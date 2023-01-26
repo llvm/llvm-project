@@ -11,6 +11,16 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  cstddef_test
+  SUITE
+    libc_cpp_utils_unittests
+  SRCS
+    cstddef_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.cstddef
+)
+
+add_libc_unittest(
   stringview_test
   SUITE
     libc_cpp_utils_unittests
@@ -28,27 +38,7 @@ add_libc_unittest(
     limits_test.cpp
   DEPENDS
     libc.src.__support.CPP.limits
-    libc.src.__support.CPP.uint
-)
-
-add_libc_unittest(
-  arrayref_test
-  SUITE
-    libc_cpp_utils_unittests
-  SRCS
-    arrayref_test.cpp
-  DEPENDS
-    libc.src.__support.CPP.array_ref
-)
-
-add_libc_unittest(
-  vector_test
-  SUITE
-    libc_cpp_utils_unittests
-  SRCS
-    vector_test.cpp
-  DEPENDS
-    libc.src.__support.CPP.vector
+    libc.src.__support.uint
 )
 
 add_libc_unittest(
@@ -72,22 +62,32 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
-  blockstore_test
-  SUITE
-    libc_cpp_utils_unittests
-  SRCS
-    blockstore_test.cpp
-  DEPENDS
-    libc.src.__support.CPP.blockstore
-)
-
-add_libc_unittest(
   stringstream_test
   SUITE
     libc_cpp_utils_unittests
   SRCS
     stringstream_test.cpp
   DEPENDS
-    libc.src.__support.CPP.array_ref
+    libc.src.__support.CPP.span
     libc.src.__support.CPP.stringstream
+)
+
+add_libc_unittest(
+  optional_test
+  SUITE
+    libc_cpp_utils_unittests
+  SRCS
+    optional_test.cpp
+  DEPENDS
+  libc.src.__support.CPP.optional
+)
+
+add_libc_unittest(
+  span_test
+  SUITE
+    libc_cpp_utils_unittests
+  SRCS
+    span_test.cpp
+  DEPENDS
+  libc.src.__support.CPP.span
 )

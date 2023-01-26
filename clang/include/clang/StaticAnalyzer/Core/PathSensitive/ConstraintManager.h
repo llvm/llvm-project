@@ -17,9 +17,9 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <memory>
+#include <optional>
 #include <utility>
 
 namespace llvm {
@@ -36,7 +36,7 @@ class ExprEngine;
 class SymbolReaper;
 
 class ConditionTruthVal {
-  Optional<bool> Val;
+  std::optional<bool> Val;
 
 public:
   /// Construct a ConditionTruthVal indicating the constraint is constrained
@@ -53,10 +53,10 @@ public:
   }
 
   /// Return true if the constraint is perfectly constrained to 'true'.
-  bool isConstrainedTrue() const { return Val && Val.value(); }
+  bool isConstrainedTrue() const { return Val && *Val; }
 
   /// Return true if the constraint is perfectly constrained to 'false'.
-  bool isConstrainedFalse() const { return Val && !Val.value(); }
+  bool isConstrainedFalse() const { return Val && !*Val; }
 
   /// Return true if the constrained is perfectly constrained.
   bool isConstrained() const { return Val.has_value(); }

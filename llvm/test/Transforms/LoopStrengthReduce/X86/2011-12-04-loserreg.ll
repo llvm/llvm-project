@@ -19,7 +19,7 @@ target triple = "x86_64-apple-darwin"
 ; CHECK: %lsr.iv
 ; CHECK-NOT: %dummyout
 ; CHECK: ret
-define i64 @test(i64 %count, float* nocapture %srcrow, i32* nocapture %destrow) nounwind uwtable ssp {
+define i64 @test(i64 %count, ptr nocapture %srcrow, ptr nocapture %destrow) nounwind uwtable ssp {
 entry:
   %cmp34 = icmp eq i64 %count, 0
   br i1 %cmp34, label %for.end29, label %for.body
@@ -27,36 +27,36 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %dummyiv = phi i64 [ %dummycnt, %for.body ], [ 0, %entry ]
   %indvars.iv39 = phi i64 [ %indvars.iv.next40, %for.body ], [ 0, %entry ]
-  %dp.036 = phi i32* [ %add.ptr, %for.body ], [ %destrow, %entry ]
-  %p.035 = phi float* [ %incdec.ptr4, %for.body ], [ %srcrow, %entry ]
-  %incdec.ptr = getelementptr inbounds float, float* %p.035, i64 1
-  %0 = load float, float* %incdec.ptr, align 4
-  %incdec.ptr2 = getelementptr inbounds float, float* %p.035, i64 2
-  %1 = load float, float* %incdec.ptr2, align 4
-  %incdec.ptr3 = getelementptr inbounds float, float* %p.035, i64 3
-  %2 = load float, float* %incdec.ptr3, align 4
-  %incdec.ptr4 = getelementptr inbounds float, float* %p.035, i64 4
-  %3 = load float, float* %incdec.ptr4, align 4
-  %4 = load i32, i32* %dp.036, align 4
+  %dp.036 = phi ptr [ %add.ptr, %for.body ], [ %destrow, %entry ]
+  %p.035 = phi ptr [ %incdec.ptr4, %for.body ], [ %srcrow, %entry ]
+  %incdec.ptr = getelementptr inbounds float, ptr %p.035, i64 1
+  %0 = load float, ptr %incdec.ptr, align 4
+  %incdec.ptr2 = getelementptr inbounds float, ptr %p.035, i64 2
+  %1 = load float, ptr %incdec.ptr2, align 4
+  %incdec.ptr3 = getelementptr inbounds float, ptr %p.035, i64 3
+  %2 = load float, ptr %incdec.ptr3, align 4
+  %incdec.ptr4 = getelementptr inbounds float, ptr %p.035, i64 4
+  %3 = load float, ptr %incdec.ptr4, align 4
+  %4 = load i32, ptr %dp.036, align 4
   %conv5 = fptoui float %0 to i32
   %or = or i32 %4, %conv5
-  %arrayidx6 = getelementptr inbounds i32, i32* %dp.036, i64 1
-  %5 = load i32, i32* %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds i32, ptr %dp.036, i64 1
+  %5 = load i32, ptr %arrayidx6, align 4
   %conv7 = fptoui float %1 to i32
   %or8 = or i32 %5, %conv7
-  %arrayidx9 = getelementptr inbounds i32, i32* %dp.036, i64 2
-  %6 = load i32, i32* %arrayidx9, align 4
+  %arrayidx9 = getelementptr inbounds i32, ptr %dp.036, i64 2
+  %6 = load i32, ptr %arrayidx9, align 4
   %conv10 = fptoui float %2 to i32
   %or11 = or i32 %6, %conv10
-  %arrayidx12 = getelementptr inbounds i32, i32* %dp.036, i64 3
-  %7 = load i32, i32* %arrayidx12, align 4
+  %arrayidx12 = getelementptr inbounds i32, ptr %dp.036, i64 3
+  %7 = load i32, ptr %arrayidx12, align 4
   %conv13 = fptoui float %3 to i32
   %or14 = or i32 %7, %conv13
-  store i32 %or, i32* %dp.036, align 4
-  store i32 %or8, i32* %arrayidx6, align 4
-  store i32 %or11, i32* %arrayidx9, align 4
-  store i32 %or14, i32* %arrayidx12, align 4
-  %add.ptr = getelementptr inbounds i32, i32* %dp.036, i64 4
+  store i32 %or, ptr %dp.036, align 4
+  store i32 %or8, ptr %arrayidx6, align 4
+  store i32 %or11, ptr %arrayidx9, align 4
+  store i32 %or14, ptr %arrayidx12, align 4
+  %add.ptr = getelementptr inbounds i32, ptr %dp.036, i64 4
   %indvars.iv.next40 = add i64 %indvars.iv39, 4
   %dummycnt = add i64 %dummyiv, 1
   %cmp = icmp ult i64 %indvars.iv.next40, %count
@@ -74,16 +74,16 @@ for.body23.lr.ph:                                 ; preds = %for.cond19.preheade
 
 for.body23:                                       ; preds = %for.body23, %for.body23.lr.ph
   %indvars.iv = phi i64 [ 0, %for.body23.lr.ph ], [ %indvars.iv.next, %for.body23 ]
-  %dp.132 = phi i32* [ %add.ptr, %for.body23.lr.ph ], [ %incdec.ptr28, %for.body23 ]
-  %p.131 = phi float* [ %incdec.ptr4, %for.body23.lr.ph ], [ %incdec.ptr24, %for.body23 ]
-  %incdec.ptr24 = getelementptr inbounds float, float* %p.131, i64 1
-  %9 = load float, float* %incdec.ptr24, align 4
-  %10 = load i32, i32* %dp.132, align 4
+  %dp.132 = phi ptr [ %add.ptr, %for.body23.lr.ph ], [ %incdec.ptr28, %for.body23 ]
+  %p.131 = phi ptr [ %incdec.ptr4, %for.body23.lr.ph ], [ %incdec.ptr24, %for.body23 ]
+  %incdec.ptr24 = getelementptr inbounds float, ptr %p.131, i64 1
+  %9 = load float, ptr %incdec.ptr24, align 4
+  %10 = load i32, ptr %dp.132, align 4
   %conv25 = fptoui float %9 to i32
   %or26 = or i32 %10, %conv25
-  store i32 %or26, i32* %dp.132, align 4
+  store i32 %or26, ptr %dp.132, align 4
   %indvars.iv.next = add i64 %indvars.iv, 1
-  %incdec.ptr28 = getelementptr inbounds i32, i32* %dp.132, i64 1
+  %incdec.ptr28 = getelementptr inbounds i32, ptr %dp.132, i64 1
   %exitcond = icmp eq i64 %indvars.iv.next, %8
   br i1 %exitcond, label %for.end29, label %for.body23
 

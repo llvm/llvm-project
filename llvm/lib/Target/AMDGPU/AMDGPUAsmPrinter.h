@@ -63,12 +63,10 @@ private:
                        const SIProgramInfo &KernelInfo);
   void emitPALFunctionMetadata(const MachineFunction &MF);
   void emitCommonFunctionComments(uint32_t NumVGPR,
-                                  Optional<uint32_t> NumAGPR,
-                                  uint32_t TotalNumVGPR,
-                                  uint32_t NumSGPR,
-                                  uint64_t ScratchSize,
-                                  uint64_t CodeSize,
-                                  const AMDGPUMachineFunction* MFI);
+                                  std::optional<uint32_t> NumAGPR,
+                                  uint32_t TotalNumVGPR, uint32_t NumSGPR,
+                                  uint64_t ScratchSize, uint64_t CodeSize,
+                                  const AMDGPUMachineFunction *MFI);
   void emitResourceUsageRemarks(const MachineFunction &MF,
                                 const SIProgramInfo &CurrentProgramInfo,
                                 bool isModuleEntryFunction, bool hasMAIInsts);

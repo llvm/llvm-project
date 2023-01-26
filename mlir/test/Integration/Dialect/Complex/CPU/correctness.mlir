@@ -6,8 +6,11 @@
 // RUN:   -convert-func-to-llvm -reconcile-unrealized-casts |\
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext |\
+// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext |\
 // RUN: FileCheck %s
+
+// XFAIL: target=aarch64{{.*}}
+// See: https://github.com/llvm/llvm-project/issues/58531
 
 func.func @test_unary(%input: tensor<?xcomplex<f32>>,
                       %func: (complex<f32>) -> complex<f32>) {

@@ -3,25 +3,25 @@
 
 // Wrong results on amdgpu
 // XFAIL: amdgcn-amd-amdhsa
-// XFAIL: amdgcn-amd-amdhsa-oldDriver
 // XFAIL: amdgcn-amd-amdhsa-LTO
 
 #include <omp.h>
 #include <stdio.h>
 
 #define CHECK_PRESENCE(Var1, Var2, Var3)                                       \
-  printf("    presence of %s, %s, %s: %d, %d, %d\n",                           \
-         #Var1, #Var2, #Var3,                                                  \
+  printf("    presence of %s, %s, %s: %d, %d, %d\n", #Var1, #Var2, #Var3,      \
          omp_target_is_present(&(Var1), omp_get_default_device()),             \
          omp_target_is_present(&(Var2), omp_get_default_device()),             \
          omp_target_is_present(&(Var3), omp_get_default_device()))
 
 #define CHECK_VALUES(Var1, Var2)                                               \
-  printf("    values of %s, %s: %d, %d\n",                                     \
-         #Var1, #Var2, (Var1), (Var2))
+  printf("    values of %s, %s: %d, %d\n", #Var1, #Var2, (Var1), (Var2))
 
 int main() {
-  struct S { int i; int j; } s;
+  struct S {
+    int i;
+    int j;
+  } s;
   // CHECK: presence of s, s.i, s.j: 0, 0, 0
   CHECK_PRESENCE(s, s.i, s.j);
 
@@ -33,17 +33,17 @@ int main() {
   printf("check: ompx_hold only on first member\n");
   s.i = 20;
   s.j = 30;
-  #pragma omp target data map(tofrom: s) map(ompx_hold,tofrom: s.i) \
-                                         map(tofrom: s.j)
+#pragma omp target data map(tofrom : s) map(ompx_hold, tofrom : s.i)           \
+    map(tofrom : s.j)
   {
     // CHECK-NEXT: presence of s, s.i, s.j: 1, 1, 1
     CHECK_PRESENCE(s, s.i, s.j);
-    #pragma omp target map(tofrom: s)
+#pragma omp target map(tofrom : s)
     {
       s.i = 21;
       s.j = 31;
     }
-    #pragma omp target exit data map(delete: s, s.i)
+#pragma omp target exit data map(delete : s, s.i)
     // ompx_hold on s.i applies to all of s.
     // CHECK-NEXT: presence of s, s.i, s.j: 1, 1, 1
     // CHECK-NEXT: values of s.i, s.j: 20, 30
@@ -60,17 +60,17 @@ int main() {
   printf("check: ompx_hold only on last member\n");
   s.i = 20;
   s.j = 30;
-  #pragma omp target data map(tofrom: s) map(tofrom: s.i) \
-                                         map(ompx_hold,tofrom: s.j)
+#pragma omp target data map(tofrom : s) map(tofrom : s.i)                      \
+    map(ompx_hold, tofrom : s.j)
   {
     // CHECK-NEXT: presence of s, s.i, s.j: 1, 1, 1
     CHECK_PRESENCE(s, s.i, s.j);
-    #pragma omp target map(tofrom: s)
+#pragma omp target map(tofrom : s)
     {
       s.i = 21;
       s.j = 31;
     }
-    #pragma omp target exit data map(delete: s, s.i)
+#pragma omp target exit data map(delete : s, s.i)
     // ompx_hold on s.j applies to all of s.
     // CHECK-NEXT: presence of s, s.i, s.j: 1, 1, 1
     // CHECK-NEXT: values of s.i, s.j: 20, 30
@@ -87,17 +87,17 @@ int main() {
   printf("check: ompx_hold only on struct\n");
   s.i = 20;
   s.j = 30;
-  #pragma omp target data map(ompx_hold,tofrom: s) map(tofrom: s.i) \
-                                              map(tofrom: s.j)
+#pragma omp target data map(ompx_hold, tofrom : s) map(tofrom : s.i)           \
+    map(tofrom : s.j)
   {
     // CHECK-NEXT: presence of s, s.i, s.j: 1, 1, 1
     CHECK_PRESENCE(s, s.i, s.j);
-    #pragma omp target map(tofrom: s)
+#pragma omp target map(tofrom : s)
     {
       s.i = 21;
       s.j = 31;
     }
-    #pragma omp target exit data map(delete: s, s.i)
+#pragma omp target exit data map(delete : s, s.i)
     // CHECK-NEXT: presence of s, s.i, s.j: 1, 1, 1
     // CHECK-NEXT: values of s.i, s.j: 20, 30
     CHECK_PRESENCE(s, s.i, s.j);
@@ -116,12 +116,12 @@ int main() {
   printf("check: parent DynRefCount=1 is not sufficient for transfer\n");
   s.i = 20;
   s.j = 30;
-  #pragma omp target data map(ompx_hold, tofrom: s)
-  #pragma omp target data map(ompx_hold, tofrom: s)
+#pragma omp target data map(ompx_hold, tofrom : s)
+#pragma omp target data map(ompx_hold, tofrom : s)
   {
     // CHECK-NEXT: presence of s, s.i, s.j: 1, 1, 1
     CHECK_PRESENCE(s, s.i, s.j);
-    #pragma omp target map(from: s.i, s.j)
+#pragma omp target map(from : s.i, s.j)
     {
       s.i = 21;
       s.j = 31;
@@ -130,7 +130,7 @@ int main() {
     // CHECK-NEXT: values of s.i, s.j: 20, 30
     CHECK_PRESENCE(s, s.i, s.j);
     CHECK_VALUES(s.i, s.j);
-    #pragma omp target map(to: s.i, s.j)
+#pragma omp target map(to : s.i, s.j)
     { // No transfer here even though parent's DynRefCount=1.
       // CHECK-NEXT: values of s.i, s.j: 21, 31
       CHECK_VALUES(s.i, s.j);
@@ -146,12 +146,12 @@ int main() {
   printf("check: parent HoldRefCount=1 is not sufficient for transfer\n");
   s.i = 20;
   s.j = 30;
-  #pragma omp target data map(tofrom: s)
-  #pragma omp target data map(tofrom: s)
+#pragma omp target data map(tofrom : s)
+#pragma omp target data map(tofrom : s)
   {
     // CHECK-NEXT: presence of s, s.i, s.j: 1, 1, 1
     CHECK_PRESENCE(s, s.i, s.j);
-    #pragma omp target map(ompx_hold, from: s.i, s.j)
+#pragma omp target map(ompx_hold, from : s.i, s.j)
     {
       s.i = 21;
       s.j = 31;
@@ -160,7 +160,7 @@ int main() {
     // CHECK-NEXT: values of s.i, s.j: 20, 30
     CHECK_PRESENCE(s, s.i, s.j);
     CHECK_VALUES(s.i, s.j);
-    #pragma omp target map(ompx_hold, to: s.i, s.j)
+#pragma omp target map(ompx_hold, to : s.i, s.j)
     { // No transfer here even though parent's HoldRefCount=1.
       // CHECK-NEXT: values of s.i, s.j: 21, 31
       CHECK_VALUES(s.i, s.j);
@@ -182,16 +182,16 @@ int main() {
   printf("check: parent TotalRefCount=1 is not sufficient for transfer\n");
   s.i = 20;
   s.j = 30;
-  #pragma omp target data map(ompx_hold, tofrom: s)
+#pragma omp target data map(ompx_hold, tofrom : s)
   {
     // CHECK-NEXT: presence of s, s.i, s.j: 1, 1, 1
     CHECK_PRESENCE(s, s.i, s.j);
-    #pragma omp target map(ompx_hold, tofrom: s.i, s.j)
+#pragma omp target map(ompx_hold, tofrom : s.i, s.j)
     {
       s.i = 21;
       s.j = 31;
     }
-    #pragma omp target exit data map(from: s.i, s.j)
+#pragma omp target exit data map(from : s.i, s.j)
     // No transfer here even though parent's TotalRefCount=1.
     // CHECK-NEXT: presence of s, s.i, s.j: 1, 1, 1
     // CHECK-NEXT: values of s.i, s.j: 20, 30

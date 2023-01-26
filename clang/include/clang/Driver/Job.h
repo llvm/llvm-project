@@ -12,13 +12,13 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Driver/InputInfo.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Program.h"
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -141,8 +141,11 @@ class Command {
   /// See Command::setEnvironment
   std::vector<const char *> Environment;
 
+  /// Optional redirection for stdin, stdout, stderr.
+  std::vector<std::optional<std::string>> RedirectFiles;
+
   /// Information on executable run provided by OS.
-  mutable Optional<llvm::sys::ProcessStatistics> ProcStat;
+  mutable std::optional<llvm::sys::ProcessStatistics> ProcStat;
 
   /// When a response file is needed, we try to put most arguments in an
   /// exclusive file, while others remains as regular command line arguments.
@@ -166,7 +169,7 @@ public:
   Command(const Action &Source, const Tool &Creator,
           ResponseFileSupport ResponseSupport, const char *Executable,
           const llvm::opt::ArgStringList &Arguments, ArrayRef<InputInfo> Inputs,
-          ArrayRef<InputInfo> Outputs = None);
+          ArrayRef<InputInfo> Outputs = std::nullopt);
   // FIXME: This really shouldn't be copyable, but is currently copied in some
   // error handling in Driver::generateCompilationDiagnostics.
   Command(const Command &) = default;
@@ -175,7 +178,7 @@ public:
   virtual void Print(llvm::raw_ostream &OS, const char *Terminator, bool Quote,
                      CrashReportInfo *CrashInfo = nullptr) const;
 
-  virtual int Execute(ArrayRef<Optional<StringRef>> Redirects,
+  virtual int Execute(ArrayRef<std::optional<StringRef>> Redirects,
                       std::string *ErrMsg, bool *ExecutionFailed) const;
 
   /// getSource - Return the Action which caused the creation of this job.
@@ -204,6 +207,9 @@ public:
   ///         from the parent process will be used.
   virtual void setEnvironment(llvm::ArrayRef<const char *> NewEnvironment);
 
+  void
+  setRedirectFiles(const std::vector<std::optional<std::string>> &Redirects);
+
   void replaceArguments(llvm::opt::ArgStringList List) {
     Arguments = std::move(List);
   }
@@ -220,7 +226,7 @@ public:
     return OutputFilenames;
   }
 
-  Optional<llvm::sys::ProcessStatistics> getProcessStatistics() const {
+  std::optional<llvm::sys::ProcessStatistics> getProcessStatistics() const {
     return ProcStat;
   }
 
@@ -235,12 +241,13 @@ public:
   CC1Command(const Action &Source, const Tool &Creator,
              ResponseFileSupport ResponseSupport, const char *Executable,
              const llvm::opt::ArgStringList &Arguments,
-             ArrayRef<InputInfo> Inputs, ArrayRef<InputInfo> Outputs = None);
+             ArrayRef<InputInfo> Inputs,
+             ArrayRef<InputInfo> Outputs = std::nullopt);
 
   void Print(llvm::raw_ostream &OS, const char *Terminator, bool Quote,
              CrashReportInfo *CrashInfo = nullptr) const override;
 
-  int Execute(ArrayRef<Optional<StringRef>> Redirects, std::string *ErrMsg,
+  int Execute(ArrayRef<std::optional<StringRef>> Redirects, std::string *ErrMsg,
               bool *ExecutionFailed) const override;
 
   void setEnvironment(llvm::ArrayRef<const char *> NewEnvironment) override;
@@ -254,12 +261,12 @@ public:
                       const char *Executable_,
                       const llvm::opt::ArgStringList &Arguments_,
                       ArrayRef<InputInfo> Inputs,
-                      ArrayRef<InputInfo> Outputs = None);
+                      ArrayRef<InputInfo> Outputs = std::nullopt);
 
   void Print(llvm::raw_ostream &OS, const char *Terminator, bool Quote,
              CrashReportInfo *CrashInfo = nullptr) const override;
 
-  int Execute(ArrayRef<Optional<StringRef>> Redirects, std::string *ErrMsg,
+  int Execute(ArrayRef<std::optional<StringRef>> Redirects, std::string *ErrMsg,
               bool *ExecutionFailed) const override;
 };
 

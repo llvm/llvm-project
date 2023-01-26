@@ -1,4 +1,4 @@
-; XFAIL: -aix
+; XFAIL: target={{.*}}-aix{{.*}}
 ; RUN: llc -filetype=asm -asm-verbose=0 -O0 < %s | FileCheck %s
 ; RUN: llc -filetype=obj -O0 < %s | llvm-dwarfdump -debug-line - | FileCheck %s --check-prefix=INT
 
@@ -27,7 +27,7 @@
 ; CHECK-NOT: .loc
 ; CHECK: .loc	1 4 15{{$}}
 ; CHECK-NOT: .loc
-; CHECK: .loc	1 5 1 is_stmt 1{{$}}
+; CHECK: .loc	1 5 1 {{(epilogue_begin )?}}is_stmt 1{{$}}
 
 ; INT: {{^}}Address
 ; INT: -----
@@ -38,7 +38,7 @@
 ; INT-NEXT: 4 3 1 0 0 is_stmt{{$}}
 ; INT-NEXT: 4 9 1 0 0 {{$}}
 ; INT-NEXT: 4 15 1 0 0 {{$}}
-; INT-NEXT: 5 1 1 0 0 is_stmt{{$}}
+; INT-NEXT: 5 1 1 0 0 is_stmt{{( epilogue_begin)?}}{{$}}
 
 
 ; Function Attrs: nounwind uwtable

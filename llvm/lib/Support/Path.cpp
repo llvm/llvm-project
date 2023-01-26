@@ -771,7 +771,7 @@ bool remove_dots(SmallVectorImpl<char> &the_path, bool remove_dot_dot,
 
   if (!components.empty()) {
     buffer += components[0];
-    for (StringRef C : makeArrayRef(components).drop_front()) {
+    for (StringRef C : ArrayRef(components).drop_front()) {
       buffer += preferred_separator(style);
       buffer += C;
     }
@@ -1054,7 +1054,7 @@ ErrorOr<MD5::MD5Result> md5_contents(int FD) {
     BytesRead = read(FD, Buf.data(), BufSize);
     if (BytesRead <= 0)
       break;
-    Hash.update(makeArrayRef(Buf.data(), BytesRead));
+    Hash.update(ArrayRef(Buf.data(), BytesRead));
   }
 
   if (BytesRead < 0)
@@ -1181,7 +1181,7 @@ Error readNativeFileToEOF(file_t FileHandle, SmallVectorImpl<char> &Buffer,
   for (;;) {
     Buffer.resize_for_overwrite(Size + ChunkSize);
     Expected<size_t> ReadBytes = readNativeFile(
-        FileHandle, makeMutableArrayRef(Buffer.begin() + Size, ChunkSize));
+        FileHandle, MutableArrayRef(Buffer.begin() + Size, ChunkSize));
     if (!ReadBytes)
       return ReadBytes.takeError();
     if (*ReadBytes == 0)

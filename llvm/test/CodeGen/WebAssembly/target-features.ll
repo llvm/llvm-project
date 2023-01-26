@@ -1,5 +1,5 @@
 ; RUN: llc < %s | FileCheck %s --check-prefixes CHECK,ATTRS
-; RUN: llc < %s -mattr=+simd128 | FileCheck %s --check-prefixes CHECK,SIMD128
+; RUN: llc < %s -mcpu=mvp -mattr=+simd128 | FileCheck %s --check-prefixes CHECK,SIMD128
 ; RUN: llc < %s -mcpu=bleeding-edge | FileCheck %s --check-prefixes CHECK,BLEEDING-EDGE
 
 ; Test that codegen emits target features from the command line or
@@ -8,17 +8,17 @@
 
 target triple = "wasm32-unknown-unknown"
 
-define void @fn_atomics(i32* %p1, float %f2) #0 {
-  %a = atomicrmw min i32* undef, i32 42 seq_cst
+define void @fn_atomics(ptr %p1, float %f2) #0 {
+  %a = atomicrmw min ptr undef, i32 42 seq_cst
   %v = fptoui float %f2 to i32
-  store i32 %v, i32* %p1
+  store i32 %v, ptr %p1
   ret void
 }
 
-define void @fn_nontrapping_fptoint(i32* %p1, float %f2) #1 {
-  %a = atomicrmw min i32* undef, i32 42 seq_cst
+define void @fn_nontrapping_fptoint(ptr %p1, float %f2) #1 {
+  %a = atomicrmw min ptr undef, i32 42 seq_cst
   %v = fptoui float %f2 to i32
-  store i32 %v, i32* %p1
+  store i32 %v, ptr %p1
   ret void
 }
 
@@ -55,17 +55,22 @@ attributes #2 = { "target-features"="+reference-types" }
 
 ; CHECK-LABEL: .custom_section.target_features,"",@
 
-; +atomics, +nontrapping-fptoint, +reference-types
-; ATTRS-NEXT: .int8 3
-; ATTRS-NEXT: .int8 43
-; ATTRS-NEXT: .int8 7
-; ATTRS-NEXT: .ascii "atomics"
-; ATTRS-NEXT: .int8 43
-; ATTRS-NEXT: .int8 19
-; ATTRS-NEXT: .ascii "nontrapping-fptoint"
-; ATTRS-NEXT: .int8 43
-; ATTRS-NEXT: .int8 15
-; ATTRS-NEXT: .ascii "reference-types"
+; +atomics, +reference-types, +mutable-globals
+; ATTRS-NEXT: .int8	5
+; ATTRS-NEXT: .int8	43
+; ATTRS-NEXT: .int8	7
+; ATTRS-NEXT: .ascii	"atomics"
+; ATTRS-NEXT: .int8	43
+; ATTRS-NEXT: .int8	15
+; ATTRS-NEXT: .ascii	"mutable-globals"
+; ATTRS-NEXT: .int8	43
+; ATTRS-NEXT: .int8	19
+; ATTRS-NEXT: .ascii	"nontrapping-fptoint"
+; ATTRS-NEXT: .int8	43
+; ATTRS-NEXT: .int8	15
+; ATTRS-NEXT: .ascii	"reference-types"
+; ATTRS-NEXT: .int8	43
+; ATTRS-NEXT: .int8	8
 
 ; +atomics, +nontrapping-fptoint, +reference-types, +simd128
 ; SIMD128-NEXT: .int8 4
@@ -109,5 +114,3 @@ attributes #2 = { "target-features"="+reference-types" }
 ; BLEEDING-EDGE-NEXT: .int8   43
 ; BLEEDING-EDGE-NEXT: .int8   9
 ; BLEEDING-EDGE-NEXT: .ascii  "tail-call"
-
-; CHECK-NEXT: .text

@@ -15,12 +15,12 @@
 .long foo
 
 tail foo
-# RELOC: R_RISCV_CALL foo 0x0
+# RELOC: R_RISCV_CALL_PLT foo 0x0
 # INSTR: auipc t1, 0
 # INSTR: jr  t1
 # FIXUP: fixup A - offset: 0, value: foo, kind:
 tail bar
-# RELOC: R_RISCV_CALL bar 0x0
+# RELOC: R_RISCV_CALL_PLT bar 0x0
 # INSTR: auipc t1, 0
 # INSTR: jr  t1
 # FIXUP: fixup A - offset: 0, value: bar, kind:
@@ -29,19 +29,19 @@ tail bar
 # work.
 
 tail zero
-# RELOC: R_RISCV_CALL zero 0x0
+# RELOC: R_RISCV_CALL_PLT zero 0x0
 # INSTR: auipc t1, 0
 # INSTR: jr  t1
 # FIXUP: fixup A - offset: 0, value: zero, kind:
 
 tail f1
-# RELOC: R_RISCV_CALL f1 0x0
+# RELOC: R_RISCV_CALL_PLT f1 0x0
 # INSTR: auipc t1, 0
 # INSTR: jr  t1
 # FIXUP: fixup A - offset: 0, value: f1, kind:
 
 tail ra
-# RELOC: R_RISCV_CALL ra 0x0
+# RELOC: R_RISCV_CALL_PLT ra 0x0
 # INSTR: auipc t1, 0
 # INSTR: jr  t1
 # FIXUP: fixup A - offset: 0, value: ra, kind:

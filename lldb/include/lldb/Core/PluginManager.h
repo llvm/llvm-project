@@ -197,15 +197,19 @@ public:
                          llvm::StringRef plugin_name);
 
   // ObjectContainer
-  static bool
-  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
-                 ObjectContainerCreateInstance create_callback,
-                 ObjectFileGetModuleSpecifications get_module_specifications);
+  static bool RegisterPlugin(
+      llvm::StringRef name, llvm::StringRef description,
+      ObjectContainerCreateInstance create_callback,
+      ObjectFileGetModuleSpecifications get_module_specifications,
+      ObjectContainerCreateMemoryInstance create_memory_callback = nullptr);
 
   static bool UnregisterPlugin(ObjectContainerCreateInstance create_callback);
 
   static ObjectContainerCreateInstance
   GetObjectContainerCreateCallbackAtIndex(uint32_t idx);
+
+  static ObjectContainerCreateMemoryInstance
+  GetObjectContainerCreateMemoryCallbackAtIndex(uint32_t idx);
 
   static ObjectFileGetModuleSpecifications
   GetObjectContainerGetModuleSpecificationsCallbackAtIndex(uint32_t idx);
@@ -338,7 +342,8 @@ public:
       llvm::StringRef name, llvm::StringRef description,
       TraceCreateInstanceFromBundle create_callback_from_bundle,
       TraceCreateInstanceForLiveProcess create_callback_for_live_process,
-      llvm::StringRef schema);
+      llvm::StringRef schema,
+      DebuggerInitializeCallback debugger_init_callback);
 
   static bool
   UnregisterPlugin(TraceCreateInstanceFromBundle create_callback);
@@ -480,6 +485,10 @@ public:
   GetSettingForProcessPlugin(Debugger &debugger, ConstString setting_name);
 
   static bool CreateSettingForProcessPlugin(
+      Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
+      ConstString description, bool is_global_property);
+
+  static bool CreateSettingForTracePlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
       ConstString description, bool is_global_property);
 

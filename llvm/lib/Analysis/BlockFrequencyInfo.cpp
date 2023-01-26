@@ -12,7 +12,6 @@
 
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
@@ -26,6 +25,7 @@
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <optional>
 #include <string>
 
 using namespace llvm;
@@ -204,19 +204,19 @@ BlockFrequency BlockFrequencyInfo::getBlockFreq(const BasicBlock *BB) const {
   return BFI ? BFI->getBlockFreq(BB) : 0;
 }
 
-Optional<uint64_t>
+std::optional<uint64_t>
 BlockFrequencyInfo::getBlockProfileCount(const BasicBlock *BB,
                                          bool AllowSynthetic) const {
   if (!BFI)
-    return None;
+    return std::nullopt;
 
   return BFI->getBlockProfileCount(*getFunction(), BB, AllowSynthetic);
 }
 
-Optional<uint64_t>
+std::optional<uint64_t>
 BlockFrequencyInfo::getProfileCountFromFreq(uint64_t Freq) const {
   if (!BFI)
-    return None;
+    return std::nullopt;
   return BFI->getProfileCountFromFreq(*getFunction(), Freq);
 }
 

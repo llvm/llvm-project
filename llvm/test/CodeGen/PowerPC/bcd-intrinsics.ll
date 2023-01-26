@@ -11,7 +11,6 @@ define dso_local i64 @test_invalid(<16 x i8> %a) local_unnamed_addr #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    bcdsub. v2, v2, v2, 0
 ; CHECK-NEXT:    setbc r3, 4*cr6+un
-; CHECK-NEXT:    extsw r3, r3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test_invalid:
@@ -19,7 +18,6 @@ define dso_local i64 @test_invalid(<16 x i8> %a) local_unnamed_addr #0 {
 ; CHECK-P9-NEXT:    bcdsub. v2, v2, v2, 0
 ; CHECK-P9-NEXT:    mfocrf r3, 2
 ; CHECK-P9-NEXT:    rlwinm r3, r3, 28, 31, 31
-; CHECK-P9-NEXT:    extsw r3, r3
 ; CHECK-P9-NEXT:    blr
 entry:
   %0 = tail call i32 @llvm.ppc.bcdsub.p(i32 6, <16 x i8> %a, <16 x i8> %a) #2
@@ -47,7 +45,6 @@ define dso_local i64 @test_add_ofl(<16 x i8> %a, <16 x i8> %b, i64 %ps) local_un
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    bcdadd. v2, v2, v3, 0
 ; CHECK-NEXT:    setbc r3, 4*cr6+un
-; CHECK-NEXT:    extsw r3, r3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test_add_ofl:
@@ -55,7 +52,6 @@ define dso_local i64 @test_add_ofl(<16 x i8> %a, <16 x i8> %b, i64 %ps) local_un
 ; CHECK-P9-NEXT:    bcdadd. v2, v2, v3, 0
 ; CHECK-P9-NEXT:    mfocrf r3, 2
 ; CHECK-P9-NEXT:    rlwinm r3, r3, 28, 31, 31
-; CHECK-P9-NEXT:    extsw r3, r3
 ; CHECK-P9-NEXT:    blr
 entry:
   %0 = tail call i32 @llvm.ppc.bcdadd.p(i32 6, <16 x i8> %a, <16 x i8> %b) #2
@@ -83,7 +79,6 @@ define dso_local i64 @test_sub_ofl(<16 x i8> %a, <16 x i8> %b, i64 %ps) local_un
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    bcdsub. v2, v2, v3, 0
 ; CHECK-NEXT:    setbc r3, 4*cr6+un
-; CHECK-NEXT:    extsw r3, r3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test_sub_ofl:
@@ -91,7 +86,6 @@ define dso_local i64 @test_sub_ofl(<16 x i8> %a, <16 x i8> %b, i64 %ps) local_un
 ; CHECK-P9-NEXT:    bcdsub. v2, v2, v3, 0
 ; CHECK-P9-NEXT:    mfocrf r3, 2
 ; CHECK-P9-NEXT:    rlwinm r3, r3, 28, 31, 31
-; CHECK-P9-NEXT:    extsw r3, r3
 ; CHECK-P9-NEXT:    blr
 entry:
   %0 = tail call i32 @llvm.ppc.bcdsub.p(i32 6, <16 x i8> %a, <16 x i8> %b) #2
@@ -104,7 +98,6 @@ define dso_local i64 @test_cmplt(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    bcdsub. v2, v2, v3, 0
 ; CHECK-NEXT:    setbc r3, 4*cr6+lt
-; CHECK-NEXT:    extsw r3, r3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test_cmplt:
@@ -112,7 +105,6 @@ define dso_local i64 @test_cmplt(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK-P9-NEXT:    bcdsub. v2, v2, v3, 0
 ; CHECK-P9-NEXT:    mfocrf r3, 2
 ; CHECK-P9-NEXT:    rlwinm r3, r3, 25, 31, 31
-; CHECK-P9-NEXT:    extsw r3, r3
 ; CHECK-P9-NEXT:    blr
 entry:
   %0 = tail call i32 @llvm.ppc.bcdsub.p(i32 2, <16 x i8> %a, <16 x i8> %b) #2
@@ -125,7 +117,6 @@ define dso_local i64 @test_cmpgt(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    bcdsub. v2, v2, v3, 0
 ; CHECK-NEXT:    setbc r3, 4*cr6+gt
-; CHECK-NEXT:    extsw r3, r3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test_cmpgt:
@@ -133,7 +124,6 @@ define dso_local i64 @test_cmpgt(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK-P9-NEXT:    bcdsub. v2, v2, v3, 0
 ; CHECK-P9-NEXT:    mfocrf r3, 2
 ; CHECK-P9-NEXT:    rlwinm r3, r3, 26, 31, 31
-; CHECK-P9-NEXT:    extsw r3, r3
 ; CHECK-P9-NEXT:    blr
 entry:
   %0 = tail call i32 @llvm.ppc.bcdsub.p(i32 4, <16 x i8> %a, <16 x i8> %b) #2
@@ -146,7 +136,6 @@ define dso_local i64 @test_cmpeq(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    bcdsub. v2, v2, v3, 0
 ; CHECK-NEXT:    setbc r3, 4*cr6+eq
-; CHECK-NEXT:    extsw r3, r3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test_cmpeq:
@@ -154,7 +143,6 @@ define dso_local i64 @test_cmpeq(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK-P9-NEXT:    bcdsub. v2, v2, v3, 0
 ; CHECK-P9-NEXT:    mfocrf r3, 2
 ; CHECK-P9-NEXT:    rlwinm r3, r3, 27, 31, 31
-; CHECK-P9-NEXT:    extsw r3, r3
 ; CHECK-P9-NEXT:    blr
 entry:
   %0 = tail call i32 @llvm.ppc.bcdsub.p(i32 0, <16 x i8> %a, <16 x i8> %b) #2
@@ -167,7 +155,6 @@ define dso_local i64 @test_cmpge(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    bcdsub. v2, v2, v3, 0
 ; CHECK-NEXT:    setbcr r3, 4*cr6+lt
-; CHECK-NEXT:    extsw r3, r3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test_cmpge:
@@ -176,7 +163,6 @@ define dso_local i64 @test_cmpge(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK-P9-NEXT:    mfocrf r3, 2
 ; CHECK-P9-NEXT:    rlwinm r3, r3, 25, 31, 31
 ; CHECK-P9-NEXT:    xori r3, r3, 1
-; CHECK-P9-NEXT:    extsw r3, r3
 ; CHECK-P9-NEXT:    blr
 entry:
   %0 = tail call i32 @llvm.ppc.bcdsub.p(i32 3, <16 x i8> %a, <16 x i8> %b) #2
@@ -189,7 +175,6 @@ define dso_local i64 @test_cmple(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    bcdsub. v2, v2, v3, 0
 ; CHECK-NEXT:    setbcr r3, 4*cr6+gt
-; CHECK-NEXT:    extsw r3, r3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test_cmple:
@@ -198,7 +183,6 @@ define dso_local i64 @test_cmple(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK-P9-NEXT:    mfocrf r3, 2
 ; CHECK-P9-NEXT:    rlwinm r3, r3, 26, 31, 31
 ; CHECK-P9-NEXT:    xori r3, r3, 1
-; CHECK-P9-NEXT:    extsw r3, r3
 ; CHECK-P9-NEXT:    blr
 entry:
   %0 = tail call i32 @llvm.ppc.bcdsub.p(i32 5, <16 x i8> %a, <16 x i8> %b) #2

@@ -3,8 +3,9 @@ add_llvm_component_library(LLVMAVRDisassembler
 
   LINK_COMPONENTS
   MCDisassembler
-  AVRInfo
+  MC
   Support
+  AVRInfo
 
   ADD_TO_COMPONENT
   AVR

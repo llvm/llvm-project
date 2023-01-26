@@ -9,6 +9,7 @@
 #ifndef LLDB_SYMBOL_SYMBOLFILE_H
 #define LLDB_SYMBOL_SYMBOLFILE_H
 
+#include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/SourceLocationSpec.h"
@@ -27,6 +28,7 @@
 #include "llvm/Support/Errc.h"
 
 #include <mutex>
+#include <optional>
 
 #if defined(LLDB_CONFIGURATION_DEBUG)
 #define ASSERT_MODULE_LOCK(expr) (expr->AssertModuleLock())
@@ -203,7 +205,7 @@ public:
   /// To support variable-length array types, this function takes an
   /// optional \p ExecutionContext. If \c exe_ctx is non-null, the
   /// dynamic characteristics for that context are returned.
-  virtual llvm::Optional<ArrayInfo>
+  virtual std::optional<ArrayInfo>
   GetDynamicArrayInfoForUID(lldb::user_id_t type_uid,
                             const lldb_private::ExecutionContext *exe_ctx) = 0;
 
@@ -221,6 +223,50 @@ public:
   virtual uint32_t ResolveSymbolContext(const Address &so_addr,
                                         lldb::SymbolContextItem resolve_scope,
                                         SymbolContext &sc) = 0;
+
+  /// Get an error that describes why variables might be missing for a given
+  /// symbol context.
+  ///
+  /// If there is an error in the debug information that prevents variables from
+  /// being fetched, this error will get filled in. If there is no debug
+  /// informaiton, no error should be returned. But if there is debug
+  /// information and something prevents the variables from being available a
+  /// valid error should be returned. Valid cases include:
+  /// - compiler option that removes variables (-gline-tables-only)
+  /// - missing external files
+  ///   - .dwo files in fission are not accessible or missing
+  ///   - .o files on darwin when not using dSYM files that are not accessible
+  ///     or missing
+  /// - mismatched exteral files
+  ///   - .dwo files in fission where the DWO ID doesn't match
+  ///   - .o files on darwin when modification timestamp doesn't match
+  /// - corrupted debug info
+  ///
+  /// \param[in] frame
+  ///   The stack frame to use as a basis for the context to check. The frame
+  ///   address can be used if there is not debug info due to it not being able
+  ///   to be loaded, or if there is a debug info context, like a compile unit,
+  ///   or function, it can be used to track down more information on why
+  ///   variables are missing.
+  ///
+  /// \returns
+  ///   An error specifying why there should have been debug info with variable
+  ///   information but the variables were not able to be resolved.
+  Status GetFrameVariableError(StackFrame &frame) {
+    Status err = CalculateFrameVariableError(frame);
+    if (err.Fail())
+      SetDebugInfoHadFrameVariableErrors();
+    return err;
+  }
+
+  /// Subclasses will override this function to for GetFrameVariableError().
+  ///
+  /// This allows GetFrameVariableError() to set the member variable
+  /// m_debug_info_had_variable_errors correctly without users having to do it
+  /// manually which is error prone.
+  virtual Status CalculateFrameVariableError(StackFrame &frame) {
+    return Status();
+  }
   virtual uint32_t
   ResolveSymbolContext(const SourceLocationSpec &src_location_spec,
                        lldb::SymbolContextItem resolve_scope,
@@ -234,9 +280,8 @@ public:
   virtual void FindGlobalVariables(const RegularExpression &regex,
                                    uint32_t max_matches,
                                    VariableList &variables);
-  virtual void FindFunctions(ConstString name,
+  virtual void FindFunctions(const Module::LookupInfo &lookup_info,
                              const CompilerDeclContext &parent_decl_ctx,
-                             lldb::FunctionNameType name_type_mask,
                              bool include_inlines, SymbolContextList &sc_list);
   virtual void FindFunctions(const RegularExpression &regex,
                              bool include_inlines, SymbolContextList &sc_list);
@@ -266,7 +311,7 @@ public:
 
   virtual void PreloadSymbols();
 
-  virtual llvm::Expected<lldb_private::TypeSystem &>
+  virtual llvm::Expected<lldb::TypeSystemSP>
   GetTypeSystemForLanguage(lldb::LanguageType language) = 0;
 
   virtual CompilerDeclContext
@@ -361,6 +406,23 @@ public:
   virtual void SetDebugInfoIndexWasSavedToCache() = 0;
   /// \}
 
+  /// Accessors for the bool that indicates if there was debug info, but errors
+  /// stopped variables from being able to be displayed correctly. See
+  /// GetFrameVariableError() for details on what are considered errors.
+  virtual bool GetDebugInfoHadFrameVariableErrors() const = 0;
+  virtual void SetDebugInfoHadFrameVariableErrors() = 0;
+
+  virtual lldb::TypeSP
+  MakeType(lldb::user_id_t uid, ConstString name,
+           std::optional<uint64_t> byte_size, SymbolContextScope *context,
+           lldb::user_id_t encoding_uid,
+           Type::EncodingDataType encoding_uid_type, const Declaration &decl,
+           const CompilerType &compiler_qual_type,
+           Type::ResolveState compiler_type_resolve_state,
+           uint32_t opaque_payload = 0) = 0;
+
+  virtual lldb::TypeSP CopyType(const lldb::TypeSP &other_type) = 0;
+
 protected:
   void AssertModuleLock();
 
@@ -415,7 +477,7 @@ public:
   uint32_t GetNumCompileUnits() override;
   lldb::CompUnitSP GetCompileUnitAtIndex(uint32_t idx) override;
 
-  llvm::Expected<lldb_private::TypeSystem &>
+  llvm::Expected<lldb::TypeSystemSP>
   GetTypeSystemForLanguage(lldb::LanguageType language) override;
 
   void Dump(Stream &s) override;
@@ -434,6 +496,41 @@ public:
   void SetDebugInfoIndexWasSavedToCache() override {
     m_index_was_saved_to_cache = true;
   }
+  bool GetDebugInfoHadFrameVariableErrors() const override {
+    return m_debug_info_had_variable_errors;
+  }
+  void SetDebugInfoHadFrameVariableErrors() override {
+     m_debug_info_had_variable_errors = true;
+  }
+
+  /// This function is used to create types that belong to a SymbolFile. The
+  /// symbol file will own a strong reference to the type in an internal type
+  /// list.
+  lldb::TypeSP MakeType(lldb::user_id_t uid, ConstString name,
+                        std::optional<uint64_t> byte_size,
+                        SymbolContextScope *context,
+                        lldb::user_id_t encoding_uid,
+                        Type::EncodingDataType encoding_uid_type,
+                        const Declaration &decl,
+                        const CompilerType &compiler_qual_type,
+                        Type::ResolveState compiler_type_resolve_state,
+                        uint32_t opaque_payload = 0) override {
+     lldb::TypeSP type_sp (new Type(
+         uid, this, name, byte_size, context, encoding_uid,
+         encoding_uid_type, decl, compiler_qual_type,
+         compiler_type_resolve_state, opaque_payload));
+     m_type_list.Insert(type_sp);
+     return type_sp;
+  }
+
+  lldb::TypeSP CopyType(const lldb::TypeSP &other_type) override {
+     // Make sure the real symbol file matches when copying types.
+     if (GetBackingSymbolFile() != other_type->GetSymbolFile())
+      return lldb::TypeSP();
+     lldb::TypeSP type_sp(new Type(*other_type));
+     m_type_list.Insert(type_sp);
+     return type_sp;
+  }
 
 protected:
   virtual uint32_t CalculateNumCompileUnits() = 0;
@@ -445,17 +542,24 @@ protected:
                                    // case it isn't the same as the module
                                    // object file (debug symbols in a separate
                                    // file)
-  llvm::Optional<std::vector<lldb::CompUnitSP>> m_compile_units;
+  std::optional<std::vector<lldb::CompUnitSP>> m_compile_units;
   TypeList m_type_list;
-  Symtab *m_symtab = nullptr;
   uint32_t m_abilities = 0;
   bool m_calculated_abilities = false;
   bool m_index_was_loaded_from_cache = false;
   bool m_index_was_saved_to_cache = false;
+  /// Set to true if any variable feteching errors have been found when calling
+  /// GetFrameVariableError(). This will be emitted in the "statistics dump"
+  /// information for a module.
+  bool m_debug_info_had_variable_errors = false;
 
 private:
   SymbolFileCommon(const SymbolFileCommon &) = delete;
   const SymbolFileCommon &operator=(const SymbolFileCommon &) = delete;
+
+  /// Do not use m_symtab directly, as it may be freed. Use GetSymtab()
+  /// to access it instead.
+  Symtab *m_symtab = nullptr;
 };
 
 } // namespace lldb_private

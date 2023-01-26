@@ -35,6 +35,11 @@ test.format_symbol_name_attr_op @name
 test.format_symbol_name_attr_op @opt_name
 test.format_opt_symbol_name_attr_op
 
+// CHECK: test.format_opt_symbol_ref_attr_op @foo
+// CHECK: test.format_opt_symbol_ref_attr_op {test.unit}
+test.format_opt_symbol_ref_attr_op @foo {test.unit}
+test.format_opt_symbol_ref_attr_op {test.unit}
+
 // CHECK: test.format_attr_dict_w_keyword attributes {attr = 10 : i64}
 test.format_attr_dict_w_keyword attributes {attr = 10 : i64}
 
@@ -196,6 +201,15 @@ test.format_optional_enum_attr case5
 // CHECK: test.format_optional_enum_attr
 // CHECK-NOT: "case5"
 test.format_optional_enum_attr
+
+// CHECK: test.format_optional_default_attrs "foo" @foo case10
+test.format_optional_default_attrs "foo" @foo case10
+
+// CHECK: test.format_optional_default_attr
+// CHECK-NOT: "default"
+// CHECK-NOT: @default
+// CHECK-NOT: case5
+test.format_optional_default_attrs "default" @default case5
 
 //===----------------------------------------------------------------------===//
 // Format optional operands and results
@@ -389,8 +403,17 @@ func.func @foo() {
   return
 }
 
+// CHECK: test.format_custom_directive_spacing "a" "b"
+test.format_custom_directive_spacing "a" "b"
+
 // CHECK: test.format_literal_following_optional_group(5 : i32) : i32 {a}
 test.format_literal_following_optional_group(5 : i32) : i32 {a}
+
+func.func @variadic(%a: i32) {
+  // CHECK: test.ellipsis(%{{.*}} ...) : i32 ...
+  test.ellipsis(%a ...) : i32 ...
+  return
+}
 
 //===----------------------------------------------------------------------===//
 // Format trait type inference
@@ -463,3 +486,18 @@ test.format_infer_variadic_type_from_non_variadic %i64, %i64 : i64
 
 // CHECK: test.has_str_value
 test.has_str_value {}
+
+//===----------------------------------------------------------------------===//
+// ElseAnchorOp
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @else_anchor_op
+func.func @else_anchor_op(%a: !test.else_anchor<?>, %b: !test.else_anchor<5>) {
+  // CHECK: test.else_anchor(?) {a = !test.else_anchor_struct<?>}
+  test.else_anchor(?) {a = !test.else_anchor_struct<?>}
+  // CHECK: test.else_anchor(%{{.*}} : !test.else_anchor<?>) {a = !test.else_anchor_struct<a = 0>}
+  test.else_anchor(%a : !test.else_anchor<?>) {a = !test.else_anchor_struct<a = 0>}
+  // CHECK: test.else_anchor(%{{.*}} : !test.else_anchor<5>) {a = !test.else_anchor_struct<b = 0>}
+  test.else_anchor(%b : !test.else_anchor<5>) {a = !test.else_anchor_struct<b = 0>}
+  return
+}

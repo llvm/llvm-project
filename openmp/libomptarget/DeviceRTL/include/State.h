@@ -19,7 +19,7 @@
 
 #pragma omp begin declare target device_type(nohost)
 
-namespace _OMP {
+namespace ompx {
 
 namespace memory {
 
@@ -109,7 +109,7 @@ struct ThreadStateTy {
   }
 };
 
-extern ThreadStateTy *ThreadStates[mapping::MaxThreadsPerTeam];
+extern ThreadStateTy **ThreadStates;
 #pragma omp allocate(ThreadStates) allocator(omp_pteam_mem_alloc)
 
 /// Initialize the state machinery. Must be called by all threads.
@@ -364,7 +364,7 @@ inline state::Value<uint32_t, state::VK_RunSched> RunSched;
 
 } // namespace icv
 
-} // namespace _OMP
+} // namespace ompx
 
 #pragma omp end declare target
 

@@ -71,6 +71,23 @@ define i32 @combine_sub_vscale_i32(i32 %in) nounwind {
  ret i32 %sub
 }
 
+; Tests of multiple uses of vscale when canonicalize
+; (sub X, (vscale * C)) to (add X,  (vscale * -C))
+define i64 @multiple_uses_sub_vscale_i64(i64 %x, i64 %y) nounwind {
+; CHECK-LABEL: multiple_uses_sub_vscale_i64:
+; CHECK-NEXT:  rdvl	x8, #1
+; CHECK-NEXT:  lsr	x8, x8, #4
+; CHECK-NEXT:  sub	x9, x0, x8
+; CHECK-NEXT:  add	x8, x1, x8
+; CHECK-NEXT:  mul	x0, x9, x8
+; CHECK-NEXT:  ret
+ %vscale = call i64 @llvm.vscale.i64()
+ %sub = sub i64 %x, %vscale
+ %add = add i64 %y, %vscale
+ %res = mul i64 %sub, %add
+ ret i64 %res
+}
+
 ; Fold (shl (vscale * C0), C1) to (vscale * (C0 << C1)).
 ; C0 = 1 , C1 = 4
 ; At IR level,  %shl = 2^4 * VSCALE.

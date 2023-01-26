@@ -22,6 +22,7 @@
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -108,7 +109,7 @@ void EnumCastOutOfRangeChecker::checkPreStmt(const CastExpr *CE,
   }
 
   // Get the value of the expression to cast.
-  const llvm::Optional<DefinedOrUnknownSVal> ValueToCast =
+  const std::optional<DefinedOrUnknownSVal> ValueToCast =
       C.getSVal(CE->getSubExpr()).getAs<DefinedOrUnknownSVal>();
 
   // If the value cannot be reasoned about (not even a DefinedOrUnknownSVal),

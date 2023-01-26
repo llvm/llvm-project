@@ -41,6 +41,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstring>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -1001,18 +1002,18 @@ bool IfStmt::isObjCAvailabilityCheck() const {
   return isa<ObjCAvailabilityCheckExpr>(getCond());
 }
 
-Optional<Stmt *> IfStmt::getNondiscardedCase(const ASTContext &Ctx) {
+std::optional<Stmt *> IfStmt::getNondiscardedCase(const ASTContext &Ctx) {
   if (!isConstexpr() || getCond()->isValueDependent())
-    return None;
+    return std::nullopt;
   return !getCond()->EvaluateKnownConstInt(Ctx) ? getElse() : getThen();
 }
 
-Optional<const Stmt *>
+std::optional<const Stmt *>
 IfStmt::getNondiscardedCase(const ASTContext &Ctx) const {
-  if (Optional<Stmt *> Result =
+  if (std::optional<Stmt *> Result =
           const_cast<IfStmt *>(this)->getNondiscardedCase(Ctx))
     return *Result;
-  return None;
+  return std::nullopt;
 }
 
 ForStmt::ForStmt(const ASTContext &C, Stmt *Init, Expr *Cond, VarDecl *condVar,

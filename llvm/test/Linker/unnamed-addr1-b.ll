@@ -6,8 +6,8 @@
 @global-e = unnamed_addr global i32 42
 @global-f = unnamed_addr global i32 42
 
-@alias-a =  unnamed_addr alias i32, i32* @global-f
-@alias-b =  unnamed_addr alias i32, i32* @global-f
+@alias-a =  unnamed_addr alias i32, ptr @global-f
+@alias-b =  unnamed_addr alias i32, ptr @global-f
 
 define weak void @func-c() unnamed_addr { ret void }
 define weak void @func-d() unnamed_addr { ret void }
@@ -18,8 +18,8 @@ define weak void @func-e() unnamed_addr { ret void }
 @global-i = global i32 42
 @global-j = global i32 42
 
-@alias-c =  alias i32, i32* @global-f
-@alias-d =  alias i32, i32* @global-f
+@alias-c =  alias i32, ptr @global-f
+@alias-d =  alias i32, ptr @global-f
 
 define weak void @func-g() { ret void }
 define weak void @func-h() { ret void }

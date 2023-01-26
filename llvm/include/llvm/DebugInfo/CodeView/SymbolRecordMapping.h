@@ -35,7 +35,7 @@ public:
 #include "llvm/DebugInfo/CodeView/CodeViewSymbols.def"
 
 private:
-  Optional<SymbolKind> Kind;
+  std::optional<SymbolKind> Kind;
 
   CodeViewRecordIO IO;
   CodeViewContainer Container;

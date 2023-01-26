@@ -14,9 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 static void replaceMoveWithForward(const UnresolvedLookupExpr *Callee,
                                    const ParmVarDecl *ParmVar,
@@ -112,7 +110,7 @@ void MoveForwardingReferenceCheck::check(
   // template as the function parameter of that type. (This implies that type
   // deduction will happen on the type.)
   const TemplateParameterList *Params = FuncTemplate->getTemplateParameters();
-  if (!std::count(Params->begin(), Params->end(), TypeParmDecl))
+  if (!llvm::is_contained(*Params, TypeParmDecl))
     return;
 
   auto Diag = diag(CallMove->getExprLoc(),
@@ -124,6 +122,4 @@ void MoveForwardingReferenceCheck::check(
                          *Result.Context);
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

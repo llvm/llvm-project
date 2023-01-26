@@ -34,10 +34,13 @@ add_subdirectory(inttypes)
 add_subdirectory(math)
 add_subdirectory(string)
 add_subdirectory(stdlib)
+add_subdirectory(stdio)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(fcntl)
+  add_subdirectory(sched)
   add_subdirectory(sys)
+  add_subdirectory(termios)
   add_subdirectory(unistd)
 endif()
 
@@ -46,11 +49,10 @@ if(NOT LLVM_LIBC_FULL_BUILD)
 endif()
 
 add_subdirectory(dirent)
-# The signal API is currently disabled as signal.h is incorrect.
-# since assert uses the signal API, we disable assert also.
-# add_subdirectory(assert)
-# add_subdirectory(signal)
-add_subdirectory(stdio)
+add_subdirectory(assert)
+add_subdirectory(setjmp)
+add_subdirectory(signal)
+add_subdirectory(spawn)
 add_subdirectory(time)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
@@ -81,45 +83,31 @@ add_custom_command(
 
   DEPENDS ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td ${spec_files}
           libc-prototype-testgen ${TARGET_PUBLIC_HEADERS}
-          llvmlibc
+          ${LIBC_TARGET}
 )
 
-add_executable(
-  libc-api-test
-  EXCLUDE_FROM_ALL
-  ${public_test}
+add_custom_target(libc-api-test)
+set(
+  allocator_entrypoints 
+    libc.src.stdlib.malloc
+    libc.src.stdlib.calloc
+    libc.src.stdlib.realloc
+    libc.src.stdlib.aligned_alloc
+    libc.src.stdlib.free
 )
-# Blank out default include directories to prevent accidentally including
-# system headers or our own internal headers.
-set_target_properties(
-  libc-api-test
-  PROPERTIES
-  INCLUDE_DIRECTORIES ""
+set(api-test-entrypoints ${TARGET_LLVMLIBC_ENTRYPOINTS})
+list(REMOVE_ITEM api-test-entrypoints ${allocator_entrypoints})
+add_integration_test(
+  api-test
+  SUITE
+    libc-api-test
+  SRCS
+    ${public_test}
+  STARTUP
+    libc.startup.linux.crt1
+  DEPENDS
+    ${api-test-entrypoints}
 )
-target_link_libraries(libc-api-test llvmlibc)
-
-# Only include we need is the include for cpp::IsSame and our generated
-# public headers.
-target_include_directories(
-  libc-api-test BEFORE
-  PRIVATE
-    "${LIBC_SOURCE_DIR}/src/__support/CPP"
-    "${LIBC_BUILD_DIR}/include"
-)
-target_compile_options(
-  libc-api-test
-  PRIVATE
-  -ffreestanding
-)
-target_link_options(
-  libc-api-test
-  PRIVATE "-nostdlib"
-)
-set(library_files)
-foreach(library_name IN LISTS "llvmlibc")
-  get_target_property(library_file ${library_name} "LIBRARY_FILE")
-  list(APPEND library_files ${library_file})
-endforeach()
 
 if(COMPILER_RESOURCE_DIR AND LLVM_LIBC_ENABLE_LINTING)
   add_custom_target(
@@ -139,8 +127,3 @@ if(COMPILER_RESOURCE_DIR AND LLVM_LIBC_ENABLE_LINTING)
   )
   add_dependencies(libc-api-test libc-api-test-tidy)
 endif()
-
-target_link_libraries(libc-api-test
-  PRIVATE
-  ${library_files}
-)

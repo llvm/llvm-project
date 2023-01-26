@@ -31,11 +31,11 @@ define void @_ZN3pov6ot_insEPPNS_14ot_node_structEPNS_15ot_block_structEPNS_12ot
 ; CHECK-GEN-ISEL-TRUE-NEXT:    .cfi_offset r30, -16
 ; CHECK-GEN-ISEL-TRUE-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-GEN-ISEL-TRUE-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-GEN-ISEL-TRUE-NEXT:    std r0, 16(r1)
 ; CHECK-GEN-ISEL-TRUE-NEXT:    stdu r1, -64(r1)
 ; CHECK-GEN-ISEL-TRUE-NEXT:    mr r30, r3
 ; CHECK-GEN-ISEL-TRUE-NEXT:    # implicit-def: $x3
 ; CHECK-GEN-ISEL-TRUE-NEXT:    # implicit-def: $r29
+; CHECK-GEN-ISEL-TRUE-NEXT:    std r0, 80(r1)
 ; CHECK-GEN-ISEL-TRUE-NEXT:    .p2align 4
 ; CHECK-GEN-ISEL-TRUE-NEXT:  .LBB0_1: # %while.cond11
 ; CHECK-GEN-ISEL-TRUE-NEXT:    #
@@ -71,11 +71,11 @@ define void @_ZN3pov6ot_insEPPNS_14ot_node_structEPNS_15ot_block_structEPNS_12ot
 ; CHECK-NEXT:    .cfi_offset r30, -16
 ; CHECK-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -64(r1)
 ; CHECK-NEXT:    mr r30, r3
 ; CHECK-NEXT:    # implicit-def: $x3
 ; CHECK-NEXT:    # implicit-def: $r29
+; CHECK-NEXT:    std r0, 80(r1)
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %while.cond11
 ; CHECK-NEXT:    #

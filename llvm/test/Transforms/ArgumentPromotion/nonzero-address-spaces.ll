@@ -16,11 +16,11 @@ define i32 @bar() {
 ;
 
 entry:
-  %call = call i32 @foo(i32* @g)
+  %call = call i32 @foo(ptr @g)
   ret i32 %call
 }
 
-define internal i32 @foo(i32*) {
+define internal i32 @foo(ptr) {
 ; CHECK-LABEL: define {{[^@]+}}@foo() addrspace(1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4

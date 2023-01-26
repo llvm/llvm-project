@@ -1,4 +1,4 @@
-; RUN: llc -fast-isel < %s | FileCheck %s
+; RUN: llc -opaque-pointers=0 -fast-isel < %s | FileCheck %s
 target datalayout = "e-m:o-p:32:32-i1:8:32-i8:8:32-i16:16:32-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
 target triple = "thumbv7-apple-ios5.0.0"
 

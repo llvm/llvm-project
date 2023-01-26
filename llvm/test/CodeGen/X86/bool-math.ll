@@ -262,10 +262,9 @@ define i8 @low_bit_select_constants_bigger_true_narrower_result(i16 %x) {
 define i1 @opaque_constant(i48 %x, i48 %y) {
 ; X64-LABEL: opaque_constant:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rsi, %rax
-; X64-NEXT:    shrq $32, %rdi
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    xorq %rsi, %rax
 ; X64-NEXT:    shrq $32, %rax
-; X64-NEXT:    xorl %edi, %eax
 ; X64-NEXT:    andl $1, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $rax
 ; X64-NEXT:    retq

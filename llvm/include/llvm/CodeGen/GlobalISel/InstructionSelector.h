@@ -16,7 +16,6 @@
 #define LLVM_CODEGEN_GLOBALISEL_INSTRUCTIONSELECTOR_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -27,6 +26,7 @@
 #include <cstdint>
 #include <functional>
 #include <initializer_list>
+#include <optional>
 #include <vector>
 
 namespace llvm {
@@ -468,7 +468,7 @@ public:
 
 protected:
   using ComplexRendererFns =
-      Optional<SmallVector<std::function<void(MachineInstrBuilder &)>, 4>>;
+      std::optional<SmallVector<std::function<void(MachineInstrBuilder &)>, 4>>;
   using RecordedMIVector = SmallVector<MachineInstr *, 4>;
   using NewMIVector = SmallVector<MachineInstrBuilder, 4>;
 

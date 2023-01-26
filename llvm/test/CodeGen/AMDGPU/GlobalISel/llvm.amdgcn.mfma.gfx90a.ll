@@ -10,7 +10,7 @@ declare <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double, double, <4 x doubl
 declare double @llvm.amdgcn.mfma.f64.4x4x4f64(double, double, double, i32, i32, i32)
 declare i32 @llvm.amdgcn.workitem.id.x()
 
-define amdgpu_kernel void @test_mfma_f32_32x32x4bf16_1k(<32 x float> addrspace(1)* %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_32x32x4bf16_1k(ptr addrspace(1) %arg) #0 {
 ; GCN-LABEL: test_mfma_f32_32x32x4bf16_1k:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx2 s[34:35], s[0:1], 0x24
@@ -70,15 +70,15 @@ define amdgpu_kernel void @test_mfma_f32_32x32x4bf16_1k(<32 x float> addrspace(1
 ; GCN-NEXT:    global_store_dwordx4 v0, a[28:31], s[34:35] offset:112
 ; GCN-NEXT:    s_endpgm
 bb:
-  %in.1 = load <32 x float>, <32 x float> addrspace(1)* %arg
+  %in.1 = load <32 x float>, ptr addrspace(1) %arg
   %a = bitcast i64 1 to <4 x i16>
   %b = bitcast i64 2 to <4 x i16>
   %mai.1 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x4bf16.1k(<4 x i16> %a, <4 x i16> %b, <32 x float> %in.1, i32 1, i32 2, i32 3)
-  store <32 x float> %mai.1, <32 x float> addrspace(1)* %arg
+  store <32 x float> %mai.1, ptr addrspace(1) %arg
   ret void
 }
 
-define amdgpu_kernel void @test_mfma_f32_16x16x4bf16_1k(<16 x float> addrspace(1)* %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_16x16x4bf16_1k(ptr addrspace(1) %arg) #0 {
 ; GCN-LABEL: test_mfma_f32_16x16x4bf16_1k:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx2 s[16:17], s[0:1], 0x24
@@ -116,15 +116,15 @@ define amdgpu_kernel void @test_mfma_f32_16x16x4bf16_1k(<16 x float> addrspace(1
 ; GCN-NEXT:    global_store_dwordx4 v0, a[12:15], s[16:17] offset:48
 ; GCN-NEXT:    s_endpgm
 bb:
-  %in.1 = load <16 x float>, <16 x float> addrspace(1)* %arg
+  %in.1 = load <16 x float>, ptr addrspace(1) %arg
   %a = bitcast i64 1 to <4 x i16>
   %b = bitcast i64 2 to <4 x i16>
   %mai.1 = tail call <16 x float> @llvm.amdgcn.mfma.f32.16x16x4bf16.1k(<4 x i16> %a, <4 x i16> %b, <16 x float> %in.1, i32 1, i32 2, i32 3)
-  store <16 x float> %mai.1, <16 x float> addrspace(1)* %arg
+  store <16 x float> %mai.1, ptr addrspace(1) %arg
   ret void
 }
 
-define amdgpu_kernel void @test_mfma_f32_4x4x4bf16_1k(<4 x float> addrspace(1)* %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_4x4x4bf16_1k(ptr addrspace(1) %arg) #0 {
 ; GCN-LABEL: test_mfma_f32_4x4x4bf16_1k:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
@@ -146,15 +146,15 @@ define amdgpu_kernel void @test_mfma_f32_4x4x4bf16_1k(<4 x float> addrspace(1)* 
 ; GCN-NEXT:    global_store_dwordx4 v0, a[0:3], s[4:5]
 ; GCN-NEXT:    s_endpgm
 bb:
-  %in.1 = load <4 x float>, <4 x float> addrspace(1)* %arg
+  %in.1 = load <4 x float>, ptr addrspace(1) %arg
   %a = bitcast i64 1 to <4 x i16>
   %b = bitcast i64 2 to <4 x i16>
   %mai.1 = tail call <4 x float> @llvm.amdgcn.mfma.f32.4x4x4bf16.1k(<4 x i16> %a, <4 x i16> %b, <4 x float> %in.1, i32 1, i32 2, i32 3)
-  store <4 x float> %mai.1, <4 x float> addrspace(1)* %arg
+  store <4 x float> %mai.1, ptr addrspace(1) %arg
   ret void
 }
 
-define amdgpu_kernel void @test_mfma_f32_32x32x8bf16_1k(<16 x float> addrspace(1)* %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_32x32x8bf16_1k(ptr addrspace(1) %arg) #0 {
 ; GCN-LABEL: test_mfma_f32_32x32x8bf16_1k:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx2 s[16:17], s[0:1], 0x24
@@ -193,15 +193,15 @@ define amdgpu_kernel void @test_mfma_f32_32x32x8bf16_1k(<16 x float> addrspace(1
 ; GCN-NEXT:    global_store_dwordx4 v0, a[12:15], s[16:17] offset:48
 ; GCN-NEXT:    s_endpgm
 bb:
-  %in.1 = load <16 x float>, <16 x float> addrspace(1)* %arg
+  %in.1 = load <16 x float>, ptr addrspace(1) %arg
   %a = bitcast i64 1 to <4 x i16>
   %b = bitcast i64 2 to <4 x i16>
   %mai.1 = tail call <16 x float> @llvm.amdgcn.mfma.f32.32x32x8bf16.1k(<4 x i16> %a, <4 x i16> %b, <16 x float> %in.1, i32 1, i32 2, i32 3)
-  store <16 x float> %mai.1, <16 x float> addrspace(1)* %arg
+  store <16 x float> %mai.1, ptr addrspace(1) %arg
   ret void
 }
 
-define amdgpu_kernel void @test_mfma_f32_16x16x16bf16_1k(<4 x float> addrspace(1)* %arg) #0 {
+define amdgpu_kernel void @test_mfma_f32_16x16x16bf16_1k(ptr addrspace(1) %arg) #0 {
 ; GCN-LABEL: test_mfma_f32_16x16x16bf16_1k:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
@@ -224,15 +224,15 @@ define amdgpu_kernel void @test_mfma_f32_16x16x16bf16_1k(<4 x float> addrspace(1
 ; GCN-NEXT:    global_store_dwordx4 v0, a[0:3], s[4:5]
 ; GCN-NEXT:    s_endpgm
 bb:
-  %in.1 = load <4 x float>, <4 x float> addrspace(1)* %arg
+  %in.1 = load <4 x float>, ptr addrspace(1) %arg
   %a = bitcast i64 1 to <4 x i16>
   %b = bitcast i64 2 to <4 x i16>
   %mai.1 = tail call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16bf16.1k(<4 x i16> %a, <4 x i16> %b, <4 x float> %in.1, i32 1, i32 2, i32 3)
-  store <4 x float> %mai.1, <4 x float> addrspace(1)* %arg
+  store <4 x float> %mai.1, ptr addrspace(1) %arg
   ret void
 }
 
-define amdgpu_kernel void @test_mfma_f64_4x4x4f64(double addrspace(1)* %arg, double %a, double %b) #0 {
+define amdgpu_kernel void @test_mfma_f64_4x4x4f64(ptr addrspace(1) %arg, double %a, double %b) #0 {
 ; GCN-LABEL: test_mfma_f64_4x4x4f64:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -251,11 +251,11 @@ define amdgpu_kernel void @test_mfma_f64_4x4x4f64(double addrspace(1)* %arg, dou
 bb:
   %mai.1 = tail call double @llvm.amdgcn.mfma.f64.4x4x4f64(double %a, double %b, double 0.0, i32 0, i32 0, i32 0)
   %mai.2 = tail call double @llvm.amdgcn.mfma.f64.4x4x4f64(double %a, double %b, double %mai.1, i32 1, i32 2, i32 3)
-  store double %mai.2, double addrspace(1)* %arg
+  store double %mai.2, ptr addrspace(1) %arg
   ret void
 }
 
-define amdgpu_kernel void @test_mfma_f64_16x16x4f64(<4 x double> addrspace(1)* %arg, double %a, double %b) #0 {
+define amdgpu_kernel void @test_mfma_f64_16x16x4f64(ptr addrspace(1) %arg, double %a, double %b) #0 {
 ; GCN-LABEL: test_mfma_f64_16x16x4f64:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x24
@@ -283,13 +283,13 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64(<4 x double> addrspace(1)* %
 ; GCN-NEXT:    global_store_dwordx4 v0, a[4:7], s[8:9] offset:16
 ; GCN-NEXT:    s_endpgm
 bb:
-  %in.1 = load <4 x double>, <4 x double> addrspace(1)* %arg
+  %in.1 = load <4 x double>, ptr addrspace(1) %arg
   %mai.1 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> %in.1, i32 1, i32 2, i32 3)
-  store <4 x double> %mai.1, <4 x double> addrspace(1)* %arg
+  store <4 x double> %mai.1, ptr addrspace(1) %arg
   ret void
 }
 
-define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm(<4 x double> addrspace(1)* %arg, double %a, double %b) #0 {
+define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm(ptr addrspace(1) %arg, double %a, double %b) #0 {
 ; GCN-LABEL: test_mfma_f64_16x16x4f64_splat_imm:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -310,11 +310,11 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm(<4 x double> addrs
 bb:
   %mai.1 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> <double 0.0, double 0.0, double 0.0, double 0.0>, i32 0, i32 0, i32 0)
   %mai.2 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> %mai.1, i32 1, i32 2, i32 3)
-  store <4 x double> %mai.2, <4 x double> addrspace(1)* %arg
+  store <4 x double> %mai.2, ptr addrspace(1) %arg
   ret void
 }
 
-define amdgpu_kernel void @test_mfma_f64_16x16x4f64_imm(<4 x double> addrspace(1)* %arg, double %a, double %b) #0 {
+define amdgpu_kernel void @test_mfma_f64_16x16x4f64_imm(ptr addrspace(1) %arg, double %a, double %b) #0 {
 ; GCN-LABEL: test_mfma_f64_16x16x4f64_imm:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx4 s[12:15], s[0:1], 0x24
@@ -345,11 +345,11 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_imm(<4 x double> addrspace(1
 ; GCN-NEXT:    s_endpgm
 bb:
   %mai.1 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> <double 0.0, double 0.0, double 0.0, double 1.0>, i32 0, i32 0, i32 0)
-  store <4 x double> %mai.1, <4 x double> addrspace(1)* %arg
+  store <4 x double> %mai.1, ptr addrspace(1) %arg
   ret void
 }
 
-define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_lit(<4 x double> addrspace(1)* %arg, double %a, double %b) #0 {
+define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_lit(ptr addrspace(1) %arg, double %a, double %b) #0 {
 ; GCN-LABEL: test_mfma_f64_16x16x4f64_splat_lit:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx4 s[12:15], s[0:1], 0x24
@@ -381,7 +381,7 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_lit(<4 x double> addrs
 ; GCN-NEXT:    s_endpgm
 bb:
   %mai.1 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> <double 123.0, double 123.0, double 123.0, double 123.0>, i32 0, i32 0, i32 0)
-  store <4 x double> %mai.1, <4 x double> addrspace(1)* %arg
+  store <4 x double> %mai.1, ptr addrspace(1) %arg
   ret void
 }
 

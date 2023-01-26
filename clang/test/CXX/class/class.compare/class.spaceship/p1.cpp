@@ -150,7 +150,7 @@ namespace Access {
   };
   struct B {
     A a; // expected-note {{would invoke a private 'operator<=>'}}
-    friend std::strong_ordering operator<=>(const B &, const B &) = default; // expected-warning {{deleted}}
+    friend std::strong_ordering operator<=>(const B &, const B &) = default; // expected-warning {{deleted}} expected-note{{replace 'default'}}
   };
 
   class C {
@@ -160,7 +160,7 @@ namespace Access {
   };
   struct D {
     C c; // expected-note {{would invoke a private 'operator=='}}
-    friend std::strong_ordering operator<=>(const D &, const D &) = default; // expected-warning {{deleted}}
+    friend std::strong_ordering operator<=>(const D &, const D &) = default; // expected-warning {{deleted}} expected-note{{replace 'default'}}
   };
 }
 

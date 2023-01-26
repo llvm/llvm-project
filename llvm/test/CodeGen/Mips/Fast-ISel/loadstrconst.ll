@@ -4,12 +4,12 @@
 ; RUN:     < %s | FileCheck %s
 
 @.str = private unnamed_addr constant [6 x i8] c"hello\00", align 1
-@s = common global i8* null, align 4
+@s = common global ptr null, align 4
 
 ; Function Attrs: nounwind
 define void @foo() #0 {
 entry:
-  store i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i32 0, i32 0), i8** @s, align 4
+  store ptr @.str, ptr @s, align 4
   ret void
 ; CHECK:        .ent    foo
 ; CHECK:        lw      $[[REG1:[0-9]+]], %got($.str)(${{[0-9]+}})

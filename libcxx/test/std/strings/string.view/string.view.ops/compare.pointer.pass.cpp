@@ -55,6 +55,7 @@ int main(int, char**)
     test("abcdefghijklmnopqrst", "abcdefghijklmnopqrst", 0);
     }
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
     test(L"", L"", 0);
     test(L"", L"abcde", -5);
@@ -73,6 +74,7 @@ int main(int, char**)
     test(L"abcdefghijklmnopqrst", L"abcdefghij", 10);
     test(L"abcdefghijklmnopqrst", L"abcdefghijklmnopqrst", 0);
     }
+#endif
 
 #if TEST_STD_VER >= 11
     {

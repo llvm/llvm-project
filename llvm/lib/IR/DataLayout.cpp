@@ -406,6 +406,9 @@ Error DataLayout::parseSpecifier(StringRef Desc) {
         return reportError("Invalid ABI alignment, must be a 16bit integer");
       if (ABIAlign != 0 && !isPowerOf2_64(ABIAlign))
         return reportError("Invalid ABI alignment, must be a power of 2");
+      if (AlignType == INTEGER_ALIGN && Size == 8 && ABIAlign != 1)
+        return reportError(
+            "Invalid ABI alignment, i8 must be naturally aligned");
 
       // Preferred alignment.
       unsigned PrefAlign = ABIAlign;
@@ -783,7 +786,7 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
   case Type::PPC_FP128TyID:
   case Type::FP128TyID:
   case Type::X86_FP80TyID: {
-    unsigned BitWidth = getTypeSizeInBits(Ty).getFixedSize();
+    unsigned BitWidth = getTypeSizeInBits(Ty).getFixedValue();
     auto I = findAlignmentLowerBound(FLOAT_ALIGN, BitWidth);
     if (I != Alignments.end() && I->AlignType == FLOAT_ALIGN &&
         I->TypeBitWidth == BitWidth)
@@ -800,7 +803,7 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
   case Type::X86_MMXTyID:
   case Type::FixedVectorTyID:
   case Type::ScalableVectorTyID: {
-    unsigned BitWidth = getTypeSizeInBits(Ty).getKnownMinSize();
+    unsigned BitWidth = getTypeSizeInBits(Ty).getKnownMinValue();
     auto I = findAlignmentLowerBound(VECTOR_ALIGN, BitWidth);
     if (I != Alignments.end() && I->AlignType == VECTOR_ALIGN &&
         I->TypeBitWidth == BitWidth)
@@ -812,10 +815,14 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
     // We're only calculating a natural alignment, so it doesn't have to be
     // based on the full size for scalable vectors. Using the minimum element
     // count should be enough here.
-    return Align(PowerOf2Ceil(getTypeStoreSize(Ty).getKnownMinSize()));
+    return Align(PowerOf2Ceil(getTypeStoreSize(Ty).getKnownMinValue()));
   }
   case Type::X86_AMXTyID:
     return Align(64);
+  case Type::TargetExtTyID: {
+    Type *LayoutTy = cast<TargetExtType>(Ty)->getLayoutType();
+    return getAlignment(LayoutTy, abi_or_pref);
+  }
   default:
     llvm_unreachable("Bad type for getAlignment!!!");
   }
@@ -925,8 +932,8 @@ static APInt getElementIndex(TypeSize ElemSize, APInt &Offset) {
   return Index;
 }
 
-Optional<APInt> DataLayout::getGEPIndexForOffset(Type *&ElemTy,
-                                                 APInt &Offset) const {
+std::optional<APInt> DataLayout::getGEPIndexForOffset(Type *&ElemTy,
+                                                      APInt &Offset) const {
   if (auto *ArrTy = dyn_cast<ArrayType>(ElemTy)) {
     ElemTy = ArrTy->getElementType();
     return getElementIndex(getTypeAllocSize(ElemTy), Offset);
@@ -934,10 +941,10 @@ Optional<APInt> DataLayout::getGEPIndexForOffset(Type *&ElemTy,
 
   if (auto *VecTy = dyn_cast<VectorType>(ElemTy)) {
     ElemTy = VecTy->getElementType();
-    unsigned ElemSizeInBits = getTypeSizeInBits(ElemTy).getFixedSize();
+    unsigned ElemSizeInBits = getTypeSizeInBits(ElemTy).getFixedValue();
     // GEPs over non-multiple of 8 size vector elements are invalid.
     if (ElemSizeInBits % 8 != 0)
-      return None;
+      return std::nullopt;
 
     return getElementIndex(TypeSize::Fixed(ElemSizeInBits / 8), Offset);
   }
@@ -946,7 +953,7 @@ Optional<APInt> DataLayout::getGEPIndexForOffset(Type *&ElemTy,
     const StructLayout *SL = getStructLayout(STy);
     uint64_t IntOffset = Offset.getZExtValue();
     if (IntOffset >= SL->getSizeInBytes())
-      return None;
+      return std::nullopt;
 
     unsigned Index = SL->getElementContainingOffset(IntOffset);
     Offset -= SL->getElementOffset(Index);
@@ -955,7 +962,7 @@ Optional<APInt> DataLayout::getGEPIndexForOffset(Type *&ElemTy,
   }
 
   // Non-aggregate type.
-  return None;
+  return std::nullopt;
 }
 
 SmallVector<APInt> DataLayout::getGEPIndicesForOffset(Type *&ElemTy,
@@ -964,7 +971,7 @@ SmallVector<APInt> DataLayout::getGEPIndicesForOffset(Type *&ElemTy,
   SmallVector<APInt> Indices;
   Indices.push_back(getElementIndex(getTypeAllocSize(ElemTy), Offset));
   while (Offset != 0) {
-    Optional<APInt> Index = getGEPIndexForOffset(ElemTy, Offset);
+    std::optional<APInt> Index = getGEPIndexForOffset(ElemTy, Offset);
     if (!Index)
       break;
     Indices.push_back(*Index);

@@ -97,10 +97,10 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          OptionalFileEntryRef File, StringRef SearchPath,
                           StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override {
-    // File is None if it wasn't found.
+    // File is std::nullopt if it wasn't found.
     // (We have some false negatives if PP recovered e.g. <foo> -> "foo")
     if (File)
       return;

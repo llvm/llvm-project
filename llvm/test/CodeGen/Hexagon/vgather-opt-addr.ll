@@ -32,65 +32,59 @@ target triple = "hexagon"
 define dso_local void @contiguos_vgather_test(i32 %Rb, i32 %mu, i32 %nloops, <32 x i32> %Vv, <64 x i32> %Vvv, <32 x i32> %Qs) local_unnamed_addr #0 {
 entry:
   %Vout1 = alloca <32 x i32>, align 128
-  %0 = bitcast <32 x i32>* %Vout1 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 128, i8* nonnull %0) #2
+  call void @llvm.lifetime.start.p0(i64 128, ptr nonnull %Vout1) #2
   %cmp23 = icmp sgt i32 %nloops, 0
   br i1 %cmp23, label %for.body.lr.ph, label %for.cond.cleanup
 
 for.body.lr.ph:                                   ; preds = %entry
-  %add.ptr = getelementptr inbounds <32 x i32>, <32 x i32>* %Vout1, i32 1
-  %1 = bitcast <32 x i32>* %add.ptr to i8*
-  %add.ptr1 = getelementptr inbounds <32 x i32>, <32 x i32>* %Vout1, i32 2
-  %2 = bitcast <32 x i32>* %add.ptr1 to i8*
-  %add.ptr2 = getelementptr inbounds <32 x i32>, <32 x i32>* %Vout1, i32 3
-  %3 = bitcast <32 x i32>* %add.ptr2 to i8*
-  %4 = tail call <128 x i1> @llvm.hexagon.V6.vandvrt.128B(<32 x i32> %Qs, i32 -1)
-  %add.ptr3 = getelementptr inbounds <32 x i32>, <32 x i32>* %Vout1, i32 4
-  %5 = bitcast <32 x i32>* %add.ptr3 to i8*
-  %add.ptr4 = getelementptr inbounds <32 x i32>, <32 x i32>* %Vout1, i32 5
-  %6 = bitcast <32 x i32>* %add.ptr4 to i8*
+  %add.ptr = getelementptr inbounds <32 x i32>, ptr %Vout1, i32 1
+  %add.ptr1 = getelementptr inbounds <32 x i32>, ptr %Vout1, i32 2
+  %add.ptr2 = getelementptr inbounds <32 x i32>, ptr %Vout1, i32 3
+  %0 = tail call <128 x i1> @llvm.hexagon.V6.vandvrt.128B(<32 x i32> %Qs, i32 -1)
+  %add.ptr3 = getelementptr inbounds <32 x i32>, ptr %Vout1, i32 4
+  %add.ptr4 = getelementptr inbounds <32 x i32>, ptr %Vout1, i32 5
   br label %for.body
 
 for.cond.cleanup:                                 ; preds = %for.body, %entry
-  call void @llvm.lifetime.end.p0i8(i64 128, i8* nonnull %0) #2
+  call void @llvm.lifetime.end.p0(i64 128, ptr nonnull %Vout1) #2
   ret void
 
 for.body:                                         ; preds = %for.body, %for.body.lr.ph
   %i.024 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
-  call void @llvm.hexagon.V6.vgathermh.128B(i8* nonnull %0, i32 %Rb, i32 %mu, <32 x i32> %Vv)
-  call void @llvm.hexagon.V6.vgathermw.128B(i8* nonnull %1, i32 %Rb, i32 %mu, <32 x i32> %Vv)
-  call void @llvm.hexagon.V6.vgathermhw.128B(i8* nonnull %2, i32 %Rb, i32 %mu, <64 x i32> %Vvv)
-  call void @llvm.hexagon.V6.vgathermhq.128B(i8* nonnull %3, <128 x i1> %4, i32 %Rb, i32 %mu, <32 x i32> %Vv)
-  call void @llvm.hexagon.V6.vgathermwq.128B(i8* nonnull %5, <128 x i1> %4, i32 %Rb, i32 %mu, <32 x i32> %Vv)
-  call void @llvm.hexagon.V6.vgathermhwq.128B(i8* nonnull %6, <128 x i1> %4, i32 %Rb, i32 %mu, <64 x i32> %Vvv)
+  call void @llvm.hexagon.V6.vgathermh.128B(ptr nonnull %Vout1, i32 %Rb, i32 %mu, <32 x i32> %Vv)
+  call void @llvm.hexagon.V6.vgathermw.128B(ptr nonnull %add.ptr, i32 %Rb, i32 %mu, <32 x i32> %Vv)
+  call void @llvm.hexagon.V6.vgathermhw.128B(ptr nonnull %add.ptr1, i32 %Rb, i32 %mu, <64 x i32> %Vvv)
+  call void @llvm.hexagon.V6.vgathermhq.128B(ptr nonnull %add.ptr2, <128 x i1> %0, i32 %Rb, i32 %mu, <32 x i32> %Vv)
+  call void @llvm.hexagon.V6.vgathermwq.128B(ptr nonnull %add.ptr3, <128 x i1> %0, i32 %Rb, i32 %mu, <32 x i32> %Vv)
+  call void @llvm.hexagon.V6.vgathermhwq.128B(ptr nonnull %add.ptr4, <128 x i1> %0, i32 %Rb, i32 %mu, <64 x i32> %Vvv)
   %inc = add nuw nsw i32 %i.024, 1
   %exitcond = icmp eq i32 %inc, %nloops
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.hexagon.V6.vgathermh.128B(i8*, i32, i32, <32 x i32>) #1
+declare void @llvm.hexagon.V6.vgathermh.128B(ptr, i32, i32, <32 x i32>) #1
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.hexagon.V6.vgathermw.128B(i8*, i32, i32, <32 x i32>) #1
+declare void @llvm.hexagon.V6.vgathermw.128B(ptr, i32, i32, <32 x i32>) #1
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.hexagon.V6.vgathermhw.128B(i8*, i32, i32, <64 x i32>) #1
+declare void @llvm.hexagon.V6.vgathermhw.128B(ptr, i32, i32, <64 x i32>) #1
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.hexagon.V6.vgathermhq.128B(i8*, <128 x i1>, i32, i32, <32 x i32>) #1
+declare void @llvm.hexagon.V6.vgathermhq.128B(ptr, <128 x i1>, i32, i32, <32 x i32>) #1
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.hexagon.V6.vgathermwq.128B(i8*, <128 x i1>, i32, i32, <32 x i32>) #1
+declare void @llvm.hexagon.V6.vgathermwq.128B(ptr, <128 x i1>, i32, i32, <32 x i32>) #1
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.hexagon.V6.vgathermhwq.128B(i8*, <128 x i1>, i32, i32, <64 x i32>) #1
+declare void @llvm.hexagon.V6.vgathermhwq.128B(ptr, <128 x i1>, i32, i32, <64 x i32>) #1
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
 
 declare <128 x i1> @llvm.hexagon.V6.vandvrt.128B(<32 x i32>, i32) #1
 

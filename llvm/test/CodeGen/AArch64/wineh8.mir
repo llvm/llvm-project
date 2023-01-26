@@ -163,10 +163,10 @@ body:             |
     frame-setup CFI_INSTRUCTION offset $b10, -104
     frame-setup CFI_INSTRUCTION offset $b11, -112
     $x19 = ADDXrr $x0, killed $x1
-    $d8 = FADDDrr killed $d0, $d1
-    $d9 = FADDDrr $d8, $d1
-    $d10 = FADDDrr $d9, $d8
-    $d11 = FADDDrr killed $d9, $d10
+    $d8 = FADDDrr killed $d0, $d1, implicit $fpcr
+    $d9 = FADDDrr $d8, $d1, implicit $fpcr
+    $d10 = FADDDrr $d9, $d8, implicit $fpcr
+    $d11 = FADDDrr killed $d9, $d10, implicit $fpcr
     $x20 = SUBSXrr $x19, killed $x0, implicit-def $nzcv
     Bcc 1, %bb.2, implicit killed $nzcv
     B %bb.1

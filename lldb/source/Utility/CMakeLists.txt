@@ -35,6 +35,7 @@ add_lldb_library(lldbUtility
   DataBufferLLVM.cpp
   DataEncoder.cpp
   DataExtractor.cpp
+  Diagnostics.cpp
   Environment.cpp
   Event.cpp
   FileSpec.cpp
@@ -48,9 +49,7 @@ add_lldb_library(lldbUtility
   ProcessInfo.cpp
   RegisterValue.cpp
   RegularExpression.cpp
-  Reproducer.cpp
   Instrumentation.cpp
-  ReproducerProvider.cpp
   Scalar.cpp
   SelectHelper.cpp
   State.cpp
@@ -82,4 +81,5 @@ add_lldb_library(lldbUtility
   LINK_COMPONENTS
     BinaryFormat
     Support
+    TargetParser
   )

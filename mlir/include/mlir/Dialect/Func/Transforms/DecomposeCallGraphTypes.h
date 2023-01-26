@@ -19,6 +19,7 @@
 #define MLIR_DIALECT_FUNC_TRANSFORMS_DECOMPOSECALLGRAPHTYPES_H
 
 #include "mlir/Transforms/DialectConversion.h"
+#include <optional>
 
 namespace mlir {
 
@@ -60,20 +61,22 @@ public:
   }
 
 private:
-  using DecomposeValueConversionCallFn = std::function<Optional<LogicalResult>(
-      OpBuilder &, Location, Type, Value, SmallVectorImpl<Value> &)>;
+  using DecomposeValueConversionCallFn =
+      std::function<std::optional<LogicalResult>(
+          OpBuilder &, Location, Type, Value, SmallVectorImpl<Value> &)>;
 
   /// Generate a wrapper for the given decompose value conversion callback.
   template <typename T, typename FnT>
   DecomposeValueConversionCallFn
   wrapDecomposeValueConversionCallback(FnT &&callback) {
-    return [callback = std::forward<FnT>(callback)](
-               OpBuilder &builder, Location loc, Type type, Value value,
-               SmallVectorImpl<Value> &newValues) -> Optional<LogicalResult> {
-      if (T derivedType = type.dyn_cast<T>())
-        return callback(builder, loc, derivedType, value, newValues);
-      return llvm::None;
-    };
+    return
+        [callback = std::forward<FnT>(callback)](
+            OpBuilder &builder, Location loc, Type type, Value value,
+            SmallVectorImpl<Value> &newValues) -> std::optional<LogicalResult> {
+          if (T derivedType = type.dyn_cast<T>())
+            return callback(builder, loc, derivedType, value, newValues);
+          return std::nullopt;
+        };
   }
 
   SmallVector<DecomposeValueConversionCallFn, 2> decomposeValueConversions;

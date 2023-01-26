@@ -7,7 +7,7 @@
 
   define i32 @e() optsize {
   entry:
-    %.pr = load i32, i32* @d, align 4
+    %.pr = load i32, ptr @d, align 4
     %cmp13 = icmp sgt i32 %.pr, -1
     br i1 %cmp13, label %for.cond1.preheader.preheader, label %for.end9
 
@@ -18,20 +18,20 @@
 
   for.cond1.preheader:                              ; preds = %for.cond1.preheader.preheader, %for.cond1.preheader
     %2 = phi i32 [ %1, %for.cond1.preheader.preheader ], [ %3, %for.cond1.preheader ]
-    call void @llvm.memset.p0i8.i32(i8* nonnull align 4 dereferenceable(24) bitcast ([1 x i32]* @c to i8*), i8 0, i32 24, i1 false)
+    call void @llvm.memset.p0.i32(ptr nonnull align 4 dereferenceable(24) @c, i8 0, i32 24, i1 false)
     %3 = call i32 @llvm.loop.decrement.reg.i32(i32 %2, i32 1)
     %4 = icmp ne i32 %3, 0
     br i1 %4, label %for.cond1.preheader, label %for.cond.for.end9_crit_edge
 
   for.cond.for.end9_crit_edge:                      ; preds = %for.cond1.preheader
-    store i32 -1, i32* @d, align 4
+    store i32 -1, ptr @d, align 4
     br label %for.end9
 
   for.end9:                                         ; preds = %for.cond.for.end9_crit_edge, %entry
     ret i32 undef
   }
 
-  declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1 immarg)
+  declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)
   declare i32 @llvm.start.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32(i32, i32)
 

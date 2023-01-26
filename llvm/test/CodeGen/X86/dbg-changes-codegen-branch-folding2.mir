@@ -46,7 +46,7 @@
     br i1 1, label %for.cond.cleanup, label %for.body.11
   
   for.body.11:
-    %d.0.d.0..12 = load volatile i8, i8* %d, align 1
+    %d.0.d.0..12 = load volatile i8, ptr %d, align 1
     call void @llvm.dbg.value(metadata i8 %d.0.d.0..12, metadata !16, metadata !DIExpression()), !dbg !19
     br label %for.cond.cleanup
   }

@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars
+; RUN: opt < %s -passes=indvars
 
 ; An invoke has a result value which is used in an "Interesting"
 ; expression inside the loop. IndVars should be able to rewrite
@@ -7,11 +7,11 @@
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:32:32"
 target triple = "i386-pc-linux-gnu"
   %struct.string___XUB = type { i32, i32 }
-  %struct.string___XUP = type { [0 x i8]*, %struct.string___XUB* }
-@.str7 = external constant [24 x i8]            ; <[24 x i8]*> [#uses=1]
-@C.17.316 = external constant %struct.string___XUB              ; <%struct.string___XUB*> [#uses=1]
+  %struct.string___XUP = type { ptr, ptr }
+@.str7 = external constant [24 x i8]            ; <ptr> [#uses=1]
+@C.17.316 = external constant %struct.string___XUB              ; <ptr> [#uses=1]
 
-define void @_ada_c35503g() personality i32 (...)* @__gxx_personality_v0 {
+define void @_ada_c35503g() personality ptr @__gxx_personality_v0 {
 entry:
   br label %bb
 
@@ -32,11 +32,11 @@ invcont127:             ; preds = %bb123
   br i1 %2, label %bb178, label %bb128
 
 bb128:          ; preds = %invcont127
-  invoke void @system__img_int__image_integer(%struct.string___XUP* noalias sret(%struct.string___XUP) null, i32 %i.0)
+  invoke void @system__img_int__image_integer(ptr noalias sret(%struct.string___XUP) null, i32 %i.0)
       to label %invcont129 unwind label %lpad266
 
 invcont129:             ; preds = %bb128
-  invoke void @system__string_ops__str_concat(%struct.string___XUP* noalias sret(%struct.string___XUP) null, [0 x i8]* bitcast ([24 x i8]* @.str7 to [0 x i8]*), %struct.string___XUB* @C.17.316, [0 x i8]* null, %struct.string___XUB* null)
+  invoke void @system__string_ops__str_concat(ptr noalias sret(%struct.string___XUP) null, ptr @.str7, ptr @C.17.316, ptr null, ptr null)
       to label %invcont138 unwind label %lpad266
 
 invcont138:             ; preds = %invcont129
@@ -47,15 +47,15 @@ bb178:          ; preds = %invcont127
   br label %bb123
 
 lpad266:                ; preds = %invcont129, %bb128, %bb123
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
             cleanup
   unreachable
 }
 
 declare i32 @__gxx_personality_v0(...)
 
-declare void @system__img_int__image_integer(%struct.string___XUP* noalias sret(%struct.string___XUP), i32)
+declare void @system__img_int__image_integer(ptr noalias sret(%struct.string___XUP), i32)
 
-declare void @system__string_ops__str_concat(%struct.string___XUP* noalias sret(%struct.string___XUP), [0 x i8]*, %struct.string___XUB*, [0 x i8]*, %struct.string___XUB*)
+declare void @system__string_ops__str_concat(ptr noalias sret(%struct.string___XUP), ptr, ptr, ptr, ptr)
 
 declare i32 @report__ident_int(i32)

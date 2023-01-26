@@ -814,7 +814,7 @@ public:
   }
 
   ArrayRef<SourceLocation> getProtocolLocs() const {
-    return llvm::makeArrayRef(getProtocolLocArray(), getNumProtocols());
+    return llvm::ArrayRef(getProtocolLocArray(), getNumProtocols());
   }
 
   void initializeLocal(ASTContext &Context, SourceLocation Loc);
@@ -1020,7 +1020,7 @@ public:
 
 
   ArrayRef<SourceLocation> getProtocolLocs() const {
-    return llvm::makeArrayRef(getProtocolLocArray(), getNumProtocols());
+    return llvm::ArrayRef(getProtocolLocArray(), getNumProtocols());
   }
 
   bool hasBaseTypeAsWritten() const {
@@ -1447,7 +1447,7 @@ public:
   }
 
   ArrayRef<ParmVarDecl *> getParams() const {
-    return llvm::makeArrayRef(getParmArray(), getNumParams());
+    return llvm::ArrayRef(getParmArray(), getNumParams());
   }
 
   // ParmVarDecls* are stored after Info, one for each parameter.
@@ -1634,7 +1634,7 @@ public:
   }
 
   unsigned getNumArgs() const {
-    return getTypePtr()->getNumArgs();
+    return getTypePtr()->template_arguments().size();
   }
 
   void setArgLocInfo(unsigned i, TemplateArgumentLocInfo AI) {
@@ -1646,7 +1646,8 @@ public:
   }
 
   TemplateArgumentLoc getArgLoc(unsigned i) const {
-    return TemplateArgumentLoc(getTypePtr()->getArg(i), getArgLocInfo(i));
+    return TemplateArgumentLoc(getTypePtr()->template_arguments()[i],
+                               getArgLocInfo(i));
   }
 
   SourceLocation getTemplateNameLoc() const {
@@ -1681,12 +1682,12 @@ public:
     setTemplateNameLoc(Loc);
     setLAngleLoc(Loc);
     setRAngleLoc(Loc);
-    initializeArgLocs(Context, getNumArgs(), getTypePtr()->getArgs(),
+    initializeArgLocs(Context, getTypePtr()->template_arguments(),
                       getArgInfos(), Loc);
   }
 
-  static void initializeArgLocs(ASTContext &Context, unsigned NumArgs,
-                                const TemplateArgument *Args,
+  static void initializeArgLocs(ASTContext &Context,
+                                ArrayRef<TemplateArgument> Args,
                                 TemplateArgumentLocInfo *ArgInfos,
                                 SourceLocation Loc);
 
@@ -1934,7 +1935,7 @@ struct TypeOfExprTypeLocInfo : public TypeofLocInfo {
 };
 
 struct TypeOfTypeLocInfo : public TypeofLocInfo {
-  TypeSourceInfo* UnderlyingTInfo;
+  TypeSourceInfo *UnmodifiedTInfo;
 };
 
 template <class Derived, class TypeClass, class LocalData = TypeofLocInfo>
@@ -2002,16 +2003,16 @@ public:
 class TypeOfTypeLoc
   : public TypeofLikeTypeLoc<TypeOfTypeLoc, TypeOfType, TypeOfTypeLocInfo> {
 public:
-  QualType getUnderlyingType() const {
-    return this->getTypePtr()->getUnderlyingType();
+  QualType getUnmodifiedType() const {
+    return this->getTypePtr()->getUnmodifiedType();
   }
 
-  TypeSourceInfo* getUnderlyingTInfo() const {
-    return this->getLocalData()->UnderlyingTInfo;
+  TypeSourceInfo *getUnmodifiedTInfo() const {
+    return this->getLocalData()->UnmodifiedTInfo;
   }
 
-  void setUnderlyingTInfo(TypeSourceInfo* TI) const {
-    this->getLocalData()->UnderlyingTInfo = TI;
+  void setUnmodifiedTInfo(TypeSourceInfo *TI) const {
+    this->getLocalData()->UnmodifiedTInfo = TI;
   }
 
   void initializeLocal(ASTContext &Context, SourceLocation Loc);
@@ -2188,7 +2189,7 @@ public:
   }
 
   unsigned getNumArgs() const {
-    return getTypePtr()->getNumArgs();
+    return getTypePtr()->getTypeConstraintArguments().size();
   }
 
   void setArgLocInfo(unsigned i, TemplateArgumentLocInfo AI) {
@@ -2464,7 +2465,7 @@ public:
   }
 
   unsigned getNumArgs() const {
-    return getTypePtr()->getNumArgs();
+    return getTypePtr()->template_arguments().size();
   }
 
   void setArgLocInfo(unsigned i, TemplateArgumentLocInfo AI) {
@@ -2476,7 +2477,8 @@ public:
   }
 
   TemplateArgumentLoc getArgLoc(unsigned i) const {
-    return TemplateArgumentLoc(getTypePtr()->getArg(i), getArgLocInfo(i));
+    return TemplateArgumentLoc(getTypePtr()->template_arguments()[i],
+                               getArgLocInfo(i));
   }
 
   SourceRange getLocalSourceRange() const {

@@ -43,6 +43,8 @@ source_set("sources") {
     "release.h",
     "report.cpp",
     "report.h",
+    "rss_limit_checker.cpp",
+    "rss_limit_checker.h",
     "secondary.h",
     "size_class_map.h",
     "stack_depot.h",

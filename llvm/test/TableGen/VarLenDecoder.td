@@ -59,17 +59,17 @@ def FOO32 : MyVarInst<MemOp32> {
 
 // CHECK:      case 0:
 // CHECK-NEXT: tmp = fieldFromInstruction(insn, 8, 3);
-// CHECK-NEXT: if (DecodeRegClassRegisterClass(MI, tmp, Address, Decoder) == MCDisassembler::Fail) { return MCDisassembler::Fail; }
+// CHECK-NEXT: if (!Check(S, DecodeRegClassRegisterClass(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }
 // CHECK-NEXT: tmp = fieldFromInstruction(insn, 0, 3);
-// CHECK-NEXT: if (DecodeRegClassRegisterClass(MI, tmp, Address, Decoder) == MCDisassembler::Fail) { return MCDisassembler::Fail; }
+// CHECK-NEXT: if (!Check(S, DecodeRegClassRegisterClass(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }
 // CHECK-NEXT: tmp = fieldFromInstruction(insn, 11, 16);
 // CHECK-NEXT: MI.addOperand(MCOperand::createImm(tmp));
 // CHECK-NEXT: return S;
 // CHECK-NEXT: case 1:
 // CHECK-NEXT: tmp = fieldFromInstruction(insn, 8, 3);
-// CHECK-NEXT: if (DecodeRegClassRegisterClass(MI, tmp, Address, Decoder) == MCDisassembler::Fail) { return MCDisassembler::Fail; }
+// CHECK-NEXT: if (!Check(S, DecodeRegClassRegisterClass(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }
 // CHECK-NEXT: tmp = fieldFromInstruction(insn, 0, 3);
-// CHECK-NEXT: if (DecodeRegClassRegisterClass(MI, tmp, Address, Decoder) == MCDisassembler::Fail) { return MCDisassembler::Fail; }
+// CHECK-NEXT: if (!Check(S, DecodeRegClassRegisterClass(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }
 // CHECK-NEXT: tmp = 0x0;
 // CHECK-NEXT: insertBits(tmp, fieldFromInstruction(insn, 11, 16), 16, 16);
 // CHECK-NEXT: insertBits(tmp, fieldFromInstruction(insn, 27, 16), 0, 16);

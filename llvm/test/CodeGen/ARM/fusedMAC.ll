@@ -150,10 +150,10 @@ entry:
   ret double %tmp2
 }
 
-define arm_aapcs_vfpcc float @test_fnms_f32(float %a, float %b, float* %c) nounwind readnone ssp {
+define arm_aapcs_vfpcc float @test_fnms_f32(float %a, float %b, ptr %c) nounwind readnone ssp {
 ; CHECK: test_fnms_f32
 ; CHECK: vfnms.f32
-  %tmp1 = load float, float* %c, align 4
+  %tmp1 = load float, ptr %c, align 4
   %tmp2 = fsub float -0.0, %tmp1
   %tmp3 = tail call float @llvm.fma.f32(float %a, float %b, float %tmp2) nounwind readnone
   ret float %tmp3 
@@ -216,13 +216,13 @@ define arm_aapcs_vfpcc float @test_fma_canonicalize(float %a, float %b) nounwind
 }
 
 ; Check that very wide vector fma's can be split into legal fma's.
-define arm_aapcs_vfpcc void @test_fma_v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float>* %p) nounwind readnone ssp {
+define arm_aapcs_vfpcc void @test_fma_v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %c, ptr %p) nounwind readnone ssp {
 ; CHECK: test_fma_v8f32
 ; CHECK: vfma.f32
 ; CHECK: vfma.f32
 entry:
   %call = tail call <8 x float> @llvm.fma.v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %c) nounwind readnone
-  store <8 x float> %call, <8 x float>* %p, align 16
+  store <8 x float> %call, ptr %p, align 16
   ret void
 }
 

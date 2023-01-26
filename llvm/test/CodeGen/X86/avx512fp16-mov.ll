@@ -963,13 +963,13 @@ define <16 x half> @movrrkz16f16(<16 x half> %a, i16 %msk) {
 define <8 x half> @load8f16(ptr %a) {
 ; X64-LABEL: load8f16:
 ; X64:       # %bb.0:
-; X64-NEXT:    movaps (%rdi), %xmm0
+; X64-NEXT:    vmovaps (%rdi), %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: load8f16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movaps (%eax), %xmm0
+; X86-NEXT:    vmovaps (%eax), %xmm0
 ; X86-NEXT:    retl
   %res = load <8 x half>, ptr %a
   ret <8 x half> %res
@@ -1016,13 +1016,13 @@ define <8 x half> @load8f16maskz(ptr %a, i8 %c) {
 define <8 x half> @loadu8f16(ptr %a) {
 ; X64-LABEL: loadu8f16:
 ; X64:       # %bb.0:
-; X64-NEXT:    movups (%rdi), %xmm0
+; X64-NEXT:    vmovups (%rdi), %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: loadu8f16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movups (%eax), %xmm0
+; X86-NEXT:    vmovups (%eax), %xmm0
 ; X86-NEXT:    retl
   %res = load <8 x half>, ptr %a, align 8
   ret <8 x half> %res
@@ -1070,12 +1070,12 @@ define void @store8f16(<8 x half> %a) {
 ; X64-LABEL: store8f16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq g8f16@GOTPCREL(%rip), %rax
-; X64-NEXT:    movaps %xmm0, (%rax)
+; X64-NEXT:    vmovaps %xmm0, (%rax)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: store8f16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movaps %xmm0, g8f16
+; X86-NEXT:    vmovaps %xmm0, g8f16
 ; X86-NEXT:    retl
   store <8 x half> %a, ptr @g8f16
   ret void
@@ -1085,12 +1085,12 @@ define void @storeu8f16(<8 x half> %a) {
 ; X64-LABEL: storeu8f16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq g8f16u@GOTPCREL(%rip), %rax
-; X64-NEXT:    movups %xmm0, (%rax)
+; X64-NEXT:    vmovups %xmm0, (%rax)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: storeu8f16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movups %xmm0, g8f16u
+; X86-NEXT:    vmovups %xmm0, g8f16u
 ; X86-NEXT:    retl
   store <8 x half> %a, ptr @g8f16u, align 8
   ret void
@@ -1346,6 +1346,74 @@ define half @extract_f16_7(<8 x half> %x) {
 ; CHECK-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    ret{{[l|q]}}
    %res = extractelement <8 x half> %x, i32 7
+   ret half %res
+}
+
+define half @extract_f16_8(<32 x half> %x, i64 %idx) nounwind {
+; X64-LABEL: extract_f16_8:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbp
+; X64-NEXT:    movq %rsp, %rbp
+; X64-NEXT:    andq $-64, %rsp
+; X64-NEXT:    subq $128, %rsp
+; X64-NEXT:    andl $31, %edi
+; X64-NEXT:    vmovaps %zmm0, (%rsp)
+; X64-NEXT:    vmovsh (%rsp,%rdi,2), %xmm0
+; X64-NEXT:    movq %rbp, %rsp
+; X64-NEXT:    popq %rbp
+; X64-NEXT:    vzeroupper
+; X64-NEXT:    retq
+;
+; X86-LABEL: extract_f16_8:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    andl $-64, %esp
+; X86-NEXT:    subl $128, %esp
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    andl $31, %eax
+; X86-NEXT:    vmovaps %zmm0, (%esp)
+; X86-NEXT:    vmovsh (%esp,%eax,2), %xmm0
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    vzeroupper
+; X86-NEXT:    retl
+   %res = extractelement <32 x half> %x, i64 %idx
+   ret half %res
+}
+
+define half @extract_f16_9(<64 x half> %x, i64 %idx) nounwind {
+; X64-LABEL: extract_f16_9:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbp
+; X64-NEXT:    movq %rsp, %rbp
+; X64-NEXT:    andq $-64, %rsp
+; X64-NEXT:    subq $192, %rsp
+; X64-NEXT:    andl $63, %edi
+; X64-NEXT:    vmovaps %zmm1, {{[0-9]+}}(%rsp)
+; X64-NEXT:    vmovaps %zmm0, (%rsp)
+; X64-NEXT:    vmovsh (%rsp,%rdi,2), %xmm0
+; X64-NEXT:    movq %rbp, %rsp
+; X64-NEXT:    popq %rbp
+; X64-NEXT:    vzeroupper
+; X64-NEXT:    retq
+;
+; X86-LABEL: extract_f16_9:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    andl $-64, %esp
+; X86-NEXT:    subl $192, %esp
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    andl $63, %eax
+; X86-NEXT:    vmovaps %zmm1, {{[0-9]+}}(%esp)
+; X86-NEXT:    vmovaps %zmm0, (%esp)
+; X86-NEXT:    vmovsh (%esp,%eax,2), %xmm0
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    vzeroupper
+; X86-NEXT:    retl
+   %res = extractelement <64 x half> %x, i64 %idx
    ret half %res
 }
 
@@ -1985,10 +2053,10 @@ define void @pr52560(i8 %0, <2 x i16> %1, ptr %c) nounwind {
 ; X64-NEXT:    vmovdqu16 %xmm0, %xmm0 {%k1} {z}
 ; X64-NEXT:    vmovw %xmm0, %eax
 ; X64-NEXT:    testw %ax, %ax
-; X64-NEXT:    je .LBB121_2
+; X64-NEXT:    je .LBB123_2
 ; X64-NEXT:  # %bb.1: # %for.body.preheader
 ; X64-NEXT:    movb $0, (%rsi)
-; X64-NEXT:  .LBB121_2: # %for.end
+; X64-NEXT:  .LBB123_2: # %for.end
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: pr52560:
@@ -2000,11 +2068,11 @@ define void @pr52560(i8 %0, <2 x i16> %1, ptr %c) nounwind {
 ; X86-NEXT:    vmovdqu16 %xmm0, %xmm0 {%k1} {z}
 ; X86-NEXT:    vmovw %xmm0, %eax
 ; X86-NEXT:    testw %ax, %ax
-; X86-NEXT:    je .LBB121_2
+; X86-NEXT:    je .LBB123_2
 ; X86-NEXT:  # %bb.1: # %for.body.preheader
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movb $0, (%eax)
-; X86-NEXT:  .LBB121_2: # %for.end
+; X86-NEXT:  .LBB123_2: # %for.end
 ; X86-NEXT:    retl
 entry:
   %conv = sext i8 %0 to i16
@@ -2026,10 +2094,10 @@ for.end:                                          ; preds = %for.body.preheader,
 define <16 x i32> @pr52561(<16 x i32> %a, <16 x i32> %b) "min-legal-vector-width"="256" "prefer-vector-width"="256" nounwind {
 ; X64-LABEL: pr52561:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpbroadcastd {{.*#+}} ymm4 = [112,112,112,112,112,112,112,112]
-; X64-NEXT:    vpaddd %ymm4, %ymm2, %ymm2
+; X64-NEXT:    vpaddd %ymm3, %ymm1, %ymm1
 ; X64-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
-; X64-NEXT:    vpaddd %ymm4, %ymm3, %ymm2
+; X64-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [112,112,112,112,112,112,112,112]
+; X64-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; X64-NEXT:    vpaddd %ymm2, %ymm1, %ymm1
 ; X64-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
 ; X64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
@@ -2042,11 +2110,11 @@ define <16 x i32> @pr52561(<16 x i32> %a, <16 x i32> %b) "min-legal-vector-width
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-32, %esp
 ; X86-NEXT:    subl $32, %esp
-; X86-NEXT:    vpaddd 8(%ebp), %ymm1, %ymm1
-; X86-NEXT:    vpbroadcastd {{.*#+}} ymm3 = [112,112,112,112,112,112,112,112]
-; X86-NEXT:    vpaddd %ymm3, %ymm2, %ymm2
 ; X86-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
-; X86-NEXT:    vpaddd %ymm3, %ymm1, %ymm1
+; X86-NEXT:    vpaddd 8(%ebp), %ymm1, %ymm1
+; X86-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [112,112,112,112,112,112,112,112]
+; X86-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
+; X86-NEXT:    vpaddd %ymm2, %ymm1, %ymm1
 ; X86-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %ymm1, %ymm1
 ; X86-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; X86-NEXT:    vmovsh %xmm0, %xmm2, %xmm0
@@ -2057,4 +2125,28 @@ define <16 x i32> @pr52561(<16 x i32> %a, <16 x i32> %b) "min-legal-vector-width
   %2 = add <16 x i32> %1, %b
   %3 = and <16 x i32> %2, <i32 65535, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 65535>
   ret <16 x i32> %3
+}
+
+define <8 x i16> @pr59628_xmm(i16 %arg) {
+; X64-LABEL: pr59628_xmm:
+; X64:       # %bb.0:
+; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X64-NEXT:    vpbroadcastw %edi, %xmm1
+; X64-NEXT:    vmovsh %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vpcmpneqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %k1
+; X64-NEXT:    vmovdqu16 %xmm0, %xmm0 {%k1} {z}
+; X64-NEXT:    retq
+;
+; X86-LABEL: pr59628_xmm:
+; X86:       # %bb.0:
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X86-NEXT:    vpbroadcastw %eax, %xmm1
+; X86-NEXT:    vmovsh %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vpcmpneqw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %k1
+; X86-NEXT:    vmovdqu16 %xmm0, %xmm0 {%k1} {z}
+; X86-NEXT:    retl
+  %I1 = insertelement <8 x i16> zeroinitializer, i16 %arg, i16 0
+  %I2 = insertelement <8 x i16> %I1, i16 0, i16 %arg
+  ret <8 x i16> %I2
 }

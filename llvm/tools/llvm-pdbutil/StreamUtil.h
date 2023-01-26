@@ -9,11 +9,11 @@
 #ifndef LLVM_TOOLS_LLVMPDBDUMP_STREAMUTIL_H
 #define LLVM_TOOLS_LLVMPDBDUMP_STREAMUTIL_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <string>
+#include <optional>
 
 namespace llvm {
 namespace pdb {
@@ -52,7 +52,7 @@ private:
   StreamPurpose Purpose;
   uint32_t StreamIndex;
   std::string Name;
-  Optional<uint32_t> ModuleIndex;
+  std::optional<uint32_t> ModuleIndex;
 };
 
 void discoverStreamPurposes(PDBFile &File,

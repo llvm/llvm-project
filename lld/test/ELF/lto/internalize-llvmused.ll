@@ -14,7 +14,7 @@ define hidden void @f() {
   ret void
 }
 
-@llvm.used = appending global [1 x i8*] [ i8* bitcast (void ()* @f to i8*)]
+@llvm.used = appending global [1 x ptr] [ ptr @f]
 
 ; Check that f is not internalized.
 ; CHECK: define hidden void @f()

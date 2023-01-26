@@ -14,8 +14,6 @@
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -33,6 +31,7 @@
 #include <iterator>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -455,10 +454,10 @@ class SegmentBuilder {
 
   /// Emit segments for active regions which end before \p Loc.
   ///
-  /// \p Loc: The start location of the next region. If None, all active
+  /// \p Loc: The start location of the next region. If std::nullopt, all active
   /// regions are completed.
   /// \p FirstCompletedRegion: Index of the first completed region.
-  void completeRegionsUntil(Optional<LineColPair> Loc,
+  void completeRegionsUntil(std::optional<LineColPair> Loc,
                             unsigned FirstCompletedRegion) {
     // Sort the completed regions by end location. This makes it simple to
     // emit closing segments in sorted order.
@@ -557,7 +556,7 @@ class SegmentBuilder {
 
     // Complete any remaining active regions.
     if (!ActiveRegions.empty())
-      completeRegionsUntil(None, 0);
+      completeRegionsUntil(std::nullopt, 0);
   }
 
   /// Sort a nested sequence of regions from a single file.
@@ -676,25 +675,27 @@ static SmallBitVector gatherFileIDs(StringRef SourceFile,
 }
 
 /// Return the ID of the file where the definition of the function is located.
-static Optional<unsigned> findMainViewFileID(const FunctionRecord &Function) {
+static std::optional<unsigned>
+findMainViewFileID(const FunctionRecord &Function) {
   SmallBitVector IsNotExpandedFile(Function.Filenames.size(), true);
   for (const auto &CR : Function.CountedRegions)
     if (CR.Kind == CounterMappingRegion::ExpansionRegion)
       IsNotExpandedFile[CR.ExpandedFileID] = false;
   int I = IsNotExpandedFile.find_first();
   if (I == -1)
-    return None;
+    return std::nullopt;
   return I;
 }
 
 /// Check if SourceFile is the file that contains the definition of
-/// the Function. Return the ID of the file in that case or None otherwise.
-static Optional<unsigned> findMainViewFileID(StringRef SourceFile,
-                                             const FunctionRecord &Function) {
-  Optional<unsigned> I = findMainViewFileID(Function);
+/// the Function. Return the ID of the file in that case or std::nullopt
+/// otherwise.
+static std::optional<unsigned>
+findMainViewFileID(StringRef SourceFile, const FunctionRecord &Function) {
+  std::optional<unsigned> I = findMainViewFileID(Function);
   if (I && SourceFile == Function.Filenames[*I])
     return I;
-  return None;
+  return std::nullopt;
 }
 
 static bool isExpansion(const CountedRegion &R, unsigned FileID) {

@@ -7,10 +7,10 @@
 %0 = type opaque
 
 ; CHECK-LABEL: @f0(
-; CHECK: %c1 = call %0* @llvm.ssa.copy.p0s_s.0(%0* %arg)
-; CHECK: %c2 = call %1* @llvm.ssa.copy.p0s_s.1(%1* %tmp)
-; CHECK: %c3 = call %0** @llvm.ssa.copy.p0p0s_s.1(%0** %arg2)
-; CHECK: %c4 = call %1** @llvm.ssa.copy.p0p0s_s.0(%1** %tmp2)
+; CHECK: %c1 = call ptr @llvm.ssa.copy.p0(ptr %arg)
+; CHECK: %c2 = call ptr @llvm.ssa.copy.p0(ptr %tmp)
+; CHECK: %c3 = call ptr @llvm.ssa.copy.p0(ptr %arg2)
+; CHECK: %c4 = call ptr @llvm.ssa.copy.p0(ptr %tmp2)
 
 define void @f0(%0* %arg, %1* %tmp, %1** %tmp2, %0** %arg2) {
 bb:

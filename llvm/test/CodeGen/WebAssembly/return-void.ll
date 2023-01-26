@@ -19,10 +19,10 @@ define void @return_void_twice(i32 %a) {
   br i1 %b, label %true, label %false
 
 true:
-  store i32 0, i32* null
+  store i32 0, ptr null
   ret void
 
 false:
-  store i32 1, i32* null
+  store i32 1, ptr null
   ret void
 }

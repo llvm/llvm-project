@@ -12,7 +12,7 @@ target triple = "x86_64-apple-macosx10.15.0"
 ; Function Attrs: norecurse nounwind readonly ssp uwtable
 define dso_local i32 @b(i8 signext %0) local_unnamed_addr #0 !dbg !12 {
   call void @llvm.dbg.value(metadata i8 %0, metadata !17, metadata !DIExpression()), !dbg !18
-  %2 = load i32, i32* @a, align 4, !dbg !19, !tbaa !20
+  %2 = load i32, ptr @a, align 4, !dbg !19, !tbaa !20
   %3 = icmp sgt i32 %2, 1, !dbg !24
   br i1 %3, label %8, label %4, !dbg !25
 

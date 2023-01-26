@@ -15,6 +15,7 @@ static_library("DependencyScanning") {
     "//llvm/lib/IR",
     "//llvm/lib/Support",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "DependencyScanningFilesystem.cpp",

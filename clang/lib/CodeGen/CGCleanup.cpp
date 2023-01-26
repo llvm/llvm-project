@@ -556,7 +556,7 @@ static llvm::BasicBlock *SimplifyCleanupEntry(CodeGenFunction &CGF,
   Entry->replaceAllUsesWith(Pred);
 
   // Merge the blocks.
-  Pred->getInstList().splice(Pred->end(), Entry->getInstList());
+  Pred->splice(Pred->end(), Entry);
 
   // Kill the entry block.
   Entry->eraseFromParent();
@@ -942,7 +942,7 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
       // Append the prepared cleanup prologue from above.
       llvm::BasicBlock *NormalExit = Builder.GetInsertBlock();
       for (unsigned I = 0, E = InstsToAppend.size(); I != E; ++I)
-        NormalExit->getInstList().push_back(InstsToAppend[I]);
+        InstsToAppend[I]->insertInto(NormalExit, NormalExit->end());
 
       // Optimistically hope that any fixups will continue falling through.
       for (unsigned I = FixupDepth, E = EHStack.getNumBranchFixups();
@@ -1016,8 +1016,7 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
     // throwing cleanups. For funclet EH personalities, the cleanupendpad models
     // program termination when cleanups throw.
     bool PushedTerminate = false;
-    SaveAndRestore<llvm::Instruction *> RestoreCurrentFuncletPad(
-        CurrentFuncletPad);
+    SaveAndRestore RestoreCurrentFuncletPad(CurrentFuncletPad);
     llvm::CleanupPadInst *CPI = nullptr;
 
     const EHPersonality &Personality = EHPersonality::get(*this);
@@ -1336,7 +1335,8 @@ static void EmitSehScope(CodeGenFunction &CGF,
       CGF.getBundlesForFunclet(SehCppScope.getCallee());
   if (CGF.CurrentFuncletPad)
     BundleList.emplace_back("funclet", CGF.CurrentFuncletPad);
-  CGF.Builder.CreateInvoke(SehCppScope, Cont, InvokeDest, None, BundleList);
+  CGF.Builder.CreateInvoke(SehCppScope, Cont, InvokeDest, std::nullopt,
+                           BundleList);
   CGF.EmitBlock(Cont);
 }
 

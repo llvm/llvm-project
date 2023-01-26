@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Core/ModuleSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Event.h"
 
@@ -51,6 +52,7 @@ private:
 class DiagnosticEventData : public EventData {
 public:
   enum class Type {
+    Info,
     Warning,
     Error,
   };
@@ -80,6 +82,28 @@ protected:
 
   DiagnosticEventData(const DiagnosticEventData &) = delete;
   const DiagnosticEventData &operator=(const DiagnosticEventData &) = delete;
+};
+
+class SymbolChangeEventData : public EventData {
+public:
+  SymbolChangeEventData(lldb::DebuggerWP debugger_wp, ModuleSpec module_spec)
+      : m_debugger_wp(debugger_wp), m_module_spec(std::move(module_spec)) {}
+
+  static ConstString GetFlavorString();
+  ConstString GetFlavor() const override;
+
+  static const SymbolChangeEventData *
+  GetEventDataFromEvent(const Event *event_ptr);
+
+  void DoOnRemoval(Event *event_ptr) override;
+
+private:
+  lldb::DebuggerWP m_debugger_wp;
+  ModuleSpec m_module_spec;
+
+  SymbolChangeEventData(const SymbolChangeEventData &) = delete;
+  const SymbolChangeEventData &
+  operator=(const SymbolChangeEventData &) = delete;
 };
 
 } // namespace lldb_private

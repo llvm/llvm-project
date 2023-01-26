@@ -309,9 +309,7 @@ TEST(MathExtras, alignTo) {
   EXPECT_EQ(552u, alignTo(321, 255, 42));
 }
 
-template<typename T>
-void SaturatingAddTestHelper()
-{
+template <typename T> void SaturatingAddTestHelper() {
   const T Max = std::numeric_limits<T>::max();
   bool ResultOverflowed;
 
@@ -333,6 +331,42 @@ void SaturatingAddTestHelper()
 
   EXPECT_EQ(Max, SaturatingAdd(Max, Max));
   EXPECT_EQ(Max, SaturatingAdd(Max, Max, &ResultOverflowed));
+  EXPECT_TRUE(ResultOverflowed);
+
+  EXPECT_EQ(T(6), SaturatingAdd(T(1), T(2), T(3)));
+  EXPECT_EQ(T(6), SaturatingAdd(T(1), T(2), T(3), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  EXPECT_EQ(T(10), SaturatingAdd(T(1), T(2), T(3), T(4)));
+  EXPECT_EQ(T(10), SaturatingAdd(T(1), T(2), T(3), T(4), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  EXPECT_EQ(Max, SaturatingAdd(Max, T(0), T(0)));
+  EXPECT_EQ(Max, SaturatingAdd(Max, T(0), T(0), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  EXPECT_EQ(Max, SaturatingAdd(T(0), T(0), Max));
+  EXPECT_EQ(Max, SaturatingAdd(T(0), T(0), Max, &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  EXPECT_EQ(Max, SaturatingAdd(Max, T(0), T(1)));
+  EXPECT_EQ(Max, SaturatingAdd(Max, T(0), T(1), &ResultOverflowed));
+  EXPECT_TRUE(ResultOverflowed);
+
+  EXPECT_EQ(Max, SaturatingAdd(T(0), T(1), Max));
+  EXPECT_EQ(Max, SaturatingAdd(T(0), T(1), Max, &ResultOverflowed));
+  EXPECT_TRUE(ResultOverflowed);
+
+  EXPECT_EQ(Max, SaturatingAdd(T(1), T(Max - 2), T(1)));
+  EXPECT_EQ(Max, SaturatingAdd(T(1), T(Max - 2), T(1), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  EXPECT_EQ(Max, SaturatingAdd(T(1), T(1), T(Max - 2)));
+  EXPECT_EQ(Max, SaturatingAdd(T(1), T(1), T(Max - 2), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  EXPECT_EQ(Max, SaturatingAdd(Max, Max, Max));
+  EXPECT_EQ(Max, SaturatingAdd(Max, Max, Max, &ResultOverflowed));
   EXPECT_TRUE(ResultOverflowed);
 }
 

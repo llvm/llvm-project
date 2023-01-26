@@ -6,42 +6,42 @@
 ; the Phi operand refer to Phis from the same loop.
 
 ; Function Attrs: nounwind
-define void @f0(float* nocapture %a0, float* nocapture %a1) #0 {
+define void @f0(ptr nocapture %a0, ptr nocapture %a1) #0 {
 b0:
   %v0 = alloca [400 x float], align 4
-  %v1 = getelementptr inbounds float, float* %a1, i32 1
-  %v2 = getelementptr inbounds float, float* %a1, i32 2
-  %v3 = getelementptr inbounds float, float* %a1, i32 3
-  %v4 = getelementptr inbounds float, float* %a1, i32 4
-  %v5 = getelementptr inbounds float, float* %a1, i32 5
-  %v6 = getelementptr inbounds float, float* %a1, i32 6
-  %v7 = getelementptr inbounds float, float* %a1, i32 7
-  %v8 = getelementptr inbounds float, float* %a1, i32 8
-  %v9 = getelementptr inbounds float, float* %a1, i32 9
-  %v10 = getelementptr inbounds float, float* %a1, i32 10
-  %v11 = getelementptr inbounds float, float* %a1, i32 11
-  %v12 = getelementptr inbounds float, float* %a1, i32 12
-  %v13 = getelementptr inbounds float, float* %a1, i32 13
-  %v14 = getelementptr inbounds float, float* %a1, i32 14
-  %v15 = getelementptr inbounds float, float* %a1, i32 15
-  %v16 = getelementptr inbounds float, float* %a1, i32 16
-  %v17 = load float, float* %a1, align 4
-  %v18 = load float, float* %v1, align 4
-  %v19 = load float, float* %v2, align 4
-  %v20 = load float, float* %v3, align 4
-  %v21 = load float, float* %v4, align 4
-  %v22 = load float, float* %v5, align 4
-  %v23 = load float, float* %v6, align 4
-  %v24 = load float, float* %v7, align 4
-  %v25 = load float, float* %v8, align 4
-  %v26 = load float, float* %v9, align 4
-  %v27 = load float, float* %v10, align 4
-  %v28 = load float, float* %v11, align 4
-  %v29 = load float, float* %v12, align 4
-  %v30 = load float, float* %v13, align 4
-  %v31 = load float, float* %v14, align 4
-  %v32 = load float, float* %v15, align 4
-  %v33 = load float, float* %v16, align 4
+  %v1 = getelementptr inbounds float, ptr %a1, i32 1
+  %v2 = getelementptr inbounds float, ptr %a1, i32 2
+  %v3 = getelementptr inbounds float, ptr %a1, i32 3
+  %v4 = getelementptr inbounds float, ptr %a1, i32 4
+  %v5 = getelementptr inbounds float, ptr %a1, i32 5
+  %v6 = getelementptr inbounds float, ptr %a1, i32 6
+  %v7 = getelementptr inbounds float, ptr %a1, i32 7
+  %v8 = getelementptr inbounds float, ptr %a1, i32 8
+  %v9 = getelementptr inbounds float, ptr %a1, i32 9
+  %v10 = getelementptr inbounds float, ptr %a1, i32 10
+  %v11 = getelementptr inbounds float, ptr %a1, i32 11
+  %v12 = getelementptr inbounds float, ptr %a1, i32 12
+  %v13 = getelementptr inbounds float, ptr %a1, i32 13
+  %v14 = getelementptr inbounds float, ptr %a1, i32 14
+  %v15 = getelementptr inbounds float, ptr %a1, i32 15
+  %v16 = getelementptr inbounds float, ptr %a1, i32 16
+  %v17 = load float, ptr %a1, align 4
+  %v18 = load float, ptr %v1, align 4
+  %v19 = load float, ptr %v2, align 4
+  %v20 = load float, ptr %v3, align 4
+  %v21 = load float, ptr %v4, align 4
+  %v22 = load float, ptr %v5, align 4
+  %v23 = load float, ptr %v6, align 4
+  %v24 = load float, ptr %v7, align 4
+  %v25 = load float, ptr %v8, align 4
+  %v26 = load float, ptr %v9, align 4
+  %v27 = load float, ptr %v10, align 4
+  %v28 = load float, ptr %v11, align 4
+  %v29 = load float, ptr %v12, align 4
+  %v30 = load float, ptr %v13, align 4
+  %v31 = load float, ptr %v14, align 4
+  %v32 = load float, ptr %v15, align 4
+  %v33 = load float, ptr %v16, align 4
   br label %b1
 
 b1:                                               ; preds = %b1, %b0
@@ -113,36 +113,36 @@ b1:                                               ; preds = %b1, %b0
   %v99 = fmul float %v49, %v34
   %v100 = fadd float %v51, %v99
   %v101 = add nsw i32 %v67, 16
-  %v102 = getelementptr inbounds [400 x float], [400 x float]* %v0, i32 0, i32 %v101
-  %v103 = load float, float* %v102, align 4, !tbaa !0
+  %v102 = getelementptr inbounds [400 x float], ptr %v0, i32 0, i32 %v101
+  %v103 = load float, ptr %v102, align 4, !tbaa !0
   %v104 = fmul float %v49, %v103
   %v105 = fadd float %v50, %v104
   %v106 = icmp eq i32 %v70, 384
   br i1 %v106, label %b2, label %b1
 
 b2:                                               ; preds = %b1
-  store float %v69, float* %a1, align 4
-  store float %v72, float* %v1, align 4
-  store float %v74, float* %v2, align 4
-  store float %v76, float* %v3, align 4
-  store float %v78, float* %v4, align 4
-  store float %v80, float* %v5, align 4
-  store float %v82, float* %v6, align 4
-  store float %v84, float* %v7, align 4
-  store float %v86, float* %v8, align 4
-  store float %v88, float* %v9, align 4
-  store float %v90, float* %v10, align 4
-  store float %v92, float* %v11, align 4
-  store float %v94, float* %v12, align 4
-  store float %v96, float* %v13, align 4
-  store float %v98, float* %v14, align 4
-  store float %v100, float* %v15, align 4
-  store float %v105, float* %v16, align 4
+  store float %v69, ptr %a1, align 4
+  store float %v72, ptr %v1, align 4
+  store float %v74, ptr %v2, align 4
+  store float %v76, ptr %v3, align 4
+  store float %v78, ptr %v4, align 4
+  store float %v80, ptr %v5, align 4
+  store float %v82, ptr %v6, align 4
+  store float %v84, ptr %v7, align 4
+  store float %v86, ptr %v8, align 4
+  store float %v88, ptr %v9, align 4
+  store float %v90, ptr %v10, align 4
+  store float %v92, ptr %v11, align 4
+  store float %v94, ptr %v12, align 4
+  store float %v96, ptr %v13, align 4
+  store float %v98, ptr %v14, align 4
+  store float %v100, ptr %v15, align 4
+  store float %v105, ptr %v16, align 4
   %v107 = fcmp olt float %v69, 1.000000e+00
   br i1 %v107, label %b3, label %b4
 
 b3:                                               ; preds = %b2
-  store float 1.000000e+00, float* %a1, align 4, !tbaa !0
+  store float 1.000000e+00, ptr %a1, align 4, !tbaa !0
   br label %b4
 
 b4:                                               ; preds = %b3, %b2

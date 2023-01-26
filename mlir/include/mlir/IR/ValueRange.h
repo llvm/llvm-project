@@ -13,16 +13,17 @@
 #ifndef MLIR_IR_VALUERANGE_H
 #define MLIR_IR_VALUERANGE_H
 
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/Sequence.h"
+#include <optional>
 
 namespace mlir {
 class ValueRange;
 template <typename ValueRangeT>
 class ValueTypeRange;
-class ElementsAttr;
 class TypeRangeRange;
 template <typename ValueIteratorT>
 class ValueTypeIterator;
@@ -54,7 +55,7 @@ public:
 
   /// Split this range into a set of contiguous subranges using the given
   /// elements attribute, which contains the sizes of the sub ranges.
-  OperandRangeRange split(ElementsAttr segmentSizes) const;
+  OperandRangeRange split(DenseI32ArrayAttr segmentSizes) const;
 
 private:
   /// See `llvm::detail::indexed_accessor_range_base` for details.
@@ -114,21 +115,21 @@ private:
 class MutableOperandRange {
 public:
   /// A pair of a named attribute corresponding to an operand segment attribute,
-  /// and the index within that attribute. The attribute should correspond to an
-  /// i32 DenseElementsAttr.
+  /// and the index within that attribute. The attribute should correspond to a
+  /// dense i32 array attr.
   using OperandSegment = std::pair<unsigned, NamedAttribute>;
 
   /// Construct a new mutable range from the given operand, operand start index,
   /// and range length. `operandSegments` is an optional set of operand segments
   /// to be updated when mutating the operand list.
   MutableOperandRange(Operation *owner, unsigned start, unsigned length,
-                      ArrayRef<OperandSegment> operandSegments = llvm::None);
+                      ArrayRef<OperandSegment> operandSegments = std::nullopt);
   MutableOperandRange(Operation *owner);
 
   /// Slice this range into a sub range, with the additional operand segment.
   MutableOperandRange
   slice(unsigned subStart, unsigned subLen,
-        Optional<OperandSegment> segment = llvm::None) const;
+        std::optional<OperandSegment> segment = std::nullopt) const;
 
   /// Append the given values to the range.
   void append(ValueRange values);
@@ -356,7 +357,7 @@ public:
   using RangeBaseT::RangeBaseT;
 
   template <typename Arg,
-            typename = typename std::enable_if_t<
+            typename = std::enable_if_t<
                 std::is_constructible<ArrayRef<Value>, Arg>::value &&
                 !std::is_convertible<Arg, Value>::value>>
   ValueRange(Arg &&arg) : ValueRange(ArrayRef<Value>(std::forward<Arg>(arg))) {}
@@ -369,7 +370,7 @@ public:
       : ValueRange(ResultRange(values)) {}
   ValueRange(ArrayRef<BlockArgument> values)
       : ValueRange(ArrayRef<Value>(values.data(), values.size())) {}
-  ValueRange(ArrayRef<Value> values = llvm::None);
+  ValueRange(ArrayRef<Value> values = std::nullopt);
   ValueRange(OperandRange values);
   ValueRange(ResultRange values);
 

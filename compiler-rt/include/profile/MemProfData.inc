@@ -32,7 +32,7 @@
    (uint64_t)'o' << 24 | (uint64_t)'f' << 16 | (uint64_t)'r' << 8 | (uint64_t)129)
 
 // The version number of the raw binary format.
-#define MEMPROF_RAW_VERSION 1ULL
+#define MEMPROF_RAW_VERSION 2ULL
 
 namespace llvm {
 namespace memprof {
@@ -127,6 +127,19 @@ MemInfoBlock(uint32_t Size, uint64_t AccessCount, uint32_t AllocTs,
   TotalLifetime = DeallocTimestamp - AllocTimestamp;
   MinLifetime = TotalLifetime;
   MaxLifetime = TotalLifetime;
+  // Access density is accesses per byte. Multiply by 100 to include the
+  // fractional part.
+  TotalAccessDensity = AccessCount * 100 / Size;
+  MinAccessDensity = TotalAccessDensity;
+  MaxAccessDensity = TotalAccessDensity;
+  // Lifetime access density is the access density per second of lifetime.
+  // Multiply by 1000 to convert denominator lifetime to seconds (using a
+  // minimum lifetime of 1ms to avoid divide by 0. Do the multiplication first
+  // to reduce truncations to 0.
+  TotalLifetimeAccessDensity =
+      TotalAccessDensity * 1000 / (TotalLifetime ? TotalLifetime : 1);
+  MinLifetimeAccessDensity = TotalLifetimeAccessDensity;
+  MaxLifetimeAccessDensity = TotalLifetimeAccessDensity;
   AllocCpuId = AllocCpu;
   DeallocCpuId = DeallocCpu;
   NumMigratedCpu = AllocCpuId != DeallocCpuId;
@@ -137,15 +150,33 @@ void Merge(const MemInfoBlock &newMIB) {
 
   TotalAccessCount += newMIB.TotalAccessCount;
   MinAccessCount = newMIB.MinAccessCount < MinAccessCount ? newMIB.MinAccessCount : MinAccessCount;
-  MaxAccessCount = newMIB.MaxAccessCount < MaxAccessCount ? newMIB.MaxAccessCount : MaxAccessCount;
+  MaxAccessCount = newMIB.MaxAccessCount > MaxAccessCount ? newMIB.MaxAccessCount : MaxAccessCount;
 
   TotalSize += newMIB.TotalSize;
   MinSize = newMIB.MinSize < MinSize ? newMIB.MinSize : MinSize;
-  MaxSize = newMIB.MaxSize < MaxSize ? newMIB.MaxSize : MaxSize;
+  MaxSize = newMIB.MaxSize > MaxSize ? newMIB.MaxSize : MaxSize;
 
   TotalLifetime += newMIB.TotalLifetime;
   MinLifetime = newMIB.MinLifetime < MinLifetime ? newMIB.MinLifetime : MinLifetime;
   MaxLifetime = newMIB.MaxLifetime > MaxLifetime ? newMIB.MaxLifetime : MaxLifetime;
+
+  TotalAccessDensity += newMIB.TotalAccessDensity;
+  MinAccessDensity = newMIB.MinAccessDensity < MinAccessDensity
+                         ? newMIB.MinAccessDensity
+                         : MinAccessDensity;
+  MaxAccessDensity = newMIB.MaxAccessDensity > MaxAccessDensity
+                         ? newMIB.MaxAccessDensity
+                         : MaxAccessDensity;
+
+  TotalLifetimeAccessDensity += newMIB.TotalLifetimeAccessDensity;
+  MinLifetimeAccessDensity =
+      newMIB.MinLifetimeAccessDensity < MinLifetimeAccessDensity
+          ? newMIB.MinLifetimeAccessDensity
+          : MinLifetimeAccessDensity;
+  MaxLifetimeAccessDensity =
+      newMIB.MaxLifetimeAccessDensity > MaxLifetimeAccessDensity
+          ? newMIB.MaxLifetimeAccessDensity
+          : MaxLifetimeAccessDensity;
 
   // We know newMIB was deallocated later, so just need to check if it was
   // allocated before last one deallocated.

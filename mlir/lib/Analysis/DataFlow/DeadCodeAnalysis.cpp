@@ -10,6 +10,7 @@
 #include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::dataflow;
@@ -118,6 +119,7 @@ LogicalResult DeadCodeAnalysis::initialize(Operation *top) {
 }
 
 void DeadCodeAnalysis::initializeSymbolCallables(Operation *top) {
+  analysisScope = top;
   auto walkFn = [&](Operation *symTable, bool allUsesVisible) {
     Region &symbolTableRegion = symTable->getRegion(0);
     Block *symbolTableBlock = &symbolTableRegion.front();
@@ -145,7 +147,7 @@ void DeadCodeAnalysis::initializeSymbolCallables(Operation *top) {
       return;
 
     // Walk the symbol table to check for non-call uses of symbols.
-    Optional<SymbolTable::UseRange> uses =
+    std::optional<SymbolTable::UseRange> uses =
         SymbolTable::getSymbolUses(&symbolTableRegion);
     if (!uses) {
       // If we couldn't gather the symbol uses, conservatively assume that
@@ -278,14 +280,14 @@ LogicalResult DeadCodeAnalysis::visit(ProgramPoint point) {
 }
 
 void DeadCodeAnalysis::visitCallOperation(CallOpInterface call) {
-  Operation *callableOp = nullptr;
-  if (Value callableValue = call.getCallableForCallee().dyn_cast<Value>())
-    callableOp = callableValue.getDefiningOp();
-  else
-    callableOp = call.resolveCallable(&symbolTable);
+  Operation *callableOp = call.resolveCallable(&symbolTable);
 
   // A call to a externally-defined callable has unknown predecessors.
-  const auto isExternalCallable = [](Operation *op) {
+  const auto isExternalCallable = [this](Operation *op) {
+    // A callable outside the analysis scope is an external callable.
+    if (!analysisScope->isAncestor(op))
+      return true;
+    // Otherwise, check if the callable region is defined.
     if (auto callable = dyn_cast<CallableOpInterface>(op))
       return !callable.getCallableRegion();
     return false;
@@ -309,7 +311,7 @@ void DeadCodeAnalysis::visitCallOperation(CallOpInterface call) {
 /// Get the constant values of the operands of an operation. If any of the
 /// constant value lattices are uninitialized, return none to indicate the
 /// analysis should bail out.
-static Optional<SmallVector<Attribute>> getOperandValuesImpl(
+static std::optional<SmallVector<Attribute>> getOperandValuesImpl(
     Operation *op,
     function_ref<const Lattice<ConstantValue> *(Value)> getLattice) {
   SmallVector<Attribute> operands;
@@ -317,14 +319,14 @@ static Optional<SmallVector<Attribute>> getOperandValuesImpl(
   for (Value operand : op->getOperands()) {
     const Lattice<ConstantValue> *cv = getLattice(operand);
     // If any of the operands' values are uninitialized, bail out.
-    if (cv->isUninitialized())
+    if (cv->getValue().isUninitialized())
       return {};
     operands.push_back(cv->getValue().getConstantValue());
   }
   return operands;
 }
 
-Optional<SmallVector<Attribute>>
+std::optional<SmallVector<Attribute>>
 DeadCodeAnalysis::getOperandValues(Operation *op) {
   return getOperandValuesImpl(op, [&](Value value) {
     auto *lattice = getOrCreate<Lattice<ConstantValue>>(value);
@@ -335,7 +337,7 @@ DeadCodeAnalysis::getOperandValues(Operation *op) {
 
 void DeadCodeAnalysis::visitBranchOperation(BranchOpInterface branch) {
   // Try to deduce a single successor for the branch.
-  Optional<SmallVector<Attribute>> operands = getOperandValues(branch);
+  std::optional<SmallVector<Attribute>> operands = getOperandValues(branch);
   if (!operands)
     return;
 
@@ -351,7 +353,7 @@ void DeadCodeAnalysis::visitBranchOperation(BranchOpInterface branch) {
 void DeadCodeAnalysis::visitRegionBranchOperation(
     RegionBranchOpInterface branch) {
   // Try to deduce which regions are executable.
-  Optional<SmallVector<Attribute>> operands = getOperandValues(branch);
+  std::optional<SmallVector<Attribute>> operands = getOperandValues(branch);
   if (!operands)
     return;
 
@@ -375,7 +377,7 @@ void DeadCodeAnalysis::visitRegionBranchOperation(
 
 void DeadCodeAnalysis::visitRegionTerminator(Operation *op,
                                              RegionBranchOpInterface branch) {
-  Optional<SmallVector<Attribute>> operands = getOperandValues(op);
+  std::optional<SmallVector<Attribute>> operands = getOperandValues(op);
   if (!operands)
     return;
 

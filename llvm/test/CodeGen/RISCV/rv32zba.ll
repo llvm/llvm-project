@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+m,+zba -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefixes=CHECK,RV32ZBA
 
-define signext i16 @sh1add(i64 %0, i16* %1) {
+define signext i16 @sh1add(i64 %0, ptr %1) {
 ; RV32I-LABEL: sh1add:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a0, a0, 1
@@ -17,12 +17,12 @@ define signext i16 @sh1add(i64 %0, i16* %1) {
 ; RV32ZBA-NEXT:    sh1add a0, a0, a2
 ; RV32ZBA-NEXT:    lh a0, 0(a0)
 ; RV32ZBA-NEXT:    ret
-  %3 = getelementptr inbounds i16, i16* %1, i64 %0
-  %4 = load i16, i16* %3
+  %3 = getelementptr inbounds i16, ptr %1, i64 %0
+  %4 = load i16, ptr %3
   ret i16 %4
 }
 
-define i32 @sh2add(i64 %0, i32* %1) {
+define i32 @sh2add(i64 %0, ptr %1) {
 ; RV32I-LABEL: sh2add:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a0, a0, 2
@@ -35,18 +35,18 @@ define i32 @sh2add(i64 %0, i32* %1) {
 ; RV32ZBA-NEXT:    sh2add a0, a0, a2
 ; RV32ZBA-NEXT:    lw a0, 0(a0)
 ; RV32ZBA-NEXT:    ret
-  %3 = getelementptr inbounds i32, i32* %1, i64 %0
-  %4 = load i32, i32* %3
+  %3 = getelementptr inbounds i32, ptr %1, i64 %0
+  %4 = load i32, ptr %3
   ret i32 %4
 }
 
-define i64 @sh3add(i64 %0, i64* %1) {
+define i64 @sh3add(i64 %0, ptr %1) {
 ; RV32I-LABEL: sh3add:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a0, a0, 3
-; RV32I-NEXT:    add a1, a2, a0
-; RV32I-NEXT:    lw a0, 0(a1)
-; RV32I-NEXT:    lw a1, 4(a1)
+; RV32I-NEXT:    add a2, a2, a0
+; RV32I-NEXT:    lw a0, 0(a2)
+; RV32I-NEXT:    lw a1, 4(a2)
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: sh3add:
@@ -55,8 +55,8 @@ define i64 @sh3add(i64 %0, i64* %1) {
 ; RV32ZBA-NEXT:    lw a0, 0(a1)
 ; RV32ZBA-NEXT:    lw a1, 4(a1)
 ; RV32ZBA-NEXT:    ret
-  %3 = getelementptr inbounds i64, i64* %1, i64 %0
-  %4 = load i64, i64* %3
+  %3 = getelementptr inbounds i64, ptr %1, i64 %0
+  %4 = load i64, ptr %3
   ret i64 %4
 }
 
@@ -558,6 +558,16 @@ define i32 @add8208(i32 %a) {
 ; RV32ZBA-NEXT:    sh3add a0, a1, a0
 ; RV32ZBA-NEXT:    ret
   %c = add i32 %a, 8208
+  ret i32 %c
+}
+
+define i32 @add8192(i32 %a) {
+; CHECK-LABEL: add8192:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 2
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ret
+  %c = add i32 %a, 8192
   ret i32 %c
 }
 

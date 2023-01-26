@@ -11,24 +11,29 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/TensorToLinalg/TensorToLinalgPass.h"
-#include "../PassDetail.h"
+
 #include "mlir/Conversion/TensorToLinalg/TensorToLinalg.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTTENSORTOLINALG
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
 namespace {
 /// A pass converting MLIR Tensor operations into the Linalg dialect.
 class ConvertTensorToLinalgPass
-    : public ConvertTensorToLinalgBase<ConvertTensorToLinalgPass> {
+    : public impl::ConvertTensorToLinalgBase<ConvertTensorToLinalgPass> {
   void runOnOperation() override {
     auto &context = getContext();
     ConversionTarget target(context);
-    target.addLegalDialect<mlir::arith::ArithmeticDialect,
-                           mlir::linalg::LinalgDialect,
-                           mlir::tensor::TensorDialect>();
+    target
+        .addLegalDialect<mlir::arith::ArithDialect, mlir::linalg::LinalgDialect,
+                         mlir::tensor::TensorDialect>();
     target.addIllegalOp<mlir::tensor::PadOp>();
 
     RewritePatternSet patterns(&context);

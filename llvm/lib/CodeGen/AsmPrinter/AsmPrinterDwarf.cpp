@@ -163,7 +163,7 @@ void AsmPrinter::emitDwarfSymbolReference(const MCSymbol *Label,
     }
 
     // If the format uses relocations with dwarf, refer to the symbol directly.
-    if (MAI->doesDwarfUseRelocationsAcrossSections()) {
+    if (doesDwarfUseRelocationsAcrossSections()) {
       OutStreamer->emitSymbolValue(Label, getDwarfOffsetByteSize());
       return;
     }
@@ -175,7 +175,7 @@ void AsmPrinter::emitDwarfSymbolReference(const MCSymbol *Label,
 }
 
 void AsmPrinter::emitDwarfStringOffset(DwarfStringPoolEntry S) const {
-  if (MAI->doesDwarfUseRelocationsAcrossSections()) {
+  if (doesDwarfUseRelocationsAcrossSections()) {
     assert(S.Symbol && "No symbol available");
     emitDwarfSymbolReference(S.Symbol);
     return;

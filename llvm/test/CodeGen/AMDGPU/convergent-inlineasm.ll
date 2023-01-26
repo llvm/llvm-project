@@ -6,7 +6,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() #0
 ; GCN: v_cmp_ne_u32_e64
 ; GCN: s_cbranch_execz
 ; GCN: ; %bb.{{[0-9]+}}:
-define amdgpu_kernel void @convergent_inlineasm(i64 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @convergent_inlineasm(ptr addrspace(1) nocapture %arg) {
 bb:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = tail call i64 asm "v_cmp_ne_u32_e64 $0, 0, $1", "=s,v"(i32 1) #1
@@ -14,8 +14,8 @@ bb:
   br i1 %tmp2, label %bb3, label %bb5
 
 bb3:                                              ; preds = %bb
-  %tmp4 = getelementptr i64, i64 addrspace(1)* %arg, i32 %tmp
-  store i64 %tmp1, i64 addrspace(1)* %arg, align 8
+  %tmp4 = getelementptr i64, ptr addrspace(1) %arg, i32 %tmp
+  store i64 %tmp1, ptr addrspace(1) %arg, align 8
   br label %bb5
 
 bb5:                                              ; preds = %bb3, %bb
@@ -30,7 +30,7 @@ bb5:                                              ; preds = %bb3, %bb
 
 ; GCN: BB{{[0-9]+_[0-9]+}}:
 
-define amdgpu_kernel void @nonconvergent_inlineasm(i64 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @nonconvergent_inlineasm(ptr addrspace(1) nocapture %arg) {
 bb:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = tail call i64 asm "v_cmp_ne_u32_e64 $0, 0, $1", "=s,v"(i32 1)
@@ -38,8 +38,8 @@ bb:
   br i1 %tmp2, label %bb3, label %bb5
 
 bb3:                                              ; preds = %bb
-  %tmp4 = getelementptr i64, i64 addrspace(1)* %arg, i32 %tmp
-  store i64 %tmp1, i64 addrspace(1)* %arg, align 8
+  %tmp4 = getelementptr i64, ptr addrspace(1) %arg, i32 %tmp
+  store i64 %tmp1, ptr addrspace(1) %arg, align 8
   br label %bb5
 
 bb5:                                              ; preds = %bb3, %bb

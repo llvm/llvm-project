@@ -425,7 +425,7 @@ void DIEInteger::emitValue(const AsmPrinter *Asm, dwarf::Form Form) const {
 ///
 unsigned DIEInteger::sizeOf(const dwarf::FormParams &FormParams,
                             dwarf::Form Form) const {
-  if (Optional<uint8_t> FixedSize =
+  if (std::optional<uint8_t> FixedSize =
           dwarf::getFixedFormByteSize(Form, FormParams))
     return *FixedSize;
 
@@ -580,7 +580,7 @@ void DIEString::emitValue(const AsmPrinter *AP, dwarf::Form Form) const {
     DIEInteger(S.getIndex()).emitValue(AP, Form);
     return;
   case dwarf::DW_FORM_strp:
-    if (AP->MAI->doesDwarfUseRelocationsAcrossSections())
+    if (AP->doesDwarfUseRelocationsAcrossSections())
       DIELabel(S.getSymbol()).emitValue(AP, Form);
     else
       DIEInteger(S.getOffset()).emitValue(AP, Form);

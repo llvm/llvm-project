@@ -283,7 +283,7 @@ namespace OverloadResolutionTemplate {
 
 namespace DefaultedMethods {
   struct A {
-    auto operator=(const A&) = default; // expected-error {{must return 'DefaultedMethods::A &'}}
+    auto operator=(const A&) = default; // expected-error {{must return 'A &'}}
     A &operator=(A&&); // expected-note {{previous}}
   };
   auto A::operator=(A&&) = default; // expected-error {{return type of out-of-line definition of 'DefaultedMethods::A::operator=' differs from that in the declaration}}

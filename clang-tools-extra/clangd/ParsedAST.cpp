@@ -23,8 +23,10 @@
 #include "Preamble.h"
 #include "SourceCode.h"
 #include "TidyProvider.h"
+#include "clang-include-cleaner/Record.h"
 #include "index/CanonicalIncludes.h"
 #include "index/Index.h"
+#include "index/Symbol.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
 #include "clang/AST/ASTContext.h"
@@ -50,6 +52,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <vector>
 
 // Force the linker to link in Clang-tidy modules.
@@ -171,7 +174,7 @@ private:
 
   void replay() {
     for (const auto &Inc : Includes) {
-      llvm::Optional<FileEntryRef> File;
+      OptionalFileEntryRef File;
       if (Inc.Resolved != "")
         File = expectedToOptional(SM.getFileManager().getFileRef(Inc.Resolved));
 
@@ -338,7 +341,7 @@ void applyWarningOptions(llvm::ArrayRef<std::string> ExtraArgs,
 
 } // namespace
 
-llvm::Optional<ParsedAST>
+std::optional<ParsedAST>
 ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
                  std::unique_ptr<clang::CompilerInvocation> CI,
                  llvm::ArrayRef<Diag> CompilerInvocationDiags,
@@ -375,7 +378,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
                        [&](const auto &L) { L->sawDiagnostic(D, Diag); });
       });
 
-  llvm::Optional<PreamblePatch> Patch;
+  std::optional<PreamblePatch> Patch;
   bool PreserveDiags = true;
   // We might use an ignoring diagnostic consumer if they are going to be
   // dropped later on to not pay for extra latency by processing them.
@@ -399,7 +402,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     elog("Failed to prepare a compiler instance: {0}",
          !Diags.empty() ? static_cast<DiagBase &>(Diags.back()).Message
                         : "unknown error");
-    return None;
+    return std::nullopt;
   }
   tidy::ClangTidyOptions ClangTidyOpts;
   if (PreserveDiags) {
@@ -443,7 +446,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   if (!Action->BeginSourceFile(*Clang, MainInput)) {
     log("BeginSourceFile() failed when building AST for {0}",
         MainInput.getFile());
-    return None;
+    return std::nullopt;
   }
   // If we saw an include guard in the preamble section of the main file,
   // mark the main-file as include-guarded.
@@ -464,8 +467,10 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   // In practice almost all checks work well without modifications.
   std::vector<std::unique_ptr<tidy::ClangTidyCheck>> CTChecks;
   ast_matchers::MatchFinder CTFinder;
-  llvm::Optional<tidy::ClangTidyContext> CTContext;
-  llvm::Optional<IncludeFixer> FixIncludes;
+  std::optional<tidy::ClangTidyContext> CTContext;
+  // Must outlive FixIncludes.
+  auto BuildDir = VFS->getCurrentWorkingDirectory();
+  std::optional<IncludeFixer> FixIncludes;
   llvm::DenseMap<diag::kind, DiagnosticsEngine::Level> OverriddenSeverity;
   // No need to run clang-tidy or IncludeFixerif we are not going to surface
   // diagnostics.
@@ -480,7 +485,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     CTContext->setASTContext(&Clang->getASTContext());
     CTContext->setCurrentFile(Filename);
     CTContext->setSelfContainedDiags(true);
-    CTChecks = CTFactories.createChecksForLanguage(CTContext.getPointer());
+    CTChecks = CTFactories.createChecksForLanguage(&*CTContext);
     Preprocessor *PP = &Clang->getPreprocessor();
     for (const auto &Check : CTChecks) {
       Check->registerPPCallbacks(Clang->getSourceManager(), PP, PP);
@@ -493,6 +498,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     // We restore the original severity in the level adjuster.
     // FIXME: It would be better to have a real API for this, but what?
     for (auto ID : {diag::ext_implicit_function_decl_c99,
+                    diag::ext_implicit_lib_function_decl,
                     diag::ext_implicit_lib_function_decl_c99,
                     diag::warn_implicit_function_decl}) {
       OverriddenSeverity.try_emplace(
@@ -537,6 +543,10 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
             // NOLINT comments)?
             return DiagnosticsEngine::Ignored;
           }
+          if (!CTContext->getOptions().SystemHeaders.value_or(false) &&
+              Info.hasSourceManager() &&
+              Info.getSourceManager().isInSystemMacro(Info.getLocation()))
+            return DiagnosticsEngine::Ignored;
 
           // Check for warning-as-error.
           if (DiagLevel == DiagnosticsEngine::Warning &&
@@ -550,19 +560,27 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
 
     // Add IncludeFixer which can recover diagnostics caused by missing includes
     // (e.g. incomplete type) and attach include insertion fixes to diagnostics.
-    auto BuildDir = VFS->getCurrentWorkingDirectory();
     if (Inputs.Index && !BuildDir.getError()) {
       auto Style =
           getFormatStyleForFile(Filename, Inputs.Contents, *Inputs.TFS);
       auto Inserter = std::make_shared<IncludeInserter>(
           Filename, Inputs.Contents, Style, BuildDir.get(),
           &Clang->getPreprocessor().getHeaderSearchInfo());
+      ArrayRef<Inclusion> MainFileIncludes;
       if (Preamble) {
+        MainFileIncludes = Preamble->Includes.MainFileIncludes;
         for (const auto &Inc : Preamble->Includes.MainFileIncludes)
           Inserter->addExisting(Inc);
       }
+      // FIXME: Consider piping through ASTSignals to fetch this to handle the
+      // case where a header file contains ObjC decls but no #imports.
+      Symbol::IncludeDirective Directive =
+          Inputs.Opts.ImportInsertions
+              ? preferredIncludeDirective(Filename, Clang->getLangOpts(),
+                                          MainFileIncludes, {})
+              : Symbol::Include;
       FixIncludes.emplace(Filename, Inserter, *Inputs.Index,
-                          /*IndexRequestLimit=*/5);
+                          /*IndexRequestLimit=*/5, Directive);
       ASTDiags.contributeFixes([&FixIncludes](DiagnosticsEngine::Level DiagLevl,
                                               const clang::Diagnostic &Info) {
         return FixIncludes->fix(DiagLevl, Info);
@@ -650,7 +668,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   // CompilerInstance won't run this callback, do it directly.
   ASTDiags.EndSourceFile();
 
-  llvm::Optional<std::vector<Diag>> Diags;
+  std::optional<std::vector<Diag>> Diags;
   // FIXME: Also skip generation of diagnostics alltogether to speed up ast
   // builds when we are patching a stale preamble.
   if (PreserveDiags) {
@@ -661,14 +679,15 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
                     Preamble->Diags.end());
     // Finally, add diagnostics coming from the AST.
     {
-      std::vector<Diag> D = ASTDiags.take(CTContext.getPointer());
+      std::vector<Diag> D = ASTDiags.take(&*CTContext);
       Diags->insert(Diags->end(), D.begin(), D.end());
     }
   }
-  ParsedAST Result(Inputs.Version, std::move(Preamble), std::move(Clang),
-                   std::move(Action), std::move(Tokens), std::move(Macros),
-                   std::move(Marks), std::move(ParsedDecls), std::move(Diags),
-                   std::move(Includes), std::move(CanonIncludes));
+  ParsedAST Result(Filename, Inputs.Version, std::move(Preamble),
+                   std::move(Clang), std::move(Action), std::move(Tokens),
+                   std::move(Macros), std::move(Marks), std::move(ParsedDecls),
+                   std::move(Diags), std::move(Includes),
+                   std::move(CanonIncludes));
   if (Result.Diags) {
     auto UnusedHeadersDiags =
         issueUnusedIncludesDiagnostics(Result, Inputs.Contents);
@@ -676,7 +695,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
                          make_move_iterator(UnusedHeadersDiags.begin()),
                          make_move_iterator(UnusedHeadersDiags.end()));
   }
-  return Result;
+  return std::move(Result);
 }
 
 ParsedAST::ParsedAST(ParsedAST &&Other) = default;
@@ -713,6 +732,10 @@ const Preprocessor &ParsedAST::getPreprocessor() const {
 }
 
 llvm::ArrayRef<Decl *> ParsedAST::getLocalTopLevelDecls() {
+  return LocalTopLevelDecls;
+}
+
+llvm::ArrayRef<const Decl *> ParsedAST::getLocalTopLevelDecls() const {
   return LocalTopLevelDecls;
 }
 
@@ -759,19 +782,19 @@ const CanonicalIncludes &ParsedAST::getCanonicalIncludes() const {
   return CanonIncludes;
 }
 
-ParsedAST::ParsedAST(llvm::StringRef Version,
+ParsedAST::ParsedAST(PathRef TUPath, llvm::StringRef Version,
                      std::shared_ptr<const PreambleData> Preamble,
                      std::unique_ptr<CompilerInstance> Clang,
                      std::unique_ptr<FrontendAction> Action,
                      syntax::TokenBuffer Tokens, MainFileMacros Macros,
                      std::vector<PragmaMark> Marks,
                      std::vector<Decl *> LocalTopLevelDecls,
-                     llvm::Optional<std::vector<Diag>> Diags,
+                     std::optional<std::vector<Diag>> Diags,
                      IncludeStructure Includes, CanonicalIncludes CanonIncludes)
-    : Version(Version), Preamble(std::move(Preamble)), Clang(std::move(Clang)),
-      Action(std::move(Action)), Tokens(std::move(Tokens)),
-      Macros(std::move(Macros)), Marks(std::move(Marks)),
-      Diags(std::move(Diags)),
+    : TUPath(TUPath), Version(Version), Preamble(std::move(Preamble)),
+      Clang(std::move(Clang)), Action(std::move(Action)),
+      Tokens(std::move(Tokens)), Macros(std::move(Macros)),
+      Marks(std::move(Marks)), Diags(std::move(Diags)),
       LocalTopLevelDecls(std::move(LocalTopLevelDecls)),
       Includes(std::move(Includes)), CanonIncludes(std::move(CanonIncludes)) {
   Resolver = std::make_unique<HeuristicResolver>(getASTContext());
@@ -779,9 +802,15 @@ ParsedAST::ParsedAST(llvm::StringRef Version,
   assert(this->Action);
 }
 
-llvm::Optional<llvm::StringRef> ParsedAST::preambleVersion() const {
+const include_cleaner::PragmaIncludes *ParsedAST::getPragmaIncludes() const {
   if (!Preamble)
-    return llvm::None;
+    return nullptr;
+  return &Preamble->Pragmas;
+}
+
+std::optional<llvm::StringRef> ParsedAST::preambleVersion() const {
+  if (!Preamble)
+    return std::nullopt;
   return llvm::StringRef(Preamble->Version);
 }
 

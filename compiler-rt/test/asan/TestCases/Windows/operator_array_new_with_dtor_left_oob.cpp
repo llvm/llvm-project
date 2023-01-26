@@ -18,7 +18,7 @@ int main() {
 // FIXME: Currently it says "4 bytes ... left of 172-byte region",
 //        should be "8 bytes ... left of 168-byte region", see
 //        https://code.google.com/p/address-sanitizer/issues/detail?id=314
-// CHECK: [[ADDR]] is located {{.*}} bytes to the left of {{(172|176)}}-byte region
+// CHECK: [[ADDR]] is located {{.*}} bytes before {{(172|176)}}-byte region
 // CHECK-LABEL: allocated by thread T0 here:
 // FIXME: The 'operator new' frame should have [].
 // CHECK-NEXT: {{#0 .* operator new}}

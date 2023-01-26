@@ -2,229 +2,225 @@
 ; RUN: llc -mtriple=riscv32 -target-abi=ilp32d -mattr=+v,+zfh,+experimental-zvfh,+f,+d -riscv-v-vector-bits-min=128 -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -target-abi=lp64d -mattr=+v,+zfh,+experimental-zvfh,+f,+d -riscv-v-vector-bits-min=128 -verify-machineinstrs < %s | FileCheck %s
 
-define void @vselect_vv_v8i32(<8 x i32>* %a, <8 x i32>* %b, <8 x i1>* %cc, <8 x i32>* %z) {
+define void @vselect_vv_v8i32(ptr %a, ptr %b, ptr %cc, ptr %z) {
 ; CHECK-LABEL: vselect_vv_v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vlm.v v0, (a2)
-; CHECK-NEXT:    vle32.v v10, (a1)
-; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
+; CHECK-NEXT:    vle32.v v8, (a1)
+; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    vse32.v v8, (a3)
 ; CHECK-NEXT:    ret
-  %va = load <8 x i32>, <8 x i32>* %a
-  %vb = load <8 x i32>, <8 x i32>* %b
-  %vcc = load <8 x i1>, <8 x i1>* %cc
+  %va = load <8 x i32>, ptr %a
+  %vb = load <8 x i32>, ptr %b
+  %vcc = load <8 x i1>, ptr %cc
   %vsel = select <8 x i1> %vcc, <8 x i32> %va, <8 x i32> %vb
-  store <8 x i32> %vsel, <8 x i32>* %z
+  store <8 x i32> %vsel, ptr %z
   ret void
 }
 
-define void @vselect_vx_v8i32(i32 %a, <8 x i32>* %b, <8 x i1>* %cc, <8 x i32>* %z) {
+define void @vselect_vx_v8i32(i32 %a, ptr %b, ptr %cc, ptr %z) {
 ; CHECK-LABEL: vselect_vx_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a2)
 ; CHECK-NEXT:    vle32.v v8, (a1)
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    vse32.v v8, (a3)
 ; CHECK-NEXT:    ret
-  %vb = load <8 x i32>, <8 x i32>* %b
+  %vb = load <8 x i32>, ptr %b
   %ahead = insertelement <8 x i32> poison, i32 %a, i32 0
   %va = shufflevector <8 x i32> %ahead, <8 x i32> poison, <8 x i32> zeroinitializer
-  %vcc = load <8 x i1>, <8 x i1>* %cc
+  %vcc = load <8 x i1>, ptr %cc
   %vsel = select <8 x i1> %vcc, <8 x i32> %va, <8 x i32> %vb
-  store <8 x i32> %vsel, <8 x i32>* %z
+  store <8 x i32> %vsel, ptr %z
   ret void
 }
 
-define void @vselect_vi_v8i32(<8 x i32>* %b, <8 x i1>* %cc, <8 x i32>* %z) {
+define void @vselect_vi_v8i32(ptr %b, ptr %cc, ptr %z) {
 ; CHECK-LABEL: vselect_vi_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a1)
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmerge.vim v8, v8, -1, v0
 ; CHECK-NEXT:    vse32.v v8, (a2)
 ; CHECK-NEXT:    ret
-  %vb = load <8 x i32>, <8 x i32>* %b
+  %vb = load <8 x i32>, ptr %b
   %a = insertelement <8 x i32> poison, i32 -1, i32 0
   %va = shufflevector <8 x i32> %a, <8 x i32> poison, <8 x i32> zeroinitializer
-  %vcc = load <8 x i1>, <8 x i1>* %cc
+  %vcc = load <8 x i1>, ptr %cc
   %vsel = select <8 x i1> %vcc, <8 x i32> %va, <8 x i32> %vb
-  store <8 x i32> %vsel, <8 x i32>* %z
+  store <8 x i32> %vsel, ptr %z
   ret void
 }
 
-define void @vselect_vv_v8f32(<8 x float>* %a, <8 x float>* %b, <8 x i1>* %cc, <8 x float>* %z) {
+define void @vselect_vv_v8f32(ptr %a, ptr %b, ptr %cc, ptr %z) {
 ; CHECK-LABEL: vselect_vv_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vlm.v v0, (a2)
-; CHECK-NEXT:    vle32.v v10, (a1)
-; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
+; CHECK-NEXT:    vle32.v v8, (a1)
+; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    vse32.v v8, (a3)
 ; CHECK-NEXT:    ret
-  %va = load <8 x float>, <8 x float>* %a
-  %vb = load <8 x float>, <8 x float>* %b
-  %vcc = load <8 x i1>, <8 x i1>* %cc
+  %va = load <8 x float>, ptr %a
+  %vb = load <8 x float>, ptr %b
+  %vcc = load <8 x i1>, ptr %cc
   %vsel = select <8 x i1> %vcc, <8 x float> %va, <8 x float> %vb
-  store <8 x float> %vsel, <8 x float>* %z
+  store <8 x float> %vsel, ptr %z
   ret void
 }
 
-define void @vselect_vx_v8f32(float %a, <8 x float>* %b, <8 x i1>* %cc, <8 x float>* %z) {
+define void @vselect_vx_v8f32(float %a, ptr %b, ptr %cc, ptr %z) {
 ; CHECK-LABEL: vselect_vx_v8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a1)
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vfmerge.vfm v8, v8, fa0, v0
 ; CHECK-NEXT:    vse32.v v8, (a2)
 ; CHECK-NEXT:    ret
-  %vb = load <8 x float>, <8 x float>* %b
+  %vb = load <8 x float>, ptr %b
   %ahead = insertelement <8 x float> poison, float %a, i32 0
   %va = shufflevector <8 x float> %ahead, <8 x float> poison, <8 x i32> zeroinitializer
-  %vcc = load <8 x i1>, <8 x i1>* %cc
+  %vcc = load <8 x i1>, ptr %cc
   %vsel = select <8 x i1> %vcc, <8 x float> %va, <8 x float> %vb
-  store <8 x float> %vsel, <8 x float>* %z
+  store <8 x float> %vsel, ptr %z
   ret void
 }
 
-define void @vselect_vfpzero_v8f32(<8 x float>* %b, <8 x i1>* %cc, <8 x float>* %z) {
+define void @vselect_vfpzero_v8f32(ptr %b, ptr %cc, ptr %z) {
 ; CHECK-LABEL: vselect_vfpzero_v8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a1)
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0
 ; CHECK-NEXT:    vse32.v v8, (a2)
 ; CHECK-NEXT:    ret
-  %vb = load <8 x float>, <8 x float>* %b
+  %vb = load <8 x float>, ptr %b
   %a = insertelement <8 x float> poison, float 0.0, i32 0
   %va = shufflevector <8 x float> %a, <8 x float> poison, <8 x i32> zeroinitializer
-  %vcc = load <8 x i1>, <8 x i1>* %cc
+  %vcc = load <8 x i1>, ptr %cc
   %vsel = select <8 x i1> %vcc, <8 x float> %va, <8 x float> %vb
-  store <8 x float> %vsel, <8 x float>* %z
+  store <8 x float> %vsel, ptr %z
   ret void
 }
 
-define void @vselect_vv_v16i16(<16 x i16>* %a, <16 x i16>* %b, <16 x i1>* %cc, <16 x i16>* %z) {
+define void @vselect_vv_v16i16(ptr %a, ptr %b, ptr %cc, ptr %z) {
 ; CHECK-LABEL: vselect_vv_v16i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
-; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vlm.v v0, (a2)
-; CHECK-NEXT:    vle16.v v10, (a1)
-; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
+; CHECK-NEXT:    vle16.v v8, (a1)
+; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    vse16.v v8, (a3)
 ; CHECK-NEXT:    ret
-  %va = load <16 x i16>, <16 x i16>* %a
-  %vb = load <16 x i16>, <16 x i16>* %b
-  %vcc = load <16 x i1>, <16 x i1>* %cc
+  %va = load <16 x i16>, ptr %a
+  %vb = load <16 x i16>, ptr %b
+  %vcc = load <16 x i1>, ptr %cc
   %vsel = select <16 x i1> %vcc, <16 x i16> %va, <16 x i16> %vb
-  store <16 x i16> %vsel, <16 x i16>* %z
+  store <16 x i16> %vsel, ptr %z
   ret void
 }
 
-define void @vselect_vx_v16i16(i16 signext %a, <16 x i16>* %b, <16 x i1>* %cc, <16 x i16>* %z) {
+define void @vselect_vx_v16i16(i16 signext %a, ptr %b, ptr %cc, ptr %z) {
 ; CHECK-LABEL: vselect_vx_v16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a2)
 ; CHECK-NEXT:    vle16.v v8, (a1)
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    vse16.v v8, (a3)
 ; CHECK-NEXT:    ret
-  %vb = load <16 x i16>, <16 x i16>* %b
+  %vb = load <16 x i16>, ptr %b
   %ahead = insertelement <16 x i16> poison, i16 %a, i32 0
   %va = shufflevector <16 x i16> %ahead, <16 x i16> poison, <16 x i32> zeroinitializer
-  %vcc = load <16 x i1>, <16 x i1>* %cc
+  %vcc = load <16 x i1>, ptr %cc
   %vsel = select <16 x i1> %vcc, <16 x i16> %va, <16 x i16> %vb
-  store <16 x i16> %vsel, <16 x i16>* %z
+  store <16 x i16> %vsel, ptr %z
   ret void
 }
 
-define void @vselect_vi_v16i16(<16 x i16>* %b, <16 x i1>* %cc, <16 x i16>* %z) {
+define void @vselect_vi_v16i16(ptr %b, ptr %cc, ptr %z) {
 ; CHECK-LABEL: vselect_vi_v16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a1)
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vmerge.vim v8, v8, 4, v0
 ; CHECK-NEXT:    vse16.v v8, (a2)
 ; CHECK-NEXT:    ret
-  %vb = load <16 x i16>, <16 x i16>* %b
+  %vb = load <16 x i16>, ptr %b
   %a = insertelement <16 x i16> poison, i16 4, i32 0
   %va = shufflevector <16 x i16> %a, <16 x i16> poison, <16 x i32> zeroinitializer
-  %vcc = load <16 x i1>, <16 x i1>* %cc
+  %vcc = load <16 x i1>, ptr %cc
   %vsel = select <16 x i1> %vcc, <16 x i16> %va, <16 x i16> %vb
-  store <16 x i16> %vsel, <16 x i16>* %z
+  store <16 x i16> %vsel, ptr %z
   ret void
 }
 
-define void @vselect_vv_v32f16(<32 x half>* %a, <32 x half>* %b, <32 x i1>* %cc, <32 x half>* %z) {
+define void @vselect_vv_v32f16(ptr %a, ptr %b, ptr %cc, ptr %z) {
 ; CHECK-LABEL: vselect_vv_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a4, 32
 ; CHECK-NEXT:    vsetvli zero, a4, e16, m4, ta, mu
-; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vlm.v v0, (a2)
-; CHECK-NEXT:    vle16.v v12, (a1)
-; CHECK-NEXT:    vmerge.vvm v8, v12, v8, v0
+; CHECK-NEXT:    vle16.v v8, (a1)
+; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    vse16.v v8, (a3)
 ; CHECK-NEXT:    ret
-  %va = load <32 x half>, <32 x half>* %a
-  %vb = load <32 x half>, <32 x half>* %b
-  %vcc = load <32 x i1>, <32 x i1>* %cc
+  %va = load <32 x half>, ptr %a
+  %vb = load <32 x half>, ptr %b
+  %vcc = load <32 x i1>, ptr %cc
   %vsel = select <32 x i1> %vcc, <32 x half> %va, <32 x half> %vb
-  store <32 x half> %vsel, <32 x half>* %z
+  store <32 x half> %vsel, ptr %z
   ret void
 }
 
-define void @vselect_vx_v32f16(half %a, <32 x half>* %b, <32 x i1>* %cc, <32 x half>* %z) {
+define void @vselect_vx_v32f16(half %a, ptr %b, ptr %cc, ptr %z) {
 ; CHECK-LABEL: vselect_vx_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a3, 32
-; CHECK-NEXT:    vsetvli zero, a3, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a3, e16, m4, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a1)
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vfmerge.vfm v8, v8, fa0, v0
 ; CHECK-NEXT:    vse16.v v8, (a2)
 ; CHECK-NEXT:    ret
-  %vb = load <32 x half>, <32 x half>* %b
+  %vb = load <32 x half>, ptr %b
   %ahead = insertelement <32 x half> poison, half %a, i32 0
   %va = shufflevector <32 x half> %ahead, <32 x half> poison, <32 x i32> zeroinitializer
-  %vcc = load <32 x i1>, <32 x i1>* %cc
+  %vcc = load <32 x i1>, ptr %cc
   %vsel = select <32 x i1> %vcc, <32 x half> %va, <32 x half> %vb
-  store <32 x half> %vsel, <32 x half>* %z
+  store <32 x half> %vsel, ptr %z
   ret void
 }
 
-define void @vselect_vfpzero_v32f16(<32 x half>* %b, <32 x i1>* %cc, <32 x half>* %z) {
+define void @vselect_vfpzero_v32f16(ptr %b, ptr %cc, ptr %z) {
 ; CHECK-LABEL: vselect_vfpzero_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a3, 32
-; CHECK-NEXT:    vsetvli zero, a3, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a3, e16, m4, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a1)
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0
 ; CHECK-NEXT:    vse16.v v8, (a2)
 ; CHECK-NEXT:    ret
-  %vb = load <32 x half>, <32 x half>* %b
+  %vb = load <32 x half>, ptr %b
   %a = insertelement <32 x half> poison, half 0.0, i32 0
   %va = shufflevector <32 x half> %a, <32 x half> poison, <32 x i32> zeroinitializer
-  %vcc = load <32 x i1>, <32 x i1>* %cc
+  %vcc = load <32 x i1>, ptr %cc
   %vsel = select <32 x i1> %vcc, <32 x half> %va, <32 x half> %vb
-  store <32 x half> %vsel, <32 x half>* %z
+  store <32 x half> %vsel, ptr %z
   ret void
 }
 
 define <2 x i1> @vselect_v2i1(<2 x i1> %a, <2 x i1> %b, <2 x i1> %cc) {
 ; CHECK-LABEL: vselect_v2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmandn.mm v8, v8, v9
 ; CHECK-NEXT:    vmand.mm v9, v0, v9
 ; CHECK-NEXT:    vmor.mm v0, v9, v8
@@ -236,7 +232,7 @@ define <2 x i1> @vselect_v2i1(<2 x i1> %a, <2 x i1> %b, <2 x i1> %cc) {
 define <4 x i1> @vselect_v4i1(<4 x i1> %a, <4 x i1> %b, <4 x i1> %cc) {
 ; CHECK-LABEL: vselect_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmandn.mm v8, v8, v9
 ; CHECK-NEXT:    vmand.mm v9, v0, v9
 ; CHECK-NEXT:    vmor.mm v0, v9, v8
@@ -248,7 +244,7 @@ define <4 x i1> @vselect_v4i1(<4 x i1> %a, <4 x i1> %b, <4 x i1> %cc) {
 define <8 x i1> @vselect_v8i1(<8 x i1> %a, <8 x i1> %b, <8 x i1> %cc) {
 ; CHECK-LABEL: vselect_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmandn.mm v8, v8, v9
 ; CHECK-NEXT:    vmand.mm v9, v0, v9
 ; CHECK-NEXT:    vmor.mm v0, v9, v8
@@ -260,7 +256,7 @@ define <8 x i1> @vselect_v8i1(<8 x i1> %a, <8 x i1> %b, <8 x i1> %cc) {
 define <16 x i1> @vselect_v16i1(<16 x i1> %a, <16 x i1> %b, <16 x i1> %cc) {
 ; CHECK-LABEL: vselect_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmandn.mm v8, v8, v9
 ; CHECK-NEXT:    vmand.mm v9, v0, v9
 ; CHECK-NEXT:    vmor.mm v0, v9, v8
@@ -273,7 +269,7 @@ define <32 x i1> @vselect_v32i1(<32 x i1> %a, <32 x i1> %b, <32 x i1> %cc) {
 ; CHECK-LABEL: vselect_v32i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; CHECK-NEXT:    vmandn.mm v8, v8, v9
 ; CHECK-NEXT:    vmand.mm v9, v0, v9
 ; CHECK-NEXT:    vmor.mm v0, v9, v8
@@ -286,7 +282,7 @@ define <64 x i1> @vselect_v64i1(<64 x i1> %a, <64 x i1> %b, <64 x i1> %cc) {
 ; CHECK-LABEL: vselect_v64i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 64
-; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; CHECK-NEXT:    vmandn.mm v8, v8, v9
 ; CHECK-NEXT:    vmand.mm v9, v0, v9
 ; CHECK-NEXT:    vmor.mm v0, v9, v8

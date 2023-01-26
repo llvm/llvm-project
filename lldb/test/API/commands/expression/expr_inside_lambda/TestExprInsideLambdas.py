@@ -11,8 +11,6 @@ from lldbsuite.test.lldbtest import *
 
 class ExprInsideLambdaTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def expectExprError(self, expr : str, expected : str):
         frame = self.thread.GetFrameAtIndex(0)
         value = frame.EvaluateExpression(expr)
@@ -112,7 +110,7 @@ class ExprInsideLambdaTestCase(TestBase):
                                            " 'base_var'"))
 
         self.expectExprError("local_var", ("use of non-static data member 'local_var'"
-                                           " of '' from nested type 'LocalLambdaClass'"))
+                                           " of '(unnamed class)' from nested type 'LocalLambdaClass'"))
 
         # Inside non_capturing_method
         lldbutil.continue_to_breakpoint(process, bkpt)

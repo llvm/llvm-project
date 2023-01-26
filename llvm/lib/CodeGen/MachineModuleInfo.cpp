@@ -47,8 +47,6 @@ void MachineModuleInfo::initialize() {
 }
 
 void MachineModuleInfo::finalize() {
-  Personalities.clear();
-
   Context.reset();
   // We don't clear the ExternalContext.
 
@@ -89,16 +87,6 @@ MachineModuleInfo::MachineModuleInfo(const LLVMTargetMachine *TM,
 
 MachineModuleInfo::~MachineModuleInfo() { finalize(); }
 
-/// \name Exception Handling
-/// \{
-
-void MachineModuleInfo::addPersonality(const Function *Personality) {
-  if (!llvm::is_contained(Personalities, Personality))
-    Personalities.push_back(Personality);
-}
-
-/// \}
-
 MachineFunction *
 MachineModuleInfo::getMachineFunction(const Function &F) const {
   auto I = MachineFunctions.find(&F);
@@ -118,6 +106,7 @@ MachineFunction &MachineModuleInfo::getOrCreateMachineFunction(Function &F) {
     // No pre-existing machine function, create a new one.
     const TargetSubtargetInfo &STI = *TM.getSubtargetImpl(F);
     MF = new MachineFunction(F, TM, STI, NextFnNum++, *this);
+    MF->initTargetMachineFunctionInfo(STI);
     // Update the set entry.
     I.first->second.reset(MF);
   } else {

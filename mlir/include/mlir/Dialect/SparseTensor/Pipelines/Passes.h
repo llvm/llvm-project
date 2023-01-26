@@ -30,77 +30,98 @@ namespace sparse_tensor {
 struct SparseCompilerOptions
     : public PassPipelineOptions<SparseCompilerOptions> {
   // These options must be kept in sync with `SparsificationBase`.
-  PassOptions::Option<int32_t> parallelization{
+  // TODO(57514): These options are duplicated in Passes.td.
+  PassOptions::Option<mlir::SparseParallelizationStrategy> parallelization{
       *this, "parallelization-strategy",
-      desc("Set the parallelization strategy"), init(0)};
-  PassOptions::Option<int32_t> vectorization{
-      *this, "vectorization-strategy", desc("Set the vectorization strategy"),
-      init(0)};
-  PassOptions::Option<int32_t> vectorLength{
-      *this, "vl", desc("Set the vector length"), init(1)};
-  PassOptions::Option<bool> enableSIMDIndex32{
-      *this, "enable-simd-index32",
-      desc("Enable i32 indexing into vectors (for efficiency)"), init(false)};
-  PassOptions::Option<bool> enableVLAVectorization{
-      *this, "enable-vla-vectorization",
-      desc("Enable vector length agnostic vectorization"), init(false)};
+      ::llvm::cl::desc("Set the parallelization strategy"),
+      ::llvm::cl::init(mlir::SparseParallelizationStrategy::kNone),
+      llvm::cl::values(
+          clEnumValN(mlir::SparseParallelizationStrategy::kNone, "none",
+                     "Turn off sparse parallelization."),
+          clEnumValN(mlir::SparseParallelizationStrategy::kDenseOuterLoop,
+                     "dense-outer-loop",
+                     "Enable dense outer loop sparse parallelization."),
+          clEnumValN(mlir::SparseParallelizationStrategy::kAnyStorageOuterLoop,
+                     "any-storage-outer-loop",
+                     "Enable sparse parallelization regardless of storage for "
+                     "the outer loop."),
+          clEnumValN(mlir::SparseParallelizationStrategy::kDenseAnyLoop,
+                     "dense-any-loop",
+                     "Enable dense parallelization for any loop."),
+          clEnumValN(
+              mlir::SparseParallelizationStrategy::kAnyStorageAnyLoop,
+              "any-storage-any-loop",
+              "Enable sparse parallelization for any storage and loop."))};
+
+  PassOptions::Option<bool> enableRuntimeLibrary{
+      *this, "enable-runtime-library",
+      desc("Enable runtime library for manipulating sparse tensors"),
+      init(true)};
+
   PassOptions::Option<bool> testBufferizationAnalysisOnly{
       *this, "test-bufferization-analysis-only",
       desc("Run only the inplacability analysis"), init(false)};
 
-  /// Projects out the options for `createSparsificationPass`.
-  SparsificationOptions sparsificationOptions() const {
-    return SparsificationOptions(sparseParallelizationStrategy(parallelization),
-                                 sparseVectorizationStrategy(vectorization),
-                                 vectorLength, enableSIMDIndex32,
-                                 enableVLAVectorization);
-  }
+  PassOptions::Option<bool> enableBufferInitialization{
+      *this, "enable-buffer-initialization",
+      desc("Enable zero-initialization of memory buffers"), init(false)};
+
+  PassOptions::Option<int32_t> vectorLength{
+      *this, "vl", desc("Set the vector length (0 disables vectorization)"),
+      init(0)};
 
   // These options must be kept in sync with `SparseTensorConversionBase`.
   PassOptions::Option<int32_t> sparseToSparse{
       *this, "s2s-strategy",
       desc("Set the strategy for sparse-to-sparse conversion"), init(0)};
 
-  /// Projects out the options for `createSparsificationPass`.
-  SparseTensorConversionOptions sparseTensorConversionOptions() const {
-    return SparseTensorConversionOptions(
-        sparseToSparseConversionStrategy(sparseToSparse));
-  }
-
-  // These options must be kept in sync with `ConvertVectorToLLVMBase`.
-  // TODO(wrengr): does `indexOptimizations` differ from `enableSIMDIndex32`?
+  // These options must be kept in sync with the `ConvertVectorToLLVM`
+  // (defined in include/mlir/Dialect/SparseTensor/Pipelines/Passes.h).
   PassOptions::Option<bool> reassociateFPReductions{
       *this, "reassociate-fp-reductions",
       desc("Allows llvm to reassociate floating-point reductions for speed"),
       init(false)};
-  PassOptions::Option<bool> indexOptimizations{
+  PassOptions::Option<bool> force32BitVectorIndices{
       *this, "enable-index-optimizations",
       desc("Allows compiler to assume indices fit in 32-bit if that yields "
            "faster code"),
       init(true)};
   PassOptions::Option<bool> amx{
       *this, "enable-amx",
-      desc("Enables the use of AMX dialect while lowering the vector dialect."),
+      desc("Enables the use of AMX dialect while lowering the vector dialect"),
       init(false)};
-  PassOptions::Option<bool> armNeon{*this, "enable-arm-neon",
-                                    desc("Enables the use of ArmNeon dialect "
-                                         "while lowering the vector dialect."),
-                                    init(false)};
-  PassOptions::Option<bool> armSVE{*this, "enable-arm-sve",
-                                   desc("Enables the use of ArmSVE dialect "
-                                        "while lowering the vector dialect."),
-                                   init(false)};
+  PassOptions::Option<bool> armNeon{
+      *this, "enable-arm-neon",
+      desc("Enables the use of ArmNeon dialect while lowering the vector "
+           "dialect"),
+      init(false)};
+  PassOptions::Option<bool> armSVE{
+      *this, "enable-arm-sve",
+      desc("Enables the use of ArmSVE dialect while lowering the vector "
+           "dialect"),
+      init(false)};
   PassOptions::Option<bool> x86Vector{
       *this, "enable-x86vector",
       desc("Enables the use of X86Vector dialect while lowering the vector "
-           "dialect."),
+           "dialect"),
       init(false)};
+
+  /// Projects out the options for `createSparsificationPass`.
+  SparsificationOptions sparsificationOptions() const {
+    return SparsificationOptions(parallelization);
+  }
+
+  /// Projects out the options for `createSparseTensorConversionPass`.
+  SparseTensorConversionOptions sparseTensorConversionOptions() const {
+    return SparseTensorConversionOptions(
+        sparseToSparseConversionStrategy(sparseToSparse));
+  }
 
   /// Projects out the options for `createConvertVectorToLLVMPass`.
   LowerVectorToLLVMOptions lowerVectorToLLVMOptions() const {
     LowerVectorToLLVMOptions opts{};
     opts.enableReassociateFPReductions(reassociateFPReductions);
-    opts.enableIndexOptimizations(indexOptimizations);
+    opts.enableIndexOptimizations(force32BitVectorIndices);
     opts.enableArmNeon(armNeon);
     opts.enableArmSVE(armSVE);
     opts.enableAMX(amx);

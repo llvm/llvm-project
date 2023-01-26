@@ -8,7 +8,7 @@
 ; CHECK:      $BB0_2:
 ; CHECK-NOT:  sll ${{[0-9]+}}, ${{[0-9]+}}, 2
 
-define i32 @f0(i32 %n, i32 %m, [256 x i32]* nocapture %a, [256 x i32]* nocapture %b) nounwind readonly {
+define i32 @f0(i32 %n, i32 %m, ptr nocapture %a, ptr nocapture %b) nounwind readonly {
 entry:
   br label %for.cond1.preheader
 
@@ -20,10 +20,10 @@ for.cond1.preheader:
 for.body3:
   %s.120 = phi i32 [ %s.022, %for.cond1.preheader ], [ %add7, %for.body3 ]
   %j.019 = phi i32 [ 0, %for.cond1.preheader ], [ %add8, %for.body3 ]
-  %arrayidx4 = getelementptr inbounds [256 x i32], [256 x i32]* %a, i32 %i.021, i32 %j.019
-  %0 = load i32, i32* %arrayidx4, align 4
-  %arrayidx6 = getelementptr inbounds [256 x i32], [256 x i32]* %b, i32 %i.021, i32 %j.019
-  %1 = load i32, i32* %arrayidx6, align 4
+  %arrayidx4 = getelementptr inbounds [256 x i32], ptr %a, i32 %i.021, i32 %j.019
+  %0 = load i32, ptr %arrayidx4, align 4
+  %arrayidx6 = getelementptr inbounds [256 x i32], ptr %b, i32 %i.021, i32 %j.019
+  %1 = load i32, ptr %arrayidx6, align 4
   %add = add i32 %0, %s.120
   %add7 = add i32 %add, %1
   %add8 = add nsw i32 %j.019, %m

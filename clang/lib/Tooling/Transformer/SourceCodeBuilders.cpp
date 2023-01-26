@@ -72,17 +72,17 @@ bool tooling::isKnownPointerLikeType(QualType Ty, ASTContext &Context) {
   return match(PointerLikeTy, Ty, Context).size() > 0;
 }
 
-llvm::Optional<std::string> tooling::buildParens(const Expr &E,
-                                                 const ASTContext &Context) {
+std::optional<std::string> tooling::buildParens(const Expr &E,
+                                                const ASTContext &Context) {
   StringRef Text = getText(E, Context);
   if (Text.empty())
-    return llvm::None;
+    return std::nullopt;
   if (mayEverNeedParens(E))
     return ("(" + Text + ")").str();
   return Text.str();
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 tooling::buildDereference(const Expr &E, const ASTContext &Context) {
   if (const auto *Op = dyn_cast<UnaryOperator>(&E))
     if (Op->getOpcode() == UO_AddrOf) {
@@ -90,21 +90,21 @@ tooling::buildDereference(const Expr &E, const ASTContext &Context) {
       StringRef Text =
           getText(*Op->getSubExpr()->IgnoreParenImpCasts(), Context);
       if (Text.empty())
-        return llvm::None;
+        return std::nullopt;
       return Text.str();
     }
 
   StringRef Text = getText(E, Context);
   if (Text.empty())
-    return llvm::None;
+    return std::nullopt;
   // Add leading '*'.
   if (needParensAfterUnaryOperator(E))
     return ("*(" + Text + ")").str();
   return ("*" + Text).str();
 }
 
-llvm::Optional<std::string> tooling::buildAddressOf(const Expr &E,
-                                                    const ASTContext &Context) {
+std::optional<std::string> tooling::buildAddressOf(const Expr &E,
+                                                   const ASTContext &Context) {
   if (E.isImplicitCXXThis())
     return std::string("this");
   if (const auto *Op = dyn_cast<UnaryOperator>(&E))
@@ -113,13 +113,13 @@ llvm::Optional<std::string> tooling::buildAddressOf(const Expr &E,
       StringRef Text =
           getText(*Op->getSubExpr()->IgnoreParenImpCasts(), Context);
       if (Text.empty())
-        return llvm::None;
+        return std::nullopt;
       return Text.str();
     }
   // Add leading '&'.
   StringRef Text = getText(E, Context);
   if (Text.empty())
-    return llvm::None;
+    return std::nullopt;
   if (needParensAfterUnaryOperator(E)) {
     return ("&(" + Text + ")").str();
   }
@@ -128,7 +128,7 @@ llvm::Optional<std::string> tooling::buildAddressOf(const Expr &E,
 
 // Append the appropriate access operation (syntactically) to `E`, assuming `E`
 // is a non-pointer value.
-static llvm::Optional<std::string>
+static std::optional<std::string>
 buildAccessForValue(const Expr &E, const ASTContext &Context) {
   if (const auto *Op = llvm::dyn_cast<UnaryOperator>(&E))
     if (Op->getOpcode() == UO_Deref) {
@@ -136,7 +136,7 @@ buildAccessForValue(const Expr &E, const ASTContext &Context) {
       const Expr *SubExpr = Op->getSubExpr()->IgnoreParenImpCasts();
       StringRef DerefText = getText(*SubExpr, Context);
       if (DerefText.empty())
-        return llvm::None;
+        return std::nullopt;
       if (needParensBeforeDotOrArrow(*SubExpr))
         return ("(" + DerefText + ")->").str();
       return (DerefText + "->").str();
@@ -145,7 +145,7 @@ buildAccessForValue(const Expr &E, const ASTContext &Context) {
   // Add following '.'.
   StringRef Text = getText(E, Context);
   if (Text.empty())
-    return llvm::None;
+    return std::nullopt;
   if (needParensBeforeDotOrArrow(E)) {
     return ("(" + Text + ").").str();
   }
@@ -154,7 +154,7 @@ buildAccessForValue(const Expr &E, const ASTContext &Context) {
 
 // Append the appropriate access operation (syntactically) to `E`, assuming `E`
 // is a pointer value.
-static llvm::Optional<std::string>
+static std::optional<std::string>
 buildAccessForPointer(const Expr &E, const ASTContext &Context) {
   if (const auto *Op = llvm::dyn_cast<UnaryOperator>(&E))
     if (Op->getOpcode() == UO_AddrOf) {
@@ -162,7 +162,7 @@ buildAccessForPointer(const Expr &E, const ASTContext &Context) {
       const Expr *SubExpr = Op->getSubExpr()->IgnoreParenImpCasts();
       StringRef DerefText = getText(*SubExpr, Context);
       if (DerefText.empty())
-        return llvm::None;
+        return std::nullopt;
       if (needParensBeforeDotOrArrow(*SubExpr))
         return ("(" + DerefText + ").").str();
       return (DerefText + ".").str();
@@ -171,19 +171,19 @@ buildAccessForPointer(const Expr &E, const ASTContext &Context) {
   // Add following '->'.
   StringRef Text = getText(E, Context);
   if (Text.empty())
-    return llvm::None;
+    return std::nullopt;
   if (needParensBeforeDotOrArrow(E))
     return ("(" + Text + ")->").str();
   return (Text + "->").str();
 }
 
-llvm::Optional<std::string> tooling::buildDot(const Expr &E,
-                                              const ASTContext &Context) {
+std::optional<std::string> tooling::buildDot(const Expr &E,
+                                             const ASTContext &Context) {
   return buildAccessForValue(E, Context);
 }
 
-llvm::Optional<std::string> tooling::buildArrow(const Expr &E,
-                                                const ASTContext &Context) {
+std::optional<std::string> tooling::buildArrow(const Expr &E,
+                                               const ASTContext &Context) {
   return buildAccessForPointer(E, Context);
 }
 
@@ -210,11 +210,12 @@ static bool treatLikePointer(QualType Ty, PLTClass C, ASTContext &Context) {
 
 // FIXME: move over the other `maybe` functionality from Stencil. Should all be
 // in one place.
-llvm::Optional<std::string> tooling::buildAccess(const Expr &RawExpression,
-                                                 ASTContext &Context,
-                                                 PLTClass Classification) {
+std::optional<std::string> tooling::buildAccess(const Expr &RawExpression,
+                                                ASTContext &Context,
+                                                PLTClass Classification) {
   if (RawExpression.isImplicitCXXThis())
-    // Return the empty string, because `None` signifies some sort of failure.
+    // Return the empty string, because `std::nullopt` signifies some sort of
+    // failure.
     return std::string();
 
   const Expr *E = RawExpression.IgnoreImplicitAsWritten();

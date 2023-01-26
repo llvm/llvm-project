@@ -11,7 +11,7 @@
 // Conflicts with BIONIC declarations.
 // Lacks mallinfo, mallopt except in libmalloc.  cfree with different
 // signature in libc.
-// UNSUPPORTED: solaris
+// UNSUPPORTED: target={{.*solaris.*}}
 
 // Inhibit conflicting declaration of memalign on Solaris.
 #if defined(__sun__) && defined(__svr4__)

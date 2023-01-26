@@ -33,7 +33,7 @@ llvm::Expected<std::vector<FoldingRange>> getFoldingRanges(ParsedAST &AST);
 /// Returns a list of ranges whose contents might be collapsible in an editor.
 /// This version uses the pseudoparser which does not require the AST.
 llvm::Expected<std::vector<FoldingRange>>
-getFoldingRanges(const std::string &Code);
+getFoldingRanges(const std::string &Code, bool LineFoldingOnly);
 
 } // namespace clangd
 } // namespace clang

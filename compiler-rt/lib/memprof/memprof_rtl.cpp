@@ -50,6 +50,14 @@ static void MemprofDie() {
   }
 }
 
+static void MemprofOnDeadlySignal(int signo, void *siginfo, void *context) {
+  // We call StartReportDeadlySignal not HandleDeadlySignal so we get the
+  // deadly signal message to stderr but no writing to the profile output file
+  StartReportDeadlySignal();
+  __memprof_profile_dump();
+  Die();
+}
+
 static void CheckUnwind() {
   GET_STACK_TRACE(kStackTraceMax, common_flags()->fast_unwind_on_check);
   stack.Print();
@@ -183,6 +191,7 @@ static void MemprofInitInternal() {
   InitializeShadowMemory();
 
   TSDInit(PlatformTSDDtor);
+  InstallDeadlySignalHandlers(MemprofOnDeadlySignal);
 
   InitializeAllocator();
 

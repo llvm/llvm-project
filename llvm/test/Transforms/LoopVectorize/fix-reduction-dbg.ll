@@ -28,7 +28,7 @@
 ;   return ret;
 ; }
 
-define dso_local i32 @"foo"(i32 %count, i32* nocapture readonly %bar) local_unnamed_addr !dbg !8 {
+define dso_local i32 @"foo"(i32 %count, ptr nocapture readonly %bar) local_unnamed_addr !dbg !8 {
 entry:
   %cmp8 = icmp sgt i32 %count, 0, !dbg !10
   br i1 %cmp8, label %for.body.preheader, label %for.cond.cleanup, !dbg !10
@@ -48,8 +48,8 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 for.body:                                         ; preds = %for.body, %for.body.preheader
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %ret.09 = phi i32 [ %count, %for.body.preheader ], [ %add, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %bar, i64 %indvars.iv, !dbg !11
-  %0 = load i32, i32* %arrayidx, align 4, !dbg !11, !tbaa !15
+  %arrayidx = getelementptr inbounds i32, ptr %bar, i64 %indvars.iv, !dbg !11
+  %0 = load i32, ptr %arrayidx, align 4, !dbg !11, !tbaa !15
   %add = add nsw i32 %0, %ret.09, !dbg !12
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !10
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count, !dbg !10

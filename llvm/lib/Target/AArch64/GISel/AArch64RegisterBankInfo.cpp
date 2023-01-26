@@ -272,7 +272,9 @@ AArch64RegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   case AArch64::rtcGPR64RegClassID:
   case AArch64::WSeqPairsClassRegClassID:
   case AArch64::XSeqPairsClassRegClassID:
+  case AArch64::MatrixIndexGPR32_8_11RegClassID:
   case AArch64::MatrixIndexGPR32_12_15RegClassID:
+  case AArch64::GPR64_with_sub_32_in_MatrixIndexGPR32_8_11RegClassID:
   case AArch64::GPR64_with_sub_32_in_MatrixIndexGPR32_12_15RegClassID:
     return getRegBank(AArch64::GPRRegBankID);
   case AArch64::CCRRegClassID:
@@ -627,10 +629,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     Register DstReg = MI.getOperand(0).getReg();
     Register SrcReg = MI.getOperand(1).getReg();
     // Check if one of the register is not a generic register.
-    if ((Register::isPhysicalRegister(DstReg) ||
-         !MRI.getType(DstReg).isValid()) ||
-        (Register::isPhysicalRegister(SrcReg) ||
-         !MRI.getType(SrcReg).isValid())) {
+    if ((DstReg.isPhysical() || !MRI.getType(DstReg).isValid()) ||
+        (SrcReg.isPhysical() || !MRI.getType(SrcReg).isValid())) {
       const RegisterBank *DstRB = getRegBank(DstReg, MRI, TRI);
       const RegisterBank *SrcRB = getRegBank(SrcReg, MRI, TRI);
       if (!DstRB)
@@ -648,7 +648,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
           /*NumOperands*/ 1);
     }
     // Both registers are generic, use G_BITCAST.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case TargetOpcode::G_BITCAST: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
@@ -681,6 +681,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       continue;
 
     LLT Ty = MRI.getType(MO.getReg());
+    if (!Ty.isValid())
+      continue;
     OpSize[Idx] = Ty.getSizeInBits();
 
     // As a top-level guess, vectors go in FPRs, scalars and pointers in GPRs.
@@ -989,6 +991,9 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   SmallVector<const ValueMapping *, 8> OpdsMapping(NumOperands);
   for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
     if (MI.getOperand(Idx).isReg() && MI.getOperand(Idx).getReg()) {
+      LLT Ty = MRI.getType(MI.getOperand(Idx).getReg());
+      if (!Ty.isValid())
+        continue;
       auto Mapping = getValueMapping(OpRegBankIdx[Idx], OpSize[Idx]);
       if (!Mapping->isValid())
         return getInvalidInstructionMapping();

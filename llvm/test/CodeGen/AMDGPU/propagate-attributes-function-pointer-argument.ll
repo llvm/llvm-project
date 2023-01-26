@@ -3,27 +3,27 @@
 ; passed to the original call instruction as an argument.
 ;
 ; Example:
-; `call void @f(void ()* @g)`
+; `call void @f(ptr @g)`
 ; could become
-; `call void @g(void ()* @g.1)`
+; `call void @g(ptr @g.1)`
 ; which is invalid IR.
 
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -amdgpu-propagate-attributes-late %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-propagate-attributes-late %s | FileCheck %s
 
 ; CHECK-LABEL: define amdgpu_kernel void @thiswasabug() #0
-; CHECK-NOT: call void @g(void ()* @g.1)
-; CHECK-DAG: call void @f(void ()* @g.1)
+; CHECK-NOT: call void @g(ptr @g.1)
+; CHECK-DAG: call void @f(ptr @g.1)
 ; CHECK-DAG: call void @g()
 define amdgpu_kernel void @thiswasabug() #0 {
     ; no replacement, but @g should be renamed to @g.1
-    call void @f(void ()* @g)
+    call void @f(ptr @g)
 
     ; this should call the clone, which takes the name @g
     call void @g()
     ret void
 }
 
-define private void @f(void ()* nocapture %0) #0 {
+define private void @f(ptr nocapture %0) #0 {
     ret void
 }
 

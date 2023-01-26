@@ -35,7 +35,8 @@ std::vector<CodeTemplate> getSingleton(CodeTemplate &&CT);
 
 // Generates code templates that has a self-dependency.
 Expected<std::vector<CodeTemplate>>
-generateSelfAliasingCodeTemplates(InstructionTemplate Variant);
+generateSelfAliasingCodeTemplates(InstructionTemplate Variant,
+                                  const BitVector &ForbiddenRegisters);
 
 // Generates code templates without assignment constraints.
 Expected<std::vector<CodeTemplate>>
@@ -91,6 +92,9 @@ size_t randomIndex(size_t Max);
 // Picks a random bit among the bits set in Vector and returns its index.
 // Precondition: Vector must have at least one bit set.
 size_t randomBit(const BitVector &Vector);
+
+// Picks a first bit that is common to these two vectors.
+std::optional<int> getFirstCommonBit(const BitVector &A, const BitVector &B);
 
 // Picks a random configuration, then selects a random def and a random use from
 // it and finally set the selected values in the provided InstructionInstances.

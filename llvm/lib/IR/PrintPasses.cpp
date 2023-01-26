@@ -8,6 +8,10 @@
 
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Errc.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Program.h"
 #include <unordered_set>
 
 using namespace llvm;
@@ -73,11 +77,24 @@ cl::opt<ChangePrinter> llvm::PrintChanged(
         // Sentinel value for unspecified option.
         clEnumValN(ChangePrinter::Verbose, "", "")));
 
+// An option for specifying the diff used by print-changed=[diff | diff-quiet]
+static cl::opt<std::string>
+    DiffBinary("print-changed-diff-path", cl::Hidden, cl::init("diff"),
+               cl::desc("system diff used by change reporters"));
+
 static cl::opt<bool>
     PrintModuleScope("print-module-scope",
                      cl::desc("When printing IR for print-[before|after]{-all} "
                               "always print a module IR"),
                      cl::init(false), cl::Hidden);
+
+// See the description for -print-changed for an explanation of the use
+// of this option.
+static cl::list<std::string> FilterPasses(
+    "filter-passes", cl::value_desc("pass names"),
+    cl::desc("Only consider IR changes for passes whose names "
+             "match the specified value. No-op without -print-changed"),
+    cl::CommaSeparated, cl::Hidden);
 
 static cl::list<std::string>
     PrintFuncsList("filter-print-funcs", cl::value_desc("function names"),
@@ -124,9 +141,105 @@ std::vector<std::string> llvm::printAfterPasses() {
 
 bool llvm::forcePrintModuleIR() { return PrintModuleScope; }
 
+bool llvm::isPassInPrintList(StringRef PassName) {
+  static std::unordered_set<std::string> Set(FilterPasses.begin(),
+                                             FilterPasses.end());
+  return Set.empty() || Set.count(std::string(PassName));
+}
+
+bool llvm::isFilterPassesEmpty() { return FilterPasses.empty(); }
+
 bool llvm::isFunctionInPrintList(StringRef FunctionName) {
   static std::unordered_set<std::string> PrintFuncNames(PrintFuncsList.begin(),
                                                         PrintFuncsList.end());
   return PrintFuncNames.empty() ||
          PrintFuncNames.count(std::string(FunctionName));
+}
+
+std::error_code cleanUpTempFilesImpl(ArrayRef<std::string> FileName,
+                                     unsigned N) {
+  std::error_code RC;
+  for (unsigned I = 0; I < N; ++I) {
+    std::error_code EC = sys::fs::remove(FileName[I]);
+    if (EC)
+      RC = EC;
+  }
+  return RC;
+}
+
+std::error_code llvm::prepareTempFiles(SmallVector<int> &FD,
+                                       ArrayRef<StringRef> SR,
+                                       SmallVector<std::string> &FileName) {
+  assert(FD.size() >= SR.size() && FileName.size() == FD.size() &&
+         "Unexpected array sizes");
+  std::error_code EC;
+  unsigned I = 0;
+  for (; I < FD.size(); ++I) {
+    if (FD[I] == -1) {
+      SmallVector<char, 200> SV;
+      EC = sys::fs::createTemporaryFile("tmpfile", "txt", FD[I], SV);
+      if (EC)
+        break;
+      FileName[I] = Twine(SV).str();
+    }
+    if (I < SR.size()) {
+      EC = sys::fs::openFileForWrite(FileName[I], FD[I]);
+      if (EC)
+        break;
+      raw_fd_ostream OutStream(FD[I], /*shouldClose=*/true);
+      if (FD[I] == -1) {
+        EC = make_error_code(errc::io_error);
+        break;
+      }
+      OutStream << SR[I];
+    }
+  }
+  if (EC && I > 0)
+    // clean up created temporary files
+    cleanUpTempFilesImpl(FileName, I);
+  return EC;
+}
+
+std::error_code llvm::cleanUpTempFiles(ArrayRef<std::string> FileName) {
+  return cleanUpTempFilesImpl(FileName, FileName.size());
+}
+
+std::string llvm::doSystemDiff(StringRef Before, StringRef After,
+                               StringRef OldLineFormat, StringRef NewLineFormat,
+                               StringRef UnchangedLineFormat) {
+  // Store the 2 bodies into temporary files and call diff on them
+  // to get the body of the node.
+  static SmallVector<int> FD{-1, -1, -1};
+  SmallVector<StringRef> SR{Before, After};
+  static SmallVector<std::string> FileName{"", "", ""};
+  if (auto Err = prepareTempFiles(FD, SR, FileName))
+    return "Unable to create temporary file.";
+
+  static ErrorOr<std::string> DiffExe = sys::findProgramByName(DiffBinary);
+  if (!DiffExe)
+    return "Unable to find diff executable.";
+
+  SmallString<128> OLF, NLF, ULF;
+  ("--old-line-format=" + OldLineFormat).toVector(OLF);
+  ("--new-line-format=" + NewLineFormat).toVector(NLF);
+  ("--unchanged-line-format=" + UnchangedLineFormat).toVector(ULF);
+
+  StringRef Args[] = {DiffBinary, "-w", "-d",        OLF,
+                      NLF,        ULF,  FileName[0], FileName[1]};
+  std::optional<StringRef> Redirects[] = {std::nullopt, StringRef(FileName[2]),
+                                          std::nullopt};
+  int Result = sys::ExecuteAndWait(*DiffExe, Args, std::nullopt, Redirects);
+  if (Result < 0)
+    return "Error executing system diff.";
+  std::string Diff;
+  auto B = MemoryBuffer::getFile(FileName[2]);
+  if (B && *B)
+    Diff = (*B)->getBuffer().str();
+  else
+    return "Unable to read result.";
+
+  if (auto Err = cleanUpTempFiles(FileName))
+    return "Unable to remove temporary file.";
+
+  return Diff;
 }

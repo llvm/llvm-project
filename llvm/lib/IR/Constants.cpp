@@ -87,7 +87,7 @@ bool Constant::isNullValue() const {
   // constant zero is zero for aggregates, cpnull is null for pointers, none for
   // tokens.
   return isa<ConstantAggregateZero>(this) || isa<ConstantPointerNull>(this) ||
-         isa<ConstantTokenNone>(this);
+         isa<ConstantTokenNone>(this) || isa<ConstantTargetNone>(this);
 }
 
 bool Constant::isAllOnesValue() const {
@@ -337,6 +337,12 @@ bool Constant::containsPoisonElement() const {
       this, [&](const auto *C) { return isa<PoisonValue>(C); });
 }
 
+bool Constant::containsUndefElement() const {
+  return containsUndefinedElement(this, [&](const auto *C) {
+    return isa<UndefValue>(C) && !isa<PoisonValue>(C);
+  });
+}
+
 bool Constant::containsConstantExpression() const {
   if (auto *VTy = dyn_cast<FixedVectorType>(getType())) {
     for (unsigned i = 0, e = VTy->getNumElements(); i != e; ++i)
@@ -369,6 +375,8 @@ Constant *Constant::getNullValue(Type *Ty) {
     return ConstantAggregateZero::get(Ty);
   case Type::TokenTyID:
     return ConstantTokenNone::get(Ty->getContext());
+  case Type::TargetExtTyID:
+    return ConstantTargetNone::get(cast<TargetExtType>(Ty));
   default:
     // Function, Label, or Opaque type?
     llvm_unreachable("Cannot create a null constant of that type!");
@@ -535,8 +543,8 @@ void llvm::deleteConstant(Constant *C) {
     delete static_cast<PoisonValue *>(C);
     break;
   case Constant::ConstantExprVal:
-    if (isa<UnaryConstantExpr>(C))
-      delete static_cast<UnaryConstantExpr *>(C);
+    if (isa<CastConstantExpr>(C))
+      delete static_cast<CastConstantExpr *>(C);
     else if (isa<BinaryConstantExpr>(C))
       delete static_cast<BinaryConstantExpr *>(C);
     else if (isa<SelectConstantExpr>(C))
@@ -1407,11 +1415,11 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
   else if (isa<UndefValue>(V))
     return UndefValue::get(VTy);
 
-  Type *I32Ty = Type::getInt32Ty(VTy->getContext());
+  Type *IdxTy = Type::getInt64Ty(VTy->getContext());
 
   // Move scalar into vector.
   Constant *PoisonV = PoisonValue::get(VTy);
-  V = ConstantExpr::getInsertElement(PoisonV, V, ConstantInt::get(I32Ty, 0));
+  V = ConstantExpr::getInsertElement(PoisonV, V, ConstantInt::get(IdxTy, 0));
   // Build shuffle mask to perform the splat.
   SmallVector<int, 8> Zeros(EC.getKnownMinValue(), 0);
   // Splat.
@@ -1484,8 +1492,6 @@ Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
                                           OnlyIfReducedTy);
   case Instruction::ExtractElement:
     return ConstantExpr::getExtractElement(Ops[0], Ops[1], OnlyIfReducedTy);
-  case Instruction::FNeg:
-    return ConstantExpr::getFNeg(Ops[0]);
   case Instruction::ShuffleVector:
     return ConstantExpr::getShuffleVector(Ops[0], Ops[1], getShuffleMask(),
                                           OnlyIfReducedTy);
@@ -1684,6 +1690,11 @@ Constant *ConstantVector::getSplatValue(bool AllowUndefs) const {
 const APInt &Constant::getUniqueInteger() const {
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(this))
     return CI->getValue();
+  // Scalable vectors can use a ConstantExpr to build a splat.
+  if (isa<ConstantExpr>(this))
+    return cast<ConstantInt>(this->getSplatValue())->getValue();
+  // For non-ConstantExpr we use getAggregateElement as a fast path to avoid
+  // calling getSplatValue in release builds.
   assert(this->getSplatValue() && "Doesn't contain a unique integer!");
   const Constant *C = this->getAggregateElement(0U);
   assert(C && isa<ConstantInt>(C) && "Not a vector of numbers!");
@@ -1705,6 +1716,25 @@ ConstantPointerNull *ConstantPointerNull::get(PointerType *Ty) {
 /// Remove the constant from the constant table.
 void ConstantPointerNull::destroyConstantImpl() {
   getContext().pImpl->CPNConstants.erase(getType());
+}
+
+//---- ConstantTargetNone::get() implementation.
+//
+
+ConstantTargetNone *ConstantTargetNone::get(TargetExtType *Ty) {
+  assert(Ty->hasProperty(TargetExtType::HasZeroInit) &&
+         "Target extension type not allowed to have a zeroinitializer");
+  std::unique_ptr<ConstantTargetNone> &Entry =
+      Ty->getContext().pImpl->CTNConstants[Ty];
+  if (!Entry)
+    Entry.reset(new ConstantTargetNone(Ty));
+
+  return Entry.get();
+}
+
+/// Remove the constant from the constant table.
+void ConstantTargetNone::destroyConstantImpl() {
+  getContext().pImpl->CTNConstants.erase(getType());
 }
 
 UndefValue *UndefValue::get(Type *Ty) {
@@ -2230,37 +2260,6 @@ Constant *ConstantExpr::getAddrSpaceCast(Constant *C, Type *DstTy,
   return getFoldedCast(Instruction::AddrSpaceCast, C, DstTy, OnlyIfReduced);
 }
 
-Constant *ConstantExpr::get(unsigned Opcode, Constant *C, unsigned Flags,
-                            Type *OnlyIfReducedTy) {
-  // Check the operands for consistency first.
-  assert(Instruction::isUnaryOp(Opcode) &&
-         "Invalid opcode in unary constant expression");
-
-#ifndef NDEBUG
-  switch (Opcode) {
-  case Instruction::FNeg:
-    assert(C->getType()->isFPOrFPVectorTy() &&
-           "Tried to create a floating-point operation on a "
-           "non-floating-point type!");
-    break;
-  default:
-    break;
-  }
-#endif
-
-  if (Constant *FC = ConstantFoldUnaryInstruction(Opcode, C))
-    return FC;
-
-  if (OnlyIfReducedTy == C->getType())
-    return nullptr;
-
-  Constant *ArgVec[] = { C };
-  ConstantExprKeyType Key(Opcode, ArgVec, 0, Flags);
-
-  LLVMContextImpl *pImpl = C->getContext().pImpl;
-  return pImpl->ExprConstants.getOrCreate(C->getType(), Key);
-}
-
 Constant *ConstantExpr::get(unsigned Opcode, Constant *C1, Constant *C2,
                             unsigned Flags, Type *OnlyIfReducedTy) {
   // Check the operands for consistency first.
@@ -2458,7 +2457,7 @@ Constant *ConstantExpr::getSelect(Constant *C, Constant *V1, Constant *V2,
 
 Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
                                          ArrayRef<Value *> Idxs, bool InBounds,
-                                         Optional<unsigned> InRangeIndex,
+                                         std::optional<unsigned> InRangeIndex,
                                          Type *OnlyIfReducedTy) {
   PointerType *OrigPtrTy = cast<PointerType>(C->getType()->getScalarType());
   assert(Ty && "Must specify element type");
@@ -2480,7 +2479,7 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
   if (VectorType *VecTy = dyn_cast<VectorType>(C->getType()))
     EltCount = VecTy->getElementCount();
   else
-    for (auto Idx : Idxs)
+    for (auto *Idx : Idxs)
       if (VectorType *VecTy = dyn_cast<VectorType>(Idx->getType()))
         EltCount = VecTy->getElementCount();
 
@@ -2515,7 +2514,7 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
   if (InRangeIndex && *InRangeIndex < 63)
     SubClassOptionalData |= (*InRangeIndex + 1) << 1;
   const ConstantExprKeyType Key(Instruction::GetElementPtr, ArgVec, 0,
-                                SubClassOptionalData, None, Ty);
+                                SubClassOptionalData, std::nullopt, Ty);
 
   LLVMContextImpl *pImpl = C->getContext().pImpl;
   return pImpl->ExprConstants.getOrCreate(ReqTy, Key);
@@ -2647,12 +2646,6 @@ Constant *ConstantExpr::getNeg(Constant *C, bool HasNUW, bool HasNSW) {
          "Cannot NEG a nonintegral value!");
   return getSub(ConstantFP::getZeroValueForNegation(C->getType()),
                 C, HasNUW, HasNSW);
-}
-
-Constant *ConstantExpr::getFNeg(Constant *C) {
-  assert(C->getType()->isFPOrFPVectorTy() &&
-         "Cannot FNEG a non-floating-point value!");
-  return get(Instruction::FNeg, C);
 }
 
 Constant *ConstantExpr::getNot(Constant *C) {
@@ -3002,7 +2995,7 @@ Constant *ConstantDataArray::getString(LLVMContext &Context,
                                        StringRef Str, bool AddNull) {
   if (!AddNull) {
     const uint8_t *Data = Str.bytes_begin();
-    return get(Context, makeArrayRef(Data, Str.size()));
+    return get(Context, ArrayRef(Data, Str.size()));
   }
 
   SmallVector<uint8_t, 64> ElementVals;
@@ -3470,9 +3463,6 @@ Instruction *ConstantExpr::getAsInstruction(Instruction *InsertBefore) const {
     return CmpInst::Create((Instruction::OtherOps)getOpcode(),
                            (CmpInst::Predicate)getPredicate(), Ops[0], Ops[1],
                            "", InsertBefore);
-  case Instruction::FNeg:
-    return UnaryOperator::Create((Instruction::UnaryOps)getOpcode(), Ops[0], "",
-                                 InsertBefore);
   default:
     assert(getNumOperands() == 2 && "Must be binary operator?");
     BinaryOperator *BO = BinaryOperator::Create(

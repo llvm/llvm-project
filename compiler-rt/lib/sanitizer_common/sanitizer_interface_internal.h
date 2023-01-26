@@ -66,18 +66,30 @@ void __sanitizer_annotate_contiguous_container(const void *beg, const void *end,
                                                const void *old_mid,
                                                const void *new_mid);
 SANITIZER_INTERFACE_ATTRIBUTE
+void __sanitizer_annotate_double_ended_contiguous_container(
+    const void *storage_beg, const void *storage_end,
+    const void *old_container_beg, const void *old_container_end,
+    const void *new_container_beg, const void *new_container_end);
+SANITIZER_INTERFACE_ATTRIBUTE
 int __sanitizer_verify_contiguous_container(const void *beg, const void *mid,
                                             const void *end);
+SANITIZER_INTERFACE_ATTRIBUTE
+int __sanitizer_verify_double_ended_contiguous_container(
+    const void *storage_beg, const void *container_beg,
+    const void *container_end, const void *storage_end);
 SANITIZER_INTERFACE_ATTRIBUTE
 const void *__sanitizer_contiguous_container_find_bad_address(const void *beg,
                                                               const void *mid,
                                                               const void *end);
+SANITIZER_INTERFACE_ATTRIBUTE
+const void *__sanitizer_double_ended_contiguous_container_find_bad_address(
+    const void *storage_beg, const void *container_beg,
+    const void *container_end, const void *storage_end);
 
 SANITIZER_INTERFACE_ATTRIBUTE
 int __sanitizer_get_module_and_offset_for_pc(void *pc, char *module_path,
                                              __sanitizer::uptr module_path_len,
                                              void **pc_offset);
-
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
 __sanitizer_cov_trace_cmp();
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void

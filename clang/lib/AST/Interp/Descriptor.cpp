@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Descriptor.h"
+#include "Boolean.h"
 #include "Pointer.h"
 #include "PrimType.h"
 #include "Record.h"
@@ -39,6 +40,11 @@ static void ctorArrayTy(Block *, char *Ptr, bool, bool, bool, Descriptor *D) {
 
 template <typename T>
 static void dtorArrayTy(Block *, char *Ptr, Descriptor *D) {
+  InitMap *IM = *reinterpret_cast<InitMap **>(Ptr);
+  if (IM != (InitMap *)-1)
+    free(IM);
+
+  Ptr += sizeof(InitMap *);
   for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
     reinterpret_cast<T *>(Ptr)[I].~T();
   }
@@ -72,9 +78,10 @@ static void ctorArrayDesc(Block *B, char *Ptr, bool IsConst, bool IsMutable,
     Desc->IsBase = false;
     Desc->IsActive = IsActive;
     Desc->IsConst = IsConst || D->IsConst;
-    Desc->IsMutable = IsMutable || D->IsMutable;
+    Desc->IsFieldMutable = IsMutable || D->IsMutable;
     if (auto Fn = D->ElemDesc->CtorFn)
-      Fn(B, ElemLoc, Desc->IsConst, Desc->IsMutable, IsActive, D->ElemDesc);
+      Fn(B, ElemLoc, Desc->IsConst, Desc->IsFieldMutable, IsActive,
+         D->ElemDesc);
   }
 }
 
@@ -121,13 +128,14 @@ static void ctorRecord(Block *B, char *Ptr, bool IsConst, bool IsMutable,
     auto *Desc = reinterpret_cast<InlineDescriptor *>(Ptr + SubOff) - 1;
     Desc->Offset = SubOff;
     Desc->Desc = F;
-    Desc->IsInitialized = (B->isStatic() || F->IsArray) && !IsBase;
+    Desc->IsInitialized = F->IsArray && !IsBase;
     Desc->IsBase = IsBase;
     Desc->IsActive = IsActive && !IsUnion;
     Desc->IsConst = IsConst || F->IsConst;
-    Desc->IsMutable = IsMutable || F->IsMutable;
+    Desc->IsFieldMutable = IsMutable || F->IsMutable;
     if (auto Fn = F->CtorFn)
-      Fn(B, Ptr + SubOff, Desc->IsConst, Desc->IsMutable, Desc->IsActive, F);
+      Fn(B, Ptr + SubOff, Desc->IsConst, Desc->IsFieldMutable, Desc->IsActive,
+         F);
   };
   for (const auto &B : D->ElemRecord->bases())
     CtorSub(B.Offset, B.Desc, /*isBase=*/true);
@@ -178,26 +186,30 @@ static BlockCtorFn getCtorArrayPrim(PrimType Type) {
 }
 
 static BlockDtorFn getDtorArrayPrim(PrimType Type) {
-  COMPOSITE_TYPE_SWITCH(Type, return dtorArrayTy<T>, return nullptr);
+  TYPE_SWITCH(Type, return dtorArrayTy<T>);
+  llvm_unreachable("unknown Expr");
 }
 
 static BlockMoveFn getMoveArrayPrim(PrimType Type) {
   COMPOSITE_TYPE_SWITCH(Type, return moveArrayTy<T>, return nullptr);
 }
 
-Descriptor::Descriptor(const DeclTy &D, PrimType Type, bool IsConst,
-                       bool IsTemporary, bool IsMutable)
-    : Source(D), ElemSize(primSize(Type)), Size(ElemSize), AllocSize(Size),
-      IsConst(IsConst), IsMutable(IsMutable), IsTemporary(IsTemporary),
-      CtorFn(getCtorPrim(Type)), DtorFn(getDtorPrim(Type)),
-      MoveFn(getMovePrim(Type)) {
+Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
+                       bool IsConst, bool IsTemporary, bool IsMutable)
+    : Source(D), ElemSize(primSize(Type)), Size(ElemSize),
+      MDSize(MD.value_or(0)), AllocSize(align(Size + MDSize)), IsConst(IsConst),
+      IsMutable(IsMutable), IsTemporary(IsTemporary), CtorFn(getCtorPrim(Type)),
+      DtorFn(getDtorPrim(Type)), MoveFn(getMovePrim(Type)) {
+  assert(AllocSize >= Size);
   assert(Source && "Missing source");
 }
 
-Descriptor::Descriptor(const DeclTy &D, PrimType Type, size_t NumElems,
-                       bool IsConst, bool IsTemporary, bool IsMutable)
+Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
+                       size_t NumElems, bool IsConst, bool IsTemporary,
+                       bool IsMutable)
     : Source(D), ElemSize(primSize(Type)), Size(ElemSize * NumElems),
-      AllocSize(align(Size) + sizeof(InitMap *)), IsConst(IsConst),
+      MDSize(MD.value_or(0)),
+      AllocSize(align(Size) + sizeof(InitMap *) + MDSize), IsConst(IsConst),
       IsMutable(IsMutable), IsTemporary(IsTemporary), IsArray(true),
       CtorFn(getCtorArrayPrim(Type)), DtorFn(getDtorArrayPrim(Type)),
       MoveFn(getMoveArrayPrim(Type)) {
@@ -206,39 +218,42 @@ Descriptor::Descriptor(const DeclTy &D, PrimType Type, size_t NumElems,
 
 Descriptor::Descriptor(const DeclTy &D, PrimType Type, bool IsTemporary,
                        UnknownSize)
-    : Source(D), ElemSize(primSize(Type)), Size(UnknownSizeMark),
+    : Source(D), ElemSize(primSize(Type)), Size(UnknownSizeMark), MDSize(0),
       AllocSize(alignof(void *)), IsConst(true), IsMutable(false),
       IsTemporary(IsTemporary), IsArray(true), CtorFn(getCtorArrayPrim(Type)),
       DtorFn(getDtorArrayPrim(Type)), MoveFn(getMoveArrayPrim(Type)) {
   assert(Source && "Missing source");
 }
 
-Descriptor::Descriptor(const DeclTy &D, Descriptor *Elem, unsigned NumElems,
-                       bool IsConst, bool IsTemporary, bool IsMutable)
+Descriptor::Descriptor(const DeclTy &D, Descriptor *Elem, MetadataSize MD,
+                       unsigned NumElems, bool IsConst, bool IsTemporary,
+                       bool IsMutable)
     : Source(D), ElemSize(Elem->getAllocSize() + sizeof(InlineDescriptor)),
-      Size(ElemSize * NumElems),
-      AllocSize(std::max<size_t>(alignof(void *), Size)), ElemDesc(Elem),
-      IsConst(IsConst), IsMutable(IsMutable), IsTemporary(IsTemporary),
-      IsArray(true), CtorFn(ctorArrayDesc), DtorFn(dtorArrayDesc),
-      MoveFn(moveArrayDesc) {
+      Size(ElemSize * NumElems), MDSize(MD.value_or(0)),
+      AllocSize(std::max<size_t>(alignof(void *), Size) + MDSize),
+      ElemDesc(Elem), IsConst(IsConst), IsMutable(IsMutable),
+      IsTemporary(IsTemporary), IsArray(true), CtorFn(ctorArrayDesc),
+      DtorFn(dtorArrayDesc), MoveFn(moveArrayDesc) {
   assert(Source && "Missing source");
 }
 
 Descriptor::Descriptor(const DeclTy &D, Descriptor *Elem, bool IsTemporary,
                        UnknownSize)
     : Source(D), ElemSize(Elem->getAllocSize() + sizeof(InlineDescriptor)),
-      Size(UnknownSizeMark), AllocSize(alignof(void *)), ElemDesc(Elem),
-      IsConst(true), IsMutable(false), IsTemporary(IsTemporary), IsArray(true),
-      CtorFn(ctorArrayDesc), DtorFn(dtorArrayDesc), MoveFn(moveArrayDesc) {
+      Size(UnknownSizeMark), MDSize(0), AllocSize(alignof(void *)),
+      ElemDesc(Elem), IsConst(true), IsMutable(false), IsTemporary(IsTemporary),
+      IsArray(true), CtorFn(ctorArrayDesc), DtorFn(dtorArrayDesc),
+      MoveFn(moveArrayDesc) {
   assert(Source && "Missing source");
 }
 
-Descriptor::Descriptor(const DeclTy &D, Record *R, bool IsConst,
-                       bool IsTemporary, bool IsMutable)
+Descriptor::Descriptor(const DeclTy &D, Record *R, MetadataSize MD,
+                       bool IsConst, bool IsTemporary, bool IsMutable)
     : Source(D), ElemSize(std::max<size_t>(alignof(void *), R->getFullSize())),
-      Size(ElemSize), AllocSize(Size), ElemRecord(R), IsConst(IsConst),
-      IsMutable(IsMutable), IsTemporary(IsTemporary), CtorFn(ctorRecord),
-      DtorFn(dtorRecord), MoveFn(moveRecord) {
+      Size(ElemSize), MDSize(MD.value_or(0)), AllocSize(Size + MDSize),
+      ElemRecord(R), IsConst(IsConst), IsMutable(IsMutable),
+      IsTemporary(IsTemporary), CtorFn(ctorRecord), DtorFn(dtorRecord),
+      MoveFn(moveRecord) {
   assert(Source && "Missing source");
 }
 
@@ -259,9 +274,7 @@ SourceLocation Descriptor::getLocation() const {
 }
 
 InitMap::InitMap(unsigned N) : UninitFields(N) {
-  for (unsigned I = 0; I < N / PER_FIELD; ++I) {
-    data()[I] = 0;
-  }
+  std::fill_n(data(), (N + PER_FIELD - 1) / PER_FIELD, 0);
 }
 
 InitMap::T *InitMap::data() {
@@ -269,9 +282,14 @@ InitMap::T *InitMap::data() {
   return reinterpret_cast<T *>(Start);
 }
 
+const InitMap::T *InitMap::data() const {
+  auto *Start = reinterpret_cast<const char *>(this) + align(sizeof(InitMap));
+  return reinterpret_cast<const T *>(Start);
+}
+
 bool InitMap::initialize(unsigned I) {
   unsigned Bucket = I / PER_FIELD;
-  unsigned Mask = 1ull << static_cast<uint64_t>(I % PER_FIELD);
+  T Mask = T(1) << (I % PER_FIELD);
   if (!(data()[Bucket] & Mask)) {
     data()[Bucket] |= Mask;
     UninitFields -= 1;
@@ -279,10 +297,9 @@ bool InitMap::initialize(unsigned I) {
   return UninitFields == 0;
 }
 
-bool InitMap::isInitialized(unsigned I) {
+bool InitMap::isInitialized(unsigned I) const {
   unsigned Bucket = I / PER_FIELD;
-  unsigned Mask = 1ull << static_cast<uint64_t>(I % PER_FIELD);
-  return data()[Bucket] & Mask;
+  return data()[Bucket] & (T(1) << (I % PER_FIELD));
 }
 
 InitMap *InitMap::allocate(unsigned N) {

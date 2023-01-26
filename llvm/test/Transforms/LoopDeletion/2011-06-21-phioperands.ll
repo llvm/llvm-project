@@ -1,13 +1,13 @@
-; RUN: opt -loop-deletion -disable-output < %s
+; RUN: opt -passes=loop-deletion -disable-output < %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 
 %0 = type { %"class.llvm::SmallVectorImpl", [1 x %"union.llvm::SmallVectorBase::U"] }
 %"class.clang::SourceLocation" = type { i32 }
-%"class.clang::driver::Arg" = type { %"class.clang::driver::Option"*, %"class.clang::driver::Arg"*, i32, i8, %0 }
-%"class.clang::driver::Option" = type { i32 (...)**, i32, %"class.clang::SourceLocation", i8*, %"class.clang::driver::OptionGroup"*, %"class.clang::driver::Option"*, i8 }
+%"class.clang::driver::Arg" = type { ptr, ptr, i32, i8, %0 }
+%"class.clang::driver::Option" = type { ptr, i32, %"class.clang::SourceLocation", ptr, ptr, ptr, i8 }
 %"class.clang::driver::OptionGroup" = type { %"class.clang::driver::Option" }
-%"class.llvm::SmallVectorBase" = type { i8*, i8*, i8*, %"union.llvm::SmallVectorBase::U" }
+%"class.llvm::SmallVectorBase" = type { ptr, ptr, ptr, %"union.llvm::SmallVectorBase::U" }
 %"class.llvm::SmallVectorImpl" = type { %"class.llvm::SmallVectorTemplateBase" }
 %"class.llvm::SmallVectorTemplateBase" = type { %"class.llvm::SmallVectorTemplateCommon" }
 %"class.llvm::SmallVectorTemplateCommon" = type { %"class.llvm::SmallVectorBase" }
@@ -165,7 +165,7 @@ if.end.i.us:                                      ; preds = %for.cond.i.us
   br i1 true, label %for.cond.loopexit.us-lcssa.us, label %for.cond.i.us
 
 for.cond.loopexit.us-lcssa.us:                    ; preds = %if.end.i.us, %for.cond.i.us
-  %tmp178218.us.lcssa = phi %"class.clang::driver::Arg"** [ undef, %if.end.i.us ], [ undef, %for.cond.i.us ]
+  %tmp178218.us.lcssa = phi ptr [ undef, %if.end.i.us ], [ undef, %for.cond.i.us ]
   br label %for.cond.loopexit
 
 for.cond.i.preheader.split:                       ; preds = %for.cond.i.preheader.for.cond.i.preheader.split_crit_edge

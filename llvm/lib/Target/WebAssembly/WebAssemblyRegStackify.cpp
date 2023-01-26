@@ -336,12 +336,17 @@ static bool isSafeToMove(const MachineOperand *Def, const MachineOperand *Use,
   // instruction in which the current value is used, we cannot
   // stackify. Stackifying in this case would require that def moving below the
   // current def in the stack, which cannot be achieved, even with locals.
+  // Also ensure we don't sink the def past any other prior uses.
   for (const auto &SubsequentDef : drop_begin(DefI->defs())) {
-    for (const auto &PriorUse : UseI->uses()) {
-      if (&PriorUse == Use)
-        break;
-      if (PriorUse.isReg() && SubsequentDef.getReg() == PriorUse.getReg())
-        return false;
+    auto I = std::next(MachineBasicBlock::const_iterator(DefI));
+    auto E = std::next(MachineBasicBlock::const_iterator(UseI));
+    for (; I != E; ++I) {
+      for (const auto &PriorUse : I->uses()) {
+        if (&PriorUse == Use)
+          break;
+        if (PriorUse.isReg() && SubsequentDef.getReg() == PriorUse.getReg())
+          return false;
+      }
     }
   }
 
@@ -370,7 +375,7 @@ static bool isSafeToMove(const MachineOperand *Def, const MachineOperand *Use,
         !Insert->readsRegister(Reg))
       continue;
 
-    if (Register::isPhysicalRegister(Reg)) {
+    if (Reg.isPhysical()) {
       // Ignore ARGUMENTS; it's just used to keep the ARGUMENT_* instructions
       // from moving down, and we've already checked for that.
       if (Reg == WebAssembly::ARGUMENTS)
@@ -466,8 +471,7 @@ static bool oneUseDominatesOtherUses(unsigned Reg, const MachineOperand &OneUse,
         if (!MO.isReg())
           return false;
         Register DefReg = MO.getReg();
-        if (!Register::isVirtualRegister(DefReg) ||
-            !MFI.isVRegStackified(DefReg))
+        if (!DefReg.isVirtual() || !MFI.isVRegStackified(DefReg))
           return false;
         assert(MRI.hasOneNonDBGUse(DefReg));
         const MachineOperand &NewUse = *MRI.use_nodbg_begin(DefReg);
@@ -842,7 +846,7 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         assert(Use.isUse() && "explicit_uses() should only iterate over uses");
         assert(!Use.isImplicit() &&
                "explicit_uses() should only iterate over explicit operands");
-        if (Register::isPhysicalRegister(Reg))
+        if (Reg.isPhysical())
           continue;
 
         // Identify the definition for this register at this point.

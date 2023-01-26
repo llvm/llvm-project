@@ -9,14 +9,12 @@ from __future__ import absolute_import
 
 # System modules
 import errno
+import io
 import os
 import re
 import sys
 import subprocess
-
-# Third-party modules
-from six import StringIO as SixStringIO
-import six
+from typing import Dict
 
 # LLDB modules
 import lldb
@@ -110,7 +108,7 @@ def disassemble(target, function_or_symbol):
 
     It returns the disassembly content in a string object.
     """
-    buf = SixStringIO()
+    buf = io.StringIO()
     insts = function_or_symbol.GetInstructions(target)
     for i in insts:
         print(i, file=buf)
@@ -208,140 +206,54 @@ def get_description(obj, option=None):
 # Convert some enum value to its string counterpart
 # =================================================
 
-def state_type_to_str(enum):
+def _enum_names(prefix: str) -> Dict[int, str]:
+    """Generate a mapping of enum value to name, for the enum prefix."""
+    suffix_start = len(prefix)
+    return {
+        getattr(lldb, attr): attr[suffix_start:].lower()
+        for attr in dir(lldb)
+        if attr.startswith(prefix)
+    }
+
+
+_STATE_NAMES = _enum_names(prefix="eState")
+
+def state_type_to_str(enum: int) -> str:
     """Returns the stateType string given an enum."""
-    if enum == lldb.eStateInvalid:
-        return "invalid"
-    elif enum == lldb.eStateUnloaded:
-        return "unloaded"
-    elif enum == lldb.eStateConnected:
-        return "connected"
-    elif enum == lldb.eStateAttaching:
-        return "attaching"
-    elif enum == lldb.eStateLaunching:
-        return "launching"
-    elif enum == lldb.eStateStopped:
-        return "stopped"
-    elif enum == lldb.eStateRunning:
-        return "running"
-    elif enum == lldb.eStateStepping:
-        return "stepping"
-    elif enum == lldb.eStateCrashed:
-        return "crashed"
-    elif enum == lldb.eStateDetached:
-        return "detached"
-    elif enum == lldb.eStateExited:
-        return "exited"
-    elif enum == lldb.eStateSuspended:
-        return "suspended"
-    else:
-        raise Exception("Unknown StateType enum: " + str(enum))
+    name = _STATE_NAMES.get(enum)
+    if name:
+        return name
+    raise Exception(f"Unknown StateType enum: {enum}")
 
 
-def stop_reason_to_str(enum):
+_STOP_REASON_NAMES = _enum_names(prefix="eStopReason")
+
+def stop_reason_to_str(enum: int) -> str:
     """Returns the stopReason string given an enum."""
-    if enum == lldb.eStopReasonInvalid:
-        return "invalid"
-    elif enum == lldb.eStopReasonNone:
-        return "none"
-    elif enum == lldb.eStopReasonTrace:
-        return "trace"
-    elif enum == lldb.eStopReasonBreakpoint:
-        return "breakpoint"
-    elif enum == lldb.eStopReasonWatchpoint:
-        return "watchpoint"
-    elif enum == lldb.eStopReasonExec:
-        return "exec"
-    elif enum == lldb.eStopReasonFork:
-        return "fork"
-    elif enum == lldb.eStopReasonVFork:
-        return "vfork"
-    elif enum == lldb.eStopReasonVForkDone:
-        return "vforkdone"
-    elif enum == lldb.eStopReasonSignal:
-        return "signal"
-    elif enum == lldb.eStopReasonException:
-        return "exception"
-    elif enum == lldb.eStopReasonPlanComplete:
-        return "plancomplete"
-    elif enum == lldb.eStopReasonThreadExiting:
-        return "threadexiting"
-    else:
-        raise Exception("Unknown StopReason enum")
+    name = _STOP_REASON_NAMES.get(enum)
+    if name:
+        return name
+    raise Exception(f"Unknown StopReason enum: {enum}")
 
 
-def symbol_type_to_str(enum):
+_SYMBOL_TYPE_NAMES = _enum_names(prefix="eSymbolType")
+
+def symbol_type_to_str(enum: int) -> str:
     """Returns the symbolType string given an enum."""
-    if enum == lldb.eSymbolTypeInvalid:
-        return "invalid"
-    elif enum == lldb.eSymbolTypeAbsolute:
-        return "absolute"
-    elif enum == lldb.eSymbolTypeCode:
-        return "code"
-    elif enum == lldb.eSymbolTypeData:
-        return "data"
-    elif enum == lldb.eSymbolTypeTrampoline:
-        return "trampoline"
-    elif enum == lldb.eSymbolTypeRuntime:
-        return "runtime"
-    elif enum == lldb.eSymbolTypeException:
-        return "exception"
-    elif enum == lldb.eSymbolTypeSourceFile:
-        return "sourcefile"
-    elif enum == lldb.eSymbolTypeHeaderFile:
-        return "headerfile"
-    elif enum == lldb.eSymbolTypeObjectFile:
-        return "objectfile"
-    elif enum == lldb.eSymbolTypeCommonBlock:
-        return "commonblock"
-    elif enum == lldb.eSymbolTypeBlock:
-        return "block"
-    elif enum == lldb.eSymbolTypeLocal:
-        return "local"
-    elif enum == lldb.eSymbolTypeParam:
-        return "param"
-    elif enum == lldb.eSymbolTypeVariable:
-        return "variable"
-    elif enum == lldb.eSymbolTypeVariableType:
-        return "variabletype"
-    elif enum == lldb.eSymbolTypeLineEntry:
-        return "lineentry"
-    elif enum == lldb.eSymbolTypeLineHeader:
-        return "lineheader"
-    elif enum == lldb.eSymbolTypeScopeBegin:
-        return "scopebegin"
-    elif enum == lldb.eSymbolTypeScopeEnd:
-        return "scopeend"
-    elif enum == lldb.eSymbolTypeAdditional:
-        return "additional"
-    elif enum == lldb.eSymbolTypeCompiler:
-        return "compiler"
-    elif enum == lldb.eSymbolTypeInstrumentation:
-        return "instrumentation"
-    elif enum == lldb.eSymbolTypeUndefined:
-        return "undefined"
+    name = _SYMBOL_TYPE_NAMES.get(enum)
+    if name:
+        return name
+    raise Exception(f"Unknown SymbolType enum: {enum}")
 
 
-def value_type_to_str(enum):
+_VALUE_TYPE_NAMES = _enum_names(prefix="eValueType")
+
+def value_type_to_str(enum: int) -> str:
     """Returns the valueType string given an enum."""
-    if enum == lldb.eValueTypeInvalid:
-        return "invalid"
-    elif enum == lldb.eValueTypeVariableGlobal:
-        return "global_variable"
-    elif enum == lldb.eValueTypeVariableStatic:
-        return "static_variable"
-    elif enum == lldb.eValueTypeVariableArgument:
-        return "argument_variable"
-    elif enum == lldb.eValueTypeVariableLocal:
-        return "local_variable"
-    elif enum == lldb.eValueTypeRegister:
-        return "register"
-    elif enum == lldb.eValueTypeRegisterSet:
-        return "register_set"
-    elif enum == lldb.eValueTypeConstResult:
-        return "constant_result"
-    else:
-        raise Exception("Unknown ValueType enum")
+    name = _VALUE_TYPE_NAMES.get(enum)
+    if name:
+        return name
+    raise Exception(f"Unknown ValueType enum: {enum}")
 
 
 # ==================================================
@@ -1076,6 +988,21 @@ def continue_to_breakpoint(process, bkpt):
         return get_threads_stopped_at_breakpoint(process, bkpt)
 
 
+def continue_to_source_breakpoint(test, process, bkpt_pattern, source_spec):
+    """
+    Sets a breakpoint set by source regex bkpt_pattern, continues the process, and deletes the breakpoint again.
+    Otherwise the same as `continue_to_breakpoint`
+    """
+    breakpoint = process.target.BreakpointCreateBySourceRegex(
+            bkpt_pattern, source_spec, None)
+    test.assertTrue(breakpoint.GetNumLocations() > 0,
+                    'No locations found for source breakpoint: "%s", file: "%s", dir: "%s"'
+                    %(bkpt_pattern, source_spec.GetFilename(), source_spec.GetDirectory()))
+    stopped_threads = continue_to_breakpoint(process, breakpoint)
+    process.target.BreakpointDelete(breakpoint.GetID())
+    return stopped_threads
+
+
 def get_caller_symbol(thread):
     """
     Returns the symbol name for the call site of the leaf function.
@@ -1165,7 +1092,7 @@ def get_stack_frames(thread):
 def print_stacktrace(thread, string_buffer=False):
     """Prints a simple stack trace of this thread."""
 
-    output = SixStringIO() if string_buffer else sys.stdout
+    output = io.StringIO() if string_buffer else sys.stdout
     target = thread.GetProcess().GetTarget()
 
     depth = thread.GetNumFrames()
@@ -1227,7 +1154,7 @@ def print_stacktrace(thread, string_buffer=False):
 def print_stacktraces(process, string_buffer=False):
     """Prints the stack traces of all the threads."""
 
-    output = SixStringIO() if string_buffer else sys.stdout
+    output = io.StringIO() if string_buffer else sys.stdout
 
     print("Stack traces for " + str(process), file=output)
 
@@ -1343,7 +1270,7 @@ def get_args_as_string(frame, showFuncName=True):
 def print_registers(frame, string_buffer=False):
     """Prints all the register sets of the frame."""
 
-    output = SixStringIO() if string_buffer else sys.stdout
+    output = io.StringIO() if string_buffer else sys.stdout
 
     print("Register sets for " + str(frame), file=output)
 
@@ -1429,7 +1356,7 @@ class BasicFormatter(object):
 
     def format(self, value, buffer=None, indent=0):
         if not buffer:
-            output = SixStringIO()
+            output = io.StringIO()
         else:
             output = buffer
         # If there is a summary, it suffices.
@@ -1459,7 +1386,7 @@ class ChildVisitingFormatter(BasicFormatter):
 
     def format(self, value, buffer=None):
         if not buffer:
-            output = SixStringIO()
+            output = io.StringIO()
         else:
             output = buffer
 
@@ -1486,7 +1413,7 @@ class RecursiveDecentFormatter(BasicFormatter):
 
     def format(self, value, buffer=None):
         if not buffer:
-            output = SixStringIO()
+            output = io.StringIO()
         else:
             output = buffer
 
@@ -1596,7 +1523,7 @@ class PrintableRegex(object):
 
 
 def skip_if_callable(test, mycallable, reason):
-    if six.callable(mycallable):
+    if callable(mycallable):
         if mycallable(test):
             test.skipTest(reason)
             return True

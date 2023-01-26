@@ -133,6 +133,7 @@ interesting areas to contribute to lldb.
    use/variable
    use/symbolication
    use/symbols
+   use/extensions
    use/python
    use/python-reference
    use/remote
@@ -150,6 +151,7 @@ interesting areas to contribute to lldb.
    resources/contributing
    resources/build
    resources/test
+   resources/fuzzing
    resources/bots
    resources/caveats
 

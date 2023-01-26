@@ -607,15 +607,13 @@ function(add_mlir_python_extension libname extname)
 
   # The extension itself must be compiled with RTTI and exceptions enabled.
   # Also, some warning classes triggered by pybind11 are disabled.
-  target_compile_options(${libname} PRIVATE
-    $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
-      # Enable RTTI and exceptions.
-      -frtti -fexceptions
-    >
-    $<$<CXX_COMPILER_ID:MSVC>:
-      # Enable RTTI and exceptions.
-      /EHsc /GR>
-  )
+  set(eh_rtti_enable)
+  if (MSVC)
+    set(eh_rtti_enable /EHsc /GR)
+  elseif(LLVM_COMPILER_IS_GCC_COMPATIBLE)
+    set(eh_rtti_enable -frtti -fexceptions)
+  endif ()
+  target_compile_options(${libname} PRIVATE ${eh_rtti_enable})
 
   # Configure the output to match python expectations.
   set_target_properties(

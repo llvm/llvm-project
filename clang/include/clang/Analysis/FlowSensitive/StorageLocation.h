@@ -65,6 +65,9 @@ public:
 /// struct with public members. The child map is flat, so when used for a struct
 /// or class type, all accessible members of base struct and class types are
 /// directly accesible as children of this location.
+/// FIXME: Currently, the storage location of unions is modelled the same way as
+/// that of structs or classes. Eventually, we need to change this modelling so
+/// that all of the members of a given union have the same storage location.
 class AggregateStorageLocation final : public StorageLocation {
 public:
   explicit AggregateStorageLocation(QualType Type)

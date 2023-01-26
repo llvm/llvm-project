@@ -5,7 +5,7 @@
 // RUN: %clangxx_msan -DPOSITIVE -O3 -g %s -o %t && not %run %t 2>&1 | FileCheck %s
 
 // Reports different report (not analyzed)
-// XFAIL: netbsd
+// XFAIL: target={{.*netbsd.*}}
 
 #include <assert.h>
 #include <stdlib.h>

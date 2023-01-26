@@ -46,7 +46,7 @@ body: |
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   BUFFER_STORE_DWORD_OFFSET $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, implicit $exec
+  ; CHECK-NEXT:   BUFFER_STORE_DWORD_OFFSET $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   S_ENDPGM 0
@@ -57,7 +57,7 @@ body: |
   bb.1:
     successors: %bb.2
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    BUFFER_STORE_DWORD_OFFSET $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, implicit $exec
 
   bb.2:
     S_ENDPGM 0

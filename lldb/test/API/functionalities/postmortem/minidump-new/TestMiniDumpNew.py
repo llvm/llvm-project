@@ -2,8 +2,6 @@
 Test basics of Minidump debugging.
 """
 
-from six import iteritems
-
 import shutil
 
 import lldb
@@ -117,7 +115,7 @@ class MiniDumpNewTestCase(TestBase):
         # one and only thread.
         self.assertEqual(self.process.GetNumThreads(), 1)
         thread = self.process.GetThreadAtIndex(0)
-        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonSignal)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonSignal)
         stop_description = thread.GetStopDescription(256)
         self.assertIn("SIGSEGV", stop_description)
 
@@ -153,7 +151,7 @@ class MiniDumpNewTestCase(TestBase):
         self.check_state()
         self.assertEqual(self.process.GetNumThreads(), 1)
         thread = self.process.GetThreadAtIndex(0)
-        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonNone)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonNone)
         stop_description = thread.GetStopDescription(256)
         self.assertEqual(stop_description, "")
 
@@ -164,7 +162,7 @@ class MiniDumpNewTestCase(TestBase):
         self.check_state()
         self.assertEqual(self.process.GetNumThreads(), 1)
         thread = self.process.GetThreadAtIndex(0)
-        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonNone)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonNone)
         stop_description = thread.GetStopDescription(256)
         self.assertEqual(stop_description, "")
 
@@ -191,7 +189,7 @@ class MiniDumpNewTestCase(TestBase):
         self.check_state()
         self.assertEqual(self.process.GetNumThreads(), 1)
         thread = self.process.GetThreadAtIndex(0)
-        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonNone)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonNone)
         stop_description = thread.GetStopDescription(256)
         self.assertEqual(stop_description, "")
         registers = thread.GetFrameAtIndex(0).GetRegisters()
@@ -258,7 +256,7 @@ class MiniDumpNewTestCase(TestBase):
         self.check_state()
         self.assertEqual(self.process.GetNumThreads(), 1)
         thread = self.process.GetThreadAtIndex(0)
-        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonNone)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonNone)
         stop_description = thread.GetStopDescription(256)
         self.assertEqual(stop_description, "")
         registers = thread.GetFrameAtIndex(0).GetRegisters()
@@ -327,7 +325,7 @@ class MiniDumpNewTestCase(TestBase):
 
         expected_stack = {1: 'bar', 2: 'foo', 3: '_start'}
         self.assertGreaterEqual(thread.GetNumFrames(), len(expected_stack))
-        for index, name in iteritems(expected_stack):
+        for index, name in expected_stack.items():
             frame = thread.GetFrameAtIndex(index)
             self.assertTrue(frame.IsValid())
             function_name = frame.GetFunctionName()

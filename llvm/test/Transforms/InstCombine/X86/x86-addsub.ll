@@ -140,16 +140,16 @@ define float @elts_addsub_v8f32_sub(<8 x float> %0, <8 x float> %1) {
   ret float %8
 }
 
-define void @PR46277(float %0, float %1, float %2, float %3, <4 x float> %4, float* %5) {
+define void @PR46277(float %0, float %1, float %2, float %3, <4 x float> %4, ptr %5) {
 ; CHECK-LABEL: @PR46277(
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> undef, float [[TMP0:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x float> [[TMP7]], float [[TMP1:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = tail call <4 x float> @llvm.x86.sse3.addsub.ps(<4 x float> [[TMP8]], <4 x float> [[TMP4:%.*]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x float> [[TMP9]], i64 0
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, float* [[TMP5:%.*]], i64 1
-; CHECK-NEXT:    store float [[TMP10]], float* [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[TMP5:%.*]], i64 1
+; CHECK-NEXT:    store float [[TMP10]], ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x float> [[TMP9]], i64 1
-; CHECK-NEXT:    store float [[TMP12]], float* [[TMP11]], align 4
+; CHECK-NEXT:    store float [[TMP12]], ptr [[TMP11]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %7 = insertelement <4 x float> undef, float %0, i32 0
@@ -158,10 +158,10 @@ define void @PR46277(float %0, float %1, float %2, float %3, <4 x float> %4, flo
   %10 = insertelement <4 x float> %9, float %3, i32 3
   %11 = tail call <4 x float> @llvm.x86.sse3.addsub.ps(<4 x float> %10, <4 x float> %4)
   %12 = extractelement <4 x float> %11, i32 0
-  %13 = getelementptr inbounds float, float* %5, i64 1
-  store float %12, float* %5, align 4
+  %13 = getelementptr inbounds float, ptr %5, i64 1
+  store float %12, ptr %5, align 4
   %14 = extractelement <4 x float> %11, i32 1
-  store float %14, float* %13, align 4
+  store float %14, ptr %13, align 4
   ret void
 }
 

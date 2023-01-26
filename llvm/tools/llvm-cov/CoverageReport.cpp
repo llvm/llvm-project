@@ -437,6 +437,7 @@ void CoverageReport::renderFileReports(
       prepareFileReports(Coverage, Totals, Files, Options, Filters);
 
   std::vector<StringRef> Filenames;
+  Filenames.reserve(FileReports.size());
   for (const FileCoverageSummary &FCS : FileReports)
     Filenames.emplace_back(FCS.Name);
   adjustColumnWidths(Filenames, {});

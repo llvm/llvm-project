@@ -428,7 +428,7 @@ bool ObjCARCContract::tryToPeepholeInstruction(
     if (!optimizeRetainCall(F, Inst))
       return false;
     // If we succeed in our optimization, fall through.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ARCInstKind::RetainRV:
   case ARCInstKind::UnsafeClaimRV: {
     // Return true if this is a bundled retainRV/claimRV call, which is always
@@ -472,7 +472,8 @@ bool ObjCARCContract::tryToPeepholeInstruction(
                          RVInstMarker->getString(),
                          /*Constraints=*/"", /*hasSideEffects=*/true);
 
-      objcarc::createCallInstWithColors(IA, None, "", Inst, BlockColors);
+      objcarc::createCallInstWithColors(IA, std::nullopt, "", Inst,
+                                        BlockColors);
     }
   decline_rv_optimization:
     return false;

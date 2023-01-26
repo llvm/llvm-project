@@ -1,4 +1,4 @@
-; RUN: opt < %s  -loop-vectorize -mtriple=x86_64-apple-macosx10.8.0 -mcpu=corei7-avx -debug-only=loop-vectorize -stats -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -mtriple=x86_64-apple-macosx10.8.0 -mcpu=corei7-avx -debug-only=loop-vectorize -stats -S 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; CHECK: LV: Loop hints: force=enabled
@@ -15,7 +15,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 ; The source code for the test:
 ;
 ; #include <math.h>
-; void foo(float* restrict A, float * restrict B)
+; void foo(ptr restrict A, ptr restrict B)
 ; {
 ;   for (int i = 0; i < 1000; i+=2) A[i] = sinf(B[i]);
 ; }
@@ -25,17 +25,17 @@ target triple = "x86_64-apple-macosx10.8.0"
 ; This loop will be vectorized, although the scalar cost is lower than any of vector costs, but vectorization is explicitly forced in metadata.
 ;
 
-define void @vectorized(float* noalias nocapture %A, float* noalias nocapture %B) {
+define void @vectorized(ptr noalias nocapture %A, ptr noalias nocapture %B) {
 entry:
   br label %for.body
 
 for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds float, float* %B, i64 %indvars.iv
-  %0 = load float, float* %arrayidx, align 4, !llvm.access.group !11
+  %arrayidx = getelementptr inbounds float, ptr %B, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4, !llvm.access.group !11
   %call = tail call float @llvm.sin.f32(float %0)
-  %arrayidx2 = getelementptr inbounds float, float* %A, i64 %indvars.iv
-  store float %call, float* %arrayidx2, align 4, !llvm.access.group !11
+  %arrayidx2 = getelementptr inbounds float, ptr %A, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4, !llvm.access.group !11
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 2
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, 1000
@@ -56,17 +56,17 @@ for.end:
 ; This method will not be vectorized, as scalar cost is lower than any of vector costs.
 ;
 
-define void @not_vectorized(float* noalias nocapture %A, float* noalias nocapture %B) {
+define void @not_vectorized(ptr noalias nocapture %A, ptr noalias nocapture %B) {
 entry:
   br label %for.body
 
 for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds float, float* %B, i64 %indvars.iv
-  %0 = load float, float* %arrayidx, align 4, !llvm.access.group !13
+  %arrayidx = getelementptr inbounds float, ptr %B, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4, !llvm.access.group !13
   %call = tail call float @llvm.sin.f32(float %0)
-  %arrayidx2 = getelementptr inbounds float, float* %A, i64 %indvars.iv
-  store float %call, float* %arrayidx2, align 4, !llvm.access.group !13
+  %arrayidx2 = getelementptr inbounds float, ptr %A, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4, !llvm.access.group !13
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 2
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, 1000

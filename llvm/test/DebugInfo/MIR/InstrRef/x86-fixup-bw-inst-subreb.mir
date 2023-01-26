@@ -16,6 +16,7 @@
 name:            test1
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:
   - { reg: '$rax' }
 # CHECK:     debugValueSubstitutions:
@@ -36,6 +37,7 @@ body:             |
 name:            test3
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:
   - { reg: '$rdi' }
 # CHECK:     debugValueSubstitutions:

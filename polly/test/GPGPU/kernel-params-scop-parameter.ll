@@ -9,11 +9,11 @@
 ;        A[i] += 42;
 ;    }
 
-; KERNEL-IR: define ptx_kernel void @FUNC_kernel_params_scop_parameter_SCOP_0_KERNEL_0(i8 addrspace(1)* %MemRef_A, i64 %n)
+; KERNEL-IR: define ptx_kernel void @FUNC_kernel_params_scop_parameter_SCOP_0_KERNEL_0(ptr addrspace(1) %MemRef_A, i64 %n)
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @kernel_params_scop_parameter(float* %A, i64 %n) {
+define void @kernel_params_scop_parameter(ptr %A, i64 %n) {
 bb:
   br label %bb1
 
@@ -23,10 +23,10 @@ bb1:                                              ; preds = %bb6, %bb
   br i1 %tmp, label %bb2, label %bb8
 
 bb2:                                              ; preds = %bb1
-  %tmp3 = getelementptr inbounds float, float* %A, i64 %i.0
-  %tmp4 = load float, float* %tmp3, align 4
+  %tmp3 = getelementptr inbounds float, ptr %A, i64 %i.0
+  %tmp4 = load float, ptr %tmp3, align 4
   %tmp5 = fadd float %tmp4, 4.200000e+01
-  store float %tmp5, float* %tmp3, align 4
+  store float %tmp5, ptr %tmp3, align 4
   br label %bb6
 
 bb6:                                              ; preds = %bb2

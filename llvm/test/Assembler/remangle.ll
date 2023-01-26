@@ -20,21 +20,21 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare void @foo(%fum*)
 
-; Will be remagled to @"llvm.ssa.copy.p0p0s_fum.1s"
-declare %fum.1** @"llvm.ssa.copy.p0p0s_fums"(%fum.1**)
+; Will be remagled to @"llvm.ssa.copy.s_fum.1s"
+declare %fum.1 @"llvm.ssa.copy.s_fums"(%fum.1)
 
-; Will be remagled to @"llvm.ssa.copy.p0p0s_fums"
-declare %fum** @"llvm.ssa.copy.p0p0s_fum.1s"(%fum**)
+; Will be remagled to @"llvm.ssa.copy.s_fums"
+declare %fum @"llvm.ssa.copy.s_fum.1s"(%fum)
 
-define void @foo1(%fum** %a, %fum.1 ** %b) {
-  %b.copy = call %fum.1** @"llvm.ssa.copy.p0p0s_fums"(%fum.1** %b)
-  %a.copy = call %fum** @"llvm.ssa.copy.p0p0s_fum.1s"(%fum** %a)
+define void @foo1(%fum %a, %fum.1 %b) {
+  %b.copy = call %fum.1 @"llvm.ssa.copy.s_fums"(%fum.1 %b)
+  %a.copy = call %fum @"llvm.ssa.copy.s_fum.1s"(%fum %a)
   ret void
 }
 
-define void @foo2(%fum.1 ** %b, %fum** %a) {
-  %a.copy = call %fum** @"llvm.ssa.copy.p0p0s_fum.1s"(%fum** %a)
-  %b.copy = call %fum.1** @"llvm.ssa.copy.p0p0s_fums"(%fum.1** %b)
+define void @foo2(%fum.1 %b, %fum %a) {
+  %a.copy = call %fum @"llvm.ssa.copy.s_fum.1s"(%fum %a)
+  %b.copy = call %fum.1 @"llvm.ssa.copy.s_fums"(%fum.1 %b)
   ret void
 }
 
@@ -45,16 +45,16 @@ define void @foo2(%fum.1 ** %b, %fum** %a) {
 ; CHECK-DAG: %abb = type { %abc }
 ; CHECK-DAG: %abc = type { [4 x i8] }
 
-; CHECK-LABEL: define void @foo1(%fum** %a, %fum.1** %b) {
-; CHECK-NEXT:   %b.copy = call %fum.1** @llvm.ssa.copy.p0p0s_fum.1s(%fum.1** %b)
-; CHECK-NEXT:   %a.copy = call %fum** @llvm.ssa.copy.p0p0s_fums(%fum** %a)
+; CHECK-LABEL: define void @foo1(%fum %a, %fum.1 %b) {
+; CHECK-NEXT:   %b.copy = call %fum.1 @llvm.ssa.copy.s_fum.1s(%fum.1 %b)
+; CHECK-NEXT:   %a.copy = call %fum @llvm.ssa.copy.s_fums(%fum %a)
 ; CHECK-NEXT:  ret void
 
-; CHECK-LABEL: define void @foo2(%fum.1** %b, %fum** %a) {
-; CHECK-NEXT:   %a.copy = call %fum** @llvm.ssa.copy.p0p0s_fums(%fum** %a)
-; CHECK-NEXT:  %b.copy = call %fum.1** @llvm.ssa.copy.p0p0s_fum.1s(%fum.1** %b)
+; CHECK-LABEL: define void @foo2(%fum.1 %b, %fum %a) {
+; CHECK-NEXT:   %a.copy = call %fum @llvm.ssa.copy.s_fums(%fum %a)
+; CHECK-NEXT:  %b.copy = call %fum.1 @llvm.ssa.copy.s_fum.1s(%fum.1 %b)
 ; CHECK-NEXT:  ret void
 
-; CHECK: declare %fum.1** @llvm.ssa.copy.p0p0s_fum.1s(%fum.1** returned)
+; CHECK: declare %fum.1 @llvm.ssa.copy.s_fum.1s(%fum.1 returned)
 
-; CHECK: declare %fum** @llvm.ssa.copy.p0p0s_fums(%fum** returned)
+; CHECK: declare %fum @llvm.ssa.copy.s_fums(%fum returned)

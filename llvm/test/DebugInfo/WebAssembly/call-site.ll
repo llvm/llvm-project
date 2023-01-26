@@ -20,7 +20,7 @@ entry:
 
 ;; WebAssembly does not currently support DW_TAG_GNU_call_site for stackified
 ;; registers. This just checks if the test runs without crashing.
-define i32 @call_indirect(i32 (i32, i32)* %callee) !dbg !11 {
+define i32 @call_indirect(ptr %callee) !dbg !11 {
   %1 = call i32 %callee(i32 3, i32 5), !dbg !12
   ret i32 %1, !dbg !13
 }

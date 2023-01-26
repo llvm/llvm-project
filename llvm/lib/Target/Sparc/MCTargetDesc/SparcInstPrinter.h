@@ -23,7 +23,7 @@ public:
                    const MCRegisterInfo &MRI)
       : MCInstPrinter(MAI, MII, MRI) {}
 
-  void printRegName(raw_ostream &OS, unsigned RegNo) const override;
+  void printRegName(raw_ostream &OS, MCRegister Reg) const override;
   void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
                  const MCSubtargetInfo &STI, raw_ostream &O) override;
   bool printSparcAliasInstr(const MCInst *MI, const MCSubtargetInfo &STI,
@@ -39,7 +39,7 @@ public:
   void printCustomAliasOperand(const MCInst *MI, uint64_t Address,
                                unsigned OpIdx, unsigned PrintMethodIdx,
                                const MCSubtargetInfo &STI, raw_ostream &O);
-  static const char *getRegisterName(unsigned RegNo);
+  static const char *getRegisterName(MCRegister Reg);
 
   void printOperand(const MCInst *MI, int opNum, const MCSubtargetInfo &STI,
                     raw_ostream &OS);

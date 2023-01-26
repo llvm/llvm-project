@@ -1,8 +1,10 @@
 # REQUIRES: arm
 # RUN: rm -rf %t; split-file %s %t
 
+# TODO: Replace %no-lsystem-lld with %lld
+
 # RUN: llvm-mc -filetype=obj -triple=armv4t-apple-darwin %t/armv4t-dtrace.s -o %t/armv4t-dtrace.o
-# RUN: %lld -arch armv4t -o %t/armv4t-dtrace %t/armv4t-dtrace.o
+# RUN: %no-lsystem-lld -arch armv4t -o %t/armv4t-dtrace %t/armv4t-dtrace.o
 
 ## If references of dtrace symbols are handled by lld, their relocation should be replaced with the following instructions
 # RUN: llvm-objdump --macho -D %t/armv4t-dtrace | FileCheck %s --check-prefix=CHECK-armv4t
@@ -12,7 +14,7 @@
 # CHECK-armv4t: 00 00 a0 e1  mov     r0, r0
 
 # RUN: llvm-mc -filetype=obj -triple=thumbv7-apple-darwin %t/armv7-dtrace.s -o %t/armv7-dtrace.o
-# RUN: %lld -arch armv7 -o %t/armv7-dtrace %t/armv7-dtrace.o
+# RUN: %no-lsystem-lld -arch armv7 -o %t/armv7-dtrace %t/armv7-dtrace.o
 
 ## If references of dtrace symbols are handled by lld, their relocation should be replaced with the following instructions
 # RUN: llvm-objdump --macho -D %t/armv7-dtrace | FileCheck %s --check-prefix=CHECK-armv7

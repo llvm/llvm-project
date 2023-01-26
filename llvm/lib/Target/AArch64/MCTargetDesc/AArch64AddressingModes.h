@@ -755,7 +755,7 @@ static inline uint64_t decodeAdvSIMDModImmType12(uint8_t Imm) {
 template <typename T>
 static inline bool isSVEMaskOfIdenticalElements(int64_t Imm) {
   auto Parts = bit_cast<std::array<T, sizeof(int64_t) / sizeof(T)>>(Imm);
-  return all_of(Parts, [&](T Elem) { return Elem == Parts[0]; });
+  return llvm::all_equal(Parts);
 }
 
 /// Returns true if Imm is valid for CPY/DUP.

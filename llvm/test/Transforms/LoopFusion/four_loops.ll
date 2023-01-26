@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-fusion < %s | FileCheck %s
+; RUN: opt -S -passes=loop-fusion < %s | FileCheck %s
 
 @A = common global [1024 x i32] zeroinitializer, align 16
 @B = common global [1024 x i32] zeroinitializer, align 16
@@ -35,8 +35,8 @@ bb15:                                             ; preds = %bb, %bb22
   %tmp18 = mul nsw i32 %tmp, %tmp17
   %tmp19 = trunc i64 %indvars.iv107 to i32
   %tmp20 = srem i32 %tmp18, %tmp19
-  %tmp21 = getelementptr inbounds [1024 x i32], [1024 x i32]* @A, i64 0, i64 %indvars.iv107
-  store i32 %tmp20, i32* %tmp21, align 4
+  %tmp21 = getelementptr inbounds [1024 x i32], ptr @A, i64 0, i64 %indvars.iv107
+  store i32 %tmp20, ptr %tmp21, align 4
   br label %bb22
 
 bb22:                                             ; preds = %bb15
@@ -57,8 +57,8 @@ bb27:                                             ; preds = %bb25.preheader, %bb
   %tmp31 = mul nsw i32 %tmp28, %tmp30
   %tmp32 = trunc i64 %indvars.iv75 to i32
   %tmp33 = srem i32 %tmp31, %tmp32
-  %tmp34 = getelementptr inbounds [1024 x i32], [1024 x i32]* @B, i64 0, i64 %indvars.iv75
-  store i32 %tmp33, i32* %tmp34, align 4
+  %tmp34 = getelementptr inbounds [1024 x i32], ptr @B, i64 0, i64 %indvars.iv75
+  store i32 %tmp33, ptr %tmp34, align 4
   br label %bb35
 
 bb35:                                             ; preds = %bb27
@@ -79,8 +79,8 @@ bb40:                                             ; preds = %bb38.preheader, %bb
   %tmp44 = mul nsw i32 %tmp41, %tmp43
   %tmp45 = trunc i64 %indvars.iv43 to i32
   %tmp46 = srem i32 %tmp44, %tmp45
-  %tmp47 = getelementptr inbounds [1024 x i32], [1024 x i32]* @C, i64 0, i64 %indvars.iv43
-  store i32 %tmp46, i32* %tmp47, align 4
+  %tmp47 = getelementptr inbounds [1024 x i32], ptr @C, i64 0, i64 %indvars.iv43
+  store i32 %tmp46, ptr %tmp47, align 4
   br label %bb48
 
 bb48:                                             ; preds = %bb40
@@ -101,8 +101,8 @@ bb53:                                             ; preds = %bb51.preheader, %bb
   %tmp57 = mul nsw i32 %tmp54, %tmp56
   %tmp58 = trunc i64 %indvars.iv1 to i32
   %tmp59 = srem i32 %tmp57, %tmp58
-  %tmp60 = getelementptr inbounds [1024 x i32], [1024 x i32]* @D, i64 0, i64 %indvars.iv1
-  store i32 %tmp59, i32* %tmp60, align 4
+  %tmp60 = getelementptr inbounds [1024 x i32], ptr @D, i64 0, i64 %indvars.iv1
+  store i32 %tmp59, ptr %tmp60, align 4
   br label %bb61
 
 bb61:                                             ; preds = %bb53

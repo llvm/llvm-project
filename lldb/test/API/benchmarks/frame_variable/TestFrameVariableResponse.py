@@ -1,8 +1,5 @@
 """Test lldb's response time for 'frame variable' command."""
 
-from __future__ import print_function
-
-
 import sys
 import lldb
 from lldbsuite.test import configuration

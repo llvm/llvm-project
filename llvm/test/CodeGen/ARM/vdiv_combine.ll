@@ -11,7 +11,7 @@ declare void @foo_int32x4_t(<4 x i32>)
 ; CHECK-NOT: {{vdiv|vmul}}
 define void @t1() nounwind {
 entry:
-  %tmp = load i32, i32* @iin, align 4
+  %tmp = load i32, ptr @iin, align 4
   %vecinit.i = insertelement <2 x i32> undef, i32 %tmp, i32 0
   %vecinit2.i = insertelement <2 x i32> %vecinit.i, i32 %tmp, i32 1
   %vcvt.i = sitofp <2 x i32> %vecinit2.i to <2 x float>
@@ -27,7 +27,7 @@ declare void @foo_float32x2_t(<2 x float>)
 ; CHECK-NOT: {{vdiv|vmul}}
 define void @t2() nounwind {
 entry:
-  %tmp = load i32, i32* @uin, align 4
+  %tmp = load i32, ptr @uin, align 4
   %vecinit.i = insertelement <2 x i32> undef, i32 %tmp, i32 0
   %vecinit2.i = insertelement <2 x i32> %vecinit.i, i32 %tmp, i32 1
   %vcvt.i = uitofp <2 x i32> %vecinit2.i to <2 x float>
@@ -41,7 +41,7 @@ entry:
 ; CHECK: {{vdiv|vmul}}
 define void @t3() nounwind {
 entry:
-  %tmp = load i32, i32* @iin, align 4
+  %tmp = load i32, ptr @iin, align 4
   %vecinit.i = insertelement <2 x i32> undef, i32 %tmp, i32 0
   %vecinit2.i = insertelement <2 x i32> %vecinit.i, i32 %tmp, i32 1
   %vcvt.i = sitofp <2 x i32> %vecinit2.i to <2 x float>
@@ -55,7 +55,7 @@ entry:
 ; CHECK: {{vdiv|vmul}}
 define void @t4() nounwind {
 entry:
-  %tmp = load i32, i32* @iin, align 4
+  %tmp = load i32, ptr @iin, align 4
   %vecinit.i = insertelement <2 x i32> undef, i32 %tmp, i32 0
   %vecinit2.i = insertelement <2 x i32> %vecinit.i, i32 %tmp, i32 1
   %vcvt.i = sitofp <2 x i32> %vecinit2.i to <2 x float>
@@ -69,7 +69,7 @@ entry:
 ; CHECK-NOT: {{vdiv|vmul}}
 define void @t5() nounwind {
 entry:
-  %tmp = load i32, i32* @iin, align 4
+  %tmp = load i32, ptr @iin, align 4
   %vecinit.i = insertelement <2 x i32> undef, i32 %tmp, i32 0
   %vecinit2.i = insertelement <2 x i32> %vecinit.i, i32 %tmp, i32 1
   %vcvt.i = sitofp <2 x i32> %vecinit2.i to <2 x float>
@@ -83,7 +83,7 @@ entry:
 ; CHECK-NOT: {{vdiv|vmul}}
 define void @t6() nounwind {
 entry:
-  %tmp = load i32, i32* @iin, align 4
+  %tmp = load i32, ptr @iin, align 4
   %vecinit.i = insertelement <4 x i32> undef, i32 %tmp, i32 0
   %vecinit2.i = insertelement <4 x i32> %vecinit.i, i32 %tmp, i32 1
   %vecinit4.i = insertelement <4 x i32> %vecinit2.i, i32 %tmp, i32 2

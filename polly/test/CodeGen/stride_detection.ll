@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-opt-isl -polly-vectorizer=polly -polly-codegen < %s -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-opt-isl -polly-vectorizer=polly -polly-codegen < %s -S | FileCheck %s
 
 ; #pragma known-parallel
 ;   for (int c0 = 0; c0 <= 31; c0 += 1)

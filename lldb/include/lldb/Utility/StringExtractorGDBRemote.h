@@ -13,6 +13,7 @@
 #include "lldb/Utility/StringExtractor.h"
 #include "llvm/ADT/StringRef.h"
 
+#include <optional>
 #include <string>
 
 #include <cstddef>
@@ -208,9 +209,9 @@ public:
   static constexpr lldb::tid_t AllThreads = UINT64_MAX;
 
   // Read thread-id from the packet.  If the packet is valid, returns
-  // the pair (PID, TID), otherwise returns llvm::None.  If the packet
+  // the pair (PID, TID), otherwise returns std::nullopt.  If the packet
   // does not list a PID, default_pid is used.
-  llvm::Optional<std::pair<lldb::pid_t, lldb::tid_t>>
+  std::optional<std::pair<lldb::pid_t, lldb::tid_t>>
   GetPidTid(lldb::pid_t default_pid);
 
 protected:

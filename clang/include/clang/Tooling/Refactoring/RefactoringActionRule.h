@@ -10,7 +10,6 @@
 #define LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGACTIONRULE_H
 
 #include "clang/Basic/LLVM.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {

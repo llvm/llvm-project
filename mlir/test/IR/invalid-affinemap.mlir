@@ -29,7 +29,7 @@
 #hello_world = affine_map<(i, j) [s0] -> (((s0 + (i + j) + 5), j)> // expected-error {{expected ')'}}
 
 // -----
- 
+
 // expected-error @+1 {{expected '(' in affine map range}}
 #hello_world = affine_map<(i, j) [s0] -> i + s0, j)>
 

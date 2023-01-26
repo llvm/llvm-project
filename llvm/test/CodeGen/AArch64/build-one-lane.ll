@@ -189,7 +189,7 @@ define <2 x i64> @v2i64m(i64 %t, i64 %s) nounwind {
 
 ; Check that building up a vector w/ some constants initializes efficiently.
 
-define void @v8i8st(<8 x i8>* %p, i8 %s) nounwind {
+define void @v8i8st(ptr %p, i8 %s) nounwind {
 ; CHECK-LABEL: v8i8st:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.8b, #1
@@ -197,11 +197,11 @@ define void @v8i8st(<8 x i8>* %p, i8 %s) nounwind {
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
   %v = insertelement <8 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 undef>, i8 %s, i32 7
-  store <8 x i8> %v, <8 x i8>* %p, align 8
+  store <8 x i8> %v, ptr %p, align 8
   ret void
 }
 
-define void @v16i8st(<16 x i8>* %p, i8 %s) nounwind {
+define void @v16i8st(ptr %p, i8 %s) nounwind {
 ; CHECK-LABEL: v16i8st:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.16b, #128
@@ -209,11 +209,11 @@ define void @v16i8st(<16 x i8>* %p, i8 %s) nounwind {
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
   %v = insertelement <16 x i8> <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 undef>, i8 %s, i32 15
-  store <16 x i8> %v, <16 x i8>* %p, align 16
+  store <16 x i8> %v, ptr %p, align 16
   ret void
 }
 
-define void @v4i16st(<4 x i16>* %p, i16 %s) nounwind {
+define void @v4i16st(ptr %p, i16 %s) nounwind {
 ; CHECK-LABEL: v4i16st:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.4h, #85, lsl #8
@@ -221,11 +221,11 @@ define void @v4i16st(<4 x i16>* %p, i16 %s) nounwind {
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
   %v = insertelement <4 x i16> <i16 21760, i16 21760, i16 21760, i16 undef>, i16 %s, i32 3
-  store <4 x i16> %v, <4 x i16>* %p, align 8
+  store <4 x i16> %v, ptr %p, align 8
   ret void
 }
 
-define void @v8i16st(<8 x i16>* %p, i16 %s) nounwind {
+define void @v8i16st(ptr %p, i16 %s) nounwind {
 ; CHECK-LABEL: v8i16st:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvni v0.8h, #85, lsl #8
@@ -233,11 +233,11 @@ define void @v8i16st(<8 x i16>* %p, i16 %s) nounwind {
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
   %v = insertelement <8 x i16> <i16 -21761, i16 -21761, i16 -21761, i16 -21761, i16 -21761, i16 -21761, i16 -21761, i16 undef>, i16 %s, i32 7
-  store <8 x i16> %v, <8 x i16>* %p, align 16
+  store <8 x i16> %v, ptr %p, align 16
   ret void
 }
 
-define void @v2i32st(<2 x i32>* %p, i32 %s) nounwind {
+define void @v2i32st(ptr %p, i32 %s) nounwind {
 ; CHECK-LABEL: v2i32st:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2s, #15, lsl #16
@@ -245,11 +245,11 @@ define void @v2i32st(<2 x i32>* %p, i32 %s) nounwind {
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
   %v = insertelement <2 x i32> <i32 983040, i32 undef>, i32 %s, i32 1
-  store <2 x i32> %v, <2 x i32>* %p, align 8
+  store <2 x i32> %v, ptr %p, align 8
   ret void
 }
 
-define void @v4i32st(<4 x i32>* %p, i32 %s) nounwind {
+define void @v4i32st(ptr %p, i32 %s) nounwind {
 ; CHECK-LABEL: v4i32st:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.4s, #248, msl #16
@@ -257,11 +257,11 @@ define void @v4i32st(<4 x i32>* %p, i32 %s) nounwind {
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
   %v = insertelement <4 x i32> <i32 16318463, i32 16318463, i32 16318463, i32 undef>, i32 %s, i32 3
-  store <4 x i32> %v, <4 x i32>* %p, align 16
+  store <4 x i32> %v, ptr %p, align 16
   ret void
 }
 
-define void @v2i64st(<2 x i64>* %p, i64 %s) nounwind {
+define void @v2i64st(ptr %p, i64 %s) nounwind {
 ; CHECK-LABEL: v2i64st:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov v0.2d, #-2.00000000
@@ -269,11 +269,11 @@ define void @v2i64st(<2 x i64>* %p, i64 %s) nounwind {
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
   %v = insertelement <2 x i64> <i64 13835058055282163712, i64 undef>, i64 %s, i32 1
-  store <2 x i64> %v, <2 x i64>* %p, align 16
+  store <2 x i64> %v, ptr %p, align 16
   ret void
 }
 
-define void @v2f32st(<2 x float>* %p, float %s) nounwind {
+define void @v2f32st(ptr %p, float %s) nounwind {
 ; CHECK-LABEL: v2f32st:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.2s, #64, lsl #24
@@ -282,11 +282,11 @@ define void @v2f32st(<2 x float>* %p, float %s) nounwind {
 ; CHECK-NEXT:    str d1, [x0]
 ; CHECK-NEXT:    ret
   %v = insertelement <2 x float> <float 2.0, float undef>, float %s, i32 1
-  store <2 x float> %v, <2 x float>* %p, align 8
+  store <2 x float> %v, ptr %p, align 8
   ret void
 }
 
-define void @v4f32st(<4 x float>* %p, float %s) nounwind {
+define void @v4f32st(ptr %p, float %s) nounwind {
 ; CHECK-LABEL: v4f32st:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.4s, #192, lsl #24
@@ -295,11 +295,11 @@ define void @v4f32st(<4 x float>* %p, float %s) nounwind {
 ; CHECK-NEXT:    str q1, [x0]
 ; CHECK-NEXT:    ret
   %v = insertelement <4 x float> <float -2.0, float -2.0, float -2.0, float undef>, float %s, i32 3
-  store <4 x float> %v, <4 x float>* %p, align 16
+  store <4 x float> %v, ptr %p, align 16
   ret void
 }
 
-define void @v2f64st(<2 x double>* %p, double %s) nounwind {
+define void @v2f64st(ptr %p, double %s) nounwind {
 ; CHECK-LABEL: v2f64st:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov v1.2d, #2.00000000
@@ -308,7 +308,7 @@ define void @v2f64st(<2 x double>* %p, double %s) nounwind {
 ; CHECK-NEXT:    str q1, [x0]
 ; CHECK-NEXT:    ret
   %v = insertelement <2 x double> <double 2.0, double undef>, double %s, i32 1
-  store <2 x double> %v, <2 x double>* %p, align 16
+  store <2 x double> %v, ptr %p, align 16
   ret void
 }
 

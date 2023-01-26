@@ -50,7 +50,7 @@ public:
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
 
-  Optional<MCFixupKind> getFixupKind(StringRef Name) const override;
+  std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
                              const MCValue &Target) override;
@@ -162,13 +162,14 @@ void AMDGPUAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
     Data[Offset + i] |= static_cast<uint8_t>((Value >> (i * 8)) & 0xff);
 }
 
-Optional<MCFixupKind> AMDGPUAsmBackend::getFixupKind(StringRef Name) const {
-  return StringSwitch<Optional<MCFixupKind>>(Name)
+std::optional<MCFixupKind>
+AMDGPUAsmBackend::getFixupKind(StringRef Name) const {
+  return StringSwitch<std::optional<MCFixupKind>>(Name)
 #define ELF_RELOC(Name, Value)                                                 \
   .Case(#Name, MCFixupKind(FirstLiteralRelocationKind + Value))
 #include "llvm/BinaryFormat/ELFRelocs/AMDGPU.def"
 #undef ELF_RELOC
-      .Default(None);
+      .Default(std::nullopt);
 }
 
 const MCFixupKindInfo &AMDGPUAsmBackend::getFixupKindInfo(

@@ -3,68 +3,62 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"
 
-define {i8*, i32*} @f(i8* %buffer, i32* %ptr) presplitcoroutine {
+define {ptr, ptr} @f(ptr %buffer, ptr %ptr) presplitcoroutine {
 entry:
   %temp = alloca i32, align 4
-  %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, i8* %buffer, i8* bitcast (void (i8*, i1)* @prototype to i8*), i8* bitcast (i8* (i32)* @allocate to i8*), i8* bitcast (void (i8*)* @deallocate to i8*))
-  %hdl = call i8* @llvm.coro.begin(token %id, i8* null)
-  %oldvalue = load i32, i32* %ptr
-  store i32 %oldvalue, i32* %temp
-  %unwind = call i1 (...) @llvm.coro.suspend.retcon.i1(i32* %temp)
+  %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate)
+  %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
+  %oldvalue = load i32, ptr %ptr
+  store i32 %oldvalue, ptr %temp
+  %unwind = call i1 (...) @llvm.coro.suspend.retcon.i1(ptr %temp)
   br i1 %unwind, label %cleanup, label %cont
 
 cont:
-  %newvalue = load i32, i32* %temp
-  store i32 %newvalue, i32* %ptr
+  %newvalue = load i32, ptr %temp
+  store i32 %newvalue, ptr %ptr
   br label %cleanup
 
 cleanup:
-  call i1 @llvm.coro.end(i8* %hdl, i1 0)
+  call i1 @llvm.coro.end(ptr %hdl, i1 0)
   unreachable
 }
 
 
 
-declare token @llvm.coro.id.retcon.once(i32, i32, i8*, i8*, i8*, i8*)
-declare i8* @llvm.coro.begin(token, i8*)
+declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr)
+declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
-declare i1 @llvm.coro.end(i8*, i1)
+declare i1 @llvm.coro.end(ptr, i1)
 
-declare void @prototype(i8*, i1 zeroext)
+declare void @prototype(ptr, i1 zeroext)
 
-declare noalias i8* @allocate(i32 %size)
-declare fastcc void @deallocate(i8* %ptr)
+declare noalias ptr @allocate(i32 %size)
+declare fastcc void @deallocate(ptr %ptr)
 
 declare void @print(i32)
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @allocate(i32 16)
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[BUFFER:%.*]] to i8**
-; CHECK-NEXT:    store i8* [[TMP0]], i8** [[TMP1]], align 8
-; CHECK-NEXT:    [[FRAMEPTR:%.*]] = bitcast i8* [[TMP0]] to %f.Frame*
-; CHECK-NEXT:    [[TEMP:%.*]] = getelementptr inbounds [[F_FRAME:%.*]], %f.Frame* [[FRAMEPTR]], i32 0, i32 1
-; CHECK-NEXT:    [[PTR_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], %f.Frame* [[FRAMEPTR]], i32 0, i32 0
-; CHECK-NEXT:    store i32* [[PTR:%.*]], i32** [[PTR_SPILL_ADDR]], align 8
-; CHECK-NEXT:    [[OLDVALUE:%.*]] = load i32, i32* [[PTR]], align 4
-; CHECK-NEXT:    store i32 [[OLDVALUE]], i32* [[TEMP]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { i8*, i32* } { i8* bitcast (void (i8*, i1)* @f.resume.0 to i8*), i32* undef }, i32* [[TEMP]], 1
-; CHECK-NEXT:    ret { i8*, i32* } [[TMP2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @allocate(i32 16)
+; CHECK-NEXT:    store ptr [[TMP0]], ptr [[BUFFER:%.*]], align 8
+; CHECK-NEXT:    [[TEMP:%.*]] = getelementptr inbounds [[F_FRAME:%.*]], ptr [[TMP0]], i32 0, i32 1
+; CHECK-NEXT:    store ptr [[PTR:%.*]], ptr [[TMP0]], align 8
+; CHECK-NEXT:    [[OLDVALUE:%.*]] = load i32, ptr [[PTR]], align 4
+; CHECK-NEXT:    store i32 [[OLDVALUE]], ptr [[TEMP]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr, ptr } { ptr @f.resume.0, ptr undef }, ptr [[TEMP]], 1
+; CHECK-NEXT:    ret { ptr, ptr } [[TMP2]]
 ;
 ;
 ; CHECK-LABEL: @f.resume.0(
 ; CHECK-NEXT:  entryresume.0:
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[TMP0:%.*]] to %f.Frame**
-; CHECK-NEXT:    [[FRAMEPTR:%.*]] = load %f.Frame*, %f.Frame** [[TMP2]], align 8
-; CHECK-NEXT:    [[TEMP:%.*]] = getelementptr inbounds [[F_FRAME:%.*]], %f.Frame* [[FRAMEPTR]], i32 0, i32 1
+; CHECK-NEXT:    [[FRAMEPTR:%.*]] = load ptr, ptr [[TMP0:%.*]], align 8
+; CHECK-NEXT:    [[TEMP:%.*]] = getelementptr inbounds [[F_FRAME:%.*]], ptr [[FRAMEPTR]], i32 0, i32 1
 ; CHECK-NEXT:    br i1 [[TMP1:%.*]], label [[COROEND:%.*]], label [[CONT:%.*]]
 ; CHECK:       cont:
-; CHECK-NEXT:    [[PTR_RELOAD_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], %f.Frame* [[FRAMEPTR]], i32 0, i32 0
-; CHECK-NEXT:    [[PTR_RELOAD:%.*]] = load i32*, i32** [[PTR_RELOAD_ADDR]], align 8
-; CHECK-NEXT:    [[NEWVALUE:%.*]] = load i32, i32* [[TEMP]], align 4
-; CHECK-NEXT:    store i32 [[NEWVALUE]], i32* [[PTR_RELOAD]], align 4
+; CHECK-NEXT:    [[PTR_RELOAD:%.*]] = load ptr, ptr [[FRAMEPTR]], align 8
+; CHECK-NEXT:    [[NEWVALUE:%.*]] = load i32, ptr [[TEMP]], align 4
+; CHECK-NEXT:    store i32 [[NEWVALUE]], ptr [[PTR_RELOAD]], align 4
 ; CHECK-NEXT:    br label [[COROEND]]
 ; CHECK:       CoroEnd:
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast %f.Frame* [[FRAMEPTR]] to i8*
-; CHECK-NEXT:    call fastcc void @deallocate(i8* [[TMP3]])
+; CHECK-NEXT:    call fastcc void @deallocate(ptr [[FRAMEPTR]])
 ; CHECK-NEXT:    ret void
 ;

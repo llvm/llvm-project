@@ -49,13 +49,14 @@ struct E e;
 char e1[__alignof__(e) == 2 ?: -1] = {0};
 char e2[__alignof__(e.member) == 2 ?: -1] = {0};
 
-typedef char overaligned_char __attribute__((aligned(16)));
-typedef overaligned_char array_with_overaligned_char[11];
+typedef struct { char c[16]; } S;
+typedef S overaligned_struct __attribute__((aligned(16)));
+typedef overaligned_struct array_with_overaligned_struct[11];
 typedef char array_with_align_attr[11] __attribute__((aligned(16)));
 
-char f0[__alignof__(array_with_overaligned_char) == 16 ? 1 : -1] = { 0 };
+char f0[__alignof__(array_with_overaligned_struct) == 16 ? 1 : -1] = { 0 };
 char f1[__alignof__(array_with_align_attr) == 16 ? 1 : -1] = { 0 };
-array_with_overaligned_char F2;
+array_with_overaligned_struct F2;
 char f2[__alignof__(F2) == 16 ? 1 : -1] = { 0 };
 array_with_align_attr F3;
 char f3[__alignof__(F3) == 16 ? 1 : -1] = { 0 };

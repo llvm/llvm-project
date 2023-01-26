@@ -14,7 +14,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using llvm::None;
 
 class TestSignals : public UnixSignals {
 public:
@@ -128,31 +127,35 @@ TEST(UnixSignalsTest, VersionChange) {
 TEST(UnixSignalsTest, GetFilteredSignals) {
   TestSignals signals;
 
-  auto all_signals = signals.GetFilteredSignals(None, None, None);
+  auto all_signals =
+      signals.GetFilteredSignals(std::nullopt, std::nullopt, std::nullopt);
   std::vector<int32_t> expected = {2, 4, 8, 16};
   EXPECT_EQ_ARRAYS(expected, all_signals);
 
-  auto supressed = signals.GetFilteredSignals(true, None, None);
+  auto supressed = signals.GetFilteredSignals(true, std::nullopt, std::nullopt);
   expected = {4, 8, 16};
   EXPECT_EQ_ARRAYS(expected, supressed);
 
-  auto not_supressed = signals.GetFilteredSignals(false, None, None);
+  auto not_supressed =
+      signals.GetFilteredSignals(false, std::nullopt, std::nullopt);
   expected = {2};
   EXPECT_EQ_ARRAYS(expected, not_supressed);
 
-  auto stopped = signals.GetFilteredSignals(None, true, None);
+  auto stopped = signals.GetFilteredSignals(std::nullopt, true, std::nullopt);
   expected = {2, 8};
   EXPECT_EQ_ARRAYS(expected, stopped);
 
-  auto not_stopped = signals.GetFilteredSignals(None, false, None);
+  auto not_stopped =
+      signals.GetFilteredSignals(std::nullopt, false, std::nullopt);
   expected = {4, 16};
   EXPECT_EQ_ARRAYS(expected, not_stopped);
 
-  auto notified = signals.GetFilteredSignals(None, None, true);
+  auto notified = signals.GetFilteredSignals(std::nullopt, std::nullopt, true);
   expected = {2, 4, 8};
   EXPECT_EQ_ARRAYS(expected, notified);
 
-  auto not_notified = signals.GetFilteredSignals(None, None, false);
+  auto not_notified =
+      signals.GetFilteredSignals(std::nullopt, std::nullopt, false);
   expected = {16};
   EXPECT_EQ_ARRAYS(expected, not_notified);
 

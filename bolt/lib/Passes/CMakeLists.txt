@@ -11,11 +11,12 @@ add_llvm_library(LLVMBOLTPasses
   CallGraphWalker.cpp
   DataflowAnalysis.cpp
   DataflowInfoManager.cpp
-  ExtTSPReorderAlgorithm.cpp
   FrameAnalysis.cpp
   FrameOptimizer.cpp
+  FixRelaxationPass.cpp
   HFSort.cpp
   HFSortPlus.cpp
+  Hugify.cpp
   IdenticalCodeFolding.cpp
   IndirectCallPromotion.cpp
   Inliner.cpp
@@ -43,8 +44,11 @@ add_llvm_library(LLVMBOLTPasses
   TailDuplication.cpp
   ThreeWayBranch.cpp
   ValidateInternalCalls.cpp
+  ValidateMemRefs.cpp
   VeneerElimination.cpp
   RetpolineInsertion.cpp
+
+  DISABLE_LLVM_LINK_LLVM_DYLIB
 
   LINK_LIBS
   ${LLVM_PTHREAD_LIB}
@@ -53,6 +57,8 @@ add_llvm_library(LLVMBOLTPasses
   AsmPrinter
   MC
   Support
+  TargetParser
+  TransformUtils
   )
 
 target_link_libraries(LLVMBOLTPasses

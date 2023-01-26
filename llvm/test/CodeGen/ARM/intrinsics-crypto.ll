@@ -1,8 +1,8 @@
 ; RUN: llc < %s -mtriple=armv8 -mattr=+crypto | FileCheck %s
 
-define arm_aapcs_vfpcc <16 x i8> @test_aesde(<16 x i8>* %a, <16 x i8> *%b) {
-  %tmp = load <16 x i8>, <16 x i8>* %a
-  %tmp2 = load <16 x i8>, <16 x i8>* %b
+define arm_aapcs_vfpcc <16 x i8> @test_aesde(ptr %a, ptr %b) {
+  %tmp = load <16 x i8>, ptr %a
+  %tmp2 = load <16 x i8>, ptr %b
   %tmp3 = call <16 x i8> @llvm.arm.neon.aesd(<16 x i8> %tmp, <16 x i8> %tmp2)
   ; CHECK: aesd.8 q{{[0-9]+}}, q{{[0-9]+}}
   %tmp4 = call <16 x i8> @llvm.arm.neon.aese(<16 x i8> %tmp3, <16 x i8> %tmp2)
@@ -14,10 +14,10 @@ define arm_aapcs_vfpcc <16 x i8> @test_aesde(<16 x i8>* %a, <16 x i8> *%b) {
   ret <16 x i8> %tmp6
 }
 
-define arm_aapcs_vfpcc <4 x i32> @test_sha(<4 x i32> *%a, <4 x i32> *%b, <4 x i32> *%c) {
-  %tmp = load <4 x i32>, <4 x i32>* %a
-  %tmp2 = load <4 x i32>, <4 x i32>* %b
-  %tmp3 = load <4 x i32>, <4 x i32>* %c
+define arm_aapcs_vfpcc <4 x i32> @test_sha(ptr %a, ptr %b, ptr %c) {
+  %tmp = load <4 x i32>, ptr %a
+  %tmp2 = load <4 x i32>, ptr %b
+  %tmp3 = load <4 x i32>, ptr %c
   %scalar = extractelement <4 x i32> %tmp, i32 0
   %resscalar = call i32 @llvm.arm.neon.sha1h(i32 %scalar)
   %res1 = insertelement <4 x i32> undef, i32 %resscalar, i32 0

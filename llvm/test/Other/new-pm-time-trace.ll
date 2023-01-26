@@ -7,13 +7,13 @@
 
 ; CHECK: "name": "Total FunctionToLoopPassAdaptor
 
-define void @foo(i1 %x, i8* %p1, i8* %p2) {
+define void @foo(i1 %x, ptr %p1, ptr %p2) {
 entry:
-  store i8 42, i8* %p1
+  store i8 42, ptr %p1
   br i1 %x, label %loop, label %exit
 
 loop:
-  %tmp1 = load i8, i8* %p2
+  %tmp1 = load i8, ptr %p2
   br label %loop
 
 exit:

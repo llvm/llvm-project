@@ -15,8 +15,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SwapByteOrder.h"
 #include <cassert>
 #include <cstring>
 using namespace llvm;
@@ -89,8 +89,8 @@ void FoldingSetNodeID::AddString(StringRef String) {
   // Pos will have overshot size by 4 - #bytes left over.
   // No need to take endianness into account here - this is always executed.
   switch (Pos - Size) {
-  case 1: V = (V << 8) | (unsigned char)String[Size - 3]; LLVM_FALLTHROUGH;
-  case 2: V = (V << 8) | (unsigned char)String[Size - 2]; LLVM_FALLTHROUGH;
+  case 1: V = (V << 8) | (unsigned char)String[Size - 3]; [[fallthrough]];
+  case 2: V = (V << 8) | (unsigned char)String[Size - 2]; [[fallthrough]];
   case 3: V = (V << 8) | (unsigned char)String[Size - 1]; break;
   default: return; // Nothing left.
   }

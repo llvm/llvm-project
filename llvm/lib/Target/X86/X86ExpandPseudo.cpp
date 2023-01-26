@@ -224,9 +224,11 @@ void X86ExpandPseudo::expandCALL_RVMARKER(MachineBasicBlock &MBB,
   // Emit marker "movq %rax, %rdi".  %rdi is not callee-saved, so it cannot be
   // live across the earlier call. The call to the ObjC runtime function returns
   // the first argument, so the value of %rax is unchanged after the ObjC
-  // runtime call.
+  // runtime call. On Windows targets, the runtime call follows the regular
+  // x64 calling convention and expects the first argument in %rcx.
+  auto TargetReg = STI->getTargetTriple().isOSWindows() ? X86::RCX : X86::RDI;
   auto *Marker = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(X86::MOV64rr))
-                     .addReg(X86::RDI, RegState::Define)
+                     .addReg(TargetReg, RegState::Define)
                      .addReg(X86::RAX)
                      .getInstr();
   if (MI.shouldUpdateCallSiteInfo())
@@ -356,6 +358,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
     MachineInstr &NewMI = *std::prev(MBBI);
     NewMI.copyImplicitOps(*MBBI->getParent()->getParent(), *MBBI);
+    NewMI.setCFIType(*MBB.getParent(), MI.getCFIType());
 
     // Update the call site info.
     if (MBBI->isCandidateForCallSiteEntry())
@@ -563,7 +566,8 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   case X86::PTDPBSUDV:
   case X86::PTDPBUSDV:
   case X86::PTDPBUUDV:
-  case X86::PTDPBF16PSV: {
+  case X86::PTDPBF16PSV:
+  case X86::PTDPFP16PSV: {
     MI.untieRegOperand(4);
     for (unsigned i = 3; i > 0; --i)
       MI.removeOperand(i);
@@ -574,6 +578,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     case X86::PTDPBUSDV:   Opc = X86::TDPBUSD; break;
     case X86::PTDPBUUDV:   Opc = X86::TDPBUUD; break;
     case X86::PTDPBF16PSV: Opc = X86::TDPBF16PS; break;
+    case X86::PTDPFP16PSV: Opc = X86::TDPFP16PS; break;
     default: llvm_unreachable("Impossible Opcode!");
     }
     MI.setDesc(TII->get(Opc));
@@ -671,8 +676,7 @@ void X86ExpandPseudo::ExpandVastartSaveXmmRegs(
         NewMI.add(VAStartPseudoInstr->getOperand(i + 1));
     }
     NewMI.addReg(VAStartPseudoInstr->getOperand(OpndIdx).getReg());
-    assert(Register::isPhysicalRegister(
-        VAStartPseudoInstr->getOperand(OpndIdx).getReg()));
+    assert(VAStartPseudoInstr->getOperand(OpndIdx).getReg().isPhysical());
   }
 
   // The original block will now fall through to the GuardedRegsBlk.

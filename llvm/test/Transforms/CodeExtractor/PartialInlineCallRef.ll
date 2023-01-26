@@ -1,4 +1,3 @@
-; RUN: opt < %s -partial-inliner -S  | FileCheck %s
 ; RUN: opt < %s -passes=partial-inliner -S  | FileCheck %s
 
 
@@ -6,7 +5,7 @@
 declare void @foo(...) local_unnamed_addr #0
 
 ; Function Attrs: noinline
-define i32 @caller(i32 (i32)* nocapture %arg, i32 (i32)* nocapture %arg1, i32 %arg2) local_unnamed_addr #1 {
+define i32 @caller(ptr nocapture %arg, ptr nocapture %arg1, i32 %arg2) local_unnamed_addr #1 {
 bb:
   %tmp = tail call i32 %arg(i32 %arg2) #0
   %tmp3 = tail call i32 %arg1(i32 %arg2) #0
@@ -44,7 +43,7 @@ bb:
 ; check that caller is not wrongly inlined by partial inliner
 ; CHECK: call i32 @caller
 ; CHECK-NOT: call .* @bar
-  %tmp = tail call i32 @caller(i32 (i32)* nonnull @bar, i32 (i32)* nonnull @bar, i32 %arg)
+  %tmp = tail call i32 @caller(ptr nonnull @bar, ptr nonnull @bar, i32 %arg)
   ret i32 %tmp
 }
 

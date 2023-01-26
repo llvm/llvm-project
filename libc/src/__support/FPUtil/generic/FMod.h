@@ -9,11 +9,11 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMOD_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMOD_H
 
-#include "src/__support/CPP/Limits.h"
+#include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/builtin_wrappers.h"
+#include "src/__support/builtin_wrappers.h"
 #include "src/__support/common.h"
 #include "src/math/generic/math_utils.h"
 
@@ -122,9 +122,9 @@ template <typename T> struct FModExceptionalInputHandler {
   static_assert(cpp::is_floating_point_v<T>,
                 "FModCStandardWrapper instantiated with invalid type.");
 
-  static bool PreCheck(T x, T y, T &out) {
+  LIBC_INLINE static bool PreCheck(T x, T y, T &out) {
     using FPB = fputil::FPBits<T>;
-    const T quiet_NaN = FPB::build_nan(FPB::FloatProp::QUIET_NAN_MASK);
+    const T quiet_NaN = FPB::build_quiet_nan(0);
     FPB sx(x), sy(y);
     if (likely(!sy.is_zero() && !sy.is_inf_or_nan() && !sx.is_inf_or_nan())) {
       return false;
@@ -168,8 +168,8 @@ private:
   using intU_t = typename FPBits<T>::UIntType;
 
 public:
-  inline constexpr static intU_t execute(int exp_diff, int sides_zeroes_count,
-                                         intU_t m_x, intU_t m_y) {
+  LIBC_INLINE constexpr static intU_t
+  execute(int exp_diff, int sides_zeroes_count, intU_t m_x, intU_t m_y) {
     while (exp_diff > sides_zeroes_count) {
       exp_diff -= sides_zeroes_count;
       m_x <<= sides_zeroes_count;
@@ -187,10 +187,10 @@ private:
   using intU_t = typename FPB::UIntType;
 
 public:
-  inline constexpr static intU_t execute(int exp_diff, int sides_zeroes_count,
-                                         intU_t m_x, intU_t m_y) {
+  LIBC_INLINE constexpr static intU_t
+  execute(int exp_diff, int sides_zeroes_count, intU_t m_x, intU_t m_y) {
     if (exp_diff > sides_zeroes_count) {
-      intU_t inv_hy = (cpp::NumericLimits<intU_t>::max() / m_y);
+      intU_t inv_hy = (cpp::numeric_limits<intU_t>::max() / m_y);
       while (exp_diff > sides_zeroes_count) {
         exp_diff -= sides_zeroes_count;
         intU_t hd =
@@ -223,7 +223,7 @@ private:
   using FPB = FPBits<T>;
   using intU_t = typename FPB::UIntType;
 
-  inline static constexpr FPB eval_internal(FPB sx, FPB sy) {
+  LIBC_INLINE static constexpr FPB eval_internal(FPB sx, FPB sy) {
 
     if (likely(sx.uintval() <= sy.uintval())) {
       if (sx.uintval() < sy.uintval())
@@ -300,7 +300,7 @@ private:
   }
 
 public:
-  static inline T eval(T x, T y) {
+  LIBC_INLINE static T eval(T x, T y) {
     if (T out; Wrapper::PreCheck(x, y, out))
       return out;
     FPB sx(x), sy(y);

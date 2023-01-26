@@ -15,7 +15,6 @@
 #ifndef LLVM_PASSES_PASSBUILDER_H
 #define LLVM_PASSES_PASSBUILDER_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/OptimizationLevel.h"
@@ -75,6 +74,9 @@ public:
   /// false.
   bool MergeFunctions;
 
+  /// Tuning option to override the default inliner threshold.
+  int InlinerThreshold;
+
   // Experimental option to eagerly invalidate more analyses. This has the
   // potential to decrease max memory usage in exchange for more compile time.
   // This may affect codegen due to either passes using analyses only when
@@ -94,7 +96,7 @@ public:
 class PassBuilder {
   TargetMachine *TM;
   PipelineTuningOptions PTO;
-  Optional<PGOOptions> PGOOpt;
+  std::optional<PGOOptions> PGOOpt;
   PassInstrumentationCallbacks *PIC;
 
 public:
@@ -113,7 +115,7 @@ public:
 
   explicit PassBuilder(TargetMachine *TM = nullptr,
                        PipelineTuningOptions PTO = PipelineTuningOptions(),
-                       Optional<PGOOptions> PGOOpt = None,
+                       std::optional<PGOOptions> PGOOpt = std::nullopt,
                        PassInstrumentationCallbacks *PIC = nullptr);
 
   /// Cross register the analysis managers through their proxies.
@@ -374,12 +376,6 @@ public:
   /// returns false.
   Error parseAAPipeline(AAManager &AA, StringRef PipelineText);
 
-  /// Returns true if the pass name is the name of an alias analysis pass.
-  bool isAAPassName(StringRef PassName);
-
-  /// Returns true if the pass name is the name of a (non-alias) analysis pass.
-  bool isAnalysisPassName(StringRef PassName);
-
   /// Print pass names.
   void printPassNames(raw_ostream &OS);
 
@@ -590,7 +586,7 @@ private:
   void addVectorPasses(OptimizationLevel Level, FunctionPassManager &FPM,
                        bool IsFullLTO);
 
-  static Optional<std::vector<PipelineElement>>
+  static std::optional<std::vector<PipelineElement>>
   parsePipelineText(StringRef Text);
 
   Error parseModulePass(ModulePassManager &MPM, const PipelineElement &E);

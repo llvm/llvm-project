@@ -15,12 +15,10 @@ contains
 ! CHECK:         %[[VAL_0:.*]] = fir.address_of(@_QMtest_loop_varEi_pointer) : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK:         %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK:         %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
-! CHECK:         fir.do_loop %[[VAL_9:.*]] =
-! CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (index) -> i32
-! CHECK:           fir.store %[[VAL_10]] to %[[VAL_2]] : !fir.ptr<i32>
+! CHECK:         %[[VAL_9:.*]]:2 = fir.do_loop{{.*}}iter_args(%[[IV:.*]] = {{.*}})
+! CHECK:           fir.store %[[IV]] to %[[VAL_2]] : !fir.ptr<i32>
 ! CHECK:         }
-! CHECK:         %[[VAL_12:.*]] = fir.convert %[[VAL_13:.*]] : (index) -> i32
-! CHECK:         fir.store %[[VAL_12]] to %[[VAL_2]] : !fir.ptr<i32>
+! CHECK:         fir.store %[[VAL_9]]#1 to %[[VAL_2]] : !fir.ptr<i32>
   end subroutine
 
 ! CHECK-LABEL: func @_QMtest_loop_varPtest_allocatable
@@ -30,12 +28,10 @@ contains
 ! CHECK:         %[[VAL_0:.*]] = fir.address_of(@_QMtest_loop_varEi_allocatable) : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:         %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:         %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
-! CHECK:         fir.do_loop %[[VAL_9:.*]] =
-! CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (index) -> i32
-! CHECK:           fir.store %[[VAL_10]] to %[[VAL_2]] : !fir.heap<i32>
+! CHECK:         %[[VAL_9:.*]]:2 = fir.do_loop{{.*}}iter_args(%[[IV:.*]] = {{.*}})
+! CHECK:           fir.store %[[IV]] to %[[VAL_2]] : !fir.heap<i32>
 ! CHECK:         }
-! CHECK:         %[[VAL_12:.*]] = fir.convert %[[VAL_13:.*]] : (index) -> i32
-! CHECK:         fir.store %[[VAL_12]] to %[[VAL_2]] : !fir.heap<i32>
+! CHECK:         fir.store %[[VAL_9]]#1 to %[[VAL_2]] : !fir.heap<i32>
   end subroutine
 
 ! CHECK-LABEL: func @_QMtest_loop_varPtest_real_pointer
@@ -56,7 +52,7 @@ contains
 ! CHECK:         cond_br %{{.*}}, ^bb2, ^bb3
 ! CHECK:       ^bb2:
 ! CHECK:         %[[VAL_19:.*]] = fir.load %[[VAL_3]] : !fir.ptr<f32>
-! CHECK:         %[[VAL_20:.*]] = arith.addf %[[VAL_19]], %[[VAL_8]] : f32
+! CHECK:         %[[VAL_20:.*]] = arith.addf %[[VAL_19]], %[[VAL_8]] {{.*}}: f32
 ! CHECK:         fir.store %[[VAL_20]] to %[[VAL_3]] : !fir.ptr<f32>
 ! CHECK:         br ^bb1
 ! CHECK:       ^bb3:
@@ -81,7 +77,7 @@ contains
 ! CHECK:         cond_br %{{.*}}, ^bb2, ^bb3
 ! CHECK:       ^bb2:
 ! CHECK:         %[[VAL_19:.*]] = fir.load %[[VAL_3]] : !fir.heap<f32>
-! CHECK:         %[[VAL_20:.*]] = arith.addf %[[VAL_19]], %[[VAL_8]] : f32
+! CHECK:         %[[VAL_20:.*]] = arith.addf %[[VAL_19]], %[[VAL_8]] {{.*}}: f32
 ! CHECK:         fir.store %[[VAL_20]] to %[[VAL_3]] : !fir.heap<f32>
 ! CHECK:         br ^bb1
 ! CHECK:       ^bb3:

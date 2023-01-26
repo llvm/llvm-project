@@ -18,7 +18,6 @@
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -148,7 +147,7 @@ void DiagnosticRenderer::emitStoredDiagnostic(StoredDiagnostic &Diag) {
 
 void DiagnosticRenderer::emitBasicNote(StringRef Message) {
   emitDiagnosticMessage(FullSourceLoc(), PresumedLoc(), DiagnosticsEngine::Note,
-                        Message, None, DiagOrStoredDiag());
+                        Message, std::nullopt, DiagOrStoredDiag());
 }
 
 /// Prints an include stack when appropriate for a particular
@@ -453,7 +452,7 @@ void DiagnosticRenderer::emitSingleMacroExpansion(
     Message << "expanded from macro '" << MacroName << "'";
 
   emitDiagnostic(SpellingLoc, DiagnosticsEngine::Note, Message.str(),
-                 SpellingRanges, None);
+                 SpellingRanges, std::nullopt);
 }
 
 /// Check that the macro argument location of Loc starts with ArgumentLoc.

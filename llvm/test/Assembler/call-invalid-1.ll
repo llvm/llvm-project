@@ -4,6 +4,6 @@ declare void @f()
 
 define void @g() {
   call void @f() align 8
-; CHECK: error: call instructions may not have an alignment
+; CHECK: Attribute 'align 8' does not apply to functions!
   ret void
 }

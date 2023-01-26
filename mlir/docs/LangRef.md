@@ -725,7 +725,7 @@ part of the syntax into an equivalent, but lighter weight form:
 !foo.something<abcd>
 ```
 
-See [here](AttributesAndTypes.md) to learn how to define dialect types.
+See [here](DefiningDialects/AttributesAndTypes.md) to learn how to define dialect types.
 
 ### Builtin Types
 
@@ -744,7 +744,7 @@ attribute-value ::= attribute-alias | dialect-attribute | builtin-attribute
 
 Attributes are the mechanism for specifying constant data on operations in
 places where a variable is never allowed - e.g. the comparison predicate of a
-[`cmpi` operation](Dialects/ArithmeticOps.md#arithcmpi-mlirarithcmpiop). Each operation has an
+[`cmpi` operation](Dialects/ArithOps.md#arithcmpi-mlirarithcmpiop). Each operation has an
 attribute dictionary, which associates a set of attribute names to attribute
 values. MLIR's builtin dialect provides a rich set of
 [builtin attribute values](#builtin-attribute-values) out of the box (such as
@@ -837,7 +837,7 @@ part of the syntax into an equivalent, but lighter weight form:
 #foo.string<"">
 ```
 
-See [here](AttributesAndTypes.md) on how to define dialect attribute values.
+See [here](DefiningDialects/AttributesAndTypes.md) on how to define dialect attribute values.
 
 ### Builtin Attribute Values
 

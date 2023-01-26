@@ -9,8 +9,7 @@
 // This file defines the TokenKind database.  This includes normal tokens like
 // tok::ampamp (corresponding to the && token) as well as keywords for various
 // languages.  Users of this file must optionally #define the TOK, KEYWORD,
-// CXX11_KEYWORD, CONCEPTS_KEYWORD, ALIAS, or PPKEYWORD macros to make use of
-// this file.
+// CXX11_KEYWORD, ALIAS, or PPKEYWORD macros to make use of this file.
 //
 //===----------------------------------------------------------------------===//
 
@@ -29,8 +28,11 @@
 #ifndef CXX20_KEYWORD
 #define CXX20_KEYWORD(X,Y) KEYWORD(X,KEYCXX20|(Y))
 #endif
-#ifndef CONCEPTS_KEYWORD
-#define CONCEPTS_KEYWORD(X) CXX20_KEYWORD(X,KEYCONCEPTS)
+#ifndef C99_KEYWORD
+#define C99_KEYWORD(X,Y) KEYWORD(X,KEYC99|(Y))
+#endif
+#ifndef C2X_KEYWORD
+#define C2X_KEYWORD(X,Y) KEYWORD(X,KEYC2X|(Y))
 #endif
 #ifndef COROUTINES_KEYWORD
 #define COROUTINES_KEYWORD(X) CXX20_KEYWORD(X,KEYCOROUTINES)
@@ -254,13 +256,12 @@ PUNCTUATOR(caretcaret,            "^^")
 //              always be treated as a keyword
 //   KEYC99   - This is a keyword introduced to C in C99
 //   KEYC11   - This is a keyword introduced to C in C11
+//   KEYC2X   - This is a keyword introduced to C in C2x
 //   KEYCXX   - This is a C++ keyword, or a C++-specific keyword in the
 //              implementation namespace
 //   KEYNOCXX - This is a keyword in every non-C++ dialect.
 //   KEYCXX11 - This is a C++ keyword introduced to C++ in C++11
 //   KEYCXX20 - This is a C++ keyword introduced to C++ in C++20
-//   KEYCONCEPTS - This is a keyword if the C++ extensions for concepts
-//                 are enabled.
 //   KEYMODULES - This is a keyword if the C++ extensions for modules
 //                are enabled.
 //   KEYGNU   - This is a keyword if GNU extensions are enabled
@@ -297,13 +298,11 @@ KEYWORD(float                       , KEYALL)
 KEYWORD(for                         , KEYALL)
 KEYWORD(goto                        , KEYALL)
 KEYWORD(if                          , KEYALL)
-KEYWORD(inline                      , KEYC99|KEYCXX|KEYGNU)
 KEYWORD(int                         , KEYALL)
 KEYWORD(_ExtInt                     , KEYALL)
 KEYWORD(_BitInt                     , KEYALL)
 KEYWORD(long                        , KEYALL)
 KEYWORD(register                    , KEYALL)
-KEYWORD(restrict                    , KEYC99)
 KEYWORD(return                      , KEYALL)
 KEYWORD(short                       , KEYALL)
 KEYWORD(signed                      , KEYALL)
@@ -334,7 +333,7 @@ KEYWORD(__objc_no                   , KEYALL)
 
 // C++ 2.11p1: Keywords.
 KEYWORD(asm                         , KEYCXX|KEYGNU)
-KEYWORD(bool                        , BOOLSUPPORT)
+KEYWORD(bool                        , BOOLSUPPORT|KEYC2X)
 KEYWORD(catch                       , KEYCXX)
 KEYWORD(class                       , KEYCXX)
 KEYWORD(const_cast                  , KEYCXX)
@@ -342,7 +341,7 @@ KEYWORD(delete                      , KEYCXX)
 KEYWORD(dynamic_cast                , KEYCXX)
 KEYWORD(explicit                    , KEYCXX)
 KEYWORD(export                      , KEYCXX)
-KEYWORD(false                       , BOOLSUPPORT)
+KEYWORD(false                       , BOOLSUPPORT|KEYC2X)
 KEYWORD(friend                      , KEYCXX)
 KEYWORD(mutable                     , KEYCXX)
 KEYWORD(namespace                   , KEYCXX)
@@ -356,7 +355,7 @@ KEYWORD(static_cast                 , KEYCXX)
 KEYWORD(template                    , KEYCXX)
 KEYWORD(this                        , KEYCXX)
 KEYWORD(throw                       , KEYCXX)
-KEYWORD(true                        , BOOLSUPPORT)
+KEYWORD(true                        , BOOLSUPPORT|KEYC2X)
 KEYWORD(try                         , KEYCXX)
 KEYWORD(typename                    , KEYCXX)
 KEYWORD(typeid                      , KEYCXX)
@@ -377,22 +376,23 @@ CXX_KEYWORD_OPERATOR(or_eq   , pipeequal)
 CXX_KEYWORD_OPERATOR(xor     , caret)
 CXX_KEYWORD_OPERATOR(xor_eq  , caretequal)
 
+// C99 Keywords.
+C99_KEYWORD(restrict                    , 0)
+C99_KEYWORD(inline                      , KEYCXX|KEYGNU)
+
+
 // C++11 keywords
-CXX11_KEYWORD(alignas               , 0)
+CXX11_KEYWORD(alignas               , KEYC2X)
 // alignof and _Alignof return the required ABI alignment
-CXX11_UNARY_EXPR_OR_TYPE_TRAIT(alignof, AlignOf, 0)
+CXX11_UNARY_EXPR_OR_TYPE_TRAIT(alignof, AlignOf, KEYC2X)
 CXX11_KEYWORD(char16_t              , KEYNOMS18)
 CXX11_KEYWORD(char32_t              , KEYNOMS18)
 CXX11_KEYWORD(constexpr             , 0)
 CXX11_KEYWORD(decltype              , 0)
 CXX11_KEYWORD(noexcept              , 0)
-CXX11_KEYWORD(nullptr               , 0)
-CXX11_KEYWORD(static_assert         , KEYMSCOMPAT)
-CXX11_KEYWORD(thread_local          , 0)
-
-// C++20 keywords
-CONCEPTS_KEYWORD(concept)
-CONCEPTS_KEYWORD(requires)
+CXX11_KEYWORD(nullptr               , KEYC2X)
+CXX11_KEYWORD(static_assert         , KEYMSCOMPAT|KEYC2X)
+CXX11_KEYWORD(thread_local          , KEYC2X)
 
 // C++20 / coroutines TS keywords
 COROUTINES_KEYWORD(co_await)
@@ -406,11 +406,18 @@ MODULES_KEYWORD(import)
 // C++20 keywords.
 CXX20_KEYWORD(consteval             , 0)
 CXX20_KEYWORD(constinit             , 0)
+CXX20_KEYWORD(concept               , 0)
+CXX20_KEYWORD(requires              , 0)
+
 // Not a CXX20_KEYWORD because it is disabled by -fno-char8_t.
 KEYWORD(char8_t                     , CHAR8SUPPORT)
 
 // C11 Extension
 KEYWORD(_Float16                    , KEYALL)
+
+// C2x keywords
+C2X_KEYWORD(typeof                  , KEYGNU)
+C2X_KEYWORD(typeof_unqual           , 0)
 
 // ISO/IEC JTC1 SC22 WG14 N1169 Extension
 KEYWORD(_Accum                      , KEYNOCXX)
@@ -450,9 +457,6 @@ KEYWORD(__FUNCTION__                , KEYALL)
 KEYWORD(__PRETTY_FUNCTION__         , KEYALL)
 KEYWORD(__auto_type                 , KEYALL)
 
-// GNU Extensions (outside impl-reserved namespace)
-KEYWORD(typeof                      , KEYGNU)
-
 // MS Extensions
 KEYWORD(__FUNCDNAME__               , KEYMS)
 KEYWORD(__FUNCSIG__                 , KEYMS)
@@ -462,9 +466,9 @@ TYPE_TRAIT_1(__is_interface_class, IsInterfaceClass, KEYMS)
 TYPE_TRAIT_1(__is_sealed, IsSealed, KEYMS)
 
 // MSVC12.0 / VS2013 Type Traits
-TYPE_TRAIT_1(__is_destructible, IsDestructible, KEYMS)
+TYPE_TRAIT_1(__is_destructible, IsDestructible, KEYALL)
 TYPE_TRAIT_1(__is_trivially_destructible, IsTriviallyDestructible, KEYCXX)
-TYPE_TRAIT_1(__is_nothrow_destructible, IsNothrowDestructible, KEYMS)
+TYPE_TRAIT_1(__is_nothrow_destructible, IsNothrowDestructible, KEYALL)
 TYPE_TRAIT_2(__is_nothrow_assignable, IsNothrowAssignable, KEYCXX)
 TYPE_TRAIT_N(__is_constructible, IsConstructible, KEYCXX)
 TYPE_TRAIT_N(__is_nothrow_constructible, IsNothrowConstructible, KEYCXX)
@@ -508,10 +512,17 @@ TYPE_TRAIT_1(__is_trivially_copyable, IsTriviallyCopyable, KEYCXX)
 TYPE_TRAIT_1(__is_union, IsUnion, KEYCXX)
 TYPE_TRAIT_1(__has_unique_object_representations,
              HasUniqueObjectRepresentations, KEYCXX)
-KEYWORD(__underlying_type           , KEYCXX)
+
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) KEYWORD(__##Trait, KEYCXX)
+#include "clang/Basic/TransformTypeTraits.def"
 
 // Clang-only C++ Type Traits
 TYPE_TRAIT_1(__is_trivially_relocatable, IsTriviallyRelocatable, KEYCXX)
+TYPE_TRAIT_1(__is_bounded_array, IsBoundedArray, KEYCXX)
+TYPE_TRAIT_1(__is_unbounded_array, IsUnboundedArray, KEYCXX)
+TYPE_TRAIT_1(__is_nullptr, IsNullPointer, KEYCXX)
+TYPE_TRAIT_1(__is_scoped_enum, IsScopedEnum, KEYCXX)
+TYPE_TRAIT_1(__is_referenceable, IsReferenceable, KEYCXX)
 TYPE_TRAIT_2(__reference_binds_to_temporary, ReferenceBindsToTemporary, KEYCXX)
 
 // Embarcadero Expression Traits
@@ -601,6 +612,11 @@ KEYWORD(addrspace_cast              , KEYOPENCLCXX)
 
 // CUDA/HIP function attributes
 KEYWORD(__noinline__                , KEYCUDA)
+
+// HLSL keywords.
+KEYWORD(cbuffer                     , KEYHLSL)
+KEYWORD(tbuffer                     , KEYHLSL)
+KEYWORD(groupshared                 , KEYHLSL)
 
 // OpenMP Type Traits
 UNARY_EXPR_OR_TYPE_TRAIT(__builtin_omp_required_simd_align, OpenMPRequiredSimdAlign, KEYALL)
@@ -935,9 +951,10 @@ ANNOTATION(header_unit)
 #undef TYPE_TRAIT_2
 #undef TYPE_TRAIT_1
 #undef TYPE_TRAIT
-#undef CONCEPTS_KEYWORD
 #undef CXX20_KEYWORD
 #undef CXX11_KEYWORD
 #undef KEYWORD
 #undef PUNCTUATOR
 #undef TOK
+#undef C99_KEYWORD
+#undef C2X_KEYWORD

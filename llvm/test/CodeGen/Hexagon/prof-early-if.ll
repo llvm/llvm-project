@@ -20,15 +20,15 @@ declare i64 @llvm.hexagon.A2.vaddws(i64, i64) #0
 declare i64 @llvm.hexagon.A2.vsubws(i64, i64) #0
 declare i32 @llvm.hexagon.A4.modwrapu(i32, i32) #0
 
-define void @f0(i32 %a0, i64* %a1) #1 {
+define void @f0(i32 %a0, ptr %a1) #1 {
 b0:
   br label %b1
 
 b1:                                               ; preds = %b5, %b0
   %v0 = phi i32 [ 0, %b0 ], [ %v26, %b5 ]
   %v1 = phi i32 [ 0, %b0 ], [ %v25, %b5 ]
-  %v2 = load i32, i32* @g1, align 4
-  %v3 = load i32, i32* @g2, align 8
+  %v2 = load i32, ptr @g1, align 4
+  %v3 = load i32, ptr @g2, align 8
   %v4 = and i32 %v3, %v2
   br label %b2
 
@@ -38,21 +38,21 @@ b2:                                               ; preds = %b4, %b1
   %v7 = phi i32 [ %v9, %b4 ], [ %v4, %b1 ]
   %v8 = tail call i32 @llvm.hexagon.S2.cl0(i32 %v7)
   %v9 = tail call i32 @llvm.hexagon.S2.setbit.r(i32 %v7, i32 %v8)
-  %v10 = getelementptr [10 x %s.0], [10 x %s.0]* inttoptr (i32 -121502345 to [10 x %s.0]*), i32 0, i32 %v1
-  %v11 = getelementptr %s.0, %s.0* %v10, i32 0, i32 12, i32 %v8
-  %v12 = load i32, i32* %v11, align 4
+  %v10 = getelementptr [10 x %s.0], ptr inttoptr (i32 -121502345 to ptr), i32 0, i32 %v1
+  %v11 = getelementptr %s.0, ptr %v10, i32 0, i32 12, i32 %v8
+  %v12 = load i32, ptr %v11, align 4
   %v13 = tail call i64 @llvm.hexagon.M2.vmpy2s.s0(i32 %v12, i32 %v12)
-  %v14 = getelementptr %s.0, %s.0* %v10, i32 0, i32 13, i32 %v8
-  %v15 = load i32, i32* %v14, align 4
+  %v14 = getelementptr %s.0, ptr %v10, i32 0, i32 13, i32 %v8
+  %v15 = load i32, ptr %v14, align 4
   %v16 = tail call i64 @llvm.hexagon.M2.vmac2s.s0(i64 %v13, i32 %v15, i32 %v15)
-  %v17 = load i8, i8* @g3, align 1
+  %v17 = load i8, ptr @g3, align 1
   %v18 = and i8 %v17, 1
   %v19 = icmp eq i8 %v18, 0
   br i1 %v19, label %b3, label %b4, !prof !0
 
 b3:                                               ; preds = %b2
   %v20 = tail call i64 @llvm.hexagon.A2.vaddws(i64 %v5, i64 %v16)
-  store i64 %v20, i64* %a1, align 8
+  store i64 %v20, ptr %a1, align 8
   br label %b4
 
 b4:                                               ; preds = %b3, %b2
@@ -69,7 +69,7 @@ b5:                                               ; preds = %b4
   br i1 %v27, label %b6, label %b1, !prof !1
 
 b6:                                               ; preds = %b5
-  store i64 %v16, i64* @g0, align 8
+  store i64 %v16, ptr @g0, align 8
   ret void
 }
 

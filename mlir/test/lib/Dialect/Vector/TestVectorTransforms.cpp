@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <type_traits>
+#include <optional>
 
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -20,6 +21,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorDistribution.h"
+#include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -71,11 +73,11 @@ struct TestVectorToVectorLowering
 
 private:
   // Return the target shape based on op type.
-  static Optional<SmallVector<int64_t, 4>> getShape(Operation *op) {
+  static std::optional<SmallVector<int64_t>> getShape(Operation *op) {
     if (isa<arith::AddFOp, arith::SelectOp, arith::CmpFOp>(op))
-      return SmallVector<int64_t, 4>(2, 2);
+      return SmallVector<int64_t>(2, 2);
     if (isa<vector::ContractionOp>(op))
-      return SmallVector<int64_t, 4>(3, 2);
+      return SmallVector<int64_t>(3, 2);
     // For transfer ops, just propagate the shape coming from
     // InsertStridedSlices/ExtractStridedSlices.
     if (auto readOp = dyn_cast<vector::TransferReadOp>(op)) {
@@ -83,23 +85,23 @@ private:
       for (Operation *users : readOp->getUsers()) {
         auto extract = dyn_cast<ExtractStridedSliceOp>(users);
         if (!extract)
-          return llvm::None;
+          return std::nullopt;
         auto vecType = extract.getResult().getType().cast<VectorType>();
         if (dstVec && dstVec != vecType)
-          return llvm::None;
+          return std::nullopt;
         dstVec = vecType;
       }
-      return SmallVector<int64_t, 4>(dstVec.getShape().begin(),
-                                     dstVec.getShape().end());
+      return SmallVector<int64_t>(dstVec.getShape().begin(),
+                                  dstVec.getShape().end());
     }
     if (auto writeOp = dyn_cast<vector::TransferWriteOp>(op)) {
       auto insert = writeOp.getVector().getDefiningOp<InsertStridedSliceOp>();
       if (!insert)
-        return llvm::None;
+        return std::nullopt;
       ArrayRef<int64_t> shape = insert.getSourceVectorType().getShape();
-      return SmallVector<int64_t, 4>(shape.begin(), shape.end());
+      return SmallVector<int64_t>(shape.begin(), shape.end());
     }
-    return llvm::None;
+    return std::nullopt;
   }
 
   static LogicalResult filter(Operation *op) {
@@ -160,7 +162,7 @@ struct TestVectorContractionLowering
       VectorContractLowering lowering = VectorContractLowering::OuterProduct;
       VectorTransformsOptions options{lowering};
       patterns.add<ContractionOpToOuterProductOpLowering>(
-          options, &getContext(), [](vector::ContractionOp op) {
+          options, &getContext(), /*benefit=*/1, [](vector::ContractionOp op) {
             // Only lowers vector.contract where the lhs as a type vector<MxNx?>
             // where M is not 4.
             if (op.getRhsType().getShape()[0] == 4)
@@ -235,39 +237,40 @@ struct TestVectorTransposeLowering
   }
 
   void runOnOperation() override {
-    RewritePatternSet patterns(&getContext());
+    func::FuncOp funcOp = getOperation();
+    MLIRContext *context = funcOp.getContext();
+    RewritePatternSet patterns(context);
 
-    // Test on one pattern in isolation.
-    // Explicitly disable shape_cast lowering.
-    LinalgVectorLoweringOptions options = LinalgVectorLoweringOptions()
-                                              .enableVectorTransposeLowering()
-                                              .enableShapeCastLowering(false);
+    vector::VectorTransformsOptions vectorTransformOptions;
     if (lowerToEltwise) {
-      options = options.setVectorTransformsOptions(
-          VectorTransformsOptions().setVectorTransposeLowering(
-              VectorTransposeLowering::EltWise));
+      vectorTransformOptions =
+          vectorTransformOptions.setVectorTransposeLowering(
+              VectorTransposeLowering::EltWise);
     }
     if (lowerToFlatTranspose) {
-      options = options.setVectorTransformsOptions(
-          VectorTransformsOptions().setVectorTransposeLowering(
-              VectorTransposeLowering::Flat));
+      vectorTransformOptions =
+          vectorTransformOptions.setVectorTransposeLowering(
+              VectorTransposeLowering::Flat);
     }
     if (lowerToShuffleTranspose) {
-      options = options.setVectorTransformsOptions(
-          VectorTransformsOptions().setVectorTransposeLowering(
-              VectorTransposeLowering::Shuffle));
+      vectorTransformOptions =
+          vectorTransformOptions.setVectorTransposeLowering(
+              VectorTransposeLowering::Shuffle);
     }
+    vector::populateVectorTransposeLoweringPatterns(patterns,
+                                                    vectorTransformOptions);
+
     if (lowerToAvx2) {
-      options = options.enableAVX2Lowering().setAVX2LoweringOptions(
+      auto avx2LoweringOptions =
           x86vector::avx2::LoweringOptions().setTransposeOptions(
               x86vector::avx2::TransposeLoweringOptions()
                   .lower4x8xf32()
-                  .lower8x8xf32()));
+                  .lower8x8xf32());
+      x86vector::avx2::populateSpecializedTransposeLoweringPatterns(
+          patterns, avx2LoweringOptions, /*benefit=*/10);
     }
 
-    OpPassManager dynamicPM("func.func");
-    dynamicPM.addPass(createLinalgStrategyLowerVectorsPass(options));
-    if (failed(runPipeline(dynamicPM, getOperation())))
+    if (failed(applyPatternsAndFoldGreedily(funcOp, std::move(patterns))))
       return signalPassFailure();
   }
 };
@@ -312,10 +315,10 @@ struct TestVectorUnrollingPatterns
 
     if (unrollBasedOnType) {
       UnrollVectorOptions::NativeShapeFnType nativeShapeFn =
-          [](Operation *op) -> Optional<SmallVector<int64_t, 4>> {
+          [](Operation *op) -> std::optional<SmallVector<int64_t>> {
         vector::ContractionOp contractOp = cast<vector::ContractionOp>(op);
-        SmallVector<int64_t, 4> nativeShape(
-            contractOp.getIteratorTypes().size(), 4);
+        SmallVector<int64_t> nativeShape(contractOp.getIteratorTypes().size(),
+                                         4);
         Type lhsType = contractOp.getLhsType().getElementType();
         nativeShape[nativeShape.size() - 1] = lhsType.isF16() ? 4 : 2;
         return nativeShape;
@@ -327,22 +330,24 @@ struct TestVectorUnrollingPatterns
               [](Operation *op) { return success(isa<ContractionOp>(op)); });
 
       if (!unrollOrder.empty()) {
-        opts.setUnrollTraversalOrderFn([this](Operation *op)
-                                           -> Optional<SmallVector<int64_t>> {
-          vector::ContractionOp contractOp = cast<vector::ContractionOp>(op);
-          if (contractOp.getIteratorTypes().size() == unrollOrder.size())
-            return SmallVector<int64_t>(unrollOrder.begin(), unrollOrder.end());
-          return None;
-        });
+        opts.setUnrollTraversalOrderFn(
+            [this](Operation *op) -> std::optional<SmallVector<int64_t>> {
+              vector::ContractionOp contractOp =
+                  cast<vector::ContractionOp>(op);
+              if (contractOp.getIteratorTypes().size() == unrollOrder.size())
+                return SmallVector<int64_t>(unrollOrder.begin(),
+                                            unrollOrder.end());
+              return std::nullopt;
+            });
       }
       populateVectorUnrollPatterns(patterns, opts);
     } else {
       auto nativeShapeFn =
-          [](Operation *op) -> Optional<SmallVector<int64_t, 4>> {
+          [](Operation *op) -> std::optional<SmallVector<int64_t>> {
         auto contractOp = dyn_cast<ContractionOp>(op);
         if (!contractOp)
-          return None;
-        return SmallVector<int64_t, 4>(contractOp.getIteratorTypes().size(), 2);
+          return std::nullopt;
+        return SmallVector<int64_t>(contractOp.getIteratorTypes().size(), 2);
       };
       populateVectorUnrollPatterns(patterns,
                                    UnrollVectorOptions()
@@ -362,126 +367,6 @@ struct TestVectorUnrollingPatterns
       *this, "unroll-based-on-type",
       llvm::cl::desc("Set the unroll factor based on type of the operation"),
       llvm::cl::init(false)};
-};
-
-struct TestVectorDistributePatterns
-    : public PassWrapper<TestVectorDistributePatterns,
-                         OperationPass<func::FuncOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorDistributePatterns)
-
-  StringRef getArgument() const final {
-    return "test-vector-distribute-patterns";
-  }
-  StringRef getDescription() const final {
-    return "Test lowering patterns to distribute vector ops in the vector "
-           "dialect";
-  }
-  TestVectorDistributePatterns() = default;
-  TestVectorDistributePatterns(const TestVectorDistributePatterns &pass)
-      : PassWrapper(pass) {}
-  void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<VectorDialect>();
-    registry.insert<AffineDialect>();
-  }
-  ListOption<int32_t> multiplicity{
-      *this, "distribution-multiplicity",
-      llvm::cl::desc("Set the multiplicity used for distributing vector")};
-
-  void runOnOperation() override {
-    MLIRContext *ctx = &getContext();
-    RewritePatternSet patterns(ctx);
-    func::FuncOp func = getOperation();
-    func.walk([&](arith::AddFOp op) {
-      OpBuilder builder(op);
-      if (auto vecType = op.getType().dyn_cast<VectorType>()) {
-        SmallVector<int64_t, 2> mul;
-        SmallVector<AffineExpr, 2> perm;
-        SmallVector<Value, 2> ids;
-        unsigned count = 0;
-        // Remove the multiplicity of 1 and calculate the affine map based on
-        // the multiplicity.
-        SmallVector<int32_t, 4> m(multiplicity.begin(), multiplicity.end());
-        for (unsigned i = 0, e = vecType.getRank(); i < e; i++) {
-          if (i < m.size() && m[i] != 1 && vecType.getDimSize(i) % m[i] == 0) {
-            mul.push_back(m[i]);
-            ids.push_back(func.getArgument(count++));
-            perm.push_back(getAffineDimExpr(i, ctx));
-          }
-        }
-        auto map = AffineMap::get(op.getType().cast<VectorType>().getRank(), 0,
-                                  perm, ctx);
-        Optional<mlir::vector::DistributeOps> ops = distributPointwiseVectorOp(
-            builder, op.getOperation(), ids, mul, map);
-        if (ops) {
-          SmallPtrSet<Operation *, 1> extractOp({ops->extract, ops->insert});
-          op.getResult().replaceAllUsesExcept(ops->insert.getResult(),
-                                              extractOp);
-        }
-      }
-    });
-    populatePropagateVectorDistributionPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
-  }
-};
-
-struct TestVectorToLoopPatterns
-    : public PassWrapper<TestVectorToLoopPatterns,
-                         OperationPass<func::FuncOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorToLoopPatterns)
-
-  StringRef getArgument() const final { return "test-vector-to-forloop"; }
-  StringRef getDescription() const final {
-    return "Test lowering patterns to break up a vector op into a for loop";
-  }
-  TestVectorToLoopPatterns() = default;
-  TestVectorToLoopPatterns(const TestVectorToLoopPatterns &pass)
-      : PassWrapper(pass) {}
-  void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<VectorDialect>();
-    registry.insert<AffineDialect>();
-  }
-  Option<int32_t> multiplicity{
-      *this, "distribution-multiplicity",
-      llvm::cl::desc("Set the multiplicity used for distributing vector"),
-      llvm::cl::init(32)};
-  void runOnOperation() override {
-    MLIRContext *ctx = &getContext();
-    RewritePatternSet patterns(ctx);
-    func::FuncOp func = getOperation();
-    func.walk([&](arith::AddFOp op) {
-      // Check that the operation type can be broken down into a loop.
-      VectorType type = op.getType().dyn_cast<VectorType>();
-      if (!type || type.getRank() != 1 ||
-          type.getNumElements() % multiplicity != 0)
-        return mlir::WalkResult::advance();
-      auto filterAlloc = [](Operation *op) {
-        return !isa<arith::ConstantOp, memref::AllocOp, func::CallOp>(op);
-      };
-      auto dependentOps = getSlice(op, filterAlloc);
-      // Create a loop and move instructions from the Op slice into the loop.
-      OpBuilder builder(op);
-      auto zero = builder.create<arith::ConstantIndexOp>(op.getLoc(), 0);
-      auto one = builder.create<arith::ConstantIndexOp>(op.getLoc(), 1);
-      auto numIter =
-          builder.create<arith::ConstantIndexOp>(op.getLoc(), multiplicity);
-      auto forOp = builder.create<scf::ForOp>(op.getLoc(), zero, numIter, one);
-      for (Operation *it : dependentOps) {
-        it->moveBefore(forOp.getBody()->getTerminator());
-      }
-      auto map = AffineMap::getMultiDimIdentityMap(1, ctx);
-      // break up the original op and let the patterns propagate.
-      Optional<mlir::vector::DistributeOps> ops = distributPointwiseVectorOp(
-          builder, op.getOperation(), {forOp.getInductionVar()}, {multiplicity},
-          map);
-      if (ops) {
-        SmallPtrSet<Operation *, 1> extractOp({ops->extract, ops->insert});
-        op.getResult().replaceAllUsesExcept(ops->insert.getResult(), extractOp);
-      }
-      return mlir::WalkResult::interrupt();
-    });
-    populatePropagateVectorDistributionPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
-  }
 };
 
 struct TestVectorTransferUnrollingPatterns
@@ -516,14 +401,14 @@ struct TestVectorTransferUnrollingPatterns
         });
     if (reverseUnrollOrder.getValue()) {
       opts.setUnrollTraversalOrderFn(
-          [](Operation *op) -> Optional<SmallVector<int64_t>> {
+          [](Operation *op) -> std::optional<SmallVector<int64_t>> {
             int64_t numLoops = 0;
             if (auto readOp = dyn_cast<vector::TransferReadOp>(op))
               numLoops = readOp.getVectorType().getRank();
             else if (auto writeOp = dyn_cast<vector::TransferWriteOp>(op))
               numLoops = writeOp.getVectorType().getRank();
             else
-              return None;
+              return std::nullopt;
             auto order = llvm::reverse(llvm::seq<int64_t>(0, numLoops));
             return llvm::to_vector(order);
           });
@@ -577,6 +462,33 @@ struct TestVectorTransferFullPartialSplitPatterns
     else
       options.setVectorTransferSplit(VectorTransferSplit::VectorTransfer);
     patterns.add<VectorTransferFullPartialRewriter>(ctx, options);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
+
+struct TestScalarVectorTransferLoweringPatterns
+    : public PassWrapper<TestScalarVectorTransferLoweringPatterns,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestScalarVectorTransferLoweringPatterns)
+
+  StringRef getArgument() const final {
+    return "test-scalar-vector-transfer-lowering";
+  }
+  StringRef getDescription() const final {
+    return "Test lowering of scalar vector transfers to memref loads/stores.";
+  }
+  TestScalarVectorTransferLoweringPatterns() = default;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<AffineDialect, memref::MemRefDialect, tensor::TensorDialect,
+                    vector::VectorDialect>();
+  }
+
+  void runOnOperation() override {
+    MLIRContext *ctx = &getContext();
+    RewritePatternSet patterns(ctx);
+    vector::populateScalarVectorTransferLoweringPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
@@ -805,14 +717,15 @@ static Value allocateGlobalSharedMemory(Location loc, OpBuilder &builder,
 
 static Value warpReduction(Location loc, OpBuilder &builder, Value input,
                            CombiningKind kind, uint32_t size) {
-  Value laneVal = input;
+  // First reduce on a single thread to get per lane reduction value.
+  Value laneVal = builder.create<vector::ReductionOp>(loc, kind, input);
   // Parallel reduction using butterfly shuffles.
   for (uint64_t i = 1; i < size; i <<= 1) {
     Value shuffled = builder
                          .create<gpu::ShuffleOp>(loc, laneVal, i,
                                                  /*width=*/size,
                                                  /*mode=*/gpu::ShuffleMode::XOR)
-                         .result();
+                         .getShuffleResult();
     laneVal = makeArithReduction(builder, loc, kind, laneVal, shuffled);
   }
   return laneVal;
@@ -865,24 +778,41 @@ struct TestVectorDistribution
       }
     });
     MLIRContext *ctx = &getContext();
+    auto distributionFn = [](Value val) {
+      // Create a map (d0, d1) -> (d1) to distribute along the inner
+      // dimension. Once we support n-d distribution we can add more
+      // complex cases.
+      VectorType vecType = val.getType().dyn_cast<VectorType>();
+      int64_t vecRank = vecType ? vecType.getRank() : 0;
+      OpBuilder builder(val.getContext());
+      if (vecRank == 0)
+        return AffineMap::get(val.getContext());
+      return AffineMap::get(vecRank, 0, builder.getAffineDimExpr(vecRank - 1));
+    };
+    auto shuffleFn = [](Location loc, OpBuilder &builder, Value val,
+                        Value srcIdx, int64_t warpSz) {
+      assert((val.getType().isF32() || val.getType().isInteger(32)) &&
+             "unsupported shuffle type");
+      Type i32Type = builder.getIntegerType(32);
+      Value srcIdxI32 =
+          builder.create<arith::IndexCastOp>(loc, i32Type, srcIdx);
+      Value warpSzI32 = builder.create<arith::ConstantOp>(
+          loc, builder.getIntegerAttr(i32Type, warpSz));
+      Value result = builder
+                         .create<gpu::ShuffleOp>(loc, val, srcIdxI32, warpSzI32,
+                                                 gpu::ShuffleMode::IDX)
+                         .getResult(0);
+      return result;
+    };
     if (distributeTransferWriteOps) {
-      auto distributionFn = [](vector::TransferWriteOp writeOp) {
-        // Create a map (d0, d1) -> (d1) to distribute along the inner
-        // dimension. Once we support n-d distribution we can add more
-        // complex cases.
-        int64_t vecRank = writeOp.getVectorType().getRank();
-        OpBuilder builder(writeOp.getContext());
-        auto map =
-            AffineMap::get(vecRank, 0, builder.getAffineDimExpr(vecRank - 1));
-        return map;
-      };
       RewritePatternSet patterns(ctx);
       populateDistributeTransferWriteOpPatterns(patterns, distributionFn);
       (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
     }
     if (propagateDistribution) {
       RewritePatternSet patterns(ctx);
-      vector::populatePropagateWarpVectorDistributionPatterns(patterns);
+      vector::populatePropagateWarpVectorDistributionPatterns(
+          patterns, distributionFn, shuffleFn);
       vector::populateDistributeReduction(patterns, warpReduction);
       (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
     }
@@ -898,6 +828,58 @@ struct TestVectorDistribution
       (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
       return;
     }
+  }
+};
+
+struct TestVectorExtractStridedSliceLowering
+    : public PassWrapper<TestVectorExtractStridedSliceLowering,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestVectorExtractStridedSliceLowering)
+
+  StringRef getArgument() const final {
+    return "test-vector-extract-strided-slice-lowering";
+  }
+  StringRef getDescription() const final {
+    return "Test lowering patterns that converts vector.extract_strided_slice "
+           "into a chain of vector.extract and vector.insert ops";
+  }
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    populateVectorExtractStridedSliceToExtractInsertChainPatterns(patterns);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
+
+struct TestCreateVectorBroadcast
+    : public PassWrapper<TestCreateVectorBroadcast,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestCreateVectorBroadcast)
+
+  StringRef getArgument() const final { return "test-create-vector-broadcast"; }
+  StringRef getDescription() const final {
+    return "Test optimization transformations for transfer ops";
+  }
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<vector::VectorDialect>();
+  }
+
+  void runOnOperation() override {
+    getOperation()->walk([](Operation *op) {
+      if (op->getName().getStringRef() != "test_create_broadcast")
+        return;
+      auto targetShape =
+          op->getResult(0).getType().cast<VectorType>().getShape();
+      auto arrayAttr =
+          op->getAttr("broadcast_dims").cast<DenseI64ArrayAttr>().asArrayRef();
+      llvm::SetVector<int64_t> broadcastedDims;
+      broadcastedDims.insert(arrayAttr.begin(), arrayAttr.end());
+      OpBuilder b(op);
+      Value bcast = vector::BroadcastOp::createOrFoldBroadcastOp(
+          b, op->getOperand(0), targetShape, broadcastedDims);
+      op->getResult(0).replaceAllUsesWith(bcast);
+      op->erase();
+    });
   }
 };
 
@@ -918,9 +900,7 @@ void registerTestVectorLowerings() {
 
   PassRegistration<TestVectorTransferFullPartialSplitPatterns>();
 
-  PassRegistration<TestVectorDistributePatterns>();
-
-  PassRegistration<TestVectorToLoopPatterns>();
+  PassRegistration<TestScalarVectorTransferLoweringPatterns>();
 
   PassRegistration<TestVectorTransferOpt>();
 
@@ -939,6 +919,10 @@ void registerTestVectorLowerings() {
   PassRegistration<TestVectorScanLowering>();
 
   PassRegistration<TestVectorDistribution>();
+
+  PassRegistration<TestVectorExtractStridedSliceLowering>();
+
+  PassRegistration<TestCreateVectorBroadcast>();
 }
 } // namespace test
 } // namespace mlir

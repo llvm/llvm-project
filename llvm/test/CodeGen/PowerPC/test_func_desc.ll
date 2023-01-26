@@ -13,7 +13,7 @@ entry:
 define i32 @main() {
 entry:
   %0 = call i32 @foo()
-  %1 = call i32 bitcast (i32 (...)* @extern_foo to i32 ()*)()
+  %1 = call i32 @extern_foo()
   %2 = call i32 @static_foo()
   %3 = add nsw i32 %0, %1
   %4 = add nsw i32 %3, %2

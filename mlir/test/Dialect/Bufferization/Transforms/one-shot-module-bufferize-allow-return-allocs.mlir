@@ -74,4 +74,4 @@ func.func @return_arg(%A: tensor<?xf32>) -> tensor<?xf32> {
 
 // NO-DROP-LABEL: func @return_arg
 //  NO-DROP-SAME:     %[[A:.*]]: memref<?xf32
-//       No_DROP:   return %[[A]]
+//       NO-DROP:   return %[[A]]

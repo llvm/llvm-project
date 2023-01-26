@@ -204,7 +204,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
   for (auto *I : Params)
     if (auto *VT = dyn_cast<llvm::VectorType>(I))
       LargestVectorWidth = std::max(
-          LargestVectorWidth, VT->getPrimitiveSizeInBits().getKnownMinSize());
+          LargestVectorWidth, VT->getPrimitiveSizeInBits().getKnownMinValue());
 
   // Recompute the parameter attributes list based on the new arguments for
   // the function.
@@ -300,7 +300,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
   // Since we have now created the new function, splice the body of the old
   // function right into the new function, leaving the old rotting hulk of the
   // function empty.
-  NF->getBasicBlockList().splice(NF->begin(), F->getBasicBlockList());
+  NF->splice(NF->begin(), F);
 
   // We will collect all the new created allocas to promote them into registers
   // after the following loop
@@ -476,10 +476,10 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
   bool AreStoresAllowed = Arg->getParamByValType() && Arg->getParamAlign();
 
   // An end user of a pointer argument is a load or store instruction.
-  // Returns None if this load or store is not based on the argument. Return
-  // true if we can promote the instruction, false otherwise.
+  // Returns std::nullopt if this load or store is not based on the argument.
+  // Return true if we can promote the instruction, false otherwise.
   auto HandleEndUser = [&](auto *I, Type *Ty,
-                           bool GuaranteedToExecute) -> Optional<bool> {
+                           bool GuaranteedToExecute) -> std::optional<bool> {
     // Don't promote volatile or atomic instructions.
     if (!I->isSimple())
       return false;
@@ -489,7 +489,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
     Ptr = Ptr->stripAndAccumulateConstantOffsets(DL, Offset,
                                                  /* AllowNonInbounds */ true);
     if (Ptr != Arg)
-      return None;
+      return std::nullopt;
 
     if (Offset.getSignificantBits() >= 64)
       return false;
@@ -553,7 +553,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
 
   // Look for loads and stores that are guaranteed to execute on entry.
   for (Instruction &I : Arg->getParent()->getEntryBlock()) {
-    Optional<bool> Res{};
+    std::optional<bool> Res{};
     if (LoadInst *LI = dyn_cast<LoadInst>(&I))
       Res = HandleEndUser(LI, LI->getType(), /* GuaranteedToExecute */ true);
     else if (StoreInst *SI = dyn_cast<StoreInst>(&I))

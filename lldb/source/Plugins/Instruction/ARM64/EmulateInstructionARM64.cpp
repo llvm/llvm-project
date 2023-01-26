@@ -23,6 +23,7 @@
 #include "Plugins/Process/Utility/lldb-arm64-register-enums.h"
 
 #include <cstdlib>
+#include <optional>
 
 #define GPR_OFFSET(idx) ((idx)*8)
 #define GPR_OFFSET_NAME(reg) 0
@@ -51,11 +52,10 @@ using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE_ADV(EmulateInstructionARM64, InstructionARM64)
 
-static bool LLDBTableGetRegisterInfo(uint32_t reg_num, RegisterInfo &reg_info) {
-  if (reg_num >= llvm::array_lengthof(g_register_infos_arm64_le))
-    return false;
-  reg_info = g_register_infos_arm64_le[reg_num];
-  return true;
+static std::optional<RegisterInfo> LLDBTableGetRegisterInfo(uint32_t reg_num) {
+  if (reg_num >= std::size(g_register_infos_arm64_le))
+    return {};
+  return g_register_infos_arm64_le[reg_num];
 }
 
 #define No_VFP 0
@@ -144,9 +144,9 @@ bool EmulateInstructionARM64::SetTargetTriple(const ArchSpec &arch) {
   return false;
 }
 
-bool EmulateInstructionARM64::GetRegisterInfo(RegisterKind reg_kind,
-                                              uint32_t reg_num,
-                                              RegisterInfo &reg_info) {
+std::optional<RegisterInfo>
+EmulateInstructionARM64::GetRegisterInfo(RegisterKind reg_kind,
+                                         uint32_t reg_num) {
   if (reg_kind == eRegisterKindGeneric) {
     switch (reg_num) {
     case LLDB_REGNUM_GENERIC_PC:
@@ -171,13 +171,13 @@ bool EmulateInstructionARM64::GetRegisterInfo(RegisterKind reg_kind,
       break;
 
     default:
-      return false;
+      return {};
     }
   }
 
   if (reg_kind == eRegisterKindLLDB)
-    return LLDBTableGetRegisterInfo(reg_num, reg_info);
-  return false;
+    return LLDBTableGetRegisterInfo(reg_num);
+  return {};
 }
 
 EmulateInstructionARM64::Opcode *
@@ -360,7 +360,7 @@ EmulateInstructionARM64::GetOpcodeForInstruction(const uint32_t opcode) {
        "TBNZ <R><t>, #<imm>, <label>"},
 
   };
-  static const size_t k_num_arm_opcodes = llvm::array_lengthof(g_opcodes);
+  static const size_t k_num_arm_opcodes = std::size(g_opcodes);
 
   for (size_t i = 0; i < k_num_arm_opcodes; ++i) {
     if ((g_opcodes[i].mask & opcode) == g_opcodes[i].value)
@@ -561,7 +561,7 @@ uint64_t EmulateInstructionARM64::
 AddWithCarry(uint32_t N, uint64_t x, uint64_t y, bit carry_in,
              EmulateInstructionARM64::ProcState &proc_state) {
   uint64_t unsigned_sum = UInt(x) + UInt(y) + UInt(carry_in);
-  llvm::Optional<int64_t> signed_sum = llvm::checkedAdd(SInt(x), SInt(y));
+  std::optional<int64_t> signed_sum = llvm::checkedAdd(SInt(x), SInt(y));
   bool overflow = !signed_sum;
   if (!overflow)
     overflow |= !llvm::checkedAdd(*signed_sum, SInt(carry_in));
@@ -633,7 +633,7 @@ bool EmulateInstructionARM64::EmulateADDSUBImm(const uint32_t opcode) {
     imm = imm12;
     break;
   case 1:
-    imm = imm12 << 12;
+    imm = static_cast<uint64_t>(imm12) << 12;
     break;
   default:
     return false; // UNDEFINED;
@@ -664,9 +664,10 @@ bool EmulateInstructionARM64::EmulateADDSUBImm(const uint32_t opcode) {
   }
 
   Context context;
-  RegisterInfo reg_info_Rn;
-  if (GetRegisterInfo(eRegisterKindLLDB, n, reg_info_Rn))
-    context.SetRegisterPlusOffset(reg_info_Rn, imm);
+  std::optional<RegisterInfo> reg_info_Rn =
+      GetRegisterInfo(eRegisterKindLLDB, n);
+  if (reg_info_Rn)
+    context.SetRegisterPlusOffset(*reg_info_Rn, imm);
 
   if (n == GetFramePointerRegisterNumber() && d == gpr_sp_arm64 && !setflags) {
     // 'mov sp, fp' - common epilogue instruction, CFA is now in terms of the
@@ -768,25 +769,24 @@ bool EmulateInstructionARM64::EmulateLDPSTP(const uint32_t opcode) {
   uint64_t address;
   uint64_t wb_address;
 
-  RegisterValue data_Rt;
-  RegisterValue data_Rt2;
-  RegisterInfo reg_info_base;
-  RegisterInfo reg_info_Rt;
-  RegisterInfo reg_info_Rt2;
-  if (!GetRegisterInfo(eRegisterKindLLDB, gpr_x0_arm64 + n, reg_info_base))
+  std::optional<RegisterInfo> reg_info_base =
+      GetRegisterInfo(eRegisterKindLLDB, gpr_x0_arm64 + n);
+  if (!reg_info_base)
     return false;
 
+  std::optional<RegisterInfo> reg_info_Rt;
+  std::optional<RegisterInfo> reg_info_Rt2;
+
   if (vector) {
-    if (!GetRegisterInfo(eRegisterKindLLDB, fpu_d0_arm64 + t, reg_info_Rt))
-      return false;
-    if (!GetRegisterInfo(eRegisterKindLLDB, fpu_d0_arm64 + t2, reg_info_Rt2))
-      return false;
+    reg_info_Rt = GetRegisterInfo(eRegisterKindLLDB, fpu_d0_arm64 + t);
+    reg_info_Rt2 = GetRegisterInfo(eRegisterKindLLDB, fpu_d0_arm64 + t2);
   } else {
-    if (!GetRegisterInfo(eRegisterKindLLDB, gpr_x0_arm64 + t, reg_info_Rt))
-      return false;
-    if (!GetRegisterInfo(eRegisterKindLLDB, gpr_x0_arm64 + t2, reg_info_Rt2))
-      return false;
+    reg_info_Rt = GetRegisterInfo(eRegisterKindLLDB, gpr_x0_arm64 + t);
+    reg_info_Rt2 = GetRegisterInfo(eRegisterKindLLDB, gpr_x0_arm64 + t2);
   }
+
+  if (!reg_info_Rt || !reg_info_Rt2)
+    return false;
 
   bool success = false;
   if (n == 31) {
@@ -819,29 +819,32 @@ bool EmulateInstructionARM64::EmulateLDPSTP(const uint32_t opcode) {
       context_t.type = eContextRegisterStore;
       context_t2.type = eContextRegisterStore;
     }
-    context_t.SetRegisterToRegisterPlusOffset(reg_info_Rt, reg_info_base, 0);
-    context_t2.SetRegisterToRegisterPlusOffset(reg_info_Rt2, reg_info_base,
+    context_t.SetRegisterToRegisterPlusOffset(*reg_info_Rt, *reg_info_base, 0);
+    context_t2.SetRegisterToRegisterPlusOffset(*reg_info_Rt2, *reg_info_base,
                                                size);
 
-    if (!ReadRegister(&reg_info_Rt, data_Rt))
+    std::optional<RegisterValue> data_Rt = ReadRegister(*reg_info_Rt);
+    if (!data_Rt)
       return false;
 
-    if (data_Rt.GetAsMemoryData(&reg_info_Rt, buffer, reg_info_Rt.byte_size,
-                                eByteOrderLittle, error) == 0)
-      return false;
-
-    if (!WriteMemory(context_t, address + 0, buffer, reg_info_Rt.byte_size))
-      return false;
-
-    if (!ReadRegister(&reg_info_Rt2, data_Rt2))
-      return false;
-
-    if (data_Rt2.GetAsMemoryData(&reg_info_Rt2, buffer, reg_info_Rt2.byte_size,
+    if (data_Rt->GetAsMemoryData(*reg_info_Rt, buffer, reg_info_Rt->byte_size,
                                  eByteOrderLittle, error) == 0)
       return false;
 
+    if (!WriteMemory(context_t, address + 0, buffer, reg_info_Rt->byte_size))
+      return false;
+
+    std::optional<RegisterValue> data_Rt2 = ReadRegister(*reg_info_Rt2);
+    if (!data_Rt2)
+      return false;
+
+    if (data_Rt2->GetAsMemoryData(*reg_info_Rt2, buffer,
+                                  reg_info_Rt2->byte_size, eByteOrderLittle,
+                                  error) == 0)
+      return false;
+
     if (!WriteMemory(context_t2, address + size, buffer,
-                     reg_info_Rt2.byte_size))
+                     reg_info_Rt2->byte_size))
       return false;
   } break;
 
@@ -860,37 +863,39 @@ bool EmulateInstructionARM64::EmulateLDPSTP(const uint32_t opcode) {
     context_t2.SetAddress(address + size);
 
     if (rt_unknown)
-      memset(buffer, 'U', reg_info_Rt.byte_size);
+      memset(buffer, 'U', reg_info_Rt->byte_size);
     else {
-      if (!ReadMemory(context_t, address, buffer, reg_info_Rt.byte_size))
+      if (!ReadMemory(context_t, address, buffer, reg_info_Rt->byte_size))
         return false;
     }
 
-    if (data_Rt.SetFromMemoryData(&reg_info_Rt, buffer, reg_info_Rt.byte_size,
+    RegisterValue data_Rt;
+    if (data_Rt.SetFromMemoryData(*reg_info_Rt, buffer, reg_info_Rt->byte_size,
                                   eByteOrderLittle, error) == 0)
       return false;
 
     if (!vector && is_signed && !data_Rt.SignExtend(datasize))
       return false;
 
-    if (!WriteRegister(context_t, &reg_info_Rt, data_Rt))
+    if (!WriteRegister(context_t, *reg_info_Rt, data_Rt))
       return false;
 
     if (!rt_unknown) {
       if (!ReadMemory(context_t2, address + size, buffer,
-                      reg_info_Rt2.byte_size))
+                      reg_info_Rt2->byte_size))
         return false;
     }
 
-    if (data_Rt2.SetFromMemoryData(&reg_info_Rt2, buffer,
-                                   reg_info_Rt2.byte_size, eByteOrderLittle,
+    RegisterValue data_Rt2;
+    if (data_Rt2.SetFromMemoryData(*reg_info_Rt2, buffer,
+                                   reg_info_Rt2->byte_size, eByteOrderLittle,
                                    error) == 0)
       return false;
 
     if (!vector && is_signed && !data_Rt2.SignExtend(datasize))
       return false;
 
-    if (!WriteRegister(context_t2, &reg_info_Rt2, data_Rt2))
+    if (!WriteRegister(context_t2, *reg_info_Rt2, data_Rt2))
       return false;
   } break;
 
@@ -907,7 +912,7 @@ bool EmulateInstructionARM64::EmulateLDPSTP(const uint32_t opcode) {
       context.type = eContextAdjustStackPointer;
     else
       context.type = eContextAdjustBaseRegister;
-    WriteRegisterUnsigned(context, &reg_info_base, wb_address);
+    WriteRegisterUnsigned(context, *reg_info_base, wb_address);
   }
   return true;
 }
@@ -955,7 +960,6 @@ bool EmulateInstructionARM64::EmulateLDRSTRImm(const uint32_t opcode) {
   bool success = false;
   uint64_t address;
   uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
-  RegisterValue data_Rt;
 
   if (n == 31)
     address =
@@ -970,38 +974,41 @@ bool EmulateInstructionARM64::EmulateLDRSTRImm(const uint32_t opcode) {
   if (!postindex)
     address += offset;
 
-  RegisterInfo reg_info_base;
-  if (!GetRegisterInfo(eRegisterKindLLDB, gpr_x0_arm64 + n, reg_info_base))
+  std::optional<RegisterInfo> reg_info_base =
+      GetRegisterInfo(eRegisterKindLLDB, gpr_x0_arm64 + n);
+  if (!reg_info_base)
     return false;
 
-  RegisterInfo reg_info_Rt;
-  if (!GetRegisterInfo(eRegisterKindLLDB, gpr_x0_arm64 + t, reg_info_Rt))
+  std::optional<RegisterInfo> reg_info_Rt =
+      GetRegisterInfo(eRegisterKindLLDB, gpr_x0_arm64 + t);
+  if (!reg_info_Rt)
     return false;
 
   Context context;
   switch (memop) {
-  case MemOp_STORE:
+  case MemOp_STORE: {
     if (n == 31 || n == GetFramePointerRegisterNumber()) // if this store is
                                                          // based off of the sp
                                                          // or fp register
       context.type = eContextPushRegisterOnStack;
     else
       context.type = eContextRegisterStore;
-    context.SetRegisterToRegisterPlusOffset(reg_info_Rt, reg_info_base,
+    context.SetRegisterToRegisterPlusOffset(*reg_info_Rt, *reg_info_base,
                                             postindex ? 0 : offset);
 
-    if (!ReadRegister(&reg_info_Rt, data_Rt))
+    std::optional<RegisterValue> data_Rt = ReadRegister(*reg_info_Rt);
+    if (!data_Rt)
       return false;
 
-    if (data_Rt.GetAsMemoryData(&reg_info_Rt, buffer, reg_info_Rt.byte_size,
-                                eByteOrderLittle, error) == 0)
+    if (data_Rt->GetAsMemoryData(*reg_info_Rt, buffer, reg_info_Rt->byte_size,
+                                 eByteOrderLittle, error) == 0)
       return false;
 
-    if (!WriteMemory(context, address, buffer, reg_info_Rt.byte_size))
+    if (!WriteMemory(context, address, buffer, reg_info_Rt->byte_size))
       return false;
-    break;
+  } break;
 
-  case MemOp_LOAD:
+  case MemOp_LOAD: {
     if (n == 31 || n == GetFramePointerRegisterNumber()) // if this store is
                                                          // based off of the sp
                                                          // or fp register
@@ -1010,16 +1017,17 @@ bool EmulateInstructionARM64::EmulateLDRSTRImm(const uint32_t opcode) {
       context.type = eContextRegisterLoad;
     context.SetAddress(address);
 
-    if (!ReadMemory(context, address, buffer, reg_info_Rt.byte_size))
+    if (!ReadMemory(context, address, buffer, reg_info_Rt->byte_size))
       return false;
 
-    if (data_Rt.SetFromMemoryData(&reg_info_Rt, buffer, reg_info_Rt.byte_size,
+    RegisterValue data_Rt;
+    if (data_Rt.SetFromMemoryData(*reg_info_Rt, buffer, reg_info_Rt->byte_size,
                                   eByteOrderLittle, error) == 0)
       return false;
 
-    if (!WriteRegister(context, &reg_info_Rt, data_Rt))
+    if (!WriteRegister(context, *reg_info_Rt, data_Rt))
       return false;
-    break;
+  } break;
   default:
     return false;
   }
@@ -1034,7 +1042,7 @@ bool EmulateInstructionARM64::EmulateLDRSTRImm(const uint32_t opcode) {
       context.type = eContextAdjustBaseRegister;
     context.SetImmediateSigned(offset);
 
-    if (!WriteRegisterUnsigned(context, &reg_info_base, address))
+    if (!WriteRegisterUnsigned(context, *reg_info_base, address))
       return false;
   }
   return true;

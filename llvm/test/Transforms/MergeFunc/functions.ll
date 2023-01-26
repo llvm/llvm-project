@@ -1,4 +1,4 @@
-; RUN: opt -S -mergefunc < %s | FileCheck %s
+; RUN: opt -S -passes=mergefunc < %s | FileCheck %s
 
 ; Be sure we don't merge cross-referenced functions of same type.
 

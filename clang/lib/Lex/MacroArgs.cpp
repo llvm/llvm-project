@@ -62,7 +62,7 @@ MacroArgs *MacroArgs::create(const MacroInfo *MI,
 
   // Copy the actual unexpanded tokens to immediately after the result ptr.
   if (!UnexpArgTokens.empty()) {
-    static_assert(std::is_trivial<Token>::value,
+    static_assert(std::is_trivial_v<Token>,
                   "assume trivial copyability if copying into the "
                   "uninitialized array (as opposed to reusing a cached "
                   "MacroArgs)");
@@ -94,7 +94,7 @@ MacroArgs *MacroArgs::deallocate() {
   // Run the dtor to deallocate the vectors.
   this->~MacroArgs();
   // Release the memory for the object.
-  static_assert(std::is_trivially_destructible<Token>::value,
+  static_assert(std::is_trivially_destructible_v<Token>,
                 "assume trivially destructible and forego destructors");
   free(this);
 
@@ -169,7 +169,7 @@ const std::vector<Token> &MacroArgs::getPreExpArgument(unsigned Arg,
   std::vector<Token> &Result = PreExpArgTokens[Arg];
   if (!Result.empty()) return Result;
 
-  SaveAndRestore<bool> PreExpandingMacroArgs(PP.InMacroArgPreExpansion, true);
+  SaveAndRestore PreExpandingMacroArgs(PP.InMacroArgPreExpansion, true);
 
   const Token *AT = getUnexpArgument(Arg);
   unsigned NumToks = getArgLength(AT)+1;  // Include the EOF.

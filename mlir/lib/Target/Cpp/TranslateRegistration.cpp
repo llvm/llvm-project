@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -33,15 +33,15 @@ void registerToCppTranslation() {
       llvm::cl::init(false));
 
   TranslateFromMLIRRegistration reg(
-      "mlir-to-cpp",
-      [](ModuleOp module, raw_ostream &output) {
+      "mlir-to-cpp", "translate from mlir to cpp",
+      [](Operation *op, raw_ostream &output) {
         return emitc::translateToCpp(
-            module, output,
+            op, output,
             /*declareVariablesAtTop=*/declareVariablesAtTop);
       },
       [](DialectRegistry &registry) {
         // clang-format off
-        registry.insert<arith::ArithmeticDialect,
+        registry.insert<arith::ArithDialect,
                         cf::ControlFlowDialect,
                         emitc::EmitCDialect,
                         func::FuncDialect,

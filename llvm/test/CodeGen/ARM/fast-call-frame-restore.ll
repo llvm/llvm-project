@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=armv7-linux-gnueabi %s -o - | FileCheck %s
 
-declare void @bar(i8*, i32, i32, i32, i32)
+declare void @bar(ptr, i32, i32, i32, i32)
 
 define void @foo(i32 %amt) optnone noinline {
   br label %next
@@ -10,7 +10,7 @@ next:
   br label %next1
 
 next1:
-  call void @bar(i8* %mem, i32 undef, i32 undef, i32 undef, i32 undef)
+  call void @bar(ptr %mem, i32 undef, i32 undef, i32 undef, i32 undef)
 ; CHECK: sub sp, sp, #8
 ; CHECK: bl bar
 ; CHECK: add sp, sp, #8

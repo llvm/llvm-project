@@ -530,11 +530,6 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
         .addImm(15).addReg(SystemZ::R0D);
     break;
 
-  // Emit nothing here but a comment if we can.
-  case SystemZ::MemBarrier:
-    OutStreamer->emitRawComment("MEMBARRIER");
-    return;
-
   // We want to emit "j .+2" for traps, jumping to the relative immediate field
   // of the jump instruction, which is an illegal instruction. We cannot emit a
   // "." symbol, so create and emit a temp label before the instruction and use
@@ -759,6 +754,17 @@ void SystemZAsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
                             getSubtargetInfo());
 }
 
+// The *alignment* of 128-bit vector types is different between the software
+// and hardware vector ABIs. If the there is an externally visible use of a
+// vector type in the module it should be annotated with an attribute.
+void SystemZAsmPrinter::emitAttributes(Module &M) {
+  if (M.getModuleFlag("s390x-visible-vector-ABI")) {
+    bool HasVectorFeature =
+      TM.getMCSubtargetInfo()->getFeatureBits()[SystemZ::FeatureVector];
+    OutStreamer->emitGNUAttribute(8, HasVectorFeature ? 2 : 1);
+  }
+}
+
 // Convert a SystemZ-specific constant pool modifier into the associated
 // MCSymbolRefExpr variant kind.
 static MCSymbolRefExpr::VariantKind
@@ -785,6 +791,49 @@ void SystemZAsmPrinter::emitMachineConstantPoolValue(
   OutStreamer->emitValue(Expr, Size);
 }
 
+static void printFormattedRegName(const MCAsmInfo *MAI, unsigned RegNo,
+                                  raw_ostream &OS) {
+  const char *RegName = SystemZInstPrinter::getRegisterName(RegNo);
+  if (MAI->getAssemblerDialect() == AD_HLASM) {
+    // Skip register prefix so that only register number is left
+    assert(isalpha(RegName[0]) && isdigit(RegName[1]));
+    OS << (RegName + 1);
+  } else
+    OS << '%' << RegName;
+}
+
+static void printOperand(const MCOperand &MCOp, const MCAsmInfo *MAI,
+                         raw_ostream &OS) {
+  if (MCOp.isReg()) {
+    if (!MCOp.getReg())
+      OS << '0';
+    else
+      printFormattedRegName(MAI, MCOp.getReg(), OS);
+  } else if (MCOp.isImm())
+    OS << MCOp.getImm();
+  else if (MCOp.isExpr())
+    MCOp.getExpr()->print(OS, MAI);
+  else
+    llvm_unreachable("Invalid operand");
+}
+
+static void printAddress(const MCAsmInfo *MAI, unsigned Base,
+                         const MCOperand &DispMO, unsigned Index,
+                         raw_ostream &OS) {
+  printOperand(DispMO, MAI, OS);
+  if (Base || Index) {
+    OS << '(';
+    if (Index) {
+      printFormattedRegName(MAI, Index, OS);
+      if (Base)
+        OS << ',';
+    }
+    if (Base)
+      printFormattedRegName(MAI, Base, OS);
+    OS << ')';
+  }
+}
+
 bool SystemZAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                                         const char *ExtraCode,
                                         raw_ostream &OS) {
@@ -802,7 +851,7 @@ bool SystemZAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     SystemZMCInstLower Lower(MF->getContext(), *this);
     MCOp = Lower.lowerOperand(MO);
   }
-  SystemZInstPrinter::printOperand(MCOp, MAI, OS);
+  printOperand(MCOp, MAI, OS);
   return false;
 }
 
@@ -810,15 +859,14 @@ bool SystemZAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
                                               unsigned OpNo,
                                               const char *ExtraCode,
                                               raw_ostream &OS) {
-  SystemZInstPrinter::
-    printAddress(MAI, MI->getOperand(OpNo).getReg(),
-                 MCOperand::createImm(MI->getOperand(OpNo + 1).getImm()),
-                 MI->getOperand(OpNo + 2).getReg(), OS);
+  printAddress(MAI, MI->getOperand(OpNo).getReg(),
+               MCOperand::createImm(MI->getOperand(OpNo + 1).getImm()),
+               MI->getOperand(OpNo + 2).getReg(), OS);
   return false;
 }
 
 void SystemZAsmPrinter::emitEndOfAsmFile(Module &M) {
-  emitStackMaps(SM);
+  emitAttributes(M);
 }
 
 void SystemZAsmPrinter::emitFunctionBodyEnd() {

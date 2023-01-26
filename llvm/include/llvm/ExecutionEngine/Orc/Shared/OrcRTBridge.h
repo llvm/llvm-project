@@ -47,14 +47,17 @@ extern const char *RegisterEHFrameSectionWrapperName;
 extern const char *DeregisterEHFrameSectionWrapperName;
 
 extern const char *RunAsMainWrapperName;
+extern const char *RunAsVoidFunctionWrapperName;
+extern const char *RunAsIntFunctionWrapperName;
 
 using SPSSimpleExecutorDylibManagerOpenSignature =
-    shared::SPSExpected<uint64_t>(shared::SPSExecutorAddr, shared::SPSString,
-                                  uint64_t);
+    shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
+                                                 shared::SPSString, uint64_t);
 
 using SPSSimpleExecutorDylibManagerLookupSignature =
     shared::SPSExpected<shared::SPSSequence<shared::SPSExecutorAddr>>(
-        shared::SPSExecutorAddr, uint64_t, shared::SPSRemoteSymbolLookupSet);
+        shared::SPSExecutorAddr, shared::SPSExecutorAddr,
+        shared::SPSRemoteSymbolLookupSet);
 
 using SPSSimpleExecutorMemoryManagerReserveSignature =
     shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
@@ -81,7 +84,8 @@ using SPSExecutorSharedMemoryMapperServiceReleaseSignature = shared::SPSError(
 
 using SPSRunAsMainSignature = int64_t(shared::SPSExecutorAddr,
                                       shared::SPSSequence<shared::SPSString>);
-
+using SPSRunAsVoidFunctionSignature = int32_t(shared::SPSExecutorAddr);
+using SPSRunAsIntFunctionSignature = int32_t(shared::SPSExecutorAddr, int32_t);
 } // end namespace rt
 } // end namespace orc
 } // end namespace llvm

@@ -8,10 +8,12 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
 #include "gtest/gtest.h"
 #include <array>
+#include <optional>
 
 using namespace llvm;
 
@@ -1791,6 +1793,16 @@ TEST(APIntTest, isShiftedMask) {
   }
 }
 
+TEST(APIntTest, isOneBitSet) {
+  EXPECT_FALSE(APInt(5, 0x00).isOneBitSet(0));
+  EXPECT_FALSE(APInt(5, 0x02).isOneBitSet(0));
+  EXPECT_FALSE(APInt(5, 0x03).isOneBitSet(0));
+  EXPECT_TRUE(APInt(5, 0x02).isOneBitSet(1));
+  EXPECT_TRUE(APInt(32, (unsigned)(0xffu << 31)).isOneBitSet(31));
+
+  EXPECT_TRUE(APInt::getOneBitSet(255, 13).isOneBitSet(13));
+}
+
 TEST(APIntTest, isPowerOf2) {
   EXPECT_FALSE(APInt(5, 0x00).isPowerOf2());
   EXPECT_FALSE(APInt(32, 0x11).isPowerOf2());
@@ -2894,9 +2906,8 @@ TEST(APIntTest, SolveQuadraticEquationWrap) {
         continue;
       for (int B = Low; B != High; ++B) {
         for (int C = Low; C != High; ++C) {
-          Optional<APInt> S = APIntOps::SolveQuadraticEquationWrap(
-                                APInt(Width, A), APInt(Width, B),
-                                APInt(Width, C), Width);
+          std::optional<APInt> S = APIntOps::SolveQuadraticEquationWrap(
+              APInt(Width, A), APInt(Width, B), APInt(Width, C), Width);
           if (S)
             Validate(A, B, C, Width, S->getSExtValue());
         }
@@ -2931,10 +2942,10 @@ TEST(APIntTest, MultiplicativeInverseExaustive) {
 
 TEST(APIntTest, GetMostSignificantDifferentBit) {
   EXPECT_EQ(APIntOps::GetMostSignificantDifferentBit(APInt(8, 0), APInt(8, 0)),
-            llvm::None);
+            std::nullopt);
   EXPECT_EQ(
       APIntOps::GetMostSignificantDifferentBit(APInt(8, 42), APInt(8, 42)),
-      llvm::None);
+      std::nullopt);
   EXPECT_EQ(*APIntOps::GetMostSignificantDifferentBit(APInt(8, 0), APInt(8, 1)),
             0u);
   EXPECT_EQ(*APIntOps::GetMostSignificantDifferentBit(APInt(8, 0), APInt(8, 2)),
@@ -2944,7 +2955,7 @@ TEST(APIntTest, GetMostSignificantDifferentBit) {
   EXPECT_EQ(*APIntOps::GetMostSignificantDifferentBit(APInt(8, 1), APInt(8, 0)),
             0u);
   EXPECT_EQ(APIntOps::GetMostSignificantDifferentBit(APInt(8, 1), APInt(8, 1)),
-            llvm::None);
+            std::nullopt);
   EXPECT_EQ(*APIntOps::GetMostSignificantDifferentBit(APInt(8, 1), APInt(8, 2)),
             1u);
   EXPECT_EQ(*APIntOps::GetMostSignificantDifferentBit(APInt(8, 1), APInt(8, 3)),
@@ -2956,10 +2967,10 @@ TEST(APIntTest, GetMostSignificantDifferentBit) {
 
 TEST(APIntTest, GetMostSignificantDifferentBitExaustive) {
   auto GetHighestDifferentBitBruteforce =
-      [](const APInt &V0, const APInt &V1) -> llvm::Optional<unsigned> {
+      [](const APInt &V0, const APInt &V1) -> std::optional<unsigned> {
     assert(V0.getBitWidth() == V1.getBitWidth() && "Must have same bitwidth");
     if (V0 == V1)
-      return llvm::None; // Bitwise identical.
+      return std::nullopt; // Bitwise identical.
     // There is a mismatch. Let's find the most significant different bit.
     for (int Bit = V0.getBitWidth() - 1; Bit >= 0; --Bit) {
       if (V0[Bit] == V1[Bit])
@@ -3124,6 +3135,35 @@ TEST(APIntTest, ScaleBitMask) {
   EXPECT_EQ(APIntOps::ScaleBitMask(APInt(8, 0x00), 4, true), APInt(4, 0x00));
   EXPECT_EQ(APIntOps::ScaleBitMask(APInt(8, 0xFF), 4, true), APInt(4, 0x0F));
   EXPECT_EQ(APIntOps::ScaleBitMask(APInt(8, 0xE4), 4, true), APInt(4, 0x08));
+}
+
+TEST(APIntTest, DenseMap) {
+  DenseMap<APInt, int> Map;
+  APInt ZeroWidthInt(0, 0, false);
+  Map.insert({ZeroWidthInt, 0});
+  Map.find(ZeroWidthInt);
+}
+
+TEST(APIntTest, TryExt) {
+  APInt small(32, 42);
+  APInt large(128, {0xffff, 0xffff});
+  ASSERT_TRUE(small.tryZExtValue().has_value());
+  ASSERT_TRUE(small.trySExtValue().has_value());
+  ASSERT_FALSE(large.tryZExtValue().has_value());
+  ASSERT_FALSE(large.trySExtValue().has_value());
+  ASSERT_EQ(small.trySExtValue().value_or(41), 42);
+  ASSERT_EQ(large.trySExtValue().value_or(41), 41);
+
+  APInt negOne32(32, 0);
+  negOne32.setAllBits();
+  ASSERT_EQ(negOne32.trySExtValue().value_or(42), -1);
+  APInt negOne64(64, 0);
+  negOne64.setAllBits();
+  ASSERT_EQ(negOne64.trySExtValue().value_or(42), -1);
+  APInt negOne128(128, 0);
+  negOne128.setAllBits();
+  ASSERT_EQ(negOne128.trySExtValue().value_or(42), -1);
+  ASSERT_EQ(42, APInt(128, -1).trySExtValue().value_or(42));
 }
 
 } // end anonymous namespace

@@ -3,11 +3,16 @@
 REQUIRES: x86_64-linux
 
 RUN: %clangxx -fpic -Wl,-q %S/Inputs/exception4.cpp -o %t.pic
-RUN: llvm-bolt %t.pic -o %t && %t 2>&1 | FileCheck %s
-RUN: llvm-bolt --relocs --use-old-text %t.pic -o %t && %t 2>&1 | FileCheck %s
+
+RUN: llvm-bolt %t.pic -o %t
+RUN: %t 2>&1 | FileCheck %s
+
+RUN: llvm-bolt --relocs --use-old-text %t.pic -o %t
+RUN: %t 2>&1 | FileCheck %s
+
+RUN: llvm-bolt %t.pic -o %t --split-functions --split-strategy=all --split-eh
+RUN: %t 2>&1 | FileCheck %s
 
 CHECK: catch 2
 CHECK-NEXT: catch 1
 CHECK-NEXT: caught ExcC
-
-

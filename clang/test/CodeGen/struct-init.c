@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -Wno-int-conversion -triple armv7-apple-darwin -target-feature +neon %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -Wno-int-conversion -triple armv7-apple-darwin -target-feature +neon %s -emit-llvm -o - | FileCheck %s
 
 typedef struct _zend_ini_entry zend_ini_entry;
 struct _zend_ini_entry {
@@ -29,7 +29,7 @@ void foo(void) {
     const uint32x2_t signBit = { (uint2) 0x80000000 };
 }
 
-// CHECK: %struct.fp_struct_foo = type { void ([1 x i32])* }
+// CHECK: %struct.fp_struct_foo = type { ptr }
 struct fp_struct_bar { int a; };
 
 struct fp_struct_foo {

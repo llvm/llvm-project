@@ -10,10 +10,10 @@
 
 define void @llvm_mips_div_s_b_test() nounwind {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @llvm_mips_div_s_b_ARG1
-  %1 = load <16 x i8>, <16 x i8>* @llvm_mips_div_s_b_ARG2
+  %0 = load <16 x i8>, ptr @llvm_mips_div_s_b_ARG1
+  %1 = load <16 x i8>, ptr @llvm_mips_div_s_b_ARG2
   %2 = tail call <16 x i8> @llvm.mips.div.s.b(<16 x i8> %0, <16 x i8> %1)
-  store <16 x i8> %2, <16 x i8>* @llvm_mips_div_s_b_RES
+  store <16 x i8> %2, ptr @llvm_mips_div_s_b_RES
   ret void
 }
 
@@ -32,10 +32,10 @@ declare <16 x i8> @llvm.mips.div.s.b(<16 x i8>, <16 x i8>) nounwind
 
 define void @llvm_mips_div_s_h_test() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_div_s_h_ARG1
-  %1 = load <8 x i16>, <8 x i16>* @llvm_mips_div_s_h_ARG2
+  %0 = load <8 x i16>, ptr @llvm_mips_div_s_h_ARG1
+  %1 = load <8 x i16>, ptr @llvm_mips_div_s_h_ARG2
   %2 = tail call <8 x i16> @llvm.mips.div.s.h(<8 x i16> %0, <8 x i16> %1)
-  store <8 x i16> %2, <8 x i16>* @llvm_mips_div_s_h_RES
+  store <8 x i16> %2, ptr @llvm_mips_div_s_h_RES
   ret void
 }
 
@@ -54,10 +54,10 @@ declare <8 x i16> @llvm.mips.div.s.h(<8 x i16>, <8 x i16>) nounwind
 
 define void @llvm_mips_div_s_w_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_div_s_w_ARG1
-  %1 = load <4 x i32>, <4 x i32>* @llvm_mips_div_s_w_ARG2
+  %0 = load <4 x i32>, ptr @llvm_mips_div_s_w_ARG1
+  %1 = load <4 x i32>, ptr @llvm_mips_div_s_w_ARG2
   %2 = tail call <4 x i32> @llvm.mips.div.s.w(<4 x i32> %0, <4 x i32> %1)
-  store <4 x i32> %2, <4 x i32>* @llvm_mips_div_s_w_RES
+  store <4 x i32> %2, ptr @llvm_mips_div_s_w_RES
   ret void
 }
 
@@ -76,10 +76,10 @@ declare <4 x i32> @llvm.mips.div.s.w(<4 x i32>, <4 x i32>) nounwind
 
 define void @llvm_mips_div_s_d_test() nounwind {
 entry:
-  %0 = load <2 x i64>, <2 x i64>* @llvm_mips_div_s_d_ARG1
-  %1 = load <2 x i64>, <2 x i64>* @llvm_mips_div_s_d_ARG2
+  %0 = load <2 x i64>, ptr @llvm_mips_div_s_d_ARG1
+  %1 = load <2 x i64>, ptr @llvm_mips_div_s_d_ARG2
   %2 = tail call <2 x i64> @llvm.mips.div.s.d(<2 x i64> %0, <2 x i64> %1)
-  store <2 x i64> %2, <2 x i64>* @llvm_mips_div_s_d_RES
+  store <2 x i64> %2, ptr @llvm_mips_div_s_d_RES
   ret void
 }
 
@@ -95,10 +95,10 @@ declare <2 x i64> @llvm.mips.div.s.d(<2 x i64>, <2 x i64>) nounwind
 
 define void @div_s_b_test() nounwind {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @llvm_mips_div_s_b_ARG1
-  %1 = load <16 x i8>, <16 x i8>* @llvm_mips_div_s_b_ARG2
+  %0 = load <16 x i8>, ptr @llvm_mips_div_s_b_ARG1
+  %1 = load <16 x i8>, ptr @llvm_mips_div_s_b_ARG2
   %2 = sdiv <16 x i8> %0, %1
-  store <16 x i8> %2, <16 x i8>* @llvm_mips_div_s_b_RES
+  store <16 x i8> %2, ptr @llvm_mips_div_s_b_RES
   ret void
 }
 
@@ -111,10 +111,10 @@ entry:
 
 define void @div_s_h_test() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_div_s_h_ARG1
-  %1 = load <8 x i16>, <8 x i16>* @llvm_mips_div_s_h_ARG2
+  %0 = load <8 x i16>, ptr @llvm_mips_div_s_h_ARG1
+  %1 = load <8 x i16>, ptr @llvm_mips_div_s_h_ARG2
   %2 = sdiv <8 x i16> %0, %1
-  store <8 x i16> %2, <8 x i16>* @llvm_mips_div_s_h_RES
+  store <8 x i16> %2, ptr @llvm_mips_div_s_h_RES
   ret void
 }
 
@@ -127,10 +127,10 @@ entry:
 
 define void @div_s_w_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_div_s_w_ARG1
-  %1 = load <4 x i32>, <4 x i32>* @llvm_mips_div_s_w_ARG2
+  %0 = load <4 x i32>, ptr @llvm_mips_div_s_w_ARG1
+  %1 = load <4 x i32>, ptr @llvm_mips_div_s_w_ARG2
   %2 = sdiv <4 x i32> %0, %1
-  store <4 x i32> %2, <4 x i32>* @llvm_mips_div_s_w_RES
+  store <4 x i32> %2, ptr @llvm_mips_div_s_w_RES
   ret void
 }
 
@@ -143,10 +143,10 @@ entry:
 
 define void @div_s_d_test() nounwind {
 entry:
-  %0 = load <2 x i64>, <2 x i64>* @llvm_mips_div_s_d_ARG1
-  %1 = load <2 x i64>, <2 x i64>* @llvm_mips_div_s_d_ARG2
+  %0 = load <2 x i64>, ptr @llvm_mips_div_s_d_ARG1
+  %1 = load <2 x i64>, ptr @llvm_mips_div_s_d_ARG2
   %2 = sdiv <2 x i64> %0, %1
-  store <2 x i64> %2, <2 x i64>* @llvm_mips_div_s_d_RES
+  store <2 x i64> %2, ptr @llvm_mips_div_s_d_RES
   ret void
 }
 
@@ -163,10 +163,10 @@ entry:
 
 define void @llvm_mips_div_u_b_test() nounwind {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @llvm_mips_div_u_b_ARG1
-  %1 = load <16 x i8>, <16 x i8>* @llvm_mips_div_u_b_ARG2
+  %0 = load <16 x i8>, ptr @llvm_mips_div_u_b_ARG1
+  %1 = load <16 x i8>, ptr @llvm_mips_div_u_b_ARG2
   %2 = tail call <16 x i8> @llvm.mips.div.u.b(<16 x i8> %0, <16 x i8> %1)
-  store <16 x i8> %2, <16 x i8>* @llvm_mips_div_u_b_RES
+  store <16 x i8> %2, ptr @llvm_mips_div_u_b_RES
   ret void
 }
 
@@ -185,10 +185,10 @@ declare <16 x i8> @llvm.mips.div.u.b(<16 x i8>, <16 x i8>) nounwind
 
 define void @llvm_mips_div_u_h_test() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_div_u_h_ARG1
-  %1 = load <8 x i16>, <8 x i16>* @llvm_mips_div_u_h_ARG2
+  %0 = load <8 x i16>, ptr @llvm_mips_div_u_h_ARG1
+  %1 = load <8 x i16>, ptr @llvm_mips_div_u_h_ARG2
   %2 = tail call <8 x i16> @llvm.mips.div.u.h(<8 x i16> %0, <8 x i16> %1)
-  store <8 x i16> %2, <8 x i16>* @llvm_mips_div_u_h_RES
+  store <8 x i16> %2, ptr @llvm_mips_div_u_h_RES
   ret void
 }
 
@@ -207,10 +207,10 @@ declare <8 x i16> @llvm.mips.div.u.h(<8 x i16>, <8 x i16>) nounwind
 
 define void @llvm_mips_div_u_w_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_div_u_w_ARG1
-  %1 = load <4 x i32>, <4 x i32>* @llvm_mips_div_u_w_ARG2
+  %0 = load <4 x i32>, ptr @llvm_mips_div_u_w_ARG1
+  %1 = load <4 x i32>, ptr @llvm_mips_div_u_w_ARG2
   %2 = tail call <4 x i32> @llvm.mips.div.u.w(<4 x i32> %0, <4 x i32> %1)
-  store <4 x i32> %2, <4 x i32>* @llvm_mips_div_u_w_RES
+  store <4 x i32> %2, ptr @llvm_mips_div_u_w_RES
   ret void
 }
 
@@ -229,10 +229,10 @@ declare <4 x i32> @llvm.mips.div.u.w(<4 x i32>, <4 x i32>) nounwind
 
 define void @llvm_mips_div_u_d_test() nounwind {
 entry:
-  %0 = load <2 x i64>, <2 x i64>* @llvm_mips_div_u_d_ARG1
-  %1 = load <2 x i64>, <2 x i64>* @llvm_mips_div_u_d_ARG2
+  %0 = load <2 x i64>, ptr @llvm_mips_div_u_d_ARG1
+  %1 = load <2 x i64>, ptr @llvm_mips_div_u_d_ARG2
   %2 = tail call <2 x i64> @llvm.mips.div.u.d(<2 x i64> %0, <2 x i64> %1)
-  store <2 x i64> %2, <2 x i64>* @llvm_mips_div_u_d_RES
+  store <2 x i64> %2, ptr @llvm_mips_div_u_d_RES
   ret void
 }
 
@@ -248,10 +248,10 @@ declare <2 x i64> @llvm.mips.div.u.d(<2 x i64>, <2 x i64>) nounwind
 
 define void @div_u_b_test() nounwind {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @llvm_mips_div_u_b_ARG1
-  %1 = load <16 x i8>, <16 x i8>* @llvm_mips_div_u_b_ARG2
+  %0 = load <16 x i8>, ptr @llvm_mips_div_u_b_ARG1
+  %1 = load <16 x i8>, ptr @llvm_mips_div_u_b_ARG2
   %2 = udiv <16 x i8> %0, %1
-  store <16 x i8> %2, <16 x i8>* @llvm_mips_div_u_b_RES
+  store <16 x i8> %2, ptr @llvm_mips_div_u_b_RES
   ret void
 }
 
@@ -264,10 +264,10 @@ entry:
 
 define void @div_u_h_test() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_div_u_h_ARG1
-  %1 = load <8 x i16>, <8 x i16>* @llvm_mips_div_u_h_ARG2
+  %0 = load <8 x i16>, ptr @llvm_mips_div_u_h_ARG1
+  %1 = load <8 x i16>, ptr @llvm_mips_div_u_h_ARG2
   %2 = udiv <8 x i16> %0, %1
-  store <8 x i16> %2, <8 x i16>* @llvm_mips_div_u_h_RES
+  store <8 x i16> %2, ptr @llvm_mips_div_u_h_RES
   ret void
 }
 
@@ -280,10 +280,10 @@ entry:
 
 define void @div_u_w_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_div_u_w_ARG1
-  %1 = load <4 x i32>, <4 x i32>* @llvm_mips_div_u_w_ARG2
+  %0 = load <4 x i32>, ptr @llvm_mips_div_u_w_ARG1
+  %1 = load <4 x i32>, ptr @llvm_mips_div_u_w_ARG2
   %2 = udiv <4 x i32> %0, %1
-  store <4 x i32> %2, <4 x i32>* @llvm_mips_div_u_w_RES
+  store <4 x i32> %2, ptr @llvm_mips_div_u_w_RES
   ret void
 }
 
@@ -296,10 +296,10 @@ entry:
 
 define void @div_u_d_test() nounwind {
 entry:
-  %0 = load <2 x i64>, <2 x i64>* @llvm_mips_div_u_d_ARG1
-  %1 = load <2 x i64>, <2 x i64>* @llvm_mips_div_u_d_ARG2
+  %0 = load <2 x i64>, ptr @llvm_mips_div_u_d_ARG1
+  %1 = load <2 x i64>, ptr @llvm_mips_div_u_d_ARG2
   %2 = udiv <2 x i64> %0, %1
-  store <2 x i64> %2, <2 x i64>* @llvm_mips_div_u_d_RES
+  store <2 x i64> %2, ptr @llvm_mips_div_u_d_RES
   ret void
 }
 
@@ -326,10 +326,10 @@ entry:
 
 define void @llvm_mips_dotp_s_h_test() nounwind {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @llvm_mips_dotp_s_h_ARG1
-  %1 = load <16 x i8>, <16 x i8>* @llvm_mips_dotp_s_h_ARG2
+  %0 = load <16 x i8>, ptr @llvm_mips_dotp_s_h_ARG1
+  %1 = load <16 x i8>, ptr @llvm_mips_dotp_s_h_ARG2
   %2 = tail call <8 x i16> @llvm.mips.dotp.s.h(<16 x i8> %0, <16 x i8> %1)
-  store <8 x i16> %2, <8 x i16>* @llvm_mips_dotp_s_h_RES
+  store <8 x i16> %2, ptr @llvm_mips_dotp_s_h_RES
   ret void
 }
 
@@ -353,10 +353,10 @@ declare <8 x i16> @llvm.mips.dotp.s.h(<16 x i8>, <16 x i8>) nounwind
 
 define void @llvm_mips_dotp_s_w_test() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_dotp_s_w_ARG1
-  %1 = load <8 x i16>, <8 x i16>* @llvm_mips_dotp_s_w_ARG2
+  %0 = load <8 x i16>, ptr @llvm_mips_dotp_s_w_ARG1
+  %1 = load <8 x i16>, ptr @llvm_mips_dotp_s_w_ARG2
   %2 = tail call <4 x i32> @llvm.mips.dotp.s.w(<8 x i16> %0, <8 x i16> %1)
-  store <4 x i32> %2, <4 x i32>* @llvm_mips_dotp_s_w_RES
+  store <4 x i32> %2, ptr @llvm_mips_dotp_s_w_RES
   ret void
 }
 
@@ -377,10 +377,10 @@ declare <4 x i32> @llvm.mips.dotp.s.w(<8 x i16>, <8 x i16>) nounwind
 
 define void @llvm_mips_dotp_s_d_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_dotp_s_d_ARG1
-  %1 = load <4 x i32>, <4 x i32>* @llvm_mips_dotp_s_d_ARG2
+  %0 = load <4 x i32>, ptr @llvm_mips_dotp_s_d_ARG1
+  %1 = load <4 x i32>, ptr @llvm_mips_dotp_s_d_ARG2
   %2 = tail call <2 x i64> @llvm.mips.dotp.s.d(<4 x i32> %0, <4 x i32> %1)
-  store <2 x i64> %2, <2 x i64>* @llvm_mips_dotp_s_d_RES
+  store <2 x i64> %2, ptr @llvm_mips_dotp_s_d_RES
   ret void
 }
 
@@ -409,10 +409,10 @@ declare <2 x i64> @llvm.mips.dotp.s.d(<4 x i32>, <4 x i32>) nounwind
 
 define void @llvm_mips_dotp_u_h_test() nounwind {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @llvm_mips_dotp_u_h_ARG1
-  %1 = load <16 x i8>, <16 x i8>* @llvm_mips_dotp_u_h_ARG2
+  %0 = load <16 x i8>, ptr @llvm_mips_dotp_u_h_ARG1
+  %1 = load <16 x i8>, ptr @llvm_mips_dotp_u_h_ARG2
   %2 = tail call <8 x i16> @llvm.mips.dotp.u.h(<16 x i8> %0, <16 x i8> %1)
-  store <8 x i16> %2, <8 x i16>* @llvm_mips_dotp_u_h_RES
+  store <8 x i16> %2, ptr @llvm_mips_dotp_u_h_RES
   ret void
 }
 
@@ -436,10 +436,10 @@ declare <8 x i16> @llvm.mips.dotp.u.h(<16 x i8>, <16 x i8>) nounwind
 
 define void @llvm_mips_dotp_u_w_test() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_dotp_u_w_ARG1
-  %1 = load <8 x i16>, <8 x i16>* @llvm_mips_dotp_u_w_ARG2
+  %0 = load <8 x i16>, ptr @llvm_mips_dotp_u_w_ARG1
+  %1 = load <8 x i16>, ptr @llvm_mips_dotp_u_w_ARG2
   %2 = tail call <4 x i32> @llvm.mips.dotp.u.w(<8 x i16> %0, <8 x i16> %1)
-  store <4 x i32> %2, <4 x i32>* @llvm_mips_dotp_u_w_RES
+  store <4 x i32> %2, ptr @llvm_mips_dotp_u_w_RES
   ret void
 }
 
@@ -460,10 +460,10 @@ declare <4 x i32> @llvm.mips.dotp.u.w(<8 x i16>, <8 x i16>) nounwind
 
 define void @llvm_mips_dotp_u_d_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_dotp_u_d_ARG1
-  %1 = load <4 x i32>, <4 x i32>* @llvm_mips_dotp_u_d_ARG2
+  %0 = load <4 x i32>, ptr @llvm_mips_dotp_u_d_ARG1
+  %1 = load <4 x i32>, ptr @llvm_mips_dotp_u_d_ARG2
   %2 = tail call <2 x i64> @llvm.mips.dotp.u.d(<4 x i32> %0, <4 x i32> %1)
-  store <2 x i64> %2, <2 x i64>* @llvm_mips_dotp_u_d_RES
+  store <2 x i64> %2, ptr @llvm_mips_dotp_u_d_RES
   ret void
 }
 

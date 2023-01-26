@@ -1,150 +1,150 @@
-; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes=inline -S | FileCheck %s
 
-@g0 = global i8* null, align 8
-declare i8* @foo0()
+@g0 = global ptr null, align 8
+declare ptr @foo0()
 
-define i8* @callee0_autoreleaseRV() {
-  %call = call i8* @foo0() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
-  %1 = tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %call)
-  ret i8* %call
+define ptr @callee0_autoreleaseRV() {
+  %call = call ptr @foo0() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
+  %1 = tail call ptr @llvm.objc.autoreleaseReturnValue(ptr %call)
+  ret ptr %call
 }
 
 ; CHECK-LABEL: define void @test0_autoreleaseRV(
-; CHECK: call i8* @foo0() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+; CHECK: call ptr @foo0() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
 
 define void @test0_autoreleaseRV() {
-  %call = call i8* @callee0_autoreleaseRV() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  %call = call ptr @callee0_autoreleaseRV() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
   ret void
 }
 
 ; CHECK-LABEL: define void @test0_claimRV_autoreleaseRV(
-; CHECK: %[[CALL:.*]] = call i8* @foo0() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
-; CHECK: call void @llvm.objc.release(i8* %[[CALL]])
+; CHECK: %[[CALL:.*]] = call ptr @foo0() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
+; CHECK: call void @llvm.objc.release(ptr %[[CALL]])
 ; CHECK-NEXT: ret void
 
 define void @test0_claimRV_autoreleaseRV() {
-  %call = call i8* @callee0_autoreleaseRV() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.unsafeClaimAutoreleasedReturnValue) ]
+  %call = call ptr @callee0_autoreleaseRV() [ "clang.arc.attachedcall"(ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue) ]
   ret void
 }
 
 ; CHECK-LABEL: define void @test1_autoreleaseRV(
-; CHECK: invoke i8* @foo0() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+; CHECK: invoke ptr @foo0() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
 
-define void @test1_autoreleaseRV() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @test1_autoreleaseRV() personality ptr @__gxx_personality_v0 {
 entry:
-  %call = invoke i8* @callee0_autoreleaseRV() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  %call = invoke ptr @callee0_autoreleaseRV() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
           to label %invoke.cont unwind label %lpad
 
 invoke.cont:
   ret void
 
 lpad:
-  %0 = landingpad { i8*, i32 }
+  %0 = landingpad { ptr, i32 }
           cleanup
-  resume { i8*, i32 } undef
+  resume { ptr, i32 } undef
 }
 
 ; CHECK-LABEL: define void @test1_claimRV_autoreleaseRV(
-; CHECK: %[[INVOKE:.*]] = invoke i8* @foo0() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
-; CHECK: call void @llvm.objc.release(i8* %[[INVOKE]])
+; CHECK: %[[INVOKE:.*]] = invoke ptr @foo0() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
+; CHECK: call void @llvm.objc.release(ptr %[[INVOKE]])
 ; CHECK-NEXT: br
 
-define void @test1_claimRV_autoreleaseRV() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @test1_claimRV_autoreleaseRV() personality ptr @__gxx_personality_v0 {
 entry:
-  %call = invoke i8* @callee0_autoreleaseRV() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.unsafeClaimAutoreleasedReturnValue) ]
+  %call = invoke ptr @callee0_autoreleaseRV() [ "clang.arc.attachedcall"(ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue) ]
           to label %invoke.cont unwind label %lpad
 
 invoke.cont:
   ret void
 
 lpad:
-  %0 = landingpad { i8*, i32 }
+  %0 = landingpad { ptr, i32 }
           cleanup
-  resume { i8*, i32 } undef
+  resume { ptr, i32 } undef
 }
 
-define i8* @callee1_no_autoreleaseRV() {
-  %call = call i8* @foo0()
-  ret i8* %call
+define ptr @callee1_no_autoreleaseRV() {
+  %call = call ptr @foo0()
+  ret ptr %call
 }
 
 ; CHECK-LABEL: define void @test2_no_autoreleaseRV(
-; CHECK: call i8* @foo0() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+; CHECK: call ptr @foo0() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
 ; CHECK-NEXT: ret void
 
 define void @test2_no_autoreleaseRV() {
-  %call = call i8* @callee1_no_autoreleaseRV() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  %call = call ptr @callee1_no_autoreleaseRV() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
   ret void
 }
 
 ; CHECK-LABEL: define void @test2_claimRV_no_autoreleaseRV(
-; CHECK: call i8* @foo0() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.unsafeClaimAutoreleasedReturnValue) ]
+; CHECK: call ptr @foo0() [ "clang.arc.attachedcall"(ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue) ]
 ; CHECK-NEXT: ret void
 
 define void @test2_claimRV_no_autoreleaseRV() {
-  %call = call i8* @callee1_no_autoreleaseRV() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.unsafeClaimAutoreleasedReturnValue) ]
+  %call = call ptr @callee1_no_autoreleaseRV() [ "clang.arc.attachedcall"(ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue) ]
   ret void
 }
 
 ; CHECK-LABEL: define void @test3_no_autoreleaseRV(
-; CHECK: invoke i8* @foo0() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+; CHECK: invoke ptr @foo0() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
 
-define void @test3_no_autoreleaseRV() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @test3_no_autoreleaseRV() personality ptr @__gxx_personality_v0 {
 entry:
-  %call = invoke i8* @callee1_no_autoreleaseRV() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  %call = invoke ptr @callee1_no_autoreleaseRV() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
           to label %invoke.cont unwind label %lpad
 
 invoke.cont:
   ret void
 
 lpad:
-  %0 = landingpad { i8*, i32 }
+  %0 = landingpad { ptr, i32 }
           cleanup
-  resume { i8*, i32 } undef
+  resume { ptr, i32 } undef
 }
 
-define i8* @callee2_nocall() {
-  %1 = load i8*, i8** @g0, align 8
-  ret i8* %1
+define ptr @callee2_nocall() {
+  %1 = load ptr, ptr @g0, align 8
+  ret ptr %1
 }
 
 ; Check that a call to @llvm.objc.retain is inserted if there is no matching
 ; autoreleaseRV call or a call.
 
 ; CHECK-LABEL: define void @test4_nocall(
-; CHECK: %[[V0:.*]] = load i8*, i8** @g0,
-; CHECK-NEXT: call i8* @llvm.objc.retain(i8* %[[V0]])
+; CHECK: %[[V0:.*]] = load ptr, ptr @g0,
+; CHECK-NEXT: call ptr @llvm.objc.retain(ptr %[[V0]])
 ; CHECK-NEXT: ret void
 
 define void @test4_nocall() {
-  %call = call i8* @callee2_nocall() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  %call = call ptr @callee2_nocall() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
   ret void
 }
 
 ; CHECK-LABEL: define void @test4_claimRV_nocall(
-; CHECK: %[[V0:.*]] = load i8*, i8** @g0,
+; CHECK: %[[V0:.*]] = load ptr, ptr @g0,
 ; CHECK-NEXT: ret void
 
 define void @test4_claimRV_nocall() {
-  %call = call i8* @callee2_nocall() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.unsafeClaimAutoreleasedReturnValue) ]
+  %call = call ptr @callee2_nocall() [ "clang.arc.attachedcall"(ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue) ]
   ret void
 }
 
 ; Check that a call to @llvm.objc.retain is inserted if call to @foo already has
 ; the attribute. I'm not sure this will happen in practice.
 
-define i8* @callee3_marker() {
-  %1 = call i8* @foo0() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
-  ret i8* %1
+define ptr @callee3_marker() {
+  %1 = call ptr @foo0() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
+  ret ptr %1
 }
 
 ; CHECK-LABEL: define void @test5(
-; CHECK: %[[V0:.*]] = call i8* @foo0() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
-; CHECK-NEXT: call i8* @llvm.objc.retain(i8* %[[V0]])
+; CHECK: %[[V0:.*]] = call ptr @foo0() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
+; CHECK-NEXT: call ptr @llvm.objc.retain(ptr %[[V0]])
 ; CHECK-NEXT: ret void
 
 define void @test5() {
-  %call = call i8* @callee3_marker() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  %call = call ptr @callee3_marker() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
   ret void
 }
 
@@ -152,26 +152,26 @@ define void @test5() {
 ; if there is an instruction between the ret instruction and the call to
 ; autoreleaseRV that isn't a cast instruction.
 
-define i8* @callee0_autoreleaseRV2() {
-  %call = call i8* @foo0() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
-  %1 = tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %call)
-  store i8* null, i8** @g0
-  ret i8* %call
+define ptr @callee0_autoreleaseRV2() {
+  %call = call ptr @foo0() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
+  %1 = tail call ptr @llvm.objc.autoreleaseReturnValue(ptr %call)
+  store ptr null, ptr @g0
+  ret ptr %call
 }
 
 ; CHECK-LABEL: define void @test6(
-; CHECK: %[[V0:.*]] = call i8* @foo0() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
-; CHECK: call i8* @llvm.objc.autoreleaseReturnValue(i8* %[[V0]])
-; CHECK: store i8* null, i8** @g0, align 8
-; CHECK: call i8* @llvm.objc.retain(i8* %[[V0]])
+; CHECK: %[[V0:.*]] = call ptr @foo0() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
+; CHECK: call ptr @llvm.objc.autoreleaseReturnValue(ptr %[[V0]])
+; CHECK: store ptr null, ptr @g0, align 8
+; CHECK: call ptr @llvm.objc.retain(ptr %[[V0]])
 ; CHECK-NEXT: ret void
 
 define void @test6() {
-  %call = call i8* @callee0_autoreleaseRV2() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  %call = call ptr @callee0_autoreleaseRV2() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
   ret void
 }
 
-declare i8* @llvm.objc.retainAutoreleasedReturnValue(i8*)
-declare i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8*)
-declare i8* @llvm.objc.autoreleaseReturnValue(i8*)
+declare ptr @llvm.objc.retainAutoreleasedReturnValue(ptr)
+declare ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue(ptr)
+declare ptr @llvm.objc.autoreleaseReturnValue(ptr)
 declare i32 @__gxx_personality_v0(...)

@@ -12,8 +12,9 @@
 
 // UNSUPPORTED: c++03
 
-#include <tuple>
 #include <cassert>
+#include <tuple>
+#include <type_traits>
 
 #include "test_macros.h"
 

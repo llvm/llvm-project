@@ -72,7 +72,7 @@ public:
     // node.
     const Edge *edges_end() const { return (this + 1)->Edges; }
     ArrayRef<Edge> edges() const {
-      return makeArrayRef(edges_begin(), edges_end());
+      return ArrayRef(edges_begin(), edges_end());
     }
   };
 
@@ -87,11 +87,11 @@ protected:
   ImmutableGraph &operator=(ImmutableGraph &&) = delete;
 
 public:
-  ArrayRef<Node> nodes() const { return makeArrayRef(Nodes.get(), NodesSize); }
+  ArrayRef<Node> nodes() const { return ArrayRef(Nodes.get(), NodesSize); }
   const Node *nodes_begin() const { return nodes().begin(); }
   const Node *nodes_end() const { return nodes().end(); }
 
-  ArrayRef<Edge> edges() const { return makeArrayRef(Edges.get(), EdgesSize); }
+  ArrayRef<Edge> edges() const { return ArrayRef(Edges.get(), EdgesSize); }
   const Edge *edges_begin() const { return edges().begin(); }
   const Edge *edges_end() const { return edges().end(); }
 

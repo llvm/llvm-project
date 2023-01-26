@@ -226,7 +226,7 @@ public:
     return createPPCELFObjectWriter(Is64, OSABI);
   }
 
-  Optional<MCFixupKind> getFixupKind(StringRef Name) const override;
+  std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 };
 
 class XCOFFPPCAsmBackend : public PPCAsmBackend {
@@ -242,7 +242,8 @@ public:
 
 } // end anonymous namespace
 
-Optional<MCFixupKind> ELFPPCAsmBackend::getFixupKind(StringRef Name) const {
+std::optional<MCFixupKind>
+ELFPPCAsmBackend::getFixupKind(StringRef Name) const {
   if (TT.isOSBinFormatELF()) {
     unsigned Type;
     if (TT.isPPC64()) {
@@ -268,7 +269,7 @@ Optional<MCFixupKind> ELFPPCAsmBackend::getFixupKind(StringRef Name) const {
     if (Type != -1u)
       return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
   }
-  return None;
+  return std::nullopt;
 }
 
 MCAsmBackend *llvm::createPPCAsmBackend(const Target &T,

@@ -29,7 +29,7 @@
 ; CHECK: loop-idiom Scanning: F[NonAffinePointer] Countable Loop %for.body
 ; CHECK-NEXT: Pointer is not affine, abort
 
-define void @MemsetSize_LoopVariant(i32* %ar, i32 %n, i32 %m) {
+define void @MemsetSize_LoopVariant(ptr %ar, i32 %n, i32 %m) {
 ; CHECK-LABEL: @MemsetSize_LoopVariant(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[N:%.*]] to i64
@@ -43,10 +43,9 @@ define void @MemsetSize_LoopVariant(i32* %ar, i32 %n, i32 %m) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_02:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[I_02]], [[CONV1]]
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, i32* [[AR:%.*]], i64 [[MUL]]
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[ADD_PTR]] to i8*
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[AR:%.*]], i64 [[MUL]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[I_02]], [[MUL3]]
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 4 [[TMP0]], i8 0, i64 [[ADD]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ADD_PTR]], i8 0, i64 [[ADD]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_02]], 1
@@ -71,10 +70,9 @@ for.body.lr.ph:                                   ; preds = %entry
 for.body:                                         ; preds = %for.body.lr.ph, %for.inc
   %i.02 = phi i64 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
   %mul = mul nsw i64 %i.02, %conv1
-  %add.ptr = getelementptr inbounds i32, i32* %ar, i64 %mul
-  %0 = bitcast i32* %add.ptr to i8*
+  %add.ptr = getelementptr inbounds i32, ptr %ar, i64 %mul
   %add = add nsw i64 %i.02, %mul3
-  call void @llvm.memset.p0i8.i64(i8* align 4 %0, i8 0, i64 %add, i1 false)
+  call void @llvm.memset.p0.i64(ptr align 4 %add.ptr, i8 0, i64 %add, i1 false)
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body
@@ -96,7 +94,7 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 ;     memset(arr, 0, m * sizeof(int));
 ;   }
 ; }
-define void @MemsetSize_Stride_Mismatch(i32* %ar, i32 %n, i32 %m) {
+define void @MemsetSize_Stride_Mismatch(ptr %ar, i32 %n, i32 %m) {
 ; CHECK-LABEL: @MemsetSize_Stride_Mismatch(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[N:%.*]] to i64
@@ -109,11 +107,10 @@ define void @MemsetSize_Stride_Mismatch(i32* %ar, i32 %n, i32 %m) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_02:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, i32* [[AR:%.*]], i64 [[I_02]]
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[AR:%.*]], i64 [[I_02]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[I_02]], [[CONV1]]
-; CHECK-NEXT:    [[ADD_PTR2:%.*]] = getelementptr inbounds i32, i32* [[ADD_PTR]], i64 [[MUL]]
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[ADD_PTR2]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 4 [[TMP0]], i8 0, i64 [[MUL4]], i1 false)
+; CHECK-NEXT:    [[ADD_PTR2:%.*]] = getelementptr inbounds i32, ptr [[ADD_PTR]], i64 [[MUL]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ADD_PTR2]], i8 0, i64 [[MUL4]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_02]], 1
@@ -137,11 +134,10 @@ for.body.lr.ph:                                   ; preds = %entry
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.inc
   %i.02 = phi i64 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
-  %add.ptr = getelementptr inbounds i32, i32* %ar, i64 %i.02
+  %add.ptr = getelementptr inbounds i32, ptr %ar, i64 %i.02
   %mul = mul nsw i64 %i.02, %conv1
-  %add.ptr2 = getelementptr inbounds i32, i32* %add.ptr, i64 %mul
-  %0 = bitcast i32* %add.ptr2 to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 4 %0, i8 0, i64 %mul4, i1 false)
+  %add.ptr2 = getelementptr inbounds i32, ptr %add.ptr, i64 %mul
+  call void @llvm.memset.p0.i64(ptr align 4 %add.ptr2, i8 0, i64 %mul4, i1 false)
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body
@@ -156,7 +152,7 @@ for.end:                                          ; preds = %for.cond.for.end_cr
   ret void
 }
 
-define void @NonZeroAddressSpace(i32 addrspace(2)* nocapture %ar, i64 %n, i64 %m) {
+define void @NonZeroAddressSpace(ptr addrspace(2) nocapture %ar, i64 %n, i64 %m) {
 ; CHECK-LABEL: @NonZeroAddressSpace(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[M:%.*]], 2
@@ -164,10 +160,9 @@ define void @NonZeroAddressSpace(i32 addrspace(2)* nocapture %ar, i64 %n, i64 %m
 ; CHECK:       for.cond1.preheader:
 ; CHECK-NEXT:    [[I_017:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC5:%.*]], [[FOR_INC4:%.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[M]], [[I_017]]
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i32, i32 addrspace(2)* [[AR:%.*]], i64 [[TMP1]]
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = bitcast i32 addrspace(2)* [[SCEVGEP]] to i8 addrspace(2)*
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i32, ptr addrspace(2) [[AR:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[I_017]], [[M]]
-; CHECK-NEXT:    call void @llvm.memset.p2i8.i64(i8 addrspace(2)* align 4 [[SCEVGEP1]], i8 0, i64 [[TMP0]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p2.i64(ptr addrspace(2) align 4 [[SCEVGEP]], i8 0, i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_INC4]]
 ; CHECK:       for.inc4:
 ; CHECK-NEXT:    [[INC5]] = add nuw nsw i64 [[I_017]], 1
@@ -183,10 +178,9 @@ entry:
 for.cond1.preheader:                              ; preds = %for.inc4, %entry
   %i.017 = phi i64 [ 0, %entry ], [ %inc5, %for.inc4 ]
   %1 = mul i64 %m, %i.017
-  %scevgep = getelementptr i32, i32 addrspace(2)* %ar, i64 %1
-  %scevgep1 = bitcast i32 addrspace(2)* %scevgep to i8 addrspace(2)*
+  %scevgep = getelementptr i32, ptr addrspace(2) %ar, i64 %1
   %mul = mul nsw i64 %i.017, %m
-  call void @llvm.memset.p2i8.i64(i8 addrspace(2)* align 4 %scevgep1, i8 0, i64 %0, i1 false)
+  call void @llvm.memset.p2.i64(ptr addrspace(2) align 4 %scevgep, i8 0, i64 %0, i1 false)
   br label %for.inc4
 
 for.inc4:                                         ; preds = %for.cond1.preheader
@@ -207,7 +201,7 @@ for.end6:                                         ; preds = %for.inc4
 ; 	  ar = ar + i;
 ;   }
 ; }
-define void @NonAffinePointer(i32* %ar, i32 %n, i32 %m) {
+define void @NonAffinePointer(ptr %ar, i32 %n, i32 %m) {
 ; CHECK-LABEL: @NonAffinePointer(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[N:%.*]] to i64
@@ -219,13 +213,12 @@ define void @NonAffinePointer(i32* %ar, i32 %n, i32 %m) {
 ; CHECK-NEXT:    [[MUL3:%.*]] = mul i64 [[CONV2]], 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[AR_ADDR_03:%.*]] = phi i32* [ [[AR:%.*]], [[FOR_BODY_LR_PH]] ], [ [[ADD_PTR4:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[AR_ADDR_03:%.*]] = phi ptr [ [[AR:%.*]], [[FOR_BODY_LR_PH]] ], [ [[ADD_PTR4:%.*]], [[FOR_INC:%.*]] ]
 ; CHECK-NEXT:    [[I_02:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[FOR_INC]] ]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[I_02]], [[CONV1]]
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, i32* [[AR_ADDR_03]], i64 [[MUL]]
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[ADD_PTR]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 4 [[TMP0]], i8 0, i64 [[MUL3]], i1 false)
-; CHECK-NEXT:    [[ADD_PTR4]] = getelementptr inbounds i32, i32* [[AR_ADDR_03]], i64 [[I_02]]
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[AR_ADDR_03]], i64 [[MUL]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ADD_PTR]], i8 0, i64 [[MUL3]], i1 false)
+; CHECK-NEXT:    [[ADD_PTR4]] = getelementptr inbounds i32, ptr [[AR_ADDR_03]], i64 [[I_02]]
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_02]], 1
@@ -248,13 +241,12 @@ for.body.lr.ph:                                   ; preds = %entry
   br label %for.body
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.inc
-  %ar.addr.03 = phi i32* [ %ar, %for.body.lr.ph ], [ %add.ptr4, %for.inc ]
+  %ar.addr.03 = phi ptr [ %ar, %for.body.lr.ph ], [ %add.ptr4, %for.inc ]
   %i.02 = phi i64 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
   %mul = mul nsw i64 %i.02, %conv1
-  %add.ptr = getelementptr inbounds i32, i32* %ar.addr.03, i64 %mul
-  %0 = bitcast i32* %add.ptr to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 4 %0, i8 0, i64 %mul3, i1 false)
-  %add.ptr4 = getelementptr inbounds i32, i32* %ar.addr.03, i64 %i.02
+  %add.ptr = getelementptr inbounds i32, ptr %ar.addr.03, i64 %mul
+  call void @llvm.memset.p0.i64(ptr align 4 %add.ptr, i8 0, i64 %mul3, i1 false)
+  %add.ptr4 = getelementptr inbounds i32, ptr %ar.addr.03, i64 %i.02
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body
@@ -269,5 +261,5 @@ for.end:                                          ; preds = %for.cond.for.end_cr
   ret void
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg)
-declare void @llvm.memset.p2i8.i64(i8 addrspace(2)* nocapture writeonly, i8, i64, i1 immarg)
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
+declare void @llvm.memset.p2.i64(ptr addrspace(2) nocapture writeonly, i8, i64, i1 immarg)

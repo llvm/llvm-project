@@ -1,4 +1,4 @@
-; RUN: opt -transform-warning -disable-output < %s 2>&1 | FileCheck -allow-empty %s
+; RUN: opt -passes=transform-warning -disable-output < %s 2>&1 | FileCheck -allow-empty %s
 ;
 ; llvm.org/PR40546
 ; Do not warn about about leftover llvm.loop.vectorize.enable for already

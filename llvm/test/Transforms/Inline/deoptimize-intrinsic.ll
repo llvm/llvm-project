@@ -1,14 +1,14 @@
-; RUN: opt -S -always-inline < %s | FileCheck %s
+; RUN: opt -S -passes=always-inline < %s | FileCheck %s
 
 declare i8 @llvm.experimental.deoptimize.i8(...)
 declare i32 @llvm.experimental.deoptimize.i32(...)
 
-define i8 @callee(i1* %c) alwaysinline {
-  %c0 = load volatile i1, i1* %c
+define i8 @callee(ptr %c) alwaysinline {
+  %c0 = load volatile i1, ptr %c
   br i1 %c0, label %left, label %right
 
 left:
-  %c1 = load volatile i1, i1* %c
+  %c1 = load volatile i1, ptr %c
   br i1 %c1, label %lleft, label %lright
 
 lleft:
@@ -19,11 +19,11 @@ lright:
   ret i8 10
 
 right:
-  %c2 = load volatile i1, i1* %c
+  %c2 = load volatile i1, ptr %c
   br i1 %c2, label %rleft, label %rright
 
 rleft:
-  %v1 = call i8(...) @llvm.experimental.deoptimize.i8(i32 1, i32 300, float 500.0, <2 x i32*> undef) [ "deopt"(i32 1) ]
+  %v1 = call i8(...) @llvm.experimental.deoptimize.i8(i32 1, i32 300, float 500.0, <2 x ptr> undef) [ "deopt"(i32 1) ]
   ret i8 %v1
 
 rright:
@@ -31,11 +31,11 @@ rright:
   ret i8 %v2
 }
 
-define void @caller_0(i1* %c, i8* %ptr) {
+define void @caller_0(ptr %c, ptr %ptr) {
 ; CHECK-LABEL: @caller_0(
 entry:
-  %v = call i8 @callee(i1* %c)  [ "deopt"(i32 2) ]
-  store i8 %v, i8* %ptr
+  %v = call i8 @callee(ptr %c)  [ "deopt"(i32 2) ]
+  store i8 %v, ptr %ptr
   ret void
 
 ; CHECK: lleft.i:
@@ -43,7 +43,7 @@ entry:
 ; CHECK-NEXT:  ret void
 
 ; CHECK: rleft.i:
-; CHECK-NEXT:  call void (...) @llvm.experimental.deoptimize.isVoid(i32 1, i32 300, float 5.000000e+02, <2 x i32*> undef) [ "deopt"(i32 2, i32 1) ]
+; CHECK-NEXT:  call void (...) @llvm.experimental.deoptimize.isVoid(i32 1, i32 300, float 5.000000e+02, <2 x ptr> undef) [ "deopt"(i32 2, i32 1) ]
 ; CHECK-NEXT:  ret void
 
 ; CHECK: rright.i:
@@ -51,15 +51,15 @@ entry:
 ; CHECK-NEXT:  ret void
 
 ; CHECK: callee.exit:
-; CHECK-NEXT:  store i8 10, i8* %ptr
+; CHECK-NEXT:  store i8 10, ptr %ptr
 ; CHECK-NEXT:  ret void
 
 }
 
-define i32 @caller_1(i1* %c, i8* %ptr) personality i8 3 {
+define i32 @caller_1(ptr %c, ptr %ptr) personality i8 3 {
 ; CHECK-LABEL: @caller_1(
 entry:
-  %v = invoke i8 @callee(i1* %c)  [ "deopt"(i32 3) ] to label %normal
+  %v = invoke i8 @callee(ptr %c)  [ "deopt"(i32 3) ] to label %normal
        unwind label %unwind
 
 ; CHECK: lleft.i:
@@ -67,7 +67,7 @@ entry:
 ; CHECK-NEXT:  ret i32 %0
 
 ; CHECK: rleft.i:
-; CHECK-NEXT:  %1 = call i32 (...) @llvm.experimental.deoptimize.i32(i32 1, i32 300, float 5.000000e+02, <2 x i32*> undef) [ "deopt"(i32 3, i32 1) ]
+; CHECK-NEXT:  %1 = call i32 (...) @llvm.experimental.deoptimize.i32(i32 1, i32 300, float 5.000000e+02, <2 x ptr> undef) [ "deopt"(i32 3, i32 1) ]
 ; CHECK-NEXT:  ret i32 %1
 
 ; CHECK: rright.i:
@@ -78,7 +78,7 @@ entry:
 ; CHECK-NEXT:  br label %normal
 
 ; CHECK: normal:
-; CHECK-NEXT:  store i8 10, i8* %ptr
+; CHECK-NEXT:  store i8 10, ptr %ptr
 ; CHECK-NEXT:  ret i32 42
 
 unwind:
@@ -86,19 +86,19 @@ unwind:
   ret i32 43
 
 normal:
-  store i8 %v, i8* %ptr
+  store i8 %v, ptr %ptr
   ret i32 42
 }
 
 define i8 @callee_with_alloca() alwaysinline {
   %t = alloca i8
-  %v0 = call i8(...) @llvm.experimental.deoptimize.i8(i32 1) [ "deopt"(i8* %t) ]
+  %v0 = call i8(...) @llvm.experimental.deoptimize.i8(i32 1) [ "deopt"(ptr %t) ]
   ret i8 %v0
 }
 
 define void @caller_with_lifetime() {
 ; CHECK-LABEL: @caller_with_lifetime(
-; CHECK:  call void (...) @llvm.experimental.deoptimize.isVoid(i32 1) [ "deopt"(i8* %t.i) ]
+; CHECK:  call void (...) @llvm.experimental.deoptimize.isVoid(i32 1) [ "deopt"(ptr %t.i) ]
 ; CHECK-NEXT:  ret void
 
 entry:
@@ -108,13 +108,13 @@ entry:
 
 define i8 @callee_with_dynamic_alloca(i32 %n) alwaysinline {
   %p = alloca i8, i32 %n
-  %v = call i8(...) @llvm.experimental.deoptimize.i8(i32 1) [ "deopt"(i8* %p) ]
+  %v = call i8(...) @llvm.experimental.deoptimize.i8(i32 1) [ "deopt"(ptr %p) ]
   ret i8 %v
 }
 
 define void @caller_with_stacksaverestore(i32 %n) {
 ; CHECK-LABEL: void @caller_with_stacksaverestore(
-; CHECK:  call void (...) @llvm.experimental.deoptimize.isVoid(i32 1) [ "deopt"(i8* %p.i) ]
+; CHECK:  call void (...) @llvm.experimental.deoptimize.isVoid(i32 1) [ "deopt"(ptr %p.i) ]
 ; CHECK-NEXT:  ret void
 
   %p = alloca i32, i32 %n

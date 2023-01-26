@@ -114,8 +114,7 @@ enum : long {
   long_enum_val = 10000
 };
 
-enum : long x; // expected-error{{unnamed enumeration must be a definition}} \
-// expected-warning{{declaration does not declare anything}}
+enum : long x; // expected-error{{unnamed enumeration must be a definition}}
 
 void PR9333() {
   enum class scoped_enum { yes, no, maybe };

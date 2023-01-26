@@ -74,6 +74,16 @@ void test() {
   f1();
 }
 
+// Validate that the invalid function doesn't stay overloadable. 
+int __attribute__((overloadable)) invalid(); // expected-error{{'overloadable' function 'invalid' must have a prototype}}
+int __attribute__((overloadable)) invalid(int); // expected-error{{redeclaration of 'invalid' must not have the 'overloadable' attribute}}
+                                                // expected-note@-2{{previous unmarked overload of function is here}}
+void use_invalid(void) {
+  invalid(); // expected-error{{too few arguments to function call, expected 1, have 0}}
+             // expected-note@-4{{'invalid' declared here}}
+  invalid(1);
+}
+
 void before_local_1(int) __attribute__((overloadable));
 void before_local_2(int); // expected-note {{here}}
 void before_local_3(int) __attribute__((overloadable));
@@ -112,7 +122,7 @@ void fn_type_conversions() {
   void (*ambiguous)(int *) = &foo; // expected-error{{initializing 'void (*)(int *)' with an expression of incompatible type '<overloaded function type>'}} expected-note@-4{{candidate function}} expected-note@-3{{candidate function}}
   void *vp_ambiguous = &foo; // expected-error{{initializing 'void *' with an expression of incompatible type '<overloaded function type>'}} expected-note@-5{{candidate function}} expected-note@-4{{candidate function}}
 
-  void (*specific1)(int *) = (void (*)(void *))&foo; // expected-warning{{incompatible function pointer types initializing 'void (*)(int *)' with an expression of type 'void (*)(void *)'}}
+  void (*specific1)(int *) = (void (*)(void *))&foo; // expected-error{{incompatible function pointer types initializing 'void (*)(int *)' with an expression of type 'void (*)(void *)'}}
   void *specific2 = (void (*)(void *))&foo;
 
   void disabled(void *c) __attribute__((overloadable, enable_if(0, "")));
@@ -120,8 +130,8 @@ void fn_type_conversions() {
   void disabled(char *c) __attribute__((overloadable, enable_if(1, "The function name lies.")));
   // To be clear, these should all point to the last overload of 'disabled'
   void (*dptr1)(char *c) = &disabled;
-  void (*dptr2)(void *c) = &disabled; // expected-warning{{incompatible function pointer types initializing 'void (*)(void *)' with an expression of type '<overloaded function type>'}} expected-note@-5{{candidate function made ineligible by enable_if}} expected-note@-4{{candidate function made ineligible by enable_if}} expected-note@-3{{candidate function has type mismatch at 1st parameter (expected 'void *' but has 'char *')}}
-  void (*dptr3)(int *c) = &disabled; // expected-warning{{incompatible function pointer types initializing 'void (*)(int *)' with an expression of type '<overloaded function type>'}} expected-note@-6{{candidate function made ineligible by enable_if}} expected-note@-5{{candidate function made ineligible by enable_if}} expected-note@-4{{candidate function has type mismatch at 1st parameter (expected 'int *' but has 'char *')}}
+  void (*dptr2)(void *c) = &disabled; // expected-error{{incompatible function pointer types initializing 'void (*)(void *)' with an expression of type '<overloaded function type>'}} expected-note@-5{{candidate function made ineligible by enable_if}} expected-note@-4{{candidate function made ineligible by enable_if}} expected-note@-3{{candidate function has type mismatch at 1st parameter (expected 'void *' but has 'char *')}}
+  void (*dptr3)(int *c) = &disabled; // expected-error{{incompatible function pointer types initializing 'void (*)(int *)' with an expression of type '<overloaded function type>'}} expected-note@-6{{candidate function made ineligible by enable_if}} expected-note@-5{{candidate function made ineligible by enable_if}} expected-note@-4{{candidate function has type mismatch at 1st parameter (expected 'int *' but has 'char *')}}
 
   void *specific_disabled = &disabled;
 }

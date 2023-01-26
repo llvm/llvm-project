@@ -93,10 +93,10 @@ class VSCodeTestCaseBase(TestBase):
                         return
         self.assertTrue(False, "breakpoint not hit")
 
-    def verify_exception_breakpoint_hit(self, filter_label):
+    def verify_stop_exception_info(self, expected_description):
         '''Wait for the process we are debugging to stop, and verify the stop
            reason is 'exception' and that the description matches
-           'filter_label'
+           'expected_description'
         '''
         stopped_events = self.vscode.wait_for_stopped()
         for stopped_event in stopped_events:
@@ -109,7 +109,7 @@ class VSCodeTestCaseBase(TestBase):
                 if 'description' not in body:
                     continue
                 description = body['description']
-                if filter_label == description:
+                if expected_description == description:
                     return True
         return False
 
@@ -236,7 +236,7 @@ class VSCodeTestCaseBase(TestBase):
 
     def continue_to_exception_breakpoint(self, filter_label):
         self.vscode.request_continue()
-        self.assertTrue(self.verify_exception_breakpoint_hit(filter_label),
+        self.assertTrue(self.verify_stop_exception_info(filter_label),
                         'verify we got "%s"' % (filter_label))
 
     def continue_to_exit(self, exitCode=0):
@@ -253,7 +253,7 @@ class VSCodeTestCaseBase(TestBase):
                initCommands=None, preRunCommands=None, stopCommands=None,
                exitCommands=None, attachCommands=None, coreFile=None,
                disconnectAutomatically=True, terminateCommands=None,
-               postRunCommands=None, sourceMap=None):
+               postRunCommands=None, sourceMap=None, sourceInitFile=False):
         '''Build the default Makefile target, create the VSCode debug adaptor,
            and attach to the process.
         '''
@@ -267,7 +267,7 @@ class VSCodeTestCaseBase(TestBase):
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
         # Initialize and launch the program
-        self.vscode.request_initialize()
+        self.vscode.request_initialize(sourceInitFile)
         response = self.vscode.request_attach(
             program=program, pid=pid, waitFor=waitFor, trace=trace,
             initCommands=initCommands, preRunCommands=preRunCommands,
@@ -284,7 +284,7 @@ class VSCodeTestCaseBase(TestBase):
                disableSTDIO=False, shellExpandArguments=False,
                trace=False, initCommands=None, preRunCommands=None,
                stopCommands=None, exitCommands=None, terminateCommands=None,
-               sourcePath=None, debuggerRoot=None, launchCommands=None,
+               sourcePath=None, debuggerRoot=None, sourceInitFile=False, launchCommands=None,
                sourceMap=None, disconnectAutomatically=True, runInTerminal=False,
                expectFailure=False, postRunCommands=None):
         '''Sending launch request to vscode
@@ -301,7 +301,7 @@ class VSCodeTestCaseBase(TestBase):
         self.addTearDownHook(cleanup)
 
         # Initialize and launch the program
-        self.vscode.request_initialize()
+        self.vscode.request_initialize(sourceInitFile)
         response = self.vscode.request_launch(
             program,
             args=args,
@@ -344,7 +344,7 @@ class VSCodeTestCaseBase(TestBase):
                          trace=False, initCommands=None, preRunCommands=None,
                          stopCommands=None, exitCommands=None,
                          terminateCommands=None, sourcePath=None,
-                         debuggerRoot=None, runInTerminal=False,
+                         debuggerRoot=None, sourceInitFile=False, runInTerminal=False,
                          disconnectAutomatically=True, postRunCommands=None,
                          lldbVSCodeEnv=None):
         '''Build the default Makefile target, create the VSCode debug adaptor,
@@ -356,6 +356,7 @@ class VSCodeTestCaseBase(TestBase):
         return self.launch(program, args, cwd, env, stopOnEntry, disableASLR,
                     disableSTDIO, shellExpandArguments, trace,
                     initCommands, preRunCommands, stopCommands, exitCommands,
-                    terminateCommands, sourcePath, debuggerRoot, runInTerminal=runInTerminal,
+                    terminateCommands, sourcePath, debuggerRoot, sourceInitFile,
+                    runInTerminal=runInTerminal,
                     disconnectAutomatically=disconnectAutomatically,
                     postRunCommands=postRunCommands)

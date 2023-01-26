@@ -9,26 +9,26 @@
 
   %struct.A = type { i32, i32, i32 }
 
-  @c = common local_unnamed_addr global %struct.A* null, align 8
+  @c = common local_unnamed_addr global ptr null, align 8
   @a = common local_unnamed_addr global i32 0, align 4
   @d = common local_unnamed_addr global i32 0, align 4
   @b = common local_unnamed_addr global i32 0, align 4
 
   define i32 @fn1() local_unnamed_addr !dbg !8 {
-    %1 = load %struct.A*, %struct.A** @c, align 8, !dbg !13
-    %2 = load i32, i32* @a, align 4, !dbg !13
+    %1 = load ptr, ptr @c, align 8, !dbg !13
+    %2 = load i32, ptr @a, align 4, !dbg !13
     %3 = sext i32 %2 to i64, !dbg !13
-    %4 = getelementptr inbounds %struct.A, %struct.A* %1, i64 %3, !dbg !13
-    %5 = ptrtoint %struct.A* %4 to i64, !dbg !13
+    %4 = getelementptr inbounds %struct.A, ptr %1, i64 %3, !dbg !13
+    %5 = ptrtoint ptr %4 to i64, !dbg !13
     %6 = trunc i64 %5 to i32, !dbg !13
-    store i32 %6, i32* @d, align 4, !dbg !13
-    %7 = getelementptr inbounds %struct.A, %struct.A* %1, i64 %3, i32 2, !dbg !14
-    tail call void @llvm.dbg.value(metadata i32* %7, i64 0, metadata !11, metadata !DIExpression()), !dbg !15
+    store i32 %6, ptr @d, align 4, !dbg !13
+    %7 = getelementptr inbounds %struct.A, ptr %1, i64 %3, i32 2, !dbg !14
+    tail call void @llvm.dbg.value(metadata ptr %7, i64 0, metadata !11, metadata !DIExpression()), !dbg !15
     br label %8, !dbg !16
 
   ; <label>:8:                                      ; preds = %8, %0
-    %9 = load i32, i32* %7, align 4, !dbg !17
-    store i32 %9, i32* @d, align 4, !dbg !17
+    %9 = load i32, ptr %7, align 4, !dbg !17
+    store i32 %9, ptr @d, align 4, !dbg !17
     br label %8, !dbg !18
   }
 

@@ -1,6 +1,6 @@
 # RUN: llvm-mc -triple bpfel -filetype=obj -o %t %s
-# RUN: llvm-objdump -d -r %t | FileCheck %s
-# RUN: llvm-objdump --mattr=+alu32 -d -r %t | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d -r %t | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex --mattr=+alu32 -d -r %t | FileCheck %s
 
 // ======== BPF_ALU Class ========
   w1 = -w1    // BPF_NEG

@@ -24,7 +24,7 @@
 ; #11 0x0000000002e12f41 (anonymous namespace)::DAGCombiner::visit(llvm::SDNode*) DAGCombiner.cpp:0:0
 ; #12 0x0000000002e14fe5 (anonymous namespace)::DAGCombiner::combine(llvm::SDNode*) DAGCombiner.cpp:0:0
 
-define i64 @g({ i64, i64 }* %p) {
+define i64 @g(ptr %p) {
 ; CHECK-LABEL: g:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr x8, [x0, #8]
@@ -32,11 +32,10 @@ define i64 @g({ i64, i64 }* %p) {
 ; CHECK-NEXT:    add x8, x9, x8
 ; CHECK-NEXT:    sub x0, x8, x8
 ; CHECK-NEXT:    ret
-  %vecp = bitcast { i64, i64 }* %p to <2 x i64>*
-  %vec = load <2 x i64>, <2 x i64>* %vecp, align 1
+  %vec = load <2 x i64>, ptr %p, align 1
   %elt = extractelement <2 x i64> %vec, i32 1
-  %scalarp = getelementptr inbounds { i64, i64 }, { i64, i64 }* %p, i32 0, i32 1
-  %scalar = load i64, i64* %scalarp, align 1
+  %scalarp = getelementptr inbounds { i64, i64 }, ptr %p, i32 0, i32 1
+  %scalar = load i64, ptr %scalarp, align 1
   %add.i62 = add i64 %elt, %scalar
   %add.i66 = add i64 %add.i62, %elt
   %add.i72 = add i64 %scalar, %scalar

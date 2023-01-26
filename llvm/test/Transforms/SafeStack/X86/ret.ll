@@ -12,6 +12,6 @@ entry:
   ; CHECK: __safestack_unsafe_stack_ptr
   ; CHECK: ret i64
   %x = alloca [100 x i32], align 16
-  %0 = ptrtoint [100 x i32]* %x to i64
+  %0 = ptrtoint ptr %x to i64
   ret i64 %0
 }

@@ -9,7 +9,7 @@ declare <2 x double> @llvm.experimental.constrained.fpext.v2f64.v2f32(<2 x float
 declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata)
 
 ; Test cases where both elements of a v2f64 are converted to f32s.
-define void @f1(<2 x double> %val, <2 x float> *%ptr) #0 {
+define void @f1(<2 x double> %val, ptr %ptr) #0 {
 ; CHECK-LABEL: f1:
 ; CHECK: vledb {{%v[0-9]+}}, %v24, 0, 0
 ; CHECK: br %r14
@@ -17,7 +17,7 @@ define void @f1(<2 x double> %val, <2 x float> *%ptr) #0 {
                                                <2 x double> %val,
                                                metadata !"round.dynamic",
                                                metadata !"fpexcept.strict") #0
-  store <2 x float> %res, <2 x float> *%ptr
+  store <2 x float> %res, ptr %ptr
   ret void
 }
 

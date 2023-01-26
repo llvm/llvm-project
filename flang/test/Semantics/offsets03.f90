@@ -60,4 +60,8 @@ module me
   integer :: i5, j5, l5(10)
   equivalence(l5(1), i5)
   common /common7/ j5, i5   ! CHECK: common7 size=44 offset=0: CommonBlockDetails alignment=4:
+
+  real :: a1, a2, a3(2)
+  equivalence(a1,a3(1)),(a2,a3(2))
+  common /common8/ a1, a2   ! CHECK: common8 size=8 offset=0: CommonBlockDetails alignment=4:
 end

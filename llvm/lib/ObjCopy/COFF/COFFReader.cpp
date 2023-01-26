@@ -83,9 +83,9 @@ Error COFFReader::readSections(Object &Obj) const {
 
 Error COFFReader::readSymbols(Object &Obj, bool IsBigObj) const {
   std::vector<Symbol> Symbols;
-  Symbols.reserve(COFFObj.getRawNumberOfSymbols());
+  Symbols.reserve(COFFObj.getNumberOfSymbols());
   ArrayRef<Section> Sections = Obj.getSections();
-  for (uint32_t I = 0, E = COFFObj.getRawNumberOfSymbols(); I < E;) {
+  for (uint32_t I = 0, E = COFFObj.getNumberOfSymbols(); I < E;) {
     Expected<COFFSymbolRef> SymOrErr = COFFObj.getSymbol(I);
     if (!SymOrErr)
       return SymOrErr.takeError();

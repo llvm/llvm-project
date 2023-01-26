@@ -18,17 +18,17 @@ entry:
   ret void
 }
 
-define hidden void @foo_h(i32* %ip) {
+define hidden void @foo_h(ptr %ip) {
 entry:
   ret void
 }
 
-define dllexport void @foo_e(i32* %ip) {
+define dllexport void @foo_e(ptr %ip) {
 entry:
   ret void
 }
 
-define protected void @foo_protected(i32* %ip) {
+define protected void @foo_protected(ptr %ip) {
 entry:
   ret void
 }
@@ -43,21 +43,21 @@ entry:
   ret void
 }
 
-@foo_p = global void ()* @zoo_weak_extern_h, align 4
+@foo_p = global ptr @zoo_weak_extern_h, align 4
 declare extern_weak hidden void @zoo_weak_extern_h()
 declare extern_weak dllexport void @zoo_weak_extern_e()
 
 define i32 @main() {
 entry:
-  %call1= call i32 @bar_h(i32* @b_h)
+  %call1= call i32 @bar_h(ptr @b_h)
   call void @foo_weak_h()
-  %0 = load void ()*, void ()** @foo_p, align 4
+  %0 = load ptr, ptr @foo_p, align 4
   call void %0()
   ret i32 0
 }
 
-declare hidden i32 @bar_h(i32*)
-declare dllexport i32 @bar_e(i32*)
+declare hidden i32 @bar_h(ptr)
+declare dllexport i32 @bar_e(ptr)
 
 ; CHECK:        .globl  foo[DS]{{[[:space:]]*([#].*)?$}}
 ; CHECK:        .globl  .foo{{[[:space:]]*([#].*)?$}}

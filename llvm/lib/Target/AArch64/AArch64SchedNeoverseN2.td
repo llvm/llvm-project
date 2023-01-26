@@ -18,7 +18,8 @@ def NeoverseN2Model : SchedMachineModel {
   let LoopMicroOpBufferSize =  16; // NOTE: Copied from Cortex-A57.
   let CompleteModel         =   1;
 
-  list<Predicate> UnsupportedFeatures = SMEUnsupported.F;
+  list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F,
+                                                    [HasSVE2p1]);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2048,7 +2049,7 @@ def : InstRW<[N2Write_4cyc_1V], (instrs BFDOT_ZZI, BFDOT_ZZZ)>;
 def : InstRW<[N2Write_5cyc_1V], (instrs BFMMLA_ZZZ)>;
 
 // Multiply accumulate long
-def : InstRW<[N2Write_4cyc_1V], (instregex "^BFMLAL[BT]_ZZ[ZI]$")>;
+def : InstRW<[N2Write_4cyc_1V], (instregex "^BFMLAL[BT]_ZZZ(I)?$")>;
 
 // SVE Load instructions
 // -----------------------------------------------------------------------------

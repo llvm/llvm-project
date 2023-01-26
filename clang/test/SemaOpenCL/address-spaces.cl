@@ -231,12 +231,12 @@ void nested(__global int *g, __global int * __private *gg, __local int *l, __loc
 }
 #endif
 
-__private int func_return_priv(void);       //expected-error {{return value cannot be qualified with address space}}
-__global int func_return_global(void);      //expected-error {{return value cannot be qualified with address space}}
-__local int func_return_local(void);        //expected-error {{return value cannot be qualified with address space}}
-__constant int func_return_constant(void);  //expected-error {{return value cannot be qualified with address space}}
+__private int func_return_priv(void);       //expected-error {{return type cannot be qualified with address space}}
+__global int func_return_global(void);      //expected-error {{return type cannot be qualified with address space}}
+__local int func_return_local(void);        //expected-error {{return type cannot be qualified with address space}}
+__constant int func_return_constant(void);  //expected-error {{return type cannot be qualified with address space}}
 #if __OPENCL_C_VERSION__ >= 200
-__generic int func_return_generic(void);    //expected-error {{return value cannot be qualified with address space}}
+__generic int func_return_generic(void);    //expected-error {{return type cannot be qualified with address space}}
 #endif
 
 void func_multiple_addr(void) {

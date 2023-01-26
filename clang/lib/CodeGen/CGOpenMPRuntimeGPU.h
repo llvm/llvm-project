@@ -42,8 +42,6 @@ private:
 
   ExecutionMode getExecutionMode() const;
 
-  bool requiresFullRuntime() const { return RequiresFullRuntime; }
-
   /// Get barrier to synchronize all threads in a block.
   void syncCTAThreads(CodeGenFunction &CGF);
 
@@ -65,12 +63,6 @@ private:
   //
   // Base class overrides.
   //
-
-  /// Creates offloading entry for the provided entry ID \a ID,
-  /// address \a Addr, size \a Size, and flags \a Flags.
-  void createOffloadEntry(llvm::Constant *ID, llvm::Constant *Addr,
-                          uint64_t Size, int32_t Flags,
-                          llvm::GlobalValue::LinkageTypes Linkage) override;
 
   /// Emit outlined function specialized for the Fork-Join
   /// programming model for applicable target directives on the NVPTX device.
@@ -161,15 +153,11 @@ protected:
   /// Constant for NVPTX for better optimization.
   bool isDefaultLocationConstant() const override { return true; }
 
-  /// Returns additional flags that can be stored in reserved_2 field of the
-  /// default location.
-  /// For NVPTX target contains data about SPMD/Non-SPMD execution mode +
-  /// Full/Lightweight runtime mode. Used for better optimization.
-  unsigned getDefaultLocationReserved2Flags() const override;
-
 public:
   explicit CGOpenMPRuntimeGPU(CodeGenModule &CGM);
   void clear() override;
+
+  bool isTargetCodegen() const override { return true; };
 
   /// Declare generalized virtual functions which need to be defined
   /// by all specializations of OpenMPGPURuntime Targets like AMDGCN
@@ -330,7 +318,7 @@ public:
   /// translating these arguments to correct target-specific arguments.
   void emitOutlinedFunctionCall(
       CodeGenFunction &CGF, SourceLocation Loc, llvm::FunctionCallee OutlinedFn,
-      ArrayRef<llvm::Value *> Args = llvm::None) const override;
+      ArrayRef<llvm::Value *> Args = std::nullopt) const override;
 
   /// Emits OpenMP-specific function prolog.
   /// Required for device constructs.
@@ -386,17 +374,9 @@ private:
   /// to emit optimized code.
   ExecutionMode CurrentExecutionMode = EM_Unknown;
 
-  /// Check if the full runtime is required (default - yes).
-  bool RequiresFullRuntime = true;
-
-  /// true if we're emitting the code for the target region and next parallel
-  /// region is L0 for sure.
-  bool IsInTargetMasterThreadRegion = false;
   /// true if currently emitting code for target/teams/distribute region, false
   /// - otherwise.
   bool IsInTTDRegion = false;
-  /// true if we're definitely in the parallel region.
-  bool IsInParallelRegion = false;
 
   /// Map between an outlined function and its wrapper.
   llvm::DenseMap<llvm::Function *, llvm::Function *> WrapperFunctionsMap;
@@ -421,12 +401,10 @@ private:
   using EscapedParamsTy = llvm::SmallPtrSet<const Decl *, 4>;
   struct FunctionData {
     DeclToAddrMapTy LocalVarData;
-    llvm::Optional<DeclToAddrMapTy> SecondaryLocalVarData = llvm::None;
     EscapedParamsTy EscapedParameters;
     llvm::SmallVector<const ValueDecl*, 4> EscapedVariableLengthDecls;
     llvm::SmallVector<std::pair<llvm::Value *, llvm::Value *>, 4>
         EscapedVariableLengthDeclsAddrs;
-    llvm::Value *IsInSPMDModeFlag = nullptr;
     std::unique_ptr<CodeGenFunction::OMPMapVars> MappedParams;
   };
   /// Maps the function to the list of the globalized variables with their
@@ -438,9 +416,6 @@ private:
   /// reductions.
   /// All the records are gathered into a union `union.type` is created.
   llvm::SmallVector<const RecordDecl *, 4> TeamsReductions;
-  /// Shared pointer for the global memory in the global memory buffer used for
-  /// the given kernel.
-  llvm::GlobalVariable *KernelStaticGlobalized = nullptr;
   /// Pair of the Non-SPMD team and all reductions variables in this team
   /// region.
   std::pair<const Decl *, llvm::SmallVector<const ValueDecl *, 4>>

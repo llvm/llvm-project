@@ -117,7 +117,7 @@ bool OptimizePHIs::IsSingleValuePHICycle(MachineInstr *MI,
     // Skip over register-to-register moves.
     if (SrcMI && SrcMI->isCopy() && !SrcMI->getOperand(0).getSubReg() &&
         !SrcMI->getOperand(1).getSubReg() &&
-        Register::isVirtualRegister(SrcMI->getOperand(1).getReg())) {
+        SrcMI->getOperand(1).getReg().isVirtual()) {
       SrcReg = SrcMI->getOperand(1).getReg();
       SrcMI = MRI->getVRegDef(SrcReg);
     }
@@ -142,8 +142,7 @@ bool OptimizePHIs::IsSingleValuePHICycle(MachineInstr *MI,
 bool OptimizePHIs::IsDeadPHICycle(MachineInstr *MI, InstrSet &PHIsInCycle) {
   assert(MI->isPHI() && "IsDeadPHICycle expects a PHI instruction");
   Register DstReg = MI->getOperand(0).getReg();
-  assert(Register::isVirtualRegister(DstReg) &&
-         "PHI destination is not a virtual register");
+  assert(DstReg.isVirtual() && "PHI destination is not a virtual register");
 
   // See if we already saw this register.
   if (!PHIsInCycle.insert(MI).second)

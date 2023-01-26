@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -loop-interchange -cache-line-size=64 -pass-remarks-missed='loop-interchange' -pass-remarks-output=%t -S \
+; RUN: opt < %s -passes=loop-interchange -cache-line-size=64 -pass-remarks-missed='loop-interchange' -pass-remarks-output=%t -S \
 ; RUN:     -verify-dom-info -verify-loop-info -verify-loop-lcssa 2>&1
 ; RUN: FileCheck --input-file=%t --check-prefix=REMARKS %s
 
@@ -7,7 +7,7 @@
 ; REMARKS-NEXT: Name:            Interchanged
 ; REMARKS-NEXT: Function:        pr48212
 
-define void @pr48212([5 x i32]* %filter) {
+define void @pr48212(ptr %filter) {
 entry:
   br label %L1
 
@@ -26,10 +26,10 @@ for.body3:                                        ; preds = %L2, %for.inc
   %temp.12 = phi i32 [ %temp.04, %L2 ], [ %add, %for.inc ]
   %k2.01 = phi i32 [ 0, %L2 ], [ %inc, %for.inc ]
   %idxprom = sext i32 %k2.01 to i64
-  %arrayidx = getelementptr inbounds [5 x i32], [5 x i32]* %filter, i64 %idxprom
+  %arrayidx = getelementptr inbounds [5 x i32], ptr %filter, i64 %idxprom
   %idxprom4 = sext i32 %k1.03 to i64
-  %arrayidx5 = getelementptr inbounds [5 x i32], [5 x i32]* %arrayidx, i64 0, i64 %idxprom4
-  %0 = load i32, i32* %arrayidx5
+  %arrayidx5 = getelementptr inbounds [5 x i32], ptr %arrayidx, i64 0, i64 %idxprom4
+  %0 = load i32, ptr %arrayidx5
   %add = add nsw i32 %temp.12, %0
   br label %for.inc
 

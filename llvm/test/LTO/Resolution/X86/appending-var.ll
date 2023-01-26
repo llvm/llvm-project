@@ -11,6 +11,6 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 %"foo.1" = type { i8, i8 }
-declare dso_local i32 @bar(%"foo.1"* nocapture readnone %this) local_unnamed_addr
+declare dso_local i32 @bar(ptr nocapture readnone %this) local_unnamed_addr
 
-@llvm.used = appending global [1 x i8*] [i8* bitcast (i32 (%"foo.1"*)* @bar to i8*)], section "llvm.metadata"
+@llvm.used = appending global [1 x ptr] [ptr @bar], section "llvm.metadata"

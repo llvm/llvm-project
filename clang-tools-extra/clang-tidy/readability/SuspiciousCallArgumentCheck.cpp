@@ -11,14 +11,13 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include <optional>
 #include <sstream>
 
 using namespace clang::ast_matchers;
 namespace optutils = clang::tidy::utils::options;
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 namespace {
 struct DefaultHeuristicConfiguration {
@@ -90,7 +89,7 @@ struct AllHeuristicsBoundsWellConfigured {
                                   1>::Value;
 };
 
-static_assert(AllHeuristicsBoundsWellConfigured::Value, "");
+static_assert(AllHeuristicsBoundsWellConfigured::Value);
 } // namespace
 
 static constexpr llvm::StringLiteral DefaultAbbreviations = "addr=address;"
@@ -581,13 +580,13 @@ bool SuspiciousCallArgumentCheck::isHeuristicEnabled(Heuristic H) const {
   return llvm::is_contained(AppliedHeuristics, H);
 }
 
-Optional<int8_t> SuspiciousCallArgumentCheck::getBound(Heuristic H,
-                                                       BoundKind BK) const {
+std::optional<int8_t>
+SuspiciousCallArgumentCheck::getBound(Heuristic H, BoundKind BK) const {
   auto Idx = static_cast<std::size_t>(H);
   assert(Idx < HeuristicCount);
 
   if (!Defaults[Idx].hasBounds())
-    return None;
+    return std::nullopt;
 
   switch (BK) {
   case BoundKind::DissimilarBelow:
@@ -782,7 +781,7 @@ bool SuspiciousCallArgumentCheck::areNamesSimilar(StringRef Arg,
                                                   StringRef Param, Heuristic H,
                                                   BoundKind BK) const {
   int8_t Threshold = -1;
-  if (Optional<int8_t> GotBound = getBound(H, BK))
+  if (std::optional<int8_t> GotBound = getBound(H, BK))
     Threshold = *GotBound;
 
   switch (H) {
@@ -806,6 +805,4 @@ bool SuspiciousCallArgumentCheck::areNamesSimilar(StringRef Arg,
   llvm_unreachable("Unhandled heuristic kind");
 }
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability

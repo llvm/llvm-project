@@ -14,9 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace performance {
+namespace clang::tidy::performance {
 
 NoAutomaticMoveCheck::NoAutomaticMoveCheck(StringRef Name,
                                            ClangTidyContext *Context)
@@ -67,6 +65,4 @@ void NoAutomaticMoveCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
                 utils::options::serializeStringList(AllowedTypes));
 }
 
-} // namespace performance
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::performance

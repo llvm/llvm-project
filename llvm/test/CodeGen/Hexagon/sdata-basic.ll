@@ -7,7 +7,7 @@ target triple = "hexagon"
 
 define i32 @foo() nounwind readonly {
 entry:
-  %0 = load i32, i32* @var, align 4, !tbaa !0
+  %0 = load i32, ptr @var, align 4, !tbaa !0
   ret i32 %0
 }
 

@@ -84,6 +84,8 @@ option(LIBCXX_ENABLE_LOCALIZATION
    the C locale API (e.g. embedded). When localization is not supported,
    several parts of the library will be disabled: <iostream>, <regex>, <locale>
    will be completely unusable, and other parts may be only partly available." ON)
+option(LIBCXX_ENABLE_FSTREAM
+   "Whether to include support for <fstream>." ON) # TODO: Consider rolling that into LIBCXX_ENABLE_FILESYSTEM
 option(LIBCXX_ENABLE_UNICODE
   "Whether to include support for Unicode in the library. Disabling Unicode can
    be useful when porting to platforms that don't support UTF-8 encoding (e.g.
@@ -101,6 +103,7 @@ option(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS
    to provide compile-time errors when using features unavailable on some version of
    the shared library they shipped should turn this on and see `include/__availability`
    for more details." OFF)
+option(LIBCXX_ENABLE_CLANG_TIDY "Whether to compile and run clang-tidy checks" OFF)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(LIBCXX_DEFAULT_TEST_CONFIG "llvm-libc++-shared-gcc.cfg.in")
@@ -226,19 +229,19 @@ option(LIBCXX_ENABLE_STATIC_ABI_LIBRARY
   "Use a static copy of the ABI library when linking libc++.
    This option cannot be used with LIBCXX_ENABLE_ABI_LINKER_SCRIPT." OFF)
 
-cmake_dependent_option(LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY
-  "Statically link the ABI library to static library" ON
-  "LIBCXX_ENABLE_STATIC_ABI_LIBRARY" OFF)
+option(LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY
+  "Statically link the ABI library to static library"
+  ${LIBCXX_ENABLE_STATIC_ABI_LIBRARY})
 
-cmake_dependent_option(LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
-  "Statically link the ABI library to shared library" ON
-  "LIBCXX_ENABLE_STATIC_ABI_LIBRARY" OFF)
+option(LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
+  "Statically link the ABI library to shared library"
+  ${LIBCXX_ENABLE_STATIC_ABI_LIBRARY})
 
 # Generate and install a linker script inplace of libc++.so. The linker script
 # will link libc++ to the correct ABI library. This option is on by default
-# on UNIX platforms other than Apple unless 'LIBCXX_ENABLE_STATIC_ABI_LIBRARY'
-# is on. This option is also disabled when the ABI library is not specified
-# or is specified to be "none".
+# on UNIX platforms other than Apple unless
+# 'LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY' is on. This option is also
+# disabled when the ABI library is not specified or is specified to be "none".
 set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE OFF)
 if (LLVM_HAVE_LINK_VERSION_SCRIPT AND NOT LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
       AND NOT LIBCXX_CXX_ABI STREQUAL "none"
@@ -264,11 +267,6 @@ option(LIBCXXABI_USE_LLVM_UNWINDER "Build and use the LLVM unwinder." OFF)
 option(LIBCXX_BUILD_32_BITS "Build 32 bit multilib libc++. This option is not supported anymore when building the runtimes. Please specify a full triple instead." ${LLVM_BUILD_32_BITS})
 if (LIBCXX_BUILD_32_BITS)
   message(FATAL_ERROR "LIBCXX_BUILD_32_BITS is not supported anymore when building the runtimes, please specify a full triple instead.")
-endif()
-
-# TODO: Remove this after branching for LLVM 15
-if(LIBCXX_SYSROOT OR LIBCXX_TARGET_TRIPLE OR LIBCXX_GCC_TOOLCHAIN)
-  message(WARNING "LIBCXX_SYSROOT, LIBCXX_TARGET_TRIPLE and LIBCXX_GCC_TOOLCHAIN are not supported anymore, please use the native CMake equivalents instead")
 endif()
 
 # Feature options -------------------------------------------------------------
@@ -376,14 +374,6 @@ if (LLVM_USE_SANITIZER AND LIBCXX_GENERATE_COVERAGE)
   message(FATAL_ERROR "LLVM_USE_SANITIZER cannot be used with LIBCXX_GENERATE_COVERAGE")
 endif()
 
-# Warn users that LIBCXX_ENABLE_STATIC_ABI_LIBRARY is an experimental option.
-if (LIBCXX_ENABLE_STATIC_ABI_LIBRARY)
-  message(WARNING "LIBCXX_ENABLE_STATIC_ABI_LIBRARY is an experimental option")
-  if (LIBCXX_ENABLE_STATIC AND NOT Python3_EXECUTABLE)
-    message(FATAL_ERROR "LIBCXX_ENABLE_STATIC_ABI_LIBRARY requires python but it was not found.")
-  endif()
-endif()
-
 if (LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
     if (APPLE)
       message(FATAL_ERROR "LIBCXX_ENABLE_ABI_LINKER_SCRIPT cannot be used on APPLE targets")
@@ -395,7 +385,7 @@ endif()
 
 if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
     message(FATAL_ERROR "Conflicting options given.
-        LIBCXX_ENABLE_STATIC_ABI_LIBRARY cannot be specified with
+        LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY cannot be specified with
         LIBCXX_ENABLE_ABI_LINKER_SCRIPT")
 endif()
 
@@ -414,6 +404,9 @@ set(LIBCXX_INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}/c++/v1" CACHE PATH
     "Path where target-agnostic libc++ headers should be installed.")
 set(LIBCXX_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
     "Path where built libc++ runtime libraries should be installed.")
+
+set(LIBCXX_SHARED_OUTPUT_NAME "c++" CACHE STRING "Output name for the shared libc++ runtime library.")
+set(LIBCXX_STATIC_OUTPUT_NAME "c++" CACHE STRING "Output name for the static libc++ runtime library.")
 
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
@@ -457,6 +450,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBCXX_LIBRARY_DIR})
 set(LIBCXX_COMPILE_FLAGS "")
 set(LIBCXX_LINK_FLAGS "")
 set(LIBCXX_LIBRARIES "")
+set(LIBCXX_ADDITIONAL_COMPILE_FLAGS "" CACHE STRING
+    "Additional Compile only flags which can be provided in cache")
+set(LIBCXX_ADDITIONAL_LIBRARIES "" CACHE STRING
+    "Additional libraries libc++ is linked to which can be provided in cache")
 
 # Include macros for adding and removing libc++ flags.
 include(HandleLibcxxFlags)
@@ -465,9 +462,6 @@ include(HandleLibcxxFlags)
 # These flags get added to CMAKE_CXX_FLAGS and CMAKE_C_FLAGS so that
 # 'config-ix' use them during feature checks. It also adds them to both
 # 'LIBCXX_COMPILE_FLAGS' and 'LIBCXX_LINK_FLAGS'
-if(ZOS)
-  add_target_flags_if_supported("-fzos-le-char-mode=ebcdic")
-endif()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
   add_target_flags_if_supported("-mdefault-visibility-export-mapping=explicit")
@@ -496,12 +490,6 @@ endif()
 
 include(HandleLibCXXABI) # Setup the ABI library flags
 
-# Remove flags that may have snuck in.
-# TODO: This shouldn't be necessary anymore since we don't support the Project
-#       build anymore, so the rest of LLVM can't pollute our flags.
-remove_flags(-DNDEBUG -UNDEBUG -D_DEBUG -lc++abi)
-remove_flags(--stdlib=libc++ -stdlib=libc++ --stdlib=libstdc++ -stdlib=libstdc++)
-
 # FIXME: Remove all debug flags and flags that change which Windows
 # default libraries are linked. Currently we only support linking the
 # non-debug DLLs
@@ -524,7 +512,7 @@ function(cxx_add_basic_build_flags target)
 
   # When building the dylib, don't warn for unavailable aligned allocation
   # functions based on the deployment target -- they are always available
-  # because they are provided by the dylib itself with the excepton of z/OS.
+  # because they are provided by the dylib itself with the exception of z/OS.
   if (ZOS)
     target_add_compile_flags_if_supported(${target} PRIVATE -fno-aligned-allocation)
   else()
@@ -571,6 +559,7 @@ function(cxx_add_basic_build_flags target)
       target_compile_definitions(${target} PRIVATE -D_LIBCPP_LINK_RT_LIB)
     endif()
   endif()
+  target_compile_options(${target} PUBLIC "${LIBCXX_ADDITIONAL_COMPILE_FLAGS}")
 endfunction()
 
 # Warning flags ===============================================================
@@ -699,6 +688,8 @@ function(get_sanitizer_flags OUT_VAR  USE_SANITIZER)
     endif()
     if (USE_SANITIZER STREQUAL "Address")
       append_flags(SANITIZER_FLAGS "-fsanitize=address")
+    elseif (USE_SANITIZER STREQUAL "HWAddress")
+      append_flags(SANITIZER_FLAGS "-fsanitize=hwaddress")
     elseif (USE_SANITIZER MATCHES "Memory(WithOrigins)?")
       append_flags(SANITIZER_FLAGS -fsanitize=memory)
       if (USE_SANITIZER STREQUAL "MemoryWithOrigins")
@@ -805,6 +796,7 @@ function(cxx_link_system_libraries target)
   if (ANDROID AND ANDROID_PLATFORM_LEVEL LESS 21)
     target_link_libraries(${target} PUBLIC android_support)
   endif()
+  target_link_libraries(${target} PUBLIC "${LIBCXX_ADDITIONAL_LIBRARIES}")
 endfunction()
 
 # Windows-related flags =======================================================
@@ -829,6 +821,14 @@ function(cxx_add_windows_flags target)
                                  # Use the ISO conforming behaviour for conversion
                                  # in printf, scanf.
                                  _CRT_STDIO_ISO_WIDE_SPECIFIERS)
+    # Clang-cl shared builds don't support the experimental library.
+    # To avoid linker errors the format_error destructor is inlined for the
+    # dylib. Users can never use format in this mode.
+    # TODO FMT Remove when format becomes mainline.
+    if (LIBCXX_ENABLE_SHARED)
+      target_compile_definitions(${target} PRIVATE
+                                 _LIBCPP_INLINE_FORMAT_ERROR_DTOR)
+    endif()
   endif()
 endfunction()
 
@@ -852,6 +852,7 @@ config_define_if(LIBCXX_ENABLE_PARALLEL_ALGORITHMS _LIBCPP_HAS_PARALLEL_ALGORITH
 config_define_if_not(LIBCXX_ENABLE_FILESYSTEM _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
 config_define_if_not(LIBCXX_ENABLE_RANDOM_DEVICE _LIBCPP_HAS_NO_RANDOM_DEVICE)
 config_define_if_not(LIBCXX_ENABLE_LOCALIZATION _LIBCPP_HAS_NO_LOCALIZATION)
+config_define_if_not(LIBCXX_ENABLE_FSTREAM _LIBCPP_HAS_NO_FSTREAM)
 config_define_if_not(LIBCXX_ENABLE_UNICODE _LIBCPP_HAS_NO_UNICODE)
 config_define_if_not(LIBCXX_ENABLE_WIDE_CHARACTERS _LIBCPP_HAS_NO_WIDE_CHARACTERS)
 config_define_if_not(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)
@@ -921,6 +922,10 @@ set(LIBCXX_TEST_DEPS "cxx_experimental")
 
 if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)
   list(APPEND LIBCXX_TEST_DEPS cxx_external_threads)
+endif()
+
+if (LIBCXX_ENABLE_CLANG_TIDY)
+  list(APPEND LIBCXX_TEST_DEPS cxx-tidy)
 endif()
 
 if (LIBCXX_INCLUDE_BENCHMARKS)

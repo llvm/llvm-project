@@ -1,6 +1,6 @@
 ; RUN: opt < %s -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s
 
-define i32 @test1(i32 %i, i32* %a) {
+define i32 @test1(i32 %i, ptr %a) {
 ; CHECK: Printing analysis {{.*}} for function 'test1'
 entry:
   br label %body
@@ -9,8 +9,8 @@ entry:
 body:
   %iv = phi i32 [ 0, %entry ], [ %next, %body ]
   %base = phi i32 [ 0, %entry ], [ %sum, %body ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i32 %iv
-  %0 = load i32, i32* %arrayidx
+  %arrayidx = getelementptr inbounds i32, ptr %a, i32 %iv
+  %0 = load i32, ptr %arrayidx
   %sum = add nsw i32 %0, %base
   %next = add i32 %iv, 1
   %exitcond = icmp eq i32 %next, %i
@@ -197,7 +197,7 @@ exit:
 
 !3 = !{!"branch_weights", i32 100, i32 1}
 
-define i32 @test_cold_call_sites(i32* %a) {
+define i32 @test_cold_call_sites(ptr %a) {
 ; Test that edges to blocks post-dominated by cold call sites
 ; are marked as not expected to be taken.
 ; TODO(dnovillo) The calls to regular_function should not be merged, but
@@ -209,8 +209,8 @@ define i32 @test_cold_call_sites(i32* %a) {
 ; CHECK: edge entry -> else probability is 0x78787f1d / 0x80000000 = 94.12% [HOT edge]
 
 entry:
-  %gep1 = getelementptr i32, i32* %a, i32 1
-  %val1 = load i32, i32* %gep1
+  %gep1 = getelementptr i32, ptr %a, i32 1
+  %val1 = load i32, ptr %gep1
   %cond1 = icmp ugt i32 %val1, 1
   br i1 %cond1, label %then, label %else
 
@@ -220,8 +220,8 @@ then:
   br label %exit
 
 else:
-  %gep2 = getelementptr i32, i32* %a, i32 2
-  %val2 = load i32, i32* %gep2
+  %gep2 = getelementptr i32, ptr %a, i32 2
+  %val2 = load i32, ptr %gep2
   %val3 = call i32 @regular_function(i32 %val2)
   br label %exit
 
@@ -231,7 +231,7 @@ exit:
 }
 
 ; CHECK-LABEL: test_invoke_code_callsite1
-define i32 @test_invoke_code_callsite1(i1 %c) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @test_invoke_code_callsite1(i1 %c) personality ptr @__gxx_personality_v0 {
 entry:
   br i1 %c, label %if.then, label %if.end
 ; Edge "entry->if.end" should have higher probability based on the cold call
@@ -251,7 +251,7 @@ invoke.cont:
   br label %if.end
 
 lpad:
-  %ll = landingpad { i8*, i32 }
+  %ll = landingpad { ptr, i32 }
           cleanup
   br label %if.end
 
@@ -260,7 +260,7 @@ if.end:
 }
 
 ; CHECK-LABEL: test_invoke_code_callsite2
-define i32 @test_invoke_code_callsite2(i1 %c) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @test_invoke_code_callsite2(i1 %c) personality ptr @__gxx_personality_v0 {
 entry:
   br i1 %c, label %if.then, label %if.end
 
@@ -277,7 +277,7 @@ invoke.cont:
   br label %if.end
 
 lpad:
-  %ll = landingpad { i8*, i32 }
+  %ll = landingpad { ptr, i32 }
           cleanup
   call void @ColdFunc() #0
   br label %if.end
@@ -287,7 +287,7 @@ if.end:
 }
 
 ; CHECK-LABEL: test_invoke_code_callsite3
-define i32 @test_invoke_code_callsite3(i1 %c) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @test_invoke_code_callsite3(i1 %c) personality ptr @__gxx_personality_v0 {
 entry:
   br i1 %c, label %if.then, label %if.end
 ; CHECK: edge entry -> if.then probability is 0x078780e3 / 0x80000000 = 5.88%
@@ -306,7 +306,7 @@ invoke.cont:
   br label %if.end
 
 lpad:
-  %ll = landingpad { i8*, i32 }
+  %ll = landingpad { ptr, i32 }
           cleanup
   call void @ColdFunc() #0
   br label %if.end
@@ -316,7 +316,7 @@ if.end:
 }
 
 ; CHECK-LABEL: test_invoke_code_profiled
-define void @test_invoke_code_profiled(i1 %c) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @test_invoke_code_profiled(i1 %c) personality ptr @__gxx_personality_v0 {
 entry:
 ; CHECK: edge entry -> invoke.to0 probability is 0x7ffff800 / 0x80000000 = 100.00% [HOT edge]
 ; CHECK: edge entry -> lpad probability is 0x00000800 / 0x80000000 = 0.00%
@@ -339,7 +339,7 @@ invoke.to2:
   ret void
 
 lpad:
-  %ll = landingpad { i8*, i32 }
+  %ll = landingpad { ptr, i32 }
           cleanup
   ret void
 }

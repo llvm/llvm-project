@@ -12,9 +12,9 @@
 
 declare void @do_something(<vscale x 4 x i32> %x)
 
-define void @can_replace_gep_idx_with_zero_typesize(i64 %n, <vscale x 4 x i32>* %a, i64 %b) {
-  %idx = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* %a, i64 %b
-  %tmp = load <vscale x 4 x i32>, <vscale x 4 x i32>* %idx
+define void @can_replace_gep_idx_with_zero_typesize(i64 %n, ptr %a, i64 %b) {
+  %idx = getelementptr <vscale x 4 x i32>, ptr %a, i64 %b
+  %tmp = load <vscale x 4 x i32>, ptr %idx
   call void @do_something(<vscale x 4 x i32> %tmp)
   ret void
 }

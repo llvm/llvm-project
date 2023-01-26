@@ -18,6 +18,7 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
+#include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/ModuleLoader.h"
@@ -649,7 +650,7 @@ TEST_F(LexerTest, RawAndNormalLexSameForLineComments) {
           SrcBuffer.data(), SrcBuffer.data(),
           SrcBuffer.data() + SrcBuffer.size());
 
-  auto ToksView = llvm::makeArrayRef(Toks);
+  auto ToksView = llvm::ArrayRef(Toks);
   clang::Token T;
   EXPECT_FALSE(ToksView.empty());
   while (!L.LexFromRawLexer(T)) {

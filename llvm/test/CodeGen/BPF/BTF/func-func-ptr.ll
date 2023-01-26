@@ -8,9 +8,9 @@
 ; Compilation flag:
 ;   clang -target bpf -O2 -g -S -emit-llvm t.c
 
-%struct.t1 = type { void (i32)* }
+%struct.t1 = type { ptr }
 
-@a1 = common dso_local local_unnamed_addr global void (i32)* null, align 8, !dbg !0
+@a1 = common dso_local local_unnamed_addr global ptr null, align 8, !dbg !0
 @b1 = common dso_local local_unnamed_addr global %struct.t1 zeroinitializer, align 8, !dbg !6
 
 ; Function Attrs: nounwind readnone

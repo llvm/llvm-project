@@ -40,5 +40,5 @@ def InstB : TestInstruction {
 // CHECK-NEXT: /* 37 */      MCD::OPC_TryDecode, {{[0-9]+}}, 1, 1, 0, 0, 0, // Opcode: InstA, skip to: 44
 // CHECK-NEXT: /* 44 */      MCD::OPC_Fail,
 
-// CHECK: if (DecodeInstB(MI, insn, Address, Decoder) == MCDisassembler::Fail) { DecodeComplete = false; return MCDisassembler::Fail; }
-// CHECK: if (DecodeInstA(MI, insn, Address, Decoder) == MCDisassembler::Fail) { DecodeComplete = false; return MCDisassembler::Fail; }
+// CHECK: if (!Check(S, DecodeInstB(MI, insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }
+// CHECK: if (!Check(S, DecodeInstA(MI, insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }

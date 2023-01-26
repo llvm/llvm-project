@@ -1,4 +1,4 @@
-import("//llvm/utils/unittest/unittest.gni")
+import("//third-party/unittest/unittest.gni")
 
 unittest("PowerPCTests") {
   deps = [
@@ -7,6 +7,7 @@ unittest("PowerPCTests") {
     "//llvm/lib/Target/PowerPC:LLVMPowerPCCodeGen",
     "//llvm/lib/Target/PowerPC/MCTargetDesc",
     "//llvm/lib/Target/PowerPC/TargetInfo",
+    "//llvm/lib/TargetParser",
   ]
   sources = [ "AIXRelocModelTest.cpp" ]
 }

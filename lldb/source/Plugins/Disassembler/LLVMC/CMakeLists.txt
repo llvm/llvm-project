@@ -11,4 +11,5 @@ add_lldb_library(lldbPluginDisassemblerLLVMC PLUGIN
     MCDisassembler
     RuntimeDyld
     Support
+    TargetParser
   )

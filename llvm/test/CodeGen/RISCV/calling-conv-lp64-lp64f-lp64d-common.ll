@@ -53,16 +53,16 @@ define i32 @callee_many_scalars(i8 %a, i16 %b, i32 %c, i128 %d, i32 %e, i32 %f, 
 ; RV64I-NEXT:    andi a0, a0, 255
 ; RV64I-NEXT:    slli a1, a1, 48
 ; RV64I-NEXT:    srli a1, a1, 48
-; RV64I-NEXT:    addw a0, a0, a1
-; RV64I-NEXT:    addw a0, a0, a2
+; RV64I-NEXT:    add a0, a0, a2
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    xor a1, a4, t1
 ; RV64I-NEXT:    xor a2, a3, a7
 ; RV64I-NEXT:    or a1, a2, a1
 ; RV64I-NEXT:    seqz a1, a1
+; RV64I-NEXT:    add a0, a0, a5
+; RV64I-NEXT:    add a0, a0, a6
+; RV64I-NEXT:    add a0, a0, t0
 ; RV64I-NEXT:    addw a0, a1, a0
-; RV64I-NEXT:    addw a0, a0, a5
-; RV64I-NEXT:    addw a0, a0, a6
-; RV64I-NEXT:    addw a0, a0, t0
 ; RV64I-NEXT:    ret
   %a_ext = zext i8 %a to i32
   %b_ext = zext i16 %b to i32
@@ -118,8 +118,8 @@ define i64 @callee_large_scalars(i256 %a, i256 %b) nounwind {
 ; RV64I-NEXT:    xor a4, a7, a4
 ; RV64I-NEXT:    or a4, a4, a5
 ; RV64I-NEXT:    xor a0, a0, a1
-; RV64I-NEXT:    xor a1, a3, a2
-; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    xor a2, a3, a2
+; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    or a0, a0, a4
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ret
@@ -239,7 +239,7 @@ define i64 @caller_mixed_scalar_libcalls(i64 %a) nounwind {
 
 ; Check passing of coerced integer arrays
 
-%struct.small = type { i64, i64* }
+%struct.small = type { i64, ptr }
 
 define i64 @callee_small_coerced_struct([2 x i64] %a.coerce) nounwind {
 ; RV64I-LABEL: callee_small_coerced_struct:
@@ -273,19 +273,18 @@ define i64 @caller_small_coerced_struct() nounwind {
 
 %struct.large = type { i64, i64, i64, i64 }
 
-define i64 @callee_large_struct(%struct.large* byval(%struct.large) align 8 %a) nounwind {
+define i64 @callee_large_struct(ptr byval(%struct.large) align 8 %a) nounwind {
 ; RV64I-LABEL: callee_large_struct:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    ld a1, 0(a0)
 ; RV64I-NEXT:    ld a0, 24(a0)
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    ret
-  %1 = getelementptr inbounds %struct.large, %struct.large* %a, i64 0, i32 0
-  %2 = getelementptr inbounds %struct.large, %struct.large* %a, i64 0, i32 3
-  %3 = load i64, i64* %1
-  %4 = load i64, i64* %2
-  %5 = add i64 %3, %4
-  ret i64 %5
+  %1 = getelementptr inbounds %struct.large, ptr %a, i64 0, i32 3
+  %2 = load i64, ptr %a
+  %3 = load i64, ptr %1
+  %4 = add i64 %2, %3
+  ret i64 %4
 }
 
 define i64 @caller_large_struct() nounwind {
@@ -311,17 +310,15 @@ define i64 @caller_large_struct() nounwind {
 ; RV64I-NEXT:    addi sp, sp, 80
 ; RV64I-NEXT:    ret
   %ls = alloca %struct.large, align 8
-  %1 = bitcast %struct.large* %ls to i8*
-  %a = getelementptr inbounds %struct.large, %struct.large* %ls, i64 0, i32 0
-  store i64 1, i64* %a
-  %b = getelementptr inbounds %struct.large, %struct.large* %ls, i64 0, i32 1
-  store i64 2, i64* %b
-  %c = getelementptr inbounds %struct.large, %struct.large* %ls, i64 0, i32 2
-  store i64 3, i64* %c
-  %d = getelementptr inbounds %struct.large, %struct.large* %ls, i64 0, i32 3
-  store i64 4, i64* %d
-  %2 = call i64 @callee_large_struct(%struct.large* byval(%struct.large) align 8 %ls)
-  ret i64 %2
+  store i64 1, ptr %ls
+  %b = getelementptr inbounds %struct.large, ptr %ls, i64 0, i32 1
+  store i64 2, ptr %b
+  %c = getelementptr inbounds %struct.large, ptr %ls, i64 0, i32 2
+  store i64 3, ptr %c
+  %d = getelementptr inbounds %struct.large, ptr %ls, i64 0, i32 3
+  store i64 4, ptr %d
+  %1 = call i64 @callee_large_struct(ptr byval(%struct.large) align 8 %ls)
+  ret i64 %1
 }
 
 ; Check 2x*xlen values are aligned appropriately when passed on the stack
@@ -331,15 +328,15 @@ define i64 @callee_aligned_stack(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i128 %f
 ; should only be 8-byte aligned
 ; RV64I-LABEL: callee_aligned_stack:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    ld a0, 40(sp)
+; RV64I-NEXT:    ld a0, 32(sp)
 ; RV64I-NEXT:    ld a1, 0(sp)
 ; RV64I-NEXT:    ld a2, 16(sp)
-; RV64I-NEXT:    ld a3, 32(sp)
-; RV64I-NEXT:    add a4, a5, a7
-; RV64I-NEXT:    add a1, a4, a1
-; RV64I-NEXT:    add a1, a1, a2
-; RV64I-NEXT:    add a1, a1, a3
+; RV64I-NEXT:    ld a3, 40(sp)
+; RV64I-NEXT:    add a5, a5, a7
+; RV64I-NEXT:    add a1, a5, a1
+; RV64I-NEXT:    add a0, a2, a0
 ; RV64I-NEXT:    add a0, a1, a0
+; RV64I-NEXT:    add a0, a0, a3
 ; RV64I-NEXT:    ret
   %f_trunc = trunc i128 %f to i64
   %1 = add i64 %f_trunc, %g
@@ -425,7 +422,7 @@ define %struct.small @callee_small_struct_ret() nounwind {
 ; RV64I-NEXT:    li a0, 1
 ; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    ret
-  ret %struct.small { i64 1, i64* null }
+  ret %struct.small { i64 1, ptr null }
 }
 
 define i64 @caller_small_struct_ret() nounwind {
@@ -441,7 +438,7 @@ define i64 @caller_small_struct_ret() nounwind {
   %1 = call %struct.small @callee_small_struct_ret()
   %2 = extractvalue %struct.small %1, 0
   %3 = extractvalue %struct.small %1, 1
-  %4 = ptrtoint i64* %3 to i64
+  %4 = ptrtoint ptr %3 to i64
   %5 = add i64 %2, %4
   ret i64 %5
 }
@@ -478,7 +475,7 @@ define void @caller_large_scalar_ret() nounwind {
 
 ; Check return of >2x xlen structs
 
-define void @callee_large_struct_ret(%struct.large* noalias sret(%struct.large) %agg.result) nounwind {
+define void @callee_large_struct_ret(ptr noalias sret(%struct.large) %agg.result) nounwind {
 ; RV64I-LABEL: callee_large_struct_ret:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sw zero, 4(a0)
@@ -494,14 +491,13 @@ define void @callee_large_struct_ret(%struct.large* noalias sret(%struct.large) 
 ; RV64I-NEXT:    li a1, 4
 ; RV64I-NEXT:    sw a1, 24(a0)
 ; RV64I-NEXT:    ret
-  %a = getelementptr inbounds %struct.large, %struct.large* %agg.result, i64 0, i32 0
-  store i64 1, i64* %a, align 4
-  %b = getelementptr inbounds %struct.large, %struct.large* %agg.result, i64 0, i32 1
-  store i64 2, i64* %b, align 4
-  %c = getelementptr inbounds %struct.large, %struct.large* %agg.result, i64 0, i32 2
-  store i64 3, i64* %c, align 4
-  %d = getelementptr inbounds %struct.large, %struct.large* %agg.result, i64 0, i32 3
-  store i64 4, i64* %d, align 4
+  store i64 1, ptr %agg.result, align 4
+  %b = getelementptr inbounds %struct.large, ptr %agg.result, i64 0, i32 1
+  store i64 2, ptr %b, align 4
+  %c = getelementptr inbounds %struct.large, ptr %agg.result, i64 0, i32 2
+  store i64 3, ptr %c, align 4
+  %d = getelementptr inbounds %struct.large, ptr %agg.result, i64 0, i32 3
+  store i64 4, ptr %d, align 4
   ret void
 }
 
@@ -519,11 +515,10 @@ define i64 @caller_large_struct_ret() nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
   %1 = alloca %struct.large
-  call void @callee_large_struct_ret(%struct.large* sret(%struct.large) %1)
-  %2 = getelementptr inbounds %struct.large, %struct.large* %1, i64 0, i32 0
-  %3 = load i64, i64* %2
-  %4 = getelementptr inbounds %struct.large, %struct.large* %1, i64 0, i32 3
-  %5 = load i64, i64* %4
-  %6 = add i64 %3, %5
-  ret i64 %6
+  call void @callee_large_struct_ret(ptr sret(%struct.large) %1)
+  %2 = load i64, ptr %1
+  %3 = getelementptr inbounds %struct.large, ptr %1, i64 0, i32 3
+  %4 = load i64, ptr %3
+  %5 = add i64 %2, %4
+  ret i64 %5
 }

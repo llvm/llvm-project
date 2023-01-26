@@ -20,6 +20,12 @@ namespace fir {
 
 struct NameUniquer;
 
+#define GEN_PASS_DECL_FIRTOLLVMLOWERING
+#define GEN_PASS_DECL_CODEGENREWRITE
+#define GEN_PASS_DECL_TARGETREWRITEPASS
+#define GEN_PASS_DECL_BOXEDPROCEDUREPASS
+#include "flang/Optimizer/CodeGen/CGPasses.h.inc"
+
 /// Prerequiste pass for code gen. Perform intermediate rewrites to perform
 /// the code gen (to LLVM-IR dialect) conversion.
 std::unique_ptr<mlir::Pass> createFirCodeGenRewritePass();
@@ -45,6 +51,9 @@ struct FIRToLLVMPassOptions {
   // that such programs would crash at runtime if the derived type descriptors
   // are required by the runtime, so this is only an option to help debugging.
   bool ignoreMissingTypeDescriptors = false;
+
+  // Generate TBAA information for FIR types and memory accessing operations.
+  bool applyTBAA = false;
 };
 
 /// Convert FIR to the LLVM IR dialect with default options.

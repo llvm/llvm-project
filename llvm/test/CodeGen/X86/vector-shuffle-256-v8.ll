@@ -638,6 +638,17 @@ define <8 x float> @shuffle_v8f32_00224466_v4f32(<4 x float> %a, <4 x float> %b)
   ret <8 x float> %3
 }
 
+define <8 x float> @shuffle_v8f32_00004444_v4f32(<4 x float> %a, <4 x float> %b) {
+; ALL-LABEL: shuffle_v8f32_00004444_v4f32:
+; ALL:       # %bb.0:
+; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; ALL-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
+; ALL-NEXT:    retq
+  %1 = shufflevector <4 x float> %a, <4 x float> %b, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 4, i32 4, i32 4, i32 4>
+  ret <8 x float> %1
+}
+
 define <8 x float> @shuffle_v8f32_10325476(<8 x float> %a, <8 x float> %b) {
 ; ALL-LABEL: shuffle_v8f32_10325476:
 ; ALL:       # %bb.0:
@@ -3270,6 +3281,17 @@ define <8 x i32> @shuffle_v8i32_32107654_v4i32(<4 x i32> %a, <4 x i32> %b) {
   ret <8 x i32> %3
 }
 
+define <8 x i32> @shuffle_v8i32_00004444_v4f32(<4 x i32> %a, <4 x i32> %b) {
+; ALL-LABEL: shuffle_v8i32_00004444_v4f32:
+; ALL:       # %bb.0:
+; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; ALL-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
+; ALL-NEXT:    retq
+  %1 = shufflevector <4 x i32> %a, <4 x i32> %b, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 4, i32 4, i32 4, i32 4>
+  ret <8 x i32> %1
+}
+
 define <8 x float> @splat_mem_v8f32_2(ptr %p) {
 ; ALL-LABEL: splat_mem_v8f32_2:
 ; ALL:       # %bb.0:
@@ -3780,8 +3802,7 @@ define <8 x i32> @lowhalf_v8i32(<8 x i32> %x, <8 x i32> %y) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[2,2,2,2]
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,2,3,3]
-; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; AVX1-NEXT:    vunpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: lowhalf_v8i32:

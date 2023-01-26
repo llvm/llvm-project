@@ -2,7 +2,7 @@
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx1010 | FileCheck %s --check-prefix=GCN
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx1100 | FileCheck %s --check-prefix=GFX11
 
-define void @vgpr_descriptor_waterfall_loop_idom_update(<4 x i32>* %arg) #0 {
+define void @vgpr_descriptor_waterfall_loop_idom_update(ptr %arg) #0 {
 ; GCN-LABEL: vgpr_descriptor_waterfall_loop_idom_update:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -34,7 +34,8 @@ define void @vgpr_descriptor_waterfall_loop_idom_update(<4 x i32>* %arg) #0 {
 ; GCN-NEXT:    s_cbranch_execnz .LBB0_2
 ; GCN-NEXT:  ; %bb.3: ; in Loop: Header=BB0_1 Depth=1
 ; GCN-NEXT:    s_mov_b32 exec_lo, s5
-; GCN-NEXT:    s_branch .LBB0_1
+; GCN-NEXT:    s_mov_b32 vcc_lo, exec_lo
+; GCN-NEXT:    s_cbranch_vccnz .LBB0_1
 ;
 ; GFX11-LABEL: vgpr_descriptor_waterfall_loop_idom_update:
 ; GFX11:       ; %bb.0: ; %entry
@@ -65,12 +66,17 @@ define void @vgpr_descriptor_waterfall_loop_idom_update(<4 x i32>* %arg) #0 {
 ; GFX11-NEXT:    s_cbranch_execnz .LBB0_2
 ; GFX11-NEXT:  ; %bb.3: ; in Loop: Header=BB0_1 Depth=1
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s1
-; GFX11-NEXT:    s_branch .LBB0_1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_mov_b32 vcc_lo, exec_lo
+; GFX11-NEXT:    s_cbranch_vccnz .LBB0_1
+; GFX11-NEXT: ; %bb.4: ; %DummyReturnBlock 
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0 
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   br label %bb0
 
 bb0:
-  %desc = load <4 x i32>, <4 x i32>* %arg, align 8
+  %desc = load <4 x i32>, ptr %arg, align 8
   tail call void @llvm.amdgcn.raw.buffer.store.f32(float undef, <4 x i32> %desc, i32 undef, i32 0, i32 0)
   br label %bb0
 }

@@ -16,6 +16,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include <optional>
 
 #define DEBUG_TYPE "clang-tidy"
 
@@ -58,8 +59,7 @@ struct DenseMapInfo<clang::tidy::RenamerClangTidyCheck::NamingCheckId> {
 
 } // namespace llvm
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 
 namespace {
 
@@ -214,7 +214,7 @@ class NameLookup {
 
 public:
   explicit NameLookup(const NamedDecl *ND) : Data(ND, false) {}
-  explicit NameLookup(llvm::NoneType) : Data(nullptr, true) {}
+  explicit NameLookup(std::nullopt_t) : Data(nullptr, true) {}
   explicit NameLookup(std::nullptr_t) : Data(nullptr, false) {}
   NameLookup() : NameLookup(nullptr) {}
 
@@ -258,12 +258,12 @@ NameLookup findDeclInBases(const CXXRecordDecl &Parent, StringRef DeclName,
       if (*Search) {
         if (Found)
           return NameLookup(
-              llvm::None); // Multiple decls found in different base classes.
+              std::nullopt); // Multiple decls found in different base classes.
         Found = *Search;
         continue;
       }
     } else
-      return NameLookup(llvm::None); // Propagate multiple resolution back up.
+      return NameLookup(std::nullopt); // Propagate multiple resolution back up.
   }
   return NameLookup(Found); // If nullptr, decl wasn't found.
 }
@@ -445,7 +445,7 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
     if (isa<ClassTemplateSpecializationDecl>(Decl))
       return;
 
-    Optional<FailureInfo> MaybeFailure =
+    std::optional<FailureInfo> MaybeFailure =
         getDeclFailureInfo(Decl, *Result.SourceManager);
     if (!MaybeFailure)
       return;
@@ -476,7 +476,7 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
 void RenamerClangTidyCheck::checkMacro(SourceManager &SourceMgr,
                                        const Token &MacroNameTok,
                                        const MacroInfo *MI) {
-  Optional<FailureInfo> MaybeFailure =
+  std::optional<FailureInfo> MaybeFailure =
       getMacroFailureInfo(MacroNameTok, SourceMgr);
   if (!MaybeFailure)
     return;
@@ -562,5 +562,4 @@ void RenamerClangTidyCheck::onEndOfTranslationUnit() {
   }
 }
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

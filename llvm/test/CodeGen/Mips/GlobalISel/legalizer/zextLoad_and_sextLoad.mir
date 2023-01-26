@@ -2,16 +2,16 @@
 # RUN: llc -O0 -mtriple=mipsel-linux-gnu -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=MIPS32
 --- |
 
-  define void @load1_s8_to_zextLoad1_s32(i8* %px) {entry: ret void}
-  define void @load2_s16_to_zextLoad2_s32(i16* %px) {entry: ret void}
-  define void @load1_s8_to_zextLoad1_s16(i8* %px) {entry: ret void}
-  define void @load1_s8_to_zextLoad1_s16_to_zextLoad1_s32(i8* %px) {entry: ret void}
-  define void @load4_s32_to_zextLoad4_s64(i8* %px) {entry: ret void}
-  define void @load1_s8_to_sextLoad1_s32(i8* %px) {entry: ret void}
-  define void @load2_s16_to_sextLoad2_s32(i16* %px) {entry: ret void}
-  define void @load1_s8_to_sextLoad1_s16(i8* %px) {entry: ret void}
-  define void @load1_s8_to_sextLoad1_s16_to_sextLoad1_s32(i8* %px) {entry: ret void}
-  define void @load4_s32_to_sextLoad4_s64(i8* %px) {entry: ret void}
+  define void @load1_s8_to_zextLoad1_s32(ptr %px) {entry: ret void}
+  define void @load2_s16_to_zextLoad2_s32(ptr %px) {entry: ret void}
+  define void @load1_s8_to_zextLoad1_s16(ptr %px) {entry: ret void}
+  define void @load1_s8_to_zextLoad1_s16_to_zextLoad1_s32(ptr %px) {entry: ret void}
+  define void @load4_s32_to_zextLoad4_s64(ptr %px) {entry: ret void}
+  define void @load1_s8_to_sextLoad1_s32(ptr %px) {entry: ret void}
+  define void @load2_s16_to_sextLoad2_s32(ptr %px) {entry: ret void}
+  define void @load1_s8_to_sextLoad1_s16(ptr %px) {entry: ret void}
+  define void @load1_s8_to_sextLoad1_s16_to_sextLoad1_s32(ptr %px) {entry: ret void}
+  define void @load4_s32_to_sextLoad4_s64(ptr %px) {entry: ret void}
 
 ...
 ---

@@ -151,7 +151,7 @@ bool ABISysV_arc::IsRegisterFileReduced(RegisterContext &reg_ctx) const {
                                                           /*fail_value*/ 0);
     // RF_BUILD "Number of Entries" bit.
     const uint32_t rf_entries_bit = 1U << 9U;
-    m_is_reg_file_reduced = (reg_value | rf_entries_bit) != 0;
+    m_is_reg_file_reduced = (reg_value & rf_entries_bit) != 0;
   }
 
   return m_is_reg_file_reduced.value_or(false);
@@ -271,7 +271,7 @@ bool ABISysV_arc::PrepareTrivialCall(Thread &thread, addr_t sp, addr_t pc,
         reg_value[byte_index++] = 0;
       }
 
-      RegisterValue reg_val_obj(llvm::makeArrayRef(reg_value, reg_size),
+      RegisterValue reg_val_obj(llvm::ArrayRef(reg_value, reg_size),
                                 eByteOrderLittle);
       if (!reg_ctx->WriteRegister(
             reg_ctx->GetRegisterInfo(eRegisterKindGeneric, reg_index),

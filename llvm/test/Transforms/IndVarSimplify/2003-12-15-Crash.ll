@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -disable-output 
+; RUN: opt < %s -passes=indvars -disable-output 
 define void @_ZN17CoinFactorization7cleanupEv() {
 entry:
         br i1 false, label %loopexit.14, label %cond_continue.3

@@ -1,4 +1,4 @@
-; RUN: opt -S -licm -simple-loop-unswitch -verify-memoryssa %s | FileCheck %s
+; RUN: opt -S -passes=licm,simple-loop-unswitch -verify-memoryssa %s | FileCheck %s
 ; REQUIRES: asserts
 target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 target triple = "s390x-ibm-linux"
@@ -13,16 +13,16 @@ bb:
   br label %bb10
 
 bb10:                                             ; preds = %bb81.loopexit, %bb
-  %tmp17 = load i16, i16* @g_92, align 2
+  %tmp17 = load i16, ptr @g_92, align 2
   %tmp18 = add i16 %tmp17, 1
-  store i16 %tmp18, i16* @g_92, align 2
+  store i16 %tmp18, ptr @g_92, align 2
   br label %bb19
 
 bb19:                                             ; preds = %bb42, %bb10
   br label %bb24.preheader
 
 bb24.preheader:                                   ; preds = %bb75, %bb19
-  store i32 0, i32* @g_993, align 4
+  store i32 0, ptr @g_993, align 4
   br i1 %tmp6.i, label %bb24.preheader.split.us, label %bb24.preheader.split
 
 bb24.preheader.split.us:                          ; preds = %bb24.preheader

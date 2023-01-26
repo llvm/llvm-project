@@ -9,6 +9,8 @@
 #ifndef LIBC_SRC_SUPPORT_DETAILED_POWERS_OF_TEN_H
 #define LIBC_SRC_SUPPORT_DETAILED_POWERS_OF_TEN_H
 
+#include "src/__support/common.h"
+
 #include <stdint.h>
 
 namespace __llvm_libc {
@@ -27,7 +29,7 @@ constexpr int32_t DETAILED_POWERS_OF_TEN_MIN_EXP_10 = -348;
 constexpr int32_t DETAILED_POWERS_OF_TEN_MAX_EXP_10 = 347;
 
 // This rescales the base 10 exponent by a factor of log(10)/log(2).
-static inline int64_t exp10_to_exp2(int64_t exp10) {
+LIBC_INLINE int64_t exp10_to_exp2(int64_t exp10) {
   return (217706 * exp10) >> 16;
 }
 

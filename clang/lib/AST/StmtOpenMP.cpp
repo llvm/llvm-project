@@ -31,7 +31,7 @@ void OMPChildren::setClauses(ArrayRef<OMPClause *> Clauses) {
 }
 
 MutableArrayRef<Stmt *> OMPChildren::getChildren() {
-  return llvm::makeMutableArrayRef(getTrailingObjects<Stmt *>(), NumChildren);
+  return llvm::MutableArrayRef(getTrailingObjects<Stmt *>(), NumChildren);
 }
 
 OMPChildren *OMPChildren::Create(void *Mem, ArrayRef<OMPClause *> Clauses) {
@@ -517,7 +517,7 @@ OMPSectionDirective *OMPSectionDirective::Create(const ASTContext &C,
                                                  Stmt *AssociatedStmt,
                                                  bool HasCancel) {
   auto *Dir =
-      createDirective<OMPSectionDirective>(C, llvm::None, AssociatedStmt,
+      createDirective<OMPSectionDirective>(C, std::nullopt, AssociatedStmt,
                                            /*NumChildren=*/0, StartLoc, EndLoc);
   Dir->setHasCancel(HasCancel);
   return Dir;
@@ -550,7 +550,7 @@ OMPMasterDirective *OMPMasterDirective::Create(const ASTContext &C,
                                                SourceLocation StartLoc,
                                                SourceLocation EndLoc,
                                                Stmt *AssociatedStmt) {
-  return createDirective<OMPMasterDirective>(C, llvm::None, AssociatedStmt,
+  return createDirective<OMPMasterDirective>(C, std::nullopt, AssociatedStmt,
                                              /*NumChildren=*/0, StartLoc,
                                              EndLoc);
 }
@@ -742,6 +742,21 @@ OMPTaskyieldDirective *OMPTaskyieldDirective::Create(const ASTContext &C,
 OMPTaskyieldDirective *OMPTaskyieldDirective::CreateEmpty(const ASTContext &C,
                                                           EmptyShell) {
   return new (C) OMPTaskyieldDirective();
+}
+
+OMPErrorDirective *OMPErrorDirective::Create(const ASTContext &C,
+                                             SourceLocation StartLoc,
+                                             SourceLocation EndLoc,
+                                             ArrayRef<OMPClause *> Clauses) {
+  return createDirective<OMPErrorDirective>(
+      C, Clauses, /*AssociatedStmt=*/nullptr, /*NumChildren=*/0, StartLoc,
+      EndLoc);
+}
+
+OMPErrorDirective *OMPErrorDirective::CreateEmpty(const ASTContext &C,
+                                                  unsigned NumClauses,
+                                                  EmptyShell) {
+  return createEmptyDirective<OMPErrorDirective>(C, NumClauses);
 }
 
 OMPBarrierDirective *OMPBarrierDirective::Create(const ASTContext &C,

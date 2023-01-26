@@ -21,6 +21,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include <optional>
 
 using namespace mlir;
 using namespace test;
@@ -88,26 +89,24 @@ static llvm::hash_code test::hash_value(const FieldInfo &fi) { // NOLINT
 // TestCustomType
 //===----------------------------------------------------------------------===//
 
-static LogicalResult parseCustomTypeA(AsmParser &parser,
-                                      FailureOr<int> &aResult) {
-  aResult.emplace();
-  return parser.parseInteger(*aResult);
+static LogicalResult parseCustomTypeA(AsmParser &parser, int &aResult) {
+  return parser.parseInteger(aResult);
 }
 
 static void printCustomTypeA(AsmPrinter &printer, int a) { printer << a; }
 
 static LogicalResult parseCustomTypeB(AsmParser &parser, int a,
-                                      FailureOr<Optional<int>> &bResult) {
+                                      std::optional<int> &bResult) {
   if (a < 0)
     return success();
   for (int i : llvm::seq(0, a))
     if (failed(parser.parseInteger(i)))
       return failure();
   bResult.emplace(0);
-  return parser.parseInteger(**bResult);
+  return parser.parseInteger(*bResult);
 }
 
-static void printCustomTypeB(AsmPrinter &printer, int a, Optional<int> b) {
+static void printCustomTypeB(AsmPrinter &printer, int a, std::optional<int> b) {
   if (a < 0)
     return;
   printer << ' ';
@@ -116,8 +115,7 @@ static void printCustomTypeB(AsmPrinter &printer, int a, Optional<int> b) {
   printer << *b;
 }
 
-static LogicalResult parseFooString(AsmParser &parser,
-                                    FailureOr<std::string> &foo) {
+static LogicalResult parseFooString(AsmParser &parser, std::string &foo) {
   std::string result;
   if (parser.parseString(&result))
     return failure();
@@ -134,7 +132,7 @@ static LogicalResult parseBarString(AsmParser &parser, StringRef foo) {
 }
 
 static void printBarString(AsmPrinter &printer, StringRef foo) {
-  printer << ' ' << foo;
+  printer << foo;
 }
 //===----------------------------------------------------------------------===//
 // Tablegen Generated Definitions
@@ -411,15 +409,15 @@ Type TestDialect::parseTestType(AsmParser &parser,
   {
     Type genType;
     auto parseResult = generatedTypeParser(parser, &typeTag, genType);
-    if (parseResult.hasValue())
+    if (parseResult.has_value())
       return genType;
   }
 
   {
     Type dynType;
     auto parseResult = parseOptionalDynamicType(typeTag, parser, dynType);
-    if (parseResult.hasValue()) {
-      if (succeeded(parseResult.getValue()))
+    if (parseResult.has_value()) {
+      if (succeeded(parseResult.value()))
         return dynType;
       return Type();
     }

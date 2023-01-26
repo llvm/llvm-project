@@ -18,41 +18,42 @@ define i32 @foo(i32 %arg, ptr %arg3) nounwind {
 ; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    movabsq $-2305847407260205056, %rbx # imm = 0xDFFFFC0000000000
+; CHECK-NEXT:    movabsq $-2305847407260205056, %r14 # imm = 0xDFFFFC0000000000
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_5
 ; CHECK-NEXT:  # %bb.1: # %bb5
-; CHECK-NEXT:    movq %rsi, %r14
+; CHECK-NEXT:    movq %rsi, %rbx
 ; CHECK-NEXT:    movslq %edi, %rbp
 ; CHECK-NEXT:    leaq (,%rbp,8), %rax
-; CHECK-NEXT:    leaq global(%rax,%rax,2), %r15
-; CHECK-NEXT:    leaq global+4(%rax,%rax,2), %r12
+; CHECK-NEXT:    leaq global(%rax,%rax,2), %r14
+; CHECK-NEXT:    leaq global+4(%rax,%rax,2), %r15
 ; CHECK-NEXT:    xorl %r13d, %r13d
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_2: # %bb8
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    callq bar@PLT
-; CHECK-NEXT:    movq %rax, %rbx
+; CHECK-NEXT:    movq %rax, %r12
 ; CHECK-NEXT:    movq %rax, %rdi
-; CHECK-NEXT:    callq *%r14
-; CHECK-NEXT:    movq %r15, %rdi
+; CHECK-NEXT:    callq *%rbx
+; CHECK-NEXT:    movq %r14, %rdi
 ; CHECK-NEXT:    callq hoge@PLT
-; CHECK-NEXT:    movq %r12, %rdi
+; CHECK-NEXT:    movq %r15, %rdi
 ; CHECK-NEXT:    callq hoge@PLT
 ; CHECK-NEXT:    testb %r13b, %r13b
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.3: # %bb15
 ; CHECK-NEXT:    leaq (%rbp,%rbp,2), %rax
-; CHECK-NEXT:    movq %rbx, global+16(,%rax,8)
-; CHECK-NEXT:    movabsq $-2305847407260205056, %rbx # imm = 0xDFFFFC0000000000
+; CHECK-NEXT:    movq %r12, global+16(,%rax,8)
+; CHECK-NEXT:    movabsq $-2305847407260205056, %r14 # imm = 0xDFFFFC0000000000
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  # %bb.4: # %bb17
 ; CHECK-NEXT:    callq widget@PLT
-; CHECK-NEXT:  .Ltmp0: # Block address taken
-; CHECK-NEXT:  .LBB0_5: # %bb18
-; CHECK-NEXT:    movw $0, 14(%rbx)
+; CHECK-NEXT:  .LBB0_5: # Block address taken
+; CHECK-NEXT:    # %bb18
+; CHECK-NEXT:    # Label of block must be emitted
+; CHECK-NEXT:    movw $0, 14(%r14)
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r12

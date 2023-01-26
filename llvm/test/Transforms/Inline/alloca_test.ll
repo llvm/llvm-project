@@ -2,12 +2,12 @@
 ; This test ensures that alloca instructions in the entry block for an inlined
 ; function are moved to the top of the function they are inlined into.
 ;
-; RUN: opt -S -inline < %s | FileCheck %s
+; RUN: opt -S -passes=inline < %s | FileCheck %s
 ; RUN: opt -S -passes='cgscc(inline)' < %s | FileCheck %s
 
 define i32 @func(i32 %i) {
   %X = alloca i32
-  store i32 %i, i32* %X
+  store i32 %i, ptr %X
   ret i32 %i
 }
 
@@ -41,16 +41,16 @@ define void @PR27277(i32 %p1) {
 
 ; Don't assume that the size is a ConstantInt (a ConstExpr is also a constant).
 
-@GV = common global i32* null
+@GV = common global ptr null
 
 define void @PR27277_part2(i32 %p1) {
 ; CHECK-LABEL: @PR27277_part2(
 ; CHECK-NEXT:    [[VLA:%.*]] = alloca double, i32 %p1
-; CHECK-NEXT:    call void @PR27277_part2(i32 ptrtoint (i32** @GV to i32))
+; CHECK-NEXT:    call void @PR27277_part2(i32 ptrtoint (ptr @GV to i32))
 ; CHECK-NEXT:    ret void
 ;
   %vla = alloca double, i32 %p1
-  call void @PR27277_part2(i32 ptrtoint (i32** @GV to i32))
+  call void @PR27277_part2(i32 ptrtoint (ptr @GV to i32))
   ret void
 }
 

@@ -2207,34 +2207,34 @@ define void @PR34947(ptr %p0, ptr %p1) nounwind {
 ;
 ; X64-SSE-LABEL: PR34947:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movzwl 16(%rdi), %r8d
+; X64-SSE-NEXT:    movzwl 16(%rdi), %ecx
 ; X64-SSE-NEXT:    movdqa (%rdi), %xmm3
 ; X64-SSE-NEXT:    movdqa (%rsi), %xmm0
 ; X64-SSE-NEXT:    movdqa 16(%rsi), %xmm1
 ; X64-SSE-NEXT:    pxor %xmm4, %xmm4
 ; X64-SSE-NEXT:    movdqa %xmm3, %xmm2
 ; X64-SSE-NEXT:    pextrw $7, %xmm3, %eax
-; X64-SSE-NEXT:    pextrw $4, %xmm3, %r9d
-; X64-SSE-NEXT:    pextrw $0, %xmm3, %r10d
-; X64-SSE-NEXT:    pextrw $1, %xmm3, %r11d
-; X64-SSE-NEXT:    pextrw $3, %xmm3, %ecx
+; X64-SSE-NEXT:    pextrw $4, %xmm3, %edi
+; X64-SSE-NEXT:    pextrw $0, %xmm3, %r8d
+; X64-SSE-NEXT:    pextrw $1, %xmm3, %r9d
+; X64-SSE-NEXT:    pextrw $3, %xmm3, %r10d
 ; X64-SSE-NEXT:    movdqa %xmm3, %xmm5
 ; X64-SSE-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
 ; X64-SSE-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm4[4],xmm2[5],xmm4[5],xmm2[6],xmm4[6],xmm2[7],xmm4[7]
 ; X64-SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[3,3,3,3]
-; X64-SSE-NEXT:    movd %xmm3, %edi
+; X64-SSE-NEXT:    movd %xmm3, %r11d
 ; X64-SSE-NEXT:    xorl %edx, %edx
-; X64-SSE-NEXT:    divl %edi
+; X64-SSE-NEXT:    divl %r11d
 ; X64-SSE-NEXT:    movd %edx, %xmm3
 ; X64-SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm2[2,3,2,3]
 ; X64-SSE-NEXT:    movd %xmm4, %eax
 ; X64-SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,2,3]
-; X64-SSE-NEXT:    movd %xmm4, %edi
+; X64-SSE-NEXT:    movd %xmm4, %r11d
 ; X64-SSE-NEXT:    xorl %edx, %edx
-; X64-SSE-NEXT:    divl %edi
+; X64-SSE-NEXT:    divl %r11d
 ; X64-SSE-NEXT:    movd %edx, %xmm4
 ; X64-SSE-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
-; X64-SSE-NEXT:    movl %r9d, %eax
+; X64-SSE-NEXT:    movl %edi, %eax
 ; X64-SSE-NEXT:    xorl %edx, %edx
 ; X64-SSE-NEXT:    divl 16(%rsi)
 ; X64-SSE-NEXT:    movd %edx, %xmm3
@@ -2247,33 +2247,33 @@ define void @PR34947(ptr %p0, ptr %p1) nounwind {
 ; X64-SSE-NEXT:    movd %edx, %xmm1
 ; X64-SSE-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
 ; X64-SSE-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm4[0]
-; X64-SSE-NEXT:    movl %r10d, %eax
+; X64-SSE-NEXT:    movl %r8d, %eax
 ; X64-SSE-NEXT:    xorl %edx, %edx
 ; X64-SSE-NEXT:    divl (%rsi)
 ; X64-SSE-NEXT:    movd %edx, %xmm1
 ; X64-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,1,1]
 ; X64-SSE-NEXT:    movd %xmm2, %edi
-; X64-SSE-NEXT:    movl %r11d, %eax
+; X64-SSE-NEXT:    movl %r9d, %eax
 ; X64-SSE-NEXT:    xorl %edx, %edx
 ; X64-SSE-NEXT:    divl %edi
 ; X64-SSE-NEXT:    movd %edx, %xmm2
 ; X64-SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; X64-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[3,3,3,3]
 ; X64-SSE-NEXT:    movd %xmm2, %edi
-; X64-SSE-NEXT:    movl %ecx, %eax
+; X64-SSE-NEXT:    movl %r10d, %eax
 ; X64-SSE-NEXT:    xorl %edx, %edx
 ; X64-SSE-NEXT:    divl %edi
 ; X64-SSE-NEXT:    movd %edx, %xmm2
 ; X64-SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm5[2,3,2,3]
 ; X64-SSE-NEXT:    movd %xmm4, %eax
 ; X64-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; X64-SSE-NEXT:    movd %xmm0, %ecx
+; X64-SSE-NEXT:    movd %xmm0, %edi
 ; X64-SSE-NEXT:    xorl %edx, %edx
-; X64-SSE-NEXT:    divl %ecx
+; X64-SSE-NEXT:    divl %edi
 ; X64-SSE-NEXT:    movd %edx, %xmm0
 ; X64-SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; X64-SSE-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; X64-SSE-NEXT:    movl %r8d, %eax
+; X64-SSE-NEXT:    movl %ecx, %eax
 ; X64-SSE-NEXT:    xorl %edx, %edx
 ; X64-SSE-NEXT:    divl 32(%rsi)
 ; X64-SSE-NEXT:    movdqa {{.*#+}} xmm0 = [8199,8199,8199,8199]
@@ -2305,27 +2305,27 @@ define void @PR34947(ptr %p0, ptr %p1) nounwind {
 ; X64-AVX1-NEXT:    vmovd %xmm2, %eax
 ; X64-AVX1-NEXT:    xorl %edx, %edx
 ; X64-AVX1-NEXT:    divl 32(%rsi)
-; X64-AVX1-NEXT:    movl %edx, %r8d
+; X64-AVX1-NEXT:    movl %edx, %ecx
 ; X64-AVX1-NEXT:    vpextrd $3, %xmm1, %eax
 ; X64-AVX1-NEXT:    xorl %edx, %edx
 ; X64-AVX1-NEXT:    divl 28(%rsi)
-; X64-AVX1-NEXT:    movl %edx, %r9d
+; X64-AVX1-NEXT:    movl %edx, %edi
 ; X64-AVX1-NEXT:    vpextrd $2, %xmm1, %eax
 ; X64-AVX1-NEXT:    xorl %edx, %edx
 ; X64-AVX1-NEXT:    divl 24(%rsi)
-; X64-AVX1-NEXT:    movl %edx, %r10d
+; X64-AVX1-NEXT:    movl %edx, %r8d
 ; X64-AVX1-NEXT:    vpextrd $1, %xmm1, %eax
 ; X64-AVX1-NEXT:    xorl %edx, %edx
 ; X64-AVX1-NEXT:    divl 20(%rsi)
-; X64-AVX1-NEXT:    movl %edx, %r11d
+; X64-AVX1-NEXT:    movl %edx, %r9d
 ; X64-AVX1-NEXT:    vmovd %xmm1, %eax
 ; X64-AVX1-NEXT:    xorl %edx, %edx
 ; X64-AVX1-NEXT:    divl 16(%rsi)
-; X64-AVX1-NEXT:    movl %edx, %ecx
+; X64-AVX1-NEXT:    movl %edx, %r10d
 ; X64-AVX1-NEXT:    vpextrd $3, %xmm0, %eax
 ; X64-AVX1-NEXT:    xorl %edx, %edx
 ; X64-AVX1-NEXT:    divl 12(%rsi)
-; X64-AVX1-NEXT:    movl %edx, %edi
+; X64-AVX1-NEXT:    movl %edx, %r11d
 ; X64-AVX1-NEXT:    vpextrd $2, %xmm0, %eax
 ; X64-AVX1-NEXT:    xorl %edx, %edx
 ; X64-AVX1-NEXT:    divl 8(%rsi)
@@ -2340,15 +2340,15 @@ define void @PR34947(ptr %p0, ptr %p1) nounwind {
 ; X64-AVX1-NEXT:    vmovd %edx, %xmm0
 ; X64-AVX1-NEXT:    vpinsrd $1, %ebp, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpinsrd $2, %ebx, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpinsrd $3, %edi, %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpinsrd $3, %r11d, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [8199,8199,8199,8199]
 ; X64-AVX1-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vmovd %ecx, %xmm2
-; X64-AVX1-NEXT:    vpinsrd $1, %r11d, %xmm2, %xmm2
-; X64-AVX1-NEXT:    vpinsrd $2, %r10d, %xmm2, %xmm2
-; X64-AVX1-NEXT:    vpinsrd $3, %r9d, %xmm2, %xmm2
+; X64-AVX1-NEXT:    vmovd %r10d, %xmm2
+; X64-AVX1-NEXT:    vpinsrd $1, %r9d, %xmm2, %xmm2
+; X64-AVX1-NEXT:    vpinsrd $2, %r8d, %xmm2, %xmm2
+; X64-AVX1-NEXT:    vpinsrd $3, %edi, %xmm2, %xmm2
 ; X64-AVX1-NEXT:    vpmulld %xmm1, %xmm2, %xmm1
-; X64-AVX1-NEXT:    imull $8199, %r8d, %eax # imm = 0x2007
+; X64-AVX1-NEXT:    imull $8199, %ecx, %eax # imm = 0x2007
 ; X64-AVX1-NEXT:    movl %eax, (%rax)
 ; X64-AVX1-NEXT:    vmovdqa %xmm1, (%rax)
 ; X64-AVX1-NEXT:    vmovdqa %xmm0, (%rax)

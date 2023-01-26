@@ -1803,1869 +1803,1940 @@ def: Pat<(int_hexagon_Y6_dmwait ),
 // V60 HVX Instructions.
 
 def: Pat<(int_hexagon_V6_extractw HvxVR:$src1, IntRegs:$src2),
-         (V6_extractw HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_extractw HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_extractw_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_extractw HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_extractw HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_hi HvxWR:$src1),
-         (V6_hi HvxWR:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_hi HvxWR:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_hi_128B HvxWR:$src1),
-         (V6_hi HvxWR:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_hi HvxWR:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_lo HvxWR:$src1),
-         (V6_lo HvxWR:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_lo HvxWR:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_lo_128B HvxWR:$src1),
-         (V6_lo HvxWR:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_lo HvxWR:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_lvsplatw IntRegs:$src1),
-         (V6_lvsplatw IntRegs:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_lvsplatw IntRegs:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_lvsplatw_128B IntRegs:$src1),
-         (V6_lvsplatw IntRegs:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_lvsplatw IntRegs:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_pred_and HvxQR:$src1, HvxQR:$src2),
-         (V6_pred_and HvxQR:$src1, HvxQR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_pred_and HvxQR:$src1, HvxQR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_pred_and_128B HvxQR:$src1, HvxQR:$src2),
-         (V6_pred_and HvxQR:$src1, HvxQR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_pred_and HvxQR:$src1, HvxQR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_pred_and_n HvxQR:$src1, HvxQR:$src2),
-         (V6_pred_and_n HvxQR:$src1, HvxQR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_pred_and_n HvxQR:$src1, HvxQR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_pred_and_n_128B HvxQR:$src1, HvxQR:$src2),
-         (V6_pred_and_n HvxQR:$src1, HvxQR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_pred_and_n HvxQR:$src1, HvxQR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_pred_not HvxQR:$src1),
-         (V6_pred_not HvxQR:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_pred_not HvxQR:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_pred_not_128B HvxQR:$src1),
-         (V6_pred_not HvxQR:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_pred_not HvxQR:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_pred_or HvxQR:$src1, HvxQR:$src2),
-         (V6_pred_or HvxQR:$src1, HvxQR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_pred_or HvxQR:$src1, HvxQR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_pred_or_128B HvxQR:$src1, HvxQR:$src2),
-         (V6_pred_or HvxQR:$src1, HvxQR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_pred_or HvxQR:$src1, HvxQR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_pred_or_n HvxQR:$src1, HvxQR:$src2),
-         (V6_pred_or_n HvxQR:$src1, HvxQR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_pred_or_n HvxQR:$src1, HvxQR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_pred_or_n_128B HvxQR:$src1, HvxQR:$src2),
-         (V6_pred_or_n HvxQR:$src1, HvxQR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_pred_or_n HvxQR:$src1, HvxQR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_pred_scalar2 IntRegs:$src1),
-         (V6_pred_scalar2 IntRegs:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_pred_scalar2 IntRegs:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_pred_scalar2_128B IntRegs:$src1),
-         (V6_pred_scalar2 IntRegs:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_pred_scalar2 IntRegs:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_pred_xor HvxQR:$src1, HvxQR:$src2),
-         (V6_pred_xor HvxQR:$src1, HvxQR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_pred_xor HvxQR:$src1, HvxQR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_pred_xor_128B HvxQR:$src1, HvxQR:$src2),
-         (V6_pred_xor HvxQR:$src1, HvxQR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_pred_xor HvxQR:$src1, HvxQR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vS32b_nqpred_ai HvxQR:$src1, IntRegs:$src2, HvxVR:$src3),
-         (V6_vS32b_nqpred_ai HvxQR:$src1, IntRegs:$src2, 0, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vS32b_nqpred_ai HvxQR:$src1, IntRegs:$src2, 0, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vS32b_nqpred_ai_128B HvxQR:$src1, IntRegs:$src2, HvxVR:$src3),
-         (V6_vS32b_nqpred_ai HvxQR:$src1, IntRegs:$src2, 0, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vS32b_nqpred_ai HvxQR:$src1, IntRegs:$src2, 0, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vS32b_nt_nqpred_ai HvxQR:$src1, IntRegs:$src2, HvxVR:$src3),
-         (V6_vS32b_nt_nqpred_ai HvxQR:$src1, IntRegs:$src2, 0, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vS32b_nt_nqpred_ai HvxQR:$src1, IntRegs:$src2, 0, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vS32b_nt_nqpred_ai_128B HvxQR:$src1, IntRegs:$src2, HvxVR:$src3),
-         (V6_vS32b_nt_nqpred_ai HvxQR:$src1, IntRegs:$src2, 0, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vS32b_nt_nqpred_ai HvxQR:$src1, IntRegs:$src2, 0, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vS32b_nt_qpred_ai HvxQR:$src1, IntRegs:$src2, HvxVR:$src3),
-         (V6_vS32b_nt_qpred_ai HvxQR:$src1, IntRegs:$src2, 0, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vS32b_nt_qpred_ai HvxQR:$src1, IntRegs:$src2, 0, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vS32b_nt_qpred_ai_128B HvxQR:$src1, IntRegs:$src2, HvxVR:$src3),
-         (V6_vS32b_nt_qpred_ai HvxQR:$src1, IntRegs:$src2, 0, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vS32b_nt_qpred_ai HvxQR:$src1, IntRegs:$src2, 0, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vS32b_qpred_ai HvxQR:$src1, IntRegs:$src2, HvxVR:$src3),
-         (V6_vS32b_qpred_ai HvxQR:$src1, IntRegs:$src2, 0, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vS32b_qpred_ai HvxQR:$src1, IntRegs:$src2, 0, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vS32b_qpred_ai_128B HvxQR:$src1, IntRegs:$src2, HvxVR:$src3),
-         (V6_vS32b_qpred_ai HvxQR:$src1, IntRegs:$src2, 0, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vS32b_qpred_ai HvxQR:$src1, IntRegs:$src2, 0, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vabsdiffh HvxVR:$src1, HvxVR:$src2),
-         (V6_vabsdiffh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vabsdiffh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vabsdiffh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vabsdiffh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vabsdiffh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vabsdiffub HvxVR:$src1, HvxVR:$src2),
-         (V6_vabsdiffub HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vabsdiffub HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vabsdiffub_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vabsdiffub HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vabsdiffub HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vabsdiffuh HvxVR:$src1, HvxVR:$src2),
-         (V6_vabsdiffuh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vabsdiffuh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vabsdiffuh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vabsdiffuh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vabsdiffuh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vabsdiffw HvxVR:$src1, HvxVR:$src2),
-         (V6_vabsdiffw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vabsdiffw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vabsdiffw_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vabsdiffw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vabsdiffw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vabsh HvxVR:$src1),
-         (V6_vabsh HvxVR:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vabsh HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vabsh_128B HvxVR:$src1),
-         (V6_vabsh HvxVR:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vabsh HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vabsh_sat HvxVR:$src1),
-         (V6_vabsh_sat HvxVR:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vabsh_sat HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vabsh_sat_128B HvxVR:$src1),
-         (V6_vabsh_sat HvxVR:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vabsh_sat HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vabsw HvxVR:$src1),
-         (V6_vabsw HvxVR:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vabsw HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vabsw_128B HvxVR:$src1),
-         (V6_vabsw HvxVR:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vabsw HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vabsw_sat HvxVR:$src1),
-         (V6_vabsw_sat HvxVR:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vabsw_sat HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vabsw_sat_128B HvxVR:$src1),
-         (V6_vabsw_sat HvxVR:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vabsw_sat HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddb HvxVR:$src1, HvxVR:$src2),
-         (V6_vaddb HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vaddb HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddb_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vaddb HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vaddb HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddb_dv HvxWR:$src1, HvxWR:$src2),
-         (V6_vaddb_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vaddb_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddb_dv_128B HvxWR:$src1, HvxWR:$src2),
-         (V6_vaddb_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vaddb_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddbnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vaddbnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vaddbnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddbnq_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vaddbnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vaddbnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddbq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vaddbq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vaddbq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddbq_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vaddbq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vaddbq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddh HvxVR:$src1, HvxVR:$src2),
-         (V6_vaddh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vaddh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vaddh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vaddh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddh_dv HvxWR:$src1, HvxWR:$src2),
-         (V6_vaddh_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vaddh_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddh_dv_128B HvxWR:$src1, HvxWR:$src2),
-         (V6_vaddh_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vaddh_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddhnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vaddhnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vaddhnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddhnq_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vaddhnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vaddhnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddhq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vaddhq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vaddhq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddhq_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vaddhq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vaddhq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddhsat HvxVR:$src1, HvxVR:$src2),
-         (V6_vaddhsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vaddhsat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddhsat_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vaddhsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vaddhsat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddhsat_dv HvxWR:$src1, HvxWR:$src2),
-         (V6_vaddhsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vaddhsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddhsat_dv_128B HvxWR:$src1, HvxWR:$src2),
-         (V6_vaddhsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vaddhsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddhw HvxVR:$src1, HvxVR:$src2),
-         (V6_vaddhw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vaddhw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddhw_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vaddhw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vaddhw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddubh HvxVR:$src1, HvxVR:$src2),
-         (V6_vaddubh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vaddubh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddubh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vaddubh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vaddubh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddubsat HvxVR:$src1, HvxVR:$src2),
-         (V6_vaddubsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vaddubsat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddubsat_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vaddubsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vaddubsat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddubsat_dv HvxWR:$src1, HvxWR:$src2),
-         (V6_vaddubsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vaddubsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddubsat_dv_128B HvxWR:$src1, HvxWR:$src2),
-         (V6_vaddubsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vaddubsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vadduhsat HvxVR:$src1, HvxVR:$src2),
-         (V6_vadduhsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vadduhsat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vadduhsat_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vadduhsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vadduhsat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vadduhsat_dv HvxWR:$src1, HvxWR:$src2),
-         (V6_vadduhsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vadduhsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vadduhsat_dv_128B HvxWR:$src1, HvxWR:$src2),
-         (V6_vadduhsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vadduhsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vadduhw HvxVR:$src1, HvxVR:$src2),
-         (V6_vadduhw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vadduhw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vadduhw_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vadduhw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vadduhw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddw HvxVR:$src1, HvxVR:$src2),
-         (V6_vaddw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vaddw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddw_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vaddw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vaddw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddw_dv HvxWR:$src1, HvxWR:$src2),
-         (V6_vaddw_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vaddw_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddw_dv_128B HvxWR:$src1, HvxWR:$src2),
-         (V6_vaddw_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vaddw_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddwnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vaddwnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vaddwnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddwnq_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vaddwnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vaddwnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddwq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vaddwq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vaddwq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddwq_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vaddwq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vaddwq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddwsat HvxVR:$src1, HvxVR:$src2),
-         (V6_vaddwsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vaddwsat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddwsat_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vaddwsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vaddwsat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddwsat_dv HvxWR:$src1, HvxWR:$src2),
-         (V6_vaddwsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vaddwsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddwsat_dv_128B HvxWR:$src1, HvxWR:$src2),
-         (V6_vaddwsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vaddwsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_valignb HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_valignb HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_valignb HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_valignb_128B HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_valignb HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_valignb HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_valignbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3),
-         (V6_valignbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_valignbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_valignbi_128B HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3),
-         (V6_valignbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_valignbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vand HvxVR:$src1, HvxVR:$src2),
-         (V6_vand HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vand HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vand_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vand HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vand HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vandqrt HvxQR:$src1, IntRegs:$src2),
-         (V6_vandqrt HvxQR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vandqrt HvxQR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vandqrt_128B HvxQR:$src1, IntRegs:$src2),
-         (V6_vandqrt HvxQR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vandqrt HvxQR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vandqrt_acc HvxVR:$src1, HvxQR:$src2, IntRegs:$src3),
-         (V6_vandqrt_acc HvxVR:$src1, HvxQR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vandqrt_acc HvxVR:$src1, HvxQR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vandqrt_acc_128B HvxVR:$src1, HvxQR:$src2, IntRegs:$src3),
-         (V6_vandqrt_acc HvxVR:$src1, HvxQR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vandqrt_acc HvxVR:$src1, HvxQR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vandvrt HvxVR:$src1, IntRegs:$src2),
-         (V6_vandvrt HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vandvrt HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vandvrt_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_vandvrt HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vandvrt HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vandvrt_acc HvxQR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vandvrt_acc HvxQR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vandvrt_acc HvxQR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vandvrt_acc_128B HvxQR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vandvrt_acc HvxQR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vandvrt_acc HvxQR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaslh HvxVR:$src1, IntRegs:$src2),
-         (V6_vaslh HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vaslh HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaslh_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_vaslh HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vaslh HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaslhv HvxVR:$src1, HvxVR:$src2),
-         (V6_vaslhv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vaslhv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaslhv_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vaslhv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vaslhv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaslw HvxVR:$src1, IntRegs:$src2),
-         (V6_vaslw HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vaslw HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaslw_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_vaslw HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vaslw HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaslw_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vaslw_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vaslw_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaslw_acc_128B HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vaslw_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vaslw_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaslwv HvxVR:$src1, HvxVR:$src2),
-         (V6_vaslwv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vaslwv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaslwv_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vaslwv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vaslwv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vasrh HvxVR:$src1, IntRegs:$src2),
-         (V6_vasrh HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vasrh HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vasrh_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_vasrh HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vasrh HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vasrhbrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vasrhbrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vasrhbrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vasrhbrndsat_128B HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vasrhbrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vasrhbrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vasrhubrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vasrhubrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vasrhubrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vasrhubrndsat_128B HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vasrhubrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vasrhubrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vasrhubsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vasrhubsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vasrhubsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vasrhubsat_128B HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vasrhubsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vasrhubsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vasrhv HvxVR:$src1, HvxVR:$src2),
-         (V6_vasrhv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vasrhv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vasrhv_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vasrhv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vasrhv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vasrw HvxVR:$src1, IntRegs:$src2),
-         (V6_vasrw HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vasrw HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vasrw_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_vasrw HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vasrw HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vasrw_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vasrw_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vasrw_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vasrw_acc_128B HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vasrw_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vasrw_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vasrwh HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vasrwh HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vasrwh HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vasrwh_128B HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vasrwh HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vasrwh HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vasrwhrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vasrwhrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vasrwhrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vasrwhrndsat_128B HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vasrwhrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vasrwhrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vasrwhsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vasrwhsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vasrwhsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vasrwhsat_128B HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vasrwhsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vasrwhsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vasrwuhsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vasrwuhsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vasrwuhsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vasrwuhsat_128B HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vasrwuhsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vasrwuhsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vasrwv HvxVR:$src1, HvxVR:$src2),
-         (V6_vasrwv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vasrwv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vasrwv_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vasrwv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vasrwv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vassign HvxVR:$src1),
-         (V6_vassign HvxVR:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vassign HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vassign_128B HvxVR:$src1),
-         (V6_vassign HvxVR:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vassign HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vassignp HvxWR:$src1),
-         (V6_vassignp HvxWR:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vassignp HvxWR:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vassignp_128B HvxWR:$src1),
-         (V6_vassignp HvxWR:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vassignp HvxWR:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vavgh HvxVR:$src1, HvxVR:$src2),
-         (V6_vavgh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vavgh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vavgh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vavgh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vavgh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vavghrnd HvxVR:$src1, HvxVR:$src2),
-         (V6_vavghrnd HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vavghrnd HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vavghrnd_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vavghrnd HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vavghrnd HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vavgub HvxVR:$src1, HvxVR:$src2),
-         (V6_vavgub HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vavgub HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vavgub_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vavgub HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vavgub HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vavgubrnd HvxVR:$src1, HvxVR:$src2),
-         (V6_vavgubrnd HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vavgubrnd HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vavgubrnd_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vavgubrnd HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vavgubrnd HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vavguh HvxVR:$src1, HvxVR:$src2),
-         (V6_vavguh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vavguh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vavguh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vavguh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vavguh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vavguhrnd HvxVR:$src1, HvxVR:$src2),
-         (V6_vavguhrnd HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vavguhrnd HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vavguhrnd_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vavguhrnd HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vavguhrnd HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vavgw HvxVR:$src1, HvxVR:$src2),
-         (V6_vavgw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vavgw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vavgw_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vavgw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vavgw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vavgwrnd HvxVR:$src1, HvxVR:$src2),
-         (V6_vavgwrnd HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vavgwrnd HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vavgwrnd_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vavgwrnd HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vavgwrnd HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vcl0h HvxVR:$src1),
-         (V6_vcl0h HvxVR:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vcl0h HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vcl0h_128B HvxVR:$src1),
-         (V6_vcl0h HvxVR:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vcl0h HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vcl0w HvxVR:$src1),
-         (V6_vcl0w HvxVR:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vcl0w HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vcl0w_128B HvxVR:$src1),
-         (V6_vcl0w HvxVR:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vcl0w HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vcombine HvxVR:$src1, HvxVR:$src2),
-         (V6_vcombine HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vcombine HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vcombine_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vcombine HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vcombine HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vd0 ),
-         (V6_vd0 )>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vd0 )>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vd0_128B ),
-         (V6_vd0 )>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vd0 )>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdealb HvxVR:$src1),
-         (V6_vdealb HvxVR:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vdealb HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdealb_128B HvxVR:$src1),
-         (V6_vdealb HvxVR:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vdealb HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdealb4w HvxVR:$src1, HvxVR:$src2),
-         (V6_vdealb4w HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vdealb4w HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdealb4w_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vdealb4w HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vdealb4w HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdealh HvxVR:$src1),
-         (V6_vdealh HvxVR:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vdealh HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdealh_128B HvxVR:$src1),
-         (V6_vdealh HvxVR:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vdealh HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdealvdd HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vdealvdd HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vdealvdd HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdealvdd_128B HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vdealvdd HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vdealvdd HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdelta HvxVR:$src1, HvxVR:$src2),
-         (V6_vdelta HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vdelta HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdelta_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vdelta HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vdelta HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdmpybus HvxVR:$src1, IntRegs:$src2),
-         (V6_vdmpybus HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vdmpybus HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdmpybus_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_vdmpybus HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vdmpybus HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdmpybus_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vdmpybus_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vdmpybus_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdmpybus_acc_128B HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vdmpybus_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vdmpybus_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdmpybus_dv HvxWR:$src1, IntRegs:$src2),
-         (V6_vdmpybus_dv HvxWR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vdmpybus_dv HvxWR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdmpybus_dv_128B HvxWR:$src1, IntRegs:$src2),
-         (V6_vdmpybus_dv HvxWR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vdmpybus_dv HvxWR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdmpybus_dv_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3),
-         (V6_vdmpybus_dv_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vdmpybus_dv_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdmpybus_dv_acc_128B HvxWR:$src1, HvxWR:$src2, IntRegs:$src3),
-         (V6_vdmpybus_dv_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vdmpybus_dv_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdmpyhb HvxVR:$src1, IntRegs:$src2),
-         (V6_vdmpyhb HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vdmpyhb HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdmpyhb_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_vdmpyhb HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vdmpyhb HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdmpyhb_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vdmpyhb_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vdmpyhb_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdmpyhb_acc_128B HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vdmpyhb_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vdmpyhb_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdmpyhb_dv HvxWR:$src1, IntRegs:$src2),
-         (V6_vdmpyhb_dv HvxWR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vdmpyhb_dv HvxWR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdmpyhb_dv_128B HvxWR:$src1, IntRegs:$src2),
-         (V6_vdmpyhb_dv HvxWR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vdmpyhb_dv HvxWR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdmpyhb_dv_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3),
-         (V6_vdmpyhb_dv_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vdmpyhb_dv_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdmpyhb_dv_acc_128B HvxWR:$src1, HvxWR:$src2, IntRegs:$src3),
-         (V6_vdmpyhb_dv_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vdmpyhb_dv_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdmpyhisat HvxWR:$src1, IntRegs:$src2),
-         (V6_vdmpyhisat HvxWR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vdmpyhisat HvxWR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdmpyhisat_128B HvxWR:$src1, IntRegs:$src2),
-         (V6_vdmpyhisat HvxWR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vdmpyhisat HvxWR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdmpyhisat_acc HvxVR:$src1, HvxWR:$src2, IntRegs:$src3),
-         (V6_vdmpyhisat_acc HvxVR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vdmpyhisat_acc HvxVR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdmpyhisat_acc_128B HvxVR:$src1, HvxWR:$src2, IntRegs:$src3),
-         (V6_vdmpyhisat_acc HvxVR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vdmpyhisat_acc HvxVR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdmpyhsat HvxVR:$src1, IntRegs:$src2),
-         (V6_vdmpyhsat HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vdmpyhsat HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdmpyhsat_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_vdmpyhsat HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vdmpyhsat HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdmpyhsat_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vdmpyhsat_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vdmpyhsat_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdmpyhsat_acc_128B HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vdmpyhsat_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vdmpyhsat_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdmpyhsuisat HvxWR:$src1, IntRegs:$src2),
-         (V6_vdmpyhsuisat HvxWR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vdmpyhsuisat HvxWR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdmpyhsuisat_128B HvxWR:$src1, IntRegs:$src2),
-         (V6_vdmpyhsuisat HvxWR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vdmpyhsuisat HvxWR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdmpyhsuisat_acc HvxVR:$src1, HvxWR:$src2, IntRegs:$src3),
-         (V6_vdmpyhsuisat_acc HvxVR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vdmpyhsuisat_acc HvxVR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdmpyhsuisat_acc_128B HvxVR:$src1, HvxWR:$src2, IntRegs:$src3),
-         (V6_vdmpyhsuisat_acc HvxVR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vdmpyhsuisat_acc HvxVR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdmpyhsusat HvxVR:$src1, IntRegs:$src2),
-         (V6_vdmpyhsusat HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vdmpyhsusat HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdmpyhsusat_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_vdmpyhsusat HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vdmpyhsusat HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdmpyhsusat_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vdmpyhsusat_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vdmpyhsusat_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdmpyhsusat_acc_128B HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vdmpyhsusat_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vdmpyhsusat_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdmpyhvsat HvxVR:$src1, HvxVR:$src2),
-         (V6_vdmpyhvsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vdmpyhvsat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdmpyhvsat_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vdmpyhvsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vdmpyhvsat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdmpyhvsat_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vdmpyhvsat_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vdmpyhvsat_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdmpyhvsat_acc_128B HvxVR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vdmpyhvsat_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vdmpyhvsat_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdsaduh HvxWR:$src1, IntRegs:$src2),
-         (V6_vdsaduh HvxWR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vdsaduh HvxWR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdsaduh_128B HvxWR:$src1, IntRegs:$src2),
-         (V6_vdsaduh HvxWR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vdsaduh HvxWR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdsaduh_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3),
-         (V6_vdsaduh_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vdsaduh_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdsaduh_acc_128B HvxWR:$src1, HvxWR:$src2, IntRegs:$src3),
-         (V6_vdsaduh_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vdsaduh_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_veqb HvxVR:$src1, HvxVR:$src2),
-         (V6_veqb HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_veqb HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_veqb_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_veqb HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_veqb HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_veqb_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_veqb_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_veqb_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_veqb_and_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_veqb_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_veqb_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_veqb_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_veqb_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_veqb_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_veqb_or_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_veqb_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_veqb_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_veqb_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_veqb_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_veqb_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_veqb_xor_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_veqb_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_veqb_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_veqh HvxVR:$src1, HvxVR:$src2),
-         (V6_veqh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_veqh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_veqh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_veqh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_veqh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_veqh_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_veqh_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_veqh_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_veqh_and_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_veqh_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_veqh_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_veqh_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_veqh_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_veqh_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_veqh_or_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_veqh_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_veqh_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_veqh_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_veqh_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_veqh_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_veqh_xor_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_veqh_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_veqh_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_veqw HvxVR:$src1, HvxVR:$src2),
-         (V6_veqw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_veqw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_veqw_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_veqw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_veqw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_veqw_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_veqw_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_veqw_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_veqw_and_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_veqw_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_veqw_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_veqw_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_veqw_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_veqw_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_veqw_or_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_veqw_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_veqw_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_veqw_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_veqw_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_veqw_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_veqw_xor_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_veqw_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_veqw_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vgtb HvxVR:$src1, HvxVR:$src2),
-         (V6_vgtb HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vgtb HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vgtb_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vgtb HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vgtb HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vgtb_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtb_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vgtb_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vgtb_and_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtb_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vgtb_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vgtb_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtb_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vgtb_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vgtb_or_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtb_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vgtb_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vgtb_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtb_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vgtb_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vgtb_xor_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtb_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vgtb_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vgth HvxVR:$src1, HvxVR:$src2),
-         (V6_vgth HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vgth HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vgth_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vgth HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vgth HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vgth_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgth_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vgth_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vgth_and_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgth_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vgth_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vgth_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgth_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vgth_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vgth_or_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgth_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vgth_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vgth_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgth_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vgth_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vgth_xor_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgth_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vgth_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vgtub HvxVR:$src1, HvxVR:$src2),
-         (V6_vgtub HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vgtub HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vgtub_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vgtub HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vgtub HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vgtub_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtub_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vgtub_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vgtub_and_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtub_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vgtub_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vgtub_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtub_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vgtub_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vgtub_or_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtub_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vgtub_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vgtub_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtub_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vgtub_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vgtub_xor_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtub_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vgtub_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vgtuh HvxVR:$src1, HvxVR:$src2),
-         (V6_vgtuh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vgtuh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vgtuh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vgtuh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vgtuh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vgtuh_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtuh_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vgtuh_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vgtuh_and_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtuh_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vgtuh_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vgtuh_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtuh_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vgtuh_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vgtuh_or_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtuh_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vgtuh_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vgtuh_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtuh_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vgtuh_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vgtuh_xor_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtuh_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vgtuh_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vgtuw HvxVR:$src1, HvxVR:$src2),
-         (V6_vgtuw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vgtuw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vgtuw_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vgtuw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vgtuw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vgtuw_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtuw_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vgtuw_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vgtuw_and_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtuw_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vgtuw_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vgtuw_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtuw_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vgtuw_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vgtuw_or_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtuw_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vgtuw_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vgtuw_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtuw_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vgtuw_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vgtuw_xor_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtuw_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vgtuw_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vgtw HvxVR:$src1, HvxVR:$src2),
-         (V6_vgtw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vgtw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vgtw_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vgtw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vgtw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vgtw_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtw_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vgtw_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vgtw_and_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtw_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vgtw_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vgtw_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtw_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vgtw_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vgtw_or_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtw_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vgtw_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vgtw_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtw_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vgtw_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vgtw_xor_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtw_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vgtw_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vinsertwr HvxVR:$src1, IntRegs:$src2),
-         (V6_vinsertwr HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vinsertwr HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vinsertwr_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_vinsertwr HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vinsertwr HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vlalignb HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vlalignb HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vlalignb HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vlalignb_128B HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vlalignb HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vlalignb HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vlalignbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3),
-         (V6_vlalignbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vlalignbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vlalignbi_128B HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3),
-         (V6_vlalignbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vlalignbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vlsrh HvxVR:$src1, IntRegs:$src2),
-         (V6_vlsrh HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vlsrh HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vlsrh_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_vlsrh HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vlsrh HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vlsrhv HvxVR:$src1, HvxVR:$src2),
-         (V6_vlsrhv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vlsrhv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vlsrhv_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vlsrhv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vlsrhv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vlsrw HvxVR:$src1, IntRegs:$src2),
-         (V6_vlsrw HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vlsrw HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vlsrw_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_vlsrw HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vlsrw HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vlsrwv HvxVR:$src1, HvxVR:$src2),
-         (V6_vlsrwv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vlsrwv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vlsrwv_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vlsrwv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vlsrwv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vlutvvb HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vlutvvb HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vlutvvb HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vlutvvb_128B HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vlutvvb HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vlutvvb HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vlutvvb_oracc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3, IntRegsLow8:$src4),
-         (V6_vlutvvb_oracc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3, IntRegsLow8:$src4)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vlutvvb_oracc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3, IntRegsLow8:$src4)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vlutvvb_oracc_128B HvxVR:$src1, HvxVR:$src2, HvxVR:$src3, IntRegsLow8:$src4),
-         (V6_vlutvvb_oracc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3, IntRegsLow8:$src4)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vlutvvb_oracc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3, IntRegsLow8:$src4)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vlutvwh HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vlutvwh HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vlutvwh HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vlutvwh_128B HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vlutvwh HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vlutvwh HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vlutvwh_oracc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3, IntRegsLow8:$src4),
-         (V6_vlutvwh_oracc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3, IntRegsLow8:$src4)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vlutvwh_oracc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3, IntRegsLow8:$src4)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vlutvwh_oracc_128B HvxWR:$src1, HvxVR:$src2, HvxVR:$src3, IntRegsLow8:$src4),
-         (V6_vlutvwh_oracc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3, IntRegsLow8:$src4)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vlutvwh_oracc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3, IntRegsLow8:$src4)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmaxh HvxVR:$src1, HvxVR:$src2),
-         (V6_vmaxh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmaxh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmaxh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmaxh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmaxh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmaxub HvxVR:$src1, HvxVR:$src2),
-         (V6_vmaxub HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmaxub HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmaxub_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmaxub HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmaxub HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmaxuh HvxVR:$src1, HvxVR:$src2),
-         (V6_vmaxuh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmaxuh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmaxuh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmaxuh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmaxuh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmaxw HvxVR:$src1, HvxVR:$src2),
-         (V6_vmaxw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmaxw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmaxw_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmaxw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmaxw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vminh HvxVR:$src1, HvxVR:$src2),
-         (V6_vminh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vminh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vminh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vminh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vminh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vminub HvxVR:$src1, HvxVR:$src2),
-         (V6_vminub HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vminub HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vminub_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vminub HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vminub HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vminuh HvxVR:$src1, HvxVR:$src2),
-         (V6_vminuh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vminuh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vminuh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vminuh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vminuh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vminw HvxVR:$src1, HvxVR:$src2),
-         (V6_vminw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vminw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vminw_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vminw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vminw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpabus HvxWR:$src1, IntRegs:$src2),
-         (V6_vmpabus HvxWR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpabus HvxWR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpabus_128B HvxWR:$src1, IntRegs:$src2),
-         (V6_vmpabus HvxWR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpabus HvxWR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpabus_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3),
-         (V6_vmpabus_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpabus_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpabus_acc_128B HvxWR:$src1, HvxWR:$src2, IntRegs:$src3),
-         (V6_vmpabus_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpabus_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpabusv HvxWR:$src1, HvxWR:$src2),
-         (V6_vmpabusv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpabusv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpabusv_128B HvxWR:$src1, HvxWR:$src2),
-         (V6_vmpabusv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpabusv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpabuuv HvxWR:$src1, HvxWR:$src2),
-         (V6_vmpabuuv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpabuuv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpabuuv_128B HvxWR:$src1, HvxWR:$src2),
-         (V6_vmpabuuv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpabuuv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpahb HvxWR:$src1, IntRegs:$src2),
-         (V6_vmpahb HvxWR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpahb HvxWR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpahb_128B HvxWR:$src1, IntRegs:$src2),
-         (V6_vmpahb HvxWR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpahb HvxWR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpahb_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3),
-         (V6_vmpahb_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpahb_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpahb_acc_128B HvxWR:$src1, HvxWR:$src2, IntRegs:$src3),
-         (V6_vmpahb_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpahb_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpybus HvxVR:$src1, IntRegs:$src2),
-         (V6_vmpybus HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpybus HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpybus_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_vmpybus HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpybus HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpybus_acc HvxWR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vmpybus_acc HvxWR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpybus_acc HvxWR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpybus_acc_128B HvxWR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vmpybus_acc HvxWR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpybus_acc HvxWR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpybusv HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpybusv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpybusv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpybusv_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpybusv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpybusv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpybusv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpybusv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpybusv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpybusv_acc_128B HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpybusv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpybusv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpybv HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpybv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpybv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpybv_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpybv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpybv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpybv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpybv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpybv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpybv_acc_128B HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpybv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpybv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyewuh HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyewuh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyewuh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyewuh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyewuh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyewuh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyh HvxVR:$src1, IntRegs:$src2),
-         (V6_vmpyh HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyh HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyh_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_vmpyh HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyh HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyhsat_acc HvxWR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vmpyhsat_acc HvxWR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyhsat_acc HvxWR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyhsat_acc_128B HvxWR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vmpyhsat_acc HvxWR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyhsat_acc HvxWR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyhsrs HvxVR:$src1, IntRegs:$src2),
-         (V6_vmpyhsrs HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyhsrs HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyhsrs_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_vmpyhsrs HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyhsrs HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyhss HvxVR:$src1, IntRegs:$src2),
-         (V6_vmpyhss HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyhss HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyhss_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_vmpyhss HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyhss HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyhus HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyhus HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyhus HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyhus_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyhus HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyhus HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyhus_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpyhus_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyhus_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyhus_acc_128B HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpyhus_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyhus_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyhv HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyhv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyhv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyhv_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyhv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyhv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyhv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpyhv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyhv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyhv_acc_128B HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpyhv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyhv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyhvsrs HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyhvsrs HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyhvsrs HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyhvsrs_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyhvsrs HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyhvsrs HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyieoh HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyieoh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyieoh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyieoh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyieoh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyieoh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyiewh_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpyiewh_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyiewh_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyiewh_acc_128B HvxVR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpyiewh_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyiewh_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyiewuh HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyiewuh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyiewuh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyiewuh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyiewuh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyiewuh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyiewuh_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpyiewuh_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyiewuh_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyiewuh_acc_128B HvxVR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpyiewuh_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyiewuh_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyih HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyih HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyih HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyih_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyih HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyih HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyih_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpyih_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyih_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyih_acc_128B HvxVR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpyih_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyih_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyihb HvxVR:$src1, IntRegs:$src2),
-         (V6_vmpyihb HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyihb HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyihb_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_vmpyihb HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyihb HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyihb_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vmpyihb_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyihb_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyihb_acc_128B HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vmpyihb_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyihb_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyiowh HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyiowh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyiowh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyiowh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyiowh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyiowh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyiwb HvxVR:$src1, IntRegs:$src2),
-         (V6_vmpyiwb HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyiwb HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyiwb_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_vmpyiwb HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyiwb HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyiwb_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vmpyiwb_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyiwb_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyiwb_acc_128B HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vmpyiwb_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyiwb_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyiwh HvxVR:$src1, IntRegs:$src2),
-         (V6_vmpyiwh HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyiwh HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyiwh_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_vmpyiwh HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyiwh HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyiwh_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vmpyiwh_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyiwh_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyiwh_acc_128B HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vmpyiwh_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyiwh_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyowh HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyowh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyowh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyowh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyowh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyowh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyowh_rnd HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyowh_rnd HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyowh_rnd HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyowh_rnd_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyowh_rnd HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyowh_rnd HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyowh_rnd_sacc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpyowh_rnd_sacc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyowh_rnd_sacc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyowh_rnd_sacc_128B HvxVR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpyowh_rnd_sacc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyowh_rnd_sacc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyowh_sacc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpyowh_sacc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyowh_sacc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyowh_sacc_128B HvxVR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpyowh_sacc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyowh_sacc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyub HvxVR:$src1, IntRegs:$src2),
-         (V6_vmpyub HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyub HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyub_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_vmpyub HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyub HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyub_acc HvxWR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vmpyub_acc HvxWR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyub_acc HvxWR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyub_acc_128B HvxWR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vmpyub_acc HvxWR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyub_acc HvxWR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyubv HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyubv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyubv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyubv_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyubv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyubv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyubv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpyubv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyubv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyubv_acc_128B HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpyubv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyubv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyuh HvxVR:$src1, IntRegs:$src2),
-         (V6_vmpyuh HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyuh HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyuh_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_vmpyuh HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyuh HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyuh_acc HvxWR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vmpyuh_acc HvxWR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyuh_acc HvxWR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyuh_acc_128B HvxWR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vmpyuh_acc HvxWR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyuh_acc HvxWR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyuhv HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyuhv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyuhv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyuhv_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyuhv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyuhv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyuhv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpyuhv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmpyuhv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyuhv_acc_128B HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpyuhv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmpyuhv_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmux HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmux HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vmux HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmux_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmux HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vmux HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vnavgh HvxVR:$src1, HvxVR:$src2),
-         (V6_vnavgh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vnavgh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vnavgh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vnavgh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vnavgh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vnavgub HvxVR:$src1, HvxVR:$src2),
-         (V6_vnavgub HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vnavgub HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vnavgub_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vnavgub HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vnavgub HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vnavgw HvxVR:$src1, HvxVR:$src2),
-         (V6_vnavgw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vnavgw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vnavgw_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vnavgw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vnavgw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vnormamth HvxVR:$src1),
-         (V6_vnormamth HvxVR:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vnormamth HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vnormamth_128B HvxVR:$src1),
-         (V6_vnormamth HvxVR:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vnormamth HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vnormamtw HvxVR:$src1),
-         (V6_vnormamtw HvxVR:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vnormamtw HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vnormamtw_128B HvxVR:$src1),
-         (V6_vnormamtw HvxVR:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vnormamtw HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vnot HvxVR:$src1),
-         (V6_vnot HvxVR:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vnot HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vnot_128B HvxVR:$src1),
-         (V6_vnot HvxVR:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vnot HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vor HvxVR:$src1, HvxVR:$src2),
-         (V6_vor HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vor HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vor_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vor HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vor HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vpackeb HvxVR:$src1, HvxVR:$src2),
-         (V6_vpackeb HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vpackeb HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vpackeb_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vpackeb HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vpackeb HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vpackeh HvxVR:$src1, HvxVR:$src2),
-         (V6_vpackeh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vpackeh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vpackeh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vpackeh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vpackeh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vpackhb_sat HvxVR:$src1, HvxVR:$src2),
-         (V6_vpackhb_sat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vpackhb_sat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vpackhb_sat_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vpackhb_sat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vpackhb_sat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vpackhub_sat HvxVR:$src1, HvxVR:$src2),
-         (V6_vpackhub_sat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vpackhub_sat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vpackhub_sat_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vpackhub_sat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vpackhub_sat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vpackob HvxVR:$src1, HvxVR:$src2),
-         (V6_vpackob HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vpackob HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vpackob_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vpackob HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vpackob HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vpackoh HvxVR:$src1, HvxVR:$src2),
-         (V6_vpackoh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vpackoh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vpackoh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vpackoh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vpackoh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vpackwh_sat HvxVR:$src1, HvxVR:$src2),
-         (V6_vpackwh_sat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vpackwh_sat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vpackwh_sat_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vpackwh_sat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vpackwh_sat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vpackwuh_sat HvxVR:$src1, HvxVR:$src2),
-         (V6_vpackwuh_sat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vpackwuh_sat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vpackwuh_sat_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vpackwuh_sat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vpackwuh_sat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vpopcounth HvxVR:$src1),
-         (V6_vpopcounth HvxVR:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vpopcounth HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vpopcounth_128B HvxVR:$src1),
-         (V6_vpopcounth HvxVR:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vpopcounth HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vrdelta HvxVR:$src1, HvxVR:$src2),
-         (V6_vrdelta HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vrdelta HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vrdelta_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vrdelta HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vrdelta HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vrmpybus HvxVR:$src1, IntRegs:$src2),
-         (V6_vrmpybus HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vrmpybus HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vrmpybus_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_vrmpybus HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vrmpybus HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vrmpybus_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vrmpybus_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vrmpybus_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vrmpybus_acc_128B HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vrmpybus_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vrmpybus_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vrmpybusi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3),
-         (V6_vrmpybusi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vrmpybusi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vrmpybusi_128B HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3),
-         (V6_vrmpybusi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vrmpybusi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vrmpybusi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4),
-         (V6_vrmpybusi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vrmpybusi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vrmpybusi_acc_128B HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4),
-         (V6_vrmpybusi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vrmpybusi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vrmpybusv HvxVR:$src1, HvxVR:$src2),
-         (V6_vrmpybusv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vrmpybusv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vrmpybusv_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vrmpybusv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vrmpybusv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vrmpybusv_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vrmpybusv_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vrmpybusv_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vrmpybusv_acc_128B HvxVR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vrmpybusv_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vrmpybusv_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vrmpybv HvxVR:$src1, HvxVR:$src2),
-         (V6_vrmpybv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vrmpybv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vrmpybv_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vrmpybv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vrmpybv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vrmpybv_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vrmpybv_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vrmpybv_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vrmpybv_acc_128B HvxVR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vrmpybv_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vrmpybv_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vrmpyub HvxVR:$src1, IntRegs:$src2),
-         (V6_vrmpyub HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vrmpyub HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vrmpyub_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_vrmpyub HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vrmpyub HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vrmpyub_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vrmpyub_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vrmpyub_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vrmpyub_acc_128B HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vrmpyub_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vrmpyub_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vrmpyubi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3),
-         (V6_vrmpyubi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vrmpyubi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vrmpyubi_128B HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3),
-         (V6_vrmpyubi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vrmpyubi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vrmpyubi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4),
-         (V6_vrmpyubi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vrmpyubi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vrmpyubi_acc_128B HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4),
-         (V6_vrmpyubi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vrmpyubi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vrmpyubv HvxVR:$src1, HvxVR:$src2),
-         (V6_vrmpyubv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vrmpyubv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vrmpyubv_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vrmpyubv HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vrmpyubv HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vrmpyubv_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vrmpyubv_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vrmpyubv_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vrmpyubv_acc_128B HvxVR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vrmpyubv_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vrmpyubv_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vror HvxVR:$src1, IntRegs:$src2),
-         (V6_vror HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vror HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vror_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_vror HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vror HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vroundhb HvxVR:$src1, HvxVR:$src2),
-         (V6_vroundhb HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vroundhb HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vroundhb_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vroundhb HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vroundhb HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vroundhub HvxVR:$src1, HvxVR:$src2),
-         (V6_vroundhub HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vroundhub HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vroundhub_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vroundhub HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vroundhub HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vroundwh HvxVR:$src1, HvxVR:$src2),
-         (V6_vroundwh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vroundwh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vroundwh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vroundwh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vroundwh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vroundwuh HvxVR:$src1, HvxVR:$src2),
-         (V6_vroundwuh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vroundwuh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vroundwuh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vroundwuh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vroundwuh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vrsadubi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3),
-         (V6_vrsadubi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vrsadubi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vrsadubi_128B HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3),
-         (V6_vrsadubi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vrsadubi HvxWR:$src1, IntRegs:$src2, u1_0ImmPred_timm:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vrsadubi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4),
-         (V6_vrsadubi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vrsadubi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vrsadubi_acc_128B HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4),
-         (V6_vrsadubi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vrsadubi_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3, u1_0ImmPred_timm:$src4)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsathub HvxVR:$src1, HvxVR:$src2),
-         (V6_vsathub HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vsathub HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsathub_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vsathub HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vsathub HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsatwh HvxVR:$src1, HvxVR:$src2),
-         (V6_vsatwh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vsatwh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsatwh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vsatwh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vsatwh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsb HvxVR:$src1),
-         (V6_vsb HvxVR:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vsb HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsb_128B HvxVR:$src1),
-         (V6_vsb HvxVR:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vsb HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsh HvxVR:$src1),
-         (V6_vsh HvxVR:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vsh HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsh_128B HvxVR:$src1),
-         (V6_vsh HvxVR:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vsh HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vshufeh HvxVR:$src1, HvxVR:$src2),
-         (V6_vshufeh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vshufeh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vshufeh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vshufeh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vshufeh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vshuffb HvxVR:$src1),
-         (V6_vshuffb HvxVR:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vshuffb HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vshuffb_128B HvxVR:$src1),
-         (V6_vshuffb HvxVR:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vshuffb HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vshuffeb HvxVR:$src1, HvxVR:$src2),
-         (V6_vshuffeb HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vshuffeb HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vshuffeb_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vshuffeb HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vshuffeb HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vshuffh HvxVR:$src1),
-         (V6_vshuffh HvxVR:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vshuffh HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vshuffh_128B HvxVR:$src1),
-         (V6_vshuffh HvxVR:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vshuffh HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vshuffob HvxVR:$src1, HvxVR:$src2),
-         (V6_vshuffob HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vshuffob HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vshuffob_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vshuffob HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vshuffob HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vshuffvdd HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vshuffvdd HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vshuffvdd HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vshuffvdd_128B HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vshuffvdd HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vshuffvdd HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vshufoeb HvxVR:$src1, HvxVR:$src2),
-         (V6_vshufoeb HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vshufoeb HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vshufoeb_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vshufoeb HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vshufoeb HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vshufoeh HvxVR:$src1, HvxVR:$src2),
-         (V6_vshufoeh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vshufoeh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vshufoeh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vshufoeh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vshufoeh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vshufoh HvxVR:$src1, HvxVR:$src2),
-         (V6_vshufoh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vshufoh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vshufoh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vshufoh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vshufoh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubb HvxVR:$src1, HvxVR:$src2),
-         (V6_vsubb HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vsubb HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubb_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vsubb HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vsubb HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubb_dv HvxWR:$src1, HvxWR:$src2),
-         (V6_vsubb_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vsubb_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubb_dv_128B HvxWR:$src1, HvxWR:$src2),
-         (V6_vsubb_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vsubb_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubbnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vsubbnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vsubbnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubbnq_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vsubbnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vsubbnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubbq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vsubbq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vsubbq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubbq_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vsubbq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vsubbq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubh HvxVR:$src1, HvxVR:$src2),
-         (V6_vsubh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vsubh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vsubh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vsubh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubh_dv HvxWR:$src1, HvxWR:$src2),
-         (V6_vsubh_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vsubh_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubh_dv_128B HvxWR:$src1, HvxWR:$src2),
-         (V6_vsubh_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vsubh_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubhnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vsubhnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vsubhnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubhnq_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vsubhnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vsubhnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubhq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vsubhq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vsubhq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubhq_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vsubhq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vsubhq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubhsat HvxVR:$src1, HvxVR:$src2),
-         (V6_vsubhsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vsubhsat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubhsat_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vsubhsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vsubhsat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubhsat_dv HvxWR:$src1, HvxWR:$src2),
-         (V6_vsubhsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vsubhsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubhsat_dv_128B HvxWR:$src1, HvxWR:$src2),
-         (V6_vsubhsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vsubhsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubhw HvxVR:$src1, HvxVR:$src2),
-         (V6_vsubhw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vsubhw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubhw_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vsubhw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vsubhw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsububh HvxVR:$src1, HvxVR:$src2),
-         (V6_vsububh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vsububh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsububh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vsububh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vsububh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsububsat HvxVR:$src1, HvxVR:$src2),
-         (V6_vsububsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vsububsat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsububsat_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vsububsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vsububsat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsububsat_dv HvxWR:$src1, HvxWR:$src2),
-         (V6_vsububsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vsububsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsububsat_dv_128B HvxWR:$src1, HvxWR:$src2),
-         (V6_vsububsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vsububsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubuhsat HvxVR:$src1, HvxVR:$src2),
-         (V6_vsubuhsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vsubuhsat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubuhsat_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vsubuhsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vsubuhsat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubuhsat_dv HvxWR:$src1, HvxWR:$src2),
-         (V6_vsubuhsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vsubuhsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubuhsat_dv_128B HvxWR:$src1, HvxWR:$src2),
-         (V6_vsubuhsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vsubuhsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubuhw HvxVR:$src1, HvxVR:$src2),
-         (V6_vsubuhw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vsubuhw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubuhw_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vsubuhw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vsubuhw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubw HvxVR:$src1, HvxVR:$src2),
-         (V6_vsubw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vsubw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubw_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vsubw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vsubw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubw_dv HvxWR:$src1, HvxWR:$src2),
-         (V6_vsubw_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vsubw_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubw_dv_128B HvxWR:$src1, HvxWR:$src2),
-         (V6_vsubw_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vsubw_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubwnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vsubwnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vsubwnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubwnq_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vsubwnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vsubwnq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubwq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vsubwq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vsubwq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubwq_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vsubwq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vsubwq HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubwsat HvxVR:$src1, HvxVR:$src2),
-         (V6_vsubwsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vsubwsat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubwsat_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vsubwsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vsubwsat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubwsat_dv HvxWR:$src1, HvxWR:$src2),
-         (V6_vsubwsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vsubwsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubwsat_dv_128B HvxWR:$src1, HvxWR:$src2),
-         (V6_vsubwsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vsubwsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vswap HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vswap HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vswap HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vswap_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vswap HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vswap HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vtmpyb HvxWR:$src1, IntRegs:$src2),
-         (V6_vtmpyb HvxWR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vtmpyb HvxWR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vtmpyb_128B HvxWR:$src1, IntRegs:$src2),
-         (V6_vtmpyb HvxWR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vtmpyb HvxWR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vtmpyb_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3),
-         (V6_vtmpyb_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vtmpyb_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vtmpyb_acc_128B HvxWR:$src1, HvxWR:$src2, IntRegs:$src3),
-         (V6_vtmpyb_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vtmpyb_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vtmpybus HvxWR:$src1, IntRegs:$src2),
-         (V6_vtmpybus HvxWR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vtmpybus HvxWR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vtmpybus_128B HvxWR:$src1, IntRegs:$src2),
-         (V6_vtmpybus HvxWR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vtmpybus HvxWR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vtmpybus_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3),
-         (V6_vtmpybus_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vtmpybus_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vtmpybus_acc_128B HvxWR:$src1, HvxWR:$src2, IntRegs:$src3),
-         (V6_vtmpybus_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vtmpybus_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vtmpyhb HvxWR:$src1, IntRegs:$src2),
-         (V6_vtmpyhb HvxWR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vtmpyhb HvxWR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vtmpyhb_128B HvxWR:$src1, IntRegs:$src2),
-         (V6_vtmpyhb HvxWR:$src1, IntRegs:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vtmpyhb HvxWR:$src1, IntRegs:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vtmpyhb_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3),
-         (V6_vtmpyhb_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vtmpyhb_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vtmpyhb_acc_128B HvxWR:$src1, HvxWR:$src2, IntRegs:$src3),
-         (V6_vtmpyhb_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vtmpyhb_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vunpackb HvxVR:$src1),
-         (V6_vunpackb HvxVR:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vunpackb HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vunpackb_128B HvxVR:$src1),
-         (V6_vunpackb HvxVR:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vunpackb HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vunpackh HvxVR:$src1),
-         (V6_vunpackh HvxVR:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vunpackh HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vunpackh_128B HvxVR:$src1),
-         (V6_vunpackh HvxVR:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vunpackh HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vunpackob HvxWR:$src1, HvxVR:$src2),
-         (V6_vunpackob HvxWR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vunpackob HvxWR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vunpackob_128B HvxWR:$src1, HvxVR:$src2),
-         (V6_vunpackob HvxWR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vunpackob HvxWR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vunpackoh HvxWR:$src1, HvxVR:$src2),
-         (V6_vunpackoh HvxWR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vunpackoh HvxWR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vunpackoh_128B HvxWR:$src1, HvxVR:$src2),
-         (V6_vunpackoh HvxWR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vunpackoh HvxWR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vunpackub HvxVR:$src1),
-         (V6_vunpackub HvxVR:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vunpackub HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vunpackub_128B HvxVR:$src1),
-         (V6_vunpackub HvxVR:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vunpackub HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vunpackuh HvxVR:$src1),
-         (V6_vunpackuh HvxVR:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vunpackuh HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vunpackuh_128B HvxVR:$src1),
-         (V6_vunpackuh HvxVR:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vunpackuh HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vxor HvxVR:$src1, HvxVR:$src2),
-         (V6_vxor HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vxor HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vxor_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vxor HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vxor HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vzb HvxVR:$src1),
-         (V6_vzb HvxVR:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vzb HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vzb_128B HvxVR:$src1),
-         (V6_vzb HvxVR:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vzb HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vzh HvxVR:$src1),
-         (V6_vzh HvxVR:$src1)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vzh HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vzh_128B HvxVR:$src1),
-         (V6_vzh HvxVR:$src1)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vzh HvxVR:$src1)>, Requires<[UseHVXV60, UseHVX128B]>;
 
 // V62 HVX Instructions.
 
 def: Pat<(int_hexagon_V6_lvsplatb IntRegs:$src1),
-         (V6_lvsplatb IntRegs:$src1)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_lvsplatb IntRegs:$src1)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_lvsplatb_128B IntRegs:$src1),
-         (V6_lvsplatb IntRegs:$src1)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_lvsplatb IntRegs:$src1)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_lvsplath IntRegs:$src1),
-         (V6_lvsplath IntRegs:$src1)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_lvsplath IntRegs:$src1)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_lvsplath_128B IntRegs:$src1),
-         (V6_lvsplath IntRegs:$src1)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_lvsplath IntRegs:$src1)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_pred_scalar2v2 IntRegs:$src1),
-         (V6_pred_scalar2v2 IntRegs:$src1)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_pred_scalar2v2 IntRegs:$src1)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_pred_scalar2v2_128B IntRegs:$src1),
-         (V6_pred_scalar2v2 IntRegs:$src1)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_pred_scalar2v2 IntRegs:$src1)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_shuffeqh HvxQR:$src1, HvxQR:$src2),
-         (V6_shuffeqh HvxQR:$src1, HvxQR:$src2)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_shuffeqh HvxQR:$src1, HvxQR:$src2)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_shuffeqh_128B HvxQR:$src1, HvxQR:$src2),
-         (V6_shuffeqh HvxQR:$src1, HvxQR:$src2)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_shuffeqh HvxQR:$src1, HvxQR:$src2)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_shuffeqw HvxQR:$src1, HvxQR:$src2),
-         (V6_shuffeqw HvxQR:$src1, HvxQR:$src2)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_shuffeqw HvxQR:$src1, HvxQR:$src2)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_shuffeqw_128B HvxQR:$src1, HvxQR:$src2),
-         (V6_shuffeqw HvxQR:$src1, HvxQR:$src2)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_shuffeqw HvxQR:$src1, HvxQR:$src2)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddbsat HvxVR:$src1, HvxVR:$src2),
-         (V6_vaddbsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vaddbsat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddbsat_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vaddbsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vaddbsat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddbsat_dv HvxWR:$src1, HvxWR:$src2),
-         (V6_vaddbsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vaddbsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddbsat_dv_128B HvxWR:$src1, HvxWR:$src2),
-         (V6_vaddbsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vaddbsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddcarry HvxVR:$src1, HvxVR:$src2, HvxQR:$src3),
-         (V6_vaddcarry HvxVR:$src1, HvxVR:$src2, HvxQR:$src3)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vaddcarry HvxVR:$src1, HvxVR:$src2, HvxQR:$src3)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddcarry_128B HvxVR:$src1, HvxVR:$src2, HvxQR:$src3),
-         (V6_vaddcarry HvxVR:$src1, HvxVR:$src2, HvxQR:$src3)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vaddcarry HvxVR:$src1, HvxVR:$src2, HvxQR:$src3)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddclbh HvxVR:$src1, HvxVR:$src2),
-         (V6_vaddclbh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vaddclbh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddclbh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vaddclbh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vaddclbh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddclbw HvxVR:$src1, HvxVR:$src2),
-         (V6_vaddclbw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vaddclbw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddclbw_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vaddclbw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vaddclbw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddhw_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vaddhw_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vaddhw_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddhw_acc_128B HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vaddhw_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vaddhw_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddubh_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vaddubh_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vaddubh_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddubh_acc_128B HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vaddubh_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vaddubh_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddububb_sat HvxVR:$src1, HvxVR:$src2),
-         (V6_vaddububb_sat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vaddububb_sat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddububb_sat_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vaddububb_sat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vaddububb_sat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vadduhw_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vadduhw_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vadduhw_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vadduhw_acc_128B HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vadduhw_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vadduhw_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vadduwsat HvxVR:$src1, HvxVR:$src2),
-         (V6_vadduwsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vadduwsat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vadduwsat_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vadduwsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vadduwsat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vadduwsat_dv HvxWR:$src1, HvxWR:$src2),
-         (V6_vadduwsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vadduwsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vadduwsat_dv_128B HvxWR:$src1, HvxWR:$src2),
-         (V6_vadduwsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vadduwsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vandnqrt HvxQR:$src1, IntRegs:$src2),
-         (V6_vandnqrt HvxQR:$src1, IntRegs:$src2)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vandnqrt HvxQR:$src1, IntRegs:$src2)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vandnqrt_128B HvxQR:$src1, IntRegs:$src2),
-         (V6_vandnqrt HvxQR:$src1, IntRegs:$src2)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vandnqrt HvxQR:$src1, IntRegs:$src2)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vandnqrt_acc HvxVR:$src1, HvxQR:$src2, IntRegs:$src3),
-         (V6_vandnqrt_acc HvxVR:$src1, HvxQR:$src2, IntRegs:$src3)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vandnqrt_acc HvxVR:$src1, HvxQR:$src2, IntRegs:$src3)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vandnqrt_acc_128B HvxVR:$src1, HvxQR:$src2, IntRegs:$src3),
-         (V6_vandnqrt_acc HvxVR:$src1, HvxQR:$src2, IntRegs:$src3)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vandnqrt_acc HvxVR:$src1, HvxQR:$src2, IntRegs:$src3)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vandvnqv HvxQR:$src1, HvxVR:$src2),
-         (V6_vandvnqv HvxQR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vandvnqv HvxQR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vandvnqv_128B HvxQR:$src1, HvxVR:$src2),
-         (V6_vandvnqv HvxQR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vandvnqv HvxQR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vandvqv HvxQR:$src1, HvxVR:$src2),
-         (V6_vandvqv HvxQR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vandvqv HvxQR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vandvqv_128B HvxQR:$src1, HvxVR:$src2),
-         (V6_vandvqv HvxQR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vandvqv HvxQR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vasrhbsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vasrhbsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vasrhbsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vasrhbsat_128B HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vasrhbsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vasrhbsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vasruwuhrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vasruwuhrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vasruwuhrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vasruwuhrndsat_128B HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vasruwuhrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vasruwuhrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vasrwuhrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vasrwuhrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vasrwuhrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vasrwuhrndsat_128B HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vasrwuhrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vasrwuhrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vlsrb HvxVR:$src1, IntRegs:$src2),
-         (V6_vlsrb HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vlsrb HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vlsrb_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_vlsrb HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vlsrb HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vlutvvb_nm HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vlutvvb_nm HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vlutvvb_nm HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vlutvvb_nm_128B HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vlutvvb_nm HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vlutvvb_nm HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vlutvvb_oracci HvxVR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred_timm:$src4),
-         (V6_vlutvvb_oracci HvxVR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred_timm:$src4)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vlutvvb_oracci HvxVR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred_timm:$src4)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vlutvvb_oracci_128B HvxVR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred_timm:$src4),
-         (V6_vlutvvb_oracci HvxVR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred_timm:$src4)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vlutvvb_oracci HvxVR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred_timm:$src4)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vlutvvbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3),
-         (V6_vlutvvbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vlutvvbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vlutvvbi_128B HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3),
-         (V6_vlutvvbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vlutvvbi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vlutvwh_nm HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vlutvwh_nm HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vlutvwh_nm HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vlutvwh_nm_128B HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vlutvwh_nm HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vlutvwh_nm HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vlutvwh_oracci HvxWR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred_timm:$src4),
-         (V6_vlutvwh_oracci HvxWR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred_timm:$src4)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vlutvwh_oracci HvxWR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred_timm:$src4)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vlutvwh_oracci_128B HvxWR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred_timm:$src4),
-         (V6_vlutvwh_oracci HvxWR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred_timm:$src4)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vlutvwh_oracci HvxWR:$src1, HvxVR:$src2, HvxVR:$src3, u3_0ImmPred_timm:$src4)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vlutvwhi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3),
-         (V6_vlutvwhi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vlutvwhi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vlutvwhi_128B HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3),
-         (V6_vlutvwhi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vlutvwhi HvxVR:$src1, HvxVR:$src2, u3_0ImmPred_timm:$src3)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmaxb HvxVR:$src1, HvxVR:$src2),
-         (V6_vmaxb HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vmaxb HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmaxb_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmaxb HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vmaxb HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vminb HvxVR:$src1, HvxVR:$src2),
-         (V6_vminb HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vminb HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vminb_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vminb HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vminb HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpauhb HvxWR:$src1, IntRegs:$src2),
-         (V6_vmpauhb HvxWR:$src1, IntRegs:$src2)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vmpauhb HvxWR:$src1, IntRegs:$src2)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpauhb_128B HvxWR:$src1, IntRegs:$src2),
-         (V6_vmpauhb HvxWR:$src1, IntRegs:$src2)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vmpauhb HvxWR:$src1, IntRegs:$src2)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpauhb_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3),
-         (V6_vmpauhb_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vmpauhb_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpauhb_acc_128B HvxWR:$src1, HvxWR:$src2, IntRegs:$src3),
-         (V6_vmpauhb_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vmpauhb_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyewuh_64 HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyewuh_64 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vmpyewuh_64 HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyewuh_64_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyewuh_64 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vmpyewuh_64 HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyiwub HvxVR:$src1, IntRegs:$src2),
-         (V6_vmpyiwub HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vmpyiwub HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyiwub_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_vmpyiwub HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vmpyiwub HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyiwub_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vmpyiwub_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vmpyiwub_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyiwub_acc_128B HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vmpyiwub_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vmpyiwub_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyowh_64_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpyowh_64_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vmpyowh_64_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyowh_64_acc_128B HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpyowh_64_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vmpyowh_64_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vrounduhub HvxVR:$src1, HvxVR:$src2),
-         (V6_vrounduhub HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vrounduhub HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vrounduhub_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vrounduhub HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vrounduhub HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vrounduwuh HvxVR:$src1, HvxVR:$src2),
-         (V6_vrounduwuh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vrounduwuh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vrounduwuh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vrounduwuh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vrounduwuh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsatuwuh HvxVR:$src1, HvxVR:$src2),
-         (V6_vsatuwuh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vsatuwuh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsatuwuh_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vsatuwuh HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vsatuwuh HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubbsat HvxVR:$src1, HvxVR:$src2),
-         (V6_vsubbsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vsubbsat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubbsat_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vsubbsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vsubbsat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubbsat_dv HvxWR:$src1, HvxWR:$src2),
-         (V6_vsubbsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vsubbsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubbsat_dv_128B HvxWR:$src1, HvxWR:$src2),
-         (V6_vsubbsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vsubbsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubcarry HvxVR:$src1, HvxVR:$src2, HvxQR:$src3),
-         (V6_vsubcarry HvxVR:$src1, HvxVR:$src2, HvxQR:$src3)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vsubcarry HvxVR:$src1, HvxVR:$src2, HvxQR:$src3)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubcarry_128B HvxVR:$src1, HvxVR:$src2, HvxQR:$src3),
-         (V6_vsubcarry HvxVR:$src1, HvxVR:$src2, HvxQR:$src3)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vsubcarry HvxVR:$src1, HvxVR:$src2, HvxQR:$src3)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubububb_sat HvxVR:$src1, HvxVR:$src2),
-         (V6_vsubububb_sat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vsubububb_sat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubububb_sat_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vsubububb_sat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vsubububb_sat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubuwsat HvxVR:$src1, HvxVR:$src2),
-         (V6_vsubuwsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vsubuwsat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubuwsat_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vsubuwsat HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vsubuwsat HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV62, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsubuwsat_dv HvxWR:$src1, HvxWR:$src2),
-         (V6_vsubuwsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV62, UseHVX64B]>;
+         (V6_vsubuwsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV62, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubuwsat_dv_128B HvxWR:$src1, HvxWR:$src2),
-         (V6_vsubuwsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[HasV62, UseHVX128B]>;
+         (V6_vsubuwsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV62, UseHVX128B]>;
 
 // V65 HVX Instructions.
 
 def: Pat<(int_hexagon_V6_vabsb HvxVR:$src1),
-         (V6_vabsb HvxVR:$src1)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vabsb HvxVR:$src1)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vabsb_128B HvxVR:$src1),
-         (V6_vabsb HvxVR:$src1)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vabsb HvxVR:$src1)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vabsb_sat HvxVR:$src1),
-         (V6_vabsb_sat HvxVR:$src1)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vabsb_sat HvxVR:$src1)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vabsb_sat_128B HvxVR:$src1),
-         (V6_vabsb_sat HvxVR:$src1)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vabsb_sat HvxVR:$src1)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaslh_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vaslh_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vaslh_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaslh_acc_128B HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vaslh_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vaslh_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vasrh_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vasrh_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vasrh_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vasrh_acc_128B HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vasrh_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vasrh_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vasruhubrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vasruhubrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vasruhubrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vasruhubrndsat_128B HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vasruhubrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vasruhubrndsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vasruhubsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vasruhubsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vasruhubsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vasruhubsat_128B HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vasruhubsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vasruhubsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vasruwuhsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vasruwuhsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vasruwuhsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vasruwuhsat_128B HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
-         (V6_vasruwuhsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vasruwuhsat HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vavgb HvxVR:$src1, HvxVR:$src2),
-         (V6_vavgb HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vavgb HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vavgb_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vavgb HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vavgb HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vavgbrnd HvxVR:$src1, HvxVR:$src2),
-         (V6_vavgbrnd HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vavgbrnd HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vavgbrnd_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vavgbrnd HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vavgbrnd HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vavguw HvxVR:$src1, HvxVR:$src2),
-         (V6_vavguw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vavguw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vavguw_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vavguw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vavguw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vavguwrnd HvxVR:$src1, HvxVR:$src2),
-         (V6_vavguwrnd HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vavguwrnd HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vavguwrnd_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vavguwrnd HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vavguwrnd HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdd0 ),
-         (V6_vdd0 )>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vdd0 )>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdd0_128B ),
-         (V6_vdd0 )>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vdd0 )>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vlut4 HvxVR:$src1, DoubleRegs:$src2),
-         (V6_vlut4 HvxVR:$src1, DoubleRegs:$src2)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vlut4 HvxVR:$src1, DoubleRegs:$src2)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vlut4_128B HvxVR:$src1, DoubleRegs:$src2),
-         (V6_vlut4 HvxVR:$src1, DoubleRegs:$src2)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vlut4 HvxVR:$src1, DoubleRegs:$src2)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpabuu HvxWR:$src1, IntRegs:$src2),
-         (V6_vmpabuu HvxWR:$src1, IntRegs:$src2)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vmpabuu HvxWR:$src1, IntRegs:$src2)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpabuu_128B HvxWR:$src1, IntRegs:$src2),
-         (V6_vmpabuu HvxWR:$src1, IntRegs:$src2)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vmpabuu HvxWR:$src1, IntRegs:$src2)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpabuu_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3),
-         (V6_vmpabuu_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vmpabuu_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpabuu_acc_128B HvxWR:$src1, HvxWR:$src2, IntRegs:$src3),
-         (V6_vmpabuu_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vmpabuu_acc HvxWR:$src1, HvxWR:$src2, IntRegs:$src3)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpahhsat HvxVR:$src1, HvxVR:$src2, DoubleRegs:$src3),
-         (V6_vmpahhsat HvxVR:$src1, HvxVR:$src2, DoubleRegs:$src3)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vmpahhsat HvxVR:$src1, HvxVR:$src2, DoubleRegs:$src3)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpahhsat_128B HvxVR:$src1, HvxVR:$src2, DoubleRegs:$src3),
-         (V6_vmpahhsat HvxVR:$src1, HvxVR:$src2, DoubleRegs:$src3)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vmpahhsat HvxVR:$src1, HvxVR:$src2, DoubleRegs:$src3)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpauhuhsat HvxVR:$src1, HvxVR:$src2, DoubleRegs:$src3),
-         (V6_vmpauhuhsat HvxVR:$src1, HvxVR:$src2, DoubleRegs:$src3)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vmpauhuhsat HvxVR:$src1, HvxVR:$src2, DoubleRegs:$src3)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpauhuhsat_128B HvxVR:$src1, HvxVR:$src2, DoubleRegs:$src3),
-         (V6_vmpauhuhsat HvxVR:$src1, HvxVR:$src2, DoubleRegs:$src3)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vmpauhuhsat HvxVR:$src1, HvxVR:$src2, DoubleRegs:$src3)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpsuhuhsat HvxVR:$src1, HvxVR:$src2, DoubleRegs:$src3),
-         (V6_vmpsuhuhsat HvxVR:$src1, HvxVR:$src2, DoubleRegs:$src3)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vmpsuhuhsat HvxVR:$src1, HvxVR:$src2, DoubleRegs:$src3)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpsuhuhsat_128B HvxVR:$src1, HvxVR:$src2, DoubleRegs:$src3),
-         (V6_vmpsuhuhsat HvxVR:$src1, HvxVR:$src2, DoubleRegs:$src3)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vmpsuhuhsat HvxVR:$src1, HvxVR:$src2, DoubleRegs:$src3)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyh_acc HvxWR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vmpyh_acc HvxWR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vmpyh_acc HvxWR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyh_acc_128B HvxWR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vmpyh_acc HvxWR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vmpyh_acc HvxWR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyuhe HvxVR:$src1, IntRegs:$src2),
-         (V6_vmpyuhe HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vmpyuhe HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyuhe_128B HvxVR:$src1, IntRegs:$src2),
-         (V6_vmpyuhe HvxVR:$src1, IntRegs:$src2)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vmpyuhe HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyuhe_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vmpyuhe_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vmpyuhe_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyuhe_acc_128B HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
-         (V6_vmpyuhe_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vmpyuhe_acc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vnavgb HvxVR:$src1, HvxVR:$src2),
-         (V6_vnavgb HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vnavgb HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vnavgb_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vnavgb HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vnavgb HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vprefixqb HvxQR:$src1),
-         (V6_vprefixqb HvxQR:$src1)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vprefixqb HvxQR:$src1)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vprefixqb_128B HvxQR:$src1),
-         (V6_vprefixqb HvxQR:$src1)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vprefixqb HvxQR:$src1)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vprefixqh HvxQR:$src1),
-         (V6_vprefixqh HvxQR:$src1)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vprefixqh HvxQR:$src1)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vprefixqh_128B HvxQR:$src1),
-         (V6_vprefixqh HvxQR:$src1)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vprefixqh HvxQR:$src1)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vprefixqw HvxQR:$src1),
-         (V6_vprefixqw HvxQR:$src1)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vprefixqw HvxQR:$src1)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vprefixqw_128B HvxQR:$src1),
-         (V6_vprefixqw HvxQR:$src1)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vprefixqw HvxQR:$src1)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vscattermh IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4),
-         (V6_vscattermh IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vscattermh IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vscattermh_128B IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4),
-         (V6_vscattermh IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vscattermh IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vscattermh_add IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4),
-         (V6_vscattermh_add IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vscattermh_add IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vscattermh_add_128B IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4),
-         (V6_vscattermh_add IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vscattermh_add IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vscattermhq HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxVR:$src4, HvxVR:$src5),
-         (V6_vscattermhq HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxVR:$src4, HvxVR:$src5)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vscattermhq HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxVR:$src4, HvxVR:$src5)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vscattermhq_128B HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxVR:$src4, HvxVR:$src5),
-         (V6_vscattermhq HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxVR:$src4, HvxVR:$src5)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vscattermhq HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxVR:$src4, HvxVR:$src5)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vscattermhw IntRegs:$src1, ModRegs:$src2, HvxWR:$src3, HvxVR:$src4),
-         (V6_vscattermhw IntRegs:$src1, ModRegs:$src2, HvxWR:$src3, HvxVR:$src4)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vscattermhw IntRegs:$src1, ModRegs:$src2, HvxWR:$src3, HvxVR:$src4)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vscattermhw_128B IntRegs:$src1, ModRegs:$src2, HvxWR:$src3, HvxVR:$src4),
-         (V6_vscattermhw IntRegs:$src1, ModRegs:$src2, HvxWR:$src3, HvxVR:$src4)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vscattermhw IntRegs:$src1, ModRegs:$src2, HvxWR:$src3, HvxVR:$src4)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vscattermhw_add IntRegs:$src1, ModRegs:$src2, HvxWR:$src3, HvxVR:$src4),
-         (V6_vscattermhw_add IntRegs:$src1, ModRegs:$src2, HvxWR:$src3, HvxVR:$src4)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vscattermhw_add IntRegs:$src1, ModRegs:$src2, HvxWR:$src3, HvxVR:$src4)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vscattermhw_add_128B IntRegs:$src1, ModRegs:$src2, HvxWR:$src3, HvxVR:$src4),
-         (V6_vscattermhw_add IntRegs:$src1, ModRegs:$src2, HvxWR:$src3, HvxVR:$src4)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vscattermhw_add IntRegs:$src1, ModRegs:$src2, HvxWR:$src3, HvxVR:$src4)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vscattermhwq HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxWR:$src4, HvxVR:$src5),
-         (V6_vscattermhwq HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxWR:$src4, HvxVR:$src5)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vscattermhwq HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxWR:$src4, HvxVR:$src5)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vscattermhwq_128B HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxWR:$src4, HvxVR:$src5),
-         (V6_vscattermhwq HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxWR:$src4, HvxVR:$src5)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vscattermhwq HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxWR:$src4, HvxVR:$src5)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vscattermw IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4),
-         (V6_vscattermw IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vscattermw IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vscattermw_128B IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4),
-         (V6_vscattermw IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vscattermw IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vscattermw_add IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4),
-         (V6_vscattermw_add IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vscattermw_add IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vscattermw_add_128B IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4),
-         (V6_vscattermw_add IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vscattermw_add IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4)>, Requires<[UseHVXV65, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vscattermwq HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxVR:$src4, HvxVR:$src5),
-         (V6_vscattermwq HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxVR:$src4, HvxVR:$src5)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vscattermwq HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxVR:$src4, HvxVR:$src5)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vscattermwq_128B HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxVR:$src4, HvxVR:$src5),
-         (V6_vscattermwq HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxVR:$src4, HvxVR:$src5)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vscattermwq HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxVR:$src4, HvxVR:$src5)>, Requires<[UseHVXV65, UseHVX128B]>;
 
 // V66 HVX Instructions.
 
+def: Pat<(int_hexagon_V6_vaddcarryo HvxVR:$src1, HvxVR:$src2),
+         (V6_vaddcarryo HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV66, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vaddcarryo_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_vaddcarryo HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV66, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddcarrysat HvxVR:$src1, HvxVR:$src2, HvxQR:$src3),
-         (V6_vaddcarrysat HvxVR:$src1, HvxVR:$src2, HvxQR:$src3)>, Requires<[HasV66, UseHVX64B]>;
+         (V6_vaddcarrysat HvxVR:$src1, HvxVR:$src2, HvxQR:$src3)>, Requires<[UseHVXV66, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddcarrysat_128B HvxVR:$src1, HvxVR:$src2, HvxQR:$src3),
-         (V6_vaddcarrysat HvxVR:$src1, HvxVR:$src2, HvxQR:$src3)>, Requires<[HasV66, UseHVX128B]>;
+         (V6_vaddcarrysat HvxVR:$src1, HvxVR:$src2, HvxQR:$src3)>, Requires<[UseHVXV66, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vasr_into HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vasr_into HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV66, UseHVX64B]>;
+         (V6_vasr_into HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV66, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vasr_into_128B HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vasr_into HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV66, UseHVX128B]>;
+         (V6_vasr_into HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV66, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vrotr HvxVR:$src1, HvxVR:$src2),
-         (V6_vrotr HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV66, UseHVX64B]>;
+         (V6_vrotr HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV66, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vrotr_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vrotr HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV66, UseHVX128B]>;
+         (V6_vrotr HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV66, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsatdw HvxVR:$src1, HvxVR:$src2),
-         (V6_vsatdw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV66, UseHVX64B]>;
+         (V6_vsatdw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV66, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsatdw_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vsatdw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV66, UseHVX128B]>;
+         (V6_vsatdw HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV66, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vsubcarryo HvxVR:$src1, HvxVR:$src2),
+         (V6_vsubcarryo HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV66, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vsubcarryo_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_vsubcarryo HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV66, UseHVX128B]>;
 
 // V68 HVX Instructions.
 
 def: Pat<(int_hexagon_V6_v6mpyhubs10 HvxWR:$src1, HvxWR:$src2, u2_0ImmPred_timm:$src3),
-         (V6_v6mpyhubs10 HvxWR:$src1, HvxWR:$src2, u2_0ImmPred_timm:$src3)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_v6mpyhubs10 HvxWR:$src1, HvxWR:$src2, u2_0ImmPred_timm:$src3)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_v6mpyhubs10_128B HvxWR:$src1, HvxWR:$src2, u2_0ImmPred_timm:$src3),
-         (V6_v6mpyhubs10 HvxWR:$src1, HvxWR:$src2, u2_0ImmPred_timm:$src3)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_v6mpyhubs10 HvxWR:$src1, HvxWR:$src2, u2_0ImmPred_timm:$src3)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_v6mpyhubs10_vxx HvxWR:$src1, HvxWR:$src2, HvxWR:$src3, u2_0ImmPred_timm:$src4),
-         (V6_v6mpyhubs10_vxx HvxWR:$src1, HvxWR:$src2, HvxWR:$src3, u2_0ImmPred_timm:$src4)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_v6mpyhubs10_vxx HvxWR:$src1, HvxWR:$src2, HvxWR:$src3, u2_0ImmPred_timm:$src4)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_v6mpyhubs10_vxx_128B HvxWR:$src1, HvxWR:$src2, HvxWR:$src3, u2_0ImmPred_timm:$src4),
-         (V6_v6mpyhubs10_vxx HvxWR:$src1, HvxWR:$src2, HvxWR:$src3, u2_0ImmPred_timm:$src4)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_v6mpyhubs10_vxx HvxWR:$src1, HvxWR:$src2, HvxWR:$src3, u2_0ImmPred_timm:$src4)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_v6mpyvubs10 HvxWR:$src1, HvxWR:$src2, u2_0ImmPred_timm:$src3),
-         (V6_v6mpyvubs10 HvxWR:$src1, HvxWR:$src2, u2_0ImmPred_timm:$src3)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_v6mpyvubs10 HvxWR:$src1, HvxWR:$src2, u2_0ImmPred_timm:$src3)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_v6mpyvubs10_128B HvxWR:$src1, HvxWR:$src2, u2_0ImmPred_timm:$src3),
-         (V6_v6mpyvubs10 HvxWR:$src1, HvxWR:$src2, u2_0ImmPred_timm:$src3)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_v6mpyvubs10 HvxWR:$src1, HvxWR:$src2, u2_0ImmPred_timm:$src3)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_v6mpyvubs10_vxx HvxWR:$src1, HvxWR:$src2, HvxWR:$src3, u2_0ImmPred_timm:$src4),
-         (V6_v6mpyvubs10_vxx HvxWR:$src1, HvxWR:$src2, HvxWR:$src3, u2_0ImmPred_timm:$src4)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_v6mpyvubs10_vxx HvxWR:$src1, HvxWR:$src2, HvxWR:$src3, u2_0ImmPred_timm:$src4)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_v6mpyvubs10_vxx_128B HvxWR:$src1, HvxWR:$src2, HvxWR:$src3, u2_0ImmPred_timm:$src4),
-         (V6_v6mpyvubs10_vxx HvxWR:$src1, HvxWR:$src2, HvxWR:$src3, u2_0ImmPred_timm:$src4)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_v6mpyvubs10_vxx HvxWR:$src1, HvxWR:$src2, HvxWR:$src3, u2_0ImmPred_timm:$src4)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vabs_hf HvxVR:$src1),
-         (V6_vabs_hf HvxVR:$src1)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vabs_hf HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vabs_hf_128B HvxVR:$src1),
-         (V6_vabs_hf HvxVR:$src1)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vabs_hf HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vabs_sf HvxVR:$src1),
-         (V6_vabs_sf HvxVR:$src1)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vabs_sf HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vabs_sf_128B HvxVR:$src1),
-         (V6_vabs_sf HvxVR:$src1)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vabs_sf HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vadd_hf HvxVR:$src1, HvxVR:$src2),
-         (V6_vadd_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vadd_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vadd_hf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vadd_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vadd_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vadd_hf_hf HvxVR:$src1, HvxVR:$src2),
-         (V6_vadd_hf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vadd_hf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vadd_hf_hf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vadd_hf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vadd_hf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vadd_qf16 HvxVR:$src1, HvxVR:$src2),
-         (V6_vadd_qf16 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vadd_qf16 HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vadd_qf16_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vadd_qf16 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vadd_qf16 HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vadd_qf16_mix HvxVR:$src1, HvxVR:$src2),
-         (V6_vadd_qf16_mix HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vadd_qf16_mix HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vadd_qf16_mix_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vadd_qf16_mix HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vadd_qf16_mix HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vadd_qf32 HvxVR:$src1, HvxVR:$src2),
-         (V6_vadd_qf32 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vadd_qf32 HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vadd_qf32_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vadd_qf32 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vadd_qf32 HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vadd_qf32_mix HvxVR:$src1, HvxVR:$src2),
-         (V6_vadd_qf32_mix HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vadd_qf32_mix HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vadd_qf32_mix_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vadd_qf32_mix HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vadd_qf32_mix HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vadd_sf HvxVR:$src1, HvxVR:$src2),
-         (V6_vadd_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vadd_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vadd_sf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vadd_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vadd_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vadd_sf_hf HvxVR:$src1, HvxVR:$src2),
-         (V6_vadd_sf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vadd_sf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vadd_sf_hf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vadd_sf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vadd_sf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vadd_sf_sf HvxVR:$src1, HvxVR:$src2),
-         (V6_vadd_sf_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vadd_sf_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vadd_sf_sf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vadd_sf_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vadd_sf_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vassign_fp HvxVR:$src1),
-         (V6_vassign_fp HvxVR:$src1)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vassign_fp HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vassign_fp_128B HvxVR:$src1),
-         (V6_vassign_fp HvxVR:$src1)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vassign_fp HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vconv_hf_qf16 HvxVR:$src1),
-         (V6_vconv_hf_qf16 HvxVR:$src1)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vconv_hf_qf16 HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vconv_hf_qf16_128B HvxVR:$src1),
-         (V6_vconv_hf_qf16 HvxVR:$src1)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vconv_hf_qf16 HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vconv_hf_qf32 HvxWR:$src1),
-         (V6_vconv_hf_qf32 HvxWR:$src1)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vconv_hf_qf32 HvxWR:$src1)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vconv_hf_qf32_128B HvxWR:$src1),
-         (V6_vconv_hf_qf32 HvxWR:$src1)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vconv_hf_qf32 HvxWR:$src1)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vconv_sf_qf32 HvxVR:$src1),
-         (V6_vconv_sf_qf32 HvxVR:$src1)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vconv_sf_qf32 HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vconv_sf_qf32_128B HvxVR:$src1),
-         (V6_vconv_sf_qf32 HvxVR:$src1)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vconv_sf_qf32 HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vcvt_b_hf HvxVR:$src1, HvxVR:$src2),
-         (V6_vcvt_b_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vcvt_b_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vcvt_b_hf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vcvt_b_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vcvt_b_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vcvt_h_hf HvxVR:$src1),
-         (V6_vcvt_h_hf HvxVR:$src1)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vcvt_h_hf HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vcvt_h_hf_128B HvxVR:$src1),
-         (V6_vcvt_h_hf HvxVR:$src1)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vcvt_h_hf HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vcvt_hf_b HvxVR:$src1),
-         (V6_vcvt_hf_b HvxVR:$src1)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vcvt_hf_b HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vcvt_hf_b_128B HvxVR:$src1),
-         (V6_vcvt_hf_b HvxVR:$src1)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vcvt_hf_b HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vcvt_hf_h HvxVR:$src1),
-         (V6_vcvt_hf_h HvxVR:$src1)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vcvt_hf_h HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vcvt_hf_h_128B HvxVR:$src1),
-         (V6_vcvt_hf_h HvxVR:$src1)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vcvt_hf_h HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vcvt_hf_sf HvxVR:$src1, HvxVR:$src2),
-         (V6_vcvt_hf_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vcvt_hf_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vcvt_hf_sf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vcvt_hf_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vcvt_hf_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vcvt_hf_ub HvxVR:$src1),
-         (V6_vcvt_hf_ub HvxVR:$src1)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vcvt_hf_ub HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vcvt_hf_ub_128B HvxVR:$src1),
-         (V6_vcvt_hf_ub HvxVR:$src1)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vcvt_hf_ub HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vcvt_hf_uh HvxVR:$src1),
-         (V6_vcvt_hf_uh HvxVR:$src1)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vcvt_hf_uh HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vcvt_hf_uh_128B HvxVR:$src1),
-         (V6_vcvt_hf_uh HvxVR:$src1)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vcvt_hf_uh HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vcvt_sf_hf HvxVR:$src1),
-         (V6_vcvt_sf_hf HvxVR:$src1)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vcvt_sf_hf HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vcvt_sf_hf_128B HvxVR:$src1),
-         (V6_vcvt_sf_hf HvxVR:$src1)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vcvt_sf_hf HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vcvt_ub_hf HvxVR:$src1, HvxVR:$src2),
-         (V6_vcvt_ub_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vcvt_ub_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vcvt_ub_hf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vcvt_ub_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vcvt_ub_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vcvt_uh_hf HvxVR:$src1),
-         (V6_vcvt_uh_hf HvxVR:$src1)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vcvt_uh_hf HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vcvt_uh_hf_128B HvxVR:$src1),
-         (V6_vcvt_uh_hf HvxVR:$src1)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vcvt_uh_hf HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdmpy_sf_hf HvxVR:$src1, HvxVR:$src2),
-         (V6_vdmpy_sf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vdmpy_sf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdmpy_sf_hf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vdmpy_sf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vdmpy_sf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vdmpy_sf_hf_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vdmpy_sf_hf_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vdmpy_sf_hf_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdmpy_sf_hf_acc_128B HvxVR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vdmpy_sf_hf_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vdmpy_sf_hf_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vfmax_hf HvxVR:$src1, HvxVR:$src2),
-         (V6_vfmax_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vfmax_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vfmax_hf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vfmax_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vfmax_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vfmax_sf HvxVR:$src1, HvxVR:$src2),
-         (V6_vfmax_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vfmax_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vfmax_sf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vfmax_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vfmax_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vfmin_hf HvxVR:$src1, HvxVR:$src2),
-         (V6_vfmin_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vfmin_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vfmin_hf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vfmin_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vfmin_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vfmin_sf HvxVR:$src1, HvxVR:$src2),
-         (V6_vfmin_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vfmin_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vfmin_sf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vfmin_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vfmin_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vfneg_hf HvxVR:$src1),
-         (V6_vfneg_hf HvxVR:$src1)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vfneg_hf HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vfneg_hf_128B HvxVR:$src1),
-         (V6_vfneg_hf HvxVR:$src1)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vfneg_hf HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vfneg_sf HvxVR:$src1),
-         (V6_vfneg_sf HvxVR:$src1)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vfneg_sf HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vfneg_sf_128B HvxVR:$src1),
-         (V6_vfneg_sf HvxVR:$src1)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vfneg_sf HvxVR:$src1)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vgthf HvxVR:$src1, HvxVR:$src2),
-         (V6_vgthf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vgthf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vgthf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vgthf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vgthf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vgthf_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgthf_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vgthf_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vgthf_and_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgthf_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vgthf_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vgthf_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgthf_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vgthf_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vgthf_or_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgthf_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vgthf_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vgthf_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgthf_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vgthf_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vgthf_xor_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgthf_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vgthf_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vgtsf HvxVR:$src1, HvxVR:$src2),
-         (V6_vgtsf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vgtsf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vgtsf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vgtsf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vgtsf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vgtsf_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtsf_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vgtsf_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vgtsf_and_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtsf_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vgtsf_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vgtsf_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtsf_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vgtsf_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vgtsf_or_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtsf_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vgtsf_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vgtsf_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtsf_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vgtsf_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vgtsf_xor_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vgtsf_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vgtsf_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vmax_hf HvxVR:$src1, HvxVR:$src2),
-         (V6_vmax_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vmax_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vmax_hf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmax_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vmax_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vmax_sf HvxVR:$src1, HvxVR:$src2),
-         (V6_vmax_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vmax_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vmax_sf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmax_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vmax_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vmin_hf HvxVR:$src1, HvxVR:$src2),
-         (V6_vmin_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vmin_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vmin_hf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmin_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vmin_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vmin_sf HvxVR:$src1, HvxVR:$src2),
-         (V6_vmin_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vmin_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vmin_sf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmin_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vmin_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vmpy_hf_hf HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpy_hf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vmpy_hf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpy_hf_hf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpy_hf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vmpy_hf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpy_hf_hf_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpy_hf_hf_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vmpy_hf_hf_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpy_hf_hf_acc_128B HvxVR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpy_hf_hf_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vmpy_hf_hf_acc HvxVR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpy_qf16 HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpy_qf16 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vmpy_qf16 HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vmpy_qf16_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpy_qf16 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vmpy_qf16 HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vmpy_qf16_hf HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpy_qf16_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vmpy_qf16_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vmpy_qf16_hf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpy_qf16_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vmpy_qf16_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vmpy_qf16_mix_hf HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpy_qf16_mix_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vmpy_qf16_mix_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vmpy_qf16_mix_hf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpy_qf16_mix_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vmpy_qf16_mix_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vmpy_qf32 HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpy_qf32 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vmpy_qf32 HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vmpy_qf32_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpy_qf32 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vmpy_qf32 HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vmpy_qf32_hf HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpy_qf32_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vmpy_qf32_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vmpy_qf32_hf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpy_qf32_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vmpy_qf32_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vmpy_qf32_mix_hf HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpy_qf32_mix_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vmpy_qf32_mix_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vmpy_qf32_mix_hf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpy_qf32_mix_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vmpy_qf32_mix_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vmpy_qf32_qf16 HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpy_qf32_qf16 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vmpy_qf32_qf16 HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vmpy_qf32_qf16_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpy_qf32_qf16 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vmpy_qf32_qf16 HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vmpy_qf32_sf HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpy_qf32_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vmpy_qf32_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vmpy_qf32_sf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpy_qf32_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vmpy_qf32_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vmpy_sf_hf HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpy_sf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vmpy_sf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpy_sf_hf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpy_sf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vmpy_sf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpy_sf_hf_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpy_sf_hf_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vmpy_sf_hf_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpy_sf_hf_acc_128B HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
-         (V6_vmpy_sf_hf_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vmpy_sf_hf_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpy_sf_sf HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpy_sf_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vmpy_sf_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpy_sf_sf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpy_sf_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vmpy_sf_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsub_hf HvxVR:$src1, HvxVR:$src2),
-         (V6_vsub_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vsub_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vsub_hf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vsub_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vsub_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vsub_hf_hf HvxVR:$src1, HvxVR:$src2),
-         (V6_vsub_hf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vsub_hf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsub_hf_hf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vsub_hf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vsub_hf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsub_qf16 HvxVR:$src1, HvxVR:$src2),
-         (V6_vsub_qf16 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vsub_qf16 HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vsub_qf16_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vsub_qf16 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vsub_qf16 HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vsub_qf16_mix HvxVR:$src1, HvxVR:$src2),
-         (V6_vsub_qf16_mix HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vsub_qf16_mix HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vsub_qf16_mix_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vsub_qf16_mix HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vsub_qf16_mix HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vsub_qf32 HvxVR:$src1, HvxVR:$src2),
-         (V6_vsub_qf32 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vsub_qf32 HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vsub_qf32_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vsub_qf32 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vsub_qf32 HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vsub_qf32_mix HvxVR:$src1, HvxVR:$src2),
-         (V6_vsub_qf32_mix HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vsub_qf32_mix HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vsub_qf32_mix_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vsub_qf32_mix HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vsub_qf32_mix HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vsub_sf HvxVR:$src1, HvxVR:$src2),
-         (V6_vsub_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B, UseHVXQFloat]>;
+         (V6_vsub_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vsub_sf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vsub_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B, UseHVXQFloat]>;
+         (V6_vsub_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B, UseHVXQFloat]>;
 def: Pat<(int_hexagon_V6_vsub_sf_hf HvxVR:$src1, HvxVR:$src2),
-         (V6_vsub_sf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vsub_sf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsub_sf_hf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vsub_sf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vsub_sf_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vsub_sf_sf HvxVR:$src1, HvxVR:$src2),
-         (V6_vsub_sf_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX64B]>;
+         (V6_vsub_sf_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsub_sf_sf_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vsub_sf_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV68, UseHVX128B]>;
+         (V6_vsub_sf_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV68, UseHVX128B]>;
 
 // V69 HVX Instructions.
 
 def: Pat<(int_hexagon_V6_vasrvuhubrndsat HvxWR:$src1, HvxVR:$src2),
-         (V6_vasrvuhubrndsat HvxWR:$src1, HvxVR:$src2)>, Requires<[HasV69, UseHVX64B]>;
+         (V6_vasrvuhubrndsat HvxWR:$src1, HvxVR:$src2)>, Requires<[UseHVXV69, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vasrvuhubrndsat_128B HvxWR:$src1, HvxVR:$src2),
-         (V6_vasrvuhubrndsat HvxWR:$src1, HvxVR:$src2)>, Requires<[HasV69, UseHVX128B]>;
+         (V6_vasrvuhubrndsat HvxWR:$src1, HvxVR:$src2)>, Requires<[UseHVXV69, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vasrvuhubsat HvxWR:$src1, HvxVR:$src2),
-         (V6_vasrvuhubsat HvxWR:$src1, HvxVR:$src2)>, Requires<[HasV69, UseHVX64B]>;
+         (V6_vasrvuhubsat HvxWR:$src1, HvxVR:$src2)>, Requires<[UseHVXV69, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vasrvuhubsat_128B HvxWR:$src1, HvxVR:$src2),
-         (V6_vasrvuhubsat HvxWR:$src1, HvxVR:$src2)>, Requires<[HasV69, UseHVX128B]>;
+         (V6_vasrvuhubsat HvxWR:$src1, HvxVR:$src2)>, Requires<[UseHVXV69, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vasrvwuhrndsat HvxWR:$src1, HvxVR:$src2),
-         (V6_vasrvwuhrndsat HvxWR:$src1, HvxVR:$src2)>, Requires<[HasV69, UseHVX64B]>;
+         (V6_vasrvwuhrndsat HvxWR:$src1, HvxVR:$src2)>, Requires<[UseHVXV69, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vasrvwuhrndsat_128B HvxWR:$src1, HvxVR:$src2),
-         (V6_vasrvwuhrndsat HvxWR:$src1, HvxVR:$src2)>, Requires<[HasV69, UseHVX128B]>;
+         (V6_vasrvwuhrndsat HvxWR:$src1, HvxVR:$src2)>, Requires<[UseHVXV69, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vasrvwuhsat HvxWR:$src1, HvxVR:$src2),
-         (V6_vasrvwuhsat HvxWR:$src1, HvxVR:$src2)>, Requires<[HasV69, UseHVX64B]>;
+         (V6_vasrvwuhsat HvxWR:$src1, HvxVR:$src2)>, Requires<[UseHVXV69, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vasrvwuhsat_128B HvxWR:$src1, HvxVR:$src2),
-         (V6_vasrvwuhsat HvxWR:$src1, HvxVR:$src2)>, Requires<[HasV69, UseHVX128B]>;
+         (V6_vasrvwuhsat HvxWR:$src1, HvxVR:$src2)>, Requires<[UseHVXV69, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vmpyuhvs HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyuhvs HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV69, UseHVX64B]>;
+         (V6_vmpyuhvs HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV69, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vmpyuhvs_128B HvxVR:$src1, HvxVR:$src2),
-         (V6_vmpyuhvs HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV69, UseHVX128B]>;
+         (V6_vmpyuhvs HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV69, UseHVX128B]>;
+
+// V73 HVX Instructions.
+
+def: Pat<(int_hexagon_V6_vadd_sf_bf HvxVR:$src1, HvxVR:$src2),
+         (V6_vadd_sf_bf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV73, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vadd_sf_bf_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_vadd_sf_bf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV73, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vconv_h_hf HvxVR:$src1),
+         (V6_vconv_h_hf HvxVR:$src1)>, Requires<[UseHVXV73, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vconv_h_hf_128B HvxVR:$src1),
+         (V6_vconv_h_hf HvxVR:$src1)>, Requires<[UseHVXV73, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vconv_hf_h HvxVR:$src1),
+         (V6_vconv_hf_h HvxVR:$src1)>, Requires<[UseHVXV73, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vconv_hf_h_128B HvxVR:$src1),
+         (V6_vconv_hf_h HvxVR:$src1)>, Requires<[UseHVXV73, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vconv_sf_w HvxVR:$src1),
+         (V6_vconv_sf_w HvxVR:$src1)>, Requires<[UseHVXV73, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vconv_sf_w_128B HvxVR:$src1),
+         (V6_vconv_sf_w HvxVR:$src1)>, Requires<[UseHVXV73, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vconv_w_sf HvxVR:$src1),
+         (V6_vconv_w_sf HvxVR:$src1)>, Requires<[UseHVXV73, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vconv_w_sf_128B HvxVR:$src1),
+         (V6_vconv_w_sf HvxVR:$src1)>, Requires<[UseHVXV73, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vcvt_bf_sf HvxVR:$src1, HvxVR:$src2),
+         (V6_vcvt_bf_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV73, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vcvt_bf_sf_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_vcvt_bf_sf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV73, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vgtbf HvxVR:$src1, HvxVR:$src2),
+         (V6_vgtbf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV73, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vgtbf_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_vgtbf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV73, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vgtbf_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
+         (V6_vgtbf_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV73, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vgtbf_and_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
+         (V6_vgtbf_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV73, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vgtbf_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
+         (V6_vgtbf_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV73, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vgtbf_or_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
+         (V6_vgtbf_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV73, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vgtbf_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
+         (V6_vgtbf_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV73, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vgtbf_xor_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
+         (V6_vgtbf_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV73, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vmax_bf HvxVR:$src1, HvxVR:$src2),
+         (V6_vmax_bf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV73, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vmax_bf_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_vmax_bf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV73, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vmin_bf HvxVR:$src1, HvxVR:$src2),
+         (V6_vmin_bf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV73, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vmin_bf_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_vmin_bf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV73, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vmpy_sf_bf HvxVR:$src1, HvxVR:$src2),
+         (V6_vmpy_sf_bf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV73, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vmpy_sf_bf_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_vmpy_sf_bf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV73, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vmpy_sf_bf_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
+         (V6_vmpy_sf_bf_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV73, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vmpy_sf_bf_acc_128B HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
+         (V6_vmpy_sf_bf_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV73, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vsub_sf_bf HvxVR:$src1, HvxVR:$src2),
+         (V6_vsub_sf_bf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV73, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vsub_sf_bf_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_vsub_sf_bf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV73, UseHVX128B]>;

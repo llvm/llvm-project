@@ -412,7 +412,7 @@ void AsmWriterEmitter::EmitGetMnemonic(
          << "_t Bits = 0;\n";
   while (BytesNeeded != 0) {
     // Figure out how big this table section needs to be, but no bigger than 4.
-    unsigned TableSize = std::min(1 << Log2_32(BytesNeeded), 4);
+    unsigned TableSize = std::min(llvm::bit_floor(BytesNeeded), 4u);
     BytesNeeded -= TableSize;
     TableSize *= 8; // Convert to bits;
     uint64_t Mask = (1ULL << TableSize) - 1;
@@ -618,10 +618,11 @@ void AsmWriterEmitter::EmitGetRegisterName(raw_ostream &O) {
   "/// for the specified register.\n"
   "const char *" << Target.getName() << ClassName << "::";
   if (hasAltNames)
-    O << "\ngetRegisterName(unsigned RegNo, unsigned AltIdx) {\n";
+    O << "\ngetRegisterName(MCRegister Reg, unsigned AltIdx) {\n";
   else
-    O << "getRegisterName(unsigned RegNo) {\n";
-  O << "  assert(RegNo && RegNo < " << (Registers.size()+1)
+    O << "getRegisterName(MCRegister Reg) {\n";
+  O << "  unsigned RegNo = Reg.id();\n"
+    << "  assert(RegNo && RegNo < " << (Registers.size() + 1)
     << " && \"Invalid register number!\");\n"
     << "\n";
 
@@ -1177,10 +1178,10 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
   O << "#endif\n\n";
 
   O.indent(2) << "AliasMatchingData M {\n";
-  O.indent(2) << "  makeArrayRef(OpToPatterns),\n";
-  O.indent(2) << "  makeArrayRef(Patterns),\n";
-  O.indent(2) << "  makeArrayRef(Conds),\n";
-  O.indent(2) << "  StringRef(AsmStrings, array_lengthof(AsmStrings)),\n";
+  O.indent(2) << "  ArrayRef(OpToPatterns),\n";
+  O.indent(2) << "  ArrayRef(Patterns),\n";
+  O.indent(2) << "  ArrayRef(Conds),\n";
+  O.indent(2) << "  StringRef(AsmStrings, std::size(AsmStrings)),\n";
   if (MCOpPredicates.empty())
     O.indent(2) << "  nullptr,\n";
   else

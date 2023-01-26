@@ -64,6 +64,7 @@ set(sources
   X86InstrFoldTables.cpp
   X86InstrInfo.cpp
   X86EvexToVex.cpp
+  X86KCFI.cpp
   X86LegalizerInfo.cpp
   X86LoadValueInjectionLoadHardening.cpp
   X86LoadValueInjectionRetHardening.cpp
@@ -100,6 +101,7 @@ add_llvm_target(X86CodeGen ${sources}
   SelectionDAG
   Support
   Target
+  TargetParser
   TransformUtils
   X86Desc
   X86Info

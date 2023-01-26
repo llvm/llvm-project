@@ -211,7 +211,7 @@ static bool emitIntrinsic(const llvm::Record &record, llvm::raw_ostream &os) {
   if (intr.isCommutative())
     traits.push_back("Commutative");
   if (!intr.hasSideEffects())
-    traits.push_back("NoSideEffect");
+    traits.push_back("NoMemoryEffect");
 
   // Prepare strings for operands.
   llvm::SmallVector<llvm::StringRef, 8> operands(intr.getNumOperands(),

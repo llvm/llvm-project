@@ -8,10 +8,10 @@ entry:
   br label %for.body
 
 for.body:
-  %add.ptr3.pn = phi i8* [ undef, %entry ], [ %src4.0394, %for.end ]
-  %src2.0390 = phi i8* [ undef, %entry ], [ %add.ptr3.pn, %for.end ]
-  %src4.0394 = getelementptr inbounds i8, i8* %add.ptr3.pn, i32 %srcStride
-  %sri414 = load i8, i8* undef, align 1
+  %add.ptr3.pn = phi ptr [ undef, %entry ], [ %src4.0394, %for.end ]
+  %src2.0390 = phi ptr [ undef, %entry ], [ %add.ptr3.pn, %for.end ]
+  %src4.0394 = getelementptr inbounds i8, ptr %add.ptr3.pn, i32 %srcStride
+  %sri414 = load i8, ptr undef, align 1
   br i1 undef, label %for.body9.epil, label %for.body9.preheader.new
 
 for.body9.preheader.new:
@@ -25,12 +25,12 @@ for.body9.epil:
   %epil.iter = phi i32 [ %epil.iter.sub, %for.body9.epil ], [ undef, %for.body9.preheader.new ], [ undef, %for.body ]
   %add17.epil = add nuw i32 %inc.sink385.epil, 1
   %add21.epil = add i32 %inc.sink385.epil, 2
-  %arrayidx22.epil = getelementptr inbounds i8, i8* undef, i32 %add21.epil
+  %arrayidx22.epil = getelementptr inbounds i8, ptr undef, i32 %add21.epil
   %conv27.epil = zext i8 %sr422.epil to i32
-  %0 = load i8, i8* null, align 1
+  %0 = load i8, ptr null, align 1
   %conv61.epil = zext i8 %0 to i32
-  %arrayidx94.epil = getelementptr inbounds i8, i8* %src4.0394, i32 %add17.epil
-  %1 = load i8, i8* %arrayidx94.epil, align 1
+  %arrayidx94.epil = getelementptr inbounds i8, ptr %src4.0394, i32 %add17.epil
+  %1 = load i8, ptr %arrayidx94.epil, align 1
   %add35.epil = add i32 0, %conv27.epil
   %add39.epil = add i32 %add35.epil, 0
   %add43.epil = add i32 %add39.epil, 0
@@ -53,7 +53,7 @@ for.body9.epil:
   %add101.epil = add nsw i32 %mul.epil, 32768
   %shr369.epil = lshr i32 %add101.epil, 16
   %conv102.epil = trunc i32 %shr369.epil to i8
-  store i8 %conv102.epil, i8* undef, align 1
+  store i8 %conv102.epil, ptr undef, align 1
   %epil.iter.sub = add i32 %epil.iter, -1
   %epil.iter.cmp = icmp eq i32 %epil.iter.sub, 0
   br i1 %epil.iter.cmp, label %for.end, label %for.body9.epil

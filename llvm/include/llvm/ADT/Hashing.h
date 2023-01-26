@@ -51,6 +51,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstring>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -122,6 +123,8 @@ hash_code hash_value(const std::tuple<Ts...> &arg);
 template <typename T>
 hash_code hash_value(const std::basic_string<T> &arg);
 
+/// Compute a hash_code for a standard string.
+template <typename T> hash_code hash_value(const std::optional<T> &arg);
 
 /// Override the execution seed with a fixed value.
 ///
@@ -651,24 +654,8 @@ hash_code hash_value(const std::pair<T, U> &arg) {
   return hash_combine(arg.first, arg.second);
 }
 
-// Implementation details for the hash_value overload for std::tuple<...>(...).
-namespace hashing {
-namespace detail {
-
-template <typename... Ts, std::size_t... Indices>
-hash_code hash_value_tuple_helper(const std::tuple<Ts...> &arg,
-                                  std::index_sequence<Indices...>) {
-  return hash_combine(std::get<Indices>(arg)...);
-}
-
-} // namespace detail
-} // namespace hashing
-
-template <typename... Ts>
-hash_code hash_value(const std::tuple<Ts...> &arg) {
-  // TODO: Use std::apply when LLVM starts using C++17.
-  return ::llvm::hashing::detail::hash_value_tuple_helper(
-      arg, typename std::index_sequence_for<Ts...>());
+template <typename... Ts> hash_code hash_value(const std::tuple<Ts...> &arg) {
+  return std::apply([](const auto &...xs) { return hash_combine(xs...); }, arg);
 }
 
 // Declared and documented above, but defined here so that any of the hashing
@@ -676,6 +663,10 @@ hash_code hash_value(const std::tuple<Ts...> &arg) {
 template <typename T>
 hash_code hash_value(const std::basic_string<T> &arg) {
   return hash_combine_range(arg.begin(), arg.end());
+}
+
+template <typename T> hash_code hash_value(const std::optional<T> &arg) {
+  return arg ? hash_combine(true, *arg) : hash_value(false);
 }
 
 template <> struct DenseMapInfo<hash_code, void> {

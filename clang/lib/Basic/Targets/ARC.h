@@ -40,7 +40,9 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override { return None; }
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override {
+    return std::nullopt;
+  }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::VoidPtrBuiltinVaList;
@@ -54,11 +56,11 @@ public:
         "r8",  "r9",  "r10", "r11", "r12", "r13",    "r14", "r15",
         "r16", "r17", "r18", "r19", "r20", "r21",    "r22", "r23",
         "r24", "r25", "gp",  "sp",  "fp",  "ilink1", "r30", "blink"};
-    return llvm::makeArrayRef(GCCRegNames);
+    return llvm::ArrayRef(GCCRegNames);
   }
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return None;
+    return std::nullopt;
   }
 
   bool validateAsmConstraint(const char *&Name,

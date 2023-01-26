@@ -573,10 +573,6 @@ void CSKYConstantIslands::initializeFunctionInfo(
           CPEntry *CPE = findConstPoolEntry(CPI, CPEMI);
           assert(CPE && "Cannot find a corresponding CPEntry!");
           CPE->RefCount++;
-
-          // Instructions can only use one CP entry, don't bother scanning the
-          // rest of the operands.
-          break;
         }
     }
   }

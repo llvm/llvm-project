@@ -26,28 +26,22 @@ namespace unevaluated {
 
 namespace constant_evaluated {
   template<typename T> requires f<int[0]> struct S {};
-  // expected-note@-1{{in instantiation of}} expected-note@-1{{while substituting}} \
-     expected-error@-1{{substitution into constraint expression resulted in a non-constant expression}} \
-     expected-note@-1{{subexpression not valid}}
+  // expected-note@-1{{in instantiation of}} expected-note@-1{{while substituting}}
   using s = S<int>;
-  // expected-note@-1 2{{while checking}}
+  // expected-note@-1 {{while checking}}
   template<typename T> void foo() requires f<int[1]> { };
   // expected-note@-1{{in instantiation}} expected-note@-1{{while substituting}} \
-     expected-note@-1{{candidate template ignored}} expected-note@-1{{subexpression not valid}} \
-     expected-error@-1{{substitution into constraint expression resulted in a non-constant expression}}
+     expected-note@-1{{candidate template ignored}}
   int a = (foo<int>(), 0);
-  // expected-note@-1 2{{while checking}} expected-error@-1{{no matching function}} \
-     expected-note@-1 2{{in instantiation}}
+  // expected-note@-1 {{while checking}} expected-error@-1{{no matching function}} \
+     expected-note@-1 {{in instantiation}}
   template<typename T> void bar() requires requires { requires f<int[2]>; } { };
-  // expected-note@-1{{in instantiation}} expected-note@-1{{subexpression not valid}} \
+  // expected-note@-1{{in instantiation}} \
      expected-note@-1{{while substituting}} \
-     expected-error@-1{{substitution into constraint expression resulted in a non-constant expression}} \
-     expected-note@-1 2{{while checking the satisfaction of nested requirement}}
+     expected-note@-1 {{while checking the satisfaction of nested requirement}}
   int b = (bar<int>(), 0);
   template<typename T> struct M { static void foo() requires f<int[3]> { }; };
-  // expected-note@-1{{in instantiation}} expected-note@-1{{subexpression not valid}} \
-     expected-note@-1{{while substituting}} \
-     expected-error@-1{{substitution into constraint expression resulted in a non-constant expression}}
+  // expected-note@-1{{in instantiation}} expected-note@-1{{while substituting}}
   int c = (M<int>::foo(), 0);
-  // expected-note@-1 2{{while checking}}
+  // expected-note@-1 {{while checking}}
 }

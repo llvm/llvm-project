@@ -9,6 +9,7 @@ add_llvm_component_library(LLVMFuzzerCLI
 
   LINK_COMPONENTS
   Support
+  TargetParser
   )
 
 # Library for using LLVM IR together with fuzzers.
@@ -33,4 +34,6 @@ add_llvm_component_library(LLVMFuzzMutate
   Scalar
   Support
   Target
+  TargetParser
+  TransformUtils
   )

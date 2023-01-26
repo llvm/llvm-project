@@ -13,9 +13,9 @@ define dso_local void @movi_modimm_t1() nounwind {
 ; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = add <8 x i16> %in, <i16 1, i16 0, i16 1, i16 0, i16 1, i16 0, i16 1, i16 0>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -29,9 +29,9 @@ define dso_local void @movi_modimm_t2() nounwind {
 ; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = add <8 x i16> %in, <i16 256, i16 0, i16 256, i16 0, i16 256, i16 0, i16 256, i16 0>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -45,9 +45,9 @@ define dso_local void @movi_modimm_t3() nounwind {
 ; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = add <8 x i16> %in, <i16 0, i16 1, i16 0, i16 1, i16 0, i16 1, i16 0, i16 1>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -61,9 +61,9 @@ define dso_local void @movi_modimm_t4() nounwind {
 ; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = add <8 x i16> %in, <i16 0, i16 256, i16 0, i16 256, i16 0, i16 256, i16 0, i16 256>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -77,9 +77,9 @@ define dso_local void @movi_modimm_t5() nounwind {
 ; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = add <8 x i16> %in, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -93,9 +93,9 @@ define dso_local void @movi_modimm_t6() nounwind {
 ; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = add <8 x i16> %in, <i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -109,9 +109,9 @@ define dso_local void @movi_modimm_t7() nounwind {
 ; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = add <8 x i16> %in, <i16 511, i16 0, i16 511, i16 0, i16 511, i16 0, i16 511, i16 0>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -125,9 +125,9 @@ define dso_local void @movi_modimm_t8() nounwind {
 ; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = add <8 x i16> %in, <i16 65535, i16 1, i16 65535, i16 1, i16 65535, i16 1, i16 65535, i16 1>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -141,9 +141,9 @@ define dso_local void @movi_modimm_t9() nounwind {
 ; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = add <8 x i16> %in, <i16 257, i16 257, i16 257, i16 257, i16 257, i16 257, i16 257, i16 257>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -157,9 +157,9 @@ define dso_local void @movi_modimm_t10() nounwind {
 ; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = add <8 x i16> %in, <i16 -1, i16 0, i16 -1, i16 0, i16 -1, i16 0, i16 -1, i16 0>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -173,9 +173,9 @@ define dso_local void @fmov_modimm_t11() nounwind {
 ; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = add <8 x i16> %in, <i16 0, i16 16448, i16 0, i16 16448, i16 0, i16 16448, i16 0, i16 16448>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -189,9 +189,9 @@ define dso_local void @fmov_modimm_t12() nounwind {
 ; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = add <8 x i16> %in, <i16 0, i16 0, i16 0, i16 16327, i16 0, i16 0, i16 0, i16 16327>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -205,9 +205,9 @@ define dso_local void @mvni_modimm_t1() nounwind {
 ; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = add <8 x i16> %in, <i16 65534, i16 65535, i16 65534, i16 65535, i16 65534, i16 65535, i16 65534, i16 65535>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -221,9 +221,9 @@ define dso_local void @mvni_modimm_t2() nounwind {
 ; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = add <8 x i16> %in, <i16 65279, i16 65535, i16 65279, i16 65535, i16 65279, i16 65535, i16 65279, i16 65535>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -237,9 +237,9 @@ define dso_local void @mvni_modimm_t3() nounwind {
 ; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = add <8 x i16> %in, <i16 65535, i16 65534, i16 65535, i16 65534, i16 65535, i16 65534, i16 65535, i16 65534>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -253,9 +253,9 @@ define dso_local void @mvni_modimm_t4() nounwind {
 ; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = add <8 x i16> %in, <i16 65535, i16 65279, i16 65535, i16 65279, i16 65535, i16 65279, i16 65535, i16 65279>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -269,9 +269,9 @@ define dso_local void @mvni_modimm_t5() nounwind {
 ; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = add <8 x i16> %in, <i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -285,9 +285,9 @@ define dso_local void @mvni_modimm_t6() nounwind {
 ; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = add <8 x i16> %in, <i16 65279, i16 65279, i16 65279, i16 65279, i16 65279, i16 65279, i16 65279, i16 65279>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -301,9 +301,9 @@ define dso_local void @mvni_modimm_t7() nounwind {
 ; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = add <8 x i16> %in, <i16 65024, i16 65535, i16 65024, i16 65535, i16 65024, i16 65535, i16 65024, i16 65535>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -317,9 +317,9 @@ define dso_local void @mvni_modimm_t8() nounwind {
 ; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = add <8 x i16> %in, <i16 0, i16 65534, i16 0, i16 65534, i16 0, i16 65534, i16 0, i16 65534>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -332,9 +332,9 @@ define dso_local void @bic_modimm_t1() nounwind {
 ; CHECK-NEXT:    bic v0.4s, #1
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = and <8 x i16> %in, <i16 65534, i16 65535, i16 65534, i16 65535, i16 65534, i16 65535, i16 65534, i16 65535>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -347,9 +347,9 @@ define dso_local void @bic_modimm_t2() nounwind {
 ; CHECK-NEXT:    bic v0.4s, #1, lsl #8
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = and <8 x i16> %in, <i16 65279, i16 65535, i16 65279, i16 65535, i16 65279, i16 65535, i16 65279, i16 65535>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -362,9 +362,9 @@ define dso_local void @bic_modimm_t3() nounwind {
 ; CHECK-NEXT:    bic v0.4s, #1, lsl #16
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = and <8 x i16> %in, <i16 65535, i16 65534, i16 65535, i16 65534, i16 65535, i16 65534, i16 65535, i16 65534>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -377,9 +377,9 @@ define dso_local void @bic_modimm_t4() nounwind {
 ; CHECK-NEXT:    bic v0.4s, #1, lsl #24
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = and <8 x i16> %in, <i16 65535, i16 65279, i16 65535, i16 65279, i16 65535, i16 65279, i16 65535, i16 65279>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -392,9 +392,9 @@ define dso_local void @bic_modimm_t5() nounwind {
 ; CHECK-NEXT:    bic v0.8h, #1
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = and <8 x i16> %in, <i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -407,9 +407,9 @@ define dso_local void @bic_modimm_t6() nounwind {
 ; CHECK-NEXT:    bic v0.8h, #1, lsl #8
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = and <8 x i16> %in, <i16 65279, i16 65279, i16 65279, i16 65279, i16 65279, i16 65279, i16 65279, i16 65279>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -422,9 +422,9 @@ define dso_local void @orr_modimm_t1() nounwind {
 ; CHECK-NEXT:    orr v0.4s, #1
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = or <8 x i16> %in, <i16 1, i16 0, i16 1, i16 0, i16 1, i16 0, i16 1, i16 0>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -437,9 +437,9 @@ define dso_local void @orr_modimm_t2() nounwind {
 ; CHECK-NEXT:    orr v0.4s, #1, lsl #8
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = or <8 x i16> %in, <i16 256, i16 0, i16 256, i16 0, i16 256, i16 0, i16 256, i16 0>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -452,9 +452,9 @@ define dso_local void @orr_modimm_t3() nounwind {
 ; CHECK-NEXT:    orr v0.4s, #1, lsl #16
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = or <8 x i16> %in, <i16 0, i16 1, i16 0, i16 1, i16 0, i16 1, i16 0, i16 1>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -467,9 +467,9 @@ define dso_local void @orr_modimm_t4() nounwind {
 ; CHECK-NEXT:    orr v0.4s, #1, lsl #24
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = or <8 x i16> %in, <i16 0, i16 256, i16 0, i16 256, i16 0, i16 256, i16 0, i16 256>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -482,9 +482,9 @@ define dso_local void @orr_modimm_t5() nounwind {
 ; CHECK-NEXT:    orr v0.8h, #1
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = or <8 x i16> %in, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -497,9 +497,9 @@ define dso_local void @orr_modimm_t6() nounwind {
 ; CHECK-NEXT:    orr v0.8h, #1, lsl #8
 ; CHECK-NEXT:    st1 { v0.8h }, [x8]
 ; CHECK-NEXT:    ret
-  %in = load <8 x i16>, <8 x i16>* @vec_v8i16
+  %in = load <8 x i16>, ptr @vec_v8i16
   %rv = or <8 x i16> %in, <i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256>
-  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  store <8 x i16> %rv, ptr @vec_v8i16
   ret void
 }
 
@@ -1031,7 +1031,7 @@ define dso_local void @modimm_t12_call() {
   ret void
 }
 
-define <2 x double> @test_v1f64(<1 x double> %0, <2 x double>* %1) {
+define <2 x double> @test_v1f64(<1 x double> %0, ptr %1) {
 ; CHECK-LABEL: test_v1f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvni v1.2s, #31, msl #16

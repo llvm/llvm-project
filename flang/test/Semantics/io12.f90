@@ -52,9 +52,9 @@ module m3
     type(maybeBad) :: y
     type(poison) :: z
     write(u) x ! always ok
-    !ERROR: Derived type in I/O cannot have an allocatable or pointer direct component unless using defined I/O
+    !ERROR: Derived type 'maybebad' in I/O cannot have an allocatable or pointer direct component 'allocatablecomponent' unless using defined I/O
     write(u) y ! bad here
-    !ERROR: Derived type in I/O cannot have an allocatable or pointer direct component unless using defined I/O
+    !ERROR: Derived type 'poison' in I/O cannot have an allocatable or pointer direct component 'allocatablecomponent' unless using defined I/O
     write(u) z ! bad
   end subroutine
 end module
@@ -69,7 +69,7 @@ module m4
     type(poison) :: z
     write(u) x ! always ok
     write(u) y ! ok here
-    !ERROR: Derived type in I/O cannot have an allocatable or pointer direct component unless using defined I/O
+    !ERROR: Derived type 'poison' in I/O cannot have an allocatable or pointer direct component 'allocatablecomponent' unless using defined I/O
     write(u) z ! bad
   end subroutine
 end module

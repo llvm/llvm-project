@@ -544,9 +544,9 @@ bool TypeInfer::EnforceSmallerThan(TypeSetByHwMode &Small, TypeSetByHwMode &Big,
     // Always treat non-scalable MVTs as smaller than scalable MVTs for the
     // purposes of ordering.
     auto ASize = std::make_tuple(A.isScalableVector(), A.getScalarSizeInBits(),
-                                 A.getSizeInBits().getKnownMinSize());
+                                 A.getSizeInBits().getKnownMinValue());
     auto BSize = std::make_tuple(B.isScalableVector(), B.getScalarSizeInBits(),
-                                 B.getSizeInBits().getKnownMinSize());
+                                 B.getSizeInBits().getKnownMinValue());
     return ASize < BSize;
   };
   auto SameKindLE = [](MVT A, MVT B) -> bool {
@@ -558,9 +558,9 @@ bool TypeInfer::EnforceSmallerThan(TypeSetByHwMode &Small, TypeSetByHwMode &Big,
       return false;
 
     return std::make_tuple(A.getScalarSizeInBits(),
-                           A.getSizeInBits().getKnownMinSize()) <=
+                           A.getSizeInBits().getKnownMinValue()) <=
            std::make_tuple(B.getScalarSizeInBits(),
-                           B.getSizeInBits().getKnownMinSize());
+                           B.getSizeInBits().getKnownMinValue());
   };
 
   for (unsigned M : Modes) {
@@ -740,7 +740,7 @@ bool TypeInfer::EnforceSameNumElts(TypeSetByHwMode &V, TypeSetByHwMode &W) {
   auto NoLength = [](const SmallDenseSet<ElementCount> &Lengths,
                      MVT T) -> bool {
     return !Lengths.count(T.isVector() ? T.getVectorElementCount()
-                                       : ElementCount::getNull());
+                                       : ElementCount());
   };
 
   SmallVector<unsigned, 4> Modes;
@@ -751,11 +751,9 @@ bool TypeInfer::EnforceSameNumElts(TypeSetByHwMode &V, TypeSetByHwMode &W) {
 
     SmallDenseSet<ElementCount> VN, WN;
     for (MVT T : VS)
-      VN.insert(T.isVector() ? T.getVectorElementCount()
-                             : ElementCount::getNull());
+      VN.insert(T.isVector() ? T.getVectorElementCount() : ElementCount());
     for (MVT T : WS)
-      WN.insert(T.isVector() ? T.getVectorElementCount()
-                             : ElementCount::getNull());
+      WN.insert(T.isVector() ? T.getVectorElementCount() : ElementCount());
 
     Changed |= berase_if(VS, std::bind(NoLength, WN, std::placeholders::_1));
     Changed |= berase_if(WS, std::bind(NoLength, VN, std::placeholders::_1));
@@ -2998,7 +2996,7 @@ TreePatternNodePtr TreePattern::ParseTreePattern(Init *TheInit,
     // chain.
     if (Int.IS.RetVTs.empty())
       Operator = getDAGPatterns().get_intrinsic_void_sdnode();
-    else if (Int.ModRef != CodeGenIntrinsic::NoMem || Int.hasSideEffects)
+    else if (!Int.ME.doesNotAccessMemory() || Int.hasSideEffects)
       // Has side-effects, requires chain.
       Operator = getDAGPatterns().get_intrinsic_w_chain_sdnode();
     else // Otherwise, no chain.
@@ -3637,16 +3635,17 @@ public:
     if (N->NodeHasProperty(SDNPHasChain, CDP)) hasChain = true;
 
     if (const CodeGenIntrinsic *IntInfo = N->getIntrinsicInfo(CDP)) {
+      ModRefInfo MR = IntInfo->ME.getModRef();
       // If this is an intrinsic, analyze it.
-      if (IntInfo->ModRef & CodeGenIntrinsic::MR_Ref)
-        mayLoad = true;// These may load memory.
+      if (isRefSet(MR))
+        mayLoad = true; // These may load memory.
 
-      if (IntInfo->ModRef & CodeGenIntrinsic::MR_Mod)
-        mayStore = true;// Intrinsics that can write to memory are 'mayStore'.
+      if (isModSet(MR))
+        mayStore = true; // Intrinsics that can write to memory are 'mayStore'.
 
-      if (IntInfo->ModRef >= CodeGenIntrinsic::ReadWriteMem ||
-          IntInfo->hasSideEffects)
-        // ReadWriteMem intrinsics can have other strange effects.
+      // Consider intrinsics that don't specify any restrictions on memory
+      // effects as having a side-effect.
+      if (IntInfo->ME == MemoryEffects::unknown() || IntInfo->hasSideEffects)
         hasSideEffects = true;
     }
   }

@@ -1100,6 +1100,12 @@ let Predicates = [PairedVectorMemops] in {
   }
 }
 
+let Predicates = [IsISA3_1] in {
+  def XSCMPEQQP : X_VT5_VA5_VB5<63, 68, "xscmpeqqp", []>;
+  def XSCMPGEQP : X_VT5_VA5_VB5<63, 196, "xscmpgeqp", []>;
+  def XSCMPGTQP : X_VT5_VA5_VB5<63, 228, "xscmpgtqp", []>;
+}
+
 let Predicates = [PCRelativeMemops] in {
   // Load i32
   def : Pat<(i32 (zextloadi1  (PPCmatpcreladdr PCRelForm:$ga))),
@@ -1319,23 +1325,31 @@ let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1, Predicates = [P
 
 let Predicates = [IsISA3_1] in {
   def SETBC : XForm_XT5_BI5<31, 384, (outs gprc:$RT), (ins crbitrc:$BI),
-                            "setbc $RT, $BI", IIC_IntCompare, []>;
+                            "setbc $RT, $BI", IIC_IntCompare, []>,
+                            SExt32To64, ZExt32To64;
   def SETBCR : XForm_XT5_BI5<31, 416, (outs gprc:$RT), (ins crbitrc:$BI),
-                             "setbcr $RT, $BI", IIC_IntCompare, []>;
+                             "setbcr $RT, $BI", IIC_IntCompare, []>,
+                             SExt32To64, ZExt32To64;
   def SETNBC : XForm_XT5_BI5<31, 448, (outs gprc:$RT), (ins crbitrc:$BI),
-                             "setnbc $RT, $BI", IIC_IntCompare, []>;
+                             "setnbc $RT, $BI", IIC_IntCompare, []>,
+                             SExt32To64;
   def SETNBCR : XForm_XT5_BI5<31, 480, (outs gprc:$RT), (ins crbitrc:$BI),
-                              "setnbcr $RT, $BI", IIC_IntCompare, []>;
+                              "setnbcr $RT, $BI", IIC_IntCompare, []>,
+                              SExt32To64;
 
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
     def SETBC8 : XForm_XT5_BI5<31, 384, (outs g8rc:$RT), (ins crbitrc:$BI),
-                               "setbc $RT, $BI", IIC_IntCompare, []>;
+                               "setbc $RT, $BI", IIC_IntCompare, []>,
+                               SExt32To64, ZExt32To64;
     def SETBCR8 : XForm_XT5_BI5<31, 416, (outs g8rc:$RT), (ins crbitrc:$BI),
-                                "setbcr $RT, $BI", IIC_IntCompare, []>;
+                                "setbcr $RT, $BI", IIC_IntCompare, []>,
+                                SExt32To64, ZExt32To64;
     def SETNBC8 : XForm_XT5_BI5<31, 448, (outs g8rc:$RT), (ins crbitrc:$BI),
-                                "setnbc $RT, $BI", IIC_IntCompare, []>;
+                                "setnbc $RT, $BI", IIC_IntCompare, []>,
+                                SExt32To64;
     def SETNBCR8 : XForm_XT5_BI5<31, 480, (outs g8rc:$RT), (ins crbitrc:$BI),
-                                 "setnbcr $RT, $BI", IIC_IntCompare, []>;
+                                 "setnbcr $RT, $BI", IIC_IntCompare, []>,
+                                 SExt32To64;
   }
 
   def VSLDBI : VNForm_VTAB5_SD3<22, 0, (outs vrrc:$VRT),
@@ -1457,19 +1471,23 @@ let Predicates = [IsISA3_1] in {
   def VEXTRACTBM : VXForm_RD5_XO5_RS5<1602, 8, (outs gprc:$rD), (ins vrrc:$vB),
                                       "vextractbm $rD, $vB", IIC_VecGeneral,
                                       [(set i32:$rD,
-                                      (int_ppc_altivec_vextractbm v16i8:$vB))]>;
+                                      (int_ppc_altivec_vextractbm v16i8:$vB))]>,
+                                      ZExt32To64;
   def VEXTRACTHM : VXForm_RD5_XO5_RS5<1602, 9, (outs gprc:$rD), (ins vrrc:$vB),
                                       "vextracthm $rD, $vB", IIC_VecGeneral,
                                       [(set i32:$rD,
-                                      (int_ppc_altivec_vextracthm v8i16:$vB))]>;
+                                      (int_ppc_altivec_vextracthm v8i16:$vB))]>,
+                                      ZExt32To64;
   def VEXTRACTWM : VXForm_RD5_XO5_RS5<1602, 10, (outs gprc:$rD), (ins vrrc:$vB),
                                       "vextractwm $rD, $vB", IIC_VecGeneral,
                                       [(set i32:$rD,
-                                      (int_ppc_altivec_vextractwm v4i32:$vB))]>;
+                                      (int_ppc_altivec_vextractwm v4i32:$vB))]>,
+                                      ZExt32To64;
   def VEXTRACTDM : VXForm_RD5_XO5_RS5<1602, 11, (outs gprc:$rD), (ins vrrc:$vB),
                                       "vextractdm $rD, $vB", IIC_VecGeneral,
                                       [(set i32:$rD,
-                                      (int_ppc_altivec_vextractdm v2i64:$vB))]>;
+                                      (int_ppc_altivec_vextractdm v2i64:$vB))]>,
+                                      ZExt32To64;
   def VEXTRACTQM : VXForm_RD5_XO5_RS5<1602, 12, (outs gprc:$rD), (ins vrrc:$vB),
                                       "vextractqm $rD, $vB", IIC_VecGeneral,
                                       [(set i32:$rD,
@@ -1726,6 +1744,20 @@ let Predicates = [IsISA3_1] in {
                                v2i64:$vB))]>;
   def XVTLSBB : XX2_BF3_XO5_XB6_XO9<60, 2, 475, (outs crrc:$BF), (ins vsrc:$XB),
                                     "xvtlsbb $BF, $XB", IIC_VecGeneral, []>;
+  def BRH : XForm_11<31, 219, (outs gprc:$RA), (ins gprc:$RS),
+                     "brh $RA, $RS", IIC_IntRotate, []>;
+  def BRW : XForm_11<31, 155, (outs gprc:$RA), (ins gprc:$RS),
+                     "brw $RA, $RS", IIC_IntRotate,
+                     [(set i32:$RA, (bswap i32:$RS))]>;
+  let isCodeGenOnly = 1 in {
+    def BRH8 : XForm_11<31, 219, (outs g8rc:$RA), (ins g8rc:$RS),
+                        "brh $RA, $RS", IIC_IntRotate, []>;
+    def BRW8 : XForm_11<31, 155, (outs g8rc:$RA), (ins g8rc:$RS),
+                        "brw $RA, $RS", IIC_IntRotate, []>;
+  }
+  def BRD : XForm_11<31, 187, (outs g8rc:$RA), (ins g8rc:$RS),
+                     "brd $RA, $RS", IIC_IntRotate,
+                     [(set i64:$RA, (bswap i64:$RS))]>;
 
   // The XFormMemOp flag for the following 8 instructions is set on
   // the instruction format.
@@ -1958,7 +1990,10 @@ let Predicates = [IsISA3_1] in {
             (EXTRACT_SUBREG (XVTLSBB (COPY_TO_REGCLASS $XB, VSRC)), sub_lt)>;
   def : Pat<(i32 (int_ppc_vsx_xvtlsbb v16i8:$XB, 0)),
             (EXTRACT_SUBREG (XVTLSBB (COPY_TO_REGCLASS $XB, VSRC)), sub_eq)>;
-
+  def : Pat<(srl (bswap i32:$RS), (i32 16)),
+            (RLDICL_32 (BRH $RS), 0, 48)>;
+  def : Pat<(i64 (zext (i32 (srl (bswap i32:$RS), (i32 16))))),
+            (RLDICL_32_64 (BRH $RS), 0, 48)>;
   def : Pat <(v1i128 (PPClxvrzx ForceXForm:$src, 8)),
              (v1i128 (COPY_TO_REGCLASS (LXVRBX ForceXForm:$src), VRRC))>;
   def : Pat <(v1i128 (PPClxvrzx ForceXForm:$src, 16)),
@@ -2095,6 +2130,52 @@ def : Pat<(f64 nzFPImmAsi64:$A),
   // nand(A, nand(B, C))
   def : xxevalPattern<(or (vnot v4i32:$vA), (and v4i32:$vB, v4i32:$vC)),
                        !sub(255, 14)>;
+
+  // EQV
+  // (eqv A, B, C)
+  def : xxevalPattern<(or (and v4i32:$vA, (and v4i32:$vB, v4i32:$vC)),
+                          (vnot (or v4i32:$vA, (or v4i32:$vB, v4i32:$vC)))),
+                       150>;
+  // (eqv A, (and B, C))
+  def : xxevalPattern<(vnot (xor v4i32:$vA, (and v4i32:$vB, v4i32:$vC))), 225>;
+  // (eqv A, (or B, C))
+  def : xxevalPattern<(vnot (xor v4i32:$vA, (or v4i32:$vB, v4i32:$vC))), 135>;
+
+  // NOR
+  // (nor A, B, C)
+  def : xxevalPattern<(vnot (or v4i32:$vA, (or v4i32:$vB, v4i32:$vC))), 128>;
+  // (nor A, (and B, C))
+  def : xxevalPattern<(vnot (or v4i32:$vA, (and v4i32:$vB, v4i32:$vC))), 224>;
+  // (nor A, (eqv B, C))
+  def : xxevalPattern<(and (vnot v4i32:$vA), (xor v4i32:$vB, v4i32:$vC)), 96>;
+  // (nor A, (nand B, C))
+  def : xxevalPattern<(and (vnot v4i32:$vA), (and v4i32:$vB, v4i32:$vC)), 16>;
+  // (nor A, (nor B, C))
+  def : xxevalPattern<(and (vnot v4i32:$vA), (or v4i32:$vB, v4i32:$vC)), 112>;
+  // (nor A, (xor B, C))
+  def : xxevalPattern<(vnot (or v4i32:$vA, (xor v4i32:$vB, v4i32:$vC))), 144>;
+
+  // OR
+  // (or A, B, C)
+  def : xxevalPattern<(or v4i32:$vA, (or v4i32:$vB, v4i32:$vC)), 127>;
+  // (or A, (and B, C))
+  def : xxevalPattern<(or v4i32:$vA, (and v4i32:$vB, v4i32:$vC)), 31>;
+  // (or A, (eqv B, C))
+  def : xxevalPattern<(or v4i32:$vA, (vnot (xor v4i32:$vB, v4i32:$vC))), 159>;
+  // (or A, (nand B, C))
+  def : xxevalPattern<(or v4i32:$vA, (vnot (and v4i32:$vB, v4i32:$vC))), 239>;
+  // (or A, (nor B, C))
+  def : xxevalPattern<(or v4i32:$vA, (vnot (or v4i32:$vB, v4i32:$vC))), 143>;
+  // (or A, (xor B, C))
+  def : xxevalPattern<(or v4i32:$vA, (xor v4i32:$vB, v4i32:$vC)), 111>;
+
+  // XOR
+  // (xor A, B, C)
+  def : xxevalPattern<(xor v4i32:$vA, (xor v4i32:$vB, v4i32:$vC)), 105>;
+  // (xor A, (and B, C))
+  def : xxevalPattern<(xor v4i32:$vA, (and v4i32:$vB, v4i32:$vC)), 30>;
+  // (xor A, (or B, C))
+  def : xxevalPattern<(xor v4i32:$vA, (or v4i32:$vB, v4i32:$vC)), 120>;
 
   // Anonymous patterns to select prefixed VSX loads and stores.
   // Load / Store f128

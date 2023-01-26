@@ -20,7 +20,9 @@ include "flang/Optimizer/Dialect/FIRDialect.td"
 // FIR Types
 //===----------------------------------------------------------------------===//
 
-class FIR_Type<string name, string typeMnemonic> : TypeDef<fir_Dialect, name> {
+class FIR_Type<string name, string typeMnemonic, list<Trait> traits = [],
+               string baseCppClass = "::mlir::Type">
+    : TypeDef<fir_Dialect, name, traits, baseCppClass> {
   let mnemonic = typeMnemonic;
 }
 
@@ -66,7 +68,7 @@ def fir_BoxProcType : FIR_Type<"BoxProc", "boxproc"> {
   let hasCustomAssemblyFormat = 1;
 }
 
-def fir_BoxType : FIR_Type<"Box", "box"> {
+def fir_BoxType : FIR_Type<"Box", "box", [], "BaseBoxType"> {
   let summary = "The type of a Fortran descriptor";
 
   let description = [{
@@ -75,25 +77,24 @@ def fir_BoxType : FIR_Type<"Box", "box"> {
     to) whether the entity is an array, its size, or what type it has.
   }];
 
-  let parameters = (ins "mlir::Type":$eleTy, "mlir::AffineMapAttr":$map);
+  let parameters = (ins "mlir::Type":$eleTy);
 
   let skipDefaultBuilders = 1;
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-        "mlir::Type":$eleTy,
-        CArg<"mlir::AffineMapAttr", "{}">:$map), [{
-      return Base::get(eleTy.getContext(), eleTy, map);
+        "mlir::Type":$eleTy), [{
+      return Base::get(eleTy.getContext(), eleTy);
     }]>,
   ];
 
   let extraClassDeclaration = [{
     mlir::Type getElementType() const { return getEleTy(); }
-    mlir::AffineMapAttr getLayoutMap() const { return getMap(); }
   }];
 
   let genVerifyDecl = 1;
-  let hasCustomAssemblyFormat = 1;
+
+  let assemblyFormat = "`<` $eleTy `>`";
 }
 
 def fir_CharacterType : FIR_Type<"Character", "char"> {
@@ -127,14 +128,34 @@ def fir_CharacterType : FIR_Type<"Character", "char"> {
     static constexpr LenType singleton() { return 1; }
 
     /// Character has a LEN value which is not a compile-time known constant.
-    static constexpr LenType unknownLen() { return -1; }
+    static constexpr LenType unknownLen() { return mlir::ShapedType::kDynamic; }
 
     /// Character LEN is a runtime value.
     bool hasDynamicLen() { return getLen() == unknownLen(); }
 
-    /// Character LEN is a compile-time cpnstant value.
+    /// Character LEN is a compile-time constant value.
     bool hasConstantLen() { return !hasDynamicLen(); }
   }];
+}
+
+def fir_ClassType : FIR_Type<"Class", "class", [], "BaseBoxType"> {
+  let summary = "Class type";
+
+  let description = [{
+    Class type is used to model the Fortran CLASS intrinsic type. A class type
+    is equivalent to a fir.box type with a dynamic type.
+  }];
+
+  let parameters = (ins "mlir::Type":$eleTy);
+
+  let builders = [
+    TypeBuilderWithInferredContext<(ins "mlir::Type":$eleTy), [{
+      return $_get(eleTy.getContext(), eleTy);
+    }]>
+  ];
+
+  let genVerifyDecl = 1;
+  let assemblyFormat = "`<` $eleTy `>`";
 }
 
 def fir_ComplexType : FIR_Type<"Complex", "complex"> {
@@ -335,6 +356,7 @@ def fir_RecordType : FIR_Type<"Record", "type"> {
     unsigned getNumLenParams() { return getLenParamList().size(); }
     bool isDependentType() { return getNumLenParams(); }
 
+    bool isFinalized() const;
     void finalize(llvm::ArrayRef<TypePair> lenPList,
                   llvm::ArrayRef<TypePair> typeList);
 
@@ -405,15 +427,6 @@ def fir_ShiftType : FIR_Type<"Shift", "shift"> {
 
   let parameters = (ins "unsigned":$rank);
   let hasCustomAssemblyFormat = 1;
-
-  let extraClassDeclaration = [{
-    using KindTy = unsigned;
-
-    // a !fir.boxchar<k> always wraps a !fir.char<k, ?>
-    CharacterType getElementType(mlir::MLIRContext *context) const;
-
-    CharacterType getEleTy() const;
-  }];
 }
 
 def fir_SequenceType : FIR_Type<"Sequence", "array"> {
@@ -470,8 +483,10 @@ def fir_SequenceType : FIR_Type<"Sequence", "array"> {
     // Does the sequence have unknown shape? (`array<* x T>`)
     bool hasUnknownShape() const { return getShape().empty(); }
 
-    // The value `-1` represents an unknown extent for a dimension
-    static constexpr Extent getUnknownExtent() { return -1; }
+    // The value `kDynamic` represents an unknown extent for a dimension
+    static constexpr Extent getUnknownExtent() {
+      return mlir::ShapedType::kDynamic;
+    }
   }];
 }
 
@@ -515,7 +530,7 @@ def fir_VectorType : FIR_Type<"Vector", "vector"> {
 
   let description = [{
     Replacement for the builtin vector type.
-    The FIR vector type is always rank one. It's size is always a constant.
+    The FIR vector type is always rank one. Its size is always a constant.
     A vector's element type must be real or integer.
   }];
 
@@ -542,6 +557,10 @@ def fir_VectorType : FIR_Type<"Vector", "vector"> {
 def fir_VoidType : FIR_Type<"Void", "void"> {
   let genStorageClass = 0;
 }
+
+// Whether a type is a BaseBoxType
+def IsBaseBoxTypePred
+        : CPred<"$_self.isa<::fir::BaseBoxType>()">;
 
 // Generalized FIR and standard dialect types representing intrinsic types
 def AnyIntegerLike : TypeConstraint<Or<[SignlessIntegerLike.predicate,
@@ -575,14 +594,18 @@ def RefOrLLVMPtr : TypeConstraint<Or<[fir_ReferenceType.predicate,
     fir_LLVMPointerType.predicate]>, "fir.ref or fir.llvm_ptr">;
 
 def AnyBoxLike : TypeConstraint<Or<[fir_BoxType.predicate,
-    fir_BoxCharType.predicate, fir_BoxProcType.predicate]>, "any box">;
+    fir_BoxCharType.predicate, fir_BoxProcType.predicate,
+    fir_ClassType.predicate]>, "any box">;
+
+def BoxOrClassType : TypeConstraint<Or<[fir_BoxType.predicate,
+    fir_ClassType.predicate]>, "box or class">;
 
 def AnyRefOrBoxLike : TypeConstraint<Or<[AnyReferenceLike.predicate,
     AnyBoxLike.predicate, FunctionType.predicate]>,
     "any reference or box like">;
 def AnyRefOrBox : TypeConstraint<Or<[fir_ReferenceType.predicate,
-    fir_HeapType.predicate, fir_PointerType.predicate, fir_BoxType.predicate]>,
-    "any reference or box">;
+    fir_HeapType.predicate, fir_PointerType.predicate,
+    IsBaseBoxTypePred]>, "any reference or box">;
 
 def AnyShapeLike : TypeConstraint<Or<[fir_ShapeType.predicate,
     fir_ShapeShiftType.predicate]>, "any legal shape type">;
@@ -613,7 +636,7 @@ def AnyAddressableLike : TypeConstraint<Or<[fir_ReferenceType.predicate,
     FunctionType.predicate]>, "any addressable">;
 
 def ArrayOrBoxOrRecord : TypeConstraint<Or<[fir_SequenceType.predicate,
-    fir_BoxType.predicate, fir_RecordType.predicate]>,
+    IsBaseBoxTypePred, fir_RecordType.predicate]>,
     "fir.box, fir.array or fir.type">;
 
 

@@ -10,18 +10,16 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace performance {
+namespace clang::tidy::performance {
 
 namespace {
 
-llvm::Optional<std::string> makeCharacterLiteral(const StringLiteral *Literal) {
+std::optional<std::string> makeCharacterLiteral(const StringLiteral *Literal) {
   std::string Result;
   {
     llvm::raw_string_ostream OS(Result);
@@ -30,11 +28,11 @@ llvm::Optional<std::string> makeCharacterLiteral(const StringLiteral *Literal) {
   // Now replace the " with '.
   auto Pos = Result.find_first_of('"');
   if (Pos == Result.npos)
-    return llvm::None;
+    return std::nullopt;
   Result[Pos] = '\'';
   Pos = Result.find_last_of('"');
   if (Pos == Result.npos)
-    return llvm::None;
+    return std::nullopt;
   Result[Pos] = '\'';
   return Result;
 }
@@ -95,6 +93,4 @@ void FasterStringFindCheck::check(const MatchFinder::MatchResult &Result) {
              *Replacement);
 }
 
-} // namespace performance
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::performance

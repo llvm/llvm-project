@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 
 // PR10415
 __asm__ ("foo1");
@@ -197,7 +197,7 @@ void *t24(char c) {
   void *addr;
   // CHECK: @t24
   // CHECK: zext i8 {{.*}} to i32
-  // CHECK-NEXT: call i8* asm "foobar"
+  // CHECK-NEXT: call ptr asm "foobar"
   __asm__ ("foobar" : "=a" (addr) : "0" (c));
   return addr;
 }
@@ -246,7 +246,7 @@ void t29(void) {
                :
                : "m"(t29_var));
   // CHECK: @t29
-  // CHECK: call void asm sideeffect "movl %eax, $0", "*m,~{dirflag},~{fpsr},~{flags}"([1 x i32]* elementtype([1 x i32]) @t29_var)
+  // CHECK: call void asm sideeffect "movl %eax, $0", "*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype([1 x i32]) @t29_var)
 }
 
 void t30(int len) {
@@ -283,5 +283,5 @@ void *t33(void *ptr)
   return ret;
 
   // CHECK: @t33
-  // CHECK: %1 = call i8* asm "lea $1, $0", "=r,p,~{dirflag},~{fpsr},~{flags}"(i8* %0)
+  // CHECK: %1 = call ptr asm "lea $1, $0", "=r,p,~{dirflag},~{fpsr},~{flags}"(ptr %0)
 }

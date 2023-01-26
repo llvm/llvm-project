@@ -6,15 +6,15 @@
 ; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
 ; GCN-NOT: [[A]]
 ; GCN: v_add_f32_e64 v{{[0-9]+}}, [[A]], 1.0 clamp{{$}}
-define amdgpu_kernel void @v_clamp_add_src_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_add_src_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %add = fadd float %a, 1.0
   %max = call float @llvm.maxnum.f32(float %add, float 0.0)
   %clamp = call float @llvm.minnum.f32(float %max, float 1.0)
-  store float %clamp, float addrspace(1)* %out.gep
+  store float %clamp, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -22,16 +22,16 @@ define amdgpu_kernel void @v_clamp_add_src_f32(float addrspace(1)* %out, float a
 ; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_add_f32_e32 [[ADD:v[0-9]+]], 1.0, [[A]]{{$}}
 ; GCN: v_max_f32_e64 v{{[0-9]+}}, [[ADD]], [[ADD]] clamp{{$}}
-define amdgpu_kernel void @v_clamp_multi_use_src_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_multi_use_src_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %add = fadd float %a, 1.0
   %max = call float @llvm.maxnum.f32(float %add, float 0.0)
   %clamp = call float @llvm.minnum.f32(float %max, float 1.0)
-  store float %clamp, float addrspace(1)* %out.gep
-  store volatile float %add, float addrspace(1)* undef
+  store float %clamp, ptr addrspace(1) %out.gep
+  store volatile float %add, ptr addrspace(1) undef
   ret void
 }
 
@@ -39,16 +39,16 @@ define amdgpu_kernel void @v_clamp_multi_use_src_f32(float addrspace(1)* %out, f
 ; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
 ; GCN-NOT: [[A]]
 ; GCN: v_add_f32_e64 v{{[0-9]+}}, [[A]], 1.0 clamp{{$}}
-define amdgpu_kernel void @v_clamp_dbg_use_src_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_dbg_use_src_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %add = fadd float %a, 1.0
   call void @llvm.dbg.value(metadata float %add, i64 0, metadata !4, metadata !9), !dbg !10
   %max = call float @llvm.maxnum.f32(float %add, float 0.0)
   %clamp = call float @llvm.minnum.f32(float %max, float 1.0)
-  store float %clamp, float addrspace(1)* %out.gep
+  store float %clamp, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -56,16 +56,16 @@ define amdgpu_kernel void @v_clamp_dbg_use_src_f32(float addrspace(1)* %out, flo
 ; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_floor_f32_e32 [[FLOOR:v[0-9]+]], [[A]]
 ; GCN: v_max_f32_e64 v{{[0-9]+}}, -[[FLOOR]], -[[FLOOR]] clamp{{$}}
-define amdgpu_kernel void @v_clamp_add_neg_src_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_add_neg_src_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %floor = call float @llvm.floor.f32(float %a)
   %neg.floor = fneg float %floor
   %max = call float @llvm.maxnum.f32(float %neg.floor, float 0.0)
   %clamp = call float @llvm.minnum.f32(float %max, float 1.0)
-  store float %clamp, float addrspace(1)* %out.gep
+  store float %clamp, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -73,29 +73,29 @@ define amdgpu_kernel void @v_clamp_add_neg_src_f32(float addrspace(1)* %out, flo
 ; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_add_f32_e32 [[ADD:v[0-9]+]], 1.0, [[A]]{{$}}
 ; GCN: v_max_f32_e32 v{{[0-9]+}}, 0, [[ADD]]{{$}}
-define amdgpu_kernel void @v_non_clamp_max_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_non_clamp_max_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %add = fadd float %a, 1.0
   %max = call float @llvm.maxnum.f32(float %add, float 0.0)
-  store float %max, float addrspace(1)* %out.gep
+  store float %max, ptr addrspace(1) %out.gep
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_clamp_add_src_f32_denormals:
 ; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_add_f32_e64 [[ADD:v[0-9]+]], [[A]], 1.0 clamp{{$}}
-define amdgpu_kernel void @v_clamp_add_src_f32_denormals(float addrspace(1)* %out, float addrspace(1)* %aptr) #2 {
+define amdgpu_kernel void @v_clamp_add_src_f32_denormals(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %add = fadd float %a, 1.0
   %max = call float @llvm.maxnum.f32(float %add, float 0.0)
   %clamp = call float @llvm.minnum.f32(float %max, float 1.0)
-  store float %clamp, float addrspace(1)* %out.gep
+  store float %clamp, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -106,15 +106,15 @@ define amdgpu_kernel void @v_clamp_add_src_f32_denormals(float addrspace(1)* %ou
 ; SI: v_cvt_f32_f16_e32 [[CVT:v[0-9]+]], [[A]]
 ; SI: v_add_f32_e64 [[ADD:v[0-9]+]], [[CVT]], 1.0 clamp{{$}}
 ; SI: v_cvt_f16_f32_e32 v{{[0-9]+}}, [[ADD]]
-define amdgpu_kernel void @v_clamp_add_src_f16_denorm(half addrspace(1)* %out, half addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_add_src_f16_denorm(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr half, half addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr half, half addrspace(1)* %out, i32 %tid
-  %a = load half, half addrspace(1)* %gep0
+  %gep0 = getelementptr half, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr half, ptr addrspace(1) %out, i32 %tid
+  %a = load half, ptr addrspace(1) %gep0
   %add = fadd half %a, 1.0
   %max = call half @llvm.maxnum.f16(half %add, half 0.0)
   %clamp = call half @llvm.minnum.f16(half %max, half 1.0)
-  store half %clamp, half addrspace(1)* %out.gep
+  store half %clamp, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -126,15 +126,15 @@ define amdgpu_kernel void @v_clamp_add_src_f16_denorm(half addrspace(1)* %out, h
 ; SI: v_cvt_f32_f16_e32 [[CVT:v[0-9]+]], [[A]]
 ; SI: v_add_f32_e64 [[ADD:v[0-9]+]], [[CVT]], 1.0 clamp{{$}}
 ; SI: v_cvt_f16_f32_e32 v{{[0-9]+}}, [[ADD]]
-define amdgpu_kernel void @v_clamp_add_src_f16_no_denormals(half addrspace(1)* %out, half addrspace(1)* %aptr) #3 {
+define amdgpu_kernel void @v_clamp_add_src_f16_no_denormals(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #3 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr half, half addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr half, half addrspace(1)* %out, i32 %tid
-  %a = load half, half addrspace(1)* %gep0
+  %gep0 = getelementptr half, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr half, ptr addrspace(1) %out, i32 %tid
+  %a = load half, ptr addrspace(1) %gep0
   %add = fadd half %a, 1.0
   %max = call half @llvm.maxnum.f16(half %add, half 0.0)
   %clamp = call half @llvm.minnum.f16(half %max, half 1.0)
-  store half %clamp, half addrspace(1)* %out.gep
+  store half %clamp, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -142,47 +142,47 @@ define amdgpu_kernel void @v_clamp_add_src_f16_no_denormals(half addrspace(1)* %
 ; GCN: {{buffer|flat|global}}_load_dwordx2 v[[[A:[0-9]+]]:[[B:[0-9]+]]]
 ; GCN-DAG: v_add_f32_e64 v{{[0-9]+}}, v[[A]], 1.0 clamp{{$}}
 ; GCN-DAG: v_add_f32_e64 v{{[0-9]+}}, v[[B]], 1.0 clamp{{$}}
-define amdgpu_kernel void @v_clamp_add_src_v2f32(<2 x float> addrspace(1)* %out, <2 x float> addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_add_src_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr <2 x float>, <2 x float> addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr <2 x float>, <2 x float> addrspace(1)* %out, i32 %tid
-  %a = load <2 x float>, <2 x float> addrspace(1)* %gep0
+  %gep0 = getelementptr <2 x float>, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr <2 x float>, ptr addrspace(1) %out, i32 %tid
+  %a = load <2 x float>, ptr addrspace(1) %gep0
   %add = fadd <2 x float> %a, <float 1.0, float 1.0>
   %max = call <2 x float> @llvm.maxnum.v2f32(<2 x float> %add, <2 x float> zeroinitializer)
   %clamp = call <2 x float> @llvm.minnum.v2f32(<2 x float> %max, <2 x float> <float 1.0, float 1.0>)
-  store <2 x float> %clamp, <2 x float> addrspace(1)* %out.gep
+  store <2 x float> %clamp, ptr addrspace(1) %out.gep
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_clamp_add_src_f64:
 ; GCN: {{buffer|flat|global}}_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]]
 ; GCN: v_add_f64 v{{\[[0-9]+:[0-9]+\]}}, [[A]], 1.0 clamp{{$}}
-define amdgpu_kernel void @v_clamp_add_src_f64(double addrspace(1)* %out, double addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_add_src_f64(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr double, double addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr double, double addrspace(1)* %out, i32 %tid
-  %a = load double, double addrspace(1)* %gep0
+  %gep0 = getelementptr double, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr double, ptr addrspace(1) %out, i32 %tid
+  %a = load double, ptr addrspace(1) %gep0
   %add = fadd double %a, 1.0
   %max = call double @llvm.maxnum.f64(double %add, double 0.0)
   %clamp = call double @llvm.minnum.f64(double %max, double 1.0)
-  store double %clamp, double addrspace(1)* %out.gep
+  store double %clamp, ptr addrspace(1) %out.gep
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_clamp_mac_to_mad:
 ; GCN: v_mad_f32 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]}} clamp{{$}}
-define amdgpu_kernel void @v_clamp_mac_to_mad(float addrspace(1)* %out, float addrspace(1)* %aptr, float %a) #0 {
+define amdgpu_kernel void @v_clamp_mac_to_mad(ptr addrspace(1) %out, ptr addrspace(1) %aptr, float %a) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %b = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %b = load float, ptr addrspace(1) %gep0
 
   %mul = fmul float %a, %a
   %add = fadd float %mul, %b
   %max = call float @llvm.maxnum.f32(float %add, float 0.0)
   %clamp = call float @llvm.minnum.f32(float %max, float 1.0)
   %res = fadd float %clamp, %b
-  store float %res, float addrspace(1)* %out.gep
+  store float %res, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -190,30 +190,30 @@ define amdgpu_kernel void @v_clamp_mac_to_mad(float addrspace(1)* %out, float ad
 ; GCN-LABEL: {{^}}v_clamp_add_src_v2f16_denorm:
 ; GCN:  {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
 ; GFX9: v_pk_add_f16 [[ADD:v[0-9]+]], [[A]], 1.0 op_sel_hi:[1,0] clamp{{$}}
-define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr <2 x half>, <2 x half> addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
-  %a = load <2 x half>, <2 x half> addrspace(1)* %gep0
+  %gep0 = getelementptr <2 x half>, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
+  %a = load <2 x half>, ptr addrspace(1) %gep0
   %add = fadd <2 x half> %a, <half 1.0, half 1.0>
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %add, <2 x half> zeroinitializer)
   %clamp = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half 1.0>)
-  store <2 x half> %clamp, <2 x half> addrspace(1)* %out.gep
+  store <2 x half> %clamp, ptr addrspace(1) %out.gep
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_clamp_add_src_v2f16_no_denormals:
 ; GCN:  {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
 ; GFX9: v_pk_add_f16 [[ADD:v[0-9]+]], [[A]], 1.0 op_sel_hi:[1,0] clamp{{$}}
-define amdgpu_kernel void @v_clamp_add_src_v2f16_no_denormals(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %aptr) #3 {
+define amdgpu_kernel void @v_clamp_add_src_v2f16_no_denormals(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #3 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr <2 x half>, <2 x half> addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
-  %a = load <2 x half>, <2 x half> addrspace(1)* %gep0
+  %gep0 = getelementptr <2 x half>, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
+  %a = load <2 x half>, ptr addrspace(1) %gep0
   %add = fadd <2 x half> %a, <half 1.0, half 1.0>
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %add, <2 x half> zeroinitializer)
   %clamp = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half 1.0>)
-  store <2 x half> %clamp, <2 x half> addrspace(1)* %out.gep
+  store <2 x half> %clamp, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -221,16 +221,16 @@ define amdgpu_kernel void @v_clamp_add_src_v2f16_no_denormals(<2 x half> addrspa
 ; GCN:  {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
 ; GFX9: v_pk_add_f16 [[ADD:v[0-9]+]], [[A]], 1.0 op_sel_hi:[1,0]{{$}}
 ; GFX9: v_pk_max_f16 [[MAX:v[0-9]+]], [[ADD]], [[ADD]] neg_lo:[1,1] neg_hi:[1,1] clamp{{$}}
-define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm_neg(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm_neg(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr <2 x half>, <2 x half> addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
-  %a = load <2 x half>, <2 x half> addrspace(1)* %gep0
+  %gep0 = getelementptr <2 x half>, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
+  %a = load <2 x half>, ptr addrspace(1) %gep0
   %add = fadd <2 x half> %a, <half 1.0, half 1.0>
   %neg.add = fsub <2 x half> <half -0.0, half -0.0>, %add
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %neg.add, <2 x half> zeroinitializer)
   %clamp = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half 1.0>)
-  store <2 x half> %clamp, <2 x half> addrspace(1)* %out.gep
+  store <2 x half> %clamp, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -238,18 +238,18 @@ define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm_neg(<2 x half> addrspace
 ; GCN:  {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
 ; GFX9: v_pk_add_f16 [[ADD:v[0-9]+]], [[A]], 1.0 op_sel_hi:[1,0]{{$}}
 ; GFX9: v_pk_max_f16 [[MAX:v[0-9]+]], [[ADD]], [[ADD]] neg_lo:[1,1] clamp{{$}}
-define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm_neg_lo(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm_neg_lo(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr <2 x half>, <2 x half> addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
-  %a = load <2 x half>, <2 x half> addrspace(1)* %gep0
+  %gep0 = getelementptr <2 x half>, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
+  %a = load <2 x half>, ptr addrspace(1) %gep0
   %add = fadd <2 x half> %a, <half 1.0, half 1.0>
   %lo = extractelement <2 x half> %add, i32 0
   %neg.lo = fsub half -0.0, %lo
   %neg.lo.add = insertelement <2 x half> %add, half %neg.lo, i32 0
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %neg.lo.add, <2 x half> zeroinitializer)
   %clamp = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half 1.0>)
-  store <2 x half> %clamp, <2 x half> addrspace(1)* %out.gep
+  store <2 x half> %clamp, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -257,18 +257,18 @@ define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm_neg_lo(<2 x half> addrsp
 ; GCN:  {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
 ; GFX9: v_pk_add_f16 [[ADD:v[0-9]+]], [[A]], 1.0 op_sel_hi:[1,0]{{$}}
 ; GFX9: v_pk_max_f16 [[MAX:v[0-9]+]], [[ADD]], [[ADD]] neg_hi:[1,1] clamp{{$}}
-define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm_neg_hi(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm_neg_hi(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr <2 x half>, <2 x half> addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
-  %a = load <2 x half>, <2 x half> addrspace(1)* %gep0
+  %gep0 = getelementptr <2 x half>, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
+  %a = load <2 x half>, ptr addrspace(1) %gep0
   %add = fadd <2 x half> %a, <half 1.0, half 1.0>
   %hi = extractelement <2 x half> %add, i32 1
   %neg.hi = fsub half -0.0, %hi
   %neg.hi.add = insertelement <2 x half> %add, half %neg.hi, i32 1
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %neg.hi.add, <2 x half> zeroinitializer)
   %clamp = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half 1.0>)
-  store <2 x half> %clamp, <2 x half> addrspace(1)* %out.gep
+  store <2 x half> %clamp, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -276,17 +276,17 @@ define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm_neg_hi(<2 x half> addrsp
 ; GCN:  {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
 ; GFX9: v_pk_add_f16 [[ADD:v[0-9]+]], [[A]], 1.0 op_sel_hi:[1,0]{{$}}
 ; GFX9: v_pk_max_f16 [[MAX:v[0-9]+]], [[ADD]], [[ADD]] op_sel:[1,1] op_sel_hi:[0,0] clamp{{$}}
-define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm_shuf(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm_shuf(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr <2 x half>, <2 x half> addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
-  %a = load <2 x half>, <2 x half> addrspace(1)* %gep0
+  %gep0 = getelementptr <2 x half>, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
+  %a = load <2 x half>, ptr addrspace(1) %gep0
   %add = fadd <2 x half> %a, <half 1.0, half 1.0>
   %shuf = shufflevector <2 x half> %add, <2 x half> undef, <2 x i32> <i32 1, i32 0>
 
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %shuf, <2 x half> zeroinitializer)
   %clamp = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half 1.0>)
-  store <2 x half> %clamp, <2 x half> addrspace(1)* %out.gep
+  store <2 x half> %clamp, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -294,17 +294,17 @@ define amdgpu_kernel void @v_clamp_add_src_v2f16_denorm_shuf(<2 x half> addrspac
 ; GCN-DAG: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
 ; GFX9: v_add_f32_e32 [[ADD:v[0-9]+]], 1.0, [[A]]{{$}}
 ; GFX9: v_pk_max_f16 [[CLAMP:v[0-9]+]], [[ADD]], [[ADD]] clamp{{$}}
-define amdgpu_kernel void @v_no_clamp_add_src_v2f16_f32_src(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_no_clamp_add_src_v2f16_f32_src(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr <2 x half>, <2 x half> addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
-  %a = load <2 x half>, <2 x half> addrspace(1)* %gep0
+  %gep0 = getelementptr <2 x half>, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
+  %a = load <2 x half>, ptr addrspace(1) %gep0
   %bc = bitcast <2 x half> %a to float
   %f32.op = fadd float %bc, 1.0
   %f32.op.cast = bitcast float %f32.op to <2 x half>
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %f32.op.cast, <2 x half> zeroinitializer)
   %clamp = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half 1.0>)
-  store <2 x half> %clamp, <2 x half> addrspace(1)* %out.gep
+  store <2 x half> %clamp, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -312,16 +312,16 @@ define amdgpu_kernel void @v_no_clamp_add_src_v2f16_f32_src(<2 x half> addrspace
 ; GCN:  {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
 ; GFX9: v_pk_add_f16 [[ADD:v[0-9]+]], [[A]], 1.0 op_sel_hi:[1,0]{{$}}
 ; GFX9: v_max_f32_e64 [[CLAMP:v[0-9]+]], [[ADD]], [[ADD]] clamp{{$}}
-define amdgpu_kernel void @v_no_clamp_add_packed_src_f32(float addrspace(1)* %out, <2 x half> addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_no_clamp_add_packed_src_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr <2 x half>, <2 x half> addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load <2 x half>, <2 x half> addrspace(1)* %gep0
+  %gep0 = getelementptr <2 x half>, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load <2 x half>, ptr addrspace(1) %gep0
   %add = fadd <2 x half> %a, <half 1.0, half 1.0>
   %bc.add = bitcast <2 x half> %add to float
   %max = call float @llvm.maxnum.f32(float %bc.add, float 0.0)
   %clamp = call float @llvm.minnum.f32(float %max, float 1.0)
-  store float %clamp, float addrspace(1)* %out.gep
+  store float %clamp, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -331,18 +331,18 @@ define amdgpu_kernel void @v_no_clamp_add_packed_src_f32(float addrspace(1)* %ou
 ; GCN-DAG: {{buffer|flat|global}}_load_ushort [[A:v[0-9]+]]
 ; GFX9: v_add_f16_e32 [[ADD:v[0-9]+]], 1.0, [[A]]{{$}}
 ; GFX9: v_pk_max_f16 [[CLAMP:v[0-9]+]], [[ADD]], [[ADD]] clamp{{$}}
-define amdgpu_kernel void @v_no_clamp_add_src_v2f16_f16_src(<2 x half> addrspace(1)* %out, half addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_no_clamp_add_src_v2f16_f16_src(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr half, half addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
-  %a = load half, half addrspace(1)* %gep0
+  %gep0 = getelementptr half, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
+  %a = load half, ptr addrspace(1) %gep0
   %add = fadd half %a, 1.0
   %bc = bitcast half %add to i16
   %zext = zext i16 %bc to i32
   %v2f16 = bitcast i32 %zext to <2 x half>
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %v2f16, <2 x half> zeroinitializer)
   %clamp = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half 1.0>)
-  store <2 x half> %clamp, <2 x half> addrspace(1)* %out.gep
+  store <2 x half> %clamp, ptr addrspace(1) %out.gep
   ret void
 }
 

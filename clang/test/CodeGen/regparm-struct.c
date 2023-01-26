@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-unknown %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -o - | FileCheck %s
 
 __attribute__((regparm(3))) void f1(int a, int b, int c, int d);
 // CHECK: declare void @f1(i32 inreg noundef, i32 inreg noundef, i32 inreg noundef, i32 noundef)
@@ -159,7 +159,7 @@ void g16(void) {
 }
 
 __attribute__((regparm(3))) struct s12 f17(int a, int b, int c);
-// CHECK: declare void @f17(%struct.s12* inreg sret(%struct.s12) align 4, i32 inreg noundef, i32 inreg noundef, i32 noundef)
+// CHECK: declare void @f17(ptr inreg sret(%struct.s12) align 4, i32 inreg noundef, i32 inreg noundef, i32 noundef)
 void g17(void) {
   f17(41, 42, 43);
 }
@@ -170,7 +170,7 @@ struct s13 {
   } y;
 };
 __attribute__((regparm(3))) void f18(struct s13 a, int b, int c, int d);
-// CHECK: declare void @f18(%struct.s13* noundef byval(%struct.s13) align 4, i32 inreg noundef, i32 inreg noundef, i32 inreg noundef)
+// CHECK: declare void @f18(ptr noundef byval(%struct.s13) align 4, i32 inreg noundef, i32 inreg noundef, i32 inreg noundef)
 void g18(void) {
   struct s13 x = {{41}};
   f18(x, 42, 43, 44);

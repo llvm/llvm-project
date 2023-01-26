@@ -12,7 +12,7 @@
 # The 'operand_kinds' dict of spirv.core.grammar.json contains all supported
 # SPIR-V enum classes.
 #
-# If <enum-name> is missing, this script updates existing ones.
+# If <enum-class-name> is missing, this script updates existing ones.
 
 set -e
 

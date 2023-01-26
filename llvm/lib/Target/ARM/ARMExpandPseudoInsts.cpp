@@ -953,6 +953,7 @@ static bool IsAnAddressOperand(const MachineOperand &MO) {
   case MachineOperand::MO_Metadata:
   case MachineOperand::MO_MCSymbol:
     return true;
+  case MachineOperand::MO_DbgInstrRef:
   case MachineOperand::MO_CFIIndex:
     return false;
   case MachineOperand::MO_IntrinsicID:
@@ -1219,7 +1220,7 @@ ARMExpandPseudo::CMSEClearFPRegsV8(MachineBasicBlock &MBB,
       Register Reg = Op.getReg();
       if (Reg == ARM::NoRegister || Reg == ARM::LR)
         continue;
-      assert(Register::isPhysicalRegister(Reg) && "Unallocated register");
+      assert(Reg.isPhysical() && "Unallocated register");
       ClearBB->addLiveIn(Reg);
       DoneBB->addLiveIn(Reg);
     }

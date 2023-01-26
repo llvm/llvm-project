@@ -110,7 +110,7 @@ MCOperand M68kMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
   return MCOperand::createExpr(Expr);
 }
 
-Optional<MCOperand>
+std::optional<MCOperand>
 M68kMCInstLower::LowerOperand(const MachineInstr *MI,
                               const MachineOperand &MO) const {
   switch (MO.getType()) {
@@ -119,7 +119,7 @@ M68kMCInstLower::LowerOperand(const MachineInstr *MI,
   case MachineOperand::MO_Register:
     // Ignore all implicit register operands.
     if (MO.isImplicit())
-      return None;
+      return std::nullopt;
     return MCOperand::createReg(MO.getReg());
   case MachineOperand::MO_Immediate:
     return MCOperand::createImm(MO.getImm());
@@ -138,7 +138,7 @@ M68kMCInstLower::LowerOperand(const MachineInstr *MI,
         MO, AsmPrinter.GetBlockAddressSymbol(MO.getBlockAddress()));
   case MachineOperand::MO_RegisterMask:
     // Ignore call clobbers.
-    return None;
+    return std::nullopt;
   }
 }
 
@@ -148,10 +148,10 @@ void M68kMCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
 
   for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = MI->getOperand(i);
-    Optional<MCOperand> MCOp = LowerOperand(MI, MO);
+    std::optional<MCOperand> MCOp = LowerOperand(MI, MO);
 
-    if (MCOp.hasValue() && MCOp.getValue().isValid())
-      OutMI.addOperand(MCOp.getValue());
+    if (MCOp.has_value() && MCOp.value().isValid())
+      OutMI.addOperand(MCOp.value());
   }
 
   // TAILJMPj, TAILJMPq - Lower to the correct jump instructions.

@@ -24,3 +24,12 @@ pointers or references to const values. For example, these are fine:
    const int* foo();
    const int& foo();
    const Clazz* foo();
+
+
+Options
+-------
+
+.. option:: IgnoreMacros
+
+   If set to `true`, the check will not give warnings inside macros. Default
+   is `true`.

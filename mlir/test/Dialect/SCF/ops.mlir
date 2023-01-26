@@ -323,10 +323,10 @@ func.func @simple_example(%in: tensor<100xf32>, %out: tensor<100xf32>) {
   // CHECK-NEXT:  }
   // CHECK-NEXT:  }
   // CHECK-NEXT:  return
-  %result = scf.foreach_thread (%thread_idx) in (%num_threads) -> tensor<100xf32> {
+  %result = scf.foreach_thread (%thread_idx) in (%num_threads) shared_outs(%o = %out) -> tensor<100xf32> {
       %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
       scf.foreach_thread.perform_concurrently {
-        tensor.parallel_insert_slice %1 into %out[%thread_idx][1][1] :
+        tensor.parallel_insert_slice %1 into %o[%thread_idx][1][1] :
           tensor<1xf32> into tensor<100xf32>
       }
   }
@@ -338,11 +338,44 @@ func.func @elide_terminator() -> () {
   %num_threads = arith.constant 100 : index
 
   //      CHECK:    scf.foreach_thread
-  // CHECK-NEXT:  } {thread_dim_mapping = [42]}
+  // CHECK-NEXT:  } {mapping = [#gpu.thread<x>]}
   // CHECK-NEXT:  return
-  scf.foreach_thread (%thread_idx) in (%num_threads) -> () {
+  scf.foreach_thread (%thread_idx) in (%num_threads) {
     scf.foreach_thread.perform_concurrently {
     }
-  } {thread_dim_mapping = [42]}
+  } {mapping = [#gpu.thread<x>]}
   return
+}
+
+// CHECK-LABEL: @switch
+func.func @switch(%arg0: index) -> i32 {
+  // CHECK: %{{.*}} = scf.index_switch %arg0 -> i32
+  %0 = scf.index_switch %arg0 -> i32
+  // CHECK-NEXT: case 2 {
+  case 2 {
+    // CHECK-NEXT: arith.constant
+    %c10_i32 = arith.constant 10 : i32
+    // CHECK-NEXT: scf.yield %{{.*}} : i32
+    scf.yield %c10_i32 : i32
+    // CHECK-NEXT: }
+  }
+  // CHECK-NEXT: case 5 {
+  case 5 {
+    %c20_i32 = arith.constant 20 : i32
+    scf.yield %c20_i32 : i32
+  }
+  // CHECK: default {
+  default {
+    %c30_i32 = arith.constant 30 : i32
+    scf.yield %c30_i32 : i32
+  }
+
+  // CHECK: scf.index_switch %arg0
+  scf.index_switch %arg0
+  // CHECK-NEXT: default {
+  default {
+    scf.yield
+  }
+
+  return %0 : i32
 }

@@ -25,12 +25,12 @@ body:             |
     liveins: $sgpr4_sgpr5
 
     ; CHECK: COPY
-    ; CHECK-NEXT: %bb0_{{[0-9]+}}__1:sreg_64_xexec = S_LOAD_DWORDX2_IMM
-    ; CHECK-NEXT: %bb0_{{[0-9]+}}__1:sreg_64_xexec = S_LOAD_DWORDX2_IMM
-    ; CHECK-NEXT: %bb0_{{[0-9]+}}__1:sreg_64_xexec = S_LOAD_DWORDX2_IMM
-    ; CHECK-NEXT: %bb0_{{[0-9]+}}__1:sreg_64_xexec = S_LOAD_DWORDX2_IMM
-    ; CHECK-NEXT: %bb0_{{[0-9]+}}__1:sreg_64_xexec = S_LOAD_DWORDX2_IMM
-    ; CHECK-NEXT: %bb0_{{[0-9]+}}__1:sreg_64_xexec = S_LOAD_DWORDX2_IMM
+    ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:sreg_64_xexec = S_LOAD_DWORDX2_IMM
+    ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:sreg_64_xexec = S_LOAD_DWORDX2_IMM
+    ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:sreg_64_xexec = S_LOAD_DWORDX2_IMM
+    ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:sreg_64_xexec = S_LOAD_DWORDX2_IMM
+    ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:sreg_64_xexec = S_LOAD_DWORDX2_IMM
+    ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:sreg_64_xexec = S_LOAD_DWORDX2_IMM
 
     %0 = COPY $sgpr4_sgpr5
     %1 = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (non-temporal dereferenceable invariant load (s64) from `i64 addrspace(4)* undef`)

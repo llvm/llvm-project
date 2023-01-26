@@ -3,6 +3,7 @@ add_llvm_component_library(LLVMMSP430Disassembler
 
   LINK_COMPONENTS
   MCDisassembler
+  MC
   MSP430Info
   Support
 

@@ -66,18 +66,17 @@ NSDictionary_Additionals::GetAdditionalSynthetics() {
 static CompilerType GetLLDBNSPairType(TargetSP target_sp) {
   CompilerType compiler_type;
 
-  TypeSystemClang *target_ast_context =
+  TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(*target_sp);
 
-  if (target_ast_context) {
+  if (scratch_ts_sp) {
     ConstString g_lldb_autogen_nspair("__lldb_autogen_nspair");
 
-    compiler_type =
-        target_ast_context->GetTypeForIdentifier<clang::CXXRecordDecl>(
-            g_lldb_autogen_nspair);
+    compiler_type = scratch_ts_sp->GetTypeForIdentifier<clang::CXXRecordDecl>(
+        g_lldb_autogen_nspair);
 
     if (!compiler_type) {
-      compiler_type = target_ast_context->CreateRecordType(
+      compiler_type = scratch_ts_sp->CreateRecordType(
           nullptr, OptionalClangModuleID(), lldb::eAccessPublic,
           g_lldb_autogen_nspair.GetCString(), clang::TTK_Struct,
           lldb::eLanguageTypeC);
@@ -85,7 +84,7 @@ static CompilerType GetLLDBNSPairType(TargetSP target_sp) {
       if (compiler_type) {
         TypeSystemClang::StartTagDeclarationDefinition(compiler_type);
         CompilerType id_compiler_type =
-            target_ast_context->GetBasicType(eBasicTypeObjCID);
+            scratch_ts_sp->GetBasicType(eBasicTypeObjCID);
         TypeSystemClang::AddFieldToRecordType(
             compiler_type, "key", id_compiler_type, lldb::eAccessPublic, 0);
         TypeSystemClang::AddFieldToRecordType(
@@ -1121,9 +1120,8 @@ lldb_private::formatters::GenericNSDictionaryMSyntheticFrontEnd<D32,D64>::
     process_sp->ReadMemory(data_location, m_data_64, sizeof(D64),
                            error);
   }
-  if (error.Fail())
-    return false;
-  return true;
+
+  return error.Success();
 }
 
 template <typename D32, typename D64>
@@ -1284,9 +1282,8 @@ lldb_private::formatters::Foundation1100::
     process_sp->ReadMemory(data_location, m_data_64, sizeof(DataDescriptor_64),
                            error);
   }
-  if (error.Fail())
-    return false;
-  return false;
+
+  return error.Success();
 }
 
 bool

@@ -13,12 +13,12 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Minidump.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Endian.h"
+#include <optional>
 
 // C includes
 // C++ includes
@@ -83,7 +83,7 @@ struct MinidumpMiscInfo {
 
   static const MinidumpMiscInfo *Parse(llvm::ArrayRef<uint8_t> &data);
 
-  llvm::Optional<lldb::pid_t> GetPid() const;
+  std::optional<lldb::pid_t> GetPid() const;
 };
 static_assert(sizeof(MinidumpMiscInfo) == 24,
               "sizeof MinidumpMiscInfo is not correct!");
@@ -94,7 +94,7 @@ public:
   llvm::StringRef proc_status;
   lldb::pid_t pid;
 
-  static llvm::Optional<LinuxProcStatus> Parse(llvm::ArrayRef<uint8_t> &data);
+  static std::optional<LinuxProcStatus> Parse(llvm::ArrayRef<uint8_t> &data);
 
   lldb::pid_t GetPid() const;
 

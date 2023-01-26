@@ -6,18 +6,17 @@ target triple = "x86_64-pc-windows-msvc18.0.0"
 
 %struct.B = type { i64, i64 }
 
-define void @test1(%struct.B* %p) personality i32 (...)* @__CxxFrameHandler3 {
+define void @test1(ptr %p) personality ptr @__CxxFrameHandler3 {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  invoke.cont:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast %struct.B* [[P:%.*]] to <2 x i64>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i64 0
 ; CHECK-NEXT:    invoke void @throw()
 ; CHECK-NEXT:    to label [[UNREACHABLE:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       catch.dispatch:
 ; CHECK-NEXT:    [[CS:%.*]] = catchswitch within none [label %invoke.cont1] unwind label [[EHCLEANUP:%.*]]
 ; CHECK:       invoke.cont1:
-; CHECK-NEXT:    [[CATCH:%.*]] = catchpad within [[CS]] [i8* null, i32 64, i8* null]
+; CHECK-NEXT:    [[CATCH:%.*]] = catchpad within [[CS]] [ptr null, i32 64, ptr null]
 ; CHECK-NEXT:    invoke void @throw() [ "funclet"(token [[CATCH]]) ]
 ; CHECK-NEXT:    to label [[UNREACHABLE]] unwind label [[EHCLEANUP]]
 ; CHECK:       ehcleanup:
@@ -29,9 +28,8 @@ define void @test1(%struct.B* %p) personality i32 (...)* @__CxxFrameHandler3 {
 ; CHECK-NEXT:    unreachable
 ;
 invoke.cont:
-  %0 = bitcast %struct.B* %p to <2 x i64>*
-  %1 = load <2 x i64>, <2 x i64>* %0, align 8
-  %2 = extractelement <2 x i64> %1, i32 0
+  %0 = load <2 x i64>, ptr %p, align 8
+  %1 = extractelement <2 x i64> %0, i32 0
   invoke void @throw()
   to label %unreachable unwind label %catch.dispatch
 
@@ -39,12 +37,12 @@ catch.dispatch:                                   ; preds = %invoke.cont
   %cs = catchswitch within none [label %invoke.cont1] unwind label %ehcleanup
 
 invoke.cont1:                                     ; preds = %catch.dispatch
-  %catch = catchpad within %cs [i8* null, i32 64, i8* null]
+  %catch = catchpad within %cs [ptr null, i32 64, ptr null]
   invoke void @throw() [ "funclet"(token %catch) ]
   to label %unreachable unwind label %ehcleanup
 
 ehcleanup:                                        ; preds = %invoke.cont1, %catch.dispatch
-  %phi = phi i64 [ %2, %catch.dispatch ], [ 9, %invoke.cont1 ]
+  %phi = phi i64 [ %1, %catch.dispatch ], [ 9, %invoke.cont1 ]
   %cleanup = cleanuppad within none []
   call void @release(i64 %phi) [ "funclet"(token %cleanup) ]
   cleanupret from %cleanup unwind to caller

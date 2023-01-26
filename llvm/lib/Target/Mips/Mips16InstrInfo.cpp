@@ -96,11 +96,11 @@ void Mips16InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     MIB.addReg(SrcReg, getKillRegState(KillSrc));
 }
 
-Optional<DestSourcePair>
+std::optional<DestSourcePair>
 Mips16InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   if (MI.isMoveReg())
     return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
-  return None;
+  return std::nullopt;
 }
 
 void Mips16InstrInfo::storeRegToStack(MachineBasicBlock &MBB,
@@ -354,7 +354,7 @@ unsigned Mips16InstrInfo::loadImmediate(unsigned FrameReg, int64_t Imm,
   for (unsigned i = 0, e = II->getNumOperands(); i != e; ++i) {
     MachineOperand &MO = II->getOperand(i);
     if (MO.isReg() && MO.getReg() != 0 && !MO.isDef() &&
-        !Register::isVirtualRegister(MO.getReg()))
+        !MO.getReg().isVirtual())
       Candidates.reset(MO.getReg());
   }
 

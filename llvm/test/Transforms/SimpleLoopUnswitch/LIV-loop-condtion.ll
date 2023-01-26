@@ -1,4 +1,4 @@
-; RUN: opt < %s -simple-loop-unswitch -verify-memoryssa -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=simple-loop-unswitch -verify-memoryssa -S 2>&1 | FileCheck %s
 
 ; This is to test trivial loop unswitch only happens when trivial condition
 ; itself is an LIV loop condition (not partial LIV which could occur in and/or).
@@ -34,4 +34,4 @@ loop_exit:
   ret i32 0
 }
 
-declare void @some_func() noreturn 
+declare void @some_func() noreturn

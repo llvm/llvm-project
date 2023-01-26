@@ -34,7 +34,7 @@ define double @constraint_f_double(double %a) nounwind {
 ; RV64F-NEXT:    #NO_APP
 ; RV64F-NEXT:    fmv.x.d a0, ft0
 ; RV64F-NEXT:    ret
-  %1 = load double, double* @gd
+  %1 = load double, ptr @gd
   %2 = tail call double asm "fadd.d $0, $1, $2", "=f,f,f"(double %a, double %1)
   ret double %2
 }
@@ -67,7 +67,7 @@ define double @constraint_f_double_abi_name(double %a) nounwind {
 ; RV64F-NEXT:    #NO_APP
 ; RV64F-NEXT:    fmv.x.d a0, ft0
 ; RV64F-NEXT:    ret
-  %1 = load double, double* @gd
+  %1 = load double, ptr @gd
   %2 = tail call double asm "fadd.d $0, $1, $2", "={ft0},{fa1},{fs0}"(double %a, double %1)
   ret double %2
 }

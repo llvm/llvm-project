@@ -24,19 +24,19 @@ define internal void @indirect() {
 define amdgpu_kernel void @test_simple_indirect_call() {
 ; AKF_GCN-LABEL: define {{[^@]+}}@test_simple_indirect_call
 ; AKF_GCN-SAME: () #[[ATTR0:[0-9]+]] {
-; AKF_GCN-NEXT:    [[FPTR:%.*]] = alloca void ()*, align 8, addrspace(5)
-; AKF_GCN-NEXT:    [[FPTR_CAST:%.*]] = addrspacecast void ()* addrspace(5)* [[FPTR]] to void ()**
-; AKF_GCN-NEXT:    store void ()* @indirect, void ()** [[FPTR_CAST]], align 8
-; AKF_GCN-NEXT:    [[FP:%.*]] = load void ()*, void ()** [[FPTR_CAST]], align 8
+; AKF_GCN-NEXT:    [[FPTR:%.*]] = alloca ptr, align 8, addrspace(5)
+; AKF_GCN-NEXT:    [[FPTR_CAST:%.*]] = addrspacecast ptr addrspace(5) [[FPTR]] to ptr
+; AKF_GCN-NEXT:    store ptr @indirect, ptr [[FPTR_CAST]], align 8
+; AKF_GCN-NEXT:    [[FP:%.*]] = load ptr, ptr [[FPTR_CAST]], align 8
 ; AKF_GCN-NEXT:    call void [[FP]]()
 ; AKF_GCN-NEXT:    ret void
 ;
 ; ATTRIBUTOR_GCN-LABEL: define {{[^@]+}}@test_simple_indirect_call
 ; ATTRIBUTOR_GCN-SAME: () #[[ATTR1:[0-9]+]] {
-; ATTRIBUTOR_GCN-NEXT:    [[FPTR:%.*]] = alloca void ()*, align 8, addrspace(5)
-; ATTRIBUTOR_GCN-NEXT:    [[FPTR_CAST:%.*]] = addrspacecast void ()* addrspace(5)* [[FPTR]] to void ()**
-; ATTRIBUTOR_GCN-NEXT:    store void ()* @indirect, void ()** [[FPTR_CAST]], align 8
-; ATTRIBUTOR_GCN-NEXT:    [[FP:%.*]] = load void ()*, void ()** [[FPTR_CAST]], align 8
+; ATTRIBUTOR_GCN-NEXT:    [[FPTR:%.*]] = alloca ptr, align 8, addrspace(5)
+; ATTRIBUTOR_GCN-NEXT:    [[FPTR_CAST:%.*]] = addrspacecast ptr addrspace(5) [[FPTR]] to ptr
+; ATTRIBUTOR_GCN-NEXT:    store ptr @indirect, ptr [[FPTR_CAST]], align 8
+; ATTRIBUTOR_GCN-NEXT:    [[FP:%.*]] = load ptr, ptr [[FPTR_CAST]], align 8
 ; ATTRIBUTOR_GCN-NEXT:    call void [[FP]]()
 ; ATTRIBUTOR_GCN-NEXT:    ret void
 ;
@@ -62,10 +62,10 @@ define amdgpu_kernel void @test_simple_indirect_call() {
 ; GFX9-NEXT:    ds_write_b64 v0, v[3:4]
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[6:7]
 ; GFX9-NEXT:    s_endpgm
-  %fptr = alloca void()*, addrspace(5)
-  %fptr.cast = addrspacecast void()* addrspace(5)* %fptr to void()**
-  store void()* @indirect, void()** %fptr.cast
-  %fp = load void()*, void()** %fptr.cast
+  %fptr = alloca ptr, addrspace(5)
+  %fptr.cast = addrspacecast ptr addrspace(5) %fptr to ptr
+  store ptr @indirect, ptr %fptr.cast
+  %fp = load ptr, ptr %fptr.cast
   call void %fp()
   ret void
 }
@@ -73,6 +73,6 @@ define amdgpu_kernel void @test_simple_indirect_call() {
 ;.
 ; AKF_GCN: attributes #[[ATTR0]] = { "amdgpu-calls" "amdgpu-stack-objects" }
 ;.
-; ATTRIBUTOR_GCN: attributes #[[ATTR0]] = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_GCN: attributes #[[ATTR0]] = { "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
 ; ATTRIBUTOR_GCN: attributes #[[ATTR1]] = { "uniform-work-group-size"="false" }
 ;.

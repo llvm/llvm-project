@@ -29,10 +29,22 @@ namespace parallel {
 // initialized before the first use of parallel routines.
 extern ThreadPoolStrategy strategy;
 
-namespace detail {
-
 #if LLVM_ENABLE_THREADS
+#ifdef _WIN32
+// Direct access to thread_local variables from a different DLL isn't
+// possible with Windows Native TLS.
+unsigned getThreadIndex();
+#else
+// Don't access this directly, use the getThreadIndex wrapper.
+extern thread_local unsigned threadIndex;
 
+inline unsigned getThreadIndex() { return threadIndex; }
+#endif
+#else
+inline unsigned getThreadIndex() { return 0; }
+#endif
+
+namespace detail {
 class Latch {
   uint32_t Count;
   mutable std::mutex Mutex;
@@ -61,20 +73,42 @@ public:
     Cond.wait(lock, [&] { return Count == 0; });
   }
 };
+} // namespace detail
 
 class TaskGroup {
-  Latch L;
+  detail::Latch L;
   bool Parallel;
 
 public:
   TaskGroup();
   ~TaskGroup();
 
+  // Spawn a task, but does not wait for it to finish.
   void spawn(std::function<void()> f);
+
+  // Similar to spawn, but execute the task immediately when ThreadsRequested ==
+  // 1. The difference is to give the following pattern a more intuitive order
+  // when single threading is requested.
+  //
+  // for (size_t begin = 0, i = 0, taskSize = 0;;) {
+  //   taskSize += ...
+  //   bool done = ++i == end;
+  //   if (done || taskSize >= taskSizeLimit) {
+  //     tg.execute([=] { fn(begin, i); });
+  //     if (done)
+  //       break;
+  //     begin = i;
+  //     taskSize = 0;
+  //   }
+  // }
+  void execute(std::function<void()> f);
 
   void sync() const { L.sync(); }
 };
 
+namespace detail {
+
+#if LLVM_ENABLE_THREADS
 const ptrdiff_t MinParallelSize = 1024;
 
 /// Inclusive median.
@@ -169,7 +203,7 @@ ResultTy parallel_transform_reduce(IterTy Begin, IterTy End, ResultTy Init,
   // reductions are cheaper than the transformation.
   ResultTy FinalResult = std::move(Results.front());
   for (ResultTy &PartialResult :
-       makeMutableArrayRef(Results.data() + 1, Results.size() - 1))
+       MutableArrayRef(Results.data() + 1, Results.size() - 1))
     FinalResult = Reduce(FinalResult, std::move(PartialResult));
   return std::move(FinalResult);
 }

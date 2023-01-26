@@ -20,9 +20,9 @@ for.body.prol:
   %sr.prol = phi float [ %0, %for.body.prol ], [ undef, %entry ]
   %sr109.prol = phi float [ %sr.prol, %for.body.prol ], [ undef, %entry ]
   %prol.iter = phi i32 [ %prol.iter.sub, %for.body.prol ], [ undef, %entry ]
-  %0 = load float, float* undef, align 4
+  %0 = load float, ptr undef, align 4
   %sub7.prol = fsub contract float %sr109.prol, %0
-  store float %sub7.prol, float* null, align 4
+  store float %sub7.prol, ptr null, align 4
   %prol.iter.sub = add i32 %prol.iter, -1
   %prol.iter.cmp = icmp eq i32 %prol.iter.sub, 0
   br i1 %prol.iter.cmp, label %for.body.prol.loopexit, label %for.body.prol

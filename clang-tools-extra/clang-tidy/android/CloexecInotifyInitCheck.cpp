@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace android {
+namespace clang::tidy::android {
 
 void CloexecInotifyInitCheck::registerMatchers(MatchFinder *Finder) {
   registerMatchersImpl(
@@ -28,6 +26,4 @@ void CloexecInotifyInitCheck::check(const MatchFinder::MatchResult &Result) {
               /*FixMsg=*/"inotify_init1(IN_CLOEXEC)");
 }
 
-} // namespace android
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::android

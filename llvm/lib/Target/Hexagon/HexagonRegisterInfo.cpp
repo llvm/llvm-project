@@ -58,7 +58,7 @@ HexagonRegisterInfo::HexagonRegisterInfo(unsigned HwMode)
                              0/*PC*/, HwMode) {}
 
 
-bool HexagonRegisterInfo::isEHReturnCalleeSaveReg(unsigned R) const {
+bool HexagonRegisterInfo::isEHReturnCalleeSaveReg(Register R) const {
   return R == Hexagon::R0 || R == Hexagon::R1 || R == Hexagon::R2 ||
          R == Hexagon::R3 || R == Hexagon::D0 || R == Hexagon::D1;
 }
@@ -194,13 +194,18 @@ BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
   if (MF.getSubtarget<HexagonSubtarget>().hasReservedR19())
     Reserved.set(Hexagon::R19);
 
+  Register AP =
+      MF.getInfo<HexagonMachineFunctionInfo>()->getStackAlignBaseReg();
+  if (AP.isValid())
+    Reserved.set(AP);
+
   for (int x = Reserved.find_first(); x >= 0; x = Reserved.find_next(x))
     markSuperRegs(Reserved, x);
 
   return Reserved;
 }
 
-void HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
+bool HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                               int SPAdj, unsigned FIOp,
                                               RegScavenger *RS) const {
   static unsigned ReuseCount = 0;
@@ -229,7 +234,7 @@ void HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       MI.setDesc(HII.get(Hexagon::A2_addi));
       MI.getOperand(FIOp).ChangeToImmediate(RealOffset);
       MI.removeOperand(FIOp+1);
-      return;
+      return false;
     case Hexagon::PS_fi:
       // Set up the instruction for updating below.
       MI.setDesc(HII.get(Hexagon::A2_addi));
@@ -255,7 +260,7 @@ void HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       case Hexagon::PS_vstorerw_ai:
       case Hexagon::PS_vstorerw_nt_ai:
         IsPair = true;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case Hexagon::PS_vloadrv_ai:
       case Hexagon::PS_vloadrv_nt_ai:
       case Hexagon::PS_vstorerv_ai:
@@ -341,6 +346,7 @@ void HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   MI.getOperand(FIOp).ChangeToRegister(BP, false, false, false);
   MI.getOperand(FIOp+1).ChangeToImmediate(RealOffset);
+  return false;
 }
 
 
@@ -386,15 +392,10 @@ bool HexagonRegisterInfo::shouldCoalesce(MachineInstr *MI,
   // If one register is large (HvxWR) and the other is small (HvxVR), then
   // coalescing is ok if the large is already live across a function call,
   // or if the small one is not.
-  unsigned SmallReg = SmallSrc ? SrcReg : DstReg;
-  unsigned LargeReg = SmallSrc ? DstReg : SrcReg;
+  Register SmallReg = SmallSrc ? SrcReg : DstReg;
+  Register LargeReg = SmallSrc ? DstReg : SrcReg;
   return  any_of(LIS.getInterval(LargeReg), HasCall) ||
          !any_of(LIS.getInterval(SmallReg), HasCall);
-}
-
-
-unsigned HexagonRegisterInfo::getRARegister() const {
-  return Hexagon::R31;
 }
 
 
@@ -407,12 +408,12 @@ Register HexagonRegisterInfo::getFrameRegister(const MachineFunction
 }
 
 
-unsigned HexagonRegisterInfo::getFrameRegister() const {
+Register HexagonRegisterInfo::getFrameRegister() const {
   return Hexagon::R30;
 }
 
 
-unsigned HexagonRegisterInfo::getStackRegister() const {
+Register HexagonRegisterInfo::getStackRegister() const {
   return Hexagon::R29;
 }
 
@@ -452,7 +453,7 @@ HexagonRegisterInfo::getPointerRegClass(const MachineFunction &MF,
   return &Hexagon::IntRegsRegClass;
 }
 
-unsigned HexagonRegisterInfo::getFirstCallerSavedNonParamReg() const {
+Register HexagonRegisterInfo::getFirstCallerSavedNonParamReg() const {
   return Hexagon::R6;
 }
 

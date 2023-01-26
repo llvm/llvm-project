@@ -23,10 +23,16 @@ public:
 
   SBError(const lldb::SBError &rhs);
 
+  SBError(const lldb_private::Status &error);
+
   ~SBError();
 
   const SBError &operator=(const lldb::SBError &rhs);
 
+  /// Get the error string as a NULL terminated UTF8 c-string.
+  ///
+  /// This SBError object owns the returned string and this object must be kept
+  /// around long enough to use the returned string.
   const char *GetCString() const;
 
   void Clear();
@@ -64,6 +70,7 @@ protected:
   friend class SBCommunication;
   friend class SBData;
   friend class SBDebugger;
+  friend class SBFile;
   friend class SBHostOS;
   friend class SBPlatform;
   friend class SBProcess;
@@ -73,8 +80,8 @@ protected:
   friend class SBThread;
   friend class SBTrace;
   friend class SBValue;
+  friend class SBValueList;
   friend class SBWatchpoint;
-  friend class SBFile;
 
   friend class lldb_private::ScriptInterpreter;
 

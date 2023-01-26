@@ -1,4 +1,4 @@
-; RUN: opt -loop-unroll -S -mtriple=amdgcn-- -mcpu=tahiti %s | FileCheck %s
+; RUN: opt -passes=loop-unroll -S -mtriple=amdgcn-- -mcpu=tahiti %s | FileCheck %s
 
 ; This IR comes from this OpenCL C code:
 ;
@@ -16,10 +16,10 @@
 ; loop to not be unrolled at all, but that may change in the future.
 
 ; CHECK-LABEL: @test
-; CHECK: store i8 0, i8 addrspace(1)*
-; CHECK-NOT: store i8 0, i8 addrspace(1)*
+; CHECK: store i8 0, ptr addrspace(1)
+; CHECK-NOT: store i8 0, ptr addrspace(1)
 ; CHECK: ret void
-define amdgpu_kernel void @test(i8 addrspace(1)* nocapture %dst, i32 %a, i32 %b, i32 %c) {
+define amdgpu_kernel void @test(ptr addrspace(1) nocapture %dst, i32 %a, i32 %b, i32 %c) {
 entry:
   %add = add nsw i32 %b, 4
   %cmp = icmp sgt i32 %add, %a
@@ -39,8 +39,8 @@ if.then4:                                         ; preds = %if.then4.lr.ph, %if
   %add2 = add nsw i32 %b.addr.014, 1
   %1 = sext i32 %b.addr.014 to i64
   %add.ptr.sum = add nsw i64 %1, %0
-  %add.ptr5 = getelementptr inbounds i8, i8 addrspace(1)* %dst, i64 %add.ptr.sum
-  store i8 0, i8 addrspace(1)* %add.ptr5, align 1
+  %add.ptr5 = getelementptr inbounds i8, ptr addrspace(1) %dst, i64 %add.ptr.sum
+  store i8 0, ptr addrspace(1) %add.ptr5, align 1
   %inc = add nsw i32 %i.015, 1
   %cmp1 = icmp slt i32 %inc, 4
   %cmp3 = icmp slt i32 %add2, %a

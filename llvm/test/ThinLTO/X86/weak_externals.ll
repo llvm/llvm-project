@@ -27,17 +27,16 @@ $_ZZN9SingletonI1SE11getInstanceEvE13instance_weak = comdat any
 
 @_ZZN9SingletonI1SE11getInstanceEvE8instance = linkonce_odr dso_local global %struct.S zeroinitializer, comdat, align 8
 
-@_ZZN9SingletonI1SE11getInstanceEvE13instance_weak = weak_odr dso_local global %struct.S* null, comdat, align 8
+@_ZZN9SingletonI1SE11getInstanceEvE13instance_weak = weak_odr dso_local global ptr null, comdat, align 8
 
 define dso_local void @_ZL5initSv() {
-  %1 = call dereferenceable(16) %struct.S* @_ZN9SingletonI1SE11getInstanceEv()
-  store  %struct.S* %1, %struct.S** @_ZZN9SingletonI1SE11getInstanceEvE13instance_weak
-  %2 = getelementptr inbounds %struct.S, %struct.S* %1, i32 0, i32 0
-  store i64 1, i64* %2, align 8
+  %1 = call dereferenceable(16) ptr @_ZN9SingletonI1SE11getInstanceEv()
+  store  ptr %1, ptr @_ZZN9SingletonI1SE11getInstanceEvE13instance_weak
+  store i64 1, ptr %1, align 8
   ret void
 }
 
-define linkonce_odr dso_local dereferenceable(16) %struct.S* @_ZN9SingletonI1SE11getInstanceEv() #0 comdat align 2 {
-  ret %struct.S* @_ZZN9SingletonI1SE11getInstanceEvE8instance
+define linkonce_odr dso_local dereferenceable(16) ptr @_ZN9SingletonI1SE11getInstanceEv() #0 comdat align 2 {
+  ret ptr @_ZZN9SingletonI1SE11getInstanceEvE8instance
 }
 

@@ -10,42 +10,54 @@
 ; Prelink pipelines:
 ; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes='thinlto-pre-link<O1>' -S %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O1,CHECK-PRELINK-O,CHECK-PRELINK-O-NODIS
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O123,CHECK-O1,CHECK-PRELINK-O,CHECK-PRELINK-O-NODIS
 ; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes='thinlto-pre-link<O2>' -S  %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O2,CHECK-O23SZ,CHECK-PRELINK-O,CHECK-PRELINK-O-NODIS
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O123,CHECK-O2,CHECK-O23SZ,CHECK-PRELINK-O,CHECK-PRELINK-O-NODIS
 ; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes='thinlto-pre-link<O3>' -S -passes-ep-pipeline-start='no-op-module' %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O3,CHECK-O23SZ,CHECK-PRELINK-O,CHECK-PRELINK-O-NODIS,CHECK-EP-PIPELINE-START
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O123,CHECK-O3,CHECK-O23SZ,CHECK-PRELINK-O,CHECK-PRELINK-O-NODIS,CHECK-EP-PIPELINE-START
+; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
+; RUN:     -passes='thinlto-pre-link<O3>' -S -passes-ep-optimizer-early='no-op-module' %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O123,CHECK-O3,CHECK-O23SZ,CHECK-PRELINK-O,CHECK-PRELINK-O-NODIS,CHECK-EP-OPT-EARLY
+; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
+; RUN:     -passes='thinlto-pre-link<O3>' -S -passes-ep-optimizer-last='no-op-module' %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O123,CHECK-O3,CHECK-O23SZ,CHECK-PRELINK-O,CHECK-PRELINK-O-NODIS,CHECK-EP-OPT-LAST
 ; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes='thinlto-pre-link<Os>' -S %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-Os,CHECK-O23SZ,CHECK-PRELINK-O,CHECK-PRELINK-O-NODIS
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-OSZ,CHECK-O23SZ,CHECK-PRELINK-O,CHECK-PRELINK-O-NODIS
 ; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes='thinlto-pre-link<Oz>' -S %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-Oz,CHECK-O23SZ,CHECK-PRELINK-O,CHECK-PRELINK-O-NODIS
-; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager -new-pm-debug-info-for-profiling \
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-OSZ,CHECK-O23SZ,CHECK-PRELINK-O,CHECK-PRELINK-O-NODIS
+; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager -debug-info-for-profiling \
 ; RUN:     -passes='thinlto-pre-link<O2>' -S  %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-DIS,CHECK-O,CHECK-O2,CHECK-O23SZ,CHECK-PRELINK-O
+; RUN:     | FileCheck %s --check-prefixes=CHECK-DIS,CHECK-O,CHECK-O123,CHECK-O2,CHECK-O23SZ,CHECK-PRELINK-O
 ;
 ; Postlink pipelines:
 ; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes='thinlto<O1>' -S %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O1,CHECK-POSTLINK-O,%llvmcheckext
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O123,CHECK-O1,CHECK-POSTLINK-O,%llvmcheckext
 ; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes='thinlto<O2>' -S  %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O2,CHECK-O23SZ,CHECK-POSTLINK-O,%llvmcheckext,CHECK-POSTLINK-O2
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O123,CHECK-O2,CHECK-O23SZ,CHECK-POSTLINK-O,%llvmcheckext,CHECK-POSTLINK-O2
 ; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager -passes-ep-pipeline-start='no-op-module' \
 ; RUN:     -passes='thinlto<O3>' -S  %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O3,CHECK-O23SZ,CHECK-POSTLINK-O,%llvmcheckext,CHECK-POSTLINK-O3
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O123,CHECK-O3,CHECK-O23SZ,CHECK-POSTLINK-O,%llvmcheckext,CHECK-POSTLINK-O3
+; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager -passes-ep-optimizer-early='no-op-module' \
+; RUN:     -passes='thinlto<O3>' -S  %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O123,CHECK-O3,CHECK-O23SZ,CHECK-POSTLINK-O,%llvmcheckext,CHECK-POSTLINK-O3,CHECK-POST-EP-OPT-EARLY
+; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager -passes-ep-optimizer-last='no-op-module' \
+; RUN:     -passes='thinlto<O3>' -S  %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O123,CHECK-O3,CHECK-O23SZ,CHECK-POSTLINK-O,%llvmcheckext,CHECK-POSTLINK-O3,CHECK-POST-EP-OPT-LAST
 ; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes='thinlto<Os>' -S %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-Os,CHECK-O23SZ,CHECK-POSTLINK-O,%llvmcheckext,CHECK-POSTLINK-Os
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-OSZ,CHECK-O23SZ,CHECK-POSTLINK-O,%llvmcheckext,CHECK-POSTLINK-Os
 ; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes='thinlto<Oz>' -S %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-Oz,CHECK-O23SZ,CHECK-POSTLINK-O,%llvmcheckext
-; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager -new-pm-debug-info-for-profiling \
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-OSZ,CHECK-O23SZ,CHECK-POSTLINK-O,%llvmcheckext
+; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager -debug-info-for-profiling \
 ; RUN:     -passes='thinlto<O2>' -S  %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O2,CHECK-O23SZ,CHECK-POSTLINK-O,%llvmcheckext,CHECK-POSTLINK-O2
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O123,CHECK-O2,CHECK-O23SZ,CHECK-POSTLINK-O,%llvmcheckext,CHECK-POSTLINK-O2
 
 ; Suppress FileCheck --allow-unused-prefixes=false diagnostics.
 ; CHECK-NOEXT: {{^}}
@@ -75,10 +87,10 @@
 ; CHECK-O-NEXT: Running pass: OpenMPOptPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: LowerTypeTestsPass
 ; CHECK-O-NEXT: Running pass: IPSCCPPass
+; CHECK-O123-NEXT: Running analysis: LoopAnalysis
 ; CHECK-O-NEXT: Running pass: CalledValuePropagationPass
 ; CHECK-O-NEXT: Running pass: GlobalOptPass
 ; CHECK-O-NEXT: Running pass: PromotePass
-; CHECK-O-NEXT: Running pass: DeadArgumentEliminationPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-PRELINK-O-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis
 ; CHECK-O-NEXT: Running analysis: AAManager
@@ -127,7 +139,7 @@
 ; CHECK-O-NEXT: Running pass: ReassociatePass
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}OptimizationRemarkEmitterAnalysis
 ; CHECK-O-NEXT: Running pass: LoopSimplifyPass
-; CHECK-O-NEXT: Running analysis: LoopAnalysis
+; CHECK-OSZ-NEXT: Running analysis: LoopAnalysis
 ; CHECK-O-NEXT: Running pass: LCSSAPass
 ; CHECK-O-NEXT: Running analysis: ScalarEvolutionAnalysis
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
@@ -137,6 +149,7 @@
 ; CHECK-O-NEXT: Running pass: LoopRotatePass
 ; CHECK-O-NEXT: Running pass: LICM
 ; CHECK-O-NEXT: Running pass: SimpleLoopUnswitchPass
+; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O-NEXT: Running pass: LoopSimplifyPass
@@ -146,22 +159,10 @@
 ; CHECK-O-NEXT: Running pass: LoopDeletionPass
 ; CHECK-O-NEXT: Running pass: LoopFullUnrollPass
 ; CHECK-O-NEXT: Running pass: SROAPass on foo
-; CHECK-Os-NEXT: Running pass: MergedLoadStoreMotionPass
-; CHECK-Os-NEXT: Running pass: GVNPass
-; CHECK-Os-NEXT: Running analysis: MemoryDependenceAnalysis
-; CHECK-Os-NEXT: Running analysis: PhiValuesAnalysis
-; CHECK-Oz-NEXT: Running pass: MergedLoadStoreMotionPass
-; CHECK-Oz-NEXT: Running pass: GVNPass
-; CHECK-Oz-NEXT: Running analysis: MemoryDependenceAnalysis
-; CHECK-Oz-NEXT: Running analysis: PhiValuesAnalysis
-; CHECK-O2-NEXT: Running pass: MergedLoadStoreMotionPass
-; CHECK-O2-NEXT: Running pass: GVNPass
-; CHECK-O2-NEXT: Running analysis: MemoryDependenceAnalysis
-; CHECK-O2-NEXT: Running analysis: PhiValuesAnalysis
-; CHECK-O3-NEXT: Running pass: MergedLoadStoreMotionPass
-; CHECK-O3-NEXT: Running pass: GVNPass
-; CHECK-O3-NEXT: Running analysis: MemoryDependenceAnalysis
-; CHECK-O3-NEXT: Running analysis: PhiValuesAnalysis
+; CHECK-O23SZ-NEXT: Running pass: VectorCombinePass
+; CHECK-O23SZ-NEXT: Running pass: MergedLoadStoreMotionPass
+; CHECK-O23SZ-NEXT: Running pass: GVNPass
+; CHECK-O23SZ-NEXT: Running analysis: MemoryDependenceAnalysis
 ; CHECK-O1-NEXT: Running pass: MemCpyOptPass
 ; CHECK-O-NEXT: Running pass: SCCPPass
 ; CHECK-O-NEXT: Running pass: BDCEPass
@@ -178,7 +179,7 @@
 ; CHECK-O23SZ-NEXT: Running pass: DSEPass
 ; CHECK-O23SZ-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-O23SZ-NEXT: Running pass: LCSSAPass
-; CHECK-O23SZ-NEXT: Running pass: LICMPass on Loop at depth 1 containing: %loop
+; CHECK-O23SZ-NEXT: Running pass: LICMPass on loop
 ; CHECK-O23SZ-NEXT: Running pass: CoroElidePass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
@@ -187,6 +188,7 @@
 ; CHECK-O-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}ShouldNotRunFunctionPassesAnalysis
 ; CHECK-O-NEXT: Invalidating analysis: ShouldNotRunFunctionPassesAnalysis
 ; CHECK-O-NEXT: Invalidating analysis: InlineAdvisorAnalysis
+; CHECK-O-NEXT: Running pass: DeadArgumentEliminationPass
 ; CHECK-O-NEXT: Running pass: CoroCleanupPass
 ; CHECK-PRELINK-O-NEXT: Running pass: GlobalOptPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: GlobalOptPass
@@ -194,6 +196,7 @@
 ; CHECK-POSTLINK-O-NEXT: Running pass: EliminateAvailableExternallyPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: ReversePostOrderFunctionAttrsPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: RecomputeGlobalsAAPass
+; CHECK-POST-EP-OPT-EARLY-NEXT: Running pass: NoOpModulePass
 ; CHECK-POSTLINK-O-NEXT: Running pass: Float2IntPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: LowerConstantIntrinsicsPass
 ; CHECK-EXT: Running pass: {{.*}}::Bye
@@ -202,12 +205,12 @@
 ; CHECK-POSTLINK-O-NEXT: Running pass: LoopRotatePass
 ; CHECK-POSTLINK-O-NEXT: Running pass: LoopDeletionPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: LoopDistributePass
+; CHECK-POSTLINK-O-NEXT: Running analysis: LoopAccessAnalysis on foo
 ; CHECK-POSTLINK-O-NEXT: Running pass: InjectTLIMappings
 ; CHECK-POSTLINK-O-NEXT: Running pass: LoopVectorizePass
 ; CHECK-POSTLINK-O-NEXT: Running analysis: BlockFrequencyAnalysis
 ; CHECK-POSTLINK-O-NEXT: Running analysis: BranchProbabilityAnalysis
 ; CHECK-POSTLINK-O-NEXT: Running pass: LoopLoadEliminationPass
-; CHECK-POSTLINK-O-NEXT: Running analysis: LoopAccessAnalysis
 ; CHECK-POSTLINK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-POSTLINK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-POSTLINK-O2-NEXT: Running pass: SLPVectorizerPass
@@ -217,6 +220,7 @@
 ; CHECK-POSTLINK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-POSTLINK-O-NEXT: Running pass: LoopUnrollPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: WarnMissedTransformationsPass
+; CHECK-POSTLINK-O-NEXT: Running pass: SROAPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-POSTLINK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}OptimizationRemarkEmitterAnalysis
 ; CHECK-POSTLINK-O-NEXT: Running pass: LoopSimplifyPass
@@ -228,10 +232,13 @@
 ; CHECK-POSTLINK-O-NEXT: Running pass: DivRemPairsPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: TailCallElimPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: SimplifyCFGPass
+; CHECK-POST-EP-OPT-LAST-NEXT: Running pass: NoOpModulePass
 ; CHECK-POSTLINK-O-NEXT: Running pass: GlobalDCEPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: ConstantMergePass
 ; CHECK-POSTLINK-O-NEXT: Running pass: CGProfilePass
 ; CHECK-POSTLINK-O-NEXT: Running pass: RelLookupTableConverterPass
+; CHECK-EP-OPT-EARLY-NEXT: Running pass: NoOpModulePass
+; CHECK-EP-OPT-LAST-NEXT: Running pass: NoOpModulePass
 ; CHECK-O-NEXT:          Running pass: AnnotationRemarksPass on foo
 ; CHECK-PRELINK-O-NEXT: Running pass: CanonicalizeAliasesPass
 ; CHECK-PRELINK-O-NEXT: Running pass: NameAnonGlobalPass

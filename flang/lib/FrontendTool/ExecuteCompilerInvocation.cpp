@@ -82,7 +82,7 @@ createFrontendAction(CompilerInstance &ci) {
     return std::make_unique<InitOnlyAction>();
   case PluginAction: {
     for (const FrontendPluginRegistry::entry &plugin :
-        FrontendPluginRegistry::entries()) {
+         FrontendPluginRegistry::entries()) {
       if (plugin.getName() == ci.getFrontendOpts().actionName) {
         std::unique_ptr<PluginParseTreeAction> p(plugin.instantiate());
         return std::move(p);
@@ -101,8 +101,9 @@ createFrontendAction(CompilerInstance &ci) {
 bool executeCompilerInvocation(CompilerInstance *flang) {
   // Honor -help.
   if (flang->getFrontendOpts().showHelp) {
-    clang::driver::getDriverOptTable().printHelp(llvm::outs(),
-        "flang-new -fc1 [options] file...", "LLVM 'Flang' Compiler",
+    clang::driver::getDriverOptTable().printHelp(
+        llvm::outs(), "flang-new -fc1 [options] file...",
+        "LLVM 'Flang' Compiler",
         /*Include=*/clang::driver::options::FC1Option,
         /*Exclude=*/llvm::opt::DriverFlag::HelpHidden,
         /*ShowAllAliases=*/false);

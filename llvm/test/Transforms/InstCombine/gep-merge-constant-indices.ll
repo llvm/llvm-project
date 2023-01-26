@@ -9,7 +9,7 @@ target datalayout = "i24:8:8"
 %struct.B = type { i8, [3 x i16], %struct.A, float }
 %struct.C = type { i8, i32, i32 }
 
-; result = (i32*) p + 3
+; result = (ptr) p + 3
 define ptr @mergeBasic(ptr %p) {
 ; CHECK-LABEL: @mergeBasic(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 3
@@ -20,8 +20,8 @@ define ptr @mergeBasic(ptr %p) {
   ret ptr %2
 }
 
-; Converted to i8* and merged.
-; result = (i8*) p + 10
+; Converted to ptr and merged.
+; result = (ptr) p + 10
 define ptr @mergeDifferentTypes(ptr %p) {
 ; CHECK-LABEL: @mergeDifferentTypes(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 10
@@ -32,8 +32,8 @@ define ptr @mergeDifferentTypes(ptr %p) {
   ret ptr %2
 }
 
-; Converted to i8* and merged.
-; result = (i8*) p + 10
+; Converted to ptr and merged.
+; result = (ptr) p + 10
 define ptr @mergeReverse(ptr %p) {
 ; CHECK-LABEL: @mergeReverse(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 10
@@ -55,7 +55,7 @@ define ptr @zeroSum(ptr %p) {
   ret ptr %2
 }
 
-; result = (i8*) (([20 x i8]*) p + 1) + 17
+; result = (ptr) ((ptr) p + 1) + 17
 define ptr @array1(ptr %p) {
 ; CHECK-LABEL: @array1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [20 x i8], ptr [[P:%.*]], i64 1, i64 17
@@ -66,8 +66,8 @@ define ptr @array1(ptr %p) {
   ret ptr %2
 }
 
-; Converted to i8* and merged.
-; result = (i8*) p + 20
+; Converted to ptr and merged.
+; result = (ptr) p + 20
 define ptr @array2(ptr %p) {
 ; CHECK-LABEL: @array2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 20
@@ -78,8 +78,8 @@ define ptr @array2(ptr %p) {
   ret ptr %2
 }
 
-; Converted to i8* and merged.
-; result = (i8*) p + 36
+; Converted to ptr and merged.
+; result = (ptr) p + 36
 define ptr @struct1(ptr %p) {
 ; CHECK-LABEL: @struct1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 36
@@ -101,7 +101,7 @@ define ptr @struct2(ptr %p) {
   ret ptr %2
 }
 
-; result = (i8*) &((struct.B) p)[0].member2.member0 + 7
+; result = (ptr) &((struct.B) p)[0].member2.member0 + 7
 define ptr @structStruct(ptr %p) {
 ; CHECK-LABEL: @structStruct(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_B:%.*]], ptr [[P:%.*]], i64 0, i32 2, i32 0, i64 7
@@ -115,7 +115,7 @@ define ptr @structStruct(ptr %p) {
 ; First GEP offset is not divisible by last GEP's source element size, but first
 ; GEP points to an array such that the last GEP offset is divisible by the
 ; array's element size, so the first GEP can be rewritten with an extra index.
-; result = (i16*) &((struct.B*) p)[i].member1 + 2
+; result = (ptr) &((struct.B*) p)[i].member1 + 2
 define ptr @appendIndex(ptr %p, i64 %i) {
 ; CHECK-LABEL: @appendIndex(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_B:%.*]], ptr [[P:%.*]], i64 [[I:%.*]], i32 1, i64 2
@@ -126,10 +126,10 @@ define ptr @appendIndex(ptr %p, i64 %i) {
   ret ptr %2
 }
 
-; Offset of either GEP is not divisible by the other's size, converted to i8*
+; Offset of either GEP is not divisible by the other's size, converted to ptr
 ; and merged.
 ; Here i24 is 8-bit aligned.
-; result = (i8*) p + 7
+; result = (ptr) p + 7
 define ptr @notDivisible(ptr %p) {
 ; CHECK-LABEL: @notDivisible(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 7

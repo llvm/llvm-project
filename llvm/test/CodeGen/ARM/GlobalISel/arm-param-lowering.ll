@@ -2,9 +2,9 @@
 ; RUN: llc -O0 -mtriple armeb-unknown -mattr=+vfp2,+v4t -global-isel -global-isel-abort=0 -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=ARM -check-prefix=BIG
 ; RUN: llc -O0 -mtriple thumb-unknown -mattr=+vfp2,+v6t2 -global-isel -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=LITTLE -check-prefix=THUMB
 
-declare arm_aapcscc i32* @simple_reg_params_target(i32, i32*)
+declare arm_aapcscc ptr @simple_reg_params_target(i32, ptr)
 
-define arm_aapcscc i32* @test_call_simple_reg_params(i32 *%a, i32 %b) {
+define arm_aapcscc ptr @test_call_simple_reg_params(ptr %a, i32 %b) {
 ; CHECK-LABEL: name: test_call_simple_reg_params
 ; CHECK-DAG: [[AVREG:%[0-9]+]]:_(p0) = COPY $r0
 ; CHECK-DAG: [[BVREG:%[0-9]+]]:_(s32) = COPY $r1
@@ -19,13 +19,13 @@ define arm_aapcscc i32* @test_call_simple_reg_params(i32 *%a, i32 %b) {
 ; ARM: BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ; THUMB: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
 entry:
-  %r = notail call arm_aapcscc i32 *@simple_reg_params_target(i32 %b, i32 *%a)
-  ret i32 *%r
+  %r = notail call arm_aapcscc ptr @simple_reg_params_target(i32 %b, ptr %a)
+  ret ptr %r
 }
 
-declare arm_aapcscc i32* @simple_stack_params_target(i32, i32*, i32, i32*, i32, i32*)
+declare arm_aapcscc ptr @simple_stack_params_target(i32, ptr, i32, ptr, i32, ptr)
 
-define arm_aapcscc i32* @test_call_simple_stack_params(i32 *%a, i32 %b) {
+define arm_aapcscc ptr @test_call_simple_stack_params(ptr %a, i32 %b) {
 ; CHECK-LABEL: name: test_call_simple_stack_params
 ; CHECK-DAG: [[AVREG:%[0-9]+]]:_(p0) = COPY $r0
 ; CHECK-DAG: [[BVREG:%[0-9]+]]:_(s32) = COPY $r1
@@ -50,8 +50,8 @@ define arm_aapcscc i32* @test_call_simple_stack_params(i32 *%a, i32 %b) {
 ; ARM: BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ; THUMB: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
 entry:
-  %r = notail call arm_aapcscc i32 *@simple_stack_params_target(i32 %b, i32 *%a, i32 %b, i32 *%a, i32 %b, i32 *%a)
-  ret i32 *%r
+  %r = notail call arm_aapcscc ptr @simple_stack_params_target(i32 %b, ptr %a, i32 %b, ptr %a, i32 %b, ptr %a)
+  ret ptr %r
 }
 
 declare arm_aapcscc signext i16 @ext_target(i8 signext, i8 zeroext, i16 signext, i16 zeroext, i8 signext, i8 zeroext, i16 signext, i16 zeroext, i1 zeroext)
@@ -403,9 +403,9 @@ entry:
   ret [4 x float] %r
 }
 
-declare arm_aapcscc [2 x i32*] @tough_arrays_target([6 x [4 x i32]] %arr)
+declare arm_aapcscc [2 x ptr] @tough_arrays_target([6 x [4 x i32]] %arr)
 
-define arm_aapcscc [2 x i32*] @test_tough_arrays([6 x [4 x i32]] %arr) {
+define arm_aapcscc [2 x ptr] @test_tough_arrays([6 x [4 x i32]] %arr) {
 ; CHECK-LABEL: name: test_tough_arrays
 ; CHECK: fixedStack:
 ; The parameters live in separate stack locations, one for each element that
@@ -446,8 +446,8 @@ define arm_aapcscc [2 x i32*] @test_tough_arrays([6 x [4 x i32]] %arr) {
 ; ARM: BX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
 ; THUMB: tBX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
 entry:
-  %r = notail call arm_aapcscc [2 x i32*] @tough_arrays_target([6 x [4 x i32]] %arr)
-  ret [2 x i32*] %r
+  %r = notail call arm_aapcscc [2 x ptr] @tough_arrays_target([6 x [4 x i32]] %arr)
+  ret [2 x ptr] %r
 }
 
 declare arm_aapcscc {i32, i32} @structs_target({i32, i32})

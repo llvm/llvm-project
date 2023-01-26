@@ -8,7 +8,7 @@
 ;   struct t {
 ;     int a;
 ;   } __attribute__((preserve_access_index));
-;   int foo(void *);
+;   int foo(ptr);
 ;   int test(struct t *arg) {
 ;       long param[1];
 ;       param[0] = (long)&arg->a;
@@ -22,19 +22,17 @@ target triple = "bpf"
 %struct.t = type { i32 }
 
 ; Function Attrs: nounwind
-define dso_local i32 @test(%struct.t* %arg) local_unnamed_addr #0 !dbg !14 {
+define dso_local i32 @test(ptr %arg) local_unnamed_addr #0 !dbg !14 {
 entry:
   %param = alloca [1 x i64], align 8
-  call void @llvm.dbg.value(metadata %struct.t* %arg, metadata !22, metadata !DIExpression()), !dbg !27
-  %0 = bitcast [1 x i64]* %param to i8*, !dbg !28
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %0) #5, !dbg !28
-  call void @llvm.dbg.declare(metadata [1 x i64]* %param, metadata !23, metadata !DIExpression()), !dbg !29
-  %1 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.ts(%struct.t* elementtype(%struct.t) %arg, i32 0, i32 0), !dbg !30, !llvm.preserve.access.index !18
-  %2 = ptrtoint i32* %1 to i64, !dbg !31
-  %arrayidx = getelementptr inbounds [1 x i64], [1 x i64]* %param, i64 0, i64 0, !dbg !32
-  store i64 %2, i64* %arrayidx, align 8, !dbg !33, !tbaa !34
-  %call = call i32 @foo(i8* nonnull %0) #5, !dbg !38
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %0) #5, !dbg !39
+  call void @llvm.dbg.value(metadata ptr %arg, metadata !22, metadata !DIExpression()), !dbg !27
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %param) #5, !dbg !28
+  call void @llvm.dbg.declare(metadata ptr %param, metadata !23, metadata !DIExpression()), !dbg !29
+  %0 = tail call ptr @llvm.preserve.struct.access.index.p0.p0.ts(ptr elementtype(%struct.t) %arg, i32 0, i32 0), !dbg !30, !llvm.preserve.access.index !18
+  %1 = ptrtoint ptr %0 to i64, !dbg !31
+  store i64 %1, ptr %param, align 8, !dbg !33, !tbaa !34
+  %call = call i32 @foo(ptr nonnull %param) #5, !dbg !38
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %param) #5, !dbg !39
   ret i32 %call, !dbg !40
 }
 
@@ -46,15 +44,15 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #2
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #2
 
 ; Function Attrs: nounwind readnone
-declare i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.ts(%struct.t*, i32, i32) #3
+declare ptr @llvm.preserve.struct.access.index.p0.p0.ts(ptr, i32, i32) #3
 
-declare !dbg !5 dso_local i32 @foo(i8*) local_unnamed_addr #4
+declare !dbg !5 dso_local i32 @foo(ptr) local_unnamed_addr #4
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #2
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #2
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1

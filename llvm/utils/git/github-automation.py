@@ -16,7 +16,7 @@ import re
 import requests
 import sys
 import time
-from typing import *
+from typing import List, Optional
 
 class IssueSubscriber:
 
@@ -60,7 +60,7 @@ def phab_api_call(phab_token:str, url:str, args:dict) -> dict:
     return response.json()
 
 
-def phab_login_to_github_login(phab_token:str, repo:github.Repository.Repository, phab_login:str) -> str:
+def phab_login_to_github_login(phab_token:str, repo:github.Repository.Repository, phab_login:str) -> Optional[str]:
     """
     Tries to translate a Phabricator login to a github login by
     finding a commit made in Phabricator's Differential.
@@ -86,13 +86,22 @@ def phab_login_to_github_login(phab_token:str, repo:github.Repository.Repository
         return None
 
     commit_sha = data[0]['fields']['identifier']
-    return repo.get_commit(commit_sha).committer.login
+    committer = repo.get_commit(commit_sha).committer
+    if not committer:
+        # This committer had an email address GitHub could not recognize, so
+        # it can't link the user to a GitHub account.
+        print(f"Warning: Can't find github account for {phab_login}")
+        return None
+    return committer.login
 
-def phab_get_commit_approvers(phab_token:str, repo:github.Repository.Repository, commit:github.Commit.Commit) -> list:
+def phab_get_commit_approvers(phab_token:str, commit:github.Commit.Commit) -> list:
     args = { "corpus" : commit.commit.message }
     # API documentation: https://reviews.llvm.org/conduit/method/differential.parsecommitmessage/
     r = phab_api_call(phab_token, "https://reviews.llvm.org/api/differential.parsecommitmessage", args)
     review_id = r['result']['revisionIDFieldInfo']['value']
+    if not review_id:
+        # No Phabricator revision for this commit
+        return []
 
     args = {
         'constraints[ids][0]' : review_id,
@@ -254,7 +263,7 @@ class ReleaseWorkflow:
         """
         reviewers = []
         for commit in pr.get_commits():
-            approvers = phab_get_commit_approvers(self.phab_token, self.repo, commit)
+            approvers = phab_get_commit_approvers(self.phab_token, commit)
             for a in approvers:
                 login = phab_login_to_github_login(self.phab_token, self.repo, a)
                 if not login:
@@ -304,7 +313,7 @@ class ReleaseWorkflow:
     def create_pull_request(self, owner:str, repo_name:str, branch:str) -> bool:
         """
         reate a pull request in `self.branch_repo_name`.  The base branch of the
-        pull request will be choosen based on the the milestone attached to
+        pull request will be chosen based on the the milestone attached to
         the issue represented by `self.issue_number`  For example if the milestone
         is Release 13.0.1, then the base branch will be release/13.x. `branch`
         will be used as the compare branch.
@@ -325,7 +334,7 @@ class ReleaseWorkflow:
             head_branch = f'{owner}-{branch}'
             local_repo = Repo(self.llvm_project_dir)
             push_done = False
-            for i in range(0,5):
+            for _ in range(0,5):
                 try:
                     local_repo.git.fetch(f'https://github.com/{owner}/{repo_name}', f'{branch}:{branch}')
                     local_repo.git.push(self.push_url, f'{branch}:{head_branch}', force=True)
@@ -379,7 +388,7 @@ class ReleaseWorkflow:
         """
         for line in sys.stdin:
             line.rstrip()
-            m = re.search("/([a-z-]+)\s(.+)", line)
+            m = re.search(r"/([a-z-]+)\s(.+)", line)
             if not m:
                 continue
             command = m.group(1)

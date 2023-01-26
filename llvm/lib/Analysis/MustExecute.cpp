@@ -59,10 +59,11 @@ void SimpleLoopSafetyInfo::computeLoopSafetyInfo(const Loop *CurLoop) {
   // The first block in loopinfo.Blocks is guaranteed to be the header.
   assert(Header == *CurLoop->getBlocks().begin() &&
          "First block must be header");
-  for (Loop::block_iterator BB = std::next(CurLoop->block_begin()),
-                            BBE = CurLoop->block_end();
-       (BB != BBE) && !MayThrow; ++BB)
-    MayThrow |= !isGuaranteedToTransferExecutionToSuccessor(*BB);
+  for (const BasicBlock *BB : llvm::drop_begin(CurLoop->blocks())) {
+    MayThrow |= !isGuaranteedToTransferExecutionToSuccessor(BB);
+    if (MayThrow)
+      break;
+  }
 
   computeBlockColors(CurLoop);
 }
@@ -199,6 +200,15 @@ bool LoopSafetyInfo::allLoopPathsLeadToBlock(const Loop *CurLoop,
   // be a subset of the blocks within the loop.
   SmallPtrSet<const BasicBlock *, 4> Predecessors;
   collectTransitivePredecessors(CurLoop, BB, Predecessors);
+
+  // Bail out if a latch block is part of the predecessor set. In this case
+  // we may take the backedge to the header and not execute other latch
+  // successors.
+  for (const BasicBlock *Pred : predecessors(CurLoop->getHeader()))
+    // Predecessors only contains loop blocks, so we don't have to worry about
+    // preheader predecessors here.
+    if (Predecessors.contains(Pred))
+      return false;
 
   // Make sure that all successors of, all predecessors of BB which are not
   // dominated by BB, are either:
@@ -488,12 +498,12 @@ bool llvm::mayContainIrreducibleControl(const Function &F, const LoopInfo *LI) {
 /// Lookup \p Key in \p Map and return the result, potentially after
 /// initializing the optional through \p Fn(\p args).
 template <typename K, typename V, typename FnTy, typename... ArgsTy>
-static V getOrCreateCachedOptional(K Key, DenseMap<K, Optional<V>> &Map,
-                                   FnTy &&Fn, ArgsTy&&... args) {
-  Optional<V> &OptVal = Map[Key];
+static V getOrCreateCachedOptional(K Key, DenseMap<K, std::optional<V>> &Map,
+                                   FnTy &&Fn, ArgsTy &&...args) {
+  std::optional<V> &OptVal = Map[Key];
   if (!OptVal)
     OptVal = Fn(std::forward<ArgsTy>(args)...);
-  return OptVal.value();
+  return *OptVal;
 }
 
 const BasicBlock *

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // <algorithm>
 
@@ -51,7 +50,7 @@ concept HasInplaceMergeIter =
 
 static_assert(HasInplaceMergeIter<int*, int*, int*>);
 
-// !bidirectional_­iterator<I>
+// !bidirectional_iterator<I>
 static_assert(!HasInplaceMergeIter<BidirectionalIteratorNotDerivedFrom>);
 static_assert(!HasInplaceMergeIter<cpp20_input_iterator<int*>>);
 
@@ -88,9 +87,9 @@ static_assert(!HasInplaceMergeIter<R<const int*>, const int*>);
 
 template <class In, template <class> class SentWrapper, std::size_t N1, std::size_t N2>
 void testInplaceMergeImpl(std::array<int, N1> input, int midIdx, std::array<int, N2> expected) {
-  std::is_sorted(input.begin(), input.begin() + midIdx);
-  std::is_sorted(input.begin() + midIdx, input.end());
-  std::is_sorted(expected.begin(), expected.end());
+  assert(std::is_sorted(input.begin(), input.begin() + midIdx));
+  assert(std::is_sorted(input.begin() + midIdx, input.end()));
+  assert(std::is_sorted(expected.begin(), expected.end()));
 
   using Sent = SentWrapper<In>;
 
@@ -288,7 +287,7 @@ bool test() {
 
   // Complexity: Let N = last - first :
   //   - For the overloads with no ExecutionPolicy, and if enough
-  //     additional memory is available, exactly N − 1 comparisons.
+  //     additional memory is available, exactly N - 1 comparisons.
   //   - Otherwise, O(NlogN) comparisons.
   // In either case, twice as many projections as comparisons.
   {

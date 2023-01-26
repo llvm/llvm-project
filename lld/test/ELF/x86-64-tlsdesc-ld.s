@@ -3,11 +3,11 @@
 
 # RUN: ld.lld -shared %t.o -o %t.so
 # RUN: llvm-readobj -r %t.so | FileCheck --check-prefix=LD-REL %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck --check-prefix=LD %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.so | FileCheck --check-prefix=LD %s
 
 # RUN: ld.lld %t.o -o %t
 # RUN: llvm-readelf -r %t | FileCheck --check-prefix=NOREL %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=LE %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck --check-prefix=LE %s
 
 ## Check _TLS_MODULE_BASE_ used by LD produces a dynamic relocation with a value of 0.
 # LD-REL:      .rela.dyn {
@@ -31,6 +31,14 @@
 # LE-NEXT: nop
 # LE-NEXT: movl %fs:-8(%rax), %edx
 # LE-NEXT: addl %fs:-4(%rax), %edx
+
+# RUN: ld.lld -r %t.o -o %t.ro
+# RUN: llvm-readelf -s %t.ro | FileCheck --check-prefix=RELOCATABLE %s
+# RUN: ld.lld %t.ro -o %t
+# RUN: llvm-readelf -r %t | FileCheck --check-prefix=NOREL %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck --check-prefix=LE %s
+
+# RELOCATABLE: 0000000000000000 0 TLS GLOBAL DEFAULT UND _TLS_MODULE_BASE_
 
 leaq _TLS_MODULE_BASE_@tlsdesc(%rip), %rax
 call *_TLS_MODULE_BASE_@tlscall(%rax)

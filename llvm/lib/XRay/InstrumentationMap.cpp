@@ -12,7 +12,6 @@
 
 #include "llvm/XRay/InstrumentationMap.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
@@ -34,18 +33,19 @@
 using namespace llvm;
 using namespace xray;
 
-Optional<int32_t> InstrumentationMap::getFunctionId(uint64_t Addr) const {
+std::optional<int32_t> InstrumentationMap::getFunctionId(uint64_t Addr) const {
   auto I = FunctionIds.find(Addr);
   if (I != FunctionIds.end())
     return I->second;
-  return None;
+  return std::nullopt;
 }
 
-Optional<uint64_t> InstrumentationMap::getFunctionAddr(int32_t FuncId) const {
+std::optional<uint64_t>
+InstrumentationMap::getFunctionAddr(int32_t FuncId) const {
   auto I = FunctionAddresses.find(FuncId);
   if (I != FunctionAddresses.end())
     return I->second;
-  return None;
+  return std::nullopt;
 }
 
 using RelocMap = DenseMap<uint64_t, uint64_t>;
@@ -188,7 +188,7 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
         SledEntry::FunctionKinds::TAIL,
         SledEntry::FunctionKinds::LOG_ARGS_ENTER,
         SledEntry::FunctionKinds::CUSTOM_EVENT};
-    if (Kind >= sizeof(Kinds) / sizeof(Kinds[0]))
+    if (Kind >= std::size(Kinds))
       return errorCodeToError(
           std::make_error_code(std::errc::executable_format_error));
     Entry.Kind = Kinds[Kind];

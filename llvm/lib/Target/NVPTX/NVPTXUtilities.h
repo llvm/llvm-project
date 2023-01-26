@@ -24,6 +24,8 @@
 
 namespace llvm {
 
+class TargetMachine;
+
 void clearAnnotationCache(const Module *);
 
 bool findOneNVVMAnnotation(const GlobalValue *, const std::string &,
@@ -58,6 +60,7 @@ bool isKernelFunction(const Function &);
 
 bool getAlign(const Function &, unsigned index, unsigned &);
 bool getAlign(const CallInst &, unsigned index, unsigned &);
+Function *getMaybeBitcastedCallee(const CallBase *CB);
 
 // PTX ABI requires all scalar argument/return values to have
 // bit-size as a power of two of at least 32 bits.
@@ -69,6 +72,8 @@ inline unsigned promoteScalarArgumentSize(unsigned size) {
   else
     return size;
 }
+
+bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM);
 }
 
 #endif

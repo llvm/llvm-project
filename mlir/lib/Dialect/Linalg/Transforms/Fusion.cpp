@@ -10,9 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
@@ -32,6 +31,7 @@
 #include "llvm/Support/Debug.h"
 
 #include <set>
+#include <optional>
 
 #define DEBUG_TYPE "linalg-fusion"
 
@@ -69,7 +69,7 @@ getShapeDefiningLoopRange(LinalgOp op, unsigned loopDepth,
                           bool fromSubViewOpOnly = false) {
   // Iterate over the inputs and outputs in order.
   // Extract the subranges from the linearized ranges.
-  for (OpOperand *opOperand : op.getInputAndOutputOperands()) {
+  for (OpOperand &opOperand : op->getOpOperands()) {
     // The method `getRangeFromOperandShape` requires using SubViewOp or
     // ExtractSliceOps. If the value isn't defined from there continue.
     // todo: The method should be adapted to get the values from
@@ -78,12 +78,12 @@ getShapeDefiningLoopRange(LinalgOp op, unsigned loopDepth,
     // `std` dialect and add the method to `ViewInterface`.
     if (fromSubViewOpOnly &&
         !isa_and_nonnull<memref::SubViewOp, tensor::ExtractSliceOp>(
-            opOperand->get().getDefiningOp()))
+            opOperand.get().getDefiningOp()))
       continue;
 
-    AffineMap map = op.getTiedIndexingMap(opOperand);
+    AffineMap map = op.getMatchingIndexingMap(&opOperand);
     LLVM_DEBUG(llvm::dbgs() << "getShapeDefiningLoopRange I/O idx: "
-                            << opOperand->getOperandNumber() << "\n");
+                            << opOperand.getOperandNumber() << "\n");
     LLVM_DEBUG(llvm::dbgs()
                << "getShapeDefiningLoopRange map: " << map << "\n");
     SmallVector<Value, 8> shapeRanges(map.getNumResults(), nullptr);
@@ -95,8 +95,8 @@ getShapeDefiningLoopRange(LinalgOp op, unsigned loopDepth,
         LLVM_DEBUG(llvm::dbgs() << "getShapeDefiningLoopRange loopDepth: "
                                 << loopDepth << "\n");
         LLVM_DEBUG(llvm::dbgs() << "getShapeDefiningLoopRange shape: "
-                                << opOperand->get() << "\n");
-        return ShapeDimension{opOperand->get(),
+                                << opOperand.get() << "\n");
+        return ShapeDimension{opOperand.get(),
                               static_cast<unsigned>(en.index())};
       }
     }
@@ -105,7 +105,7 @@ getShapeDefiningLoopRange(LinalgOp op, unsigned loopDepth,
 }
 
 static SmallVector<Value> getTiledOperands(LinalgOp producer) {
-  return producer.getInputAndOutputOperands();
+  return producer->getOperands();
 }
 
 /// Fuses the producer by cloning the `producer`. The `fusedLoopsAndRanges`
@@ -138,7 +138,7 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
   }
 
   SmallVector<Value, 8> clonedShapes;
-  clonedShapes.reserve(producer.getNumInputsAndOutputs());
+  clonedShapes.reserve(producer->getNumOperands());
 
   // Compute subranges for all tensor input/output operands.
   clonedShapes.append(makeTiledShapes(
@@ -151,19 +151,22 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
   // fully dynamic at construction time.
   SmallVector<Type, 4> resultTypes;
   resultTypes.reserve(producer->getNumResults());
-  for (RankedTensorType t : producer.getOutputTensorTypes()) {
-    unsigned rank = t.getRank();
+  for (OpOperand *operand : producer.getDpsInitOperands()) {
+    auto tensorType = operand->get().getType().dyn_cast<RankedTensorType>();
+    if (!tensorType)
+      continue;
+    unsigned rank = tensorType.getRank();
     SmallVector<int64_t, 4> staticOffsetsVector(
-        rank, ShapedType::kDynamicStrideOrOffset);
-    SmallVector<int64_t, 4> staticSizesVector(rank, ShapedType::kDynamicSize);
+        rank, ShapedType::kDynamic);
+    SmallVector<int64_t, 4> staticSizesVector(rank, ShapedType::kDynamic);
     SmallVector<int64_t, 4> staticStridesVector(
-        rank, ShapedType::kDynamicStrideOrOffset);
+        rank, ShapedType::kDynamic);
     resultTypes.push_back(tensor::ExtractSliceOp::inferResultType(
-        t.cast<RankedTensorType>(), staticOffsetsVector, staticSizesVector,
+        tensorType, staticOffsetsVector, staticSizesVector,
         staticStridesVector));
   }
 
-  Operation *clonedOp = producer.clone(b, loc, resultTypes, clonedShapes);
+  Operation *clonedOp = clone(b, producer, resultTypes, clonedShapes);
 
   // Shift all IndexOp results by the tile offset.
   SmallVector<OpFoldResult> allIvs = llvm::to_vector(
@@ -209,7 +212,7 @@ static bool isStructurallyFusableProducer(LinalgOp producer, Value consumedView,
          "expected linalg op with buffer semantics");
   assert(consumer.hasBufferSemantics() &&
          "expected linalg op with buffer semantics");
-  if (producer.getNumOutputs() != 1) {
+  if (producer.getNumDpsInits() != 1) {
     LLVM_DEBUG(llvm::dbgs() << "\nNot structurally fusable (multi-output)");
     return false;
   }
@@ -296,7 +299,7 @@ findFusableProducer(OpOperand &consumerOpOperand,
                                        << elem.getIndexingValue() << " and "
                                        << elem.getDependentValue() << "\n");
                Value v = elem.getIndexingValue();
-               Optional<unsigned> operandNum =
+               std::optional<unsigned> operandNum =
                    elem.getIndexingOpViewOperandNum();
                return isa<LinalgOp>(elem.getDependentOp()) &&
                       v == consumerOpOperand.get() && operandNum &&
@@ -331,8 +334,8 @@ findFusableProducer(OpOperand &consumerOpOperand,
 FailureOr<FusionInfo>
 mlir::linalg::fuseProducerOfBuffer(OpBuilder &b, OpOperand &consumerOpOperand,
                                    const LinalgDependenceGraph &graph) {
-  Optional<LinalgDependenceGraph::LinalgDependenceGraphElem> fusableDependence =
-      findFusableProducer(consumerOpOperand, graph);
+  std::optional<LinalgDependenceGraph::LinalgDependenceGraphElem>
+      fusableDependence = findFusableProducer(consumerOpOperand, graph);
   if (!fusableDependence)
     return failure();
 
@@ -345,7 +348,7 @@ mlir::linalg::fuseProducerOfBuffer(OpBuilder &b, OpOperand &consumerOpOperand,
       fusableDependence->getDependentValue().getParentBlock())
     return failure();
 
-  Optional<AffineMap> producerMap =
+  std::optional<AffineMap> producerMap =
       fusableDependence->getDependentOpViewIndexingMap();
   if (!producerMap)
     return failure();
@@ -441,9 +444,9 @@ mlir::linalg::fuseProducerOfTensor(OpBuilder &b, OpResult producerOpResult,
   b.setInsertionPoint(consumerOp);
   LLVM_DEBUG(llvm::dbgs() << "Fuse into consumer: " << *consumerOp << "\n");
   OpOperand *opOperand =
-      producerOp.getOutputOperand(producerOpResult.getResultNumber());
+      producerOp.getDpsInitOperand(producerOpResult.getResultNumber());
   LinalgOp fusedProducer =
-      fuse(b, producerOp, producerOp.getTiedIndexingMap(opOperand),
+      fuse(b, producerOp, producerOp.getMatchingIndexingMap(opOperand),
            consumerOpOperand);
 
   // Replace use.

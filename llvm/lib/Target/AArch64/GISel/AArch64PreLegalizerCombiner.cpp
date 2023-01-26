@@ -377,7 +377,8 @@ public:
 bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
                                               MachineInstr &MI,
                                               MachineIRBuilder &B) const {
-  CombinerHelper Helper(Observer, B, KB, MDT);
+  const auto *LI = MI.getMF()->getSubtarget().getLegalizerInfo();
+  CombinerHelper Helper(Observer, B, /* IsPreLegalize*/ true, KB, MDT, LI);
   AArch64GenPreLegalizerCombinerHelper Generated(GeneratedRuleCfg, Helper);
 
   if (Generated.tryCombineAll(Observer, MI, B))

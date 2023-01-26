@@ -43,7 +43,7 @@ template <class ELFT> struct NoteTestData {
 
 TEST(ELFTypesTest, NoteTest) {
   static const uint8_t Random[] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
-  ArrayRef<uint8_t> RandomData = makeArrayRef(Random);
+  ArrayRef<uint8_t> RandomData = ArrayRef(Random);
   NoteTestData<ELF64LE> TestData;
 
   auto Note1 = TestData.getElfNote(StringRef("AMD"), ELF::NT_AMDGPU_METADATA,

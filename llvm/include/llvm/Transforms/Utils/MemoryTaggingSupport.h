@@ -16,6 +16,7 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/Support/Alignment.h"
 
 namespace llvm {
@@ -62,15 +63,15 @@ struct StackInfo {
 
 class StackInfoBuilder {
 public:
-  StackInfoBuilder(std::function<bool(const AllocaInst &)> IsInterestingAlloca)
-      : IsInterestingAlloca(IsInterestingAlloca) {}
+  StackInfoBuilder(const StackSafetyGlobalInfo *SSI) : SSI(SSI) {}
 
   void visit(Instruction &Inst);
+  bool isInterestingAlloca(const AllocaInst &AI);
   StackInfo &get() { return Info; };
 
 private:
   StackInfo Info;
-  std::function<bool(const AllocaInst &)> IsInterestingAlloca;
+  const StackSafetyGlobalInfo *SSI;
 };
 
 uint64_t getAllocaSizeInBytes(const AllocaInst &AI);

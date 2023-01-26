@@ -38,14 +38,14 @@ endif()
 
 if (LLVM_TREE_AVAILABLE)
   # Compute the Clang version from the LLVM version.
-  # FIXME: We should be able to reuse CLANG_VERSION variable calculated
+  # FIXME: We should be able to reuse CLANG_VERSION_MAJOR variable calculated
   #        in Clang cmake files, instead of copying the rules here.
-  string(REGEX MATCH "[0-9]+\\.[0-9]+(\\.[0-9]+)?" CLANG_VERSION
+  string(REGEX MATCH "^[0-9]+" CLANG_VERSION_MAJOR
          ${PACKAGE_VERSION})
   # Setup the paths where compiler-rt runtimes and headers should be stored.
-  set(COMPILER_RT_OUTPUT_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/clang/${CLANG_VERSION})
+  set(COMPILER_RT_OUTPUT_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/clang/${CLANG_VERSION_MAJOR})
   set(COMPILER_RT_EXEC_OUTPUT_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
-  set(COMPILER_RT_INSTALL_PATH lib${LLVM_LIBDIR_SUFFIX}/clang/${CLANG_VERSION})
+  set(COMPILER_RT_INSTALL_PATH lib${LLVM_LIBDIR_SUFFIX}/clang/${CLANG_VERSION_MAJOR})
   option(COMPILER_RT_INCLUDE_TESTS "Generate and build compiler-rt unit tests."
          ${LLVM_INCLUDE_TESTS})
   option(COMPILER_RT_ENABLE_WERROR "Fail and stop if warning is triggered"
@@ -205,6 +205,8 @@ macro(test_targets)
           test_target_arch(x86_64 "" "")
         endif()
       endif()
+    elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "loongarch64")
+      test_target_arch(loongarch64 "" "")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "powerpc64le|ppc64le")
       test_target_arch(powerpc64le "" "-m64")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "powerpc")
@@ -215,24 +217,29 @@ macro(test_targets)
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "sparc")
       test_target_arch(sparc "" "-m32")
       test_target_arch(sparcv9 "" "-m64")
-    elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "mipsel|mips64el")
-      # Gcc doesn't accept -m32/-m64 so we do the next best thing and use
-      # -mips32r2/-mips64r2. We don't use -mips1/-mips3 because we want to match
-      # clang's default CPU's. In the 64-bit case, we must also specify the ABI
-      # since the default ABI differs between gcc and clang.
-      # FIXME: Ideally, we would build the N32 library too.
-      test_target_arch(mipsel "" "-mips32r2" "-mabi=32" "-D_LARGEFILE_SOURCE" "-D_FILE_OFFSET_BITS=64")
-      test_target_arch(mips64el "" "-mips64r2" "-mabi=64")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "mips")
-      test_target_arch(mips "" "-mips32r2" "-mabi=32" "-D_LARGEFILE_SOURCE" "-D_FILE_OFFSET_BITS=64")
-      test_target_arch(mips64 "" "-mips64r2" "-mabi=64")
+      # FIXME: Ideally, we would build the N32 library too.
+      if("${COMPILER_RT_MIPS_EL}" AND ("${COMPILER_RT_MIPS32R6}" OR "${COMPILER_RT_MIPS64R6}"))
+        test_target_arch(mipsel "" "-mips32r6" "-mabi=32" "-D_LARGEFILE_SOURCE" "-D_FILE_OFFSET_BITS=64")
+        test_target_arch(mips64el "" "-mips64r6" "-mabi=64")
+      elseif("${COMPILER_RT_MIPS_EL}")
+        test_target_arch(mipsel "" "-mips32r2" "-mabi=32" "-D_LARGEFILE_SOURCE" "-D_FILE_OFFSET_BITS=64")
+        test_target_arch(mips64el "" "-mips64r2" "-mabi=64")
+      elseif("${COMPILER_RT_MIPS32R6}" OR "${COMPILER_RT_MIPS64R6}")
+        test_target_arch(mips "" "-mips32r6" "-mabi=32" "-D_LARGEFILE_SOURCE" "-D_FILE_OFFSET_BITS=64")
+        test_target_arch(mips64 "" "-mips64r6" "-mabi=64")
+      else()
+        test_target_arch(mips "" "-mips32r2" "-mabi=32" "-D_LARGEFILE_SOURCE" "-D_FILE_OFFSET_BITS=64")
+        test_target_arch(mips64 "" "-mips64r2" "-mabi=64")
+      endif()
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "arm")
       if(WIN32)
         test_target_arch(arm "" "" "")
       else()
+        test_target_arch(armv4t "" "-march=armv4t" "-mfloat-abi=soft")
+        test_target_arch(armv6m "" "-march=armv6m" "-mfloat-abi=soft")
         test_target_arch(arm "" "-march=armv7-a" "-mfloat-abi=soft")
         test_target_arch(armhf "" "-march=armv7-a" "-mfloat-abi=hard")
-        test_target_arch(armv6m "" "-march=armv6m" "-mfloat-abi=soft")
       endif()
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "avr")
       test_target_arch(avr "__AVR__" "--target=avr")

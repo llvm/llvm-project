@@ -3,7 +3,7 @@
 ; LowerCONCAT_VECTORS() was reversing the order of two parts.
 ; rdar://11558157
 ; rdar://11559553
-define <16 x i8> @test(<16 x i8> %q0, <16 x i8> %q1, i8* nocapture %dest) nounwind {
+define <16 x i8> @test(<16 x i8> %q0, <16 x i8> %q1, ptr nocapture %dest) nounwind {
 entry:
 ; CHECK-LABEL: test:
 ; CHECK: mov.d v0[1], v1[0]

@@ -2,7 +2,7 @@
 # RUN: rm -rf %t && split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=armv7-a-none-eabi --arm-add-build-attributes %t/a.s -o %t/a.o
 # RUN: ld.lld -pie -T %t/lds %t/a.o -o %t/a
-# RUN: llvm-objdump -d --no-show-raw-insn %t/a | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/a | FileCheck %s
 
 ## We create a thunk for dest.
 # CHECK-LABEL: <mid>:

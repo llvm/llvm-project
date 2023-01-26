@@ -6,8 +6,8 @@ define dso_local signext i32 @caller(i32 signext %a, i32 signext %b) local_unnam
 ; CHECK-LABEL: caller:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -240(r1)
+; CHECK-NEXT:    std r0, 256(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 240
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    .cfi_offset v20, -192

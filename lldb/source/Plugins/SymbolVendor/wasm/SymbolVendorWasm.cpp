@@ -9,6 +9,7 @@
 #include "SymbolVendorWasm.h"
 
 #include <cstring>
+#include <optional>
 
 #include "Plugins/ObjectFile/wasm/ObjectFileWasm.h"
 #include "lldb/Core/Module.h"
@@ -78,7 +79,7 @@ SymbolVendorWasm::CreateInstance(const lldb::ModuleSP &module_sp,
   // A Wasm module may have a custom section named "external_debug_info" whose
   // content is the absolute or relative path of the Wasm module that contains
   // debug symbols for this module.
-  llvm::Optional<FileSpec> symbol_file_spec =
+  std::optional<FileSpec> symbol_file_spec =
       obj_file->GetExternalDebugInfoFileSpec();
   if (!symbol_file_spec)
     return nullptr;

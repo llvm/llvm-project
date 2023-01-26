@@ -78,7 +78,7 @@ define <3 x i8> @t5_vec_undef2(<3 x i8> %x) {
 ; One-use tests
 define i8 @t6_extrause0(i8 %x) {
 ; CHECK-LABEL: @t6_extrause0(
-; CHECK-NEXT:    [[BITMASK:%.*]] = shl i8 1, [[X:%.*]]
+; CHECK-NEXT:    [[BITMASK:%.*]] = shl nuw i8 1, [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[BITMASK]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 7, [[X]]
 ; CHECK-NEXT:    [[MASK:%.*]] = lshr i8 -1, [[TMP1]]
@@ -92,7 +92,7 @@ define i8 @t6_extrause0(i8 %x) {
 }
 define i8 @t7_extrause1(i8 %x) {
 ; CHECK-LABEL: @t7_extrause1(
-; CHECK-NEXT:    [[BITMASK:%.*]] = shl i8 1, [[X:%.*]]
+; CHECK-NEXT:    [[BITMASK:%.*]] = shl nuw i8 1, [[X:%.*]]
 ; CHECK-NEXT:    [[LOWBITMASK:%.*]] = add i8 [[BITMASK]], -1
 ; CHECK-NEXT:    call void @use8(i8 [[LOWBITMASK]])
 ; CHECK-NEXT:    [[MASK:%.*]] = or i8 [[LOWBITMASK]], [[BITMASK]]
@@ -106,7 +106,7 @@ define i8 @t7_extrause1(i8 %x) {
 }
 define i8 @t8_extrause2(i8 %x) {
 ; CHECK-LABEL: @t8_extrause2(
-; CHECK-NEXT:    [[BITMASK:%.*]] = shl i8 1, [[X:%.*]]
+; CHECK-NEXT:    [[BITMASK:%.*]] = shl nuw i8 1, [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[BITMASK]])
 ; CHECK-NEXT:    [[LOWBITMASK:%.*]] = add i8 [[BITMASK]], -1
 ; CHECK-NEXT:    call void @use8(i8 [[LOWBITMASK]])
@@ -124,7 +124,7 @@ define i8 @t8_extrause2(i8 %x) {
 ; Non-CSE'd test
 define i8 @t9_nocse(i8 %x) {
 ; CHECK-LABEL: @t9_nocse(
-; CHECK-NEXT:    [[BITMASK1:%.*]] = shl i8 1, [[X:%.*]]
+; CHECK-NEXT:    [[BITMASK1:%.*]] = shl nuw i8 1, [[X:%.*]]
 ; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw i8 -1, [[X]]
 ; CHECK-NEXT:    [[LOWBITMASK:%.*]] = xor i8 [[NOTMASK]], -1
 ; CHECK-NEXT:    [[MASK:%.*]] = or i8 [[BITMASK1]], [[LOWBITMASK]]
@@ -140,7 +140,7 @@ define i8 @t9_nocse(i8 %x) {
 ; Non-CSE'd extra uses test
 define i8 @t10_nocse_extrause0(i8 %x) {
 ; CHECK-LABEL: @t10_nocse_extrause0(
-; CHECK-NEXT:    [[BITMASK0:%.*]] = shl i8 1, [[X:%.*]]
+; CHECK-NEXT:    [[BITMASK0:%.*]] = shl nuw i8 1, [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[BITMASK0]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 7, [[X]]
 ; CHECK-NEXT:    [[MASK:%.*]] = lshr i8 -1, [[TMP1]]
@@ -155,7 +155,7 @@ define i8 @t10_nocse_extrause0(i8 %x) {
 }
 define i8 @t11_nocse_extrause1(i8 %x) {
 ; CHECK-LABEL: @t11_nocse_extrause1(
-; CHECK-NEXT:    [[BITMASK1:%.*]] = shl i8 1, [[X:%.*]]
+; CHECK-NEXT:    [[BITMASK1:%.*]] = shl nuw i8 1, [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[BITMASK1]])
 ; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw i8 -1, [[X]]
 ; CHECK-NEXT:    [[LOWBITMASK:%.*]] = xor i8 [[NOTMASK]], -1
@@ -171,7 +171,7 @@ define i8 @t11_nocse_extrause1(i8 %x) {
 }
 define i8 @t12_nocse_extrause2(i8 %x) {
 ; CHECK-LABEL: @t12_nocse_extrause2(
-; CHECK-NEXT:    [[BITMASK1:%.*]] = shl i8 1, [[X:%.*]]
+; CHECK-NEXT:    [[BITMASK1:%.*]] = shl nuw i8 1, [[X:%.*]]
 ; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw i8 -1, [[X]]
 ; CHECK-NEXT:    [[LOWBITMASK:%.*]] = xor i8 [[NOTMASK]], -1
 ; CHECK-NEXT:    call void @use8(i8 [[LOWBITMASK]])
@@ -187,9 +187,9 @@ define i8 @t12_nocse_extrause2(i8 %x) {
 }
 define i8 @t13_nocse_extrause3(i8 %x) {
 ; CHECK-LABEL: @t13_nocse_extrause3(
-; CHECK-NEXT:    [[BITMASK0:%.*]] = shl i8 1, [[X:%.*]]
+; CHECK-NEXT:    [[BITMASK0:%.*]] = shl nuw i8 1, [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[BITMASK0]])
-; CHECK-NEXT:    [[BITMASK1:%.*]] = shl i8 1, [[X]]
+; CHECK-NEXT:    [[BITMASK1:%.*]] = shl nuw i8 1, [[X]]
 ; CHECK-NEXT:    call void @use8(i8 [[BITMASK1]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 7, [[X]]
 ; CHECK-NEXT:    [[MASK:%.*]] = lshr i8 -1, [[TMP1]]
@@ -205,7 +205,7 @@ define i8 @t13_nocse_extrause3(i8 %x) {
 }
 define i8 @t14_nocse_extrause4(i8 %x) {
 ; CHECK-LABEL: @t14_nocse_extrause4(
-; CHECK-NEXT:    [[BITMASK0:%.*]] = shl i8 1, [[X:%.*]]
+; CHECK-NEXT:    [[BITMASK0:%.*]] = shl nuw i8 1, [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[BITMASK0]])
 ; CHECK-NEXT:    [[LOWBITMASK:%.*]] = add i8 [[BITMASK0]], -1
 ; CHECK-NEXT:    call void @use8(i8 [[LOWBITMASK]])
@@ -223,7 +223,7 @@ define i8 @t14_nocse_extrause4(i8 %x) {
 }
 define i8 @t15_nocse_extrause5(i8 %x) {
 ; CHECK-LABEL: @t15_nocse_extrause5(
-; CHECK-NEXT:    [[BITMASK1:%.*]] = shl i8 1, [[X:%.*]]
+; CHECK-NEXT:    [[BITMASK1:%.*]] = shl nuw i8 1, [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[BITMASK1]])
 ; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw i8 -1, [[X]]
 ; CHECK-NEXT:    [[LOWBITMASK:%.*]] = xor i8 [[NOTMASK]], -1
@@ -241,9 +241,9 @@ define i8 @t15_nocse_extrause5(i8 %x) {
 }
 define i8 @t16_nocse_extrause6(i8 %x) {
 ; CHECK-LABEL: @t16_nocse_extrause6(
-; CHECK-NEXT:    [[BITMASK0:%.*]] = shl i8 1, [[X:%.*]]
+; CHECK-NEXT:    [[BITMASK0:%.*]] = shl nuw i8 1, [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[BITMASK0]])
-; CHECK-NEXT:    [[BITMASK1:%.*]] = shl i8 1, [[X]]
+; CHECK-NEXT:    [[BITMASK1:%.*]] = shl nuw i8 1, [[X]]
 ; CHECK-NEXT:    call void @use8(i8 [[BITMASK1]])
 ; CHECK-NEXT:    [[LOWBITMASK:%.*]] = add i8 [[BITMASK0]], -1
 ; CHECK-NEXT:    call void @use8(i8 [[LOWBITMASK]])
@@ -263,7 +263,7 @@ define i8 @t16_nocse_extrause6(i8 %x) {
 ; Non-CSE'd test with mismatching X's.
 define i8 @t17_nocse_mismatching_x(i8 %x0, i8 %x1) {
 ; CHECK-LABEL: @t17_nocse_mismatching_x(
-; CHECK-NEXT:    [[BITMASK1:%.*]] = shl i8 1, [[X1:%.*]]
+; CHECK-NEXT:    [[BITMASK1:%.*]] = shl nuw i8 1, [[X1:%.*]]
 ; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw i8 -1, [[X0:%.*]]
 ; CHECK-NEXT:    [[LOWBITMASK:%.*]] = xor i8 [[NOTMASK]], -1
 ; CHECK-NEXT:    [[MASK:%.*]] = or i8 [[BITMASK1]], [[LOWBITMASK]]

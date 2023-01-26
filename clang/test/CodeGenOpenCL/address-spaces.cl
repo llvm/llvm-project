@@ -1,17 +1,17 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -O0 -ffake-address-space-map -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,SPIR
-// RUN: %clang_cc1 -no-opaque-pointers %s -O0 -cl-std=CL3.0 -cl-ext=-all -ffake-address-space-map -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,SPIR
-// RUN: %clang_cc1 -no-opaque-pointers %s -O0 -cl-std=clc++2021 -cl-ext=-all -ffake-address-space-map -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,SPIR
-// RUN: %clang_cc1 -no-opaque-pointers %s -O0 -DCL20 -cl-std=CL2.0 -ffake-address-space-map -emit-llvm -o - | FileCheck %s --check-prefixes=CL20,CL20SPIR
-// RUN: %clang_cc1 -no-opaque-pointers %s -O0 -triple amdgcn-amd-amdhsa -emit-llvm -o - | FileCheck --check-prefixes=CHECK,AMDGCN %s
-// RUN: %clang_cc1 -no-opaque-pointers %s -O0 -triple amdgcn-amd-amdhsa -cl-std=CL3.0 -emit-llvm -o - | FileCheck --check-prefixes=CHECK,AMDGCN %s
-// RUN: %clang_cc1 -no-opaque-pointers %s -O0 -triple amdgcn-amd-amdhsa -DCL20 -cl-std=CL2.0 -emit-llvm -o - | FileCheck %s --check-prefixes=CL20,CL20AMDGCN
-// RUN: %clang_cc1 -no-opaque-pointers %s -O0 -triple amdgcn-mesa-mesa3d -emit-llvm -o - | FileCheck --check-prefixes=CHECK,AMDGCN %s
-// RUN: %clang_cc1 -no-opaque-pointers %s -O0 -triple amdgcn-mesa-mesa3d -cl-std=CL3.0 -emit-llvm -o - | FileCheck --check-prefixes=CHECK,AMDGCN %s
-// RUN: %clang_cc1 -no-opaque-pointers %s -O0 -triple r600-- -emit-llvm -o - | FileCheck --check-prefixes=CHECK,AMDGCN %s
-// RUN: %clang_cc1 -no-opaque-pointers %s -O0 -triple r600-- -emit-llvm -cl-std=CL3.0 -o - | FileCheck --check-prefixes=CHECK,AMDGCN %s
+// RUN: %clang_cc1 %s -O0 -ffake-address-space-map -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,SPIR
+// RUN: %clang_cc1 %s -O0 -cl-std=CL3.0 -cl-ext=-all -ffake-address-space-map -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,SPIR
+// RUN: %clang_cc1 %s -O0 -cl-std=clc++2021 -cl-ext=-all -ffake-address-space-map -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,SPIR
+// RUN: %clang_cc1 %s -O0 -DCL20 -cl-std=CL2.0 -ffake-address-space-map -emit-llvm -o - | FileCheck %s --check-prefixes=CL20,CL20SPIR
+// RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-amdhsa -emit-llvm -o - | FileCheck --check-prefixes=CHECK,AMDGCN %s
+// RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-amdhsa -cl-std=CL3.0 -emit-llvm -o - | FileCheck --check-prefixes=CHECK,AMDGCN %s
+// RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-amdhsa -DCL20 -cl-std=CL2.0 -emit-llvm -o - | FileCheck %s --check-prefixes=CL20,CL20AMDGCN
+// RUN: %clang_cc1 %s -O0 -triple amdgcn-mesa-mesa3d -emit-llvm -o - | FileCheck --check-prefixes=CHECK,AMDGCN %s
+// RUN: %clang_cc1 %s -O0 -triple amdgcn-mesa-mesa3d -cl-std=CL3.0 -emit-llvm -o - | FileCheck --check-prefixes=CHECK,AMDGCN %s
+// RUN: %clang_cc1 %s -O0 -triple r600-- -emit-llvm -o - | FileCheck --check-prefixes=CHECK,AMDGCN %s
+// RUN: %clang_cc1 %s -O0 -triple r600-- -emit-llvm -cl-std=CL3.0 -o - | FileCheck --check-prefixes=CHECK,AMDGCN %s
 
-// SPIR: %struct.S = type { i32, i32, i32* }
-// CL20SPIR: %struct.S = type { i32, i32, i32 addrspace(4)* }
+// SPIR: %struct.S = type { i32, i32, ptr }
+// CL20SPIR: %struct.S = type { i32, i32, ptr addrspace(4) }
 struct S {
   int x;
   int y;
@@ -28,54 +28,54 @@ struct S {
 struct S g_s;
 #endif
 
-// SPIR: i32* %arg
-// AMDGCN: i32 addrspace(5)* %arg
+// SPIR: ptr %arg
+// AMDGCN: ptr addrspace(5) %arg
 void f__p(__private int *arg) {}
 
-// CHECK: i32 addrspace(1)* %arg
+// CHECK: ptr addrspace(1) %arg
 void f__g(__global int *arg) {}
 
-// CHECK: i32 addrspace(3)* %arg
+// CHECK: ptr addrspace(3) %arg
 void f__l(__local int *arg) {}
 
-// SPIR: i32 addrspace(2)* %arg
-// AMDGCN: i32 addrspace(4)* %arg
+// SPIR: ptr addrspace(2) %arg
+// AMDGCN: ptr addrspace(4) %arg
 void f__c(__constant int *arg) {}
 
-// SPIR: i32* %arg
-// AMDGCN: i32 addrspace(5)* %arg
+// SPIR: ptr %arg
+// AMDGCN: ptr addrspace(5) %arg
 void fp(private int *arg) {}
 
-// CHECK: i32 addrspace(1)* %arg
+// CHECK: ptr addrspace(1) %arg
 void fg(global int *arg) {}
 
-// CHECK: i32 addrspace(3)* %arg
+// CHECK: ptr addrspace(3) %arg
 void fl(local int *arg) {}
 
-// SPIR: i32 addrspace(2)* %arg
-// AMDGCN: i32 addrspace(4)* %arg
+// SPIR: ptr addrspace(2) %arg
+// AMDGCN: ptr addrspace(4) %arg
 void fc(constant int *arg) {}
 
-// SPIR: i32 addrspace(5)* %arg
-// AMDGCN: i32 addrspace(1)* %arg
+// SPIR: ptr addrspace(5) %arg
+// AMDGCN: ptr addrspace(1) %arg
 void fd(__attribute__((opencl_global_device)) int *arg) {}
 
-// SPIR: i32 addrspace(6)* %arg
-// AMDGCN: i32 addrspace(1)* %arg
+// SPIR: ptr addrspace(6) %arg
+// AMDGCN: ptr addrspace(1) %arg
 void fh(__attribute__((opencl_global_host)) int *arg) {}
 
 #ifdef CL20
 int i;
 // CL20-DAG: @i = {{(dso_local )?}}addrspace(1) global i32 0
 int *ptr;
-// CL20SPIR-DAG: @ptr = {{(common )?}}{{(dso_local )?}}addrspace(1) global i32 addrspace(4)* null
-// CL20AMDGCN-DAG: @ptr = {{(dso_local )?}}addrspace(1) global i32* null
+// CL20SPIR-DAG: @ptr = {{(common )?}}{{(dso_local )?}}addrspace(1) global ptr addrspace(4) null
+// CL20AMDGCN-DAG: @ptr = {{(dso_local )?}}addrspace(1) global ptr null
 #endif
 
-// SPIR: i32* noundef %arg
-// AMDGCN: i32 addrspace(5)* noundef %arg
-// CL20SPIR-DAG: i32 addrspace(4)* noundef %arg
-// CL20AMDGCN-DAG: i32* noundef %arg
+// SPIR: ptr noundef %arg
+// AMDGCN: ptr addrspace(5) noundef %arg
+// CL20SPIR-DAG: ptr addrspace(4) noundef %arg
+// CL20AMDGCN-DAG: ptr noundef %arg
 void f(int *arg) {
 
   int i;
@@ -92,7 +92,7 @@ void f(int *arg) {
 
 typedef int int_td;
 typedef int *intp_td;
-// SPIR: define {{(dso_local )?}}void @{{.*}}test_typedef{{.*}}(i32 addrspace(1)* noundef %x, i32 addrspace(2)* noundef %y, i32* noundef %z)
+// SPIR: define {{(dso_local )?}}void @{{.*}}test_typedef{{.*}}(ptr addrspace(1) noundef %x, ptr addrspace(2) noundef %y, ptr noundef %z)
 void test_typedef(global int_td *x, constant int_td *y, intp_td z) {
   *x = *y;
   *z = 0;
@@ -100,14 +100,14 @@ void test_typedef(global int_td *x, constant int_td *y, intp_td z) {
 
 // SPIR: define {{(dso_local )?}}void @{{.*}}test_struct{{.*}}()
 void test_struct() {
-  // SPIR: %ps = alloca %struct.S*
-  // CL20SPIR: %ps = alloca %struct.S addrspace(4)*
+  // SPIR: %ps = alloca ptr
+  // CL20SPIR: %ps = alloca ptr addrspace(4)
   struct S *ps;
-  // SPIR: store i32 0, i32* %x
-  // CL20SPIR: store i32 0, i32 addrspace(4)* %x
+  // SPIR: store i32 0, ptr %x
+  // CL20SPIR: store i32 0, ptr addrspace(4) %x
   ps->x = 0;
 #ifdef CL20
-  // CL20SPIR: store i32 0, i32 addrspace(1)* getelementptr inbounds (%struct.S, %struct.S addrspace(1)* @g_s, i32 0, i32 0)
+  // CL20SPIR: store i32 0, ptr addrspace(1) @g_s
   g_s.x = 0;
 #endif
 }

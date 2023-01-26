@@ -11,6 +11,7 @@
 
 #include <map>
 #include <mutex>
+#include <optional>
 
 #include "lldb/lldb-private.h"
 
@@ -60,8 +61,8 @@ private:
   void Dump(Stream &s);
 
   void Initialize();
-  llvm::Optional<AddressRange> GetAddressRange(const Address &addr,
-                                               SymbolContext &sc);
+  std::optional<AddressRange> GetAddressRange(const Address &addr,
+                                              SymbolContext &sc);
 
   typedef std::map<lldb::addr_t, lldb::FuncUnwindersSP> collection;
   typedef collection::iterator iterator;

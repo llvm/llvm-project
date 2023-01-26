@@ -67,6 +67,10 @@ CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
       ArgName = InDI->getArgNameStr(i-NumDefs);
     }
 
+    DagInit *SubArgDag = dyn_cast<DagInit>(ArgInit);
+    if (SubArgDag)
+      ArgInit = SubArgDag->getOperator();
+
     DefInit *Arg = dyn_cast<DefInit>(ArgInit);
     if (!Arg)
       PrintFatalError(R->getLoc(), "Illegal operand for the '" + R->getName() +
@@ -116,10 +120,11 @@ CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
     } else if (Rec->isSubClassOf("RegisterClass")) {
       OperandType = "OPERAND_REGISTER";
     } else if (!Rec->isSubClassOf("PointerLikeRegClass") &&
-               !Rec->isSubClassOf("unknown_class"))
+               !Rec->isSubClassOf("unknown_class")) {
       PrintFatalError(R->getLoc(), "Unknown operand class '" + Rec->getName() +
                                        "' in '" + R->getName() +
                                        "' instruction!");
+    }
 
     // Check that the operand has a name and that it's unique.
     if (ArgName.empty())
@@ -132,20 +137,60 @@ CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
                           Twine(i) +
                           " has the same name as a previous operand!");
 
-    OperandList.emplace_back(
+    OperandInfo &OpInfo = OperandList.emplace_back(
         Rec, std::string(ArgName), std::string(PrintMethod),
-        std::string(EncoderMethod), OperandNamespace + "::" + OperandType,
-        MIOperandNo, NumOps, MIOpInfo);
+        OperandNamespace + "::" + OperandType, MIOperandNo, NumOps, MIOpInfo);
+
+    if (SubArgDag) {
+      if (SubArgDag->getNumArgs() != NumOps) {
+        PrintFatalError(R->getLoc(), "In instruction '" + R->getName() +
+                                         "', operand #" + Twine(i) + " has " +
+                                         Twine(SubArgDag->getNumArgs()) +
+                                         " sub-arg names, expected " +
+                                         Twine(NumOps) + ".");
+      }
+
+      for (unsigned j = 0; j < NumOps; ++j) {
+        if (!isa<UnsetInit>(SubArgDag->getArg(j)))
+          PrintFatalError(R->getLoc(),
+                          "In instruction '" + R->getName() + "', operand #" +
+                              Twine(i) + " sub-arg #" + Twine(j) +
+                              " has unexpected operand (expected only $name).");
+
+        StringRef SubArgName = SubArgDag->getArgNameStr(j);
+        if (SubArgName.empty())
+          PrintFatalError(R->getLoc(), "In instruction '" + R->getName() +
+                                           "', operand #" + Twine(i) +
+                                           " has no name!");
+        if (!OperandNames.insert(std::string(SubArgName)).second)
+          PrintFatalError(R->getLoc(),
+                          "In instruction '" + R->getName() + "', operand #" +
+                              Twine(i) + " sub-arg #" + Twine(j) +
+                              " has the same name as a previous operand!");
+
+        if (auto MaybeEncoderMethod =
+                cast<DefInit>(MIOpInfo->getArg(j))
+                    ->getDef()
+                    ->getValueAsOptionalString("EncoderMethod")) {
+          OpInfo.EncoderMethodNames[j] = *MaybeEncoderMethod;
+        }
+
+        OpInfo.SubOpNames[j] = SubArgName;
+        SubOpAliases[SubArgName] = std::make_pair(MIOperandNo, j);
+      }
+    } else if (!EncoderMethod.empty()) {
+      // If we have no explicit sub-op dag, but have an top-level encoder
+      // method, the single encoder will multiple sub-ops, itself.
+      OpInfo.EncoderMethodNames[0] = EncoderMethod;
+      for (unsigned j = 1; j < NumOps; ++j)
+        OpInfo.DoNotEncode[j] = true;
+    }
+
     MIOperandNo += NumOps;
   }
 
   if (VariadicOuts)
     --NumDefs;
-
-  // Make sure the constraints list for each operand is large enough to hold
-  // constraint info, even if none is present.
-  for (OperandInfo &OpInfo : OperandList)
-    OpInfo.Constraints.resize(OpInfo.MINumOperands);
 }
 
 
@@ -175,6 +220,17 @@ bool CGIOperandList::hasOperandNamed(StringRef Name, unsigned &OpIdx) const {
   return false;
 }
 
+bool CGIOperandList::hasSubOperandAlias(
+    StringRef Name, std::pair<unsigned, unsigned> &SubOp) const {
+  assert(!Name.empty() && "Cannot search for operand with no name!");
+  auto SubOpIter = SubOpAliases.find(Name);
+  if (SubOpIter != SubOpAliases.end()) {
+    SubOp = SubOpIter->second;
+    return true;
+  }
+  return false;
+}
+
 std::pair<unsigned,unsigned>
 CGIOperandList::ParseOperandName(StringRef Op, bool AllowWholeOp) {
   if (Op.empty() || Op[0] != '$')
@@ -195,7 +251,21 @@ CGIOperandList::ParseOperandName(StringRef Op, bool AllowWholeOp) {
     OpName = OpName.substr(0, DotIdx);
   }
 
-  unsigned OpIdx = getOperandNamed(OpName);
+  unsigned OpIdx;
+
+  if (std::pair<unsigned, unsigned> SubOp; hasSubOperandAlias(OpName, SubOp)) {
+    // Found a name for a piece of an operand, just return it directly.
+    if (!SubOpName.empty()) {
+      PrintFatalError(
+          TheDef->getLoc(),
+          TheDef->getName() +
+              ": Cannot use dotted suboperand name within suboperand '" +
+              OpName + "'");
+    }
+    return SubOp;
+  }
+
+  OpIdx = getOperandNamed(OpName);
 
   if (SubOpName.empty()) {  // If no suboperand name was specified:
     // If one was needed, throw.
@@ -350,8 +420,6 @@ void CGIOperandList::ProcessDisableEncoding(StringRef DisableEncoding) {
     std::pair<unsigned,unsigned> Op = ParseOperandName(OpName, false);
 
     // Mark the operand as not-to-be encoded.
-    if (Op.second >= OperandList[Op.first].DoNotEncode.size())
-      OperandList[Op.first].DoNotEncode.resize(Op.second+1);
     OperandList[Op.first].DoNotEncode[Op.second] = true;
   }
 
@@ -511,9 +579,9 @@ FlattenAsmStringVariants(StringRef Cur, unsigned Variant) {
   return Res;
 }
 
-bool CodeGenInstruction::isOperandImpl(unsigned i,
+bool CodeGenInstruction::isOperandImpl(StringRef OpListName, unsigned i,
                                        StringRef PropertyName) const {
-  DagInit *ConstraintList = TheDef->getValueAsDag("InOperandList");
+  DagInit *ConstraintList = TheDef->getValueAsDag(OpListName);
   if (!ConstraintList || i >= ConstraintList->getNumArgs())
     return false;
 

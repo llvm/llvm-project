@@ -155,7 +155,7 @@ define <4 x i16> @fold_srem_vec_1(<4 x i16> %x) nounwind {
 ; RV64IM-NEXT:    add a3, a3, a2
 ; RV64IM-NEXT:    srli a6, a3, 63
 ; RV64IM-NEXT:    srli a3, a3, 6
-; RV64IM-NEXT:    addw a3, a3, a6
+; RV64IM-NEXT:    add a3, a3, a6
 ; RV64IM-NEXT:    lui a6, %hi(.LCPI0_1)
 ; RV64IM-NEXT:    ld a6, %lo(.LCPI0_1)(a6)
 ; RV64IM-NEXT:    li a7, 95
@@ -165,7 +165,7 @@ define <4 x i16> @fold_srem_vec_1(<4 x i16> %x) nounwind {
 ; RV64IM-NEXT:    sub a3, a3, a1
 ; RV64IM-NEXT:    srli a6, a3, 63
 ; RV64IM-NEXT:    srli a3, a3, 6
-; RV64IM-NEXT:    addw a3, a3, a6
+; RV64IM-NEXT:    add a3, a3, a6
 ; RV64IM-NEXT:    lui a6, %hi(.LCPI0_2)
 ; RV64IM-NEXT:    ld a6, %lo(.LCPI0_2)(a6)
 ; RV64IM-NEXT:    li a7, -124
@@ -174,21 +174,21 @@ define <4 x i16> @fold_srem_vec_1(<4 x i16> %x) nounwind {
 ; RV64IM-NEXT:    mulh a3, a5, a6
 ; RV64IM-NEXT:    srli a6, a3, 63
 ; RV64IM-NEXT:    srli a3, a3, 5
-; RV64IM-NEXT:    addw a3, a3, a6
+; RV64IM-NEXT:    add a3, a3, a6
 ; RV64IM-NEXT:    lui a6, %hi(.LCPI0_3)
 ; RV64IM-NEXT:    ld a6, %lo(.LCPI0_3)(a6)
 ; RV64IM-NEXT:    li a7, 98
 ; RV64IM-NEXT:    mulw a3, a3, a7
-; RV64IM-NEXT:    subw a3, a5, a3
-; RV64IM-NEXT:    mulh a5, a4, a6
-; RV64IM-NEXT:    srli a6, a5, 63
-; RV64IM-NEXT:    srli a5, a5, 7
-; RV64IM-NEXT:    addw a5, a5, a6
+; RV64IM-NEXT:    subw a5, a5, a3
+; RV64IM-NEXT:    mulh a3, a4, a6
+; RV64IM-NEXT:    srli a6, a3, 63
+; RV64IM-NEXT:    srli a3, a3, 7
+; RV64IM-NEXT:    add a3, a3, a6
 ; RV64IM-NEXT:    li a6, -1003
-; RV64IM-NEXT:    mulw a5, a5, a6
-; RV64IM-NEXT:    subw a4, a4, a5
+; RV64IM-NEXT:    mulw a3, a3, a6
+; RV64IM-NEXT:    subw a4, a4, a3
 ; RV64IM-NEXT:    sh a4, 6(a0)
-; RV64IM-NEXT:    sh a3, 4(a0)
+; RV64IM-NEXT:    sh a5, 4(a0)
 ; RV64IM-NEXT:    sh a1, 2(a0)
 ; RV64IM-NEXT:    sh a2, 0(a0)
 ; RV64IM-NEXT:    ret
@@ -336,7 +336,7 @@ define <4 x i16> @fold_srem_vec_2(<4 x i16> %x) nounwind {
 ; RV64IM-NEXT:    add a6, a6, a2
 ; RV64IM-NEXT:    srli a7, a6, 63
 ; RV64IM-NEXT:    srli a6, a6, 6
-; RV64IM-NEXT:    addw a6, a6, a7
+; RV64IM-NEXT:    add a6, a6, a7
 ; RV64IM-NEXT:    li a7, 95
 ; RV64IM-NEXT:    mulw a6, a6, a7
 ; RV64IM-NEXT:    subw a2, a2, a6
@@ -344,24 +344,24 @@ define <4 x i16> @fold_srem_vec_2(<4 x i16> %x) nounwind {
 ; RV64IM-NEXT:    add a6, a6, a1
 ; RV64IM-NEXT:    srli t0, a6, 63
 ; RV64IM-NEXT:    srli a6, a6, 6
-; RV64IM-NEXT:    addw a6, a6, t0
+; RV64IM-NEXT:    add a6, a6, t0
 ; RV64IM-NEXT:    mulw a6, a6, a7
 ; RV64IM-NEXT:    subw a1, a1, a6
 ; RV64IM-NEXT:    mulh a6, a5, a3
 ; RV64IM-NEXT:    add a6, a6, a5
 ; RV64IM-NEXT:    srli t0, a6, 63
 ; RV64IM-NEXT:    srli a6, a6, 6
-; RV64IM-NEXT:    addw a6, a6, t0
+; RV64IM-NEXT:    add a6, a6, t0
 ; RV64IM-NEXT:    mulw a6, a6, a7
 ; RV64IM-NEXT:    subw a5, a5, a6
 ; RV64IM-NEXT:    mulh a3, a4, a3
 ; RV64IM-NEXT:    add a3, a3, a4
 ; RV64IM-NEXT:    srli a6, a3, 63
 ; RV64IM-NEXT:    srli a3, a3, 6
-; RV64IM-NEXT:    addw a3, a3, a6
+; RV64IM-NEXT:    add a3, a3, a6
 ; RV64IM-NEXT:    mulw a3, a3, a7
-; RV64IM-NEXT:    subw a3, a4, a3
-; RV64IM-NEXT:    sh a3, 6(a0)
+; RV64IM-NEXT:    subw a4, a4, a3
+; RV64IM-NEXT:    sh a4, 6(a0)
 ; RV64IM-NEXT:    sh a5, 4(a0)
 ; RV64IM-NEXT:    sh a1, 2(a0)
 ; RV64IM-NEXT:    sh a2, 0(a0)
@@ -423,12 +423,12 @@ define <4 x i16> @combine_srem_sdiv(<4 x i16> %x) nounwind {
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    call __divsi3@plt
 ; RV32I-NEXT:    add a0, s8, a0
-; RV32I-NEXT:    add a1, s7, s2
-; RV32I-NEXT:    add a2, s6, s3
-; RV32I-NEXT:    add a3, s5, s4
-; RV32I-NEXT:    sh a3, 6(s0)
-; RV32I-NEXT:    sh a2, 4(s0)
-; RV32I-NEXT:    sh a1, 2(s0)
+; RV32I-NEXT:    add s2, s7, s2
+; RV32I-NEXT:    add s3, s6, s3
+; RV32I-NEXT:    add s4, s5, s4
+; RV32I-NEXT:    sh s4, 6(s0)
+; RV32I-NEXT:    sh s3, 4(s0)
+; RV32I-NEXT:    sh s2, 2(s0)
 ; RV32I-NEXT:    sh a0, 0(s0)
 ; RV32I-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
@@ -458,32 +458,32 @@ define <4 x i16> @combine_srem_sdiv(<4 x i16> %x) nounwind {
 ; RV32IM-NEXT:    add a6, a6, a7
 ; RV32IM-NEXT:    li a7, 95
 ; RV32IM-NEXT:    mul t0, a6, a7
-; RV32IM-NEXT:    sub a4, a4, t0
-; RV32IM-NEXT:    mulh t0, a1, a5
-; RV32IM-NEXT:    add t0, t0, a1
-; RV32IM-NEXT:    srli t1, t0, 31
-; RV32IM-NEXT:    srai t0, t0, 6
-; RV32IM-NEXT:    add t0, t0, t1
-; RV32IM-NEXT:    mul t1, t0, a7
-; RV32IM-NEXT:    sub a1, a1, t1
-; RV32IM-NEXT:    mulh t1, a3, a5
-; RV32IM-NEXT:    add t1, t1, a3
+; RV32IM-NEXT:    mulh t1, a1, a5
+; RV32IM-NEXT:    add t1, t1, a1
 ; RV32IM-NEXT:    srli t2, t1, 31
 ; RV32IM-NEXT:    srai t1, t1, 6
 ; RV32IM-NEXT:    add t1, t1, t2
 ; RV32IM-NEXT:    mul t2, t1, a7
-; RV32IM-NEXT:    sub a3, a3, t2
+; RV32IM-NEXT:    mulh t3, a3, a5
+; RV32IM-NEXT:    add t3, t3, a3
+; RV32IM-NEXT:    srli t4, t3, 31
+; RV32IM-NEXT:    srai t3, t3, 6
+; RV32IM-NEXT:    add t3, t3, t4
+; RV32IM-NEXT:    mul t4, t3, a7
 ; RV32IM-NEXT:    mulh a5, a2, a5
 ; RV32IM-NEXT:    add a5, a5, a2
-; RV32IM-NEXT:    srli t2, a5, 31
+; RV32IM-NEXT:    srli t5, a5, 31
 ; RV32IM-NEXT:    srai a5, a5, 6
-; RV32IM-NEXT:    add a5, a5, t2
+; RV32IM-NEXT:    add a5, a5, t5
 ; RV32IM-NEXT:    mul a7, a5, a7
-; RV32IM-NEXT:    sub a2, a2, a7
 ; RV32IM-NEXT:    add a2, a2, a5
-; RV32IM-NEXT:    add a3, a3, t1
-; RV32IM-NEXT:    add a1, a1, t0
+; RV32IM-NEXT:    sub a2, a2, a7
+; RV32IM-NEXT:    add a3, a3, t3
+; RV32IM-NEXT:    sub a3, a3, t4
+; RV32IM-NEXT:    add a1, a1, t1
+; RV32IM-NEXT:    sub a1, a1, t2
 ; RV32IM-NEXT:    add a4, a4, a6
+; RV32IM-NEXT:    sub a4, a4, t0
 ; RV32IM-NEXT:    sh a4, 6(a0)
 ; RV32IM-NEXT:    sh a1, 4(a0)
 ; RV32IM-NEXT:    sh a3, 2(a0)
@@ -539,13 +539,13 @@ define <4 x i16> @combine_srem_sdiv(<4 x i16> %x) nounwind {
 ; RV64I-NEXT:    li a1, 95
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    call __divdi3@plt
-; RV64I-NEXT:    addw a0, s8, a0
-; RV64I-NEXT:    addw a1, s7, s2
-; RV64I-NEXT:    addw a2, s6, s3
-; RV64I-NEXT:    addw a3, s5, s4
-; RV64I-NEXT:    sh a3, 6(s0)
-; RV64I-NEXT:    sh a2, 4(s0)
-; RV64I-NEXT:    sh a1, 2(s0)
+; RV64I-NEXT:    add a0, s8, a0
+; RV64I-NEXT:    add s2, s7, s2
+; RV64I-NEXT:    add s3, s6, s3
+; RV64I-NEXT:    add s4, s5, s4
+; RV64I-NEXT:    sh s4, 6(s0)
+; RV64I-NEXT:    sh s3, 4(s0)
+; RV64I-NEXT:    sh s2, 2(s0)
 ; RV64I-NEXT:    sh a0, 0(s0)
 ; RV64I-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
@@ -572,35 +572,35 @@ define <4 x i16> @combine_srem_sdiv(<4 x i16> %x) nounwind {
 ; RV64IM-NEXT:    add a6, a6, a2
 ; RV64IM-NEXT:    srli a7, a6, 63
 ; RV64IM-NEXT:    srai a6, a6, 6
-; RV64IM-NEXT:    addw a6, a6, a7
+; RV64IM-NEXT:    add a6, a6, a7
 ; RV64IM-NEXT:    li a7, 95
 ; RV64IM-NEXT:    mulw t0, a6, a7
-; RV64IM-NEXT:    subw a2, a2, t0
-; RV64IM-NEXT:    mulh t0, a1, a3
-; RV64IM-NEXT:    add t0, t0, a1
-; RV64IM-NEXT:    srli t1, t0, 63
-; RV64IM-NEXT:    srai t0, t0, 6
-; RV64IM-NEXT:    addw t0, t0, t1
-; RV64IM-NEXT:    mulw t1, t0, a7
-; RV64IM-NEXT:    subw a1, a1, t1
-; RV64IM-NEXT:    mulh t1, a5, a3
-; RV64IM-NEXT:    add t1, t1, a5
+; RV64IM-NEXT:    mulh t1, a1, a3
+; RV64IM-NEXT:    add t1, t1, a1
 ; RV64IM-NEXT:    srli t2, t1, 63
 ; RV64IM-NEXT:    srai t1, t1, 6
-; RV64IM-NEXT:    addw t1, t1, t2
+; RV64IM-NEXT:    add t1, t1, t2
 ; RV64IM-NEXT:    mulw t2, t1, a7
-; RV64IM-NEXT:    subw a5, a5, t2
+; RV64IM-NEXT:    mulh t3, a5, a3
+; RV64IM-NEXT:    add t3, t3, a5
+; RV64IM-NEXT:    srli t4, t3, 63
+; RV64IM-NEXT:    srai t3, t3, 6
+; RV64IM-NEXT:    add t3, t3, t4
+; RV64IM-NEXT:    mulw t4, t3, a7
 ; RV64IM-NEXT:    mulh a3, a4, a3
 ; RV64IM-NEXT:    add a3, a3, a4
-; RV64IM-NEXT:    srli t2, a3, 63
+; RV64IM-NEXT:    srli t5, a3, 63
 ; RV64IM-NEXT:    srai a3, a3, 6
-; RV64IM-NEXT:    addw a3, a3, t2
+; RV64IM-NEXT:    add a3, a3, t5
 ; RV64IM-NEXT:    mulw a7, a3, a7
-; RV64IM-NEXT:    subw a4, a4, a7
-; RV64IM-NEXT:    addw a3, a4, a3
-; RV64IM-NEXT:    addw a4, a5, t1
-; RV64IM-NEXT:    addw a1, a1, t0
-; RV64IM-NEXT:    addw a2, a2, a6
+; RV64IM-NEXT:    add a3, a4, a3
+; RV64IM-NEXT:    subw a3, a3, a7
+; RV64IM-NEXT:    add a5, a5, t3
+; RV64IM-NEXT:    subw a4, a5, t4
+; RV64IM-NEXT:    add a1, a1, t1
+; RV64IM-NEXT:    subw a1, a1, t2
+; RV64IM-NEXT:    add a2, a2, a6
+; RV64IM-NEXT:    subw a2, a2, t0
 ; RV64IM-NEXT:    sh a2, 6(a0)
 ; RV64IM-NEXT:    sh a1, 4(a0)
 ; RV64IM-NEXT:    sh a4, 2(a0)
@@ -738,7 +738,7 @@ define <4 x i16> @dont_fold_srem_power_of_two(<4 x i16> %x) nounwind {
 ; RV64IM-NEXT:    add a3, a3, a2
 ; RV64IM-NEXT:    srli a6, a3, 63
 ; RV64IM-NEXT:    srli a3, a3, 6
-; RV64IM-NEXT:    addw a3, a3, a6
+; RV64IM-NEXT:    add a3, a3, a6
 ; RV64IM-NEXT:    li a6, 95
 ; RV64IM-NEXT:    mulw a3, a3, a6
 ; RV64IM-NEXT:    subw a2, a2, a3
@@ -749,13 +749,13 @@ define <4 x i16> @dont_fold_srem_power_of_two(<4 x i16> %x) nounwind {
 ; RV64IM-NEXT:    srli a3, a5, 59
 ; RV64IM-NEXT:    add a3, a5, a3
 ; RV64IM-NEXT:    andi a3, a3, -32
-; RV64IM-NEXT:    subw a3, a5, a3
-; RV64IM-NEXT:    srli a5, a4, 61
-; RV64IM-NEXT:    add a5, a4, a5
-; RV64IM-NEXT:    andi a5, a5, -8
-; RV64IM-NEXT:    subw a4, a4, a5
+; RV64IM-NEXT:    subw a5, a5, a3
+; RV64IM-NEXT:    srli a3, a4, 61
+; RV64IM-NEXT:    add a3, a4, a3
+; RV64IM-NEXT:    andi a3, a3, -8
+; RV64IM-NEXT:    subw a4, a4, a3
 ; RV64IM-NEXT:    sh a4, 4(a0)
-; RV64IM-NEXT:    sh a3, 2(a0)
+; RV64IM-NEXT:    sh a5, 2(a0)
 ; RV64IM-NEXT:    sh a1, 0(a0)
 ; RV64IM-NEXT:    sh a2, 6(a0)
 ; RV64IM-NEXT:    ret
@@ -889,7 +889,7 @@ define <4 x i16> @dont_fold_srem_one(<4 x i16> %x) nounwind {
 ; RV64IM-NEXT:    add a3, a3, a2
 ; RV64IM-NEXT:    srli a5, a3, 63
 ; RV64IM-NEXT:    srli a3, a3, 4
-; RV64IM-NEXT:    addw a3, a3, a5
+; RV64IM-NEXT:    add a3, a3, a5
 ; RV64IM-NEXT:    lui a5, %hi(.LCPI4_1)
 ; RV64IM-NEXT:    ld a5, %lo(.LCPI4_1)(a5)
 ; RV64IM-NEXT:    li a6, 23
@@ -898,7 +898,7 @@ define <4 x i16> @dont_fold_srem_one(<4 x i16> %x) nounwind {
 ; RV64IM-NEXT:    mulh a3, a1, a5
 ; RV64IM-NEXT:    srli a5, a3, 63
 ; RV64IM-NEXT:    srli a3, a3, 8
-; RV64IM-NEXT:    addw a3, a3, a5
+; RV64IM-NEXT:    add a3, a3, a5
 ; RV64IM-NEXT:    lui a5, %hi(.LCPI4_2)
 ; RV64IM-NEXT:    ld a5, %lo(.LCPI4_2)(a5)
 ; RV64IM-NEXT:    li a6, 654
@@ -907,13 +907,13 @@ define <4 x i16> @dont_fold_srem_one(<4 x i16> %x) nounwind {
 ; RV64IM-NEXT:    mulh a3, a4, a5
 ; RV64IM-NEXT:    srli a5, a3, 63
 ; RV64IM-NEXT:    srli a3, a3, 11
-; RV64IM-NEXT:    addw a3, a3, a5
+; RV64IM-NEXT:    add a3, a3, a5
 ; RV64IM-NEXT:    lui a5, 1
 ; RV64IM-NEXT:    addiw a5, a5, 1327
 ; RV64IM-NEXT:    mulw a3, a3, a5
-; RV64IM-NEXT:    subw a3, a4, a3
+; RV64IM-NEXT:    subw a4, a4, a3
 ; RV64IM-NEXT:    sh zero, 0(a0)
-; RV64IM-NEXT:    sh a3, 6(a0)
+; RV64IM-NEXT:    sh a4, 6(a0)
 ; RV64IM-NEXT:    sh a1, 2(a0)
 ; RV64IM-NEXT:    sh a2, 4(a0)
 ; RV64IM-NEXT:    ret
@@ -1041,7 +1041,7 @@ define <4 x i16> @dont_fold_urem_i16_smax(<4 x i16> %x) nounwind {
 ; RV64IM-NEXT:    add a3, a3, a2
 ; RV64IM-NEXT:    srli a5, a3, 63
 ; RV64IM-NEXT:    srli a3, a3, 4
-; RV64IM-NEXT:    addw a3, a3, a5
+; RV64IM-NEXT:    add a3, a3, a5
 ; RV64IM-NEXT:    li a5, 23
 ; RV64IM-NEXT:    lui a6, %hi(.LCPI5_1)
 ; RV64IM-NEXT:    ld a6, %lo(.LCPI5_1)(a6)
@@ -1051,19 +1051,19 @@ define <4 x i16> @dont_fold_urem_i16_smax(<4 x i16> %x) nounwind {
 ; RV64IM-NEXT:    mulh a3, a4, a6
 ; RV64IM-NEXT:    srli a5, a3, 63
 ; RV64IM-NEXT:    srli a3, a3, 11
-; RV64IM-NEXT:    addw a3, a3, a5
+; RV64IM-NEXT:    add a3, a3, a5
 ; RV64IM-NEXT:    lui a5, 1
 ; RV64IM-NEXT:    addiw a5, a5, 1327
 ; RV64IM-NEXT:    mulw a3, a3, a5
-; RV64IM-NEXT:    subw a3, a4, a3
-; RV64IM-NEXT:    srli a4, a1, 49
-; RV64IM-NEXT:    add a4, a1, a4
+; RV64IM-NEXT:    subw a4, a4, a3
+; RV64IM-NEXT:    srli a3, a1, 49
+; RV64IM-NEXT:    add a3, a1, a3
 ; RV64IM-NEXT:    lui a5, 8
-; RV64IM-NEXT:    and a4, a4, a5
-; RV64IM-NEXT:    subw a1, a1, a4
+; RV64IM-NEXT:    and a3, a3, a5
+; RV64IM-NEXT:    subw a1, a1, a3
 ; RV64IM-NEXT:    sh zero, 0(a0)
 ; RV64IM-NEXT:    sh a1, 2(a0)
-; RV64IM-NEXT:    sh a3, 6(a0)
+; RV64IM-NEXT:    sh a4, 6(a0)
 ; RV64IM-NEXT:    sh a2, 4(a0)
 ; RV64IM-NEXT:    ret
   %1 = srem <4 x i16> %x, <i16 1, i16 32768, i16 23, i16 5423>
@@ -1279,9 +1279,9 @@ define <4 x i64> @dont_fold_srem_i64(<4 x i64> %x) nounwind {
 ; RV64IM-NEXT:    lui a5, 1
 ; RV64IM-NEXT:    addiw a5, a5, 1327
 ; RV64IM-NEXT:    mul a3, a3, a5
-; RV64IM-NEXT:    sub a3, a4, a3
+; RV64IM-NEXT:    sub a4, a4, a3
 ; RV64IM-NEXT:    sd zero, 0(a0)
-; RV64IM-NEXT:    sd a3, 24(a0)
+; RV64IM-NEXT:    sd a4, 24(a0)
 ; RV64IM-NEXT:    sd a1, 8(a0)
 ; RV64IM-NEXT:    sd a2, 16(a0)
 ; RV64IM-NEXT:    ret

@@ -7,14 +7,14 @@ define <2 x double> @test_insert_elt(<2 x double> %vec, double %val) {
   ret <2 x double> %res
 }
 
-define void @test_split_16B(<4 x float> %val, <4 x float>* %addr) {
+define void @test_split_16B(<4 x float> %val, ptr %addr) {
 ; CHECK-LABEL: test_split_16B:
 ; CHECK: str q0, [x0]
-  store <4 x float> %val, <4 x float>* %addr, align 8
+  store <4 x float> %val, ptr %addr, align 8
   ret void
 }
 
-define void @test_split_16B_splat(<4 x i32>, <4 x i32>* %addr) {
+define void @test_split_16B_splat(<4 x i32>, ptr %addr) {
 ; CHECK-LABEL: test_split_16B_splat:
 ; CHECK: str {{q[0-9]+}}
 
@@ -23,176 +23,176 @@ define void @test_split_16B_splat(<4 x i32>, <4 x i32>* %addr) {
   %vec.tmp2 = insertelement <4 x i32> %vec.tmp1, i32 42, i32 2
   %vec = insertelement <4 x i32> %vec.tmp2, i32 42, i32 3
 
-  store <4 x i32> %vec, <4 x i32>* %addr, align 8
+  store <4 x i32> %vec, ptr %addr, align 8
   ret void
 }
 
 
 %vec = type <2 x double>
 
-declare {%vec, %vec} @llvm.aarch64.neon.ld2r.v2f64.p0i8(i8*)
-define {%vec, %vec} @test_neon_load(i8* %addr) {
+declare {%vec, %vec} @llvm.aarch64.neon.ld2r.v2f64.p0(ptr)
+define {%vec, %vec} @test_neon_load(ptr %addr) {
 ; CHECK-LABEL: test_neon_load:
 ; CHECK: ld2r.2d { v0, v1 }, [x0]
-  %res = call {%vec, %vec} @llvm.aarch64.neon.ld2r.v2f64.p0i8(i8* %addr)
+  %res = call {%vec, %vec} @llvm.aarch64.neon.ld2r.v2f64.p0(ptr %addr)
   ret {%vec, %vec} %res
 }
 
-declare {%vec, %vec} @llvm.aarch64.neon.ld2lane.v2f64.p0i8(%vec, %vec, i64, i8*)
-define {%vec, %vec} @test_neon_load_lane(i8* %addr, %vec %in1, %vec %in2) {
+declare {%vec, %vec} @llvm.aarch64.neon.ld2lane.v2f64.p0(%vec, %vec, i64, ptr)
+define {%vec, %vec} @test_neon_load_lane(ptr %addr, %vec %in1, %vec %in2) {
 ; CHECK-LABEL: test_neon_load_lane:
 ; CHECK: ld2.d { v0, v1 }[0], [x0]
-  %res = call {%vec, %vec} @llvm.aarch64.neon.ld2lane.v2f64.p0i8(%vec %in1, %vec %in2, i64 0, i8* %addr)
+  %res = call {%vec, %vec} @llvm.aarch64.neon.ld2lane.v2f64.p0(%vec %in1, %vec %in2, i64 0, ptr %addr)
   ret {%vec, %vec} %res
 }
 
-declare void @llvm.aarch64.neon.st2.v2f64.p0i8(%vec, %vec, i8*)
-define void @test_neon_store(i8* %addr, %vec %in1, %vec %in2) {
+declare void @llvm.aarch64.neon.st2.v2f64.p0(%vec, %vec, ptr)
+define void @test_neon_store(ptr %addr, %vec %in1, %vec %in2) {
 ; CHECK-LABEL: test_neon_store:
 ; CHECK: st2.2d { v0, v1 }, [x0]
-  call void @llvm.aarch64.neon.st2.v2f64.p0i8(%vec %in1, %vec %in2, i8* %addr)
+  call void @llvm.aarch64.neon.st2.v2f64.p0(%vec %in1, %vec %in2, ptr %addr)
   ret void
 }
 
-declare void @llvm.aarch64.neon.st2lane.v2f64.p0i8(%vec, %vec, i64, i8*)
-define void @test_neon_store_lane(i8* %addr, %vec %in1, %vec %in2) {
+declare void @llvm.aarch64.neon.st2lane.v2f64.p0(%vec, %vec, i64, ptr)
+define void @test_neon_store_lane(ptr %addr, %vec %in1, %vec %in2) {
 ; CHECK-LABEL: test_neon_store_lane:
 ; CHECK: st2.d { v0, v1 }[1], [x0]
-  call void @llvm.aarch64.neon.st2lane.v2f64.p0i8(%vec %in1, %vec %in2, i64 1, i8* %addr)
+  call void @llvm.aarch64.neon.st2lane.v2f64.p0(%vec %in1, %vec %in2, i64 1, ptr %addr)
   ret void
 }
 
-declare {%vec, %vec} @llvm.aarch64.neon.ld2.v2f64.p0i8(i8*)
-define {{%vec, %vec}, i8*} @test_neon_load_post(i8* %addr, i32 %offset) {
+declare {%vec, %vec} @llvm.aarch64.neon.ld2.v2f64.p0(ptr)
+define {{%vec, %vec}, ptr} @test_neon_load_post(ptr %addr, i32 %offset) {
 ; CHECK-LABEL: test_neon_load_post:
 ; CHECK-DAG: sxtw [[OFFSET:x[0-9]+]], w1
 ; CHECK: ld2.2d { v0, v1 }, [x0], [[OFFSET]]
 
-  %vecs = call {%vec, %vec} @llvm.aarch64.neon.ld2.v2f64.p0i8(i8* %addr)
+  %vecs = call {%vec, %vec} @llvm.aarch64.neon.ld2.v2f64.p0(ptr %addr)
 
-  %addr.new = getelementptr inbounds i8, i8* %addr, i32 %offset
+  %addr.new = getelementptr inbounds i8, ptr %addr, i32 %offset
 
-  %res.tmp = insertvalue {{%vec, %vec}, i8*} undef, {%vec, %vec} %vecs, 0
-  %res = insertvalue {{%vec, %vec}, i8*} %res.tmp, i8* %addr.new, 1
-  ret {{%vec, %vec}, i8*} %res
+  %res.tmp = insertvalue {{%vec, %vec}, ptr} undef, {%vec, %vec} %vecs, 0
+  %res = insertvalue {{%vec, %vec}, ptr} %res.tmp, ptr %addr.new, 1
+  ret {{%vec, %vec}, ptr} %res
 }
 
-define {{%vec, %vec}, i8*} @test_neon_load_post_lane(i8* %addr, i32 %offset, %vec %in1, %vec %in2) {
+define {{%vec, %vec}, ptr} @test_neon_load_post_lane(ptr %addr, i32 %offset, %vec %in1, %vec %in2) {
 ; CHECK-LABEL: test_neon_load_post_lane:
 ; CHECK-DAG: sxtw [[OFFSET:x[0-9]+]], w1
 ; CHECK: ld2.d { v0, v1 }[1], [x0], [[OFFSET]]
 
-  %vecs = call {%vec, %vec} @llvm.aarch64.neon.ld2lane.v2f64.p0i8(%vec %in1, %vec %in2, i64 1, i8* %addr)
+  %vecs = call {%vec, %vec} @llvm.aarch64.neon.ld2lane.v2f64.p0(%vec %in1, %vec %in2, i64 1, ptr %addr)
 
-  %addr.new = getelementptr inbounds i8, i8* %addr, i32 %offset
+  %addr.new = getelementptr inbounds i8, ptr %addr, i32 %offset
 
-  %res.tmp = insertvalue {{%vec, %vec}, i8*} undef, {%vec, %vec} %vecs, 0
-  %res = insertvalue {{%vec, %vec}, i8*} %res.tmp, i8* %addr.new, 1
-  ret {{%vec, %vec}, i8*} %res
+  %res.tmp = insertvalue {{%vec, %vec}, ptr} undef, {%vec, %vec} %vecs, 0
+  %res = insertvalue {{%vec, %vec}, ptr} %res.tmp, ptr %addr.new, 1
+  ret {{%vec, %vec}, ptr} %res
 }
 
-define i8* @test_neon_store_post(i8* %addr, i32 %offset, %vec %in1, %vec %in2) {
+define ptr @test_neon_store_post(ptr %addr, i32 %offset, %vec %in1, %vec %in2) {
 ; CHECK-LABEL: test_neon_store_post:
 ; CHECK-DAG: sxtw [[OFFSET:x[0-9]+]], w1
 ; CHECK: st2.2d { v0, v1 }, [x0], [[OFFSET]]
 
-  call void @llvm.aarch64.neon.st2.v2f64.p0i8(%vec %in1, %vec %in2, i8* %addr)
+  call void @llvm.aarch64.neon.st2.v2f64.p0(%vec %in1, %vec %in2, ptr %addr)
 
-  %addr.new = getelementptr inbounds i8, i8* %addr, i32 %offset
+  %addr.new = getelementptr inbounds i8, ptr %addr, i32 %offset
 
-  ret i8* %addr.new
+  ret ptr %addr.new
 }
 
-define i8* @test_neon_store_post_lane(i8* %addr, i32 %offset, %vec %in1, %vec %in2) {
+define ptr @test_neon_store_post_lane(ptr %addr, i32 %offset, %vec %in1, %vec %in2) {
 ; CHECK-LABEL: test_neon_store_post_lane:
 ; CHECK: sxtw [[OFFSET:x[0-9]+]], w1
 ; CHECK: st2.d { v0, v1 }[0], [x0], [[OFFSET]]
 
-  call void @llvm.aarch64.neon.st2lane.v2f64.p0i8(%vec %in1, %vec %in2, i64 0, i8* %addr)
+  call void @llvm.aarch64.neon.st2lane.v2f64.p0(%vec %in1, %vec %in2, i64 0, ptr %addr)
 
-  %addr.new = getelementptr inbounds i8, i8* %addr, i32 %offset
+  %addr.new = getelementptr inbounds i8, ptr %addr, i32 %offset
 
-  ret i8* %addr.new
+  ret ptr %addr.new
 }
 
 ; ld1 is slightly different because it goes via ISelLowering of normal IR ops
 ; rather than an intrinsic.
-define {%vec, double*} @test_neon_ld1_post_lane(double* %addr, i32 %offset, %vec %in) {
+define {%vec, ptr} @test_neon_ld1_post_lane(ptr %addr, i32 %offset, %vec %in) {
 ; CHECK-LABEL: test_neon_ld1_post_lane:
 ; CHECK: sbfiz [[OFFSET:x[0-9]+]], x1, #3, #32
 ; CHECK: ld1.d { v0 }[0], [x0], [[OFFSET]]
 
-  %loaded = load double, double* %addr, align 8
+  %loaded = load double, ptr %addr, align 8
   %newvec = insertelement %vec %in, double %loaded, i32 0
 
-  %addr.new = getelementptr inbounds double, double* %addr, i32 %offset
+  %addr.new = getelementptr inbounds double, ptr %addr, i32 %offset
 
-  %res.tmp = insertvalue {%vec, double*} undef, %vec %newvec, 0
-  %res = insertvalue {%vec, double*} %res.tmp, double* %addr.new, 1
+  %res.tmp = insertvalue {%vec, ptr} undef, %vec %newvec, 0
+  %res = insertvalue {%vec, ptr} %res.tmp, ptr %addr.new, 1
 
-  ret {%vec, double*} %res
+  ret {%vec, ptr} %res
 }
 
-define {{%vec, %vec}, i8*} @test_neon_load_post_exact(i8* %addr) {
+define {{%vec, %vec}, ptr} @test_neon_load_post_exact(ptr %addr) {
 ; CHECK-LABEL: test_neon_load_post_exact:
 ; CHECK: ld2.2d { v0, v1 }, [x0], #32
 
-  %vecs = call {%vec, %vec} @llvm.aarch64.neon.ld2.v2f64.p0i8(i8* %addr)
+  %vecs = call {%vec, %vec} @llvm.aarch64.neon.ld2.v2f64.p0(ptr %addr)
 
-  %addr.new = getelementptr inbounds i8, i8* %addr, i32 32
+  %addr.new = getelementptr inbounds i8, ptr %addr, i32 32
 
-  %res.tmp = insertvalue {{%vec, %vec}, i8*} undef, {%vec, %vec} %vecs, 0
-  %res = insertvalue {{%vec, %vec}, i8*} %res.tmp, i8* %addr.new, 1
-  ret {{%vec, %vec}, i8*} %res
+  %res.tmp = insertvalue {{%vec, %vec}, ptr} undef, {%vec, %vec} %vecs, 0
+  %res = insertvalue {{%vec, %vec}, ptr} %res.tmp, ptr %addr.new, 1
+  ret {{%vec, %vec}, ptr} %res
 }
 
-define {%vec, double*} @test_neon_ld1_post_lane_exact(double* %addr, %vec %in) {
+define {%vec, ptr} @test_neon_ld1_post_lane_exact(ptr %addr, %vec %in) {
 ; CHECK-LABEL: test_neon_ld1_post_lane_exact:
 ; CHECK: ld1.d { v0 }[0], [x0], #8
 
-  %loaded = load double, double* %addr, align 8
+  %loaded = load double, ptr %addr, align 8
   %newvec = insertelement %vec %in, double %loaded, i32 0
 
-  %addr.new = getelementptr inbounds double, double* %addr, i32 1
+  %addr.new = getelementptr inbounds double, ptr %addr, i32 1
 
-  %res.tmp = insertvalue {%vec, double*} undef, %vec %newvec, 0
-  %res = insertvalue {%vec, double*} %res.tmp, double* %addr.new, 1
+  %res.tmp = insertvalue {%vec, ptr} undef, %vec %newvec, 0
+  %res = insertvalue {%vec, ptr} %res.tmp, ptr %addr.new, 1
 
-  ret {%vec, double*} %res
+  ret {%vec, ptr} %res
 }
 
 ; As in the general load/store case, this GEP has defined semantics when the
 ; address wraps. We cannot use post-indexed addressing.
-define {%vec, double*} @test_neon_ld1_notpost_lane_exact(double* %addr, %vec %in) {
+define {%vec, ptr} @test_neon_ld1_notpost_lane_exact(ptr %addr, %vec %in) {
 ; CHECK-LABEL: test_neon_ld1_notpost_lane_exact:
 ; CHECK-NOT: ld1.d { {{v[0-9]+}} }[0], [{{x[0-9]+|sp}}], #8
 ; CHECK: add w0, w0, #8
 ; CHECK: ret
 
-  %loaded = load double, double* %addr, align 8
+  %loaded = load double, ptr %addr, align 8
   %newvec = insertelement %vec %in, double %loaded, i32 0
 
-  %addr.new = getelementptr double, double* %addr, i32 1
+  %addr.new = getelementptr double, ptr %addr, i32 1
 
-  %res.tmp = insertvalue {%vec, double*} undef, %vec %newvec, 0
-  %res = insertvalue {%vec, double*} %res.tmp, double* %addr.new, 1
+  %res.tmp = insertvalue {%vec, ptr} undef, %vec %newvec, 0
+  %res = insertvalue {%vec, ptr} %res.tmp, ptr %addr.new, 1
 
-  ret {%vec, double*} %res
+  ret {%vec, ptr} %res
 }
 
-define {%vec, double*} @test_neon_ld1_notpost_lane(double* %addr, i32 %offset, %vec %in) {
+define {%vec, ptr} @test_neon_ld1_notpost_lane(ptr %addr, i32 %offset, %vec %in) {
 ; CHECK-LABEL: test_neon_ld1_notpost_lane:
 ; CHECK-NOT: ld1.d { {{v[0-9]+}} }[0], [{{x[0-9]+|sp}}], {{x[0-9]+|sp}}
 ; CHECK: add w0, w0, w1, lsl #3
 ; CHECK: ret
 
-  %loaded = load double, double* %addr, align 8
+  %loaded = load double, ptr %addr, align 8
   %newvec = insertelement %vec %in, double %loaded, i32 0
 
-  %addr.new = getelementptr double, double* %addr, i32 %offset
+  %addr.new = getelementptr double, ptr %addr, i32 %offset
 
-  %res.tmp = insertvalue {%vec, double*} undef, %vec %newvec, 0
-  %res = insertvalue {%vec, double*} %res.tmp, double* %addr.new, 1
+  %res.tmp = insertvalue {%vec, ptr} undef, %vec %newvec, 0
+  %res = insertvalue {%vec, ptr} %res.tmp, ptr %addr.new, 1
 
-  ret {%vec, double*} %res
+  ret {%vec, ptr} %res
 }

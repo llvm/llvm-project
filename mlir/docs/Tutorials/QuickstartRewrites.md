@@ -8,7 +8,7 @@ demonstration purposes).
 
 See [MLIR specification](../LangRef.md) for more information about MLIR, the
 structure of the IR, operations, etc. See
-[Table-driven Operation Definition](../OpDefinitions.md) and
+[Table-driven Operation Definition](../DefiningDialects/Operations.md) and
 [Declarative Rewrite Rule](../DeclarativeRewrites.md) for the detailed explanation
 of all available mechanisms for defining operations and rewrites in a
 table-driven manner.
@@ -45,7 +45,7 @@ operations are generated from. To define an operation one needs to specify:
 
 ```tablegen
 def TFL_LeakyReluOp: TFL_Op<TFL_Dialect, "leaky_relu",
-                            [NoSideEffect, SameValueType]>,
+                            [NoMemoryEffect, SameValueType]>,
                      Results<(outs Tensor)> {
   let arguments = (ins
     F32Tensor:$x,

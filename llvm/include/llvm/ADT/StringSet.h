@@ -20,8 +20,8 @@ namespace llvm {
 
 /// StringSet - A wrapper for StringMap that provides set-like functionality.
 template <class AllocatorTy = MallocAllocator>
-class StringSet : public StringMap<NoneType, AllocatorTy> {
-  using Base = StringMap<NoneType, AllocatorTy>;
+class StringSet : public StringMap<std::nullopt_t, AllocatorTy> {
+  using Base = StringMap<std::nullopt_t, AllocatorTy>;
 
 public:
   StringSet() = default;
@@ -36,7 +36,7 @@ public:
   }
 
   template <typename InputIt>
-  void insert(const InputIt &begin, const InputIt &end) {
+  void insert(InputIt begin, InputIt end) {
     for (auto it = begin; it != end; ++it)
       insert(*it);
   }

@@ -21,8 +21,8 @@ for.end20:                                        ; preds = %entry
 
 for.body24:                                       ; preds = %for.body61.preheader, %for.end20
   %indvars.iv = phi i64 [ 0, %for.end20 ], [ %indvars.iv.next, %for.body61.preheader ]
-  %arrayidx26 = getelementptr inbounds [256 x i8], [256 x i8]* @connected_passed, i64 0, i64 %indvars.iv
-  store i8 0, i8* %arrayidx26, align 1
+  %arrayidx26 = getelementptr inbounds [256 x i8], ptr @connected_passed, i64 0, i64 %indvars.iv
+  store i8 0, ptr %arrayidx26, align 1
   %0 = trunc i64 %indvars.iv to i32
   br i1 false, label %for.inc56.4, label %if.then51
 

@@ -9,7 +9,7 @@
 ; CHECK: @[[LLVM_GLOBAL_CTORS:[a-zA-Z0-9_$"\\.-]+]] = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 2, ptr @sancov.module_ctor_trace_pc_guard, ptr @sancov.module_ctor_trace_pc_guard }]
 ; CHECK: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [1 x ptr] [ptr @__sancov_gen_], section "llvm.metadata"
 ;.
-define void @foo(i32* %a) {
+define void @foo(ptr %a) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc_guard(ptr @__sancov_gen_) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    ret void

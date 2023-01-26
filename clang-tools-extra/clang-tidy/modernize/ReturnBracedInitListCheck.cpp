@@ -14,9 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 void ReturnBracedInitListCheck::registerMatchers(MatchFinder *Finder) {
   // Skip list initialization and constructors with an initializer list.
@@ -82,6 +80,4 @@ void ReturnBracedInitListCheck::check(const MatchFinder::MatchResult &Result) {
        << FixItHint::CreateReplacement(CallParensRange.getEnd(), "}");
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

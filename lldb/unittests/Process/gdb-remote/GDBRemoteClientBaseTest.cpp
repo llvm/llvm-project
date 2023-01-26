@@ -39,7 +39,7 @@ struct MockDelegate : public GDBRemoteClientBase::ContinueDelegate {
 };
 
 struct TestClient : public GDBRemoteClientBase {
-  TestClient() : GDBRemoteClientBase("test.client", "test.client.listener") {
+  TestClient() : GDBRemoteClientBase("test.client") {
     m_send_acks = false;
   }
 };
@@ -71,7 +71,8 @@ protected:
   void WaitForRunEvent() {
     EventSP event_sp;
     listener_sp->GetEventForBroadcasterWithType(
-        &client, TestClient::eBroadcastBitRunPacketSent, event_sp, llvm::None);
+        &client, TestClient::eBroadcastBitRunPacketSent, event_sp,
+        std::nullopt);
   }
 };
 

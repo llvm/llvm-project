@@ -41,8 +41,8 @@ bb2:
   br label %branch.block
 
 branch.block:
-  %addr = phi i8* [blockaddress(@blockaddr_user, %target1), %bb1], [blockaddress(@blockaddr_user, %target2), %bb2]
-  indirectbr i8* %addr, [label %target1, label %target2]
+  %addr = phi ptr [blockaddress(@blockaddr_user, %target1), %bb1], [blockaddress(@blockaddr_user, %target2), %bb2]
+  indirectbr ptr %addr, [label %target1, label %target2]
 
 target1:
   br label %target2

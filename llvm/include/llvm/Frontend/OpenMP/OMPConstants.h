@@ -185,12 +185,60 @@ enum class OMPScheduleType {
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue */ ModifierMask)
 };
 
-enum OMPTgtExecModeFlags : int8_t {
-  OMP_TGT_EXEC_MODE_GENERIC = 1 << 0,
-  OMP_TGT_EXEC_MODE_SPMD = 1 << 1,
-  OMP_TGT_EXEC_MODE_GENERIC_SPMD =
-      OMP_TGT_EXEC_MODE_GENERIC | OMP_TGT_EXEC_MODE_SPMD,
-  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue */ OMP_TGT_EXEC_MODE_GENERIC_SPMD)
+/// Values for bit flags used to specify the mapping type for
+/// offloading.
+enum class OpenMPOffloadMappingFlags : uint64_t {
+  /// No flags
+  OMP_MAP_NONE = 0x0,
+  /// Allocate memory on the device and move data from host to device.
+  OMP_MAP_TO = 0x01,
+  /// Allocate memory on the device and move data from device to host.
+  OMP_MAP_FROM = 0x02,
+  /// Always perform the requested mapping action on the element, even
+  /// if it was already mapped before.
+  OMP_MAP_ALWAYS = 0x04,
+  /// Delete the element from the device environment, ignoring the
+  /// current reference count associated with the element.
+  OMP_MAP_DELETE = 0x08,
+  /// The element being mapped is a pointer-pointee pair; both the
+  /// pointer and the pointee should be mapped.
+  OMP_MAP_PTR_AND_OBJ = 0x10,
+  /// This flags signals that the base address of an entry should be
+  /// passed to the target kernel as an argument.
+  OMP_MAP_TARGET_PARAM = 0x20,
+  /// Signal that the runtime library has to return the device pointer
+  /// in the current position for the data being mapped. Used when we have the
+  /// use_device_ptr or use_device_addr clause.
+  OMP_MAP_RETURN_PARAM = 0x40,
+  /// This flag signals that the reference being passed is a pointer to
+  /// private data.
+  OMP_MAP_PRIVATE = 0x80,
+  /// Pass the element to the device by value.
+  OMP_MAP_LITERAL = 0x100,
+  /// Implicit map
+  OMP_MAP_IMPLICIT = 0x200,
+  /// Close is a hint to the runtime to allocate memory close to
+  /// the target device.
+  OMP_MAP_CLOSE = 0x400,
+  /// 0x800 is reserved for compatibility with XLC.
+  /// Produce a runtime error if the data is not already allocated.
+  OMP_MAP_PRESENT = 0x1000,
+  // Increment and decrement a separate reference counter so that the data
+  // cannot be unmapped within the associated region.  Thus, this flag is
+  // intended to be used on 'target' and 'target data' directives because they
+  // are inherently structured.  It is not intended to be used on 'target
+  // enter data' and 'target exit data' directives because they are inherently
+  // dynamic.
+  // This is an OpenMP extension for the sake of OpenACC support.
+  OMP_MAP_OMPX_HOLD = 0x2000,
+  /// Signal that the runtime library should use args as an array of
+  /// descriptor_dim pointers and use args_size as dims. Used when we have
+  /// non-contiguous list items in target update directive
+  OMP_MAP_NON_CONTIG = 0x100000000000,
+  /// The 16 MSBs of the flags indicate whether the entry is member of some
+  /// struct/class.
+  OMP_MAP_MEMBER_OF = 0xffff000000000000,
+  LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ OMP_MAP_MEMBER_OF)
 };
 
 enum class AddressSpace : unsigned {
@@ -207,8 +255,23 @@ enum class OMPInteropType { Unknown, Target, TargetSync };
 /// Atomic compare operations. Currently OpenMP only supports ==, >, and <.
 enum class OMPAtomicCompareOp : unsigned { EQ, MIN, MAX };
 
+/// Fields ids in kmp_depend_info record.
+enum class RTLDependInfoFields { BaseAddr, Len, Flags };
+
+/// Dependence kind for RTL.
+enum class RTLDependenceKindTy {
+  DepUnknown = 0x0,
+  DepIn = 0x01,
+  DepInOut = 0x3,
+  DepMutexInOutSet = 0x4,
+  DepInOutSet = 0x8,
+  DepOmpAllMem = 0x80,
+};
+
 } // end namespace omp
 
 } // end namespace llvm
+
+#include "OMPDeviceConstants.h"
 
 #endif // LLVM_FRONTEND_OPENMP_OMPCONSTANTS_H

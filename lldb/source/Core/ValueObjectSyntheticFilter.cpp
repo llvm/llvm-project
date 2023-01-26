@@ -17,6 +17,7 @@
 #include "lldb/Utility/Status.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include <optional>
 
 namespace lldb_private {
 class Declaration;
@@ -121,7 +122,7 @@ bool ValueObjectSynthetic::MightHaveChildren() {
   return (m_might_have_children != eLazyBoolNo);
 }
 
-llvm::Optional<uint64_t> ValueObjectSynthetic::GetByteSize() {
+std::optional<uint64_t> ValueObjectSynthetic::GetByteSize() {
   return m_parent->GetByteSize();
 }
 

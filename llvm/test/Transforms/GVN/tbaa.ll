@@ -1,119 +1,119 @@
-; RUN: opt -tbaa -basic-aa -gvn -S < %s | FileCheck %s
+; RUN: opt -passes=gvn -S < %s | FileCheck %s
 
-define i32 @test1(i8* %p, i8* %q) {
-; CHECK-LABEL: @test1(i8* %p, i8* %q)
-; CHECK: call i32 @foo(i8* %p)
+define i32 @test1(ptr %p, ptr %q) {
+; CHECK-LABEL: @test1(ptr %p, ptr %q)
+; CHECK: call i32 @foo(ptr %p)
 ; CHECK-NOT: tbaa
 ; CHECK: %c = add i32 %a, %a
-  %a = call i32 @foo(i8* %p), !tbaa !0
-  %b = call i32 @foo(i8* %p)
+  %a = call i32 @foo(ptr %p), !tbaa !0
+  %b = call i32 @foo(ptr %p)
   %c = add i32 %a, %b
   ret i32 %c
 }
 
-define i32 @test2(i8* %p, i8* %q) {
-; CHECK-LABEL: @test2(i8* %p, i8* %q)
-; CHECK: call i32 @foo(i8* %p), !tbaa [[TAGC:!.*]]
+define i32 @test2(ptr %p, ptr %q) {
+; CHECK-LABEL: @test2(ptr %p, ptr %q)
+; CHECK: call i32 @foo(ptr %p), !tbaa [[TAGC:!.*]]
 ; CHECK: %c = add i32 %a, %a
-  %a = call i32 @foo(i8* %p), !tbaa !0
-  %b = call i32 @foo(i8* %p), !tbaa !0
+  %a = call i32 @foo(ptr %p), !tbaa !0
+  %b = call i32 @foo(ptr %p), !tbaa !0
   %c = add i32 %a, %b
   ret i32 %c
 }
 
-define i32 @test3(i8* %p, i8* %q) {
-; CHECK-LABEL: @test3(i8* %p, i8* %q)
-; CHECK: call i32 @foo(i8* %p), !tbaa [[TAGB:!.*]]
+define i32 @test3(ptr %p, ptr %q) {
+; CHECK-LABEL: @test3(ptr %p, ptr %q)
+; CHECK: call i32 @foo(ptr %p), !tbaa [[TAGB:!.*]]
 ; CHECK: %c = add i32 %a, %a
-  %a = call i32 @foo(i8* %p), !tbaa !3
-  %b = call i32 @foo(i8* %p), !tbaa !3
+  %a = call i32 @foo(ptr %p), !tbaa !3
+  %b = call i32 @foo(ptr %p), !tbaa !3
   %c = add i32 %a, %b
   ret i32 %c
 }
 
-define i32 @test4(i8* %p, i8* %q) {
-; CHECK-LABEL: @test4(i8* %p, i8* %q)
-; CHECK: call i32 @foo(i8* %p), !tbaa [[TAGA:!.*]]
+define i32 @test4(ptr %p, ptr %q) {
+; CHECK-LABEL: @test4(ptr %p, ptr %q)
+; CHECK: call i32 @foo(ptr %p), !tbaa [[TAGA:!.*]]
 ; CHECK: %c = add i32 %a, %a
-  %a = call i32 @foo(i8* %p), !tbaa !1
-  %b = call i32 @foo(i8* %p), !tbaa !0
+  %a = call i32 @foo(ptr %p), !tbaa !1
+  %b = call i32 @foo(ptr %p), !tbaa !0
   %c = add i32 %a, %b
   ret i32 %c
 }
 
-define i32 @test5(i8* %p, i8* %q) {
-; CHECK-LABEL: @test5(i8* %p, i8* %q)
-; CHECK: call i32 @foo(i8* %p), !tbaa [[TAGA]]
+define i32 @test5(ptr %p, ptr %q) {
+; CHECK-LABEL: @test5(ptr %p, ptr %q)
+; CHECK: call i32 @foo(ptr %p), !tbaa [[TAGA]]
 ; CHECK: %c = add i32 %a, %a
-  %a = call i32 @foo(i8* %p), !tbaa !0
-  %b = call i32 @foo(i8* %p), !tbaa !1
+  %a = call i32 @foo(ptr %p), !tbaa !0
+  %b = call i32 @foo(ptr %p), !tbaa !1
   %c = add i32 %a, %b
   ret i32 %c
 }
 
-define i32 @test6(i8* %p, i8* %q) {
-; CHECK-LABEL: @test6(i8* %p, i8* %q)
-; CHECK: call i32 @foo(i8* %p), !tbaa [[TAGA]]
+define i32 @test6(ptr %p, ptr %q) {
+; CHECK-LABEL: @test6(ptr %p, ptr %q)
+; CHECK: call i32 @foo(ptr %p), !tbaa [[TAGA]]
 ; CHECK: %c = add i32 %a, %a
-  %a = call i32 @foo(i8* %p), !tbaa !0
-  %b = call i32 @foo(i8* %p), !tbaa !3
+  %a = call i32 @foo(ptr %p), !tbaa !0
+  %b = call i32 @foo(ptr %p), !tbaa !3
   %c = add i32 %a, %b
   ret i32 %c
 }
 
-define i32 @test7(i8* %p, i8* %q) {
-; CHECK-LABEL: @test7(i8* %p, i8* %q)
-; CHECK: call i32 @foo(i8* %p)
+define i32 @test7(ptr %p, ptr %q) {
+; CHECK-LABEL: @test7(ptr %p, ptr %q)
+; CHECK: call i32 @foo(ptr %p)
 ; CHECK-NOT: tbaa
 ; CHECK: %c = add i32 %a, %a
-  %a = call i32 @foo(i8* %p), !tbaa !4
-  %b = call i32 @foo(i8* %p), !tbaa !3
+  %a = call i32 @foo(ptr %p), !tbaa !4
+  %b = call i32 @foo(ptr %p), !tbaa !3
   %c = add i32 %a, %b
   ret i32 %c
 }
 
-define i32 @test8(i32* %p, i32* %q) {
+define i32 @test8(ptr %p, ptr %q) {
 ; CHECK-LABEL: @test8
-; CHECK-NEXT: store i32 15, i32* %p
+; CHECK-NEXT: store i32 15, ptr %p
 ; CHECK-NEXT: ret i32 0
 ; Since we know the location is invariant, we can forward the
 ; load across the potentially aliasing store.
 
-  %a = load i32, i32* %q, !tbaa !10
-  store i32 15, i32* %p
-  %b = load i32, i32* %q, !tbaa !10
+  %a = load i32, ptr %q, !tbaa !10
+  store i32 15, ptr %p
+  %b = load i32, ptr %q, !tbaa !10
   %c = sub i32 %a, %b
   ret i32 %c
 }
 
-define i32 @test9(i32* %p, i32* %q) {
+define i32 @test9(ptr %p, ptr %q) {
 ; CHECK-LABEL: @test9
 ; CHECK-NEXT: call void @clobber()
 ; CHECK-NEXT: ret i32 0
 ; Since we know the location is invariant, we can forward the
 ; load across the potentially aliasing store (within the call).
 
-  %a = load i32, i32* %q, !tbaa !10
+  %a = load i32, ptr %q, !tbaa !10
   call void @clobber()
-  %b = load i32, i32* %q, !tbaa !10
+  %b = load i32, ptr %q, !tbaa !10
   %c = sub i32 %a, %b
   ret i32 %c
 }
 
-define i32 @test10(i8* %p, i8* %q) {
+define i32 @test10(ptr %p, ptr %q) {
 ; If one access encloses the other, then the merged access is the enclosed one
 ; and not just the common final access type.
 ; CHECK-LABEL: @test10
-; CHECK: call i32 @foo(i8* %p), !tbaa [[TAG_X_i:!.*]]
+; CHECK: call i32 @foo(ptr %p), !tbaa [[TAG_X_i:!.*]]
 ; CHECK: %c = add i32 %a, %a
-  %a = call i32 @foo(i8* %p), !tbaa !15  ; TAG_X_i
-  %b = call i32 @foo(i8* %p), !tbaa !19  ; TAG_Y_x_i
+  %a = call i32 @foo(ptr %p), !tbaa !15  ; TAG_X_i
+  %b = call i32 @foo(ptr %p), !tbaa !19  ; TAG_Y_x_i
   %c = add i32 %a, %b
   ret i32 %c
 }
 
 declare void @clobber()
-declare i32 @foo(i8*) readonly
+declare i32 @foo(ptr) readonly
 
 ; CHECK-DAG: [[TAGC]] = !{[[TYPEC:!.*]], [[TYPEC]], i64 0}
 ; CHECK-DAG: [[TYPEC]] = !{!"C", [[TYPEA:!.*]]}

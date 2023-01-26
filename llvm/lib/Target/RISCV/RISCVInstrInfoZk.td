@@ -96,7 +96,7 @@ def AES64ES   : ALU_rr<0b0011001, 0b000, "aes64es">;
 def AES64ESM  : ALU_rr<0b0011011, 0b000, "aes64esm">;
 } // Predicates = [HasStdExtZkne, IsRV64]
 
-let Predicates = [HasStdExtZknh] in {
+let Predicates = [HasStdExtZknh], IsSignExtendingOpW = 1 in {
 def SHA256SIG0 : RVKUnary<0b000100000010, 0b001, "sha256sig0">;
 def SHA256SIG1 : RVKUnary<0b000100000011, 0b001, "sha256sig1">;
 def SHA256SUM0 : RVKUnary<0b000100000000, 0b001, "sha256sum0">;

@@ -12,14 +12,14 @@ define hidden void @Func() !type !0 {
 ; CHECK1: ![[A1]] = !{!"Alias", !"Func", i8 1, i8 0}
 ; CHECK1: ![[A2]] = !{!"Hidden_Alias", !"Func", i8 1, i8 0}
 ; CHECK1: ![[A3]] = !{!"Weak_Alias", !"Func", i8 0, i8 1}
-@Alias = hidden alias void (), void ()* @Func
-@Hidden_Alias = hidden alias void (), void ()* @Func
-@Weak_Alias = weak alias void (), void ()* @Func
+@Alias = hidden alias void (), ptr @Func
+@Hidden_Alias = hidden alias void (), ptr @Func
+@Weak_Alias = weak alias void (), ptr @Func
 
 @Variable = global i32 0
 
 ; Only generate summary alias information for aliases to functions
 ; CHECK1-NOT: Variable_Alias
-@Variable_Alias = alias i32, i32* @Variable
+@Variable_Alias = alias i32, ptr @Variable
 
 !0 = !{i64 0, !"_ZTSFvvE"}

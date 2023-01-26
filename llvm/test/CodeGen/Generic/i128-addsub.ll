@@ -1,6 +1,6 @@
 ; RUN: llc < %s
 
-define void @test_add(i64 %AL, i64 %AH, i64 %BL, i64 %BH, i64* %RL, i64* %RH) {
+define void @test_add(i64 %AL, i64 %AH, i64 %BL, i64 %BH, ptr %RL, ptr %RH) {
 entry:
 	%tmp1 = zext i64 %AL to i128		; <i128> [#uses=1]
 	%tmp23 = zext i64 %AH to i128		; <i128> [#uses=1]
@@ -12,14 +12,14 @@ entry:
 	%tmp12 = or i128 %tmp11, %tmp67		; <i128> [#uses=1]
 	%tmp15 = add i128 %tmp12, %tmp5		; <i128> [#uses=2]
 	%tmp1617 = trunc i128 %tmp15 to i64		; <i64> [#uses=1]
-	store i64 %tmp1617, i64* %RL
+	store i64 %tmp1617, ptr %RL
 	%tmp21 = lshr i128 %tmp15, 64		; <i128> [#uses=1]
 	%tmp2122 = trunc i128 %tmp21 to i64		; <i64> [#uses=1]
-	store i64 %tmp2122, i64* %RH
+	store i64 %tmp2122, ptr %RH
 	ret void
 }
 
-define void @test_sub(i64 %AL, i64 %AH, i64 %BL, i64 %BH, i64* %RL, i64* %RH) {
+define void @test_sub(i64 %AL, i64 %AH, i64 %BL, i64 %BH, ptr %RL, ptr %RH) {
 entry:
 	%tmp1 = zext i64 %AL to i128		; <i128> [#uses=1]
 	%tmp23 = zext i64 %AH to i128		; <i128> [#uses=1]
@@ -31,9 +31,9 @@ entry:
 	%tmp12 = or i128 %tmp11, %tmp67		; <i128> [#uses=1]
 	%tmp15 = sub i128 %tmp5, %tmp12		; <i128> [#uses=2]
 	%tmp1617 = trunc i128 %tmp15 to i64		; <i64> [#uses=1]
-	store i64 %tmp1617, i64* %RL
+	store i64 %tmp1617, ptr %RL
 	%tmp21 = lshr i128 %tmp15, 64		; <i128> [#uses=1]
 	%tmp2122 = trunc i128 %tmp21 to i64		; <i64> [#uses=1]
-	store i64 %tmp2122, i64* %RH
+	store i64 %tmp2122, ptr %RH
 	ret void
 }

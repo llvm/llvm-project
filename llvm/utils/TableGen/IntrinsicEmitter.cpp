@@ -361,10 +361,10 @@ static void EncodeFixedType(Record *R, std::vector<unsigned char> &ArgCodes,
   unsigned Tmp = 0;
   switch (VT) {
   default: break;
-  case MVT::iPTRAny: ++Tmp; LLVM_FALLTHROUGH;
-  case MVT::vAny: ++Tmp;    LLVM_FALLTHROUGH;
-  case MVT::fAny: ++Tmp;    LLVM_FALLTHROUGH;
-  case MVT::iAny: ++Tmp;    LLVM_FALLTHROUGH;
+  case MVT::iPTRAny: ++Tmp; [[fallthrough]];
+  case MVT::vAny: ++Tmp;    [[fallthrough]];
+  case MVT::fAny: ++Tmp;    [[fallthrough]];
+  case MVT::iAny: ++Tmp;    [[fallthrough]];
   case MVT::Any: {
     // If this is an "any" valuetype, then the type is the type of the next
     // type in the list specified to getIntrinsic().
@@ -444,16 +444,16 @@ static void UpdateArgCodes(Record *R, std::vector<unsigned char> &ArgCodes,
     break;
   case MVT::iPTRAny:
     ++Tmp;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MVT::vAny:
     ++Tmp;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MVT::fAny:
     ++Tmp;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MVT::iAny:
     ++Tmp;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MVT::Any:
     unsigned OriginalIdx = ArgCodes.size() - NumInserted;
     assert(OriginalIdx >= Mapping.size());
@@ -601,49 +601,64 @@ void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
 }
 
 namespace {
+std::optional<bool> compareFnAttributes(const CodeGenIntrinsic *L,
+                                        const CodeGenIntrinsic *R) {
+  // Sort throwing intrinsics after non-throwing intrinsics.
+  if (L->canThrow != R->canThrow)
+    return R->canThrow;
+
+  if (L->isNoDuplicate != R->isNoDuplicate)
+    return R->isNoDuplicate;
+
+  if (L->isNoMerge != R->isNoMerge)
+    return R->isNoMerge;
+
+  if (L->isNoReturn != R->isNoReturn)
+    return R->isNoReturn;
+
+  if (L->isNoCallback != R->isNoCallback)
+    return R->isNoCallback;
+
+  if (L->isNoSync != R->isNoSync)
+    return R->isNoSync;
+
+  if (L->isNoFree != R->isNoFree)
+    return R->isNoFree;
+
+  if (L->isWillReturn != R->isWillReturn)
+    return R->isWillReturn;
+
+  if (L->isCold != R->isCold)
+    return R->isCold;
+
+  if (L->isConvergent != R->isConvergent)
+    return R->isConvergent;
+
+  if (L->isSpeculatable != R->isSpeculatable)
+    return R->isSpeculatable;
+
+  if (L->hasSideEffects != R->hasSideEffects)
+    return R->hasSideEffects;
+
+  // Try to order by readonly/readnone attribute.
+  uint32_t LK = L->ME.toIntValue();
+  uint32_t RK = R->ME.toIntValue();
+  if (LK != RK) return (LK > RK);
+
+  return std::nullopt;
+}
+
+struct FnAttributeComparator {
+  bool operator()(const CodeGenIntrinsic *L, const CodeGenIntrinsic *R) const {
+    return compareFnAttributes(L, R).value_or(false);
+  }
+};
+
 struct AttributeComparator {
   bool operator()(const CodeGenIntrinsic *L, const CodeGenIntrinsic *R) const {
-    // Sort throwing intrinsics after non-throwing intrinsics.
-    if (L->canThrow != R->canThrow)
-      return R->canThrow;
+    if (std::optional<bool> Res = compareFnAttributes(L, R))
+      return *Res;
 
-    if (L->isNoDuplicate != R->isNoDuplicate)
-      return R->isNoDuplicate;
-
-    if (L->isNoMerge != R->isNoMerge)
-      return R->isNoMerge;
-
-    if (L->isNoReturn != R->isNoReturn)
-      return R->isNoReturn;
-
-    if (L->isNoCallback != R->isNoCallback)
-      return R->isNoCallback;
-
-    if (L->isNoSync != R->isNoSync)
-      return R->isNoSync;
-
-    if (L->isNoFree != R->isNoFree)
-      return R->isNoFree;
-
-    if (L->isWillReturn != R->isWillReturn)
-      return R->isWillReturn;
-
-    if (L->isCold != R->isCold)
-      return R->isCold;
-
-    if (L->isConvergent != R->isConvergent)
-      return R->isConvergent;
-
-    if (L->isSpeculatable != R->isSpeculatable)
-      return R->isSpeculatable;
-
-    if (L->hasSideEffects != R->hasSideEffects)
-      return R->hasSideEffects;
-
-    // Try to order by readonly/readnone attribute.
-    CodeGenIntrinsic::ModRefBehavior LK = L->ModRef;
-    CodeGenIntrinsic::ModRefBehavior RK = R->ModRef;
-    if (LK != RK) return (LK > RK);
     // Order by argument attributes.
     // This is reliable because each side is already sorted internally.
     return (L->ArgumentAttributes < R->ArgumentAttributes);
@@ -656,6 +671,118 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
                                       raw_ostream &OS) {
   OS << "// Add parameter attributes that are not common to all intrinsics.\n";
   OS << "#ifdef GET_INTRINSIC_ATTRIBUTES\n";
+
+  // Compute unique argument attribute sets.
+  std::map<SmallVector<CodeGenIntrinsic::ArgAttribute, 0>, unsigned>
+      UniqArgAttributes;
+  OS << "static AttributeSet getIntrinsicArgAttributeSet("
+     << "LLVMContext &C, unsigned ID) {\n"
+     << "  switch (ID) {\n"
+     << "  default: llvm_unreachable(\"Invalid attribute set number\");\n";
+  for (const CodeGenIntrinsic &Int : Ints) {
+    for (auto &Attrs : Int.ArgumentAttributes) {
+      if (Attrs.empty())
+        continue;
+
+      unsigned ID = UniqArgAttributes.size();
+      if (!UniqArgAttributes.try_emplace(Attrs, ID).second)
+        continue;
+
+      assert(is_sorted(Attrs) &&
+             "Argument attributes are not sorted");
+
+      OS << "  case " << ID << ":\n";
+      OS << "    return AttributeSet::get(C, {\n";
+      for (const CodeGenIntrinsic::ArgAttribute &Attr : Attrs) {
+        switch (Attr.Kind) {
+        case CodeGenIntrinsic::NoCapture:
+          OS << "      Attribute::get(C, Attribute::NoCapture),\n";
+          break;
+        case CodeGenIntrinsic::NoAlias:
+          OS << "      Attribute::get(C, Attribute::NoAlias),\n";
+          break;
+        case CodeGenIntrinsic::NoUndef:
+          OS << "      Attribute::get(C, Attribute::NoUndef),\n";
+          break;
+        case CodeGenIntrinsic::NonNull:
+          OS << "      Attribute::get(C, Attribute::NonNull),\n";
+          break;
+        case CodeGenIntrinsic::Returned:
+          OS << "      Attribute::get(C, Attribute::Returned),\n";
+          break;
+        case CodeGenIntrinsic::ReadOnly:
+          OS << "      Attribute::get(C, Attribute::ReadOnly),\n";
+          break;
+        case CodeGenIntrinsic::WriteOnly:
+          OS << "      Attribute::get(C, Attribute::WriteOnly),\n";
+          break;
+        case CodeGenIntrinsic::ReadNone:
+          OS << "      Attribute::get(C, Attribute::ReadNone),\n";
+          break;
+        case CodeGenIntrinsic::ImmArg:
+          OS << "      Attribute::get(C, Attribute::ImmArg),\n";
+          break;
+        case CodeGenIntrinsic::Alignment:
+          OS << "      Attribute::get(C, Attribute::Alignment, "
+             << Attr.Value << "),\n";
+          break;
+        }
+      }
+      OS << "    });\n";
+    }
+  }
+  OS << "  }\n";
+  OS << "}\n\n";
+
+  // Compute unique function attribute sets.
+  std::map<const CodeGenIntrinsic*, unsigned, FnAttributeComparator>
+      UniqFnAttributes;
+  OS << "static AttributeSet getIntrinsicFnAttributeSet("
+     << "LLVMContext &C, unsigned ID) {\n"
+     << "  switch (ID) {\n"
+     << "  default: llvm_unreachable(\"Invalid attribute set number\");\n";
+  for (const CodeGenIntrinsic &Intrinsic : Ints) {
+    unsigned ID = UniqFnAttributes.size();
+    if (!UniqFnAttributes.try_emplace(&Intrinsic, ID).second)
+      continue;
+
+    OS << "  case " << ID << ":\n"
+       << "    return AttributeSet::get(C, {\n";
+    if (!Intrinsic.canThrow)
+      OS << "      Attribute::get(C, Attribute::NoUnwind),\n";
+    if (Intrinsic.isNoReturn)
+      OS << "      Attribute::get(C, Attribute::NoReturn),\n";
+    if (Intrinsic.isNoCallback)
+      OS << "      Attribute::get(C, Attribute::NoCallback),\n";
+    if (Intrinsic.isNoSync)
+      OS << "      Attribute::get(C, Attribute::NoSync),\n";
+    if (Intrinsic.isNoFree)
+      OS << "      Attribute::get(C, Attribute::NoFree),\n";
+    if (Intrinsic.isWillReturn)
+      OS << "      Attribute::get(C, Attribute::WillReturn),\n";
+    if (Intrinsic.isCold)
+      OS << "      Attribute::get(C, Attribute::Cold),\n";
+    if (Intrinsic.isNoDuplicate)
+      OS << "      Attribute::get(C, Attribute::NoDuplicate),\n";
+    if (Intrinsic.isNoMerge)
+      OS << "      Attribute::get(C, Attribute::NoMerge),\n";
+    if (Intrinsic.isConvergent)
+      OS << "      Attribute::get(C, Attribute::Convergent),\n";
+    if (Intrinsic.isSpeculatable)
+      OS << "      Attribute::get(C, Attribute::Speculatable),\n";
+
+    MemoryEffects ME = Intrinsic.ME;
+    // TODO: IntrHasSideEffects should affect not only readnone intrinsics.
+    if (ME.doesNotAccessMemory() && Intrinsic.hasSideEffects)
+      ME = MemoryEffects::unknown();
+    if (ME != MemoryEffects::unknown()) {
+      OS << "      Attribute::getWithMemoryEffects(C, "
+         << "MemoryEffects::createFromIntValue(" << ME.toIntValue() << ")),\n";
+    }
+    OS << "    });\n";
+  }
+  OS << "  }\n";
+  OS << "}\n\n";
   OS << "AttributeList Intrinsic::getAttributes(LLVMContext &C, ID id) {\n";
 
   // Compute the maximum number of attribute arguments and the map
@@ -686,7 +813,7 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
   }
   OS << "  };\n\n";
 
-  OS << "  AttributeList AS[" << maxArgAttrs + 1 << "];\n";
+  OS << "  std::pair<unsigned, AttributeSet> AS[" << maxArgAttrs + 1 << "];\n";
   OS << "  unsigned NumAttrs = 0;\n";
   OS << "  if (id != 0) {\n";
   OS << "    switch(IntrinsicsToAttributesMap[id - 1]) {\n";
@@ -699,182 +826,41 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
     // Keep track of the number of attributes we're writing out.
     unsigned numAttrs = 0;
 
-    // The argument attributes are alreadys sorted by argument index.
-    unsigned Ai = 0, Ae = Intrinsic.ArgumentAttributes.size();
-    if (Ae) {
-      while (Ai != Ae) {
-        unsigned AttrIdx = Intrinsic.ArgumentAttributes[Ai].Index;
+    for (const auto &[AttrIdx, Attrs] :
+         enumerate(Intrinsic.ArgumentAttributes)) {
+      if (Attrs.empty())
+        continue;
 
-        OS << "      const Attribute::AttrKind AttrParam" << AttrIdx << "[]= {";
-        ListSeparator LS(",");
-
-        bool AllValuesAreZero = true;
-        SmallVector<uint64_t, 8> Values;
-        do {
-          switch (Intrinsic.ArgumentAttributes[Ai].Kind) {
-          case CodeGenIntrinsic::NoCapture:
-            OS << LS << "Attribute::NoCapture";
-            break;
-          case CodeGenIntrinsic::NoAlias:
-            OS << LS << "Attribute::NoAlias";
-            break;
-          case CodeGenIntrinsic::NoUndef:
-            OS << LS << "Attribute::NoUndef";
-            break;
-          case CodeGenIntrinsic::Returned:
-            OS << LS << "Attribute::Returned";
-            break;
-          case CodeGenIntrinsic::ReadOnly:
-            OS << LS << "Attribute::ReadOnly";
-            break;
-          case CodeGenIntrinsic::WriteOnly:
-            OS << LS << "Attribute::WriteOnly";
-            break;
-          case CodeGenIntrinsic::ReadNone:
-            OS << LS << "Attribute::ReadNone";
-            break;
-          case CodeGenIntrinsic::ImmArg:
-            OS << LS << "Attribute::ImmArg";
-            break;
-          case CodeGenIntrinsic::Alignment:
-            OS << LS << "Attribute::Alignment";
-            break;
-          }
-          uint64_t V = Intrinsic.ArgumentAttributes[Ai].Value;
-          Values.push_back(V);
-          AllValuesAreZero &= (V == 0);
-
-          ++Ai;
-        } while (Ai != Ae && Intrinsic.ArgumentAttributes[Ai].Index == AttrIdx);
-        OS << "};\n";
-
-        // Generate attribute value array if not all attribute values are zero.
-        if (!AllValuesAreZero) {
-          OS << "      const uint64_t AttrValParam" << AttrIdx << "[]= {";
-          ListSeparator LSV(",");
-          for (const auto V : Values)
-            OS << LSV << V;
-          OS << "};\n";
-        }
-
-        OS << "      AS[" << numAttrs++ << "] = AttributeList::get(C, "
-           << AttrIdx << ", AttrParam" << AttrIdx;
-        if (!AllValuesAreZero)
-          OS << ", AttrValParam" << AttrIdx;
-        OS << ");\n";
-      }
+      unsigned ID = UniqArgAttributes.find(Attrs)->second;
+      OS << "      AS[" << numAttrs++ << "] = {" << AttrIdx
+         << ", getIntrinsicArgAttributeSet(C, " << ID << ")};\n";
     }
 
     if (!Intrinsic.canThrow ||
-        (Intrinsic.ModRef != CodeGenIntrinsic::ReadWriteMem &&
+        (Intrinsic.ME != MemoryEffects::unknown() &&
          !Intrinsic.hasSideEffects) ||
         Intrinsic.isNoReturn || Intrinsic.isNoCallback || Intrinsic.isNoSync ||
         Intrinsic.isNoFree || Intrinsic.isWillReturn || Intrinsic.isCold ||
         Intrinsic.isNoDuplicate || Intrinsic.isNoMerge ||
         Intrinsic.isConvergent || Intrinsic.isSpeculatable) {
-      OS << "      const Attribute::AttrKind Atts[] = {";
-      ListSeparator LS(",");
-      if (!Intrinsic.canThrow)
-        OS << LS << "Attribute::NoUnwind";
-      if (Intrinsic.isNoReturn)
-        OS << LS << "Attribute::NoReturn";
-      if (Intrinsic.isNoCallback)
-        OS << LS << "Attribute::NoCallback";
-      if (Intrinsic.isNoSync)
-        OS << LS << "Attribute::NoSync";
-      if (Intrinsic.isNoFree)
-        OS << LS << "Attribute::NoFree";
-      if (Intrinsic.isWillReturn)
-        OS << LS << "Attribute::WillReturn";
-      if (Intrinsic.isCold)
-        OS << LS << "Attribute::Cold";
-      if (Intrinsic.isNoDuplicate)
-        OS << LS << "Attribute::NoDuplicate";
-      if (Intrinsic.isNoMerge)
-        OS << LS << "Attribute::NoMerge";
-      if (Intrinsic.isConvergent)
-        OS << LS << "Attribute::Convergent";
-      if (Intrinsic.isSpeculatable)
-        OS << LS << "Attribute::Speculatable";
-
-      switch (Intrinsic.ModRef) {
-      case CodeGenIntrinsic::NoMem:
-        if (Intrinsic.hasSideEffects)
-          break;
-        OS << LS;
-        OS << "Attribute::ReadNone";
-        break;
-      case CodeGenIntrinsic::ReadArgMem:
-        OS << LS;
-        OS << "Attribute::ReadOnly,";
-        OS << "Attribute::ArgMemOnly";
-        break;
-      case CodeGenIntrinsic::ReadMem:
-        OS << LS;
-        OS << "Attribute::ReadOnly";
-        break;
-      case CodeGenIntrinsic::ReadInaccessibleMem:
-        OS << LS;
-        OS << "Attribute::ReadOnly,";
-        OS << "Attribute::InaccessibleMemOnly";
-        break;
-      case CodeGenIntrinsic::ReadInaccessibleMemOrArgMem:
-        OS << LS;
-        OS << "Attribute::ReadOnly,";
-        OS << "Attribute::InaccessibleMemOrArgMemOnly";
-        break;
-      case CodeGenIntrinsic::WriteArgMem:
-        OS << LS;
-        OS << "Attribute::WriteOnly,";
-        OS << "Attribute::ArgMemOnly";
-        break;
-      case CodeGenIntrinsic::WriteMem:
-        OS << LS;
-        OS << "Attribute::WriteOnly";
-        break;
-      case CodeGenIntrinsic::WriteInaccessibleMem:
-        OS << LS;
-        OS << "Attribute::WriteOnly,";
-        OS << "Attribute::InaccessibleMemOnly";
-        break;
-      case CodeGenIntrinsic::WriteInaccessibleMemOrArgMem:
-        OS << LS;
-        OS << "Attribute::WriteOnly,";
-        OS << "Attribute::InaccessibleMemOrArgMemOnly";
-        break;
-      case CodeGenIntrinsic::ReadWriteArgMem:
-        OS << LS;
-        OS << "Attribute::ArgMemOnly";
-        break;
-      case CodeGenIntrinsic::ReadWriteInaccessibleMem:
-        OS << LS;
-        OS << "Attribute::InaccessibleMemOnly";
-        break;
-      case CodeGenIntrinsic::ReadWriteInaccessibleMemOrArgMem:
-        OS << LS;
-        OS << "Attribute::InaccessibleMemOrArgMemOnly";
-        break;
-      case CodeGenIntrinsic::ReadWriteMem:
-        break;
-      }
-      OS << "};\n";
-      OS << "      AS[" << numAttrs++ << "] = AttributeList::get(C, "
-         << "AttributeList::FunctionIndex, Atts);\n";
+      unsigned ID = UniqFnAttributes.find(&Intrinsic)->second;
+      OS << "      AS[" << numAttrs++ << "] = {AttributeList::FunctionIndex, "
+         << "getIntrinsicFnAttributeSet(C, " << ID << ")};\n";
     }
 
     if (numAttrs) {
       OS << "      NumAttrs = " << numAttrs << ";\n";
       OS << "      break;\n";
-      OS << "      }\n";
+      OS << "    }\n";
     } else {
       OS << "      return AttributeList();\n";
-      OS << "      }\n";
+      OS << "    }\n";
     }
   }
 
   OS << "    }\n";
   OS << "  }\n";
-  OS << "  return AttributeList::get(C, makeArrayRef(AS, NumAttrs));\n";
+  OS << "  return AttributeList::get(C, ArrayRef(AS, NumAttrs));\n";
   OS << "}\n";
   OS << "#endif // GET_INTRINSIC_ATTRIBUTES\n\n";
 }

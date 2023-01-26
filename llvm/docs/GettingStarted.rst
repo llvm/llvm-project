@@ -107,6 +107,92 @@ Consult the `Getting Started with LLVM`_ section for detailed information on
 configuring and compiling LLVM.  Go to `Directory Layout`_ to learn about the
 layout of the source code tree.
 
+Stand-alone Builds
+------------------
+
+Stand-alone builds allow you to build a sub-project against a pre-built
+version of the clang or llvm libraries that is already present on your
+system.
+
+You can use the source code from a standard checkout of the llvm-project
+(as described above) to do stand-alone builds, but you may also build
+from a :ref:`sparse checkout<workflow-multicheckout-nocommit>` or from the
+tarballs available on the `releases <https://github.com/llvm/llvm-project/releases/>`_
+page.
+
+For stand-alone builds, you must have an llvm install that is configured
+properly to be consumable by stand-alone builds of the other projects.
+This could be a distro provided LLVM install, or you can build it yourself,
+like this:
+
+.. code-block:: console
+
+  cmake -G Ninja -S path/to/llvm-project/llvm -B $builddir \
+        -DLLVM_INSTALL_UTILS=ON \
+        -DCMAKE_INSTALL_PREFIX=/path/to/llvm/install/prefix \
+        < other options >
+
+  ninja -C $builddir install
+
+Once llvm is installed, to configure a project for a stand-alone build, invoke CMake like this:
+
+.. code-block:: console
+
+  cmake -G Ninja -S path/to/llvm-project/$subproj \
+        -B $buildir_subproj \
+        -DLLVM_EXTERNAL_LIT=/path/to/lit \
+        -DLLVM_ROOT=/path/to/llvm/install/prefix
+
+Notice that:
+
+* The stand-alone build needs to happen in a folder that is not the
+  original folder where LLVMN was built
+  (`$builddir!=$builddir_subproj`).
+* ``LLVM_ROOT`` should point to the prefix of your llvm installation,
+   so for example, if llvm is installed into ``/usr/bin`` and
+   ``/usr/lib64``, then you should pass ``-DLLVM_ROOT=/usr/``.
+* Both the ``LLVM_ROOT`` and ``LLVM_EXTERNAL_LIT`` options are
+  required to do stand-alone builds for all sub-projects.  Additional
+  required options for each sub-project can be found in the table
+  below.
+
+The ``check-$subproj`` and ``install`` build targets are supported for the
+sub-projects listed in the table below.
+
+============ ======================== ======================
+Sub-Project  Required Sub-Directories Required CMake Options
+============ ======================== ======================
+llvm         llvm, cmake, third-party LLVM_INSTALL_UTILS=ON
+clang        clang, cmake             CLANG_INCLUDE_TESTS=ON (Required for check-clang only)
+lld          lld, cmake
+============ ======================== ======================
+
+Example for building stand-alone `clang`:
+
+.. code-block:: console
+
+   #!/bin/sh
+
+   build_llvm=`pwd`/build-llvm
+   build_clang=`pwd`/build-clang
+   installprefix=`pwd`/install
+   llvm=`pwd`/llvm-project
+   mkdir -p $build_llvm
+   mkdir -p $installprefix
+
+   cmake -G Ninja -S $llvm/llvm -B $build_llvm \
+         -DLLVM_INSTALL_UTILS=ON \
+         -DCMAKE_INSTALL_PREFIX=$installprefix \
+         -DCMAKE_BUILD_TYPE=Release
+
+   ninja -C $build_llvm install
+
+   cmake -G Ninja -S $llvm/clang -B $build_clang \
+         -DLLVM_EXTERNAL_LIT=$build_llvm/utils/lit \
+         -DLLVM_ROOT=$installprefix
+
+   ninja -C $build_clang
+
 Requirements
 ============
 
@@ -239,7 +325,7 @@ standards<CodingStandards>`. To enforce this language version, we check the most
 popular host toolchains for specific minimum versions in our build systems:
 
 * Clang 5.0
-* Apple Clang 9.3
+* Apple Clang 10.0
 * GCC 7.1
 * Visual Studio 2019 16.7
 
@@ -503,7 +589,7 @@ used by people developing LLVM.
 | CMAKE_INSTALL_PREFIX    | Specifies the install directory to target when     |
 |                         | running the install action of the build files.     |
 +-------------------------+----------------------------------------------------+
-| PYTHON_EXECUTABLE       | Forces CMake to use a specific Python version by   |
+| Python3_EXECUTABLE      | Forces CMake to use a specific Python version by   |
 |                         | passing a path to a Python interpreter. By default |
 |                         | the Python version of the interpreter in your PATH |
 |                         | is used.                                           |
@@ -849,7 +935,7 @@ share code among the `tools`_.
 Contains bindings for the LLVM compiler infrastructure to allow
 programs written in languages other than C or C++ to take advantage of the LLVM
 infrastructure.
-LLVM project provides language bindings for Go, OCaml and Python.
+LLVM project provides language bindings for OCaml and Python.
 
 ``llvm/projects``
 -----------------

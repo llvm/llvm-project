@@ -11,7 +11,7 @@ func.func @array_coor_box_value(%29 : !fir.box<!fir.array<2xf64>>,
 // CHECK-LABEL: define double @array_coor_box_value
 // CHECK: %[[t3:.*]] = sub i64 %{{.*}}, 1
 // CHECK: %[[t4:.*]] = mul i64 %[[t3]], 1
-// CHECK: %[[t5:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %{{.*}}, i32 0, i32 7, i64 0, i32 2
+// CHECK: %[[t5:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %{{.*}}, i32 0, i32 7, i32 0, i32 2
 // CHECK: %[[t6:.*]] = load i64, ptr %[[t5]]
 // CHECK: %[[t7:.*]] = mul i64 %[[t4]], %[[t6]]
 // CHECK: %[[t8:.*]] = add i64 %[[t7]], 0

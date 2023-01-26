@@ -7,7 +7,7 @@
 ; algorithm requires.
 
 ; Function Attrs: nounwind
-define void @test(float* nocapture %out, i32 %K1, float* nocapture readonly %nr) {
+define void @test(ptr nocapture %out, i32 %K1, ptr nocapture readonly %nr) {
 
 ; CHECK: entry:
 ; CHECK: br label %for.body
@@ -28,11 +28,11 @@ for.body:                                         ; preds = %for.body.backedge, 
 ; CHECK: lor.lhs.false:
 ; CHECK: br label %Flow
 lor.lhs.false:                                    ; preds = %for.body
-  %arrayidx = getelementptr inbounds float, float* %nr, i64 %indvars.iv
-  %tmp1 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %nr, i64 %indvars.iv
+  %tmp1 = load float, ptr %arrayidx, align 4
   %tmp2 = add nsw i64 %indvars.iv, -1
-  %arrayidx2 = getelementptr inbounds float, float* %nr, i64 %tmp2
-  %tmp3 = load float, float* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %nr, i64 %tmp2
+  %tmp3 = load float, ptr %arrayidx2, align 4
   %cmp3 = fcmp une float %tmp1, %tmp3
   br i1 %cmp3, label %if.then, label %for.body.1
 
@@ -44,15 +44,15 @@ lor.lhs.false:                                    ; preds = %for.body
 if.then:                                          ; preds = %lor.lhs.false, %for.body
   %sub4 = sub nsw i32 %tmp0, %prev_start.026
   %tmp4 = add nsw i64 %indvars.iv, -1
-  %arrayidx8 = getelementptr inbounds float, float* %nr, i64 %tmp4
-  %tmp5 = load float, float* %arrayidx8, align 4
+  %arrayidx8 = getelementptr inbounds float, ptr %nr, i64 %tmp4
+  %tmp5 = load float, ptr %arrayidx8, align 4
   br i1 %cmp1, label %for.end, label %for.body.1
 
 ; CHECK: for.end:
 ; CHECK: ret void
 for.end:                                          ; preds = %for.body.1, %if.then
   %best_val.0.lcssa = phi float [ %best_val.233, %for.body.1 ], [ %tmp5, %if.then ]
-  store float %best_val.0.lcssa, float* %out, align 4
+  store float %best_val.0.lcssa, ptr %out, align 4
   ret void
 
 ; CHECK: Flow1
@@ -84,8 +84,8 @@ for.body.6:                                       ; preds = %for.body.1
 ; CHECK: if.then6.6
 ; CHECK: br label %for.body.backedge
 if.then6.6:                                       ; preds = %for.body.6
-  %arrayidx8.6 = getelementptr inbounds float, float* %nr, i64 %indvars.iv.next.454
-  %tmp29 = load float, float* %arrayidx8.6, align 4
+  %arrayidx8.6 = getelementptr inbounds float, ptr %nr, i64 %indvars.iv.next.454
+  %tmp29 = load float, ptr %arrayidx8.6, align 4
   br label %for.body.backedge
 
 ; CHECK: Flow3:

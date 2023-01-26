@@ -33,7 +33,6 @@ define <vscale x 1 x i64> @spill_lmul_1(<vscale x 1 x i64> %va) nounwind {
 ; SPILL-O2-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
 ; SPILL-O2-NEXT:    #APP
 ; SPILL-O2-NEXT:    #NO_APP
-; SPILL-O2-NEXT:    addi a0, sp, 16
 ; SPILL-O2-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
 ; SPILL-O2-NEXT:    csrr a0, vlenb
 ; SPILL-O2-NEXT:    slli a0, a0, 1
@@ -59,7 +58,7 @@ define <vscale x 2 x i64> @spill_lmul_2(<vscale x 2 x i64> %va) nounwind {
 ; SPILL-O0-NEXT:    #APP
 ; SPILL-O0-NEXT:    #NO_APP
 ; SPILL-O0-NEXT:    addi a0, sp, 16
-; SPILL-O0-NEXT:    vl2re8.v v8, (a0) # Unknown-size Folded Reload
+; SPILL-O0-NEXT:    vl2r.v v8, (a0) # Unknown-size Folded Reload
 ; SPILL-O0-NEXT:    csrr a0, vlenb
 ; SPILL-O0-NEXT:    slli a0, a0, 1
 ; SPILL-O0-NEXT:    add sp, sp, a0
@@ -76,8 +75,7 @@ define <vscale x 2 x i64> @spill_lmul_2(<vscale x 2 x i64> %va) nounwind {
 ; SPILL-O2-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
 ; SPILL-O2-NEXT:    #APP
 ; SPILL-O2-NEXT:    #NO_APP
-; SPILL-O2-NEXT:    addi a0, sp, 16
-; SPILL-O2-NEXT:    vl2re8.v v8, (a0) # Unknown-size Folded Reload
+; SPILL-O2-NEXT:    vl2r.v v8, (a0) # Unknown-size Folded Reload
 ; SPILL-O2-NEXT:    csrr a0, vlenb
 ; SPILL-O2-NEXT:    slli a0, a0, 1
 ; SPILL-O2-NEXT:    add sp, sp, a0
@@ -102,7 +100,7 @@ define <vscale x 4 x i64> @spill_lmul_4(<vscale x 4 x i64> %va) nounwind {
 ; SPILL-O0-NEXT:    #APP
 ; SPILL-O0-NEXT:    #NO_APP
 ; SPILL-O0-NEXT:    addi a0, sp, 16
-; SPILL-O0-NEXT:    vl4re8.v v8, (a0) # Unknown-size Folded Reload
+; SPILL-O0-NEXT:    vl4r.v v8, (a0) # Unknown-size Folded Reload
 ; SPILL-O0-NEXT:    csrr a0, vlenb
 ; SPILL-O0-NEXT:    slli a0, a0, 2
 ; SPILL-O0-NEXT:    add sp, sp, a0
@@ -119,8 +117,7 @@ define <vscale x 4 x i64> @spill_lmul_4(<vscale x 4 x i64> %va) nounwind {
 ; SPILL-O2-NEXT:    vs4r.v v8, (a0) # Unknown-size Folded Spill
 ; SPILL-O2-NEXT:    #APP
 ; SPILL-O2-NEXT:    #NO_APP
-; SPILL-O2-NEXT:    addi a0, sp, 16
-; SPILL-O2-NEXT:    vl4re8.v v8, (a0) # Unknown-size Folded Reload
+; SPILL-O2-NEXT:    vl4r.v v8, (a0) # Unknown-size Folded Reload
 ; SPILL-O2-NEXT:    csrr a0, vlenb
 ; SPILL-O2-NEXT:    slli a0, a0, 2
 ; SPILL-O2-NEXT:    add sp, sp, a0
@@ -145,7 +142,7 @@ define <vscale x 8 x i64> @spill_lmul_8(<vscale x 8 x i64> %va) nounwind {
 ; SPILL-O0-NEXT:    #APP
 ; SPILL-O0-NEXT:    #NO_APP
 ; SPILL-O0-NEXT:    addi a0, sp, 16
-; SPILL-O0-NEXT:    vl8re8.v v8, (a0) # Unknown-size Folded Reload
+; SPILL-O0-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
 ; SPILL-O0-NEXT:    csrr a0, vlenb
 ; SPILL-O0-NEXT:    slli a0, a0, 3
 ; SPILL-O0-NEXT:    add sp, sp, a0
@@ -162,8 +159,7 @@ define <vscale x 8 x i64> @spill_lmul_8(<vscale x 8 x i64> %va) nounwind {
 ; SPILL-O2-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
 ; SPILL-O2-NEXT:    #APP
 ; SPILL-O2-NEXT:    #NO_APP
-; SPILL-O2-NEXT:    addi a0, sp, 16
-; SPILL-O2-NEXT:    vl8re8.v v8, (a0) # Unknown-size Folded Reload
+; SPILL-O2-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
 ; SPILL-O2-NEXT:    csrr a0, vlenb
 ; SPILL-O2-NEXT:    slli a0, a0, 3
 ; SPILL-O2-NEXT:    add sp, sp, a0

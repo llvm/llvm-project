@@ -32,7 +32,7 @@
     ret i32 0
   }
 
-  define i32 @bar(i32 %a, i32* %p) {
+  define i32 @bar(i32 %a, ptr %p) {
   bb0:
     br label %bb1
 
@@ -55,7 +55,7 @@
   bb7:                                              ; preds = %bb4, %bb6
     %vreg1 = phi i32 [ 2, %bb6 ], [ 1, %bb4 ]
     %vreg2 = add i32 %vreg5, %vreg0
-    store i32 %vreg0, i32* %p
+    store i32 %vreg0, ptr %p
     %vreg3 = add i32 %vreg1, %vreg2
     %cond2 = icmp slt i32 %vreg3, 10
     br i1 %cond2, label %bb1, label %bb8

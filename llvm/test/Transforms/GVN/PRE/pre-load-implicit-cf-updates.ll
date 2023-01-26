@@ -1,4 +1,4 @@
-; RUN: opt -S -gvn -enable-load-pre < %s | FileCheck %s
+; RUN: opt -S -passes=gvn -enable-load-pre < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -17,7 +17,7 @@ define hidden void @test_01(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test_01
 ; CHECK:       entry:
 ; CHECK-NEXT:    %c1 = call i32 @foo(i32 %x)
-; CHECK-NEXT:    %val.pre = load i32, i32* null, align 8
+; CHECK-NEXT:    %val.pre = load i32, ptr null, align 8
 ; CHECK-NEXT:    br label %loop
 ; CHECK:       loop:
 ; CHECK-NEXT:    %c3 = call i32 @foo(i32 %val.pre)
@@ -29,7 +29,7 @@ entry:
 
 loop:
   %c2 = call i32 @foo(i32 %x)
-  %val = load i32, i32* null, align 8
+  %val = load i32, ptr null, align 8
   %c3 = call i32 @foo(i32 %val)
   br label %loop
 }
@@ -44,7 +44,7 @@ define hidden void @test_02(i32 %x, i32 %y) {
 ; CHECK-NEXT:    br label %loop
 ; CHECK:       loop:
 ; CHECK-NEXT:    %c2 = call i32 @foo(i32 %y)
-; CHECK-NEXT:    %val = load i32, i32* null, align 8
+; CHECK-NEXT:    %val = load i32, ptr null, align 8
 ; CHECK-NEXT:    %c3 = call i32 @foo(i32 %val)
 ; CHECK-NEXT:    br label %loop
 
@@ -54,7 +54,7 @@ entry:
 
 loop:
   %c2 = call i32 @foo(i32 %y)
-  %val = load i32, i32* null, align 8
+  %val = load i32, ptr null, align 8
   %c3 = call i32 @foo(i32 %val)
   br label %loop
 }
@@ -67,7 +67,7 @@ define hidden void @test_03(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test_03
 ; CHECK:       entry:
 ; CHECK-NEXT:    %c1 = call i32 @foo(i32 %x)
-; CHECK-NEXT:    %val.pre = load i32, i32* null, align 8
+; CHECK-NEXT:    %val.pre = load i32, ptr null, align 8
 ; CHECK-NEXT:    br label %loop
 ; CHECK:       loop:
 ; CHECK-NEXT:    %c3 = call i32 @foo(i32 %y)
@@ -80,9 +80,9 @@ entry:
 
 loop:
   %c2 = call i32 @foo(i32 %x)
-  %val = load i32, i32* null, align 8
+  %val = load i32, ptr null, align 8
   %c3 = call i32 @foo(i32 %y)
-  %val2 = load i32, i32* null, align 8
+  %val2 = load i32, ptr null, align 8
   %c4 = call i32 @foo(i32 %y)
   %c5 = call i32 @foo(i32 %val)
   br label %loop
@@ -98,7 +98,7 @@ define hidden void @test_04(i32 %x, i32 %y) {
 ; CHECK-NEXT:    br label %loop
 ; CHECK:       loop:
 ; CHECK-NEXT:    %c3 = call i32 @foo(i32 %y)
-; CHECK-NEXT:    %val = load i32, i32* null, align 8
+; CHECK-NEXT:    %val = load i32, ptr null, align 8
 ; CHECK-NEXT:    %c5 = call i32 @foo(i32 %val)
 ; CHECK-NEXT:    br label %loop
 
@@ -109,7 +109,7 @@ entry:
 loop:
   %c2 = call i32 @foo(i32 %x)
   %c3 = call i32 @foo(i32 %y)
-  %val = load i32, i32* null, align 8
+  %val = load i32, ptr null, align 8
   %c4 = call i32 @foo(i32 %y)
   %c5 = call i32 @foo(i32 %val)
   br label %loop

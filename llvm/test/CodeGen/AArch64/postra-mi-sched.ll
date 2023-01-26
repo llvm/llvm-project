@@ -16,7 +16,7 @@ entry:
   %mul = fmul float %s2, %s3
   %conv = fpext float %mul to double
   %div = fdiv double %d, %conv
-  store double %div, double* @d1, align 8
+  store double %div, ptr @d1, align 8
   %factor = shl i32 %i3, 1
   %add1 = add i32 %i2, 4
   %add2 = add i32 %add1, %factor

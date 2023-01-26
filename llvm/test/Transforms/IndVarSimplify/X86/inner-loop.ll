@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -S | FileCheck %s
+; RUN: opt < %s -passes=indvars -S | FileCheck %s
 
 ; This is regression test for the bug in ScalarEvolution::isKnownPredicate.
 ; It does not check whether SCEV is available at loop entry before invoking
@@ -10,7 +10,7 @@ target triple = "x86_64-unknown-linux-gnu"
 declare void @foo(i64)
 declare void @bar(i32)
 
-define void @test(i8* %arr) {
+define void @test(ptr %arr) {
 entry:
   br label %outer_header
 
@@ -24,8 +24,8 @@ inner_header:
   %j1 = zext i32 %j to i64
 ; The next 4 lines are required for avoid widening of %j and
 ; SCEV at %cmp would not be AddRec.
-  %gep = getelementptr inbounds i8, i8*  %arr, i64 %j1
-  %ld = load i8, i8* %gep
+  %gep = getelementptr inbounds i8, ptr  %arr, i64 %j1
+  %ld = load i8, ptr %gep
   %ec = icmp eq i8 %ld, 0
   br i1 %ec, label %return, label %inner_backedge
 

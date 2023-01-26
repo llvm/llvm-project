@@ -178,7 +178,7 @@ namespace llvm {
 namespace yaml {
 template <std::size_t N> struct ScalarTraits<FixedSizeHex<N>> {
   static void output(const FixedSizeHex<N> &Fixed, void *, raw_ostream &OS) {
-    OS << toHex(makeArrayRef(Fixed.Storage));
+    OS << toHex(ArrayRef(Fixed.Storage));
   }
 
   static StringRef input(StringRef Scalar, void *, FixedSizeHex<N> &Fixed) {

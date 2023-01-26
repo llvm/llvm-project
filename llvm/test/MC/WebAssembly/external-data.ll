@@ -8,7 +8,7 @@ target triple = "wasm32-unknown-unknown"
 @myimport = external global i32, align 4
 
 @foo = global i64 7, align 4
-@bar = hidden global i32* @myimport, align 4
+@bar = hidden global ptr @myimport, align 4
 
 ; CHECK:        - Type:            DATA{{$}}
 ; CHECK-NEXT:     Relocations:

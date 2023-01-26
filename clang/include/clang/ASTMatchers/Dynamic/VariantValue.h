@@ -20,8 +20,8 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersInternal.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/Optional.h"
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace clang {
@@ -117,8 +117,8 @@ class VariantMatcher {
 
     /// Constructs a variadic typed matcher from \p InnerMatchers.
     /// Will try to convert each inner matcher to the destination type and
-    /// return llvm::None if it fails to do so.
-    llvm::Optional<DynTypedMatcher>
+    /// return std::nullopt if it fails to do so.
+    std::optional<DynTypedMatcher>
     constructVariadicOperator(DynTypedMatcher::VariadicOperator Op,
                               ArrayRef<VariantMatcher> InnerMatchers) const;
 
@@ -132,9 +132,9 @@ class VariantMatcher {
   class Payload {
   public:
     virtual ~Payload();
-    virtual llvm::Optional<DynTypedMatcher> getSingleMatcher() const = 0;
+    virtual std::optional<DynTypedMatcher> getSingleMatcher() const = 0;
     virtual std::string getTypeAsString() const = 0;
-    virtual llvm::Optional<DynTypedMatcher>
+    virtual std::optional<DynTypedMatcher>
     getTypedMatcher(const MatcherOps &Ops) const = 0;
     virtual bool isConvertibleTo(ASTNodeKind Kind,
                                  unsigned *Specificity) const = 0;
@@ -171,7 +171,7 @@ public:
   /// \returns the matcher, if there is only one matcher. An empty Optional, if
   /// the underlying matcher is a polymorphic matcher with more than one
   /// representation.
-  llvm::Optional<DynTypedMatcher> getSingleMatcher() const;
+  std::optional<DynTypedMatcher> getSingleMatcher() const;
 
   /// Determines if the contained matcher can be converted to
   ///   \c Matcher<T>.

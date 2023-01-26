@@ -332,6 +332,7 @@ bool RISCVMakeCompressibleOpt::runOnMachineFunction(MachineFunction &Fn) {
   const RISCVInstrInfo &TII = *STI.getInstrInfo();
 
   // This optimization only makes sense if compressed instructions are emitted.
+  // FIXME: Support Zca, Zcf, Zcd granularity.
   if (!STI.hasStdExtC())
     return false;
 

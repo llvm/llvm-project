@@ -250,6 +250,9 @@ EPCIndirectionUtils::Create(ExecutorProcessControl &EPC) {
   case Triple::x86:
     return CreateWithABI<OrcI386>(EPC);
 
+  case Triple::loongarch64:
+    return CreateWithABI<OrcLoongArch64>(EPC);
+
   case Triple::mips:
     return CreateWithABI<OrcMips32Be>(EPC);
 

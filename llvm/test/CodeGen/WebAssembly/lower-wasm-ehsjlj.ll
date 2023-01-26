@@ -1,5 +1,5 @@
-; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-eh -wasm-enable-sjlj -S | FileCheck %s
-; RUN: llc < %s -wasm-enable-eh -wasm-enable-sjlj -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs
+; RUN: opt -opaque-pointers=0 < %s -wasm-lower-em-ehsjlj -wasm-enable-eh -wasm-enable-sjlj -S | FileCheck %s
+; RUN: llc -opaque-pointers=0 < %s -wasm-enable-eh -wasm-enable-sjlj -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -109,7 +109,7 @@ catch:                                            ; preds = %catch.start
   catchret from %2 to label %catchret.dest
 ; CHECK: catch:                                            ; preds = %catch.start
 ; CHECK-NEXT:   %exn = load i8*, i8** %exn.slot15, align 4
-; CHECK-NEXT:   %5 = call i8* @__cxa_begin_catch(i8* %exn) #2 [ "funclet"(token %2) ]
+; CHECK-NEXT:   %5 = call i8* @__cxa_begin_catch(i8* %exn) #7 [ "funclet"(token %2) ]
 ; CHECK-NEXT:   invoke void @__cxa_end_catch() [ "funclet"(token %2) ]
 ; CHECK-NEXT:           to label %.noexc unwind label %catch.dispatch.longjmp
 

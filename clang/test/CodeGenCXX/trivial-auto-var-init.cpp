@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -fblocks %s -emit-llvm -o - | FileCheck %s -check-prefix=UNINIT
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -emit-llvm -o - | FileCheck %s -check-prefix=PATTERN
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=zero %s -emit-llvm -o - | FileCheck %s -check-prefix=ZERO
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fblocks %s -emit-llvm -o - | FileCheck %s -check-prefix=UNINIT
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -emit-llvm -o - | FileCheck %s -check-prefix=PATTERN
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=zero %s -emit-llvm -o - | FileCheck %s -check-prefix=ZERO
 
 // None of the synthesized globals should contain `undef`.
 // PATTERN-NOT: undef
@@ -12,9 +12,9 @@ extern "C" {
 
 // UNINIT-LABEL:  test_selfinit(
 // ZERO-LABEL:    test_selfinit(
-// ZERO: store i32 0, i32* %self, align 4, !annotation [[AUTO_INIT:!.+]]
+// ZERO: store i32 0, ptr %self, align 4, !annotation [[AUTO_INIT:!.+]]
 // PATTERN-LABEL: test_selfinit(
-// PATTERN: store i32 -1431655766, i32* %self, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN: store i32 -1431655766, ptr %self, align 4, !annotation [[AUTO_INIT:!.+]]
 void test_selfinit() {
   int self = self + 1;
   used(self);
@@ -22,9 +22,9 @@ void test_selfinit() {
 
 // UNINIT-LABEL:  test_block(
 // ZERO-LABEL:    test_block(
-// ZERO: store i32 0, i32* %block, align 4, !annotation [[AUTO_INIT:!.+]]
+// ZERO: store i32 0, ptr %block, align 4, !annotation [[AUTO_INIT:!.+]]
 // PATTERN-LABEL: test_block(
-// PATTERN: store i32 -1431655766, i32* %block, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN: store i32 -1431655766, ptr %block, align 4, !annotation [[AUTO_INIT:!.+]]
 void test_block() {
   __block int block;
   used(block);
@@ -36,15 +36,15 @@ void test_block() {
 //
 // UNINIT-LABEL:  test_block_self_init(
 // ZERO-LABEL:    test_block_self_init(
-// ZERO:          %block = alloca <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i8* }>, align 8
-// ZERO:          %captured1 = getelementptr inbounds %struct.__block_byref_captured, %struct.__block_byref_captured* %captured, i32 0, i32 4
-// ZERO-NEXT:     store %struct.XYZ* null, %struct.XYZ** %captured1, align 8, !annotation [[AUTO_INIT:!.+]]
-// ZERO:          %call = call %struct.XYZ* @create(
+// ZERO:          %block = alloca <{ ptr, i32, i32, ptr, ptr, ptr }>, align 8
+// ZERO:          %captured1 = getelementptr inbounds %struct.__block_byref_captured, ptr %captured, i32 0, i32 4
+// ZERO-NEXT:     store ptr null, ptr %captured1, align 8, !annotation [[AUTO_INIT:!.+]]
+// ZERO:          %call = call ptr @create(
 // PATTERN-LABEL: test_block_self_init(
-// PATTERN:       %block = alloca <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i8* }>, align 8
-// PATTERN:       %captured1 = getelementptr inbounds %struct.__block_byref_captured, %struct.__block_byref_captured* %captured, i32 0, i32 4
-// PATTERN-NEXT:  store %struct.XYZ* inttoptr (i64 -6148914691236517206 to %struct.XYZ*), %struct.XYZ** %captured1, align 8, !annotation [[AUTO_INIT:!.+]]
-// PATTERN:       %call = call %struct.XYZ* @create(
+// PATTERN:       %block = alloca <{ ptr, i32, i32, ptr, ptr, ptr }>, align 8
+// PATTERN:       %captured1 = getelementptr inbounds %struct.__block_byref_captured, ptr %captured, i32 0, i32 4
+// PATTERN-NEXT:  store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %captured1, align 8, !annotation [[AUTO_INIT:!.+]]
+// PATTERN:       %call = call ptr @create(
 using Block = void (^)();
 typedef struct XYZ {
   Block block;
@@ -60,15 +60,15 @@ void test_block_self_init() {
 //
 // UNINIT-LABEL:  test_block_captures_self_after_init(
 // ZERO-LABEL:    test_block_captures_self_after_init(
-// ZERO:          %block = alloca <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i8* }>, align 8
-// ZERO:          %captured1 = getelementptr inbounds %struct.__block_byref_captured.1, %struct.__block_byref_captured.1* %captured, i32 0, i32 4
-// ZERO-NEXT:     store %struct.XYZ* null, %struct.XYZ** %captured1, align 8, !annotation [[AUTO_INIT:!.+]]
-// ZERO:          %call = call %struct.XYZ* @create(
+// ZERO:          %block = alloca <{ ptr, i32, i32, ptr, ptr, ptr }>, align 8
+// ZERO:          %captured1 = getelementptr inbounds %struct.__block_byref_captured.1, ptr %captured, i32 0, i32 4
+// ZERO-NEXT:     store ptr null, ptr %captured1, align 8, !annotation [[AUTO_INIT:!.+]]
+// ZERO:          %call = call ptr @create(
 // PATTERN-LABEL: test_block_captures_self_after_init(
-// PATTERN:       %block = alloca <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i8* }>, align 8
-// PATTERN:       %captured1 = getelementptr inbounds %struct.__block_byref_captured.1, %struct.__block_byref_captured.1* %captured, i32 0, i32 4
-// PATTERN-NEXT:  store %struct.XYZ* inttoptr (i64 -6148914691236517206 to %struct.XYZ*), %struct.XYZ** %captured1, align 8, !annotation [[AUTO_INIT:!.+]]
-// PATTERN:       %call = call %struct.XYZ* @create(
+// PATTERN:       %block = alloca <{ ptr, i32, i32, ptr, ptr, ptr }>, align 8
+// PATTERN:       %captured1 = getelementptr inbounds %struct.__block_byref_captured.1, ptr %captured, i32 0, i32 4
+// PATTERN-NEXT:  store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %captured1, align 8, !annotation [[AUTO_INIT:!.+]]
+// PATTERN:       %call = call ptr @create(
 void test_block_captures_self_after_init() {
   extern xyz_t create(Block block);
   __block xyz_t captured;
@@ -97,13 +97,13 @@ void test_goto_unreachable_value() {
 // ZERO-LABEL:    test_goto(
 // ZERO: if.then:
 // ZERO: br label %jump
-// ZERO: store i32 0, i32* %oops, align 4, !annotation [[AUTO_INIT:!.+]]
+// ZERO: store i32 0, ptr %oops, align 4, !annotation [[AUTO_INIT:!.+]]
 // ZERO: br label %jump
 // ZERO: jump:
 // PATTERN-LABEL: test_goto(
 // PATTERN: if.then:
 // PATTERN: br label %jump
-// PATTERN: store i32 -1431655766, i32* %oops, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN: store i32 -1431655766, ptr %oops, align 4, !annotation [[AUTO_INIT:!.+]]
 // PATTERN: br label %jump
 // PATTERN: jump:
 void test_goto(int i) {
@@ -119,12 +119,12 @@ void test_goto(int i) {
 // UNINIT-LABEL:  test_switch(
 // ZERO-LABEL:    test_switch(
 // ZERO:      sw.bb:
-// ZERO-NEXT: store i32 0, i32* %oops, align 4, !annotation [[AUTO_INIT:!.+]]
+// ZERO-NEXT: store i32 0, ptr %oops, align 4, !annotation [[AUTO_INIT:!.+]]
 // ZERO:      sw.bb1:
 // ZERO-NEXT: call void @{{.*}}used
 // PATTERN-LABEL: test_switch(
 // PATTERN:      sw.bb:
-// PATTERN-NEXT: store i32 -1431655766, i32* %oops, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN-NEXT: store i32 -1431655766, ptr %oops, align 4, !annotation [[AUTO_INIT:!.+]]
 // PATTERN:      sw.bb1:
 // PATTERN-NEXT: call void @{{.*}}used
 void test_switch(int i) {
@@ -140,20 +140,19 @@ void test_switch(int i) {
 // UNINIT-LABEL:  test_vla(
 // ZERO-LABEL:    test_vla(
 // ZERO:  %[[SIZE:[0-9]+]] = mul nuw i64 %{{.*}}, 4
-// ZERO:  call void @llvm.memset{{.*}}(i8* align 16 %{{.*}}, i8 0, i64 %[[SIZE]], i1 false), !annotation [[AUTO_INIT:!.+]]
+// ZERO:  call void @llvm.memset{{.*}}(ptr align 16 %{{.*}}, i8 0, i64 %[[SIZE]], i1 false), !annotation [[AUTO_INIT:!.+]]
 // PATTERN-LABEL: test_vla(
 // PATTERN:  %vla.iszerosized = icmp eq i64 %{{.*}}, 0
 // PATTERN:  br i1 %vla.iszerosized, label %vla-init.cont, label %vla-setup.loop
 // PATTERN: vla-setup.loop:
 // PATTERN:  %[[SIZE:[0-9]+]] = mul nuw i64 %{{.*}}, 4
-// PATTERN:  %vla.begin = bitcast i32* %vla to i8*
-// PATTERN:  %vla.end = getelementptr inbounds i8, i8* %vla.begin, i64 %[[SIZE]]
+// PATTERN:  %vla.end = getelementptr inbounds i8, ptr %vla, i64 %[[SIZE]]
 // PATTERN:  br label %vla-init.loop
 // PATTERN: vla-init.loop:
-// PATTERN:  %vla.cur = phi i8* [ %vla.begin, %vla-setup.loop ], [ %vla.next, %vla-init.loop ]
-// PATTERN:  call void @llvm.memcpy{{.*}} %vla.cur, {{.*}}@__const.test_vla.vla {{.*}}), !annotation [[AUTO_INIT:!.+]]
-// PATTERN:  %vla.next = getelementptr inbounds i8, i8* %vla.cur, i64 4
-// PATTERN:  %vla-init.isdone = icmp eq i8* %vla.next, %vla.end
+// PATTERN:  %vla.cur = phi ptr [ %vla, %vla-setup.loop ], [ %vla.next, %vla-init.loop ]
+// PATTERN:  call void @llvm.memcpy{{.*}} %vla.cur, {{.*}}@__const.test_vla.vla{{.*}}), !annotation [[AUTO_INIT:!.+]]
+// PATTERN:  %vla.next = getelementptr inbounds i8, ptr %vla.cur, i64 4
+// PATTERN:  %vla-init.isdone = icmp eq ptr %vla.next, %vla.end
 // PATTERN:  br i1 %vla-init.isdone, label %vla-init.cont, label %vla-init.loop
 // PATTERN: vla-init.cont:
 // PATTERN:  call void @{{.*}}used
@@ -177,11 +176,11 @@ void test_vla(int size) {
 // ZERO-LABEL:    test_alloca(
 // ZERO:          %[[SIZE:[a-z0-9]+]] = sext i32 %{{.*}} to i64
 // ZERO-NEXT:     %[[ALLOCA:[a-z0-9]+]] = alloca i8, i64 %[[SIZE]], align [[ALIGN:[0-9]+]]
-// ZERO-NEXT:     call void @llvm.memset{{.*}}(i8* align [[ALIGN]] %[[ALLOCA]], i8 0, i64 %[[SIZE]], i1 false), !annotation [[AUTO_INIT:!.+]]
+// ZERO-NEXT:     call void @llvm.memset{{.*}}(ptr align [[ALIGN]] %[[ALLOCA]], i8 0, i64 %[[SIZE]], i1 false), !annotation [[AUTO_INIT:!.+]]
 // PATTERN-LABEL: test_alloca(
 // PATTERN:       %[[SIZE:[a-z0-9]+]] = sext i32 %{{.*}} to i64
 // PATTERN-NEXT:  %[[ALLOCA:[a-z0-9]+]] = alloca i8, i64 %[[SIZE]], align [[ALIGN:[0-9]+]]
-// PATTERN-NEXT:  call void @llvm.memset{{.*}}(i8* align [[ALIGN]] %[[ALLOCA]], i8 -86, i64 %[[SIZE]], i1 false), !annotation [[AUTO_INIT:!.+]]
+// PATTERN-NEXT:  call void @llvm.memset{{.*}}(ptr align [[ALIGN]] %[[ALLOCA]], i8 -86, i64 %[[SIZE]], i1 false), !annotation [[AUTO_INIT:!.+]]
 void test_alloca(int size) {
   void *ptr = __builtin_alloca(size);
   used(ptr);
@@ -191,11 +190,11 @@ void test_alloca(int size) {
 // ZERO-LABEL:    test_alloca_with_align(
 // ZERO:          %[[SIZE:[a-z0-9]+]] = sext i32 %{{.*}} to i64
 // ZERO-NEXT:     %[[ALLOCA:[a-z0-9]+]] = alloca i8, i64 %[[SIZE]], align 128
-// ZERO-NEXT:     call void @llvm.memset{{.*}}(i8* align 128 %[[ALLOCA]], i8 0, i64 %[[SIZE]], i1 false), !annotation [[AUTO_INIT:!.+]]
+// ZERO-NEXT:     call void @llvm.memset{{.*}}(ptr align 128 %[[ALLOCA]], i8 0, i64 %[[SIZE]], i1 false), !annotation [[AUTO_INIT:!.+]]
 // PATTERN-LABEL: test_alloca_with_align(
 // PATTERN:       %[[SIZE:[a-z0-9]+]] = sext i32 %{{.*}} to i64
 // PATTERN-NEXT:  %[[ALLOCA:[a-z0-9]+]] = alloca i8, i64 %[[SIZE]], align 128
-// PATTERN-NEXT:  call void @llvm.memset{{.*}}(i8* align 128 %[[ALLOCA]], i8 -86, i64 %[[SIZE]], i1 false), !annotation [[AUTO_INIT:!.+]]
+// PATTERN-NEXT:  call void @llvm.memset{{.*}}(ptr align 128 %[[ALLOCA]], i8 -86, i64 %[[SIZE]], i1 false), !annotation [[AUTO_INIT:!.+]]
 void test_alloca_with_align(int size) {
   void *ptr = __builtin_alloca_with_align(size, 1024);
   used(ptr);
@@ -232,20 +231,19 @@ void test_alloca_with_align_uninitialized(int size) {
 // UNINIT-LABEL:  test_struct_vla(
 // ZERO-LABEL:    test_struct_vla(
 // ZERO:  %[[SIZE:[0-9]+]] = mul nuw i64 %{{.*}}, 16
-// ZERO:  call void @llvm.memset{{.*}}(i8* align 16 %{{.*}}, i8 0, i64 %[[SIZE]], i1 false), !annotation [[AUTO_INIT:!.+]]
+// ZERO:  call void @llvm.memset{{.*}}(ptr align 16 %{{.*}}, i8 0, i64 %[[SIZE]], i1 false), !annotation [[AUTO_INIT:!.+]]
 // PATTERN-LABEL: test_struct_vla(
 // PATTERN:  %vla.iszerosized = icmp eq i64 %{{.*}}, 0
 // PATTERN:  br i1 %vla.iszerosized, label %vla-init.cont, label %vla-setup.loop
 // PATTERN: vla-setup.loop:
 // PATTERN:  %[[SIZE:[0-9]+]] = mul nuw i64 %{{.*}}, 16
-// PATTERN:  %vla.begin = bitcast %struct.anon* %vla to i8*
-// PATTERN:  %vla.end = getelementptr inbounds i8, i8* %vla.begin, i64 %[[SIZE]]
+// PATTERN:  %vla.end = getelementptr inbounds i8, ptr %vla, i64 %[[SIZE]]
 // PATTERN:  br label %vla-init.loop
 // PATTERN: vla-init.loop:
-// PATTERN:  %vla.cur = phi i8* [ %vla.begin, %vla-setup.loop ], [ %vla.next, %vla-init.loop ]
-// PATTERN:  call void @llvm.memcpy{{.*}} %vla.cur, {{.*}}@__const.test_struct_vla.vla {{.*}}), !annotation [[AUTO_INIT:!.+]]
-// PATTERN:  %vla.next = getelementptr inbounds i8, i8* %vla.cur, i64 16
-// PATTERN:  %vla-init.isdone = icmp eq i8* %vla.next, %vla.end
+// PATTERN:  %vla.cur = phi ptr [ %vla, %vla-setup.loop ], [ %vla.next, %vla-init.loop ]
+// PATTERN:  call void @llvm.memcpy{{.*}} %vla.cur, {{.*}}@__const.test_struct_vla.vla{{.*}}), !annotation [[AUTO_INIT:!.+]]
+// PATTERN:  %vla.next = getelementptr inbounds i8, ptr %vla.cur, i64 16
+// PATTERN:  %vla-init.isdone = icmp eq ptr %vla.next, %vla.end
 // PATTERN:  br i1 %vla-init.isdone, label %vla-init.cont, label %vla-init.loop
 // PATTERN: vla-init.cont:
 // PATTERN:  call void @{{.*}}used
@@ -310,10 +308,10 @@ void test_huge_small_init() {
 
 // UNINIT-LABEL:  test_huge_larger_init(
 // ZERO-LABEL:    test_huge_larger_init(
-// ZERO:  call void @llvm.memcpy{{.*}} @__const.test_huge_larger_init.big, {{.*}}, i64 65536,
+// ZERO:  call void @llvm.memcpy{{.*}} @__const.test_huge_larger_init.big, i64 65536,
 // ZERO-NOT: !annotation
 // PATTERN-LABEL: test_huge_larger_init(
-// PATTERN:  call void @llvm.memcpy{{.*}} @__const.test_huge_larger_init.big, {{.*}}, i64 65536,
+// PATTERN:  call void @llvm.memcpy{{.*}} @__const.test_huge_larger_init.big, i64 65536,
 // PATTERN-NOT: !annotation
 void test_huge_larger_init() {
   char big[65536] = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' };

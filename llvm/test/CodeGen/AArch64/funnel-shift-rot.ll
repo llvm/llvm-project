@@ -19,8 +19,7 @@ define i8 @rotl_i8_const_shift(i8 %x) {
 ; CHECK-LABEL: rotl_i8_const_shift:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ubfx w8, w0, #5, #3
-; CHECK-NEXT:    bfi w8, w0, #3, #29
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    orr w0, w8, w0, lsl #3
 ; CHECK-NEXT:    ret
   %f = call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 3)
   ret i8 %f

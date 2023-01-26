@@ -57,7 +57,8 @@ enum ID {
 };
 
 struct Info {
-  const char *Name, *Type, *Attributes, *HeaderName;
+  llvm::StringRef Name;
+  const char *Type, *Attributes, *HeaderName;
   LanguageID Langs;
   const char *Features;
 };
@@ -86,9 +87,7 @@ public:
 
   /// Return the identifier name for the specified builtin,
   /// e.g. "__builtin_abs".
-  const char *getName(unsigned ID) const {
-    return getRecord(ID).Name;
-  }
+  llvm::StringRef getName(unsigned ID) const { return getRecord(ID).Name; }
 
   /// Get the type descriptor string for the specified builtin.
   const char *getTypeString(unsigned ID) const {
@@ -228,11 +227,16 @@ public:
                         llvm::SmallVectorImpl<int> &Encoding) const;
 
   /// Return true if this function has no side effects and doesn't
-  /// read memory, except for possibly errno.
+  /// read memory, except for possibly errno or raising FP exceptions.
   ///
-  /// Such functions can be const when the MathErrno lang option is disabled.
-  bool isConstWithoutErrno(unsigned ID) const {
+  /// Such functions can be const when the MathErrno lang option and FP
+  /// exceptions are disabled.
+  bool isConstWithoutErrnoAndExceptions(unsigned ID) const {
     return strchr(getRecord(ID).Attributes, 'e') != nullptr;
+  }
+
+  bool isConstWithoutExceptions(unsigned ID) const {
+    return strchr(getRecord(ID).Attributes, 'g') != nullptr;
   }
 
   const char *getRequiredFeatures(unsigned ID) const {
@@ -257,6 +261,11 @@ public:
   /// Returns true if this is a builtin that can be redeclared.  Returns true
   /// for non-builtins.
   bool canBeRedeclared(unsigned ID) const;
+
+  /// Return true if this function can be constant evaluated by Clang frontend.
+  bool isConstantEvaluated(unsigned ID) const {
+    return strchr(getRecord(ID).Attributes, 'E') != nullptr;
+  }
 
 private:
   const Info &getRecord(unsigned ID) const;

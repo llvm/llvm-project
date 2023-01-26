@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-deletion -loop-rotate -verify-dom-info -verify-loop-info -disable-output
+; RUN: opt < %s -passes=loop-deletion,loop-rotate -verify-dom-info -verify-loop-info -disable-output
 ; PR 2639
 
 	%struct.HexxagonMove = type { i8, i8, i32 }
@@ -24,7 +24,7 @@ bb5:		; preds = %bb4, %bb3
 	br i1 %exitcond, label %bb7, label %bb4
 
 bb7:		; preds = %bb5
-	store %struct.HexxagonMove* null, %struct.HexxagonMove** null, align 4
+	store ptr null, ptr null, align 4
 	br label %bb8
 
 bb8:		; preds = %bb7, %bb1

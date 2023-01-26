@@ -130,9 +130,9 @@ define i1 @allones_v64i8_sign(<64 x i8> %arg) {
 ; SSE-LABEL: allones_v64i8_sign:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    pand %xmm1, %xmm0
-; SSE-NEXT:    pand %xmm3, %xmm0
-; SSE-NEXT:    pmovmskb %xmm0, %eax
+; SSE-NEXT:    pand %xmm3, %xmm1
+; SSE-NEXT:    pand %xmm0, %xmm1
+; SSE-NEXT:    pmovmskb %xmm1, %eax
 ; SSE-NEXT:    cmpw $-1, %ax
 ; SSE-NEXT:    sete %al
 ; SSE-NEXT:    retq
@@ -141,9 +141,9 @@ define i1 @allones_v64i8_sign(<64 x i8> %arg) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vpand %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vpand %xmm0, %xmm2, %xmm0
-; AVX1-NEXT:    vpand %xmm0, %xmm3, %xmm0
 ; AVX1-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX1-NEXT:    cmpw $-1, %ax
 ; AVX1-NEXT:    sete %al
@@ -186,9 +186,9 @@ define i1 @allzeros_v64i8_sign(<64 x i8> %arg) {
 ; SSE-LABEL: allzeros_v64i8_sign:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    por %xmm3, %xmm1
-; SSE-NEXT:    por %xmm2, %xmm1
-; SSE-NEXT:    por %xmm0, %xmm1
-; SSE-NEXT:    pmovmskb %xmm1, %eax
+; SSE-NEXT:    por %xmm2, %xmm0
+; SSE-NEXT:    por %xmm1, %xmm0
+; SSE-NEXT:    pmovmskb %xmm0, %eax
 ; SSE-NEXT:    testl %eax, %eax
 ; SSE-NEXT:    sete %al
 ; SSE-NEXT:    retq
@@ -198,8 +198,8 @@ define i1 @allzeros_v64i8_sign(<64 x i8> %arg) {
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-NEXT:    vpor %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vpor %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpor %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX1-NEXT:    testl %eax, %eax
 ; AVX1-NEXT:    sete %al
@@ -1322,10 +1322,10 @@ define i1 @allones_v64i8_and1(<64 x i8> %arg) {
 ; SSE-LABEL: allones_v64i8_and1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    pand %xmm1, %xmm0
-; SSE-NEXT:    pand %xmm3, %xmm0
-; SSE-NEXT:    psllw $7, %xmm0
-; SSE-NEXT:    pmovmskb %xmm0, %eax
+; SSE-NEXT:    pand %xmm3, %xmm1
+; SSE-NEXT:    pand %xmm0, %xmm1
+; SSE-NEXT:    psllw $7, %xmm1
+; SSE-NEXT:    pmovmskb %xmm1, %eax
 ; SSE-NEXT:    cmpw $-1, %ax
 ; SSE-NEXT:    sete %al
 ; SSE-NEXT:    retq
@@ -1334,9 +1334,9 @@ define i1 @allones_v64i8_and1(<64 x i8> %arg) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vpand %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vpand %xmm0, %xmm2, %xmm0
-; AVX1-NEXT:    vpand %xmm0, %xmm3, %xmm0
 ; AVX1-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX1-NEXT:    cmpw $-1, %ax
@@ -1383,10 +1383,10 @@ define i1 @allzeros_v64i8_and1(<64 x i8> %arg) {
 ; SSE-LABEL: allzeros_v64i8_and1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    por %xmm3, %xmm1
-; SSE-NEXT:    por %xmm2, %xmm1
-; SSE-NEXT:    por %xmm0, %xmm1
-; SSE-NEXT:    psllw $7, %xmm1
-; SSE-NEXT:    pmovmskb %xmm1, %eax
+; SSE-NEXT:    por %xmm2, %xmm0
+; SSE-NEXT:    por %xmm1, %xmm0
+; SSE-NEXT:    psllw $7, %xmm0
+; SSE-NEXT:    pmovmskb %xmm0, %eax
 ; SSE-NEXT:    testl %eax, %eax
 ; SSE-NEXT:    sete %al
 ; SSE-NEXT:    retq
@@ -1396,8 +1396,8 @@ define i1 @allzeros_v64i8_and1(<64 x i8> %arg) {
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-NEXT:    vpor %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vpor %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpor %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX1-NEXT:    testl %eax, %eax
@@ -2611,10 +2611,10 @@ define i1 @allones_v64i8_and4(<64 x i8> %arg) {
 ; SSE-LABEL: allones_v64i8_and4:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    pand %xmm1, %xmm0
-; SSE-NEXT:    pand %xmm3, %xmm0
-; SSE-NEXT:    psllw $5, %xmm0
-; SSE-NEXT:    pmovmskb %xmm0, %eax
+; SSE-NEXT:    pand %xmm3, %xmm1
+; SSE-NEXT:    pand %xmm0, %xmm1
+; SSE-NEXT:    psllw $5, %xmm1
+; SSE-NEXT:    pmovmskb %xmm1, %eax
 ; SSE-NEXT:    cmpw $-1, %ax
 ; SSE-NEXT:    sete %al
 ; SSE-NEXT:    retq
@@ -2623,9 +2623,9 @@ define i1 @allones_v64i8_and4(<64 x i8> %arg) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vpand %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vpand %xmm0, %xmm2, %xmm0
-; AVX1-NEXT:    vpand %xmm0, %xmm3, %xmm0
 ; AVX1-NEXT:    vpsllw $5, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX1-NEXT:    cmpw $-1, %ax
@@ -2672,10 +2672,10 @@ define i1 @allzeros_v64i8_and4(<64 x i8> %arg) {
 ; SSE-LABEL: allzeros_v64i8_and4:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    por %xmm3, %xmm1
-; SSE-NEXT:    por %xmm2, %xmm1
-; SSE-NEXT:    por %xmm0, %xmm1
-; SSE-NEXT:    psllw $5, %xmm1
-; SSE-NEXT:    pmovmskb %xmm1, %eax
+; SSE-NEXT:    por %xmm2, %xmm0
+; SSE-NEXT:    por %xmm1, %xmm0
+; SSE-NEXT:    psllw $5, %xmm0
+; SSE-NEXT:    pmovmskb %xmm0, %eax
 ; SSE-NEXT:    testl %eax, %eax
 ; SSE-NEXT:    sete %al
 ; SSE-NEXT:    retq
@@ -2685,8 +2685,8 @@ define i1 @allzeros_v64i8_and4(<64 x i8> %arg) {
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-NEXT:    vpor %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vpor %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpor %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsllw $5, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX1-NEXT:    testl %eax, %eax

@@ -196,8 +196,12 @@ class DominatorTree : public DominatorTreeBase<BasicBlock, false> {
   /// Return true if value Def dominates all possible uses inside instruction
   /// User. Same comments as for the Use-based API apply.
   bool dominates(const Value *Def, const Instruction *User) const;
-  // Does not accept Value to avoid ambiguity with dominance checks between
-  // two basic blocks.
+
+  /// Returns true if Def would dominate a use in any instruction in BB.
+  /// If Def is an instruction in BB, then Def does not dominate BB.
+  ///
+  /// Does not accept Value to avoid ambiguity with dominance checks between
+  /// two basic blocks.
   bool dominates(const Instruction *Def, const BasicBlock *BB) const;
 
   /// Return true if an edge dominates a use.
@@ -214,6 +218,14 @@ class DominatorTree : public DominatorTreeBase<BasicBlock, false> {
 
   /// Provide an overload for a Use.
   bool isReachableFromEntry(const Use &U) const;
+
+  // Ensure base class overloads are visible.
+  using Base::findNearestCommonDominator;
+
+  /// Find the nearest instruction I that dominates both I1 and I2, in the sense
+  /// that a result produced before I will be available at both I1 and I2.
+  Instruction *findNearestCommonDominator(Instruction *I1,
+                                          Instruction *I2) const;
 
   // Pop up a GraphViz/gv window with the Dominator Tree rendered using `dot`.
   void viewGraph(const Twine &Name, const Twine &Title);

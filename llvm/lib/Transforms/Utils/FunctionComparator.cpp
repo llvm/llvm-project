@@ -110,7 +110,7 @@ int FunctionComparator::cmpMem(StringRef L, StringRef R) const {
 
   // Compare strings lexicographically only when it is necessary: only when
   // strings are equal in size.
-  return L.compare(R);
+  return std::clamp(L.compare(R), -1, 1);
 }
 
 int FunctionComparator::cmpAttrs(const AttributeList L,
@@ -241,9 +241,9 @@ int FunctionComparator::cmpConstants(const Constant *L,
     unsigned TyRWidth = 0;
 
     if (auto *VecTyL = dyn_cast<VectorType>(TyL))
-      TyLWidth = VecTyL->getPrimitiveSizeInBits().getFixedSize();
+      TyLWidth = VecTyL->getPrimitiveSizeInBits().getFixedValue();
     if (auto *VecTyR = dyn_cast<VectorType>(TyR))
-      TyRWidth = VecTyR->getPrimitiveSizeInBits().getFixedSize();
+      TyRWidth = VecTyR->getPrimitiveSizeInBits().getFixedValue();
 
     if (TyLWidth != TyRWidth)
       return cmpNumbers(TyLWidth, TyRWidth);
@@ -381,7 +381,7 @@ int FunctionComparator::cmpConstants(const Constant *L,
       BasicBlock *RBB = RBA->getBasicBlock();
       if (LBB == RBB)
         return 0;
-      for (BasicBlock &BB : F->getBasicBlockList()) {
+      for (BasicBlock &BB : *F) {
         if (&BB == LBB) {
           assert(&BB != RBB);
           return -1;
@@ -401,6 +401,15 @@ int FunctionComparator::cmpConstants(const Constant *L,
       // context of their respective functions.
       return cmpValues(LBA->getBasicBlock(), RBA->getBasicBlock());
     }
+  }
+  case Value::DSOLocalEquivalentVal: {
+    // dso_local_equivalent is functionally equivalent to whatever it points to.
+    // This means the behavior of the IR should be the exact same as if the
+    // function was referenced directly rather than through a
+    // dso_local_equivalent.
+    const auto *LEquiv = cast<DSOLocalEquivalent>(L);
+    const auto *REquiv = cast<DSOLocalEquivalent>(R);
+    return cmpGlobalValues(LEquiv->getGlobalValue(), REquiv->getGlobalValue());
   }
   default: // Unknown constant, abort.
     LLVM_DEBUG(dbgs() << "Looking at valueID " << L->getValueID() << "\n");
@@ -968,7 +977,7 @@ FunctionComparator::FunctionHash FunctionComparator::functionHash(Function &F) {
     // This random value acts as a block header, as otherwise the partition of
     // opcodes into BBs wouldn't affect the hash, only the order of the opcodes
     H.add(45798);
-    for (auto &Inst : *BB) {
+    for (const auto &Inst : *BB) {
       H.add(Inst.getOpcode());
     }
     const Instruction *Term = BB->getTerminator();

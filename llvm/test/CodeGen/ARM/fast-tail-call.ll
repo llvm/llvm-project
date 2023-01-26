@@ -5,12 +5,12 @@
 ; which led (via a convoluted route) to DAG nodes after a TC_RETURN that
 ; couldn't possibly work.
 
-declare i8* @g(i8*)
+declare ptr @g(ptr)
 
-define i8* @f(i8* %a) {
+define ptr @f(ptr %a) {
 entry:
-  %0 = tail call i8* @g(i8* %a)
-  ret i8* %0
+  %0 = tail call ptr @g(ptr %a)
+  ret ptr %0
 ; CHECK: b g
 ; CHECK-NOT: ldr
 ; CHECK-NOT: str

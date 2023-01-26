@@ -40,8 +40,7 @@ struct BufferizationInlinerInterface : public DialectInlinerInterface {
   using DialectInlinerInterface::DialectInlinerInterface;
 
   /// Operations in Bufferization dialect are always legal to inline.
-  bool isLegalToInline(Operation *, Region *, bool,
-                       BlockAndValueMapping &) const final {
+  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
     return true;
   }
 };
@@ -59,19 +58,34 @@ void mlir::bufferization::BufferizationDialect::initialize() {
   addInterfaces<BufferizationInlinerInterface>();
 }
 
-LogicalResult
-BufferizationDialect::verifyOperationAttribute(Operation *op,
-                                               NamedAttribute attr) {
-  using bufferization::BufferizableOpInterface;
-
+LogicalResult BufferizationDialect::verifyRegionArgAttribute(
+    Operation *op, unsigned /*regionIndex*/, unsigned argIndex,
+    NamedAttribute attr) {
   if (attr.getName() == kWritableAttrName) {
     if (!attr.getValue().isa<BoolAttr>()) {
       return op->emitError() << "'" << kWritableAttrName
                              << "' is expected to be a boolean attribute";
     }
     if (!isa<FunctionOpInterface>(op))
-      return op->emitError() << "expected " << attr.getName()
-                             << " to be used on function-like operations";
+      return op->emitError() << "expected '" << kWritableAttrName
+                             << "' to be used on function-like operations";
+    if (cast<FunctionOpInterface>(op).isExternal())
+      return op->emitError() << "'" << kWritableAttrName
+                             << "' is invalid on external functions";
+    return success();
+  }
+  if (attr.getName() == kBufferAccessAttrName) {
+    if (!attr.getValue().isa<StringAttr>()) {
+      return op->emitError() << "'" << kBufferAccessAttrName
+                             << "' is expected to be a string attribute";
+    }
+    StringRef str = attr.getValue().cast<StringAttr>().getValue();
+    if (str != "none" && str != "read" && str != "write" && str != "read-write")
+      return op->emitError()
+             << "invalid value for '" << kBufferAccessAttrName << "'";
+    if (!isa<FunctionOpInterface>(op))
+      return op->emitError() << "expected '" << kBufferAccessAttrName
+                             << "' to be used on function-like operations";
     return success();
   }
   if (attr.getName() == kBufferLayoutAttrName) {
@@ -80,10 +94,20 @@ BufferizationDialect::verifyOperationAttribute(Operation *op,
                              << "' is expected to be a affine map attribute";
     }
     if (!isa<FunctionOpInterface>(op))
-      return op->emitError() << "expected " << attr.getName()
-                             << " to be used on function-like operations";
+      return op->emitError() << "expected '" << kBufferLayoutAttrName
+                             << "' to be used on function-like operations";
     return success();
   }
+  return op->emitError() << "attribute '" << kBufferLayoutAttrName
+                         << "' not supported as a region arg attribute by the "
+                            "bufferization dialect";
+}
+
+LogicalResult
+BufferizationDialect::verifyOperationAttribute(Operation *op,
+                                               NamedAttribute attr) {
+  using bufferization::BufferizableOpInterface;
+
   if (attr.getName() == kEscapeAttrName) {
     auto arrayAttr = attr.getValue().dyn_cast<ArrayAttr>();
     if (!arrayAttr)
@@ -116,6 +140,7 @@ BufferizationDialect::verifyOperationAttribute(Operation *op,
     return success();
   }
 
-  return op->emitError() << "attribute '" << attr.getName()
-                         << "' not supported by the bufferization dialect";
+  return op->emitError()
+         << "attribute '" << attr.getName()
+         << "' not supported as an op attribute by the bufferization dialect";
 }

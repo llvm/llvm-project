@@ -13,6 +13,8 @@
 #include "mlir/AsmParser/AsmParserState.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
+#include "llvm/Support/Base64.h"
+#include <optional>
 
 namespace mlir {
 namespace detail {
@@ -112,6 +114,11 @@ public:
   /// Parse a `,` token if present.
   ParseResult parseOptionalComma() override {
     return success(parser.consumeIf(Token::comma));
+  }
+
+  /// Parses a `...`.
+  ParseResult parseEllipsis() override {
+    return parser.parseToken(Token::ellipsis, "expected '...'");
   }
 
   /// Parses a `...` if present.
@@ -240,6 +247,28 @@ public:
     return success();
   }
 
+  /// Parses a Base64 encoded string of bytes.
+  ParseResult parseBase64Bytes(std::vector<char> *bytes) override {
+    auto loc = getCurrentLocation();
+    if (!parser.getToken().is(Token::string))
+      return emitError(loc, "expected string");
+
+    if (bytes) {
+      // decodeBase64 doesn't modify its input so we can use the token spelling
+      // and just slice off the quotes/whitespaces if there are any. Whitespace
+      // and quotes cannot appear as part of a (standard) base64 encoded string,
+      // so this is safe to do.
+      StringRef b64QuotedString = parser.getTokenSpelling();
+      StringRef b64String =
+          b64QuotedString.ltrim("\"  \t\n\v\f\r").rtrim("\" \t\n\v\f\r");
+      if (auto err = llvm::decodeBase64(b64String, *bytes))
+        return emitError(loc, toString(std::move(err)));
+    }
+
+    parser.consumeToken();
+    return success();
+  }
+
   /// Parse a floating point value from the stream.
   ParseResult parseFloat(double &result) override {
     bool isNegative = parser.consumeIf(Token::minus);
@@ -258,7 +287,7 @@ public:
 
     // Check for a hexadecimal float value.
     if (curTok.is(Token::integer)) {
-      Optional<APFloat> apResult;
+      std::optional<APFloat> apResult;
       if (failed(parser.parseFloatFromIntegerLiteral(
               apResult, curTok, isNegative, APFloat::IEEEdouble(),
               /*typeSizeInBits=*/64)))
@@ -402,6 +431,10 @@ public:
                                              Type type) override {
     return parser.parseOptionalAttribute(result, type);
   }
+  OptionalParseResult parseOptionalAttribute(SymbolRefAttr &result,
+                                             Type type) override {
+    return parser.parseOptionalAttribute(result, type);
+  }
 
   /// Parse a named dictionary into 'result' if it is present.
   ParseResult parseOptionalAttrDict(NamedAttrList &result) override {
@@ -434,14 +467,12 @@ public:
 
   /// Parse an optional @-identifier and store it (without the '@' symbol) in a
   /// string attribute named 'attrName'.
-  ParseResult parseOptionalSymbolName(StringAttr &result, StringRef attrName,
-                                      NamedAttrList &attrs) override {
+  ParseResult parseOptionalSymbolName(StringAttr &result) override {
     Token atToken = parser.getToken();
     if (atToken.isNot(Token::at_identifier))
       return failure();
 
     result = getBuilder().getStringAttr(atToken.getSymbolReference());
-    attrs.push_back(getBuilder().getNamedAttr(attrName, result));
     parser.consumeToken();
 
     // If we are populating the assembly parser state, record this as a symbol
@@ -460,7 +491,7 @@ public:
   /// Parse a handle to a resource within the assembly format.
   FailureOr<AsmDialectResourceHandle>
   parseResourceHandle(Dialect *dialect) override {
-    const auto *interface = dyn_cast_or_null<OpAsmDialectInterface>(dialect);
+    const auto *interface = dyn_cast<OpAsmDialectInterface>(dialect);
     if (!interface) {
       return parser.emitError() << "dialect '" << dialect->getNamespace()
                                 << "' does not expect resource handles";

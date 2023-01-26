@@ -19,14 +19,17 @@ add_mlir_dialect_library(MLIRTensorDialect
   Core
 
   LINK_LIBS PUBLIC
-  MLIRArithmeticDialect
-  MLIRArithmeticUtils
+  MLIRAffineDialect
+  MLIRArithDialect
+  MLIRArithUtils
   MLIRCastInterfaces
   MLIRComplexDialect
+  MLIRDestinationStyleOpInterface
   MLIRDialectUtils
   MLIRIR
   MLIRInferTypeOpInterface
   MLIRParallelCombiningOpInterface
+  MLIRShapedOpInterfaces
   MLIRSideEffectInterfaces
   MLIRSupport
   MLIRViewLikeInterface
@@ -54,10 +57,14 @@ add_mlir_dialect_library(MLIRTensorTilingInterfaceImpl
 
   LINK_LIBS PUBLIC
   MLIRAffineDialect
+  MLIRAffineUtils
+  MLIRDialectUtils
   MLIRIR
   MLIRLinalgDialect
+  MLIRLinalgUtils
   MLIRSCFDialect
   MLIRSupport
   MLIRTensorDialect
+  MLIRTensorUtils
   MLIRTilingInterface
   )

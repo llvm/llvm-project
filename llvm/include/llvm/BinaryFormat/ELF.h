@@ -435,6 +435,7 @@ enum : unsigned {
   EF_ARM_ABI_FLOAT_SOFT = 0x00000200U, // EABI_VER5
   EF_ARM_VFP_FLOAT = 0x00000400U,      // Legacy pre EABI_VER5
   EF_ARM_ABI_FLOAT_HARD = 0x00000400U, // EABI_VER5
+  EF_ARM_BE8 = 0x00800000U,
   EF_ARM_EABI_UNKNOWN = 0x00000000U,
   EF_ARM_EABI_VER1 = 0x01000000U,
   EF_ARM_EABI_VER2 = 0x02000000U,
@@ -619,6 +620,9 @@ enum {
   EF_HEXAGON_MACH_V67T = 0x00008067, // Hexagon V67T
   EF_HEXAGON_MACH_V68 = 0x00000068,  // Hexagon V68
   EF_HEXAGON_MACH_V69 = 0x00000069,  // Hexagon V69
+  EF_HEXAGON_MACH_V71 = 0x00000071,  // Hexagon V71
+  EF_HEXAGON_MACH_V71T = 0x00008071, // Hexagon V71T
+  EF_HEXAGON_MACH_V73 = 0x00000073,  // Hexagon V73
   EF_HEXAGON_MACH = 0x000003ff,      // Hexagon V..
 
   // Highest ISA version flags
@@ -636,6 +640,9 @@ enum {
   EF_HEXAGON_ISA_V67 = 0x00000067,  // Hexagon V67 ISA
   EF_HEXAGON_ISA_V68 = 0x00000068,  // Hexagon V68 ISA
   EF_HEXAGON_ISA_V69 = 0x00000069,  // Hexagon V69 ISA
+  EF_HEXAGON_ISA_V71 = 0x00000071,  // Hexagon V71 ISA
+  EF_HEXAGON_ISA_V73 = 0x00000073,  // Hexagon V73 ISA
+  EF_HEXAGON_ISA_V75 = 0x00000075,  // Hexagon V75 ISA
   EF_HEXAGON_ISA = 0x000003ff,      // Hexagon V.. ISA
 };
 
@@ -902,27 +909,40 @@ enum {
 
 // LoongArch Specific e_flags
 enum : unsigned {
-  // Reference: https://github.com/loongson/LoongArch-Documentation.
-  // The last commit hash (main branch) is
-  // 99016636af64d02dee05e39974d4c1e55875c45b.
-  // Note that there is an open PR
-  // https://github.com/loongson/LoongArch-Documentation/pull/47
-  // talking about using 0x1, 0x2, 0x3 for ILP32S/F/D and use EI_CLASS to
-  // distinguish LP64 and ILP32. If this PR get merged, we will update
-  // the definition here.
-  // Base ABI Types.
-  EF_LOONGARCH_BASE_ABI_LP64S = 0x1,  // LP64 soft-float ABI
-  EF_LOONGARCH_BASE_ABI_LP64F = 0x2,  // LP64 single-float ABI
-  EF_LOONGARCH_BASE_ABI_LP64D = 0x3,  // LP64 double-float ABI
-  EF_LOONGARCH_BASE_ABI_ILP32S = 0x5, // ILP32 soft-float ABI
-  EF_LOONGARCH_BASE_ABI_ILP32F = 0x6, // ILP32 single-float ABI
-  EF_LOONGARCH_BASE_ABI_ILP32D = 0x7, // ILP32 double-float ABI
-  EF_LOONGARCH_BASE_ABI_MASK = 0x7,   // Mask for selecting base ABI
+  // Definitions from LoongArch ELF psABI v2.01.
+  // Reference: https://github.com/loongson/LoongArch-Documentation
+  // (commit hash 296de4def055c871809068e0816325a4ac04eb12)
+
+  // Base ABI Modifiers
+  EF_LOONGARCH_ABI_SOFT_FLOAT    = 0x1,
+  EF_LOONGARCH_ABI_SINGLE_FLOAT  = 0x2,
+  EF_LOONGARCH_ABI_DOUBLE_FLOAT  = 0x3,
+  EF_LOONGARCH_ABI_MODIFIER_MASK = 0x7,
+
+  // Object file ABI versions
+  EF_LOONGARCH_OBJABI_V0   = 0x0,
+  EF_LOONGARCH_OBJABI_V1   = 0x40,
+  EF_LOONGARCH_OBJABI_MASK = 0xC0,
 };
 
 // ELF Relocation types for LoongArch
 enum {
 #include "ELFRelocs/LoongArch.def"
+};
+
+// Xtensa specific e_flags
+enum : unsigned {
+  // Four-bit Xtensa machine type mask.
+  EF_XTENSA_MACH = 0x0000000f,
+  // Various CPU types.
+  EF_XTENSA_MACH_NONE = 0x00000000, // A base Xtensa implementation
+  EF_XTENSA_XT_INSN = 0x00000100,
+  EF_XTENSA_XT_LIT = 0x00000200,
+};
+
+// ELF Relocation types for Xtensa
+enum {
+#include "ELFRelocs/Xtensa.def"
 };
 
 #undef ELF_RELOC
@@ -1030,6 +1050,10 @@ enum : unsigned {
   SHT_ARM_ATTRIBUTES = 0x70000003U,
   SHT_ARM_DEBUGOVERLAY = 0x70000004U,
   SHT_ARM_OVERLAYSECTION = 0x70000005U,
+  // Special aarch64-specific sections for MTE support, as described in:
+  // https://github.com/ARM-software/abi-aa/blob/main/memtagabielf64/memtagabielf64.rst#7section-types
+  SHT_AARCH64_MEMTAG_GLOBALS_STATIC = 0x70000007U,
+  SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC = 0x70000008U,
   SHT_HEX_ORDERED = 0x70000000,   // Link editor is to sort the entries in
                                   // this section based on their sizes
   SHT_X86_64_UNWIND = 0x70000001, // Unwind information
@@ -1377,6 +1401,7 @@ enum {
   PT_GNU_RELRO = 0x6474e552,    // Read-only after relocation.
   PT_GNU_PROPERTY = 0x6474e553, // .note.gnu.property notes sections.
 
+  PT_OPENBSD_MUTABLE = 0x65a3dbe5,   // Like bss, but not immutable.
   PT_OPENBSD_RANDOMIZE = 0x65a3dbe6, // Fill with random data.
   PT_OPENBSD_WXNEEDED = 0x65a3dbe7,  // Program does W^X violations.
   PT_OPENBSD_BOOTDATA = 0x65a41be6,  // Section for boot arguments.
@@ -1597,6 +1622,7 @@ enum {
   NT_GNU_BUILD_ID = 3,
   NT_GNU_GOLD_VERSION = 4,
   NT_GNU_PROPERTY_TYPE_0 = 5,
+  FDO_PACKAGING_METADATA = 0xcafe1a7e,
 };
 
 // Android note types.

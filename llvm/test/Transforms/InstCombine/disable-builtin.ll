@@ -9,13 +9,12 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 @empty = constant [1 x i8] c"\00", align 1
 
-declare i8* @strcat(i8*, i8*)
+declare ptr @strcat(ptr, ptr)
 
-define i8* @test_strcat(i8* %x) {
+define ptr @test_strcat(ptr %x) {
 ; CHECK-LABEL: @test_strcat(
-  %empty = getelementptr [1 x i8], [1 x i8]* @empty, i32 0, i32 0
-  %ret = call i8* @strcat(i8* %x, i8* %empty)
-  ret i8* %ret
-; CHECK: call i8* @strcat
+  %ret = call ptr @strcat(ptr %x, ptr @empty)
+  ret ptr %ret
+; CHECK: call ptr @strcat
 }
 

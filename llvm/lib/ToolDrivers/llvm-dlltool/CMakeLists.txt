@@ -9,6 +9,7 @@ add_llvm_component_library(LLVMDlltoolDriver
   Object
   Option
   Support
+  TargetParser
   )
 
 add_dependencies(LLVMDlltoolDriver DllOptionsTableGen)

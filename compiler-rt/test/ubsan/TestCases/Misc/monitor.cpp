@@ -1,12 +1,12 @@
-// RUN: %clangxx -w -fsanitize=bool %s -o %t
+// RUN: %clangxx -w -fsanitize=bool -fno-sanitize-memory-param-retval %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 
 // __ubsan_on_report is not defined as weak. Redefining it here isn't supported
 // on Windows.
 //
-// UNSUPPORTED: windows-msvc
+// UNSUPPORTED: target={{.*windows-msvc.*}}
 // Linkage issue
-// XFAIL: openbsd
+// XFAIL: target={{.*openbsd.*}}
 
 #include <cstdio>
 

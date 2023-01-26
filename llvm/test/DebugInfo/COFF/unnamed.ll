@@ -140,16 +140,13 @@ define i32 @main() #0 !dbg !7 {
 entry:
   %retval = alloca i32, align 4
   %local = alloca %struct.named_struct, align 4
-  store i32 0, i32* %retval, align 4
-  call void @llvm.dbg.declare(metadata %struct.named_struct* %local, metadata !11, metadata !25), !dbg !26
-  %id = getelementptr inbounds %struct.named_struct, %struct.named_struct* %local, i32 0, i32 0, !dbg !27
-  store i32 1, i32* %id, align 4, !dbg !28
-  %unnamed_union = getelementptr inbounds %struct.named_struct, %struct.named_struct* %local, i32 0, i32 1, !dbg !29
-  %m1 = bitcast %union.anon* %unnamed_union to i32*, !dbg !30
-  store i32 65, i32* %m1, align 4, !dbg !31
-  %unnamed_struct = getelementptr inbounds %struct.named_struct, %struct.named_struct* %local, i32 0, i32 2, !dbg !32
-  %m3 = getelementptr inbounds %struct.anon, %struct.anon* %unnamed_struct, i32 0, i32 0, !dbg !33
-  store i8 66, i8* %m3, align 4, !dbg !34
+  store i32 0, ptr %retval, align 4
+  call void @llvm.dbg.declare(metadata ptr %local, metadata !11, metadata !25), !dbg !26
+  store i32 1, ptr %local, align 4, !dbg !28
+  %unnamed_union = getelementptr inbounds %struct.named_struct, ptr %local, i32 0, i32 1, !dbg !29
+  store i32 65, ptr %unnamed_union, align 4, !dbg !31
+  %unnamed_struct = getelementptr inbounds %struct.named_struct, ptr %local, i32 0, i32 2, !dbg !32
+  store i8 66, ptr %unnamed_struct, align 4, !dbg !34
   ret i32 0, !dbg !35
 }
 

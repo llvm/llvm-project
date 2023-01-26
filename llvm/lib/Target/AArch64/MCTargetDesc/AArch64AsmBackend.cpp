@@ -46,7 +46,7 @@ public:
     return AArch64::NumTargetFixupKinds;
   }
 
-  Optional<MCFixupKind> getFixupKind(StringRef Name) const override;
+  std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo Infos[AArch64::NumTargetFixupKinds] = {
@@ -330,9 +330,10 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
   }
 }
 
-Optional<MCFixupKind> AArch64AsmBackend::getFixupKind(StringRef Name) const {
+std::optional<MCFixupKind>
+AArch64AsmBackend::getFixupKind(StringRef Name) const {
   if (!TheTriple.isOSBinFormatELF())
-    return None;
+    return std::nullopt;
 
   unsigned Type = llvm::StringSwitch<unsigned>(Name)
 #define ELF_RELOC(X, Y)  .Case(#X, Y)
@@ -344,7 +345,7 @@ Optional<MCFixupKind> AArch64AsmBackend::getFixupKind(StringRef Name) const {
                       .Case("BFD_RELOC_64", ELF::R_AARCH64_ABS64)
                       .Default(-1u);
   if (Type == -1u)
-    return None;
+    return std::nullopt;
   return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
 }
 
@@ -745,7 +746,7 @@ public:
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
-    return createAArch64WinCOFFObjectWriter();
+    return createAArch64WinCOFFObjectWriter(TheTriple);
   }
 };
 }

@@ -1,41 +1,41 @@
 ; RUN: llc < %s -mtriple=thumbv6-apple-darwin10 | grep rsbs | grep "#0"
 
-	%struct.FILE = type { i8*, i32, i32, i16, i16, %struct.__sbuf, i32, i8*, i32 (i8*)*, i32 (i8*, i8*, i32)*, i64 (i8*, i64, i32)*, i32 (i8*, i8*, i32)*, %struct.__sbuf, %struct.__sFILEX*, i32, [3 x i8], [1 x i8], %struct.__sbuf, i32, i64 }
+	%struct.FILE = type { ptr, i32, i32, i16, i16, %struct.__sbuf, i32, ptr, ptr, ptr, ptr, ptr, %struct.__sbuf, ptr, i32, [3 x i8], [1 x i8], %struct.__sbuf, i32, i64 }
 	%struct.__sFILEX = type opaque
-	%struct.__sbuf = type { i8*, i32 }
+	%struct.__sbuf = type { ptr, i32 }
 	%struct.adpcm_state = type { i16, i8 }
-@stepsizeTable = internal constant [89 x i32] [i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 16, i32 17, i32 19, i32 21, i32 23, i32 25, i32 28, i32 31, i32 34, i32 37, i32 41, i32 45, i32 50, i32 55, i32 60, i32 66, i32 73, i32 80, i32 88, i32 97, i32 107, i32 118, i32 130, i32 143, i32 157, i32 173, i32 190, i32 209, i32 230, i32 253, i32 279, i32 307, i32 337, i32 371, i32 408, i32 449, i32 494, i32 544, i32 598, i32 658, i32 724, i32 796, i32 876, i32 963, i32 1060, i32 1166, i32 1282, i32 1411, i32 1552, i32 1707, i32 1878, i32 2066, i32 2272, i32 2499, i32 2749, i32 3024, i32 3327, i32 3660, i32 4026, i32 4428, i32 4871, i32 5358, i32 5894, i32 6484, i32 7132, i32 7845, i32 8630, i32 9493, i32 10442, i32 11487, i32 12635, i32 13899, i32 15289, i32 16818, i32 18500, i32 20350, i32 22385, i32 24623, i32 27086, i32 29794, i32 32767]		; <[89 x i32]*> [#uses=4]
-@indexTable = internal constant [16 x i32] [i32 -1, i32 -1, i32 -1, i32 -1, i32 2, i32 4, i32 6, i32 8, i32 -1, i32 -1, i32 -1, i32 -1, i32 2, i32 4, i32 6, i32 8]		; <[16 x i32]*> [#uses=2]
-@abuf = common global [500 x i8] zeroinitializer		; <[500 x i8]*> [#uses=1]
-@.str = private constant [11 x i8] c"input file\00", section "__TEXT,__cstring,cstring_literals", align 1		; <[11 x i8]*> [#uses=1]
-@sbuf = common global [1000 x i16] zeroinitializer		; <[1000 x i16]*> [#uses=1]
-@state = common global %struct.adpcm_state zeroinitializer		; <%struct.adpcm_state*> [#uses=3]
-@__stderrp = external global %struct.FILE*		; <%struct.FILE**> [#uses=1]
-@.str1 = private constant [28 x i8] c"Final valprev=%d, index=%d\0A\00", section "__TEXT,__cstring,cstring_literals", align 1		; <[28 x i8]*> [#uses=1]
+@stepsizeTable = internal constant [89 x i32] [i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 16, i32 17, i32 19, i32 21, i32 23, i32 25, i32 28, i32 31, i32 34, i32 37, i32 41, i32 45, i32 50, i32 55, i32 60, i32 66, i32 73, i32 80, i32 88, i32 97, i32 107, i32 118, i32 130, i32 143, i32 157, i32 173, i32 190, i32 209, i32 230, i32 253, i32 279, i32 307, i32 337, i32 371, i32 408, i32 449, i32 494, i32 544, i32 598, i32 658, i32 724, i32 796, i32 876, i32 963, i32 1060, i32 1166, i32 1282, i32 1411, i32 1552, i32 1707, i32 1878, i32 2066, i32 2272, i32 2499, i32 2749, i32 3024, i32 3327, i32 3660, i32 4026, i32 4428, i32 4871, i32 5358, i32 5894, i32 6484, i32 7132, i32 7845, i32 8630, i32 9493, i32 10442, i32 11487, i32 12635, i32 13899, i32 15289, i32 16818, i32 18500, i32 20350, i32 22385, i32 24623, i32 27086, i32 29794, i32 32767]		; <ptr> [#uses=4]
+@indexTable = internal constant [16 x i32] [i32 -1, i32 -1, i32 -1, i32 -1, i32 2, i32 4, i32 6, i32 8, i32 -1, i32 -1, i32 -1, i32 -1, i32 2, i32 4, i32 6, i32 8]		; <ptr> [#uses=2]
+@abuf = common global [500 x i8] zeroinitializer		; <ptr> [#uses=1]
+@.str = private constant [11 x i8] c"input file\00", section "__TEXT,__cstring,cstring_literals", align 1		; <ptr> [#uses=1]
+@sbuf = common global [1000 x i16] zeroinitializer		; <ptr> [#uses=1]
+@state = common global %struct.adpcm_state zeroinitializer		; <ptr> [#uses=3]
+@__stderrp = external global ptr		; <ptr> [#uses=1]
+@.str1 = private constant [28 x i8] c"Final valprev=%d, index=%d\0A\00", section "__TEXT,__cstring,cstring_literals", align 1		; <ptr> [#uses=1]
 
-define void @adpcm_coder(i16* nocapture %indata, i8* nocapture %outdata, i32 %len, %struct.adpcm_state* nocapture %state) nounwind {
+define void @adpcm_coder(ptr nocapture %indata, ptr nocapture %outdata, i32 %len, ptr nocapture %state) nounwind {
 entry:
-	%0 = getelementptr %struct.adpcm_state, %struct.adpcm_state* %state, i32 0, i32 0		; <i16*> [#uses=2]
-	%1 = load i16, i16* %0, align 2		; <i16> [#uses=1]
+	%0 = getelementptr %struct.adpcm_state, ptr %state, i32 0, i32 0		; <ptr> [#uses=2]
+	%1 = load i16, ptr %0, align 2		; <i16> [#uses=1]
 	%2 = sext i16 %1 to i32		; <i32> [#uses=2]
-	%3 = getelementptr %struct.adpcm_state, %struct.adpcm_state* %state, i32 0, i32 1		; <i8*> [#uses=2]
-	%4 = load i8, i8* %3, align 2		; <i8> [#uses=1]
+	%3 = getelementptr %struct.adpcm_state, ptr %state, i32 0, i32 1		; <ptr> [#uses=2]
+	%4 = load i8, ptr %3, align 2		; <i8> [#uses=1]
 	%5 = sext i8 %4 to i32		; <i32> [#uses=3]
-	%6 = getelementptr [89 x i32], [89 x i32]* @stepsizeTable, i32 0, i32 %5		; <i32*> [#uses=1]
-	%7 = load i32, i32* %6, align 4		; <i32> [#uses=1]
+	%6 = getelementptr [89 x i32], ptr @stepsizeTable, i32 0, i32 %5		; <ptr> [#uses=1]
+	%7 = load i32, ptr %6, align 4		; <i32> [#uses=1]
 	%8 = icmp sgt i32 %len, 0		; <i1> [#uses=1]
 	br i1 %8, label %bb, label %bb27
 
 bb:		; preds = %bb25, %entry
 	%indvar = phi i32 [ 0, %entry ], [ %indvar.next, %bb25 ]		; <i32> [#uses=2]
-	%outp.136 = phi i8* [ %outdata, %entry ], [ %outp.0, %bb25 ]		; <i8*> [#uses=3]
+	%outp.136 = phi ptr [ %outdata, %entry ], [ %outp.0, %bb25 ]		; <ptr> [#uses=3]
 	%bufferstep.035 = phi i32 [ 1, %entry ], [ %tmp, %bb25 ]		; <i32> [#uses=3]
 	%outputbuffer.134 = phi i32 [ undef, %entry ], [ %outputbuffer.0, %bb25 ]		; <i32> [#uses=2]
 	%index.033 = phi i32 [ %5, %entry ], [ %index.2, %bb25 ]		; <i32> [#uses=1]
 	%valpred.132 = phi i32 [ %2, %entry ], [ %valpred.2, %bb25 ]		; <i32> [#uses=2]
 	%step.031 = phi i32 [ %7, %entry ], [ %36, %bb25 ]		; <i32> [#uses=5]
-	%inp.038 = getelementptr i16, i16* %indata, i32 %indvar		; <i16*> [#uses=1]
-	%9 = load i16, i16* %inp.038, align 2		; <i16> [#uses=1]
+	%inp.038 = getelementptr i16, ptr %indata, i32 %indvar		; <ptr> [#uses=1]
+	%9 = load i16, ptr %inp.038, align 2		; <i16> [#uses=1]
 	%10 = sext i16 %9 to i32		; <i32> [#uses=1]
 	%11 = sub i32 %10, %valpred.132		; <i32> [#uses=3]
 	%12 = icmp slt i32 %11, 0		; <i1> [#uses=1]
@@ -79,15 +79,15 @@ bb18:		; preds = %bb17, %bb16, %bb
 	%delta.1 = or i32 %21, %iftmp.1.0		; <i32> [#uses=1]
 	%delta.2 = or i32 %delta.1, %25		; <i32> [#uses=1]
 	%29 = xor i32 %delta.2, 1		; <i32> [#uses=3]
-	%30 = getelementptr [16 x i32], [16 x i32]* @indexTable, i32 0, i32 %29		; <i32*> [#uses=1]
-	%31 = load i32, i32* %30, align 4		; <i32> [#uses=1]
+	%30 = getelementptr [16 x i32], ptr @indexTable, i32 0, i32 %29		; <ptr> [#uses=1]
+	%31 = load i32, ptr %30, align 4		; <i32> [#uses=1]
 	%32 = add i32 %31, %index.033		; <i32> [#uses=2]
 	%33 = icmp slt i32 %32, 0		; <i1> [#uses=1]
 	%index.1 = select i1 %33, i32 0, i32 %32		; <i32> [#uses=2]
 	%34 = icmp sgt i32 %index.1, 88		; <i1> [#uses=1]
 	%index.2 = select i1 %34, i32 88, i32 %index.1		; <i32> [#uses=3]
-	%35 = getelementptr [89 x i32], [89 x i32]* @stepsizeTable, i32 0, i32 %index.2		; <i32*> [#uses=1]
-	%36 = load i32, i32* %35, align 4		; <i32> [#uses=1]
+	%35 = getelementptr [89 x i32], ptr @stepsizeTable, i32 0, i32 %index.2		; <ptr> [#uses=1]
+	%36 = load i32, ptr %35, align 4		; <i32> [#uses=1]
 	%37 = icmp eq i32 %bufferstep.035, 0		; <i1> [#uses=1]
 	br i1 %37, label %bb24, label %bb23
 
@@ -101,13 +101,13 @@ bb24:		; preds = %bb18
 	%41 = and i8 %40, 15		; <i8> [#uses=1]
 	%42 = trunc i32 %outputbuffer.134 to i8		; <i8> [#uses=1]
 	%43 = or i8 %41, %42		; <i8> [#uses=1]
-	store i8 %43, i8* %outp.136, align 1
-	%44 = getelementptr i8, i8* %outp.136, i32 1		; <i8*> [#uses=1]
+	store i8 %43, ptr %outp.136, align 1
+	%44 = getelementptr i8, ptr %outp.136, i32 1		; <ptr> [#uses=1]
 	br label %bb25
 
 bb25:		; preds = %bb24, %bb23
 	%outputbuffer.0 = phi i32 [ %39, %bb23 ], [ %outputbuffer.134, %bb24 ]		; <i32> [#uses=2]
-	%outp.0 = phi i8* [ %outp.136, %bb23 ], [ %44, %bb24 ]		; <i8*> [#uses=2]
+	%outp.0 = phi ptr [ %outp.136, %bb23 ], [ %44, %bb24 ]		; <ptr> [#uses=2]
 	%tmp = xor i32 %bufferstep.035, 1		; <i32> [#uses=1]
 	%indvar.next = add i32 %indvar, 1		; <i32> [#uses=2]
 	%exitcond = icmp eq i32 %indvar.next, %len		; <i1> [#uses=1]
@@ -118,7 +118,7 @@ bb26.bb27_crit_edge:		; preds = %bb25
 	br label %bb27
 
 bb27:		; preds = %bb26.bb27_crit_edge, %entry
-	%outp.1.lcssa = phi i8* [ %outp.0, %bb26.bb27_crit_edge ], [ %outdata, %entry ]		; <i8*> [#uses=1]
+	%outp.1.lcssa = phi ptr [ %outp.0, %bb26.bb27_crit_edge ], [ %outdata, %entry ]		; <ptr> [#uses=1]
 	%bufferstep.0.lcssa = phi i1 [ %phitmp44, %bb26.bb27_crit_edge ], [ false, %entry ]		; <i1> [#uses=1]
 	%outputbuffer.1.lcssa = phi i32 [ %outputbuffer.0, %bb26.bb27_crit_edge ], [ undef, %entry ]		; <i32> [#uses=1]
 	%index.0.lcssa = phi i32 [ %index.2, %bb26.bb27_crit_edge ], [ %5, %entry ]		; <i32> [#uses=1]
@@ -127,57 +127,57 @@ bb27:		; preds = %bb26.bb27_crit_edge, %entry
 
 bb28:		; preds = %bb27
 	%45 = trunc i32 %outputbuffer.1.lcssa to i8		; <i8> [#uses=1]
-	store i8 %45, i8* %outp.1.lcssa, align 1
+	store i8 %45, ptr %outp.1.lcssa, align 1
 	br label %bb29
 
 bb29:		; preds = %bb28, %bb27
 	%46 = trunc i32 %valpred.1.lcssa to i16		; <i16> [#uses=1]
-	store i16 %46, i16* %0, align 2
+	store i16 %46, ptr %0, align 2
 	%47 = trunc i32 %index.0.lcssa to i8		; <i8> [#uses=1]
-	store i8 %47, i8* %3, align 2
+	store i8 %47, ptr %3, align 2
 	ret void
 }
 
-define void @adpcm_decoder(i8* nocapture %indata, i16* nocapture %outdata, i32 %len, %struct.adpcm_state* nocapture %state) nounwind {
+define void @adpcm_decoder(ptr nocapture %indata, ptr nocapture %outdata, i32 %len, ptr nocapture %state) nounwind {
 entry:
-	%0 = getelementptr %struct.adpcm_state, %struct.adpcm_state* %state, i32 0, i32 0		; <i16*> [#uses=2]
-	%1 = load i16, i16* %0, align 2		; <i16> [#uses=1]
+	%0 = getelementptr %struct.adpcm_state, ptr %state, i32 0, i32 0		; <ptr> [#uses=2]
+	%1 = load i16, ptr %0, align 2		; <i16> [#uses=1]
 	%2 = sext i16 %1 to i32		; <i32> [#uses=2]
-	%3 = getelementptr %struct.adpcm_state, %struct.adpcm_state* %state, i32 0, i32 1		; <i8*> [#uses=2]
-	%4 = load i8, i8* %3, align 2		; <i8> [#uses=1]
+	%3 = getelementptr %struct.adpcm_state, ptr %state, i32 0, i32 1		; <ptr> [#uses=2]
+	%4 = load i8, ptr %3, align 2		; <i8> [#uses=1]
 	%5 = sext i8 %4 to i32		; <i32> [#uses=3]
-	%6 = getelementptr [89 x i32], [89 x i32]* @stepsizeTable, i32 0, i32 %5		; <i32*> [#uses=1]
-	%7 = load i32, i32* %6, align 4		; <i32> [#uses=1]
+	%6 = getelementptr [89 x i32], ptr @stepsizeTable, i32 0, i32 %5		; <ptr> [#uses=1]
+	%7 = load i32, ptr %6, align 4		; <i32> [#uses=1]
 	%8 = icmp sgt i32 %len, 0		; <i1> [#uses=1]
 	br i1 %8, label %bb, label %bb22
 
 bb:		; preds = %bb20, %entry
 	%indvar = phi i32 [ 0, %entry ], [ %indvar.next, %bb20 ]		; <i32> [#uses=2]
-	%inp.131 = phi i8* [ %indata, %entry ], [ %inp.0, %bb20 ]		; <i8*> [#uses=3]
+	%inp.131 = phi ptr [ %indata, %entry ], [ %inp.0, %bb20 ]		; <ptr> [#uses=3]
 	%bufferstep.028 = phi i32 [ 0, %entry ], [ %tmp, %bb20 ]		; <i32> [#uses=2]
 	%inputbuffer.127 = phi i32 [ undef, %entry ], [ %inputbuffer.0, %bb20 ]		; <i32> [#uses=2]
 	%index.026 = phi i32 [ %5, %entry ], [ %index.2, %bb20 ]		; <i32> [#uses=1]
 	%valpred.125 = phi i32 [ %2, %entry ], [ %valpred.2, %bb20 ]		; <i32> [#uses=1]
 	%step.024 = phi i32 [ %7, %entry ], [ %35, %bb20 ]		; <i32> [#uses=4]
-	%outp.030 = getelementptr i16, i16* %outdata, i32 %indvar		; <i16*> [#uses=1]
+	%outp.030 = getelementptr i16, ptr %outdata, i32 %indvar		; <ptr> [#uses=1]
 	%9 = icmp eq i32 %bufferstep.028, 0		; <i1> [#uses=1]
 	br i1 %9, label %bb2, label %bb3
 
 bb2:		; preds = %bb
-	%10 = load i8, i8* %inp.131, align 1		; <i8> [#uses=1]
+	%10 = load i8, ptr %inp.131, align 1		; <i8> [#uses=1]
 	%11 = sext i8 %10 to i32		; <i32> [#uses=2]
-	%12 = getelementptr i8, i8* %inp.131, i32 1		; <i8*> [#uses=1]
+	%12 = getelementptr i8, ptr %inp.131, i32 1		; <ptr> [#uses=1]
 	%13 = ashr i32 %11, 4		; <i32> [#uses=1]
 	br label %bb3
 
 bb3:		; preds = %bb2, %bb
 	%inputbuffer.0 = phi i32 [ %11, %bb2 ], [ %inputbuffer.127, %bb ]		; <i32> [#uses=1]
 	%delta.0.in = phi i32 [ %13, %bb2 ], [ %inputbuffer.127, %bb ]		; <i32> [#uses=5]
-	%inp.0 = phi i8* [ %12, %bb2 ], [ %inp.131, %bb ]		; <i8*> [#uses=1]
+	%inp.0 = phi ptr [ %12, %bb2 ], [ %inp.131, %bb ]		; <ptr> [#uses=1]
 	%delta.0 = and i32 %delta.0.in, 15		; <i32> [#uses=1]
 	%tmp = xor i32 %bufferstep.028, 1		; <i32> [#uses=1]
-	%14 = getelementptr [16 x i32], [16 x i32]* @indexTable, i32 0, i32 %delta.0		; <i32*> [#uses=1]
-	%15 = load i32, i32* %14, align 4		; <i32> [#uses=1]
+	%14 = getelementptr [16 x i32], ptr @indexTable, i32 0, i32 %delta.0		; <ptr> [#uses=1]
+	%15 = load i32, ptr %14, align 4		; <i32> [#uses=1]
 	%16 = add i32 %15, %index.026		; <i32> [#uses=2]
 	%17 = icmp slt i32 %16, 0		; <i1> [#uses=1]
 	%index.1 = select i1 %17, i32 0, i32 %16		; <i32> [#uses=2]
@@ -227,10 +227,10 @@ bb19:		; preds = %bb18
 
 bb20:		; preds = %bb19, %bb18, %bb13
 	%valpred.2 = phi i32 [ -32768, %bb19 ], [ 32767, %bb13 ], [ %valpred.0, %bb18 ]		; <i32> [#uses=3]
-	%34 = getelementptr [89 x i32], [89 x i32]* @stepsizeTable, i32 0, i32 %index.2		; <i32*> [#uses=1]
-	%35 = load i32, i32* %34, align 4		; <i32> [#uses=1]
+	%34 = getelementptr [89 x i32], ptr @stepsizeTable, i32 0, i32 %index.2		; <ptr> [#uses=1]
+	%35 = load i32, ptr %34, align 4		; <i32> [#uses=1]
 	%36 = trunc i32 %valpred.2 to i16		; <i16> [#uses=1]
-	store i16 %36, i16* %outp.030, align 2
+	store i16 %36, ptr %outp.030, align 2
 	%indvar.next = add i32 %indvar, 1		; <i32> [#uses=2]
 	%exitcond = icmp eq i32 %indvar.next, %len		; <i1> [#uses=1]
 	br i1 %exitcond, label %bb22, label %bb
@@ -239,9 +239,9 @@ bb22:		; preds = %bb20, %entry
 	%index.0.lcssa = phi i32 [ %5, %entry ], [ %index.2, %bb20 ]		; <i32> [#uses=1]
 	%valpred.1.lcssa = phi i32 [ %2, %entry ], [ %valpred.2, %bb20 ]		; <i32> [#uses=1]
 	%37 = trunc i32 %valpred.1.lcssa to i16		; <i16> [#uses=1]
-	store i16 %37, i16* %0, align 2
+	store i16 %37, ptr %0, align 2
 	%38 = trunc i32 %index.0.lcssa to i8		; <i8> [#uses=1]
-	store i8 %38, i8* %3, align 2
+	store i8 %38, ptr %3, align 2
 	ret void
 }
 
@@ -250,12 +250,12 @@ entry:
 	br label %bb
 
 bb:		; preds = %bb3, %entry
-	%0 = tail call  i32 (...) @read(i32 0, i8* getelementptr ([500 x i8], [500 x i8]* @abuf, i32 0, i32 0), i32 500) nounwind		; <i32> [#uses=4]
+	%0 = tail call  i32 (...) @read(i32 0, ptr @abuf, i32 500) nounwind		; <i32> [#uses=4]
 	%1 = icmp slt i32 %0, 0		; <i1> [#uses=1]
 	br i1 %1, label %bb1, label %bb2
 
 bb1:		; preds = %bb
-	tail call  void @perror(i8* getelementptr ([11 x i8], [11 x i8]* @.str, i32 0, i32 0)) nounwind
+	tail call  void @perror(ptr @.str) nounwind
 	ret i32 1
 
 bb2:		; preds = %bb
@@ -264,25 +264,25 @@ bb2:		; preds = %bb
 
 bb3:		; preds = %bb2
 	%3 = shl i32 %0, 1		; <i32> [#uses=1]
-	tail call  void @adpcm_decoder(i8* getelementptr ([500 x i8], [500 x i8]* @abuf, i32 0, i32 0), i16* getelementptr ([1000 x i16], [1000 x i16]* @sbuf, i32 0, i32 0), i32 %3, %struct.adpcm_state* @state) nounwind
+	tail call  void @adpcm_decoder(ptr @abuf, ptr @sbuf, i32 %3, ptr @state) nounwind
 	%4 = shl i32 %0, 2		; <i32> [#uses=1]
-	%5 = tail call  i32 (...) @write(i32 1, i16* getelementptr ([1000 x i16], [1000 x i16]* @sbuf, i32 0, i32 0), i32 %4) nounwind		; <i32> [#uses=0]
+	%5 = tail call  i32 (...) @write(i32 1, ptr @sbuf, i32 %4) nounwind		; <i32> [#uses=0]
 	br label %bb
 
 bb4:		; preds = %bb2
-	%6 = load %struct.FILE*, %struct.FILE** @__stderrp, align 4		; <%struct.FILE*> [#uses=1]
-	%7 = load i16, i16* getelementptr (%struct.adpcm_state, %struct.adpcm_state* @state, i32 0, i32 0), align 4		; <i16> [#uses=1]
+	%6 = load ptr, ptr @__stderrp, align 4		; <ptr> [#uses=1]
+	%7 = load i16, ptr @state, align 4		; <i16> [#uses=1]
 	%8 = sext i16 %7 to i32		; <i32> [#uses=1]
-	%9 = load i8, i8* getelementptr (%struct.adpcm_state, %struct.adpcm_state* @state, i32 0, i32 1), align 2		; <i8> [#uses=1]
+	%9 = load i8, ptr getelementptr (%struct.adpcm_state, ptr @state, i32 0, i32 1), align 2		; <i8> [#uses=1]
 	%10 = sext i8 %9 to i32		; <i32> [#uses=1]
-	%11 = tail call  i32 (%struct.FILE*, i8*, ...) @fprintf(%struct.FILE* %6, i8* getelementptr ([28 x i8], [28 x i8]* @.str1, i32 0, i32 0), i32 %8, i32 %10) nounwind		; <i32> [#uses=0]
+	%11 = tail call  i32 (ptr, ptr, ...) @fprintf(ptr %6, ptr @.str1, i32 %8, i32 %10) nounwind		; <i32> [#uses=0]
 	ret i32 0
 }
 
 declare i32 @read(...)
 
-declare void @perror(i8* nocapture) nounwind
+declare void @perror(ptr nocapture) nounwind
 
 declare i32 @write(...)
 
-declare i32 @fprintf(%struct.FILE* nocapture, i8* nocapture, ...) nounwind
+declare i32 @fprintf(ptr nocapture, ptr nocapture, ...) nounwind

@@ -74,7 +74,7 @@ public:
   bool mayUseUncheckedLoadStore();
   void uncheckUsesOf(unsigned TaggedReg, int FI);
   void uncheckLoadsAndStores();
-  Optional<int> findFirstSlotCandidate();
+  std::optional<int> findFirstSlotCandidate();
 
   bool runOnMachineFunction(MachineFunction &Func) override;
   StringRef getPassName() const override {
@@ -185,8 +185,7 @@ void AArch64StackTaggingPreRA::uncheckUsesOf(unsigned TaggedReg, int FI) {
         UseI.getOperand(OpIdx).ChangeToFrameIndex(FI);
         UseI.getOperand(OpIdx).setTargetFlags(AArch64II::MO_TAGGED);
       }
-    } else if (UseI.isCopy() &&
-               Register::isVirtualRegister(UseI.getOperand(0).getReg())) {
+    } else if (UseI.isCopy() && UseI.getOperand(0).getReg().isVirtual()) {
       uncheckUsesOf(UseI.getOperand(0).getReg(), FI);
     }
   }
@@ -238,7 +237,7 @@ static bool isSlotPreAllocated(MachineFrameInfo *MFI, int FI) {
 // eliminates a vreg (by replacing it with direct uses of IRG, which is usually
 // live almost everywhere anyway), and therefore needs to happen before
 // regalloc.
-Optional<int> AArch64StackTaggingPreRA::findFirstSlotCandidate() {
+std::optional<int> AArch64StackTaggingPreRA::findFirstSlotCandidate() {
   // Find the best (FI, Tag) pair to pin to offset 0.
   // Looking at the possible uses of a tagged address, the advantage of pinning
   // is:
@@ -255,7 +254,7 @@ Optional<int> AArch64StackTaggingPreRA::findFirstSlotCandidate() {
   // - Any other instruction may benefit from being pinned to offset 0.
   LLVM_DEBUG(dbgs() << "AArch64StackTaggingPreRA::findFirstSlotCandidate\n");
   if (!ClFirstSlot)
-    return None;
+    return std::nullopt;
 
   DenseMap<SlotWithTag, int> RetagScore;
   SlotWithTag MaxScoreST{-1, -1};
@@ -266,7 +265,7 @@ Optional<int> AArch64StackTaggingPreRA::findFirstSlotCandidate() {
       continue;
 
     Register RetagReg = I->getOperand(0).getReg();
-    if (!Register::isVirtualRegister(RetagReg))
+    if (!RetagReg.isVirtual())
       continue;
 
     int Score = 0;
@@ -285,7 +284,7 @@ Optional<int> AArch64StackTaggingPreRA::findFirstSlotCandidate() {
           continue;
         if (UseI.isCopy()) {
           Register DstReg = UseI.getOperand(0).getReg();
-          if (Register::isVirtualRegister(DstReg))
+          if (DstReg.isVirtual())
             WorkList.push_back(DstReg);
           continue;
         }
@@ -305,7 +304,7 @@ Optional<int> AArch64StackTaggingPreRA::findFirstSlotCandidate() {
   }
 
   if (MaxScoreST.FI < 0)
-    return None;
+    return std::nullopt;
 
   // If FI's tag is already 0, we are done.
   if (MaxScoreST.Tag == 0)
@@ -378,7 +377,7 @@ bool AArch64StackTaggingPreRA::runOnMachineFunction(MachineFunction &Func) {
   // Find a slot that is used with zero tag offset, like ADDG #fi, 0.
   // If the base tagged pointer is set up to the address of this slot,
   // the ADDG instruction can be eliminated.
-  Optional<int> BaseSlot = findFirstSlotCandidate();
+  std::optional<int> BaseSlot = findFirstSlotCandidate();
   if (BaseSlot)
     AFI->setTaggedBasePointerIndex(*BaseSlot);
 

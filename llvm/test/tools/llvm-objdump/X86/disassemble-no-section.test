@@ -6,9 +6,9 @@
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objdump -d %t | FileCheck %s
 
-# CHECK:       Disassembly of section :
+# CHECK:       Disassembly of section PT_LOAD#0:
 # CHECK-EMPTY:
-# CHECK-NEXT:  <>:
+# CHECK-NEXT:  <PT_LOAD#0>:
 # CHECK-NEXT:  55                    pushq   %rbp
 # CHECK-NEXT:  48 89 e5              movq    %rsp, %rbp
 # CHECK-NEXT:  0f 1f 40 00           nopl    (%rax)
@@ -22,9 +22,9 @@
 
 # RANGE:       no section overlaps the range
 # RANGE-EMPTY:
-# RANGE-NEXT:  Disassembly of section :
+# RANGE-NEXT:  Disassembly of section PT_LOAD#0:
 # RANGE-EMPTY:
-# RANGE-NEXT:  <>:
+# RANGE-NEXT:  <PT_LOAD#0>:
 # RANGE-NEXT:  55                    pushq   %rbp
 # RANGE-NEXT:  48 89 e5              movq    %rsp, %rbp
 # RANGE-EMPTY:

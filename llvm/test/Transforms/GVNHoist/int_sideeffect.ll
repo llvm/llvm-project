@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -gvn-hoist | FileCheck %s
+; RUN: opt -S < %s -passes=gvn-hoist | FileCheck %s
 
 declare void @llvm.sideeffect()
 

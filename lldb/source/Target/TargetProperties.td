@@ -37,6 +37,9 @@ let Definition = "target" in {
   def SourceMap: Property<"source-map", "PathMap">,
     DefaultStringValue<"">,
     Desc<"Source path remappings apply substitutions to the paths of source files, typically needed to debug from a different host than the one that built the target.  The source-map property consists of an array of pairs, the first element is a path prefix, and the second is its replacement.  The syntax is `prefix1 replacement1 prefix2 replacement2...`.  The pairs are checked in order, the first prefix that matches is used, and that prefix is substituted with the replacement.  A common pattern is to use source-map in conjunction with the clang -fdebug-prefix-map flag.  In the build, use `-fdebug-prefix-map=/path/to/build_dir=.` to rewrite the host specific build directory to `.`.  Then for debugging, use `settings set target.source-map . /path/to/local_dir` to convert `.` to a valid local path.">;
+  def AutoSourceMapRelative: Property<"auto-source-map-relative", "Boolean">,
+    DefaultTrue,
+    Desc<"Automatically deduce source path mappings based on source file breakpoint resolution. It only deduces source mapping if source file breakpoint request is using full path and if the debug info contains relative paths.">;
   def ExecutableSearchPaths: Property<"exec-search-paths", "FileSpecList">,
     DefaultStringValue<"">,
     Desc<"Executable search paths to use when locating executable files whose paths don't match the local file system.">;

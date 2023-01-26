@@ -15,9 +15,9 @@
 ; GFX678: buffer_store_dwordx2 v[[[X]]:[[Y]]]
 ; GFX10: global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX11: global_store_b64 v2, v[0:1], s[0:1]
-define amdgpu_kernel void @build_vector2 (<2 x i32> addrspace(1)* %out) {
+define amdgpu_kernel void @build_vector2 (ptr addrspace(1) %out) {
 entry:
-  store <2 x i32> <i32 5, i32 6>, <2 x i32> addrspace(1)* %out
+  store <2 x i32> <i32 5, i32 6>, ptr addrspace(1) %out
   ret void
 }
 
@@ -38,9 +38,9 @@ entry:
 ; GFX678: buffer_store_dwordx4 v[[[X]]:[[W]]]
 ; GFX10: global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX11: global_store_b128 v4, v[0:3], s[0:1]
-define amdgpu_kernel void @build_vector4 (<4 x i32> addrspace(1)* %out) {
+define amdgpu_kernel void @build_vector4 (ptr addrspace(1) %out) {
 entry:
-  store <4 x i32> <i32 5, i32 6, i32 7, i32 8>, <4 x i32> addrspace(1)* %out
+  store <4 x i32> <i32 5, i32 6, i32 7, i32 8>, ptr addrspace(1) %out
   ret void
 }
 
@@ -58,9 +58,9 @@ entry:
 ; GFX1011: s_waitcnt lgkmcnt(0)
 ; GFX10: global_store_dword v0, v1, s[0:1]
 ; GFX11: global_store_b32 v0, v1, s[0:1]
-define amdgpu_kernel void @build_vector_v2i16 (<2 x i16> addrspace(1)* %out) {
+define amdgpu_kernel void @build_vector_v2i16 (ptr addrspace(1) %out) {
 entry:
-  store <2 x i16> <i16 5, i16 6>, <2 x i16> addrspace(1)* %out
+  store <2 x i16> <i16 5, i16 6>, ptr addrspace(1) %out
   ret void
 }
 
@@ -91,11 +91,11 @@ entry:
 ; GFX1011: v_mov_b32_e32 v1, s2
 ; GFX10: global_store_dword v0, v1, s[0:1]
 ; GFX11: global_store_b32 v0, v1, s[0:1]
-define amdgpu_kernel void @build_vector_v2i16_trunc (<2 x i16> addrspace(1)* %out, i32 %a) {
+define amdgpu_kernel void @build_vector_v2i16_trunc (ptr addrspace(1) %out, i32 %a) {
   %srl = lshr i32 %a, 16
   %trunc = trunc i32 %srl to i16
   %ins.0 = insertelement <2 x i16> undef, i16 %trunc, i32 0
   %ins.1 = insertelement <2 x i16> %ins.0, i16 5, i32 1
-  store <2 x i16> %ins.1, <2 x i16> addrspace(1)* %out
+  store <2 x i16> %ins.1, ptr addrspace(1) %out
   ret void
 }

@@ -39,8 +39,8 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
                                           MAB.getTargetOptions().getABIName()));
 }
 
-MCELFStreamer &RISCVTargetELFStreamer::getStreamer() {
-  return static_cast<MCELFStreamer &>(Streamer);
+RISCVELFStreamer &RISCVTargetELFStreamer::getStreamer() {
+  return static_cast<RISCVELFStreamer &>(Streamer);
 }
 
 void RISCVTargetELFStreamer::emitDirectiveOptionPush() {}
@@ -157,6 +157,8 @@ void RISCVTargetELFStreamer::finish() {
 
   if (Features[RISCV::FeatureStdExtC])
     EFlags |= ELF::EF_RISCV_RVC;
+  if (Features[RISCV::FeatureStdExtZtso])
+    EFlags |= ELF::EF_RISCV_TSO;
 
   switch (ABI) {
   case RISCVABI::ABI_ILP32:
@@ -185,99 +187,90 @@ void RISCVTargetELFStreamer::reset() {
   Contents.clear();
 }
 
-namespace {
-class RISCVELFStreamer : public MCELFStreamer {
-  static std::pair<unsigned, unsigned> getRelocPairForSize(unsigned Size) {
-    switch (Size) {
-    default:
-      llvm_unreachable("unsupported fixup size");
-    case 1:
-      return std::make_pair(RISCV::fixup_riscv_add_8, RISCV::fixup_riscv_sub_8);
-    case 2:
-      return std::make_pair(RISCV::fixup_riscv_add_16,
-                            RISCV::fixup_riscv_sub_16);
-    case 4:
-      return std::make_pair(RISCV::fixup_riscv_add_32,
-                            RISCV::fixup_riscv_sub_32);
-    case 8:
-      return std::make_pair(RISCV::fixup_riscv_add_64,
-                            RISCV::fixup_riscv_sub_64);
-    }
+void RISCVTargetELFStreamer::emitDirectiveVariantCC(MCSymbol &Symbol) {
+  getStreamer().getAssembler().registerSymbol(Symbol);
+  cast<MCSymbolELF>(Symbol).setOther(ELF::STO_RISCV_VARIANT_CC);
+}
+
+std::pair<unsigned, unsigned>
+RISCVELFStreamer::getRelocPairForSize(unsigned Size) {
+  switch (Size) {
+  default:
+    llvm_unreachable("unsupported fixup size");
+  case 1:
+    return std::make_pair(RISCV::fixup_riscv_add_8, RISCV::fixup_riscv_sub_8);
+  case 2:
+    return std::make_pair(RISCV::fixup_riscv_add_16, RISCV::fixup_riscv_sub_16);
+  case 4:
+    return std::make_pair(RISCV::fixup_riscv_add_32, RISCV::fixup_riscv_sub_32);
+  case 8:
+    return std::make_pair(RISCV::fixup_riscv_add_64, RISCV::fixup_riscv_sub_64);
   }
+}
 
-  static bool requiresFixups(MCContext &C, const MCExpr *Value,
-                             const MCExpr *&LHS, const MCExpr *&RHS) {
-    auto IsMetadataOrEHFrameSection = [](const MCSection &S) -> bool {
-      // Additionally check .apple_names/.apple_types. They are fixed-size and
-      // do not need fixups. llvm-dwarfdump --apple-names does not process
-      // R_RISCV_{ADD,SUB}32 in them.
-      return S.getKind().isMetadata() || S.getName() == ".eh_frame" ||
-             S.getName() == ".apple_names" || S.getName() == ".apple_types";
-    };
+bool RISCVELFStreamer::requiresFixups(MCContext &C, const MCExpr *Value,
+                                      const MCExpr *&LHS, const MCExpr *&RHS) {
+  const auto *MBE = dyn_cast<MCBinaryExpr>(Value);
+  if (MBE == nullptr)
+    return false;
 
-    const auto *MBE = dyn_cast<MCBinaryExpr>(Value);
-    if (MBE == nullptr)
-      return false;
+  MCValue E;
+  if (!Value->evaluateAsRelocatable(E, nullptr, nullptr))
+    return false;
+  if (E.getSymA() == nullptr || E.getSymB() == nullptr)
+    return false;
 
-    MCValue E;
-    if (!Value->evaluateAsRelocatable(E, nullptr, nullptr))
-      return false;
-    if (E.getSymA() == nullptr || E.getSymB() == nullptr)
-      return false;
+  const auto &A = E.getSymA()->getSymbol();
+  const auto &B = E.getSymB()->getSymbol();
 
-    const auto &A = E.getSymA()->getSymbol();
-    const auto &B = E.getSymB()->getSymbol();
-
-    LHS =
-        MCBinaryExpr::create(MCBinaryExpr::Add, MCSymbolRefExpr::create(&A, C),
+  LHS = MCBinaryExpr::create(MCBinaryExpr::Add, MCSymbolRefExpr::create(&A, C),
                              MCConstantExpr::create(E.getConstant(), C), C);
-    RHS = E.getSymB();
+  RHS = E.getSymB();
 
-    // TODO: when available, R_RISCV_n_PCREL should be preferred.
+  // If either symbol is in a text section, we need to delay the relocation
+  // evaluation as relaxation may alter the size of the symbol.
+  //
+  // Unfortunately, we cannot identify if the symbol was built with relaxation
+  // as we do not track the state per symbol or section.  However, BFD will
+  // always emit the relocation and so we follow suit which avoids the need to
+  // track that information.
+  if (A.isInSection() && A.getSection().getKind().isText())
+    return true;
+  if (B.isInSection() && B.getSection().getKind().isText())
+    return true;
 
-    // Avoid pairwise relocations for symbolic difference in debug and .eh_frame
-    if (A.isInSection())
-      return !IsMetadataOrEHFrameSection(A.getSection());
-    if (B.isInSection())
-      return !IsMetadataOrEHFrameSection(B.getSection());
-    // as well as for absolute symbols.
-    return !A.getName().empty() || !B.getName().empty();
-  }
+  // Support cross-section symbolic differences ...
+  return A.isInSection() && B.isInSection() &&
+         A.getSection().getName() != B.getSection().getName();
+}
 
-  void reset() override {
-    static_cast<RISCVTargetStreamer *>(getTargetStreamer())->reset();
-    MCELFStreamer::reset();
-  }
+void RISCVELFStreamer::reset() {
+  static_cast<RISCVTargetStreamer *>(getTargetStreamer())->reset();
+  MCELFStreamer::reset();
+}
 
-public:
-  RISCVELFStreamer(MCContext &C, std::unique_ptr<MCAsmBackend> MAB,
-                   std::unique_ptr<MCObjectWriter> MOW,
-                   std::unique_ptr<MCCodeEmitter> MCE)
-      : MCELFStreamer(C, std::move(MAB), std::move(MOW), std::move(MCE)) {}
+void RISCVELFStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
+                                     SMLoc Loc) {
+  const MCExpr *A, *B;
+  if (!requiresFixups(getContext(), Value, A, B))
+    return MCELFStreamer::emitValueImpl(Value, Size, Loc);
 
-  void emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override {
-    const MCExpr *A, *B;
-    if (!requiresFixups(getContext(), Value, A, B))
-      return MCELFStreamer::emitValueImpl(Value, Size, Loc);
+  MCStreamer::emitValueImpl(Value, Size, Loc);
 
-    MCStreamer::emitValueImpl(Value, Size, Loc);
+  MCDataFragment *DF = getOrCreateDataFragment();
+  flushPendingLabels(DF, DF->getContents().size());
+  MCDwarfLineEntry::make(this, getCurrentSectionOnly());
 
-    MCDataFragment *DF = getOrCreateDataFragment();
-    flushPendingLabels(DF, DF->getContents().size());
-    MCDwarfLineEntry::make(this, getCurrentSectionOnly());
+  unsigned Add, Sub;
+  std::tie(Add, Sub) = getRelocPairForSize(Size);
 
-    unsigned Add, Sub;
-    std::tie(Add, Sub) = getRelocPairForSize(Size);
+  DF->getFixups().push_back(MCFixup::create(
+      DF->getContents().size(), A, static_cast<MCFixupKind>(Add), Loc));
+  DF->getFixups().push_back(MCFixup::create(
+      DF->getContents().size(), B, static_cast<MCFixupKind>(Sub), Loc));
 
-    DF->getFixups().push_back(MCFixup::create(
-        DF->getContents().size(), A, static_cast<MCFixupKind>(Add), Loc));
-    DF->getFixups().push_back(MCFixup::create(
-        DF->getContents().size(), B, static_cast<MCFixupKind>(Sub), Loc));
-
-    DF->getContents().resize(DF->getContents().size() + Size, 0);
-  }
-};
-} // namespace
+  DF->getContents().resize(DF->getContents().size() + Size, 0);
+}
 
 namespace llvm {
 MCELFStreamer *createRISCVELFStreamer(MCContext &C,

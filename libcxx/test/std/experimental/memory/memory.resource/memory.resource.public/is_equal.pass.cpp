@@ -24,6 +24,8 @@
 //      and the resulting value is returned.
 //   D) 'do_is_equal' is called on the LHS object and not the RHS object.
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <experimental/memory_resource>
 #include <type_traits>
 #include <cassert>

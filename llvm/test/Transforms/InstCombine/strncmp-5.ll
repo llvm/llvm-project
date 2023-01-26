@@ -4,7 +4,7 @@
 ; Exercise folding of strncmp calls with constant arrays and nonconstant
 ; sizes.
 
-declare i32 @strncmp(i8*, i8*, i64)
+declare i32 @strncmp(ptr, ptr, i64)
 
 @ax = external constant [8 x i8]
 @a01230123 = constant [8 x i8] c"01230123"
@@ -16,77 +16,74 @@ declare i32 @strncmp(i8*, i8*, i64)
 
 ; Exercise strncmp(A, B, N) folding of arrays with the same bytes.
 
-define void @fold_strncmp_a_b_n(i32* %pcmp, i64 %n) {
+define void @fold_strncmp_a_b_n(ptr %pcmp, i64 %n) {
 ; CHECK-LABEL: @fold_strncmp_a_b_n(
-; CHECK-NEXT:    store i32 0, i32* [[PCMP:%.*]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[PCMP:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[N:%.*]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i1 [[TMP1]] to i32
-; CHECK-NEXT:    [[S0_1:%.*]] = getelementptr i32, i32* [[PCMP]], i64 1
-; CHECK-NEXT:    store i32 [[TMP2]], i32* [[S0_1]], align 4
+; CHECK-NEXT:    [[S0_1:%.*]] = getelementptr i32, ptr [[PCMP]], i64 1
+; CHECK-NEXT:    store i32 [[TMP2]], ptr [[S0_1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext i1 [[TMP3]] to i32
-; CHECK-NEXT:    [[S0_2:%.*]] = getelementptr i32, i32* [[PCMP]], i64 2
-; CHECK-NEXT:    store i32 [[TMP4]], i32* [[S0_2]], align 4
+; CHECK-NEXT:    [[S0_2:%.*]] = getelementptr i32, ptr [[PCMP]], i64 2
+; CHECK-NEXT:    store i32 [[TMP4]], ptr [[S0_2]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext i1 [[TMP5]] to i32
-; CHECK-NEXT:    [[S0_3:%.*]] = getelementptr i32, i32* [[PCMP]], i64 3
-; CHECK-NEXT:    store i32 [[TMP6]], i32* [[S0_3]], align 4
-; CHECK-NEXT:    [[S0_4:%.*]] = getelementptr i32, i32* [[PCMP]], i64 4
-; CHECK-NEXT:    store i32 0, i32* [[S0_4]], align 4
+; CHECK-NEXT:    [[S0_3:%.*]] = getelementptr i32, ptr [[PCMP]], i64 3
+; CHECK-NEXT:    store i32 [[TMP6]], ptr [[S0_3]], align 4
+; CHECK-NEXT:    [[S0_4:%.*]] = getelementptr i32, ptr [[PCMP]], i64 4
+; CHECK-NEXT:    store i32 0, ptr [[S0_4]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = sext i1 [[TMP7]] to i32
-; CHECK-NEXT:    [[S0_5:%.*]] = getelementptr i32, i32* [[PCMP]], i64 5
-; CHECK-NEXT:    store i32 [[TMP8]], i32* [[S0_5]], align 4
+; CHECK-NEXT:    [[S0_5:%.*]] = getelementptr i32, ptr [[PCMP]], i64 5
+; CHECK-NEXT:    store i32 [[TMP8]], ptr [[S0_5]], align 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext i1 [[TMP9]] to i32
-; CHECK-NEXT:    [[S5_0:%.*]] = getelementptr i32, i32* [[PCMP]], i64 6
-; CHECK-NEXT:    store i32 [[TMP10]], i32* [[S5_0]], align 4
+; CHECK-NEXT:    [[S5_0:%.*]] = getelementptr i32, ptr [[PCMP]], i64 6
+; CHECK-NEXT:    store i32 [[TMP10]], ptr [[S5_0]], align 4
 ; CHECK-NEXT:    ret void
 ;
 
-  %p0 = getelementptr [8 x i8], [8 x i8]* @a01230123, i64 0, i64 0
 
-  %q0 = getelementptr [8 x i8], [8 x i8]* @b01230123, i64 0, i64 0
-  %q1 = getelementptr [8 x i8], [8 x i8]* @b01230123, i64 0, i64 1
-  %q2 = getelementptr [8 x i8], [8 x i8]* @b01230123, i64 0, i64 2
-  %q3 = getelementptr [8 x i8], [8 x i8]* @b01230123, i64 0, i64 3
-  %q4 = getelementptr [8 x i8], [8 x i8]* @b01230123, i64 0, i64 4
-  %q5 = getelementptr [8 x i8], [8 x i8]* @b01230123, i64 0, i64 5
+  %q1 = getelementptr [8 x i8], ptr @b01230123, i64 0, i64 1
+  %q2 = getelementptr [8 x i8], ptr @b01230123, i64 0, i64 2
+  %q3 = getelementptr [8 x i8], ptr @b01230123, i64 0, i64 3
+  %q4 = getelementptr [8 x i8], ptr @b01230123, i64 0, i64 4
+  %q5 = getelementptr [8 x i8], ptr @b01230123, i64 0, i64 5
 
   ; Fold strncmp(a, b, n) to 0.
-  %c0_0 = call i32 @strncmp(i8* %p0, i8* %q0, i64 %n)
-  %s0_0 = getelementptr i32, i32* %pcmp, i64 0
-  store i32 %c0_0, i32* %s0_0
+  %c0_0 = call i32 @strncmp(ptr @a01230123, ptr @b01230123, i64 %n)
+  store i32 %c0_0, ptr %pcmp
 
   ; Fold strncmp(a, b + 1, n) to N != 0 ? -1 : 0.
-  %c0_1 = call i32 @strncmp(i8* %p0, i8* %q1, i64 %n)
-  %s0_1 = getelementptr i32, i32* %pcmp, i64 1
-  store i32 %c0_1, i32* %s0_1
+  %c0_1 = call i32 @strncmp(ptr @a01230123, ptr %q1, i64 %n)
+  %s0_1 = getelementptr i32, ptr %pcmp, i64 1
+  store i32 %c0_1, ptr %s0_1
 
   ; Fold strncmp(a, b + 2, n) to N != 0 ? -1 : 0.
-  %c0_2 = call i32 @strncmp(i8* %p0, i8* %q2, i64 %n)
-  %s0_2 = getelementptr i32, i32* %pcmp, i64 2
-  store i32 %c0_2, i32* %s0_2
+  %c0_2 = call i32 @strncmp(ptr @a01230123, ptr %q2, i64 %n)
+  %s0_2 = getelementptr i32, ptr %pcmp, i64 2
+  store i32 %c0_2, ptr %s0_2
 
   ; Fold strncmp(a, b + 3, n) to N != 0 ? -1 : 0.
-  %c0_3 = call i32 @strncmp(i8* %p0, i8* %q3, i64 %n)
-  %s0_3 = getelementptr i32, i32* %pcmp, i64 3
-  store i32 %c0_3, i32* %s0_3
+  %c0_3 = call i32 @strncmp(ptr @a01230123, ptr %q3, i64 %n)
+  %s0_3 = getelementptr i32, ptr %pcmp, i64 3
+  store i32 %c0_3, ptr %s0_3
 
   ; Fold strncmp(a, b + 4, n) to 0.
-  %c0_4 = call i32 @strncmp(i8* %p0, i8* %q4, i64 %n)
-  %s0_4 = getelementptr i32, i32* %pcmp, i64 4
-  store i32 %c0_4, i32* %s0_4
+  %c0_4 = call i32 @strncmp(ptr @a01230123, ptr %q4, i64 %n)
+  %s0_4 = getelementptr i32, ptr %pcmp, i64 4
+  store i32 %c0_4, ptr %s0_4
 
   ; Fold strncmp(a, b + 5, n) to N != 0 ? -1 : 0.
-  %c0_5 = call i32 @strncmp(i8* %p0, i8* %q5, i64 %n)
-  %s0_5 = getelementptr i32, i32* %pcmp, i64 5
-  store i32 %c0_5, i32* %s0_5
+  %c0_5 = call i32 @strncmp(ptr @a01230123, ptr %q5, i64 %n)
+  %s0_5 = getelementptr i32, ptr %pcmp, i64 5
+  store i32 %c0_5, ptr %s0_5
 
   ; Fold strncmp(b + 5, a, n) to N != 0 ? +1 : 0.
-  %c5_0 = call i32 @strncmp(i8* %q5, i8* %p0, i64 %n)
-  %s5_0 = getelementptr i32, i32* %pcmp, i64 6
-  store i32 %c5_0, i32* %s5_0
+  %c5_0 = call i32 @strncmp(ptr %q5, ptr @a01230123, i64 %n)
+  %s5_0 = getelementptr i32, ptr %pcmp, i64 6
+  store i32 %c5_0, ptr %s5_0
 
   ret void
 }
@@ -94,20 +91,17 @@ define void @fold_strncmp_a_b_n(i32* %pcmp, i64 %n) {
 ; Vefify that a strncmp() call involving a constant array with unknown
 ; contents is not folded.
 
-define void @call_strncmp_a_ax_n(i32* %pcmp, i64 %n) {
+define void @call_strncmp_a_ax_n(ptr %pcmp, i64 %n) {
 ; CHECK-LABEL: @call_strncmp_a_ax_n(
-; CHECK-NEXT:    [[C0_0:%.*]] = call i32 @strncmp(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @a01230123, i64 0, i64 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @ax, i64 0, i64 0), i64 [[N:%.*]])
-; CHECK-NEXT:    store i32 [[C0_0]], i32* [[PCMP:%.*]], align 4
+; CHECK-NEXT:    [[C0_0:%.*]] = call i32 @strncmp(ptr nonnull @a01230123, ptr nonnull @ax, i64 [[N:%.*]])
+; CHECK-NEXT:    store i32 [[C0_0]], ptr [[PCMP:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 
-  %p0 = getelementptr [8 x i8], [8 x i8]* @a01230123, i64 0, i64 0
-  %q0 = getelementptr [8 x i8], [8 x i8]* @ax, i64 0, i64 0
 
   ; Do not fold strncmp(a, ax, n).
-  %c0_0 = call i32 @strncmp(i8* %p0, i8* %q0, i64 %n)
-  %s0_0 = getelementptr i32, i32* %pcmp, i64 0
-  store i32 %c0_0, i32* %s0_0
+  %c0_0 = call i32 @strncmp(ptr @a01230123, ptr @ax, i64 %n)
+  store i32 %c0_0, ptr %pcmp
 
   ret void
 }
@@ -116,72 +110,69 @@ define void @call_strncmp_a_ax_n(i32* %pcmp, i64 %n) {
 ; Exercise strncmp(A, C, N) folding of arrays with the same leading bytes
 ; but a difference in the trailing byte.
 
-define void @fold_strncmp_a_c_n(i32* %pcmp, i64 %n) {
+define void @fold_strncmp_a_c_n(ptr %pcmp, i64 %n) {
 ; CHECK-LABEL: @fold_strncmp_a_c_n(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[N:%.*]], 7
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i1 [[TMP1]] to i32
-; CHECK-NEXT:    store i32 [[TMP2]], i32* [[PCMP:%.*]], align 4
+; CHECK-NEXT:    store i32 [[TMP2]], ptr [[PCMP:%.*]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext i1 [[TMP3]] to i32
-; CHECK-NEXT:    [[S0_1:%.*]] = getelementptr i32, i32* [[PCMP]], i64 1
-; CHECK-NEXT:    store i32 [[TMP4]], i32* [[S0_1]], align 4
+; CHECK-NEXT:    [[S0_1:%.*]] = getelementptr i32, ptr [[PCMP]], i64 1
+; CHECK-NEXT:    store i32 [[TMP4]], ptr [[S0_1]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext i1 [[TMP5]] to i32
-; CHECK-NEXT:    [[S0_2:%.*]] = getelementptr i32, i32* [[PCMP]], i64 2
-; CHECK-NEXT:    store i32 [[TMP6]], i32* [[S0_2]], align 4
+; CHECK-NEXT:    [[S0_2:%.*]] = getelementptr i32, ptr [[PCMP]], i64 2
+; CHECK-NEXT:    store i32 [[TMP6]], ptr [[S0_2]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = sext i1 [[TMP7]] to i32
-; CHECK-NEXT:    [[S0_3:%.*]] = getelementptr i32, i32* [[PCMP]], i64 3
-; CHECK-NEXT:    store i32 [[TMP8]], i32* [[S0_3]], align 4
+; CHECK-NEXT:    [[S0_3:%.*]] = getelementptr i32, ptr [[PCMP]], i64 3
+; CHECK-NEXT:    store i32 [[TMP8]], ptr [[S0_3]], align 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[N]], 3
 ; CHECK-NEXT:    [[TMP10:%.*]] = sext i1 [[TMP9]] to i32
-; CHECK-NEXT:    [[S0_4:%.*]] = getelementptr i32, i32* [[PCMP]], i64 4
-; CHECK-NEXT:    store i32 [[TMP10]], i32* [[S0_4]], align 4
+; CHECK-NEXT:    [[S0_4:%.*]] = getelementptr i32, ptr [[PCMP]], i64 4
+; CHECK-NEXT:    store i32 [[TMP10]], ptr [[S0_4]], align 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ugt i64 [[N]], 3
 ; CHECK-NEXT:    [[TMP12:%.*]] = sext i1 [[TMP11]] to i32
-; CHECK-NEXT:    [[S0_5:%.*]] = getelementptr i32, i32* [[PCMP]], i64 5
-; CHECK-NEXT:    store i32 [[TMP12]], i32* [[S0_5]], align 4
+; CHECK-NEXT:    [[S0_5:%.*]] = getelementptr i32, ptr [[PCMP]], i64 5
+; CHECK-NEXT:    store i32 [[TMP12]], ptr [[S0_5]], align 4
 ; CHECK-NEXT:    ret void
 ;
 
-  %p0 = getelementptr [8 x i8], [8 x i8]* @a01230123, i64 0, i64 0
 
-  %q0 = getelementptr [8 x i8], [8 x i8]* @c01230129, i64 0, i64 0
-  %q1 = getelementptr [8 x i8], [8 x i8]* @c01230129, i64 0, i64 1
-  %q2 = getelementptr [8 x i8], [8 x i8]* @c01230129, i64 0, i64 2
-  %q3 = getelementptr [8 x i8], [8 x i8]* @c01230129, i64 0, i64 3
-  %q4 = getelementptr [8 x i8], [8 x i8]* @c01230129, i64 0, i64 4
-  %q5 = getelementptr [8 x i8], [8 x i8]* @c01230129, i64 0, i64 5
+  %q1 = getelementptr [8 x i8], ptr @c01230129, i64 0, i64 1
+  %q2 = getelementptr [8 x i8], ptr @c01230129, i64 0, i64 2
+  %q3 = getelementptr [8 x i8], ptr @c01230129, i64 0, i64 3
+  %q4 = getelementptr [8 x i8], ptr @c01230129, i64 0, i64 4
+  %q5 = getelementptr [8 x i8], ptr @c01230129, i64 0, i64 5
 
   ; Fold strncmp(a, c, n) to N > 7 ? -1 : 0.
-  %c0_0 = call i32 @strncmp(i8* %p0, i8* %q0, i64 %n)
-  %s0_0 = getelementptr i32, i32* %pcmp, i64 0
-  store i32 %c0_0, i32* %s0_0
+  %c0_0 = call i32 @strncmp(ptr @a01230123, ptr @c01230129, i64 %n)
+  store i32 %c0_0, ptr %pcmp
 
   ; Fold strncmp(a, c + 1, n) to N != 0 ? -1 : 0.
-  %c0_1 = call i32 @strncmp(i8* %p0, i8* %q1, i64 %n)
-  %s0_1 = getelementptr i32, i32* %pcmp, i64 1
-  store i32 %c0_1, i32* %s0_1
+  %c0_1 = call i32 @strncmp(ptr @a01230123, ptr %q1, i64 %n)
+  %s0_1 = getelementptr i32, ptr %pcmp, i64 1
+  store i32 %c0_1, ptr %s0_1
 
   ; Fold strncmp(a, c + 2, n) to N != 0 ? -1 : 0.
-  %c0_2 = call i32 @strncmp(i8* %p0, i8* %q2, i64 %n)
-  %s0_2 = getelementptr i32, i32* %pcmp, i64 2
-  store i32 %c0_2, i32* %s0_2
+  %c0_2 = call i32 @strncmp(ptr @a01230123, ptr %q2, i64 %n)
+  %s0_2 = getelementptr i32, ptr %pcmp, i64 2
+  store i32 %c0_2, ptr %s0_2
 
   ; Fold strncmp(a, c + 3, n) to N != 0 ? -1 : 0.
-  %c0_3 = call i32 @strncmp(i8* %p0, i8* %q3, i64 %n)
-  %s0_3 = getelementptr i32, i32* %pcmp, i64 3
-  store i32 %c0_3, i32* %s0_3
+  %c0_3 = call i32 @strncmp(ptr @a01230123, ptr %q3, i64 %n)
+  %s0_3 = getelementptr i32, ptr %pcmp, i64 3
+  store i32 %c0_3, ptr %s0_3
 
   ; Fold strncmp(a, c + 4, n) to N > 3 ? -1 : 0.
-  %c0_4 = call i32 @strncmp(i8* %p0, i8* %q4, i64 %n)
-  %s0_4 = getelementptr i32, i32* %pcmp, i64 4
-  store i32 %c0_4, i32* %s0_4
+  %c0_4 = call i32 @strncmp(ptr @a01230123, ptr %q4, i64 %n)
+  %s0_4 = getelementptr i32, ptr %pcmp, i64 4
+  store i32 %c0_4, ptr %s0_4
 
   ; Fold strncmp(a, c + 5, n) to N != 0 ? -1 : 0.
-  %c0_5 = call i32 @strncmp(i8* %p0, i8* %q4, i64 %n)
-  %s0_5 = getelementptr i32, i32* %pcmp, i64 5
-  store i32 %c0_5, i32* %s0_5
+  %c0_5 = call i32 @strncmp(ptr @a01230123, ptr %q4, i64 %n)
+  %s0_5 = getelementptr i32, ptr %pcmp, i64 5
+  store i32 %c0_5, ptr %s0_5
 
   ret void
 }
@@ -190,99 +181,96 @@ define void @fold_strncmp_a_c_n(i32* %pcmp, i64 %n) {
 ; Exercise strncmp(A, D, N) folding of arrays of different sizes and
 ; a difference in the leading byte.
 
-define void @fold_strncmp_a_d_n(i32* %pcmp, i64 %n) {
+define void @fold_strncmp_a_d_n(ptr %pcmp, i64 %n) {
 ; CHECK-LABEL: @fold_strncmp_a_d_n(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[N:%.*]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i1 [[TMP1]] to i32
-; CHECK-NEXT:    store i32 [[TMP2]], i32* [[PCMP:%.*]], align 4
+; CHECK-NEXT:    store i32 [[TMP2]], ptr [[PCMP:%.*]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext i1 [[TMP3]] to i32
-; CHECK-NEXT:    [[S0_1:%.*]] = getelementptr i32, i32* [[PCMP]], i64 1
-; CHECK-NEXT:    store i32 [[TMP4]], i32* [[S0_1]], align 4
+; CHECK-NEXT:    [[S0_1:%.*]] = getelementptr i32, ptr [[PCMP]], i64 1
+; CHECK-NEXT:    store i32 [[TMP4]], ptr [[S0_1]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt i64 [[N]], 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i1 [[TMP5]] to i32
-; CHECK-NEXT:    [[S1_1:%.*]] = getelementptr i32, i32* [[PCMP]], i64 2
-; CHECK-NEXT:    store i32 [[TMP6]], i32* [[S1_1]], align 4
+; CHECK-NEXT:    [[S1_1:%.*]] = getelementptr i32, ptr [[PCMP]], i64 2
+; CHECK-NEXT:    store i32 [[TMP6]], ptr [[S1_1]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i64 [[N]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext i1 [[TMP7]] to i32
-; CHECK-NEXT:    [[S2_2:%.*]] = getelementptr i32, i32* [[PCMP]], i64 3
-; CHECK-NEXT:    store i32 [[TMP8]], i32* [[S2_2]], align 4
+; CHECK-NEXT:    [[S2_2:%.*]] = getelementptr i32, ptr [[PCMP]], i64 3
+; CHECK-NEXT:    store i32 [[TMP8]], ptr [[S2_2]], align 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext i1 [[TMP9]] to i32
-; CHECK-NEXT:    [[S4_4:%.*]] = getelementptr i32, i32* [[PCMP]], i64 4
-; CHECK-NEXT:    store i32 [[TMP10]], i32* [[S4_4]], align 4
+; CHECK-NEXT:    [[S4_4:%.*]] = getelementptr i32, ptr [[PCMP]], i64 4
+; CHECK-NEXT:    store i32 [[TMP10]], ptr [[S4_4]], align 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = sext i1 [[TMP11]] to i32
-; CHECK-NEXT:    [[S4_4_2:%.*]] = getelementptr i32, i32* [[PCMP]], i64 5
-; CHECK-NEXT:    store i32 [[TMP12]], i32* [[S4_4_2]], align 4
-; CHECK-NEXT:    [[S5_5:%.*]] = getelementptr i32, i32* [[PCMP]], i64 6
-; CHECK-NEXT:    store i32 0, i32* [[S5_5]], align 4
-; CHECK-NEXT:    [[S6_6:%.*]] = getelementptr i32, i32* [[PCMP]], i64 7
-; CHECK-NEXT:    store i32 0, i32* [[S6_6]], align 4
+; CHECK-NEXT:    [[S4_4_2:%.*]] = getelementptr i32, ptr [[PCMP]], i64 5
+; CHECK-NEXT:    store i32 [[TMP12]], ptr [[S4_4_2]], align 4
+; CHECK-NEXT:    [[S5_5:%.*]] = getelementptr i32, ptr [[PCMP]], i64 6
+; CHECK-NEXT:    store i32 0, ptr [[S5_5]], align 4
+; CHECK-NEXT:    [[S6_6:%.*]] = getelementptr i32, ptr [[PCMP]], i64 7
+; CHECK-NEXT:    store i32 0, ptr [[S6_6]], align 4
 ; CHECK-NEXT:    ret void
 ;
 
-  %p0 = getelementptr [8 x i8], [8 x i8]* @a01230123, i64 0, i64 0
-  %p1 = getelementptr [8 x i8], [8 x i8]* @a01230123, i64 0, i64 1
-  %p2 = getelementptr [8 x i8], [8 x i8]* @a01230123, i64 0, i64 2
-  %p3 = getelementptr [8 x i8], [8 x i8]* @a01230123, i64 0, i64 3
-  %p4 = getelementptr [8 x i8], [8 x i8]* @a01230123, i64 0, i64 4
-  %p5 = getelementptr [8 x i8], [8 x i8]* @a01230123, i64 0, i64 5
-  %p6 = getelementptr [8 x i8], [8 x i8]* @a01230123, i64 0, i64 6
+  %p1 = getelementptr [8 x i8], ptr @a01230123, i64 0, i64 1
+  %p2 = getelementptr [8 x i8], ptr @a01230123, i64 0, i64 2
+  %p3 = getelementptr [8 x i8], ptr @a01230123, i64 0, i64 3
+  %p4 = getelementptr [8 x i8], ptr @a01230123, i64 0, i64 4
+  %p5 = getelementptr [8 x i8], ptr @a01230123, i64 0, i64 5
+  %p6 = getelementptr [8 x i8], ptr @a01230123, i64 0, i64 6
 
-  %q0 = getelementptr [7 x i8], [7 x i8]* @d9123_12, i64 0, i64 0
-  %q1 = getelementptr [7 x i8], [7 x i8]* @d9123_12, i64 0, i64 1
-  %q2 = getelementptr [7 x i8], [7 x i8]* @d9123_12, i64 0, i64 2
-  %q3 = getelementptr [7 x i8], [7 x i8]* @d9123_12, i64 0, i64 3
-  %q4 = getelementptr [7 x i8], [7 x i8]* @d9123_12, i64 0, i64 4
-  %q5 = getelementptr [7 x i8], [7 x i8]* @d9123_12, i64 0, i64 5
-  %q6 = getelementptr [7 x i8], [7 x i8]* @d9123_12, i64 0, i64 6
+  %q1 = getelementptr [7 x i8], ptr @d9123_12, i64 0, i64 1
+  %q2 = getelementptr [7 x i8], ptr @d9123_12, i64 0, i64 2
+  %q3 = getelementptr [7 x i8], ptr @d9123_12, i64 0, i64 3
+  %q4 = getelementptr [7 x i8], ptr @d9123_12, i64 0, i64 4
+  %q5 = getelementptr [7 x i8], ptr @d9123_12, i64 0, i64 5
+  %q6 = getelementptr [7 x i8], ptr @d9123_12, i64 0, i64 6
 
   ; Fold strncmp(a, d, n) to N != 0 ? -1 : 0.
-  %c0_0 = call i32 @strncmp(i8* %p0, i8* %q0, i64 %n)
-  %s0_0 = getelementptr i32, i32* %pcmp, i64 0
-  store i32 %c0_0, i32* %s0_0
+  %c0_0 = call i32 @strncmp(ptr @a01230123, ptr @d9123_12, i64 %n)
+  store i32 %c0_0, ptr %pcmp
 
   ; Fold strncmp(a, d + 1, n) to N != 0 ? -1 : 0.
-  %c0_1 = call i32 @strncmp(i8* %p0, i8* %q1, i64 %n)
-  %s0_1 = getelementptr i32, i32* %pcmp, i64 1
-  store i32 %c0_1, i32* %s0_1
+  %c0_1 = call i32 @strncmp(ptr @a01230123, ptr %q1, i64 %n)
+  %s0_1 = getelementptr i32, ptr %pcmp, i64 1
+  store i32 %c0_1, ptr %s0_1
 
   ; Fold strncmp(a + 1, d + 1, n) N > 3 ? +1 : 0.
-  %c1_1 = call i32 @strncmp(i8* %p1, i8* %q1, i64 %n)
-  %s1_1 = getelementptr i32, i32* %pcmp, i64 2
-  store i32 %c1_1, i32* %s1_1
+  %c1_1 = call i32 @strncmp(ptr %p1, ptr %q1, i64 %n)
+  %s1_1 = getelementptr i32, ptr %pcmp, i64 2
+  store i32 %c1_1, ptr %s1_1
 
   ; Fold strncmp(a + 2, d + 2, n) N > 2 ? +1 : 0.
-  %c2_2 = call i32 @strncmp(i8* %p2, i8* %q2, i64 %n)
-  %s2_2 = getelementptr i32, i32* %pcmp, i64 3
-  store i32 %c2_2, i32* %s2_2
+  %c2_2 = call i32 @strncmp(ptr %p2, ptr %q2, i64 %n)
+  %s2_2 = getelementptr i32, ptr %pcmp, i64 3
+  store i32 %c2_2, ptr %s2_2
 
   ; Fold strncmp(a + 3, d + 3, n) N > 1 ? +1 : 0.
-  %c3_3 = call i32 @strncmp(i8* %p3, i8* %q3, i64 %n)
-  %s3_3 = getelementptr i32, i32* %pcmp, i64 4
-  store i32 %c3_3, i32* %s3_3
+  %c3_3 = call i32 @strncmp(ptr %p3, ptr %q3, i64 %n)
+  %s3_3 = getelementptr i32, ptr %pcmp, i64 4
+  store i32 %c3_3, ptr %s3_3
 
   ; Fold strncmp(a + 4, d + 4, n) N != 0 ? +1 : 0.
-  %c4_4 = call i32 @strncmp(i8* %p4, i8* %q4, i64 %n)
-  %s4_4 = getelementptr i32, i32* %pcmp, i64 4
-  store i32 %c4_4, i32* %s4_4
+  %c4_4 = call i32 @strncmp(ptr %p4, ptr %q4, i64 %n)
+  %s4_4 = getelementptr i32, ptr %pcmp, i64 4
+  store i32 %c4_4, ptr %s4_4
 
   ; Fold strncmp(d + 4, a + 4, n) N != 0 ? -1 : 0 (same as above but
   ; with the array arguments reversed).
-  %c4_4_2 = call i32 @strncmp(i8* %q4, i8* %p4, i64 %n)
-  %s4_4_2 = getelementptr i32, i32* %pcmp, i64 5
-  store i32 %c4_4_2, i32* %s4_4_2
+  %c4_4_2 = call i32 @strncmp(ptr %q4, ptr %p4, i64 %n)
+  %s4_4_2 = getelementptr i32, ptr %pcmp, i64 5
+  store i32 %c4_4_2, ptr %s4_4_2
 
   ; Fold strncmp(a + 5, d + 5, n) to 0.
-  %c5_5 = call i32 @strncmp(i8* %p5, i8* %q5, i64 %n)
-  %s5_5 = getelementptr i32, i32* %pcmp, i64 6
-  store i32 %c5_5, i32* %s5_5
+  %c5_5 = call i32 @strncmp(ptr %p5, ptr %q5, i64 %n)
+  %s5_5 = getelementptr i32, ptr %pcmp, i64 6
+  store i32 %c5_5, ptr %s5_5
 
   ; Fold strncmp(a + 6, d + 6, n) to 0.
-  %c6_6 = call i32 @strncmp(i8* %p6, i8* %q6, i64 %n)
-  %s6_6 = getelementptr i32, i32* %pcmp, i64 7
-  store i32 %c6_6, i32* %s6_6
+  %c6_6 = call i32 @strncmp(ptr %p6, ptr %q6, i64 %n)
+  %s6_6 = getelementptr i32, ptr %pcmp, i64 7
+  store i32 %c6_6, ptr %s6_6
 
   ret void
 }
@@ -291,19 +279,16 @@ define void @fold_strncmp_a_d_n(i32* %pcmp, i64 %n) {
 ; Exercise strncmp(A, D, N) folding of arrays with the same bytes and
 ; a nonzero size.
 
-define void @fold_strncmp_a_d_nz(i32* %pcmp, i64 %n) {
+define void @fold_strncmp_a_d_nz(ptr %pcmp, i64 %n) {
 ; CHECK-LABEL: @fold_strncmp_a_d_nz(
-; CHECK-NEXT:    store i32 -1, i32* [[PCMP:%.*]], align 4
+; CHECK-NEXT:    store i32 -1, ptr [[PCMP:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 
-  %p0 = getelementptr [8 x i8], [8 x i8]* @a01230123, i64 0, i64 0
-  %q0 = getelementptr [7 x i8], [7 x i8]* @d9123_12, i64 0, i64 0
   %nz = or i64 %n, 1
 
-  %c0_0 = call i32 @strncmp(i8* %p0, i8* %q0, i64 %nz)
-  %s0_0 = getelementptr i32, i32* %pcmp, i64 0
-  store i32 %c0_0, i32* %s0_0
+  %c0_0 = call i32 @strncmp(ptr @a01230123, ptr @d9123_12, i64 %nz)
+  store i32 %c0_0, ptr %pcmp
 
   ret void
 }
@@ -311,47 +296,44 @@ define void @fold_strncmp_a_d_nz(i32* %pcmp, i64 %n) {
 
 ; Exercise strncmp(D, E, N) folding of equal strings but unequal arrays.
 
-define void @fold_strncmp_d_e_n(i32* %pcmp, i64 %n) {
+define void @fold_strncmp_d_e_n(ptr %pcmp, i64 %n) {
 ; CHECK-LABEL: @fold_strncmp_d_e_n(
-; CHECK-NEXT:    store i32 0, i32* [[PCMP:%.*]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[PCMP:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[N:%.*]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i32
-; CHECK-NEXT:    [[S0_1:%.*]] = getelementptr i32, i32* [[PCMP]], i64 1
-; CHECK-NEXT:    store i32 [[TMP2]], i32* [[S0_1]], align 4
+; CHECK-NEXT:    [[S0_1:%.*]] = getelementptr i32, ptr [[PCMP]], i64 1
+; CHECK-NEXT:    store i32 [[TMP2]], ptr [[S0_1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext i1 [[TMP3]] to i32
-; CHECK-NEXT:    [[S1_0:%.*]] = getelementptr i32, i32* [[PCMP]], i64 2
-; CHECK-NEXT:    store i32 [[TMP4]], i32* [[S1_0]], align 4
-; CHECK-NEXT:    [[S1_1:%.*]] = getelementptr i32, i32* [[PCMP]], i64 3
-; CHECK-NEXT:    store i32 0, i32* [[S1_1]], align 4
+; CHECK-NEXT:    [[S1_0:%.*]] = getelementptr i32, ptr [[PCMP]], i64 2
+; CHECK-NEXT:    store i32 [[TMP4]], ptr [[S1_0]], align 4
+; CHECK-NEXT:    [[S1_1:%.*]] = getelementptr i32, ptr [[PCMP]], i64 3
+; CHECK-NEXT:    store i32 0, ptr [[S1_1]], align 4
 ; CHECK-NEXT:    ret void
 ;
 
-  %p0 = getelementptr [7 x i8], [7 x i8]* @d9123_12, i64 0, i64 0
-  %p1 = getelementptr [7 x i8], [7 x i8]* @d9123_12, i64 0, i64 1
+  %p1 = getelementptr [7 x i8], ptr @d9123_12, i64 0, i64 1
 
-  %q0 = getelementptr [7 x i8], [7 x i8]* @e9123_34, i64 0, i64 0
-  %q1 = getelementptr [7 x i8], [7 x i8]* @e9123_34, i64 0, i64 1
+  %q1 = getelementptr [7 x i8], ptr @e9123_34, i64 0, i64 1
 
   ; Fold to 0.
-  %c0_0 = call i32 @strncmp(i8* %p0, i8* %q0, i64 %n)
-  %s0_0 = getelementptr i32, i32* %pcmp, i64 0
-  store i32 %c0_0, i32* %s0_0
+  %c0_0 = call i32 @strncmp(ptr @d9123_12, ptr @e9123_34, i64 %n)
+  store i32 %c0_0, ptr %pcmp
 
   ; Fold to N ? +1 : 0.
-  %c0_1 = call i32 @strncmp(i8* %p0, i8* %q1, i64 %n)
-  %s0_1 = getelementptr i32, i32* %pcmp, i64 1
-  store i32 %c0_1, i32* %s0_1
+  %c0_1 = call i32 @strncmp(ptr @d9123_12, ptr %q1, i64 %n)
+  %s0_1 = getelementptr i32, ptr %pcmp, i64 1
+  store i32 %c0_1, ptr %s0_1
 
   ; Fold to N ? -1 : 0.
-  %c1_0 = call i32 @strncmp(i8* %p1, i8* %q0, i64 %n)
-  %s1_0 = getelementptr i32, i32* %pcmp, i64 2
-  store i32 %c1_0, i32* %s1_0
+  %c1_0 = call i32 @strncmp(ptr %p1, ptr @e9123_34, i64 %n)
+  %s1_0 = getelementptr i32, ptr %pcmp, i64 2
+  store i32 %c1_0, ptr %s1_0
 
   ; Fold to 0.
-  %c1_1 = call i32 @strncmp(i8* %p1, i8* %q1, i64 %n)
-  %s1_1 = getelementptr i32, i32* %pcmp, i64 3
-  store i32 %c1_1, i32* %s1_1
+  %c1_1 = call i32 @strncmp(ptr %p1, ptr %q1, i64 %n)
+  %s1_1 = getelementptr i32, ptr %pcmp, i64 3
+  store i32 %c1_1, ptr %s1_1
 
   ret void
 }

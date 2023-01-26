@@ -10,7 +10,7 @@ entry:
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
-  store i32 %a, i32* @gvar, align 4
+  store i32 %a, ptr @gvar, align 4
   br label %if.end
 
 if.end:

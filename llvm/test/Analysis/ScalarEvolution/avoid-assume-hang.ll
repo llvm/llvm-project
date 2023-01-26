@@ -1,5 +1,5 @@
-; RUN: opt %s -always-inline | opt -passes='print<scalar-evolution>'
-; There was optimization bug in ScalarEvolution, that causes too long 
+; RUN: opt %s -passes=always-inline | opt -passes='print<scalar-evolution>'
+; There was optimization bug in ScalarEvolution, that causes too long
 ; compute time and stack overflow crash.
 
 declare void @body(i32)

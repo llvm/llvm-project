@@ -159,6 +159,10 @@ public:
     bool mayBeModifiedByCall() const;
     /// Can the argument be read by the callee ?
     bool mayBeReadByCall() const;
+    /// Is the argument INTENT(OUT)
+    bool isIntentOut() const;
+    /// Does the argument have the CONTIGUOUS attribute or have explicit shape ?
+    bool mustBeMadeContiguous() const;
     /// How entity is passed by.
     PassEntityBy passBy;
     /// What is the entity (SymbolRef for callee/ActualArgument* for caller)
@@ -280,6 +284,14 @@ public:
   /// procedure.
   bool isIndirectCall() const;
 
+  /// Returns true if this is a call of a type-bound procedure with a
+  /// polymorphic entity.
+  bool requireDispatchCall() const;
+
+  /// Get the passed-object argument index. nullopt if there is no passed-object
+  /// index.
+  std::optional<unsigned> getPassArgIndex() const;
+
   /// Return the procedure symbol if this is a call to a user defined
   /// procedure.
   const Fortran::semantics::Symbol *getProcedureSymbol() const;
@@ -333,6 +345,9 @@ public:
     llvm_unreachable("getting host associated type in CallerInterface");
   }
 
+  /// Set attributes on MLIR function.
+  void setFuncAttrs(mlir::func::FuncOp) const {}
+
 private:
   /// Check that the input vector is complete.
   bool verifyActualInputs() const;
@@ -368,6 +383,10 @@ public:
   /// called through pointers or not.
   bool isIndirectCall() const { return false; }
 
+  /// On the callee side it does not matter whether the procedure is called
+  /// through dynamic dispatch or not.
+  bool requireDispatchCall() const { return false; };
+
   /// Return the procedure symbol if this is a call to a user defined
   /// procedure.
   const Fortran::semantics::Symbol *getProcedureSymbol() const;
@@ -379,6 +398,7 @@ public:
   bool hasHostAssociated() const;
   mlir::Type getHostAssociatedTy() const;
   mlir::Value getHostAssociatedTuple() const;
+  void setFuncAttrs(mlir::func::FuncOp) const;
 
 private:
   Fortran::lower::pft::FunctionLikeUnit &funit;
@@ -406,6 +426,10 @@ getOrDeclareFunction(llvm::StringRef name,
 /// functions).
 mlir::Type getDummyProcedureType(const Fortran::semantics::Symbol &dummyProc,
                                  Fortran::lower::AbstractConverter &);
+
+/// Return true if \p ty is "!fir.ref<i64>", which is the interface for
+/// type(C_PTR/C_FUNPTR) passed by value.
+bool isCPtrArgByValueType(mlir::Type ty);
 
 /// Is it required to pass \p proc as a tuple<function address, result length> ?
 // This is required to convey  the length of character functions passed as dummy

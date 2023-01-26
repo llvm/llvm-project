@@ -60,3 +60,9 @@ unsigned long long int extract_exp(void) {
 // CHECK-NEXT: ret i64
 }
 
+int test_data_class_f128(__float128 q) {
+  return __builtin_ppc_test_data_class(q, 0);
+// CHECK-LABEL: @test_data_class_f128
+// CHECK: [[TMP:%.*]] = call i32 @llvm.ppc.test.data.class.f128(fp128 %0, i32 0)
+// CHECK-NEXT: ret i32 [[TMP]]
+}

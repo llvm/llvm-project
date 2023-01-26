@@ -62,14 +62,13 @@
 
 namespace llvm {
 
-class AAResults;
 class AssumptionCache;
 class BlockFrequencyInfo;
 class DemandedBits;
 class DominatorTree;
 class Function;
 class Loop;
-class LoopAccessInfo;
+class LoopAccessInfoManager;
 class LoopInfo;
 class OptimizationRemarkEmitter;
 class ProfileSummaryInfo;
@@ -178,9 +177,8 @@ public:
   BlockFrequencyInfo *BFI;
   TargetLibraryInfo *TLI;
   DemandedBits *DB;
-  AAResults *AA;
   AssumptionCache *AC;
-  std::function<const LoopAccessInfo &(Loop &)> *GetLAA;
+  LoopAccessInfoManager *LAIs;
   OptimizationRemarkEmitter *ORE;
   ProfileSummaryInfo *PSI;
 
@@ -189,13 +187,13 @@ public:
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   // Shim for old PM.
-  LoopVectorizeResult
-  runImpl(Function &F, ScalarEvolution &SE_, LoopInfo &LI_,
-          TargetTransformInfo &TTI_, DominatorTree &DT_,
-          BlockFrequencyInfo &BFI_, TargetLibraryInfo *TLI_, DemandedBits &DB_,
-          AAResults &AA_, AssumptionCache &AC_,
-          std::function<const LoopAccessInfo &(Loop &)> &GetLAA_,
-          OptimizationRemarkEmitter &ORE_, ProfileSummaryInfo *PSI_);
+  LoopVectorizeResult runImpl(Function &F, ScalarEvolution &SE_, LoopInfo &LI_,
+                              TargetTransformInfo &TTI_, DominatorTree &DT_,
+                              BlockFrequencyInfo &BFI_, TargetLibraryInfo *TLI_,
+                              DemandedBits &DB_, AssumptionCache &AC_,
+                              LoopAccessInfoManager &LAIs_,
+                              OptimizationRemarkEmitter &ORE_,
+                              ProfileSummaryInfo *PSI_);
 
   bool processLoop(Loop *L);
 };

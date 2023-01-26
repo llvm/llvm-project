@@ -7,6 +7,8 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-has-no-incomplete-format
+// TODO FMT Evaluate gcc-12 status
+// UNSUPPORTED: gcc-12
 
 // Tests whether a move only type can be formatted. This is required by
 // P2418R2 "Add support for std::generator-like types to std::format"
@@ -28,8 +30,7 @@
 
 template <class CharT>
 struct std::formatter<MoveOnly, CharT> : std::formatter<int, CharT> {
-  // TODO FMT Make this a const member function after the base class has been adapted.
-  auto format(const MoveOnly& m, auto& ctx) -> decltype(ctx.out()) {
+  auto format(const MoveOnly& m, auto& ctx) const -> decltype(ctx.out()) {
     return std::formatter<int, CharT>::format(m.get(), ctx);
   }
 };

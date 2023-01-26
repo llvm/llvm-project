@@ -892,7 +892,10 @@ void LLVMOrcIRTransformLayerSetTransform(
               assert(!TSMRef && "TSMRef was not reset to null on error");
               return unwrap(Err);
             }
-            return std::move(*unwrap(TSMRef));
+            assert(TSMRef && "Transform succeeded, but TSMRef was set to null");
+            ThreadSafeModule Result = std::move(*unwrap(TSMRef));
+            LLVMOrcDisposeThreadSafeModule(TSMRef);
+            return std::move(Result);
           });
 }
 
@@ -1064,6 +1067,116 @@ LLVMOrcCreateRTDyldObjectLinkingLayerWithSectionMemoryManager(
   assert(ES && "ES must not be null");
   return wrap(new RTDyldObjectLinkingLayer(
       *unwrap(ES), [] { return std::make_unique<SectionMemoryManager>(); }));
+}
+
+LLVMOrcObjectLayerRef
+LLVMOrcCreateRTDyldObjectLinkingLayerWithMCJITMemoryManagerLikeCallbacks(
+    LLVMOrcExecutionSessionRef ES, void *CreateContextCtx,
+    LLVMMemoryManagerCreateContextCallback CreateContext,
+    LLVMMemoryManagerNotifyTerminatingCallback NotifyTerminating,
+    LLVMMemoryManagerAllocateCodeSectionCallback AllocateCodeSection,
+    LLVMMemoryManagerAllocateDataSectionCallback AllocateDataSection,
+    LLVMMemoryManagerFinalizeMemoryCallback FinalizeMemory,
+    LLVMMemoryManagerDestroyCallback Destroy) {
+
+  struct MCJITMemoryManagerLikeCallbacks {
+    MCJITMemoryManagerLikeCallbacks() = default;
+    MCJITMemoryManagerLikeCallbacks(
+        void *CreateContextCtx,
+        LLVMMemoryManagerCreateContextCallback CreateContext,
+        LLVMMemoryManagerNotifyTerminatingCallback NotifyTerminating,
+        LLVMMemoryManagerAllocateCodeSectionCallback AllocateCodeSection,
+        LLVMMemoryManagerAllocateDataSectionCallback AllocateDataSection,
+        LLVMMemoryManagerFinalizeMemoryCallback FinalizeMemory,
+        LLVMMemoryManagerDestroyCallback Destroy)
+        : CreateContextCtx(CreateContextCtx), CreateContext(CreateContext),
+          NotifyTerminating(NotifyTerminating),
+          AllocateCodeSection(AllocateCodeSection),
+          AllocateDataSection(AllocateDataSection),
+          FinalizeMemory(FinalizeMemory), Destroy(Destroy) {}
+
+    MCJITMemoryManagerLikeCallbacks(MCJITMemoryManagerLikeCallbacks &&Other) {
+      std::swap(CreateContextCtx, Other.CreateContextCtx);
+      std::swap(CreateContext, Other.CreateContext);
+      std::swap(NotifyTerminating, Other.NotifyTerminating);
+      std::swap(AllocateCodeSection, Other.AllocateCodeSection);
+      std::swap(AllocateDataSection, Other.AllocateDataSection);
+      std::swap(FinalizeMemory, Other.FinalizeMemory);
+      std::swap(Destroy, Other.Destroy);
+    }
+
+    ~MCJITMemoryManagerLikeCallbacks() {
+      if (NotifyTerminating)
+        NotifyTerminating(CreateContextCtx);
+    }
+
+    void *CreateContextCtx = nullptr;
+    LLVMMemoryManagerCreateContextCallback CreateContext = nullptr;
+    LLVMMemoryManagerNotifyTerminatingCallback NotifyTerminating = nullptr;
+    LLVMMemoryManagerAllocateCodeSectionCallback AllocateCodeSection = nullptr;
+    LLVMMemoryManagerAllocateDataSectionCallback AllocateDataSection = nullptr;
+    LLVMMemoryManagerFinalizeMemoryCallback FinalizeMemory = nullptr;
+    LLVMMemoryManagerDestroyCallback Destroy = nullptr;
+  };
+
+  class MCJITMemoryManagerLikeCallbacksMemMgr : public RTDyldMemoryManager {
+  public:
+    MCJITMemoryManagerLikeCallbacksMemMgr(
+        const MCJITMemoryManagerLikeCallbacks &CBs)
+        : CBs(CBs) {
+      Opaque = CBs.CreateContext(CBs.CreateContextCtx);
+    }
+    ~MCJITMemoryManagerLikeCallbacksMemMgr() override { CBs.Destroy(Opaque); }
+
+    uint8_t *allocateCodeSection(uintptr_t Size, unsigned Alignment,
+                                 unsigned SectionID,
+                                 StringRef SectionName) override {
+      return CBs.AllocateCodeSection(Opaque, Size, Alignment, SectionID,
+                                     SectionName.str().c_str());
+    }
+
+    uint8_t *allocateDataSection(uintptr_t Size, unsigned Alignment,
+                                 unsigned SectionID, StringRef SectionName,
+                                 bool isReadOnly) override {
+      return CBs.AllocateDataSection(Opaque, Size, Alignment, SectionID,
+                                     SectionName.str().c_str(), isReadOnly);
+    }
+
+    bool finalizeMemory(std::string *ErrMsg) override {
+      char *ErrMsgCString = nullptr;
+      bool Result = CBs.FinalizeMemory(Opaque, &ErrMsgCString);
+      assert((Result || !ErrMsgCString) &&
+             "Did not expect an error message if FinalizeMemory succeeded");
+      if (ErrMsgCString) {
+        if (ErrMsg)
+          *ErrMsg = ErrMsgCString;
+        free(ErrMsgCString);
+      }
+      return Result;
+    }
+
+  private:
+    const MCJITMemoryManagerLikeCallbacks &CBs;
+    void *Opaque = nullptr;
+  };
+
+  assert(ES && "ES must not be null");
+  assert(CreateContext && "CreateContext must not be null");
+  assert(NotifyTerminating && "NotifyTerminating must not be null");
+  assert(AllocateCodeSection && "AllocateCodeSection must not be null");
+  assert(AllocateDataSection && "AllocateDataSection must not be null");
+  assert(FinalizeMemory && "FinalizeMemory must not be null");
+  assert(Destroy && "Destroy must not be null");
+
+  MCJITMemoryManagerLikeCallbacks CBs(
+      CreateContextCtx, CreateContext, NotifyTerminating, AllocateCodeSection,
+      AllocateDataSection, FinalizeMemory, Destroy);
+
+  return wrap(new RTDyldObjectLinkingLayer(*unwrap(ES), [CBs = std::move(CBs)] {
+    return std::make_unique<MCJITMemoryManagerLikeCallbacksMemMgr>(CBs);
+  }));
+
+  return nullptr;
 }
 
 void LLVMOrcRTDyldObjectLinkingLayerRegisterJITEventListener(

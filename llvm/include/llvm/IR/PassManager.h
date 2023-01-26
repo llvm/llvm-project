@@ -230,11 +230,11 @@ public:
     }
     // The intersection requires the *union* of the explicitly not-preserved
     // IDs and the *intersection* of the preserved IDs.
-    for (auto ID : Arg.NotPreservedAnalysisIDs) {
+    for (auto *ID : Arg.NotPreservedAnalysisIDs) {
       PreservedIDs.erase(ID);
       NotPreservedAnalysisIDs.insert(ID);
     }
-    for (auto ID : PreservedIDs)
+    for (auto *ID : PreservedIDs)
       if (!Arg.PreservedIDs.count(ID))
         PreservedIDs.erase(ID);
   }
@@ -252,11 +252,11 @@ public:
     }
     // The intersection requires the *union* of the explicitly not-preserved
     // IDs and the *intersection* of the preserved IDs.
-    for (auto ID : Arg.NotPreservedAnalysisIDs) {
+    for (auto *ID : Arg.NotPreservedAnalysisIDs) {
       PreservedIDs.erase(ID);
       NotPreservedAnalysisIDs.insert(ID);
     }
-    for (auto ID : PreservedIDs)
+    for (auto *ID : PreservedIDs)
       if (!Arg.PreservedIDs.count(ID))
         PreservedIDs.erase(ID);
   }
@@ -507,24 +507,18 @@ public:
         detail::getAnalysisResult<PassInstrumentationAnalysis>(
             AM, IR, std::tuple<ExtraArgTs...>(ExtraArgs...));
 
-    for (unsigned Idx = 0, Size = Passes.size(); Idx != Size; ++Idx) {
-      auto *P = Passes[Idx].get();
-
+    for (auto &Pass : Passes) {
       // Check the PassInstrumentation's BeforePass callbacks before running the
       // pass, skip its execution completely if asked to (callback returns
       // false).
-      if (!PI.runBeforePass<IRUnitT>(*P, IR))
+      if (!PI.runBeforePass<IRUnitT>(*Pass, IR))
         continue;
 
-      PreservedAnalyses PassPA;
-      {
-        TimeTraceScope TimeScope(P->name(), IR.getName());
-        PassPA = P->run(IR, AM, ExtraArgs...);
-      }
+      PreservedAnalyses PassPA = Pass->run(IR, AM, ExtraArgs...);
 
       // Call onto PassInstrumentation's AfterPass callbacks immediately after
       // running the pass.
-      PI.runAfterPass<IRUnitT>(*P, IR, PassPA);
+      PI.runAfterPass<IRUnitT>(*Pass, IR, PassPA);
 
       // Update the analysis manager as each pass runs and potentially
       // invalidates analyses.
@@ -1104,7 +1098,7 @@ public:
           DeadKeys.push_back(OuterID);
       }
 
-      for (auto OuterID : DeadKeys)
+      for (auto *OuterID : DeadKeys)
         OuterAnalysisInvalidationMap.erase(OuterID);
 
       // The proxy itself remains valid regardless of anything else.

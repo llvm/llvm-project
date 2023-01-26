@@ -19,8 +19,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Core/Diagnostic.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -29,13 +27,13 @@
 #include <cassert>
 #include <cstddef>
 #include <iterator>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <type_traits>
 #include <utility>
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 
 //===----------------------------------------------------------------------===//
 // NoLintType
@@ -45,14 +43,14 @@ namespace tidy {
 enum class NoLintType { NoLint, NoLintNextLine, NoLintBegin, NoLintEnd };
 
 // Convert a string like "NOLINTNEXTLINE" to its enum `Type::NoLintNextLine`.
-// Return `None` if the string is unrecognized.
-static Optional<NoLintType> strToNoLintType(StringRef Str) {
-  auto Type = llvm::StringSwitch<Optional<NoLintType>>(Str)
+// Return `std::nullopt` if the string is unrecognized.
+static std::optional<NoLintType> strToNoLintType(StringRef Str) {
+  auto Type = llvm::StringSwitch<std::optional<NoLintType>>(Str)
                   .Case("NOLINT", NoLintType::NoLint)
                   .Case("NOLINTNEXTLINE", NoLintType::NoLintNextLine)
                   .Case("NOLINTBEGIN", NoLintType::NoLintBegin)
                   .Case("NOLINTEND", NoLintType::NoLintEnd)
-                  .Default(None);
+                  .Default(std::nullopt);
   return Type;
 }
 
@@ -82,7 +80,8 @@ public:
   //   to NOLINT(*).
   // - An empty string means nothing is suppressed - equivalent to NOLINT().
   // - Negative globs ignored (which would effectively disable the suppression).
-  NoLintToken(NoLintType Type, size_t Pos, const Optional<std::string> &Checks)
+  NoLintToken(NoLintType Type, size_t Pos,
+              const std::optional<std::string> &Checks)
       : Type(Type), Pos(Pos), ChecksGlob(std::make_unique<CachedGlobList>(
                                   Checks.value_or("*"),
                                   /*KeepNegativeGlobs=*/false)) {
@@ -97,13 +96,13 @@ public:
   size_t Pos;
 
   // If this NOLINT specifies checks, return the checks.
-  Optional<std::string> checks() const { return Checks; }
+  std::optional<std::string> checks() const { return Checks; }
 
   // Whether this NOLINT applies to the provided check.
   bool suppresses(StringRef Check) const { return ChecksGlob->contains(Check); }
 
 private:
-  Optional<std::string> Checks;
+  std::optional<std::string> Checks;
   std::unique_ptr<CachedGlobList> ChecksGlob;
 };
 
@@ -128,13 +127,13 @@ static SmallVector<NoLintToken> getNoLints(StringRef Buffer) {
       ++Pos;
 
     // Is this a recognized NOLINT type?
-    const Optional<NoLintType> NoLintType =
+    const std::optional<NoLintType> NoLintType =
         strToNoLintType(Buffer.slice(NoLintPos, Pos));
     if (!NoLintType)
       continue;
 
     // Get checks, if specified.
-    Optional<std::string> Checks;
+    std::optional<std::string> Checks;
     if (Pos < Buffer.size() && Buffer[Pos] == '(') {
       size_t ClosingBracket = Buffer.find_first_of("\n)", ++Pos);
       if (ClosingBracket != StringRef::npos && Buffer[ClosingBracket] == ')') {
@@ -305,8 +304,8 @@ static bool withinNoLintBlock(ArrayRef<NoLintBlockToken> NoLintBlocks,
 }
 
 // Get the file contents as a string.
-static Optional<StringRef> getBuffer(const SourceManager &SrcMgr, FileID File,
-                                     bool AllowIO) {
+static std::optional<StringRef> getBuffer(const SourceManager &SrcMgr,
+                                          FileID File, bool AllowIO) {
   return AllowIO ? SrcMgr.getBufferDataOrNone(File)
                  : SrcMgr.getBufferDataIfLoaded(File);
 }
@@ -326,12 +325,12 @@ bool NoLintDirectiveHandler::Impl::diagHasNoLint(
 
   // We will only see NOLINTs in user-authored sources. No point reading the
   // file if it is a <built-in>.
-  Optional<StringRef> FileName = SrcMgr.getNonBuiltinFilenameForID(File);
+  std::optional<StringRef> FileName = SrcMgr.getNonBuiltinFilenameForID(File);
   if (!FileName)
     return false;
 
   // Get file contents.
-  Optional<StringRef> Buffer = getBuffer(SrcMgr, File, AllowIO);
+  std::optional<StringRef> Buffer = getBuffer(SrcMgr, File, AllowIO);
   if (!Buffer)
     return false;
 
@@ -411,5 +410,4 @@ bool NoLintDirectiveHandler::shouldSuppress(
                                EnableNoLintBlocks);
 }
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

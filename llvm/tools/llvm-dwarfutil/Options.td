@@ -5,6 +5,14 @@ multiclass BB<string name, string help1, string help2> {
   def no_ # NAME: Flag<["--"], "no-" # name>, HelpText<help2>;
 }
 
+def build_accelerator: Separate<["--", "-"], "build-accelerator">,
+  MetaVarName<"[none,DWARF]">,
+  HelpText<"Build accelerator tables(default: none)\n"
+  "    =none - Do not build accelerators\n"
+  "    =DWARF - .debug_names are generated for all DWARF versions\n"
+  >;
+def: Joined<["--", "-"], "build-accelerator=">, Alias<build_accelerator>;
+
 def help : Flag<["--"], "help">,
   HelpText<"Prints this help output">;
 

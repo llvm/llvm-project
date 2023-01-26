@@ -61,8 +61,8 @@ target triple = "wasm64-unknown-unknown"
 source_filename = "test.c"
 
 @myextern = external global i32, align 4
-@foo = hidden global i32* @myextern, align 4, !dbg !0
-@ptr2 = hidden global void ()* @f2, align 4, !dbg !6
+@foo = hidden global ptr @myextern, align 4, !dbg !0
+@ptr2 = hidden global ptr @f2, align 4, !dbg !6
 
 ; Function Attrs: noinline nounwind optnone
 define hidden void @f2() #0 !dbg !17 {

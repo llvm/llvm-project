@@ -225,17 +225,17 @@ define <2 x i32> @ashr_undef_undef_xor(<2 x i32> %x, <2 x i32> %y) {
   ret <2 x i32> %sh1
 }
 
-define i32 @lshr_or_extra_use(i32 %x, i32 %y, i32* %p) {
+define i32 @lshr_or_extra_use(i32 %x, i32 %y, ptr %p) {
 ; CHECK-LABEL: @lshr_or_extra_use(
 ; CHECK-NEXT:    [[SH0:%.*]] = lshr i32 [[X:%.*]], 5
 ; CHECK-NEXT:    [[R:%.*]] = or i32 [[SH0]], [[Y:%.*]]
-; CHECK-NEXT:    store i32 [[R]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[R]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[SH1:%.*]] = lshr i32 [[R]], 7
 ; CHECK-NEXT:    ret i32 [[SH1]]
 ;
   %sh0 = lshr i32 %x, 5
   %r = or i32 %sh0, %y
-  store i32 %r, i32* %p
+  store i32 %r, ptr %p
   %sh1 = lshr i32 %r, 7
   ret i32 %sh1
 }
@@ -247,12 +247,12 @@ define i32 @lshr_or_extra_use(i32 %x, i32 %y, i32* %p) {
 define i32 @PR44028(i32 %x) {
 ; CHECK-LABEL: @PR44028(
 ; CHECK-NEXT:    [[SH1:%.*]] = ashr exact i32 [[X:%.*]], 16
-; CHECK-NEXT:    [[T0:%.*]] = xor i32 [[SH1]], shl (i32 ptrtoint (i32* @g to i32), i32 16)
+; CHECK-NEXT:    [[T0:%.*]] = xor i32 [[SH1]], shl (i32 ptrtoint (ptr @g to i32), i32 16)
 ; CHECK-NEXT:    [[T27:%.*]] = ashr exact i32 [[T0]], 16
 ; CHECK-NEXT:    ret i32 [[T27]]
 ;
   %sh1 = ashr exact i32 %x, 16
-  %t0 = xor i32 %sh1, shl (i32 ptrtoint (i32* @g to i32), i32 16)
+  %t0 = xor i32 %sh1, shl (i32 ptrtoint (ptr @g to i32), i32 16)
   %t27 = ashr exact i32 %t0, 16
   ret i32 %t27
 }

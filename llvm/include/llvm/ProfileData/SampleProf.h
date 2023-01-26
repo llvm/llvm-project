@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Function.h"
@@ -302,6 +303,13 @@ struct LineLocation {
   uint32_t Discriminator;
 };
 
+struct LineLocationHash {
+  uint64_t operator()(const LineLocation &Loc) const {
+    return std::hash<std::uint64_t>{}((((uint64_t)Loc.LineOffset) << 32) |
+                                      Loc.Discriminator);
+  }
+};
+
 raw_ostream &operator<<(raw_ostream &OS, const LineLocation &Loc);
 
 /// Representation of a single sample record.
@@ -397,8 +405,8 @@ public:
   /// Sort call targets in descending order of call frequency.
   static const SortedCallTargetSet SortCallTargets(const CallTargetMap &Targets) {
     SortedCallTargetSet SortedTargets;
-    for (const auto &I : Targets) {
-      SortedTargets.emplace(I.first(), I.second);
+    for (const auto &[Target, Frequency] : Targets) {
+      SortedTargets.emplace(Target, Frequency);
     }
     return SortedTargets;
   }
@@ -407,8 +415,8 @@ public:
   static const CallTargetMap adjustCallTargets(const CallTargetMap &Targets,
                                                float DistributionFactor) {
     CallTargetMap AdjustedTargets;
-    for (const auto &I : Targets) {
-      AdjustedTargets[I.first()] = I.second * DistributionFactor;
+    for (const auto &[Target, Frequency] : Targets) {
+      AdjustedTargets[Target] = Frequency * DistributionFactor;
     }
     return AdjustedTargets;
   }
@@ -640,7 +648,7 @@ public:
       return State < That.State;
 
     if (!hasContext()) {
-      return (Name.compare(That.Name)) == -1;
+      return Name < That.Name;
     }
 
     uint64_t I = 0;
@@ -649,7 +657,7 @@ public:
       auto &Context2 = That.FullContext[I];
       auto V = Context1.FuncName.compare(Context2.FuncName);
       if (V)
-        return V == -1;
+        return V < 0;
       if (Context1.Location != Context2.Location)
         return Context1.Location < Context2.Location;
       I++;
@@ -918,12 +926,16 @@ public:
     return CallsiteSamples;
   }
 
-  /// Return the maximum of sample counts in a function body including functions
-  /// inlined in it.
-  uint64_t getMaxCountInside() const {
+  /// Return the maximum of sample counts in a function body. When SkipCallSite
+  /// is false, which is the default, the return count includes samples in the
+  /// inlined functions. When SkipCallSite is true, the return count only
+  /// considers the body samples.
+  uint64_t getMaxCountInside(bool SkipCallSite = false) const {
     uint64_t MaxCount = 0;
     for (const auto &L : getBodySamples())
       MaxCount = std::max(MaxCount, L.second.getSamples());
+    if (SkipCallSite)
+      return MaxCount;
     for (const auto &C : getCallsiteSamples())
       for (const FunctionSamplesMap::value_type &F : C.second)
         MaxCount = std::max(MaxCount, F.second.getMaxCountInside());
@@ -1331,6 +1343,26 @@ template <> struct DenseMapInfo<SampleContext> {
     return LHS == RHS;
   }
 };
+
+// Prepend "__uniq" before the hash for tools like profilers to understand
+// that this symbol is of internal linkage type.  The "__uniq" is the
+// pre-determined prefix that is used to tell tools that this symbol was
+// created with -funique-internal-linakge-symbols and the tools can strip or
+// keep the prefix as needed.
+inline std::string getUniqueInternalLinkagePostfix(const StringRef &FName) {
+  llvm::MD5 Md5;
+  Md5.update(FName);
+  llvm::MD5::MD5Result R;
+  Md5.final(R);
+  SmallString<32> Str;
+  llvm::MD5::stringifyResult(R, Str);
+  // Convert MD5hash to Decimal. Demangler suffixes can either contain
+  // numbers or characters but not both.
+  llvm::APInt IntHash(128, Str.str(), 16);
+  return toString(IntHash, /* Radix = */ 10, /* Signed = */ false)
+      .insert(0, FunctionSamples::UniqSuffix);
+}
+
 } // end namespace llvm
 
 #endif // LLVM_PROFILEDATA_SAMPLEPROF_H

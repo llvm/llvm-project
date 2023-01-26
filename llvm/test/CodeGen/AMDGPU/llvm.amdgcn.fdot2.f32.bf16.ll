@@ -19,16 +19,16 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f32_bf16_clamp(
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-    float addrspace(1)* %r,
-    <2 x i16> addrspace(1)* %a,
-    <2 x i16> addrspace(1)* %b,
-    float addrspace(1)* %c) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b,
+    ptr addrspace(1) %c) {
 entry:
-  %a.val = load <2 x i16>, <2 x i16> addrspace(1)* %a
-  %b.val = load <2 x i16>, <2 x i16> addrspace(1)* %b
-  %c.val = load float, float addrspace(1)* %c
+  %a.val = load <2 x i16>, ptr addrspace(1) %a
+  %b.val = load <2 x i16>, ptr addrspace(1) %b
+  %c.val = load float, ptr addrspace(1) %c
   %r.val = call float @llvm.amdgcn.fdot2.f32.bf16(<2 x i16> %a.val, <2 x i16> %b.val, float %c.val, i1 1)
-  store float %r.val, float addrspace(1)* %r
+  store float %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -48,15 +48,15 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f32_bf16_no_clamp(
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-    float addrspace(1)* %r,
-    <2 x i16> addrspace(1)* %a,
-    <2 x i16> addrspace(1)* %b,
-    float addrspace(1)* %c) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b,
+    ptr addrspace(1) %c) {
 entry:
-  %a.val = load <2 x i16>, <2 x i16> addrspace(1)* %a
-  %b.val = load <2 x i16>, <2 x i16> addrspace(1)* %b
-  %c.val = load float, float addrspace(1)* %c
+  %a.val = load <2 x i16>, ptr addrspace(1) %a
+  %b.val = load <2 x i16>, ptr addrspace(1) %b
+  %c.val = load float, ptr addrspace(1) %c
   %r.val = call float @llvm.amdgcn.fdot2.f32.bf16(<2 x i16> %a.val, <2 x i16> %b.val, float %c.val, i1 0)
-  store float %r.val, float addrspace(1)* %r
+  store float %r.val, ptr addrspace(1) %r
   ret void
 }

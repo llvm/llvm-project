@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -polly-print-scops \
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-print-scops \
 ; RUN: -polly-invariant-load-hoisting=true -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -S -polly-codegen \
+; RUN: opt -opaque-pointers=0 %loadPolly -S -polly-codegen \
 ; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s --check-prefix=IR
 ;
 ;    void f(long *A, long *B, long *ptr, long val) {

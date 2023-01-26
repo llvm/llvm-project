@@ -1,4 +1,4 @@
-; RUN: opt -gvn-hoist -newgvn -gvn-hoist -S < %s | FileCheck %s
+; RUN: opt -passes='function(gvn-hoist),function(newgvn),function(gvn-hoist)' -S < %s | FileCheck %s
 
 ; Check that recursive GEPs are hoisted. Since hoisting creates
 ; fully redundant instructions, newgvn is run to remove them which then

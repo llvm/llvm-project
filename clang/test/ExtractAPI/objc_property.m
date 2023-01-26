@@ -55,37 +55,44 @@
     {
       "kind": "memberOf",
       "source": "c:objc(cs)Interface(cpy)myInterfaceTypeProp",
-      "target": "c:objc(cs)Interface"
+      "target": "c:objc(cs)Interface",
+      "targetFallback": "Interface"
     },
     {
       "kind": "memberOf",
       "source": "c:objc(cs)Interface(py)myInterfaceInstanceProp",
-      "target": "c:objc(cs)Interface"
+      "target": "c:objc(cs)Interface",
+      "targetFallback": "Interface"
     },
     {
       "kind": "memberOf",
       "source": "c:objc(cs)Interface(cpy)myCategoryTypeProp",
-      "target": "c:objc(cs)Interface"
+      "target": "c:objc(cs)Interface",
+      "targetFallback": "Interface"
     },
     {
       "kind": "memberOf",
       "source": "c:objc(cs)Interface(py)myCategoryInstanceProp",
-      "target": "c:objc(cs)Interface"
+      "target": "c:objc(cs)Interface",
+      "targetFallback": "Interface"
     },
     {
       "kind": "conformsTo",
       "source": "c:objc(cs)Interface",
-      "target": "c:objc(pl)Protocol"
+      "target": "c:objc(pl)Protocol",
+      "targetFallback": "Protocol"
     },
     {
       "kind": "memberOf",
       "source": "c:objc(pl)Protocol(cpy)myProtocolTypeProp",
-      "target": "c:objc(pl)Protocol"
+      "target": "c:objc(pl)Protocol",
+      "targetFallback": "Protocol"
     },
     {
       "kind": "memberOf",
       "source": "c:objc(pl)Protocol(py)myProtocolInstanceProp",
-      "target": "c:objc(pl)Protocol"
+      "target": "c:objc(pl)Protocol",
+      "targetFallback": "Protocol"
     }
   ],
   "symbols": [

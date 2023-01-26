@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-unknown-linux-gnu -O2 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple powerpc64-unknown-linux-gnu -O2 -emit-llvm -o - %s | FileCheck %s
 
 _Bool test_wc_i1(_Bool b1, _Bool b2) {
   _Bool o;
@@ -40,13 +40,13 @@ double test_fmax(double x, double y) {
 
 void testZ(void *addr) {
   asm volatile ("dcbz %y0\n" :: "Z"(*(unsigned char *)addr) : "memory");
-// CHECK-LABEL: void @testZ(i8* noundef %addr)
-// CHECK: call void asm sideeffect "dcbz ${0:y}\0A", "*Z,~{memory}"(i8* elementtype(i8) %addr)
+// CHECK-LABEL: void @testZ(ptr noundef %addr)
+// CHECK: call void asm sideeffect "dcbz ${0:y}\0A", "*Z,~{memory}"(ptr elementtype(i8) %addr)
 }
 
 void testZwOff(void *addr, long long off) {
   asm volatile ("dcbz %y0\n" :: "Z"(*(unsigned char *)(addr + off)) : "memory");
-// CHECK-LABEL: void @testZwOff(i8* noundef %addr, i64 noundef %off)
-// CHECK: %[[VAL:[^ ]+]] = getelementptr i8, i8* %addr, i64 %off
-// CHECK: call void asm sideeffect "dcbz ${0:y}\0A", "*Z,~{memory}"(i8* elementtype(i8) %[[VAL]])
+// CHECK-LABEL: void @testZwOff(ptr noundef %addr, i64 noundef %off)
+// CHECK: %[[VAL:[^ ]+]] = getelementptr i8, ptr %addr, i64 %off
+// CHECK: call void asm sideeffect "dcbz ${0:y}\0A", "*Z,~{memory}"(ptr elementtype(i8) %[[VAL]])
 }

@@ -23,6 +23,7 @@ end program
 
 ! CHECK-NEXT: Canonicalizer
 ! CHECK-NEXT: SimplifyRegionLite
+! CHECK-NEXT: SimplifyIntrinsics
 ! CHECK-NEXT: AlgebraicSimplification
 ! CHECK-NEXT: CSE
 ! CHECK-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd

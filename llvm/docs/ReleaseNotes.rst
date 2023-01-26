@@ -42,13 +42,73 @@ Non-comprehensive list of changes in this release
    functionality, or simply have a lot to talk about), see the `NOTE` below
    for adding a new subsection.
 
+*  The ``readnone`` calls which are crossing suspend points in coroutines will
+   not be merged. Since ``readnone`` calls may access thread id and thread id
+   is not a constant in coroutines. This decision may cause unnecessary
+   performance regressions and we plan to fix it in later versions.
+
+*  The LoongArch target is promoted to "official" (see below for more details).
+
 * ...
 
 Update on required toolchains to build LLVM
 -------------------------------------------
 
+LLVM is now built with C++17 by default. This means C++17 can be used in
+the code base.
+
+The previous "soft" toolchain requirements have now been changed to "hard".
+This means that the the following versions are now required to build LLVM
+and there is no way to suppress this error.
+
+* GCC >= 7.1
+* Clang >= 5.0
+* Apple Clang >= 10.0
+* Visual Studio 2019 >= 16.7
+
+With LLVM 16.x we will raise the version requirement of CMake used to build
+LLVM. The new requirements are as follows:
+
+* CMake >= 3.20.0
+
+In LLVM 16.x this requirement will be "soft", there will only be a diagnostic.
+
+With the release of LLVM 17.x this requirement will be hard and LLVM developers
+can start using CMake 3.20.0 features, making it impossible to build with older
+versions of CMake.
+
 Changes to the LLVM IR
 ----------------------
+
+* The ``readnone``, ``readonly``, ``writeonly``, ``argmemonly``,
+  ``inaccessiblememonly`` and ``inaccessiblemem_or_argmemonly`` function
+  attributes have been replaced by a single ``memory(...)`` attribute. The
+  old attributes may be mapped to the new one as follows:
+
+  * ``readnone`` -> ``memory(none)``
+  * ``readonly`` -> ``memory(read)``
+  * ``writeonly`` -> ``memory(write)``
+  * ``argmemonly`` -> ``memory(argmem: readwrite)``
+  * ``argmemonly readonly`` -> ``memory(argmem: read)``
+  * ``argmemonly writeonly`` -> ``memory(argmem: write)``
+  * ``inaccessiblememonly`` -> ``memory(inaccessiblemem: readwrite)``
+  * ``inaccessiblememonly readonly`` -> ``memory(inaccessiblemem: read)``
+  * ``inaccessiblememonly writeonly`` -> ``memory(inaccessiblemem: write)``
+  * ``inaccessiblemem_or_argmemonly`` ->
+    ``memory(argmem: readwrite, inaccessiblemem: readwrite)``
+  * ``inaccessiblemem_or_argmemonly readonly`` ->
+    ``memory(argmem: read, inaccessiblemem: read)``
+  * ``inaccessiblemem_or_argmemonly writeonly`` ->
+    ``memory(argmem: write, inaccessiblemem: write)``
+
+* The constant expression variants of the following instructions has been
+  removed:
+
+  * ``fneg``
+
+* Target extension types have been added, which allow targets to have
+  types that need to be preserved through the optimizer, but otherwise are not
+  introspectable by target-independent optimizations.
 
 Changes to building LLVM
 ------------------------
@@ -56,14 +116,34 @@ Changes to building LLVM
 Changes to TableGen
 -------------------
 
+Changes to Interprocedural Optimizations
+----------------------------------------
+
+* Function Specialization has been integrated into IPSCCP.
+* Specialization of functions has been enabled by default at all
+  optimization levels except Os, Oz. This has exposed a mis-compilation
+  in SPEC/CINT2017rate/502.gcc_r when built via the LLVM Test Suite with
+  both LTO and PGO enabled, but without the option -fno-strict-aliasing.
+
 Changes to the AArch64 Backend
 ------------------------------
+
+* Added support for the Cortex-A715 CPU.
+* Added support for the Cortex-X3 CPU.
+* Added support for the Neoverse V2 CPU.
+* Added support for assembly for RME MEC (Memory Encryption Contexts).
+* Added codegen support for the Armv8.3 Complex Number extension.
 
 Changes to the AMDGPU Backend
 -----------------------------
 
 Changes to the ARM Backend
 --------------------------
+
+* Support for targeting armv2, armv2A, armv3 and armv3M has been removed.
+  LLVM did not, and was not ever likely to generate correct code for those
+  architecture versions so their presence was misleading.
+* Added codegen support for the complex arithmetic instructions in MVE.
 
 Changes to the AVR Backend
 --------------------------
@@ -78,6 +158,22 @@ Changes to the Hexagon Backend
 
 * ...
 
+Changes to the LoongArch Backend
+--------------------------------
+
+* The LoongArch target is no longer "experimental"! It's now built by default,
+  rather than needing to be enabled with ``LLVM_EXPERIMENTAL_TARGETS_TO_BUILD``.
+
+* The backend has full codegen support for the base (both integer and
+  floating-point) instruction set and it conforms to psABI v2. Testing has been
+  performed with Linux, including native compilation of a large corpus of Linux
+  applications.
+
+* Support GHC calling convention.
+
+* Initial JITLink support is added.
+  (`D141036 <https://reviews.llvm.org/D141036>`_)
+
 Changes to the MIPS Backend
 ---------------------------
 
@@ -91,13 +187,45 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
+* Support for the unratified Zbe, Zbf, Zbm, Zbp, Zbr, and Zbt extensions have
+  been removed.
+* i32 is now a native type in the datalayout string. This enables
+  LoopStrengthReduce for loops with i32 induction variables, among other
+  optimizations.
+
 Changes to the WebAssembly Backend
 ----------------------------------
 
 * ...
 
+Changes to the Windows Target
+-----------------------------
+
+* For MinGW, generate embedded ``-exclude-symbols:`` directives for symbols
+  with hidden visibility, omitting them from automatic export of all symbols.
+  This roughly makes hidden visibility work like it does for other object
+  file formats.
+
+* When using multi-threaded LLVM tools (such as LLD) on a Windows host with a
+  large number of processors or CPU sockets, previously the LLVM ThreadPool
+  would span out threads to use all processors.
+  Starting with Windows Server 2022 and Windows 11, the behavior has changed,
+  the OS now spans out threads automatically to all processors. This also fixes
+  an affinity mask issue.
+  (`D138747 <https://reviews.llvm.org/D138747>`_)
+
 Changes to the X86 Backend
 --------------------------
+
+* Add support for the ``RDMSRLIST and WRMSRLIST`` instructions.
+* Add support for the ``WRMSRNS`` instruction.
+* Support ISA of ``AMX-FP16`` which contains ``tdpfp16ps`` instruction.
+* Support ISA of ``CMPCCXADD``.
+* Support ISA of ``AVX-IFMA``.
+* Support ISA of ``AVX-VNNI-INT8``.
+* Support ISA of ``AVX-NE-CONVERT``.
+* ``-mcpu=raptorlake``, ``-mcpu=meteorlake`` and ``-mcpu=emeraldrapids`` are now supported.
+* ``-mcpu=sierraforest``, ``-mcpu=graniterapids`` and ``-mcpu=grandridge`` are now supported.
 
 Changes to the OCaml bindings
 -----------------------------
@@ -106,9 +234,28 @@ Changes to the OCaml bindings
 Changes to the C API
 --------------------
 
-Changes to the Go bindings
---------------------------
+* The following functions for creating constant expressions have been removed,
+  because the underlying constant expressions are no longer supported. Instead,
+  an instruction should be created using the ``LLVMBuildXYZ`` APIs, which will
+  constant fold the operands if possible and create an instruction otherwise:
 
+  * ``LLVMConstFNeg``
+
+
+* The following deprecated functions have been removed, because they are
+  incompatible with opaque pointers. Use the new functions accepting a separate
+  function/element type instead.
+
+  * ``LLVMBuildLoad`` -> ``LLVMBuildLoad2``
+  * ``LLVMBuildCall`` -> ``LLVMBuildCall2``
+  * ``LLVMBuildInvoke`` -> ``LLVMBuildInvoke2``
+  * ``LLVMBuildGEP`` -> ``LLVMBuildGEP2``
+  * ``LLVMBuildInBoundsGEP`` -> ``LLVMBuildInBoundsGEP2``
+  * ``LLVMBuildStructGEP`` -> ``LLVMBuildStructGEP2``
+  * ``LLVMBuildPtrDiff`` -> ``LLVMBuildPtrDiff2``
+  * ``LLVMConstGEP`` -> ``LLVMConstGEP2``
+  * ``LLVMConstInBoundsGEP`` -> ``LLVMConstInBoundsGEP2``
+  * ``LLVMAddAlias`` -> ``LLVMAddAlias2``
 
 Changes to the FastISel infrastructure
 --------------------------------------
@@ -128,20 +275,51 @@ Changes to the Metadata Info
 Changes to the Debug Info
 ---------------------------------
 
-During this release ...
+Previously when emitting DWARF v4 and tuning for GDB, llc would use DWARF v2's
+``DW_AT_bit_offset`` and ``DW_AT_data_member_location``. llc now uses DWARF v4's
+``DW_AT_data_bit_offset`` regardless of tuning.
+
+Support for ``DW_AT_data_bit_offset`` was added in GDB 8.0. For earlier versions,
+you can use llc's ``-dwarf-version=3`` option to emit compatible DWARF.
+
+When emitting CodeView debug information, LLVM will now emit S_CONSTANT records
+for variables optimized into a constant via the SROA and SCCP passes.
+(`D138995 <https://reviews.llvm.org/D138995>`_)
 
 Changes to the LLVM tools
 ---------------------------------
 
+* ``llvm-readobj --elf-output-style=JSON`` no longer prefixes each JSON object
+  with the file name. Previously, each object file's output looked like
+  ``"main.o":{"FileSummary":{"File":"main.o"},...}`` but is now
+  ``{"FileSummary":{"File":"main.o"},...}``. This allows each JSON object to be
+  parsed in the same way, since each object no longer has a unique key. Tools
+  that consume ``llvm-readobj``'s JSON output should update their parsers
+  accordingly.
+
+* ``llvm-objdump`` now uses ``--print-imm-hex`` by default, which brings its
+  default behavior closer in line with ``objdump``.
+
 Changes to LLDB
 ---------------------------------
+
+* Initial support for debugging Linux LoongArch 64-bit binaries.
 
 Changes to Sanitizers
 ---------------------
 
+* Many Sanitizers (asan, fuzzer, lsan, safestack, scudo, tsan, ubsan) have
+  support for Linux LoongArch 64-bit variant. Some of them may be rudimentary.
 
 Other Changes
 -------------
+
+* lit no longer supports using substrings of the default target triple as
+  feature names in ``UNSUPPORTED:`` and ``XFAIL:`` directives. These have been
+  replaced by the ``target=<triple>`` feature, and tests can use regex
+  matching to achieve the same effect. For example, ``UNSUPPORTED: arm``
+  would now be ``UNSUPPORTED: target=arm{{.*}}`` and ``XFAIL: windows``
+  would now be ``XFAIL: target={{.*}}-windows{{.*}}``.
 
 External Open Source Projects Using LLVM 15
 ===========================================

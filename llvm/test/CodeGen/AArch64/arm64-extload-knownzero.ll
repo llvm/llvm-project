@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=arm64-eabi | FileCheck %s
 ; rdar://12771555
 
-define void @foo(i16* %ptr, i32 %a) nounwind {
+define void @foo(ptr %ptr, i32 %a) nounwind {
 entry:
 ; CHECK-LABEL: foo:
   %tmp1 = icmp ult i32 %a, 100
@@ -9,7 +9,7 @@ entry:
 bb1:
 ; CHECK: %bb1
 ; CHECK: ldrh [[REG:w[0-9]+]]
-  %tmp2 = load i16, i16* %ptr, align 2
+  %tmp2 = load i16, ptr %ptr, align 2
   br label %bb2
 bb2:
 ; CHECK-NOT: and {{w[0-9]+}}, [[REG]], #0xffff

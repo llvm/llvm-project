@@ -1,10 +1,9 @@
-import("//llvm/utils/TableGen/tablegen.gni")
-
 static_library("OpenMP") {
   output_name = "LLVMFrontendOpenMP"
   deps = [
     "//llvm/lib/IR",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Transforms/Utils",
   ]
   public_deps = [ "//llvm/include/llvm/Frontend/OpenMP:public_tablegen" ]

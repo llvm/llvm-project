@@ -20,6 +20,7 @@ static_library("LLVMNVPTXCodeGen") {
     "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Transforms/IPO",
     "//llvm/lib/Transforms/Scalar",
     "//llvm/lib/Transforms/Utils",

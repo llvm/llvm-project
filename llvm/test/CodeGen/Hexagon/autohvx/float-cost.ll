@@ -1,4 +1,4 @@
-; RUN: opt -march=hexagon -loop-vectorize -hexagon-autohvx -debug-only=loop-vectorize -S < %s 2>&1 | FileCheck %s
+; RUN: opt -march=hexagon -passes=loop-vectorize -hexagon-autohvx -debug-only=loop-vectorize -S < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; Check that the cost model makes vectorization non-profitable.
@@ -7,7 +7,7 @@
 target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
 target triple = "hexagon"
 
-define void @f0(i8* nocapture readonly %a0, i8* nocapture %a1, i32 %a2, i32 %a3, i32 %a4, float %a5, float %a6) #0 {
+define void @f0(ptr nocapture readonly %a0, ptr nocapture %a1, i32 %a2, i32 %a3, i32 %a4, float %a5, float %a6) #0 {
 b0:
   %v0 = icmp sgt i32 %a2, 0
   br i1 %v0, label %b1, label %b2
@@ -51,17 +51,17 @@ b2:                                               ; preds = %b3, %b0
 b3:                                               ; preds = %b3, %b1
   %v31 = phi i32 [ 0, %b1 ], [ %v60, %b3 ]
   %v32 = add nsw i32 %v31, %v15
-  %v33 = getelementptr inbounds i8, i8* %a0, i32 %v32
-  %v34 = load i8, i8* %v33, align 1, !tbaa !0
+  %v33 = getelementptr inbounds i8, ptr %a0, i32 %v32
+  %v34 = load i8, ptr %v33, align 1, !tbaa !0
   %v35 = add nsw i32 %v31, %v21
-  %v36 = getelementptr inbounds i8, i8* %a0, i32 %v35
-  %v37 = load i8, i8* %v36, align 1, !tbaa !0
+  %v36 = getelementptr inbounds i8, ptr %a0, i32 %v35
+  %v37 = load i8, ptr %v36, align 1, !tbaa !0
   %v38 = add nsw i32 %v31, %v28
-  %v39 = getelementptr inbounds i8, i8* %a0, i32 %v38
-  %v40 = load i8, i8* %v39, align 1, !tbaa !0
+  %v39 = getelementptr inbounds i8, ptr %a0, i32 %v38
+  %v40 = load i8, ptr %v39, align 1, !tbaa !0
   %v41 = add nsw i32 %v31, %v30
-  %v42 = getelementptr inbounds i8, i8* %a0, i32 %v41
-  %v43 = load i8, i8* %v42, align 1, !tbaa !0
+  %v42 = getelementptr inbounds i8, ptr %a0, i32 %v41
+  %v43 = load i8, ptr %v42, align 1, !tbaa !0
   %v44 = uitofp i8 %v34 to float
   %v45 = uitofp i8 %v37 to float
   %v46 = uitofp i8 %v40 to float
@@ -77,8 +77,8 @@ b3:                                               ; preds = %b3, %b1
   %v56 = fadd float %v50, %v55
   %v57 = fadd float %v56, 5.000000e-01
   %v58 = fptoui float %v57 to i8
-  %v59 = getelementptr inbounds i8, i8* %a1, i32 %v31
-  store i8 %v58, i8* %v59, align 1, !tbaa !0
+  %v59 = getelementptr inbounds i8, ptr %a1, i32 %v31
+  store i8 %v58, ptr %v59, align 1, !tbaa !0
   %v60 = add nuw nsw i32 %v31, 1
   %v61 = icmp eq i32 %v60, %a2
   br i1 %v61, label %b2, label %b3

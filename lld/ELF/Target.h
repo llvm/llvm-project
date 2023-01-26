@@ -13,6 +13,7 @@
 #include "InputSection.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Object/ELF.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <array>
 
@@ -88,6 +89,7 @@ public:
   void relocateNoSym(uint8_t *loc, RelType type, uint64_t val) const {
     relocate(loc, Relocation{R_NONE, type, 0, 0, nullptr}, val);
   }
+  virtual void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const;
 
   // Do a linker relaxation pass and return true if we changed something.
   virtual bool relaxOnce(int pass) const { return false; }
@@ -146,7 +148,7 @@ public:
 
   // Stores the NOP instructions of different sizes for the target and is used
   // to pad sections that are relaxed.
-  llvm::Optional<std::vector<std::vector<uint8_t>>> nopInstrs;
+  std::optional<std::vector<std::vector<uint8_t>>> nopInstrs;
 
   // If a target needs to rewrite calls to __morestack to instead call
   // __morestack_non_split when a split-stack enabled caller calls a
@@ -156,16 +158,6 @@ public:
   virtual RelExpr adjustTlsExpr(RelType type, RelExpr expr) const;
   virtual RelExpr adjustGotPcExpr(RelType type, int64_t addend,
                                   const uint8_t *loc) const;
-  virtual void relaxGot(uint8_t *loc, const Relocation &rel,
-                        uint64_t val) const;
-  virtual void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
-                              uint64_t val) const;
-  virtual void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
-                              uint64_t val) const;
-  virtual void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
-                              uint64_t val) const;
-  virtual void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
-                              uint64_t val) const;
 
 protected:
   // On FreeBSD x86_64 the first page cannot be mmaped.
@@ -204,7 +196,6 @@ static inline std::string getErrorLocation(const uint8_t *loc) {
 
 void writePPC32GlinkSection(uint8_t *buf, size_t numEntries);
 
-bool tryRelaxPPC64TocIndirection(const Relocation &rel, uint8_t *bufLoc);
 unsigned getPPCDFormOp(unsigned secondaryOp);
 
 // In the PowerPC64 Elf V2 abi a function can have 2 entry points.  The first
@@ -225,20 +216,9 @@ void addPPC64SaveRestore();
 uint64_t getPPC64TocBase();
 uint64_t getAArch64Page(uint64_t expr);
 void riscvFinalizeRelax(int passes);
+void mergeRISCVAttributesSections();
 
-class AArch64Relaxer {
-  bool safeToRelaxAdrpLdr = true;
-
-public:
-  explicit AArch64Relaxer(ArrayRef<Relocation> relocs);
-
-  bool tryRelaxAdrpAdd(const Relocation &adrpRel, const Relocation &addRel,
-                       uint64_t secAddr, uint8_t *buf) const;
-  bool tryRelaxAdrpLdr(const Relocation &adrpRel, const Relocation &ldrRel,
-                       uint64_t secAddr, uint8_t *buf) const;
-};
-
-extern const TargetInfo *target;
+LLVM_LIBRARY_VISIBILITY extern const TargetInfo *target;
 TargetInfo *getTarget();
 
 template <class ELFT> bool isMipsPIC(const Defined *sym);

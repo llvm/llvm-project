@@ -1,4 +1,4 @@
-; RUN: opt -loop-simplifycfg -verify-memoryssa -S < %s | FileCheck %s
+; RUN: opt -passes=loop-simplifycfg -verify-memoryssa -S < %s | FileCheck %s
 ; REQUIRES: asserts
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -9,7 +9,7 @@ declare i32 @eggs(...)
 declare void @spam()
 
 ; CHECK-LABEL: @f()
-define void @f() personality i8* bitcast (i32 (...)* @eggs to i8*) {
+define void @f() personality ptr @eggs {
 bb:
   invoke void @spam()
           to label %bb2 unwind label %bb4
@@ -19,12 +19,12 @@ bb2:                                              ; preds = %bb
           to label %bb8 unwind label %bb5
 
 bb4:                                              ; preds = %bb
-  %tmp = landingpad { i8*, i32 }
+  %tmp = landingpad { ptr, i32 }
           cleanup
-  resume { i8*, i32 } undef
+  resume { ptr, i32 } undef
 
 bb5:                                              ; preds = %bb2
-  %tmp6 = landingpad { i8*, i32 }
+  %tmp6 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
@@ -47,17 +47,17 @@ bb13:                                             ; preds = %bb12
   br label %bb8
 
 bb20:                                             ; preds = %bb10
-  %tmp21 = landingpad { i8*, i32 }
+  %tmp21 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 bb22:                                             ; preds = %bb11
-  %tmp23 = landingpad { i8*, i32 }
+  %tmp23 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 bb24:                                             ; preds = %bb12
-  %tmp25 = landingpad { i8*, i32 }
+  %tmp25 = landingpad { ptr, i32 }
           cleanup
   unreachable
 }

@@ -22,8 +22,8 @@
 #include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include <optional>
 using namespace clang;
 
 template <typename AttrT> static bool hasExplicitAttr(const VarDecl *D) {
@@ -338,7 +338,7 @@ bool Sema::inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
   if (!InClass || HasExplicitAttr)
     return false;
 
-  llvm::Optional<CUDAFunctionTarget> InferredTarget;
+  std::optional<CUDAFunctionTarget> InferredTarget;
 
   // We're going to invoke special member lookup; mark that these special
   // members are called from this one, and not from its caller.
@@ -381,13 +381,12 @@ bool Sema::inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
       InferredTarget = BaseMethodTarget;
     } else {
       bool ResolutionError = resolveCalleeCUDATargetConflict(
-          InferredTarget.value(), BaseMethodTarget,
-          InferredTarget.getPointer());
+          *InferredTarget, BaseMethodTarget, &*InferredTarget);
       if (ResolutionError) {
         if (Diagnose) {
           Diag(ClassDecl->getLocation(),
                diag::note_implicit_member_target_infer_collision)
-              << (unsigned)CSM << InferredTarget.value() << BaseMethodTarget;
+              << (unsigned)CSM << *InferredTarget << BaseMethodTarget;
         }
         MemberDecl->addAttr(CUDAInvalidTargetAttr::CreateImplicit(Context));
         return true;
@@ -425,13 +424,12 @@ bool Sema::inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
       InferredTarget = FieldMethodTarget;
     } else {
       bool ResolutionError = resolveCalleeCUDATargetConflict(
-          InferredTarget.value(), FieldMethodTarget,
-          InferredTarget.getPointer());
+          *InferredTarget, FieldMethodTarget, &*InferredTarget);
       if (ResolutionError) {
         if (Diagnose) {
           Diag(ClassDecl->getLocation(),
                diag::note_implicit_member_target_infer_collision)
-              << (unsigned)CSM << InferredTarget.value() << FieldMethodTarget;
+              << (unsigned)CSM << *InferredTarget << FieldMethodTarget;
         }
         MemberDecl->addAttr(CUDAInvalidTargetAttr::CreateImplicit(Context));
         return true;
@@ -444,9 +442,9 @@ bool Sema::inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
   // it's the least restrictive option that can be invoked from any target.
   bool NeedsH = true, NeedsD = true;
   if (InferredTarget) {
-    if (InferredTarget.value() == CFT_Device)
+    if (*InferredTarget == CFT_Device)
       NeedsH = false;
-    else if (InferredTarget.value() == CFT_Host)
+    else if (*InferredTarget == CFT_Host)
       NeedsD = false;
   }
 

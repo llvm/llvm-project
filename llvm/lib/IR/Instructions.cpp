@@ -13,7 +13,7 @@
 
 #include "llvm/IR/Instructions.h"
 #include "LLVMContextImpl.h"
-#include "llvm/ADT/None.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/Attributes.h"
@@ -31,16 +31,19 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/TypeSize.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 using namespace llvm;
@@ -53,17 +56,25 @@ static cl::opt<bool> DisableI2pP2iOpt(
 //                            AllocaInst Class
 //===----------------------------------------------------------------------===//
 
-Optional<TypeSize>
-AllocaInst::getAllocationSizeInBits(const DataLayout &DL) const {
-  TypeSize Size = DL.getTypeAllocSizeInBits(getAllocatedType());
+std::optional<TypeSize>
+AllocaInst::getAllocationSize(const DataLayout &DL) const {
+  TypeSize Size = DL.getTypeAllocSize(getAllocatedType());
   if (isArrayAllocation()) {
     auto *C = dyn_cast<ConstantInt>(getArraySize());
     if (!C)
-      return None;
+      return std::nullopt;
     assert(!Size.isScalable() && "Array elements cannot have a scalable size");
     Size *= C->getZExtValue();
   }
   return Size;
+}
+
+std::optional<TypeSize>
+AllocaInst::getAllocationSizeInBits(const DataLayout &DL) const {
+  std::optional<TypeSize> Size = getAllocationSize(DL);
+  if (Size)
+    return *Size * 8;
+  return std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//
@@ -104,7 +115,7 @@ PHINode::PHINode(const PHINode &PN)
       ReservedSpace(PN.getNumOperands()) {
   allocHungoffUses(PN.getNumOperands());
   std::copy(PN.op_begin(), PN.op_end(), op_begin());
-  std::copy(PN.block_begin(), PN.block_end(), block_begin());
+  copyIncomingBlocks(make_range(PN.block_begin(), PN.block_end()));
   SubclassOptionalData = PN.SubclassOptionalData;
 }
 
@@ -119,7 +130,7 @@ Value *PHINode::removeIncomingValue(unsigned Idx, bool DeletePHIIfEmpty) {
   // clients might not expect this to happen.  The code as it is thrashes the
   // use/def lists, which is kinda lame.
   std::copy(op_begin() + Idx + 1, op_end(), op_begin() + Idx);
-  std::copy(block_begin() + Idx + 1, block_end(), block_begin() + Idx);
+  copyIncomingBlocks(make_range(block_begin() + Idx + 1, block_end()), Idx);
 
   // Nuke the last value.
   Op<-1>().set(nullptr);
@@ -343,9 +354,25 @@ bool CallBase::paramHasAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
 
   if (Attrs.hasParamAttr(ArgNo, Kind))
     return true;
-  if (const Function *F = getCalledFunction())
-    return F->getAttributes().hasParamAttr(ArgNo, Kind);
-  return false;
+
+  const Function *F = getCalledFunction();
+  if (!F)
+    return false;
+
+  if (!F->getAttributes().hasParamAttr(ArgNo, Kind))
+    return false;
+
+  // Take into account mod/ref by operand bundles.
+  switch (Kind) {
+  case Attribute::ReadNone:
+    return !hasReadingOperandBundles() && !hasClobberingOperandBundles();
+  case Attribute::ReadOnly:
+    return !hasClobberingOperandBundles();
+  case Attribute::WriteOnly:
+    return !hasReadingOperandBundles();
+  default:
+    return true;
+  }
 }
 
 bool CallBase::hasFnAttrOnCalledFunction(Attribute::AttrKind Kind) const {
@@ -374,10 +401,12 @@ bool CallBase::hasFnAttrOnCalledFunction(StringRef Kind) const {
 
 template <typename AK>
 Attribute CallBase::getFnAttrOnCalledFunction(AK Kind) const {
-  // Operand bundles override attributes on the called function, but don't
-  // override attributes directly present on the call instruction.
-  if (isFnAttrDisallowedByOpBundle(Kind))
-    return Attribute();
+  if constexpr (std::is_same_v<AK, Attribute::AttrKind>) {
+    // getMemoryEffects() correctly combines memory effects from the call-site,
+    // operand bundles and function.
+    assert(Kind != Attribute::Memory && "Use getMemoryEffects() instead");
+  }
+
   Value *V = getCalledOperand();
   if (auto *CE = dyn_cast<ConstantExpr>(V))
     if (CE->getOpcode() == BitCast)
@@ -505,8 +534,87 @@ bool CallBase::hasReadingOperandBundles() const {
   // Implementation note: this is a conservative implementation of operand
   // bundle semantics, where *any* non-assume operand bundle (other than
   // ptrauth) forces a callsite to be at least readonly.
-  return hasOperandBundlesOtherThan(LLVMContext::OB_ptrauth) &&
+  return hasOperandBundlesOtherThan(
+             {LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi}) &&
          getIntrinsicID() != Intrinsic::assume;
+}
+
+bool CallBase::hasClobberingOperandBundles() const {
+  return hasOperandBundlesOtherThan(
+             {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
+              LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi}) &&
+         getIntrinsicID() != Intrinsic::assume;
+}
+
+MemoryEffects CallBase::getMemoryEffects() const {
+  MemoryEffects ME = getAttributes().getMemoryEffects();
+  if (auto *Fn = dyn_cast<Function>(getCalledOperand())) {
+    MemoryEffects FnME = Fn->getMemoryEffects();
+    if (hasOperandBundles()) {
+      // TODO: Add a method to get memory effects for operand bundles instead.
+      if (hasReadingOperandBundles())
+        FnME |= MemoryEffects::readOnly();
+      if (hasClobberingOperandBundles())
+        FnME |= MemoryEffects::writeOnly();
+    }
+    ME &= FnME;
+  }
+  return ME;
+}
+void CallBase::setMemoryEffects(MemoryEffects ME) {
+  addFnAttr(Attribute::getWithMemoryEffects(getContext(), ME));
+}
+
+/// Determine if the function does not access memory.
+bool CallBase::doesNotAccessMemory() const {
+  return getMemoryEffects().doesNotAccessMemory();
+}
+void CallBase::setDoesNotAccessMemory() {
+  setMemoryEffects(MemoryEffects::none());
+}
+
+/// Determine if the function does not access or only reads memory.
+bool CallBase::onlyReadsMemory() const {
+  return getMemoryEffects().onlyReadsMemory();
+}
+void CallBase::setOnlyReadsMemory() {
+  setMemoryEffects(getMemoryEffects() & MemoryEffects::readOnly());
+}
+
+/// Determine if the function does not access or only writes memory.
+bool CallBase::onlyWritesMemory() const {
+  return getMemoryEffects().onlyWritesMemory();
+}
+void CallBase::setOnlyWritesMemory() {
+  setMemoryEffects(getMemoryEffects() & MemoryEffects::writeOnly());
+}
+
+/// Determine if the call can access memmory only using pointers based
+/// on its arguments.
+bool CallBase::onlyAccessesArgMemory() const {
+  return getMemoryEffects().onlyAccessesArgPointees();
+}
+void CallBase::setOnlyAccessesArgMemory() {
+  setMemoryEffects(getMemoryEffects() & MemoryEffects::argMemOnly());
+}
+
+/// Determine if the function may only access memory that is
+///  inaccessible from the IR.
+bool CallBase::onlyAccessesInaccessibleMemory() const {
+  return getMemoryEffects().onlyAccessesInaccessibleMem();
+}
+void CallBase::setOnlyAccessesInaccessibleMemory() {
+  setMemoryEffects(getMemoryEffects() & MemoryEffects::inaccessibleMemOnly());
+}
+
+/// Determine if the function may only access memory that is
+///  either inaccessible from the IR or pointed to by its arguments.
+bool CallBase::onlyAccessesInaccessibleMemOrArgMem() const {
+  return getMemoryEffects().onlyAccessesInaccessibleOrArgMem();
+}
+void CallBase::setOnlyAccessesInaccessibleMemOrArgMem() {
+  setMemoryEffects(getMemoryEffects() &
+                   MemoryEffects::inaccessibleOrArgMemOnly());
 }
 
 //===----------------------------------------------------------------------===//
@@ -725,7 +833,7 @@ static Instruction *createMalloc(Instruction *InsertBefore,
     MCall = CallInst::Create(MallocFunc, AllocSize, OpB, "malloccall");
     Result = MCall;
     if (Result->getType() != AllocPtrType) {
-      InsertAtEnd->getInstList().push_back(MCall);
+      MCall->insertInto(InsertAtEnd, InsertAtEnd->end());
       // Create a cast instruction to convert to the right type...
       Result = new BitCastInst(MCall, AllocPtrType, Name);
     }
@@ -753,7 +861,7 @@ Instruction *CallInst::CreateMalloc(Instruction *InsertBefore,
                                     Function *MallocF,
                                     const Twine &Name) {
   return createMalloc(InsertBefore, nullptr, IntPtrTy, AllocTy, AllocSize,
-                      ArraySize, None, MallocF, Name);
+                      ArraySize, std::nullopt, MallocF, Name);
 }
 Instruction *CallInst::CreateMalloc(Instruction *InsertBefore,
                                     Type *IntPtrTy, Type *AllocTy,
@@ -778,7 +886,7 @@ Instruction *CallInst::CreateMalloc(BasicBlock *InsertAtEnd,
                                     Value *AllocSize, Value *ArraySize,
                                     Function *MallocF, const Twine &Name) {
   return createMalloc(nullptr, InsertAtEnd, IntPtrTy, AllocTy, AllocSize,
-                      ArraySize, None, MallocF, Name);
+                      ArraySize, std::nullopt, MallocF, Name);
 }
 Instruction *CallInst::CreateMalloc(BasicBlock *InsertAtEnd,
                                     Type *IntPtrTy, Type *AllocTy,
@@ -825,7 +933,7 @@ static Instruction *createFree(Value *Source,
 
 /// CreateFree - Generate the IR for a call to the builtin free function.
 Instruction *CallInst::CreateFree(Value *Source, Instruction *InsertBefore) {
-  return createFree(Source, None, InsertBefore, nullptr);
+  return createFree(Source, std::nullopt, InsertBefore, nullptr);
 }
 Instruction *CallInst::CreateFree(Value *Source,
                                   ArrayRef<OperandBundleDef> Bundles,
@@ -837,7 +945,8 @@ Instruction *CallInst::CreateFree(Value *Source,
 /// Note: This function does not add the call to the basic block, that is the
 /// responsibility of the caller.
 Instruction *CallInst::CreateFree(Value *Source, BasicBlock *InsertAtEnd) {
-  Instruction *FreeCall = createFree(Source, None, nullptr, InsertAtEnd);
+  Instruction *FreeCall =
+      createFree(Source, std::nullopt, nullptr, InsertAtEnd);
   assert(FreeCall && "CreateFree did not create a CallInst");
   return FreeCall;
 }
@@ -958,12 +1067,6 @@ void CallBrInst::init(FunctionType *FTy, Value *Fn, BasicBlock *Fallthrough,
   assert(It + 2 + IndirectDests.size() == op_end() && "Should add up!");
 
   setName(NameStr);
-}
-
-BlockAddress *
-CallBrInst::getBlockAddressForIndirectDest(unsigned DestNo) const {
-  return BlockAddress::get(const_cast<Function *>(getFunction()),
-                           getIndirectDest(DestNo));
 }
 
 CallBrInst::CallBrInst(const CallBrInst &CBI)
@@ -1417,7 +1520,7 @@ bool AllocaInst::isStaticAlloca() const {
 
   // Must be in the entry block.
   const BasicBlock *Parent = getParent();
-  return Parent == &Parent->getParent()->front() && !isUsedWithInAlloca();
+  return Parent->isEntryBlock() && !isUsedWithInAlloca();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2067,7 +2170,7 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
       return false;
 
   if (isa<ScalableVectorType>(V1->getType()))
-    if ((Mask[0] != 0 && Mask[0] != UndefMaskElem) || !is_splat(Mask))
+    if ((Mask[0] != 0 && Mask[0] != UndefMaskElem) || !all_equal(Mask))
       return false;
 
   return true;
@@ -2158,7 +2261,7 @@ Constant *ShuffleVectorInst::convertShuffleMaskForBitcode(ArrayRef<int> Mask,
                                                           Type *ResultTy) {
   Type *Int32Ty = Type::getInt32Ty(ResultTy->getContext());
   if (isa<ScalableVectorType>(ResultTy)) {
-    assert(is_splat(Mask) && "Unexpected shuffle");
+    assert(all_equal(Mask) && "Unexpected shuffle");
     Type *VecTy = VectorType::get(Int32Ty, Mask.size(), true);
     if (Mask[0] == 0)
       return Constant::getNullValue(VecTy);
@@ -2290,6 +2393,37 @@ bool ShuffleVectorInst::isTransposeMask(ArrayRef<int> Mask) {
     if (MaskEltVal - MaskEltPrevVal != 2)
       return false;
   }
+  return true;
+}
+
+bool ShuffleVectorInst::isSpliceMask(ArrayRef<int> Mask, int &Index) {
+  // Example: shufflevector <4 x n> A, <4 x n> B, <1,2,3,4>
+  int StartIndex = -1;
+  for (int I = 0, E = Mask.size(); I != E; ++I) {
+    int MaskEltVal = Mask[I];
+    if (MaskEltVal == -1)
+      continue;
+
+    if (StartIndex == -1) {
+      // Don't support a StartIndex that begins in the second input, or if the
+      // first non-undef index would access below the StartIndex.
+      if (MaskEltVal < I || E <= (MaskEltVal - I))
+        return false;
+
+      StartIndex = MaskEltVal - I;
+      continue;
+    }
+
+    // Splice is sequential starting from StartIndex.
+    if (MaskEltVal != (StartIndex + I))
+      return false;
+  }
+
+  if (StartIndex == -1)
+    return false;
+
+  // NOTE: This accepts StartIndex == 0 (COPY).
+  Index = StartIndex;
   return true;
 }
 
@@ -2485,7 +2619,7 @@ static bool isReplicationMaskWithParams(ArrayRef<int> Mask,
 bool ShuffleVectorInst::isReplicationMask(ArrayRef<int> Mask,
                                           int &ReplicationFactor, int &VF) {
   // undef-less case is trivial.
-  if (none_of(Mask, [](int MaskElt) { return MaskElt == UndefMaskElem; })) {
+  if (!llvm::is_contained(Mask, UndefMaskElem)) {
     ReplicationFactor =
         Mask.take_while([](int MaskElt) { return MaskElt == 0; }).size();
     if (ReplicationFactor == 0 || Mask.size() % ReplicationFactor != 0)
@@ -2541,6 +2675,37 @@ bool ShuffleVectorInst::isReplicationMask(int &ReplicationFactor,
   ReplicationFactor = ShuffleMask.size() / VF;
 
   return isReplicationMaskWithParams(ShuffleMask, ReplicationFactor, VF);
+}
+
+bool ShuffleVectorInst::isOneUseSingleSourceMask(ArrayRef<int> Mask, int VF) {
+  if (VF <= 0 || Mask.size() < static_cast<unsigned>(VF) ||
+      Mask.size() % VF != 0)
+    return false;
+  for (unsigned K = 0, Sz = Mask.size(); K < Sz; K += VF) {
+    ArrayRef<int> SubMask = Mask.slice(K, VF);
+    if (all_of(SubMask, [](int Idx) { return Idx == UndefMaskElem; }))
+      continue;
+    SmallBitVector Used(VF, false);
+    for_each(SubMask, [&Used, VF](int Idx) {
+      if (Idx != UndefMaskElem && Idx < VF)
+        Used.set(Idx);
+    });
+    if (!Used.all())
+      return false;
+  }
+  return true;
+}
+
+/// Return true if this shuffle mask is a replication mask.
+bool ShuffleVectorInst::isOneUseSingleSourceMask(int VF) const {
+  // Not possible to express a shuffle mask for a scalable vector for this
+  // case.
+  if (isa<ScalableVectorType>(getType()))
+    return false;
+  if (!isSingleSourceMask(ShuffleMask))
+    return false;
+
+  return isOneUseSingleSourceMask(ShuffleMask, VF);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2659,7 +2824,7 @@ UnaryOperator *UnaryOperator::Create(UnaryOps Op, Value *S,
                                      const Twine &Name,
                                      BasicBlock *InsertAtEnd) {
   UnaryOperator *Res = Create(Op, S, Name);
-  InsertAtEnd->getInstList().push_back(Res);
+  Res->insertInto(InsertAtEnd, InsertAtEnd->end());
   return Res;
 }
 
@@ -2790,7 +2955,7 @@ BinaryOperator *BinaryOperator::Create(BinaryOps Op, Value *S1, Value *S2,
                                        const Twine &Name,
                                        BasicBlock *InsertAtEnd) {
   BinaryOperator *Res = Create(Op, S1, S2, Name);
-  InsertAtEnd->getInstList().push_back(Res);
+  Res->insertInto(InsertAtEnd, InsertAtEnd->end());
   return Res;
 }
 
@@ -3430,7 +3595,7 @@ bool CastInst::isBitCastable(Type *SrcTy, Type *DestTy) {
 
   // Could still have vectors of pointers if the number of elements doesn't
   // match
-  if (SrcBits.getKnownMinSize() == 0 || DestBits.getKnownMinSize() == 0)
+  if (SrcBits.getKnownMinValue() == 0 || DestBits.getKnownMinValue() == 0)
     return false;
 
   if (SrcBits != DestBits)
@@ -4408,15 +4573,6 @@ void SwitchInst::growOperands() {
   growHungoffUses(ReservedSpace);
 }
 
-MDNode *
-SwitchInstProfUpdateWrapper::getProfBranchWeightsMD(const SwitchInst &SI) {
-  if (MDNode *ProfileData = SI.getMetadata(LLVMContext::MD_prof))
-    if (auto *MDName = dyn_cast<MDString>(ProfileData->getOperand(0)))
-      if (MDName->getString() == "branch_weights")
-        return ProfileData;
-  return nullptr;
-}
-
 MDNode *SwitchInstProfUpdateWrapper::buildProfBranchWeightsMD() {
   assert(Changed && "called only if metadata has changed");
 
@@ -4426,16 +4582,16 @@ MDNode *SwitchInstProfUpdateWrapper::buildProfBranchWeightsMD() {
   assert(SI.getNumSuccessors() == Weights->size() &&
          "num of prof branch_weights must accord with num of successors");
 
-  bool AllZeroes = all_of(Weights.value(), [](uint32_t W) { return W == 0; });
+  bool AllZeroes = all_of(*Weights, [](uint32_t W) { return W == 0; });
 
-  if (AllZeroes || Weights.value().size() < 2)
+  if (AllZeroes || Weights->size() < 2)
     return nullptr;
 
   return MDBuilder(SI.getParent()->getContext()).createBranchWeights(*Weights);
 }
 
 void SwitchInstProfUpdateWrapper::init() {
-  MDNode *ProfileData = getProfBranchWeightsMD(SI);
+  MDNode *ProfileData = getBranchWeightMDNode(SI);
   if (!ProfileData)
     return;
 
@@ -4445,11 +4601,8 @@ void SwitchInstProfUpdateWrapper::init() {
   }
 
   SmallVector<uint32_t, 8> Weights;
-  for (unsigned CI = 1, CE = SI.getNumSuccessors(); CI <= CE; ++CI) {
-    ConstantInt *C = mdconst::extract<ConstantInt>(ProfileData->getOperand(CI));
-    uint32_t CW = C->getValue().getZExtValue();
-    Weights.push_back(CW);
-  }
+  if (!extractBranchWeights(ProfileData, Weights))
+    return;
   this->Weights = std::move(Weights);
 }
 
@@ -4462,8 +4615,8 @@ SwitchInstProfUpdateWrapper::removeCase(SwitchInst::CaseIt I) {
     // Copy the last case to the place of the removed one and shrink.
     // This is tightly coupled with the way SwitchInst::removeCase() removes
     // the cases in SwitchInst::removeCase(CaseIt).
-    Weights.value()[I->getCaseIndex() + 1] = Weights.value().back();
-    Weights.value().pop_back();
+    (*Weights)[I->getCaseIndex() + 1] = Weights->back();
+    Weights->pop_back();
   }
   return SI.removeCase(I);
 }
@@ -4476,10 +4629,10 @@ void SwitchInstProfUpdateWrapper::addCase(
   if (!Weights && W && *W) {
     Changed = true;
     Weights = SmallVector<uint32_t, 8>(SI.getNumSuccessors(), 0);
-    Weights.value()[SI.getNumSuccessors() - 1] = *W;
+    (*Weights)[SI.getNumSuccessors() - 1] = *W;
   } else if (Weights) {
     Changed = true;
-    Weights.value().push_back(W.value_or(0));
+    Weights->push_back(W.value_or(0));
   }
   if (Weights)
     assert(SI.getNumSuccessors() == Weights->size() &&
@@ -4498,7 +4651,7 @@ SwitchInstProfUpdateWrapper::eraseFromParent() {
 SwitchInstProfUpdateWrapper::CaseWeightOpt
 SwitchInstProfUpdateWrapper::getSuccessorWeight(unsigned idx) {
   if (!Weights)
-    return None;
+    return std::nullopt;
   return (*Weights)[idx];
 }
 
@@ -4522,13 +4675,13 @@ void SwitchInstProfUpdateWrapper::setSuccessorWeight(
 SwitchInstProfUpdateWrapper::CaseWeightOpt
 SwitchInstProfUpdateWrapper::getSuccessorWeight(const SwitchInst &SI,
                                                 unsigned idx) {
-  if (MDNode *ProfileData = getProfBranchWeightsMD(SI))
+  if (MDNode *ProfileData = getBranchWeightMDNode(SI))
     if (ProfileData->getNumOperands() == SI.getNumSuccessors() + 1)
       return mdconst::extract<ConstantInt>(ProfileData->getOperand(idx + 1))
           ->getValue()
           .getZExtValue();
 
-  return None;
+  return std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4662,9 +4815,8 @@ InsertValueInst *InsertValueInst::cloneImpl() const {
 }
 
 AllocaInst *AllocaInst::cloneImpl() const {
-  AllocaInst *Result =
-      new AllocaInst(getAllocatedType(), getType()->getAddressSpace(),
-                     getOperand(0), getAlign());
+  AllocaInst *Result = new AllocaInst(getAllocatedType(), getAddressSpace(),
+                                      getOperand(0), getAlign());
   Result->setUsedWithInAlloca(isUsedWithInAlloca());
   Result->setSwiftError(isSwiftError());
   return Result;

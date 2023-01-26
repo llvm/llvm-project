@@ -49,11 +49,10 @@ define i32 @main() #0 !dbg !26 {
 entry:
   %retval = alloca i32, align 4
   %instance_C = alloca %class.C, align 4
-  store i32 0, i32* %retval
-  call void @llvm.dbg.declare(metadata %class.C* %instance_C, metadata !29, metadata !30), !dbg !31
-  %d = getelementptr inbounds %class.C, %class.C* %instance_C, i32 0, i32 0, !dbg !32
-  store i32 8, i32* %d, align 4, !dbg !32
-  %0 = load i32, i32* @_ZN1C1cE, align 4, !dbg !33
+  store i32 0, ptr %retval
+  call void @llvm.dbg.declare(metadata ptr %instance_C, metadata !29, metadata !30), !dbg !31
+  store i32 8, ptr %instance_C, align 4, !dbg !32
+  %0 = load i32, ptr @_ZN1C1cE, align 4, !dbg !33
   ret i32 %0, !dbg !33
 }
 

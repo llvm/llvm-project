@@ -64,21 +64,18 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 %Derived = type { %Base }
-%Base = type { i32 (...)** }
+%Base = type { ptr }
 
-@_ZTV7Derived = external constant { [5 x i8*] }
+@_ZTV7Derived = external constant { [5 x ptr] }
 
 define hidden i32 @main() {
 entry:
-  %call = tail call i8* @_Znwm(i64 8)
-  %0 = bitcast i8* %call to %Derived*
-  %1 = getelementptr inbounds %Derived, %Derived* %0, i64 0, i32 0, i32 0
-  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [5 x i8*] }, { [5 x i8*] }* @_ZTV7Derived, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %1
-  %2 = getelementptr %Derived, %Derived* %0, i64 0, i32 0
-  tail call void @_Z3fooP4Base(%Base* nonnull %2)
+  %call = tail call ptr @_Znwm(i64 8)
+  store ptr getelementptr inbounds ({ [5 x ptr] }, ptr @_ZTV7Derived, i64 0, inrange i32 0, i64 2), ptr %call
+  tail call void @_Z3fooP4Base(ptr nonnull %call)
   ret i32 0
 }
 
-declare i8* @_Znwm(i64)
+declare ptr @_Znwm(i64)
 
-declare void @_Z3fooP4Base(%Base*)
+declare void @_Z3fooP4Base(ptr)

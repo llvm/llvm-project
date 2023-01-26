@@ -45,10 +45,9 @@ class WebAssemblyDisassembler final : public MCDisassembler {
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
                               raw_ostream &CStream) const override;
-  Optional<DecodeStatus> onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
-                                       ArrayRef<uint8_t> Bytes,
-                                       uint64_t Address,
-                                       raw_ostream &CStream) const override;
+  std::optional<DecodeStatus>
+  onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size, ArrayRef<uint8_t> Bytes,
+                uint64_t Address, raw_ostream &CStream) const override;
 
 public:
   WebAssemblyDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
@@ -121,29 +120,31 @@ bool parseImmediate(MCInst &MI, uint64_t &Size, ArrayRef<uint8_t> Bytes) {
   return true;
 }
 
-Optional<MCDisassembler::DecodeStatus> WebAssemblyDisassembler::onSymbolStart(
-    SymbolInfoTy &Symbol, uint64_t &Size, ArrayRef<uint8_t> Bytes,
-    uint64_t Address, raw_ostream &CStream) const {
+std::optional<MCDisassembler::DecodeStatus>
+WebAssemblyDisassembler::onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
+                                       ArrayRef<uint8_t> Bytes,
+                                       uint64_t Address,
+                                       raw_ostream &CStream) const {
   Size = 0;
   if (Address == 0) {
     // Start of a code section: we're parsing only the function count.
     int64_t FunctionCount;
     if (!nextLEB(FunctionCount, Bytes, Size, false))
-      return None;
+      return std::nullopt;
     outs() << "        # " << FunctionCount << " functions in section.";
   } else {
     // Parse the start of a single function.
     int64_t BodySize, LocalEntryCount;
     if (!nextLEB(BodySize, Bytes, Size, false) ||
         !nextLEB(LocalEntryCount, Bytes, Size, false))
-      return None;
+      return std::nullopt;
     if (LocalEntryCount) {
       outs() << "        .local ";
       for (int64_t I = 0; I < LocalEntryCount; I++) {
         int64_t Count, Type;
         if (!nextLEB(Count, Bytes, Size, false) ||
             !nextLEB(Type, Bytes, Size, false))
-          return None;
+          return std::nullopt;
         for (int64_t J = 0; J < Count; J++) {
           if (I || J)
             outs() << ", ";

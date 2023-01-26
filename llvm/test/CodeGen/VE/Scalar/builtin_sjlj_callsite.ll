@@ -4,7 +4,7 @@
 ; RUN:     FileCheck %s -check-prefix=PIC
 
 ; Function Attrs: noinline nounwind optnone
-define void @test_callsite() personality i32 (...)* @__gxx_personality_sj0 {
+define void @test_callsite() personality ptr @__gxx_personality_sj0 {
 ; CHECK-LABEL: test_callsite:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st %s9, (, %s11)
@@ -251,24 +251,23 @@ define void @test_callsite() personality i32 (...)* @__gxx_personality_sj0 {
 ; PIC-NEXT:    ld %s0, -88(, %s9)
 ; PIC-NEXT:    ld %s0, -80(, %s9)
 ; PIC-NEXT:    br.l.t .LBB0_2
-  %fn_context = alloca { i8*, i32, [4 x i32], i8*, i8*, [5 x i8*] }, align 4
+  %fn_context = alloca { ptr, i32, [4 x i32], ptr, ptr, [5 x ptr] }, align 4
   call void @llvm.eh.sjlj.callsite(i32 0)
   invoke void @f()
           to label %try.cont unwind label %lpad
 
 lpad:                                             ; preds = %entry
-  %1 = landingpad { i8*, i32 }
+  %1 = landingpad { ptr, i32 }
           cleanup
-;;  %__data = getelementptr { i8*, i32, [4 x i32], i8*, i8*, [5 x i8*] }, { i8*, i32, [4 x i32], i8*, i8*, [5 x i8*] }* %fn_context, i32 0, i32 2
-;;  %exception_gep = getelementptr [4 x i32], [4 x i32]* %__data, i32 0, i32 0
-;;  %exn_val = load volatile i32, i32* %exception_gep, align 4
-;;  %2 = inttoptr i32 %exn_val to i8*
-;;  %exn_selector_gep = getelementptr [4 x i32], [4 x i32]* %__data, i32 0, i32 1
-;;  %exn_selector_val = load volatile i32, i32* %exn_selector_gep, align 4
+;;  %__data = getelementptr { ptr, i32, [4 x i32], ptr, ptr, [5 x ptr] }, ptr %fn_context, i32 0, i32 2
+;;  %exn_val = load volatile i32, ptr %__data, align 4
+;;  %2 = inttoptr i32 %exn_val to ptr
+;;  %exn_selector_gep = getelementptr [4 x i32], ptr %__data, i32 0, i32 1
+;;  %exn_selector_val = load volatile i32, ptr %exn_selector_gep, align 4
   br label %try.cont
 
 try.cont:                                         ; preds = %lpad, %entry
-  call void @_Unwind_SjLj_Unregister({ i8*, i32, [4 x i32], i8*, i8*, [5 x i8*] }* %fn_context)
+  call void @_Unwind_SjLj_Unregister(ptr %fn_context)
   ret void
 }
 
@@ -276,7 +275,7 @@ declare void @f()
 
 declare i32 @__gxx_personality_sj0(...)
 
-declare void @_Unwind_SjLj_Unregister({ i8*, i32, [4 x i32], i8*, i8*, [5 x i8*] }*)
+declare void @_Unwind_SjLj_Unregister(ptr)
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.eh.sjlj.callsite(i32)

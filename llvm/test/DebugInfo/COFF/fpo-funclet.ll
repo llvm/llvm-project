@@ -37,7 +37,7 @@ source_filename = "t.cpp"
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i386-pc-windows-msvc19.11.25508"
 
-define void @"\01?f@@YAXXZ"() local_unnamed_addr #0 personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) !dbg !8 {
+define void @"\01?f@@YAXXZ"() local_unnamed_addr #0 personality ptr @__CxxFrameHandler3 !dbg !8 {
 entry:
   invoke void @"\01?g@@YAXXZ"()
           to label %try.cont unwind label %catch.dispatch, !dbg !11
@@ -46,7 +46,7 @@ catch.dispatch:                                   ; preds = %entry
   %0 = catchswitch within none [label %catch] unwind to caller, !dbg !13
 
 catch:                                            ; preds = %catch.dispatch
-  %1 = catchpad within %0 [i8* null, i32 64, i8* null], !dbg !13
+  %1 = catchpad within %0 [ptr null, i32 64, ptr null], !dbg !13
   call void @"\01?g@@YAXXZ"() [ "funclet"(token %1) ], !dbg !14
   catchret from %1 to label %try.cont, !dbg !16
 

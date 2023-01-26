@@ -15,12 +15,12 @@
 #define LLVM_REMARKS_BITSTREAMREMARKPARSER_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/Error.h"
 #include <array>
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 namespace remarks {
@@ -33,11 +33,11 @@ struct BitstreamMetaParserHelper {
   BitstreamBlockInfo &BlockInfo;
   /// The parsed content: depending on the container type, some fields might be
   /// empty.
-  Optional<uint64_t> ContainerVersion;
-  Optional<uint8_t> ContainerType;
-  Optional<StringRef> StrTabBuf;
-  Optional<StringRef> ExternalFilePath;
-  Optional<uint64_t> RemarkVersion;
+  std::optional<uint64_t> ContainerVersion;
+  std::optional<uint8_t> ContainerType;
+  std::optional<StringRef> StrTabBuf;
+  std::optional<StringRef> ExternalFilePath;
+  std::optional<uint64_t> RemarkVersion;
 
   /// Continue parsing with \p Stream. \p Stream is expected to contain a
   /// ENTER_SUBBLOCK to the META_BLOCK at the current position.
@@ -55,22 +55,22 @@ struct BitstreamRemarkParserHelper {
   /// The Bitstream reader.
   BitstreamCursor &Stream;
   /// The parsed content: depending on the remark, some fields might be empty.
-  Optional<uint8_t> Type;
-  Optional<uint64_t> RemarkNameIdx;
-  Optional<uint64_t> PassNameIdx;
-  Optional<uint64_t> FunctionNameIdx;
-  Optional<uint64_t> SourceFileNameIdx;
-  Optional<uint32_t> SourceLine;
-  Optional<uint32_t> SourceColumn;
-  Optional<uint64_t> Hotness;
+  std::optional<uint8_t> Type;
+  std::optional<uint64_t> RemarkNameIdx;
+  std::optional<uint64_t> PassNameIdx;
+  std::optional<uint64_t> FunctionNameIdx;
+  std::optional<uint64_t> SourceFileNameIdx;
+  std::optional<uint32_t> SourceLine;
+  std::optional<uint32_t> SourceColumn;
+  std::optional<uint64_t> Hotness;
   struct Argument {
-    Optional<uint64_t> KeyIdx;
-    Optional<uint64_t> ValueIdx;
-    Optional<uint64_t> SourceFileNameIdx;
-    Optional<uint32_t> SourceLine;
-    Optional<uint32_t> SourceColumn;
+    std::optional<uint64_t> KeyIdx;
+    std::optional<uint64_t> ValueIdx;
+    std::optional<uint64_t> SourceFileNameIdx;
+    std::optional<uint32_t> SourceLine;
+    std::optional<uint32_t> SourceColumn;
   };
-  Optional<ArrayRef<Argument>> Args;
+  std::optional<ArrayRef<Argument>> Args;
   /// Avoid re-allocating a vector every time.
   SmallVector<Argument, 8> TmpArgs;
 

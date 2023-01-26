@@ -15,38 +15,38 @@ define <7 x i1> @create_mask7(i64 %0) {
 ; CHECK-NEXT:    vpbroadcastq zmm0, rsi
 ; CHECK-NEXT:    vpcmpnleuq k0, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
 ; CHECK-NEXT:    kshiftrb k1, k0, 6
-; CHECK-NEXT:    kmovd r8d, k1
+; CHECK-NEXT:    kmovd ecx, k1
 ; CHECK-NEXT:    kshiftrb k1, k0, 5
-; CHECK-NEXT:    kmovd r9d, k1
+; CHECK-NEXT:    kmovd edx, k1
 ; CHECK-NEXT:    kshiftrb k1, k0, 4
-; CHECK-NEXT:    kmovd r10d, k1
+; CHECK-NEXT:    kmovd esi, k1
 ; CHECK-NEXT:    kshiftrb k1, k0, 3
 ; CHECK-NEXT:    kmovd edi, k1
 ; CHECK-NEXT:    kshiftrb k1, k0, 2
-; CHECK-NEXT:    kmovd ecx, k1
+; CHECK-NEXT:    kmovd r8d, k1
 ; CHECK-NEXT:    kshiftrb k1, k0, 1
-; CHECK-NEXT:    kmovd edx, k1
-; CHECK-NEXT:    kmovd esi, k0
-; CHECK-NEXT:    and sil, 1
-; CHECK-NEXT:    and dl, 1
-; CHECK-NEXT:    add dl, dl
-; CHECK-NEXT:    or dl, sil
-; CHECK-NEXT:    and cl, 1
-; CHECK-NEXT:    shl cl, 2
-; CHECK-NEXT:    or cl, dl
+; CHECK-NEXT:    kmovd r9d, k1
+; CHECK-NEXT:    kmovd r10d, k0
+; CHECK-NEXT:    and r10b, 1
+; CHECK-NEXT:    and r9b, 1
+; CHECK-NEXT:    add r9b, r9b
+; CHECK-NEXT:    or r9b, r10b
+; CHECK-NEXT:    and r8b, 1
+; CHECK-NEXT:    shl r8b, 2
+; CHECK-NEXT:    or r8b, r9b
 ; CHECK-NEXT:    and dil, 1
 ; CHECK-NEXT:    shl dil, 3
-; CHECK-NEXT:    or dil, cl
-; CHECK-NEXT:    and r10b, 1
-; CHECK-NEXT:    shl r10b, 4
-; CHECK-NEXT:    or r10b, dil
-; CHECK-NEXT:    and r9b, 1
-; CHECK-NEXT:    shl r9b, 5
-; CHECK-NEXT:    or r9b, r10b
-; CHECK-NEXT:    shl r8b, 6
-; CHECK-NEXT:    or r8b, r9b
-; CHECK-NEXT:    and r8b, 127
-; CHECK-NEXT:    mov byte ptr [rax], r8b
+; CHECK-NEXT:    or dil, r8b
+; CHECK-NEXT:    and sil, 1
+; CHECK-NEXT:    shl sil, 4
+; CHECK-NEXT:    or sil, dil
+; CHECK-NEXT:    and dl, 1
+; CHECK-NEXT:    shl dl, 5
+; CHECK-NEXT:    or dl, sil
+; CHECK-NEXT:    shl cl, 6
+; CHECK-NEXT:    or cl, dl
+; CHECK-NEXT:    and cl, 127
+; CHECK-NEXT:    mov byte ptr [rax], cl
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret
   %2 = call <7 x i1> @llvm.get.active.lane.mask.v7i1.i64(i64 0, i64 %0)

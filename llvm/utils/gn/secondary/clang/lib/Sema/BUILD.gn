@@ -29,6 +29,7 @@ static_library("Sema") {
     "//llvm/lib/Frontend/OpenMP",
     "//llvm/lib/MC",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "AnalysisBasedWarnings.cpp",
@@ -64,6 +65,7 @@ static_library("Sema") {
     "SemaExprMember.cpp",
     "SemaExprObjC.cpp",
     "SemaFixItUtils.cpp",
+    "SemaHLSL.cpp",
     "SemaInit.cpp",
     "SemaLambda.cpp",
     "SemaLookup.cpp",

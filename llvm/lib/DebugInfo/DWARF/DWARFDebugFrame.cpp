@@ -8,13 +8,11 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Errc.h"
@@ -25,18 +23,18 @@
 #include <cassert>
 #include <cinttypes>
 #include <cstdint>
+#include <optional>
 
 using namespace llvm;
 using namespace dwarf;
 
-static void printRegister(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH,
+static void printRegister(raw_ostream &OS, DIDumpOptions DumpOpts,
                           unsigned RegNum) {
-  if (MRI) {
-    if (Optional<unsigned> LLVMRegNum = MRI->getLLVMRegNum(RegNum, IsEH)) {
-      if (const char *RegName = MRI->getName(*LLVMRegNum)) {
-        OS << RegName;
-        return;
-      }
+  if (DumpOpts.GetNameForDWARFReg) {
+    auto RegName = DumpOpts.GetNameForDWARFReg(RegNum, DumpOpts.IsEH);
+    if (!RegName.empty()) {
+      OS << RegName;
+      return;
     }
   }
   OS << "reg" << RegNum;
@@ -49,26 +47,26 @@ UnwindLocation UnwindLocation::createUndefined() { return {Undefined}; }
 UnwindLocation UnwindLocation::createSame() { return {Same}; }
 
 UnwindLocation UnwindLocation::createIsConstant(int32_t Value) {
-  return {Constant, InvalidRegisterNumber, Value, None, false};
+  return {Constant, InvalidRegisterNumber, Value, std::nullopt, false};
 }
 
 UnwindLocation UnwindLocation::createIsCFAPlusOffset(int32_t Offset) {
-  return {CFAPlusOffset, InvalidRegisterNumber, Offset, None, false};
+  return {CFAPlusOffset, InvalidRegisterNumber, Offset, std::nullopt, false};
 }
 
 UnwindLocation UnwindLocation::createAtCFAPlusOffset(int32_t Offset) {
-  return {CFAPlusOffset, InvalidRegisterNumber, Offset, None, true};
+  return {CFAPlusOffset, InvalidRegisterNumber, Offset, std::nullopt, true};
 }
 
 UnwindLocation
 UnwindLocation::createIsRegisterPlusOffset(uint32_t RegNum, int32_t Offset,
-                                           Optional<uint32_t> AddrSpace) {
+                                           std::optional<uint32_t> AddrSpace) {
   return {RegPlusOffset, RegNum, Offset, AddrSpace, false};
 }
 
 UnwindLocation
 UnwindLocation::createAtRegisterPlusOffset(uint32_t RegNum, int32_t Offset,
-                                           Optional<uint32_t> AddrSpace) {
+                                           std::optional<uint32_t> AddrSpace) {
   return {RegPlusOffset, RegNum, Offset, AddrSpace, true};
 }
 
@@ -80,8 +78,7 @@ UnwindLocation UnwindLocation::createAtDWARFExpression(DWARFExpression Expr) {
   return {Expr, true};
 }
 
-void UnwindLocation::dump(raw_ostream &OS, const MCRegisterInfo *MRI,
-                          bool IsEH) const {
+void UnwindLocation::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   if (Dereference)
     OS << '[';
   switch (Kind) {
@@ -103,7 +100,7 @@ void UnwindLocation::dump(raw_ostream &OS, const MCRegisterInfo *MRI,
     OS << Offset;
     break;
   case RegPlusOffset:
-    printRegister(OS, MRI, IsEH, RegNum);
+    printRegister(OS, DumpOpts, RegNum);
     if (Offset == 0 && !AddrSpace)
       break;
     if (Offset >= 0)
@@ -112,9 +109,10 @@ void UnwindLocation::dump(raw_ostream &OS, const MCRegisterInfo *MRI,
     if (AddrSpace)
       OS << " in addrspace" << *AddrSpace;
     break;
-  case DWARFExpr:
-    Expr->print(OS, DIDumpOptions(), MRI, nullptr, IsEH);
+  case DWARFExpr: {
+    Expr->print(OS, DumpOpts, nullptr);
     break;
+  }
   case Constant:
     OS << Offset;
     break;
@@ -125,7 +123,8 @@ void UnwindLocation::dump(raw_ostream &OS, const MCRegisterInfo *MRI,
 
 raw_ostream &llvm::dwarf::operator<<(raw_ostream &OS,
                                      const UnwindLocation &UL) {
-  UL.dump(OS, nullptr, false);
+  auto DumpOpts = DIDumpOptions();
+  UL.dump(OS, DumpOpts);
   return OS;
 }
 
@@ -150,53 +149,55 @@ bool UnwindLocation::operator==(const UnwindLocation &RHS) const {
   return false;
 }
 
-void RegisterLocations::dump(raw_ostream &OS, const MCRegisterInfo *MRI,
-                             bool IsEH) const {
+void RegisterLocations::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   bool First = true;
   for (const auto &RegLocPair : Locations) {
     if (First)
       First = false;
     else
       OS << ", ";
-    printRegister(OS, MRI, IsEH, RegLocPair.first);
+    printRegister(OS, DumpOpts, RegLocPair.first);
     OS << '=';
-    RegLocPair.second.dump(OS, MRI, IsEH);
+    RegLocPair.second.dump(OS, DumpOpts);
   }
 }
 
 raw_ostream &llvm::dwarf::operator<<(raw_ostream &OS,
                                      const RegisterLocations &RL) {
-  RL.dump(OS, nullptr, false);
+  auto DumpOpts = DIDumpOptions();
+  RL.dump(OS, DumpOpts);
   return OS;
 }
 
-void UnwindRow::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH,
+void UnwindRow::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
                      unsigned IndentLevel) const {
   OS.indent(2 * IndentLevel);
   if (hasAddress())
     OS << format("0x%" PRIx64 ": ", *Address);
   OS << "CFA=";
-  CFAValue.dump(OS, MRI, IsEH);
+  CFAValue.dump(OS, DumpOpts);
   if (RegLocs.hasLocations()) {
     OS << ": ";
-    RegLocs.dump(OS, MRI, IsEH);
+    RegLocs.dump(OS, DumpOpts);
   }
   OS << "\n";
 }
 
 raw_ostream &llvm::dwarf::operator<<(raw_ostream &OS, const UnwindRow &Row) {
-  Row.dump(OS, nullptr, false, 0);
+  auto DumpOpts = DIDumpOptions();
+  Row.dump(OS, DumpOpts, 0);
   return OS;
 }
 
-void UnwindTable::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH,
+void UnwindTable::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
                        unsigned IndentLevel) const {
   for (const UnwindRow &Row : Rows)
-    Row.dump(OS, MRI, IsEH, IndentLevel);
+    Row.dump(OS, DumpOpts, IndentLevel);
 }
 
 raw_ostream &llvm::dwarf::operator<<(raw_ostream &OS, const UnwindTable &Rows) {
-  Rows.dump(OS, nullptr, false, 0);
+  auto DumpOpts = DIDumpOptions();
+  Rows.dump(OS, DumpOpts, 0);
   return OS;
 }
 
@@ -513,7 +514,8 @@ CFIProgram::Instruction::getOperandAsSigned(const CFIProgram &CFIP,
 
 Error UnwindTable::parseRows(const CFIProgram &CFIP, UnwindRow &Row,
                              const RegisterLocations *InitialLocs) {
-  std::vector<RegisterLocations> RegisterStates;
+  // State consists of CFA value and register locations.
+  std::vector<std::pair<UnwindLocation, RegisterLocations>> States;
   for (const CFIProgram::Instruction &Inst : CFIP) {
     switch (Inst.Opcode) {
     case dwarf::DW_CFA_set_loc: {
@@ -570,7 +572,7 @@ Error UnwindTable::parseRows(const CFIProgram &CFIP, UnwindRow &Row,
       llvm::Expected<uint64_t> RegNum = Inst.getOperandAsUnsigned(CFIP, 0);
       if (!RegNum)
         return RegNum.takeError();
-      if (Optional<UnwindLocation> O =
+      if (std::optional<UnwindLocation> O =
               InitialLocs->getRegisterLocation(*RegNum))
         Row.getRegisterLocations().setRegisterLocation(*RegNum, *O);
       else
@@ -596,16 +598,18 @@ Error UnwindTable::parseRows(const CFIProgram &CFIP, UnwindRow &Row,
       break;
 
     case dwarf::DW_CFA_remember_state:
-      RegisterStates.push_back(Row.getRegisterLocations());
+      States.push_back(
+          std::make_pair(Row.getCFAValue(), Row.getRegisterLocations()));
       break;
 
     case dwarf::DW_CFA_restore_state:
-      if (RegisterStates.empty())
+      if (States.empty())
         return createStringError(errc::invalid_argument,
                                  "DW_CFA_restore_state without a matching "
                                  "previous DW_CFA_remember_state");
-      Row.getRegisterLocations() = RegisterStates.back();
-      RegisterStates.pop_back();
+      Row.getCFAValue() = States.back().first;
+      Row.getRegisterLocations() = States.back().second;
+      States.pop_back();
       break;
 
     case dwarf::DW_CFA_GNU_window_save:
@@ -853,7 +857,6 @@ CFIProgram::getOperandTypes() {
 
 /// Print \p Opcode's operand number \p OperandIdx which has value \p Operand.
 void CFIProgram::printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
-                              const MCRegisterInfo *MRI, bool IsEH,
                               const Instruction &Instr, unsigned OperandIdx,
                               uint64_t Operand) const {
   assert(OperandIdx < MaxOperands);
@@ -901,7 +904,7 @@ void CFIProgram::printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
     break;
   case OT_Register:
     OS << ' ';
-    printRegister(OS, MRI, IsEH, Operand);
+    printRegister(OS, DumpOpts, Operand);
     break;
   case OT_AddressSpace:
     OS << format(" in addrspace%" PRId64, Operand);
@@ -909,20 +912,19 @@ void CFIProgram::printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
   case OT_Expression:
     assert(Instr.Expression && "missing DWARFExpression object");
     OS << " ";
-    Instr.Expression->print(OS, DumpOpts, MRI, nullptr, IsEH);
+    Instr.Expression->print(OS, DumpOpts, nullptr);
     break;
   }
 }
 
 void CFIProgram::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
-                      const MCRegisterInfo *MRI, bool IsEH,
                       unsigned IndentLevel) const {
   for (const auto &Instr : Instructions) {
     uint8_t Opcode = Instr.Opcode;
     OS.indent(2 * IndentLevel);
     OS << callFrameString(Opcode) << ":";
     for (unsigned i = 0; i < Instr.Ops.size(); ++i)
-      printOperand(OS, DumpOpts, MRI, IsEH, Instr, i, Instr.Ops[i]);
+      printOperand(OS, DumpOpts, Instr, i, Instr.Ops[i]);
     OS << '\n';
   }
 }
@@ -939,21 +941,20 @@ constexpr uint64_t getCIEId(bool IsDWARF64, bool IsEH) {
   return DW_CIE_ID;
 }
 
-void CIE::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
-               const MCRegisterInfo *MRI, bool IsEH) const {
+void CIE::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   // A CIE with a zero length is a terminator entry in the .eh_frame section.
-  if (IsEH && Length == 0) {
+  if (DumpOpts.IsEH && Length == 0) {
     OS << format("%08" PRIx64, Offset) << " ZERO terminator\n";
     return;
   }
 
   OS << format("%08" PRIx64, Offset)
      << format(" %0*" PRIx64, IsDWARF64 ? 16 : 8, Length)
-     << format(" %0*" PRIx64, IsDWARF64 && !IsEH ? 16 : 8,
-               getCIEId(IsDWARF64, IsEH))
+     << format(" %0*" PRIx64, IsDWARF64 && !DumpOpts.IsEH ? 16 : 8,
+               getCIEId(IsDWARF64, DumpOpts.IsEH))
      << " CIE\n"
      << "  Format:                " << FormatString(IsDWARF64) << "\n";
-  if (IsEH && Version != 1)
+  if (DumpOpts.IsEH && Version != 1)
     OS << "WARNING: unsupported CIE version\n";
   OS << format("  Version:               %d\n", Version)
      << "  Augmentation:          \"" << Augmentation << "\"\n";
@@ -974,11 +975,11 @@ void CIE::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
     OS << "\n";
   }
   OS << "\n";
-  CFIs.dump(OS, DumpOpts, MRI, IsEH);
+  CFIs.dump(OS, DumpOpts);
   OS << "\n";
 
   if (Expected<UnwindTable> RowsOrErr = UnwindTable::create(this))
-    RowsOrErr->dump(OS, MRI, IsEH, 1);
+    RowsOrErr->dump(OS, DumpOpts, 1);
   else {
     DumpOpts.RecoverableErrorHandler(joinErrors(
         createStringError(errc::invalid_argument,
@@ -988,11 +989,10 @@ void CIE::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
   OS << "\n";
 }
 
-void FDE::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
-               const MCRegisterInfo *MRI, bool IsEH) const {
+void FDE::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   OS << format("%08" PRIx64, Offset)
      << format(" %0*" PRIx64, IsDWARF64 ? 16 : 8, Length)
-     << format(" %0*" PRIx64, IsDWARF64 && !IsEH ? 16 : 8, CIEPointer)
+     << format(" %0*" PRIx64, IsDWARF64 && !DumpOpts.IsEH ? 16 : 8, CIEPointer)
      << " FDE cie=";
   if (LinkedCIE)
     OS << format("%08" PRIx64, LinkedCIE->getOffset());
@@ -1003,11 +1003,11 @@ void FDE::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
   OS << "  Format:       " << FormatString(IsDWARF64) << "\n";
   if (LSDAAddress)
     OS << format("  LSDA Address: %016" PRIx64 "\n", *LSDAAddress);
-  CFIs.dump(OS, DumpOpts, MRI, IsEH);
+  CFIs.dump(OS, DumpOpts);
   OS << "\n";
 
   if (Expected<UnwindTable> RowsOrErr = UnwindTable::create(this))
-    RowsOrErr->dump(OS, MRI, IsEH, 1);
+    RowsOrErr->dump(OS, DumpOpts, 1);
   else {
     DumpOpts.RecoverableErrorHandler(joinErrors(
         createStringError(errc::invalid_argument,
@@ -1051,7 +1051,7 @@ Error DWARFDebugFrame::parse(DWARFDataExtractor Data) {
     if (Length == 0) {
       auto Cie = std::make_unique<CIE>(
           IsDWARF64, StartOffset, 0, 0, SmallString<8>(), 0, 0, 0, 0, 0,
-          SmallString<8>(), 0, 0, None, None, Arch);
+          SmallString<8>(), 0, 0, std::nullopt, std::nullopt, Arch);
       CIEs[StartOffset] = Cie.get();
       Entries.push_back(std::move(Cie));
       break;
@@ -1088,10 +1088,10 @@ Error DWARFDebugFrame::parse(DWARFDataExtractor Data) {
       StringRef AugmentationData("");
       uint32_t FDEPointerEncoding = DW_EH_PE_absptr;
       uint32_t LSDAPointerEncoding = DW_EH_PE_omit;
-      Optional<uint64_t> Personality;
-      Optional<uint32_t> PersonalityEncoding;
+      std::optional<uint64_t> Personality;
+      std::optional<uint32_t> PersonalityEncoding;
       if (IsEH) {
-        Optional<uint64_t> AugmentationLength;
+        std::optional<uint64_t> AugmentationLength;
         uint64_t StartAugmentationOffset;
         uint64_t EndAugmentationOffset;
 
@@ -1169,7 +1169,7 @@ Error DWARFDebugFrame::parse(DWARFDataExtractor Data) {
       uint64_t CIEPointer = Id;
       uint64_t InitialLocation = 0;
       uint64_t AddressRange = 0;
-      Optional<uint64_t> LSDAAddress;
+      std::optional<uint64_t> LSDAAddress;
       CIE *Cie = CIEs[IsEH ? (StartStructureOffset - CIEPointer) : CIEPointer];
 
       if (IsEH) {
@@ -1242,15 +1242,15 @@ FrameEntry *DWARFDebugFrame::getEntryAtOffset(uint64_t Offset) const {
 }
 
 void DWARFDebugFrame::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
-                           const MCRegisterInfo *MRI,
-                           Optional<uint64_t> Offset) const {
+                           std::optional<uint64_t> Offset) const {
+  DumpOpts.IsEH = IsEH;
   if (Offset) {
     if (auto *Entry = getEntryAtOffset(*Offset))
-      Entry->dump(OS, DumpOpts, MRI, IsEH);
+      Entry->dump(OS, DumpOpts);
     return;
   }
 
   OS << "\n";
   for (const auto &Entry : Entries)
-    Entry->dump(OS, DumpOpts, MRI, IsEH);
+    Entry->dump(OS, DumpOpts);
 }

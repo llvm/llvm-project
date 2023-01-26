@@ -1,8 +1,5 @@
 """Test the lldb public C++ api when doing multiple debug sessions simultaneously."""
 
-from __future__ import print_function
-
-
 import os
 
 import lldb

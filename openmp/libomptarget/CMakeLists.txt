@@ -39,23 +39,18 @@ include_directories(${LIBOMPTARGET_LLVM_INCLUDE_DIRS})
 
 # This is a list of all the targets that are supported/tested right now.
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} aarch64-unknown-linux-gnu")
-set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} aarch64-unknown-linux-gnu-oldDriver")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} aarch64-unknown-linux-gnu-LTO")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} amdgcn-amd-amdhsa")
-set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} amdgcn-amd-amdhsa-oldDriver")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} amdgcn-amd-amdhsa-LTO")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} powerpc64le-ibm-linux-gnu")
-set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} powerpc64le-ibm-linux-gnu-oldDriver")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} powerpc64le-ibm-linux-gnu-LTO")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} powerpc64-ibm-linux-gnu")
-set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} powerpc64-ibm-linux-gnu-oldDriver")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} powerpc64-ibm-linux-gnu-LTO")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} x86_64-pc-linux-gnu")
-set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} x86_64-pc-linux-gnu-oldDriver")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} x86_64-pc-linux-gnu-LTO")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} nvptx64-nvidia-cuda")
-set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} nvptx64-nvidia-cuda-oldDriver")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} nvptx64-nvidia-cuda-LTO")
+set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} nvptx64-nvidia-cuda-JIT-LTO")
 
 # Once the plugins for the different targets are validated, they will be added to
 # the list of supported targets in the current system.
@@ -75,7 +70,28 @@ if(LIBOMPTARGET_ENABLE_DEBUG)
   add_definitions(-DOMPTARGET_DEBUG)
 endif()
 
+# OMPT support for libomptarget
+# Follow host OMPT support and check if host support has been requested.
+# LIBOMP_HAVE_OMPT_SUPPORT indicates whether host OMPT support has been implemented.
+# LIBOMP_OMPT_SUPPORT indicates whether host OMPT support has been requested (default is ON).
+# LIBOMPTARGET_OMPT_SUPPORT indicates whether target OMPT support has been requested (default is ON).
+set(OMPT_TARGET_DEFAULT FALSE)
+if ((LIBOMP_HAVE_OMPT_SUPPORT) AND (LIBOMP_OMPT_SUPPORT) AND (NOT WIN32))
+  set (OMPT_TARGET_DEFAULT TRUE)
+endif()
+set(LIBOMPTARGET_OMPT_SUPPORT ${OMPT_TARGET_DEFAULT} CACHE BOOL "OMPT-target-support?")
+if ((OMPT_TARGET_DEFAULT) AND (LIBOMPTARGET_OMPT_SUPPORT))
+  add_definitions(-DOMPT_SUPPORT=1)
+  message(STATUS "OMPT target enabled")
+else()
+  message(STATUS "OMPT target disabled")
+endif()
+
+pythonize_bool(LIBOMPTARGET_OMPT_SUPPORT)
+
 set(LIBOMPTARGET_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+message(STATUS "OpenMP tools dir in libomptarget: ${LIBOMP_OMP_TOOLS_INCLUDE_DIR}")
+include_directories(${LIBOMP_OMP_TOOLS_INCLUDE_DIR})
 
 # Build target agnostic offloading library.
 set(LIBOMPTARGET_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -91,6 +107,7 @@ set(LIBOMPTARGET_LLVM_LIBRARY_DIR "${LLVM_LIBRARY_DIR}" CACHE STRING
 
 # Build offloading plugins and device RTLs if they are available.
 add_subdirectory(plugins)
+add_subdirectory(plugins-nextgen)
 add_subdirectory(DeviceRTL)
 add_subdirectory(tools)
 

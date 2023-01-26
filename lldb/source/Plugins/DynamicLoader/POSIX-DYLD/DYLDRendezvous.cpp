@@ -190,6 +190,14 @@ bool DYLDRendezvous::IsValid() {
 }
 
 DYLDRendezvous::RendezvousAction DYLDRendezvous::GetAction() const {
+  // If we have a core file, we will read the current rendezvous state
+  // from the core file's memory into m_current which can be in an inconsistent
+  // state, so we can't rely on its state to determine what we should do. We
+  // always need it to load all of the shared libraries one time when we attach
+  // to a core file.
+  if (IsCoreFile())
+    return eTakeSnapshot;
+
   switch (m_current.state) {
 
   case eConsistent:
@@ -396,8 +404,7 @@ bool DYLDRendezvous::AddSOEntries() {
 
     UpdateFileSpecIfNecessary(entry);
 
-    pos = std::find(m_soentries.begin(), m_soentries.end(), entry);
-    if (pos == m_soentries.end()) {
+    if (!llvm::is_contained(m_soentries, entry)) {
       m_soentries.push_back(entry);
       m_added_soentries.push_back(entry);
     }
@@ -416,8 +423,7 @@ bool DYLDRendezvous::RemoveSOEntries() {
     return false;
 
   for (iterator I = begin(); I != end(); ++I) {
-    pos = std::find(entry_list.begin(), entry_list.end(), *I);
-    if (pos == entry_list.end())
+    if (!llvm::is_contained(entry_list, *I))
       m_removed_soentries.push_back(*I);
   }
 
@@ -665,4 +671,8 @@ void DYLDRendezvous::DumpToLog(Log *log) const {
     LLDB_LOGF(log, "      Next : %" PRIx64, I->next);
     LLDB_LOGF(log, "      Prev : %" PRIx64, I->prev);
   }
+}
+
+bool DYLDRendezvous::IsCoreFile() const {
+  return !m_process->IsLiveDebugSession();
 }

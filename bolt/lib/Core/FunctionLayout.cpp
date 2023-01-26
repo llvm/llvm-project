@@ -3,140 +3,227 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/edit_distance.h"
 #include <algorithm>
+#include <cstddef>
 #include <functional>
+#include <iterator>
+#include <memory>
 
 using namespace llvm;
 using namespace bolt;
 
-unsigned FunctionFragment::size() const { return end() - begin(); }
-bool FunctionFragment::empty() const { return end() == begin(); }
+FunctionFragment::FunctionFragment(FunctionLayout &Layout,
+                                   const FragmentNum Num)
+    : Layout(&Layout), Num(Num), StartIndex(Layout.block_size()) {}
+
+FunctionFragment::iterator FunctionFragment::begin() {
+  return iterator(Layout->block_begin() + StartIndex);
+}
 FunctionFragment::const_iterator FunctionFragment::begin() const {
-  return Layout.block_begin() + Layout.Fragments[Num.get()];
+  return const_iterator(Layout->block_begin() + StartIndex);
+}
+FunctionFragment::iterator FunctionFragment::end() {
+  return iterator(Layout->block_begin() + StartIndex + Size);
 }
 FunctionFragment::const_iterator FunctionFragment::end() const {
-  return Layout.block_begin() + Layout.Fragments[Num.get() + 1];
-}
-BinaryBasicBlock *FunctionFragment::front() const { return *begin(); }
-
-FunctionFragment FunctionLayout::addFragment() {
-  Fragments.emplace_back(Blocks.size());
-  return back();
+  return const_iterator(Layout->block_begin() + StartIndex + Size);
 }
 
-FunctionFragment FunctionLayout::getFragment(FragmentNum Num) const {
-  return FunctionFragment(Num, *this);
+const BinaryBasicBlock *FunctionFragment::front() const { return *begin(); }
+
+FunctionLayout::FunctionLayout() { addFragment(); }
+
+FunctionLayout::FunctionLayout(const FunctionLayout &Other)
+    : Blocks(Other.Blocks) {
+  for (FunctionFragment *const FF : Other.Fragments) {
+    auto *Copy = new FunctionFragment(*FF);
+    Copy->Layout = this;
+    Fragments.emplace_back(Copy);
+  }
 }
 
-FunctionFragment
-FunctionLayout::findFragment(const BinaryBasicBlock *BB) const {
+FunctionLayout::FunctionLayout(FunctionLayout &&Other)
+    : Fragments(std::move(Other.Fragments)), Blocks(std::move(Other.Blocks)) {
+  for (FunctionFragment *const F : Fragments)
+    F->Layout = this;
+}
+
+FunctionLayout &FunctionLayout::operator=(const FunctionLayout &Other) {
+  Blocks = Other.Blocks;
+  for (FunctionFragment *const FF : Other.Fragments) {
+    auto *const Copy = new FunctionFragment(*FF);
+    Copy->Layout = this;
+    Fragments.emplace_back(Copy);
+  }
+  return *this;
+}
+
+FunctionLayout &FunctionLayout::operator=(FunctionLayout &&Other) {
+  Fragments = std::move(Other.Fragments);
+  Blocks = std::move(Other.Blocks);
+  for (FunctionFragment *const FF : Fragments)
+    FF->Layout = this;
+  return *this;
+}
+
+FunctionLayout::~FunctionLayout() {
+  for (FunctionFragment *const F : Fragments) {
+    delete F;
+  }
+}
+
+FunctionFragment &FunctionLayout::addFragment() {
+  FunctionFragment *const FF =
+      new FunctionFragment(*this, FragmentNum(Fragments.size()));
+  Fragments.emplace_back(FF);
+  return *FF;
+}
+
+FunctionFragment &FunctionLayout::getFragment(FragmentNum Num) {
+  return *Fragments[Num.get()];
+}
+
+const FunctionFragment &FunctionLayout::getFragment(FragmentNum Num) const {
+  return *Fragments[Num.get()];
+}
+
+const FunctionFragment &
+FunctionLayout::findFragment(const BinaryBasicBlock *const BB) const {
   return getFragment(BB->getFragmentNum());
 }
 
-void FunctionLayout::addBasicBlock(BinaryBasicBlock *BB) {
-  if (empty())
-    addFragment();
-
+void FunctionLayout::addBasicBlock(BinaryBasicBlock *const BB) {
   BB->setLayoutIndex(Blocks.size());
   Blocks.emplace_back(BB);
-  ++Fragments.back();
-
-  assert(Fragments.back() == Blocks.size());
+  Fragments.back()->Size++;
 }
 
-void FunctionLayout::insertBasicBlocks(BinaryBasicBlock *InsertAfter,
-                                       ArrayRef<BinaryBasicBlock *> NewBlocks) {
-  if (empty())
-    addFragment();
+void FunctionLayout::insertBasicBlocks(
+    const BinaryBasicBlock *const InsertAfter,
+    const ArrayRef<BinaryBasicBlock *> NewBlocks) {
+  block_iterator InsertBeforePos = Blocks.begin();
+  FragmentNum InsertFragmentNum = FragmentNum::main();
+  unsigned LayoutIndex = 0;
 
-  const block_iterator InsertBeforePos =
-      InsertAfter ? std::next(findBasicBlockPos(InsertAfter)) : Blocks.begin();
-  Blocks.insert(InsertBeforePos, NewBlocks.begin(), NewBlocks.end());
+  if (InsertAfter) {
+    InsertBeforePos = std::next(findBasicBlockPos(InsertAfter));
+    InsertFragmentNum = InsertAfter->getFragmentNum();
+    LayoutIndex = InsertAfter->getLayoutIndex();
+  }
 
-  unsigned FragmentUpdateStart =
-      InsertAfter ? InsertAfter->getFragmentNum().get() + 1 : 1;
-  std::for_each(
-      Fragments.begin() + FragmentUpdateStart, Fragments.end(),
-      [&](unsigned &FragmentOffset) { FragmentOffset += NewBlocks.size(); });
+  llvm::copy(NewBlocks, std::inserter(Blocks, InsertBeforePos));
+
+  for (BinaryBasicBlock *const BB : NewBlocks) {
+    BB->setFragmentNum(InsertFragmentNum);
+    BB->setLayoutIndex(LayoutIndex++);
+  }
+
+  const fragment_iterator InsertFragment =
+      fragment_begin() + InsertFragmentNum.get();
+  InsertFragment->Size += NewBlocks.size();
+
+  const fragment_iterator TailBegin = std::next(InsertFragment);
+  auto const UpdateFragment = [&](FunctionFragment &FF) {
+    FF.StartIndex += NewBlocks.size();
+    for (BinaryBasicBlock *const BB : FF)
+      BB->setLayoutIndex(LayoutIndex++);
+  };
+  std::for_each(TailBegin, fragment_end(), UpdateFragment);
 }
 
 void FunctionLayout::eraseBasicBlocks(
     const DenseSet<const BinaryBasicBlock *> ToErase) {
-  auto IsErased = [&](const BinaryBasicBlock *const BB) {
+  const auto IsErased = [&](const BinaryBasicBlock *const BB) {
     return ToErase.contains(BB);
   };
-  FragmentListType NewFragments;
-  NewFragments.emplace_back(0);
-  for (const FunctionFragment F : *this) {
-    unsigned ErasedBlocks = count_if(F, IsErased);
-    unsigned NewFragment = NewFragments.back() + F.size() - ErasedBlocks;
-    NewFragments.emplace_back(NewFragment);
+
+  unsigned TotalErased = 0;
+  for (FunctionFragment &FF : fragments()) {
+    unsigned Erased = count_if(FF, IsErased);
+    FF.Size -= Erased;
+    FF.StartIndex -= TotalErased;
+    TotalErased += Erased;
   }
-  Blocks.erase(std::remove_if(Blocks.begin(), Blocks.end(), IsErased),
-               Blocks.end());
-  Fragments = std::move(NewFragments);
+  llvm::erase_if(Blocks, IsErased);
+
+  // Remove empty fragments at the end
+  const auto IsEmpty = [](const FunctionFragment *const FF) {
+    return FF->empty();
+  };
+  const FragmentListType::iterator EmptyTailBegin =
+      llvm::find_if_not(reverse(Fragments), IsEmpty).base();
+  for (FunctionFragment *const FF :
+       llvm::make_range(EmptyTailBegin, Fragments.end()))
+    delete FF;
+  Fragments.erase(EmptyTailBegin, Fragments.end());
+
+  updateLayoutIndices();
 }
 
-void FunctionLayout::updateLayoutIndices() const {
+void FunctionLayout::updateLayoutIndices() {
   unsigned BlockIndex = 0;
-  for (const FunctionFragment F : *this) {
-    for (BinaryBasicBlock *const BB : F)
+  for (FunctionFragment &FF : fragments()) {
+    for (BinaryBasicBlock *const BB : FF) {
       BB->setLayoutIndex(BlockIndex++);
+      BB->setFragmentNum(FF.getFragmentNum());
+    }
   }
 }
 
-void FunctionLayout::update(const ArrayRef<BinaryBasicBlock *> NewLayout) {
-  PreviousBlocks = std::move(Blocks);
-  PreviousFragments = std::move(Fragments);
+bool FunctionLayout::update(const ArrayRef<BinaryBasicBlock *> NewLayout) {
+  const bool EqualBlockOrder = llvm::equal(Blocks, NewLayout);
+  if (EqualBlockOrder) {
+    const bool EqualPartitioning =
+        llvm::all_of(fragments(), [](const FunctionFragment &FF) {
+          return llvm::all_of(FF, [&](const BinaryBasicBlock *const BB) {
+            return FF.Num == BB->getFragmentNum();
+          });
+        });
+    if (EqualPartitioning)
+      return false;
+  }
 
-  Blocks.clear();
-  Fragments = {0};
-
-  if (NewLayout.empty())
-    return;
-
-  copy(NewLayout, std::back_inserter(Blocks));
+  clear();
 
   // Generate fragments
-  for (const auto &BB : enumerate(Blocks)) {
-    unsigned FragmentNum = BB.value()->getFragmentNum().get();
+  for (BinaryBasicBlock *const BB : NewLayout) {
+    FragmentNum Num = BB->getFragmentNum();
 
-    assert(FragmentNum + 1 >= size() &&
+    assert(Num >= Fragments.back()->getFragmentNum() &&
            "Blocks must be arranged such that fragments are monotonically "
            "increasing.");
 
     // Add empty fragments if necessary
-    for (unsigned I = size(); I <= FragmentNum; ++I) {
+    while (Fragments.back()->getFragmentNum() < Num)
       addFragment();
-      Fragments[I] = BB.index();
-    }
 
     // Set the next fragment to point one past the current BB
-    Fragments[FragmentNum + 1] = BB.index() + 1;
+    addBasicBlock(BB);
   }
 
-  if (PreviousBlocks == Blocks && PreviousFragments == Fragments) {
-    // If new layout is the same as previous layout, clear previous layout so
-    // hasLayoutChanged() returns false.
-    PreviousBlocks = {};
-    PreviousFragments = {};
-  }
+  return true;
 }
 
 void FunctionLayout::clear() {
-  Blocks = {};
-  Fragments = {0};
-  PreviousBlocks = {};
-  PreviousFragments = {0};
+  Blocks = BasicBlockListType();
+  // If the binary does not have relocations and is not split, the function will
+  // be written to the output stream at its original file offset (see
+  // `RewriteInstance::rewriteFile`). Hence, when the layout is cleared, retain
+  // the main fragment, so that this information is not lost.
+  for (FunctionFragment *const FF : llvm::drop_begin(Fragments))
+    delete FF;
+  Fragments = FragmentListType{Fragments.front()};
+  getMainFragment().Size = 0;
 }
 
-BinaryBasicBlock *FunctionLayout::getBasicBlockAfter(const BinaryBasicBlock *BB,
-                                                     bool IgnoreSplits) const {
-  const block_const_iterator BBPos = find(Blocks, BB);
-  if (BBPos == Blocks.end())
+const BinaryBasicBlock *
+FunctionLayout::getBasicBlockAfter(const BinaryBasicBlock *BB,
+                                   bool IgnoreSplits) const {
+  const block_const_iterator BBPos = find(blocks(), BB);
+  if (BBPos == block_end())
     return nullptr;
 
   const block_const_iterator BlockAfter = std::next(BBPos);
-  if (BlockAfter == Blocks.end())
+  if (BlockAfter == block_end())
     return nullptr;
 
   if (!IgnoreSplits)
@@ -147,18 +234,19 @@ BinaryBasicBlock *FunctionLayout::getBasicBlockAfter(const BinaryBasicBlock *BB,
 }
 
 bool FunctionLayout::isSplit() const {
-  unsigned NonEmptyFragCount = llvm::count_if(
-      *this, [](const FunctionFragment &F) { return !F.empty(); });
+  const unsigned NonEmptyFragCount = llvm::count_if(
+      fragments(), [](const FunctionFragment &FF) { return !FF.empty(); });
   return NonEmptyFragCount >= 2;
 }
 
-uint64_t FunctionLayout::getEditDistance() const {
-  return ComputeEditDistance<BinaryBasicBlock *>(PreviousBlocks, Blocks);
+uint64_t FunctionLayout::getEditDistance(
+    const ArrayRef<const BinaryBasicBlock *> OldBlockOrder) const {
+  return ComputeEditDistance<const BinaryBasicBlock *>(OldBlockOrder, Blocks);
 }
 
 FunctionLayout::block_const_iterator
 FunctionLayout::findBasicBlockPos(const BinaryBasicBlock *BB) const {
-  return find(Blocks, BB);
+  return block_const_iterator(find(Blocks, BB));
 }
 
 FunctionLayout::block_iterator

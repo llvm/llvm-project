@@ -50,9 +50,15 @@ private:
 };
 
 /// Create a ExecutorProcessControl-based DebugObjectRegistrar that emits debug
-/// objects to the GDB JIT interface.
-Expected<std::unique_ptr<EPCDebugObjectRegistrar>>
-createJITLoaderGDBRegistrar(ExecutionSession &ES);
+/// objects to the GDB JIT interface. This will use the EPC's lookupSymbols
+/// method to find the registration/deregistration  funciton addresses by name.
+///
+/// If RegistrationFunctionsDylib is non-None then it will be searched to find
+/// the registration functions. If it is None then the process dylib will be
+/// loaded to find the registration functions.
+Expected<std::unique_ptr<EPCDebugObjectRegistrar>> createJITLoaderGDBRegistrar(
+    ExecutionSession &ES,
+    std::optional<ExecutorAddr> RegistrationFunctionDylib = std::nullopt);
 
 } // end namespace orc
 } // end namespace llvm

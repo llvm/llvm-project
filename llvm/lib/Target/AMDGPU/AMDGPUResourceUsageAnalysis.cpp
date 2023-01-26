@@ -43,9 +43,9 @@ using namespace llvm::AMDGPU;
 char llvm::AMDGPUResourceUsageAnalysis::ID = 0;
 char &llvm::AMDGPUResourceUsageAnalysisID = AMDGPUResourceUsageAnalysis::ID;
 
-// We need to tell the runtime some amount ahead of time if we don't know the
-// true stack size. Assume a smaller number if this is only due to dynamic /
-// non-entry block allocas.
+// In code object v4 and older, we need to tell the runtime some amount ahead of
+// time if we don't know the true stack size. Assume a smaller number if this is
+// only due to dynamic / non-entry block allocas.
 static cl::opt<uint32_t> AssumedStackSizeForExternalCall(
     "amdgpu-assume-external-call-stack-size",
     cl::desc("Assumed stack use of any external call (in bytes)"), cl::Hidden,
@@ -109,6 +109,15 @@ bool AMDGPUResourceUsageAnalysis::runOnModule(Module &M) {
   CallGraph CG = CallGraph(M);
   auto End = po_end(&CG);
 
+  // By default, for code object v5 and later, track only the minimum scratch
+  // size
+  if (AMDGPU::getAmdhsaCodeObjectVersion() >= 5) {
+    if (!AssumedStackSizeForDynamicSizeObjects.getNumOccurrences())
+      AssumedStackSizeForDynamicSizeObjects = 0;
+    if (!AssumedStackSizeForExternalCall.getNumOccurrences())
+      AssumedStackSizeForExternalCall = 0;
+  }
+
   for (auto IT = po_begin(&CG); IT != End; ++IT) {
     Function *F = IT->getFunction();
     if (!F || F->isDeclaration())
@@ -117,10 +126,30 @@ bool AMDGPUResourceUsageAnalysis::runOnModule(Module &M) {
     MachineFunction *MF = MMI.getMachineFunction(*F);
     assert(MF && "function must have been generated already");
 
-    auto CI = CallGraphResourceInfo.insert(
-        std::make_pair(F, SIFunctionResourceInfo()));
+    auto CI =
+        CallGraphResourceInfo.insert(std::pair(F, SIFunctionResourceInfo()));
     SIFunctionResourceInfo &Info = CI.first->second;
     assert(CI.second && "should only be called once per function");
+    Info = analyzeResourceUsage(*MF, TM);
+    HasIndirectCall |= Info.HasIndirectCall;
+  }
+
+  // It's possible we have unreachable functions in the module which weren't
+  // visited by the PO traversal. Make sure we have some resource counts to
+  // report.
+  for (const auto &IT : CG) {
+    const Function *F = IT.first;
+    if (!F || F->isDeclaration())
+      continue;
+
+    auto CI =
+        CallGraphResourceInfo.insert(std::pair(F, SIFunctionResourceInfo()));
+    if (!CI.second) // Skip already visited functions
+      continue;
+
+    SIFunctionResourceInfo &Info = CI.first->second;
+    MachineFunction *MF = MMI.getMachineFunction(*F);
+    assert(MF && "function must have been generated already");
     Info = analyzeResourceUsage(*MF, TM);
     HasIndirectCall |= Info.HasIndirectCall;
   }
@@ -244,9 +273,13 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
         case AMDGPU::M0:
         case AMDGPU::M0_LO16:
         case AMDGPU::M0_HI16:
+        case AMDGPU::SRC_SHARED_BASE_LO:
         case AMDGPU::SRC_SHARED_BASE:
+        case AMDGPU::SRC_SHARED_LIMIT_LO:
         case AMDGPU::SRC_SHARED_LIMIT:
+        case AMDGPU::SRC_PRIVATE_BASE_LO:
         case AMDGPU::SRC_PRIVATE_BASE:
+        case AMDGPU::SRC_PRIVATE_LIMIT_LO:
         case AMDGPU::SRC_PRIVATE_LIMIT:
         case AMDGPU::SGPR_NULL:
         case AMDGPU::SGPR_NULL64:
@@ -398,6 +431,46 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
           IsSGPR = false;
           IsAGPR = true;
           Width = 8;
+        } else if (AMDGPU::VReg_288RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 9;
+        } else if (AMDGPU::SReg_288RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 9;
+        } else if (AMDGPU::AReg_288RegClass.contains(Reg)) {
+          IsSGPR = false;
+          IsAGPR = true;
+          Width = 9;
+        } else if (AMDGPU::VReg_320RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 10;
+        } else if (AMDGPU::SReg_320RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 10;
+        } else if (AMDGPU::AReg_320RegClass.contains(Reg)) {
+          IsSGPR = false;
+          IsAGPR = true;
+          Width = 10;
+        } else if (AMDGPU::VReg_352RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 11;
+        } else if (AMDGPU::SReg_352RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 11;
+        } else if (AMDGPU::AReg_352RegClass.contains(Reg)) {
+          IsSGPR = false;
+          IsAGPR = true;
+          Width = 11;
+        } else if (AMDGPU::VReg_384RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 12;
+        } else if (AMDGPU::SReg_384RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 12;
+        } else if (AMDGPU::AReg_384RegClass.contains(Reg)) {
+          IsSGPR = false;
+          IsAGPR = true;
+          Width = 12;
         } else if (AMDGPU::SReg_512RegClass.contains(Reg)) {
           assert(!AMDGPU::TTMP_512RegClass.contains(Reg) &&
                  "trap handler registers should not be used");

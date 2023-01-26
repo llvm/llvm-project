@@ -263,6 +263,18 @@ isl::map polly::shiftDim(isl::map Map, isl::dim Dim, int Pos, int Amount) {
   }
 }
 
+isl::val polly::getConstant(isl::map Map, isl::dim Dim, int Pos) {
+  unsigned NumDims = unsignedFromIslSize(Map.dim(Dim));
+  if (Pos < 0)
+    Pos = NumDims + Pos;
+  assert(unsigned(Pos) < NumDims && "Dimension index must be in range");
+  // TODO: The isl_map_plain_get_val_if_fixed function is not robust, since its
+  // result is different depending on the internal representation.
+  // Replace it with a different implementation.
+  return isl::manage(isl_map_plain_get_val_if_fixed(
+      Map.get(), static_cast<enum isl_dim_type>(Dim), Pos));
+}
+
 isl::union_map polly::shiftDim(isl::union_map UMap, isl::dim Dim, int Pos,
                                int Amount) {
   isl::union_map Result = isl::union_map::empty(UMap.ctx());

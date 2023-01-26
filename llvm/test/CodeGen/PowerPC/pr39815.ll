@@ -1,19 +1,19 @@
 ; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu < %s \
 ; RUN:   -verify-machineinstrs | FileCheck %s
 
-@b = dso_local local_unnamed_addr global i64* null, align 8
+@b = dso_local local_unnamed_addr global ptr null, align 8
 @a = dso_local local_unnamed_addr global i8 0, align 1
 
 define void @testADDEPromoteResult() {
 entry:
-  %0 = load i64*, i64** @b, align 8
-  %1 = load i64, i64* %0, align 8
-  %cmp = icmp ne i64* %0, null
+  %0 = load ptr, ptr @b, align 8
+  %1 = load i64, ptr %0, align 8
+  %cmp = icmp ne ptr %0, null
   %conv1 = zext i1 %cmp to i64
   %add = add nsw i64 %1, %conv1
   %2 = trunc i64 %add to i8
   %conv2 = and i8 %2, 5
-  store i8 %conv2, i8* @a, align 1
+  store i8 %conv2, ptr @a, align 1
   ret void
 
 ; CHECK-LABEL: @testADDEPromoteResult

@@ -18,12 +18,21 @@ _isGCC        = lambda cfg: '__GNUC__' in compilerMacros(cfg) and '__clang__' no
 _isMSVC       = lambda cfg: '_MSC_VER' in compilerMacros(cfg)
 _msvcVersion  = lambda cfg: (int(compilerMacros(cfg)['_MSC_VER']) // 100, int(compilerMacros(cfg)['_MSC_VER']) % 100)
 
-def _hasSuitableClangTidy(cfg):
+def _getSuitableClangTidy(cfg):
   try:
-    return int(re.search('[0-9]+', commandOutput(cfg, ['clang-tidy --version'])).group()) >= 13
-  except ConfigurationRuntimeError:
-    return False
+    # If we didn't build the libcxx-tidy plugin via CMake, we can't run the clang-tidy tests.
+    if runScriptExitCode(cfg, ['stat %{test-tools}/clang_tidy_checks/libcxx-tidy.plugin']) != 0:
+      return None
 
+    # TODO This should be the last stable release.
+    if runScriptExitCode(cfg, ['clang-tidy-16 --version']) == 0:
+      return 'clang-tidy-16'
+
+    if int(re.search('[0-9]+', commandOutput(cfg, ['clang-tidy --version'])).group()) >= 16:
+      return 'clang-tidy'
+
+  except ConfigurationRuntimeError:
+    return None
 
 DEFAULT_FEATURES = [
   Feature(name='fcoroutines-ts',
@@ -38,6 +47,18 @@ DEFAULT_FEATURES = [
   Feature(name='diagnose-if-support',
           when=lambda cfg: hasCompileFlag(cfg, '-Wuser-defined-warnings'),
           actions=[AddCompileFlag('-Wuser-defined-warnings')]),
+
+  # Tests to validate whether the compiler has a way to set the maximum number
+  # of steps during constant evaluation. Since the flag differs per compiler
+  # store the "valid" flag as a feature. This allows passing the proper compile
+  # flag to the compiler:
+  # // ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=12345678
+  # // ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=12345678
+  Feature(name='has-fconstexpr-steps',
+          when=lambda cfg: hasCompileFlag(cfg, '-fconstexpr-steps=1')),
+
+  Feature(name='has-fconstexpr-ops-limit',
+          when=lambda cfg: hasCompileFlag(cfg, '-fconstexpr-ops-limit=1')),
 
   Feature(name='has-fblocks',                   when=lambda cfg: hasCompileFlag(cfg, '-fblocks')),
   Feature(name='-fsized-deallocation',          when=lambda cfg: hasCompileFlag(cfg, '-fsized-deallocation')),
@@ -94,7 +115,7 @@ DEFAULT_FEATURES = [
   # Check for a Windows UCRT bug (fixed in UCRT/Windows 10.0.19041.0).
   # https://developercommunity.visualstudio.com/t/printf-formatting-with-g-outputs-too/1660837
   Feature(name='win32-broken-printf-g-precision',
-          when=lambda cfg: not '_LIBCPP_HAS_NO_LOCALIZATION' in compilerMacros(cfg) and '_WIN32' in compilerMacros(cfg) and not programSucceeds(cfg, """
+          when=lambda cfg: '_WIN32' in compilerMacros(cfg) and not programSucceeds(cfg, """
             #include <stdio.h>
             #include <string.h>
             int main(int, char**) {
@@ -136,7 +157,8 @@ DEFAULT_FEATURES = [
   Feature(name='executor-has-no-bash',
           when=lambda cfg: runScriptExitCode(cfg, ['%{exec} bash -c \'bash --version\'']) != 0),
   Feature(name='has-clang-tidy',
-          when=_hasSuitableClangTidy),
+          when=lambda cfg: _getSuitableClangTidy(cfg) is not None,
+          actions=[AddSubstitution('%{clang-tidy}', lambda cfg: _getSuitableClangTidy(cfg))]),
 
   Feature(name='apple-clang',                                                                                                      when=_isAppleClang),
   Feature(name=lambda cfg: 'apple-clang-{__clang_major__}'.format(**compilerMacros(cfg)),                                          when=_isAppleClang),
@@ -187,6 +209,7 @@ macros = {
   '_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY': 'no-filesystem',
   '_LIBCPP_HAS_NO_RANDOM_DEVICE': 'no-random-device',
   '_LIBCPP_HAS_NO_LOCALIZATION': 'no-localization',
+  '_LIBCPP_HAS_NO_FSTREAM': 'no-fstream',
   '_LIBCPP_HAS_NO_WIDE_CHARACTERS': 'no-wide-characters',
   '_LIBCPP_HAS_NO_UNICODE': 'libcpp-has-no-unicode',
   '_LIBCPP_ENABLE_DEBUG_MODE': 'libcpp-has-debug-mode',
@@ -217,7 +240,7 @@ for locale, alts in locales.items():
                                   when=lambda cfg, alts=alts: hasAnyLocale(cfg, alts)))
 
 
-# Add features representing the platform name: darwin, linux, windows, etc...
+# Add features representing the target platform name: darwin, linux, windows, etc...
 DEFAULT_FEATURES += [
   Feature(name='darwin', when=lambda cfg: '__APPLE__' in compilerMacros(cfg)),
   Feature(name='windows', when=lambda cfg: '_WIN32' in compilerMacros(cfg)),
@@ -251,7 +274,8 @@ DEFAULT_FEATURES += [
           """), actions=[AddCompileFlag('-DTEST_WINDOWS_DLL')]),
   Feature(name='linux', when=lambda cfg: '__linux__' in compilerMacros(cfg)),
   Feature(name='netbsd', when=lambda cfg: '__NetBSD__' in compilerMacros(cfg)),
-  Feature(name='freebsd', when=lambda cfg: '__FreeBSD__' in compilerMacros(cfg))
+  Feature(name='freebsd', when=lambda cfg: '__FreeBSD__' in compilerMacros(cfg)),
+  Feature(name='LIBCXX-FREEBSD-FIXME', when=lambda cfg: '__FreeBSD__' in compilerMacros(cfg)),
 ]
 
 # Add features representing the build host platform name.

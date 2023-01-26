@@ -185,7 +185,7 @@ void multiple_waiters() {
   __llvm_libc::pthread_mutex_destroy(&counter_lock);
 }
 
-int main() {
+TEST_MAIN() {
   relay_counter();
   wait_and_step();
   multiple_waiters();

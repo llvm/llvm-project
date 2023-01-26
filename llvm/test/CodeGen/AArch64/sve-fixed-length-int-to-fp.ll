@@ -20,20 +20,20 @@ define <4 x half> @ucvtf_v4i16_v4f16(<4 x i16> %op1) vscale_range(2,0) #0 {
 }
 
 ; Don't use SVE for 128-bit vectors.
-define void @ucvtf_v8i16_v8f16(<8 x i16>* %a, <8 x half>* %b) vscale_range(2,0) #0 {
+define void @ucvtf_v8i16_v8f16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ucvtf_v8i16_v8f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ucvtf v0.8h, v0.8h
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i16>, <8 x i16>* %a
+  %op1 = load <8 x i16>, ptr %a
   %res = uitofp <8 x i16> %op1 to <8 x half>
-  store <8 x half> %res, <8 x half>* %b
+  store <8 x half> %res, ptr %b
   ret void
 }
 
-define void @ucvtf_v16i16_v16f16(<16 x i16>* %a, <16 x half>* %b) vscale_range(2,0) #0 {
+define void @ucvtf_v16i16_v16f16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ucvtf_v16i16_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -41,13 +41,13 @@ define void @ucvtf_v16i16_v16f16(<16 x i16>* %a, <16 x half>* %b) vscale_range(2
 ; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i16>, <16 x i16>* %a
+  %op1 = load <16 x i16>, ptr %a
   %res = uitofp <16 x i16> %op1 to <16 x half>
-  store <16 x half> %res, <16 x half>* %b
+  store <16 x half> %res, ptr %b
   ret void
 }
 
-define void @ucvtf_v32i16_v32f16(<32 x i16>* %a, <32 x half>* %b) #0 {
+define void @ucvtf_v32i16_v32f16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: ucvtf_v32i16_v32f16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
@@ -67,13 +67,13 @@ define void @ucvtf_v32i16_v32f16(<32 x i16>* %a, <32 x half>* %b) #0 {
 ; VBITS_GE_512-NEXT:    ucvtf z0.h, p0/m, z0.h
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <32 x i16>, <32 x i16>* %a
+  %op1 = load <32 x i16>, ptr %a
   %res = uitofp <32 x i16> %op1 to <32 x half>
-  store <32 x half> %res, <32 x half>* %b
+  store <32 x half> %res, ptr %b
   ret void
 }
 
-define void @ucvtf_v64i16_v64f16(<64 x i16>* %a, <64 x half>* %b) vscale_range(8,0) #0 {
+define void @ucvtf_v64i16_v64f16(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: ucvtf_v64i16_v64f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
@@ -81,13 +81,13 @@ define void @ucvtf_v64i16_v64f16(<64 x i16>* %a, <64 x half>* %b) vscale_range(8
 ; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <64 x i16>, <64 x i16>* %a
+  %op1 = load <64 x i16>, ptr %a
   %res = uitofp <64 x i16> %op1 to <64 x half>
-  store <64 x half> %res, <64 x half>* %b
+  store <64 x half> %res, ptr %b
   ret void
 }
 
-define void @ucvtf_v128i16_v128f16(<128 x i16>* %a, <128 x half>* %b) vscale_range(16,0) #0 {
+define void @ucvtf_v128i16_v128f16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: ucvtf_v128i16_v128f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
@@ -95,9 +95,9 @@ define void @ucvtf_v128i16_v128f16(<128 x i16>* %a, <128 x half>* %b) vscale_ran
 ; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <128 x i16>, <128 x i16>* %a
+  %op1 = load <128 x i16>, ptr %a
   %res = uitofp <128 x i16> %op1 to <128 x half>
-  store <128 x half> %res, <128 x half>* %b
+  store <128 x half> %res, ptr %b
   ret void
 }
 
@@ -128,7 +128,7 @@ define <4 x float> @ucvtf_v4i16_v4f32(<4 x i16> %op1) vscale_range(2,0) #0 {
   ret <4 x float> %res
 }
 
-define void @ucvtf_v8i16_v8f32(<8 x i16>* %a, <8 x float>* %b) vscale_range(2,0) #0 {
+define void @ucvtf_v8i16_v8f32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ucvtf_v8i16_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -137,13 +137,13 @@ define void @ucvtf_v8i16_v8f32(<8 x i16>* %a, <8 x float>* %b) vscale_range(2,0)
 ; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i16>, <8 x i16>* %a
+  %op1 = load <8 x i16>, ptr %a
   %res = uitofp <8 x i16> %op1 to <8 x float>
-  store <8 x float> %res, <8 x float>* %b
+  store <8 x float> %res, ptr %b
   ret void
 }
 
-define void @ucvtf_v16i16_v16f32(<16 x i16>* %a, <16 x float>* %b) #0 {
+define void @ucvtf_v16i16_v16f32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: ucvtf_v16i16_v16f32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
@@ -166,13 +166,13 @@ define void @ucvtf_v16i16_v16f32(<16 x i16>* %a, <16 x float>* %b) #0 {
 ; VBITS_GE_512-NEXT:    ucvtf z0.s, p0/m, z0.s
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <16 x i16>, <16 x i16>* %a
+  %op1 = load <16 x i16>, ptr %a
   %res = uitofp <16 x i16> %op1 to <16 x float>
-  store <16 x float> %res, <16 x float>* %b
+  store <16 x float> %res, ptr %b
   ret void
 }
 
-define void @ucvtf_v32i16_v32f32(<32 x i16>* %a, <32 x float>* %b) vscale_range(8,0) #0 {
+define void @ucvtf_v32i16_v32f32(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: ucvtf_v32i16_v32f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -180,13 +180,13 @@ define void @ucvtf_v32i16_v32f32(<32 x i16>* %a, <32 x float>* %b) vscale_range(
 ; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i16>, <32 x i16>* %a
+  %op1 = load <32 x i16>, ptr %a
   %res = uitofp <32 x i16> %op1 to <32 x float>
-  store <32 x float> %res, <32 x float>* %b
+  store <32 x float> %res, ptr %b
   ret void
 }
 
-define void @ucvtf_v64i16_v64f32(<64 x i16>* %a, <64 x float>* %b) vscale_range(16,0) #0 {
+define void @ucvtf_v64i16_v64f32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: ucvtf_v64i16_v64f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -194,9 +194,9 @@ define void @ucvtf_v64i16_v64f32(<64 x i16>* %a, <64 x float>* %b) vscale_range(
 ; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <64 x i16>, <64 x i16>* %a
+  %op1 = load <64 x i16>, ptr %a
   %res = uitofp <64 x i16> %op1 to <64 x float>
-  store <64 x float> %res, <64 x float>* %b
+  store <64 x float> %res, ptr %b
   ret void
 }
 
@@ -232,7 +232,7 @@ define <2 x double> @ucvtf_v2i16_v2f64(<2 x i16> %op1) vscale_range(2,0) #0 {
   ret <2 x double> %res
 }
 
-define void @ucvtf_v4i16_v4f64(<4 x i16>* %a, <4 x double>* %b) vscale_range(2,0) #0 {
+define void @ucvtf_v4i16_v4f64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ucvtf_v4i16_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
@@ -242,13 +242,13 @@ define void @ucvtf_v4i16_v4f64(<4 x i16>* %a, <4 x double>* %b) vscale_range(2,0
 ; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i16>, <4 x i16>* %a
+  %op1 = load <4 x i16>, ptr %a
   %res = uitofp <4 x i16> %op1 to <4 x double>
-  store <4 x double> %res, <4 x double>* %b
+  store <4 x double> %res, ptr %b
   ret void
 }
 
-define void @ucvtf_v8i16_v8f64(<8 x i16>* %a, <8 x double>* %b) #0 {
+define void @ucvtf_v8i16_v8f64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: ucvtf_v8i16_v8f64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ldr q0, [x0]
@@ -274,13 +274,13 @@ define void @ucvtf_v8i16_v8f64(<8 x i16>* %a, <8 x double>* %b) #0 {
 ; VBITS_GE_512-NEXT:    ucvtf z0.d, p0/m, z0.d
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <8 x i16>, <8 x i16>* %a
+  %op1 = load <8 x i16>, ptr %a
   %res = uitofp <8 x i16> %op1 to <8 x double>
-  store <8 x double> %res, <8 x double>* %b
+  store <8 x double> %res, ptr %b
   ret void
 }
 
-define void @ucvtf_v16i16_v16f64(<16 x i16>* %a, <16 x double>* %b) vscale_range(8,0) #0 {
+define void @ucvtf_v16i16_v16f64(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: ucvtf_v16i16_v16f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -288,13 +288,13 @@ define void @ucvtf_v16i16_v16f64(<16 x i16>* %a, <16 x double>* %b) vscale_range
 ; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i16>, <16 x i16>* %a
+  %op1 = load <16 x i16>, ptr %a
   %res = uitofp <16 x i16> %op1 to <16 x double>
-  store <16 x double> %res, <16 x double>* %b
+  store <16 x double> %res, ptr %b
   ret void
 }
 
-define void @ucvtf_v32i16_v32f64(<32 x i16>* %a, <32 x double>* %b) vscale_range(16,0) #0 {
+define void @ucvtf_v32i16_v32f64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: ucvtf_v32i16_v32f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -302,9 +302,9 @@ define void @ucvtf_v32i16_v32f64(<32 x i16>* %a, <32 x double>* %b) vscale_range
 ; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i16>, <32 x i16>* %a
+  %op1 = load <32 x i16>, ptr %a
   %res = uitofp <32 x i16> %op1 to <32 x double>
-  store <32 x double> %res, <32 x double>* %b
+  store <32 x double> %res, ptr %b
   ret void
 }
 
@@ -335,29 +335,27 @@ define <4 x half> @ucvtf_v4i32_v4f16(<4 x i32> %op1) vscale_range(2,0) #0 {
   ret <4 x half> %res
 }
 
-define <8 x half> @ucvtf_v8i32_v8f16(<8 x i32>* %a) vscale_range(2,0) #0 {
+define <8 x half> @ucvtf_v8i32_v8f16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ucvtf_v8i32_v8f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i32>, <8 x i32>* %a
+  %op1 = load <8 x i32>, ptr %a
   %res = uitofp <8 x i32> %op1 to <8 x half>
   ret <8 x half> %res
 }
 
-define void @ucvtf_v16i32_v16f16(<16 x i32>* %a, <16 x half>* %b) #0 {
+define void @ucvtf_v16i32_v16f16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: ucvtf_v16i32_v16f16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    ptrue p0.s
 ; VBITS_GE_256-NEXT:    ucvtf z0.h, p0/m, z0.s
 ; VBITS_GE_256-NEXT:    ucvtf z1.h, p0/m, z1.s
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z0.h, z0.h
@@ -372,49 +370,46 @@ define void @ucvtf_v16i32_v16f16(<16 x i32>* %a, <16 x half>* %b) #0 {
 ; VBITS_GE_512:       // %bb.0:
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; VBITS_GE_512-NEXT:    ptrue p0.s
 ; VBITS_GE_512-NEXT:    ucvtf z0.h, p0/m, z0.s
 ; VBITS_GE_512-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <16 x i32>, <16 x i32>* %a
+  %op1 = load <16 x i32>, ptr %a
   %res = uitofp <16 x i32> %op1 to <16 x half>
-  store <16 x half> %res, <16 x half>* %b
+  store <16 x half> %res, ptr %b
   ret void
 }
 
-define void @ucvtf_v32i32_v32f16(<32 x i32>* %a, <32 x half>* %b) vscale_range(8,0) #0 {
+define void @ucvtf_v32i32_v32f16(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: ucvtf_v32i32_v32f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.s
 ; CHECK-NEXT:    ptrue p0.h, vl32
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i32>, <32 x i32>* %a
+  %op1 = load <32 x i32>, ptr %a
   %res = uitofp <32 x i32> %op1 to <32 x half>
-  store <32 x half> %res, <32 x half>* %b
+  store <32 x half> %res, ptr %b
   ret void
 }
 
-define void @ucvtf_v64i32_v64f16(<64 x i32>* %a, <64 x half>* %b) vscale_range(16,0) #0 {
+define void @ucvtf_v64i32_v64f16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: ucvtf_v64i32_v64f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.s
 ; CHECK-NEXT:    ptrue p0.h, vl64
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <64 x i32>, <64 x i32>* %a
+  %op1 = load <64 x i32>, ptr %a
   %res = uitofp <64 x i32> %op1 to <64 x half>
-  store <64 x half> %res, <64 x half>* %b
+  store <64 x half> %res, ptr %b
   ret void
 }
 
@@ -442,7 +437,7 @@ define <4 x float> @ucvtf_v4i32_v4f32(<4 x i32> %op1) vscale_range(2,0) #0 {
   ret <4 x float> %res
 }
 
-define void @ucvtf_v8i32_v8f32(<8 x i32>* %a, <8 x float>* %b) vscale_range(2,0) #0 {
+define void @ucvtf_v8i32_v8f32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ucvtf_v8i32_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -450,13 +445,13 @@ define void @ucvtf_v8i32_v8f32(<8 x i32>* %a, <8 x float>* %b) vscale_range(2,0)
 ; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i32>, <8 x i32>* %a
+  %op1 = load <8 x i32>, ptr %a
   %res = uitofp <8 x i32> %op1 to <8 x float>
-  store <8 x float> %res, <8 x float>* %b
+  store <8 x float> %res, ptr %b
   ret void
 }
 
-define void @ucvtf_v16i32_v16f32(<16 x i32>* %a, <16 x float>* %b) #0 {
+define void @ucvtf_v16i32_v16f32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: ucvtf_v16i32_v16f32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -476,13 +471,13 @@ define void @ucvtf_v16i32_v16f32(<16 x i32>* %a, <16 x float>* %b) #0 {
 ; VBITS_GE_512-NEXT:    ucvtf z0.s, p0/m, z0.s
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <16 x i32>, <16 x i32>* %a
+  %op1 = load <16 x i32>, ptr %a
   %res = uitofp <16 x i32> %op1 to <16 x float>
-  store <16 x float> %res, <16 x float>* %b
+  store <16 x float> %res, ptr %b
   ret void
 }
 
-define void @ucvtf_v32i32_v32f32(<32 x i32>* %a, <32 x float>* %b) vscale_range(8,0) #0 {
+define void @ucvtf_v32i32_v32f32(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: ucvtf_v32i32_v32f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -490,13 +485,13 @@ define void @ucvtf_v32i32_v32f32(<32 x i32>* %a, <32 x float>* %b) vscale_range(
 ; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i32>, <32 x i32>* %a
+  %op1 = load <32 x i32>, ptr %a
   %res = uitofp <32 x i32> %op1 to <32 x float>
-  store <32 x float> %res, <32 x float>* %b
+  store <32 x float> %res, ptr %b
   ret void
 }
 
-define void @ucvtf_v64i32_v64f32(<64 x i32>* %a, <64 x float>* %b) vscale_range(16,0) #0 {
+define void @ucvtf_v64i32_v64f32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: ucvtf_v64i32_v64f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -504,9 +499,9 @@ define void @ucvtf_v64i32_v64f32(<64 x i32>* %a, <64 x float>* %b) vscale_range(
 ; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <64 x i32>, <64 x i32>* %a
+  %op1 = load <64 x i32>, ptr %a
   %res = uitofp <64 x i32> %op1 to <64 x float>
-  store <64 x float> %res, <64 x float>* %b
+  store <64 x float> %res, ptr %b
   ret void
 }
 
@@ -537,7 +532,7 @@ define <2 x double> @ucvtf_v2i32_v2f64(<2 x i32> %op1) vscale_range(2,0) #0 {
   ret <2 x double> %res
 }
 
-define void @ucvtf_v4i32_v4f64(<4 x i32>* %a, <4 x double>* %b) vscale_range(2,0) #0 {
+define void @ucvtf_v4i32_v4f64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ucvtf_v4i32_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -546,13 +541,13 @@ define void @ucvtf_v4i32_v4f64(<4 x i32>* %a, <4 x double>* %b) vscale_range(2,0
 ; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i32>, <4 x i32>* %a
+  %op1 = load <4 x i32>, ptr %a
   %res = uitofp <4 x i32> %op1 to <4 x double>
-  store <4 x double> %res, <4 x double>* %b
+  store <4 x double> %res, ptr %b
   ret void
 }
 
-define void @ucvtf_v8i32_v8f64(<8 x i32>* %a, <8 x double>* %b) #0 {
+define void @ucvtf_v8i32_v8f64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: ucvtf_v8i32_v8f64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
@@ -575,13 +570,13 @@ define void @ucvtf_v8i32_v8f64(<8 x i32>* %a, <8 x double>* %b) #0 {
 ; VBITS_GE_512-NEXT:    ucvtf z0.d, p0/m, z0.d
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <8 x i32>, <8 x i32>* %a
+  %op1 = load <8 x i32>, ptr %a
   %res = uitofp <8 x i32> %op1 to <8 x double>
-  store <8 x double> %res, <8 x double>* %b
+  store <8 x double> %res, ptr %b
   ret void
 }
 
-define void @ucvtf_v16i32_v16f64(<16 x i32>* %a, <16 x double>* %b) vscale_range(8,0) #0 {
+define void @ucvtf_v16i32_v16f64(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: ucvtf_v16i32_v16f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -589,13 +584,13 @@ define void @ucvtf_v16i32_v16f64(<16 x i32>* %a, <16 x double>* %b) vscale_range
 ; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i32>, <16 x i32>* %a
+  %op1 = load <16 x i32>, ptr %a
   %res = uitofp <16 x i32> %op1 to <16 x double>
-  store <16 x double> %res, <16 x double>* %b
+  store <16 x double> %res, ptr %b
   ret void
 }
 
-define void @ucvtf_v32i32_v32f64(<32 x i32>* %a, <32 x double>* %b) vscale_range(16,0) #0 {
+define void @ucvtf_v32i32_v32f64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: ucvtf_v32i32_v32f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -603,9 +598,9 @@ define void @ucvtf_v32i32_v32f64(<32 x i32>* %a, <32 x double>* %b) vscale_range
 ; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i32>, <32 x i32>* %a
+  %op1 = load <32 x i32>, ptr %a
   %res = uitofp <32 x i32> %op1 to <32 x double>
-  store <32 x double> %res, <32 x double>* %b
+  store <32 x double> %res, ptr %b
   ret void
 }
 
@@ -630,7 +625,7 @@ define <2 x half> @ucvtf_v2i64_v2f16(<2 x i64> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ucvtf_v2i64_v2f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.d
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
@@ -640,30 +635,28 @@ define <2 x half> @ucvtf_v2i64_v2f16(<2 x i64> %op1) vscale_range(2,0) #0 {
   ret <2 x half> %res
 }
 
-define <4 x half> @ucvtf_v4i64_v4f16(<4 x i64>* %a) vscale_range(2,0) #0 {
+define <4 x half> @ucvtf_v4i64_v4f16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ucvtf_v4i64_v4f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.d
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i64>, <4 x i64>* %a
+  %op1 = load <4 x i64>, ptr %a
   %res = uitofp <4 x i64> %op1 to <4 x half>
   ret <4 x half> %res
 }
 
-define <8 x half> @ucvtf_v8i64_v8f16(<8 x i64>* %a) #0 {
+define <8 x half> @ucvtf_v8i64_v8f16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: ucvtf_v8i64_v8f16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    ptrue p0.d
 ; VBITS_GE_256-NEXT:    ucvtf z0.h, p0/m, z0.d
 ; VBITS_GE_256-NEXT:    ucvtf z1.h, p0/m, z1.d
 ; VBITS_GE_256-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -678,50 +671,45 @@ define <8 x half> @ucvtf_v8i64_v8f16(<8 x i64>* %a) #0 {
 ; VBITS_GE_512:       // %bb.0:
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; VBITS_GE_512-NEXT:    ptrue p0.d
 ; VBITS_GE_512-NEXT:    ucvtf z0.h, p0/m, z0.d
 ; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_GE_512-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <8 x i64>, <8 x i64>* %a
+  %op1 = load <8 x i64>, ptr %a
   %res = uitofp <8 x i64> %op1 to <8 x half>
   ret <8 x half> %res
 }
 
-define void @ucvtf_v16i64_v16f16(<16 x i64>* %a, <16 x half>* %b) vscale_range(8,0) #0 {
+define void @ucvtf_v16i64_v16f16(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: ucvtf_v16i64_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.d
-; CHECK-NEXT:    ptrue p0.h, vl16
+; CHECK-NEXT:    ptrue p0.s, vl16
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
+; CHECK-NEXT:    st1h { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i64>, <16 x i64>* %a
+  %op1 = load <16 x i64>, ptr %a
   %res = uitofp <16 x i64> %op1 to <16 x half>
-  store <16 x half> %res, <16 x half>* %b
+  store <16 x half> %res, ptr %b
   ret void
 }
 
-define void @ucvtf_v32i64_v32f16(<32 x i64>* %a, <32 x half>* %b) vscale_range(16,0) #0 {
+define void @ucvtf_v32i64_v32f16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: ucvtf_v32i64_v32f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.d
-; CHECK-NEXT:    ptrue p0.h, vl32
+; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
+; CHECK-NEXT:    st1h { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i64>, <32 x i64>* %a
+  %op1 = load <32 x i64>, ptr %a
   %res = uitofp <32 x i64> %op1 to <32 x half>
-  store <32 x half> %res, <32 x half>* %b
+  store <32 x half> %res, ptr %b
   ret void
 }
 
@@ -752,29 +740,27 @@ define <2 x float> @ucvtf_v2i64_v2f32(<2 x i64> %op1) vscale_range(2,0) #0 {
   ret <2 x float> %res
 }
 
-define <4 x float> @ucvtf_v4i64_v4f32(<4 x i64>* %a) vscale_range(2,0) #0 {
+define <4 x float> @ucvtf_v4i64_v4f32(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ucvtf_v4i64_v4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.d
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i64>, <4 x i64>* %a
+  %op1 = load <4 x i64>, ptr %a
   %res = uitofp <4 x i64> %op1 to <4 x float>
   ret <4 x float> %res
 }
 
-define void @ucvtf_v8i64_v8f32(<8 x i64>* %a, <8 x float>* %b) #0 {
+define void @ucvtf_v8i64_v8f32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: ucvtf_v8i64_v8f32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    ptrue p0.d
 ; VBITS_GE_256-NEXT:    ucvtf z0.s, p0/m, z0.d
 ; VBITS_GE_256-NEXT:    ucvtf z1.s, p0/m, z1.d
 ; VBITS_GE_256-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -789,49 +775,46 @@ define void @ucvtf_v8i64_v8f32(<8 x i64>* %a, <8 x float>* %b) #0 {
 ; VBITS_GE_512:       // %bb.0:
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; VBITS_GE_512-NEXT:    ptrue p0.d
 ; VBITS_GE_512-NEXT:    ucvtf z0.s, p0/m, z0.d
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <8 x i64>, <8 x i64>* %a
+  %op1 = load <8 x i64>, ptr %a
   %res = uitofp <8 x i64> %op1 to <8 x float>
-  store <8 x float> %res, <8 x float>* %b
+  store <8 x float> %res, ptr %b
   ret void
 }
 
-define void @ucvtf_v16i64_v16f32(<16 x i64>* %a, <16 x float>* %b) vscale_range(8,0) #0 {
+define void @ucvtf_v16i64_v16f32(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: ucvtf_v16i64_v16f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.d
 ; CHECK-NEXT:    ptrue p0.s, vl16
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i64>, <16 x i64>* %a
+  %op1 = load <16 x i64>, ptr %a
   %res = uitofp <16 x i64> %op1 to <16 x float>
-  store <16 x float> %res, <16 x float>* %b
+  store <16 x float> %res, ptr %b
   ret void
 }
 
-define void @ucvtf_v32i64_v32f32(<32 x i64>* %a, <32 x float>* %b) vscale_range(16,0) #0 {
+define void @ucvtf_v32i64_v32f32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: ucvtf_v32i64_v32f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.d
 ; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i64>, <32 x i64>* %a
+  %op1 = load <32 x i64>, ptr %a
   %res = uitofp <32 x i64> %op1 to <32 x float>
-  store <32 x float> %res, <32 x float>* %b
+  store <32 x float> %res, ptr %b
   ret void
 }
 
@@ -861,7 +844,7 @@ define <2 x double> @ucvtf_v2i64_v2f64(<2 x i64> %op1) vscale_range(2,0) #0 {
   ret <2 x double> %res
 }
 
-define void @ucvtf_v4i64_v4f64(<4 x i64>* %a, <4 x double>* %b) vscale_range(2,0) #0 {
+define void @ucvtf_v4i64_v4f64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ucvtf_v4i64_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -869,13 +852,13 @@ define void @ucvtf_v4i64_v4f64(<4 x i64>* %a, <4 x double>* %b) vscale_range(2,0
 ; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i64>, <4 x i64>* %a
+  %op1 = load <4 x i64>, ptr %a
   %res = uitofp <4 x i64> %op1 to <4 x double>
-  store <4 x double> %res, <4 x double>* %b
+  store <4 x double> %res, ptr %b
   ret void
 }
 
-define void @ucvtf_v8i64_v8f64(<8 x i64>* %a, <8 x double>* %b) #0 {
+define void @ucvtf_v8i64_v8f64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: ucvtf_v8i64_v8f64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -895,13 +878,13 @@ define void @ucvtf_v8i64_v8f64(<8 x i64>* %a, <8 x double>* %b) #0 {
 ; VBITS_GE_512-NEXT:    ucvtf z0.d, p0/m, z0.d
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <8 x i64>, <8 x i64>* %a
+  %op1 = load <8 x i64>, ptr %a
   %res = uitofp <8 x i64> %op1 to <8 x double>
-  store <8 x double> %res, <8 x double>* %b
+  store <8 x double> %res, ptr %b
   ret void
 }
 
-define void @ucvtf_v16i64_v16f64(<16 x i64>* %a, <16 x double>* %b) vscale_range(8,0) #0 {
+define void @ucvtf_v16i64_v16f64(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: ucvtf_v16i64_v16f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -909,13 +892,13 @@ define void @ucvtf_v16i64_v16f64(<16 x i64>* %a, <16 x double>* %b) vscale_range
 ; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i64>, <16 x i64>* %a
+  %op1 = load <16 x i64>, ptr %a
   %res = uitofp <16 x i64> %op1 to <16 x double>
-  store <16 x double> %res, <16 x double>* %b
+  store <16 x double> %res, ptr %b
   ret void
 }
 
-define void @ucvtf_v32i64_v32f64(<32 x i64>* %a, <32 x double>* %b) vscale_range(16,0) #0 {
+define void @ucvtf_v32i64_v32f64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: ucvtf_v32i64_v32f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -923,9 +906,9 @@ define void @ucvtf_v32i64_v32f64(<32 x i64>* %a, <32 x double>* %b) vscale_range
 ; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i64>, <32 x i64>* %a
+  %op1 = load <32 x i64>, ptr %a
   %res = uitofp <32 x i64> %op1 to <32 x double>
-  store <32 x double> %res, <32 x double>* %b
+  store <32 x double> %res, ptr %b
   ret void
 }
 
@@ -944,20 +927,20 @@ define <4 x half> @scvtf_v4i16_v4f16(<4 x i16> %op1) vscale_range(2,0) #0 {
 }
 
 ; Don't use SVE for 128-bit vectors.
-define void @scvtf_v8i16_v8f16(<8 x i16>* %a, <8 x half>* %b) vscale_range(2,0) #0 {
+define void @scvtf_v8i16_v8f16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: scvtf_v8i16_v8f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    scvtf v0.8h, v0.8h
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i16>, <8 x i16>* %a
+  %op1 = load <8 x i16>, ptr %a
   %res = sitofp <8 x i16> %op1 to <8 x half>
-  store <8 x half> %res, <8 x half>* %b
+  store <8 x half> %res, ptr %b
   ret void
 }
 
-define void @scvtf_v16i16_v16f16(<16 x i16>* %a, <16 x half>* %b) vscale_range(2,0) #0 {
+define void @scvtf_v16i16_v16f16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: scvtf_v16i16_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -965,13 +948,13 @@ define void @scvtf_v16i16_v16f16(<16 x i16>* %a, <16 x half>* %b) vscale_range(2
 ; CHECK-NEXT:    scvtf z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i16>, <16 x i16>* %a
+  %op1 = load <16 x i16>, ptr %a
   %res = sitofp <16 x i16> %op1 to <16 x half>
-  store <16 x half> %res, <16 x half>* %b
+  store <16 x half> %res, ptr %b
   ret void
 }
 
-define void @scvtf_v32i16_v32f16(<32 x i16>* %a, <32 x half>* %b) #0 {
+define void @scvtf_v32i16_v32f16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: scvtf_v32i16_v32f16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
@@ -991,13 +974,13 @@ define void @scvtf_v32i16_v32f16(<32 x i16>* %a, <32 x half>* %b) #0 {
 ; VBITS_GE_512-NEXT:    scvtf z0.h, p0/m, z0.h
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <32 x i16>, <32 x i16>* %a
+  %op1 = load <32 x i16>, ptr %a
   %res = sitofp <32 x i16> %op1 to <32 x half>
-  store <32 x half> %res, <32 x half>* %b
+  store <32 x half> %res, ptr %b
   ret void
 }
 
-define void @scvtf_v64i16_v64f16(<64 x i16>* %a, <64 x half>* %b) vscale_range(8,0) #0 {
+define void @scvtf_v64i16_v64f16(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: scvtf_v64i16_v64f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
@@ -1005,13 +988,13 @@ define void @scvtf_v64i16_v64f16(<64 x i16>* %a, <64 x half>* %b) vscale_range(8
 ; CHECK-NEXT:    scvtf z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <64 x i16>, <64 x i16>* %a
+  %op1 = load <64 x i16>, ptr %a
   %res = sitofp <64 x i16> %op1 to <64 x half>
-  store <64 x half> %res, <64 x half>* %b
+  store <64 x half> %res, ptr %b
   ret void
 }
 
-define void @scvtf_v128i16_v128f16(<128 x i16>* %a, <128 x half>* %b) vscale_range(16,0) #0 {
+define void @scvtf_v128i16_v128f16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: scvtf_v128i16_v128f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
@@ -1019,9 +1002,9 @@ define void @scvtf_v128i16_v128f16(<128 x i16>* %a, <128 x half>* %b) vscale_ran
 ; CHECK-NEXT:    scvtf z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <128 x i16>, <128 x i16>* %a
+  %op1 = load <128 x i16>, ptr %a
   %res = sitofp <128 x i16> %op1 to <128 x half>
-  store <128 x half> %res, <128 x half>* %b
+  store <128 x half> %res, ptr %b
   ret void
 }
 
@@ -1052,7 +1035,7 @@ define <4 x float> @scvtf_v4i16_v4f32(<4 x i16> %op1) vscale_range(2,0) #0 {
   ret <4 x float> %res
 }
 
-define void @scvtf_v8i16_v8f32(<8 x i16>* %a, <8 x float>* %b) vscale_range(2,0) #0 {
+define void @scvtf_v8i16_v8f32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: scvtf_v8i16_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -1061,13 +1044,13 @@ define void @scvtf_v8i16_v8f32(<8 x i16>* %a, <8 x float>* %b) vscale_range(2,0)
 ; CHECK-NEXT:    scvtf z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i16>, <8 x i16>* %a
+  %op1 = load <8 x i16>, ptr %a
   %res = sitofp <8 x i16> %op1 to <8 x float>
-  store <8 x float> %res, <8 x float>* %b
+  store <8 x float> %res, ptr %b
   ret void
 }
 
-define void @scvtf_v16i16_v16f32(<16 x i16>* %a, <16 x float>* %b) #0 {
+define void @scvtf_v16i16_v16f32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: scvtf_v16i16_v16f32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
@@ -1092,13 +1075,13 @@ define void @scvtf_v16i16_v16f32(<16 x i16>* %a, <16 x float>* %b) #0 {
 ; VBITS_GE_512-NEXT:    scvtf z0.s, p0/m, z0.s
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <16 x i16>, <16 x i16>* %a
+  %op1 = load <16 x i16>, ptr %a
   %res = sitofp <16 x i16> %op1 to <16 x float>
-  store <16 x float> %res, <16 x float>* %b
+  store <16 x float> %res, ptr %b
   ret void
 }
 
-define void @scvtf_v32i16_v32f32(<32 x i16>* %a, <32 x float>* %b) vscale_range(8,0) #0 {
+define void @scvtf_v32i16_v32f32(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: scvtf_v32i16_v32f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl32
@@ -1108,13 +1091,13 @@ define void @scvtf_v32i16_v32f32(<32 x i16>* %a, <32 x float>* %b) vscale_range(
 ; CHECK-NEXT:    scvtf z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i16>, <32 x i16>* %a
+  %op1 = load <32 x i16>, ptr %a
   %res = sitofp <32 x i16> %op1 to <32 x float>
-  store <32 x float> %res, <32 x float>* %b
+  store <32 x float> %res, ptr %b
   ret void
 }
 
-define void @scvtf_v64i16_v64f32(<64 x i16>* %a, <64 x float>* %b) vscale_range(16,0) #0 {
+define void @scvtf_v64i16_v64f32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: scvtf_v64i16_v64f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
@@ -1124,9 +1107,9 @@ define void @scvtf_v64i16_v64f32(<64 x i16>* %a, <64 x float>* %b) vscale_range(
 ; CHECK-NEXT:    scvtf z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <64 x i16>, <64 x i16>* %a
+  %op1 = load <64 x i16>, ptr %a
   %res = sitofp <64 x i16> %op1 to <64 x float>
-  store <64 x float> %res, <64 x float>* %b
+  store <64 x float> %res, ptr %b
   ret void
 }
 
@@ -1162,7 +1145,7 @@ define <2 x double> @scvtf_v2i16_v2f64(<2 x i16> %op1) vscale_range(2,0) #0 {
   ret <2 x double> %res
 }
 
-define void @scvtf_v4i16_v4f64(<4 x i16>* %a, <4 x double>* %b) vscale_range(2,0) #0 {
+define void @scvtf_v4i16_v4f64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: scvtf_v4i16_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
@@ -1172,13 +1155,13 @@ define void @scvtf_v4i16_v4f64(<4 x i16>* %a, <4 x double>* %b) vscale_range(2,0
 ; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i16>, <4 x i16>* %a
+  %op1 = load <4 x i16>, ptr %a
   %res = sitofp <4 x i16> %op1 to <4 x double>
-  store <4 x double> %res, <4 x double>* %b
+  store <4 x double> %res, ptr %b
   ret void
 }
 
-define void @scvtf_v8i16_v8f64(<8 x i16>* %a, <8 x double>* %b) #0 {
+define void @scvtf_v8i16_v8f64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: scvtf_v8i16_v8f64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ldr q0, [x0]
@@ -1204,13 +1187,13 @@ define void @scvtf_v8i16_v8f64(<8 x i16>* %a, <8 x double>* %b) #0 {
 ; VBITS_GE_512-NEXT:    scvtf z0.d, p0/m, z0.d
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <8 x i16>, <8 x i16>* %a
+  %op1 = load <8 x i16>, ptr %a
   %res = sitofp <8 x i16> %op1 to <8 x double>
-  store <8 x double> %res, <8 x double>* %b
+  store <8 x double> %res, ptr %b
   ret void
 }
 
-define void @scvtf_v16i16_v16f64(<16 x i16>* %a, <16 x double>* %b) vscale_range(8,0) #0 {
+define void @scvtf_v16i16_v16f64(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: scvtf_v16i16_v16f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -1221,13 +1204,13 @@ define void @scvtf_v16i16_v16f64(<16 x i16>* %a, <16 x double>* %b) vscale_range
 ; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i16>, <16 x i16>* %a
+  %op1 = load <16 x i16>, ptr %a
   %res = sitofp <16 x i16> %op1 to <16 x double>
-  store <16 x double> %res, <16 x double>* %b
+  store <16 x double> %res, ptr %b
   ret void
 }
 
-define void @scvtf_v32i16_v32f64(<32 x i16>* %a, <32 x double>* %b) vscale_range(16,0) #0 {
+define void @scvtf_v32i16_v32f64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: scvtf_v32i16_v32f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl32
@@ -1238,9 +1221,9 @@ define void @scvtf_v32i16_v32f64(<32 x i16>* %a, <32 x double>* %b) vscale_range
 ; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i16>, <32 x i16>* %a
+  %op1 = load <32 x i16>, ptr %a
   %res = sitofp <32 x i16> %op1 to <32 x double>
-  store <32 x double> %res, <32 x double>* %b
+  store <32 x double> %res, ptr %b
   ret void
 }
 
@@ -1271,29 +1254,27 @@ define <4 x half> @scvtf_v4i32_v4f16(<4 x i32> %op1) vscale_range(2,0) #0 {
   ret <4 x half> %res
 }
 
-define <8 x half> @scvtf_v8i32_v8f16(<8 x i32>* %a) vscale_range(2,0) #0 {
+define <8 x half> @scvtf_v8i32_v8f16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: scvtf_v8i32_v8f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    scvtf z0.h, p0/m, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i32>, <8 x i32>* %a
+  %op1 = load <8 x i32>, ptr %a
   %res = sitofp <8 x i32> %op1 to <8 x half>
   ret <8 x half> %res
 }
 
-define void @scvtf_v16i32_v16f16(<16 x i32>* %a, <16 x half>* %b) #0 {
+define void @scvtf_v16i32_v16f16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: scvtf_v16i32_v16f16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    ptrue p0.s
 ; VBITS_GE_256-NEXT:    scvtf z0.h, p0/m, z0.s
 ; VBITS_GE_256-NEXT:    scvtf z1.h, p0/m, z1.s
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z0.h, z0.h
@@ -1308,49 +1289,46 @@ define void @scvtf_v16i32_v16f16(<16 x i32>* %a, <16 x half>* %b) #0 {
 ; VBITS_GE_512:       // %bb.0:
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; VBITS_GE_512-NEXT:    ptrue p0.s
 ; VBITS_GE_512-NEXT:    scvtf z0.h, p0/m, z0.s
 ; VBITS_GE_512-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <16 x i32>, <16 x i32>* %a
+  %op1 = load <16 x i32>, ptr %a
   %res = sitofp <16 x i32> %op1 to <16 x half>
-  store <16 x half> %res, <16 x half>* %b
+  store <16 x half> %res, ptr %b
   ret void
 }
 
-define void @scvtf_v32i32_v32f16(<32 x i32>* %a, <32 x half>* %b) vscale_range(8,0) #0 {
+define void @scvtf_v32i32_v32f16(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: scvtf_v32i32_v32f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    scvtf z0.h, p0/m, z0.s
 ; CHECK-NEXT:    ptrue p0.h, vl32
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i32>, <32 x i32>* %a
+  %op1 = load <32 x i32>, ptr %a
   %res = sitofp <32 x i32> %op1 to <32 x half>
-  store <32 x half> %res, <32 x half>* %b
+  store <32 x half> %res, ptr %b
   ret void
 }
 
-define void @scvtf_v64i32_v64f16(<64 x i32>* %a, <64 x half>* %b) vscale_range(16,0) #0 {
+define void @scvtf_v64i32_v64f16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: scvtf_v64i32_v64f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    scvtf z0.h, p0/m, z0.s
 ; CHECK-NEXT:    ptrue p0.h, vl64
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <64 x i32>, <64 x i32>* %a
+  %op1 = load <64 x i32>, ptr %a
   %res = sitofp <64 x i32> %op1 to <64 x half>
-  store <64 x half> %res, <64 x half>* %b
+  store <64 x half> %res, ptr %b
   ret void
 }
 
@@ -1378,7 +1356,7 @@ define <4 x float> @scvtf_v4i32_v4f32(<4 x i32> %op1) vscale_range(2,0) #0 {
   ret <4 x float> %res
 }
 
-define void @scvtf_v8i32_v8f32(<8 x i32>* %a, <8 x float>* %b) vscale_range(2,0) #0 {
+define void @scvtf_v8i32_v8f32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: scvtf_v8i32_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -1386,13 +1364,13 @@ define void @scvtf_v8i32_v8f32(<8 x i32>* %a, <8 x float>* %b) vscale_range(2,0)
 ; CHECK-NEXT:    scvtf z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i32>, <8 x i32>* %a
+  %op1 = load <8 x i32>, ptr %a
   %res = sitofp <8 x i32> %op1 to <8 x float>
-  store <8 x float> %res, <8 x float>* %b
+  store <8 x float> %res, ptr %b
   ret void
 }
 
-define void @scvtf_v16i32_v16f32(<16 x i32>* %a, <16 x float>* %b) #0 {
+define void @scvtf_v16i32_v16f32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: scvtf_v16i32_v16f32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -1412,13 +1390,13 @@ define void @scvtf_v16i32_v16f32(<16 x i32>* %a, <16 x float>* %b) #0 {
 ; VBITS_GE_512-NEXT:    scvtf z0.s, p0/m, z0.s
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <16 x i32>, <16 x i32>* %a
+  %op1 = load <16 x i32>, ptr %a
   %res = sitofp <16 x i32> %op1 to <16 x float>
-  store <16 x float> %res, <16 x float>* %b
+  store <16 x float> %res, ptr %b
   ret void
 }
 
-define void @scvtf_v32i32_v32f32(<32 x i32>* %a, <32 x float>* %b) vscale_range(8,0) #0 {
+define void @scvtf_v32i32_v32f32(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: scvtf_v32i32_v32f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -1426,13 +1404,13 @@ define void @scvtf_v32i32_v32f32(<32 x i32>* %a, <32 x float>* %b) vscale_range(
 ; CHECK-NEXT:    scvtf z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i32>, <32 x i32>* %a
+  %op1 = load <32 x i32>, ptr %a
   %res = sitofp <32 x i32> %op1 to <32 x float>
-  store <32 x float> %res, <32 x float>* %b
+  store <32 x float> %res, ptr %b
   ret void
 }
 
-define void @scvtf_v64i32_v64f32(<64 x i32>* %a, <64 x float>* %b) vscale_range(16,0) #0 {
+define void @scvtf_v64i32_v64f32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: scvtf_v64i32_v64f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -1440,9 +1418,9 @@ define void @scvtf_v64i32_v64f32(<64 x i32>* %a, <64 x float>* %b) vscale_range(
 ; CHECK-NEXT:    scvtf z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <64 x i32>, <64 x i32>* %a
+  %op1 = load <64 x i32>, ptr %a
   %res = sitofp <64 x i32> %op1 to <64 x float>
-  store <64 x float> %res, <64 x float>* %b
+  store <64 x float> %res, ptr %b
   ret void
 }
 
@@ -1473,7 +1451,7 @@ define <2 x double> @scvtf_v2i32_v2f64(<2 x i32> %op1) vscale_range(2,0) #0 {
   ret <2 x double> %res
 }
 
-define void @scvtf_v4i32_v4f64(<4 x i32>* %a, <4 x double>* %b) vscale_range(2,0) #0 {
+define void @scvtf_v4i32_v4f64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: scvtf_v4i32_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -1482,13 +1460,13 @@ define void @scvtf_v4i32_v4f64(<4 x i32>* %a, <4 x double>* %b) vscale_range(2,0
 ; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i32>, <4 x i32>* %a
+  %op1 = load <4 x i32>, ptr %a
   %res = sitofp <4 x i32> %op1 to <4 x double>
-  store <4 x double> %res, <4 x double>* %b
+  store <4 x double> %res, ptr %b
   ret void
 }
 
-define void @scvtf_v8i32_v8f64(<8 x i32>* %a, <8 x double>* %b) #0 {
+define void @scvtf_v8i32_v8f64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: scvtf_v8i32_v8f64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
@@ -1513,13 +1491,13 @@ define void @scvtf_v8i32_v8f64(<8 x i32>* %a, <8 x double>* %b) #0 {
 ; VBITS_GE_512-NEXT:    scvtf z0.d, p0/m, z0.d
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <8 x i32>, <8 x i32>* %a
+  %op1 = load <8 x i32>, ptr %a
   %res = sitofp <8 x i32> %op1 to <8 x double>
-  store <8 x double> %res, <8 x double>* %b
+  store <8 x double> %res, ptr %b
   ret void
 }
 
-define void @scvtf_v16i32_v16f64(<16 x i32>* %a, <16 x double>* %b) vscale_range(8,0) #0 {
+define void @scvtf_v16i32_v16f64(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: scvtf_v16i32_v16f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl16
@@ -1529,13 +1507,13 @@ define void @scvtf_v16i32_v16f64(<16 x i32>* %a, <16 x double>* %b) vscale_range
 ; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i32>, <16 x i32>* %a
+  %op1 = load <16 x i32>, ptr %a
   %res = sitofp <16 x i32> %op1 to <16 x double>
-  store <16 x double> %res, <16 x double>* %b
+  store <16 x double> %res, ptr %b
   ret void
 }
 
-define void @scvtf_v32i32_v32f64(<32 x i32>* %a, <32 x double>* %b) vscale_range(16,0) #0 {
+define void @scvtf_v32i32_v32f64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: scvtf_v32i32_v32f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -1545,9 +1523,9 @@ define void @scvtf_v32i32_v32f64(<32 x i32>* %a, <32 x double>* %b) vscale_range
 ; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i32>, <32 x i32>* %a
+  %op1 = load <32 x i32>, ptr %a
   %res = sitofp <32 x i32> %op1 to <32 x double>
-  store <32 x double> %res, <32 x double>* %b
+  store <32 x double> %res, ptr %b
   ret void
 }
 
@@ -1572,7 +1550,7 @@ define <2 x half> @scvtf_v2i64_v2f16(<2 x i64> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: scvtf_v2i64_v2f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    scvtf z0.h, p0/m, z0.d
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
@@ -1582,30 +1560,28 @@ define <2 x half> @scvtf_v2i64_v2f16(<2 x i64> %op1) vscale_range(2,0) #0 {
   ret <2 x half> %res
 }
 
-define <4 x half> @scvtf_v4i64_v4f16(<4 x i64>* %a) vscale_range(2,0) #0 {
+define <4 x half> @scvtf_v4i64_v4f16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: scvtf_v4i64_v4f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    scvtf z0.h, p0/m, z0.d
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i64>, <4 x i64>* %a
+  %op1 = load <4 x i64>, ptr %a
   %res = sitofp <4 x i64> %op1 to <4 x half>
   ret <4 x half> %res
 }
 
-define <8 x half> @scvtf_v8i64_v8f16(<8 x i64>* %a) #0 {
+define <8 x half> @scvtf_v8i64_v8f16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: scvtf_v8i64_v8f16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    ptrue p0.d
 ; VBITS_GE_256-NEXT:    scvtf z0.h, p0/m, z0.d
 ; VBITS_GE_256-NEXT:    scvtf z1.h, p0/m, z1.d
 ; VBITS_GE_256-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -1620,50 +1596,45 @@ define <8 x half> @scvtf_v8i64_v8f16(<8 x i64>* %a) #0 {
 ; VBITS_GE_512:       // %bb.0:
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; VBITS_GE_512-NEXT:    ptrue p0.d
 ; VBITS_GE_512-NEXT:    scvtf z0.h, p0/m, z0.d
 ; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_GE_512-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <8 x i64>, <8 x i64>* %a
+  %op1 = load <8 x i64>, ptr %a
   %res = sitofp <8 x i64> %op1 to <8 x half>
   ret <8 x half> %res
 }
 
-define void @scvtf_v16i64_v16f16(<16 x i64>* %a, <16 x half>* %b) vscale_range(8,0) #0 {
+define void @scvtf_v16i64_v16f16(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: scvtf_v16i64_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    scvtf z0.h, p0/m, z0.d
-; CHECK-NEXT:    ptrue p0.h, vl16
+; CHECK-NEXT:    ptrue p0.s, vl16
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
+; CHECK-NEXT:    st1h { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i64>, <16 x i64>* %a
+  %op1 = load <16 x i64>, ptr %a
   %res = sitofp <16 x i64> %op1 to <16 x half>
-  store <16 x half> %res, <16 x half>* %b
+  store <16 x half> %res, ptr %b
   ret void
 }
 
-define void @scvtf_v32i64_v32f16(<32 x i64>* %a, <32 x half>* %b) vscale_range(16,0) #0 {
+define void @scvtf_v32i64_v32f16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: scvtf_v32i64_v32f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    scvtf z0.h, p0/m, z0.d
-; CHECK-NEXT:    ptrue p0.h, vl32
+; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
+; CHECK-NEXT:    st1h { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i64>, <32 x i64>* %a
+  %op1 = load <32 x i64>, ptr %a
   %res = sitofp <32 x i64> %op1 to <32 x half>
-  store <32 x half> %res, <32 x half>* %b
+  store <32 x half> %res, ptr %b
   ret void
 }
 
@@ -1694,29 +1665,27 @@ define <2 x float> @scvtf_v2i64_v2f32(<2 x i64> %op1) vscale_range(2,0) #0 {
   ret <2 x float> %res
 }
 
-define <4 x float> @scvtf_v4i64_v4f32(<4 x i64>* %a) vscale_range(2,0) #0 {
+define <4 x float> @scvtf_v4i64_v4f32(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: scvtf_v4i64_v4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    scvtf z0.s, p0/m, z0.d
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i64>, <4 x i64>* %a
+  %op1 = load <4 x i64>, ptr %a
   %res = sitofp <4 x i64> %op1 to <4 x float>
   ret <4 x float> %res
 }
 
-define void @scvtf_v8i64_v8f32(<8 x i64>* %a, <8 x float>* %b) #0 {
+define void @scvtf_v8i64_v8f32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: scvtf_v8i64_v8f32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    ptrue p0.d
 ; VBITS_GE_256-NEXT:    scvtf z0.s, p0/m, z0.d
 ; VBITS_GE_256-NEXT:    scvtf z1.s, p0/m, z1.d
 ; VBITS_GE_256-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -1731,49 +1700,46 @@ define void @scvtf_v8i64_v8f32(<8 x i64>* %a, <8 x float>* %b) #0 {
 ; VBITS_GE_512:       // %bb.0:
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; VBITS_GE_512-NEXT:    ptrue p0.d
 ; VBITS_GE_512-NEXT:    scvtf z0.s, p0/m, z0.d
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <8 x i64>, <8 x i64>* %a
+  %op1 = load <8 x i64>, ptr %a
   %res = sitofp <8 x i64> %op1 to <8 x float>
-  store <8 x float> %res, <8 x float>* %b
+  store <8 x float> %res, ptr %b
   ret void
 }
 
-define void @scvtf_v16i64_v16f32(<16 x i64>* %a, <16 x float>* %b) vscale_range(8,0) #0 {
+define void @scvtf_v16i64_v16f32(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: scvtf_v16i64_v16f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    scvtf z0.s, p0/m, z0.d
 ; CHECK-NEXT:    ptrue p0.s, vl16
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i64>, <16 x i64>* %a
+  %op1 = load <16 x i64>, ptr %a
   %res = sitofp <16 x i64> %op1 to <16 x float>
-  store <16 x float> %res, <16 x float>* %b
+  store <16 x float> %res, ptr %b
   ret void
 }
 
-define void @scvtf_v32i64_v32f32(<32 x i64>* %a, <32 x float>* %b) vscale_range(16,0) #0 {
+define void @scvtf_v32i64_v32f32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: scvtf_v32i64_v32f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    scvtf z0.s, p0/m, z0.d
 ; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i64>, <32 x i64>* %a
+  %op1 = load <32 x i64>, ptr %a
   %res = sitofp <32 x i64> %op1 to <32 x float>
-  store <32 x float> %res, <32 x float>* %b
+  store <32 x float> %res, ptr %b
   ret void
 }
 
@@ -1803,7 +1769,7 @@ define <2 x double> @scvtf_v2i64_v2f64(<2 x i64> %op1) vscale_range(2,0) #0 {
   ret <2 x double> %res
 }
 
-define void @scvtf_v4i64_v4f64(<4 x i64>* %a, <4 x double>* %b) vscale_range(2,0) #0 {
+define void @scvtf_v4i64_v4f64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: scvtf_v4i64_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -1811,13 +1777,13 @@ define void @scvtf_v4i64_v4f64(<4 x i64>* %a, <4 x double>* %b) vscale_range(2,0
 ; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i64>, <4 x i64>* %a
+  %op1 = load <4 x i64>, ptr %a
   %res = sitofp <4 x i64> %op1 to <4 x double>
-  store <4 x double> %res, <4 x double>* %b
+  store <4 x double> %res, ptr %b
   ret void
 }
 
-define void @scvtf_v8i64_v8f64(<8 x i64>* %a, <8 x double>* %b) #0 {
+define void @scvtf_v8i64_v8f64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: scvtf_v8i64_v8f64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -1837,13 +1803,13 @@ define void @scvtf_v8i64_v8f64(<8 x i64>* %a, <8 x double>* %b) #0 {
 ; VBITS_GE_512-NEXT:    scvtf z0.d, p0/m, z0.d
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <8 x i64>, <8 x i64>* %a
+  %op1 = load <8 x i64>, ptr %a
   %res = sitofp <8 x i64> %op1 to <8 x double>
-  store <8 x double> %res, <8 x double>* %b
+  store <8 x double> %res, ptr %b
   ret void
 }
 
-define void @scvtf_v16i64_v16f64(<16 x i64>* %a, <16 x double>* %b) vscale_range(8,0) #0 {
+define void @scvtf_v16i64_v16f64(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: scvtf_v16i64_v16f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -1851,13 +1817,13 @@ define void @scvtf_v16i64_v16f64(<16 x i64>* %a, <16 x double>* %b) vscale_range
 ; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i64>, <16 x i64>* %a
+  %op1 = load <16 x i64>, ptr %a
   %res = sitofp <16 x i64> %op1 to <16 x double>
-  store <16 x double> %res, <16 x double>* %b
+  store <16 x double> %res, ptr %b
   ret void
 }
 
-define void @scvtf_v32i64_v32f64(<32 x i64>* %a, <32 x double>* %b) vscale_range(16,0) #0 {
+define void @scvtf_v32i64_v32f64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: scvtf_v32i64_v32f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -1865,9 +1831,9 @@ define void @scvtf_v32i64_v32f64(<32 x i64>* %a, <32 x double>* %b) vscale_range
 ; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i64>, <32 x i64>* %a
+  %op1 = load <32 x i64>, ptr %a
   %res = sitofp <32 x i64> %op1 to <32 x double>
-  store <32 x double> %res, <32 x double>* %b
+  store <32 x double> %res, ptr %b
   ret void
 }
 

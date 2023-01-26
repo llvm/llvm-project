@@ -43,7 +43,7 @@ class Symbol;
 extern std::unique_ptr<llvm::TarWriter> tar;
 
 // Opens a given file.
-llvm::Optional<MemoryBufferRef> readFile(StringRef path);
+std::optional<MemoryBufferRef> readFile(StringRef path);
 
 // Add symbols in File to the symbol table.
 void parseFile(InputFile *file);
@@ -51,7 +51,8 @@ void parseFile(InputFile *file);
 // The root class of input files.
 class InputFile {
 protected:
-  SmallVector<Symbol *, 0> symbols;
+  std::unique_ptr<Symbol *[]> symbols;
+  uint32_t numSymbols = 0;
   SmallVector<InputSectionBase *, 0> sections;
 
 public:
@@ -85,7 +86,7 @@ public:
   ArrayRef<Symbol *> getSymbols() const {
     assert(fileKind == BinaryKind || fileKind == ObjKind ||
            fileKind == BitcodeKind);
-    return symbols;
+    return {symbols.get(), numSymbols};
   }
 
   // Get filename to use for linker script processing.
@@ -160,9 +161,10 @@ private:
 
 class ELFFileBase : public InputFile {
 public:
-  ELFFileBase(Kind k, MemoryBufferRef m);
+  ELFFileBase(Kind k, ELFKind ekind, MemoryBufferRef m);
   static bool classof(const InputFile *f) { return f->isElf(); }
 
+  void init();
   template <typename ELFT> llvm::object::ELFFile<ELFT> getObj() const {
     return check(llvm::object::ELFFile<ELFT>::create(mb.getBuffer()));
   }
@@ -170,16 +172,17 @@ public:
   StringRef getStringTable() const { return stringTable; }
 
   ArrayRef<Symbol *> getLocalSymbols() {
-    if (symbols.empty())
+    if (numSymbols == 0)
       return {};
-    return llvm::makeArrayRef(symbols).slice(1, firstGlobal - 1);
+    return llvm::ArrayRef(symbols.get() + 1, firstGlobal - 1);
   }
   ArrayRef<Symbol *> getGlobalSymbols() {
-    return llvm::makeArrayRef(symbols).slice(firstGlobal);
+    return llvm::ArrayRef(symbols.get() + firstGlobal,
+                          numSymbols - firstGlobal);
   }
   MutableArrayRef<Symbol *> getMutableGlobalSymbols() {
-    return llvm::makeMutableArrayRef(symbols.data(), symbols.size())
-        .slice(firstGlobal);
+    return llvm::MutableArrayRef(symbols.get() + firstGlobal,
+                                     numSymbols - firstGlobal);
   }
 
   template <typename ELFT> typename ELFT::ShdrRange getELFShdrs() const {
@@ -196,7 +199,7 @@ public:
 
 protected:
   // Initializes this class's member variables.
-  template <typename ELFT> void init();
+  template <typename ELFT> void init(InputFile::Kind k);
 
   StringRef stringTable;
   const void *elfShdrs = nullptr;
@@ -221,7 +224,8 @@ public:
     return this->ELFFileBase::getObj<ELFT>();
   }
 
-  ObjFile(MemoryBufferRef m, StringRef archiveName) : ELFFileBase(ObjKind, m) {
+  ObjFile(ELFKind ekind, MemoryBufferRef m, StringRef archiveName)
+      : ELFFileBase(ObjKind, ekind, m) {
     this->archiveName = archiveName;
   }
 
@@ -232,7 +236,7 @@ public:
                                  const Elf_Shdr &sec);
 
   Symbol &getSymbol(uint32_t symbolIndex) const {
-    if (symbolIndex >= this->symbols.size())
+    if (symbolIndex >= numSymbols)
       fatal(toString(this) + ": invalid symbol index");
     return *this->symbols[symbolIndex];
   }
@@ -244,8 +248,9 @@ public:
     return getSymbol(symIndex);
   }
 
-  llvm::Optional<llvm::DILineInfo> getDILineInfo(InputSectionBase *, uint64_t);
-  llvm::Optional<std::pair<std::string, unsigned>> getVariableLoc(StringRef name);
+  std::optional<llvm::DILineInfo> getDILineInfo(InputSectionBase *, uint64_t);
+  std::optional<std::pair<std::string, unsigned>>
+  getVariableLoc(StringRef name);
 
   // Name of source file obtained from STT_FILE symbol value,
   // or empty string if there is no such symbol in object file
@@ -274,7 +279,7 @@ public:
   // Get cached DWARF information.
   DWARFCache *getDwarf();
 
-  void initializeLocalSymbols();
+  void initSectionsAndLocalSyms(bool ignoreComdats);
   void postParse();
 
 private:
@@ -304,9 +309,6 @@ private:
   // If the section does not exist (which is common), the array is empty.
   ArrayRef<Elf_Word> shndxTable;
 
-  // Storage for local symbols.
-  std::unique_ptr<SymbolUnion[]> localSymStorage;
-
   // Debugging information to retrieve source file and line for error
   // reporting. Linker may find reasonable number of errors in a
   // single object file, so we cache debugging information in order to
@@ -320,7 +322,7 @@ public:
   BitcodeFile(MemoryBufferRef m, StringRef archiveName,
               uint64_t offsetInArchive, bool lazy);
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
-  template <class ELFT> void parse();
+  void parse();
   void parseLazy();
   void postParse();
   std::unique_ptr<llvm::lto::InputFile> obj;
@@ -330,9 +332,7 @@ public:
 // .so file.
 class SharedFile : public ELFFileBase {
 public:
-  SharedFile(MemoryBufferRef m, StringRef defaultSoName)
-      : ELFFileBase(SharedKind, m), soName(defaultSoName),
-        isNeeded(!config->asNeeded) {}
+  SharedFile(MemoryBufferRef m, StringRef defaultSoName);
 
   // This is actually a vector of Elf_Verdef pointers.
   SmallVector<const void *, 0> verdefs;

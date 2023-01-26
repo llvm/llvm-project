@@ -23,7 +23,7 @@ entry:
   ret ptr %0
 }
 
-define void @foobar({} addrspace(10)* addrspace(11)* %p) {
+define void @foobar(ptr addrspace(11) %p) {
 ; CHECK-LE-LABEL: foobar:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    ld 3, 0(3)
@@ -38,6 +38,6 @@ define void @foobar({} addrspace(10)* addrspace(11)* %p) {
 ; CHECK-NEXT:    bne- 7, .+4
 ; CHECK-NEXT:    isync
 entry:
-  %0 = load atomic {} addrspace(10)*, {} addrspace(10)* addrspace(11)* %p acquire, align 8
+  %0 = load atomic ptr addrspace(10), ptr addrspace(11) %p acquire, align 8
   unreachable
 }

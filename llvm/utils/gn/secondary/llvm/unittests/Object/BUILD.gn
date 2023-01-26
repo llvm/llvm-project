@@ -1,10 +1,11 @@
-import("//llvm/utils/unittest/unittest.gni")
+import("//third-party/unittest/unittest.gni")
 
 unittest("ObjectTests") {
   deps = [
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/Object",
     "//llvm/lib/ObjectYAML",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Testing/Support",
   ]
   sources = [

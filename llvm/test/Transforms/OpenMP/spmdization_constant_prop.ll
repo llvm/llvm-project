@@ -3,7 +3,7 @@
 ; Verify we change it to SPMD mode but also avoid propagating the old mode (=generic) into the __kmpc_target_init function.
 ;
 ; CHECK-NOT: store i32 0, ptr addrspace(3) @IsSPMDMode
-; CHECK: call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @1 to ptr), i8 2, i1 false, i1 false)
+; CHECK: call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @1 to ptr), i8 2, i1 false)
 ; CHECK-NOT: store i32 0, ptr addrspace(3) @IsSPMDMode
 ; CHECK: store i32 1, ptr addrspace(3) @IsSPMDMode
 ; CHECK-NOT: store i32 0, ptr addrspace(3) @IsSPMDMode
@@ -41,7 +41,7 @@ define weak_odr amdgpu_kernel void @__omp_offloading_20_11e3950_main_l12(i64 nou
 entry:
   %ng1 = alloca i32, align 4
   %captured_vars_addrs = alloca [2 x ptr], align 8, addrspace(5)
-  %0 = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @1 to ptr), i8 1, i1 true, i1 true)
+  %0 = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @1 to ptr), i8 1, i1 true)
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %common.ret
 
@@ -49,7 +49,7 @@ user_code.entry:                                  ; preds = %entry
   %captured_vars_addrs.ascast = addrspacecast ptr addrspace(5) %captured_vars_addrs to ptr
   store ptr %ng1, ptr addrspace(5) %captured_vars_addrs, align 8, !tbaa !7
   call void @__kmpc_parallel_51(ptr addrspacecast (ptr addrspace(1) @1 to ptr), i32 0, i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__, ptr nonnull @__omp_outlined___wrapper, ptr nonnull %captured_vars_addrs.ascast, i64 2)
-  call void @__kmpc_target_deinit(ptr addrspacecast (ptr addrspace(1) @1 to ptr), i8 1, i1 true)
+  call void @__kmpc_target_deinit(ptr addrspacecast (ptr addrspace(1) @1 to ptr), i8 1)
   br label %common.ret
 
 common.ret:                                       ; preds = %user_code.entry, %entry
@@ -97,15 +97,16 @@ declare void @llvm.assume(i1 noundef) #6
 declare void @llvm.amdgcn.s.barrier() #7
 
 ; Function Attrs: convergent mustprogress noinline nounwind willreturn
-define internal fastcc void @_ZN4_OMP11synchronize14threadsAlignedEv() unnamed_addr #8 {
+define internal fastcc void @_ZN4ompx11synchronize14threadsAlignedEv() unnamed_addr #8 {
 entry:
   call void @llvm.amdgcn.s.barrier() #13
   ret void
 }
 
 ; Function Attrs: convergent nounwind
-define internal i32 @__kmpc_target_init(ptr nocapture noundef readnone %Ident, i8 noundef signext %Mode, i1 noundef zeroext %UseGenericStateMachine, i1 noundef zeroext %0) local_unnamed_addr #9 {
+define internal i32 @__kmpc_target_init(ptr nocapture noundef readnone %Ident, i8 noundef signext %Mode, i1 noundef zeroext %UseGenericStateMachine) local_unnamed_addr #9 {
 entry:
+  %0 = and i32 undef, undef
   %1 = and i8 %Mode, 2
   %tobool.not = icmp eq i8 %1, 0
   br i1 %tobool.not, label %if.else, label %if.then
@@ -125,7 +126,7 @@ if.then:                                          ; preds = %entry
   %cmp4.i.i.i = icmp ult i32 %2, %9
   call void @llvm.assume(i1 %cmp4.i.i.i) #13
   %cmp.i.i8 = icmp eq i32 %2, 0
-  br i1 %cmp.i.i8, label %if.then.i, label %_ZN4_OMP5state4initEb.exit.critedge
+  br i1 %cmp.i.i8, label %if.then.i, label %_ZN4ompx5state4initEb.exit.critedge
 
 if.then.i:                                        ; preds = %if.then
   store i32 1, ptr addrspace(3) @IsSPMDMode, align 4, !tbaa !14
@@ -138,17 +139,17 @@ if.then.i:                                        ; preds = %if.then
   store i32 1, ptr addrspace(3) getelementptr inbounds (%"struct.(anonymous namespace)::TeamStateTy", ptr addrspace(3) @_ZN12_GLOBAL__N_19TeamStateE, i32 0, i32 0, i32 5), align 4, !tbaa !27
   store i32 1, ptr addrspace(3) getelementptr inbounds (%"struct.(anonymous namespace)::TeamStateTy", ptr addrspace(3) @_ZN12_GLOBAL__N_19TeamStateE, i32 0, i32 1), align 8, !tbaa !28
   store ptr null, ptr addrspace(3) getelementptr inbounds (%"struct.(anonymous namespace)::TeamStateTy", ptr addrspace(3) @_ZN12_GLOBAL__N_19TeamStateE, i32 0, i32 2), align 8, !tbaa !29
-  br label %_ZN4_OMP5state4initEb.exit
+  br label %_ZN4ompx5state4initEb.exit
 
-_ZN4_OMP5state4initEb.exit.critedge:              ; preds = %if.then
+_ZN4ompx5state4initEb.exit.critedge:              ; preds = %if.then
   %arrayidx.i.i.c = getelementptr inbounds [1024 x i8], ptr addrspace(3) getelementptr inbounds (%"struct.(anonymous namespace)::SharedMemorySmartStackTy", ptr addrspace(3) @_ZN12_GLOBAL__N_122SharedMemorySmartStackE, i32 0, i32 1, i32 0), i32 0, i32 %2
   store i8 0, ptr addrspace(3) %arrayidx.i.i.c, align 1, !tbaa !18
-  br label %_ZN4_OMP5state4initEb.exit
+  br label %_ZN4ompx5state4initEb.exit
 
-_ZN4_OMP5state4initEb.exit:                       ; preds = %_ZN4_OMP5state4initEb.exit.critedge, %if.then.i
+_ZN4ompx5state4initEb.exit:                       ; preds = %_ZN4ompx5state4initEb.exit.critedge, %if.then.i
   %arrayidx.i = getelementptr inbounds [1024 x ptr], ptr addrspace(3) @_ZN12_GLOBAL__N_112ThreadStatesE, i32 0, i32 %2
   store ptr null, ptr addrspace(3) %arrayidx.i, align 8, !tbaa !30
-  call fastcc void @_ZN4_OMP11synchronize14threadsAlignedEv() #14
+  call fastcc void @_ZN4ompx11synchronize14threadsAlignedEv() #14
   br label %if.end
 
 if.else:                                          ; preds = %entry
@@ -168,7 +169,7 @@ if.else:                                          ; preds = %entry
   %sub.i.i.i27 = add nsw i32 %16, -1
   %and.i.i.i28 = and i32 %sub.i.i.i27, -64
   %cmp.i2.i.i29 = icmp eq i32 %17, %and.i.i.i28
-  br i1 %cmp.i2.i.i29, label %if.then.i30, label %_ZN4_OMP5state4initEb.exit55.critedge
+  br i1 %cmp.i2.i.i29, label %if.then.i30, label %_ZN4ompx5state4initEb.exit55.critedge
 
 if.then.i30:                                      ; preds = %if.else
   store i32 0, ptr addrspace(3) @IsSPMDMode, align 4, !tbaa !14
@@ -183,19 +184,19 @@ if.then.i30:                                      ; preds = %if.else
   store i32 1, ptr addrspace(3) getelementptr inbounds (%"struct.(anonymous namespace)::TeamStateTy", ptr addrspace(3) @_ZN12_GLOBAL__N_19TeamStateE, i32 0, i32 0, i32 5), align 4, !tbaa !27
   store i32 1, ptr addrspace(3) getelementptr inbounds (%"struct.(anonymous namespace)::TeamStateTy", ptr addrspace(3) @_ZN12_GLOBAL__N_19TeamStateE, i32 0, i32 1), align 8, !tbaa !28
   store ptr null, ptr addrspace(3) getelementptr inbounds (%"struct.(anonymous namespace)::TeamStateTy", ptr addrspace(3) @_ZN12_GLOBAL__N_19TeamStateE, i32 0, i32 2), align 8, !tbaa !29
-  br label %_ZN4_OMP5state4initEb.exit55
+  br label %_ZN4ompx5state4initEb.exit55
 
-_ZN4_OMP5state4initEb.exit55.critedge:            ; preds = %if.else
+_ZN4ompx5state4initEb.exit55.critedge:            ; preds = %if.else
   %arrayidx.i.i46.c = getelementptr inbounds [1024 x i8], ptr addrspace(3) getelementptr inbounds (%"struct.(anonymous namespace)::SharedMemorySmartStackTy", ptr addrspace(3) @_ZN12_GLOBAL__N_122SharedMemorySmartStackE, i32 0, i32 1, i32 0), i32 0, i32 %17
   store i8 0, ptr addrspace(3) %arrayidx.i.i46.c, align 1, !tbaa !18
-  br label %_ZN4_OMP5state4initEb.exit55
+  br label %_ZN4ompx5state4initEb.exit55
 
-_ZN4_OMP5state4initEb.exit55:                     ; preds = %_ZN4_OMP5state4initEb.exit55.critedge, %if.then.i30
+_ZN4ompx5state4initEb.exit55:                     ; preds = %_ZN4ompx5state4initEb.exit55.critedge, %if.then.i30
   %arrayidx.i53 = getelementptr inbounds [1024 x ptr], ptr addrspace(3) @_ZN12_GLOBAL__N_112ThreadStatesE, i32 0, i32 %17
   store ptr null, ptr addrspace(3) %arrayidx.i53, align 8, !tbaa !30
   br label %if.end
 
-if.end:                                           ; preds = %_ZN4_OMP5state4initEb.exit55, %_ZN4_OMP5state4initEb.exit
+if.end:                                           ; preds = %_ZN4ompx5state4initEb.exit55, %_ZN4ompx5state4initEb.exit
   %18 = call i32 @llvm.amdgcn.workgroup.id.x() #13
   %19 = call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #13
   %20 = getelementptr i8, ptr addrspace(4) %19, i64 12
@@ -209,9 +210,9 @@ if.end:                                           ; preds = %_ZN4_OMP5state4init
   %25 = call i32 @llvm.amdgcn.workitem.id.x() #13
   %cmp.i.i.i79 = icmp ult i32 %25, %24
   call void @llvm.assume(i1 %cmp.i.i.i79) #13
-  br i1 %tobool.not, label %_ZN4_OMP7mapping23isInitialThreadInLevel0Eb.exit, label %_ZN4_OMP7mapping12getBlockSizeEb.exit.i64
+  br i1 %tobool.not, label %_ZN4ompx7mapping23isInitialThreadInLevel0Eb.exit, label %_ZN4ompx7mapping12getBlockSizeEb.exit.i64
 
-_ZN4_OMP7mapping12getBlockSizeEb.exit.i64:        ; preds = %if.end
+_ZN4ompx7mapping12getBlockSizeEb.exit.i64:        ; preds = %if.end
   %26 = load i32, ptr addrspace(3) @_ZN12_GLOBAL__N_19TeamStateE, align 8
   %cmp.i.i.i63 = icmp eq i32 %24, %26
   call void @llvm.assume(i1 %cmp.i.i.i63) #13
@@ -238,13 +239,13 @@ _ZN4_OMP7mapping12getBlockSizeEb.exit.i64:        ; preds = %if.end
   call void @llvm.assume(i1 %tobool.i59.i) #13
   br label %_ZN14DebugEntryRAIID2Ev.exit250
 
-_ZN4_OMP7mapping23isInitialThreadInLevel0Eb.exit: ; preds = %if.end
+_ZN4ompx7mapping23isInitialThreadInLevel0Eb.exit: ; preds = %if.end
   %sub.i.i83 = add nsw i32 %24, -1
   %and.i.i84 = and i32 %sub.i.i83, -64
   %cmp.i2.i = icmp eq i32 %25, %and.i.i84
   br i1 %cmp.i2.i, label %_ZN14DebugEntryRAIID2Ev.exit250, label %if.end10
 
-if.end10:                                         ; preds = %_ZN4_OMP7mapping23isInitialThreadInLevel0Eb.exit
+if.end10:                                         ; preds = %_ZN4ompx7mapping23isInitialThreadInLevel0Eb.exit
   %sub.i = add nsw i32 %24, -64
   %cmp = icmp ult i32 %25, %sub.i
   %or.cond251 = select i1 %UseGenericStateMachine, i1 %cmp, i1 false
@@ -254,13 +255,13 @@ do.body.i:                                        ; preds = %if.end10
   call void @llvm.amdgcn.s.barrier() #13
   br label %_ZN14DebugEntryRAIID2Ev.exit250
 
-_ZN14DebugEntryRAIID2Ev.exit250:                  ; preds = %do.body.i, %if.end10, %_ZN4_OMP7mapping23isInitialThreadInLevel0Eb.exit, %_ZN4_OMP7mapping12getBlockSizeEb.exit.i64
-  %retval.0 = phi i32 [ -1, %_ZN4_OMP7mapping12getBlockSizeEb.exit.i64 ], [ -1, %_ZN4_OMP7mapping23isInitialThreadInLevel0Eb.exit ], [ %25, %do.body.i ], [ %25, %if.end10 ]
+_ZN14DebugEntryRAIID2Ev.exit250:                  ; preds = %do.body.i, %if.end10, %_ZN4ompx7mapping23isInitialThreadInLevel0Eb.exit, %_ZN4ompx7mapping12getBlockSizeEb.exit.i64
+  %retval.0 = phi i32 [ -1, %_ZN4ompx7mapping12getBlockSizeEb.exit.i64 ], [ -1, %_ZN4ompx7mapping23isInitialThreadInLevel0Eb.exit ], [ %25, %do.body.i ], [ %25, %if.end10 ]
   ret i32 %retval.0
 }
 
 ; Function Attrs: nounwind
-define internal void @__kmpc_target_deinit(ptr nocapture noundef readnone %Ident, i8 noundef signext %Mode, i1 noundef zeroext %0) local_unnamed_addr #10 {
+define internal void @__kmpc_target_deinit(ptr nocapture noundef readnone %Ident, i8 noundef signext %Mode) local_unnamed_addr #10 {
   ret void
 }
 

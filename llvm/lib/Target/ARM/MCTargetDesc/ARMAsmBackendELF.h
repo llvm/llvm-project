@@ -28,7 +28,7 @@ public:
     return createARMELFObjectWriter(OSABI);
   }
 
-  Optional<MCFixupKind> getFixupKind(StringRef Name) const override;
+  std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 };
 }
 

@@ -5,15 +5,15 @@
 ; analysis doesn't repeatedly add a phis values to itself until it segfaults.
 
 ; CHECK-LABEL: PHI Values for function: fn
-define void @fn(i8* %arg) {
+define void @fn(ptr %arg) {
 entry:
   br label %for.body
 
 for.body:
 ; CHECK: PHI %phi1 has values:
-; CHECK-DAG: i8* %arg
-; CHECK-DAG: i8* undef
-  %phi1 = phi i8* [ %arg, %entry ], [ %phi2, %end ]
+; CHECK-DAG: ptr %arg
+; CHECK-DAG: ptr undef
+  %phi1 = phi ptr [ %arg, %entry ], [ %phi2, %end ]
   switch i32 undef, label %end [
     i32 1, label %bb1
     i32 2, label %bb2
@@ -71,8 +71,8 @@ bb13:
 
 end:
 ; CHECK: PHI %phi2 has values:
-; CHECK-DAG: i8* %arg
-; CHECK-DAG: i8* undef
-  %phi2 = phi i8* [ %phi1, %for.body ], [ %phi1, %bb1 ], [ %phi1, %bb2 ], [ %phi1, %bb3 ], [ %phi1, %bb4 ], [ %phi1, %bb5 ], [ %phi1, %bb6 ], [ %phi1, %bb7 ], [ undef, %bb8 ], [ %phi1, %bb9 ], [ %phi1, %bb10 ], [ %phi1, %bb11 ], [ %phi1, %bb12 ], [ %phi1, %bb13 ]
+; CHECK-DAG: ptr %arg
+; CHECK-DAG: ptr undef
+  %phi2 = phi ptr [ %phi1, %for.body ], [ %phi1, %bb1 ], [ %phi1, %bb2 ], [ %phi1, %bb3 ], [ %phi1, %bb4 ], [ %phi1, %bb5 ], [ %phi1, %bb6 ], [ %phi1, %bb7 ], [ undef, %bb8 ], [ %phi1, %bb9 ], [ %phi1, %bb10 ], [ %phi1, %bb11 ], [ %phi1, %bb12 ], [ %phi1, %bb13 ]
   br label %for.body
 }

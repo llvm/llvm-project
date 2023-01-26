@@ -55,8 +55,7 @@ module attributes {"test.name" = "Normal function call"} {
 module attributes {"test.name" = "Invoke call"} {
   // CHECK-LABEL: ---- CallGraph ----
   // CHECK: - Node : 'llvm.func' {{.*}} sym_name = "invokeLandingpad"
-  // CHECK-DAG: -- Call-Edge : 'llvm.func' {{.*}} sym_name = "foo"
-  // CHECK-DAG: -- Call-Edge : 'llvm.func' {{.*}} sym_name = "bar"
+  // CHECK-DAG: -- Call-Edge : <Unknown-Callee-Node>
 
   // CHECK: -- SCCs --
   llvm.mlir.global external constant @_ZTIi() : !llvm.ptr<i8>

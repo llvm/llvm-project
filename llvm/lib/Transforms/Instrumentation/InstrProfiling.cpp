@@ -259,7 +259,7 @@ public:
     // of the loop, the result profile is incomplete.
     // FIXME: add other heuristics to detect long running loops.
     if (SkipRetExitBlock) {
-      for (auto BB : ExitBlocks)
+      for (auto *BB : ExitBlocks)
         if (isa<ReturnInst>(BB->getTerminator()))
           return false;
     }
@@ -525,15 +525,15 @@ bool InstrProfiling::run(
   TT = Triple(M.getTargetTriple());
 
   bool MadeChange = false;
-
-  // Emit the runtime hook even if no counters are present.
-  if (needsRuntimeHookUnconditionally(TT))
+  bool NeedsRuntimeHook = needsRuntimeHookUnconditionally(TT);
+  if (NeedsRuntimeHook)
     MadeChange = emitRuntimeHook();
 
-  // Improve compile time by avoiding linear scans when there is no work.
+  bool ContainsProfiling = containsProfilingIntrinsics(M);
   GlobalVariable *CoverageNamesVar =
       M.getNamedGlobal(getCoverageUnusedNamesVarName());
-  if (!containsProfilingIntrinsics(M) && !CoverageNamesVar)
+  // Improve compile time by avoiding linear scans when there is no work.
+  if (!ContainsProfiling && !CoverageNamesVar)
     return MadeChange;
 
   // We did not know how many value sites there would be inside
@@ -567,7 +567,14 @@ bool InstrProfiling::run(
 
   emitVNodes();
   emitNameData();
-  emitRuntimeHook();
+
+  // Emit runtime hook for the cases where the target does not unconditionally
+  // require pulling in profile runtime, and coverage is enabled on code that is
+  // not eliminated by the front-end, e.g. unused functions with internal
+  // linkage.
+  if (!NeedsRuntimeHook && ContainsProfiling)
+    emitRuntimeHook();
+
   emitRegistration();
   emitUses();
   emitInitialization();
@@ -592,7 +599,7 @@ static FunctionCallee getOrInsertValueProfilingCall(
 #include "llvm/ProfileData/InstrProfData.inc"
   };
   auto *ValueProfilingCallTy =
-      FunctionType::get(ReturnTy, makeArrayRef(ParamTypes), false);
+      FunctionType::get(ReturnTy, ArrayRef(ParamTypes), false);
   StringRef FuncName = CallType == ValueProfilingCallType::Default
                            ? getInstrProfValueProfFuncName()
                            : getInstrProfValueProfMemOpFuncName();
@@ -914,6 +921,11 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
       if (!NeedComdat)
         C->setSelectionKind(Comdat::NoDeduplicate);
       GV->setComdat(C);
+      // COFF doesn't allow the comdat group leader to have private linkage, so
+      // upgrade private linkage to internal linkage to produce a symbol table
+      // entry.
+      if (TT.isOSBinFormatCOFF() && GV->hasPrivateLinkage())
+        GV->setLinkage(GlobalValue::InternalLinkage);
     }
   };
 
@@ -924,8 +936,8 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
   CounterPtr->setVisibility(Visibility);
   CounterPtr->setSection(
       getInstrProfSectionName(IPSK_cnts, TT.getObjectFormat()));
-  MaybeSetComdat(CounterPtr);
   CounterPtr->setLinkage(Linkage);
+  MaybeSetComdat(CounterPtr);
   PD.RegionCounters = CounterPtr;
   if (DebugInfoCorrelate) {
     if (auto *SP = Fn->getSubprogram()) {
@@ -1000,7 +1012,7 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
 #define INSTR_PROF_DATA(Type, LLVMType, Name, Init) LLVMType,
 #include "llvm/ProfileData/InstrProfData.inc"
   };
-  auto *DataTy = StructType::get(Ctx, makeArrayRef(DataTypes));
+  auto *DataTy = StructType::get(Ctx, ArrayRef(DataTypes));
 
   Constant *FunctionAddr = shouldRecordFunctionAddr(Fn)
                                ? ConstantExpr::getBitCast(Fn, Int8PtrTy)
@@ -1045,7 +1057,6 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
   Data->setSection(getInstrProfSectionName(IPSK_data, TT.getObjectFormat()));
   Data->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));
   MaybeSetComdat(Data);
-  Data->setLinkage(Linkage);
 
   PD.DataVar = Data;
 
@@ -1097,7 +1108,7 @@ void InstrProfiling::emitVNodes() {
 #define INSTR_PROF_VALUE_NODE(Type, LLVMType, Name, Init) LLVMType,
 #include "llvm/ProfileData/InstrProfData.inc"
   };
-  auto *VNodeTy = StructType::get(Ctx, makeArrayRef(VNodeTypes));
+  auto *VNodeTy = StructType::get(Ctx, ArrayRef(VNodeTypes));
 
   ArrayType *VNodesTy = ArrayType::get(VNodeTy, NumCounters);
   auto *VNodesVar = new GlobalVariable(
@@ -1174,7 +1185,7 @@ void InstrProfiling::emitRegistration() {
   if (NamesVar) {
     Type *ParamTypes[] = {VoidPtrTy, Int64Ty};
     auto *NamesRegisterTy =
-        FunctionType::get(VoidTy, makeArrayRef(ParamTypes), false);
+        FunctionType::get(VoidTy, ArrayRef(ParamTypes), false);
     auto *NamesRegisterF =
         Function::Create(NamesRegisterTy, GlobalVariable::ExternalLinkage,
                          getInstrProfNamesRegFuncName(), M);
@@ -1188,7 +1199,7 @@ void InstrProfiling::emitRegistration() {
 bool InstrProfiling::emitRuntimeHook() {
   // We expect the linker to be invoked with -u<hook_var> flag for Linux
   // in which case there is no need to emit the external variable.
-  if (TT.isOSLinux())
+  if (TT.isOSLinux() || TT.isOSAIX())
     return false;
 
   // If the module's provided its own runtime, we don't need to do anything.

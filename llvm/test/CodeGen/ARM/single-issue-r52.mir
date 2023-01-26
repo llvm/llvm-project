@@ -9,14 +9,14 @@
 
   %struct.__neon_int8x8x4_t = type { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> }
   ; Function Attrs: nounwind
-  define <8 x i8> @foo(i8* %A) {
-    %tmp1 = call %struct.__neon_int8x8x4_t @llvm.arm.neon.vld4.v8i8.p0i8(i8* %A, i32 8)
+  define <8 x i8> @foo(ptr %A) {
+    %tmp1 = call %struct.__neon_int8x8x4_t @llvm.arm.neon.vld4.v8i8.p0(ptr %A, i32 8)
     %tmp2 = extractvalue %struct.__neon_int8x8x4_t %tmp1, 0
     %tmp3 = extractvalue %struct.__neon_int8x8x4_t %tmp1, 1
     %tmp4 = add <8 x i8> %tmp2, %tmp3
     ret <8 x i8> %tmp4
   }
-  declare %struct.__neon_int8x8x4_t @llvm.arm.neon.vld4.v8i8.p0i8(i8*, i32)
+  declare %struct.__neon_int8x8x4_t @llvm.arm.neon.vld4.v8i8.p0(ptr, i32)
 
 # CHECK: ********** MI Scheduling **********
 # CHECK: ScheduleDAGMILive::schedule starting

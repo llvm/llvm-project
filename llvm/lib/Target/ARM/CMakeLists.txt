@@ -82,6 +82,7 @@ add_llvm_target(ARMCodeGen
   SelectionDAG
   Support
   Target
+  TargetParser
   GlobalISel
   ARMUtils
   TransformUtils

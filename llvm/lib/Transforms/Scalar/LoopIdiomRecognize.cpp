@@ -441,7 +441,7 @@ static Constant *getMemSetPatternValue(Value *V, const DataLayout *DL) {
   // array.  We could theoretically do a store to an alloca or something, but
   // that doesn't seem worthwhile.
   Constant *C = dyn_cast<Constant>(V);
-  if (!C)
+  if (!C || isa<ConstantExpr>(C))
     return nullptr;
 
   // Only handle simple values that are a power of two bytes in size.
@@ -496,8 +496,8 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
   // When storing out scalable vectors we bail out for now, since the code
   // below currently only works for constant strides.
   TypeSize SizeInBits = DL->getTypeSizeInBits(StoredVal->getType());
-  if (SizeInBits.isScalable() || (SizeInBits.getFixedSize() & 7) ||
-      (SizeInBits.getFixedSize() >> 32) != 0)
+  if (SizeInBits.isScalable() || (SizeInBits.getFixedValue() & 7) ||
+      (SizeInBits.getFixedValue() >> 32) != 0)
     return LegalStoreKind::None;
 
   // See if the pointer expression is an AddRec like {base,+,1} on the current
@@ -1028,8 +1028,7 @@ mayLoopAccessLocation(Value *Ptr, ModRefInfo Access, Loop *L,
   for (BasicBlock *B : L->blocks())
     for (Instruction &I : *B)
       if (!IgnoredInsts.contains(&I) &&
-          isModOrRefSet(
-              intersectModRef(AA.getModRefInfo(&I, StoreLoc), Access)))
+          isModOrRefSet(AA.getModRefInfo(&I, StoreLoc) & Access))
         return true;
   return false;
 }
@@ -1273,6 +1272,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
                                     StoreEv, LoadEv, BECount);
 }
 
+namespace {
 class MemmoveVerifier {
 public:
   explicit MemmoveVerifier(const Value &LoadBasePtr, const Value &StoreBasePtr,
@@ -1296,7 +1296,7 @@ public:
       // Ensure that LoadBasePtr is after StoreBasePtr or before StoreBasePtr
       // for negative stride. LoadBasePtr shouldn't overlap with StoreBasePtr.
       int64_t LoadSize =
-          DL.getTypeSizeInBits(TheLoad.getType()).getFixedSize() / 8;
+          DL.getTypeSizeInBits(TheLoad.getType()).getFixedValue() / 8;
       if (BP1 != BP2 || LoadSize != int64_t(StoreSize))
         return false;
       if ((!IsNegStride && LoadOff < StoreOff + int64_t(StoreSize)) ||
@@ -1316,6 +1316,7 @@ private:
 public:
   const bool IsSameObject;
 };
+} // namespace
 
 bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
     Value *DestPtr, Value *SourcePtr, const SCEV *StoreSizeSCEV,
@@ -1483,7 +1484,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
     // anything where the alignment isn't at least the element size.
     assert((StoreAlign && LoadAlign) &&
            "Expect unordered load/store to have align.");
-    if (StoreAlign.value() < StoreSize || LoadAlign.value() < StoreSize)
+    if (*StoreAlign < StoreSize || *LoadAlign < StoreSize)
       return Changed;
 
     // If the element.atomic memcpy is not lowered into explicit
@@ -1497,9 +1498,8 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
     // Note that unordered atomic loads/stores are *required* by the spec to
     // have an alignment but non-atomic loads/stores may not.
     NewCall = Builder.CreateElementUnorderedAtomicMemCpy(
-        StoreBasePtr, StoreAlign.value(), LoadBasePtr, LoadAlign.value(),
-        NumBytes, StoreSize, AATags.TBAA, AATags.TBAAStruct, AATags.Scope,
-        AATags.NoAlias);
+        StoreBasePtr, *StoreAlign, LoadBasePtr, *LoadAlign, NumBytes, StoreSize,
+        AATags.TBAA, AATags.TBAAStruct, AATags.Scope, AATags.NoAlias);
   }
   NewCall->setDebugLoc(TheStore->getDebugLoc());
 

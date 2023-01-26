@@ -34,9 +34,9 @@ define <4 x i32> @f1(<4 x i32> %src, i32 %val, i32 %index) {
   ret <4 x i32> %res
 }
 
-define void @f2(<4 x i32> *%dest, <4 x i32> *%src, i32 %index) {
+define void @f2(ptr %dest, ptr %src, i32 %index) {
 ; DEFAULT-LABEL: @f2(
-; DEFAULT-NEXT:    [[VAL0:%.*]] = load <4 x i32>, <4 x i32>* [[SRC:%.*]], align 16
+; DEFAULT-NEXT:    [[VAL0:%.*]] = load <4 x i32>, ptr [[SRC:%.*]], align 16
 ; DEFAULT-NEXT:    [[INDEX_IS_0:%.*]] = icmp eq i32 [[INDEX:%.*]], 0
 ; DEFAULT-NEXT:    [[VAL0_I0:%.*]] = extractelement <4 x i32> [[VAL0]], i32 0
 ; DEFAULT-NEXT:    [[VAL1_I0:%.*]] = select i1 [[INDEX_IS_0]], i32 1, i32 [[VAL0_I0]]
@@ -57,11 +57,11 @@ define void @f2(<4 x i32> *%dest, <4 x i32> *%src, i32 %index) {
 ; DEFAULT-NEXT:    [[VAL2_UPTO1:%.*]] = insertelement <4 x i32> [[VAL2_UPTO0]], i32 [[VAL2_I1]], i32 1
 ; DEFAULT-NEXT:    [[VAL2_UPTO2:%.*]] = insertelement <4 x i32> [[VAL2_UPTO1]], i32 [[VAL2_I2]], i32 2
 ; DEFAULT-NEXT:    [[VAL2:%.*]] = insertelement <4 x i32> [[VAL2_UPTO2]], i32 [[VAL2_I3]], i32 3
-; DEFAULT-NEXT:    store <4 x i32> [[VAL2]], <4 x i32>* [[DEST:%.*]], align 16
+; DEFAULT-NEXT:    store <4 x i32> [[VAL2]], ptr [[DEST:%.*]], align 16
 ; DEFAULT-NEXT:    ret void
 ;
 ; OFF-LABEL: @f2(
-; OFF-NEXT:    [[VAL0:%.*]] = load <4 x i32>, <4 x i32>* [[SRC:%.*]], align 16
+; OFF-NEXT:    [[VAL0:%.*]] = load <4 x i32>, ptr [[SRC:%.*]], align 16
 ; OFF-NEXT:    [[VAL1:%.*]] = insertelement <4 x i32> [[VAL0]], i32 1, i32 [[INDEX:%.*]]
 ; OFF-NEXT:    [[VAL1_I0:%.*]] = extractelement <4 x i32> [[VAL1]], i32 0
 ; OFF-NEXT:    [[VAL2_I0:%.*]] = shl i32 1, [[VAL1_I0]]
@@ -75,12 +75,12 @@ define void @f2(<4 x i32> *%dest, <4 x i32> *%src, i32 %index) {
 ; OFF-NEXT:    [[VAL2_UPTO1:%.*]] = insertelement <4 x i32> [[VAL2_UPTO0]], i32 [[VAL2_I1]], i32 1
 ; OFF-NEXT:    [[VAL2_UPTO2:%.*]] = insertelement <4 x i32> [[VAL2_UPTO1]], i32 [[VAL2_I2]], i32 2
 ; OFF-NEXT:    [[VAL2:%.*]] = insertelement <4 x i32> [[VAL2_UPTO2]], i32 [[VAL2_I3]], i32 3
-; OFF-NEXT:    store <4 x i32> [[VAL2]], <4 x i32>* [[DEST:%.*]], align 16
+; OFF-NEXT:    store <4 x i32> [[VAL2]], ptr [[DEST:%.*]], align 16
 ; OFF-NEXT:    ret void
 ;
-  %val0 = load <4 x i32> , <4 x i32> *%src
+  %val0 = load <4 x i32> , ptr %src
   %val1 = insertelement <4 x i32> %val0, i32 1, i32 %index
   %val2 = shl <4 x i32> <i32 1, i32 2, i32 3, i32 4>, %val1
-  store <4 x i32> %val2, <4 x i32> *%dest
+  store <4 x i32> %val2, ptr %dest
   ret void
 }

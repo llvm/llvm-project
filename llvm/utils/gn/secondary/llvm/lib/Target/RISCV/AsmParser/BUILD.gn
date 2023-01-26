@@ -18,6 +18,7 @@ static_library("AsmParser") {
     "//llvm/lib/Support",
     "//llvm/lib/Target/RISCV:RISCVGenCompressInstEmitter",
     "//llvm/lib/Target/RISCV/MCTargetDesc",
+    "//llvm/lib/TargetParser",
   ]
   include_dirs = [ ".." ]
   sources = [ "RISCVAsmParser.cpp" ]

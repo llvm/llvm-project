@@ -38,8 +38,9 @@ protected:
   }
 
   void addSearchDir(llvm::StringRef Dir) {
-    VFS->addFile(Dir, 0, llvm::MemoryBuffer::getMemBuffer(""), /*User=*/None,
-                 /*Group=*/None, llvm::sys::fs::file_type::directory_file);
+    VFS->addFile(
+        Dir, 0, llvm::MemoryBuffer::getMemBuffer(""), /*User=*/std::nullopt,
+        /*Group=*/std::nullopt, llvm::sys::fs::file_type::directory_file);
     auto DE = FileMgr.getOptionalDirectoryRef(Dir);
     assert(DE);
     auto DL = DirectoryLookup(*DE, SrcMgr::C_User, /*isFramework=*/false);
@@ -47,8 +48,9 @@ protected:
   }
 
   void addSystemFrameworkSearchDir(llvm::StringRef Dir) {
-    VFS->addFile(Dir, 0, llvm::MemoryBuffer::getMemBuffer(""), /*User=*/None,
-                 /*Group=*/None, llvm::sys::fs::file_type::directory_file);
+    VFS->addFile(
+        Dir, 0, llvm::MemoryBuffer::getMemBuffer(""), /*User=*/std::nullopt,
+        /*Group=*/std::nullopt, llvm::sys::fs::file_type::directory_file);
     auto DE = FileMgr.getOptionalDirectoryRef(Dir);
     assert(DE);
     auto DL = DirectoryLookup(*DE, SrcMgr::C_System, /*isFramework=*/true);
@@ -58,7 +60,8 @@ protected:
   void addHeaderMap(llvm::StringRef Filename,
                     std::unique_ptr<llvm::MemoryBuffer> Buf,
                     bool isAngled = false) {
-    VFS->addFile(Filename, 0, std::move(Buf), /*User=*/None, /*Group=*/None,
+    VFS->addFile(Filename, 0, std::move(Buf), /*User=*/std::nullopt,
+                 /*Group=*/std::nullopt,
                  llvm::sys::fs::file_type::regular_file);
     auto FE = FileMgr.getFile(Filename, true);
     assert(FE);
@@ -150,6 +153,14 @@ TEST_F(HeaderSearchTest, DotDotsWithAbsPath) {
             "z");
 }
 
+TEST_F(HeaderSearchTest, BothDotDots) {
+  addSearchDir("/x/../y/");
+  EXPECT_EQ(Search.suggestPathToFileForDiagnostics("/x/../y/z",
+                                                   /*WorkingDir=*/"",
+                                                   /*MainFile=*/""),
+            "z");
+}
+
 TEST_F(HeaderSearchTest, IncludeFromSameDirectory) {
   EXPECT_EQ(Search.suggestPathToFileForDiagnostics("/y/z/t.h",
                                                    /*WorkingDir=*/"",
@@ -189,9 +200,10 @@ TEST_F(HeaderSearchTest, NestedFramework) {
 TEST_F(HeaderSearchTest, HeaderFrameworkLookup) {
   std::string HeaderPath = "/tmp/Frameworks/Foo.framework/Headers/Foo.h";
   addSystemFrameworkSearchDir("/tmp/Frameworks");
-  VFS->addFile(
-      HeaderPath, 0, llvm::MemoryBuffer::getMemBufferCopy("", HeaderPath),
-      /*User=*/None, /*Group=*/None, llvm::sys::fs::file_type::regular_file);
+  VFS->addFile(HeaderPath, 0,
+               llvm::MemoryBuffer::getMemBufferCopy("", HeaderPath),
+               /*User=*/std::nullopt, /*Group=*/std::nullopt,
+               llvm::sys::fs::file_type::regular_file);
 
   bool IsFrameworkFound = false;
   auto FoundFile = Search.LookupFile(
@@ -202,7 +214,7 @@ TEST_F(HeaderSearchTest, HeaderFrameworkLookup) {
 
   EXPECT_TRUE(FoundFile.has_value());
   EXPECT_TRUE(IsFrameworkFound);
-  auto &FE = FoundFile.value();
+  auto &FE = *FoundFile;
   auto FI = Search.getExistingFileInfo(FE);
   EXPECT_TRUE(FI);
   EXPECT_TRUE(FI->IsValid);
@@ -259,7 +271,8 @@ TEST_F(HeaderSearchTest, HeaderMapFrameworkLookup) {
   VFS->addFile(
       HeaderDirName + HeaderName, 0,
       llvm::MemoryBuffer::getMemBufferCopy("", HeaderDirName + HeaderName),
-      /*User=*/None, /*Group=*/None, llvm::sys::fs::file_type::regular_file);
+      /*User=*/std::nullopt, /*Group=*/std::nullopt,
+      llvm::sys::fs::file_type::regular_file);
 
   bool IsMapped = false;
   auto FoundFile = Search.LookupFile(
@@ -271,7 +284,7 @@ TEST_F(HeaderSearchTest, HeaderMapFrameworkLookup) {
 
   EXPECT_TRUE(FoundFile.has_value());
   EXPECT_TRUE(IsMapped);
-  auto &FE = FoundFile.value();
+  auto &FE = *FoundFile;
   auto FI = Search.getExistingFileInfo(FE);
   EXPECT_TRUE(FI);
   EXPECT_TRUE(FI->IsValid);

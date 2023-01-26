@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <cassert>
+#include <optional>
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/dwarf.h"
@@ -187,16 +188,16 @@ static FormSize g_form_sizes[] = {
     {1, 8},  // 0x20 DW_FORM_ref_sig8
 };
 
-llvm::Optional<uint8_t>
-DWARFFormValue::GetFixedSize(dw_form_t form, const DWARFUnit *u) {
+std::optional<uint8_t> DWARFFormValue::GetFixedSize(dw_form_t form,
+                                                    const DWARFUnit *u) {
   if (form <= DW_FORM_ref_sig8 && g_form_sizes[form].valid)
-    return g_form_sizes[form].size;
+    return static_cast<uint8_t>(g_form_sizes[form].size);
   if (form == DW_FORM_addr && u)
     return u->GetAddressByteSize();
-  return llvm::None;
+  return std::nullopt;
 }
 
-llvm::Optional<uint8_t> DWARFFormValue::GetFixedSize() const {
+std::optional<uint8_t> DWARFFormValue::GetFixedSize() const {
   return GetFixedSize(m_form, m_unit);
 }
 
@@ -468,7 +469,7 @@ const char *DWARFFormValue::AsCString() const {
       m_form == DW_FORM_strx1 || m_form == DW_FORM_strx2 ||
       m_form == DW_FORM_strx3 || m_form == DW_FORM_strx4) {
 
-    llvm::Optional<uint64_t> offset =
+    std::optional<uint64_t> offset =
         m_unit->GetStringOffsetSectionItem(m_value.value.uval);
     if (!offset)
       return nullptr;
@@ -512,8 +513,7 @@ DWARFDIE DWARFFormValue::Reference() const {
     value += m_unit->GetOffset();
     if (!m_unit->ContainsDIEOffset(value)) {
       m_unit->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-          "DW_FORM_ref* DIE reference 0x%" PRIx64 " is outside of its CU",
-          value);
+          "DW_FORM_ref* DIE reference {0:x16} is outside of its CU", value);
       return {};
     }
     return const_cast<DWARFUnit *>(m_unit)->GetDIE(value);
@@ -524,8 +524,7 @@ DWARFDIE DWARFFormValue::Reference() const {
             DIERef::Section::DebugInfo, value);
     if (!ref_cu) {
       m_unit->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-          "DW_FORM_ref_addr DIE reference 0x%" PRIx64 " has no matching CU",
-          value);
+          "DW_FORM_ref_addr DIE reference {0:x16} has no matching CU", value);
       return {};
     }
     return ref_cu->GetDIE(value);

@@ -13,7 +13,7 @@
 #include "index/Index.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Testing/Support/Annotations.h"
+#include "llvm/Testing/Annotations/Annotations.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -25,9 +25,9 @@ namespace clangd {
 // Fixture base for testing tweaks. Intended to be subclassed for each tweak.
 //
 // Usage:
-// TWEAK_TEST(ExpandAutoType);
+// TWEAK_TEST(ExpandDeducedType);
 //
-// TEST_F(ExpandAutoTypeTest, ShortensTypes) {
+// TEST_F(ExpandDeducedTypeTest, ShortensTypes) {
 //   Header = R"cpp(
 //     namespace foo { template<typename> class X{}; }
 //     using namespace foo;

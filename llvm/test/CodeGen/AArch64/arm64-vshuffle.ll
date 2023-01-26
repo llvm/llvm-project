@@ -28,7 +28,7 @@ bb:
   ret <8 x i1> %Shuff
 }
 
-define <16 x i1> @test3(i1* %ptr, i32 %v) {
+define <16 x i1> @test3(ptr %ptr, i32 %v) {
 ; CHECK-LABEL: test3:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    movi.2d v0, #0x0000ff000000ff
@@ -57,7 +57,7 @@ bb:
 ; CHECK:         .byte   0                       ; 0x0
 ; CHECK:         .byte   0                       ; 0x0
 ; CHECK:         .byte   0                       ; 0x0
-define <16 x i1> @test4(i1* %ptr, i32 %v) {
+define <16 x i1> @test4(ptr %ptr, i32 %v) {
 ; CHECK-LABEL: _test4:
 ; CHECK:         adrp    x[[REG3:[0-9]+]], lCPI3_0@PAGE
 ; CHECK:         ldr     q[[REG2:[0-9]+]], [x[[REG3]], lCPI3_0@PAGEOFF]

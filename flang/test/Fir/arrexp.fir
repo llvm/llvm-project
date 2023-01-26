@@ -112,7 +112,7 @@ func.func @f5(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf
   %3 = fir.array_load %arg1 : (!fir.box<!fir.array<?xf32>>) -> !fir.array<?xf32>
   // CHECK: icmp sgt
   %4 = fir.do_loop %arg3 = %c0 to %1 step %c1 iter_args(%arg4 = %2) -> (!fir.array<?xf32>) {
-    // CHECK: %[[B_STRIDE_GEP:.*]] = getelementptr {{.*}}, ptr %[[B]], i32 0, i32 7, i64 0, i32 2
+    // CHECK: %[[B_STRIDE_GEP:.*]] = getelementptr {{.*}}, ptr %[[B]], i32 0, i32 7, i32 0, i32 2
     // CHECK: %[[B_STRIDE:.*]] = load i64, ptr %[[B_STRIDE_GEP]]
     // CHECK: %[[B_DIM_OFFSET:.*]] = mul i64 %{{.*}}, %[[B_STRIDE]]
     // CHECK: %[[B_OFFSET:.*]] =  add i64 %[[B_DIM_OFFSET]], 0
@@ -145,7 +145,7 @@ func.func @f6(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: f32) {
 
   // CHECK: %[[EXT_GEP:.*]] = getelementptr {{.*}} %[[A]], i32 0, i32 7, i64 0, i32 1
   // CHECK: %[[EXTENT:.*]] = load i64, ptr %[[EXT_GEP]]
-  // CHECK: %[[SIZE:.*]] = mul i64 4, %[[EXTENT]]
+  // CHECK: %[[SIZE:.*]] = mul i64 ptrtoint (ptr getelementptr (float, ptr null, i32 1) to i64), %[[EXTENT]]
   // CHECK: %[[MALLOC:.*]] = call ptr @malloc(i64 %[[SIZE]])
   %1 = fir.slice %c2, %c10, %c1 : (index, index, index) -> !fir.slice<1>
   %2 = fir.array_load %arg0 [%1] : (!fir.box<!fir.array<?xf32>>, !fir.slice<1>) -> !fir.array<?xf32>
@@ -170,7 +170,7 @@ func.func @f7(%arg0: !fir.ref<f32>, %arg1: !fir.box<!fir.array<?xf32>>) {
   %c4 = arith.constant 4 : index
   %c100 = arith.constant 100 : index
   %0 = fir.shift %c4 : (index) -> !fir.shift<1>
-  // CHECK: %[[STRIDE_GEP:.*]] = getelementptr {{.*}}, ptr %[[Y]], i32 0, i32 7, i64 0, i32 2
+  // CHECK: %[[STRIDE_GEP:.*]] = getelementptr {{.*}}, ptr %[[Y]], i32 0, i32 7, i32 0, i32 2
   // CHECK: %[[STRIDE:.*]] = load i64, ptr %[[STRIDE_GEP]]
   // CHECK: mul i64 96, %[[STRIDE]]
   %1 = fir.array_coor %arg1(%0) %c100 : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>, index) -> !fir.ref<f32>

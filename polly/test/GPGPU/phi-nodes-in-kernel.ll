@@ -1,11 +1,11 @@
-; RUN: opt %loadPolly -polly-codegen-ppcg -polly-acc-dump-code \
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-codegen-ppcg -polly-acc-dump-code \
 ; RUN: -disable-output < %s | \
 ; RUN: FileCheck -check-prefix=CODE %s
 
-; RUN: opt %loadPolly -polly-codegen-ppcg -S < %s | \
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-codegen-ppcg -S < %s | \
 ; RUN: FileCheck %s -check-prefix=IR
 
-; RUN: opt %loadPolly -polly-codegen-ppcg -polly-acc-dump-kernel-ir \
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-codegen-ppcg -polly-acc-dump-kernel-ir \
 ; RUN: -disable-output < %s | \
 ; RUN: FileCheck %s -check-prefix=KERNEL-IR
 

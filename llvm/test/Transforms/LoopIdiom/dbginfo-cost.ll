@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-idiom -mtriple=systemz-unknown -mcpu=z13 %s | FileCheck %s
+; RUN: opt -S -passes=loop-idiom -mtriple=systemz-unknown -mcpu=z13 %s | FileCheck %s
 
 ; CHECK: @llvm.ctlz.i32
 

@@ -305,7 +305,7 @@ static DataLayoutSpecInterface getCombinedDataLayout(Operation *leaf) {
   if (nonNullSpecs.empty())
     return {};
   return nonNullSpecs.back().combineWith(
-      llvm::makeArrayRef(nonNullSpecs).drop_back());
+      llvm::ArrayRef(nonNullSpecs).drop_back());
 }
 
 LogicalResult mlir::detail::verifyDataLayoutOp(Operation *op) {

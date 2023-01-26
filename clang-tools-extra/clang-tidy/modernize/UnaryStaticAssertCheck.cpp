@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 void UnaryStaticAssertCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(staticAssertDecl().bind("static_assert"), this);
@@ -36,6 +34,4 @@ void UnaryStaticAssertCheck::check(const MatchFinder::MatchResult &Result) {
       << FixItHint::CreateRemoval(AssertMessage->getSourceRange());
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

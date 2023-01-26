@@ -18,7 +18,7 @@ target triple = "x86_64-apple-macosx10.15.0"
 ;
 ; We are looking for the shifts to get combined into mul along with vectorization.
 
-define void @loop_or(i8* noalias %pIn, i32* noalias %pOut, i32 %s) {
+define void @loop_or(ptr noalias %pIn, ptr noalias %pOut, i32 %s) {
 ; CHECK-LABEL: @loop_or(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[S:%.*]], 0
@@ -32,24 +32,20 @@ define void @loop_or(i8* noalias %pIn, i32* noalias %pOut, i32 %s) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, i8* [[PIN:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[TMP0]] to <4 x i8>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, <4 x i8>* [[TMP1]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, i8* [[TMP0]], i64 4
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP2]] to <4 x i8>*
-; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i8>, <4 x i8>* [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[PIN:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP0]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 4
+; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i8>, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i8> [[WIDE_LOAD]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[WIDE_LOAD4]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw nsw <4 x i32> [[TMP4]], <i32 65793, i32 65793, i32 65793, i32 65793>
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul nuw nsw <4 x i32> [[TMP5]], <i32 65793, i32 65793, i32 65793, i32 65793>
 ; CHECK-NEXT:    [[TMP8:%.*]] = or <4 x i32> [[TMP6]], <i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216>
 ; CHECK-NEXT:    [[TMP9:%.*]] = or <4 x i32> [[TMP7]], <i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216>
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, i32* [[POUT:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i32* [[TMP10]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[TMP8]], <4 x i32>* [[TMP11]], align 4
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, i32* [[TMP10]], i64 4
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast i32* [[TMP12]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[TMP9]], <4 x i32>* [[TMP13]], align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[POUT:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    store <4 x i32> [[TMP8]], ptr [[TMP10]], align 4
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP10]], i64 4
+; CHECK-NEXT:    store <4 x i32> [[TMP9]], ptr [[TMP12]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -61,13 +57,13 @@ define void @loop_or(i8* noalias %pIn, i32* noalias %pOut, i32 %s) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[INDVARS_IV_PH]], [[FOR_BODY_PREHEADER5]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, i8* [[PIN]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP15:%.*]] = load i8, i8* [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[PIN]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP15:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP15]] to i32
 ; CHECK-NEXT:    [[OR2:%.*]] = mul nuw nsw i32 [[CONV]], 65793
 ; CHECK-NEXT:    [[OR3:%.*]] = or i32 [[OR2]], -16777216
-; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, i32* [[POUT]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i32 [[OR3]], i32* [[ARRAYIDX5]], align 4
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, ptr [[POUT]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store i32 [[OR3]], ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
@@ -87,8 +83,8 @@ for.cond.cleanup:
 
 for.body:
   %idxprom = sext i32 %i.0 to i64
-  %arrayidx = getelementptr inbounds i8, i8* %pIn, i64 %idxprom
-  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %pIn, i64 %idxprom
+  %0 = load i8, ptr %arrayidx, align 1
   %conv = zext i8 %0 to i32
   %shl = shl i32 %conv, 8
   %or = or i32 %conv, %shl
@@ -96,8 +92,8 @@ for.body:
   %or2 = or i32 %or, %shl1
   %or3 = or i32 %or2, -16777216
   %idxprom4 = sext i32 %i.0 to i64
-  %arrayidx5 = getelementptr inbounds i32, i32* %pOut, i64 %idxprom4
-  store i32 %or3, i32* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds i32, ptr %pOut, i64 %idxprom4
+  store i32 %or3, ptr %arrayidx5, align 4
   br label %for.inc
 
 for.inc:

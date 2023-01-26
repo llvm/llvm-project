@@ -23,10 +23,10 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include <optional>
 
 namespace llvm {
 
@@ -101,7 +101,7 @@ private:
 
 class DemandedBitsWrapperPass : public FunctionPass {
 private:
-  mutable Optional<DemandedBits> DB;
+  mutable std::optional<DemandedBits> DB;
 
 public:
   static char ID; // Pass identification, replacement for typeid

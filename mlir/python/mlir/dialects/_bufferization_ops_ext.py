@@ -19,6 +19,7 @@ class AllocTensorOp:
                tensor_type: Type,
                dynamic_sizes: Sequence[Value],
                copy: Value,
+               size_hint: Value,
                escape: BoolAttr,
                *,
                loc=None,
@@ -30,7 +31,7 @@ class AllocTensorOp:
       attributes["escape"] = escape
     op = self.build_generic(
         results=[tensor_type],
-        operands=[dynamic_sizes, copy],
+        operands=[dynamic_sizes, copy, size_hint],
         attributes=attributes,
         loc=loc,
         ip=ip)

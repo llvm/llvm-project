@@ -1,10 +1,10 @@
-; RUN: opt < %s -verify -S | FileCheck %s
+; RUN: opt < %s -passes=verify -S | FileCheck %s
 
 ; CHECK: DW_LANG_Mips_Assembler
 
 define void @Foo(i32 %a, i32 %b) {
 entry:
-  call void @llvm.dbg.declare(metadata i32* null, metadata !1, metadata !DIExpression()), !dbg !DILocation(scope: !6)
+  call void @llvm.dbg.declare(metadata ptr null, metadata !1, metadata !DIExpression()), !dbg !DILocation(scope: !6)
   ret void
 }
 !llvm.dbg.cu = !{!2}

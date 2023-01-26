@@ -83,12 +83,12 @@ public:
   }
 };
 
+} // namespace
+
 static PluginProperties &GetGlobalPluginProperties() {
   static PluginProperties g_settings;
   return g_settings;
 }
-
-} // anonymous namespace end
 
 static const lldb::tid_t g_kernel_tid = 1;
 
@@ -168,21 +168,21 @@ ProcessKDP::~ProcessKDP() {
   Finalize();
 }
 
-Status ProcessKDP::WillLaunch(Module *module) {
+Status ProcessKDP::DoWillLaunch(Module *module) {
   Status error;
   error.SetErrorString("launching not supported in kdp-remote plug-in");
   return error;
 }
 
-Status ProcessKDP::WillAttachToProcessWithID(lldb::pid_t pid) {
+Status ProcessKDP::DoWillAttachToProcessWithID(lldb::pid_t pid) {
   Status error;
   error.SetErrorString(
       "attaching to a by process ID not supported in kdp-remote plug-in");
   return error;
 }
 
-Status ProcessKDP::WillAttachToProcessWithName(const char *process_name,
-                                               bool wait_for_launch) {
+Status ProcessKDP::DoWillAttachToProcessWithName(const char *process_name,
+                                                 bool wait_for_launch) {
   Status error;
   error.SetErrorString(
       "attaching to a by process name not supported in kdp-remote plug-in");
@@ -770,7 +770,7 @@ void *ProcessKDP::AsyncThread() {
                 "ProcessKDP::AsyncThread (pid = %" PRIu64
                 ") listener.WaitForEvent (NULL, event_sp)...",
                 pid);
-      if (listener_sp->GetEvent(event_sp, llvm::None)) {
+      if (listener_sp->GetEvent(event_sp, std::nullopt)) {
         uint32_t event_type = event_sp->GetType();
         LLDB_LOGF(log,
                   "ProcessKDP::AsyncThread (pid = %" PRIu64

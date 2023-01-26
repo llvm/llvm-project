@@ -14,9 +14,9 @@ main_body:
 
 ; GCN-LABEL: {{^}}buffer_store_format_d16_xy:
 
-; UNPACKED: s_load_dword [[S_DATA:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x10
-; UNPACKED-DAG: s_lshr_b32 [[SHR:s[0-9]+]], [[S_DATA]], 16
-; UNPACKED-DAG: s_and_b32 [[MASKED:s[0-9]+]], [[S_DATA]], 0xffff{{$}}
+; UNPACKED: s_load_dwordx2 s[[[S_DATA:[0-9]+]]:{{[0-9]+}}], s{{\[[0-9]+:[0-9]+\]}}, 0x10
+; UNPACKED-DAG: s_lshr_b32 [[SHR:s[0-9]+]], s[[S_DATA]], 16
+; UNPACKED-DAG: s_and_b32 [[MASKED:s[0-9]+]], s[[S_DATA]], 0xffff{{$}}
 ; UNPACKED-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], [[MASKED]]
 ; UNPACKED-DAG: v_mov_b32_e32 v[[V_HI:[0-9]+]], [[SHR]]
 ; UNPACKED: buffer_store_format_d16_xy v[[[V_LO]]:[[V_HI]]], v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 idxen

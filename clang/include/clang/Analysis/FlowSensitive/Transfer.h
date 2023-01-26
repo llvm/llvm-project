@@ -15,16 +15,11 @@
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_TRANSFER_H
 
 #include "clang/AST/Stmt.h"
+#include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 
 namespace clang {
 namespace dataflow {
-
-struct TransferOptions {
-  /// Determines whether to analyze function bodies when present in the
-  /// translation unit.
-  bool ContextSensitive = false;
-};
 
 /// Maps statements to the environments of basic blocks that contain them.
 class StmtToEnvMap {
@@ -42,8 +37,7 @@ public:
 /// Requirements:
 ///
 ///  `S` must not be `ParenExpr` or `ExprWithCleanups`.
-void transfer(const StmtToEnvMap &StmtToEnv, const Stmt &S, Environment &Env,
-              TransferOptions Options);
+void transfer(const StmtToEnvMap &StmtToEnv, const Stmt &S, Environment &Env);
 
 } // namespace dataflow
 } // namespace clang

@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-unroll -unroll-runtime -unroll-count=2 -verify-scev-maps -S | FileCheck %s
+; RUN: opt < %s -passes=loop-unroll -unroll-runtime -unroll-count=2 -verify-scev-maps -S | FileCheck %s
 
 ; Check SCEV expansion uses existing value when unrolling an inner loop with runtime trip count in a loop nest.
 ; The outer loop gets unrolled twice, so we see 2 selects in the outer loop blocks.

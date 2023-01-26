@@ -11,8 +11,7 @@
 // template <class... Types>
 // template <class Alloc, class U1, class U2>
 // constexpr explicit(see below)
-//	 tuple<Types...>::tuple(allocator_arg_t, const Alloc& a, pair<U1, U2>&
-// u);
+//  tuple<Types...>::tuple(allocator_arg_t, const Alloc& a, pair<U1, U2>& u);
 
 // Constraints:
 // - sizeof...(Types) is 2 and
@@ -25,7 +24,7 @@
 #include <tuple>
 #include <utility>
 
-#include "convert_types.h"
+#include "copy_move_types.h"
 #include "test_allocator.h"
 
 // test constraints

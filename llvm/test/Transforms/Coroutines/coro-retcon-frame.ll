@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 target datalayout = "p:64:64:64"
 

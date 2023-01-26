@@ -1,6 +1,6 @@
 ; RUN: llc < %s
 ; ModuleID = '2006-01-12-BadSetCCFold.ll'
-	%struct.node_t = type { double*, %struct.node_t*, %struct.node_t**, double**, double*, i32, i32 }
+	%struct.node_t = type { ptr, ptr, ptr, ptr, ptr, i32, i32 }
 
 define void @main() {
 entry:
@@ -24,7 +24,7 @@ no_exit.i12.i.i:		; preds = %no_exit.i12.i.i, %dealwithargs.exit
 	br i1 false, label %fill_table.exit22.i.i, label %no_exit.i12.i.i
 
 fill_table.exit22.i.i:		; preds = %no_exit.i12.i.i, %dealwithargs.exit
-	%cur_node.0.i8.1.i.i = phi %struct.node_t* [ undef, %dealwithargs.exit ], [ null, %no_exit.i12.i.i ]		; <%struct.node_t*> [#uses=0]
+	%cur_node.0.i8.1.i.i = phi ptr [ undef, %dealwithargs.exit ], [ null, %no_exit.i12.i.i ]		; <ptr> [#uses=0]
 	br i1 %tmp.14.i1134.i.i, label %no_exit.i.preheader.i.i, label %make_tables.exit.i
 
 no_exit.i.preheader.i.i:		; preds = %fill_table.exit22.i.i

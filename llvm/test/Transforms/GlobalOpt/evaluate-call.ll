@@ -1,17 +1,17 @@
 ; Checks if bitcasted call expression can be evaluated
 ; Given call expresion:
-;   %struct.Bar* bitcast (%struct.Foo* (%struct.Foo*)* @_ZL3fooP3Foo to %struct.Bar* (%struct.Bar*)*)(%struct.Bar* @gBar)
+;   ptr @_ZL3fooP3Foo(ptr @gBar)
 ; We evaluate call to function @_ZL3fooP3Foo casting both parameter and return value
 ; Given call expression:
-;   void bitcast (void (%struct.Foo*)* @_ZL3bazP3Foo to void (%struct.Bar*)*)(%struct.Bar* @gBar) 
+;   void @_ZL3bazP3Foo(ptr @gBar) 
 ; We evaluate call to function _ZL3bazP3Foo casting its parameter and check that evaluated value (nullptr)
 ; is handled correctly
 
-; RUN: opt -globalopt -instcombine -S %s -o - | FileCheck %s
+; RUN: opt -passes=globalopt,instcombine -S %s -o - | FileCheck %s
 
 ; CHECK:      @gBar = local_unnamed_addr global %struct.Bar { i32 2 }
 ; CHECK-NEXT: @_s = local_unnamed_addr global %struct.S { i32 1 }, align 4
-; CHECK-NEXT: @llvm.global_ctors = appending global [0 x { i32, void ()*, i8* }] zeroinitializer
+; CHECK-NEXT: @llvm.global_ctors = appending global [0 x { i32, ptr, ptr }] zeroinitializer
 
 ; CHECK:      define i32 @main()
 ; CHECK-NEXT:   ret i32 0
@@ -25,58 +25,54 @@ target triple = "x86_64-apple-macosx10.12.0"
 
 @gBar = global %struct.Bar zeroinitializer, align 4
 @_s = global %struct.S zeroinitializer, align 4
-@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I_main.cpp, i8* null }]
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_main.cpp, ptr null }]
 
 define internal void @__cxx_global_var_init() section "__TEXT,__StaticInit,regular,pure_instructions" {
-  call void @_ZN1SC1Ev_alias(%struct.S* @_s)
+  call void @_ZN1SC1Ev_alias(ptr @_s)
   ret void
 }
 
-@_ZN1SC1Ev_alias = linkonce_odr unnamed_addr alias void (%struct.S*), void (%struct.S*)* @_ZN1SC1Ev
+@_ZN1SC1Ev_alias = linkonce_odr unnamed_addr alias void (ptr), ptr @_ZN1SC1Ev
 
-define linkonce_odr void @_ZN1SC1Ev(%struct.S*) unnamed_addr align 2 {
-  %2 = alloca %struct.S*, align 8
-  store %struct.S* %0, %struct.S** %2, align 8
-  %3 = load %struct.S*, %struct.S** %2, align 8
-  call void @_ZN1SC2Ev(%struct.S* %3)
+define linkonce_odr void @_ZN1SC1Ev(ptr) unnamed_addr align 2 {
+  %2 = alloca ptr, align 8
+  store ptr %0, ptr %2, align 8
+  %3 = load ptr, ptr %2, align 8
+  call void @_ZN1SC2Ev(ptr %3)
   ret void
 }
 
 define i32 @main()  {
   %1 = alloca i32, align 4
-  store i32 0, i32* %1, align 4
+  store i32 0, ptr %1, align 4
   ret i32 0
 }
 
-define linkonce_odr void @_ZN1SC2Ev(%struct.S*) unnamed_addr align 2 {
-  %2 = alloca %struct.S*, align 8
-  store %struct.S* %0, %struct.S** %2, align 8
-  %3 = load %struct.S*, %struct.S** %2, align 8
-  %4 = getelementptr inbounds %struct.S, %struct.S* %3, i32 0, i32 0
-  %5 = call %struct.Bar* bitcast (%struct.Foo* (%struct.Foo*)* @_ZL3fooP3Foo to %struct.Bar* (%struct.Bar*)*)(%struct.Bar* @gBar)
-  %6 = getelementptr inbounds %struct.Bar, %struct.Bar* %5, i32 0, i32 0
-  %7 = load i32, i32* %6, align 4
-  store i32 %7, i32* %4, align 4
-  call void bitcast (void (%struct.Foo*)* @_ZL3bazP3Foo to void (%struct.Bar*)*)(%struct.Bar* @gBar)
+define linkonce_odr void @_ZN1SC2Ev(ptr) unnamed_addr align 2 {
+  %2 = alloca ptr, align 8
+  store ptr %0, ptr %2, align 8
+  %3 = load ptr, ptr %2, align 8
+  %4 = call ptr @_ZL3fooP3Foo(ptr @gBar)
+  %5 = load i32, ptr %4, align 4
+  store i32 %5, ptr %3, align 4
+  call void @_ZL3bazP3Foo(ptr @gBar)
   ret void
 }
 
-define internal %struct.Foo* @_ZL3fooP3Foo(%struct.Foo*) {
-  %2 = alloca %struct.Foo*, align 8
-  store %struct.Foo* %0, %struct.Foo** %2, align 8
-  %3 = load %struct.Foo*, %struct.Foo** %2, align 8
-  %4 = getelementptr inbounds %struct.Foo, %struct.Foo* %3, i32 0, i32 0
-  store i32 1, i32* %4, align 4
-  %5 = load %struct.Foo*, %struct.Foo** %2, align 8
-  ret %struct.Foo* %5
+define internal ptr @_ZL3fooP3Foo(ptr) {
+  %2 = alloca ptr, align 8
+  store ptr %0, ptr %2, align 8
+  %3 = load ptr, ptr %2, align 8
+  store i32 1, ptr %3, align 4
+  %4 = load ptr, ptr %2, align 8
+  ret ptr %4
 }
 
-define internal void @_ZL3bazP3Foo(%struct.Foo*) {
-  %2 = alloca %struct.Foo*, align 8
-  store %struct.Foo* %0, %struct.Foo** %2, align 8
-  %3 = load %struct.Foo*, %struct.Foo** %2, align 8
-  %4 = getelementptr inbounds %struct.Foo, %struct.Foo* %3, i32 0, i32 0
-  store i32 2, i32* %4, align 4
+define internal void @_ZL3bazP3Foo(ptr) {
+  %2 = alloca ptr, align 8
+  store ptr %0, ptr %2, align 8
+  %3 = load ptr, ptr %2, align 8
+  store i32 2, ptr %3, align 4
   ret void
 }
 

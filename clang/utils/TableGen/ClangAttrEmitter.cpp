@@ -37,6 +37,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <string>
@@ -806,6 +807,49 @@ namespace {
     }
   };
 
+  class VariadicOMPInteropInfoArgument : public VariadicArgument {
+  public:
+    VariadicOMPInteropInfoArgument(const Record &Arg, StringRef Attr)
+        : VariadicArgument(Arg, Attr, "OMPInteropInfo") {}
+
+    void writeDump(raw_ostream &OS) const override {
+      OS << "    for (" << getAttrName() << "Attr::" << getLowerName()
+         << "_iterator I = SA->" << getLowerName() << "_begin(), E = SA->"
+         << getLowerName() << "_end(); I != E; ++I) {\n";
+      OS << "      if (I->IsTarget && I->IsTargetSync)\n";
+      OS << "        OS << \" Target_TargetSync\";\n";
+      OS << "      else if (I->IsTarget)\n";
+      OS << "        OS << \" Target\";\n";
+      OS << "      else\n";
+      OS << "        OS << \" TargetSync\";\n";
+      OS << "    }\n";
+    }
+
+    void writePCHReadDecls(raw_ostream &OS) const override {
+      OS << "    unsigned " << getLowerName() << "Size = Record.readInt();\n";
+      OS << "    SmallVector<OMPInteropInfo, 4> " << getLowerName() << ";\n";
+      OS << "    " << getLowerName() << ".reserve(" << getLowerName()
+         << "Size);\n";
+      OS << "    for (unsigned I = 0, E = " << getLowerName() << "Size; ";
+      OS << "I != E; ++I) {\n";
+      OS << "      bool IsTarget = Record.readBool();\n";
+      OS << "      bool IsTargetSync = Record.readBool();\n";
+      OS << "      " << getLowerName()
+         << ".emplace_back(IsTarget, IsTargetSync);\n";
+      OS << "    }\n";
+    }
+
+    void writePCHWrite(raw_ostream &OS) const override {
+      OS << "    Record.push_back(SA->" << getLowerName() << "_size());\n";
+      OS << "    for (" << getAttrName() << "Attr::" << getLowerName()
+         << "_iterator I = SA->" << getLowerName() << "_begin(), E = SA->"
+         << getLowerName() << "_end(); I != E; ++I) {\n";
+      OS << "      Record.writeBool(I->IsTarget);\n";
+      OS << "      Record.writeBool(I->IsTargetSync);\n";
+      OS << "    }\n";
+    }
+  };
+
   class VariadicParamIdxArgument : public VariadicArgument {
   public:
     VariadicParamIdxArgument(const Record &Arg, StringRef Attr)
@@ -934,13 +978,14 @@ namespace {
 
       OS << "bool " << getAttrName() << "Attr::ConvertStrTo" << type
          << "(StringRef Val, " << type << " &Out) {\n";
-      OS << "  Optional<" << type << "> R = llvm::StringSwitch<Optional<";
+      OS << "  std::optional<" << type
+         << "> R = llvm::StringSwitch<std::optional<";
       OS << type << ">>(Val)\n";
       for (size_t I = 0; I < enums.size(); ++I) {
         OS << "    .Case(\"" << values[I] << "\", ";
         OS << getAttrName() << "Attr::" << enums[I] << ")\n";
       }
-      OS << "    .Default(Optional<" << type << ">());\n";
+      OS << "    .Default(std::optional<" << type << ">());\n";
       OS << "  if (R) {\n";
       OS << "    Out = *R;\n      return true;\n    }\n";
       OS << "  return false;\n";
@@ -1055,13 +1100,14 @@ namespace {
       OS << "bool " << getAttrName() << "Attr::ConvertStrTo" << type
          << "(StringRef Val, ";
       OS << type << " &Out) {\n";
-      OS << "  Optional<" << type << "> R = llvm::StringSwitch<Optional<";
+      OS << "  std::optional<" << type
+         << "> R = llvm::StringSwitch<std::optional<";
       OS << type << ">>(Val)\n";
       for (size_t I = 0; I < enums.size(); ++I) {
         OS << "    .Case(\"" << values[I] << "\", ";
         OS << getAttrName() << "Attr::" << enums[I] << ")\n";
       }
-      OS << "    .Default(Optional<" << type << ">());\n";
+      OS << "    .Default(std::optional<" << type << ">());\n";
       OS << "  if (R) {\n";
       OS << "    Out = *R;\n      return true;\n    }\n";
       OS << "  return false;\n";
@@ -1171,6 +1217,13 @@ namespace {
       OS << "          return nullptr;\n";
       OS << "        tempInst" << getUpperName() << " = Result.get();\n";
       OS << "      }\n";
+    }
+
+    void writeValue(raw_ostream &OS) const override {
+      OS << "\";\n";
+      OS << "    get" << getUpperName()
+         << "()->printPretty(OS, nullptr, Policy);\n";
+      OS << "    OS << \"";
     }
 
     void writeDump(raw_ostream &OS) const override {}
@@ -1374,6 +1427,8 @@ createArgument(const Record &Arg, StringRef Attr,
     Ptr = std::make_unique<VersionArgument>(Arg, Attr);
   else if (ArgName == "OMPTraitInfoArgument")
     Ptr = std::make_unique<SimpleArgument>(Arg, Attr, "OMPTraitInfo *");
+  else if (ArgName == "VariadicOMPInteropInfoArgument")
+    Ptr = std::make_unique<VariadicOMPInteropInfoArgument>(Arg, Attr);
 
   if (!Ptr) {
     // Search in reverse order so that the most-derived type is handled first.
@@ -2062,9 +2117,9 @@ PragmaClangAttributeSupport::generateStrictConformsTo(const Record &Attr,
 
 void PragmaClangAttributeSupport::generateParsingHelpers(raw_ostream &OS) {
   // Generate routines that check the names of sub-rules.
-  OS << "Optional<attr::SubjectMatchRule> "
+  OS << "std::optional<attr::SubjectMatchRule> "
         "defaultIsAttributeSubjectMatchSubRuleFor(StringRef, bool) {\n";
-  OS << "  return None;\n";
+  OS << "  return std::nullopt;\n";
   OS << "}\n\n";
 
   llvm::MapVector<const Record *, std::vector<AttributeSubjectMatchRule>>
@@ -2076,36 +2131,37 @@ void PragmaClangAttributeSupport::generateParsingHelpers(raw_ostream &OS) {
   }
 
   for (const auto &SubMatchRule : SubMatchRules) {
-    OS << "Optional<attr::SubjectMatchRule> isAttributeSubjectMatchSubRuleFor_"
+    OS << "std::optional<attr::SubjectMatchRule> "
+          "isAttributeSubjectMatchSubRuleFor_"
        << SubMatchRule.first->getValueAsString("Name")
        << "(StringRef Name, bool IsUnless) {\n";
     OS << "  if (IsUnless)\n";
     OS << "    return "
-          "llvm::StringSwitch<Optional<attr::SubjectMatchRule>>(Name).\n";
+          "llvm::StringSwitch<std::optional<attr::SubjectMatchRule>>(Name).\n";
     for (const auto &Rule : SubMatchRule.second) {
       if (Rule.isNegatedSubRule())
         OS << "    Case(\"" << Rule.getName() << "\", " << Rule.getEnumValue()
            << ").\n";
     }
-    OS << "    Default(None);\n";
+    OS << "    Default(std::nullopt);\n";
     OS << "  return "
-          "llvm::StringSwitch<Optional<attr::SubjectMatchRule>>(Name).\n";
+          "llvm::StringSwitch<std::optional<attr::SubjectMatchRule>>(Name).\n";
     for (const auto &Rule : SubMatchRule.second) {
       if (!Rule.isNegatedSubRule())
         OS << "  Case(\"" << Rule.getName() << "\", " << Rule.getEnumValue()
            << ").\n";
     }
-    OS << "  Default(None);\n";
+    OS << "  Default(std::nullopt);\n";
     OS << "}\n\n";
   }
 
   // Generate the function that checks for the top-level rules.
-  OS << "std::pair<Optional<attr::SubjectMatchRule>, "
-        "Optional<attr::SubjectMatchRule> (*)(StringRef, "
+  OS << "std::pair<std::optional<attr::SubjectMatchRule>, "
+        "std::optional<attr::SubjectMatchRule> (*)(StringRef, "
         "bool)> isAttributeSubjectMatchRule(StringRef Name) {\n";
   OS << "  return "
-        "llvm::StringSwitch<std::pair<Optional<attr::SubjectMatchRule>, "
-        "Optional<attr::SubjectMatchRule> (*) (StringRef, "
+        "llvm::StringSwitch<std::pair<std::optional<attr::SubjectMatchRule>, "
+        "std::optional<attr::SubjectMatchRule> (*) (StringRef, "
         "bool)>>(Name).\n";
   for (const auto &Rule : Rules) {
     if (Rule.isSubRule())
@@ -2119,7 +2175,7 @@ void PragmaClangAttributeSupport::generateParsingHelpers(raw_ostream &OS) {
     OS << "  Case(\"" << Rule.getName() << "\", std::make_pair("
        << Rule.getEnumValue() << ", " << SubRuleFunction << ")).\n";
   }
-  OS << "  Default(std::make_pair(None, "
+  OS << "  Default(std::make_pair(std::nullopt, "
         "defaultIsAttributeSubjectMatchSubRuleFor));\n";
   OS << "}\n\n";
 
@@ -2681,8 +2737,8 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
 
     // Emit constructors that takes no arguments if none already exists.
     // This is used for delaying arguments.
-    bool HasRequiredArgs = std::count_if(
-        Args.begin(), Args.end(), [=](const std::unique_ptr<Argument> &arg) {
+    bool HasRequiredArgs =
+        llvm::count_if(Args, [=](const std::unique_ptr<Argument> &arg) {
           return !arg->isFake() && !arg->isOptional();
         });
     if (DelayedArgs && HasRequiredArgs)
@@ -2852,7 +2908,8 @@ static const AttrClassDescriptor AttrClassDescriptors[] = {
   { "INHERITABLE_ATTR", "InheritableAttr" },
   { "DECL_OR_TYPE_ATTR", "DeclOrTypeAttr" },
   { "INHERITABLE_PARAM_ATTR", "InheritableParamAttr" },
-  { "PARAMETER_ABI_ATTR", "ParameterABIAttr" }
+  { "PARAMETER_ABI_ATTR", "ParameterABIAttr" },
+  { "HLSL_ANNOTATION_ATTR", "HLSLAnnotationAttr"}
 };
 
 static void emitDefaultDefine(raw_ostream &OS, StringRef name,

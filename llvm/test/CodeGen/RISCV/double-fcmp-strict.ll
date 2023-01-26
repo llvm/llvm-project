@@ -293,8 +293,8 @@ define i32 @fcmp_ueq(double %a, double %b) nounwind strictfp {
 ; CHECKIFD-NEXT:    frflags a0
 ; CHECKIFD-NEXT:    flt.d a2, fa1, fa0
 ; CHECKIFD-NEXT:    fsflags a0
-; CHECKIFD-NEXT:    or a0, a2, a1
-; CHECKIFD-NEXT:    xori a0, a0, 1
+; CHECKIFD-NEXT:    or a1, a2, a1
+; CHECKIFD-NEXT:    xori a0, a1, 1
 ; CHECKIFD-NEXT:    feq.d zero, fa1, fa0
 ; CHECKIFD-NEXT:    ret
 ;

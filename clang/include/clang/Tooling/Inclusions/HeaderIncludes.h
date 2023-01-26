@@ -15,6 +15,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
 #include <list>
+#include <optional>
 #include <unordered_map>
 
 namespace clang {
@@ -44,6 +45,8 @@ private:
   SmallVector<llvm::Regex, 4> CategoryRegexs;
 };
 
+enum class IncludeDirective { Include, Import };
+
 /// Generates replacements for inserting or deleting #include directives in a
 /// file.
 class HeaderIncludes {
@@ -51,9 +54,9 @@ public:
   HeaderIncludes(llvm::StringRef FileName, llvm::StringRef Code,
                  const IncludeStyle &Style);
 
-  /// Inserts an #include directive of \p Header into the code. If \p IsAngled
-  /// is true, \p Header will be quoted with <> in the directive; otherwise, it
-  /// will be quoted with "".
+  /// Inserts an #include or #import directive of \p Header into the code.
+  /// If \p IsAngled is true, \p Header will be quoted with <> in the directive;
+  /// otherwise, it will be quoted with "".
   ///
   /// When searching for points to insert new header, this ignores #include's
   /// after the #include block(s) in the beginning of a file to avoid inserting
@@ -69,25 +72,32 @@ public:
   /// this will simply insert the #include in front of the first #include of the
   /// same category in the code that should be sorted after \p IncludeName. If
   /// \p IncludeName already exists (with exactly the same spelling), this
-  /// returns None.
-  llvm::Optional<tooling::Replacement> insert(llvm::StringRef Header,
-                                              bool IsAngled) const;
+  /// returns std::nullopt.
+  std::optional<tooling::Replacement> insert(llvm::StringRef Header,
+                                             bool IsAngled,
+                                             IncludeDirective Directive) const;
 
-  /// Removes all existing #includes of \p Header quoted with <> if \p IsAngled
-  /// is true or "" if \p IsAngled is false.
-  /// This doesn't resolve the header file path; it only deletes #includes with
-  /// exactly the same spelling.
+  /// Removes all existing #includes and #imports of \p Header quoted with <> if
+  /// \p IsAngled is true or "" if \p IsAngled is false.
+  /// This doesn't resolve the header file path; it only deletes #includes and
+  /// #imports with exactly the same spelling.
   tooling::Replacements remove(llvm::StringRef Header, bool IsAngled) const;
+
+  // Matches a whole #include directive.
+  static const llvm::Regex IncludeRegex;
 
 private:
   struct Include {
-    Include(StringRef Name, tooling::Range R) : Name(Name), R(R) {}
+    Include(StringRef Name, tooling::Range R, IncludeDirective D)
+        : Name(Name), R(R), Directive(D) {}
 
     // An include header quoted with either <> or "".
     std::string Name;
     // The range of the whole line of include directive including any leading
     // whitespaces and trailing comment.
     tooling::Range R;
+    // Either #include or #import.
+    IncludeDirective Directive;
   };
 
   void addExistingInclude(Include IncludeToAdd, unsigned NextLineOffset);
@@ -124,9 +134,6 @@ private:
 
   // All possible priorities.
   std::set<int> Priorities;
-
-  // Matches a whole #include directive.
-  llvm::Regex IncludeRegex;
 };
 
 } // namespace tooling

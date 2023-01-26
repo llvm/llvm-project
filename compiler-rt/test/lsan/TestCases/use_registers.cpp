@@ -43,6 +43,8 @@ extern "C" void *registers_thread_func(void *arg) {
       "mov x14, %0"
       :
       : "r"(p));
+#elif defined(__loongarch_lp64)
+  asm("move $s8, %0" : : "r"(p));
 #elif defined(__powerpc__)
   asm("mr 30, %0"
       :

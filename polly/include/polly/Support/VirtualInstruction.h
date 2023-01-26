@@ -94,7 +94,7 @@ public:
   /// @param U       The llvm::Use the get information for.
   /// @param LI      The LoopInfo analysis. Needed to determine whether the
   ///                value is synthesizable.
-  /// @param Virtual Whether to ignore existing MemoryAcccess.
+  /// @param Virtual Whether to ignore existing MemoryAccess.
   ///
   /// @return The VirtualUse representing the same use as @p U.
   static VirtualUse create(Scop *S, const Use &U, LoopInfo *LI, bool Virtual);

@@ -28,6 +28,7 @@ def RawFrmImm8    : Format<7>;
 def RawFrmImm16   : Format<8>;
 def AddCCFrm      : Format<9>;
 def PrefixByte    : Format<10>;
+def MRMDestMem4VOp3CC : Format<20>;
 def MRMr0          : Format<21>;
 def MRMSrcMemFSIB  : Format<22>;
 def MRMDestMemFSIB : Format<23>;
@@ -472,13 +473,15 @@ class Ii32PCRel<bits<8> o, Format f, dag outs, dag ins, string asm,
 class FPI<bits<8> o, Format F, dag outs, dag ins, string asm>
   : I<o, F, outs, ins, asm, []> {
   let Defs = [FPSW];
+  let Predicates = [HasX87];
 }
 
-// FpI_ - Floating Point Pseudo Instruction template. Not Predicated.
+// FpI_ - Floating Point Pseudo Instruction template.
 class FpI_<dag outs, dag ins, FPFormat fp, list<dag> pattern>
   : PseudoI<outs, ins, pattern> {
   let FPForm = fp;
   let Defs = [FPSW];
+  let Predicates = [HasX87];
 }
 
 // Templates for instructions that use a 16- or 32-bit segmented address as
@@ -1011,7 +1014,8 @@ class MMXI64<bits<8> o, Format F, dag outs, dag ins, string asm,
       : I<o, F, outs, ins, asm, pattern>, PS, Requires<[HasMMX,In64BitMode]>;
 class MMXRI<bits<8> o, Format F, dag outs, dag ins, string asm,
             list<dag> pattern>
-      : I<o, F, outs, ins, asm, pattern>, PS, REX_W, Requires<[HasMMX]>;
+      : I<o, F, outs, ins, asm, pattern>, PS, REX_W,
+        Requires<[HasMMX,In64BitMode]>;
 class MMX2I<bits<8> o, Format F, dag outs, dag ins, string asm,
             list<dag> pattern>
       : I<o, F, outs, ins, asm, pattern>, PD, Requires<[HasMMX]>;

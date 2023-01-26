@@ -33,6 +33,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -369,7 +370,7 @@ enum CFNumberType {
   kCFNumberCGFloatType = 16
 };
 
-static Optional<uint64_t> GetCFNumberSize(ASTContext &Ctx, uint64_t i) {
+static std::optional<uint64_t> GetCFNumberSize(ASTContext &Ctx, uint64_t i) {
   static const unsigned char FixedSize[] = { 8, 16, 32, 64, 32, 64 };
 
   if (i < kCFNumberCharType)
@@ -390,7 +391,7 @@ static Optional<uint64_t> GetCFNumberSize(ASTContext &Ctx, uint64_t i) {
     case kCFNumberCGFloatType:
       // FIXME: We need a way to map from names to Type*.
     default:
-      return None;
+      return std::nullopt;
   }
 
   return Ctx.getTypeSize(T);
@@ -442,12 +443,13 @@ void CFNumberChecker::checkPreStmt(const CallExpr *CE,
 
   // FIXME: We really should allow ranges of valid theType values, and
   //   bifurcate the state appropriately.
-  Optional<nonloc::ConcreteInt> V = dyn_cast<nonloc::ConcreteInt>(TheTypeVal);
+  std::optional<nonloc::ConcreteInt> V =
+      dyn_cast<nonloc::ConcreteInt>(TheTypeVal);
   if (!V)
     return;
 
   uint64_t NumberKind = V->getValue().getLimitedValue();
-  Optional<uint64_t> OptCFNumberSize = GetCFNumberSize(Ctx, NumberKind);
+  std::optional<uint64_t> OptCFNumberSize = GetCFNumberSize(Ctx, NumberKind);
 
   // FIXME: In some cases we can emit an error.
   if (!OptCFNumberSize)
@@ -462,7 +464,7 @@ void CFNumberChecker::checkPreStmt(const CallExpr *CE,
 
   // FIXME: Eventually we should handle arbitrary locations.  We can do this
   //  by having an enhanced memory model that does low-level typing.
-  Optional<loc::MemRegionVal> LV = TheValueExpr.getAs<loc::MemRegionVal>();
+  std::optional<loc::MemRegionVal> LV = TheValueExpr.getAs<loc::MemRegionVal>();
   if (!LV)
     return;
 
@@ -531,10 +533,10 @@ namespace {
 class CFRetainReleaseChecker : public Checker<check::PreCall> {
   mutable APIMisuse BT{this, "null passed to CF memory management function"};
   const CallDescriptionSet ModelledCalls = {
-      {"CFRetain", 1},
-      {"CFRelease", 1},
-      {"CFMakeCollectable", 1},
-      {"CFAutorelease", 1},
+      {{"CFRetain"}, 1},
+      {{"CFRelease"}, 1},
+      {{"CFMakeCollectable"}, 1},
+      {{"CFAutorelease"}, 1},
   };
 
 public:
@@ -554,7 +556,7 @@ void CFRetainReleaseChecker::checkPreCall(const CallEvent &Call,
 
   // Get the argument's value.
   SVal ArgVal = Call.getArgSVal(0);
-  Optional<DefinedSVal> DefArgVal = ArgVal.getAs<DefinedSVal>();
+  std::optional<DefinedSVal> DefArgVal = ArgVal.getAs<DefinedSVal>();
   if (!DefArgVal)
     return;
 
@@ -742,7 +744,7 @@ void VariadicMethodTypeChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
     return;
 
   // Verify that all arguments have Objective-C types.
-  Optional<ExplodedNode*> errorNode;
+  std::optional<ExplodedNode *> errorNode;
 
   for (unsigned I = variadicArgsBegin; I != variadicArgsEnd; ++I) {
     QualType ArgTy = msg.getArgExpr(I)->getType();
@@ -769,7 +771,7 @@ void VariadicMethodTypeChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
     if (!errorNode)
       errorNode = C.generateNonFatalErrorNode();
 
-    if (!errorNode.value())
+    if (!*errorNode)
       continue;
 
     SmallString<128> sbuf;
@@ -786,8 +788,8 @@ void VariadicMethodTypeChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
     ArgTy.print(os, C.getLangOpts());
     os << "'";
 
-    auto R = std::make_unique<PathSensitiveBugReport>(*BT, os.str(),
-                                                      errorNode.value());
+    auto R =
+        std::make_unique<PathSensitiveBugReport>(*BT, os.str(), *errorNode);
     R->addRange(msg.getArgSourceRange(I));
     C.emitReport(std::move(R));
   }
@@ -857,7 +859,8 @@ static ProgramStateRef checkCollectionNonNil(CheckerContext &C,
     return nullptr;
 
   SVal CollectionVal = C.getSVal(FCS->getCollection());
-  Optional<DefinedSVal> KnownCollection = CollectionVal.getAs<DefinedSVal>();
+  std::optional<DefinedSVal> KnownCollection =
+      CollectionVal.getAs<DefinedSVal>();
   if (!KnownCollection)
     return State;
 
@@ -889,7 +892,7 @@ static ProgramStateRef checkElementNonNil(CheckerContext &C,
   const Stmt *Element = FCS->getElement();
 
   // FIXME: Copied from ExprEngineObjC.
-  Optional<Loc> ElementLoc;
+  std::optional<Loc> ElementLoc;
   if (const DeclStmt *DS = dyn_cast<DeclStmt>(Element)) {
     const VarDecl *ElemDecl = cast<VarDecl>(DS->getSingleDecl());
     assert(ElemDecl->getInit() == nullptr);
@@ -928,8 +931,8 @@ assumeCollectionNonEmpty(CheckerContext &C, ProgramStateRef State,
                           nonloc::SymbolVal(*CountS),
                           SvalBuilder.makeIntVal(0, (*CountS)->getType()),
                           SvalBuilder.getConditionType());
-  Optional<DefinedSVal> CountGreaterThanZero =
-    CountGreaterThanZeroVal.getAs<DefinedSVal>();
+  std::optional<DefinedSVal> CountGreaterThanZero =
+      CountGreaterThanZeroVal.getAs<DefinedSVal>();
   if (!CountGreaterThanZero) {
     // The SValBuilder cannot construct a valid SVal for this condition.
     // This means we cannot properly reason about it.
@@ -957,7 +960,7 @@ static bool alreadyExecutedAtLeastOneLoopIteration(const ExplodedNode *N,
     return false;
 
   ProgramPoint P = N->getLocation();
-  if (Optional<BlockEdge> BE = P.getAs<BlockEdge>()) {
+  if (std::optional<BlockEdge> BE = P.getAs<BlockEdge>()) {
     return BE->getSrc()->getLoopTarget() == FCS;
   }
 
@@ -1092,7 +1095,7 @@ ObjCLoopChecker::checkPointerEscape(ProgramStateRef State,
                                     PointerEscapeKind Kind) const {
   SymbolRef ImmutableReceiver = getMethodReceiverIfKnownImmutable(Call);
 
-  // Remove the invalidated symbols form the collection count map.
+  // Remove the invalidated symbols from the collection count map.
   for (InvalidatedSymbols::const_iterator I = Escaped.begin(),
        E = Escaped.end();
        I != E; ++I) {
@@ -1174,7 +1177,8 @@ ObjCNonNilReturnValueChecker::assumeExprIsNonNull(const Expr *NonNullExpr,
                                                   ProgramStateRef State,
                                                   CheckerContext &C) const {
   SVal Val = C.getSVal(NonNullExpr);
-  if (Optional<DefinedOrUnknownSVal> DV = Val.getAs<DefinedOrUnknownSVal>())
+  if (std::optional<DefinedOrUnknownSVal> DV =
+          Val.getAs<DefinedOrUnknownSVal>())
     return State->assume(*DV, true);
   return State;
 }

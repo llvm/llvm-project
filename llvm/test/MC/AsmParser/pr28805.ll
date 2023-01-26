@@ -6,11 +6,10 @@ target triple = "x86_64-pc-windows-msvc18.0.31101"
 define i32 @_xbegin() {
 entry:
   %res = alloca i32, align 4
-  %0 = bitcast i32* %res to i8*
-  store i32 -1, i32* %res, align 4
-  call void asm sideeffect inteldialect ".byte 0xC7\0A\09.byte 0xF8\0A\09.byte 2\0A\09.byte 0\0A\09.byte 0\0A\09.byte 0\0A\09jmp .L__MSASMLABEL_.0__L2\0A\09mov dword ptr $0, eax\0A\09.L__MSASMLABEL_.0__L2:", "=*m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) nonnull %res)
-  %1 = load i32, i32* %res, align 4
-  ret i32 %1
+  store i32 -1, ptr %res, align 4
+  call void asm sideeffect inteldialect ".byte 0xC7\0A\09.byte 0xF8\0A\09.byte 2\0A\09.byte 0\0A\09.byte 0\0A\09.byte 0\0A\09jmp .L__MSASMLABEL_.0__L2\0A\09mov dword ptr $0, eax\0A\09.L__MSASMLABEL_.0__L2:", "=*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) nonnull %res)
+  %0 = load i32, ptr %res, align 4
+  ret i32 %0
 }
 
 ; CHECK-NOT: Error parsing inline asm

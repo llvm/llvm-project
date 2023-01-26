@@ -3,9 +3,9 @@
 @i = internal global i32 0, align 4
 
 ; Function Attrs: minsize
-define arm_aapcs_vfpcc i32* @function() #0 {
+define arm_aapcs_vfpcc ptr @function() #0 {
 entry:
-  ret i32* @i
+  ret ptr @i
 }
 
 attributes #0 = { minsize }

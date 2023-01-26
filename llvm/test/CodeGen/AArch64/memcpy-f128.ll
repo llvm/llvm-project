@@ -9,8 +9,8 @@ define void @test1() {
 ; CHECK-LABEL: @test1
 ; CHECK: ret
 entry:
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 undef, i8* align 8 bitcast (%structA* @stubA to i8*), i64 48, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr align 8 undef, ptr align 8 @stubA, i64 48, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1)
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1)

@@ -19,11 +19,11 @@
 #include "clang/Lex/DependencyDirectivesScanner.h"
 #include "clang/Lex/PreprocessorLexer.h"
 #include "clang/Lex/Token.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <string>
 
 namespace llvm {
@@ -552,9 +552,9 @@ public:
   /// Finds the token that comes right after the given location.
   ///
   /// Returns the next token, or none if the location is inside a macro.
-  static Optional<Token> findNextToken(SourceLocation Loc,
-                                       const SourceManager &SM,
-                                       const LangOptions &LangOpts);
+  static std::optional<Token> findNextToken(SourceLocation Loc,
+                                            const SourceManager &SM,
+                                            const LangOptions &LangOpts);
 
   /// Checks that the given token is the first token that occurs after
   /// the given location (this excludes comments and whitespace). Returns the
@@ -769,10 +769,10 @@ private:
   void codeCompleteIncludedFile(const char *PathStart,
                                 const char *CompletionPoint, bool IsAngled);
 
-  llvm::Optional<uint32_t>
+  std::optional<uint32_t>
   tryReadNumericUCN(const char *&StartPtr, const char *SlashLoc, Token *Result);
-  llvm::Optional<uint32_t> tryReadNamedUCN(const char *&StartPtr,
-                                           Token *Result);
+  std::optional<uint32_t> tryReadNamedUCN(const char *&StartPtr,
+                                          const char *SlashLoc, Token *Result);
 
   /// Read a universal character name.
   ///

@@ -21,12 +21,13 @@
 
 // XFAIL: no-wide-characters
 
+// TODO: Avoid using <fstream> in this test.
+// XFAIL: no-fstream
+
 #include <locale>
 #include <codecvt>
 #include <fstream>
 #include <cassert>
-
-#include "test_macros.h"
 
 class test_codecvt
     : public std::codecvt<wchar_t, char, std::mbstate_t>

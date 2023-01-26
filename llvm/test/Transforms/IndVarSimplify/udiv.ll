@@ -1,9 +1,9 @@
-; RUN: opt -indvars -S < %s | FileCheck %s
+; RUN: opt -passes=indvars -S < %s | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 
-@main.flags = internal global [8193 x i8] zeroinitializer, align 1 ; <[8193 x i8]*> [#uses=5]
-@.str = private constant [11 x i8] c"Count: %d\0A\00" ; <[11 x i8]*> [#uses=1]
+@main.flags = internal global [8193 x i8] zeroinitializer, align 1 ; <ptr> [#uses=5]
+@.str = private constant [11 x i8] c"Count: %d\0A\00" ; <ptr> [#uses=1]
 
 ; Indvars shouldn't emit a udiv here, because there's no udiv in the
 ; original code. This comes from SingleSource/Benchmarks/Shootout/sieve.c.
@@ -11,15 +11,15 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK-LABEL: @main(
 ; CHECK-NOT: div
 
-define i32 @main(i32 %argc, i8** nocapture %argv) nounwind {
+define i32 @main(i32 %argc, ptr nocapture %argv) nounwind {
 entry:
   %cmp = icmp eq i32 %argc, 2                     ; <i1> [#uses=1]
   br i1 %cmp, label %cond.true, label %while.cond.preheader
 
 cond.true:                                        ; preds = %entry
-  %arrayidx = getelementptr inbounds i8*, i8** %argv, i64 1 ; <i8**> [#uses=1]
-  %tmp2 = load i8*, i8** %arrayidx                     ; <i8*> [#uses=1]
-  %call = tail call i32 @atoi(i8* %tmp2) nounwind readonly ; <i32> [#uses=1]
+  %arrayidx = getelementptr inbounds ptr, ptr %argv, i64 1 ; <ptr> [#uses=1]
+  %tmp2 = load ptr, ptr %arrayidx                     ; <ptr> [#uses=1]
+  %call = tail call i32 @atoi(ptr %tmp2) nounwind readonly ; <i32> [#uses=1]
   br label %while.cond.preheader
 
 while.cond.preheader:                             ; preds = %entry, %cond.true
@@ -59,8 +59,8 @@ bb.nph:                                           ; preds = %for.cond.preheader
 
 for.body:                                         ; preds = %bb.nph, %for.cond
   %i.02 = phi i64 [ 2, %bb.nph ], [ %inc, %for.cond ] ; <i64> [#uses=2]
-  %arrayidx10 = getelementptr inbounds [8193 x i8], [8193 x i8]* @main.flags, i64 0, i64 %i.02 ; <i8*> [#uses=1]
-  store i8 1, i8* %arrayidx10
+  %arrayidx10 = getelementptr inbounds [8193 x i8], ptr @main.flags, i64 0, i64 %i.02 ; <ptr> [#uses=1]
+  store i8 1, ptr %arrayidx10
   %inc = add nsw i64 %i.02, 1                     ; <i64> [#uses=2]
   br label %for.cond
 
@@ -81,8 +81,8 @@ bb.nph16:                                         ; preds = %for.cond12.loopexit
 for.body15:                                       ; preds = %bb.nph16, %for.cond12
   %count.212 = phi i32 [ 0, %bb.nph16 ], [ %count.1, %for.cond12 ] ; <i32> [#uses=2]
   %i.17 = phi i64 [ 2, %bb.nph16 ], [ %inc37, %for.cond12 ] ; <i64> [#uses=4]
-  %arrayidx17 = getelementptr inbounds [8193 x i8], [8193 x i8]* @main.flags, i64 0, i64 %i.17 ; <i8*> [#uses=1]
-  %tmp18 = load i8, i8* %arrayidx17                   ; <i8> [#uses=1]
+  %arrayidx17 = getelementptr inbounds [8193 x i8], ptr @main.flags, i64 0, i64 %i.17 ; <ptr> [#uses=1]
+  %tmp18 = load i8, ptr %arrayidx17                   ; <i8> [#uses=1]
   %tobool19 = icmp eq i8 %tmp18, 0                ; <i1> [#uses=1]
   br i1 %tobool19, label %for.inc35, label %if.then
 
@@ -103,8 +103,8 @@ bb.nph5:                                          ; preds = %if.then
 
 for.body25:                                       ; preds = %bb.nph5, %for.cond22
   %k.04 = phi i64 [ %add, %bb.nph5 ], [ %add31, %for.cond22 ] ; <i64> [#uses=2]
-  %arrayidx27 = getelementptr inbounds [8193 x i8], [8193 x i8]* @main.flags, i64 0, i64 %k.04 ; <i8*> [#uses=1]
-  store i8 0, i8* %arrayidx27
+  %arrayidx27 = getelementptr inbounds [8193 x i8], ptr @main.flags, i64 0, i64 %k.04 ; <ptr> [#uses=1]
+  store i8 0, ptr %arrayidx27
   %add31 = add nsw i64 %k.04, %i.17               ; <i64> [#uses=2]
   br label %for.cond22
 
@@ -119,13 +119,13 @@ for.inc35:                                        ; preds = %for.body15, %for.en
 
 while.end:                                        ; preds = %while.cond.while.end_crit_edge, %while.cond.preheader
   %count.0.lcssa = phi i32 [ %count.2.lcssa.lcssa, %while.cond.while.end_crit_edge ], [ 0, %while.cond.preheader ] ; <i32> [#uses=1]
-  %call40 = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i64 0, i64 0), i32 %count.0.lcssa) nounwind ; <i32> [#uses=0]
+  %call40 = tail call i32 (ptr, ...) @printf(ptr @.str, i32 %count.0.lcssa) nounwind ; <i32> [#uses=0]
   ret i32 0
 }
 
-declare i32 @atoi(i8* nocapture) nounwind readonly
+declare i32 @atoi(ptr nocapture) nounwind readonly
 
-declare i32 @printf(i8* nocapture, ...) nounwind
+declare i32 @printf(ptr nocapture, ...) nounwind
 
 ; IndVars doesn't emit a udiv in for.body.preheader since SCEVExpander::expand will
 ; find out there's already a udiv in the original code.
@@ -134,7 +134,7 @@ declare i32 @printf(i8* nocapture, ...) nounwind
 ; CHECK: for.body.preheader:
 ; CHECK-NOT: udiv
 
-define void @foo(double* %p, i64 %n) nounwind {
+define void @foo(ptr %p, i64 %n) nounwind {
 entry:
   %div0 = udiv i64 %n, 7                          ; <i64> [#uses=1]
   %div1 = add i64 %div0, 1
@@ -146,8 +146,8 @@ for.body.preheader:                               ; preds = %entry
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %i.03 = phi i64 [ %inc, %for.body ], [ 0, %for.body.preheader ] ; <i64> [#uses=2]
-  %arrayidx = getelementptr inbounds double, double* %p, i64 %i.03 ; <double*> [#uses=1]
-  store double 0.000000e+00, double* %arrayidx
+  %arrayidx = getelementptr inbounds double, ptr %p, i64 %i.03 ; <ptr> [#uses=1]
+  store double 0.000000e+00, ptr %arrayidx
   %inc = add i64 %i.03, 1                         ; <i64> [#uses=2]
   %divx = udiv i64 %n, 7                           ; <i64> [#uses=1]
   %div = add i64 %divx, 1

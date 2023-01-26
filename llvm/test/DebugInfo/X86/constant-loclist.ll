@@ -27,14 +27,14 @@ define void @main() #0 !dbg !7 {
   %1 = alloca double, align 8
   %2 = alloca i64, align 8
   %3 = alloca i64, align 8
-  store double 2.000000e+00, double* %1, align 8, !dbg !21
+  store double 2.000000e+00, ptr %1, align 8, !dbg !21
   call void @llvm.dbg.value(metadata i64 0, metadata !22, metadata !15), !dbg !24
   call void @llvm.dbg.value(metadata i64 0, metadata !25, metadata !15), !dbg !27
   call void @llvm.dbg.value(metadata double 2.000000e+00, metadata !19, metadata !15), !dbg !21
-  store i64 4611686018427387904, i64* %2, align 8, !dbg !24
+  store i64 4611686018427387904, ptr %2, align 8, !dbg !24
   call void @llvm.dbg.value(metadata i64 4611686018427387904, metadata !22, metadata !15), !dbg !24
   call void @llvm.dbg.value(metadata i64 4611686018427387904, metadata !25, metadata !15), !dbg !27
-  store i64 4611686018427387904, i64* %3, align 8, !dbg !27
+  store i64 4611686018427387904, ptr %3, align 8, !dbg !27
   ret void, !dbg !28
 }
 

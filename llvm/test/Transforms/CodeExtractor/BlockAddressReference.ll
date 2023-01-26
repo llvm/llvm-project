@@ -1,6 +1,6 @@
-; RUN: opt < %s -loop-simplify -loop-extract -S | FileCheck %s
+; RUN: opt < %s -passes='function(loop-simplify),loop-extract'  -S | FileCheck %s
 
-@label = common local_unnamed_addr global i8* null
+@label = common local_unnamed_addr global ptr null
 
 ; CHECK: define
 ; no outlined function
@@ -9,8 +9,8 @@ define i32 @sterix(i32 %n) {
 entry:
   %tobool = icmp ne i32 %n, 0
   ; this blockaddress references a basic block that goes in the extracted loop
-  %cond = select i1 %tobool, i8* blockaddress(@sterix, %for.cond), i8* blockaddress(@sterix, %exit)
-  store i8* %cond, i8** @label
+  %cond = select i1 %tobool, ptr blockaddress(@sterix, %for.cond), ptr blockaddress(@sterix, %exit)
+  store ptr %cond, ptr @label
   %cmp5 = icmp sgt i32 %n, 0
   br i1 %cmp5, label %for.body, label %exit
 

@@ -33,9 +33,9 @@ target triple = "x86_64-unknown-linux-gnu"
 define dso_local i32 @_Z3fooi.1(i32 %a) !dbg !9 {
 entry:
   %a.addr = alloca i32, align 4
-  store i32 %a, i32* %a.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %a.addr, metadata !14, metadata !DIExpression()), !dbg !15
-  %0 = load i32, i32* %a.addr, align 4, !dbg !15
+  store i32 %a, ptr %a.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !14, metadata !DIExpression()), !dbg !15
+  %0 = load i32, ptr %a.addr, align 4, !dbg !15
   ret i32 %0, !dbg !15
 }
 ; Function Attrs: nounwind readnone speculatable willreturn
@@ -50,9 +50,9 @@ entry:
 define dso_local i32 @_Z3fooi(i32 %a) !dbg !23 {
 entry:
   %a.addr = alloca i32, align 4
-  store i32 %a, i32* %a.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %a.addr, metadata !24, metadata !DIExpression()), !dbg !25
-  %0 = load i32, i32* %a.addr, align 4, !dbg !25
+  store i32 %a, ptr %a.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !24, metadata !DIExpression()), !dbg !25
+  %0 = load i32, ptr %a.addr, align 4, !dbg !25
   ret i32 %0, !dbg !25
 }
 ; Function Attrs: noinline nounwind optnone uwtable

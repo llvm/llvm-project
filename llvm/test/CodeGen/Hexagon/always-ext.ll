@@ -10,8 +10,8 @@
 ; CHECK: memw(r{{[0-9+]}}<<#2+##4)
 ; CHECK: }
 
-%struct.CuTest.1.28.31.37.40.43.52.55.67.85.111 = type { i8*, void (%struct.CuTest.1.28.31.37.40.43.52.55.67.85.111*)*, i32, i32, i8*, [23 x i32]* }
-%struct.CuSuite.2.29.32.38.41.44.53.56.68.86.112 = type { i32, [1024 x %struct.CuTest.1.28.31.37.40.43.52.55.67.85.111*], i32 }
+%struct.CuTest.1.28.31.37.40.43.52.55.67.85.111 = type { ptr, ptr, i32, i32, ptr, ptr }
+%struct.CuSuite.2.29.32.38.41.44.53.56.68.86.112 = type { i32, [1024 x ptr], i32 }
 
 @__func__.CuSuiteAdd = external unnamed_addr constant [11 x i8], align 8
 @.str24 = external unnamed_addr constant [140 x i8], align 8
@@ -23,8 +23,8 @@ entry:
   br i1 undef, label %for.body.us, label %for.end
 
 for.body.us:                                      ; preds = %entry
-  %0 = load %struct.CuTest.1.28.31.37.40.43.52.55.67.85.111*, %struct.CuTest.1.28.31.37.40.43.52.55.67.85.111** null, align 4
-  %1 = load i32, i32* undef, align 4
+  %0 = load ptr, ptr null, align 4
+  %1 = load i32, ptr undef, align 4
   %cmp.i.us = icmp slt i32 %1, 1024
   br i1 %cmp.i.us, label %CuSuiteAdd.exit.us, label %cond.false6.i.us
 
@@ -33,8 +33,8 @@ cond.false6.i.us:                                 ; preds = %for.body.us
   unreachable
 
 CuSuiteAdd.exit.us:                               ; preds = %for.body.us
-  %arrayidx.i.us = getelementptr inbounds %struct.CuSuite.2.29.32.38.41.44.53.56.68.86.112, %struct.CuSuite.2.29.32.38.41.44.53.56.68.86.112* null, i32 0, i32 1, i32 %1
-  store %struct.CuTest.1.28.31.37.40.43.52.55.67.85.111* %0, %struct.CuTest.1.28.31.37.40.43.52.55.67.85.111** %arrayidx.i.us, align 4
+  %arrayidx.i.us = getelementptr inbounds %struct.CuSuite.2.29.32.38.41.44.53.56.68.86.112, ptr null, i32 0, i32 1, i32 %1
+  store ptr %0, ptr %arrayidx.i.us, align 4
   call void @llvm.trap()
   unreachable
 

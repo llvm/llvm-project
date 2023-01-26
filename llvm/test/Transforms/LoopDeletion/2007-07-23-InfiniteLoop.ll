@@ -1,6 +1,6 @@
-; RUN: opt < %s -loop-deletion -S | grep switch
+; RUN: opt < %s -passes=loop-deletion -S | grep switch
 ; PR 1564
-  
+
 define fastcc void @out() {
     start:
             br label %loop

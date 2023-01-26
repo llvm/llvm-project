@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef SUPPORT_FP_COMPARE_H
 #define SUPPORT_FP_COMPARE_H
 
@@ -17,29 +18,29 @@
 template<typename T>
 bool fptest_close(T val, T expected, T eps)
 {
-	constexpr T zero = T(0);
-	assert(eps >= zero);
+    constexpr T zero = T(0);
+    assert(eps >= zero);
 
-//	Handle the zero cases
-	if (eps      == zero) return val == expected;
-	if (val      == zero) return std::abs(expected) <= eps;
-	if (expected == zero) return std::abs(val)      <= eps;
+    // Handle the zero cases
+    if (eps      == zero) return val == expected;
+    if (val      == zero) return std::abs(expected) <= eps;
+    if (expected == zero) return std::abs(val)      <= eps;
 
-	return std::abs(val - expected) < eps
-	    && std::abs(val - expected)/std::abs(val) < eps;
+    return std::abs(val - expected) < eps
+        && std::abs(val - expected)/std::abs(val) < eps;
 }
 
 template<typename T>
 bool fptest_close_pct(T val, T expected, T percent)
 {
-	constexpr T zero = T(0);
-	assert(percent >= zero);
+    constexpr T zero = T(0);
+    assert(percent >= zero);
 
-//	Handle the zero cases
-	if (percent == zero) return val == expected;
-	T eps = (percent / T(100)) * std::max(std::abs(val), std::abs(expected));
+    // Handle the zero cases
+    if (percent == zero) return val == expected;
+    T eps = (percent / T(100)) * std::max(std::abs(val), std::abs(expected));
 
-	return fptest_close(val, expected, eps);
+    return fptest_close(val, expected, eps);
 }
 
 

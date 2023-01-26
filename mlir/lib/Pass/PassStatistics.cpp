@@ -27,7 +27,7 @@ struct Statistic {
 
 /// Utility to print a pass entry in the statistics output.
 static void printPassEntry(raw_ostream &os, unsigned indent, StringRef pass,
-                           MutableArrayRef<Statistic> stats = llvm::None) {
+                           MutableArrayRef<Statistic> stats = std::nullopt) {
   os.indent(indent) << pass << "\n";
   if (stats.empty())
     return;
@@ -226,10 +226,12 @@ static void prepareStatistics(OpPassManager &pm) {
     MutableArrayRef<OpPassManager> nestedPms = adaptor->getPassManagers();
 
     // Merge the statistics from the async pass managers into the main nested
-    // pass managers.
+    // pass managers.  Prepare recursively before merging.
     for (auto &asyncPM : adaptor->getParallelPassManagers()) {
-      for (unsigned i = 0, e = asyncPM.size(); i != e; ++i)
+      for (unsigned i = 0, e = asyncPM.size(); i != e; ++i) {
+        prepareStatistics(asyncPM[i]);
         asyncPM[i].mergeStatisticsInto(nestedPms[i]);
+      }
     }
 
     // Prepare the statistics of each of the nested passes.

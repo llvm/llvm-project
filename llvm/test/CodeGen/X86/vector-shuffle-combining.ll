@@ -1566,14 +1566,23 @@ define <4 x i32> @combine_test21(<8 x i32> %a, ptr %ptr) {
 ; SSE-NEXT:    movaps %xmm2, (%rdi)
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: combine_test21:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm0[0],xmm1[0]
-; AVX-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; AVX-NEXT:    vmovaps %xmm2, (%rdi)
-; AVX-NEXT:    vzeroupper
-; AVX-NEXT:    retq
+; AVX1-LABEL: combine_test21:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm0[0],xmm1[0]
+; AVX1-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; AVX1-NEXT:    vmovaps %xmm2, (%rdi)
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: combine_test21:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = ymm0[1,3,2,3]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    vmovaps %xmm0, (%rdi)
+; AVX2-NEXT:    vmovaps %xmm1, %xmm0
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
   %1 = shufflevector <8 x i32> %a, <8 x i32> %a, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   %2 = shufflevector <8 x i32> %a, <8 x i32> %a, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
   store <4 x i32> %1, ptr %ptr, align 16
@@ -3520,4 +3529,31 @@ entry:
   %21 = fadd <4 x float> %20, %2
   store <4 x float> %21, ptr undef, align 16
   ret void
+}
+
+; Inifite loop test case reported on 5ca77541446d
+define void @autogen_SD25931() {
+; CHECK-LABEL: autogen_SD25931:
+; CHECK:       # %bb.0: # %BB
+; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:  .LBB139_1: # %CF242
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    jmp .LBB139_1
+BB:
+  %Cmp16 = icmp uge <2 x i1> zeroinitializer, zeroinitializer
+  %Shuff19 = shufflevector <2 x i1> zeroinitializer, <2 x i1> %Cmp16, <2 x i32> <i32 3, i32 1>
+  %Shuff33 = shufflevector <2 x i1> %Shuff19, <2 x i1> zeroinitializer, <2 x i32> <i32 0, i32 2>
+  br label %CF250
+
+CF250:                                            ; preds = %CF250, %BB
+  br i1 poison, label %CF250, label %CF259
+
+CF259:                                            ; preds = %CF250
+  %Cmp83 = icmp ule <2 x i1> %Shuff19, zeroinitializer
+  br label %CF242
+
+CF242:                                            ; preds = %CF242, %CF259
+  %Shuff153 = shufflevector <2 x i1> %Shuff33, <2 x i1> poison, <2 x i32> <i32 3, i32 1>
+  %Shuff161 = shufflevector <2 x i1> zeroinitializer, <2 x i1> %Cmp83, <2 x i32> <i32 1, i32 3>
+  br label %CF242
 }

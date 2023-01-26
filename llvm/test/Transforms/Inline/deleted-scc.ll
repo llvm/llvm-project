@@ -24,13 +24,13 @@ entry:
 
 L:                                                ; preds = %cleanup9, %entry
   %cleanup.dest.slot.0 = phi i32 [ undef, %entry ], [ %cleanup.dest.slot.3, %cleanup9 ]
-  store i32 0, i32* @b, align 4
+  store i32 0, ptr @b, align 4
   %tobool.not = icmp eq i32 0, 0
   br i1 %tobool.not, label %if.then, label %while.cond
 
 while.cond:                                       ; preds = %cleanup9, %L
   %cleanup.dest.slot.2 = phi i32 [ %cleanup.dest.slot.0, %L ], [ 0, %cleanup9 ]
-  %0 = load i32, i32* @b, align 4
+  %0 = load i32, ptr @b, align 4
   %tobool3.not = icmp eq i32 %0, 0
   br i1 %tobool3.not, label %cleanup9, label %while.body4
 

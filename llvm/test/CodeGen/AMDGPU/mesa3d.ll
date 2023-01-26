@@ -16,10 +16,10 @@
 ; GCN-DAG: s_mov_b32 s7, 0xe8f000
 ; GCN-DAG: v_mov_b32_e32 [[V:v[0-9]+]], 2
 ; GCN: buffer_store_dword [[V]], v0, s[4:7], 0 offen
-define amdgpu_ps void @scratch_ps(i32 addrspace(1)* %out, i32 %in) {
+define amdgpu_ps void @scratch_ps(ptr addrspace(1) %out, i32 %in) {
 entry:
   %alloca = alloca [32 x i32], addrspace(5)
-  %ptr = getelementptr [32 x i32], [32 x i32] addrspace(5)* %alloca, i32 0, i32 %in
-  store volatile i32 2, i32 addrspace(5)* %ptr
+  %ptr = getelementptr [32 x i32], ptr addrspace(5) %alloca, i32 0, i32 %in
+  store volatile i32 2, ptr addrspace(5) %ptr
   ret void
 }

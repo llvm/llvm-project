@@ -662,14 +662,13 @@ define i32 @shuf_4bytes(<4 x i8> %x) {
   ret i32 %cast
 }
 
-define i32 @shuf_load_4bytes(<4 x i8>* %p) {
+define i32 @shuf_load_4bytes(ptr %p) {
 ; CHECK-LABEL: @shuf_load_4bytes(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8>* [[P:%.*]] to i32*
-; CHECK-NEXT:    [[X1:%.*]] = load i32, i32* [[TMP1]], align 4
+; CHECK-NEXT:    [[X1:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[CAST:%.*]] = call i32 @llvm.bswap.i32(i32 [[X1]])
 ; CHECK-NEXT:    ret i32 [[CAST]]
 ;
-  %x = load <4 x i8>, <4 x i8>* %p
+  %x = load <4 x i8>, ptr %p
   %bswap = shufflevector <4 x i8> %x, <4 x i8> undef, <4 x i32> <i32 3, i32 2, i32 undef, i32 0>
   %cast = bitcast <4 x i8> %bswap to i32
   ret i32 %cast
@@ -773,9 +772,9 @@ define i32 @funnel_and(i32 %abcd) {
 }
 
 ; Don't attempt to collectBitParts from >128 bit integers
-define i16 @trunc_bswap_i160(i160* %a0) {
+define i16 @trunc_bswap_i160(ptr %a0) {
 ; CHECK-LABEL: @trunc_bswap_i160(
-; CHECK-NEXT:    [[LOAD:%.*]] = load i160, i160* [[A0:%.*]], align 4
+; CHECK-NEXT:    [[LOAD:%.*]] = load i160, ptr [[A0:%.*]], align 4
 ; CHECK-NEXT:    [[LSHR1:%.*]] = lshr i160 [[LOAD]], 136
 ; CHECK-NEXT:    [[CAST1:%.*]] = trunc i160 [[LSHR1]] to i16
 ; CHECK-NEXT:    [[AND1:%.*]] = and i16 [[CAST1]], 255
@@ -785,7 +784,7 @@ define i16 @trunc_bswap_i160(i160* %a0) {
 ; CHECK-NEXT:    [[OR:%.*]] = or i16 [[AND1]], [[SHL]]
 ; CHECK-NEXT:    ret i16 [[OR]]
 ;
-  %load = load i160, i160* %a0, align 4
+  %load = load i160, ptr %a0, align 4
   %lshr0 = lshr i160 %load, 128
   %lshr1 = lshr i160 %load, 136
   %cast0 = trunc i160 %lshr0 to i16

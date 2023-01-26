@@ -39,16 +39,16 @@
 target datalayout = "e-m:o-p:32:32-f64:32:64-f80:128-n8:16:32-S128"
 target triple = "i386-apple-macosx10.12.0"
 
-define void @foo(float* %A, float* %p) {
+define void @foo(ptr %A, ptr %p) {
 entry:
   br label %loop
 
 loop:
   %indvar = phi i64 [0, %entry], [%indvar.next, %loop]
   %indvar.next = add i64 %indvar, 1
-  %invariant = load float, float* %p
-  %ptr = getelementptr float, float* %A, i64 %indvar
-  store float 42.0, float* %ptr
+  %invariant = load float, ptr %p
+  %ptr = getelementptr float, ptr %A, i64 %indvar
+  store float 42.0, ptr %ptr
   %cmp = icmp sle i64 %indvar, 1024
   br i1 %cmp, label %loop, label %loop2
 
@@ -56,7 +56,7 @@ loop2:
   %indvar2 = phi i64 [0, %loop], [%indvar2.next, %loop2]
   %indvar2f = phi float [%invariant, %loop], [%indvar2f, %loop2]
   %indvar2.next = add i64 %indvar2, 1
-  store float %indvar2f, float* %A
+  store float %indvar2f, ptr %A
   %cmp2 = icmp sle i64 %indvar2, 1024
   br i1 %cmp2, label %loop2, label %end
 

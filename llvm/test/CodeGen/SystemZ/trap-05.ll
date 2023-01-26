@@ -7,13 +7,13 @@
 declare void @llvm.trap()
 
 ; Check LAT with no displacement.
-define void @f1(i32 *%ptr) {
+define void @f1(ptr %ptr) {
 ; CHECK-LABEL: f1:
 ; CHECK: lfhat [[REG:%r[0-9]+]], 0(%r2)
 ; CHECK: stepa [[REG]]
 ; CHECK: br %r14
 entry:
-  %val = load i32, i32 *%ptr
+  %val = load i32, ptr %ptr
   %cmp = icmp eq i32 %val, 0
   br i1 %cmp, label %if.then, label %if.end
 
@@ -27,13 +27,13 @@ if.end:                                           ; preds = %entry
 }
 
 ; Check the high end of the LAT range.
-define void @f2(i32 *%src) {
+define void @f2(ptr %src) {
 ; CHECK-LABEL: f2:
 ; CHECK: lfhat [[REG:%r[0-9]+]], 524284(%r2)
 ; CHECK: stepa [[REG]]
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%src, i64 131071
-  %val = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %src, i64 131071
+  %val = load i32, ptr %ptr
   %cmp = icmp eq i32 %val, 0
   br i1 %cmp, label %if.then, label %if.end
 
@@ -48,14 +48,14 @@ if.end:                                           ; preds = %entry
 
 ; Check the next word up, which needs separate address logic.
 ; Other sequences besides this one would be OK.
-define void @f3(i32 *%src) {
+define void @f3(ptr %src) {
 ; CHECK-LABEL: f3:
 ; CHECK: agfi %r2, 524288
 ; CHECK: lfhat [[REG:%r[0-9]+]], 0(%r2)
 ; CHECK: stepa [[REG]]
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%src, i64 131072
-  %val = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %src, i64 131072
+  %val = load i32, ptr %ptr
   %cmp = icmp eq i32 %val, 0
   br i1 %cmp, label %if.then, label %if.end
 
@@ -76,8 +76,8 @@ define void @f4(i64 %src, i64 %index) {
 ; CHECK: br %r14
   %add1 = add i64 %src, %index
   %add2 = add i64 %add1, 524287
-  %ptr = inttoptr i64 %add2 to i32 *
-  %val = load i32, i32 *%ptr
+  %ptr = inttoptr i64 %add2 to ptr
+  %val = load i32, ptr %ptr
   %cmp = icmp eq i32 %val, 0
   br i1 %cmp, label %if.then, label %if.end
 

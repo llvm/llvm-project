@@ -15,22 +15,22 @@ declare i32 @llvm.arm.space(i32, i32)
 
 define i32 @testpadding(i32 %a) {
 entry:
-  %0 = load i32, i32* @g0, align 4
+  %0 = load i32, ptr @g0, align 4
   %add = add nsw i32 %0, 12
-  store i32 %add, i32* @g0, align 4
-  %1 = load double, double* @d0, align 8
+  store i32 %add, ptr @g0, align 4
+  %1 = load double, ptr @d0, align 8
   %add1 = fadd double %1, 0x3FF3C0B8ED46EACB
-  store double %add1, double* @d0, align 8
+  store double %add1, ptr @d0, align 8
   %tmpcall11 = call i32 @llvm.arm.space(i32 28, i32 undef)
   call void @foo20(i32 191)
-  %2 = load float, float* @f0, align 4
+  %2 = load float, ptr @f0, align 4
   %add2 = fadd float %2, 0x3FF3C0BDC0000000
-  store float %add2, float* @f0, align 4
+  store float %add2, ptr @f0, align 4
   br label %do.body
 
 do.body:                                          ; preds = %do.body, %entry
   tail call void @foo20(i32 19)
-  %3 = load i32, i32* @g1, align 4
+  %3 = load i32, ptr @g1, align 4
   %tobool = icmp eq i32 %3, 0
   br i1 %tobool, label %do.end, label %do.body
 

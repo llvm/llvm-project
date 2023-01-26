@@ -1,4 +1,4 @@
-; RUN: llc -O3 -march=hexagon < %s | FileCheck %s
+; RUN: llc -opaque-pointers=0 -O3 -march=hexagon < %s | FileCheck %s
 
 ; CHECK-NOT: memb(r{{[0-9]+}}+#375) = #4
 ; CHECK: [[REG0:(r[0-9]+)]] = add(r{{[0-9]+}},{{#?}}#374)

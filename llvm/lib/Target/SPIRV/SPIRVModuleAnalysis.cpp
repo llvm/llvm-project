@@ -16,11 +16,11 @@
 
 #include "SPIRVModuleAnalysis.h"
 #include "SPIRV.h"
-#include "SPIRVGlobalRegistry.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "TargetInfo/SPIRVTargetInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 
@@ -52,21 +52,59 @@ static unsigned getMetadataUInt(MDNode *MdNode, unsigned OpIndex,
   return DefaultVal;
 }
 
+static SPIRV::Requirements
+getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
+                               unsigned i, const SPIRVSubtarget &ST,
+                               SPIRV::RequirementHandler &Reqs) {
+  unsigned ReqMinVer = getSymbolicOperandMinVersion(Category, i);
+  unsigned ReqMaxVer = getSymbolicOperandMaxVersion(Category, i);
+  unsigned TargetVer = ST.getSPIRVVersion();
+  bool MinVerOK = !ReqMinVer || !TargetVer || TargetVer >= ReqMinVer;
+  bool MaxVerOK = !ReqMaxVer || !TargetVer || TargetVer <= ReqMaxVer;
+  CapabilityList ReqCaps = getSymbolicOperandCapabilities(Category, i);
+  ExtensionList ReqExts = getSymbolicOperandExtensions(Category, i);
+  if (ReqCaps.empty()) {
+    if (ReqExts.empty()) {
+      if (MinVerOK && MaxVerOK)
+        return {true, {}, {}, ReqMinVer, ReqMaxVer};
+      return {false, {}, {}, 0, 0};
+    }
+  } else if (MinVerOK && MaxVerOK) {
+    for (auto Cap : ReqCaps) { // Only need 1 of the capabilities to work.
+      if (Reqs.isCapabilityAvailable(Cap))
+        return {true, {Cap}, {}, ReqMinVer, ReqMaxVer};
+    }
+  }
+  // If there are no capabilities, or we can't satisfy the version or
+  // capability requirements, use the list of extensions (if the subtarget
+  // can handle them all).
+  if (llvm::all_of(ReqExts, [&ST](const SPIRV::Extension::Extension &Ext) {
+        return ST.canUseExtension(Ext);
+      })) {
+    return {true, {}, ReqExts, 0, 0}; // TODO: add versions to extensions.
+  }
+  return {false, {}, {}, 0, 0};
+}
+
 void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
   MAI.MaxID = 0;
   for (int i = 0; i < SPIRV::NUM_MODULE_SECTIONS; i++)
     MAI.MS[i].clear();
   MAI.RegisterAliasTable.clear();
   MAI.InstrsToDelete.clear();
-  MAI.FuncNameMap.clear();
+  MAI.FuncMap.clear();
   MAI.GlobalVarList.clear();
   MAI.ExtInstSetMap.clear();
+  MAI.Reqs.clear();
+  MAI.Reqs.initAvailableCapabilities(*ST);
 
   // TODO: determine memory model and source language from the configuratoin.
   if (auto MemModel = M.getNamedMetadata("spirv.MemoryModel")) {
     auto MemMD = MemModel->getOperand(0);
-    MAI.Addr = static_cast<SPIRV::AddressingModel>(getMetadataUInt(MemMD, 0));
-    MAI.Mem = static_cast<SPIRV::MemoryModel>(getMetadataUInt(MemMD, 1));
+    MAI.Addr = static_cast<SPIRV::AddressingModel::AddressingModel>(
+        getMetadataUInt(MemMD, 0));
+    MAI.Mem =
+        static_cast<SPIRV::MemoryModel::MemoryModel>(getMetadataUInt(MemMD, 1));
   } else {
     MAI.Mem = SPIRV::MemoryModel::OpenCL;
     unsigned PtrSize = ST->getPointerSize();
@@ -100,6 +138,15 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
         MAI.SrcExt.insert(cast<MDString>(MD->getOperand(J))->getString());
     }
   }
+
+  // Update required capabilities for this memory model, addressing model and
+  // source language.
+  MAI.Reqs.getAndAddRequirements(SPIRV::OperandCategory::MemoryModelOperand,
+                                 MAI.Mem, *ST);
+  MAI.Reqs.getAndAddRequirements(SPIRV::OperandCategory::SourceLanguageOperand,
+                                 MAI.SrcLang, *ST);
+  MAI.Reqs.getAndAddRequirements(SPIRV::OperandCategory::AddressingModelOperand,
+                                 MAI.Addr, *ST);
 
   // TODO: check if it's required by default.
   MAI.ExtInstSetMap[static_cast<unsigned>(SPIRV::InstructionSet::OpenCL_std)] =
@@ -178,6 +225,27 @@ void SPIRVModuleAnalysis::processDefInstrs(const Module &M) {
       DepsGraph, SPIRV::MB_TypeConstVars,
       [](const SPIRV::DTSortableEntry *E) { return !E->getIsFunc(); });
 
+  for (auto F = M.begin(), E = M.end(); F != E; ++F) {
+    MachineFunction *MF = MMI->getMachineFunction(*F);
+    if (!MF)
+      continue;
+    // Iterate through and collect OpExtension/OpCapability instructions.
+    for (MachineBasicBlock &MBB : *MF) {
+      for (MachineInstr &MI : MBB) {
+        if (MI.getOpcode() == SPIRV::OpExtension) {
+          // Here, OpExtension just has a single enum operand, not a string.
+          auto Ext = SPIRV::Extension::Extension(MI.getOperand(0).getImm());
+          MAI.Reqs.addExtension(Ext);
+          MAI.setSkipEmission(&MI);
+        } else if (MI.getOpcode() == SPIRV::OpCapability) {
+          auto Cap = SPIRV::Capability::Capability(MI.getOperand(0).getImm());
+          MAI.Reqs.addCapability(Cap);
+          MAI.setSkipEmission(&MI);
+        }
+      }
+    }
+  }
+
   collectGlobalEntities(
       DepsGraph, SPIRV::MB_ExtFuncDecls,
       [](const SPIRV::DTSortableEntry *E) { return E->getIsFunc(); }, true);
@@ -211,12 +279,12 @@ static bool findSameInstrInMS(const MachineInstr &A,
   return false;
 }
 
-// Look for IDs declared with Import linkage, and map the imported name string
+// Look for IDs declared with Import linkage, and map the corresponding function
 // to the register defining that variable (which will usually be the result of
 // an OpFunction). This lets us call externally imported functions using
 // the correct ID registers.
 void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
-                                           const Function &F) {
+                                           const Function *F) {
   if (MI.getOpcode() == SPIRV::OpDecorate) {
     // If it's got Import linkage.
     auto Dec = MI.getOperand(1).getImm();
@@ -224,10 +292,10 @@ void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
       auto Lnk = MI.getOperand(MI.getNumOperands() - 1).getImm();
       if (Lnk == static_cast<unsigned>(SPIRV::LinkageType::Import)) {
         // Map imported function name to function ID register.
-        std::string Name = getStringImm(MI, 2);
+        const Function *ImportedFunc =
+            F->getParent()->getFunction(getStringImm(MI, 2));
         Register Target = MI.getOperand(0).getReg();
-        // TODO: check defs from different MFs.
-        MAI.FuncNameMap[Name] = MAI.getRegisterAlias(MI.getMF(), Target);
+        MAI.FuncMap[ImportedFunc] = MAI.getRegisterAlias(MI.getMF(), Target);
       }
     }
   } else if (MI.getOpcode() == SPIRV::OpFunction) {
@@ -235,8 +303,7 @@ void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
     Register Reg = MI.defs().begin()->getReg();
     Register GlobalReg = MAI.getRegisterAlias(MI.getMF(), Reg);
     assert(GlobalReg.isValid());
-    // TODO: check that it does not conflict with existing entries.
-    MAI.FuncNameMap[F.getGlobalIdentifier()] = GlobalReg;
+    MAI.FuncMap[F] = GlobalReg;
   }
 }
 
@@ -275,13 +342,13 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
           collectOtherInstr(MI, MAI, SPIRV::MB_EntryPoints);
         } else if (TII->isDecorationInstr(MI)) {
           collectOtherInstr(MI, MAI, SPIRV::MB_Annotations);
-          collectFuncNames(MI, *F);
+          collectFuncNames(MI, &*F);
         } else if (TII->isConstantInstr(MI)) {
           // Now OpSpecConstant*s are not in DT,
           // but they need to be collected anyway.
           collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars);
         } else if (OpCode == SPIRV::OpFunction) {
-          collectFuncNames(MI, *F);
+          collectFuncNames(MI, &*F);
         } else if (OpCode == SPIRV::OpTypeForwardPointer) {
           collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars, false);
         }
@@ -337,7 +404,14 @@ static void processSwitches(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
           assert(MI.getOperand(0).isReg());
           SwitchRegs.insert(MI.getOperand(0).getReg());
         }
-        if (MI.getOpcode() != SPIRV::OpIEqual || !MI.getOperand(2).isReg() ||
+        if (MI.getOpcode() == SPIRV::OpISubS &&
+            SwitchRegs.contains(MI.getOperand(2).getReg())) {
+          SwitchRegs.insert(MI.getOperand(0).getReg());
+          MAI.setSkipEmission(&MI);
+        }
+        if ((MI.getOpcode() != SPIRV::OpIEqual &&
+             MI.getOpcode() != SPIRV::OpULessThanEqual) ||
+            !MI.getOperand(2).isReg() ||
             !SwitchRegs.contains(MI.getOperand(2).getReg()))
           continue;
         Register CmpReg = MI.getOperand(0).getReg();
@@ -350,6 +424,577 @@ static void processSwitches(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
         if (&MBB.front() == &MI && &MBB.back() == CBr)
           MAI.MBBsToSkip.insert(&MBB);
       }
+  }
+}
+
+// RequirementHandler implementations.
+void SPIRV::RequirementHandler::getAndAddRequirements(
+    SPIRV::OperandCategory::OperandCategory Category, uint32_t i,
+    const SPIRVSubtarget &ST) {
+  addRequirements(getSymbolicOperandRequirements(Category, i, ST, *this));
+}
+
+void SPIRV::RequirementHandler::pruneCapabilities(
+    const CapabilityList &ToPrune) {
+  for (const auto &Cap : ToPrune) {
+    AllCaps.insert(Cap);
+    auto FoundIndex = std::find(MinimalCaps.begin(), MinimalCaps.end(), Cap);
+    if (FoundIndex != MinimalCaps.end())
+      MinimalCaps.erase(FoundIndex);
+    CapabilityList ImplicitDecls =
+        getSymbolicOperandCapabilities(OperandCategory::CapabilityOperand, Cap);
+    pruneCapabilities(ImplicitDecls);
+  }
+}
+
+void SPIRV::RequirementHandler::addCapabilities(const CapabilityList &ToAdd) {
+  for (const auto &Cap : ToAdd) {
+    bool IsNewlyInserted = AllCaps.insert(Cap).second;
+    if (!IsNewlyInserted) // Don't re-add if it's already been declared.
+      continue;
+    CapabilityList ImplicitDecls =
+        getSymbolicOperandCapabilities(OperandCategory::CapabilityOperand, Cap);
+    pruneCapabilities(ImplicitDecls);
+    MinimalCaps.push_back(Cap);
+  }
+}
+
+void SPIRV::RequirementHandler::addRequirements(
+    const SPIRV::Requirements &Req) {
+  if (!Req.IsSatisfiable)
+    report_fatal_error("Adding SPIR-V requirements this target can't satisfy.");
+
+  if (Req.Cap.has_value())
+    addCapabilities({Req.Cap.value()});
+
+  addExtensions(Req.Exts);
+
+  if (Req.MinVer) {
+    if (MaxVersion && Req.MinVer > MaxVersion) {
+      LLVM_DEBUG(dbgs() << "Conflicting version requirements: >= " << Req.MinVer
+                        << " and <= " << MaxVersion << "\n");
+      report_fatal_error("Adding SPIR-V requirements that can't be satisfied.");
+    }
+
+    if (MinVersion == 0 || Req.MinVer > MinVersion)
+      MinVersion = Req.MinVer;
+  }
+
+  if (Req.MaxVer) {
+    if (MinVersion && Req.MaxVer < MinVersion) {
+      LLVM_DEBUG(dbgs() << "Conflicting version requirements: <= " << Req.MaxVer
+                        << " and >= " << MinVersion << "\n");
+      report_fatal_error("Adding SPIR-V requirements that can't be satisfied.");
+    }
+
+    if (MaxVersion == 0 || Req.MaxVer < MaxVersion)
+      MaxVersion = Req.MaxVer;
+  }
+}
+
+void SPIRV::RequirementHandler::checkSatisfiable(
+    const SPIRVSubtarget &ST) const {
+  // Report as many errors as possible before aborting the compilation.
+  bool IsSatisfiable = true;
+  auto TargetVer = ST.getSPIRVVersion();
+
+  if (MaxVersion && TargetVer && MaxVersion < TargetVer) {
+    LLVM_DEBUG(
+        dbgs() << "Target SPIR-V version too high for required features\n"
+               << "Required max version: " << MaxVersion << " target version "
+               << TargetVer << "\n");
+    IsSatisfiable = false;
+  }
+
+  if (MinVersion && TargetVer && MinVersion > TargetVer) {
+    LLVM_DEBUG(dbgs() << "Target SPIR-V version too low for required features\n"
+                      << "Required min version: " << MinVersion
+                      << " target version " << TargetVer << "\n");
+    IsSatisfiable = false;
+  }
+
+  if (MinVersion && MaxVersion && MinVersion > MaxVersion) {
+    LLVM_DEBUG(
+        dbgs()
+        << "Version is too low for some features and too high for others.\n"
+        << "Required SPIR-V min version: " << MinVersion
+        << " required SPIR-V max version " << MaxVersion << "\n");
+    IsSatisfiable = false;
+  }
+
+  for (auto Cap : MinimalCaps) {
+    if (AvailableCaps.contains(Cap))
+      continue;
+    LLVM_DEBUG(dbgs() << "Capability not supported: "
+                      << getSymbolicOperandMnemonic(
+                             OperandCategory::CapabilityOperand, Cap)
+                      << "\n");
+    IsSatisfiable = false;
+  }
+
+  for (auto Ext : AllExtensions) {
+    if (ST.canUseExtension(Ext))
+      continue;
+    LLVM_DEBUG(dbgs() << "Extension not suported: "
+                      << getSymbolicOperandMnemonic(
+                             OperandCategory::ExtensionOperand, Ext)
+                      << "\n");
+    IsSatisfiable = false;
+  }
+
+  if (!IsSatisfiable)
+    report_fatal_error("Unable to meet SPIR-V requirements for this target.");
+}
+
+// Add the given capabilities and all their implicitly defined capabilities too.
+void SPIRV::RequirementHandler::addAvailableCaps(const CapabilityList &ToAdd) {
+  for (const auto Cap : ToAdd)
+    if (AvailableCaps.insert(Cap).second)
+      addAvailableCaps(getSymbolicOperandCapabilities(
+          SPIRV::OperandCategory::CapabilityOperand, Cap));
+}
+
+namespace llvm {
+namespace SPIRV {
+void RequirementHandler::initAvailableCapabilities(const SPIRVSubtarget &ST) {
+  // TODO: Implemented for other targets other then OpenCL.
+  if (!ST.isOpenCLEnv())
+    return;
+  // Add the min requirements for different OpenCL and SPIR-V versions.
+  addAvailableCaps({Capability::Addresses, Capability::Float16Buffer,
+                    Capability::Int16, Capability::Int8, Capability::Kernel,
+                    Capability::Linkage, Capability::Vector16,
+                    Capability::Groups, Capability::GenericPointer,
+                    Capability::Shader});
+  if (ST.hasOpenCLFullProfile())
+    addAvailableCaps({Capability::Int64, Capability::Int64Atomics});
+  if (ST.hasOpenCLImageSupport()) {
+    addAvailableCaps({Capability::ImageBasic, Capability::LiteralSampler,
+                      Capability::Image1D, Capability::SampledBuffer,
+                      Capability::ImageBuffer});
+    if (ST.isAtLeastOpenCLVer(20))
+      addAvailableCaps({Capability::ImageReadWrite});
+  }
+  if (ST.isAtLeastSPIRVVer(11) && ST.isAtLeastOpenCLVer(22))
+    addAvailableCaps({Capability::SubgroupDispatch, Capability::PipeStorage});
+  if (ST.isAtLeastSPIRVVer(13))
+    addAvailableCaps({Capability::GroupNonUniform,
+                      Capability::GroupNonUniformVote,
+                      Capability::GroupNonUniformArithmetic,
+                      Capability::GroupNonUniformBallot,
+                      Capability::GroupNonUniformClustered,
+                      Capability::GroupNonUniformShuffle,
+                      Capability::GroupNonUniformShuffleRelative});
+  if (ST.isAtLeastSPIRVVer(14))
+    addAvailableCaps({Capability::DenormPreserve, Capability::DenormFlushToZero,
+                      Capability::SignedZeroInfNanPreserve,
+                      Capability::RoundingModeRTE,
+                      Capability::RoundingModeRTZ});
+  // TODO: verify if this needs some checks.
+  addAvailableCaps({Capability::Float16, Capability::Float64});
+
+  // TODO: add OpenCL extensions.
+}
+} // namespace SPIRV
+} // namespace llvm
+
+// Add the required capabilities from a decoration instruction (including
+// BuiltIns).
+static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
+                              SPIRV::RequirementHandler &Reqs,
+                              const SPIRVSubtarget &ST) {
+  int64_t DecOp = MI.getOperand(DecIndex).getImm();
+  auto Dec = static_cast<SPIRV::Decoration::Decoration>(DecOp);
+  Reqs.addRequirements(getSymbolicOperandRequirements(
+      SPIRV::OperandCategory::DecorationOperand, Dec, ST, Reqs));
+
+  if (Dec == SPIRV::Decoration::BuiltIn) {
+    int64_t BuiltInOp = MI.getOperand(DecIndex + 1).getImm();
+    auto BuiltIn = static_cast<SPIRV::BuiltIn::BuiltIn>(BuiltInOp);
+    Reqs.addRequirements(getSymbolicOperandRequirements(
+        SPIRV::OperandCategory::BuiltInOperand, BuiltIn, ST, Reqs));
+  }
+}
+
+// Add requirements for image handling.
+static void addOpTypeImageReqs(const MachineInstr &MI,
+                               SPIRV::RequirementHandler &Reqs,
+                               const SPIRVSubtarget &ST) {
+  assert(MI.getNumOperands() >= 8 && "Insufficient operands for OpTypeImage");
+  // The operand indices used here are based on the OpTypeImage layout, which
+  // the MachineInstr follows as well.
+  int64_t ImgFormatOp = MI.getOperand(7).getImm();
+  auto ImgFormat = static_cast<SPIRV::ImageFormat::ImageFormat>(ImgFormatOp);
+  Reqs.getAndAddRequirements(SPIRV::OperandCategory::ImageFormatOperand,
+                             ImgFormat, ST);
+
+  bool IsArrayed = MI.getOperand(4).getImm() == 1;
+  bool IsMultisampled = MI.getOperand(5).getImm() == 1;
+  bool NoSampler = MI.getOperand(6).getImm() == 2;
+  // Add dimension requirements.
+  assert(MI.getOperand(2).isImm());
+  switch (MI.getOperand(2).getImm()) {
+  case SPIRV::Dim::DIM_1D:
+    Reqs.addRequirements(NoSampler ? SPIRV::Capability::Image1D
+                                   : SPIRV::Capability::Sampled1D);
+    break;
+  case SPIRV::Dim::DIM_2D:
+    if (IsMultisampled && NoSampler)
+      Reqs.addRequirements(SPIRV::Capability::ImageMSArray);
+    break;
+  case SPIRV::Dim::DIM_Cube:
+    Reqs.addRequirements(SPIRV::Capability::Shader);
+    if (IsArrayed)
+      Reqs.addRequirements(NoSampler ? SPIRV::Capability::ImageCubeArray
+                                     : SPIRV::Capability::SampledCubeArray);
+    break;
+  case SPIRV::Dim::DIM_Rect:
+    Reqs.addRequirements(NoSampler ? SPIRV::Capability::ImageRect
+                                   : SPIRV::Capability::SampledRect);
+    break;
+  case SPIRV::Dim::DIM_Buffer:
+    Reqs.addRequirements(NoSampler ? SPIRV::Capability::ImageBuffer
+                                   : SPIRV::Capability::SampledBuffer);
+    break;
+  case SPIRV::Dim::DIM_SubpassData:
+    Reqs.addRequirements(SPIRV::Capability::InputAttachment);
+    break;
+  }
+
+  // Has optional access qualifier.
+  // TODO: check if it's OpenCL's kernel.
+  if (MI.getNumOperands() > 8 &&
+      MI.getOperand(8).getImm() == SPIRV::AccessQualifier::ReadWrite)
+    Reqs.addRequirements(SPIRV::Capability::ImageReadWrite);
+  else
+    Reqs.addRequirements(SPIRV::Capability::ImageBasic);
+}
+
+void addInstrRequirements(const MachineInstr &MI,
+                          SPIRV::RequirementHandler &Reqs,
+                          const SPIRVSubtarget &ST) {
+  switch (MI.getOpcode()) {
+  case SPIRV::OpMemoryModel: {
+    int64_t Addr = MI.getOperand(0).getImm();
+    Reqs.getAndAddRequirements(SPIRV::OperandCategory::AddressingModelOperand,
+                               Addr, ST);
+    int64_t Mem = MI.getOperand(1).getImm();
+    Reqs.getAndAddRequirements(SPIRV::OperandCategory::MemoryModelOperand, Mem,
+                               ST);
+    break;
+  }
+  case SPIRV::OpEntryPoint: {
+    int64_t Exe = MI.getOperand(0).getImm();
+    Reqs.getAndAddRequirements(SPIRV::OperandCategory::ExecutionModelOperand,
+                               Exe, ST);
+    break;
+  }
+  case SPIRV::OpExecutionMode:
+  case SPIRV::OpExecutionModeId: {
+    int64_t Exe = MI.getOperand(1).getImm();
+    Reqs.getAndAddRequirements(SPIRV::OperandCategory::ExecutionModeOperand,
+                               Exe, ST);
+    break;
+  }
+  case SPIRV::OpTypeMatrix:
+    Reqs.addCapability(SPIRV::Capability::Matrix);
+    break;
+  case SPIRV::OpTypeInt: {
+    unsigned BitWidth = MI.getOperand(1).getImm();
+    if (BitWidth == 64)
+      Reqs.addCapability(SPIRV::Capability::Int64);
+    else if (BitWidth == 16)
+      Reqs.addCapability(SPIRV::Capability::Int16);
+    else if (BitWidth == 8)
+      Reqs.addCapability(SPIRV::Capability::Int8);
+    break;
+  }
+  case SPIRV::OpTypeFloat: {
+    unsigned BitWidth = MI.getOperand(1).getImm();
+    if (BitWidth == 64)
+      Reqs.addCapability(SPIRV::Capability::Float64);
+    else if (BitWidth == 16)
+      Reqs.addCapability(SPIRV::Capability::Float16);
+    break;
+  }
+  case SPIRV::OpTypeVector: {
+    unsigned NumComponents = MI.getOperand(2).getImm();
+    if (NumComponents == 8 || NumComponents == 16)
+      Reqs.addCapability(SPIRV::Capability::Vector16);
+    break;
+  }
+  case SPIRV::OpTypePointer: {
+    auto SC = MI.getOperand(1).getImm();
+    Reqs.getAndAddRequirements(SPIRV::OperandCategory::StorageClassOperand, SC,
+                               ST);
+    // If it's a type of pointer to float16, add Float16Buffer capability.
+    assert(MI.getOperand(2).isReg());
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    SPIRVType *TypeDef = MRI.getVRegDef(MI.getOperand(2).getReg());
+    if (TypeDef->getOpcode() == SPIRV::OpTypeFloat &&
+        TypeDef->getOperand(1).getImm() == 16)
+      Reqs.addCapability(SPIRV::Capability::Float16Buffer);
+    break;
+  }
+  case SPIRV::OpBitReverse:
+  case SPIRV::OpTypeRuntimeArray:
+    Reqs.addCapability(SPIRV::Capability::Shader);
+    break;
+  case SPIRV::OpTypeOpaque:
+  case SPIRV::OpTypeEvent:
+    Reqs.addCapability(SPIRV::Capability::Kernel);
+    break;
+  case SPIRV::OpTypePipe:
+  case SPIRV::OpTypeReserveId:
+    Reqs.addCapability(SPIRV::Capability::Pipes);
+    break;
+  case SPIRV::OpTypeDeviceEvent:
+  case SPIRV::OpTypeQueue:
+  case SPIRV::OpBuildNDRange:
+    Reqs.addCapability(SPIRV::Capability::DeviceEnqueue);
+    break;
+  case SPIRV::OpDecorate:
+  case SPIRV::OpDecorateId:
+  case SPIRV::OpDecorateString:
+    addOpDecorateReqs(MI, 1, Reqs, ST);
+    break;
+  case SPIRV::OpMemberDecorate:
+  case SPIRV::OpMemberDecorateString:
+    addOpDecorateReqs(MI, 2, Reqs, ST);
+    break;
+  case SPIRV::OpInBoundsPtrAccessChain:
+    Reqs.addCapability(SPIRV::Capability::Addresses);
+    break;
+  case SPIRV::OpConstantSampler:
+    Reqs.addCapability(SPIRV::Capability::LiteralSampler);
+    break;
+  case SPIRV::OpTypeImage:
+    addOpTypeImageReqs(MI, Reqs, ST);
+    break;
+  case SPIRV::OpTypeSampler:
+    Reqs.addCapability(SPIRV::Capability::ImageBasic);
+    break;
+  case SPIRV::OpTypeForwardPointer:
+    // TODO: check if it's OpenCL's kernel.
+    Reqs.addCapability(SPIRV::Capability::Addresses);
+    break;
+  case SPIRV::OpAtomicFlagTestAndSet:
+  case SPIRV::OpAtomicLoad:
+  case SPIRV::OpAtomicStore:
+  case SPIRV::OpAtomicExchange:
+  case SPIRV::OpAtomicCompareExchange:
+  case SPIRV::OpAtomicIIncrement:
+  case SPIRV::OpAtomicIDecrement:
+  case SPIRV::OpAtomicIAdd:
+  case SPIRV::OpAtomicISub:
+  case SPIRV::OpAtomicUMin:
+  case SPIRV::OpAtomicUMax:
+  case SPIRV::OpAtomicSMin:
+  case SPIRV::OpAtomicSMax:
+  case SPIRV::OpAtomicAnd:
+  case SPIRV::OpAtomicOr:
+  case SPIRV::OpAtomicXor: {
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    const MachineInstr *InstrPtr = &MI;
+    if (MI.getOpcode() == SPIRV::OpAtomicStore) {
+      assert(MI.getOperand(3).isReg());
+      InstrPtr = MRI.getVRegDef(MI.getOperand(3).getReg());
+      assert(InstrPtr && "Unexpected type instruction for OpAtomicStore");
+    }
+    assert(InstrPtr->getOperand(1).isReg() && "Unexpected operand in atomic");
+    Register TypeReg = InstrPtr->getOperand(1).getReg();
+    SPIRVType *TypeDef = MRI.getVRegDef(TypeReg);
+    if (TypeDef->getOpcode() == SPIRV::OpTypeInt) {
+      unsigned BitWidth = TypeDef->getOperand(1).getImm();
+      if (BitWidth == 64)
+        Reqs.addCapability(SPIRV::Capability::Int64Atomics);
+    }
+    break;
+  }
+  case SPIRV::OpGroupNonUniformIAdd:
+  case SPIRV::OpGroupNonUniformFAdd:
+  case SPIRV::OpGroupNonUniformIMul:
+  case SPIRV::OpGroupNonUniformFMul:
+  case SPIRV::OpGroupNonUniformSMin:
+  case SPIRV::OpGroupNonUniformUMin:
+  case SPIRV::OpGroupNonUniformFMin:
+  case SPIRV::OpGroupNonUniformSMax:
+  case SPIRV::OpGroupNonUniformUMax:
+  case SPIRV::OpGroupNonUniformFMax:
+  case SPIRV::OpGroupNonUniformBitwiseAnd:
+  case SPIRV::OpGroupNonUniformBitwiseOr:
+  case SPIRV::OpGroupNonUniformBitwiseXor:
+  case SPIRV::OpGroupNonUniformLogicalAnd:
+  case SPIRV::OpGroupNonUniformLogicalOr:
+  case SPIRV::OpGroupNonUniformLogicalXor: {
+    assert(MI.getOperand(3).isImm());
+    int64_t GroupOp = MI.getOperand(3).getImm();
+    switch (GroupOp) {
+    case SPIRV::GroupOperation::Reduce:
+    case SPIRV::GroupOperation::InclusiveScan:
+    case SPIRV::GroupOperation::ExclusiveScan:
+      Reqs.addCapability(SPIRV::Capability::Kernel);
+      Reqs.addCapability(SPIRV::Capability::GroupNonUniformArithmetic);
+      Reqs.addCapability(SPIRV::Capability::GroupNonUniformBallot);
+      break;
+    case SPIRV::GroupOperation::ClusteredReduce:
+      Reqs.addCapability(SPIRV::Capability::GroupNonUniformClustered);
+      break;
+    case SPIRV::GroupOperation::PartitionedReduceNV:
+    case SPIRV::GroupOperation::PartitionedInclusiveScanNV:
+    case SPIRV::GroupOperation::PartitionedExclusiveScanNV:
+      Reqs.addCapability(SPIRV::Capability::GroupNonUniformPartitionedNV);
+      break;
+    }
+    break;
+  }
+  case SPIRV::OpGroupNonUniformShuffle:
+  case SPIRV::OpGroupNonUniformShuffleXor:
+    Reqs.addCapability(SPIRV::Capability::GroupNonUniformShuffle);
+    break;
+  case SPIRV::OpGroupNonUniformShuffleUp:
+  case SPIRV::OpGroupNonUniformShuffleDown:
+    Reqs.addCapability(SPIRV::Capability::GroupNonUniformShuffleRelative);
+    break;
+  case SPIRV::OpGroupAll:
+  case SPIRV::OpGroupAny:
+  case SPIRV::OpGroupBroadcast:
+  case SPIRV::OpGroupIAdd:
+  case SPIRV::OpGroupFAdd:
+  case SPIRV::OpGroupFMin:
+  case SPIRV::OpGroupUMin:
+  case SPIRV::OpGroupSMin:
+  case SPIRV::OpGroupFMax:
+  case SPIRV::OpGroupUMax:
+  case SPIRV::OpGroupSMax:
+    Reqs.addCapability(SPIRV::Capability::Groups);
+    break;
+  case SPIRV::OpGroupNonUniformElect:
+    Reqs.addCapability(SPIRV::Capability::GroupNonUniform);
+    break;
+  case SPIRV::OpGroupNonUniformAll:
+  case SPIRV::OpGroupNonUniformAny:
+  case SPIRV::OpGroupNonUniformAllEqual:
+    Reqs.addCapability(SPIRV::Capability::GroupNonUniformVote);
+    break;
+  case SPIRV::OpGroupNonUniformBroadcast:
+  case SPIRV::OpGroupNonUniformBroadcastFirst:
+  case SPIRV::OpGroupNonUniformBallot:
+  case SPIRV::OpGroupNonUniformInverseBallot:
+  case SPIRV::OpGroupNonUniformBallotBitExtract:
+  case SPIRV::OpGroupNonUniformBallotBitCount:
+  case SPIRV::OpGroupNonUniformBallotFindLSB:
+  case SPIRV::OpGroupNonUniformBallotFindMSB:
+    Reqs.addCapability(SPIRV::Capability::GroupNonUniformBallot);
+    break;
+  default:
+    break;
+  }
+}
+
+static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
+                        MachineModuleInfo *MMI, const SPIRVSubtarget &ST) {
+  // Collect requirements for existing instructions.
+  for (auto F = M.begin(), E = M.end(); F != E; ++F) {
+    MachineFunction *MF = MMI->getMachineFunction(*F);
+    if (!MF)
+      continue;
+    for (const MachineBasicBlock &MBB : *MF)
+      for (const MachineInstr &MI : MBB)
+        addInstrRequirements(MI, MAI.Reqs, ST);
+  }
+  // Collect requirements for OpExecutionMode instructions.
+  auto Node = M.getNamedMetadata("spirv.ExecutionMode");
+  if (Node) {
+    for (unsigned i = 0; i < Node->getNumOperands(); i++) {
+      MDNode *MDN = cast<MDNode>(Node->getOperand(i));
+      const MDOperand &MDOp = MDN->getOperand(1);
+      if (auto *CMeta = dyn_cast<ConstantAsMetadata>(MDOp)) {
+        Constant *C = CMeta->getValue();
+        if (ConstantInt *Const = dyn_cast<ConstantInt>(C)) {
+          auto EM = Const->getZExtValue();
+          MAI.Reqs.getAndAddRequirements(
+              SPIRV::OperandCategory::ExecutionModeOperand, EM, ST);
+        }
+      }
+    }
+  }
+  for (auto FI = M.begin(), E = M.end(); FI != E; ++FI) {
+    const Function &F = *FI;
+    if (F.isDeclaration())
+      continue;
+    if (F.getMetadata("reqd_work_group_size"))
+      MAI.Reqs.getAndAddRequirements(
+          SPIRV::OperandCategory::ExecutionModeOperand,
+          SPIRV::ExecutionMode::LocalSize, ST);
+    if (F.getMetadata("work_group_size_hint"))
+      MAI.Reqs.getAndAddRequirements(
+          SPIRV::OperandCategory::ExecutionModeOperand,
+          SPIRV::ExecutionMode::LocalSizeHint, ST);
+    if (F.getMetadata("intel_reqd_sub_group_size"))
+      MAI.Reqs.getAndAddRequirements(
+          SPIRV::OperandCategory::ExecutionModeOperand,
+          SPIRV::ExecutionMode::SubgroupSize, ST);
+    if (F.getMetadata("vec_type_hint"))
+      MAI.Reqs.getAndAddRequirements(
+          SPIRV::OperandCategory::ExecutionModeOperand,
+          SPIRV::ExecutionMode::VecTypeHint, ST);
+  }
+}
+
+static unsigned getFastMathFlags(const MachineInstr &I) {
+  unsigned Flags = SPIRV::FPFastMathMode::None;
+  if (I.getFlag(MachineInstr::MIFlag::FmNoNans))
+    Flags |= SPIRV::FPFastMathMode::NotNaN;
+  if (I.getFlag(MachineInstr::MIFlag::FmNoInfs))
+    Flags |= SPIRV::FPFastMathMode::NotInf;
+  if (I.getFlag(MachineInstr::MIFlag::FmNsz))
+    Flags |= SPIRV::FPFastMathMode::NSZ;
+  if (I.getFlag(MachineInstr::MIFlag::FmArcp))
+    Flags |= SPIRV::FPFastMathMode::AllowRecip;
+  if (I.getFlag(MachineInstr::MIFlag::FmReassoc))
+    Flags |= SPIRV::FPFastMathMode::Fast;
+  return Flags;
+}
+
+static void handleMIFlagDecoration(MachineInstr &I, const SPIRVSubtarget &ST,
+                                   const SPIRVInstrInfo &TII,
+                                   SPIRV::RequirementHandler &Reqs) {
+  if (I.getFlag(MachineInstr::MIFlag::NoSWrap) && TII.canUseNSW(I) &&
+      getSymbolicOperandRequirements(SPIRV::OperandCategory::DecorationOperand,
+                                     SPIRV::Decoration::NoSignedWrap, ST, Reqs)
+          .IsSatisfiable) {
+    buildOpDecorate(I.getOperand(0).getReg(), I, TII,
+                    SPIRV::Decoration::NoSignedWrap, {});
+  }
+  if (I.getFlag(MachineInstr::MIFlag::NoUWrap) && TII.canUseNUW(I) &&
+      getSymbolicOperandRequirements(SPIRV::OperandCategory::DecorationOperand,
+                                     SPIRV::Decoration::NoUnsignedWrap, ST,
+                                     Reqs)
+          .IsSatisfiable) {
+    buildOpDecorate(I.getOperand(0).getReg(), I, TII,
+                    SPIRV::Decoration::NoUnsignedWrap, {});
+  }
+  if (!TII.canUseFastMathFlags(I))
+    return;
+  unsigned FMFlags = getFastMathFlags(I);
+  if (FMFlags == SPIRV::FPFastMathMode::None)
+    return;
+  Register DstReg = I.getOperand(0).getReg();
+  buildOpDecorate(DstReg, I, TII, SPIRV::Decoration::FPFastMathMode, {FMFlags});
+}
+
+// Walk all functions and add decorations related to MI flags.
+static void addDecorations(const Module &M, const SPIRVInstrInfo &TII,
+                           MachineModuleInfo *MMI, const SPIRVSubtarget &ST,
+                           SPIRV::ModuleAnalysisInfo &MAI) {
+  for (auto F = M.begin(), E = M.end(); F != E; ++F) {
+    MachineFunction *MF = MMI->getMachineFunction(*F);
+    if (!MF)
+      continue;
+    for (auto &MBB : *MF)
+      for (auto &MI : MBB)
+        handleMIFlagDecoration(MI, ST, TII, MAI.Reqs);
   }
 }
 
@@ -371,6 +1016,10 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
 
   setBaseInfo(M);
 
+  addDecorations(M, *TII, MMI, *ST, MAI);
+
+  collectReqs(M, MAI, MMI, *ST);
+
   processSwitches(M, MAI, MMI);
 
   // Process type/const/global var/func decl instructions, number their
@@ -382,6 +1031,10 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
 
   // Collect OpName, OpEntryPoint, OpDecorate etc, process other instructions.
   processOtherInstrs(M);
+
+  // If there are no entry points, we need the Linkage capability.
+  if (MAI.MS[SPIRV::MB_EntryPoints].empty())
+    MAI.Reqs.addCapability(SPIRV::Capability::Linkage);
 
   return false;
 }

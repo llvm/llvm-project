@@ -12,15 +12,15 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK: bb:
 ; "dead" ptrpoint not emitted (or dead code eliminated) with
 ; current LSR cost model.
-; CHECK-NOT: = ptrtoint i8* undef to i64
+; CHECK-NOT: = ptrtoint ptr undef to i64
 ; CHECK: .lr.ph
 ; CHECK: ret void
 define void @VerifyDiagnosticConsumerTest() unnamed_addr nounwind uwtable align 2 {
 bb:
-  %tmp3 = call i8* @getCharData() nounwind
-  %tmp4 = call i8* @getCharData() nounwind
-  %tmp5 = ptrtoint i8* %tmp4 to i64
-  %tmp6 = ptrtoint i8* %tmp3 to i64
+  %tmp3 = call ptr @getCharData() nounwind
+  %tmp4 = call ptr @getCharData() nounwind
+  %tmp5 = ptrtoint ptr %tmp4 to i64
+  %tmp6 = ptrtoint ptr %tmp3 to i64
   %tmp7 = sub i64 %tmp5, %tmp6
   br i1 undef, label %bb87, label %.preheader
 
@@ -70,8 +70,8 @@ bb61:                                             ; preds = %bb63, %bb58
   br i1 %tmp62, label %_ZNK4llvm9StringRef4findEcm.exit._crit_edge, label %bb63
 
 bb63:                                             ; preds = %bb61
-  %tmp64 = getelementptr inbounds i8, i8* %tmp3, i64 %i.0.i
-  %tmp65 = load i8, i8* %tmp64, align 1
+  %tmp64 = getelementptr inbounds i8, ptr %tmp3, i64 %i.0.i
+  %tmp65 = load i8, ptr %tmp64, align 1
   %tmp67 = add i64 %i.0.i, 1
   br i1 undef, label %_ZNK4llvm9StringRef4findEcm.exit.loopexit, label %bb61
 
@@ -79,4 +79,4 @@ bb87:                                             ; preds = %bb
   ret void
 }
 
-declare i8* @getCharData()
+declare ptr @getCharData()

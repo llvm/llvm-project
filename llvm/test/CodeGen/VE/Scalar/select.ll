@@ -119,7 +119,6 @@ define zeroext i32 @select_u32_var(i1 zeroext %0, i32 zeroext %1, i32 zeroext %2
 define i64 @select_i64_var(i1 zeroext %0, i64 %1, i64 %2) {
 ; CHECK-LABEL: select_i64_var:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.ne %s2, %s1, %s0
 ; CHECK-NEXT:    or %s0, 0, %s2
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -131,7 +130,6 @@ define i64 @select_i64_var(i1 zeroext %0, i64 %1, i64 %2) {
 define i64 @select_u64_var(i1 zeroext %0, i64 %1, i64 %2) {
 ; CHECK-LABEL: select_u64_var:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.ne %s2, %s1, %s0
 ; CHECK-NEXT:    or %s0, 0, %s2
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -143,7 +141,6 @@ define i64 @select_u64_var(i1 zeroext %0, i64 %1, i64 %2) {
 define i128 @select_i128_var(i1 zeroext %0, i128 %1, i128 %2) {
 ; CHECK-LABEL: select_i128_var:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.ne %s3, %s1, %s0
 ; CHECK-NEXT:    cmov.w.ne %s4, %s2, %s0
 ; CHECK-NEXT:    or %s0, 0, %s3
@@ -157,7 +154,6 @@ define i128 @select_i128_var(i1 zeroext %0, i128 %1, i128 %2) {
 define i128 @select_u128_var(i1 zeroext %0, i128 %1, i128 %2) {
 ; CHECK-LABEL: select_u128_var:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.ne %s3, %s1, %s0
 ; CHECK-NEXT:    cmov.w.ne %s4, %s2, %s0
 ; CHECK-NEXT:    or %s0, 0, %s3
@@ -171,7 +167,6 @@ define i128 @select_u128_var(i1 zeroext %0, i128 %1, i128 %2) {
 define float @select_float_var(i1 zeroext %0, float %1, float %2) {
 ; CHECK-LABEL: select_float_var:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.ne %s2, %s1, %s0
 ; CHECK-NEXT:    or %s0, 0, %s2
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -183,7 +178,6 @@ define float @select_float_var(i1 zeroext %0, float %1, float %2) {
 define double @select_double_var(i1 zeroext %0, double %1, double %2) {
 ; CHECK-LABEL: select_double_var:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.ne %s2, %s1, %s0
 ; CHECK-NEXT:    or %s0, 0, %s2
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -195,7 +189,6 @@ define double @select_double_var(i1 zeroext %0, double %1, double %2) {
 define fp128 @select_quad_var(i1 zeroext %0, fp128 %1, fp128 %2) {
 ; CHECK-LABEL: select_quad_var:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.ne %s4, %s2, %s0
 ; CHECK-NEXT:    cmov.w.ne %s5, %s3, %s0
 ; CHECK-NEXT:    or %s0, 0, %s4
@@ -285,7 +278,6 @@ define zeroext i32 @select_u32_mimm(i1 zeroext %0, i32 zeroext %1) {
 define i64 @select_i64_mimm(i1 zeroext %0, i64 %1) {
 ; CHECK-LABEL: select_i64_mimm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.ne %s1, (48)0, %s0
 ; CHECK-NEXT:    or %s0, 0, %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -297,7 +289,6 @@ define i64 @select_i64_mimm(i1 zeroext %0, i64 %1) {
 define i64 @select_u64_mimm(i1 zeroext %0, i64 %1) {
 ; CHECK-LABEL: select_u64_mimm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.ne %s1, (48)0, %s0
 ; CHECK-NEXT:    or %s0, 0, %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -309,7 +300,6 @@ define i64 @select_u64_mimm(i1 zeroext %0, i64 %1) {
 define i128 @select_i128_mimm(i1 zeroext %0, i128 %1) {
 ; CHECK-LABEL: select_i128_mimm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.ne %s1, (48)0, %s0
 ; CHECK-NEXT:    cmov.w.ne %s2, (0)1, %s0
 ; CHECK-NEXT:    or %s0, 0, %s1
@@ -323,7 +313,6 @@ define i128 @select_i128_mimm(i1 zeroext %0, i128 %1) {
 define i128 @select_u128_mimm(i1 zeroext %0, i128 %1) {
 ; CHECK-LABEL: select_u128_mimm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.ne %s1, (48)0, %s0
 ; CHECK-NEXT:    cmov.w.ne %s2, (0)1, %s0
 ; CHECK-NEXT:    or %s0, 0, %s1
@@ -337,7 +326,6 @@ define i128 @select_u128_mimm(i1 zeroext %0, i128 %1) {
 define float @select_float_mimm(i1 zeroext %0, float %1) {
 ; CHECK-LABEL: select_float_mimm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.ne %s1, (2)1, %s0
 ; CHECK-NEXT:    or %s0, 0, %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -349,7 +337,6 @@ define float @select_float_mimm(i1 zeroext %0, float %1) {
 define double @select_double_mimm(i1 zeroext %0, double %1) {
 ; CHECK-LABEL: select_double_mimm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.ne %s1, (2)1, %s0
 ; CHECK-NEXT:    or %s0, 0, %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -366,7 +353,6 @@ define fp128 @select_quad_mimm(i1 zeroext %0, fp128 %1) {
 ; CHECK-NEXT:    lea.sl %s1, .LCPI{{[0-9]+}}_0@hi(, %s1)
 ; CHECK-NEXT:    ld %s4, 8(, %s1)
 ; CHECK-NEXT:    ld %s5, (, %s1)
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.ne %s2, %s4, %s0
 ; CHECK-NEXT:    cmov.w.ne %s3, %s5, %s0
 ; CHECK-NEXT:    or %s0, 0, %s2
@@ -458,7 +444,6 @@ define zeroext i32 @select_mimm_u32(i1 zeroext %0, i32 zeroext %1) {
 define i64 @select_mimm_i64(i1 zeroext %0, i64 %1) {
 ; CHECK-LABEL: select_mimm_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.eq %s1, (48)0, %s0
 ; CHECK-NEXT:    or %s0, 0, %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -470,7 +455,6 @@ define i64 @select_mimm_i64(i1 zeroext %0, i64 %1) {
 define i64 @select_mimm_u64(i1 zeroext %0, i64 %1) {
 ; CHECK-LABEL: select_mimm_u64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.eq %s1, (48)0, %s0
 ; CHECK-NEXT:    or %s0, 0, %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -482,7 +466,6 @@ define i64 @select_mimm_u64(i1 zeroext %0, i64 %1) {
 define i128 @select_mimm_i128(i1 zeroext %0, i128 %1) {
 ; CHECK-LABEL: select_mimm_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.eq %s1, (48)0, %s0
 ; CHECK-NEXT:    cmov.w.eq %s2, (0)1, %s0
 ; CHECK-NEXT:    or %s0, 0, %s1
@@ -496,7 +479,6 @@ define i128 @select_mimm_i128(i1 zeroext %0, i128 %1) {
 define i128 @select_mimm_u128(i1 zeroext %0, i128 %1) {
 ; CHECK-LABEL: select_mimm_u128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.eq %s1, (48)0, %s0
 ; CHECK-NEXT:    cmov.w.eq %s2, (0)1, %s0
 ; CHECK-NEXT:    or %s0, 0, %s1
@@ -510,7 +492,6 @@ define i128 @select_mimm_u128(i1 zeroext %0, i128 %1) {
 define float @select_mimm_float(i1 zeroext %0, float %1) {
 ; CHECK-LABEL: select_mimm_float:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.eq %s1, (2)1, %s0
 ; CHECK-NEXT:    or %s0, 0, %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -522,7 +503,6 @@ define float @select_mimm_float(i1 zeroext %0, float %1) {
 define double @select_mimm_double(i1 zeroext %0, double %1) {
 ; CHECK-LABEL: select_mimm_double:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.eq %s1, (2)1, %s0
 ; CHECK-NEXT:    or %s0, 0, %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -539,7 +519,6 @@ define fp128 @select_mimm_quad(i1 zeroext %0, fp128 %1) {
 ; CHECK-NEXT:    lea.sl %s1, .LCPI{{[0-9]+}}_0@hi(, %s1)
 ; CHECK-NEXT:    ld %s4, 8(, %s1)
 ; CHECK-NEXT:    ld %s5, (, %s1)
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.ne %s4, %s2, %s0
 ; CHECK-NEXT:    cmov.w.ne %s5, %s3, %s0
 ; CHECK-NEXT:    or %s0, 0, %s4

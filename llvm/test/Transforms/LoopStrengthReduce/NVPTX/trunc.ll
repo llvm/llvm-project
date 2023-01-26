@@ -42,4 +42,4 @@ for.body:                                         ; preds = %for.body.preheader,
 declare void @_Z3usei(i32)
 
 !nvvm.annotations = !{!0}
-!0 = !{void (i64, i64, i64)* @trunc_is_free, !"kernel", i32 1}
+!0 = !{ptr @trunc_is_free, !"kernel", i32 1}

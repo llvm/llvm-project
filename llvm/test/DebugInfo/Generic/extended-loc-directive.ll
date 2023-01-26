@@ -1,4 +1,4 @@
-; XFAIL: -aix
+; XFAIL: target={{.*}}-aix{{.*}}
 ; RUN: llc -filetype=asm -asm-verbose=0 -O0 -dwarf-extended-loc=Enable < %s | FileCheck %s --check-prefix ENABLED --check-prefix CHECK
 ; RUN: llc -filetype=asm -asm-verbose=0 -O0 -dwarf-extended-loc=Disable < %s | FileCheck %s --check-prefix DISABLED --check-prefix CHECK
 
@@ -31,7 +31,7 @@
 ; CHECK-NOT: .loc
 ; CHECK: .loc 1 4 15{{$}}
 ; CHECK-NOT: .loc
-; ENABLED: .loc 1 5 1 is_stmt 1{{$}}
+; ENABLED: .loc 1 5 1 {{(epilogue_begin )?is_stmt}} 1{{$}}
 ; DISABLED: .loc 1 5 1{{$}}
 
 ; Function Attrs: nounwind uwtable

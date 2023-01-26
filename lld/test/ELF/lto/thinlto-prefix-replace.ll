@@ -14,7 +14,7 @@
 ; RUN: ld.lld --thinlto-index-only --thinlto-prefix-replace="%t/oldpath/;%t/newpath/" -shared %t/oldpath/thinlto_prefix_replace.o -o %t/thinlto_prefix_replace
 ; RUN: ls %t/newpath/thinlto_prefix_replace.o.thinlto.bc
 
-; Ensure that lld generates error if prefix replace option does not have 'old;new' format
+; Ensure that lld generates error if prefix replace option does not have 'old;new' format.
 ; RUN: rm -f %t/newpath/thinlto_prefix_replace.o.thinlto.bc
 ; RUN: not ld.lld --plugin-opt=thinlto-index-only --plugin-opt=thinlto-prefix-replace=abc:def -shared %t/oldpath/thinlto_prefix_replace.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
 ; ERR: --plugin-opt=thinlto-prefix-replace= expects 'old;new' format, but got abc:def

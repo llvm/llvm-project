@@ -9,10 +9,12 @@
 #include "mlir/Dialect/Linalg/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/IR/DstBufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/Interfaces/DestinationStyleOpInterface.h"
 
 using namespace mlir;
 using namespace linalg;
@@ -20,9 +22,11 @@ using namespace mlir::bufferization;
 
 namespace {
 
-/// Generic conversion for any LinalgOp on tensors.
-static LogicalResult bufferizeLinalgOp(RewriterBase &rewriter, LinalgOp op,
-                                       const BufferizationOptions &options) {
+/// Generic conversion for any DestinationStyleOpInterface on tensors.
+static LogicalResult
+bufferizeDestinationStyleOpInterface(RewriterBase &rewriter,
+                                     DestinationStyleOpInterface op,
+                                     const BufferizationOptions &options) {
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(op);
@@ -38,8 +42,8 @@ static LogicalResult bufferizeLinalgOp(RewriterBase &rewriter, LinalgOp op,
 
   // New input operands for the cloned op.
   SmallVector<Value> newInputBuffers;
-  newInputBuffers.reserve(op.getNumInputs());
-  for (OpOperand *opOperand : op.getInputOperands()) {
+  newInputBuffers.reserve(op.getNumDpsInputs());
+  for (OpOperand *opOperand : op.getDpsInputOperands()) {
     if (op.isScalar(opOperand)) {
       newInputBuffers.push_back(opOperand->get());
       continue;
@@ -53,7 +57,7 @@ static LogicalResult bufferizeLinalgOp(RewriterBase &rewriter, LinalgOp op,
   // New output operands for the cloned op.
   SmallVector<Value> newOutputBuffers;
   for (OpResult opResult : op->getOpResults()) {
-    OpOperand *opOperand = op.getOutputOperand(opResult.getResultNumber());
+    OpOperand *opOperand = op.getDpsInitOperand(opResult.getResultNumber());
     FailureOr<Value> resultBuffer =
         getBuffer(rewriter, opOperand->get(), options);
     if (failed(resultBuffer))
@@ -71,8 +75,8 @@ static LogicalResult bufferizeLinalgOp(RewriterBase &rewriter, LinalgOp op,
   // new op. Since the new op does not have any tensor results, it does not
   // return anything.
   assert(op->getNumRegions() == 1 && "expected that op has 1 region");
-  auto newOp = cast<LinalgOp>(op.cloneWithoutRegions(
-      rewriter, op.getLoc(), /*resultTypes=*/TypeRange{}, newOperands));
+  auto newOp = cast<DestinationStyleOpInterface>(cloneWithoutRegions(
+      rewriter, op, /*newResultTypes=*/TypeRange{}, newOperands));
   rewriter.inlineRegionBefore(op->getRegion(0), newOp->getRegion(0),
                               newOp->getRegion(0).begin());
 
@@ -86,8 +90,8 @@ static LogicalResult bufferizeLinalgOp(RewriterBase &rewriter, LinalgOp op,
 /// operates entirely on memrefs.
 template <typename OpTy>
 struct LinalgOpInterface
-    : public BufferizableOpInterface::ExternalModel<LinalgOpInterface<OpTy>,
-                                                    OpTy> {
+    : public DstBufferizableOpInterfaceExternalModel<LinalgOpInterface<OpTy>,
+                                                     OpTy> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
     // Operand is read if it is used in the computation.
@@ -102,33 +106,10 @@ struct LinalgOpInterface
     return !bufferizableOp.getAliasingOpResult(opOperand, state).empty();
   }
 
-  SmallVector<OpOperand *>
-  getAliasingOpOperand(Operation *op, OpResult opResult,
-                       const AnalysisState &state) const {
-    auto genericOp = cast<linalg::LinalgOp>(op);
-
-    // The i-th OpResult may alias with the i-th "out" tensor.
-    return {genericOp.getOutputOperand(opResult.getResultNumber())};
-  }
-
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
-    auto genericOp = cast<linalg::LinalgOp>(op);
-
-    // The i-th "out" tensor may alias with the i-th OpResult.
-    if (genericOp.isOutputTensor(&opOperand))
-      return {genericOp.getTiedOpResult(&opOperand)};
-    return {};
-  }
-
-  BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const AnalysisState &state) const {
-    return BufferRelation::Equivalent;
-  }
-
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
-    return bufferizeLinalgOp(rewriter, cast<LinalgOp>(op), options);
+    return bufferizeDestinationStyleOpInterface(
+        rewriter, cast<DestinationStyleOpInterface>(op), options);
   }
 };
 
@@ -137,8 +118,7 @@ struct LinalgOpInterface
 template <typename... Ops>
 struct LinalgOpInterfaceHelper {
   static void registerOpInterface(MLIRContext *ctx) {
-    (void)std::initializer_list<int>{
-        0, (Ops::template attachInterface<LinalgOpInterface<Ops>>(*ctx), 0)...};
+    (Ops::template attachInterface<LinalgOpInterface<Ops>>(*ctx), ...);
   }
 };
 } // namespace

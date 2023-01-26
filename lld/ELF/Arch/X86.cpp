@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "OutputSections.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -37,14 +38,7 @@ public:
                 uint64_t val) const override;
 
   RelExpr adjustTlsExpr(RelType type, RelExpr expr) const override;
-  void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
-                      uint64_t val) const override;
-  void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
-                      uint64_t val) const override;
-  void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
-                      uint64_t val) const override;
-  void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
-                      uint64_t val) const override;
+  void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
 };
 } // namespace
 
@@ -77,9 +71,6 @@ int X86::getTlsGdRelaxSkip(RelType type) const {
 
 RelExpr X86::getRelExpr(RelType type, const Symbol &s,
                         const uint8_t *loc) const {
-  if (type == R_386_TLS_IE || type == R_386_TLS_GOTIE)
-    config->hasTlsIe = true;
-
   switch (type) {
   case R_386_8:
   case R_386_16:
@@ -353,21 +344,22 @@ void X86::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 }
 
-void X86::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
-                         uint64_t val) const {
+static void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
   if (rel.type == R_386_TLS_GD) {
-    // Convert
+    // Convert (loc[-2] == 0x04)
     //   leal x@tlsgd(, %ebx, 1), %eax
-    //   call __tls_get_addr@plt
+    //   call ___tls_get_addr@plt
+    // or
+    //   leal x@tlsgd(%reg), %eax
+    //   call *___tls_get_addr@got(%reg)
     // to
-    //   movl %gs:0, %eax
-    //   subl $x@tpoff, %eax
     const uint8_t inst[] = {
         0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, // movl %gs:0, %eax
-        0x81, 0xe8, 0,    0,    0,    0,    // subl val(%ebx), %eax
+        0x81, 0xe8, 0,    0,    0,    0,    // subl x@ntpoff(%ebx), %eax
     };
-    memcpy(loc - 3, inst, sizeof(inst));
-    write32le(loc + 5, val);
+    uint8_t *w = loc[-2] == 0x04 ? loc - 3 : loc - 2;
+    memcpy(w, inst, sizeof(inst));
+    write32le(w + 8, val);
   } else if (rel.type == R_386_TLS_GOTDESC) {
     // Convert leal x@tlsdesc(%ebx), %eax to leal x@ntpoff, %eax.
     //
@@ -387,21 +379,21 @@ void X86::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
   }
 }
 
-void X86::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
-                         uint64_t val) const {
+static void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel, uint64_t val) {
   if (rel.type == R_386_TLS_GD) {
-    // Convert
+    // Convert (loc[-2] == 0x04)
     //   leal x@tlsgd(, %ebx, 1), %eax
-    //   call __tls_get_addr@plt
-    // to
-    //   movl %gs:0, %eax
-    //   addl x@gotntpoff(%ebx), %eax
+    //   call ___tls_get_addr@plt
+    // or
+    //   leal x@tlsgd(%reg), %eax
+    //   call *___tls_get_addr@got(%reg)
     const uint8_t inst[] = {
         0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, // movl %gs:0, %eax
-        0x03, 0x83, 0,    0,    0,    0,    // addl val(%ebx), %eax
+        0x03, 0x83, 0,    0,    0,    0,    // addl x@gottpoff(%ebx), %eax
     };
-    memcpy(loc - 3, inst, sizeof(inst));
-    write32le(loc + 5, val);
+    uint8_t *w = loc[-2] == 0x04 ? loc - 3 : loc - 2;
+    memcpy(w, inst, sizeof(inst));
+    write32le(w + 8, val);
   } else if (rel.type == R_386_TLS_GOTDESC) {
     // Convert leal x@tlsdesc(%ebx), %eax to movl x@gotntpoff(%ebx), %eax.
     if (memcmp(loc - 2, "\x8d\x83", 2)) {
@@ -421,8 +413,7 @@ void X86::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
 
 // In some conditions, relocations can be optimized to avoid using GOT.
 // This function does that for Initial Exec to Local Exec case.
-void X86::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
-                         uint64_t val) const {
+static void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
   // Ulrich's document section 6.2 says that @gotntpoff can
   // be used with MOVL or ADDL instructions.
   // @indntpoff is similar to @gotntpoff, but for use in
@@ -459,26 +450,66 @@ void X86::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
   write32le(loc, val);
 }
 
-void X86::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
-                         uint64_t val) const {
+static void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
   if (rel.type == R_386_TLS_LDO_32) {
     write32le(loc, val);
     return;
   }
 
+  if (loc[4] == 0xe8) {
+    // Convert
+    //   leal x(%reg),%eax
+    //   call ___tls_get_addr@plt
+    // to
+    const uint8_t inst[] = {
+        0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, // movl %gs:0,%eax
+        0x90,                               // nop
+        0x8d, 0x74, 0x26, 0x00,             // leal 0(%esi,1),%esi
+    };
+    memcpy(loc - 2, inst, sizeof(inst));
+    return;
+  }
+
   // Convert
-  //   leal foo(%reg),%eax
-  //   call ___tls_get_addr
+  //   leal x(%reg),%eax
+  //   call *___tls_get_addr@got(%reg)
   // to
-  //   movl %gs:0,%eax
-  //   nop
-  //   leal 0(%esi,1),%esi
   const uint8_t inst[] = {
       0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, // movl %gs:0,%eax
-      0x90,                               // nop
-      0x8d, 0x74, 0x26, 0x00,             // leal 0(%esi,1),%esi
+      0x8d, 0xb6, 0x00, 0x00, 0x00, 0x00, // leal (%esi),%esi
   };
   memcpy(loc - 2, inst, sizeof(inst));
+}
+
+void X86::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
+  uint64_t secAddr = sec.getOutputSection()->addr;
+  if (auto *s = dyn_cast<InputSection>(&sec))
+    secAddr += s->outSecOff;
+  for (const Relocation &rel : sec.relocs()) {
+    uint8_t *loc = buf + rel.offset;
+    const uint64_t val = SignExtend64(
+        sec.getRelocTargetVA(sec.file, rel.type, rel.addend,
+                             secAddr + rel.offset, *rel.sym, rel.expr),
+        32);
+    switch (rel.expr) {
+    case R_RELAX_TLS_GD_TO_IE_GOTPLT:
+      relaxTlsGdToIe(loc, rel, val);
+      continue;
+    case R_RELAX_TLS_GD_TO_LE:
+    case R_RELAX_TLS_GD_TO_LE_NEG:
+      relaxTlsGdToLe(loc, rel, val);
+      continue;
+    case R_RELAX_TLS_LD_TO_LE:
+      relaxTlsLdToLe(loc, rel, val);
+      break;
+    case R_RELAX_TLS_IE_TO_LE:
+      relaxTlsIeToLe(loc, rel, val);
+      continue;
+    default:
+      relocate(loc, rel, val);
+      break;
+    }
+  }
 }
 
 // If Intel Indirect Branch Tracking is enabled, we have to emit special PLT

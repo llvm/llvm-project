@@ -24,6 +24,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include <optional>
 
 using namespace clang;
 
@@ -73,7 +74,7 @@ static bool isBuiltinAssumeFalse(const CFGBlock *B, const Stmt *S,
     // (e.g. a CFGBlock containing only a goto).
     return false;
   }
-  if (Optional<CFGStmt> CS = B->back().getAs<CFGStmt>()) {
+  if (std::optional<CFGStmt> CS = B->back().getAs<CFGStmt>()) {
     if (const auto *CE = dyn_cast<CallExpr>(CS->getStmt())) {
       return CE->getCallee()->IgnoreCasts() == S && CE->isBuiltinAssumeFalse(C);
     }
@@ -88,7 +89,7 @@ static bool isDeadReturn(const CFGBlock *B, const Stmt *S) {
   const CFGBlock *Current = B;
   while (true) {
     for (const CFGElement &CE : llvm::reverse(*Current)) {
-      if (Optional<CFGStmt> CS = CE.getAs<CFGStmt>()) {
+      if (std::optional<CFGStmt> CS = CE.getAs<CFGStmt>()) {
         if (const ReturnStmt *RS = dyn_cast<ReturnStmt>(CS->getStmt())) {
           if (RS == S)
             return true;
@@ -218,7 +219,7 @@ static bool isConfigurationValue(const Stmt *S,
       return isConfigurationValue(cast<DeclRefExpr>(S)->getDecl(), PP);
     case Stmt::ObjCBoolLiteralExprClass:
       IgnoreYES_NO = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Stmt::CXXBoolLiteralExprClass:
     case Stmt::IntegerLiteralClass: {
       const Expr *E = cast<Expr>(S);
@@ -299,6 +300,12 @@ static bool shouldTreatSuccessorsAsReachable(const CFGBlock *B,
     if (isa<BinaryOperator>(Term)) {
       return isConfigurationValue(Term, PP);
     }
+    // Do not treat constexpr if statement successors as unreachable in warnings
+    // since the point of these statements is to determine branches at compile
+    // time.
+    if (const auto *IS = dyn_cast<IfStmt>(Term);
+        IS != nullptr && IS->isConstexpr())
+      return true;
   }
 
   const Stmt *Cond = B->getTerminatorCondition(/* stripParens */ false);
@@ -333,7 +340,7 @@ static unsigned scanFromBlock(const CFGBlock *Start,
     // This allows us to potentially uncover some "always unreachable" code
     // within the "sometimes unreachable" code.
     // Look at the successors and mark then reachable.
-    Optional<bool> TreatAllSuccessorsAsReachable;
+    std::optional<bool> TreatAllSuccessorsAsReachable;
     if (!IncludeSometimesUnreachableEdges)
       TreatAllSuccessorsAsReachable = false;
 
@@ -455,7 +462,7 @@ static bool isValidDeadStmt(const Stmt *S) {
 
 const Stmt *DeadCodeScan::findDeadCode(const clang::CFGBlock *Block) {
   for (CFGBlock::const_iterator I = Block->begin(), E = Block->end(); I!=E; ++I)
-    if (Optional<CFGStmt> CS = I->getAs<CFGStmt>()) {
+    if (std::optional<CFGStmt> CS = I->getAs<CFGStmt>()) {
       const Stmt *S = CS->getStmt();
       if (isValidDeadStmt(S))
         return S;

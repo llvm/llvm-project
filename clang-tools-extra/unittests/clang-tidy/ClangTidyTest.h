@@ -86,7 +86,7 @@ template <typename... CheckTypes>
 std::string
 runCheckOnCode(StringRef Code, std::vector<ClangTidyError> *Errors = nullptr,
                const Twine &Filename = "input.cc",
-               ArrayRef<std::string> ExtraArgs = None,
+               ArrayRef<std::string> ExtraArgs = std::nullopt,
                const ClangTidyOptions &ExtraOptions = ClangTidyOptions(),
                std::map<StringRef, StringRef> PathsToContent =
                    std::map<StringRef, StringRef>()) {

@@ -3,8 +3,8 @@
 %t = type { i8 }
 
 @g = global %t zeroinitializer
-@a = weak alias %t, %t* @g
+@a = weak alias %t, ptr @g
 
 ; CHECK: @g = global %t zeroinitializer
 ; CHECK: @g2 = global %t zeroinitializer
-; CHECK: @a = weak alias %t, %t* @g
+; CHECK: @a = weak alias %t, ptr @g

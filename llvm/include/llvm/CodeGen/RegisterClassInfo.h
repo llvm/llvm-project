@@ -38,7 +38,7 @@ class RegisterClassInfo {
     RCInfo() = default;
 
     operator ArrayRef<MCPhysReg>() const {
-      return makeArrayRef(Order.get(), NumRegs);
+      return ArrayRef(Order.get(), NumRegs);
     }
   };
 
@@ -52,10 +52,9 @@ class RegisterClassInfo {
   const MachineFunction *MF = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
 
-  // Callee saved registers of last MF. Assumed to be valid until the next
-  // runOnFunction() call.
-  // Used only to determine if an update was made to CalleeSavedAliases.
-  const MCPhysReg *CalleeSavedRegs = nullptr;
+  // Callee saved registers of last MF.
+  // Used only to determine if an update for CalleeSavedAliases is necessary.
+  SmallVector<MCPhysReg, 16> LastCalleeSavedRegs;
 
   // Map register alias to the callee saved Register.
   SmallVector<MCPhysReg, 4> CalleeSavedAliases;

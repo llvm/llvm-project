@@ -74,6 +74,7 @@ add_llvm_target(PowerPCCodeGen
   SelectionDAG
   Support
   Target
+  TargetParser
   TransformUtils
   GlobalISel
 

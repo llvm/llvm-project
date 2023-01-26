@@ -27,39 +27,39 @@ bb:
 define dso_local void @func_2() #0 {
 bb:
   %tmp = alloca i32, align 4
-  store i32 0, i32* @g_80, align 4, !tbaa !1
+  store i32 0, ptr @g_80, align 4, !tbaa !1
   br label %bb1
 
 bb1:                                              ; preds = %bb15, %bb
-  %tmp2 = load i32, i32* @g_80, align 4, !tbaa !1
+  %tmp2 = load i32, ptr @g_80, align 4, !tbaa !1
   %tmp3 = icmp sle i32 %tmp2, 6
   br i1 %tmp3, label %bb4, label %bb18
 
 bb4:                                              ; preds = %bb1
-  %tmp5 = load i32, i32* @g_1683, align 4, !tbaa !1
+  %tmp5 = load i32, ptr @g_1683, align 4, !tbaa !1
   %tmp6 = sext i32 %tmp5 to i64
-  %tmp7 = getelementptr inbounds [7 x i8], [7 x i8]* @0, i64 0, i64 %tmp6
-  %tmp8 = load i8, i8* %tmp7, align 1, !tbaa !5
+  %tmp7 = getelementptr inbounds [7 x i8], ptr @0, i64 0, i64 %tmp6
+  %tmp8 = load i8, ptr %tmp7, align 1, !tbaa !5
   %tmp9 = icmp ne i8 %tmp8, 0
   br i1 %tmp9, label %bb10, label %bb11
 
 bb10:                                             ; preds = %bb4
-  store i32 82, i32* %tmp, align 4
+  store i32 82, ptr %tmp, align 4
   br label %bb12
 
 bb11:                                             ; preds = %bb4
-  store i32 0, i32* %tmp, align 4
+  store i32 0, ptr %tmp, align 4
   br label %bb12
 
 bb12:                                             ; preds = %bb11, %bb10
-  %tmp13 = load i32, i32* %tmp, align 4
+  %tmp13 = load i32, ptr %tmp, align 4
   %tmp14 = icmp ult i32 %tmp13, 1
   br i1 %tmp14, label %bb15, label %bb18
 
 bb15:                                             ; preds = %bb12
-  %tmp16 = load i32, i32* @g_80, align 4, !tbaa !1
+  %tmp16 = load i32, ptr @g_80, align 4, !tbaa !1
   %tmp17 = add nsw i32 %tmp16, 1
-  store i32 %tmp17, i32* @g_80, align 4, !tbaa !1
+  store i32 %tmp17, ptr @g_80, align 4, !tbaa !1
   br label %bb1
 
 bb18:                                             ; preds = %bb12, %bb1

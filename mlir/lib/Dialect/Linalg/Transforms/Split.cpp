@@ -42,8 +42,7 @@ createSplitPart(RewriterBase &b, Location loc, TilingInterface op,
 
   // Create the part as it it were a single tile.
   SmallVector<Operation *> tiled =
-      op.getTiledImplementation(b, resultOperands, offsetsCopy, sizesCopy,
-                                /*tileDestOperands=*/true);
+      op.getTiledImplementation(b, offsetsCopy, sizesCopy);
   assert(tiled.size() == 1 && "expected a single result from tiling");
   auto part = cast<TilingInterface>(tiled.front());
 
@@ -98,12 +97,18 @@ linalg::splitOp(RewriterBase &rewriter, TilingInterface op, unsigned dimension,
       return {op, TilingInterface()};
   }
 
+  // Compute destination tensors.
+  SmallVector<Value> destinationTensors;
+  LogicalResult destStatus = tensor::getOrCreateDestinations(
+      rewriter, op.getLoc(), op, destinationTensors);
+  (void)destStatus;
+  assert(succeeded(destStatus) && "failed to get destination tensors");
+
   // Create the first part.
   SmallVector<Value> firstResults;
   TilingInterface firstPart = createSplitPart(
-      rewriter, op.getLoc(), op, offsets, sizes,
-      op.getDestinationOperands(rewriter), dimension, minSplitPoint,
-      iterationSpace[dimension].offset, firstResults);
+      rewriter, op.getLoc(), op, offsets, sizes, destinationTensors, dimension,
+      minSplitPoint, iterationSpace[dimension].offset, firstResults);
 
   // Need to pretend that the original op now takes as operands firstResults,
   // otherwise tiling interface implementation will take the wrong value to
@@ -122,6 +127,10 @@ linalg::splitOp(RewriterBase &rewriter, TilingInterface op, unsigned dimension,
   TilingInterface secondPart =
       createSplitPart(rewriter, op.getLoc(), op, offsets, sizes, firstResults,
                       dimension, remainingSize, totalOffset, secondResults);
+
+  // Propagate any errors in part creation.
+  if (!firstPart || !secondPart)
+    return {TilingInterface(), TilingInterface()};
 
   // Replace the original op with the results of the two newly created ops.
   rewriter.replaceOp(op, secondResults);

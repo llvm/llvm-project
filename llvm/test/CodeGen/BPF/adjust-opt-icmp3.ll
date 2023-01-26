@@ -20,22 +20,22 @@ define dso_local i32 @test1(i64 %a) #0 {
 entry:
   %retval = alloca i32, align 4
   %a.addr = alloca i64, align 8
-  store i64 %a, i64* %a.addr, align 8, !tbaa !3
-  %0 = load i64, i64* %a.addr, align 8, !tbaa !3
+  store i64 %a, ptr %a.addr, align 8, !tbaa !3
+  %0 = load i64, ptr %a.addr, align 8, !tbaa !3
   %conv = trunc i64 %0 to i32
   %cmp = icmp ule i32 %conv, 3
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  store i32 2, i32* %retval, align 4
+  store i32 2, ptr %retval, align 4
   br label %return
 
 if.end:                                           ; preds = %entry
-  store i32 3, i32* %retval, align 4
+  store i32 3, ptr %retval, align 4
   br label %return
 
 return:                                           ; preds = %if.end, %if.then
-  %1 = load i32, i32* %retval, align 4
+  %1 = load i32, ptr %retval, align 4
   ret i32 %1
 }
 
@@ -48,22 +48,22 @@ define dso_local i32 @test2(i64 %a) #0 {
 entry:
   %retval = alloca i32, align 4
   %a.addr = alloca i64, align 8
-  store i64 %a, i64* %a.addr, align 8, !tbaa !3
-  %0 = load i64, i64* %a.addr, align 8, !tbaa !3
+  store i64 %a, ptr %a.addr, align 8, !tbaa !3
+  %0 = load i64, ptr %a.addr, align 8, !tbaa !3
   %conv = trunc i64 %0 to i32
   %cmp = icmp ult i32 %conv, 4
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  store i32 2, i32* %retval, align 4
+  store i32 2, ptr %retval, align 4
   br label %return
 
 if.end:                                           ; preds = %entry
-  store i32 3, i32* %retval, align 4
+  store i32 3, ptr %retval, align 4
   br label %return
 
 return:                                           ; preds = %if.end, %if.then
-  %1 = load i32, i32* %retval, align 4
+  %1 = load i32, ptr %retval, align 4
   ret i32 %1
 }
 

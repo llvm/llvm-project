@@ -431,25 +431,24 @@ public:
     return false;
   }
 
-  Optional<uint64_t> evaluateMemoryOperandAddress(const MCInst &Inst,
-                                                  const MCSubtargetInfo *STI,
-                                                  uint64_t Addr,
-                                                  uint64_t Size) const override;
+  std::optional<uint64_t>
+  evaluateMemoryOperandAddress(const MCInst &Inst, const MCSubtargetInfo *STI,
+                               uint64_t Addr, uint64_t Size) const override;
 };
 
 } // namespace
 
-static Optional<uint64_t>
+static std::optional<uint64_t>
 // NOLINTNEXTLINE(readability-identifier-naming)
 evaluateMemOpAddrForAddrMode_i12(const MCInst &Inst, const MCInstrDesc &Desc,
                                  unsigned MemOpIndex, uint64_t Addr) {
   if (MemOpIndex + 1 >= Desc.getNumOperands())
-    return None;
+    return std::nullopt;
 
   const MCOperand &MO1 = Inst.getOperand(MemOpIndex);
   const MCOperand &MO2 = Inst.getOperand(MemOpIndex + 1);
   if (!MO1.isReg() || MO1.getReg() != ARM::PC || !MO2.isImm())
-    return None;
+    return std::nullopt;
 
   int32_t OffImm = (int32_t)MO2.getImm();
   // Special value for #-0. All others are normal.
@@ -458,18 +457,17 @@ evaluateMemOpAddrForAddrMode_i12(const MCInst &Inst, const MCInstrDesc &Desc,
   return Addr + OffImm;
 }
 
-static Optional<uint64_t> evaluateMemOpAddrForAddrMode3(const MCInst &Inst,
-                                                        const MCInstrDesc &Desc,
-                                                        unsigned MemOpIndex,
-                                                        uint64_t Addr) {
+static std::optional<uint64_t>
+evaluateMemOpAddrForAddrMode3(const MCInst &Inst, const MCInstrDesc &Desc,
+                              unsigned MemOpIndex, uint64_t Addr) {
   if (MemOpIndex + 2 >= Desc.getNumOperands())
-    return None;
+    return std::nullopt;
 
   const MCOperand &MO1 = Inst.getOperand(MemOpIndex);
   const MCOperand &MO2 = Inst.getOperand(MemOpIndex + 1);
   const MCOperand &MO3 = Inst.getOperand(MemOpIndex + 2);
   if (!MO1.isReg() || MO1.getReg() != ARM::PC || MO2.getReg() || !MO3.isImm())
-    return None;
+    return std::nullopt;
 
   unsigned ImmOffs = ARM_AM::getAM3Offset(MO3.getImm());
   ARM_AM::AddrOpc Op = ARM_AM::getAM3Op(MO3.getImm());
@@ -479,17 +477,16 @@ static Optional<uint64_t> evaluateMemOpAddrForAddrMode3(const MCInst &Inst,
   return Addr + ImmOffs;
 }
 
-static Optional<uint64_t> evaluateMemOpAddrForAddrMode5(const MCInst &Inst,
-                                                        const MCInstrDesc &Desc,
-                                                        unsigned MemOpIndex,
-                                                        uint64_t Addr) {
+static std::optional<uint64_t>
+evaluateMemOpAddrForAddrMode5(const MCInst &Inst, const MCInstrDesc &Desc,
+                              unsigned MemOpIndex, uint64_t Addr) {
   if (MemOpIndex + 1 >= Desc.getNumOperands())
-    return None;
+    return std::nullopt;
 
   const MCOperand &MO1 = Inst.getOperand(MemOpIndex);
   const MCOperand &MO2 = Inst.getOperand(MemOpIndex + 1);
   if (!MO1.isReg() || MO1.getReg() != ARM::PC || !MO2.isImm())
-    return None;
+    return std::nullopt;
 
   unsigned ImmOffs = ARM_AM::getAM5Offset(MO2.getImm());
   ARM_AM::AddrOpc Op = ARM_AM::getAM5Op(MO2.getImm());
@@ -499,16 +496,16 @@ static Optional<uint64_t> evaluateMemOpAddrForAddrMode5(const MCInst &Inst,
   return Addr + ImmOffs * 4;
 }
 
-static Optional<uint64_t>
+static std::optional<uint64_t>
 evaluateMemOpAddrForAddrMode5FP16(const MCInst &Inst, const MCInstrDesc &Desc,
                                   unsigned MemOpIndex, uint64_t Addr) {
   if (MemOpIndex + 1 >= Desc.getNumOperands())
-    return None;
+    return std::nullopt;
 
   const MCOperand &MO1 = Inst.getOperand(MemOpIndex);
   const MCOperand &MO2 = Inst.getOperand(MemOpIndex + 1);
   if (!MO1.isReg() || MO1.getReg() != ARM::PC || !MO2.isImm())
-    return None;
+    return std::nullopt;
 
   unsigned ImmOffs = ARM_AM::getAM5FP16Offset(MO2.getImm());
   ARM_AM::AddrOpc Op = ARM_AM::getAM5FP16Op(MO2.getImm());
@@ -518,17 +515,17 @@ evaluateMemOpAddrForAddrMode5FP16(const MCInst &Inst, const MCInstrDesc &Desc,
   return Addr + ImmOffs * 2;
 }
 
-static Optional<uint64_t>
+static std::optional<uint64_t>
 // NOLINTNEXTLINE(readability-identifier-naming)
 evaluateMemOpAddrForAddrModeT2_i8s4(const MCInst &Inst, const MCInstrDesc &Desc,
                                     unsigned MemOpIndex, uint64_t Addr) {
   if (MemOpIndex + 1 >= Desc.getNumOperands())
-    return None;
+    return std::nullopt;
 
   const MCOperand &MO1 = Inst.getOperand(MemOpIndex);
   const MCOperand &MO2 = Inst.getOperand(MemOpIndex + 1);
   if (!MO1.isReg() || MO1.getReg() != ARM::PC || !MO2.isImm())
-    return None;
+    return std::nullopt;
 
   int32_t OffImm = (int32_t)MO2.getImm();
   assert(((OffImm & 0x3) == 0) && "Not a valid immediate!");
@@ -539,13 +536,13 @@ evaluateMemOpAddrForAddrModeT2_i8s4(const MCInst &Inst, const MCInstrDesc &Desc,
   return Addr + OffImm;
 }
 
-static Optional<uint64_t>
+static std::optional<uint64_t>
 // NOLINTNEXTLINE(readability-identifier-naming)
 evaluateMemOpAddrForAddrModeT2_pc(const MCInst &Inst, const MCInstrDesc &Desc,
                                   unsigned MemOpIndex, uint64_t Addr) {
   const MCOperand &MO1 = Inst.getOperand(MemOpIndex);
   if (!MO1.isImm())
-    return None;
+    return std::nullopt;
 
   int32_t OffImm = (int32_t)MO1.getImm();
 
@@ -555,28 +552,28 @@ evaluateMemOpAddrForAddrModeT2_pc(const MCInst &Inst, const MCInstrDesc &Desc,
   return Addr + OffImm;
 }
 
-static Optional<uint64_t>
+static std::optional<uint64_t>
 // NOLINTNEXTLINE(readability-identifier-naming)
 evaluateMemOpAddrForAddrModeT1_s(const MCInst &Inst, const MCInstrDesc &Desc,
                                  unsigned MemOpIndex, uint64_t Addr) {
   return evaluateMemOpAddrForAddrModeT2_pc(Inst, Desc, MemOpIndex, Addr);
 }
 
-Optional<uint64_t> ARMMCInstrAnalysis::evaluateMemoryOperandAddress(
+std::optional<uint64_t> ARMMCInstrAnalysis::evaluateMemoryOperandAddress(
     const MCInst &Inst, const MCSubtargetInfo *STI, uint64_t Addr,
     uint64_t Size) const {
   const MCInstrDesc &Desc = Info->get(Inst.getOpcode());
 
   // Only load instructions can have PC-relative memory addressing.
   if (!Desc.mayLoad())
-    return None;
+    return std::nullopt;
 
   // PC-relative addressing does not update the base register.
   uint64_t TSFlags = Desc.TSFlags;
   unsigned IndexMode =
       (TSFlags & ARMII::IndexModeMask) >> ARMII::IndexModeShift;
   if (IndexMode != ARMII::IndexModeNone)
-    return None;
+    return std::nullopt;
 
   // Find the memory addressing operand in the instruction.
   unsigned OpIndex = Desc.NumDefs;
@@ -584,7 +581,7 @@ Optional<uint64_t> ARMMCInstrAnalysis::evaluateMemoryOperandAddress(
          Desc.OpInfo[OpIndex].OperandType != MCOI::OPERAND_MEMORY)
     ++OpIndex;
   if (OpIndex == Desc.getNumOperands())
-    return None;
+    return std::nullopt;
 
   // Base address for PC-relative addressing is always 32-bit aligned.
   Addr &= ~0x3;
@@ -609,7 +606,7 @@ Optional<uint64_t> ARMMCInstrAnalysis::evaluateMemoryOperandAddress(
   unsigned AddrMode = (TSFlags & ARMII::AddrModeMask);
   switch (AddrMode) {
   default:
-    return None;
+    return std::nullopt;
   case ARMII::AddrMode_i12:
     return evaluateMemOpAddrForAddrMode_i12(Inst, Desc, OpIndex, Addr);
   case ARMII::AddrMode3:

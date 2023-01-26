@@ -34,7 +34,7 @@ template <typename U> class OMPDeclarativeDirective : public U {
   /// Get the clauses storage.
   MutableArrayRef<OMPClause *> getClauses() {
     if (!Data)
-      return llvm::None;
+      return std::nullopt;
     return Data->getClauses();
   }
 
@@ -90,7 +90,7 @@ public:
 
   ArrayRef<OMPClause *> clauses() const {
     if (!Data)
-      return llvm::None;
+      return std::nullopt;
     return Data->getClauses();
   }
 };
@@ -118,12 +118,12 @@ class OMPThreadPrivateDecl final : public OMPDeclarativeDirective<Decl> {
 
   ArrayRef<const Expr *> getVars() const {
     auto **Storage = reinterpret_cast<Expr **>(Data->getChildren().data());
-    return llvm::makeArrayRef(Storage, Data->getNumChildren());
+    return llvm::ArrayRef(Storage, Data->getNumChildren());
   }
 
   MutableArrayRef<Expr *> getVars() {
     auto **Storage = reinterpret_cast<Expr **>(Data->getChildren().data());
-    return llvm::makeMutableArrayRef(Storage, Data->getNumChildren());
+    return llvm::MutableArrayRef(Storage, Data->getNumChildren());
   }
 
   void setVars(ArrayRef<Expr *> VL);
@@ -481,12 +481,12 @@ class OMPAllocateDecl final : public OMPDeclarativeDirective<Decl> {
 
   ArrayRef<const Expr *> getVars() const {
     auto **Storage = reinterpret_cast<Expr **>(Data->getChildren().data());
-    return llvm::makeArrayRef(Storage, Data->getNumChildren());
+    return llvm::ArrayRef(Storage, Data->getNumChildren());
   }
 
   MutableArrayRef<Expr *> getVars() {
     auto **Storage = reinterpret_cast<Expr **>(Data->getChildren().data());
-    return llvm::makeMutableArrayRef(Storage, Data->getNumChildren());
+    return llvm::MutableArrayRef(Storage, Data->getNumChildren());
   }
 
   void setVars(ArrayRef<Expr *> VL);

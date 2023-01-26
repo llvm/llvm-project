@@ -431,3 +431,77 @@ func.func @hoist_vector_transfer_pairs_tensor_and_slices(
   }
   return %0#0, %0#1, %0#2 : tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @hoist_vector_transfer_write_pairs_disjoint_tensor(
+//  CHECK-SAME:   %[[T:.*]]: tensor<?x?xf32>,
+//   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[C3:.*]] = arith.constant 3 : index
+//   CHECK-DAG:   %[[R0:.*]] = vector.transfer_read %[[T]][%[[C0]], %[[C0]]], %{{.*}} : tensor<?x?xf32>, vector<2xf32>
+//   CHECK-DAG:   %[[R1:.*]] = vector.transfer_read %[[T]][%[[C0]], %[[C3]]], %{{.*}} : tensor<?x?xf32>, vector<2xf32>
+//       CHECK:   %[[F:.*]]:2 = scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[R3:.*]] = %[[R1:.*]], %[[R2:.*]] = %[[R0]]) -> (vector<2xf32>, vector<2xf32>) {
+//       CHECK:     %[[R4:.*]] = "some_use"(%[[R2]]) : (vector<2xf32>) -> vector<2xf32>
+//       CHECK:     %[[R5:.*]] = "some_use"(%[[R3]]) : (vector<2xf32>) -> vector<2xf32>
+//       CHECK:     scf.yield %[[R5]], %[[R4]] : vector<2xf32>, vector<2xf32>
+//       CHECK:   }
+//       CHECK:   %[[W0:.*]] = vector.transfer_write %[[F]]#1, %[[T]][%[[C0]], %[[C0]]] : vector<2xf32>, tensor<?x?xf32>
+//       CHECK:   %[[W1:.*]] = vector.transfer_write %[[F]]#0, %[[W0]][%[[C0]], %[[C3]]] : vector<2xf32>, tensor<?x?xf32>
+//       CHECK:  return %[[W1]] : tensor<?x?xf32>
+func.func @hoist_vector_transfer_write_pairs_disjoint_tensor(
+    %tensor: tensor<?x?xf32>,
+    %val: index, %lb : index, %ub : index, %step: index) ->
+    (tensor<?x?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c3 = arith.constant 3 : index
+  %cst = arith.constant 0.0 : f32
+  %1 = scf.for %j = %lb to %ub step %step iter_args(%arg5 = %tensor)
+    -> (tensor<?x?xf32>) {
+    %r00 = vector.transfer_read %arg5[%c0, %c0], %cst: tensor<?x?xf32>, vector<2xf32>
+    %u00 = "some_use"(%r00) : (vector<2xf32>) -> vector<2xf32>
+    %w10 = vector.transfer_write %u00, %arg5[%c0, %c0] : vector<2xf32>, tensor<?x?xf32>
+    %r01 = vector.transfer_read %w10[%c0, %c3], %cst: tensor<?x?xf32>, vector<2xf32>
+    %u01 = "some_use"(%r01) : (vector<2xf32>) -> vector<2xf32>
+    %w11 = vector.transfer_write %u01, %w10[%c0, %c3] : vector<2xf32>, tensor<?x?xf32>
+    scf.yield %w11 : tensor<?x?xf32>
+  }
+  return %1 : tensor<?x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @hoist_vector_transfer_pairs_in_affine_loops(
+//  CHECK-SAME:   %[[MEMREF0:[a-zA-Z0-9]+]]: memref<64x64xi32>,
+//  CHECK-SAME:   %[[MEMREF1:[a-zA-Z0-9]+]]: memref<64x64xi32>,
+//  CHECK-SAME:   %[[MEMREF2:[a-zA-Z0-9]+]]: memref<64x64xi32>) {
+//       CHECK:   %[[C0:.*]] = arith.constant 0 : i32
+//       CHECK:   affine.for %[[I:.*]] = 0 to 64 {
+//       CHECK:     affine.for %[[J:.*]] = 0 to 64 step 16 {
+//       CHECK:       %[[R0:.*]] = vector.transfer_read %[[MEMREF2]][%[[I]], %[[J]]], %[[C0]] : memref<64x64xi32>, vector<16xi32>
+//       CHECK:       %[[R:.*]] = affine.for %[[K:.*]] = 0 to 64 iter_args(%[[ACC:.*]] = %[[R0]]) -> (vector<16xi32>) {
+//       CHECK:         %[[AV:.*]] = vector.transfer_read %[[MEMREF0]][%[[I]], %[[K]]], %[[C0]] {{.*}}: memref<64x64xi32>, vector<16xi32>
+//       CHECK:         %[[BV:.*]] = vector.transfer_read %[[MEMREF1]][%[[K]], %[[J]]], %[[C0]] {{.*}}: memref<64x64xi32>, vector<16xi32>
+//       CHECK:         %[[T0:.*]] = arith.muli %[[AV]], %[[BV]] : vector<16xi32>
+//       CHECK:         %[[T1:.*]] = arith.addi %[[ACC]], %[[T0]] : vector<16xi32>
+//       CHECK:         affine.yield %[[T1]] : vector<16xi32>
+//       CHECK:       }
+//       CHECK:       vector.transfer_write %[[R]], %[[MEMREF2]][%[[I]], %[[J]]] : vector<16xi32>, memref<64x64xi32>
+//       CHECK:     }
+//       CHECK:   }
+func.func @hoist_vector_transfer_pairs_in_affine_loops(%memref0: memref<64x64xi32>, %memref1: memref<64x64xi32>, %memref2: memref<64x64xi32>) {
+  %c0_i32 = arith.constant 0 : i32
+  affine.for %arg3 = 0 to 64 {
+    affine.for %arg4 = 0 to 64 step 16 {
+      affine.for %arg5 = 0 to 64 {
+        %0 = vector.transfer_read %memref0[%arg3, %arg5], %c0_i32 {permutation_map = affine_map<(d0, d1) -> (0)>} : memref<64x64xi32>, vector<16xi32>
+        %1 = vector.transfer_read %memref1[%arg5, %arg4], %c0_i32 : memref<64x64xi32>, vector<16xi32>
+        %2 = vector.transfer_read %memref2[%arg3, %arg4], %c0_i32 : memref<64x64xi32>, vector<16xi32>
+        %3 = arith.muli %0, %1 : vector<16xi32>
+        %4 = arith.addi %2, %3 : vector<16xi32>
+        vector.transfer_write %4, %memref2[%arg3, %arg4] : vector<16xi32>, memref<64x64xi32>
+      }
+    }
+  }
+  return
+}

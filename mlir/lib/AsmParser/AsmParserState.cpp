@@ -102,7 +102,7 @@ AsmParserState &AsmParserState::operator=(AsmParserState &&other) {
 // Access State
 
 auto AsmParserState::getBlockDefs() const -> iterator_range<BlockDefIterator> {
-  return llvm::make_pointee_range(llvm::makeArrayRef(impl->blocks));
+  return llvm::make_pointee_range(llvm::ArrayRef(impl->blocks));
 }
 
 auto AsmParserState::getBlockDef(Block *block) const
@@ -112,7 +112,7 @@ auto AsmParserState::getBlockDef(Block *block) const
 }
 
 auto AsmParserState::getOpDefs() const -> iterator_range<OperationDefIterator> {
-  return llvm::make_pointee_range(llvm::makeArrayRef(impl->operations));
+  return llvm::make_pointee_range(llvm::ArrayRef(impl->operations));
 }
 
 auto AsmParserState::getOpDef(Operation *op) const
@@ -273,7 +273,7 @@ void AsmParserState::addDefinition(BlockArgument blockArg, SMLoc location) {
 
 void AsmParserState::addUses(Value value, ArrayRef<SMLoc> locations) {
   // Handle the case where the value is an operation result.
-  if (OpResult result = value.dyn_cast<OpResult>()) {
+  if (OpResult result = dyn_cast<OpResult>(value)) {
     // Check to see if a definition for the parent operation has been recorded.
     // If one hasn't, we treat the provided value as a placeholder value that
     // will be refined further later.

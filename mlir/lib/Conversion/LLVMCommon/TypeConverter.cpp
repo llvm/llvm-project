@@ -42,21 +42,21 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
   // before the conversions below since conversions are attempted in reverse
   // order and those should take priority.
   addConversion([](Type type) {
-    return LLVM::isCompatibleType(type) ? llvm::Optional<Type>(type)
-                                        : llvm::None;
+    return LLVM::isCompatibleType(type) ? std::optional<Type>(type)
+                                        : std::nullopt;
   });
 
   // LLVM container types may (recursively) contain other types that must be
   // converted even when the outer type is compatible.
-  addConversion([&](LLVM::LLVMPointerType type) -> llvm::Optional<Type> {
+  addConversion([&](LLVM::LLVMPointerType type) -> std::optional<Type> {
     if (type.isOpaque())
       return type;
     if (auto pointee = convertType(type.getElementType()))
       return LLVM::LLVMPointerType::get(pointee, type.getAddressSpace());
-    return llvm::None;
+    return std::nullopt;
   });
   addConversion([&](LLVM::LLVMStructType type, SmallVectorImpl<Type> &results,
-                    ArrayRef<Type> callStack) -> llvm::Optional<LogicalResult> {
+                    ArrayRef<Type> callStack) -> std::optional<LogicalResult> {
     // Fastpath for types that won't be converted by this callback anyway.
     if (LLVM::isCompatibleType(type)) {
       results.push_back(type);
@@ -82,7 +82,7 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
       SmallVector<Type> convertedElemTypes;
       convertedElemTypes.reserve(type.getBody().size());
       if (failed(convertTypes(type.getBody(), convertedElemTypes)))
-        return llvm::None;
+        return std::nullopt;
 
       if (failed(convertedType.setBody(convertedElemTypes, type.isPacked())))
         return failure();
@@ -93,26 +93,26 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
     SmallVector<Type> convertedSubtypes;
     convertedSubtypes.reserve(type.getBody().size());
     if (failed(convertTypes(type.getBody(), convertedSubtypes)))
-      return llvm::None;
+      return std::nullopt;
 
     results.push_back(LLVM::LLVMStructType::getLiteral(
         type.getContext(), convertedSubtypes, type.isPacked()));
     return success();
   });
-  addConversion([&](LLVM::LLVMArrayType type) -> llvm::Optional<Type> {
+  addConversion([&](LLVM::LLVMArrayType type) -> std::optional<Type> {
     if (auto element = convertType(type.getElementType()))
       return LLVM::LLVMArrayType::get(element, type.getNumElements());
-    return llvm::None;
+    return std::nullopt;
   });
-  addConversion([&](LLVM::LLVMFunctionType type) -> llvm::Optional<Type> {
+  addConversion([&](LLVM::LLVMFunctionType type) -> std::optional<Type> {
     Type convertedResType = convertType(type.getReturnType());
     if (!convertedResType)
-      return llvm::None;
+      return std::nullopt;
 
     SmallVector<Type> convertedArgTypes;
     convertedArgTypes.reserve(type.getNumParams());
     if (failed(convertTypes(type.getParams(), convertedArgTypes)))
-      return llvm::None;
+      return std::nullopt;
 
     return LLVM::LLVMFunctionType::get(convertedResType, convertedArgTypes,
                                        type.isVarArg());
@@ -123,37 +123,37 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
   // value represents a memref.
   addArgumentMaterialization(
       [&](OpBuilder &builder, UnrankedMemRefType resultType, ValueRange inputs,
-          Location loc) -> Optional<Value> {
+          Location loc) -> std::optional<Value> {
         if (inputs.size() == 1)
-          return llvm::None;
+          return std::nullopt;
         return UnrankedMemRefDescriptor::pack(builder, loc, *this, resultType,
                                               inputs);
       });
   addArgumentMaterialization([&](OpBuilder &builder, MemRefType resultType,
                                  ValueRange inputs,
-                                 Location loc) -> Optional<Value> {
+                                 Location loc) -> std::optional<Value> {
     // TODO: bare ptr conversion could be handled here but we would need a way
     // to distinguish between FuncOp and other regions.
     if (inputs.size() == 1)
-      return llvm::None;
+      return std::nullopt;
     return MemRefDescriptor::pack(builder, loc, *this, resultType, inputs);
   });
   // Add generic source and target materializations to handle cases where
   // non-LLVM types persist after an LLVM conversion.
   addSourceMaterialization([&](OpBuilder &builder, Type resultType,
                                ValueRange inputs,
-                               Location loc) -> Optional<Value> {
+                               Location loc) -> std::optional<Value> {
     if (inputs.size() != 1)
-      return llvm::None;
+      return std::nullopt;
 
     return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
         .getResult(0);
   });
   addTargetMaterialization([&](OpBuilder &builder, Type resultType,
                                ValueRange inputs,
-                               Location loc) -> Optional<Value> {
+                               Location loc) -> std::optional<Value> {
     if (inputs.size() != 1)
-      return llvm::None;
+      return std::nullopt;
 
     return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
         .getResult(0);
@@ -199,6 +199,8 @@ Type LLVMTypeConverter::convertFunctionType(FunctionType type) {
   SignatureConversion conversion(type.getNumInputs());
   Type converted =
       convertFunctionSignature(type, /*isVariadic=*/false, conversion);
+  if (!converted)
+    return {};
   return LLVM::LLVMPointerType::get(converted);
 }
 
@@ -298,8 +300,13 @@ LLVMTypeConverter::convertFunctionTypeCWrapper(FunctionType type) {
 SmallVector<Type, 5>
 LLVMTypeConverter::getMemRefDescriptorFields(MemRefType type,
                                              bool unpackAggregates) {
-  assert(isStrided(type) &&
-         "Non-strided layout maps must have been normalized away");
+  if (!isStrided(type)) {
+    emitError(
+        UnknownLoc::get(type.getContext()),
+        "conversion to strided form failed either due to non-strided layout "
+        "maps (which should have been normalized away) or other reasons");
+    return {};
+  }
 
   Type elementType = convertType(type.getElementType());
   if (!elementType)
@@ -386,10 +393,10 @@ bool LLVMTypeConverter::canConvertToBarePtr(BaseMemRefType type) {
     return false;
 
   for (int64_t stride : strides)
-    if (ShapedType::isDynamicStrideOrOffset(stride))
+    if (ShapedType::isDynamic(stride))
       return false;
 
-  return !ShapedType::isDynamicStrideOrOffset(offset);
+  return !ShapedType::isDynamic(offset);
 }
 
 /// Convert a memref type to a bare pointer to the memref element type.
@@ -474,14 +481,11 @@ Type LLVMTypeConverter::packFunctionResults(TypeRange types) {
 
 Value LLVMTypeConverter::promoteOneMemRefDescriptor(Location loc, Value operand,
                                                     OpBuilder &builder) {
-  auto *context = builder.getContext();
-  auto int64Ty = IntegerType::get(builder.getContext(), 64);
-  auto indexType = IndexType::get(context);
   // Alloca with proper alignment. We do not expect optimizations of this
   // alloca op and so we omit allocating at the entry block.
   auto ptrType = LLVM::LLVMPointerType::get(operand.getType());
-  Value one = builder.create<LLVM::ConstantOp>(loc, int64Ty,
-                                               IntegerAttr::get(indexType, 1));
+  Value one = builder.create<LLVM::ConstantOp>(loc, builder.getI64Type(),
+                                               builder.getIndexAttr(1));
   Value allocated =
       builder.create<LLVM::AllocaOp>(loc, ptrType, one, /*alignment=*/0);
   // Store into the alloca'ed descriptor.

@@ -2,7 +2,7 @@
 ; RUN: llc -march=hexagon < %s | FileCheck %s
 
 ; Function Attrs: nounwind
-define <32 x i32> @f0(i8* %a0, i32 %a1) #0 {
+define <32 x i32> @f0(ptr %a0, i32 %a1) #0 {
 ; CHECK-LABEL: f0:
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
@@ -46,23 +46,21 @@ define <32 x i32> @f0(i8* %a0, i32 %a1) #0 {
 ; CHECK-NEXT:    }
 b0:
   %v0 = add i32 %a1, 128
-  %v1 = getelementptr i8, i8* %a0, i32 %v0
-  %v2 = bitcast i8* %v1 to <32 x i32>*
-  %v3 = tail call <32 x i32> @llvm.masked.load.v32i32.p0v32i32(<32 x i32>* %v2, i32 128, <32 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <32 x i32> undef)
+  %v1 = getelementptr i8, ptr %a0, i32 %v0
+  %v3 = tail call <32 x i32> @llvm.masked.load.v32i32.p0(ptr %v1, i32 128, <32 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <32 x i32> undef)
   %v4 = add i32 %a1, 136
-  %v5 = getelementptr i8, i8* %a0, i32 %v4
-  %v6 = bitcast i8* %v5 to <32 x i32>*
-  %v7 = tail call <32 x i32> @llvm.masked.load.v32i32.p0v32i32(<32 x i32>* %v6, i32 8, <32 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <32 x i32> undef)
+  %v5 = getelementptr i8, ptr %a0, i32 %v4
+  %v7 = tail call <32 x i32> @llvm.masked.load.v32i32.p0(ptr %v5, i32 8, <32 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <32 x i32> undef)
   %v8 = add <32 x i32> %v3, %v7
-  tail call void @llvm.masked.store.v32i32.p0v32i32(<32 x i32> %v8, <32 x i32>* %v2, i32 128, <32 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>)
+  tail call void @llvm.masked.store.v32i32.p0(<32 x i32> %v8, ptr %v1, i32 128, <32 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>)
   ret <32 x i32> %v8
 }
 
 ; Function Attrs: argmemonly nounwind readonly willreturn
-declare <32 x i32> @llvm.masked.load.v32i32.p0v32i32(<32 x i32>*, i32 immarg, <32 x i1>, <32 x i32>) #1
+declare <32 x i32> @llvm.masked.load.v32i32.p0(ptr, i32 immarg, <32 x i1>, <32 x i32>) #1
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.masked.store.v32i32.p0v32i32(<32 x i32>, <32 x i32>*, i32 immarg, <32 x i1>) #2
+declare void @llvm.masked.store.v32i32.p0(<32 x i32>, ptr, i32 immarg, <32 x i1>) #2
 
 attributes #0 = { nounwind "target-cpu"="hexagonv66" "target-features"="+hvx,+hvx-length128b,-packets" }
 attributes #1 = { argmemonly nounwind readonly willreturn }

@@ -6,11 +6,11 @@
 target datalayout = "e-p:32:32:32-i64:64:64-i32:32:32-i16:16:16-i1:32:32-f64:64:64-f32:32:32-v64:64:64-v32:32:32-a0:0-n16:32"
 target triple = "hexagon"
 
-define void @foo(i32* nocapture %buf, i32* nocapture %dest, i32 %offset, i32 %oddBlock, i32 %gb) #0 {
+define void @foo(ptr nocapture %buf, ptr nocapture %dest, i32 %offset, i32 %oddBlock, i32 %gb) #0 {
 entry:
-  %0 = load i32, i32* %buf, align 4, !tbaa !0
+  %0 = load i32, ptr %buf, align 4, !tbaa !0
   %shr = ashr i32 %0, %gb
-  store i32 %shr, i32* %buf, align 4, !tbaa !0
+  store i32 %shr, ptr %buf, align 4, !tbaa !0
   %not.tobool = icmp eq i32 %oddBlock, 0
   %1 = sub i32 %offset, %oddBlock
   %2 = zext i1 %not.tobool to i32
@@ -27,14 +27,14 @@ entry:
   %12 = bitcast i64 %11 to <2 x i32>
   %sub12p_vec = add <2 x i32> %10, %12
   %p_22 = add i32 %4, 64
-  %p_d.018 = getelementptr i32, i32* %dest, i32 %4
-  %p_d.01823 = getelementptr i32, i32* %dest, i32 %p_22
+  %p_d.018 = getelementptr i32, ptr %dest, i32 %4
+  %p_d.01823 = getelementptr i32, ptr %dest, i32 %p_22
   %p_25 = add i32 %4, 72
-  %p_arrayidx14 = getelementptr i32, i32* %dest, i32 %5
-  %p_arrayidx1426 = getelementptr i32, i32* %dest, i32 %p_25
-  %_p_scalar_ = load i32, i32* %p_d.018, align 4
+  %p_arrayidx14 = getelementptr i32, ptr %dest, i32 %5
+  %p_arrayidx1426 = getelementptr i32, ptr %dest, i32 %p_25
+  %_p_scalar_ = load i32, ptr %p_d.018, align 4
   %_p_vec_ = insertelement <2 x i32> undef, i32 %_p_scalar_, i32 0
-  %_p_scalar_27 = load i32, i32* %p_d.01823, align 4
+  %_p_scalar_27 = load i32, ptr %p_d.01823, align 4
   %_p_vec_28 = insertelement <2 x i32> %_p_vec_, i32 %_p_scalar_27, i32 1
   %13 = bitcast <2 x i32> %_p_vec_28 to i64
   %14 = tail call i64 @llvm.hexagon.S2.asr.i.vw(i64 %13, i32 31)
@@ -48,22 +48,22 @@ entry:
   %20 = tail call i64 @llvm.hexagon.S2.asl.r.vw(i64 %19, i32 %gb)
   %21 = bitcast i64 %20 to <2 x i32>
   %22 = extractelement <2 x i32> %21, i32 0
-  store i32 %22, i32* %p_arrayidx14, align 4
+  store i32 %22, ptr %p_arrayidx14, align 4
   %23 = extractelement <2 x i32> %21, i32 1
-  store i32 %23, i32* %p_arrayidx1426, align 4
-  store i32 %22, i32* %p_d.018, align 4
-  store i32 %23, i32* %p_d.01823, align 4
+  store i32 %23, ptr %p_arrayidx1426, align 4
+  store i32 %22, ptr %p_d.018, align 4
+  store i32 %23, ptr %p_d.01823, align 4
   %p_21.1 = add i32 %4, 128
   %p_22.1 = add i32 %4, 192
-  %p_d.018.1 = getelementptr i32, i32* %dest, i32 %p_21.1
-  %p_d.01823.1 = getelementptr i32, i32* %dest, i32 %p_22.1
+  %p_d.018.1 = getelementptr i32, ptr %dest, i32 %p_21.1
+  %p_d.01823.1 = getelementptr i32, ptr %dest, i32 %p_22.1
   %p_24.1 = add i32 %4, 136
   %p_25.1 = add i32 %4, 200
-  %p_arrayidx14.1 = getelementptr i32, i32* %dest, i32 %p_24.1
-  %p_arrayidx1426.1 = getelementptr i32, i32* %dest, i32 %p_25.1
-  %_p_scalar_.1 = load i32, i32* %p_d.018.1, align 4
+  %p_arrayidx14.1 = getelementptr i32, ptr %dest, i32 %p_24.1
+  %p_arrayidx1426.1 = getelementptr i32, ptr %dest, i32 %p_25.1
+  %_p_scalar_.1 = load i32, ptr %p_d.018.1, align 4
   %_p_vec_.1 = insertelement <2 x i32> undef, i32 %_p_scalar_.1, i32 0
-  %_p_scalar_27.1 = load i32, i32* %p_d.01823.1, align 4
+  %_p_scalar_27.1 = load i32, ptr %p_d.01823.1, align 4
   %_p_vec_28.1 = insertelement <2 x i32> %_p_vec_.1, i32 %_p_scalar_27.1, i32 1
   %24 = bitcast <2 x i32> %_p_vec_28.1 to i64
   %25 = tail call i64 @llvm.hexagon.S2.asr.i.vw(i64 %24, i32 31)
@@ -77,22 +77,22 @@ entry:
   %31 = tail call i64 @llvm.hexagon.S2.asl.r.vw(i64 %30, i32 %gb)
   %32 = bitcast i64 %31 to <2 x i32>
   %33 = extractelement <2 x i32> %32, i32 0
-  store i32 %33, i32* %p_arrayidx14.1, align 4
+  store i32 %33, ptr %p_arrayidx14.1, align 4
   %34 = extractelement <2 x i32> %32, i32 1
-  store i32 %34, i32* %p_arrayidx1426.1, align 4
-  store i32 %33, i32* %p_d.018.1, align 4
-  store i32 %34, i32* %p_d.01823.1, align 4
+  store i32 %34, ptr %p_arrayidx1426.1, align 4
+  store i32 %33, ptr %p_d.018.1, align 4
+  store i32 %34, ptr %p_d.01823.1, align 4
   %p_21.2 = add i32 %4, 256
   %p_22.2 = add i32 %4, 320
-  %p_d.018.2 = getelementptr i32, i32* %dest, i32 %p_21.2
-  %p_d.01823.2 = getelementptr i32, i32* %dest, i32 %p_22.2
+  %p_d.018.2 = getelementptr i32, ptr %dest, i32 %p_21.2
+  %p_d.01823.2 = getelementptr i32, ptr %dest, i32 %p_22.2
   %p_24.2 = add i32 %4, 264
   %p_25.2 = add i32 %4, 328
-  %p_arrayidx14.2 = getelementptr i32, i32* %dest, i32 %p_24.2
-  %p_arrayidx1426.2 = getelementptr i32, i32* %dest, i32 %p_25.2
-  %_p_scalar_.2 = load i32, i32* %p_d.018.2, align 4
+  %p_arrayidx14.2 = getelementptr i32, ptr %dest, i32 %p_24.2
+  %p_arrayidx1426.2 = getelementptr i32, ptr %dest, i32 %p_25.2
+  %_p_scalar_.2 = load i32, ptr %p_d.018.2, align 4
   %_p_vec_.2 = insertelement <2 x i32> undef, i32 %_p_scalar_.2, i32 0
-  %_p_scalar_27.2 = load i32, i32* %p_d.01823.2, align 4
+  %_p_scalar_27.2 = load i32, ptr %p_d.01823.2, align 4
   %_p_vec_28.2 = insertelement <2 x i32> %_p_vec_.2, i32 %_p_scalar_27.2, i32 1
   %35 = bitcast <2 x i32> %_p_vec_28.2 to i64
   %36 = tail call i64 @llvm.hexagon.S2.asr.i.vw(i64 %35, i32 31)
@@ -106,22 +106,22 @@ entry:
   %42 = tail call i64 @llvm.hexagon.S2.asl.r.vw(i64 %41, i32 %gb)
   %43 = bitcast i64 %42 to <2 x i32>
   %44 = extractelement <2 x i32> %43, i32 0
-  store i32 %44, i32* %p_arrayidx14.2, align 4
+  store i32 %44, ptr %p_arrayidx14.2, align 4
   %45 = extractelement <2 x i32> %43, i32 1
-  store i32 %45, i32* %p_arrayidx1426.2, align 4
-  store i32 %44, i32* %p_d.018.2, align 4
-  store i32 %45, i32* %p_d.01823.2, align 4
+  store i32 %45, ptr %p_arrayidx1426.2, align 4
+  store i32 %44, ptr %p_d.018.2, align 4
+  store i32 %45, ptr %p_d.01823.2, align 4
   %p_21.3 = add i32 %4, 384
   %p_22.3 = add i32 %4, 448
-  %p_d.018.3 = getelementptr i32, i32* %dest, i32 %p_21.3
-  %p_d.01823.3 = getelementptr i32, i32* %dest, i32 %p_22.3
+  %p_d.018.3 = getelementptr i32, ptr %dest, i32 %p_21.3
+  %p_d.01823.3 = getelementptr i32, ptr %dest, i32 %p_22.3
   %p_24.3 = add i32 %4, 392
   %p_25.3 = add i32 %4, 456
-  %p_arrayidx14.3 = getelementptr i32, i32* %dest, i32 %p_24.3
-  %p_arrayidx1426.3 = getelementptr i32, i32* %dest, i32 %p_25.3
-  %_p_scalar_.3 = load i32, i32* %p_d.018.3, align 4
+  %p_arrayidx14.3 = getelementptr i32, ptr %dest, i32 %p_24.3
+  %p_arrayidx1426.3 = getelementptr i32, ptr %dest, i32 %p_25.3
+  %_p_scalar_.3 = load i32, ptr %p_d.018.3, align 4
   %_p_vec_.3 = insertelement <2 x i32> undef, i32 %_p_scalar_.3, i32 0
-  %_p_scalar_27.3 = load i32, i32* %p_d.01823.3, align 4
+  %_p_scalar_27.3 = load i32, ptr %p_d.01823.3, align 4
   %_p_vec_28.3 = insertelement <2 x i32> %_p_vec_.3, i32 %_p_scalar_27.3, i32 1
   %46 = bitcast <2 x i32> %_p_vec_28.3 to i64
   %47 = tail call i64 @llvm.hexagon.S2.asr.i.vw(i64 %46, i32 31)
@@ -135,22 +135,22 @@ entry:
   %53 = tail call i64 @llvm.hexagon.S2.asl.r.vw(i64 %52, i32 %gb)
   %54 = bitcast i64 %53 to <2 x i32>
   %55 = extractelement <2 x i32> %54, i32 0
-  store i32 %55, i32* %p_arrayidx14.3, align 4
+  store i32 %55, ptr %p_arrayidx14.3, align 4
   %56 = extractelement <2 x i32> %54, i32 1
-  store i32 %56, i32* %p_arrayidx1426.3, align 4
-  store i32 %55, i32* %p_d.018.3, align 4
-  store i32 %56, i32* %p_d.01823.3, align 4
+  store i32 %56, ptr %p_arrayidx1426.3, align 4
+  store i32 %55, ptr %p_d.018.3, align 4
+  store i32 %56, ptr %p_d.01823.3, align 4
   %p_21.4 = add i32 %4, 512
   %p_22.4 = add i32 %4, 576
-  %p_d.018.4 = getelementptr i32, i32* %dest, i32 %p_21.4
-  %p_d.01823.4 = getelementptr i32, i32* %dest, i32 %p_22.4
+  %p_d.018.4 = getelementptr i32, ptr %dest, i32 %p_21.4
+  %p_d.01823.4 = getelementptr i32, ptr %dest, i32 %p_22.4
   %p_24.4 = add i32 %4, 520
   %p_25.4 = add i32 %4, 584
-  %p_arrayidx14.4 = getelementptr i32, i32* %dest, i32 %p_24.4
-  %p_arrayidx1426.4 = getelementptr i32, i32* %dest, i32 %p_25.4
-  %_p_scalar_.4 = load i32, i32* %p_d.018.4, align 4
+  %p_arrayidx14.4 = getelementptr i32, ptr %dest, i32 %p_24.4
+  %p_arrayidx1426.4 = getelementptr i32, ptr %dest, i32 %p_25.4
+  %_p_scalar_.4 = load i32, ptr %p_d.018.4, align 4
   %_p_vec_.4 = insertelement <2 x i32> undef, i32 %_p_scalar_.4, i32 0
-  %_p_scalar_27.4 = load i32, i32* %p_d.01823.4, align 4
+  %_p_scalar_27.4 = load i32, ptr %p_d.01823.4, align 4
   %_p_vec_28.4 = insertelement <2 x i32> %_p_vec_.4, i32 %_p_scalar_27.4, i32 1
   %57 = bitcast <2 x i32> %_p_vec_28.4 to i64
   %58 = tail call i64 @llvm.hexagon.S2.asr.i.vw(i64 %57, i32 31)
@@ -164,22 +164,22 @@ entry:
   %64 = tail call i64 @llvm.hexagon.S2.asl.r.vw(i64 %63, i32 %gb)
   %65 = bitcast i64 %64 to <2 x i32>
   %66 = extractelement <2 x i32> %65, i32 0
-  store i32 %66, i32* %p_arrayidx14.4, align 4
+  store i32 %66, ptr %p_arrayidx14.4, align 4
   %67 = extractelement <2 x i32> %65, i32 1
-  store i32 %67, i32* %p_arrayidx1426.4, align 4
-  store i32 %66, i32* %p_d.018.4, align 4
-  store i32 %67, i32* %p_d.01823.4, align 4
+  store i32 %67, ptr %p_arrayidx1426.4, align 4
+  store i32 %66, ptr %p_d.018.4, align 4
+  store i32 %67, ptr %p_d.01823.4, align 4
   %p_21.5 = add i32 %4, 640
   %p_22.5 = add i32 %4, 704
-  %p_d.018.5 = getelementptr i32, i32* %dest, i32 %p_21.5
-  %p_d.01823.5 = getelementptr i32, i32* %dest, i32 %p_22.5
+  %p_d.018.5 = getelementptr i32, ptr %dest, i32 %p_21.5
+  %p_d.01823.5 = getelementptr i32, ptr %dest, i32 %p_22.5
   %p_24.5 = add i32 %4, 648
   %p_25.5 = add i32 %4, 712
-  %p_arrayidx14.5 = getelementptr i32, i32* %dest, i32 %p_24.5
-  %p_arrayidx1426.5 = getelementptr i32, i32* %dest, i32 %p_25.5
-  %_p_scalar_.5 = load i32, i32* %p_d.018.5, align 4
+  %p_arrayidx14.5 = getelementptr i32, ptr %dest, i32 %p_24.5
+  %p_arrayidx1426.5 = getelementptr i32, ptr %dest, i32 %p_25.5
+  %_p_scalar_.5 = load i32, ptr %p_d.018.5, align 4
   %_p_vec_.5 = insertelement <2 x i32> undef, i32 %_p_scalar_.5, i32 0
-  %_p_scalar_27.5 = load i32, i32* %p_d.01823.5, align 4
+  %_p_scalar_27.5 = load i32, ptr %p_d.01823.5, align 4
   %_p_vec_28.5 = insertelement <2 x i32> %_p_vec_.5, i32 %_p_scalar_27.5, i32 1
   %68 = bitcast <2 x i32> %_p_vec_28.5 to i64
   %69 = tail call i64 @llvm.hexagon.S2.asr.i.vw(i64 %68, i32 31)
@@ -193,22 +193,22 @@ entry:
   %75 = tail call i64 @llvm.hexagon.S2.asl.r.vw(i64 %74, i32 %gb)
   %76 = bitcast i64 %75 to <2 x i32>
   %77 = extractelement <2 x i32> %76, i32 0
-  store i32 %77, i32* %p_arrayidx14.5, align 4
+  store i32 %77, ptr %p_arrayidx14.5, align 4
   %78 = extractelement <2 x i32> %76, i32 1
-  store i32 %78, i32* %p_arrayidx1426.5, align 4
-  store i32 %77, i32* %p_d.018.5, align 4
-  store i32 %78, i32* %p_d.01823.5, align 4
+  store i32 %78, ptr %p_arrayidx1426.5, align 4
+  store i32 %77, ptr %p_d.018.5, align 4
+  store i32 %78, ptr %p_d.01823.5, align 4
   %p_21.6 = add i32 %4, 768
   %p_22.6 = add i32 %4, 832
-  %p_d.018.6 = getelementptr i32, i32* %dest, i32 %p_21.6
-  %p_d.01823.6 = getelementptr i32, i32* %dest, i32 %p_22.6
+  %p_d.018.6 = getelementptr i32, ptr %dest, i32 %p_21.6
+  %p_d.01823.6 = getelementptr i32, ptr %dest, i32 %p_22.6
   %p_24.6 = add i32 %4, 776
   %p_25.6 = add i32 %4, 840
-  %p_arrayidx14.6 = getelementptr i32, i32* %dest, i32 %p_24.6
-  %p_arrayidx1426.6 = getelementptr i32, i32* %dest, i32 %p_25.6
-  %_p_scalar_.6 = load i32, i32* %p_d.018.6, align 4
+  %p_arrayidx14.6 = getelementptr i32, ptr %dest, i32 %p_24.6
+  %p_arrayidx1426.6 = getelementptr i32, ptr %dest, i32 %p_25.6
+  %_p_scalar_.6 = load i32, ptr %p_d.018.6, align 4
   %_p_vec_.6 = insertelement <2 x i32> undef, i32 %_p_scalar_.6, i32 0
-  %_p_scalar_27.6 = load i32, i32* %p_d.01823.6, align 4
+  %_p_scalar_27.6 = load i32, ptr %p_d.01823.6, align 4
   %_p_vec_28.6 = insertelement <2 x i32> %_p_vec_.6, i32 %_p_scalar_27.6, i32 1
   %79 = bitcast <2 x i32> %_p_vec_28.6 to i64
   %80 = tail call i64 @llvm.hexagon.S2.asr.i.vw(i64 %79, i32 31)
@@ -222,22 +222,22 @@ entry:
   %86 = tail call i64 @llvm.hexagon.S2.asl.r.vw(i64 %85, i32 %gb)
   %87 = bitcast i64 %86 to <2 x i32>
   %88 = extractelement <2 x i32> %87, i32 0
-  store i32 %88, i32* %p_arrayidx14.6, align 4
+  store i32 %88, ptr %p_arrayidx14.6, align 4
   %89 = extractelement <2 x i32> %87, i32 1
-  store i32 %89, i32* %p_arrayidx1426.6, align 4
-  store i32 %88, i32* %p_d.018.6, align 4
-  store i32 %89, i32* %p_d.01823.6, align 4
+  store i32 %89, ptr %p_arrayidx1426.6, align 4
+  store i32 %88, ptr %p_d.018.6, align 4
+  store i32 %89, ptr %p_d.01823.6, align 4
   %p_21.7 = add i32 %4, 896
   %p_22.7 = add i32 %4, 960
-  %p_d.018.7 = getelementptr i32, i32* %dest, i32 %p_21.7
-  %p_d.01823.7 = getelementptr i32, i32* %dest, i32 %p_22.7
+  %p_d.018.7 = getelementptr i32, ptr %dest, i32 %p_21.7
+  %p_d.01823.7 = getelementptr i32, ptr %dest, i32 %p_22.7
   %p_24.7 = add i32 %4, 904
   %p_25.7 = add i32 %4, 968
-  %p_arrayidx14.7 = getelementptr i32, i32* %dest, i32 %p_24.7
-  %p_arrayidx1426.7 = getelementptr i32, i32* %dest, i32 %p_25.7
-  %_p_scalar_.7 = load i32, i32* %p_d.018.7, align 4
+  %p_arrayidx14.7 = getelementptr i32, ptr %dest, i32 %p_24.7
+  %p_arrayidx1426.7 = getelementptr i32, ptr %dest, i32 %p_25.7
+  %_p_scalar_.7 = load i32, ptr %p_d.018.7, align 4
   %_p_vec_.7 = insertelement <2 x i32> undef, i32 %_p_scalar_.7, i32 0
-  %_p_scalar_27.7 = load i32, i32* %p_d.01823.7, align 4
+  %_p_scalar_27.7 = load i32, ptr %p_d.01823.7, align 4
   %_p_vec_28.7 = insertelement <2 x i32> %_p_vec_.7, i32 %_p_scalar_27.7, i32 1
   %90 = bitcast <2 x i32> %_p_vec_28.7 to i64
   %91 = tail call i64 @llvm.hexagon.S2.asr.i.vw(i64 %90, i32 31)
@@ -251,11 +251,11 @@ entry:
   %97 = tail call i64 @llvm.hexagon.S2.asl.r.vw(i64 %96, i32 %gb)
   %98 = bitcast i64 %97 to <2 x i32>
   %99 = extractelement <2 x i32> %98, i32 0
-  store i32 %99, i32* %p_arrayidx14.7, align 4
+  store i32 %99, ptr %p_arrayidx14.7, align 4
   %100 = extractelement <2 x i32> %98, i32 1
-  store i32 %100, i32* %p_arrayidx1426.7, align 4
-  store i32 %99, i32* %p_d.018.7, align 4
-  store i32 %100, i32* %p_d.01823.7, align 4
+  store i32 %100, ptr %p_arrayidx1426.7, align 4
+  store i32 %99, ptr %p_d.018.7, align 4
+  store i32 %100, ptr %p_d.01823.7, align 4
   ret void
 }
 

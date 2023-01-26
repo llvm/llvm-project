@@ -5,27 +5,25 @@
 target triple = "hexagon-unknown--elf"
 
 ; Function Attrs: nounwind optsize
-define void @f0(i16* nocapture readonly %a0, i16* nocapture readonly %a1, i16* nocapture %a2, i32 %a3, i32 %a4, i32 %a5) #0 {
+define void @f0(ptr nocapture readonly %a0, ptr nocapture readonly %a1, ptr nocapture %a2, i32 %a3, i32 %a4, i32 %a5) #0 {
 b0:
-  %v0 = bitcast i16* %a0 to i64*
-  %v1 = bitcast i16* %a1 to i64*
   %v2 = icmp sgt i32 %a5, 0
   br i1 %v2, label %b1, label %b6
 
 b1:                                               ; preds = %b0
   %v3 = icmp sgt i32 %a4, 0
-  %v4 = getelementptr i16, i16* %a2, i32 5
-  %v5 = getelementptr i16, i16* %a2, i32 6
-  %v6 = getelementptr i16, i16* %a2, i32 7
+  %v4 = getelementptr i16, ptr %a2, i32 5
+  %v5 = getelementptr i16, ptr %a2, i32 6
+  %v6 = getelementptr i16, ptr %a2, i32 7
   br label %b2
 
 b2:                                               ; preds = %b5, %b1
-  %v7 = phi i16* [ %a2, %b1 ], [ %v12, %b5 ]
-  %v8 = phi i16* [ %v4, %b1 ], [ %v59, %b5 ]
-  %v9 = phi i16* [ %v5, %b1 ], [ %v60, %b5 ]
-  %v10 = phi i16* [ %v6, %b1 ], [ %v61, %b5 ]
+  %v7 = phi ptr [ %a2, %b1 ], [ %v12, %b5 ]
+  %v8 = phi ptr [ %v4, %b1 ], [ %v59, %b5 ]
+  %v9 = phi ptr [ %v5, %b1 ], [ %v60, %b5 ]
+  %v10 = phi ptr [ %v6, %b1 ], [ %v61, %b5 ]
   %v11 = phi i32 [ 0, %b1 ], [ %v57, %b5 ]
-  %v12 = getelementptr i16, i16* %v7, i32 4
+  %v12 = getelementptr i16, ptr %v7, i32 4
   br i1 %v3, label %b3, label %b5
 
 b3:                                               ; preds = %b3, %b2
@@ -36,14 +34,14 @@ b3:                                               ; preds = %b3, %b2
   %v17 = phi i32 [ %v38, %b3 ], [ 0, %b2 ]
   %v18 = add nsw i32 %v13, %v11
   %v19 = sdiv i32 %v18, 4
-  %v20 = getelementptr inbounds i64, i64* %v0, i32 %v19
-  %v21 = load i64, i64* %v20, align 8
+  %v20 = getelementptr inbounds i64, ptr %a0, i32 %v19
+  %v21 = load i64, ptr %v20, align 8
   %v22 = add nsw i32 %v19, 1
-  %v23 = getelementptr inbounds i64, i64* %v0, i32 %v22
-  %v24 = load i64, i64* %v23, align 8
+  %v23 = getelementptr inbounds i64, ptr %a0, i32 %v22
+  %v24 = load i64, ptr %v23, align 8
   %v25 = sdiv i32 %v13, 4
-  %v26 = getelementptr inbounds i64, i64* %v1, i32 %v25
-  %v27 = load i64, i64* %v26, align 8
+  %v26 = getelementptr inbounds i64, ptr %a1, i32 %v25
+  %v27 = load i64, ptr %v26, align 8
   %v28 = sext i32 %v14 to i64
   %v29 = tail call i64 @llvm.hexagon.M2.vrmac.s0(i64 %v28, i64 %v21, i64 %v27)
   %v30 = trunc i64 %v29 to i32
@@ -80,14 +78,14 @@ b5:                                               ; preds = %b4, %b2
   %v55 = phi i16 [ %v52, %b4 ], [ 0, %b2 ]
   %v56 = phi i16 [ %v50, %b4 ], [ 0, %b2 ]
   %v57 = add nsw i32 %v11, 4
-  store i16 %v53, i16* %v12, align 8
-  store i16 %v54, i16* %v8, align 8
-  store i16 %v56, i16* %v9, align 8
-  store i16 %v55, i16* %v10, align 8
+  store i16 %v53, ptr %v12, align 8
+  store i16 %v54, ptr %v8, align 8
+  store i16 %v56, ptr %v9, align 8
+  store i16 %v55, ptr %v10, align 8
   %v58 = icmp slt i32 %v57, %a5
-  %v59 = getelementptr i16, i16* %v8, i32 4
-  %v60 = getelementptr i16, i16* %v9, i32 4
-  %v61 = getelementptr i16, i16* %v10, i32 4
+  %v59 = getelementptr i16, ptr %v8, i32 4
+  %v60 = getelementptr i16, ptr %v9, i32 4
+  %v61 = getelementptr i16, ptr %v10, i32 4
   br i1 %v58, label %b2, label %b6
 
 b6:                                               ; preds = %b5, %b0

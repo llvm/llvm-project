@@ -4,7 +4,6 @@ Test that we handle breakpoints on consecutive instructions correctly.
 
 
 
-import unittest2
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

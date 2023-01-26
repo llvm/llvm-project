@@ -15,8 +15,6 @@
 #define LLVM_SUPPORT_VIRTUALFILESYSTEM_H
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
@@ -30,6 +28,7 @@
 #include <cstdint>
 #include <ctime>
 #include <memory>
+#include <optional>
 #include <stack>
 #include <string>
 #include <system_error>
@@ -451,7 +450,7 @@ public:
   }
 
 protected:
-  FileSystem &getUnderlyingFS() { return *FS; }
+  FileSystem &getUnderlyingFS() const { return *FS; }
 
 private:
   IntrusiveRefCntPtr<FileSystem> FS;
@@ -510,13 +509,13 @@ class InMemoryFileSystem : public FileSystem {
   /// Create node with \p MakeNode and add it into this filesystem at \p Path.
   bool addFile(const Twine &Path, time_t ModificationTime,
                std::unique_ptr<llvm::MemoryBuffer> Buffer,
-               Optional<uint32_t> User, Optional<uint32_t> Group,
-               Optional<llvm::sys::fs::file_type> Type,
-               Optional<llvm::sys::fs::perms> Perms, MakeNodeFn MakeNode);
+               std::optional<uint32_t> User, std::optional<uint32_t> Group,
+               std::optional<llvm::sys::fs::file_type> Type,
+               std::optional<llvm::sys::fs::perms> Perms, MakeNodeFn MakeNode);
 
-  /// Looks up the in-memory node for the path \param P.
-  /// If \param FollowFinalSymlink is true, the returned node is guaranteed to
-  /// not be a symlink and its path may differ from \param P.
+  /// Looks up the in-memory node for the path \p P.
+  /// If \p FollowFinalSymlink is true, the returned node is guaranteed to
+  /// not be a symlink and its path may differ from \p P.
   detail::NamedNodeOrError lookupNode(const Twine &P, bool FollowFinalSymlink,
                                       size_t SymlinkDepth = 0) const;
 
@@ -534,9 +533,10 @@ public:
   /// different contents.
   bool addFile(const Twine &Path, time_t ModificationTime,
                std::unique_ptr<llvm::MemoryBuffer> Buffer,
-               Optional<uint32_t> User = None, Optional<uint32_t> Group = None,
-               Optional<llvm::sys::fs::file_type> Type = None,
-               Optional<llvm::sys::fs::perms> Perms = None);
+               std::optional<uint32_t> User = std::nullopt,
+               std::optional<uint32_t> Group = std::nullopt,
+               std::optional<llvm::sys::fs::file_type> Type = std::nullopt,
+               std::optional<llvm::sys::fs::perms> Perms = std::nullopt);
 
   /// Add a hard link to a file.
   ///
@@ -546,10 +546,10 @@ public:
   /// to distinguish between the link and the file after the link has been
   /// added.
   ///
-  /// The \param Target path must be an existing file or a hardlink. The
-  /// \param NewLink file must not have been added before. The \param Target
-  /// path must not be a directory. The \param NewLink node is added as a hard
-  /// link which points to the resolved file of \param Target node.
+  /// The \p Target path must be an existing file or a hardlink. The
+  /// \p NewLink file must not have been added before. The \p Target
+  /// path must not be a directory. The \p NewLink node is added as a hard
+  /// link which points to the resolved file of \p Target node.
   /// \return true if the above condition is satisfied and hardlink was
   /// successfully created, false otherwise.
   bool addHardLink(const Twine &NewLink, const Twine &Target);
@@ -558,13 +558,15 @@ public:
   /// if a link links to a link that links back to the link, for example.
   static constexpr size_t MaxSymlinkDepth = 16;
 
-  /// Add a symbolic link. Unlike a HardLink, because \param Target doesn't need
+  /// Add a symbolic link. Unlike a HardLink, because \p Target doesn't need
   /// to refer to a file (or refer to anything, as it happens). Also, an
-  /// in-memory directory for \param Target isn't automatically created.
-  bool addSymbolicLink(const Twine &NewLink, const Twine &Target,
-                       time_t ModificationTime, Optional<uint32_t> User = None,
-                       Optional<uint32_t> Group = None,
-                       Optional<llvm::sys::fs::perms> Perms = None);
+  /// in-memory directory for \p Target isn't automatically created.
+  bool
+  addSymbolicLink(const Twine &NewLink, const Twine &Target,
+                  time_t ModificationTime,
+                  std::optional<uint32_t> User = std::nullopt,
+                  std::optional<uint32_t> Group = std::nullopt,
+                  std::optional<llvm::sys::fs::perms> Perms = std::nullopt);
 
   /// Add a buffer to the VFS with a path. The VFS does not own the buffer.
   /// If present, User, Group, Type and Perms apply to the newly-created file
@@ -574,10 +576,10 @@ public:
   /// different contents.
   bool addFileNoOwn(const Twine &Path, time_t ModificationTime,
                     const llvm::MemoryBufferRef &Buffer,
-                    Optional<uint32_t> User = None,
-                    Optional<uint32_t> Group = None,
-                    Optional<llvm::sys::fs::file_type> Type = None,
-                    Optional<llvm::sys::fs::perms> Perms = None);
+                    std::optional<uint32_t> User = std::nullopt,
+                    std::optional<uint32_t> Group = std::nullopt,
+                    std::optional<llvm::sys::fs::file_type> Type = std::nullopt,
+                    std::optional<llvm::sys::fs::perms> Perms = std::nullopt);
 
   std::string toString() const;
 
@@ -651,16 +653,27 @@ class RedirectingFileSystemParser;
 /// \endverbatim
 ///
 /// The roots may be absolute or relative. If relative they will be made
-/// absolute against the current working directory.
+/// absolute against either current working directory or the directory where
+/// the Overlay YAML file is located, depending on the 'root-relative'
+/// configuration.
 ///
 /// All configuration options are optional.
 ///   'case-sensitive': <boolean, default=(true for Posix, false for Windows)>
 ///   'use-external-names': <boolean, default=true>
+///   'root-relative': <string, one of 'cwd' or 'overlay-dir', default='cwd'>
 ///   'overlay-relative': <boolean, default=false>
 ///   'fallthrough': <boolean, default=true, deprecated - use 'redirecting-with'
 ///                   instead>
 ///   'redirecting-with': <string, one of 'fallthrough', 'fallback', or
 ///                        'redirect-only', default='fallthrough'>
+///
+/// To clarify, 'root-relative' option will prepend the current working
+/// directory, or the overlay directory to the 'roots->name' field only if
+/// 'roots->name' is a relative path. On the other hand, when 'overlay-relative'
+/// is set to 'true', external paths will always be prepended with the overlay
+/// directory, even if external paths are not relative paths. The
+/// 'root-relative' option has no interaction with the 'overlay-relative'
+/// option.
 ///
 /// Virtual directories that list their contents are represented as
 /// \verbatim
@@ -745,6 +758,15 @@ public:
     RedirectOnly
   };
 
+  /// The type of relative path used by Roots.
+  enum class RootRelativeKind {
+    /// The roots are relative to the current working directory.
+    CWD,
+    /// The roots are relative to the directory where the Overlay YAML file
+    // locates.
+    OverlayDir
+  };
+
   /// A single file or directory in the VFS.
   class Entry {
     EntryKind Kind;
@@ -816,7 +838,7 @@ public:
     static bool classof(const Entry *E) {
       switch (E->getKind()) {
       case EK_DirectoryRemap:
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case EK_File:
         return true;
       case EK_Directory:
@@ -857,7 +879,7 @@ public:
     /// When the found Entry is a DirectoryRemapEntry, stores the path in the
     /// external file system that the looked-up path in the virtual file system
     //  corresponds to.
-    Optional<std::string> ExternalRedirect;
+    std::optional<std::string> ExternalRedirect;
 
   public:
     LookupResult(Entry *E, sys::path::const_iterator Start,
@@ -866,12 +888,12 @@ public:
     /// If the found Entry maps the the input path to a path in the external
     /// file system (i.e. it is a FileEntry or DirectoryRemapEntry), returns
     /// that path.
-    Optional<StringRef> getExternalRedirect() const {
+    std::optional<StringRef> getExternalRedirect() const {
       if (isa<DirectoryRemapEntry>(E))
         return StringRef(*ExternalRedirect);
       if (auto *FE = dyn_cast<FileEntry>(E))
         return FE->getExternalContentsPath();
-      return None;
+      return std::nullopt;
     }
   };
 
@@ -889,6 +911,21 @@ private:
   /// up the entry using the canonical path.
   ErrorOr<Status> getExternalStatus(const Twine &CanonicalPath,
                                     const Twine &OriginalPath) const;
+
+  /// Make \a Path an absolute path.
+  ///
+  /// Makes \a Path absolute using the \a WorkingDir if it is not already.
+  ///
+  /// /absolute/path   => /absolute/path
+  /// relative/../path => <WorkingDir>/relative/../path
+  ///
+  /// \param WorkingDir  A path that will be used as the base Dir if \a Path
+  ///                    is not already absolute.
+  /// \param Path A path that is modified to be an absolute path.
+  /// \returns success if \a path has been made absolute, otherwise a
+  ///          platform-specific error_code.
+  std::error_code makeAbsolute(StringRef WorkingDir,
+                               SmallVectorImpl<char> &Path) const;
 
   // In a RedirectingFileSystem, keys can be specified in Posix or Windows
   // style (or even a mixture of both), so this comparison helper allows
@@ -910,10 +947,11 @@ private:
   /// The file system to use for external references.
   IntrusiveRefCntPtr<FileSystem> ExternalFS;
 
-  /// If IsRelativeOverlay is set, this represents the directory
-  /// path that should be prefixed to each 'external-contents' entry
-  /// when reading from YAML files.
-  std::string ExternalContentsPrefixDir;
+  /// This represents the directory path that the YAML file is located.
+  /// This will be prefixed to each 'external-contents' if IsRelativeOverlay
+  /// is set. This will also be prefixed to each 'roots->name' if RootRelative
+  /// is set to RootRelativeKind::OverlayDir and the path is relative.
+  std::string OverlayFileDir;
 
   /// @name Configuration
   /// @{
@@ -923,7 +961,7 @@ private:
   /// Currently, case-insensitive matching only works correctly with ASCII.
   bool CaseSensitive = is_style_posix(sys::path::Style::native);
 
-  /// IsRelativeOverlay marks whether a ExternalContentsPrefixDir path must
+  /// IsRelativeOverlay marks whether a OverlayFileDir path must
   /// be prefixed in every 'external-contents' when reading from YAML files.
   bool IsRelativeOverlay = false;
 
@@ -934,6 +972,10 @@ private:
   /// Determines the lookups to perform, as well as their order. See
   /// \c RedirectKind for details.
   RedirectKind Redirection = RedirectKind::Fallthrough;
+
+  /// Determine the prefix directory if the roots are relative paths. See
+  /// \c RootRelativeKind for details.
+  RootRelativeKind RootRelative = RootRelativeKind::CWD;
   /// @}
 
   RedirectingFileSystem(IntrusiveRefCntPtr<FileSystem> ExternalFS);
@@ -984,9 +1026,9 @@ public:
 
   directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override;
 
-  void setExternalContentsPrefixDir(StringRef PrefixDir);
+  void setOverlayFileDir(StringRef PrefixDir);
 
-  StringRef getExternalContentsPrefixDir() const;
+  StringRef getOverlayFileDir() const;
 
   /// Sets the redirection kind to \c Fallthrough if true or \c RedirectOnly
   /// otherwise. Will removed in the future, use \c setRedirection instead.
@@ -1015,9 +1057,9 @@ void collectVFSFromYAML(
 
 class YAMLVFSWriter {
   std::vector<YAMLVFSEntry> Mappings;
-  Optional<bool> IsCaseSensitive;
-  Optional<bool> IsOverlayRelative;
-  Optional<bool> UseExternalNames;
+  std::optional<bool> IsCaseSensitive;
+  std::optional<bool> IsOverlayRelative;
+  std::optional<bool> UseExternalNames;
   std::string OverlayDir;
 
   void addEntry(StringRef VirtualPath, StringRef RealPath, bool IsDirectory);

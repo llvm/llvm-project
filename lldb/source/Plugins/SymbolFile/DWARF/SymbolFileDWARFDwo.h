@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARFDWO_H
 
 #include "SymbolFileDWARF.h"
+#include <optional>
 
 class SymbolFileDWARFDwo : public SymbolFileDWARF {
   /// LLVM RTTI support.
@@ -34,13 +35,23 @@ public:
   void GetObjCMethods(lldb_private::ConstString class_name,
                       llvm::function_ref<bool(DWARFDIE die)> callback) override;
 
-  llvm::Expected<lldb_private::TypeSystem &>
+  llvm::Expected<lldb::TypeSystemSP>
   GetTypeSystemForLanguage(lldb::LanguageType language) override;
 
   DWARFDIE
   GetDIE(const DIERef &die_ref) override;
 
-  llvm::Optional<uint32_t> GetDwoNum() override { return GetID() >> 32; }
+  std::optional<uint32_t> GetDwoNum() override { return GetID() >> 32; }
+
+  lldb::offset_t
+  GetVendorDWARFOpcodeSize(const lldb_private::DataExtractor &data,
+                           const lldb::offset_t data_offset,
+                           const uint8_t op) const override;
+
+  bool ParseVendorDWARFOpcode(
+      uint8_t op, const lldb_private::DataExtractor &opcodes,
+      lldb::offset_t &offset,
+      std::vector<lldb_private::Value> &stack) const override;
 
 protected:
   DIEToTypePtr &GetDIEToType() override;
@@ -53,14 +64,14 @@ protected:
 
   UniqueDWARFASTTypeMap &GetUniqueDWARFASTTypeMap() override;
 
-  lldb::TypeSP FindDefinitionTypeForDWARFDeclContext(
-      const DWARFDeclContext &die_decl_ctx) override;
+  lldb::TypeSP
+  FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) override;
 
   lldb::TypeSP FindCompleteObjCDefinitionTypeForDIE(
       const DWARFDIE &die, lldb_private::ConstString type_name,
       bool must_be_implementation) override;
 
-  SymbolFileDWARF &GetBaseSymbolFile() { return m_base_symbol_file; }
+  SymbolFileDWARF &GetBaseSymbolFile() const { return m_base_symbol_file; }
 
   /// If this file contains exactly one compile unit, this function will return
   /// it. Otherwise it returns nullptr.

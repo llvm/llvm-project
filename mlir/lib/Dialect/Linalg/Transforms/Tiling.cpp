@@ -10,26 +10,33 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <utility>
-
-#include "PassDetail.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/Utils/Utils.h"
-#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
+
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/LoopUtils.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
-#include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/ValueRange.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
+#include <utility>
+
+namespace mlir {
+#define GEN_PASS_DEF_LINALGTILINGPASS
+#include "mlir/Dialect/Linalg/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -110,6 +117,32 @@ static void emitIsPositiveIndexAssertion(ImplicitLocOpBuilder &b,
       b.getStringAttr("expected strictly positive tile size and divisor"));
 }
 
+FailureOr<StaticMultiSizeSpecification>
+mlir::linalg::computeStaticMultiTileSizes(LinalgOp op, unsigned dimension,
+                                          int64_t targetSize, int64_t divisor) {
+  assert(!op.hasDynamicShape() &&
+         "cannot compute static multi-tile sizes for an op with dynamic shape");
+  assert(targetSize > 0 && "target size must be non-negative");
+  assert(divisor > 0 && "divisor must be non-negative");
+  assert(dimension < op.getNumLoops() && "dimension overflow");
+
+  StaticMultiSizeSpecification spec;
+  int64_t tripCount = op.getStaticLoopRanges()[dimension];
+  int64_t a = tripCount / divisor;
+  int64_t t = (targetSize + divisor - 1) / divisor;
+  int64_t totalTripCount = (a + t - 1) / t;
+  spec.lowTileSize = (a / totalTripCount) * divisor;
+  spec.highTileSize = spec.lowTileSize + divisor;
+  spec.highTripCount = a % totalTripCount;
+  spec.lowTripCount = totalTripCount - spec.highTripCount;
+  if (spec.lowTileSize * spec.lowTripCount +
+          spec.highTileSize * spec.highTripCount !=
+      tripCount) {
+    return failure();
+  }
+  return spec;
+}
+
 FailureOr<MultiSizeSpecification>
 mlir::linalg::computeMultiTileSizes(OpBuilder &builder, LinalgOp op,
                                     unsigned dimension, OpFoldResult targetSize,
@@ -119,25 +152,26 @@ mlir::linalg::computeMultiTileSizes(OpBuilder &builder, LinalgOp op,
     return failure();
 
   // The code below works only on values.
-  ImplicitLocOpBuilder b(op.getLoc(), builder);
+  Location loc = op.getLoc();
+  ImplicitLocOpBuilder b(loc, builder);
   if (emitAssertions) {
     emitIsPositiveIndexAssertion(b, targetSize);
     emitIsPositiveIndexAssertion(b, divisor);
   }
-  Value targetSizeValue = materializeOpFoldResult(b, targetSize);
-  Value divisorValue = materializeOpFoldResult(b, divisor);
+  Value targetSizeValue =
+      getValueOrCreateConstantIndexOp(builder, loc, targetSize);
+  Value divisorValue = getValueOrCreateConstantIndexOp(builder, loc, divisor);
 
   // Find the trip count of the iteration space dimension for which the tile
   // sizes are computed.
   SmallVector<OpFoldResult> allShapes =
       op.createFlatListOfOperandDims(b, b.getLoc());
   AffineMap shapesToLoops = op.getShapesToLoopsMap();
-  IRRewriter rewriter(b);
   SmallVector<OpFoldResult> loopRanges =
-      makeComposedFoldedMultiResultAffineApply(rewriter, op.getLoc(),
-                                               shapesToLoops, allShapes);
+      makeComposedFoldedMultiResultAffineApply(b, op.getLoc(), shapesToLoops,
+                                               allShapes);
   Value tripCount =
-      materializeOpFoldResult(rewriter, op.getLoc(), loopRanges[dimension]);
+      getValueOrCreateConstantIndexOp(b, op.getLoc(), loopRanges[dimension]);
 
   // Compute the tile sizes and the respective numbers of tiles.
   AffineExpr s0 = b.getAffineSymbolExpr(0);
@@ -178,26 +212,14 @@ mlir::linalg::computeMultiTileSizes(OpBuilder &builder, LinalgOp op,
   return spec;
 }
 
-/// Given a `subsetExtractOp`, a `source` and a `dest`, create a new
-/// `ParallelInsertSlice` op of `source` into `dest` at the same subset location
-/// as `subsetExtractOp`.
-static void
-createMatchingParallelSubsetInsertOp(OpBuilder &b, Location loc,
-                                     tensor::ExtractSliceOp subsetExtractOp,
-                                     Value source, Value dest) {
-  b.create<tensor::ParallelInsertSliceOp>(
-      loc, source, dest, subsetExtractOp.getMixedOffsets(),
-      subsetExtractOp.getMixedSizes(), subsetExtractOp.getMixedStrides());
-}
-
 /// Returns true if the maximum tile offset `tileSize * numThreads-1` is less
 /// than `iterationSize`.
 static bool canOmitTileOffsetInBoundsCheck(OpFoldResult tileSize,
                                            OpFoldResult numThreads,
                                            OpFoldResult iterationSize) {
-  Optional<int64_t> tileSizeConst = getConstantIntValue(tileSize);
-  Optional<int64_t> numThreadsConst = getConstantIntValue(numThreads);
-  Optional<int64_t> iterSizeConst = getConstantIntValue(iterationSize);
+  std::optional<int64_t> tileSizeConst = getConstantIntValue(tileSize);
+  std::optional<int64_t> numThreadsConst = getConstantIntValue(numThreads);
+  std::optional<int64_t> iterSizeConst = getConstantIntValue(iterationSize);
   if (!tileSizeConst || !numThreadsConst || !iterSizeConst)
     return false;
   return *tileSizeConst * (*numThreadsConst - 1) < *iterSizeConst;
@@ -206,74 +228,37 @@ static bool canOmitTileOffsetInBoundsCheck(OpFoldResult tileSize,
 /// Build an `affine_max` of all the `vals`.
 static OpFoldResult buildMax(OpBuilder &b, Location loc,
                              ArrayRef<OpFoldResult> vals) {
-  IRRewriter rewriter(b);
   return makeComposedFoldedAffineMax(
-      rewriter, loc,
-      AffineMap::getMultiDimIdentityMap(vals.size(), loc.getContext()), vals);
+      b, loc, AffineMap::getMultiDimIdentityMap(vals.size(), loc.getContext()),
+      vals);
 }
 
 /// Build an `affine_min` of all the `vals`.
 static OpFoldResult buildMin(OpBuilder &b, Location loc,
                              ArrayRef<OpFoldResult> vals) {
-  IRRewriter rewriter(b);
   return makeComposedFoldedAffineMin(
-      rewriter, loc,
-      AffineMap::getMultiDimIdentityMap(vals.size(), loc.getContext()), vals);
+      b, loc, AffineMap::getMultiDimIdentityMap(vals.size(), loc.getContext()),
+      vals);
 }
 
-/// Rewrite a TilingInterface `op` to a tiled `scf.foreach_thread`. The
-/// tiling is specified by the number of tiles/threads `numThreads` and the
-/// optional nominal tile size `nominalTileSizes`. If `nominalTilSizes` is
-/// not specified, then  it is derived from `numThreads` as `ceilDiv(dimSize[i],
-/// numThreads[i])`. If non-empty, the `threadDimMapping` is added as an
-/// attribute to the resulting `scf.foreach_thread`. A zero tile sizes indicate
-/// that the dimension is not tiled, and can be thought of as tiling by the full
-/// size of data.
-/// It is the user's responsibility to ensure that `numThreads` is a valid
-/// tiling specification (i.e. that only tiles parallel dimensions, e.g. in the
-/// Linalg case). If `omitTileOffsetBoundsCheck` is true, then the function will
-/// assume that `tileSize[i] * (numThread[i] -1) <= dimSize[i]` holds.
-static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
-    RewriterBase &b, TilingInterface op, ArrayRef<OpFoldResult> numThreads,
-    Optional<ArrayRef<OpFoldResult>> nominalTileSizes,
-    ArrayRef<int64_t> threadDimMapping, bool omitTileOffsetBoundsCheck) {
-  Location loc = op->getLoc();
+/// Fill out the `tiledOffsets` and `tiledSizes` to be used to tile to a given
+/// number of threads.
+static void calculateTileOffsetsAndSizes(
+    RewriterBase &b, Location loc, scf::ForeachThreadOp foreachThreadOp,
+    ArrayRef<OpFoldResult> numThreads, SmallVector<Range> loopRanges,
+    bool omitTileOffsetBoundsCheck,
+    std::optional<ArrayRef<OpFoldResult>> nominalTileSizes,
+    SmallVector<OpFoldResult> &tiledOffsets,
+    SmallVector<OpFoldResult> &tiledSizes) {
   OpBuilder::InsertionGuard g(b);
-  SmallVector<Range> loopRanges = op.getIterationDomain(b);
-  if (loopRanges.empty())
-    return op->emitOpError("expected non-empty loop ranges");
-  auto hasStrideOne = [](Range r) { return !isConstantIntValue(r.stride, 1); };
-  if (llvm::any_of(loopRanges, hasStrideOne))
-    return op->emitOpError("only stride-1 supported atm");
-  // TODO: support `getTiledImplementation` with >1 produced tiled ops.
-  auto destOperands = op.getDestinationOperands(b);
-  if (destOperands.size() != 1)
-    return op->emitOpError("only single dest operand supported atm");
+  b.setInsertionPointToStart(foreachThreadOp.getBody(0));
 
+  ValueRange threadIds = foreachThreadOp.getThreadIndices();
   SmallVector<OpFoldResult> nonZeroNumThreads =
       llvm::to_vector(llvm::make_filter_range(numThreads, [](OpFoldResult ofr) {
         return !isConstantIntValue(ofr, 0);
       }));
-  SmallVector<Value> materializedNonZeroNumThreads =
-      llvm::to_vector(llvm::map_range(nonZeroNumThreads, [&](OpFoldResult ofr) {
-        ImplicitLocOpBuilder ilocb(loc, b);
-        return materializeOpFoldResult(ilocb, ofr);
-      }));
-
-  Operation *tiledOp = nullptr;
-
-  // Create the ForeachThreadOp. We don't use the lambda body-builder
-  // version because we require the use of RewriterBase in the body, so we
-  // manually move the insertion point to the body below.
-  scf::ForeachThreadOp foreachThreadOp = b.create<scf::ForeachThreadOp>(
-      loc, op->getResultTypes(), ValueRange(materializedNonZeroNumThreads),
-      threadDimMapping);
-
-  // Fill out the ForeachThreadOp body.
-  b.setInsertionPointToStart(foreachThreadOp.getBody(0));
-  ValueRange threadIds = foreachThreadOp.getThreadIndices();
   int64_t nLoops = loopRanges.size();
-  SmallVector<OpFoldResult> tiledOffsets, tiledSizes;
   tiledOffsets.reserve(nLoops);
   tiledSizes.reserve(nLoops);
   for (unsigned loopIdx = 0, threadIdIdx = 0; loopIdx < nLoops; ++loopIdx) {
@@ -287,9 +272,9 @@ static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
     }
 
     // Tiled case: compute the offset and size.
-    AffineExpr i, j, M, N, O;
+    AffineExpr i, j, m, n, o;
     bindDims(b.getContext(), i, j);
-    bindSymbols(b.getContext(), M, N, O);
+    bindSymbols(b.getContext(), m, n, o);
     OpFoldResult size = loopRanges[loopIdx].size;
     OpFoldResult offset = loopRanges[loopIdx].offset;
     OpFoldResult threadId = threadIds[threadIdIdx];
@@ -299,19 +284,19 @@ static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
         nominalTileSizes.has_value()
             ? (*nominalTileSizes)[loopIdx]
             : makeComposedFoldedAffineApply(
-                  b, loc, M.ceilDiv(N),
+                  b, loc, m.ceilDiv(n),
                   ArrayRef<OpFoldResult>{size, nonZeroNumThreads[threadIdIdx]});
 
     // Dynamic offset shifted by threadId * maxSizePerThread.
     OpFoldResult offsetPerThread = makeComposedFoldedAffineApply(
-        b, loc, i + j * M, {offset, threadId, tileSizePerThread});
+        b, loc, i + j * m, {offset, threadId, tileSizePerThread});
     // Dynamic upper-bound depending on the threadId.
     OpFoldResult residualTileSize = makeComposedFoldedAffineApply(
-        b, loc, i + j * M - N,
+        b, loc, i + j * m - n,
         {offset, nonZeroNumThreads[threadIdIdx], tileSizePerThread, size});
     if (!isConstantIntValue(residualTileSize, 0)) {
       OpFoldResult sizeMinusOffsetPerThread = makeComposedFoldedAffineApply(
-          b, loc, -i + M, {offsetPerThread, size});
+          b, loc, -i + m, {offsetPerThread, size});
       tileSizePerThread =
           buildMin(b, loc, {sizeMinusOffsetPerThread, tileSizePerThread});
     }
@@ -327,25 +312,112 @@ static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
     tiledSizes.push_back(tileSizePerThread);
     ++threadIdIdx;
   }
+}
 
-  SmallVector<Operation *> tiledOps =
-      op.getTiledImplementation(b, destOperands, tiledOffsets, tiledSizes,
-                                /*tileDestOperands=*/true);
-  assert(tiledOps.size() == 1 && "expected a single produced tiled op");
-  tiledOp = tiledOps.front();
+/// Rewrite a TilingInterface `op` to a tiled `scf.foreach_thread`. The
+/// tiling is specified by the number of tiles/threads `numThreads` and the
+/// optional nominal tile size `nominalTileSizes`. If `nominalTilSizes` is
+/// not specified, then  it is derived from `numThreads` as `ceilDiv(dimSize[i],
+/// numThreads[i])`. If non-empty, the `mapping` is added as an
+/// attribute to the resulting `scf.foreach_thread`. A zero tile sizes indicate
+/// that the dimension is not tiled, and can be thought of as tiling by the full
+/// size of data.
+/// It is the user's responsibility to ensure that `numThreads` is a valid
+/// tiling specification (i.e. that only tiles parallel dimensions, e.g. in the
+/// Linalg case). If `omitTileOffsetBoundsCheck` is true, then the function will
+/// assume that `tileSize[i] * (numThread[i] -1) <= dimSize[i]` holds.
+static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
+    RewriterBase &b, TilingInterface op, ArrayRef<OpFoldResult> numThreads,
+    std::optional<ArrayRef<OpFoldResult>> nominalTileSizes,
+    std::optional<ArrayAttr> mapping, bool omitTileOffsetBoundsCheck) {
+  Location loc = op->getLoc();
+  OpBuilder::InsertionGuard g(b);
 
+  SmallVector<Range> loopRanges = op.getIterationDomain(b);
+  if (loopRanges.empty())
+    return op->emitOpError("expected non-empty loop ranges");
+  auto hasStrideOne = [](Range r) { return !isConstantIntValue(r.stride, 1); };
+  if (llvm::any_of(loopRanges, hasStrideOne))
+    return op->emitOpError("only stride-1 supported atm");
+
+  // Gather destination tensors.
+  SmallVector<Value> dest;
+  if (failed(tensor::getOrCreateDestinations(b, loc, op, dest)))
+    return op->emitOpError("failed to get destination tensors");
+
+  SmallVector<OpFoldResult> nonZeroNumThreads =
+      llvm::to_vector(llvm::make_filter_range(numThreads, [](OpFoldResult ofr) {
+        return !isConstantIntValue(ofr, 0);
+      }));
+  SmallVector<Value> materializedNonZeroNumThreads =
+      llvm::to_vector(llvm::map_range(nonZeroNumThreads, [&](OpFoldResult ofr) {
+        return getValueOrCreateConstantIndexOp(b, loc, ofr);
+      }));
+
+  Operation *tiledOp = nullptr;
+
+  // 1. Create the ForeachThreadOp. We don't use the lambda body-builder
+  // version because we require the use of RewriterBase in the body, so we
+  // manually move the insertion point to the body below.
+  scf::ForeachThreadOp foreachThreadOp = b.create<scf::ForeachThreadOp>(
+      loc, dest, ValueRange(materializedNonZeroNumThreads), mapping);
+
+  // 2. Fill out the ForeachThreadOp body.
+  SmallVector<OpFoldResult> tiledOffsets, tiledSizes;
+  calculateTileOffsetsAndSizes(b, loc, foreachThreadOp, numThreads, loopRanges,
+                               omitTileOffsetBoundsCheck, nominalTileSizes,
+                               tiledOffsets, tiledSizes);
+
+  // 3. Clone the tileable op and update its destination operands to use the
+  // output bbArgs of the ForeachThreadOp.
+  ArrayRef<BlockArgument> destBbArgs =
+      foreachThreadOp.getOutputBlockArguments();
+  {
+    // 3.a. RAII guard, inserting within foreachThreadOp, before terminator.
+    OpBuilder::InsertionGuard g(b);
+    b.setInsertionPoint(foreachThreadOp.getTerminator());
+    Operation *clonedOp = b.clone(*op.getOperation());
+    auto destinationStyleOp = dyn_cast<DestinationStyleOpInterface>(clonedOp);
+    if (destinationStyleOp) {
+      for (OpOperand *outOperand : destinationStyleOp.getDpsInitOperands()) {
+        auto *it = llvm::find(dest, outOperand->get());
+        assert(it != dest.end() && "dest operand not found in dest");
+        unsigned destNum = std::distance(dest.begin(), it);
+        outOperand->set(destBbArgs[destNum]);
+      }
+    }
+
+    // 4. Tile the cloned op and delete the clone.
+    SmallVector<Operation *> tiledOps =
+        cast<TilingInterface>(clonedOp).getTiledImplementation(b, tiledOffsets,
+                                                               tiledSizes);
+    b.eraseOp(clonedOp);
+    assert(tiledOps.size() == 1 && "expected a single produced tiled op");
+    tiledOp = tiledOps.front();
+  }
+
+  // 5. Parallel insert back into the result tensor.
   auto tilingInterfaceOp = dyn_cast<TilingInterface>(tiledOp);
   assert(tilingInterfaceOp && "Tiled op does not implement TilingInterface");
+  for (auto it : llvm::zip(llvm::seq(unsigned(0), unsigned(dest.size())),
+                           tilingInterfaceOp->getResults(), destBbArgs)) {
+    // 5.a. Partial subset information is inserted just before the terminator.
+    OpBuilder::InsertionGuard g(b);
+    b.setInsertionPoint(foreachThreadOp.getTerminator());
 
-  auto tiledDestOperands = tilingInterfaceOp.getDestinationOperands(b);
+    SmallVector<OpFoldResult> resultOffsets, resultSizes;
+    if (failed(op.getResultTilePosition(b, std::get<0>(it), tiledOffsets,
+                                        tiledSizes, resultOffsets,
+                                        resultSizes)))
+      return op->emitOpError("output offsets couldn't be calculated");
+    SmallVector<OpFoldResult> strides(resultSizes.size(), b.getIndexAttr(1));
 
-  // Create terminator with parallel subset insert operations.
-  b.setInsertionPointToStart(foreachThreadOp.getTerminator().getBody());
-  for (auto it : llvm::zip(tiledDestOperands, tilingInterfaceOp->getResults(),
-                           destOperands)) {
-    createMatchingParallelSubsetInsertOp(
-        b, loc, cast<tensor::ExtractSliceOp>(std::get<0>(it).getDefiningOp()),
-        std::get<1>(it), std::get<2>(it));
+    // 5.b. Parallel insertions are inserted at the end of the combining
+    // terminator.
+    b.setInsertionPointToEnd(foreachThreadOp.getTerminator().getBody());
+    b.create<tensor::ParallelInsertSliceOp>(loc, std::get<1>(it),
+                                            std::get<2>(it), resultOffsets,
+                                            resultSizes, strides);
   }
   return ForeachThreadTilingResult{foreachThreadOp, tiledOp};
 }
@@ -353,16 +425,16 @@ static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
 FailureOr<ForeachThreadTilingResult>
 linalg::tileToForeachThreadOp(RewriterBase &b, TilingInterface op,
                               ArrayRef<OpFoldResult> numThreads,
-                              ArrayRef<int64_t> threadDimMapping) {
-  return tileToForeachThreadOpImpl(b, op, numThreads, /*nominalTileSizes=*/None,
-                                   threadDimMapping,
+                              std::optional<ArrayAttr> mapping) {
+  return tileToForeachThreadOpImpl(b, op, numThreads,
+                                   /*nominalTileSizes=*/std::nullopt, mapping,
                                    /*omitTileOffsetBoundsCheck=*/false);
 }
 
 FailureOr<ForeachThreadTilingResult>
-linalg::tileToForeachThreadOpUsingTileSizes(
-    RewriterBase &b, TilingInterface op, ArrayRef<OpFoldResult> tileSizes,
-    ArrayRef<int64_t> threadDimMapping) {
+linalg::tileToForeachThreadOpUsingTileSizes(RewriterBase &b, TilingInterface op,
+                                            ArrayRef<OpFoldResult> tileSizes,
+                                            std::optional<ArrayAttr> mapping) {
   SmallVector<Range> loopRanges = op.getIterationDomain(b);
   unsigned nLoops = loopRanges.size();
   SmallVector<OpFoldResult> numThreads;
@@ -378,27 +450,16 @@ linalg::tileToForeachThreadOpUsingTileSizes(
     numThreads.push_back(numTiles);
   }
   return tileToForeachThreadOpImpl(b, op, numThreads,
-                                   /*nominalTileSizes=*/tileSizes,
-                                   threadDimMapping,
+                                   /*nominalTileSizes=*/tileSizes, mapping,
                                    /*omitTileOffsetBoundsCheck=*/true);
-}
-
-// Insert a tile `source` into the destination tensor `dest`. The position at
-// which the tile is inserted (as well as size of tile) is taken from a given
-// ExtractSliceOp `sliceOp`.
-static Value insertSliceIntoTensor(RewriterBase &b, Location loc,
-                                   tensor::ExtractSliceOp sliceOp, Value source,
-                                   Value dest) {
-  return b.create<tensor::InsertSliceOp>(
-      loc, sliceOp.getSource().getType(), source, dest, sliceOp.getOffsets(),
-      sliceOp.getSizes(), sliceOp.getStrides(), sliceOp.getStaticOffsets(),
-      sliceOp.getStaticSizes(), sliceOp.getStaticStrides());
 }
 
 template <typename LoopTy>
 static FailureOr<TiledLinalgOp>
 tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
                  const LinalgTilingOptions &options) {
+  OpBuilder::InsertionGuard g(b);
+
   auto nLoops = op.getNumLoops();
   // Initial tile sizes may be too big, only take the first nLoops.
   tileSizes = tileSizes.take_front(nLoops);
@@ -418,14 +479,11 @@ tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
   if (!shapeSizesToLoopsMap)
     return failure();
 
-  SmallVector<Range, 4> loopRanges;
-  LoopIndexToRangeIndexMap loopIndexToRangeIndex;
-  std::tie(loopRanges, loopIndexToRangeIndex) = makeTiledLoopRanges(
+  auto [loopRanges, loopIndexToRangeIndex] = makeTiledLoopRanges(
       b, op.getLoc(), shapeSizesToLoopsMap, allShapeSizes, tileSizes);
 
-  SmallVector<Attribute, 4> iteratorTypes;
-  for (const auto &attr :
-       enumerate(op.iterator_types().cast<ArrayAttr>().getValue())) {
+  SmallVector<utils::IteratorType, 4> iteratorTypes;
+  for (const auto &attr : enumerate(op.getIteratorTypesArray())) {
     if (loopIndexToRangeIndex.count(attr.index()))
       iteratorTypes.push_back(attr.value());
   }
@@ -455,6 +513,31 @@ tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
     applyPermutationToVector(iteratorTypes, permutation);
   }
 
+  // Handle distribution. Create a vector of the same size of loops that are to
+  // be tiled.
+  SmallVector<linalg::ProcInfo> procInfo;
+  if (options.distribution) {
+    procInfo.resize(
+        iteratorTypes.size(),
+        linalg::ProcInfo{nullptr, nullptr, linalg::DistributionMethod::None});
+    // Collect loop ranges of tiled loopss, loops that are parallel.
+    SmallVector<Range> parallelLoopRanges;
+    for (const auto &iteratorType : llvm::enumerate(iteratorTypes)) {
+      if (!isParallelIterator(iteratorType.value()))
+        break;
+      parallelLoopRanges.push_back(loopRanges[iteratorType.index()]);
+    }
+    auto returnedProcInfo =
+        options.distribution->procInfo(b, op.getLoc(), parallelLoopRanges);
+    unsigned procIdIdx = 0;
+    // Update the distribution information for the loops.
+    for (const auto &iteratorType : llvm::enumerate(iteratorTypes)) {
+      if (!isParallelIterator(iteratorType.value()))
+        break;
+      procInfo[iteratorType.index()] = returnedProcInfo[procIdIdx++];
+    }
+  }
+
   // 2. Create the tiled loops.
   LinalgOp res = op;
   SmallVector<Value, 4> ivs, tensorResults;
@@ -475,13 +558,12 @@ tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
     // Tile the `operandValuesToUse` that either match the `op` operands
     // themselves or the tile loop arguments forwarding them.
     assert(operandValuesToUse.size() ==
-               static_cast<size_t>(op.getNumInputsAndOutputs()) &&
+               static_cast<size_t>(op->getNumOperands()) &&
            "expect the number of operands and inputs and outputs to match");
     SmallVector<Value> valuesToTile = operandValuesToUse;
-    IRRewriter rewriter(b);
     SmallVector<OpFoldResult> sizeBounds =
-        makeComposedFoldedMultiResultAffineApply(
-            rewriter, loc, shapeSizesToLoopsMap, allShapeSizes);
+        makeComposedFoldedMultiResultAffineApply(b, loc, shapeSizesToLoopsMap,
+                                                 allShapeSizes);
     SmallVector<Value> tiledOperands = makeTiledShapes(
         b, loc, op, valuesToTile, getAsOpFoldResult(interchangedIvs), tileSizes,
         sizeBounds,
@@ -489,14 +571,13 @@ tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
 
     SmallVector<Type> resultTensorTypes =
         getTensorOutputTypes(op, tiledOperands);
-    res = op.clone(b, loc, resultTensorTypes, tiledOperands);
+    res = clone(b, op, resultTensorTypes, tiledOperands);
     tensorResults =
         insertSlicesBack(builder, loc, op, tiledOperands, res->getResults());
     return scf::ValueVector(tensorResults.begin(), tensorResults.end());
   };
   GenerateLoopNest<LoopTy>::doit(b, op.getLoc(), loopRanges, op, iteratorTypes,
-                                 tiledLoopBodyBuilder, options.distribution,
-                                 options.distributionTypes);
+                                 tiledLoopBodyBuilder, procInfo);
 
   // 3. Transform IndexOp results w.r.t. the tiling.
   transformIndexOps(b, res, ivs, loopIndexToRangeIndex);
@@ -524,6 +605,216 @@ tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
 
   return TiledLinalgOp{
       res, loops, outermostLoop ? outermostLoop->getResults() : tensorResults};
+}
+
+FailureOr<linalg::ForeachThreadReductionTilingResult>
+linalg::tileReductionUsingForeachThread(RewriterBase &b,
+                                        PartialReductionOpInterface op,
+                                        ArrayRef<OpFoldResult> numThreads,
+                                        ArrayRef<OpFoldResult> tileSizes,
+                                        std::optional<ArrayAttr> mapping) {
+  Location loc = op.getLoc();
+  OpBuilder::InsertionGuard g(b);
+
+  // Ops implementing PartialReductionOpInterface are expected to implement
+  // TilingInterface.
+  // TODO: proper core mechanism to tie interfaces together.
+  auto tilingInterfaceOp = cast<TilingInterface>(op.getOperation());
+
+  // Ops implementing PartialReductionOpInterface are not necessarily expected
+  // to implement TilingInterface.. This cast is unsafe atm.
+  // TODO: proper core mechanism to tie interfaces together.
+  // TODO: this function requires a pair of interfaces ..
+  auto destinationStyleOp =
+      dyn_cast<DestinationStyleOpInterface>(op.getOperation());
+  if (!destinationStyleOp)
+    return b.notifyMatchFailure(op, "not a destination style op");
+
+  // Actually this only work for Linalg ops atm.
+  auto linalgOp = dyn_cast<linalg::LinalgOp>(op.getOperation());
+  if (!linalgOp)
+    return b.notifyMatchFailure(op, "not a linalg op");
+
+  SmallVector<Range> iterationDomain = tilingInterfaceOp.getIterationDomain(b);
+  if (op->getNumResults() != 1)
+    return b.notifyMatchFailure(
+        op, "don't support ops with multiple results for now");
+
+  SmallVector<utils::IteratorType> iterators =
+      tilingInterfaceOp.getLoopIteratorTypes();
+  SmallVector<unsigned> redDims;
+  linalgOp.getReductionDims(redDims);
+  if (redDims.size() != 1)
+    return b.notifyMatchFailure(
+        op, "only support ops with one reduction dimension.");
+  if (!tileSizes.empty() && tileSizes.size() != numThreads.size())
+    return b.notifyMatchFailure(op, "if tile sizes are present it must have as "
+                                    "many elements as number of threads");
+  int reductionDim = static_cast<int>(redDims.front());
+
+  if (redDims.front() >= numThreads.size())
+    return b.notifyMatchFailure(
+        op, "reduction dimension must be mapped to threads");
+
+  // 1. Create the inital tensor value.
+  FailureOr<Operation *> identityTensor =
+      op.generateInitialTensorForPartialReduction(b, loc, numThreads,
+                                                  reductionDim);
+  if (failed(identityTensor))
+    return b.notifyMatchFailure(op,
+                                "cannot create a tensor of identity value.");
+
+  // Gather destination tensors.
+  SmallVector<Value> dest;
+  if (failed(tensor::getOrCreateDestinations(b, loc, op, dest)))
+    return b.notifyMatchFailure(op, "failed to get destination tensors");
+
+  Operation *tiledOp = nullptr;
+
+  SmallVector<OpFoldResult> nonZeroNumThreads =
+      llvm::to_vector(llvm::make_filter_range(numThreads, [](OpFoldResult ofr) {
+        return !isConstantIntValue(ofr, 0);
+      }));
+  SmallVector<Value> materializedNonZeroNumThreads =
+      getAsValues(b, loc, nonZeroNumThreads);
+
+  // 2. Create the ForeachThreadOp with an empty region.
+  scf::ForeachThreadOp foreachThreadOp = b.create<scf::ForeachThreadOp>(
+      loc, (*identityTensor)->getResults(),
+      ValueRange(materializedNonZeroNumThreads), mapping);
+
+  // 3. Calculate the tile offsets and sizes for the subsequent loop that will
+  // be nested under `foreachThreadOp`.
+  SmallVector<OpFoldResult> tiledOffsets, tiledSizes;
+  calculateTileOffsetsAndSizes(
+      b, loc, foreachThreadOp, numThreads, iterationDomain,
+      /*omitTileOffsetBoundsCheck =*/false,
+      /*nominalTileSizes=*/std::nullopt, tiledOffsets, tiledSizes);
+
+  // 4. Clone the tileable op and update its destination operands to use the
+  // output bbArgs of the ForeachThreadOp.
+  ValueRange tilingResults;
+  ArrayRef<BlockArgument> destBbArgs =
+      foreachThreadOp.getOutputBlockArguments();
+  {
+    // 4.a. RAII guard, inserting within foreachThreadOp, before terminator.
+    OpBuilder::InsertionGuard g(b);
+    b.setInsertionPoint(foreachThreadOp.getTerminator());
+
+    SmallVector<Value> tiledDpsInitOperands;
+    for (OpOperand *initOperand : destinationStyleOp.getDpsInitOperands()) {
+      auto *it = llvm::find(dest, initOperand->get());
+      assert(it != dest.end() && "dest operand not found in dest");
+      unsigned destNum = std::distance(dest.begin(), it);
+      SmallVector<OpFoldResult> strides(numThreads.size(), b.getIndexAttr(1));
+      SmallVector<OpFoldResult> outOffsets(numThreads.size(),
+                                           b.getIndexAttr(0));
+      SmallVector<OpFoldResult> sizes = tiledSizes;
+      sizes[reductionDim] = b.getIndexAttr(1);
+      outOffsets[reductionDim] = foreachThreadOp.getThreadIndices().front();
+      // TODO: use SubsetExtractOpInterface once it is available.
+      tiledDpsInitOperands.push_back(b.create<tensor::ExtractSliceOp>(
+          loc, initOperand->get().getType().cast<RankedTensorType>(),
+          destBbArgs[destNum], outOffsets, sizes, strides));
+    }
+
+    // 4.b. Clone the op and update init operands.
+    // We cannot use a IRMapping here because it can replace
+    // different OpOperands with the same value.
+    Operation *clonedOp = b.clone(*op.getOperation());
+    b.updateRootInPlace(clonedOp, [&]() {
+      for (auto [initOperandPtr, tiledInitValue] : llvm::zip_equal(
+               cast<DestinationStyleOpInterface>(clonedOp).getDpsInitOperands(),
+               tiledDpsInitOperands)) {
+        initOperandPtr->set(tiledInitValue);
+      }
+    });
+
+    // 5. Tile the cloned op and delete the clone.
+    if (tileSizes.empty()) {
+      SmallVector<Operation *> tiledOps =
+          cast<TilingInterface>(clonedOp).getTiledImplementation(
+              b, tiledOffsets, tiledSizes);
+      assert(tiledOps.size() == 1 && "expected a single produced tiled op");
+      tiledOp = tiledOps.front();
+      tilingResults = tiledOp->getResults();
+    } else {
+      LinalgTilingOptions options;
+      FailureOr<TiledLinalgOp> maybeTiled = tileLinalgOpImpl<scf::ForOp>(
+          b, cast<LinalgOp>(clonedOp), tileSizes, options);
+      if (failed(maybeTiled))
+        return b.notifyMatchFailure(op, "failed tileLinalgOpImpl");
+
+      SmallVector<Value> ids = foreachThreadOp.getThreadIndices();
+      mapLoopToProcessorIds(cast<scf::ForOp>(maybeTiled->loops.back()), ids,
+                            materializedNonZeroNumThreads);
+      assert(maybeTiled->loops.size() == 1 &&
+             "expected a single produced loop");
+      tiledOp = maybeTiled->op;
+      tilingResults = maybeTiled->loops.front()->getResults();
+    }
+
+    b.eraseOp(clonedOp);
+  }
+
+  // 6. Insert the partial reductions back into a new tensor.
+  for (auto [index, result, bbArg] : llvm::zip(
+           llvm::seq<unsigned>(0, dest.size()), tilingResults, destBbArgs)) {
+    // 6.a. Partial subset information is inserted just before the terminator.
+    OpBuilder::InsertionGuard g(b);
+    b.setInsertionPoint(foreachThreadOp.getTerminator());
+
+    SmallVector<OpFoldResult> resultOffsets, resultSizes;
+    if (failed(tilingInterfaceOp.getResultTilePosition(
+            b, index, tiledOffsets, tiledSizes, resultOffsets, resultSizes)))
+      return op->emitOpError("output offsets couldn't be calculated");
+    SmallVector<OpFoldResult> resultOffsetsRank, resultSizesRank;
+    int64_t offIdx = 0;
+    int64_t sizeIdx = 0;
+    for (int64_t i = 0, e = numThreads.size(); i < e; ++i) {
+      if (i == reductionDim) {
+        resultOffsetsRank.push_back(foreachThreadOp.getThreadIndices().front());
+        resultSizesRank.push_back(b.getIndexAttr(1));
+        continue;
+      }
+      resultOffsetsRank.push_back(resultOffsets[offIdx++]);
+      resultSizesRank.push_back(resultSizes[sizeIdx++]);
+    }
+    SmallVector<OpFoldResult> strides(resultSizesRank.size(),
+                                      b.getIndexAttr(1));
+
+    // 6.b. Parallel insertions are inserted at the end of the combining
+    // terminator.
+    b.setInsertionPointToEnd(foreachThreadOp.getTerminator().getBody());
+    b.create<tensor::ParallelInsertSliceOp>(
+        loc, result, bbArg, resultOffsetsRank, resultSizesRank, strides);
+  }
+
+  // 7. Merge the partial reductions.
+  b.setInsertionPointAfter(foreachThreadOp);
+  Operation *mergeOp =
+      op.mergeReductions(b, loc, foreachThreadOp->getResults(), reductionDim);
+  b.replaceOp(op, mergeOp->getResults());
+
+  // 8. Return.
+  ForeachThreadReductionTilingResult results;
+  results.initialOp = *identityTensor;
+  results.loops = foreachThreadOp;
+  results.parallelTiledOp = tiledOp;
+  results.mergeOp = mergeOp;
+  return results;
+}
+
+// Insert a tile `source` into the destination tensor `dest`. The position at
+// which the tile is inserted (as well as size of tile) is taken from a given
+// ExtractSliceOp `sliceOp`.
+static Value insertSliceIntoTensor(OpBuilder &b, Location loc,
+                                   tensor::ExtractSliceOp sliceOp, Value source,
+                                   Value dest) {
+  return b.create<tensor::InsertSliceOp>(
+      loc, sliceOp.getSource().getType(), source, dest, sliceOp.getOffsets(),
+      sliceOp.getSizes(), sliceOp.getStrides(), sliceOp.getStaticOffsets(),
+      sliceOp.getStaticSizes(), sliceOp.getStaticStrides());
 }
 
 template <typename LoopTy>
@@ -588,16 +879,21 @@ static LogicalResult tilePadOp(RewriterBase &builder, tensor::PadOp op,
   for (int64_t i = 0; i < rank; ++i) {
     allDims.push_back(ranges[i].size);
     if (!isZero(tileSizes[i])) {
-      lbs.push_back(materializeOpFoldResult(builder, loc, ranges[i].offset));
-      dims.push_back(materializeOpFoldResult(builder, loc, ranges[i].size));
-      steps.push_back(materializeOpFoldResult(builder, loc, tileSizes[i]));
+      lbs.push_back(
+          getValueOrCreateConstantIndexOp(builder, loc, ranges[i].offset));
+      dims.push_back(
+          getValueOrCreateConstantIndexOp(builder, loc, ranges[i].size));
+      steps.push_back(
+          getValueOrCreateConstantIndexOp(builder, loc, tileSizes[i]));
     }
   }
-  // Generate loop nest: One loop per dimension.
-  SmallVector<Value> destOperand =
-      tilingInterface.getDestinationOperands(builder);
+  SmallVector<Value> destinationTensors;
+  if (failed(tensor::getOrCreateDestinations(builder, loc, tilingInterface,
+                                             destinationTensors)))
+    return failure();
+
   loopNest = mlir::scf::buildLoopNest(
-      builder, loc, lbs, /*ubs=*/dims, steps, ValueRange(destOperand),
+      builder, loc, lbs, /*ubs=*/dims, steps, ValueRange(destinationTensors),
       [&](OpBuilder &b, Location loc, ValueRange localIvs,
           ValueRange iterArgs) -> scf::ValueVector {
         // Compute offsets and sizes of ExtractSliceOp.
@@ -616,10 +912,8 @@ static LogicalResult tilePadOp(RewriterBase &builder, tensor::PadOp op,
         auto sliceOp = tiledOutput.getDefiningOp<tensor::ExtractSliceOp>();
         assert(sliceOp && "expected ExtractSliceOp");
         // Insert the tile into the output tensor.
-        // TODO: Propagate RewriterBase everywhere.
-        IRRewriter rewriter(b);
         Value yieldValue =
-            insertSliceIntoTensor(rewriter, loc, sliceOp, sliceOp, iterArgs[0]);
+            insertSliceIntoTensor(b, loc, sliceOp, sliceOp, iterArgs[0]);
         return scf::ValueVector({yieldValue});
       });
   return success();
@@ -632,16 +926,12 @@ struct PadOpTilingPattern : public OpRewritePattern<tensor::PadOp> {
 
   LogicalResult matchAndRewrite(tensor::PadOp op,
                                 PatternRewriter &rewriter) const override {
-    if (op->hasAttr(LinalgTransforms::kLinalgTransformMarker))
-      return failure();
     tensor::PadOp newPadOp;
     LoopNest loopNest;
     if (failed(tilePadOp(rewriter, op, newPadOp, loopNest, options)))
       return failure();
-    newPadOp->setAttr(LinalgTransforms::kLinalgTransformMarker,
-                      rewriter.getUnitAttr());
     // Replace all uses of the original tensor::PadOp.
-    rewriter.replaceOp(op, loopNest.getResults()[0]);
+    rewriter.replaceOp(op, loopNest.results.front());
     return success();
   }
 
@@ -693,10 +983,9 @@ void mlir::linalg::populateLinalgTilingCanonicalizationPatterns(
   scf::ParallelOp::getCanonicalizationPatterns(patterns, ctx);
 
   tensor::CastOp::getCanonicalizationPatterns(patterns, ctx);
+  tensor::EmptyOp::getCanonicalizationPatterns(patterns, ctx);
   tensor::ExtractSliceOp::getCanonicalizationPatterns(patterns, ctx);
   tensor::InsertSliceOp::getCanonicalizationPatterns(patterns, ctx);
-
-  InitTensorOp::getCanonicalizationPatterns(patterns, ctx);
   tensor::PadOp::getCanonicalizationPatterns(patterns, ctx);
   ctx->getLoadedDialect<LinalgDialect>()->getCanonicalizationPatterns(patterns);
 
@@ -706,77 +995,8 @@ void mlir::linalg::populateLinalgTilingCanonicalizationPatterns(
       >::insert(patterns);
 }
 
-/// Populate the given list with patterns that apply Linalg tiling.
-static void insertTilingPatterns(RewritePatternSet &patterns,
-                                 const LinalgTilingOptions &options) {
-  auto *ctx = patterns.getContext();
-  LinalgTransformationFilter f(ArrayRef<StringAttr>{},
-                               StringAttr::get(ctx, "tiled"));
-  TilingPatterns<GenericOp,
-#define GET_OP_LIST
-#include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
-                 >::insert(patterns, options, f);
-  patterns.add<PadOpTilingPattern>(ctx, options);
-}
-
 void mlir::linalg::populatePadTensorTilingPatterns(
     RewritePatternSet &patterns, const LinalgTilingOptions &options) {
   auto *ctx = patterns.getContext();
   patterns.add<PadOpTilingPattern>(ctx, options);
-}
-
-static void applyExtractSliceOfPadTensorSwapPattern(func::FuncOp funcOp) {
-  MLIRContext *ctx = funcOp.getContext();
-  RewritePatternSet patterns(ctx);
-  patterns.add<ExtractSliceOfPadTensorSwapPattern>(patterns.getContext());
-  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
-  (void)applyPatternsAndFoldGreedily(
-      funcOp, getLinalgTilingCanonicalizationPatterns(ctx));
-}
-
-namespace {
-struct LinalgTilingPass : public LinalgTilingBase<LinalgTilingPass> {
-  LinalgTilingPass() = default;
-  LinalgTilingPass(ArrayRef<int64_t> tileSizes, LinalgTilingLoopType loopType) {
-    this->tileSizes = tileSizes;
-    this->loopType = "";
-    this->loopTypeEnum = loopType;
-  }
-
-  void runOnOperation() override {
-    func::FuncOp funcOp = getOperation();
-    LinalgTilingLoopType type =
-        llvm::StringSwitch<LinalgTilingLoopType>(loopType)
-            .Case("for", LinalgTilingLoopType::Loops)
-            .Case("affine", LinalgTilingLoopType::AffineLoops)
-            .Case("parallel", LinalgTilingLoopType::ParallelLoops)
-            .Default(loopTypeEnum);
-    auto options =
-        LinalgTilingOptions().setTileSizes(tileSizes).setLoopType(type);
-    MLIRContext *ctx = funcOp.getContext();
-    RewritePatternSet patterns(ctx);
-    insertTilingPatterns(patterns, options);
-    scf::populateSCFForLoopCanonicalizationPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
-    (void)applyPatternsAndFoldGreedily(
-        funcOp, getLinalgTilingCanonicalizationPatterns(ctx));
-    // Drop the marker.
-    funcOp.walk([](LinalgOp op) {
-      op->removeAttr(LinalgTransforms::kLinalgTransformMarker);
-    });
-
-    // Apply swap pattern after generating loop nest and running
-    // canonicalizations.
-    applyExtractSliceOfPadTensorSwapPattern(funcOp);
-  }
-
-  LinalgTilingLoopType loopTypeEnum;
-};
-
-} // namespace
-
-std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::createLinalgTilingPass(ArrayRef<int64_t> tileSizes,
-                             linalg::LinalgTilingLoopType loopType) {
-  return std::make_unique<LinalgTilingPass>(tileSizes, loopType);
 }

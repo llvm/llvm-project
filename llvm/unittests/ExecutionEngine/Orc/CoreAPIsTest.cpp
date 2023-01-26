@@ -99,7 +99,7 @@ TEST_F(CoreAPIsStandardTest, MaterializationSideEffctsOnlyBasic) {
   // results.
 
   std::unique_ptr<MaterializationResponsibility> FooR;
-  Optional<SymbolMap> Result;
+  std::optional<SymbolMap> Result;
 
   cantFail(JD.define(std::make_unique<SimpleMaterializationUnit>(
       SymbolFlagsMap(
@@ -235,6 +235,27 @@ TEST_F(CoreAPIsStandardTest, RemoveSymbolsTest) {
   EXPECT_TRUE(BarMaterializerDestructed)
       << "\"Bar\"'s materializer should have been destructed";
   EXPECT_TRUE(OnCompletionRun) << "OnCompletion should have been run";
+}
+
+TEST_F(CoreAPIsStandardTest, DiscardInitSymbol) {
+  SymbolStringPtr ForwardedDiscardSym = nullptr;
+
+  auto MU = std::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap({{Foo, FooSym.getFlags()}, {Bar, BarSym.getFlags()}}),
+      [](std::unique_ptr<MaterializationResponsibility> R) {
+        llvm_unreachable("Materialize called unexpectedly?");
+      },
+      Foo,
+      [&](const JITDylib &, SymbolStringPtr Sym) {
+        ForwardedDiscardSym = std::move(Sym);
+      });
+
+  MU->doDiscard(JD, Foo);
+
+  EXPECT_EQ(ForwardedDiscardSym, Foo);
+  EXPECT_EQ(MU->getSymbols().size(), 1U);
+  EXPECT_TRUE(MU->getSymbols().count(Bar));
+  EXPECT_EQ(MU->getInitializerSymbol(), nullptr);
 }
 
 TEST_F(CoreAPIsStandardTest, LookupWithHiddenSymbols) {
@@ -1016,6 +1037,21 @@ TEST_F(CoreAPIsStandardTest, TestBasicWeakSymbolMaterialization) {
   EXPECT_TRUE(BarMaterialized) << "Bar was not materialized at all";
   EXPECT_TRUE(DuplicateBarDiscarded)
       << "Duplicate bar definition not discarded";
+}
+
+TEST_F(CoreAPIsStandardTest, RedefineBoundWeakSymbol) {
+  // Check that redefinition of a bound weak symbol fails.
+
+  JITSymbolFlags WeakExported(JITSymbolFlags::Exported);
+  WeakExported |= JITSymbolFlags::Weak;
+
+  // Define "Foo" as weak, force materialization.
+  cantFail(JD.define(absoluteSymbols({{Foo, {FooAddr, WeakExported}}})));
+  cantFail(ES.lookup({&JD}, Foo));
+
+  // Attempt to redefine "Foo". Expect failure, despite "Foo" being weak,
+  // since it has already been bound.
+  EXPECT_THAT_ERROR(JD.define(absoluteSymbols({{Foo, FooSym}})), Failed());
 }
 
 TEST_F(CoreAPIsStandardTest, DefineMaterializingSymbol) {

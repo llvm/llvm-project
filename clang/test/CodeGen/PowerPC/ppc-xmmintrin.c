@@ -1,31 +1,31 @@
 // REQUIRES: powerpc-registered-target
 
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN: -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-BE
-// RUN: %clang -Xclang -no-opaque-pointers -x c++ -fsyntax-only -target powerpc64-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -x c++ -fsyntax-only -target powerpc64-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN: -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-LE
-// RUN: %clang -Xclang -no-opaque-pointers -x c++ -fsyntax-only -target powerpc64le-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -x c++ -fsyntax-only -target powerpc64le-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns
 
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-P10-LE
 
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64-unknown-freebsd13.0 -mcpu=pwr8 -ffreestanding -nostdlibinc -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64-unknown-freebsd13.0 -mcpu=pwr8 -ffreestanding -nostdlibinc -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-BE
-// RUN: %clang -Xclang -no-opaque-pointers -x c++ -fsyntax-only -target powerpc64-unknown-freebsd13.0 -mcpu=pwr8 -ffreestanding -nostdlibinc -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -x c++ -fsyntax-only -target powerpc64-unknown-freebsd13.0 -mcpu=pwr8 -ffreestanding -nostdlibinc -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64le-unknown-freebsd13.0 -mcpu=pwr8 -ffreestanding -nostdlibinc -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64le-unknown-freebsd13.0 -mcpu=pwr8 -ffreestanding -nostdlibinc -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-LE
-// RUN: %clang -Xclang -no-opaque-pointers -x c++ -fsyntax-only -target powerpc64le-unknown-freebsd13.0 -mcpu=pwr8 -ffreestanding -nostdlibinc -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -x c++ -fsyntax-only -target powerpc64le-unknown-freebsd13.0 -mcpu=pwr8 -ffreestanding -nostdlibinc -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns
 
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-BE
-// RUN: %clang -Xclang -no-opaque-pointers -x c++ -fsyntax-only -target powerpc64-ibm-aix -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -x c++ -fsyntax-only -target powerpc64-ibm-aix -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-P10-BE
 
 #include <xmmintrin.h>
@@ -71,7 +71,6 @@ test_avg() {
 // CHECK: call <2 x i64> @vec_splats(unsigned long long)
 // CHECK: call <2 x i64> @vec_splats(unsigned long long)
 // CHECK: call <8 x i16> @vec_avg(unsigned short vector[8], unsigned short vector[8])
-// CHECK: bitcast <8 x i16> %{{[0-9a-zA-Z_.]+}} to <2 x i64>
 // CHECK: extractelement <2 x i64> %{{[0-9a-zA-Z_.]+}}, i32 0
 
 // CHECK-LABEL: define available_externally i64 @_mm_avg_pu8
@@ -666,7 +665,7 @@ test_move() {
 // CHECK-LABEL: @test_move
 
 // CHECK-LABEL: define available_externally void @_mm_maskmove_si64
-// CHECK: store i64 -9187201950435737472, i64* %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: store i64 -9187201950435737472, ptr %{{[0-9a-zA-Z_.]+}}, align 8
 // CHECK: %[[AND:[0-9a-zA-Z_.]+]] = and i64
 // CHECK: call i64 @_mm_cmpeq_pi8(i64 noundef %[[AND]], i64 noundef %{{[0-9a-zA-Z_.]+}})
 // CHECK: %[[XOR:[0-9a-zA-Z_.]+]] = xor i64 %{{[0-9a-zA-Z_.]+}}, -1
@@ -684,8 +683,8 @@ test_move() {
 // CHECK: call <2 x i64> @vec_mergeh(unsigned long long vector[2], unsigned long long vector[2])
 
 // CHECK-LABEL: define available_externally signext i32 @_mm_movemask_pi8
-// CHECK-LE: store i64 2269495618449464, i64* %{{[0-9a-zA-Z_.]+}}, align 8
-// CHECK-BE: store i64 4048780183313844224, i64* %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK-LE: store i64 2269495618449464, ptr %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK-BE: store i64 4048780183313844224, ptr %{{[0-9a-zA-Z_.]+}}, align 8
 // CHECK: %[[CALL:[0-9a-zA-Z_.]+]] = call i64 @llvm.ppc.bpermd
 // CHECK: trunc i64 %[[CALL]] to i32
 
@@ -733,8 +732,8 @@ test_mul() {
 // CHECK: call <4 x float> @vec_sel(float vector[4], float vector[4], unsigned int vector[4])(<4 x float> noundef %{{[0-9a-zA-Z_.]+}}, <4 x float> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef <i32 -1, i32 0, i32 0, i32 0>)
 
 // CHECK-LABEL: define available_externally i64 @_mm_mulhi_pu16
-// CHECK-LE: store <16 x i8> <i8 2, i8 3, i8 18, i8 19, i8 6, i8 7, i8 22, i8 23, i8 10, i8 11, i8 26, i8 27, i8 14, i8 15, i8 30, i8 31>, <16 x i8>* %{{[0-9a-zA-Z_.]+}}, align 16
-// CHECK-BE: store <16 x i8> <i8 0, i8 1, i8 16, i8 17, i8 4, i8 5, i8 20, i8 21, i8 0, i8 1, i8 16, i8 17, i8 4, i8 5, i8 20, i8 21>, <16 x i8>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK-LE: store <16 x i8> <i8 2, i8 3, i8 18, i8 19, i8 6, i8 7, i8 22, i8 23, i8 10, i8 11, i8 26, i8 27, i8 14, i8 15, i8 30, i8 31>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK-BE: store <16 x i8> <i8 0, i8 1, i8 16, i8 17, i8 4, i8 5, i8 20, i8 21, i8 0, i8 1, i8 16, i8 17, i8 4, i8 5, i8 20, i8 21>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK: call <2 x i64> @vec_splats(unsigned long long)
 // CHECK: call <2 x i64> @vec_splats(unsigned long long)
 // CHECK: call <4 x i32> @vec_vmuleuh(<8 x i16> noundef %{{[0-9a-zA-Z_.]+}}, <8 x i16> noundef %{{[0-9a-zA-Z_.]+}})
@@ -753,7 +752,7 @@ test_prefetch() {
 // CHECK-LABEL: @test_prefetch
 
 // CHECK-LABEL: define available_externally void @_mm_prefetch
-// CHECK: call void @llvm.prefetch.p0i8(i8* %{{[0-9a-zA-Z_.]+}}, i32 0, i32 3, i32 1)
+// CHECK: call void @llvm.prefetch.p0(ptr %{{[0-9a-zA-Z_.]+}}, i32 0, i32 3, i32 1)
 
 void __attribute__((noinline))
 test_rcp() {
@@ -796,7 +795,7 @@ test_sad() {
 // CHECK-LABEL: @test_sad
 
 // CHECK-LABEL: define available_externally i64 @_mm_sad_pu8
-// CHECK: call void @llvm.memset.p0i8.i64(i8* align 8 %{{[0-9a-zA-Z_.]+}}, i8 0, i64 8, i1 false)
+// CHECK: call void @llvm.memset.p0.i64(ptr align 8 %{{[0-9a-zA-Z_.]+}}, i8 0, i64 8, i1 false)
 // CHECK: insertelement <2 x i64> <i64 0, i64 undef>, i64 %{{[0-9a-zA-Z_.]+}}, i32 1
 // CHECK: insertelement <2 x i64> <i64 0, i64 undef>, i64 %{{[0-9a-zA-Z_.]+}}, i32 1
 // CHECK: call <16 x i8> @vec_min(unsigned char vector[16], unsigned char vector[16])
@@ -806,9 +805,8 @@ test_sad() {
 // CHECK: call <4 x i32> @vec_sums(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef zeroinitializer)
 // CHECK: %[[EXT:[0-9a-zA-Z_.]+]] = extractelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 3
 // CHECK: %[[TRUNC:[0-9a-zA-Z_.]+]] = trunc i32 %[[EXT]] to i16
-// CHECK: %[[CAST:[0-9a-zA-Z_.]+]] = bitcast %{{[0-9a-zA-Z_.]+}}* %{{[0-9a-zA-Z_.]+}} to [4 x i16]*
-// CHECK: %[[GEP:[0-9a-zA-Z_.]+]] = getelementptr inbounds [4 x i16], [4 x i16]* %[[CAST]], i64 0, i64 0
-// CHECK: store i16 %[[TRUNC]], i16* %[[GEP]], align 8
+// CHECK: %[[GEP:[0-9a-zA-Z_.]+]] = getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
+// CHECK: store i16 %[[TRUNC]], ptr %[[GEP]], align 8
 
 // CHECK-LABEL: define available_externally i64 @_m_psadbw
 // CHECK: call i64 @_mm_sad_pu8
@@ -829,7 +827,7 @@ test_set() {
 // CHECK: %[[VEC2:[0-9a-zA-Z_.]+]] = insertelement <4 x float> %[[VEC]], float %{{[0-9a-zA-Z_.]+}}, i32 1
 // CHECK: %[[VEC3:[0-9a-zA-Z_.]+]] = insertelement <4 x float> %[[VEC2]], float %{{[0-9a-zA-Z_.]+}}, i32 2
 // CHECK: %[[VEC4:[0-9a-zA-Z_.]+]] = insertelement <4 x float> %[[VEC3]], float %{{[0-9a-zA-Z_.]+}}, i32 3
-// CHECK: store <4 x float> %[[VEC4]], <4 x float>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <4 x float> %[[VEC4]], ptr %{{[0-9a-zA-Z_.]+}}, align 16
 
 // CHECK-LABEL: define available_externally <4 x float> @_mm_set_ps1
 // CHECK: call <4 x float> @_mm_set1_ps
@@ -839,21 +837,21 @@ test_set() {
 // CHECK: %[[VEC2:[0-9a-zA-Z_.]+]] = insertelement <4 x float> %[[VEC]], float 0.000000e+00, i32 1
 // CHECK: %[[VEC3:[0-9a-zA-Z_.]+]] = insertelement <4 x float> %[[VEC2]], float 0.000000e+00, i32 2
 // CHECK: %[[VEC4:[0-9a-zA-Z_.]+]] = insertelement <4 x float> %[[VEC3]], float 0.000000e+00, i32 3
-// CHECK: store <4 x float> %[[VEC4]], <4 x float>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <4 x float> %[[VEC4]], ptr %{{[0-9a-zA-Z_.]+}}, align 16
 
 // CHECK-LABEL: define available_externally <4 x float> @_mm_set1_ps
 // CHECK: %[[VEC:[0-9a-zA-Z_.]+]] = insertelement <4 x float> undef, float %{{[0-9a-zA-Z_.]+}}, i32 0
 // CHECK: %[[VEC2:[0-9a-zA-Z_.]+]] = insertelement <4 x float> %[[VEC]], float %{{[0-9a-zA-Z_.]+}}, i32 1
 // CHECK: %[[VEC3:[0-9a-zA-Z_.]+]] = insertelement <4 x float> %[[VEC2]], float %{{[0-9a-zA-Z_.]+}}, i32 2
 // CHECK: %[[VEC4:[0-9a-zA-Z_.]+]] = insertelement <4 x float> %[[VEC3]], float %{{[0-9a-zA-Z_.]+}}, i32 3
-// CHECK: store <4 x float> %[[VEC4]], <4 x float>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <4 x float> %[[VEC4]], ptr %{{[0-9a-zA-Z_.]+}}, align 16
 
 // CHECK-LABEL: define available_externally <4 x float> @_mm_setr_ps
 // CHECK: %[[VEC:[0-9a-zA-Z_.]+]] = insertelement <4 x float> undef, float %{{[0-9a-zA-Z_.]+}}, i32 0
 // CHECK: %[[VEC2:[0-9a-zA-Z_.]+]] = insertelement <4 x float> %[[VEC]], float %{{[0-9a-zA-Z_.]+}}, i32 1
 // CHECK: %[[VEC3:[0-9a-zA-Z_.]+]] = insertelement <4 x float> %[[VEC2]], float %{{[0-9a-zA-Z_.]+}}, i32 2
 // CHECK: %[[VEC4:[0-9a-zA-Z_.]+]] = insertelement <4 x float> %[[VEC3]], float %{{[0-9a-zA-Z_.]+}}, i32 3
-// CHECK: store <4 x float> %[[VEC4]], <4 x float>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <4 x float> %[[VEC4]], ptr %{{[0-9a-zA-Z_.]+}}, align 16
 
 void __attribute__((noinline))
 test_setzero() {
@@ -863,7 +861,7 @@ test_setzero() {
 // CHECK-LABEL: @test_setzero
 
 // CHECK-LABEL: define available_externally <4 x float> @_mm_setzero_ps
-// CHECK: store <4 x float> zeroinitializer, <4 x float>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <4 x float> zeroinitializer, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 
 void __attribute__((noinline))
 test_sfence() {
@@ -896,18 +894,18 @@ test_shuffle() {
 // CHECK: %[[SHR3:[0-9a-zA-Z_.]+]] = ashr i32 %{{[0-9a-zA-Z_.]+}}, 6
 // CHECK: %[[AND4:[0-9a-zA-Z_.]+]] = and i32 %[[SHR3]], 3
 // CHECK: sext i32 %[[AND4]] to i64
-// CHECK: getelementptr inbounds [4 x i16], [4 x i16]* @_mm_shuffle_pi16.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
-// CHECK-LE: getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
-// CHECK-BE: getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 3
-// CHECK: getelementptr inbounds [4 x i16], [4 x i16]* @_mm_shuffle_pi16.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
-// CHECK-LE: getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
-// CHECK-BE: getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 2
-// CHECK: getelementptr inbounds [4 x i16], [4 x i16]* @_mm_shuffle_pi16.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
-// CHECK-LE: getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 2
-// CHECK-BE: getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
-// CHECK: getelementptr inbounds [4 x i16], [4 x i16]* @_mm_shuffle_pi16.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
-// CHECK-LE: getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 3
-// CHECK-BE: getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
+// CHECK: getelementptr inbounds [4 x i16], ptr @_mm_shuffle_pi16.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK-LE: getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
+// CHECK-BE: getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 3
+// CHECK: getelementptr inbounds [4 x i16], ptr @_mm_shuffle_pi16.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK-LE: getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
+// CHECK-BE: getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 2
+// CHECK: getelementptr inbounds [4 x i16], ptr @_mm_shuffle_pi16.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK-LE: getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 2
+// CHECK-BE: getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
+// CHECK: getelementptr inbounds [4 x i16], ptr @_mm_shuffle_pi16.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK-LE: getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 3
+// CHECK-BE: getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
 // CHECK: call <2 x i64> @vec_splats(unsigned long long)
 // CHECK: call <2 x i64> @vec_splats(unsigned long long)
 // CHECK: call <2 x i64> @vec_perm(unsigned long long vector[2], unsigned long long vector[2], unsigned char vector[16])
@@ -925,14 +923,14 @@ test_shuffle() {
 // CHECK: %[[SHR3:[0-9a-zA-Z_.]+]] = ashr i32 %{{[0-9a-zA-Z_.]+}}, 6
 // CHECK: %[[AND4:[0-9a-zA-Z_.]+]] = and i32 %[[SHR3]], 3
 // CHECK: sext i32 %[[AND4]] to i64
-// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_ps.__permute_selectors, i64 0, i64
+// CHECK: getelementptr inbounds [4 x i32], ptr @_mm_shuffle_ps.__permute_selectors, i64 0, i64
 // CHECK: insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %{{[0-9a-zA-Z_.]+}}, i32 0
-// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_ps.__permute_selectors, i64 0, i64
+// CHECK: getelementptr inbounds [4 x i32], ptr @_mm_shuffle_ps.__permute_selectors, i64 0, i64
 // CHECK: insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %{{[0-9a-zA-Z_.]+}}, i32 1
-// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_ps.__permute_selectors, i64 0, i64
+// CHECK: getelementptr inbounds [4 x i32], ptr @_mm_shuffle_ps.__permute_selectors, i64 0, i64
 // CHECK: %[[ADD:[0-9a-zA-Z_.]+]] = add i32 %{{[0-9a-zA-Z_.]+}}, 269488144
 // CHECK: insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %[[ADD]], i32 2
-// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_ps.__permute_selectors, i64 0, i64
+// CHECK: getelementptr inbounds [4 x i32], ptr @_mm_shuffle_ps.__permute_selectors, i64 0, i64
 // CHECK: %[[ADD2:[0-9a-zA-Z_.]+]] = add i32 %{{[0-9a-zA-Z_.]+}}, 269488144
 // CHECK: insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %[[ADD2]], i32 3
 // CHECK: call <4 x float> @vec_perm(float vector[4], float vector[4], unsigned char vector[16])
@@ -970,14 +968,14 @@ test_store() {
 // CHECK-LABEL: @test_store
 
 // CHECK-LABEL: define available_externally void @_mm_store_ps
-// CHECK: call void @vec_st(float vector[4], long, float vector[4]*)(<4 x float> noundef %{{[0-9a-zA-Z_.]+}}, i64 noundef 0, <4 x float>* noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK: call void @vec_st(float vector[4], long, float vector[4]*)(<4 x float> noundef %{{[0-9a-zA-Z_.]+}}, i64 noundef 0, ptr noundef %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally void @_mm_store_ps1
 // CHECK: call void @_mm_store1_ps
 
 // CHECK-LABEL: define available_externally void @_mm_store_ss
 // CHECK: %[[VAL:[0-9a-zA-Z_.]+]] = extractelement <4 x float> %{{[0-9a-zA-Z_.]+}}, i32 0
-// CHECK: store float %[[VAL]], float* %{{[0-9a-zA-Z_.]+}}, align 4
+// CHECK: store float %[[VAL]], ptr %{{[0-9a-zA-Z_.]+}}, align 4
 
 // CHECK-LABEL: define available_externally void @_mm_store1_ps
 // CHECK: call <4 x float> @vec_splat(float vector[4], unsigned int)(<4 x float> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef zeroext 0)
@@ -985,11 +983,11 @@ test_store() {
 
 // CHECK-LABEL: define available_externally void @_mm_storeh_pi
 // CHECK: %[[VAL:[0-9a-zA-Z_.]+]] = extractelement <2 x i64> %{{[0-9a-zA-Z_.]+}}, i32 1
-// CHECK: store i64 %[[VAL]], i64* %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: store i64 %[[VAL]], ptr %{{[0-9a-zA-Z_.]+}}, align 8
 
 // CHECK-LABEL: define available_externally void @_mm_storel_pi
 // CHECK: %[[VAL:[0-9a-zA-Z_.]+]] = extractelement <2 x i64> %{{[0-9a-zA-Z_.]+}}, i32 0
-// CHECK: store i64 %[[VAL]], i64* %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: store i64 %[[VAL]], ptr %{{[0-9a-zA-Z_.]+}}, align 8
 
 // CHECK-LABEL: define available_externally void @_mm_storer_ps
 // CHECK: call <4 x float> @vec_perm(float vector[4], float vector[4], unsigned char vector[16])(<4 x float> noundef %{{[0-9a-zA-Z_.]+}}, <4 x float> noundef %{{[0-9a-zA-Z_.]+}}, <16 x i8> noundef <i8 28, i8 29, i8 30, i8 31, i8 24, i8 25, i8 26, i8 27, i8 20, i8 21, i8 22, i8 23, i8 16, i8 17, i8 18, i8 19>)
@@ -1004,10 +1002,10 @@ test_stream() {
 // CHECK-LABEL: @test_stream
 
 // CHECK-LABEL: define available_externally void @_mm_stream_pi
-// CHECK: call void asm sideeffect "\09dcbtstt\090,$0", "b,~{memory}"(i64* %{{[0-9a-zA-Z_.]+}})
+// CHECK: call void asm sideeffect "\09dcbtstt\090,$0", "b,~{memory}"(ptr %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally void @_mm_stream_ps
-// CHECK: call void asm sideeffect "\09dcbtstt\090,$0", "b,~{memory}"(float* %{{[0-9a-zA-Z_.]+}})
+// CHECK: call void asm sideeffect "\09dcbtstt\090,$0", "b,~{memory}"(ptr %{{[0-9a-zA-Z_.]+}})
 // CHECK: call void @_mm_store_ps
 
 void __attribute__((noinline))
@@ -1095,8 +1093,8 @@ test_undefined() {
 
 // CHECK-LABEL: define available_externally <4 x float> @_mm_undefined_ps
 // CHECK: alloca <4 x float>, align 16
-// CHECK: load <4 x float>, <4 x float>* %[[ADDR:[0-9a-zA-Z_.]+]], align 16
-// CHECK: load <4 x float>, <4 x float>* %[[ADDR]], align 16
+// CHECK: load <4 x float>, ptr %[[ADDR:[0-9a-zA-Z_.]+]], align 16
+// CHECK: load <4 x float>, ptr %[[ADDR]], align 16
 
 void __attribute__((noinline))
 test_unpack() {

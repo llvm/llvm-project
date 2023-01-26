@@ -1,4 +1,4 @@
-// UNSUPPORTED: -zos, -aix
+// UNSUPPORTED: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: %clang_cc1 -fsyntax-only -F%t/Frameworks %t/test.m -Wno-objc-property-implementation -Wno-incomplete-implementation \

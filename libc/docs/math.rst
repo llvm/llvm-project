@@ -1,21 +1,33 @@
-===========================
-Math Functions in LLVM-libc
-===========================
+.. _math:
 
-.. role::  raw-html(raw)
-    :format: html
+==============
+Math Functions
+==============
 
-.. |check| replace:: :raw-html:`&#x2705`
+.. include:: check.rst
+
+.. raw:: html
+
+    <style> .green {color:green} </style>
+
+.. role:: green
+
+.. toctree::
+  :hidden:
+
+  math/log.rst
+
 
 .. contents:: Table of Contents
   :depth: 4
   :local:
 
-Summary
-=======
+Source Locations
+================
 
-* This document tracks the status of the implementation of math functions in
-  LLVM libc.
+- The main source is located at: `libc/src/math <https://github.com/llvm/llvm-project/tree/main/libc/src/math>`_.
+- The tests are located at: `libc/test/src/math <https://github.com/llvm/llvm-project/tree/main/libc/test/src/math>`_.
+- The floating point utilities are located at: `libc/src/__support/FPUtil <https://github.com/llvm/llvm-project/tree/main/libc/src/__support/FPUtil>`_.
 
 Implementation Requirements / Goals
 ===================================
@@ -48,13 +60,6 @@ Implementation Requirements / Goals
   platforms.
 
 
-Source Locations
-================
-
-- The main source is located at: `libc/src/math <https://github.com/llvm/llvm-project/tree/main/libc/src/math>`_.
-- The tests are located at: `libc/test/src/math <https://github.com/llvm/llvm-project/tree/main/libc/test/src/math>`_.
-- The floating point utilities are located at: `libc/src/__support/FPUtil <https://github.com/llvm/llvm-project/tree/main/libc/src/__support/FPUtil>`_.
-
 Add a new math function to LLVM libc
 ====================================
 
@@ -69,17 +74,17 @@ Basic Operations
 ============== ================ =============== ======================
 <Func>         <Func_f> (float) <Func> (double) <Func_l> (long double)
 ============== ================ =============== ======================
-ceil           |check|          |check|         |check|  
-copysign       |check|          |check|         |check|  
-fabs           |check|          |check|         |check|  
-fdim           |check|          |check|         |check|  
-floor          |check|          |check|         |check|  
-fmax           |check|          |check|         |check|  
-fmin           |check|          |check|         |check|  
-fmod           |check|          |check|
+ceil           :green:`XA`      :green:`XA`     :green:`XA`
+copysign       :green:`XA`      :green:`XA`     :green:`XA`
+fabs           :green:`XA`      :green:`XA`     :green:`XA`
+fdim           :green:`XA`      :green:`XA`     :green:`XA`
+floor          :green:`XA`      :green:`XA`     :green:`XA`
+fmax           :green:`XA`      :green:`XA`     :green:`XA`
+fmin           :green:`XA`      :green:`XA`     :green:`XA`
+fmod           :green:`XA`      :green:`XA`
 fpclassify
-frexp          |check|          |check|         |check|  
-ilogb          |check|          |check|         |check|  
+frexp          :green:`XA`      :green:`XA`     :green:`XA`
+ilogb          :green:`XA`      :green:`XA`     :green:`XA`
 isfinite
 isgreater
 isgreaterequal
@@ -90,24 +95,24 @@ islessgreater
 isnan
 isnormal
 isubordered
-ldexp          |check|          |check|         |check|  
-llrint         |check|          |check|         |check|  
-llround        |check|          |check|         |check|  
-logb           |check|          |check|         |check|  
-lrint          |check|          |check|         |check|  
-lround         |check|          |check|         |check|  
-modf           |check|          |check|         |check|  
+ldexp          :green:`XA`      :green:`XA`     :green:`XA`
+llrint         :green:`XA`      :green:`XA`     :green:`XA`
+llround        :green:`XA`      :green:`XA`     :green:`XA`
+logb           :green:`XA`      :green:`XA`     :green:`XA`
+lrint          :green:`XA`      :green:`XA`     :green:`XA`
+lround         :green:`XA`      :green:`XA`     :green:`XA`
+modf           :green:`XA`      :green:`XA`     :green:`XA`
 nan
-nearbyint      |check|          |check|         |check|  
-nextafter      |check|          |check|         |check|  
+nearbyint      :green:`XA`      :green:`XA`     :green:`XA`
+nextafter      :green:`XA`      :green:`XA`     :green:`XA`
 nexttoward
-remainder      |check|          |check|         |check|  
-remquo         |check|          |check|         |check|  
-rint           |check|          |check|         |check|  
-round          |check|          |check|         |check|  
+remainder      :green:`XA`      :green:`XA`     :green:`XA`
+remquo         :green:`XA`      :green:`XA`     :green:`XA`
+rint           :green:`XA`      :green:`XA`     :green:`XA`
+round          :green:`XA`      :green:`XA`     :green:`XA`
 scalbn
 signbit
-trunc          |check|          |check|         |check|  
+trunc          :green:`XA`      :green:`XA`     :green:`XA`
 ============== ================ =============== ======================
 
 Higher Math Functions
@@ -116,35 +121,36 @@ Higher Math Functions
 ============== ================ =============== ======================
 <Func>         <Func_f> (float) <Func> (double) <Func_l> (long double)
 ============== ================ =============== ======================
-acos
+acos           :green:`XA`
 acosh
-asin
+asin           :green:`XA`
 asinh
-atan
+atan           :green:`XA`
 atan2
-atanh
+atanh          :green:`XA`
 cbrt
-cos            |check|          |check|
-cosh
+cos            :green:`XA`      :green:`XA`
+cosh           :green:`XA`
 erf
 erfc
-exp            |check|
-exp2           |check|
-expm1          |check|
-fma            |check|          |check|
-hypot          |check|          |check|
+exp            :green:`XA`
+exp10          :green:`XA`
+exp2           :green:`XA`
+expm1          :green:`XA`
+fma            :green:`XA`      :green:`XA`
+hypot          :green:`XA`      :green:`XA`
 lgamma
-log            |check|
-log10          |check|
-log1p          |check|
-log2           |check|
+log            :green:`XA`
+log10          :green:`XA`      :green:`XA`
+log1p          :green:`XA`
+log2           :green:`XA`
 pow
-sin            |check|          |check|
-sincos         |check|          |check|
-sinh
-sqrt           |check|          |check|         |check|
-tan
-tanh
+sin            :green:`XA`      :green:`XA`
+sincos         :green:`XA`      :green:`XA`
+sinh           :green:`XA`
+sqrt           :green:`XA`      :green:`XA`     :green:`XA`
+tan            :green:`XA`
+tanh           :green:`XA`
 tgamma
 ============== ================ =============== ======================
 
@@ -154,24 +160,34 @@ Accuracy of Higher Math Functions
 ============== ================ =============== ======================
 <Func>         <Func_f> (float) <Func> (double) <Func_l> (long double)
 ============== ================ =============== ======================
-cos            0.776 ULPs       large
-exp            |check|
-exp2           |check|
-expm1          |check|
-fma            |check|          |check|
-hypot          |check|          |check|
-log            |check|
-log10          |check|
-log1p          |check|
-log2           |check|
-sin            |check|          large
-sincos         0.776 ULPs       large
-sqrt           |check|          |check|         |check|
+acos           :green:`XA`
+asin           :green:`XA`
+atan           :green:`XA`
+atanh          :green:`XA`
+cos            :green:`XA`      large
+cosh           :green:`XA`
+exp            :green:`XA`
+exp10          :green:`XA`
+exp2           :green:`XA`
+expm1          :green:`XA`
+fma            :green:`XA`      :green:`XA`
+hypot          :green:`XA`      :green:`XA`
+log            :green:`XA`
+log10          :green:`XA`      :green:`XA`
+log1p          :green:`XA`
+log2           :green:`XA`
+sin            :green:`XA`      large
+sincos         :green:`XA`      large
+sinh           :green:`XA`
+sqrt           :green:`XA`      :green:`XA`     :green:`XA`
+tan            :green:`XA`
+tanh           :green:`XA`
 ============== ================ =============== ======================
 
 Legends:
 
-* |check|: correctly rounded for all 4 rounding modes.
+* `X` = x86_64, `A` = aarch64, `a` = arm32
+* Green text (eg. :green:`XA`): correctly rounded for all 4 rounding modes.
 * CR: correctly rounded for the default rounding mode (round-to-the-nearest,
   tie-to-even).
 * x ULPs: largest errors recorded.
@@ -197,11 +213,23 @@ Performance
 |              +-----------+-------------------+-----------+-------------------+                                     +------------+-------------------------+--------------+---------------+
 |              | LLVM libc | Reference (glibc) | LLVM libc | Reference (glibc) |                                     | CPU        | OS                      | Compiler     | Special flags |
 +==============+===========+===================+===========+===================+=====================================+============+=========================+==============+===============+
-| cosf         |        37 |                32 |        73 |                72 | :math:`[0, 2\pi]`                   | Ryzen 1700 | Ubuntu 20.04 LTS x86_64 | Clang 12.0.0 |               |
+| acosf        |        24 |                29 |        62 |                77 | :math:`[-1, 1]`                     | Ryzen 1700 | Ubuntu 22.04 LTS x86_64 | Clang 14.0.0 | FMA           |
++--------------+-----------+-------------------+-----------+-------------------+-------------------------------------+------------+-------------------------+--------------+---------------+
+| asinf        |        23 |                27 |        62 |                62 | :math:`[-1, 1]`                     | Ryzen 1700 | Ubuntu 22.04 LTS x86_64 | Clang 14.0.0 | FMA           |
++--------------+-----------+-------------------+-----------+-------------------+-------------------------------------+------------+-------------------------+--------------+---------------+
+| atanf        |        27 |                29 |        79 |                68 | :math:`[-10, 10]`                   | Ryzen 1700 | Ubuntu 22.04 LTS x86_64 | Clang 14.0.0 | FMA           |
++--------------+-----------+-------------------+-----------+-------------------+-------------------------------------+------------+-------------------------+--------------+---------------+
+| atanhf       |        20 |                66 |        71 |               133 | :math:`[-1, 1]`                     | Ryzen 1700 | Ubuntu 22.04 LTS x86_64 | Clang 14.0.0 | FMA           |
++--------------+-----------+-------------------+-----------+-------------------+-------------------------------------+------------+-------------------------+--------------+---------------+
+| cosf         |        13 |                32 |        53 |                59 | :math:`[0, 2\pi]`                   | Ryzen 1700 | Ubuntu 20.04 LTS x86_64 | Clang 12.0.0 | FMA           |
++--------------+-----------+-------------------+-----------+-------------------+-------------------------------------+------------+-------------------------+--------------+---------------+
+| coshf        |        14 |                20 |        50 |                48 | :math:`[-10, 10]`                   | Ryzen 1700 | Ubuntu 22.04 LTS x86_64 | Clang 14.0.0 | FMA           |
 +--------------+-----------+-------------------+-----------+-------------------+-------------------------------------+------------+-------------------------+--------------+---------------+
 | expf         |         9 |                 7 |        44 |                38 | :math:`[-10, 10]`                   | Ryzen 1700 | Ubuntu 20.04 LTS x86_64 | Clang 12.0.0 | FMA           |
 +--------------+-----------+-------------------+-----------+-------------------+-------------------------------------+------------+-------------------------+--------------+---------------+
-| exp2f        |         8 |                 6 |        35 |                23 | :math:`[-10, 10]`                   | i5-1135G7  | Ubuntu 20.04 LTS x86_64 | Clang 12.0.0 | FMA           |
+| exp10f       |        10 |                 8 |        40 |                38 | :math:`[-10, 10]`                   | Ryzen 1700 | Ubuntu 22.04 LTS x86_64 | Clang 14.0.0 | FMA           |
++--------------+-----------+-------------------+-----------+-------------------+-------------------------------------+------------+-------------------------+--------------+---------------+
+| exp2f        |         9 |                 6 |        35 |                31 | :math:`[-10, 10]`                   | Ryzen 1700 | Ubuntu 22.04 LTS x86_64 | Clang 14.0.0 | FMA           |
 +--------------+-----------+-------------------+-----------+-------------------+-------------------------------------+------------+-------------------------+--------------+---------------+
 | expm1f       |         9 |                44 |        42 |               121 | :math:`[-10, 10]`                   | Ryzen 1700 | Ubuntu 20.04 LTS x86_64 | Clang 12.0.0 | FMA           |
 +--------------+-----------+-------------------+-----------+-------------------+-------------------------------------+------------+-------------------------+--------------+---------------+
@@ -223,8 +251,21 @@ Performance
 +--------------+-----------+-------------------+-----------+-------------------+-------------------------------------+------------+-------------------------+--------------+---------------+
 | log2f        |        13 |                10 |        57 |                46 | :math:`[e^{-1}, e]`                 | Ryzen 1700 | Ubuntu 20.04 LTS x86_64 | Clang 12.0.0 | FMA           |
 +--------------+-----------+-------------------+-----------+-------------------+-------------------------------------+------------+-------------------------+--------------+---------------+
-| sinf         |        13 |                25 |        54 |                57 | :math:`[-\pi, \pi]`                 | Ryzen 1700 | Ubuntu 20.04 LTS x86_64 | Clang 12.0.0 | FMA           |
+| sinf         |        12 |                25 |        51 |                57 | :math:`[-\pi, \pi]`                 | Ryzen 1700 | Ubuntu 20.04 LTS x86_64 | Clang 12.0.0 | FMA           |
 +--------------+-----------+-------------------+-----------+-------------------+-------------------------------------+------------+-------------------------+--------------+---------------+
+| sincosf      |        19 |                30 |        57 |                68 | :math:`[-\pi, \pi]`                 | Ryzen 1700 | Ubuntu 20.04 LTS x86_64 | Clang 12.0.0 | FMA           |
++--------------+-----------+-------------------+-----------+-------------------+-------------------------------------+------------+-------------------------+--------------+---------------+
+| sinhf        |        13 |                63 |        48 |               137 | :math:`[-10, 10]`                   | Ryzen 1700 | Ubuntu 22.04 LTS x86_64 | Clang 14.0.0 | FMA           |
++--------------+-----------+-------------------+-----------+-------------------+-------------------------------------+------------+-------------------------+--------------+---------------+
+| tanf         |        16 |                50 |        61 |               107 | :math:`[-\pi, \pi]`                 | Ryzen 1700 | Ubuntu 22.04 LTS x86_64 | Clang 14.0.0 | FMA           |
++--------------+-----------+-------------------+-----------+-------------------+-------------------------------------+------------+-------------------------+--------------+---------------+
+| tanhf        |        13 |                55 |        57 |               123 | :math:`[-10, 10]`                   | Ryzen 1700 | Ubuntu 22.04 LTS x86_64 | Clang 14.0.0 | FMA           |
++--------------+-----------+-------------------+-----------+-------------------+-------------------------------------+------------+-------------------------+--------------+---------------+
+
+Algorithms + Implementation Details
+===================================
+
+* :doc:`math/log`
 
 References
 ==========

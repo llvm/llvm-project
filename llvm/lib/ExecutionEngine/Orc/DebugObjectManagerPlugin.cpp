@@ -289,6 +289,9 @@ ELFDebugObject::CreateArchType(MemoryBufferRef Buffer,
       continue;
     HasDwarfSection |= isDwarfSection(*Name);
 
+    if (!(Header.sh_flags & ELF::SHF_ALLOC))
+      continue;
+
     auto Wrapped = std::make_unique<ELFDebugObjectSection<ELFT>>(&Header);
     if (Error Err = DebugObj->recordSection(*Name, std::move(Wrapped)))
       return std::move(Err);
@@ -370,7 +373,9 @@ Error ELFDebugObject::recordSection(
     return Err;
   auto ItInserted = Sections.try_emplace(Name, std::move(Section));
   if (!ItInserted.second)
-    return make_error<StringError>("Duplicate section",
+    return make_error<StringError>("In " + Buffer->getBufferIdentifier() +
+				   ", encountered duplicate section \"" +
+				   Name + "\" while building debug object",
                                    inconvertibleErrorCode());
   return Error::success();
 }
@@ -487,7 +492,8 @@ Error DebugObjectManagerPlugin::notifyFailed(
   return Error::success();
 }
 
-void DebugObjectManagerPlugin::notifyTransferringResources(ResourceKey DstKey,
+void DebugObjectManagerPlugin::notifyTransferringResources(JITDylib &JD,
+                                                           ResourceKey DstKey,
                                                            ResourceKey SrcKey) {
   // Debug objects are stored by ResourceKey only after registration.
   // Thus, pending objects don't need to be updated here.
@@ -502,7 +508,8 @@ void DebugObjectManagerPlugin::notifyTransferringResources(ResourceKey DstKey,
   }
 }
 
-Error DebugObjectManagerPlugin::notifyRemovingResources(ResourceKey Key) {
+Error DebugObjectManagerPlugin::notifyRemovingResources(JITDylib &JD,
+                                                        ResourceKey Key) {
   // Removing the resource for a pending object fails materialization, so they
   // get cleaned up in the notifyFailed() handler.
   std::lock_guard<std::mutex> Lock(RegisteredObjsLock);

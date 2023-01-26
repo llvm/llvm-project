@@ -84,7 +84,7 @@ subroutine ref_scalar_real_a(a0_0, a1_0, a0_1, a1_1)
   ! CHECK: %[[load:.*]] = fir.load %[[coor]] : !fir.ref<!fir.box<!fir.heap<f32>>>
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[load]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
   ! CHECK: %[[cast:.*]] = fir.convert %[[addr]] : (!fir.heap<f32>) -> !fir.ref<f32>
-  ! CHECK: fir.call @_QPtakes_real_scalar(%[[cast]]) : (!fir.ref<f32>) -> ()
+  ! CHECK: fir.call @_QPtakes_real_scalar(%[[cast]]) {{.*}}: (!fir.ref<f32>) -> ()
   call takes_real_scalar(a0_0%p)
 
   ! CHECK: %[[a0_1_coor:.*]] = fir.coordinate_of %[[arg2]], %{{.*}} : (!fir.ref<!fir.array<100x!fir.type<_QMacompTreal_a0{p:!fir.box<!fir.heap<f32>>}>>>, i64) -> !fir.ref<!fir.type<_QMacompTreal_a0{p:!fir.box<!fir.heap<f32>>}>>
@@ -93,7 +93,7 @@ subroutine ref_scalar_real_a(a0_0, a1_0, a0_1, a1_1)
   ! CHECK: %[[load:.*]] = fir.load %[[coor]] : !fir.ref<!fir.box<!fir.heap<f32>>>
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[load]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
   ! CHECK: %[[cast:.*]] = fir.convert %[[addr]] : (!fir.heap<f32>) -> !fir.ref<f32>
-  ! CHECK: fir.call @_QPtakes_real_scalar(%[[cast]]) : (!fir.ref<f32>) -> ()
+  ! CHECK: fir.call @_QPtakes_real_scalar(%[[cast]]) {{.*}}: (!fir.ref<f32>) -> ()
   call takes_real_scalar(a0_1(5)%p)
 
   ! CHECK: %[[fld:.*]] = fir.field_index p, !fir.type<_QMacompTreal_a1{p:!fir.box<!fir.heap<!fir.array<?xf32>>>}>
@@ -104,7 +104,7 @@ subroutine ref_scalar_real_a(a0_0, a1_0, a0_1, a1_1)
   ! CHECK: %[[lb:.*]] = fir.convert %[[dims]]#0 : (index) -> i64
   ! CHECK: %[[index:.*]] = arith.subi %c7{{.*}}, %[[lb]] : i64
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[addr]], %[[index]] : (!fir.heap<!fir.array<?xf32>>, i64) -> !fir.ref<f32>
-  ! CHECK: fir.call @_QPtakes_real_scalar(%[[coor]]) : (!fir.ref<f32>) -> ()
+  ! CHECK: fir.call @_QPtakes_real_scalar(%[[coor]]) {{.*}}: (!fir.ref<f32>) -> ()
   call takes_real_scalar(a1_0%p(7))
 
   ! CHECK: %[[a1_1_coor:.*]] = fir.coordinate_of %[[arg3]], %{{.*}} : (!fir.ref<!fir.array<100x!fir.type<_QMacompTreal_a1{p:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>>, i64) -> !fir.ref<!fir.type<_QMacompTreal_a1{p:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
@@ -116,7 +116,7 @@ subroutine ref_scalar_real_a(a0_0, a1_0, a0_1, a1_1)
   ! CHECK: %[[lb:.*]] = fir.convert %[[dims]]#0 : (index) -> i64
   ! CHECK: %[[index:.*]] = arith.subi %c7{{.*}}, %[[lb]] : i64
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[addr]], %[[index]] : (!fir.heap<!fir.array<?xf32>>, i64) -> !fir.ref<f32>
-  ! CHECK: fir.call @_QPtakes_real_scalar(%[[coor]]) : (!fir.ref<f32>) -> ()
+  ! CHECK: fir.call @_QPtakes_real_scalar(%[[coor]]) {{.*}}: (!fir.ref<f32>) -> ()
   call takes_real_scalar(a1_1(5)%p(7))
 end subroutine
 
@@ -138,7 +138,7 @@ end subroutine
 ! CHECK:         %[[VAL_15:.*]] = fir.slice %[[VAL_9]], %[[VAL_13]], %[[VAL_11]] : (index, index, index) -> !fir.slice<1>
 ! CHECK:         %[[VAL_16:.*]] = fir.embox %[[VAL_7]](%[[VAL_14]]) {{\[}}%[[VAL_15]]] : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>, !fir.slice<1>) -> !fir.box<!fir.array<16xf32>>
 ! CHECK:         %[[VAL_16_NEW:.*]] = fir.convert %[[VAL_16]] : (!fir.box<!fir.array<16xf32>>) -> !fir.box<!fir.array<?xf32>>
-! CHECK:         fir.call @_QPtakes_real_array(%[[VAL_16_NEW]]) : (!fir.box<!fir.array<?xf32>>) -> ()
+! CHECK:         fir.call @_QPtakes_real_array(%[[VAL_16_NEW]]) {{.*}}: (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:         %[[VAL_17:.*]] = arith.constant 5 : i64
 ! CHECK:         %[[VAL_18:.*]] = arith.constant 1 : i64
 ! CHECK:         %[[VAL_19:.*]] = arith.subi %[[VAL_17]], %[[VAL_18]] : i64
@@ -159,7 +159,7 @@ end subroutine
 ! CHECK:         %[[VAL_34:.*]] = fir.slice %[[VAL_28]], %[[VAL_32]], %[[VAL_30]] : (index, index, index) -> !fir.slice<1>
 ! CHECK:         %[[VAL_35:.*]] = fir.embox %[[VAL_26]](%[[VAL_33]]) {{\[}}%[[VAL_34]]] : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>, !fir.slice<1>) -> !fir.box<!fir.array<16xf32>>
 ! CHECK:         %[[VAL_35_NEW:.*]] = fir.convert %[[VAL_35]] : (!fir.box<!fir.array<16xf32>>) -> !fir.box<!fir.array<?xf32>>
-! CHECK:         fir.call @_QPtakes_real_array(%[[VAL_35_NEW]]) : (!fir.box<!fir.array<?xf32>>) -> ()
+! CHECK:         fir.call @_QPtakes_real_array(%[[VAL_35_NEW]]) {{.*}}: (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:         return
 ! CHECK:       }
 

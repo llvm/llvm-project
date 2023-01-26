@@ -28,7 +28,7 @@ public:
 
   unsigned getMaxStubSize() const override { return 8; }
 
-  unsigned getStubAlignment() override { return 8; }
+  Align getStubAlignment() override { return Align(8); }
 
   /// Extract the addend encoded in the instruction / memory location.
   Expected<int64_t> decodeAddend(const RelocationEntry &RE) const {
@@ -118,7 +118,7 @@ public:
       (void)p;
       assert((*p & 0x3B000000) == 0x39000000 &&
              "Only expected load / store instructions.");
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
     case MachO::ARM64_RELOC_PAGEOFF12: {
       // Verify that the relocation points to one of the expected load / store
@@ -222,7 +222,7 @@ public:
       assert((*p & 0x3B000000) == 0x39000000 &&
              "Only expected load / store instructions.");
       (void)p;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
     case MachO::ARM64_RELOC_PAGEOFF12: {
       // Verify that the relocation points to one of the expected load / store
@@ -453,13 +453,13 @@ private:
       // FIXME: There must be a better way to do this then to check and fix the
       // alignment every time!!!
       uintptr_t BaseAddress = uintptr_t(Section.getAddress());
-      uintptr_t StubAlignment = getStubAlignment();
+      uintptr_t StubAlignment = getStubAlignment().value();
       uintptr_t StubAddress =
           (BaseAddress + Section.getStubOffset() + StubAlignment - 1) &
           -StubAlignment;
       unsigned StubOffset = StubAddress - BaseAddress;
       Stubs[Value] = StubOffset;
-      assert(((StubAddress % getStubAlignment()) == 0) &&
+      assert(isAligned(getStubAlignment(), StubAddress) &&
              "GOT entry not aligned");
       RelocationEntry GOTRE(RE.SectionID, StubOffset,
                             MachO::ARM64_RELOC_UNSIGNED, Value.Offset,

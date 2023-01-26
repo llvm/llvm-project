@@ -37,13 +37,13 @@ define void @FFT(ptr noalias nocapture %destination, ptr noalias %re, ptr noalia
 ; X64-NEXT:    movdqu (%rdx), %xmm0
 ; X64-NEXT:    pslld $4, %xmm0
 ; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    movslq %eax, %r8
+; X64-NEXT:    cltq
 ; X64-NEXT:    pextrd $1, %xmm0, %ecx
 ; X64-NEXT:    movslq %ecx, %rcx
 ; X64-NEXT:    pextrd $2, %xmm0, %edx
 ; X64-NEXT:    movslq %edx, %rdx
-; X64-NEXT:    pextrd $3, %xmm0, %eax
-; X64-NEXT:    cltq
+; X64-NEXT:    pextrd $3, %xmm0, %r8d
+; X64-NEXT:    movslq %r8d, %r8
 ; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X64-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero

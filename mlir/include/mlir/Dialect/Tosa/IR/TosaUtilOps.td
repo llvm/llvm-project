@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines codegen utility operators for the TOSA dialect. 
-// These operators are not part of the formal TOSA specification and 
-// are intended to aid code generation from TOSA. 
+// This file defines codegen utility operators for the TOSA dialect.
+// These operators are not part of the formal TOSA specification and
+// are intended to aid code generation from TOSA.
 //
 //===----------------------------------------------------------------------===//
 
@@ -24,7 +24,7 @@ include "mlir/Dialect/Tosa/IR/TosaInterfaces.td"
 include "mlir/Dialect/Tosa/IR/TosaTypesBase.td"
 include "mlir/Dialect/Tosa/IR/TosaOpBase.td"
 
-def Tosa_ApplyScaleOp: Tosa_Op<"apply_scale", [NoSideEffect] # ElementwiseMappable.traits> {
+def Tosa_ApplyScaleOp: Tosa_Op<"apply_scale", [Pure] # ElementwiseMappable.traits> {
   let summary = "Rescale scalar operator for Tosa tensor operators";
 
   let description = [{
@@ -53,7 +53,7 @@ def Tosa_ApplyScaleOp: Tosa_Op<"apply_scale", [NoSideEffect] # ElementwiseMappab
 //===----------------------------------------------------------------------===//
 def Tosa_YieldOp : Tosa_Op<"yield", [
        Terminator,
-       NoSideEffect]> {
+       Pure]> {
   let summary = "yield operator";
 
   let description = [{

@@ -389,6 +389,7 @@ def gentbl_cc_library(
         deps = [],
         strip_include_prefix = None,
         test = False,
+        copts = None,
         **kwargs):
     """Create multiple TableGen generated files using the same tool and input.
 
@@ -406,6 +407,7 @@ def gentbl_cc_library(
       deps: See gentbl_rule.deps
       strip_include_prefix: attribute to pass through to cc_library.
       test: whether to create a shell test that invokes the tool too.
+      copts: list of copts to pass to cc_library.
       **kwargs: Extra keyword arguments to pass to all generated rules.
     """
 
@@ -429,5 +431,6 @@ def gentbl_cc_library(
         hdrs = [":" + filegroup_name] if strip_include_prefix else [],
         strip_include_prefix = strip_include_prefix,
         textual_hdrs = [":" + filegroup_name],
+        copts = copts,
         **kwargs
     )

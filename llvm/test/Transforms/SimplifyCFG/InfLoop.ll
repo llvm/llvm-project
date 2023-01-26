@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -disable-output
+; RUN: opt < %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -disable-output
 ; END.
 
 target datalayout = "e-m:o-p:32:32-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
@@ -13,7 +13,7 @@ target triple = "thumbv7-apple-ios9.0.0"
 
 define void @main() {
 entry:
-  %0 = load i32, i32* getelementptr inbounds (%struct.anon, %struct.anon* @U, i32 0, i32 2), align 4
+  %0 = load i32, ptr getelementptr inbounds (%struct.anon, ptr @U, i32 0, i32 2), align 4
   %cmp.i = icmp eq i32 %0, -1
   br i1 %cmp.i, label %if.then, label %if.end
 
@@ -21,8 +21,8 @@ if.then:                                          ; preds = %entry
   br label %if.end
 
 if.end:                                           ; preds = %entry, %if.then
-  %1 = load i32, i32* getelementptr inbounds (%struct.anon, %struct.anon* @U, i32 0, i32 2), align 4
-  %bf.load = load i32, i32* getelementptr inbounds (%struct.anon, %struct.anon* @U, i32 0, i32 3, i32 0, i32 0), align 4
+  %1 = load i32, ptr getelementptr inbounds (%struct.anon, ptr @U, i32 0, i32 2), align 4
+  %bf.load = load i32, ptr getelementptr inbounds (%struct.anon, ptr @U, i32 0, i32 3, i32 0, i32 0), align 4
   %cmp = icmp slt i32 %0, 0
   br i1 %cmp, label %if.end7, label %cond.false
 
@@ -63,8 +63,8 @@ for.cond.i:                                       ; preds = %if.end6.i, %if.end.
   br i1 %cmp2.i, label %for.body.i, label %TmpSimpleNeedExt.exit
 
 for.body.i:                                       ; preds = %for.cond.i
-  %arrayidx.i = getelementptr inbounds %struct.anon, %struct.anon* @U, i32 0, i32 0, i32 2, i32 %ix.0.i
-  %elt = load i8, i8* %arrayidx.i, align 1
+  %arrayidx.i = getelementptr inbounds %struct.anon, ptr @U, i32 0, i32 0, i32 2, i32 %ix.0.i
+  %elt = load i8, ptr %arrayidx.i, align 1
   %cmp3.i = icmp sgt i8 %elt, 7
   br i1 %cmp3.i, label %if.else21, label %if.end6.i
 

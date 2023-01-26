@@ -16,11 +16,26 @@ using namespace clang::driver;
 using namespace clang::driver::options;
 using namespace llvm::opt;
 
-#define PREFIX(NAME, VALUE) static const char *const NAME[] = VALUE;
+#define OPTTABLE_VALUES_CODE
+#include "clang/Driver/Options.inc"
+#undef OPTTABLE_VALUES_CODE
+
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
+  static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
+      NAME##_init, std::size(NAME##_init) - 1);
 #include "clang/Driver/Options.inc"
 #undef PREFIX
 
-static const OptTable::Info InfoTable[] = {
+static constexpr const llvm::StringLiteral PrefixTable_init[] =
+#define PREFIX_UNION(VALUES) VALUES
+#include "clang/Driver/Options.inc"
+#undef PREFIX_UNION
+    ;
+static constexpr const llvm::ArrayRef<llvm::StringLiteral>
+    PrefixTable(PrefixTable_init, std::size(PrefixTable_init) - 1);
+
+static constexpr OptTable::Info InfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
   {PREFIX, NAME,  HELPTEXT,    METAVAR,     OPT_##ID,  Option::KIND##Class,    \
@@ -31,25 +46,13 @@ static const OptTable::Info InfoTable[] = {
 
 namespace {
 
-class DriverOptTable : public OptTable {
+class DriverOptTable : public PrecomputedOptTable {
 public:
-  DriverOptTable()
-    : OptTable(InfoTable) {}
+  DriverOptTable() : PrecomputedOptTable(InfoTable, PrefixTable) {}
 };
-
 }
 
 const llvm::opt::OptTable &clang::driver::getDriverOptTable() {
-  static const DriverOptTable *Table = []() {
-    auto Result = std::make_unique<DriverOptTable>();
-    // Options.inc is included in DriverOptions.cpp, and calls OptTable's
-    // addValues function.
-    // Opt is a variable used in the code fragment in Options.inc.
-    OptTable &Opt = *Result;
-#define OPTTABLE_ARG_INIT
-#include "clang/Driver/Options.inc"
-#undef OPTTABLE_ARG_INIT
-    return Result.release();
-  }();
-  return *Table;
+  static DriverOptTable Table;
+  return Table;
 }

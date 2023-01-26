@@ -6,7 +6,6 @@ config.llvm_src_root = path(r"@LLVM_SOURCE_DIR@")
 config.llvm_obj_root = path(r"@LLVM_BINARY_DIR@")
 config.llvm_tools_dir = lit_config.substitute(path(r"@LLVM_TOOLS_DIR@"))
 config.llvm_build_mode = lit_config.substitute("@LLVM_BUILD_MODE@")
-config.enable_shared = @ENABLE_SHARED@
 config.shlibdir = lit_config.substitute(path(r"@SHLIBDIR@"))
 
 # Let the main config do the real work.

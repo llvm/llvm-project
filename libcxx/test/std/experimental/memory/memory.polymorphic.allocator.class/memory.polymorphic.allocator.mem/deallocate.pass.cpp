@@ -22,6 +22,8 @@
 
 // T* polymorphic_allocator<T>::deallocate(T*, size_t size)
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <experimental/memory_resource>
 #include <type_traits>
 #include <cassert>
@@ -34,7 +36,7 @@ namespace ex = std::experimental::pmr;
 
 template <size_t S, size_t Align>
 void testForSizeAndAlign() {
-    using T = typename std::aligned_storage<S, Align>::type;
+    struct T { alignas(Align) char data[S]; };
 
     TestResource R;
     ex::polymorphic_allocator<T> a(&R);

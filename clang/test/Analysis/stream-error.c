@@ -7,6 +7,7 @@
 #include "Inputs/system-header-simulator.h"
 
 void clang_analyzer_eval(int);
+void clang_analyzer_dump(int);
 void clang_analyzer_warnIfReached(void);
 void StreamTesterChecker_make_feof_stream(FILE *);
 void StreamTesterChecker_make_ferror_stream(FILE *);
@@ -101,10 +102,15 @@ void error_fwrite(void) {
 }
 
 void freadwrite_zerosize(FILE *F) {
-  fwrite(0, 1, 0, F);
-  fwrite(0, 0, 1, F);
-  fread(0, 1, 0, F);
-  fread(0, 0, 1, F);
+  size_t Ret;
+  Ret = fwrite(0, 1, 0, F);
+  clang_analyzer_dump(Ret); // expected-warning {{0 }}
+  Ret = fwrite(0, 0, 1, F);
+  clang_analyzer_dump(Ret); // expected-warning {{0 }}
+  Ret = fread(0, 1, 0, F);
+  clang_analyzer_dump(Ret); // expected-warning {{0 }}
+  Ret = fread(0, 0, 1, F);
+  clang_analyzer_dump(Ret); // expected-warning {{0 }}
 }
 
 void freadwrite_zerosize_eofstate(FILE *F) {

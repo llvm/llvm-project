@@ -82,7 +82,7 @@ char DuplicateDefinition::ID = 0;
 char JITSymbolNotFound::ID = 0;
 
 std::error_code orcError(OrcErrorCode ErrCode) {
-  typedef std::underlying_type<OrcErrorCode>::type UT;
+  typedef std::underlying_type_t<OrcErrorCode> UT;
   return std::error_code(static_cast<UT>(ErrCode), getOrcErrCat());
 }
 
@@ -105,7 +105,7 @@ JITSymbolNotFound::JITSymbolNotFound(std::string SymbolName)
     : SymbolName(std::move(SymbolName)) {}
 
 std::error_code JITSymbolNotFound::convertToErrorCode() const {
-  typedef std::underlying_type<OrcErrorCode>::type UT;
+  typedef std::underlying_type_t<OrcErrorCode> UT;
   return std::error_code(static_cast<UT>(OrcErrorCode::JITSymbolNotFound),
                          getOrcErrCat());
 }

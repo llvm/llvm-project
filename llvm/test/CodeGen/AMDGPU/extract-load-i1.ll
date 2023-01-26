@@ -3,7 +3,7 @@
 
 ; FIXME: Inefficient codegen which skips an optimization of load +
 ; extractelement when the vector element type is not byte-sized.
-define i1 @extractloadi1(<8 x i1> *%ptr, i32 %idx) {
+define i1 @extractloadi1(ptr %ptr, i32 %idx) {
 ; CHECK-LABEL: extractloadi1:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -30,7 +30,7 @@ define i1 @extractloadi1(<8 x i1> *%ptr, i32 %idx) {
 ; CHECK-NEXT:    buffer_load_ubyte v0, v1, s[0:3], 0 offen
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <8 x i1>, <8 x i1> *%ptr
+  %val = load <8 x i1>, ptr %ptr
   %ret = extractelement <8 x i1> %val, i32 %idx
   ret i1 %ret
 }

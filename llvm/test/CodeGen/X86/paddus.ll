@@ -397,23 +397,23 @@ define <32 x i8> @test12(<32 x i8> %x) {
 define <64 x i8> @test13(<64 x i8> %x) {
 ; SSE-LABEL: test13:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pcmpeqd %xmm8, %xmm8
+; SSE-NEXT:    pcmpeqd %xmm4, %xmm4
 ; SSE-NEXT:    movdqa %xmm3, %xmm5
-; SSE-NEXT:    psubb %xmm8, %xmm5
+; SSE-NEXT:    psubb %xmm4, %xmm5
 ; SSE-NEXT:    movdqa %xmm2, %xmm6
-; SSE-NEXT:    psubb %xmm8, %xmm6
+; SSE-NEXT:    psubb %xmm4, %xmm6
 ; SSE-NEXT:    movdqa %xmm1, %xmm7
-; SSE-NEXT:    psubb %xmm8, %xmm7
-; SSE-NEXT:    movdqa %xmm0, %xmm4
-; SSE-NEXT:    psubb %xmm8, %xmm4
-; SSE-NEXT:    pcmpeqb %xmm8, %xmm3
+; SSE-NEXT:    psubb %xmm4, %xmm7
+; SSE-NEXT:    movdqa %xmm0, %xmm8
+; SSE-NEXT:    psubb %xmm4, %xmm8
+; SSE-NEXT:    pcmpeqb %xmm4, %xmm3
 ; SSE-NEXT:    por %xmm5, %xmm3
-; SSE-NEXT:    pcmpeqb %xmm8, %xmm2
+; SSE-NEXT:    pcmpeqb %xmm4, %xmm2
 ; SSE-NEXT:    por %xmm6, %xmm2
-; SSE-NEXT:    pcmpeqb %xmm8, %xmm1
+; SSE-NEXT:    pcmpeqb %xmm4, %xmm1
 ; SSE-NEXT:    por %xmm7, %xmm1
-; SSE-NEXT:    pcmpeqb %xmm8, %xmm0
-; SSE-NEXT:    por %xmm4, %xmm0
+; SSE-NEXT:    pcmpeqb %xmm4, %xmm0
+; SSE-NEXT:    por %xmm8, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test13:
@@ -1150,23 +1150,23 @@ define <16 x i16> @test30(<16 x i16> %x) {
 define <32 x i16> @test31(<32 x i16> %x) {
 ; SSE-LABEL: test31:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pcmpeqd %xmm8, %xmm8
+; SSE-NEXT:    pcmpeqd %xmm4, %xmm4
 ; SSE-NEXT:    movdqa %xmm3, %xmm5
-; SSE-NEXT:    psubw %xmm8, %xmm5
+; SSE-NEXT:    psubw %xmm4, %xmm5
 ; SSE-NEXT:    movdqa %xmm2, %xmm6
-; SSE-NEXT:    psubw %xmm8, %xmm6
+; SSE-NEXT:    psubw %xmm4, %xmm6
 ; SSE-NEXT:    movdqa %xmm1, %xmm7
-; SSE-NEXT:    psubw %xmm8, %xmm7
-; SSE-NEXT:    movdqa %xmm0, %xmm4
-; SSE-NEXT:    psubw %xmm8, %xmm4
-; SSE-NEXT:    pcmpeqw %xmm8, %xmm3
+; SSE-NEXT:    psubw %xmm4, %xmm7
+; SSE-NEXT:    movdqa %xmm0, %xmm8
+; SSE-NEXT:    psubw %xmm4, %xmm8
+; SSE-NEXT:    pcmpeqw %xmm4, %xmm3
 ; SSE-NEXT:    por %xmm5, %xmm3
-; SSE-NEXT:    pcmpeqw %xmm8, %xmm2
+; SSE-NEXT:    pcmpeqw %xmm4, %xmm2
 ; SSE-NEXT:    por %xmm6, %xmm2
-; SSE-NEXT:    pcmpeqw %xmm8, %xmm1
+; SSE-NEXT:    pcmpeqw %xmm4, %xmm1
 ; SSE-NEXT:    por %xmm7, %xmm1
-; SSE-NEXT:    pcmpeqw %xmm8, %xmm0
-; SSE-NEXT:    por %xmm4, %xmm0
+; SSE-NEXT:    pcmpeqw %xmm4, %xmm0
+; SSE-NEXT:    por %xmm8, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test31:

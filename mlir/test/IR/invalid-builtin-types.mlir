@@ -64,36 +64,48 @@ func.func @memrefs(memref<42xi8, #map0>) // expected-error {{memref layout misma
 
 // -----
 
-func.func @memref_space_after_strides(memref<42x42xi8, 0, offset: ?, strides: [?, ?]>) // expected-error {{expected memory space to be last in memref type}}
+// expected-error @below {{expected '<' after 'strided'}}
+func.func private @memref_unfinished_strided() -> memref<?x?xf32, strided>
 
 // -----
 
-func.func @memref_stride_missing_colon(memref<42x42xi8, offset ?, strides: [?, ?]>) // expected-error {{expected colon after `offset` keyword}}
+// expected-error @below {{expected '['}}
+func.func private @memref_unfinished_strided() -> memref<?x?xf32, strided<>>
 
 // -----
 
-func.func @memref_stride_invalid_offset(memref<42x42xi8, offset: [], strides: [?, ?]>) // expected-error {{invalid offset}}
+// expected-error @below {{expected a 64-bit signed integer or '?'}}
+func.func private @memref_unfinished_stride_list() -> memref<?x?xf32, strided<[>>
 
 // -----
 
-func.func @memref_stride_missing_strides(memref<42x42xi8, offset: 0 [?, ?]>) // expected-error {{expected comma after offset value}}
+// expected-error @below {{expected 'offset' after comma}}
+func.func private @memref_missing_offset() -> memref<?x?xf32, strided<[], >>
 
 // -----
 
-func.func @memref_stride_missing_strides(memref<42x42xi8, offset: 0, [?, ?]>) // expected-error {{expected `strides` keyword after offset specification}}
+// expected-error @below {{expected ':' after 'offset'}}
+func.func private @memref_missing_offset_colon() -> memref<?x?xf32, strided<[], offset>>
 
 // -----
 
-func.func @memref_stride_missing_colon_2(memref<42x42xi8, offset: 0, strides [?, ?]>) // expected-error {{expected colon after `strides` keyword}}
+// expected-error @below {{expected a 64-bit signed integer or '?'}}
+func.func private @memref_missing_offset_value() -> memref<?x?xf32, strided<[], offset: >>
 
 // -----
 
-// expected-error @+1 {{expected '['}}
-func.func @memref_stride_invalid_strides(memref<42x42xi8, offset: 0, strides: ()>)
+// expected-error @below {{expected '>'}}
+func.func private @memref_incorrect_strided_ending() -> memref<?x?xf32, strided<[], offset: 32)>
 
 // -----
 
-func.func @memref_zero_stride(memref<42x42xi8, offset: ?, strides: [0, ?]>) // expected-error {{invalid memref stride}}
+// expected-error @below {{strides must not be zero}}
+func.func private @memref_zero_stride() -> memref<?x?xf32, strided<[0, 0]>>
+
+// -----
+
+// expected-error @below {{expected the number of strides to match the rank}}
+func.func private @memref_strided_rank_mismatch() -> memref<?x?xf32, strided<[1]>>
 
 // -----
 

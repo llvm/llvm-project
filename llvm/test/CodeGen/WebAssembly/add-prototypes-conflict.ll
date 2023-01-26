@@ -1,4 +1,4 @@
-; RUN: opt -S -wasm-add-missing-prototypes -o %t.ll %s 2>&1 | FileCheck %s -check-prefix=WARNING
+; RUN: opt -opaque-pointers=0 -S -wasm-add-missing-prototypes -o %t.ll %s 2>&1 | FileCheck %s -check-prefix=WARNING
 ; RUN: cat %t.ll | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"

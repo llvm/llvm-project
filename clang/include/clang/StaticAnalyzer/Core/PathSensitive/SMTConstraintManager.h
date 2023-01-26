@@ -18,6 +18,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/RangedConstraintManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SMTConv.h"
+#include <optional>
 
 typedef llvm::ImmutableSet<
     std::pair<clang::ento::SymbolRef, const llvm::SMTExpr *>>
@@ -128,7 +129,7 @@ public:
       addStateConstraints(State);
 
       // Constraints are unsatisfiable
-      Optional<bool> isSat = Solver->check();
+      std::optional<bool> isSat = Solver->check();
       if (!isSat || !*isSat)
         return nullptr;
 
@@ -145,7 +146,7 @@ public:
 
       Solver->addConstraint(NotExp);
 
-      Optional<bool> isNotSat = Solver->check();
+      std::optional<bool> isNotSat = Solver->check();
       if (!isNotSat || *isNotSat)
         return nullptr;
 
@@ -246,7 +247,7 @@ public:
   bool canReasonAbout(SVal X) const override {
     const TargetInfo &TI = getBasicVals().getContext().getTargetInfo();
 
-    Optional<nonloc::SymbolVal> SymVal = X.getAs<nonloc::SymbolVal>();
+    std::optional<nonloc::SymbolVal> SymVal = X.getAs<nonloc::SymbolVal>();
     if (!SymVal)
       return true;
 
@@ -340,11 +341,11 @@ protected:
     Solver->reset();
     addStateConstraints(NewState);
 
-    Optional<bool> res = Solver->check();
+    std::optional<bool> res = Solver->check();
     if (!res)
       Cached[hash] = ConditionTruthVal();
     else
-      Cached[hash] = ConditionTruthVal(res.value());
+      Cached[hash] = ConditionTruthVal(*res);
 
     return Cached[hash];
   }

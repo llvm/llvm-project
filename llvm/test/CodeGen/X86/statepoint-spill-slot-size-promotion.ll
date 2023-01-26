@@ -15,14 +15,14 @@ define i1 @test_spill_slot_size(i1 %a1, i2 %a2, i7 %a7, i8 %a8, i9 %a9, i15 %a15
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movl %edi, %ebx
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r11
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %edi
-; CHECK-NEXT:    movw %di, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %r11, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %r10, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %r10d
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %r11d
+; CHECK-NEXT:    movw %r11w, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movl %r10d, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb %cl, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    andb $3, %sil
 ; CHECK-NEXT:    movb %sil, {{[0-9]+}}(%rsp)

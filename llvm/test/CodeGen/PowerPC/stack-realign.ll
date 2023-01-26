@@ -7,23 +7,21 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 %struct.s = type { i32, i32 }
 
-declare void @bar(i32*)
+declare void @bar(ptr)
 
 @barbaz = external global i32
 
-define void @goo(%struct.s* byval(%struct.s) nocapture readonly %a) {
+define void @goo(ptr byval(%struct.s) nocapture readonly %a) {
 entry:
   %x = alloca [2 x i32], align 32
-  %a1 = getelementptr inbounds %struct.s, %struct.s* %a, i64 0, i32 0
-  %0 = load i32, i32* %a1, align 4
-  %arrayidx = getelementptr inbounds [2 x i32], [2 x i32]* %x, i64 0, i64 0
-  store i32 %0, i32* %arrayidx, align 32
-  %b = getelementptr inbounds %struct.s, %struct.s* %a, i64 0, i32 1
-  %1 = load i32, i32* %b, align 4
-  %2 = load i32, i32* @barbaz, align 4
-  %arrayidx2 = getelementptr inbounds [2 x i32], [2 x i32]* %x, i64 0, i64 1
-  store i32 %2, i32* %arrayidx2, align 4
-  call void @bar(i32* %arrayidx)
+  %0 = load i32, ptr %a, align 4
+  store i32 %0, ptr %x, align 32
+  %b = getelementptr inbounds %struct.s, ptr %a, i64 0, i32 1
+  %1 = load i32, ptr %b, align 4
+  %2 = load i32, ptr @barbaz, align 4
+  %arrayidx2 = getelementptr inbounds [2 x i32], ptr %x, i64 0, i64 1
+  store i32 %2, ptr %arrayidx2, align 4
+  call void @bar(ptr %x)
   ret void
 }
 
@@ -105,18 +103,16 @@ entry:
 ; CHECK-32-PIC:     addic 29, 0, 12
 
 ; The large-frame-size case.
-define void @hoo(%struct.s* byval(%struct.s) nocapture readonly %a) {
+define void @hoo(ptr byval(%struct.s) nocapture readonly %a) {
 entry:
   %x = alloca [200000 x i32], align 32
-  %a1 = getelementptr inbounds %struct.s, %struct.s* %a, i64 0, i32 0
-  %0 = load i32, i32* %a1, align 4
-  %arrayidx = getelementptr inbounds [200000 x i32], [200000 x i32]* %x, i64 0, i64 0
-  store i32 %0, i32* %arrayidx, align 32
-  %b = getelementptr inbounds %struct.s, %struct.s* %a, i64 0, i32 1
-  %1 = load i32, i32* %b, align 4
-  %arrayidx2 = getelementptr inbounds [200000 x i32], [200000 x i32]* %x, i64 0, i64 1
-  store i32 %1, i32* %arrayidx2, align 4
-  call void @bar(i32* %arrayidx)
+  %0 = load i32, ptr %a, align 4
+  store i32 %0, ptr %x, align 32
+  %b = getelementptr inbounds %struct.s, ptr %a, i64 0, i32 1
+  %1 = load i32, ptr %b, align 4
+  %arrayidx2 = getelementptr inbounds [200000 x i32], ptr %x, i64 0, i64 1
+  store i32 %1, ptr %arrayidx2, align 4
+  call void @bar(ptr %x)
   ret void
 }
 
@@ -174,18 +170,16 @@ entry:
 
 ; Make sure that the FP save area is still allocated correctly relative to
 ; where r30 is saved.
-define void @loo(%struct.s* byval(%struct.s) nocapture readonly %a) {
+define void @loo(ptr byval(%struct.s) nocapture readonly %a) {
 entry:
   %x = alloca [2 x i32], align 32
-  %a1 = getelementptr inbounds %struct.s, %struct.s* %a, i64 0, i32 0
-  %0 = load i32, i32* %a1, align 4
-  %arrayidx = getelementptr inbounds [2 x i32], [2 x i32]* %x, i64 0, i64 0
-  store i32 %0, i32* %arrayidx, align 32
-  %b = getelementptr inbounds %struct.s, %struct.s* %a, i64 0, i32 1
-  %1 = load i32, i32* %b, align 4
-  %arrayidx2 = getelementptr inbounds [2 x i32], [2 x i32]* %x, i64 0, i64 1
-  store i32 %1, i32* %arrayidx2, align 4
-  call void @bar(i32* %arrayidx)
+  %0 = load i32, ptr %a, align 4
+  store i32 %0, ptr %x, align 32
+  %b = getelementptr inbounds %struct.s, ptr %a, i64 0, i32 1
+  %1 = load i32, ptr %b, align 4
+  %arrayidx2 = getelementptr inbounds [2 x i32], ptr %x, i64 0, i64 1
+  store i32 %1, ptr %arrayidx2, align 4
+  call void @bar(ptr %x)
   call void asm sideeffect "", "~{f30}"() nounwind
   ret void
 }

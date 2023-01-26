@@ -19,6 +19,7 @@
 #include "mlir/Analysis/Presburger/SlowMPInt.h"
 #include "mlir/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <numeric>
 
 namespace mlir {
 namespace presburger {
@@ -257,9 +258,7 @@ llvm::hash_code hash_value(const MPInt &x); // NOLINT
 /// This just calls through to the operator int64_t, but it's useful when a
 /// function pointer is required. (Although this is marked inline, it is still
 /// possible to obtain and use a function pointer to this.)
-LLVM_ATTRIBUTE_ALWAYS_INLINE int64_t int64FromMPInt(const MPInt &x) {
-  return int64_t(x);
-}
+static inline int64_t int64FromMPInt(const MPInt &x) { return int64_t(x); }
 LLVM_ATTRIBUTE_ALWAYS_INLINE MPInt mpintFromInt64(int64_t x) {
   return MPInt(x);
 }
@@ -400,7 +399,7 @@ LLVM_ATTRIBUTE_ALWAYS_INLINE MPInt mod(const MPInt &lhs, const MPInt &rhs) {
 LLVM_ATTRIBUTE_ALWAYS_INLINE MPInt gcd(const MPInt &a, const MPInt &b) {
   assert(a >= 0 && b >= 0 && "operands must be non-negative!");
   if (LLVM_LIKELY(a.isSmall() && b.isSmall()))
-    return MPInt(llvm::greatestCommonDivisor(a.getSmall(), b.getSmall()));
+    return MPInt(std::gcd(a.getSmall(), b.getSmall()));
   return MPInt(gcd(detail::SlowMPInt(a), detail::SlowMPInt(b)));
 }
 

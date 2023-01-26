@@ -5,8 +5,8 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK:      Function: foo:
 ; CHECK-NEXT:   NoAlias: {}* %p, {}* %q
 
-define void @foo({}* %p, {}* %q) {
-  store {} {}, {}* %p
-  store {} {}, {}* %q
+define void @foo(ptr %p, ptr %q) {
+  store {} {}, ptr %p
+  store {} {}, ptr %q
   ret void
 }

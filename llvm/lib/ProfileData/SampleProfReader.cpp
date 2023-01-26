@@ -30,6 +30,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MD5.h"
@@ -70,6 +71,79 @@ void SampleProfileReader::dump(raw_ostream &OS) {
   sortFuncProfiles(Profiles, V);
   for (const auto &I : V)
     dumpFunctionProfile(I.first, OS);
+}
+
+static void dumpFunctionProfileJson(const FunctionSamples &S,
+                                    json::OStream &JOS, bool TopLevel = false) {
+  auto DumpBody = [&](const BodySampleMap &BodySamples) {
+    for (const auto &I : BodySamples) {
+      const LineLocation &Loc = I.first;
+      const SampleRecord &Sample = I.second;
+      JOS.object([&] {
+        JOS.attribute("line", Loc.LineOffset);
+        if (Loc.Discriminator)
+          JOS.attribute("discriminator", Loc.Discriminator);
+        JOS.attribute("samples", Sample.getSamples());
+
+        auto CallTargets = Sample.getSortedCallTargets();
+        if (!CallTargets.empty()) {
+          JOS.attributeArray("calls", [&] {
+            for (const auto &J : CallTargets) {
+              JOS.object([&] {
+                JOS.attribute("function", J.first);
+                JOS.attribute("samples", J.second);
+              });
+            }
+          });
+        }
+      });
+    }
+  };
+
+  auto DumpCallsiteSamples = [&](const CallsiteSampleMap &CallsiteSamples) {
+    for (const auto &I : CallsiteSamples)
+      for (const auto &FS : I.second) {
+        const LineLocation &Loc = I.first;
+        const FunctionSamples &CalleeSamples = FS.second;
+        JOS.object([&] {
+          JOS.attribute("line", Loc.LineOffset);
+          if (Loc.Discriminator)
+            JOS.attribute("discriminator", Loc.Discriminator);
+          JOS.attributeArray(
+              "samples", [&] { dumpFunctionProfileJson(CalleeSamples, JOS); });
+        });
+      }
+  };
+
+  JOS.object([&] {
+    JOS.attribute("name", S.getName());
+    JOS.attribute("total", S.getTotalSamples());
+    if (TopLevel)
+      JOS.attribute("head", S.getHeadSamples());
+
+    const auto &BodySamples = S.getBodySamples();
+    if (!BodySamples.empty())
+      JOS.attributeArray("body", [&] { DumpBody(BodySamples); });
+
+    const auto &CallsiteSamples = S.getCallsiteSamples();
+    if (!CallsiteSamples.empty())
+      JOS.attributeArray("callsites",
+                         [&] { DumpCallsiteSamples(CallsiteSamples); });
+  });
+}
+
+/// Dump all the function profiles found on stream \p OS in the JSON format.
+void SampleProfileReader::dumpJson(raw_ostream &OS) {
+  std::vector<NameFunctionSamples> V;
+  sortFuncProfiles(Profiles, V);
+  json::OStream JOS(OS, 2);
+  JOS.arrayBegin();
+  for (const auto &F : V)
+    dumpFunctionProfileJson(*F.second, JOS, true);
+  JOS.arrayEnd();
+
+  // Emit a newline character at the end as json::OStream doesn't emit one.
+  OS << "\n";
 }
 
 /// Parse \p Input as function head.
@@ -735,7 +809,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncOffsetTable() {
     OrderedFuncOffsets->reserve(*Size);
   }
 
-  for (uint32_t I = 0; I < *Size; ++I) {
+  for (uint64_t I = 0; I < *Size; ++I) {
     auto FContext(readSampleContextFromTable());
     if (std::error_code EC = FContext.getError())
       return EC;
@@ -882,8 +956,8 @@ std::error_code SampleProfileReaderExtBinaryBase::decompressSection(
 
   uint8_t *Buffer = Allocator.Allocate<uint8_t>(DecompressBufSize);
   size_t UCSize = DecompressBufSize;
-  llvm::Error E = compression::zlib::uncompress(
-      makeArrayRef(Data, *CompressSize), Buffer, UCSize);
+  llvm::Error E = compression::zlib::decompress(ArrayRef(Data, *CompressSize),
+                                                Buffer, UCSize);
   if (E)
     return sampleprof_error::uncompress_failed;
   DecompressBuf = reinterpret_cast<const uint8_t *>(Buffer);
@@ -1022,7 +1096,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readMD5NameTable() {
     return sampleprof_error::success;
   }
   NameTable.reserve(*Size);
-  for (uint32_t I = 0; I < *Size; ++I) {
+  for (uint64_t I = 0; I < *Size; ++I) {
     auto FID = readNumber<uint64_t>();
     if (std::error_code EC = FID.getError())
       return EC;
@@ -1163,7 +1237,7 @@ std::error_code SampleProfileReaderCompactBinary::readNameTable() {
   if (std::error_code EC = Size.getError())
     return EC;
   NameTable.reserve(*Size);
-  for (uint32_t I = 0; I < *Size; ++I) {
+  for (uint64_t I = 0; I < *Size; ++I) {
     auto FID = readNumber<uint64_t>();
     if (std::error_code EC = FID.getError())
       return EC;
@@ -1205,7 +1279,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readSecHdrTable() {
   if (std::error_code EC = EntryNum.getError())
     return EC;
 
-  for (uint32_t i = 0; i < (*EntryNum); i++)
+  for (uint64_t i = 0; i < (*EntryNum); i++)
     if (std::error_code EC = readSecHdrTableEntry(i))
       return EC;
 
@@ -1374,7 +1448,7 @@ std::error_code SampleProfileReaderCompactBinary::readFuncOffsetTable() {
     return EC;
 
   FuncOffsetTable.reserve(*Size);
-  for (uint32_t I = 0; I < *Size; ++I) {
+  for (uint64_t I = 0; I < *Size; ++I) {
     auto FName(readStringFromTable());
     if (std::error_code EC = FName.getError())
       return EC;
@@ -1646,7 +1720,7 @@ std::error_code SampleProfileReaderGCC::readOneFunctionProfile(
     if (Update) {
       // Walk up the inline stack, adding the samples on this line to
       // the total sample count of the callers in the chain.
-      for (auto CallerProfile : NewStack)
+      for (auto *CallerProfile : NewStack)
         CallerProfile->addTotalSamples(Count);
 
       // Update the body samples for the current profile.
@@ -1746,11 +1820,11 @@ void SampleProfileReaderItaniumRemapper::applyRemapping(LLVMContext &Ctx) {
   RemappingApplied = true;
 }
 
-Optional<StringRef>
+std::optional<StringRef>
 SampleProfileReaderItaniumRemapper::lookUpNameInProfile(StringRef Fname) {
   if (auto Key = Remappings->lookup(Fname))
     return NameMap.lookup(Key);
-  return None;
+  return std::nullopt;
 }
 
 /// Prepare a memory buffer for the contents of \p Filename.
@@ -1762,10 +1836,6 @@ setupMemoryBuffer(const Twine &Filename) {
   if (std::error_code EC = BufferOrErr.getError())
     return EC;
   auto Buffer = std::move(BufferOrErr.get());
-
-  // Check the file.
-  if (uint64_t(Buffer->getBufferSize()) > std::numeric_limits<uint32_t>::max())
-    return sampleprof_error::too_large;
 
   return std::move(Buffer);
 }

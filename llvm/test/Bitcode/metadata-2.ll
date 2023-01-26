@@ -1,5 +1,4 @@
 ; RUN: llvm-as < %s | llvm-dis -disable-output
-; RUN: verify-uselistorder < %s
 	%0 = type { %object.ModuleInfo.__vtbl*, i8*, %"byte[]", %1, %"ClassInfo[]", i32, void ()*, void ()*, void ()*, i8*, void ()* }		; type %0
 	%1 = type { i64, %object.ModuleInfo* }		; type %1
 	%2 = type { i32, void ()*, i8* }		; type %2
@@ -19,12 +18,12 @@
 	%object.TypeInfo = type { %object.TypeInfo.__vtbl*, i8* }
 	%object.TypeInfo.__vtbl = type { %object.ClassInfo*, %"byte[]" (%object.Object*)*, i64 (%object.Object*)*, i32 (%object.Object*, %object.Object*)*, i32 (%object.Object*, %object.Object*)*, i64 (%object.TypeInfo*, i8*)*, i32 (%object.TypeInfo*, i8*, i8*)*, i32 (%object.TypeInfo*, i8*, i8*)*, i64 (%object.TypeInfo*)*, void (%object.TypeInfo*, i8*, i8*)*, %object.TypeInfo* (%object.TypeInfo*)*, %"byte[]" (%object.TypeInfo*)*, i32 (%object.TypeInfo*)*, %"OffsetTypeInfo[]" (%object.TypeInfo*)* }
 	%"void*[]" = type { i64, i8** }
-@_D10ModuleInfo6__vtblZ = external constant %object.ModuleInfo.__vtbl		; <%object.ModuleInfo.__vtbl*> [#uses=1]
-@.str = internal constant [20 x i8] c"tango.core.BitManip\00"		; <[20 x i8]*> [#uses=1]
-@_D5tango4core8BitManip8__ModuleZ = global %0 { %object.ModuleInfo.__vtbl* @_D10ModuleInfo6__vtblZ, i8* null, %"byte[]" { i64 19, i8* getelementptr ([20 x i8], [20 x i8]* @.str, i32 0, i32 0) }, %1 zeroinitializer, %"ClassInfo[]" zeroinitializer, i32 4, void ()* null, void ()* null, void ()* null, i8* null, void ()* null }		; <%0*> [#uses=1]
-@_D5tango4core8BitManip11__moduleRefZ = internal global %ModuleReference { %ModuleReference* null, %object.ModuleInfo* bitcast (%0* @_D5tango4core8BitManip8__ModuleZ to %object.ModuleInfo*) }		; <%ModuleReference*> [#uses=2]
-@_Dmodule_ref = external global %ModuleReference*		; <%ModuleReference**> [#uses=2]
-@llvm.global_ctors = appending constant [1 x %2] [%2 { i32 65535, void ()* @_D5tango4core8BitManip16__moduleinfoCtorZ, i8* null }]		; <[1 x %2]*> [#uses=0]
+@_D10ModuleInfo6__vtblZ = external constant %object.ModuleInfo.__vtbl		; <ptr> [#uses=1]
+@.str = internal constant [20 x i8] c"tango.core.BitManip\00"		; <ptr> [#uses=1]
+@_D5tango4core8BitManip8__ModuleZ = global %0 { %object.ModuleInfo.__vtbl* @_D10ModuleInfo6__vtblZ, i8* null, %"byte[]" { i64 19, i8* getelementptr ([20 x i8], [20 x i8]* @.str, i32 0, i32 0) }, %1 zeroinitializer, %"ClassInfo[]" zeroinitializer, i32 4, void ()* null, void ()* null, void ()* null, i8* null, void ()* null }		; <ptr> [#uses=1]
+@_D5tango4core8BitManip11__moduleRefZ = internal global %ModuleReference { %ModuleReference* null, %object.ModuleInfo* bitcast (%0* @_D5tango4core8BitManip8__ModuleZ to %object.ModuleInfo*) }		; <ptr> [#uses=2]
+@_Dmodule_ref = external global %ModuleReference*		; <ptr> [#uses=2]
+@llvm.global_ctors = appending constant [1 x %2] [%2 { i32 65535, void ()* @_D5tango4core8BitManip16__moduleinfoCtorZ, i8* null }]		; <ptr> [#uses=0]
 
 define fastcc i32 @_D5tango4core8BitManip6popcntFkZi(i32 %x_arg) nounwind readnone {
 entry:
@@ -77,7 +76,7 @@ entry:
 
 define internal void @_D5tango4core8BitManip16__moduleinfoCtorZ() nounwind {
 moduleinfoCtorEntry:
-	%current = load %ModuleReference*, %ModuleReference** @_Dmodule_ref		; <%ModuleReference*> [#uses=1]
+	%current = load %ModuleReference*, %ModuleReference** @_Dmodule_ref		; <ptr> [#uses=1]
 	store %ModuleReference* %current, %ModuleReference** getelementptr (%ModuleReference, %ModuleReference* @_D5tango4core8BitManip11__moduleRefZ, i32 0, i32 0)
 	store %ModuleReference* @_D5tango4core8BitManip11__moduleRefZ, %ModuleReference** @_Dmodule_ref
 	ret void

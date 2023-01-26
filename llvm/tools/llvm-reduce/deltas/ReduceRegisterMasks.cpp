@@ -13,6 +13,7 @@
 
 #include "ReduceRegisterMasks.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 
 using namespace llvm;
@@ -68,6 +69,5 @@ static void reduceMasksInModule(Oracle &O, ReducerWorkItem &WorkItem) {
 }
 
 void llvm::reduceRegisterMasksMIRDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing register masks...\n";
-  runDeltaPass(Test, reduceMasksInModule);
+  runDeltaPass(Test, reduceMasksInModule, "Reducing register masks");
 }

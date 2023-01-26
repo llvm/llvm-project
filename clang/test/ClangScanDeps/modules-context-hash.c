@@ -40,7 +40,7 @@
 // CHECK-NEXT:   ],
 // CHECK-NEXT:   "translation-units": [
 // CHECK-NEXT:     {
-// CHECK-NEXT:       "clang-context-hash": "{{.*}}",
+// CHECK:            "clang-context-hash": "{{.*}}",
 // CHECK-NEXT:       "clang-module-deps": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "context-hash": "[[HASH_MOD_A]]",
@@ -48,18 +48,14 @@
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "command-line": [
-// CHECK:              "-fno-implicit-modules",
-// CHECK-NEXT:         "-fno-implicit-module-maps"
-// CHECK-NEXT:       ],
-// CHECK-NEXT:       "file-deps": [
+// CHECK:            ],
+// CHECK:            "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/tu.c"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "input-file": "[[PREFIX]]/tu.c"
 // CHECK-NEXT:     }
-// CHECK-NEXT:   ]
-// CHECK-NEXT: }
-// CHECK-NEXT: {
-// CHECK-NEXT:   "modules": [
+
+// CHECK:       "modules": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "clang-module-deps": [],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
@@ -81,7 +77,7 @@
 // CHECK-NEXT:   ],
 // CHECK-NEXT:   "translation-units": [
 // CHECK-NEXT:     {
-// CHECK-NEXT:       "clang-context-hash": "{{.*}}",
+// CHECK:            "clang-context-hash": "{{.*}}",
 // CHECK-NEXT:       "clang-module-deps": [
 // CHECK-NEXT:         {
 // CHECK-NOT:            "context-hash": "[[HASH_MOD_A]]",
@@ -89,13 +85,9 @@
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "command-line": [
-// CHECK:              "-fno-implicit-modules",
-// CHECK-NEXT:         "-fno-implicit-module-maps"
-// CHECK-NEXT:       ],
-// CHECK-NEXT:       "file-deps": [
+// CHECK:            ],
+// CHECK:            "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/tu.c"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "input-file": "[[PREFIX]]/tu.c"
 // CHECK-NEXT:     }
-// CHECK-NEXT:   ]
-// CHECK-NEXT: }

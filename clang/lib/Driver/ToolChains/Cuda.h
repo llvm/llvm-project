@@ -14,7 +14,6 @@
 #include "clang/Driver/Multilib.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/VersionTuple.h"
 #include <bitset>
@@ -32,7 +31,6 @@ private:
   CudaVersion Version = CudaVersion::UNKNOWN;
   std::string InstallPath;
   std::string BinPath;
-  std::string LibPath;
   std::string LibDevicePath;
   std::string IncludePath;
   llvm::StringMap<std::string> LibDeviceMap;
@@ -70,8 +68,6 @@ public:
   StringRef getBinPath() const { return BinPath; }
   /// Get the detected Cuda Include path.
   StringRef getIncludePath() const { return IncludePath; }
-  /// Get the detected Cuda library path.
-  StringRef getLibPath() const { return LibPath; }
   /// Get the detected Cuda device library path.
   StringRef getLibDevicePath() const { return LibDevicePath; }
   /// Get libdevice file for given architecture
@@ -86,42 +82,42 @@ namespace NVPTX {
 
 // Run ptxas, the NVPTX assembler.
 class LLVM_LIBRARY_VISIBILITY Assembler : public Tool {
- public:
-   Assembler(const ToolChain &TC) : Tool("NVPTX::Assembler", "ptxas", TC) {}
+public:
+  Assembler(const ToolChain &TC) : Tool("NVPTX::Assembler", "ptxas", TC) {}
 
-   bool hasIntegratedCPP() const override { return false; }
+  bool hasIntegratedCPP() const override { return false; }
 
-   void ConstructJob(Compilation &C, const JobAction &JA,
-                     const InputInfo &Output, const InputInfoList &Inputs,
-                     const llvm::opt::ArgList &TCArgs,
-                     const char *LinkingOutput) const override;
+  void ConstructJob(Compilation &C, const JobAction &JA,
+                    const InputInfo &Output, const InputInfoList &Inputs,
+                    const llvm::opt::ArgList &TCArgs,
+                    const char *LinkingOutput) const override;
 };
 
 // Runs fatbinary, which combines GPU object files ("cubin" files) and/or PTX
 // assembly into a single output file.
-class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
- public:
-   Linker(const ToolChain &TC) : Tool("NVPTX::Linker", "fatbinary", TC) {}
+class LLVM_LIBRARY_VISIBILITY FatBinary : public Tool {
+public:
+  FatBinary(const ToolChain &TC) : Tool("NVPTX::Linker", "fatbinary", TC) {}
 
-   bool hasIntegratedCPP() const override { return false; }
+  bool hasIntegratedCPP() const override { return false; }
 
-   void ConstructJob(Compilation &C, const JobAction &JA,
-                     const InputInfo &Output, const InputInfoList &Inputs,
-                     const llvm::opt::ArgList &TCArgs,
-                     const char *LinkingOutput) const override;
+  void ConstructJob(Compilation &C, const JobAction &JA,
+                    const InputInfo &Output, const InputInfoList &Inputs,
+                    const llvm::opt::ArgList &TCArgs,
+                    const char *LinkingOutput) const override;
 };
 
-class LLVM_LIBRARY_VISIBILITY OpenMPLinker : public Tool {
- public:
-   OpenMPLinker(const ToolChain &TC)
-       : Tool("NVPTX::OpenMPLinker", "nvlink", TC) {}
+// Runs nvlink, which links GPU object files ("cubin" files) into a single file.
+class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
+public:
+  Linker(const ToolChain &TC) : Tool("NVPTX::Linker", "fatbinary", TC) {}
 
-   bool hasIntegratedCPP() const override { return false; }
+  bool hasIntegratedCPP() const override { return false; }
 
-   void ConstructJob(Compilation &C, const JobAction &JA,
-                     const InputInfo &Output, const InputInfoList &Inputs,
-                     const llvm::opt::ArgList &TCArgs,
-                     const char *LinkingOutput) const override;
+  void ConstructJob(Compilation &C, const JobAction &JA,
+                    const InputInfo &Output, const InputInfoList &Inputs,
+                    const llvm::opt::ArgList &TCArgs,
+                    const char *LinkingOutput) const override;
 };
 
 void getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
@@ -133,28 +129,18 @@ void getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
 
 namespace toolchains {
 
-class LLVM_LIBRARY_VISIBILITY CudaToolChain : public ToolChain {
+class LLVM_LIBRARY_VISIBILITY NVPTXToolChain : public ToolChain {
 public:
-  CudaToolChain(const Driver &D, const llvm::Triple &Triple,
-                const ToolChain &HostTC, const llvm::opt::ArgList &Args,
-                const Action::OffloadKind OK);
+  NVPTXToolChain(const Driver &D, const llvm::Triple &Triple,
+                 const llvm::Triple &HostTriple,
+                 const llvm::opt::ArgList &Args);
 
-  const llvm::Triple *getAuxTriple() const override {
-    return &HostTC.getTriple();
-  }
-
-  std::string getInputFilename(const InputInfo &Input) const override;
+  NVPTXToolChain(const Driver &D, const llvm::Triple &Triple,
+                 const llvm::opt::ArgList &Args);
 
   llvm::opt::DerivedArgList *
   TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
                 Action::OffloadKind DeviceOffloadKind) const override;
-  void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                             llvm::opt::ArgStringList &CC1Args,
-                             Action::OffloadKind DeviceOffloadKind) const override;
-
-  llvm::DenormalMode getDefaultDenormalModeForType(
-      const llvm::opt::ArgList &DriverArgs, const JobAction &JA,
-      const llvm::fltSemantics *FPType = nullptr) const override;
 
   // Never try to use the integrated assembler with CUDA; always fork out to
   // ptxas.
@@ -166,10 +152,46 @@ public:
   }
   bool isPICDefaultForced() const override { return false; }
   bool SupportsProfiling() const override { return false; }
+
+  bool IsMathErrnoDefault() const override { return false; }
+
   bool supportsDebugInfoOption(const llvm::opt::Arg *A) const override;
   void adjustDebugInfoKind(codegenoptions::DebugInfoKind &DebugInfoKind,
                            const llvm::opt::ArgList &Args) const override;
-  bool IsMathErrnoDefault() const override { return false; }
+
+  // NVPTX supports only DWARF2.
+  unsigned GetDefaultDwarfVersion() const override { return 2; }
+  unsigned getMaxDwarfVersion() const override { return 2; }
+
+  CudaInstallationDetector CudaInstallation;
+
+protected:
+  Tool *buildAssembler() const override; // ptxas.
+  Tool *buildLinker() const override;    // nvlink.
+};
+
+class LLVM_LIBRARY_VISIBILITY CudaToolChain : public NVPTXToolChain {
+public:
+  CudaToolChain(const Driver &D, const llvm::Triple &Triple,
+                const ToolChain &HostTC, const llvm::opt::ArgList &Args);
+
+  const llvm::Triple *getAuxTriple() const override {
+    return &HostTC.getTriple();
+  }
+
+  std::string getInputFilename(const InputInfo &Input) const override;
+
+  llvm::opt::DerivedArgList *
+  TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
+                Action::OffloadKind DeviceOffloadKind) const override;
+  void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args,
+                        Action::OffloadKind DeviceOffloadKind) const override;
+
+  llvm::DenormalMode getDefaultDenormalModeForType(
+      const llvm::opt::ArgList &DriverArgs, const JobAction &JA,
+      const llvm::fltSemantics *FPType = nullptr) const override;
 
   void AddCudaIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                           llvm::opt::ArgStringList &CC1Args) const override;
@@ -191,19 +213,16 @@ public:
   computeMSVCVersion(const Driver *D,
                      const llvm::opt::ArgList &Args) const override;
 
-  unsigned GetDefaultDwarfVersion() const override { return 2; }
-  // NVPTX supports only DWARF2.
-  unsigned getMaxDwarfVersion() const override { return 2; }
-
   const ToolChain &HostTC;
-  CudaInstallationDetector CudaInstallation;
+
+  /// Uses nvptx-arch tool to get arch of the system GPU. Will return error
+  /// if unable to find one.
+  virtual Expected<SmallVector<std::string>>
+  getSystemGPUArchs(const llvm::opt::ArgList &Args) const override;
 
 protected:
-  Tool *buildAssembler() const override;  // ptxas
-  Tool *buildLinker() const override;     // fatbinary (ok, not really a linker)
-
-private:
-  const Action::OffloadKind OK;
+  Tool *buildAssembler() const override; // ptxas
+  Tool *buildLinker() const override;    // fatbinary (ok, not really a linker)
 };
 
 } // end namespace toolchains

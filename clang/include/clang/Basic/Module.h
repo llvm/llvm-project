@@ -20,7 +20,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -33,6 +32,7 @@
 #include <cstdint>
 #include <ctime>
 #include <iterator>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -93,7 +93,9 @@ struct ASTFileSignature : std::array<uint8_t, 20> {
 };
 
 /// Describes a module or submodule.
-class Module {
+///
+/// Aligned to 8 bytes to allow for llvm::PointerIntPair<Module *, 3>.
+class alignas(8) Module {
 public:
   /// The name of this module.
   std::string Name;
@@ -142,7 +144,8 @@ public:
   std::string PresumedModuleMapFile;
 
   /// The umbrella header or directory.
-  llvm::PointerUnion<const FileEntry *, const DirectoryEntry *> Umbrella;
+  llvm::PointerUnion<const FileEntryRef::MapEntry *, const DirectoryEntry *>
+      Umbrella;
 
   /// The module signature.
   ASTFileSignature Signature;
@@ -157,7 +160,8 @@ public:
   /// eventually be exposed, for use in "private" modules.
   std::string ExportAsModule;
 
-  /// Does this Module scope describe part of the purview of a named C++ module?
+  /// Does this Module scope describe part of the purview of a standard named
+  /// C++ module?
   bool isModulePurview() const {
     return Kind == ModuleInterfaceUnit || Kind == ModulePartitionInterface ||
            Kind == ModulePartitionImplementation ||
@@ -182,7 +186,7 @@ private:
 
   /// The AST file if this is a top-level module which has a
   /// corresponding serialized AST file, or null otherwise.
-  Optional<FileEntryRef> ASTFile;
+  OptionalFileEntryRef ASTFile;
 
   /// The top-level headers associated with this module.
   llvm::SmallSetVector<const FileEntry *, 2> TopHeaders;
@@ -211,9 +215,9 @@ public:
   struct Header {
     std::string NameAsWritten;
     std::string PathRelativeToRootModuleDirectory;
-    const FileEntry *Entry;
+    OptionalFileEntryRefDegradesToFileEntryPtr Entry;
 
-    explicit operator bool() { return Entry; }
+    explicit operator bool() { return Entry.has_value(); }
   };
 
   /// Information about a directory name as found in the module map
@@ -237,8 +241,8 @@ public:
     std::string FileName;
     bool IsUmbrella = false;
     bool HasBuiltinHeader = false;
-    Optional<off_t> Size;
-    Optional<time_t> ModTime;
+    std::optional<off_t> Size;
+    std::optional<time_t> ModTime;
   };
 
   /// Headers that are mentioned in the module map file but that we have not
@@ -344,6 +348,10 @@ public:
   /// The set of modules imported by this module, and on which this
   /// module depends.
   llvm::SmallSetVector<Module *, 2> Imports;
+
+  /// The set of top-level modules that affected the compilation of this module,
+  /// but were not imported.
+  llvm::SmallSetVector<Module *, 2> AffectingClangModules;
 
   /// Describes an exported module.
   ///
@@ -460,6 +468,9 @@ public:
   /// shadowed, this parameter will be set to the shadowing module.
   bool isUnimportable(const LangOptions &LangOpts, const TargetInfo &Target,
                       Requirement &Req, Module *&ShadowingModule) const;
+
+  /// Determine whether this module can be built in this compilation.
+  bool isForBuilding(const LangOptions &LangOpts) const;
 
   /// Determine whether this module is available for use within the
   /// current translation unit.
@@ -603,9 +614,8 @@ public:
   }
 
   /// Set the serialized AST file for the top-level module of this module.
-  void setASTFile(Optional<FileEntryRef> File) {
-    assert((!File || !getASTFile() || getASTFile() == File) &&
-           "file path changed");
+  void setASTFile(OptionalFileEntryRef File) {
+    assert((!getASTFile() || getASTFile() == File) && "file path changed");
     getTopLevelModule()->ASTFile = File;
   }
 
@@ -616,9 +626,9 @@ public:
   /// Retrieve the header that serves as the umbrella header for this
   /// module.
   Header getUmbrellaHeader() const {
-    if (auto *FE = Umbrella.dyn_cast<const FileEntry *>())
+    if (auto *ME = Umbrella.dyn_cast<const FileEntryRef::MapEntry *>())
       return Header{UmbrellaAsWritten, UmbrellaRelativeToRootModuleDirectory,
-                    FE};
+                    FileEntryRef(*ME)};
     return Header{};
   }
 

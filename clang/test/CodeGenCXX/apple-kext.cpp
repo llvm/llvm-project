@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -fno-use-cxa-atexit -fapple-kext -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fno-use-cxa-atexit -fapple-kext -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: @_ZN5test01aE ={{.*}} global [[A:%.*]] zeroinitializer
-// CHECK: @llvm.global_ctors = appending global {{.*}} { i32 65535, void ()* [[CTOR0:@.*]], i8* null }
-// CHECK: @llvm.global_dtors = appending global {{.*}} { i32 65535, void ()* [[DTOR0:@.*]], i8* null }
+// CHECK: @llvm.global_ctors = appending global {{.*}} { i32 65535, ptr [[CTOR0:@.*]], ptr null }
+// CHECK: @llvm.global_dtors = appending global {{.*}} { i32 65535, ptr [[DTOR0:@.*]], ptr null }
 
 // Check that the base destructor is marked as always_inline when generating
 // code for kext.
@@ -29,7 +29,7 @@ namespace test0 {
   A a;
 }
 // CHECK:    define internal void [[CTOR0_:@.*]]()
-// CHECK:      call void @_ZN5test01AC1Ev([[A]]* {{[^,]*}} @_ZN5test01aE)
+// CHECK:      call void @_ZN5test01AC1Ev(ptr {{[^,]*}} @_ZN5test01aE)
 // CHECK-NEXT: ret void
 
 // CHECK:    define internal void [[CTOR0]]()
@@ -37,7 +37,7 @@ namespace test0 {
 // CHECK-NEXT: ret void
 
 // CHECK:    define internal void [[DTOR0]]()
-// CHECK:      call void @_ZN5test01AD1Ev([[A]]* @_ZN5test01aE)
+// CHECK:      call void @_ZN5test01AD1Ev(ptr @_ZN5test01aE)
 // CHECK-NEXT: ret void
 
 // CHECK: attributes #[[ATTR0]] = { alwaysinline nounwind {{.*}} }

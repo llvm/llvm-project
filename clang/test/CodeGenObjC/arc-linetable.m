@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -fblocks -fobjc-arc -debug-info-kind=standalone -dwarf-version=4 -gno-column-info -disable-llvm-passes -triple x86_64-apple-darwin10 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -fblocks -fobjc-arc -debug-info-kind=standalone -dwarf-version=4 -gno-column-info -disable-llvm-passes -triple x86_64-apple-darwin10 %s -o - | FileCheck %s
 
 // Legend: EXP = Return expression, RET = ret instruction
 
@@ -34,7 +34,7 @@
 
 // CHECK: define {{.*}}testCleanupVoid
 // CHECK: icmp ne {{.*}}!dbg ![[SKIP1:[0-9]+]]
-// CHECK: store i32 0, i32* {{.*}}, !dbg ![[RET8:[0-9]+]]
+// CHECK: store i32 0, ptr {{.*}}, !dbg ![[RET8:[0-9]+]]
 // CHECK: @llvm.objc.storeStrong{{.*}}, !dbg ![[RET8]]
 // CHECK: ret {{.*}} !dbg ![[RET8]]
 

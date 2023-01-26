@@ -300,7 +300,7 @@ static void walkReachable(Scop *S, LoopInfo *LI,
       // enabled.
       if (!VUse.getMemoryAccess())
         break;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case VirtualUse::Inter:
       assert(VUse.getMemoryAccess());
       WorklistAccs.push_back(VUse.getMemoryAccess());

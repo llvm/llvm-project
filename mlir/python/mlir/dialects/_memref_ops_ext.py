@@ -4,7 +4,8 @@
 
 try:
   from ..ir import *
-  from ._ods_common import get_op_result_or_value as _get_op_result_or_value, get_op_results_or_values as _get_op_results_or_values
+  from ._ods_common import get_op_result_or_value as _get_op_result_or_value
+  from ._ods_common import get_op_results_or_values as _get_op_results_or_values
 except ImportError as e:
   raise RuntimeError("Error loading imports from extension module") from e
 
@@ -30,8 +31,6 @@ class LoadOp:
       loc: user-visible location of the operation.
       ip: insertion point.
     """
-    memref_resolved = _get_op_result_or_value(memref)
     indices_resolved = [] if indices is None else _get_op_results_or_values(
         indices)
-    return_type = MemRefType(memref_resolved.type).element_type
-    super().__init__(return_type, memref, indices_resolved, loc=loc, ip=ip)
+    super().__init__(memref, indices_resolved, loc=loc, ip=ip)

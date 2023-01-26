@@ -77,7 +77,7 @@
 @gv_u128 = global %"struct.std::__1::atomic.45" zeroinitializer, align 16
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i1 @_Z22atomic_swap_relaxed_i1RNSt3__16atomicIbEEb(%"struct.std::__1::atomic"* nocapture nonnull align 1 dereferenceable(1) %0, i1 zeroext %1) {
+define zeroext i1 @_Z22atomic_swap_relaxed_i1RNSt3__16atomicIbEEb(ptr nocapture nonnull align 1 dereferenceable(1) %0, i1 zeroext %1) {
 ; CHECK-LABEL: _Z22atomic_swap_relaxed_i1RNSt3__16atomicIbEEb:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    and %s2, 3, %s0
@@ -91,15 +91,14 @@ define zeroext i1 @_Z22atomic_swap_relaxed_i1RNSt3__16atomicIbEEb(%"struct.std::
 ; CHECK-NEXT:    and %s0, 1, %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
   %3 = zext i1 %1 to i8
-  %4 = getelementptr inbounds %"struct.std::__1::atomic", %"struct.std::__1::atomic"* %0, i64 0, i32 0, i32 0, i32 0, i32 0
-  %5 = atomicrmw xchg i8* %4, i8 %3 monotonic
-  %6 = and i8 %5, 1
-  %7 = icmp ne i8 %6, 0
-  ret i1 %7
+  %4 = atomicrmw xchg ptr %0, i8 %3 monotonic
+  %5 = and i8 %4, 1
+  %6 = icmp ne i8 %5, 0
+  ret i1 %6
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define signext i8 @_Z22atomic_swap_relaxed_i8RNSt3__16atomicIcEEc(%"struct.std::__1::atomic.0"* nocapture nonnull align 1 dereferenceable(1) %0, i8 signext %1) {
+define signext i8 @_Z22atomic_swap_relaxed_i8RNSt3__16atomicIcEEc(ptr nocapture nonnull align 1 dereferenceable(1) %0, i8 signext %1) {
 ; CHECK-LABEL: _Z22atomic_swap_relaxed_i8RNSt3__16atomicIcEEc:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    and %s2, 3, %s0
@@ -113,13 +112,12 @@ define signext i8 @_Z22atomic_swap_relaxed_i8RNSt3__16atomicIcEEc(%"struct.std::
 ; CHECK-NEXT:    sll %s0, %s0, 56
 ; CHECK-NEXT:    sra.l %s0, %s0, 56
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %3 = getelementptr inbounds %"struct.std::__1::atomic.0", %"struct.std::__1::atomic.0"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %4 = atomicrmw xchg i8* %3, i8 %1 monotonic
-  ret i8 %4
+  %3 = atomicrmw xchg ptr %0, i8 %1 monotonic
+  ret i8 %3
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i8 @_Z22atomic_swap_relaxed_u8RNSt3__16atomicIhEEh(%"struct.std::__1::atomic.5"* nocapture nonnull align 1 dereferenceable(1) %0, i8 zeroext %1) {
+define zeroext i8 @_Z22atomic_swap_relaxed_u8RNSt3__16atomicIhEEh(ptr nocapture nonnull align 1 dereferenceable(1) %0, i8 zeroext %1) {
 ; CHECK-LABEL: _Z22atomic_swap_relaxed_u8RNSt3__16atomicIhEEh:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    and %s2, 3, %s0
@@ -132,13 +130,12 @@ define zeroext i8 @_Z22atomic_swap_relaxed_u8RNSt3__16atomicIhEEh(%"struct.std::
 ; CHECK-NEXT:    srl %s0, %s0, %s3
 ; CHECK-NEXT:    and %s0, %s0, (56)0
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %3 = getelementptr inbounds %"struct.std::__1::atomic.5", %"struct.std::__1::atomic.5"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %4 = atomicrmw xchg i8* %3, i8 %1 monotonic
-  ret i8 %4
+  %3 = atomicrmw xchg ptr %0, i8 %1 monotonic
+  ret i8 %3
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define signext i16 @_Z23atomic_swap_relaxed_i16RNSt3__16atomicIsEEs(%"struct.std::__1::atomic.10"* nocapture nonnull align 2 dereferenceable(2) %0, i16 signext %1) {
+define signext i16 @_Z23atomic_swap_relaxed_i16RNSt3__16atomicIsEEs(ptr nocapture nonnull align 2 dereferenceable(2) %0, i16 signext %1) {
 ; CHECK-LABEL: _Z23atomic_swap_relaxed_i16RNSt3__16atomicIsEEs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    and %s2, 3, %s0
@@ -152,13 +149,12 @@ define signext i16 @_Z23atomic_swap_relaxed_i16RNSt3__16atomicIsEEs(%"struct.std
 ; CHECK-NEXT:    sll %s0, %s0, 48
 ; CHECK-NEXT:    sra.l %s0, %s0, 48
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %3 = getelementptr inbounds %"struct.std::__1::atomic.10", %"struct.std::__1::atomic.10"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %4 = atomicrmw xchg i16* %3, i16 %1 monotonic
-  ret i16 %4
+  %3 = atomicrmw xchg ptr %0, i16 %1 monotonic
+  ret i16 %3
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i16 @_Z23atomic_swap_relaxed_u16RNSt3__16atomicItEEt(%"struct.std::__1::atomic.15"* nocapture nonnull align 2 dereferenceable(2) %0, i16 zeroext %1) {
+define zeroext i16 @_Z23atomic_swap_relaxed_u16RNSt3__16atomicItEEt(ptr nocapture nonnull align 2 dereferenceable(2) %0, i16 zeroext %1) {
 ; CHECK-LABEL: _Z23atomic_swap_relaxed_u16RNSt3__16atomicItEEt:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    and %s2, 3, %s0
@@ -171,63 +167,58 @@ define zeroext i16 @_Z23atomic_swap_relaxed_u16RNSt3__16atomicItEEt(%"struct.std
 ; CHECK-NEXT:    srl %s0, %s0, %s3
 ; CHECK-NEXT:    and %s0, %s0, (48)0
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %3 = getelementptr inbounds %"struct.std::__1::atomic.15", %"struct.std::__1::atomic.15"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %4 = atomicrmw xchg i16* %3, i16 %1 monotonic
-  ret i16 %4
+  %3 = atomicrmw xchg ptr %0, i16 %1 monotonic
+  ret i16 %3
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define signext i32 @_Z23atomic_swap_relaxed_i32RNSt3__16atomicIiEEi(%"struct.std::__1::atomic.20"* nocapture nonnull align 4 dereferenceable(4) %0, i32 signext %1) {
+define signext i32 @_Z23atomic_swap_relaxed_i32RNSt3__16atomicIiEEi(ptr nocapture nonnull align 4 dereferenceable(4) %0, i32 signext %1) {
 ; CHECK-LABEL: _Z23atomic_swap_relaxed_i32RNSt3__16atomicIiEEi:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ts1am.w %s1, (%s0), 15
 ; CHECK-NEXT:    adds.w.sx %s0, %s1, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %3 = getelementptr inbounds %"struct.std::__1::atomic.20", %"struct.std::__1::atomic.20"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %4 = atomicrmw xchg i32* %3, i32 %1 monotonic
-  ret i32 %4
+  %3 = atomicrmw xchg ptr %0, i32 %1 monotonic
+  ret i32 %3
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i32 @_Z23atomic_swap_relaxed_u32RNSt3__16atomicIjEEj(%"struct.std::__1::atomic.25"* nocapture nonnull align 4 dereferenceable(4) %0, i32 zeroext %1) {
+define zeroext i32 @_Z23atomic_swap_relaxed_u32RNSt3__16atomicIjEEj(ptr nocapture nonnull align 4 dereferenceable(4) %0, i32 zeroext %1) {
 ; CHECK-LABEL: _Z23atomic_swap_relaxed_u32RNSt3__16atomicIjEEj:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ts1am.w %s1, (%s0), 15
 ; CHECK-NEXT:    adds.w.zx %s0, %s1, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %3 = getelementptr inbounds %"struct.std::__1::atomic.25", %"struct.std::__1::atomic.25"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %4 = atomicrmw xchg i32* %3, i32 %1 monotonic
-  ret i32 %4
+  %3 = atomicrmw xchg ptr %0, i32 %1 monotonic
+  ret i32 %3
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define i64 @_Z23atomic_swap_relaxed_i64RNSt3__16atomicIlEEl(%"struct.std::__1::atomic.30"* nocapture nonnull align 8 dereferenceable(8) %0, i64 %1) {
+define i64 @_Z23atomic_swap_relaxed_i64RNSt3__16atomicIlEEl(ptr nocapture nonnull align 8 dereferenceable(8) %0, i64 %1) {
 ; CHECK-LABEL: _Z23atomic_swap_relaxed_i64RNSt3__16atomicIlEEl:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s2, 255
 ; CHECK-NEXT:    ts1am.l %s1, (%s0), %s2
 ; CHECK-NEXT:    or %s0, 0, %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %3 = getelementptr inbounds %"struct.std::__1::atomic.30", %"struct.std::__1::atomic.30"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %4 = atomicrmw xchg i64* %3, i64 %1 monotonic
-  ret i64 %4
+  %3 = atomicrmw xchg ptr %0, i64 %1 monotonic
+  ret i64 %3
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define i64 @_Z23atomic_swap_relaxed_u64RNSt3__16atomicImEEm(%"struct.std::__1::atomic.35"* nocapture nonnull align 8 dereferenceable(8) %0, i64 %1) {
+define i64 @_Z23atomic_swap_relaxed_u64RNSt3__16atomicImEEm(ptr nocapture nonnull align 8 dereferenceable(8) %0, i64 %1) {
 ; CHECK-LABEL: _Z23atomic_swap_relaxed_u64RNSt3__16atomicImEEm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s2, 255
 ; CHECK-NEXT:    ts1am.l %s1, (%s0), %s2
 ; CHECK-NEXT:    or %s0, 0, %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %3 = getelementptr inbounds %"struct.std::__1::atomic.35", %"struct.std::__1::atomic.35"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %4 = atomicrmw xchg i64* %3, i64 %1 monotonic
-  ret i64 %4
+  %3 = atomicrmw xchg ptr %0, i64 %1 monotonic
+  ret i64 %3
 }
 
 ; Function Attrs: nounwind mustprogress
-define i128 @_Z24atomic_swap_relaxed_i128RNSt3__16atomicInEEn(%"struct.std::__1::atomic.40"* nonnull align 16 dereferenceable(16) %0, i128 %1) {
+define i128 @_Z24atomic_swap_relaxed_i128RNSt3__16atomicInEEn(ptr nonnull align 16 dereferenceable(16) %0, i128 %1) {
 ; CHECK-LABEL: _Z24atomic_swap_relaxed_i128RNSt3__16atomicInEEn:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    or %s5, 0, %s0
@@ -247,21 +238,18 @@ define i128 @_Z24atomic_swap_relaxed_i128RNSt3__16atomicInEEn(%"struct.std::__1:
 ; CHECK-NEXT:    or %s11, 0, %s9
   %3 = alloca i128, align 16
   %4 = alloca i128, align 16
-  %5 = bitcast i128* %3 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %5)
-  %6 = bitcast i128* %4 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %6)
-  store i128 %1, i128* %3, align 16, !tbaa !2
-  %7 = bitcast %"struct.std::__1::atomic.40"* %0 to i8*
-  call void @__atomic_exchange(i64 16, i8* nonnull %7, i8* nonnull %5, i8* nonnull %6, i32 signext 0)
-  %8 = load i128, i128* %4, align 16, !tbaa !2
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %5)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %6)
-  ret i128 %8
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %3)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %4)
+  store i128 %1, ptr %3, align 16, !tbaa !2
+  call void @__atomic_exchange(i64 16, ptr nonnull %0, ptr nonnull %3, ptr nonnull %4, i32 signext 0)
+  %5 = load i128, ptr %4, align 16, !tbaa !2
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %3)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %4)
+  ret i128 %5
 }
 
 ; Function Attrs: nounwind mustprogress
-define i128 @_Z24atomic_swap_relaxed_u128RNSt3__16atomicIoEEo(%"struct.std::__1::atomic.45"* nonnull align 16 dereferenceable(16) %0, i128 %1) {
+define i128 @_Z24atomic_swap_relaxed_u128RNSt3__16atomicIoEEo(ptr nonnull align 16 dereferenceable(16) %0, i128 %1) {
 ; CHECK-LABEL: _Z24atomic_swap_relaxed_u128RNSt3__16atomicIoEEo:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    or %s5, 0, %s0
@@ -281,21 +269,18 @@ define i128 @_Z24atomic_swap_relaxed_u128RNSt3__16atomicIoEEo(%"struct.std::__1:
 ; CHECK-NEXT:    or %s11, 0, %s9
   %3 = alloca i128, align 16
   %4 = alloca i128, align 16
-  %5 = bitcast i128* %3 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %5)
-  %6 = bitcast i128* %4 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %6)
-  store i128 %1, i128* %3, align 16, !tbaa !2
-  %7 = bitcast %"struct.std::__1::atomic.45"* %0 to i8*
-  call void @__atomic_exchange(i64 16, i8* nonnull %7, i8* nonnull %5, i8* nonnull %6, i32 signext 0)
-  %8 = load i128, i128* %4, align 16, !tbaa !2
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %5)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %6)
-  ret i128 %8
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %3)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %4)
+  store i128 %1, ptr %3, align 16, !tbaa !2
+  call void @__atomic_exchange(i64 16, ptr nonnull %0, ptr nonnull %3, ptr nonnull %4, i32 signext 0)
+  %5 = load i128, ptr %4, align 16, !tbaa !2
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %3)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %4)
+  ret i128 %5
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i1 @_Z22atomic_swap_acquire_i1RNSt3__16atomicIbEEb(%"struct.std::__1::atomic"* nocapture nonnull align 1 dereferenceable(1) %0, i1 zeroext %1) {
+define zeroext i1 @_Z22atomic_swap_acquire_i1RNSt3__16atomicIbEEb(ptr nocapture nonnull align 1 dereferenceable(1) %0, i1 zeroext %1) {
 ; CHECK-LABEL: _Z22atomic_swap_acquire_i1RNSt3__16atomicIbEEb:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    and %s2, 3, %s0
@@ -310,15 +295,14 @@ define zeroext i1 @_Z22atomic_swap_acquire_i1RNSt3__16atomicIbEEb(%"struct.std::
 ; CHECK-NEXT:    fencem 2
 ; CHECK-NEXT:    b.l.t (, %s10)
   %3 = zext i1 %1 to i8
-  %4 = getelementptr inbounds %"struct.std::__1::atomic", %"struct.std::__1::atomic"* %0, i64 0, i32 0, i32 0, i32 0, i32 0
-  %5 = atomicrmw xchg i8* %4, i8 %3 acquire
-  %6 = and i8 %5, 1
-  %7 = icmp ne i8 %6, 0
-  ret i1 %7
+  %4 = atomicrmw xchg ptr %0, i8 %3 acquire
+  %5 = and i8 %4, 1
+  %6 = icmp ne i8 %5, 0
+  ret i1 %6
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define signext i8 @_Z22atomic_swap_acquire_i8RNSt3__16atomicIcEEc(%"struct.std::__1::atomic.0"* nocapture nonnull align 1 dereferenceable(1) %0, i8 signext %1) {
+define signext i8 @_Z22atomic_swap_acquire_i8RNSt3__16atomicIcEEc(ptr nocapture nonnull align 1 dereferenceable(1) %0, i8 signext %1) {
 ; CHECK-LABEL: _Z22atomic_swap_acquire_i8RNSt3__16atomicIcEEc:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    and %s2, 3, %s0
@@ -333,13 +317,12 @@ define signext i8 @_Z22atomic_swap_acquire_i8RNSt3__16atomicIcEEc(%"struct.std::
 ; CHECK-NEXT:    sra.l %s0, %s0, 56
 ; CHECK-NEXT:    fencem 2
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %3 = getelementptr inbounds %"struct.std::__1::atomic.0", %"struct.std::__1::atomic.0"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %4 = atomicrmw xchg i8* %3, i8 %1 acquire
-  ret i8 %4
+  %3 = atomicrmw xchg ptr %0, i8 %1 acquire
+  ret i8 %3
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i8 @_Z22atomic_swap_acquire_u8RNSt3__16atomicIhEEh(%"struct.std::__1::atomic.5"* nocapture nonnull align 1 dereferenceable(1) %0, i8 zeroext %1) {
+define zeroext i8 @_Z22atomic_swap_acquire_u8RNSt3__16atomicIhEEh(ptr nocapture nonnull align 1 dereferenceable(1) %0, i8 zeroext %1) {
 ; CHECK-LABEL: _Z22atomic_swap_acquire_u8RNSt3__16atomicIhEEh:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    and %s2, 3, %s0
@@ -353,13 +336,12 @@ define zeroext i8 @_Z22atomic_swap_acquire_u8RNSt3__16atomicIhEEh(%"struct.std::
 ; CHECK-NEXT:    and %s0, %s0, (56)0
 ; CHECK-NEXT:    fencem 2
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %3 = getelementptr inbounds %"struct.std::__1::atomic.5", %"struct.std::__1::atomic.5"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %4 = atomicrmw xchg i8* %3, i8 %1 acquire
-  ret i8 %4
+  %3 = atomicrmw xchg ptr %0, i8 %1 acquire
+  ret i8 %3
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define signext i16 @_Z23atomic_swap_acquire_i16RNSt3__16atomicIsEEs(%"struct.std::__1::atomic.10"* nocapture nonnull align 2 dereferenceable(2) %0, i16 signext %1) {
+define signext i16 @_Z23atomic_swap_acquire_i16RNSt3__16atomicIsEEs(ptr nocapture nonnull align 2 dereferenceable(2) %0, i16 signext %1) {
 ; CHECK-LABEL: _Z23atomic_swap_acquire_i16RNSt3__16atomicIsEEs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    and %s2, 3, %s0
@@ -374,13 +356,12 @@ define signext i16 @_Z23atomic_swap_acquire_i16RNSt3__16atomicIsEEs(%"struct.std
 ; CHECK-NEXT:    sra.l %s0, %s0, 48
 ; CHECK-NEXT:    fencem 2
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %3 = getelementptr inbounds %"struct.std::__1::atomic.10", %"struct.std::__1::atomic.10"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %4 = atomicrmw xchg i16* %3, i16 %1 acquire
-  ret i16 %4
+  %3 = atomicrmw xchg ptr %0, i16 %1 acquire
+  ret i16 %3
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i16 @_Z23atomic_swap_acquire_u16RNSt3__16atomicItEEt(%"struct.std::__1::atomic.15"* nocapture nonnull align 2 dereferenceable(2) %0, i16 zeroext %1) {
+define zeroext i16 @_Z23atomic_swap_acquire_u16RNSt3__16atomicItEEt(ptr nocapture nonnull align 2 dereferenceable(2) %0, i16 zeroext %1) {
 ; CHECK-LABEL: _Z23atomic_swap_acquire_u16RNSt3__16atomicItEEt:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    and %s2, 3, %s0
@@ -394,39 +375,36 @@ define zeroext i16 @_Z23atomic_swap_acquire_u16RNSt3__16atomicItEEt(%"struct.std
 ; CHECK-NEXT:    and %s0, %s0, (48)0
 ; CHECK-NEXT:    fencem 2
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %3 = getelementptr inbounds %"struct.std::__1::atomic.15", %"struct.std::__1::atomic.15"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %4 = atomicrmw xchg i16* %3, i16 %1 acquire
-  ret i16 %4
+  %3 = atomicrmw xchg ptr %0, i16 %1 acquire
+  ret i16 %3
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define signext i32 @_Z23atomic_swap_acquire_i32RNSt3__16atomicIiEEi(%"struct.std::__1::atomic.20"* nocapture nonnull align 4 dereferenceable(4) %0, i32 signext %1) {
+define signext i32 @_Z23atomic_swap_acquire_i32RNSt3__16atomicIiEEi(ptr nocapture nonnull align 4 dereferenceable(4) %0, i32 signext %1) {
 ; CHECK-LABEL: _Z23atomic_swap_acquire_i32RNSt3__16atomicIiEEi:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ts1am.w %s1, (%s0), 15
 ; CHECK-NEXT:    adds.w.sx %s0, %s1, (0)1
 ; CHECK-NEXT:    fencem 2
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %3 = getelementptr inbounds %"struct.std::__1::atomic.20", %"struct.std::__1::atomic.20"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %4 = atomicrmw xchg i32* %3, i32 %1 acquire
-  ret i32 %4
+  %3 = atomicrmw xchg ptr %0, i32 %1 acquire
+  ret i32 %3
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i32 @_Z23atomic_swap_acquire_u32RNSt3__16atomicIjEEj(%"struct.std::__1::atomic.25"* nocapture nonnull align 4 dereferenceable(4) %0, i32 zeroext %1) {
+define zeroext i32 @_Z23atomic_swap_acquire_u32RNSt3__16atomicIjEEj(ptr nocapture nonnull align 4 dereferenceable(4) %0, i32 zeroext %1) {
 ; CHECK-LABEL: _Z23atomic_swap_acquire_u32RNSt3__16atomicIjEEj:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ts1am.w %s1, (%s0), 15
 ; CHECK-NEXT:    adds.w.zx %s0, %s1, (0)1
 ; CHECK-NEXT:    fencem 2
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %3 = getelementptr inbounds %"struct.std::__1::atomic.25", %"struct.std::__1::atomic.25"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %4 = atomicrmw xchg i32* %3, i32 %1 acquire
-  ret i32 %4
+  %3 = atomicrmw xchg ptr %0, i32 %1 acquire
+  ret i32 %3
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define i64 @_Z23atomic_swap_acquire_i64RNSt3__16atomicIlEEl(%"struct.std::__1::atomic.30"* nocapture nonnull align 8 dereferenceable(8) %0, i64 %1) {
+define i64 @_Z23atomic_swap_acquire_i64RNSt3__16atomicIlEEl(ptr nocapture nonnull align 8 dereferenceable(8) %0, i64 %1) {
 ; CHECK-LABEL: _Z23atomic_swap_acquire_i64RNSt3__16atomicIlEEl:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s2, 255
@@ -434,13 +412,12 @@ define i64 @_Z23atomic_swap_acquire_i64RNSt3__16atomicIlEEl(%"struct.std::__1::a
 ; CHECK-NEXT:    fencem 2
 ; CHECK-NEXT:    or %s0, 0, %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %3 = getelementptr inbounds %"struct.std::__1::atomic.30", %"struct.std::__1::atomic.30"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %4 = atomicrmw xchg i64* %3, i64 %1 acquire
-  ret i64 %4
+  %3 = atomicrmw xchg ptr %0, i64 %1 acquire
+  ret i64 %3
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define i64 @_Z23atomic_swap_acquire_u64RNSt3__16atomicImEEm(%"struct.std::__1::atomic.35"* nocapture nonnull align 8 dereferenceable(8) %0, i64 %1) {
+define i64 @_Z23atomic_swap_acquire_u64RNSt3__16atomicImEEm(ptr nocapture nonnull align 8 dereferenceable(8) %0, i64 %1) {
 ; CHECK-LABEL: _Z23atomic_swap_acquire_u64RNSt3__16atomicImEEm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s2, 255
@@ -448,13 +425,12 @@ define i64 @_Z23atomic_swap_acquire_u64RNSt3__16atomicImEEm(%"struct.std::__1::a
 ; CHECK-NEXT:    fencem 2
 ; CHECK-NEXT:    or %s0, 0, %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %3 = getelementptr inbounds %"struct.std::__1::atomic.35", %"struct.std::__1::atomic.35"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %4 = atomicrmw xchg i64* %3, i64 %1 acquire
-  ret i64 %4
+  %3 = atomicrmw xchg ptr %0, i64 %1 acquire
+  ret i64 %3
 }
 
 ; Function Attrs: nounwind mustprogress
-define i128 @_Z24atomic_swap_acquire_i128RNSt3__16atomicInEEn(%"struct.std::__1::atomic.40"* nonnull align 16 dereferenceable(16) %0, i128 %1) {
+define i128 @_Z24atomic_swap_acquire_i128RNSt3__16atomicInEEn(ptr nonnull align 16 dereferenceable(16) %0, i128 %1) {
 ; CHECK-LABEL: _Z24atomic_swap_acquire_i128RNSt3__16atomicInEEn:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    or %s5, 0, %s0
@@ -474,21 +450,18 @@ define i128 @_Z24atomic_swap_acquire_i128RNSt3__16atomicInEEn(%"struct.std::__1:
 ; CHECK-NEXT:    or %s11, 0, %s9
   %3 = alloca i128, align 16
   %4 = alloca i128, align 16
-  %5 = bitcast i128* %3 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %5)
-  %6 = bitcast i128* %4 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %6)
-  store i128 %1, i128* %3, align 16, !tbaa !2
-  %7 = bitcast %"struct.std::__1::atomic.40"* %0 to i8*
-  call void @__atomic_exchange(i64 16, i8* nonnull %7, i8* nonnull %5, i8* nonnull %6, i32 signext 2)
-  %8 = load i128, i128* %4, align 16, !tbaa !2
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %5)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %6)
-  ret i128 %8
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %3)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %4)
+  store i128 %1, ptr %3, align 16, !tbaa !2
+  call void @__atomic_exchange(i64 16, ptr nonnull %0, ptr nonnull %3, ptr nonnull %4, i32 signext 2)
+  %5 = load i128, ptr %4, align 16, !tbaa !2
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %3)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %4)
+  ret i128 %5
 }
 
 ; Function Attrs: nounwind mustprogress
-define i128 @_Z24atomic_swap_acquire_u128RNSt3__16atomicIoEEo(%"struct.std::__1::atomic.45"* nonnull align 16 dereferenceable(16) %0, i128 %1) {
+define i128 @_Z24atomic_swap_acquire_u128RNSt3__16atomicIoEEo(ptr nonnull align 16 dereferenceable(16) %0, i128 %1) {
 ; CHECK-LABEL: _Z24atomic_swap_acquire_u128RNSt3__16atomicIoEEo:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    or %s5, 0, %s0
@@ -508,21 +481,18 @@ define i128 @_Z24atomic_swap_acquire_u128RNSt3__16atomicIoEEo(%"struct.std::__1:
 ; CHECK-NEXT:    or %s11, 0, %s9
   %3 = alloca i128, align 16
   %4 = alloca i128, align 16
-  %5 = bitcast i128* %3 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %5)
-  %6 = bitcast i128* %4 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %6)
-  store i128 %1, i128* %3, align 16, !tbaa !2
-  %7 = bitcast %"struct.std::__1::atomic.45"* %0 to i8*
-  call void @__atomic_exchange(i64 16, i8* nonnull %7, i8* nonnull %5, i8* nonnull %6, i32 signext 2)
-  %8 = load i128, i128* %4, align 16, !tbaa !2
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %5)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %6)
-  ret i128 %8
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %3)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %4)
+  store i128 %1, ptr %3, align 16, !tbaa !2
+  call void @__atomic_exchange(i64 16, ptr nonnull %0, ptr nonnull %3, ptr nonnull %4, i32 signext 2)
+  %5 = load i128, ptr %4, align 16, !tbaa !2
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %3)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %4)
+  ret i128 %5
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i1 @_Z22atomic_swap_seq_cst_i1RNSt3__16atomicIbEEb(%"struct.std::__1::atomic"* nocapture nonnull align 1 dereferenceable(1) %0, i1 zeroext %1) {
+define zeroext i1 @_Z22atomic_swap_seq_cst_i1RNSt3__16atomicIbEEb(ptr nocapture nonnull align 1 dereferenceable(1) %0, i1 zeroext %1) {
 ; CHECK-LABEL: _Z22atomic_swap_seq_cst_i1RNSt3__16atomicIbEEb:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 3
@@ -538,15 +508,14 @@ define zeroext i1 @_Z22atomic_swap_seq_cst_i1RNSt3__16atomicIbEEb(%"struct.std::
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    b.l.t (, %s10)
   %3 = zext i1 %1 to i8
-  %4 = getelementptr inbounds %"struct.std::__1::atomic", %"struct.std::__1::atomic"* %0, i64 0, i32 0, i32 0, i32 0, i32 0
-  %5 = atomicrmw xchg i8* %4, i8 %3 seq_cst
-  %6 = and i8 %5, 1
-  %7 = icmp ne i8 %6, 0
-  ret i1 %7
+  %4 = atomicrmw xchg ptr %0, i8 %3 seq_cst
+  %5 = and i8 %4, 1
+  %6 = icmp ne i8 %5, 0
+  ret i1 %6
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define signext i8 @_Z22atomic_swap_seq_cst_i8RNSt3__16atomicIcEEc(%"struct.std::__1::atomic.0"* nocapture nonnull align 1 dereferenceable(1) %0, i8 signext %1) {
+define signext i8 @_Z22atomic_swap_seq_cst_i8RNSt3__16atomicIcEEc(ptr nocapture nonnull align 1 dereferenceable(1) %0, i8 signext %1) {
 ; CHECK-LABEL: _Z22atomic_swap_seq_cst_i8RNSt3__16atomicIcEEc:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 3
@@ -562,13 +531,12 @@ define signext i8 @_Z22atomic_swap_seq_cst_i8RNSt3__16atomicIcEEc(%"struct.std::
 ; CHECK-NEXT:    sra.l %s0, %s0, 56
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %3 = getelementptr inbounds %"struct.std::__1::atomic.0", %"struct.std::__1::atomic.0"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %4 = atomicrmw xchg i8* %3, i8 %1 seq_cst
-  ret i8 %4
+  %3 = atomicrmw xchg ptr %0, i8 %1 seq_cst
+  ret i8 %3
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i8 @_Z22atomic_swap_seq_cst_u8RNSt3__16atomicIhEEh(%"struct.std::__1::atomic.5"* nocapture nonnull align 1 dereferenceable(1) %0, i8 zeroext %1) {
+define zeroext i8 @_Z22atomic_swap_seq_cst_u8RNSt3__16atomicIhEEh(ptr nocapture nonnull align 1 dereferenceable(1) %0, i8 zeroext %1) {
 ; CHECK-LABEL: _Z22atomic_swap_seq_cst_u8RNSt3__16atomicIhEEh:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 3
@@ -583,13 +551,12 @@ define zeroext i8 @_Z22atomic_swap_seq_cst_u8RNSt3__16atomicIhEEh(%"struct.std::
 ; CHECK-NEXT:    and %s0, %s0, (56)0
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %3 = getelementptr inbounds %"struct.std::__1::atomic.5", %"struct.std::__1::atomic.5"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %4 = atomicrmw xchg i8* %3, i8 %1 seq_cst
-  ret i8 %4
+  %3 = atomicrmw xchg ptr %0, i8 %1 seq_cst
+  ret i8 %3
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define signext i16 @_Z23atomic_swap_seq_cst_i16RNSt3__16atomicIsEEs(%"struct.std::__1::atomic.10"* nocapture nonnull align 2 dereferenceable(2) %0, i16 signext %1) {
+define signext i16 @_Z23atomic_swap_seq_cst_i16RNSt3__16atomicIsEEs(ptr nocapture nonnull align 2 dereferenceable(2) %0, i16 signext %1) {
 ; CHECK-LABEL: _Z23atomic_swap_seq_cst_i16RNSt3__16atomicIsEEs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 3
@@ -605,13 +572,12 @@ define signext i16 @_Z23atomic_swap_seq_cst_i16RNSt3__16atomicIsEEs(%"struct.std
 ; CHECK-NEXT:    sra.l %s0, %s0, 48
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %3 = getelementptr inbounds %"struct.std::__1::atomic.10", %"struct.std::__1::atomic.10"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %4 = atomicrmw xchg i16* %3, i16 %1 seq_cst
-  ret i16 %4
+  %3 = atomicrmw xchg ptr %0, i16 %1 seq_cst
+  ret i16 %3
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i16 @_Z23atomic_swap_seq_cst_u16RNSt3__16atomicItEEt(%"struct.std::__1::atomic.15"* nocapture nonnull align 2 dereferenceable(2) %0, i16 zeroext %1) {
+define zeroext i16 @_Z23atomic_swap_seq_cst_u16RNSt3__16atomicItEEt(ptr nocapture nonnull align 2 dereferenceable(2) %0, i16 zeroext %1) {
 ; CHECK-LABEL: _Z23atomic_swap_seq_cst_u16RNSt3__16atomicItEEt:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 3
@@ -626,13 +592,12 @@ define zeroext i16 @_Z23atomic_swap_seq_cst_u16RNSt3__16atomicItEEt(%"struct.std
 ; CHECK-NEXT:    and %s0, %s0, (48)0
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %3 = getelementptr inbounds %"struct.std::__1::atomic.15", %"struct.std::__1::atomic.15"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %4 = atomicrmw xchg i16* %3, i16 %1 seq_cst
-  ret i16 %4
+  %3 = atomicrmw xchg ptr %0, i16 %1 seq_cst
+  ret i16 %3
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define signext i32 @_Z23atomic_swap_seq_cst_i32RNSt3__16atomicIiEEi(%"struct.std::__1::atomic.20"* nocapture nonnull align 4 dereferenceable(4) %0, i32 signext %1) {
+define signext i32 @_Z23atomic_swap_seq_cst_i32RNSt3__16atomicIiEEi(ptr nocapture nonnull align 4 dereferenceable(4) %0, i32 signext %1) {
 ; CHECK-LABEL: _Z23atomic_swap_seq_cst_i32RNSt3__16atomicIiEEi:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 3
@@ -640,13 +605,12 @@ define signext i32 @_Z23atomic_swap_seq_cst_i32RNSt3__16atomicIiEEi(%"struct.std
 ; CHECK-NEXT:    adds.w.sx %s0, %s1, (0)1
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %3 = getelementptr inbounds %"struct.std::__1::atomic.20", %"struct.std::__1::atomic.20"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %4 = atomicrmw xchg i32* %3, i32 %1 seq_cst
-  ret i32 %4
+  %3 = atomicrmw xchg ptr %0, i32 %1 seq_cst
+  ret i32 %3
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i32 @_Z23atomic_swap_seq_cst_u32RNSt3__16atomicIjEEj(%"struct.std::__1::atomic.25"* nocapture nonnull align 4 dereferenceable(4) %0, i32 zeroext %1) {
+define zeroext i32 @_Z23atomic_swap_seq_cst_u32RNSt3__16atomicIjEEj(ptr nocapture nonnull align 4 dereferenceable(4) %0, i32 zeroext %1) {
 ; CHECK-LABEL: _Z23atomic_swap_seq_cst_u32RNSt3__16atomicIjEEj:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 3
@@ -654,13 +618,12 @@ define zeroext i32 @_Z23atomic_swap_seq_cst_u32RNSt3__16atomicIjEEj(%"struct.std
 ; CHECK-NEXT:    adds.w.zx %s0, %s1, (0)1
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %3 = getelementptr inbounds %"struct.std::__1::atomic.25", %"struct.std::__1::atomic.25"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %4 = atomicrmw xchg i32* %3, i32 %1 seq_cst
-  ret i32 %4
+  %3 = atomicrmw xchg ptr %0, i32 %1 seq_cst
+  ret i32 %3
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define i64 @_Z23atomic_swap_seq_cst_i64RNSt3__16atomicIlEEl(%"struct.std::__1::atomic.30"* nocapture nonnull align 8 dereferenceable(8) %0, i64 %1) {
+define i64 @_Z23atomic_swap_seq_cst_i64RNSt3__16atomicIlEEl(ptr nocapture nonnull align 8 dereferenceable(8) %0, i64 %1) {
 ; CHECK-LABEL: _Z23atomic_swap_seq_cst_i64RNSt3__16atomicIlEEl:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 3
@@ -669,13 +632,12 @@ define i64 @_Z23atomic_swap_seq_cst_i64RNSt3__16atomicIlEEl(%"struct.std::__1::a
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    or %s0, 0, %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %3 = getelementptr inbounds %"struct.std::__1::atomic.30", %"struct.std::__1::atomic.30"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %4 = atomicrmw xchg i64* %3, i64 %1 seq_cst
-  ret i64 %4
+  %3 = atomicrmw xchg ptr %0, i64 %1 seq_cst
+  ret i64 %3
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define i64 @_Z23atomic_swap_seq_cst_u64RNSt3__16atomicImEEm(%"struct.std::__1::atomic.35"* nocapture nonnull align 8 dereferenceable(8) %0, i64 %1) {
+define i64 @_Z23atomic_swap_seq_cst_u64RNSt3__16atomicImEEm(ptr nocapture nonnull align 8 dereferenceable(8) %0, i64 %1) {
 ; CHECK-LABEL: _Z23atomic_swap_seq_cst_u64RNSt3__16atomicImEEm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 3
@@ -684,13 +646,12 @@ define i64 @_Z23atomic_swap_seq_cst_u64RNSt3__16atomicImEEm(%"struct.std::__1::a
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    or %s0, 0, %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %3 = getelementptr inbounds %"struct.std::__1::atomic.35", %"struct.std::__1::atomic.35"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %4 = atomicrmw xchg i64* %3, i64 %1 seq_cst
-  ret i64 %4
+  %3 = atomicrmw xchg ptr %0, i64 %1 seq_cst
+  ret i64 %3
 }
 
 ; Function Attrs: nounwind mustprogress
-define i128 @_Z24atomic_swap_seq_cst_i128RNSt3__16atomicInEEn(%"struct.std::__1::atomic.40"* nonnull align 16 dereferenceable(16) %0, i128 %1) {
+define i128 @_Z24atomic_swap_seq_cst_i128RNSt3__16atomicInEEn(ptr nonnull align 16 dereferenceable(16) %0, i128 %1) {
 ; CHECK-LABEL: _Z24atomic_swap_seq_cst_i128RNSt3__16atomicInEEn:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    or %s5, 0, %s0
@@ -710,21 +671,18 @@ define i128 @_Z24atomic_swap_seq_cst_i128RNSt3__16atomicInEEn(%"struct.std::__1:
 ; CHECK-NEXT:    or %s11, 0, %s9
   %3 = alloca i128, align 16
   %4 = alloca i128, align 16
-  %5 = bitcast i128* %3 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %5)
-  %6 = bitcast i128* %4 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %6)
-  store i128 %1, i128* %3, align 16, !tbaa !2
-  %7 = bitcast %"struct.std::__1::atomic.40"* %0 to i8*
-  call void @__atomic_exchange(i64 16, i8* nonnull %7, i8* nonnull %5, i8* nonnull %6, i32 signext 5)
-  %8 = load i128, i128* %4, align 16, !tbaa !2
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %5)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %6)
-  ret i128 %8
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %3)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %4)
+  store i128 %1, ptr %3, align 16, !tbaa !2
+  call void @__atomic_exchange(i64 16, ptr nonnull %0, ptr nonnull %3, ptr nonnull %4, i32 signext 5)
+  %5 = load i128, ptr %4, align 16, !tbaa !2
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %3)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %4)
+  ret i128 %5
 }
 
 ; Function Attrs: nounwind mustprogress
-define i128 @_Z24atomic_swap_seq_cst_u128RNSt3__16atomicIoEEo(%"struct.std::__1::atomic.45"* nonnull align 16 dereferenceable(16) %0, i128 %1) {
+define i128 @_Z24atomic_swap_seq_cst_u128RNSt3__16atomicIoEEo(ptr nonnull align 16 dereferenceable(16) %0, i128 %1) {
 ; CHECK-LABEL: _Z24atomic_swap_seq_cst_u128RNSt3__16atomicIoEEo:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    or %s5, 0, %s0
@@ -744,17 +702,14 @@ define i128 @_Z24atomic_swap_seq_cst_u128RNSt3__16atomicIoEEo(%"struct.std::__1:
 ; CHECK-NEXT:    or %s11, 0, %s9
   %3 = alloca i128, align 16
   %4 = alloca i128, align 16
-  %5 = bitcast i128* %3 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %5)
-  %6 = bitcast i128* %4 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %6)
-  store i128 %1, i128* %3, align 16, !tbaa !2
-  %7 = bitcast %"struct.std::__1::atomic.45"* %0 to i8*
-  call void @__atomic_exchange(i64 16, i8* nonnull %7, i8* nonnull %5, i8* nonnull %6, i32 signext 5)
-  %8 = load i128, i128* %4, align 16, !tbaa !2
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %5)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %6)
-  ret i128 %8
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %3)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %4)
+  store i128 %1, ptr %3, align 16, !tbaa !2
+  call void @__atomic_exchange(i64 16, ptr nonnull %0, ptr nonnull %3, ptr nonnull %4, i32 signext 5)
+  %5 = load i128, ptr %4, align 16, !tbaa !2
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %3)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %4)
+  ret i128 %5
 }
 
 ; Function Attrs: nofree nounwind mustprogress
@@ -769,21 +724,20 @@ define zeroext i1 @_Z26atomic_swap_relaxed_stk_i1b(i1 zeroext %0) {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = alloca %"struct.std::__1::atomic", align 1
-  %3 = getelementptr inbounds %"struct.std::__1::atomic", %"struct.std::__1::atomic"* %2, i64 0, i32 0, i32 0, i32 0, i32 0
-  call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull %3)
-  %4 = zext i1 %0 to i8
-  %5 = atomicrmw volatile xchg i8* %3, i8 %4 monotonic
-  %6 = and i8 %5, 1
-  %7 = icmp ne i8 %6, 0
-  call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull %3)
-  ret i1 %7
+  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %2)
+  %3 = zext i1 %0 to i8
+  %4 = atomicrmw volatile xchg ptr %2, i8 %3 monotonic
+  %5 = and i8 %4, 1
+  %6 = icmp ne i8 %5, 0
+  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %2)
+  ret i1 %6
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 ; Function Attrs: nofree nounwind mustprogress
 define signext i8 @_Z26atomic_swap_relaxed_stk_i8c(i8 signext %0) {
@@ -798,11 +752,10 @@ define signext i8 @_Z26atomic_swap_relaxed_stk_i8c(i8 signext %0) {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = alloca %"struct.std::__1::atomic.0", align 1
-  %3 = getelementptr inbounds %"struct.std::__1::atomic.0", %"struct.std::__1::atomic.0"* %2, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull %3)
-  %4 = atomicrmw volatile xchg i8* %3, i8 %0 monotonic
-  call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull %3)
-  ret i8 %4
+  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %2)
+  %3 = atomicrmw volatile xchg ptr %2, i8 %0 monotonic
+  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %2)
+  ret i8 %3
 }
 
 ; Function Attrs: nofree nounwind mustprogress
@@ -817,11 +770,10 @@ define zeroext i8 @_Z26atomic_swap_relaxed_stk_u8h(i8 zeroext %0) {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = alloca %"struct.std::__1::atomic.5", align 1
-  %3 = getelementptr inbounds %"struct.std::__1::atomic.5", %"struct.std::__1::atomic.5"* %2, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull %3)
-  %4 = atomicrmw volatile xchg i8* %3, i8 %0 monotonic
-  call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull %3)
-  ret i8 %4
+  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %2)
+  %3 = atomicrmw volatile xchg ptr %2, i8 %0 monotonic
+  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %2)
+  ret i8 %3
 }
 
 ; Function Attrs: nofree nounwind mustprogress
@@ -837,12 +789,10 @@ define signext i16 @_Z27atomic_swap_relaxed_stk_i16s(i16 signext %0) {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = alloca %"struct.std::__1::atomic.10", align 2
-  %3 = bitcast %"struct.std::__1::atomic.10"* %2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 2, i8* nonnull %3)
-  %4 = getelementptr inbounds %"struct.std::__1::atomic.10", %"struct.std::__1::atomic.10"* %2, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %5 = atomicrmw volatile xchg i16* %4, i16 %0 monotonic
-  call void @llvm.lifetime.end.p0i8(i64 2, i8* nonnull %3)
-  ret i16 %5
+  call void @llvm.lifetime.start.p0(i64 2, ptr nonnull %2)
+  %3 = atomicrmw volatile xchg ptr %2, i16 %0 monotonic
+  call void @llvm.lifetime.end.p0(i64 2, ptr nonnull %2)
+  ret i16 %3
 }
 
 ; Function Attrs: nofree nounwind mustprogress
@@ -857,12 +807,10 @@ define zeroext i16 @_Z27atomic_swap_relaxed_stk_u16t(i16 zeroext %0) {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = alloca %"struct.std::__1::atomic.15", align 2
-  %3 = bitcast %"struct.std::__1::atomic.15"* %2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 2, i8* nonnull %3)
-  %4 = getelementptr inbounds %"struct.std::__1::atomic.15", %"struct.std::__1::atomic.15"* %2, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %5 = atomicrmw volatile xchg i16* %4, i16 %0 monotonic
-  call void @llvm.lifetime.end.p0i8(i64 2, i8* nonnull %3)
-  ret i16 %5
+  call void @llvm.lifetime.start.p0(i64 2, ptr nonnull %2)
+  %3 = atomicrmw volatile xchg ptr %2, i16 %0 monotonic
+  call void @llvm.lifetime.end.p0(i64 2, ptr nonnull %2)
+  ret i16 %3
 }
 
 ; Function Attrs: nofree nounwind mustprogress
@@ -874,12 +822,10 @@ define signext i32 @_Z27atomic_swap_relaxed_stk_i32i(i32 signext %0) {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = alloca %"struct.std::__1::atomic.20", align 4
-  %3 = bitcast %"struct.std::__1::atomic.20"* %2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %3)
-  %4 = getelementptr inbounds %"struct.std::__1::atomic.20", %"struct.std::__1::atomic.20"* %2, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %5 = atomicrmw volatile xchg i32* %4, i32 %0 monotonic
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %3)
-  ret i32 %5
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %2)
+  %3 = atomicrmw volatile xchg ptr %2, i32 %0 monotonic
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %2)
+  ret i32 %3
 }
 
 ; Function Attrs: nofree nounwind mustprogress
@@ -891,12 +837,10 @@ define zeroext i32 @_Z27atomic_swap_relaxed_stk_u32j(i32 zeroext %0) {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = alloca %"struct.std::__1::atomic.25", align 4
-  %3 = bitcast %"struct.std::__1::atomic.25"* %2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %3)
-  %4 = getelementptr inbounds %"struct.std::__1::atomic.25", %"struct.std::__1::atomic.25"* %2, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %5 = atomicrmw volatile xchg i32* %4, i32 %0 monotonic
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %3)
-  ret i32 %5
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %2)
+  %3 = atomicrmw volatile xchg ptr %2, i32 %0 monotonic
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %2)
+  ret i32 %3
 }
 
 ; Function Attrs: nofree nounwind mustprogress
@@ -908,12 +852,10 @@ define i64 @_Z27atomic_swap_relaxed_stk_i64l(i64 %0) {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = alloca %"struct.std::__1::atomic.30", align 8
-  %3 = bitcast %"struct.std::__1::atomic.30"* %2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %3)
-  %4 = getelementptr inbounds %"struct.std::__1::atomic.30", %"struct.std::__1::atomic.30"* %2, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %5 = atomicrmw volatile xchg i64* %4, i64 %0 monotonic
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %3)
-  ret i64 %5
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %2)
+  %3 = atomicrmw volatile xchg ptr %2, i64 %0 monotonic
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %2)
+  ret i64 %3
 }
 
 ; Function Attrs: nofree nounwind mustprogress
@@ -925,12 +867,10 @@ define i64 @_Z27atomic_swap_relaxed_stk_u64m(i64 %0) {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = alloca %"struct.std::__1::atomic.35", align 8
-  %3 = bitcast %"struct.std::__1::atomic.35"* %2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %3)
-  %4 = getelementptr inbounds %"struct.std::__1::atomic.35", %"struct.std::__1::atomic.35"* %2, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %5 = atomicrmw volatile xchg i64* %4, i64 %0 monotonic
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %3)
-  ret i64 %5
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %2)
+  %3 = atomicrmw volatile xchg ptr %2, i64 %0 monotonic
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %2)
+  ret i64 %3
 }
 
 ; Function Attrs: nounwind mustprogress
@@ -954,19 +894,16 @@ define i128 @_Z28atomic_swap_relaxed_stk_i128n(i128 %0) {
   %2 = alloca i128, align 16
   %3 = alloca i128, align 16
   %4 = alloca %"struct.std::__1::atomic.40", align 16
-  %5 = bitcast %"struct.std::__1::atomic.40"* %4 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %5)
-  %6 = bitcast i128* %2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %6)
-  %7 = bitcast i128* %3 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %7)
-  store i128 %0, i128* %2, align 16, !tbaa !2
-  call void @__atomic_exchange(i64 16, i8* nonnull %5, i8* nonnull %6, i8* nonnull %7, i32 signext 0)
-  %8 = load i128, i128* %3, align 16, !tbaa !2
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %6)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %7)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %5)
-  ret i128 %8
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %4)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %2)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %3)
+  store i128 %0, ptr %2, align 16, !tbaa !2
+  call void @__atomic_exchange(i64 16, ptr nonnull %4, ptr nonnull %2, ptr nonnull %3, i32 signext 0)
+  %5 = load i128, ptr %3, align 16, !tbaa !2
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %2)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %3)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %4)
+  ret i128 %5
 }
 
 ; Function Attrs: nounwind mustprogress
@@ -990,19 +927,16 @@ define i128 @_Z28atomic_swap_relaxed_stk_u128o(i128 %0) {
   %2 = alloca i128, align 16
   %3 = alloca i128, align 16
   %4 = alloca %"struct.std::__1::atomic.45", align 16
-  %5 = bitcast %"struct.std::__1::atomic.45"* %4 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %5)
-  %6 = bitcast i128* %2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %6)
-  %7 = bitcast i128* %3 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %7)
-  store i128 %0, i128* %2, align 16, !tbaa !2
-  call void @__atomic_exchange(i64 16, i8* nonnull %5, i8* nonnull %6, i8* nonnull %7, i32 signext 0)
-  %8 = load i128, i128* %3, align 16, !tbaa !2
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %6)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %7)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %5)
-  ret i128 %8
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %4)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %2)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %3)
+  store i128 %0, ptr %2, align 16, !tbaa !2
+  call void @__atomic_exchange(i64 16, ptr nonnull %4, ptr nonnull %2, ptr nonnull %3, i32 signext 0)
+  %5 = load i128, ptr %3, align 16, !tbaa !2
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %2)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %3)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %4)
+  ret i128 %5
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
@@ -1023,7 +957,7 @@ define zeroext i1 @_Z25atomic_swap_relaxed_gv_i1b(i1 zeroext %0) {
 ; CHECK-NEXT:    and %s0, 1, %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = zext i1 %0 to i8
-  %3 = atomicrmw xchg i8* getelementptr inbounds (%"struct.std::__1::atomic", %"struct.std::__1::atomic"* @gv_i1, i64 0, i32 0, i32 0, i32 0, i32 0), i8 %2 monotonic
+  %3 = atomicrmw xchg ptr @gv_i1, i8 %2 monotonic
   %4 = and i8 %3, 1
   %5 = icmp ne i8 %4, 0
   ret i1 %5
@@ -1047,7 +981,7 @@ define signext i8 @_Z25atomic_swap_relaxed_gv_i8c(i8 signext %0) {
 ; CHECK-NEXT:    sll %s0, %s0, 56
 ; CHECK-NEXT:    sra.l %s0, %s0, 56
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %2 = atomicrmw xchg i8* getelementptr inbounds (%"struct.std::__1::atomic.0", %"struct.std::__1::atomic.0"* @gv_i8, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0), i8 %0 monotonic
+  %2 = atomicrmw xchg ptr @gv_i8, i8 %0 monotonic
   ret i8 %2
 }
 
@@ -1068,7 +1002,7 @@ define zeroext i8 @_Z25atomic_swap_relaxed_gv_u8h(i8 zeroext %0) {
 ; CHECK-NEXT:    srl %s0, %s0, %s3
 ; CHECK-NEXT:    and %s0, %s0, (56)0
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %2 = atomicrmw xchg i8* getelementptr inbounds (%"struct.std::__1::atomic.5", %"struct.std::__1::atomic.5"* @gv_u8, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0), i8 %0 monotonic
+  %2 = atomicrmw xchg ptr @gv_u8, i8 %0 monotonic
   ret i8 %2
 }
 
@@ -1090,7 +1024,7 @@ define signext i16 @_Z26atomic_swap_relaxed_gv_i16s(i16 signext %0) {
 ; CHECK-NEXT:    sll %s0, %s0, 48
 ; CHECK-NEXT:    sra.l %s0, %s0, 48
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %2 = atomicrmw xchg i16* getelementptr inbounds (%"struct.std::__1::atomic.10", %"struct.std::__1::atomic.10"* @gv_i16, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0), i16 %0 monotonic
+  %2 = atomicrmw xchg ptr @gv_i16, i16 %0 monotonic
   ret i16 %2
 }
 
@@ -1111,7 +1045,7 @@ define zeroext i16 @_Z26atomic_swap_relaxed_gv_u16t(i16 zeroext %0) {
 ; CHECK-NEXT:    srl %s0, %s0, %s3
 ; CHECK-NEXT:    and %s0, %s0, (48)0
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %2 = atomicrmw xchg i16* getelementptr inbounds (%"struct.std::__1::atomic.15", %"struct.std::__1::atomic.15"* @gv_u16, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0), i16 %0 monotonic
+  %2 = atomicrmw xchg ptr @gv_u16, i16 %0 monotonic
   ret i16 %2
 }
 
@@ -1125,7 +1059,7 @@ define signext i32 @_Z26atomic_swap_relaxed_gv_i32i(i32 signext %0) {
 ; CHECK-NEXT:    ts1am.w %s0, (%s1), 15
 ; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %2 = atomicrmw xchg i32* getelementptr inbounds (%"struct.std::__1::atomic.20", %"struct.std::__1::atomic.20"* @gv_i32, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0), i32 %0 monotonic
+  %2 = atomicrmw xchg ptr @gv_i32, i32 %0 monotonic
   ret i32 %2
 }
 
@@ -1139,7 +1073,7 @@ define zeroext i32 @_Z26atomic_swap_relaxed_gv_u32j(i32 zeroext %0) {
 ; CHECK-NEXT:    ts1am.w %s0, (%s1), 15
 ; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %2 = atomicrmw xchg i32* getelementptr inbounds (%"struct.std::__1::atomic.25", %"struct.std::__1::atomic.25"* @gv_u32, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0), i32 %0 monotonic
+  %2 = atomicrmw xchg ptr @gv_u32, i32 %0 monotonic
   ret i32 %2
 }
 
@@ -1153,7 +1087,7 @@ define i64 @_Z26atomic_swap_relaxed_gv_i64l(i64 %0) {
 ; CHECK-NEXT:    lea %s2, 255
 ; CHECK-NEXT:    ts1am.l %s0, (%s1), %s2
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %2 = atomicrmw xchg i64* getelementptr inbounds (%"struct.std::__1::atomic.30", %"struct.std::__1::atomic.30"* @gv_i64, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0), i64 %0 monotonic
+  %2 = atomicrmw xchg ptr @gv_i64, i64 %0 monotonic
   ret i64 %2
 }
 
@@ -1167,7 +1101,7 @@ define i64 @_Z26atomic_swap_relaxed_gv_u64m(i64 %0) {
 ; CHECK-NEXT:    lea %s2, 255
 ; CHECK-NEXT:    ts1am.l %s0, (%s1), %s2
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %2 = atomicrmw xchg i64* getelementptr inbounds (%"struct.std::__1::atomic.35", %"struct.std::__1::atomic.35"* @gv_u64, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0), i64 %0 monotonic
+  %2 = atomicrmw xchg ptr @gv_u64, i64 %0 monotonic
   ret i64 %2
 }
 
@@ -1193,16 +1127,14 @@ define i128 @_Z27atomic_swap_relaxed_gv_i128n(i128 %0) {
 ; CHECK-NEXT:    or %s11, 0, %s9
   %2 = alloca i128, align 16
   %3 = alloca i128, align 16
-  %4 = bitcast i128* %2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %4)
-  %5 = bitcast i128* %3 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %5)
-  store i128 %0, i128* %2, align 16, !tbaa !2
-  call void @__atomic_exchange(i64 16, i8* nonnull bitcast (%"struct.std::__1::atomic.40"* @gv_i128 to i8*), i8* nonnull %4, i8* nonnull %5, i32 signext 0)
-  %6 = load i128, i128* %3, align 16, !tbaa !2
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %4)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %5)
-  ret i128 %6
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %2)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %3)
+  store i128 %0, ptr %2, align 16, !tbaa !2
+  call void @__atomic_exchange(i64 16, ptr nonnull @gv_i128, ptr nonnull %2, ptr nonnull %3, i32 signext 0)
+  %4 = load i128, ptr %3, align 16, !tbaa !2
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %2)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %3)
+  ret i128 %4
 }
 
 ; Function Attrs: nounwind mustprogress
@@ -1227,20 +1159,18 @@ define i128 @_Z27atomic_swap_relaxed_gv_u128o(i128 %0) {
 ; CHECK-NEXT:    or %s11, 0, %s9
   %2 = alloca i128, align 16
   %3 = alloca i128, align 16
-  %4 = bitcast i128* %2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %4)
-  %5 = bitcast i128* %3 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %5)
-  store i128 %0, i128* %2, align 16, !tbaa !2
-  call void @__atomic_exchange(i64 16, i8* nonnull bitcast (%"struct.std::__1::atomic.45"* @gv_u128 to i8*), i8* nonnull %4, i8* nonnull %5, i32 signext 0)
-  %6 = load i128, i128* %3, align 16, !tbaa !2
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %4)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %5)
-  ret i128 %6
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %2)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %3)
+  store i128 %0, ptr %2, align 16, !tbaa !2
+  call void @__atomic_exchange(i64 16, ptr nonnull @gv_u128, ptr nonnull %2, ptr nonnull %3, i32 signext 0)
+  %4 = load i128, ptr %3, align 16, !tbaa !2
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %2)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %3)
+  ret i128 %4
 }
 
 ; Function Attrs: nounwind willreturn
-declare void @__atomic_exchange(i64, i8*, i8*, i8*, i32)
+declare void @__atomic_exchange(i64, ptr, ptr, ptr, i32)
 
 !2 = !{!3, !3, i64 0}
 !3 = !{!"__int128", !4, i64 0}

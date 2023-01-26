@@ -85,9 +85,9 @@ bool BaseIndexOffset::equalBaseIndex(const BaseIndexOffset &Other,
 }
 
 bool BaseIndexOffset::computeAliasing(const SDNode *Op0,
-                                      const Optional<int64_t> NumBytes0,
+                                      const std::optional<int64_t> NumBytes0,
                                       const SDNode *Op1,
-                                      const Optional<int64_t> NumBytes1,
+                                      const std::optional<int64_t> NumBytes1,
                                       const SelectionDAG &DAG, bool &IsAlias) {
 
   BaseIndexOffset BasePtr0 = match(Op0, DAG);

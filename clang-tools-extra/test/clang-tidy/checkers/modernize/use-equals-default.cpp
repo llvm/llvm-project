@@ -33,6 +33,43 @@ public:
   ~NE() { f(); }
 };
 
+// Skip unions.
+union NU {
+  NU() {}
+  // CHECK-FIXES: NU() {}
+  ~NU() {}
+  // CHECK-FIXES: ~NU() {}
+  NE Field;
+};
+
+// Skip structs/classes containing anonymous unions.
+struct SU {
+  SU() {}
+  // CHECK-FIXES: SU() {}
+  ~SU() {}
+  // CHECK-FIXES: ~SU() {}
+  union {
+    NE Field;
+  };
+};
+
+// Skip variadic constructors.
+struct VA {
+  VA(...) {}
+};
+
+// Skip template constructors.
+struct TC {
+  template <unsigned U>
+  TC() {}
+
+  template <unsigned U>
+  TC(const TC &) {}
+
+  template <unsigned U>
+  TC& operator = (const TC &) { return *this; }
+};
+
 // Initializer or arguments.
 class IA {
 public:
@@ -65,22 +102,38 @@ public:
 
 // Private constructor/destructor.
 class Priv {
-  Priv() {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
-  // CHECK-FIXES: Priv() = default;
-  ~Priv() {};
+  Priv();
+  ~Priv() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
   // CHECK-FIXES: ~Priv() = default;
 };
+
+Priv::Priv() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use '= default'
+// CHECK-FIXES: Priv::Priv() = default;
+
+struct SemiColon {
+  SemiColon() {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
+  // CHECK-FIXES: SemiColon() = default;{{$}}
+};
+
+struct SemiColonOutOfLine {
+  SemiColonOutOfLine();
+};
+
+SemiColonOutOfLine::SemiColonOutOfLine() {};
+// CHECK-MESSAGES: :[[@LINE-1]]:21: warning: use '= default'
+// CHECK-FIXES: SemiColonOutOfLine::SemiColonOutOfLine() = default;{{$}}
 
 // struct.
 struct ST {
   ST() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
-  // CHECK-FIXES: ST() = default;
+  // CHECK-FIXES: ST() = default;{{$}}
   ~ST() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
-  // CHECK-FIXES: ST() = default;
+  // CHECK-FIXES: ST() = default;{{$}}
 };
 
 // Deleted constructor/destructor.
@@ -173,7 +226,13 @@ struct DC : KW {
   DC() : KW() {}
   ~DC() override {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
-  // CHECK-FIXES: ~DC() override = default;
+  // CHECK-FIXES: ~DC() override = default;{{$}}
+};
+
+struct OverrideWithSemiColon : KW {
+  ~OverrideWithSemiColon() override {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
+  // CHECK-FIXES: ~OverrideWithSemiColon() override = default;{{$}}
 };
 
 struct Comments {

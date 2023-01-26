@@ -70,8 +70,8 @@ define <2 x half> @test_fmin_legacy_ule_v2f16(<2 x half> %a, <2 x half> %b) #0 {
 ; GFX9-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
 ; GFX9-SAFE-NEXT:    v_cmp_ngt_f16_e32 vcc, v0, v1
 ; GFX9-SAFE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
-; GFX9-SAFE-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX9-SAFE-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
+; GFX9-SAFE-NEXT:    s_mov_b32 s4, 0x5040100
+; GFX9-SAFE-NEXT:    v_perm_b32 v0, v2, v0, s4
 ; GFX9-SAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-NNAN-LABEL: test_fmin_legacy_ule_v2f16:
@@ -147,8 +147,8 @@ define <3 x half> @test_fmin_legacy_ule_v3f16(<3 x half> %a, <3 x half> %b) #0 {
 ; GFX9-SAFE-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GFX9-SAFE-NEXT:    v_cmp_ngt_f16_e32 vcc, v0, v2
 ; GFX9-SAFE-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
-; GFX9-SAFE-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX9-SAFE-NEXT:    v_lshl_or_b32 v0, v4, 16, v0
+; GFX9-SAFE-NEXT:    s_mov_b32 s4, 0x5040100
+; GFX9-SAFE-NEXT:    v_perm_b32 v0, v4, v0, s4
 ; GFX9-SAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-NNAN-LABEL: test_fmin_legacy_ule_v3f16:
@@ -242,10 +242,9 @@ define <4 x half> @test_fmin_legacy_ule_v4f16(<4 x half> %a, <4 x half> %b) #0 {
 ; GFX9-SAFE-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GFX9-SAFE-NEXT:    v_cmp_ngt_f16_e32 vcc, v0, v2
 ; GFX9-SAFE-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
-; GFX9-SAFE-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX9-SAFE-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX9-SAFE-NEXT:    v_lshl_or_b32 v0, v4, 16, v0
-; GFX9-SAFE-NEXT:    v_lshl_or_b32 v1, v6, 16, v1
+; GFX9-SAFE-NEXT:    s_mov_b32 s4, 0x5040100
+; GFX9-SAFE-NEXT:    v_perm_b32 v0, v4, v0, s4
+; GFX9-SAFE-NEXT:    v_perm_b32 v1, v6, v1, s4
 ; GFX9-SAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-NNAN-LABEL: test_fmin_legacy_ule_v4f16:
@@ -369,14 +368,11 @@ define <8 x half> @test_fmin_legacy_ule_v8f16(<8 x half> %a, <8 x half> %b) #0 {
 ; GFX9-SAFE-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc
 ; GFX9-SAFE-NEXT:    v_cmp_ngt_f16_e32 vcc, v0, v4
 ; GFX9-SAFE-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
-; GFX9-SAFE-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX9-SAFE-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX9-SAFE-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX9-SAFE-NEXT:    v_and_b32_e32 v3, 0xffff, v3
-; GFX9-SAFE-NEXT:    v_lshl_or_b32 v0, v8, 16, v0
-; GFX9-SAFE-NEXT:    v_lshl_or_b32 v1, v10, 16, v1
-; GFX9-SAFE-NEXT:    v_lshl_or_b32 v2, v12, 16, v2
-; GFX9-SAFE-NEXT:    v_lshl_or_b32 v3, v14, 16, v3
+; GFX9-SAFE-NEXT:    s_mov_b32 s4, 0x5040100
+; GFX9-SAFE-NEXT:    v_perm_b32 v0, v8, v0, s4
+; GFX9-SAFE-NEXT:    v_perm_b32 v1, v10, v1, s4
+; GFX9-SAFE-NEXT:    v_perm_b32 v2, v12, v2, s4
+; GFX9-SAFE-NEXT:    v_perm_b32 v3, v14, v3, s4
 ; GFX9-SAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-NNAN-LABEL: test_fmin_legacy_ule_v8f16:

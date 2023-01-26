@@ -3,8 +3,8 @@
 
 ; REQUIRES: pollyacc
 
-; CHECK: store i64 %polly.access.B.load, i64* %invariant.preload.s2a
-; CHECK: %invariant.final_reload = load i64, i64* %invariant.preload.s2a
+; CHECK: store i64 %polly.access.B.load, ptr %invariant.preload.s2a
+; CHECK: %invariant.final_reload = load i64, ptr %invariant.preload.s2a
 
 ; Verify that the final reload of an invariant scalar memory access uses the
 ; same stack slot that into which the invariant memory access was stored
@@ -12,16 +12,16 @@
 ; of the preload stack slot, which remained uninitialized and caused our escaping
 ; loads to contain garbage.
 
-define i64 @foo(float* %A, i64* %B) {
+define i64 @foo(ptr %A, ptr %B) {
 entry:
   br label %loop
 
 loop:
   %indvar = phi i64 [0, %entry], [%indvar.next, %loop]
   %indvar.next = add nsw i64 %indvar, 1
-  %idx = getelementptr float, float* %A, i64 %indvar
-  store float 42.0, float* %idx
-  %invariant = load i64, i64* %B
+  %idx = getelementptr float, ptr %A, i64 %indvar
+  store float 42.0, ptr %idx
+  %invariant = load i64, ptr %B
   %cmp = icmp sle i64 %indvar, 1024
   br i1 %cmp, label %loop, label %exit
 

@@ -1,5 +1,6 @@
 import("//llvm/tools/binutils_symlinks.gni")
 import("//llvm/utils/TableGen/tablegen.gni")
+import("//llvm/utils/gn/build/driver_executable.gni")
 import("//llvm/utils/gn/build/symlink_or_copy.gni")
 
 tablegen("Opts") {
@@ -23,7 +24,7 @@ group("symlinks") {
   }
 }
 
-executable("llvm-nm") {
+driver_executable("llvm-nm") {
   deps = [
     ":Opts",
     "//llvm/lib/Bitcode/Reader",
@@ -35,6 +36,7 @@ executable("llvm-nm") {
     "//llvm/lib/Target:AllTargetsAsmParsers",
     "//llvm/lib/Target:AllTargetsDescs",
     "//llvm/lib/Target:AllTargetsInfos",
+    "//llvm/lib/TargetParser",
   ]
   sources = [ "llvm-nm.cpp" ]
 }

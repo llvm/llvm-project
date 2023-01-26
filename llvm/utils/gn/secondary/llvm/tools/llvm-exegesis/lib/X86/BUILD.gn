@@ -9,6 +9,7 @@ static_library("X86") {
   output_name = "LLVMExegesisX86"
   deps = [
     ":X86GenExegesis",
+    "//llvm/lib/TargetParser",
 
     # Exegesis reaches inside the Target/X86 tablegen internals and must
     # depend on this Target/X86-internal build target.

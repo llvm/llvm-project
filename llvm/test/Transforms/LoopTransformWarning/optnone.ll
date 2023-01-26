@@ -1,7 +1,3 @@
-; Legacy pass manager
-; RUN: opt -transform-warning -disable-output -pass-remarks-missed=transform-warning -pass-remarks-analysis=transform-warning < %s 2>&1 | FileCheck -allow-empty %s
-;
-; New pass manager
 ; RUN: opt -passes=transform-warning -disable-output -pass-remarks-missed=transform-warning -pass-remarks-analysis=transform-warning < %s 2>&1 | FileCheck -allow-empty %s
 ;
 ; Verify that no transformation warnings are emitted for functions with
@@ -9,7 +5,7 @@
 ;
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @func(i32* nocapture %A, i32* nocapture readonly %B, i32 %Length) #0 {
+define void @func(ptr nocapture %A, ptr nocapture readonly %B, i32 %Length) #0 {
 entry:
   %cmp9 = icmp sgt i32 %Length, 0
   br i1 %cmp9, label %for.body.preheader, label %for.end
@@ -19,13 +15,13 @@ for.body.preheader:
 
 for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i32, i32* %B, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %B, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %idxprom1 = sext i32 %0 to i64
-  %arrayidx2 = getelementptr inbounds i32, i32* %A, i64 %idxprom1
-  %1 = load i32, i32* %arrayidx2, align 4
-  %arrayidx4 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  store i32 %1, i32* %arrayidx4, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %A, i64 %idxprom1
+  %1 = load i32, ptr %arrayidx2, align 4
+  %arrayidx4 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  store i32 %1, ptr %arrayidx4, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %Length

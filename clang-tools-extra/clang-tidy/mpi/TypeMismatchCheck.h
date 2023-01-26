@@ -12,6 +12,7 @@
 #include "../ClangTidyCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/StaticAnalyzer/Checkers/MPIFunctionClassifier.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {
@@ -45,7 +46,7 @@ private:
                       ArrayRef<const Expr *> BufferExprs,
                       ArrayRef<StringRef> MPIDatatypes, const LangOptions &LO);
 
-  Optional<ento::mpi::MPIFunctionClassifier> FuncClassifier;
+  std::optional<ento::mpi::MPIFunctionClassifier> FuncClassifier;
 };
 
 } // namespace mpi

@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -instcombine-code-sinking=0 -S < %s | FileCheck %s
+; RUN: opt -passes=instcombine -instcombine-code-sinking=0 -S < %s | FileCheck %s
 
 define i32 @test(i1 %C, i32 %A, i32 %B) {
 ; CHECK-LABEL: @test(

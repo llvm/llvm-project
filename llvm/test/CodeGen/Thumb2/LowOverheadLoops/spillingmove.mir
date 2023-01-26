@@ -3,13 +3,13 @@
 
 --- |
   %struct.arm_2d_size_t = type { i16, i16 }
-  define void @none(i16* noalias nocapture %phwTargetBase, i16 signext %iTargetStride, %struct.arm_2d_size_t* noalias nocapture readonly %ptCopySize, i16 zeroext %hwColour, i32 %chRatio) {
+  define void @none(ptr noalias nocapture %phwTargetBase, i16 signext %iTargetStride, ptr noalias nocapture readonly %ptCopySize, i16 zeroext %hwColour, i32 %chRatio) {
     unreachable
   }
-  define void @copyin(i16* noalias nocapture %phwTargetBase, i16 signext %iTargetStride, %struct.arm_2d_size_t* noalias nocapture readonly %ptCopySize, i16 zeroext %hwColour, i32 %chRatio) {
+  define void @copyin(ptr noalias nocapture %phwTargetBase, i16 signext %iTargetStride, ptr noalias nocapture readonly %ptCopySize, i16 zeroext %hwColour, i32 %chRatio) {
     unreachable
   }
-  define void @copyout(i16* noalias nocapture %phwTargetBase, i16 signext %iTargetStride, %struct.arm_2d_size_t* noalias nocapture readonly %ptCopySize, i16 zeroext %hwColour, i32 %chRatio) {
+  define void @copyout(ptr noalias nocapture %phwTargetBase, i16 signext %iTargetStride, ptr noalias nocapture readonly %ptCopySize, i16 zeroext %hwColour, i32 %chRatio) {
     unreachable
   }
 ...

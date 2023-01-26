@@ -16,7 +16,7 @@ define hidden void @_strtod_r() nounwind {
   br i1 undef, label %4, label %7
 
 ; <label>:4                                       ; preds = %3
-  %5 = call i32 @llvm.flt.rounds()
+  %5 = call i32 @llvm.get.rounding()
   %6 = icmp eq i32 %5, 1
   br i1 %6, label %8, label %7
 
@@ -33,4 +33,4 @@ define hidden void @_strtod_r() nounwind {
   ret void
 }
 
-declare i32 @llvm.flt.rounds() nounwind
+declare i32 @llvm.get.rounding() nounwind

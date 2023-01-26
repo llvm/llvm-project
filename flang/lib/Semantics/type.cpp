@@ -37,9 +37,9 @@ void DerivedTypeSpec::ReplaceScope(const Scope &scope) {
 }
 
 void DerivedTypeSpec::AddRawParamValue(
-    const std::optional<parser::Keyword> &keyword, ParamValue &&value) {
+    const parser::Keyword *keyword, ParamValue &&value) {
   CHECK(parameters_.empty());
-  rawParameters_.emplace_back(keyword ? &*keyword : nullptr, std::move(value));
+  rawParameters_.emplace_back(keyword, std::move(value));
 }
 
 void DerivedTypeSpec::CookParameters(evaluate::FoldingContext &foldingContext) {
@@ -463,10 +463,8 @@ void InstantiateHelper::InstantiateComponent(const Symbol &oldSymbol) {
   } else if (auto *procDetails{newSymbol.detailsIf<ProcEntityDetails>()}) {
     // We have a procedure pointer.  Instantiate its return type
     if (const DeclTypeSpec * returnType{InstantiateType(newSymbol)}) {
-      ProcInterface &interface{procDetails->interface()};
-      if (!interface.symbol()) {
-        // Don't change the type for interfaces based on symbols
-        interface.set_type(*returnType);
+      if (!procDetails->procInterface()) {
+        procDetails->ReplaceType(*returnType);
       }
     }
   }
@@ -790,15 +788,6 @@ std::string DeclTypeSpec::AsFortran() const {
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const DeclTypeSpec &x) {
   return o << x.AsFortran();
-}
-
-void ProcInterface::set_symbol(const Symbol &symbol) {
-  CHECK(!type_);
-  symbol_ = &symbol;
-}
-void ProcInterface::set_type(const DeclTypeSpec &type) {
-  CHECK(!symbol_);
-  type_ = &type;
 }
 
 } // namespace Fortran::semantics

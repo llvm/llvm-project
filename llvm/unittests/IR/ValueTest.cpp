@@ -61,9 +61,11 @@ TEST(GlobalTest, CreateAddressSpace) {
                          GlobalVariable::NotThreadLocal,
                          1);
 
-  EXPECT_TRUE(Value::MaximumAlignment == 4294967296ULL);
-  Dummy0->setAlignment(Align(4294967296ULL));
-  EXPECT_EQ(Dummy0->getAlignment(), 4294967296ULL);
+  const Align kMaxAlignment(Value::MaximumAlignment);
+  EXPECT_TRUE(kMaxAlignment.value() == 4294967296ULL);
+  Dummy0->setAlignment(kMaxAlignment);
+  EXPECT_TRUE(Dummy0->getAlign());
+  EXPECT_EQ(*Dummy0->getAlign(), kMaxAlignment);
 
   // Make sure the address space isn't dropped when returning this.
   Constant *Dummy1 = M->getOrInsertGlobal("dummy", Int32Ty);

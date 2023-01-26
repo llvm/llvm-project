@@ -25,7 +25,7 @@
 ; RUN:   -mips-tail-calls=1 -mcpu=mips64r6 -mattr=+use-indirect-jump-hazard \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefix=PIC-MIPS64R6
 
-define void @fooNonTail(void (i32)* nocapture %f1) nounwind {
+define void @fooNonTail(ptr nocapture %f1) nounwind {
 ; MIPS32R2-LABEL: fooNonTail:
 ; MIPS32R2:       # %bb.0: # %entry
 ; MIPS32R2-NEXT:    addiu $sp, $sp, -24
@@ -118,7 +118,7 @@ entry:
   ret void
 }
 
-define i32 @fooTail(i32 (i32)* nocapture %f1) nounwind {
+define i32 @fooTail(ptr nocapture %f1) nounwind {
 ; MIPS32R2-LABEL: fooTail:
 ; MIPS32R2:       # %bb.0: # %entry
 ; MIPS32R2-NEXT:    move $25, $4

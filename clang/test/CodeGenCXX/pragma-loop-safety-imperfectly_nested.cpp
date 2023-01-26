@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -std=c++11 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -std=c++11 -emit-llvm -o - %s | FileCheck %s
 
 // Verify that the outer loop has the llvm.access.group property for the
 // accesses outside and inside the inner loop, even when the inner loop
@@ -15,12 +15,12 @@ void vectorize_imperfectly_nested_test(int *List, int Length) {
 }
 
 
-// CHECK: load i32, i32* %Length.addr, align 4, !llvm.access.group ![[ACCESS_GROUP_2:[0-9]+]]
+// CHECK: load i32, ptr %Length.addr, align 4, !llvm.access.group ![[ACCESS_GROUP_2:[0-9]+]]
 
 // CHECK: %[[MUL:.+]] = mul nsw i32 %add, 2
-// CHECK: store i32 %[[MUL]], i32* %{{.+}}, !llvm.access.group ![[ACCESS_GROUP_3:[0-9]+]]
+// CHECK: store i32 %[[MUL]], ptr %{{.+}}, !llvm.access.group ![[ACCESS_GROUP_3:[0-9]+]]
 // CHECK: br label %{{.+}}, !llvm.loop ![[INNER_LOOPID:[0-9]+]]
-// CHECK: store i32 21, i32* %{{.+}}, !llvm.access.group ![[ACCESS_GROUP_2]]
+// CHECK: store i32 21, ptr %{{.+}}, !llvm.access.group ![[ACCESS_GROUP_2]]
 // CHECK: br label %{{.+}}, !llvm.loop ![[OUTER_LOOPID:[0-9]+]]
 
 // CHECK: ![[ACCESS_GROUP_2]] = distinct !{}

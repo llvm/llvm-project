@@ -407,6 +407,7 @@ void tautological_compare(bool x, int y) {
   // TODO: Extend warning to the following code:
   if (x < -1)
     calledFun();
+
   if (-1 > x)
     calledFun();
   else

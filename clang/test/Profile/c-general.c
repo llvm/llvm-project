@@ -1,13 +1,13 @@
 // Test instrumentation of general constructs in C.
 
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instrument=clang | FileCheck -allow-deprecated-dag-overlap  -check-prefix=PGOGEN %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instrument=clang | FileCheck -allow-deprecated-dag-overlap  -check-prefix=PGOGEN %s
 
 // RUN: llvm-profdata merge %S/Inputs/c-general.proftext -o %t.profdata
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instrument-use-path=%t.profdata | FileCheck -allow-deprecated-dag-overlap  -check-prefix=PGOUSE %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instrument-use-path=%S/Inputs/c-general.profdata.v5 | FileCheck -allow-deprecated-dag-overlap  -check-prefix=PGOUSE %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instrument-use-path=%S/Inputs/c-general.profdata.v3 | FileCheck -allow-deprecated-dag-overlap  -check-prefix=PGOUSE %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instrument-use-path=%t.profdata | FileCheck -allow-deprecated-dag-overlap  -check-prefix=PGOUSE %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instrument-use-path=%S/Inputs/c-general.profdata.v5 | FileCheck -allow-deprecated-dag-overlap  -check-prefix=PGOUSE %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instrument-use-path=%S/Inputs/c-general.profdata.v3 | FileCheck -allow-deprecated-dag-overlap  -check-prefix=PGOUSE %s
 // Also check compatibility with older profiles.
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instrument-use-path=%S/Inputs/c-general.profdata.v1 | FileCheck -allow-deprecated-dag-overlap  -check-prefix=PGOUSE %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instrument-use-path=%S/Inputs/c-general.profdata.v1 | FileCheck -allow-deprecated-dag-overlap  -check-prefix=PGOUSE %s
 
 // PGOGEN: @[[SLC:__profc_simple_loops]] = private global [4 x i64] zeroinitializer
 // PGOGEN: @[[IFC:__profc_conditionals]] = private global [13 x i64] zeroinitializer
@@ -24,7 +24,7 @@
 
 // PGOGEN-LABEL: @simple_loops()
 // PGOUSE-LABEL: @simple_loops()
-// PGOGEN: store {{.*}} @[[SLC]], i32 0, i32 0
+// PGOGEN: store {{.*}} @[[SLC]]
 void simple_loops(void) {
   int i;
   // PGOGEN: store {{.*}} @[[SLC]], i32 0, i32 1
@@ -45,7 +45,7 @@ void simple_loops(void) {
 
 // PGOGEN-LABEL: @conditionals()
 // PGOUSE-LABEL: @conditionals()
-// PGOGEN: store {{.*}} @[[IFC]], i32 0, i32 0
+// PGOGEN: store {{.*}} @[[IFC]]
 void conditionals(void) {
   // PGOGEN: store {{.*}} @[[IFC]], i32 0, i32 1
   // PGOUSE: br {{.*}} !prof ![[IF1:[0-9]+]]
@@ -86,7 +86,7 @@ void conditionals(void) {
 
 // PGOGEN-LABEL: @early_exits()
 // PGOUSE-LABEL: @early_exits()
-// PGOGEN: store {{.*}} @[[EEC]], i32 0, i32 0
+// PGOGEN: store {{.*}} @[[EEC]]
 void early_exits(void) {
   int i = 0;
 
@@ -133,7 +133,7 @@ void early_exits(void) {
 
 // PGOGEN-LABEL: @jumps()
 // PGOUSE-LABEL: @jumps()
-// PGOGEN: store {{.*}} @[[JMC]], i32 0, i32 0
+// PGOGEN: store {{.*}} @[[JMC]]
 void jumps(void) {
   int i;
 
@@ -215,7 +215,7 @@ third:
 
 // PGOGEN-LABEL: @switches()
 // PGOUSE-LABEL: @switches()
-// PGOGEN: store {{.*}} @[[SWC]], i32 0, i32 0
+// PGOGEN: store {{.*}} @[[SWC]]
 void switches(void) {
   static int weights[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5};
 
@@ -288,7 +288,7 @@ void switches(void) {
 
 // PGOGEN-LABEL: @big_switch()
 // PGOUSE-LABEL: @big_switch()
-// PGOGEN: store {{.*}} @[[BSC]], i32 0, i32 0
+// PGOGEN: store {{.*}} @[[BSC]]
 void big_switch(void) {
   // PGOGEN: store {{.*}} @[[BSC]], i32 0, i32 1
   // PGOUSE: br {{.*}} !prof ![[BS1:[0-9]+]]
@@ -355,7 +355,7 @@ void big_switch(void) {
 
 // PGOGEN-LABEL: @boolean_operators()
 // PGOUSE-LABEL: @boolean_operators()
-// PGOGEN: store {{.*}} @[[BOC]], i32 0, i32 0
+// PGOGEN: store {{.*}} @[[BOC]]
 void boolean_operators(void) {
   int v;
   // PGOGEN: store {{.*}} @[[BOC]], i32 0, i32 1
@@ -394,7 +394,7 @@ void boolean_operators(void) {
 
 // PGOGEN-LABEL: @boolop_loops()
 // PGOUSE-LABEL: @boolop_loops()
-// PGOGEN: store {{.*}} @[[BLC]], i32 0, i32 0
+// PGOGEN: store {{.*}} @[[BLC]]
 void boolop_loops(void) {
   int i = 100;
 
@@ -434,7 +434,7 @@ void boolop_loops(void) {
 
 // PGOGEN-LABEL: @conditional_operator()
 // PGOUSE-LABEL: @conditional_operator()
-// PGOGEN: store {{.*}} @[[COC]], i32 0, i32 0
+// PGOGEN: store {{.*}} @[[COC]]
 void conditional_operator(void) {
   int i = 100;
 
@@ -452,7 +452,7 @@ void conditional_operator(void) {
 
 // PGOGEN-LABEL: @do_fallthrough()
 // PGOUSE-LABEL: @do_fallthrough()
-// PGOGEN: store {{.*}} @[[DFC]], i32 0, i32 0
+// PGOGEN: store {{.*}} @[[DFC]]
 void do_fallthrough(void) {
   // PGOGEN: store {{.*}} @[[DFC]], i32 0, i32 1
   // PGOUSE: br {{.*}} !prof ![[DF1:[0-9]+]]
@@ -474,7 +474,7 @@ void do_fallthrough(void) {
 
 // PGOGEN-LABEL: @static_func()
 // PGOUSE-LABEL: @static_func()
-// PGOGEN: store {{.*}} @[[STC]], i32 0, i32 0
+// PGOGEN: store {{.*}} @[[STC]]
 static void static_func(void) {
   // PGOGEN: store {{.*}} @[[STC]], i32 0, i32 1
   // PGOUSE: br {{.*}} !prof ![[ST1:[0-9]+]]

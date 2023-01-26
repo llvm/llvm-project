@@ -11,18 +11,18 @@ target datalayout = "e-m:e-p:32:32-i1:32-i64:64-a:0-n32"
 ; }
 
 ; AddRec: {{(-1 + ((1 + %bs) * %stride)),+,(-1 * %stride)}<%for.cond1.preheader>,+,1}<nw><%for.body3>
-; CHECK: Inst:  %0 = load i8, i8* %arrayidx, align 1
+; CHECK: Inst:  %0 = load i8, ptr %arrayidx, align 1
 ; CHECK: Base offset: %dst
 ; CHECK: ArrayDecl[UnknownSize][%stride] with elements of 1 bytes.
 ; CHECK: ArrayRef[{(1 + %bs),+,-1}<nw><%for.cond1.preheader>][{-1,+,1}<nw><%for.body3>]
 
-; AddRec: {{(%stride * %bs),+,(-1 * %stride)}<%for.cond1.preheader>,+,1}<nw><%for.body3>
-; CHECK: Inst:  store i8 %0, i8* %arrayidx7, align 1
+; AddRec: {{(ptr %bs),+,(-1 * %stride)}<%for.cond1.preheader>,+,1}<nw><%for.body3>
+; CHECK: Inst:  store i8 %0, ptr %arrayidx7, align 1
 ; CHECK: Base offset: %dst
 ; CHECK: ArrayDecl[UnknownSize][%stride] with elements of 1 bytes.
 ; CHECK: ArrayRef[{%bs,+,-1}<nsw><%for.cond1.preheader>][{0,+,1}<nuw><nsw><%for.body3>]
 
-define void @test(i8* nocapture %dst, i32 %stride, i32 %bs) {
+define void @test(ptr nocapture %dst, i32 %stride, i32 %bs) {
 entry:
   %cmp20 = icmp sgt i32 %bs, -1
   br i1 %cmp20, label %for.cond1.preheader.lr.ph, label %for.end9
@@ -45,11 +45,11 @@ for.body3.lr.ph:
 for.body3:
   %c.019 = phi i32 [ 0, %for.body3.lr.ph ], [ %inc, %for.body3 ]
   %sub = add i32 %add4, %c.019
-  %arrayidx = getelementptr inbounds i8, i8* %dst, i32 %sub
-  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %dst, i32 %sub
+  %0 = load i8, ptr %arrayidx, align 1
   %add6 = add nsw i32 %c.019, %mul5
-  %arrayidx7 = getelementptr inbounds i8, i8* %dst, i32 %add6
-  store i8 %0, i8* %arrayidx7, align 1
+  %arrayidx7 = getelementptr inbounds i8, ptr %dst, i32 %add6
+  store i8 %0, ptr %arrayidx7, align 1
   %inc = add nsw i32 %c.019, 1
   %cmp2 = icmp slt i32 %inc, %bs
   br i1 %cmp2, label %for.body3, label %for.cond1.for.inc8_crit_edge

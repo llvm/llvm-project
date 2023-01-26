@@ -3,6 +3,7 @@ static_library("TextAPI") {
   deps = [
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "Architecture.cpp",

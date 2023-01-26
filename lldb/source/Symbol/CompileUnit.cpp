@@ -13,6 +13,7 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/Timer.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -216,10 +217,11 @@ VariableListSP CompileUnit::GetVariableList(bool can_create) {
   return m_variables;
 }
 
-std::vector<uint32_t> FindFileIndexes(const FileSpecList &files, const FileSpec &file) {
+std::vector<uint32_t> FindFileIndexes(const FileSpecList &files,
+                                      const FileSpec &file) {
   std::vector<uint32_t> result;
   uint32_t idx = -1;
-  while ((idx = files.FindFileIndex(idx + 1, file, /*full=*/true)) !=
+  while ((idx = files.FindCompatibleIndex(idx + 1, file)) !=
          UINT32_MAX)
     result.push_back(idx);
   return result;
@@ -230,12 +232,14 @@ uint32_t CompileUnit::FindLineEntry(uint32_t start_idx, uint32_t line,
                                     LineEntry *line_entry_ptr) {
   if (!file_spec_ptr)
     file_spec_ptr = &GetPrimaryFile();
-  std::vector<uint32_t> file_indexes = FindFileIndexes(GetSupportFiles(), *file_spec_ptr);
+  std::vector<uint32_t> file_indexes = FindFileIndexes(GetSupportFiles(),
+                                                       *file_spec_ptr);
   if (file_indexes.empty())
     return UINT32_MAX;
 
   // TODO: Handle SourceLocationSpec column information
-  SourceLocationSpec location_spec(*file_spec_ptr, line, /*column=*/llvm::None,
+  SourceLocationSpec location_spec(*file_spec_ptr, line,
+                                   /*column=*/std::nullopt,
                                    /*check_inlines=*/false, exact);
 
   LineTable *line_table = GetLineTable();
@@ -255,7 +259,6 @@ void CompileUnit::ResolveSymbolContext(
   // First find all of the file indexes that match our "file_spec". If
   // "file_spec" has an empty directory, then only compare the basenames when
   // finding file indexes
-  std::vector<uint32_t> file_indexes;
   bool file_spec_matches_cu_file_spec =
       FileSpec::Match(file_spec, this->GetPrimaryFile());
 
@@ -276,13 +279,8 @@ void CompileUnit::ResolveSymbolContext(
     return;
   }
 
-  uint32_t file_idx =
-      GetSupportFiles().FindFileIndex(0, file_spec, true);
-  while (file_idx != UINT32_MAX) {
-    file_indexes.push_back(file_idx);
-    file_idx = GetSupportFiles().FindFileIndex(file_idx + 1, file_spec, true);
-  }
-
+  std::vector<uint32_t> file_indexes = FindFileIndexes(GetSupportFiles(),
+                                                       file_spec);
   const size_t num_file_indexes = file_indexes.size();
   if (num_file_indexes == 0)
     return;
@@ -322,10 +320,9 @@ void CompileUnit::ResolveSymbolContext(
   // subsequent line exact matches below.
   const bool inlines = false;
   const bool exact = true;
-  const llvm::Optional<uint16_t> column =
-      src_location_spec.GetColumn()
-          ? llvm::Optional<uint16_t>(line_entry.column)
-          : llvm::None;
+  const std::optional<uint16_t> column =
+      src_location_spec.GetColumn() ? std::optional<uint16_t>(line_entry.column)
+                                    : std::nullopt;
 
   SourceLocationSpec found_entry(line_entry.file, line_entry.line, column,
                                  inlines, exact);
@@ -334,14 +331,45 @@ void CompileUnit::ResolveSymbolContext(
     // If they only asked for the line entry, then we're done, we can
     // just copy that over. But if they wanted more than just the line
     // number, fill it in.
+    SymbolContext resolved_sc;
+    sc.line_entry = line_entry;
     if (resolve_scope == eSymbolContextLineEntry) {
-      sc.line_entry = line_entry;
+      sc_list.Append(sc);
     } else {
-      line_entry.range.GetBaseAddress().CalculateSymbolContext(&sc,
+      line_entry.range.GetBaseAddress().CalculateSymbolContext(&resolved_sc,
                                                                resolve_scope);
+      // Sometimes debug info is bad and isn't able to resolve the line entry's
+      // address back to the same compile unit and/or line entry. If the compile
+      // unit changed, then revert back to just the compile unit and line entry.
+      // Prior to this fix, the above code might end up not being able to lookup
+      // the address, and then it would clear compile unit and the line entry in
+      // the symbol context and the breakpoint would fail to get set even though
+      // we have a valid line table entry in this compile unit. The address
+      // lookup can also end up finding another function in another compiler
+      // unit if the DWARF has overlappging address ranges. So if we end up with
+      // no compile unit or a different one after the above function call,
+      // revert back to the same results as if resolve_scope was set exactly to
+      // eSymbolContextLineEntry.
+      if (resolved_sc.comp_unit == this) {
+        sc_list.Append(resolved_sc);
+      } else {
+        if (resolved_sc.comp_unit == nullptr && resolved_sc.module_sp) {
+          // Only report an error if we don't map back to any compile unit. With
+          // link time optimizations, the debug info might have many compile
+          // units that have the same address range due to function outlining
+          // or other link time optimizations. If the compile unit is NULL, then
+          // address resolving is completely failing and more deserving of an
+          // error message the user can see.
+          resolved_sc.module_sp->ReportError(
+              "unable to resolve a line table file address {0:x16} back "
+              "to a compile unit, please file a bug and attach the address "
+              "and file.",
+              line_entry.range.GetBaseAddress().GetFileAddress());
+        }
+        sc_list.Append(sc);
+      }
     }
 
-    sc_list.Append(sc);
     if (num_file_indexes == 1)
       line_idx = line_table->FindLineEntryIndexByFileIndex(
           line_idx + 1, file_indexes.front(), found_entry, &line_entry);

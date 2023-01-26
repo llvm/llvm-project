@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_INCLUDESORTER_H
 
 #include "../ClangTidyCheck.h"
+#include <optional>
 #include <string>
 
 namespace clang {
@@ -44,9 +45,11 @@ public:
   void addInclude(StringRef FileName, bool IsAngled,
                   SourceLocation HashLocation, SourceLocation EndLocation);
 
-  /// Creates a quoted inclusion directive in the right sort order. Returns None
-  /// on error or if header inclusion directive for header already exists.
-  Optional<FixItHint> createIncludeInsertion(StringRef FileName, bool IsAngled);
+  /// Creates a quoted inclusion directive in the right sort order. Returns
+  /// std::nullopt on error or if header inclusion directive for header already
+  /// exists.
+  std::optional<FixItHint> createIncludeInsertion(StringRef FileName,
+                                                  bool IsAngled);
 
 private:
   typedef SmallVector<SourceRange, 1> SourceRangeVector;

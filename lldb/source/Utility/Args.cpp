@@ -215,7 +215,12 @@ bool Args::GetCommandString(std::string &command) const {
   for (size_t i = 0; i < m_entries.size(); ++i) {
     if (i > 0)
       command += ' ';
+    char quote = m_entries[i].quote;
+    if (quote != '\0')
+     command += quote;
     command += m_entries[i].ref();
+    if (quote != '\0')
+      command += quote;
   }
 
   return !m_entries.empty();
@@ -307,7 +312,7 @@ void Args::AppendArguments(const char **argv) {
   assert(m_argv.size() == m_entries.size() + 1);
   assert(m_argv.back() == nullptr);
   m_argv.pop_back();
-  for (auto arg : llvm::makeArrayRef(argv, argc)) {
+  for (auto arg : llvm::ArrayRef(argv, argc)) {
     m_entries.emplace_back(arg, '\0');
     m_argv.push_back(m_entries.back().data());
   }
@@ -353,7 +358,7 @@ void Args::DeleteArgumentAtIndex(size_t idx) {
 void Args::SetArguments(size_t argc, const char **argv) {
   Clear();
 
-  auto args = llvm::makeArrayRef(argv, argc);
+  auto args = llvm::ArrayRef(argv, argc);
   m_entries.resize(argc);
   m_argv.resize(argc + 1);
   for (size_t i = 0; i < args.size(); ++i) {
@@ -681,21 +686,4 @@ void OptionsWithRaw::SetFromString(llvm::StringRef arg_string) {
   // If we didn't find a suffix delimiter, the whole string is the raw suffix.
   if (!found_suffix)
     m_suffix = std::string(original_args);
-}
-
-void llvm::yaml::MappingTraits<Args::ArgEntry>::mapping(IO &io,
-                                                        Args::ArgEntry &v) {
-  MappingNormalization<NormalizedArgEntry, Args::ArgEntry> keys(io, v);
-  io.mapRequired("value", keys->value);
-  io.mapRequired("quote", keys->quote);
-}
-
-void llvm::yaml::MappingTraits<Args>::mapping(IO &io, Args &v) {
-  io.mapRequired("entries", v.m_entries);
-
-  // Recompute m_argv vector.
-  v.m_argv.clear();
-  for (auto &entry : v.m_entries)
-    v.m_argv.push_back(entry.data());
-  v.m_argv.push_back(nullptr);
 }

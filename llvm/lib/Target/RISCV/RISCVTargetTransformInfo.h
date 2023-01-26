@@ -22,6 +22,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/IR/Function.h"
+#include <optional>
 
 namespace llvm {
 
@@ -37,11 +38,28 @@ class RISCVTTIImpl : public BasicTTIImplBase<RISCVTTIImpl> {
   const RISCVSubtarget *getST() const { return ST; }
   const RISCVTargetLowering *getTLI() const { return TLI; }
 
-  unsigned getMaxVLFor(VectorType *Ty);
+  /// This function returns an estimate for VL to be used in VL based terms
+  /// of the cost model.  For fixed length vectors, this is simply the
+  /// vector length.  For scalable vectors, we return results consistent
+  /// with getVScaleForTuning under the assumption that clients are also
+  /// using that when comparing costs between scalar and vector representation.
+  /// This does unfortunately mean that we can both undershoot and overshot
+  /// the true cost significantly if getVScaleForTuning is wildly off for the
+  /// actual target hardware.
+  unsigned getEstimatedVLFor(VectorType *Ty);
+
+  /// Return the cost of LMUL. The larger the LMUL, the higher the cost.
+  InstructionCost getLMULCost(MVT VT);
+
 public:
   explicit RISCVTTIImpl(const RISCVTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
+
+  /// Return the cost of materializing an immediate for a value operand of
+  /// a store instruction.
+  InstructionCost getStoreImmCost(Type *VecTy, TTI::OperandValueInfo OpInfo,
+                                  TTI::TargetCostKind CostKind);
 
   InstructionCost getIntImmCost(const APInt &Imm, Type *Ty,
                                 TTI::TargetCostKind CostKind);
@@ -62,12 +80,21 @@ public:
     return ST->hasVInstructions() ? PredicationStyle::Data
                                   : PredicationStyle::None;
   }
-  Optional<unsigned> getMaxVScale() const;
-  Optional<unsigned> getVScaleForTuning() const;
+  std::optional<unsigned> getMaxVScale() const;
+  std::optional<unsigned> getVScaleForTuning() const;
 
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
 
   unsigned getRegUsageForType(Type *Ty);
+
+  unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const;
+
+  bool preferEpilogueVectorization() const {
+    // Epilogue vectorization is usually unprofitable - tail folding or
+    // a smaller VF would have been better.  This a blunt hammer - we
+    // should re-examine this once vectorization is better tuned.
+    return false;
+  }
 
   InstructionCost getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
                                         Align Alignment, unsigned AddressSpace,
@@ -86,9 +113,10 @@ public:
 
   InstructionCost getSpliceCost(VectorType *Tp, int Index);
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
-                                 ArrayRef<int> Mask, int Index,
+                                 ArrayRef<int> Mask,
+                                 TTI::TargetCostKind CostKind, int Index,
                                  VectorType *SubTp,
-                                 ArrayRef<const Value *> Args = None);
+                                 ArrayRef<const Value *> Args = std::nullopt);
 
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                         TTI::TargetCostKind CostKind);
@@ -109,8 +137,36 @@ public:
                                          TTI::TargetCostKind CostKind);
 
   InstructionCost getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
-                                             Optional<FastMathFlags> FMF,
+                                             std::optional<FastMathFlags> FMF,
                                              TTI::TargetCostKind CostKind);
+
+  InstructionCost getExtendedReductionCost(unsigned Opcode, bool IsUnsigned,
+                                           Type *ResTy, VectorType *ValTy,
+                                           std::optional<FastMathFlags> FMF,
+                                           TTI::TargetCostKind CostKind);
+
+  InstructionCost
+  getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
+                  unsigned AddressSpace, TTI::TargetCostKind CostKind,
+                  TTI::OperandValueInfo OpdInfo = {TTI::OK_AnyValue, TTI::OP_None},
+                  const Instruction *I = nullptr);
+
+  InstructionCost getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
+                                     CmpInst::Predicate VecPred,
+                                     TTI::TargetCostKind CostKind,
+                                     const Instruction *I = nullptr);
+
+  using BaseT::getVectorInstrCost;
+  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
+                                     TTI::TargetCostKind CostKind,
+                                     unsigned Index, Value *Op0, Value *Op1);
+
+  InstructionCost getArithmeticInstrCost(
+      unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
+      TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
+      TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
+      ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
+      const Instruction *CxtI = nullptr);
 
   bool isElementTypeLegalForScalableVector(Type *Ty) const {
     return TLI->isLegalElementTypeForRVV(Ty);
@@ -131,7 +187,7 @@ public:
       return false;
 
     if (Alignment <
-        DL.getTypeStoreSize(DataType->getScalarType()).getFixedSize())
+        DL.getTypeStoreSize(DataType->getScalarType()).getFixedValue())
       return false;
 
     return TLI->isLegalElementTypeForRVV(DataType->getScalarType());
@@ -159,7 +215,7 @@ public:
       return false;
 
     if (Alignment <
-        DL.getTypeStoreSize(DataType->getScalarType()).getFixedSize())
+        DL.getTypeStoreSize(DataType->getScalarType()).getFixedValue())
       return false;
 
     return TLI->isLegalElementTypeForRVV(DataType->getScalarType());
@@ -187,6 +243,12 @@ public:
   TargetTransformInfo::VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const {
     using VPLegalization = TargetTransformInfo::VPLegalization;
+    if (!ST->hasVInstructions() ||
+        (PI.getIntrinsicID() == Intrinsic::vp_reduce_mul &&
+         cast<VectorType>(PI.getArgOperand(1)->getType())
+                 ->getElementType()
+                 ->getIntegerBitWidth() != 1))
+      return VPLegalization(VPLegalization::Discard, VPLegalization::Convert);
     return VPLegalization(VPLegalization::Legal, VPLegalization::Legal);
   }
 
@@ -211,6 +273,9 @@ public:
     case RecurKind::UMax:
     case RecurKind::FMin:
     case RecurKind::FMax:
+    case RecurKind::SelectICmp:
+    case RecurKind::SelectFCmp:
+    case RecurKind::FMulAdd:
       return true;
     default:
       return false;
@@ -251,7 +316,7 @@ public:
       return RISCVRegisterClass::GPRRC;
 
     Type *ScalarTy = Ty->getScalarType();
-    if ((ScalarTy->isHalfTy() && ST->hasStdExtZfh()) ||
+    if ((ScalarTy->isHalfTy() && ST->hasStdExtZfhOrZfhmin()) ||
         (ScalarTy->isFloatTy() && ST->hasStdExtF()) ||
         (ScalarTy->isDoubleTy() && ST->hasStdExtD())) {
       return RISCVRegisterClass::FPRRC;

@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -loop-reduce %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 -S -mtriple=amdgcn-amd-amdhsa -loop-reduce %s | FileCheck %s
 
 ; Test for assert resulting from inconsistent isLegalAddressingMode
 ; answers when the address space was dropped from the query.

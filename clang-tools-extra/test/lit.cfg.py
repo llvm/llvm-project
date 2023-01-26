@@ -59,3 +59,8 @@ config.substitutions.append(
 # Plugins (loadable modules)
 if config.has_plugins and config.llvm_plugin_ext:
     config.available_features.add('plugins')
+
+# It is not realistically possible to account for all options that could
+# possibly be present in system and user configuration files, so disable
+# default configs for the test runs.
+config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"

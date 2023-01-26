@@ -11,7 +11,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ;       *(A + j * m + i) = 2.0;
 ; }
 
-define void @foo(i64 %n, i64 %m, double* %A) {
+define void @foo(i64 %n, i64 %m, ptr %A) {
 entry:
   br label %for.i
 
@@ -23,12 +23,12 @@ for.j:
   %j = phi i64 [ 0, %for.i ], [ %j.inc, %for.j ]
   %tmp = mul nsw i64 %i, %m
   %vlaarrayidx.sum = add i64 %j, %tmp
-  %arrayidx = getelementptr inbounds double, double* %A, i64 %vlaarrayidx.sum
-  store double 1.0, double* %arrayidx
+  %arrayidx = getelementptr inbounds double, ptr %A, i64 %vlaarrayidx.sum
+  store double 1.0, ptr %arrayidx
   %tmp1 = mul nsw i64 %j, %n
   %vlaarrayidx.sum1 = add i64 %i, %tmp1
-  %arrayidx1 = getelementptr inbounds double, double* %A, i64 %vlaarrayidx.sum1
-  store double 1.0, double* %arrayidx1
+  %arrayidx1 = getelementptr inbounds double, ptr %A, i64 %vlaarrayidx.sum1
+  store double 1.0, ptr %arrayidx1
   %j.inc = add nsw i64 %j, 1
   %j.exitcond = icmp eq i64 %j.inc, %m
   br i1 %j.exitcond, label %for.i.inc, label %for.j

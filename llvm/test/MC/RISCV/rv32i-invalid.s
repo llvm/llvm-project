@@ -151,8 +151,8 @@ slti a10, a2, 0x20 # CHECK: :[[@LINE]]:6: error: invalid operand for instruction
 slt x32, s0, s0 # CHECK: :[[@LINE]]:5: error: invalid operand for instruction
 
 # RV64I mnemonics
-addiw a0, sp, 100 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
-sraw t0, s2, zero # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
+addiw a0, sp, 100 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}
+sraw t0, s2, zero # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}
 
 # Invalid operand types
 xori sp, 22, 220 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
@@ -169,19 +169,19 @@ ori a0, a1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
 xor s2, s2 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
 
 # Instruction not in the base ISA
-div a4, ra, s0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'M' (Integer Multiplication and Division)
-amomaxu.w s5, s4, (s3) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'A' (Atomic Instructions)
+div a4, ra, s0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'M' (Integer Multiplication and Division){{$}}
+amomaxu.w s5, s4, (s3) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'A' (Atomic Instructions){{$}}
 fadd.s ft0, ft1, ft2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'F' (Single-Precision Floating-Point){{$}}
-fadd.h ft0, ft1, ft2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zfh' (Half-Precision Floating-Point)
-fadd.s a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zfinx' (Float in Integer)
-fadd.d a0, a2, a4 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zdinx' (Double in Integer)
-fadd.h a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zhinx' (Half Float in Integer)
+fadd.h ft0, ft1, ft2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zfh' (Half-Precision Floating-Point){{$}}
+fadd.s a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zfinx' (Float in Integer){{$}}
+fadd.d a0, a2, a4 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zdinx' (Double in Integer){{$}}
+fadd.h a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zhinx' (Half Float in Integer){{$}}
 flh ft0, (a0) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zfh' (Half-Precision Floating-Point) or 'Zfhmin' (Half-Precision Floating-Point Minimal){{$}}
-sh1add a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zba' (Address Generation Instructions)
-clz a0, a1 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zbb' (Basic Bit-Manipulation)
-clmul a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zbc' (Carry-Less Multiplication)
-bset a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zbs' (Single-Bit Instructions)
-pause # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zihintpause' (Pause Hint)
+sh1add a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zba' (Address Generation Instructions){{$}}
+clz a0, a1 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zbb' (Basic Bit-Manipulation){{$}}
+clmul a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zbc' (Carry-Less Multiplication) or 'Zbkc' (Carry-less multiply instructions for Cryptography){{$}}
+bset a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zbs' (Single-Bit Instructions){{$}}
+pause # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zihintpause' (Pause Hint){{$}}
 
 # Using floating point registers when integer registers are expected
 addi a2, ft0, 24 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction

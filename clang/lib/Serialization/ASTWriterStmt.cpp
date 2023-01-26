@@ -402,6 +402,7 @@ static void
 addConstraintSatisfaction(ASTRecordWriter &Record,
                           const ASTConstraintSatisfaction &Satisfaction) {
   Record.push_back(Satisfaction.IsSatisfied);
+  Record.push_back(Satisfaction.ContainsErrors);
   if (!Satisfaction.IsSatisfied) {
     Record.push_back(Satisfaction.NumRecords);
     for (const auto &DetailRecord : Satisfaction) {
@@ -432,16 +433,13 @@ addSubstitutionDiagnostic(
 void ASTStmtWriter::VisitConceptSpecializationExpr(
         ConceptSpecializationExpr *E) {
   VisitExpr(E);
-  ArrayRef<TemplateArgument> TemplateArgs = E->getTemplateArguments();
-  Record.push_back(TemplateArgs.size());
   Record.AddNestedNameSpecifierLoc(E->getNestedNameSpecifierLoc());
   Record.AddSourceLocation(E->getTemplateKWLoc());
   Record.AddDeclarationNameInfo(E->getConceptNameInfo());
   Record.AddDeclRef(E->getNamedConcept());
   Record.AddDeclRef(E->getFoundDecl());
+  Record.AddDeclRef(E->getSpecializationDecl());
   Record.AddASTTemplateArgumentListInfo(E->getTemplateArgsAsWritten());
-  for (const TemplateArgument &Arg : TemplateArgs)
-    Record.AddTemplateArgument(Arg);
   if (!E->isValueDependent())
     addConstraintSatisfaction(Record, E->getSatisfaction());
 
@@ -495,12 +493,12 @@ void ASTStmtWriter::VisitRequiresExpr(RequiresExpr *E) {
     } else {
       auto *NestedReq = cast<concepts::NestedRequirement>(R);
       Record.push_back(concepts::Requirement::RK_Nested);
-      Record.push_back(NestedReq->isSubstitutionFailure());
-      if (NestedReq->isSubstitutionFailure()){
-        addSubstitutionDiagnostic(Record,
-                                  NestedReq->getSubstitutionDiagnostic());
+      Record.push_back(NestedReq->hasInvalidConstraint());
+      if (NestedReq->hasInvalidConstraint()) {
+        Record.AddString(NestedReq->getInvalidConstraintEntity());
+        addConstraintSatisfaction(Record, *NestedReq->Satisfaction);
       } else {
-        Record.AddStmt(NestedReq->Value.get<Expr *>());
+        Record.AddStmt(NestedReq->getConstraintExpr());
         if (!NestedReq->isDependent())
           addConstraintSatisfaction(Record, *NestedReq->Satisfaction);
       }
@@ -1747,14 +1745,20 @@ void ASTStmtWriter::VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
   Record.AddDeclRef(E->getParam());
   Record.AddDeclRef(cast_or_null<Decl>(E->getUsedContext()));
   Record.AddSourceLocation(E->getUsedLocation());
+  Record.push_back(E->hasRewrittenInit());
+  if (E->hasRewrittenInit())
+    Record.AddStmt(E->getRewrittenExpr());
   Code = serialization::EXPR_CXX_DEFAULT_ARG;
 }
 
 void ASTStmtWriter::VisitCXXDefaultInitExpr(CXXDefaultInitExpr *E) {
   VisitExpr(E);
+  Record.push_back(E->hasRewrittenInit());
   Record.AddDeclRef(E->getField());
   Record.AddDeclRef(cast_or_null<Decl>(E->getUsedContext()));
   Record.AddSourceLocation(E->getExprLoc());
+  if (E->hasRewrittenInit())
+    Record.AddStmt(E->getRewrittenExpr());
   Code = serialization::EXPR_CXX_DEFAULT_INIT;
 }
 
@@ -2027,8 +2031,13 @@ void ASTStmtWriter::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
 void ASTStmtWriter::VisitSubstNonTypeTemplateParmExpr(
                                               SubstNonTypeTemplateParmExpr *E) {
   VisitExpr(E);
-  Record.AddDeclRef(E->getParameter());
+  Record.AddDeclRef(E->getAssociatedDecl());
   Record.push_back(E->isReferenceParameter());
+  Record.push_back(E->getIndex());
+  if (auto PackIndex = E->getPackIndex())
+    Record.push_back(*PackIndex + 1);
+  else
+    Record.push_back(0);
   Record.AddSourceLocation(E->getNameLoc());
   Record.AddStmt(E->getReplacement());
   Code = serialization::EXPR_SUBST_NON_TYPE_TEMPLATE_PARM;
@@ -2037,7 +2046,8 @@ void ASTStmtWriter::VisitSubstNonTypeTemplateParmExpr(
 void ASTStmtWriter::VisitSubstNonTypeTemplateParmPackExpr(
                                           SubstNonTypeTemplateParmPackExpr *E) {
   VisitExpr(E);
-  Record.AddDeclRef(E->getParameterPack());
+  Record.AddDeclRef(E->getAssociatedDecl());
+  Record.push_back(E->getIndex());
   Record.AddTemplateArgument(E->getArgumentPack());
   Record.AddSourceLocation(E->getParameterPackLocation());
   Code = serialization::EXPR_SUBST_NON_TYPE_TEMPLATE_PARM_PACK;
@@ -2075,6 +2085,30 @@ void ASTStmtWriter::VisitCXXFoldExpr(CXXFoldExpr *E) {
   Record.AddStmt(E->SubExprs[2]);
   Record.push_back(E->Opcode);
   Code = serialization::EXPR_CXX_FOLD;
+}
+
+void ASTStmtWriter::VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
+  VisitExpr(E);
+  ArrayRef<Expr *> InitExprs = E->getInitExprs();
+  Record.push_back(InitExprs.size());
+  Record.push_back(E->getUserSpecifiedInitExprs().size());
+  Record.AddSourceLocation(E->getInitLoc());
+  Record.AddSourceLocation(E->getBeginLoc());
+  Record.AddSourceLocation(E->getEndLoc());
+  for (Expr *InitExpr : E->getInitExprs())
+    Record.AddStmt(InitExpr);
+  Expr *ArrayFiller = E->getArrayFiller();
+  FieldDecl *UnionField = E->getInitializedFieldInUnion();
+  bool HasArrayFillerOrUnionDecl = ArrayFiller || UnionField;
+  Record.push_back(HasArrayFillerOrUnionDecl);
+  if (HasArrayFillerOrUnionDecl) {
+    Record.push_back(static_cast<bool>(ArrayFiller));
+    if (ArrayFiller)
+      Record.AddStmt(ArrayFiller);
+    else
+      Record.AddDeclRef(UnionField);
+  }
+  Code = serialization::EXPR_CXX_PAREN_LIST_INIT;
 }
 
 void ASTStmtWriter::VisitOpaqueValueExpr(OpaqueValueExpr *E) {
@@ -2390,6 +2424,13 @@ void ASTStmtWriter::VisitOMPTaskwaitDirective(OMPTaskwaitDirective *D) {
   Record.push_back(D->getNumClauses());
   VisitOMPExecutableDirective(D);
   Code = serialization::STMT_OMP_TASKWAIT_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPErrorDirective(OMPErrorDirective *D) {
+  VisitStmt(D);
+  Record.push_back(D->getNumClauses());
+  VisitOMPExecutableDirective(D);
+  Code = serialization::STMT_OMP_ERROR_DIRECTIVE;
 }
 
 void ASTStmtWriter::VisitOMPTaskgroupDirective(OMPTaskgroupDirective *D) {

@@ -1,5 +1,5 @@
 ; Check that promise object is reloaded from the correct index of the coro frame.
-; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 %"class.task::promise_type" = type { [64 x i8] }
 

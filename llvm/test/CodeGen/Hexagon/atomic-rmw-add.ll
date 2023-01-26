@@ -13,8 +13,7 @@
 
 define void @b() #0 {
   %d = alloca %struct.a
-  %c = getelementptr %struct.a, %struct.a* %d, i32 0, i32 0
-  atomicrmw add i8* %c, i8 2 monotonic
+  atomicrmw add ptr %d, i8 2 monotonic
   ret void
 }
 

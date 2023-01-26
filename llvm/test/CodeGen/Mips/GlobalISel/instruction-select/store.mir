@@ -3,9 +3,9 @@
 # RUN: llc -O0 -mtriple=mipsel-linux-gnu -mattr=+fp64,+mips32r2 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=MIPS32FP64
 --- |
 
-  define void @store_i32(i32* %ptr) { entry: ret void }
-  define void @store_float(float* %ptr) { entry: ret void }
-  define void @store_double(double* %ptr) { entry: ret void }
+  define void @store_i32(ptr %ptr) { entry: ret void }
+  define void @store_float(ptr %ptr) { entry: ret void }
+  define void @store_double(ptr %ptr) { entry: ret void }
 
 ...
 ---

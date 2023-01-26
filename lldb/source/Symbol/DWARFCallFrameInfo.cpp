@@ -22,6 +22,7 @@
 #include "lldb/Utility/Timer.h"
 #include <cstring>
 #include <list>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -167,7 +168,7 @@ bool DWARFCallFrameInfo::GetUnwindPlan(const AddressRange &range,
       module_sp->GetObjectFile() != &m_objfile)
     return false;
 
-  if (llvm::Optional<FDEEntryMap::Entry> entry = GetFirstFDEEntryInRange(range))
+  if (std::optional<FDEEntryMap::Entry> entry = GetFirstFDEEntryInRange(range))
     return FDEToUnwindPlan(entry->data, addr, unwind_plan);
   return false;
 }
@@ -194,10 +195,10 @@ bool DWARFCallFrameInfo::GetAddressRange(Address addr, AddressRange &range) {
   return true;
 }
 
-llvm::Optional<DWARFCallFrameInfo::FDEEntryMap::Entry>
+std::optional<DWARFCallFrameInfo::FDEEntryMap::Entry>
 DWARFCallFrameInfo::GetFirstFDEEntryInRange(const AddressRange &range) {
   if (!m_section_sp || m_section_sp->IsEncrypted())
-    return llvm::None;
+    return std::nullopt;
 
   GetFDEIndex();
 
@@ -208,7 +209,7 @@ DWARFCallFrameInfo::GetFirstFDEEntryInRange(const AddressRange &range) {
                  FDEEntryMap::Range(start_file_addr, range.GetByteSize())))
     return *fde;
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 void DWARFCallFrameInfo::GetFunctionAddressAndSizeVector(
@@ -772,12 +773,12 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
           // useful for compilers that move epilogue code into the body of a
           // function.)
           if (stack.empty()) {
-            LLDB_LOGF(log,
-                      "DWARFCallFrameInfo::%s(dwarf_offset: %" PRIx32
-                      ", startaddr: %" PRIx64
-                      " encountered DW_CFA_restore_state but state stack "
-                      "is empty. Corrupt unwind info?",
-                      __FUNCTION__, dwarf_offset, startaddr.GetFileAddress());
+            LLDB_LOG(log,
+                     "DWARFCallFrameInfo::{0}(dwarf_offset: "
+                     "{1:x16}, startaddr: [{2:x16}] encountered "
+                     "DW_CFA_restore_state but state stack "
+                     "is empty. Corrupt unwind info?",
+                     __FUNCTION__, dwarf_offset, startaddr.GetFileAddress());
             break;
           }
           lldb::addr_t offset = row->GetOffset();

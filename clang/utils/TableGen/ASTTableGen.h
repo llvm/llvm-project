@@ -11,6 +11,7 @@
 
 #include "llvm/TableGen/Record.h"
 #include "llvm/ADT/STLExtras.h"
+#include <optional>
 
 // These are spellings in the tblgen files.
 

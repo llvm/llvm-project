@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -loop-vectorize -S -mattr=avx512f --debug-only=loop-vectorize < %s 2>&1| FileCheck %s
+; RUN: opt -passes=loop-vectorize -S -mattr=avx512f --debug-only=loop-vectorize < %s 2>&1| FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -20,10 +20,10 @@ entry:
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %0 = shl nsw i64 %indvars.iv, 1
-  %arrayidx = getelementptr inbounds [10240 x i64], [10240 x i64]* @A, i64 0, i64 %0
-  %1 = load i64, i64* %arrayidx, align 16
-  %arrayidx2 = getelementptr inbounds [10240 x i64], [10240 x i64]* @B, i64 0, i64 %indvars.iv
-  store i64 %1, i64* %arrayidx2, align 8
+  %arrayidx = getelementptr inbounds [10240 x i64], ptr @A, i64 0, i64 %0
+  %1 = load i64, ptr %arrayidx, align 16
+  %arrayidx2 = getelementptr inbounds [10240 x i64], ptr @B, i64 0, i64 %indvars.iv
+  store i64 %1, ptr %arrayidx2, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.end, label %for.body
@@ -44,10 +44,10 @@ entry:
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %0 = mul nsw i64 %indvars.iv, 3
-  %arrayidx = getelementptr inbounds [10240 x i64], [10240 x i64]* @A, i64 0, i64 %0
-  %1 = load i64, i64* %arrayidx, align 16
-  %arrayidx2 = getelementptr inbounds [10240 x i64], [10240 x i64]* @B, i64 0, i64 %indvars.iv
-  store i64 %1, i64* %arrayidx2, align 8
+  %arrayidx = getelementptr inbounds [10240 x i64], ptr @A, i64 0, i64 %0
+  %1 = load i64, ptr %arrayidx, align 16
+  %arrayidx2 = getelementptr inbounds [10240 x i64], ptr @B, i64 0, i64 %indvars.iv
+  store i64 %1, ptr %arrayidx2, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.end, label %for.body
@@ -68,10 +68,10 @@ entry:
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %0 = mul nsw i64 %indvars.iv, 4
-  %arrayidx = getelementptr inbounds [10240 x i64], [10240 x i64]* @A, i64 0, i64 %0
-  %1 = load i64, i64* %arrayidx, align 16
-  %arrayidx2 = getelementptr inbounds [10240 x i64], [10240 x i64]* @B, i64 0, i64 %indvars.iv
-  store i64 %1, i64* %arrayidx2, align 8
+  %arrayidx = getelementptr inbounds [10240 x i64], ptr @A, i64 0, i64 %0
+  %1 = load i64, ptr %arrayidx, align 16
+  %arrayidx2 = getelementptr inbounds [10240 x i64], ptr @B, i64 0, i64 %indvars.iv
+  store i64 %1, ptr %arrayidx2, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.end, label %for.body

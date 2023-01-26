@@ -2762,6 +2762,7 @@ body: |
     ; GFX9-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s1), [[SUB3]], [[SELECT]]
     ; GFX9-NEXT: [[XOR2:%[0-9]+]]:_(s32) = G_XOR [[SELECT1]], [[ASHR]]
     ; GFX9-NEXT: [[SUB4:%[0-9]+]]:_(s32) = G_SUB [[XOR2]], [[ASHR]]
+    ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[SUB4]](s32)
     ; GFX9-NEXT: [[SEXT_INREG2:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LSHR]], 16
     ; GFX9-NEXT: [[SEXT_INREG3:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LSHR1]], 16
     ; GFX9-NEXT: [[ASHR2:%[0-9]+]]:_(s32) = G_ASHR [[SEXT_INREG2]], [[C1]](s32)
@@ -2789,8 +2790,9 @@ body: |
     ; GFX9-NEXT: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP3]](s1), [[SUB8]], [[SELECT2]]
     ; GFX9-NEXT: [[XOR5:%[0-9]+]]:_(s32) = G_XOR [[SELECT3]], [[ASHR2]]
     ; GFX9-NEXT: [[SUB9:%[0-9]+]]:_(s32) = G_SUB [[XOR5]], [[ASHR2]]
-    ; GFX9-NEXT: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[SUB4]](s32), [[SUB9]](s32)
-    ; GFX9-NEXT: $vgpr0 = COPY [[BUILD_VECTOR_TRUNC]](<2 x s16>)
+    ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[SUB9]](s32)
+    ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
+    ; GFX9-NEXT: $vgpr0 = COPY [[BUILD_VECTOR]](<2 x s16>)
     ; GFX10-LABEL: name: test_srem_v2s16
     ; GFX10: liveins: $vgpr0, $vgpr1
     ; GFX10-NEXT: {{  $}}
@@ -2831,6 +2833,7 @@ body: |
     ; GFX10-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s1), [[SUB3]], [[SELECT]]
     ; GFX10-NEXT: [[XOR2:%[0-9]+]]:_(s32) = G_XOR [[SELECT1]], [[ASHR]]
     ; GFX10-NEXT: [[SUB4:%[0-9]+]]:_(s32) = G_SUB [[XOR2]], [[ASHR]]
+    ; GFX10-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[SUB4]](s32)
     ; GFX10-NEXT: [[SEXT_INREG2:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LSHR]], 16
     ; GFX10-NEXT: [[SEXT_INREG3:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LSHR1]], 16
     ; GFX10-NEXT: [[ASHR2:%[0-9]+]]:_(s32) = G_ASHR [[SEXT_INREG2]], [[C1]](s32)
@@ -2858,8 +2861,9 @@ body: |
     ; GFX10-NEXT: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP3]](s1), [[SUB8]], [[SELECT2]]
     ; GFX10-NEXT: [[XOR5:%[0-9]+]]:_(s32) = G_XOR [[SELECT3]], [[ASHR2]]
     ; GFX10-NEXT: [[SUB9:%[0-9]+]]:_(s32) = G_SUB [[XOR5]], [[ASHR2]]
-    ; GFX10-NEXT: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[SUB4]](s32), [[SUB9]](s32)
-    ; GFX10-NEXT: $vgpr0 = COPY [[BUILD_VECTOR_TRUNC]](<2 x s16>)
+    ; GFX10-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[SUB9]](s32)
+    ; GFX10-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
+    ; GFX10-NEXT: $vgpr0 = COPY [[BUILD_VECTOR]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $vgpr0
     %1:_(<2 x s16>) = COPY $vgpr1
     %2:_(<2 x s16>) = G_SREM %0, %1

@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S < %s | FileCheck %s
+; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -103,30 +103,30 @@ if.end:                                           ; preds = %if.else, %if.then
 ;   return p;
 ; }
 
-; CHECK: define i32* @gep
+; CHECK: define ptr @gep
 ; CHECK-LABEL: if.end:
 ; CHECK: %[[PHI:.*]] = phi i64 [ %call, %if.then ], [ %call1, %if.else ]
-; CHECK: getelementptr inbounds i32, i32* %b, i64 %[[PHI]], !dbg [[gepMergedLoc:![0-9]+]]
-; CHECK: ret i32*
+; CHECK: getelementptr inbounds i32, ptr %b, i64 %[[PHI]], !dbg [[gepMergedLoc:![0-9]+]]
+; CHECK: ret ptr
 
-define i32* @gep(i32 %a, i32* %b) !dbg !23 {
+define ptr @gep(i32 %a, ptr %b) !dbg !23 {
 entry:
   %tobool = icmp ne i32 %a, 0, !dbg !24
   br i1 %tobool, label %if.then, label %if.else, !dbg !24
 
 if.then:                                          ; preds = %entry
   %call = call i64 @foo2(), !dbg !25
-  %arrayidx = getelementptr inbounds i32, i32* %b, i64 %call, !dbg !26
+  %arrayidx = getelementptr inbounds i32, ptr %b, i64 %call, !dbg !26
   br label %if.end, !dbg !27
 
 if.else:                                          ; preds = %entry
   %call1 = call i64 @bar2(), !dbg !28
-  %arrayidx2 = getelementptr inbounds i32, i32* %b, i64 %call1, !dbg !29
+  %arrayidx2 = getelementptr inbounds i32, ptr %b, i64 %call1, !dbg !29
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
-  %r.0 = phi i32* [ %arrayidx, %if.then ], [ %arrayidx2, %if.else ]
-  ret i32* %r.0, !dbg !30
+  %r.0 = phi ptr [ %arrayidx, %if.then ], [ %arrayidx2, %if.else ]
+  ret ptr %r.0, !dbg !30
 }
 
 ; Test folding of load.  Generated from source:
@@ -145,8 +145,8 @@ if.end:                                           ; preds = %if.else, %if.then
 
 ; CHECK: define i32 @load
 ; CHECK-LABEL: if.end:
-; CHECK: %[[PHI:.*]] = phi i32* [ %call, %if.then ], [ %call1, %if.else ]
-; CHECK: load i32, i32* %[[PHI]],{{.*}} !dbg [[loadMergedLoc:![0-9]+]]
+; CHECK: %[[PHI:.*]] = phi ptr [ %call, %if.then ], [ %call1, %if.else ]
+; CHECK: load i32, ptr %[[PHI]],{{.*}} !dbg [[loadMergedLoc:![0-9]+]]
 ; CHECK: ret i32
 
 define i32 @load(i32 %a) !dbg !31 {
@@ -155,13 +155,13 @@ entry:
   br i1 %tobool, label %if.then, label %if.else, !dbg !32
 
 if.then:                                          ; preds = %entry
-  %call = call i32* @foo3(), !dbg !33
-  %0 = load i32, i32* %call, align 4, !dbg !34
+  %call = call ptr @foo3(), !dbg !33
+  %0 = load i32, ptr %call, align 4, !dbg !34
   br label %if.end, !dbg !35
 
 if.else:                                          ; preds = %entry
-  %call1 = call i32* @bar3(), !dbg !36
-  %1 = load i32, i32* %call1, align 4, !dbg !37
+  %call1 = call ptr @bar3(), !dbg !36
+  %1 = load i32, ptr %call1, align 4, !dbg !37
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
@@ -295,8 +295,8 @@ declare i32 @foo()
 declare i32 @bar()
 declare i64 @foo2()
 declare i64 @bar2()
-declare i32* @foo3()
-declare i32* @bar3()
+declare ptr @foo3()
+declare ptr @bar3()
 
 ; CHECK: [[binopMergedLoc]] = !DILocation(line: 0
 ; CHECK: [[cmpMergedLoc]] = !DILocation(line: 0

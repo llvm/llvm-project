@@ -2,14 +2,14 @@
 # RUN: llc -O0 -mtriple=mipsel-linux-gnu -run-pass=regbankselect -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=MIPS32
 --- |
 
-  define void @outgoing_gpr(i32* %i32_ptr) {entry: ret void}
-  define void @outgoing_fpr(float* %float_ptr) {entry: ret void}
-  define void @outgoing_gpr_instr(i32* %i32_ptr1, i32* %i32_ptr2) {entry: ret void}
-  define void @outgoing_fpr_instr(float* %float_ptr1, float* %float_ptr2) {entry: ret void}
-  define void @incoming_gpr(i32* %a) {entry: ret void}
-  define void @incoming_fpr(float* %a) {entry: ret void}
-  define void @incoming_i32_instr(i32* %i32_ptr) {entry: ret void}
-  define void @incoming_float_instr(float* %float_ptr) {entry: ret void}
+  define void @outgoing_gpr(ptr %i32_ptr) {entry: ret void}
+  define void @outgoing_fpr(ptr %float_ptr) {entry: ret void}
+  define void @outgoing_gpr_instr(ptr %i32_ptr1, ptr %i32_ptr2) {entry: ret void}
+  define void @outgoing_fpr_instr(ptr %float_ptr1, ptr %float_ptr2) {entry: ret void}
+  define void @incoming_gpr(ptr %a) {entry: ret void}
+  define void @incoming_fpr(ptr %a) {entry: ret void}
+  define void @incoming_i32_instr(ptr %i32_ptr) {entry: ret void}
+  define void @incoming_float_instr(ptr %float_ptr) {entry: ret void}
 
 ...
 ---

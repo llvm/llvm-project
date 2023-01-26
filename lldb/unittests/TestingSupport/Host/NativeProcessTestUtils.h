@@ -86,7 +86,7 @@ public:
   Status WriteMemory(addr_t Addr, const void *Buf, size_t Size,
                      size_t &BytesWritten) /*override*/ {
     auto ExpectedBytes = this->WriteMemory(
-        Addr, llvm::makeArrayRef(static_cast<const uint8_t *>(Buf), Size));
+        Addr, llvm::ArrayRef(static_cast<const uint8_t *>(Buf), Size));
     if (!ExpectedBytes) {
       BytesWritten = 0;
       return Status(ExpectedBytes.takeError());

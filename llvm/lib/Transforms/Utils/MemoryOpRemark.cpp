@@ -16,6 +16,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::ore;
@@ -144,9 +145,10 @@ static void inlineVolatileOrAtomicWithExtraArgs(bool *Inline, bool Volatile,
     R << " Atomic: " << NV("StoreAtomic", false) << ".";
 }
 
-static Optional<uint64_t> getSizeInBytes(Optional<uint64_t> SizeInBits) {
+static std::optional<uint64_t>
+getSizeInBytes(std::optional<uint64_t> SizeInBits) {
   if (!SizeInBits || *SizeInBits % 8 != 0)
-    return None;
+    return std::nullopt;
   return *SizeInBits / 8;
 }
 
@@ -297,17 +299,17 @@ void MemoryOpRemark::visitSizeOperand(Value *V, DiagnosticInfoIROptimization &R)
   }
 }
 
-static Optional<StringRef> nameOrNone(const Value *V) {
+static std::optional<StringRef> nameOrNone(const Value *V) {
   if (V->hasName())
     return V->getName();
-  return None;
+  return std::nullopt;
 }
 
 void MemoryOpRemark::visitVariable(const Value *V,
                                    SmallVectorImpl<VariableInfo> &Result) {
   if (auto *GV = dyn_cast<GlobalVariable>(V)) {
     auto *Ty = GV->getValueType();
-    uint64_t Size = DL.getTypeSizeInBits(Ty).getFixedSize();
+    uint64_t Size = DL.getTypeSizeInBits(Ty).getFixedValue();
     VariableInfo Var{nameOrNone(GV), Size};
     if (!Var.isEmpty())
       Result.push_back(std::move(Var));
@@ -321,7 +323,7 @@ void MemoryOpRemark::visitVariable(const Value *V,
   for (const DbgVariableIntrinsic *DVI :
        FindDbgAddrUses(const_cast<Value *>(V))) {
     if (DILocalVariable *DILV = DVI->getVariable()) {
-      Optional<uint64_t> DISize = getSizeInBytes(DILV->getSizeInBits());
+      std::optional<uint64_t> DISize = getSizeInBytes(DILV->getSizeInBits());
       VariableInfo Var{DILV->getName(), DISize};
       if (!Var.isEmpty()) {
         Result.push_back(std::move(Var));
@@ -339,9 +341,9 @@ void MemoryOpRemark::visitVariable(const Value *V,
     return;
 
   // If not, get it from the alloca.
-  Optional<TypeSize> TySize = AI->getAllocationSizeInBits(DL);
-  Optional<uint64_t> Size =
-      TySize ? getSizeInBytes(TySize->getFixedSize()) : None;
+  std::optional<TypeSize> TySize = AI->getAllocationSize(DL);
+  std::optional<uint64_t> Size =
+      TySize ? std::optional(TySize->getFixedValue()) : std::nullopt;
   VariableInfo Var{nameOrNone(AI), Size};
   if (!Var.isEmpty())
     Result.push_back(std::move(Var));
@@ -361,7 +363,7 @@ void MemoryOpRemark::visitPtr(Value *Ptr, bool IsRead, DiagnosticInfoIROptimizat
     uint64_t Size = Ptr->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
     if (!Size)
       return;
-    VIs.push_back({None, Size});
+    VIs.push_back({std::nullopt, Size});
   }
 
   R << (IsRead ? "\n Read Variables: " : "\n Written Variables: ");

@@ -432,7 +432,7 @@ private:
     return *getTrailingObjects<ParsedType>();
   }
 
-  /// The property data immediately follows the object is is mutually exclusive
+  /// The property data immediately follows the object is mutually exclusive
   /// with arguments.
   detail::PropertyData &getPropertyDataBuffer() {
     assert(IsProperty);
@@ -707,6 +707,17 @@ public:
     case ParsedAttr::AT_OpenCLPrivateAddressSpace:
       return LangAS::sycl_private;
     case ParsedAttr::AT_OpenCLGenericAddressSpace:
+    default:
+      return LangAS::Default;
+    }
+  }
+
+  /// If this is an HLSL address space attribute, returns its representation
+  /// in LangAS, otherwise returns default address space.
+  LangAS asHLSLLangAS() const {
+    switch (getParsedKind()) {
+    case ParsedAttr::AT_HLSLGroupSharedAddressSpace:
+      return LangAS::hlsl_groupshared;
     default:
       return LangAS::Default;
     }
@@ -1173,21 +1184,21 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
 /// it explicit is hard. This constructor causes ambiguity with
 /// DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB, SourceRange R).
 /// We use SFINAE to disable any conversion and remove any ambiguity.
-template <typename ACI,
-          typename std::enable_if_t<
-              std::is_same<ACI, AttributeCommonInfo>::value, int> = 0>
+template <
+    typename ACI,
+    std::enable_if_t<std::is_same<ACI, AttributeCommonInfo>::value, int> = 0>
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
-                                           const ACI &CI) {
+                                             const ACI &CI) {
   DB.AddTaggedVal(reinterpret_cast<uint64_t>(CI.getAttrName()),
                   DiagnosticsEngine::ak_identifierinfo);
   return DB;
 }
 
-template <typename ACI,
-          typename std::enable_if_t<
-              std::is_same<ACI, AttributeCommonInfo>::value, int> = 0>
+template <
+    typename ACI,
+    std::enable_if_t<std::is_same<ACI, AttributeCommonInfo>::value, int> = 0>
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
-                                           const ACI* CI) {
+                                             const ACI *CI) {
   DB.AddTaggedVal(reinterpret_cast<uint64_t>(CI->getAttrName()),
                   DiagnosticsEngine::ak_identifierinfo);
   return DB;

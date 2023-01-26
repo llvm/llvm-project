@@ -19,6 +19,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include <optional>
 
 namespace llvm {
 class SmallBitVector;
@@ -104,6 +105,10 @@ public:
   /// dimensional identifiers.
   bool isIdentity() const;
 
+  /// Returns true if this affine map is an identity affine map on the symbol
+  /// identifiers.
+  bool isSymbolIdentity() const;
+
   /// Returns true if this affine map is a minor identity, i.e. an identity
   /// affine map (d0, ..., dn) -> (dp, ..., dn) on the most minor dimensions.
   bool isMinorIdentity() const;
@@ -166,9 +171,10 @@ public:
   /// when the caller knows it is safe to do so.
   unsigned getDimPosition(unsigned idx) const;
 
-  /// Extracts the permuted position where given input index resides.
-  /// Fails when called on a non-permutation.
-  unsigned getPermutedPosition(unsigned input) const;
+  /// Extracts the first result position where `input` dimension resides.
+  /// Returns `std::nullopt` if `input` is not a dimension expression or cannot
+  /// be found in results.
+  std::optional<unsigned> getResultPosition(AffineExpr input) const;
 
   /// Return true if any affine expression involves AffineDimExpr `position`.
   bool isFunctionOfDim(unsigned position) const {
@@ -243,9 +249,17 @@ public:
 
   /// Returns a new AffineMap with the same number of dims and symbols and one
   /// less result at `pos`, dropped.
-  AffineMap dropResult(unsigned pos) {
+  AffineMap dropResult(int64_t pos) { return dropResults({pos}); }
+
+  // Returns a new AffineMap with the same number of dims and symbols, but all
+  // positions in `positions` dropped from results.
+  AffineMap dropResults(ArrayRef<int64_t> positions) {
+    SmallVector<int64_t> reverse_sorted_positions = llvm::to_vector(positions);
+    llvm::sort(reverse_sorted_positions, std::greater<int64_t>());
+
     auto exprs = llvm::to_vector<4>(getResults());
-    exprs.erase(exprs.begin() + pos);
+    for (int64_t pos : reverse_sorted_positions)
+      exprs.erase(exprs.begin() + pos);
     return AffineMap::get(getNumDims(), getNumSymbols(), exprs, getContext());
   }
 
@@ -317,6 +331,12 @@ public:
   /// Returns the null AffineMap if `numResults` == 0.
   /// Returns `*this` if `numResults` >= `this->getNumResults()`.
   AffineMap getMinorSubMap(unsigned numResults) const;
+
+  /// Get the largest known divisor of all map expressions.
+  /// For eg: for (d0, d1) -> (8*d0 + 4, 4*d1 + 2), the result is 2.
+  /// In the case of maps with no expressions or all zero constant expressions,
+  /// the largest known divisor is trivially the max uint64_t value.
+  uint64_t getLargestKnownDivisorOfMapExprs();
 
   friend ::llvm::hash_code hash_value(AffineMap arg);
 

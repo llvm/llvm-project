@@ -29,6 +29,7 @@
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Dominators.h"
@@ -295,7 +296,7 @@ void AggressiveDeadCodeElimination::initialize() {
   // return of the function.
   // We do this by seeing which of the postdomtree root children exit the
   // program, and for all others, mark the subtree live.
-  for (auto &PDTChild : children<DomTreeNode *>(PDT.getRootNode())) {
+  for (const auto &PDTChild : children<DomTreeNode *>(PDT.getRootNode())) {
     auto *BB = PDTChild->getBlock();
     auto &Info = BlockInfo[BB];
     // Real function return
@@ -306,7 +307,7 @@ void AggressiveDeadCodeElimination::initialize() {
     }
 
     // This child is something else, like an infinite loop.
-    for (auto DFNode : depth_first(PDTChild))
+    for (auto *DFNode : depth_first(PDTChild))
       markLive(BlockInfo[DFNode->getBlock()].Terminator);
   }
 
@@ -543,6 +544,11 @@ bool AggressiveDeadCodeElimination::removeDeadInstructions() {
       continue;
 
     if (auto *DII = dyn_cast<DbgInfoIntrinsic>(&I)) {
+      // Avoid removing a dbg.assign that is linked to instructions because it
+      // holds information about an existing store.
+      if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(DII))
+        if (!at::getAssignmentInsts(DAI).empty())
+          continue;
       // Check if the scope of this variable location is alive.
       if (AliveScopes.count(DII->getDebugLoc()->getScope()))
         continue;

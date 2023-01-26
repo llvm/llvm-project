@@ -41,8 +41,6 @@ using ProbeFactorMap = std::unordered_map<std::pair<uint64_t, uint64_t>, float,
                                           pair_hash<uint64_t, uint64_t>>;
 using FuncProbeFactorMap = StringMap<ProbeFactorMap>;
 
-enum class PseudoProbeReservedId { Invalid = 0, Last = Invalid };
-
 class PseudoProbeDescriptor {
   uint64_t FunctionGUID;
   uint64_t FunctionHash;

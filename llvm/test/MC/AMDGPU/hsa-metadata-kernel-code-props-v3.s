@@ -13,7 +13,6 @@
 // CHECK:          .sgpr_count:     40
 // CHECK:          .sgpr_spill_count: 1
 // CHECK:          .symbol:         'test_kernel@kd'
-// CHECK:          .uses_dynamic_stack: true
 // CHECK:          .vgpr_count:     14
 // CHECK:          .vgpr_spill_count: 1
 // CHECK:          .wavefront_size: 64
@@ -33,7 +32,6 @@
       .kernarg_segment_size:      24
       .group_segment_fixed_size:   24
       .private_segment_fixed_size: 16
-      .uses_dynamic_stack: true
       .kernarg_segment_align:     16
       .wavefront_size:           64
       .max_flat_workgroup_size:    256

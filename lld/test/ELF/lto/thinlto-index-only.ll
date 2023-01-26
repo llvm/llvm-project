@@ -16,13 +16,19 @@
 ; RUN: opt -module-summary %p/Inputs/thinlto.ll -o 2.o
 ; RUN: opt -module-summary %p/Inputs/thinlto_empty.ll -o 3.o
 
+;; Ensure lld doesn't generates index files when --thinlto-index-only is not enabled.
+; RUN: rm -f 1.o.thinlto.bc 2.o.thinlto.bc
+; RUN: ld.lld -shared 1.o 2.o -o 5
+; RUN: not ls 1.o.thinlto.bc
+; RUN: not ls 2.o.thinlto.bc
+
 ;; Ensure lld generates an index and not a binary if requested.
 ; RUN: ld.lld --plugin-opt=thinlto-index-only -shared 1.o 2.o -o 4
 ; RUN: llvm-bcanalyzer -dump 1.o.thinlto.bc | FileCheck %s --check-prefix=BACKEND1
 ; RUN: llvm-bcanalyzer -dump 2.o.thinlto.bc | FileCheck %s --check-prefix=BACKEND2
 ; RUN: not test -e 4
 
-;; Ensure lld generates an index even if the file is wrapped in --start-lib/--end-lib
+;; Ensure lld generates an index even if the file is wrapped in --start-lib/--end-lib.
 ; RUN: rm -f 2.o.thinlto.bc 4
 ; RUN: ld.lld --plugin-opt=thinlto-index-only -shared 1.o 3.o --start-lib 2.o --end-lib -o 4
 ; RUN: llvm-dis < 2.o.thinlto.bc | grep -q '\^0 = module:'
@@ -41,6 +47,21 @@
 ; RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux-gnu /dev/null -o dummy.o
 ; RUN: ld.lld --plugin-opt=thinlto-index-only -shared dummy.o --start-lib 1.o --end-lib -o /dev/null
 ; RUN: ls 1.o.thinlto.bc
+
+;; Ensure when the same bitcode object is given as both lazy and non-lazy,
+;; LLD does not generate an empty index for the lazy object.
+; RUN: rm -f 2.o.thinlto.bc
+; RUN: ld.lld --plugin-opt=thinlto-index-only -shared 1.o 2.o --start-lib 2.o --end-lib -o /dev/null
+; RUN: llvm-dis < 2.o.thinlto.bc | grep -q '\^0 = module:'
+; RUN: rm -f 2.o.thinlto.bc
+; RUN: ld.lld --plugin-opt=thinlto-index-only -shared --start-lib 2.o --end-lib 2.o 1.o -o /dev/null
+; RUN: llvm-dis < 2.o.thinlto.bc | grep -q '\^0 = module:'
+
+;; Ensure when the same lazy bitcode object is given multiple times,
+;; no empty index file is generated if one of the copies is linked.
+; RUN: rm -f 2.o.thinlto.bc
+; RUN: ld.lld --plugin-opt=thinlto-index-only -shared 1.o --start-lib 2.o --end-lib --start-lib 2.o --end-lib -o /dev/null
+; RUN: llvm-dis < 2.o.thinlto.bc | grep -q '\^0 = module:'
 
 ; NM: T f
 

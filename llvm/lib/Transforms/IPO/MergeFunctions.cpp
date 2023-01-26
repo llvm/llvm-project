@@ -215,7 +215,7 @@ private:
       if (LHS.getHash() != RHS.getHash())
         return LHS.getHash() < RHS.getHash();
       FunctionComparator FCmp(LHS.getFunc(), RHS.getFunc(), GlobalNumbers);
-      return FCmp.compare() == -1;
+      return FCmp.compare() < 0;
     }
   };
   using FnTreeType = std::set<FunctionNode, FunctionNodeCmp>;
@@ -493,12 +493,11 @@ static Value *createCast(IRBuilder<> &Builder, Value *V, Type *DestTy) {
     assert(SrcTy->getStructNumElements() == DestTy->getStructNumElements());
     Value *Result = PoisonValue::get(DestTy);
     for (unsigned int I = 0, E = SrcTy->getStructNumElements(); I < E; ++I) {
-      Value *Element = createCast(
-          Builder, Builder.CreateExtractValue(V, makeArrayRef(I)),
-          DestTy->getStructElementType(I));
+      Value *Element =
+          createCast(Builder, Builder.CreateExtractValue(V, ArrayRef(I)),
+                     DestTy->getStructElementType(I));
 
-      Result =
-          Builder.CreateInsertValue(Result, Element, makeArrayRef(I));
+      Result = Builder.CreateInsertValue(Result, Element, ArrayRef(I));
     }
     return Result;
   }
@@ -775,7 +774,12 @@ void MergeFunctions::writeAlias(Function *F, Function *G) {
   auto *GA = GlobalAlias::create(G->getValueType(), PtrType->getAddressSpace(),
                                  G->getLinkage(), "", BitcastF, G->getParent());
 
-  F->setAlignment(MaybeAlign(std::max(F->getAlignment(), G->getAlignment())));
+  const MaybeAlign FAlign = F->getAlign();
+  const MaybeAlign GAlign = G->getAlign();
+  if (FAlign || GAlign)
+    F->setAlignment(std::max(FAlign.valueOrOne(), GAlign.valueOrOne()));
+  else
+    F->setAlignment(std::nullopt);
   GA->takeName(G);
   GA->setVisibility(G->getVisibility());
   GA->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
@@ -822,12 +826,18 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     removeUsers(F);
     F->replaceAllUsesWith(NewF);
 
-    MaybeAlign MaxAlignment(std::max(G->getAlignment(), NewF->getAlignment()));
+    // We collect alignment before writeThunkOrAlias that overwrites NewF and
+    // G's content.
+    const MaybeAlign NewFAlign = NewF->getAlign();
+    const MaybeAlign GAlign = G->getAlign();
 
     writeThunkOrAlias(F, G);
     writeThunkOrAlias(F, NewF);
 
-    F->setAlignment(MaxAlignment);
+    if (NewFAlign || GAlign)
+      F->setAlignment(std::max(NewFAlign.valueOrOne(), GAlign.valueOrOne()));
+    else
+      F->setAlignment(std::nullopt);
     F->setLinkage(GlobalValue::PrivateLinkage);
     ++NumDoubleWeak;
     ++NumFunctionsMerged;

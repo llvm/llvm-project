@@ -1,4 +1,4 @@
-; RUN: opt < %s -memcpyopt -S | FileCheck %s
+; RUN: opt < %s -passes=memcpyopt -S | FileCheck %s
 
 %struct.MV = type { i16, i16 }
 

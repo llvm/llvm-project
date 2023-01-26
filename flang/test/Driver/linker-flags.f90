@@ -36,8 +36,11 @@
 ! MINGW-SAME: -lFortranRuntime
 ! MINGW-SAME: -lFortranDecimal
 
-! NOTE: This check should also match if the default linker is lld-link.exe
-! MSVC-LABEL: link.exe
+! NOTE: This also matches lld-link (when CLANG_DEFAULT_LINKER=lld) and
+!       any .exe suffix that is added when resolving to the full path of
+!       (lld-)link.exe on Windows platforms. The suffix may not be added
+!       when the executable is not found or on non-Windows platforms.
+! MSVC-LABEL: link
 ! MSVC-SAME: Fortran_main.lib
 ! MSVC-SAME: FortranRuntime.lib
 ! MSVC-SAME: FortranDecimal.lib

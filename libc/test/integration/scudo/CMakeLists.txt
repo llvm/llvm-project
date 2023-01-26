@@ -5,9 +5,9 @@ endif()
 # We use a special library consisting of only the SCUDO allocator
 # functions to link to the integration tests below. We could instead
 # link to libllvmlibc.a directly, but since libllvmlibc.a contains
-# functions which depend on the LLVM libc loader, the integration
-# test will have to link to the LLVM libc loader. LLVM libc's loader
-# is not complete enough to allow this. It is also desireable to
+# functions which depend on the LLVM libc startup system, the integration
+# test will have to link to the LLVM libc startup system. LLVM libc's startup
+# system is not complete enough to allow this. It is also desireable to
 # keep the dependencies as minimal as possible.
 add_entrypoint_library(
   libc_for_scudo_integration_test

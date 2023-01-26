@@ -4,7 +4,7 @@
 
 ; This is good - eliminate an op by hoisting logic.
 
-define i32 @lshr_or(i32 %x, i32 %y, i32 %z, i32* %p1, i32* %p2) {
+define i32 @lshr_or(i32 %x, i32 %y, i32 %z, ptr %p1, ptr %p2) {
 ; CHECK-LABEL: lshr_or:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    or 3, 3, 4
@@ -19,7 +19,7 @@ define i32 @lshr_or(i32 %x, i32 %y, i32 %z, i32* %p1, i32* %p2) {
 ; This is questionable - hoisting doesn't eliminate anything.
 ; It might result in an extra register move.
 
-define i32 @lshr_or_multiuse1(i32 %x, i32 %y, i32 %z, i32* %p1, i32* %p2) {
+define i32 @lshr_or_multiuse1(i32 %x, i32 %y, i32 %z, ptr %p1, ptr %p2) {
 ; CHECK-LABEL: lshr_or_multiuse1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srw 7, 3, 5
@@ -29,14 +29,14 @@ define i32 @lshr_or_multiuse1(i32 %x, i32 %y, i32 %z, i32* %p1, i32* %p2) {
 ; CHECK-NEXT:    blr
   %xt = lshr i32 %x, %z
   %yt = lshr i32 %y, %z
-  store i32 %xt, i32* %p1
+  store i32 %xt, ptr %p1
   %r = or i32 %xt, %yt
   ret i32 %r
 }
 
 ; This is questionable - hoisting doesn't eliminate anything.
 
-define i32 @lshr_multiuse2(i32 %x, i32 %y, i32 %z, i32* %p1, i32* %p2) {
+define i32 @lshr_multiuse2(i32 %x, i32 %y, i32 %z, ptr %p1, ptr %p2) {
 ; CHECK-LABEL: lshr_multiuse2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srw 3, 3, 5
@@ -46,14 +46,14 @@ define i32 @lshr_multiuse2(i32 %x, i32 %y, i32 %z, i32* %p1, i32* %p2) {
 ; CHECK-NEXT:    blr
   %xt = lshr i32 %x, %z
   %yt = lshr i32 %y, %z
-  store i32 %yt, i32* %p2
+  store i32 %yt, ptr %p2
   %r = or i32 %xt, %yt
   ret i32 %r
 }
 
 ; This is not profitable to hoist. We need an extra shift instruction.
 
-define i32 @lshr_multiuse3(i32 %x, i32 %y, i32 %z, i32* %p1, i32* %p2) {
+define i32 @lshr_multiuse3(i32 %x, i32 %y, i32 %z, ptr %p1, ptr %p2) {
 ; CHECK-LABEL: lshr_multiuse3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srw 3, 3, 5
@@ -64,8 +64,8 @@ define i32 @lshr_multiuse3(i32 %x, i32 %y, i32 %z, i32* %p1, i32* %p2) {
 ; CHECK-NEXT:    blr
   %xt = lshr i32 %x, %z
   %yt = lshr i32 %y, %z
-  store i32 %xt, i32* %p1
-  store i32 %yt, i32* %p2
+  store i32 %xt, ptr %p1
+  store i32 %yt, ptr %p2
   %r = or i32 %xt, %yt
   ret i32 %r
 }

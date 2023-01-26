@@ -206,7 +206,7 @@ bool SILateBranchLowering::runOnMachineFunction(MachineFunction &MF) {
       MF.insert(MF.end(), EmptyMBBAtEnd);
     }
 
-    for (auto MI : EpilogInstrs) {
+    for (auto *MI : EpilogInstrs) {
       auto MBB = MI->getParent();
       if (MBB == &MF.back() && MI == &MBB->back())
         continue;

@@ -5,10 +5,10 @@ target datalayout = "e-m:e-p:32:32-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnux32"
 
 %"class.llvm::AttributeSetNode.230.2029.3828.6141.6912.7683.8454.9482.9996.10253.18506" = type { %"class.llvm::FoldingSetImpl::Node.1.1801.3600.5913.6684.7455.8226.9254.9768.10025.18505", i32 }
-%"class.llvm::FoldingSetImpl::Node.1.1801.3600.5913.6684.7455.8226.9254.9768.10025.18505" = type { i8* }
-%"struct.std::pair.241.2040.3839.6152.6923.7694.8465.9493.10007.10264.18507" = type { i32, %"class.llvm::AttributeSetNode.230.2029.3828.6141.6912.7683.8454.9482.9996.10253.18506"* }
-%"class.llvm::Attribute.222.2021.3820.6133.6904.7675.8446.9474.9988.10245.18509" = type { %"class.llvm::AttributeImpl.2.1802.3601.5914.6685.7456.8227.9255.9769.10026.18508"* }
-%"class.llvm::AttributeImpl.2.1802.3601.5914.6685.7456.8227.9255.9769.10026.18508" = type <{ i32 (...)**, %"class.llvm::FoldingSetImpl::Node.1.1801.3600.5913.6684.7455.8226.9254.9768.10025.18505", i8, [3 x i8] }>
+%"class.llvm::FoldingSetImpl::Node.1.1801.3600.5913.6684.7455.8226.9254.9768.10025.18505" = type { ptr }
+%"struct.std::pair.241.2040.3839.6152.6923.7694.8465.9493.10007.10264.18507" = type { i32, ptr }
+%"class.llvm::Attribute.222.2021.3820.6133.6904.7675.8446.9474.9988.10245.18509" = type { ptr }
+%"class.llvm::AttributeImpl.2.1802.3601.5914.6685.7456.8227.9255.9769.10026.18508" = type <{ ptr, %"class.llvm::FoldingSetImpl::Node.1.1801.3600.5913.6684.7455.8226.9254.9768.10025.18505", i8, [3 x i8] }>
 
 ; Function Attrs: nounwind uwtable
 define void @_ZNK4llvm11AttrBuilder13hasAttributesENS_12AttributeSetEy() #0 align 2 {
@@ -44,22 +44,21 @@ cond.false:                                       ; preds = %for.end, %for.inc, 
   unreachable
 
 _ZNK4llvm12AttributeSet3endEj.exit:               ; preds = %for.end
-  %second.i.i.i = getelementptr inbounds %"struct.std::pair.241.2040.3839.6152.6923.7694.8465.9493.10007.10264.18507", %"struct.std::pair.241.2040.3839.6152.6923.7694.8465.9493.10007.10264.18507"* undef, i32 %I.099.lcssa129, i32 1
-  %0 = load %"class.llvm::AttributeSetNode.230.2029.3828.6141.6912.7683.8454.9482.9996.10253.18506"*, %"class.llvm::AttributeSetNode.230.2029.3828.6141.6912.7683.8454.9482.9996.10253.18506"** %second.i.i.i, align 4, !tbaa !2
-  %NumAttrs.i.i.i = getelementptr inbounds %"class.llvm::AttributeSetNode.230.2029.3828.6141.6912.7683.8454.9482.9996.10253.18506", %"class.llvm::AttributeSetNode.230.2029.3828.6141.6912.7683.8454.9482.9996.10253.18506"* %0, i32 0, i32 1
-  %1 = load i32, i32* %NumAttrs.i.i.i, align 4, !tbaa !8
-  %add.ptr.i.i.i55 = getelementptr inbounds %"class.llvm::Attribute.222.2021.3820.6133.6904.7675.8446.9474.9988.10245.18509", %"class.llvm::Attribute.222.2021.3820.6133.6904.7675.8446.9474.9988.10245.18509"* undef, i32 %1
+  %second.i.i.i = getelementptr inbounds %"struct.std::pair.241.2040.3839.6152.6923.7694.8465.9493.10007.10264.18507", ptr undef, i32 %I.099.lcssa129, i32 1
+  %0 = load ptr, ptr %second.i.i.i, align 4, !tbaa !2
+  %NumAttrs.i.i.i = getelementptr inbounds %"class.llvm::AttributeSetNode.230.2029.3828.6141.6912.7683.8454.9482.9996.10253.18506", ptr %0, i32 0, i32 1
+  %1 = load i32, ptr %NumAttrs.i.i.i, align 4, !tbaa !8
+  %add.ptr.i.i.i55 = getelementptr inbounds %"class.llvm::Attribute.222.2021.3820.6133.6904.7675.8446.9474.9988.10245.18509", ptr undef, i32 %1
   br i1 undef, label %return, label %for.body11
 
 for.cond9:                                        ; preds = %_ZNK4llvm9Attribute13getKindAsEnumEv.exit
-  %cmp10 = icmp eq %"class.llvm::Attribute.222.2021.3820.6133.6904.7675.8446.9474.9988.10245.18509"* %incdec.ptr, %add.ptr.i.i.i55
+  %cmp10 = icmp eq ptr %incdec.ptr, %add.ptr.i.i.i55
   br i1 %cmp10, label %return, label %for.body11
 
 for.body11:                                       ; preds = %for.cond9, %_ZNK4llvm12AttributeSet3endEj.exit
-  %I5.096 = phi %"class.llvm::Attribute.222.2021.3820.6133.6904.7675.8446.9474.9988.10245.18509"* [ %incdec.ptr, %for.cond9 ], [ undef, %_ZNK4llvm12AttributeSet3endEj.exit ]
-  %2 = bitcast %"class.llvm::Attribute.222.2021.3820.6133.6904.7675.8446.9474.9988.10245.18509"* %I5.096 to i32*
-  %3 = load i32, i32* %2, align 4, !tbaa !10
-  %tobool.i59 = icmp eq i32 %3, 0
+  %I5.096 = phi ptr [ %incdec.ptr, %for.cond9 ], [ undef, %_ZNK4llvm12AttributeSet3endEj.exit ]
+  %2 = load i32, ptr %I5.096, align 4, !tbaa !10
+  %tobool.i59 = icmp eq i32 %2, 0
   br i1 %tobool.i59, label %cond.false21, label %_ZNK4llvm9Attribute15isEnumAttributeEv.exit
 
 _ZNK4llvm9Attribute15isEnumAttributeEv.exit:      ; preds = %for.body11
@@ -70,7 +69,7 @@ _ZNK4llvm9Attribute15isEnumAttributeEv.exit:      ; preds = %for.body11
   ]
 
 _ZNK4llvm9Attribute13getKindAsEnumEv.exit:        ; preds = %_ZNK4llvm9Attribute15isEnumAttributeEv.exit, %_ZNK4llvm9Attribute15isEnumAttributeEv.exit
-  %incdec.ptr = getelementptr inbounds %"class.llvm::Attribute.222.2021.3820.6133.6904.7675.8446.9474.9988.10245.18509", %"class.llvm::Attribute.222.2021.3820.6133.6904.7675.8446.9474.9988.10245.18509"* %I5.096, i32 1
+  %incdec.ptr = getelementptr inbounds %"class.llvm::Attribute.222.2021.3820.6133.6904.7675.8446.9474.9988.10245.18509", ptr %I5.096, i32 1
   br i1 undef, label %for.cond9, label %return
 
 cond.false21:                                     ; preds = %_ZNK4llvm9Attribute15isEnumAttributeEv.exit, %for.body11

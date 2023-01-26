@@ -15,6 +15,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "llvm/Support/CommandLine.h"
+#include <optional>
 
 static llvm::cl::opt<std::string> mainEntryName(
     "main-entry-name",
@@ -36,7 +37,7 @@ static std::string doModules(llvm::ArrayRef<llvm::StringRef> mods) {
 }
 
 static std::string doModulesHost(llvm::ArrayRef<llvm::StringRef> mods,
-                                 llvm::Optional<llvm::StringRef> host) {
+                                 std::optional<llvm::StringRef> host) {
   std::string result = doModules(mods);
   if (host)
     result.append("F").append(host->lower());
@@ -48,9 +49,9 @@ convertToStringRef(llvm::ArrayRef<std::string> from) {
   return {from.begin(), from.end()};
 }
 
-inline llvm::Optional<llvm::StringRef>
-convertToStringRef(const llvm::Optional<std::string> &from) {
-  llvm::Optional<llvm::StringRef> to;
+inline std::optional<llvm::StringRef>
+convertToStringRef(const std::optional<std::string> &from) {
+  std::optional<llvm::StringRef> to;
   if (from)
     to = *from;
   return to;
@@ -110,7 +111,7 @@ std::string fir::NameUniquer::doBlockData(llvm::StringRef name) {
 
 std::string
 fir::NameUniquer::doConstant(llvm::ArrayRef<llvm::StringRef> modules,
-                             llvm::Optional<llvm::StringRef> host,
+                             std::optional<llvm::StringRef> host,
                              llvm::StringRef name) {
   std::string result = prefix();
   result.append(doModulesHost(modules, host)).append("EC");
@@ -119,7 +120,7 @@ fir::NameUniquer::doConstant(llvm::ArrayRef<llvm::StringRef> modules,
 
 std::string
 fir::NameUniquer::doDispatchTable(llvm::ArrayRef<llvm::StringRef> modules,
-                                  llvm::Optional<llvm::StringRef> host,
+                                  std::optional<llvm::StringRef> host,
                                   llvm::StringRef name,
                                   llvm::ArrayRef<std::int64_t> kinds) {
   std::string result = prefix();
@@ -134,7 +135,7 @@ std::string fir::NameUniquer::doGenerated(llvm::StringRef name) {
 
 std::string fir::NameUniquer::doIntrinsicTypeDescriptor(
     llvm::ArrayRef<llvm::StringRef> modules,
-    llvm::Optional<llvm::StringRef> host, IntrinsicType type,
+    std::optional<llvm::StringRef> host, IntrinsicType type,
     std::int64_t kind) {
   const char *name = nullptr;
   switch (type) {
@@ -162,7 +163,7 @@ std::string fir::NameUniquer::doIntrinsicTypeDescriptor(
 
 std::string
 fir::NameUniquer::doProcedure(llvm::ArrayRef<llvm::StringRef> modules,
-                              llvm::Optional<llvm::StringRef> host,
+                              std::optional<llvm::StringRef> host,
                               llvm::StringRef name) {
   std::string result = prefix();
   result.append(doModulesHost(modules, host)).append("P");
@@ -170,7 +171,7 @@ fir::NameUniquer::doProcedure(llvm::ArrayRef<llvm::StringRef> modules,
 }
 
 std::string fir::NameUniquer::doType(llvm::ArrayRef<llvm::StringRef> modules,
-                                     llvm::Optional<llvm::StringRef> host,
+                                     std::optional<llvm::StringRef> host,
                                      llvm::StringRef name,
                                      llvm::ArrayRef<std::int64_t> kinds) {
   std::string result = prefix();
@@ -180,7 +181,7 @@ std::string fir::NameUniquer::doType(llvm::ArrayRef<llvm::StringRef> modules,
 
 std::string
 fir::NameUniquer::doTypeDescriptor(llvm::ArrayRef<llvm::StringRef> modules,
-                                   llvm::Optional<llvm::StringRef> host,
+                                   std::optional<llvm::StringRef> host,
                                    llvm::StringRef name,
                                    llvm::ArrayRef<std::int64_t> kinds) {
   std::string result = prefix();
@@ -189,7 +190,7 @@ fir::NameUniquer::doTypeDescriptor(llvm::ArrayRef<llvm::StringRef> modules,
 }
 
 std::string fir::NameUniquer::doTypeDescriptor(
-    llvm::ArrayRef<std::string> modules, llvm::Optional<std::string> host,
+    llvm::ArrayRef<std::string> modules, std::optional<std::string> host,
     llvm::StringRef name, llvm::ArrayRef<std::int64_t> kinds) {
   auto rmodules = convertToStringRef(modules);
   auto rhost = convertToStringRef(host);
@@ -198,7 +199,7 @@ std::string fir::NameUniquer::doTypeDescriptor(
 
 std::string
 fir::NameUniquer::doVariable(llvm::ArrayRef<llvm::StringRef> modules,
-                             llvm::Optional<llvm::StringRef> host,
+                             std::optional<llvm::StringRef> host,
                              llvm::StringRef name) {
   std::string result = prefix();
   result.append(doModulesHost(modules, host)).append("E");
@@ -207,7 +208,7 @@ fir::NameUniquer::doVariable(llvm::ArrayRef<llvm::StringRef> modules,
 
 std::string
 fir::NameUniquer::doNamelistGroup(llvm::ArrayRef<llvm::StringRef> modules,
-                                  llvm::Optional<llvm::StringRef> host,
+                                  std::optional<llvm::StringRef> host,
                                   llvm::StringRef name) {
   std::string result = prefix();
   result.append(doModulesHost(modules, host)).append("G");
@@ -224,7 +225,7 @@ std::pair<fir::NameUniquer::NameKind, fir::NameUniquer::DeconstructedName>
 fir::NameUniquer::deconstruct(llvm::StringRef uniq) {
   if (uniq.startswith("_Q")) {
     llvm::SmallVector<std::string> modules;
-    llvm::Optional<std::string> host;
+    std::optional<std::string> host;
     std::string name;
     llvm::SmallVector<std::int64_t> kinds;
     NameKind nk = NameKind::NOT_UNIQUED;
@@ -329,24 +330,36 @@ static std::string
 mangleTypeDescriptorKinds(llvm::ArrayRef<std::int64_t> kinds) {
   if (kinds.empty())
     return "";
-  std::string result = "";
+  std::string result;
   for (std::int64_t kind : kinds)
     result += "." + std::to_string(kind);
   return result;
 }
 
-std::string
-fir::NameUniquer::getTypeDescriptorName(llvm::StringRef mangledTypeName) {
-  auto result = deconstruct(mangledTypeName);
-  if (result.first != NameKind::DERIVED_TYPE)
+static std::string getDerivedTypeObjectName(llvm::StringRef mangledTypeName,
+                                            const llvm::StringRef separator) {
+  if (mangledTypeName.ends_with(boxprocSuffix))
+    mangledTypeName = mangledTypeName.drop_back(boxprocSuffix.size());
+  auto result = fir::NameUniquer::deconstruct(mangledTypeName);
+  if (result.first != fir::NameUniquer::NameKind::DERIVED_TYPE)
     return "";
-  std::string varName = ".dt." + result.second.name +
+  std::string varName = separator.str() + result.second.name +
                         mangleTypeDescriptorKinds(result.second.kinds);
   llvm::SmallVector<llvm::StringRef> modules;
   for (const std::string &mod : result.second.modules)
     modules.push_back(mod);
-  llvm::Optional<llvm::StringRef> host;
+  std::optional<llvm::StringRef> host;
   if (result.second.host)
     host = *result.second.host;
-  return doVariable(modules, host, varName);
+  return fir::NameUniquer::doVariable(modules, host, varName);
+}
+
+std::string
+fir::NameUniquer::getTypeDescriptorName(llvm::StringRef mangledTypeName) {
+  return getDerivedTypeObjectName(mangledTypeName, typeDescriptorSeparator);
+}
+
+std::string fir::NameUniquer::getTypeDescriptorBindingTableName(
+    llvm::StringRef mangledTypeName) {
+  return getDerivedTypeObjectName(mangledTypeName, bindingTableSeparator);
 }

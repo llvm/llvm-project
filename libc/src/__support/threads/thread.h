@@ -9,7 +9,10 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_THREADS_THREAD_H
 #define LLVM_LIBC_SRC_SUPPORT_THREADS_THREAD_H
 
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/atomic.h"
+#include "src/__support/CPP/optional.h"
+#include "src/__support/CPP/stringstream.h"
 #include "src/__support/architectures.h"
 
 #include <stddef.h> // For size_t
@@ -29,6 +32,8 @@ union ThreadReturnValue {
   void *posix_retval;
   int stdc_retval;
   constexpr ThreadReturnValue() : posix_retval(nullptr) {}
+  constexpr ThreadReturnValue(int r) : stdc_retval(r) {}
+  constexpr ThreadReturnValue(void *r) : posix_retval(r) {}
 };
 
 #if (defined(LLVM_LIBC_ARCH_AARCH64) || defined(LLVM_LIBC_ARCH_X86_64))
@@ -53,6 +58,8 @@ enum class DetachType : int {
   // Indicates that the detach operation performed thread cleanup.
   CLEANUP = 2
 };
+
+class ThreadAtExitCallbackMgr;
 
 // A data type to hold common thread attributes which have to be stored as
 // thread state. Note that this is different from public attribute types like
@@ -89,13 +96,39 @@ struct alignas(STACK_ALIGNMENT) ThreadAttributes {
   int tid;
   ThreadStyle style;
   ThreadReturnValue retval;
+  ThreadAtExitCallbackMgr *atexit_callback_mgr;
   void *platform_data;
 
   constexpr ThreadAttributes()
       : detach_state(uint32_t(DetachState::DETACHED)), stack(nullptr),
         stack_size(0), tls(0), tls_size(0), owned_stack(false), tid(-1),
-        style(ThreadStyle::POSIX), retval(), platform_data(nullptr) {}
+        style(ThreadStyle::POSIX), retval(), atexit_callback_mgr(nullptr),
+        platform_data(nullptr) {}
 };
+
+using TSSDtor = void(void *);
+
+// Create a new TSS key and associate the |dtor| as the corresponding
+// destructor. Can be used to implement public functions like
+// pthread_key_create.
+cpp::optional<unsigned int> new_tss_key(TSSDtor *dtor);
+
+// Delete the |key|. Can be used to implement public functions like
+// pthread_key_delete.
+//
+// Return true on success, false on failure.
+bool tss_key_delete(unsigned int key);
+
+// Set the value associated with |key| for the current thread. Can be used
+// to implement public functions like pthread_setspecific.
+//
+// Return true on success, false on failure.
+bool set_tss_value(unsigned int key, void *value);
+
+// Return the value associated with |key| for the current thread. Return
+// nullptr if |key| is invalid. Can be used to implement public functions like
+// pthread_getspecific.
+void *get_tss_value(unsigned int key);
 
 struct Thread {
   ThreadAttributes *attrib;
@@ -165,9 +198,34 @@ struct Thread {
 
   // Return true if this thread is equal to the other thread.
   bool operator==(const Thread &other) const;
+
+  // Set the name of the thread. Return the error number on error.
+  int set_name(const cpp::string_view &name);
+
+  // Return the name of the thread in |name|. Return the error number of error.
+  int get_name(cpp::StringStream &name) const;
 };
 
 extern thread_local Thread self;
+
+// Platforms should implement this function.
+void thread_exit(ThreadReturnValue retval, ThreadStyle style);
+
+namespace internal {
+// Internal namespace containing utilities which are to be used by platform
+// implementations of threads.
+
+// Return the current thread's atexit callback manager. After thread startup
+// but before running the thread function, platform implementations should
+// set the "atexit_callback_mgr" field of the thread's attributes to the value
+// returned by this function.
+ThreadAtExitCallbackMgr *get_thread_atexit_callback_mgr();
+
+// Call the currently registered thread specific atexit callbacks. Useful for
+// implementing the thread_exit function.
+void call_atexit_callbacks(ThreadAttributes *attrib);
+
+} // namespace internal
 
 } // namespace __llvm_libc
 

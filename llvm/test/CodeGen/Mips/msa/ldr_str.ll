@@ -8,7 +8,7 @@
 
 ; Test intrinsics for 4-byte and 8-byte MSA load and stores.
 
-define void @llvm_mips_ldr_d_test(<2 x i64>* %val, i8* %ptr) nounwind {
+define void @llvm_mips_ldr_d_test(ptr %val, ptr %ptr) nounwind {
 ; MIPS32R5-EB-LABEL: llvm_mips_ldr_d_test:
 ; MIPS32R5-EB:       # %bb.0: # %entry
 ; MIPS32R5-EB-NEXT:    # implicit-def: $v0
@@ -62,14 +62,14 @@ define void @llvm_mips_ldr_d_test(<2 x i64>* %val, i8* %ptr) nounwind {
 ; MIPS64R6-NEXT:    st.d $w0, 0($4)
 ; MIPS64R6-NEXT:    jrc $ra
 entry:
-  %0 = tail call <2 x i64> @llvm.mips.ldr.d(i8* %ptr, i32 16)
-  store <2 x i64> %0, <2 x i64>* %val
+  %0 = tail call <2 x i64> @llvm.mips.ldr.d(ptr %ptr, i32 16)
+  store <2 x i64> %0, ptr %val
   ret void
 }
 
-declare <2 x i64> @llvm.mips.ldr.d(i8*, i32) nounwind
+declare <2 x i64> @llvm.mips.ldr.d(ptr, i32) nounwind
 
-define void @llvm_mips_ldr_w_test(<4 x i32>* %val, i8* %ptr) nounwind {
+define void @llvm_mips_ldr_w_test(ptr %val, ptr %ptr) nounwind {
 ; MIPS32R5-EB-LABEL: llvm_mips_ldr_w_test:
 ; MIPS32R5-EB:       # %bb.0: # %entry
 ; MIPS32R5-EB-NEXT:    # implicit-def: $at
@@ -111,14 +111,14 @@ define void @llvm_mips_ldr_w_test(<4 x i32>* %val, i8* %ptr) nounwind {
 ; MIPS64R6-NEXT:    st.w $w0, 0($4)
 ; MIPS64R6-NEXT:    jrc $ra
 entry:
-  %0 = tail call <4 x i32> @llvm.mips.ldr.w(i8* %ptr, i32 16)
-  store <4 x i32> %0, <4 x i32>* %val
+  %0 = tail call <4 x i32> @llvm.mips.ldr.w(ptr %ptr, i32 16)
+  store <4 x i32> %0, ptr %val
   ret void
 }
 
-declare <4 x i32> @llvm.mips.ldr.w(i8*, i32) nounwind
+declare <4 x i32> @llvm.mips.ldr.w(ptr, i32) nounwind
 
-define void @llvm_mips_str_d_test(<2 x i64>* %val, i8* %ptr) nounwind {
+define void @llvm_mips_str_d_test(ptr %val, ptr %ptr) nounwind {
 ; MIPS32R5-EB-LABEL: llvm_mips_str_d_test:
 ; MIPS32R5-EB:       # %bb.0: # %entry
 ; MIPS32R5-EB-NEXT:    ld.d $w0, 0($4)
@@ -168,14 +168,14 @@ define void @llvm_mips_str_d_test(<2 x i64>* %val, i8* %ptr) nounwind {
 ; MIPS64R6-NEXT:    sd $1, 16($5)
 ; MIPS64R6-NEXT:    jrc $ra
 entry:
-  %0 = load <2 x i64>, <2 x i64>* %val
-  tail call void @llvm.mips.str.d(<2 x i64> %0, i8* %ptr, i32 16)
+  %0 = load <2 x i64>, ptr %val
+  tail call void @llvm.mips.str.d(<2 x i64> %0, ptr %ptr, i32 16)
   ret void
 }
 
-declare void @llvm.mips.str.d(<2 x i64>, i8*, i32) nounwind
+declare void @llvm.mips.str.d(<2 x i64>, ptr, i32) nounwind
 
-define void @llvm_mips_str_w_test(<4 x i32>* %val, i8* %ptr) nounwind {
+define void @llvm_mips_str_w_test(ptr %val, ptr %ptr) nounwind {
 ; MIPS32R5-EB-LABEL: llvm_mips_str_w_test:
 ; MIPS32R5-EB:       # %bb.0: # %entry
 ; MIPS32R5-EB-NEXT:    ld.w $w0, 0($4)
@@ -215,10 +215,10 @@ define void @llvm_mips_str_w_test(<4 x i32>* %val, i8* %ptr) nounwind {
 ; MIPS64R6-NEXT:    sw $1, 16($5)
 ; MIPS64R6-NEXT:    jrc $ra
 entry:
-  %0 = load <4 x i32>, <4 x i32>* %val
-  tail call void @llvm.mips.str.w(<4 x i32> %0, i8* %ptr, i32 16)
+  %0 = load <4 x i32>, ptr %val
+  tail call void @llvm.mips.str.w(<4 x i32> %0, ptr %ptr, i32 16)
   ret void
 }
 
-declare void @llvm.mips.str.w(<4 x i32>, i8*, i32) nounwind
+declare void @llvm.mips.str.w(<4 x i32>, ptr, i32) nounwind
 

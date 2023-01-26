@@ -44,7 +44,7 @@ test()
 int main(int, char**)
 {
     test<std::string>();
-#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+#ifndef TEST_HAS_NO_CHAR8_T
     test<std::u8string>();
 #endif
     test<std::u16string>();

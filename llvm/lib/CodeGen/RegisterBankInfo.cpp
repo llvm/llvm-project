@@ -79,7 +79,7 @@ bool RegisterBankInfo::verify(const TargetRegisterInfo &TRI) const {
 const RegisterBank *
 RegisterBankInfo::getRegBank(Register Reg, const MachineRegisterInfo &MRI,
                              const TargetRegisterInfo &TRI) const {
-  if (Register::isPhysicalRegister(Reg)) {
+  if (Reg.isPhysical()) {
     // FIXME: This was probably a copy to a virtual register that does have a
     // type we could use.
     return &getRegBankFromRegClass(getMinimalPhysRegClass(Reg, TRI), LLT());
@@ -97,7 +97,7 @@ RegisterBankInfo::getRegBank(Register Reg, const MachineRegisterInfo &MRI,
 const TargetRegisterClass &
 RegisterBankInfo::getMinimalPhysRegClass(Register Reg,
                                          const TargetRegisterInfo &TRI) const {
-  assert(Register::isPhysicalRegister(Reg) && "Reg must be a physreg");
+  assert(Reg.isPhysical() && "Reg must be a physreg");
   const auto &RegRCIt = PhysRegMinimalRCs.find(Reg);
   if (RegRCIt != PhysRegMinimalRCs.end())
     return *RegRCIt->second;
@@ -449,6 +449,9 @@ void RegisterBankInfo::applyDefaultMapping(const OperandsMapper &OpdMapper) {
       LLVM_DEBUG(dbgs() << " is $noreg, nothing to be done\n");
       continue;
     }
+    LLT Ty = MRI.getType(MO.getReg());
+    if (!Ty.isValid())
+      continue;
     assert(OpdMapper.getInstrMapping().getOperandMapping(OpIdx).NumBreakDowns !=
                0 &&
            "Invalid mapping");
@@ -490,7 +493,7 @@ void RegisterBankInfo::applyDefaultMapping(const OperandsMapper &OpdMapper) {
 unsigned RegisterBankInfo::getSizeInBits(Register Reg,
                                          const MachineRegisterInfo &MRI,
                                          const TargetRegisterInfo &TRI) const {
-  if (Register::isPhysicalRegister(Reg)) {
+  if (Reg.isPhysical()) {
     // The size is not directly available for physical registers.
     // Instead, we need to access a register class that contains Reg and
     // get the size of that register class.
@@ -601,6 +604,7 @@ bool RegisterBankInfo::InstructionMapping::verify(
   const MachineFunction &MF = *MI.getMF();
   const RegisterBankInfo *RBI = MF.getSubtarget().getRegBankInfo();
   (void)RBI;
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
 
   for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
     const MachineOperand &MO = MI.getOperand(Idx);
@@ -611,6 +615,9 @@ bool RegisterBankInfo::InstructionMapping::verify(
     }
     Register Reg = MO.getReg();
     if (!Reg)
+      continue;
+    LLT Ty = MRI.getType(Reg);
+    if (!Ty.isValid())
       continue;
     assert(getOperandMapping(Idx).isValid() &&
            "We must have a mapping for reg operands");

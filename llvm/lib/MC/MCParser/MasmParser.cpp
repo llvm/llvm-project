@@ -14,8 +14,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -67,6 +65,7 @@
 #include <ctime>
 #include <deque>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <tuple>
@@ -74,8 +73,6 @@
 #include <vector>
 
 using namespace llvm;
-
-extern cl::opt<unsigned> AsmMacroMaxNestingDepth;
 
 namespace {
 
@@ -109,7 +106,7 @@ struct ParseStatementInfo {
   bool ParseError = false;
 
   /// The value associated with a macro exit.
-  Optional<std::string> ExitValue;
+  std::optional<std::string> ExitValue;
 
   SmallVectorImpl<AsmRewrite> *AsmRewrites = nullptr;
 
@@ -140,9 +137,7 @@ struct StructInfo {
                       unsigned FieldAlignmentSize);
 
   StructInfo() = default;
-
-  StructInfo(StringRef StructName, bool Union, unsigned AlignmentValue)
-      : Name(StructName), IsUnion(Union), Alignment(AlignmentValue) {}
+  StructInfo(StringRef StructName, bool Union, unsigned AlignmentValue);
 };
 
 // FIXME: This should probably use a class hierarchy, raw pointers between the
@@ -170,14 +165,7 @@ struct StructFieldInfo {
   StructInfo Structure;
 
   StructFieldInfo() = default;
-  StructFieldInfo(const std::vector<StructInitializer> &V, StructInfo S) {
-    Initializers = V;
-    Structure = S;
-  }
-  StructFieldInfo(std::vector<StructInitializer> &&V, StructInfo S) {
-    Initializers = V;
-    Structure = S;
-  }
+  StructFieldInfo(std::vector<StructInitializer> V, StructInfo S);
 };
 
 class FieldInitializer {
@@ -189,133 +177,19 @@ public:
     StructFieldInfo StructInfo;
   };
 
-  ~FieldInitializer() {
-    switch (FT) {
-    case FT_INTEGRAL:
-      IntInfo.~IntFieldInfo();
-      break;
-    case FT_REAL:
-      RealInfo.~RealFieldInfo();
-      break;
-    case FT_STRUCT:
-      StructInfo.~StructFieldInfo();
-      break;
-    }
-  }
+  ~FieldInitializer();
+  FieldInitializer(FieldType FT);
 
-  FieldInitializer(FieldType FT) : FT(FT) {
-    switch (FT) {
-    case FT_INTEGRAL:
-      new (&IntInfo) IntFieldInfo();
-      break;
-    case FT_REAL:
-      new (&RealInfo) RealFieldInfo();
-      break;
-    case FT_STRUCT:
-      new (&StructInfo) StructFieldInfo();
-      break;
-    }
-  }
-
-  FieldInitializer(SmallVector<const MCExpr *, 1> &&Values) : FT(FT_INTEGRAL) {
-    new (&IntInfo) IntFieldInfo(Values);
-  }
-
-  FieldInitializer(SmallVector<APInt, 1> &&AsIntValues) : FT(FT_REAL) {
-    new (&RealInfo) RealFieldInfo(AsIntValues);
-  }
-
+  FieldInitializer(SmallVector<const MCExpr *, 1> &&Values);
+  FieldInitializer(SmallVector<APInt, 1> &&AsIntValues);
   FieldInitializer(std::vector<StructInitializer> &&Initializers,
-                   struct StructInfo Structure)
-      : FT(FT_STRUCT) {
-    new (&StructInfo) StructFieldInfo(Initializers, Structure);
-  }
+                   struct StructInfo Structure);
 
-  FieldInitializer(const FieldInitializer &Initializer) : FT(Initializer.FT) {
-    switch (FT) {
-    case FT_INTEGRAL:
-      new (&IntInfo) IntFieldInfo(Initializer.IntInfo);
-      break;
-    case FT_REAL:
-      new (&RealInfo) RealFieldInfo(Initializer.RealInfo);
-      break;
-    case FT_STRUCT:
-      new (&StructInfo) StructFieldInfo(Initializer.StructInfo);
-      break;
-    }
-  }
+  FieldInitializer(const FieldInitializer &Initializer);
+  FieldInitializer(FieldInitializer &&Initializer);
 
-  FieldInitializer(FieldInitializer &&Initializer) : FT(Initializer.FT) {
-    switch (FT) {
-    case FT_INTEGRAL:
-      new (&IntInfo) IntFieldInfo(Initializer.IntInfo);
-      break;
-    case FT_REAL:
-      new (&RealInfo) RealFieldInfo(Initializer.RealInfo);
-      break;
-    case FT_STRUCT:
-      new (&StructInfo) StructFieldInfo(Initializer.StructInfo);
-      break;
-    }
-  }
-
-  FieldInitializer &operator=(const FieldInitializer &Initializer) {
-    if (FT != Initializer.FT) {
-      switch (FT) {
-      case FT_INTEGRAL:
-        IntInfo.~IntFieldInfo();
-        break;
-      case FT_REAL:
-        RealInfo.~RealFieldInfo();
-        break;
-      case FT_STRUCT:
-        StructInfo.~StructFieldInfo();
-        break;
-      }
-    }
-    FT = Initializer.FT;
-    switch (FT) {
-    case FT_INTEGRAL:
-      IntInfo = Initializer.IntInfo;
-      break;
-    case FT_REAL:
-      RealInfo = Initializer.RealInfo;
-      break;
-    case FT_STRUCT:
-      StructInfo = Initializer.StructInfo;
-      break;
-    }
-    return *this;
-  }
-
-  FieldInitializer &operator=(FieldInitializer &&Initializer) {
-    if (FT != Initializer.FT) {
-      switch (FT) {
-      case FT_INTEGRAL:
-        IntInfo.~IntFieldInfo();
-        break;
-      case FT_REAL:
-        RealInfo.~RealFieldInfo();
-        break;
-      case FT_STRUCT:
-        StructInfo.~StructFieldInfo();
-        break;
-      }
-    }
-    FT = Initializer.FT;
-    switch (FT) {
-    case FT_INTEGRAL:
-      IntInfo = Initializer.IntInfo;
-      break;
-    case FT_REAL:
-      RealInfo = Initializer.RealInfo;
-      break;
-    case FT_STRUCT:
-      StructInfo = Initializer.StructInfo;
-      break;
-    }
-    return *this;
-  }
+  FieldInitializer &operator=(const FieldInitializer &Initializer);
+  FieldInitializer &operator=(FieldInitializer &&Initializer);
 };
 
 struct StructInitializer {
@@ -340,6 +214,16 @@ struct FieldInfo {
   FieldInfo(FieldType FT) : Contents(FT) {}
 };
 
+StructFieldInfo::StructFieldInfo(std::vector<StructInitializer> V,
+                                 StructInfo S) {
+  Initializers = std::move(V);
+  Structure = S;
+}
+
+StructInfo::StructInfo(StringRef StructName, bool Union,
+                       unsigned AlignmentValue)
+    : Name(StructName), IsUnion(Union), Alignment(AlignmentValue) {}
+
 FieldInfo &StructInfo::addField(StringRef FieldName, FieldType FT,
                                 unsigned FieldAlignmentSize) {
   if (!FieldName.empty())
@@ -353,6 +237,139 @@ FieldInfo &StructInfo::addField(StringRef FieldName, FieldType FT,
   }
   AlignmentSize = std::max(AlignmentSize, FieldAlignmentSize);
   return Field;
+}
+
+FieldInitializer::~FieldInitializer() {
+  switch (FT) {
+  case FT_INTEGRAL:
+    IntInfo.~IntFieldInfo();
+    break;
+  case FT_REAL:
+    RealInfo.~RealFieldInfo();
+    break;
+  case FT_STRUCT:
+    StructInfo.~StructFieldInfo();
+    break;
+  }
+}
+
+FieldInitializer::FieldInitializer(FieldType FT) : FT(FT) {
+  switch (FT) {
+  case FT_INTEGRAL:
+    new (&IntInfo) IntFieldInfo();
+    break;
+  case FT_REAL:
+    new (&RealInfo) RealFieldInfo();
+    break;
+  case FT_STRUCT:
+    new (&StructInfo) StructFieldInfo();
+    break;
+  }
+}
+
+FieldInitializer::FieldInitializer(SmallVector<const MCExpr *, 1> &&Values)
+    : FT(FT_INTEGRAL) {
+  new (&IntInfo) IntFieldInfo(Values);
+}
+
+FieldInitializer::FieldInitializer(SmallVector<APInt, 1> &&AsIntValues)
+    : FT(FT_REAL) {
+  new (&RealInfo) RealFieldInfo(AsIntValues);
+}
+
+FieldInitializer::FieldInitializer(
+    std::vector<StructInitializer> &&Initializers, struct StructInfo Structure)
+    : FT(FT_STRUCT) {
+  new (&StructInfo) StructFieldInfo(std::move(Initializers), Structure);
+}
+
+FieldInitializer::FieldInitializer(const FieldInitializer &Initializer)
+    : FT(Initializer.FT) {
+  switch (FT) {
+  case FT_INTEGRAL:
+    new (&IntInfo) IntFieldInfo(Initializer.IntInfo);
+    break;
+  case FT_REAL:
+    new (&RealInfo) RealFieldInfo(Initializer.RealInfo);
+    break;
+  case FT_STRUCT:
+    new (&StructInfo) StructFieldInfo(Initializer.StructInfo);
+    break;
+  }
+}
+
+FieldInitializer::FieldInitializer(FieldInitializer &&Initializer)
+    : FT(Initializer.FT) {
+  switch (FT) {
+  case FT_INTEGRAL:
+    new (&IntInfo) IntFieldInfo(Initializer.IntInfo);
+    break;
+  case FT_REAL:
+    new (&RealInfo) RealFieldInfo(Initializer.RealInfo);
+    break;
+  case FT_STRUCT:
+    new (&StructInfo) StructFieldInfo(Initializer.StructInfo);
+    break;
+  }
+}
+
+FieldInitializer &
+FieldInitializer::operator=(const FieldInitializer &Initializer) {
+  if (FT != Initializer.FT) {
+    switch (FT) {
+    case FT_INTEGRAL:
+      IntInfo.~IntFieldInfo();
+      break;
+    case FT_REAL:
+      RealInfo.~RealFieldInfo();
+      break;
+    case FT_STRUCT:
+      StructInfo.~StructFieldInfo();
+      break;
+    }
+  }
+  FT = Initializer.FT;
+  switch (FT) {
+  case FT_INTEGRAL:
+    IntInfo = Initializer.IntInfo;
+    break;
+  case FT_REAL:
+    RealInfo = Initializer.RealInfo;
+    break;
+  case FT_STRUCT:
+    StructInfo = Initializer.StructInfo;
+    break;
+  }
+  return *this;
+}
+
+FieldInitializer &FieldInitializer::operator=(FieldInitializer &&Initializer) {
+  if (FT != Initializer.FT) {
+    switch (FT) {
+    case FT_INTEGRAL:
+      IntInfo.~IntFieldInfo();
+      break;
+    case FT_REAL:
+      RealInfo.~RealFieldInfo();
+      break;
+    case FT_STRUCT:
+      StructInfo.~StructFieldInfo();
+      break;
+    }
+  }
+  FT = Initializer.FT;
+  switch (FT) {
+  case FT_INTEGRAL:
+    IntInfo = Initializer.IntInfo;
+    break;
+  case FT_REAL:
+    RealInfo = Initializer.RealInfo;
+    break;
+  case FT_STRUCT:
+    StructInfo = Initializer.StructInfo;
+    break;
+  }
+  return *this;
 }
 
 /// The concrete assembly parser instance.
@@ -491,9 +508,11 @@ public:
     AssemblerDialect = i;
   }
 
-  void Note(SMLoc L, const Twine &Msg, SMRange Range = None) override;
-  bool Warning(SMLoc L, const Twine &Msg, SMRange Range = None) override;
-  bool printError(SMLoc L, const Twine &Msg, SMRange Range = None) override;
+  void Note(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt) override;
+  bool Warning(SMLoc L, const Twine &Msg,
+               SMRange Range = std::nullopt) override;
+  bool printError(SMLoc L, const Twine &Msg,
+                  SMRange Range = std::nullopt) override;
 
   enum ExpandKind { ExpandMacros, DoNotExpandMacros };
   const AsmToken &Lex(ExpandKind ExpandNextToken);
@@ -600,7 +619,7 @@ private:
   bool expandStatement(SMLoc Loc);
 
   void printMessage(SMLoc Loc, SourceMgr::DiagKind Kind, const Twine &Msg,
-                    SMRange Range = None) const {
+                    SMRange Range = std::nullopt) const {
     ArrayRef<SMRange> Ranges(Range);
     SrcMgr.PrintMessage(Loc, Kind, Msg, Ranges);
   }
@@ -827,8 +846,8 @@ private:
 
   const MCExpr *evaluateBuiltinValue(BuiltinSymbol Symbol, SMLoc StartLoc);
 
-  llvm::Optional<std::string> evaluateBuiltinTextMacro(BuiltinSymbol Symbol,
-                                                       SMLoc StartLoc);
+  std::optional<std::string> evaluateBuiltinTextMacro(BuiltinSymbol Symbol,
+                                                      SMLoc StartLoc);
 
   // ".ascii", ".asciz", ".string"
   bool parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated);
@@ -1062,6 +1081,8 @@ private:
 
 namespace llvm {
 
+extern cl::opt<unsigned> AsmMacroMaxNestingDepth;
+
 extern MCAsmParserExtension *createCOFFMasmParser();
 
 } // end namespace llvm
@@ -1178,7 +1199,7 @@ bool MasmParser::expandMacros() {
     return false;
   }
 
-  llvm::Optional<std::string> ExpandedValue;
+  std::optional<std::string> ExpandedValue;
   auto BuiltinIt = BuiltinSymbolMap.find(IDLower);
   if (BuiltinIt != BuiltinSymbolMap.end()) {
     ExpandedValue =
@@ -1302,10 +1323,9 @@ bool MasmParser::enabledGenDwarfForAssembly() {
     // Use the first #line directive for this, if any. It's preprocessed, so
     // there is no checksum, and of course no source directive.
     if (!FirstCppHashFilename.empty())
-      getContext().setMCLineTableRootFile(/*CUID=*/0,
-                                          getContext().getCompilationDir(),
-                                          FirstCppHashFilename,
-                                          /*Cksum=*/None, /*Source=*/None);
+      getContext().setMCLineTableRootFile(
+          /*CUID=*/0, getContext().getCompilationDir(), FirstCppHashFilename,
+          /*Cksum=*/std::nullopt, /*Source=*/std::nullopt);
     const MCDwarfFile &RootFile =
         getContext().getMCDwarfLineTable(/*CUID=*/0).getRootFile();
     getContext().setGenDwarfFileNumber(getStreamer().emitDwarfFileDirective(
@@ -2205,11 +2225,10 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
 
   // FIXME: Recurse on local labels?
 
-  // See what kind of statement we have.
-  switch (Lexer.getKind()) {
-  case AsmToken::Colon: {
-    if (!getTargetParser().isLabel(ID))
-      break;
+  // Check for a label.
+  //   ::= identifier ':'
+  //   ::= number ':'
+  if (Lexer.is(AsmToken::Colon) && getTargetParser().isLabel(ID)) {
     if (checkForValidSection())
       return true;
 
@@ -2258,7 +2277,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
       Lex();
     }
 
-    getTargetParser().doBeforeLabelEmit(Sym);
+    getTargetParser().doBeforeLabelEmit(Sym, IDLoc);
 
     // Emit the label.
     if (!getTargetParser().isParsingMSInlineAsm())
@@ -2273,10 +2292,6 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     getTargetParser().onLabelParsed(Sym);
 
     return false;
-  }
-
-  default: // Normal instruction or directive.
-    break;
   }
 
   // If macros are enabled, check to see if this is a macro instantiation.
@@ -2576,7 +2591,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
       // Size directive; part of an instruction.
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case DK_SBYTE:
   case DK_DB:
     Lex();
@@ -2587,7 +2602,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
       // Size directive; part of an instruction.
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case DK_SWORD:
   case DK_DW:
     Lex();
@@ -2598,7 +2613,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
       // Size directive; part of an instruction.
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case DK_SDWORD:
   case DK_DD:
     Lex();
@@ -2609,7 +2624,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
       // Size directive; part of an instruction.
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case DK_DF:
     Lex();
     return parseDirectiveNamedValue(nextVal, 6, IDVal, IDLoc);
@@ -2619,7 +2634,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
       // Size directive; part of an instruction.
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case DK_SQWORD:
   case DK_DQ:
     Lex();
@@ -2863,7 +2878,7 @@ bool MasmParser::expandMacro(raw_svector_ostream &OS, StringRef Body,
     Name.clear();
   }
 
-  Optional<char> CurrentQuote;
+  std::optional<char> CurrentQuote;
   while (!Body.empty()) {
     // Scan for the next substitution.
     std::size_t End = Body.size(), Pos = 0;
@@ -3595,7 +3610,7 @@ bool MasmParser::parseTextItem(std::string &Data) {
       // Try to resolve as a built-in text macro
       auto BuiltinIt = BuiltinSymbolMap.find(ID.lower());
       if (BuiltinIt != BuiltinSymbolMap.end()) {
-        llvm::Optional<std::string> BuiltinText =
+        std::optional<std::string> BuiltinText =
             evaluateBuiltinTextMacro(BuiltinIt->getValue(), StartLoc);
         if (!BuiltinText) {
           // Not a text macro; break without substituting
@@ -3740,7 +3755,7 @@ bool MasmParser::emitIntegralValues(unsigned Size, unsigned *Count) {
   if (checkForValidSection() || parseScalarInstList(Size, Values))
     return true;
 
-  for (auto Value : Values) {
+  for (const auto *Value : Values) {
     emitIntValue(Value, Size);
   }
   if (Count)
@@ -4194,7 +4209,7 @@ bool MasmParser::parseStructInitializer(const StructInfo &Structure,
                                         StructInitializer &Initializer) {
   const AsmToken FirstToken = getTok();
 
-  Optional<AsmToken::TokenKind> EndToken;
+  std::optional<AsmToken::TokenKind> EndToken;
   if (parseOptionalToken(AsmToken::LCurly)) {
     EndToken = AsmToken::RCurly;
   } else if (parseOptionalAngleBracketOpen()) {
@@ -4213,8 +4228,7 @@ bool MasmParser::parseStructInitializer(const StructInfo &Structure,
   size_t FieldIndex = 0;
   if (EndToken) {
     // Initialize all fields with given initializers.
-    while (getTok().isNot(EndToken.value()) &&
-           FieldIndex < Structure.Fields.size()) {
+    while (getTok().isNot(*EndToken) && FieldIndex < Structure.Fields.size()) {
       const FieldInfo &Field = Structure.Fields[FieldIndex++];
       if (parseOptionalToken(AsmToken::Comma)) {
         // Empty initializer; use the default and continue. (Also, allow line
@@ -4242,10 +4256,10 @@ bool MasmParser::parseStructInitializer(const StructInfo &Structure,
     FieldInitializers.push_back(Field.Contents);
 
   if (EndToken) {
-    if (EndToken.value() == AsmToken::Greater)
+    if (*EndToken == AsmToken::Greater)
       return parseAngleBracketClose();
 
-    return parseToken(EndToken.value());
+    return parseToken(*EndToken);
   }
 
   return false;
@@ -4722,11 +4736,12 @@ bool MasmParser::emitAlignTo(int64_t Alignment) {
     const MCSection *Section = getStreamer().getCurrentSectionOnly();
     assert(Section && "must have section to emit alignment");
     if (Section->useCodeAlign()) {
-      getStreamer().emitCodeAlignment(Alignment, &getTargetParser().getSTI(),
+      getStreamer().emitCodeAlignment(Align(Alignment),
+                                      &getTargetParser().getSTI(),
                                       /*MaxBytesToEmit=*/0);
     } else {
       // FIXME: Target specific behavior about how the "extra" bytes are filled.
-      getStreamer().emitValueToAlignment(Alignment, /*Value=*/0,
+      getStreamer().emitValueToAlignment(Align(Alignment), /*Value=*/0,
                                          /*ValueSize=*/1,
                                          /*MaxBytesToEmit=*/0);
     }
@@ -4821,7 +4836,7 @@ bool MasmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
   uint64_t MD5Hi, MD5Lo;
   bool HasMD5 = false;
 
-  Optional<StringRef> Source;
+  std::optional<StringRef> Source;
   bool HasSource = false;
   std::string SourceString;
 
@@ -4865,7 +4880,7 @@ bool MasmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
       Ctx.setGenDwarfForAssembly(false);
     }
 
-    Optional<MD5::MD5Result> CKMem;
+    std::optional<MD5::MD5Result> CKMem;
     if (HasMD5) {
       MD5::MD5Result Sum;
       for (unsigned i = 0; i != 8; ++i) {
@@ -5516,10 +5531,10 @@ bool MasmParser::parseDirectiveCFIEndProc() {
 /// parse register name or number.
 bool MasmParser::parseRegisterOrRegisterNumber(int64_t &Register,
                                                SMLoc DirectiveLoc) {
-  unsigned RegNo;
+  MCRegister RegNo;
 
   if (getLexer().isNot(AsmToken::Integer)) {
-    if (getTargetParser().ParseRegister(RegNo, DirectiveLoc, DirectiveLoc))
+    if (getTargetParser().parseRegister(RegNo, DirectiveLoc, DirectiveLoc))
       return true;
     Register = getContext().getRegisterInfo()->getDwarfRegNum(RegNo, true);
   } else
@@ -6098,11 +6113,12 @@ bool MasmParser::parseDirectiveComm(bool IsLocal) {
 
   // Create the Symbol as a common or local common with Size and Pow2Alignment.
   if (IsLocal) {
-    getStreamer().emitLocalCommonSymbol(Sym, Size, 1 << Pow2Alignment);
+    getStreamer().emitLocalCommonSymbol(Sym, Size,
+                                        Align(1ULL << Pow2Alignment));
     return false;
   }
 
-  getStreamer().emitCommonSymbol(Sym, Size, 1 << Pow2Alignment);
+  getStreamer().emitCommonSymbol(Sym, Size, Align(1ULL << Pow2Alignment));
   return false;
 }
 
@@ -6248,10 +6264,10 @@ bool MasmParser::parseDirectiveIfdef(SMLoc DirectiveLoc, bool expect_defined) {
     eatToEndOfStatement();
   } else {
     bool is_defined = false;
-    unsigned RegNo;
+    MCRegister Reg;
     SMLoc StartLoc, EndLoc;
-    is_defined = (getTargetParser().tryParseRegister(
-                      RegNo, StartLoc, EndLoc) == MatchOperand_Success);
+    is_defined = (getTargetParser().tryParseRegister(Reg, StartLoc, EndLoc) ==
+                  MatchOperand_Success);
     if (!is_defined) {
       StringRef Name;
       if (check(parseIdentifier(Name), "expected identifier after 'ifdef'") ||
@@ -6368,9 +6384,9 @@ bool MasmParser::parseDirectiveElseIfdef(SMLoc DirectiveLoc,
     eatToEndOfStatement();
   } else {
     bool is_defined = false;
-    unsigned RegNo;
+    MCRegister Reg;
     SMLoc StartLoc, EndLoc;
-    is_defined = (getTargetParser().tryParseRegister(RegNo, StartLoc, EndLoc) ==
+    is_defined = (getTargetParser().tryParseRegister(Reg, StartLoc, EndLoc) ==
                   MatchOperand_Success);
     if (!is_defined) {
       StringRef Name;
@@ -6540,9 +6556,9 @@ bool MasmParser::parseDirectiveErrorIfdef(SMLoc DirectiveLoc,
   }
 
   bool IsDefined = false;
-  unsigned RegNo;
+  MCRegister Reg;
   SMLoc StartLoc, EndLoc;
-  IsDefined = (getTargetParser().tryParseRegister(RegNo, StartLoc, EndLoc) ==
+  IsDefined = (getTargetParser().tryParseRegister(Reg, StartLoc, EndLoc) ==
                MatchOperand_Success);
   if (!IsDefined) {
     StringRef Name;
@@ -6699,6 +6715,7 @@ void MasmParser::initializeDirectiveKindMap() {
   DirectiveKindMap["even"] = DK_EVEN;
   DirectiveKindMap["org"] = DK_ORG;
   DirectiveKindMap["extern"] = DK_EXTERN;
+  DirectiveKindMap["extrn"] = DK_EXTERN;
   DirectiveKindMap["public"] = DK_PUBLIC;
   // DirectiveKindMap[".comm"] = DK_COMM;
   DirectiveKindMap["comment"] = DK_COMMENT;
@@ -6869,7 +6886,7 @@ bool MasmParser::expandStatement(SMLoc Loc) {
   StringMap<std::string> BuiltinValues;
   for (const auto &S : BuiltinSymbolMap) {
     const BuiltinSymbol &Sym = S.getValue();
-    if (llvm::Optional<std::string> Text = evaluateBuiltinTextMacro(Sym, Loc)) {
+    if (std::optional<std::string> Text = evaluateBuiltinTextMacro(Sym, Loc)) {
       BuiltinValues[S.getKey().lower()] = std::move(*Text);
     }
   }
@@ -6969,7 +6986,8 @@ bool MasmParser::parseDirectiveRepeat(SMLoc DirectiveLoc, StringRef Dir) {
   SmallString<256> Buf;
   raw_svector_ostream OS(Buf);
   while (Count--) {
-    if (expandMacro(OS, M->Body, None, None, M->Locals, getTok().getLoc()))
+    if (expandMacro(OS, M->Body, std::nullopt, std::nullopt, M->Locals,
+                    getTok().getLoc()))
       return true;
   }
   instantiateMacroLikeBody(M, DirectiveLoc, OS);
@@ -7002,7 +7020,8 @@ bool MasmParser::parseDirectiveWhile(SMLoc DirectiveLoc) {
   if (Condition) {
     // Instantiate the macro, then resume at this directive to recheck the
     // condition.
-    if (expandMacro(OS, M->Body, None, None, M->Locals, getTok().getLoc()))
+    if (expandMacro(OS, M->Body, std::nullopt, std::nullopt, M->Locals,
+                    getTok().getLoc()))
       return true;
     instantiateMacroLikeBody(M, DirectiveLoc, /*ExitLoc=*/DirectiveLoc, OS);
   }
@@ -7667,7 +7686,7 @@ const MCExpr *MasmParser::evaluateBuiltinValue(BuiltinSymbol Symbol,
   llvm_unreachable("unhandled built-in symbol");
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 MasmParser::evaluateBuiltinTextMacro(BuiltinSymbol Symbol, SMLoc StartLoc) {
   switch (Symbol) {
   default:

@@ -7,9 +7,9 @@ static_library("Symbolize") {
     "//llvm/lib/Demangle",
     "//llvm/lib/Object",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
-    "DIFetcher.cpp",
     "DIPrinter.cpp",
     "Markup.cpp",
     "MarkupFilter.cpp",

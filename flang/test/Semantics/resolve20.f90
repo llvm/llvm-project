@@ -3,6 +3,8 @@ module m
   abstract interface
     subroutine foo
     end subroutine
+    subroutine foo2
+    end subroutine
   end interface
 
   procedure() :: a
@@ -35,9 +37,14 @@ module m
   type :: bad3
   end type
 
-  type :: m ! the name of a module can be used as a local identifier
+  !PORTABILITY: Name 'm' declared in a module should not have the same name as the module
+  type :: m
   end type m
 
+  !ERROR: EXTERNAL attribute was already specified on 'a'
+  !ERROR: EXTERNAL attribute was already specified on 'b'
+  !ERROR: EXTERNAL attribute was already specified on 'c'
+  !ERROR: EXTERNAL attribute was already specified on 'd'
   external :: a, b, c, d
   !ERROR: EXTERNAL attribute not allowed on 'm'
   external :: m
@@ -57,7 +64,7 @@ module m
     integer :: i
   contains
     !ERROR: 'proc' must be an abstract interface or a procedure with an explicit interface
-    !ERROR: Procedure component 'p1' has invalid interface 'proc'
+    !ERROR: Procedure component 'p1' must have NOPASS attribute or explicit interface
     procedure(proc), deferred :: p1
   end type t1
 
@@ -70,9 +77,9 @@ contains
   subroutine bar
   end subroutine
   subroutine test
-    !ERROR: Abstract interface 'foo' may not be called
-    call foo()
-    !ERROR: Abstract interface 'f' may not be called
+    !ERROR: Abstract procedure interface 'foo2' may not be referenced
+    call foo2()
+    !ERROR: Abstract procedure interface 'f' may not be referenced
     x = f()
   end subroutine
 end module

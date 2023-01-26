@@ -12,7 +12,8 @@
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Language.h"
 
-#include <set>
+#include "llvm/ADT/DenseSet.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace lldb;
@@ -24,7 +25,7 @@ static_assert(eNumLanguageTypes < g_num_small_bitvector_bits,
               "Languages bit vector is no longer small on 64 bit systems");
 LanguageSet::LanguageSet() : bitvector(eNumLanguageTypes, false) {}
 
-llvm::Optional<LanguageType> LanguageSet::GetSingularLanguage() {
+std::optional<LanguageType> LanguageSet::GetSingularLanguage() {
   if (bitvector.count() == 1)
     return (LanguageType)bitvector.find_first();
   return {};
@@ -37,19 +38,17 @@ bool LanguageSet::operator[](unsigned i) const { return bitvector[i]; }
 
 TypeSystem::~TypeSystem() = default;
 
-static lldb::TypeSystemSP CreateInstanceHelper(lldb::LanguageType language,
-                                               Module *module, Target *target) {
+static TypeSystemSP CreateInstanceHelper(lldb::LanguageType language,
+                                         Module *module, Target *target) {
   uint32_t i = 0;
   TypeSystemCreateInstance create_callback;
   while ((create_callback = PluginManager::GetTypeSystemCreateCallbackAtIndex(
               i++)) != nullptr) {
-    lldb::TypeSystemSP type_system_sp =
-        create_callback(language, module, target);
-    if (type_system_sp)
+    if (auto type_system_sp = create_callback(language, module, target))
       return type_system_sp;
   }
 
-  return lldb::TypeSystemSP();
+  return {};
 }
 
 lldb::TypeSystemSP TypeSystem::CreateInstance(lldb::LanguageType language,
@@ -115,27 +114,33 @@ CompilerType TypeSystem::GetBuiltinTypeByName(ConstString name) {
 }
 
 CompilerType TypeSystem::GetTypeForFormatters(void *type) {
-  return CompilerType(this, type);
+  return CompilerType(weak_from_this(), type);
 }
 
-size_t TypeSystem::GetNumTemplateArguments(lldb::opaque_compiler_type_t type) {
+bool TypeSystem::IsTemplateType(lldb::opaque_compiler_type_t type) {
+  return false;
+}
+
+size_t TypeSystem::GetNumTemplateArguments(lldb::opaque_compiler_type_t type,
+                                           bool expand_pack) {
   return 0;
 }
 
 TemplateArgumentKind
-TypeSystem::GetTemplateArgumentKind(opaque_compiler_type_t type, size_t idx) {
+TypeSystem::GetTemplateArgumentKind(opaque_compiler_type_t type, size_t idx,
+                                    bool expand_pack) {
   return eTemplateArgumentKindNull;
 }
 
 CompilerType TypeSystem::GetTypeTemplateArgument(opaque_compiler_type_t type,
-                                                 size_t idx) {
+                                                 size_t idx, bool expand_pack) {
   return CompilerType();
 }
 
-llvm::Optional<CompilerType::IntegralTemplateArgument>
-TypeSystem::GetIntegralTemplateArgument(opaque_compiler_type_t type,
-                                        size_t idx) {
-  return llvm::None;
+std::optional<CompilerType::IntegralTemplateArgument>
+TypeSystem::GetIntegralTemplateArgument(opaque_compiler_type_t type, size_t idx,
+                                        bool expand_pack) {
+  return std::nullopt;
 }
 
 LazyBool TypeSystem::ShouldPrintAsOneLiner(void *type, ValueObject *valobj) {
@@ -176,6 +181,10 @@ TypeSystem::CreateUtilityFunction(std::string text, std::string name) {
   return {};
 }
 
+std::optional<llvm::json::Value> TypeSystem::ReportStatistics() {
+  return std::nullopt;
+}
+
 #pragma mark TypeSystemMap
 
 TypeSystemMap::TypeSystemMap() : m_mutex(), m_map() {}
@@ -189,13 +198,13 @@ void TypeSystemMap::Clear() {
     map = m_map;
     m_clear_in_progress = true;
   }
-  std::set<TypeSystem *> visited;
-  for (auto pair : map) {
-    TypeSystem *type_system = pair.second.get();
-    if (type_system && !visited.count(type_system)) {
-      visited.insert(type_system);
+  llvm::DenseSet<TypeSystem *> visited;
+  for (auto &pair : map) {
+    if (visited.count(pair.second.get()))
+      continue;
+    visited.insert(pair.second.get());
+    if (lldb::TypeSystemSP type_system = pair.second)
       type_system->Finalize();
-    }
   }
   map.clear();
   {
@@ -205,24 +214,26 @@ void TypeSystemMap::Clear() {
   }
 }
 
-void TypeSystemMap::ForEach(std::function<bool(TypeSystem *)> const &callback) {
+void TypeSystemMap::ForEach(
+    std::function<bool(lldb::TypeSystemSP)> const &callback) {
   std::lock_guard<std::mutex> guard(m_mutex);
   // Use a std::set so we only call the callback once for each unique
-  // TypeSystem instance
-  std::set<TypeSystem *> visited;
-  for (auto pair : m_map) {
+  // TypeSystem instance.
+  llvm::DenseSet<TypeSystem *> visited;
+  for (auto &pair : m_map) {
     TypeSystem *type_system = pair.second.get();
-    if (type_system && !visited.count(type_system)) {
-      visited.insert(type_system);
-      if (!callback(type_system))
-        break;
-    }
+    if (!type_system || visited.count(type_system))
+      continue;
+    visited.insert(type_system);
+    assert(type_system);
+    if (!callback(pair.second))
+      break;
   }
 }
 
-llvm::Expected<TypeSystem &> TypeSystemMap::GetTypeSystemForLanguage(
+llvm::Expected<lldb::TypeSystemSP> TypeSystemMap::GetTypeSystemForLanguage(
     lldb::LanguageType language,
-    llvm::Optional<CreateCallback> create_callback) {
+    std::optional<CreateCallback> create_callback) {
   std::lock_guard<std::mutex> guard(m_mutex);
   if (m_clear_in_progress)
     return llvm::make_error<llvm::StringError>(
@@ -231,9 +242,10 @@ llvm::Expected<TypeSystem &> TypeSystemMap::GetTypeSystemForLanguage(
 
   collection::iterator pos = m_map.find(language);
   if (pos != m_map.end()) {
-    auto *type_system = pos->second.get();
-    if (type_system)
-      return *type_system;
+    if (pos->second) {
+      assert(!pos->second->weak_from_this().expired());
+      return pos->second;
+    }
     return llvm::make_error<llvm::StringError>(
         "TypeSystem for language " +
             llvm::StringRef(Language::GetNameForLanguageType(language)) +
@@ -246,8 +258,8 @@ llvm::Expected<TypeSystem &> TypeSystemMap::GetTypeSystemForLanguage(
       // Add a new mapping for "language" to point to an already existing
       // TypeSystem that supports this language
       m_map[language] = pair.second;
-      if (pair.second.get())
-        return *pair.second.get();
+      if (pair.second)
+        return pair.second;
       return llvm::make_error<llvm::StringError>(
           "TypeSystem for language " +
               llvm::StringRef(Language::GetNameForLanguageType(language)) +
@@ -263,11 +275,11 @@ llvm::Expected<TypeSystem &> TypeSystemMap::GetTypeSystemForLanguage(
         llvm::inconvertibleErrorCode());
 
   // Cache even if we get a shared pointer that contains a null type system
-  // back
+  // back.
   TypeSystemSP type_system_sp = (*create_callback)();
   m_map[language] = type_system_sp;
-  if (type_system_sp.get())
-    return *type_system_sp.get();
+  if (type_system_sp)
+    return type_system_sp;
   return llvm::make_error<llvm::StringError>(
       "TypeSystem for language " +
           llvm::StringRef(Language::GetNameForLanguageType(language)) +
@@ -275,24 +287,24 @@ llvm::Expected<TypeSystem &> TypeSystemMap::GetTypeSystemForLanguage(
       llvm::inconvertibleErrorCode());
 }
 
-llvm::Expected<TypeSystem &>
+llvm::Expected<lldb::TypeSystemSP>
 TypeSystemMap::GetTypeSystemForLanguage(lldb::LanguageType language,
                                         Module *module, bool can_create) {
   if (can_create) {
     return GetTypeSystemForLanguage(
-        language, llvm::Optional<CreateCallback>([language, module]() {
+        language, std::optional<CreateCallback>([language, module]() {
           return TypeSystem::CreateInstance(language, module);
         }));
   }
   return GetTypeSystemForLanguage(language);
 }
 
-llvm::Expected<TypeSystem &>
+llvm::Expected<lldb::TypeSystemSP>
 TypeSystemMap::GetTypeSystemForLanguage(lldb::LanguageType language,
                                         Target *target, bool can_create) {
   if (can_create) {
     return GetTypeSystemForLanguage(
-        language, llvm::Optional<CreateCallback>([language, target]() {
+        language, std::optional<CreateCallback>([language, target]() {
           return TypeSystem::CreateInstance(language, target);
         }));
   }

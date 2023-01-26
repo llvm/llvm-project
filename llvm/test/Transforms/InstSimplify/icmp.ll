@@ -211,3 +211,50 @@ loop:
   %sub2 = sub i32 42, %p2
   br label %loop
 }
+
+define i1 @sub_false(i32 %x) {
+; CHECK-LABEL: @sub_false(
+; CHECK-NEXT:    ret i1 false
+;
+  %sub = sub i32 1, %x
+  %cmp = icmp eq i32 %sub, %x
+  ret i1 %cmp
+}
+
+define i1 @sub_swap(i8 %x) {
+; CHECK-LABEL: @sub_swap(
+; CHECK-NEXT:    ret i1 true
+;
+  %sub = sub i8 3, %x
+  %cmp = icmp ne i8 %x, %sub
+  ret i1 %cmp
+}
+
+define <2 x i1> @sub_odd(<2 x i8> %x) {
+; CHECK-LABEL: @sub_odd(
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %sub = sub <2 x i8> <i8 3, i8 3>, %x
+  %cmp = icmp ne <2 x i8> %sub, %x
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @sub_odd_poison(<2 x i8> %x) {
+; CHECK-LABEL: @sub_odd_poison(
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %sub = sub <2 x i8> <i8 poison, i8 1>, %x
+  %cmp = icmp ne <2 x i8> %sub, %x
+  ret <2 x i1> %cmp
+}
+
+define i1 @sub_even(i8 %x) {
+; CHECK-LABEL: @sub_even(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 2, [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[SUB]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sub = sub i8 2, %x
+  %cmp = icmp ne i8 %sub, %x
+  ret i1 %cmp
+}

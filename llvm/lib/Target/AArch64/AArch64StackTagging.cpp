@@ -14,8 +14,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -306,8 +304,6 @@ public:
     initializeAArch64StackTaggingPass(*PassRegistry::getPassRegistry());
   }
 
-  bool isInterestingAlloca(const AllocaInst &AI);
-
   void tagAlloca(AllocaInst *AI, Instruction *InsertBefore, Value *Ptr,
                  uint64_t Size);
   void untagAlloca(AllocaInst *AI, Instruction *InsertBefore, uint64_t Size);
@@ -383,7 +379,7 @@ Instruction *AArch64StackTagging::collectInitializers(Instruction *StartInst,
         break;
 
       // Check to see if this store is to a constant offset from the start ptr.
-      Optional<int64_t> Offset =
+      std::optional<int64_t> Offset =
           isPointerOffset(StartPtr, NextStore->getPointerOperand(), *DL);
       if (!Offset)
         break;
@@ -401,7 +397,8 @@ Instruction *AArch64StackTagging::collectInitializers(Instruction *StartInst,
         break;
 
       // Check to see if this store is to a constant offset from the start ptr.
-      Optional<int64_t> Offset = isPointerOffset(StartPtr, MSI->getDest(), *DL);
+      std::optional<int64_t> Offset =
+          isPointerOffset(StartPtr, MSI->getDest(), *DL);
       if (!Offset)
         break;
 
@@ -411,22 +408,6 @@ Instruction *AArch64StackTagging::collectInitializers(Instruction *StartInst,
     }
   }
   return LastInst;
-}
-
-bool AArch64StackTagging::isInterestingAlloca(const AllocaInst &AI) {
-  // FIXME: support dynamic allocas
-  bool IsInteresting =
-      AI.getAllocatedType()->isSized() && AI.isStaticAlloca() &&
-      // alloca() may be called with 0 size, ignore it.
-      *AI.getAllocationSizeInBits(*DL) > 0 &&
-      // inalloca allocas are not treated as static, and we don't want
-      // dynamic alloca instrumentation for them as well.
-      !AI.isUsedWithInAlloca() &&
-      // swifterror allocas are register promoted by ISel
-      !AI.isSwiftError() &&
-      // safe allocas are not interesting
-      !(SSI && SSI->isSafe(AI));
-  return IsInteresting;
 }
 
 void AArch64StackTagging::tagAlloca(AllocaInst *AI, Instruction *InsertBefore,
@@ -495,8 +476,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   if (MergeInit)
     AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
-  memtag::StackInfoBuilder SIB(
-      [this](const AllocaInst &AI) { return isInterestingAlloca(AI); });
+  memtag::StackInfoBuilder SIB(SSI);
   for (Instruction &I : instructions(F))
     SIB.visit(I);
   memtag::StackInfo &SInfo = SIB.get();
@@ -541,7 +521,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   int NextTag = 0;
   for (auto &I : SInfo.AllocasToInstrument) {
     memtag::AllocaInfo &Info = I.second;
-    assert(Info.AI && isInterestingAlloca(*Info.AI));
+    assert(Info.AI && SIB.isInterestingAlloca(*Info.AI));
     TrackingVH<Instruction> OldAI = Info.AI;
     memtag::alignAndPadAlloca(Info, kTagGranuleSize);
     AllocaInst *AI = Info.AI;
@@ -583,28 +563,28 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
           End->eraseFromParent();
       }
     } else {
-      uint64_t Size = *Info.AI->getAllocationSizeInBits(*DL) / 8;
+      uint64_t Size = *Info.AI->getAllocationSize(*DL);
       Value *Ptr = IRB.CreatePointerCast(TagPCall, IRB.getInt8PtrTy());
       tagAlloca(AI, &*IRB.GetInsertPoint(), Ptr, Size);
-      for (auto &RI : SInfo.RetVec) {
+      for (auto *RI : SInfo.RetVec) {
         untagAlloca(AI, RI, Size);
       }
       // We may have inserted tag/untag outside of any lifetime interval.
       // Remove all lifetime intrinsics for this alloca.
-      for (auto &II : Info.LifetimeStart)
+      for (auto *II : Info.LifetimeStart)
         II->eraseFromParent();
-      for (auto &II : Info.LifetimeEnd)
+      for (auto *II : Info.LifetimeEnd)
         II->eraseFromParent();
     }
 
     // Fixup debug intrinsics to point to the new alloca.
-    for (auto DVI : Info.DbgVariableIntrinsics)
+    for (auto *DVI : Info.DbgVariableIntrinsics)
       DVI->replaceVariableLocationOp(OldAI, Info.AI);
   }
 
   // If we have instrumented at least one alloca, all unrecognized lifetime
   // intrinsics have to go.
-  for (auto &I : SInfo.UnrecognizedLifetimes)
+  for (auto *I : SInfo.UnrecognizedLifetimes)
     I->eraseFromParent();
 
   return true;

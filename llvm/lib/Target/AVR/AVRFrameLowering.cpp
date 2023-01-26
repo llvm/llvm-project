@@ -56,6 +56,7 @@ void AVRFrameLowering::emitPrologue(MachineFunction &MF,
   const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
   const AVRInstrInfo &TII = *STI.getInstrInfo();
   const AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
   bool HasFP = hasFP(MF);
 
   // Interrupt handlers re-enable interrupts in function entry.
@@ -68,21 +69,26 @@ void AVRFrameLowering::emitPrologue(MachineFunction &MF,
   // Emit special prologue code to save R1, R0 and SREG in interrupt/signal
   // handlers before saving any other registers.
   if (AFI->isInterruptOrSignalHandler()) {
-    BuildMI(MBB, MBBI, DL, TII.get(AVR::PUSHWRr))
-        .addReg(AVR::R1R0, RegState::Kill)
+    BuildMI(MBB, MBBI, DL, TII.get(AVR::PUSHRr))
+        .addReg(STI.getTmpRegister(), RegState::Kill)
         .setMIFlag(MachineInstr::FrameSetup);
 
-    BuildMI(MBB, MBBI, DL, TII.get(AVR::INRdA), AVR::R0)
+    BuildMI(MBB, MBBI, DL, TII.get(AVR::INRdA), STI.getTmpRegister())
         .addImm(STI.getIORegSREG())
         .setMIFlag(MachineInstr::FrameSetup);
     BuildMI(MBB, MBBI, DL, TII.get(AVR::PUSHRr))
-        .addReg(AVR::R0, RegState::Kill)
+        .addReg(STI.getTmpRegister(), RegState::Kill)
         .setMIFlag(MachineInstr::FrameSetup);
-    BuildMI(MBB, MBBI, DL, TII.get(AVR::EORRdRr))
-        .addReg(AVR::R1, RegState::Define)
-        .addReg(AVR::R1, RegState::Kill)
-        .addReg(AVR::R1, RegState::Kill)
-        .setMIFlag(MachineInstr::FrameSetup);
+    if (!MRI.reg_empty(STI.getZeroRegister())) {
+      BuildMI(MBB, MBBI, DL, TII.get(AVR::PUSHRr))
+          .addReg(STI.getZeroRegister(), RegState::Kill)
+          .setMIFlag(MachineInstr::FrameSetup);
+      BuildMI(MBB, MBBI, DL, TII.get(AVR::EORRdRr))
+          .addReg(STI.getZeroRegister(), RegState::Define)
+          .addReg(STI.getZeroRegister(), RegState::Kill)
+          .addReg(STI.getZeroRegister(), RegState::Kill)
+          .setMIFlag(MachineInstr::FrameSetup);
+    }
   }
 
   // Early exit if the frame pointer is not needed in this function.
@@ -115,7 +121,8 @@ void AVRFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   // Reserve the necessary frame memory by doing FP -= <size>.
-  unsigned Opcode = (isUInt<6>(FrameSize)) ? AVR::SBIWRdK : AVR::SUBIWRdK;
+  unsigned Opcode = (isUInt<6>(FrameSize) && STI.hasADDSUBIW()) ? AVR::SBIWRdK
+                                                                : AVR::SUBIWRdK;
 
   MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(Opcode), AVR::R29R28)
                          .addReg(AVR::R29R28, RegState::Kill)
@@ -132,6 +139,7 @@ void AVRFrameLowering::emitPrologue(MachineFunction &MF,
 
 static void restoreStatusRegister(MachineFunction &MF, MachineBasicBlock &MBB) {
   const AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
 
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
 
@@ -142,11 +150,14 @@ static void restoreStatusRegister(MachineFunction &MF, MachineBasicBlock &MBB) {
   // Emit special epilogue code to restore R1, R0 and SREG in interrupt/signal
   // handlers at the very end of the function, just before reti.
   if (AFI->isInterruptOrSignalHandler()) {
-    BuildMI(MBB, MBBI, DL, TII.get(AVR::POPRd), AVR::R0);
+    if (!MRI.reg_empty(STI.getZeroRegister())) {
+      BuildMI(MBB, MBBI, DL, TII.get(AVR::POPRd), STI.getZeroRegister());
+    }
+    BuildMI(MBB, MBBI, DL, TII.get(AVR::POPRd), STI.getTmpRegister());
     BuildMI(MBB, MBBI, DL, TII.get(AVR::OUTARr))
         .addImm(STI.getIORegSREG())
-        .addReg(AVR::R0, RegState::Kill);
-    BuildMI(MBB, MBBI, DL, TII.get(AVR::POPWRd), AVR::R1R0);
+        .addReg(STI.getTmpRegister(), RegState::Kill);
+    BuildMI(MBB, MBBI, DL, TII.get(AVR::POPRd), STI.getTmpRegister());
   }
 }
 
@@ -192,7 +203,7 @@ void AVRFrameLowering::emitEpilogue(MachineFunction &MF,
     unsigned Opcode;
 
     // Select the optimal opcode depending on how big it is.
-    if (isUInt<6>(FrameSize)) {
+    if (isUInt<6>(FrameSize) && STI.hasADDSUBIW()) {
       Opcode = AVR::ADIWRdK;
     } else {
       Opcode = AVR::SUBIWRdK;
@@ -374,7 +385,7 @@ MachineBasicBlock::iterator AVRFrameLowering::eliminateCallFramePseudoInstr(
     // Select the best opcode to adjust SP based on the offset size.
     unsigned AddOpcode;
 
-    if (isUInt<6>(Amount)) {
+    if (isUInt<6>(Amount) && STI.hasADDSUBIW()) {
       AddOpcode = AVR::ADIWRdK;
     } else {
       AddOpcode = AVR::SUBIWRdK;
@@ -447,7 +458,8 @@ struct AVRFrameAnalyzer : public MachineFunctionPass {
         int Opcode = MI.getOpcode();
 
         if ((Opcode != AVR::LDDRdPtrQ) && (Opcode != AVR::LDDWRdPtrQ) &&
-            (Opcode != AVR::STDPtrQRr) && (Opcode != AVR::STDWPtrQRr)) {
+            (Opcode != AVR::STDPtrQRr) && (Opcode != AVR::STDWPtrQRr) &&
+            (Opcode != AVR::FRMIDX)) {
           continue;
         }
 

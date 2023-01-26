@@ -100,7 +100,8 @@ bool isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
                           DependenceInfo &DI, LoopInfo &LI);
 
 bool computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
-                        DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
+                        DominatorTree &DT, LoopInfo *LI, AssumptionCache *AC,
+                        ScalarEvolution &SE,
                         const SmallPtrSetImpl<const Value *> &EphValues,
                         OptimizationRemarkEmitter *ORE, unsigned TripCount,
                         unsigned MaxTripCount, bool MaxOrZero,
@@ -120,9 +121,10 @@ TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
     Loop *L, ScalarEvolution &SE, const TargetTransformInfo &TTI,
     BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
     llvm::OptimizationRemarkEmitter &ORE, int OptLevel,
-    Optional<unsigned> UserThreshold, Optional<unsigned> UserCount,
-    Optional<bool> UserAllowPartial, Optional<bool> UserRuntime,
-    Optional<bool> UserUpperBound, Optional<unsigned> UserFullUnrollMaxCount);
+    std::optional<unsigned> UserThreshold, std::optional<unsigned> UserCount,
+    std::optional<bool> UserAllowPartial, std::optional<bool> UserRuntime,
+    std::optional<bool> UserUpperBound,
+    std::optional<unsigned> UserFullUnrollMaxCount);
 
 InstructionCost ApproximateLoopSize(const Loop *L, unsigned &NumCalls,
     bool &NotDuplicatable, bool &Convergent, const TargetTransformInfo &TTI,

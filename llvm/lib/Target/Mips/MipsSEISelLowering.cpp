@@ -415,7 +415,7 @@ SDValue MipsSETargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
 }
 
 bool MipsSETargetLowering::allowsMisalignedMemoryAccesses(
-    EVT VT, unsigned, Align, MachineMemOperand::Flags, bool *Fast) const {
+    EVT VT, unsigned, Align, MachineMemOperand::Flags, unsigned *Fast) const {
   MVT::SimpleValueType SVT = VT.getSimpleVT().SimpleTy;
 
   if (Subtarget.systemSupportsUnalignedAccess()) {
@@ -424,7 +424,7 @@ bool MipsSETargetLowering::allowsMisalignedMemoryAccesses(
     // a hybrid of the two but it's expected that most implementations will
     // handle the majority of cases in hardware.
     if (Fast)
-      *Fast = true;
+      *Fast = 1;
     return true;
   }
 
@@ -432,7 +432,7 @@ bool MipsSETargetLowering::allowsMisalignedMemoryAccesses(
   case MVT::i64:
   case MVT::i32:
     if (Fast)
-      *Fast = true;
+      *Fast = 1;
     return true;
   default:
     return false;
@@ -508,7 +508,7 @@ static SDValue performANDCombine(SDNode *N, SelectionDAG &DAG,
       SDValue Ops[] = { Op0->getOperand(0), Op0->getOperand(1), Op0Op2 };
       return DAG.getNode(MipsISD::VEXTRACT_ZEXT_ELT, SDLoc(Op0),
                          Op0->getVTList(),
-                         makeArrayRef(Ops, Op0->getNumOperands()));
+                         ArrayRef(Ops, Op0->getNumOperands()));
     }
   }
 
@@ -917,7 +917,7 @@ static SDValue performSRACombine(SDNode *N, SelectionDAG &DAG,
                           Op0Op0->getOperand(2) };
         return DAG.getNode(MipsISD::VEXTRACT_SEXT_ELT, SDLoc(Op0Op0),
                            Op0Op0->getVTList(),
-                           makeArrayRef(Ops, Op0Op0->getNumOperands()));
+                           ArrayRef(Ops, Op0Op0->getNumOperands()));
       }
     }
   }
@@ -1396,7 +1396,7 @@ static SDValue lowerMSASplatZExt(SDValue Op, unsigned OpNr, SelectionDAG &DAG) {
                       LaneA, LaneB, LaneA, LaneB, LaneA, LaneB, LaneA, LaneB };
 
   SDValue Result = DAG.getBuildVector(
-      ViaVecTy, DL, makeArrayRef(Ops, ViaVecTy.getVectorNumElements()));
+      ViaVecTy, DL, ArrayRef(Ops, ViaVecTy.getVectorNumElements()));
 
   if (ViaVecTy != ResVecTy) {
     SDValue One = DAG.getConstant(1, DL, ViaVecTy);
@@ -1444,7 +1444,7 @@ static SDValue getBuildVectorSplat(EVT VecTy, SDValue SplatValue,
                       SplatValueA, SplatValueB, SplatValueA, SplatValueB };
 
   SDValue Result = DAG.getBuildVector(
-      ViaVecTy, DL, makeArrayRef(Ops, ViaVecTy.getVectorNumElements()));
+      ViaVecTy, DL, ArrayRef(Ops, ViaVecTy.getVectorNumElements()));
 
   if (VecTy != ViaVecTy)
     Result = DAG.getNode(ISD::BITCAST, DL, VecTy, Result);

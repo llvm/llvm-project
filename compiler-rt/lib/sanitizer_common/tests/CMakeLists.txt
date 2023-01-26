@@ -5,6 +5,7 @@ clang_compiler_add_cxx_check()
 # FIXME: use SANITIZER_COMMON_SUPPORTED_ARCH here
 filter_available_targets(SANITIZER_UNITTEST_SUPPORTED_ARCH x86_64 i386 mips64 mips64el riscv64 sparcv9 sparc)
 if(APPLE)
+  list(APPEND SANITIZER_UNITTEST_SUPPORTED_ARCH arm64)
   darwin_filter_host_archs(SANITIZER_UNITTEST_SUPPORTED_ARCH SANITIZER_UNITTEST_SUPPORTED_ARCH)
 endif()
 
@@ -102,6 +103,8 @@ if(APPLE)
 
   add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
   list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON ${WEAK_SYMBOL_LINK_FLAGS})
+  # For c++17 sanitizer_allocator_test requires language features introduced in macos 10.13
+  list(APPEND SANITIZER_TEST_CFLAGS_COMMON "-mmacosx-version-min=10.13")
 endif()
 
 # MSVC linker is allocating 1M for the stack by default, which is not

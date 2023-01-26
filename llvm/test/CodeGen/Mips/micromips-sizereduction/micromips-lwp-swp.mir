@@ -3,15 +3,15 @@
 # RUN:      %s -o - | FileCheck %s
 
 --- |
-  define void @f1(i32* %adr, i32 %val) { ret void }
-  define void @f2(i32* %adr, i32 %val) { ret void }
-  define void @f3(i32* %adr, i32 %val) { ret void }
-  define void @f4(i32* %adr, i32 %val) { ret void }
+  define void @f1(ptr %adr, i32 %val) { ret void }
+  define void @f2(ptr %adr, i32 %val) { ret void }
+  define void @f3(ptr %adr, i32 %val) { ret void }
+  define void @f4(ptr %adr, i32 %val) { ret void }
 
-  declare i32* @f()
+  declare ptr @f()
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**)
+  declare void @llvm.stackprotector(ptr, ptr)
 
 ...
 ---

@@ -16,7 +16,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK: remark: <unknown>:0:0: User-specified vectorization factor 4 is unsafe, clamping to maximum safe vectorization factor 2
 ; CHECK-LABEL: @foo
 ; CHECK: <2 x i32>
-define void @foo(i32* %a, i32* %b) {
+define void @foo(ptr %a, ptr %b) {
 entry:
   br label %loop.ph
 
@@ -25,14 +25,14 @@ loop.ph:
 
 loop:
   %iv = phi i64 [ 0, %loop.ph ], [ %iv.next, %loop ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %iv
-  %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %b, i64 %iv
-  %1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %b, i64 %iv
+  %1 = load i32, ptr %arrayidx2, align 4
   %add = add nsw i32 %1, %0
   %2 = add nuw nsw i64 %iv, 2
-  %arrayidx5 = getelementptr inbounds i32, i32* %a, i64 %2
-  store i32 %add, i32* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds i32, ptr %a, i64 %2
+  store i32 %add, ptr %arrayidx5, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %exit, label %loop, !llvm.loop !0

@@ -85,7 +85,7 @@ target triple = "x86_64-pc-windows-msvc19.0.23918"
 define void @"\01?baz@bar@foo@@YAXXZ"() #0 !dbg !20 {
 entry:
   %l = alloca %struct.LocalRecord, align 4
-  call void @llvm.dbg.declare(metadata %struct.LocalRecord* %l, metadata !23, metadata !27), !dbg !28
+  call void @llvm.dbg.declare(metadata ptr %l, metadata !23, metadata !27), !dbg !28
   ret void, !dbg !29
 }
 
@@ -93,12 +93,12 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind uwtable
-define void @"\01?method@GlobalRecord@bar@foo@@QEAAXXZ"(%"struct.foo::bar::GlobalRecord"* %this) #0 align 2 !dbg !30 {
+define void @"\01?method@GlobalRecord@bar@foo@@QEAAXXZ"(ptr %this) #0 align 2 !dbg !30 {
 entry:
-  %this.addr = alloca %"struct.foo::bar::GlobalRecord"*, align 8
-  store %"struct.foo::bar::GlobalRecord"* %this, %"struct.foo::bar::GlobalRecord"** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %"struct.foo::bar::GlobalRecord"** %this.addr, metadata !31, metadata !27), !dbg !33
-  %this1 = load %"struct.foo::bar::GlobalRecord"*, %"struct.foo::bar::GlobalRecord"** %this.addr, align 8
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !31, metadata !27), !dbg !33
+  %this1 = load ptr, ptr %this.addr, align 8
   ret void, !dbg !34
 }
 

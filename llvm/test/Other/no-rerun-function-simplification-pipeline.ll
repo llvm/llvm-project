@@ -16,13 +16,13 @@
 ; CHECK: PassManager{{.*}}SCC{{.*}} on (f3)
 ; CHECK: Running pass: BDCEPass on f3
 
-define void @f1(void()* %p) alwaysinline {
+define void @f1(ptr %p) alwaysinline {
   call void %p()
   ret void
 }
 
 define void @f2() #0 {
-  call void @f1(void()* @f2)
+  call void @f1(ptr @f2)
   call void @f3()
   ret void
 }

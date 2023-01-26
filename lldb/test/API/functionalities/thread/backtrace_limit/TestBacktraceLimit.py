@@ -2,7 +2,6 @@
 Test that the target.process.thread.max-backtrace-depth setting works.
 """
 
-import unittest2
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

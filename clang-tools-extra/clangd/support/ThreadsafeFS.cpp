@@ -8,7 +8,6 @@
 
 #include "support/ThreadsafeFS.h"
 #include "Logger.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
@@ -74,7 +73,7 @@ private:
 
 llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
 ThreadsafeFS::view(PathRef CWD) const {
-  auto FS = view(llvm::None);
+  auto FS = view(std::nullopt);
   if (auto EC = FS->setCurrentWorkingDirectory(CWD))
     elog("VFS: failed to set CWD to {0}: {1}", CWD, EC.message());
   return FS;

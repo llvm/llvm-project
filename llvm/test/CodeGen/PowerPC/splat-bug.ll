@@ -10,7 +10,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 define void @foo() nounwind ssp {
 ; CHECK: foo:
-  store <16 x i8> <i8 0, i8 16, i8 0, i8 16, i8 0, i8 16, i8 0, i8 16, i8 0, i8 16, i8 0, i8 16, i8 0, i8 16, i8 0, i8 16>, <16 x i8>* @a
+  store <16 x i8> <i8 0, i8 16, i8 0, i8 16, i8 0, i8 16, i8 0, i8 16, i8 0, i8 16, i8 0, i8 16, i8 0, i8 16, i8 0, i8 16>, ptr @a
 ; CHECK: vspltish [[REG:[0-9]+]], 8
 ; CHECK: vadduhm {{[0-9]+}}, [[REG]], [[REG]]
   ret void

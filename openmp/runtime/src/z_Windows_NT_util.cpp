@@ -78,7 +78,7 @@ struct SYSTEM_THREAD {
 }; // SYSTEM_THREAD
 
 KMP_BUILD_ASSERT(offsetof(SYSTEM_THREAD, KernelTime) == 0);
-#if KMP_ARCH_X86
+#if KMP_ARCH_X86 || KMP_ARCH_ARM
 KMP_BUILD_ASSERT(offsetof(SYSTEM_THREAD, StartAddress) == 28);
 KMP_BUILD_ASSERT(offsetof(SYSTEM_THREAD, State) == 52);
 #else
@@ -108,7 +108,7 @@ typedef SYSTEM_PROCESS_INFORMATION *PSYSTEM_PROCESS_INFORMATION;
 KMP_BUILD_ASSERT(offsetof(SYSTEM_PROCESS_INFORMATION, NextEntryOffset) == 0);
 KMP_BUILD_ASSERT(offsetof(SYSTEM_PROCESS_INFORMATION, CreateTime) == 32);
 KMP_BUILD_ASSERT(offsetof(SYSTEM_PROCESS_INFORMATION, ImageName) == 56);
-#if KMP_ARCH_X86
+#if KMP_ARCH_X86 || KMP_ARCH_ARM
 KMP_BUILD_ASSERT(offsetof(SYSTEM_PROCESS_INFORMATION, ProcessId) == 68);
 KMP_BUILD_ASSERT(offsetof(SYSTEM_PROCESS_INFORMATION, HandleCount) == 76);
 KMP_BUILD_ASSERT(offsetof(SYSTEM_PROCESS_INFORMATION, VMCounters) == 88);
@@ -608,7 +608,8 @@ void __kmp_affinity_bind_thread(int proc) {
     KMP_DEBUG_ASSERT(__kmp_SetThreadGroupAffinity != NULL);
     if (__kmp_SetThreadGroupAffinity(GetCurrentThread(), &ga, NULL) == 0) {
       DWORD error = GetLastError();
-      if (__kmp_affinity_verbose) { // AC: continue silently if not verbose
+      // AC: continue silently if not verbose
+      if (__kmp_affinity.flags.verbose) {
         kmp_msg_t err_code = KMP_ERR(error);
         __kmp_msg(kmp_ms_warning, KMP_MSG(CantSetThreadAffMask), err_code,
                   __kmp_msg_null);

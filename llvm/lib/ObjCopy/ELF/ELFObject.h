@@ -544,7 +544,7 @@ class CompressedSection : public SectionBase {
 
 public:
   CompressedSection(const SectionBase &Sec,
-                    DebugCompressionType CompressionType);
+    DebugCompressionType CompressionType, bool Is64Bits);
   CompressedSection(ArrayRef<uint8_t> CompressedData, uint32_t ChType,
                     uint64_t DecompressedSize, uint64_t DecompressedAlign);
 
@@ -957,7 +957,7 @@ private:
   const ELFFile<ELFT> &ElfFile;
   Object &Obj;
   size_t EhdrOffset = 0;
-  Optional<StringRef> ExtractPartition;
+  std::optional<StringRef> ExtractPartition;
 
   void setParentSegment(Segment &Child);
   Error readProgramHeaders(const ELFFile<ELFT> &HeadersFile);
@@ -970,7 +970,7 @@ private:
 
 public:
   ELFBuilder(const ELFObjectFile<ELFT> &ElfObj, Object &Obj,
-             Optional<StringRef> ExtractPartition);
+             std::optional<StringRef> ExtractPartition);
 
   Error build(bool EnsureSymtab);
 };
@@ -1009,11 +1009,11 @@ public:
 
 class ELFReader : public Reader {
   Binary *Bin;
-  Optional<StringRef> ExtractPartition;
+  std::optional<StringRef> ExtractPartition;
 
 public:
   Expected<std::unique_ptr<Object>> create(bool EnsureSymtab) const override;
-  explicit ELFReader(Binary *B, Optional<StringRef> ExtractPartition)
+  explicit ELFReader(Binary *B, std::optional<StringRef> ExtractPartition)
       : Bin(B), ExtractPartition(ExtractPartition) {}
 };
 
@@ -1045,6 +1045,7 @@ public:
   Segment ElfHdrSegment;
   Segment ProgramHdrSegment;
 
+  bool Is64Bits;
   uint8_t OSABI;
   uint8_t ABIVersion;
   uint64_t Entry;

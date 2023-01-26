@@ -159,7 +159,7 @@ ConstantRange getStaticAllocaSizeRange(const AllocaInst &AI) {
   ConstantRange R = ConstantRange::getEmpty(PointerSize);
   if (TS.isScalable())
     return R;
-  APInt APSize(PointerSize, TS.getFixedSize(), true);
+  APInt APSize(PointerSize, TS.getFixedValue(), true);
   if (APSize.isNonPositive())
     return R;
   if (AI.isArrayAllocation()) {
@@ -307,7 +307,7 @@ ConstantRange StackSafetyLocalAnalysis::getAccessRange(Value *Addr, Value *Base,
                                                        TypeSize Size) {
   if (Size.isScalable())
     return UnknownRange;
-  APInt APSize(PointerSize, Size.getFixedSize(), true);
+  APInt APSize(PointerSize, Size.getFixedValue(), true);
   if (APSize.isNegative())
     return UnknownRange;
   return getAccessRange(Addr, Base,
@@ -348,7 +348,7 @@ bool StackSafetyLocalAnalysis::isSafeAccess(const Use &U, AllocaInst *AI,
   if (TS.isScalable())
     return false;
   auto *CalculationTy = IntegerType::getIntNTy(SE.getContext(), PointerSize);
-  const SCEV *SV = SE.getConstant(CalculationTy, TS.getFixedSize());
+  const SCEV *SV = SE.getConstant(CalculationTy, TS.getFixedValue());
   return isSafeAccess(U, AI, SV);
 }
 

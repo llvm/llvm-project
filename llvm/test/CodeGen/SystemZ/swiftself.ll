@@ -3,17 +3,17 @@
 ; Parameter with swiftself should be allocated to r10.
 ; CHECK-LABEL: swiftself_param:
 ; CHECK: lgr %r2, %r10
-define i8 *@swiftself_param(i8* swiftself %addr0) {
-  ret i8 *%addr0
+define ptr@swiftself_param(ptr swiftself %addr0) {
+  ret ptr %addr0
 }
 
 ; Check that r10 is used to pass a swiftself argument.
 ; CHECK-LABEL: call_swiftself:
 ; CHECK: lgr %r10, %r2
 ; CHECK: brasl %r14, swiftself_param
-define i8 *@call_swiftself(i8* %arg) {
-  %res = call i8 *@swiftself_param(i8* swiftself %arg)
-  ret i8 *%res
+define ptr@call_swiftself(ptr %arg) {
+  %res = call ptr@swiftself_param(ptr swiftself %arg)
+  ret ptr %res
 }
 
 ; r10 should be saved by the callee even if used for swiftself
@@ -22,9 +22,9 @@ define i8 *@call_swiftself(i8* %arg) {
 ; ...
 ; CHECK: lmg %r10,
 ; CHECK: br %r14
-define i8 *@swiftself_clobber(i8* swiftself %addr0) {
+define ptr@swiftself_clobber(ptr swiftself %addr0) {
   call void asm sideeffect "", "~{r10}"()
-  ret i8 *%addr0
+  ret ptr %addr0
 }
 
 ; Demonstrate that we do not need any loads when calling multiple functions
@@ -34,9 +34,9 @@ define i8 *@swiftself_clobber(i8* swiftself %addr0) {
 ; CHECK: brasl %r14, swiftself_param
 ; CHECK-NOT: lg{{.*}}r10,
 ; CHECK-NEXT: brasl %r14, swiftself_param
-define void @swiftself_passthrough(i8* swiftself %addr0) {
-  call i8 *@swiftself_param(i8* swiftself %addr0)
-  call i8 *@swiftself_param(i8* swiftself %addr0)
+define void @swiftself_passthrough(ptr swiftself %addr0) {
+  call ptr@swiftself_param(ptr swiftself %addr0)
+  call ptr@swiftself_param(ptr swiftself %addr0)
   ret void
 }
 
@@ -47,10 +47,10 @@ define void @swiftself_passthrough(i8* swiftself %addr0) {
 ; CHECK: lgr %r10, %r[[REG1]]
 ; CHECK: brasl %r14, swiftself_param
 ; CHECK: br %r14
-define i8* @swiftself_tail(i8* swiftself %addr0) {
+define ptr @swiftself_tail(ptr swiftself %addr0) {
   call void asm sideeffect "", "~{r10}"()
-  %res = tail call i8* @swiftself_param(i8* swiftself %addr0)
-  ret i8* %res
+  %res = tail call ptr @swiftself_param(ptr swiftself %addr0)
+  ret ptr %res
 }
 
 ; We can not use a tail call if the callee swiftself is not the same as the
@@ -60,7 +60,7 @@ define i8* @swiftself_tail(i8* swiftself %addr0) {
 ; CHECK: brasl %r14, swiftself_param
 ; CHECK: lmg %r10,
 ; CHECK: br %r14
-define i8* @swiftself_notail(i8* swiftself %addr0, i8* %addr1) nounwind {
-  %res = tail call i8* @swiftself_param(i8* swiftself %addr1)
-  ret i8* %res
+define ptr @swiftself_notail(ptr swiftself %addr0, ptr %addr1) nounwind {
+  %res = tail call ptr @swiftself_param(ptr swiftself %addr1)
+  ret ptr %res
 }

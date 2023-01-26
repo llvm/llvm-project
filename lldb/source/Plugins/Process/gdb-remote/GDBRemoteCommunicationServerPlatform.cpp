@@ -14,6 +14,7 @@
 #include <csignal>
 #include <cstring>
 #include <mutex>
+#include <optional>
 #include <sstream>
 #include <thread>
 
@@ -109,8 +110,7 @@ bool GDBRemoteCommunicationServerPlatform::PortMap::empty() const {
 // GDBRemoteCommunicationServerPlatform constructor
 GDBRemoteCommunicationServerPlatform::GDBRemoteCommunicationServerPlatform(
     const Socket::SocketProtocol socket_protocol, const char *socket_scheme)
-    : GDBRemoteCommunicationServerCommon("gdb-remote.server",
-                                         "gdb-remote.server.rx_packet"),
+    : GDBRemoteCommunicationServerCommon(),
       m_socket_protocol(socket_protocol), m_socket_scheme(socket_scheme),
       m_spawned_pids_mutex(), m_port_map(), m_port_offset(0) {
   m_pending_gdb_server.pid = LLDB_INVALID_PROCESS_ID;
@@ -159,7 +159,7 @@ GDBRemoteCommunicationServerPlatform::~GDBRemoteCommunicationServerPlatform() =
 
 Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
     const lldb_private::Args &args, std::string hostname, lldb::pid_t &pid,
-    llvm::Optional<uint16_t> &port, std::string &socket_name) {
+    std::optional<uint16_t> &port, std::string &socket_name) {
   if (!port) {
     llvm::Expected<uint16_t> available_port = m_port_map.GetNextAvailablePort();
     if (available_port)
@@ -195,10 +195,10 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
 #if !defined(__APPLE__)
   url << m_socket_scheme << "://";
 #endif
-  uint16_t *port_ptr = port.getPointer();
+  uint16_t *port_ptr = &*port;
   if (m_socket_protocol == Socket::ProtocolTcp) {
     std::string platform_uri = GetConnection()->GetURI();
-    llvm::Optional<URI> parsed_uri = URI::Parse(platform_uri);
+    std::optional<URI> parsed_uri = URI::Parse(platform_uri);
     url << '[' << parsed_uri->hostname.str() << "]:" << *port;
   } else {
     socket_name = GetDomainSocketPath("gdbserver").GetPath();
@@ -237,7 +237,7 @@ GDBRemoteCommunicationServerPlatform::Handle_qLaunchGDBServer(
   packet.SetFilePos(::strlen("qLaunchGDBServer;"));
   llvm::StringRef name;
   llvm::StringRef value;
-  llvm::Optional<uint16_t> port;
+  std::optional<uint16_t> port;
   while (packet.GetNameColonValue(name, value)) {
     if (name.equals("host"))
       hostname = std::string(value);

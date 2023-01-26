@@ -1,6 +1,6 @@
-; RUN: llc < %s -mtriple=armv7-apple-darwin -mcpu=cortex-a8 | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-ARM
-; RUN: llc < %s -mtriple=armv7-apple-darwin -mcpu=cortex-a9 | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-ARM
-; RUN: llc < %s -mtriple=thumbv7m-none-eabi | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-THUMB
+; RUN: llc -opaque-pointers=0 < %s -mtriple=armv7-apple-darwin -mcpu=cortex-a8 | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-ARM
+; RUN: llc -opaque-pointers=0 < %s -mtriple=armv7-apple-darwin -mcpu=cortex-a9 | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-ARM
+; RUN: llc -opaque-pointers=0 < %s -mtriple=thumbv7m-none-eabi | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-THUMB
 ; rdar://8576755
 
 

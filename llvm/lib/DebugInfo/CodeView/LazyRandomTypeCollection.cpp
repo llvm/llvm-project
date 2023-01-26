@@ -8,7 +8,6 @@
 
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
@@ -50,9 +49,8 @@ LazyRandomTypeCollection::LazyRandomTypeCollection(ArrayRef<uint8_t> Data,
 
 LazyRandomTypeCollection::LazyRandomTypeCollection(StringRef Data,
                                                    uint32_t RecordCountHint)
-    : LazyRandomTypeCollection(
-          makeArrayRef(Data.bytes_begin(), Data.bytes_end()), RecordCountHint) {
-}
+    : LazyRandomTypeCollection(ArrayRef(Data.bytes_begin(), Data.bytes_end()),
+                               RecordCountHint) {}
 
 LazyRandomTypeCollection::LazyRandomTypeCollection(const CVTypeArray &Types,
                                                    uint32_t NumRecords)
@@ -98,13 +96,13 @@ CVType LazyRandomTypeCollection::getType(TypeIndex Index) {
   return Records[Index.toArrayIndex()].Type;
 }
 
-Optional<CVType> LazyRandomTypeCollection::tryGetType(TypeIndex Index) {
+std::optional<CVType> LazyRandomTypeCollection::tryGetType(TypeIndex Index) {
   if (Index.isSimple())
-    return None;
+    return std::nullopt;
 
   if (auto EC = ensureTypeExists(Index)) {
     consumeError(std::move(EC));
-    return None;
+    return std::nullopt;
   }
 
   assert(contains(Index));
@@ -202,22 +200,22 @@ Error LazyRandomTypeCollection::visitRangeForType(TypeIndex TI) {
   return Error::success();
 }
 
-Optional<TypeIndex> LazyRandomTypeCollection::getFirst() {
+std::optional<TypeIndex> LazyRandomTypeCollection::getFirst() {
   TypeIndex TI = TypeIndex::fromArrayIndex(0);
   if (auto EC = ensureTypeExists(TI)) {
     consumeError(std::move(EC));
-    return None;
+    return std::nullopt;
   }
   return TI;
 }
 
-Optional<TypeIndex> LazyRandomTypeCollection::getNext(TypeIndex Prev) {
+std::optional<TypeIndex> LazyRandomTypeCollection::getNext(TypeIndex Prev) {
   // We can't be sure how long this type stream is, given that the initial count
   // given to the constructor is just a hint.  So just try to make sure the next
   // record exists, and if anything goes wrong, we must be at the end.
   if (auto EC = ensureTypeExists(Prev + 1)) {
     consumeError(std::move(EC));
-    return None;
+    return std::nullopt;
   }
 
   return Prev + 1;

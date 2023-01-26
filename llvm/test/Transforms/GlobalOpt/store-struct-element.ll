@@ -4,20 +4,20 @@
 @A = local_unnamed_addr global %class.Class undef, align 4
 @B = local_unnamed_addr global %class.Class undef, align 4
 
-@llvm.global_ctors = appending global [2 x { i32, void ()*, i8* }] [
-  { i32, void ()*, i8* } { i32 65535, void ()* @initA, i8* null },
-  { i32, void ()*, i8* } { i32 65535, void ()* @initB, i8* null }
+@llvm.global_ctors = appending global [2 x { i32, ptr, ptr }] [
+  { i32, ptr, ptr } { i32 65535, ptr @initA, ptr null },
+  { i32, ptr, ptr } { i32 65535, ptr @initB, ptr null }
 ]
 
 define internal void @initA() section "__TEXT,__StaticInit,regular,pure_instructions" {
 entry:
-  store i32 -1, i32* bitcast (%class.Class* @A to i32*), align 4
+  store i32 -1, ptr @A, align 4
   ret void
 }
 
 define internal void @initB() section "__TEXT,__StaticInit,regular,pure_instructions" {
 entry:
-  store i8 -1, i8* bitcast (%class.Class* @B to i8*), align 4
+  store i8 -1, ptr @B, align 4
   ret void
 }
 

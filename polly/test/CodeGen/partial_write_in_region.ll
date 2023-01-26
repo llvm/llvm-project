@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop \
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-import-jscop \
 ; RUN: -polly-import-jscop-postfix=transformed -polly-codegen \
 ; RUN: -verify-dom-info \
 ; RUN: -S < %s | FileCheck %s

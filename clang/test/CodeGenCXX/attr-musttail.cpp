@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -no-opaque-pointers -fno-elide-constructors -S -emit-llvm %s -triple x86_64-unknown-linux-gnu -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -fno-elide-constructors -S -emit-llvm %s -triple x86_64-unknown-linux-gnu -o - | opt -verify
+// RUN: %clang_cc1 -no-opaque-pointers -fno-elide-constructors -S -emit-llvm %s -triple x86_64-unknown-linux-gnu -o - | opt -passes=verify
 // FIXME: remove the call to "opt" once the tests are running the Clang verifier automatically again.
 
 int Bar(int);

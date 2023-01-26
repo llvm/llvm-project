@@ -115,7 +115,7 @@ Printable printReg(Register Reg, const TargetRegisterInfo *TRI,
       OS << "$noreg";
     else if (Register::isStackSlot(Reg))
       OS << "SS#" << Register::stackSlot2Index(Reg);
-    else if (Register::isVirtualRegister(Reg)) {
+    else if (Reg.isVirtual()) {
       StringRef Name = MRI ? MRI->getVRegName(Reg) : "";
       if (Name != "") {
         OS << '%' << Name;
@@ -571,10 +571,14 @@ bool TargetRegisterInfo::getCoveringSubRegIndexes(
         break;
       }
 
-      // Try to cover as much of the remaining lanes as possible but
-      // as few of the already covered lanes as possible.
-      int Cover = (SubRegMask & LanesLeft).getNumLanes() -
-                  (SubRegMask & ~LanesLeft).getNumLanes();
+      // Do not cover already-covered lanes to avoid creating cycles
+      // in copy bundles (= bundle contains copies that write to the
+      // registers).
+      if ((SubRegMask & ~LanesLeft).any())
+        continue;
+
+      // Try to cover as many of the remaining lanes as possible.
+      const int Cover = (SubRegMask & LanesLeft).getNumLanes();
       if (Cover > BestCover) {
         BestCover = Cover;
         BestIdx = Idx;

@@ -12,6 +12,7 @@ set(LLVM_LINK_COMPONENTS
   SelectionDAG
   Support
   Target
+  TargetParser
   )
 
 add_llvm_unittest(CodeGenTests
@@ -35,6 +36,7 @@ add_llvm_unittest(CodeGenTests
   TypeTraitsTest.cpp
   TargetOptionsTest.cpp
   TestAsmPrinter.cpp
+  MLRegallocDevelopmentFeatures.cpp
   )
 
 add_subdirectory(GlobalISel)

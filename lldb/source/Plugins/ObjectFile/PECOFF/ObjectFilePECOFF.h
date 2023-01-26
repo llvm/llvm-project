@@ -9,6 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_PECOFF_OBJECTFILEPECOFF_H
 #define LLDB_SOURCE_PLUGINS_OBJECTFILE_PECOFF_OBJECTFILEPECOFF_H
 
+#include <optional>
 #include <vector>
 
 #include "lldb/Symbol/ObjectFile.h"
@@ -123,7 +124,7 @@ public:
 
   /// Return the contents of the .gnu_debuglink section, if the object file
   /// contains it.
-  llvm::Optional<lldb_private::FileSpec> GetDebugLink();
+  std::optional<lldb_private::FileSpec> GetDebugLink();
 
   uint32_t GetDependentModules(lldb_private::FileSpecList &files) override;
 
@@ -225,12 +226,6 @@ protected:
         data_dirs; // will contain num_data_dir_entries entries
   } coff_opt_header_t;
 
-  enum coff_data_dir_type {
-    coff_data_dir_export_table = 0,
-    coff_data_dir_import_table = 1,
-    coff_data_dir_exception_table = 3
-  };
-
   typedef struct section_header {
     char name[8] = {};
     uint32_t vmsize = 0;  // Virtual Size
@@ -243,29 +238,6 @@ protected:
     uint16_t nline = 0;   // Number of line table entries
     uint32_t flags = 0;
   } section_header_t;
-
-  typedef struct coff_symbol {
-    char name[8] = {};
-    uint32_t value = 0;
-    uint16_t sect = 0;
-    uint16_t type = 0;
-    uint8_t storage = 0;
-    uint8_t naux = 0;
-  } coff_symbol_t;
-
-  typedef struct export_directory_entry {
-    uint32_t characteristics = 0;
-    uint32_t time_date_stamp = 0;
-    uint16_t major_version = 0;
-    uint16_t minor_version = 0;
-    uint32_t name = 0;
-    uint32_t base = 0;
-    uint32_t number_of_functions = 0;
-    uint32_t number_of_names = 0;
-    uint32_t address_of_functions = 0;
-    uint32_t address_of_names = 0;
-    uint32_t address_of_name_ordinals = 0;
-  } export_directory_entry;
 
   static bool ParseDOSHeader(lldb_private::DataExtractor &data,
                              dos_header_t &dos_header);
@@ -297,6 +269,12 @@ protected:
 
 private:
   bool CreateBinary();
+  typedef std::vector<std::pair<uint32_t, uint32_t>> rva_symbol_list_t;
+  void AppendFromCOFFSymbolTable(lldb_private::SectionList *sect_list,
+                                 lldb_private::Symtab &symtab,
+                                 const rva_symbol_list_t &sorted_exports);
+  rva_symbol_list_t AppendFromExportTable(lldb_private::SectionList *sect_list,
+                                          lldb_private::Symtab &symtab);
 
   dos_header_t m_dos_header;
   coff_header_t m_coff_header;
@@ -304,7 +282,7 @@ private:
   SectionHeaderColl m_sect_headers;
   lldb::addr_t m_image_base;
   lldb_private::Address m_entry_point_address;
-  llvm::Optional<lldb_private::FileSpecList> m_deps_filespec;
+  std::optional<lldb_private::FileSpecList> m_deps_filespec;
   std::unique_ptr<llvm::object::COFFObjectFile> m_binary;
   lldb_private::UUID m_uuid;
 };

@@ -13,10 +13,12 @@
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
+#include "llvm/ADT/StringRef.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -63,6 +65,31 @@ lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
 size_t lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
     CalculateNumChildren() {
   return m_num_elements;
+}
+
+static void consumeInlineNamespace(llvm::StringRef &name) {
+  // Delete past an inline namespace, if any: __[a-zA-Z0-9_]+::
+  auto scratch = name;
+  if (scratch.consume_front("__") && std::isalnum(scratch[0])) {
+    scratch = scratch.drop_while([](char c) { return std::isalnum(c); });
+    if (scratch.consume_front("::")) {
+      // Successfully consumed a namespace.
+      name = scratch;
+    }
+  }
+}
+
+static bool isStdTemplate(ConstString type_name, llvm::StringRef type) {
+  llvm::StringRef name = type_name.GetStringRef();
+  // The type name may be prefixed with `std::__<inline-namespace>::`.
+  if (name.consume_front("std::"))
+    consumeInlineNamespace(name);
+  return name.consume_front(type) && name.startswith("<");
+}
+
+static bool isUnorderedMap(ConstString type_name) {
+  return isStdTemplate(type_name, "unordered_map") ||
+         isStdTemplate(type_name, "unordered_multimap");
 }
 
 lldb::ValueObjectSP lldb_private::formatters::
@@ -118,10 +145,20 @@ lldb::ValueObjectSP lldb_private::formatters::
         m_element_type = m_element_type.GetPointeeType();
         m_node_type = m_element_type;
         m_element_type = m_element_type.GetTypeTemplateArgument(0);
-        std::string name;
-        m_element_type =
-            m_element_type.GetFieldAtIndex(0, name, nullptr, nullptr, nullptr);
-        m_element_type = m_element_type.GetTypedefedType();
+        // This synthetic provider is used for both unordered_(multi)map and
+        // unordered_(multi)set. For unordered_map, the element type has an
+        // additional type layer, an internal struct (`__hash_value_type`)
+        // that wraps a std::pair. Peel away the internal wrapper type - whose
+        // structure is of no value to users, to expose the std::pair. This
+        // matches the structure returned by the std::map synthetic provider.
+        if (isUnorderedMap(m_backend.GetTypeName())) {
+          std::string name;
+          CompilerType field_type = m_element_type.GetFieldAtIndex(
+              0, name, nullptr, nullptr, nullptr);
+          CompilerType actual_type = field_type.GetTypedefedType();
+          if (isStdTemplate(actual_type.GetTypeName(), "pair"))
+            m_element_type = actual_type;
+        }
       }
       if (!m_node_type)
         return nullptr;
@@ -153,7 +190,7 @@ lldb::ValueObjectSP lldb_private::formatters::
   ExecutionContext exe_ctx = val_hash.first->GetExecutionContextRef().Lock(
       thread_and_frame_only_if_stopped);
   return CreateValueObjectFromData(stream.GetString(), data, exe_ctx,
-                                   val_hash.first->GetCompilerType());
+                                   m_element_type);
 }
 
 bool lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::

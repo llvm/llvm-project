@@ -1,10 +1,10 @@
 ; RUN: llc -mtriple armv7 %s -o - | FileCheck %s
 
 ; CHECK-LABEL: f:
-define float @f(<4 x i16>* nocapture %in) {
+define float @f(ptr nocapture %in) {
   ; CHECK: vld1
   ; CHECK: vmovl.u16
-  %1 = load <4 x i16>, <4 x i16>* %in
+  %1 = load <4 x i16>, ptr %in
   ; CHECK: vcvt.f32.u32
   %2 = uitofp <4 x i16> %1 to <4 x float>
   %3 = extractelement <4 x float> %2, i32 0
@@ -19,13 +19,13 @@ define float @f(<4 x i16>* nocapture %in) {
 }
 
 ; CHECK-LABEL: g:
-define float @g(<4 x i8>* nocapture %in) {
+define float @g(ptr nocapture %in) {
 ; Note: vld1 here is reasonably important. Mixing VFP and NEON
 ; instructions is bad on some cores
   ; CHECK: vld1
   ; CHECK: vmovl.u8
   ; CHECK: vmovl.u16
-  %1 = load <4 x i8>, <4 x i8>* %in
+  %1 = load <4 x i8>, ptr %in
   ; CHECK: vcvt.f32.u32
   %2 = uitofp <4 x i8> %1 to <4 x float>
   %3 = extractelement <4 x float> %2, i32 0
@@ -48,7 +48,7 @@ define <4 x i8> @h(<4 x float> %v) {
 }
 
 ; CHECK-LABEL: i:
-define <4 x i8> @i(<4 x i8>* %x, <4 x i8> %y) {
+define <4 x i8> @i(ptr %x, <4 x i8> %y) {
 ; Note: vld1 here is reasonably important. Mixing VFP and NEON
 ; instructions is bad on some cores
   ; CHECK: vld1
@@ -58,17 +58,17 @@ define <4 x i8> @i(<4 x i8>* %x, <4 x i8> %y) {
   ; CHECK: vrecps
   ; CHECK: vmul
   ; CHECK: vmovn
-  %1 = load <4 x i8>, <4 x i8>* %x, align 4
+  %1 = load <4 x i8>, ptr %x, align 4
   %2 = sdiv <4 x i8> %y, %1
   ret <4 x i8> %2
 }
 ; CHECK-LABEL: j:
-define <4 x i32> @j(<4 x i8>* %in) nounwind {
+define <4 x i32> @j(ptr %in) nounwind {
   ; CHECK: vld1
   ; CHECK: vmovl.u8
   ; CHECK: vmovl.u16
   ; CHECK-NOT: vand
-  %1 = load <4 x i8>, <4 x i8>* %in, align 4
+  %1 = load <4 x i8>, ptr %in, align 4
   %2 = zext <4 x i8> %1 to <4 x i32>
   ret <4 x i32> %2
 }

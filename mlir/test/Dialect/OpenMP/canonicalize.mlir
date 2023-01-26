@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -canonicalize -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -canonicalize="test-convergence" -split-input-file | FileCheck %s
 
 func.func @update_no_op(%x : memref<i32>) {
   omp.atomic.update %x : memref<i32> {
@@ -72,3 +72,57 @@ func.func @update_unnecessary_computations(%x: memref<i32>) {
 // CHECK-LABEL: func.func @update_unnecessary_computations
 // CHECK-NOT: omp.atomic.update
 // CHECK: omp.atomic.write
+
+// -----
+
+// CHECK-LABEL: func.func @parallel_empty
+func.func @parallel_empty() {
+  omp.parallel {}
+  return
+}
+
+// CHECK-NOT: omp.parallel
+
+// -----
+
+// CHECK-LABEL: func.func @parallel_only_terminator
+func.func @parallel_only_terminator() {
+  omp.parallel {
+    omp.terminator
+  }
+  return
+}
+
+// CHECK-NOT: omp.parallel
+// CHECK-NOT: omp.terminator
+
+// -----
+
+// CHECK-LABEL: func.func @parallel_no_side_effects
+func.func @parallel_no_side_effects(%a: i32, %b: i32) {
+  omp.parallel {
+    %x = arith.addi %a, %b : i32
+    omp.terminator
+  }
+  return
+}
+
+// CHECK-NOT: omp.parallel
+// CHECK-NOT: omp.terminator
+
+// -----
+
+// CHECK-LABEL: func.func @parallel_maybe_side_effects
+func.func @parallel_maybe_side_effects(%a: i32, %b: i32) {
+  omp.parallel {
+    func.call @foo() : () -> ()
+    omp.terminator
+  }
+  return
+}
+
+func.func private @foo() -> ()
+
+// CHECK: omp.parallel
+// CHECK: func.call @foo() : () -> ()
+// CHECK: omp.terminator

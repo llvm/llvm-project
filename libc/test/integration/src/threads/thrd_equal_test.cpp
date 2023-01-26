@@ -31,7 +31,7 @@ static int child_func(void *arg) {
   return 0;
 }
 
-int main() {
+TEST_MAIN() {
   // We init and lock the mutex so that we guarantee that the child thread is
   // waiting after startup.
   ASSERT_EQ(__llvm_libc::mtx_init(&mutex, mtx_plain), int(thrd_success));
@@ -57,7 +57,7 @@ int main() {
   ASSERT_EQ(__llvm_libc::mtx_unlock(&mutex), int(thrd_success));
 
   int retval;
-  ASSERT_EQ(__llvm_libc::thrd_join(&th, &retval), int(thrd_success));
+  ASSERT_EQ(__llvm_libc::thrd_join(th, &retval), int(thrd_success));
   ASSERT_EQ(retval, 0);
   // The child thread should see that thrd_current return value is the same as
   // |child_thread|.

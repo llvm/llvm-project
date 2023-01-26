@@ -75,8 +75,8 @@ define amdgpu_kernel void @test_enqueue_kernel_caller(i8 %a) #1
   ret void
 }
 
-attributes #0 = { optnone noinline "amdgpu-implicitarg-num-bytes"="48" }
-attributes #1 = { optnone noinline "calls-enqueue-kernel" "amdgpu-implicitarg-num-bytes"="48" }
+attributes #0 = { optnone noinline "amdgpu-no-default-queue" "amdgpu-no-completion-action" "amdgpu-implicitarg-num-bytes"="48" }
+attributes #1 = { optnone noinline "amdgpu-implicitarg-num-bytes"="48" "calls-enqueue-kernel" }
 
 !1 = !{i32 0}
 !2 = !{!"none"}

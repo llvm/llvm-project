@@ -438,7 +438,7 @@ TEST(RemoteMarshallingTest, URIToRelativePathTranslation) {
   auto RelativePath = ProtobufMarshaller.uriToRelativePath(
       testPathURI("remote/project/lib/File.cpp", Strings));
   ASSERT_TRUE(bool(RelativePath));
-  // RemoteIndexRoot has to be be a prefix of the file path.
+  // RemoteIndexRoot has to be a prefix of the file path.
   Marshaller WrongMarshaller(
       /*RemoteIndexRoot=*/testPath("remote/other/project/"),
       /*LocalIndexRoot=*/"");

@@ -27,7 +27,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define i32 @f(i32* %A) {
+define i32 @f(ptr %A) {
 bb:
   br label %bb1
 
@@ -38,7 +38,7 @@ bb1:                                              ; preds = %bb3, %bb
 
 bb2:                                              ; preds = %bb1
   %a.1 = mul i32 %i.0, 2
-  store i32 %i.0, i32 *%A, align 4
+  store i32 %i.0, ptr %A, align 4
   br label %bb3
 
 bb3:                                              ; preds = %bb2

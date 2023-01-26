@@ -176,7 +176,8 @@ void DependenceAnalysisWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
 // Looks through the function, noting instructions that may access memory.
 // Calls depends() on every possible pair and prints out the result.
 // Ignores all other instructions.
-static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA) {
+static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
+                                  ScalarEvolution &SE, bool NormalizeResults) {
   auto *F = DA->getFunction();
   for (inst_iterator SrcI = inst_begin(F), SrcE = inst_end(F); SrcI != SrcE;
        ++SrcI) {
@@ -187,6 +188,9 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA) {
           OS << "Src:" << *SrcI << " --> Dst:" << *DstI << "\n";
           OS << "  da analyze - ";
           if (auto D = DA->depends(&*SrcI, &*DstI, true)) {
+            // Normalize negative direction vectors if required by clients.
+            if (NormalizeResults && D->normalize(&SE))
+                OS << "normalized - ";
             D->dump(OS);
             for (unsigned Level = 1; Level <= D->getLevels(); Level++) {
               if (D->isSplitable(Level)) {
@@ -206,13 +210,16 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA) {
 
 void DependenceAnalysisWrapperPass::print(raw_ostream &OS,
                                           const Module *) const {
-  dumpExampleDependence(OS, info.get());
+  dumpExampleDependence(OS, info.get(),
+                        getAnalysis<ScalarEvolutionWrapperPass>().getSE(), false);
 }
 
 PreservedAnalyses
 DependenceAnalysisPrinterPass::run(Function &F, FunctionAnalysisManager &FAM) {
   OS << "'Dependence Analysis' for function '" << F.getName() << "':\n";
-  dumpExampleDependence(OS, &FAM.getResult<DependenceAnalysis>(F));
+  dumpExampleDependence(OS, &FAM.getResult<DependenceAnalysis>(F),
+                        FAM.getResult<ScalarEvolutionAnalysis>(F),
+                        NormalizeResults);
   return PreservedAnalyses::all();
 }
 
@@ -263,6 +270,62 @@ FullDependence::FullDependence(Instruction *Source, Instruction *Destination,
   Consistent = true;
   if (CommonLevels)
     DV = std::make_unique<DVEntry[]>(CommonLevels);
+}
+
+// FIXME: in some cases the meaning of a negative direction vector
+// may not be straightforward, e.g.,
+// for (int i = 0; i < 32; ++i) {
+//   Src:    A[i] = ...;
+//   Dst:    use(A[31 - i]);
+// }
+// The dependency is
+//   flow { Src[i] -> Dst[31 - i] : when i >= 16 } and
+//   anti { Dst[i] -> Src[31 - i] : when i < 16 },
+// -- hence a [<>].
+// As long as a dependence result contains '>' ('<>', '<=>', "*"), it
+// means that a reversed/normalized dependence needs to be considered
+// as well. Nevertheless, current isDirectionNegative() only returns
+// true with a '>' or '>=' dependency for ease of canonicalizing the
+// dependency vector, since the reverse of '<>', '<=>' and "*" is itself.
+bool FullDependence::isDirectionNegative() const {
+  for (unsigned Level = 1; Level <= Levels; ++Level) {
+    unsigned char Direction = DV[Level - 1].Direction;
+    if (Direction == Dependence::DVEntry::EQ)
+      continue;
+    if (Direction == Dependence::DVEntry::GT ||
+        Direction == Dependence::DVEntry::GE)
+      return true;
+    return false;
+  }
+  return false;
+}
+
+bool FullDependence::normalize(ScalarEvolution *SE) {
+  if (!isDirectionNegative())
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Before normalizing negative direction vectors:\n";
+             dump(dbgs()););
+  std::swap(Src, Dst);
+  for (unsigned Level = 1; Level <= Levels; ++Level) {
+    unsigned char Direction = DV[Level - 1].Direction;
+    // Reverse the direction vector, this means LT becomes GT
+    // and GT becomes LT.
+    unsigned char RevDirection = Direction & Dependence::DVEntry::EQ;
+    if (Direction & Dependence::DVEntry::LT)
+      RevDirection |= Dependence::DVEntry::GT;
+    if (Direction & Dependence::DVEntry::GT)
+      RevDirection |= Dependence::DVEntry::LT;
+    DV[Level - 1].Direction = RevDirection;
+    // Reverse the dependence distance as well.
+    if (DV[Level - 1].Distance != nullptr)
+      DV[Level - 1].Distance =
+          SE->getNegativeSCEV(DV[Level - 1].Distance);
+  }
+
+  LLVM_DEBUG(dbgs() << "After normalizing negative direction vectors:\n";
+             dump(dbgs()););
+  return true;
 }
 
 // The rest are simple getters that hide the implementation.
@@ -1316,8 +1379,8 @@ bool DependenceInfo::weakCrossingSIVtest(
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   NewConstraint.setLine(Coeff, Coeff, Delta, CurLoop);
   if (Delta->isZero()) {
-    Result.DV[Level].Direction &= unsigned(~Dependence::DVEntry::LT);
-    Result.DV[Level].Direction &= unsigned(~Dependence::DVEntry::GT);
+    Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
+    Result.DV[Level].Direction &= ~Dependence::DVEntry::GT;
     ++WeakCrossingSIVsuccesses;
     if (!Result.DV[Level].Direction) {
       ++WeakCrossingSIVindependence;
@@ -1376,8 +1439,8 @@ bool DependenceInfo::weakCrossingSIVtest(
     }
     if (isKnownPredicate(CmpInst::ICMP_EQ, Delta, ML)) {
       // i = i' = UB
-      Result.DV[Level].Direction &= unsigned(~Dependence::DVEntry::LT);
-      Result.DV[Level].Direction &= unsigned(~Dependence::DVEntry::GT);
+      Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
+      Result.DV[Level].Direction &= ~Dependence::DVEntry::GT;
       ++WeakCrossingSIVsuccesses;
       if (!Result.DV[Level].Direction) {
         ++WeakCrossingSIVindependence;
@@ -1410,7 +1473,7 @@ bool DependenceInfo::weakCrossingSIVtest(
   LLVM_DEBUG(dbgs() << "\t    Remainder = " << Remainder << "\n");
   if (Remainder != 0) {
     // Equal direction isn't possible
-    Result.DV[Level].Direction &= unsigned(~Dependence::DVEntry::EQ);
+    Result.DV[Level].Direction &= ~Dependence::DVEntry::EQ;
     ++WeakCrossingSIVsuccesses;
   }
   return false;
@@ -2494,7 +2557,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
       LLVM_DEBUG(dbgs() << "\tRemainder = " << Remainder << "\n");
       if (Remainder != 0) {
         unsigned Level = mapSrcLoop(CurLoop);
-        Result.DV[Level - 1].Direction &= unsigned(~Dependence::DVEntry::EQ);
+        Result.DV[Level - 1].Direction &= ~Dependence::DVEntry::EQ;
         Improved = true;
       }
     }

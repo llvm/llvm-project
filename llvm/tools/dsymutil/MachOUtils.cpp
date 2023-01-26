@@ -56,7 +56,7 @@ std::string getArchName(StringRef Arch) {
 }
 
 static bool runLipo(StringRef SDKPath, SmallVectorImpl<StringRef> &Args) {
-  auto Path = sys::findProgramByName("lipo", makeArrayRef(SDKPath));
+  auto Path = sys::findProgramByName("lipo", ArrayRef(SDKPath));
   if (!Path)
     Path = sys::findProgramByName("lipo");
 
@@ -66,7 +66,8 @@ static bool runLipo(StringRef SDKPath, SmallVectorImpl<StringRef> &Args) {
   }
 
   std::string ErrMsg;
-  int result = sys::ExecuteAndWait(*Path, Args, None, {}, 0, 0, &ErrMsg);
+  int result =
+      sys::ExecuteAndWait(*Path, Args, std::nullopt, {}, 0, 0, &ErrMsg);
   if (result) {
     WithColor::error() << "lipo: " << ErrMsg << "\n";
     return false;
@@ -317,10 +318,10 @@ static bool createDwarfSegment(uint64_t VMAddr, uint64_t FileOffset,
     if (Sec->begin() == Sec->end() || !Layout.getSectionFileSize(Sec))
       continue;
 
-    unsigned Align = Sec->getAlignment();
-    if (Align > 1) {
-      VMAddr = alignTo(VMAddr, Align);
-      FileOffset = alignTo(FileOffset, Align);
+    Align Alignment = Sec->getAlign();
+    if (Alignment > 1) {
+      VMAddr = alignTo(VMAddr, Alignment);
+      FileOffset = alignTo(FileOffset, Alignment);
       if (FileOffset > UINT32_MAX)
         return error("section " + Sec->getName() + "'s file offset exceeds 4GB."
             " Refusing to produce an invalid Mach-O file.");
@@ -477,7 +478,7 @@ bool generateDsymCompanion(
       continue;
 
     if (uint64_t Size = Layout.getSectionFileSize(Sec)) {
-      DwarfSegmentSize = alignTo(DwarfSegmentSize, Sec->getAlignment());
+      DwarfSegmentSize = alignTo(DwarfSegmentSize, Sec->getAlign());
       DwarfSegmentSize += Size;
       ++NumDwarfSections;
     }
@@ -617,7 +618,7 @@ bool generateDsymCompanion(
       continue;
 
     uint64_t Pos = OutFile.tell();
-    OutFile.write_zeros(alignTo(Pos, Sec.getAlignment()) - Pos);
+    OutFile.write_zeros(alignTo(Pos, Sec.getAlign()) - Pos);
     MCAsm.writeSectionData(OutFile, &Sec, Layout);
   }
 

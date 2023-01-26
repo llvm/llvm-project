@@ -39,11 +39,13 @@ class MachOReader : public Reader {
   void readWeakBindInfo(Object &O) const;
   void readLazyBindInfo(Object &O) const;
   void readExportInfo(Object &O) const;
-  void readLinkData(Object &O, Optional<size_t> LCIndex, LinkData &LD) const;
+  void readLinkData(Object &O, std::optional<size_t> LCIndex,
+                    LinkData &LD) const;
   void readCodeSignature(Object &O) const;
   void readDataInCodeData(Object &O) const;
   void readLinkerOptimizationHint(Object &O) const;
   void readFunctionStartsData(Object &O) const;
+  void readDylibCodeSignDRs(Object &O) const;
   void readExportsTrie(Object &O) const;
   void readChainedFixups(Object &O) const;
   void readIndirectSymbolTable(Object &O) const;

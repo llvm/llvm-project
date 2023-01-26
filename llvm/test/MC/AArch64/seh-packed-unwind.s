@@ -243,6 +243,58 @@
 // CHECK-NEXT:       end
 // CHECK-NEXT:     ]
 // CHECK-NEXT:   }
+// CHECK-NEXT:   RuntimeFunction {
+// CHECK-NEXT:     Function: func16
+// CHECK-NEXT:     Fragment: No
+// CHECK-NEXT:     FunctionLength: 28
+// CHECK-NEXT:     RegF: 0
+// CHECK-NEXT:     RegI: 0
+// CHECK-NEXT:     HomedParameters: No
+// CHECK-NEXT:     CR: 2
+// CHECK-NEXT:     FrameSize: 32
+// CHECK-NEXT:     Prologue [
+// CHECK-NEXT:       mov x29, sp
+// CHECK-NEXT:       stp x29, lr, [sp, #-32]!
+// CHECK-NEXT:       pacibsp
+// CHECK-NEXT:       end
+// CHECK-NEXT:     ]
+// CHECK-NEXT:   }
+// CHECK-NEXT:   RuntimeFunction {
+// CHECK-NEXT:     Function: func17
+// CHECK-NEXT:     Fragment: No
+// CHECK-NEXT:     FunctionLength: 40
+// CHECK-NEXT:     RegF: 0
+// CHECK-NEXT:     RegI: 2
+// CHECK-NEXT:     HomedParameters: No
+// CHECK-NEXT:     CR: 2
+// CHECK-NEXT:     FrameSize: 48
+// CHECK-NEXT:     Prologue [
+// CHECK-NEXT:       mov x29, sp
+// CHECK-NEXT:       stp x29, lr, [sp, #-32]!
+// CHECK-NEXT:       stp x19, x20, [sp, #-16]!
+// CHECK-NEXT:       pacibsp
+// CHECK-NEXT:       end
+// CHECK-NEXT:     ]
+// CHECK-NEXT:   }
+// CHECK-NEXT:   RuntimeFunction {
+// CHECK-NEXT:     Function: func18
+// CHECK-NEXT:     Fragment: No
+// CHECK-NEXT:     FunctionLength: 56
+// CHECK-NEXT:     RegF: 0
+// CHECK-NEXT:     RegI: 2
+// CHECK-NEXT:     HomedParameters: No
+// CHECK-NEXT:     CR: 2
+// CHECK-NEXT:     FrameSize: 4112
+// CHECK-NEXT:     Prologue [
+// CHECK-NEXT:       mov x29, sp
+// CHECK-NEXT:       stp x29, lr, [sp, #0]
+// CHECK-NEXT:       sub sp, sp, #16
+// CHECK-NEXT:       sub sp, sp, #4080
+// CHECK-NEXT:       stp x19, x20, [sp, #-16]!
+// CHECK-NEXT:       pacibsp
+// CHECK-NEXT:       end
+// CHECK-NEXT:     ]
+// CHECK-NEXT:   }
 // CHECK:        RuntimeFunction {
 // CHECK-NEXT:     Function: nonpacked1
 // CHECK-NEXT:     ExceptionRecord:
@@ -308,6 +360,22 @@
 // CHECK-NEXT:     ExceptionRecord:
 // CHECK-NEXT:     ExceptionData {
 // CHECK:            EpiloguePacked: Yes
+// CHECK:        RuntimeFunction {
+// CHECK-NEXT:     Function: nonpacked14
+// CHECK-NEXT:     ExceptionRecord:
+// CHECK-NEXT:     ExceptionData {
+// CHECK:            EpiloguePacked: Yes
+// CHECK:        RuntimeFunction {
+// CHECK-NEXT:     Function: nonpacked15
+// CHECK-NEXT:     ExceptionRecord:
+// CHECK-NEXT:     ExceptionData {
+// CHECK:            EpiloguePacked: Yes
+// CHECK:        RuntimeFunction {
+// CHECK-NEXT:     Function: nonpacked16
+// CHECK-NEXT:     ExceptionRecord:
+// CHECK-NEXT:     ExceptionData {
+// CHECK:            EpiloguePacked: Yes
+
 
     .text
 func1:
@@ -664,6 +732,83 @@ func15:
     ret
     .seh_endproc
 
+func16:
+    .seh_proc func16
+    pacibsp
+    .seh_pac_sign_lr
+    stp x29, lr,  [sp, #-32]!
+    .seh_save_fplr_x 32
+    mov x29, sp
+    .seh_set_fp
+    .seh_endprologue
+    nop
+    .seh_startepilogue
+    ldp x29, lr, [sp], #32
+    .seh_save_fplr_x 32
+    autibsp
+    .seh_pac_sign_lr
+    .seh_endepilogue
+    ret
+    .seh_endproc
+
+func17:
+    .seh_proc func17
+    pacibsp
+    .seh_pac_sign_lr
+    stp x19, x20, [sp, #-16]!
+    .seh_save_r19r20_x 16
+    stp x29, lr,  [sp, #-32]!
+    .seh_save_fplr_x 32
+    mov x29, sp
+    .seh_set_fp
+    .seh_endprologue
+    nop
+    .seh_startepilogue
+    mov sp,  x29
+    .seh_set_fp
+    ldp x29, lr,  [sp], #32
+    .seh_save_fplr_x 32
+    ldp x19, x20, [sp], #16
+    .seh_save_r19r20_x 16
+    autibsp
+    .seh_pac_sign_lr
+    .seh_endepilogue
+    ret
+    .seh_endproc
+
+func18:
+    .seh_proc func18
+    pacibsp
+    .seh_pac_sign_lr
+    stp x19, x20, [sp, #-16]!
+    .seh_save_r19r20_x 16
+    sub sp,  sp,  #4080
+    .seh_stackalloc 4080
+    sub sp,  sp,  #16
+    .seh_stackalloc 16
+    stp x29, lr,  [sp, #0]
+    .seh_save_fplr 0
+    mov x29, sp
+    .seh_set_fp
+    .seh_endprologue
+    nop
+    .seh_startepilogue
+    mov sp,  x29
+    .seh_set_fp
+    ldp x29, lr,  [sp, #0]
+    .seh_save_fplr 0
+    add sp,  sp,  #16
+    .seh_stackalloc 16
+    add sp,  sp,  #4080
+    .seh_stackalloc 4080
+    ldp x19, x20, [sp], #16
+    .seh_save_r19r20_x 16
+    autibsp
+    .seh_pac_sign_lr
+    .seh_endepilogue
+    ret
+    .seh_endproc
+
 nonpacked1:
     .seh_proc nonpacked1
     // Can't be packed; can't save integer registers after float registers.
@@ -929,4 +1074,86 @@ nonpacked13:
     .seh_handlerdata
     .long 0
     .text
+    .seh_endproc
+
+nonpacked14:
+    .seh_proc nonpacked14
+    // Can't be packed; a signed return address can only be expressed if
+    // we save both x29 and lr on the stack.
+    pacibsp
+    .seh_pac_sign_lr
+    str lr,       [sp, #-32]!
+    .seh_save_reg_x lr, 32
+    .seh_endprologue
+    nop
+    .seh_startepilogue
+    ldr lr,       [sp], #32
+    .seh_save_reg_x lr, 32
+    autibsp
+    .seh_pac_sign_lr
+    .seh_endepilogue
+    ret
+    .seh_endproc
+
+nonpacked15:
+    .seh_proc nonpacked15
+    // Can't be packed; a signed return address can only be expressed if
+    // we save both x29 and lr on the stack.
+    pacibsp
+    .seh_pac_sign_lr
+    stp x19, x20, [sp, #-32]!
+    .seh_save_r19r20_x 32
+    stp x21, lr,  [sp, #16]
+    .seh_save_lrpair x21, 16
+    sub sp,  sp,  #16
+    .seh_stackalloc 16
+    .seh_endprologue
+    nop
+    .seh_startepilogue
+    add sp,  sp,  #16
+    .seh_stackalloc 16
+    ldp x21, lr,  [sp, #16]
+    .seh_save_lrpair x21, 16
+    ldp x19, x20, [sp], #32
+    .seh_save_r19r20_x 32
+    autibsp
+    .seh_pac_sign_lr
+    .seh_endepilogue
+    ret
+    .seh_endproc
+
+nonpacked16:
+    .seh_proc nonpacked16
+    // Make sure we correctly analyze .seh_save_any_reg_p
+    stp     x29, x30, [sp, #-176]!
+    .seh_save_fplr_x        176
+    stp     q6, q7, [sp, #16]
+    .seh_save_any_reg_p     q6, 16
+    stp     q8, q9, [sp, #48]
+    .seh_save_any_reg_p     q8, 48
+    stp     q10, q11, [sp, #80]
+    .seh_save_any_reg_p     q10, 80
+    stp     q12, q13, [sp, #112]
+    .seh_save_any_reg_p     q12, 112
+    stp     q14, q15, [sp, #144]
+    .seh_save_any_reg_p     q14, 144
+    mov     x29, sp
+    .seh_set_fp
+    .seh_endprologue
+    nop
+    .seh_startepilogue
+    ldp     q14, q15, [sp, #144]
+    .seh_save_any_reg_p     q14, 144
+    ldp     q12, q13, [sp, #112]
+    .seh_save_any_reg_p     q12, 112
+    ldp     q10, q11, [sp, #80]
+    .seh_save_any_reg_p     q10, 80
+    ldp     q8, q9, [sp, #48]
+    .seh_save_any_reg_p     q8, 48
+    ldp     q6, q7, [sp, #16]
+    .seh_save_any_reg_p     q6, 16
+    ldp     x29, x30, [sp], #176
+    .seh_save_fplr_x        176
+    .seh_endepilogue
+    br      x9
     .seh_endproc

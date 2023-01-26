@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -fobjc-arc -fblocks -fexceptions -fobjc-exceptions -O2 -disable-llvm-passes -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -fobjc-arc -fblocks -fexceptions -fobjc-exceptions -disable-llvm-passes -o - %s | FileCheck -check-prefix=NO-METADATA %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -fobjc-arc -fblocks -fexceptions -fobjc-exceptions -O2 -disable-llvm-passes -o - %s -fobjc-arc-exceptions | FileCheck -check-prefix=NO-METADATA %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-arc -fblocks -fexceptions -fobjc-exceptions -O2 -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-arc -fblocks -fexceptions -fobjc-exceptions -disable-llvm-passes -o - %s | FileCheck -check-prefix=NO-METADATA %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-arc -fblocks -fexceptions -fobjc-exceptions -O2 -disable-llvm-passes -o - %s -fobjc-arc-exceptions | FileCheck -check-prefix=NO-METADATA %s
 
 // The front-end should emit clang.arc.no_objc_arc_exceptions in -fobjc-arc-exceptions
 // mode when optimization is enabled, and not otherwise.
@@ -34,7 +34,7 @@ void test1(id x) {
 void NSLog(id, ...);
 
 // CHECK-LABEL: define{{.*}} void @test2(
-// CHECK: invoke void (i8*, ...) @NSLog(i8* noundef bitcast (%struct.__NSConstantString_tag* @_unnamed_cfstring_ to i8*), i32* noundef %{{.*}})
+// CHECK: invoke void (ptr, ...) @NSLog(ptr noundef @_unnamed_cfstring_, ptr noundef %{{.*}})
 // CHECK:   to label %{{.*}} unwind label %{{.*}}, !clang.arc.no_objc_arc_exceptions !
 // NO-METADATA-LABEL: define{{.*}} void @test2(
 // NO-METADATA-NOT: !clang.arc.no_objc_arc_exceptions
@@ -48,7 +48,7 @@ void test2(void) {
 }
 
 // CHECK-LABEL: define{{.*}} void @test3(
-// CHECK: invoke void %{{.*}}(i8* noundef %{{.*}})
+// CHECK: invoke void %{{.*}}(ptr noundef %{{.*}})
 // CHECK:   to label %{{.*}} unwind label %{{.*}}, !clang.arc.no_objc_arc_exceptions !
 // NO-METADATA-LABEL: define{{.*}} void @test3(
 // NO-METADATA-NOT: !clang.arc.no_objc_arc_exceptions
@@ -63,7 +63,7 @@ void test3(void) {
 }
 
 // CHECK-LABEL: define{{.*}} void @test4(
-// CHECK: invoke void %{{.*}}(i8* noundef %{{.*}})
+// CHECK: invoke void %{{.*}}(ptr noundef %{{.*}})
 // CHECK:   to label %{{.*}} unwind label %{{.*}}, !clang.arc.no_objc_arc_exceptions !
 // NO-METADATA-LABEL: define{{.*}} void @test4(
 // NO-METADATA-NOT: !clang.arc.no_objc_arc_exceptions

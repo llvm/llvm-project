@@ -26,7 +26,7 @@ This document describes the available MLIR passes and their contracts.
 
 ## `arith` Dialect Passes
 
-[include "ArithmeticPasses.md"]
+[include "ArithPasses.md"]
 
 ## `func` Dialect Passes
 

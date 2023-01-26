@@ -305,7 +305,7 @@ STRING_LOCATION_STDPAIR(MethodDecl, getTypeSpecStartLoc())
 
   // clang-format off
   EXPECT_EQ(
-            llvm::makeArrayRef(ExpectedRanges),
+            llvm::ArrayRef(ExpectedRanges),
       (ArrayRef<std::pair<std::string, SourceRange>>{
 STRING_LOCATION_STDPAIR(MethodDecl, getExceptionSpecSourceRange()),
 STRING_LOCATION_STDPAIR(MethodDecl, getNameInfo().getSourceRange()),
@@ -384,7 +384,7 @@ void ns::A::foo() {}
   llvm::sort(ExpectedLocations);
 
   EXPECT_EQ(
-      llvm::makeArrayRef(ExpectedLocations),
+      llvm::ArrayRef(ExpectedLocations),
       (ArrayRef<std::pair<std::string, SourceLocation>>{
           STRING_LOCATION_STDPAIR(NNS, getBeginLoc()),
           STRING_LOCATION_STDPAIR(NNS, getEndLoc()),
@@ -962,7 +962,7 @@ struct D : Templ<T...> {
 
   // clang-format off
   EXPECT_EQ(
-     llvm::makeArrayRef(ExpectedLocations),
+     llvm::ArrayRef(ExpectedLocations),
       (ArrayRef<std::pair<std::string, SourceLocation>>{
 STRING_LOCATION_STDPAIR(CtorInit, getBaseClassLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getAs<clang::TemplateSpecializationTypeLoc>().getLAngleLoc()),
 STRING_LOCATION_STDPAIR(CtorInit, getBaseClassLoc().getAs<clang::ElaboratedTypeLoc>().getNamedTypeLoc().getAs<clang::TemplateSpecializationTypeLoc>().getRAngleLoc()),
@@ -1329,7 +1329,7 @@ int foo();
 
   // clang-format off
   EXPECT_EQ(
-      llvm::makeArrayRef(ExpectedLocations),
+      llvm::ArrayRef(ExpectedLocations),
           (ArrayRef<std::pair<std::string, SourceLocation>>{
 STRING_LOCATION_STDPAIR(TL, getAs<clang::FunctionTypeLoc>().getLParenLoc()),
 STRING_LOCATION_STDPAIR(TL, getAs<clang::FunctionTypeLoc>().getLocalRangeBegin()),
@@ -1393,7 +1393,7 @@ int* i;
 
   // clang-format off
   EXPECT_EQ(
-      llvm::makeArrayRef(ExpectedLocations),
+      llvm::ArrayRef(ExpectedLocations),
       (ArrayRef<std::pair<std::string, SourceLocation>>{
 STRING_LOCATION_STDPAIR(TL, getAs<clang::PointerTypeLoc>().getPointeeLoc().getAs<clang::BuiltinTypeLoc>().getBuiltinLoc()),
 STRING_LOCATION_STDPAIR(TL, getAs<clang::PointerTypeLoc>().getPointeeLoc().getAs<clang::BuiltinTypeLoc>().getNameLoc()),
@@ -1505,7 +1505,7 @@ class Foo
 
   // clang-format off
   EXPECT_EQ(
-      llvm::makeArrayRef(ExpectedLocations),
+      llvm::ArrayRef(ExpectedLocations),
       (ArrayRef<std::pair<std::string, SourceLocation>>{
           STRING_LOCATION_STDPAIR((&NI), getBeginLoc()),
           STRING_LOCATION_STDPAIR((&NI), getEndLoc()),
@@ -1571,20 +1571,19 @@ void foo()
   llvm::sort(ExpectedLocations);
 
   EXPECT_EQ(
-      llvm::makeArrayRef(ExpectedLocations),
+      llvm::ArrayRef(ExpectedLocations),
       (ArrayRef<std::pair<std::string, SourceLocation>>{
-    STRING_LOCATION_STDPAIR(Member, getBeginLoc()),
-    STRING_LOCATION_STDPAIR(Member, getEndLoc()),
-    STRING_LOCATION_STDPAIR(Member, getExprLoc()),
-    STRING_LOCATION_STDPAIR(Member, getLAngleLoc()),
-    STRING_LOCATION_STDPAIR(Member, getMemberLoc()),
-    STRING_LOCATION_STDPAIR(Member, getMemberNameInfo().getBeginLoc()),
-    STRING_LOCATION_STDPAIR(Member, getMemberNameInfo().getEndLoc()),
-    STRING_LOCATION_STDPAIR(Member, getMemberNameInfo().getLoc()),
-    STRING_LOCATION_STDPAIR(Member, getOperatorLoc()),
-    STRING_LOCATION_STDPAIR(Member, getRAngleLoc()),
-    STRING_LOCATION_STDPAIR(Member, getTemplateKeywordLoc())
-        }));
+          STRING_LOCATION_STDPAIR(Member, getBeginLoc()),
+          STRING_LOCATION_STDPAIR(Member, getEndLoc()),
+          STRING_LOCATION_STDPAIR(Member, getExprLoc()),
+          STRING_LOCATION_STDPAIR(Member, getLAngleLoc()),
+          STRING_LOCATION_STDPAIR(Member, getMemberLoc()),
+          STRING_LOCATION_STDPAIR(Member, getMemberNameInfo().getBeginLoc()),
+          STRING_LOCATION_STDPAIR(Member, getMemberNameInfo().getEndLoc()),
+          STRING_LOCATION_STDPAIR(Member, getMemberNameInfo().getLoc()),
+          STRING_LOCATION_STDPAIR(Member, getOperatorLoc()),
+          STRING_LOCATION_STDPAIR(Member, getRAngleLoc()),
+          STRING_LOCATION_STDPAIR(Member, getTemplateKeywordLoc())}));
 
   auto ExpectedRanges = FormatExpected<SourceRange>(Result.RangeAccessors);
 
@@ -1624,7 +1623,7 @@ class Foo
 
   llvm::sort(ExpectedLocations);
 
-  EXPECT_EQ(llvm::makeArrayRef(ExpectedLocations),
+  EXPECT_EQ(llvm::ArrayRef(ExpectedLocations),
             (ArrayRef<std::pair<std::string, SourceLocation>>{
                 STRING_LOCATION_STDPAIR((&NI), getBeginLoc()),
                 STRING_LOCATION_STDPAIR((&NI), getEndLoc()),
@@ -1666,7 +1665,7 @@ long double operator"" _identity ( long double val )
 
   llvm::sort(ExpectedLocations);
 
-  EXPECT_EQ(llvm::makeArrayRef(ExpectedLocations),
+  EXPECT_EQ(llvm::ArrayRef(ExpectedLocations),
             (ArrayRef<std::pair<std::string, SourceLocation>>{
                 STRING_LOCATION_STDPAIR((&NI), getBeginLoc()),
                 STRING_LOCATION_STDPAIR((&NI), getCXXLiteralOperatorNameLoc()),

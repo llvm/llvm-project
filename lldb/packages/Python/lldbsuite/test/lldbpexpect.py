@@ -4,9 +4,6 @@ from __future__ import absolute_import
 import os
 import sys
 
-# Third-party modules
-import six
-
 # LLDB Modules
 import lldb
 from .lldbtest import *
@@ -72,7 +69,7 @@ class PExpectTest(TestBase):
         self.assertNotIn('\n', cmd)
         # If 'substrs' is a string then this code would just check that every
         # character of the string is in the output.
-        assert not isinstance(substrs, six.string_types), \
+        assert not isinstance(substrs, str), \
             "substrs must be a collection of strings"
 
         self.child.sendline(cmd)

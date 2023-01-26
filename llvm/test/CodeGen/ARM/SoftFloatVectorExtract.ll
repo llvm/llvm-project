@@ -15,7 +15,7 @@ define double @vector_ex() nounwind #0 {
 ; CHECK-NEXT:    vmov.32 r0, d17[0]
 ; CHECK-NEXT:    vmov.32 r1, d17[1]
 ; CHECK-NEXT:    bx lr
-       %v = load <2 x double>, <2 x double>* @m
+       %v = load <2 x double>, ptr @m
        %x = extractelement <2 x double> %v, i32 1
        ret double %x
 }

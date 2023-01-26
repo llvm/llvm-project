@@ -2,10 +2,10 @@ target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-apple-macosx10.11.0"
 
 ; Alias are not optimized
-@linkonceodralias = linkonce_odr alias void (), void ()* @linkonceodrfuncwithalias
+@linkonceodralias = linkonce_odr alias void (), ptr @linkonceodrfuncwithalias
 
 ; Alias are not optimized
-@linkoncealias = linkonce alias void (), void ()* @linkoncefuncwithalias
+@linkoncealias = linkonce alias void (), ptr @linkoncefuncwithalias
 
 ; Function with an alias are not optimized
 define linkonce_odr void @linkonceodrfuncwithalias() #0 {

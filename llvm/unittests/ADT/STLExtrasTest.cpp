@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 #include <climits>
@@ -14,6 +15,8 @@
 #include <vector>
 
 using namespace llvm;
+
+using testing::ElementsAre;
 
 namespace {
 
@@ -47,31 +50,29 @@ TEST(STLExtrasTest, EnumerateLValue) {
   typedef std::pair<std::size_t, char> CharPairType;
   std::vector<CharPairType> CharResults;
 
-  for (auto X : llvm::enumerate(foo)) {
-    CharResults.emplace_back(X.index(), X.value());
+  for (auto [index, value] : llvm::enumerate(foo)) {
+    CharResults.emplace_back(index, value);
   }
-  ASSERT_EQ(3u, CharResults.size());
-  EXPECT_EQ(CharPairType(0u, 'a'), CharResults[0]);
-  EXPECT_EQ(CharPairType(1u, 'b'), CharResults[1]);
-  EXPECT_EQ(CharPairType(2u, 'c'), CharResults[2]);
+
+  EXPECT_THAT(CharResults,
+              ElementsAre(CharPairType(0u, 'a'), CharPairType(1u, 'b'),
+                          CharPairType(2u, 'c')));
 
   // Test a const range of a different type.
   typedef std::pair<std::size_t, int> IntPairType;
   std::vector<IntPairType> IntResults;
   const std::vector<int> bar = {1, 2, 3};
-  for (auto X : llvm::enumerate(bar)) {
-    IntResults.emplace_back(X.index(), X.value());
+  for (auto [index, value] : llvm::enumerate(bar)) {
+    IntResults.emplace_back(index, value);
   }
-  ASSERT_EQ(3u, IntResults.size());
-  EXPECT_EQ(IntPairType(0u, 1), IntResults[0]);
-  EXPECT_EQ(IntPairType(1u, 2), IntResults[1]);
-  EXPECT_EQ(IntPairType(2u, 3), IntResults[2]);
+  EXPECT_THAT(IntResults, ElementsAre(IntPairType(0u, 1), IntPairType(1u, 2),
+                                      IntPairType(2u, 3)));
 
   // Test an empty range.
   IntResults.clear();
   const std::vector<int> baz{};
-  for (auto X : llvm::enumerate(baz)) {
-    IntResults.emplace_back(X.index(), X.value());
+  for (auto [index, value] : llvm::enumerate(baz)) {
+    IntResults.emplace_back(index, value);
   }
   EXPECT_TRUE(IntResults.empty());
 }
@@ -84,9 +85,15 @@ TEST(STLExtrasTest, EnumerateModifyLValue) {
   for (auto X : llvm::enumerate(foo)) {
     ++X.value();
   }
-  EXPECT_EQ('b', foo[0]);
-  EXPECT_EQ('c', foo[1]);
-  EXPECT_EQ('d', foo[2]);
+  EXPECT_THAT(foo, ElementsAre('b', 'c', 'd'));
+
+  // Also test if this works with structured bindings.
+  foo = {'a', 'b', 'c'};
+
+  for (auto [index, value] : llvm::enumerate(foo)) {
+    ++value;
+  }
+  EXPECT_THAT(foo, ElementsAre('b', 'c', 'd'));
 }
 
 TEST(STLExtrasTest, EnumerateRValueRef) {
@@ -100,10 +107,18 @@ TEST(STLExtrasTest, EnumerateRValueRef) {
     Results.emplace_back(X.index(), X.value());
   }
 
-  ASSERT_EQ(3u, Results.size());
-  EXPECT_EQ(PairType(0u, 1), Results[0]);
-  EXPECT_EQ(PairType(1u, 2), Results[1]);
-  EXPECT_EQ(PairType(2u, 3), Results[2]);
+  EXPECT_THAT(Results,
+              ElementsAre(PairType(0u, 1), PairType(1u, 2), PairType(2u, 3)));
+
+  // Also test if this works with structured bindings.
+  Results.clear();
+
+  for (auto [index, value] : llvm::enumerate(std::vector<int>{1, 2, 3})) {
+    Results.emplace_back(index, value);
+  }
+
+  EXPECT_THAT(Results,
+              ElementsAre(PairType(0u, 1), PairType(1u, 2), PairType(2u, 3)));
 }
 
 TEST(STLExtrasTest, EnumerateModifyRValue) {
@@ -118,10 +133,20 @@ TEST(STLExtrasTest, EnumerateModifyRValue) {
     Results.emplace_back(X.index(), X.value());
   }
 
-  ASSERT_EQ(3u, Results.size());
-  EXPECT_EQ(PairType(0u, '2'), Results[0]);
-  EXPECT_EQ(PairType(1u, '3'), Results[1]);
-  EXPECT_EQ(PairType(2u, '4'), Results[2]);
+  EXPECT_THAT(Results, ElementsAre(PairType(0u, '2'), PairType(1u, '3'),
+                                   PairType(2u, '4')));
+
+  // Also test if this works with structured bindings.
+  Results.clear();
+
+  for (auto [index, value] :
+       llvm::enumerate(std::vector<char>{'1', '2', '3'})) {
+    ++value;
+    Results.emplace_back(index, value);
+  }
+
+  EXPECT_THAT(Results, ElementsAre(PairType(0u, '2'), PairType(1u, '3'),
+                                   PairType(2u, '4')));
 }
 
 template <bool B> struct CanMove {};
@@ -230,49 +255,6 @@ TEST(STLExtrasTest, EnumerateLifetimeSemanticsLValue) {
   EXPECT_EQ(0, Copies);
   EXPECT_EQ(0, Moves);
   EXPECT_EQ(1, Destructors);
-}
-
-TEST(STLExtrasTest, ApplyTuple) {
-  auto T = std::make_tuple(1, 3, 7);
-  auto U = llvm::apply_tuple(
-      [](int A, int B, int C) { return std::make_tuple(A - B, B - C, C - A); },
-      T);
-
-  EXPECT_EQ(-2, std::get<0>(U));
-  EXPECT_EQ(-4, std::get<1>(U));
-  EXPECT_EQ(6, std::get<2>(U));
-
-  auto V = llvm::apply_tuple(
-      [](int A, int B, int C) {
-        return std::make_tuple(std::make_pair(A, char('A' + A)),
-                               std::make_pair(B, char('A' + B)),
-                               std::make_pair(C, char('A' + C)));
-      },
-      T);
-
-  EXPECT_EQ(std::make_pair(1, 'B'), std::get<0>(V));
-  EXPECT_EQ(std::make_pair(3, 'D'), std::get<1>(V));
-  EXPECT_EQ(std::make_pair(7, 'H'), std::get<2>(V));
-}
-
-class apply_variadic {
-  static int apply_one(int X) { return X + 1; }
-  static char apply_one(char C) { return C + 1; }
-  static StringRef apply_one(StringRef S) { return S.drop_back(); }
-
-public:
-  template <typename... Ts> auto operator()(Ts &&... Items) {
-    return std::make_tuple(apply_one(Items)...);
-  }
-};
-
-TEST(STLExtrasTest, ApplyTupleVariadic) {
-  auto Items = std::make_tuple(1, llvm::StringRef("Test"), 'X');
-  auto Values = apply_tuple(apply_variadic(), Items);
-
-  EXPECT_EQ(2, std::get<0>(Values));
-  EXPECT_EQ("Tes", std::get<1>(Values));
-  EXPECT_EQ('Y', std::get<2>(Values));
 }
 
 TEST(STLExtrasTest, CountAdaptor) {
@@ -415,23 +397,6 @@ TEST(STLExtrasTest, ADLTest) {
   int count = 0;
   llvm::for_each(s, [&count](int) { ++count; });
   EXPECT_EQ(5, count);
-}
-
-TEST(STLExtrasTest, EmptyTest) {
-  std::vector<void*> V;
-  EXPECT_TRUE(llvm::empty(V));
-  V.push_back(nullptr);
-  EXPECT_FALSE(llvm::empty(V));
-
-  std::initializer_list<int> E = {};
-  std::initializer_list<int> NotE = {7, 13, 42};
-  EXPECT_TRUE(llvm::empty(E));
-  EXPECT_FALSE(llvm::empty(NotE));
-
-  auto R0 = make_range(V.begin(), V.begin());
-  EXPECT_TRUE(llvm::empty(R0));
-  auto R1 = make_range(V.begin(), V.end());
-  EXPECT_FALSE(llvm::empty(R1));
 }
 
 TEST(STLExtrasTest, DropBeginTest) {
@@ -606,19 +571,27 @@ TEST(STLExtrasTest, EarlyIncrementTestCustomPointerIterator) {
   EXPECT_EQ(EIR.end(), I);
 }
 
-TEST(STLExtrasTest, splat) {
+TEST(STLExtrasTest, AllEqual) {
   std::vector<int> V;
-  EXPECT_FALSE(is_splat(V));
+  EXPECT_TRUE(all_equal(V));
 
   V.push_back(1);
-  EXPECT_TRUE(is_splat(V));
+  EXPECT_TRUE(all_equal(V));
 
   V.push_back(1);
   V.push_back(1);
-  EXPECT_TRUE(is_splat(V));
+  EXPECT_TRUE(all_equal(V));
 
   V.push_back(2);
-  EXPECT_FALSE(is_splat(V));
+  EXPECT_FALSE(all_equal(V));
+}
+
+TEST(STLExtrasTest, AllEqualInitializerList) {
+  EXPECT_TRUE(all_equal({1}));
+  EXPECT_TRUE(all_equal({1, 1}));
+  EXPECT_FALSE(all_equal({1, 2}));
+  EXPECT_FALSE(all_equal({2, 1}));
+  EXPECT_TRUE(all_equal({1, 1, 1}));
 }
 
 TEST(STLExtrasTest, to_address) {

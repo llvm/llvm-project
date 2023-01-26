@@ -10,9 +10,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/Path.h"
 
-namespace clang {
-namespace tidy {
-namespace llvm_check {
+namespace clang::tidy::llvm_check {
 
 LLVMHeaderGuardCheck::LLVMHeaderGuardCheck(StringRef Name,
                                            ClangTidyContext *Context)
@@ -66,6 +64,4 @@ std::string LLVMHeaderGuardCheck::getHeaderGuard(StringRef Filename,
   return StringRef(Guard).upper();
 }
 
-} // namespace llvm_check
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::llvm_check

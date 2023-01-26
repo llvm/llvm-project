@@ -19,9 +19,6 @@ endif()
 if (NOT(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$" AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
   libomptarget_say("Not building CUDA offloading plugin: only support CUDA in Linux x86_64, ppc64le, or aarch64 hosts.")
   return()
-elseif (NOT LIBOMPTARGET_DEP_LIBELF_FOUND)
-  libomptarget_say("Not building CUDA offloading plugin: libelf dependency not found.")
-  return()
 endif()
 
 libomptarget_say("Building CUDA offloading plugin.")
@@ -46,14 +43,16 @@ if (LIBOMPTARGET_CAN_LINK_LIBCUDA AND NOT LIBOMPTARGET_FORCE_DLOPEN_LIBCUDA)
 
     ADDITIONAL_HEADER_DIRS
     ${LIBOMPTARGET_INCLUDE_DIR}
-    ${LIBOMPTARGET_DEP_LIBELF_INCLUDE_DIRS}
+
+    LINK_COMPONENTS
+    Support
+    Object
 
     LINK_LIBS
     PRIVATE
     elf_common
     MemoryManager
     ${LIBOMPTARGET_DEP_CUDA_DRIVER_LIBRARIES}
-    ${LIBOMPTARGET_DEP_LIBELF_LIBRARIES}
     ${OPENMP_PTHREAD_LIB}
     "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"
     "-Wl,-z,defs"
@@ -71,14 +70,11 @@ else()
 
     ADDITIONAL_HEADER_DIRS
     ${LIBOMPTARGET_INCLUDE_DIR}
-    ${LIBOMPTARGET_DEP_LIBELF_INCLUDE_DIRS}
 
     LINK_LIBS
     PRIVATE
     elf_common
     MemoryManager
-    ${CMAKE_DL_LIBS}
-    ${LIBOMPTARGET_DEP_LIBELF_LIBRARIES}
     ${OPENMP_PTHREAD_LIB}
     "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"
     "-Wl,-z,defs"
@@ -91,18 +87,19 @@ add_dependencies(omptarget.rtl.cuda omptarget.devicertl.nvptx)
 # Install plugin under the lib destination folder.
 install(TARGETS omptarget.rtl.cuda LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")
 set_target_properties(omptarget.rtl.cuda PROPERTIES 
-  INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
+  INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/.."
+  CXX_VISIBILITY_PRESET protected)
 
 target_include_directories(omptarget.rtl.cuda PRIVATE
   ${LIBOMPTARGET_INCLUDE_DIR}
-  ${LIBOMPTARGET_DEP_LIBELF_INCLUDE_DIRS}
 )
 
 # Report to the parent scope that we are building a plugin for CUDA.
 # This controls whether tests are run for the nvptx offloading target
 # Run them if libcuda is available, or if the user explicitly asked for dlopen
 # Otherwise this plugin is being built speculatively and there may be no cuda available
-if (LIBOMPTARGET_CAN_LINK_LIBCUDA OR LIBOMPTARGET_FORCE_DLOPEN_LIBCUDA)
+option(LIBOMPTARGET_FORCE_NVIDIA_TESTS "Build NVIDIA libomptarget tests" OFF)
+if (LIBOMPTARGET_FOUND_NVIDIA_GPU OR LIBOMPTARGET_FORCE_NVIDIA_TESTS)
   libomptarget_say("Enable tests using CUDA plugin")
   set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} nvptx64-nvidia-cuda nvptx64-nvidia-cuda-oldDriver" PARENT_SCOPE)
   set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} nvptx64-nvidia-cuda nvptx64-nvidia-cuda-LTO" PARENT_SCOPE)

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SocketTestUtilities.h"
+#include "TestingSupport/Host/SocketTestUtilities.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Utility/UriParser.h"
@@ -179,7 +179,7 @@ TEST_P(SocketTest, DomainGetConnectURI) {
   CreateDomainConnectedSockets(domain_path, &socket_a_up, &socket_b_up);
 
   std::string uri(socket_a_up->GetRemoteConnectionURI());
-  EXPECT_EQ((URI{"unix-connect", "", llvm::None, domain_path}),
+  EXPECT_EQ((URI{"unix-connect", "", std::nullopt, domain_path}),
             URI::Parse(uri));
 
   EXPECT_EQ(socket_b_up->GetRemoteConnectionURI(), "");

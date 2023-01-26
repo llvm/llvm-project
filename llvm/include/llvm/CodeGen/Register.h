@@ -75,7 +75,7 @@ public:
   /// Convert a virtual register number to a 0-based index.
   /// The first virtual register in a function will get the index 0.
   static unsigned virtReg2Index(Register Reg) {
-    assert(isVirtualRegister(Reg) && "Not a virtual register");
+    assert(Reg.isVirtual() && "Not a virtual register");
     return Reg & ~MCRegister::VirtualRegFlag;
   }
 

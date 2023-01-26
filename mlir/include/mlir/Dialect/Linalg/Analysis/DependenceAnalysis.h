@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpDefinition.h"
+#include <optional>
 
 namespace mlir {
 namespace func {
@@ -76,29 +77,29 @@ public:
       return opView.get<Value>();
     }
     // Return the indexing map of the operand/result in `opView` specified in
-    // the owning LinalgOp. If the owner is not a LinalgOp returns llvm::None.
-    static Optional<AffineMap> getIndexingMap(OpView opView) {
+    // the owning LinalgOp. If the owner is not a LinalgOp returns std::nullopt.
+    static std::optional<AffineMap> getIndexingMap(OpView opView) {
       auto owner = dyn_cast<LinalgOp>(getOwner(opView));
       if (!owner)
-        return llvm::None;
+        return std::nullopt;
       if (OpOperand *operand = opView.dyn_cast<OpOperand *>())
-        return owner.getTiedIndexingMap(operand);
-      return owner.getTiedIndexingMap(owner.getOutputOperand(
+        return owner.getMatchingIndexingMap(operand);
+      return owner.getMatchingIndexingMap(owner.getDpsInitOperand(
           opView.get<Value>().cast<OpResult>().getResultNumber()));
     }
     // Return the operand number if the `opView` is an OpOperand *. Otherwise
-    // return llvm::None.
-    static Optional<unsigned> getOperandNumber(OpView opView) {
+    // return std::nullopt.
+    static std::optional<unsigned> getOperandNumber(OpView opView) {
       if (OpOperand *operand = opView.dyn_cast<OpOperand *>())
         return operand->getOperandNumber();
-      return llvm::None;
+      return std::nullopt;
     }
     // Return the result number if the `opView` is an OpResult. Otherwise return
-    // llvm::None.
-    static Optional<unsigned> getResultNumber(OpView opView) {
+    // std::nullopt.
+    static std::optional<unsigned> getResultNumber(OpView opView) {
       if (OpResult result = opView.dyn_cast<Value>().cast<OpResult>())
         return result.getResultNumber();
-      return llvm::None;
+      return std::nullopt;
     }
 
     // Return the owner of the dependent OpView.
@@ -114,38 +115,38 @@ public:
     Value getIndexingValue() const { return getValue(indexingOpView); }
 
     // If the dependent OpView is an operand, return operand number. Return
-    // llvm::None otherwise.
-    Optional<unsigned> getDependentOpViewOperandNum() const {
+    // std::nullopt otherwise.
+    std::optional<unsigned> getDependentOpViewOperandNum() const {
       return getOperandNumber(dependentOpView);
     }
 
     // If the indexing OpView is an operand, return operand number. Return
-    // llvm::None otherwise.
-    Optional<unsigned> getIndexingOpViewOperandNum() const {
+    // std::nullopt otherwise.
+    std::optional<unsigned> getIndexingOpViewOperandNum() const {
       return getOperandNumber(indexingOpView);
     }
 
     // If the dependent OpView is a result value, return the result
-    // number. Return llvm::None otherwise.
-    Optional<unsigned> getDependentOpViewResultNum() const {
+    // number. Return std::nullopt otherwise.
+    std::optional<unsigned> getDependentOpViewResultNum() const {
       return getResultNumber(dependentOpView);
     }
 
     // If the dependent OpView is a result value, return the result
-    // number. Return llvm::None otherwise.
-    Optional<unsigned> getIndexingOpViewResultNum() const {
+    // number. Return std::nullopt otherwise.
+    std::optional<unsigned> getIndexingOpViewResultNum() const {
       return getResultNumber(indexingOpView);
     }
 
     // Return the indexing map of the operand/result in the dependent OpView as
     // specified in the owner of the OpView.
-    Optional<AffineMap> getDependentOpViewIndexingMap() const {
+    std::optional<AffineMap> getDependentOpViewIndexingMap() const {
       return getIndexingMap(dependentOpView);
     }
 
     // Return the indexing map of the operand/result in the indexing OpView as
     // specified in the owner of the OpView.
-    Optional<AffineMap> getIndexingOpViewIndexingMap() const {
+    std::optional<AffineMap> getIndexingOpViewIndexingMap() const {
       return getIndexingMap(indexingOpView);
     }
   };

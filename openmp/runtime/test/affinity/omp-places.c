@@ -23,7 +23,7 @@ static int compare_places(const place_list_t *p1, const place_list_t *p2) {
     topology_print_places(p1);
     printf("\n");
     printf("p2 places:\n");
-    topology_print_places(p1);
+    topology_print_places(p2);
     return EXIT_FAILURE;
   }
   for (i = 0; i < p1->num_places; ++i) {
@@ -40,7 +40,7 @@ static int compare_places(const place_list_t *p1, const place_list_t *p2) {
       topology_print_places(p1);
       printf("\n");
       printf("p2 places:\n");
-      topology_print_places(p1);
+      topology_print_places(p2);
       return EXIT_FAILURE;
     }
   }

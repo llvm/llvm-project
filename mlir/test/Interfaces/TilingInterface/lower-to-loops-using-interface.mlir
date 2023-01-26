@@ -159,3 +159,110 @@ func.func @pool_strides_and_dilation(%arg0 : memref<?x?x?x?xf32>, %arg1 : memref
 //   CHECK-DAG:               %[[T9:.+]] = memref.load %[[ARG2]][%[[IV0]], %[[IV1]], %[[IV2]], %[[IV3]]]
 //       CHECK:               %[[T10:.+]] = arith.maxf %[[T9]], %[[T8]]
 //       CHECK:               memref.store %[[T10]], %[[ARG2]][%[[IV0]], %[[IV1]], %[[IV2]], %[[IV3]]]
+
+// -----
+
+func.func @map(%lhs: memref<64xf32>,
+    %rhs: memref<64xf32>, %out: memref<64xf32>) {
+  linalg.map ins(%lhs, %rhs : memref<64xf32>, memref<64xf32>)
+             outs(%out : memref<64xf32>)
+    (%in: f32, %in_0: f32) {
+      %0 = arith.addf %in, %in_0 : f32
+      linalg.yield %0 : f32
+    }
+  return
+}
+// CHECK-LABEL: func.func @map(
+// CHECK-SAME:    %[[LHS:[a-zA-Z0-9]+]]: memref<64xf32>,
+// CHECK-SAME:    %[[RHS:[a-zA-Z0-9]+]]: memref<64xf32>,
+// CHECK-SAME:    %[[OUT:[a-zA-Z0-9]+]]: memref<64xf32>) {
+
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG: %[[C64:.*]] = arith.constant 64 : index
+
+// CHECK:     scf.for %[[I:.*]] = %[[C0]] to %[[C64]] step %[[C1]] {
+// CHECK:       %[[LHS_ELEM:.*]] = memref.load %[[LHS]][%[[I]]]
+// CHECK:       %[[RHS_ELEM:.*]] = memref.load %[[RHS]][%[[I]]]
+// CHECK:       %[[ADD:.*]] = arith.addf %[[LHS_ELEM]], %[[RHS_ELEM]]
+// CHECK:       memref.store %[[ADD]], %[[OUT]][%[[I]]]
+
+// -----
+
+func.func @transpose(%arg0: memref<16x32x64xf32>,
+                               %arg1: memref<32x64x16xf32>) {
+  linalg.transpose ins(%arg0 : memref<16x32x64xf32>)
+                   outs(%arg1 : memref<32x64x16xf32>) permutation = [1, 2, 0]
+  return
+}
+// CHECK-LABEL: func.func @transpose(
+// CHECK-SAME:    %[[IN:[a-zA-Z0-9]+]]: memref<16x32x64xf32>,
+// CHECK-SAME:    %[[OUT:[a-zA-Z0-9]+]]: memref<32x64x16xf32>)
+
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG: %[[C16:.*]] = arith.constant 16 : index
+// CHECK-DAG: %[[C32:.*]] = arith.constant 32 : index
+// CHECK-DAG: %[[C64:.*]] = arith.constant 64 : index
+
+// CHECK:     scf.for %[[I:.*]] = %[[C0]] to %[[C16]] step %[[C1]] {
+// CHECK:       scf.for %[[J:.*]] = %[[C0]] to %[[C32]] step %[[C1]] {
+// CHECK:         scf.for %[[K:.*]] = %[[C0]] to %[[C64]] step %[[C1]] {
+// CHECK:           %[[ELEM:.*]] = memref.load %[[IN]][%[[I]], %[[J]], %[[K]]]
+// CHECK:           memref.store %[[ELEM]], %[[OUT]][%[[J]], %[[K]], %[[I]]]
+
+// -----
+
+func.func @reduce(%arg0: memref<16x32x64xf32>,
+                  %arg1: memref<16x64xf32>) {
+  linalg.reduce ins(%arg0 : memref<16x32x64xf32>)
+                outs(%arg1 : memref<16x64xf32>) dimensions = [1]
+    (%in: f32, %init: f32) {
+      %0 = arith.addf %in, %init : f32
+      linalg.yield %0 : f32
+    }
+  return
+}
+// CHECK-LABEL: func.func @reduce(
+// CHECK-SAME:    %[[IN:[a-zA-Z0-9]+]]: memref<16x32x64xf32>,
+// CHECK-SAME:    %[[OUT:[a-zA-Z0-9]+]]: memref<16x64xf32>
+
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG: %[[C16:.*]] = arith.constant 16 : index
+// CHECK-DAG: %[[C32:.*]] = arith.constant 32 : index
+// CHECK-DAG: %[[C64:.*]] = arith.constant 64 : index
+
+// CHECK:     scf.for %[[I:.*]] = %[[C0]] to %[[C16]] step %[[C1]] {
+// CHECK:       scf.for %[[J:.*]] = %[[C0]] to %[[C32]] step %[[C1]] {
+// CHECK:         scf.for %[[K:.*]] = %[[C0]] to %[[C64]] step %[[C1]] {
+// CHECK:           %[[IN_ELEM:.*]] = memref.load %[[IN]][%[[I]], %[[J]], %[[K]]]
+// CHECK:           %[[OUT_ELEM:.*]] = memref.load %[[OUT]][%[[I]], %[[K]]]
+// CHECK:           %[[ADD:.*]] = arith.addf %[[IN_ELEM]], %[[OUT_ELEM]]
+// CHECK:           memref.store %[[ADD]], %[[OUT]][%[[I]], %[[K]]]
+
+// -----
+
+func.func @broadcast(%input: memref<8x32xf32>,
+                     %init: memref<8x16x32xf32>) {
+  linalg.broadcast
+      ins(%input:memref<8x32xf32>)
+      outs(%init:memref<8x16x32xf32>)
+      dimensions = [1]
+  func.return
+}
+// CHECK-LABEL: func.func @broadcast(
+// CHECK-SAME:    %[[IN:[a-zA-Z0-9]+]]: memref<8x32xf32>,
+// CHECK-SAME:    %[[OUT:[a-zA-Z0-9]+]]: memref<8x16x32xf32>
+
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG: %[[C8:.*]] = arith.constant 8 : index
+// CHECK-DAG: %[[C16:.*]] = arith.constant 16 : index
+// CHECK-DAG: %[[C32:.*]] = arith.constant 32 : index
+
+// CHECK:     scf.for %[[I:.*]] = %[[C0]] to %[[C8]] step %[[C1]] {
+// CHECK:       scf.for %[[J:.*]] = %[[C0]] to %[[C16]] step %[[C1]] {
+// CHECK:         scf.for %[[K:.*]] = %[[C0]] to %[[C32]] step %[[C1]] {
+// CHECK:           %[[ELEM:.*]] = memref.load %[[IN]][%[[I]], %[[K]]]
+// CHECK:           memref.store %[[ELEM]], %[[OUT]][%[[I]], %[[J]], %[[K]]]

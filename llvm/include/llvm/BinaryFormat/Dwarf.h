@@ -30,10 +30,8 @@
 
 namespace llvm {
 class StringRef;
-template<typename T> class Optional;
 
 namespace dwarf {
-
 
 //===----------------------------------------------------------------------===//
 // DWARF constants as gleaned from the DWARF Debugging Information Format V.5
@@ -216,6 +214,8 @@ inline bool isCPlusPlus(SourceLanguage S) {
   case DW_LANG_C_plus_plus_03:
   case DW_LANG_C_plus_plus_11:
   case DW_LANG_C_plus_plus_14:
+  case DW_LANG_C_plus_plus_17:
+  case DW_LANG_C_plus_plus_20:
     result = true;
     break;
   case DW_LANG_C89:
@@ -256,6 +256,13 @@ inline bool isCPlusPlus(SourceLanguage S) {
   case DW_LANG_BORLAND_Delphi:
   case DW_LANG_lo_user:
   case DW_LANG_hi_user:
+  case DW_LANG_Kotlin:
+  case DW_LANG_Zig:
+  case DW_LANG_Crystal:
+  case DW_LANG_C17:
+  case DW_LANG_Fortran18:
+  case DW_LANG_Ada2005:
+  case DW_LANG_Ada2012:
     result = false;
     break;
   }
@@ -274,6 +281,7 @@ inline bool isFortran(SourceLanguage S) {
   case DW_LANG_Fortran95:
   case DW_LANG_Fortran03:
   case DW_LANG_Fortran08:
+  case DW_LANG_Fortran18:
     result = true;
     break;
   case DW_LANG_C89:
@@ -313,11 +321,81 @@ inline bool isFortran(SourceLanguage S) {
   case DW_LANG_BORLAND_Delphi:
   case DW_LANG_lo_user:
   case DW_LANG_hi_user:
+  case DW_LANG_Kotlin:
+  case DW_LANG_Zig:
+  case DW_LANG_Crystal:
+  case DW_LANG_C_plus_plus_17:
+  case DW_LANG_C_plus_plus_20:
+  case DW_LANG_C17:
+  case DW_LANG_Ada2005:
+  case DW_LANG_Ada2012:
     result = false;
     break;
   }
 
   return result;
+}
+
+inline bool isC(SourceLanguage S) {
+  // Deliberately enumerate all the language options so we get a warning when
+  // new language options are added (-Wswitch) that'll hopefully help keep this
+  // switch up-to-date when new C++ versions are added.
+  switch (S) {
+  case DW_LANG_C11:
+  case DW_LANG_C17:
+  case DW_LANG_C89:
+  case DW_LANG_C99:
+  case DW_LANG_C:
+  case DW_LANG_ObjC:
+    return true;
+  case DW_LANG_C_plus_plus:
+  case DW_LANG_C_plus_plus_03:
+  case DW_LANG_C_plus_plus_11:
+  case DW_LANG_C_plus_plus_14:
+  case DW_LANG_C_plus_plus_17:
+  case DW_LANG_C_plus_plus_20:
+  case DW_LANG_Ada83:
+  case DW_LANG_Cobol74:
+  case DW_LANG_Cobol85:
+  case DW_LANG_Fortran77:
+  case DW_LANG_Fortran90:
+  case DW_LANG_Pascal83:
+  case DW_LANG_Modula2:
+  case DW_LANG_Java:
+  case DW_LANG_Ada95:
+  case DW_LANG_Fortran95:
+  case DW_LANG_PLI:
+  case DW_LANG_ObjC_plus_plus:
+  case DW_LANG_UPC:
+  case DW_LANG_D:
+  case DW_LANG_Python:
+  case DW_LANG_OpenCL:
+  case DW_LANG_Go:
+  case DW_LANG_Modula3:
+  case DW_LANG_Haskell:
+  case DW_LANG_OCaml:
+  case DW_LANG_Rust:
+  case DW_LANG_Swift:
+  case DW_LANG_Julia:
+  case DW_LANG_Dylan:
+  case DW_LANG_Fortran03:
+  case DW_LANG_Fortran08:
+  case DW_LANG_RenderScript:
+  case DW_LANG_BLISS:
+  case DW_LANG_Mips_Assembler:
+  case DW_LANG_GOOGLE_RenderScript:
+  case DW_LANG_BORLAND_Delphi:
+  case DW_LANG_lo_user:
+  case DW_LANG_hi_user:
+  case DW_LANG_Kotlin:
+  case DW_LANG_Zig:
+  case DW_LANG_Crystal:
+  case DW_LANG_Fortran18:
+  case DW_LANG_Ada2005:
+  case DW_LANG_Ada2012:
+    return false;
+  }
+  llvm_unreachable("Unknown language kind.");
 }
 
 inline TypeKind getArrayIndexTypeEncoding(SourceLanguage S) {
@@ -634,7 +712,7 @@ unsigned AttributeEncodingVendor(TypeKind E);
 unsigned LanguageVendor(SourceLanguage L);
 /// @}
 
-Optional<unsigned> LanguageLowerBound(SourceLanguage L);
+std::optional<unsigned> LanguageLowerBound(SourceLanguage L);
 
 /// The size of a reference determined by the DWARF 32/64-bit format.
 inline uint8_t getDwarfOffsetByteSize(DwarfFormat Format) {
@@ -690,13 +768,14 @@ inline uint8_t getUnitLengthFieldByteSize(DwarfFormat Format) {
 ///
 /// If the form has a fixed byte size, then an Optional with a value will be
 /// returned. If the form is always encoded using a variable length storage
-/// format (ULEB or SLEB numbers or blocks) then None will be returned.
+/// format (ULEB or SLEB numbers or blocks) then std::nullopt will be returned.
 ///
 /// \param Form DWARF form to get the fixed byte size for.
 /// \param Params DWARF parameters to help interpret forms.
-/// \returns Optional<uint8_t> value with the fixed byte size or None if
-/// \p Form doesn't have a fixed byte size.
-Optional<uint8_t> getFixedFormByteSize(dwarf::Form Form, FormParams Params);
+/// \returns std::optional<uint8_t> value with the fixed byte size or
+/// std::nullopt if \p Form doesn't have a fixed byte size.
+std::optional<uint8_t> getFixedFormByteSize(dwarf::Form Form,
+                                            FormParams Params);
 
 /// Tells whether the specified form is defined in the specified version,
 /// or is an extension if extensions are allowed.

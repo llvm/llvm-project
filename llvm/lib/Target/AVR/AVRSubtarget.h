@@ -21,6 +21,7 @@
 #include "AVRISelLowering.h"
 #include "AVRInstrInfo.h"
 #include "AVRSelectionDAGInfo.h"
+#include "MCTargetDesc/AVRMCTargetDesc.h"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "AVRGenSubtargetInfo.inc"
@@ -72,6 +73,7 @@ public:
   bool hasLPMX() const { return m_hasLPMX; }
   bool hasELPM() const { return m_hasELPM; }
   bool hasELPMX() const { return m_hasELPMX; }
+  bool hasPROGMEM() const { return m_hasPROGMEM; }
   bool hasSPM() const { return m_hasSPM; }
   bool hasSPMX() const { return m_hasSPMX; }
   bool hasDES() const { return m_hasDES; }
@@ -102,35 +104,43 @@ public:
   int getRegTmpIndex() const { return hasTinyEncoding() ? 16 : 0; }
   int getRegZeroIndex() const { return hasTinyEncoding() ? 17 : 1; }
 
+  Register getTmpRegister() const {
+    return hasTinyEncoding() ? AVR::R16 : AVR::R0;
+  }
+  Register getZeroRegister() const {
+    return hasTinyEncoding() ? AVR::R17 : AVR::R1;
+  }
+
 private:
   /// The ELF e_flags architecture.
-  unsigned ELFArch;
+  unsigned ELFArch = 0;
 
   // Subtarget feature settings
   // See AVR.td for details.
-  bool m_hasSRAM;
-  bool m_hasJMPCALL;
-  bool m_hasIJMPCALL;
-  bool m_hasEIJMPCALL;
-  bool m_hasADDSUBIW;
-  bool m_hasSmallStack;
-  bool m_hasMOVW;
-  bool m_hasLPM;
-  bool m_hasLPMX;
-  bool m_hasELPM;
-  bool m_hasELPMX;
-  bool m_hasSPM;
-  bool m_hasSPMX;
-  bool m_hasDES;
-  bool m_supportsRMW;
-  bool m_supportsMultiplication;
-  bool m_hasBREAK;
-  bool m_hasTinyEncoding;
-  bool m_hasMemMappedGPR;
+  bool m_hasSRAM = false;
+  bool m_hasJMPCALL = false;
+  bool m_hasIJMPCALL = false;
+  bool m_hasEIJMPCALL = false;
+  bool m_hasADDSUBIW = false;
+  bool m_hasSmallStack = false;
+  bool m_hasMOVW = false;
+  bool m_hasLPM = false;
+  bool m_hasLPMX = false;
+  bool m_hasELPM = false;
+  bool m_hasELPMX = false;
+  bool m_hasPROGMEM = false;
+  bool m_hasSPM = false;
+  bool m_hasSPMX = false;
+  bool m_hasDES = false;
+  bool m_supportsRMW = false;
+  bool m_supportsMultiplication = false;
+  bool m_hasBREAK = false;
+  bool m_hasTinyEncoding = false;
+  bool m_hasMemMappedGPR = false;
 
   // Dummy member, used by FeatureSet's. We cannot have a SubtargetFeature with
   // no variable, so we instead bind pseudo features to this variable.
-  bool m_FeatureSetDummy;
+  bool m_FeatureSetDummy = false;
 
   AVRInstrInfo InstrInfo;
   AVRFrameLowering FrameLowering;

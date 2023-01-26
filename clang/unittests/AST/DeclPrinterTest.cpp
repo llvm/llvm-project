@@ -731,7 +731,7 @@ TEST(DeclPrinter, TestCXXMethodDecl_Operator1) {
     "()", "[]"
   };
 
-  for (unsigned i = 0, e = llvm::array_lengthof(OperatorNames); i != e; ++i) {
+  for (unsigned i = 0, e = std::size(OperatorNames); i != e; ++i) {
     SmallString<128> Code;
     Code.append("struct Z { void operator");
     Code.append(OperatorNames[i]);
@@ -754,7 +754,7 @@ TEST(DeclPrinter, TestCXXMethodDecl_Operator2) {
     "~", "!", "++", "--", "->"
   };
 
-  for (unsigned i = 0, e = llvm::array_lengthof(OperatorNames); i != e; ++i) {
+  for (unsigned i = 0, e = std::size(OperatorNames); i != e; ++i) {
     SmallString<128> Code;
     Code.append("struct Z { void operator");
     Code.append(OperatorNames[i]);

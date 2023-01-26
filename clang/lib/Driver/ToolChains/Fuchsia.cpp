@@ -87,6 +87,8 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (ToolChain.getArch() == llvm::Triple::aarch64) {
+    CmdArgs.push_back("--execute-only");
+
     std::string CPU = getCPUName(D, Args, Triple);
     if (CPU.empty() || CPU == "generic" || CPU == "cortex-a53")
       CmdArgs.push_back("--fix-cortex-a53-843419");
@@ -375,8 +377,8 @@ void Fuchsia::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
 void Fuchsia::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
                                            ArgStringList &CC1Args) const {
-  if (DriverArgs.hasArg(options::OPT_nostdlibinc) ||
-      DriverArgs.hasArg(options::OPT_nostdincxx))
+  if (DriverArgs.hasArg(options::OPT_nostdinc, options::OPT_nostdlibinc,
+                        options::OPT_nostdincxx))
     return;
 
   const Driver &D = getDriver();

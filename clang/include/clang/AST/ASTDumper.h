@@ -32,6 +32,7 @@ public:
 
   TextNodeDumper &doGetNodeDelegate() { return NodeDumper; }
 
+  void dumpInvalidDeclContext(const DeclContext *DC);
   void dumpLookups(const DeclContext *DC, bool DumpDecls);
 
   template <typename SpecializationDecl>

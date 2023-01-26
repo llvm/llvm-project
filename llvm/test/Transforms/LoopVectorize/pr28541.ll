@@ -30,14 +30,14 @@
 
 define i32 @fn1() {
 entry:
-  %tmp2 = load i32, i32* @b, align 4
+  %tmp2 = load i32, ptr @b, align 4
   %dec3 = add nsw i32 %tmp2, -1
-  store i32 %dec3, i32* @b, align 4
+  store i32 %dec3, ptr @b, align 4
   %tobool4 = icmp eq i32 %tmp2, 0
   br i1 %tobool4, label %while.end, label %while.body.lr.ph
 
 while.body.lr.ph:                                 ; preds = %entry
-  %tmp1 = load i32, i32* @a, align 4
+  %tmp1 = load i32, ptr @a, align 4
   %and = and i32 %tmp1, 3
   %switch = icmp eq i32 %and, 0
   br label %while.body
@@ -62,8 +62,8 @@ do.cond:                                          ; preds = %do.body, %while.bod
   br i1 %tobool3, label %while.cond, label %do.body
 
 while.cond.while.end_crit_edge:                   ; preds = %while.cond
-  store i32 0, i32* @c, align 4
-  store i32 -1, i32* @b, align 4
+  store i32 0, ptr @c, align 4
+  store i32 -1, ptr @b, align 4
   br label %while.end
 
 while.end:                                        ; preds = %while.cond.while.end_crit_edge, %entry

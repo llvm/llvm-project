@@ -1005,8 +1005,7 @@ void __kmpc_atomic_20(ident_t *id_ref, int gtid, void *lhs, void *rhs,
 void __kmpc_atomic_32(ident_t *id_ref, int gtid, void *lhs, void *rhs,
                       void (*f)(void *, void *, void *));
 
-// READ, WRITE, CAPTURE are supported only on IA-32 architecture and Intel(R) 64
-#if KMP_ARCH_X86 || KMP_ARCH_X86_64
+// READ, WRITE, CAPTURE
 
 //  Below routines for atomic READ are listed
 char __kmpc_atomic_fixed1_rd(ident_t *id_ref, int gtid, char *loc);
@@ -1337,7 +1336,6 @@ void __kmpc_atomic_cmplx4_mul_cpt(ident_t *id_ref, int gtid, kmp_cmplx32 *lhs,
                                   kmp_cmplx32 rhs, kmp_cmplx32 *out, int flag);
 void __kmpc_atomic_cmplx4_div_cpt(ident_t *id_ref, int gtid, kmp_cmplx32 *lhs,
                                   kmp_cmplx32 rhs, kmp_cmplx32 *out, int flag);
-
 kmp_cmplx64 __kmpc_atomic_cmplx8_add_cpt(ident_t *id_ref, int gtid,
                                          kmp_cmplx64 *lhs, kmp_cmplx64 rhs,
                                          int flag);
@@ -1419,7 +1417,7 @@ void __kmpc_atomic_end(void);
 
 // OpenMP 4.0: v = x = expr binop x; { v = x; x = expr binop x; } { x = expr
 // binop x; v = x; }  for non-commutative operations.
-
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
 char __kmpc_atomic_fixed1_sub_cpt_rev(ident_t *id_ref, int gtid, char *lhs,
                                       char rhs, int flag);
 char __kmpc_atomic_fixed1_div_cpt_rev(ident_t *id_ref, int gtid, char *lhs,

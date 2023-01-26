@@ -23,8 +23,8 @@ declare <16 x i32> @llvm.hexagon.V6.vaslw.acc(<16 x i32>, <16 x i32>, i32) #0
 
 define void @f0() #1 {
 b0:
-  %v0 = load i16*, i16** undef, align 4
-  %v1 = load i32*, i32** undef, align 4
+  %v0 = load ptr, ptr undef, align 4
+  %v1 = load ptr, ptr undef, align 4
   br label %b1
 
 b1:                                               ; preds = %b3, %b0
@@ -36,22 +36,19 @@ b1:                                               ; preds = %b3, %b0
   br label %b2
 
 b2:                                               ; preds = %b2, %b1
-  %v7 = phi i32* [ %v1, %b1 ], [ %v127, %b2 ]
-  %v8 = phi i16* [ %v0, %b1 ], [ %v128, %b2 ]
+  %v7 = phi ptr [ %v1, %b1 ], [ %v127, %b2 ]
+  %v8 = phi ptr [ %v0, %b1 ], [ %v128, %b2 ]
   %v9 = phi i32 [ 0, %b1 ], [ %v125, %b2 ]
   %v10 = mul nuw nsw i32 %v9, 32
-  %v11 = bitcast i32* %v7 to <16 x i32>*
-  %v12 = load <16 x i32>, <16 x i32>* %v11, align 64, !tbaa !1
+  %v12 = load <16 x i32>, ptr %v7, align 64, !tbaa !1
   %v13 = add nuw nsw i32 %v10, 16
-  %v14 = getelementptr inbounds i32, i32* %v1, i32 %v13
-  %v15 = bitcast i32* %v14 to <16 x i32>*
-  %v16 = load <16 x i32>, <16 x i32>* %v15, align 64, !tbaa !1
+  %v14 = getelementptr inbounds i32, ptr %v1, i32 %v13
+  %v16 = load <16 x i32>, ptr %v14, align 64, !tbaa !1
   %v17 = tail call <32 x i32> @llvm.hexagon.V6.vcombine(<16 x i32> %v16, <16 x i32> %v12)
   %v18 = tail call <16 x i32> @llvm.hexagon.V6.lo(<32 x i32> %v17) #2
   %v19 = tail call <16 x i32> @llvm.hexagon.V6.hi(<32 x i32> %v17) #2
   %v20 = tail call <32 x i32> @llvm.hexagon.V6.vdealvdd(<16 x i32> %v19, <16 x i32> %v18, i32 -4) #2
-  %v21 = bitcast i16* %v8 to <16 x i32>*
-  %v22 = load <16 x i32>, <16 x i32>* %v21, align 64, !tbaa !4
+  %v22 = load <16 x i32>, ptr %v8, align 64, !tbaa !4
   %v23 = tail call <16 x i32> @llvm.hexagon.V6.lo(<32 x i32> %v20) #2
   %v24 = tail call <16 x i32> @llvm.hexagon.V6.hi(<32 x i32> %v20) #2
   %v25 = tail call <16 x i32> @llvm.hexagon.V6.vshufeh(<16 x i32> %v24, <16 x i32> %v23) #2
@@ -69,24 +66,20 @@ b2:                                               ; preds = %b2, %b1
   %v37 = tail call <32 x i32> @llvm.hexagon.V6.vshuffvdd(<16 x i32> %v36, <16 x i32> %v35, i32 -4) #2
   %v38 = tail call <16 x i32> @llvm.hexagon.V6.lo(<32 x i32> %v37)
   %v39 = add nuw nsw i32 %v10, %v3
-  %v40 = getelementptr inbounds i32, i32* undef, i32 %v39
-  %v41 = bitcast i32* %v40 to <16 x i32>*
-  store <16 x i32> %v38, <16 x i32>* %v41, align 64, !tbaa !6
+  %v40 = getelementptr inbounds i32, ptr undef, i32 %v39
+  store <16 x i32> %v38, ptr %v40, align 64, !tbaa !6
   %v42 = tail call <16 x i32> @llvm.hexagon.V6.hi(<32 x i32> %v37)
-  store <16 x i32> %v42, <16 x i32>* undef, align 64, !tbaa !6
-  %v43 = getelementptr i32, i32* %v7, i32 32
-  %v44 = getelementptr i16, i16* %v8, i32 32
-  %v45 = bitcast i32* %v43 to <16 x i32>*
-  %v46 = load <16 x i32>, <16 x i32>* %v45, align 64, !tbaa !1
+  store <16 x i32> %v42, ptr undef, align 64, !tbaa !6
+  %v43 = getelementptr i32, ptr %v7, i32 32
+  %v44 = getelementptr i16, ptr %v8, i32 32
+  %v46 = load <16 x i32>, ptr %v43, align 64, !tbaa !1
   %v47 = add nuw nsw i32 %v10, 48
-  %v48 = getelementptr inbounds i32, i32* %v1, i32 %v47
-  %v49 = bitcast i32* %v48 to <16 x i32>*
-  %v50 = load <16 x i32>, <16 x i32>* %v49, align 64, !tbaa !1
+  %v48 = getelementptr inbounds i32, ptr %v1, i32 %v47
+  %v50 = load <16 x i32>, ptr %v48, align 64, !tbaa !1
   %v51 = tail call <32 x i32> @llvm.hexagon.V6.vcombine(<16 x i32> %v50, <16 x i32> %v46)
   %v52 = tail call <16 x i32> @llvm.hexagon.V6.lo(<32 x i32> %v51) #2
   %v53 = tail call <32 x i32> @llvm.hexagon.V6.vdealvdd(<16 x i32> undef, <16 x i32> %v52, i32 -4) #2
-  %v54 = bitcast i16* %v44 to <16 x i32>*
-  %v55 = load <16 x i32>, <16 x i32>* %v54, align 64, !tbaa !4
+  %v55 = load <16 x i32>, ptr %v44, align 64, !tbaa !4
   %v56 = tail call <16 x i32> @llvm.hexagon.V6.lo(<32 x i32> %v53) #2
   %v57 = tail call <16 x i32> @llvm.hexagon.V6.vshufeh(<16 x i32> undef, <16 x i32> %v56) #2
   %v58 = tail call <16 x i32> @llvm.hexagon.V6.vshufoh(<16 x i32> undef, <16 x i32> %v56) #2
@@ -103,28 +96,23 @@ b2:                                               ; preds = %b2, %b1
   %v69 = tail call <32 x i32> @llvm.hexagon.V6.vshuffvdd(<16 x i32> %v68, <16 x i32> %v67, i32 -4) #2
   %v70 = tail call <16 x i32> @llvm.hexagon.V6.lo(<32 x i32> %v69)
   %v71 = add nuw nsw i32 %v4, %v10
-  %v72 = getelementptr inbounds i32, i32* undef, i32 %v71
-  %v73 = bitcast i32* %v72 to <16 x i32>*
-  store <16 x i32> %v70, <16 x i32>* %v73, align 64, !tbaa !6
+  %v72 = getelementptr inbounds i32, ptr undef, i32 %v71
+  store <16 x i32> %v70, ptr %v72, align 64, !tbaa !6
   %v74 = tail call <16 x i32> @llvm.hexagon.V6.hi(<32 x i32> %v69)
   %v75 = add nuw nsw i32 %v71, 16
-  %v76 = getelementptr inbounds i32, i32* undef, i32 %v75
-  %v77 = bitcast i32* %v76 to <16 x i32>*
-  store <16 x i32> %v74, <16 x i32>* %v77, align 64, !tbaa !6
-  %v78 = getelementptr i32, i32* %v7, i32 64
-  %v79 = getelementptr i16, i16* %v8, i32 64
-  %v80 = bitcast i32* %v78 to <16 x i32>*
-  %v81 = load <16 x i32>, <16 x i32>* %v80, align 64, !tbaa !1
+  %v76 = getelementptr inbounds i32, ptr undef, i32 %v75
+  store <16 x i32> %v74, ptr %v76, align 64, !tbaa !6
+  %v78 = getelementptr i32, ptr %v7, i32 64
+  %v79 = getelementptr i16, ptr %v8, i32 64
+  %v81 = load <16 x i32>, ptr %v78, align 64, !tbaa !1
   %v82 = add nuw nsw i32 %v10, 80
-  %v83 = getelementptr inbounds i32, i32* %v1, i32 %v82
-  %v84 = bitcast i32* %v83 to <16 x i32>*
-  %v85 = load <16 x i32>, <16 x i32>* %v84, align 64, !tbaa !1
+  %v83 = getelementptr inbounds i32, ptr %v1, i32 %v82
+  %v85 = load <16 x i32>, ptr %v83, align 64, !tbaa !1
   %v86 = tail call <32 x i32> @llvm.hexagon.V6.vcombine(<16 x i32> %v85, <16 x i32> %v81)
   %v87 = tail call <16 x i32> @llvm.hexagon.V6.lo(<32 x i32> %v86) #2
   %v88 = tail call <16 x i32> @llvm.hexagon.V6.hi(<32 x i32> %v86) #2
   %v89 = tail call <32 x i32> @llvm.hexagon.V6.vdealvdd(<16 x i32> %v88, <16 x i32> %v87, i32 -4) #2
-  %v90 = bitcast i16* %v79 to <16 x i32>*
-  %v91 = load <16 x i32>, <16 x i32>* %v90, align 64, !tbaa !4
+  %v91 = load <16 x i32>, ptr %v79, align 64, !tbaa !4
   %v92 = tail call <16 x i32> @llvm.hexagon.V6.lo(<32 x i32> %v89) #2
   %v93 = tail call <16 x i32> @llvm.hexagon.V6.hi(<32 x i32> %v89) #2
   %v94 = tail call <16 x i32> @llvm.hexagon.V6.vshufeh(<16 x i32> %v93, <16 x i32> %v92) #2
@@ -142,30 +130,26 @@ b2:                                               ; preds = %b2, %b1
   %v106 = tail call <32 x i32> @llvm.hexagon.V6.vshuffvdd(<16 x i32> %v105, <16 x i32> %v104, i32 -4) #2
   %v107 = tail call <16 x i32> @llvm.hexagon.V6.lo(<32 x i32> %v106)
   %v108 = add nuw nsw i32 %v5, %v10
-  %v109 = getelementptr inbounds i32, i32* undef, i32 %v108
-  %v110 = bitcast i32* %v109 to <16 x i32>*
-  store <16 x i32> %v107, <16 x i32>* %v110, align 64, !tbaa !6
+  %v109 = getelementptr inbounds i32, ptr undef, i32 %v108
+  store <16 x i32> %v107, ptr %v109, align 64, !tbaa !6
   %v111 = tail call <16 x i32> @llvm.hexagon.V6.hi(<32 x i32> %v106)
   %v112 = add nuw nsw i32 %v108, 16
-  %v113 = getelementptr inbounds i32, i32* undef, i32 %v112
-  %v114 = bitcast i32* %v113 to <16 x i32>*
-  store <16 x i32> %v111, <16 x i32>* %v114, align 64, !tbaa !6
+  %v113 = getelementptr inbounds i32, ptr undef, i32 %v112
+  store <16 x i32> %v111, ptr %v113, align 64, !tbaa !6
   %v115 = tail call <16 x i32> @llvm.hexagon.V6.lo(<32 x i32> undef) #2
   %v116 = tail call <32 x i32> @llvm.hexagon.V6.vshuffvdd(<16 x i32> undef, <16 x i32> %v115, i32 -4) #2
   %v117 = tail call <16 x i32> @llvm.hexagon.V6.lo(<32 x i32> %v116)
   %v118 = add nuw nsw i32 %v6, %v10
-  %v119 = getelementptr inbounds i32, i32* undef, i32 %v118
-  %v120 = bitcast i32* %v119 to <16 x i32>*
-  store <16 x i32> %v117, <16 x i32>* %v120, align 64, !tbaa !6
+  %v119 = getelementptr inbounds i32, ptr undef, i32 %v118
+  store <16 x i32> %v117, ptr %v119, align 64, !tbaa !6
   %v121 = tail call <16 x i32> @llvm.hexagon.V6.hi(<32 x i32> %v116)
   %v122 = add nuw nsw i32 %v118, 16
-  %v123 = getelementptr inbounds i32, i32* undef, i32 %v122
-  %v124 = bitcast i32* %v123 to <16 x i32>*
-  store <16 x i32> %v121, <16 x i32>* %v124, align 64, !tbaa !6
+  %v123 = getelementptr inbounds i32, ptr undef, i32 %v122
+  store <16 x i32> %v121, ptr %v123, align 64, !tbaa !6
   %v125 = add nuw nsw i32 %v9, 4
   %v126 = icmp eq i32 %v125, 24
-  %v127 = getelementptr i32, i32* %v7, i32 128
-  %v128 = getelementptr i16, i16* %v8, i32 128
+  %v127 = getelementptr i32, ptr %v7, i32 128
+  %v128 = getelementptr i16, ptr %v8, i32 128
   br i1 %v126, label %b3, label %b2
 
 b3:                                               ; preds = %b2

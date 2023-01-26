@@ -9,12 +9,12 @@
 
 define dllexport void @test1() local_unnamed_addr #0 {
 entry:
-  tail call void @llvm.hexagon.instrprof.custom(i8* getelementptr inbounds ([21 x i8], [21 x i8]* @handler_name, i32 0, i32 0), i32 999)
+  tail call void @llvm.hexagon.instrprof.custom(ptr @handler_name, i32 999)
   ret void
 }
 
 ; Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn
-declare void @llvm.hexagon.instrprof.custom(i8*, i32) #1
+declare void @llvm.hexagon.instrprof.custom(ptr, i32) #1
 
 attributes #0 = { "target-features"="+hvxv68,+hvx-length128b,+hvx-qfloat,-hvx-ieee-fp,+hmxv68" }
 attributes #1 = { inaccessiblememonly nofree nosync nounwind willreturn }

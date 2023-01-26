@@ -220,13 +220,13 @@ TableGen provides "bang operators" that have a wide variety of uses:
 .. productionlist::
    BangOperator: one of
                : !add        !and         !cast        !con         !dag
-               : !empty      !eq          !filter      !find        !foldl
-               : !foreach    !ge          !getdagop    !gt          !head
-               : !if         !interleave  !isa         !le          !listconcat
-               : !listsplat  !lt          !mul         !ne          !not
-               : !or         !setdagop    !shl         !size        !sra
-               : !srl        !strconcat   !sub         !subst       !substr
-               : !tail       !xor
+               : !div        !empty       !eq          !filter      !find
+               : !foldl      !foreach     !ge          !getdagop    !gt
+               : !head       !if          !interleave  !isa         !le
+               : !listconcat !listremove  !listsplat   !logtwo      !lt
+               : !mul        !ne          !not         !or          !setdagop
+               : !shl        !size        !sra         !srl         !strconcat
+               : !sub        !subst       !substr      !tail        !xor
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
@@ -1622,6 +1622,10 @@ and non-0 as true.
     Example: ``!dag(op, [a1, a2, ?], ["name1", "name2", "name3"])`` results in
     ``(op a1-value:$name1, a2-value:$name2, ?:$name3)``.
 
+``!div(``\ *a*\ ``,`` *b*\ ``)``
+    This operator preforms signed division of *a* by *b*, and produces the quotient.
+    Division by 0 produces an error. Division of INT64_MIN by -1 produces an error.
+
 ``!empty(``\ *a*\ ``)``
     This operator produces 1 if the string, list, or DAG *a* is empty; 0 otherwise.
     A dag is empty if it has no arguments; the operator does not count.
@@ -1736,10 +1740,19 @@ and non-0 as true.
     This operator concatenates the list arguments *list1*, *list2*, etc., and
     produces the resulting list. The lists must have the same element type.
 
+``!listremove(``\ *list1*\ ``,`` *list2*\ ``)``
+    This operator returns a copy of *list1* removing all elements that also occur in
+    *list2*. The lists must have the same element type.
+
 ``!listsplat(``\ *value*\ ``,`` *count*\ ``)``
     This operator produces a list of length *count* whose elements are all
     equal to the *value*. For example, ``!listsplat(42, 3)`` results in
     ``[42, 42, 42]``.
+
+``!logtwo(``\ *a*\ ``)``
+    This operator produces the base 2 log of *a* and produces the integer
+    result. The log of 0 or a negative number produces an error. This
+    is a flooring operation.
 
 ``!lt(``\ *a*\ `,` *b*\ ``)``
     This operator produces 1 if *a* is less than *b*; 0 otherwise.

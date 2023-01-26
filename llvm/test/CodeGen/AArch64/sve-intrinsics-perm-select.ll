@@ -574,7 +574,7 @@ define <vscale x 2 x i64> @dupq_i64_range(<vscale x 2 x i64> %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    index z1.d, #0, #1
 ; CHECK-NEXT:    and z1.d, z1.d, #0x1
-; CHECK-NEXT:    add z1.d, z1.d, #8 // =0x8
+; CHECK-NEXT:    orr z1.d, z1.d, #0x8
 ; CHECK-NEXT:    tbl z0.d, { z0.d }, z1.d
 ; CHECK-NEXT:    ret
   %out = call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> %a, i64 4)
@@ -583,6 +583,40 @@ define <vscale x 2 x i64> @dupq_i64_range(<vscale x 2 x i64> %a) {
 ;
 ; EXT
 ;
+
+define dso_local <vscale x 4 x float> @dupq_f32_repeat_complex(float %x, float %y) {
+; CHECK-LABEL: dupq_f32_repeat_complex:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
+; CHECK-NEXT:    // kill: def $s1 killed $s1 def $q1
+; CHECK-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-NEXT:    mov z0.d, d0
+; CHECK-NEXT:    ret
+  %1 = insertelement <4 x float> undef, float %x, i64 0
+  %2 = insertelement <4 x float> %1, float %y, i64 1
+  %3 = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> %2, i64 0)
+  %4 = bitcast <vscale x 4 x float> %3 to <vscale x 2 x double>
+  %5 = shufflevector <vscale x 2 x double> %4, <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
+  %6 = bitcast <vscale x 2 x double> %5 to <vscale x 4 x float>
+  ret <vscale x 4 x float> %6
+}
+
+define dso_local <vscale x 8 x half> @dupq_f16_repeat_complex(half %x, half %y) {
+; CHECK-LABEL: dupq_f16_repeat_complex:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
+; CHECK-NEXT:    // kill: def $h1 killed $h1 def $q1
+; CHECK-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-NEXT:    mov z0.s, s0
+; CHECK-NEXT:    ret
+  %1 = insertelement <8 x half> undef, half %x, i64 0
+  %2 = insertelement <8 x half> %1, half %y, i64 1
+  %3 = call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> undef, <8 x half> %2, i64 0)
+  %4 = bitcast <vscale x 8 x half> %3 to <vscale x 4 x float>
+  %5 = shufflevector <vscale x 4 x float> %4, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
+  %6 = bitcast <vscale x 4 x float> %5 to <vscale x 8 x half>
+  ret <vscale x 8 x half> %6
+}
 
 define <vscale x 16 x i8> @ext_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: ext_i8:

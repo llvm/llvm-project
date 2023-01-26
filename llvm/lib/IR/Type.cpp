@@ -13,7 +13,6 @@
 #include "llvm/IR/Type.h"
 #include "LLVMContextImpl.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -118,18 +117,18 @@ bool Type::canLosslesslyBitCastTo(Type *Ty) const {
 
   //  64-bit fixed width vector types can be losslessly converted to x86mmx.
   if (((isa<FixedVectorType>(this)) && Ty->isX86_MMXTy()) &&
-      getPrimitiveSizeInBits().getFixedSize() == 64)
+      getPrimitiveSizeInBits().getFixedValue() == 64)
     return true;
   if ((isX86_MMXTy() && isa<FixedVectorType>(Ty)) &&
-      Ty->getPrimitiveSizeInBits().getFixedSize() == 64)
+      Ty->getPrimitiveSizeInBits().getFixedValue() == 64)
     return true;
 
   //  8192-bit fixed width vector types can be losslessly converted to x86amx.
   if (((isa<FixedVectorType>(this)) && Ty->isX86_AMXTy()) &&
-      getPrimitiveSizeInBits().getFixedSize() == 8192)
+      getPrimitiveSizeInBits().getFixedValue() == 8192)
     return true;
   if ((isX86_AMXTy() && isa<FixedVectorType>(Ty)) &&
-      Ty->getPrimitiveSizeInBits().getFixedSize() == 8192)
+      Ty->getPrimitiveSizeInBits().getFixedValue() == 8192)
     return true;
 
   // At this point we have only various mismatches of the first class types
@@ -180,7 +179,7 @@ TypeSize Type::getPrimitiveSizeInBits() const {
     ElementCount EC = VTy->getElementCount();
     TypeSize ETS = VTy->getElementType()->getPrimitiveSizeInBits();
     assert(!ETS.isScalable() && "Vector type should have fixed-width elements");
-    return {ETS.getFixedSize() * EC.getKnownMinValue(), EC.isScalable()};
+    return {ETS.getFixedValue() * EC.getKnownMinValue(), EC.isScalable()};
   }
   default: return TypeSize::Fixed(0);
   }
@@ -188,7 +187,7 @@ TypeSize Type::getPrimitiveSizeInBits() const {
 
 unsigned Type::getScalarSizeInBits() const {
   // It is safe to assume that the scalar types have a fixed size.
-  return getScalarType()->getPrimitiveSizeInBits().getFixedSize();
+  return getScalarType()->getPrimitiveSizeInBits().getFixedValue();
 }
 
 int Type::getFPMantissaWidth() const {
@@ -211,6 +210,9 @@ bool Type::isSizedDerivedType(SmallPtrSetImpl<Type*> *Visited) const {
 
   if (auto *VTy = dyn_cast<VectorType>(this))
     return VTy->getElementType()->isSized(Visited);
+
+  if (auto *TTy = dyn_cast<TargetExtType>(this))
+    return TTy->getLayoutType()->isSized(Visited);
 
   return cast<StructType>(this)->isSized(Visited);
 }
@@ -385,7 +387,7 @@ FunctionType *FunctionType::get(Type *ReturnType,
 }
 
 FunctionType *FunctionType::get(Type *Result, bool isVarArg) {
-  return get(Result, None, isVarArg);
+  return get(Result, std::nullopt, isVarArg);
 }
 
 bool FunctionType::isValidReturnType(Type *RetTy) {
@@ -518,7 +520,7 @@ StructType *StructType::create(LLVMContext &Context, StringRef Name) {
 }
 
 StructType *StructType::get(LLVMContext &Context, bool isPacked) {
-  return get(Context, None, isPacked);
+  return get(Context, std::nullopt, isPacked);
 }
 
 StructType *StructType::create(LLVMContext &Context, ArrayRef<Type*> Elements,
@@ -674,7 +676,7 @@ VectorType *VectorType::get(Type *ElementType, ElementCount EC) {
 
 bool VectorType::isValidElementType(Type *ElemTy) {
   return ElemTy->isIntegerTy() || ElemTy->isFloatingPointTy() ||
-         ElemTy->isPointerTy();
+         ElemTy->isPointerTy() || ElemTy->getTypeID() == TypedPointerTyID;
 }
 
 //===----------------------------------------------------------------------===//
@@ -783,4 +785,83 @@ bool PointerType::isValidElementType(Type *ElemTy) {
 
 bool PointerType::isLoadableOrStorableType(Type *ElemTy) {
   return isValidElementType(ElemTy) && !ElemTy->isFunctionTy();
+}
+
+//===----------------------------------------------------------------------===//
+//                       TargetExtType Implementation
+//===----------------------------------------------------------------------===//
+
+TargetExtType::TargetExtType(LLVMContext &C, StringRef Name,
+                             ArrayRef<Type *> Types, ArrayRef<unsigned> Ints)
+    : Type(C, TargetExtTyID), Name(C.pImpl->Saver.save(Name)) {
+  NumContainedTys = Types.size();
+
+  // Parameter storage immediately follows the class in allocation.
+  Type **Params = reinterpret_cast<Type **>(this + 1);
+  ContainedTys = Params;
+  for (Type *T : Types)
+    *Params++ = T;
+
+  setSubclassData(Ints.size());
+  unsigned *IntParamSpace = reinterpret_cast<unsigned *>(Params);
+  IntParams = IntParamSpace;
+  for (unsigned IntParam : Ints)
+    *IntParamSpace++ = IntParam;
+}
+
+TargetExtType *TargetExtType::get(LLVMContext &C, StringRef Name,
+                                  ArrayRef<Type *> Types,
+                                  ArrayRef<unsigned> Ints) {
+  const TargetExtTypeKeyInfo::KeyTy Key(Name, Types, Ints);
+  TargetExtType *TT;
+  // Since we only want to allocate a fresh target type in case none is found
+  // and we don't want to perform two lookups (one for checking if existent and
+  // one for inserting the newly allocated one), here we instead lookup based on
+  // Key and update the reference to the target type in-place to a newly
+  // allocated one if not found.
+  auto Insertion = C.pImpl->TargetExtTypes.insert_as(nullptr, Key);
+  if (Insertion.second) {
+    // The target type was not found. Allocate one and update TargetExtTypes
+    // in-place.
+    TT = (TargetExtType *)C.pImpl->Alloc.Allocate(
+        sizeof(TargetExtType) + sizeof(Type *) * Types.size() +
+            sizeof(unsigned) * Ints.size(),
+        alignof(TargetExtType));
+    new (TT) TargetExtType(C, Name, Types, Ints);
+    *Insertion.first = TT;
+  } else {
+    // The target type was found. Just return it.
+    TT = *Insertion.first;
+  }
+  return TT;
+}
+
+namespace {
+struct TargetTypeInfo {
+  Type *LayoutType;
+  uint64_t Properties;
+
+  template <typename... ArgTys>
+  TargetTypeInfo(Type *LayoutType, ArgTys... Properties)
+      : LayoutType(LayoutType), Properties((0 | ... | Properties)) {}
+};
+} // anonymous namespace
+
+static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
+  LLVMContext &C = Ty->getContext();
+  StringRef Name = Ty->getName();
+  if (Name.startswith("spirv.")) {
+    return TargetTypeInfo(Type::getInt8PtrTy(C, 0), TargetExtType::HasZeroInit,
+                          TargetExtType::CanBeGlobal);
+  }
+  return TargetTypeInfo(Type::getVoidTy(C));
+}
+
+Type *TargetExtType::getLayoutType() const {
+  return getTargetTypeInfo(this).LayoutType;
+}
+
+bool TargetExtType::hasProperty(Property Prop) const {
+  uint64_t Properties = getTargetTypeInfo(this).Properties;
+  return (Properties & Prop) == Prop;
 }

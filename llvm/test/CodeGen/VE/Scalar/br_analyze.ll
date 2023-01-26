@@ -6,7 +6,7 @@ declare void @foo() noreturn
 ;;; Check a case where a separate branch is needed and where the original
 ;;; order should be reversed.  Copied from SystemZ/branch-08.ll
 
-define i32 @f1(i32 %a, i32 *%bptr) {
+define i32 @f1(i32 %a, ptr %bptr) {
 ; CHECK-LABEL: f1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    st %s9, (, %s11)
@@ -39,7 +39,7 @@ define i32 @f1(i32 %a, i32 *%bptr) {
 ; CHECK-NEXT:    lea.sl %s12, foo@hi(, %s0)
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 entry:
-  %b = load i32, i32 *%bptr
+  %b = load i32, ptr %bptr
   %cmp = icmp ult i32 %a, %b
   br i1 %cmp, label %callit, label %return
 

@@ -2,11 +2,10 @@
 
 // Wrong results on amdgpu
 // XFAIL: amdgcn-amd-amdhsa
-// XFAIL: amdgcn-amd-amdhsa-oldDriver
 // XFAIL: amdgcn-amd-amdhsa-LTO
 
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
 
 // CHECK: before: [[V1:111]] [[V2:222]] [[PX:0x[^ ]+]] [[PY:0x[^ ]+]]
 // CHECK: lambda: [[V1]] [[V2]] [[PX_TGT:0x[^ ]+]] 0x{{.*}}
@@ -26,14 +25,13 @@ int main() {
 
   printf("before: %d %ld %p %p\n", x[1], y[1], &x[0], &y[0]);
 
-  intptr_t xp = (intptr_t) &x[0];
+  intptr_t xp = (intptr_t)&x[0];
 #pragma omp target firstprivate(xp)
   {
     lambda();
-    printf("tgt   : %d %p %d\n", x[1], &x[0], (&x[0] != (int*) xp));
+    printf("tgt   : %d %p %d\n", x[1], &x[0], (&x[0] != (int *)xp));
   }
   printf("out   : %d %ld %p %p\n", x[1], y[1], &x[0], &y[0]);
 
   return 0;
 }
-

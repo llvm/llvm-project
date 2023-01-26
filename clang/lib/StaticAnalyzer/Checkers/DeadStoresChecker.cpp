@@ -38,17 +38,17 @@ public:
   llvm::DenseSet<const VarDecl *> &S;
 
   bool TraverseObjCAtFinallyStmt(ObjCAtFinallyStmt *S) {
-    SaveAndRestore<bool> inFinally(inEH, true);
+    SaveAndRestore inFinally(inEH, true);
     return ::RecursiveASTVisitor<EHCodeVisitor>::TraverseObjCAtFinallyStmt(S);
   }
 
   bool TraverseObjCAtCatchStmt(ObjCAtCatchStmt *S) {
-    SaveAndRestore<bool> inCatch(inEH, true);
+    SaveAndRestore inCatch(inEH, true);
     return ::RecursiveASTVisitor<EHCodeVisitor>::TraverseObjCAtCatchStmt(S);
   }
 
   bool TraverseCXXCatchStmt(CXXCatchStmt *S) {
-    SaveAndRestore<bool> inCatch(inEH, true);
+    SaveAndRestore inCatch(inEH, true);
     return TraverseStmt(S->getHandlerBlock());
   }
 
@@ -103,8 +103,8 @@ void ReachableCode::computeReachableBlocks() {
 static const Expr *
 LookThroughTransitiveAssignmentsAndCommaOperators(const Expr *Ex) {
   while (Ex) {
-    const BinaryOperator *BO =
-      dyn_cast<BinaryOperator>(Ex->IgnoreParenCasts());
+    Ex = Ex->IgnoreParenCasts();
+    const BinaryOperator *BO = dyn_cast<BinaryOperator>(Ex);
     if (!BO)
       break;
     BinaryOperatorKind Op = BO->getOpcode();
@@ -240,7 +240,7 @@ public:
 
       case DeadIncrement:
         BugType = "Dead increment";
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case Standard:
         if (!BugType) BugType = "Dead assignment";
         os << "Value stored to '" << *V << "' is never read";
@@ -331,8 +331,7 @@ public:
           // Special case: check for assigning null to a pointer.
           //  This is a common form of defensive programming.
           const Expr *RHS =
-            LookThroughTransitiveAssignmentsAndCommaOperators(B->getRHS());
-          RHS = RHS->IgnoreParenCasts();
+              LookThroughTransitiveAssignmentsAndCommaOperators(B->getRHS());
 
           QualType T = VD->getType();
           if (T.isVolatileQualified())
@@ -415,8 +414,7 @@ public:
               if (isConstant(E))
                 return;
 
-              if (const DeclRefExpr *DRE =
-                      dyn_cast<DeclRefExpr>(E->IgnoreParenCasts()))
+              if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E))
                 if (const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
                   // Special case: check for initialization from constant
                   //  variables.
@@ -438,7 +436,7 @@ public:
 
               PathDiagnosticLocation Loc =
                 PathDiagnosticLocation::create(V, BR.getSourceManager());
-              Report(V, DeadInit, Loc, E->getSourceRange());
+              Report(V, DeadInit, Loc, V->getInit()->getSourceRange());
             }
           }
         }
@@ -450,8 +448,9 @@ private:
   bool isConstant(const InitListExpr *Candidate) const {
     // We consider init list to be constant if each member of the list can be
     // interpreted as constant.
-    return llvm::all_of(Candidate->inits(),
-                        [this](const Expr *Init) { return isConstant(Init); });
+    return llvm::all_of(Candidate->inits(), [this](const Expr *Init) {
+      return isConstant(Init->IgnoreParenCasts());
+    });
   }
 
   /// Return true if the given expression can be interpreted as constant
@@ -461,7 +460,7 @@ private:
       return true;
 
     // We should also allow defensive initialization of structs, i.e. { 0 }
-    if (const auto *ILE = dyn_cast<InitListExpr>(E->IgnoreParenCasts())) {
+    if (const auto *ILE = dyn_cast<InitListExpr>(E)) {
       return isConstant(ILE);
     }
 
@@ -504,7 +503,7 @@ public:
   // Treat local variables captured by reference in C++ lambdas as escaped.
   void findLambdaReferenceCaptures(const LambdaExpr *LE)  {
     const CXXRecordDecl *LambdaClass = LE->getLambdaClass();
-    llvm::DenseMap<const VarDecl *, FieldDecl *> CaptureFields;
+    llvm::DenseMap<const ValueDecl *, FieldDecl *> CaptureFields;
     FieldDecl *ThisCaptureField;
     LambdaClass->getCaptureFields(CaptureFields, ThisCaptureField);
 
@@ -512,14 +511,14 @@ public:
       if (!C.capturesVariable())
         continue;
 
-      VarDecl *VD = C.getCapturedVar();
+      ValueDecl *VD = C.getCapturedVar();
       const FieldDecl *FD = CaptureFields[VD];
-      if (!FD)
+      if (!FD || !isa<VarDecl>(VD))
         continue;
 
       // If the capture field is a reference type, it is capture-by-reference.
       if (FD->getType()->isReferenceType())
-        Escaped.insert(VD);
+        Escaped.insert(cast<VarDecl>(VD));
     }
   }
 };

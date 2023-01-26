@@ -241,6 +241,7 @@ TEST(LegalizerInfoTest, RuleSets) {
   const LLT v2s64 = LLT::fixed_vector(2, 64);
 
   const LLT p0 = LLT::pointer(0, 32);
+  const LLT v2p0 = LLT::fixed_vector(2, p0);
   const LLT v3p0 = LLT::fixed_vector(3, p0);
   const LLT v4p0 = LLT::fixed_vector(4, p0);
 
@@ -317,6 +318,27 @@ TEST(LegalizerInfoTest, RuleSets) {
 
     // Only handle scalars, ignore vectors.
     EXPECT_ACTION(WidenScalar, 0, s32, LegalityQuery(G_OR, {s16}));
+    EXPECT_ACTION(Unsupported, 0, LLT(), LegalityQuery(G_OR, {v2s16}));
+  }
+
+  // Test minScalarIf
+  {
+    bool IfCond = true;
+    LegalizerInfo LI;
+    auto &LegacyInfo = LI.getLegacyLegalizerInfo();
+    LI.getActionDefinitionsBuilder(G_OR)
+      .legalFor({s32})
+      .minScalarIf([&](const LegalityQuery &Query) {
+                     return IfCond;
+                   }, 0, s32);
+    LegacyInfo.computeTables();
+
+    // Only handle scalars, ignore vectors.
+    EXPECT_ACTION(WidenScalar, 0, s32, LegalityQuery(G_OR, {s16}));
+    EXPECT_ACTION(Unsupported, 0, LLT(), LegalityQuery(G_OR, {v2s16}));
+
+    IfCond = false;
+    EXPECT_ACTION(Unsupported, 0, LLT(), LegalityQuery(G_OR, {s16}));
     EXPECT_ACTION(Unsupported, 0, LLT(), LegalityQuery(G_OR, {v2s16}));
   }
 
@@ -426,6 +448,21 @@ TEST(LegalizerInfoTest, RuleSets) {
                   LegalityQuery(G_ADD, {LLT::scalable_vector(4, 16)}));
     EXPECT_ACTION(FewerElements, 0, s16,
                   LegalityQuery(G_ADD, {LLT::scalable_vector(8, 16)}));
+  }
+
+  // Test minScalarEltSameAsIf
+  {
+    LegalizerInfo LI;
+    auto &LegacyInfo = LI.getLegacyLegalizerInfo();
+
+    LI.getActionDefinitionsBuilder(G_SELECT).minScalarEltSameAsIf(
+        all(isVector(0), isVector(1)), 1, 0);
+    LegacyInfo.computeTables();
+    LLT p1 = LLT::pointer(1, 32);
+    LLT v2p1 = LLT::fixed_vector(2, p1);
+
+    EXPECT_ACTION(WidenScalar, 1, v2s32, LegalityQuery(G_SELECT, {v2p0, v2s1}));
+    EXPECT_ACTION(WidenScalar, 1, v2s32, LegalityQuery(G_SELECT, {v2p1, v2s1}));
   }
 }
 

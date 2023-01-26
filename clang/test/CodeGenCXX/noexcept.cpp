@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-apple-darwin10 -emit-llvm -o - -fcxx-exceptions -fexceptions -std=c++11 | FileCheck %s
+// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - -fcxx-exceptions -fexceptions -std=c++11 | FileCheck %s
 
 // rdar://11904428
 //   Ensure that we call __cxa_begin_catch before calling
@@ -29,12 +29,12 @@ namespace test0 {
 //   Cleanup lpad.
 // CHECK: [[TERMINATE_LPAD]]:
 // CHECK-NEXT: [[T0:%.*]] = landingpad
-// CHECK-NEXT:   catch i8* null
-// CHECK-NEXT: [[T1:%.*]] = extractvalue { i8*, i32 } [[T0]], 0
-// CHECK-NEXT: call void @__clang_call_terminate(i8* [[T1]])
+// CHECK-NEXT:   catch ptr null
+// CHECK-NEXT: [[T1:%.*]] = extractvalue { ptr, i32 } [[T0]], 0
+// CHECK-NEXT: call void @__clang_call_terminate(ptr [[T1]])
 // CHECK-NEXT: unreachable
 
 // CHECK-LABEL:  define linkonce_odr hidden void @__clang_call_terminate(
-// CHECK:      call i8* @__cxa_begin_catch(
+// CHECK:      call ptr @__cxa_begin_catch(
 // CHECK-NEXT: call void @_ZSt9terminatev()
 // CHECK-NEXT: unreachable

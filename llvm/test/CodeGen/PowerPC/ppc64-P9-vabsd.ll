@@ -544,6 +544,7 @@ define <16 x i8> @sub_absv_8_ext(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK-PWR9-BE-NEXT:    li r10, 7
 ; CHECK-PWR9-BE-NEXT:    vextublx r11, r10, v2
 ; CHECK-PWR9-BE-NEXT:    vextublx r10, r10, v3
+; CHECK-PWR9-BE-NEXT:    mtfprwz f2, r9
 ; CHECK-PWR9-BE-NEXT:    clrlwi r11, r11, 24
 ; CHECK-PWR9-BE-NEXT:    clrlwi r10, r10, 24
 ; CHECK-PWR9-BE-NEXT:    sub r10, r11, r10
@@ -562,7 +563,6 @@ define <16 x i8> @sub_absv_8_ext(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK-PWR9-BE-NEXT:    li r12, 9
 ; CHECK-PWR9-BE-NEXT:    vextublx r0, r12, v2
 ; CHECK-PWR9-BE-NEXT:    vextublx r12, r12, v3
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v0, r11
 ; CHECK-PWR9-BE-NEXT:    clrlwi r0, r0, 24
 ; CHECK-PWR9-BE-NEXT:    clrlwi r12, r12, 24
 ; CHECK-PWR9-BE-NEXT:    sub r12, r0, r12
@@ -572,6 +572,7 @@ define <16 x i8> @sub_absv_8_ext(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK-PWR9-BE-NEXT:    li r0, 10
 ; CHECK-PWR9-BE-NEXT:    vextublx r30, r0, v2
 ; CHECK-PWR9-BE-NEXT:    vextublx r0, r0, v3
+; CHECK-PWR9-BE-NEXT:    mtvsrwz v4, r12
 ; CHECK-PWR9-BE-NEXT:    clrlwi r30, r30, 24
 ; CHECK-PWR9-BE-NEXT:    clrlwi r0, r0, 24
 ; CHECK-PWR9-BE-NEXT:    sub r0, r30, r0
@@ -599,8 +600,6 @@ define <16 x i8> @sub_absv_8_ext(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK-PWR9-BE-NEXT:    li r28, 13
 ; CHECK-PWR9-BE-NEXT:    vextublx r27, r28, v2
 ; CHECK-PWR9-BE-NEXT:    vextublx r28, r28, v3
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v5, r29
-; CHECK-PWR9-BE-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
 ; CHECK-PWR9-BE-NEXT:    clrlwi r27, r27, 24
 ; CHECK-PWR9-BE-NEXT:    clrlwi r28, r28, 24
 ; CHECK-PWR9-BE-NEXT:    sub r28, r27, r28
@@ -619,12 +618,14 @@ define <16 x i8> @sub_absv_8_ext(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK-PWR9-BE-NEXT:    li r26, 15
 ; CHECK-PWR9-BE-NEXT:    vextublx r25, r26, v2
 ; CHECK-PWR9-BE-NEXT:    vextublx r26, r26, v3
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v3, r27
+; CHECK-PWR9-BE-NEXT:    mtfprwz f0, r27
 ; CHECK-PWR9-BE-NEXT:    addis r27, r2, .LCPI9_0@toc@ha
+; CHECK-PWR9-BE-NEXT:    mtvsrwz v3, r28
+; CHECK-PWR9-BE-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
 ; CHECK-PWR9-BE-NEXT:    addi r27, r27, .LCPI9_0@toc@l
 ; CHECK-PWR9-BE-NEXT:    clrlwi r25, r25, 24
 ; CHECK-PWR9-BE-NEXT:    clrlwi r26, r26, 24
-; CHECK-PWR9-BE-NEXT:    lxv v4, 0(r27)
+; CHECK-PWR9-BE-NEXT:    lxv vs1, 0(r27)
 ; CHECK-PWR9-BE-NEXT:    ld r27, -40(r1) # 8-byte Folded Reload
 ; CHECK-PWR9-BE-NEXT:    sub r26, r25, r26
 ; CHECK-PWR9-BE-NEXT:    srawi r25, r26, 31
@@ -633,32 +634,31 @@ define <16 x i8> @sub_absv_8_ext(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK-PWR9-BE-NEXT:    ld r25, -56(r1) # 8-byte Folded Reload
 ; CHECK-PWR9-BE-NEXT:    mtvsrwz v2, r26
 ; CHECK-PWR9-BE-NEXT:    ld r26, -48(r1) # 8-byte Folded Reload
-; CHECK-PWR9-BE-NEXT:    vperm v2, v3, v2, v4
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v3, r28
-; CHECK-PWR9-BE-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
-; CHECK-PWR9-BE-NEXT:    vperm v3, v5, v3, v4
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v5, r0
+; CHECK-PWR9-BE-NEXT:    xxperm v2, vs0, vs1
+; CHECK-PWR9-BE-NEXT:    mtfprwz f0, r29
+; CHECK-PWR9-BE-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
+; CHECK-PWR9-BE-NEXT:    xxperm v3, vs0, vs1
+; CHECK-PWR9-BE-NEXT:    mtfprwz f0, r0
 ; CHECK-PWR9-BE-NEXT:    vmrghh v2, v3, v2
 ; CHECK-PWR9-BE-NEXT:    mtvsrwz v3, r30
 ; CHECK-PWR9-BE-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; CHECK-PWR9-BE-NEXT:    vperm v3, v5, v3, v4
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v5, r12
-; CHECK-PWR9-BE-NEXT:    vperm v5, v0, v5, v4
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v0, r3
-; CHECK-PWR9-BE-NEXT:    vmrghh v3, v5, v3
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v5, r7
+; CHECK-PWR9-BE-NEXT:    xxperm v3, vs0, vs1
+; CHECK-PWR9-BE-NEXT:    mtfprwz f0, r11
+; CHECK-PWR9-BE-NEXT:    xxperm v4, vs0, vs1
+; CHECK-PWR9-BE-NEXT:    vmrghh v3, v4, v3
+; CHECK-PWR9-BE-NEXT:    mtvsrwz v4, r4
 ; CHECK-PWR9-BE-NEXT:    xxmrghw vs0, v3, v2
 ; CHECK-PWR9-BE-NEXT:    mtvsrwz v2, r10
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v3, r9
-; CHECK-PWR9-BE-NEXT:    vperm v2, v3, v2, v4
 ; CHECK-PWR9-BE-NEXT:    mtvsrwz v3, r8
-; CHECK-PWR9-BE-NEXT:    vperm v3, v5, v3, v4
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v5, r5
+; CHECK-PWR9-BE-NEXT:    xxperm v2, vs2, vs1
+; CHECK-PWR9-BE-NEXT:    mtfprwz f2, r7
+; CHECK-PWR9-BE-NEXT:    xxperm v3, vs2, vs1
+; CHECK-PWR9-BE-NEXT:    mtfprwz f2, r5
 ; CHECK-PWR9-BE-NEXT:    vmrghh v2, v3, v2
 ; CHECK-PWR9-BE-NEXT:    mtvsrwz v3, r6
-; CHECK-PWR9-BE-NEXT:    vperm v3, v5, v3, v4
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v5, r4
-; CHECK-PWR9-BE-NEXT:    vperm v4, v0, v5, v4
+; CHECK-PWR9-BE-NEXT:    xxperm v3, vs2, vs1
+; CHECK-PWR9-BE-NEXT:    mtfprwz f2, r3
+; CHECK-PWR9-BE-NEXT:    xxperm v4, vs2, vs1
 ; CHECK-PWR9-BE-NEXT:    vmrghh v3, v4, v3
 ; CHECK-PWR9-BE-NEXT:    xxmrghw vs1, v3, v2
 ; CHECK-PWR9-BE-NEXT:    xxmrghd v2, vs1, vs0

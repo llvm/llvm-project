@@ -41,7 +41,7 @@ SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
   auto VVPOpcodeOpt = getVVPOpcode(Opcode);
   if (!VVPOpcodeOpt)
     return SDValue();
-  unsigned VVPOpcode = VVPOpcodeOpt.value();
+  unsigned VVPOpcode = *VVPOpcodeOpt;
   const bool FromVP = ISD::isVPOpcode(Opcode);
 
   // The representative and legalized vector type of this operation.

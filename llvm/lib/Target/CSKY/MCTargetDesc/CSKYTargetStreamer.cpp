@@ -30,7 +30,7 @@ void CSKYConstantPool::emitAll(MCStreamer &Streamer) {
   Streamer.emitDataRegion(MCDR_DataRegion);
   for (const ConstantPoolEntry &Entry : Entries) {
     Streamer.emitCodeAlignment(
-        Entry.Size,
+        Align(Entry.Size),
         Streamer.getContext().getSubtargetInfo()); // align naturally
     Streamer.emitLabel(Entry.Label);
     Streamer.emitValue(Entry.Value, Entry.Size, Entry.Loc);

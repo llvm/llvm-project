@@ -4,7 +4,7 @@
 ; a pointer bitcast from a pointer having an address space to one without
 ;
 ; CHECK-LABEL: entry:
-; CHECK: load <4 x float>, <4 x float> addrspace(4)*
+; CHECK: load <4 x float>, ptr addrspace(4)
 ;
 ; ModuleID = '/tmp/lud.bc'
 source_filename = "lud.c"
@@ -14,7 +14,7 @@ target datalayout = "e-m:e-p:32:32-p1:32:32-p3:32:32-p5:32:32-i64:32-f64:32-v64:
 target triple = "x86_64-unknown-unknown"
 
 ; Function Attrs: noinline nounwind
-define void @LU_decomp_kij_opt(i32 %n, i32 %lda, float addrspace(4)* %A, float addrspace(4)* %scratch) #0 {
+define void @LU_decomp_kij_opt(i32 %n, i32 %lda, ptr addrspace(4) %A, ptr addrspace(4) %scratch) #0 {
 entry:
   %cmp34 = icmp sgt i32 %n, 0
   br i1 %cmp34, label %for.body.lr.ph, label %for.end34
@@ -27,8 +27,8 @@ for.body:                                         ; preds = %for.inc32, %for.bod
   %k.035 = phi i32 [ 0, %for.body.lr.ph ], [ %add2, %for.inc32 ]
   %mul = mul nsw i32 %k.035, %lda
   %add = add nsw i32 %mul, %k.035
-  %arrayidx = getelementptr inbounds float, float addrspace(4)* %A, i32 %add
-  %1 = load float, float addrspace(4)* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr addrspace(4) %A, i32 %add
+  %1 = load float, ptr addrspace(4) %arrayidx, align 4
   %conv1 = fdiv arcp float 1.000000e+00, %1
   %add2 = add nuw nsw i32 %k.035, 1
   %exitcond37 = icmp eq i32 %k.035, %0
@@ -41,24 +41,24 @@ for.body6:                                        ; preds = %for.inc29, %for.bod
   %i.033 = phi i32 [ %add2, %for.body6.lr.ph ], [ %inc30, %for.inc29 ]
   %mul7 = mul nsw i32 %i.033, %lda
   %add8 = add nsw i32 %mul7, %k.035
-  %arrayidx9 = getelementptr inbounds float, float addrspace(4)* %A, i32 %add8
-  %2 = load float, float addrspace(4)* %arrayidx9, align 4
+  %arrayidx9 = getelementptr inbounds float, ptr addrspace(4) %A, i32 %add8
+  %2 = load float, ptr addrspace(4) %arrayidx9, align 4
   %mul10 = fmul arcp contract float %conv1, %2
-  store float %mul10, float addrspace(4)* %arrayidx9, align 4
+  store float %mul10, ptr addrspace(4) %arrayidx9, align 4
   br label %for.body18
 
 for.body18:                                       ; preds = %for.body18, %for.body6
   %j.031 = phi i32 [ %add2, %for.body6 ], [ %inc, %for.body18 ]
-  %3 = load float, float addrspace(4)* %arrayidx9, align 4
+  %3 = load float, ptr addrspace(4) %arrayidx9, align 4
   %add23 = add nsw i32 %j.031, %mul
-  %arrayidx24 = getelementptr inbounds float, float addrspace(4)* %A, i32 %add23
-  %4 = load float, float addrspace(4)* %arrayidx24, align 4
+  %arrayidx24 = getelementptr inbounds float, ptr addrspace(4) %A, i32 %add23
+  %4 = load float, ptr addrspace(4) %arrayidx24, align 4
   %mul25 = fmul arcp contract float %3, %4
   %add27 = add nsw i32 %j.031, %mul7
-  %arrayidx28 = getelementptr inbounds float, float addrspace(4)* %A, i32 %add27
-  %5 = load float, float addrspace(4)* %arrayidx28, align 4
+  %arrayidx28 = getelementptr inbounds float, ptr addrspace(4) %A, i32 %add27
+  %5 = load float, ptr addrspace(4) %arrayidx28, align 4
   %sub = fsub arcp contract float %5, %mul25
-  store float %sub, float addrspace(4)* %arrayidx28, align 4
+  store float %sub, ptr addrspace(4) %arrayidx28, align 4
   %inc = add nuw nsw i32 %j.031, 1
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.inc29, label %for.body18

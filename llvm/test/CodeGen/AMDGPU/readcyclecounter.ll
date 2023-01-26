@@ -1,8 +1,13 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=MEMTIME -check-prefix=SIVI -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=MEMTIME -check-prefix=SIVI -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=MEMTIME -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GETREG,GETREG-SDAG -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -amdgpu-enable-vopd=0 < %s | FileCheck -enable-var-scope -check-prefixes=GETREG,GETREG-SDAG -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=MEMTIME -check-prefix=SIVI -check-prefix=GCN %s
+; -global-isel=1 SI run line skipped since store not yet implemented.
+; RUN: llc -global-isel=0 -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=MEMTIME -check-prefix=SIVI -check-prefix=GCN %s
+; RUN: llc -global-isel=1 -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=MEMTIME -check-prefix=SIVI -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefix=MEMTIME -check-prefix=GCN %s
+; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefix=MEMTIME -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=GETREG,GETREG-SDAG -check-prefix=GCN %s
+; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=GETREG,GETREG-GISEL -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GETREG,GETREG-SDAG -check-prefix=GCN %s
+; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GETREG,GETREG-GISEL -check-prefix=GCN %s
 
 declare i64 @llvm.readcyclecounter() #0
 
@@ -25,12 +30,12 @@ declare i64 @llvm.readcyclecounter() #0
 ; GETREG:      v_mov_b32_e32 v[[VCNT2:[0-9]+]], [[CNT2]]
 ; GETREG:      global_store_{{dwordx2|b64}} v{{.+}}, v[[[VCNT2]]:[[ZERO]]]
 
-define amdgpu_kernel void @test_readcyclecounter(i64 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test_readcyclecounter(ptr addrspace(1) %out) #0 {
   %cycle0 = call i64 @llvm.readcyclecounter()
-  store volatile i64 %cycle0, i64 addrspace(1)* %out
+  store volatile i64 %cycle0, ptr addrspace(1) %out
 
   %cycle1 = call i64 @llvm.readcyclecounter()
-  store volatile i64 %cycle1, i64 addrspace(1)* %out
+  store volatile i64 %cycle1, ptr addrspace(1) %out
   ret void
 }
 
@@ -39,10 +44,10 @@ define amdgpu_kernel void @test_readcyclecounter(i64 addrspace(1)* %out) #0 {
 ; GCN-LABEL: {{^}}test_readcyclecounter_smem:
 ; MEMTIME-DAG: s_memtime
 ; GCN-DAG:     s_load_{{dword|b32|b64}}
-; GETREG-DAG:  s_getreg_b32 s1, hwreg(HW_REG_SHADER_CYCLES, 0, 20)
-define amdgpu_cs i32 @test_readcyclecounter_smem(i64 addrspace(4)* inreg %in) #0 {
+; GETREG-DAG:  s_getreg_b32 s{{[0-9]+}}, hwreg(HW_REG_SHADER_CYCLES, 0, 20)
+define amdgpu_cs i32 @test_readcyclecounter_smem(ptr addrspace(4) inreg %in) #0 {
   %cycle0 = call i64 @llvm.readcyclecounter()
-  %in.v = load i64, i64 addrspace(4)* %in
+  %in.v = load i64, ptr addrspace(4) %in
   %r.64 = add i64 %cycle0, %in.v
   %r.32 = trunc i64 %r.64 to i32
   ret i32 %r.32

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++2a %s -emit-llvm -o - -triple x86_64-linux-gnu | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++2a %s -emit-llvm -o - -triple x86_64-linux-gnu -O2 -disable-llvm-passes | FileCheck %s --check-prefix=CHECK-OPT
+// RUN: %clang_cc1 -std=c++2a %s -emit-llvm -o - -triple x86_64-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 -std=c++2a %s -emit-llvm -o - -triple x86_64-linux-gnu -O2 -disable-llvm-passes | FileCheck %s --check-prefix=CHECK-OPT
 
 struct A { ~A(); int n; char c[3]; };
 struct B { [[no_unique_address]] A a; char k; };
@@ -62,21 +62,18 @@ static_assert(sizeof(FieldOverlap) == 4);
 // CHECK-DAG: @fo ={{.*}} global %{{[^ ]*}} { i32 1234 }
 FieldOverlap fo = {{}, {}, {}, {}, 1234};
 
-// CHECK-DAG: @e1 ={{.*}} constant %[[E1:[^ ]*]]* bitcast (%[[FO:[^ ]*]]* @fo to %[[E1]]*)
+// CHECK-DAG: @e1 ={{.*}} constant ptr @fo
 Empty1 &e1 = fo.e1;
-// CHECK-DAG: @e2 ={{.*}} constant %[[E1]]* bitcast (i8* getelementptr (i8, i8* bitcast (%[[FO]]* @fo to i8*), i64 1) to %[[E1]]*)
+// CHECK-DAG: @e2 ={{.*}} constant ptr getelementptr inbounds (i8, ptr @fo, i64 1)
 Empty1 &e2 = fo.e2;
 
 // CHECK-LABEL: accessE1
-// CHECK: %[[RET:.*]] = bitcast %[[FO]]* %{{.*}} to %[[E1]]*
-// CHECK: ret %[[E1]]* %[[RET]]
+// CHECK: ret ptr %{{.*}}
 Empty1 &accessE1(FieldOverlap &fo) { return fo.e1; }
 
 // CHECK-LABEL: accessE2
-// CHECK: %[[AS_I8:.*]] = bitcast %[[FO]]* %{{.*}} to i8*
-// CHECK: %[[ADJUSTED:.*]] = getelementptr inbounds i8, i8* %[[AS_I8]], i64 1
-// CHECK: %[[RET:.*]] = bitcast i8* %[[ADJUSTED]] to %[[E1]]*
-// CHECK: ret %[[E1]]* %[[RET]]
+// CHECK: %[[ADJUSTED:.*]] = getelementptr inbounds i8, ptr %{{.*}}, i64 1
+// CHECK: ret ptr %[[ADJUSTED]]
 Empty1 &accessE2(FieldOverlap &fo) { return fo.e2; }
 
 struct LaterDeclaredFieldHasLowerOffset {

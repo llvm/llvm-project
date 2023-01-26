@@ -1,4 +1,4 @@
-; RUN: opt -S -o - %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 | FileCheck %s
+; RUN: opt -S -o - %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 | FileCheck %s
 
 declare i1 @make_condition()
 

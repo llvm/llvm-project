@@ -1,4 +1,4 @@
-; RUN: opt -verify -disable-output <%s 2>&1 | FileCheck %s
+; RUN: opt -passes=verify -disable-output <%s 2>&1 | FileCheck %s
 ;
 ; This test creates an invalid vector by defining multiple elements for the
 ; vector's DICompositeType definition.  A vector should only have one element
@@ -10,7 +10,7 @@
 
 define void @f() {
   %1 = alloca <6 x float>, align 32
-  call void @llvm.dbg.declare(metadata <6 x float>* %1, metadata !10, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.declare(metadata ptr %1, metadata !10, metadata !DIExpression()), !dbg !18
   ret void
 }
 

@@ -1,6 +1,10 @@
 // We support a CC1 option for disabling LLVM's passes.
 // RUN: %clang -O2 -Xclang -disable-llvm-passes -### %s 2>&1 \
 // RUN:     | FileCheck --check-prefix=DISABLED %s
+
+// Try -Xclang=.
+// RUN: %clang -O2 -Xclang=-disable-llvm-passes -### %s 2>&1 \
+// RUN:     | FileCheck --check-prefix=DISABLED %s
 // DISABLED: -cc1
 // DISABLED-NOT: "-mllvm" "-disable-llvm-passes"
 // DISABLED: "-disable-llvm-passes"

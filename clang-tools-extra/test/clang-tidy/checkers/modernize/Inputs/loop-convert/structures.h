@@ -126,6 +126,10 @@ class dependent {
   void constFoo() const;
 };
 
+template<typename ElemType>
+class dependent_derived : public dependent<ElemType> {
+};
+
 template<typename First, typename Second>
 class doublyDependent{
  public:

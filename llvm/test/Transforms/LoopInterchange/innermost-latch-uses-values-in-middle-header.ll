@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -basic-aa -loop-interchange -cache-line-size=64 -verify-dom-info -verify-loop-info \
+; RUN: opt < %s -passes=loop-interchange -cache-line-size=64 -verify-dom-info -verify-loop-info \
 ; RUN:     -S -debug 2>&1 | FileCheck %s
 
 @a = common global i32 0, align 4
@@ -15,7 +15,7 @@
 ; CHECK: Not interchanging loops. Cannot prove legality.
 define void @innermost_latch_uses_values_in_middle_header() {
 entry:
-  %0 = load i32, i32* @a, align 4
+  %0 = load i32, ptr @a, align 4
   %b = add i32 80, 1
   br label %outermost.header
 
@@ -34,8 +34,8 @@ innermost.header:                                         ; preds = %middle.head
   br label %innermost.body
 
 innermost.body:                                      ; preds = %innermost.header
-  %arrayidx9.i = getelementptr inbounds [1 x [6 x i32]], [1 x [6 x i32]]* @d, i64 0, i64 %indvar.innermost, i64 %indvar.middle
-  store i32 0, i32* %arrayidx9.i, align 4
+  %arrayidx9.i = getelementptr inbounds [1 x [6 x i32]], ptr @d, i64 0, i64 %indvar.innermost, i64 %indvar.middle
+  store i32 0, ptr %arrayidx9.i, align 4
   br label %innermost.latch
 
 innermost.latch:                             ; preds = %innermost.body

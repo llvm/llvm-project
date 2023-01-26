@@ -3,14 +3,14 @@
 
 declare void @sink(i32)
 
-define internal void @test(i32** %X) !dbg !2 {
+define internal void @test(ptr %X) !dbg !2 {
 ; CHECK-LABEL: define {{[^@]+}}@test
 ; CHECK-SAME: (i32 [[X_0_VAL_0_VAL:%.*]]) !dbg [[DBG3:![0-9]+]] {
 ; CHECK-NEXT:    call void @sink(i32 [[X_0_VAL_0_VAL]])
 ; CHECK-NEXT:    ret void
 ;
-  %1 = load i32*, i32** %X, align 8
-  %2 = load i32, i32* %1, align 8
+  %1 = load ptr, ptr %X, align 8
+  %2 = load i32, ptr %1, align 8
   call void @sink(i32 %2)
   ret void
 }
@@ -20,32 +20,30 @@ define internal void @test(i32** %X) !dbg !2 {
 ; Do not promote because there is a store of the pointer %P itself. Even if %P
 ; had been promoted as a byval argument, the result would have been not
 ; optimizable for SROA.
-define internal void @test_byval(%struct.pair* byval(%struct.pair) align 4 %P) {
+define internal void @test_byval(ptr byval(%struct.pair) align 4 %P) {
 ; CHECK-LABEL: define {{[^@]+}}@test_byval
-; CHECK-SAME: ([[STRUCT_PAIR:%.*]]* byval([[STRUCT_PAIR]]) align 4 [[P:%.*]]) {
-; CHECK-NEXT:    [[SINK:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    [[TEMP:%.*]] = getelementptr [[STRUCT_PAIR]], [[STRUCT_PAIR]]* [[P]], i32 0, i32 0
-; CHECK-NEXT:    store i32* [[TEMP]], i32** [[SINK]], align 8
+; CHECK-SAME: (ptr byval([[STRUCT_PAIR:%.*]]) align 4 [[P:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    store ptr [[P]], ptr [[TMP1]], align 8
 ; CHECK-NEXT:    ret void
 ;
-  %1 = alloca i32*, align 8
-  %2 = getelementptr %struct.pair, %struct.pair* %P, i32 0, i32 0
-  store i32* %2, i32** %1, align 8 ; to protect from promotion
+  %1 = alloca ptr, align 8
+  store ptr %P, ptr %1, align 8 ; to protect from promotion
   ret void
 }
 
-define void @caller(i32** %Y, %struct.pair* %P) {
+define void @caller(ptr %Y, ptr %P) {
 ; CHECK-LABEL: define {{[^@]+}}@caller
-; CHECK-SAME: (i32** [[Y:%.*]], %struct.pair* [[P:%.*]]) {
-; CHECK-NEXT:    [[Y_VAL:%.*]] = load i32*, i32** [[Y]], align 8, !dbg [[DBG4:![0-9]+]]
-; CHECK-NEXT:    [[Y_VAL_VAL:%.*]] = load i32, i32* [[Y_VAL]], align 8, !dbg [[DBG4]]
+; CHECK-SAME: (ptr [[Y:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[Y_VAL:%.*]] = load ptr, ptr [[Y]], align 8, !dbg [[DBG4:![0-9]+]]
+; CHECK-NEXT:    [[Y_VAL_VAL:%.*]] = load i32, ptr [[Y_VAL]], align 8, !dbg [[DBG4]]
 ; CHECK-NEXT:    call void @test(i32 [[Y_VAL_VAL]]), !dbg [[DBG4]]
-; CHECK-NEXT:    call void @test_byval([[STRUCT_PAIR]]* byval([[STRUCT_PAIR]]) align 4 [[P]]), !dbg [[DBG5:![0-9]+]]
+; CHECK-NEXT:    call void @test_byval(ptr byval([[STRUCT_PAIR:%.*]]) align 4 [[P]]), !dbg [[DBG5:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
-  call void @test(i32** %Y), !dbg !1
+  call void @test(ptr %Y), !dbg !1
 
-  call void @test_byval(%struct.pair* byval(%struct.pair) align 4 %P), !dbg !6
+  call void @test_byval(ptr byval(%struct.pair) align 4 %P), !dbg !6
   ret void
 }
 

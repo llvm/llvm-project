@@ -57,7 +57,7 @@ loop:
   call void @llvm.dbg.value(metadata i32 0, metadata !3, metadata !DIExpression()), !dbg !6
   br i1 %retval, label %loop2, label %exit
 loop2:
-  store i32 %bar, i32 *@glob
+  store i32 %bar, ptr @glob
   br label %loop
 exit:
   ret i32 %bar

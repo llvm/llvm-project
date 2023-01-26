@@ -107,10 +107,8 @@ public:
 static raw_ostream &operator<<(raw_ostream &OS, const PrintState &PS) {
 
   static const std::pair<char, const char *> Mapping[] = {
-      std::make_pair(StateWQM, "WQM"),
-      std::make_pair(StateStrictWWM, "StrictWWM"),
-      std::make_pair(StateStrictWQM, "StrictWQM"),
-      std::make_pair(StateExact, "Exact")};
+      std::pair(StateWQM, "WQM"), std::pair(StateStrictWWM, "StrictWWM"),
+      std::pair(StateStrictWQM, "StrictWQM"), std::pair(StateExact, "Exact")};
   char State = PS.State;
   for (auto M : Mapping) {
     if (State & M.first) {
@@ -215,6 +213,8 @@ private:
   MachineInstr *lowerKillI1(MachineBasicBlock &MBB, MachineInstr &MI,
                             bool IsWQM);
   MachineInstr *lowerKillF32(MachineBasicBlock &MBB, MachineInstr &MI);
+  void lowerPseudoStrictMode(MachineBasicBlock &MBB, MachineInstr *Entry,
+                             MachineInstr *Exit);
 
   void lowerBlock(MachineBasicBlock &MBB);
   void processBlock(MachineBasicBlock &MBB, bool IsEntry);
@@ -607,7 +607,7 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
             Register Reg = MO.getReg();
 
             if (!Reg.isVirtual() &&
-                TRI->hasVectorRegisters(TRI->getPhysRegClass(Reg))) {
+                TRI->hasVectorRegisters(TRI->getPhysRegBaseClass(Reg))) {
               Flags = StateWQM;
               break;
             }
@@ -1040,6 +1040,31 @@ MachineInstr *SIWholeQuadMode::lowerKillI1(MachineBasicBlock &MBB,
   return NewTerm;
 }
 
+// Convert a strict mode transition to a pseudo transition.
+// This still pre-allocates registers to prevent clobbering,
+// but avoids any EXEC mask changes.
+void SIWholeQuadMode::lowerPseudoStrictMode(MachineBasicBlock &MBB,
+                                            MachineInstr *Entry,
+                                            MachineInstr *Exit) {
+  assert(Entry->getOpcode() == AMDGPU::ENTER_STRICT_WQM);
+  assert(Exit->getOpcode() == AMDGPU::EXIT_STRICT_WQM);
+
+  Register SaveOrig = Entry->getOperand(0).getReg();
+
+  MachineInstr *NewEntry =
+    BuildMI(MBB, Entry, DebugLoc(), TII->get(AMDGPU::ENTER_PSEUDO_WM));
+  MachineInstr *NewExit =
+    BuildMI(MBB, Exit, DebugLoc(), TII->get(AMDGPU::EXIT_PSEUDO_WM));
+
+  LIS->ReplaceMachineInstrInMaps(*Exit, *NewExit);
+  Exit->eraseFromParent();
+
+  LIS->ReplaceMachineInstrInMaps(*Entry, *NewEntry);
+  Entry->eraseFromParent();
+
+  LIS->removeInterval(SaveOrig);
+}
+
 // Replace (or supplement) instructions accessing live mask.
 // This can only happen once all the live mask registers have been created
 // and the execute state (WQM/StrictWWM/Exact) of instructions is known.
@@ -1056,9 +1081,12 @@ void SIWholeQuadMode::lowerBlock(MachineBasicBlock &MBB) {
 
   SmallVector<MachineInstr *, 4> SplitPoints;
   char State = BI.InitialState;
+  MachineInstr *StrictEntry = nullptr;
 
   for (MachineInstr &MI : llvm::make_early_inc_range(
            llvm::make_range(MBB.getFirstNonPHI(), MBB.end()))) {
+    char PreviousState = State;
+
     if (StateTransition.count(&MI))
       State = StateTransition[&MI];
 
@@ -1070,6 +1098,20 @@ void SIWholeQuadMode::lowerBlock(MachineBasicBlock &MBB) {
       break;
     case AMDGPU::SI_KILL_F32_COND_IMM_TERMINATOR:
       SplitPoint = lowerKillF32(MBB, MI);
+      break;
+    case AMDGPU::ENTER_STRICT_WQM:
+      StrictEntry = PreviousState == StateWQM ? &MI : nullptr;
+      break;
+    case AMDGPU::EXIT_STRICT_WQM:
+      if (State == StateWQM && StrictEntry) {
+        // Transition WQM -> StrictWQM -> WQM detected.
+        lowerPseudoStrictMode(MBB, StrictEntry, &MI);
+      }
+      StrictEntry = nullptr;
+      break;
+    case AMDGPU::ENTER_STRICT_WWM:
+    case AMDGPU::EXIT_STRICT_WWM:
+      StrictEntry = nullptr;
       break;
     default:
       break;
@@ -1213,7 +1255,12 @@ void SIWholeQuadMode::toStrictMode(MachineBasicBlock &MBB,
              .addImm(-1);
   }
   LIS->InsertMachineInstrInMaps(*MI);
-  StateTransition[MI] = StateStrictWWM;
+  StateTransition[MI] = StrictStateNeeded;
+
+  // Mark block as needing lower so it will be checked for unnecessary transitions.
+  auto BII = Blocks.find(&MBB);
+  if (BII != Blocks.end())
+    BII->second.NeedsLowering = true;
 }
 
 void SIWholeQuadMode::fromStrictMode(MachineBasicBlock &MBB,
@@ -1448,14 +1495,10 @@ void SIWholeQuadMode::lowerCopyInstrs() {
     assert(MI->getNumExplicitOperands() == 2);
 
     const Register Reg = MI->getOperand(0).getReg();
-    const unsigned SubReg = MI->getOperand(0).getSubReg();
 
-    if (TRI->isVGPR(*MRI, Reg)) {
-      const TargetRegisterClass *regClass =
-          Reg.isVirtual() ? MRI->getRegClass(Reg) : TRI->getPhysRegClass(Reg);
-      if (SubReg)
-        regClass = TRI->getSubRegClass(regClass, SubReg);
-
+    const TargetRegisterClass *regClass =
+        TRI->getRegClassForOperandReg(*MRI, MI->getOperand(0));
+    if (TRI->isVGPRClass(regClass)) {
       const unsigned MovOp = TII->getMovOpcode(regClass);
       MI->setDesc(TII->get(MovOp));
 

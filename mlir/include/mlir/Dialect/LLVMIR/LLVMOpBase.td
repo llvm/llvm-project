@@ -27,17 +27,18 @@ def LLVM_Dialect : Dialect {
   let name = "llvm";
   let cppNamespace = "::mlir::LLVM";
 
-  let useDefaultTypePrinterParser = 1;
   let useDefaultAttributePrinterParser = 1;
   let hasRegionArgAttrVerify = 1;
   let hasRegionResultAttrVerify = 1;
   let hasOperationAttrVerify = 1;
+  let useFoldAPI = kEmitFoldAdaptorFolder;
 
   let extraClassDeclaration = [{
     /// Name of the data layout attributes.
     static StringRef getDataLayoutAttrName() { return "llvm.data_layout"; }
     static StringRef getAlignAttrName() { return "llvm.align"; }
     static StringRef getNoAliasAttrName() { return "llvm.noalias"; }
+    static StringRef getReadonlyAttrName() { return "llvm.readonly"; }
     static StringRef getNoAliasScopesAttrName() { return "noalias_scopes"; }
     static StringRef getAliasScopesAttrName() { return "alias_scopes"; }
     static StringRef getLoopAttrName() { return "llvm.loop"; }
@@ -45,6 +46,14 @@ def LLVM_Dialect : Dialect {
     static StringRef getLoopOptionsAttrName() { return "options"; }
     static StringRef getAccessGroupsAttrName() { return "access_groups"; }
     static StringRef getStructAttrsAttrName() { return "llvm.struct_attrs"; }
+    static StringRef getByValAttrName() { return "llvm.byval"; }
+    static StringRef getByRefAttrName() { return "llvm.byref"; }
+    static StringRef getStructRetAttrName() { return "llvm.sret"; }
+    static StringRef getInAllocaAttrName() { return "llvm.inalloca"; }
+    static StringRef getNoUndefAttrName() { return "llvm.noundef"; }
+    static StringRef getSExtAttrName() { return "llvm.signext"; }
+    static StringRef getZExtAttrName() { return "llvm.zeroext"; }
+    static StringRef getTBAAAttrName() { return "llvm.tbaa"; }
 
     /// Verifies if the attribute is a well-formed value for "llvm.struct_attrs"
     static LogicalResult verifyStructAttr(
@@ -66,14 +75,29 @@ def LLVM_Dialect : Dialect {
     /// Returns `true` if the given type is compatible with the LLVM dialect.
     static bool isCompatibleType(Type);
 
+    /// TODO Remove this once there is an alternative way of modeling memory
+    /// effects on FunctionOpInterface.
+    /// Name of the attribute that will cause the creation of a readnone memory
+    /// effect when lowering to the LLVMDialect.
+    static StringRef getReadnoneAttrName() {
+      return "llvm.readnone";
+    }
+
+    Type parseType(DialectAsmParser &p) const override;
+    void printType(Type, DialectAsmPrinter &p) const override;
+
   private:
+    /// Register all types.
+    void registerTypes();
+
     /// A cache storing compatible LLVM types that have been verified. This
     /// can save us lots of verification time if there are many occurrences
     /// of some deeply-nested aggregate types in the program.
     ThreadLocalCache<DenseSet<Type>> compatibleTypes;
-  }];
 
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
+    /// Register the attributes of this dialect.
+    void registerAttributes();
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -190,7 +214,8 @@ class LLVM_ScalarOrVectorOf<Type element> :
     AnyTypeOf<[element, LLVM_VectorOf<element>]>;
 
 // Base class for LLVM operations. Defines the interface to the llvm::IRBuilder
-// used to translate to LLVM IR proper.
+// used to translate to proper LLVM IR and the interface to the mlir::OpBuilder
+// used to import from LLVM IR.
 class LLVM_OpBase<Dialect dialect, string mnemonic, list<Trait> traits = []> :
     Op<dialect, mnemonic, traits> {
   // A pattern for constructing the LLVM IR Instruction (or other Value) that
@@ -205,6 +230,34 @@ class LLVM_OpBase<Dialect dialect, string mnemonic, list<Trait> traits = []> :
   //   - $_location - mlir::Location object of the instruction.
   // Additionally, `$$` can be used to produce the dollar character.
   string llvmBuilder = "";
+
+  // A builder to construct the MLIR LLVM dialect operation given the matching
+  // LLVM IR instruction `inst` and its operands `llvmOperands`. The
+  // following $-variables exist:
+  //   - $name - substituted by the remapped `inst` operand value at the index
+  //             of the MLIR operation argument with the given name, or if the
+  //             name matches the result name, by a reference to store the
+  //             result of the newly created MLIR operation to;
+  //   - $_op - substituted by a reference to store the newly created MLIR
+  //            operation (only for MLIR operations that return no result);
+  //   - $_int_attr - substituted by a call to an integer attribute matcher;
+  //   - $_var_attr - substituted by a call to a variable attribute matcher;
+  //   - $_resultType - substituted with the MLIR result type;
+  //   - $_location - substituted with the MLIR location;
+  //   - $_builder - substituted with the MLIR builder;
+  //   - $_qualCppClassName - substitiuted with the MLIR operation class name.
+  // Always either store a reference to the result of the newly created
+  // operation, or to the operation itself if it does not return a result.
+  // Additionally, `$$` can be used to produce the dollar character.
+  string mlirBuilder = "";
+
+  // An array that specifies a mapping from MLIR argument indices to LLVM IR
+  // operand indices. The mapping is necessary since argument and operand
+  // indices do not always match. If not defined, the array is set to the
+  // identity permutation. An operation may define any custom index permutation
+  // and set a specific argument index to -1 if it does not map to an LLVM IR
+  // operand.
+  list<int> llvmArgIndices = [];
 }
 
 //===----------------------------------------------------------------------===//
@@ -294,17 +347,24 @@ def LLVM_IntrPatterns {
 // to be accessed via the LLVMStructType, instead of directly via the result.
 // "opName" contains the name of the operation to be associated with the
 // intrinsic and "enumName" contains the name of the intrinsic as appears in
-// `llvm::Intrinsic` enum; one usually wants these to be related.
+// `llvm::Intrinsic` enum; one usually wants these to be related. Additionally,
+// the base class also defines the "mlirBuilder" field to support the inverse
+// translation starting from an LLVM IR intrinsic.
 class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
                       list<int> overloadedResults, list<int> overloadedOperands,
                       list<Trait> traits, int numResults,
-                      bit requiresAccessGroup = 0, bit requiresAliasScope = 0>
-    : LLVM_OpBase<dialect, opName, traits>,
+                      bit requiresAccessGroup = 0, bit requiresAliasScope = 0,
+                      bit requiresFastmath = 0>
+    : LLVM_OpBase<dialect, opName, !listconcat(
+        !if(!gt(requiresFastmath, 0),
+            [DeclareOpInterfaceMethods<FastmathFlagsInterface>],
+            []),
+        traits)>,
       Results<!if(!gt(numResults, 0), (outs LLVM_Type:$res), (outs))> {
   string resultPattern = !if(!gt(numResults, 1),
                              LLVM_IntrPatterns.structResult,
                              LLVM_IntrPatterns.result);
-  string llvmEnumName = enumName;                           
+  string llvmEnumName = enumName;
   let llvmBuilder = [{
     llvm::Module *module = builder.GetInsertBlock()->getModule();
     llvm::Function *fn = llvm::Intrinsic::getDeclaration(
@@ -324,6 +384,19 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
       "moduleTranslation.setAliasScopeMetadata(op, inst);",
       "(void) inst;")
     # !if(!gt(numResults, 0), "$res = inst;", "");
+
+  string mlirBuilder = [{
+    FailureOr<SmallVector<Value>> mlirOperands =
+      moduleImport.convertValues(llvmOperands);
+    if (failed(mlirOperands))
+      return failure();
+    SmallVector<Type> resultTypes =
+    }] # !if(!gt(numResults, 0), "{$_resultType};", "{};") # [{
+    auto op = $_builder.create<$_qualCppClassName>(
+      $_location, resultTypes, *mlirOperands);
+    }] # !if(!gt(requiresFastmath, 0),
+      "moduleImport.setFastmathFlagsAttr(inst, op);", "")
+    # !if(!gt(numResults, 0), "$res = op;", "$_op = op;");
 }
 
 // Base class for LLVM intrinsic operations, should not be used directly. Places
@@ -331,17 +404,18 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
 class LLVM_IntrOp<string mnem, list<int> overloadedResults,
                   list<int> overloadedOperands, list<Trait> traits,
                   int numResults, bit requiresAccessGroup = 0,
-                  bit requiresAliasScope = 0>
+                  bit requiresAliasScope = 0, bit requiresFastmath = 0>
     : LLVM_IntrOpBase<LLVM_Dialect, "intr." # mnem, !subst(".", "_", mnem),
                       overloadedResults, overloadedOperands, traits,
-                      numResults, requiresAccessGroup, requiresAliasScope>;
+                      numResults, requiresAccessGroup, requiresAliasScope,
+                      requiresFastmath>;
 
 // Base class for LLVM intrinsic operations returning no results. Places the
 // intrinsic into the LLVM dialect and prefixes its name with "intr.".
 //
 // Sample use: derive an entry from this class and populate the fields.
 //
-//    def LLVM_Name : LLVM_ZeroResultIntrOp<"name", [0], [NoSideEffect]>,
+//    def LLVM_Name : LLVM_ZeroResultIntrOp<"name", [0], [Pure]>,
 //                    Arguments<(ins LLVM_Type, LLVM_Type)>;
 //
 // The mnemonic will be prefixed with "llvm.intr.", where the "llvm." part comes
@@ -362,40 +436,11 @@ class LLVM_ZeroResultIntrOp<string mnem, list<int> overloadedOperands = [],
 // empty otherwise.
 class LLVM_OneResultIntrOp<string mnem, list<int> overloadedResults = [],
                            list<int> overloadedOperands = [],
-                           list<Trait> traits = []>
-    : LLVM_IntrOp<mnem, overloadedResults, overloadedOperands, traits, 1>;
-
-// LLVM vector reduction over a single vector.
-class LLVM_VectorReduction<string mnem>
-    : LLVM_OneResultIntrOp<"vector.reduce." # mnem,
-                           [], [0], [NoSideEffect]>,
-      Arguments<(ins LLVM_Type)>;
-
-// LLVM vector reduction over a single vector, with an initial value,
-// and with permission to reassociate the reduction operations.
-class LLVM_VectorReductionAcc<string mnem>
-    : LLVM_OpBase<LLVM_Dialect, "intr.vector.reduce." # mnem,
-                  [NoSideEffect]>,
-      Results<(outs LLVM_Type:$res)>,
-      Arguments<(ins LLVM_Type, LLVM_Type,
-                 DefaultValuedAttr<BoolAttr, "false">:$reassoc)> {
-  let llvmBuilder = [{
-    llvm::Module *module = builder.GetInsertBlock()->getModule();
-    llvm::Function *fn = llvm::Intrinsic::getDeclaration(
-        module,
-        llvm::Intrinsic::vector_reduce_}] # mnem # [{,
-        { }] # !interleave(ListIntSubst<LLVM_IntrPatterns.operand, [1]>.lst,
-                           ", ") # [{
-        });
-    auto operands = moduleTranslation.lookupValues(opInst.getOperands());
-    llvm::FastMathFlags origFM = builder.getFastMathFlags();
-    llvm::FastMathFlags tempFM = origFM;
-    tempFM.setAllowReassoc($reassoc);
-    builder.setFastMathFlags(tempFM);  // set fastmath flag
-    $res = builder.CreateCall(fn, operands);
-    builder.setFastMathFlags(origFM);  // restore fastmath flag
-  }];
-}
+                           list<Trait> traits = [],
+                           bit requiresFastmath = 0>
+    : LLVM_IntrOp<mnem, overloadedResults, overloadedOperands, traits, 1,
+                  /*requiresAccessGroup=*/0, /*requiresAliasScope=*/0,
+                  requiresFastmath>;
 
 def LLVM_OneResultOpBuilder :
   OpBuilder<(ins "Type":$resultType, "ValueRange":$operands,

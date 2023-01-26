@@ -26,7 +26,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 
 define i32 @read() {
 entry:
-  %0 = load i32, i32* @a, align 4
+  %0 = load i32, ptr @a, align 4
   ret i32 %0
 ; CHECK-LABEL: read:
 
@@ -76,7 +76,7 @@ entry:
 
 define void @write(i32 %v)  {
 entry:
-  store i32 %v, i32* @a, align 4
+  store i32 %v, ptr @a, align 4
   ret void
 ; CHECK-LABEL: write:
 
@@ -126,7 +126,7 @@ entry:
 
 define i32 @read_const()  {
 entry:
-  %0 = load i32, i32* @b, align 4
+  %0 = load i32, ptr @b, align 4
   ret i32 %0
 ; CHECK-LABEL: read_const:
 
@@ -194,9 +194,9 @@ entry:
 ; THUMB1_RO_PC-NEXT: .long b-([[LPC]]+4)
 }
 
-define i32* @take_addr()  {
+define ptr @take_addr()  {
 entry:
-  ret i32* @a
+  ret ptr @a
 ; CHECK-LABEL: take_addr:
 
 ; ARM_RW_ABS: movw    r[[REG:[0-9]]], :lower16:a
@@ -240,9 +240,9 @@ entry:
 ; THUMB1_RW_SB: .long   a(sbrel)
 }
 
-define i32* @take_addr_const()  {
+define ptr @take_addr_const()  {
 entry:
-  ret i32* @b
+  ret ptr @b
 ; CHECK-LABEL: take_addr_const:
 
 ; ARM_RO_ABS: movw    r[[REG:[0-9]]], :lower16:b
@@ -300,9 +300,9 @@ entry:
 ; THUMB1_RO_PC-NEXT: .long b-([[LPC]]+4)
 }
 
-define i8* @take_addr_func()  {
+define ptr @take_addr_func()  {
 entry:
-  ret i8* bitcast (i8* ()* @take_addr_func to i8*)
+  ret ptr @take_addr_func
 ; CHECK-LABEL: take_addr_func:
 
 ; ARM_RO_ABS: movw    r[[REG:[0-9]]], :lower16:take_addr_func
@@ -360,12 +360,12 @@ entry:
 ; THUMB1_RO_PC-NEXT: .long take_addr_func-([[LPC]]+4)
 }
 
-define i8* @block_addr() {
+define ptr @block_addr() {
 entry:
   br label %lab1
 
 lab1:
-  ret i8* blockaddress(@block_addr, %lab1)
+  ret ptr blockaddress(@block_addr, %lab1)
 
 ; CHECK-LABEL: block_addr:
 

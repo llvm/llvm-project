@@ -6,14 +6,14 @@
 define void @tinkywinky() {
   br i1 true, label %lor.lhs.false, label %cond.true
 lor.lhs.false:
-  %tmp = load i32, i32* @d, align 4
-  %patatino = load i32, i32* null, align 4
+  %tmp = load i32, ptr @d, align 4
+  %patatino = load i32, ptr null, align 4
   %or = or i32 %tmp, %patatino
-  store i32 %or, i32* @d, align 4
+  store i32 %or, ptr @d, align 4
   br label %cond.true
 cond.true:
-  %tmp1 = load i32, i32* @e, align 4
-  %tmp2 = load i32, i32* @d, align 4
+  %tmp1 = load i32, ptr @e, align 4
+  %tmp2 = load i32, ptr @d, align 4
   %cmp = icmp eq i32 %tmp1, %tmp2
   br i1 %cmp, label %cond.true6, label %cond.false
 cond.true6:

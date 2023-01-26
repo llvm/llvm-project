@@ -263,7 +263,7 @@ template <LogicalReduction REDUCTION> struct LogicalReduceHelper {
         Terminator &terminator, const char *intrinsic) const {
       // Standard requires result to have same LOGICAL kind as argument.
       CreatePartialReductionResult(
-          result, x, dim, terminator, intrinsic, x.type());
+          result, x, x.ElementBytes(), dim, terminator, intrinsic, x.type());
       SubscriptValue at[maxRank];
       result.GetLowerBounds(at);
       INTERNAL_CHECK(result.rank() == 0 || at[0] == 1);
@@ -310,8 +310,11 @@ private:
 template <int KIND> struct CountDimension {
   void operator()(Descriptor &result, const Descriptor &x, int dim,
       Terminator &terminator) const {
-    CreatePartialReductionResult(result, x, dim, terminator, "COUNT",
-        TypeCode{TypeCategory::Integer, KIND});
+    // Element size of the descriptor descriptor is the size
+    // of {TypeCategory::Integer, KIND}.
+    CreatePartialReductionResult(result, x,
+        Descriptor::BytesFor(TypeCategory::Integer, KIND), dim, terminator,
+        "COUNT", TypeCode{TypeCategory::Integer, KIND});
     SubscriptValue at[maxRank];
     result.GetLowerBounds(at);
     INTERNAL_CHECK(result.rank() == 0 || at[0] == 1);

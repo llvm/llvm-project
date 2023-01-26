@@ -18,7 +18,7 @@ bb3:                                              ; preds = %bb4
 bb4:                                              ; preds = %bb4, %bb2, %bb
   %tmp5 = phi i64 [ %tmp11, %bb4 ], [ 1, %bb2 ], [ 1, %bb ]
   %tmp6 = phi i32 [ %tmp10, %bb4 ], [ 0, %bb2 ], [ 0, %bb ]
-  %tmp7 = load i32, i32* undef, align 4
+  %tmp7 = load i32, ptr undef, align 4
   %tmp8 = add i32 %tmp7, %tmp6
   %tmp9 = add i32 undef, %tmp8
   %tmp10 = add i32 undef, %tmp9
@@ -27,7 +27,7 @@ bb4:                                              ; preds = %bb4, %bb2, %bb
   br i1 %tmp12, label %bb3, label %bb4
 
 ; CHECK: Loop %bb4: backedge-taken count is 20
-; CHECK: Loop %bb4: max backedge-taken count is 20
+; CHECK: Loop %bb4: constant max backedge-taken count is 20
 
 bb13:                                             ; preds = %bb13, %bb3
   %tmp14 = phi i64 [ 0, %bb3 ], [ %tmp15, %bb13 ]
@@ -55,7 +55,7 @@ bb3:                                              ; preds = %bb4
 bb4:                                              ; preds = %bb4, %bb2, %bb
   %tmp5 = phi i64 [ %tmp11, %bb4 ], [ 1, %bb2 ], [ 3, %bb ]
   %tmp6 = phi i32 [ %tmp10, %bb4 ], [ 0, %bb2 ], [ 0, %bb ]
-  %tmp7 = load i32, i32* undef, align 4
+  %tmp7 = load i32, ptr undef, align 4
   %tmp8 = add i32 %tmp7, %tmp6
   %tmp9 = add i32 undef, %tmp8
   %tmp10 = add i32 undef, %tmp9
@@ -64,7 +64,7 @@ bb4:                                              ; preds = %bb4, %bb2, %bb
   br i1 %tmp12, label %bb3, label %bb4
 
 ; CHECK: Loop %bb4: Unpredictable backedge-taken count.
-; CHECK: Loop %bb4: Unpredictable max backedge-taken count.
+; CHECK: Loop %bb4: Unpredictable constant max backedge-taken count.
 
 bb13:                                             ; preds = %bb13, %bb3
   %tmp14 = phi i64 [ 0, %bb3 ], [ %tmp15, %bb13 ]

@@ -16,6 +16,7 @@
 
 #include "Protocol.h"
 #include "llvm/Support/SourceMgr.h"
+#include <optional>
 
 namespace mlir {
 namespace lsp {
@@ -27,6 +28,16 @@ namespace lsp {
 /// start of an token location. The range is computed heuristically, and
 /// supports identifier-like tokens, strings, etc.
 SMRange convertTokenLocToRange(SMLoc loc);
+
+/// Extract a documentation comment for the given location within the source
+/// manager. Returns std::nullopt if no comment could be computed.
+std::optional<std::string> extractSourceDocComment(llvm::SourceMgr &sourceMgr,
+                                                   SMLoc loc);
+
+/// Returns true if the given range contains the given source location. Note
+/// that this has different behavior than SMRange because it is inclusive of the
+/// end location.
+bool contains(SMRange range, SMLoc loc);
 
 //===----------------------------------------------------------------------===//
 // SourceMgrInclude

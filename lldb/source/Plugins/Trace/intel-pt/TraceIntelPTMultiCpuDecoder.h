@@ -13,6 +13,7 @@
 #include "PerfContextSwitchDecoder.h"
 #include "ThreadDecoder.h"
 #include "forward-declarations.h"
+#include <optional>
 
 namespace lldb_private {
 namespace trace_intel_pt {
@@ -67,10 +68,10 @@ public:
   size_t GetTotalPSBBlocksCount() const;
 
   /// \return
-  ///     The lowest TSC value in this trace if available, \a llvm::None if the
-  ///     trace is empty or the trace contains no timing information, or an \a
-  ///     llvm::Error if it was not possible to set up the decoder.
-  llvm::Expected<llvm::Optional<uint64_t>> FindLowestTSC();
+  ///     The lowest TSC value in this trace if available, \a std::nullopt if
+  ///     the trace is empty or the trace contains no timing information, or an
+  ///     \a llvm::Error if it was not possible to set up the decoder.
+  llvm::Expected<std::optional<uint64_t>> FindLowestTSC();
 
 private:
   /// Traverse the context switch traces and the basic intel pt continuous
@@ -92,13 +93,13 @@ private:
 
   std::weak_ptr<TraceIntelPT> m_trace_wp;
   std::set<lldb::tid_t> m_tids;
-  llvm::Optional<
+  std::optional<
       llvm::DenseMap<lldb::tid_t, std::vector<IntelPTThreadContinousExecution>>>
       m_continuous_executions_per_thread;
   llvm::DenseMap<lldb::tid_t, DecodedThreadSP> m_decoded_threads;
-  /// This variable will be non-None if a severe error happened during the setup
-  /// of the decoder and we don't want decoding to be reattempted.
-  llvm::Optional<std::string> m_setup_error;
+  /// This variable will not be std::nullopt if a severe error happened during
+  /// the setup of the decoder and we don't want decoding to be reattempted.
+  std::optional<std::string> m_setup_error;
   uint64_t m_unattributed_psb_blocks = 0;
   uint64_t m_total_psb_blocks = 0;
 };

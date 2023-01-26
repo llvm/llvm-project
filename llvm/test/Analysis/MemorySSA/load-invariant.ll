@@ -14,23 +14,23 @@ define i32 @foo() {
   call void @clobberAllTheThings()
 ; CHECK: MemoryUse(liveOnEntry)
 ; CHECK-NEXT: %1 = load i32
-  %1 = load i32, i32* @g, align 4, !invariant.load !0
+  %1 = load i32, ptr @g, align 4, !invariant.load !0
   ret i32 %1
 }
 
 ; CHECK-LABEL: define i32 @bar
-define i32 @bar(i32* %a) {
+define i32 @bar(ptr %a) {
 ; CHECK: 1 = MemoryDef(liveOnEntry)
 ; CHECK-NEXT: call void @clobberAllTheThings()
   call void @clobberAllTheThings()
 
 ; CHECK: 2 = MemoryDef(1)
 ; CHECK-NEXT: %1 = load atomic i32
-  %1 = load atomic i32, i32* %a acquire, align 4, !invariant.load !0
+  %1 = load atomic i32, ptr %a acquire, align 4, !invariant.load !0
 
 ; CHECK: MemoryUse(2)
 ; CHECK-NEXT: %2 = load i32
-  %2 = load i32, i32* %a, align 4
+  %2 = load i32, ptr %a, align 4
   ret i32 %2
 }
 

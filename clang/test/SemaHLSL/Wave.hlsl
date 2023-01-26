@@ -4,5 +4,5 @@
 
 // expected-no-diagnostics
 unsigned foo(bool b) {
-    return WaveActiveCountBits(b);
+    return hlsl::WaveActiveCountBits(b);
 }

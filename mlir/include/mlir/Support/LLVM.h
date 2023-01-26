@@ -58,8 +58,7 @@ class DenseSet;
 class MallocAllocator;
 template <typename T>
 class MutableArrayRef;
-template <typename T>
-class Optional;
+template <typename T> using Optional = std::optional<T>;
 template <typename... PT>
 class PointerUnion;
 template <typename T, typename Vector, typename Set>
@@ -99,6 +98,7 @@ namespace mlir {
 using llvm::cast;
 using llvm::cast_or_null;
 using llvm::dyn_cast;
+using llvm::dyn_cast_if_present;
 using llvm::dyn_cast_or_null;
 using llvm::isa;
 using llvm::isa_and_nonnull;
@@ -128,7 +128,6 @@ using SetVector = llvm::SetVector<T, Vector, Set>;
 template <typename AllocatorTy = llvm::MallocAllocator>
 using StringSet = llvm::StringSet<AllocatorTy>;
 using llvm::MutableArrayRef;
-using llvm::None;
 using llvm::Optional;
 using llvm::PointerUnion;
 using llvm::SmallPtrSet;

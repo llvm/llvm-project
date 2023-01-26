@@ -8,7 +8,7 @@ define i32 @test(i32 %off) nounwind {
 ; CHECK: adrp x[[REG:[0-9]+]], _G@GOTPAGE
 ; CHECK: ldr  x[[REG2:[0-9]+]], [x[[REG]], _G@GOTPAGEOFF]
 ; CHECK: add w0, w[[REG2]], w0
-  %tmp = ptrtoint i32* @G to i32
+  %tmp = ptrtoint ptr @G to i32
   %tmp1 = add i32 %tmp, %off
   ret i32 %tmp1
 }

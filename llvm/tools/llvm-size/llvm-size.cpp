@@ -47,11 +47,14 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "Opts.inc"
 #undef PREFIX
 
-const opt::OptTable::Info InfoTable[] = {
+static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
   {                                                                            \
@@ -63,9 +66,9 @@ const opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class SizeOptTable : public opt::OptTable {
+class SizeOptTable : public opt::GenericOptTable {
 public:
-  SizeOptTable() : OptTable(InfoTable) { setGroupedShortOptions(true); }
+  SizeOptTable() : GenericOptTable(InfoTable) { setGroupedShortOptions(true); }
 };
 
 enum OutputFormatTy { berkeley, sysv, darwin };
@@ -570,6 +573,8 @@ static void printFileSectionSizes(StringRef file) {
         else if (MachO && OutputFormat == darwin)
           outs() << a->getFileName() << "(" << o->getFileName() << "):\n";
         printObjectSectionSizes(o);
+        if (!MachO && OutputFormat == darwin)
+          outs() << o->getFileName() << " (ex " << a->getFileName() << ")\n";
         if (OutputFormat == berkeley) {
           if (MachO)
             outs() << a->getFileName() << "(" << o->getFileName() << ")\n";
@@ -836,6 +841,8 @@ static void printFileSectionSizes(StringRef file) {
     else if (MachO && OutputFormat == darwin && MoreThanOneFile)
       outs() << o->getFileName() << ":\n";
     printObjectSectionSizes(o);
+    if (!MachO && OutputFormat == darwin)
+      outs() << o->getFileName() << "\n";
     if (OutputFormat == berkeley) {
       if (!MachO || MoreThanOneFile)
         outs() << o->getFileName();
@@ -862,7 +869,7 @@ static void printBerkeleyTotals() {
          << "(TOTALS)\n";
 }
 
-int main(int argc, char **argv) {
+int llvm_size_main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   BumpPtrAllocator A;
   StringSaver Saver(A);
@@ -937,4 +944,5 @@ int main(int argc, char **argv) {
 
   if (HadError)
     return 1;
+  return 0;
 }

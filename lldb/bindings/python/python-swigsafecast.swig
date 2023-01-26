@@ -5,28 +5,6 @@ PythonObject ToSWIGHelper(void *obj, swig_type_info *info) {
   return {PyRefType::Owned, SWIG_NewPointerObj(obj, info, SWIG_POINTER_OWN)};
 }
 
-/// A class that automatically clears an SB object when it goes out of scope.
-/// Use for cases where the SB object points to a temporary/unowned entity.
-template <typename T> class ScopedPythonObject : PythonObject {
-public:
-  ScopedPythonObject(T *sb, swig_type_info *info)
-      : PythonObject(ToSWIGHelper(sb, info)), m_sb(sb) {}
-  ~ScopedPythonObject() {
-    if (m_sb)
-      *m_sb = T();
-  }
-  ScopedPythonObject(ScopedPythonObject &&rhs)
-      : PythonObject(std::move(rhs)), m_sb(std::exchange(rhs.m_sb, nullptr)) {}
-  ScopedPythonObject(const ScopedPythonObject &) = delete;
-  ScopedPythonObject &operator=(const ScopedPythonObject &) = delete;
-  ScopedPythonObject &operator=(ScopedPythonObject &&) = delete;
-
-  const PythonObject &obj() const { return *this; }
-
-private:
-  T *m_sb;
-};
-
 PythonObject ToSWIGWrapper(std::unique_ptr<lldb::SBValue> value_sb) {
   return ToSWIGHelper(value_sb.release(), SWIGTYPE_p_lldb__SBValue);
 }
@@ -53,6 +31,10 @@ PythonObject ToSWIGWrapper(lldb::ThreadPlanSP thread_plan_sp) {
 PythonObject ToSWIGWrapper(lldb::BreakpointSP breakpoint_sp) {
   return ToSWIGHelper(new lldb::SBBreakpoint(std::move(breakpoint_sp)),
                       SWIGTYPE_p_lldb__SBBreakpoint);
+}
+
+PythonObject ToSWIGWrapper(const Status& status) {
+  return ToSWIGHelper(new lldb::SBError(status), SWIGTYPE_p_lldb__SBError);
 }
 
 PythonObject ToSWIGWrapper(std::unique_ptr<lldb::SBStream> stream_sb) {
@@ -95,6 +77,10 @@ PythonObject ToSWIGWrapper(lldb::BreakpointLocationSP bp_loc_sp) {
 PythonObject ToSWIGWrapper(lldb::ExecutionContextRefSP ctx_sp) {
   return ToSWIGHelper(new lldb::SBExecutionContext(std::move(ctx_sp)),
                       SWIGTYPE_p_lldb__SBExecutionContext);
+}
+
+PythonObject ToSWIGWrapper(lldb::TypeImplSP type_impl_sp) {
+  return ToSWIGHelper(new lldb::SBType(type_impl_sp), SWIGTYPE_p_lldb__SBType);
 }
 
 PythonObject ToSWIGWrapper(const TypeSummaryOptions &summary_options) {

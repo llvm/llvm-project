@@ -20,8 +20,8 @@
 //   [Note: Given a divisor of 12, Euclidean division truncates towards negative infinity
 //   and always produces a remainder in the range of [0, 11].
 //   Assuming no overflow in the signed summation, this operation results in a month
-//   holding a value in the range [1, 12] even if !x.ok(). —end note]
-//   [Example: February + months{11} == January. —end example]
+//   holding a value in the range [1, 12] even if !x.ok(). -end note]
+//   [Example: February + months{11} == January. -end example]
 
 
 

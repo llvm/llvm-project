@@ -9,10 +9,10 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 
 %zed = type { i8 }
 define void @foo()  {
-  call void @bar(%zed* null)
+  call void @bar(ptr null)
   ret void
 }
-declare void @bar(%zed*)
+declare void @bar(ptr)
 
 ; CHECK:      define void @foo() {
 ; CHECK-NEXT:   call void @bar(ptr null)

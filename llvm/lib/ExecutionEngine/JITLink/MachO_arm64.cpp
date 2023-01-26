@@ -332,7 +332,7 @@ private:
           if ((Instr & 0x7fffffff) != 0x14000000)
             return make_error<JITLinkError>("BRANCH26 target is not a B or BL "
                                             "instruction with a zero addend");
-          Kind = aarch64::Branch26;
+          Kind = aarch64::Branch26PCRel;
           break;
         }
         case MachOPointer32:
@@ -362,12 +362,12 @@ private:
           else
             return TargetSymbolOrErr.takeError();
           Addend = TargetAddress - TargetSymbol->getAddress();
-          Kind = aarch64::Pointer64Anon;
+          Kind = aarch64::Pointer64;
           break;
         }
         case MachOPage21:
-        case MachOTLVPage21:
-        case MachOGOTPage21: {
+        case MachOGOTPage21:
+        case MachOTLVPage21: {
           if (auto TargetSymbolOrErr = findSymbolByIndex(RI.r_symbolnum))
             TargetSymbol = TargetSymbolOrErr->GraphSymbol;
           else
@@ -380,10 +380,10 @@ private:
 
           if (*MachORelocKind == MachOPage21) {
             Kind = aarch64::Page21;
-          } else if (*MachORelocKind == MachOTLVPage21) {
-            Kind = aarch64::TLVPage21;
           } else if (*MachORelocKind == MachOGOTPage21) {
-            Kind = aarch64::GOTPage21;
+            Kind = aarch64::RequestGOTAndTransformToPage21;
+          } else if (*MachORelocKind == MachOTLVPage21) {
+            Kind = aarch64::RequestTLVPAndTransformToPage21;
           }
           break;
         }
@@ -400,8 +400,8 @@ private:
           Kind = aarch64::PageOffset12;
           break;
         }
-        case MachOTLVPageOffset12:
-        case MachOGOTPageOffset12: {
+        case MachOGOTPageOffset12:
+        case MachOTLVPageOffset12: {
           if (auto TargetSymbolOrErr = findSymbolByIndex(RI.r_symbolnum))
             TargetSymbol = TargetSymbolOrErr->GraphSymbol;
           else
@@ -412,10 +412,10 @@ private:
                                             "immediate instruction with a zero "
                                             "addend");
 
-          if (*MachORelocKind == MachOTLVPageOffset12) {
-            Kind = aarch64::TLVPageOffset12;
-          } else if (*MachORelocKind == MachOGOTPageOffset12) {
-            Kind = aarch64::GOTPageOffset12;
+          if (*MachORelocKind == MachOGOTPageOffset12) {
+            Kind = aarch64::RequestGOTAndTransformToPageOffset12;
+          } else if (*MachORelocKind == MachOTLVPageOffset12) {
+            Kind = aarch64::RequestTLVPAndTransformToPageOffset12;
           }
           break;
         }
@@ -425,7 +425,7 @@ private:
           else
             return TargetSymbolOrErr.takeError();
 
-          Kind = aarch64::Delta32ToGOT;
+          Kind = aarch64::RequestGOTAndTransformToDelta32;
           break;
         case MachODelta32:
         case MachODelta64: {
@@ -563,11 +563,8 @@ void link_MachO_arm64(std::unique_ptr<LinkGraph> G,
     // Add eh-frame passses.
     // FIXME: Prune eh-frames for which compact-unwind is available once
     // we support compact-unwind registration with libunwind.
-    Config.PrePrunePasses.push_back(
-        DWARFRecordSectionSplitter("__TEXT,__eh_frame"));
-    Config.PrePrunePasses.push_back(EHFrameEdgeFixer(
-        "__TEXT,__eh_frame", 8, aarch64::Pointer32, aarch64::Pointer64,
-        aarch64::Delta32, aarch64::Delta64, aarch64::NegDelta32));
+    Config.PrePrunePasses.push_back(createEHFrameSplitterPass_MachO_arm64());
+    Config.PrePrunePasses.push_back(createEHFrameEdgeFixerPass_MachO_arm64());
 
     // Add an in-place GOT/Stubs pass.
     Config.PostPrunePasses.push_back(buildTables_MachO_arm64);
@@ -578,6 +575,17 @@ void link_MachO_arm64(std::unique_ptr<LinkGraph> G,
 
   // Construct a JITLinker and run the link function.
   MachOJITLinker_arm64::link(std::move(Ctx), std::move(G), std::move(Config));
+}
+
+LinkGraphPassFunction createEHFrameSplitterPass_MachO_arm64() {
+  return DWARFRecordSectionSplitter("__TEXT,__eh_frame");
+}
+
+LinkGraphPassFunction createEHFrameEdgeFixerPass_MachO_arm64() {
+  return EHFrameEdgeFixer("__TEXT,__eh_frame", aarch64::PointerSize,
+                          aarch64::Pointer32, aarch64::Pointer64,
+                          aarch64::Delta32, aarch64::Delta64,
+                          aarch64::NegDelta32);
 }
 
 } // end namespace jitlink

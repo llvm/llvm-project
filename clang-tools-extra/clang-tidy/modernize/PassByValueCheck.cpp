@@ -18,9 +18,7 @@
 using namespace clang::ast_matchers;
 using namespace llvm;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 namespace {
 /// Matches move-constructible classes.
@@ -138,7 +136,7 @@ static bool hasRValueOverload(const CXXConstructorDecl *Ctor,
   const int ParamIdx = Param->getFunctionScopeIndex();
   const CXXRecordDecl *Record = Ctor->getParent();
 
-  // Check whether a ctor `C` forms a pair with `Ctor` under the aforementionned
+  // Check whether a ctor `C` forms a pair with `Ctor` under the aforementioned
   // rules.
   const auto IsRValueOverload = [&Ctor, ParamIdx](const CXXConstructorDecl *C) {
     if (C == Ctor || C->isDeleted() ||
@@ -305,6 +303,4 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
               "<utility>");
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

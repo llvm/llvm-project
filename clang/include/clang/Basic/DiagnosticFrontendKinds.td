@@ -35,6 +35,11 @@ def note_fe_backend_frame_larger_than: Note<"%0">, BackendInfo;
 
 def warn_fe_backend_plugin: Warning<"%0">, BackendInfo, InGroup<BackendPlugin>;
 def err_fe_backend_plugin: Error<"%0">, BackendInfo;
+
+def warn_fe_backend_resource_limit: Warning<"%0 (%1) exceeds limit (%2) in '%3'">, BackendInfo, InGroup<BackendPlugin>;
+def err_fe_backend_resource_limit: Error<"%0 (%1) exceeds limit (%2) in '%3'">, BackendInfo;
+def note_fe_backend_resource_limit: Note<"%0 (%1) exceeds limit (%2) in '%3'">, BackendInfo;
+
 def remark_fe_backend_plugin: Remark<"%0">, BackendInfo, InGroup<RemarkBackendPlugin>;
 def note_fe_backend_plugin: Note<"%0">, BackendInfo;
 
@@ -47,6 +52,9 @@ def warn_fe_backend_unsupported_fp_rounding : Warning<
 def warn_fe_backend_unsupported_fp_exceptions : Warning<
     "overriding currently unsupported use of floating point exceptions "
     "on this target">, InGroup<UnsupportedFPOpt>;
+def warn_fe_backend_invalid_feature_flag : Warning<
+    "feature flag '%0' must start with either '+' to enable the feature or '-'"
+    " to disable it; flag ignored">, InGroup<InvalidCommandLineArgument>;
 
 def err_incompatible_fp_eval_method_options : Error<
     "option 'ffp-eval-method' cannot be used with option "
@@ -78,9 +86,9 @@ def err_fe_backend_unsupported : Error<"%0">, BackendInfo;
 def warn_fe_backend_unsupported : Warning<"%0">, BackendInfo;
 
 def err_fe_backend_error_attr :
-  Error<"call to %0 declared with 'error' attribute: %1">, BackendInfo;
+  Error<"call to '%0' declared with 'error' attribute: %1">, BackendInfo;
 def warn_fe_backend_warning_attr :
-  Warning<"call to %0 declared with 'warning' attribute: %1">, BackendInfo,
+  Warning<"call to '%0' declared with 'warning' attribute: %1">, BackendInfo,
   InGroup<BackendWarningAttributes>;
 
 def err_fe_invalid_code_complete_file : Error<
@@ -124,9 +132,8 @@ def err_fe_invalid_alignment : Error<
     "invalid value '%1' in '%0'; alignment must be a power of 2">;
 def err_fe_invalid_exception_model
    : Error<"invalid exception model '%select{none|sjlj|seh|dwarf|wasm}0' for target '%1'">;
-def warn_fe_concepts_ts_flag : Warning<
-  "-fconcepts-ts is deprecated - use '-std=c++20' for Concepts support">,
-  InGroup<Deprecated>;
+def err_fe_invalid_source_date_epoch : Error<
+    "environment variable 'SOURCE_DATE_EPOCH' ('%0') must be a non-negative decimal integer <= %1">;
 
 def err_fe_unable_to_load_basic_block_sections_file : Error<
     "unable to load basic block sections function list: '%0'">;
@@ -203,9 +210,6 @@ def err_module_build_requires_fmodules : Error<
   "module compilation requires '-fmodules'">;
 def err_module_interface_requires_cpp_modules : Error<
   "module interface compilation requires '-std=c++20' or '-fmodules-ts'">;
-def err_header_module_requires_modules : Error<
-  "header module compilation requires '-fmodules', '-std=c++20', or "
-  "'-fmodules-ts'">;
 def warn_module_config_mismatch : Warning<
   "module file %0 cannot be loaded due to a configuration mismatch with the current "
   "compilation">, InGroup<DiagGroup<"module-file-config-mismatch">>, DefaultError;
@@ -269,7 +273,7 @@ def warn_avx_calling_convention
     : Warning<"AVX vector %select{return|argument}0 of type %1 without '%2' "
               "enabled changes the ABI">,
       InGroup<DiagGroup<"psabi">>;
-def err_avx_calling_convention : Error<warn_avx_calling_convention.Text>;
+def err_avx_calling_convention : Error<warn_avx_calling_convention.Summary>;
 
 def err_alias_to_undefined : Error<
   "%select{alias|ifunc}0 must point to a defined "
@@ -282,6 +286,10 @@ def err_duplicate_mangled_name : Error<
   "definition with same mangled name '%0' as another definition">;
 def err_cyclic_alias : Error<
   "%select{alias|ifunc}0 definition is part of a cycle">;
+def err_hidden_visibility_dllexport : Error<
+  "hidden visibility cannot be applied to 'dllexport' declaration">;
+def err_non_default_visibility_dllimport : Error<
+  "non-default visibility cannot be applied to 'dllimport' declaration">;
 def err_ifunc_resolver_return : Error<
   "ifunc resolver function must return a pointer">;
 
@@ -321,5 +329,8 @@ def warn_profile_data_misexpect : Warning<
   BackendInfo,
   InGroup<MisExpect>;
 } // end of instrumentation issue category
+
+def err_extract_api_ignores_file_not_found :
+  Error<"file '%0' specified by '--extract-api-ignores=' not found">, DefaultFatal;
 
 }

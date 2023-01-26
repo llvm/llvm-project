@@ -20,10 +20,10 @@ declare void @llvm.trap() #0
 ; DOORBELL-NEXT:     .amdhsa_user_sgpr_private_segment_buffer 1
 ; DOORBELL:      .end_amdhsa_kernel
 
-define amdgpu_kernel void @trap(i32 addrspace(1)* nocapture readonly %arg0) {
-  store volatile i32 1, i32 addrspace(1)* %arg0
+define amdgpu_kernel void @trap(ptr addrspace(1) nocapture readonly %arg0) {
+  store volatile i32 1, ptr addrspace(1) %arg0
   call void @llvm.trap()
   unreachable
-  store volatile i32 2, i32 addrspace(1)* %arg0
+  store volatile i32 2, ptr addrspace(1) %arg0
   ret void
 }

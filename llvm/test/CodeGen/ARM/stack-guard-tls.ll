@@ -11,11 +11,11 @@
 ; RUN: FileCheck --check-prefixes=CHECK,CHECK-LARGE %s
 
 ;--- main.ll
-declare void @baz(i32*)
+declare void @baz(ptr)
 
 define void @foo(i64 %t) sspstrong {
   %vla = alloca i32, i64 %t, align 4
-  call void @baz(i32* nonnull %vla)
+  call void @baz(ptr nonnull %vla)
   ret void
 }
 !llvm.module.flags = !{!1, !2}

@@ -32,8 +32,13 @@ private:
   /// Size of stack frame to save callee saved registers
   unsigned CalleeSavedStackSize = 0;
 
+  /// FrameIndex of the spill slot when there is no scavenged register in
+  /// insertIndirectBranch.
+  int BranchRelaxationSpillFrameIndex = -1;
+
 public:
-  LoongArchMachineFunctionInfo(const MachineFunction &MF) {}
+  LoongArchMachineFunctionInfo(const Function &F,
+                               const TargetSubtargetInfo *STI) {}
 
   MachineFunctionInfo *
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
@@ -50,6 +55,13 @@ public:
 
   unsigned getCalleeSavedStackSize() const { return CalleeSavedStackSize; }
   void setCalleeSavedStackSize(unsigned Size) { CalleeSavedStackSize = Size; }
+
+  int getBranchRelaxationSpillFrameIndex() {
+    return BranchRelaxationSpillFrameIndex;
+  }
+  void setBranchRelaxationSpillFrameIndex(int Index) {
+    BranchRelaxationSpillFrameIndex = Index;
+  }
 };
 
 } // end namespace llvm

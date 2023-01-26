@@ -11,39 +11,35 @@
 %"myclass" = type { %struct.foo }
 %struct.foo = type { i32, [40 x i8] }
 
-define hidden void @func(i8* %Data) nounwind ssp {
-  %1 = getelementptr inbounds i8, i8* %Data, i32 12
-  %2 = bitcast i8* %1 to %"myclass"*
-  tail call void @abc(%"myclass"* %2) nounwind
-  tail call void @def(%"myclass"* %2) nounwind
-  %3 = getelementptr inbounds i8, i8* %Data, i32 8
-  %4 = bitcast i8* %3 to i8**
-  %5 = load i8*, i8** %4, align 4
-  tail call void @ghi(i8* %5) nounwind
-  %6 = bitcast i8* %Data to void (i8*)**
-  %7 = load void (i8*)*, void (i8*)** %6, align 4
-  %8 = getelementptr inbounds i8, i8* %Data, i32 4
-  %9 = bitcast i8* %8 to i8**
-  %10 = load i8*, i8** %9, align 4
-  %11 = icmp eq i8* %Data, null
-  br i1 %11, label %14, label %12
+define hidden void @func(ptr %Data) nounwind ssp {
+  %1 = getelementptr inbounds i8, ptr %Data, i32 12
+  tail call void @abc(ptr %1) nounwind
+  tail call void @def(ptr %1) nounwind
+  %2 = getelementptr inbounds i8, ptr %Data, i32 8
+  %3 = load ptr, ptr %2, align 4
+  tail call void @ghi(ptr %3) nounwind
+  %4 = load ptr, ptr %Data, align 4
+  %5 = getelementptr inbounds i8, ptr %Data, i32 4
+  %6 = load ptr, ptr %5, align 4
+  %7 = icmp eq ptr %Data, null
+  br i1 %7, label %10, label %8
 
 ; <label>:12                                      ; preds = %0
-  %13 = tail call %"myclass"* @jkl(%"myclass"* %2) nounwind
-  tail call void @mno(i8* %Data) nounwind
-  br label %14
+  %9 = tail call ptr @jkl(ptr %1) nounwind
+  tail call void @mno(ptr %Data) nounwind
+  br label %10
 
-; <label>:14                                      ; preds = %12, %0
-  tail call void %7(i8* %10) nounwind
+; <label>:14                                      ; preds = %8, %0
+  tail call void %4(ptr %6) nounwind
   ret void
 }
 
-declare void @mno(i8*)
+declare void @mno(ptr)
 
-declare void @def(%"myclass"*)
+declare void @def(ptr)
 
-declare void @abc(%"myclass"*)
+declare void @abc(ptr)
 
-declare void @ghi(i8*)
+declare void @ghi(ptr)
 
-declare %"myclass"* @jkl(%"myclass"*) nounwind
+declare ptr @jkl(ptr) nounwind

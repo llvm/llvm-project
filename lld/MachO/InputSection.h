@@ -64,11 +64,12 @@ public:
 protected:
   InputSection(Kind kind, const Section &section, ArrayRef<uint8_t> data,
                uint32_t align)
-      : sectionKind(kind), align(align), data(data), section(section) {}
+      : sectionKind(kind), keepUnique(false), hasAltEntry(false), align(align),
+        data(data), section(section) {}
 
   InputSection(const InputSection &rhs)
-      : sectionKind(rhs.sectionKind), align(rhs.align), data(rhs.data),
-        section(rhs.section) {}
+      : sectionKind(rhs.sectionKind), keepUnique(false), hasAltEntry(false),
+        align(rhs.align), data(rhs.data), section(rhs.section) {}
 
   Kind sectionKind;
 
@@ -77,13 +78,15 @@ public:
   bool isFinal = false;
   // keep the address of the symbol(s) in this section unique in the final
   // binary ?
-  bool keepUnique = false;
+  bool keepUnique : 1;
+  // Does this section have symbols at offsets other than zero? (NOTE: only
+  // applies to ConcatInputSections.)
+  bool hasAltEntry : 1;
   uint32_t align = 1;
 
   OutputSection *parent = nullptr;
   ArrayRef<uint8_t> data;
   std::vector<Reloc> relocs;
-  ArrayRef<OptimizationHint> optimizationHints;
   // The symbols that belong to this InputSection, sorted by value. With
   // .subsections_via_symbols, there is typically only one element here.
   llvm::TinyPtrVector<Defined *> symbols;
@@ -192,8 +195,10 @@ static_assert(sizeof(StringPiece) == 16, "StringPiece is too big!");
 class CStringInputSection final : public InputSection {
 public:
   CStringInputSection(const Section &section, ArrayRef<uint8_t> data,
-                      uint32_t align)
-      : InputSection(CStringLiteralKind, section, data, align) {}
+                      uint32_t align, bool dedupLiterals)
+      : InputSection(CStringLiteralKind, section, data, align),
+        deduplicateLiterals(dedupLiterals) {}
+
   uint64_t getOffset(uint64_t off) const override;
   bool isLive(uint64_t off) const override { return getStringPiece(off).live; }
   void markLive(uint64_t off) override { getStringPiece(off).live = true; }
@@ -206,8 +211,10 @@ public:
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   StringRef getStringRef(size_t i) const {
     size_t begin = pieces[i].inSecOff;
+    // The endpoint should be *at* the null terminator, not after. This matches
+    // the behavior of StringRef(const char *Str).
     size_t end =
-        (pieces.size() - 1 == i) ? data.size() : pieces[i + 1].inSecOff;
+        ((pieces.size() - 1 == i) ? data.size() : pieces[i + 1].inSecOff) - 1;
     return toStringRef(data.slice(begin, end - begin));
   }
 
@@ -215,7 +222,7 @@ public:
   // string merging is enabled, so we want to inline.
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   llvm::CachedHashStringRef getCachedHashStringRef(size_t i) const {
-    assert(config->dedupLiterals);
+    assert(deduplicateLiterals);
     return {getStringRef(i), pieces[i].hash};
   }
 
@@ -223,6 +230,7 @@ public:
     return isec->kind() == CStringLiteralKind;
   }
 
+  bool deduplicateLiterals = false;
   std::vector<StringPiece> pieces;
 };
 
@@ -280,6 +288,7 @@ inline bool isWordLiteralSection(uint32_t flags) {
 bool isCodeSection(const InputSection *);
 bool isCfStringSection(const InputSection *);
 bool isClassRefsSection(const InputSection *);
+bool isSelRefsSection(const InputSection *);
 bool isEhFrameSection(const InputSection *);
 bool isGccExceptTabSection(const InputSection *);
 
@@ -294,6 +303,7 @@ constexpr const char bitcodeBundle[] = "__bundle";
 constexpr const char cString[] = "__cstring";
 constexpr const char cfString[] = "__cfstring";
 constexpr const char cgProfile[] = "__cg_profile";
+constexpr const char chainFixups[] = "__chainfixups";
 constexpr const char codeSignature[] = "__code_signature";
 constexpr const char common[] = "__common";
 constexpr const char compactUnwind[] = "__compact_unwind";
@@ -311,6 +321,7 @@ constexpr const char functionStarts[] = "__func_starts";
 constexpr const char got[] = "__got";
 constexpr const char header[] = "__mach_header";
 constexpr const char indirectSymbolTable[] = "__ind_sym_tab";
+constexpr const char initOffsets[] = "__init_offsets";
 constexpr const char const_[] = "__const";
 constexpr const char lazySymbolPtr[] = "__la_symbol_ptr";
 constexpr const char lazyBinding[] = "__lazy_binding";
@@ -323,6 +334,9 @@ constexpr const char objcClassList[] = "__objc_classlist";
 constexpr const char objcClassRefs[] = "__objc_classrefs";
 constexpr const char objcConst[] = "__objc_const";
 constexpr const char objCImageInfo[] = "__objc_imageinfo";
+constexpr const char objcStubs[] = "__objc_stubs";
+constexpr const char objcSelrefs[] = "__objc_selrefs";
+constexpr const char objcMethname[] = "__objc_methname";
 constexpr const char objcNonLazyCatList[] = "__objc_nlcatlist";
 constexpr const char objcNonLazyClassList[] = "__objc_nlclslist";
 constexpr const char objcProtoList[] = "__objc_protolist";

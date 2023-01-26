@@ -416,6 +416,72 @@ inline bool isCatch(unsigned Opc) {
   }
 }
 
+inline bool isLocalGet(unsigned Opc) {
+  switch (Opc) {
+  case WebAssembly::LOCAL_GET_I32:
+  case WebAssembly::LOCAL_GET_I32_S:
+  case WebAssembly::LOCAL_GET_I64:
+  case WebAssembly::LOCAL_GET_I64_S:
+  case WebAssembly::LOCAL_GET_F32:
+  case WebAssembly::LOCAL_GET_F32_S:
+  case WebAssembly::LOCAL_GET_F64:
+  case WebAssembly::LOCAL_GET_F64_S:
+  case WebAssembly::LOCAL_GET_V128:
+  case WebAssembly::LOCAL_GET_V128_S:
+  case WebAssembly::LOCAL_GET_FUNCREF:
+  case WebAssembly::LOCAL_GET_FUNCREF_S:
+  case WebAssembly::LOCAL_GET_EXTERNREF:
+  case WebAssembly::LOCAL_GET_EXTERNREF_S:
+    return true;
+  default:
+    return false;
+  }
+}
+
+inline bool isLocalSet(unsigned Opc) {
+  switch (Opc) {
+  case WebAssembly::LOCAL_SET_I32:
+  case WebAssembly::LOCAL_SET_I32_S:
+  case WebAssembly::LOCAL_SET_I64:
+  case WebAssembly::LOCAL_SET_I64_S:
+  case WebAssembly::LOCAL_SET_F32:
+  case WebAssembly::LOCAL_SET_F32_S:
+  case WebAssembly::LOCAL_SET_F64:
+  case WebAssembly::LOCAL_SET_F64_S:
+  case WebAssembly::LOCAL_SET_V128:
+  case WebAssembly::LOCAL_SET_V128_S:
+  case WebAssembly::LOCAL_SET_FUNCREF:
+  case WebAssembly::LOCAL_SET_FUNCREF_S:
+  case WebAssembly::LOCAL_SET_EXTERNREF:
+  case WebAssembly::LOCAL_SET_EXTERNREF_S:
+    return true;
+  default:
+    return false;
+  }
+}
+
+inline bool isLocalTee(unsigned Opc) {
+  switch (Opc) {
+  case WebAssembly::LOCAL_TEE_I32:
+  case WebAssembly::LOCAL_TEE_I32_S:
+  case WebAssembly::LOCAL_TEE_I64:
+  case WebAssembly::LOCAL_TEE_I64_S:
+  case WebAssembly::LOCAL_TEE_F32:
+  case WebAssembly::LOCAL_TEE_F32_S:
+  case WebAssembly::LOCAL_TEE_F64:
+  case WebAssembly::LOCAL_TEE_F64_S:
+  case WebAssembly::LOCAL_TEE_V128:
+  case WebAssembly::LOCAL_TEE_V128_S:
+  case WebAssembly::LOCAL_TEE_FUNCREF:
+  case WebAssembly::LOCAL_TEE_FUNCREF_S:
+  case WebAssembly::LOCAL_TEE_EXTERNREF:
+  case WebAssembly::LOCAL_TEE_EXTERNREF_S:
+    return true;
+  default:
+    return false;
+  }
+}
+
 } // end namespace WebAssembly
 } // end namespace llvm
 

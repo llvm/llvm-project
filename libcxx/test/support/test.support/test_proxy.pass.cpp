@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 #include "MoveOnly.h"
 #include "test_iterators.h"
@@ -293,7 +292,7 @@ constexpr bool test() {
   return true;
 }
 
-int main(int, const char**) {
+int main(int, char**) {
   test();
   static_assert(test());
 

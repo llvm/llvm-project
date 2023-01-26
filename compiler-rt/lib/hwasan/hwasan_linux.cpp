@@ -110,26 +110,84 @@ static void InitializeShadowBaseAddress(uptr shadow_size_bytes) {
       FindDynamicShadowStart(shadow_size_bytes);
 }
 
-void InitializeOsSupport() {
+static void MaybeDieIfNoTaggingAbi(const char *message) {
+  if (!flags()->fail_without_syscall_abi)
+    return;
+  Printf("FATAL: %s\n", message);
+  Die();
+}
+
 #  define PR_SET_TAGGED_ADDR_CTRL 55
 #  define PR_GET_TAGGED_ADDR_CTRL 56
 #  define PR_TAGGED_ADDR_ENABLE (1UL << 0)
 #  define ARCH_GET_UNTAG_MASK 0x4001
 #  define ARCH_ENABLE_TAGGED_ADDR 0x4002
-  // Check we're running on a kernel that can use the tagged address ABI.
-  int local_errno = 0;
-  bool has_abi;
+#  define ARCH_GET_MAX_TAG_BITS 0x4003
+
+static bool CanUseTaggingAbi() {
 #  if defined(__x86_64__)
-  has_abi = (internal_iserror(internal_arch_prctl(ARCH_GET_UNTAG_MASK, 0),
-                              &local_errno) &&
-             local_errno == EINVAL);
+  unsigned long num_bits = 0;
+  // Check for x86 LAM support. This API is based on a currently unsubmitted
+  // patch to the Linux kernel (as of August 2022) and is thus subject to
+  // change. The patch is here:
+  // https://lore.kernel.org/all/20220815041803.17954-1-kirill.shutemov@linux.intel.com/
+  //
+  // arch_prctl(ARCH_GET_MAX_TAG_BITS, &bits) returns the maximum number of tag
+  // bits the user can request, or zero if LAM is not supported by the hardware.
+  if (internal_iserror(internal_arch_prctl(ARCH_GET_MAX_TAG_BITS,
+                                           reinterpret_cast<uptr>(&num_bits))))
+    return false;
+  // The platform must provide enough bits for HWASan tags.
+  if (num_bits < kTagBits)
+    return false;
+  return true;
 #  else
-  has_abi =
-      (internal_iserror(internal_prctl(PR_GET_TAGGED_ADDR_CTRL, 0, 0, 0, 0),
-                        &local_errno) &&
-       local_errno == EINVAL);
-#  endif
-  if (has_abi) {
+  // Check for ARM TBI support.
+  return !internal_iserror(internal_prctl(PR_GET_TAGGED_ADDR_CTRL, 0, 0, 0, 0));
+#  endif // __x86_64__
+}
+
+static bool EnableTaggingAbi() {
+#  if defined(__x86_64__)
+  // Enable x86 LAM tagging for the process.
+  //
+  // arch_prctl(ARCH_ENABLE_TAGGED_ADDR, bits) enables tagging if the number of
+  // tag bits requested by the user does not exceed that provided by the system.
+  // arch_prctl(ARCH_GET_UNTAG_MASK, &mask) returns the mask of significant
+  // address bits. It is ~0ULL if either LAM is disabled for the process or LAM
+  // is not supported by the hardware.
+  if (internal_iserror(internal_arch_prctl(ARCH_ENABLE_TAGGED_ADDR, kTagBits)))
+    return false;
+  unsigned long mask = 0;
+  // Make sure the tag bits are where we expect them to be.
+  if (internal_iserror(internal_arch_prctl(ARCH_GET_UNTAG_MASK,
+                                           reinterpret_cast<uptr>(&mask))))
+    return false;
+  // @mask has ones for non-tag bits, whereas @kAddressTagMask has ones for tag
+  // bits. Therefore these masks must not overlap.
+  if (mask & kAddressTagMask)
+    return false;
+  return true;
+#  else
+  // Enable ARM TBI tagging for the process. If for some reason tagging is not
+  // supported, prctl(PR_SET_TAGGED_ADDR_CTRL, PR_TAGGED_ADDR_ENABLE) returns
+  // -EINVAL.
+  if (internal_iserror(internal_prctl(PR_SET_TAGGED_ADDR_CTRL,
+                                      PR_TAGGED_ADDR_ENABLE, 0, 0, 0)))
+    return false;
+  // Ensure that TBI is enabled.
+  if (internal_prctl(PR_GET_TAGGED_ADDR_CTRL, 0, 0, 0, 0) !=
+      PR_TAGGED_ADDR_ENABLE)
+    return false;
+  return true;
+#  endif // __x86_64__
+}
+
+void InitializeOsSupport() {
+  // Check we're running on a kernel that can use the tagged address ABI.
+  bool has_abi = CanUseTaggingAbi();
+
+  if (!has_abi) {
 #  if SANITIZER_ANDROID || defined(HWASAN_ALIASING_MODE)
     // Some older Android kernels have the tagged pointer ABI on
     // unconditionally, and hence don't have the tagged-addr prctl while still
@@ -138,40 +196,22 @@ void InitializeOsSupport() {
     // case.
     return;
 #  else
-    if (flags()->fail_without_syscall_abi) {
-      Printf(
-          "FATAL: "
-          "HWAddressSanitizer requires a kernel with tagged address ABI.\n");
-      Die();
-    }
+    MaybeDieIfNoTaggingAbi(
+        "HWAddressSanitizer requires a kernel with tagged address ABI.");
 #  endif
   }
 
-  // Turn on the tagged address ABI.
-  if ((internal_iserror(internal_prctl(PR_SET_TAGGED_ADDR_CTRL,
-                                       PR_TAGGED_ADDR_ENABLE, 0, 0, 0)) ||
-       !internal_prctl(PR_GET_TAGGED_ADDR_CTRL, 0, 0, 0, 0))) {
-#  if defined(__x86_64__) && !defined(HWASAN_ALIASING_MODE)
-    // Try the new prctl API for Intel LAM.  The API is based on a currently
-    // unsubmitted patch to the Linux kernel (as of July 2022) and is thus
-    // subject to change.  Patch is here:
-    // https://lore.kernel.org/linux-mm/20220712231328.5294-1-kirill.shutemov@linux.intel.com/
-    if (!internal_iserror(
-            internal_arch_prctl(ARCH_ENABLE_TAGGED_ADDR, kTagBits))) {
-      return;
-    }
-#  endif  // defined(__x86_64__) && !defined(HWASAN_ALIASING_MODE)
-    if (flags()->fail_without_syscall_abi) {
-      Printf(
-          "FATAL: HWAddressSanitizer failed to enable tagged address syscall "
-          "ABI.\nSuggest check `sysctl abi.tagged_addr_disabled` "
-          "configuration.\n");
-      Die();
-    }
-  }
-#  undef PR_SET_TAGGED_ADDR_CTRL
-#  undef PR_GET_TAGGED_ADDR_CTRL
-#  undef PR_TAGGED_ADDR_ENABLE
+  if (EnableTaggingAbi())
+    return;
+
+#  if SANITIZER_ANDROID
+  MaybeDieIfNoTaggingAbi(
+      "HWAddressSanitizer failed to enable tagged address syscall ABI.\n"
+      "Check the `sysctl abi.tagged_addr_disabled` configuration.");
+#  else
+  MaybeDieIfNoTaggingAbi(
+      "HWAddressSanitizer failed to enable tagged address syscall ABI.\n");
+#  endif
 }
 
 bool InitShadow() {
@@ -363,6 +403,47 @@ static AccessInfo GetAccessInfo(siginfo_t *info, ucontext_t *uc) {
   const uptr size =
       size_log == 0xf ? uc->uc_mcontext.gregs[REG_RSI] : 1U << size_log;
 
+#  elif SANITIZER_RISCV64
+  // Access type is encoded in the instruction following EBREAK as
+  // ADDI x0, x0, [0x40 + 0xXY]. For Y == 0xF, access size is stored in
+  // X11 register. Access address is always in X10 register.
+  uptr pc = (uptr)uc->uc_mcontext.__gregs[REG_PC];
+  uint8_t byte1 = *((u8 *)(pc + 0));
+  uint8_t byte2 = *((u8 *)(pc + 1));
+  uint8_t byte3 = *((u8 *)(pc + 2));
+  uint8_t byte4 = *((u8 *)(pc + 3));
+  uint32_t ebreak = (byte1 | (byte2 << 8) | (byte3 << 16) | (byte4 << 24));
+  bool isFaultShort = false;
+  bool isEbreak = (ebreak == 0x100073);
+  bool isShortEbreak = false;
+#    if defined(__riscv_compressed)
+  isFaultShort = ((ebreak & 0x3) != 0x3);
+  isShortEbreak = ((ebreak & 0xffff) == 0x9002);
+#    endif
+  // faulted insn is not ebreak, not our case
+  if (!(isEbreak || isShortEbreak))
+    return AccessInfo{};
+  // advance pc to point after ebreak and reconstruct addi instruction
+  pc += isFaultShort ? 2 : 4;
+  byte1 = *((u8 *)(pc + 0));
+  byte2 = *((u8 *)(pc + 1));
+  byte3 = *((u8 *)(pc + 2));
+  byte4 = *((u8 *)(pc + 3));
+  // reconstruct instruction
+  uint32_t instr = (byte1 | (byte2 << 8) | (byte3 << 16) | (byte4 << 24));
+  // check if this is really 32 bit instruction
+  // code is encoded in top 12 bits, since instruction is supposed to be with
+  // imm
+  const unsigned code = (instr >> 20) & 0xffff;
+  const uptr addr = uc->uc_mcontext.__gregs[10];
+  const bool is_store = code & 0x10;
+  const bool recover = code & 0x20;
+  const unsigned size_log = code & 0xf;
+  if (size_log > 4 && size_log != 0xf)
+    return AccessInfo{};  // Not our case
+  const uptr size =
+      size_log == 0xf ? uc->uc_mcontext.__gregs[11] : 1U << size_log;
+
 #  else
 #    error Unsupported architecture
 #  endif
@@ -381,6 +462,19 @@ static bool HwasanOnSIGTRAP(int signo, siginfo_t *info, ucontext_t *uc) {
 #  if defined(__aarch64__)
   uc->uc_mcontext.pc += 4;
 #  elif defined(__x86_64__)
+#  elif SANITIZER_RISCV64
+  // pc points to EBREAK which is 2 bytes long
+  uint8_t *exception_source = (uint8_t *)(uc->uc_mcontext.__gregs[REG_PC]);
+  uint8_t byte1 = (uint8_t)(*(exception_source + 0));
+  uint8_t byte2 = (uint8_t)(*(exception_source + 1));
+  uint8_t byte3 = (uint8_t)(*(exception_source + 2));
+  uint8_t byte4 = (uint8_t)(*(exception_source + 3));
+  uint32_t faulted = (byte1 | (byte2 << 8) | (byte3 << 16) | (byte4 << 24));
+  bool isFaultShort = false;
+#    if defined(__riscv_compressed)
+  isFaultShort = ((faulted & 0x3) != 0x3);
+#    endif
+  uc->uc_mcontext.__gregs[REG_PC] += isFaultShort ? 2 : 4;
 #  else
 #    error Unsupported architecture
 #  endif
@@ -445,6 +539,17 @@ void HwasanInstallAtForkHandler() {
     HwasanAllocatorUnlock();
   };
   pthread_atfork(before, after, after);
+}
+
+void InstallAtExitCheckLeaks() {
+  if (CAN_SANITIZE_LEAKS) {
+    if (common_flags()->detect_leaks && common_flags()->leak_check_at_exit) {
+      if (flags()->halt_on_error)
+        Atexit(__lsan::DoLeakCheck);
+      else
+        Atexit(__lsan::DoRecoverableLeakCheckVoid);
+    }
+  }
 }
 
 }  // namespace __hwasan

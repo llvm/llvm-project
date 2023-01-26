@@ -19,8 +19,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
@@ -30,6 +28,7 @@
 #include <cassert>
 #include <cstddef>
 #include <iterator>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -241,12 +240,12 @@ class Token;
     unsigned ImportedModule : 1;
 
     /// The file that was included.
-    Optional<FileEntryRef> File;
+    OptionalFileEntryRef File;
 
   public:
     InclusionDirective(PreprocessingRecord &PPRec, InclusionKind Kind,
                        StringRef FileName, bool InQuotes, bool ImportedModule,
-                       Optional<FileEntryRef> File, SourceRange Range);
+                       OptionalFileEntryRef File, SourceRange Range);
 
     /// Determine what kind of inclusion directive this is.
     InclusionKind getKind() const { return static_cast<InclusionKind>(Kind); }
@@ -264,7 +263,7 @@ class Token;
 
     /// Retrieve the file entry for the actual file that was included
     /// by this directive.
-    Optional<FileEntryRef> getFile() const { return File; }
+    OptionalFileEntryRef getFile() const { return File; }
 
     // Implement isa/cast/dyncast/etc.
     static bool classof(const PreprocessedEntity *PE) {
@@ -291,9 +290,9 @@ class Token;
 
     /// Optionally returns true or false if the preallocated preprocessed
     /// entity with index \p Index came from file \p FID.
-    virtual Optional<bool> isPreprocessedEntityInFileID(unsigned Index,
-                                                        FileID FID) {
-      return None;
+    virtual std::optional<bool> isPreprocessedEntityInFileID(unsigned Index,
+                                                             FileID FID) {
+      return std::nullopt;
     }
 
     /// Read a preallocated skipped range from the external source.
@@ -529,7 +528,7 @@ class Token;
     void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                             StringRef FileName, bool IsAngled,
                             CharSourceRange FilenameRange,
-                            Optional<FileEntryRef> File, StringRef SearchPath,
+                            OptionalFileEntryRef File, StringRef SearchPath,
                             StringRef RelativePath, const Module *Imported,
                             SrcMgr::CharacteristicKind FileType) override;
     void Ifdef(SourceLocation Loc, const Token &MacroNameTok,

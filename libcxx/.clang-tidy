@@ -15,6 +15,7 @@ Checks: >
 
   modernize-loop-convert,
   modernize-redundant-void-arg,
+  modernize-use-override,
 
   readability-duplicate-include,
   readability-identifier-naming,
@@ -24,6 +25,7 @@ Checks: >
   readability-redundant-control-flow,
   readability-redundant-function-ptr-dereference,
   readability-redundant-preprocessor,
+  readability-simplify-boolean-expr,
   readability-simplify-subscript-expr,
   readability-uniqueptr-delete-release,
 
@@ -38,6 +40,12 @@ CheckOptions:
     value: lower_case
   - key:   readability-identifier-naming.ParameterPrefix
     value: __
+  - key:   readability-identifier-naming.PrivateMemberCase
+    value: lower_case
+  - key:   readability-identifier-naming.PrivateMemberPrefix
+    value: __
+  - key:   readability-identifier-naming.PrivateMemberSuffix
+    value: _
 
 # TODO: investigate these checks
 # bugprone-branch-clone,
@@ -49,7 +57,6 @@ CheckOptions:
 # modernize-use-equals-default,
 # modernize-use-equals-delete,
 # modernize-use-nullptr,
-# modernize-use-override,
 # portability-restrict-system-includes,
 # readability-function-cognitive-complexity,
 # readability-implicit-bool-conversion,
@@ -57,4 +64,4 @@ CheckOptions:
 # readability-redundant-access-specifiers,
 # readability-redundant-declaration,
 # readability-redundant-member-init,
-# readability-simplify-boolean-expr,
+#

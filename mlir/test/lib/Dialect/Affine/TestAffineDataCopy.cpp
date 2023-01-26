@@ -132,7 +132,8 @@ void TestAffineDataCopy::runOnOperation() {
       AffineStoreOp::getCanonicalizationPatterns(patterns, &getContext());
     }
   }
-  (void)applyOpPatternsAndFold(copyOps, std::move(patterns), /*strict=*/true);
+  (void)applyOpPatternsAndFold(copyOps, std::move(patterns),
+                               GreedyRewriteStrictness::ExistingAndNewOps);
 }
 
 namespace mlir {

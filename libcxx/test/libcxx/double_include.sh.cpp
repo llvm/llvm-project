@@ -69,7 +69,9 @@ END-SCRIPT
 #include <complex.h>
 #include <concepts>
 #include <condition_variable>
-#include <coroutine>
+#if (defined(__cpp_impl_coroutine) && __cpp_impl_coroutine >= 201902L) || (defined(__cpp_coroutines) && __cpp_coroutines >= 201703L)
+#   include <coroutine>
+#endif
 #include <csetjmp>
 #include <csignal>
 #include <cstdarg>
@@ -93,6 +95,7 @@ END-SCRIPT
 #include <errno.h>
 #include <exception>
 #include <execution>
+#include <expected>
 #include <fenv.h>
 #if !defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
 #   include <filesystem>
@@ -100,7 +103,7 @@ END-SCRIPT
 #include <float.h>
 #include <format>
 #include <forward_list>
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION) && !defined(_LIBCPP_HAS_NO_FSTREAM)
 #   include <fstream>
 #endif
 #include <functional>
@@ -138,6 +141,7 @@ END-SCRIPT
 #include <map>
 #include <math.h>
 #include <memory>
+#include <memory_resource>
 #if !defined(_LIBCPP_HAS_NO_THREADS)
 #   include <mutex>
 #endif
@@ -164,6 +168,7 @@ END-SCRIPT
 #if !defined(_LIBCPP_HAS_NO_THREADS)
 #   include <shared_mutex>
 #endif
+#include <source_location>
 #include <span>
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #   include <sstream>

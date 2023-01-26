@@ -484,6 +484,8 @@ static uint32_t g_d31_invalidates[] = {fpu_v31, fpu_s31, LLDB_INVALID_REGNUM};
 #define MISC_FPU_KIND(lldb_kind) LLDB_KIND(lldb_kind)
 #define MISC_EXC_KIND(lldb_kind) LLDB_KIND(lldb_kind)
 
+// clang-format off
+
 // Defines a 64-bit general purpose register
 #define DEFINE_GPR64(reg, generic_kind)                                        \
   {                                                                            \

@@ -26,6 +26,10 @@ llvm.func @rocdl_special_regs() -> i32 {
   %11 = rocdl.grid.dim.y : i64
   // CHECK: call i64 @__ockl_get_global_size(i32 2)
   %12 = rocdl.grid.dim.z : i64
+
+  // CHECK: call i32 @llvm.amdgcn.workitem.id.x(),{{.*}} !range ![[$RANGE:[0-9]+]]
+  %13 = rocdl.workitem.id.x {range = array<i32: 0, 64>} : i32
+
   llvm.return %1 : i32
 }
 
@@ -39,6 +43,16 @@ llvm.func @kernel_func_workgroups()
     attributes {rocdl.kernel, rocdl.max_flat_work_group_size = 1024 : index} {
   // CHECK-LABEL: amdgpu_kernel void @kernel_func_workgroups()
   // CHECK: #[[$KERNEL_WORKGROUP_ATTRS:[0-9]+]]
+  llvm.return
+}
+
+llvm.func @known_block_sizes()
+    attributes {rocdl.kernel,
+      rocdl.flat_work_group_size = "128,128",
+      rocdl.reqd_work_group_size = array<i32: 16, 4, 2>} {
+  // CHECK-LABEL: amdgpu_kernel void @known_block_sizes()
+  // CHECK: #[[$KNOWN_BLOCK_SIZE_ATTRS:[0-9]+]]
+  // CHECK: !reqd_work_group_size ![[$REQD_WORK_GROUP_SIZE:[0-9]+]]
   llvm.return
 }
 
@@ -225,5 +239,8 @@ llvm.func @rocdl.raw.buffer.atomic(%rsrc : vector<4xi32>,
   llvm.return
 }
 
-// CHECK-DAG: attributes #[[$KERNEL_ATTRS]] = { "amdgpu-flat-work-group-size"="1, 256" "amdgpu-implicitarg-num-bytes"="56" }
-// CHECK-DAG: attributes #[[$KERNEL_WORKGROUP_ATTRS]] = { "amdgpu-flat-work-group-size"="1, 1024"
+// CHECK-DAG: attributes #[[$KERNEL_ATTRS]] = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-implicitarg-num-bytes"="56" }
+// CHECK-DAG: attributes #[[$KERNEL_WORKGROUP_ATTRS]] = { "amdgpu-flat-work-group-size"="1,1024"
+// CHECK-DAG: attributes #[[$KNOWN_BLOCK_SIZE_ATTRS]] = { "amdgpu-flat-work-group-size"="128,128"
+// CHECK-DAG: ![[$RANGE]] = !{i32 0, i32 64}
+// CHECK-DAG: ![[$REQD_WORK_GROUP_SIZE]] = !{i32 16, i32 4, i32 2}

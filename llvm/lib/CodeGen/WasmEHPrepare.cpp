@@ -182,8 +182,7 @@ bool WasmEHPrepare::prepareThrows(Function &F) {
     Changed = true;
     auto *BB = ThrowI->getParent();
     SmallVector<BasicBlock *, 4> Succs(successors(BB));
-    auto &InstList = BB->getInstList();
-    InstList.erase(std::next(BasicBlock::iterator(ThrowI)), InstList.end());
+    BB->erase(std::next(BasicBlock::iterator(ThrowI)), BB->end());
     IRB.SetInsertPoint(BB);
     IRB.CreateUnreachable();
     eraseDeadBBsAndChildren(Succs);
@@ -253,7 +252,7 @@ bool WasmEHPrepare::prepareEHPads(Function &F) {
     auto *CPI = cast<CatchPadInst>(BB->getFirstNonPHI());
     // In case of a single catch (...), we don't need to emit a personalify
     // function call
-    if (CPI->getNumArgOperands() == 1 &&
+    if (CPI->arg_size() == 1 &&
         cast<Constant>(CPI->getArgOperand(0))->isNullValue())
       prepareEHPad(BB, false);
     else

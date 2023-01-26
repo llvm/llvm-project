@@ -472,7 +472,7 @@ entry:
   ret <16 x i8> %shuffle
 }
 
-define dso_local <8 x i16> @testmrglb3(<8 x i8>* nocapture readonly %a) local_unnamed_addr #0 {
+define dso_local <8 x i16> @testmrglb3(ptr nocapture readonly %a) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: testmrglb3:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    lxsdx v2, 0, r3
@@ -491,10 +491,10 @@ define dso_local <8 x i16> @testmrglb3(<8 x i8>* nocapture readonly %a) local_un
 ; CHECK-P9-BE:       # %bb.0: # %entry
 ; CHECK-P9-BE-NEXT:    lxsd v2, 0(r3)
 ; CHECK-P9-BE-NEXT:    addis r3, r2, .LCPI12_0@toc@ha
-; CHECK-P9-BE-NEXT:    xxlxor v4, v4, v4
+; CHECK-P9-BE-NEXT:    xxlxor vs1, vs1, vs1
 ; CHECK-P9-BE-NEXT:    addi r3, r3, .LCPI12_0@toc@l
-; CHECK-P9-BE-NEXT:    lxv v3, 0(r3)
-; CHECK-P9-BE-NEXT:    vperm v2, v4, v2, v3
+; CHECK-P9-BE-NEXT:    lxv vs0, 0(r3)
+; CHECK-P9-BE-NEXT:    xxperm v2, vs1, vs0
 ; CHECK-P9-BE-NEXT:    blr
 ;
 ; CHECK-NOVSX-LABEL: testmrglb3:
@@ -549,18 +549,18 @@ define dso_local <8 x i16> @testmrglb3(<8 x i8>* nocapture readonly %a) local_un
 ; P8-AIX-32-NEXT:    vmrghb v2, v3, v2
 ; P8-AIX-32-NEXT:    blr
 entry:
-  %0 = load <8 x i8>, <8 x i8>* %a, align 8
+  %0 = load <8 x i8>, ptr %a, align 8
   %1 = zext <8 x i8> %0 to <8 x i16>
   ret <8 x i16> %1
 }
 
-define dso_local void @no_crash_elt0_from_RHS(<2 x double>* noalias nocapture dereferenceable(16) %.vtx6) #0 {
+define dso_local void @no_crash_elt0_from_RHS(ptr noalias nocapture dereferenceable(16) %.vtx6) #0 {
 ; CHECK-P8-LABEL: no_crash_elt0_from_RHS:
 ; CHECK-P8:       # %bb.0: # %test_entry
 ; CHECK-P8-NEXT:    mflr r0
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
 ; CHECK-P8-NEXT:    bl dummy
 ; CHECK-P8-NEXT:    nop
@@ -574,8 +574,8 @@ define dso_local void @no_crash_elt0_from_RHS(<2 x double>* noalias nocapture de
 ; CHECK-P9:       # %bb.0: # %test_entry
 ; CHECK-P9-NEXT:    mflr r0
 ; CHECK-P9-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P9-NEXT:    std r0, 16(r1)
 ; CHECK-P9-NEXT:    stdu r1, -48(r1)
+; CHECK-P9-NEXT:    std r0, 64(r1)
 ; CHECK-P9-NEXT:    mr r30, r3
 ; CHECK-P9-NEXT:    bl dummy
 ; CHECK-P9-NEXT:    nop
@@ -587,8 +587,8 @@ define dso_local void @no_crash_elt0_from_RHS(<2 x double>* noalias nocapture de
 ; CHECK-P9-BE-LABEL: no_crash_elt0_from_RHS:
 ; CHECK-P9-BE:       # %bb.0: # %test_entry
 ; CHECK-P9-BE-NEXT:    mflr r0
-; CHECK-P9-BE-NEXT:    std r0, 16(r1)
 ; CHECK-P9-BE-NEXT:    stdu r1, -128(r1)
+; CHECK-P9-BE-NEXT:    std r0, 144(r1)
 ; CHECK-P9-BE-NEXT:    std r30, 112(r1) # 8-byte Folded Spill
 ; CHECK-P9-BE-NEXT:    mr r30, r3
 ; CHECK-P9-BE-NEXT:    bl dummy
@@ -602,8 +602,8 @@ define dso_local void @no_crash_elt0_from_RHS(<2 x double>* noalias nocapture de
 ; CHECK-NOVSX:       # %bb.0: # %test_entry
 ; CHECK-NOVSX-NEXT:    mflr r0
 ; CHECK-NOVSX-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-NOVSX-NEXT:    std r0, 16(r1)
 ; CHECK-NOVSX-NEXT:    stdu r1, -48(r1)
+; CHECK-NOVSX-NEXT:    std r0, 64(r1)
 ; CHECK-NOVSX-NEXT:    mr r30, r3
 ; CHECK-NOVSX-NEXT:    bl dummy
 ; CHECK-NOVSX-NEXT:    nop
@@ -615,8 +615,8 @@ define dso_local void @no_crash_elt0_from_RHS(<2 x double>* noalias nocapture de
 ; CHECK-P7:       # %bb.0: # %test_entry
 ; CHECK-P7-NEXT:    mflr r0
 ; CHECK-P7-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P7-NEXT:    std r0, 16(r1)
 ; CHECK-P7-NEXT:    stdu r1, -48(r1)
+; CHECK-P7-NEXT:    std r0, 64(r1)
 ; CHECK-P7-NEXT:    mr r30, r3
 ; CHECK-P7-NEXT:    bl dummy
 ; CHECK-P7-NEXT:    nop
@@ -629,8 +629,8 @@ define dso_local void @no_crash_elt0_from_RHS(<2 x double>* noalias nocapture de
 ; P8-AIX-64-LABEL: no_crash_elt0_from_RHS:
 ; P8-AIX-64:       # %bb.0: # %test_entry
 ; P8-AIX-64-NEXT:    mflr r0
-; P8-AIX-64-NEXT:    std r0, 16(r1)
 ; P8-AIX-64-NEXT:    stdu r1, -128(r1)
+; P8-AIX-64-NEXT:    std r0, 144(r1)
 ; P8-AIX-64-NEXT:    std r31, 120(r1) # 8-byte Folded Spill
 ; P8-AIX-64-NEXT:    mr r31, r3
 ; P8-AIX-64-NEXT:    bl .dummy[PR]
@@ -643,8 +643,8 @@ define dso_local void @no_crash_elt0_from_RHS(<2 x double>* noalias nocapture de
 ; P8-AIX-32-LABEL: no_crash_elt0_from_RHS:
 ; P8-AIX-32:       # %bb.0: # %test_entry
 ; P8-AIX-32-NEXT:    mflr r0
-; P8-AIX-32-NEXT:    stw r0, 8(r1)
 ; P8-AIX-32-NEXT:    stwu r1, -64(r1)
+; P8-AIX-32-NEXT:    stw r0, 72(r1)
 ; P8-AIX-32-NEXT:    stw r31, 60(r1) # 4-byte Folded Spill
 ; P8-AIX-32-NEXT:    mr r31, r3
 ; P8-AIX-32-NEXT:    bl .dummy[PR]
@@ -660,7 +660,7 @@ test_entry:
   %.splatinsert = insertelement <2 x double> undef, double %0, i32 0
   %.splat = shufflevector <2 x double> %.splatinsert, <2 x double> undef, <2 x i32> zeroinitializer
   %1 = shufflevector <2 x double> zeroinitializer, <2 x double> %.splat, <2 x i32> <i32 0, i32 3>
-  store <2 x double> %1, <2 x double>* %.vtx6, align 16
+  store <2 x double> %1, ptr %.vtx6, align 16
   unreachable
 }
 
@@ -748,11 +748,12 @@ define dso_local <4 x i32> @replace_undefs_in_splat(<4 x i32> %a) local_unnamed_
 ; CHECK-P9-BE:       # %bb.0: # %entry
 ; CHECK-P9-BE-NEXT:    addis r3, r2, .LCPI15_0@toc@ha
 ; CHECK-P9-BE-NEXT:    addi r3, r3, .LCPI15_0@toc@l
-; CHECK-P9-BE-NEXT:    lxv v3, 0(r3)
+; CHECK-P9-BE-NEXT:    lxv vs1, 0(r3)
 ; CHECK-P9-BE-NEXT:    addis r3, r2, .LCPI15_1@toc@ha
 ; CHECK-P9-BE-NEXT:    addi r3, r3, .LCPI15_1@toc@l
-; CHECK-P9-BE-NEXT:    lxv v4, 0(r3)
-; CHECK-P9-BE-NEXT:    vperm v2, v2, v4, v3
+; CHECK-P9-BE-NEXT:    lxv vs0, 0(r3)
+; CHECK-P9-BE-NEXT:    xxperm vs0, v2, vs1
+; CHECK-P9-BE-NEXT:    xxlor v2, vs0, vs0
 ; CHECK-P9-BE-NEXT:    blr
 ;
 ; CHECK-NOVSX-LABEL: replace_undefs_in_splat:
@@ -801,7 +802,7 @@ entry:
   ret <4 x i32> %vecins1
 }
 
-define dso_local <16 x i8> @no_RAUW_in_combine_during_legalize(i32* nocapture readonly %ptr, i32 signext %offset) local_unnamed_addr #0 {
+define dso_local <16 x i8> @no_RAUW_in_combine_during_legalize(ptr nocapture readonly %ptr, i32 signext %offset) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: no_RAUW_in_combine_during_legalize:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    sldi r4, r4, 2
@@ -873,8 +874,8 @@ define dso_local <16 x i8> @no_RAUW_in_combine_during_legalize(i32* nocapture re
 ; P8-AIX-32-NEXT:    blr
 entry:
   %idx.ext = sext i32 %offset to i64
-  %add.ptr = getelementptr inbounds i32, i32* %ptr, i64 %idx.ext
-  %0 = load i32, i32* %add.ptr, align 4
+  %add.ptr = getelementptr inbounds i32, ptr %ptr, i64 %idx.ext
+  %0 = load i32, ptr %add.ptr, align 4
   %conv = zext i32 %0 to i64
   %splat.splatinsert = insertelement <2 x i64> undef, i64 %conv, i32 0
   %1 = bitcast <2 x i64> %splat.splatinsert to <16 x i8>
@@ -882,7 +883,7 @@ entry:
   ret <16 x i8> %shuffle
 }
 
-define dso_local <4 x i32> @testSplat4Low(<8 x i8>* nocapture readonly %ptr) local_unnamed_addr #0 {
+define dso_local <4 x i32> @testSplat4Low(ptr nocapture readonly %ptr) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: testSplat4Low:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    lfdx f0, 0, r3
@@ -933,14 +934,14 @@ define dso_local <4 x i32> @testSplat4Low(<8 x i8>* nocapture readonly %ptr) loc
 ; P8-AIX-32-NEXT:    xxspltw v2, vs0, 1
 ; P8-AIX-32-NEXT:    blr
 entry:
-  %0 = load <8 x i8>, <8 x i8>* %ptr, align 8
+  %0 = load <8 x i8>, ptr %ptr, align 8
   %vecinit18 = shufflevector <8 x i8> %0, <8 x i8> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %1 = bitcast <16 x i8> %vecinit18 to <4 x i32>
   ret <4 x i32> %1
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define dso_local <4 x i32> @testSplat4hi(<8 x i8>* nocapture readonly %ptr) local_unnamed_addr #0 {
+define dso_local <4 x i32> @testSplat4hi(ptr nocapture readonly %ptr) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: testSplat4hi:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    lfdx f0, 0, r3
@@ -988,14 +989,14 @@ define dso_local <4 x i32> @testSplat4hi(<8 x i8>* nocapture readonly %ptr) loca
 ; P8-AIX-32-NEXT:    xxspltw v2, vs0, 1
 ; P8-AIX-32-NEXT:    blr
 entry:
-  %0 = load <8 x i8>, <8 x i8>* %ptr, align 8
+  %0 = load <8 x i8>, ptr %ptr, align 8
   %vecinit22 = shufflevector <8 x i8> %0, <8 x i8> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %1 = bitcast <16 x i8> %vecinit22 to <4 x i32>
   ret <4 x i32> %1
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define dso_local <2 x i64> @testSplat8(<8 x i8>* nocapture readonly %ptr) local_unnamed_addr #0 {
+define dso_local <2 x i64> @testSplat8(ptr nocapture readonly %ptr) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: testSplat8:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    lxvdsx v2, 0, r3
@@ -1044,13 +1045,13 @@ define dso_local <2 x i64> @testSplat8(<8 x i8>* nocapture readonly %ptr) local_
 ; P8-AIX-32-NEXT:    xxmrghd v2, vs0, vs0
 ; P8-AIX-32-NEXT:    blr
 entry:
-  %0 = load <8 x i8>, <8 x i8>* %ptr, align 8
+  %0 = load <8 x i8>, ptr %ptr, align 8
   %vecinit30 = shufflevector <8 x i8> %0, <8 x i8> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %1 = bitcast <16 x i8> %vecinit30 to <2 x i64>
   ret <2 x i64> %1
 }
 
-define <2 x i64> @testSplati64_0(<1 x i64>* nocapture readonly %ptr) #0 {
+define <2 x i64> @testSplati64_0(ptr nocapture readonly %ptr) #0 {
 ; CHECK-P8-LABEL: testSplati64_0:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    lxvdsx v2, 0, r3
@@ -1100,12 +1101,12 @@ define <2 x i64> @testSplati64_0(<1 x i64>* nocapture readonly %ptr) #0 {
 ; P8-AIX-32-NEXT:    vperm v2, v4, v3, v2
 ; P8-AIX-32-NEXT:    blr
 entry:
-  %0 = load <1 x i64>, <1 x i64>* %ptr, align 8
+  %0 = load <1 x i64>, ptr %ptr, align 8
   %1 = shufflevector <1 x i64> %0, <1 x i64> undef, <2 x i32> <i32 0, i32 0>
   ret <2 x i64> %1
 }
 
-define <2 x i64> @testSplati64_1(<2 x i64>* nocapture readonly %ptr) #0 {
+define <2 x i64> @testSplati64_1(ptr nocapture readonly %ptr) #0 {
 ; CHECK-P8-LABEL: testSplati64_1:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addi r3, r3, 8
@@ -1150,7 +1151,7 @@ define <2 x i64> @testSplati64_1(<2 x i64>* nocapture readonly %ptr) #0 {
 ; P8-AIX-NEXT:    lxvdsx v2, 0, r3
 ; P8-AIX-NEXT:    blr
 entry:
-  %0 = load <2 x i64>, <2 x i64>* %ptr, align 8
+  %0 = load <2 x i64>, ptr %ptr, align 8
   %1 = shufflevector <2 x i64> %0, <2 x i64> undef, <2 x i32> <i32 1, i32 1>
   ret <2 x i64> %1
 }
@@ -1207,10 +1208,10 @@ define dso_local void @testByteSplat() #0 {
 ; P8-AIX-NEXT:    stxvw4x v2, 0, r3
 ; P8-AIX-NEXT:    blr
 entry:
-  %0 = load i8, i8* undef, align 1
+  %0 = load i8, ptr undef, align 1
   %splat.splatinsert.i = insertelement <16 x i8> poison, i8 %0, i32 0
   %splat.splat.i = shufflevector <16 x i8> %splat.splatinsert.i, <16 x i8> poison, <16 x i32> zeroinitializer
-  store <16 x i8> %splat.splat.i, <16 x i8>* undef, align 16
+  store <16 x i8> %splat.splat.i, ptr undef, align 16
   ret void
 }
 

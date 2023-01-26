@@ -16,14 +16,13 @@
 ; RUN:     -function-sections < %s | \
 ; RUN:   FileCheck --check-prefixes=ASM,ASMFS,ASM64 %s
 
-@_ZTIi = external constant i8*
+@_ZTIi = external constant ptr
 
 define void @_Z9throwFuncv() {
 entry:
-  %exception = call i8* @__cxa_allocate_exception(i32 4) #2
-  %0 = bitcast i8* %exception to i32*
-  store i32 1, i32* %0, align 16
-  call void @__cxa_throw(i8* %exception, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #3
+  %exception = call ptr @__cxa_allocate_exception(i32 4) #2
+  store i32 1, ptr %exception, align 16
+  call void @__cxa_throw(ptr %exception, ptr @_ZTIi, ptr null) #3
   unreachable
 }
 
@@ -36,10 +35,10 @@ entry:
 ; ASM:      bl .__cxa_throw[PR]
 ; ASM:      nop
 
-define i32 @_Z9catchFuncv() personality i8* bitcast (i32 (...)* @__xlcxx_personality_v1 to i8*) {
+define i32 @_Z9catchFuncv() personality ptr @__xlcxx_personality_v1 {
 entry:
   %retval = alloca i32, align 4
-  %exn.slot = alloca i8*, align 4
+  %exn.slot = alloca ptr, align 4
   %ehselector.slot = alloca i32, align 4
   %0 = alloca i32, align 4
   invoke void @_Z9throwFuncv()
@@ -49,44 +48,43 @@ invoke.cont:                                      ; preds = %entry
   br label %try.cont
 
 lpad:                                             ; preds = %entry
-  %1 = landingpad { i8*, i32 }
-          catch i8* bitcast (i8** @_ZTIi to i8*)
-  %2 = extractvalue { i8*, i32 } %1, 0
-  store i8* %2, i8** %exn.slot, align 4
-  %3 = extractvalue { i8*, i32 } %1, 1
-  store i32 %3, i32* %ehselector.slot, align 4
+  %1 = landingpad { ptr, i32 }
+          catch ptr @_ZTIi
+  %2 = extractvalue { ptr, i32 } %1, 0
+  store ptr %2, ptr %exn.slot, align 4
+  %3 = extractvalue { ptr, i32 } %1, 1
+  store i32 %3, ptr %ehselector.slot, align 4
   br label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %lpad
-  %sel = load i32, i32* %ehselector.slot, align 4
-  %4 = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*)) #2
+  %sel = load i32, ptr %ehselector.slot, align 4
+  %4 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #2
   %matches = icmp eq i32 %sel, %4
   br i1 %matches, label %catch, label %eh.resume
 
 catch:                                            ; preds = %catch.dispatch
-  %exn = load i8*, i8** %exn.slot, align 4
-  %5 = call i8* @__cxa_begin_catch(i8* %exn) #2
-  %6 = bitcast i8* %5 to i32*
-  %7 = load i32, i32* %6, align 4
-  store i32 %7, i32* %0, align 4
-  store i32 2, i32* %retval, align 4
+  %exn = load ptr, ptr %exn.slot, align 4
+  %5 = call ptr @__cxa_begin_catch(ptr %exn) #2
+  %6 = load i32, ptr %5, align 4
+  store i32 %6, ptr %0, align 4
+  store i32 2, ptr %retval, align 4
   call void @__cxa_end_catch() #2
   br label %return
 
 try.cont:                                         ; preds = %invoke.cont
-  store i32 1, i32* %retval, align 4
+  store i32 1, ptr %retval, align 4
   br label %return
 
 return:                                           ; preds = %try.cont, %catch
-  %8 = load i32, i32* %retval, align 4
-  ret i32 %8
+  %7 = load i32, ptr %retval, align 4
+  ret i32 %7
 
 eh.resume:                                        ; preds = %catch.dispatch
-  %exn1 = load i8*, i8** %exn.slot, align 4
-  %sel2 = load i32, i32* %ehselector.slot, align 4
-  %lpad.val = insertvalue { i8*, i32 } undef, i8* %exn1, 0
-  %lpad.val3 = insertvalue { i8*, i32 } %lpad.val, i32 %sel2, 1
-  resume { i8*, i32 } %lpad.val3
+  %exn1 = load ptr, ptr %exn.slot, align 4
+  %sel2 = load i32, ptr %ehselector.slot, align 4
+  %lpad.val = insertvalue { ptr, i32 } undef, ptr %exn1, 0
+  %lpad.val3 = insertvalue { ptr, i32 } %lpad.val, i32 %sel2, 1
+  resume { ptr, i32 } %lpad.val3
 }
 
 ; ASMNFS: ._Z9catchFuncv:
@@ -184,9 +182,9 @@ eh.resume:                                        ; preds = %catch.dispatch
 ; ASM:  L..C1:
 ; ASM:    .tc __ehinfo.1[TC],__ehinfo.1
 
-declare i8* @__cxa_allocate_exception(i32)
-declare void @__cxa_throw(i8*, i8*, i8*)
+declare ptr @__cxa_allocate_exception(i32)
+declare void @__cxa_throw(ptr, ptr, ptr)
 declare i32 @__xlcxx_personality_v1(...)
-declare i32 @llvm.eh.typeid.for(i8*)
-declare i8* @__cxa_begin_catch(i8*)
+declare i32 @llvm.eh.typeid.for(ptr)
+declare ptr @__cxa_begin_catch(ptr)
 declare void @__cxa_end_catch()

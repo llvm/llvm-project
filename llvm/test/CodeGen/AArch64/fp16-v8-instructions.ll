@@ -278,24 +278,24 @@ entry:
 }
 
 
-define <8 x half> @load_h(<8 x half>* %a) {
+define <8 x half> @load_h(ptr %a) {
 ; CHECK-LABEL: load_h:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ret
 entry:
-  %0 = load <8 x half>, <8 x half>* %a, align 4
+  %0 = load <8 x half>, ptr %a, align 4
   ret <8 x half> %0
 }
 
 
-define void @store_h(<8 x half>* %a, <8 x half> %b) {
+define void @store_h(ptr %a, <8 x half> %b) {
 ; CHECK-LABEL: store_h:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
 entry:
-  store <8 x half> %b, <8 x half>* %a, align 4
+  store <8 x half> %b, ptr %a, align 4
   ret void
 }
 
@@ -647,14 +647,14 @@ define <8 x half> @uitofp_i64(<8 x i64> %a) #0 {
   ret <8 x half> %1
 }
 
-define void @test_insert_at_zero(half %a, <8 x half>* %b) #0 {
+define void @test_insert_at_zero(half %a, ptr %b) #0 {
 ; CHECK-LABEL: test_insert_at_zero:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
   %1 = insertelement <8 x half> undef, half %a, i64 0
-  store <8 x half> %1, <8 x half>* %b, align 4
+  store <8 x half> %1, ptr %b, align 4
   ret void
 }
 

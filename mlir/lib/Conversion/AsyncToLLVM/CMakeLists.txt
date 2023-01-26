@@ -11,7 +11,7 @@ add_mlir_conversion_library(MLIRAsyncToLLVM
   Core
 
   LINK_LIBS PUBLIC
-  MLIRArithmeticDialect
+  MLIRArithDialect
   MLIRAsyncDialect
   MLIRFuncToLLVM
   MLIRFuncTransforms

@@ -1,4 +1,4 @@
-; RUN: opt -S -instcombine < %s | FileCheck %s
+; RUN: opt -S -passes=instcombine < %s | FileCheck %s
 
 ; https://llvm.org/bugs/show_bug.cgi?id=25900
 ; An arithmetic shift right of a power of two is not a power

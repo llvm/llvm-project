@@ -13,8 +13,6 @@ o test_expr_commands_can_handle_quotes:
 
 
 
-import unittest2
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

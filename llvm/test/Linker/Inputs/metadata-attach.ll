@@ -8,7 +8,7 @@ declare !attach !0 void @f1()
 
 define void @f2() !attach !0 {
   call void @f1()
-  store i32 0, i32* @g1
+  store i32 0, ptr @g1
   ret void
 }
 

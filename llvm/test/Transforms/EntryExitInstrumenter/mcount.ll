@@ -13,10 +13,10 @@ entry:
 ; CHECK-LABEL: define void @leaf_function()
 ; CHECK: entry:
 ; CHECK-NEXT: call void @mcount()
-; CHECK-NEXT: %0 = call i8* @llvm.returnaddress(i32 0)
-; CHECK-NEXT: call void @__cyg_profile_func_enter(i8* bitcast (void ()* @leaf_function to i8*), i8* %0)
-; CHECK-NEXT: %1 = call i8* @llvm.returnaddress(i32 0)
-; CHECK-NEXT: call void @__cyg_profile_func_exit(i8* bitcast (void ()* @leaf_function to i8*), i8* %1)
+; CHECK-NEXT: %0 = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT: call void @__cyg_profile_func_enter(ptr @leaf_function, ptr %0)
+; CHECK-NEXT: %1 = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT: call void @__cyg_profile_func_exit(ptr @leaf_function, ptr %1)
 ; CHECK-NEXT: ret void
 }
 
@@ -30,17 +30,17 @@ entry:
 ; CHECK: entry:
 ; CHECK-NEXT: call void @mcount()
 
-; CHECK-NEXT: %0 = call i8* @llvm.returnaddress(i32 0)
-; CHECK-NEXT: call void @__cyg_profile_func_enter(i8* bitcast (void ()* @root_function to i8*), i8* %0)
+; CHECK-NEXT: %0 = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT: call void @__cyg_profile_func_enter(ptr @root_function, ptr %0)
 
 ; Entry and exit calls, inlined from @leaf_function()
-; CHECK-NEXT: %1 = call i8* @llvm.returnaddress(i32 0)
-; CHECK-NEXT: call void @__cyg_profile_func_enter(i8* bitcast (void ()* @leaf_function to i8*), i8* %1)
-; CHECK-NEXT: %2 = call i8* @llvm.returnaddress(i32 0)
-; CHECK-NEXT: call void @__cyg_profile_func_exit(i8* bitcast (void ()* @leaf_function to i8*), i8* %2)
-; CHECK-NEXT: %3 = call i8* @llvm.returnaddress(i32 0)
+; CHECK-NEXT: %1 = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT: call void @__cyg_profile_func_enter(ptr @leaf_function, ptr %1)
+; CHECK-NEXT: %2 = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT: call void @__cyg_profile_func_exit(ptr @leaf_function, ptr %2)
+; CHECK-NEXT: %3 = call ptr @llvm.returnaddress(i32 0)
 
-; CHECK-NEXT: call void @__cyg_profile_func_exit(i8* bitcast (void ()* @root_function to i8*), i8* %3)
+; CHECK-NEXT: call void @__cyg_profile_func_exit(ptr @root_function, ptr %3)
 ; CHECK-NEXT: ret void
 }
 
@@ -79,22 +79,22 @@ define void @f7() #7 { entry: ret void }
 
 ; Treat musttail calls as terminators; inserting between the musttail call and
 ; ret is not allowed.
-declare i32* @tailcallee()
-define i32* @tailcaller() #8 {
-  %1 = musttail call i32* @tailcallee()
-  ret i32* %1
-; CHECK-LABEL: define i32* @tailcaller
+declare ptr @tailcallee()
+define ptr @tailcaller() #8 {
+  %1 = musttail call ptr @tailcallee()
+  ret ptr %1
+; CHECK-LABEL: define ptr @tailcaller
 ; CHECK: call void @__cyg_profile_func_exit
-; CHECK: musttail call i32* @tailcallee
+; CHECK: musttail call ptr @tailcallee
 ; CHECK: ret
 }
-define i8* @tailcaller2() #8 {
-  %1 = musttail call i32* @tailcallee()
-  %2 = bitcast i32* %1 to i8*
-  ret i8* %2
-; CHECK-LABEL: define i8* @tailcaller2
+define ptr @tailcaller2() #8 {
+  %1 = musttail call ptr @tailcallee()
+  %2 = bitcast ptr %1 to ptr
+  ret ptr %2
+; CHECK-LABEL: define ptr @tailcaller2
 ; CHECK: call void @__cyg_profile_func_exit
-; CHECK: musttail call i32* @tailcallee
+; CHECK: musttail call ptr @tailcallee
 ; CHECK: bitcast
 ; CHECK: ret
 }

@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <optional>
 #include <unordered_map>
 
 #include "lldb/Core/FileSpecList.h"
@@ -120,6 +121,8 @@ public:
   static unsigned RelocAddend32(const ELFRelocation &rel);
 
   static unsigned RelocAddend64(const ELFRelocation &rel);
+
+  bool IsRela() { return (reloc.is<ELFRela *>()); }
 
 private:
   typedef llvm::PointerUnion<ELFRel *, ELFRela *> RelocUnion;
@@ -318,6 +321,18 @@ static uint32_t ppc64VariantFromElfFlags(const elf::ELFHeader &header) {
     return ArchSpec::eCore_ppc64_generic;
 }
 
+static uint32_t loongarchVariantFromElfFlags(const elf::ELFHeader &header) {
+  uint32_t fileclass = header.e_ident[EI_CLASS];
+  switch (fileclass) {
+  case llvm::ELF::ELFCLASS32:
+    return ArchSpec::eLoongArchSubType_loongarch32;
+  case llvm::ELF::ELFCLASS64:
+    return ArchSpec::eLoongArchSubType_loongarch64;
+  default:
+    return ArchSpec::eLoongArchSubType_unknown;
+  }
+}
+
 static uint32_t subTypeFromElfHeader(const elf::ELFHeader &header) {
   if (header.e_machine == llvm::ELF::EM_MIPS)
     return mipsVariantFromElfFlags(header);
@@ -325,6 +340,8 @@ static uint32_t subTypeFromElfHeader(const elf::ELFHeader &header) {
     return ppc64VariantFromElfFlags(header);
   else if (header.e_machine == llvm::ELF::EM_RISCV)
     return riscvVariantFromElfFlags(header);
+  else if (header.e_machine == llvm::ELF::EM_LOONGARCH)
+    return loongarchVariantFromElfFlags(header);
 
   return LLDB_INVALID_CPUTYPE;
 }
@@ -430,8 +447,8 @@ bool ObjectFileELF::MagicBytesMatch(DataBufferSP &data_sp,
 }
 
 static uint32_t calc_crc32(uint32_t init, const DataExtractor &data) {
-  return llvm::crc32(
-      init, llvm::makeArrayRef(data.GetDataStart(), data.GetByteSize()));
+  return llvm::crc32(init,
+                     llvm::ArrayRef(data.GetDataStart(), data.GetByteSize()));
 }
 
 uint32_t ObjectFileELF::CalculateELFNotesSegmentsCRC32(
@@ -627,13 +644,13 @@ size_t ObjectFileELF::GetModuleSpecifications(
             if (gnu_debuglink_crc) {
               // Use 4 bytes of crc from the .gnu_debuglink section.
               u32le data(gnu_debuglink_crc);
-              uuid = UUID::fromData(&data, sizeof(data));
+              uuid = UUID(&data, sizeof(data));
             } else if (core_notes_crc) {
               // Use 8 bytes - first 4 bytes for *magic* prefix, mainly to make
               // it look different form .gnu_debuglink crc followed by 4 bytes
               // of note segments crc.
               u32le data[] = {u32le(g_core_uuid_magic), u32le(core_notes_crc)};
-              uuid = UUID::fromData(data, sizeof(data));
+              uuid = UUID(data, sizeof(data));
             }
           }
 
@@ -788,7 +805,7 @@ UUID ObjectFileELF::GetUUID() {
         // look different form .gnu_debuglink crc - followed by 4 bytes of note
         // segments crc.
         u32le data[] = {u32le(g_core_uuid_magic), u32le(core_notes_crc)};
-        m_uuid = UUID::fromData(data, sizeof(data));
+        m_uuid = UUID(data, sizeof(data));
       }
     } else {
       if (!m_gnu_debuglink_crc)
@@ -796,7 +813,7 @@ UUID ObjectFileELF::GetUUID() {
       if (m_gnu_debuglink_crc) {
         // Use 4 bytes of crc from the .gnu_debuglink section.
         u32le data(m_gnu_debuglink_crc);
-        m_uuid = UUID::fromData(&data, sizeof(data));
+        m_uuid = UUID(&data, sizeof(data));
       }
     }
   }
@@ -804,9 +821,9 @@ UUID ObjectFileELF::GetUUID() {
   return m_uuid;
 }
 
-llvm::Optional<FileSpec> ObjectFileELF::GetDebugLink() {
+std::optional<FileSpec> ObjectFileELF::GetDebugLink() {
   if (m_gnu_debuglink_file.empty())
-    return llvm::None;
+    return std::nullopt;
   return FileSpec(m_gnu_debuglink_file);
 }
 
@@ -1134,7 +1151,7 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
           if (note.n_descsz >= 4) {
             if (const uint8_t *buf = data.PeekData(offset, note.n_descsz)) {
               // Save the build id as the UUID for the module.
-              uuid = UUID::fromData(buf, note.n_descsz);
+              uuid = UUID(buf, note.n_descsz);
             } else {
               error.SetErrorString("failed to read GNU_BUILD_ID note payload");
               return error;
@@ -1750,22 +1767,22 @@ public:
     return llvm::formatv("{0}[{1}]", SegmentName, SegmentCount).str();
   }
 
-  llvm::Optional<VMRange> GetAddressInfo(const ELFProgramHeader &H) {
+  std::optional<VMRange> GetAddressInfo(const ELFProgramHeader &H) {
     if (H.p_memsz == 0) {
       LLDB_LOG(Log, "Ignoring zero-sized {0} segment. Corrupt object file?",
                SegmentName);
-      return llvm::None;
+      return std::nullopt;
     }
 
     if (Segments.overlaps(H.p_vaddr, H.p_vaddr + H.p_memsz)) {
       LLDB_LOG(Log, "Ignoring overlapping {0} segment. Corrupt object file?",
                SegmentName);
-      return llvm::None;
+      return std::nullopt;
     }
     return VMRange(H.p_vaddr, H.p_memsz);
   }
 
-  llvm::Optional<SectionAddressInfo> GetAddressInfo(const ELFSectionHeader &H) {
+  std::optional<SectionAddressInfo> GetAddressInfo(const ELFSectionHeader &H) {
     VMRange Range = GetVMRange(H);
     SectionSP Segment;
     auto It = Segments.find(Range.GetRangeBase());
@@ -1785,7 +1802,7 @@ public:
     if (Range.GetByteSize() > 0 &&
         Sections.overlaps(Range.GetRangeBase(), Range.GetRangeEnd())) {
       LLDB_LOG(Log, "Ignoring overlapping section. Corrupt object file?");
-      return llvm::None;
+      return std::nullopt;
     }
     if (Segment)
       Range.Slide(-Segment->GetFileAddress());
@@ -1935,7 +1952,7 @@ std::shared_ptr<ObjectFileELF> ObjectFileELF::GetGnuDebugDataObjectFile() {
   auto err = lldb_private::lzma::uncompress(data.GetData(), uncompressedData);
   if (err) {
     GetModule()->ReportWarning(
-        "An error occurred while decompression the section %s: %s",
+        "An error occurred while decompression the section {0}: {1}",
         section->GetName().AsCString(), llvm::toString(std::move(err)).c_str());
     return nullptr;
   }
@@ -2222,23 +2239,6 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
     // symbol_value_offset may contain 0 for ARM symbols or -1 for THUMB
     // symbols. See above for more details.
     uint64_t symbol_value = symbol.st_value + symbol_value_offset;
-
-    if (symbol_section_sp == nullptr && shndx == SHN_ABS &&
-        symbol.st_size != 0) {
-      // We don't have a section for a symbol with non-zero size. Create a new
-      // section for it so the address range covered by the symbol is also
-      // covered by the module (represented through the section list). It is
-      // needed so module lookup for the addresses covered by this symbol will
-      // be successfull. This case happens for absolute symbols.
-      ConstString fake_section_name(std::string(".absolute.") + symbol_name);
-      symbol_section_sp =
-          std::make_shared<Section>(module_sp, this, SHN_ABS, fake_section_name,
-                                    eSectionTypeAbsoluteAddress, symbol_value,
-                                    symbol.st_size, 0, 0, 0, SHF_ALLOC);
-
-      module_section_list->AddSection(symbol_section_sp);
-      section_list->AddSection(symbol_section_sp);
-    }
 
     if (symbol_section_sp &&
         CalculateType() != ObjectFile::Type::eTypeObjectFile)
@@ -2614,25 +2614,46 @@ unsigned ObjectFileELF::ApplyRelocations(
   }
 
   for (unsigned i = 0; i < num_relocations; ++i) {
-    if (!rel.Parse(rel_data, &offset))
+    if (!rel.Parse(rel_data, &offset)) {
+      GetModule()->ReportError(".rel{0}[{1:d}] failed to parse relocation",
+                               rel_section->GetName().AsCString(), i);
       break;
-
+    }
     Symbol *symbol = nullptr;
 
     if (hdr->Is32Bit()) {
       switch (reloc_type(rel)) {
       case R_386_32:
+        symbol = symtab->FindSymbolByID(reloc_symbol(rel));
+        if (symbol) {
+          addr_t f_offset =
+              rel_section->GetFileOffset() + ELFRelocation::RelocOffset32(rel);
+          DataBufferSP &data_buffer_sp = debug_data.GetSharedDataBuffer();
+          // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
+          WritableDataBuffer *data_buffer =
+              llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
+          uint32_t *dst = reinterpret_cast<uint32_t *>(
+              data_buffer->GetBytes() + f_offset);
+
+          addr_t value = symbol->GetAddressRef().GetFileAddress();
+          if (rel.IsRela()) {
+            value += ELFRelocation::RelocAddend32(rel);
+          } else {
+            value += *dst;
+          }
+          *dst = value;
+        } else {
+          GetModule()->ReportError(".rel{0}[{1}] unknown symbol id: {2:d}",
+                                   rel_section->GetName().AsCString(), i,
+                                   reloc_symbol(rel));
+        }
+        break;
       case R_386_PC32:
       default:
-        // FIXME: This asserts with this input:
-        //
-        // foo.cpp
-        // int main(int argc, char **argv) { return 0; }
-        //
-        // clang++.exe --target=i686-unknown-linux-gnu -g -c foo.cpp -o foo.o
-        //
-        // and running this on the foo.o module.
-        assert(false && "unexpected relocation type");
+        GetModule()->ReportError("unsupported 32-bit relocation:"
+                                 " .rel{0}[{1}], type {2}",
+                                 rel_section->GetName().AsCString(), i,
+                                 reloc_type(rel));
       }
     } else {
       switch (reloc_type(rel)) {
@@ -3375,7 +3396,7 @@ size_t ObjectFileELF::ReadSectionData(Section *section,
       GetByteOrder() == eByteOrderLittle, GetAddressByteSize() == 8);
   if (!Decompressor) {
     GetModule()->ReportWarning(
-        "Unable to initialize decompressor for section '%s': %s",
+        "Unable to initialize decompressor for section '{0}': {1}",
         section->GetName().GetCString(),
         llvm::toString(Decompressor.takeError()).c_str());
     section_data.Clear();
@@ -3386,10 +3407,9 @@ size_t ObjectFileELF::ReadSectionData(Section *section,
       std::make_shared<DataBufferHeap>(Decompressor->getDecompressedSize(), 0);
   if (auto error = Decompressor->decompress(
           {buffer_sp->GetBytes(), size_t(buffer_sp->GetByteSize())})) {
-    GetModule()->ReportWarning(
-        "Decompression of section '%s' failed: %s",
-        section->GetName().GetCString(),
-        llvm::toString(std::move(error)).c_str());
+    GetModule()->ReportWarning("Decompression of section '{0}' failed: {1}",
+                               section->GetName().GetCString(),
+                               llvm::toString(std::move(error)).c_str());
     section_data.Clear();
     return 0;
   }

@@ -173,6 +173,13 @@ StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
       break;
     }
     break;
+  case ELF::EM_XTENSA:
+    switch (Type) {
+#include "llvm/BinaryFormat/ELFRelocs/Xtensa.def"
+    default:
+      break;
+    }
+    break;
   default:
     break;
   }
@@ -223,6 +230,8 @@ uint32_t llvm::object::getELFRelativeRelocationType(uint32_t Machine) {
     break;
   case ELF::EM_BPF:
     break;
+  case ELF::EM_LOONGARCH:
+    return ELF::R_LARCH_RELATIVE;
   default:
     break;
   }
@@ -540,9 +549,8 @@ Expected<typename ELFT::DynRange> ELFFile<ELFT>::dynamicEntries() const {
 
   for (const Elf_Phdr &Phdr : *ProgramHeadersOrError) {
     if (Phdr.p_type == ELF::PT_DYNAMIC) {
-      Dyn = makeArrayRef(
-          reinterpret_cast<const Elf_Dyn *>(base() + Phdr.p_offset),
-          Phdr.p_filesz / sizeof(Elf_Dyn));
+      Dyn = ArrayRef(reinterpret_cast<const Elf_Dyn *>(base() + Phdr.p_offset),
+                     Phdr.p_filesz / sizeof(Elf_Dyn));
       break;
     }
   }
@@ -667,7 +675,7 @@ ELFFile<ELFT>::decodeBBAddrMap(const Elf_Shdr &Sec) const {
       Version = Data.getU8(Cur);
       if (!Cur)
         break;
-      if (Version > 1)
+      if (Version > 2)
         return createError("unsupported SHT_LLVM_BB_ADDR_MAP version: " +
                            Twine(static_cast<int>(Version)));
       Data.getU8(Cur); // Feature byte
@@ -676,8 +684,9 @@ ELFFile<ELFT>::decodeBBAddrMap(const Elf_Shdr &Sec) const {
     uint32_t NumBlocks = ReadULEB128AsUInt32();
     std::vector<BBAddrMap::BBEntry> BBEntries;
     uint32_t PrevBBEndOffset = 0;
-    for (uint32_t BlockID = 0; !ULEBSizeErr && Cur && (BlockID < NumBlocks);
-         ++BlockID) {
+    for (uint32_t BlockIndex = 0;
+         !ULEBSizeErr && Cur && (BlockIndex < NumBlocks); ++BlockIndex) {
+      uint32_t ID = Version >= 2 ? ReadULEB128AsUInt32() : BlockIndex;
       uint32_t Offset = ReadULEB128AsUInt32();
       uint32_t Size = ReadULEB128AsUInt32();
       uint32_t Metadata = ReadULEB128AsUInt32();
@@ -686,7 +695,7 @@ ELFFile<ELFT>::decodeBBAddrMap(const Elf_Shdr &Sec) const {
         Offset += PrevBBEndOffset;
         PrevBBEndOffset = Offset + Size;
       }
-      BBEntries.push_back({Offset, Size, Metadata});
+      BBEntries.push_back({ID, Offset, Size, Metadata});
     }
     FunctionEntries.push_back({Address, std::move(BBEntries)});
   }

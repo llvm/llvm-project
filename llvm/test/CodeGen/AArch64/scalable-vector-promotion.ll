@@ -6,18 +6,18 @@
 ; will assert once target lowering is ready, then we can bring in implementation for non-splat
 ; codepath for scalable vector.
 
-define void @simpleOneInstructionPromotion(<vscale x 2 x i32>* %addr1, i32* %dest) {
+define void @simpleOneInstructionPromotion(ptr %addr1, ptr %dest) {
 ; CHECK-LABEL: @simpleOneInstructionPromotion(
-; CHECK-NEXT:    [[IN1:%.*]] = load <vscale x 2 x i32>, <vscale x 2 x i32>* [[ADDR1:%.*]], align 8
+; CHECK-NEXT:    [[IN1:%.*]] = load <vscale x 2 x i32>, ptr [[ADDR1:%.*]], align 8
 ; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <vscale x 2 x i32> [[IN1]], i32 1
 ; CHECK-NEXT:    [[OUT:%.*]] = or i32 [[EXTRACT]], 1
-; CHECK-NEXT:    store i32 [[OUT]], i32* [[DEST:%.*]], align 4
+; CHECK-NEXT:    store i32 [[OUT]], ptr [[DEST:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %in1 = load <vscale x 2 x i32>, <vscale x 2 x i32>* %addr1, align 8
+  %in1 = load <vscale x 2 x i32>, ptr %addr1, align 8
   %extract = extractelement <vscale x 2 x i32> %in1, i32 1
   %out = or i32 %extract, 1
-  store i32 %out, i32* %dest, align 4
+  store i32 %out, ptr %dest, align 4
   ret void
 }
 

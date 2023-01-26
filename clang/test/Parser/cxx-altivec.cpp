@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -triple=powerpc-apple-darwin8 -Wno-deprecate-lax-vec-conv-all -target-feature +altivec -fsyntax-only -verify=expected,novsx -std=c++11 %s
-// RUN: %clang_cc1 -triple=powerpc64-unknown-linux-gnu -Wno-deprecate-lax-vec-conv-all -target-feature +altivec -target-feature +vsx -fsyntax-only -verify=expected,nonaix -std=c++11 %s
-// RUN: %clang_cc1 -triple=powerpc64le-unknown-linux-gnu -Wno-deprecate-lax-vec-conv-all -target-feature +altivec -fsyntax-only -verify=expected,novsx -std=c++11 %s
-// RUN: %clang_cc1 -triple=powerpc64-unknown-linux-gnu -Wno-deprecate-lax-vec-conv-all -target-feature +vsx -target-cpu pwr7 -fsyntax-only -verify=expected,nonaix -std=c++11 %s
-// RUN: %clang_cc1 -triple=powerpc64le-unknown-linux-gnu -Wno-deprecate-lax-vec-conv-all -target-feature -vsx -target-cpu pwr7 -fsyntax-only -verify=expected,novsx -std=c++11 %s
-// RUN: %clang_cc1 -triple=powerpc-ibm-aix -Wno-deprecate-lax-vec-conv-all -target-feature +altivec -fsyntax-only -verify=expected,aix -std=c++11 %s
-// RUN: %clang_cc1 -triple=powerpc64-ibm-aix -Wno-deprecate-lax-vec-conv-all -target-feature +altivec -fsyntax-only -verify=expected,aix -std=c++11 %s
+// RUN: %clang_cc1 -triple=powerpc-apple-darwin8 -target-feature +altivec -fsyntax-only -verify=expected,novsx -std=c++11 %s
+// RUN: %clang_cc1 -triple=powerpc64-unknown-linux-gnu -target-feature +altivec -target-feature +vsx -fsyntax-only -verify=expected,nonaix -std=c++11 %s
+// RUN: %clang_cc1 -triple=powerpc64le-unknown-linux-gnu -target-feature +altivec -fsyntax-only -verify=expected,novsx -std=c++11 %s
+// RUN: %clang_cc1 -triple=powerpc64-unknown-linux-gnu -target-feature +vsx -target-cpu pwr7 -fsyntax-only -verify=expected,nonaix -std=c++11 %s
+// RUN: %clang_cc1 -triple=powerpc64le-unknown-linux-gnu -target-feature -vsx -target-cpu pwr7 -fsyntax-only -verify=expected,novsx -std=c++11 %s
+// RUN: %clang_cc1 -triple=powerpc-ibm-aix -target-feature +altivec -fsyntax-only -verify=expected,aix -std=c++11 %s
+// RUN: %clang_cc1 -triple=powerpc64-ibm-aix -target-feature +altivec -fsyntax-only -verify=expected,aix -std=c++11 %s
 #include <altivec.h>
 
 __vector char vv_c;

@@ -12,7 +12,6 @@
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/lldb-private.h"
-#include "llvm/ADT/Optional.h"
 
 class DWARFUnit;
 

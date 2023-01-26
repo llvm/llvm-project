@@ -32,8 +32,8 @@ define void @_Z3funv() local_unnamed_addr #0 !dbg !11 {
 }
 
 ; Function Attrs: norecurse uwtable
-define weak_odr hidden i32* @_ZTW3var() local_unnamed_addr #1 {
-  ret i32* @var
+define weak_odr hidden ptr @_ZTW3var() local_unnamed_addr #1 {
+  ret ptr @var
 }
 
 attributes #0 = { norecurse nounwind readnone uwtable }

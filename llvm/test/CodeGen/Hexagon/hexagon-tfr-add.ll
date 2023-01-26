@@ -7,7 +7,7 @@ target triple = "hexagon"
 %s.1 = type { i32, [30 x %s.16] }
 %s.2 = type { [10 x %s.27], i8, i8 }
 %s.3 = type { i8, %s.41 }
-%s.4 = type { i8, i8, i8* }
+%s.4 = type { i8, i8, ptr }
 %s.5 = type { %s.22, %s.1, i8, i8, i64, i8, i8, i32, i8, i8, i8, %s.34, i8, i8, i32, i8 }
 %s.6 = type { i64, i8, i8, %s.7, i8, i8, %s.34, %s.34, i8, i8, %s.26 }
 %s.7 = type { i32, [256 x %s.8] }
@@ -49,7 +49,7 @@ target triple = "hexagon"
 %s.43 = type { i8, i8, i8, i8, [9 x i16] }
 %s.44 = type { %s.45, %s.47 }
 %s.45 = type { %s.46, i32, i8 }
-%s.46 = type { %s.46*, %s.46* }
+%s.46 = type { ptr, ptr }
 %s.47 = type { %s.48 }
 %s.48 = type { %s.46, %s.49 }
 %s.49 = type { %s.50 }
@@ -57,11 +57,11 @@ target triple = "hexagon"
 %s.51 = type { i32, i16, i8, i8, i8, i8, i8, [5 x i8] }
 %s.52 = type { i8, %s.53 }
 %s.53 = type { %s.54 }
-%s.54 = type { %s.55*, i8, i32 }
-%s.55 = type { %s.46, i32, i8*, i8*, %s.55*, %s.55*, i32, i8, i8, i16, i32, i8, %s.56, i16, [1 x %s.58], i32 }
+%s.54 = type { ptr, i8, i32 }
+%s.55 = type { %s.46, i32, ptr, ptr, ptr, ptr, i32, i8, i8, i16, i32, i8, %s.56, i16, [1 x %s.58], i32 }
 %s.56 = type { %s.57 }
 %s.57 = type { i8 }
-%s.58 = type { i8*, i32 }
+%s.58 = type { ptr, i32 }
 %s.59 = type { i8, [17 x %s.60] }
 %s.60 = type { i16, i8, [16 x %s.61] }
 %s.61 = type { i8, i8 }
@@ -72,16 +72,16 @@ target triple = "hexagon"
 %s.66 = type { i8, i32, i8 }
 %s.67 = type { i16, i8 }
 %s.68 = type { %s.69 }
-%s.69 = type { i32, i8* }
+%s.69 = type { i32, ptr }
 
 @g0 = external global %s.0, align 8
 @g1 = external constant %s.68, section ".dummy.dummy.dummy.dumm", align 4
 
 ; Function Attrs: optsize
-declare void @f0(%s.68*) #0
+declare void @f0(ptr) #0
 
 ; Function Attrs: nounwind optsize
-declare zeroext i8 @f1(i8*) #1
+declare zeroext i8 @f1(ptr) #1
 
 ; Function Attrs: nounwind optsize
 declare void @f2(i32) #1
@@ -92,29 +92,29 @@ declare void @f2(i32) #1
 ; Function Attrs: nounwind optsize ssp
 define zeroext i8 @f3() #2 {
 b0:
-  %v0 = load i8, i8* getelementptr inbounds (%s.0, %s.0* @g0, i32 0, i32 57), align 2
+  %v0 = load i8, ptr getelementptr inbounds (%s.0, ptr @g0, i32 0, i32 57), align 2
   %v1 = icmp eq i8 %v0, 0
   br i1 %v1, label %b2, label %b1
 
 b1:                                               ; preds = %b0
-  tail call void @f0(%s.68* nonnull @g1) #3
+  tail call void @f0(ptr nonnull @g1) #3
   unreachable
 
 b2:                                               ; preds = %b0
-  %v2 = call zeroext i8 @f1(i8* nonnull undef) #4
+  %v2 = call zeroext i8 @f1(ptr nonnull undef) #4
   br i1 undef, label %b3, label %b8
 
 b3:                                               ; preds = %b2
-  %v3 = load i8, i8* getelementptr inbounds (%s.0, %s.0* @g0, i32 0, i32 1), align 1
+  %v3 = load i8, ptr getelementptr inbounds (%s.0, ptr @g0, i32 0, i32 1), align 1
   %v4 = add i8 %v3, -17
   %v5 = icmp ult i8 %v4, 2
   br i1 %v5, label %b4, label %b7
 
 b4:                                               ; preds = %b3
-  %v6 = load i8, i8* getelementptr inbounds (%s.0, %s.0* @g0, i32 0, i32 167, i32 2), align 2
+  %v6 = load i8, ptr getelementptr inbounds (%s.0, ptr @g0, i32 0, i32 167, i32 2), align 2
   %v7 = sext i8 %v6 to i32
   %v8 = add nsw i32 %v7, 1
-  %v9 = load i8, i8* getelementptr inbounds (%s.0, %s.0* @g0, i32 0, i32 167, i32 0), align 2
+  %v9 = load i8, ptr getelementptr inbounds (%s.0, ptr @g0, i32 0, i32 167, i32 0), align 2
   %v10 = zext i8 %v9 to i32
   %v11 = icmp slt i32 %v8, %v10
   br i1 %v11, label %b6, label %b5
@@ -141,7 +141,7 @@ b11:                                              ; preds = %b10
   unreachable
 
 b12:                                              ; preds = %b10
-  %v12 = load i8, i8* getelementptr inbounds (%s.0, %s.0* @g0, i32 0, i32 1), align 1
+  %v12 = load i8, ptr getelementptr inbounds (%s.0, ptr @g0, i32 0, i32 1), align 1
   %v13 = zext i8 %v12 to i32
   switch i32 %v13, label %b14 [
     i32 17, label %b13

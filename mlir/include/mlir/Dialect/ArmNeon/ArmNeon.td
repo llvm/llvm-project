@@ -25,11 +25,11 @@ def ArmNeon_Dialect : Dialect {
   let name = "arm_neon";
   let cppNamespace = "::mlir::arm_neon";
 
+  let useFoldAPI = kEmitFoldAdaptorFolder;
+
   // Note: this does not need to depend on LLVMDialect as long as functions in
   // this dialect (such as canonicalization) do not produce entities belonging
   // to the LLVMDialect (ops or types).
-
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 //===----------------------------------------------------------------------===//
@@ -66,7 +66,7 @@ class ArmNeon_OverloadedOperandsWithOneResultIntrOp<string mnemonic,
   : ArmNeon_IntrOp<mnemonic, [0], overloadedOperands, 1, traits>;
 
 def SMullOp : ArmNeon_OverloadedOneResultIntrOp<"smull", [
-       NoSideEffect,
+       Pure,
        AllTypesMatch<["a", "b"]>,
        TypesMatchWith<
          "res has same vector shape and element bitwidth scaled by 2 as a",
@@ -95,7 +95,7 @@ def SMullOp : ArmNeon_OverloadedOneResultIntrOp<"smull", [
 }
 
 def SdotOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"sdot",[1], [
-      NoSideEffect,
+      Pure,
       AllTypesMatch<["b", "c"]>,
       AllTypesMatch<["a", "res"]>,
       TypesMatchWith<"res has the same number of elements as operand b",
@@ -128,7 +128,7 @@ class ArmNeon_2dOp<string mnemonic, list<Trait> traits = []>
          /*traits=*/traits>;
 
 def Sdot2dOp : ArmNeon_2dOp<"sdot", [
-      NoSideEffect,
+      Pure,
       AllTypesMatch<["b", "c"]>,
       AllTypesMatch<["a", "res"]>,
       PredOpTrait<

@@ -20,13 +20,12 @@ define void @f2() !type !1 {
 }
 
 define i1 @_start(i1 %i) {
-  %1 = select i1 %i, void ()* @f1, void ()* @f2
-  %2 = bitcast void ()* %1 to i8*
-  %3 = call i1 @llvm.type.test(i8* %2, metadata !"typeid1")
-  ret i1 %3
+  %1 = select i1 %i, ptr @f1, ptr @f2
+  %2 = call i1 @llvm.type.test(ptr %1, metadata !"typeid1")
+  ret i1 %2
 }
 
-declare i1 @llvm.type.test(i8*, metadata)
+declare i1 @llvm.type.test(ptr, metadata)
 
 !0 = !{i64 0, !"typeid1"}
 !1 = !{i64 0, !"typeid2"}

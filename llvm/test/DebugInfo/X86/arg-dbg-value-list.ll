@@ -2,7 +2,8 @@
 ;; variadic dbg_values. When/if we support them, the DBG_VALUE_LIST should be
 ;; updated accordingly.
 
-; RUN: llc %s -start-after=codegenprepare -stop-before=finalize-isel -o - | FileCheck %s
+; RUN: llc %s -start-after=codegenprepare --experimental-debug-variable-locations=false -stop-before=finalize-isel -o - | FileCheck %s
+; RUN: llc %s -start-after=codegenprepare --experimental-debug-variable-locations -stop-before=finalize-isel -o - | FileCheck %s
 
 ;; Check that unused argument values are handled the same way for variadic
 ;; dbg_values as non-variadics.
@@ -13,7 +14,7 @@
 
 ; CHECK: DBG_VALUE $ecx, $noreg, ![[A]], !DIExpression(), debug-location
 ; CHECK: DBG_VALUE $edx, $noreg, ![[B]], !DIExpression(), debug-location
-; CHECK: DBG_VALUE $noreg, $noreg, ![[C]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), debug-location
+; CHECK: DBG_VALUE $noreg, $noreg, ![[C]], !DIExpression(), debug-location
 
 target triple = "x86_64-pc-windows-msvc19.16.27034"
 define dso_local i32 @"?foo@@YAHHH@Z"(i32 %a, i32 %b) local_unnamed_addr !dbg !8 {

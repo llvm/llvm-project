@@ -26,7 +26,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/FunctionSummary.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/WorkList.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Casting.h"
@@ -34,6 +33,7 @@
 #include <algorithm>
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <utility>
 
 using namespace clang;
@@ -273,10 +273,10 @@ void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
     const ReturnStmt *RS = nullptr;
     if (!L.getSrc()->empty()) {
       CFGElement LastElement = L.getSrc()->back();
-      if (Optional<CFGStmt> LastStmt = LastElement.getAs<CFGStmt>()) {
+      if (std::optional<CFGStmt> LastStmt = LastElement.getAs<CFGStmt>()) {
         RS = dyn_cast<ReturnStmt>(LastStmt->getStmt());
-      } else if (Optional<CFGAutomaticObjDtor> AutoDtor =
-                 LastElement.getAs<CFGAutomaticObjDtor>()) {
+      } else if (std::optional<CFGAutomaticObjDtor> AutoDtor =
+                     LastElement.getAs<CFGAutomaticObjDtor>()) {
         RS = dyn_cast<ReturnStmt>(AutoDtor->getTriggerStmt());
       }
     }
@@ -314,11 +314,10 @@ void CoreEngine::HandleBlockEntrance(const BlockEntrance &L,
   setBlockCounter(Counter);
 
   // Process the entrance of the block.
-  if (Optional<CFGElement> E = L.getFirstElement()) {
+  if (std::optional<CFGElement> E = L.getFirstElement()) {
     NodeBuilderContext Ctx(*this, L.getBlock(), Pred);
     ExprEng.processCFGElement(*E, Pred, 0, &Ctx);
-  }
-  else
+  } else
     HandleBlockExit(L.getBlock(), Pred);
 }
 
@@ -616,7 +615,7 @@ void CoreEngine::enqueue(ExplodedNodeSet &Set,
 }
 
 void CoreEngine::enqueueEndOfFunction(ExplodedNodeSet &Set, const ReturnStmt *RS) {
-  for (auto I : Set) {
+  for (auto *I : Set) {
     // If we are in an inlined call, generate CallExitBegin node.
     if (I->getLocationContext()->getParent()) {
       I = generateCallExitBeginNode(I, RS);

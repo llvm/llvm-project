@@ -34,16 +34,16 @@ declare void @_Z5printddddd(double, double, double, double, double)
 
 define void @_Z4testiiiiiddddd(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e,
                                double %m, double %n, double %p,
-                               double %q, double %r) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+                               double %q, double %r) personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @_Z5printiiiii(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e)
           to label %try.cont unwind label %lpad
 
 lpad:
-  %0 = landingpad { i8*, i32 }
-          catch i8* null
-  %1 = extractvalue { i8*, i32 } %0, 0
-  %2 = tail call i8* @__cxa_begin_catch(i8* %1)
+  %0 = landingpad { ptr, i32 }
+          catch ptr null
+  %1 = extractvalue { ptr, i32 } %0, 0
+  %2 = tail call ptr @__cxa_begin_catch(ptr %1)
   invoke void @_Z5printddddd(double %m, double %n, double %p,
                              double %q, double %r)
           to label %invoke.cont2 unwind label %lpad1
@@ -56,27 +56,27 @@ try.cont:
   ret void
 
 lpad1:
-  %3 = landingpad { i8*, i32 }
+  %3 = landingpad { ptr, i32 }
           cleanup
   invoke void @__cxa_end_catch()
           to label %eh.resume unwind label %terminate.lpad
 
 eh.resume:
-  resume { i8*, i32 } %3
+  resume { ptr, i32 } %3
 
 terminate.lpad:
-  %4 = landingpad { i8*, i32 }
-          catch i8* null
-  %5 = extractvalue { i8*, i32 } %4, 0
-  tail call void @__clang_call_terminate(i8* %5)
+  %4 = landingpad { ptr, i32 }
+          catch ptr null
+  %5 = extractvalue { ptr, i32 } %4, 0
+  tail call void @__clang_call_terminate(ptr %5)
   unreachable
 }
 
-declare void @__clang_call_terminate(i8*)
+declare void @__clang_call_terminate(ptr)
 
 declare i32 @__gxx_personality_v0(...)
 
-declare i8* @__cxa_begin_catch(i8*)
+declare ptr @__cxa_begin_catch(ptr)
 
 declare void @__cxa_end_catch()
 

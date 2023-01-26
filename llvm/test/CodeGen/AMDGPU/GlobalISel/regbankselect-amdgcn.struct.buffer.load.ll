@@ -16,7 +16,7 @@ define amdgpu_ps float @struct_buffer_load__sgpr_rsrc__vgpr_val__vgpr_vindex__vg
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sgpr(s32) = COPY $sgpr6
-  ; CHECK-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s32) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[COPY4]](s32), [[COPY5]], [[COPY6]], 0, 0, -1 :: (dereferenceable load (s32), align 1, addrspace 4)
+  ; CHECK-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s32) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[COPY4]](s32), [[COPY5]], [[COPY6]], 0, 0, -1 :: (dereferenceable load (s32), align 1, addrspace 7)
   ; CHECK-NEXT:   $vgpr0 = COPY [[AMDGPU_BUFFER_LOAD]](s32)
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %val = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
@@ -39,7 +39,7 @@ define amdgpu_ps float @struct_buffer_load__sgpr_rsrc__sgpr_val__sgpr_vindex__sg
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sgpr(s32) = COPY $sgpr8
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY [[COPY4]](s32)
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY [[COPY5]](s32)
-  ; CHECK-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s32) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[COPY7]](s32), [[COPY8]], [[COPY6]], 0, 0, -1 :: (dereferenceable load (s32), align 1, addrspace 4)
+  ; CHECK-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s32) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[COPY7]](s32), [[COPY8]], [[COPY6]], 0, 0, -1 :: (dereferenceable load (s32), align 1, addrspace 7)
   ; CHECK-NEXT:   $vgpr0 = COPY [[AMDGPU_BUFFER_LOAD]](s32)
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %val = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
@@ -85,7 +85,7 @@ define amdgpu_ps float @struct_buffer_load__vgpr_rsrc__vgpr_val__vgpr_vindex__vg
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s32) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR1]](<4 x s32>), [[COPY4]](s32), [[COPY5]], [[COPY6]], 0, 0, -1 :: (dereferenceable load (s32), align 1, addrspace 4)
+  ; CHECK-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s32) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR1]](<4 x s32>), [[COPY4]](s32), [[COPY5]], [[COPY6]], 0, 0, -1 :: (dereferenceable load (s32), align 1, addrspace 7)
   ; CHECK-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; CHECK-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; CHECK-NEXT: {{  $}}
@@ -131,7 +131,7 @@ define amdgpu_ps float @struct_buffer_load__sgpr_rsrc__vgpr_val__vgpr_vindex_vgp
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s32) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[COPY4]](s32), [[COPY5]], [[V_READFIRSTLANE_B32_]], 0, 0, -1 :: (dereferenceable load (s32), align 1, addrspace 4)
+  ; CHECK-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s32) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[COPY4]](s32), [[COPY5]], [[V_READFIRSTLANE_B32_]], 0, 0, -1 :: (dereferenceable load (s32), align 1, addrspace 7)
   ; CHECK-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; CHECK-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; CHECK-NEXT: {{  $}}
@@ -189,7 +189,7 @@ define amdgpu_ps float @struct_buffer_load__vgpr_rsrc__vgpr_val__vgpr_vindex__vg
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s32) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR1]](<4 x s32>), [[COPY4]](s32), [[COPY5]], [[V_READFIRSTLANE_B32_4]], 0, 0, -1 :: (dereferenceable load (s32), align 1, addrspace 4)
+  ; CHECK-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s32) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR1]](<4 x s32>), [[COPY4]](s32), [[COPY5]], [[V_READFIRSTLANE_B32_4]], 0, 0, -1 :: (dereferenceable load (s32), align 1, addrspace 7)
   ; CHECK-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; CHECK-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; CHECK-NEXT: {{  $}}

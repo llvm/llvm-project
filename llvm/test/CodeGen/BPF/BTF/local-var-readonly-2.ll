@@ -2,7 +2,7 @@
 ; RUN: llc -march=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
 ;
 ; Source:
-;   void foo(const void *);
+;   void foo(const ptr);
 ;   int test() {
 ;     const struct {
 ;       unsigned a[4];
@@ -22,12 +22,11 @@
 define dso_local i32 @test() local_unnamed_addr #0 !dbg !7 {
 entry:
   %val = alloca %struct.anon, align 4
-  %0 = bitcast %struct.anon* %val to i8*, !dbg !23
-  call void @llvm.lifetime.start.p0i8(i64 20, i8* nonnull %0) #4, !dbg !23
-  call void @llvm.dbg.declare(metadata %struct.anon* %val, metadata !12, metadata !DIExpression()), !dbg !24
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 4 dereferenceable(20) %0, i8* nonnull align 4 dereferenceable(20) bitcast (%struct.anon* @__const.test.val to i8*), i64 20, i1 false), !dbg !24
-  call void @foo(i8* nonnull %0) #4, !dbg !25
-  call void @llvm.lifetime.end.p0i8(i64 20, i8* nonnull %0) #4, !dbg !26
+  call void @llvm.lifetime.start.p0(i64 20, ptr nonnull %val) #4, !dbg !23
+  call void @llvm.dbg.declare(metadata ptr %val, metadata !12, metadata !DIExpression()), !dbg !24
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 4 dereferenceable(20) %val, ptr nonnull align 4 dereferenceable(20) @__const.test.val, i64 20, i1 false), !dbg !24
+  call void @foo(ptr nonnull %val) #4, !dbg !25
+  call void @llvm.lifetime.end.p0(i64 20, ptr nonnull %val) #4, !dbg !26
   ret i32 0, !dbg !27
 }
 
@@ -39,18 +38,18 @@ entry:
 ; CHECK:             .ascii  ".rodata"                       # string offset=42
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: nounwind readnone speculatable willreturn
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg) #1
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #1
 
-declare !dbg !28 dso_local void @foo(i8*) local_unnamed_addr #3
+declare !dbg !28 dso_local void @foo(ptr) local_unnamed_addr #3
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 
 attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { argmemonly nounwind willreturn }

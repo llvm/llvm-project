@@ -12,13 +12,12 @@
 ; CHECK: memd(r29+#0) = r{{[0-9]+}}:{{[0-9]+}}
 ; CHECK: memd(r29+#0) = r{{[0-9]+}}:{{[0-9]+}}
 
-define i8** @f0(i8* %a0) local_unnamed_addr {
+define ptr @f0(ptr %a0) local_unnamed_addr {
 b0:
-  %v0 = tail call i8* @f1(i32 0)
-  %v1 = tail call i8* @f1(i32 8)
-  %v2 = bitcast i8* %v1 to i8**
-  %v3 = load i32, i32* undef, align 4
-  %v4 = tail call i8* @f4(i8* %a0, i32 0, i32 %v3)
+  %v0 = tail call ptr @f1(i32 0)
+  %v1 = tail call ptr @f1(i32 8)
+  %v3 = load i32, ptr undef, align 4
+  %v4 = tail call ptr @f4(ptr %a0, i32 0, i32 %v3)
   %v5 = sub nsw i32 %v3, 0
   br label %b1
 
@@ -42,10 +41,10 @@ b5:                                               ; preds = %b4
   br i1 undef, label %b27, label %b6
 
 b6:                                               ; preds = %b5
-  %v6 = ptrtoint i8* %v4 to i32
+  %v6 = ptrtoint ptr %v4 to i32
   %v7 = sub i32 0, %v6
-  %v8 = call i8* @f4(i8* nonnull %v4, i32 0, i32 %v7)
-  %v9 = call i8* @f4(i8* nonnull %v4, i32 undef, i32 %v5)
+  %v8 = call ptr @f4(ptr nonnull %v4, i32 0, i32 %v7)
+  %v9 = call ptr @f4(ptr nonnull %v4, i32 undef, i32 %v5)
   br label %b7
 
 b7:                                               ; preds = %b6
@@ -56,7 +55,7 @@ b8:                                               ; preds = %b7
 
 b9:                                               ; preds = %b8, %b7
   %v10 = phi i32 [ 2, %b8 ], [ 0, %b7 ]
-  %v11 = load i8, i8* %v9, align 1
+  %v11 = load i8, ptr %v9, align 1
   switch i8 %v11, label %b12 [
     i8 43, label %b10
     i8 45, label %b10
@@ -66,9 +65,9 @@ b10:                                              ; preds = %b9, %b9
   br i1 undef, label %b11, label %b12
 
 b11:                                              ; preds = %b10
-  %v12 = call i64 @f6(i8* nonnull %v9, i8** nonnull undef, i32 10)
-  %v13 = load i8*, i8** undef, align 4
-  %v14 = ptrtoint i8* %v13 to i32
+  %v12 = call i64 @f6(ptr nonnull %v9, ptr nonnull undef, i32 10)
+  %v13 = load ptr, ptr undef, align 4
+  %v14 = ptrtoint ptr %v13 to i32
   br label %b15
 
 b12:                                              ; preds = %b10, %b9
@@ -87,7 +86,7 @@ b15:                                              ; preds = %b13, %b11
   %v15 = phi i32 [ undef, %b13 ], [ %v14, %b11 ]
   %v16 = phi i32 [ 2, %b13 ], [ 1, %b11 ]
   %v17 = phi i64 [ undef, %b13 ], [ %v12, %b11 ]
-  %v18 = call i32* @f5()
+  %v18 = call ptr @f5()
   br label %b16
 
 b16:                                              ; preds = %b15
@@ -96,7 +95,7 @@ b16:                                              ; preds = %b15
   br i1 %v20, label %b17, label %b18
 
 b17:                                              ; preds = %b16
-  call void @f2(i8* %v8)
+  call void @f2(ptr %v8)
   br label %b27
 
 b18:                                              ; preds = %b16
@@ -135,24 +134,24 @@ b26:                                              ; preds = %b25
   unreachable
 
 b27:                                              ; preds = %b17, %b5
-  call void @f2(i8* %v4)
-  call void @f2(i8* %v0)
-  %v29 = call i8* @f3(i8* undef, i8* nonnull %a0)
-  ret i8** %v2
+  call void @f2(ptr %v4)
+  call void @f2(ptr %v0)
+  %v29 = call ptr @f3(ptr undef, ptr nonnull %a0)
+  ret ptr %v1
 
 b28:                                              ; preds = %b25
-  call void @f2(i8* %v9)
+  call void @f2(ptr %v9)
   unreachable
 }
 
-declare i8* @f1(i32) local_unnamed_addr
+declare ptr @f1(i32) local_unnamed_addr
 
-declare void @f2(i8* nocapture) local_unnamed_addr
+declare void @f2(ptr nocapture) local_unnamed_addr
 
-declare i8* @f3(i8*, i8* nocapture readonly) local_unnamed_addr
+declare ptr @f3(ptr, ptr nocapture readonly) local_unnamed_addr
 
-declare i8* @f4(i8*, i32, i32) local_unnamed_addr
+declare ptr @f4(ptr, i32, i32) local_unnamed_addr
 
-declare i32* @f5() local_unnamed_addr
+declare ptr @f5() local_unnamed_addr
 
-declare i64 @f6(i8*, i8**, i32) local_unnamed_addr
+declare i64 @f6(ptr, ptr, i32) local_unnamed_addr

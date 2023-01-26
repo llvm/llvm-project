@@ -48,6 +48,15 @@ typedef basic_string<char, std::char_traits<char>, std::allocator<char>> string;
 typedef basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t>> wstring;
 typedef basic_string<char16, std::char_traits<char16>, std::allocator<char16>> u16string;
 typedef basic_string<char32, std::char_traits<char32>, std::allocator<char32>> u32string;
+
+template <typename C, typename T>
+struct basic_string_view {
+  basic_string_view(const C* s);
+};
+typedef basic_string_view<char, std::char_traits<char>> string_view;
+typedef basic_string_view<wchar_t, std::char_traits<wchar_t>> wstring_view;
+typedef basic_string_view<char16, std::char_traits<char16>> u16string_view;
+typedef basic_string_view<char32, std::char_traits<char32>> u32string_view;
 }
 
 std::string operator+(const std::string&, const std::string&);
@@ -169,6 +178,15 @@ void f6(const std::string &s) {
   tmp.insert(1, s);
   tmp.insert(1, s.c_str(), 2);
 }
+void f7(std::string_view sv) {
+  std::string s;
+  f7(s.c_str());
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
+  // CHECK-FIXES: {{^  }}f7(s);{{$}}
+  f7(s.data());
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call to 'data' [readability-redundant-string-cstr]
+  // CHECK-FIXES: {{^  }}f7(s);{{$}}
+}
 
 // Tests for std::wstring.
 
@@ -176,6 +194,15 @@ void g1(const std::wstring &s) {
   g1(s.c_str());
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
   // CHECK-FIXES: {{^  }}g1(s);{{$}}
+}
+void g2(std::wstring_view sv) {
+  std::wstring s;
+  g2(s.c_str());
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
+  // CHECK-FIXES: {{^  }}g2(s);{{$}}
+  g2(s.data());
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call to 'data' [readability-redundant-string-cstr]
+  // CHECK-FIXES: {{^  }}g2(s);{{$}}
 }
 
 // Tests for std::u16string.
@@ -185,6 +212,15 @@ void h1(const std::u16string &s) {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
   // CHECK-FIXES: {{^  }}h1(s);{{$}}
 }
+void h2(std::u16string_view sv) {
+  std::u16string s;
+  h2(s.c_str());
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
+  // CHECK-FIXES: {{^  }}h2(s);{{$}}
+  h2(s.data());
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call to 'data' [readability-redundant-string-cstr]
+  // CHECK-FIXES: {{^  }}h2(s);{{$}}
+}
 
 // Tests for std::u32string.
 
@@ -192,6 +228,15 @@ void k1(const std::u32string &s) {
   k1(s.c_str());
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
   // CHECK-FIXES: {{^  }}k1(s);{{$}}
+}
+void k2(std::u32string_view sv) {
+  std::u32string s;
+  k2(s.c_str());
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
+  // CHECK-FIXES: {{^  }}k2(s);{{$}}
+  k2(s.data());
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call to 'data' [readability-redundant-string-cstr]
+  // CHECK-FIXES: {{^  }}k2(s);{{$}}
 }
 
 // Tests on similar classes that aren't good candidates for this checker.

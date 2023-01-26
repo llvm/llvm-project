@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -tensor-copy-insertion="must-infer-memory-space" -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-tensor-copy-insertion="must-infer-memory-space" -split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @unknown_op_copy
 func.func @unknown_op_copy() -> (tensor<10xf32>, tensor<10xf32>) {

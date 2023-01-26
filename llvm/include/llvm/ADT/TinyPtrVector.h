@@ -10,7 +10,6 @@
 #define LLVM_ADT_TINYPTRVECTOR_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
@@ -136,7 +135,7 @@ public:
   // implicit conversion operator to ArrayRef.
   operator ArrayRef<EltTy>() const {
     if (Val.isNull())
-      return None;
+      return std::nullopt;
     if (Val.template is<EltTy>())
       return *Val.getAddrOfPtr1();
     return *Val.template get<VecTy*>();
@@ -145,7 +144,7 @@ public:
   // implicit conversion operator to MutableArrayRef.
   operator MutableArrayRef<EltTy>() {
     if (Val.isNull())
-      return None;
+      return std::nullopt;
     if (Val.template is<EltTy>())
       return *Val.getAddrOfPtr1();
     return *Val.template get<VecTy*>();

@@ -1,10 +1,10 @@
-; RUN: not opt -verify < %s 2>&1 | FileCheck %s
+; RUN: not opt -passes=verify < %s 2>&1 | FileCheck %s
 
 %X = type opaque
 
-define void @f_1(%X %val, %X* %ptr) {
-  store %X %val, %X* %ptr
+define void @f_1(%X %val, ptr %ptr) {
+  store %X %val, ptr %ptr
   ret void
 ; CHECK: storing unsized types is not allowed
-; CHECK-NEXT:  store %X %val, %X* %ptr
+; CHECK-NEXT:  store %X %val, ptr %ptr
 }

@@ -33,8 +33,6 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -42,6 +40,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <algorithm>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
@@ -50,19 +49,19 @@ namespace clang {
 namespace clangd {
 namespace {
 
-llvm::Optional<llvm::StringRef> getArgStr(const clang::Diagnostic &Info,
-                                          unsigned Index) {
+std::optional<llvm::StringRef> getArgStr(const clang::Diagnostic &Info,
+                                         unsigned Index) {
   switch (Info.getArgKind(Index)) {
   case DiagnosticsEngine::ak_c_string:
     return llvm::StringRef(Info.getArgCStr(Index));
   case DiagnosticsEngine::ak_std_string:
     return llvm::StringRef(Info.getArgStdStr(Index));
   default:
-    return llvm::None;
+    return std::nullopt;
   }
 }
 
-std::vector<Fix> only(llvm::Optional<Fix> F) {
+std::vector<Fix> only(std::optional<Fix> F) {
   if (F)
     return {std::move(*F)};
   return {};
@@ -226,7 +225,7 @@ std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
   case diag::err_implied_std_initializer_list_not_found:
     return only(insertHeader("<initializer_list>"));
   case diag::err_need_header_before_typeid:
-    return only(insertHeader("<typeid>"));
+    return only(insertHeader("<typeinfo>"));
   case diag::err_need_header_before_placement_new:
   case diag::err_implicit_coroutine_std_nothrow_type_not_found:
     return only(insertHeader("<new>"));
@@ -248,19 +247,23 @@ std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
   return {};
 }
 
-llvm::Optional<Fix> IncludeFixer::insertHeader(llvm::StringRef Spelled,
-                                               llvm::StringRef Symbol) const {
+std::optional<Fix> IncludeFixer::insertHeader(llvm::StringRef Spelled,
+                                               llvm::StringRef Symbol,
+                                               tooling::IncludeDirective Directive) const {
   Fix F;
 
-  if (auto Edit = Inserter->insert(Spelled))
+  if (auto Edit = Inserter->insert(Spelled, Directive))
     F.Edits.push_back(std::move(*Edit));
   else
-    return llvm::None;
+    return std::nullopt;
 
+  llvm::StringRef DirectiveSpelling =
+      Directive == tooling::IncludeDirective::Include ? "Include" : "Import";
   if (Symbol.empty())
-    F.Message = llvm::formatv("Include {0}", Spelled);
+    F.Message = llvm::formatv("{0} {1}", DirectiveSpelling, Spelled);
   else
-    F.Message = llvm::formatv("Include {0} for symbol {1}", Spelled, Symbol);
+    F.Message = llvm::formatv("{0} {1} for symbol {2}",
+        DirectiveSpelling, Spelled, Symbol);
 
   return F;
 }
@@ -278,7 +281,7 @@ std::vector<Fix> IncludeFixer::fixIncompleteType(const Type &T) const {
   auto ID = getSymbolID(TD);
   if (!ID)
     return {};
-  llvm::Optional<const SymbolSlab *> Symbols = lookupCached(ID);
+  std::optional<const SymbolSlab *> Symbols = lookupCached(ID);
   if (!Symbols)
     return {};
   const SymbolSlab &Syms = **Symbols;
@@ -317,17 +320,22 @@ std::vector<Fix> IncludeFixer::fixesForSymbols(const SymbolSlab &Syms) const {
   llvm::StringSet<> InsertedHeaders;
   for (const auto &Sym : Syms) {
     for (const auto &Inc : getRankedIncludes(Sym)) {
-      if (auto ToInclude = Inserted(Sym, Inc)) {
+      if ((Inc.Directive & Directive) == 0)
+        continue;
+      if (auto ToInclude = Inserted(Sym, Inc.Header)) {
         if (ToInclude->second) {
           if (!InsertedHeaders.try_emplace(ToInclude->first).second)
             continue;
           if (auto Fix =
-                  insertHeader(ToInclude->first, (Sym.Scope + Sym.Name).str()))
+                  insertHeader(ToInclude->first, (Sym.Scope + Sym.Name).str(),
+                               Directive == Symbol::Import
+                                  ? tooling::IncludeDirective::Import
+                                  : tooling::IncludeDirective::Include))
             Fixes.push_back(std::move(*Fix));
         }
       } else {
-        vlog("Failed to calculate include insertion for {0} into {1}: {2}", Inc,
-             File, ToInclude.takeError());
+        vlog("Failed to calculate include insertion for {0} into {1}: {2}",
+             Inc.Header, File, ToInclude.takeError());
       }
     }
   }
@@ -339,7 +347,7 @@ std::vector<Fix> IncludeFixer::fixesForSymbols(const SymbolSlab &Syms) const {
 // "::X::Y" that is qualified by unresolved name "clangd":
 //     clang::clangd::X::Y
 //            ~
-llvm::Optional<std::string> qualifiedByUnresolved(const SourceManager &SM,
+std::optional<std::string> qualifiedByUnresolved(const SourceManager &SM,
                                                   SourceLocation Loc,
                                                   const LangOptions &LangOpts) {
   std::string Result;
@@ -355,7 +363,7 @@ llvm::Optional<std::string> qualifiedByUnresolved(const SourceManager &SM,
     NextLoc = IDTok->getLocation();
   }
   if (Result.empty())
-    return llvm::None;
+    return std::nullopt;
   return Result;
 }
 
@@ -365,29 +373,29 @@ struct CheapUnresolvedName {
   // This is the part of what was typed that was resolved, and it's in its
   // resolved form not its typed form (think `namespace clang { clangd::x }` -->
   // `clang::clangd::`).
-  llvm::Optional<std::string> ResolvedScope;
+  std::optional<std::string> ResolvedScope;
 
   // Unresolved part of the scope. When the unresolved name is a specifier, we
   // use the name that comes after it as the alternative name to resolve and use
   // the specifier as the extra scope in the accessible scopes.
-  llvm::Optional<std::string> UnresolvedScope;
+  std::optional<std::string> UnresolvedScope;
 };
 
-llvm::Optional<std::string> getSpelledSpecifier(const CXXScopeSpec &SS,
+std::optional<std::string> getSpelledSpecifier(const CXXScopeSpec &SS,
     const SourceManager &SM) {
   // Support specifiers written within a single macro argument.
   if (!SM.isWrittenInSameFile(SS.getBeginLoc(), SS.getEndLoc()))
-    return llvm::None;
+    return std::nullopt;
   SourceRange Range(SM.getTopMacroCallerLoc(SS.getBeginLoc()), SM.getTopMacroCallerLoc(SS.getEndLoc()));
   if (Range.getBegin().isMacroID() || Range.getEnd().isMacroID())
-    return llvm::None;
+    return std::nullopt;
 
   return (toSourceCode(SM, Range) + "::").str();
 }
 
 // Extracts unresolved name and scope information around \p Unresolved.
 // FIXME: try to merge this with the scope-wrangling code in CodeComplete.
-llvm::Optional<CheapUnresolvedName> extractUnresolvedNameCheaply(
+std::optional<CheapUnresolvedName> extractUnresolvedNameCheaply(
     const SourceManager &SM, const DeclarationNameInfo &Unresolved,
     CXXScopeSpec *SS, const LangOptions &LangOpts, bool UnresolvedIsSpecifier) {
   CheapUnresolvedName Result;
@@ -398,7 +406,7 @@ llvm::Optional<CheapUnresolvedName> extractUnresolvedNameCheaply(
         Result.ResolvedScope = "";
       } else if (const auto *NS = Nested->getAsNamespace()) {
         std::string SpecifiedNS = printNamespaceScope(*NS);
-        llvm::Optional<std::string> Spelling = getSpelledSpecifier(*SS, SM);
+        std::optional<std::string> Spelling = getSpelledSpecifier(*SS, SM);
 
         // Check the specifier spelled in the source.
         // If the resolved scope doesn't end with the spelled scope, the
@@ -418,7 +426,7 @@ llvm::Optional<CheapUnresolvedName> extractUnresolvedNameCheaply(
       } else {
         // We don't fix symbols in scopes that are not top-level e.g. class
         // members, as we don't collect includes for them.
-        return llvm::None;
+        return std::nullopt;
       }
     }
   }
@@ -483,7 +491,7 @@ collectAccessibleScopes(Sema &Sem, const DeclarationNameInfo &Typo, Scope *S,
 
 class IncludeFixer::UnresolvedNameRecorder : public ExternalSemaSource {
 public:
-  UnresolvedNameRecorder(llvm::Optional<UnresolvedName> &LastUnresolvedName)
+  UnresolvedNameRecorder(std::optional<UnresolvedName> &LastUnresolvedName)
       : LastUnresolvedName(LastUnresolvedName) {}
 
   void InitializeSema(Sema &S) override { this->SemaPtr = &S; }
@@ -536,7 +544,7 @@ public:
 private:
   Sema *SemaPtr = nullptr;
 
-  llvm::Optional<UnresolvedName> &LastUnresolvedName;
+  std::optional<UnresolvedName> &LastUnresolvedName;
 };
 
 llvm::IntrusiveRefCntPtr<ExternalSemaSource>
@@ -557,13 +565,13 @@ std::vector<Fix> IncludeFixer::fixUnresolvedName() const {
   Req.RestrictForCodeCompletion = true;
   Req.Limit = 100;
 
-  if (llvm::Optional<const SymbolSlab *> Syms = fuzzyFindCached(Req))
+  if (std::optional<const SymbolSlab *> Syms = fuzzyFindCached(Req))
     return fixesForSymbols(**Syms);
 
   return {};
 }
 
-llvm::Optional<const SymbolSlab *>
+std::optional<const SymbolSlab *>
 IncludeFixer::fuzzyFindCached(const FuzzyFindRequest &Req) const {
   auto ReqStr = llvm::formatv("{0}", toJSON(Req)).str();
   auto I = FuzzyFindCache.find(ReqStr);
@@ -571,7 +579,7 @@ IncludeFixer::fuzzyFindCached(const FuzzyFindRequest &Req) const {
     return &I->second;
 
   if (IndexRequestCount >= IndexRequestLimit)
-    return llvm::None;
+    return std::nullopt;
   IndexRequestCount++;
 
   SymbolSlab::Builder Matches;
@@ -586,7 +594,7 @@ IncludeFixer::fuzzyFindCached(const FuzzyFindRequest &Req) const {
   return &E.first->second;
 }
 
-llvm::Optional<const SymbolSlab *>
+std::optional<const SymbolSlab *>
 IncludeFixer::lookupCached(const SymbolID &ID) const {
   LookupRequest Req;
   Req.IDs.insert(ID);
@@ -596,7 +604,7 @@ IncludeFixer::lookupCached(const SymbolID &ID) const {
     return &I->second;
 
   if (IndexRequestCount >= IndexRequestLimit)
-    return llvm::None;
+    return std::nullopt;
   IndexRequestCount++;
 
   // FIXME: consider batching the requests for all diagnostics.

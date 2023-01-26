@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple riscv32 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple riscv32 -emit-llvm %s -o - | FileCheck %s
 
 // This file contains test cases that will have different output for ilp32 vs
 // the other 32-bit ABIs.
@@ -35,7 +35,7 @@ int f_scalar_stack_1(int32_t a, int64_t b, float c, double d, long double e,
 // the presence of large return values that consume a register due to the need
 // to pass a pointer.
 
-// CHECK-LABEL: define{{.*}} void @f_scalar_stack_2(%struct.large* noalias sret(%struct.large) align 4 %agg.result, float noundef %a, i64 noundef %b, double noundef %c, fp128 noundef %d, i8 noundef zeroext %e, i8 noundef %f, i8 noundef %g)
+// CHECK-LABEL: define{{.*}} void @f_scalar_stack_2(ptr noalias sret(%struct.large) align 4 %agg.result, float noundef %a, i64 noundef %b, double noundef %c, fp128 noundef %d, i8 noundef zeroext %e, i8 noundef %f, i8 noundef %g)
 struct large f_scalar_stack_2(float a, int64_t b, double c, long double d,
                               uint8_t e, int8_t f, uint8_t g) {
   return (struct large){a, e, f, g};
@@ -48,6 +48,6 @@ struct large f_scalar_stack_2(float a, int64_t b, double c, long double d,
 void f_scalar_stack_3(double a, int64_t b, double c, int64_t d, int e,
                       int64_t f, float g, double h, long double i) {}
 
-// CHECK-LABEL: define{{.*}} void @f_agg_stack(double noundef %a, i64 noundef %b, double noundef %c, i64 noundef %d, i32 %e.coerce, [2 x i32] %f.coerce, i64 %g.coerce, %struct.large* noundef %h)
+// CHECK-LABEL: define{{.*}} void @f_agg_stack(double noundef %a, i64 noundef %b, double noundef %c, i64 noundef %d, i32 %e.coerce, [2 x i32] %f.coerce, i64 %g.coerce, ptr noundef %h)
 void f_agg_stack(double a, int64_t b, double c, int64_t d, struct tiny e,
                  struct small f, struct small_aligned g, struct large h) {}

@@ -33,4 +33,4 @@ int main(int argc, char *argv[]) {
 // CHECK:   Previous write of size 4
 // CHECK-NEXT: #0 {{.*}}parallel-simple.c:23
 // CHECK: DONE
-// CHECK: ThreadSanitizer: reported 1 warnings
+// CHECK: ThreadSanitizer: reported {{[1-3]}} warnings

@@ -7,63 +7,63 @@
 
 define i32 @inner() {
   call void @extern()
-  %a1 = load volatile i32, i32* @a
+  %a1 = load volatile i32, ptr @a
   %x1 = add i32 %a1,  %a1
   ret i32 %x1
 }
 
 define i32 @inner2() {
   call void @extern()
-  %a1 = load volatile i32, i32* @a
+  %a1 = load volatile i32, ptr @a
   %x1 = add i32 %a1,  %a1
-  %a2 = load volatile i32, i32* @a
+  %a2 = load volatile i32, ptr @a
   %x2 = add i32 %x1, %a2
-  %a3 = load volatile i32, i32* @a
+  %a3 = load volatile i32, ptr @a
   %x3 = add i32 %x2, %a3
-  %a4 = load volatile i32, i32* @a
+  %a4 = load volatile i32, ptr @a
   %x4 = add i32 %x3, %a4
-  %a5 = load volatile i32, i32* @a
+  %a5 = load volatile i32, ptr @a
   %x5 = add i32 %x3, %a5
-  %a6 = load volatile i32, i32* @a
+  %a6 = load volatile i32, ptr @a
   %x6 = add i32 %x5, %a6
-  %a7 = load volatile i32, i32* @a
+  %a7 = load volatile i32, ptr @a
   %x7 = add i32 %x6, %a7
-  %a8 = load volatile i32, i32* @a
+  %a8 = load volatile i32, ptr @a
   %x8 = add i32 %x7, %a8
   ret i32 %x8
 }
 
 define i32 @inner3() {
   call void @extern()
-  %a1 = load volatile i32, i32* @a
+  %a1 = load volatile i32, ptr @a
   %x1 = add i32 %a1,  %a1
-  %a2 = load volatile i32, i32* @a
+  %a2 = load volatile i32, ptr @a
   %x2 = add i32 %x1, %a2
-  %a3 = load volatile i32, i32* @a
+  %a3 = load volatile i32, ptr @a
   %x3 = add i32 %x2, %a3
-  %a4 = load volatile i32, i32* @a
+  %a4 = load volatile i32, ptr @a
   %x4 = add i32 %x3, %a4
-  %a5 = load volatile i32, i32* @a
+  %a5 = load volatile i32, ptr @a
   %x5 = add i32 %x4, %a5
-  %a6 = load volatile i32, i32* @a
+  %a6 = load volatile i32, ptr @a
   %x6 = add i32 %x5, %a6
-  %a7 = load volatile i32, i32* @a
+  %a7 = load volatile i32, ptr @a
   %x7 = add i32 %x6, %a7
-  %a8 = load volatile i32, i32* @a
+  %a8 = load volatile i32, ptr @a
   %x8 = add i32 %x7, %a8
-  %a9 = load volatile i32, i32* @a
+  %a9 = load volatile i32, ptr @a
   %x9 = add i32 %x8, %a9
-  %a10 = load volatile i32, i32* @a
+  %a10 = load volatile i32, ptr @a
   %x10 = add i32 %x9, %a10
-  %a11 = load volatile i32, i32* @a
+  %a11 = load volatile i32, ptr @a
   %x11 = add i32 %x10, %a11
-  %a12 = load volatile i32, i32* @a
+  %a12 = load volatile i32, ptr @a
   %x12 = add i32 %x11, %a12
-  %a13 = load volatile i32, i32* @a
+  %a13 = load volatile i32, ptr @a
   %x13 = add i32 %x12, %a13
-  %a14 = load volatile i32, i32* @a
+  %a14 = load volatile i32, ptr @a
   %x14 = add i32 %x13, %a14
-  %a15 = load volatile i32, i32* @a
+  %a15 = load volatile i32, ptr @a
   %x15 = add i32 %x14, %a15
   ret i32 %x15
 }

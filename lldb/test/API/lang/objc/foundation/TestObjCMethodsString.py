@@ -19,6 +19,8 @@ class FoundationTestCaseString(TestBase):
                 self, '// Break here for NSString tests',
                 lldb.SBFileSpec('main.m', False))
 
+        self.runCmd("settings set target.prefer-dynamic-value no-dynamic-values")
+
         # Test_NSString:
         self.runCmd("thread backtrace")
         self.expect("expression (int)[str length]",

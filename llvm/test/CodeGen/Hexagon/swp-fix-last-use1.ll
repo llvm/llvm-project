@@ -22,7 +22,7 @@ b2:                                               ; preds = %b2, %b1
   %v9 = lshr i64 %v8, 32
   %v10 = trunc i64 %v9 to i32
   %v11 = tail call i32 @llvm.hexagon.S2.lsr.r.r(i32 %v10, i32 undef)
-  %v12 = load i64, i64* undef, align 8, !tbaa !0
+  %v12 = load i64, ptr undef, align 8, !tbaa !0
   %v13 = trunc i64 %v12 to i32
   %v14 = lshr i64 %v12, 32
   %v15 = trunc i64 %v14 to i32
@@ -43,7 +43,7 @@ b4:                                               ; preds = %b3, %b0
   %v24 = zext i32 %v22 to i64
   %v25 = shl nuw i64 %v24, 32
   %v26 = or i64 %v25, 0
-  store i64 %v26, i64* undef, align 8, !tbaa !0
+  store i64 %v26, ptr undef, align 8, !tbaa !0
   ret void
 }
 

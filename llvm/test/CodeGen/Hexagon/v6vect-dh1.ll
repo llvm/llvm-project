@@ -18,66 +18,55 @@
 target triple = "hexagon"
 
 ; Function Attrs: nounwind
-define void @f0(i8* nocapture readonly %a0, i8* nocapture readonly %a1, i32 %a2, i8* nocapture %a3, i32 %a4) #0 {
+define void @f0(ptr nocapture readonly %a0, ptr nocapture readonly %a1, i32 %a2, ptr nocapture %a3, i32 %a4) #0 {
 b0:
-  %v0 = bitcast i8* %a1 to i32*
-  %v1 = load i32, i32* %v0, align 4, !tbaa !0
-  %v2 = getelementptr inbounds i8, i8* %a1, i32 4
-  %v3 = bitcast i8* %v2 to i32*
-  %v4 = load i32, i32* %v3, align 4, !tbaa !0
-  %v5 = getelementptr inbounds i8, i8* %a1, i32 8
-  %v6 = bitcast i8* %v5 to i32*
-  %v7 = load i32, i32* %v6, align 4, !tbaa !0
+  %v1 = load i32, ptr %a1, align 4, !tbaa !0
+  %v2 = getelementptr inbounds i8, ptr %a1, i32 4
+  %v4 = load i32, ptr %v2, align 4, !tbaa !0
+  %v5 = getelementptr inbounds i8, ptr %a1, i32 8
+  %v7 = load i32, ptr %v5, align 4, !tbaa !0
   %v8 = mul i32 %a4, 2
   %v9 = add i32 %v8, %a4
   %v10 = icmp sgt i32 %a4, 0
   br i1 %v10, label %b1, label %b4
 
 b1:                                               ; preds = %b0
-  %v11 = getelementptr inbounds i8, i8* %a0, i32 %v9
-  %v12 = getelementptr inbounds i8, i8* %a0, i32 %v8
-  %v13 = getelementptr inbounds i8, i8* %a0, i32 %a4
+  %v11 = getelementptr inbounds i8, ptr %a0, i32 %v9
+  %v12 = getelementptr inbounds i8, ptr %a0, i32 %v8
+  %v13 = getelementptr inbounds i8, ptr %a0, i32 %a4
   %v14 = add i32 %v9, 64
-  %v15 = bitcast i8* %v11 to <16 x i32>*
   %v16 = add i32 %v8, 64
-  %v17 = bitcast i8* %v12 to <16 x i32>*
   %v18 = add i32 %a4, 64
-  %v19 = bitcast i8* %v13 to <16 x i32>*
-  %v20 = bitcast i8* %a0 to <16 x i32>*
-  %v21 = getelementptr inbounds i8, i8* %a0, i32 %v14
-  %v22 = load <16 x i32>, <16 x i32>* %v15, align 64, !tbaa !4
-  %v23 = getelementptr inbounds i8, i8* %a0, i32 %v16
-  %v24 = load <16 x i32>, <16 x i32>* %v17, align 64, !tbaa !4
-  %v25 = getelementptr inbounds i8, i8* %a0, i32 %v18
-  %v26 = load <16 x i32>, <16 x i32>* %v19, align 64, !tbaa !4
-  %v27 = load <16 x i32>, <16 x i32>* %v20, align 64, !tbaa !4
-  %v28 = getelementptr inbounds i8, i8* %a3, i32 %a4
+  %v21 = getelementptr inbounds i8, ptr %a0, i32 %v14
+  %v22 = load <16 x i32>, ptr %v11, align 64, !tbaa !4
+  %v23 = getelementptr inbounds i8, ptr %a0, i32 %v16
+  %v24 = load <16 x i32>, ptr %v12, align 64, !tbaa !4
+  %v25 = getelementptr inbounds i8, ptr %a0, i32 %v18
+  %v26 = load <16 x i32>, ptr %v13, align 64, !tbaa !4
+  %v27 = load <16 x i32>, ptr %a0, align 64, !tbaa !4
+  %v28 = getelementptr inbounds i8, ptr %a3, i32 %a4
   br label %b2
 
 b2:                                               ; preds = %b2, %b1
-  %v29 = phi i8* [ %a0, %b1 ], [ %v40, %b2 ]
-  %v30 = phi i8* [ %a3, %b1 ], [ %v74, %b2 ]
-  %v31 = phi i8* [ %v25, %b1 ], [ %v45, %b2 ]
-  %v32 = phi i8* [ %v23, %b1 ], [ %v48, %b2 ]
-  %v33 = phi i8* [ %v21, %b1 ], [ %v51, %b2 ]
-  %v34 = phi i8* [ %v28, %b1 ], [ %v89, %b2 ]
+  %v29 = phi ptr [ %a0, %b1 ], [ %v40, %b2 ]
+  %v30 = phi ptr [ %a3, %b1 ], [ %v74, %b2 ]
+  %v31 = phi ptr [ %v25, %b1 ], [ %v45, %b2 ]
+  %v32 = phi ptr [ %v23, %b1 ], [ %v48, %b2 ]
+  %v33 = phi ptr [ %v21, %b1 ], [ %v51, %b2 ]
+  %v34 = phi ptr [ %v28, %b1 ], [ %v89, %b2 ]
   %v35 = phi i32 [ 0, %b1 ], [ %v90, %b2 ]
   %v36 = phi <16 x i32> [ %v27, %b1 ], [ %v42, %b2 ]
   %v37 = phi <16 x i32> [ %v26, %b1 ], [ %v44, %b2 ]
   %v38 = phi <16 x i32> [ %v24, %b1 ], [ %v47, %b2 ]
   %v39 = phi <16 x i32> [ %v22, %b1 ], [ %v50, %b2 ]
-  %v40 = getelementptr inbounds i8, i8* %v29, i32 64
-  %v41 = bitcast i8* %v40 to <16 x i32>*
-  %v42 = load <16 x i32>, <16 x i32>* %v41, align 64, !tbaa !4
-  %v43 = bitcast i8* %v31 to <16 x i32>*
-  %v44 = load <16 x i32>, <16 x i32>* %v43, align 64, !tbaa !4
-  %v45 = getelementptr inbounds i8, i8* %v31, i32 64
-  %v46 = bitcast i8* %v32 to <16 x i32>*
-  %v47 = load <16 x i32>, <16 x i32>* %v46, align 64, !tbaa !4
-  %v48 = getelementptr inbounds i8, i8* %v32, i32 64
-  %v49 = bitcast i8* %v33 to <16 x i32>*
-  %v50 = load <16 x i32>, <16 x i32>* %v49, align 64, !tbaa !4
-  %v51 = getelementptr inbounds i8, i8* %v33, i32 64
+  %v40 = getelementptr inbounds i8, ptr %v29, i32 64
+  %v42 = load <16 x i32>, ptr %v40, align 64, !tbaa !4
+  %v44 = load <16 x i32>, ptr %v31, align 64, !tbaa !4
+  %v45 = getelementptr inbounds i8, ptr %v31, i32 64
+  %v47 = load <16 x i32>, ptr %v32, align 64, !tbaa !4
+  %v48 = getelementptr inbounds i8, ptr %v32, i32 64
+  %v50 = load <16 x i32>, ptr %v33, align 64, !tbaa !4
+  %v51 = getelementptr inbounds i8, ptr %v33, i32 64
   %v52 = tail call <16 x i32> @llvm.hexagon.V6.valignbi(<16 x i32> %v42, <16 x i32> %v36, i32 4)
   %v53 = tail call <16 x i32> @llvm.hexagon.V6.valignbi(<16 x i32> %v44, <16 x i32> %v37, i32 4)
   %v54 = tail call <16 x i32> @llvm.hexagon.V6.valignbi(<16 x i32> %v47, <16 x i32> %v38, i32 4)
@@ -99,9 +88,8 @@ b2:                                               ; preds = %b2, %b1
   %v70 = tail call <16 x i32> @llvm.hexagon.V6.lo(<32 x i32> %v64)
   %v71 = tail call <16 x i32> @llvm.hexagon.V6.vasrwh(<16 x i32> %v69, <16 x i32> %v70, i32 %a2)
   %v72 = tail call <16 x i32> @llvm.hexagon.V6.vsathub(<16 x i32> %v68, <16 x i32> %v71)
-  %v73 = bitcast i8* %v30 to <16 x i32>*
-  store <16 x i32> %v72, <16 x i32>* %v73, align 64, !tbaa !4
-  %v74 = getelementptr inbounds i8, i8* %v30, i32 64
+  store <16 x i32> %v72, ptr %v30, align 64, !tbaa !4
+  %v74 = getelementptr inbounds i8, ptr %v30, i32 64
   %v75 = tail call <32 x i32> @llvm.hexagon.V6.vrmpybusi(<32 x i32> %v57, i32 %v1, i32 0)
   %v76 = tail call <32 x i32> @llvm.hexagon.V6.vrmpybusi(<32 x i32> %v57, i32 %v1, i32 1)
   %v77 = tail call <32 x i32> @llvm.hexagon.V6.vrmpybusi.acc(<32 x i32> %v75, <32 x i32> %v58, i32 %v4, i32 0)
@@ -115,9 +103,8 @@ b2:                                               ; preds = %b2, %b1
   %v85 = tail call <16 x i32> @llvm.hexagon.V6.lo(<32 x i32> %v79)
   %v86 = tail call <16 x i32> @llvm.hexagon.V6.vasrwh(<16 x i32> %v84, <16 x i32> %v85, i32 %a2)
   %v87 = tail call <16 x i32> @llvm.hexagon.V6.vsathub(<16 x i32> %v83, <16 x i32> %v86)
-  %v88 = bitcast i8* %v34 to <16 x i32>*
-  store <16 x i32> %v87, <16 x i32>* %v88, align 64, !tbaa !4
-  %v89 = getelementptr inbounds i8, i8* %v34, i32 64
+  store <16 x i32> %v87, ptr %v34, align 64, !tbaa !4
+  %v89 = getelementptr inbounds i8, ptr %v34, i32 64
   %v90 = add nsw i32 %v35, 64
   %v91 = icmp slt i32 %v90, %a4
   br i1 %v91, label %b2, label %b3

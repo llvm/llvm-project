@@ -28,11 +28,23 @@
 #include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/lldb-enumerations.h"
+#include <optional>
 #include <tuple>
 
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
+
+lldb::ValueObjectSP lldb_private::formatters::GetChildMemberWithName(
+    ValueObject &obj, llvm::ArrayRef<ConstString> alternative_names) {
+  for (ConstString name : alternative_names) {
+    lldb::ValueObjectSP child_sp = obj.GetChildMemberWithName(name, true);
+
+    if (child_sp)
+      return child_sp;
+  }
+  return {};
+}
 
 bool lldb_private::formatters::LibcxxOptionalSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
@@ -280,8 +292,8 @@ bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
       auto addr(m_pair_ptr->GetValueAsUnsigned(LLDB_INVALID_ADDRESS));
       m_pair_ptr = nullptr;
       if (addr && addr != LLDB_INVALID_ADDRESS) {
-        TypeSystemClang *ast_ctx =
-            llvm::dyn_cast_or_null<TypeSystemClang>(pair_type.GetTypeSystem());
+        auto ts = pair_type.GetTypeSystem();
+        auto ast_ctx = ts.dyn_cast_or_null<TypeSystemClang>();
         if (!ast_ctx)
           return false;
 
@@ -310,7 +322,7 @@ bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
               ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
              {"cw", ast_ctx->GetBasicType(lldb::eBasicTypeBool)},
              {"payload", pair_type}});
-        llvm::Optional<uint64_t> size = tree_node_type.GetByteSize(nullptr);
+        std::optional<uint64_t> size = tree_node_type.GetByteSize(nullptr);
         if (!size)
           return false;
         WritableDataBufferSP buffer_sp(new DataBufferHeap(*size, 0));
@@ -449,8 +461,8 @@ bool lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
     if (addr == 0 || addr == LLDB_INVALID_ADDRESS)
       return false;
 
-    TypeSystemClang *ast_ctx =
-        llvm::dyn_cast_or_null<TypeSystemClang>(pair_type.GetTypeSystem());
+    auto ts = pair_type.GetTypeSystem();
+    auto ast_ctx = ts.dyn_cast_or_null<TypeSystemClang>();
     if (!ast_ctx)
       return false;
 
@@ -472,7 +484,7 @@ bool lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
           ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
          {"__hash_", ast_ctx->GetBasicType(lldb::eBasicTypeUnsignedLongLong)},
          {"__value_", pair_type}});
-    llvm::Optional<uint64_t> size = tree_node_type.GetByteSize(nullptr);
+    std::optional<uint64_t> size = tree_node_type.GetByteSize(nullptr);
     if (!size)
       return false;
     WritableDataBufferSP buffer_sp(new DataBufferHeap(*size, 0));
@@ -538,12 +550,9 @@ lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEndCreator(
 SyntheticChildrenFrontEnd *
 lldb_private::formatters::LibCxxVectorIteratorSyntheticFrontEndCreator(
     CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
-  static ConstString g_item_name;
-  if (!g_item_name)
-    g_item_name.SetCString("__i");
-  return (valobj_sp
-              ? new VectorIteratorSyntheticFrontEnd(valobj_sp, g_item_name)
-              : nullptr);
+  return (valobj_sp ? new VectorIteratorSyntheticFrontEnd(
+                          valobj_sp, {ConstString("__i_"), ConstString("__i")})
+                    : nullptr);
 }
 
 lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
@@ -721,7 +730,7 @@ enum class StringLayout { CSD, DSC };
 /// Determine the size in bytes of \p valobj (a libc++ std::string object) and
 /// extract its data payload. Return the size + payload pair.
 // TODO: Support big-endian architectures.
-static llvm::Optional<std::pair<uint64_t, ValueObjectSP>>
+static std::optional<std::pair<uint64_t, ValueObjectSP>>
 ExtractLibcxxStringInfo(ValueObject &valobj) {
   ValueObjectSP valobj_r_sp =
       valobj.GetChildMemberWithName(ConstString("__r_"), /*can_create=*/true);
@@ -790,7 +799,7 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
     // inline string buffer (23 bytes on x86_64/Darwin). If it doesn't, it's
     // likely that the string isn't initialized and we're reading garbage.
     ExecutionContext exe_ctx(location_sp->GetExecutionContextRef());
-    const llvm::Optional<uint64_t> max_bytes =
+    const std::optional<uint64_t> max_bytes =
         location_sp->GetCompilerType().GetByteSize(
             exe_ctx.GetBestExecutionContextScope());
     if (!max_bytes || size > *max_bytes || !location_sp)
@@ -844,13 +853,13 @@ LibcxxWStringSummaryProvider(ValueObject &valobj, Stream &stream,
     return false;
 
   // std::wstring::size() is measured in 'characters', not bytes
-  TypeSystemClang *ast_context =
+  TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(*valobj.GetTargetSP());
-  if (!ast_context)
+  if (!scratch_ts_sp)
     return false;
 
   auto wchar_t_size =
-      ast_context->GetBasicType(lldb::eBasicTypeWChar).GetByteSize(nullptr);
+      scratch_ts_sp->GetBasicType(lldb::eBasicTypeWChar).GetByteSize(nullptr);
   if (!wchar_t_size)
     return false;
 
@@ -992,11 +1001,10 @@ bool lldb_private::formatters::LibcxxStringSummaryProviderUTF32(
 
 static std::tuple<bool, ValueObjectSP, size_t>
 LibcxxExtractStringViewData(ValueObject& valobj) {
-  ConstString g_data_name("__data");
-  ConstString g_size_name("__size");
-  auto dataobj = valobj.GetChildMemberWithName(g_data_name, true);
-  auto sizeobj = valobj.GetChildMemberWithName(g_size_name, true);
-
+  auto dataobj = GetChildMemberWithName(
+      valobj, {ConstString("__data_"), ConstString("__data")});
+  auto sizeobj = GetChildMemberWithName(
+      valobj, {ConstString("__size_"), ConstString("__size")});
   if (!dataobj || !sizeobj)
     return std::make_tuple<bool,ValueObjectSP,size_t>(false, {}, {});
 

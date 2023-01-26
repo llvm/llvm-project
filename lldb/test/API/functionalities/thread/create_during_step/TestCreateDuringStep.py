@@ -141,7 +141,7 @@ class CreateDuringStepTestCase(TestBase):
             'Number of expected threads and actual threads do not match after thread exit.')
 
         stop_reason = stepping_thread.GetStopReason()
-        self.assertEqual(stop_reason, lldb.eStopReasonPlanComplete, "Stopped for plan completion")
+        self.assertStopReason(stop_reason, lldb.eStopReasonPlanComplete, "Stopped for plan completion")
 
         # Run to completion
         self.runCmd("process continue")

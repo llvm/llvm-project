@@ -15,7 +15,7 @@
 
 ; CHECK-ALLOW: [[CMP:%[^ ]+]] = call i1 @llvm.loop.decrement.i32(i32 1)
 ; CHECK-ALLOW: br i1 [[CMP]], label %bb10, label %bb16
-define void @not_rotated(i32 %arg, i16* nocapture %arg1, i16 signext %arg2) {
+define void @not_rotated(i32 %arg, ptr nocapture %arg1, i16 signext %arg2) {
 bb:
   br label %bb3
 
@@ -35,10 +35,10 @@ bb7:                                              ; preds = %bb10, %bb5
 
 bb10:                                             ; preds = %bb7
   %tmp11 = add i32 %tmp8, %tmp6
-  %tmp12 = getelementptr inbounds i16, i16* %arg1, i32 %tmp11
-  %tmp13 = load i16, i16* %tmp12, align 2
+  %tmp12 = getelementptr inbounds i16, ptr %arg1, i32 %tmp11
+  %tmp13 = load i16, ptr %tmp12, align 2
   %tmp14 = add i16 %tmp13, %arg2
-  store i16 %tmp14, i16* %tmp12, align 2
+  store i16 %tmp14, ptr %tmp12, align 2
   %tmp15 = add i32 %tmp8, 1
   br label %bb7
 

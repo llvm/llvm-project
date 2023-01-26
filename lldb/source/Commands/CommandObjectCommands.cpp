@@ -24,6 +24,7 @@
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/StringList.h"
 #include "llvm/ADT/StringRef.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -57,8 +58,8 @@ public:
 
   ~CommandObjectCommandsSource() override = default;
 
-  llvm::Optional<std::string> GetRepeatCommand(Args &current_command_args,
-                                               uint32_t index) override {
+  std::optional<std::string> GetRepeatCommand(Args &current_command_args,
+                                              uint32_t index) override {
     return std::string("");
   }
 
@@ -118,7 +119,7 @@ protected:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_source_options);
+      return llvm::ArrayRef(g_source_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -201,7 +202,7 @@ protected:
 static const char *g_python_command_instructions =
     "Enter your Python command(s). Type 'DONE' to end.\n"
     "You must define a Python function with this signature:\n"
-    "def my_command_impl(debugger, args, result, internal_dict):\n";
+    "def my_command_impl(debugger, args, exe_ctx, result, internal_dict):\n";
 
 class CommandObjectCommandsAlias : public CommandObjectRaw {
 protected:
@@ -212,7 +213,7 @@ protected:
     ~CommandOptions() override = default;
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_alias_options);
+      return llvm::ArrayRef(g_alias_options);
     }
 
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
@@ -485,29 +486,31 @@ protected:
         OptionArgVectorSP(new OptionArgVector);
 
     const bool include_aliases = true;
-    if (CommandObjectSP cmd_obj_sp = m_interpreter.GetCommandSPExact(
-            cmd_obj.GetCommandName(), include_aliases)) {
-      if (m_interpreter.AliasExists(alias_command) ||
-          m_interpreter.UserCommandExists(alias_command)) {
-        result.AppendWarningWithFormat(
-            "Overwriting existing definition for '%s'.\n",
-            alias_command.str().c_str());
-      }
-      if (CommandAlias *alias = m_interpreter.AddAlias(
-              alias_command, cmd_obj_sp, raw_command_string)) {
-        if (m_command_options.m_help.OptionWasSet())
-          alias->SetHelp(m_command_options.m_help.GetCurrentValue());
-        if (m_command_options.m_long_help.OptionWasSet())
-          alias->SetHelpLong(m_command_options.m_long_help.GetCurrentValue());
-        result.SetStatus(eReturnStatusSuccessFinishNoResult);
-      } else {
-        result.AppendError("Unable to create requested alias.\n");
-      }
+    // Look up the command using command's name first.  This is to resolve
+    // aliases when you are making nested aliases.  But if you don't find
+    // it that way, then it wasn't an alias and we can just use the object
+    // we were passed in.
+    CommandObjectSP cmd_obj_sp = m_interpreter.GetCommandSPExact(
+            cmd_obj.GetCommandName(), include_aliases);
+    if (!cmd_obj_sp)
+      cmd_obj_sp = cmd_obj.shared_from_this();
 
+    if (m_interpreter.AliasExists(alias_command) ||
+        m_interpreter.UserCommandExists(alias_command)) {
+      result.AppendWarningWithFormat(
+          "Overwriting existing definition for '%s'.\n",
+          alias_command.str().c_str());
+    }
+    if (CommandAlias *alias = m_interpreter.AddAlias(
+            alias_command, cmd_obj_sp, raw_command_string)) {
+      if (m_command_options.m_help.OptionWasSet())
+        alias->SetHelp(m_command_options.m_help.GetCurrentValue());
+      if (m_command_options.m_long_help.OptionWasSet())
+        alias->SetHelpLong(m_command_options.m_long_help.GetCurrentValue());
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
       result.AppendError("Unable to create requested alias.\n");
     }
-
     return result.Succeeded();
   }
 
@@ -891,7 +894,7 @@ protected:
           llvm::StringRef(),     // Continuation prompt
           multiple_lines, color_prompt,
           0, // Don't show line numbers
-          *this, nullptr));
+          *this));
 
       if (io_handler_sp) {
         debugger.RunIOHandlerAsync(io_handler_sp);
@@ -1054,7 +1057,7 @@ private:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_regex_options);
+      return llvm::ArrayRef(g_regex_options);
     }
 
     llvm::StringRef GetHelp() { return m_help; }
@@ -1301,7 +1304,7 @@ protected:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_script_import_options);
+      return llvm::ArrayRef(g_script_import_options);
     }
     bool relative_to_command_file = false;
     bool silent = false;
@@ -1452,7 +1455,7 @@ protected:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_script_add_options);
+      return llvm::ArrayRef(g_script_add_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -1895,7 +1898,7 @@ protected:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_container_add_options);
+      return llvm::ArrayRef(g_container_add_options);
     }
 
     // Instance variables to hold the values for command options.

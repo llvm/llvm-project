@@ -128,57 +128,57 @@ define <4 x i1> @vec_4xi32_signbit_lshr_and_eq_undef3(<4 x i32> %x, <4 x i32> %y
 ; Extra use
 
 ; Fold happened
-define i1 @scalar_i32_signbit_lshr_and_eq_extra_use_lshr(i32 %x, i32 %y, i32 %z, i32* %p) {
+define i1 @scalar_i32_signbit_lshr_and_eq_extra_use_lshr(i32 %x, i32 %y, i32 %z, ptr %p) {
 ; CHECK-LABEL: @scalar_i32_signbit_lshr_and_eq_extra_use_lshr(
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 -2147483648, [[Y:%.*]]
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[LSHR]], [[Z:%.*]]
-; CHECK-NEXT:    store i32 [[XOR]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[XOR]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[LSHR]], [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %lshr = lshr i32 2147483648, %y
   %xor = xor i32 %lshr, %z  ; extra use of lshr
-  store i32 %xor, i32* %p
+  store i32 %xor, ptr %p
   %and = and i32 %lshr, %x
   %r = icmp eq i32 %and, 0
   ret i1 %r
 }
 
 ; Not fold
-define i1 @scalar_i32_signbit_lshr_and_eq_extra_use_and(i32 %x, i32 %y, i32 %z, i32* %p) {
+define i1 @scalar_i32_signbit_lshr_and_eq_extra_use_and(i32 %x, i32 %y, i32 %z, ptr %p) {
 ; CHECK-LABEL: @scalar_i32_signbit_lshr_and_eq_extra_use_and(
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 -2147483648, [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[LSHR]], [[X:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[AND]], [[Z:%.*]]
-; CHECK-NEXT:    store i32 [[MUL]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[MUL]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %lshr = lshr i32 2147483648, %y
   %and = and i32 %lshr, %x
   %mul = mul i32 %and, %z  ; extra use of and
-  store i32 %mul, i32* %p
+  store i32 %mul, ptr %p
   %r = icmp eq i32 %and, 0
   ret i1 %r
 }
 
 ; Not fold
-define i1 @scalar_i32_signbit_lshr_and_eq_extra_use_lshr_and(i32 %x, i32 %y, i32 %z, i32* %p, i32* %q) {
+define i1 @scalar_i32_signbit_lshr_and_eq_extra_use_lshr_and(i32 %x, i32 %y, i32 %z, ptr %p, ptr %q) {
 ; CHECK-LABEL: @scalar_i32_signbit_lshr_and_eq_extra_use_lshr_and(
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 -2147483648, [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[LSHR]], [[X:%.*]]
-; CHECK-NEXT:    store i32 [[AND]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[AND]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[LSHR]], [[Z:%.*]]
-; CHECK-NEXT:    store i32 [[ADD]], i32* [[Q:%.*]], align 4
+; CHECK-NEXT:    store i32 [[ADD]], ptr [[Q:%.*]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %lshr = lshr i32 2147483648, %y
   %and = and i32 %lshr, %x
-  store i32 %and, i32* %p  ; extra use of and
+  store i32 %and, ptr %p  ; extra use of and
   %add = add i32 %lshr, %z  ; extra use of lshr
-  store i32 %add, i32* %q
+  store i32 %add, ptr %q
   %r = icmp eq i32 %and, 0
   ret i1 %r
 }

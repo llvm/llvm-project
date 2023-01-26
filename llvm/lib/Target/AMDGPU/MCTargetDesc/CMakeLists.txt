@@ -19,6 +19,7 @@ add_llvm_component_library(LLVMAMDGPUDesc
   AMDGPUUtils
   Support
   BinaryFormat
+  TargetParser
 
   ADD_TO_COMPONENT
   AMDGPU

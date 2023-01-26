@@ -22,6 +22,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Frontend/ASTUnit.h"
+#include <optional>
 
 using namespace clang;
 
@@ -180,7 +181,7 @@ static inline CXTranslationUnit GetTU(CXType CT) {
   return static_cast<CXTranslationUnit>(CT.data[1]);
 }
 
-static Optional<ArrayRef<TemplateArgument>>
+static std::optional<ArrayRef<TemplateArgument>>
 GetTemplateArguments(QualType Type) {
   assert(!Type.isNull());
   if (const auto *Specialization = Type->getAs<TemplateSpecializationType>())
@@ -193,16 +194,17 @@ GetTemplateArguments(QualType Type) {
       return TemplateDecl->getTemplateArgs().asArray();
   }
 
-  return None;
+  return std::nullopt;
 }
 
-static Optional<QualType> TemplateArgumentToQualType(const TemplateArgument &A) {
+static std::optional<QualType>
+TemplateArgumentToQualType(const TemplateArgument &A) {
   if (A.getKind() == TemplateArgument::Type)
     return A.getAsType();
-  return None;
+  return std::nullopt;
 }
 
-static Optional<QualType>
+static std::optional<QualType>
 FindTemplateArgumentTypeAt(ArrayRef<TemplateArgument> TA, unsigned index) {
   unsigned current = 0;
   for (const auto &A : TA) {
@@ -216,7 +218,7 @@ FindTemplateArgumentTypeAt(ArrayRef<TemplateArgument> TA, unsigned index) {
       return TemplateArgumentToQualType(A);
     current++;
   }
-  return None;
+  return std::nullopt;
 }
 
 CXType clang_getCursorType(CXCursor C) {
@@ -482,6 +484,14 @@ try_again:
       break;
   }
   return MakeCXType(T, GetTU(CT));
+}
+
+CXType clang_getUnqualifiedType(CXType CT) {
+  return MakeCXType(GetQualType(CT).getUnqualifiedType(), GetTU(CT));
+}
+
+CXType clang_getNonReferenceType(CXType CT) {
+  return MakeCXType(GetQualType(CT).getNonReferenceType(), GetTU(CT));
 }
 
 CXCursor clang_getTypeDeclaration(CXType CT) {
@@ -1167,7 +1177,7 @@ CXType clang_Type_getTemplateArgumentAsType(CXType CT, unsigned index) {
   if (!TA)
     return MakeCXType(QualType(), GetTU(CT));
 
-  Optional<QualType> QT = FindTemplateArgumentTypeAt(*TA, index);
+  std::optional<QualType> QT = FindTemplateArgumentTypeAt(*TA, index);
   return MakeCXType(QT.value_or(QualType()), GetTU(CT));
 }
 
@@ -1322,8 +1332,7 @@ enum CXTypeNullabilityKind clang_Type_getNullability(CXType CT) {
   if (T.isNull())
     return CXTypeNullability_Invalid;
 
-  ASTContext &Ctx = cxtu::getASTUnit(GetTU(CT))->getASTContext();
-  if (auto nullability = T->getNullability(Ctx)) {
+  if (auto nullability = T->getNullability()) {
     switch (*nullability) {
       case NullabilityKind::NonNull:
         return CXTypeNullability_NonNull;

@@ -5,48 +5,43 @@
   target triple = "arm-arm-none-eabi"
 
   ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-  declare void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i32, i1 immarg)
+  declare void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32, i1 immarg)
   ; Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
-  declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1 immarg)
+  declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)
 
-  define void @test1(i32* noalias %X, i32* noalias readonly %Y, i32 %n) {
+  define void @test1(ptr noalias %X, ptr noalias readonly %Y, i32 %n) {
   entry:
-    %0 = bitcast i32* %X to i8*
-    %1 = bitcast i32* %Y to i8*
-    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %0, i8* align 4 %1, i32 %n, i1 false)
+    call void @llvm.memcpy.p0.p0.i32(ptr align 4 %X, ptr align 4 %Y, i32 %n, i1 false)
     ret void
   }
 
-  define void @test2(i32* noalias %X, i32* noalias readonly %Y, i32 %n) {
+  define void @test2(ptr noalias %X, ptr noalias readonly %Y, i32 %n) {
   entry:
     %cmp6 = icmp sgt i32 %n, 0
     br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
 
   for.body.preheader:                               ; preds = %entry
-    %X.bits = bitcast i32* %X to i8*
-    %Y.bits = bitcast i32* %Y to i8*
-    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %X.bits, i8* align 4 %Y.bits, i32 %n, i1 false)
+    call void @llvm.memcpy.p0.p0.i32(ptr align 4 %X, ptr align 4 %Y, i32 %n, i1 false)
     br label %for.cond.cleanup
 
   for.cond.cleanup:                                 ; preds = %for.body.preheader, %entry
     ret void
   }
 
-  define void @test3(i32* nocapture %X, i8 zeroext %c, i32 %n) {
+  define void @test3(ptr nocapture %X, i8 zeroext %c, i32 %n) {
   entry:
-    %0 = bitcast i32* %X to i8*
-    tail call void @llvm.memset.p0i8.i32(i8* align 4 %0, i8 %c, i32 %n, i1 false)
+    tail call void @llvm.memset.p0.i32(ptr align 4 %X, i8 %c, i32 %n, i1 false)
     ret void
   }
 
 
-  define void @test4(i8* nocapture %X, i8 zeroext %c, i32 %n) {
+  define void @test4(ptr nocapture %X, i8 zeroext %c, i32 %n) {
   entry:
     %cmp4 = icmp sgt i32 %n, 0
     br i1 %cmp4, label %for.body.preheader, label %for.cond.cleanup
 
   for.body.preheader:                               ; preds = %entry
-    call void @llvm.memset.p0i8.i32(i8* align 1 %X, i8 %c, i32 %n, i1 false)
+    call void @llvm.memset.p0.i32(ptr align 1 %X, i8 %c, i32 %n, i1 false)
     br label %for.cond.cleanup
 
   for.cond.cleanup:                                 ; preds = %for.body.preheader, %entry

@@ -9,9 +9,9 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/SymbolTable.h"
@@ -33,6 +33,14 @@ Location Builder::getFusedLoc(ArrayRef<Location> locs, Attribute metadata) {
 // Types.
 //===----------------------------------------------------------------------===//
 
+FloatType Builder::getFloat8E5M2Type() {
+  return FloatType::getFloat8E5M2(context);
+}
+
+FloatType Builder::getFloat8E4M3FNType() {
+  return FloatType::getFloat8E4M3FN(context);
+}
+
 FloatType Builder::getBF16Type() { return FloatType::getBF16(context); }
 
 FloatType Builder::getF16Type() { return FloatType::getF16(context); }
@@ -49,7 +57,13 @@ IndexType Builder::getIndexType() { return IndexType::get(context); }
 
 IntegerType Builder::getI1Type() { return IntegerType::get(context, 1); }
 
+IntegerType Builder::getI2Type() { return IntegerType::get(context, 2); }
+
+IntegerType Builder::getI4Type() { return IntegerType::get(context, 4); }
+
 IntegerType Builder::getI8Type() { return IntegerType::get(context, 8); }
+
+IntegerType Builder::getI16Type() { return IntegerType::get(context, 16); }
 
 IntegerType Builder::getI32Type() { return IntegerType::get(context, 32); }
 
@@ -122,6 +136,10 @@ DenseIntElementsAttr Builder::getIndexVectorAttr(ArrayRef<int64_t> values) {
   return DenseIntElementsAttr::get(
       VectorType::get(static_cast<int64_t>(values.size()), getIndexType()),
       values);
+}
+
+DenseBoolArrayAttr Builder::getDenseBoolArrayAttr(ArrayRef<bool> values) {
+  return DenseBoolArrayAttr::get(context, values);
 }
 
 DenseI8ArrayAttr Builder::getDenseI8ArrayAttr(ArrayRef<int8_t> values) {
@@ -489,7 +507,7 @@ LogicalResult OpBuilder::tryFold(Operation *op,
   return success();
 }
 
-Operation *OpBuilder::clone(Operation &op, BlockAndValueMapping &mapper) {
+Operation *OpBuilder::clone(Operation &op, IRMapping &mapper) {
   Operation *newOp = op.clone(mapper);
   // The `insert` call below handles the notification for inserting `newOp`
   // itself. But if `newOp` has any regions, we need to notify the listener
@@ -505,6 +523,6 @@ Operation *OpBuilder::clone(Operation &op, BlockAndValueMapping &mapper) {
 }
 
 Operation *OpBuilder::clone(Operation &op) {
-  BlockAndValueMapping mapper;
+  IRMapping mapper;
   return clone(op, mapper);
 }

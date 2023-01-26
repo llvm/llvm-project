@@ -2,6 +2,8 @@
 // RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++20 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++2b %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
 // FIXME: __SIZE_TYPE__ expands to 'long long' on some targets.
 __extension__ typedef __SIZE_TYPE__ size_t;
@@ -77,6 +79,40 @@ namespace dr403 { // dr403: yes
 
 // dr404: na
 // (NB: also sup 594)
+
+namespace dr405 { // dr405: yes
+                  // NB: also dup 218
+  namespace A {
+    struct S {};
+    void f(S);
+  }
+  namespace B {
+    struct S {};
+    void f(S);
+  }
+
+  struct C {
+    int f;
+    void test1(A::S as) { f(as); } // expected-error {{called object type 'int'}}
+    void test2(A::S as) { void f(); f(as); } // expected-error {{too many arguments}} expected-note {{}}
+    void test3(A::S as) { using A::f; f(as); } // ok
+    void test4(A::S as) { using B::f; f(as); } // ok
+    void test5(A::S as) { int f; f(as); } // expected-error {{called object type 'int'}}
+    void test6(A::S as) { struct f {}; (void) f(as); } // expected-error {{no matching conversion}} expected-note +{{}}
+  };
+
+  namespace D {
+    struct S {};
+    struct X { void operator()(S); } f;
+  }
+  void testD(D::S ds) { f(ds); } // expected-error {{undeclared identifier}}
+
+  namespace E {
+    struct S {};
+    struct f { f(S); };
+  }
+  void testE(E::S es) { f(es); } // expected-error {{undeclared identifier}}
+}
 
 namespace dr406 { // dr406: yes
   typedef struct {
@@ -176,7 +212,10 @@ namespace dr409 { // dr409: yes
     B b1;
     A::B b2;
     A<T>::B b3;
-    A<T*>::B b4; // expected-error {{missing 'typename'}}
+    A<T*>::B b4;
+#if __cplusplus <= 201703L
+    // expected-error@-2 {{implicit 'typename' is a C++20 extension}}
+#endif
   };
 }
 
@@ -262,9 +301,8 @@ namespace dr417 { // dr417: no
     struct F;
     struct H;
   }
-  // FIXME: This is ill-formed.
   using N::D;
-  struct dr417::D {}; // expected-warning {{extra qualification}}
+  struct dr417::D {}; // expected-error {{forward declaration of struct cannot}} expected-warning {{extra qualification}}
   using namespace N;
   struct dr417::E {}; // expected-warning {{extra qualification}} expected-error {{no struct named 'E'}}
   struct N::F {};
@@ -275,6 +313,50 @@ namespace dr417 { // dr417: no
     struct dr417::H {}; // expected-error {{namespace 'M' does not enclose}}
   }
 }
+
+namespace dr418 { // dr418: no
+namespace example1 {
+void f1(int, int = 0);
+void f1(int = 0, int);
+
+void g() { f1(); }
+} // namespace example1
+
+namespace example2 {
+namespace A {
+void f2(int); // #dr418-f2-decl
+}
+namespace B {
+using A::f2;
+}
+namespace A {
+void f2(int = 3);
+}
+void g2() {
+  using B::f2;
+  f2(); // expected-error {{no matching function}}
+  // expected-note@#dr418-f2-decl {{requires 1 argument}}
+}
+} // namespace example2
+
+// example from [over.match.best]/4
+namespace example3 {
+namespace A {
+extern "C" void f(int = 5);
+}
+namespace B {
+extern "C" void f(int = 5);
+}
+
+using A::f;
+using B::f;
+
+void use() {
+  f(3);
+  f(); // FIXME: this should fail
+}
+} // namespace example3
+} // namespace dr418
 
 namespace dr420 { // dr420: yes
   template<typename T> struct ptr {
@@ -604,9 +686,9 @@ namespace dr447 { // dr447: yes
     U<__builtin_offsetof(A, n)>::type a;
     U<__builtin_offsetof(T, n)>::type b; // expected-error +{{}} expected-warning 0+{{}}
     // as an extension, we allow the member-designator to include array indices
-    g(__builtin_offsetof(A, a[0])).h<int>();
-    g(__builtin_offsetof(A, a[N])).h<int>();
-    U<__builtin_offsetof(A, a[0])>::type c;
+    g(__builtin_offsetof(A, a[0])).h<int>(); // expected-error {{using an array subscript expression within '__builtin_offsetof' is a Clang extension}}
+    g(__builtin_offsetof(A, a[N])).h<int>(); // expected-error {{using an array subscript expression within '__builtin_offsetof' is a Clang extension}}
+    U<__builtin_offsetof(A, a[0])>::type c; // expected-error {{using an array subscript expression within '__builtin_offsetof' is a Clang extension}}
     U<__builtin_offsetof(A, a[N])>::type d; // expected-error +{{}} expected-warning 0+{{}}
   }
 }
@@ -1013,7 +1095,7 @@ namespace dr483 { // dr483: yes
     int check4[__LONG_MAX__ >= 2147483647 ? 1 : -1];
     int check5[__LONG_LONG_MAX__ >= 9223372036854775807 ? 1 : -1];
 #if __cplusplus < 201103L
-    // expected-error@-2 {{extension}}
+    // expected-error@-2 1+{{extension}}
 #endif
   }
   namespace cstdint {

@@ -1,4 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=bonaire -enable-misched=0 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -global-isel=0 -march=amdgcn -mcpu=bonaire -enable-misched=0 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -global-isel=1 -march=amdgcn -mcpu=bonaire -enable-misched=0 -verify-machineinstrs < %s | FileCheck %s
 
 declare void @llvm.write_register.i32(metadata, i32) #0
 declare void @llvm.write_register.i64(metadata, i64) #0

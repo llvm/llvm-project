@@ -33,3 +33,5 @@ _main:
   addq  $32, %rsp
   popq  %rbp
   retq
+
+  .subsections_via_symbols

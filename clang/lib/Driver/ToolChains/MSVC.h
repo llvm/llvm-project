@@ -51,7 +51,8 @@ public:
                 Action::OffloadKind DeviceOffloadKind) const override;
 
   bool IsIntegratedAssemblerDefault() const override;
-  bool IsUnwindTablesDefault(const llvm::opt::ArgList &Args) const override;
+  UnwindTableLevel
+  getDefaultUnwindTableLevel(const llvm::opt::ArgList &Args) const override;
   bool isPICDefault() const override;
   bool isPIEDefault(const llvm::opt::ArgList &Args) const override;
   bool isPICDefaultForced() const override;
@@ -132,7 +133,7 @@ protected:
   Tool *buildLinker() const override;
   Tool *buildAssembler() const override;
 private:
-  llvm::Optional<llvm::StringRef> WinSdkDir, WinSdkVersion, WinSysRoot;
+  std::optional<llvm::StringRef> WinSdkDir, WinSdkVersion, WinSysRoot;
   std::string VCToolChainPath;
   llvm::ToolsetLayout VSLayout = llvm::ToolsetLayout::OlderVS;
   CudaInstallationDetector CudaInstallation;

@@ -1,6 +1,6 @@
 ; Tests that if an alloca is escaped through storing the address,
 ; the alloac will be put on the frame.
-; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 define i8* @f() presplitcoroutine {
 entry:

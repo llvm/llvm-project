@@ -27,6 +27,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DJB.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -330,8 +331,8 @@ ObjCLanguageRuntime::GetNonKVOClassDescriptor(ObjCISA isa) {
 CompilerType
 ObjCLanguageRuntime::EncodingToType::RealizeType(const char *name,
                                                  bool for_expression) {
-  if (m_scratch_ast_ctx_up)
-    return RealizeType(*m_scratch_ast_ctx_up, name, for_expression);
+  if (m_scratch_ast_ctx_sp)
+    return RealizeType(*m_scratch_ast_ctx_sp, name, for_expression);
   return CompilerType();
 }
 
@@ -413,7 +414,7 @@ Status ObjCLanguageRuntime::ObjCExceptionPrecondition::ConfigurePrecondition(
   return error;
 }
 
-llvm::Optional<CompilerType>
+std::optional<CompilerType>
 ObjCLanguageRuntime::GetRuntimeType(CompilerType base_type) {
   CompilerType class_type;
   bool is_pointer_type = false;
@@ -423,18 +424,18 @@ ObjCLanguageRuntime::GetRuntimeType(CompilerType base_type) {
   else if (TypeSystemClang::IsObjCObjectOrInterfaceType(base_type))
     class_type = base_type;
   else
-    return llvm::None;
+    return std::nullopt;
 
   if (!class_type)
-    return llvm::None;
+    return std::nullopt;
 
   ConstString class_name(class_type.GetTypeName());
   if (!class_name)
-    return llvm::None;
+    return std::nullopt;
 
   TypeSP complete_objc_class_type_sp = LookupInCompleteClassCache(class_name);
   if (!complete_objc_class_type_sp)
-    return llvm::None;
+    return std::nullopt;
 
   CompilerType complete_class(
       complete_objc_class_type_sp->GetFullCompilerType());
@@ -445,5 +446,5 @@ ObjCLanguageRuntime::GetRuntimeType(CompilerType base_type) {
       return complete_class;
   }
 
-  return llvm::None;
+  return std::nullopt;
 }

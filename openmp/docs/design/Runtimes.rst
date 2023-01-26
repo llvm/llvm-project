@@ -374,6 +374,24 @@ The ``offset`` specifier indicates the starting position for thread assignment.
     across one socket, and ``granularity=socket`` the runtime will shift the
     granularity down to group since that is the largest granularity allowed by the OS.
 
+KMP_HIDDEN_HELPER_AFFINITY (Windows, Linux)
+"""""""""""""""""""""""""""""
+
+Enables run-time library to bind hidden helper threads to physical processing units.
+This environment variable has the same syntax and semantics as ``KMP_AFFINIY`` but only
+applies to the hidden helper team.
+
+You must set this environment variable before the first parallel region, or
+certain API calls including ``omp_get_max_threads()``, ``omp_get_num_procs()``
+and any affinity API calls.
+
+**Syntax:** Same as ``KMP_AFFINITY``
+
+The following ``modifiers`` are ignored in ``KMP_HIDDEN_HELPER_AFFINITY`` and are only valid
+for ``KMP_AFFINITY``:
+* ``respect`` and ``norespect``
+* ``reset`` and ``noreset``
+
 KMP_ALL_THREADS
 """""""""""""""
 
@@ -695,6 +713,12 @@ variables is defined below.
     * ``LIBOMPTARGET_STACK_SIZE=<Num>``
     * ``LIBOMPTARGET_SHARED_MEMORY_SIZE=<Num>``
     * ``LIBOMPTARGET_MAP_FORCE_ATOMIC=[TRUE/FALSE] (default TRUE)``
+    * ``LIBOMPTARGET_JIT_OPT_LEVEL={0,1,2,3} (default 3)``
+    * ``LIBOMPTARGET_JIT_SKIP_OPT=[TRUE/FALSE] (default FALSE)``
+    * ``LIBOMPTARGET_JIT_REPLACEMENT_OBJECT=<in:Filename> (object file)``
+    * ``LIBOMPTARGET_JIT_REPLACEMENT_MODULE=<in:Filename> (LLVM-IR file)``
+    * ``LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE=<out:Filename> (LLVM-IR file)``
+    * ``LIBOMPTARGET_JIT_POST_OPT_IR_MODULE=<out:Filename> (LLVM-IR file)``
 
 LIBOMPTARGET_DEBUG
 """"""""""""""""""
@@ -707,16 +731,15 @@ displayed. This feature is only availible if ``libomptarget`` was built with
 
 LIBOMPTARGET_PROFILE
 """"""""""""""""""""
+
 ``LIBOMPTARGET_PROFILE`` allows ``libomptarget`` to generate time profile output
 similar to Clang's ``-ftime-trace`` option. This generates a JSON file based on
 `Chrome Tracing`_ that can be viewed with ``chrome://tracing`` or the
-`Speedscope App`_. Building this feature depends on the `LLVM Support Library`_
-for time trace output. Using this library is enabled by default when building
-using the CMake option ``OPENMP_ENABLE_LIBOMPTARGET_PROFILING``. The output will
-be saved to the filename specified by the environment variable. For multi-threaded
-applications, profiling in ``libomp`` is also needed. Setting the CMake option
-``OPENMP_ENABLE_LIBOMP_PROFILING=ON`` to enable the feature. Note that this will
-turn ``libomp`` into a C++ library.
+`Speedscope App`_. The output will be saved to the filename specified by the
+environment variable. For multi-threaded applications, profiling in ``libomp``
+is also needed. Setting the CMake option ``OPENMP_ENABLE_LIBOMP_PROFILING=ON``
+to enable the feature. This feature depends on the `LLVM Support Library`_
+for time trace output. Note that this will turn ``libomp`` into a C++ library.
 
 .. _`Chrome Tracing`: https://www.chromium.org/developers/how-tos/trace-event-profiling-tool
 
@@ -1033,6 +1056,68 @@ value of the ``LIBOMPTARGET_MAP_FORCE_ATOMIC`` environment variable.
 The default behavior of LLVM 14 is to force atomic maps clauses, prior versions
 of LLVM did not.
 
+
+LIBOMPTARGET_JIT_OPT_LEVEL
+""""""""""""""""""""""""""
+
+This environment variable can be used to change the optimization pipeleine used
+to optimize the embedded device code as part of the device JIT. The value is
+corresponds to the ``-O{0,1,2,3}`` command line argument passed to ``clang``.
+
+LIBOMPTARGET_JIT_SKIP_OPT
+""""""""""""""""""""""""""
+
+This environment variable can be used to skip the optimization pipeline during
+JIT compilation. If set, the image will only be passed through the backend. The
+backend is invoked with the ``LIBOMPTARGET_JIT_OPT_LEVEL`` flag.
+
+LIBOMPTARGET_JIT_REPLACEMENT_OBJECT
+"""""""""""""""""""""""""""""""""""
+
+This environment variable can be used to replace the embedded device code
+before the device JIT finishes compilation for the target. The value is
+expected to be a filename to an object file, thus containing the output of the
+assembler in object format for the respective target. The JIT optimization
+pipeline and backend are skipped and only target specific post-processing is
+performed on the object file before it is loaded onto the device.
+
+LIBOMPTARGET_JIT_REPLACEMENT_MODULE
+"""""""""""""""""""""""""""""""""""
+
+This environment variable can be used to replace the embedded device code
+before the device JIT finishes compilation for the target. The value is
+expected to be a filename to an LLVM-IR file, thus containing an LLVM-IR module
+for the respective target. To obtain a device code image compatible with the
+embedded one it is recommended to extract the embedded one either before or
+after IR optimization. This can be done at compile time, after compile time via
+llvm tools (llvm-objdump), or, simply, by setting the
+:ref:`LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE` or
+:ref:`LIBOMPTARGET_JIT_POST_OPT_IR_MODULE` environment variables.
+
+
+LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE
+""""""""""""""""""""""""""""""""""
+
+This environment variable can be used to extract the embedded device code
+before the device JIT runs additional IR optimizations on it (see
+:ref:`LIBOMPTARGET_JIT_OPT_LEVEL`). The value is expected to be a filename into
+which the LLVM-IR module is written. The module can be the analyzed, and
+transformed and loaded back into the JIT pipeline via
+:ref:`LIBOMPTARGET_JIT_REPLACEMENT_MODULE`.
+
+
+LIBOMPTARGET_JIT_POST_OPT_IR_MODULE
+""""""""""""""""""""""""""""""""""
+
+This environment variable can be used to extract the embedded device code after
+the device JIT runs additional IR optimizations on it (see
+:ref:`LIBOMPTARGET_JIT_OPT_LEVEL`). The value is expected to be a filename into
+which the LLVM-IR module is written. The module can be the analyzed, and
+transformed and loaded back into the JIT pipeline via
+:ref:`LIBOMPTARGET_JIT_REPLACEMENT_MODULE`.
+
+
+
 .. _libomptarget_plugin:
 
 LLVM/OpenMP Target Host Runtime Plugins (``libomptarget.rtl.XXXX``)
@@ -1115,8 +1200,9 @@ buffer. This pointer can be obtained using the
 ``llvm_omp_target_dynamic_shared_alloc`` extension. If this function is called
 from the host it will simply return a null pointer. In order to use this buffer
 the kernel must be launched with an adequate amount of dynamic shared memory
-allocated. Currently this is done using the ``LIBOMPTARGET_SHARED_MEMORY_SIZE``
-environment variable. An example is given below.
+allocated. This can be done using the ``LIBOMPTARGET_SHARED_MEMORY_SIZE``
+environment variable or the ``ompx_dyn_cgroup_mem(<N>)`` target directive
+clause. Examples for both are given below.
 
 .. code-block:: c++
 
@@ -1125,19 +1211,41 @@ environment variable. An example is given below.
     #pragma omp target parallel map(from : x)
       {
         int *buf = llvm_omp_target_dynamic_shared_alloc();
-    #pragma omp barrier
         if (omp_get_thread_num() == 0)
           *buf = 1;
     #pragma omp barrier
         if (omp_get_thread_num() == 1)
           x = *buf;
       }
+      assert(x == 1);
     }
 
 .. code-block:: console
 
-    $ clang++ -fopenmp -fopenmp-targets=nvptx64 shared.c
+    $ clang++ -fopenmp --offload-arch=sm_80 -O3 shared.c
     $ env LIBOMPTARGET_SHARED_MEMORY_SIZE=256 ./shared
+
+.. code-block:: c++
+
+    void foo(int N) {
+      int x;
+    #pragma omp target parallel map(from : x) ompx_dyn_cgroup_mem(N * sizeof(int))
+      {
+        int *buf = llvm_omp_target_dynamic_shared_alloc();
+        if (omp_get_thread_num() == 0)
+          buf[N - 1] = 1;
+    #pragma omp barrier
+        if (omp_get_thread_num() == 1)
+          x = buf[N - 1];
+      }
+      assert(x == 1);
+    }
+
+.. code-block:: console
+
+    $ clang++ -fopenmp --offload-arch=gfx90a -O3 shared.c
+    $ env LIBOMPTARGET_NEXTGEN_PLUGINS=1 ./shared
+
 
 .. _libomptarget_device_debugging:
 

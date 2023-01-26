@@ -15,7 +15,6 @@
 #include "lldb/API/SBFile.h"
 #include "lldb/API/SBHostOS.h"
 #include "lldb/API/SBLanguageRuntime.h"
-#include "lldb/API/SBReproducer.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBStructuredData.h"
@@ -60,11 +59,14 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "Options.inc"
 #undef PREFIX
 
-const opt::OptTable::Info InfoTable[] = {
+static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
   {                                                                            \
@@ -76,9 +78,9 @@ const opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class LLDBOptTable : public opt::OptTable {
+class LLDBOptTable : public opt::GenericOptTable {
 public:
-  LLDBOptTable() : OptTable(InfoTable) {}
+  LLDBOptTable() : opt::GenericOptTable(InfoTable) {}
 };
 } // namespace
 
@@ -742,39 +744,6 @@ EXAMPLES:
   llvm::outs() << examples << '\n';
 }
 
-static llvm::Optional<int> InitializeReproducer(llvm::StringRef argv0,
-                                                opt::InputArgList &input_args) {
-  bool capture = input_args.hasArg(OPT_capture);
-  bool generate_on_exit = input_args.hasArg(OPT_generate_on_exit);
-  auto *capture_path = input_args.getLastArg(OPT_capture_path);
-
-  if (generate_on_exit && !capture) {
-    WithColor::warning()
-        << "-reproducer-generate-on-exit specified without -capture\n";
-  }
-
-  if (capture || capture_path) {
-    if (capture_path) {
-      if (!capture)
-        WithColor::warning() << "-capture-path specified without -capture\n";
-      if (const char *error = SBReproducer::Capture(capture_path->getValue())) {
-        WithColor::error() << "reproducer capture failed: " << error << '\n';
-        return 1;
-      }
-    } else {
-      const char *error = SBReproducer::Capture();
-      if (error) {
-        WithColor::error() << "reproducer capture failed: " << error << '\n';
-        return 1;
-      }
-    }
-    if (generate_on_exit)
-      SBReproducer::SetAutoGenerate(true);
-  }
-
-  return llvm::None;
-}
-
 int main(int argc, char const *argv[]) {
   // Editline uses for example iswprint which is dependent on LC_CTYPE.
   std::setlocale(LC_ALL, "");
@@ -788,7 +757,7 @@ int main(int argc, char const *argv[]) {
   LLDBOptTable T;
   unsigned MissingArgIndex;
   unsigned MissingArgCount;
-  ArrayRef<const char *> arg_arr = makeArrayRef(argv + 1, argc - 1);
+  ArrayRef<const char *> arg_arr = ArrayRef(argv + 1, argc - 1);
   opt::InputArgList input_args =
       T.ParseArgs(arg_arr, MissingArgIndex, MissingArgCount);
   llvm::StringRef argv0 = llvm::sys::path::filename(argv[0]);
@@ -816,16 +785,16 @@ int main(int argc, char const *argv[]) {
     return 1;
   }
 
-  if (auto exit_code = InitializeReproducer(argv[0], input_args)) {
-    return *exit_code;
-  }
-
   SBError error = SBDebugger::InitializeWithErrorHandling();
   if (error.Fail()) {
     WithColor::error() << "initialization failed: " << error.GetCString()
                        << '\n';
     return 1;
   }
+
+  // Setup LLDB signal handlers once the debugger has been initialized.
+  SBDebugger::PrintDiagnosticsOnError();
+
   SBHostOS::ThreadCreated("<lldb.driver.main-thread>");
 
   signal(SIGINT, sigint_handler);

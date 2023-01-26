@@ -6,6 +6,6 @@
 define void @__signbit(double %__x) {
 entry:
   %__x.addr = alloca double, align 8
-  store double %__x, double* %__x.addr, align 8
+  store double %__x, ptr %__x.addr, align 8
   ret void
 }

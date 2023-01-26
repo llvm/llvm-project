@@ -29,6 +29,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
+#include <optional>
 #include <utility>
 
 using namespace llvm;
@@ -187,12 +188,12 @@ getOperands(ArrayRef<VPValue *> Values) {
 }
 
 /// Returns the opcode of Values or ~0 if they do not all agree.
-static Optional<unsigned> getOpcode(ArrayRef<VPValue *> Values) {
+static std::optional<unsigned> getOpcode(ArrayRef<VPValue *> Values) {
   unsigned Opcode = cast<VPInstruction>(Values[0])->getOpcode();
   if (any_of(Values, [Opcode](VPValue *V) {
         return cast<VPInstruction>(V)->getOpcode() != Opcode;
       }))
-    return None;
+    return std::nullopt;
   return {Opcode};
 }
 
@@ -343,7 +344,7 @@ SmallVector<VPlanSlp::MultiNodeOpTy, 4> VPlanSlp::reorderMultiNodeOps() {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPlanSlp::dumpBundle(ArrayRef<VPValue *> Values) {
   dbgs() << " Ops: ";
-  for (auto Op : Values) {
+  for (auto *Op : Values) {
     if (auto *VPInstr = cast_or_null<VPInstruction>(Op))
       if (auto *Instr = VPInstr->getUnderlyingInstr()) {
         dbgs() << *Instr << " | ";

@@ -22,7 +22,7 @@
 using namespace llvm;
 using namespace coverage;
 
-LLVM_NODISCARD static ::testing::AssertionResult
+[[nodiscard]] static ::testing::AssertionResult
 ErrorEquals(coveragemap_error Expected, Error E) {
   coveragemap_error Found;
   std::string FoundMsg;
@@ -213,7 +213,7 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::tuple<bool, bool>> {
     Filenames.resize(Files.size() + 1);
     for (const auto &E : Files)
       Filenames[E.getValue()] = E.getKey().str();
-    ArrayRef<std::string> FilenameRefs = llvm::makeArrayRef(Filenames);
+    ArrayRef<std::string> FilenameRefs = llvm::ArrayRef(Filenames);
     RawCoverageMappingReader Reader(Coverage, FilenameRefs, Data.Filenames,
                                     Data.Expressions, Data.Regions);
     EXPECT_THAT_ERROR(Reader.read(), Succeeded());
@@ -279,7 +279,7 @@ TEST_P(CoverageMappingTest, basic_write_read) {
   InputFunctionCoverageData &Input = InputFunctions.back();
   OutputFunctionCoverageData &Output = OutputFunctions.back();
 
-  size_t N = makeArrayRef(Input.Regions).size();
+  size_t N = ArrayRef(Input.Regions).size();
   ASSERT_EQ(N, Output.Regions.size());
   for (size_t I = 0; I < N; ++I) {
     ASSERT_EQ(Input.Regions[I].Count, Output.Regions[I].Count);
@@ -292,7 +292,7 @@ TEST_P(CoverageMappingTest, basic_write_read) {
 
 TEST_P(CoverageMappingTest, correct_deserialize_for_more_than_two_files) {
   const char *FileNames[] = {"bar", "baz", "foo"};
-  static const unsigned N = array_lengthof(FileNames);
+  static const unsigned N = std::size(FileNames);
 
   startFunction("func", 0x1234);
   for (unsigned I = 0; I < N; ++I)
@@ -321,7 +321,7 @@ TEST_P(CoverageMappingTest, load_coverage_for_more_than_two_files) {
   ProfileWriter.addRecord({"func", 0x1234, {0}}, Err);
 
   const char *FileNames[] = {"bar", "baz", "foo"};
-  static const unsigned N = array_lengthof(FileNames);
+  static const unsigned N = std::size(FileNames);
 
   startFunction("func", 0x1234);
   for (unsigned I = 0; I < N; ++I)

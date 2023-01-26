@@ -34,9 +34,9 @@ declare i32 @llvm.amdgcn.workgroup.id.z() #0
 ; ALL: COMPUTE_PGM_RSRC2:TGID_Y_EN: 0
 ; ALL: COMPUTE_PGM_RSRC2:TGID_Z_EN: 0
 ; ALL: COMPUTE_PGM_RSRC2:TIDIG_COMP_CNT: 0
-define amdgpu_kernel void @test_workgroup_id_x(i32 addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_workgroup_id_x(ptr addrspace(1) %out) #1 {
   %id = call i32 @llvm.amdgcn.workgroup.id.x()
-  store i32 %id, i32 addrspace(1)* %out
+  store i32 %id, ptr addrspace(1) %out
   ret void
 }
 
@@ -61,9 +61,9 @@ define amdgpu_kernel void @test_workgroup_id_x(i32 addrspace(1)* %out) #1 {
 ; ALL: COMPUTE_PGM_RSRC2:TGID_Y_EN: 1
 ; ALL: COMPUTE_PGM_RSRC2:TGID_Z_EN: 0
 ; ALL: COMPUTE_PGM_RSRC2:TIDIG_COMP_CNT: 0
-define amdgpu_kernel void @test_workgroup_id_y(i32 addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_workgroup_id_y(ptr addrspace(1) %out) #1 {
   %id = call i32 @llvm.amdgcn.workgroup.id.y()
-  store i32 %id, i32 addrspace(1)* %out
+  store i32 %id, ptr addrspace(1) %out
   ret void
 }
 
@@ -96,9 +96,9 @@ define amdgpu_kernel void @test_workgroup_id_y(i32 addrspace(1)* %out) #1 {
 ; ALL: COMPUTE_PGM_RSRC2:TGID_Y_EN: 0
 ; ALL: COMPUTE_PGM_RSRC2:TGID_Z_EN: 1
 ; ALL: COMPUTE_PGM_RSRC2:TIDIG_COMP_CNT: 0
-define amdgpu_kernel void @test_workgroup_id_z(i32 addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_workgroup_id_z(ptr addrspace(1) %out) #1 {
   %id = call i32 @llvm.amdgcn.workgroup.id.z()
-  store i32 %id, i32 addrspace(1)* %out
+  store i32 %id, ptr addrspace(1) %out
   ret void
 }
 

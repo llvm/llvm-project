@@ -102,7 +102,7 @@ define void @test11() {
 ; CHECK-NEXT:    adrp x8, _var32@PAGE
 ; CHECK-NEXT:    str wzr, [x8, _var32@PAGEOFF]
 ; CHECK-NEXT:    ret
-  store i32 0, i32* @var32
+  store i32 0, ptr @var32
   ret void
 }
 
@@ -113,7 +113,7 @@ define void @test12() {
 ; CHECK-NEXT:    mov w9, #1
 ; CHECK-NEXT:    str w9, [x8, _var32@PAGEOFF]
 ; CHECK-NEXT:    ret
-  store i32 1, i32* @var32
+  store i32 1, ptr @var32
   ret void
 }
 
@@ -124,7 +124,7 @@ define void @test13() {
 ; CHECK-NEXT:    mov w9, #65535
 ; CHECK-NEXT:    str w9, [x8, _var32@PAGEOFF]
 ; CHECK-NEXT:    ret
-  store i32 65535, i32* @var32
+  store i32 65535, ptr @var32
   ret void
 }
 
@@ -135,7 +135,7 @@ define void @test14() {
 ; CHECK-NEXT:    mov w9, #65536
 ; CHECK-NEXT:    str w9, [x8, _var32@PAGEOFF]
 ; CHECK-NEXT:    ret
-  store i32 65536, i32* @var32
+  store i32 65536, ptr @var32
   ret void
 }
 
@@ -146,7 +146,7 @@ define void @test15() {
 ; CHECK-NEXT:    mov w9, #-65536
 ; CHECK-NEXT:    str w9, [x8, _var32@PAGEOFF]
 ; CHECK-NEXT:    ret
-  store i32 4294901760, i32* @var32
+  store i32 4294901760, ptr @var32
   ret void
 }
 
@@ -157,7 +157,7 @@ define void @test16() {
 ; CHECK-NEXT:    mov w9, #-1
 ; CHECK-NEXT:    str w9, [x8, _var32@PAGEOFF]
 ; CHECK-NEXT:    ret
-  store i32 -1, i32* @var32
+  store i32 -1, ptr @var32
   ret void
 }
 

@@ -12,7 +12,7 @@
 
 // bool failed() const throw();
 //
-//	Extension: constructing from NULL is UB; we just make it a failed iterator
+// Extension: constructing from NULL is UB; we just make it a failed iterator
 
 #include <iterator>
 #include <cassert>

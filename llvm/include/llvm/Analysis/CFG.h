@@ -92,7 +92,7 @@ bool isPotentiallyReachable(
 /// in 'Worklist' has been reached then 'StopBB' can not be executed.
 /// Conservatively returns true.
 bool isPotentiallyReachableFromMany(
-    SmallVectorImpl<BasicBlock *> &Worklist, BasicBlock *StopBB,
+    SmallVectorImpl<BasicBlock *> &Worklist, const BasicBlock *StopBB,
     const SmallPtrSetImpl<BasicBlock *> *ExclusionSet,
     const DominatorTree *DT = nullptr, const LoopInfo *LI = nullptr);
 

@@ -1,9 +1,9 @@
 // REQUIRES: arm
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv5-none-linux-gnueabi %s -o %t
 // RUN: ld.lld %t -o %t2 --shared
-// RUN: llvm-objdump --no-show-raw-insn --start-address=0x70000c --stop-address=0x700010 --triple=armv5-none-linux-gnueabi -d %t2 | FileCheck %s
-// RUN: llvm-objdump --no-show-raw-insn --start-address=0x80000c --stop-address=0x800010 -d %t2 | FileCheck %s --check-prefix=CHECK-CALL
-// RUN: llvm-objdump --no-show-raw-insn --start-address=0xd00020 --stop-address=0xd00060 --triple=armv5-none-linux-gnueabi -d %t2 | FileCheck %s --check-prefix=CHECK-PLT
+// RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn --start-address=0x70000c --stop-address=0x700010 --triple=armv5-none-linux-gnueabi -d %t2 | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn --start-address=0x80000c --stop-address=0x800010 -d %t2 | FileCheck %s --check-prefix=CHECK-CALL
+// RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn --start-address=0xd00020 --stop-address=0xd00060 --triple=armv5-none-linux-gnueabi -d %t2 | FileCheck %s --check-prefix=CHECK-PLT
 /// When we create a thunk to a PLT entry the relocation is redirected to the
 /// Thunk, changing its expression to a non-PLT equivalent. If the thunk
 /// becomes unusable we need to restore the relocation expression to the PLT
@@ -42,7 +42,7 @@ needsplt:
         .section .text.07, "ax", %progbits
         .space (1024 * 1024)
 /// 0xd00040 = preemptible@plt
-// CHECK:      0070000c <__ARMV5PILongThunk_preemptible>:
+// CHECK:      0070000c <__ARMv4PILongBXThunk_preemptible>:
 // CHECK-NEXT:   70000c: b       0xd00040
 
         .section .text.08, "ax", %progbits
@@ -52,7 +52,7 @@ needsplt:
         .balign 2
         bl preemptible
         bl preemptible2
-// CHECK-CALL: 80000c: blx     0x70000c <__ARMV5PILongThunk_preemptible>
+// CHECK-CALL: 80000c: blx     0x70000c <__ARMv4PILongBXThunk_preemptible>
         .balign 2
         .globl preemptible
         .type preemptible, %function

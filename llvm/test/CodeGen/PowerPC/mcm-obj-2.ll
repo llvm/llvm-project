@@ -10,9 +10,9 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 define dso_local signext i32 @test_fn_static() nounwind {
 entry:
-  %0 = load i32, i32* @test_fn_static.si, align 4
+  %0 = load i32, ptr @test_fn_static.si, align 4
   %inc = add nsw i32 %0, 1
-  store i32 %inc, i32* @test_fn_static.si, align 4
+  store i32 %inc, ptr @test_fn_static.si, align 4
   ret i32 %0
 }
 
@@ -29,9 +29,9 @@ entry:
 
 define dso_local signext i32 @test_file_static() nounwind {
 entry:
-  %0 = load i32, i32* @gi, align 4
+  %0 = load i32, ptr @gi, align 4
   %inc = add nsw i32 %0, 1
-  store i32 %inc, i32* @gi, align 4
+  store i32 %inc, ptr @gi, align 4
   ret i32 %0
 }
 

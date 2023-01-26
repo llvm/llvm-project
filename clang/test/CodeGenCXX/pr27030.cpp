@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple=i386-pc-win32 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple=i386-pc-win32 %s -o - | FileCheck %s
 struct A {};
 struct B : A {};
 extern "C" {
@@ -6,7 +6,7 @@ extern int B::*a;
 void test1() { (int A::*)(a); }
 }
 // CHECK-LABEL: define dso_local void @test1(
-// CHECK: %[[load:.*]]       = load i32, i32* @a
+// CHECK: %[[load:.*]]       = load i32, ptr @a
 // CHECK: %[[memptr_cmp:.*]] = icmp ne i32 %[[load]], -1
 // CHECK: br i1 %[[memptr_cmp]]
 

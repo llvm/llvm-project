@@ -80,6 +80,13 @@ static_assert(std::is_base_of_v<std::false_type, std::conjunction<std::false_typ
 static_assert(!std::conjunction<std::false_type, HasNoValue>::value);
 static_assert(!std::conjunction_v<std::false_type, HasNoValue>);
 
+// Also check the case where HasNoValue is not the last in the list (https://llvm.org/PR584900).
+static_assert(!std::conjunction<std::false_type, HasNoValue, std::true_type>::value);
+static_assert(!std::conjunction_v<std::false_type, HasNoValue, std::true_type>);
+
+static_assert(!std::conjunction<std::false_type, HasNoValue, std::false_type>::value);
+static_assert(!std::conjunction_v<std::false_type, HasNoValue, std::false_type>);
+
 static_assert(std::conjunction<MyOtherSpecialTrueType>::value == -1);
 static_assert(std::conjunction_v<MyOtherSpecialTrueType>);
 

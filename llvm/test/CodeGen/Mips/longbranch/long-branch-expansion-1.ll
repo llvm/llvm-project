@@ -14,24 +14,24 @@ define i32 @boo1(i32 signext %argc) {
 entry:
   %retval = alloca i32, align 4
   %argc.addr = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
-  store i32 %argc, i32* %argc.addr, align 4
+  store i32 0, ptr %retval, align 4
+  store i32 %argc, ptr %argc.addr, align 4
   call void asm sideeffect "test_label_1:", "~{$1}"()
-  %0 = load i32, i32* %argc.addr, align 4
+  %0 = load i32, ptr %argc.addr, align 4
   %cmp = icmp sgt i32 %0, 1
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
   call void asm sideeffect ".space 68435052", "~{$1}"()
-  %call = call i32 bitcast (i32 (...)* @foo to i32 ()*)()
-  store i32 %call, i32* %retval, align 4
+  %call = call i32 @foo()
+  store i32 %call, ptr %retval, align 4
   br label %return
 
 if.end:
-  store i32 0, i32* %retval, align 4
+  store i32 0, ptr %retval, align 4
   br label %return
 
 return:
-  %1 = load i32, i32* %retval, align 4
+  %1 = load i32, ptr %retval, align 4
   ret i32 %1
 }

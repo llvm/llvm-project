@@ -40,7 +40,7 @@ static void handleHVXWarnings(const Driver &D, const ArgList &Args) {
     StringRef Val = A->getValue();
     if (!Val.equals_insensitive("64b") && !Val.equals_insensitive("128b"))
       D.Diag(diag::err_drv_unsupported_option_argument)
-          << A->getOption().getName() << Val;
+          << A->getSpelling() << Val;
   }
 }
 
@@ -120,16 +120,17 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
     HvxVerNum = 0;
 
   // Handle HVX floating point flags.
-  auto checkFlagHvxVersion = [&](auto FlagOn, auto FlagOff,
-                                 unsigned MinVerNum) -> Optional<StringRef> {
-    // Return an Optional<StringRef>:
-    // - None indicates a verification failure, or that the flag was not
+  auto checkFlagHvxVersion =
+      [&](auto FlagOn, auto FlagOff,
+          unsigned MinVerNum) -> std::optional<StringRef> {
+    // Return an std::optional<StringRef>:
+    // - std::nullopt indicates a verification failure, or that the flag was not
     //   present in Args.
     // - Otherwise the returned value is that name of the feature to add
     //   to Features.
     Arg *A = Args.getLastArg(FlagOn, FlagOff);
     if (!A)
-      return None;
+      return std::nullopt;
 
     StringRef OptName = A->getOption().getName();
     if (A->getOption().matches(FlagOff))
@@ -137,12 +138,12 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
 
     if (!HasHVX) {
       D.Diag(diag::err_drv_needs_hvx) << withMinus(OptName);
-      return None;
+      return std::nullopt;
     }
     if (HvxVerNum < MinVerNum) {
       D.Diag(diag::err_drv_needs_hvx_version)
           << withMinus(OptName) << ("v" + std::to_string(HvxVerNum));
-      return None;
+      return std::nullopt;
     }
     return makeFeature(OptName, true);
   };
@@ -340,8 +341,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-pie");
 
   if (auto G = toolchains::HexagonToolChain::getSmallDataThreshold(Args)) {
-    CmdArgs.push_back(Args.MakeArgString("-G" + Twine(G.value())));
-    UseG0 = G.value() == 0;
+    CmdArgs.push_back(Args.MakeArgString("-G" + Twine(*G)));
+    UseG0 = *G == 0;
   }
 
   CmdArgs.push_back("-o");
@@ -519,8 +520,8 @@ std::string HexagonToolChain::getHexagonTargetDir(
   return InstalledDir;
 }
 
-Optional<unsigned> HexagonToolChain::getSmallDataThreshold(
-      const ArgList &Args) {
+std::optional<unsigned>
+HexagonToolChain::getSmallDataThreshold(const ArgList &Args) {
   StringRef Gn = "";
   if (Arg *A = Args.getLastArg(options::OPT_G)) {
     Gn = A->getValue();
@@ -533,7 +534,7 @@ Optional<unsigned> HexagonToolChain::getSmallDataThreshold(
   if (!Gn.getAsInteger(10, G))
     return G;
 
-  return None;
+  return std::nullopt;
 }
 
 std::string HexagonToolChain::getCompilerRTPath() const {

@@ -3,14 +3,12 @@
 There should be nothing unwanted there and a simpe main.cpp which includes SB*.h
 should compile and link with the LLDB framework."""
 
-from __future__ import print_function
-
-
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfNoSBHeaders
 class SBDirCheckerCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -19,7 +17,6 @@ class SBDirCheckerCase(TestBase):
         self.source = 'main.cpp'
         self.generateSource(self.source)
 
-    @skipIfNoSBHeaders
     def test_sb_api_directory(self):
         """Test the SB API directory and make sure there's no unwanted stuff."""
 

@@ -6,10 +6,10 @@
 
 define i64 @check_size() {
 ; CHECK-LABEL: check_size:
-  %starti = ptrtoint %struct* @var to i64
+  %starti = ptrtoint ptr @var to i64
 
-  %endp = getelementptr %struct, %struct* @var, i64 1
-  %endi = ptrtoint %struct* %endp to i64
+  %endp = getelementptr %struct, ptr @var, i64 1
+  %endi = ptrtoint ptr %endp to i64
 
   %diff = sub i64 %endi, %starti
   ret i64 %diff
@@ -18,10 +18,10 @@ define i64 @check_size() {
 
 define i64 @check_field() {
 ; CHECK-LABEL: check_field:
-  %starti = ptrtoint %struct* @var to i64
+  %starti = ptrtoint ptr @var to i64
 
-  %endp = getelementptr %struct, %struct* @var, i64 0, i32 1
-  %endi = ptrtoint i128* %endp to i64
+  %endp = getelementptr %struct, ptr @var, i64 0, i32 1
+  %endi = ptrtoint ptr %endp to i64
 
   %diff = sub i64 %endi, %starti
   ret i64 %diff

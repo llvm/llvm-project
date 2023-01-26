@@ -11,8 +11,8 @@ define void @f1(i64 %addr, i64 %index) {
 ; CHECK-NEXT:    lb %r0, 0(%r3,%r2)
 ; CHECK-NEXT:    br %r14
   %add = add i64 %addr, %index
-  %ptr = inttoptr i64 %add to i8 *
-  %a = load volatile i8, i8 *%ptr
+  %ptr = inttoptr i64 %add to ptr
+  %a = load volatile i8, ptr %ptr
   ret void
 }
 
@@ -24,8 +24,8 @@ define void @f2(i64 %addr, i64 %index) {
 ; CHECK-NEXT:    br %r14
   %add1 = add i64 %addr, %index
   %add2 = add i64 %add1, 100
-  %ptr = inttoptr i64 %add2 to i8 *
-  %a = load volatile i8, i8 *%ptr
+  %ptr = inttoptr i64 %add2 to ptr
+  %a = load volatile i8, ptr %ptr
   ret void
 }
 
@@ -37,8 +37,8 @@ define void @f3(i64 %addr, i64 %index) {
 ; CHECK-NEXT:    br %r14
   %add1 = add i64 %addr, 100
   %add2 = add i64 %add1, %index
-  %ptr = inttoptr i64 %add2 to i8 *
-  %a = load volatile i8, i8 *%ptr
+  %ptr = inttoptr i64 %add2 to ptr
+  %a = load volatile i8, ptr %ptr
   ret void
 }
 
@@ -50,8 +50,8 @@ define void @f4(i64 %addr, i64 %index) {
 ; CHECK-NEXT:    br %r14
   %add1 = add i64 %addr, %index
   %add2 = sub i64 %add1, 100
-  %ptr = inttoptr i64 %add2 to i8 *
-  %a = load volatile i8, i8 *%ptr
+  %ptr = inttoptr i64 %add2 to ptr
+  %a = load volatile i8, ptr %ptr
   ret void
 }
 
@@ -63,8 +63,8 @@ define void @f5(i64 %addr, i64 %index) {
 ; CHECK-NEXT:    br %r14
   %add1 = sub i64 %addr, 100
   %add2 = add i64 %add1, %index
-  %ptr = inttoptr i64 %add2 to i8 *
-  %a = load volatile i8, i8 *%ptr
+  %ptr = inttoptr i64 %add2 to ptr
+  %a = load volatile i8, ptr %ptr
   ret void
 }
 
@@ -78,8 +78,8 @@ define void @f6(i64 %addr, i64 %index) {
   %aligned = and i64 %addr, -8
   %or = or i64 %aligned, 6
   %add = add i64 %or, %index
-  %ptr = inttoptr i64 %add to i8 *
-  %a = load volatile i8, i8 *%ptr
+  %ptr = inttoptr i64 %add to ptr
+  %a = load volatile i8, ptr %ptr
   ret void
 }
 
@@ -92,8 +92,8 @@ define void @f7(i64 %addr, i64 %index) {
 ; CHECK-NEXT:    br %r14
   %or = or i64 %addr, 6
   %add = add i64 %or, %index
-  %ptr = inttoptr i64 %add to i8 *
-  %a = load volatile i8, i8 *%ptr
+  %ptr = inttoptr i64 %add to ptr
+  %a = load volatile i8, ptr %ptr
   ret void
 }
 
@@ -110,7 +110,7 @@ define void @f8(i64 %addr, i64 %index) {
   %aligned = and i64 %addr, -8
   %add = add i64 %aligned, %index
   %or = or i64 %add, 6
-  %ptr = inttoptr i64 %or to i8 *
-  %a = load volatile i8, i8 *%ptr
+  %ptr = inttoptr i64 %or to ptr
+  %a = load volatile i8, ptr %ptr
   ret void
 }

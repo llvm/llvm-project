@@ -21,7 +21,7 @@
 #include "llvm/TableGen/Record.h"
 
 using namespace llvm;
-using namespace llvm::DXIL;
+using namespace llvm::dxil;
 
 namespace {
 
@@ -144,7 +144,7 @@ static std::string parameterKindToString(ParameterKind Kind) {
   case ParameterKind::DXIL_HANDLE:
     return "DXIL_HANDLE";
   }
-  llvm_unreachable("Unknown llvm::DXIL::ParameterKind enum");
+  llvm_unreachable("Unknown llvm::dxil::ParameterKind enum");
 }
 
 static void emitDXILOpEnum(DXILOperationData &DXILOp, raw_ostream &OS) {
@@ -238,14 +238,14 @@ static void emitDXILIntrinsicMap(std::vector<DXILOperationData> &DXILOps,
                                  raw_ostream &OS) {
   OS << "\n";
   // FIXME: use array instead of SmallDenseMap.
-  OS << "static const SmallDenseMap<Intrinsic::ID, DXIL::OpCode> LowerMap = "
+  OS << "static const SmallDenseMap<Intrinsic::ID, dxil::OpCode> LowerMap = "
         "{\n";
   for (auto &DXILOp : DXILOps) {
     if (DXILOp.Intrinsic.empty())
       continue;
-    // {Intrinsic::sin, DXIL::OpCode::Sin},
+    // {Intrinsic::sin, dxil::OpCode::Sin},
     OS << "  { Intrinsic::" << DXILOp.Intrinsic
-       << ", DXIL::OpCode::" << DXILOp.DXILOp << "},\n";
+       << ", dxil::OpCode::" << DXILOp.DXILOp << "},\n";
   }
   OS << "};\n";
   OS << "\n";
@@ -340,16 +340,16 @@ static void emitDXILOperationTable(std::vector<DXILOperationData> &DXILOps,
   Parameters.layout();
 
   // Emit the DXIL operation table.
-  //{DXIL::OpCode::Sin, OpCodeNameIndex, OpCodeClass::Unary,
+  //{dxil::OpCode::Sin, OpCodeNameIndex, OpCodeClass::Unary,
   // OpCodeClassNameIndex,
   // OverloadKind::FLOAT | OverloadKind::HALF, Attribute::AttrKind::ReadNone, 0,
   // 3, ParameterTableOffset},
-  OS << "static const OpCodeProperty *getOpCodeProperty(DXIL::OpCode DXILOp) "
+  OS << "static const OpCodeProperty *getOpCodeProperty(dxil::OpCode DXILOp) "
         "{\n";
 
   OS << "  static const OpCodeProperty OpCodeProps[] = {\n";
   for (auto &DXILOp : DXILOps) {
-    OS << "  { DXIL::OpCode::" << DXILOp.DXILOp << ", "
+    OS << "  { dxil::OpCode::" << DXILOp.DXILOp << ", "
        << OpStrings.get(DXILOp.DXILOp.str())
        << ", OpCodeClass::" << DXILOp.DXILClass << ", "
        << OpClassStrings.get(getDXILOpClassName(DXILOp.DXILClass)) << ", "
@@ -375,7 +375,7 @@ static void emitDXILOperationTable(std::vector<DXILOperationData> &DXILOps,
   OS << "}\n\n";
 
   // Emit the string tables.
-  OS << "static const char *getOpCodeName(DXIL::OpCode DXILOp) {\n\n";
+  OS << "static const char *getOpCodeName(dxil::OpCode DXILOp) {\n\n";
 
   OpStrings.emitStringLiteralDef(OS,
                                  "  static const char DXILOpCodeNameTable[]");

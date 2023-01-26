@@ -120,8 +120,9 @@ void TrackingStatistic::RegisterStatistic() {
 }
 
 StatisticInfo::StatisticInfo() {
-  // Ensure timergroup lists are created first so they are destructed after us.
-  TimerGroup::ConstructTimerLists();
+  // Ensure that necessary timer global objects are created first so they are
+  // destructed after us.
+  TimerGroup::constructForStatistics();
 }
 
 // Print information when destroyed, iff command line option is specified.
@@ -253,7 +254,7 @@ void llvm::PrintStatistics() {
 #endif
 }
 
-const std::vector<std::pair<StringRef, uint64_t>> llvm::GetStatistics() {
+std::vector<std::pair<StringRef, uint64_t>> llvm::GetStatistics() {
   sys::SmartScopedLock<true> Reader(*StatLock);
   std::vector<std::pair<StringRef, uint64_t>> ReturnStats;
 

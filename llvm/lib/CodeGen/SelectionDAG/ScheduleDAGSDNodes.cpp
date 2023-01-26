@@ -110,11 +110,15 @@ SUnit *ScheduleDAGSDNodes::Clone(SUnit *Old) {
 static void CheckForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
                                       const TargetRegisterInfo *TRI,
                                       const TargetInstrInfo *TII,
+                                      const TargetLowering &TLI,
                                       unsigned &PhysReg, int &Cost) {
   if (Op != 2 || User->getOpcode() != ISD::CopyToReg)
     return;
 
   unsigned Reg = cast<RegisterSDNode>(User->getOperand(1))->getReg();
+  if (TLI.checkForPhysRegDependency(Def, User, Op, TRI, TII, PhysReg, Cost))
+    return;
+
   if (Register::isVirtualRegister(Reg))
     return;
 
@@ -188,7 +192,7 @@ static void RemoveUnusedGlue(SDNode *N, SelectionDAG *DAG) {
          "expected an unused glue value");
 
   CloneNodeWithValues(N, DAG,
-                      makeArrayRef(N->value_begin(), N->getNumValues() - 1));
+                      ArrayRef(N->value_begin(), N->getNumValues() - 1));
 }
 
 /// ClusterNeighboringLoads - Force nearby loads together by "gluing" them.
@@ -485,7 +489,8 @@ void ScheduleDAGSDNodes::AddSchedEdges() {
         unsigned PhysReg = 0;
         int Cost = 1;
         // Determine if this is a physical register dependency.
-        CheckForPhysRegDependency(OpN, N, i, TRI, TII, PhysReg, Cost);
+        const TargetLowering &TLI = DAG->getTargetLoweringInfo();
+        CheckForPhysRegDependency(OpN, N, i, TRI, TII, TLI, PhysReg, Cost);
         assert((PhysReg == 0 || !isChain) &&
                "Chain dependence via physreg data?");
         // FIXME: See ScheduleDAGSDNodes::EmitCopyFromReg. For now, scheduler
@@ -843,8 +848,7 @@ EmitPhysRegCopy(SUnit *SU, DenseMap<SUnit*, Register> &VRBaseMap,
 /// not necessarily refer to returned BB. The emitter may split blocks.
 MachineBasicBlock *ScheduleDAGSDNodes::
 EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
-  InstrEmitter Emitter(DAG->getTarget(), BB, InsertPos,
-                       DAG->getUseInstrRefDebugInfo());
+  InstrEmitter Emitter(DAG->getTarget(), BB, InsertPos);
   DenseMap<SDValue, Register> VRBaseMap;
   DenseMap<SUnit*, Register> CopyVRBaseMap;
   SmallVector<std::pair<unsigned, MachineInstr*>, 32> Orders;
@@ -889,6 +893,9 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
     if (DAG->getNoMergeSiteInfo(Node)) {
       MI->setFlag(MachineInstr::MIFlag::NoMerge);
     }
+
+    if (MDNode *MD = DAG->getPCSections(Node))
+      MI->setPCSections(MF, MD);
 
     return MI;
   };

@@ -16,7 +16,7 @@
 ;     elided).
 ;   + We want the chains to be long enough that duplicating them is expensive.
 
-define void @test_copy_cpsr(i128 %lhs, i128 %rhs, i128* %addr) {
+define void @test_copy_cpsr(i128 %lhs, i128 %rhs, ptr %addr) {
 ; CHECK-ARM: test_copy_cpsr:
 ; CHECK-THUMB: test_copy_cpsr:
 
@@ -29,13 +29,13 @@ define void @test_copy_cpsr(i128 %lhs, i128 %rhs, i128* %addr) {
 ; CHECK-THUMB: msr {{APSR|apsr}}_nzcvq, [[TMP]] @ encoding: [0x8{{[0-9a-f]}},0xf3,0x00,0x88]
 
   %sum = add i128 %lhs, %rhs
-  store volatile i128 %sum, i128* %addr
+  store volatile i128 %sum, ptr %addr
 
   %rhs2.tmp1 = trunc i128 %rhs to i64
   %rhs2 = zext i64 %rhs2.tmp1 to i128
 
   %sum2 = add i128 %lhs, %rhs2
-  store volatile i128 %sum2, i128* %addr
+  store volatile i128 %sum2, ptr %addr
 
   ret void
 }

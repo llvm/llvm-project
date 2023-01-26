@@ -556,9 +556,6 @@ public:
   /// Return true if there is metadata referencing this value.
   bool isUsedByMetadata() const { return IsUsedByMD; }
 
-  // Return true if this value is only transitively referenced by metadata.
-  bool isTransitiveUsedByMetadataOnly() const;
-
 protected:
   /// Get the current metadata attachments for the given kind, if any.
   ///

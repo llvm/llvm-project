@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-unroll -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=loop-unroll,instcombine -S | FileCheck %s
 
 ; This test is a worst-case scenario for bitreversal/byteswap detection.
 ; After loop unrolling (the unrolled loop is unreadably large so it has been kept
@@ -23,7 +23,7 @@
 ; CHECK: define i32 @fn1
 define i32 @fn1() #0 {
 entry:
-  %b.promoted = load i32, i32* @b, align 4, !tbaa !2
+  %b.promoted = load i32, ptr @b, align 4, !tbaa !2
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
@@ -36,7 +36,7 @@ for.body:                                         ; preds = %for.body, %entry
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body
-  store i32 %or, i32* @b, align 4, !tbaa !2
+  store i32 %or, ptr @b, align 4, !tbaa !2
   ret i32 undef
 }
 

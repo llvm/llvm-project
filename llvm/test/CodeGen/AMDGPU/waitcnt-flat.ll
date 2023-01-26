@@ -10,9 +10,9 @@
 ; XGCN: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[DATA:v[0-9]+]]
 ; XGCN: s_waitcnt vmcnt(0) lgkmcnt(0)
 ; XGCN: flat_load_dword [[DATA]], v[{{[0-9]+:[0-9]+}}]
-define amdgpu_kernel void @test(i32* %out, i32 %in) {
-  store volatile i32 0, i32* %out
-  %val = load volatile i32, i32* %out
+define amdgpu_kernel void @test(ptr %out, i32 %in) {
+  store volatile i32 0, ptr %out
+  %val = load volatile i32, ptr %out
   ret void
 }
 
@@ -21,8 +21,8 @@ define amdgpu_kernel void @test(i32* %out, i32 %in) {
 ; GFX9: global_load_dword [[LD:v[0-9]+]]
 ; GFX9-NEXT: s_waitcnt vmcnt(0){{$}}
 ; GFX9-NEXT: ds_write_b32 [[LD]]
-define amdgpu_kernel void @test_waitcnt_type_flat_global(i32 addrspace(1)* %in) {
-  %val = load volatile i32, i32 addrspace(1)* %in
-  store volatile i32 %val, i32 addrspace(3)* undef
+define amdgpu_kernel void @test_waitcnt_type_flat_global(ptr addrspace(1) %in) {
+  %val = load volatile i32, ptr addrspace(1) %in
+  store volatile i32 %val, ptr addrspace(3) undef
   ret void
 }

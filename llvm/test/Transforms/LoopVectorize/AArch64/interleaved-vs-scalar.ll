@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -force-vector-width=2 -force-vector-interleave=1 -loop-vectorize -S --debug-only=loop-vectorize 2>&1 | FileCheck %s
+; RUN: opt < %s -force-vector-width=2 -force-vector-interleave=1 -passes=loop-vectorize -S --debug-only=loop-vectorize 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
@@ -17,19 +17,19 @@ target triple = "aarch64--linux-gnu"
 ; CHECK: insertelement <2 x i8> [[INSERT]], i8 [[LOAD2]], i32 1
 ; CHECK: br i1 {{.*}}, label %middle.block, label %vector.body
 
-define void @test(%pair* %p, i8* %q, i64 %n) {
+define void @test(ptr %p, ptr %q, i64 %n) {
 entry:
   br label %for.body
 
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
-  %tmp0 = getelementptr %pair, %pair* %p, i64 %i, i32 0
-  %tmp1 = load i8, i8* %tmp0, align 1
-  %tmp2 = getelementptr %pair, %pair* %p, i64 %i, i32 1
-  %tmp3 = load i8, i8* %tmp2, align 1
+  %tmp0 = getelementptr %pair, ptr %p, i64 %i, i32 0
+  %tmp1 = load i8, ptr %tmp0, align 1
+  %tmp2 = getelementptr %pair, ptr %p, i64 %i, i32 1
+  %tmp3 = load i8, ptr %tmp2, align 1
   %add = add i8 %tmp1, %tmp3
-  %qi = getelementptr i8, i8* %q, i64 %i
-  store i8 %add, i8* %qi, align 1
+  %qi = getelementptr i8, ptr %q, i64 %i
+  store i8 %add, ptr %qi, align 1
   %i.next = add nuw nsw i64 %i, 1
   %cond = icmp eq i64 %i.next, %n
   br i1 %cond, label %for.end, label %for.body

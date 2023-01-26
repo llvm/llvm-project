@@ -546,6 +546,18 @@ void RecognizableInstr::emitInstructionSpecifier() {
     HANDLE_OPERAND(roRegister)
     HANDLE_OPTIONAL(immediate)
     break;
+  case X86Local::MRMDestMem4VOp3CC:
+    // Operand 1 is a register operand in the Reg/Opcode field.
+    // Operand 2 is a register operand in the R/M field.
+    // Operand 3 is VEX.vvvv
+    // Operand 4 is condition code.
+    assert(numPhysicalOperands == 4 &&
+           "Unexpected number of operands for MRMDestMem4VOp3CC");
+    HANDLE_OPERAND(roRegister)
+    HANDLE_OPERAND(memory)
+    HANDLE_OPERAND(vvvvRegister)
+    HANDLE_OPERAND(opcodeModifier)
+    break;
   case X86Local::MRMDestMem:
   case X86Local::MRMDestMemFSIB:
     // Operand 1 is a memory operand (possibly SIB-extended)
@@ -767,7 +779,7 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
 #define MAP(from, to)                     \
   case X86Local::MRM_##from:
 
-  llvm::Optional<OpcodeType> opcodeType;
+  std::optional<OpcodeType> opcodeType;
   switch (OpMap) {
   default: llvm_unreachable("Invalid map!");
   case X86Local::OB:        opcodeType = ONEBYTE;       break;
@@ -808,6 +820,7 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
     filter = std::make_unique<ModFilter>(true);
     break;
   case X86Local::MRMDestMem:
+  case X86Local::MRMDestMem4VOp3CC:
   case X86Local::MRMDestMemFSIB:
   case X86Local::MRMSrcMem:
   case X86Local::MRMSrcMemFSIB:
@@ -858,7 +871,8 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
 
   if (Form == X86Local::AddRegFrm || Form == X86Local::MRMSrcRegCC ||
       Form == X86Local::MRMSrcMemCC || Form == X86Local::MRMXrCC ||
-      Form == X86Local::MRMXmCC || Form == X86Local::AddCCFrm) {
+      Form == X86Local::MRMXmCC || Form == X86Local::AddCCFrm ||
+      Form == X86Local::MRMDestMem4VOp3CC) {
     uint8_t Count = Form == X86Local::AddRegFrm ? 8 : 16;
     assert(((opcodeToSet % Count) == 0) && "ADDREG_FRM opcode not aligned");
 

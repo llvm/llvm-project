@@ -1,7 +1,7 @@
 // Test host codegen.
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -fopenmp-version=50 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-version=50 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-version=50 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
 
 // expected-no-diagnostics
 #ifndef HEADER
@@ -65,29 +65,28 @@ void foo() {
   omp_alloctrait_t traits[10];
   omp_allocator_handle_t my_allocator;
 
-// CHECK: [[RES:%.+]] = call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 0, i32 0, i8* @.[[TGT_REGION:.+]].region_id, %struct.__tgt_kernel_arguments* %[[KERNEL_ARGS:.+]])
+// CHECK: [[RES:%.+]] = call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 0, i32 0, ptr @.[[TGT_REGION:.+]].region_id, ptr %[[KERNEL_ARGS:.+]])
 // CHECK: [[CMP:%.+]] = icmp ne i32 [[RES]], 0
 // CHECK: br i1 [[CMP]], label %[[FAILED:.+]], label %[[DONE:.+]]
 // CHECK: [[FAILED]]:
-// CHECK: call void @[[TGT_REGION]]([10 x %struct.omp_alloctrait_t]* %{{[^,]+}})
+// CHECK: call void @[[TGT_REGION]](ptr %{{[^,]+}})
 #pragma omp target teams uses_allocators(omp_null_allocator, omp_thread_mem_alloc, my_allocator(traits))
   ;
 }
 
-// CHECK: define internal void @[[TGT_REGION]]([10 x %struct.omp_alloctrait_t]* {{.+}})
-// CHECK: [[TRAITS_ADDR_REF:%.+]] = alloca [10 x %struct.omp_alloctrait_t]*,
+// CHECK: define internal void @[[TGT_REGION]](ptr {{.+}})
+// CHECK: [[TRAITS_ADDR_REF:%.+]] = alloca ptr,
 // CHECK: [[MY_ALLOCATOR_ADDR:%.+]] = alloca i64,
-// CHECK: [[TRAITS_ADDR:%.+]] = load [10 x %struct.omp_alloctrait_t]*, [10 x %struct.omp_alloctrait_t]** [[TRAITS_ADDR_REF]],
-// CHECK: [[TRAITS_ADDR_VOIDPTR:%.+]] = bitcast [10 x %struct.omp_alloctrait_t]* [[TRAITS_ADDR]] to i8**
-// CHECK: [[TRAITS:%.+]] = load i8*, i8** [[TRAITS_ADDR_VOIDPTR]],
-// CHECK: [[ALLOCATOR:%.+]] = call i8* @__kmpc_init_allocator(i32 %{{.+}}, i8* null, i32 10, i8* [[TRAITS]])
-// CHECK: [[CONV:%.+]] = ptrtoint i8* [[ALLOCATOR]] to i64
-// CHECK: store i64 [[CONV]], i64* [[MY_ALLOCATOR_ADDR]],
+// CHECK: [[TRAITS_ADDR:%.+]] = load ptr, ptr [[TRAITS_ADDR_REF]],
+// CHECK: [[TRAITS:%.+]] = load ptr, ptr [[TRAITS_ADDR]],
+// CHECK: [[ALLOCATOR:%.+]] = call ptr @__kmpc_init_allocator(i32 %{{.+}}, ptr null, i32 10, ptr [[TRAITS]])
+// CHECK: [[CONV:%.+]] = ptrtoint ptr [[ALLOCATOR]] to i64
+// CHECK: store i64 [[CONV]], ptr [[MY_ALLOCATOR_ADDR]],
 
 // Destroy allocator upon exit from the region.
-// CHECK: [[ALLOCATOR:%.+]] = load i64, i64* [[MY_ALLOCATOR_ADDR]],
-// CHECK: [[CONV:%.+]] = inttoptr i64 [[ALLOCATOR]] to i8*
-// CHECK: call void @__kmpc_destroy_allocator(i32 %{{.+}}, i8* [[CONV]])
+// CHECK: [[ALLOCATOR:%.+]] = load i64, ptr [[MY_ALLOCATOR_ADDR]],
+// CHECK: [[CONV:%.+]] = inttoptr i64 [[ALLOCATOR]] to ptr
+// CHECK: call void @__kmpc_destroy_allocator(i32 %{{.+}}, ptr [[CONV]])
 // CHECK: ret void
 
 #endif

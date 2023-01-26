@@ -4,8 +4,8 @@
 define i32 @main() #0 {
 entry:
   %jmp = alloca float, align 4
-  store float 0x4200000000000000, float* %jmp, align 4
-  %0 = load float, float* %jmp, align 4
+  store float 0x4200000000000000, ptr %jmp, align 4
+  %0 = load float, ptr %jmp, align 4
   call void asm sideeffect "jr $0", "c,~{$1}"(float %0) #1
 
 ; CHECK: error: couldn't allocate input reg for constraint 'c'

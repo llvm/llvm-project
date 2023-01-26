@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -151,7 +152,7 @@ void ScalarEnumerationTraits<RegisterId>::enumeration(IO &io, RegisterId &Reg) {
   const auto *Header = static_cast<COFF::header *>(io.getContext());
   assert(Header && "The IO context is not initialized");
 
-  Optional<CPUType> CpuType;
+  std::optional<CPUType> CpuType;
   ArrayRef<EnumEntry<uint16_t>> RegNames;
 
   switch (Header->Machine) {
@@ -165,6 +166,7 @@ void ScalarEnumerationTraits<RegisterId>::enumeration(IO &io, RegisterId &Reg) {
     CpuType = CPUType::ARMNT;
     break;
   case COFF::IMAGE_FILE_MACHINE_ARM64:
+  case COFF::IMAGE_FILE_MACHINE_ARM64EC:
     CpuType = CPUType::ARM64;
     break;
   }

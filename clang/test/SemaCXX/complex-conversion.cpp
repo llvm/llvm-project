@@ -15,4 +15,8 @@ void func(float Real, _Complex float Complex) {
 
   // Conversion to bool doesn't actually discard the imaginary part.
   take<bool>(Complex);
+
+  using B = _Complex double;
+  B c;
+  c *= double();
 }

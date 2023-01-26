@@ -9,7 +9,7 @@ target triple = "aarch64"
 ;       this is implemented, this test will be fleshed out.
 ;
 
-define <8 x i32> @fixed_bitselect_v8i32(<8 x i32>* %pre_cond_ptr, <8 x i32>* %left_ptr, <8 x i32>* %right_ptr) #0 {
+define <8 x i32> @fixed_bitselect_v8i32(ptr %pre_cond_ptr, ptr %left_ptr, ptr %right_ptr) #0 {
 ; CHECK-LABEL: fixed_bitselect_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -24,9 +24,9 @@ define <8 x i32> @fixed_bitselect_v8i32(<8 x i32>* %pre_cond_ptr, <8 x i32>* %le
 ; CHECK-NEXT:    orr z0.d, z1.d, z0.d
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x8]
 ; CHECK-NEXT:    ret
-  %pre_cond = load <8 x i32>, <8 x i32>* %pre_cond_ptr
-  %left = load <8 x i32>, <8 x i32>* %left_ptr
-  %right = load <8 x i32>, <8 x i32>* %right_ptr
+  %pre_cond = load <8 x i32>, ptr %pre_cond_ptr
+  %left = load <8 x i32>, ptr %left_ptr
+  %right = load <8 x i32>, ptr %right_ptr
 
   %neg_cond = sub <8 x i32> zeroinitializer, %pre_cond
   %min_cond = add <8 x i32> %pre_cond, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>

@@ -15,6 +15,7 @@
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
 #include "lldb/Utility/ConstString.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
+#include <optional>
 
 namespace lldb_private {
 class DebugNamesDWARFIndex : public DWARFIndex {
@@ -46,9 +47,9 @@ public:
                 llvm::function_ref<bool(DWARFDIE die)> callback) override;
   void GetNamespaces(ConstString name,
                      llvm::function_ref<bool(DWARFDIE die)> callback) override;
-  void GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
+  void GetFunctions(const Module::LookupInfo &lookup_info,
+                    SymbolFileDWARF &dwarf,
                     const CompilerDeclContext &parent_decl_ctx,
-                    uint32_t name_type_mask,
                     llvm::function_ref<bool(DWARFDIE die)> callback) override;
   void GetFunctions(const RegularExpression &regex,
                     llvm::function_ref<bool(DWARFDIE die)> callback) override;
@@ -77,7 +78,7 @@ private:
   std::unique_ptr<DebugNames> m_debug_names_up;
   ManualDWARFIndex m_fallback;
 
-  llvm::Optional<DIERef> ToDIERef(const DebugNames::Entry &entry);
+  std::optional<DIERef> ToDIERef(const DebugNames::Entry &entry);
   bool ProcessEntry(const DebugNames::Entry &entry,
                     llvm::function_ref<bool(DWARFDIE die)> callback,
                     llvm::StringRef name);

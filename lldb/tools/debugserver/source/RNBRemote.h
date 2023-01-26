@@ -136,6 +136,7 @@ public:
     speed_test,                         // 'qSpeedTest:'
     set_detach_on_error,                // 'QSetDetachOnError:'
     query_transfer,                     // 'qXfer:'
+    json_query_dyld_process_state,      // 'jGetDyldProcessState'
     unknown_type
   };
 
@@ -246,6 +247,7 @@ public:
   rnb_err_t HandlePacket_qXfer(const char *p);
   rnb_err_t HandlePacket_stop_process(const char *p);
   rnb_err_t HandlePacket_QSetDetachOnError(const char *p);
+  rnb_err_t HandlePacket_jGetDyldProcessState(const char *p);
   rnb_err_t SendStopReplyPacketForThread(nub_thread_t tid);
   rnb_err_t SendHexEncodedBytePacket(const char *header, const void *buf,
                                      size_t buf_len, const char *footer);

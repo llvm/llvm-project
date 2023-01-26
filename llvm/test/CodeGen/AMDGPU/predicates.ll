@@ -6,7 +6,7 @@
 ; CHECK-LABEL: {{^}}simple_if:
 ; CHECK: PRED_SET{{[EGN][ET]*}}_INT * Pred,
 ; CHECK: LSHL * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}, 1, Pred_sel
-define amdgpu_kernel void @simple_if(i32 addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @simple_if(ptr addrspace(1) %out, i32 %in) {
 entry:
   %cmp0 = icmp sgt i32 %in, 0
   br i1 %cmp0, label %IF, label %ENDIF
@@ -17,7 +17,7 @@ IF:
 
 ENDIF:
   %tmp2 = phi i32 [ %in, %entry ], [ %tmp1, %IF ]
-  store i32 %tmp2, i32 addrspace(1)* %out
+  store i32 %tmp2, ptr addrspace(1) %out
   ret void
 }
 
@@ -25,7 +25,7 @@ ENDIF:
 ; CHECK: PRED_SET{{[EGN][ET]*}}_INT * Pred,
 ; CHECK: LSH{{[LR] \* T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}, 1, Pred_sel
 ; CHECK: LSH{{[LR] \* T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}, 1, Pred_sel
-define amdgpu_kernel void @simple_if_else(i32 addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @simple_if_else(ptr addrspace(1) %out, i32 %in) {
 entry:
   %0 = icmp sgt i32 %in, 0
   br i1 %0, label %IF, label %ELSE
@@ -40,7 +40,7 @@ ELSE:
 
 ENDIF:
   %3 = phi i32 [ %1, %IF ], [ %2, %ELSE ]
-  store i32 %3, i32 addrspace(1)* %out
+  store i32 %3, ptr addrspace(1) %out
   ret void
 }
 
@@ -51,7 +51,7 @@ ENDIF:
 ; CHECK: PRED_SET{{[EGN][ET]*}}_INT * Exec
 ; CHECK: PRED_SET{{[EGN][ET]*}}_INT * Pred,
 ; CHECK: LSHL * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}, 1, Pred_sel
-define amdgpu_kernel void @nested_if(i32 addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @nested_if(ptr addrspace(1) %out, i32 %in) {
 entry:
   %0 = icmp sgt i32 %in, 0
   br i1 %0, label %IF0, label %ENDIF
@@ -67,7 +67,7 @@ IF1:
 
 ENDIF:
   %4 = phi i32 [%in, %entry], [%1, %IF0], [%3, %IF1]
-  store i32 %4, i32 addrspace(1)* %out
+  store i32 %4, ptr addrspace(1) %out
   ret void
 }
 
@@ -79,7 +79,7 @@ ENDIF:
 ; CHECK: PRED_SET{{[EGN][ET]*}}_INT * Pred,
 ; CHECK: LSH{{[LR] \* T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}, 1, Pred_sel
 ; CHECK: LSH{{[LR] \* T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}, 1, Pred_sel
-define amdgpu_kernel void @nested_if_else(i32 addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @nested_if_else(ptr addrspace(1) %out, i32 %in) {
 entry:
   %0 = icmp sgt i32 %in, 0
   br i1 %0, label %IF0, label %ENDIF
@@ -99,6 +99,6 @@ ELSE1:
 
 ENDIF:
   %5 = phi i32 [%in, %entry], [%3, %IF1], [%4, %ELSE1]
-  store i32 %5, i32 addrspace(1)* %out
+  store i32 %5, ptr addrspace(1) %out
   ret void
 }

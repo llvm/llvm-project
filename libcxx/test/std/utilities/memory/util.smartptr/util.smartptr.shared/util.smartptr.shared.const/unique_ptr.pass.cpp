@@ -16,6 +16,7 @@
 #include <new>
 #include <cstdlib>
 #include <cassert>
+#include <utility>
 
 #include "test_macros.h"
 #include "count_new.h"

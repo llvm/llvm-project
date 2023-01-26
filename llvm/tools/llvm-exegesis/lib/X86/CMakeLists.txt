@@ -8,7 +8,9 @@ set(LLVM_LINK_COMPONENTS
   Exegesis
   Core
   Support
+  TargetParser
   CodeGen
+  MC
   )
 
 add_llvm_library(LLVMExegesisX86

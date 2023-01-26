@@ -1,23 +1,23 @@
 ; RUN: llc -mtriple=armv7-eabi -mcpu=cortex-a8 < %s
 ; PR5411
 
-%bar = type { %quad, float, float, [3 x %quux*], [3 x %bar*], [2 x %bar*], [3 x i8], i8 }
-%baz = type { %bar*, i32 }
+%bar = type { %quad, float, float, [3 x ptr], [3 x ptr], [2 x ptr], [3 x i8], i8 }
+%baz = type { ptr, i32 }
 %foo = type { i8, %quuz, %quad, float, [64 x %quux], [128 x %bar], i32, %baz, %baz }
 %quad = type { [4 x float] }
 %quux = type { %quad, %quad }
-%quuz = type { [4 x %quux*], [4 x float], i32 }
+%quuz = type { [4 x ptr], [4 x float], i32 }
 
-define arm_aapcs_vfpcc %bar* @aaa(%foo* nocapture %this, %quux* %a, %quux* %b, %quux* %c, i8 zeroext %forced) {
+define arm_aapcs_vfpcc ptr @aaa(ptr nocapture %this, ptr %a, ptr %b, ptr %c, i8 zeroext %forced) {
 entry:
   br i1 undef, label %bb85, label %bb
 
 bb:                                               ; preds = %entry
-  %0 = getelementptr inbounds %bar, %bar* null, i32 0, i32 0, i32 0, i32 2 ; <float*> [#uses=2]
-  %1 = load float, float* undef, align 4                 ; <float> [#uses=1]
+  %0 = getelementptr inbounds %bar, ptr null, i32 0, i32 0, i32 0, i32 2 ; <ptr> [#uses=2]
+  %1 = load float, ptr undef, align 4                 ; <float> [#uses=1]
   %2 = fsub float 0.000000e+00, undef             ; <float> [#uses=2]
   %3 = fmul float 0.000000e+00, undef             ; <float> [#uses=1]
-  %4 = load float, float* %0, align 4                    ; <float> [#uses=3]
+  %4 = load float, ptr %0, align 4                    ; <float> [#uses=3]
   %5 = fmul float %4, %2                          ; <float> [#uses=1]
   %6 = fsub float %3, %5                          ; <float> [#uses=1]
   %7 = fmul float %4, undef                       ; <float> [#uses=1]
@@ -32,11 +32,11 @@ bb:                                               ; preds = %entry
   %16 = fadd float %14, %15                       ; <float> [#uses=1]
   %17 = select i1 undef, float undef, float %16   ; <float> [#uses=1]
   %18 = fdiv float %17, 0.000000e+00              ; <float> [#uses=1]
-  store float %18, float* undef, align 4
+  store float %18, ptr undef, align 4
   %19 = fmul float %4, undef                      ; <float> [#uses=1]
-  store float %19, float* %0, align 4
-  ret %bar* null
+  store float %19, ptr %0, align 4
+  ret ptr null
 
 bb85:                                             ; preds = %entry
-  ret %bar* null
+  ret ptr null
 }

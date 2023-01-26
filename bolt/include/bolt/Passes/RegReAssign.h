@@ -9,6 +9,7 @@
 #ifndef BOLT_PASSES_REGREASSIGN_H
 #define BOLT_PASSES_REGREASSIGN_H
 
+#include "bolt/Passes/BinaryFunctionCallGraph.h"
 #include "bolt/Passes/BinaryPasses.h"
 #include "bolt/Passes/RegAnalysis.h"
 

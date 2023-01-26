@@ -859,12 +859,11 @@ enum NodeType {
   ///  3 Round to -inf
   ///  4 Round to nearest, ties to zero
   /// Result is rounding mode and chain. Input is a chain.
-  /// TODO: Rename this node to GET_ROUNDING.
-  FLT_ROUNDS_,
+  GET_ROUNDING,
 
   /// Set rounding mode.
   /// The first operand is a chain pointer. The second specifies the required
-  /// rounding mode, encoded in the same way as used in '``FLT_ROUNDS_``'.
+  /// rounding mode, encoded in the same way as used in '``GET_ROUNDING``'.
   SET_ROUNDING,
 
   /// X = FP_EXTEND(Y) - Extend a smaller FP type into a larger FP type.
@@ -1149,6 +1148,9 @@ enum NodeType {
   /// operand and output are the same floating type.
   ARITH_FENCE,
 
+  /// MEMBARRIER - Compiler barrier only; generate a no-op.
+  MEMBARRIER,
+
   /// OUTCHAIN = ATOMIC_FENCE(INCHAIN, ordering, scope)
   /// This corresponds to the fence instruction. It takes an input chain, and
   /// two integer constants: an AtomicOrdering and a SynchronizationScope.
@@ -1337,10 +1339,10 @@ bool isVPBinaryOp(unsigned Opcode);
 bool isVPReduction(unsigned Opcode);
 
 /// The operand position of the vector mask.
-Optional<unsigned> getVPMaskIdx(unsigned Opcode);
+std::optional<unsigned> getVPMaskIdx(unsigned Opcode);
 
 /// The operand position of the explicit vector length parameter.
-Optional<unsigned> getVPExplicitVectorLengthIdx(unsigned Opcode);
+std::optional<unsigned> getVPExplicitVectorLengthIdx(unsigned Opcode);
 
 //===--------------------------------------------------------------------===//
 /// MemIndexedMode enum - This enum defines the load / store indexed
@@ -1485,6 +1487,11 @@ inline unsigned getUnorderedFlavor(CondCode Cond) {
 /// Return the operation corresponding to !(X op Y), where 'op' is a valid
 /// SetCC operation.
 CondCode getSetCCInverse(CondCode Operation, EVT Type);
+
+inline bool isExtOpcode(unsigned Opcode) {
+  return Opcode == ISD::ANY_EXTEND || Opcode == ISD::ZERO_EXTEND ||
+         Opcode == ISD::SIGN_EXTEND;
+}
 
 namespace GlobalISel {
 /// Return the operation corresponding to !(X op Y), where 'op' is a valid

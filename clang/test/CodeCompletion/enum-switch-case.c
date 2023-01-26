@@ -25,14 +25,14 @@ void test(enum Color color) {
     case 
   }
 
-    // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:19:10 %s -o - | FileCheck -check-prefix=CHECK-CC1 %s
+    // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-9):10 %s -o - | FileCheck -check-prefix=CHECK-CC1 %s
     // CHECK-CC1: Blue
     // CHECK-CC1-NEXT: Green
     // CHECK-CC1-NEXT: Indigo
     // CHECK-CC1-NEXT: Orange
     // CHECK-CC1-NEXT: Violet
 
-    // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:25:10 %s -o - | FileCheck -check-prefix=CHECK-CC2 %s      
+    // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-10):10 %s -o - | FileCheck -check-prefix=CHECK-CC2 %s      
   // CHECK-CC2: COMPLETION: Blue : [#enum Color#]Blue
   // CHECK-CC2-NEXT: COMPLETION: c2 : [#unsigned int#]c2
   // CHECK-CC2-NEXT: COMPLETION: color : [#enum Color#]color

@@ -121,8 +121,9 @@ namespace llvm {
     /// Apply stored permissions to the \p OutputFilename.
     /// Copy LastAccess and ModificationTime if \p CopyDates is true.
     /// Overwrite stored permissions if \p OverwritePermissions is specified.
-    Error apply(StringRef OutputFilename, bool CopyDates = false,
-                Optional<sys::fs::perms> OverwritePermissions = None);
+    Error
+    apply(StringRef OutputFilename, bool CopyDates = false,
+          std::optional<sys::fs::perms> OverwritePermissions = std::nullopt);
 
   private:
     FilePermissionsApplier(StringRef InputFilename, sys::fs::file_status Status)

@@ -19,6 +19,7 @@
 #include "X86TargetMachine.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
+#include <optional>
 
 namespace llvm {
 
@@ -113,9 +114,9 @@ public:
 
   /// \name Cache TTI Implementation
   /// @{
-  llvm::Optional<unsigned> getCacheSize(
+  std::optional<unsigned> getCacheSize(
     TargetTransformInfo::CacheLevel Level) const override;
-  llvm::Optional<unsigned> getCacheAssociativity(
+  std::optional<unsigned> getCacheAssociativity(
     TargetTransformInfo::CacheLevel Level) const override;
   /// @}
 
@@ -128,16 +129,15 @@ public:
   unsigned getMaxInterleaveFactor(unsigned VF);
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
-      TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,
-      TTI::OperandValueKind Opd2Info = TTI::OK_AnyValue,
-      TTI::OperandValueProperties Opd1PropInfo = TTI::OP_None,
-      TTI::OperandValueProperties Opd2PropInfo = TTI::OP_None,
+      TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
+      TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
       const Instruction *CxtI = nullptr);
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
-                                 ArrayRef<int> Mask, int Index,
+                                 ArrayRef<int> Mask,
+                                 TTI::TargetCostKind CostKind, int Index,
                                  VectorType *SubTp,
-                                 ArrayRef<const Value *> Args = None);
+                                 ArrayRef<const Value *> Args = std::nullopt);
   InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                    TTI::CastContextHint CCH,
                                    TTI::TargetCostKind CostKind,
@@ -146,19 +146,23 @@ public:
                                      CmpInst::Predicate VecPred,
                                      TTI::TargetCostKind CostKind,
                                      const Instruction *I = nullptr);
+  using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                     unsigned Index);
+                                     TTI::TargetCostKind CostKind,
+                                     unsigned Index, Value *Op0, Value *Op1);
   InstructionCost getScalarizationOverhead(VectorType *Ty,
                                            const APInt &DemandedElts,
-                                           bool Insert, bool Extract);
+                                           bool Insert, bool Extract,
+                                           TTI::TargetCostKind CostKind);
   InstructionCost getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
                                             int VF,
                                             const APInt &DemandedDstElts,
                                             TTI::TargetCostKind CostKind);
-  InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src,
-                                  MaybeAlign Alignment, unsigned AddressSpace,
-                                  TTI::TargetCostKind CostKind,
-                                  const Instruction *I = nullptr);
+  InstructionCost
+  getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
+                  unsigned AddressSpace, TTI::TargetCostKind CostKind,
+                  TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
+                  const Instruction *I = nullptr);
   InstructionCost getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
                                         Align Alignment, unsigned AddressSpace,
                                         TTI::TargetCostKind CostKind);
@@ -170,13 +174,13 @@ public:
   InstructionCost getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
                                             const SCEV *Ptr);
 
-  Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
-                                               IntrinsicInst &II) const;
-  Optional<Value *>
+  std::optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
+                                                    IntrinsicInst &II) const;
+  std::optional<Value *>
   simplifyDemandedUseBitsIntrinsic(InstCombiner &IC, IntrinsicInst &II,
                                    APInt DemandedMask, KnownBits &Known,
                                    bool &KnownBitsComputed) const;
-  Optional<Value *> simplifyDemandedVectorEltsIntrinsic(
+  std::optional<Value *> simplifyDemandedVectorEltsIntrinsic(
       InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
       APInt &UndefElts2, APInt &UndefElts3,
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
@@ -184,14 +188,11 @@ public:
 
   unsigned getAtomicMemIntrinsicMaxElementSize() const;
 
-  InstructionCost
-  getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                 TTI::TargetCostKind CostKind);
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                         TTI::TargetCostKind CostKind);
 
   InstructionCost getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
-                                             Optional<FastMathFlags> FMF,
+                                             std::optional<FastMathFlags> FMF,
                                              TTI::TargetCostKind CostKind);
 
   InstructionCost getMinMaxCost(Type *Ty, Type *CondTy, bool IsUnsigned);
@@ -225,6 +226,15 @@ public:
   InstructionCost getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
                                       const APInt &Imm, Type *Ty,
                                       TTI::TargetCostKind CostKind);
+  /// Return the cost of the scaling factor used in the addressing
+  /// mode represented by AM for this target, for a load/store
+  /// of the specified type.
+  /// If the AM is supported, the return value must be >= 0.
+  /// If the AM is not supported, it returns a negative value.
+  InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
+                                       int64_t BaseOffset, bool HasBaseReg,
+                                       int64_t Scale, unsigned AddrSpace) const;
+
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2);
   bool canMacroFuseCmp();
@@ -244,6 +254,7 @@ public:
   bool isLegalAltInstr(VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
                        const SmallBitVector &OpcodeMask) const;
   bool hasDivRemOp(Type *DataType, bool IsSigned);
+  bool isExpensiveToSpeculativelyExecute(const Instruction *I);
   bool isFCmpOrdCheaperThanFCmpZero(Type *Ty);
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const;

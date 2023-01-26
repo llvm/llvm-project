@@ -4,9 +4,9 @@
 ; CHECK-LABEL: {{^}}inline_asm:
 ; CHECK: s_endpgm
 ; CHECK: s_endpgm
-define amdgpu_kernel void @inline_asm(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @inline_asm(ptr addrspace(1) %out) {
 entry:
-  store i32 5, i32 addrspace(1)* %out
+  store i32 5, ptr addrspace(1) %out
   call void asm sideeffect "s_endpgm", ""()
   ret void
 }
@@ -26,13 +26,13 @@ entry:
 ; CHECK: v_mov_b32 v{{[0-9]+}}, 0
 ; CHECK: v_cmp_eq_u32
 ; CHECK: s_and_saveexec_b64
-define amdgpu_kernel void @branch_on_asm_vgpr(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @branch_on_asm_vgpr(ptr addrspace(1) %out) {
 	%zero = call i32 asm "v_mov_b32 $0, 0", "=v"()
 	%cmp = icmp eq i32 %zero, 0
 	br i1 %cmp, label %if, label %endif
 
 if:
-	store i32 0, i32 addrspace(1)* %out
+	store i32 0, ptr addrspace(1) %out
 	br label %endif
 
 endif:
@@ -44,13 +44,13 @@ endif:
 ; CHECK: s_mov_b32 s{{[0-9]+}}, 0
 ; CHECK: s_cmp_lg_u32
 ; CHECK: s_cbranch_scc0
-define amdgpu_kernel void @branch_on_asm_sgpr(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @branch_on_asm_sgpr(ptr addrspace(1) %out) {
 	%zero = call i32 asm "s_mov_b32 $0, 0", "=s"()
 	%cmp = icmp eq i32 %zero, 0
 	br i1 %cmp, label %if, label %endif
 
 if:
-	store i32 0, i32 addrspace(1)* %out
+	store i32 0, ptr addrspace(1) %out
 	br label %endif
 
 endif:
@@ -63,15 +63,15 @@ endif:
 ; CHECK-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[MASK_LO]]
 ; CHECK-DAG: v_mov_b32_e32 v[[V_HI:[0-9]+]], s[[MASK_HI]]
 ; CHECK: buffer_store_dwordx2 v[[[V_LO]]:[[V_HI]]]
-define amdgpu_kernel void @v_cmp_asm(i64 addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @v_cmp_asm(ptr addrspace(1) %out, i32 %in) {
   %sgpr = tail call i64 asm "v_cmp_ne_u32_e64 $0, 0, $1", "=s,v"(i32 %in)
-  store i64 %sgpr, i64 addrspace(1)* %out
+  store i64 %sgpr, ptr addrspace(1) %out
   ret void
 }
 
 ; CHECK-LABEL: {{^}}code_size_inline_asm:
 ; CHECK: codeLenInByte = 12
-define amdgpu_kernel void @code_size_inline_asm(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @code_size_inline_asm(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "v_nop_e64", ""()
   ret void
@@ -80,7 +80,7 @@ entry:
 ; All inlineasm instructions are assumed to be the maximum size
 ; CHECK-LABEL: {{^}}code_size_inline_asm_small_inst:
 ; CHECK: codeLenInByte = 12
-define amdgpu_kernel void @code_size_inline_asm_small_inst(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @code_size_inline_asm_small_inst(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "v_nop_e32", ""()
   ret void
@@ -88,7 +88,7 @@ entry:
 
 ; CHECK-LABEL: {{^}}code_size_inline_asm_2_inst:
 ; CHECK: codeLenInByte = 20
-define amdgpu_kernel void @code_size_inline_asm_2_inst(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @code_size_inline_asm_2_inst(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "
     v_nop_e64
@@ -99,7 +99,7 @@ entry:
 
 ; CHECK-LABEL: {{^}}code_size_inline_asm_2_inst_extra_newline:
 ; CHECK: codeLenInByte = 20
-define amdgpu_kernel void @code_size_inline_asm_2_inst_extra_newline(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @code_size_inline_asm_2_inst_extra_newline(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "
     v_nop_e64
@@ -111,7 +111,7 @@ entry:
 
 ; CHECK-LABEL: {{^}}code_size_inline_asm_0_inst:
 ; CHECK: codeLenInByte = 4
-define amdgpu_kernel void @code_size_inline_asm_0_inst(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @code_size_inline_asm_0_inst(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "", ""()
   ret void
@@ -119,7 +119,7 @@ entry:
 
 ; CHECK-LABEL: {{^}}code_size_inline_asm_1_comment:
 ; CHECK: codeLenInByte = 4
-define amdgpu_kernel void @code_size_inline_asm_1_comment(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @code_size_inline_asm_1_comment(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "; comment", ""()
   ret void
@@ -127,7 +127,7 @@ entry:
 
 ; CHECK-LABEL: {{^}}code_size_inline_asm_newline_1_comment:
 ; CHECK: codeLenInByte = 4
-define amdgpu_kernel void @code_size_inline_asm_newline_1_comment(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @code_size_inline_asm_newline_1_comment(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "
 ; comment", ""()
@@ -136,7 +136,7 @@ entry:
 
 ; CHECK-LABEL: {{^}}code_size_inline_asm_1_comment_newline:
 ; CHECK: codeLenInByte = 4
-define amdgpu_kernel void @code_size_inline_asm_1_comment_newline(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @code_size_inline_asm_1_comment_newline(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "; comment
 ", ""()
@@ -145,7 +145,7 @@ entry:
 
 ; CHECK-LABEL: {{^}}code_size_inline_asm_2_comments_line:
 ; CHECK: codeLenInByte = 4
-define amdgpu_kernel void @code_size_inline_asm_2_comments_line(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @code_size_inline_asm_2_comments_line(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "; first comment ; second comment", ""()
   ret void
@@ -153,7 +153,7 @@ entry:
 
 ; CHECK-LABEL: {{^}}code_size_inline_asm_2_comments_line_nospace:
 ; CHECK: codeLenInByte = 4
-define amdgpu_kernel void @code_size_inline_asm_2_comments_line_nospace(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @code_size_inline_asm_2_comments_line_nospace(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "; first comment;second comment", ""()
   ret void
@@ -161,7 +161,7 @@ entry:
 
 ; CHECK-LABEL: {{^}}code_size_inline_asm_mixed_comments0:
 ; CHECK: codeLenInByte = 20
-define amdgpu_kernel void @code_size_inline_asm_mixed_comments0(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @code_size_inline_asm_mixed_comments0(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "; comment
     v_nop_e64 ; inline comment
@@ -176,7 +176,7 @@ entry:
 
 ; CHECK-LABEL: {{^}}code_size_inline_asm_mixed_comments1:
 ; CHECK: codeLenInByte = 20
-define amdgpu_kernel void @code_size_inline_asm_mixed_comments1(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @code_size_inline_asm_mixed_comments1(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "v_nop_e64 ; inline comment
 ; separate comment
@@ -190,7 +190,7 @@ entry:
 
 ; CHECK-LABEL: {{^}}code_size_inline_asm_mixed_comments_operands:
 ; CHECK: codeLenInByte = 20
-define amdgpu_kernel void @code_size_inline_asm_mixed_comments_operands(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @code_size_inline_asm_mixed_comments_operands(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "; comment
     v_add_i32_e32 v0, vcc, v1, v2 ; inline comment
@@ -235,9 +235,9 @@ entry:
 ; CHECK: {{buffer|flat}}_store_byte [[STORE]],
 define amdgpu_kernel void @i1_input_phys_vgpr() {
 entry:
-  %val = load i1, i1 addrspace(1)* undef
+  %val = load i1, ptr addrspace(1) undef
   %cc = call i1 asm sideeffect "; use $1, def $0 ", "={v1}, {v0}"(i1 %val)
-  store i1 %cc, i1 addrspace(1)* undef
+  store i1 %cc, ptr addrspace(1) undef
   ret void
 }
 
@@ -250,8 +250,8 @@ entry:
 ; CHECK-NEXT: ASMSTART
 define amdgpu_kernel void @i1_input_phys_vgpr_x2() {
 entry:
-  %val0 = load volatile i1, i1 addrspace(1)* undef
-  %val1 = load volatile i1, i1 addrspace(1)* undef
+  %val0 = load volatile i1, ptr addrspace(1) undef
+  %val1 = load volatile i1, ptr addrspace(1) undef
   call void asm sideeffect "; use $0 $1 ", "{v0}, {v1}"(i1 %val0, i1 %val1)
   ret void
 }
@@ -266,7 +266,7 @@ entry:
   %def0 = call i32 asm sideeffect "; def $0 ", "={v0}"()
   %def1 = call i32 asm sideeffect "; def $0 ", "={v0}"()
   %add = shl i32 %def0, %def1
-  store i32 %add, i32 addrspace(1)* undef
+  store i32 %add, ptr addrspace(1) undef
   ret void
 }
 

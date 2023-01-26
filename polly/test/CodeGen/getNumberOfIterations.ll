@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-vectorizer=polly -polly-codegen \
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-vectorizer=polly -polly-codegen \
 ; RUN:      < %s -S | FileCheck %s
 
 ; #pragma known-parallel

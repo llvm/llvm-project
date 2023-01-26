@@ -15,7 +15,6 @@
 #ifndef LLVM_LIB_TARGET_WEBASSEMBLY_UTILS_WEBASSEMBLYTYPEUTILITIES_H
 #define LLVM_LIB_TARGET_WEBASSEMBLY_UTILS_WEBASSEMBLYTYPEUTILITIES_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/MC/MCSymbolWasm.h"
@@ -89,7 +88,7 @@ inline bool isRefType(wasm::ValType Type) {
 
 // Convert StringRef to ValType / HealType / BlockType
 
-Optional<wasm::ValType> parseType(StringRef Type);
+std::optional<wasm::ValType> parseType(StringRef Type);
 BlockType parseBlockType(StringRef Type);
 MVT parseMVT(StringRef Type);
 

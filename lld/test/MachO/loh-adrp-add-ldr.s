@@ -2,7 +2,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %s -o %t.o
 # RUN: %lld -arch arm64 %t.o -o %t
-# RUN: llvm-objdump -d --macho %t | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d --macho %t | FileCheck %s
 
 ## This is mostly a copy of loh-adrp-ldr-got-ldr.s's `local.s` test, except that Adrp+Ldr+Ldr
 ## triples have been changed to Adrp+Add+Ldr. The performed optimization is the same.
@@ -87,7 +87,7 @@ L27: ldrsb x2, [x1]
 
 ## Unaligned
 L28: adrp x0, _unaligned@PAGE
-L29: add  x1, x0, _close@PAGEOFF
+L29: add  x1, x0, _unaligned@PAGEOFF
 L30: ldr  x2, [x1]
 # CHECK-NEXT: adr x1
 # CHECK-NEXT: nop

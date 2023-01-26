@@ -10,6 +10,7 @@
 #define LLDB_UTILITY_FILESPEC_H
 
 #include <functional>
+#include <optional>
 #include <string>
 
 #include "lldb/Utility/ConstString.h"
@@ -18,7 +19,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/YAMLTraits.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -191,11 +191,11 @@ public:
   static bool Match(const FileSpec &pattern, const FileSpec &file);
 
   /// Attempt to guess path style for a given path string. It returns a style,
-  /// if it was able to make a reasonable guess, or None if it wasn't. The guess
-  /// will be correct if the input path was a valid absolute path on the system
-  /// which produced it. On other paths the result of this function is
-  /// unreliable (e.g. "c:\foo.txt" is a valid relative posix path).
-  static llvm::Optional<Style> GuessPathStyle(llvm::StringRef absolute_path);
+  /// if it was able to make a reasonable guess, or std::nullopt if it wasn't.
+  /// The guess will be correct if the input path was a valid absolute path on
+  /// the system which produced it. On other paths the result of this function
+  /// is unreliable (e.g. "c:\foo.txt" is a valid relative posix path).
+  static std::optional<Style> GuessPathStyle(llvm::StringRef absolute_path);
 
   /// Case sensitivity of path.
   ///
@@ -411,8 +411,6 @@ public:
   ConstString GetLastPathComponent() const;
 
 protected:
-  friend struct llvm::yaml::MappingTraits<FileSpec>;
-
   // Convenience method for setting the file without changing the style.
   void SetFile(llvm::StringRef path);
 
@@ -439,9 +437,6 @@ protected:
 
 /// Dump a FileSpec object to a stream
 Stream &operator<<(Stream &s, const FileSpec &f);
-
-/// Prevent ODR violations with traits for llvm::sys::path::Style.
-LLVM_YAML_STRONG_TYPEDEF(FileSpec::Style, FileSpecStyle)
 } // namespace lldb_private
 
 namespace llvm {
@@ -469,15 +464,6 @@ template <> struct format_provider<lldb_private::FileSpec> {
                      StringRef Style);
 };
 
-namespace yaml {
-template <> struct ScalarEnumerationTraits<lldb_private::FileSpecStyle> {
-  static void enumeration(IO &io, lldb_private::FileSpecStyle &style);
-};
-
-template <> struct MappingTraits<lldb_private::FileSpec> {
-  static void mapping(IO &io, lldb_private::FileSpec &f);
-};
-} // namespace yaml
 } // namespace llvm
 
 #endif // LLDB_UTILITY_FILESPEC_H

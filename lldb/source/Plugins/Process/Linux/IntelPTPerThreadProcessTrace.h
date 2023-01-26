@@ -12,6 +12,7 @@
 #include "IntelPTProcessTrace.h"
 #include "IntelPTSingleBufferTrace.h"
 #include "IntelPTThreadTraceCollection.h"
+#include <optional>
 
 namespace lldb_private {
 namespace process_linux {
@@ -44,7 +45,7 @@ public:
 
   TraceIntelPTGetStateResponse GetState() override;
 
-  llvm::Expected<llvm::Optional<std::vector<uint8_t>>>
+  llvm::Expected<std::optional<std::vector<uint8_t>>>
   TryGetBinaryData(const TraceGetBinaryDataRequest &request) override;
 
 private:

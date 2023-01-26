@@ -1,6 +1,6 @@
-; RUN: opt -S -mergefunc < %s | FileCheck %s
+; RUN: opt -S -passes=mergefunc < %s | FileCheck %s
 
-@llvm.compiler.used = appending global [1 x i8*] [i8* bitcast (i32 (i32)* @a to i8*)], section "llvm.metadata"
+@llvm.compiler.used = appending global [1 x ptr] [ptr @a], section "llvm.metadata"
 
 define internal i32 @a(i32 %a) unnamed_addr {
   %b = xor i32 %a, 0
@@ -19,7 +19,7 @@ define i32 @c(i32 %a) unnamed_addr {
   ret i32 %b
 }
 
-; CHECK-LABEL: @llvm.compiler.used = appending global [1 x i8*] [i8* bitcast (i32 (i32)* @a to i8*)], section "llvm.metadata"
+; CHECK-LABEL: @llvm.compiler.used = appending global [1 x ptr] [ptr @a], section "llvm.metadata"
 
 ; CHECK-LABEL: define i32 @b(i32 %a) unnamed_addr
 ; CHECK-NEXT:    xor

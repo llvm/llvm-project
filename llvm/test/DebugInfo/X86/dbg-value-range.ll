@@ -2,11 +2,10 @@
 
 %struct.a = type { i32 }
 
-define i32 @bar(%struct.a* nocapture %b) nounwind ssp !dbg !0 {
+define i32 @bar(ptr nocapture %b) nounwind ssp !dbg !0 {
 entry:
-  tail call void @llvm.dbg.value(metadata %struct.a* %b, metadata !6, metadata !DIExpression()), !dbg !13
-  %tmp1 = getelementptr inbounds %struct.a, %struct.a* %b, i64 0, i32 0, !dbg !14
-  %tmp2 = load i32, i32* %tmp1, align 4, !dbg !14
+  tail call void @llvm.dbg.value(metadata ptr %b, metadata !6, metadata !DIExpression()), !dbg !13
+  %tmp2 = load i32, ptr %b, align 4, !dbg !14
   tail call void @llvm.dbg.value(metadata i32 %tmp2, metadata !11, metadata !DIExpression()), !dbg !14
   %call = tail call i32 (...) @foo(i32 %tmp2) nounwind , !dbg !18
   %add = add nsw i32 %tmp2, 1, !dbg !19

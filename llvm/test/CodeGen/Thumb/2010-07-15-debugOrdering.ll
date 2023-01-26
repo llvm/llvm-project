@@ -5,9 +5,9 @@
 
 %0 = type { [3 x double] }
 
-@llvm.used = appending global [1 x i8*] [i8* bitcast (void (%0*, i32, i32)* @_Z19getClosestDiagonal3ii to i8*)], section "llvm.metadata" ; <[1 x i8*]*> [#uses=0]
+@llvm.used = appending global [1 x ptr] [ptr @_Z19getClosestDiagonal3ii], section "llvm.metadata" ; <ptr> [#uses=0]
 
-define void @_Z19getClosestDiagonal3ii(%0* noalias sret(%0), i32, i32) nounwind {
+define void @_Z19getClosestDiagonal3ii(ptr noalias sret(%0), i32, i32) nounwind {
 ; CHECK: bl ___muldf3
 ; CHECK: beq LBB0
 ; CHECK: bl ___muldf3
@@ -28,15 +28,15 @@ define void @_Z19getClosestDiagonal3ii(%0* noalias sret(%0), i32, i32) nounwind 
   call void @llvm.dbg.value(metadata double %storemerge, i64 0, metadata !91, metadata !DIExpression()), !dbg !0
   %v_7 = icmp eq i32 %2, 1, !dbg !92                ; <i1> [#uses=1]
   %storemerge2 = select i1 %v_7, double 1.000000e+00, double -1.000000e+00 ; <double> [#uses=3]
-  %v_8 = getelementptr inbounds %0, %0* %0, i32 0, i32 0, i32 0 ; <double*> [#uses=1]
-  %v_10 = getelementptr inbounds %0, %0* %0, i32 0, i32 0, i32 2 ; <double*> [#uses=1]
+  %v_8 = getelementptr inbounds %0, ptr %0, i32 0, i32 0, i32 0 ; <ptr> [#uses=1]
+  %v_10 = getelementptr inbounds %0, ptr %0, i32 0, i32 0, i32 2 ; <ptr> [#uses=1]
   %v_11 = fmul double %storemerge1, %storemerge1, !dbg !93 ; <double> [#uses=1]
   %v_15 = tail call double @sqrt(double %v_11) nounwind readonly, !dbg !93 ; <double> [#uses=1]
   %v_16 = fdiv double 1.000000e+00, %v_15, !dbg !93   ; <double> [#uses=3]
   %v_17 = fmul double %storemerge, %v_16, !dbg !97    ; <double> [#uses=1]
-  store double %v_17, double* %v_8, align 4, !dbg !97
+  store double %v_17, ptr %v_8, align 4, !dbg !97
   %v_19 = fmul double %storemerge2, %v_16, !dbg !97   ; <double> [#uses=1]
-  store double %v_19, double* %v_10, align 4, !dbg !97
+  store double %v_19, ptr %v_10, align 4, !dbg !97
   ret void, !dbg !98
 }
 

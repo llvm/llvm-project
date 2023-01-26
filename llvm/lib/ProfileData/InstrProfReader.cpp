@@ -75,6 +75,91 @@ static Error initializeReader(InstrProfReader &Reader) {
   return Reader.readHeader();
 }
 
+/// Read a list of binary ids from a profile that consist of
+/// a. uint64_t binary id length
+/// b. uint8_t  binary id data
+/// c. uint8_t  padding (if necessary)
+/// This function is shared between raw and indexed profiles.
+/// Raw profiles are in host-endian format, and indexed profiles are in
+/// little-endian format. So, this function takes an argument indicating the
+/// associated endian format to read the binary ids correctly.
+static Error
+readBinaryIdsInternal(const MemoryBuffer &DataBuffer,
+                      const uint64_t BinaryIdsSize,
+                      const uint8_t *BinaryIdsStart,
+                      std::vector<llvm::object::BuildID> &BinaryIds,
+                      const llvm::support::endianness Endian) {
+  using namespace support;
+
+  if (BinaryIdsSize == 0)
+    return Error::success();
+
+  const uint8_t *BI = BinaryIdsStart;
+  const uint8_t *BIEnd = BinaryIdsStart + BinaryIdsSize;
+  const uint8_t *End =
+      reinterpret_cast<const uint8_t *>(DataBuffer.getBufferEnd());
+
+  while (BI < BIEnd) {
+    size_t Remaining = BIEnd - BI;
+    // There should be enough left to read the binary id length.
+    if (Remaining < sizeof(uint64_t))
+      return make_error<InstrProfError>(
+          instrprof_error::malformed,
+          "not enough data to read binary id length");
+
+    uint64_t BILen = 0;
+    if (Endian == little)
+      BILen = endian::readNext<uint64_t, little, unaligned>(BI);
+    else
+      BILen = endian::readNext<uint64_t, big, unaligned>(BI);
+
+    if (BILen == 0)
+      return make_error<InstrProfError>(instrprof_error::malformed,
+                                        "binary id length is 0");
+
+    Remaining = BIEnd - BI;
+    // There should be enough left to read the binary id data.
+    if (Remaining < alignToPowerOf2(BILen, sizeof(uint64_t)))
+      return make_error<InstrProfError>(
+          instrprof_error::malformed, "not enough data to read binary id data");
+
+    // Add binary id to the binary ids list.
+    BinaryIds.push_back(object::BuildID(BI, BI + BILen));
+
+    // Increment by binary id data length, which aligned to the size of uint64.
+    BI += alignToPowerOf2(BILen, sizeof(uint64_t));
+    if (BI > End)
+      return make_error<InstrProfError>(
+          instrprof_error::malformed,
+          "binary id section is greater than buffer size");
+  }
+
+  return Error::success();
+}
+
+static Error printBinaryIdsInternal(raw_ostream &OS,
+                                    const MemoryBuffer &DataBuffer,
+                                    uint64_t BinaryIdsSize,
+                                    const uint8_t *BinaryIdsStart,
+                                    llvm::support::endianness Endian) {
+  if (BinaryIdsSize == 0)
+    return Error::success();
+
+  std::vector<llvm::object::BuildID> BinaryIds;
+  if (Error E = readBinaryIdsInternal(DataBuffer, BinaryIdsSize, BinaryIdsStart,
+                                      BinaryIds, Endian))
+    return E;
+
+  OS << "Binary IDs: \n";
+  for (auto BI : BinaryIds) {
+    for (uint64_t I = 0; I < BI.size(); I++)
+      OS << format("%02x", BI[I]);
+    OS << "\n";
+  }
+
+  return Error::success();
+}
+
 Expected<std::unique_ptr<InstrProfReader>>
 InstrProfReader::create(const Twine &Path,
                         const InstrProfCorrelator *Correlator) {
@@ -545,7 +630,9 @@ Error RawInstrProfReader<IntPtrT>::readValueProfilingData(
 
 template <class IntPtrT>
 Error RawInstrProfReader<IntPtrT>::readNextRecord(NamedInstrProfRecord &Record) {
-  if (atEnd())
+  // Keep reading profiles that consist of only headers and no profile data and
+  // counters.
+  while (atEnd())
     // At this point, ValueDataStart field points to the next header.
     if (Error E = readNextHeader(getNextHeaderPos()))
       return error(std::move(E));
@@ -571,54 +658,17 @@ Error RawInstrProfReader<IntPtrT>::readNextRecord(NamedInstrProfRecord &Record) 
   return success();
 }
 
-static size_t RoundUp(size_t size, size_t align) {
-  return (size + align - 1) & ~(align - 1);
+template <class IntPtrT>
+Error RawInstrProfReader<IntPtrT>::readBinaryIds(
+    std::vector<llvm::object::BuildID> &BinaryIds) {
+  return readBinaryIdsInternal(*DataBuffer, BinaryIdsSize, BinaryIdsStart,
+                               BinaryIds, getDataEndianness());
 }
 
 template <class IntPtrT>
 Error RawInstrProfReader<IntPtrT>::printBinaryIds(raw_ostream &OS) {
-  if (BinaryIdsSize == 0)
-    return success();
-
-  OS << "Binary IDs: \n";
-  const uint8_t *BI = BinaryIdsStart;
-  const uint8_t *BIEnd = BinaryIdsStart + BinaryIdsSize;
-  while (BI < BIEnd) {
-    size_t Remaining = BIEnd - BI;
-
-    // There should be enough left to read the binary ID size field.
-    if (Remaining < sizeof(uint64_t))
-      return make_error<InstrProfError>(
-          instrprof_error::malformed,
-          "not enough data to read binary id length");
-
-    uint64_t BinaryIdLen = swap(*reinterpret_cast<const uint64_t *>(BI));
-
-    // There should be enough left to read the binary ID size field, and the
-    // binary ID.
-    if (Remaining < sizeof(BinaryIdLen) + BinaryIdLen)
-      return make_error<InstrProfError>(
-          instrprof_error::malformed, "not enough data to read binary id data");
-
-    // Increment by binary id length data type size.
-    BI += sizeof(BinaryIdLen);
-    if (BI > (const uint8_t *)DataBuffer->getBufferEnd())
-      return make_error<InstrProfError>(
-          instrprof_error::malformed,
-          "binary id that is read is bigger than buffer size");
-
-    for (uint64_t I = 0; I < BinaryIdLen; I++)
-      OS << format("%02x", BI[I]);
-    OS << "\n";
-
-    // Increment by binary id data length, rounded to the next 8 bytes. This
-    // accounts for the zero-padding after each build ID.
-    BI += RoundUp(BinaryIdLen, sizeof(uint64_t));
-    if (BI > (const uint8_t *)DataBuffer->getBufferEnd())
-      return make_error<InstrProfError>(instrprof_error::malformed);
-  }
-
-  return success();
+  return printBinaryIdsInternal(OS, *DataBuffer, BinaryIdsSize, BinaryIdsStart,
+                                getDataEndianness());
 }
 
 namespace llvm {
@@ -946,9 +996,9 @@ Error IndexedInstrProfReader::readHeader() {
   Cur = readSummary((IndexedInstrProf::ProfVersion)Header->formatVersion(), Cur,
                     /* UseCS */ false);
   if (Header->formatVersion() & VARIANT_MASK_CSIR_PROF)
-    Cur = readSummary((IndexedInstrProf::ProfVersion)Header->formatVersion(), Cur,
-                      /* UseCS */ true);
-
+    Cur =
+        readSummary((IndexedInstrProf::ProfVersion)Header->formatVersion(), Cur,
+                    /* UseCS */ true);
   // Read the hash type and start offset.
   IndexedInstrProf::HashT HashType = static_cast<IndexedInstrProf::HashT>(
       endian::byte_swap<uint64_t, little>(Header->HashType));
@@ -961,8 +1011,8 @@ Error IndexedInstrProfReader::readHeader() {
   auto IndexPtr = std::make_unique<InstrProfReaderIndex<OnDiskHashTableImplV3>>(
       Start + HashOffset, Cur, Start, HashType, Header->formatVersion());
 
-  // The MemProfOffset field in the header is only valid when the format version
-  // is higher than 8 (when it was introduced).
+  // The MemProfOffset field in the header is only valid when the format
+  // version is higher than 8 (when it was introduced).
   if (GET_VERSION(Header->formatVersion()) >= 8 &&
       Header->formatVersion() & VARIANT_MASK_MEMPROF) {
     uint64_t MemProfOffset =
@@ -972,7 +1022,8 @@ Error IndexedInstrProfReader::readHeader() {
     // The value returned from RecordTableGenerator.Emit.
     const uint64_t RecordTableOffset =
         support::endian::readNext<uint64_t, little, unaligned>(Ptr);
-    // The offset in the stream right before invoking FrameTableGenerator.Emit.
+    // The offset in the stream right before invoking
+    // FrameTableGenerator.Emit.
     const uint64_t FramePayloadOffset =
         support::endian::readNext<uint64_t, little, unaligned>(Ptr);
     // The value returned from FrameTableGenerator.Emit.
@@ -998,11 +1049,28 @@ Error IndexedInstrProfReader::readHeader() {
         /*Base=*/Start, memprof::FrameLookupTrait()));
   }
 
+  // BinaryIdOffset field in the header is only valid when the format version
+  // is higher than 9 (when it was introduced).
+  if (GET_VERSION(Header->formatVersion()) >= 9) {
+    uint64_t BinaryIdOffset =
+        endian::byte_swap<uint64_t, little>(Header->BinaryIdOffset);
+    const unsigned char *Ptr = Start + BinaryIdOffset;
+    // Read binary ids size.
+    BinaryIdsSize = support::endian::readNext<uint64_t, little, unaligned>(Ptr);
+    if (BinaryIdsSize % sizeof(uint64_t))
+      return error(instrprof_error::bad_header);
+    // Set the binary ids start.
+    BinaryIdsStart = Ptr;
+    if (BinaryIdsStart > (const unsigned char *)DataBuffer->getBufferEnd())
+      return make_error<InstrProfError>(instrprof_error::malformed,
+                                        "corrupted binary ids");
+  }
+
   // Load the remapping table now if requested.
   if (RemappingBuffer) {
-    Remapper = std::make_unique<
-        InstrProfReaderItaniumRemapper<OnDiskHashTableImplV3>>(
-        std::move(RemappingBuffer), *IndexPtr);
+    Remapper =
+        std::make_unique<InstrProfReaderItaniumRemapper<OnDiskHashTableImplV3>>(
+            std::move(RemappingBuffer), *IndexPtr);
     if (Error E = Remapper->populateRemappings())
       return E;
   } else {
@@ -1040,8 +1108,7 @@ Expected<InstrProfRecord> IndexedInstrProfReader::getInstrProfRecord(
   bool CSBitMatch = false;
   auto getFuncSum = [](const std::vector<uint64_t> &Counts) {
     uint64_t ValueSum = 0;
-    for (unsigned I = 0, S = Counts.size(); I < S; I++) {
-      uint64_t CountValue = Counts[I];
+    for (uint64_t CountValue : Counts) {
       if (CountValue == (uint64_t)-1)
         continue;
       // Handle overflow -- if that happens, return max.
@@ -1133,6 +1200,17 @@ Error IndexedInstrProfReader::readNextRecord(NamedInstrProfRecord &Record) {
     RecordIndex = 0;
   }
   return success();
+}
+
+Error IndexedInstrProfReader::readBinaryIds(
+    std::vector<llvm::object::BuildID> &BinaryIds) {
+  return readBinaryIdsInternal(*DataBuffer, BinaryIdsSize, BinaryIdsStart,
+                               BinaryIds, llvm::support::little);
+}
+
+Error IndexedInstrProfReader::printBinaryIds(raw_ostream &OS) {
+  return printBinaryIdsInternal(OS, *DataBuffer, BinaryIdsSize, BinaryIdsStart,
+                                llvm::support::little);
 }
 
 void InstrProfReader::accumulateCounts(CountSumOrPercent &Sum, bool IsCS) {

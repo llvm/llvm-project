@@ -269,18 +269,17 @@ define i1 @ext_lane1_from_cmp_with_stepvec(i64 %i) {
   ret i1 %res
 }
 
-define i64* @ext_lane_from_bitcast_of_splat(i32* %v) {
+define ptr @ext_lane_from_bitcast_of_splat(ptr %v) {
 ; CHECK-LABEL: @ext_lane_from_bitcast_of_splat(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = bitcast i32* [[V:%.*]] to i64*
-; CHECK-NEXT:    ret i64* [[R]]
+; CHECK-NEXT:    ret ptr [[V:%.*]]
 ;
 entry:
-  %in = insertelement <vscale x 4 x i32*> poison, i32* %v, i32 0
-  %splat = shufflevector <vscale x 4 x i32*> %in, <vscale x 4 x i32*> poison, <vscale x 4 x i32> zeroinitializer
-  %bc = bitcast <vscale x 4 x i32*> %splat to <vscale x 4 x i64*>
-  %r = extractelement <vscale x 4 x i64*> %bc, i32 3
-  ret i64* %r
+  %in = insertelement <vscale x 4 x ptr> poison, ptr %v, i32 0
+  %splat = shufflevector <vscale x 4 x ptr> %in, <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer
+  %bc = bitcast <vscale x 4 x ptr> %splat to <vscale x 4 x ptr>
+  %r = extractelement <vscale x 4 x ptr> %bc, i32 3
+  ret ptr %r
 }
 
 declare <vscale x 2 x i64> @llvm.experimental.stepvector.nxv2i64()

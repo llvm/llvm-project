@@ -32,10 +32,10 @@ define void @bar() {
 ; CHECK:  .cfi_offset 31, -20
 ; CHECK:  .cfi_offset 16, -24
 
-    %val1 = load volatile double, double* @var
-    %val2 = load volatile double, double* @var
+    %val1 = load volatile double, ptr @var
+    %val2 = load volatile double, ptr @var
     call void (...) @foo() nounwind
-    store volatile double %val1, double* @var
-    store volatile double %val2, double* @var
+    store volatile double %val1, ptr @var
+    store volatile double %val2, ptr @var
     ret void
 }

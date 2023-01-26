@@ -111,6 +111,10 @@ public:
   /// elements.
   bool containsPoisonElement() const;
 
+  /// Return true if this is a vector constant that includes any strictly undef
+  /// (not poison) elements.
+  bool containsUndefElement() const;
+
   /// Return true if this is a fixed width vector constant that includes
   /// any constant expressions.
   bool containsConstantExpression() const;

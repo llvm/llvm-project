@@ -11,14 +11,14 @@
 ; Function Attrs: nounwind optsize
 define i32 @main() #0 {
 entry:
-  %0 = load double, double* @y, align 8
+  %0 = load double, ptr @y, align 8
   %call = tail call double @fabs(double %0) #2
-  store double %call, double* @x, align 8
+  store double %call, ptr @x, align 8
 ; static-NOT: 	.ent	__call_stub_fp_fabs
 ; static-NOT: 	jal fabs
-  %1 = load float, float* @y1, align 4
+  %1 = load float, ptr @y1, align 4
   %call2 = tail call float @fabsf(float %1) #2
-  store float %call2, float* @x1, align 4
+  store float %call2, ptr @x1, align 4
 ; static-NOT: 	.ent	__call_stub_fp_fabsf
 ; static-NOT: 	jal fabsf
   ret i32 0

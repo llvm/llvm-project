@@ -5,27 +5,27 @@
 ; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -pgo-kind=pgo-instr-use-pipeline -profile-file='%t.profdata' \
 ; RUN:     -passes='thinlto-pre-link<O1>' -S %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O1,CHECK-O123SZ
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O123,CHECK-O1,CHECK-O123SZ
 ; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -pgo-kind=pgo-instr-use-pipeline -profile-file='%t.profdata' \
 ; RUN:     -passes='thinlto-pre-link<O2>' -S  %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O2,CHECK-O23SZ,CHECK-O123SZ
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O123,CHECK-O2,CHECK-O23SZ,CHECK-O123SZ
 ; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -pgo-kind=pgo-instr-use-pipeline -profile-file='%t.profdata' \
 ; RUN:     -passes='thinlto-pre-link<O3>' -S -passes-ep-pipeline-start='no-op-module' %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O3,CHECK-O23SZ,CHECK-O123SZ,CHECK-EP-PIPELINE-START
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O123,CHECK-O3,CHECK-O23SZ,CHECK-O123SZ,CHECK-EP-PIPELINE-START
 ; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -pgo-kind=pgo-instr-use-pipeline -profile-file='%t.profdata' \
 ; RUN:     -passes='thinlto-pre-link<Os>' -S %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O123SZ,CHECK-Os,CHECK-O23SZ
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-OSZ,CHECK-O123SZ,CHECK-O23SZ
 ; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -pgo-kind=pgo-instr-use-pipeline -profile-file='%t.profdata' \
 ; RUN:     -passes='thinlto-pre-link<Oz>' -S %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O123SZ,CHECK-Oz,CHECK-O23SZ
-; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager -new-pm-debug-info-for-profiling \
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-OSZ,CHECK-O123SZ,CHECK-O23SZ
+; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager -debug-info-for-profiling \
 ; RUN:     -pgo-kind=pgo-instr-use-pipeline -profile-file='%t.profdata' \
 ; RUN:     -passes='thinlto-pre-link<O2>' -S  %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O2,CHECK-O23SZ,CHECK-O123SZ
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O123,CHECK-O2,CHECK-O23SZ,CHECK-O123SZ
 ;
 ; CHECK-O: Running pass: Annotation2Metadata
 ; CHECK-O-NEXT: Running pass: ForceFunctionAttrsPass
@@ -45,10 +45,10 @@
 ; CHECK-O3-NEXT: Running pass: CallSiteSplittingPass
 ; CHECK-O-NEXT: Running pass: OpenMPOptPass
 ; CHECK-O-NEXT: Running pass: IPSCCPPass
+; CHECK-O123-NEXT: Running analysis: LoopAnalysis
 ; CHECK-O-NEXT: Running pass: CalledValuePropagationPass
 ; CHECK-O-NEXT: Running pass: GlobalOptPass
 ; CHECK-O-NEXT: Running pass: PromotePass
-; CHECK-O-NEXT: Running pass: DeadArgumentEliminationPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis
 ; CHECK-O-NEXT: Running analysis: AAManager
@@ -74,9 +74,11 @@
 ; CHECK-O-NEXT: Running pass: PGOInstrumentationUse
 ; These next two can appear in any order since they are accessed as parameters
 ; on the same call to BlockFrequencyInfo::calculate.
-; CHECK-O-DAG: Running analysis: BranchProbabilityAnalysis on foo
-; CHECK-O-DAG: Running analysis: PostDominatorTreeAnalysis on foo
-; CHECK-O-DAG: Running analysis: LoopAnalysis on foo
+; CHECK-OSZ-DAG: Running analysis: BranchProbabilityAnalysis on foo
+; CHECK-OSZ-DAG: Running analysis: PostDominatorTreeAnalysis on foo
+; CHECK-OSZ-DAG: Running analysis: LoopAnalysis on foo
+; CHECK-O123-DAG: Running analysis: BranchProbabilityAnalysis on foo
+; CHECK-O123-DAG: Running analysis: PostDominatorTreeAnalysis on foo
 ; CHECK-O-NEXT: Running analysis: BlockFrequencyAnalysis on foo
 ; CHECK-O-NEXT: Invalidating analysis: InnerAnalysisManagerProxy
 ; CHECK-O123SZ-NEXT: Invalidating analysis: LazyCallGraphAnalysis on
@@ -148,6 +150,7 @@
 ; CHECK-O-NEXT: Running pass: LoopRotatePass
 ; CHECK-O-NEXT: Running pass: LICM
 ; CHECK-O-NEXT: Running pass: SimpleLoopUnswitchPass
+; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O-NEXT: Running pass: LoopSimplifyPass
@@ -157,22 +160,10 @@
 ; CHECK-O-NEXT: Running pass: LoopDeletionPass
 ; CHECK-O-NEXT: Running pass: LoopFullUnrollPass
 ; CHECK-O-NEXT: Running pass: SROAPass on foo
-; CHECK-Os-NEXT: Running pass: MergedLoadStoreMotionPass
-; CHECK-Os-NEXT: Running pass: GVNPass
-; CHECK-Os-NEXT: Running analysis: MemoryDependenceAnalysis
-; CHECK-Os-NEXT: Running analysis: PhiValuesAnalysis
-; CHECK-Oz-NEXT: Running pass: MergedLoadStoreMotionPass
-; CHECK-Oz-NEXT: Running pass: GVNPass
-; CHECK-Oz-NEXT: Running analysis: MemoryDependenceAnalysis
-; CHECK-Oz-NEXT: Running analysis: PhiValuesAnalysis
-; CHECK-O2-NEXT: Running pass: MergedLoadStoreMotionPass
-; CHECK-O2-NEXT: Running pass: GVNPass
-; CHECK-O2-NEXT: Running analysis: MemoryDependenceAnalysis
-; CHECK-O2-NEXT: Running analysis: PhiValuesAnalysis
-; CHECK-O3-NEXT: Running pass: MergedLoadStoreMotionPass
-; CHECK-O3-NEXT: Running pass: GVNPass
-; CHECK-O3-NEXT: Running analysis: MemoryDependenceAnalysis
-; CHECK-O3-NEXT: Running analysis: PhiValuesAnalysis
+; CHECK-O23SZ-NEXT: Running pass: VectorCombinePass
+; CHECK-O23SZ-NEXT: Running pass: MergedLoadStoreMotionPass
+; CHECK-O23SZ-NEXT: Running pass: GVNPass
+; CHECK-O23SZ-NEXT: Running analysis: MemoryDependenceAnalysis
 ; CHECK-O1-NEXT: Running pass: MemCpyOptPass
 ; CHECK-O-NEXT: Running pass: SCCPPass
 ; CHECK-O-NEXT: Running pass: BDCEPass
@@ -200,6 +191,7 @@
 ; CHECK-O-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}ShouldNotRunFunctionPassesAnalysis
 ; CHECK-O-NEXT: Invalidating analysis: ShouldNotRunFunctionPassesAnalysis
 ; CHECK-O-NEXT: Invalidating analysis: InlineAdvisorAnalysis
+; CHECK-O-NEXT: Running pass: DeadArgumentEliminationPass
 ; CHECK-O-NEXT: Running pass: CoroCleanupPass
 ; CHECK-O-NEXT: Running pass: GlobalOptPass
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis on bar

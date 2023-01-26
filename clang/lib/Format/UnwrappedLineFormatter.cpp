@@ -60,10 +60,17 @@ public:
     // Update the indent level cache size so that we can rely on it
     // having the right size in adjustToUnmodifiedline.
     skipLine(Line, /*UnknownIndent=*/true);
-    if (Line.InPPDirective) {
-      unsigned IndentWidth =
+    if (Style.IndentPPDirectives != FormatStyle::PPDIS_None &&
+        (Line.InPPDirective ||
+         (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHash &&
+          Line.Type == LT_CommentAbovePPDirective))) {
+      unsigned PPIndentWidth =
           (Style.PPIndentWidth >= 0) ? Style.PPIndentWidth : Style.IndentWidth;
-      Indent = Line.Level * IndentWidth + AdditionalIndent;
+      Indent = Line.InMacroBody
+                   ? Line.PPLevel * PPIndentWidth +
+                         (Line.Level - Line.PPLevel) * Style.IndentWidth
+                   : Line.Level * PPIndentWidth;
+      Indent += AdditionalIndent;
     } else {
       Indent = getIndent(Line.Level);
     }
@@ -641,12 +648,15 @@ private:
     unsigned Length = 0;
     bool EndsWithComment = false;
     bool InPPDirective = I[0]->InPPDirective;
+    bool InMacroBody = I[0]->InMacroBody;
     const unsigned Level = I[0]->Level;
     for (; NumStmts < 3; ++NumStmts) {
       if (I + 1 + NumStmts == E)
         break;
       const AnnotatedLine *Line = I[1 + NumStmts];
       if (Line->InPPDirective != InPPDirective)
+        break;
+      if (Line->InMacroBody != InMacroBody)
         break;
       if (Line->First->isOneOf(tok::kw_case, tok::kw_default, tok::r_brace))
         break;
@@ -709,16 +719,23 @@ private:
       if (Tok && Tok->is(tok::colon))
         return 0;
     }
-    if (Line.First->isOneOf(tok::kw_if, tok::kw_else, tok::kw_while, tok::kw_do,
-                            tok::kw_try, tok::kw___try, tok::kw_catch,
-                            tok::kw___finally, tok::kw_for, TT_ForEachMacro,
-                            tok::r_brace, Keywords.kw___except)) {
-      if (Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Never)
+
+    auto IsCtrlStmt = [](const auto &Line) {
+      return Line.First->isOneOf(tok::kw_if, tok::kw_else, tok::kw_while,
+                                 tok::kw_do, tok::kw_for, TT_ForEachMacro);
+    };
+
+    const bool IsSplitBlock =
+        Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Never ||
+        (Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Empty &&
+         I[1]->First->isNot(tok::r_brace));
+
+    if (IsCtrlStmt(Line) ||
+        Line.First->isOneOf(tok::kw_try, tok::kw___try, tok::kw_catch,
+                            tok::kw___finally, tok::r_brace,
+                            Keywords.kw___except)) {
+      if (IsSplitBlock)
         return 0;
-      if (Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Empty &&
-          !I[1]->First->is(tok::r_brace)) {
-        return 0;
-      }
       // Don't merge when we can't except the case when
       // the control statement block is empty
       if (!Style.AllowShortIfStatementsOnASingleLine &&
@@ -761,6 +778,11 @@ private:
     }
 
     if (Line.Last->is(tok::l_brace)) {
+      if (IsSplitBlock && Line.First == Line.Last &&
+          I > AnnotatedLines.begin() &&
+          (I[-1]->endsWith(tok::kw_else) || IsCtrlStmt(*I[-1]))) {
+        return 0;
+      }
       FormatToken *Tok = I[1]->First;
       auto ShouldMerge = [Tok]() {
         if (Tok->isNot(tok::r_brace) || Tok->MustBreakBefore)
@@ -1297,7 +1319,7 @@ unsigned UnwrappedLineFormatter::format(
 
     // We continue formatting unchanged lines to adjust their indent, e.g. if a
     // scope was added. However, we need to carefully stop doing this when we
-    // exit the scope of affected lines to prevent indenting a the entire
+    // exit the scope of affected lines to prevent indenting the entire
     // remaining file if it currently missing a closing brace.
     bool PreviousRBrace =
         PreviousLine && PreviousLine->startsWith(tok::r_brace);

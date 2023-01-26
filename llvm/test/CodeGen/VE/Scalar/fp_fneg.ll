@@ -3,7 +3,7 @@
 ;;; Test ‘fneg’ Instruction
 ;;;
 ;;; Syntax:
-;;;   <result> = fneg [fast-math flags]* <ty> <op1>   ; yields ty:result
+;;;   <result> = fneg ptr <ty> <op1>   ; yields ty:result
 ;;;
 ;;; Overview:
 ;;;    The ‘fneg’ instruction returns the negation of its operand.

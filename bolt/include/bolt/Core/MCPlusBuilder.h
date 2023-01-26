@@ -18,7 +18,6 @@
 #include "bolt/Core/Relocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCDisassembler/MCSymbolizer.h"
@@ -33,6 +32,7 @@
 #include <cassert>
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <system_error>
 #include <unordered_map>
 #include <unordered_set>
@@ -132,11 +132,11 @@ private:
     AnnotationInst->addOperand(MCOperand::createImm(AnnotationValue));
   }
 
-  Optional<int64_t> getAnnotationOpValue(const MCInst &Inst,
-                                         unsigned Index) const {
+  std::optional<int64_t> getAnnotationOpValue(const MCInst &Inst,
+                                              unsigned Index) const {
     const MCInst *AnnotationInst = getAnnotationInst(Inst);
     if (!AnnotationInst)
-      return NoneType();
+      return std::nullopt;
 
     for (int I = AnnotationInst->getNumOperands() - 1; I >= 0; --I) {
       int64_t ImmValue = AnnotationInst->getOperand(I).getImm();
@@ -145,7 +145,7 @@ private:
       }
     }
 
-    return NoneType();
+    return std::nullopt;
   }
 
 protected:
@@ -164,9 +164,14 @@ protected:
   void setTailCall(MCInst &Inst);
 
 public:
-  class InstructionIterator
-      : public std::iterator<std::bidirectional_iterator_tag, MCInst> {
+  class InstructionIterator {
   public:
+    using iterator_category = std::bidirectional_iterator_tag;
+    using value_type = MCInst;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
     class Impl {
     public:
       virtual Impl *Copy() const = 0;
@@ -817,7 +822,9 @@ public:
   /// \brief Given a branch instruction try to get the address the branch
   /// targets. Return true on success, and the address in Target.
   virtual bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                              uint64_t &Target) const;
+                              uint64_t &Target) const {
+    return Analysis->evaluateBranch(Inst, Addr, Size, Target);
+  }
 
   /// Return true if one of the operands of the \p Inst instruction uses
   /// PC-relative addressing.
@@ -1044,7 +1051,7 @@ public:
   }
 
   /// Return handler and action info for invoke instruction if present.
-  Optional<MCPlus::MCLandingPad> getEHInfo(const MCInst &Inst) const;
+  std::optional<MCPlus::MCLandingPad> getEHInfo(const MCInst &Inst) const;
 
   /// Add handler and action info for call instruction.
   void addEHInfo(MCInst &Inst, const MCPlus::MCLandingPad &LP);
@@ -1076,7 +1083,7 @@ public:
   bool unsetJumpTable(MCInst &Inst);
 
   /// Return destination of conditional tail call instruction if \p Inst is one.
-  Optional<uint64_t> getConditionalTailCall(const MCInst &Inst) const;
+  std::optional<uint64_t> getConditionalTailCall(const MCInst &Inst) const;
 
   /// Mark the \p Instruction as a conditional tail call, and set its
   /// destination address if it is known. If \p Instruction was already marked,
@@ -1088,7 +1095,7 @@ public:
   bool unsetConditionalTailCall(MCInst &Inst);
 
   /// Return offset of \p Inst in the original function, if available.
-  Optional<uint32_t> getOffset(const MCInst &Inst) const;
+  std::optional<uint32_t> getOffset(const MCInst &Inst) const;
 
   /// Return the offset if the annotation is present, or \p Default otherwise.
   uint32_t getOffsetWithDefault(const MCInst &Inst, uint32_t Default) const;
@@ -1261,8 +1268,18 @@ public:
   /// Replace displacement in compound memory operand with given \p Label.
   bool replaceMemOperandDisp(MCInst &Inst, const MCSymbol *Label,
                              MCContext *Ctx) const {
-    return replaceMemOperandDisp(
-        Inst, MCOperand::createExpr(MCSymbolRefExpr::create(Label, *Ctx)));
+    return replaceMemOperandDisp(Inst, Label, 0, Ctx);
+  }
+
+  /// Replace displacement in compound memory operand with given \p Label
+  /// plus addend.
+  bool replaceMemOperandDisp(MCInst &Inst, const MCSymbol *Label,
+                             int64_t Addend, MCContext *Ctx) const {
+    MCInst::iterator MemOpI = getMemOperandDisp(Inst);
+    if (MemOpI == Inst.end())
+      return false;
+    return setOperandToSymbolRef(Inst, MemOpI - Inst.begin(), Label, Addend,
+                                 Ctx, 0);
   }
 
   /// Returns how many bits we have in this instruction to encode a PC-rel
@@ -1405,6 +1422,11 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  virtual bool matchAdrpAddPair(const MCInst &Adrp, const MCInst &Add) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
   virtual int getShortJmpEncodingSize() const {
     llvm_unreachable("not implemented");
   }
@@ -1426,7 +1448,7 @@ public:
     return false;
   }
 
-  /// Store \p Target absolute adddress to \p RegName
+  /// Store \p Target absolute address to \p RegName
   virtual InstructionListType materializeAddress(const MCSymbol *Target,
                                                  MCContext *Ctx,
                                                  MCPhysReg RegName,
@@ -1576,8 +1598,8 @@ public:
 
   /// Create a target-specific relocation out of the \p Fixup.
   /// Note that not every fixup could be converted into a relocation.
-  virtual Optional<Relocation> createRelocation(const MCFixup &Fixup,
-                                                const MCAsmBackend &MAB) const {
+  virtual std::optional<Relocation>
+  createRelocation(const MCFixup &Fixup, const MCAsmBackend &MAB) const {
     llvm_unreachable("not implemented");
     return Relocation();
   }
@@ -1651,11 +1673,11 @@ public:
   }
 
   /// Return annotation index matching the \p Name.
-  Optional<unsigned> getAnnotationIndex(StringRef Name) const {
+  std::optional<unsigned> getAnnotationIndex(StringRef Name) const {
     auto AI = AnnotationNameIndexMap.find(Name);
     if (AI != AnnotationNameIndexMap.end())
       return AI->second;
-    return NoneType();
+    return std::nullopt;
   }
 
   /// Return annotation index matching the \p Name. Create a new index if the
@@ -1729,7 +1751,7 @@ public:
   /// Use hasAnnotation() if the annotation may not exist.
   template <typename ValueType>
   ValueType &getAnnotationAs(const MCInst &Inst, unsigned Index) const {
-    Optional<int64_t> Value = getAnnotationOpValue(Inst, Index);
+    std::optional<int64_t> Value = getAnnotationOpValue(Inst, Index);
     assert(Value && "annotation should exist");
     return reinterpret_cast<MCPlus::MCSimpleAnnotation<ValueType> *>(*Value)
         ->getValue();

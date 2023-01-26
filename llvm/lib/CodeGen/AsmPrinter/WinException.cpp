@@ -130,14 +130,6 @@ void WinException::endFunction(const MachineFunction *MF) {
   if (F.hasPersonalityFn())
     Per = classifyEHPersonality(F.getPersonalityFn()->stripPointerCasts());
 
-  // Get rid of any dead landing pads if we're not using funclets. In funclet
-  // schemes, the landing pad is not actually reachable. It only exists so
-  // that we can emit the right table data.
-  if (!isFuncletEHPersonality(Per)) {
-    MachineFunction *NonConstMF = const_cast<MachineFunction*>(MF);
-    NonConstMF->tidyLandingPads();
-  }
-
   endFuncletImpl();
 
   // endFunclet will emit the necessary .xdata tables for table-based SEH.
@@ -736,7 +728,7 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
   // EHFlags & 1 -> Synchronous exceptions only, no async exceptions.
   // EHFlags & 2 -> ???
   // EHFlags & 4 -> The function is noexcept(true), unwinding can't continue.
-  OS.emitValueToAlignment(4);
+  OS.emitValueToAlignment(Align(4));
   OS.emitLabel(FuncInfoXData);
 
   AddComment("MagicNumber");
@@ -1010,7 +1002,7 @@ void WinException::emitExceptHandlerTable(const MachineFunction *MF) {
 
   // Emit the __ehtable label that we use for llvm.x86.seh.lsda.
   MCSymbol *LSDALabel = Asm->OutContext.getOrCreateLSDASymbol(FLinkageName);
-  OS.emitValueToAlignment(4);
+  OS.emitValueToAlignment(Align(4));
   OS.emitLabel(LSDALabel);
 
   const auto *Per = cast<Function>(F.getPersonalityFn()->stripPointerCasts());

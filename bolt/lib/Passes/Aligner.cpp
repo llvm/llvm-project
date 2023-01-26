@@ -84,7 +84,7 @@ void alignCompact(BinaryFunction &Function, const MCCodeEmitter *Emitter) {
   size_t ColdSize = 0;
 
   for (const BinaryBasicBlock &BB : Function)
-    if (BB.isCold())
+    if (BB.isSplit())
       ColdSize += BC.computeCodeSize(BB.begin(), BB.end(), Emitter);
     else
       HotSize += BC.computeCodeSize(BB.begin(), BB.end(), Emitter);
@@ -143,7 +143,7 @@ void AlignerPass::alignBlocks(BinaryFunction &Function,
 
     // Update stats.
     LLVM_DEBUG(
-      std::unique_lock<std::shared_timed_mutex> Lock(AlignHistogramMtx);
+      std::unique_lock<llvm::sys::RWMutex> Lock(AlignHistogramMtx);
       AlignHistogram[BytesToUse]++;
       AlignedBlocksCount += BB->getKnownExecutionCount();
     );

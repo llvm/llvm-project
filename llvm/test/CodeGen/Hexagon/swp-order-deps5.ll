@@ -9,7 +9,7 @@ b0:
 b1:                                               ; preds = %b1, %b0
   %v0 = phi i32 [ 1, %b0 ], [ %v9, %b1 ]
   %v1 = phi i64 [ 0, %b0 ], [ %v10, %b1 ]
-  %v2 = load i32, i32* undef, align 4
+  %v2 = load i32, ptr undef, align 4
   %v3 = sub nsw i32 0, %v2
   %v4 = select i1 undef, i32 undef, i32 %v3
   %v5 = sext i32 %v4 to i64

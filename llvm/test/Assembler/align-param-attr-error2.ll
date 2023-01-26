@@ -2,6 +2,6 @@
 ; Test parse errors when using form of align attribute with parentheses
 
 ; CHECK:  <stdin>:[[@LINE+1]]:39: error: expected integer
-define void @missing_value(i8* align () %ptr) {
+define void @missing_value(ptr align () %ptr) {
   ret void
 }

@@ -12,6 +12,7 @@
 
 #include "CSKYTargetMachine.h"
 #include "CSKY.h"
+#include "CSKYMachineFunctionInfo.h"
 #include "CSKYSubtarget.h"
 #include "CSKYTargetObjectFile.h"
 #include "TargetInfo/CSKYTargetInfo.h"
@@ -20,6 +21,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -28,6 +30,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeCSKYTarget() {
 
   PassRegistry *Registry = PassRegistry::getPassRegistry();
   initializeCSKYConstantIslandsPass(*Registry);
+  initializeCSKYDAGToDAGISelPass(*Registry);
 }
 
 static std::string computeDataLayout(const Triple &TT) {
@@ -48,8 +51,8 @@ static std::string computeDataLayout(const Triple &TT) {
 CSKYTargetMachine::CSKYTargetMachine(const Target &T, const Triple &TT,
                                      StringRef CPU, StringRef FS,
                                      const TargetOptions &Options,
-                                     Optional<Reloc::Model> RM,
-                                     Optional<CodeModel::Model> CM,
+                                     std::optional<Reloc::Model> RM,
+                                     std::optional<CodeModel::Model> CM,
                                      CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
                         RM.value_or(Reloc::Static),
@@ -86,6 +89,13 @@ CSKYTargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
+MachineFunctionInfo *CSKYTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return CSKYMachineFunctionInfo::create<CSKYMachineFunctionInfo>(Allocator, F,
+                                                                  STI);
+}
+
 namespace {
 class CSKYPassConfig : public TargetPassConfig {
 public:
@@ -113,7 +123,7 @@ void CSKYPassConfig::addIRPasses() {
 }
 
 bool CSKYPassConfig::addInstSelector() {
-  addPass(createCSKYISelDag(getCSKYTargetMachine()));
+  addPass(createCSKYISelDag(getCSKYTargetMachine(), getOptLevel()));
 
   return false;
 }

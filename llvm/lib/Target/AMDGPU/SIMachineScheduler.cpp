@@ -329,7 +329,7 @@ void SIScheduleBlock::initRegPressure(MachineBasicBlock::iterator BeginBlock,
 
   // Do not Track Physical Registers, because it messes up.
   for (const auto &RegMaskPair : RPTracker.getPressure().LiveInRegs) {
-    if (Register::isVirtualRegister(RegMaskPair.RegUnit))
+    if (RegMaskPair.RegUnit.isVirtual())
       LiveInRegs.insert(RegMaskPair.RegUnit);
   }
   LiveOutRegs.clear();
@@ -548,7 +548,7 @@ void SIScheduleBlock::addSucc(SIScheduleBlock *Succ,
   }
   if (Succ->isHighLatencyBlock())
     ++NumHighLatencySuccessors;
-  Succs.push_back(std::make_pair(Succ, Kind));
+  Succs.push_back(std::pair(Succ, Kind));
 
   assert(none_of(Preds,
                  [=](SIScheduleBlock *P) { return SuccID == P->getID(); }) &&

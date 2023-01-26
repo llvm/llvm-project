@@ -66,7 +66,7 @@ static void ParseBuildInfo(PdbIndex &index, const CVSymbol &sym,
   // S_BUILDINFO just points to an LF_BUILDINFO in the IPI stream.  Let's do
   // a little extra work to pull out the LF_BUILDINFO.
   LazyRandomTypeCollection &types = index.ipi().typeCollection();
-  llvm::Optional<CVType> cvt = types.tryGetType(bis.BuildId);
+  std::optional<CVType> cvt = types.tryGetType(bis.BuildId);
 
   if (!cvt || cvt->kind() != LF_BUILDINFO)
     return;

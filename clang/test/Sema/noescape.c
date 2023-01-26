@@ -14,12 +14,12 @@ void (*funcptr_nn)(__attribute__((noescape)) int *, __attribute__((noescape)) in
 void test0(int c) {
   escapefuncptr = &escapefunc;
   escapefuncptr = &noescapefunc;
-  noescapefuncptr = &escapefunc; // expected-warning {{incompatible function pointer types assigning to 'void (*)(__attribute__((noescape)) int *)' from 'void (*)(int *)'}}
+  noescapefuncptr = &escapefunc; // expected-error {{incompatible function pointer types assigning to 'void (*)(__attribute__((noescape)) int *)' from 'void (*)(int *)'}}
   noescapefuncptr = &noescapefunc;
 
   escapefuncptr = c ? &escapefunc : &noescapefunc;
-  noescapefuncptr = c ? &escapefunc : &noescapefunc; // expected-warning {{incompatible function pointer types assigning to 'void (*)(__attribute__((noescape)) int *)' from 'void (*)(int *)'}}
+  noescapefuncptr = c ? &escapefunc : &noescapefunc; // expected-error {{incompatible function pointer types assigning to 'void (*)(__attribute__((noescape)) int *)' from 'void (*)(int *)'}}
 
   funcptr_ee = c ? &func_ne : &func_en;
-  funcptr_nn = c ? &func_ne : &func_en; // expected-warning {{incompatible function pointer types assigning to 'void (*)(__attribute__((noescape)) int *, __attribute__((noescape)) int *)' from 'void (*)(int *, int *)'}}
+  funcptr_nn = c ? &func_ne : &func_en; // expected-error {{incompatible function pointer types assigning to 'void (*)(__attribute__((noescape)) int *, __attribute__((noescape)) int *)' from 'void (*)(int *, int *)'}}
 }

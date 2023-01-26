@@ -9,8 +9,8 @@ target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 define i32 @PR38781(i32 noundef %a, i32 noundef %b) {
 ; CHECK-LABEL: @PR38781(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP1]], -1
-; CHECK-NEXT:    [[AND:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    [[AND1:%.*]] = icmp sgt i32 [[TMP1]], -1
+; CHECK-NEXT:    [[AND:%.*]] = zext i1 [[AND1]] to i32
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %cmp = icmp sge i32 %a, 0
@@ -53,9 +53,9 @@ land.end:
 define i1 @PR54692_b(i8 noundef signext %c) {
 ; CHECK-LABEL: @PR54692_b(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i8 [[C:%.*]], 32
+; CHECK-NEXT:    [[AND1:%.*]] = icmp ult i8 [[C:%.*]], 32
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp eq i8 [[C]], 127
-; CHECK-NEXT:    [[OR2:%.*]] = or i1 [[TMP0]], [[CMP6]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i1 [[AND1]], [[CMP6]]
 ; CHECK-NEXT:    ret i1 [[OR2]]
 ;
 entry:
@@ -77,9 +77,9 @@ entry:
 define i1 @PR54692_c(i8 noundef signext %c) {
 ; CHECK-LABEL: @PR54692_c(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i8 [[C:%.*]], 32
+; CHECK-NEXT:    [[AND1:%.*]] = icmp ult i8 [[C:%.*]], 32
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp eq i8 [[C]], 127
-; CHECK-NEXT:    [[T0:%.*]] = or i1 [[TMP0]], [[CMP6]]
+; CHECK-NEXT:    [[T0:%.*]] = or i1 [[AND1]], [[CMP6]]
 ; CHECK-NEXT:    ret i1 [[T0]]
 ;
 entry:
@@ -115,7 +115,7 @@ define i32 @PR56119(i32 %e.coerce) {
 ; O1-NEXT:    [[CMP:%.*]] = icmp eq i32 [[REM]], 7
 ; O1-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; O1:       if.then:
-; O1-NEXT:    call void (...) @foo()
+; O1-NEXT:    tail call void (...) @foo()
 ; O1-NEXT:    br label [[IF_END]]
 ; O1:       if.end:
 ; O1-NEXT:    [[TMP0:%.*]] = load i32, ptr @c, align 4
@@ -124,22 +124,20 @@ define i32 @PR56119(i32 %e.coerce) {
 ; OZ-LABEL: @PR56119(
 ; OZ-NEXT:  entry:
 ; OZ-NEXT:    [[E_COERCE_FR:%.*]] = freeze i32 [[E_COERCE:%.*]]
-; OZ-NEXT:    [[TMP0:%.*]] = and i32 [[E_COERCE_FR]], 255
-; OZ-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[TMP0]], 7
-; OZ-NEXT:    br i1 [[CMP2]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; OZ-NEXT:    [[CONV2:%.*]] = and i32 [[E_COERCE_FR]], 255
+; OZ-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[CONV2]], 7
+; OZ-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; OZ:       if.then:
 ; OZ-NEXT:    tail call void (...) @foo()
 ; OZ-NEXT:    br label [[IF_END]]
 ; OZ:       if.end:
-; OZ-NEXT:    [[TMP1:%.*]] = load i32, ptr @c, align 4
-; OZ-NEXT:    ret i32 [[TMP1]]
+; OZ-NEXT:    [[TMP0:%.*]] = load i32, ptr @c, align 4
+; OZ-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
   %e = alloca %struct.a, align 4
-  %coerce.dive = getelementptr inbounds %struct.a, ptr %e, i32 0, i32 0
-  store i32 %e.coerce, ptr %coerce.dive, align 4
-  %b = getelementptr inbounds %struct.a, ptr %e, i32 0, i32 0
-  %0 = load i32, ptr %b, align 4
+  store i32 %e.coerce, ptr %e, align 4
+  %0 = load i32, ptr %e, align 4
   %conv = trunc i32 %0 to i8
   %conv1 = trunc i64 -1 to i8
   %conv2 = zext i8 %conv to i32

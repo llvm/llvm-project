@@ -53,11 +53,11 @@ define i32 @t0() {
 ; RV64-NEXT:    li a0, 0
 ; RV64-NEXT:    ret
 entry:
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 getelementptr inbounds (%struct.x, %struct.x* @dst, i32 0, i32 0), i8* align 8 getelementptr inbounds (%struct.x, %struct.x* @src, i32 0, i32 0), i32 11, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr align 8 @dst, ptr align 8 @src, i32 11, i1 false)
   ret i32 0
 }
 
-define void @t1(i8* nocapture %C) nounwind {
+define void @t1(ptr nocapture %C) nounwind {
 ; RV32-LABEL: t1:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    lui a1, %hi(.L.str1)
@@ -91,11 +91,11 @@ define void @t1(i8* nocapture %C) nounwind {
 ; RV64UNALIGNED-NEXT:    sd a1, 8(a0)
 ; RV64UNALIGNED-NEXT:    ret
 entry:
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([31 x i8], [31 x i8]* @.str1, i64 0, i64 0), i64 31, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %C, ptr @.str1, i64 31, i1 false)
   ret void
 }
 
-define void @t2(i8* nocapture %C) nounwind {
+define void @t2(ptr nocapture %C) nounwind {
 ; RV32-LABEL: t2:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    lui a1, %hi(.L.str2)
@@ -127,11 +127,11 @@ define void @t2(i8* nocapture %C) nounwind {
 ; RV64UNALIGNED-NEXT:    sd a1, 8(a0)
 ; RV64UNALIGNED-NEXT:    ret
 entry:
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([36 x i8], [36 x i8]* @.str2, i64 0, i64 0), i64 36, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %C, ptr @.str2, i64 36, i1 false)
   ret void
 }
 
-define void @t3(i8* nocapture %C) nounwind {
+define void @t3(ptr nocapture %C) nounwind {
 ; RV32ALIGNED-LABEL: t3:
 ; RV32ALIGNED:       # %bb.0: # %entry
 ; RV32ALIGNED-NEXT:    lui a1, %hi(.L.str3)
@@ -180,11 +180,11 @@ define void @t3(i8* nocapture %C) nounwind {
 ; RV64UNALIGNED-NEXT:    sd a1, 8(a0)
 ; RV64UNALIGNED-NEXT:    ret
 entry:
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([24 x i8], [24 x i8]* @.str3, i64 0, i64 0), i64 24, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %C, ptr @.str3, i64 24, i1 false)
   ret void
 }
 
-define void @t4(i8* nocapture %C) nounwind {
+define void @t4(ptr nocapture %C) nounwind {
 ; RV32ALIGNED-LABEL: t4:
 ; RV32ALIGNED:       # %bb.0: # %entry
 ; RV32ALIGNED-NEXT:    lui a1, %hi(.L.str4)
@@ -229,11 +229,11 @@ define void @t4(i8* nocapture %C) nounwind {
 ; RV64UNALIGNED-NEXT:    sd a1, 8(a0)
 ; RV64UNALIGNED-NEXT:    ret
 entry:
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([18 x i8], [18 x i8]* @.str4, i64 0, i64 0), i64 18, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %C, ptr @.str4, i64 18, i1 false)
   ret void
 }
 
-define void @t5(i8* nocapture %C) nounwind {
+define void @t5(ptr nocapture %C) nounwind {
 ; RV32ALIGNED-LABEL: t5:
 ; RV32ALIGNED:       # %bb.0: # %entry
 ; RV32ALIGNED-NEXT:    sb zero, 6(a0)
@@ -290,7 +290,7 @@ define void @t5(i8* nocapture %C) nounwind {
 ; RV64UNALIGNED-NEXT:    sw a1, 0(a0)
 ; RV64UNALIGNED-NEXT:    ret
 entry:
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str5, i64 0, i64 0), i64 7, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %C, ptr @.str5, i64 7, i1 false)
   ret void
 }
 
@@ -352,13 +352,13 @@ define void @t6() nounwind {
 ; RV64UNALIGNED-NEXT:    sw a0, %lo(spool.splbuf+8)(a1)
 ; RV64UNALIGNED-NEXT:    ret
 entry:
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* getelementptr inbounds ([512 x i8], [512 x i8]* @spool.splbuf, i64 0, i64 0), i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str6, i64 0, i64 0), i64 14, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr @spool.splbuf, ptr @.str6, i64 14, i1 false)
   ret void
 }
 
 %struct.Foo = type { i32, i32, i32, i32 }
 
-define void @t7(%struct.Foo* nocapture %a, %struct.Foo* nocapture %b) nounwind {
+define void @t7(ptr nocapture %a, ptr nocapture %b) nounwind {
 ; RV32-LABEL: t7:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    lw a2, 12(a1)
@@ -391,11 +391,9 @@ define void @t7(%struct.Foo* nocapture %a, %struct.Foo* nocapture %b) nounwind {
 ; RV64UNALIGNED-NEXT:    sd a1, 0(a0)
 ; RV64UNALIGNED-NEXT:    ret
 entry:
-  %0 = bitcast %struct.Foo* %a to i8*
-  %1 = bitcast %struct.Foo* %b to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %0, i8* align 4 %1, i32 16, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i32(ptr align 4 %a, ptr align 4 %b, i32 16, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind

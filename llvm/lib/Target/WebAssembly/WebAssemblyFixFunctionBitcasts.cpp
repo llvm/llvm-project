@@ -141,7 +141,7 @@ static Function *createWrapper(Function *F, FunctionType *Ty) {
       if (CastInst::isBitOrNoopPointerCastable(ArgType, ParamType, DL)) {
         Instruction *PtrCast =
             CastInst::CreateBitOrPointerCast(AI, ParamType, "cast");
-        BB->getInstList().push_back(PtrCast);
+        PtrCast->insertInto(BB, BB->end());
         Args.push_back(PtrCast);
       } else if (ArgType->isStructTy() || ParamType->isStructTy()) {
         LLVM_DEBUG(dbgs() << "createWrapper: struct param type in bitcast: "
@@ -181,7 +181,7 @@ static Function *createWrapper(Function *F, FunctionType *Ty) {
                                                     DL)) {
       Instruction *Cast =
           CastInst::CreateBitOrPointerCast(Call, RtnType, "cast");
-      BB->getInstList().push_back(Cast);
+      Cast->insertInto(BB, BB->end());
       ReturnInst::Create(M->getContext(), Cast, BB);
     } else if (RtnType->isStructTy() || ExpectedRtnType->isStructTy()) {
       LLVM_DEBUG(dbgs() << "createWrapper: struct return type in bitcast: "

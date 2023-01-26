@@ -4,10 +4,10 @@
 ; RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 -debug-only=isel < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
-%0 = type <{ %1*, i16, [6 x i8] }>
-%1 = type { i32 (...)** }
+%0 = type <{ ptr, i16, [6 x i8] }>
+%1 = type { ptr }
 
-define signext i16 @fun(%0* %Arg0, i16 signext %Arg1) {
+define signext i16 @fun(ptr %Arg0, i16 signext %Arg1) {
 entry:
   br i1 undef, label %lab0, label %lab1
 

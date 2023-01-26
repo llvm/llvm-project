@@ -1,12 +1,12 @@
 ; RUN: llc -mtriple=arm-eabi %s -o /dev/null
 
-	%struct.cli_ac_alt = type { i8, i8*, i16, i16, %struct.cli_ac_alt* }
-	%struct.cli_ac_node = type { i8, i8, %struct.cli_ac_patt*, %struct.cli_ac_node**, %struct.cli_ac_node* }
-	%struct.cli_ac_patt = type { i16*, i16*, i16, i16, i8, i32, i32, i8*, i8*, i32, i16, i16, i16, i16, %struct.cli_ac_alt**, i8, i16, %struct.cli_ac_patt*, %struct.cli_ac_patt* }
-	%struct.cli_bm_patt = type { i8*, i8*, i16, i16, i8*, i8*, i8, %struct.cli_bm_patt*, i16 }
-	%struct.cli_matcher = type { i16, i8, i8*, %struct.cli_bm_patt**, i32*, i32, i8, i8, %struct.cli_ac_node*, %struct.cli_ac_node**, %struct.cli_ac_patt**, i32, i32, i32 }
+	%struct.cli_ac_alt = type { i8, ptr, i16, i16, ptr }
+	%struct.cli_ac_node = type { i8, i8, ptr, ptr, ptr }
+	%struct.cli_ac_patt = type { ptr, ptr, i16, i16, i8, i32, i32, ptr, ptr, i32, i16, i16, i16, i16, ptr, i8, i16, ptr, ptr }
+	%struct.cli_bm_patt = type { ptr, ptr, i16, i16, ptr, ptr, i8, ptr, i16 }
+	%struct.cli_matcher = type { i16, i8, ptr, ptr, ptr, i32, i8, i8, ptr, ptr, ptr, i32, i32, i32 }
 
-define i32 @cli_ac_addsig(%struct.cli_matcher* nocapture %root, i8* %virname, i8* %hexsig, i32 %sigid, i16 zeroext %parts, i16 zeroext %partno, i16 zeroext %type, i32 %mindist, i32 %maxdist, i8* %offset, i8 zeroext %target) nounwind {
+define i32 @cli_ac_addsig(ptr nocapture %root, ptr %virname, ptr %hexsig, i32 %sigid, i16 zeroext %parts, i16 zeroext %partno, i16 zeroext %type, i32 %mindist, i32 %maxdist, ptr %offset, i8 zeroext %target) nounwind {
 entry:
 	br i1 undef, label %bb126, label %bb1
 
@@ -65,15 +65,14 @@ bb18:		; preds = %bb18, %bb.nph
 	br i1 undef, label %bb18, label %bb22
 
 bb22:		; preds = %bb18, %bb17
-	%0 = getelementptr i8, i8* null, i32 10		; <i8*> [#uses=1]
-	%1 = bitcast i8* %0 to i16*		; <i16*> [#uses=1]
-	%2 = load i16, i16* %1, align 2		; <i16> [#uses=1]
-	%3 = add i16 %2, 1		; <i16> [#uses=1]
-	%4 = zext i16 %3 to i32		; <i32> [#uses=1]
-	%5 = mul i32 %4, 3		; <i32> [#uses=1]
-	%6 = add i32 %5, -1		; <i32> [#uses=1]
-	%7 = icmp eq i32 %6, undef		; <i1> [#uses=1]
-	br i1 %7, label %bb25, label %bb43.preheader
+	%0 = getelementptr i8, ptr null, i32 10		; <ptr> [#uses=1]
+	%1 = load i16, ptr %0, align 2		; <i16> [#uses=1]
+	%2 = add i16 %1, 1		; <i16> [#uses=1]
+	%3 = zext i16 %2 to i32		; <i32> [#uses=1]
+	%4 = mul i32 %3, 3		; <i32> [#uses=1]
+	%5 = add i32 %4, -1		; <i32> [#uses=1]
+	%6 = icmp eq i32 %5, undef		; <i1> [#uses=1]
+	br i1 %6, label %bb25, label %bb43.preheader
 
 bb43.preheader:		; preds = %bb22
 	br i1 undef, label %bb28, label %bb45

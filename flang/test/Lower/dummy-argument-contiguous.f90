@@ -136,5 +136,5 @@ subroutine propagate(x)
   end interface
   real :: x(:)
   call bar3(x)
- ! CHECK: fir.call @_QPbar3(%arg0) : (!fir.box<!fir.array<?xf32>>) -> ()
+ ! CHECK: fir.call @_QPbar3(%arg0) {{.*}}: (!fir.box<!fir.array<?xf32>>) -> ()
 end subroutine

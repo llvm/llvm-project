@@ -26,7 +26,6 @@ define amdgpu_kernel void @max_alignment_128() #0 {
 ; VI-NEXT:     .amdhsa_user_sgpr_dispatch_id 0
 ; VI-NEXT:     .amdhsa_user_sgpr_flat_scratch_init 1
 ; VI-NEXT:     .amdhsa_user_sgpr_private_segment_size 0
-; VI-NEXT:     .amdhsa_uses_dynamic_stack 0
 ; VI-NEXT:     .amdhsa_system_sgpr_private_segment_wavefront_offset 1
 ; VI-NEXT:     .amdhsa_system_sgpr_workgroup_id_x 1
 ; VI-NEXT:     .amdhsa_system_sgpr_workgroup_id_y 0
@@ -75,7 +74,6 @@ define amdgpu_kernel void @max_alignment_128() #0 {
 ; GFX9-NEXT:     .amdhsa_user_sgpr_dispatch_id 0
 ; GFX9-NEXT:     .amdhsa_user_sgpr_flat_scratch_init 1
 ; GFX9-NEXT:     .amdhsa_user_sgpr_private_segment_size 0
-; GFX9-NEXT:     .amdhsa_uses_dynamic_stack 0
 ; GFX9-NEXT:     .amdhsa_system_sgpr_private_segment_wavefront_offset 1
 ; GFX9-NEXT:     .amdhsa_system_sgpr_workgroup_id_x 1
 ; GFX9-NEXT:     .amdhsa_system_sgpr_workgroup_id_y 0
@@ -104,7 +102,7 @@ define amdgpu_kernel void @max_alignment_128() #0 {
 ; GFX9-NEXT:    .end_amdhsa_kernel
 ; GFX9-NEXT:    .text
   %alloca.align = alloca i32, align 128, addrspace(5)
-  store volatile i32 9, i32 addrspace(5)* %alloca.align, align 128
+  store volatile i32 9, ptr addrspace(5) %alloca.align, align 128
   ret void
 }
 
@@ -131,7 +129,6 @@ define amdgpu_kernel void @stackrealign_attr() #1 {
 ; VI-NEXT:     .amdhsa_user_sgpr_dispatch_id 0
 ; VI-NEXT:     .amdhsa_user_sgpr_flat_scratch_init 1
 ; VI-NEXT:     .amdhsa_user_sgpr_private_segment_size 0
-; VI-NEXT:     .amdhsa_uses_dynamic_stack 0
 ; VI-NEXT:     .amdhsa_system_sgpr_private_segment_wavefront_offset 1
 ; VI-NEXT:     .amdhsa_system_sgpr_workgroup_id_x 1
 ; VI-NEXT:     .amdhsa_system_sgpr_workgroup_id_y 0
@@ -180,7 +177,6 @@ define amdgpu_kernel void @stackrealign_attr() #1 {
 ; GFX9-NEXT:     .amdhsa_user_sgpr_dispatch_id 0
 ; GFX9-NEXT:     .amdhsa_user_sgpr_flat_scratch_init 1
 ; GFX9-NEXT:     .amdhsa_user_sgpr_private_segment_size 0
-; GFX9-NEXT:     .amdhsa_uses_dynamic_stack 0
 ; GFX9-NEXT:     .amdhsa_system_sgpr_private_segment_wavefront_offset 1
 ; GFX9-NEXT:     .amdhsa_system_sgpr_workgroup_id_x 1
 ; GFX9-NEXT:     .amdhsa_system_sgpr_workgroup_id_y 0
@@ -209,7 +205,7 @@ define amdgpu_kernel void @stackrealign_attr() #1 {
 ; GFX9-NEXT:    .end_amdhsa_kernel
 ; GFX9-NEXT:    .text
   %alloca.align = alloca i32, align 4, addrspace(5)
-  store volatile i32 9, i32 addrspace(5)* %alloca.align, align 4
+  store volatile i32 9, ptr addrspace(5) %alloca.align, align 4
   ret void
 }
 
@@ -236,7 +232,6 @@ define amdgpu_kernel void @alignstack_attr() #2 {
 ; VI-NEXT:     .amdhsa_user_sgpr_dispatch_id 0
 ; VI-NEXT:     .amdhsa_user_sgpr_flat_scratch_init 1
 ; VI-NEXT:     .amdhsa_user_sgpr_private_segment_size 0
-; VI-NEXT:     .amdhsa_uses_dynamic_stack 0
 ; VI-NEXT:     .amdhsa_system_sgpr_private_segment_wavefront_offset 1
 ; VI-NEXT:     .amdhsa_system_sgpr_workgroup_id_x 1
 ; VI-NEXT:     .amdhsa_system_sgpr_workgroup_id_y 0
@@ -285,7 +280,6 @@ define amdgpu_kernel void @alignstack_attr() #2 {
 ; GFX9-NEXT:     .amdhsa_user_sgpr_dispatch_id 0
 ; GFX9-NEXT:     .amdhsa_user_sgpr_flat_scratch_init 1
 ; GFX9-NEXT:     .amdhsa_user_sgpr_private_segment_size 0
-; GFX9-NEXT:     .amdhsa_uses_dynamic_stack 0
 ; GFX9-NEXT:     .amdhsa_system_sgpr_private_segment_wavefront_offset 1
 ; GFX9-NEXT:     .amdhsa_system_sgpr_workgroup_id_x 1
 ; GFX9-NEXT:     .amdhsa_system_sgpr_workgroup_id_y 0
@@ -314,7 +308,7 @@ define amdgpu_kernel void @alignstack_attr() #2 {
 ; GFX9-NEXT:    .end_amdhsa_kernel
 ; GFX9-NEXT:    .text
   %alloca.align = alloca i32, align 4, addrspace(5)
-  store volatile i32 9, i32 addrspace(5)* %alloca.align, align 4
+  store volatile i32 9, ptr addrspace(5) %alloca.align, align 4
   ret void
 }
 

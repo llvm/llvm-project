@@ -8,7 +8,7 @@
 // CHECK: warn_null_arg
 
 
-// RUN: diagtool show-enabled -Wno-everything %s | count 0
+// RUN: diagtool show-enabled -Wno-everything -Rno-everything %s | count 0
 
 
 // RUN: diagtool show-enabled -Wno-everything -Wobjc-root-class %s | FileCheck -check-prefix CHECK-WARN %s
@@ -21,9 +21,9 @@
 
 // RUN: diagtool show-enabled --no-levels -Wno-everything -Wobjc-root-class %s | FileCheck -check-prefix CHECK-NO-LEVELS %s
 //
-// CHECK-NO-LEVELS-NOT: W
-// CHECK-NO-LEVELS-NOT: E
-// CHECK-NO-LEVELS-NOT: F
+// CHECK-NO-LEVELS-NOT: {{^W }}
+// CHECK-NO-LEVELS-NOT: {{^E }}
+// CHECK-NO-LEVELS-NOT: {{^F }}
 // CHECK-NO-LEVELS: warn_objc_root_class_missing [-Wobjc-root-class]
 
 // Test if EnumConversion is a subgroup of -Wconversion.

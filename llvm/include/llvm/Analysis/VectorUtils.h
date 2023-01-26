@@ -164,7 +164,8 @@ static constexpr char const *_LLVM_Scalarize_ = "_LLVM_Scalarize_";
 /// name. At the moment, this parameter is needed only to retrieve the
 /// Vectorization Factor of scalable vector functions from their
 /// respective IR declarations.
-Optional<VFInfo> tryDemangleForVFABI(StringRef MangledName, const Module &M);
+std::optional<VFInfo> tryDemangleForVFABI(StringRef MangledName,
+                                          const Module &M);
 
 /// This routine mangles the given VectorName according to the LangRef
 /// specification for vector-function-abi-variant attribute and is specific to
@@ -230,16 +231,16 @@ class VFDatabase {
     if (ListOfStrings.empty())
       return;
     for (const auto &MangledName : ListOfStrings) {
-      const Optional<VFInfo> Shape =
+      const std::optional<VFInfo> Shape =
           VFABI::tryDemangleForVFABI(MangledName, *(CI.getModule()));
       // A match is found via scalar and vector names, and also by
       // ensuring that the variant described in the attribute has a
       // corresponding definition or declaration of the vector
       // function in the Module M.
-      if (Shape && (Shape.value().ScalarName == ScalarName)) {
-        assert(CI.getModule()->getFunction(Shape.value().VectorName) &&
+      if (Shape && (Shape->ScalarName == ScalarName)) {
+        assert(CI.getModule()->getFunction(Shape->VectorName) &&
                "Vector function is missing.");
-        Mappings.push_back(Shape.value());
+        Mappings.push_back(*Shape);
       }
     }
   }
@@ -366,6 +367,14 @@ Value *getSplatValue(const Value *V);
 /// not limited by finding a scalar source value to a splatted vector.
 bool isSplatValue(const Value *V, int Index = -1, unsigned Depth = 0);
 
+/// Transform a shuffle mask's output demanded element mask into demanded
+/// element masks for the 2 operands, returns false if the mask isn't valid.
+/// Both \p DemandedLHS and \p DemandedRHS are initialised to [SrcWidth].
+/// \p AllowUndefElts permits "-1" indices to be treated as undef.
+bool getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
+                            const APInt &DemandedElts, APInt &DemandedLHS,
+                            APInt &DemandedRHS, bool AllowUndefElts = false);
+
 /// Replace each shuffle mask index with the scaled sequential indices for an
 /// equivalent mask of narrowed elements. Mask elements that are less than 0
 /// (sentinel values) are repeated in the output mask.
@@ -397,6 +406,11 @@ void narrowShuffleMaskElts(int Scale, ArrayRef<int> Mask,
 /// divide evenly (scale down) to map to wider vector elements.
 bool widenShuffleMaskElts(int Scale, ArrayRef<int> Mask,
                           SmallVectorImpl<int> &ScaledMask);
+
+/// Repetitively apply `widenShuffleMaskElts()` for as long as it succeeds,
+/// to get the shuffle mask with widest possible elements.
+void getShuffleMaskWithWidestElts(ArrayRef<int> Mask,
+                                  SmallVectorImpl<int> &ScaledMask);
 
 /// Splits and processes shuffle mask depending on the number of input and
 /// output registers. The function does 2 main things: 1) splits the
@@ -633,7 +647,7 @@ public:
   /// \returns false if the instruction doesn't belong to the group.
   bool insertMember(InstTy *Instr, int32_t Index, Align NewAlign) {
     // Make sure the key fits in an int32_t.
-    Optional<int32_t> MaybeKey = checkedAdd(Index, SmallestKey);
+    std::optional<int32_t> MaybeKey = checkedAdd(Index, SmallestKey);
     if (!MaybeKey)
       return false;
     int32_t Key = *MaybeKey;
@@ -656,7 +670,7 @@ public:
     } else if (Key < SmallestKey) {
 
       // Make sure the largest index fits in an int32_t.
-      Optional<int32_t> MaybeLargestIndex = checkedSub(LargestKey, Key);
+      std::optional<int32_t> MaybeLargestIndex = checkedSub(LargestKey, Key);
       if (!MaybeLargestIndex)
         return false;
 
@@ -810,6 +824,9 @@ public:
   /// happen when optimizing for size forbids a scalar epilogue, and the gap
   /// cannot be filtered by masking the load/store.
   void invalidateGroupsRequiringScalarEpilogue();
+
+  /// Returns true if we have any interleave groups.
+  bool hasGroups() const { return !InterleaveGroups.empty(); }
 
 private:
   /// A wrapper around ScalarEvolution, used to add runtime SCEV checks.

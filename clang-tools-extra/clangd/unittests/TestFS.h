@@ -15,9 +15,9 @@
 #include "support/Path.h"
 #include "support/ThreadsafeFS.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -60,10 +60,10 @@ public:
   MockCompilationDatabase(StringRef Directory = StringRef(),
                           StringRef RelPathPrefix = StringRef());
 
-  llvm::Optional<tooling::CompileCommand>
+  std::optional<tooling::CompileCommand>
   getCompileCommand(PathRef File) const override;
 
-  llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const override;
+  std::optional<ProjectInfo> getProjectInfo(PathRef File) const override;
 
   std::vector<std::string> ExtraClangFlags;
 

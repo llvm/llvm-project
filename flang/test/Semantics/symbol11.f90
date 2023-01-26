@@ -68,7 +68,7 @@ subroutine s3
   !REF: /s3/t2
   class is (t2)
    !REF: /s3/i
-   !DEF: /s3/OtherConstruct1/y TARGET AssocEntity TYPE(t2)
+   !DEF: /s3/OtherConstruct1/y TARGET AssocEntity CLASS(t2)
    !REF: /s3/t2/a2
    i = y%a2
   !REF: /s3/t1
@@ -79,7 +79,8 @@ subroutine s3
    i = y%a1
   class default
    !DEF: /s3/OtherConstruct3/y TARGET AssocEntity CLASS(t1)
-   print *, y
+   !REF:/s3/t1/a1
+   print *, y%a1
  end select
 end subroutine
 

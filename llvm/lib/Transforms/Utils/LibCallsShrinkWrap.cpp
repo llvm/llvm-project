@@ -40,6 +40,9 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+
+#include <cmath>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "libcalls-shrinkwrap"
@@ -493,7 +496,7 @@ void LibCallsShrinkWrap::shrinkWrapCI(CallInst *CI, Value *Cond) {
   assert(SuccBB && "The split block should have a single successor");
   SuccBB->setName("cdce.end");
   CI->removeFromParent();
-  CallBB->getInstList().insert(CallBB->getFirstInsertionPt(), CI);
+  CI->insertInto(CallBB, CallBB->getFirstInsertionPt());
   LLVM_DEBUG(dbgs() << "== Basic Block After ==");
   LLVM_DEBUG(dbgs() << *CallBB->getSinglePredecessor() << *CallBB
                     << *CallBB->getSingleSuccessor() << "\n");

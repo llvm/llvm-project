@@ -1,19 +1,19 @@
-; RUN: opt < %s  -loop-vectorize -force-vector-interleave=1 -force-target-supports-scalable-vectors=true -dce -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize,dce,instcombine -force-vector-interleave=1 -force-target-supports-scalable-vectors=true -S | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
 ; CHECK-LABEL: @test1(
 ; CHECK: store <8 x i32>
 ; CHECK: ret void
-define void @test1(i32* nocapture %a, i32 %n) #0 {
+define void @test1(ptr nocapture %a, i32 %n) #0 {
 entry:
   %cmp4 = icmp sgt i32 %n, 0
   br i1 %cmp4, label %for.body, label %for.end
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  store i32 42, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  store i32 42, ptr %arrayidx, align 4
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %n
@@ -26,15 +26,15 @@ for.end:                                          ; preds = %for.body, %entry
 ; CHECK-LABEL: @test2(
 ; CHECK: store <vscale x 8 x i32>
 ; CHECK: ret void
-define void @test2(i32* nocapture %a, i32 %n) #0 {
+define void @test2(ptr nocapture %a, i32 %n) #0 {
 entry:
   %cmp4 = icmp sgt i32 %n, 0
   br i1 %cmp4, label %for.body, label %for.end
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  store i32 42, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  store i32 42, ptr %arrayidx, align 4
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %n
@@ -47,15 +47,15 @@ for.end:                                          ; preds = %for.body, %entry
 ; CHECK-LABEL: @test3(
 ; CHECK: store <8 x i32>
 ; CHECK: ret void
-define void @test3(i32* nocapture %a, i32 %n) #0 {
+define void @test3(ptr nocapture %a, i32 %n) #0 {
 entry:
   %cmp4 = icmp sgt i32 %n, 0
   br i1 %cmp4, label %for.body, label %for.end
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  store i32 42, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  store i32 42, ptr %arrayidx, align 4
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %n
@@ -71,15 +71,15 @@ for.end:                                          ; preds = %for.body, %entry
 ; CHECK-LABEL: @test4(
 ; CHECK: store <8 x i32>
 ; CHECK: ret void
-define void @test4(i32* nocapture %a, i32 %n) #0 {
+define void @test4(ptr nocapture %a, i32 %n) #0 {
 entry:
   %cmp4 = icmp sgt i32 %n, 0
   br i1 %cmp4, label %for.body, label %for.end
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  store i32 42, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  store i32 42, ptr %arrayidx, align 4
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %n

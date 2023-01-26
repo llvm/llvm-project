@@ -49,7 +49,7 @@ body:             |
     SD $x10, %stack.0, 0
     SD $x10, %stack.2, 0
     dead renamable $x15 = PseudoVSETIVLI 1, 72, implicit-def $vl, implicit-def $vtype
-    PseudoVSPILL_M1 killed renamable $v25, %stack.1 :: (store unknown-size into %stack.1, align 8)
+    VS1R_V killed renamable $v25, %stack.1 :: (store unknown-size into %stack.1, align 8)
     ; This is here just to make all the eligible registers live at this point.
     ; This way when we replace the frame index %stack.1 with its actual address
     ; we have to allocate a virtual register to compute it.

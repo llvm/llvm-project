@@ -1,4 +1,4 @@
-; RUN: opt < %s -lcssa -S | FileCheck %s
+; RUN: opt < %s -passes=lcssa -S | FileCheck %s
 
 ; This test ensures that LCSSA does not insert dbg.value intrinsics using
 ; insertDebugValuesForPHIs() which effectively cause assignments to be

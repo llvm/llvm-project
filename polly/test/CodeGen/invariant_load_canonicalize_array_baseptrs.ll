@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s \
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-codegen -S < %s \
 ; RUN:  -polly-invariant-load-hoisting \
 ; RUN:  | FileCheck %s
 

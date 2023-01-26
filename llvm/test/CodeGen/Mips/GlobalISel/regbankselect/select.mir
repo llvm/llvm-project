@@ -5,9 +5,9 @@
   define void @select_i32(i32, i32) {entry: ret void}
   define void @select_ptr(i32, i32) {entry: ret void}
   define void @select_i64() {entry: ret void}
-  define void @select_ambiguous_i64_in_fpr(i64* %i64_ptr_a, i64* %i64_ptr_b, i64* %i64_ptr_c) {entry: ret void}
+  define void @select_ambiguous_i64_in_fpr(ptr %i64_ptr_a, ptr %i64_ptr_b, ptr %i64_ptr_c) {entry: ret void}
   define void @select_float() {entry: ret void}
-  define void @select_ambiguous_float_in_gpr(float* %f32_ptr_a, float* %f32_ptr_b, float* %f32_ptr_c) {entry: ret void}
+  define void @select_ambiguous_float_in_gpr(ptr %f32_ptr_a, ptr %f32_ptr_b, ptr %f32_ptr_c) {entry: ret void}
   define void @select_double() {entry: ret void}
 
 ...

@@ -9,7 +9,7 @@ define void @"_ZN4core3num21_$LT$impl$u20$u64$GT$15overflowing_mul17h07be88b4cba
 start:
   %2 = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %0, i64 %1)
   %3 = extractvalue { i64, i1 } %2, 0
-  store i64 %3, i64* undef
+  store i64 %3, ptr undef
   unreachable
 }
 

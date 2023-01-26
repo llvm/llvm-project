@@ -120,7 +120,7 @@ insert-before or insert-after.");
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_settings_set_options);
+      return llvm::ArrayRef(g_settings_set_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -154,7 +154,7 @@ insert-before or insert-after.");
       return;
 
     // Complete option name
-    if (arg[0] != '-')
+    if (arg[0] == '-')
       return;
 
     // Complete setting value
@@ -359,7 +359,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_settings_write_options);
+      return llvm::ArrayRef(g_settings_write_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -453,7 +453,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_settings_read_options);
+      return llvm::ArrayRef(g_settings_read_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -1083,7 +1083,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_settings_clear_options);
+      return llvm::ArrayRef(g_settings_clear_options);
     }
 
     bool m_clear_all = false;

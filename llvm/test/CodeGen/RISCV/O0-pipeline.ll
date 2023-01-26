@@ -19,6 +19,8 @@
 ; CHECK-NEXT:   ModulePass Manager
 ; CHECK-NEXT:     Pre-ISel Intrinsic Lowering
 ; CHECK-NEXT:     FunctionPass Manager
+; CHECK-NEXT:       Expand large div/rem
+; CHECK-NEXT:       Expand large fp convert
 ; CHECK-NEXT:       Expand Atomic instructions
 ; CHECK-NEXT:       Module Verifier
 ; CHECK-NEXT:       Lower Garbage Collection Instructions
@@ -32,9 +34,11 @@
 ; CHECK-NEXT:       Safe Stack instrumentation pass
 ; CHECK-NEXT:       Insert stack protectors
 ; CHECK-NEXT:       Module Verifier
+; CHECK-NEXT:       Assignment Tracking Analysis
 ; CHECK-NEXT:       RISCV DAG->DAG Pattern Instruction Selection
 ; CHECK-NEXT:       Finalize ISel and expand pseudo-instructions
 ; CHECK-NEXT:       Local Stack Slot Allocation
+; CHECK-NEXT:       RISCV Pre-RA pseudo instruction expansion pass
 ; CHECK-NEXT:       RISCV Insert VSETVLI pass
 ; CHECK-NEXT:       Eliminate PHI nodes for register allocation
 ; CHECK-NEXT:       Two-Address instruction pass
@@ -54,6 +58,10 @@
 ; CHECK-NEXT:       Contiguously Lay Out Funclets
 ; CHECK-NEXT:       StackMap Liveness Analysis
 ; CHECK-NEXT:       Live DEBUG_VALUE analysis
+; CHECK-NEXT:       Machine Sanitizer Binary Metadata
+; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
+; CHECK-NEXT:       Machine Optimization Remark Emitter
+; CHECK-NEXT:       Stack Frame Layout Analysis
 ; CHECK-NEXT:       RISCV pseudo instruction expansion pass
 ; CHECK-NEXT:       RISCV atomic pseudo instruction expansion pass
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis

@@ -9,10 +9,10 @@ target triple = "powerpc64-unknown-linux-gnu"
 %v8i16 = type <8 x i16>
 %v16i8 = type <16 x i8>
 
-define void @test_v4i32_pos_even(%v4i32* %P, %v4i32* %S) {
-       %p = load %v4i32, %v4i32* %P
+define void @test_v4i32_pos_even(ptr %P, ptr %S) {
+       %p = load %v4i32, ptr %P
        %r = add %v4i32 %p, < i32 18, i32 18, i32 18, i32 18 >
-       store %v4i32 %r, %v4i32* %S
+       store %v4i32 %r, ptr %S
        ret void
 }
 
@@ -20,10 +20,10 @@ define void @test_v4i32_pos_even(%v4i32* %P, %v4i32* %S) {
 ; CHECK: vspltisw [[REG1:[0-9]+]], 9
 ; CHECK: vadduwm {{[0-9]+}}, [[REG1]], [[REG1]]
 
-define void @test_v4i32_neg_even(%v4i32* %P, %v4i32* %S) {
-       %p = load %v4i32, %v4i32* %P
+define void @test_v4i32_neg_even(ptr %P, ptr %S) {
+       %p = load %v4i32, ptr %P
        %r = add %v4i32 %p, < i32 -28, i32 -28, i32 -28, i32 -28 >
-       store %v4i32 %r, %v4i32* %S
+       store %v4i32 %r, ptr %S
        ret void
 }
 
@@ -31,10 +31,10 @@ define void @test_v4i32_neg_even(%v4i32* %P, %v4i32* %S) {
 ; CHECK: vspltisw [[REG1:[0-9]+]], -14
 ; CHECK: vadduwm {{[0-9]+}}, [[REG1]], [[REG1]]
 
-define void @test_v8i16_pos_even(%v8i16* %P, %v8i16* %S) {
-       %p = load %v8i16, %v8i16* %P
+define void @test_v8i16_pos_even(ptr %P, ptr %S) {
+       %p = load %v8i16, ptr %P
        %r = add %v8i16 %p, < i16 30, i16 30, i16 30, i16 30, i16 30, i16 30, i16 30, i16 30 >
-       store %v8i16 %r, %v8i16* %S
+       store %v8i16 %r, ptr %S
        ret void
 }
 
@@ -42,10 +42,10 @@ define void @test_v8i16_pos_even(%v8i16* %P, %v8i16* %S) {
 ; CHECK: vspltish [[REG1:[0-9]+]], 15
 ; CHECK: vadduhm {{[0-9]+}}, [[REG1]], [[REG1]]
 
-define void @test_v8i16_neg_even(%v8i16* %P, %v8i16* %S) {
-       %p = load %v8i16, %v8i16* %P
+define void @test_v8i16_neg_even(ptr %P, ptr %S) {
+       %p = load %v8i16, ptr %P
        %r = add %v8i16 %p, < i16 -32, i16 -32, i16 -32, i16 -32, i16 -32, i16 -32, i16 -32, i16 -32 >
-       store %v8i16 %r, %v8i16* %S
+       store %v8i16 %r, ptr %S
        ret void
 }
 
@@ -53,10 +53,10 @@ define void @test_v8i16_neg_even(%v8i16* %P, %v8i16* %S) {
 ; CHECK: vspltish [[REG1:[0-9]+]], -16
 ; CHECK: vadduhm {{[0-9]+}}, [[REG1]], [[REG1]]
 
-define void @test_v16i8_pos_even(%v16i8* %P, %v16i8* %S) {
-       %p = load %v16i8, %v16i8* %P
+define void @test_v16i8_pos_even(ptr %P, ptr %S) {
+       %p = load %v16i8, ptr %P
        %r = add %v16i8 %p, < i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16 >
-       store %v16i8 %r, %v16i8* %S
+       store %v16i8 %r, ptr %S
        ret void
 }
 
@@ -64,10 +64,10 @@ define void @test_v16i8_pos_even(%v16i8* %P, %v16i8* %S) {
 ; CHECK: vspltisb [[REG1:[0-9]+]], 8
 ; CHECK: vaddubm {{[0-9]+}}, [[REG1]], [[REG1]]
 
-define void @test_v16i8_neg_even(%v16i8* %P, %v16i8* %S) {
-       %p = load %v16i8, %v16i8* %P
+define void @test_v16i8_neg_even(ptr %P, ptr %S) {
+       %p = load %v16i8, ptr %P
        %r = add %v16i8 %p, < i8 -18, i8 -18, i8 -18, i8 -18, i8 -18, i8 -18, i8 -18, i8 -18, i8 -18, i8 -18, i8 -18, i8 -18, i8 -18, i8 -18, i8 -18, i8 -18 >
-       store %v16i8 %r, %v16i8* %S
+       store %v16i8 %r, ptr %S
        ret void
 }
 
@@ -75,10 +75,10 @@ define void @test_v16i8_neg_even(%v16i8* %P, %v16i8* %S) {
 ; CHECK: vspltisb [[REG1:[0-9]+]], -9
 ; CHECK: vaddubm {{[0-9]+}}, [[REG1]], [[REG1]]
 
-define void @test_v4i32_pos_odd(%v4i32* %P, %v4i32* %S) {
-       %p = load %v4i32, %v4i32* %P
+define void @test_v4i32_pos_odd(ptr %P, ptr %S) {
+       %p = load %v4i32, ptr %P
        %r = add %v4i32 %p, < i32 27, i32 27, i32 27, i32 27 >
-       store %v4i32 %r, %v4i32* %S
+       store %v4i32 %r, ptr %S
        ret void
 }
 
@@ -87,10 +87,10 @@ define void @test_v4i32_pos_odd(%v4i32* %P, %v4i32* %S) {
 ; CHECK: vspltisw [[REG1:[0-9]+]], 11
 ; CHECK: vsubuwm {{[0-9]+}}, [[REG1]], [[REG2]]
 
-define void @test_v4i32_neg_odd(%v4i32* %P, %v4i32* %S) {
-       %p = load %v4i32, %v4i32* %P
+define void @test_v4i32_neg_odd(ptr %P, ptr %S) {
+       %p = load %v4i32, ptr %P
        %r = add %v4i32 %p, < i32 -27, i32 -27, i32 -27, i32 -27 >
-       store %v4i32 %r, %v4i32* %S
+       store %v4i32 %r, ptr %S
        ret void
 }
 
@@ -99,10 +99,10 @@ define void @test_v4i32_neg_odd(%v4i32* %P, %v4i32* %S) {
 ; CHECK: vspltisw [[REG1:[0-9]+]], -11
 ; CHECK: vadduwm {{[0-9]+}}, [[REG1]], [[REG2]]
 
-define void @test_v8i16_pos_odd(%v8i16* %P, %v8i16* %S) {
-       %p = load %v8i16, %v8i16* %P
+define void @test_v8i16_pos_odd(ptr %P, ptr %S) {
+       %p = load %v8i16, ptr %P
        %r = add %v8i16 %p, < i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31 >
-       store %v8i16 %r, %v8i16* %S
+       store %v8i16 %r, ptr %S
        ret void
 }
 
@@ -111,10 +111,10 @@ define void @test_v8i16_pos_odd(%v8i16* %P, %v8i16* %S) {
 ; CHECK: vspltish [[REG1:[0-9]+]], 15
 ; CHECK: vsubuhm {{[0-9]+}}, [[REG1]], [[REG2]]
 
-define void @test_v8i16_neg_odd(%v8i16* %P, %v8i16* %S) {
-       %p = load %v8i16, %v8i16* %P
+define void @test_v8i16_neg_odd(ptr %P, ptr %S) {
+       %p = load %v8i16, ptr %P
        %r = add %v8i16 %p, < i16 -31, i16 -31, i16 -31, i16 -31, i16 -31, i16 -31, i16 -31, i16 -31 >
-       store %v8i16 %r, %v8i16* %S
+       store %v8i16 %r, ptr %S
        ret void
 }
 
@@ -123,10 +123,10 @@ define void @test_v8i16_neg_odd(%v8i16* %P, %v8i16* %S) {
 ; CHECK: vspltish [[REG1:[0-9]+]], -15
 ; CHECK: vadduhm {{[0-9]+}}, [[REG1]], [[REG2]]
 
-define void @test_v16i8_pos_odd(%v16i8* %P, %v16i8* %S) {
-       %p = load %v16i8, %v16i8* %P
+define void @test_v16i8_pos_odd(ptr %P, ptr %S) {
+       %p = load %v16i8, ptr %P
        %r = add %v16i8 %p, < i8 17, i8 17, i8 17, i8 17, i8 17, i8 17, i8 17, i8 17, i8 17, i8 17, i8 17, i8 17, i8 17, i8 17, i8 17, i8 17 >
-       store %v16i8 %r, %v16i8* %S
+       store %v16i8 %r, ptr %S
        ret void
 }
 
@@ -135,10 +135,10 @@ define void @test_v16i8_pos_odd(%v16i8* %P, %v16i8* %S) {
 ; CHECK: vspltisb [[REG1:[0-9]+]], 1
 ; CHECK: vsububm {{[0-9]+}}, [[REG1]], [[REG2]]
 
-define void @test_v16i8_neg_odd(%v16i8* %P, %v16i8* %S) {
-       %p = load %v16i8, %v16i8* %P
+define void @test_v16i8_neg_odd(ptr %P, ptr %S) {
+       %p = load %v16i8, ptr %P
        %r = add %v16i8 %p, < i8 -17, i8 -17, i8 -17, i8 -17, i8 -17, i8 -17, i8 -17, i8 -17, i8 -17, i8 -17, i8 -17, i8 -17, i8 -17, i8 -17, i8 -17, i8 -17 >
-       store %v16i8 %r, %v16i8* %S
+       store %v16i8 %r, ptr %S
        ret void
 }
 

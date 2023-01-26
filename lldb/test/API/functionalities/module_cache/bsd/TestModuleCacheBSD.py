@@ -77,7 +77,7 @@ class ModuleCacheTestcaseBSD(TestBase):
         """
         exe = self.getBuildArtifact("a.out")
 
-        # Create a module with no depedencies.
+        # Create a module with no dependencies.
         target = self.createTestTarget(load_dependent_modules=False)
 
         self.runCmd('breakpoint set -f a.c -l %d' % (self.line_a))

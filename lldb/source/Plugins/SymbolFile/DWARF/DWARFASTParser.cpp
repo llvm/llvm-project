@@ -13,17 +13,18 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/StackFrame.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
 
-llvm::Optional<SymbolFile::ArrayInfo>
+std::optional<SymbolFile::ArrayInfo>
 DWARFASTParser::ParseChildArrayInfo(const DWARFDIE &parent_die,
                                     const ExecutionContext *exe_ctx) {
   SymbolFile::ArrayInfo array_info;
   if (!parent_die)
-    return llvm::None;
+    return std::nullopt;
 
   for (DWARFDIE die : parent_die.children()) {
     const dw_tag_t tag = die.Tag();

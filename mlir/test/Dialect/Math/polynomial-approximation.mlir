@@ -359,7 +359,7 @@ func.func @log1p_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
 // CHECK:           %[[VAL_16:.*]] = arith.select %[[VAL_15]], %[[VAL_0]], %[[VAL_2]] : f32
 // CHECK:           %[[VAL_17:.*]] = arith.cmpf ugt, %[[VAL_16]], %[[VAL_1]] : f32
 // CHECK:           %[[VAL_18:.*]] = arith.select %[[VAL_17]], %[[VAL_16]], %[[VAL_1]] : f32
-// CHECK:           %[[VAL_19:.*]] = math.abs %[[VAL_0]] : f32
+// CHECK:           %[[VAL_19:.*]] = math.absf %[[VAL_0]] : f32
 // CHECK:           %[[VAL_20:.*]] = arith.cmpf olt, %[[VAL_19]], %[[VAL_3]] : f32
 // CHECK:           %[[VAL_21:.*]] = arith.mulf %[[VAL_18]], %[[VAL_18]] : f32
 // CHECK:           %[[VAL_22:.*]] = math.fma %[[VAL_21]], %[[VAL_10]], %[[VAL_9]] : f32
@@ -517,7 +517,7 @@ func.func @rsqrt_vector_2x16xf32(%arg0: vector<2x16xf32>) -> vector<2x16xf32> {
 // CHECK-DAG:  %[[N3:.+]] = arith.constant -0.0106783099
 // CHECK-DAG:  %[[N4:.+]] = arith.constant 1.00209987
 // CHECK-DAG:  %[[HALF_PI:.+]] = arith.constant 1.57079637
-// CHECK-DAG:  %[[ABS:.+]] = math.abs %arg0
+// CHECK-DAG:  %[[ABS:.+]] = math.absf %arg0
 // CHECK-DAG:  %[[DIV:.+]] = arith.divf %cst, %[[ABS]]
 // CHECK-DAG:  %[[CMP:.+]] = arith.cmpf olt, %[[ABS]], %[[DIV]]
 // CHECK-DAG:  %[[SEL:.+]] = arith.select %[[CMP]], %[[ABS]], %[[DIV]]
@@ -547,7 +547,7 @@ func.func @atan_scalar(%arg0: f32) -> f32 {
 // CHECK-DAG:  %[[ARG0:.+]] = arith.extf %arg0 : f16 to f32
 // CHECK-DAG:  %[[ARG1:.+]] = arith.extf %arg1 : f16 to f32
 // CHECK-DAG:  %[[RATIO:.+]] = arith.divf %[[ARG0]], %[[ARG1]]
-// CHECK-DAG:  %[[ABS:.+]] = math.abs %[[RATIO]]
+// CHECK-DAG:  %[[ABS:.+]] = math.absf %[[RATIO]]
 // CHECK-DAG:  %[[DIV:.+]] = arith.divf %cst, %[[ABS]]
 // CHECK-DAG:  %[[CMP:.+]] = arith.cmpf olt, %[[ABS]], %[[DIV]]
 // CHECK-DAG:  %[[SEL:.+]] = arith.select %[[CMP]], %[[ABS]], %[[DIV]]
@@ -593,4 +593,3 @@ func.func @atan2_scalar(%arg0: f16, %arg1: f16) -> f16 {
   %0 = math.atan2 %arg0, %arg1 : f16
   return %0 : f16
 }
-

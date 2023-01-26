@@ -4,21 +4,21 @@
 define void @BZ2_bzDecompress_bb5_2E_outer_bb35_2E_i_bb54_2E_i(ptr, i32 %c_nblock_used.2.i, i32 %.reload51, ptr %.out, ptr %.out1, ptr %.out2, ptr %.out3) nounwind {
 ; CHECK-LABEL: BZ2_bzDecompress_bb5_2E_outer_bb35_2E_i_bb54_2E_i:
 ; CHECK:       # %bb.0: # %newFuncRoot
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    movl %edx, %edx
 ; CHECK-NEXT:    movl (%rdi,%rdx,4), %edx
-; CHECK-NEXT:    movzbl %dl, %eax
-; CHECK-NEXT:    addl $4, %eax
+; CHECK-NEXT:    movzbl %dl, %r10d
+; CHECK-NEXT:    addl $4, %r10d
 ; CHECK-NEXT:    shrq $6, %rdx
 ; CHECK-NEXT:    andl $67108860, %edx # imm = 0x3FFFFFC
 ; CHECK-NEXT:    movl (%rdi,%rdx), %edx
 ; CHECK-NEXT:    movzbl %dl, %edi
 ; CHECK-NEXT:    shrl $8, %edx
 ; CHECK-NEXT:    addl $5, %esi
-; CHECK-NEXT:    movl %eax, (%rcx)
+; CHECK-NEXT:    movl %r10d, (%rcx)
 ; CHECK-NEXT:    movl %edi, (%r8)
 ; CHECK-NEXT:    movl %edx, (%r9)
-; CHECK-NEXT:    movl %esi, (%r10)
+; CHECK-NEXT:    movl %esi, (%rax)
 ; CHECK-NEXT:    retq
 newFuncRoot:
 	br label %bb54.i

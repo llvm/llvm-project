@@ -12,9 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/Utils/Utils.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
@@ -64,7 +63,7 @@ struct BubbleUpExtractSliceOpPattern
                                          "expected single use of linalg op");
     }
 
-    if (linalgOp.getNumOutputs() != 1) {
+    if (linalgOp.getNumDpsInits() != 1) {
       return rewriter.notifyMatchFailure(sliceOp,
                                          "expected single output of linalg op");
     }
@@ -81,8 +80,8 @@ struct BubbleUpExtractSliceOpPattern
       return rewriter.notifyMatchFailure(sliceOp, "expected no rank reduction");
     }
 
-    OpOperand *outOperand = linalgOp.getOutputOperand(0);
-    AffineMap indexingMap = linalgOp.getTiedIndexingMap(outOperand);
+    OpOperand *outOperand = linalgOp.getDpsInitOperand(0);
+    AffineMap indexingMap = linalgOp.getMatchingIndexingMap(outOperand);
     if (!indexingMap.isProjectedPermutation()) {
       return rewriter.notifyMatchFailure(
           sliceOp, "expected a projected permutation for output");
@@ -113,19 +112,19 @@ struct BubbleUpExtractSliceOpPattern
       tileSizes[position] = sliceOp.getMixedSizes()[result.index()];
     }
 
-    SmallVector<Value> valuesToTile = linalgOp.getInputAndOutputOperands();
+    SmallVector<Value> valuesToTile = linalgOp->getOperands();
     SmallVector<Value> tiledOperands =
         makeTiledShapes(rewriter, linalgLoc, linalgOp, valuesToTile,
                         tileOffsets, tileSizes, sizeBounds,
                         /*omitPartialTileCheck=*/true);
 
     SmallVector<Type, 4> resultTensorTypes;
-    for (OpOperand *opOperand : linalgOp.getOutputTensorOperands())
+    for (OpOperand *opOperand : linalgOp.getDpsInitOperands())
       resultTensorTypes.push_back(
           tiledOperands[opOperand->getOperandNumber()].getType());
 
     Operation *newOp =
-        linalgOp.clone(rewriter, linalgLoc, resultTensorTypes, tiledOperands);
+        clone(rewriter, linalgOp, resultTensorTypes, tiledOperands);
     rewriter.replaceOp(sliceOp, newOp->getResults());
     return success();
   }

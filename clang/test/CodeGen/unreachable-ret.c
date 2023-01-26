@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -o - %s | FileCheck %s
 
 extern void abort(void) __attribute__((noreturn));
 
@@ -15,7 +15,7 @@ void *f2(void) {
   abort();
   return 0;
 }
-// CHECK-LABEL: define {{.*}}i8* @f2()
+// CHECK-LABEL: define {{.*}}ptr @f2()
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   call void @abort()
 // CHECK-NEXT:   unreachable

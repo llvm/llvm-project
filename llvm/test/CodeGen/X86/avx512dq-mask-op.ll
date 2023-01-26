@@ -33,9 +33,8 @@ define i8 @mand8(i8 %x, i8 %y) {
 ; CHECK-LABEL: mand8:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    andb %sil, %al
-; CHECK-NEXT:    xorb %sil, %dil
-; CHECK-NEXT:    orb %dil, %al
+; CHECK-NEXT:    orl %esi, %eax
+; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %ma = bitcast i8 %x to <8 x i1>
   %mb = bitcast i8 %y to <8 x i1>
@@ -51,9 +50,7 @@ define i8 @mand8_mem(ptr %x, ptr %y) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovb (%rdi), %k0
 ; CHECK-NEXT:    kmovb (%rsi), %k1
-; CHECK-NEXT:    kandb %k1, %k0, %k2
-; CHECK-NEXT:    kxorb %k1, %k0, %k0
-; CHECK-NEXT:    korb %k0, %k2, %k0
+; CHECK-NEXT:    korb %k1, %k0, %k0
 ; CHECK-NEXT:    kmovd %k0, %eax
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq

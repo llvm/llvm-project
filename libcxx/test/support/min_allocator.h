@@ -9,13 +9,14 @@
 #ifndef MIN_ALLOCATOR_H
 #define MIN_ALLOCATOR_H
 
-#include <cstddef>
-#include <cstdlib>
-#include <cstddef>
 #include <cassert>
 #include <climits>
+#include <cstddef>
+#include <cstdlib>
 #include <iterator>
 #include <memory>
+#include <new>
+#include <type_traits>
 
 #include "test_macros.h"
 

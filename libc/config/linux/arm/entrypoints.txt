@@ -19,6 +19,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # string.h entrypoints
     libc.src.string.bcmp
+    libc.src.string.bcopy
     libc.src.string.bzero
     libc.src.string.memccpy
     libc.src.string.memchr
@@ -30,6 +31,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.memset
     libc.src.string.stpcpy
     libc.src.string.stpncpy
+    libc.src.string.strcasecmp
     libc.src.string.strcat
     libc.src.string.strchr
     libc.src.string.strcmp
@@ -38,6 +40,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strlcat
     libc.src.string.strlcpy
     libc.src.string.strlen
+    libc.src.string.strncasecmp
     libc.src.string.strncat
     libc.src.string.strncmp
     libc.src.string.strncpy
@@ -48,6 +51,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strstr
     libc.src.string.strtok
     libc.src.string.strtok_r
+
     # inttypes.h entrypoints
     libc.src.inttypes.imaxabs
     libc.src.inttypes.imaxdiv
@@ -74,6 +78,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.strtoll
     libc.src.stdlib.strtoul
     libc.src.stdlib.strtoull
+
+    # sys/mman.h entrypoints
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
 )
 
 set(TARGET_LIBM_ENTRYPOINTS

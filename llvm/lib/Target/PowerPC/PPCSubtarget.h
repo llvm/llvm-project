@@ -87,89 +87,16 @@ protected:
   /// Selected instruction itineraries (one entry per itinerary class.)
   InstrItineraryData InstrItins;
 
+// Bool members corresponding to the SubtargetFeatures defined in tablegen.
+#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
+  bool ATTRIBUTE = DEFAULT;
+#include "PPCGenSubtargetInfo.inc"
+
   /// Which cpu directive was used.
   unsigned CPUDirective;
 
-  /// Used by the ISel to turn in optimizations for POWER4-derived architectures
-  bool HasMFOCRF;
-  bool Has64BitSupport;
-  bool Use64BitRegs;
-  bool UseCRBits;
-  bool HasHardFloat;
   bool IsPPC64;
-  bool HasAltivec;
-  bool HasFPU;
-  bool HasSPE;
-  bool HasEFPU2;
-  bool HasVSX;
-  bool NeedsTwoConstNR;
-  bool HasP8Vector;
-  bool HasP8Altivec;
-  bool HasP8Crypto;
-  bool HasP9Vector;
-  bool HasP9Altivec;
-  bool HasP10Vector;
-  bool HasPrefixInstrs;
-  bool HasPCRelativeMemops;
-  bool HasMMA;
-  bool HasROPProtect;
-  bool HasPrivileged;
-  bool HasFCPSGN;
-  bool HasFSQRT;
-  bool HasFRE, HasFRES, HasFRSQRTE, HasFRSQRTES;
-  bool HasRecipPrec;
-  bool HasSTFIWX;
-  bool HasLFIWAX;
-  bool HasFPRND;
-  bool HasFPCVT;
-  bool HasISEL;
-  bool HasBPERMD;
-  bool HasExtDiv;
-  bool HasCMPB;
-  bool HasLDBRX;
-  bool IsBookE;
-  bool HasOnlyMSYNC;
-  bool IsE500;
-  bool IsPPC4xx;
-  bool IsPPC6xx;
-  bool FeatureMFTB;
-  bool AllowsUnalignedFPAccess;
-  bool DeprecatedDST;
   bool IsLittleEndian;
-  bool HasICBT;
-  bool HasInvariantFunctionDescriptors;
-  bool HasPartwordAtomics;
-  bool HasQuadwordAtomics;
-  bool HasDirectMove;
-  bool HasHTM;
-  bool HasFloat128;
-  bool HasFusion;
-  bool HasStoreFusion;
-  bool HasAddiLoadFusion;
-  bool HasAddisLoadFusion;
-  bool HasArithAddFusion;
-  bool HasAddLogicalFusion;
-  bool HasLogicalAddFusion;
-  bool HasLogicalFusion;
-  bool HasSha3Fusion;
-  bool HasCompareFusion;
-  bool HasWideImmFusion;
-  bool HasZeroMoveFusion;
-  bool HasBack2BackFusion;
-  bool IsISA2_06;
-  bool IsISA2_07;
-  bool IsISA3_0;
-  bool IsISA3_1;
-  bool IsISAFuture;
-  bool UseLongCalls;
-  bool SecurePlt;
-  bool VectorsUseTwoUnits;
-  bool UsePPCPreRASchedStrategy;
-  bool UsePPCPostRASchedStrategy;
-  bool PairedVectorMemops;
-  bool PredictableSelectIsExpensive;
-  bool HasModernAIXAs;
-  bool IsAIX;
 
   POPCNTDKind HasPOPCNTD;
 
@@ -189,7 +116,8 @@ public:
   /// This constructor initializes the data members to match that
   /// of the specified triple.
   ///
-  PPCSubtarget(const Triple &TT, const std::string &CPU, const std::string &FS,
+  PPCSubtarget(const Triple &TT, const std::string &CPU,
+               const std::string &TuneCPU, const std::string &FS,
                const PPCTargetMachine &TM);
 
   /// ParseSubtargetFeatures - Parses features string setting specified
@@ -226,22 +154,22 @@ public:
   }
   const PPCTargetMachine &getTargetMachine() const { return TM; }
 
-  /// initializeSubtargetDependencies - Initializes using a CPU and feature string
-  /// so that we can use initializer lists for subtarget initialization.
-  PPCSubtarget &initializeSubtargetDependencies(StringRef CPU, StringRef FS);
+  /// initializeSubtargetDependencies - Initializes using a CPU, a TuneCPU,  and
+  /// feature string so that we can use initializer lists for subtarget
+  /// initialization.
+  PPCSubtarget &initializeSubtargetDependencies(StringRef CPU,
+                                                StringRef TuneCPU,
+                                                StringRef FS);
 
 private:
   void initializeEnvironment();
-  void initSubtargetFeatures(StringRef CPU, StringRef FS);
+  void initSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
 
 public:
   /// isPPC64 - Return true if we are generating code for 64-bit pointer mode.
   ///
   bool isPPC64() const;
 
-  /// has64BitSupport - Return true if the selected CPU supports 64-bit
-  /// instructions, regardless of whether we are in 32-bit or 64-bit mode.
-  bool has64BitSupport() const { return Has64BitSupport; }
   // useSoftFloat - Return true if soft-float option is turned on.
   bool useSoftFloat() const {
     if (isAIXABI() && !HasHardFloat)
@@ -249,73 +177,13 @@ public:
     return !HasHardFloat;
   }
 
-  /// use64BitRegs - Return true if in 64-bit mode or if we should use 64-bit
-  /// registers in 32-bit mode when possible.  This can only true if
-  /// has64BitSupport() returns true.
-  bool use64BitRegs() const { return Use64BitRegs; }
-
-  /// useCRBits - Return true if we should store and manipulate i1 values in
-  /// the individual condition register bits.
-  bool useCRBits() const { return UseCRBits; }
-
   // isLittleEndian - True if generating little-endian code
   bool isLittleEndian() const { return IsLittleEndian; }
 
-  // Specific obvious features.
-  bool hasFCPSGN() const { return HasFCPSGN; }
-  bool hasFSQRT() const { return HasFSQRT; }
-  bool hasFRE() const { return HasFRE; }
-  bool hasFRES() const { return HasFRES; }
-  bool hasFRSQRTE() const { return HasFRSQRTE; }
-  bool hasFRSQRTES() const { return HasFRSQRTES; }
-  bool hasRecipPrec() const { return HasRecipPrec; }
-  bool hasSTFIWX() const { return HasSTFIWX; }
-  bool hasLFIWAX() const { return HasLFIWAX; }
-  bool hasFPRND() const { return HasFPRND; }
-  bool hasFPCVT() const { return HasFPCVT; }
-  bool hasAltivec() const { return HasAltivec; }
-  bool hasSPE() const { return HasSPE; }
-  bool hasEFPU2() const { return HasEFPU2; }
-  bool hasFPU() const { return HasFPU; }
-  bool hasVSX() const { return HasVSX; }
-  bool needsTwoConstNR() const { return NeedsTwoConstNR; }
-  bool hasP8Vector() const { return HasP8Vector; }
-  bool hasP8Altivec() const { return HasP8Altivec; }
-  bool hasP8Crypto() const { return HasP8Crypto; }
-  bool hasP9Vector() const { return HasP9Vector; }
-  bool hasP9Altivec() const { return HasP9Altivec; }
-  bool hasP10Vector() const { return HasP10Vector; }
-  bool hasPrefixInstrs() const { return HasPrefixInstrs; }
-  bool hasPCRelativeMemops() const { return HasPCRelativeMemops; }
-  bool hasMMA() const { return HasMMA; }
-  bool hasROPProtect() const { return HasROPProtect; }
-  bool hasPrivileged() const { return HasPrivileged; }
-  bool pairedVectorMemops() const { return PairedVectorMemops; }
-  bool hasMFOCRF() const { return HasMFOCRF; }
-  bool hasISEL() const { return HasISEL; }
-  bool hasBPERMD() const { return HasBPERMD; }
-  bool hasExtDiv() const { return HasExtDiv; }
-  bool hasCMPB() const { return HasCMPB; }
-  bool hasLDBRX() const { return HasLDBRX; }
-  bool isBookE() const { return IsBookE; }
-  bool hasOnlyMSYNC() const { return HasOnlyMSYNC; }
-  bool isPPC4xx() const { return IsPPC4xx; }
-  bool isPPC6xx() const { return IsPPC6xx; }
-  bool isSecurePlt() const {return SecurePlt; }
-  bool vectorsUseTwoUnits() const {return VectorsUseTwoUnits; }
-  bool isE500() const { return IsE500; }
-  bool isFeatureMFTB() const { return FeatureMFTB; }
-  bool allowsUnalignedFPAccess() const { return AllowsUnalignedFPAccess; }
-  bool isDeprecatedDST() const { return DeprecatedDST; }
-  bool hasICBT() const { return HasICBT; }
-  bool hasInvariantFunctionDescriptors() const {
-    return HasInvariantFunctionDescriptors;
-  }
-  bool usePPCPreRASchedStrategy() const { return UsePPCPreRASchedStrategy; }
-  bool usePPCPostRASchedStrategy() const { return UsePPCPostRASchedStrategy; }
-  bool hasPartwordAtomics() const { return HasPartwordAtomics; }
-  bool hasQuadwordAtomics() const { return HasQuadwordAtomics; }
-  bool hasDirectMove() const { return HasDirectMove; }
+// Getters for SubtargetFeatures defined in tablegen.
+#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
+  bool GETTER() const { return ATTRIBUTE; }
+#include "PPCGenSubtargetInfo.inc"
 
   Align getPlatformStackAlignment() const {
     return Align(16);
@@ -331,27 +199,6 @@ public:
     return isAIXABI() ? 220 : 0;
   }
 
-  bool hasHTM() const { return HasHTM; }
-  bool hasFloat128() const { return HasFloat128; }
-  bool isISA2_06() const { return IsISA2_06; }
-  bool isISA2_07() const { return IsISA2_07; }
-  bool isISA3_0() const { return IsISA3_0; }
-  bool isISA3_1() const { return IsISA3_1; }
-  bool isISAFuture() const { return IsISAFuture; }
-  bool useLongCalls() const { return UseLongCalls; }
-  bool hasFusion() const { return HasFusion; }
-  bool hasStoreFusion() const { return HasStoreFusion; }
-  bool hasAddiLoadFusion() const { return HasAddiLoadFusion; }
-  bool hasAddisLoadFusion() const { return HasAddisLoadFusion; }
-  bool hasArithAddFusion() const { return HasArithAddFusion; }
-  bool hasAddLogicalFusion() const { return HasAddLogicalFusion; }
-  bool hasLogicalAddFusion() const { return HasLogicalAddFusion; }
-  bool hasLogicalFusion() const { return HasLogicalFusion; }
-  bool hasCompareFusion() const { return HasCompareFusion; }
-  bool hasWideImmFusion() const { return HasWideImmFusion; }
-  bool hasSha3Fusion() const { return HasSha3Fusion; }
-  bool hasZeroMoveFusion() const { return HasZeroMoveFusion; }
-  bool hasBack2BackFusion() const { return HasBack2BackFusion; }
   bool needsSwapsForVSXMemOps() const {
     return hasVSX() && isLittleEndian() && !hasP9Vector();
   }

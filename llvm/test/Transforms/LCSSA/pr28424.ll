@@ -1,4 +1,4 @@
-; RUN: opt < %s -lcssa -S -o - | FileCheck %s
+; RUN: opt < %s -passes=lcssa -S -o - | FileCheck %s
 target triple = "x86_64-unknown-linux-gnu"
 
 ; PR28424

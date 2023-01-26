@@ -1,4 +1,4 @@
-; RUN: opt -passes=newgvn -S < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 -passes=newgvn -S < %s | FileCheck %s
 
 target datalayout = "e-p:64:64:64"
 

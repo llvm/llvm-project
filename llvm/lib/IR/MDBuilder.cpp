@@ -53,7 +53,7 @@ MDNode *MDBuilder::createBranchWeights(ArrayRef<uint32_t> Weights) {
 }
 
 MDNode *MDBuilder::createUnpredictable() {
-  return MDNode::get(Context, None);
+  return MDNode::get(Context, std::nullopt);
 }
 
 MDNode *MDBuilder::createFunctionEntryCount(
@@ -155,6 +155,27 @@ MDNode *MDBuilder::createRTTIPointerPrologue(Constant *PrologueSig,
   SmallVector<Metadata *, 4> Ops;
   Ops.push_back(createConstant(PrologueSig));
   Ops.push_back(createConstant(RTTI));
+  return MDNode::get(Context, Ops);
+}
+
+MDNode *MDBuilder::createPCSections(ArrayRef<PCSection> Sections) {
+  SmallVector<Metadata *, 2> Ops;
+
+  for (const auto &Entry : Sections) {
+    const StringRef &Sec = Entry.first;
+    Ops.push_back(createString(Sec));
+
+    // If auxiliary data for this section exists, append it.
+    const SmallVector<Constant *> &AuxConsts = Entry.second;
+    if (!AuxConsts.empty()) {
+      SmallVector<Metadata *, 1> AuxMDs;
+      AuxMDs.reserve(AuxConsts.size());
+      for (Constant *C : AuxConsts)
+        AuxMDs.push_back(createConstant(C));
+      Ops.push_back(MDNode::get(Context, AuxMDs));
+    }
+  }
+
   return MDNode::get(Context, Ops);
 }
 
@@ -321,5 +342,17 @@ MDNode *MDBuilder::createPseudoProbeDesc(uint64_t GUID, uint64_t Hash,
   Ops[0] = createConstant(ConstantInt::get(Int64Ty, GUID));
   Ops[1] = createConstant(ConstantInt::get(Int64Ty, Hash));
   Ops[2] = createString(F->getName());
+  return MDNode::get(Context, Ops);
+}
+
+MDNode *
+MDBuilder::createLLVMStats(ArrayRef<std::pair<StringRef, uint64_t>> LLVMStats) {
+  auto *Int64Ty = Type::getInt64Ty(Context);
+  SmallVector<Metadata *, 4> Ops(LLVMStats.size() * 2);
+  for (size_t I = 0; I < LLVMStats.size(); I++) {
+    Ops[I * 2] = createString(LLVMStats[I].first);
+    Ops[I * 2 + 1] =
+        createConstant(ConstantInt::get(Int64Ty, LLVMStats[I].second));
+  }
   return MDNode::get(Context, Ops);
 }

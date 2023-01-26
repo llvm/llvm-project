@@ -11,11 +11,11 @@
 
 define void @llvm_mips_madd_q_h_test() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_madd_q_h_ARG1
-  %1 = load <8 x i16>, <8 x i16>* @llvm_mips_madd_q_h_ARG2
-  %2 = load <8 x i16>, <8 x i16>* @llvm_mips_madd_q_h_ARG3
+  %0 = load <8 x i16>, ptr @llvm_mips_madd_q_h_ARG1
+  %1 = load <8 x i16>, ptr @llvm_mips_madd_q_h_ARG2
+  %2 = load <8 x i16>, ptr @llvm_mips_madd_q_h_ARG3
   %3 = tail call <8 x i16> @llvm.mips.madd.q.h(<8 x i16> %0, <8 x i16> %1, <8 x i16> %2)
-  store <8 x i16> %3, <8 x i16>* @llvm_mips_madd_q_h_RES
+  store <8 x i16> %3, ptr @llvm_mips_madd_q_h_RES
   ret void
 }
 
@@ -36,11 +36,11 @@ declare <8 x i16> @llvm.mips.madd.q.h(<8 x i16>, <8 x i16>, <8 x i16>) nounwind
 
 define void @llvm_mips_madd_q_w_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_madd_q_w_ARG1
-  %1 = load <4 x i32>, <4 x i32>* @llvm_mips_madd_q_w_ARG2
-  %2 = load <4 x i32>, <4 x i32>* @llvm_mips_madd_q_w_ARG3
+  %0 = load <4 x i32>, ptr @llvm_mips_madd_q_w_ARG1
+  %1 = load <4 x i32>, ptr @llvm_mips_madd_q_w_ARG2
+  %2 = load <4 x i32>, ptr @llvm_mips_madd_q_w_ARG3
   %3 = tail call <4 x i32> @llvm.mips.madd.q.w(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2)
-  store <4 x i32> %3, <4 x i32>* @llvm_mips_madd_q_w_RES
+  store <4 x i32> %3, ptr @llvm_mips_madd_q_w_RES
   ret void
 }
 
@@ -61,11 +61,11 @@ declare <4 x i32> @llvm.mips.madd.q.w(<4 x i32>, <4 x i32>, <4 x i32>) nounwind
 
 define void @llvm_mips_maddr_q_h_test() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_maddr_q_h_ARG1
-  %1 = load <8 x i16>, <8 x i16>* @llvm_mips_maddr_q_h_ARG2
-  %2 = load <8 x i16>, <8 x i16>* @llvm_mips_maddr_q_h_ARG3
+  %0 = load <8 x i16>, ptr @llvm_mips_maddr_q_h_ARG1
+  %1 = load <8 x i16>, ptr @llvm_mips_maddr_q_h_ARG2
+  %2 = load <8 x i16>, ptr @llvm_mips_maddr_q_h_ARG3
   %3 = tail call <8 x i16> @llvm.mips.maddr.q.h(<8 x i16> %0, <8 x i16> %1, <8 x i16> %2)
-  store <8 x i16> %3, <8 x i16>* @llvm_mips_maddr_q_h_RES
+  store <8 x i16> %3, ptr @llvm_mips_maddr_q_h_RES
   ret void
 }
 
@@ -86,11 +86,11 @@ declare <8 x i16> @llvm.mips.maddr.q.h(<8 x i16>, <8 x i16>, <8 x i16>) nounwind
 
 define void @llvm_mips_maddr_q_w_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_maddr_q_w_ARG1
-  %1 = load <4 x i32>, <4 x i32>* @llvm_mips_maddr_q_w_ARG2
-  %2 = load <4 x i32>, <4 x i32>* @llvm_mips_maddr_q_w_ARG3
+  %0 = load <4 x i32>, ptr @llvm_mips_maddr_q_w_ARG1
+  %1 = load <4 x i32>, ptr @llvm_mips_maddr_q_w_ARG2
+  %2 = load <4 x i32>, ptr @llvm_mips_maddr_q_w_ARG3
   %3 = tail call <4 x i32> @llvm.mips.maddr.q.w(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2)
-  store <4 x i32> %3, <4 x i32>* @llvm_mips_maddr_q_w_RES
+  store <4 x i32> %3, ptr @llvm_mips_maddr_q_w_RES
   ret void
 }
 
@@ -111,11 +111,11 @@ declare <4 x i32> @llvm.mips.maddr.q.w(<4 x i32>, <4 x i32>, <4 x i32>) nounwind
 
 define void @llvm_mips_msub_q_h_test() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_msub_q_h_ARG1
-  %1 = load <8 x i16>, <8 x i16>* @llvm_mips_msub_q_h_ARG2
-  %2 = load <8 x i16>, <8 x i16>* @llvm_mips_msub_q_h_ARG3
+  %0 = load <8 x i16>, ptr @llvm_mips_msub_q_h_ARG1
+  %1 = load <8 x i16>, ptr @llvm_mips_msub_q_h_ARG2
+  %2 = load <8 x i16>, ptr @llvm_mips_msub_q_h_ARG3
   %3 = tail call <8 x i16> @llvm.mips.msub.q.h(<8 x i16> %0, <8 x i16> %1, <8 x i16> %2)
-  store <8 x i16> %3, <8 x i16>* @llvm_mips_msub_q_h_RES
+  store <8 x i16> %3, ptr @llvm_mips_msub_q_h_RES
   ret void
 }
 
@@ -136,11 +136,11 @@ declare <8 x i16> @llvm.mips.msub.q.h(<8 x i16>, <8 x i16>, <8 x i16>) nounwind
 
 define void @llvm_mips_msub_q_w_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_msub_q_w_ARG1
-  %1 = load <4 x i32>, <4 x i32>* @llvm_mips_msub_q_w_ARG2
-  %2 = load <4 x i32>, <4 x i32>* @llvm_mips_msub_q_w_ARG3
+  %0 = load <4 x i32>, ptr @llvm_mips_msub_q_w_ARG1
+  %1 = load <4 x i32>, ptr @llvm_mips_msub_q_w_ARG2
+  %2 = load <4 x i32>, ptr @llvm_mips_msub_q_w_ARG3
   %3 = tail call <4 x i32> @llvm.mips.msub.q.w(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2)
-  store <4 x i32> %3, <4 x i32>* @llvm_mips_msub_q_w_RES
+  store <4 x i32> %3, ptr @llvm_mips_msub_q_w_RES
   ret void
 }
 
@@ -161,11 +161,11 @@ declare <4 x i32> @llvm.mips.msub.q.w(<4 x i32>, <4 x i32>, <4 x i32>) nounwind
 
 define void @llvm_mips_msubr_q_h_test() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_msubr_q_h_ARG1
-  %1 = load <8 x i16>, <8 x i16>* @llvm_mips_msubr_q_h_ARG2
-  %2 = load <8 x i16>, <8 x i16>* @llvm_mips_msubr_q_h_ARG3
+  %0 = load <8 x i16>, ptr @llvm_mips_msubr_q_h_ARG1
+  %1 = load <8 x i16>, ptr @llvm_mips_msubr_q_h_ARG2
+  %2 = load <8 x i16>, ptr @llvm_mips_msubr_q_h_ARG3
   %3 = tail call <8 x i16> @llvm.mips.msubr.q.h(<8 x i16> %0, <8 x i16> %1, <8 x i16> %2)
-  store <8 x i16> %3, <8 x i16>* @llvm_mips_msubr_q_h_RES
+  store <8 x i16> %3, ptr @llvm_mips_msubr_q_h_RES
   ret void
 }
 
@@ -186,11 +186,11 @@ declare <8 x i16> @llvm.mips.msubr.q.h(<8 x i16>, <8 x i16>, <8 x i16>) nounwind
 
 define void @llvm_mips_msubr_q_w_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_msubr_q_w_ARG1
-  %1 = load <4 x i32>, <4 x i32>* @llvm_mips_msubr_q_w_ARG2
-  %2 = load <4 x i32>, <4 x i32>* @llvm_mips_msubr_q_w_ARG3
+  %0 = load <4 x i32>, ptr @llvm_mips_msubr_q_w_ARG1
+  %1 = load <4 x i32>, ptr @llvm_mips_msubr_q_w_ARG2
+  %2 = load <4 x i32>, ptr @llvm_mips_msubr_q_w_ARG3
   %3 = tail call <4 x i32> @llvm.mips.msubr.q.w(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2)
-  store <4 x i32> %3, <4 x i32>* @llvm_mips_msubr_q_w_RES
+  store <4 x i32> %3, ptr @llvm_mips_msubr_q_w_RES
   ret void
 }
 

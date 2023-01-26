@@ -31,13 +31,49 @@ static cl::opt<TargetLibraryInfoImpl::VectorLibrary> ClVectorLibrary(
                clEnumValN(TargetLibraryInfoImpl::MASSV, "MASSV",
                           "IBM MASS vector library"),
                clEnumValN(TargetLibraryInfoImpl::SVML, "SVML",
-                          "Intel SVML library")));
+                          "Intel SVML library"),
+               clEnumValN(TargetLibraryInfoImpl::SLEEFGNUABI, "sleefgnuabi",
+                          "SIMD Library for Evaluating Elementary Functions")));
 
 StringLiteral const TargetLibraryInfoImpl::StandardNames[LibFunc::NumLibFuncs] =
     {
 #define TLI_DEFINE_STRING
 #include "llvm/Analysis/TargetLibraryInfo.def"
 };
+
+// Recognized types of library function arguments and return types.
+enum FuncArgTypeID : char {
+  Void = 0, // Must be zero.
+  Bool,     // 8 bits on all targets
+  Int16,
+  Int32,
+  Int,
+  IntPlus, // Int or bigger.
+  Long,    // Either 32 or 64 bits.
+  IntX,    // Any integer type.
+  Int64,
+  LLong,    // 64 bits on all targets.
+  SizeT,    // size_t.
+  SSizeT,   // POSIX ssize_t.
+  Flt,      // IEEE float.
+  Dbl,      // IEEE double.
+  LDbl,     // Any floating type (TODO: tighten this up).
+  Floating, // Any floating type.
+  Ptr,      // Any pointer type.
+  Struct,   // Any struct type.
+  Ellip,    // The ellipsis (...).
+  Same,     // Same argument type as the previous one.
+};
+
+typedef std::array<FuncArgTypeID, 8> FuncProtoTy;
+
+static const FuncProtoTy Signatures[] = {
+#define TLI_DEFINE_SIG
+#include "llvm/Analysis/TargetLibraryInfo.def"
+};
+
+static_assert(sizeof Signatures / sizeof *Signatures == LibFunc::NumLibFuncs,
+              "Missing library function signatures");
 
 static bool hasSinCosPiStret(const Triple &T) {
   // Only Darwin variants have _stret versions of combined trig functions.
@@ -134,23 +170,14 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
   TLI.setUnavailable(LibFunc_fputs_unlocked);
   TLI.setUnavailable(LibFunc_fgets_unlocked);
 
-  bool ShouldExtI32Param = false, ShouldExtI32Return = false,
-       ShouldSignExtI32Param = false;
-  // PowerPC64, Sparc64, SystemZ need signext/zeroext on i32 parameters and
-  // returns corresponding to C-level ints and unsigned ints.
-  if (T.isPPC64() || T.getArch() == Triple::sparcv9 ||
-      T.getArch() == Triple::systemz) {
-    ShouldExtI32Param = true;
-    ShouldExtI32Return = true;
-  }
-  // Mips, on the other hand, needs signext on i32 parameters corresponding
-  // to both signed and unsigned ints.
-  if (T.isMIPS()) {
-    ShouldSignExtI32Param = true;
-  }
+  bool ShouldExtI32Param, ShouldExtI32Return;
+  bool ShouldSignExtI32Param, ShouldSignExtI32Return;
+  TargetLibraryInfo::initExtensionsForTriple(ShouldExtI32Param,
+       ShouldExtI32Return, ShouldSignExtI32Param, ShouldSignExtI32Return, T);
   TLI.setShouldExtI32Param(ShouldExtI32Param);
   TLI.setShouldExtI32Return(ShouldExtI32Return);
   TLI.setShouldSignExtI32Param(ShouldSignExtI32Param);
+  TLI.setShouldSignExtI32Return(ShouldSignExtI32Return);
 
   // Let's assume by default that the size of int is 32 bits, unless the target
   // is a 16-bit architecture because then it most likely is 16 bits. If that
@@ -405,6 +432,7 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_htons);
     TLI.setUnavailable(LibFunc_lchown);
     TLI.setUnavailable(LibFunc_lstat);
+    TLI.setUnavailable(LibFunc_memrchr);
     TLI.setUnavailable(LibFunc_ntohl);
     TLI.setUnavailable(LibFunc_ntohs);
     TLI.setUnavailable(LibFunc_pread);
@@ -514,7 +542,7 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     // on Linux.
     //
     // Fall through to disable all of them.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     TLI.setUnavailable(LibFunc_exp10);
     TLI.setUnavailable(LibFunc_exp10f);
@@ -826,7 +854,7 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_vec_free);
   }
 
-  TLI.addVectorizableFunctionsFromVecLib(ClVectorLibrary);
+  TLI.addVectorizableFunctionsFromVecLib(ClVectorLibrary, T);
 }
 
 TargetLibraryInfoImpl::TargetLibraryInfoImpl() {
@@ -847,6 +875,7 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(const TargetLibraryInfoImpl &TLI)
     : CustomNames(TLI.CustomNames), ShouldExtI32Param(TLI.ShouldExtI32Param),
       ShouldExtI32Return(TLI.ShouldExtI32Return),
       ShouldSignExtI32Param(TLI.ShouldSignExtI32Param),
+      ShouldSignExtI32Return(TLI.ShouldSignExtI32Return),
       SizeOfInt(TLI.SizeOfInt) {
   memcpy(AvailableArray, TLI.AvailableArray, sizeof(AvailableArray));
   VectorDescs = TLI.VectorDescs;
@@ -858,6 +887,7 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(TargetLibraryInfoImpl &&TLI)
       ShouldExtI32Param(TLI.ShouldExtI32Param),
       ShouldExtI32Return(TLI.ShouldExtI32Return),
       ShouldSignExtI32Param(TLI.ShouldSignExtI32Param),
+      ShouldSignExtI32Return(TLI.ShouldSignExtI32Return),
       SizeOfInt(TLI.SizeOfInt) {
   std::move(std::begin(TLI.AvailableArray), std::end(TLI.AvailableArray),
             AvailableArray);
@@ -870,6 +900,7 @@ TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(const TargetLibraryInfoI
   ShouldExtI32Param = TLI.ShouldExtI32Param;
   ShouldExtI32Return = TLI.ShouldExtI32Return;
   ShouldSignExtI32Param = TLI.ShouldSignExtI32Param;
+  ShouldSignExtI32Return = TLI.ShouldSignExtI32Return;
   SizeOfInt = TLI.SizeOfInt;
   memcpy(AvailableArray, TLI.AvailableArray, sizeof(AvailableArray));
   return *this;
@@ -880,6 +911,7 @@ TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(TargetLibraryInfoImpl &&
   ShouldExtI32Param = TLI.ShouldExtI32Param;
   ShouldExtI32Return = TLI.ShouldExtI32Return;
   ShouldSignExtI32Param = TLI.ShouldSignExtI32Param;
+  ShouldSignExtI32Return = TLI.ShouldSignExtI32Return;
   SizeOfInt = TLI.SizeOfInt;
   std::move(std::begin(TLI.AvailableArray), std::end(TLI.AvailableArray),
             AvailableArray);
@@ -912,895 +944,157 @@ bool TargetLibraryInfoImpl::getLibFunc(StringRef funcName, LibFunc &F) const {
   return false;
 }
 
+// Return true if ArgTy matches Ty.
+
+static bool matchType(FuncArgTypeID ArgTy, const Type *Ty, unsigned IntBits,
+                      unsigned SizeTBits) {
+  switch (ArgTy) {
+  case Void:
+    return Ty->isVoidTy();
+  case Bool:
+    return Ty->isIntegerTy(8);
+  case Int16:
+    return Ty->isIntegerTy(16);
+  case Int32:
+    return Ty->isIntegerTy(32);
+  case Int:
+    return Ty->isIntegerTy(IntBits);
+  case IntPlus:
+    return Ty->isIntegerTy() && Ty->getPrimitiveSizeInBits() >= IntBits;
+  case IntX:
+    return Ty->isIntegerTy();
+  case Long:
+    // TODO: Figure out and use long size.
+    return Ty->isIntegerTy() && Ty->getPrimitiveSizeInBits() >= IntBits;
+  case Int64:
+    return Ty->isIntegerTy(64);
+  case LLong:
+    return Ty->isIntegerTy(64);
+  case SizeT:
+  case SSizeT:
+    return Ty->isIntegerTy(SizeTBits);
+  case Flt:
+    return Ty->isFloatTy();
+  case Dbl:
+    return Ty->isDoubleTy();
+    // TODO: Tighten this up.
+  case LDbl:
+    return Ty->isFloatingPointTy();
+  case Floating:
+    return Ty->isFloatingPointTy();
+  case Ptr:
+    return Ty->isPointerTy();
+  case Struct:
+    return Ty->isStructTy();
+  default:
+    break;
+  }
+
+  llvm_unreachable("Invalid type");
+}
+
 bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
                                                    LibFunc F,
                                                    const Module &M) const {
-  // FIXME: There is really no guarantee that sizeof(size_t) is equal to
-  // sizeof(int*) for every target. So the assumption used here to derive the
-  // SizeTBits based on the size of an integer pointer in address space zero
-  // isn't always valid.
-  unsigned SizeTBits = M.getDataLayout().getPointerSizeInBits(/*AddrSpace=*/0);
   unsigned NumParams = FTy.getNumParams();
 
   switch (F) {
-  case LibFunc_execl:
-  case LibFunc_execlp:
-  case LibFunc_execle:
-    return (NumParams >= 2 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy() &&
-            FTy.getReturnType()->isIntegerTy(32));
-  case LibFunc_execv:
-  case LibFunc_execvp:
-    return (NumParams == 2 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy() &&
-            FTy.getReturnType()->isIntegerTy(32));
-  case LibFunc_execvP:
-  case LibFunc_execvpe:
-  case LibFunc_execve:
-    return (NumParams == 3 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy() &&
-            FTy.getParamType(2)->isPointerTy() &&
-            FTy.getReturnType()->isIntegerTy(32));
-  case LibFunc_strlen_chk:
-    --NumParams;
-    if (!FTy.getParamType(NumParams)->isIntegerTy(SizeTBits))
-      return false;
-    LLVM_FALLTHROUGH;
-  case LibFunc_strlen:
-    return NumParams == 1 && FTy.getParamType(0)->isPointerTy() &&
-           FTy.getReturnType()->isIntegerTy(SizeTBits);
-
-  case LibFunc_strchr:
-  case LibFunc_strrchr:
-    return (NumParams == 2 && FTy.getReturnType()->isPointerTy() &&
-            FTy.getParamType(0) == FTy.getReturnType() &&
-            FTy.getParamType(1)->isIntegerTy());
-
-  case LibFunc_strtol:
-  case LibFunc_strtod:
-  case LibFunc_strtof:
-  case LibFunc_strtoul:
-  case LibFunc_strtoll:
-  case LibFunc_strtold:
-  case LibFunc_strtoull:
-    return ((NumParams == 2 || NumParams == 3) &&
-            FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy());
-  case LibFunc_strcat_chk:
-    --NumParams;
-    if (!FTy.getParamType(NumParams)->isIntegerTy(SizeTBits))
-      return false;
-    LLVM_FALLTHROUGH;
-  case LibFunc_strcat:
-    return (NumParams == 2 && FTy.getReturnType()->isPointerTy() &&
-            FTy.getParamType(0) == FTy.getReturnType() &&
-            FTy.getParamType(1) == FTy.getReturnType());
-
-  case LibFunc_strncat_chk:
-    --NumParams;
-    if (!FTy.getParamType(NumParams)->isIntegerTy(SizeTBits))
-      return false;
-    LLVM_FALLTHROUGH;
-  case LibFunc_strncat:
-    return (NumParams == 3 && FTy.getReturnType()->isPointerTy() &&
-            FTy.getParamType(0) == FTy.getReturnType() &&
-            FTy.getParamType(1) == FTy.getReturnType() &&
-            FTy.getParamType(2)->isIntegerTy(SizeTBits));
-
-  case LibFunc_strcpy_chk:
-  case LibFunc_stpcpy_chk:
-    --NumParams;
-    if (!FTy.getParamType(NumParams)->isIntegerTy(SizeTBits))
-      return false;
-    LLVM_FALLTHROUGH;
-  case LibFunc_strcpy:
-  case LibFunc_stpcpy:
-    return (NumParams == 2 && FTy.getReturnType() == FTy.getParamType(0) &&
-            FTy.getParamType(0) == FTy.getParamType(1) &&
-            FTy.getParamType(0)->isPointerTy());
-
-  case LibFunc_strlcat_chk:
-  case LibFunc_strlcpy_chk:
-    --NumParams;
-    if (!FTy.getParamType(NumParams)->isIntegerTy(SizeTBits))
-      return false;
-    LLVM_FALLTHROUGH;
-  case LibFunc_strlcat:
-  case LibFunc_strlcpy:
-    return NumParams == 3 && FTy.getReturnType()->isIntegerTy(SizeTBits) &&
-           FTy.getParamType(0)->isPointerTy() &&
-           FTy.getParamType(1)->isPointerTy() &&
-           FTy.getParamType(2)->isIntegerTy(SizeTBits);
-
-  case LibFunc_strncpy_chk:
-  case LibFunc_stpncpy_chk:
-    --NumParams;
-    if (!FTy.getParamType(NumParams)->isIntegerTy(SizeTBits))
-      return false;
-    LLVM_FALLTHROUGH;
-  case LibFunc_strncpy:
-  case LibFunc_stpncpy:
-    return (NumParams == 3 && FTy.getReturnType() == FTy.getParamType(0) &&
-            FTy.getParamType(0) == FTy.getParamType(1) &&
-            FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(2)->isIntegerTy(SizeTBits));
-
-  case LibFunc_strxfrm:
-    return (NumParams == 3 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy());
-
-  case LibFunc_strcmp:
-    return (NumParams == 2 && FTy.getReturnType()->isIntegerTy(32) &&
-            FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(0) == FTy.getParamType(1));
-
-  case LibFunc_strncmp:
-    return (NumParams == 3 && FTy.getReturnType()->isIntegerTy(32) &&
-            FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(0) == FTy.getParamType(1) &&
-            FTy.getParamType(2)->isIntegerTy(SizeTBits));
-
-  case LibFunc_strspn:
-  case LibFunc_strcspn:
-    return (NumParams == 2 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(0) == FTy.getParamType(1) &&
-            FTy.getReturnType()->isIntegerTy());
-
-  case LibFunc_strcoll:
-  case LibFunc_strcasecmp:
-  case LibFunc_strncasecmp:
-    return (NumParams >= 2 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy());
-
-  case LibFunc_strstr:
-    return (NumParams == 2 && FTy.getReturnType()->isPointerTy() &&
-            FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy());
-
-  case LibFunc_strpbrk:
-    return (NumParams == 2 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getReturnType() == FTy.getParamType(0) &&
-            FTy.getParamType(0) == FTy.getParamType(1));
-
-  case LibFunc_strtok:
-  case LibFunc_strtok_r:
-    return (NumParams >= 2 && FTy.getParamType(1)->isPointerTy());
-  case LibFunc_scanf:
-  case LibFunc_setbuf:
-  case LibFunc_setvbuf:
-    return (NumParams >= 1 && FTy.getParamType(0)->isPointerTy());
-  case LibFunc_strdup:
-  case LibFunc_strndup:
-    return (NumParams >= 1 && FTy.getReturnType()->isPointerTy() &&
-            FTy.getParamType(0)->isPointerTy());
-  case LibFunc_sscanf:
-  case LibFunc_stat:
-  case LibFunc_statvfs:
-  case LibFunc_siprintf:
-  case LibFunc_small_sprintf:
-  case LibFunc_sprintf:
-    return (NumParams >= 2 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy() &&
-            FTy.getReturnType()->isIntegerTy(32));
-
-  case LibFunc_sprintf_chk:
-    return NumParams == 4 && FTy.getParamType(0)->isPointerTy() &&
-           FTy.getParamType(1)->isIntegerTy(32) &&
-           FTy.getParamType(2)->isIntegerTy(SizeTBits) &&
-           FTy.getParamType(3)->isPointerTy() &&
-           FTy.getReturnType()->isIntegerTy(32);
-
-  case LibFunc_snprintf:
-    return NumParams == 3 && FTy.getParamType(0)->isPointerTy() &&
-           FTy.getParamType(1)->isIntegerTy(SizeTBits) &&
-           FTy.getParamType(2)->isPointerTy() &&
-           FTy.getReturnType()->isIntegerTy(32);
-
-  case LibFunc_snprintf_chk:
-    return NumParams == 5 && FTy.getParamType(0)->isPointerTy() &&
-           FTy.getParamType(1)->isIntegerTy(SizeTBits) &&
-           FTy.getParamType(2)->isIntegerTy(32) &&
-           FTy.getParamType(3)->isIntegerTy(SizeTBits) &&
-           FTy.getParamType(4)->isPointerTy() &&
-           FTy.getReturnType()->isIntegerTy(32);
-
-  case LibFunc_setitimer:
-    return (NumParams == 3 && FTy.getParamType(1)->isPointerTy() &&
-            FTy.getParamType(2)->isPointerTy());
-  case LibFunc_system:
-    return (NumParams == 1 && FTy.getParamType(0)->isPointerTy());
-  case LibFunc___kmpc_alloc_shared:
-    return NumParams == 1 && FTy.getReturnType()->isPointerTy();
-  case LibFunc_malloc:
-  case LibFunc_vec_malloc:
-    return NumParams == 1 && FTy.getParamType(0)->isIntegerTy(SizeTBits) &&
-           FTy.getReturnType()->isPointerTy();
-  case LibFunc_memcmp:
-    return NumParams == 3 && FTy.getReturnType()->isIntegerTy(32) &&
-           FTy.getParamType(0)->isPointerTy() &&
-           FTy.getParamType(1)->isPointerTy() &&
-           FTy.getParamType(2)->isIntegerTy(SizeTBits);
-
-  case LibFunc_memchr:
-  case LibFunc_memrchr:
-    return (NumParams == 3 && FTy.getReturnType()->isPointerTy() &&
-            FTy.getReturnType() == FTy.getParamType(0) &&
-            FTy.getParamType(1)->isIntegerTy(32) &&
-            FTy.getParamType(2)->isIntegerTy(SizeTBits));
-  case LibFunc_modf:
-  case LibFunc_modff:
-  case LibFunc_modfl:
-    return (NumParams >= 2 && FTy.getParamType(1)->isPointerTy());
-
-  case LibFunc_memcpy_chk:
-  case LibFunc_mempcpy_chk:
-  case LibFunc_memmove_chk:
-    --NumParams;
-    if (!FTy.getParamType(NumParams)->isIntegerTy(SizeTBits))
-      return false;
-    LLVM_FALLTHROUGH;
-  case LibFunc_memcpy:
-  case LibFunc_mempcpy:
-  case LibFunc_memmove:
-    return (NumParams == 3 && FTy.getReturnType() == FTy.getParamType(0) &&
-            FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy() &&
-            FTy.getParamType(2)->isIntegerTy(SizeTBits));
-
-  case LibFunc_memset_chk:
-    --NumParams;
-    if (!FTy.getParamType(NumParams)->isIntegerTy(SizeTBits))
-      return false;
-    LLVM_FALLTHROUGH;
-  case LibFunc_memset:
-    return (NumParams == 3 && FTy.getReturnType() == FTy.getParamType(0) &&
-            FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isIntegerTy() &&
-            FTy.getParamType(2)->isIntegerTy(SizeTBits));
-
-  case LibFunc_memccpy_chk:
-      --NumParams;
-    if (!FTy.getParamType(NumParams)->isIntegerTy(SizeTBits))
-      return false;
-    LLVM_FALLTHROUGH;
-  case LibFunc_memccpy:
-    return (NumParams >= 2 && FTy.getParamType(1)->isPointerTy());
-  case LibFunc_memalign:
-    return (FTy.getReturnType()->isPointerTy());
-  case LibFunc_realloc:
-  case LibFunc_reallocf:
-  case LibFunc_vec_realloc:
-    return (NumParams == 2 && FTy.getReturnType()->isPointerTy() &&
-            FTy.getParamType(0) == FTy.getReturnType() &&
-            FTy.getParamType(1)->isIntegerTy(SizeTBits));
-  case LibFunc_read:
-    return (NumParams == 3 && FTy.getParamType(1)->isPointerTy());
-  case LibFunc_rewind:
-  case LibFunc_rmdir:
-  case LibFunc_remove:
-  case LibFunc_realpath:
-    return (NumParams >= 1 && FTy.getParamType(0)->isPointerTy());
-  case LibFunc_rename:
-    return (NumParams >= 2 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy());
-  case LibFunc_readlink:
-    return (NumParams >= 2 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy());
-  case LibFunc_write:
-    return (NumParams == 3 && FTy.getParamType(1)->isPointerTy());
-  case LibFunc_aligned_alloc:
-    return (NumParams == 2 && FTy.getReturnType()->isPointerTy());
-  case LibFunc_bcopy:
-  case LibFunc_bcmp:
-    return (NumParams == 3 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy());
-  case LibFunc_bzero:
-    return (NumParams == 2 && FTy.getParamType(0)->isPointerTy());
-  case LibFunc_calloc:
-  case LibFunc_vec_calloc:
-    return (NumParams == 2 && FTy.getReturnType()->isPointerTy() &&
-            FTy.getParamType(0) == FTy.getParamType(1));
-
-  case LibFunc_atof:
-  case LibFunc_atoi:
-  case LibFunc_atol:
-  case LibFunc_atoll:
-  case LibFunc_ferror:
-  case LibFunc_getenv:
-  case LibFunc_getpwnam:
-  case LibFunc_iprintf:
-  case LibFunc_small_printf:
-  case LibFunc_pclose:
-  case LibFunc_perror:
-  case LibFunc_printf:
-  case LibFunc_puts:
-  case LibFunc_uname:
-  case LibFunc_under_IO_getc:
-  case LibFunc_unlink:
-  case LibFunc_unsetenv:
-    return (NumParams == 1 && FTy.getParamType(0)->isPointerTy());
-
-  case LibFunc_access:
-  case LibFunc_chmod:
-  case LibFunc_chown:
-  case LibFunc_clearerr:
-  case LibFunc_closedir:
-  case LibFunc_ctermid:
-  case LibFunc_fclose:
-  case LibFunc_feof:
-  case LibFunc_fflush:
-  case LibFunc_fgetc:
-  case LibFunc_fgetc_unlocked:
-  case LibFunc_fileno:
-  case LibFunc_flockfile:
-  case LibFunc_free:
-  case LibFunc_fseek:
-  case LibFunc_fseeko64:
-  case LibFunc_fseeko:
-  case LibFunc_fsetpos:
-  case LibFunc_ftell:
-  case LibFunc_ftello64:
-  case LibFunc_ftello:
-  case LibFunc_ftrylockfile:
-  case LibFunc_funlockfile:
-  case LibFunc_getc:
-  case LibFunc_getc_unlocked:
-  case LibFunc_getlogin_r:
-  case LibFunc_mkdir:
-  case LibFunc_mktime:
-  case LibFunc_times:
-  case LibFunc_vec_free:
-    return (NumParams != 0 && FTy.getParamType(0)->isPointerTy());
-  case LibFunc___kmpc_free_shared:
-    return (NumParams == 2 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isIntegerTy(SizeTBits));
-
-  case LibFunc_fopen:
-    return (NumParams == 2 && FTy.getReturnType()->isPointerTy() &&
-            FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy());
-  case LibFunc_fork:
-    return (NumParams == 0 && FTy.getReturnType()->isIntegerTy(32));
-  case LibFunc_fdopen:
-    return (NumParams == 2 && FTy.getReturnType()->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy());
-  case LibFunc_fputc:
-  case LibFunc_fputc_unlocked:
-  case LibFunc_fstat:
-  case LibFunc_frexp:
-  case LibFunc_frexpf:
-  case LibFunc_frexpl:
-  case LibFunc_fstatvfs:
-    return (NumParams == 2 && FTy.getParamType(1)->isPointerTy());
-  case LibFunc_fgets:
-  case LibFunc_fgets_unlocked:
-    return (NumParams == 3 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(2)->isPointerTy());
-  case LibFunc_fread:
-  case LibFunc_fread_unlocked:
-    return (NumParams == 4 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(3)->isPointerTy());
-  case LibFunc_fwrite:
-  case LibFunc_fwrite_unlocked:
-    return (NumParams == 4 && FTy.getReturnType()->isIntegerTy() &&
-            FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isIntegerTy() &&
-            FTy.getParamType(2)->isIntegerTy() &&
-            FTy.getParamType(3)->isPointerTy());
-  case LibFunc_fputs:
-  case LibFunc_fputs_unlocked:
-    return (NumParams >= 2 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy());
-  case LibFunc_fscanf:
-  case LibFunc_fiprintf:
-  case LibFunc_small_fprintf:
-  case LibFunc_fprintf:
-    return (NumParams >= 2 && FTy.getReturnType()->isIntegerTy() &&
-            FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy());
-  case LibFunc_fgetpos:
-    return (NumParams >= 2 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy());
-  case LibFunc_getchar:
-  case LibFunc_getchar_unlocked:
-    return (NumParams == 0 && FTy.getReturnType()->isIntegerTy());
-  case LibFunc_gets:
-    return (NumParams == 1 && FTy.getParamType(0)->isPointerTy());
-  case LibFunc_getitimer:
-    return (NumParams == 2 && FTy.getParamType(1)->isPointerTy());
-  case LibFunc_ungetc:
-    return (NumParams == 2 && FTy.getParamType(1)->isPointerTy());
-  case LibFunc_utime:
-  case LibFunc_utimes:
-    return (NumParams == 2 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy());
-  case LibFunc_putc:
-  case LibFunc_putc_unlocked:
-    return (NumParams == 2 && FTy.getParamType(1)->isPointerTy());
-  case LibFunc_pread:
-  case LibFunc_pwrite:
-    return (NumParams == 4 && FTy.getParamType(1)->isPointerTy());
-  case LibFunc_popen:
-    return (NumParams == 2 && FTy.getReturnType()->isPointerTy() &&
-            FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy());
-  case LibFunc_vscanf:
-    return (NumParams == 2 && FTy.getParamType(1)->isPointerTy());
-  case LibFunc_vsscanf:
-    return (NumParams == 3 && FTy.getParamType(1)->isPointerTy() &&
-            FTy.getParamType(2)->isPointerTy());
-  case LibFunc_vfscanf:
-    return (NumParams == 3 && FTy.getParamType(1)->isPointerTy() &&
-            FTy.getParamType(2)->isPointerTy());
-  case LibFunc_valloc:
-    return (FTy.getReturnType()->isPointerTy());
-  case LibFunc_vprintf:
-    return (NumParams == 2 && FTy.getParamType(0)->isPointerTy());
-  case LibFunc_vfprintf:
-  case LibFunc_vsprintf:
-    return (NumParams == 3 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy());
-  case LibFunc_vsprintf_chk:
-    return NumParams == 5 && FTy.getParamType(0)->isPointerTy() &&
-           FTy.getParamType(1)->isIntegerTy(32) &&
-           FTy.getParamType(2)->isIntegerTy(SizeTBits) && FTy.getParamType(3)->isPointerTy();
-  case LibFunc_vsnprintf:
-    return (NumParams == 4 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(2)->isPointerTy());
-  case LibFunc_vsnprintf_chk:
-    return NumParams == 6 && FTy.getParamType(0)->isPointerTy() &&
-           FTy.getParamType(2)->isIntegerTy(32) &&
-           FTy.getParamType(3)->isIntegerTy(SizeTBits) && FTy.getParamType(4)->isPointerTy();
-  case LibFunc_open:
-    return (NumParams >= 2 && FTy.getParamType(0)->isPointerTy());
-  case LibFunc_opendir:
-    return (NumParams == 1 && FTy.getReturnType()->isPointerTy() &&
-            FTy.getParamType(0)->isPointerTy());
-  case LibFunc_tmpfile:
-    return (FTy.getReturnType()->isPointerTy());
-  case LibFunc_htonl:
-  case LibFunc_ntohl:
-    return (NumParams == 1 && FTy.getReturnType()->isIntegerTy(32) &&
-            FTy.getReturnType() == FTy.getParamType(0));
-  case LibFunc_htons:
-  case LibFunc_ntohs:
-    return (NumParams == 1 && FTy.getReturnType()->isIntegerTy(16) &&
-            FTy.getReturnType() == FTy.getParamType(0));
-  case LibFunc_lstat:
-    return (NumParams == 2 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy());
-  case LibFunc_lchown:
-    return (NumParams == 3 && FTy.getParamType(0)->isPointerTy());
-  case LibFunc_qsort:
-    return (NumParams == 4 && FTy.getParamType(3)->isPointerTy());
-  case LibFunc_dunder_strdup:
-  case LibFunc_dunder_strndup:
-    return (NumParams >= 1 && FTy.getReturnType()->isPointerTy() &&
-            FTy.getParamType(0)->isPointerTy());
-  case LibFunc_dunder_strtok_r:
-    return (NumParams == 3 && FTy.getParamType(1)->isPointerTy());
-  case LibFunc_under_IO_putc:
-    return (NumParams == 2 && FTy.getParamType(1)->isPointerTy());
-  case LibFunc_dunder_isoc99_scanf:
-    return (NumParams >= 1 && FTy.getParamType(0)->isPointerTy());
-  case LibFunc_stat64:
-  case LibFunc_lstat64:
-  case LibFunc_statvfs64:
-    return (NumParams == 2 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy());
-  case LibFunc_dunder_isoc99_sscanf:
-    return (NumParams >= 2 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy());
-  case LibFunc_fopen64:
-    return (NumParams == 2 && FTy.getReturnType()->isPointerTy() &&
-            FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy());
-  case LibFunc_tmpfile64:
-    return (FTy.getReturnType()->isPointerTy());
-  case LibFunc_fstat64:
-  case LibFunc_fstatvfs64:
-    return (NumParams == 2 && FTy.getParamType(1)->isPointerTy());
-  case LibFunc_open64:
-    return (NumParams >= 2 && FTy.getParamType(0)->isPointerTy());
-  case LibFunc_gettimeofday:
-    return (NumParams == 2 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy());
-
-  // new(unsigned int);
-  case LibFunc_Znwj:
-  // new(unsigned long);
-  case LibFunc_Znwm:
-  // new[](unsigned int);
-  case LibFunc_Znaj:
-  // new[](unsigned long);
-  case LibFunc_Znam:
-  // new(unsigned int);
-  case LibFunc_msvc_new_int:
-  // new(unsigned long long);
-  case LibFunc_msvc_new_longlong:
-  // new[](unsigned int);
-  case LibFunc_msvc_new_array_int:
-  // new[](unsigned long long);
-  case LibFunc_msvc_new_array_longlong:
-    return (NumParams == 1 && FTy.getReturnType()->isPointerTy());
-
-  // new(unsigned int, nothrow);
-  case LibFunc_ZnwjRKSt9nothrow_t:
-  // new(unsigned long, nothrow);
-  case LibFunc_ZnwmRKSt9nothrow_t:
-  // new[](unsigned int, nothrow);
-  case LibFunc_ZnajRKSt9nothrow_t:
-  // new[](unsigned long, nothrow);
-  case LibFunc_ZnamRKSt9nothrow_t:
-  // new(unsigned int, nothrow);
-  case LibFunc_msvc_new_int_nothrow:
-  // new(unsigned long long, nothrow);
-  case LibFunc_msvc_new_longlong_nothrow:
-  // new[](unsigned int, nothrow);
-  case LibFunc_msvc_new_array_int_nothrow:
-  // new[](unsigned long long, nothrow);
-  case LibFunc_msvc_new_array_longlong_nothrow:
-  // new(unsigned int, align_val_t)
-  case LibFunc_ZnwjSt11align_val_t:
-  // new(unsigned long, align_val_t)
-  case LibFunc_ZnwmSt11align_val_t:
-  // new[](unsigned int, align_val_t)
-  case LibFunc_ZnajSt11align_val_t:
-  // new[](unsigned long, align_val_t)
-  case LibFunc_ZnamSt11align_val_t:
-    return (NumParams == 2 && FTy.getReturnType()->isPointerTy());
-
-  // new(unsigned int, align_val_t, nothrow)
-  case LibFunc_ZnwjSt11align_val_tRKSt9nothrow_t:
-  // new(unsigned long, align_val_t, nothrow)
-  case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t:
-  // new[](unsigned int, align_val_t, nothrow)
-  case LibFunc_ZnajSt11align_val_tRKSt9nothrow_t:
-  // new[](unsigned long, align_val_t, nothrow)
-  case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t:
-    return (NumParams == 3 && FTy.getReturnType()->isPointerTy());
-
-  // void operator delete[](void*);
-  case LibFunc_ZdaPv:
-  // void operator delete(void*);
-  case LibFunc_ZdlPv:
-  // void operator delete[](void*);
-  case LibFunc_msvc_delete_array_ptr32:
-  // void operator delete[](void*);
-  case LibFunc_msvc_delete_array_ptr64:
-  // void operator delete(void*);
-  case LibFunc_msvc_delete_ptr32:
-  // void operator delete(void*);
-  case LibFunc_msvc_delete_ptr64:
-    return (NumParams == 1 && FTy.getParamType(0)->isPointerTy());
-
-  // void operator delete[](void*, nothrow);
-  case LibFunc_ZdaPvRKSt9nothrow_t:
-  // void operator delete[](void*, unsigned int);
-  case LibFunc_ZdaPvj:
-  // void operator delete[](void*, unsigned long);
-  case LibFunc_ZdaPvm:
-  // void operator delete(void*, nothrow);
-  case LibFunc_ZdlPvRKSt9nothrow_t:
-  // void operator delete(void*, unsigned int);
-  case LibFunc_ZdlPvj:
-  // void operator delete(void*, unsigned long);
-  case LibFunc_ZdlPvm:
-  // void operator delete(void*, align_val_t)
-  case LibFunc_ZdlPvSt11align_val_t:
-  // void operator delete[](void*, align_val_t)
-  case LibFunc_ZdaPvSt11align_val_t:
-  // void operator delete[](void*, unsigned int);
-  case LibFunc_msvc_delete_array_ptr32_int:
-  // void operator delete[](void*, nothrow);
-  case LibFunc_msvc_delete_array_ptr32_nothrow:
-  // void operator delete[](void*, unsigned long long);
-  case LibFunc_msvc_delete_array_ptr64_longlong:
-  // void operator delete[](void*, nothrow);
-  case LibFunc_msvc_delete_array_ptr64_nothrow:
-  // void operator delete(void*, unsigned int);
-  case LibFunc_msvc_delete_ptr32_int:
-  // void operator delete(void*, nothrow);
-  case LibFunc_msvc_delete_ptr32_nothrow:
-  // void operator delete(void*, unsigned long long);
-  case LibFunc_msvc_delete_ptr64_longlong:
-  // void operator delete(void*, nothrow);
-  case LibFunc_msvc_delete_ptr64_nothrow:
-    return (NumParams == 2 && FTy.getParamType(0)->isPointerTy());
-
-  // void operator delete(void*, align_val_t, nothrow)
-  case LibFunc_ZdlPvSt11align_val_tRKSt9nothrow_t:
-  // void operator delete[](void*, align_val_t, nothrow)
-  case LibFunc_ZdaPvSt11align_val_tRKSt9nothrow_t:
-  // void operator delete(void*, unsigned int, align_val_t)
-  case LibFunc_ZdlPvjSt11align_val_t:
-  // void operator delete(void*, unsigned long, align_val_t)
-  case LibFunc_ZdlPvmSt11align_val_t:
-  // void operator delete[](void*, unsigned int, align_val_t);
-  case LibFunc_ZdaPvjSt11align_val_t:
-  // void operator delete[](void*, unsigned long, align_val_t);
-  case LibFunc_ZdaPvmSt11align_val_t:
-    return (NumParams == 3 && FTy.getParamType(0)->isPointerTy());
-
-  // void __atomic_load(size_t, void *, void *, int)
-  case LibFunc_atomic_load:
-  // void __atomic_store(size_t, void *, void *, int)
-  case LibFunc_atomic_store:
-    return (NumParams == 4 && FTy.getParamType(0)->isIntegerTy() &&
-            FTy.getParamType(1)->isPointerTy() &&
-            FTy.getParamType(2)->isPointerTy() &&
-            FTy.getParamType(3)->isIntegerTy());
-
-  case LibFunc_memset_pattern4:
-  case LibFunc_memset_pattern8:
-  case LibFunc_memset_pattern16:
-    return (!FTy.isVarArg() && NumParams == 3 &&
-            FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy() &&
-            FTy.getParamType(2)->isIntegerTy());
-
-  case LibFunc_cxa_guard_abort:
-  case LibFunc_cxa_guard_acquire:
-  case LibFunc_cxa_guard_release:
-  case LibFunc_nvvm_reflect:
-    return (NumParams == 1 && FTy.getParamType(0)->isPointerTy());
-
-  case LibFunc_sincospi_stret:
-  case LibFunc_sincospif_stret:
-    return (NumParams == 1 && FTy.getParamType(0)->isFloatingPointTy());
-
-  case LibFunc_acos:
-  case LibFunc_acos_finite:
-  case LibFunc_acosf:
-  case LibFunc_acosf_finite:
-  case LibFunc_acosh:
-  case LibFunc_acosh_finite:
-  case LibFunc_acoshf:
-  case LibFunc_acoshf_finite:
-  case LibFunc_acoshl:
-  case LibFunc_acoshl_finite:
-  case LibFunc_acosl:
-  case LibFunc_acosl_finite:
-  case LibFunc_asin:
-  case LibFunc_asin_finite:
-  case LibFunc_asinf:
-  case LibFunc_asinf_finite:
-  case LibFunc_asinh:
-  case LibFunc_asinhf:
-  case LibFunc_asinhl:
-  case LibFunc_asinl:
-  case LibFunc_asinl_finite:
-  case LibFunc_atan:
-  case LibFunc_atanf:
-  case LibFunc_atanh:
-  case LibFunc_atanh_finite:
-  case LibFunc_atanhf:
-  case LibFunc_atanhf_finite:
-  case LibFunc_atanhl:
-  case LibFunc_atanhl_finite:
-  case LibFunc_atanl:
-  case LibFunc_cbrt:
-  case LibFunc_cbrtf:
-  case LibFunc_cbrtl:
-  case LibFunc_ceil:
-  case LibFunc_ceilf:
-  case LibFunc_ceill:
-  case LibFunc_cos:
-  case LibFunc_cosf:
-  case LibFunc_cosh:
-  case LibFunc_cosh_finite:
-  case LibFunc_coshf:
-  case LibFunc_coshf_finite:
-  case LibFunc_coshl:
-  case LibFunc_coshl_finite:
-  case LibFunc_cosl:
-  case LibFunc_exp10:
-  case LibFunc_exp10_finite:
-  case LibFunc_exp10f:
-  case LibFunc_exp10f_finite:
-  case LibFunc_exp10l:
-  case LibFunc_exp10l_finite:
-  case LibFunc_exp2:
-  case LibFunc_exp2_finite:
-  case LibFunc_exp2f:
-  case LibFunc_exp2f_finite:
-  case LibFunc_exp2l:
-  case LibFunc_exp2l_finite:
-  case LibFunc_exp:
-  case LibFunc_exp_finite:
-  case LibFunc_expf:
-  case LibFunc_expf_finite:
-  case LibFunc_expl:
-  case LibFunc_expl_finite:
-  case LibFunc_expm1:
-  case LibFunc_expm1f:
-  case LibFunc_expm1l:
-  case LibFunc_fabs:
-  case LibFunc_fabsf:
-  case LibFunc_fabsl:
-  case LibFunc_floor:
-  case LibFunc_floorf:
-  case LibFunc_floorl:
-  case LibFunc_log10:
-  case LibFunc_log10_finite:
-  case LibFunc_log10f:
-  case LibFunc_log10f_finite:
-  case LibFunc_log10l:
-  case LibFunc_log10l_finite:
-  case LibFunc_log1p:
-  case LibFunc_log1pf:
-  case LibFunc_log1pl:
-  case LibFunc_log2:
-  case LibFunc_log2_finite:
-  case LibFunc_log2f:
-  case LibFunc_log2f_finite:
-  case LibFunc_log2l:
-  case LibFunc_log2l_finite:
-  case LibFunc_log:
-  case LibFunc_log_finite:
-  case LibFunc_logb:
-  case LibFunc_logbf:
-  case LibFunc_logbl:
-  case LibFunc_logf:
-  case LibFunc_logf_finite:
-  case LibFunc_logl:
-  case LibFunc_logl_finite:
-  case LibFunc_nearbyint:
-  case LibFunc_nearbyintf:
-  case LibFunc_nearbyintl:
-  case LibFunc_rint:
-  case LibFunc_rintf:
-  case LibFunc_rintl:
-  case LibFunc_round:
-  case LibFunc_roundf:
-  case LibFunc_roundl:
-  case LibFunc_roundeven:
-  case LibFunc_roundevenf:
-  case LibFunc_roundevenl:
-  case LibFunc_sin:
-  case LibFunc_sinf:
-  case LibFunc_sinh:
-  case LibFunc_sinh_finite:
-  case LibFunc_sinhf:
-  case LibFunc_sinhf_finite:
-  case LibFunc_sinhl:
-  case LibFunc_sinhl_finite:
-  case LibFunc_sinl:
-  case LibFunc_sqrt:
-  case LibFunc_sqrt_finite:
-  case LibFunc_sqrtf:
-  case LibFunc_sqrtf_finite:
-  case LibFunc_sqrtl:
-  case LibFunc_sqrtl_finite:
-  case LibFunc_tan:
-  case LibFunc_tanf:
-  case LibFunc_tanh:
-  case LibFunc_tanhf:
-  case LibFunc_tanhl:
-  case LibFunc_tanl:
-  case LibFunc_trunc:
-  case LibFunc_truncf:
-  case LibFunc_truncl:
-    return (NumParams == 1 && FTy.getReturnType()->isFloatingPointTy() &&
-            FTy.getReturnType() == FTy.getParamType(0));
-
-  case LibFunc_atan2:
-  case LibFunc_atan2_finite:
-  case LibFunc_atan2f:
-  case LibFunc_atan2f_finite:
-  case LibFunc_atan2l:
-  case LibFunc_atan2l_finite:
-  case LibFunc_fmin:
-  case LibFunc_fminf:
-  case LibFunc_fminl:
-  case LibFunc_fmax:
-  case LibFunc_fmaxf:
-  case LibFunc_fmaxl:
-  case LibFunc_fmod:
-  case LibFunc_fmodf:
-  case LibFunc_fmodl:
-  case LibFunc_remainder:
-  case LibFunc_remainderf:
-  case LibFunc_remainderl:
-  case LibFunc_copysign:
-  case LibFunc_copysignf:
-  case LibFunc_copysignl:
-  case LibFunc_pow:
-  case LibFunc_pow_finite:
-  case LibFunc_powf:
-  case LibFunc_powf_finite:
-  case LibFunc_powl:
-  case LibFunc_powl_finite:
-    return (NumParams == 2 && FTy.getReturnType()->isFloatingPointTy() &&
-            FTy.getReturnType() == FTy.getParamType(0) &&
-            FTy.getReturnType() == FTy.getParamType(1));
-
-  case LibFunc_ldexp:
-  case LibFunc_ldexpf:
-  case LibFunc_ldexpl:
-    return (NumParams == 2 && FTy.getReturnType()->isFloatingPointTy() &&
-            FTy.getReturnType() == FTy.getParamType(0) &&
-            FTy.getParamType(1)->isIntegerTy(getIntSize()));
-
-  case LibFunc_ffs:
-  case LibFunc_ffsl:
-  case LibFunc_ffsll:
-  case LibFunc_fls:
-  case LibFunc_flsl:
-  case LibFunc_flsll:
-    return (NumParams == 1 && FTy.getReturnType()->isIntegerTy(32) &&
-            FTy.getParamType(0)->isIntegerTy());
-
-  case LibFunc_isdigit:
-  case LibFunc_isascii:
-  case LibFunc_toascii:
-  case LibFunc_putchar:
-  case LibFunc_putchar_unlocked:
-    return (NumParams == 1 && FTy.getReturnType()->isIntegerTy(32) &&
-            FTy.getReturnType() == FTy.getParamType(0));
-
-  case LibFunc_abs:
-  case LibFunc_labs:
-  case LibFunc_llabs:
-    return (NumParams == 1 && FTy.getReturnType()->isIntegerTy() &&
-            FTy.getReturnType() == FTy.getParamType(0));
-
-  case LibFunc_cxa_atexit:
-    return (NumParams == 3 && FTy.getReturnType()->isIntegerTy() &&
-            FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy() &&
-            FTy.getParamType(2)->isPointerTy());
-
-  case LibFunc_sinpi:
-  case LibFunc_cospi:
-    return (NumParams == 1 && FTy.getReturnType()->isDoubleTy() &&
-            FTy.getReturnType() == FTy.getParamType(0));
-
-  case LibFunc_sinpif:
-  case LibFunc_cospif:
-    return (NumParams == 1 && FTy.getReturnType()->isFloatTy() &&
-            FTy.getReturnType() == FTy.getParamType(0));
-
-  case LibFunc_strnlen:
-    return (NumParams == 2 && FTy.getReturnType() == FTy.getParamType(1) &&
-            FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isIntegerTy(SizeTBits));
-
-  case LibFunc_posix_memalign:
-    return (NumParams == 3 && FTy.getReturnType()->isIntegerTy(32) &&
-            FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isIntegerTy(SizeTBits) &&
-            FTy.getParamType(2)->isIntegerTy(SizeTBits));
-
-  case LibFunc_wcslen:
-    return (NumParams == 1 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getReturnType()->isIntegerTy());
-
+    // Special handling for <complex.h> functions:
   case LibFunc_cabs:
   case LibFunc_cabsf:
   case LibFunc_cabsl: {
-    Type* RetTy = FTy.getReturnType();
+    Type *RetTy = FTy.getReturnType();
     if (!RetTy->isFloatingPointTy())
       return false;
 
+    Type *ParamTy = FTy.getParamType(0);
     // NOTE: These prototypes are target specific and currently support
     // "complex" passed as an array or discrete real & imaginary parameters.
     // Add other calling conventions to enable libcall optimizations.
     if (NumParams == 1)
-      return (FTy.getParamType(0)->isArrayTy() &&
-              FTy.getParamType(0)->getArrayNumElements() == 2 &&
-              FTy.getParamType(0)->getArrayElementType() == RetTy);
+      return (ParamTy->isArrayTy() && ParamTy->getArrayNumElements() == 2 &&
+              ParamTy->getArrayElementType() == RetTy);
     else if (NumParams == 2)
-      return (FTy.getParamType(0) == RetTy && FTy.getParamType(1) == RetTy);
-    else
-      return false;
+      return ParamTy == RetTy && FTy.getParamType(1) == RetTy;
+
+    return false;
   }
-  case LibFunc::NumLibFuncs:
-  case LibFunc::NotLibFunc:
+    // Special handling for the sincospi functions that return either
+    // a struct or vector:
+  case LibFunc_sincospi_stret:
+  case LibFunc_sincospif_stret: {
+    if (NumParams != 1)
+      return false;
+
+    Type *RetTy = FTy.getReturnType();
+    Type *ParamTy = FTy.getParamType(0);
+    if (auto *Ty = dyn_cast<StructType>(RetTy)) {
+      if (Ty->getNumElements() != 2)
+        return false;
+      return (Ty->getElementType(0) == ParamTy &&
+              Ty->getElementType(1) == ParamTy);
+    }
+
+    if (auto *Ty = dyn_cast<FixedVectorType>(RetTy)) {
+      if (Ty->getNumElements() != 2)
+        return false;
+      return Ty->getElementType() == ParamTy;
+    }
+
+    return false;
+  }
+
+  default:
     break;
   }
 
-  llvm_unreachable("Invalid libfunc");
+  unsigned IntBits = getIntSize();
+  unsigned SizeTBits = getSizeTSize(M);
+  unsigned Idx = 0;
+
+  // Iterate over the type ids in the function prototype, matching each
+  // against the function's type FTy, starting with its return type.
+  // Return true if both match in number and kind, inclduing the ellipsis.
+  Type *Ty = FTy.getReturnType(), *LastTy = Ty;
+  const auto &ProtoTypes = Signatures[F];
+  for (auto TyID : ProtoTypes) {
+    if (Idx && TyID == Void)
+      // Except in the first position where it designates the function's
+      // return type Void ends the argument list.
+      break;
+
+    if (TyID == Ellip) {
+      // The ellipsis ends the protoype list but is not a part of FTy's
+      // argument list.  Except when it's last it must be followed by
+      // Void.
+      assert(Idx == ProtoTypes.size() - 1 || ProtoTypes[Idx + 1] == Void);
+      return FTy.isFunctionVarArg();
+    }
+
+    if (TyID == Same) {
+      assert(Idx != 0 && "Type ID 'Same' must not be first!");
+      if (Ty != LastTy)
+        return false;
+    } else {
+      if (!Ty || !matchType(TyID, Ty, IntBits, SizeTBits))
+        return false;
+      LastTy = Ty;
+    }
+
+    if (Idx == NumParams) {
+      // There's at least one and at most two more type ids than there are
+      // arguments in FTy's argument list.
+      Ty = nullptr;
+      ++Idx;
+      continue;
+    }
+
+    Ty = FTy.getParamType(Idx++);
+  }
+
+  // Return success only if all entries on both lists have been processed
+  // and the function is not a variadic one.
+  return Idx == NumParams + 1 && !FTy.isFunctionVarArg();
 }
 
 bool TargetLibraryInfoImpl::getLibFunc(const Function &FDecl,
@@ -1842,7 +1136,7 @@ void TargetLibraryInfoImpl::addVectorizableFunctions(ArrayRef<VecDesc> Fns) {
 }
 
 void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
-    enum VectorLibrary VecLib) {
+    enum VectorLibrary VecLib, const llvm::Triple &TargetTriple) {
   switch (VecLib) {
   case Accelerate: {
     const VecDesc VecFuncs[] = {
@@ -1882,6 +1176,27 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
     #include "llvm/Analysis/VecFuncs.def"
     };
     addVectorizableFunctions(VecFuncs);
+    break;
+  }
+  case SLEEFGNUABI: {
+    const VecDesc VecFuncs_VF2[] = {
+#define TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS
+#include "llvm/Analysis/VecFuncs.def"
+    };
+    const VecDesc VecFuncs_VF4[] = {
+#define TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
+#include "llvm/Analysis/VecFuncs.def"
+    };
+
+    switch (TargetTriple.getArch()) {
+    default:
+      break;
+    case llvm::Triple::aarch64:
+    case llvm::Triple::aarch64_be:
+      addVectorizableFunctions(VecFuncs_VF2);
+      addVectorizableFunctions(VecFuncs_VF4);
+      break;
+    }
     break;
   }
   case NoLibrary:
@@ -1928,6 +1243,22 @@ unsigned TargetLibraryInfoImpl::getWCharSize(const Module &M) const {
       M.getModuleFlag("wchar_size")))
     return cast<ConstantInt>(ShortWChar->getValue())->getZExtValue();
   return 0;
+}
+
+unsigned TargetLibraryInfoImpl::getSizeTSize(const Module &M) const {
+  // There is really no guarantee that sizeof(size_t) is equal to sizeof(int*).
+  // If that isn't true then it should be possible to derive the SizeTTy from
+  // the target triple here instead and do an early return.
+
+  // Historically LLVM assume that size_t has same size as intptr_t (hence
+  // deriving the size from sizeof(int*) in address space zero). This should
+  // work for most targets. For future consideration: DataLayout also implement
+  // getIndexSizeInBits which might map better to size_t compared to
+  // getPointerSizeInBits. Hard coding address space zero here might be
+  // unfortunate as well. Maybe getDefaultGlobalsAddressSpace() or
+  // getAllocaAddrSpace() is better.
+  unsigned AddressSpace = 0;
+  return M.getDataLayout().getPointerSizeInBits(AddressSpace);
 }
 
 TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass()

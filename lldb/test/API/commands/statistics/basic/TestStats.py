@@ -55,30 +55,6 @@ class TestCase(TestBase):
         self.assertEqual(success_fail_dict['failures'], num_fails,
                          'make sure success count')
 
-    def get_stats(self, options=None, log_path=None):
-        """
-            Get the output of the "statistics dump" with optional extra options
-            and return the JSON as a python dictionary.
-        """
-        # If log_path is set, open the path and emit the output of the command
-        # for debugging purposes.
-        if log_path is not None:
-            f = open(log_path, 'w')
-        else:
-            f = None
-        return_obj = lldb.SBCommandReturnObject()
-        command = "statistics dump "
-        if options is not None:
-            command += options
-        if f:
-            f.write('(lldb) %s\n' % (command))
-        self.ci.HandleCommand(command, return_obj, False)
-        metrics_json = return_obj.GetOutput()
-        if f:
-            f.write(metrics_json)
-        return json.loads(metrics_json)
-
-
     def get_target_stats(self, debug_stats):
         if "targets" in debug_stats:
             return debug_stats["targets"][0]
@@ -509,7 +485,6 @@ class TestCase(TestBase):
         exe_name = 'a.out'
         exe = self.getBuildArtifact(exe_name)
         dsym = self.getBuildArtifact(exe_name + ".dSYM")
-        print("carp: dsym = '%s'" % (dsym))
         # Make sure the executable file exists after building.
         self.assertEqual(os.path.exists(exe), True)
         # Make sure the dSYM file doesn't exist after building.
@@ -550,3 +525,61 @@ class TestCase(TestBase):
             self.assertNotEqual(o_module, None)
             # Make sure each .o file has some debug info bytes.
             self.assertGreater(o_module['debugInfoByteSize'], 0)
+
+    @skipUnlessDarwin
+    @no_debug_info_test
+    def test_had_frame_variable_errors(self):
+        """
+            Test that if we have frame variable errors that we see this in the
+            statistics for the module that had issues.
+        """
+        self.build(debug_info="dwarf")
+        exe_name = 'a.out'
+        exe = self.getBuildArtifact(exe_name)
+        dsym = self.getBuildArtifact(exe_name + ".dSYM")
+        main_obj = self.getBuildArtifact('main.o')
+        # Make sure the executable file exists after building.
+        self.assertEqual(os.path.exists(exe), True)
+        # Make sure the dSYM file doesn't exist after building.
+        self.assertEqual(os.path.isdir(dsym), False)
+        # Make sure the main.o object file exists after building.
+        self.assertEqual(os.path.exists(main_obj), True)
+
+        # Delete the main.o file that contains the debug info so we force an
+        # error when we run to main and try to get variables
+        os.unlink(main_obj)
+
+        (target, process, thread, bkpt) = lldbutil.run_to_name_breakpoint(self, 'main')
+
+        # Get stats and verify we had errors.
+        stats = self.get_stats()
+        exe_stats = self.find_module_in_metrics(exe, stats)
+        self.assertTrue(exe_stats is not None)
+
+        # Make sure we have "debugInfoHadVariableErrors" variable that is set to
+        # false before failing to get local variables due to missing .o file.
+        self.assertEqual(exe_stats['debugInfoHadVariableErrors'], False)
+
+        # Verify that the top level statistic that aggregates the number of
+        # modules with debugInfoHadVariableErrors is zero
+        self.assertEqual(stats['totalModuleCountWithVariableErrors'], 0)
+
+        # Try and fail to get variables
+        vars = thread.GetFrameAtIndex(0).GetVariables(True, True, False, True)
+
+        # Make sure we got an error back that indicates that variables were not
+        # available
+        self.assertTrue(vars.GetError().Fail())
+
+        # Get stats and verify we had errors.
+        stats = self.get_stats()
+        exe_stats = self.find_module_in_metrics(exe, stats)
+        self.assertTrue(exe_stats is not None)
+
+        # Make sure we have "hadFrameVariableErrors" variable that is set to
+        # true after failing to get local variables due to missing .o file.
+        self.assertEqual(exe_stats['debugInfoHadVariableErrors'], True)
+
+        # Verify that the top level statistic that aggregates the number of
+        # modules with debugInfoHadVariableErrors is greater than zero
+        self.assertGreater(stats['totalModuleCountWithVariableErrors'], 0)

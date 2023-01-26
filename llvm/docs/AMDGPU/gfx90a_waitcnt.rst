@@ -24,7 +24,7 @@ The bits of this operand have the following meaning:
 
 This operand may be specified as one of the following:
 
-* An :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`. The value must be in the range 0..0xFFFF.
+* An :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`. The value must be in the range from 0 to 0xFFFF.
 * A combination of *vmcnt*, *expcnt*, *lgkmcnt* and other values described below.
 
     ====================== ======================================================================
@@ -38,7 +38,8 @@ This operand may be specified as one of the following:
     lgkmcnt_sat(<*N*>)     An LGKM_CNT value computed as min(*N*, the largest LGKM_CNT value).
     ====================== ======================================================================
 
-These values may be specified in any order. Spaces, ampersands and commas may be used as optional separators.
+These values may be specified in any order. Spaces, ampersands, and commas may be used as optional separators.
+If some values are omitted, the corresponding fields will default to their maximum value.
 
 *N* is either an
 :ref:`integer number<amdgpu_synid_integer_number>` or an

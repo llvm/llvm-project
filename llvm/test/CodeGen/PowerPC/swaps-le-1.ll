@@ -46,68 +46,52 @@ entry:
 
 vector.body:
   %index = phi i64 [ 0, %entry ], [ %index.next.3, %vector.body ]
-  %0 = getelementptr inbounds [4096 x i32], [4096 x i32]* @cb, i64 0, i64 %index
-  %1 = bitcast i32* %0 to <4 x i32>*
-  %wide.load = load <4 x i32>, <4 x i32>* %1, align 8
-  %2 = getelementptr inbounds [4096 x i32], [4096 x i32]* @cc, i64 0, i64 %index
-  %3 = bitcast i32* %2 to <4 x i32>*
-  %wide.load13 = load <4 x i32>, <4 x i32>* %3, align 8
-  %4 = add nsw <4 x i32> %wide.load13, %wide.load
-  %5 = getelementptr inbounds [4096 x i32], [4096 x i32]* @cd, i64 0, i64 %index
-  %6 = bitcast i32* %5 to <4 x i32>*
-  %wide.load14 = load <4 x i32>, <4 x i32>* %6, align 8
-  %7 = mul nsw <4 x i32> %4, %wide.load14
-  %8 = getelementptr inbounds [4096 x i32], [4096 x i32]* @ca, i64 0, i64 %index
-  %9 = bitcast i32* %8 to <4 x i32>*
-  store <4 x i32> %7, <4 x i32>* %9, align 8
+  %0 = getelementptr inbounds [4096 x i32], ptr @cb, i64 0, i64 %index
+  %wide.load = load <4 x i32>, ptr %0, align 8
+  %1 = getelementptr inbounds [4096 x i32], ptr @cc, i64 0, i64 %index
+  %wide.load13 = load <4 x i32>, ptr %1, align 8
+  %2 = add nsw <4 x i32> %wide.load13, %wide.load
+  %3 = getelementptr inbounds [4096 x i32], ptr @cd, i64 0, i64 %index
+  %wide.load14 = load <4 x i32>, ptr %3, align 8
+  %4 = mul nsw <4 x i32> %2, %wide.load14
+  %5 = getelementptr inbounds [4096 x i32], ptr @ca, i64 0, i64 %index
+  store <4 x i32> %4, ptr %5, align 8
   %index.next = add nuw nsw i64 %index, 4
-  %10 = getelementptr inbounds [4096 x i32], [4096 x i32]* @cb, i64 0, i64 %index.next
-  %11 = bitcast i32* %10 to <4 x i32>*
-  %wide.load.1 = load <4 x i32>, <4 x i32>* %11, align 8
-  %12 = getelementptr inbounds [4096 x i32], [4096 x i32]* @cc, i64 0, i64 %index.next
-  %13 = bitcast i32* %12 to <4 x i32>*
-  %wide.load13.1 = load <4 x i32>, <4 x i32>* %13, align 8
-  %14 = add nsw <4 x i32> %wide.load13.1, %wide.load.1
-  %15 = getelementptr inbounds [4096 x i32], [4096 x i32]* @cd, i64 0, i64 %index.next
-  %16 = bitcast i32* %15 to <4 x i32>*
-  %wide.load14.1 = load <4 x i32>, <4 x i32>* %16, align 8
-  %17 = mul nsw <4 x i32> %14, %wide.load14.1
-  %18 = getelementptr inbounds [4096 x i32], [4096 x i32]* @ca, i64 0, i64 %index.next
-  %19 = bitcast i32* %18 to <4 x i32>*
-  store <4 x i32> %17, <4 x i32>* %19, align 8
+  %6 = getelementptr inbounds [4096 x i32], ptr @cb, i64 0, i64 %index.next
+  %wide.load.1 = load <4 x i32>, ptr %6, align 8
+  %7 = getelementptr inbounds [4096 x i32], ptr @cc, i64 0, i64 %index.next
+  %wide.load13.1 = load <4 x i32>, ptr %7, align 8
+  %8 = add nsw <4 x i32> %wide.load13.1, %wide.load.1
+  %9 = getelementptr inbounds [4096 x i32], ptr @cd, i64 0, i64 %index.next
+  %wide.load14.1 = load <4 x i32>, ptr %9, align 8
+  %10 = mul nsw <4 x i32> %8, %wide.load14.1
+  %11 = getelementptr inbounds [4096 x i32], ptr @ca, i64 0, i64 %index.next
+  store <4 x i32> %10, ptr %11, align 8
   %index.next.1 = add nuw nsw i64 %index.next, 4
-  %20 = getelementptr inbounds [4096 x i32], [4096 x i32]* @cb, i64 0, i64 %index.next.1
-  %21 = bitcast i32* %20 to <4 x i32>*
-  %wide.load.2 = load <4 x i32>, <4 x i32>* %21, align 8
-  %22 = getelementptr inbounds [4096 x i32], [4096 x i32]* @cc, i64 0, i64 %index.next.1
-  %23 = bitcast i32* %22 to <4 x i32>*
-  %wide.load13.2 = load <4 x i32>, <4 x i32>* %23, align 8
-  %24 = add nsw <4 x i32> %wide.load13.2, %wide.load.2
-  %25 = getelementptr inbounds [4096 x i32], [4096 x i32]* @cd, i64 0, i64 %index.next.1
-  %26 = bitcast i32* %25 to <4 x i32>*
-  %wide.load14.2 = load <4 x i32>, <4 x i32>* %26, align 8
-  %27 = mul nsw <4 x i32> %24, %wide.load14.2
-  %28 = getelementptr inbounds [4096 x i32], [4096 x i32]* @ca, i64 0, i64 %index.next.1
-  %29 = bitcast i32* %28 to <4 x i32>*
-  store <4 x i32> %27, <4 x i32>* %29, align 8
+  %12 = getelementptr inbounds [4096 x i32], ptr @cb, i64 0, i64 %index.next.1
+  %wide.load.2 = load <4 x i32>, ptr %12, align 8
+  %13 = getelementptr inbounds [4096 x i32], ptr @cc, i64 0, i64 %index.next.1
+  %wide.load13.2 = load <4 x i32>, ptr %13, align 8
+  %14 = add nsw <4 x i32> %wide.load13.2, %wide.load.2
+  %15 = getelementptr inbounds [4096 x i32], ptr @cd, i64 0, i64 %index.next.1
+  %wide.load14.2 = load <4 x i32>, ptr %15, align 8
+  %16 = mul nsw <4 x i32> %14, %wide.load14.2
+  %17 = getelementptr inbounds [4096 x i32], ptr @ca, i64 0, i64 %index.next.1
+  store <4 x i32> %16, ptr %17, align 8
   %index.next.2 = add nuw nsw i64 %index.next.1, 4
-  %30 = getelementptr inbounds [4096 x i32], [4096 x i32]* @cb, i64 0, i64 %index.next.2
-  %31 = bitcast i32* %30 to <4 x i32>*
-  %wide.load.3 = load <4 x i32>, <4 x i32>* %31, align 8
-  %32 = getelementptr inbounds [4096 x i32], [4096 x i32]* @cc, i64 0, i64 %index.next.2
-  %33 = bitcast i32* %32 to <4 x i32>*
-  %wide.load13.3 = load <4 x i32>, <4 x i32>* %33, align 8
-  %34 = add nsw <4 x i32> %wide.load13.3, %wide.load.3
-  %35 = getelementptr inbounds [4096 x i32], [4096 x i32]* @cd, i64 0, i64 %index.next.2
-  %36 = bitcast i32* %35 to <4 x i32>*
-  %wide.load14.3 = load <4 x i32>, <4 x i32>* %36, align 8
-  %37 = mul nsw <4 x i32> %34, %wide.load14.3
-  %38 = getelementptr inbounds [4096 x i32], [4096 x i32]* @ca, i64 0, i64 %index.next.2
-  %39 = bitcast i32* %38 to <4 x i32>*
-  store <4 x i32> %37, <4 x i32>* %39, align 8
+  %18 = getelementptr inbounds [4096 x i32], ptr @cb, i64 0, i64 %index.next.2
+  %wide.load.3 = load <4 x i32>, ptr %18, align 8
+  %19 = getelementptr inbounds [4096 x i32], ptr @cc, i64 0, i64 %index.next.2
+  %wide.load13.3 = load <4 x i32>, ptr %19, align 8
+  %20 = add nsw <4 x i32> %wide.load13.3, %wide.load.3
+  %21 = getelementptr inbounds [4096 x i32], ptr @cd, i64 0, i64 %index.next.2
+  %wide.load14.3 = load <4 x i32>, ptr %21, align 8
+  %22 = mul nsw <4 x i32> %20, %wide.load14.3
+  %23 = getelementptr inbounds [4096 x i32], ptr @ca, i64 0, i64 %index.next.2
+  store <4 x i32> %22, ptr %23, align 8
   %index.next.3 = add nuw nsw i64 %index.next.2, 4
-  %40 = icmp eq i64 %index.next.3, 4096
-  br i1 %40, label %for.end, label %vector.body
+  %24 = icmp eq i64 %index.next.3, 4096
+  br i1 %24, label %for.end, label %vector.body
 
 for.end:
   ret void

@@ -36,7 +36,7 @@
 source_filename = "/tmp/test.c"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @foo(float* %A, float* %B) {
+define void @foo(ptr %A, ptr %B) {
 entry:
   br label %for.cond
 
@@ -46,27 +46,27 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %exitcond, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %arrayidx = getelementptr inbounds float, float* %A, i64 %i.0
-  %tmp = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %A, i64 %i.0
+  %tmp = load float, ptr %arrayidx, align 4
   %cmp1 = fcmp oeq float %tmp, 4.200000e+01
   br i1 %cmp1, label %if.then, label %if.else
 
 if.then:                                          ; preds = %for.body
   %mul = shl nsw i64 %i.0, 1
   %conv = sitofp i64 %mul to float
-  %arrayidx2 = getelementptr inbounds float, float* %B, i64 %i.0
-  %tmp1 = load float, float* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %B, i64 %i.0
+  %tmp1 = load float, ptr %arrayidx2, align 4
   %add = fadd float %tmp1, %conv
-  store float %add, float* %arrayidx2, align 4
+  store float %add, ptr %arrayidx2, align 4
   br label %if.end
 
 if.else:                                          ; preds = %for.body
   %mul3 = shl nsw i64 %i.0, 2
   %conv4 = sitofp i64 %mul3 to float
-  %arrayidx5 = getelementptr inbounds float, float* %B, i64 %i.0
-  %tmp2 = load float, float* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds float, ptr %B, i64 %i.0
+  %tmp2 = load float, ptr %arrayidx5, align 4
   %add6 = fadd float %tmp2, %conv4
-  store float %add6, float* %arrayidx5, align 4
+  store float %add6, ptr %arrayidx5, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then

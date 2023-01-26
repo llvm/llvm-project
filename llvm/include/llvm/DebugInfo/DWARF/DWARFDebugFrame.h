@@ -67,21 +67,21 @@ private:
   Location Kind;   /// The type of the location that describes how to unwind it.
   uint32_t RegNum; /// The register number for Kind == RegPlusOffset.
   int32_t Offset;  /// The offset for Kind == CFAPlusOffset or RegPlusOffset.
-  Optional<uint32_t> AddrSpace; /// The address space for Kind == RegPlusOffset
-                                /// for CFA.
-  Optional<DWARFExpression> Expr; /// The DWARF expression for Kind ==
-                                  /// DWARFExpression.
+  std::optional<uint32_t> AddrSpace;   /// The address space for Kind ==
+                                       /// RegPlusOffset for CFA.
+  std::optional<DWARFExpression> Expr; /// The DWARF expression for Kind ==
+                                       /// DWARFExpression.
   bool Dereference; /// If true, the resulting location must be dereferenced
                     /// after the location value is computed.
 
   // Constructors are private to force people to use the create static
   // functions.
   UnwindLocation(Location K)
-      : Kind(K), RegNum(InvalidRegisterNumber), Offset(0), AddrSpace(None),
-        Dereference(false) {}
+      : Kind(K), RegNum(InvalidRegisterNumber), Offset(0),
+        AddrSpace(std::nullopt), Dereference(false) {}
 
-  UnwindLocation(Location K, uint32_t Reg, int32_t Off, Optional<uint32_t> AS,
-                 bool Deref)
+  UnwindLocation(Location K, uint32_t Reg, int32_t Off,
+                 std::optional<uint32_t> AS, bool Deref)
       : Kind(K), RegNum(Reg), Offset(Off), AddrSpace(AS), Dereference(Deref) {}
 
   UnwindLocation(DWARFExpression E, bool Deref)
@@ -117,10 +117,10 @@ public:
   /// false.
   static UnwindLocation
   createIsRegisterPlusOffset(uint32_t Reg, int32_t Off,
-                             Optional<uint32_t> AddrSpace = None);
+                             std::optional<uint32_t> AddrSpace = std::nullopt);
   static UnwindLocation
   createAtRegisterPlusOffset(uint32_t Reg, int32_t Off,
-                             Optional<uint32_t> AddrSpace = None);
+                             std::optional<uint32_t> AddrSpace = std::nullopt);
   /// Create a location whose value is the result of evaluating a DWARF
   /// expression. This allows complex expressions to be evaluated in order to
   /// unwind a register or CFA value.
@@ -149,7 +149,9 @@ public:
   // DW_CFA_AARCH64_negate_ra_state).
   void setConstant(int32_t Value) { Offset = Value; }
 
-  Optional<DWARFExpression> getDWARFExpressionBytes() const { return Expr; }
+  std::optional<DWARFExpression> getDWARFExpressionBytes() const {
+    return Expr;
+  }
   /// Dump a location expression as text and use the register information if
   /// some is provided.
   ///
@@ -162,7 +164,7 @@ public:
   /// instead of from .debug_frame. This is needed for register number
   /// conversion because some register numbers differ between the two sections
   /// for certain architectures like x86.
-  void dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH) const;
+  void dump(raw_ostream &OS, DIDumpOptions DumpOpts) const;
 
   bool operator==(const UnwindLocation &RHS) const;
 };
@@ -185,12 +187,12 @@ public:
   ///
   /// \param RegNum the register number to find a location for.
   ///
-  /// \returns A location if one is available for \a RegNum, or llvm::None
+  /// \returns A location if one is available for \a RegNum, or std::nullopt
   /// otherwise.
-  Optional<UnwindLocation> getRegisterLocation(uint32_t RegNum) const {
+  std::optional<UnwindLocation> getRegisterLocation(uint32_t RegNum) const {
     auto Pos = Locations.find(RegNum);
     if (Pos == Locations.end())
-      return llvm::None;
+      return std::nullopt;
     return Pos->second;
   }
 
@@ -220,7 +222,7 @@ public:
   /// instead of from .debug_frame. This is needed for register number
   /// conversion because some register numbers differ between the two sections
   /// for certain architectures like x86.
-  void dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH) const;
+  void dump(raw_ostream &OS, DIDumpOptions DumpOpts) const;
 
   /// Returns true if we have any register locations in this object.
   bool hasLocations() const { return !Locations.empty(); }
@@ -253,7 +255,7 @@ raw_ostream &operator<<(raw_ostream &OS, const RegisterLocations &RL);
 class UnwindRow {
   /// The address will be valid when parsing the instructions in a FDE. If
   /// invalid, this object represents the initial instructions of a CIE.
-  Optional<uint64_t> Address; ///< Address for row in FDE, invalid for CIE.
+  std::optional<uint64_t> Address; ///< Address for row in FDE, invalid for CIE.
   UnwindLocation CFAValue;    ///< How to unwind the Call Frame Address (CFA).
   RegisterLocations RegLocs;  ///< How to unwind all registers in this list.
 
@@ -301,7 +303,7 @@ public:
   ///
   /// \param IndentLevel specify the indent level as an integer. The UnwindRow
   /// will be output to the stream preceded by 2 * IndentLevel number of spaces.
-  void dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH,
+  void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
             unsigned IndentLevel = 0) const;
 };
 
@@ -346,7 +348,7 @@ public:
   ///
   /// \param IndentLevel specify the indent level as an integer. The UnwindRow
   /// will be output to the stream preceded by 2 * IndentLevel number of spaces.
-  void dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH,
+  void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
             unsigned IndentLevel = 0) const;
 
   /// Create an UnwindTable from a Common Information Entry (CIE).
@@ -373,7 +375,7 @@ private:
   RowContainer Rows;
   /// The end address when data is extracted from a FDE. This value will be
   /// invalid when a UnwindTable is extracted from a CIE.
-  Optional<uint64_t> EndAddress;
+  std::optional<uint64_t> EndAddress;
 
   /// Parse the information in the CFIProgram and update the CurrRow object
   /// that the state machine describes.
@@ -416,7 +418,7 @@ public:
     uint8_t Opcode;
     Operands Ops;
     // Associated DWARF expression in case this instruction refers to one
-    Optional<DWARFExpression> Expression;
+    std::optional<DWARFExpression> Expression;
 
     Expected<uint64_t> getOperandAsUnsigned(const CFIProgram &CFIP,
                                             uint32_t OperandIdx) const;
@@ -452,8 +454,8 @@ public:
   /// where a problem occurred in case an error is returned.
   Error parse(DWARFDataExtractor Data, uint64_t *Offset, uint64_t EndOffset);
 
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts, const MCRegisterInfo *MRI,
-            bool IsEH, unsigned IndentLevel = 1) const;
+  void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+            unsigned IndentLevel = 1) const;
 
   void addInstruction(const Instruction &I) { Instructions.push_back(I); }
 
@@ -521,7 +523,6 @@ private:
 
   /// Print \p Opcode's operand number \p OperandIdx which has value \p Operand.
   void printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
-                    const MCRegisterInfo *MRI, bool IsEH,
                     const Instruction &Instr, unsigned OperandIdx,
                     uint64_t Operand) const;
 };
@@ -546,8 +547,7 @@ public:
   CFIProgram &cfis() { return CFIs; }
 
   /// Dump the instructions in this CFI fragment
-  virtual void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
-                    const MCRegisterInfo *MRI, bool IsEH) const = 0;
+  virtual void dump(raw_ostream &OS, DIDumpOptions DumpOpts) const = 0;
 
 protected:
   const FrameKind Kind;
@@ -573,8 +573,8 @@ public:
       uint8_t SegmentDescriptorSize, uint64_t CodeAlignmentFactor,
       int64_t DataAlignmentFactor, uint64_t ReturnAddressRegister,
       SmallString<8> AugmentationData, uint32_t FDEPointerEncoding,
-      uint32_t LSDAPointerEncoding, Optional<uint64_t> Personality,
-      Optional<uint32_t> PersonalityEnc, Triple::ArchType Arch)
+      uint32_t LSDAPointerEncoding, std::optional<uint64_t> Personality,
+      std::optional<uint32_t> PersonalityEnc, Triple::ArchType Arch)
       : FrameEntry(FK_CIE, IsDWARF64, Offset, Length, CodeAlignmentFactor,
                    DataAlignmentFactor, Arch),
         Version(Version), Augmentation(std::move(Augmentation)),
@@ -594,15 +594,18 @@ public:
   int64_t getDataAlignmentFactor() const { return DataAlignmentFactor; }
   uint8_t getVersion() const { return Version; }
   uint64_t getReturnAddressRegister() const { return ReturnAddressRegister; }
-  Optional<uint64_t> getPersonalityAddress() const { return Personality; }
-  Optional<uint32_t> getPersonalityEncoding() const { return PersonalityEnc; }
+  std::optional<uint64_t> getPersonalityAddress() const { return Personality; }
+  std::optional<uint32_t> getPersonalityEncoding() const {
+    return PersonalityEnc;
+  }
+
+  StringRef getAugmentationData() const { return AugmentationData; }
 
   uint32_t getFDEPointerEncoding() const { return FDEPointerEncoding; }
 
   uint32_t getLSDAPointerEncoding() const { return LSDAPointerEncoding; }
 
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts, const MCRegisterInfo *MRI,
-            bool IsEH) const override;
+  void dump(raw_ostream &OS, DIDumpOptions DumpOpts) const override;
 
 private:
   /// The following fields are defined in section 6.4.1 of the DWARF standard v4
@@ -618,8 +621,8 @@ private:
   const SmallString<8> AugmentationData;
   const uint32_t FDEPointerEncoding;
   const uint32_t LSDAPointerEncoding;
-  const Optional<uint64_t> Personality;
-  const Optional<uint32_t> PersonalityEnc;
+  const std::optional<uint64_t> Personality;
+  const std::optional<uint32_t> PersonalityEnc;
 };
 
 /// DWARF Frame Description Entry (FDE)
@@ -627,23 +630,22 @@ class FDE : public FrameEntry {
 public:
   FDE(bool IsDWARF64, uint64_t Offset, uint64_t Length, uint64_t CIEPointer,
       uint64_t InitialLocation, uint64_t AddressRange, CIE *Cie,
-      Optional<uint64_t> LSDAAddress, Triple::ArchType Arch)
+      std::optional<uint64_t> LSDAAddress, Triple::ArchType Arch)
       : FrameEntry(FK_FDE, IsDWARF64, Offset, Length,
                    Cie ? Cie->getCodeAlignmentFactor() : 0,
-                   Cie ? Cie->getDataAlignmentFactor() : 0,
-                   Arch),
+                   Cie ? Cie->getDataAlignmentFactor() : 0, Arch),
         CIEPointer(CIEPointer), InitialLocation(InitialLocation),
         AddressRange(AddressRange), LinkedCIE(Cie), LSDAAddress(LSDAAddress) {}
 
   ~FDE() override = default;
 
   const CIE *getLinkedCIE() const { return LinkedCIE; }
+  uint64_t getCIEPointer() const { return CIEPointer; }
   uint64_t getInitialLocation() const { return InitialLocation; }
   uint64_t getAddressRange() const { return AddressRange; }
-  Optional<uint64_t> getLSDAAddress() const { return LSDAAddress; }
+  std::optional<uint64_t> getLSDAAddress() const { return LSDAAddress; }
 
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts, const MCRegisterInfo *MRI,
-            bool IsEH) const override;
+  void dump(raw_ostream &OS, DIDumpOptions DumpOpts) const override;
 
   static bool classof(const FrameEntry *FE) { return FE->getKind() == FK_FDE; }
 
@@ -656,7 +658,7 @@ private:
   const uint64_t InitialLocation;
   const uint64_t AddressRange;
   const CIE *LinkedCIE;
-  const Optional<uint64_t> LSDAAddress;
+  const std::optional<uint64_t> LSDAAddress;
 };
 
 } // end namespace dwarf
@@ -685,8 +687,8 @@ public:
   ~DWARFDebugFrame();
 
   /// Dump the section data into the given stream.
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts, const MCRegisterInfo *MRI,
-            Optional<uint64_t> Offset) const;
+  void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+            std::optional<uint64_t> Offset) const;
 
   /// Parse the section from raw data. \p Data is assumed to contain the whole
   /// frame section contents to be parsed.

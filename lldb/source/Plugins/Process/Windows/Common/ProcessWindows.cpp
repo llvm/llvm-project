@@ -483,7 +483,7 @@ void ProcessWindows::RefreshStateAfterStop() {
                "Creating stop info with the exception.");
       // FALLTHROUGH:  We'll treat this as a generic exception record in the
       // default case.
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
   }
 
@@ -653,27 +653,25 @@ void ProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
   LLDB_LOG(log, "Debugger connected to process {0}.  Image base = {1:x}",
            debugger->GetProcess().GetProcessId(), image_base);
 
-  ModuleSP module = GetTarget().GetExecutableModule();
-  if (!module) {
-    // During attach, we won't have the executable module, so find it now.
-    const DWORD pid = debugger->GetProcess().GetProcessId();
-    const std::string file_name = GetProcessExecutableName(pid);
-    if (file_name.empty()) {
-      return;
-    }
-
-    FileSpec executable_file(file_name);
-    FileSystem::Instance().Resolve(executable_file);
-    ModuleSpec module_spec(executable_file);
-    Status error;
-    module =
-        GetTarget().GetOrCreateModule(module_spec, true /* notify */, &error);
-    if (!module) {
-      return;
-    }
-
-    GetTarget().SetExecutableModule(module, eLoadDependentsNo);
+  ModuleSP module;
+  // During attach, we won't have the executable module, so find it now.
+  const DWORD pid = debugger->GetProcess().GetProcessId();
+  const std::string file_name = GetProcessExecutableName(pid);
+  if (file_name.empty()) {
+    return;
   }
+
+  FileSpec executable_file(file_name);
+  FileSystem::Instance().Resolve(executable_file);
+  ModuleSpec module_spec(executable_file);
+  Status error;
+  module =
+      GetTarget().GetOrCreateModule(module_spec, true /* notify */, &error);
+  if (!module) {
+    return;
+  }
+
+  GetTarget().SetExecutableModule(module, eLoadDependentsNo);
 
   if (auto dyld = GetDynamicLoader())
     dyld->OnLoadModule(module, ModuleSpec(), image_base);

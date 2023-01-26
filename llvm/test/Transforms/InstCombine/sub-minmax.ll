@@ -63,16 +63,16 @@ define <2 x i8> @sub_umin_commute_vec(<2 x i8> %a, <2 x i8> %b) {
   ret <2 x i8> %r
 }
 
-define i5 @sub_umin_uses(i5 %a, i5 %b, i5* %p) {
+define i5 @sub_umin_uses(i5 %a, i5 %b, ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@sub_umin_uses
-; CHECK-SAME: (i5 [[A:%.*]], i5 [[B:%.*]], i5* [[P:%.*]]) {
+; CHECK-SAME: (i5 [[A:%.*]], i5 [[B:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i5 @llvm.umin.i5(i5 [[A]], i5 [[B]])
-; CHECK-NEXT:    store i5 [[UMIN]], i5* [[P]], align 1
+; CHECK-NEXT:    store i5 [[UMIN]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[R:%.*]] = sub i5 [[A]], [[UMIN]]
 ; CHECK-NEXT:    ret i5 [[R]]
 ;
   %umin = call i5 @llvm.umin.i5(i5 %a, i5 %b)
-  store i5 %umin, i5* %p
+  store i5 %umin, ptr %p
   %r = sub i5 %a, %umin
   ret i5 %r
 }

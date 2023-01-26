@@ -19,6 +19,7 @@
 #include "TestTU.h"
 #include "index/Index.h"
 #include "llvm/ADT/StringRef.h"
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -38,7 +39,7 @@ public:
 
   std::unique_ptr<SymbolIndex> index();
 
-  Optional<ParsedAST> openFile(llvm::StringRef Filename);
+  std::optional<ParsedAST> openFile(llvm::StringRef Filename);
 
 private:
   struct SourceFile {

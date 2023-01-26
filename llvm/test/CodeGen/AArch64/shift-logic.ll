@@ -138,7 +138,7 @@ define i32 @ashr_overshift_xor(i32 %x, i32 %y) nounwind {
   ret i32 %sh1
 }
 
-define i32 @lshr_or_extra_use(i32 %x, i32 %y, i32* %p) nounwind {
+define i32 @lshr_or_extra_use(i32 %x, i32 %y, ptr %p) nounwind {
 ; CHECK-LABEL: lshr_or_extra_use:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    orr w8, w1, w0, lsr #5
@@ -147,7 +147,50 @@ define i32 @lshr_or_extra_use(i32 %x, i32 %y, i32* %p) nounwind {
 ; CHECK-NEXT:    ret
   %sh0 = lshr i32 %x, 5
   %r = or i32 %sh0, %y
-  store i32 %r, i32* %p
+  store i32 %r, ptr %p
   %sh1 = lshr i32 %r, 7
   ret i32 %sh1
+}
+
+define i64 @desirable_to_commute1(i64 %x) {
+; CHECK-LABEL: desirable_to_commute1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and x0, x0, #0x7fff8
+; CHECK-NEXT:    ret
+  %s1 = lshr i64 %x, 3
+  %a = and i64 %s1, 65535
+  %s2 = shl i64 %a, 3
+  ret i64 %s2
+}
+
+define i64 @desirable_to_commute2(ptr %p, i64 %i) {
+; CHECK-LABEL: desirable_to_commute2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and x8, x1, #0x1ff8
+; CHECK-NEXT:    ldr x0, [x0, x8]
+; CHECK-NEXT:    ret
+  %lshr = lshr i64 %i, 3
+  %and = and i64 %lshr, 1023
+  %pidx = getelementptr i64, ptr %p, i64 %and
+  %r = load i64, ptr %pidx
+  ret i64 %r
+}
+
+; Shrink demanded op will shrink the shl to i32,
+; Lshr and shl will have different shift amount type.
+; Compare apint will cause crash when type is different.
+define void @apint_type_mismatch(i16 %a, ptr %p) {
+; CHECK-LABEL: apint_type_mismatch:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and w8, w0, #0x7f8
+; CHECK-NEXT:    str w8, [x1]
+; CHECK-NEXT:    ret
+entry:
+  %lshr = lshr i16 %a, 3
+  %and = and i16 %lshr, 255
+  %zext = zext i16 %and to i64
+  %shl = shl i64 %zext, 3
+  %trunc = trunc i64 %shl to i32
+  store i32 %trunc, ptr %p
+  ret void
 }

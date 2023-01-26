@@ -36,6 +36,7 @@
 #include "llvm/ADT/ScopeExit.h"
 
 #include <bitset>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -151,8 +152,8 @@ public:
 
   Options *GetOptions() override { return &m_all_options; }
 
-  llvm::Optional<std::string> GetRepeatCommand(Args &current_command_args,
-                                               uint32_t index) override {
+  std::optional<std::string> GetRepeatCommand(Args &current_command_args,
+                                              uint32_t index) override {
     // No repeat for "process launch"...
     return std::string("");
   }
@@ -360,7 +361,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_process_attach_options);
+      return llvm::ArrayRef(g_process_attach_options);
     }
 
     ProcessAttachInfo attach_info;
@@ -543,7 +544,7 @@ protected:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_process_continue_options);
+      return llvm::ArrayRef(g_process_continue_options);
     }
 
     uint32_t m_ignore = 0;
@@ -837,7 +838,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_process_detach_options);
+      return llvm::ArrayRef(g_process_detach_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -920,7 +921,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_process_connect_options);
+      return llvm::ArrayRef(g_process_connect_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -1045,7 +1046,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_process_load_options);
+      return llvm::ArrayRef(g_process_load_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -1361,7 +1362,7 @@ public:
     ~CommandOptions() override = default;
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_process_save_core_options);
+      return llvm::ArrayRef(g_process_save_core_options);
     }
 
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
@@ -1483,7 +1484,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_process_status_options);
+      return llvm::ArrayRef(g_process_status_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -1537,8 +1538,9 @@ protected:
       StructuredData::DictionarySP crash_info_sp = *expected_crash_info;
 
       if (crash_info_sp) {
+        strm.EOL();
         strm.PutCString("Extended Crash Information:\n");
-        crash_info_sp->Dump(strm);
+        crash_info_sp->GetDescription(strm);
       }
     }
 
@@ -1603,7 +1605,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_process_handle_options);
+      return llvm::ArrayRef(g_process_handle_options);
     }
 
     // Instance variables to hold the values for command options.

@@ -20,6 +20,7 @@
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "mlir/Support/LogicalResult.h"
+#include <optional>
 
 namespace mlir {
 namespace presburger {
@@ -133,14 +134,24 @@ public:
   bool isSubsetOf(const IntegerRelation &other) const;
 
   /// Returns the value at the specified equality row and column.
-  inline int64_t atEq(unsigned i, unsigned j) const { return equalities(i, j); }
-  inline int64_t &atEq(unsigned i, unsigned j) { return equalities(i, j); }
+  inline MPInt atEq(unsigned i, unsigned j) const { return equalities(i, j); }
+  /// The same, but casts to int64_t. This is unsafe and will assert-fail if the
+  /// value does not fit in an int64_t.
+  inline int64_t atEq64(unsigned i, unsigned j) const {
+    return int64_t(equalities(i, j));
+  }
+  inline MPInt &atEq(unsigned i, unsigned j) { return equalities(i, j); }
 
   /// Returns the value at the specified inequality row and column.
-  inline int64_t atIneq(unsigned i, unsigned j) const {
+  inline MPInt atIneq(unsigned i, unsigned j) const {
     return inequalities(i, j);
   }
-  inline int64_t &atIneq(unsigned i, unsigned j) { return inequalities(i, j); }
+  /// The same, but casts to int64_t. This is unsafe and will assert-fail if the
+  /// value does not fit in an int64_t.
+  inline int64_t atIneq64(unsigned i, unsigned j) const {
+    return int64_t(inequalities(i, j));
+  }
+  inline MPInt &atIneq(unsigned i, unsigned j) { return inequalities(i, j); }
 
   unsigned getNumConstraints() const {
     return getNumInequalities() + getNumEqualities();
@@ -174,12 +185,19 @@ public:
     return inequalities.getNumReservedRows();
   }
 
-  inline ArrayRef<int64_t> getEquality(unsigned idx) const {
+  inline ArrayRef<MPInt> getEquality(unsigned idx) const {
     return equalities.getRow(idx);
   }
-
-  inline ArrayRef<int64_t> getInequality(unsigned idx) const {
+  inline ArrayRef<MPInt> getInequality(unsigned idx) const {
     return inequalities.getRow(idx);
+  }
+  /// The same, but casts to int64_t. This is unsafe and will assert-fail if the
+  /// value does not fit in an int64_t.
+  inline SmallVector<int64_t, 8> getEquality64(unsigned idx) const {
+    return getInt64Vec(equalities.getRow(idx));
+  }
+  inline SmallVector<int64_t, 8> getInequality64(unsigned idx) const {
+    return getInt64Vec(inequalities.getRow(idx));
   }
 
   /// Get the number of vars of the specified kind.
@@ -238,16 +256,20 @@ public:
   /// of the first added variable.
   virtual unsigned insertVar(VarKind kind, unsigned pos, unsigned num = 1);
 
-  /// Append `num` variables of the specified kind after the last variable.
-  /// of that kind. Return the position of the first appended column relative to
-  /// the kind of variable. The coefficient columns corresponding to the added
-  /// variables are initialized to zero.
+  /// Append `num` variables of the specified kind after the last variable
+  /// of that kind. The coefficient columns corresponding to the added variables
+  /// are initialized to zero. Return the absolute column position (i.e., not
+  /// relative to the kind of variable) of the first appended variable.
   unsigned appendVar(VarKind kind, unsigned num = 1);
 
   /// Adds an inequality (>= 0) from the coefficients specified in `inEq`.
-  void addInequality(ArrayRef<int64_t> inEq);
+  void addInequality(ArrayRef<MPInt> inEq);
+  void addInequality(ArrayRef<int64_t> inEq) {
+    addInequality(getMPIntVec(inEq));
+  }
   /// Adds an equality from the coefficients specified in `eq`.
-  void addEquality(ArrayRef<int64_t> eq);
+  void addEquality(ArrayRef<MPInt> eq);
+  void addEquality(ArrayRef<int64_t> eq) { addEquality(getMPIntVec(eq)); }
 
   /// Eliminate the `posB^th` local variable, replacing every instance of it
   /// with the `posA^th` local variable. This should be used when the two
@@ -282,7 +304,7 @@ public:
   /// For a generic integer sampling operation, findIntegerSample is more
   /// robust and should be preferred. Note that Domain is minimized first, then
   /// range.
-  MaybeOptimum<SmallVector<int64_t, 8>> findIntegerLexMin() const;
+  MaybeOptimum<SmallVector<MPInt, 8>> findIntegerLexMin() const;
 
   /// Swap the posA^th variable with the posB^th variable.
   virtual void swapVar(unsigned posA, unsigned posB);
@@ -292,7 +314,10 @@ public:
 
   /// Sets the `values.size()` variables starting at `po`s to the specified
   /// values and removes them.
-  void setAndEliminate(unsigned pos, ArrayRef<int64_t> values);
+  void setAndEliminate(unsigned pos, ArrayRef<MPInt> values);
+  void setAndEliminate(unsigned pos, ArrayRef<int64_t> values) {
+    setAndEliminate(pos, getMPIntVec(values));
+  }
 
   /// Replaces the contents of this IntegerRelation with `other`.
   virtual void clearAndCopyFrom(const IntegerRelation &other);
@@ -336,21 +361,28 @@ public:
   /// additional processing using Simplex for unbounded sets.
   ///
   /// Returns an integer sample point if one exists, or an empty Optional
-  /// otherwise.
-  Optional<SmallVector<int64_t, 8>> findIntegerSample() const;
+  /// otherwise. The returned value also includes values of local ids.
+  std::optional<SmallVector<MPInt, 8>> findIntegerSample() const;
 
   /// Compute an overapproximation of the number of integer points in the
   /// relation. Symbol vars currently not supported. If the computed
   /// overapproximation is infinite, an empty optional is returned.
-  Optional<uint64_t> computeVolume() const;
+  std::optional<MPInt> computeVolume() const;
 
   /// Returns true if the given point satisfies the constraints, or false
   /// otherwise. Takes the values of all vars including locals.
-  bool containsPoint(ArrayRef<int64_t> point) const;
+  bool containsPoint(ArrayRef<MPInt> point) const;
+  bool containsPoint(ArrayRef<int64_t> point) const {
+    return containsPoint(getMPIntVec(point));
+  }
   /// Given the values of non-local vars, return a satisfying assignment to the
   /// local if one exists, or an empty optional otherwise.
-  Optional<SmallVector<int64_t, 8>>
-  containsPointNoLocal(ArrayRef<int64_t> point) const;
+  std::optional<SmallVector<MPInt, 8>>
+  containsPointNoLocal(ArrayRef<MPInt> point) const;
+  std::optional<SmallVector<MPInt, 8>>
+  containsPointNoLocal(ArrayRef<int64_t> point) const {
+    return containsPointNoLocal(getMPIntVec(point));
+  }
 
   /// Returns a `DivisonRepr` representing the division representation of local
   /// variables in the constraint system.
@@ -367,17 +399,26 @@ public:
   enum BoundType { EQ, LB, UB };
 
   /// Adds a constant bound for the specified variable.
-  void addBound(BoundType type, unsigned pos, int64_t value);
+  void addBound(BoundType type, unsigned pos, const MPInt &value);
+  void addBound(BoundType type, unsigned pos, int64_t value) {
+    addBound(type, pos, MPInt(value));
+  }
 
   /// Adds a constant bound for the specified expression.
-  void addBound(BoundType type, ArrayRef<int64_t> expr, int64_t value);
+  void addBound(BoundType type, ArrayRef<MPInt> expr, const MPInt &value);
+  void addBound(BoundType type, ArrayRef<int64_t> expr, int64_t value) {
+    addBound(type, getMPIntVec(expr), MPInt(value));
+  }
 
   /// Adds a new local variable as the floordiv of an affine function of other
   /// variables, the coefficients of which are provided in `dividend` and with
   /// respect to a positive constant `divisor`. Two constraints are added to the
   /// system to capture equivalence with the floordiv:
   /// q = dividend floordiv c    <=>   c*q <= dividend <= c*q + c - 1.
-  void addLocalFloorDiv(ArrayRef<int64_t> dividend, int64_t divisor);
+  void addLocalFloorDiv(ArrayRef<MPInt> dividend, const MPInt &divisor);
+  void addLocalFloorDiv(ArrayRef<int64_t> dividend, int64_t divisor) {
+    addLocalFloorDiv(getMPIntVec(dividend), MPInt(divisor));
+  }
 
   /// Projects out (aka eliminates) `num` variables starting at position
   /// `pos`. The resulting constraint system is the shadow along the dimensions
@@ -420,27 +461,51 @@ public:
   /// variable (pos^th), i.e., the smallest known constant that is greater
   /// than or equal to 'exclusive upper bound' - 'lower bound' of the
   /// variable. This constant bound is guaranteed to be non-negative. Returns
-  /// None if it's not a constant. This method employs trivial (low complexity /
-  /// cost) checks and detection. Symbolic variables are treated specially,
-  /// i.e., it looks for constant differences between affine expressions
-  /// involving only the symbolic variables. `lb` and `ub` (along with the
-  /// `boundFloorDivisor`) are set to represent the lower and upper bound
-  /// associated with the constant difference: `lb`, `ub` have the coefficients,
-  /// and `boundFloorDivisor`, their divisor. `minLbPos` and `minUbPos` if
-  /// non-null are set to the position of the constant lower bound and upper
-  /// bound respectively (to the same if they are from an equality). Ex: if the
-  /// lower bound is [(s0 + s2 - 1) floordiv 32] for a system with three
-  /// symbolic variables, *lb = [1, 0, 1], lbDivisor = 32. See comments at
-  /// function definition for examples.
-  Optional<int64_t> getConstantBoundOnDimSize(
+  /// std::nullopt if it's not a constant. This method employs trivial (low
+  /// complexity / cost) checks and detection. Symbolic variables are treated
+  /// specially, i.e., it looks for constant differences between affine
+  /// expressions involving only the symbolic variables. `lb` and `ub` (along
+  /// with the `boundFloorDivisor`) are set to represent the lower and upper
+  /// bound associated with the constant difference: `lb`, `ub` have the
+  /// coefficients, and `boundFloorDivisor`, their divisor. `minLbPos` and
+  /// `minUbPos` if non-null are set to the position of the constant lower bound
+  /// and upper bound respectively (to the same if they are from an
+  /// equality). Ex: if the lower bound is [(s0 + s2 - 1) floordiv 32] for a
+  /// system with three symbolic variables, *lb = [1, 0, 1], lbDivisor = 32. See
+  /// comments at function definition for examples.
+  std::optional<MPInt> getConstantBoundOnDimSize(
+      unsigned pos, SmallVectorImpl<MPInt> *lb = nullptr,
+      MPInt *boundFloorDivisor = nullptr, SmallVectorImpl<MPInt> *ub = nullptr,
+      unsigned *minLbPos = nullptr, unsigned *minUbPos = nullptr) const;
+  /// The same, but casts to int64_t. This is unsafe and will assert-fail if the
+  /// value does not fit in an int64_t.
+  std::optional<int64_t> getConstantBoundOnDimSize64(
       unsigned pos, SmallVectorImpl<int64_t> *lb = nullptr,
       int64_t *boundFloorDivisor = nullptr,
       SmallVectorImpl<int64_t> *ub = nullptr, unsigned *minLbPos = nullptr,
-      unsigned *minUbPos = nullptr) const;
+      unsigned *minUbPos = nullptr) const {
+    SmallVector<MPInt, 8> ubMPInt, lbMPInt;
+    MPInt boundFloorDivisorMPInt;
+    std::optional<MPInt> result = getConstantBoundOnDimSize(
+        pos, &lbMPInt, &boundFloorDivisorMPInt, &ubMPInt, minLbPos, minUbPos);
+    if (lb)
+      *lb = getInt64Vec(lbMPInt);
+    if (ub)
+      *ub = getInt64Vec(ubMPInt);
+    if (boundFloorDivisor)
+      *boundFloorDivisor = int64_t(boundFloorDivisorMPInt);
+    return llvm::transformOptional(result, int64FromMPInt);
+  }
 
   /// Returns the constant bound for the pos^th variable if there is one;
-  /// None otherwise.
-  Optional<int64_t> getConstantBound(BoundType type, unsigned pos) const;
+  /// std::nullopt otherwise.
+  std::optional<MPInt> getConstantBound(BoundType type, unsigned pos) const;
+  /// The same, but casts to int64_t. This is unsafe and will assert-fail if the
+  /// value does not fit in an int64_t.
+  std::optional<int64_t> getConstantBound64(BoundType type,
+                                            unsigned pos) const {
+    return llvm::transformOptional(getConstantBound(type, pos), int64FromMPInt);
+  }
 
   /// Removes constraints that are independent of (i.e., do not have a
   /// coefficient) variables in the range [pos, pos + num).
@@ -619,7 +684,13 @@ protected:
   /// Returns the constant lower bound bound if isLower is true, and the upper
   /// bound if isLower is false.
   template <bool isLower>
-  Optional<int64_t> computeConstantLowerOrUpperBound(unsigned pos);
+  std::optional<MPInt> computeConstantLowerOrUpperBound(unsigned pos);
+  /// The same, but casts to int64_t. This is unsafe and will assert-fail if the
+  /// value does not fit in an int64_t.
+  template <bool isLower>
+  std::optional<int64_t> computeConstantLowerOrUpperBound64(unsigned pos) {
+    return computeConstantLowerOrUpperBound<isLower>(pos).map(int64FromMPInt);
+  }
 
   /// Eliminates a single variable at `position` from equality and inequality
   /// constraints. Returns `success` if the variable was eliminated, and

@@ -32,7 +32,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK: else
 ; CHECK:     {  /* original code */ }
 
-define void @foo(i64 %n, i64 %m, i64 %o, double* %A, i64 %p, i64 %q) {
+define void @foo(i64 %n, i64 %m, i64 %o, ptr %A, i64 %p, i64 %q) {
 entry:
   br label %cond
 
@@ -50,8 +50,8 @@ for.j:
   %subscript0 = mul i64 %offset0, %m
   %offset1 = add nsw i64 %j, %q
   %subscript1 = add i64 %offset1, %subscript0
-  %idx = getelementptr inbounds double, double* %A, i64 %subscript1
-  store double 1.0, double* %idx
+  %idx = getelementptr inbounds double, ptr %A, i64 %subscript1
+  store double 1.0, ptr %idx
   br label %for.j.inc
 
 for.j.inc:
@@ -75,8 +75,8 @@ for.j.1:
   %offset1.1 = add nsw i64 %j.1, %q
   %subscript1.1 = add i64 %offset1.1, %subscript0.1
   %subscript1.2 = sub i64 %subscript1.1, 100
-  %idx.1 = getelementptr inbounds double, double* %A, i64 %subscript1.2
-  store double 1.0, double* %idx.1
+  %idx.1 = getelementptr inbounds double, ptr %A, i64 %subscript1.2
+  store double 1.0, ptr %idx.1
   br label %for.j.inc.1
 
 for.j.inc.1:

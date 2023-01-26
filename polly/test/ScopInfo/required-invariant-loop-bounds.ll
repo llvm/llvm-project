@@ -31,7 +31,7 @@ entry:
 
 for.cond:                                         ; preds = %for.inc.6, %entry
   %i.0 = phi i64 [ 0, %entry ], [ %inc7, %for.inc.6 ]
-  %bounds0 = load i64, i64* getelementptr inbounds ([2 x i64], [2 x i64]* @bounds, i64 0, i64 0), align 16
+  %bounds0 = load i64, ptr @bounds, align 16
   %cmp = icmp sgt i64 %i.0, %bounds0
   br i1 %cmp, label %for.end.8, label %for.body
 
@@ -40,17 +40,17 @@ for.body:                                         ; preds = %for.cond
 
 for.cond.1:                                       ; preds = %for.inc, %for.body
   %j.0 = phi i64 [ 0, %for.body ], [ %inc, %for.inc ]
-  %bounds1 = load i64, i64* getelementptr inbounds ([2 x i64], [2 x i64]* @bounds, i64 0, i64 1), align 8
+  %bounds1 = load i64, ptr getelementptr inbounds ([2 x i64], ptr @bounds, i64 0, i64 1), align 8
   %cmp2 = icmp sgt i64 %j.0, %bounds1
   br i1 %cmp2, label %for.end, label %for.body.3
 
 for.body.3:                                       ; preds = %for.cond.1
   %add = add nsw i64 %i.0, %j.0
   %conv = sitofp i64 %add to double
-  %arrayidx4 = getelementptr inbounds [1000 x [1000 x double]], [1000 x [1000 x double]]* @A, i64 0, i64 %i.0, i64 %j.0
-  %tmp2 = load double, double* %arrayidx4, align 8
+  %arrayidx4 = getelementptr inbounds [1000 x [1000 x double]], ptr @A, i64 0, i64 %i.0, i64 %j.0
+  %tmp2 = load double, ptr %arrayidx4, align 8
   %add5 = fadd double %tmp2, %conv
-  store double %add5, double* %arrayidx4, align 8
+  store double %add5, ptr %arrayidx4, align 8
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body.3

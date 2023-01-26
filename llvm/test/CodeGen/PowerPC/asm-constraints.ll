@@ -17,7 +17,7 @@ target triple = "powerpc64le-unknown-linux-gnu"
 ;     : "m"(*addr) : "memory", "cr0");
 ; }
 
-define void @foo(i32 signext %result, i8* %addr) #0 {
+define void @foo(i32 signext %result, ptr %addr) #0 {
 
 ; CHECK-LABEL: @foo
 ; CHECK: ld [[REG:[0-9]+]], 0(4)
@@ -28,12 +28,12 @@ define void @foo(i32 signext %result, i8* %addr) #0 {
 
 entry:
   %result.addr = alloca i32, align 4
-  %addr.addr = alloca i8*, align 8
-  store i32 %result, i32* %result.addr, align 4
-  store i8* %addr, i8** %addr.addr, align 8
-  %0 = load i8*, i8** %addr.addr, align 8
-  %1 = call i32 asm sideeffect "ld${1:U}${1:X} $0,$1\0Acmpw $0,$0\0Abne- 1f\0A1: isync\0A", "=r,*m,~{memory},~{cr0}"(i8* elementtype(i8) %0) #1, !srcloc !0
-  store i32 %1, i32* %result.addr, align 4
+  %addr.addr = alloca ptr, align 8
+  store i32 %result, ptr %result.addr, align 4
+  store ptr %addr, ptr %addr.addr, align 8
+  %0 = load ptr, ptr %addr.addr, align 8
+  %1 = call i32 asm sideeffect "ld${1:U}${1:X} $0,$1\0Acmpw $0,$0\0Abne- 1f\0A1: isync\0A", "=r,*m,~{memory},~{cr0}"(ptr elementtype(i8) %0) #1, !srcloc !0
+  store i32 %1, ptr %result.addr, align 4
   ret void
 }
 
@@ -55,11 +55,11 @@ define signext i32 @bar(double %x) #0 {
 entry:
   %x.addr = alloca double, align 8
   %result = alloca i64, align 8
-  store double %x, double* %x.addr, align 8
-  %0 = load double, double* %x.addr, align 8
+  store double %x, ptr %x.addr, align 8
+  %0 = load double, ptr %x.addr, align 8
   %1 = call i64 asm sideeffect "fctid $0, $1", "=d,d"(double %0) #1, !srcloc !1
-  store i64 %1, i64* %result, align 8
-  %2 = load i64, i64* %result, align 8
+  store i64 %1, ptr %result, align 8
+  %2 = load i64, ptr %result, align 8
   %conv = trunc i64 %2 to i32
   ret i32 %conv
 }

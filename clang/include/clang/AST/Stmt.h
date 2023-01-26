@@ -22,6 +22,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -35,6 +36,7 @@
 #include <cassert>
 #include <cstddef>
 #include <iterator>
+#include <optional>
 #include <string>
 
 namespace llvm {
@@ -389,7 +391,10 @@ protected:
 
     unsigned : NumExprBits;
 
-    unsigned Semantics : 3; // Provides semantics for APFloat construction
+    static_assert(
+        llvm::APFloat::S_MaxSemantics < 16,
+        "Too many Semantics enum values to fit in bitfield of size 4");
+    unsigned Semantics : 4; // Provides semantics for APFloat construction
     unsigned IsExact : 1;
   };
 
@@ -686,6 +691,9 @@ protected:
 
     unsigned : NumExprBits;
 
+    /// Whether this CXXDefaultArgExpr rewrote its argument and stores a copy.
+    unsigned HasRewrittenInit : 1;
+
     /// The location where the default argument expression was used.
     SourceLocation Loc;
   };
@@ -695,6 +703,10 @@ protected:
     friend class CXXDefaultInitExpr;
 
     unsigned : NumExprBits;
+
+    /// Whether this CXXDefaultInitExprBitfields rewrote its argument and stores
+    /// a copy.
+    unsigned HasRewrittenInit : 1;
 
     /// The location where the default initializer expression was used.
     SourceLocation Loc;
@@ -1912,7 +1924,7 @@ public:
 
   SourceLocation getAttrLoc() const { return AttributedStmtBits.AttrLoc; }
   ArrayRef<const Attr *> getAttrs() const {
-    return llvm::makeArrayRef(getAttrArrayPtr(), AttributedStmtBits.NumAttrs);
+    return llvm::ArrayRef(getAttrArrayPtr(), AttributedStmtBits.NumAttrs);
   }
 
   Stmt *getSubStmt() { return SubStmt; }
@@ -2136,9 +2148,9 @@ public:
   }
 
   /// If this is an 'if constexpr', determine which substatement will be taken.
-  /// Otherwise, or if the condition is value-dependent, returns None.
-  Optional<const Stmt*> getNondiscardedCase(const ASTContext &Ctx) const;
-  Optional<Stmt *> getNondiscardedCase(const ASTContext &Ctx);
+  /// Otherwise, or if the condition is value-dependent, returns std::nullopt.
+  std::optional<const Stmt *> getNondiscardedCase(const ASTContext &Ctx) const;
+  std::optional<Stmt *> getNondiscardedCase(const ASTContext &Ctx);
 
   bool isObjCAvailabilityCheck() const;
 
@@ -3323,16 +3335,16 @@ public:
   //===--- Other ---===//
 
   ArrayRef<StringRef> getAllConstraints() const {
-    return llvm::makeArrayRef(Constraints, NumInputs + NumOutputs);
+    return llvm::ArrayRef(Constraints, NumInputs + NumOutputs);
   }
 
   ArrayRef<StringRef> getClobbers() const {
-    return llvm::makeArrayRef(Clobbers, NumClobbers);
+    return llvm::ArrayRef(Clobbers, NumClobbers);
   }
 
   ArrayRef<Expr*> getAllExprs() const {
-    return llvm::makeArrayRef(reinterpret_cast<Expr**>(Exprs),
-                              NumInputs + NumOutputs);
+    return llvm::ArrayRef(reinterpret_cast<Expr **>(Exprs),
+                          NumInputs + NumOutputs);
   }
 
   StringRef getClobber(unsigned i) const { return getClobbers()[i]; }

@@ -12,36 +12,36 @@ module asm "\09.objc_category_name_A_foo=0"
 module asm "\09.globl .objc_category_name_A_foo"
 
 %0 = type opaque
-%struct._objc_method = type { i8*, i8*, i8* }
-%struct._objc_category = type { i8*, i8*, %struct._objc_method_list*, %struct._objc_method_list*, %struct._objc_protocol_list*, i32, %struct._prop_list_t*, %struct._prop_list_t* }
+%struct._objc_method = type { ptr, ptr, ptr }
+%struct._objc_category = type { ptr, ptr, ptr, ptr, ptr, i32, ptr, ptr }
 %struct._objc_method_list = type opaque
-%struct._objc_protocol_list = type { %struct._objc_protocol_list*, i32, [0 x %struct._objc_protocol] }
-%struct._objc_protocol = type { %struct._objc_protocol_extension*, i8*, %struct._objc_protocol_list*, %struct._objc_method_description_list*, %struct._objc_method_description_list* }
-%struct._objc_protocol_extension = type { i32, %struct._objc_method_description_list*, %struct._objc_method_description_list*, %struct._prop_list_t*, i8**, %struct._prop_list_t* }
+%struct._objc_protocol_list = type { ptr, i32, [0 x %struct._objc_protocol] }
+%struct._objc_protocol = type { ptr, ptr, ptr, ptr, ptr }
+%struct._objc_protocol_extension = type { i32, ptr, ptr, ptr, ptr, ptr }
 %struct._objc_method_description_list = type { i32, [0 x %struct._objc_method_description] }
-%struct._objc_method_description = type { i8*, i8* }
+%struct._objc_method_description = type { ptr, ptr }
 %struct._prop_list_t = type { i32, i32, [0 x %struct._prop_t] }
-%struct._prop_t = type { i8*, i8* }
-%struct._objc_module = type { i32, i32, i8*, %struct._objc_symtab* }
-%struct._objc_symtab = type { i32, i8*, i16, i16, [0 x i8*] }
+%struct._prop_t = type { ptr, ptr }
+%struct._objc_module = type { i32, i32, ptr, ptr }
+%struct._objc_symtab = type { i32, ptr, i16, i16, [0 x ptr] }
 
 @OBJC_METH_VAR_NAME_ = private global [12 x i8] c"foo_myStuff\00", section "__TEXT,__cstring,cstring_literals", align 1
 @OBJC_METH_VAR_TYPE_ = private global [7 x i8] c"v8@0:4\00", section "__TEXT,__cstring,cstring_literals", align 1
 @OBJC_CLASS_NAME_ = private global [4 x i8] c"foo\00", section "__TEXT,__cstring,cstring_literals", align 1
 @OBJC_CLASS_NAME_.1 = private global [2 x i8] c"A\00", section "__TEXT,__cstring,cstring_literals", align 1
-@OBJC_CATEGORY_INSTANCE_METHODS_A_foo = private global { i8*, i32, [1 x %struct._objc_method] } { i8* null, i32 1, [1 x %struct._objc_method] [%struct._objc_method { i8* getelementptr inbounds ([12 x i8], [12 x i8]* @OBJC_METH_VAR_NAME_, i32 0, i32 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @OBJC_METH_VAR_TYPE_, i32 0, i32 0), i8* bitcast (void (%0*, i8*)* @"\01-[A(foo) foo_myStuff]" to i8*) }] }, section "__OBJC,__cat_inst_meth,regular,no_dead_strip", align 4
-@OBJC_CATEGORY_A_foo = private global %struct._objc_category { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @OBJC_CLASS_NAME_, i32 0, i32 0), i8* getelementptr inbounds ([2 x i8], [2 x i8]* @OBJC_CLASS_NAME_.1, i32 0, i32 0), %struct._objc_method_list* bitcast ({ i8*, i32, [1 x %struct._objc_method] }* @OBJC_CATEGORY_INSTANCE_METHODS_A_foo to %struct._objc_method_list*), %struct._objc_method_list* null, %struct._objc_protocol_list* null, i32 32, %struct._prop_list_t* null, %struct._prop_list_t* null }, section "__OBJC,__category,regular,no_dead_strip", align 4
+@OBJC_CATEGORY_INSTANCE_METHODS_A_foo = private global { ptr, i32, [1 x %struct._objc_method] } { ptr null, i32 1, [1 x %struct._objc_method] [%struct._objc_method { ptr @OBJC_METH_VAR_NAME_, ptr @OBJC_METH_VAR_TYPE_, ptr @"\01-[A(foo) foo_myStuff]" }] }, section "__OBJC,__cat_inst_meth,regular,no_dead_strip", align 4
+@OBJC_CATEGORY_A_foo = private global %struct._objc_category { ptr @OBJC_CLASS_NAME_, ptr @OBJC_CLASS_NAME_.1, ptr @OBJC_CATEGORY_INSTANCE_METHODS_A_foo, ptr null, ptr null, i32 32, ptr null, ptr null }, section "__OBJC,__category,regular,no_dead_strip", align 4
 @OBJC_CLASS_NAME_.2 = private global [1 x i8] zeroinitializer, section "__TEXT,__cstring,cstring_literals", align 1
-@OBJC_SYMBOLS = private global { i32, i8*, i16, i16, [1 x i8*] } { i32 0, i8* null, i16 0, i16 1, [1 x i8*] [i8* bitcast (%struct._objc_category* @OBJC_CATEGORY_A_foo to i8*)] }, section "__OBJC,__symbols,regular,no_dead_strip", align 4
-@OBJC_MODULES = private global %struct._objc_module { i32 7, i32 16, i8* getelementptr inbounds ([1 x i8], [1 x i8]* @OBJC_CLASS_NAME_.2, i32 0, i32 0), %struct._objc_symtab* bitcast ({ i32, i8*, i16, i16, [1 x i8*] }* @OBJC_SYMBOLS to %struct._objc_symtab*) }, section "__OBJC,__module_info,regular,no_dead_strip", align 4
-@llvm.compiler.used = appending global [9 x i8*] [i8* getelementptr inbounds ([12 x i8], [12 x i8]* @OBJC_METH_VAR_NAME_, i32 0, i32 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @OBJC_METH_VAR_TYPE_, i32 0, i32 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @OBJC_CLASS_NAME_, i32 0, i32 0), i8* getelementptr inbounds ([2 x i8], [2 x i8]* @OBJC_CLASS_NAME_.1, i32 0, i32 0), i8* bitcast ({ i8*, i32, [1 x %struct._objc_method] }* @OBJC_CATEGORY_INSTANCE_METHODS_A_foo to i8*), i8* bitcast (%struct._objc_category* @OBJC_CATEGORY_A_foo to i8*), i8* getelementptr inbounds ([1 x i8], [1 x i8]* @OBJC_CLASS_NAME_.2, i32 0, i32 0), i8* bitcast ({ i32, i8*, i16, i16, [1 x i8*] }* @OBJC_SYMBOLS to i8*), i8* bitcast (%struct._objc_module* @OBJC_MODULES to i8*)], section "llvm.metadata"
+@OBJC_SYMBOLS = private global { i32, ptr, i16, i16, [1 x ptr] } { i32 0, ptr null, i16 0, i16 1, [1 x ptr] [ptr @OBJC_CATEGORY_A_foo] }, section "__OBJC,__symbols,regular,no_dead_strip", align 4
+@OBJC_MODULES = private global %struct._objc_module { i32 7, i32 16, ptr @OBJC_CLASS_NAME_.2, ptr @OBJC_SYMBOLS }, section "__OBJC,__module_info,regular,no_dead_strip", align 4
+@llvm.compiler.used = appending global [9 x ptr] [ptr @OBJC_METH_VAR_NAME_, ptr @OBJC_METH_VAR_TYPE_, ptr @OBJC_CLASS_NAME_, ptr @OBJC_CLASS_NAME_.1, ptr @OBJC_CATEGORY_INSTANCE_METHODS_A_foo, ptr @OBJC_CATEGORY_A_foo, ptr @OBJC_CLASS_NAME_.2, ptr @OBJC_SYMBOLS, ptr @OBJC_MODULES], section "llvm.metadata"
 
 ; Function Attrs: nounwind ssp
-define internal void @"\01-[A(foo) foo_myStuff]"(%0*, i8*) #0 {
-  %3 = alloca %0*, align 4
-  %4 = alloca i8*, align 4
-  store %0* %0, %0** %3, align 4
-  store i8* %1, i8** %4, align 4
+define internal void @"\01-[A(foo) foo_myStuff]"(ptr, ptr) #0 {
+  %3 = alloca ptr, align 4
+  %4 = alloca ptr, align 4
+  store ptr %0, ptr %3, align 4
+  store ptr %1, ptr %4, align 4
   ret void
 }
 

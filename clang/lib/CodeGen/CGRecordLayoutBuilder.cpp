@@ -162,7 +162,7 @@ struct CGRecordLowering {
     return CharUnits::fromQuantity(DataLayout.getTypeAllocSize(Type));
   }
   CharUnits getAlignment(llvm::Type *Type) {
-    return CharUnits::fromQuantity(DataLayout.getABITypeAlignment(Type));
+    return CharUnits::fromQuantity(DataLayout.getABITypeAlign(Type));
   }
   bool isZeroInitializable(const FieldDecl *FD) {
     return Types.isZeroInitializable(FD->getType());

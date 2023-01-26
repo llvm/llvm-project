@@ -24,7 +24,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchTargetInfo() {
   RegisterTarget<Triple::loongarch32, /*HasJIT=*/false> X(
       getTheLoongArch32Target(), "loongarch32", "32-bit LoongArch",
       "LoongArch");
-  RegisterTarget<Triple::loongarch64, /*HasJIT=*/false> Y(
+  RegisterTarget<Triple::loongarch64, /*HasJIT=*/true> Y(
       getTheLoongArch64Target(), "loongarch64", "64-bit LoongArch",
       "LoongArch");
 }

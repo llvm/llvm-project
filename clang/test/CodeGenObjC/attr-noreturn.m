@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-MRC
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -fobjc-arc -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-ARC
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-MRC
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-arc -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-ARC
 
 __attribute__((objc_root_class))
 @interface Root
@@ -22,14 +22,14 @@ void testInstanceMethod(Derived *x) {
   [x fail];
 }
 // CHECK-LABEL: @testInstanceMethod
-// CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*)*)(i8* {{.*}}, i8* {{.*}}){{$}}
+// CHECK: call void @objc_msgSend(ptr {{.*}}, ptr {{.*}}){{$}}
 
 // A direct call of a class method will normally never have a null receiver.
 void testClassMethod(void) {
   [Derived abort];
 }
 // CHECK-LABEL: @testClassMethod
-// CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*)*)(i8* {{.*}}, i8* {{.*}}) [[NORETURN:#[0-9]+]]
+// CHECK: call void @objc_msgSend(ptr {{.*}}, ptr {{.*}}) [[NORETURN:#[0-9]+]]
 
 __attribute__((weak_import))
 @interface WeakMiddle : Base
@@ -44,7 +44,7 @@ void testWeakImport(void) {
   [WeakDerived abort];
 }
 // CHECK-LABEL: @testWeakImport
-// CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*)*)(i8* {{.*}}, i8* {{.*}}){{$}}
+// CHECK: call void @objc_msgSend(ptr {{.*}}, ptr {{.*}}){{$}}
 
 @interface Derived (MyMethods)
 @end
@@ -59,8 +59,8 @@ void testWeakImport(void) {
   [self fail];
 }
 // CHECK-LABEL: [Derived(MyMethods) testSelfInstanceMethod]
-// CHECK-MRC: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*)*)(i8* {{.*}}, i8* {{.*}}){{$}}
-// CHECK-ARC: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*)*)(i8* {{.*}}, i8* {{.*}}) [[NORETURN]]
+// CHECK-MRC: call void @objc_msgSend(ptr {{.*}}, ptr {{.*}}){{$}}
+// CHECK-ARC: call void @objc_msgSend(ptr {{.*}}, ptr {{.*}}) [[NORETURN]]
 
 // The ARC rule doesn't apply in -init methods.
 - (id) initWhileTestingSelfInstanceMethod {
@@ -69,15 +69,15 @@ void testWeakImport(void) {
   return self;
 }
 // CHECK-LABEL: [Derived(MyMethods) initWhileTestingSelfInstanceMethod]
-// CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*)*)(i8* {{.*}}, i8* {{.*}}){{$}}
+// CHECK: call void @objc_msgSend(ptr {{.*}}, ptr {{.*}}){{$}}
 
 // Same thing applies to class methods.
 + (void) testSelfClassMethod {
   [self abort];
 }
 // CHECK-LABEL: [Derived(MyMethods) testSelfClassMethod]
-// CHECK-MRC: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*)*)(i8* {{.*}}, i8* {{.*}}){{$}}
-// CHECK-ARC: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*)*)(i8* {{.*}}, i8* {{.*}}) [[NORETURN]]
+// CHECK-MRC: call void @objc_msgSend(ptr {{.*}}, ptr {{.*}}){{$}}
+// CHECK-ARC: call void @objc_msgSend(ptr {{.*}}, ptr {{.*}}) [[NORETURN]]
 
 // Super invocations may never be used with a null pointer; this is a
 // constraint on user code when it isn't enforced by the ARC const-self
@@ -86,13 +86,13 @@ void testWeakImport(void) {
   [super fail];
 }
 // CHECK-LABEL: [Derived(MyMethods) testSuperInstanceMethod]
-// CHECK: call void bitcast (i8* ([[SUPER_T:%.*]]*, i8*, ...)* @objc_msgSendSuper2 to void ([[SUPER_T]]*, i8*)*)([[SUPER_T]]* {{.*}}, i8* {{.*}}) [[NORETURN]]
+// CHECK: call void @objc_msgSendSuper2(ptr {{.*}}, ptr {{.*}}) [[NORETURN]]
 
 + (void) testSuperClassMethod {
   [super abort];
 }
 // CHECK-LABEL: [Derived(MyMethods) testSuperClassMethod]
-// CHECK: call void bitcast (i8* ([[SUPER_T]]*, i8*, ...)* @objc_msgSendSuper2 to void ([[SUPER_T]]*, i8*)*)([[SUPER_T]]* {{.*}}, i8* {{.*}}) [[NORETURN]]
+// CHECK: call void @objc_msgSendSuper2(ptr {{.*}}, ptr {{.*}}) [[NORETURN]]
 @end
 
 // CHECK: attributes [[NORETURN]] = { noreturn }

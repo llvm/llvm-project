@@ -2,74 +2,74 @@
 # RUN: llc -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve.fp -run-pass arm-prera-ldst-opt %s -o - -verify-machineinstrs | FileCheck %s
 
 --- |
-  define i32* @MVE_VLDRWU32(i32* %x) { unreachable }
-  define i32* @MVE_VLDRHU16(i32* %x) { unreachable }
-  define i32* @MVE_VLDRBU8(i32* %x) { unreachable }
-  define i32* @MVE_VLDRBS32(i32* %x) { unreachable }
-  define i32* @MVE_VLDRBU32(i32* %x) { unreachable }
-  define i32* @MVE_VLDRHS32(i32* %x) { unreachable }
-  define i32* @MVE_VLDRHU32(i32* %x) { unreachable }
-  define i32* @MVE_VLDRBS16(i32* %x) { unreachable }
-  define i32* @MVE_VLDRBU16(i32* %x) { unreachable }
-  define i32* @MVE_VSTRWU32(i32* %x, <4 x i32> %y) { unreachable }
-  define i32* @MVE_VSTRHU16(i32* %x, <4 x i32> %y) { unreachable }
-  define i32* @MVE_VSTRBU8(i32* %x, <4 x i32> %y) { unreachable }
-  define i32* @MVE_VSTRH32(i32* %x, <4 x i32> %y) { unreachable }
-  define i32* @MVE_VSTRB32(i32* %x, <4 x i32> %y) { unreachable }
-  define i32* @MVE_VSTRB16(i32* %x, <4 x i32> %y) { unreachable }
+  define ptr @MVE_VLDRWU32(ptr %x) { unreachable }
+  define ptr @MVE_VLDRHU16(ptr %x) { unreachable }
+  define ptr @MVE_VLDRBU8(ptr %x) { unreachable }
+  define ptr @MVE_VLDRBS32(ptr %x) { unreachable }
+  define ptr @MVE_VLDRBU32(ptr %x) { unreachable }
+  define ptr @MVE_VLDRHS32(ptr %x) { unreachable }
+  define ptr @MVE_VLDRHU32(ptr %x) { unreachable }
+  define ptr @MVE_VLDRBS16(ptr %x) { unreachable }
+  define ptr @MVE_VLDRBU16(ptr %x) { unreachable }
+  define ptr @MVE_VSTRWU32(ptr %x, <4 x i32> %y) { unreachable }
+  define ptr @MVE_VSTRHU16(ptr %x, <4 x i32> %y) { unreachable }
+  define ptr @MVE_VSTRBU8(ptr %x, <4 x i32> %y) { unreachable }
+  define ptr @MVE_VSTRH32(ptr %x, <4 x i32> %y) { unreachable }
+  define ptr @MVE_VSTRB32(ptr %x, <4 x i32> %y) { unreachable }
+  define ptr @MVE_VSTRB16(ptr %x, <4 x i32> %y) { unreachable }
 
-  define i32* @ld0ld4(i32* %x) { unreachable }
-  define i32* @ld4ld0(i32* %x) { unreachable }
-  define i32* @ld0ld4ld0(i32* %x) { unreachable }
-  define i32* @ld4ld0ld4(i32* %x) { unreachable }
-  define i32* @addload(i32* %x) { unreachable }
-  define i32* @sub(i32* %x) { unreachable }
-  define i32* @otherUse(i32* %x) { unreachable }
-  define i32* @postincUse(i32* %x) { unreachable }
-  define i32* @badScale(i32* %x) { unreachable }
-  define i32* @badRange(i32* %x) { unreachable }
+  define ptr @ld0ld4(ptr %x) { unreachable }
+  define ptr @ld4ld0(ptr %x) { unreachable }
+  define ptr @ld0ld4ld0(ptr %x) { unreachable }
+  define ptr @ld4ld0ld4(ptr %x) { unreachable }
+  define ptr @addload(ptr %x) { unreachable }
+  define ptr @sub(ptr %x) { unreachable }
+  define ptr @otherUse(ptr %x) { unreachable }
+  define ptr @postincUse(ptr %x) { unreachable }
+  define ptr @badScale(ptr %x) { unreachable }
+  define ptr @badRange(ptr %x) { unreachable }
 
-  define i32* @addUseOK(i32* %x) { unreachable }
-  define i32* @addUseDom(i32* %x) { unreachable }
-  define i32* @addUseKilled(i32* %x) { unreachable }
+  define ptr @addUseOK(ptr %x) { unreachable }
+  define ptr @addUseDom(ptr %x) { unreachable }
+  define ptr @addUseKilled(ptr %x) { unreachable }
 
-  define i32* @MVE_VLDRWU32_post(i32* %x) { unreachable }
-  define i32* @MVE_VLDRHU16_post(i32* %x) { unreachable }
-  define i32* @MVE_VLDRBU8_post(i32* %x) { unreachable }
-  define i32* @MVE_VLDRBS32_post(i32* %x) { unreachable }
-  define i32* @MVE_VLDRBU32_post(i32* %x) { unreachable }
-  define i32* @MVE_VLDRHS32_post(i32* %x) { unreachable }
-  define i32* @MVE_VLDRHU32_post(i32* %x) { unreachable }
-  define i32* @MVE_VLDRBS16_post(i32* %x) { unreachable }
-  define i32* @MVE_VLDRBU16_post(i32* %x) { unreachable }
-  define i32* @MVE_VSTRWU32_post(i32* %x, <4 x i32> %y) { unreachable }
-  define i32* @MVE_VSTRHU16_post(i32* %x, <4 x i32> %y) { unreachable }
-  define i32* @MVE_VSTRBU8_post(i32* %x, <4 x i32> %y) { unreachable }
-  define i32* @MVE_VSTRH32_post(i32* %x, <4 x i32> %y) { unreachable }
-  define i32* @MVE_VSTRB32_post(i32* %x, <4 x i32> %y) { unreachable }
-  define i32* @MVE_VSTRB16_post(i32* %x, <4 x i32> %y) { unreachable }
-  define i32* @MVE_VLDRWU32_pre(i32* %x) { unreachable }
-  define i32* @MVE_VLDRHU16_pre(i32* %x) { unreachable }
-  define i32* @MVE_VLDRBU8_pre(i32* %x) { unreachable }
-  define i32* @MVE_VLDRBS32_pre(i32* %x) { unreachable }
-  define i32* @MVE_VLDRBU32_pre(i32* %x) { unreachable }
-  define i32* @MVE_VLDRHS32_pre(i32* %x) { unreachable }
-  define i32* @MVE_VLDRHU32_pre(i32* %x) { unreachable }
-  define i32* @MVE_VLDRBS16_pre(i32* %x) { unreachable }
-  define i32* @MVE_VLDRBU16_pre(i32* %x) { unreachable }
-  define i32* @MVE_VSTRWU32_pre(i32* %x, <4 x i32> %y) { unreachable }
-  define i32* @MVE_VSTRHU16_pre(i32* %x, <4 x i32> %y) { unreachable }
-  define i32* @MVE_VSTRBU8_pre(i32* %x, <4 x i32> %y) { unreachable }
-  define i32* @MVE_VSTRH32_pre(i32* %x, <4 x i32> %y) { unreachable }
-  define i32* @MVE_VSTRB32_pre(i32* %x, <4 x i32> %y) { unreachable }
-  define i32* @MVE_VSTRB16_pre(i32* %x, <4 x i32> %y) { unreachable }
+  define ptr @MVE_VLDRWU32_post(ptr %x) { unreachable }
+  define ptr @MVE_VLDRHU16_post(ptr %x) { unreachable }
+  define ptr @MVE_VLDRBU8_post(ptr %x) { unreachable }
+  define ptr @MVE_VLDRBS32_post(ptr %x) { unreachable }
+  define ptr @MVE_VLDRBU32_post(ptr %x) { unreachable }
+  define ptr @MVE_VLDRHS32_post(ptr %x) { unreachable }
+  define ptr @MVE_VLDRHU32_post(ptr %x) { unreachable }
+  define ptr @MVE_VLDRBS16_post(ptr %x) { unreachable }
+  define ptr @MVE_VLDRBU16_post(ptr %x) { unreachable }
+  define ptr @MVE_VSTRWU32_post(ptr %x, <4 x i32> %y) { unreachable }
+  define ptr @MVE_VSTRHU16_post(ptr %x, <4 x i32> %y) { unreachable }
+  define ptr @MVE_VSTRBU8_post(ptr %x, <4 x i32> %y) { unreachable }
+  define ptr @MVE_VSTRH32_post(ptr %x, <4 x i32> %y) { unreachable }
+  define ptr @MVE_VSTRB32_post(ptr %x, <4 x i32> %y) { unreachable }
+  define ptr @MVE_VSTRB16_post(ptr %x, <4 x i32> %y) { unreachable }
+  define ptr @MVE_VLDRWU32_pre(ptr %x) { unreachable }
+  define ptr @MVE_VLDRHU16_pre(ptr %x) { unreachable }
+  define ptr @MVE_VLDRBU8_pre(ptr %x) { unreachable }
+  define ptr @MVE_VLDRBS32_pre(ptr %x) { unreachable }
+  define ptr @MVE_VLDRBU32_pre(ptr %x) { unreachable }
+  define ptr @MVE_VLDRHS32_pre(ptr %x) { unreachable }
+  define ptr @MVE_VLDRHU32_pre(ptr %x) { unreachable }
+  define ptr @MVE_VLDRBS16_pre(ptr %x) { unreachable }
+  define ptr @MVE_VLDRBU16_pre(ptr %x) { unreachable }
+  define ptr @MVE_VSTRWU32_pre(ptr %x, <4 x i32> %y) { unreachable }
+  define ptr @MVE_VSTRHU16_pre(ptr %x, <4 x i32> %y) { unreachable }
+  define ptr @MVE_VSTRBU8_pre(ptr %x, <4 x i32> %y) { unreachable }
+  define ptr @MVE_VSTRH32_pre(ptr %x, <4 x i32> %y) { unreachable }
+  define ptr @MVE_VSTRB32_pre(ptr %x, <4 x i32> %y) { unreachable }
+  define ptr @MVE_VSTRB16_pre(ptr %x, <4 x i32> %y) { unreachable }
 
-  define i32* @multiple2(i32* %x) { unreachable }
-  define i32* @multiple3(i32* %x) { unreachable }
-  define i32* @multiple4(i32* %x) { unreachable }
-  define i32* @badScale2(i32* %x) { unreachable }
-  define i32* @badRange2(i32* %x) { unreachable }
-  define i32* @regtype(i32* %x) { unreachable }
+  define ptr @multiple2(ptr %x) { unreachable }
+  define ptr @multiple3(ptr %x) { unreachable }
+  define ptr @multiple4(ptr %x) { unreachable }
+  define ptr @badScale2(ptr %x) { unreachable }
+  define ptr @badRange2(ptr %x) { unreachable }
+  define ptr @regtype(ptr %x) { unreachable }
 
 ...
 ---

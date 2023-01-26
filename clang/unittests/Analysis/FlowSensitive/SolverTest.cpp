@@ -10,7 +10,6 @@
 
 #include "TestingSupport.h"
 #include "clang/Analysis/FlowSensitive/Solver.h"
-#include "TestingSupport.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
 #include "gmock/gmock.h"
@@ -24,6 +23,7 @@ using namespace dataflow;
 using test::ConstraintContext;
 using testing::_;
 using testing::AnyOf;
+using testing::IsEmpty;
 using testing::Optional;
 using testing::Pair;
 using testing::UnorderedElementsAre;
@@ -86,6 +86,32 @@ TEST(SolverTest, DistinctVars) {
       solve({X, NotY}),
       UnorderedElementsAre(Pair(X, Solver::Result::Assignment::AssignedTrue),
                            Pair(Y, Solver::Result::Assignment::AssignedFalse)));
+}
+
+TEST(SolverTest, Top) {
+  ConstraintContext Ctx;
+  auto X = Ctx.top();
+
+  // X. Since Top is anonymous, we do not get any results in the solution.
+  expectSatisfiable(solve({X}), IsEmpty());
+}
+
+TEST(SolverTest, NegatedTop) {
+  ConstraintContext Ctx;
+  auto X = Ctx.top();
+
+  // !X
+  expectSatisfiable(solve({Ctx.neg(X)}), IsEmpty());
+}
+
+TEST(SolverTest, DistinctTops) {
+  ConstraintContext Ctx;
+  auto X = Ctx.top();
+  auto Y = Ctx.top();
+  auto NotY = Ctx.neg(Y);
+
+  // X ^ !Y
+  expectSatisfiable(solve({X, NotY}), IsEmpty());
 }
 
 TEST(SolverTest, DoubleNegation) {

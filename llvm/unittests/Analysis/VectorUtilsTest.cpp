@@ -105,9 +105,10 @@ TEST_F(BasicTest, isSplat) {
 TEST_F(BasicTest, narrowShuffleMaskElts) {
   SmallVector<int, 16> ScaledMask;
   narrowShuffleMaskElts(1, {3,2,0,-2}, ScaledMask);
-  EXPECT_EQ(makeArrayRef(ScaledMask), makeArrayRef({3,2,0,-2}));
+  EXPECT_EQ(ArrayRef(ScaledMask), ArrayRef({3, 2, 0, -2}));
   narrowShuffleMaskElts(4, {3,2,0,-1}, ScaledMask);
-  EXPECT_EQ(makeArrayRef(ScaledMask), makeArrayRef({12,13,14,15,8,9,10,11,0,1,2,3,-1,-1,-1,-1}));
+  EXPECT_EQ(ArrayRef(ScaledMask), ArrayRef({12, 13, 14, 15, 8, 9, 10, 11, 0, 1,
+                                            2, 3, -1, -1, -1, -1}));
 }
 
 TEST_F(BasicTest, widenShuffleMaskElts) {
@@ -116,11 +117,11 @@ TEST_F(BasicTest, widenShuffleMaskElts) {
 
   // scale == 1 is a copy
   EXPECT_TRUE(widenShuffleMaskElts(1, {3,2,0,-1}, WideMask));
-  EXPECT_EQ(makeArrayRef(WideMask), makeArrayRef({3,2,0,-1}));
+  EXPECT_EQ(ArrayRef(WideMask), ArrayRef({3, 2, 0, -1}));
 
   // back to original mask
-  narrowShuffleMaskElts(1, makeArrayRef(WideMask), NarrowMask);
-  EXPECT_EQ(makeArrayRef(NarrowMask), makeArrayRef({3,2,0,-1}));
+  narrowShuffleMaskElts(1, ArrayRef(WideMask), NarrowMask);
+  EXPECT_EQ(ArrayRef(NarrowMask), ArrayRef({3, 2, 0, -1}));
 
   // can't widen non-consecutive 3/2
   EXPECT_FALSE(widenShuffleMaskElts(2, {3,2,0,-1}, WideMask));
@@ -130,30 +131,31 @@ TEST_F(BasicTest, widenShuffleMaskElts) {
 
   // can always widen identity to single element
   EXPECT_TRUE(widenShuffleMaskElts(3, {0,1,2}, WideMask));
-  EXPECT_EQ(makeArrayRef(WideMask), makeArrayRef({0}));
+  EXPECT_EQ(ArrayRef(WideMask), ArrayRef({0}));
 
   // back to original mask
-  narrowShuffleMaskElts(3, makeArrayRef(WideMask), NarrowMask);
-  EXPECT_EQ(makeArrayRef(NarrowMask), makeArrayRef({0,1,2}));
+  narrowShuffleMaskElts(3, ArrayRef(WideMask), NarrowMask);
+  EXPECT_EQ(ArrayRef(NarrowMask), ArrayRef({0, 1, 2}));
 
   // groups of 4 must be consecutive/undef
   EXPECT_TRUE(widenShuffleMaskElts(4, {12,13,14,15,8,9,10,11,0,1,2,3,-1,-1,-1,-1}, WideMask));
-  EXPECT_EQ(makeArrayRef(WideMask), makeArrayRef({3,2,0,-1}));
+  EXPECT_EQ(ArrayRef(WideMask), ArrayRef({3, 2, 0, -1}));
 
   // back to original mask
-  narrowShuffleMaskElts(4, makeArrayRef(WideMask), NarrowMask);
-  EXPECT_EQ(makeArrayRef(NarrowMask), makeArrayRef({12,13,14,15,8,9,10,11,0,1,2,3,-1,-1,-1,-1}));
+  narrowShuffleMaskElts(4, ArrayRef(WideMask), NarrowMask);
+  EXPECT_EQ(ArrayRef(NarrowMask), ArrayRef({12, 13, 14, 15, 8, 9, 10, 11, 0, 1,
+                                            2, 3, -1, -1, -1, -1}));
 
   // groups of 2 must be consecutive/undef
   EXPECT_FALSE(widenShuffleMaskElts(2, {12,12,14,15,8,9,10,11,0,1,2,3,-1,-1,-1,-1}, WideMask));
 
   // groups of 3 must be consecutive/undef
   EXPECT_TRUE(widenShuffleMaskElts(3, {6,7,8,0,1,2,-1,-1,-1}, WideMask));
-  EXPECT_EQ(makeArrayRef(WideMask), makeArrayRef({2,0,-1}));
+  EXPECT_EQ(ArrayRef(WideMask), ArrayRef({2, 0, -1}));
 
   // back to original mask
-  narrowShuffleMaskElts(3, makeArrayRef(WideMask), NarrowMask);
-  EXPECT_EQ(makeArrayRef(NarrowMask), makeArrayRef({6,7,8,0,1,2,-1,-1,-1}));
+  narrowShuffleMaskElts(3, ArrayRef(WideMask), NarrowMask);
+  EXPECT_EQ(ArrayRef(NarrowMask), ArrayRef({6, 7, 8, 0, 1, 2, -1, -1, -1}));
 
   // groups of 3 must be consecutive/undef (partial undefs are not ok)
   EXPECT_FALSE(widenShuffleMaskElts(3, {-1,7,8,0,-1,2,-1,-1,-1}, WideMask));
@@ -163,7 +165,82 @@ TEST_F(BasicTest, widenShuffleMaskElts) {
 
   // negative indexes must match across a wide element
   EXPECT_TRUE(widenShuffleMaskElts(2, {-2,-2,-3,-3}, WideMask));
-  EXPECT_EQ(makeArrayRef(WideMask), makeArrayRef({-2,-3}));
+  EXPECT_EQ(ArrayRef(WideMask), ArrayRef({-2, -3}));
+}
+
+TEST_F(BasicTest, getShuffleMaskWithWidestElts) {
+  SmallVector<int, 16> WideMask;
+
+  // can not widen anything here.
+  getShuffleMaskWithWidestElts({3, 2, 0, -1}, WideMask);
+  EXPECT_EQ(ArrayRef(WideMask), ArrayRef({3, 2, 0, -1}));
+
+  // can't widen non-consecutive 3/2
+  getShuffleMaskWithWidestElts({3, 2, 0, -1}, WideMask);
+  EXPECT_EQ(ArrayRef(WideMask), ArrayRef({3, 2, 0, -1}));
+
+  // can always widen identity to single element
+  getShuffleMaskWithWidestElts({0, 1, 2}, WideMask);
+  EXPECT_EQ(ArrayRef(WideMask), ArrayRef({0}));
+
+  // groups of 4 must be consecutive/undef
+  getShuffleMaskWithWidestElts(
+      {12, 13, 14, 15, 8, 9, 10, 11, 0, 1, 2, 3, -1, -1, -1, -1}, WideMask);
+  EXPECT_EQ(ArrayRef(WideMask), ArrayRef({3, 2, 0, -1}));
+
+  // groups of 2 must be consecutive/undef
+  getShuffleMaskWithWidestElts(
+      {12, 12, 14, 15, 8, 9, 10, 11, 0, 1, 2, 3, -1, -1, -1, -1}, WideMask);
+  EXPECT_EQ(ArrayRef(WideMask), ArrayRef({12, 12, 14, 15, 8, 9, 10, 11, 0, 1, 2,
+                                          3, -1, -1, -1, -1}));
+
+  // groups of 3 must be consecutive/undef
+  getShuffleMaskWithWidestElts({6, 7, 8, 0, 1, 2, -1, -1, -1}, WideMask);
+  EXPECT_EQ(ArrayRef(WideMask), ArrayRef({2, 0, -1}));
+
+  // groups of 3 must be consecutive/undef (partial undefs are not ok)
+  getShuffleMaskWithWidestElts({-1, 7, 8, 0, -1, 2, -1, -1, -1}, WideMask);
+  EXPECT_EQ(ArrayRef(WideMask), ArrayRef({-1, 7, 8, 0, -1, 2, -1, -1, -1}));
+
+  // negative indexes must match across a wide element
+  getShuffleMaskWithWidestElts({-1, -2, -1, -1}, WideMask);
+  EXPECT_EQ(ArrayRef(WideMask), ArrayRef({-1, -2, -1, -1}));
+
+  // negative indexes must match across a wide element
+  getShuffleMaskWithWidestElts({-2, -2, -3, -3}, WideMask);
+  EXPECT_EQ(ArrayRef(WideMask), ArrayRef({-2, -3}));
+}
+
+TEST_F(BasicTest, getShuffleDemandedElts) {
+  APInt LHS, RHS;
+
+  // broadcast zero
+  EXPECT_TRUE(getShuffleDemandedElts(4, {0, 0, 0, 0}, APInt(4,0xf), LHS, RHS));
+  EXPECT_EQ(LHS.getZExtValue(), 0x1U);
+  EXPECT_EQ(RHS.getZExtValue(), 0x0U);
+
+  // broadcast zero (with non-permitted undefs)
+  EXPECT_FALSE(getShuffleDemandedElts(2, {0, -1}, APInt(2, 0x3), LHS, RHS));
+
+  // broadcast zero (with permitted undefs)
+  EXPECT_TRUE(getShuffleDemandedElts(3, {0, 0, -1}, APInt(3, 0x7), LHS, RHS, true));
+  EXPECT_EQ(LHS.getZExtValue(), 0x1U);
+  EXPECT_EQ(RHS.getZExtValue(), 0x0U);
+
+  // broadcast one in demanded
+  EXPECT_TRUE(getShuffleDemandedElts(4, {1, 1, 1, -1}, APInt(4, 0x7), LHS, RHS));
+  EXPECT_EQ(LHS.getZExtValue(), 0x2U);
+  EXPECT_EQ(RHS.getZExtValue(), 0x0U);
+
+  // broadcast 7 in demanded
+  EXPECT_TRUE(getShuffleDemandedElts(4, {7, 0, 7, 7}, APInt(4, 0xd), LHS, RHS));
+  EXPECT_EQ(LHS.getZExtValue(), 0x0U);
+  EXPECT_EQ(RHS.getZExtValue(), 0x8U);
+
+  // general test
+  EXPECT_TRUE(getShuffleDemandedElts(4, {4, 2, 7, 3}, APInt(4, 0xf), LHS, RHS));
+  EXPECT_EQ(LHS.getZExtValue(), 0xcU);
+  EXPECT_EQ(RHS.getZExtValue(), 0x9U);
 }
 
 TEST_F(BasicTest, getSplatIndex) {

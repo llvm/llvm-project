@@ -343,6 +343,39 @@ define <16 x i8> @bitselect_v16i8(<16 x i8> %c, <16 x i8> %v1, <16 x i8> %v2) {
   ret <16 x i8> %a
 }
 
+; CHECK-LABEL: bitselect_xor_v16i8:
+; NO-SIMD128-NOT: v128
+; SIMD128-NEXT: .functype bitselect_xor_v16i8 (v128, v128, v128) -> (v128){{$}}
+; SIMD128-SLOW-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $1, $2, $0{{$}}
+; SIMD128-SLOW-NEXT: return $pop[[R]]{{$}}
+; SIMD128-FAST-NEXT: v128.xor
+; SIMD128-FAST-NEXT: v128.and
+; SIMD128-FAST-NEXT: v128.xor
+define <16 x i8> @bitselect_xor_v16i8(<16 x i8> %c, <16 x i8> %v1, <16 x i8> %v2) {
+ %xor1 = xor <16 x i8> %v1, %v2
+ %and = and <16 x i8> %xor1, %c
+ %a = xor <16 x i8> %and, %v2
+ ret <16 x i8> %a
+}
+
+; CHECK-LABEL: bitselect_xor_reversed_v16i8:
+; NO-SIMD128-NOT: v128
+; SIMD128-NEXT: .functype bitselect_xor_reversed_v16i8 (v128, v128, v128) -> (v128){{$}}
+; SIMD128-SLOW-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $2, $1, $0{{$}}
+; SIMD128-SLOW-NEXT: return $pop[[R]]{{$}}
+; SIMD128-FAST-NEXT: v128.xor
+; SIMD128-FAST-NEXT: v128.not
+; SIMD128-FAST-NEXT: v128.and
+; SIMD128-FAST-NEXT: v128.xor
+define <16 x i8> @bitselect_xor_reversed_v16i8(<16 x i8> %c, <16 x i8> %v1, <16 x i8> %v2) {
+ %xor1 = xor <16 x i8> %v1, %v2
+ %notc = xor <16 x i8> %c, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1,
+                            i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+ %and = and <16 x i8> %xor1, %notc
+ %a = xor <16 x i8> %and, %v2
+ ret <16 x i8> %a
+}
+
 ; ==============================================================================
 ; 8 x i16
 ; ==============================================================================
@@ -657,6 +690,39 @@ define <8 x i16> @bitselect_v8i16(<8 x i16> %c, <8 x i16> %v1, <8 x i16> %v2) {
   %masked_v2 = and <8 x i16> %v2, %inv_mask
   %a = or <8 x i16> %masked_v1, %masked_v2
   ret <8 x i16> %a
+}
+
+; CHECK-LABEL: bitselect_xor_v8i16:
+; NO-SIMD128-NOT: v128
+; SIMD128-NEXT: .functype bitselect_xor_v8i16 (v128, v128, v128) -> (v128){{$}}
+; SIMD128-SLOW-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $1, $2, $0{{$}}
+; SIMD128-SLOW-NEXT: return $pop[[R]]{{$}}
+; SIMD128-FAST-NEXT: v128.xor
+; SIMD128-FAST-NEXT: v128.and
+; SIMD128-FAST-NEXT: v128.xor
+define <8 x i16> @bitselect_xor_v8i16(<8 x i16> %c, <8 x i16> %v1, <8 x i16> %v2) {
+ %xor1 = xor <8 x i16> %v1, %v2
+ %and = and <8 x i16> %xor1, %c
+ %a = xor <8 x i16> %and, %v2
+ ret <8 x i16> %a
+}
+
+; CHECK-LABEL: bitselect_xor_reversed_v8i16:
+; NO-SIMD128-NOT: v128
+; SIMD128-NEXT: .functype bitselect_xor_reversed_v8i16 (v128, v128, v128) -> (v128){{$}}
+; SIMD128-SLOW-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $2, $1, $0{{$}}
+; SIMD128-SLOW-NEXT: return $pop[[R]]{{$}}
+; SIMD128-FAST-NEXT: v128.xor
+; SIMD128-FAST-NEXT: v128.not
+; SIMD128-FAST-NEXT: v128.and
+; SIMD128-FAST-NEXT: v128.xor
+define <8 x i16> @bitselect_xor_reversed_v8i16(<8 x i16> %c, <8 x i16> %v1, <8 x i16> %v2) {
+ %xor1 = xor <8 x i16> %v1, %v2
+ %notc = xor <8 x i16> %c, <i16 -1, i16 -1, i16 -1, i16 -1,
+                            i16 -1, i16 -1, i16 -1, i16 -1>
+ %and = and <8 x i16> %xor1, %notc
+ %a = xor <8 x i16> %and, %v2
+ ret <8 x i16> %a
 }
 
 ; CHECK-LABEL: extmul_low_s_v8i16:
@@ -996,6 +1062,38 @@ define <4 x i32> @bitselect_v4i32(<4 x i32> %c, <4 x i32> %v1, <4 x i32> %v2) {
   %masked_v2 = and <4 x i32> %inv_mask, %v2
   %a = or <4 x i32> %masked_v2, %masked_v1
   ret <4 x i32> %a
+}
+
+; CHECK-LABEL: bitselect_xor_v4i32:
+; NO-SIMD128-NOT: v128
+; SIMD128-NEXT: .functype bitselect_xor_v4i32 (v128, v128, v128) -> (v128){{$}}
+; SIMD128-SLOW-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $1, $2, $0{{$}}
+; SIMD128-SLOW-NEXT: return $pop[[R]]{{$}}
+; SIMD128-FAST-NEXT: v128.xor
+; SIMD128-FAST-NEXT: v128.and
+; SIMD128-FAST-NEXT: v128.xor
+define <4 x i32> @bitselect_xor_v4i32(<4 x i32> %c, <4 x i32> %v1, <4 x i32> %v2) {
+ %xor1 = xor <4 x i32> %v1, %v2
+ %and = and <4 x i32> %xor1, %c
+ %a = xor <4 x i32> %and, %v2
+ ret <4 x i32> %a
+}
+
+; CHECK-LABEL: bitselect_xor_reversed_v4i32:
+; NO-SIMD128-NOT: v128
+; SIMD128-NEXT: .functype bitselect_xor_reversed_v4i32 (v128, v128, v128) -> (v128){{$}}
+; SIMD128-SLOW-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $2, $1, $0{{$}}
+; SIMD128-SLOW-NEXT: return $pop[[R]]{{$}}
+; SIMD128-FAST-NEXT: v128.xor
+; SIMD128-FAST-NEXT: v128.not
+; SIMD128-FAST-NEXT: v128.and
+; SIMD128-FAST-NEXT: v128.xor
+define <4 x i32> @bitselect_xor_reversed_v4i32(<4 x i32> %c, <4 x i32> %v1, <4 x i32> %v2) {
+ %xor1 = xor <4 x i32> %v1, %v2
+ %notc = xor <4 x i32> %c, <i32 -1, i32 -1, i32 -1, i32 -1>
+ %and = and <4 x i32> %xor1, %notc
+ %a = xor <4 x i32> %and, %v2
+ ret <4 x i32> %a
 }
 
 ; CHECK-LABEL: extmul_low_s_v4i32:
@@ -1388,6 +1486,38 @@ define <2 x i64> @bitselect_v2i64(<2 x i64> %c, <2 x i64> %v1, <2 x i64> %v2) {
   %masked_v2 = and <2 x i64> %v2, %inv_mask
   %a = or <2 x i64> %masked_v2, %masked_v1
   ret <2 x i64> %a
+}
+
+; CHECK-LABEL: bitselect_xor_v2i64:
+; NO-SIMD128-NOT: v128
+; SIMD128-NEXT: .functype bitselect_xor_v2i64 (v128, v128, v128) -> (v128){{$}}
+; SIMD128-SLOW-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $1, $2, $0{{$}}
+; SIMD128-SLOW-NEXT: return $pop[[R]]{{$}}
+; SIMD128-FAST-NEXT: v128.xor
+; SIMD128-FAST-NEXT: v128.and
+; SIMD128-FAST-NEXT: v128.xor
+define <2 x i64> @bitselect_xor_v2i64(<2 x i64> %c, <2 x i64> %v1, <2 x i64> %v2) {
+ %xor1 = xor <2 x i64> %v1, %v2
+ %and = and <2 x i64> %xor1, %c
+ %a = xor <2 x i64> %and, %v2
+ ret <2 x i64> %a
+}
+
+; CHECK-LABEL: bitselect_xor_reversed_v2i64:
+; NO-SIMD128-NOT: v128
+; SIMD128-NEXT: .functype bitselect_xor_reversed_v2i64 (v128, v128, v128) -> (v128){{$}}
+; SIMD128-SLOW-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $2, $1, $0{{$}}
+; SIMD128-SLOW-NEXT: return $pop[[R]]{{$}}
+; SIMD128-FAST-NEXT: v128.xor
+; SIMD128-FAST-NEXT: v128.not
+; SIMD128-FAST-NEXT: v128.and
+; SIMD128-FAST-NEXT: v128.xor
+define <2 x i64> @bitselect_xor_reversed_v2i64(<2 x i64> %c, <2 x i64> %v1, <2 x i64> %v2) {
+ %xor1 = xor <2 x i64> %v1, %v2
+ %notc = xor <2 x i64> %c, <i64 -1, i64 -1>
+ %and = and <2 x i64> %xor1, %notc
+ %a = xor <2 x i64> %and, %v2
+ ret <2 x i64> %a
 }
 
 ; CHECK-LABEL: extmul_low_s_v2i64:

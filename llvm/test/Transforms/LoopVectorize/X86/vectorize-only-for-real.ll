@@ -1,8 +1,8 @@
-; RUN: opt -S -basic-aa -loop-vectorize < %s | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize < %s | FileCheck %s
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"
 
-define i32 @accum(i32* nocapture readonly %x, i32 %N) #0 {
+define i32 @accum(ptr nocapture readonly %x, i32 %N) #0 {
 entry:
 ; CHECK-LABEL: @accum
 ; CHECK-NOT: x i32>
@@ -16,8 +16,8 @@ for.inc.preheader:
 for.inc:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %for.inc.preheader ]
   %sum.02 = phi i32 [ %add, %for.inc ], [ 0, %for.inc.preheader ]
-  %arrayidx = getelementptr inbounds i32, i32* %x, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %x, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %0, %sum.02
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32

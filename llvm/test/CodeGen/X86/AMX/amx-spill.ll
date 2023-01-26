@@ -28,30 +28,25 @@ define dso_local void @test_api(i32 %0, i16 signext %1, i16 signext %2) nounwind
 ; CHECK-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb %dl, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    ldtilecfg -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movl $buf, %r8d
+; CHECK-NEXT:    movl $buf, %ecx
 ; CHECK-NEXT:    movl $32, %eax
-; CHECK-NEXT:    tileloadd (%r8,%rax), %tmm1
-; CHECK-NEXT:    tileloadd (%r8,%rax), %tmm1
-; CHECK-NEXT:    movabsq $64, %rcx
-; CHECK-NEXT:    tilestored %tmm1, -64(%rsp,%rcx) # 1024-byte Folded Spill
-; CHECK-NEXT:    tileloadd (%r8,%rax), %tmm3
-; CHECK-NEXT:    tileloadd (%r8,%rax), %tmm4
-; CHECK-NEXT:    tileloadd (%r8,%rax), %tmm2
-; CHECK-NEXT:    tileloadd (%r8,%rax), %tmm5
-; CHECK-NEXT:    tileloadd (%r8,%rax), %tmm0
+; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm1
+; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm1
+; CHECK-NEXT:    movabsq $64, %r8
+; CHECK-NEXT:    tilestored %tmm1, -64(%rsp,%r8) # 1024-byte Folded Spill
+; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm3
+; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm4
+; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm2
+; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm5
+; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm0
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    je .LBB0_2
+; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    tileloadd (%r8,%rax), %tmm6
-; CHECK-NEXT:    tileloadd (%r8,%rax), %tmm7
-; CHECK-NEXT:    tileloadd (%r8,%rax), %tmm1
-; CHECK-NEXT:    jmp .LBB0_3
-; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    movl $buf2, %ecx
+; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm6
 ; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm7
 ; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm1
-; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    tdpbssd %tmm7, %tmm6, %tmm1
 ; CHECK-NEXT:    movabsq $64, %rax
 ; CHECK-NEXT:    tileloadd -64(%rsp,%rax), %tmm7 # 1024-byte Folded Reload

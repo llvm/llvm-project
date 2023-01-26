@@ -67,6 +67,20 @@ MLIR_CAPI_EXPORTED MlirType mlirIndexTypeGet(MlirContext ctx);
 // Floating-point types.
 //===----------------------------------------------------------------------===//
 
+/// Checks whether the given type is an f8E5M2 type.
+MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat8E5M2(MlirType type);
+
+/// Creates an f8E5M2 type in the given context. The type is owned by the
+/// context.
+MLIR_CAPI_EXPORTED MlirType mlirFloat8E5M2TypeGet(MlirContext ctx);
+
+/// Checks whether the given type is an f8E4M3FN type.
+MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat8E4M3FN(MlirType type);
+
+/// Creates an f8E4M3FN type in the given context. The type is owned by the
+/// context.
+MLIR_CAPI_EXPORTED MlirType mlirFloat8E4M3FNTypeGet(MlirContext ctx);
+
 /// Checks whether the given type is a bf16 type.
 MLIR_CAPI_EXPORTED bool mlirTypeIsABF16(MlirType type);
 
@@ -152,7 +166,7 @@ MLIR_CAPI_EXPORTED bool mlirShapedTypeIsDynamicSize(int64_t size);
 
 /// Returns the value indicating a dynamic size in a shaped type. Prefer
 /// mlirShapedTypeIsDynamicSize to direct comparisons with this value.
-MLIR_CAPI_EXPORTED int64_t mlirShapedTypeGetDynamicSize();
+MLIR_CAPI_EXPORTED int64_t mlirShapedTypeGetDynamicSize(void);
 
 /// Checks whether the given value is used as a placeholder for dynamic strides
 /// and offsets in shaped types.
@@ -161,7 +175,7 @@ MLIR_CAPI_EXPORTED bool mlirShapedTypeIsDynamicStrideOrOffset(int64_t val);
 /// Returns the value indicating a dynamic stride or offset in a shaped type.
 /// Prefer mlirShapedTypeGetDynamicStrideOrOffset to direct comparisons with
 /// this value.
-MLIR_CAPI_EXPORTED int64_t mlirShapedTypeGetDynamicStrideOrOffset();
+MLIR_CAPI_EXPORTED int64_t mlirShapedTypeGetDynamicStrideOrOffset(void);
 
 //===----------------------------------------------------------------------===//
 // Vector type.

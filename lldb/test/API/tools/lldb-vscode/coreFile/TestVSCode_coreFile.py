@@ -3,7 +3,6 @@ Test lldb-vscode coreFile attaching
 """
 
 
-import unittest2
 import vscode
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -18,7 +17,7 @@ class TestVSCode_coreFile(lldbvscode_testcase.VSCodeTestCaseBase):
     @skipIfRemote
     @skipIfLLVMTargetMissing("X86")
     def test_core_file(self):
-        current_dir = os.path.dirname(os.path.realpath(__file__))
+        current_dir = os.path.dirname(__file__)
         exe_file = os.path.join(current_dir, "linux-x86_64.out")
         core_file = os.path.join(current_dir, "linux-x86_64.core")
 
@@ -45,7 +44,7 @@ class TestVSCode_coreFile(lldbvscode_testcase.VSCodeTestCaseBase):
     @skipIfLLVMTargetMissing("X86")
     def test_core_file_source_mapping(self):
         ''' Test that sourceMap property is correctly applied when loading a core '''
-        current_dir = os.path.dirname(os.path.realpath(__file__))
+        current_dir = os.path.dirname(__file__)
         exe_file = os.path.join(current_dir, "linux-x86_64.out")
         core_file = os.path.join(current_dir, "linux-x86_64.core")
 

@@ -1,12 +1,11 @@
-; RUN: opt < %s -mtriple=x86_64-- -inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK,CHECK-NOLINUX,CHECK-OPEN,CHECK-UNKNOWN %s
 ; RUN: opt < %s -mtriple=x86_64-- -passes=inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK,CHECK-NOLINUX,CHECK-OPEN,CHECK-UNKNOWN %s
-; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK,CHECK-KNOWN,CHECK-NOLINUX,CHECK-OPEN,CHECK-DARWIN %s
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK,CHECK-KNOWN,CHECK-LINUX %s
-; RUN: opt < %s -mtriple=nvptx -inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK-NOLINUX,CHECK-NVPTX %s
-; RUN: opt < %s -mtriple=powerpc-ibm-aix-xcoff -inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK-AIX %s
+; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -passes=inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK,CHECK-KNOWN,CHECK-NOLINUX,CHECK-OPEN,CHECK-DARWIN %s
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes=inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK,CHECK-KNOWN,CHECK-LINUX %s
+; RUN: opt < %s -mtriple=nvptx -passes=inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK-NOLINUX,CHECK-NVPTX %s
+; RUN: opt < %s -mtriple=powerpc-ibm-aix-xcoff -passes=inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK-AIX %s
 
-declare i32 @__nvvm_reflect(i8*)
-; CHECK-NVPTX: declare noundef i32 @__nvvm_reflect(i8* noundef) [[NOFREE_NOUNWIND_READNONE:#[0-9]+]]
+declare i32 @__nvvm_reflect(ptr)
+; CHECK-NVPTX: declare noundef i32 @__nvvm_reflect(ptr noundef) [[NOFREE_NOUNWIND_READNONE:#[0-9]+]]
 
 
 ; Check all the libc functions (thereby also exercising the prototype check).
@@ -199,8 +198,8 @@ declare float @__sinpif(float)
 ; CHECK: declare i32 @abs(i32) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY:#[0-9]+]]
 declare i32 @abs(i32)
 
-; CHECK: declare noundef i32 @access(i8* nocapture noundef readonly, i32 noundef) [[NOFREE_NOUNWIND:#[0-9]+]]
-declare i32 @access(i8*, i32)
+; CHECK: declare noundef i32 @access(ptr nocapture noundef readonly, i32 noundef) [[NOFREE_NOUNWIND:#[0-9]+]]
+declare i32 @access(ptr, i32)
 
 ; CHECK: declare double @acos(double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare double @acos(double)
@@ -220,8 +219,8 @@ declare x86_fp80 @acoshl(x86_fp80)
 ; CHECK: declare x86_fp80 @acosl(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @acosl(x86_fp80)
 
-; CHECK: declare noalias noundef i8* @aligned_alloc(i64 allocalign noundef, i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCUNINIT_ALLOCSIZE1_FAMILY_MALLOC:#[0-9]+]]
-declare i8* @aligned_alloc(i64, i64)
+; CHECK: declare noalias noundef ptr @aligned_alloc(i64 allocalign noundef, i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCUNINIT_ALLOCSIZE1_FAMILY_MALLOC:#[0-9]+]]
+declare ptr @aligned_alloc(i64, i64)
 
 ; CHECK: declare double @asin(double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare double @asin(double)
@@ -268,33 +267,33 @@ declare x86_fp80 @atanhl(x86_fp80)
 ; CHECK: declare x86_fp80 @atanl(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @atanl(x86_fp80)
 
-; CHECK: declare double @atof(i8* nocapture) [[NOFREE_NOUNWIND_READONLY_WILLRETURN:#[0-9]+]]
-declare double @atof(i8*)
+; CHECK: declare double @atof(ptr nocapture) [[NOFREE_NOUNWIND_READONLY_WILLRETURN:#[0-9]+]]
+declare double @atof(ptr)
 
-; CHECK: declare i32 @atoi(i8* nocapture) [[NOFREE_NOUNWIND_READONLY_WILLRETURN]]
-declare i32 @atoi(i8*)
+; CHECK: declare i32 @atoi(ptr nocapture) [[NOFREE_NOUNWIND_READONLY_WILLRETURN]]
+declare i32 @atoi(ptr)
 
-; CHECK: declare i64 @atol(i8* nocapture) [[NOFREE_NOUNWIND_READONLY_WILLRETURN]]
-declare i64 @atol(i8*)
+; CHECK: declare i64 @atol(ptr nocapture) [[NOFREE_NOUNWIND_READONLY_WILLRETURN]]
+declare i64 @atol(ptr)
 
-; CHECK: declare i64 @atoll(i8* nocapture) [[NOFREE_NOUNWIND_READONLY_WILLRETURN]]
-declare i64 @atoll(i8*)
+; CHECK: declare i64 @atoll(ptr nocapture) [[NOFREE_NOUNWIND_READONLY_WILLRETURN]]
+declare i64 @atoll(ptr)
 
-; CHECK-LINUX: declare i32 @bcmp(i8* nocapture, i8* nocapture, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY:#[0-9]+]]
-; CHECK-NOLINUX: declare i32 @bcmp(i8*, i8*, i64){{$}}
-declare i32 @bcmp(i8*, i8*, i64)
+; CHECK-LINUX: declare i32 @bcmp(ptr nocapture, ptr nocapture, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY:#[0-9]+]]
+; CHECK-NOLINUX: declare i32 @bcmp(ptr, ptr, i64){{$}}
+declare i32 @bcmp(ptr, ptr, i64)
 
-; CHECK: declare void @bcopy(i8* nocapture readonly, i8* nocapture writeonly, i64)  [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
-declare void @bcopy(i8*, i8*, i64)
+; CHECK: declare void @bcopy(ptr nocapture readonly, ptr nocapture writeonly, i64)  [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare void @bcopy(ptr, ptr, i64)
 
-; CHECK: declare void @bzero(i8* nocapture writeonly, i64)  [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
-declare void @bzero(i8*, i64)
+; CHECK: declare void @bzero(ptr nocapture writeonly, i64)  [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+declare void @bzero(ptr, i64)
 
-; CHECK: declare noalias noundef i8* @calloc(i64 noundef, i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCZEROED_ALLOCSIZE01_FAMILY_MALLOC:#[0-9]+]]
-declare i8* @calloc(i64, i64)
+; CHECK: declare noalias noundef ptr @calloc(i64 noundef, i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCZEROED_ALLOCSIZE01_FAMILY_MALLOC:#[0-9]+]]
+declare ptr @calloc(i64, i64)
 
-; CHECK-AIX: declare noalias noundef i8* @vec_calloc(i64 noundef, i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE01_FAMILY_VEC_MALLOC:#[0-9]+]]
-declare i8* @vec_calloc(i64, i64)
+; CHECK-AIX: declare noalias noundef ptr @vec_calloc(i64 noundef, i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE01_FAMILY_VEC_MALLOC:#[0-9]+]]
+declare ptr @vec_calloc(i64, i64)
 
 ; CHECK: declare double @cbrt(double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare double @cbrt(double)
@@ -314,17 +313,22 @@ declare float @ceilf(float)
 ; CHECK: declare x86_fp80 @ceill(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @ceill(x86_fp80)
 
-; CHECK: declare noundef i32 @chmod(i8* nocapture noundef readonly, i16 noundef zeroext) [[NOFREE_NOUNWIND]]
-declare i32 @chmod(i8*, i16 zeroext)
+; The second argument of int chmod(FILE*, mode_t) is a 32-bit int on most
+; targets but it's a 16-bit short on Apple Darwin.  Use i16 here to verify
+; the function is still recognized.
+; FIXME: this should be tightened up to verify that only the type with
+; the right size for the target matches.
+; CHECK: declare noundef i32 @chmod(ptr nocapture noundef readonly, i16 noundef zeroext) [[NOFREE_NOUNWIND]]
+declare i32 @chmod(ptr, i16 zeroext)
 
-; CHECK: declare noundef i32 @chown(i8* nocapture noundef readonly, i32 noundef, i32 noundef) [[NOFREE_NOUNWIND]]
-declare i32 @chown(i8*, i32, i32)
+; CHECK: declare noundef i32 @chown(ptr nocapture noundef readonly, i32 noundef, i32 noundef) [[NOFREE_NOUNWIND]]
+declare i32 @chown(ptr, i32, i32)
 
-; CHECK: declare void @clearerr(%opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare void @clearerr(%opaque*)
+; CHECK: declare void @clearerr(ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare void @clearerr(ptr)
 
-; CHECK: declare noundef i32 @closedir(%opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i32 @closedir(%opaque*)
+; CHECK: declare noundef i32 @closedir(ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i32 @closedir(ptr)
 
 ; CHECK: declare double @copysign(double, double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare double @copysign(double, double)
@@ -353,8 +357,8 @@ declare x86_fp80 @coshl(x86_fp80)
 ; CHECK: declare x86_fp80 @cosl(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @cosl(x86_fp80)
 
-; CHECK: declare noundef i8* @ctermid(i8* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i8* @ctermid(i8*)
+; CHECK: declare noundef ptr @ctermid(ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare ptr @ctermid(ptr)
 
 ; CHECK: declare double @exp(double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare double @exp(double)
@@ -392,20 +396,20 @@ declare float @fabsf(float)
 ; CHECK: declare x86_fp80 @fabsl(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @fabsl(x86_fp80)
 
-; CHECK: declare noundef i32 @fclose(%opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i32 @fclose(%opaque*)
+; CHECK: declare noundef i32 @fclose(ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i32 @fclose(ptr)
 
-; CHECK: declare noalias noundef %opaque* @fdopen(i32 noundef, i8* nocapture noundef readonly) [[NOFREE_NOUNWIND]]
-declare %opaque* @fdopen(i32, i8*)
+; CHECK: declare noalias noundef ptr @fdopen(i32 noundef, ptr nocapture noundef readonly) [[NOFREE_NOUNWIND]]
+declare ptr @fdopen(i32, ptr)
 
-; CHECK: declare noundef i32 @feof(%opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i32 @feof(%opaque*)
+; CHECK: declare noundef i32 @feof(ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i32 @feof(ptr)
 
-; CHECK: declare noundef i32 @ferror(%opaque* nocapture noundef) [[NOFREE_NOUNWIND_READONLY:#[0-9]+]]
-declare i32 @ferror(%opaque*)
+; CHECK: declare noundef i32 @ferror(ptr nocapture noundef) [[NOFREE_NOUNWIND_READONLY:#[0-9]+]]
+declare i32 @ferror(ptr)
 
-; CHECK: declare noundef i32 @fflush(%opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i32 @fflush(%opaque*)
+; CHECK: declare noundef i32 @fflush(ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i32 @fflush(ptr)
 
 ; CHECK: declare i32 @ffs(i32) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare i32 @ffs(i32)
@@ -418,20 +422,20 @@ declare i32 @ffsl(i64)
 ; CHECK-UNKNOWN: declare i32 @ffsll(i64){{$}}
 declare i32 @ffsll(i64)
 
-; CHECK: declare noundef i32 @fgetc(%opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i32 @fgetc(%opaque*)
+; CHECK: declare noundef i32 @fgetc(ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i32 @fgetc(ptr)
 
-; CHECK: declare noundef i32 @fgetpos(%opaque* nocapture noundef, i64* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i32 @fgetpos(%opaque*, i64*)
+; CHECK: declare noundef i32 @fgetpos(ptr nocapture noundef, ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i32 @fgetpos(ptr, ptr)
 
-; CHECK: declare noundef i8* @fgets(i8* noundef, i32 noundef, %opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i8* @fgets(i8*, i32, %opaque*)
+; CHECK: declare noundef ptr @fgets(ptr noundef, i32 noundef, ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare ptr @fgets(ptr, i32, ptr)
 
-; CHECK: declare noundef i32 @fileno(%opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i32 @fileno(%opaque*)
+; CHECK: declare noundef i32 @fileno(ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i32 @fileno(ptr)
 
-; CHECK: declare void @flockfile(%opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare void @flockfile(%opaque*)
+; CHECK: declare void @flockfile(ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare void @flockfile(ptr)
 
 ; CHECK: declare double @floor(double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare double @floor(double)
@@ -478,87 +482,87 @@ declare float @fmodf(float, float)
 ; CHECK: declare x86_fp80 @fmodl(x86_fp80, x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @fmodl(x86_fp80, x86_fp80)
 
-; CHECK: declare noalias noundef %opaque* @fopen(i8* nocapture noundef readonly, i8* nocapture noundef readonly) [[NOFREE_NOUNWIND]]
-declare %opaque* @fopen(i8*, i8*)
+; CHECK: declare noalias noundef ptr @fopen(ptr nocapture noundef readonly, ptr nocapture noundef readonly) [[NOFREE_NOUNWIND]]
+declare ptr @fopen(ptr, ptr)
 
-; CHECK: declare noundef i32 @fprintf(%opaque* nocapture noundef, i8* nocapture noundef readonly, ...) [[NOFREE_NOUNWIND]]
-declare i32 @fprintf(%opaque*, i8*, ...)
+; CHECK: declare noundef i32 @fprintf(ptr nocapture noundef, ptr nocapture noundef readonly, ...) [[NOFREE_NOUNWIND]]
+declare i32 @fprintf(ptr, ptr, ...)
 
-; CHECK: declare noundef i32 @fputc(i32 noundef, %opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i32 @fputc(i32, %opaque*)
+; CHECK: declare noundef i32 @fputc(i32 noundef, ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i32 @fputc(i32, ptr)
 
-; CHECK: declare noundef i32 @fputs(i8* nocapture noundef readonly, %opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i32 @fputs(i8*, %opaque*)
+; CHECK: declare noundef i32 @fputs(ptr nocapture noundef readonly, ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i32 @fputs(ptr, ptr)
 
-; CHECK: declare noundef i64 @fread(i8* nocapture noundef, i64 noundef, i64 noundef, %opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i64 @fread(i8*, i64, i64, %opaque*)
+; CHECK: declare noundef i64 @fread(ptr nocapture noundef, i64 noundef, i64 noundef, ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i64 @fread(ptr, i64, i64, ptr)
 
-; CHECK: declare void @free(i8* allocptr nocapture noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_FREE_FAMILY_MALLOC:#[0-9]+]]
-declare void @free(i8*)
+; CHECK: declare void @free(ptr allocptr nocapture noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_FREE_FAMILY_MALLOC:#[0-9]+]]
+declare void @free(ptr)
 
-; CHECK-AIX: declare void @vec_free(i8* allocptr nocapture noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_FAMILY_VEC_MALLOC:#[0-9]+]]
-declare void @vec_free(i8*)
+; CHECK-AIX: declare void @vec_free(ptr allocptr nocapture noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_FAMILY_VEC_MALLOC:#[0-9]+]]
+declare void @vec_free(ptr)
 
-; CHECK: declare double @frexp(double, i32* nocapture) [[NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
-declare double @frexp(double, i32*)
+; CHECK: declare double @frexp(double, ptr nocapture) [[NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare double @frexp(double, ptr)
 
-; CHECK: declare float @frexpf(float, i32* nocapture) [[NOFREE_NOUNWIND_WILLRETURN]]
-declare float @frexpf(float, i32*)
+; CHECK: declare float @frexpf(float, ptr nocapture) [[NOFREE_NOUNWIND_WILLRETURN]]
+declare float @frexpf(float, ptr)
 
-; CHECK: declare x86_fp80 @frexpl(x86_fp80, i32* nocapture) [[NOFREE_NOUNWIND_WILLRETURN]]
-declare x86_fp80 @frexpl(x86_fp80, i32*)
+; CHECK: declare x86_fp80 @frexpl(x86_fp80, ptr nocapture) [[NOFREE_NOUNWIND_WILLRETURN]]
+declare x86_fp80 @frexpl(x86_fp80, ptr)
 
-; CHECK: declare noundef i32 @fscanf(%opaque* nocapture noundef, i8* nocapture noundef readonly, ...) [[NOFREE_NOUNWIND]]
-declare i32 @fscanf(%opaque*, i8*, ...)
+; CHECK: declare noundef i32 @fscanf(ptr nocapture noundef, ptr nocapture noundef readonly, ...) [[NOFREE_NOUNWIND]]
+declare i32 @fscanf(ptr, ptr, ...)
 
-; CHECK: declare noundef i32 @fseek(%opaque* nocapture noundef, i64 noundef, i32 noundef) [[NOFREE_NOUNWIND]]
-declare i32 @fseek(%opaque*, i64, i32)
+; CHECK: declare noundef i32 @fseek(ptr nocapture noundef, i64 noundef, i32 noundef) [[NOFREE_NOUNWIND]]
+declare i32 @fseek(ptr, i64, i32)
 
-; CHECK: declare noundef i32 @fseeko(%opaque* nocapture noundef, i64 noundef, i32 noundef) [[NOFREE_NOUNWIND]]
-declare i32 @fseeko(%opaque*, i64, i32)
+; CHECK: declare noundef i32 @fseeko(ptr nocapture noundef, i64 noundef, i32 noundef) [[NOFREE_NOUNWIND]]
+declare i32 @fseeko(ptr, i64, i32)
 
-; CHECK-LINUX: declare noundef i32 @fseeko64(%opaque* nocapture noundef, i64 noundef, i32 noundef) [[NOFREE_NOUNWIND]]
-declare i32 @fseeko64(%opaque*, i64, i32)
+; CHECK-LINUX: declare noundef i32 @fseeko64(ptr nocapture noundef, i64 noundef, i32 noundef) [[NOFREE_NOUNWIND]]
+declare i32 @fseeko64(ptr, i64, i32)
 
-; CHECK: declare noundef i32 @fsetpos(%opaque* nocapture noundef, i64* noundef) [[NOFREE_NOUNWIND]]
-declare i32 @fsetpos(%opaque*, i64*)
+; CHECK: declare noundef i32 @fsetpos(ptr nocapture noundef, ptr noundef) [[NOFREE_NOUNWIND]]
+declare i32 @fsetpos(ptr, ptr)
 
-; CHECK: declare noundef i32 @fstat(i32 noundef, %opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i32 @fstat(i32, %opaque*)
+; CHECK: declare noundef i32 @fstat(i32 noundef, ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i32 @fstat(i32, ptr)
 
-; CHECK-LINUX: declare noundef i32 @fstat64(i32 noundef, %opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i32 @fstat64(i32, %opaque*)
+; CHECK-LINUX: declare noundef i32 @fstat64(i32 noundef, ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i32 @fstat64(i32, ptr)
 
-; CHECK: declare noundef i32 @fstatvfs(i32 noundef, %opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i32 @fstatvfs(i32, %opaque*)
+; CHECK: declare noundef i32 @fstatvfs(i32 noundef, ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i32 @fstatvfs(i32, ptr)
 
-; CHECK-LINUX: declare noundef i32 @fstatvfs64(i32 noundef, %opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i32 @fstatvfs64(i32, %opaque*)
+; CHECK-LINUX: declare noundef i32 @fstatvfs64(i32 noundef, ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i32 @fstatvfs64(i32, ptr)
 
-; CHECK: declare noundef i64 @ftell(%opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i64 @ftell(%opaque*)
+; CHECK: declare noundef i64 @ftell(ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i64 @ftell(ptr)
 
-; CHECK: declare noundef i64 @ftello(%opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i64 @ftello(%opaque*)
+; CHECK: declare noundef i64 @ftello(ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i64 @ftello(ptr)
 
-; CHECK-LINUX: declare noundef i64 @ftello64(%opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i64 @ftello64(%opaque*)
+; CHECK-LINUX: declare noundef i64 @ftello64(ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i64 @ftello64(ptr)
 
-; CHECK: declare noundef i32 @ftrylockfile(%opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i32 @ftrylockfile(%opaque*)
+; CHECK: declare noundef i32 @ftrylockfile(ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i32 @ftrylockfile(ptr)
 
-; CHECK: declare void @funlockfile(%opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare void @funlockfile(%opaque*)
+; CHECK: declare void @funlockfile(ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare void @funlockfile(ptr)
 
-; CHECK: declare noundef i64 @fwrite(i8* nocapture noundef, i64 noundef, i64 noundef, %opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i64 @fwrite(i8*, i64, i64, %opaque*)
+; CHECK: declare noundef i64 @fwrite(ptr nocapture noundef, i64 noundef, i64 noundef, ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i64 @fwrite(ptr, i64, i64, ptr)
 
-; CHECK: declare noundef i32 @getc(%opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i32 @getc(%opaque*)
+; CHECK: declare noundef i32 @getc(ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i32 @getc(ptr)
 
-; CHECK-KNOWN: declare noundef i32 @getc_unlocked(%opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-; CHECK-UNKNOWN: declare i32 @getc_unlocked(%opaque*){{$}}
-declare i32 @getc_unlocked(%opaque*)
+; CHECK-KNOWN: declare noundef i32 @getc_unlocked(ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+; CHECK-UNKNOWN: declare i32 @getc_unlocked(ptr){{$}}
+declare i32 @getc_unlocked(ptr)
 
 ; CHECK: declare noundef i32 @getchar() [[NOFREE_NOUNWIND]]
 declare i32 @getchar()
@@ -567,23 +571,23 @@ declare i32 @getchar()
 ; CHECK-UNKNOWN: declare i32 @getchar_unlocked(){{$}}
 declare i32 @getchar_unlocked()
 
-; CHECK: declare noundef i8* @getenv(i8* nocapture noundef) [[NOFREE_NOUNWIND_READONLY]]
-declare i8* @getenv(i8*)
+; CHECK: declare noundef ptr @getenv(ptr nocapture noundef) [[NOFREE_NOUNWIND_READONLY]]
+declare ptr @getenv(ptr)
 
-; CHECK: declare noundef i32 @getitimer(i32 noundef, %opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i32 @getitimer(i32, %opaque*)
+; CHECK: declare noundef i32 @getitimer(i32 noundef, ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i32 @getitimer(i32, ptr)
 
-; CHECK: declare noundef i32 @getlogin_r(i8* nocapture noundef, i64 noundef) [[NOFREE_NOUNWIND]]
-declare i32 @getlogin_r(i8*, i64)
+; CHECK: declare noundef i32 @getlogin_r(ptr nocapture noundef, i64 noundef) [[NOFREE_NOUNWIND]]
+declare i32 @getlogin_r(ptr, i64)
 
-; CHECK: declare noundef %opaque* @getpwnam(i8* nocapture noundef readonly) [[NOFREE_NOUNWIND]]
-declare %opaque* @getpwnam(i8*)
+; CHECK: declare noundef ptr @getpwnam(ptr nocapture noundef readonly) [[NOFREE_NOUNWIND]]
+declare ptr @getpwnam(ptr)
 
-; CHECK: declare noundef i8* @gets(i8* noundef) [[NOFREE_NOUNWIND]]
-declare i8* @gets(i8*)
+; CHECK: declare noundef ptr @gets(ptr noundef) [[NOFREE_NOUNWIND]]
+declare ptr @gets(ptr)
 
-; CHECK: declare noundef i32 @gettimeofday(%opaque* nocapture noundef, i8* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i32 @gettimeofday(%opaque*, i8*)
+; CHECK: declare noundef i32 @gettimeofday(ptr nocapture noundef, ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i32 @gettimeofday(ptr, ptr)
 
 ; CHECK: declare i32 @isascii(i32) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare i32 @isascii(i32)
@@ -594,8 +598,8 @@ declare i32 @isdigit(i32)
 ; CHECK: declare i64 @labs(i64) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare i64 @labs(i64)
 
-; CHECK: declare noundef i32 @lchown(i8* nocapture noundef readonly, i32 noundef, i32 noundef) [[NOFREE_NOUNWIND]]
-declare i32 @lchown(i8*, i32, i32)
+; CHECK: declare noundef i32 @lchown(ptr nocapture noundef readonly, i32 noundef, i32 noundef) [[NOFREE_NOUNWIND]]
+declare i32 @lchown(ptr, i32, i32)
 
 ; CHECK: declare double @ldexp(double, i32) [[NOFREE_WILLRETURN:#[0-9]+]]
 declare double @ldexp(double, i32)
@@ -654,64 +658,64 @@ declare float @logf(float)
 ; CHECK: declare x86_fp80 @logl(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @logl(x86_fp80)
 
-; CHECK: declare noundef i32 @lstat(i8* nocapture noundef readonly, %opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i32 @lstat(i8*, %opaque*)
+; CHECK: declare noundef i32 @lstat(ptr nocapture noundef readonly, ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i32 @lstat(ptr, ptr)
 
-; CHECK-LINUX: declare noundef i32 @lstat64(i8* nocapture noundef readonly, %opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i32 @lstat64(i8*, %opaque*)
+; CHECK-LINUX: declare noundef i32 @lstat64(ptr nocapture noundef readonly, ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i32 @lstat64(ptr, ptr)
 
-; CHECK: declare noalias noundef i8* @malloc(i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCUNINIT_ALLOCSIZE0_FAMILY_MALLOC:#[0-9]+]]
-declare i8* @malloc(i64)
+; CHECK: declare noalias noundef ptr @malloc(i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCUNINIT_ALLOCSIZE0_FAMILY_MALLOC:#[0-9]+]]
+declare ptr @malloc(i64)
 
-; CHECK-AIX: declare noalias noundef i8* @vec_malloc(i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE0_FAMILY_VEC_MALLOC:#[0-9]+]]
-declare i8* @vec_malloc(i64)
+; CHECK-AIX: declare noalias noundef ptr @vec_malloc(i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE0_FAMILY_VEC_MALLOC:#[0-9]+]]
+declare ptr @vec_malloc(i64)
 
-; CHECK-LINUX: declare noalias noundef i8* @memalign(i64 allocalign, i64) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
-declare i8* @memalign(i64, i64)
+; CHECK-LINUX: declare noalias noundef ptr @memalign(i64 allocalign, i64) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare ptr @memalign(i64, i64)
 
-; CHECK: declare i8* @memccpy(i8* noalias writeonly, i8* noalias nocapture readonly, i32, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
-declare i8* @memccpy(i8*, i8*, i32, i64)
+; CHECK: declare ptr @memccpy(ptr noalias writeonly, ptr noalias nocapture readonly, i32, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+declare ptr @memccpy(ptr, ptr, i32, i64)
 
-; CHECK-LINUX:   declare i8* @memchr(i8*, i32, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
-; CHECK-DARWIN:  declare i8* @memchr(i8*, i32, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY:#[0-9]+]]
-; CHECK-UNKNOWN: declare i8* @memchr(i8*, i32, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY:#[0-9]+]]
-declare i8* @memchr(i8*, i32, i64)
+; CHECK-LINUX:   declare ptr @memchr(ptr, i32, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
+; CHECK-DARWIN:  declare ptr @memchr(ptr, i32, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY:#[0-9]+]]
+; CHECK-UNKNOWN: declare ptr @memchr(ptr, i32, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY:#[0-9]+]]
+declare ptr @memchr(ptr, i32, i64)
 
-; CHECK: declare i32 @memcmp(i8* nocapture, i8* nocapture, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
-declare i32 @memcmp(i8*, i8*, i64)
+; CHECK: declare i32 @memcmp(ptr nocapture, ptr nocapture, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
+declare i32 @memcmp(ptr, ptr, i64)
 
-; CHECK: declare i8* @memcpy(i8* noalias returned writeonly, i8* noalias nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
-declare i8* @memcpy(i8*, i8*, i64)
+; CHECK: declare ptr @memcpy(ptr noalias returned writeonly, ptr noalias nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+declare ptr @memcpy(ptr, ptr, i64)
 
-; CHECK: declare i8* @__memcpy_chk(i8* noalias writeonly, i8* noalias nocapture readonly, i64, i64) [[ARGMEMONLY_NOFREE_NOUNWIND:#[0-9]+]]
-declare i8* @__memcpy_chk(i8*, i8*, i64, i64)
+; CHECK: declare ptr @__memcpy_chk(ptr noalias writeonly, ptr noalias nocapture readonly, i64, i64) [[ARGMEMONLY_NOFREE_NOUNWIND:#[0-9]+]]
+declare ptr @__memcpy_chk(ptr, ptr, i64, i64)
 
-; CHECK: declare i8* @mempcpy(i8* noalias writeonly, i8* noalias nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
-declare i8* @mempcpy(i8*, i8*, i64)
+; CHECK: declare ptr @mempcpy(ptr noalias writeonly, ptr noalias nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+declare ptr @mempcpy(ptr, ptr, i64)
 
-; CHECK: declare i8* @memmove(i8* returned writeonly, i8* nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
-declare i8* @memmove(i8*, i8*, i64)
+; CHECK: declare ptr @memmove(ptr returned writeonly, ptr nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+declare ptr @memmove(ptr, ptr, i64)
 
-; CHECK: declare i8* @memset(i8* writeonly, i32, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
-declare i8* @memset(i8*, i32, i64)
+; CHECK: declare ptr @memset(ptr writeonly, i32, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare ptr @memset(ptr, i32, i64)
 
-; CHECK: declare i8* @__memset_chk(i8* writeonly, i32, i64, i64) [[ARGMEMONLY_NOFREE_NOUNWIND]]
-declare i8* @__memset_chk(i8*, i32, i64, i64)
+; CHECK: declare ptr @__memset_chk(ptr writeonly, i32, i64, i64) [[ARGMEMONLY_NOFREE_NOUNWIND]]
+declare ptr @__memset_chk(ptr, i32, i64, i64)
 
-; CHECK: declare noundef i32 @mkdir(i8* nocapture noundef readonly, i16 noundef zeroext) [[NOFREE_NOUNWIND]]
-declare i32 @mkdir(i8*, i16 zeroext)
+; CHECK: declare noundef i32 @mkdir(ptr nocapture noundef readonly, i16 noundef zeroext) [[NOFREE_NOUNWIND]]
+declare i32 @mkdir(ptr, i16 zeroext)
 
-; CHECK: declare noundef i64 @mktime(%opaque* nocapture noundef) [[NOFREE_NOUNWIND_WILLRETURN]]
-declare i64 @mktime(%opaque*)
+; CHECK: declare noundef i64 @mktime(ptr nocapture noundef) [[NOFREE_NOUNWIND_WILLRETURN]]
+declare i64 @mktime(ptr)
 
-; CHECK: declare double @modf(double, double* nocapture) [[NOFREE_NOUNWIND_WILLRETURN]]
-declare double @modf(double, double*)
+; CHECK: declare double @modf(double, ptr nocapture) [[NOFREE_NOUNWIND_WILLRETURN]]
+declare double @modf(double, ptr)
 
-; CHECK: declare float @modff(float, float* nocapture) [[NOFREE_NOUNWIND_WILLRETURN]]
-declare float @modff(float, float*)
+; CHECK: declare float @modff(float, ptr nocapture) [[NOFREE_NOUNWIND_WILLRETURN]]
+declare float @modff(float, ptr)
 
-; CHECK: declare x86_fp80 @modfl(x86_fp80, x86_fp80* nocapture) [[NOFREE_NOUNWIND_WILLRETURN]]
-declare x86_fp80 @modfl(x86_fp80, x86_fp80*)
+; CHECK: declare x86_fp80 @modfl(x86_fp80, ptr nocapture) [[NOFREE_NOUNWIND_WILLRETURN]]
+declare x86_fp80 @modfl(x86_fp80, ptr)
 
 ; CHECK: declare double @nearbyint(double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare double @nearbyint(double)
@@ -722,27 +726,27 @@ declare float @nearbyintf(float)
 ; CHECK: declare x86_fp80 @nearbyintl(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @nearbyintl(x86_fp80)
 
-; CHECK-LINUX: declare noundef i32 @open(i8* nocapture noundef readonly, i32 noundef, ...) [[NOFREE]]
-; CHECK-OPEN: declare noundef i32 @open(i8* nocapture noundef readonly, i32 noundef, ...) [[NOFREE:#[0-9]+]]
-declare i32 @open(i8*, i32, ...)
+; CHECK-LINUX: declare noundef i32 @open(ptr nocapture noundef readonly, i32 noundef, ...) [[NOFREE]]
+; CHECK-OPEN: declare noundef i32 @open(ptr nocapture noundef readonly, i32 noundef, ...) [[NOFREE:#[0-9]+]]
+declare i32 @open(ptr, i32, ...)
 
-; CHECK-LINUX: declare noundef i32 @open64(i8* nocapture noundef readonly, i32 noundef, ...) [[NOFREE]]
-declare i32 @open64(i8*, i32, ...)
+; CHECK-LINUX: declare noundef i32 @open64(ptr nocapture noundef readonly, i32 noundef, ...) [[NOFREE]]
+declare i32 @open64(ptr, i32, ...)
 
-; CHECK: declare noalias noundef %opaque* @opendir(i8* nocapture noundef readonly) [[NOFREE_NOUNWIND]]
-declare %opaque* @opendir(i8*)
+; CHECK: declare noalias noundef ptr @opendir(ptr nocapture noundef readonly) [[NOFREE_NOUNWIND]]
+declare ptr @opendir(ptr)
 
-; CHECK: declare noundef i32 @pclose(%opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i32 @pclose(%opaque*)
+; CHECK: declare noundef i32 @pclose(ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i32 @pclose(ptr)
 
-; CHECK: declare void @perror(i8* nocapture noundef readonly) [[NOFREE_NOUNWIND]]
-declare void @perror(i8*)
+; CHECK: declare void @perror(ptr nocapture noundef readonly) [[NOFREE_NOUNWIND]]
+declare void @perror(ptr)
 
-; CHECK: declare noalias noundef %opaque* @popen(i8* nocapture noundef readonly, i8* nocapture noundef readonly) [[NOFREE_NOUNWIND]]
-declare %opaque* @popen(i8*, i8*)
+; CHECK: declare noalias noundef ptr @popen(ptr nocapture noundef readonly, ptr nocapture noundef readonly) [[NOFREE_NOUNWIND]]
+declare ptr @popen(ptr, ptr)
 
-; CHECK: declare i32 @posix_memalign(i8**, i64, i64) [[NOFREE]]
-declare i32 @posix_memalign(i8**, i64, i64)
+; CHECK: declare i32 @posix_memalign(ptr, i64, i64) [[NOFREE]]
+declare i32 @posix_memalign(ptr, i64, i64)
 
 ; CHECK: declare double @pow(double, double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare double @pow(double, double)
@@ -753,14 +757,14 @@ declare float @powf(float, float)
 ; CHECK: declare x86_fp80 @powl(x86_fp80, x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @powl(x86_fp80, x86_fp80)
 
-; CHECK: declare noundef i64 @pread(i32 noundef, i8* nocapture noundef, i64 noundef, i64 noundef) [[NOFREE]]
-declare i64 @pread(i32, i8*, i64, i64)
+; CHECK: declare noundef i64 @pread(i32 noundef, ptr nocapture noundef, i64 noundef, i64 noundef) [[NOFREE]]
+declare i64 @pread(i32, ptr, i64, i64)
 
-; CHECK: declare noundef i32 @printf(i8* nocapture noundef readonly, ...) [[NOFREE_NOUNWIND]]
-declare i32 @printf(i8*, ...)
+; CHECK: declare noundef i32 @printf(ptr nocapture noundef readonly, ...) [[NOFREE_NOUNWIND]]
+declare i32 @printf(ptr, ...)
 
-; CHECK: declare noundef i32 @putc(i32 noundef, %opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i32 @putc(i32, %opaque*)
+; CHECK: declare noundef i32 @putc(i32 noundef, ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i32 @putc(i32, ptr)
 
 ; CHECK: declare noundef i32 @putchar(i32 noundef) [[NOFREE_NOUNWIND]]
 declare i32 @putchar(i32)
@@ -769,41 +773,41 @@ declare i32 @putchar(i32)
 ; CHECK-UNKNOWN: declare i32 @putchar_unlocked(i32){{$}}
 declare i32 @putchar_unlocked(i32)
 
-; CHECK: declare noundef i32 @puts(i8* nocapture noundef readonly) [[NOFREE_NOUNWIND]]
-declare i32 @puts(i8*)
+; CHECK: declare noundef i32 @puts(ptr nocapture noundef readonly) [[NOFREE_NOUNWIND]]
+declare i32 @puts(ptr)
 
-; CHECK: declare noundef i64 @pwrite(i32 noundef, i8* nocapture noundef readonly, i64 noundef, i64 noundef) [[NOFREE]]
-declare i64 @pwrite(i32, i8*, i64, i64)
+; CHECK: declare noundef i64 @pwrite(i32 noundef, ptr nocapture noundef readonly, i64 noundef, i64 noundef) [[NOFREE]]
+declare i64 @pwrite(i32, ptr, i64, i64)
 
-; CHECK: declare void @qsort(i8* noundef, i64 noundef, i64 noundef, i32 (i8*, i8*)* nocapture noundef) [[NOFREE]]
-declare void @qsort(i8*, i64, i64, i32 (i8*, i8*)*)
+; CHECK: declare void @qsort(ptr noundef, i64 noundef, i64 noundef, ptr nocapture noundef) [[NOFREE]]
+declare void @qsort(ptr, i64, i64, ptr)
 
-; CHECK: declare noundef i64 @read(i32 noundef, i8* nocapture noundef, i64 noundef) [[NOFREE]]
-declare i64 @read(i32, i8*, i64)
+; CHECK: declare noundef i64 @read(i32 noundef, ptr nocapture noundef, i64 noundef) [[NOFREE]]
+declare i64 @read(i32, ptr, i64)
 
-; CHECK: declare noundef i64 @readlink(i8* nocapture noundef readonly, i8* nocapture noundef, i64 noundef) [[NOFREE_NOUNWIND]]
-declare i64 @readlink(i8*, i8*, i64)
+; CHECK: declare noundef i64 @readlink(ptr nocapture noundef readonly, ptr nocapture noundef, i64 noundef) [[NOFREE_NOUNWIND]]
+declare i64 @readlink(ptr, ptr, i64)
 
-; CHECK: declare noalias noundef i8* @realloc(i8* allocptr nocapture, i64 noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_REALLOC_ALLOCSIZE1_FAMILY_MALLOC:#[0-9]+]]
-declare i8* @realloc(i8*, i64)
+; CHECK: declare noalias noundef ptr @realloc(ptr allocptr nocapture, i64 noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_REALLOC_ALLOCSIZE1_FAMILY_MALLOC:#[0-9]+]]
+declare ptr @realloc(ptr, i64)
 
-; CHECK: declare noalias noundef i8* @reallocf(i8* allocptr nocapture, i64 noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_REALLOC_ALLOCSIZE1_FAMILY_MALLOC]]
-declare i8* @reallocf(i8*, i64)
+; CHECK: declare noalias noundef ptr @reallocf(ptr allocptr nocapture, i64 noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_REALLOC_ALLOCSIZE1_FAMILY_MALLOC]]
+declare ptr @reallocf(ptr, i64)
 
-; CHECK-AIX: declare noalias noundef i8* @vec_realloc(i8* allocptr nocapture, i64 noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCSIZE_FAMILY_VEC_MALLOC:#[0-9]+]]
-declare i8* @vec_realloc(i8*, i64)
+; CHECK-AIX: declare noalias noundef ptr @vec_realloc(ptr allocptr nocapture, i64 noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCSIZE_FAMILY_VEC_MALLOC:#[0-9]+]]
+declare ptr @vec_realloc(ptr, i64)
 
-; CHECK: declare noundef i8* @realpath(i8* nocapture noundef readonly, i8* noundef) [[NOFREE_NOUNWIND]]
-declare i8* @realpath(i8*, i8*)
+; CHECK: declare noundef ptr @realpath(ptr nocapture noundef readonly, ptr noundef) [[NOFREE_NOUNWIND]]
+declare ptr @realpath(ptr, ptr)
 
-; CHECK: declare noundef i32 @remove(i8* nocapture noundef readonly) [[NOFREE_NOUNWIND]]
-declare i32 @remove(i8*)
+; CHECK: declare noundef i32 @remove(ptr nocapture noundef readonly) [[NOFREE_NOUNWIND]]
+declare i32 @remove(ptr)
 
-; CHECK: declare noundef i32 @rename(i8* nocapture noundef readonly, i8* nocapture noundef readonly) [[NOFREE_NOUNWIND]]
-declare i32 @rename(i8*, i8*)
+; CHECK: declare noundef i32 @rename(ptr nocapture noundef readonly, ptr nocapture noundef readonly) [[NOFREE_NOUNWIND]]
+declare i32 @rename(ptr, ptr)
 
-; CHECK: declare void @rewind(%opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare void @rewind(%opaque*)
+; CHECK: declare void @rewind(ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare void @rewind(ptr)
 
 ; CHECK: declare double @rint(double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare double @rint(double)
@@ -814,8 +818,8 @@ declare float @rintf(float)
 ; CHECK: declare x86_fp80 @rintl(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @rintl(x86_fp80)
 
-; CHECK: declare noundef i32 @rmdir(i8* nocapture noundef readonly) [[NOFREE_NOUNWIND]]
-declare i32 @rmdir(i8*)
+; CHECK: declare noundef i32 @rmdir(ptr nocapture noundef readonly) [[NOFREE_NOUNWIND]]
+declare i32 @rmdir(ptr)
 
 ; CHECK: declare double @round(double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare double @round(double)
@@ -826,17 +830,17 @@ declare float @roundf(float)
 ; CHECK: declare x86_fp80 @roundl(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @roundl(x86_fp80)
 
-; CHECK: declare noundef i32 @scanf(i8* nocapture noundef readonly, ...) [[NOFREE_NOUNWIND]]
-declare i32 @scanf(i8*, ...)
+; CHECK: declare noundef i32 @scanf(ptr nocapture noundef readonly, ...) [[NOFREE_NOUNWIND]]
+declare i32 @scanf(ptr, ...)
 
-; CHECK: declare void @setbuf(%opaque* nocapture noundef, i8* noundef) [[NOFREE_NOUNWIND]]
-declare void @setbuf(%opaque*, i8*)
+; CHECK: declare void @setbuf(ptr nocapture noundef, ptr noundef) [[NOFREE_NOUNWIND]]
+declare void @setbuf(ptr, ptr)
 
-; CHECK: declare noundef i32 @setitimer(i32 noundef, %opaque* nocapture noundef readonly, %opaque* nocapture noundef) [[NOFREE_NOUNWIND_WILLRETURN]]
-declare i32 @setitimer(i32, %opaque*, %opaque*)
+; CHECK: declare noundef i32 @setitimer(i32 noundef, ptr nocapture noundef readonly, ptr nocapture noundef) [[NOFREE_NOUNWIND_WILLRETURN]]
+declare i32 @setitimer(i32, ptr, ptr)
 
-; CHECK: declare noundef i32 @setvbuf(%opaque* nocapture noundef, i8* noundef, i32 noundef, i64 noundef) [[NOFREE_NOUNWIND]]
-declare i32 @setvbuf(%opaque*, i8*, i32, i64)
+; CHECK: declare noundef i32 @setvbuf(ptr nocapture noundef, ptr noundef, i32 noundef, i64 noundef) [[NOFREE_NOUNWIND]]
+declare i32 @setvbuf(ptr, ptr, i32, i64)
 
 ; CHECK: declare double @sin(double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare double @sin(double)
@@ -856,11 +860,11 @@ declare x86_fp80 @sinhl(x86_fp80)
 ; CHECK: declare x86_fp80 @sinl(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @sinl(x86_fp80)
 
-; CHECK: declare noundef i32 @snprintf(i8* noalias nocapture noundef writeonly, i64 noundef, i8* nocapture noundef readonly, ...) [[NOFREE_NOUNWIND]]
-declare i32 @snprintf(i8*, i64, i8*, ...)
+; CHECK: declare noundef i32 @snprintf(ptr noalias nocapture noundef writeonly, i64 noundef, ptr nocapture noundef readonly, ...) [[NOFREE_NOUNWIND]]
+declare i32 @snprintf(ptr, i64, ptr, ...)
 
-; CHECK: declare noundef i32 @sprintf(i8* noalias nocapture noundef writeonly, i8* nocapture noundef readonly, ...) [[NOFREE_NOUNWIND]]
-declare i32 @sprintf(i8*, i8*, ...)
+; CHECK: declare noundef i32 @sprintf(ptr noalias nocapture noundef writeonly, ptr nocapture noundef readonly, ...) [[NOFREE_NOUNWIND]]
+declare i32 @sprintf(ptr, ptr, ...)
 
 ; CHECK: declare double @sqrt(double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare double @sqrt(double)
@@ -871,116 +875,116 @@ declare float @sqrtf(float)
 ; CHECK: declare x86_fp80 @sqrtl(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @sqrtl(x86_fp80)
 
-; CHECK: declare noundef i32 @sscanf(i8* nocapture noundef readonly, i8* nocapture noundef readonly, ...) [[NOFREE_NOUNWIND]]
-declare i32 @sscanf(i8*, i8*, ...)
+; CHECK: declare noundef i32 @sscanf(ptr nocapture noundef readonly, ptr nocapture noundef readonly, ...) [[NOFREE_NOUNWIND]]
+declare i32 @sscanf(ptr, ptr, ...)
 
-; CHECK: declare noundef i32 @stat(i8* nocapture noundef readonly, %opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i32 @stat(i8*, %opaque*)
+; CHECK: declare noundef i32 @stat(ptr nocapture noundef readonly, ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i32 @stat(ptr, ptr)
 
-; CHECK-LINUX: declare noundef i32 @stat64(i8* nocapture noundef readonly, %opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i32 @stat64(i8*, %opaque*)
+; CHECK-LINUX: declare noundef i32 @stat64(ptr nocapture noundef readonly, ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i32 @stat64(ptr, ptr)
 
-; CHECK: declare noundef i32 @statvfs(i8* nocapture noundef readonly, %opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i32 @statvfs(i8*, %opaque*)
+; CHECK: declare noundef i32 @statvfs(ptr nocapture noundef readonly, ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i32 @statvfs(ptr, ptr)
 
-; CHECK-LINUX: declare noundef i32 @statvfs64(i8* nocapture noundef readonly, %opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i32 @statvfs64(i8*, %opaque*)
+; CHECK-LINUX: declare noundef i32 @statvfs64(ptr nocapture noundef readonly, ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i32 @statvfs64(ptr, ptr)
 
-; CHECK: declare i8* @stpcpy(i8* noalias writeonly, i8* noalias nocapture readonly) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
-declare i8* @stpcpy(i8*, i8*)
+; CHECK: declare ptr @stpcpy(ptr noalias writeonly, ptr noalias nocapture readonly) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+declare ptr @stpcpy(ptr, ptr)
 
-; CHECK: declare i8* @stpncpy(i8* noalias writeonly, i8* noalias nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
-declare i8* @stpncpy(i8*, i8*, i64)
+; CHECK: declare ptr @stpncpy(ptr noalias writeonly, ptr noalias nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+declare ptr @stpncpy(ptr, ptr, i64)
 
-; CHECK: declare i32 @strcasecmp(i8* nocapture, i8* nocapture) [[NOFREE_NOUNWIND_READONLY_WILLRETURN:#[0-9]+]]
-declare i32 @strcasecmp(i8*, i8*)
+; CHECK: declare i32 @strcasecmp(ptr nocapture, ptr nocapture) [[NOFREE_NOUNWIND_READONLY_WILLRETURN:#[0-9]+]]
+declare i32 @strcasecmp(ptr, ptr)
 
-; CHECK: declare i8* @strcat(i8* noalias returned, i8* noalias nocapture readonly) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
-declare i8* @strcat(i8*, i8*)
+; CHECK: declare ptr @strcat(ptr noalias returned, ptr noalias nocapture readonly) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+declare ptr @strcat(ptr, ptr)
 
-; CHECK: declare i8* @strchr(i8*, i32) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
-declare i8* @strchr(i8*, i32)
+; CHECK: declare ptr @strchr(ptr, i32) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
+declare ptr @strchr(ptr, i32)
 
-; CHECK: declare i32 @strcmp(i8* nocapture, i8* nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
-declare i32 @strcmp(i8*, i8*)
+; CHECK: declare i32 @strcmp(ptr nocapture, ptr nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
+declare i32 @strcmp(ptr, ptr)
 
-; CHECK: declare i32 @strcoll(i8* nocapture, i8* nocapture) [[NOFREE_NOUNWIND_READONLY_WILLRETURN]]
-declare i32 @strcoll(i8*, i8*)
+; CHECK: declare i32 @strcoll(ptr nocapture, ptr nocapture) [[NOFREE_NOUNWIND_READONLY_WILLRETURN]]
+declare i32 @strcoll(ptr, ptr)
 
-; CHECK: declare i8* @strcpy(i8* noalias returned writeonly, i8* noalias nocapture readonly) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
-declare i8* @strcpy(i8*, i8*)
+; CHECK: declare ptr @strcpy(ptr noalias returned writeonly, ptr noalias nocapture readonly) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+declare ptr @strcpy(ptr, ptr)
 
-; CHECK: declare i64 @strcspn(i8* nocapture, i8* nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
-declare i64 @strcspn(i8*, i8*)
+; CHECK: declare i64 @strcspn(ptr nocapture, ptr nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
+declare i64 @strcspn(ptr, ptr)
 
-; CHECK: declare noalias i8* @strdup(i8* nocapture readonly) [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC:#[0-9]+]]
-declare i8* @strdup(i8*)
+; CHECK: declare noalias ptr @strdup(ptr nocapture readonly) [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC:#[0-9]+]]
+declare ptr @strdup(ptr)
 
-; CHECK: declare i64 @strlen(i8* nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
-declare i64 @strlen(i8*)
+; CHECK: declare i64 @strlen(ptr nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
+declare i64 @strlen(ptr)
 
-; CHECK: declare i32 @strncasecmp(i8* nocapture, i8* nocapture, i64) [[NOFREE_NOUNWIND_READONLY_WILLRETURN]]
-declare i32 @strncasecmp(i8*, i8*, i64)
+; CHECK: declare i32 @strncasecmp(ptr nocapture, ptr nocapture, i64) [[NOFREE_NOUNWIND_READONLY_WILLRETURN]]
+declare i32 @strncasecmp(ptr, ptr, i64)
 
-; CHECK: declare i8* @strncat(i8* noalias returned, i8* noalias nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
-declare i8* @strncat(i8*, i8*, i64)
+; CHECK: declare ptr @strncat(ptr noalias returned, ptr noalias nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+declare ptr @strncat(ptr, ptr, i64)
 
-; CHECK: declare i32 @strncmp(i8* nocapture, i8* nocapture, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
-declare i32 @strncmp(i8*, i8*, i64)
+; CHECK: declare i32 @strncmp(ptr nocapture, ptr nocapture, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
+declare i32 @strncmp(ptr, ptr, i64)
 
-; CHECK: declare i8* @strncpy(i8* noalias returned writeonly, i8* noalias nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
-declare i8* @strncpy(i8*, i8*, i64)
+; CHECK: declare ptr @strncpy(ptr noalias returned writeonly, ptr noalias nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+declare ptr @strncpy(ptr, ptr, i64)
 
-; CHECK: declare noalias i8* @strndup(i8* nocapture readonly, i64 noundef) [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]]
-declare i8* @strndup(i8*, i64)
+; CHECK: declare noalias ptr @strndup(ptr nocapture readonly, i64 noundef) [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]]
+declare ptr @strndup(ptr, i64)
 
-; CHECK: declare i64 @strnlen(i8* nocapture, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN:#[0-9]+]]
-declare i64 @strnlen(i8*, i64)
+; CHECK: declare i64 @strnlen(ptr nocapture, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN:#[0-9]+]]
+declare i64 @strnlen(ptr, i64)
 
-; CHECK: declare i8* @strpbrk(i8*, i8* nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN]]
-declare i8* @strpbrk(i8*, i8*)
+; CHECK: declare ptr @strpbrk(ptr, ptr nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN]]
+declare ptr @strpbrk(ptr, ptr)
 
-; CHECK: declare i8* @strrchr(i8*, i32) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
-declare i8* @strrchr(i8*, i32)
+; CHECK: declare ptr @strrchr(ptr, i32) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
+declare ptr @strrchr(ptr, i32)
 
-; CHECK: declare i64 @strspn(i8* nocapture, i8* nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
-declare i64 @strspn(i8*, i8*)
+; CHECK: declare i64 @strspn(ptr nocapture, ptr nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
+declare i64 @strspn(ptr, ptr)
 
-; CHECK: declare i8* @strstr(i8*, i8* nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN]]
-declare i8* @strstr(i8*, i8*)
+; CHECK: declare ptr @strstr(ptr, ptr nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN]]
+declare ptr @strstr(ptr, ptr)
 
-; CHECK: declare double @strtod(i8* readonly, i8** nocapture) [[NOFREE_NOUNWIND_WILLRETURN]]
-declare double @strtod(i8*, i8**)
+; CHECK: declare double @strtod(ptr readonly, ptr nocapture) [[NOFREE_NOUNWIND_WILLRETURN]]
+declare double @strtod(ptr, ptr)
 
-; CHECK: declare float @strtof(i8* readonly, i8** nocapture) [[NOFREE_NOUNWIND_WILLRETURN]]
-declare float @strtof(i8*, i8**)
+; CHECK: declare float @strtof(ptr readonly, ptr nocapture) [[NOFREE_NOUNWIND_WILLRETURN]]
+declare float @strtof(ptr, ptr)
 
-; CHECK: declare i8* @strtok(i8*, i8* nocapture readonly) [[NOFREE_NOUNWIND_WILLRETURN]]
-declare i8* @strtok(i8*, i8*)
+; CHECK: declare ptr @strtok(ptr, ptr nocapture readonly) [[NOFREE_NOUNWIND_WILLRETURN]]
+declare ptr @strtok(ptr, ptr)
 
-; CHECK: declare i8* @strtok_r(i8*, i8* nocapture readonly, i8**) [[NOFREE_NOUNWIND_WILLRETURN]]
-declare i8* @strtok_r(i8*, i8*, i8**)
+; CHECK: declare ptr @strtok_r(ptr, ptr nocapture readonly, ptr) [[NOFREE_NOUNWIND_WILLRETURN]]
+declare ptr @strtok_r(ptr, ptr, ptr)
 
-; CHECK: declare i64 @strtol(i8* readonly, i8** nocapture, i32) [[NOFREE_NOUNWIND_WILLRETURN]]
-declare i64 @strtol(i8*, i8**, i32)
+; CHECK: declare i64 @strtol(ptr readonly, ptr nocapture, i32) [[NOFREE_NOUNWIND_WILLRETURN]]
+declare i64 @strtol(ptr, ptr, i32)
 
-; CHECK: declare x86_fp80 @strtold(i8* readonly, i8** nocapture) [[NOFREE_NOUNWIND_WILLRETURN]]
-declare x86_fp80 @strtold(i8*, i8**)
+; CHECK: declare x86_fp80 @strtold(ptr readonly, ptr nocapture) [[NOFREE_NOUNWIND_WILLRETURN]]
+declare x86_fp80 @strtold(ptr, ptr)
 
-; CHECK: declare i64 @strtoll(i8* readonly, i8** nocapture, i32) [[NOFREE_NOUNWIND_WILLRETURN]]
-declare i64 @strtoll(i8*, i8**, i32)
+; CHECK: declare i64 @strtoll(ptr readonly, ptr nocapture, i32) [[NOFREE_NOUNWIND_WILLRETURN]]
+declare i64 @strtoll(ptr, ptr, i32)
 
-; CHECK: declare i64 @strtoul(i8* readonly, i8** nocapture, i32) [[NOFREE_NOUNWIND_WILLRETURN]]
-declare i64 @strtoul(i8*, i8**, i32)
+; CHECK: declare i64 @strtoul(ptr readonly, ptr nocapture, i32) [[NOFREE_NOUNWIND_WILLRETURN]]
+declare i64 @strtoul(ptr, ptr, i32)
 
-; CHECK: declare i64 @strtoull(i8* readonly, i8** nocapture, i32) [[NOFREE_NOUNWIND_WILLRETURN]]
-declare i64 @strtoull(i8*, i8**, i32)
+; CHECK: declare i64 @strtoull(ptr readonly, ptr nocapture, i32) [[NOFREE_NOUNWIND_WILLRETURN]]
+declare i64 @strtoull(ptr, ptr, i32)
 
-; CHECK: declare i64 @strxfrm(i8* nocapture, i8* nocapture readonly, i64) [[NOFREE_NOUNWIND_WILLRETURN]]
-declare i64 @strxfrm(i8*, i8*, i64)
+; CHECK: declare i64 @strxfrm(ptr nocapture, ptr nocapture readonly, i64) [[NOFREE_NOUNWIND_WILLRETURN]]
+declare i64 @strxfrm(ptr, ptr, i64)
 
-; CHECK: declare noundef i32 @system(i8* nocapture noundef readonly) [[NOFREE]]
-declare i32 @system(i8*)
+; CHECK: declare noundef i32 @system(ptr nocapture noundef readonly) [[NOFREE]]
+declare i32 @system(ptr)
 
 ; CHECK: declare double @tan(double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare double @tan(double)
@@ -1000,14 +1004,14 @@ declare x86_fp80 @tanhl(x86_fp80)
 ; CHECK: declare x86_fp80 @tanl(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @tanl(x86_fp80)
 
-; CHECK: declare noundef i64 @times(%opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i64 @times(%opaque*)
+; CHECK: declare noundef i64 @times(ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i64 @times(ptr)
 
-; CHECK: declare noalias noundef %opaque* @tmpfile() [[NOFREE_NOUNWIND]]
-declare %opaque* @tmpfile()
+; CHECK: declare noalias noundef ptr @tmpfile() [[NOFREE_NOUNWIND]]
+declare ptr @tmpfile()
 
-; CHECK-LINUX: declare noalias noundef %opaque* @tmpfile64() [[NOFREE_NOUNWIND]]
-declare %opaque* @tmpfile64()
+; CHECK-LINUX: declare noalias noundef ptr @tmpfile64() [[NOFREE_NOUNWIND]]
+declare ptr @tmpfile64()
 
 ; CHECK: declare i32 @toascii(i32) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare i32 @toascii(i32)
@@ -1021,80 +1025,80 @@ declare float @truncf(float)
 ; CHECK: declare x86_fp80 @truncl(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @truncl(x86_fp80)
 
-; CHECK: declare noundef i32 @uname(%opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i32 @uname(%opaque*)
+; CHECK: declare noundef i32 @uname(ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i32 @uname(ptr)
 
-; CHECK: declare noundef i32 @ungetc(i32 noundef, %opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
-declare i32 @ungetc(i32, %opaque*)
+; CHECK: declare noundef i32 @ungetc(i32 noundef, ptr nocapture noundef) [[NOFREE_NOUNWIND]]
+declare i32 @ungetc(i32, ptr)
 
-; CHECK: declare noundef i32 @unlink(i8* nocapture noundef readonly) [[NOFREE_NOUNWIND]]
-declare i32 @unlink(i8*)
+; CHECK: declare noundef i32 @unlink(ptr nocapture noundef readonly) [[NOFREE_NOUNWIND]]
+declare i32 @unlink(ptr)
 
-; CHECK: declare noundef i32 @unsetenv(i8* nocapture noundef readonly) [[NOFREE_NOUNWIND]]
-declare i32 @unsetenv(i8*)
+; CHECK: declare noundef i32 @unsetenv(ptr nocapture noundef readonly) [[NOFREE_NOUNWIND]]
+declare i32 @unsetenv(ptr)
 
-; CHECK: declare noundef i32 @utime(i8* nocapture noundef readonly, %opaque* nocapture noundef readonly) [[NOFREE_NOUNWIND]]
-declare i32 @utime(i8*, %opaque*)
+; CHECK: declare noundef i32 @utime(ptr nocapture noundef readonly, ptr nocapture noundef readonly) [[NOFREE_NOUNWIND]]
+declare i32 @utime(ptr, ptr)
 
-; CHECK: declare noundef i32 @utimes(i8* nocapture noundef readonly, %opaque* nocapture noundef readonly) [[NOFREE_NOUNWIND]]
-declare i32 @utimes(i8*, %opaque*)
+; CHECK: declare noundef i32 @utimes(ptr nocapture noundef readonly, ptr nocapture noundef readonly) [[NOFREE_NOUNWIND]]
+declare i32 @utimes(ptr, ptr)
 
-; CHECK: declare noalias noundef i8* @valloc(i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCUNINIT_ALLOCSIZE0_FAMILY_MALLOC]]
-declare i8* @valloc(i64)
+; CHECK: declare noalias noundef ptr @valloc(i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCUNINIT_ALLOCSIZE0_FAMILY_MALLOC]]
+declare ptr @valloc(i64)
 
-; CHECK: declare noundef i32 @vfprintf(%opaque* nocapture noundef, i8* nocapture noundef readonly, %opaque* noundef) [[NOFREE_NOUNWIND]]
-declare i32 @vfprintf(%opaque*, i8*, %opaque*)
+; CHECK: declare noundef i32 @vfprintf(ptr nocapture noundef, ptr nocapture noundef readonly, ptr noundef) [[NOFREE_NOUNWIND]]
+declare i32 @vfprintf(ptr, ptr, ptr)
 
-; CHECK: declare noundef i32 @vfscanf(%opaque* nocapture noundef, i8* nocapture noundef readonly, %opaque* noundef) [[NOFREE_NOUNWIND]]
-declare i32 @vfscanf(%opaque*, i8*, %opaque*)
+; CHECK: declare noundef i32 @vfscanf(ptr nocapture noundef, ptr nocapture noundef readonly, ptr noundef) [[NOFREE_NOUNWIND]]
+declare i32 @vfscanf(ptr, ptr, ptr)
 
-; CHECK: declare noundef i32 @vprintf(i8* nocapture noundef readonly, %opaque* noundef) [[NOFREE_NOUNWIND]]
-declare i32 @vprintf(i8*, %opaque*)
+; CHECK: declare noundef i32 @vprintf(ptr nocapture noundef readonly, ptr noundef) [[NOFREE_NOUNWIND]]
+declare i32 @vprintf(ptr, ptr)
 
-; CHECK: declare noundef i32 @vscanf(i8* nocapture noundef readonly, %opaque* noundef) [[NOFREE_NOUNWIND]]
-declare i32 @vscanf(i8*, %opaque*)
+; CHECK: declare noundef i32 @vscanf(ptr nocapture noundef readonly, ptr noundef) [[NOFREE_NOUNWIND]]
+declare i32 @vscanf(ptr, ptr)
 
-; CHECK: declare noundef i32 @vsnprintf(i8* nocapture noundef, i64 noundef, i8* nocapture noundef readonly, %opaque* noundef) [[NOFREE_NOUNWIND]]
-declare i32 @vsnprintf(i8*, i64, i8*, %opaque*)
+; CHECK: declare noundef i32 @vsnprintf(ptr nocapture noundef, i64 noundef, ptr nocapture noundef readonly, ptr noundef) [[NOFREE_NOUNWIND]]
+declare i32 @vsnprintf(ptr, i64, ptr, ptr)
 
-; CHECK: declare noundef i32 @vsprintf(i8* nocapture noundef, i8* nocapture noundef readonly, %opaque* noundef) [[NOFREE_NOUNWIND]]
-declare i32 @vsprintf(i8*, i8*, %opaque*)
+; CHECK: declare noundef i32 @vsprintf(ptr nocapture noundef, ptr nocapture noundef readonly, ptr noundef) [[NOFREE_NOUNWIND]]
+declare i32 @vsprintf(ptr, ptr, ptr)
 
-; CHECK: declare noundef i32 @vsscanf(i8* nocapture noundef readonly, i8* nocapture noundef readonly, %opaque* noundef) [[NOFREE_NOUNWIND]]
-declare i32 @vsscanf(i8*, i8*, %opaque*)
+; CHECK: declare noundef i32 @vsscanf(ptr nocapture noundef readonly, ptr nocapture noundef readonly, ptr noundef) [[NOFREE_NOUNWIND]]
+declare i32 @vsscanf(ptr, ptr, ptr)
 
-; CHECK: declare noundef i64 @write(i32 noundef, i8* nocapture noundef readonly, i64 noundef) [[NOFREE]]
-declare i64 @write(i32, i8*, i64)
+; CHECK: declare noundef i64 @write(i32 noundef, ptr nocapture noundef readonly, i64 noundef) [[NOFREE]]
+declare i64 @write(i32, ptr, i64)
 
 
 ; memset_pattern{4,8,16} aren't available everywhere.
-; CHECK-DARWIN: declare void @memset_pattern4(i8* nocapture writeonly, i8* nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
-declare void @memset_pattern4(i8*, i8*, i64)
-; CHECK-DARWIN: declare void @memset_pattern8(i8* nocapture writeonly, i8* nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
-declare void @memset_pattern8(i8*, i8*, i64)
-; CHECK-DARWIN: declare void @memset_pattern16(i8* nocapture writeonly, i8* nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
-declare void @memset_pattern16(i8*, i8*, i64)
+; CHECK-DARWIN: declare void @memset_pattern4(ptr nocapture writeonly, ptr nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+declare void @memset_pattern4(ptr, ptr, i64)
+; CHECK-DARWIN: declare void @memset_pattern8(ptr nocapture writeonly, ptr nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+declare void @memset_pattern8(ptr, ptr, i64)
+; CHECK-DARWIN: declare void @memset_pattern16(ptr nocapture writeonly, ptr nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+declare void @memset_pattern16(ptr, ptr, i64)
 
 ; CHECK-DAG: attributes [[NOFREE_NOUNWIND_WILLRETURN]] = { mustprogress nofree nounwind willreturn }
-; CHECK-DAG: attributes [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]] = { mustprogress nofree nounwind willreturn writeonly }
+; CHECK-DAG: attributes [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]] = { mustprogress nofree nounwind willreturn memory(write) }
 ; CHECK-DAG: attributes [[NOFREE_NOUNWIND]] = { nofree nounwind }
-; CHECK-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCUNINIT_ALLOCSIZE1_FAMILY_MALLOC]] = { inaccessiblememonly mustprogress nofree nounwind willreturn allockind("alloc,uninitialized,aligned") allocsize(1) "alloc-family"="malloc" }
-; CHECK-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCZEROED_ALLOCSIZE01_FAMILY_MALLOC]] = { inaccessiblememonly mustprogress nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc" }
-; CHECK-DAG: attributes [[NOFREE_NOUNWIND_READONLY_WILLRETURN]] = { mustprogress nofree nounwind readonly willreturn }
-; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]] = { argmemonly mustprogress nofree nounwind willreturn }
-; CHECK-DAG: attributes [[NOFREE_NOUNWIND_READONLY]] = { nofree nounwind readonly }
-; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_FREE_FAMILY_MALLOC]] = { inaccessiblemem_or_argmemonly mustprogress nounwind willreturn allockind("free") "alloc-family"="malloc" }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCUNINIT_ALLOCSIZE1_FAMILY_MALLOC]] = { mustprogress nofree nounwind willreturn allockind("alloc,uninitialized,aligned") allocsize(1) memory(inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCZEROED_ALLOCSIZE01_FAMILY_MALLOC]] = { mustprogress nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; CHECK-DAG: attributes [[NOFREE_NOUNWIND_READONLY_WILLRETURN]] = { mustprogress nofree nounwind willreturn memory(read) }
+; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]] = { mustprogress nofree nounwind willreturn memory(argmem: readwrite) }
+; CHECK-DAG: attributes [[NOFREE_NOUNWIND_READONLY]] = { nofree nounwind memory(read) }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_FREE_FAMILY_MALLOC]] = { mustprogress nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; CHECK-DAG: attributes [[NOFREE_WILLRETURN]] = { mustprogress nofree willreturn }
-; CHECK-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCUNINIT_ALLOCSIZE0_FAMILY_MALLOC]] = { inaccessiblememonly mustprogress nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
-; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN]] = { argmemonly mustprogress nofree nounwind readonly willreturn }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCUNINIT_ALLOCSIZE0_FAMILY_MALLOC]] = { mustprogress nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN]] = { mustprogress nofree nounwind willreturn memory(argmem: read) }
 ; CHECK-DAG: attributes [[NOFREE]] = { nofree }
-; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND]] = { argmemonly nofree nounwind }
-; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_REALLOC_ALLOCSIZE1_FAMILY_MALLOC]] = { inaccessiblemem_or_argmemonly mustprogress nounwind willreturn allockind("realloc") allocsize(1) "alloc-family"="malloc" }
-; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]] = { inaccessiblemem_or_argmemonly mustprogress nofree nounwind willreturn "alloc-family"="malloc" }
+; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND]] = { nofree nounwind memory(argmem: readwrite) }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_REALLOC_ALLOCSIZE1_FAMILY_MALLOC]] = { mustprogress nounwind willreturn allockind("realloc") allocsize(1) memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]] = { mustprogress nofree nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 
-; CHECK-NVPTX-DAG: attributes [[NOFREE_NOUNWIND_READNONE]] = { nofree nosync nounwind readnone }
+; CHECK-NVPTX-DAG: attributes [[NOFREE_NOUNWIND_READNONE]] = { nofree nosync nounwind memory(none) }
 
-; CHECK-AIX-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE0_FAMILY_VEC_MALLOC]] = { inaccessiblememonly mustprogress nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="vec_malloc" }
-; CHECK-AIX-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_FAMILY_VEC_MALLOC]] = { inaccessiblemem_or_argmemonly mustprogress nounwind willreturn allockind("free") "alloc-family"="vec_malloc" }
-; CHECK-AIX-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCSIZE_FAMILY_VEC_MALLOC]] = { inaccessiblemem_or_argmemonly mustprogress nounwind willreturn allockind("realloc") allocsize(1) "alloc-family"="vec_malloc" }
-; CHECK-AIX-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE01_FAMILY_VEC_MALLOC]] = { inaccessiblememonly mustprogress nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="vec_malloc" }
+; CHECK-AIX-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE0_FAMILY_VEC_MALLOC]] = { mustprogress nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite) "alloc-family"="vec_malloc" }
+; CHECK-AIX-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_FAMILY_VEC_MALLOC]] = { mustprogress nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="vec_malloc" }
+; CHECK-AIX-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCSIZE_FAMILY_VEC_MALLOC]] = { mustprogress nounwind willreturn allockind("realloc") allocsize(1) memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="vec_malloc" }
+; CHECK-AIX-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE01_FAMILY_VEC_MALLOC]] = { mustprogress nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite) "alloc-family"="vec_malloc" }

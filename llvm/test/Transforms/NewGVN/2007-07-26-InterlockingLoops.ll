@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=newgvn -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -passes=newgvn -S | FileCheck %s
 
 @last = external global [65 x i32*]
 

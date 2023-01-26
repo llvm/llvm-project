@@ -26,13 +26,13 @@ for.body:                                         ; preds = %land.end, %entry
   br i1 undef, label %land.end, label %land.rhs
 
 land.rhs:                                         ; preds = %for.body
-  %1 = load i32, i32* undef, align 1
+  %1 = load i32, ptr undef, align 1
   br label %land.end
 
 land.end:                                         ; preds = %land.rhs, %for.body
   %2 = trunc i32 %0 to i16
-  %arrayidx = getelementptr inbounds [2 x i16], [2 x i16]* @a, i16 0, i16 %2
-  store i16 undef, i16* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds [2 x i16], ptr @a, i16 0, i16 %2
+  store i16 undef, ptr %arrayidx, align 1
   %dec = add nsw i32 %0, -1
   %cmp = icmp sgt i32 %0, 1
   br i1 %cmp, label %for.body, label %for.cond.for.end_crit_edge

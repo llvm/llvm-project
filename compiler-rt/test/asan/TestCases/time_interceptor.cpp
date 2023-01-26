@@ -3,7 +3,7 @@
 // Test the time() interceptor.
 
 // There's no interceptor for time() on Windows yet.
-// XFAIL: windows-msvc
+// XFAIL: target={{.*windows-msvc.*}}
 
 #include <stdio.h>
 #include <stdlib.h>

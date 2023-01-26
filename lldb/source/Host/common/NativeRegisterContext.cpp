@@ -376,7 +376,7 @@ Status NativeRegisterContext::ReadRegisterValueFromMemory(
   // TODO: we might need to add a parameter to this function in case the byte
   // order of the memory data doesn't match the process. For now we are
   // assuming they are the same.
-  reg_value.SetFromMemoryData(reg_info, src, src_len, process.GetByteOrder(),
+  reg_value.SetFromMemoryData(*reg_info, src, src_len, process.GetByteOrder(),
                               error);
 
   return error;
@@ -385,18 +385,20 @@ Status NativeRegisterContext::ReadRegisterValueFromMemory(
 Status NativeRegisterContext::WriteRegisterValueToMemory(
     const RegisterInfo *reg_info, lldb::addr_t dst_addr, size_t dst_len,
     const RegisterValue &reg_value) {
+  Status error;
+  if (reg_info == nullptr) {
+    error.SetErrorString("Invalid register info argument.");
+    return error;
+  }
 
   uint8_t dst[RegisterValue::kMaxRegisterByteSize];
-
-  Status error;
-
   NativeProcessProtocol &process = m_thread.GetProcess();
 
   // TODO: we might need to add a parameter to this function in case the byte
   // order of the memory data doesn't match the process. For now we are
   // assuming they are the same.
   const size_t bytes_copied = reg_value.GetAsMemoryData(
-      reg_info, dst, dst_len, process.GetByteOrder(), error);
+      *reg_info, dst, dst_len, process.GetByteOrder(), error);
 
   if (error.Success()) {
     if (bytes_copied == 0) {

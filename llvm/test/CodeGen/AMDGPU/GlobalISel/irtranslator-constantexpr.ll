@@ -17,7 +17,7 @@ define i32 @test() {
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   $vgpr0 = COPY [[COPY3]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
-  ret i32 bitcast (<1 x i32> <i32 extractelement (<1 x i32> bitcast (i32 zext (i1 icmp eq (i32* @var, i32* inttoptr (i32 -1 to i32*)) to i32) to <1 x i32>), i64 0)> to i32)
+  ret i32 bitcast (<1 x i32> <i32 extractelement (<1 x i32> bitcast (i32 zext (i1 icmp eq (ptr @var, ptr inttoptr (i32 -1 to ptr)) to i32) to <1 x i32>), i64 0)> to i32)
 }
 
 @gint = external addrspace(1) global i8, align 4
@@ -34,9 +34,9 @@ define amdgpu_kernel void @constantexpr_select_0() {
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[C1]], [[C2]]
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   G_STORE [[SELECT]](s32), [[DEF]](p1) :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
+  ; CHECK-NEXT:   G_STORE [[SELECT]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
-  store i32 select (i1 icmp eq (i8 addrspace(1)* @gint, i8 addrspace(1)* null), i32 1, i32 0), i32 addrspace(1)* undef, align 4
+  store i32 select (i1 icmp eq (ptr addrspace(1) @gint, ptr addrspace(1) null), i32 1, i32 0), ptr addrspace(1) undef, align 4
   ret void
 }
 
@@ -51,9 +51,9 @@ define amdgpu_kernel void @constantexpr_select_1() {
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[C1]], [[C2]]
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   G_STORE [[SELECT]](s32), [[DEF]](p1) :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
+  ; CHECK-NEXT:   G_STORE [[SELECT]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
-  store i32 select (i1 icmp eq (i8 addrspace(1)* @gint, i8 addrspace(1)* inttoptr (i64 1024 to i8 addrspace(1)*)), i32 1, i32 0), i32 addrspace(1)* undef, align 4
+  store i32 select (i1 icmp eq (ptr addrspace(1) @gint, ptr addrspace(1) inttoptr (i64 1024 to ptr addrspace(1))), i32 1, i32 0), ptr addrspace(1) undef, align 4
   ret void
 }
 
@@ -74,5 +74,5 @@ define i32 @test_fcmp_constexpr() {
   ; CHECK-NEXT:   $vgpr0 = COPY [[ZEXT]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
 entry:
-  ret i32 zext (i1 fcmp oeq (float uitofp (i1 icmp eq (i32* getelementptr inbounds ([2 x i32], [2 x i32]* @a, i64 0, i64 1), i32* @var) to float), float 0.000000e+00) to i32)
+  ret i32 zext (i1 fcmp oeq (float uitofp (i1 icmp eq (ptr getelementptr inbounds ([2 x i32], ptr @a, i64 0, i64 1), ptr @var) to float), float 0.000000e+00) to i32)
 }

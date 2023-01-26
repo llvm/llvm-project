@@ -13,10 +13,10 @@
 #ifndef LLVM_IR_PSEUDOPROBE_H
 #define LLVM_IR_PSEUDOPROBE_H
 
-#include "llvm/ADT/Optional.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>
+#include <optional>
 
 namespace llvm {
 
@@ -24,7 +24,14 @@ class Instruction;
 
 constexpr const char *PseudoProbeDescMetadataName = "llvm.pseudo_probe_desc";
 
+enum class PseudoProbeReservedId { Invalid = 0, Last = Invalid };
+
 enum class PseudoProbeType { Block = 0, IndirectCall, DirectCall };
+
+enum class PseudoProbeAttributes {
+  Reserved = 0x1,
+  Sentinel = 0x2, // A place holder for split function entry address.
+};
 
 // The saturated distrution factor representing 100% for block probes.
 constexpr static uint64_t PseudoProbeFullDistributionFactor =
@@ -80,7 +87,11 @@ struct PseudoProbe {
   float Factor;
 };
 
-Optional<PseudoProbe> extractProbe(const Instruction &Inst);
+static inline bool isSentinelProbe(uint32_t Flags) {
+  return Flags & (uint32_t)PseudoProbeAttributes::Sentinel;
+}
+
+std::optional<PseudoProbe> extractProbe(const Instruction &Inst);
 
 void setProbeDistributionFactor(Instruction &Inst, float Factor);
 } // end namespace llvm

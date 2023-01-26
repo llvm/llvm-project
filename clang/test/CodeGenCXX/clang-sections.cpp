@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple arm-none-eabi -o - %s | FileCheck %s --check-prefixes=CHECK,ELF
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple arm64-apple-ios -o - %s | FileCheck %s --check-prefixes=CHECK,MACHO
+// RUN: %clang_cc1 -emit-llvm -triple arm-none-eabi -o - %s | FileCheck %s --check-prefixes=CHECK,ELF
+// RUN: %clang_cc1 -emit-llvm -triple arm64-apple-ios -o - %s | FileCheck %s --check-prefixes=CHECK,MACHO
 // Test that global variables, statics and functions are attached section-attributes
 // as per '#pragma clang section' directives.
 
@@ -79,11 +79,11 @@ int hoo(void) {
 //CHECK: @n ={{.*}} global i32 0, align 4
 //CHECK: @o ={{.*}} global i32 6, align 4
 //CHECK: @p ={{.*}} constant i32 7, align 4
-//CHECK: @_ZL5fptrs = internal constant [2 x i32 ()*] [i32 ()* @foo, i32 ()* @goo], align {{4|8}} #3
+//CHECK: @_ZL5fptrs = internal constant [2 x ptr] [ptr @foo, ptr @goo], align {{4|8}} #3
 
 //CHECK: define{{.*}} i32 @foo() #5 {
 //CHECK: define{{.*}} i32 @goo() #6 {
-//CHECK: declare i32 @zoo(i32* noundef, i32* noundef) #7
+//CHECK: declare i32 @zoo(ptr noundef, ptr noundef) #7
 //CHECK: define{{.*}} i32 @hoo() #8 {
 
 //ELF: attributes #0 = { "bss-section"="my_bss.1" "data-section"="my_data.1" "rodata-section"="my_rodata.1" }

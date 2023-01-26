@@ -1,5 +1,5 @@
 REQUIRES: msan
-UNSUPPORTED: arm
+UNSUPPORTED: target=arm{{.*}}
 RUN: %msan_compiler %S/SimpleTestStdio.cpp -o %t
 RUN: not %run %t -seed=1 -runs=10000000 2>&1 | FileCheck %s --check-prefix=NO-REPORT
 

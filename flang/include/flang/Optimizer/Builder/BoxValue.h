@@ -32,6 +32,7 @@ class BoxValue;
 class CharBoxValue;
 class CharArrayBoxValue;
 class MutableBoxValue;
+class PolymorphicValue;
 class ProcBoxValue;
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const CharBoxValue &);
@@ -40,6 +41,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const CharArrayBoxValue &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ProcBoxValue &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const MutableBoxValue &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const BoxValue &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const PolymorphicValue &);
 
 //===----------------------------------------------------------------------===//
 //
@@ -96,6 +98,26 @@ protected:
   mlir::Value len;
 };
 
+/// Polymorphic value associated with a dynamic type descriptor.
+class PolymorphicValue : public AbstractBox {
+public:
+  PolymorphicValue(mlir::Value addr, mlir::Value sourceBox)
+      : AbstractBox{addr}, sourceBox{sourceBox} {}
+
+  PolymorphicValue clone(mlir::Value newBase) const {
+    return {newBase, sourceBox};
+  }
+
+  mlir::Value getSourceBox() const { return sourceBox; }
+
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &,
+                                       const PolymorphicValue &);
+  LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this; }
+
+protected:
+  mlir::Value sourceBox;
+};
+
 /// Abstract base class.
 /// Expressions of type array have at minimum a shape. These expressions may
 /// have lbound attributes (dynamic values) that affect the interpretation of
@@ -129,11 +151,12 @@ protected:
 
 /// Expressions with rank > 0 have extents. They may also have lbounds that are
 /// not 1.
-class ArrayBoxValue : public AbstractBox, public AbstractArrayBox {
+class ArrayBoxValue : public PolymorphicValue, public AbstractArrayBox {
 public:
   ArrayBoxValue(mlir::Value addr, llvm::ArrayRef<mlir::Value> extents,
-                llvm::ArrayRef<mlir::Value> lbounds = {})
-      : AbstractBox{addr}, AbstractArrayBox{extents, lbounds} {}
+                llvm::ArrayRef<mlir::Value> lbounds = {},
+                mlir::Value sourceBox = {})
+      : PolymorphicValue{addr, sourceBox}, AbstractArrayBox{extents, lbounds} {}
 
   ArrayBoxValue clone(mlir::Value newBase) const {
     return {newBase, extents, lbounds};
@@ -194,11 +217,11 @@ public:
                 llvm::ArrayRef<mlir::Value> extents)
       : AbstractBox{addr}, AbstractArrayBox(extents, lbounds) {}
   /// Get the fir.box<type> part of the address type.
-  fir::BoxType getBoxTy() const {
+  fir::BaseBoxType getBoxTy() const {
     auto type = getAddr().getType();
     if (auto pointedTy = fir::dyn_cast_ptrEleTy(type))
       type = pointedTy;
-    return type.cast<fir::BoxType>();
+    return type.cast<fir::BaseBoxType>();
   }
   /// Return the part of the address type after memory and box types. That is
   /// the element type, maybe wrapped in a fir.array type.
@@ -250,9 +273,12 @@ public:
     return fir::isRecordWithTypeParameters(getEleTy());
   }
 
-  /// Is this a CLASS(*)/TYPE(*) ?
+  /// Is this a polymorphic entity?
+  bool isPolymorphic() const { return fir::isPolymorphicType(getBoxTy()); }
+
+  /// Is this a CLASS(*)/TYPE(*)?
   bool isUnlimitedPolymorphic() const {
-    return fir::isUnlimitedPolymorphicType(getBaseTy());
+    return fir::isUnlimitedPolymorphicType(getBoxTy());
   }
 };
 
@@ -453,7 +479,7 @@ class ExtendedValue : public details::matcher<ExtendedValue> {
 public:
   using VT =
       std::variant<UnboxedValue, CharBoxValue, ArrayBoxValue, CharArrayBoxValue,
-                   ProcBoxValue, BoxValue, MutableBoxValue>;
+                   ProcBoxValue, BoxValue, MutableBoxValue, PolymorphicValue>;
 
   ExtendedValue() : box{UnboxedValue{}} {}
   template <typename A, typename = std::enable_if_t<
@@ -489,7 +515,16 @@ public:
     return match([](const fir::UnboxedValue &box) -> unsigned { return 0; },
                  [](const fir::CharBoxValue &box) -> unsigned { return 0; },
                  [](const fir::ProcBoxValue &box) -> unsigned { return 0; },
+                 [](const fir::PolymorphicValue &box) -> unsigned { return 0; },
                  [](const auto &box) -> unsigned { return box.rank(); });
+  }
+
+  bool isPolymorphic() const {
+    return match([](const fir::PolymorphicValue &box) -> bool { return true; },
+                 [](const fir::ArrayBoxValue &box) -> bool {
+                   return box.getSourceBox() ? true : false;
+                 },
+                 [](const auto &box) -> bool { return false; });
   }
 
   /// Is this an assumed size array ?

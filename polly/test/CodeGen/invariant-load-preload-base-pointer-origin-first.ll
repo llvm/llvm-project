@@ -5,8 +5,8 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-@TOP = external global i64*, align 8
-@BOT = external global i64*, align 8
+@TOP = external global ptr, align 8
+@BOT = external global ptr, align 8
 
 define void @RemoveConstraintVCG() {
 entry:
@@ -28,23 +28,23 @@ land.lhs.true:                                    ; preds = %for.body.11
   br i1 undef, label %if.then.20, label %for.inc
 
 if.then.20:                                       ; preds = %land.lhs.true
-  %tmp = load i64*, i64** @TOP, align 8
-  %tmp1 = load i64, i64* %tmp, align 8
+  %tmp = load ptr, ptr @TOP, align 8
+  %tmp1 = load i64, ptr %tmp, align 8
   %cmp25 = icmp eq i64 %tmp1, 1
   %cmp47 = icmp eq i64 %tmp1, 0
   br i1 false, label %if.end.117, label %lor.lhs.false.85
 
 lor.lhs.false.85:                                 ; preds = %if.then.20
   %add94 = add i64 %tmp1, 1
-  %tmp2 = load i64*, i64** @TOP, align 8
-  %arrayidx95 = getelementptr inbounds i64, i64* %tmp2, i64 %add94
-  %tmp3 = load i64, i64* %arrayidx95, align 8
+  %tmp2 = load ptr, ptr @TOP, align 8
+  %arrayidx95 = getelementptr inbounds i64, ptr %tmp2, i64 %add94
+  %tmp3 = load i64, ptr %arrayidx95, align 8
   br i1 false, label %if.else.103, label %land.lhs.true.97
 
 land.lhs.true.97:                                 ; preds = %lor.lhs.false.85
-  %tmp4 = load i64*, i64** @BOT, align 8
-  %arrayidx99 = getelementptr inbounds i64, i64* %tmp4, i64 %add94
-  %tmp5 = load i64, i64* %arrayidx99, align 8
+  %tmp4 = load ptr, ptr @BOT, align 8
+  %arrayidx99 = getelementptr inbounds i64, ptr %tmp4, i64 %add94
+  %tmp5 = load i64, ptr %arrayidx99, align 8
   %tobool100 = icmp eq i64 %tmp5, 0
   br i1 %tobool100, label %if.else.103, label %if.then.101
 
@@ -52,14 +52,14 @@ if.then.101:                                      ; preds = %land.lhs.true.97
   br label %if.end.117
 
 if.else.103:                                      ; preds = %land.lhs.true.97, %lor.lhs.false.85
-  %tmp6 = load i64*, i64** @TOP, align 8
-  %arrayidx105 = getelementptr inbounds i64, i64* %tmp6, i64 %add94
-  %tmp7 = load i64, i64* %arrayidx105, align 8
+  %tmp6 = load ptr, ptr @TOP, align 8
+  %arrayidx105 = getelementptr inbounds i64, ptr %tmp6, i64 %add94
+  %tmp7 = load i64, ptr %arrayidx105, align 8
   br i1 false, label %lor.lhs.false.107, label %if.else.112
 
 lor.lhs.false.107:                                ; preds = %if.else.103
-  %tmp8 = load i64*, i64** @BOT, align 8
-  %arrayidx109 = getelementptr inbounds i64, i64* %tmp8, i64 %add94
+  %tmp8 = load ptr, ptr @BOT, align 8
+  %arrayidx109 = getelementptr inbounds i64, ptr %tmp8, i64 %add94
   br i1 false, label %if.end.117, label %if.else.112
 
 if.else.112:                                      ; preds = %lor.lhs.false.107, %if.else.103

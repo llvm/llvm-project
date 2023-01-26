@@ -120,14 +120,14 @@ define amdgpu_ps i64 @s_shl_i64_zext_i32_overflow(i32 inreg %x) {
 ; GCN-LABEL: s_shl_i64_zext_i32_overflow:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_bitset0_b32 s0, 31
-; GCN-NEXT:    s_bfe_u64 s[0:1], s[0:1], 0x200000
+; GCN-NEXT:    s_mov_b32 s1, 0
 ; GCN-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: s_shl_i64_zext_i32_overflow:
 ; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_mov_b32 s1, 0
 ; GFX10PLUS-NEXT:    s_bitset0_b32 s0, 31
-; GFX10PLUS-NEXT:    s_bfe_u64 s[0:1], s[0:1], 0x200000
 ; GFX10PLUS-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %and = and i32 %x, 2147483647
@@ -187,14 +187,14 @@ define amdgpu_ps i64 @s_shl_i64_sext_i32_overflow(i32 inreg %x) {
 ; GCN-LABEL: s_shl_i64_sext_i32_overflow:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_bitset0_b32 s0, 31
-; GCN-NEXT:    s_bfe_i64 s[0:1], s[0:1], 0x200000
+; GCN-NEXT:    s_ashr_i32 s1, s0, 31
 ; GCN-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: s_shl_i64_sext_i32_overflow:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_bitset0_b32 s0, 31
-; GFX10PLUS-NEXT:    s_bfe_i64 s[0:1], s[0:1], 0x200000
+; GFX10PLUS-NEXT:    s_ashr_i32 s1, s0, 31
 ; GFX10PLUS-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %and = and i32 %x, 2147483647
@@ -242,7 +242,7 @@ define i64 @v_shl_i64_sext_i32_overflow(i32 %x) {
   ret i64 %shl
 }
 
-define amdgpu_kernel void @mulu24_shl64(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @mulu24_shl64(ptr addrspace(1) nocapture %arg) {
 ; GFX7-LABEL: mulu24_shl64:
 ; GFX7:       ; %bb.0: ; %bb
 ; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
@@ -319,12 +319,12 @@ bb:
   %tmp1 = and i32 %tmp, 6
   %mulconv = mul nuw nsw i32 %tmp1, 7
   %tmp2 = zext i32 %mulconv to i64
-  %tmp3 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 %tmp2
-  store i32 0, i32 addrspace(1)* %tmp3, align 4
+  %tmp3 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 %tmp2
+  store i32 0, ptr addrspace(1) %tmp3, align 4
   ret void
 }
 
-define amdgpu_kernel void @muli24_shl64(i64 addrspace(1)* nocapture %arg, i32 addrspace(1)* nocapture readonly %arg1) {
+define amdgpu_kernel void @muli24_shl64(ptr addrspace(1) nocapture %arg, ptr addrspace(1) nocapture readonly %arg1) {
 ; GFX7-LABEL: muli24_shl64:
 ; GFX7:       ; %bb.0: ; %bb
 ; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
@@ -417,14 +417,14 @@ define amdgpu_kernel void @muli24_shl64(i64 addrspace(1)* nocapture %arg, i32 ad
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp2 = sext i32 %tmp to i64
-  %tmp3 = getelementptr inbounds i32, i32 addrspace(1)* %arg1, i64 %tmp2
-  %tmp4 = load i32, i32 addrspace(1)* %tmp3, align 4
+  %tmp3 = getelementptr inbounds i32, ptr addrspace(1) %arg1, i64 %tmp2
+  %tmp4 = load i32, ptr addrspace(1) %tmp3, align 4
   %tmp5 = or i32 %tmp4, -8388608
   %tmp6 = mul nsw i32 %tmp5, -7
   %tmp7 = zext i32 %tmp6 to i64
   %tmp8 = shl nuw nsw i64 %tmp7, 3
-  %tmp9 = getelementptr inbounds i64, i64 addrspace(1)* %arg, i64 %tmp2
-  store i64 %tmp8, i64 addrspace(1)* %tmp9, align 8
+  %tmp9 = getelementptr inbounds i64, ptr addrspace(1) %arg, i64 %tmp2
+  store i64 %tmp8, ptr addrspace(1) %tmp9, align 8
   ret void
 }
 
@@ -434,9 +434,10 @@ define amdgpu_ps <2 x i64> @s_shl_v2i64_zext_v2i32(<2 x i32> inreg %x) {
 ; GCN-NEXT:    s_brev_b32 s2, -4
 ; GCN-NEXT:    s_mov_b32 s3, s2
 ; GCN-NEXT:    s_and_b64 s[0:1], s[0:1], s[2:3]
-; GCN-NEXT:    s_bfe_u64 s[2:3], s[0:1], 0x200000
-; GCN-NEXT:    s_mov_b32 s0, s1
-; GCN-NEXT:    s_bfe_u64 s[4:5], s[0:1], 0x200000
+; GCN-NEXT:    s_mov_b32 s3, 0
+; GCN-NEXT:    s_mov_b32 s2, s0
+; GCN-NEXT:    s_mov_b32 s4, s1
+; GCN-NEXT:    s_mov_b32 s5, s3
 ; GCN-NEXT:    s_lshl_b64 s[0:1], s[2:3], 2
 ; GCN-NEXT:    s_lshl_b64 s[2:3], s[4:5], 2
 ; GCN-NEXT:    ; return to shader part epilog
@@ -446,11 +447,12 @@ define amdgpu_ps <2 x i64> @s_shl_v2i64_zext_v2i32(<2 x i32> inreg %x) {
 ; GFX10PLUS-NEXT:    s_brev_b32 s2, -4
 ; GFX10PLUS-NEXT:    s_mov_b32 s3, s2
 ; GFX10PLUS-NEXT:    s_and_b64 s[0:1], s[0:1], s[2:3]
-; GFX10PLUS-NEXT:    s_mov_b32 s2, s1
-; GFX10PLUS-NEXT:    s_bfe_u64 s[0:1], s[0:1], 0x200000
-; GFX10PLUS-NEXT:    s_bfe_u64 s[2:3], s[2:3], 0x200000
-; GFX10PLUS-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
-; GFX10PLUS-NEXT:    s_lshl_b64 s[2:3], s[2:3], 2
+; GFX10PLUS-NEXT:    s_mov_b32 s3, 0
+; GFX10PLUS-NEXT:    s_mov_b32 s2, s0
+; GFX10PLUS-NEXT:    s_mov_b32 s4, s1
+; GFX10PLUS-NEXT:    s_mov_b32 s5, s3
+; GFX10PLUS-NEXT:    s_lshl_b64 s[0:1], s[2:3], 2
+; GFX10PLUS-NEXT:    s_lshl_b64 s[2:3], s[4:5], 2
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %and = and <2 x i32> %x, <i32 1073741823, i32 1073741823>
   %ext = zext <2 x i32> %and to <2 x i64>
@@ -525,9 +527,10 @@ define amdgpu_ps <2 x i64> @s_shl_v2i64_sext_v2i32(<2 x i32> inreg %x) {
 ; GCN-NEXT:    s_brev_b32 s2, -8
 ; GCN-NEXT:    s_mov_b32 s3, s2
 ; GCN-NEXT:    s_and_b64 s[0:1], s[0:1], s[2:3]
-; GCN-NEXT:    s_bfe_i64 s[2:3], s[0:1], 0x200000
-; GCN-NEXT:    s_mov_b32 s0, s1
-; GCN-NEXT:    s_bfe_i64 s[4:5], s[0:1], 0x200000
+; GCN-NEXT:    s_ashr_i32 s3, s0, 31
+; GCN-NEXT:    s_mov_b32 s2, s0
+; GCN-NEXT:    s_ashr_i32 s5, s1, 31
+; GCN-NEXT:    s_mov_b32 s4, s1
 ; GCN-NEXT:    s_lshl_b64 s[0:1], s[2:3], 2
 ; GCN-NEXT:    s_lshl_b64 s[2:3], s[4:5], 2
 ; GCN-NEXT:    ; return to shader part epilog
@@ -537,11 +540,12 @@ define amdgpu_ps <2 x i64> @s_shl_v2i64_sext_v2i32(<2 x i32> inreg %x) {
 ; GFX10PLUS-NEXT:    s_brev_b32 s2, -8
 ; GFX10PLUS-NEXT:    s_mov_b32 s3, s2
 ; GFX10PLUS-NEXT:    s_and_b64 s[0:1], s[0:1], s[2:3]
-; GFX10PLUS-NEXT:    s_mov_b32 s2, s1
-; GFX10PLUS-NEXT:    s_bfe_i64 s[0:1], s[0:1], 0x200000
-; GFX10PLUS-NEXT:    s_bfe_i64 s[2:3], s[2:3], 0x200000
-; GFX10PLUS-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
-; GFX10PLUS-NEXT:    s_lshl_b64 s[2:3], s[2:3], 2
+; GFX10PLUS-NEXT:    s_ashr_i32 s3, s0, 31
+; GFX10PLUS-NEXT:    s_mov_b32 s2, s0
+; GFX10PLUS-NEXT:    s_ashr_i32 s5, s1, 31
+; GFX10PLUS-NEXT:    s_mov_b32 s4, s1
+; GFX10PLUS-NEXT:    s_lshl_b64 s[0:1], s[2:3], 2
+; GFX10PLUS-NEXT:    s_lshl_b64 s[2:3], s[4:5], 2
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %and = and <2 x i32> %x, <i32 536870911, i32 536870911>
   %ext = sext <2 x i32> %and to <2 x i64>

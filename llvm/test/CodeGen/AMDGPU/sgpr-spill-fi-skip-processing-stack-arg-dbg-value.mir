@@ -1,0 +1,56 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -amdgpu-spill-sgpr-to-vgpr=true -verify-machineinstrs -run-pass=si-lower-sgpr-spills,prologepilog -o - %s | FileCheck %s
+
+# After handling the SGPR spill to VGPR in SILowerSGPRSpills pass, we replace the dead frame index in the DBG_VALUE instruction with reg 0.
+# Skip looking for frame indices in the debug value instruction for incoming arguments passed via stack. The test would crash otherwise.
+# It is safe to skip the fixed stack objects as they will never become the spill objects.
+
+--- |
+  define amdgpu_kernel void @test() { ret void }
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !4, producer: "llvm", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !4)
+  !1 = !DILocalVariable(name: "a", scope: !2, file: !4, line: 126, type: !6)
+  !2 = distinct !DISubprogram(name: "test", scope: !4, file: !4, line: 1, type: !3, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !5)
+  !3 = !DISubroutineType(types: !4)
+  !4 = !{null}
+  !5 = !{!1}
+  !6 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !7, size: 64, align: 32)
+  !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
+  !8 = !DIExpression()
+  !9 = !DILocation(line: 10, column: 9, scope: !2)
+
+...
+---
+name:            test
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    4
+fixedStack:
+  - { id: 0, type: default, offset: 4, size: 4, alignment: 4, stack-id: default }
+stack:
+  - { id: 0, type: spill-slot, size: 4, alignment: 4, stack-id: sgpr-spill }
+machineFunctionInfo:
+  maxKernArgAlign: 4
+  isEntryFunction: true
+  waveLimiter:     true
+  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  stackPtrOffsetReg: '$sgpr32'
+  frameOffsetReg: '$sgpr33'
+  hasSpilledSGPRs: true
+  argumentInfo:
+    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
+    kernargSegmentPtr: { reg: '$sgpr6_sgpr7' }
+    workGroupIDX:    { reg: '$sgpr8' }
+    privateSegmentWaveByteOffset: { reg: '$sgpr9' }
+body:             |
+  ; CHECK-LABEL: name: test
+  ; CHECK: bb.0:
+  ; CHECK:   DBG_VALUE $noreg, 0
+  bb.0:
+    renamable $sgpr10 = IMPLICIT_DEF
+    SI_SPILL_S32_SAVE killed $sgpr10, %stack.0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
+    DBG_VALUE %fixed-stack.0, 0, !1, !8, debug-location !9
+
+  bb.1:
+    renamable $sgpr10 = SI_SPILL_S32_RESTORE %stack.0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
+    S_ENDPGM 0

@@ -21,6 +21,8 @@
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
 // CHECK-NEXT:       "command-line": [
 // CHECK-NEXT:         "-cc1"
+// CHECK-NOT:          "-fdebug-compilation-dir="
+// CHECK-NOT:          "-fcoverage-compilation-dir="
 // CHECK-NOT:          "-dwarf-debug-flags"
 // CHECK-NOT:          "-main-file-name"
 // CHECK-NOT:          "-include"
@@ -29,9 +31,6 @@
 // CHECK-NOT:          "-fbuild-session-timestamp=
 // CHECK-NOT:          "-fmodules-prune-interval=
 // CHECK-NOT:          "-fmodules-prune-after=
-// CHECK-NOT:          "-dependency-file"
-// CHECK-NOT:          "-MT"
-// CHECK-NOT:          "-serialize-diagnostic-file"
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_MOD_HEADER:.*]]",
 // CHECK-NEXT:       "file-deps": [
@@ -45,6 +44,8 @@
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
 // CHECK-NEXT:       "command-line": [
 // CHECK-NEXT:         "-cc1"
+// CHECK-NOT:          "-fdebug-compilation-dir=
+// CHECK-NOT:          "-fcoverage-compilation-dir=
 // CHECK-NOT:          "-dwarf-debug-flags"
 // CHECK-NOT:          "-main-file-name"
 // CHECK-NOT:          "-include"
@@ -53,9 +54,6 @@
 // CHECK-NOT:          "-fbuild-session-timestamp=
 // CHECK-NOT:          "-fmodules-prune-interval=
 // CHECK-NOT:          "-fmodules-prune-after=
-// CHECK-NOT:          "-dependency-file"
-// CHECK-NOT:          "-MT"
-// CHECK-NOT:          "-serialize-diagnostic-file"
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_MOD_TU:.*]]",
 // CHECK-NEXT:       "file-deps": [
@@ -67,7 +65,7 @@
 // CHECK-NEXT:   ],
 // CHECK-NEXT:   "translation-units": [
 // CHECK-NEXT:     {
-// CHECK-NEXT:       "clang-context-hash": "[[HASH_TU:.*]]",
+// CHECK:            "clang-context-hash": "[[HASH_TU:.*]]",
 // CHECK-NEXT:       "clang-module-deps": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "context-hash": "[[HASH_MOD_HEADER]]",
@@ -79,13 +77,11 @@
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ]
 // CHECK-NEXT:       "command-line": [
-// CHECK-NEXT:         "-fsyntax-only",
+// CHECK-NEXT:         "-cc1",
 // CHECK-NOT:          "-fmodules-cache-path=
 // CHECK-NOT:          "-fmodules-validate-once-per-build-session"
+// CHECK-NOT:          "-fbuild-session-timestamp=
 // CHECK-NOT:          "-fbuild-session-file=
 // CHECK-NOT:          "-fmodules-prune-interval=
 // CHECK-NOT:          "-fmodules-prune-after=
 // CHECK:            ],
-// CHECK:          }
-// CHECK-NEXT:   ]
-// CHECK-NEXT: }

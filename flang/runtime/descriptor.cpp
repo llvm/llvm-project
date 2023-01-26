@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/descriptor.h"
+#include "ISO_Fortran_util.h"
 #include "derived.h"
 #include "memory.h"
 #include "stat.h"
 #include "terminator.h"
+#include "tools.h"
 #include "type-info.h"
 #include <cassert>
 #include <cstdlib>
@@ -29,22 +31,19 @@ void Descriptor::Establish(TypeCode t, std::size_t elementBytes, void *p,
     int rank, const SubscriptValue *extent, ISO::CFI_attribute_t attribute,
     bool addendum) {
   Terminator terminator{__FILE__, __LINE__};
-  // Subtle: the standard CFI_establish() function doesn't allow a zero
-  // elem_len argument in cases where elem_len is not ignored; and when it
-  // returns an error code (CFI_INVALID_ELEM_LEN in this case), it must not
-  // modify the descriptor.  That design makes sense, maybe, for actual
-  // C interoperability, but we need to work around it here.  A zero
-  // incoming element length is replaced by 4 so that it will be valid
-  // for all CHARACTER kinds.
-  std::size_t workaroundElemLen{elementBytes ? elementBytes : 4};
-  int cfiStatus{ISO::CFI_establish(
-      &raw_, p, attribute, t.raw(), workaroundElemLen, rank, extent)};
+  int cfiStatus{ISO::VerifyEstablishParameters(&raw_, p, attribute, t.raw(),
+      elementBytes, rank, extent, /*external=*/false)};
   if (cfiStatus != CFI_SUCCESS) {
     terminator.Crash(
-        "Descriptor::Establish: CFI_establish returned %d", cfiStatus, t.raw());
+        "Descriptor::Establish: CFI_establish returned %d for CFI_type_t(%d)",
+        cfiStatus, t.raw());
   }
+  ISO::EstablishDescriptor(
+      &raw_, p, attribute, t.raw(), elementBytes, rank, extent);
   if (elementBytes == 0) {
     raw_.elem_len = 0;
+    // Reset byte strides of the dimensions, since EstablishDescriptor()
+    // only does that when the base address is not nullptr.
     for (int j{0}; j < rank; ++j) {
       GetDimension(j).SetByteStride(0);
     }
@@ -55,6 +54,20 @@ void Descriptor::Establish(TypeCode t, std::size_t elementBytes, void *p,
   if (a) {
     new (a) DescriptorAddendum{};
   }
+}
+
+namespace {
+template <TypeCategory CAT, int KIND> struct TypeSizeGetter {
+  constexpr std::size_t operator()() const {
+    CppTypeFor<CAT, KIND> arr[2];
+    return sizeof arr / 2;
+  }
+};
+} // namespace
+
+std::size_t Descriptor::BytesFor(TypeCategory category, int kind) {
+  Terminator terminator{__FILE__, __LINE__};
+  return ApplyType<TypeSizeGetter, std::size_t>(category, kind, terminator);
 }
 
 void Descriptor::Establish(TypeCategory c, int kind, void *p, int rank,

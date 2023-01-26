@@ -17,12 +17,12 @@ target triple = "x86_64-apple-macosx10.11.0"
 ; RUN: llvm-dis < %t.o.1.2.internalize.bc | FileCheck  %s --check-prefix=PROMOTE
 ; PROMOTE: @a = private global i8 0, section "__TEXT,__cstring,cstring_literals"
 @a = private global i8 0, section "__TEXT,__cstring,cstring_literals"
-@b = global i8 *@a
+@b = global ptr@a
 
 
 ; We want foo to be imported in the main module!
 ; RUN: llvm-dis < %t.o.2.3.import.bc  | FileCheck  %s --check-prefix=IMPORT
 ; IMPORT: define available_externally dso_local ptr @foo()
-define i8 **@foo() {
-	ret i8 **@b
+define ptr@foo() {
+	ret ptr@b
 }

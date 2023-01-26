@@ -1,8 +1,8 @@
 ; RUN: llc < %s -mtriple=thumbv7-apple-darwin10
 
-declare noalias i8* @malloc(i32) nounwind
+declare noalias ptr @malloc(i32) nounwind
 
-define internal void @gl_DrawPixels(i32 %width, i32 %height, i32 %format, i32 %type, i8* %pixels) nounwind {
+define internal void @gl_DrawPixels(i32 %width, i32 %height, i32 %format, i32 %type, ptr %pixels) nounwind {
 entry:
   br i1 undef, label %bb3.i, label %bb3
 
@@ -49,7 +49,7 @@ bb4.i18:                                          ; preds = %bb3.i17
   %not..i = icmp ne i32 %1, 0
   %2 = zext i1 %not..i to i32
   %storemerge2.i = add i32 0, %2
-  %3 = call noalias i8* @malloc(i32 %storemerge2.i) nounwind
+  %3 = call noalias ptr @malloc(i32 %storemerge2.i) nounwind
   br i1 undef, label %bb3.i9, label %bb9.i
 
 bb9.i:                                            ; preds = %bb4.i18

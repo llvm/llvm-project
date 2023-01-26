@@ -122,15 +122,15 @@ template <> struct CastInfo<T4, T3> {
 using namespace llvm;
 
 // Test the peculiar behavior of Use in simplify_type.
-static_assert(std::is_same<simplify_type<Use>::SimpleType, Value *>::value,
+static_assert(std::is_same_v<simplify_type<Use>::SimpleType, Value *>,
               "Use doesn't simplify correctly!");
-static_assert(std::is_same<simplify_type<Use *>::SimpleType, Value *>::value,
+static_assert(std::is_same_v<simplify_type<Use *>::SimpleType, Value *>,
               "Use doesn't simplify correctly!");
 
 // Test that a regular class behaves as expected.
-static_assert(std::is_same<simplify_type<foo>::SimpleType, int>::value,
+static_assert(std::is_same_v<simplify_type<foo>::SimpleType, int>,
               "Unexpected simplify_type result!");
-static_assert(std::is_same<simplify_type<foo *>::SimpleType, foo *>::value,
+static_assert(std::is_same_v<simplify_type<foo *>::SimpleType, foo *>,
               "Unexpected simplify_type result!");
 
 namespace {
@@ -177,7 +177,7 @@ TEST(CastingTest, cast) {
 
   std::unique_ptr<const bar> BP(B2);
   auto FP = cast<foo>(std::move(BP));
-  static_assert(std::is_same<std::unique_ptr<const foo>, decltype(FP)>::value,
+  static_assert(std::is_same_v<std::unique_ptr<const foo>, decltype(FP)>,
                 "Incorrect deduced return type!");
   EXPECT_NE(FP.get(), null_foo);
   FP.release();
@@ -235,7 +235,7 @@ TEST(CastingTest, dyn_cast_or_null) {
 
 TEST(CastingTest, dyn_cast_value_types) {
   T1 t1;
-  Optional<T2> t2 = dyn_cast<T2>(t1);
+  std::optional<T2> t2 = dyn_cast<T2>(t1);
   EXPECT_TRUE(t2);
 
   T2 *t2ptr = dyn_cast<T2>(&t1);
@@ -246,12 +246,12 @@ TEST(CastingTest, dyn_cast_value_types) {
 }
 
 TEST(CastingTest, dyn_cast_if_present) {
-  Optional<T1> empty{};
-  Optional<T2> F1 = dyn_cast_if_present<T2>(empty);
+  std::optional<T1> empty{};
+  std::optional<T2> F1 = dyn_cast_if_present<T2>(empty);
   EXPECT_FALSE(F1.has_value());
 
   T1 t1;
-  Optional<T2> F2 = dyn_cast_if_present<T2>(t1);
+  std::optional<T2> F2 = dyn_cast_if_present<T2>(t1);
   EXPECT_TRUE(F2.has_value());
 
   T1 *t1Null = nullptr;

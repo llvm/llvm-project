@@ -973,7 +973,7 @@ void FPS::adjustLiveRegs(unsigned Mask, MachineBasicBlock::iterator I) {
 
   // Now we should have the correct registers live.
   LLVM_DEBUG(dumpStack());
-  assert(StackTop == countPopulation(Mask) && "Live count mismatch");
+  assert(StackTop == (unsigned)llvm::popcount(Mask) && "Live count mismatch");
 }
 
 /// shuffleStackTop - emit fxch instructions before I to shuffle the top

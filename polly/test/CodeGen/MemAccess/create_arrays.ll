@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-print-scops -polly-print-import-jscop -polly-import-jscop-postfix=transformed -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-codegen -S < %s 2>&1 | FileCheck %s --check-prefix=CODEGEN
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-print-scops -polly-print-import-jscop -polly-import-jscop-postfix=transformed -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-codegen -S < %s 2>&1 | FileCheck %s --check-prefix=CODEGEN
 ;
 ;  for (i = 0; i < _PB_NI; i++)
 ;    for (j = 0; j < _PB_NJ; j++)

@@ -412,8 +412,11 @@ public:
     const auto &Desc = Info->get(Inst.getOpcode());
     for (unsigned i = 0, e = Inst.getNumOperands(); i != e; i++) {
       if (Desc.OpInfo[i].OperandType == MCOI::OPERAND_PCREL) {
-        int64_t Imm = Inst.getOperand(i).getImm() * 4;
-        Target = Addr + Imm;
+        int64_t Imm = Inst.getOperand(i).getImm();
+        if (Inst.getOpcode() == AArch64::ADRP)
+          Target = (Addr & -4096) + Imm * 4096;
+        else
+          Target = Addr + Imm * 4;
         return true;
       }
     }
@@ -495,6 +498,10 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64TargetMC() {
     // Register the asm streamer.
     TargetRegistry::RegisterAsmTargetStreamer(*T,
                                               createAArch64AsmTargetStreamer);
+    // Register the null streamer.
+    TargetRegistry::RegisterNullTargetStreamer(*T,
+                                               createAArch64NullTargetStreamer);
+
     // Register the MCInstPrinter.
     TargetRegistry::RegisterMCInstPrinter(*T, createAArch64MCInstPrinter);
   }

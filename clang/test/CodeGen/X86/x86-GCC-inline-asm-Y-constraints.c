@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -ffreestanding  -triple=x86_64-apple-darwin -target-cpu skx %s -emit-llvm -o - | FileCheck %s
 #include <xmmintrin.h>
-// This test is complimented by the .ll test under llvm/test/MC/X86/. 
+// This test is complemented by the .ll test under llvm/test/MC/X86/. 
 // At this level we can only check if the constarints are passed correctly
 // from inline asm to llvm IR.
 

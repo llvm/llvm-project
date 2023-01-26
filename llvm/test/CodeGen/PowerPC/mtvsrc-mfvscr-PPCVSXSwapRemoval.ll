@@ -12,7 +12,7 @@ define void @test_mtvscr() {
 ; CHECK-NEXT:    blr
 test_mtvscr_entry:
   %0 = alloca <4 x i32>
-  %1 = load <4 x i32>, <4 x i32>* %0
+  %1 = load <4 x i32>, ptr %0
   call void @llvm.ppc.altivec.mtvscr(<4 x i32> %1)
   ret void
 }
@@ -28,7 +28,7 @@ define void @test_mfvscr() {
 test_mfvscr_entry:
   %0 = alloca <8 x i16>
   %1 = call <8 x i16> @llvm.ppc.altivec.mfvscr()
-  store <8 x i16> %1, <8 x i16>* %0
+  store <8 x i16> %1, ptr %0
   ret void
 }
 

@@ -27,8 +27,8 @@ define dso_local signext i32 @greater_qp() {
 ; CHECK-P8-LABEL: greater_qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    addis r3, r2, a_qp@toc@ha
@@ -49,8 +49,8 @@ define dso_local signext i32 @greater_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp ogt fp128 %0, %1
   %conv = zext i1 %cmp to i32
   ret i32 %conv
@@ -75,8 +75,8 @@ define dso_local signext i32 @less_qp() {
 ; CHECK-P8-LABEL: less_qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    addis r3, r2, a_qp@toc@ha
@@ -95,8 +95,8 @@ define dso_local signext i32 @less_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp olt fp128 %0, %1
   %conv = zext i1 %cmp to i32
   ret i32 %conv
@@ -121,8 +121,8 @@ define dso_local signext i32 @greater_eq_qp() {
 ; CHECK-P8-LABEL: greater_eq_qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    addis r3, r2, a_qp@toc@ha
@@ -142,8 +142,8 @@ define dso_local signext i32 @greater_eq_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp oge fp128 %0, %1
   %conv = zext i1 %cmp to i32
   ret i32 %conv
@@ -168,8 +168,8 @@ define dso_local signext i32 @less_eq_qp() {
 ; CHECK-P8-LABEL: less_eq_qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    addis r3, r2, a_qp@toc@ha
@@ -191,8 +191,8 @@ define dso_local signext i32 @less_eq_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp ole fp128 %0, %1
   %conv = zext i1 %cmp to i32
   ret i32 %conv
@@ -217,8 +217,8 @@ define dso_local signext i32 @equal_qp() {
 ; CHECK-P8-LABEL: equal_qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    addis r3, r2, a_qp@toc@ha
@@ -238,8 +238,8 @@ define dso_local signext i32 @equal_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp oeq fp128 %0, %1
   %conv = zext i1 %cmp to i32
   ret i32 %conv
@@ -263,8 +263,8 @@ define dso_local signext i32 @not_greater_qp() {
 ; CHECK-P8-LABEL: not_greater_qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    addis r3, r2, a_qp@toc@ha
@@ -286,8 +286,8 @@ define dso_local signext i32 @not_greater_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp ogt fp128 %0, %1
   %lnot = xor i1 %cmp, true
   %lnot.ext = zext i1 %lnot to i32
@@ -312,8 +312,8 @@ define dso_local signext i32 @not_less_qp() {
 ; CHECK-P8-LABEL: not_less_qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    addis r3, r2, a_qp@toc@ha
@@ -333,8 +333,8 @@ define dso_local signext i32 @not_less_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp olt fp128 %0, %1
   %lnot = xor i1 %cmp, true
   %lnot.ext = zext i1 %lnot to i32
@@ -360,8 +360,8 @@ define dso_local signext i32 @not_greater_eq_qp() {
 ; CHECK-P8-LABEL: not_greater_eq_qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    addis r3, r2, a_qp@toc@ha
@@ -380,8 +380,8 @@ define dso_local signext i32 @not_greater_eq_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp oge fp128 %0, %1
   %lnot = xor i1 %cmp, true
   %lnot.ext = zext i1 %lnot to i32
@@ -407,8 +407,8 @@ define dso_local signext i32 @not_less_eq_qp() {
 ; CHECK-P8-LABEL: not_less_eq_qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    addis r3, r2, a_qp@toc@ha
@@ -429,8 +429,8 @@ define dso_local signext i32 @not_less_eq_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp ole fp128 %0, %1
   %lnot = xor i1 %cmp, true
   %lnot.ext = zext i1 %lnot to i32
@@ -455,8 +455,8 @@ define dso_local signext i32 @not_equal_qp() {
 ; CHECK-P8-LABEL: not_equal_qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    addis r3, r2, a_qp@toc@ha
@@ -477,8 +477,8 @@ define dso_local signext i32 @not_equal_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp une fp128 %0, %1
   %conv = zext i1 %cmp to i32
   ret i32 %conv
@@ -503,8 +503,8 @@ define fp128 @greater_sel_qp() {
 ; CHECK-P8-LABEL: greater_sel_qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -80(r1)
+; CHECK-P8-NEXT:    std r0, 96(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset v30, -32
@@ -540,8 +540,8 @@ define fp128 @greater_sel_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp ogt fp128 %0, %1
   %cond = select i1 %cmp, fp128 %0, fp128 %1
   ret fp128 %cond
@@ -566,8 +566,8 @@ define fp128 @less_sel_qp() {
 ; CHECK-P8-LABEL: less_sel_qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -80(r1)
+; CHECK-P8-NEXT:    std r0, 96(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset v30, -32
@@ -603,8 +603,8 @@ define fp128 @less_sel_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp olt fp128 %0, %1
   %cond = select i1 %cmp, fp128 %0, fp128 %1
   ret fp128 %cond
@@ -630,8 +630,8 @@ define fp128 @greater_eq_sel_qp() {
 ; CHECK-P8-LABEL: greater_eq_sel_qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -80(r1)
+; CHECK-P8-NEXT:    std r0, 96(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset v30, -32
@@ -667,8 +667,8 @@ define fp128 @greater_eq_sel_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp oge fp128 %0, %1
   %cond = select i1 %cmp, fp128 %0, fp128 %1
   ret fp128 %cond
@@ -694,8 +694,8 @@ define fp128 @less_eq_sel_qp() {
 ; CHECK-P8-LABEL: less_eq_sel_qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -80(r1)
+; CHECK-P8-NEXT:    std r0, 96(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset v30, -32
@@ -731,8 +731,8 @@ define fp128 @less_eq_sel_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp ole fp128 %0, %1
   %cond = select i1 %cmp, fp128 %0, fp128 %1
   ret fp128 %cond
@@ -757,8 +757,8 @@ define fp128 @equal_sel_qp() {
 ; CHECK-P8-LABEL: equal_sel_qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -80(r1)
+; CHECK-P8-NEXT:    std r0, 96(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset v30, -32
@@ -794,8 +794,8 @@ define fp128 @equal_sel_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp oeq fp128 %0, %1
   %cond = select i1 %cmp, fp128 %0, fp128 %1
   ret fp128 %cond

@@ -153,7 +153,7 @@ BCEAtom visitICmpLoadOperand(Value *const Val, BaseIdentifier &BaseId) {
   if (!isDereferenceablePointer(Addr, LoadI->getType(), DL)) {
     LLVM_DEBUG(dbgs() << "not dereferenceable\n");
     // We need to make sure that we can do comparison in any order, so we
-    // require memory to be unconditionnally dereferencable.
+    // require memory to be unconditionally dereferenceable.
     return {};
   }
 
@@ -300,9 +300,9 @@ bool BCECmpBlock::doesOtherWork() const {
 
 // Visit the given comparison. If this is a comparison between two valid
 // BCE atoms, returns the comparison.
-Optional<BCECmp> visitICmp(const ICmpInst *const CmpI,
-                           const ICmpInst::Predicate ExpectedPredicate,
-                           BaseIdentifier &BaseId) {
+std::optional<BCECmp> visitICmp(const ICmpInst *const CmpI,
+                                const ICmpInst::Predicate ExpectedPredicate,
+                                BaseIdentifier &BaseId) {
   // The comparison can only be used once:
   //  - For intermediate blocks, as a branch condition.
   //  - For the final block, as an incoming value for the Phi.
@@ -310,19 +310,19 @@ Optional<BCECmp> visitICmp(const ICmpInst *const CmpI,
   // other comparisons as we would create an orphan use of the value.
   if (!CmpI->hasOneUse()) {
     LLVM_DEBUG(dbgs() << "cmp has several uses\n");
-    return None;
+    return std::nullopt;
   }
   if (CmpI->getPredicate() != ExpectedPredicate)
-    return None;
+    return std::nullopt;
   LLVM_DEBUG(dbgs() << "cmp "
                     << (ExpectedPredicate == ICmpInst::ICMP_EQ ? "eq" : "ne")
                     << "\n");
   auto Lhs = visitICmpLoadOperand(CmpI->getOperand(0), BaseId);
   if (!Lhs.BaseId)
-    return None;
+    return std::nullopt;
   auto Rhs = visitICmpLoadOperand(CmpI->getOperand(1), BaseId);
   if (!Rhs.BaseId)
-    return None;
+    return std::nullopt;
   const auto &DL = CmpI->getModule()->getDataLayout();
   return BCECmp(std::move(Lhs), std::move(Rhs),
                 DL.getTypeSizeInBits(CmpI->getOperand(0)->getType()), CmpI);
@@ -330,12 +330,15 @@ Optional<BCECmp> visitICmp(const ICmpInst *const CmpI,
 
 // Visit the given comparison block. If this is a comparison between two valid
 // BCE atoms, returns the comparison.
-Optional<BCECmpBlock> visitCmpBlock(Value *const Val, BasicBlock *const Block,
-                                    const BasicBlock *const PhiBlock,
-                                    BaseIdentifier &BaseId) {
-  if (Block->empty()) return None;
+std::optional<BCECmpBlock> visitCmpBlock(Value *const Val,
+                                         BasicBlock *const Block,
+                                         const BasicBlock *const PhiBlock,
+                                         BaseIdentifier &BaseId) {
+  if (Block->empty())
+    return std::nullopt;
   auto *const BranchI = dyn_cast<BranchInst>(Block->getTerminator());
-  if (!BranchI) return None;
+  if (!BranchI)
+    return std::nullopt;
   LLVM_DEBUG(dbgs() << "branch\n");
   Value *Cond;
   ICmpInst::Predicate ExpectedPredicate;
@@ -351,7 +354,8 @@ Optional<BCECmpBlock> visitCmpBlock(Value *const Val, BasicBlock *const Block,
     // chained).
     const auto *const Const = cast<ConstantInt>(Val);
     LLVM_DEBUG(dbgs() << "const\n");
-    if (!Const->isZero()) return None;
+    if (!Const->isZero())
+      return std::nullopt;
     LLVM_DEBUG(dbgs() << "false\n");
     assert(BranchI->getNumSuccessors() == 2 && "expecting a cond branch");
     BasicBlock *const FalseBlock = BranchI->getSuccessor(1);
@@ -361,12 +365,13 @@ Optional<BCECmpBlock> visitCmpBlock(Value *const Val, BasicBlock *const Block,
   }
 
   auto *CmpI = dyn_cast<ICmpInst>(Cond);
-  if (!CmpI) return None;
+  if (!CmpI)
+    return std::nullopt;
   LLVM_DEBUG(dbgs() << "icmp\n");
 
-  Optional<BCECmp> Result = visitICmp(CmpI, ExpectedPredicate, BaseId);
+  std::optional<BCECmp> Result = visitICmp(CmpI, ExpectedPredicate, BaseId);
   if (!Result)
-    return None;
+    return std::nullopt;
 
   BCECmpBlock::InstructionSet BlockInsts(
       {Result->Lhs.LoadI, Result->Rhs.LoadI, Result->CmpI, BranchI});
@@ -472,7 +477,7 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi,
   BaseIdentifier BaseId;
   for (BasicBlock *const Block : Blocks) {
     assert(Block && "invalid block");
-    Optional<BCECmpBlock> Comparison = visitCmpBlock(
+    std::optional<BCECmpBlock> Comparison = visitCmpBlock(
         Phi.getIncomingValueForBlock(Block), Block, Phi.getParent(), BaseId);
     if (!Comparison) {
       LLVM_DEBUG(dbgs() << "chain with invalid BCECmpBlock, no merge.\n");
@@ -645,14 +650,18 @@ static BasicBlock *mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
         Comparisons.begin(), Comparisons.end(), 0u,
         [](int Size, const BCECmpBlock &C) { return Size + C.SizeBits(); });
 
+    // memcmp expects a 'size_t' argument and returns 'int'.
+    unsigned SizeTBits = TLI.getSizeTSize(*Phi.getModule());
+    unsigned IntBits = TLI.getIntSize();
+
     // Create memcmp() == 0.
     const auto &DL = Phi.getModule()->getDataLayout();
     Value *const MemCmpCall = emitMemCmp(
         Lhs, Rhs,
-        ConstantInt::get(DL.getIntPtrType(Context), TotalSizeBits / 8), Builder,
-        DL, &TLI);
+        ConstantInt::get(Builder.getIntNTy(SizeTBits), TotalSizeBits / 8),
+        Builder, DL, &TLI);
     IsEqual = Builder.CreateICmpEQ(
-        MemCmpCall, ConstantInt::get(Type::getInt32Ty(Context), 0));
+        MemCmpCall, ConstantInt::get(Builder.getIntNTy(IntBits), 0));
   }
 
   BasicBlock *const PhiBB = Phi.getParent();

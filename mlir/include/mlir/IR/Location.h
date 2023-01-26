@@ -15,6 +15,7 @@
 #define MLIR_IR_LOCATION_H
 
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/SubElementInterfaces.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 
 namespace mlir {
@@ -34,6 +35,21 @@ public:
 
   /// Walk all of the locations nested under, and including, the current.
   WalkResult walk(function_ref<WalkResult(Location)> walkFn);
+
+  /// Return an instance of the given location type if one is nested under the
+  /// current location. Returns nullptr if one could not be found.
+  template <typename T>
+  T findInstanceOf() {
+    T result = {};
+    walk([&](auto loc) {
+      if (auto typedLoc = llvm::dyn_cast<T>(loc)) {
+        result = typedLoc;
+        return WalkResult::interrupt();
+      }
+      return WalkResult::advance();
+    });
+    return result;
+  }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(Attribute attr);
@@ -64,15 +80,15 @@ public:
   /// Type casting utilities on the underlying location.
   template <typename U>
   bool isa() const {
-    return impl.isa<U>();
+    return llvm::isa<U>(*this);
   }
   template <typename U>
   U dyn_cast() const {
-    return impl.dyn_cast<U>();
+    return llvm::dyn_cast<U>(*this);
   }
   template <typename U>
   U cast() const {
-    return impl.cast<U>();
+    return llvm::cast<U>(*this);
   }
 
   /// Comparison operators.
@@ -90,6 +106,9 @@ public:
   static Location getFromOpaquePointer(const void *pointer) {
     return LocationAttr(reinterpret_cast<const AttributeStorage *>(pointer));
   }
+
+  /// Support llvm style casting.
+  static bool classof(Attribute attr) { return llvm::isa<LocationAttr>(attr); }
 
 protected:
   /// The internal backing location attribute.
@@ -118,6 +137,29 @@ inline ::llvm::hash_code hash_value(Location arg) {
 namespace mlir {
 
 //===----------------------------------------------------------------------===//
+// FusedLoc
+//===----------------------------------------------------------------------===//
+
+/// This class represents a fused location whose metadata is known to be an
+/// instance of the given type.
+template <typename MetadataT>
+class FusedLocWith : public FusedLoc {
+public:
+  using FusedLoc::FusedLoc;
+
+  /// Return the metadata associated with this fused location.
+  MetadataT getMetadata() const {
+    return FusedLoc::getMetadata().template cast<MetadataT>();
+  }
+
+  /// Support llvm style casting.
+  static bool classof(Attribute attr) {
+    auto fusedLoc = attr.dyn_cast<FusedLoc>();
+    return fusedLoc && fusedLoc.getMetadata().isa_and_nonnull<MetadataT>();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // OpaqueLoc
 //===----------------------------------------------------------------------===//
 
@@ -128,6 +170,23 @@ inline OpaqueLoc OpaqueLoc::get(T underlyingLocation, MLIRContext *context) {
   return get(reinterpret_cast<uintptr_t>(underlyingLocation), TypeID::get<T>(),
              UnknownLoc::get(context));
 }
+
+//===----------------------------------------------------------------------===//
+// SubElementInterfaces
+//===----------------------------------------------------------------------===//
+
+/// Enable locations to be introspected as sub-elements.
+template <>
+struct AttrTypeSubElementHandler<Location> {
+  static void walk(Location param, AttrTypeSubElementWalker &walker) {
+    walker.walk(param);
+  }
+  static Location replace(Location param, AttrSubElementReplacements &attrRepls,
+                          TypeSubElementReplacements &typeRepls) {
+    return cast<LocationAttr>(attrRepls.take_front(1)[0]);
+  }
+};
+
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//
@@ -167,6 +226,39 @@ public:
   }
   static constexpr int NumLowBitsAvailable =
       PointerLikeTypeTraits<mlir::Attribute>::NumLowBitsAvailable;
+};
+
+/// The constructors in mlir::Location ensure that the class is a non-nullable
+/// wrapper around mlir::LocationAttr. Override default behavior and always
+/// return true for isPresent().
+template <>
+struct ValueIsPresent<mlir::Location> {
+  using UnwrappedType = mlir::Location;
+  static inline bool isPresent(const mlir::Location &location) { return true; }
+};
+
+/// Add support for llvm style casts. We provide a cast between To and From if
+/// From is mlir::Location or derives from it.
+template <typename To, typename From>
+struct CastInfo<To, From,
+                std::enable_if_t<
+                    std::is_same_v<mlir::Location, std::remove_const_t<From>> ||
+                    std::is_base_of_v<mlir::Location, From>>>
+    : DefaultDoCastIfPossible<To, From, CastInfo<To, From>> {
+
+  static inline bool isPossible(mlir::Location location) {
+    /// Return a constant true instead of a dynamic true when casting to self or
+    /// up the hierarchy. Additionally, all casting info is deferred to the
+    /// wrapped mlir::LocationAttr instance stored in mlir::Location.
+    return std::is_same_v<To, std::remove_const_t<From>> ||
+           isa<To>(static_cast<mlir::LocationAttr>(location));
+  }
+
+  static inline To castFailed() { return To(); }
+
+  static inline To doCast(mlir::Location location) {
+    return To(location->getImpl());
+  }
 };
 
 } // namespace llvm

@@ -2,8 +2,8 @@
 ; allowing dead stripping to be performed, and that the appropriate runtime
 ; routines are invoked.
 
-; RUN: opt < %s -passes='asan-pipeline'             -asan-use-private-alias=0 -asan-globals-live-support=1 -S | FileCheck %s --check-prefixes=CHECK,NOALIAS
-; RUN: opt < %s -passes='asan-pipeline'             -asan-use-private-alias=1 -asan-globals-live-support=1 -S | FileCheck %s --check-prefixes=CHECK,ALIAS
+; RUN: opt < %s -passes=asan             -asan-use-private-alias=0 -asan-globals-live-support=1 -S | FileCheck %s --check-prefixes=CHECK,NOALIAS
+; RUN: opt < %s -passes=asan             -asan-use-private-alias=1 -asan-globals-live-support=1 -S | FileCheck %s --check-prefixes=CHECK,ALIAS
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"
@@ -12,7 +12,7 @@ target triple = "x86_64-apple-macosx10.11.0"
 
 !llvm.asan.globals = !{!0}
 
-!0 = !{[1 x i32]* @global, !1, !"global", i1 false, i1 false}
+!0 = !{ptr @global, !1, !"global", i1 false, i1 false}
 !1 = !{!"test-globals.c", i32 1, i32 5}
 
 
@@ -26,7 +26,7 @@ target triple = "x86_64-apple-macosx10.11.0"
 
 ; The binder has to be inserted to llvm.compiler.used to avoid being stripped
 ; during LTO.
-; CHECK: @llvm.compiler.used {{.*}} @__asan_binder_global {{.*}} section "llvm.metadata"
+; CHECK: @llvm.compiler.used = appending global [2 x ptr] [ptr @global, ptr @__asan_binder_global], section "llvm.metadata"
 
 ; Test that there is the flag global variable:
 ; CHECK: @___asan_globals_registered = common hidden global i64 0
@@ -36,11 +36,11 @@ target triple = "x86_64-apple-macosx10.11.0"
 ; Test that __asan_register_image_globals is invoked from the constructor:
 ; CHECK-LABEL: define internal void @asan.module_ctor
 ; CHECK-NOT: ret
-; CHECK: call void @__asan_register_image_globals(i64 ptrtoint (i64* @___asan_globals_registered to i64))
+; CHECK: call void @__asan_register_image_globals(i64 ptrtoint (ptr @___asan_globals_registered to i64))
 ; CHECK: ret
 
 ; Test that __asan_unregister_image_globals is invoked from the destructor:
 ; CHECK-LABEL: define internal void @asan.module_dtor
 ; CHECK-NOT: ret
-; CHECK: call void @__asan_unregister_image_globals(i64 ptrtoint (i64* @___asan_globals_registered to i64))
+; CHECK: call void @__asan_unregister_image_globals(i64 ptrtoint (ptr @___asan_globals_registered to i64))
 ; CHECK: ret

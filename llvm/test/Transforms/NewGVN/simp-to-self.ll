@@ -1,7 +1,7 @@
 ; RUN: opt -S < %s -passes=newgvn | FileCheck %s
 
 ; CHECK-LABEL: for.cond:
-; CHECK-NEXT:    %lv = load i32, i32* bitcast (i64* @a to i32*)
+; CHECK-NEXT:    %lv = load i32, ptr @a
 ; CHECK-NEXT:    %bf.clear = and i32 %lv, -131072
 ; CHECK-NEXT:    %bf.set = or i32 1, %bf.clear
 ; CHECK-NEXT:    br i1 %bc, label %for.cond, label %exit
@@ -14,7 +14,7 @@ entry:
 for.cond:                                         ; preds = %for.cond1.1, %entry
   %tmp = phi i1 [ undef, %entry ], [ 1, %for.cond ]
   %conv = zext i1 %tmp to i32
-  %lv = load i32, i32* bitcast (i64* @a to i32*)
+  %lv = load i32, ptr @a
   %bf.clear = and i32 %lv, -131072
   %bf.set = or i32 %conv, %bf.clear
   %bf.clear.1 = and i32 %bf.set, -131072
@@ -22,6 +22,6 @@ for.cond:                                         ; preds = %for.cond1.1, %entry
   br i1 %bc, label %for.cond, label %exit
 
 exit:                              ; preds = %for.cond1
-  store i32 %bf.set.1, i32* bitcast (i64* @a to i32*)
+  store i32 %bf.set.1, ptr @a
   ret void
 }

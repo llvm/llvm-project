@@ -123,7 +123,8 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @cmpulez_v4i1(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: cmpulez_v4i1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vcmp.u32 cs, q1, zr
+; CHECK-NEXT:    vmov.i32 q2, #0x0
+; CHECK-NEXT:    vcmp.u32 cs, q2, q1
 ; CHECK-NEXT:    vpnot
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vcmpt.i32 ne, q0, zr
@@ -383,10 +384,9 @@ define arm_aapcs_vfpcc <2 x i64> @cmpeqz_v2i1(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-NEXT:    orrs r1, r2
 ; CHECK-NEXT:    cset r1, eq
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    it eq
-; CHECK-NEXT:    moveq r1, #1
-; CHECK-NEXT:    rsbs r0, r1, #0
+; CHECK-NEXT:    csinc r0, r1, zr, ne
 ; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    rsbs r0, r0, #0
 ; CHECK-NEXT:    bfi r1, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, r2, d1
 ; CHECK-NEXT:    orrs r0, r2
@@ -394,9 +394,8 @@ define arm_aapcs_vfpcc <2 x i64> @cmpeqz_v2i1(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-NEXT:    orrs r2, r3
 ; CHECK-NEXT:    cset r2, eq
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    it eq
-; CHECK-NEXT:    moveq r2, #1
-; CHECK-NEXT:    rsbs r0, r2, #0
+; CHECK-NEXT:    csinc r0, r2, zr, ne
+; CHECK-NEXT:    rsbs r0, r0, #0
 ; CHECK-NEXT:    bfi r1, r0, #8, #8
 ; CHECK-NEXT:    vmsr p0, r1
 ; CHECK-NEXT:    vpsel q0, q0, q1
@@ -420,12 +419,11 @@ define arm_aapcs_vfpcc <2 x i64> @cmpeq_v2i1(<2 x i64> %a, <2 x i64> %b, <2 x i6
 ; CHECK-NEXT:    vmov r1, r2, d0
 ; CHECK-NEXT:    cset r0, eq
 ; CHECK-NEXT:    orrs r1, r2
-; CHECK-NEXT:    it eq
-; CHECK-NEXT:    moveq r0, #1
-; CHECK-NEXT:    rsbs r0, r0, #0
-; CHECK-NEXT:    movs r1, #0
-; CHECK-NEXT:    bfi r1, r0, #0, #8
 ; CHECK-NEXT:    vmov r12, r2, d5
+; CHECK-NEXT:    csinc r0, r0, zr, ne
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    bfi r1, r0, #0, #8
 ; CHECK-NEXT:    vmov r3, r0, d3
 ; CHECK-NEXT:    eors r0, r2
 ; CHECK-NEXT:    eor.w r2, r3, r12
@@ -433,8 +431,7 @@ define arm_aapcs_vfpcc <2 x i64> @cmpeq_v2i1(<2 x i64> %a, <2 x i64> %b, <2 x i6
 ; CHECK-NEXT:    vmov r2, r3, d1
 ; CHECK-NEXT:    cset r0, eq
 ; CHECK-NEXT:    orrs r2, r3
-; CHECK-NEXT:    it eq
-; CHECK-NEXT:    moveq r0, #1
+; CHECK-NEXT:    csinc r0, r0, zr, ne
 ; CHECK-NEXT:    rsbs r0, r0, #0
 ; CHECK-NEXT:    bfi r1, r0, #8, #8
 ; CHECK-NEXT:    vmsr p0, r1

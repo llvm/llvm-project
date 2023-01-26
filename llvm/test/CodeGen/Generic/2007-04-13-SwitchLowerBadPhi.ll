@@ -1,7 +1,7 @@
 ; RUN: llc < %s -O0
 ; PR 1323
 
-	%struct.comp = type { i8*, i32, i8*, [3 x i8], i32 }
+	%struct.comp = type { ptr, i32, ptr, [3 x i8], i32 }
 
 define void @regbranch() {
 cond_next240.i:

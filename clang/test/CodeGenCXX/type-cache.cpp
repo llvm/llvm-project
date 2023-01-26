@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -triple i386-pc-windows-msvc19.16.0 | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple i386-pc-windows-msvc19.16.0 | FileCheck %s
 // REQUIRES: asserts, x86-registered-target
 
-// CHECK: call {}* @"?f@@YA?AUz@@XZ"()
+// CHECK: call ptr @"?f@@YA?AUz@@XZ"()
 
 struct z {
   z (*p)();

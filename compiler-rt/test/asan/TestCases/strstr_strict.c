@@ -4,7 +4,7 @@
 // Newer versions of Android's strstr() uses memchr() internally, which actually
 // does trigger a heap-buffer-overflow (as it tries to find the
 // null-terminator). The same applies to FreeBSD.
-// UNSUPPORTED: android, freebsd
+// UNSUPPORTED: android, target={{.*freebsd.*}}
 // RUN: %env_asan_opts=strict_string_checks=false %run %t 2>&1
 
 // RUN: %env_asan_opts=strict_string_checks=true not %run %t 2>&1 | FileCheck %s

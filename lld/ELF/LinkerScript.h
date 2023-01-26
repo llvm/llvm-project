@@ -17,13 +17,13 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <memory>
 
-namespace lld {
-namespace elf {
+namespace lld::elf {
 
 class Defined;
 class InputFile;
@@ -165,7 +165,7 @@ class SectionPattern {
   StringMatcher excludedFilePat;
 
   // Cache of the most recent input argument and result of excludesFile().
-  mutable llvm::Optional<std::pair<const InputFile *, bool>> excludesFileCache;
+  mutable std::optional<std::pair<const InputFile *, bool>> excludesFileCache;
 
 public:
   SectionPattern(StringMatcher &&pat1, StringMatcher &&pat2)
@@ -184,7 +184,7 @@ class InputSectionDescription : public SectionCommand {
   SingleStringMatcher filePat;
 
   // Cache of the most recent input argument and result of matchesFile().
-  mutable llvm::Optional<std::pair<const InputFile *, bool>> matchesFileCache;
+  mutable std::optional<std::pair<const InputFile *, bool>> matchesFileCache;
 
 public:
   InputSectionDescription(StringRef filePattern, uint64_t withFlags = 0,
@@ -251,7 +251,7 @@ struct PhdrsCommand {
   unsigned type = llvm::ELF::PT_NULL;
   bool hasFilehdr = false;
   bool hasPhdrs = false;
-  llvm::Optional<unsigned> flags;
+  std::optional<unsigned> flags;
   Expr lmaExpr = nullptr;
 };
 
@@ -291,13 +291,13 @@ class LinkerScript final {
 
   void assignOffsets(OutputSection *sec);
 
-  // Ctx captures the local AddressState and makes it accessible
+  // This captures the local AddressState and makes it accessible
   // deliberately. This is needed as there are some cases where we cannot just
   // thread the current state through to a lambda function created by the
   // script parser.
   // This should remain a plain pointer as its lifetime is smaller than
   // LinkerScript.
-  AddressState *ctx = nullptr;
+  AddressState *state = nullptr;
 
   OutputSection *aether;
 
@@ -363,9 +363,8 @@ public:
   SmallVector<const InputSectionBase *, 0> orphanSections;
 };
 
-extern std::unique_ptr<LinkerScript> script;
+LLVM_LIBRARY_VISIBILITY extern std::unique_ptr<LinkerScript> script;
 
-} // end namespace elf
-} // end namespace lld
+} // end namespace lld::elf
 
 #endif // LLD_ELF_LINKER_SCRIPT_H

@@ -186,9 +186,9 @@ if.then:                                          ; preds = %entry
   tail call void @llvm.dbg.value(metadata i32 %call2, metadata !29, metadata !23), !dbg !35
   %add.i = add nsw i32 %call2, 1, !dbg !37
   tail call void @llvm.dbg.value(metadata i32 %add.i, metadata !34, metadata !23), !dbg !38
-  %0 = load volatile i32, i32* @x, align 4, !dbg !39, !tbaa !40
+  %0 = load volatile i32, ptr @x, align 4, !dbg !39, !tbaa !40
   %inc.i = add nsw i32 %0, 1, !dbg !39
-  store volatile i32 %inc.i, i32* @x, align 4, !dbg !39, !tbaa !40
+  store volatile i32 %inc.i, ptr @x, align 4, !dbg !39, !tbaa !40
   tail call void @llvm.dbg.value(metadata i32 %add.i, metadata !20, metadata !23), !dbg !44
   tail call void @putint(i32 %add.i) #3, !dbg !45
   br label %if.end, !dbg !46

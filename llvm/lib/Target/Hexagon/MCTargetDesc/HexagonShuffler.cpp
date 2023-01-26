@@ -28,6 +28,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -47,7 +48,7 @@ class HexagonBid {
 
 public:
   HexagonBid() = default;
-  HexagonBid(unsigned B) { Bid = B ? MAX / countPopulation(B) : 0; }
+  HexagonBid(unsigned B) { Bid = B ? MAX / llvm::popcount(B) : 0; }
 
   // Check if the insn priority is overflowed.
   bool isSold() const { return (Bid >= MAX); }
@@ -99,7 +100,7 @@ unsigned HexagonResource::setWeight(unsigned s) {
   if (Key == 0 || Units == 0 || (SlotWeight * s >= 32))
     return Weight = 0;
 
-  unsigned Ctpop = countPopulation(Units);
+  unsigned Ctpop = llvm::popcount(Units);
   unsigned Cttz = countTrailingZeros(Units);
   Weight = (1u << (SlotWeight * s)) * ((MaskWeight - Ctpop) << Cttz);
   return Weight;
@@ -316,7 +317,7 @@ void HexagonShuffler::permitNonSlot() {
 }
 
 bool HexagonShuffler::ValidResourceUsage(HexagonPacketSummary const &Summary) {
-  Optional<HexagonPacket> ShuffledPacket = tryAuction(Summary);
+  std::optional<HexagonPacket> ShuffledPacket = tryAuction(Summary);
 
   if (!ShuffledPacket) {
     reportResourceError(Summary, "slot error");
@@ -488,10 +489,10 @@ HexagonShuffler::HexagonPacketSummary HexagonShuffler::GetPacketSummary() {
     case HexagonII::TypeCVI_GATHER_DV:
     case HexagonII::TypeCVI_GATHER_RST:
       ++Summary.NonZCVIloads;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case HexagonII::TypeCVI_ZW:
       ++Summary.AllCVIloads;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case HexagonII::TypeLD:
       ++Summary.loads;
       ++Summary.memory;
@@ -510,7 +511,7 @@ HexagonShuffler::HexagonPacketSummary HexagonShuffler::GetPacketSummary() {
     case HexagonII::TypeCVI_SCATTER_NEW_RST:
     case HexagonII::TypeCVI_SCATTER_NEW_ST:
       ++Summary.CVIstores;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case HexagonII::TypeST:
       ++Summary.stores;
       ++Summary.memory;
@@ -623,7 +624,7 @@ bool HexagonShuffler::check(const bool RequireShuffle) {
   return !CheckFailure;
 }
 
-llvm::Optional<HexagonShuffler::HexagonPacket>
+std::optional<HexagonShuffler::HexagonPacket>
 HexagonShuffler::tryAuction(HexagonPacketSummary const &Summary) {
   HexagonPacket PacketResult = Packet;
   HexagonUnitAuction AuctionCore(Summary.ReservedSlotMask);
@@ -642,7 +643,7 @@ HexagonShuffler::tryAuction(HexagonPacketSummary const &Summary) {
              << llvm::format_hex(ISJ.Core.getUnits(), 4, true) << "\n";
   );
 
-  Optional<HexagonPacket> Res;
+  std::optional<HexagonPacket> Res;
   if (ValidSlots)
     Res = PacketResult;
 

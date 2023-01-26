@@ -1,4 +1,4 @@
-; RUN: opt -early-cse -earlycse-debug-hash -S -o - %s | FileCheck %s
+; RUN: opt -passes=early-cse -earlycse-debug-hash -S -o - %s | FileCheck %s
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64-ni:2"
 target triple = "armv7-unknown-linux-gnueabi"
 

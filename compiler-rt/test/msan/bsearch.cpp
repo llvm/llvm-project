@@ -1,12 +1,12 @@
 // __NO_INLINE__ is defined so bsearch needs interceptor.
-// RUN: %clangxx_msan -O0 -g %s -o %t && %run %t
-// RUN: %clangxx_msan -DPOISON_DATA -O0 -g %s -o %t && not %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_msan -DPOISON_KEY -O0 -g %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -O0 -g %s -o %t && %run %t
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -DPOISON_DATA -O0 -g %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -DPOISON_KEY -O0 -g %s -o %t && not %run %t 2>&1 | FileCheck %s
 
 // __NO_INLINE__ is undefined so bsearch should be inlined and instrumented and still work as expected.
-// RUN: %clangxx_msan -O2 -g %s -o %t && %run %t
-// RUN: %clangxx_msan -DPOISON_DATA -O2 -g %s -o %t && not %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_msan -DPOISON_KEY -O2 -g %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -O2 -g %s -o %t && %run %t
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -DPOISON_DATA -O2 -g %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -DPOISON_KEY -O2 -g %s -o %t && not %run %t 2>&1 | FileCheck %s
 
 #include <assert.h>
 #include <stdlib.h>

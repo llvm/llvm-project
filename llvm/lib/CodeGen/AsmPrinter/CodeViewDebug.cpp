@@ -12,8 +12,6 @@
 
 #include "CodeViewDebug.h"
 #include "llvm/ADT/APSInt.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -560,7 +558,7 @@ void CodeViewDebug::maybeRecordLocation(const DebugLoc &DL,
 }
 
 void CodeViewDebug::emitCodeViewMagicVersion() {
-  OS.emitValueToAlignment(4);
+  OS.emitValueToAlignment(Align(4));
   OS.AddComment("Debug section magic");
   OS.emitInt32(COFF::DEBUG_SECTION_MAGIC);
 }
@@ -730,7 +728,7 @@ void CodeViewDebug::emitTypeInformation() {
   TypeRecordMapping typeMapping(CVMCOS);
   Pipeline.addCallbackToPipeline(typeMapping);
 
-  Optional<TypeIndex> B = Table.getFirst();
+  std::optional<TypeIndex> B = Table.getFirst();
   while (B) {
     // This will fail if the record data is invalid.
     CVType Record = Table.getType(*B);
@@ -754,13 +752,13 @@ void CodeViewDebug::emitTypeGlobalHashes() {
   // hardcoded to version 0, SHA1.
   OS.switchSection(Asm->getObjFileLowering().getCOFFGlobalTypeHashesSection());
 
-  OS.emitValueToAlignment(4);
+  OS.emitValueToAlignment(Align(4));
   OS.AddComment("Magic");
   OS.emitInt32(COFF::DEBUG_HASHES_SECTION_MAGIC);
   OS.AddComment("Section Version");
   OS.emitInt16(0);
   OS.AddComment("Hash Algorithm");
-  OS.emitInt16(uint16_t(GlobalTypeHashAlg::SHA1_8));
+  OS.emitInt16(uint16_t(GlobalTypeHashAlg::BLAKE3));
 
   TypeIndex TI(TypeIndex::FirstNonSimpleIndex);
   for (const auto &GHR : TypeTable.hashes()) {
@@ -907,6 +905,9 @@ static std::string flattenCommandLine(ArrayRef<std::string> Args,
       continue;
     }
     if (Arg.startswith("-object-file-name") || Arg == MainFilename)
+      continue;
+    // Skip fmessage-length for reproduciability.
+    if (Arg.startswith("-fmessage-length"))
       continue;
     if (PrintedOneArg)
       OS << " ";
@@ -1337,10 +1338,20 @@ void CodeViewDebug::calculateRanges(
     assert(DVInst->isDebugValue() && "Invalid History entry");
     // FIXME: Find a way to represent constant variables, since they are
     // relatively common.
-    Optional<DbgVariableLocation> Location =
+    std::optional<DbgVariableLocation> Location =
         DbgVariableLocation::extractFromMachineInstruction(*DVInst);
     if (!Location)
+    {
+      // When we don't have a location this is usually because LLVM has
+      // transformed it into a constant and we only have an llvm.dbg.value. We
+      // can't represent these well in CodeView since S_LOCAL only works on
+      // registers and memory locations. Instead, we will pretend this to be a
+      // constant value to at least have it show up in the debugger.
+      auto Op = DVInst->getDebugOperand(0);
+      if (Op.isImm())
+        Var.ConstantValue = APSInt(APInt(64, Op.getImm()), false);
       continue;
+    }
 
     // CodeView can only express variables in register and variables in memory
     // at a constant offset from a register. However, for variables passed
@@ -1498,8 +1509,16 @@ void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
     FPO |= FrameProcedureOptions::MarkedInline;
   if (GV.hasFnAttribute(Attribute::Naked))
     FPO |= FrameProcedureOptions::Naked;
-  if (MFI.hasStackProtectorIndex())
+  if (MFI.hasStackProtectorIndex()) {
     FPO |= FrameProcedureOptions::SecurityChecks;
+    if (GV.hasFnAttribute(Attribute::StackProtectStrong) ||
+        GV.hasFnAttribute(Attribute::StackProtectReq)) {
+      FPO |= FrameProcedureOptions::StrictSecurityChecks;
+    }
+  } else if (!GV.hasStackProtectorFnAttr()) {
+    // __declspec(safebuffers) disables stack guards.
+    FPO |= FrameProcedureOptions::SafeBuffers;
+  }
   FPO |= FrameProcedureOptions(uint32_t(CurFn->EncodedLocalFramePtrReg) << 14U);
   FPO |= FrameProcedureOptions(uint32_t(CurFn->EncodedParamFramePtrReg) << 16U);
   if (Asm->TM.getOptLevel() != CodeGenOpt::None &&
@@ -1620,7 +1639,7 @@ TypeIndex CodeViewDebug::lowerType(const DIType *Ty, const DIType *ClassTy) {
   case dwarf::DW_TAG_pointer_type:
     if (cast<DIDerivedType>(Ty)->getName() == "__vtbl_ptr_type")
       return lowerTypeVFTableShape(cast<DIDerivedType>(Ty));
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case dwarf::DW_TAG_reference_type:
   case dwarf::DW_TAG_rvalue_reference_type:
     return lowerTypePointer(cast<DIDerivedType>(Ty));
@@ -2023,9 +2042,9 @@ TypeIndex CodeViewDebug::lowerTypeFunction(const DISubroutineType *Ty) {
     ReturnAndArgTypeIndices.back() = TypeIndex::None();
   }
   TypeIndex ReturnTypeIndex = TypeIndex::Void();
-  ArrayRef<TypeIndex> ArgTypeIndices = None;
+  ArrayRef<TypeIndex> ArgTypeIndices = std::nullopt;
   if (!ReturnAndArgTypeIndices.empty()) {
-    auto ReturnAndArgTypesRef = makeArrayRef(ReturnAndArgTypeIndices);
+    auto ReturnAndArgTypesRef = ArrayRef(ReturnAndArgTypeIndices);
     ReturnTypeIndex = ReturnAndArgTypesRef.front();
     ArgTypeIndices = ReturnAndArgTypesRef.drop_front();
   }
@@ -2777,9 +2796,19 @@ void CodeViewDebug::emitLocalVariableList(const FunctionInfo &FI,
     emitLocalVariable(FI, *L);
 
   // Next emit all non-parameters in the order that we found them.
-  for (const LocalVariable &L : Locals)
-    if (!L.DIVar->isParameter())
-      emitLocalVariable(FI, L);
+  for (const LocalVariable &L : Locals) {
+    if (!L.DIVar->isParameter()) {
+      if (L.ConstantValue) {
+        // If ConstantValue is set we will emit it as a S_CONSTANT instead of a
+        // S_LOCAL in order to be able to represent it at all.
+        const DIType *Ty = L.DIVar->getType();
+        APSInt Val(*L.ConstantValue);
+        emitConstantSymbolRecord(Ty, Val, std::string(L.DIVar->getName()));
+      } else {
+        emitLocalVariable(FI, L);
+      }
+    }
+  }
 }
 
 void CodeViewDebug::emitLocalVariable(const FunctionInfo &FI,
@@ -3098,7 +3127,7 @@ MCSymbol *CodeViewDebug::beginCVSubsection(DebugSubsectionKind Kind) {
 void CodeViewDebug::endCVSubsection(MCSymbol *EndLabel) {
   OS.emitLabel(EndLabel);
   // Every subsection must be aligned to a 4-byte boundary.
-  OS.emitValueToAlignment(4);
+  OS.emitValueToAlignment(Align(4));
 }
 
 static StringRef getSymbolName(SymbolKind SymKind) {
@@ -3125,7 +3154,7 @@ void CodeViewDebug::endSymbolRecord(MCSymbol *SymEnd) {
   // an extra copy of every symbol record in LLD. This increases object file
   // size by less than 1% in the clang build, and is compatible with the Visual
   // C++ linker.
-  OS.emitValueToAlignment(4);
+  OS.emitValueToAlignment(Align(4));
   OS.emitLabel(SymEnd);
 }
 
@@ -3350,11 +3379,13 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
   if (const auto *MemberDecl = dyn_cast_or_null<DIDerivedType>(
           DIGV->getRawStaticDataMemberDeclaration()))
     Scope = MemberDecl->getScope();
-  // For Fortran, the scoping portion is elided in its name so that we can
-  // reference the variable in the command line of the VS debugger.
+  // For static local variables and Fortran, the scoping portion is elided
+  // in its name so that we can reference the variable in the command line
+  // of the VS debugger.
   std::string QualifiedName =
-      (moduleIsInFortran()) ? std::string(DIGV->getName())
-                            : getFullyQualifiedName(Scope, DIGV->getName());
+      (moduleIsInFortran() || (Scope && isa<DILocalScope>(Scope)))
+          ? std::string(DIGV->getName())
+          : getFullyQualifiedName(Scope, DIGV->getName());
 
   if (const GlobalVariable *GV =
           CVGV.GVInfo.dyn_cast<const GlobalVariable *>()) {

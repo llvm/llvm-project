@@ -1,4 +1,4 @@
-; RUN: opt < %s -reassociate -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=reassociate,instcombine -S | FileCheck %s
 
 ; Not marked as fast, so must not change.
 define float @test1(float %a0, float %a1, float %a2, float %a3, float %a4) {

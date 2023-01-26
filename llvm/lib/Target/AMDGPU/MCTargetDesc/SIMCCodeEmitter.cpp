@@ -26,6 +26,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/Casting.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -35,8 +36,9 @@ class SIMCCodeEmitter : public  AMDGPUMCCodeEmitter {
   const MCRegisterInfo &MRI;
 
   /// Encode an fp or int literal
-  uint32_t getLitEncoding(const MCOperand &MO, const MCOperandInfo &OpInfo,
-                          const MCSubtargetInfo &STI) const;
+  std::optional<uint32_t> getLitEncoding(const MCOperand &MO,
+                                         const MCOperandInfo &OpInfo,
+                                         const MCSubtargetInfo &STI) const;
 
 public:
   SIMCCodeEmitter(const MCInstrInfo &mcii, MCContext &ctx)
@@ -49,7 +51,6 @@ public:
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
 
-  /// \returns the encoding for an MCOperand.
   void getMachineOpValue(const MCInst &MI, const MCOperand &MO, APInt &Op,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
@@ -217,9 +218,10 @@ static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI) {
   return 255;
 }
 
-uint32_t SIMCCodeEmitter::getLitEncoding(const MCOperand &MO,
-                                         const MCOperandInfo &OpInfo,
-                                         const MCSubtargetInfo &STI) const {
+std::optional<uint32_t>
+SIMCCodeEmitter::getLitEncoding(const MCOperand &MO,
+                                const MCOperandInfo &OpInfo,
+                                const MCSubtargetInfo &STI) const {
   int64_t Imm;
   if (MO.isExpr()) {
     const auto *C = dyn_cast<MCConstantExpr>(MO.getExpr());
@@ -232,7 +234,7 @@ uint32_t SIMCCodeEmitter::getLitEncoding(const MCOperand &MO,
     assert(!MO.isDFPImm());
 
     if (!MO.isImm())
-      return ~0;
+      return {};
 
     Imm = MO.getImm();
   }
@@ -275,7 +277,7 @@ uint32_t SIMCCodeEmitter::getLitEncoding(const MCOperand &MO,
       return getLit32Encoding(static_cast<uint32_t>(Imm), STI);
     if (OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_V2FP16)
       return getLit16Encoding(static_cast<uint16_t>(Imm), STI);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
@@ -298,12 +300,12 @@ uint64_t SIMCCodeEmitter::getImplicitOpSelHiEncoding(int Opcode) const {
   using namespace AMDGPU::VOP3PEncoding;
   using namespace AMDGPU::OpName;
 
-  if (AMDGPU::getNamedOperandIdx(Opcode, op_sel_hi) != -1) {
-    if (AMDGPU::getNamedOperandIdx(Opcode, src2) != -1)
+  if (AMDGPU::hasNamedOperand(Opcode, op_sel_hi)) {
+    if (AMDGPU::hasNamedOperand(Opcode, src2))
       return 0;
-    if (AMDGPU::getNamedOperandIdx(Opcode, src1) != -1)
+    if (AMDGPU::hasNamedOperand(Opcode, src1))
       return OP_SEL_HI_2;
-    if (AMDGPU::getNamedOperandIdx(Opcode, src0) != -1)
+    if (AMDGPU::hasNamedOperand(Opcode, src0))
       return OP_SEL_HI_1 | OP_SEL_HI_2;
   }
   return OP_SEL_HI_0 | OP_SEL_HI_1 | OP_SEL_HI_2;
@@ -331,13 +333,13 @@ void SIMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
     Encoding |= getImplicitOpSelHiEncoding(Opcode);
   }
 
-  // GFX11 v_cmpx opcodes promoted to VOP3 have implied dst=EXEC.
+  // GFX10+ v_cmpx opcodes promoted to VOP3 have implied dst=EXEC.
   // Documentation requires dst to be encoded as EXEC (0x7E),
   // but it looks like the actual value encoded for dst operand
   // is ignored by HW. It was decided to define dst as "do not care"
   // in td files to allow disassembler accept any dst value.
   // However, dst is encoded as EXEC for compatibility with SP3.
-  if (AMDGPU::isGFX11Plus(STI) && isVCMPX64(Desc)) {
+  if (AMDGPU::isGFX10Plus(STI) && isVCMPX64(Desc)) {
     assert((Encoding & 0xFF) == 0);
     Encoding |= MRI.getEncodingValue(AMDGPU::EXEC_LO);
   }
@@ -370,9 +372,7 @@ void SIMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
     return;
 
   // Do not print literals from SISrc Operands for insts with mandatory literals
-  int ImmLitIdx =
-      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::imm);
-  if (ImmLitIdx != -1)
+  if (AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::imm))
     return;
 
   // Check for additional literals
@@ -384,7 +384,8 @@ void SIMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
 
     // Is this operand a literal immediate?
     const MCOperand &Op = MI.getOperand(i);
-    if (getLitEncoding(Op, Desc.OpInfo[i], STI) != 255)
+    auto Enc = getLitEncoding(Op, Desc.OpInfo[i], STI);
+    if (!Enc || *Enc != 255)
       continue;
 
     // Yes! Encode it
@@ -455,9 +456,9 @@ void SIMCCodeEmitter::getSDWASrcEncoding(const MCInst &MI, unsigned OpNo,
     return;
   } else {
     const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
-    uint32_t Enc = getLitEncoding(MO, Desc.OpInfo[OpNo], STI);
-    if (Enc != ~0U && Enc != 255) {
-      Op = Enc | SDWA9EncValues::SRC_SGPR_MASK;
+    auto Enc = getLitEncoding(MO, Desc.OpInfo[OpNo], STI);
+    if (Enc && *Enc != 255) {
+      Op = *Enc | SDWA9EncValues::SRC_SGPR_MASK;
       return;
     }
   }
@@ -502,6 +503,10 @@ void SIMCCodeEmitter::getAVOperandEncoding(const MCInst &MI, unsigned OpNo,
       MRI.getRegClass(AMDGPU::AReg_192RegClassID).contains(Reg) ||
       MRI.getRegClass(AMDGPU::AReg_224RegClassID).contains(Reg) ||
       MRI.getRegClass(AMDGPU::AReg_256RegClassID).contains(Reg) ||
+      MRI.getRegClass(AMDGPU::AReg_288RegClassID).contains(Reg) ||
+      MRI.getRegClass(AMDGPU::AReg_320RegClassID).contains(Reg) ||
+      MRI.getRegClass(AMDGPU::AReg_352RegClassID).contains(Reg) ||
+      MRI.getRegClass(AMDGPU::AReg_384RegClassID).contains(Reg) ||
       MRI.getRegClass(AMDGPU::AReg_512RegClassID).contains(Reg) ||
       MRI.getRegClass(AMDGPU::AGPR_LO16RegClassID).contains(Reg))
     Enc |= 512;
@@ -574,9 +579,8 @@ void SIMCCodeEmitter::getMachineOpValueCommon(
 
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   if (AMDGPU::isSISrcOperand(Desc, OpNo)) {
-    uint32_t Enc = getLitEncoding(MO, Desc.OpInfo[OpNo], STI);
-    if (Enc != ~0U) {
-      Op = Enc;
+    if (auto Enc = getLitEncoding(MO, Desc.OpInfo[OpNo], STI)) {
+      Op = *Enc;
       return;
     }
   } else if (MO.isImm()) {

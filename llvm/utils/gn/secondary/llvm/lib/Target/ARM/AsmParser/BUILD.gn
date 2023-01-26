@@ -16,6 +16,7 @@ static_library("AsmParser") {
     "//llvm/lib/Target/ARM/MCTargetDesc",
     "//llvm/lib/Target/ARM/TargetInfo",
     "//llvm/lib/Target/ARM/Utils",
+    "//llvm/lib/TargetParser",
   ]
   include_dirs = [ ".." ]
   sources = [ "ARMAsmParser.cpp" ]

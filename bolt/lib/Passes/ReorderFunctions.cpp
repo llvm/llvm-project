@@ -138,6 +138,11 @@ void ReorderFunctions::reorder(std::vector<Cluster> &&Clusters,
   if (opts::ReorderFunctions == RT_NONE)
     return;
 
+  printStats(Clusters, FuncAddr);
+}
+
+void ReorderFunctions::printStats(const std::vector<Cluster> &Clusters,
+                                  const std::vector<uint64_t> &FuncAddr) {
   if (opts::Verbosity == 0) {
 #ifndef NDEBUG
     if (!DebugFlag || !isCurrentDebugType("hfsort"))
@@ -152,7 +157,7 @@ void ReorderFunctions::reorder(std::vector<Cluster> &&Clusters,
   PrintDetailed |=
     (DebugFlag && isCurrentDebugType("hfsort") && opts::Verbosity > 0);
 #endif
-  TotalSize   = 0;
+  uint64_t TotalSize   = 0;
   uint64_t CurPage     = 0;
   uint64_t Hotfuncs    = 0;
   double TotalDistance = 0;
@@ -163,7 +168,7 @@ void ReorderFunctions::reorder(std::vector<Cluster> &&Clusters,
   if (PrintDetailed)
     outs() << "BOLT-INFO: Function reordering page layout\n"
            << "BOLT-INFO: ============== page 0 ==============\n";
-  for (Cluster &Cluster : Clusters) {
+  for (const Cluster &Cluster : Clusters) {
     if (PrintDetailed)
       outs() << format(
           "BOLT-INFO: -------- density = %.3lf (%u / %u) --------\n",
@@ -243,9 +248,7 @@ void ReorderFunctions::reorder(std::vector<Cluster> &&Clusters,
                      TotalCalls2MB, 100 * TotalCalls2MB / TotalCalls);
 }
 
-namespace {
-
-std::vector<std::string> readFunctionOrderFile() {
+std::vector<std::string> ReorderFunctions::readFunctionOrderFile() {
   std::vector<std::string> FunctionNames;
   std::ifstream FuncsFile(opts::FunctionOrderFile, std::ios::in);
   if (!FuncsFile) {
@@ -259,27 +262,24 @@ std::vector<std::string> readFunctionOrderFile() {
   return FunctionNames;
 }
 
-}
-
 void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
   auto &BFs = BC.getBinaryFunctions();
   if (opts::ReorderFunctions != RT_NONE &&
       opts::ReorderFunctions != RT_EXEC_COUNT &&
       opts::ReorderFunctions != RT_USER) {
-    Cg = buildCallGraph(BC,
-                        [](const BinaryFunction &BF) {
-                          if (!BF.hasProfile())
-                            return true;
-                          if (BF.getState() != BinaryFunction::State::CFG)
-                            return true;
-                          return false;
-                        },
-                        opts::CgFromPerfData,
-                        false, // IncludeColdCalls
-                        opts::ReorderFunctionsUseHotSize,
-                        opts::CgUseSplitHotSize,
-                        opts::UseEdgeCounts,
-                        opts::CgIgnoreRecursiveCalls);
+    Cg = buildCallGraph(
+        BC,
+        [](const BinaryFunction &BF) {
+          if (!BF.hasProfile())
+            return true;
+          if (BF.getState() != BinaryFunction::State::CFG)
+            return true;
+          return false;
+        },
+        opts::CgFromPerfData,
+        /*IncludeSplitCalls=*/false, opts::ReorderFunctionsUseHotSize,
+        opts::CgUseSplitHotSize, opts::UseEdgeCounts,
+        opts::CgIgnoreRecursiveCalls);
     Cg.normalizeArcWeights();
   }
 
@@ -339,7 +339,7 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
         BinaryData *BD = BC.getBinaryDataByName(Function);
         if (!BD) {
           uint32_t LocalID = 1;
-          while(1) {
+          while (true) {
             // If we can't find the main symbol name, look for alternates.
             const std::string FuncName =
                 Function + "/" + std::to_string(LocalID);

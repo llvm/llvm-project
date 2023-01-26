@@ -6723,7 +6723,7 @@ static void Write_IvarOffsetVar(RewriteModernObjC &RewriteObj,
                                 std::string &Result,
                                 ArrayRef<ObjCIvarDecl *> Ivars,
                                 ObjCInterfaceDecl *CDecl) {
-  // FIXME. visibilty of offset symbols may have to be set; for Darwin
+  // FIXME. visibility of offset symbols may have to be set; for Darwin
   // this is what happens:
   /**
    if (Ivar->getAccessControl() == ObjCIvarDecl::Private ||

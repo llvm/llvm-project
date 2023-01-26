@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-windows-gnu -fcxx-exceptions -fexceptions -debug-info-kind=line-tables-only -fblocks -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-windows-gnu -fcxx-exceptions -fexceptions -debug-info-kind=line-directives-only -fblocks -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-gnu -fcxx-exceptions -fexceptions -debug-info-kind=line-tables-only -fblocks -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-gnu -fcxx-exceptions -fexceptions -debug-info-kind=line-directives-only -fblocks -emit-llvm %s -o - | FileCheck %s
 
 void fn();
 
@@ -16,7 +16,7 @@ void f1() {
   }();
 }
 
-// CHECK-LABEL: define internal {{.*}}i8* @"\01-[TNSObject init]"
+// CHECK-LABEL: define internal {{.*}}ptr @"\01-[TNSObject init]"
 @implementation TNSObject
 - (id)init
 {

@@ -16,6 +16,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SmallSet.h"
+#include <optional>
 
 namespace mlir {
 class Operation;
@@ -34,14 +35,14 @@ public:
   /// Returns true if the given capability is allowed.
   bool allows(Capability) const;
   /// Returns the first allowed one if any of the given capabilities is allowed.
-  /// Returns llvm::None otherwise.
-  Optional<Capability> allows(ArrayRef<Capability>) const;
+  /// Returns std::nullopt otherwise.
+  std::optional<Capability> allows(ArrayRef<Capability>) const;
 
   /// Returns true if the given extension is allowed.
   bool allows(Extension) const;
   /// Returns the first allowed one if any of the given extensions is allowed.
-  /// Returns llvm::None otherwise.
-  Optional<Extension> allows(ArrayRef<Extension>) const;
+  /// Returns std::nullopt otherwise.
+  std::optional<Extension> allows(ArrayRef<Extension>) const;
 
   /// Returns the vendor ID.
   Vendor getVendorID() const;
@@ -73,21 +74,22 @@ private:
 StringRef getInterfaceVarABIAttrName();
 
 /// Gets the InterfaceVarABIAttr given its fields.
-InterfaceVarABIAttr getInterfaceVarABIAttr(unsigned descriptorSet,
-                                           unsigned binding,
-                                           Optional<StorageClass> storageClass,
-                                           MLIRContext *context);
+InterfaceVarABIAttr
+getInterfaceVarABIAttr(unsigned descriptorSet, unsigned binding,
+                       std::optional<StorageClass> storageClass,
+                       MLIRContext *context);
 
 /// Returns whether the given SPIR-V target (described by TargetEnvAttr) needs
-/// ABI attributes for interface variables (spv.interface_var_abi).
+/// ABI attributes for interface variables (spirv.interface_var_abi).
 bool needsInterfaceVarABIAttrs(TargetEnvAttr targetAttr);
 
 /// Returns the attribute name for specifying entry point information.
 StringRef getEntryPointABIAttrName();
 
 /// Gets the EntryPointABIAttr given its fields.
-EntryPointABIAttr getEntryPointABIAttr(ArrayRef<int32_t> localSize,
-                                       MLIRContext *context);
+EntryPointABIAttr getEntryPointABIAttr(MLIRContext *context,
+                                       ArrayRef<int32_t> workgroupSize = {},
+                                       std::optional<int> subgroupSize = {});
 
 /// Queries the entry point ABI on the nearest function-like op containing the
 /// given `op`. Returns null attribute if not found.
@@ -96,7 +98,7 @@ EntryPointABIAttr lookupEntryPointABI(Operation *op);
 /// Queries the local workgroup size from entry point ABI on the nearest
 /// function-like op containing the given `op`. Returns null attribute if not
 /// found.
-DenseIntElementsAttr lookupLocalWorkGroupSize(Operation *op);
+DenseI32ArrayAttr lookupLocalWorkGroupSize(Operation *op);
 
 /// Returns a default resource limits attribute that uses numbers from
 /// "Table 46. Required Limits" of the Vulkan spec.

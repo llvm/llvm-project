@@ -20,6 +20,10 @@ namespace llvm {
 class StringRef;
 class Twine;
 
+namespace opt {
+class Arg;
+} // namespace opt
+
 namespace object {
 class RelocationRef;
 struct VersionEntry;
@@ -145,6 +149,8 @@ T unwrapOrError(Expected<T> EO, Ts &&... Args) {
     return std::move(*EO);
   reportError(EO.takeError(), std::forward<Ts>(Args)...);
 }
+
+void invalidArgValue(const opt::Arg *A);
 
 std::string getFileNameForError(const object::Archive::Child &C,
                                 unsigned Index);

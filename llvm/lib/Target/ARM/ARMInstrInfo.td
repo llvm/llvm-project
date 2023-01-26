@@ -426,6 +426,12 @@ def top16Zero: PatLeaf<(i32 GPR:$src), [{
          CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(32, 16));
   }]>;
 
+// topbitsallzero - Return true if all bits except the lowest bit are known zero
+def topbitsallzero32 : PatLeaf<(i32 GPRwithZR:$src), [{
+  return SDValue(N,0)->getValueType(0) == MVT::i32 &&
+         CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(32, 31));
+  }]>;
+
 class BinOpFrag<dag res> : PatFrag<(ops node:$LHS, node:$RHS), res>;
 class UnOpFrag <dag res> : PatFrag<(ops node:$Src), res>;
 
@@ -2188,6 +2194,10 @@ def : InstAlias<"sev$p", (HINT 4, pred:$p)>, Requires<[IsARM, HasV6K]>;
 def : InstAlias<"sevl$p", (HINT 5, pred:$p)>, Requires<[IsARM, HasV8]>;
 def : InstAlias<"esb$p", (HINT 16, pred:$p)>, Requires<[IsARM, HasRAS]>;
 def : InstAlias<"csdb$p", (HINT 20, pred:$p)>, Requires<[IsARM, HasV6K]>;
+
+// Clear BHB instruction
+def : InstAlias<"clrbhb$p", (HINT 22, pred:$p), 0>, Requires<[IsARM, HasV8]>;
+def : InstAlias<"clrbhb$p", (HINT 22, pred:$p), 1>, Requires<[IsARM, HasV8, HasCLRBHB]>;
 
 def SEL : AI<(outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm), DPFrm, NoItinerary, "sel",
              "\t$Rd, $Rn, $Rm",
@@ -4891,6 +4901,13 @@ def : ARMPat<(ARMcmpZ GPR:$src, so_reg_imm:$rhs),
              (CMPrsi   GPR:$src, so_reg_imm:$rhs)>;
 def : ARMPat<(ARMcmpZ GPR:$src, so_reg_reg:$rhs),
              (CMPrsr   GPR:$src, so_reg_reg:$rhs)>;
+// Following patterns aimed to prevent usage of CMPrsi and CMPrsr for a comparison
+// with zero. Usage of CMPri in these cases helps to replace cmp with S-versions of
+// shift instructions during peephole optimizations pass.
+def : ARMPat<(ARMcmpZ so_reg_imm:$rhs, 0),
+             (CMPri (MOVsi so_reg_imm:$rhs), 0)>;
+def : ARMPat<(ARMcmpZ so_reg_reg:$rhs, 0),
+             (CMPri (MOVsr so_reg_reg:$rhs), 0)>;
 
 // CMN register-integer
 let isCompare = 1, Defs = [CPSR] in {
@@ -6469,13 +6486,7 @@ def CMP_SWAP_64 : PseudoInst<(outs GPRPair:$Rd, GPR:$temp),
                              NoItinerary, []>, Sched<[]>;
 }
 
-def CompilerBarrier : PseudoInst<(outs), (ins i32imm:$ordering), NoItinerary,
-                                 [(atomic_fence timm:$ordering, 0)]> {
-  let hasSideEffects = 1;
-  let Size = 0;
-  let AsmString = "@ COMPILER BARRIER";
-  let hasNoSchedulingInfo = 1;
-}
+def : Pat<(atomic_fence (timm), 0), (MEMBARRIER)>;
 
 //===----------------------------------------------------------------------===//
 // Instructions used for emitting unwind opcodes on Windows.

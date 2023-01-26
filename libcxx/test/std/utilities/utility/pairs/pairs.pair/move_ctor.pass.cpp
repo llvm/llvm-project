@@ -14,9 +14,10 @@
 
 // pair(pair&&) = default;
 
-#include <utility>
-#include <memory>
 #include <cassert>
+#include <memory>
+#include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 

@@ -11,12 +11,12 @@ entry:
 
 for.cond:                                         ; preds = %for.inc, %entry
   %0 = phi i32 [ 0, %entry ], [ %inc, %for.inc ]
-  %arrayidx = getelementptr [100 x i32], [100 x i32]* @A, i32 0, i32 %0
+  %arrayidx = getelementptr [100 x i32], ptr @A, i32 0, i32 %0
   %exitcond1 = icmp ne i32 %0, 12
   br i1 %exitcond1, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  store i32 %0, i32* %arrayidx
+  store i32 %0, ptr %arrayidx
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body
@@ -29,12 +29,12 @@ for.end:                                          ; preds = %for.cond
 
 for.cond4:                                        ; preds = %for.inc11, %for.end
   %1 = phi i32 [ 0, %for.end ], [ %inc13, %for.inc11 ]
-  %arrayidx10 = getelementptr [100 x i32], [100 x i32]* @B, i32 0, i32 %1
+  %arrayidx10 = getelementptr [100 x i32], ptr @B, i32 0, i32 %1
   %exitcond = icmp ne i32 %1, 12
   br i1 %exitcond, label %for.body7, label %for.end14
 
 for.body7:                                        ; preds = %for.cond4
-  store i32 %1, i32* %arrayidx10
+  store i32 %1, ptr %arrayidx10
   br label %for.inc11
 
 for.inc11:                                        ; preds = %for.body7
@@ -49,28 +49,28 @@ for.end14:                                        ; preds = %for.cond4
 
 ; Verify that the new access function (see above) is actually used during vector code generation.
 
-; JSCOPVEC:  store i32 0, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @B, i32 0, i32 0)
-; JSCOPVEC:  store i32 1, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @B, i32 0, i32 0)
-; JSCOPVEC:  store i32 2, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @B, i32 0, i32 0)
-; JSCOPVEC:  store i32 3, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @B, i32 0, i32 0)
-; JSCOPVEC:  store i32 4, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @B, i32 0, i32 0)
-; JSCOPVEC:  store i32 5, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @B, i32 0, i32 0)
-; JSCOPVEC:  store i32 6, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @B, i32 0, i32 0)
-; JSCOPVEC:  store i32 7, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @B, i32 0, i32 0)
-; JSCOPVEC:  store i32 8, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @B, i32 0, i32 0)
-; JSCOPVEC:  store i32 9, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @B, i32 0, i32 0)
-; JSCOPVEC:  store i32 10, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @B, i32 0, i32 0)
-; JSCOPVEC:  store i32 11, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @B, i32 0, i32 0)
+; JSCOPVEC:  store i32 0, ptr @B
+; JSCOPVEC:  store i32 1, ptr @B
+; JSCOPVEC:  store i32 2, ptr @B
+; JSCOPVEC:  store i32 3, ptr @B
+; JSCOPVEC:  store i32 4, ptr @B
+; JSCOPVEC:  store i32 5, ptr @B
+; JSCOPVEC:  store i32 6, ptr @B
+; JSCOPVEC:  store i32 7, ptr @B
+; JSCOPVEC:  store i32 8, ptr @B
+; JSCOPVEC:  store i32 9, ptr @B
+; JSCOPVEC:  store i32 10, ptr @B
+; JSCOPVEC:  store i32 11, ptr @B
 
-; JSCOPVEC:  store i32 0, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i32 0, i32 0)
-; JSCOPVEC:  store i32 1, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i32 0, i32 0)
-; JSCOPVEC:  store i32 2, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i32 0, i32 0)
-; JSCOPVEC:  store i32 3, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i32 0, i32 0)
-; JSCOPVEC:  store i32 4, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i32 0, i32 0)
-; JSCOPVEC:  store i32 5, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i32 0, i32 0)
-; JSCOPVEC:  store i32 6, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i32 0, i32 0)
-; JSCOPVEC:  store i32 7, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i32 0, i32 0)
-; JSCOPVEC:  store i32 8, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i32 0, i32 0)
-; JSCOPVEC:  store i32 9, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i32 0, i32 0)
-; JSCOPVEC:  store i32 10, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i32 0, i32 0)
-; JSCOPVEC:  store i32 11, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i32 0, i32 0)
+; JSCOPVEC:  store i32 0, ptr @A
+; JSCOPVEC:  store i32 1, ptr @A
+; JSCOPVEC:  store i32 2, ptr @A
+; JSCOPVEC:  store i32 3, ptr @A
+; JSCOPVEC:  store i32 4, ptr @A
+; JSCOPVEC:  store i32 5, ptr @A
+; JSCOPVEC:  store i32 6, ptr @A
+; JSCOPVEC:  store i32 7, ptr @A
+; JSCOPVEC:  store i32 8, ptr @A
+; JSCOPVEC:  store i32 9, ptr @A
+; JSCOPVEC:  store i32 10, ptr @A
+; JSCOPVEC:  store i32 11, ptr @A

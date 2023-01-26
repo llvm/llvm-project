@@ -557,10 +557,9 @@ static bool WindowsRequiresStackProbe(const MachineFunction &MF,
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const Function &F = MF.getFunction();
   unsigned StackProbeSize = (MFI.getStackProtectorIndex() > 0) ? 4080 : 4096;
-  if (F.hasFnAttribute("stack-probe-size"))
-    F.getFnAttribute("stack-probe-size")
-        .getValueAsString()
-        .getAsInteger(0, StackProbeSize);
+
+  StackProbeSize =
+      F.getFnAttributeAsParsedInteger("stack-probe-size", StackProbeSize);
   return (StackSizeInBytes >= StackProbeSize) &&
          !F.hasFnAttribute("no-stack-arg-probe");
 }
@@ -812,7 +811,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
           GPRCS2Size += 4;
           break;
         }
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case ARM::R0:
       case ARM::R1:
       case ARM::R2:
@@ -1105,7 +1104,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
       case ARM::R12:
         if (STI.splitFramePushPop(MF))
           break;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case ARM::R0:
       case ARM::R1:
       case ARM::R2:
@@ -1842,11 +1841,11 @@ skipAlignedDPRCS2Spills(MachineBasicBlock::iterator MI,
   case 7:
     ++MI;
     assert(MI->mayStore() && "Expecting spill instruction");
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     ++MI;
     assert(MI->mayStore() && "Expecting spill instruction");
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case 1:
   case 2:
   case 4:
@@ -2344,7 +2343,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       switch (Reg) {
       case ARM::LR:
         LRSpilled = true;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case ARM::R0: case ARM::R1:
       case ARM::R2: case ARM::R3:
       case ARM::R4: case ARM::R5:
@@ -2792,7 +2791,7 @@ bool ARMFrameLowering::assignCalleeSavedSpillSlots(
 const TargetFrameLowering::SpillSlot *
 ARMFrameLowering::getCalleeSavedSpillSlots(unsigned &NumEntries) const {
   static const SpillSlot FixedSpillOffsets[] = {{ARM::FPCXTNS, -4}};
-  NumEntries = array_lengthof(FixedSpillOffsets);
+  NumEntries = std::size(FixedSpillOffsets);
   return FixedSpillOffsets;
 }
 

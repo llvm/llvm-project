@@ -2,7 +2,7 @@
 
 ; NVPTX fails to LowerFormalArguments for arg size > i128
 ; the arg byte size must be one of the {16, 8, 4, 2}
-; XFAIL: nvptx
+; XFAIL: target=nvptx{{.*}}
 
 ; CHECK-LABEL: test_ult
 define i1 @test_ult(i256 %a) nounwind {

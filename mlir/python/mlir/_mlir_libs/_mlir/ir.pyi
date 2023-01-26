@@ -50,6 +50,8 @@ __all__ = [
     "DiagnosticHandler",
     "DiagnosticSeverity",
     "DictAttr",
+    "Float8E4M3FNType",
+    "Float8E5M2Type",
     "F16Type",
     "F32Type",
     "F64Type",
@@ -576,6 +578,20 @@ class DictAttr(Attribute):
     def __len__(self) -> int: ...
     @property
     def type(self) -> Type: ...
+
+class Float8E4M3FNType(Type):
+    def __init__(self, cast_from_type: Type) -> None: ...
+    @staticmethod
+    def get(*args, **kwargs) -> Float8E4M3FNType: ...
+    @staticmethod
+    def isinstance(arg: Any) -> bool: ...
+
+class Float8E5M2Type(Type):
+    def __init__(self, cast_from_type: Type) -> None: ...
+    @staticmethod
+    def get(*args, **kwargs) -> Float8E5M2Type: ...
+    @staticmethod
+    def isinstance(arg: Any) -> bool: ...
 
 # TODO: Auto-generated. Audit and fix.
 class F16Type(Type):

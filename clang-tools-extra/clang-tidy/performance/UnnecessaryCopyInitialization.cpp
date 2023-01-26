@@ -14,10 +14,9 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/Diagnostic.h"
+#include <optional>
 
-namespace clang {
-namespace tidy {
-namespace performance {
+namespace clang::tidy::performance {
 namespace {
 
 using namespace ::clang::ast_matchers;
@@ -35,18 +34,18 @@ void recordFixes(const VarDecl &Var, ASTContext &Context,
                  DiagnosticBuilder &Diagnostic) {
   Diagnostic << utils::fixit::changeVarDeclToReference(Var, Context);
   if (!Var.getType().isLocalConstQualified()) {
-    if (llvm::Optional<FixItHint> Fix = utils::fixit::addQualifierToVarDecl(
+    if (std::optional<FixItHint> Fix = utils::fixit::addQualifierToVarDecl(
             Var, Context, DeclSpec::TQ::TQ_const))
       Diagnostic << *Fix;
   }
 }
 
-llvm::Optional<SourceLocation> firstLocAfterNewLine(SourceLocation Loc,
-                                                    SourceManager &SM) {
+std::optional<SourceLocation> firstLocAfterNewLine(SourceLocation Loc,
+                                                   SourceManager &SM) {
   bool Invalid;
   const char *TextAfter = SM.getCharacterData(Loc, &Invalid);
   if (Invalid) {
-    return llvm::None;
+    return std::nullopt;
   }
   size_t Offset = std::strcspn(TextAfter, "\n");
   return Loc.getLocWithOffset(TextAfter[Offset] == '\0' ? Offset : Offset + 1);
@@ -58,7 +57,7 @@ void recordRemoval(const DeclStmt &Stmt, ASTContext &Context,
   // Attempt to remove trailing comments as well.
   auto Tok = utils::lexer::findNextTokenSkippingComments(Stmt.getEndLoc(), SM,
                                                          Context.getLangOpts());
-  llvm::Optional<SourceLocation> PastNewLine =
+  std::optional<SourceLocation> PastNewLine =
       firstLocAfterNewLine(Stmt.getEndLoc(), SM);
   if (Tok && PastNewLine) {
     auto BeforeFirstTokenAfterComment = Tok->getLocation().getLocWithOffset(-1);
@@ -191,12 +190,12 @@ bool differentReplacedTemplateParams(const QualType &VarType,
           getSubstitutedType(VarType, Context)) {
     if (const SubstTemplateTypeParmType *InitializerTmplType =
             getSubstitutedType(InitializerType, Context)) {
-      return VarTmplType->getReplacedParameter()
-                 ->desugar()
-                 .getCanonicalType() !=
-             InitializerTmplType->getReplacedParameter()
-                 ->desugar()
-                 .getCanonicalType();
+      const TemplateTypeParmDecl *VarTTP = VarTmplType->getReplacedParameter();
+      const TemplateTypeParmDecl *InitTTP =
+          InitializerTmplType->getReplacedParameter();
+      return (VarTTP->getDepth() != InitTTP->getDepth() ||
+              VarTTP->getIndex() != InitTTP->getIndex() ||
+              VarTTP->isParameterPack() != InitTTP->isParameterPack());
     }
   }
   return false;
@@ -369,6 +368,4 @@ void UnnecessaryCopyInitialization::storeOptions(
                 utils::options::serializeStringList(ExcludedContainerTypes));
 }
 
-} // namespace performance
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::performance

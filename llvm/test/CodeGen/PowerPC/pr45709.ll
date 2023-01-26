@@ -40,6 +40,7 @@ define dso_local void @_ZN1a1bEv(<4 x float> %in) local_unnamed_addr #0 align 2 
 ; CHECK-NEXT:    lvx v2, 0, r3
 ; CHECK-NEXT:    addi r3, r1, -16
 ; CHECK-NEXT:    stvx v2, 0, r3
+; CHECK-NEXT:    lfs f0, -16(r1)
 ; CHECK-NEXT:  .LBB0_6:
 ; CHECK-NEXT:    blr
   br i1 undef, label %7, label %1

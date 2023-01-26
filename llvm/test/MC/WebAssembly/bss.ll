@@ -1,8 +1,8 @@
-; RUN: llc -filetype=obj %s -o - | obj2yaml | FileCheck %s
+; RUN: llc -mcpu=mvp -filetype=obj %s -o - | obj2yaml | FileCheck %s
 
 target triple = "wasm32-unknown-unknown"
 
-@g0 = global i8* null, align 4
+@g0 = global ptr null, align 4
 @g1 = global i32 0, align 4
 
 %union.u1 = type {}

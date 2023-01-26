@@ -11,7 +11,7 @@
 #include "NativeRegisterContextLinux_arm.h"
 #include "NativeRegisterContextLinux_arm64.h"
 
-
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -30,6 +30,7 @@
 #include <sys/uio.h>
 // NT_PRSTATUS and NT_FPREGSET definition
 #include <elf.h>
+#include <optional>
 
 #ifndef NT_ARM_SVE
 #define NT_ARM_SVE 0x405 /* ARM Scalable Vector Extension */
@@ -75,12 +76,12 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
 
     NativeProcessLinux &process = native_thread.GetProcess();
 
-    llvm::Optional<uint64_t> auxv_at_hwcap =
+    std::optional<uint64_t> auxv_at_hwcap =
         process.GetAuxValue(AuxVector::AUXV_AT_HWCAP);
     if (auxv_at_hwcap && (*auxv_at_hwcap & HWCAP_PACA))
       opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskPAuth);
 
-    llvm::Optional<uint64_t> auxv_at_hwcap2 =
+    std::optional<uint64_t> auxv_at_hwcap2 =
         process.GetAuxValue(AuxVector::AUXV_AT_HWCAP2);
     if (auxv_at_hwcap2 && (*auxv_at_hwcap2 & HWCAP2_MTE))
       opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskMTE);
@@ -93,6 +94,12 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
   default:
     llvm_unreachable("have no register context for architecture");
   }
+}
+
+llvm::Expected<ArchSpec>
+NativeRegisterContextLinux::DetermineArchitecture(lldb::tid_t tid) {
+  return DetermineArchitectureViaGPR(
+      tid, RegisterInfoPOSIX_arm64::GetGPRSizeStatic());
 }
 
 NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
@@ -278,7 +285,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
     return Status("failed - register wasn't recognized to be a GPR or an FPR, "
                   "write strategy unknown");
 
-  reg_value.SetFromMemoryData(reg_info, src, reg_info->byte_size,
+  reg_value.SetFromMemoryData(*reg_info, src, reg_info->byte_size,
                               eByteOrderLittle, error);
 
   return error;

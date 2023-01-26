@@ -94,7 +94,7 @@ define <32 x i16> @v32i16(<32 x i16> %x, <32 x i16> %y) nounwind {
   ret <32 x i16> %z
 }
 
-define void @v8i8(<8 x i8>* %px, <8 x i8>* %py, <8 x i8>* %pz) nounwind {
+define void @v8i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-LABEL: v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x1]
@@ -102,14 +102,14 @@ define void @v8i8(<8 x i8>* %px, <8 x i8>* %py, <8 x i8>* %pz) nounwind {
 ; CHECK-NEXT:    sqadd v0.8b, v1.8b, v0.8b
 ; CHECK-NEXT:    str d0, [x2]
 ; CHECK-NEXT:    ret
-  %x = load <8 x i8>, <8 x i8>* %px
-  %y = load <8 x i8>, <8 x i8>* %py
+  %x = load <8 x i8>, ptr %px
+  %y = load <8 x i8>, ptr %py
   %z = call <8 x i8> @llvm.sadd.sat.v8i8(<8 x i8> %x, <8 x i8> %y)
-  store <8 x i8> %z, <8 x i8>* %pz
+  store <8 x i8> %z, ptr %pz
   ret void
 }
 
-define void @v4i8(<4 x i8>* %px, <4 x i8>* %py, <4 x i8>* %pz) nounwind {
+define void @v4i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-LABEL: v4i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr s0, [x0]
@@ -123,14 +123,14 @@ define void @v4i8(<4 x i8>* %px, <4 x i8>* %py, <4 x i8>* %pz) nounwind {
 ; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    str s0, [x2]
 ; CHECK-NEXT:    ret
-  %x = load <4 x i8>, <4 x i8>* %px
-  %y = load <4 x i8>, <4 x i8>* %py
+  %x = load <4 x i8>, ptr %px
+  %y = load <4 x i8>, ptr %py
   %z = call <4 x i8> @llvm.sadd.sat.v4i8(<4 x i8> %x, <4 x i8> %y)
-  store <4 x i8> %z, <4 x i8>* %pz
+  store <4 x i8> %z, ptr %pz
   ret void
 }
 
-define void @v2i8(<2 x i8>* %px, <2 x i8>* %py, <2 x i8>* %pz) nounwind {
+define void @v2i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-LABEL: v2i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1 { v0.b }[0], [x1]
@@ -148,14 +148,14 @@ define void @v2i8(<2 x i8>* %px, <2 x i8>* %py, <2 x i8>* %pz) nounwind {
 ; CHECK-NEXT:    strb w9, [x2]
 ; CHECK-NEXT:    strb w8, [x2, #1]
 ; CHECK-NEXT:    ret
-  %x = load <2 x i8>, <2 x i8>* %px
-  %y = load <2 x i8>, <2 x i8>* %py
+  %x = load <2 x i8>, ptr %px
+  %y = load <2 x i8>, ptr %py
   %z = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> %x, <2 x i8> %y)
-  store <2 x i8> %z, <2 x i8>* %pz
+  store <2 x i8> %z, ptr %pz
   ret void
 }
 
-define void @v4i16(<4 x i16>* %px, <4 x i16>* %py, <4 x i16>* %pz) nounwind {
+define void @v4i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-LABEL: v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x1]
@@ -163,14 +163,14 @@ define void @v4i16(<4 x i16>* %px, <4 x i16>* %py, <4 x i16>* %pz) nounwind {
 ; CHECK-NEXT:    sqadd v0.4h, v1.4h, v0.4h
 ; CHECK-NEXT:    str d0, [x2]
 ; CHECK-NEXT:    ret
-  %x = load <4 x i16>, <4 x i16>* %px
-  %y = load <4 x i16>, <4 x i16>* %py
+  %x = load <4 x i16>, ptr %px
+  %y = load <4 x i16>, ptr %py
   %z = call <4 x i16> @llvm.sadd.sat.v4i16(<4 x i16> %x, <4 x i16> %y)
-  store <4 x i16> %z, <4 x i16>* %pz
+  store <4 x i16> %z, ptr %pz
   ret void
 }
 
-define void @v2i16(<2 x i16>* %px, <2 x i16>* %py, <2 x i16>* %pz) nounwind {
+define void @v2i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-LABEL: v2i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1 { v0.h }[0], [x1]
@@ -188,10 +188,10 @@ define void @v2i16(<2 x i16>* %px, <2 x i16>* %py, <2 x i16>* %pz) nounwind {
 ; CHECK-NEXT:    strh w9, [x2]
 ; CHECK-NEXT:    strh w8, [x2, #2]
 ; CHECK-NEXT:    ret
-  %x = load <2 x i16>, <2 x i16>* %px
-  %y = load <2 x i16>, <2 x i16>* %py
+  %x = load <2 x i16>, ptr %px
+  %y = load <2 x i16>, ptr %py
   %z = call <2 x i16> @llvm.sadd.sat.v2i16(<2 x i16> %x, <2 x i16> %y)
-  store <2 x i16> %z, <2 x i16>* %pz
+  store <2 x i16> %z, ptr %pz
   ret void
 }
 
@@ -204,7 +204,7 @@ define <12 x i8> @v12i8(<12 x i8> %x, <12 x i8> %y) nounwind {
   ret <12 x i8> %z
 }
 
-define void @v12i16(<12 x i16>* %px, <12 x i16>* %py, <12 x i16>* %pz) nounwind {
+define void @v12i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-LABEL: v12i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q3, [x1]
@@ -214,14 +214,14 @@ define void @v12i16(<12 x i16>* %px, <12 x i16>* %py, <12 x i16>* %pz) nounwind 
 ; CHECK-NEXT:    str q0, [x2]
 ; CHECK-NEXT:    str d1, [x2, #16]
 ; CHECK-NEXT:    ret
-  %x = load <12 x i16>, <12 x i16>* %px
-  %y = load <12 x i16>, <12 x i16>* %py
+  %x = load <12 x i16>, ptr %px
+  %y = load <12 x i16>, ptr %py
   %z = call <12 x i16> @llvm.sadd.sat.v12i16(<12 x i16> %x, <12 x i16> %y)
-  store <12 x i16> %z, <12 x i16>* %pz
+  store <12 x i16> %z, ptr %pz
   ret void
 }
 
-define void @v1i8(<1 x i8>* %px, <1 x i8>* %py, <1 x i8>* %pz) nounwind {
+define void @v1i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-LABEL: v1i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr b0, [x1]
@@ -229,14 +229,14 @@ define void @v1i8(<1 x i8>* %px, <1 x i8>* %py, <1 x i8>* %pz) nounwind {
 ; CHECK-NEXT:    sqadd v0.8b, v1.8b, v0.8b
 ; CHECK-NEXT:    st1 { v0.b }[0], [x2]
 ; CHECK-NEXT:    ret
-  %x = load <1 x i8>, <1 x i8>* %px
-  %y = load <1 x i8>, <1 x i8>* %py
+  %x = load <1 x i8>, ptr %px
+  %y = load <1 x i8>, ptr %py
   %z = call <1 x i8> @llvm.sadd.sat.v1i8(<1 x i8> %x, <1 x i8> %y)
-  store <1 x i8> %z, <1 x i8>* %pz
+  store <1 x i8> %z, ptr %pz
   ret void
 }
 
-define void @v1i16(<1 x i16>* %px, <1 x i16>* %py, <1 x i16>* %pz) nounwind {
+define void @v1i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-LABEL: v1i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr h0, [x1]
@@ -244,10 +244,10 @@ define void @v1i16(<1 x i16>* %px, <1 x i16>* %py, <1 x i16>* %pz) nounwind {
 ; CHECK-NEXT:    sqadd v0.4h, v1.4h, v0.4h
 ; CHECK-NEXT:    str h0, [x2]
 ; CHECK-NEXT:    ret
-  %x = load <1 x i16>, <1 x i16>* %px
-  %y = load <1 x i16>, <1 x i16>* %py
+  %x = load <1 x i16>, ptr %px
+  %y = load <1 x i16>, ptr %py
   %z = call <1 x i16> @llvm.sadd.sat.v1i16(<1 x i16> %x, <1 x i16> %y)
-  store <1 x i16> %z, <1 x i16>* %pz
+  store <1 x i16> %z, ptr %pz
   ret void
 }
 
@@ -352,20 +352,16 @@ define <2 x i128> @v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adds x8, x2, x6
 ; CHECK-NEXT:    adcs x9, x3, x7
-; CHECK-NEXT:    cset w10, vs
-; CHECK-NEXT:    asr x11, x9, #63
-; CHECK-NEXT:    cmp w10, #0
-; CHECK-NEXT:    csel x2, x11, x8, ne
-; CHECK-NEXT:    eor x8, x11, #0x8000000000000000
-; CHECK-NEXT:    csel x3, x8, x9, ne
+; CHECK-NEXT:    asr x10, x9, #63
+; CHECK-NEXT:    csel x2, x10, x8, vs
+; CHECK-NEXT:    eor x8, x10, #0x8000000000000000
+; CHECK-NEXT:    csel x3, x8, x9, vs
 ; CHECK-NEXT:    adds x8, x0, x4
 ; CHECK-NEXT:    adcs x9, x1, x5
-; CHECK-NEXT:    cset w10, vs
-; CHECK-NEXT:    asr x11, x9, #63
-; CHECK-NEXT:    cmp w10, #0
-; CHECK-NEXT:    eor x10, x11, #0x8000000000000000
-; CHECK-NEXT:    csel x8, x11, x8, ne
-; CHECK-NEXT:    csel x1, x10, x9, ne
+; CHECK-NEXT:    asr x10, x9, #63
+; CHECK-NEXT:    csel x8, x10, x8, vs
+; CHECK-NEXT:    eor x10, x10, #0x8000000000000000
+; CHECK-NEXT:    csel x1, x10, x9, vs
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    mov v0.d[1], x1
 ; CHECK-NEXT:    fmov x0, d0

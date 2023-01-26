@@ -50,7 +50,7 @@ public:
   ArrayRef<StringRef> getDependentDialects() const;
 
   // Returns the dialects extra class declaration code.
-  llvm::Optional<StringRef> getExtraClassDeclaration() const;
+  std::optional<StringRef> getExtraClassDeclaration() const;
 
   /// Returns true if this dialect has a canonicalizer.
   bool hasCanonicalizer() const;
@@ -86,6 +86,15 @@ public:
   /// operations or types.
   bool isExtensible() const;
 
+  enum class FolderAPI {
+    RawAttributes = 0, /// fold method with ArrayRef<Attribute>.
+    FolderAdaptor = 1, /// fold method with the operation's FoldAdaptor.
+  };
+
+  /// Returns the folder API that should be emitted for operations in this
+  /// dialect.
+  FolderAPI getFolderAPI() const;
+
   // Returns whether two dialects are equal by checking the equality of the
   // underlying record.
   bool operator==(const Dialect &other) const;
@@ -97,10 +106,6 @@ public:
 
   // Returns whether the dialect is defined.
   explicit operator bool() const { return def != nullptr; }
-
-  // Returns how the accessors should be prefixed in dialect.
-  enum class EmitPrefix { Raw = 0, Prefixed = 1, Both = 2 };
-  EmitPrefix getEmitAccessorPrefix() const;
 
 private:
   const llvm::Record *def;

@@ -4,17 +4,17 @@
 ; CHECK: Printing analysis 'Scalar Evolution Analysis' for function 'func_15'
 ; CHECK-NOT: /u -1
 
-@g_16 = external global i16		; <i16*> [#uses=3]
-@.str = external constant [4 x i8]		; <[4 x i8]*> [#uses=0]
+@g_16 = external global i16		; <ptr> [#uses=3]
+@.str = external constant [4 x i8]		; <ptr> [#uses=0]
 
 define void @func_15() nounwind {
 entry:
-	%0 = load i16, i16* @g_16, align 2		; <i16> [#uses=1]
+	%0 = load i16, ptr @g_16, align 2		; <i16> [#uses=1]
 	%1 = icmp sgt i16 %0, 0		; <i1> [#uses=1]
 	br i1 %1, label %bb2, label %bb.nph
 
 bb.nph:		; preds = %entry
-	%g_16.promoted = load i16, i16* @g_16		; <i16> [#uses=1]
+	%g_16.promoted = load i16, ptr @g_16		; <i16> [#uses=1]
 	br label %bb
 
 bb:		; preds = %bb1, %bb.nph
@@ -27,7 +27,7 @@ bb1:		; preds = %bb
 	br i1 %3, label %bb1.bb2_crit_edge, label %bb
 
 bb1.bb2_crit_edge:		; preds = %bb1
-	store i16 %2, i16* @g_16
+	store i16 %2, ptr @g_16
 	br label %bb2
 
 bb2:		; preds = %bb1.bb2_crit_edge, %entry
@@ -39,5 +39,5 @@ return:		; preds = %bb2
 
 declare i32 @main() nounwind
 
-declare i32 @printf(i8*, ...) nounwind
+declare i32 @printf(ptr, ...) nounwind
 

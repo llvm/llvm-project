@@ -1,14 +1,14 @@
 ; RUN: llc -mtriple=thumbv8m.main -mcpu=cortex-m33 --float-abi=hard %s -o - | \
 ; RUN:   FileCheck %s
 
-@g = hidden local_unnamed_addr global float (...)* null, align 4
+@g = hidden local_unnamed_addr global ptr null, align 4
 @a = hidden local_unnamed_addr global float 0.000000e+00, align 4
 
 define hidden void @f() local_unnamed_addr #0 {
 entry:
-  %0 = load float ()*, float ()** bitcast (float (...)** @g to float ()**), align 4
+  %0 = load ptr, ptr @g, align 4
   %call = tail call nnan ninf nsz float %0() #1
-  store float %call, float* @a, align 4
+  store float %call, ptr @a, align 4
   ret void
 }
 

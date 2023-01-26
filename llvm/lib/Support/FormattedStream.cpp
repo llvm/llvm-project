@@ -39,7 +39,7 @@ void formatted_raw_ostream::UpdatePosition(const char *Ptr, size_t Size) {
     switch (CP[0]) {
     case '\n':
       Line += 1;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case '\r':
       Column = 0;
       break;

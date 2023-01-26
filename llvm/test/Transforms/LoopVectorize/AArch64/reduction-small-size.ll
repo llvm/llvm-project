@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -force-vector-interleave=1 -dce -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize,dce,instcombine -force-vector-interleave=1 -S | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
@@ -23,7 +23,7 @@ target triple = "aarch64--linux-gnu"
 ; CHECK:   [[Rdx:%[a-zA-Z0-9.]+]] = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8>
 ; CHECK:   zext i8 [[Rdx]] to i32
 ;
-define i8 @reduction_i8(i8* nocapture readonly %a, i8* nocapture readonly %b, i32 %n) {
+define i8 @reduction_i8(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 %n) {
 entry:
   %cmp.12 = icmp sgt i32 %n, 0
   br i1 %cmp.12, label %for.body.preheader, label %for.cond.cleanup
@@ -43,11 +43,11 @@ for.cond.cleanup:
 for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %sum.013 = phi i32 [ %add5, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i8, i8* %a, i64 %indvars.iv
-  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %a, i64 %indvars.iv
+  %0 = load i8, ptr %arrayidx, align 1
   %conv = zext i8 %0 to i32
-  %arrayidx2 = getelementptr inbounds i8, i8* %b, i64 %indvars.iv
-  %1 = load i8, i8* %arrayidx2, align 1
+  %arrayidx2 = getelementptr inbounds i8, ptr %b, i64 %indvars.iv
+  %1 = load i8, ptr %arrayidx2, align 1
   %conv3 = zext i8 %1 to i32
   %conv4 = and i32 %sum.013, 255
   %add = add nuw nsw i32 %conv, %conv4
@@ -78,7 +78,7 @@ for.body:
 ; CHECK:   [[Rdx:%[a-zA-Z0-9.]+]] = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16>
 ; CHECK:   zext i16 [[Rdx]] to i32
 ;
-define i16 @reduction_i16_1(i16* nocapture readonly %a, i16* nocapture readonly %b, i32 %n) {
+define i16 @reduction_i16_1(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 %n) {
 entry:
   %cmp.16 = icmp sgt i32 %n, 0
   br i1 %cmp.16, label %for.body.preheader, label %for.cond.cleanup
@@ -98,11 +98,11 @@ for.cond.cleanup:
 for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %sum.017 = phi i32 [ %add5, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i16, i16* %a, i64 %indvars.iv
-  %0 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %a, i64 %indvars.iv
+  %0 = load i16, ptr %arrayidx, align 2
   %conv.14 = zext i16 %0 to i32
-  %arrayidx2 = getelementptr inbounds i16, i16* %b, i64 %indvars.iv
-  %1 = load i16, i16* %arrayidx2, align 2
+  %arrayidx2 = getelementptr inbounds i16, ptr %b, i64 %indvars.iv
+  %1 = load i16, ptr %arrayidx2, align 2
   %conv3.15 = zext i16 %1 to i32
   %conv4.13 = and i32 %sum.017, 65535
   %add = add nuw nsw i32 %conv.14, %conv4.13
@@ -135,7 +135,7 @@ for.body:
 ; CHECK:   [[Rdx:%[a-zA-Z0-9.]+]] = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16>
 ; CHECK:   zext i16 [[Rdx]] to i32
 ;
-define i16 @reduction_i16_2(i8* nocapture readonly %a, i8* nocapture readonly %b, i32 %n) {
+define i16 @reduction_i16_2(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 %n) {
 entry:
   %cmp.14 = icmp sgt i32 %n, 0
   br i1 %cmp.14, label %for.body.preheader, label %for.cond.cleanup
@@ -155,11 +155,11 @@ for.cond.cleanup:
 for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %sum.015 = phi i32 [ %add5, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i8, i8* %a, i64 %indvars.iv
-  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %a, i64 %indvars.iv
+  %0 = load i8, ptr %arrayidx, align 1
   %conv = zext i8 %0 to i32
-  %arrayidx2 = getelementptr inbounds i8, i8* %b, i64 %indvars.iv
-  %1 = load i8, i8* %arrayidx2, align 1
+  %arrayidx2 = getelementptr inbounds i8, ptr %b, i64 %indvars.iv
+  %1 = load i8, ptr %arrayidx2, align 1
   %conv3 = zext i8 %1 to i32
   %conv4.13 = and i32 %sum.015, 65535
   %add = add nuw nsw i32 %conv, %conv4.13

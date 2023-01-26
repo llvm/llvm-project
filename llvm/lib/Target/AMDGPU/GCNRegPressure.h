@@ -85,8 +85,7 @@ struct GCNRegPressure {
     return !(*this == O);
   }
 
-  void print(raw_ostream &OS, const GCNSubtarget *ST = nullptr) const;
-  void dump() const { print(dbgs()); }
+  void dump() const;
 
 private:
   unsigned Value[TOTAL_KINDS];
@@ -95,6 +94,8 @@ private:
 
   friend GCNRegPressure max(const GCNRegPressure &P1,
                             const GCNRegPressure &P2);
+
+  friend Printable print(const GCNRegPressure &RP, const GCNSubtarget *ST);
 };
 
 inline GCNRegPressure max(const GCNRegPressure &P1, const GCNRegPressure &P2) {
@@ -137,9 +138,6 @@ public:
   decltype(LiveRegs) moveLiveRegs() {
     return std::move(LiveRegs);
   }
-
-  static void printLiveRegs(raw_ostream &OS, const LiveRegSet& LiveRegs,
-                            const MachineRegisterInfo &MRI);
 };
 
 class GCNUpwardRPTracker : public GCNRPTracker {
@@ -174,8 +172,8 @@ public:
   // Returns false if block is empty except debug values.
   bool reset(const MachineInstr &MI, const LiveRegSet *LiveRegs = nullptr);
 
-  // Move to the state right before the next MI. Returns false if reached
-  // end of the block.
+  // Move to the state right before the next MI or after the end of MBB.
+  // Returns false if reached end of the block.
   bool advanceBeforeNext();
 
   // Move to the state at the MI, advanceBeforeNext has to be called first.
@@ -270,9 +268,14 @@ GCNRegPressure getRegPressure(const MachineRegisterInfo &MRI,
 bool isEqual(const GCNRPTracker::LiveRegSet &S1,
              const GCNRPTracker::LiveRegSet &S2);
 
-void printLivesAt(SlotIndex SI,
-                  const LiveIntervals &LIS,
-                  const MachineRegisterInfo &MRI);
+Printable print(const GCNRegPressure &RP, const GCNSubtarget *ST = nullptr);
+
+Printable print(const GCNRPTracker::LiveRegSet &LiveRegs,
+                const MachineRegisterInfo &MRI);
+
+Printable reportMismatch(const GCNRPTracker::LiveRegSet &LISLR,
+                         const GCNRPTracker::LiveRegSet &TrackedL,
+                         const TargetRegisterInfo *TRI);
 
 } // end namespace llvm
 

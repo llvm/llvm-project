@@ -21,7 +21,7 @@
 
 namespace llvm {
 
-Optional<unsigned> getVVPOpcode(unsigned Opcode);
+std::optional<unsigned> getVVPOpcode(unsigned Opcode);
 
 bool isVVPUnaryOp(unsigned Opcode);
 bool isVVPBinaryOp(unsigned Opcode);
@@ -71,7 +71,7 @@ bool maySafelyIgnoreMask(SDValue Op);
 //
 /// AVL Functions {
 // The AVL operand position of this node.
-Optional<int> getAVLPos(unsigned);
+std::optional<int> getAVLPos(unsigned);
 
 // Whether this is a LEGALAVL node.
 bool isLegalAVL(SDValue AVL);
@@ -80,7 +80,7 @@ bool isLegalAVL(SDValue AVL);
 SDValue getNodeAVL(SDValue);
 
 // Mask position of this node.
-Optional<int> getMaskPos(unsigned);
+std::optional<int> getMaskPos(unsigned);
 
 SDValue getNodeMask(SDValue);
 
@@ -92,7 +92,7 @@ std::pair<SDValue, bool> getAnnotatedNodeAVL(SDValue);
 
 /// Node Properties {
 
-Optional<EVT> getIdiomaticVectorType(SDNode *Op);
+std::optional<EVT> getIdiomaticVectorType(SDNode *Op);
 
 SDValue getLoadStoreStride(SDValue Op, VECustomDAG &CDAG);
 
@@ -154,7 +154,7 @@ public:
 
   /// getNode {
   SDValue getNode(unsigned OC, SDVTList VTL, ArrayRef<SDValue> OpV,
-                  Optional<SDNodeFlags> Flags = None) const {
+                  std::optional<SDNodeFlags> Flags = std::nullopt) const {
     auto N = DAG.getNode(OC, DL, VTL, OpV);
     if (Flags)
       N->setFlags(*Flags);
@@ -162,7 +162,7 @@ public:
   }
 
   SDValue getNode(unsigned OC, ArrayRef<EVT> ResVT, ArrayRef<SDValue> OpV,
-                  Optional<SDNodeFlags> Flags = None) const {
+                  std::optional<SDNodeFlags> Flags = std::nullopt) const {
     auto N = DAG.getNode(OC, DL, ResVT, OpV);
     if (Flags)
       N->setFlags(*Flags);
@@ -170,7 +170,7 @@ public:
   }
 
   SDValue getNode(unsigned OC, EVT ResVT, ArrayRef<SDValue> OpV,
-                  Optional<SDNodeFlags> Flags = None) const {
+                  std::optional<SDNodeFlags> Flags = std::nullopt) const {
     auto N = DAG.getNode(OC, DL, ResVT, OpV);
     if (Flags)
       N->setFlags(*Flags);

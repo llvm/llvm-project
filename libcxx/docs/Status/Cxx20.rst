@@ -40,7 +40,7 @@ Paper Status
 
 .. note::
 
-   .. [#note-P0600] P0600: The missing bits in P0600 are in |sect|\ [mem.res.class] and |sect|\ [mem.poly.allocator.class].
+   .. [#note-P0591] P0591: The changes in [mem.poly.allocator.mem] are missing.
    .. [#note-P0645] P0645: The paper is implemented but still marked as an incomplete feature
       (the feature-test macro is not set and the libary is only available when built with ``-fexperimental-library``).
       Not yet implemented LWG-issues will cause API and ABI breakage.
@@ -49,7 +49,6 @@ Paper Status
    .. [#note-P0883.1] P0883: shared_ptr and floating-point changes weren't applied as they themselves aren't implemented yet.
    .. [#note-P0883.2] P0883: ``ATOMIC_FLAG_INIT`` was marked deprecated in version 14.0, but was undeprecated with the implementation of LWG3659 in version 15.0.
    .. [#note-P2231] P2231: Optional is complete. The changes to variant haven't been implemented yet.
-
 
 .. _issues-status-cxx20:
 

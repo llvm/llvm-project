@@ -7,10 +7,13 @@ typedef struct NSSize {
 		} inner;
 } NSSize;
 
+typedef __attribute__((__ext_vector_type__(2))) float simd_float2;
+
 @interface Foo  {
         NSSize _size;
 }
 @property NSSize size;
+@property simd_float2 f2;
 @end
 
 void foo(void) { 
@@ -32,3 +35,8 @@ void foo(void) {
 }
 - (NSSize)size {}
 @end
+
+// clang used to crash compiling this code.
+void test(Foo *f) {
+  simd_float2 *v = &f.f2.xy; // expected-error {{cannot take the address of an rvalue}}
+}

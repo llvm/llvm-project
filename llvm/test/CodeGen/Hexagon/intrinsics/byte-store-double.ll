@@ -14,30 +14,30 @@
 
 declare <128 x i1> @llvm.hexagon.V6.vandvrt.128B(<32 x i32>, i32)
 
-declare void @llvm.hexagon.V6.vmaskedstoreq.128B(<128 x i1>, i8*, <32 x i32>)
-define void @V6_vmaskedstoreq_128B( <32 x i32> %a, i8* %b, <32 x i32> %c) {
+declare void @llvm.hexagon.V6.vmaskedstoreq.128B(<128 x i1>, ptr, <32 x i32>)
+define void @V6_vmaskedstoreq_128B( <32 x i32> %a, ptr %b, <32 x i32> %c) {
   %1 = tail call <128 x i1> @llvm.hexagon.V6.vandvrt.128B(<32 x i32> %a, i32 -1)
-  call void @llvm.hexagon.V6.vmaskedstoreq.128B(<128 x i1> %1, i8* %b, <32 x i32> %c)
+  call void @llvm.hexagon.V6.vmaskedstoreq.128B(<128 x i1> %1, ptr %b, <32 x i32> %c)
   ret void
 }
 
-declare void @llvm.hexagon.V6.vmaskedstorenq.128B(<128 x i1>, i8*, <32 x i32>)
-define void @V6_vmaskedstorenq_128B( <32 x i32> %a, i8* %b, <32 x i32> %c) {
+declare void @llvm.hexagon.V6.vmaskedstorenq.128B(<128 x i1>, ptr, <32 x i32>)
+define void @V6_vmaskedstorenq_128B( <32 x i32> %a, ptr %b, <32 x i32> %c) {
   %1 = tail call <128 x i1> @llvm.hexagon.V6.vandvrt.128B(<32 x i32> %a, i32 -1)
-  call void @llvm.hexagon.V6.vmaskedstorenq.128B(<128 x i1> %1, i8* %b, <32 x i32> %c)
+  call void @llvm.hexagon.V6.vmaskedstorenq.128B(<128 x i1> %1, ptr %b, <32 x i32> %c)
   ret void
 }
 
-declare void @llvm.hexagon.V6.vmaskedstorentq.128B(<128 x i1>, i8*, <32 x i32>)
-define void @V6_vmaskedstorentq_128B( <32 x i32> %a, i8* %b, <32 x i32> %c) {
+declare void @llvm.hexagon.V6.vmaskedstorentq.128B(<128 x i1>, ptr, <32 x i32>)
+define void @V6_vmaskedstorentq_128B( <32 x i32> %a, ptr %b, <32 x i32> %c) {
   %1 = tail call <128 x i1> @llvm.hexagon.V6.vandvrt.128B(<32 x i32> %a, i32 -1)
-  call void @llvm.hexagon.V6.vmaskedstorentq.128B(<128 x i1> %1, i8* %b, <32 x i32> %c)
+  call void @llvm.hexagon.V6.vmaskedstorentq.128B(<128 x i1> %1, ptr %b, <32 x i32> %c)
   ret void
 }
 
-declare void @llvm.hexagon.V6.vmaskedstorentnq.128B(<128 x i1>, i8*, <32 x i32>)
-define void @V6_vmaskedstorentnq_128B( <32 x i32> %a, i8* %b, <32 x i32> %c) {
+declare void @llvm.hexagon.V6.vmaskedstorentnq.128B(<128 x i1>, ptr, <32 x i32>)
+define void @V6_vmaskedstorentnq_128B( <32 x i32> %a, ptr %b, <32 x i32> %c) {
   %1 = tail call <128 x i1> @llvm.hexagon.V6.vandvrt.128B(<32 x i32> %a, i32 -1)
-  call void @llvm.hexagon.V6.vmaskedstorentnq.128B(<128 x i1> %1, i8* %b, <32 x i32> %c)
+  call void @llvm.hexagon.V6.vmaskedstorentnq.128B(<128 x i1> %1, ptr %b, <32 x i32> %c)
   ret void
 }

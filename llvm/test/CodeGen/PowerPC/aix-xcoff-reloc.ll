@@ -17,14 +17,14 @@
 @globalA = global i32 1, align 4
 @globalB = global i32 2, align 4
 @arr = global <{ i32, [9 x i32] }> <{ i32 3, [9 x i32] zeroinitializer }>, align 4
-@p = global i32* bitcast (i8* getelementptr (i8, i8* bitcast (<{ i32, [9 x i32] }>* @arr to i8*), i64 16) to i32*), align 4
+@p = global ptr getelementptr (i8, ptr @arr, i64 16), align 4
 
 define i32 @foo() {
 entry:
   %call = call i32 @bar(i32 1)
-  %0 = load i32, i32* @globalA, align 4
+  %0 = load i32, ptr @globalA, align 4
   %add = add nsw i32 %call, %0
-  %1 = load i32, i32* @globalB, align 4
+  %1 = load i32, ptr @globalB, align 4
   %add1 = add nsw i32 %add, %1
   ret i32 %add1
 }
@@ -459,9 +459,9 @@ declare i32 @bar(i32)
 ; DIS:      Disassembly of section .text:
 ; DIS:      00000000 <.foo>:
 ; DIS-NEXT:        0: 7c 08 02 a6                   mflr 0
-; DIS-NEXT:        4: 90 01 00 08                   stw 0, 8(1)
-; DIS-NEXT:        8: 94 21 ff c0                   stwu 1, -64(1)
-; DIS-NEXT:        c: 38 60 00 01                   li 3, 1
+; DIS-NEXT:        4: 94 21 ff c0                   stwu 1, -64(1)
+; DIS-NEXT:        8: 38 60 00 01                   li 3, 1
+; DIS-NEXT:        c: 90 01 00 48                   stw 0, 72(1)
 ; DIS-NEXT:       10: 4b ff ff f1                   bl 0x0
 ; DIS-NEXT:       14: 60 00 00 00                   nop
 ; DIS-NEXT:       18: 80 82 00 00                   lwz 4, 0(2)
@@ -511,9 +511,9 @@ declare i32 @bar(i32)
 ; DIS64:      Disassembly of section .text:
 ; DIS64:      0000000000000000 <.foo>:
 ; DIS64-NEXT:        0: 7c 08 02 a6  	mflr 0
-; DIS64-NEXT:        4: f8 01 00 10  	std 0, 16(1)
-; DIS64-NEXT:        8: f8 21 ff 91  	stdu 1, -112(1)
-; DIS64-NEXT:        c: 38 60 00 01  	li 3, 1
+; DIS64-NEXT:        4: f8 21 ff 91  	stdu 1, -112(1)
+; DIS64-NEXT:        8: 38 60 00 01  	li 3, 1
+; DIS64-NEXT:        c: f8 01 00 80  	std 0, 128(1)
 ; DIS64-NEXT:       10: 4b ff ff f1  	bl 0x0 <.foo>
 ; DIS64-NEXT:       14: 60 00 00 00  	nop
 ; DIS64-NEXT:       18: e8 82 00 00  	ld 4, 0(2)

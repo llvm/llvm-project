@@ -143,14 +143,11 @@ int main(int argc, char **argv) {
   PassRegistry &Registry = *PassRegistry::getPassRegistry();
   initializeCore(Registry);
   initializeScalarOpts(Registry);
-  initializeObjCARCOpts(Registry);
   initializeVectorization(Registry);
   initializeIPO(Registry);
   initializeAnalysis(Registry);
   initializeTransformUtils(Registry);
   initializeInstCombine(Registry);
-  initializeAggressiveInstCombine(Registry);
-  initializeInstrumentation(Registry);
   initializeTarget(Registry);
 
   if (std::getenv("bar") == (char*) -1) {

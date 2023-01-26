@@ -1,4 +1,4 @@
-; RUN: opt < %s -jump-threading -correlated-propagation
+; RUN: opt < %s -passes=jump-threading,correlated-propagation
 
 %struct.S2 = type {}
 
@@ -35,7 +35,7 @@ lbl_133.us:                                       ; preds = %lbl_134.us, %for.co
   br i1 undef, label %if.else14.us-lcssa.us, label %if.then.us
 
 lbl_134.us:                                       ; preds = %if.then.us
-  br i1 icmp eq (i16 ptrtoint (%struct.S2* @g_128 to i16), i16 0), label %for.cond9.preheader.us-lcssa.us, label %lbl_133.us
+  br i1 icmp eq (i16 ptrtoint (ptr @g_128 to i16), i16 0), label %for.cond9.preheader.us-lcssa.us, label %lbl_133.us
 
 if.then.us:                                       ; preds = %lbl_133.us
   br i1 true, label %for.cond.loopexit4.us-lcssa.us, label %lbl_134.us
@@ -50,7 +50,7 @@ for.cond.loopexit4.us-lcssa.us:                   ; preds = %if.then.us
   br label %for.cond.loopexit4
 
 lbl_133:                                          ; preds = %lbl_134, %for.cond.for.cond.split_crit_edge
-  %l_109.0 = phi i16 [ 0, %for.cond.for.cond.split_crit_edge ], [ ptrtoint (%struct.S2* @g_128 to i16), %lbl_134 ]
+  %l_109.0 = phi i16 [ 0, %for.cond.for.cond.split_crit_edge ], [ ptrtoint (ptr @g_128 to i16), %lbl_134 ]
   %tobool = icmp eq i32 undef, 0
   br i1 %tobool, label %if.else14.us-lcssa, label %if.then
 
@@ -58,7 +58,7 @@ if.then:                                          ; preds = %lbl_133
   br i1 false, label %for.cond.loopexit4.us-lcssa, label %lbl_134
 
 lbl_134:                                          ; preds = %if.then
-  br i1 icmp eq (i16 ptrtoint (%struct.S2* @g_128 to i16), i16 0), label %for.cond9.preheader.us-lcssa, label %lbl_133
+  br i1 icmp eq (i16 ptrtoint (ptr @g_128 to i16), i16 0), label %for.cond9.preheader.us-lcssa, label %lbl_133
 
 for.cond9.preheader.us-lcssa:                     ; preds = %lbl_134
   br label %for.cond9.preheader
@@ -74,7 +74,7 @@ if.else14.us-lcssa:                               ; preds = %lbl_133
 
 if.else14:                                        ; preds = %if.else14.us-lcssa, %if.else14.us-lcssa.us
   %l_109.0.lcssa = phi i16 [ %l_109.0, %if.else14.us-lcssa ], [ 0, %if.else14.us-lcssa.us ]
-  store i16 undef, i16* @g_106, align 2
+  store i16 undef, ptr @g_106, align 2
   br label %for.cond.backedge
 
 for.cond.backedge:                                ; preds = %if.else14, %for.cond.loopexit4

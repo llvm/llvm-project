@@ -1,4 +1,4 @@
-// RUN: %clangxx -frtti -fsanitize=null,vptr -g %s -O3 -o %t -mllvm -enable-tail-merge=false
+// RUN: %clangxx -frtti -fsanitize=null,vptr -fno-sanitize-memory-param-retval -g %s -O3 -o %t -mllvm -enable-tail-merge=false
 // RUN: %env_ubsan_opts=halt_on_error=1 %run %t rT
 // RUN: %env_ubsan_opts=halt_on_error=1 %run %t mT
 // RUN: %env_ubsan_opts=halt_on_error=1 %run %t fT
@@ -37,13 +37,13 @@
 // RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.loc-supp"' not %run %t x- 2>&1 | FileCheck %s --check-prefix=CHECK-LOC-SUPPRESS
 
 // REQUIRES: stable-runtime, cxxabi
-// UNSUPPORTED: windows-msvc
+// UNSUPPORTED: target={{.*windows-msvc.*}}
 // Suppressions file not pushed to the device.
 // UNSUPPORTED: android
 // Compilation error
-// UNSUPPORTED: openbsd
+// UNSUPPORTED: target={{.*openbsd.*}}
 // Compilation error
-// UNSUPPORTED: freebsd
+// UNSUPPORTED: target={{.*freebsd.*}}
 #include <new>
 #include <typeinfo>
 #include <assert.h>

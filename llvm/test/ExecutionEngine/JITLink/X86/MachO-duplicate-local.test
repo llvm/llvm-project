@@ -19,7 +19,7 @@ FileHeader:
   filetype:        0x1
   ncmds:           4
   sizeofcmds:      280
-  flags:           0x0
+  flags:           0x2000
   reserved:        0x0
 LoadCommands:
   - cmd:             LC_SEGMENT_64

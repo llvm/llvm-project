@@ -270,7 +270,7 @@ define dso_local ptr @lea_static_fn() #0 {
 ;
 ; MEDIUM-STATIC-LABEL: lea_static_fn:
 ; MEDIUM-STATIC:       # %bb.0:
-; MEDIUM-STATIC-NEXT:    movabsq $static_fn, %rax
+; MEDIUM-STATIC-NEXT:    leaq static_fn(%rip), %rax
 ; MEDIUM-STATIC-NEXT:    retq
 ;
 ; LARGE-STATIC-LABEL: lea_static_fn:
@@ -285,7 +285,7 @@ define dso_local ptr @lea_static_fn() #0 {
 ;
 ; MEDIUM-PIC-LABEL: lea_static_fn:
 ; MEDIUM-PIC:       # %bb.0:
-; MEDIUM-PIC-NEXT:    movabsq $static_fn, %rax
+; MEDIUM-PIC-NEXT:    leaq static_fn(%rip), %rax
 ; MEDIUM-PIC-NEXT:    retq
 ;
 ; LARGE-PIC-LABEL: lea_static_fn:
@@ -308,7 +308,7 @@ define dso_local ptr @lea_global_fn() #0 {
 ;
 ; MEDIUM-STATIC-LABEL: lea_global_fn:
 ; MEDIUM-STATIC:       # %bb.0:
-; MEDIUM-STATIC-NEXT:    movabsq $global_fn, %rax
+; MEDIUM-STATIC-NEXT:    leaq global_fn(%rip), %rax
 ; MEDIUM-STATIC-NEXT:    retq
 ;
 ; LARGE-STATIC-LABEL: lea_global_fn:
@@ -323,7 +323,7 @@ define dso_local ptr @lea_global_fn() #0 {
 ;
 ; MEDIUM-PIC-LABEL: lea_global_fn:
 ; MEDIUM-PIC:       # %bb.0:
-; MEDIUM-PIC-NEXT:    movabsq $global_fn, %rax
+; MEDIUM-PIC-NEXT:    leaq global_fn(%rip), %rax
 ; MEDIUM-PIC-NEXT:    retq
 ;
 ; LARGE-PIC-LABEL: lea_global_fn:

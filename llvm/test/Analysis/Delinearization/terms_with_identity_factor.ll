@@ -11,13 +11,13 @@
 ;target triple = "aarch64--linux-gnu"
 
 ; CHECK-LABEL: Delinearization on function foo
-; CHECK: Inst:  %4 = load i8, i8* %arrayidx.us, align 1
+; CHECK: Inst:  %4 = load i8, ptr %arrayidx.us, align 1
 ; CHECK: Subscripts
 ; CHECK-NEXT: {0,+,1}<nuw><nsw><%for.body3.lr.ph.us>
 ; CHECK-NEXT: {0,+,1}<nuw><nsw><%for.body3.us>
 ; CHECK: succeeded to delinearize
 
-define void @foo(i32 %m, i32 %n, i8* nocapture %A) #0 {
+define void @foo(i32 %m, i32 %n, ptr nocapture %A) #0 {
 entry:
   br label %entry.split
 
@@ -36,10 +36,10 @@ for.cond1.preheader.lr.ph.split.us:               ; preds = %entry.split
 for.body3.us:                                     ; preds = %for.body3.us, %for.body3.lr.ph.us
   %indvars.iv = phi i64 [ 0, %for.body3.lr.ph.us ], [ %indvars.iv.next, %for.body3.us ]
   %3 = add nsw i64 %indvars.iv, %5
-  %arrayidx.us = getelementptr inbounds i8, i8* %A, i64 %3
-  %4 = load i8, i8* %arrayidx.us, align 1
+  %arrayidx.us = getelementptr inbounds i8, ptr %A, i64 %3
+  %4 = load i8, ptr %arrayidx.us, align 1
   %add4.us = add i8 %4, 1
-  store i8 %add4.us, i8* %arrayidx.us, align 1
+  store i8 %add4.us, ptr %arrayidx.us, align 1
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %0

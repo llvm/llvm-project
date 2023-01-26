@@ -574,8 +574,7 @@ define <2 x i64> @test_mm_insert_epi8(<2 x i64> %a0, i8 %a1) {
 ;
 ; X64-AVX-LABEL: test_mm_insert_epi8:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    movzbl %dil, %eax
-; X64-AVX-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
+; X64-AVX-NEXT:    vpinsrb $1, %edi, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %res = insertelement <16 x i8> %arg0, i8 %a1,i32 1

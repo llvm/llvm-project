@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/CodeView/TypeStreamMerger.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/CodeView/GlobalTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/MergingTypeTableBuilder.h"
@@ -17,6 +16,7 @@
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecordHelpers.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -77,7 +77,8 @@ public:
   // Local hashing entry points
   Error mergeTypesAndIds(MergingTypeTableBuilder &DestIds,
                          MergingTypeTableBuilder &DestTypes,
-                         const CVTypeArray &IdsAndTypes, Optional<uint32_t> &S);
+                         const CVTypeArray &IdsAndTypes,
+                         std::optional<PCHMergerInfo> &PCHInfo);
   Error mergeIdRecords(MergingTypeTableBuilder &Dest,
                        ArrayRef<TypeIndex> TypeSourceToDest,
                        const CVTypeArray &Ids);
@@ -89,14 +90,14 @@ public:
                          GlobalTypeTableBuilder &DestTypes,
                          const CVTypeArray &IdsAndTypes,
                          ArrayRef<GloballyHashedType> Hashes,
-                         Optional<uint32_t> &S);
+                         std::optional<PCHMergerInfo> &PCHInfo);
   Error mergeIdRecords(GlobalTypeTableBuilder &Dest,
                        ArrayRef<TypeIndex> TypeSourceToDest,
                        const CVTypeArray &Ids,
                        ArrayRef<GloballyHashedType> Hashes);
   Error mergeTypeRecords(GlobalTypeTableBuilder &Dest, const CVTypeArray &Types,
                          ArrayRef<GloballyHashedType> Hashes,
-                         Optional<uint32_t> &S);
+                         std::optional<PCHMergerInfo> &PCHInfo);
 
 private:
   Error doit(const CVTypeArray &Types);
@@ -166,7 +167,7 @@ private:
 
   Expected<bool> shouldRemapType(const CVType &Type);
 
-  Optional<Error> LastError;
+  std::optional<Error> LastError;
 
   bool UseGlobalHashes = false;
 
@@ -196,7 +197,7 @@ private:
   /// its type indices.
   SmallVector<uint8_t, 256> RemapStorage;
 
-  Optional<uint32_t> PCHSignature;
+  std::optional<PCHMergerInfo> PCHInfo;
 };
 
 } // end anonymous namespace
@@ -256,28 +257,27 @@ Error TypeStreamMerger::mergeIdRecords(MergingTypeTableBuilder &Dest,
   return doit(Ids);
 }
 
-Error TypeStreamMerger::mergeTypesAndIds(MergingTypeTableBuilder &DestIds,
-                                         MergingTypeTableBuilder &DestTypes,
-                                         const CVTypeArray &IdsAndTypes,
-                                         Optional<uint32_t> &S) {
+Error TypeStreamMerger::mergeTypesAndIds(
+    MergingTypeTableBuilder &DestIds, MergingTypeTableBuilder &DestTypes,
+    const CVTypeArray &IdsAndTypes, std::optional<PCHMergerInfo> &PCHInfo) {
   DestIdStream = &DestIds;
   DestTypeStream = &DestTypes;
   UseGlobalHashes = false;
   auto Err = doit(IdsAndTypes);
-  S = PCHSignature;
+  PCHInfo = this->PCHInfo;
   return Err;
 }
 
 // Global hashing entry points
-Error TypeStreamMerger::mergeTypeRecords(GlobalTypeTableBuilder &Dest,
-                                         const CVTypeArray &Types,
-                                         ArrayRef<GloballyHashedType> Hashes,
-                                         Optional<uint32_t> &S) {
+Error TypeStreamMerger::mergeTypeRecords(
+    GlobalTypeTableBuilder &Dest, const CVTypeArray &Types,
+    ArrayRef<GloballyHashedType> Hashes,
+    std::optional<PCHMergerInfo> &PCHInfo) {
   DestGlobalTypeStream = &Dest;
   UseGlobalHashes = true;
   GlobalHashes = Hashes;
   auto Err = doit(Types);
-  S = PCHSignature;
+  PCHInfo = this->PCHInfo;
   return Err;
 }
 
@@ -293,17 +293,16 @@ Error TypeStreamMerger::mergeIdRecords(GlobalTypeTableBuilder &Dest,
   return doit(Ids);
 }
 
-Error TypeStreamMerger::mergeTypesAndIds(GlobalTypeTableBuilder &DestIds,
-                                         GlobalTypeTableBuilder &DestTypes,
-                                         const CVTypeArray &IdsAndTypes,
-                                         ArrayRef<GloballyHashedType> Hashes,
-                                         Optional<uint32_t> &S) {
+Error TypeStreamMerger::mergeTypesAndIds(
+    GlobalTypeTableBuilder &DestIds, GlobalTypeTableBuilder &DestTypes,
+    const CVTypeArray &IdsAndTypes, ArrayRef<GloballyHashedType> Hashes,
+    std::optional<PCHMergerInfo> &PCHInfo) {
   DestGlobalIdStream = &DestIds;
   DestGlobalTypeStream = &DestTypes;
   UseGlobalHashes = true;
   GlobalHashes = Hashes;
   auto Err = doit(IdsAndTypes);
-  S = PCHSignature;
+  PCHInfo = this->PCHInfo;
   return Err;
 }
 
@@ -446,27 +445,27 @@ Error llvm::codeview::mergeIdRecords(MergingTypeTableBuilder &Dest,
 Error llvm::codeview::mergeTypeAndIdRecords(
     MergingTypeTableBuilder &DestIds, MergingTypeTableBuilder &DestTypes,
     SmallVectorImpl<TypeIndex> &SourceToDest, const CVTypeArray &IdsAndTypes,
-    Optional<uint32_t> &PCHSignature) {
+    std::optional<PCHMergerInfo> &PCHInfo) {
   TypeStreamMerger M(SourceToDest);
-  return M.mergeTypesAndIds(DestIds, DestTypes, IdsAndTypes, PCHSignature);
+  return M.mergeTypesAndIds(DestIds, DestTypes, IdsAndTypes, PCHInfo);
 }
 
 Error llvm::codeview::mergeTypeAndIdRecords(
     GlobalTypeTableBuilder &DestIds, GlobalTypeTableBuilder &DestTypes,
     SmallVectorImpl<TypeIndex> &SourceToDest, const CVTypeArray &IdsAndTypes,
-    ArrayRef<GloballyHashedType> Hashes, Optional<uint32_t> &PCHSignature) {
+    ArrayRef<GloballyHashedType> Hashes,
+    std::optional<PCHMergerInfo> &PCHInfo) {
   TypeStreamMerger M(SourceToDest);
-  return M.mergeTypesAndIds(DestIds, DestTypes, IdsAndTypes, Hashes,
-                            PCHSignature);
+  return M.mergeTypesAndIds(DestIds, DestTypes, IdsAndTypes, Hashes, PCHInfo);
 }
 
 Error llvm::codeview::mergeTypeRecords(GlobalTypeTableBuilder &Dest,
                                        SmallVectorImpl<TypeIndex> &SourceToDest,
                                        const CVTypeArray &Types,
                                        ArrayRef<GloballyHashedType> Hashes,
-                                       Optional<uint32_t> &PCHSignature) {
+                                       std::optional<PCHMergerInfo> &PCHInfo) {
   TypeStreamMerger M(SourceToDest);
-  return M.mergeTypeRecords(Dest, Types, Hashes, PCHSignature);
+  return M.mergeTypeRecords(Dest, Types, Hashes, PCHInfo);
 }
 
 Error llvm::codeview::mergeIdRecords(GlobalTypeTableBuilder &Dest,
@@ -487,9 +486,10 @@ Expected<bool> TypeStreamMerger::shouldRemapType(const CVType &Type) {
     if (auto EC = TypeDeserializer::deserializeAs(const_cast<CVType &>(Type),
                                                   EP))
       return joinErrors(std::move(EC), errorCorruptRecord());
-    if (PCHSignature)
+    // Only one record of this kind can appear in a OBJ.
+    if (PCHInfo)
       return errorCorruptRecord();
-    PCHSignature.emplace(EP.getSignature());
+    PCHInfo.emplace(PCHMergerInfo{EP.getSignature(), CurIndex.toArrayIndex()});
     return false;
   }
   return true;

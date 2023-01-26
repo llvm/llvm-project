@@ -174,12 +174,13 @@ ShapeAdaptor ValueShapeRange::getShape(int index) const {
 }
 
 LogicalResult mlir::detail::inferReturnTensorTypes(
-    function_ref<LogicalResult(
-        MLIRContext *, Optional<Location> location, ValueShapeRange operands,
-        DictionaryAttr attributes, RegionRange regions,
-        SmallVectorImpl<ShapedTypeComponents> &retComponents)>
+    function_ref<
+        LogicalResult(MLIRContext *, std::optional<Location> location,
+                      ValueShapeRange operands, DictionaryAttr attributes,
+                      RegionRange regions,
+                      SmallVectorImpl<ShapedTypeComponents> &retComponents)>
         componentTypeFn,
-    MLIRContext *context, Optional<Location> location, ValueRange operands,
+    MLIRContext *context, std::optional<Location> location, ValueRange operands,
     DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   SmallVector<ShapedTypeComponents, 2> retComponents;
@@ -187,15 +188,17 @@ LogicalResult mlir::detail::inferReturnTensorTypes(
                              retComponents)))
     return failure();
   for (const auto &shapeAndType : retComponents) {
-    assert(shapeAndType.getAttribute() == nullptr && "attribute not supported");
-    assert(shapeAndType.getElementType() &&
-           "element type required to construct tensor");
-    if (shapeAndType.hasRank())
-      inferredReturnTypes.push_back(RankedTensorType::get(
-          shapeAndType.getDims(), shapeAndType.getElementType()));
-    else
+    Type elementTy = shapeAndType.getElementType();
+    assert(elementTy && "element type required to construct tensor");
+
+    Attribute attr = shapeAndType.getAttribute();
+    if (shapeAndType.hasRank()) {
       inferredReturnTypes.push_back(
-          UnrankedTensorType::get(shapeAndType.getElementType()));
+          RankedTensorType::get(shapeAndType.getDims(), elementTy, attr));
+    } else {
+      assert(attr == nullptr && "attribute not supported");
+      inferredReturnTypes.push_back(UnrankedTensorType::get(elementTy));
+    }
   }
   return success();
 }

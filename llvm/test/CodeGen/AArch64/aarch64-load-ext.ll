@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=aarch64-unknown-linux-gnu < %s | FileCheck %s --check-prefix CHECK-LE
 ; RUN: llc -mtriple=aarch64_be-unknown-linux-gnu < %s | FileCheck %s --check-prefix CHECK-BE
 
-define <2 x i16> @test0(i16* %i16_ptr, i64 %inc) {
+define <2 x i16> @test0(ptr %i16_ptr, i64 %inc) {
 ; CHECK-LE-LABEL: test0:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ld1 { v0.h }[0], [x0]
@@ -14,12 +14,12 @@ define <2 x i16> @test0(i16* %i16_ptr, i64 %inc) {
 ; CHECK-BE-NEXT:    ld1 { v0.h }[0], [x0]
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-BE-NEXT:    ret
-  %i_0 = load i16, i16* %i16_ptr
+  %i_0 = load i16, ptr %i16_ptr
   %v0 = insertelement <2 x i16> undef, i16 %i_0, i32 0
   ret <2 x i16> %v0
 }
 
-define <2 x i16> @test1(<2 x i16>* %v2i16_ptr) {
+define <2 x i16> @test1(ptr %v2i16_ptr) {
 ; CHECK-LE-LABEL: test1:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ld1 { v0.h }[0], [x0]
@@ -35,11 +35,11 @@ define <2 x i16> @test1(<2 x i16>* %v2i16_ptr) {
 ; CHECK-BE-NEXT:    ld1 { v0.h }[2], [x8]
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-BE-NEXT:    ret
-  %v2i16 = load <2 x i16>, <2 x i16>* %v2i16_ptr
+  %v2i16 = load <2 x i16>, ptr %v2i16_ptr
   ret <2 x i16> %v2i16
 }
 
-define <2 x i16> @test2(i16* %i16_ptr, i64 %inc) {
+define <2 x i16> @test2(ptr %i16_ptr, i64 %inc) {
 ; CHECK-LE-LABEL: test2:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ld1 { v0.h }[0], [x0]
@@ -55,15 +55,15 @@ define <2 x i16> @test2(i16* %i16_ptr, i64 %inc) {
 ; CHECK-BE-NEXT:    ld1 { v0.h }[2], [x8]
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-BE-NEXT:    ret
-  %i_0 = load i16, i16* %i16_ptr
-  %i16_ptr_inc = getelementptr i16, i16* %i16_ptr, i64 %inc
-  %i_1 = load i16, i16* %i16_ptr_inc
+  %i_0 = load i16, ptr %i16_ptr
+  %i16_ptr_inc = getelementptr i16, ptr %i16_ptr, i64 %inc
+  %i_1 = load i16, ptr %i16_ptr_inc
   %v0 = insertelement <2 x i16> undef, i16 %i_0, i32 0
   %v1 = insertelement <2 x i16> %v0, i16 %i_1, i32 1
   ret <2 x i16> %v1
 }
 
-define <2 x i8> @test3(<2 x i8>* %v2i8_ptr) {
+define <2 x i8> @test3(ptr %v2i8_ptr) {
 ; CHECK-LE-LABEL: test3:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ld1 { v0.b }[0], [x0]
@@ -79,11 +79,11 @@ define <2 x i8> @test3(<2 x i8>* %v2i8_ptr) {
 ; CHECK-BE-NEXT:    ld1 { v0.b }[4], [x8]
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-BE-NEXT:    ret
-  %v2i8 = load <2 x i8>, <2 x i8>* %v2i8_ptr
+  %v2i8 = load <2 x i8>, ptr %v2i8_ptr
   ret <2 x i8> %v2i8
 }
 
-define <4 x i8> @test4(<4 x i8>* %v4i8_ptr) {
+define <4 x i8> @test4(ptr %v4i8_ptr) {
 ; CHECK-LE-LABEL: test4:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ldr s0, [x0]
@@ -98,11 +98,11 @@ define <4 x i8> @test4(<4 x i8>* %v4i8_ptr) {
 ; CHECK-BE-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
 ; CHECK-BE-NEXT:    ret
-  %v4i8 = load <4 x i8>, <4 x i8>* %v4i8_ptr
+  %v4i8 = load <4 x i8>, ptr %v4i8_ptr
   ret <4 x i8> %v4i8
 }
 
-define <2 x i32> @fsext_v2i32(<2 x i8>* %a) {
+define <2 x i32> @fsext_v2i32(ptr %a) {
 ; CHECK-LE-LABEL: fsext_v2i32:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ldrsb w8, [x0]
@@ -120,12 +120,12 @@ define <2 x i32> @fsext_v2i32(<2 x i8>* %a) {
 ; CHECK-BE-NEXT:    mov v0.s[1], w8
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-BE-NEXT:    ret
-  %x = load <2 x i8>, <2 x i8>* %a
+  %x = load <2 x i8>, ptr %a
   %y = sext <2 x i8> %x to <2 x i32>
   ret <2 x i32> %y
 }
 
-define <3 x i32> @fsext_v3i32(<3 x i8>* %a) {
+define <3 x i32> @fsext_v3i32(ptr %a) {
 ; CHECK-LE-LABEL: fsext_v3i32:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ldr s0, [x0]
@@ -147,12 +147,12 @@ define <3 x i32> @fsext_v3i32(<3 x i8>* %a) {
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ret
-  %x = load <3 x i8>, <3 x i8>* %a
+  %x = load <3 x i8>, ptr %a
   %y = sext <3 x i8> %x to <3 x i32>
   ret <3 x i32> %y
 }
 
-define <4 x i32> @fsext_v4i32(<4 x i8>* %a) {
+define <4 x i32> @fsext_v4i32(ptr %a) {
 ; CHECK-LE-LABEL: fsext_v4i32:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ldr s0, [x0]
@@ -169,12 +169,12 @@ define <4 x i32> @fsext_v4i32(<4 x i8>* %a) {
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ret
-  %x = load <4 x i8>, <4 x i8>* %a
+  %x = load <4 x i8>, ptr %a
   %y = sext <4 x i8> %x to <4 x i32>
   ret <4 x i32> %y
 }
 
-define <8 x i32> @fsext_v8i32(<8 x i8>* %a) {
+define <8 x i32> @fsext_v8i32(ptr %a) {
 ; CHECK-LE-LABEL: fsext_v8i32:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ldr d0, [x0]
@@ -194,12 +194,12 @@ define <8 x i32> @fsext_v8i32(<8 x i8>* %a) {
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ret
-  %x = load <8 x i8>, <8 x i8>* %a
+  %x = load <8 x i8>, ptr %a
   %y = sext <8 x i8> %x to <8 x i32>
   ret <8 x i32> %y
 }
 
-define <4 x i32> @fzext_v4i32(<4 x i8>* %a) {
+define <4 x i32> @fzext_v4i32(ptr %a) {
 ; CHECK-LE-LABEL: fzext_v4i32:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ldr s0, [x0]
@@ -216,7 +216,7 @@ define <4 x i32> @fzext_v4i32(<4 x i8>* %a) {
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ret
-  %x = load <4 x i8>, <4 x i8>* %a
+  %x = load <4 x i8>, ptr %a
   %y = zext <4 x i8> %x to <4 x i32>
   ret <4 x i32> %y
 }
@@ -224,7 +224,7 @@ define <4 x i32> @fzext_v4i32(<4 x i8>* %a) {
 ; TODO: This codegen could just be:
 ;   ldrb w0, [x0]
 ;
-define i32 @loadExti32(<4 x i8>* %ref) {
+define i32 @loadExti32(ptr %ref) {
 ; CHECK-LE-LABEL: loadExti32:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ldr s0, [x0]
@@ -241,13 +241,13 @@ define i32 @loadExti32(<4 x i8>* %ref) {
 ; CHECK-BE-NEXT:    umov w8, v0.h[0]
 ; CHECK-BE-NEXT:    and w0, w8, #0xff
 ; CHECK-BE-NEXT:    ret
-  %a = load <4 x i8>, <4 x i8>* %ref
+  %a = load <4 x i8>, ptr %ref
   %vecext = extractelement <4 x i8> %a, i32 0
   %conv = zext i8 %vecext to i32
   ret i32 %conv
 }
 
-define <2 x i16> @fsext_v2i16(<2 x i8>* %a) {
+define <2 x i16> @fsext_v2i16(ptr %a) {
 ; CHECK-LE-LABEL: fsext_v2i16:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ldrsb w8, [x0]
@@ -265,12 +265,12 @@ define <2 x i16> @fsext_v2i16(<2 x i8>* %a) {
 ; CHECK-BE-NEXT:    mov v0.s[1], w8
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-BE-NEXT:    ret
-  %x = load <2 x i8>, <2 x i8>* %a
+  %x = load <2 x i8>, ptr %a
   %y = sext <2 x i8> %x to <2 x i16>
   ret <2 x i16> %y
 }
 
-define <3 x i16> @fsext_v3i16(<3 x i8>* %a) {
+define <3 x i16> @fsext_v3i16(ptr %a) {
 ; CHECK-LE-LABEL: fsext_v3i16:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ldr s0, [x0]
@@ -289,12 +289,12 @@ define <3 x i16> @fsext_v3i16(<3 x i8>* %a) {
 ; CHECK-BE-NEXT:    sshr v0.4h, v0.4h, #8
 ; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
 ; CHECK-BE-NEXT:    ret
-  %x = load <3 x i8>, <3 x i8>* %a
+  %x = load <3 x i8>, ptr %a
   %y = sext <3 x i8> %x to <3 x i16>
   ret <3 x i16> %y
 }
 
-define <4 x i16> @fsext_v4i16(<4 x i8>* %a) {
+define <4 x i16> @fsext_v4i16(ptr %a) {
 ; CHECK-LE-LABEL: fsext_v4i16:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ldr s0, [x0]
@@ -309,12 +309,12 @@ define <4 x i16> @fsext_v4i16(<4 x i8>* %a) {
 ; CHECK-BE-NEXT:    sshll v0.8h, v0.8b, #0
 ; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
 ; CHECK-BE-NEXT:    ret
-  %x = load <4 x i8>, <4 x i8>* %a
+  %x = load <4 x i8>, ptr %a
   %y = sext <4 x i8> %x to <4 x i16>
   ret <4 x i16> %y
 }
 
-define <8 x i16> @fsext_v8i16(<8 x i8>* %a) {
+define <8 x i16> @fsext_v8i16(ptr %a) {
 ; CHECK-LE-LABEL: fsext_v8i16:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ldr d0, [x0]
@@ -328,12 +328,12 @@ define <8 x i16> @fsext_v8i16(<8 x i8>* %a) {
 ; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ret
-  %x = load <8 x i8>, <8 x i8>* %a
+  %x = load <8 x i8>, ptr %a
   %y = sext <8 x i8> %x to <8 x i16>
   ret <8 x i16> %y
 }
 
-define <16 x i16> @fsext_v16i16(<16 x i8>* %a) {
+define <16 x i16> @fsext_v16i16(ptr %a) {
 ; CHECK-LE-LABEL: fsext_v16i16:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ldr q0, [x0]
@@ -351,12 +351,12 @@ define <16 x i16> @fsext_v16i16(<16 x i8>* %a) {
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ret
-  %x = load <16 x i8>, <16 x i8>* %a
+  %x = load <16 x i8>, ptr %a
   %y = sext <16 x i8> %x to <16 x i16>
   ret <16 x i16> %y
 }
 
-define <4 x i16> @fzext_v4i16(<4 x i8>* %a) {
+define <4 x i16> @fzext_v4i16(ptr %a) {
 ; CHECK-LE-LABEL: fzext_v4i16:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ldr s0, [x0]
@@ -371,12 +371,12 @@ define <4 x i16> @fzext_v4i16(<4 x i8>* %a) {
 ; CHECK-BE-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
 ; CHECK-BE-NEXT:    ret
-  %x = load <4 x i8>, <4 x i8>* %a
+  %x = load <4 x i8>, ptr %a
   %y = zext <4 x i8> %x to <4 x i16>
   ret <4 x i16> %y
 }
 
-define <4 x i16> @anyext_v4i16(<4 x i8> *%a, <4 x i8> *%b) {
+define <4 x i16> @anyext_v4i16(ptr %a, ptr %b) {
 ; CHECK-LE-LABEL: anyext_v4i16:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ldr s0, [x0]
@@ -401,14 +401,14 @@ define <4 x i16> @anyext_v4i16(<4 x i8> *%a, <4 x i8> *%b) {
 ; CHECK-BE-NEXT:    sshr v0.4h, v0.4h, #8
 ; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
 ; CHECK-BE-NEXT:    ret
-  %x = load <4 x i8>, <4 x i8>* %a, align 4
-  %y = load <4 x i8>, <4 x i8>* %b, align 4
+  %x = load <4 x i8>, ptr %a, align 4
+  %y = load <4 x i8>, ptr %b, align 4
   %z = add <4 x i8> %x, %y
   %s = sext <4 x i8> %z to <4 x i16>
   ret <4 x i16> %s
 }
 
-define <4 x i32> @anyext_v4i32(<4 x i8> *%a, <4 x i8> *%b) {
+define <4 x i32> @anyext_v4i32(ptr %a, ptr %b) {
 ; CHECK-LE-LABEL: anyext_v4i32:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ldr s0, [x0]
@@ -436,8 +436,8 @@ define <4 x i32> @anyext_v4i32(<4 x i8> *%a, <4 x i8> *%b) {
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ret
-  %x = load <4 x i8>, <4 x i8>* %a, align 4
-  %y = load <4 x i8>, <4 x i8>* %b, align 4
+  %x = load <4 x i8>, ptr %a, align 4
+  %y = load <4 x i8>, ptr %b, align 4
   %z = add <4 x i8> %x, %y
   %s = sext <4 x i8> %z to <4 x i32>
   ret <4 x i32> %s

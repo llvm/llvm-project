@@ -17,23 +17,23 @@
 
 %0 = type { i32, [768 x i8], [768 x i8], [1024 x i8], [768 x i8], [768 x i8], [768 x i8], [768 x i8], [768 x i8], [1024 x i8], [1024 x i8], i32, i16, i16, i16, i16, i16, i16, i32, i32, i32, i16, i16, i32, i32, i32, i32, i32, i32, i32, i16, i16, i16, i16, [64 x i8], i16, i16, i16, i16, i16, i16, i16, i16, i16, i16, i16, i16, i16, i16, i16, i16, i32, i16, i16, i16, i16, i16, i16, i16, i16, i16, i16, i8, i8, i8, i8, i16, i16, i16, i16, i16, i16, float, float, i32, i16, i16, float, i16, i16, i16, i16}
 %1 = type opaque
-%2 = type { i8* }
-%3 = type { %3*, %3*, %4* (i8*)*, %2, i32, %2, %2*, i8*, double*, float*, i8*, i8*, %4* }
-%4 = type { %4*, %4*, %4*, i32, i32, i32, i32, i32, i8*, [3 x float], i8, [64 x i8] }
+%2 = type { ptr }
+%3 = type { ptr, ptr, ptr, %2, i32, %2, ptr, ptr, ptr, ptr, ptr, ptr, ptr }
+%4 = type { ptr, ptr, ptr, i32, i32, i32, i32, i32, ptr, [3 x float], i8, [64 x i8] }
 
 @global_1 = external dso_local unnamed_addr constant [1 x i8], align 1
 @global_2 = external local_unnamed_addr global %0, align 8
-@global_3 = external local_unnamed_addr global i8* (i64, i8*)*, align 8
+@global_3 = external local_unnamed_addr global ptr, align 8
 @global_4 = external dso_local unnamed_addr constant [14 x i8], align 1
 
-declare i8 @call_1(%1*) local_unnamed_addr
-declare i32 @call_2(%2*, %1*) local_unnamed_addr
-declare i32 @call_3(%2*, %1*) local_unnamed_addr
-declare %3* @call_4(%4*, i32, i32, i32, i32, i32, i16, i16, %2*, %1*, i32, float, float, float, float, i8*) local_unnamed_addr
-declare i32 @call_5(i8*) local_unnamed_addr
-declare i8 @call_6(%1*, i32) local_unnamed_addr
+declare i8 @call_1(ptr) local_unnamed_addr
+declare i32 @call_2(ptr, ptr) local_unnamed_addr
+declare i32 @call_3(ptr, ptr) local_unnamed_addr
+declare ptr @call_4(ptr, i32, i32, i32, i32, i32, i16, i16, ptr, ptr, i32, float, float, float, float, ptr) local_unnamed_addr
+declare i32 @call_5(ptr) local_unnamed_addr
+declare i8 @call_6(ptr, i32) local_unnamed_addr
 
-define dso_local void @P10_Spill_CR_UN(%2* %arg, %1* %arg1, i32 %arg2) local_unnamed_addr {
+define dso_local void @P10_Spill_CR_UN(ptr %arg, ptr %arg1, i32 %arg2) local_unnamed_addr {
 ; CHECK-LABEL: P10_Spill_CR_UN:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    mfcr r12
@@ -340,9 +340,9 @@ define dso_local void @P10_Spill_CR_UN(%2* %arg, %1* %arg1, i32 %arg2) local_unn
 ; CHECK-BE-NEXT:  .LBB0_19: # %bb55
 bb:
   %tmp = alloca [3 x i8], align 1
-  %tmp3 = tail call zeroext i8 @call_1(%1* %arg1)
+  %tmp3 = tail call zeroext i8 @call_1(ptr %arg1)
   %tmp4 = icmp ne i8 %tmp3, 0
-  %tmp5 = tail call signext i32 @call_2(%2* %arg, %1* %arg1)
+  %tmp5 = tail call signext i32 @call_2(ptr %arg, ptr %arg1)
   %tmp6 = and i32 %arg2, 16
   %tmp7 = icmp ne i32 %tmp6, 0
   br label %bb8
@@ -351,7 +351,7 @@ bb8:                                              ; preds = %bb
   br i1 undef, label %bb9, label %bb11
 
 bb9:                                              ; preds = %bb8
-  %tmp10 = call signext i32 @call_3(%2* %arg, %1* %arg1)
+  %tmp10 = call signext i32 @call_3(ptr %arg, ptr %arg1)
   br label %bb12
 
 bb11:                                             ; preds = %bb8
@@ -369,18 +369,16 @@ bb16:                                             ; preds = %bb12
   br i1 %tmp18, label %bb37, label %bb19
 
 bb19:                                             ; preds = %bb16
-  %tmp20 = getelementptr inbounds [3 x i8], [3 x i8]* %tmp, i64 0, i64 0
-  %tmp21 = load i8* (i64, i8*)*, i8* (i64, i8*)** @global_3, align 8
-  %tmp22 = call i8* %tmp21(i64 undef, i8* getelementptr inbounds ([14 x i8], [14 x i8]* @global_4, i64 0, i64 0))
-  %tmp23 = bitcast i8* %tmp22 to i32*
-  %tmp24 = icmp eq i32* %tmp23, null
+  %tmp21 = load ptr, ptr @global_3, align 8
+  %tmp22 = call ptr %tmp21(i64 undef, ptr @global_4)
+  %tmp24 = icmp eq ptr %tmp22, null
   %tmp25 = icmp eq i32 %tmp13, 0
   %tmp26 = zext i32 %tmp5 to i64
   br label %bb27
 
 bb27:                                             ; preds = %bb34, %bb19
-  %tmp28 = call zeroext i8 @call_6(%1* %arg1, i32 signext undef)
-  store i8 %tmp28, i8* %tmp20, align 1
+  %tmp28 = call zeroext i8 @call_6(ptr %arg1, i32 signext undef)
+  store i8 %tmp28, ptr %tmp, align 1
   br label %bb29
 
 bb29:                                             ; preds = %bb27
@@ -406,8 +404,8 @@ bb36:                                             ; preds = %bb34
   br label %bb54
 
 bb37:                                             ; preds = %bb16
-  %tmp38 = load i32, i32* undef, align 8
-  %tmp39 = select i1 %tmp7, i8* getelementptr inbounds ([1 x i8], [1 x i8]* @global_1, i64 0, i64 0), i8* null
+  %tmp38 = load i32, ptr undef, align 8
+  %tmp39 = select i1 %tmp7, ptr @global_1, ptr null
   %tmp40 = icmp ne i32 %tmp38, 0
   switch i32 undef, label %bb41 [
     i32 1, label %bb42
@@ -418,8 +416,8 @@ bb41:                                             ; preds = %bb37
   br label %bb50
 
 bb42:                                             ; preds = %bb37, %bb37
-  %tmp43 = call signext i32 @call_5(i8* %tmp39)
-  %tmp44 = load i16, i16* getelementptr inbounds (%0, %0* @global_2, i64 0, i32 81), align 4
+  %tmp43 = call signext i32 @call_5(ptr %tmp39)
+  %tmp44 = load i16, ptr getelementptr inbounds (%0, ptr @global_2, i64 0, i32 81), align 4
   %tmp45 = sitofp i16 %tmp44 to float
   %tmp46 = select i1 %tmp40, float 1.750000e+00, float 1.500000e+00
   %tmp47 = fmul fast float %tmp46, %tmp45
@@ -430,7 +428,7 @@ bb42:                                             ; preds = %bb37, %bb37
 bb50:                                             ; preds = %bb42, %bb41
   %tmp51 = phi i32 [ %tmp49, %bb42 ], [ undef, %bb41 ]
   %tmp52 = trunc i32 %tmp51 to i16
-  %tmp53 = call %3* @call_4(%4* nonnull undef, i32 signext 1024, i32 signext 0, i32 signext %tmp38, i32 signext 0, i32 signext 0, i16 signext %tmp52, i16 signext undef, %2* %arg, %1* %arg1, i32 signext -1, float 0.000000e+00, float undef, float -1.000000e+00, float -1.000000e+00, i8* null)
+  %tmp53 = call ptr @call_4(ptr nonnull undef, i32 signext 1024, i32 signext 0, i32 signext %tmp38, i32 signext 0, i32 signext 0, i16 signext %tmp52, i16 signext undef, ptr %arg, ptr %arg1, i32 signext -1, float 0.000000e+00, float undef, float -1.000000e+00, float -1.000000e+00, ptr null)
   br label %bb54
 
 bb54:                                             ; preds = %bb50, %bb36

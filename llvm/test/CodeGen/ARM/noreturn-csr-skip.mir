@@ -10,7 +10,7 @@
   define void @noret() noreturn nounwind {
   start:
     %p = alloca i32
-    store i32 42, i32* %p
+    store i32 42, ptr %p
     unreachable
   }
 ...

@@ -4,7 +4,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare i32 @__gxx_personality_v0(...)
 
-define fastcc void @_ZN11__sanitizerL12TestRegistryEPNS_14ThreadRegistryEb() #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define fastcc void @_ZN11__sanitizerL12TestRegistryEPNS_14ThreadRegistryEb() #0 personality ptr @__gxx_personality_v0 {
 entry:
   br i1 undef, label %if.else, label %entry.if.end_crit_edge
 
@@ -12,7 +12,7 @@ if.else:
   ret void
 
 invoke.cont70:
-  store i32 %call71, i32* undef, align 4
+  store i32 %call71, ptr undef, align 4
   br label %if.else
 
 ; CHECK-LABEL: @_ZN11__sanitizerL12TestRegistryEPNS_14ThreadRegistryEb
@@ -22,7 +22,7 @@ lpad65.loopexit.split-lp.loopexit.split-lp:
   br label %if.else
 
 lpad65.loopexit.split-lp.loopexit.split-lp.loopexit:
-  %lpad.loopexit1121 = landingpad { i8*, i32 }
+  %lpad.loopexit1121 = landingpad { ptr, i32 }
           cleanup
   br label %lpad65.loopexit.split-lp.loopexit.split-lp
 

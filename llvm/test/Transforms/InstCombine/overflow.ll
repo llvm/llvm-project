@@ -38,14 +38,14 @@ if.end:
 ; promote it since the add.off instruction has another use, and 2) it is unsafe
 ; because the add-with-off makes the high bits of the original add live.
 
-define i32 @test2(i32 %a, i32 %b, i64* %P) nounwind ssp {
+define i32 @test2(i32 %a, i32 %b, ptr %P) nounwind ssp {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[A:%.*]] to i64
 ; CHECK-NEXT:    [[CONV2:%.*]] = sext i32 [[B:%.*]] to i64
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[CONV2]], [[CONV]]
 ; CHECK-NEXT:    [[ADD_OFF:%.*]] = add nsw i64 [[ADD]], 2147483648
-; CHECK-NEXT:    store i64 [[ADD_OFF]], i64* [[P:%.*]], align 4
+; CHECK-NEXT:    store i64 [[ADD_OFF]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[ADD_OFF]], 4294967295
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
@@ -60,7 +60,7 @@ entry:
   %conv2 = sext i32 %b to i64
   %add = add nsw i64 %conv2, %conv
   %add.off = add i64 %add, 2147483648
-  store i64 %add.off, i64* %P
+  store i64 %add.off, ptr %P
   %0 = icmp ugt i64 %add.off, 4294967295
   br i1 %0, label %if.then, label %if.end
 

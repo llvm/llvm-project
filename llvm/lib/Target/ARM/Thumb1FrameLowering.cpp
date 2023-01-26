@@ -218,7 +218,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
         FRSize += 4;
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case ARM::R8:
     case ARM::R9:
     case ARM::R10:
@@ -226,13 +226,13 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
         GPRCS2Size += 4;
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case ARM::LR:
       if (HasFrameRecordArea) {
         FRSize += 4;
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case ARM::R4:
     case ARM::R5:
     case ARM::R6:
@@ -368,7 +368,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
       case ARM::R12:
         if (STI.splitFramePushPop(MF))
           break;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case ARM::R0:
       case ARM::R1:
       case ARM::R2:

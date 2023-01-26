@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -globalopt -S | FileCheck %s
+; RUN: opt < %s -passes='function(instcombine),globalopt' -S | FileCheck %s
 ; CHECK: internal fastcc float @foo
 
 define internal float @foo() {
@@ -6,7 +6,7 @@ define internal float @foo() {
 }
 
 define float @bar() {
-        %tmp1 = call float (...) bitcast (float ()* @foo to float (...)*)( )
+        %tmp1 = call float (...) @foo( )
         %tmp2 = fmul float %tmp1, 1.000000e+01           ; <float> [#uses=1]
         ret float %tmp2
 }

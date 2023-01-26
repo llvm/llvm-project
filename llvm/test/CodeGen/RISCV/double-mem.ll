@@ -4,23 +4,23 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d -verify-machineinstrs < %s \
 ; RUN:   -target-abi=lp64d | FileCheck -check-prefixes=CHECKIFD,RV64IFD %s
 
-define dso_local double @fld(double *%a) nounwind {
+define dso_local double @fld(ptr %a) nounwind {
 ; CHECKIFD-LABEL: fld:
 ; CHECKIFD:       # %bb.0:
 ; CHECKIFD-NEXT:    fld ft0, 0(a0)
 ; CHECKIFD-NEXT:    fld ft1, 24(a0)
 ; CHECKIFD-NEXT:    fadd.d fa0, ft0, ft1
 ; CHECKIFD-NEXT:    ret
-  %1 = load double, double* %a
-  %2 = getelementptr double, double* %a, i32 3
-  %3 = load double, double* %2
+  %1 = load double, ptr %a
+  %2 = getelementptr double, ptr %a, i32 3
+  %3 = load double, ptr %2
 ; Use both loaded values in an FP op to ensure an fld is used, even for the
 ; soft float ABI
   %4 = fadd double %1, %3
   ret double %4
 }
 
-define dso_local void @fsd(double *%a, double %b, double %c) nounwind {
+define dso_local void @fsd(ptr %a, double %b, double %c) nounwind {
 ; CHECKIFD-LABEL: fsd:
 ; CHECKIFD:       # %bb.0:
 ; CHECKIFD-NEXT:    fadd.d ft0, fa0, fa1
@@ -30,9 +30,9 @@ define dso_local void @fsd(double *%a, double %b, double %c) nounwind {
 ; Use %b and %c in an FP op to ensure floating point registers are used, even
 ; for the soft float ABI
   %1 = fadd double %b, %c
-  store double %1, double* %a
-  %2 = getelementptr double, double* %a, i32 8
-  store double %1, double* %2
+  store double %1, ptr %a
+  %2 = getelementptr double, ptr %a, i32 8
+  store double %1, ptr %2
   ret void
 }
 
@@ -53,11 +53,11 @@ define dso_local double @fld_fsd_global(double %a, double %b) nounwind {
 ; Use %a and %b in an FP op to ensure floating point registers are used, even
 ; for the soft float ABI
   %1 = fadd double %a, %b
-  %2 = load volatile double, double* @G
-  store double %1, double* @G
-  %3 = getelementptr double, double* @G, i32 9
-  %4 = load volatile double, double* %3
-  store double %1, double* %3
+  %2 = load volatile double, ptr @G
+  store double %1, ptr @G
+  %3 = getelementptr double, ptr @G, i32 9
+  %4 = load volatile double, ptr %3
+  store double %1, ptr %3
   ret double %1
 }
 
@@ -79,14 +79,14 @@ define dso_local double @fld_fsd_constant(double %a) nounwind {
 ; RV64IFD-NEXT:    fadd.d fa0, fa0, ft0
 ; RV64IFD-NEXT:    fsd fa0, -273(a0)
 ; RV64IFD-NEXT:    ret
-  %1 = inttoptr i32 3735928559 to double*
-  %2 = load volatile double, double* %1
+  %1 = inttoptr i32 3735928559 to ptr
+  %2 = load volatile double, ptr %1
   %3 = fadd double %a, %2
-  store double %3, double* %1
+  store double %3, ptr %1
   ret double %3
 }
 
-declare void @notdead(i8*)
+declare void @notdead(ptr)
 
 define dso_local double @fld_stack(double %a) nounwind {
 ; RV32IFD-LABEL: fld_stack:
@@ -119,11 +119,10 @@ define dso_local double @fld_stack(double %a) nounwind {
 ; RV64IFD-NEXT:    addi sp, sp, 32
 ; RV64IFD-NEXT:    ret
   %1 = alloca double, align 8
-  %2 = bitcast double* %1 to i8*
-  call void @notdead(i8* %2)
-  %3 = load double, double* %1
-  %4 = fadd double %3, %a ; force load in to FPR64
-  ret double %4
+  call void @notdead(ptr %1)
+  %2 = load double, ptr %1
+  %3 = fadd double %2, %a ; force load in to FPR64
+  ret double %3
 }
 
 define dso_local void @fsd_stack(double %a, double %b) nounwind {
@@ -152,20 +151,19 @@ define dso_local void @fsd_stack(double %a, double %b) nounwind {
 ; RV64IFD-NEXT:    ret
   %1 = fadd double %a, %b ; force store from FPR64
   %2 = alloca double, align 8
-  store double %1, double* %2
-  %3 = bitcast double* %2 to i8*
-  call void @notdead(i8* %3)
+  store double %1, ptr %2
+  call void @notdead(ptr %2)
   ret void
 }
 
 ; Test selection of store<ST4[%a], trunc to f32>, ..
-define dso_local void @fsd_trunc(float* %a, double %b) nounwind noinline optnone {
+define dso_local void @fsd_trunc(ptr %a, double %b) nounwind noinline optnone {
 ; CHECKIFD-LABEL: fsd_trunc:
 ; CHECKIFD:       # %bb.0:
 ; CHECKIFD-NEXT:    fcvt.s.d ft0, fa0
 ; CHECKIFD-NEXT:    fsw ft0, 0(a0)
 ; CHECKIFD-NEXT:    ret
   %1 = fptrunc double %b to float
-  store float %1, float* %a, align 4
+  store float %1, ptr %a, align 4
   ret void
 }

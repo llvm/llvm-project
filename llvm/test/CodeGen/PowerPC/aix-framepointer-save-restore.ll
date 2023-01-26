@@ -7,21 +7,21 @@
 ; RUN:     -mtriple=powerpc64-ibm-aix-xcoff | \
 ; RUN:   FileCheck %s -check-prefixes=AIX64
 
-declare void @clobber(i32*)
+declare void @clobber(ptr)
 
 define dso_local float @frameptr_only(i32 %n, float %f) {
 ; AIX32-LABEL: frameptr_only:
 ; AIX32:       # %bb.0: # %entry
 ; AIX32-NEXT:    mflr 0
 ; AIX32-NEXT:    stw 31, -12(1)
-; AIX32-NEXT:    stw 0, 8(1)
 ; AIX32-NEXT:    stwu 1, -80(1)
 ; AIX32-NEXT:    slwi 3, 3, 2
 ; AIX32-NEXT:    mr 31, 1
-; AIX32-NEXT:    stfd 31, 72(31) # 8-byte Folded Spill
-; AIX32-NEXT:    fmr 31, 1
+; AIX32-NEXT:    stw 0, 88(1)
 ; AIX32-NEXT:    addi 3, 3, 15
 ; AIX32-NEXT:    addi 4, 31, 80
+; AIX32-NEXT:    stfd 31, 72(31) # 8-byte Folded Spill
+; AIX32-NEXT:    fmr 31, 1
 ; AIX32-NEXT:    rlwinm 3, 3, 0, 0, 27
 ; AIX32-NEXT:    neg 3, 3
 ; AIX32-NEXT:    stwux 4, 1, 3
@@ -40,14 +40,14 @@ define dso_local float @frameptr_only(i32 %n, float %f) {
 ; AIX64:       # %bb.0: # %entry
 ; AIX64-NEXT:    mflr 0
 ; AIX64-NEXT:    std 31, -16(1)
-; AIX64-NEXT:    std 0, 16(1)
 ; AIX64-NEXT:    stdu 1, -144(1)
 ; AIX64-NEXT:    rldic 3, 3, 2, 30
 ; AIX64-NEXT:    mr 31, 1
-; AIX64-NEXT:    stfd 31, 136(31) # 8-byte Folded Spill
-; AIX64-NEXT:    fmr 31, 1
+; AIX64-NEXT:    std 0, 160(1)
 ; AIX64-NEXT:    addi 3, 3, 15
 ; AIX64-NEXT:    addi 4, 31, 144
+; AIX64-NEXT:    stfd 31, 136(31) # 8-byte Folded Spill
+; AIX64-NEXT:    fmr 31, 1
 ; AIX64-NEXT:    rldicl 3, 3, 60, 4
 ; AIX64-NEXT:    rldicl 3, 3, 4, 29
 ; AIX64-NEXT:    neg 3, 3
@@ -64,7 +64,7 @@ define dso_local float @frameptr_only(i32 %n, float %f) {
 ; AIX64-NEXT:    blr
 entry:
   %0 = alloca i32, i32 %n
-  call void @clobber(i32* %0)
+  call void @clobber(ptr %0)
   ret float %f
 }
 
@@ -128,6 +128,6 @@ define dso_local void @frameptr_realigned(i32 %n) {
 ; AIX64-NEXT:    ld 30, -16(1)
 ; AIX64-NEXT:    blr
   %ptr = alloca i32, i32 %n, align 64
-  call void @clobber(i32* %ptr)
+  call void @clobber(ptr %ptr)
   ret void
 }

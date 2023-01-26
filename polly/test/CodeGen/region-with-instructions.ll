@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-codegen -S < %s | FileCheck %s
 
 ; CHECK-LABEL:   polly.stmt.bb48:
 ; CHECK-NEXT:   %scevgep = getelementptr i64, i64* %A, i64 %polly.indvar

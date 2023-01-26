@@ -32,11 +32,10 @@ target triple = "arm64-apple-ios3.0.0"
 %struct.five = type { i32, i32, i32, i32, i32 }
 
 ; Function Attrs: nounwind ssp
-define i32 @return_five_int(%struct.five* %f) #0 !dbg !4 {
+define i32 @return_five_int(ptr %f) #0 !dbg !4 {
 entry:
-  call void @llvm.dbg.declare(metadata %struct.five* %f, metadata !17, metadata !DIExpression(DW_OP_deref)), !dbg !18
-  %a = getelementptr inbounds %struct.five, %struct.five* %f, i32 0, i32 0, !dbg !19
-  %0 = load i32, i32* %a, align 4, !dbg !19
+  call void @llvm.dbg.declare(metadata ptr %f, metadata !17, metadata !DIExpression(DW_OP_deref)), !dbg !18
+  %0 = load i32, ptr %f, align 4, !dbg !19
   ret i32 %0, !dbg !19
 }
 

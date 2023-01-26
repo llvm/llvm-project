@@ -81,7 +81,7 @@ for.end6:
   ret void
 }
 
-define void @test3(i32 %a, i32 %b, i32* %c) {
+define void @test3(i32 %a, i32 %b, ptr %c) {
 entry:
   br label %do.body
 ; CHECK: edge entry -> do.body probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
@@ -89,7 +89,7 @@ entry:
 do.body:
   %i.0 = phi i32 [ 0, %entry ], [ %inc4, %if.end ]
   call void @g1()
-  %0 = load i32, i32* %c, align 4
+  %0 = load i32, ptr %c, align 4
   %cmp = icmp slt i32 %0, 42
   br i1 %cmp, label %do.body1, label %if.end
 ; CHECK: edge do.body -> do.body1 probability is 0x40000000 / 0x80000000 = 50.00%
@@ -117,7 +117,7 @@ do.end6:
   ret void
 }
 
-define void @test4(i32 %a, i32 %b, i32* %c) {
+define void @test4(i32 %a, i32 %b, ptr %c) {
 entry:
   br label %do.body
 ; CHECK: edge entry -> do.body probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
@@ -125,7 +125,7 @@ entry:
 do.body:
   %i.0 = phi i32 [ 0, %entry ], [ %inc4, %do.end ]
   call void @g1()
-  %0 = load i32, i32* %c, align 4
+  %0 = load i32, ptr %c, align 4
   %cmp = icmp slt i32 %0, 42
   br i1 %cmp, label %return, label %do.body1
 ; CHECK: edge do.body -> return probability is 0x04000000 / 0x80000000 = 3.12%
@@ -157,7 +157,7 @@ return:
   ret void
 }
 
-define void @test5(i32 %a, i32 %b, i32* %c) {
+define void @test5(i32 %a, i32 %b, ptr %c) {
 entry:
   br label %do.body
 ; CHECK: edge entry -> do.body probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
@@ -170,7 +170,7 @@ do.body:
 
 do.body1:
   %j.0 = phi i32 [ 0, %do.body ], [ %inc, %if.end ]
-  %0 = load i32, i32* %c, align 4
+  %0 = load i32, ptr %c, align 4
   %cmp = icmp slt i32 %0, 42
   br i1 %cmp, label %return, label %if.end
 ; CHECK: edge do.body1 -> return probability is 0x04000000 / 0x80000000 = 3.12%
@@ -201,7 +201,7 @@ return:
   ret void
 }
 
-define void @test6(i32 %a, i32 %b, i32* %c) {
+define void @test6(i32 %a, i32 %b, ptr %c) {
 entry:
   br label %do.body
 ; CHECK: edge entry -> do.body probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
@@ -215,7 +215,7 @@ do.body:
 do.body1:
   %j.0 = phi i32 [ 0, %do.body ], [ %inc, %do.cond ]
   call void @g2()
-  %0 = load i32, i32* %c, align 4
+  %0 = load i32, ptr %c, align 4
   %cmp = icmp slt i32 %0, 42
   br i1 %cmp, label %return, label %do.cond
 ; CHECK: edge do.body1 -> return probability is 0x04000000 / 0x80000000 = 3.12%
@@ -245,7 +245,7 @@ return:
   ret void
 }
 
-define void @test7(i32 %a, i32 %b, i32* %c) {
+define void @test7(i32 %a, i32 %b, ptr %c) {
 entry:
   %cmp10 = icmp sgt i32 %a, 0
   br i1 %cmp10, label %for.body.lr.ph, label %for.end7
@@ -259,7 +259,7 @@ for.body.lr.ph:
 
 for.body:
   %i.011 = phi i32 [ 0, %for.body.lr.ph ], [ %inc6, %for.inc5 ]
-  %0 = load i32, i32* %c, align 4
+  %0 = load i32, ptr %c, align 4
   %cmp1 = icmp eq i32 %0, %i.011
   br i1 %cmp1, label %for.inc5, label %if.end
 ; CHECK: edge for.body -> for.inc5 probability is 0x40000000 / 0x80000000 = 50.00%
@@ -297,7 +297,7 @@ for.end7:
   ret void
 }
 
-define void @test8(i32 %a, i32 %b, i32* %c) {
+define void @test8(i32 %a, i32 %b, ptr %c) {
 entry:
   %cmp18 = icmp sgt i32 %a, 0
   br i1 %cmp18, label %for.body.lr.ph, label %for.end15
@@ -306,8 +306,8 @@ entry:
 
 for.body.lr.ph:
   %cmp216 = icmp sgt i32 %b, 0
-  %arrayidx5 = getelementptr inbounds i32, i32* %c, i64 1
-  %arrayidx9 = getelementptr inbounds i32, i32* %c, i64 2
+  %arrayidx5 = getelementptr inbounds i32, ptr %c, i64 1
+  %arrayidx9 = getelementptr inbounds i32, ptr %c, i64 2
   br label %for.body
 ; CHECK: edge for.body.lr.ph -> for.body probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
@@ -320,21 +320,21 @@ for.body:
 
 for.body3:
   %j.017 = phi i32 [ 0, %for.body ], [ %inc, %for.inc ]
-  %0 = load i32, i32* %c, align 4
+  %0 = load i32, ptr %c, align 4
   %cmp4 = icmp eq i32 %0, %j.017
   br i1 %cmp4, label %for.inc, label %if.end
 ; CHECK: edge for.body3 -> for.inc probability is 0x40000000 / 0x80000000 = 50.00%
 ; CHECK: edge for.body3 -> if.end probability is 0x40000000 / 0x80000000 = 50.00%
 
 if.end:
-  %1 = load i32, i32* %arrayidx5, align 4
+  %1 = load i32, ptr %arrayidx5, align 4
   %cmp6 = icmp eq i32 %1, %j.017
   br i1 %cmp6, label %for.inc, label %if.end8
 ; CHECK: edge if.end -> for.inc probability is 0x40000000 / 0x80000000 = 50.00%
 ; CHECK: edge if.end -> if.end8 probability is 0x40000000 / 0x80000000 = 50.00%
 
 if.end8:
-  %2 = load i32, i32* %arrayidx9, align 4
+  %2 = load i32, ptr %arrayidx9, align 4
   %cmp10 = icmp eq i32 %2, %j.017
   br i1 %cmp10, label %for.inc, label %if.end12
 ; CHECK: edge if.end8 -> for.inc probability is 0x40000000 / 0x80000000 = 50.00%
@@ -403,7 +403,7 @@ end:
 
 ; Check that the for.body -> if.then edge is considered unlikely due to making
 ; the if-condition false for the next iteration of the loop.
-define i32 @test10(i32 %n, i32* %p) {
+define i32 @test10(i32 %n, ptr %p) {
 entry:
   br label %for.cond
 ; CHECK: edge entry -> for.cond probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
@@ -421,8 +421,8 @@ for.cond.cleanup:
   ret i32 %sum.0
 
 for.body:
-  %arrayidx = getelementptr inbounds i32, i32* %p, i32 %i.0
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %p, i32 %i.0
+  %0 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %sum.0, %0
   %inc = add nsw i32 %count.0, 1
   %cmp1 = icmp sgt i32 %count.0, 6
@@ -430,7 +430,7 @@ for.body:
 ; CHECK: edge for.body -> if.then probability is 0x2aaaa8e4 / 0x80000000 = 33.33%
 ; CHECK: edge for.body -> for.inc probability is 0x5555571c / 0x80000000 = 66.67%
 if.then:
-  store i32 %add, i32* %arrayidx, align 4
+  store i32 %add, ptr %arrayidx, align 4
   br label %for.inc
 ; CHECK: edge if.then -> for.inc probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
@@ -444,7 +444,7 @@ for.inc:
 
 ; Each successor to for.body makes itself not be taken in the next iteration, so
 ; both should be equally likely
-define i32 @test11(i32 %n, i32* %p) {
+define i32 @test11(i32 %n, ptr %p) {
 entry:
   br label %for.cond
 ; CHECK: edge entry -> for.cond probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
@@ -463,15 +463,15 @@ for.cond.cleanup:
 
 for.body:
   %tobool = icmp eq i32 %flip.0, 0
-  %arrayidx1 = getelementptr inbounds i32, i32* %p, i32 %i.0
-  %0 = load i32, i32* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %p, i32 %i.0
+  %0 = load i32, ptr %arrayidx1, align 4
   br i1 %tobool, label %if.else, label %if.then
 ; CHECK: edge for.body -> if.else probability is 0x40000000 / 0x80000000 = 50.00%
 ; CHECK: edge for.body -> if.then probability is 0x40000000 / 0x80000000 = 50.00%
 
 if.then:
   %add = add nsw i32 %0, %sum.0
-  store i32 %add, i32* %arrayidx1, align 4
+  store i32 %add, ptr %arrayidx1, align 4
   br label %for.inc
 ; CHECK: edge if.then -> for.inc probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
@@ -510,7 +510,7 @@ invoke.cont:
 ; CHECK: edge invoke.cont -> exit probability is 0x04000000 / 0x80000000 = 3.12%
 
 lpad:
-  %ll = landingpad { i8*, i32 }
+  %ll = landingpad { ptr, i32 }
           cleanup
   br label %exit
 

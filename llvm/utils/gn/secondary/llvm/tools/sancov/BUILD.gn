@@ -10,6 +10,7 @@ executable("sancov") {
     "//llvm/lib/Target:AllTargetsDescs",
     "//llvm/lib/Target:AllTargetsDisassemblers",
     "//llvm/lib/Target:AllTargetsInfos",
+    "//llvm/lib/TargetParser",
   ]
   sources = [ "sancov.cpp" ]
 }

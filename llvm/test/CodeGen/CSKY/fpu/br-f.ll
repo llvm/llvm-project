@@ -1123,7 +1123,6 @@ define i32 @brRR_false(float %x, float %y) {
 ; CHECK-SF-NEXT:    btsti16 a0, 0
 ; CHECK-SF-NEXT:    bt32 .LBB30_2
 ; CHECK-SF-NEXT:  # %bb.1: # %label1
-; CHECK-SF-NEXT:    movi16 a0, 1
 ; CHECK-SF-NEXT:    rts16
 ; CHECK-SF-NEXT:  .LBB30_2: # %label2
 ; CHECK-SF-NEXT:    movi16 a0, 0
@@ -1135,7 +1134,6 @@ define i32 @brRR_false(float %x, float %y) {
 ; CHECK-SF2-NEXT:    btsti16 a0, 0
 ; CHECK-SF2-NEXT:    bt32 .LBB30_2
 ; CHECK-SF2-NEXT:  # %bb.1: # %label1
-; CHECK-SF2-NEXT:    movi16 a0, 1
 ; CHECK-SF2-NEXT:    rts16
 ; CHECK-SF2-NEXT:  .LBB30_2: # %label2
 ; CHECK-SF2-NEXT:    movi16 a0, 0
@@ -1157,7 +1155,6 @@ define i32 @brRI_false(float %x) {
 ; CHECK-SF-NEXT:    btsti16 a0, 0
 ; CHECK-SF-NEXT:    bt32 .LBB31_2
 ; CHECK-SF-NEXT:  # %bb.1: # %label1
-; CHECK-SF-NEXT:    movi16 a0, 1
 ; CHECK-SF-NEXT:    rts16
 ; CHECK-SF-NEXT:  .LBB31_2: # %label2
 ; CHECK-SF-NEXT:    movi16 a0, 0
@@ -1169,7 +1166,6 @@ define i32 @brRI_false(float %x) {
 ; CHECK-SF2-NEXT:    btsti16 a0, 0
 ; CHECK-SF2-NEXT:    bt32 .LBB31_2
 ; CHECK-SF2-NEXT:  # %bb.1: # %label1
-; CHECK-SF2-NEXT:    movi16 a0, 1
 ; CHECK-SF2-NEXT:    rts16
 ; CHECK-SF2-NEXT:  .LBB31_2: # %label2
 ; CHECK-SF2-NEXT:    movi16 a0, 0
@@ -1191,7 +1187,6 @@ define i32 @brR0_false(float %x) {
 ; CHECK-SF-NEXT:    btsti16 a0, 0
 ; CHECK-SF-NEXT:    bt32 .LBB32_2
 ; CHECK-SF-NEXT:  # %bb.1: # %label1
-; CHECK-SF-NEXT:    movi16 a0, 1
 ; CHECK-SF-NEXT:    rts16
 ; CHECK-SF-NEXT:  .LBB32_2: # %label2
 ; CHECK-SF-NEXT:    movi16 a0, 0
@@ -1203,7 +1198,6 @@ define i32 @brR0_false(float %x) {
 ; CHECK-SF2-NEXT:    btsti16 a0, 0
 ; CHECK-SF2-NEXT:    bt32 .LBB32_2
 ; CHECK-SF2-NEXT:  # %bb.1: # %label1
-; CHECK-SF2-NEXT:    movi16 a0, 1
 ; CHECK-SF2-NEXT:    rts16
 ; CHECK-SF2-NEXT:  .LBB32_2: # %label2
 ; CHECK-SF2-NEXT:    movi16 a0, 0
@@ -1657,9 +1651,7 @@ define i32 @brRR_true(float %x, float %y) {
 ; CHECK-SF-NEXT:    bt32 .LBB45_2
 ; CHECK-SF-NEXT:  # %bb.1: # %label1
 ; CHECK-SF-NEXT:    movi16 a0, 1
-; CHECK-SF-NEXT:    rts16
 ; CHECK-SF-NEXT:  .LBB45_2: # %label2
-; CHECK-SF-NEXT:    movi16 a0, 0
 ; CHECK-SF-NEXT:    rts16
 ;
 ; CHECK-SF2-LABEL: brRR_true:
@@ -1669,9 +1661,7 @@ define i32 @brRR_true(float %x, float %y) {
 ; CHECK-SF2-NEXT:    bt32 .LBB45_2
 ; CHECK-SF2-NEXT:  # %bb.1: # %label1
 ; CHECK-SF2-NEXT:    movi16 a0, 1
-; CHECK-SF2-NEXT:    rts16
 ; CHECK-SF2-NEXT:  .LBB45_2: # %label2
-; CHECK-SF2-NEXT:    movi16 a0, 0
 ; CHECK-SF2-NEXT:    rts16
 entry:
   %fcmp = fcmp true float %y, %x
@@ -1691,9 +1681,7 @@ define i32 @brRI_true(float %x) {
 ; CHECK-SF-NEXT:    bt32 .LBB46_2
 ; CHECK-SF-NEXT:  # %bb.1: # %label1
 ; CHECK-SF-NEXT:    movi16 a0, 1
-; CHECK-SF-NEXT:    rts16
 ; CHECK-SF-NEXT:  .LBB46_2: # %label2
-; CHECK-SF-NEXT:    movi16 a0, 0
 ; CHECK-SF-NEXT:    rts16
 ;
 ; CHECK-SF2-LABEL: brRI_true:
@@ -1703,9 +1691,7 @@ define i32 @brRI_true(float %x) {
 ; CHECK-SF2-NEXT:    bt32 .LBB46_2
 ; CHECK-SF2-NEXT:  # %bb.1: # %label1
 ; CHECK-SF2-NEXT:    movi16 a0, 1
-; CHECK-SF2-NEXT:    rts16
 ; CHECK-SF2-NEXT:  .LBB46_2: # %label2
-; CHECK-SF2-NEXT:    movi16 a0, 0
 ; CHECK-SF2-NEXT:    rts16
 entry:
   %fcmp = fcmp true float %x, 10.0
@@ -1725,9 +1711,7 @@ define i32 @brR0_true(float %x) {
 ; CHECK-SF-NEXT:    bt32 .LBB47_2
 ; CHECK-SF-NEXT:  # %bb.1: # %label1
 ; CHECK-SF-NEXT:    movi16 a0, 1
-; CHECK-SF-NEXT:    rts16
 ; CHECK-SF-NEXT:  .LBB47_2: # %label2
-; CHECK-SF-NEXT:    movi16 a0, 0
 ; CHECK-SF-NEXT:    rts16
 ;
 ; CHECK-SF2-LABEL: brR0_true:
@@ -1737,9 +1721,7 @@ define i32 @brR0_true(float %x) {
 ; CHECK-SF2-NEXT:    bt32 .LBB47_2
 ; CHECK-SF2-NEXT:  # %bb.1: # %label1
 ; CHECK-SF2-NEXT:    movi16 a0, 1
-; CHECK-SF2-NEXT:    rts16
 ; CHECK-SF2-NEXT:  .LBB47_2: # %label2
-; CHECK-SF2-NEXT:    movi16 a0, 0
 ; CHECK-SF2-NEXT:    rts16
 entry:
   %fcmp = fcmp true float %x, 0.0

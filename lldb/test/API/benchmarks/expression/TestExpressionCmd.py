@@ -1,8 +1,5 @@
 """Test lldb's expression evaluations and collect statistics."""
 
-from __future__ import print_function
-
-
 import sys
 import lldb
 from lldbsuite.test.decorators import *

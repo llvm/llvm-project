@@ -3,7 +3,7 @@
 ; RUN: llc -verify-machineinstrs -O0 -mcpu=pwr7 -mtriple=powerpc64-ibm-aix-xcoff -vec-extabi < %s | FileCheck %s --check-prefixes=CHECK,BE
 ; RUN: llc -verify-machineinstrs -O0 -mcpu=pwr7 -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,LE
 
-define void @test1(<4 x i32>* %P1, <4 x i32>* %P2, <4 x float>* %P3) nounwind {
+define void @test1(ptr %P1, ptr %P2, ptr %P3) nounwind {
 ; BE-LABEL: test1:
 ; BE:       # %bb.0:
 ; BE-NEXT:    lxvw4x 0, 0, 3
@@ -39,17 +39,17 @@ define void @test1(<4 x i32>* %P1, <4 x i32>* %P2, <4 x float>* %P3) nounwind {
 ; LE-NEXT:    xxswapd 0, 0
 ; LE-NEXT:    stxvd2x 0, 0, 5
 ; LE-NEXT:    blr
-	%tmp = load <4 x i32>, <4 x i32>* %P1		; <<4 x i32>> [#uses=1]
+	%tmp = load <4 x i32>, ptr %P1		; <<4 x i32>> [#uses=1]
 	%tmp4 = and <4 x i32> %tmp, < i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648 >		; <<4 x i32>> [#uses=1]
-	store <4 x i32> %tmp4, <4 x i32>* %P1
-	%tmp7 = load <4 x i32>, <4 x i32>* %P2		; <<4 x i32>> [#uses=1]
+	store <4 x i32> %tmp4, ptr %P1
+	%tmp7 = load <4 x i32>, ptr %P2		; <<4 x i32>> [#uses=1]
 	%tmp9 = and <4 x i32> %tmp7, < i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647 >		; <<4 x i32>> [#uses=1]
-	store <4 x i32> %tmp9, <4 x i32>* %P2
-	%tmp.upgrd.1 = load <4 x float>, <4 x float>* %P3		; <<4 x float>> [#uses=1]
+	store <4 x i32> %tmp9, ptr %P2
+	%tmp.upgrd.1 = load <4 x float>, ptr %P3		; <<4 x float>> [#uses=1]
 	%tmp11 = bitcast <4 x float> %tmp.upgrd.1 to <4 x i32>		; <<4 x i32>> [#uses=1]
 	%tmp12 = and <4 x i32> %tmp11, < i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647 >		; <<4 x i32>> [#uses=1]
 	%tmp13 = bitcast <4 x i32> %tmp12 to <4 x float>		; <<4 x float>> [#uses=1]
-	store <4 x float> %tmp13, <4 x float>* %P3
+	store <4 x float> %tmp13, ptr %P3
 	ret void
 
 }

@@ -8,14 +8,13 @@ entry:
 
 body:
   %ip_vec30 = phi <2 x i32> [ %ip_vec, %body ], [ zeroinitializer, %entry ]
-  %scevgep.phi = phi i32* [ %scevgep.inc, %body ], [ undef, %entry ]
+  %scevgep.phi = phi ptr [ %scevgep.inc, %body ], [ undef, %entry ]
   %polly.indvar = phi i32 [ %polly.indvar_next, %body ], [ 0, %entry ]
-  %vector_ptr = bitcast i32* %scevgep.phi to <2 x i32>*
-  %_p_vec_full = load <2 x i32>, <2 x i32>* %vector_ptr, align 8
+  %_p_vec_full = load <2 x i32>, ptr %scevgep.phi, align 8
   %ip_vec = add <2 x i32> %_p_vec_full, %ip_vec30
   %polly.indvar_next = add nsw i32 %polly.indvar, 2
   %polly.loop_cond = icmp slt i32 %polly.indvar, 4
-  %scevgep.inc = getelementptr i32, i32* %scevgep.phi, i32 2
+  %scevgep.inc = getelementptr i32, ptr %scevgep.phi, i32 2
   br i1 %polly.loop_cond, label %body, label %exit
 
 exit:

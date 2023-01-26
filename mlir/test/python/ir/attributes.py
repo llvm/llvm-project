@@ -1,7 +1,9 @@
 # RUN: %PYTHON %s | FileCheck %s
 
 import gc
+
 from mlir.ir import *
+
 
 def run(f):
   print("\nTEST:", f.__name__)
@@ -319,6 +321,29 @@ def testDenseIntAttr():
     print(ShapedType(a.type).element_type)
 
 
+@run
+def testDenseArrayGetItem():
+  def print_item(AttrClass, attr_asm):
+    attr = AttrClass(Attribute.parse(attr_asm))
+    print(f"{len(attr)}: {attr[0]}, {attr[1]}")
+
+  with Context():
+    # CHECK: 2: 0, 1
+    print_item(DenseBoolArrayAttr, "array<i1: false, true>")
+    # CHECK: 2: 2, 3
+    print_item(DenseI8ArrayAttr, "array<i8: 2, 3>")
+    # CHECK: 2: 4, 5
+    print_item(DenseI16ArrayAttr, "array<i16: 4, 5>")
+    # CHECK: 2: 6, 7
+    print_item(DenseI32ArrayAttr, "array<i32: 6, 7>")
+    # CHECK: 2: 8, 9
+    print_item(DenseI64ArrayAttr, "array<i64: 8, 9>")
+    # CHECK: 2: 1.{{0+}}, 2.{{0+}}
+    print_item(DenseF32ArrayAttr, "array<f32: 1.0, 2.0>")
+    # CHECK: 2: 3.{{0+}}, 4.{{0+}}
+    print_item(DenseF64ArrayAttr, "array<f64: 3.0, 4.0>")
+
+
 # CHECK-LABEL: TEST: testDenseIntAttrGetItem
 @run
 def testDenseIntAttrGetItem():
@@ -498,3 +523,33 @@ def testArrayAttr():
     array = array + [StringAttr.get("c")]
     # CHECK: concat: ["a", "b", "c"]
     print("concat: ", array)
+
+
+# CHECK-LABEL: TEST: testStridedLayoutAttr
+@run
+def testStridedLayoutAttr():
+  with Context():
+    attr = StridedLayoutAttr.get(42, [5, 7, 13])
+    # CHECK: strided<[5, 7, 13], offset: 42>
+    print(attr)
+    # CHECK: 42
+    print(attr.offset)
+    # CHECK: 3
+    print(len(attr.strides))
+    # CHECK: 5
+    print(attr.strides[0])
+    # CHECK: 7
+    print(attr.strides[1])
+    # CHECK: 13
+    print(attr.strides[2])
+
+    attr = StridedLayoutAttr.get_fully_dynamic(3)
+    dynamic = ShapedType.get_dynamic_stride_or_offset()
+    # CHECK: strided<[?, ?, ?], offset: ?>
+    print(attr)
+    # CHECK: offset is dynamic: True
+    print(f"offset is dynamic: {attr.offset == dynamic}")
+    # CHECK: rank: 3
+    print(f"rank: {len(attr.strides)}")
+    # CHECK: strides are dynamic: [True, True, True]
+    print(f"strides are dynamic: {[s == dynamic for s in attr.strides]}")

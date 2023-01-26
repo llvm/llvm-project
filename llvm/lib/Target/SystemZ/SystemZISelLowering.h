@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include <optional>
 
 namespace llvm {
 namespace SystemZISD {
@@ -144,9 +145,6 @@ enum NodeType : unsigned {
 
   // Store the CC value in bits 29 and 28 of an integer.
   IPM,
-
-  // Compiler barrier only; generate a no-op.
-  MEMBARRIER,
 
   // Transaction begin.  The first operand is the chain, the second
   // the TDB pointer, and the third the immediate control field.
@@ -417,13 +415,13 @@ public:
   }
   unsigned
   getNumRegisters(LLVMContext &Context, EVT VT,
-                  Optional<MVT> RegisterVT) const override {
+                  std::optional<MVT> RegisterVT) const override {
     // i128 inline assembly operand.
     if (VT == MVT::i128 && RegisterVT && *RegisterVT == MVT::Untyped)
       return 1;
     return TargetLowering::getNumRegisters(Context, VT);
   }
-  bool isCheapToSpeculateCtlz() const override { return true; }
+  bool isCheapToSpeculateCtlz(Type *) const override { return true; }
   bool preferZeroCompareBranch() const override { return true; }
   bool hasBitPreservingFPLogic(EVT VT) const override {
     EVT ScVT = VT.getScalarType();
@@ -447,7 +445,7 @@ public:
     // LD, and having the full constant in memory enables reg/mem opcodes.
     return VT != MVT::f64;
   }
-  bool hasInlineStackProbe(MachineFunction &MF) const override;
+  bool hasInlineStackProbe(const MachineFunction &MF) const override;
   bool isLegalICmpImmediate(int64_t Imm) const override;
   bool isLegalAddImmediate(int64_t Imm) const override;
   bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
@@ -455,7 +453,7 @@ public:
                              Instruction *I = nullptr) const override;
   bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AS, Align Alignment,
                                       MachineMemOperand::Flags Flags,
-                                      bool *Fast) const override;
+                                      unsigned *Fast) const override;
   bool
   findOptimalMemOpLowering(std::vector<EVT> &MemOps, unsigned Limit,
                            const MemOp &Op, unsigned DstAS, unsigned SrcAS,
@@ -556,15 +554,14 @@ public:
   const MCPhysReg *getScratchRegisters(CallingConv::ID CC) const override;
   bool allowTruncateForTailCall(Type *, Type *) const override;
   bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
-  bool splitValueIntoRegisterParts(SelectionDAG &DAG, const SDLoc &DL,
-                                   SDValue Val, SDValue *Parts,
-                                   unsigned NumParts, MVT PartVT,
-                                   Optional<CallingConv::ID> CC) const override;
-  SDValue
-  joinRegisterPartsIntoValue(SelectionDAG &DAG, const SDLoc &DL,
-                             const SDValue *Parts, unsigned NumParts,
-                             MVT PartVT, EVT ValueVT,
-                             Optional<CallingConv::ID> CC) const override;
+  bool splitValueIntoRegisterParts(
+      SelectionDAG & DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
+      unsigned NumParts, MVT PartVT, std::optional<CallingConv::ID> CC)
+      const override;
+  SDValue joinRegisterPartsIntoValue(
+      SelectionDAG & DAG, const SDLoc &DL, const SDValue *Parts,
+      unsigned NumParts, MVT PartVT, EVT ValueVT,
+      std::optional<CallingConv::ID> CC) const override;
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
                                bool isVarArg,
                                const SmallVectorImpl<ISD::InputArg> &Ins,
@@ -614,7 +611,7 @@ public:
     return true;
   }
 
-  unsigned getStackProbeSize(MachineFunction &MF) const;
+  unsigned getStackProbeSize(const MachineFunction &MF) const;
 
 private:
   const SystemZSubtarget &Subtarget;
@@ -688,6 +685,7 @@ private:
   SDValue lowerZERO_EXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerShift(SDValue Op, SelectionDAG &DAG, unsigned ByScalar) const;
   SDValue lowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
 
   bool canTreatAsByteVector(EVT VT) const;
   SDValue combineExtract(const SDLoc &DL, EVT ElemVT, EVT VecVT, SDValue OrigOp,

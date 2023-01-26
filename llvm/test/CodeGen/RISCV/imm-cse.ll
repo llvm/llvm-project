@@ -26,14 +26,14 @@ define void @imm32_cse() nounwind {
 ; RV32I-NEXT:    addi a0, a0, 2
 ; RV32I-NEXT:    sw a0, %lo(dst)(a3)
 ; RV32I-NEXT:    ret
-  %1 = load volatile i32, i32* @src
+  %1 = load volatile i32, ptr @src
   %2 = add i32 %1, 4097
-  store volatile i32 %2, i32* @dst
-  %3 = load volatile i32, i32* @src
+  store volatile i32 %2, ptr @dst
+  %3 = load volatile i32, ptr @src
   %4 = add i32 %3, 4098
-  store volatile i32 %4, i32* @dst
-  %5 = load volatile i32, i32* @src
+  store volatile i32 %4, ptr @dst
+  %5 = load volatile i32, ptr @src
   %6 = add i32 %5, 4099
-  store volatile i32 %6, i32* @dst
+  store volatile i32 %6, ptr @dst
   ret void
 }

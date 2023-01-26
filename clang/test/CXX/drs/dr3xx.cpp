@@ -30,7 +30,7 @@ namespace dr301 { // dr301: yes
     typename T::template operator+<int> a; // expected-error {{typename specifier refers to a non-type template}} expected-error +{{}}
     // FIXME: This shouldn't say (null).
     class T::template operator+<int> b; // expected-error {{identifier followed by '<' indicates a class template specialization but (null) refers to a function template}}
-    enum T::template operator+<int> c; // expected-error {{expected identifier}} expected-error {{does not declare anything}}
+    enum T::template operator+<int> c; // expected-error {{expected identifier}}
     enum T::template operator+<int>::E d; // expected-error {{qualified name refers into a specialization of function template 'T::template operator +'}} expected-error {{forward reference}}
     enum T::template X<int>::E e;
     T::template operator+<int>::foobar(); // expected-error {{qualified name refers into a specialization of function template 'T::template operator +'}}
@@ -890,6 +890,33 @@ namespace dr359 { // dr359: yes
   };
 }
 
+namespace dr360 { // dr360: yes
+struct A {
+  int foo();
+  int bar();
+
+protected:
+  int baz();
+};
+
+struct B : A {
+private:
+  using A::foo; // #dr360-foo-using-decl
+protected:
+  using A::bar; // #dr360-bar-using-decl
+public:
+  using A::baz;
+};
+
+int main() {
+  int foo = B().foo(); // expected-error {{is a private member}}
+  // expected-note@#dr360-foo-using-decl {{declared private here}}
+  int bar = B().bar(); // expected-error {{is a protected member}}
+  // expected-note@#dr360-bar-using-decl {{declared protected here}}
+  int baz = B().baz();
+}
+} // namespace dr360
+
 // dr362: na
 // dr363: na
 
@@ -924,9 +951,9 @@ namespace dr367 { // dr367: yes
 namespace dr368 { // dr368: yes
   template<typename T, T> struct S {}; // expected-note {{here}}
   template<typename T> int f(S<T, T()> *); // expected-error {{function type}}
-  template<typename T> int g(S<T, (T())> *); // cxx98_17-note {{type 'dr368::X'}}
+  template<typename T> int g(S<T, (T())> *); // cxx98_17-note {{type 'X'}}
   // cxx20_2b-note@-1 {{candidate function [with T = dr368::X]}}
-  template<typename T> int g(S<T, true ? T() : T()> *); // cxx98_17-note {{type 'dr368::X'}}
+  template<typename T> int g(S<T, true ? T() : T()> *); // cxx98_17-note {{type 'X'}}
   // cxx20_2b-note@-1 {{candidate function [with T = dr368::X]}}
   struct X {};
   int n = g<X>(0); // cxx98_17-error {{no matching}}

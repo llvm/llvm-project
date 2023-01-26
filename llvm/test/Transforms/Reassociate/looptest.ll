@@ -13,14 +13,14 @@
 ; In this case, we want to reassociate the specified expr so that i+j can be
 ; hoisted out of the inner most loop.
 ;
-; RUN: opt < %s -reassociate -S | FileCheck %s
+; RUN: opt < %s -passes=reassociate -S | FileCheck %s
 ; END.
-@.LC0 = internal global [4 x i8] c"%d\0A\00"		; <[4 x i8]*> [#uses=1]
+@.LC0 = internal global [4 x i8] c"%d\0A\00"		; <ptr> [#uses=1]
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)
 
 ; Check that (i+j) has been reassociated (i=reg115, j=reg116)
-define void @test(i32 %Num, i32* %Array) {
+define void @test(i32 %Num, ptr %Array) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  bb0:
 ; CHECK-NEXT:    [[COND221:%.*]] = icmp eq i32 0, [[NUM:%.*]]
@@ -35,8 +35,8 @@ define void @test(i32 %Num, i32* %Array) {
 ; CHECK-NEXT:    [[REG117:%.*]] = phi i32 [ [[REG118:%.*]], [[BB4]] ], [ 0, [[BB3]] ]
 ; CHECK-NEXT:    [[REG113:%.*]] = add i32 [[REG116]], [[REG115]]
 ; CHECK-NEXT:    [[REG114:%.*]] = add i32 [[REG113]], [[REG117]]
-; CHECK-NEXT:    [[CAST227:%.*]] = getelementptr [4 x i8], [4 x i8]* @.LC0, i64 0, i64 0
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 (i8*, ...) @printf(i8* [[CAST227]], i32 [[REG114]])
+; CHECK-NEXT:    [[CAST227:%.*]] = getelementptr [4 x i8], ptr @.LC0, i64 0, i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 (ptr, ...) @printf(ptr [[CAST227]], i32 [[REG114]])
 ; CHECK-NEXT:    [[REG118]] = add i32 [[REG117]], 1
 ; CHECK-NEXT:    [[COND224:%.*]] = icmp ne i32 [[REG118]], [[NUM]]
 ; CHECK-NEXT:    br i1 [[COND224]], label [[BB4]], label [[BB5]]
@@ -64,8 +64,8 @@ bb4:		; preds = %bb4, %bb3
   %reg117 = phi i32 [ %reg118, %bb4 ], [ 0, %bb3 ]		; <i32> [#uses=2]
   %reg113 = add i32 %reg115, %reg117		; <i32> [#uses=1]
   %reg114 = add i32 %reg113, %reg116		; <i32> [#uses=1]
-  %cast227 = getelementptr [4 x i8], [4 x i8]* @.LC0, i64 0, i64 0		; <i8*> [#uses=1]
-  call i32 (i8*, ...) @printf( i8* %cast227, i32 %reg114 )		; <i32>:0 [#uses=0]
+  %cast227 = getelementptr [4 x i8], ptr @.LC0, i64 0, i64 0		; <ptr> [#uses=1]
+  call i32 (ptr, ...) @printf( ptr %cast227, i32 %reg114 )		; <i32>:0 [#uses=0]
   %reg118 = add i32 %reg117, 1		; <i32> [#uses=2]
   %cond224 = icmp ne i32 %reg118, %Num		; <i1> [#uses=1]
   br i1 %cond224, label %bb4, label %bb5

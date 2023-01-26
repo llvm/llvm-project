@@ -73,10 +73,10 @@ define void @foo_i32() nounwind #0 {
 ; CHECK-RV32IFD-NEXT:    lw a1, 8(sp) # 4-byte Folded Reload
 ; CHECK-RV32IFD-NEXT:    addi sp, sp, 16
 ; CHECK-RV32IFD-NEXT:    mret
-  %1 = load i32, i32* @a
-  %2 = load i32, i32* @b
+  %1 = load i32, ptr @a
+  %2 = load i32, ptr @b
   %add = add nsw i32 %2, %1
-  store i32 %add, i32* @c
+  store i32 %add, ptr @c
   ret void
 }
 
@@ -150,10 +150,10 @@ define void @foo_fp_i32() nounwind #1 {
 ; CHECK-RV32IFD-NEXT:    lw a1, 0(sp) # 4-byte Folded Reload
 ; CHECK-RV32IFD-NEXT:    addi sp, sp, 16
 ; CHECK-RV32IFD-NEXT:    mret
-  %1 = load i32, i32* @a
-  %2 = load i32, i32* @b
+  %1 = load i32, ptr @a
+  %2 = load i32, ptr @b
   %add = add nsw i32 %2, %1
-  store i32 %add, i32* @c
+  store i32 %add, ptr @c
   ret void
 }
 
@@ -244,10 +244,10 @@ define void @foo_float() nounwind #0 {
 ; CHECK-RV32IFD-NEXT:    fld ft1, 8(sp) # 8-byte Folded Reload
 ; CHECK-RV32IFD-NEXT:    addi sp, sp, 32
 ; CHECK-RV32IFD-NEXT:    mret
-  %1 = load float, float* @e
-  %2 = load float, float* @f
+  %1 = load float, ptr @e
+  %2 = load float, ptr @f
   %add = fadd float %1, %2
-  store float %add, float* @d
+  store float %add, ptr @d
   ret void
 }
 
@@ -350,10 +350,10 @@ define void @foo_fp_float() nounwind #1 {
 ; CHECK-RV32IFD-NEXT:    fld ft1, 0(sp) # 8-byte Folded Reload
 ; CHECK-RV32IFD-NEXT:    addi sp, sp, 32
 ; CHECK-RV32IFD-NEXT:    mret
-  %1 = load float, float* @e
-  %2 = load float, float* @f
+  %1 = load float, ptr @e
+  %2 = load float, ptr @f
   %add = fadd float %1, %2
-  store float %add, float* @d
+  store float %add, ptr @d
   ret void
 }
 
@@ -540,10 +540,10 @@ define void @foo_double() nounwind #0 {
 ; CHECK-RV32IFD-NEXT:    fld ft1, 8(sp) # 8-byte Folded Reload
 ; CHECK-RV32IFD-NEXT:    addi sp, sp, 32
 ; CHECK-RV32IFD-NEXT:    mret
-  %1 = load double, double* @h
-  %2 = load double, double* @i
+  %1 = load double, ptr @h
+  %2 = load double, ptr @i
   %add = fadd double %1, %2
-  store double %add, double* @g
+  store double %add, ptr @g
   ret void
 }
 
@@ -740,10 +740,10 @@ define void @foo_fp_double() nounwind #1 {
 ; CHECK-RV32IFD-NEXT:    fld ft1, 0(sp) # 8-byte Folded Reload
 ; CHECK-RV32IFD-NEXT:    addi sp, sp, 32
 ; CHECK-RV32IFD-NEXT:    mret
-  %1 = load double, double* @h
-  %2 = load double, double* @i
+  %1 = load double, ptr @h
+  %2 = load double, ptr @i
   %add = fadd double %1, %2
-  store double %add, double* @g
+  store double %add, ptr @g
   ret void
 }
 

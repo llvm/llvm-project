@@ -14,8 +14,8 @@ define dso_local i32 @func() minsize optsize {
 ; CHECK-NEXT:  add w0, w8, w9
 ; CHECK-NEXT:  ret
 entry:
-  %0 = load i32, i32* @global0, align 4
-  %1 = load i32, i32* @global1, align 4
+  %0 = load i32, ptr @global0, align 4
+  %1 = load i32, ptr @global1, align 4
   %add = add nsw i32 %1, %0
   ret i32 %add
 }

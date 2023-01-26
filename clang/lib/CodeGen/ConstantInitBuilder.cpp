@@ -209,8 +209,7 @@ ConstantAggregateBuilderBase::addPlaceholderWithSize(llvm::Type *type) {
   // Advance the offset past that field.
   auto &layout = Builder.CGM.getDataLayout();
   if (!Packed)
-    offset = offset.alignTo(CharUnits::fromQuantity(
-                                layout.getABITypeAlignment(type)));
+    offset = offset.alignTo(CharUnits::fromQuantity(layout.getABITypeAlign(type)));
   offset += CharUnits::fromQuantity(layout.getTypeStoreSize(type));
 
   CachedOffsetEnd = Builder.Buffer.size();
@@ -249,8 +248,8 @@ CharUnits ConstantAggregateBuilderBase::getOffsetFromGlobalTo(size_t end) const{
              "cannot compute offset when a placeholder is present");
       llvm::Type *elementType = element->getType();
       if (!Packed)
-        offset = offset.alignTo(CharUnits::fromQuantity(
-                                  layout.getABITypeAlignment(elementType)));
+        offset = offset.alignTo(
+            CharUnits::fromQuantity(layout.getABITypeAlign(elementType)));
       offset += CharUnits::fromQuantity(layout.getTypeStoreSize(elementType));
     } while (++cacheEnd != end);
   }
@@ -268,7 +267,7 @@ llvm::Constant *ConstantAggregateBuilderBase::finishArray(llvm::Type *eltTy) {
   assert((Begin < buffer.size() ||
           (Begin == buffer.size() && eltTy))
          && "didn't add any array elements without element type");
-  auto elts = llvm::makeArrayRef(buffer).slice(Begin);
+  auto elts = llvm::ArrayRef(buffer).slice(Begin);
   if (!eltTy) eltTy = elts[0]->getType();
   auto type = llvm::ArrayType::get(eltTy, elts.size());
   auto constant = llvm::ConstantArray::get(type, elts);
@@ -281,7 +280,7 @@ ConstantAggregateBuilderBase::finishStruct(llvm::StructType *ty) {
   markFinished();
 
   auto &buffer = getBuffer();
-  auto elts = llvm::makeArrayRef(buffer).slice(Begin);
+  auto elts = llvm::ArrayRef(buffer).slice(Begin);
 
   if (ty == nullptr && elts.empty())
     ty = llvm::StructType::get(Builder.CGM.getLLVMContext(), {}, Packed);

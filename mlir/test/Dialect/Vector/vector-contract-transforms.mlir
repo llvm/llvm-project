@@ -403,9 +403,8 @@ func.func @nop_shape_cast(%arg0: vector<16xf32>) -> vector<16xf32> {
 }
 
 // CHECK-LABEL: func @cancel_shape_cast
-// FIXME: PR49590
-// HECK-SAME: %[[A:.*]]: vector<16xf32>
-// HECK:      return %[[A]] : vector<16xf32>
+// CHECK-SAME: %[[A:.*]]: vector<16xf32>
+// CHECK:      return %[[A]] : vector<16xf32>
 
 func.func @cancel_shape_cast(%arg0: vector<16xf32>) -> vector<16xf32> {
   %0 = vector.shape_cast %arg0 : vector<16xf32> to vector<4x4xf32>

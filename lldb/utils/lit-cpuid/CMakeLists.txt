@@ -1,6 +1,9 @@
 add_lldb_executable(lit-cpuid
   lit-cpuid.cpp
+
+  LINK_COMPONENTS
+    Support
+    TargetParser
   )
 
-target_link_libraries(lit-cpuid PRIVATE LLVMSupport)
 set_target_properties(lit-cpuid PROPERTIES FOLDER "lldb utils")

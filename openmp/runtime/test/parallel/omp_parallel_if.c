@@ -1,4 +1,5 @@
 // RUN: %libomp-compile-and-run
+// RUN: %libomp-irbuilder-compile-and-run
 #include <stdio.h>
 #include "omp_testsuite.h"
 

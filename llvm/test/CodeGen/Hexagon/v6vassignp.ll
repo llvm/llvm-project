@@ -15,11 +15,11 @@ define i32 @f0() #0 {
 b0:
   %v0 = alloca i32, align 4
   %v1 = alloca i32, align 4
-  store i32 0, i32* %v0
-  store i32 0, i32* %v1, align 4
-  %v2 = load <32 x i32>, <32 x i32>* getelementptr inbounds ([15 x <32 x i32>], [15 x <32 x i32>]* @g0, i32 0, i32 0), align 64
+  store i32 0, ptr %v0
+  store i32 0, ptr %v1, align 4
+  %v2 = load <32 x i32>, ptr @g0, align 64
   %v3 = call <32 x i32> @llvm.hexagon.V6.vassignp(<32 x i32> %v2)
-  store <32 x i32> %v3, <32 x i32>* @g1, align 64
+  store <32 x i32> %v3, ptr @g1, align 64
   ret i32 0
 }
 

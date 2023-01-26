@@ -31,11 +31,13 @@ define i32 @test1(i32 %X) nounwind {
 define i32 @test2(i32 inreg %a, i32 inreg %b, i32 %c, i32 %d) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    ## kill: def $ecx killed $ecx def $rcx
+; CHECK-NEXT:    ## kill: def $edx killed $edx def $rdx
 ; CHECK-NEXT:    ## kill: def $esi killed $esi def $rsi
 ; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    leal (%rdi,%rsi), %eax
-; CHECK-NEXT:    addl %edx, %eax
-; CHECK-NEXT:    addl %ecx, %eax
+; CHECK-NEXT:    addl %edi, %esi
+; CHECK-NEXT:    leal (%rdx,%rcx), %eax
+; CHECK-NEXT:    addl %esi, %eax
 ; CHECK-NEXT:    retq
 entry:
  %add = add i32 %b, %a
@@ -63,7 +65,7 @@ entry:
 define void @ham() {
 ; CHECK-LABEL: ham:
 ; CHECK:       ## %bb.0: ## %bb
-; CHECK-NEXT:    xorl %r8d, %r8d
+; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    movq _global@GOTPCREL(%rip), %rdx
 ; CHECK-NEXT:    movq _global2@GOTPCREL(%rip), %rsi
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -74,16 +76,16 @@ define void @ham() {
 ; CHECK-NEXT:    ## =>This Loop Header: Depth=1
 ; CHECK-NEXT:    ## Child Loop BB3_7 Depth 2
 ; CHECK-NEXT:    movl (%rdx), %edi
-; CHECK-NEXT:    leal (%rdi,%rax), %ecx
-; CHECK-NEXT:    movslq %ecx, %rcx
+; CHECK-NEXT:    leal (%rdi,%rax), %r8d
+; CHECK-NEXT:    movslq %r8d, %r8
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB3_7: ## %bb6
 ; CHECK-NEXT:    ## Parent Loop BB3_6 Depth=1
 ; CHECK-NEXT:    ## => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    movq %rax, (%rsi)
-; CHECK-NEXT:    movq %rcx, (%rsi)
+; CHECK-NEXT:    movq %r8, (%rsi)
 ; CHECK-NEXT:    movl %edi, (%rdx)
-; CHECK-NEXT:    testb %r8b, %r8b
+; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    jne LBB3_7
 ; CHECK-NEXT:  ## %bb.8: ## %bb9
 ; CHECK-NEXT:    ## in Loop: Header=BB3_6 Depth=1

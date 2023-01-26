@@ -7,14 +7,14 @@
 
 define i32 @main() nounwind {
 entry:
-  %0 = load i32, i32* @i, align 4
-  %1 = load i32, i32* @k, align 4
+  %0 = load i32, ptr @i, align 4
+  %1 = load i32, ptr @k, align 4
   %shr = lshr i32 %0, %1
 ; 16:	srlv	${{[0-9]+}}, ${{[0-9]+}}
-  store i32 %shr, i32* @j, align 4
-  %2 = load i32, i32* @j, align 4
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i32 0, i32 0), i32 %2)
+  store i32 %shr, ptr @j, align 4
+  %2 = load i32, ptr @j, align 4
+  %call = call i32 (ptr, ...) @printf(ptr @.str, i32 %2)
   ret i32 0
 }
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)

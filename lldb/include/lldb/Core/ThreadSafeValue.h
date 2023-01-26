@@ -42,6 +42,7 @@ public:
 
   // Call this if you have already manually locked the mutex using the
   // GetMutex() accessor
+  // coverity[missing_lock]
   void SetValueNoLock(const T &value) { m_value = value; }
 
   std::recursive_mutex &GetMutex() { return m_mutex; }

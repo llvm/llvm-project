@@ -15,10 +15,10 @@
 #ifndef MLIR_DIALECT_AFFINE_ANALYSIS_AFFINEANALYSIS_H
 #define MLIR_DIALECT_AFFINE_ANALYSIS_AFFINEANALYSIS_H
 
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/Value.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include <optional>
 
 namespace mlir {
 
@@ -140,10 +140,10 @@ struct DependenceComponent {
   // The AffineForOp Operation associated with this dependence component.
   Operation *op = nullptr;
   // The lower bound of the dependence distance.
-  Optional<int64_t> lb;
+  std::optional<int64_t> lb;
   // The upper bound of the dependence distance (inclusive).
-  Optional<int64_t> ub;
-  DependenceComponent() : lb(llvm::None), ub(llvm::None) {}
+  std::optional<int64_t> ub;
+  DependenceComponent() : lb(std::nullopt), ub(std::nullopt) {}
 };
 
 /// Checks whether two accesses to the same memref access the same element.
@@ -175,6 +175,12 @@ DependenceResult checkMemrefAccessDependence(
 /// corresponds to a dependence result.
 inline bool hasDependence(DependenceResult result) {
   return result.value == DependenceResult::HasDependence;
+}
+
+/// Returns true if the provided DependenceResult corresponds to the absence of
+/// a dependence.
+inline bool noDependence(DependenceResult result) {
+  return result.value == DependenceResult::NoDependence;
 }
 
 /// Returns in 'depCompsVec', dependence components for dependences between all

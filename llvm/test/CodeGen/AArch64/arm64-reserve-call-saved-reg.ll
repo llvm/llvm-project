@@ -45,8 +45,8 @@ define void @foo() {
 ; CHECK-X15-NOT: str x15, [sp
 ; CHECK-X18-NOT: str x18, [sp
 
-  %val = load volatile [30 x i64], [30 x i64]* @var
-  store volatile [30 x i64] %val, [30 x i64]* @var
+  %val = load volatile [30 x i64], ptr @var
+  store volatile [30 x i64] %val, ptr @var
 
 ; CHECK-X9-NOT: ldr x9
 ; CHECK-X10-NOT: ldr x10

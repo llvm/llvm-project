@@ -53,7 +53,7 @@ class LinuxCoreThreadsTestCase(TestBase):
             self.assertEqual(bytes_read, None)
             reason = thread.GetStopReason()
             if( thread.GetThreadID() == tid ):
-                self.assertEqual(reason, lldb.eStopReasonSignal)
+                self.assertStopReason(reason, lldb.eStopReasonSignal)
                 signal = thread.GetStopReasonDataAtIndex(1)
                 # Check we got signal 4 (SIGILL)
                 self.assertEqual(signal, 4)

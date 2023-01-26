@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-unroll -indvars -disable-output
+; RUN: opt < %s -passes=loop-unroll,indvars -disable-output
 
 @b = external global i32, align 4
 
@@ -46,7 +46,7 @@ inner.latch:                                      ; preds = %inner.header
 
 exit:                                             ; preds = %inner.latch
   %storemerge1.lcssa = phi i32 [ %storemerge1, %inner.latch ]
-  store i32 %storemerge1.lcssa, i32* @b, align 4
+  store i32 %storemerge1.lcssa, ptr @b, align 4
   ret void
 
 outer.latch:                                      ; preds = %inner.header
@@ -70,12 +70,12 @@ outer.header:
   br label %inner.header
 
 inner.header:
-  %x = load i32, i32* undef, align 4
+  %x = load i32, ptr undef, align 4
   br i1 true, label %outer.latch, label %inner.latch
 
 inner.latch:
   %inc6 = add nsw i32 %x, 1
-  store i32 %inc6, i32* undef, align 4
+  store i32 %inc6, ptr undef, align 4
   br i1 false, label %inner.header, label %exit
 
 exit:

@@ -411,8 +411,8 @@ def G_SELECT : GenericInstruction {
 
 // Generic pointer offset.
 def G_PTR_ADD : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src1, type1:$src2);
+  let OutOperandList = (outs ptype0:$dst);
+  let InOperandList = (ins ptype0:$src1, type1:$src2);
   let hasSideEffects = false;
 }
 
@@ -748,7 +748,7 @@ def G_FCANONICALIZE : GenericInstruction {
 // Generic opcode equivalent to the llvm.is_fpclass intrinsic.
 def G_IS_FPCLASS: GenericInstruction {
   let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type1:$src, unknown:$test, unknown:$fpsem);
+  let InOperandList = (ins type1:$src, unknown:$test);
   let hasSideEffects = false;
 }
 
@@ -1268,6 +1268,15 @@ def G_BRJT : GenericInstruction {
   let isTerminator = true;
   let isBarrier = true;
   let isIndirectBranch = true;
+}
+
+// A marker to signal the following code is an invoke region, that may throw
+// an exception and therefore not return.
+def G_INVOKE_REGION_START : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins);
+  let isTerminator = true; // This must be a terminator.
+  let hasSideEffects = false;
 }
 
 def G_READ_REGISTER : GenericInstruction {

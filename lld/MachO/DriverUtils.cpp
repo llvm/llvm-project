@@ -35,12 +35,15 @@ using namespace lld;
 using namespace lld::macho;
 
 // Create prefix string literals used in Options.td
-#define PREFIX(NAME, VALUE) const char *NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "Options.inc"
 #undef PREFIX
 
 // Create table mapping all options defined in Options.td
-static const OptTable::Info optInfo[] = {
+static constexpr OptTable::Info optInfo[] = {
 #define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X7, X8, X9, X10, X11, X12)      \
   {X1, X2, X10,         X11,         OPT_##ID, Option::KIND##Class,            \
    X9, X8, OPT_##GROUP, OPT_##ALIAS, X7,       X12},
@@ -48,7 +51,7 @@ static const OptTable::Info optInfo[] = {
 #undef OPTION
 };
 
-MachOOptTable::MachOOptTable() : OptTable(optInfo) {}
+MachOOptTable::MachOOptTable() : GenericOptTable(optInfo) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.
@@ -144,7 +147,7 @@ std::string macho::createResponseFile(const InputArgList &args) {
       os << "-o " << quote(path::filename(arg->getValue())) << "\n";
       break;
     case OPT_filelist:
-      if (Optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
+      if (std::optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
         for (StringRef path : args::getLines(*buffer))
           os << quote(rewriteInputPath(path)) << "\n";
       break;
@@ -159,7 +162,6 @@ std::string macho::createResponseFile(const InputArgList &args) {
     case OPT_bundle_loader:
     case OPT_exported_symbols_list:
     case OPT_order_file:
-    case OPT_rpath:
     case OPT_syslibroot:
     case OPT_unexported_symbols_list:
       os << arg->getSpelling() << " " << quote(rewritePath(arg->getValue()))
@@ -184,7 +186,7 @@ static void searchedDylib(const Twine &path, bool found) {
     depTracker->logFileNotFound(path);
 }
 
-Optional<StringRef> macho::resolveDylibPath(StringRef dylibPath) {
+std::optional<StringRef> macho::resolveDylibPath(StringRef dylibPath) {
   // TODO: if a tbd and dylib are both present, we should check to make sure
   // they are consistent.
   SmallString<261> tbdPath = dylibPath;
@@ -253,7 +255,7 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
 
 void macho::resetLoadedDylibs() { loadedDylibs.clear(); }
 
-Optional<StringRef>
+std::optional<StringRef>
 macho::findPathCombination(const Twine &name,
                            const std::vector<StringRef> &roots,
                            ArrayRef<StringRef> extensions) {
@@ -276,7 +278,7 @@ StringRef macho::rerootPath(StringRef path) {
   if (!path::is_absolute(path, path::Style::posix) || path.endswith(".o"))
     return path;
 
-  if (Optional<StringRef> rerootedPath =
+  if (std::optional<StringRef> rerootedPath =
           findPathCombination(path, config->systemLibraryRoots))
     return *rerootedPath;
 

@@ -37,7 +37,7 @@ void test_string_correction (char *x) {
   // CHECK: fix-it:"{{.*}}":{34:11-34:13}:"%s"
 }
 
-void test_object_correction (id x) {  
+void test_object_correction (id x) {
   NSLog(@"%d", x); // expected-warning{{format specifies type 'int' but the argument has type 'id'}}
   NSLog(@"%s", x); // expected-warning{{format specifies type 'char *' but the argument has type 'id'}}
   NSLog(@"%lf", x); // expected-warning{{format specifies type 'double' but the argument has type 'id'}}
@@ -108,7 +108,7 @@ void test_char(char c, signed char s, unsigned char u, uint8_t n) {
   NSLog(@"%c", c); // no-warning
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:11-[[@LINE-1]]:13}:"%c"
 
-  
+
   NSLog(@"%s", s); // expected-warning{{format specifies type 'char *' but the argument has type 'signed char'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:11-[[@LINE-1]]:13}:"%c"
 
@@ -197,11 +197,11 @@ void test_percent_C(void) {
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:16-[[@LINE-2]]:16}:"(unsigned short)"
 
   typedef unsigned short unichar;
-  
+
   NSLog(@"%C", 0x260300);  // expected-warning{{format specifies type 'unichar' (aka 'unsigned short') but the argument has type 'int'}}
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:11-[[@LINE-1]]:13}:"%d"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:16-[[@LINE-2]]:16}:"(unichar)"
-  
+
   NSLog(@"%C", data ? 0x2F0000 : 0x260300); // expected-warning{{format specifies type 'unichar' (aka 'unsigned short') but the argument has type 'int'}}
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:11-[[@LINE-1]]:13}:"%d"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:16-[[@LINE-2]]:16}:"(unichar)("
@@ -239,7 +239,7 @@ void testSizeTypes(void) {
 
   printf("%zd", 0.f); // expected-warning-re{{format specifies type 'ssize_t' (aka '{{.+}}') but the argument has type 'float'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:11-[[@LINE-1]]:14}:"%f"
-  
+
   short x;
 #if !defined(__ANDROID__) && !defined(__Fuchsia__)
   printf("%zn", &x); // expected-warning-re{{format specifies type 'ssize_t *' (aka '{{.+}}') but the argument has type 'short *'}}
@@ -266,7 +266,7 @@ void testPtrDiffTypes(void) {
 
   printf("%tu", 0.f); // expected-warning-re{{format specifies type 'unsigned ptrdiff_t' (aka '{{.+}}') but the argument has type 'float'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:11-[[@LINE-1]]:14}:"%f"
-  
+
   ptrdiff_t p2 = 0;
   printf("%td", p2);  // No warning.
 

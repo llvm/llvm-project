@@ -18,6 +18,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/SMLoc.h"
+#include <optional>
 
 namespace mlir {
 class AsmParsedResourceEntry;
@@ -181,7 +182,7 @@ public:
   virtual void printSymbolName(StringRef symbolRef);
 
   /// Print a handle to the given dialect resource.
-  void printResourceHandle(const AsmDialectResourceHandle &resource);
+  virtual void printResourceHandle(const AsmDialectResourceHandle &resource);
 
   /// Print an optional arrow followed by a type list.
   template <typename TypeRange>
@@ -215,7 +216,7 @@ public:
 protected:
   /// Initialize the printer with no internal implementation. In this case, all
   /// virtual methods of this class must be overriden.
-  AsmPrinter() {}
+  AsmPrinter() = default;
 
 private:
   AsmPrinter(const AsmPrinter &) = delete;
@@ -272,15 +273,14 @@ operator<<(AsmPrinterT &p, double value) {
 // Support printing anything that isn't convertible to one of the other
 // streamable types, even if it isn't exactly one of them. For example, we want
 // to print FunctionType with the Type version above, not have it match this.
-template <
-    typename AsmPrinterT, typename T,
-    typename std::enable_if<!std::is_convertible<T &, Value &>::value &&
-                                !std::is_convertible<T &, Type &>::value &&
-                                !std::is_convertible<T &, Attribute &>::value &&
-                                !std::is_convertible<T &, ValueRange>::value &&
-                                !std::is_convertible<T &, APFloat &>::value &&
-                                !llvm::is_one_of<T, bool, float, double>::value,
-                            T>::type * = nullptr>
+template <typename AsmPrinterT, typename T,
+          std::enable_if_t<!std::is_convertible<T &, Value &>::value &&
+                               !std::is_convertible<T &, Type &>::value &&
+                               !std::is_convertible<T &, Attribute &>::value &&
+                               !std::is_convertible<T &, ValueRange>::value &&
+                               !std::is_convertible<T &, APFloat &>::value &&
+                               !llvm::is_one_of<T, bool, float, double>::value,
+                           T> * = nullptr>
 inline std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value,
                         AsmPrinterT &>
 operator<<(AsmPrinterT &p, const T &other) {
@@ -328,9 +328,18 @@ public:
   using AsmPrinter::AsmPrinter;
   ~OpAsmPrinter() override;
 
+  /// Print a loc(...) specifier if printing debug info is enabled.
+  virtual void printOptionalLocationSpecifier(Location loc) = 0;
+
   /// Print a newline and indent the printer to the start of the current
   /// operation.
   virtual void printNewline() = 0;
+
+  /// Increase indentation.
+  virtual void increaseIndent() = 0;
+
+  /// Decrease indentation.
+  virtual void decreaseIndent() = 0;
 
   /// Print a block argument in the usual format of:
   ///   %ssaName : type {attr1=42} loc("here")
@@ -354,13 +363,8 @@ public:
   /// Print a comma separated list of operands.
   template <typename IteratorType>
   void printOperands(IteratorType it, IteratorType end) {
-    if (it == end)
-      return;
-    printOperand(*it);
-    for (++it; it != end; ++it) {
-      getStream() << ", ";
-      printOperand(*it);
-    }
+    llvm::interleaveComma(llvm::make_range(it, end), getStream(),
+                          [this](Value value) { printOperand(value); });
   }
 
   /// Print the given successor.
@@ -382,6 +386,10 @@ public:
   virtual void
   printOptionalAttrDictWithKeyword(ArrayRef<NamedAttribute> attrs,
                                    ArrayRef<StringRef> elidedAttrs = {}) = 0;
+
+  /// Prints the entire operation with the custom assembly form, if available,
+  /// or the generic assembly form, otherwise.
+  virtual void printCustomOrGenericOp(Operation *op) = 0;
 
   /// Print the entire operation with the default generic assembly form.
   /// If `printOpName` is true, then the operation name is printed (the default)
@@ -429,9 +437,9 @@ inline OpAsmPrinter &operator<<(OpAsmPrinter &p, Value value) {
 }
 
 template <typename T,
-          typename std::enable_if<std::is_convertible<T &, ValueRange>::value &&
-                                      !std::is_convertible<T &, Value &>::value,
-                                  T>::type * = nullptr>
+          std::enable_if_t<std::is_convertible<T &, ValueRange>::value &&
+                               !std::is_convertible<T &, Value &>::value,
+                           T> * = nullptr>
 inline OpAsmPrinter &operator<<(OpAsmPrinter &p, const T &values) {
   p.printOperands(values);
   return p;
@@ -570,6 +578,9 @@ public:
   /// Parse a quoted string token if present.
   virtual ParseResult parseOptionalString(std::string *string) = 0;
 
+  /// Parses a Base64 encoded string of bytes.
+  virtual ParseResult parseBase64Bytes(std::vector<char> *bytes) = 0;
+
   /// Parse a `(` token.
   virtual ParseResult parseLParen() = 0;
 
@@ -594,6 +605,9 @@ public:
   /// Parse a `]` token if present.
   virtual ParseResult parseOptionalRSquare() = 0;
 
+  /// Parse a `...` token.
+  virtual ParseResult parseEllipsis() = 0;
+
   /// Parse a `...` token if present;
   virtual ParseResult parseOptionalEllipsis() = 0;
 
@@ -605,7 +619,7 @@ public:
   ParseResult parseInteger(IntT &result) {
     auto loc = getCurrentLocation();
     OptionalParseResult parseResult = parseOptionalInteger(result);
-    if (!parseResult.hasValue())
+    if (!parseResult.has_value())
       return emitError(loc, "expected integer value");
     return *parseResult;
   }
@@ -620,7 +634,7 @@ public:
     // Parse the unsigned variant.
     APInt uintResult;
     OptionalParseResult parseResult = parseOptionalInteger(uintResult);
-    if (!parseResult.hasValue() || failed(*parseResult))
+    if (!parseResult.has_value() || failed(*parseResult))
       return parseResult;
 
     // Try to convert to the provided integer type.  sextOrTrunc is correct even
@@ -726,7 +740,7 @@ public:
     bool hasValue() const { return result.has_value(); }
 
     /// Return the result of the switch.
-    LLVM_NODISCARD operator ResultT() {
+    [[nodiscard]] operator ResultT() {
       if (!result)
         return parser.emitError(loc, "unexpected keyword: ") << keyword;
       return std::move(*result);
@@ -743,7 +757,7 @@ public:
     StringRef keyword;
 
     /// The result of the switch statement or none if currently unknown.
-    Optional<ResultT> result;
+    std::optional<ResultT> result;
   };
 
   /// Parse a given keyword.
@@ -960,6 +974,10 @@ public:
   virtual OptionalParseResult parseOptionalAttribute(StringAttr &result,
                                                      Type type = {}) = 0;
 
+  /// Parse an optional symbol ref attribute and return it in result.
+  virtual OptionalParseResult parseOptionalAttribute(SymbolRefAttr &result,
+                                                     Type type = {}) = 0;
+
   /// Parse an optional attribute of a specific type and add it to the list with
   /// the specified name.
   template <typename AttrType>
@@ -976,7 +994,7 @@ public:
                                              StringRef attrName,
                                              NamedAttrList &attrs) {
     OptionalParseResult parseResult = parseOptionalAttribute(result, type);
-    if (parseResult.hasValue() && succeeded(*parseResult))
+    if (parseResult.has_value() && succeeded(*parseResult))
       attrs.append(attrName, result);
     return parseResult;
   }
@@ -1000,20 +1018,38 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Parse an @-identifier and store it (without the '@' symbol) in a string
-  /// attribute named 'attrName'.
-  ParseResult parseSymbolName(StringAttr &result, StringRef attrName,
-                              NamedAttrList &attrs) {
-    if (failed(parseOptionalSymbolName(result, attrName, attrs)))
+  /// attribute.
+  ParseResult parseSymbolName(StringAttr &result) {
+    if (failed(parseOptionalSymbolName(result)))
       return emitError(getCurrentLocation())
              << "expected valid '@'-identifier for symbol name";
     return success();
   }
 
+  /// Parse an @-identifier and store it (without the '@' symbol) in a string
+  /// attribute named 'attrName'.
+  ParseResult parseSymbolName(StringAttr &result, StringRef attrName,
+                              NamedAttrList &attrs) {
+    if (parseSymbolName(result))
+      return failure();
+    attrs.append(attrName, result);
+    return success();
+  }
+
+  /// Parse an optional @-identifier and store it (without the '@' symbol) in a
+  /// string attribute.
+  virtual ParseResult parseOptionalSymbolName(StringAttr &result) = 0;
+
   /// Parse an optional @-identifier and store it (without the '@' symbol) in a
   /// string attribute named 'attrName'.
-  virtual ParseResult parseOptionalSymbolName(StringAttr &result,
-                                              StringRef attrName,
-                                              NamedAttrList &attrs) = 0;
+  ParseResult parseOptionalSymbolName(StringAttr &result, StringRef attrName,
+                                      NamedAttrList &attrs) {
+    if (succeeded(parseOptionalSymbolName(result))) {
+      attrs.append(attrName, result);
+      return success();
+    }
+    return failure();
+  }
 
   //===--------------------------------------------------------------------===//
   // Resource Parsing
@@ -1023,8 +1059,17 @@ public:
   template <typename ResourceT>
   FailureOr<ResourceT> parseResourceHandle() {
     SMLoc handleLoc = getCurrentLocation();
-    FailureOr<AsmDialectResourceHandle> handle = parseResourceHandle(
-        getContext()->getOrLoadDialect<typename ResourceT::Dialect>());
+
+    // Try to load the dialect that owns the handle.
+    auto *dialect =
+        getContext()->getOrLoadDialect<typename ResourceT::Dialect>();
+    if (!dialect) {
+      return emitError(handleLoc)
+             << "dialect '" << ResourceT::Dialect::getDialectNamespace()
+             << "' is unknown";
+    }
+
+    FailureOr<AsmDialectResourceHandle> handle = parseResourceHandle(dialect);
     if (failed(handle))
       return failure();
     if (auto *result = dyn_cast<ResourceT>(&*handle))
@@ -1169,8 +1214,9 @@ public:
   }
 
   /// Parse a dimension list of a tensor or memref type.  This populates the
-  /// dimension list, using -1 for the `?` dimensions if `allowDynamic` is set
-  /// and errors out on `?` otherwise. Parsing the trailing `x` is configurable.
+  /// dimension list, using ShapedType::kDynamic for the `?` dimensions if
+  /// `allowDynamic` is set and errors out on `?` otherwise. Parsing the
+  /// trailing `x` is configurable.
   ///
   ///   dimension-list ::= eps | dimension (`x` dimension)*
   ///   dimension-list-with-trailing-x ::= (dimension `x`)*
@@ -1240,7 +1286,7 @@ public:
   /// which case an OpaqueLoc is set and will be resolved when parsing
   /// completes.
   virtual ParseResult
-  parseOptionalLocationSpecifier(Optional<Location> &result) = 0;
+  parseOptionalLocationSpecifier(std::optional<Location> &result) = 0;
 
   /// Return the name of the specified result in the specified syntax, as well
   /// as the sub-element in the name.  It returns an empty string and ~0U for
@@ -1294,12 +1340,13 @@ public:
   /// skip parsing that component.
   virtual ParseResult parseGenericOperationAfterOpName(
       OperationState &result,
-      Optional<ArrayRef<UnresolvedOperand>> parsedOperandType = llvm::None,
-      Optional<ArrayRef<Block *>> parsedSuccessors = llvm::None,
-      Optional<MutableArrayRef<std::unique_ptr<Region>>> parsedRegions =
-          llvm::None,
-      Optional<ArrayRef<NamedAttribute>> parsedAttributes = llvm::None,
-      Optional<FunctionType> parsedFnType = llvm::None) = 0;
+      std::optional<ArrayRef<UnresolvedOperand>> parsedOperandType =
+          std::nullopt,
+      std::optional<ArrayRef<Block *>> parsedSuccessors = std::nullopt,
+      std::optional<MutableArrayRef<std::unique_ptr<Region>>> parsedRegions =
+          std::nullopt,
+      std::optional<ArrayRef<NamedAttribute>> parsedAttributes = std::nullopt,
+      std::optional<FunctionType> parsedFnType = std::nullopt) = 0;
 
   /// Parse a single SSA value operand name along with a result number if
   /// `allowResultNumber` is true.
@@ -1347,37 +1394,25 @@ public:
   /// Resolve a list of operands to SSA values, emitting an error on failure, or
   /// appending the results to the list on success. This method should be used
   /// when all operands have the same type.
-  ParseResult resolveOperands(ArrayRef<UnresolvedOperand> operands, Type type,
+  template <typename Operands = ArrayRef<UnresolvedOperand>>
+  ParseResult resolveOperands(Operands &&operands, Type type,
                               SmallVectorImpl<Value> &result) {
-    for (auto elt : operands)
-      if (resolveOperand(elt, type, result))
+    for (const UnresolvedOperand &operand : operands)
+      if (resolveOperand(operand, type, result))
         return failure();
     return success();
+  }
+  template <typename Operands = ArrayRef<UnresolvedOperand>>
+  ParseResult resolveOperands(Operands &&operands, Type type, SMLoc loc,
+                              SmallVectorImpl<Value> &result) {
+    return resolveOperands(std::forward<Operands>(operands), type, result);
   }
 
   /// Resolve a list of operands and a list of operand types to SSA values,
   /// emitting an error and returning failure, or appending the results
   /// to the list on success.
-  ParseResult resolveOperands(ArrayRef<UnresolvedOperand> operands,
-                              ArrayRef<Type> types, SMLoc loc,
-                              SmallVectorImpl<Value> &result) {
-    if (operands.size() != types.size())
-      return emitError(loc)
-             << operands.size() << " operands present, but expected "
-             << types.size();
-
-    for (unsigned i = 0, e = operands.size(); i != e; ++i)
-      if (resolveOperand(operands[i], types[i], result))
-        return failure();
-    return success();
-  }
-  template <typename Operands>
-  ParseResult resolveOperands(Operands &&operands, Type type, SMLoc loc,
-                              SmallVectorImpl<Value> &result) {
-    return resolveOperands(std::forward<Operands>(operands),
-                           ArrayRef<Type>(type), loc, result);
-  }
-  template <typename Operands, typename Types>
+  template <typename Operands = ArrayRef<UnresolvedOperand>,
+            typename Types = ArrayRef<Type>>
   std::enable_if_t<!std::is_convertible<Types, Type>::value, ParseResult>
   resolveOperands(Operands &&operands, Types &&types, SMLoc loc,
                   SmallVectorImpl<Value> &result) {
@@ -1387,8 +1422,8 @@ public:
       return emitError(loc)
              << operandSize << " operands present, but expected " << typeSize;
 
-    for (auto it : llvm::zip(operands, types))
-      if (resolveOperand(std::get<0>(it), std::get<1>(it), result))
+    for (auto [operand, type] : llvm::zip(operands, types))
+      if (resolveOperand(operand, type, result))
         return failure();
     return success();
   }
@@ -1418,7 +1453,7 @@ public:
     UnresolvedOperand ssaName;    // SourceLoc, SSA name, result #.
     Type type;                    // Type.
     DictionaryAttr attrs;         // Attributes if present.
-    Optional<Location> sourceLoc; // Source location specifier if present.
+    std::optional<Location> sourceLoc; // Source location specifier if present.
   };
 
   /// Parse a single argument with the following syntax:
@@ -1493,9 +1528,9 @@ public:
   ParseResult parseAssignmentList(SmallVectorImpl<Argument> &lhs,
                                   SmallVectorImpl<UnresolvedOperand> &rhs) {
     OptionalParseResult result = parseOptionalAssignmentList(lhs, rhs);
-    if (!result.hasValue())
+    if (!result.has_value())
       return emitError(getCurrentLocation(), "expected '('");
-    return result.getValue();
+    return result.value();
   }
 
   virtual OptionalParseResult

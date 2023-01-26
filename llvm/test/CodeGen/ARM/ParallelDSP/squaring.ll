@@ -5,76 +5,73 @@ define dso_local void @a() align 2 {
 ; CHECK-LABEL: @a(
 ; CHECK-NEXT:  for.end:
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* bitcast (void ()* @a to i16*), align 2
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr @a, align 2
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[TMP0]] to i32
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[CONV]], [[CONV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i16, i16* getelementptr (i16, i16* bitcast (void ()* @a to i16*), i32 1), align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr getelementptr (i16, ptr @a, i32 1), align 2
 ; CHECK-NEXT:    [[CONV3:%.*]] = sext i16 [[TMP1]] to i32
 ; CHECK-NEXT:    [[MUL6:%.*]] = mul nsw i32 [[CONV3]], [[CONV3]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[MUL6]], [[MUL]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, i16* getelementptr (i16, i16* bitcast (void ()* @a to i16*), i32 2), align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr getelementptr (i16, ptr @a, i32 2), align 2
 ; CHECK-NEXT:    [[CONV11:%.*]] = sext i16 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MUL12:%.*]] = mul nsw i32 [[CONV11]], [[CONV3]]
 ; CHECK-NEXT:    [[ADD14:%.*]] = add nsw i32 [[MUL12]], [[ADD]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i16, i16* getelementptr (i16, i16* bitcast (void ()* @a to i16*), i32 3), align 2
+; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr getelementptr (i16, ptr @a, i32 3), align 2
 ; CHECK-NEXT:    [[CONV17:%.*]] = sext i16 [[TMP3]] to i32
 ; CHECK-NEXT:    [[ADD19:%.*]] = add nsw i32 [[ADD14]], [[CONV17]]
-; CHECK-NEXT:    store i32 [[ADD19]], i32* [[B]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load i16, i16* getelementptr (i16, i16* bitcast (void ()* @a to i16*), i32 4), align 2
+; CHECK-NEXT:    store i32 [[ADD19]], ptr [[B]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load i16, ptr getelementptr (i16, ptr @a, i32 4), align 2
 ; CHECK-NEXT:    [[CONV21:%.*]] = sext i16 [[TMP4]] to i32
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, i32* [[B]], i32 [[CONV21]]
-; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr inbounds i32, i32* [[ADD_PTR]], i32 9
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[ARRAYIDX22]], align 4
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[CONV21]]
+; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr inbounds i32, ptr [[ADD_PTR]], i32 9
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX22]], align 4
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[TMP5]], 1
-; CHECK-NEXT:    store i32 [[SHL]], i32* [[ARRAYIDX22]], align 4
+; CHECK-NEXT:    store i32 [[SHL]], ptr [[ARRAYIDX22]], align 4
 ; CHECK-NEXT:    br label [[FOR_COND23:%.*]]
 ; CHECK:       for.cond23:
 ; CHECK-NEXT:    br label [[FOR_COND23]]
 ;
 for.end:
   %b = alloca i32, align 4
-  %0 = bitcast i32* %b to i8*
-  %1 = load i16, i16* bitcast (void ()* @a to i16*), align 2
-  %conv = sext i16 %1 to i32
+  %0 = load i16, ptr @a, align 2
+  %conv = sext i16 %0 to i32
   %mul = mul nsw i32 %conv, %conv
-  %2 = load i16, i16* getelementptr (i16, i16* bitcast (void ()* @a to i16*), i32 1), align 2
-  %conv3 = sext i16 %2 to i32
+  %1 = load i16, ptr getelementptr (i16, ptr @a, i32 1), align 2
+  %conv3 = sext i16 %1 to i32
   %mul6 = mul nsw i32 %conv3, %conv3
   %add = add nuw nsw i32 %mul6, %mul
-  %3 = load i16, i16* getelementptr (i16, i16* bitcast (void ()* @a to i16*), i32 2), align 2
-  %conv11 = sext i16 %3 to i32
+  %2 = load i16, ptr getelementptr (i16, ptr @a, i32 2), align 2
+  %conv11 = sext i16 %2 to i32
   %mul12 = mul nsw i32 %conv11, %conv3
   %add14 = add nsw i32 %mul12, %add
-  %4 = load i16, i16* getelementptr (i16, i16* bitcast (void ()* @a to i16*), i32 3), align 2
-  %conv17 = sext i16 %4 to i32
+  %3 = load i16, ptr getelementptr (i16, ptr @a, i32 3), align 2
+  %conv17 = sext i16 %3 to i32
   %add19 = add nsw i32 %add14, %conv17
-  store i32 %add19, i32* %b, align 4
-  %5 = load i16, i16* getelementptr (i16, i16* bitcast (void ()* @a to i16*), i32 4), align 2
-  %conv21 = sext i16 %5 to i32
-  %add.ptr = getelementptr inbounds i32, i32* %b, i32 %conv21
-  %arrayidx22 = getelementptr inbounds i32, i32* %add.ptr, i32 9
-  %6 = load i32, i32* %arrayidx22, align 4
-  %shl = shl i32 %6, 1
-  store i32 %shl, i32* %arrayidx22, align 4
+  store i32 %add19, ptr %b, align 4
+  %4 = load i16, ptr getelementptr (i16, ptr @a, i32 4), align 2
+  %conv21 = sext i16 %4 to i32
+  %add.ptr = getelementptr inbounds i32, ptr %b, i32 %conv21
+  %arrayidx22 = getelementptr inbounds i32, ptr %add.ptr, i32 9
+  %5 = load i32, ptr %arrayidx22, align 4
+  %shl = shl i32 %5, 1
+  store i32 %shl, ptr %arrayidx22, align 4
   br label %for.cond23
 
 for.cond23:                                       ; preds = %for.cond23, %for.end
   br label %for.cond23
 }
 
-define i32 @accumulate_square_a0(i16* %a, i16* %b, i32 %acc) {
+define i32 @accumulate_square_a0(ptr %a, ptr %b, i32 %acc) {
 ; CHECK-LABEL: @accumulate_square_a0(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ADDR_A_1:%.*]] = getelementptr i16, i16* [[A:%.*]], i32 1
-; CHECK-NEXT:    [[ADDR_B_1:%.*]] = getelementptr i16, i16* [[B:%.*]], i32 1
-; CHECK-NEXT:    [[LD_A_0:%.*]] = load i16, i16* [[A]]
+; CHECK-NEXT:    [[ADDR_A_1:%.*]] = getelementptr i16, ptr [[A:%.*]], i32 1
+; CHECK-NEXT:    [[ADDR_B_1:%.*]] = getelementptr i16, ptr [[B:%.*]], i32 1
+; CHECK-NEXT:    [[LD_A_0:%.*]] = load i16, ptr [[A]]
 ; CHECK-NEXT:    [[SEXT_A_0:%.*]] = sext i16 [[LD_A_0]] to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i16* [[ADDR_A_1]] to i32*
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ADDR_A_1]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i16 [[TMP2]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i16* [[ADDR_B_1]] to i32*
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[TMP4]], align 2
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ADDR_B_1]], align 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i32 [[TMP5]] to i16
 ; CHECK-NEXT:    [[TMP7:%.*]] = sext i16 [[TMP6]] to i32
 ; CHECK-NEXT:    [[MUL_0:%.*]] = mul i32 [[SEXT_A_0]], [[SEXT_A_0]]
@@ -85,22 +82,22 @@ define i32 @accumulate_square_a0(i16* %a, i16* %b, i32 %acc) {
 ; CHECK-NEXT:    ret i32 [[TMP10]]
 ;
 entry:
-  %addr.a.1 = getelementptr i16, i16* %a, i32 1
-  %addr.b.1 = getelementptr i16, i16* %b, i32 1
-  %ld.a.0 = load i16, i16* %a
+  %addr.a.1 = getelementptr i16, ptr %a, i32 1
+  %addr.b.1 = getelementptr i16, ptr %b, i32 1
+  %ld.a.0 = load i16, ptr %a
   %sext.a.0 = sext i16 %ld.a.0 to i32
-  %ld.b.0 = load i16, i16* %b
-  %ld.a.1 = load i16, i16* %addr.a.1
-  %ld.b.1 = load i16, i16* %addr.b.1
+  %ld.b.0 = load i16, ptr %b
+  %ld.a.1 = load i16, ptr %addr.a.1
+  %ld.b.1 = load i16, ptr %addr.b.1
   %sext.a.1 = sext i16 %ld.a.1 to i32
   %sext.b.1 = sext i16 %ld.b.1 to i32
   %sext.b.0 = sext i16 %ld.b.0 to i32
   %mul.0 = mul i32 %sext.a.0, %sext.a.0
   %mul.1 = mul i32 %sext.a.1, %sext.b.1
-  %addr.a.2 = getelementptr i16, i16* %a, i32 2
-  %addr.b.2 = getelementptr i16, i16* %b, i32 2
-  %ld.a.2 = load i16, i16* %addr.a.2
-  %ld.b.2 = load i16, i16* %addr.b.2
+  %addr.a.2 = getelementptr i16, ptr %a, i32 2
+  %addr.b.2 = getelementptr i16, ptr %b, i32 2
+  %ld.a.2 = load i16, ptr %addr.a.2
+  %ld.b.2 = load i16, ptr %addr.b.2
   %sext.a.2 = sext i16 %ld.a.2 to i32
   %sext.b.2 = sext i16 %ld.b.2 to i32
   %mul.2 = mul i32 %sext.a.2, %sext.b.2
@@ -111,24 +108,22 @@ entry:
   ret i32 %res
 }
 
-define i32 @accumulate_square_a2(i16* %a, i16* %b, i32 %acc) {
+define i32 @accumulate_square_a2(ptr %a, ptr %b, i32 %acc) {
 ; CHECK-LABEL: @accumulate_square_a2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i16* [[A:%.*]] to i32*
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A:%.*]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i16
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext i16 [[TMP3]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i16* [[B:%.*]] to i32*
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP5]], align 2
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[B:%.*]], align 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = lshr i32 [[TMP6]], 16
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc i32 [[TMP7]] to i16
 ; CHECK-NEXT:    [[TMP9:%.*]] = sext i16 [[TMP8]] to i32
 ; CHECK-NEXT:    [[MUL_1:%.*]] = mul i32 [[TMP4]], [[TMP9]]
-; CHECK-NEXT:    [[ADDR_A_2:%.*]] = getelementptr i16, i16* [[A]], i32 2
-; CHECK-NEXT:    [[ADDR_B_2:%.*]] = getelementptr i16, i16* [[B]], i32 2
-; CHECK-NEXT:    [[LD_A_2:%.*]] = load i16, i16* [[ADDR_A_2]]
-; CHECK-NEXT:    [[LD_B_2:%.*]] = load i16, i16* [[ADDR_B_2]]
+; CHECK-NEXT:    [[ADDR_A_2:%.*]] = getelementptr i16, ptr [[A]], i32 2
+; CHECK-NEXT:    [[ADDR_B_2:%.*]] = getelementptr i16, ptr [[B]], i32 2
+; CHECK-NEXT:    [[LD_A_2:%.*]] = load i16, ptr [[ADDR_A_2]]
+; CHECK-NEXT:    [[LD_B_2:%.*]] = load i16, ptr [[ADDR_B_2]]
 ; CHECK-NEXT:    [[SEXT_A_2:%.*]] = sext i16 [[LD_A_2]] to i32
 ; CHECK-NEXT:    [[SEXT_B_2:%.*]] = sext i16 [[LD_B_2]] to i32
 ; CHECK-NEXT:    [[MUL_2:%.*]] = mul i32 [[SEXT_A_2]], [[SEXT_A_2]]
@@ -139,22 +134,22 @@ define i32 @accumulate_square_a2(i16* %a, i16* %b, i32 %acc) {
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
-  %addr.a.1 = getelementptr i16, i16* %a, i32 1
-  %addr.b.1 = getelementptr i16, i16* %b, i32 1
-  %ld.a.0 = load i16, i16* %a
+  %addr.a.1 = getelementptr i16, ptr %a, i32 1
+  %addr.b.1 = getelementptr i16, ptr %b, i32 1
+  %ld.a.0 = load i16, ptr %a
   %sext.a.0 = sext i16 %ld.a.0 to i32
-  %ld.b.0 = load i16, i16* %b
-  %ld.a.1 = load i16, i16* %addr.a.1
-  %ld.b.1 = load i16, i16* %addr.b.1
+  %ld.b.0 = load i16, ptr %b
+  %ld.a.1 = load i16, ptr %addr.a.1
+  %ld.b.1 = load i16, ptr %addr.b.1
   %sext.a.1 = sext i16 %ld.a.1 to i32
   %sext.b.1 = sext i16 %ld.b.1 to i32
   %sext.b.0 = sext i16 %ld.b.0 to i32
   %mul.0 = mul i32 %sext.a.0, %sext.b.0
   %mul.1 = mul i32 %sext.a.1, %sext.b.1
-  %addr.a.2 = getelementptr i16, i16* %a, i32 2
-  %addr.b.2 = getelementptr i16, i16* %b, i32 2
-  %ld.a.2 = load i16, i16* %addr.a.2
-  %ld.b.2 = load i16, i16* %addr.b.2
+  %addr.a.2 = getelementptr i16, ptr %a, i32 2
+  %addr.b.2 = getelementptr i16, ptr %b, i32 2
+  %ld.a.2 = load i16, ptr %addr.a.2
+  %ld.b.2 = load i16, ptr %addr.b.2
   %sext.a.2 = sext i16 %ld.a.2 to i32
   %sext.b.2 = sext i16 %ld.b.2 to i32
   %mul.2 = mul i32 %sext.a.2, %sext.a.2
@@ -166,21 +161,21 @@ entry:
   ret i32 %res
 }
 
-define i32 @accumulate_square_b2(i16* %a, i16* %b, i32 %acc) {
+define i32 @accumulate_square_b2(ptr %a, ptr %b, i32 %acc) {
 ; CHECK-LABEL: @accumulate_square_b2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ADDR_A_1:%.*]] = getelementptr i16, i16* [[A:%.*]], i32 1
-; CHECK-NEXT:    [[ADDR_B_1:%.*]] = getelementptr i16, i16* [[B:%.*]], i32 1
-; CHECK-NEXT:    [[LD_A_0:%.*]] = load i16, i16* [[A]]
+; CHECK-NEXT:    [[ADDR_A_1:%.*]] = getelementptr i16, ptr [[A:%.*]], i32 1
+; CHECK-NEXT:    [[ADDR_B_1:%.*]] = getelementptr i16, ptr [[B:%.*]], i32 1
+; CHECK-NEXT:    [[LD_A_0:%.*]] = load i16, ptr [[A]]
 ; CHECK-NEXT:    [[SEXT_A_0:%.*]] = sext i16 [[LD_A_0]] to i32
-; CHECK-NEXT:    [[LD_A_1:%.*]] = load i16, i16* [[ADDR_A_1]]
-; CHECK-NEXT:    [[LD_B_1:%.*]] = load i16, i16* [[ADDR_B_1]]
+; CHECK-NEXT:    [[LD_A_1:%.*]] = load i16, ptr [[ADDR_A_1]]
+; CHECK-NEXT:    [[LD_B_1:%.*]] = load i16, ptr [[ADDR_B_1]]
 ; CHECK-NEXT:    [[SEXT_A_1:%.*]] = sext i16 [[LD_A_1]] to i32
 ; CHECK-NEXT:    [[SEXT_B_1:%.*]] = sext i16 [[LD_B_1]] to i32
 ; CHECK-NEXT:    [[MUL_0:%.*]] = mul i32 [[SEXT_A_0]], [[SEXT_A_0]]
 ; CHECK-NEXT:    [[MUL_1:%.*]] = mul i32 [[SEXT_A_1]], [[SEXT_B_1]]
-; CHECK-NEXT:    [[ADDR_B_2:%.*]] = getelementptr i16, i16* [[B]], i32 2
-; CHECK-NEXT:    [[LD_B_2:%.*]] = load i16, i16* [[ADDR_B_2]]
+; CHECK-NEXT:    [[ADDR_B_2:%.*]] = getelementptr i16, ptr [[B]], i32 2
+; CHECK-NEXT:    [[LD_B_2:%.*]] = load i16, ptr [[ADDR_B_2]]
 ; CHECK-NEXT:    [[SEXT_B_2:%.*]] = sext i16 [[LD_B_2]] to i32
 ; CHECK-NEXT:    [[MUL_2:%.*]] = mul i32 [[SEXT_B_2]], [[SEXT_B_2]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[MUL_0]], [[MUL_1]]
@@ -190,22 +185,22 @@ define i32 @accumulate_square_b2(i16* %a, i16* %b, i32 %acc) {
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
-  %addr.a.1 = getelementptr i16, i16* %a, i32 1
-  %addr.b.1 = getelementptr i16, i16* %b, i32 1
-  %ld.a.0 = load i16, i16* %a
+  %addr.a.1 = getelementptr i16, ptr %a, i32 1
+  %addr.b.1 = getelementptr i16, ptr %b, i32 1
+  %ld.a.0 = load i16, ptr %a
   %sext.a.0 = sext i16 %ld.a.0 to i32
-  %ld.b.0 = load i16, i16* %b
-  %ld.a.1 = load i16, i16* %addr.a.1
-  %ld.b.1 = load i16, i16* %addr.b.1
+  %ld.b.0 = load i16, ptr %b
+  %ld.a.1 = load i16, ptr %addr.a.1
+  %ld.b.1 = load i16, ptr %addr.b.1
   %sext.a.1 = sext i16 %ld.a.1 to i32
   %sext.b.1 = sext i16 %ld.b.1 to i32
   %sext.b.0 = sext i16 %ld.b.0 to i32
   %mul.0 = mul i32 %sext.a.0, %sext.a.0
   %mul.1 = mul i32 %sext.a.1, %sext.b.1
-  %addr.a.2 = getelementptr i16, i16* %a, i32 2
-  %addr.b.2 = getelementptr i16, i16* %b, i32 2
-  %ld.a.2 = load i16, i16* %addr.a.2
-  %ld.b.2 = load i16, i16* %addr.b.2
+  %addr.a.2 = getelementptr i16, ptr %a, i32 2
+  %addr.b.2 = getelementptr i16, ptr %b, i32 2
+  %ld.a.2 = load i16, ptr %addr.a.2
+  %ld.b.2 = load i16, ptr %addr.b.2
   %sext.a.2 = sext i16 %ld.a.2 to i32
   %sext.b.2 = sext i16 %ld.b.2 to i32
   %mul.2 = mul i32 %sext.b.2, %sext.b.2
@@ -217,23 +212,23 @@ entry:
   ret i32 %res
 }
 
-define i32 @accumulate_square_a1(i16* %a, i16* %b, i32 %acc) {
+define i32 @accumulate_square_a1(ptr %a, ptr %b, i32 %acc) {
 ; CHECK-LABEL: @accumulate_square_a1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ADDR_A_1:%.*]] = getelementptr i16, i16* [[A:%.*]], i32 1
-; CHECK-NEXT:    [[ADDR_B_1:%.*]] = getelementptr i16, i16* [[B:%.*]], i32 1
-; CHECK-NEXT:    [[LD_A_0:%.*]] = load i16, i16* [[A]]
+; CHECK-NEXT:    [[ADDR_A_1:%.*]] = getelementptr i16, ptr [[A:%.*]], i32 1
+; CHECK-NEXT:    [[ADDR_B_1:%.*]] = getelementptr i16, ptr [[B:%.*]], i32 1
+; CHECK-NEXT:    [[LD_A_0:%.*]] = load i16, ptr [[A]]
 ; CHECK-NEXT:    [[SEXT_A_0:%.*]] = sext i16 [[LD_A_0]] to i32
-; CHECK-NEXT:    [[LD_A_1:%.*]] = load i16, i16* [[ADDR_A_1]]
-; CHECK-NEXT:    [[LD_B_1:%.*]] = load i16, i16* [[ADDR_B_1]]
+; CHECK-NEXT:    [[LD_A_1:%.*]] = load i16, ptr [[ADDR_A_1]]
+; CHECK-NEXT:    [[LD_B_1:%.*]] = load i16, ptr [[ADDR_B_1]]
 ; CHECK-NEXT:    [[SEXT_A_1:%.*]] = sext i16 [[LD_A_1]] to i32
 ; CHECK-NEXT:    [[SEXT_B_1:%.*]] = sext i16 [[LD_B_1]] to i32
 ; CHECK-NEXT:    [[MUL_0:%.*]] = mul i32 [[SEXT_A_0]], [[SEXT_A_0]]
 ; CHECK-NEXT:    [[MUL_1:%.*]] = mul i32 [[SEXT_A_1]], [[SEXT_A_1]]
-; CHECK-NEXT:    [[ADDR_A_2:%.*]] = getelementptr i16, i16* [[A]], i32 2
-; CHECK-NEXT:    [[ADDR_B_2:%.*]] = getelementptr i16, i16* [[B]], i32 2
-; CHECK-NEXT:    [[LD_A_2:%.*]] = load i16, i16* [[ADDR_A_2]]
-; CHECK-NEXT:    [[LD_B_2:%.*]] = load i16, i16* [[ADDR_B_2]]
+; CHECK-NEXT:    [[ADDR_A_2:%.*]] = getelementptr i16, ptr [[A]], i32 2
+; CHECK-NEXT:    [[ADDR_B_2:%.*]] = getelementptr i16, ptr [[B]], i32 2
+; CHECK-NEXT:    [[LD_A_2:%.*]] = load i16, ptr [[ADDR_A_2]]
+; CHECK-NEXT:    [[LD_B_2:%.*]] = load i16, ptr [[ADDR_B_2]]
 ; CHECK-NEXT:    [[SEXT_A_2:%.*]] = sext i16 [[LD_A_2]] to i32
 ; CHECK-NEXT:    [[SEXT_B_2:%.*]] = sext i16 [[LD_B_2]] to i32
 ; CHECK-NEXT:    [[MUL_2:%.*]] = mul i32 [[SEXT_A_2]], [[SEXT_B_2]]
@@ -246,22 +241,22 @@ define i32 @accumulate_square_a1(i16* %a, i16* %b, i32 %acc) {
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
-  %addr.a.1 = getelementptr i16, i16* %a, i32 1
-  %addr.b.1 = getelementptr i16, i16* %b, i32 1
-  %ld.a.0 = load i16, i16* %a
+  %addr.a.1 = getelementptr i16, ptr %a, i32 1
+  %addr.b.1 = getelementptr i16, ptr %b, i32 1
+  %ld.a.0 = load i16, ptr %a
   %sext.a.0 = sext i16 %ld.a.0 to i32
-  %ld.b.0 = load i16, i16* %b
-  %ld.a.1 = load i16, i16* %addr.a.1
-  %ld.b.1 = load i16, i16* %addr.b.1
+  %ld.b.0 = load i16, ptr %b
+  %ld.a.1 = load i16, ptr %addr.a.1
+  %ld.b.1 = load i16, ptr %addr.b.1
   %sext.a.1 = sext i16 %ld.a.1 to i32
   %sext.b.1 = sext i16 %ld.b.1 to i32
   %sext.b.0 = sext i16 %ld.b.0 to i32
   %mul.0 = mul i32 %sext.a.0, %sext.a.0
   %mul.1 = mul i32 %sext.a.1, %sext.a.1
-  %addr.a.2 = getelementptr i16, i16* %a, i32 2
-  %addr.b.2 = getelementptr i16, i16* %b, i32 2
-  %ld.a.2 = load i16, i16* %addr.a.2
-  %ld.b.2 = load i16, i16* %addr.b.2
+  %addr.a.2 = getelementptr i16, ptr %a, i32 2
+  %addr.b.2 = getelementptr i16, ptr %b, i32 2
+  %ld.a.2 = load i16, ptr %addr.a.2
+  %ld.b.2 = load i16, ptr %addr.b.2
   %sext.a.2 = sext i16 %ld.a.2 to i32
   %sext.b.2 = sext i16 %ld.b.2 to i32
   %mul.2 = mul i32 %sext.a.2, %sext.b.2

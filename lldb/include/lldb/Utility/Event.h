@@ -112,7 +112,7 @@ public:
 
   ConstString GetFlavor() const override { return GetFlavorString(); }
 
-  bool WaitForEventReceived(const Timeout<std::micro> &timeout = llvm::None) {
+  bool WaitForEventReceived(const Timeout<std::micro> &timeout = std::nullopt) {
     return m_predicate.WaitForValueEqualTo(true, timeout);
   }
 

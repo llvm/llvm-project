@@ -23,7 +23,7 @@ module define_a
   end type
 end module
 
-! CHECK-A-DEF: fir.global linkonce_odr @_QMdefine_aE.dt.atype constant : !fir.type<{{.*}}> {
+! CHECK-A-DEF: fir.global linkonce_odr @_QMdefine_aE.dt.atype constant target : !fir.type<{{.*}}> {
 ! CHECK-A-DEF: fir.has_value
 ! CHECK-A-DEF: }
 
@@ -45,7 +45,7 @@ end module
 ! CHECK-B-DEF: fir.has_value %{{.*}} : i32
 ! CHECK-B-DEF: }
 
-! CHECK-B-DEF: fir.global linkonce_odr @_QMdefine_bE.dt.btype constant : !fir.type<{{.*}}> {
+! CHECK-B-DEF: fir.global linkonce_odr @_QMdefine_bE.dt.btype constant target : !fir.type<{{.*}}> {
 ! CHECK-B-DEF: fir.has_value
 ! CHECK-B-DEF: }
 

@@ -414,12 +414,12 @@ void SystemRuntimeMacOSX::ReadLibdispatchTSDIndexes() {
         }
 #endif
 
-    TypeSystemClang *ast_ctx =
+    TypeSystemClangSP scratch_ts_sp =
         ScratchTypeSystemClang::GetForTarget(m_process->GetTarget());
     if (m_dispatch_tsd_indexes_addr != LLDB_INVALID_ADDRESS) {
       CompilerType uint16 =
-          ast_ctx->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 16);
-      CompilerType dispatch_tsd_indexes_s = ast_ctx->CreateRecordType(
+          scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 16);
+      CompilerType dispatch_tsd_indexes_s = scratch_ts_sp->CreateRecordType(
           nullptr, OptionalClangModuleID(), lldb::eAccessPublic,
           "__lldb_dispatch_tsd_indexes_s", clang::TTK_Struct,
           lldb::eLanguageTypeC);
@@ -502,6 +502,46 @@ ThreadSP SystemRuntimeMacOSX::GetExtendedBacktraceThread(ThreadSP real_thread,
         m_page_to_free_size = ret.item_buffer_size;
       }
     }
+  } else if (type == "Application Specific Backtrace") {
+    StructuredData::ObjectSP thread_extended_sp =
+        real_thread->GetExtendedInfo();
+
+    if (!thread_extended_sp)
+      return {};
+
+    StructuredData::Array *thread_extended_info =
+        thread_extended_sp->GetAsArray();
+
+    if (!thread_extended_info || !thread_extended_info->GetSize())
+      return {};
+
+    std::vector<addr_t> app_specific_backtrace_pcs;
+
+    auto extract_frame_pc =
+        [&app_specific_backtrace_pcs](StructuredData::Object *obj) -> bool {
+      if (!obj)
+        return false;
+
+      StructuredData::Dictionary *dict = obj->GetAsDictionary();
+      if (!dict)
+        return false;
+
+      lldb::addr_t pc = LLDB_INVALID_ADDRESS;
+      if (!dict->GetValueForKeyAsInteger("pc", pc))
+        return false;
+
+      app_specific_backtrace_pcs.push_back(pc);
+
+      return pc != LLDB_INVALID_ADDRESS;
+    };
+
+    if (!thread_extended_info->ForEach(extract_frame_pc))
+      return {};
+
+    originating_thread_sp =
+        std::make_shared<HistoryThread>(*m_process, real_thread->GetIndexID(),
+                                        app_specific_backtrace_pcs, true);
+    originating_thread_sp->SetQueueName(type.AsCString());
   }
   return originating_thread_sp;
 }
@@ -674,6 +714,7 @@ const std::vector<ConstString> &
 SystemRuntimeMacOSX::GetExtendedBacktraceTypes() {
   if (m_types.size() == 0) {
     m_types.push_back(ConstString("libdispatch"));
+    m_types.push_back(ConstString("Application Specific Backtrace"));
     // We could have pthread as another type in the future if we have a way of
     // gathering that information & it's useful to distinguish between them.
   }
@@ -787,14 +828,14 @@ SystemRuntimeMacOSX::GetPendingItemRefsForQueue(lldb::addr_t queue) {
           //   }
 
           offset_t offset = 0;
-          int i = 0;
+          uint64_t i = 0;
           uint32_t version = extractor.GetU32(&offset);
           if (version == 1) {
             pending_item_refs.new_style = true;
             uint32_t item_size = extractor.GetU32(&offset);
             uint32_t start_of_array_offset = offset;
             while (offset < pending_items_pointer.items_buffer_size &&
-                   static_cast<size_t>(i) < pending_items_pointer.count) {
+                   i < pending_items_pointer.count) {
               offset = start_of_array_offset + (i * item_size);
               ItemRefAndCodeAddress item;
               item.item_ref = extractor.GetAddress(&offset);
@@ -806,7 +847,7 @@ SystemRuntimeMacOSX::GetPendingItemRefsForQueue(lldb::addr_t queue) {
             offset = 0;
             pending_item_refs.new_style = false;
             while (offset < pending_items_pointer.items_buffer_size &&
-                   static_cast<size_t>(i) < pending_items_pointer.count) {
+                   i < pending_items_pointer.count) {
               ItemRefAndCodeAddress item;
               item.item_ref = extractor.GetAddress(&offset);
               item.code_address = LLDB_INVALID_ADDRESS;

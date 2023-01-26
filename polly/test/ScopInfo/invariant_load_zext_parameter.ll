@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-print-scops -polly-invariant-load-hoisting=true -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-codegen -polly-invariant-load-hoisting=true -S < %s | FileCheck %s --check-prefix=CODEGEN
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-print-scops -polly-invariant-load-hoisting=true -disable-output < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-codegen -polly-invariant-load-hoisting=true -S < %s | FileCheck %s --check-prefix=CODEGEN
 ;
 ;    void f(int *I0, int *I1, int *V) {
 ;      for (int i = 0; i < 1000; i++) {

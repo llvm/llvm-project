@@ -10,13 +10,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Frontend/OpenMP/OMPGridValues.h"
+#include "llvm/Object/ELF.h"
+#include "llvm/Object/ELFObjectFile.h"
+
 #include <algorithm>
 #include <assert.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <functional>
-#include <libelf.h>
 #include <list>
 #include <memory>
 #include <mutex>
@@ -24,9 +29,11 @@
 #include <unordered_map>
 #include <vector>
 
+#include "ELFSymbols.h"
 #include "impl_runtime.h"
 #include "interop_hsa.h"
 
+#include "UtilitiesRTL.h"
 #include "internal.h"
 #include "rt.h"
 
@@ -35,12 +42,10 @@
 #include "omptargetplugin.h"
 #include "print_tracing.h"
 
-#include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Frontend/OpenMP/OMPConstants.h"
-#include "llvm/Frontend/OpenMP/OMPGridValues.h"
-
 using namespace llvm;
+using namespace llvm::object;
+using namespace llvm::ELF;
+using namespace llvm::omp::target::plugin::utils;
 
 // hostrpc interface, FIXME: consider moving to its own include these are
 // statically linked into amdgpu/plugin if present from hostrpc_services.a,
@@ -122,7 +127,7 @@ public:
   std::queue<int> FreeKernargSegments;
 
   uint32_t kernargSizeIncludingImplicit() {
-    return KernargSegmentSize + sizeof(impl_implicit_args_t);
+    return KernargSegmentSize + sizeof(AMDGPUImplicitArgsTy);
   }
 
   ~KernelArgPool() {
@@ -935,9 +940,10 @@ public:
         if (GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT) {
           KernArgPool = MemoryPool;
           KernArgPoolSet = true;
+        } else {
+          HostFineGrainedMemoryPool = MemoryPool;
+          FineGrainedMemoryPoolSet = true;
         }
-        HostFineGrainedMemoryPool = MemoryPool;
-        FineGrainedMemoryPoolSet = true;
       }
     }
 
@@ -1113,21 +1119,10 @@ public:
 
 pthread_mutex_t SignalPoolT::mutex = PTHREAD_MUTEX_INITIALIZER;
 
-static RTLDeviceInfoTy *DeviceInfoState = nullptr;
-static RTLDeviceInfoTy &DeviceInfo() { return *DeviceInfoState; }
-
-int32_t __tgt_rtl_init_plugin() {
-  DeviceInfoState = new RTLDeviceInfoTy;
-  return (DeviceInfoState && DeviceInfoState->ConstructionSucceeded)
-             ? OFFLOAD_SUCCESS
-             : OFFLOAD_FAIL;
-}
-
-int32_t __tgt_rtl_deinit_plugin() {
-  if (DeviceInfoState)
-    delete DeviceInfoState;
-  return OFFLOAD_SUCCESS;
-}
+// Putting accesses to DeviceInfo global behind a function call prior
+// to changing to use init_plugin/deinit_plugin calls
+static RTLDeviceInfoTy DeviceInfoState;
+static RTLDeviceInfoTy &DeviceInfo() { return DeviceInfoState; }
 
 namespace {
 
@@ -1144,7 +1139,7 @@ int32_t dataRetrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr, int64_t Size,
      (long long unsigned)(Elf64_Addr)HstPtr);
 
   Err = DeviceInfo().freesignalpoolMemcpyD2H(HstPtr, TgtPtr, (size_t)Size,
-                                           DeviceId);
+                                             DeviceId);
 
   if (Err != HSA_STATUS_SUCCESS) {
     DP("Error when copying data from device to host. Pointers: "
@@ -1171,7 +1166,7 @@ int32_t dataSubmit(int32_t DeviceId, void *TgtPtr, void *HstPtr, int64_t Size,
      (long long unsigned)(Elf64_Addr)HstPtr,
      (long long unsigned)(Elf64_Addr)TgtPtr);
   Err = DeviceInfo().freesignalpoolMemcpyH2D(TgtPtr, HstPtr, (size_t)Size,
-                                           DeviceId);
+                                             DeviceId);
   if (Err != HSA_STATUS_SUCCESS) {
     DP("Error when copying data from host to device. Pointers: "
        "host = 0x%016lx, device = 0x%016lx, size = %lld\n",
@@ -1493,13 +1488,13 @@ int32_t runRegionLocked(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
       }
 
       // Initialize implicit arguments. TODO: Which of these can be dropped
-      impl_implicit_args_t *ImplArgs = reinterpret_cast<impl_implicit_args_t *>(
+      AMDGPUImplicitArgsTy *ImplArgs = reinterpret_cast<AMDGPUImplicitArgsTy *>(
           static_cast<char *>(KernArg) + ArgPool->KernargSegmentSize);
       memset(ImplArgs, 0,
-             sizeof(impl_implicit_args_t)); // may not be necessary
-      ImplArgs->offset_x = 0;
-      ImplArgs->offset_y = 0;
-      ImplArgs->offset_z = 0;
+             sizeof(AMDGPUImplicitArgsTy)); // may not be necessary
+      ImplArgs->OffsetX = 0;
+      ImplArgs->OffsetY = 0;
+      ImplArgs->OffsetZ = 0;
 
       // assign a hostcall buffer for the selected Q
       if (__atomic_load_n(&DeviceInfo().HostcallRequired, __ATOMIC_ACQUIRE)) {
@@ -1507,8 +1502,8 @@ int32_t runRegionLocked(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
         // under a multiple reader lock, not a writer lock.
         static pthread_mutex_t HostcallInitLock = PTHREAD_MUTEX_INITIALIZER;
         pthread_mutex_lock(&HostcallInitLock);
-        uint64_t Buffer = hostrpc_assign_buffer(DeviceInfo().HSAAgents[DeviceId],
-                                                Queue, DeviceId);
+        uint64_t Buffer = hostrpc_assign_buffer(
+            DeviceInfo().HSAAgents[DeviceId], Queue, DeviceId);
         pthread_mutex_unlock(&HostcallInitLock);
         if (!Buffer) {
           DP("hostrpc_assign_buffer failed, gpu would dereference null and "
@@ -1535,7 +1530,7 @@ int32_t runRegionLocked(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
         }
 
         // initialise pointer for implicit_argument_count == 0 ABI
-        ImplArgs->hostcall_ptr = Buffer;
+        ImplArgs->HostcallPtr = Buffer;
       }
 
       Packet->kernarg_address = KernArg;
@@ -1571,8 +1566,8 @@ int32_t runRegionLocked(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
 }
 
 bool elfMachineIdIsAmdgcn(__tgt_device_image *Image) {
-  const uint16_t AmdgcnMachineID = 224; // EM_AMDGPU may not be in system elf.h
-  int32_t R = elf_check_machine(Image, AmdgcnMachineID);
+  const uint16_t AmdgcnMachineID = EM_AMDGPU;
+  const int32_t R = elf_check_machine(Image, AmdgcnMachineID);
   if (!R) {
     DP("Supported machine ID not found\n");
   }
@@ -1580,28 +1575,20 @@ bool elfMachineIdIsAmdgcn(__tgt_device_image *Image) {
 }
 
 uint32_t elfEFlags(__tgt_device_image *Image) {
-  char *ImgBegin = (char *)Image->ImageStart;
+  const char *ImgBegin = (char *)Image->ImageStart;
   size_t ImgSize = (char *)Image->ImageEnd - ImgBegin;
 
-  Elf *E = elf_memory(ImgBegin, ImgSize);
-  if (!E) {
-    DP("Unable to get ELF handle: %s!\n", elf_errmsg(-1));
+  StringRef Buffer = StringRef(ImgBegin, ImgSize);
+  auto ElfOrErr = ObjectFile::createELFObjectFile(MemoryBufferRef(Buffer, ""),
+                                                  /*InitContent=*/false);
+  if (!ElfOrErr) {
+    consumeError(ElfOrErr.takeError());
     return 0;
   }
 
-  Elf64_Ehdr *Eh64 = elf64_getehdr(E);
-
-  if (!Eh64) {
-    DP("Unable to get machine ID from ELF file!\n");
-    elf_end(E);
-    return 0;
-  }
-
-  uint32_t Flags = Eh64->e_flags;
-
-  elf_end(E);
-  DP("ELF Flags: 0x%x\n", Flags);
-  return Flags;
+  if (const auto *ELFObj = dyn_cast<ELF64LEObjectFile>(ElfOrErr->get()))
+    return ELFObj->getPlatformFlags();
+  return 0;
 }
 
 template <typename T> bool enforceUpperBound(T *Value, T Upper) {
@@ -1612,128 +1599,53 @@ template <typename T> bool enforceUpperBound(T *Value, T Upper) {
   return Changed;
 }
 
-Elf64_Shdr *findOnlyShtHash(Elf *Elf) {
-  size_t N;
-  int Rc = elf_getshdrnum(Elf, &N);
-  if (Rc != 0) {
-    return nullptr;
-  }
-
-  Elf64_Shdr *Result = nullptr;
-  for (size_t I = 0; I < N; I++) {
-    Elf_Scn *Scn = elf_getscn(Elf, I);
-    if (Scn) {
-      Elf64_Shdr *Shdr = elf64_getshdr(Scn);
-      if (Shdr) {
-        if (Shdr->sh_type == SHT_HASH) {
-          if (Result == nullptr) {
-            Result = Shdr;
-          } else {
-            // multiple SHT_HASH sections not handled
-            return nullptr;
-          }
-        }
-      }
-    }
-  }
-  return Result;
-}
-
-const Elf64_Sym *elfLookup(Elf *Elf, char *Base, Elf64_Shdr *SectionHash,
-                           const char *Symname) {
-
-  assert(SectionHash);
-  size_t SectionSymtabIndex = SectionHash->sh_link;
-  Elf64_Shdr *SectionSymtab =
-      elf64_getshdr(elf_getscn(Elf, SectionSymtabIndex));
-  size_t SectionStrtabIndex = SectionSymtab->sh_link;
-
-  const Elf64_Sym *Symtab =
-      reinterpret_cast<const Elf64_Sym *>(Base + SectionSymtab->sh_offset);
-
-  const uint32_t *Hashtab =
-      reinterpret_cast<const uint32_t *>(Base + SectionHash->sh_offset);
-
-  // Layout:
-  // nbucket
-  // nchain
-  // bucket[nbucket]
-  // chain[nchain]
-  uint32_t Nbucket = Hashtab[0];
-  const uint32_t *Bucket = &Hashtab[2];
-  const uint32_t *Chain = &Hashtab[Nbucket + 2];
-
-  const size_t Max = strlen(Symname) + 1;
-  const uint32_t Hash = elf_hash(Symname);
-  for (uint32_t I = Bucket[Hash % Nbucket]; I != 0; I = Chain[I]) {
-    char *N = elf_strptr(Elf, SectionStrtabIndex, Symtab[I].st_name);
-    if (strncmp(Symname, N, Max) == 0) {
-      return &Symtab[I];
-    }
-  }
-
-  return nullptr;
-}
-
 struct SymbolInfo {
-  void *Addr = nullptr;
+  const void *Addr = nullptr;
   uint32_t Size = UINT32_MAX;
   uint32_t ShType = SHT_NULL;
 };
 
-int getSymbolInfoWithoutLoading(Elf *Elf, char *Base, const char *Symname,
-                                SymbolInfo *Res) {
-  if (elf_kind(Elf) != ELF_K_ELF) {
+int getSymbolInfoWithoutLoading(const ELFObjectFile<ELF64LE> &ELFObj,
+                                StringRef SymName, SymbolInfo *Res) {
+  auto SymOrErr = getELFSymbol(ELFObj, SymName);
+  if (!SymOrErr) {
+    std::string ErrorString = toString(SymOrErr.takeError());
+    DP("Failed ELF lookup: %s\n", ErrorString.c_str());
+    return 1;
+  }
+  if (!*SymOrErr)
+    return 1;
+
+  auto SymSecOrErr = ELFObj.getELFFile().getSection((*SymOrErr)->st_shndx);
+  if (!SymSecOrErr) {
+    std::string ErrorString = toString(SymOrErr.takeError());
+    DP("Failed ELF lookup: %s\n", ErrorString.c_str());
     return 1;
   }
 
-  Elf64_Shdr *SectionHash = findOnlyShtHash(Elf);
-  if (!SectionHash) {
-    return 1;
-  }
-
-  const Elf64_Sym *Sym = elfLookup(Elf, Base, SectionHash, Symname);
-  if (!Sym) {
-    return 1;
-  }
-
-  if (Sym->st_size > UINT32_MAX) {
-    return 1;
-  }
-
-  if (Sym->st_shndx == SHN_UNDEF) {
-    return 1;
-  }
-
-  Elf_Scn *Section = elf_getscn(Elf, Sym->st_shndx);
-  if (!Section) {
-    return 1;
-  }
-
-  Elf64_Shdr *Header = elf64_getshdr(Section);
-  if (!Header) {
-    return 1;
-  }
-
-  Res->Addr = Sym->st_value + Base;
-  Res->Size = static_cast<uint32_t>(Sym->st_size);
-  Res->ShType = Header->sh_type;
+  Res->Addr = (*SymOrErr)->st_value + ELFObj.getELFFile().base();
+  Res->Size = static_cast<uint32_t>((*SymOrErr)->st_size);
+  Res->ShType = static_cast<uint32_t>((*SymSecOrErr)->sh_type);
   return 0;
 }
 
-int getSymbolInfoWithoutLoading(char *Base, size_t ImgSize, const char *Symname,
+int getSymbolInfoWithoutLoading(char *Base, size_t ImgSize, const char *SymName,
                                 SymbolInfo *Res) {
-  Elf *Elf = elf_memory(Base, ImgSize);
-  if (Elf) {
-    int Rc = getSymbolInfoWithoutLoading(Elf, Base, Symname, Res);
-    elf_end(Elf);
-    return Rc;
+  StringRef Buffer = StringRef(Base, ImgSize);
+  auto ElfOrErr = ObjectFile::createELFObjectFile(MemoryBufferRef(Buffer, ""),
+                                                  /*InitContent=*/false);
+  if (!ElfOrErr) {
+    REPORT("Failed to load ELF: %s\n", toString(ElfOrErr.takeError()).c_str());
+    return 1;
   }
+
+  if (const auto *ELFObj = dyn_cast<ELF64LEObjectFile>(ElfOrErr->get()))
+    return getSymbolInfoWithoutLoading(*ELFObj, SymName, Res);
   return 1;
 }
 
 hsa_status_t interopGetSymbolInfo(char *Base, size_t ImgSize,
-                                  const char *SymName, void **VarAddr,
+                                  const char *SymName, const void **VarAddr,
                                   uint32_t *VarSize) {
   SymbolInfo SI;
   int Rc = getSymbolInfoWithoutLoading(Base, ImgSize, SymName, &SI);
@@ -1796,7 +1708,7 @@ struct DeviceEnvironment {
   // If the symbol is in .data (aomp, rocm) it can be written directly.
   // If it is in .bss, we must wait for it to be allocated space on the
   // gpu (trunk) and initialize after loading.
-  const char *sym() { return "omptarget_device_environment"; }
+  const char *sym() { return "__omp_rtl_device_environment"; }
 
   DeviceEnvironmentTy HostDeviceEnv;
   SymbolInfo SI;
@@ -1839,8 +1751,9 @@ struct DeviceEnvironment {
       if (inImage()) {
         DP("Setting global device environment before load (%u bytes)\n",
            SI.Size);
-        uint64_t Offset = (char *)SI.Addr - (char *)Image->ImageStart;
-        void *Pos = (char *)Data + Offset;
+        uint64_t Offset = reinterpret_cast<const char *>(SI.Addr) -
+                          reinterpret_cast<const char *>(Image->ImageStart);
+        void *Pos = reinterpret_cast<char *>(Data) + Offset;
         memcpy(Pos, &HostDeviceEnv, SI.Size);
       }
     }
@@ -1870,7 +1783,7 @@ struct DeviceEnvironment {
         }
 
         return DeviceInfo().freesignalpoolMemcpyH2D(StatePtr, &HostDeviceEnv,
-                                                  StatePtrSize, DeviceId);
+                                                    StatePtrSize, DeviceId);
       }
     }
     return HSA_STATUS_SUCCESS;
@@ -1901,6 +1814,35 @@ bool imageContainsSymbol(void *Data, size_t Size, const char *Sym) {
   SymbolInfo SI;
   int Rc = getSymbolInfoWithoutLoading((char *)Data, Size, Sym, &SI);
   return (Rc == 0) && (SI.Addr != nullptr);
+}
+
+hsa_status_t lock_memory(void *HostPtr, size_t Size, hsa_agent_t Agent,
+                         void **LockedHostPtr) {
+  hsa_status_t err = is_locked(HostPtr, LockedHostPtr);
+  if (err != HSA_STATUS_SUCCESS)
+    return err;
+
+  // HostPtr is already locked, just return it
+  if (*LockedHostPtr)
+    return HSA_STATUS_SUCCESS;
+
+  hsa_agent_t Agents[1] = {Agent};
+  return hsa_amd_memory_lock(HostPtr, Size, Agents, /*num_agent=*/1,
+                             LockedHostPtr);
+}
+
+hsa_status_t unlock_memory(void *HostPtr) {
+  void *LockedHostPtr = nullptr;
+  hsa_status_t err = is_locked(HostPtr, &LockedHostPtr);
+  if (err != HSA_STATUS_SUCCESS)
+    return err;
+
+  // if LockedHostPtr is nullptr, then HostPtr was not locked
+  if (!LockedHostPtr)
+    return HSA_STATUS_SUCCESS;
+
+  err = hsa_amd_memory_unlock(HostPtr);
+  return err;
 }
 
 } // namespace
@@ -1935,101 +1877,6 @@ static hsa_status_t GetIsaInfo(hsa_isa_t isa, void *data) {
   return HSA_STATUS_SUCCESS;
 }
 
-/// Parse a TargetID to get processor arch and feature map.
-/// Returns processor subarch.
-/// Returns TargetID features in \p FeatureMap argument.
-/// If the \p TargetID contains feature+, FeatureMap it to true.
-/// If the \p TargetID contains feature-, FeatureMap it to false.
-/// If the \p TargetID does not contain a feature (default), do not map it.
-StringRef parseTargetID(StringRef TargetID, StringMap<bool> &FeatureMap) {
-  if (TargetID.empty())
-    return llvm::StringRef();
-
-  auto ArchFeature = TargetID.split(":");
-  auto Arch = ArchFeature.first;
-  auto Features = ArchFeature.second;
-  if (Features.empty())
-    return Arch;
-
-  if (Features.contains("sramecc+")) {
-    FeatureMap.insert(std::pair<std::string, bool>("sramecc", true));
-  } else if (Features.contains("sramecc-")) {
-    FeatureMap.insert(std::pair<std::string, bool>("sramecc", false));
-  }
-  if (Features.contains("xnack+")) {
-    FeatureMap.insert(std::pair<std::string, bool>("xnack", true));
-  } else if (Features.contains("xnack-")) {
-    FeatureMap.insert(std::pair<std::string, bool>("xnack", false));
-  }
-
-  return Arch;
-}
-
-/// Checks if an image \p ImgInfo is compatible with current
-/// system's environment \p EnvInfo
-bool IsImageCompatibleWithEnv(const char *ImgInfo, std::string EnvInfo) {
-  llvm::StringRef ImgTID(ImgInfo), EnvTID(EnvInfo);
-
-  // Compatible in case of exact match
-  if (ImgTID == EnvTID) {
-    DP("Compatible: Exact match \t[Image: %s]\t:\t[Environment: %s]\n",
-       ImgTID.data(), EnvTID.data());
-    return true;
-  }
-
-  // Incompatible if Archs mismatch.
-  StringMap<bool> ImgMap, EnvMap;
-  StringRef ImgArch = parseTargetID(ImgTID, ImgMap);
-  StringRef EnvArch = parseTargetID(EnvTID, EnvMap);
-
-  // Both EnvArch and ImgArch can't be empty here.
-  if (EnvArch.empty() || ImgArch.empty() || !ImgArch.contains(EnvArch)) {
-    DP("Incompatible: Processor mismatch \t[Image: %s]\t:\t[Environment: %s]\n",
-       ImgTID.data(), EnvTID.data());
-    return false;
-  }
-
-  // Incompatible if image has more features than the environment, irrespective
-  // of type or sign of features.
-  if (ImgMap.size() > EnvMap.size()) {
-    DP("Incompatible: Image has more features than the environment \t[Image: "
-       "%s]\t:\t[Environment: %s]\n",
-       ImgTID.data(), EnvTID.data());
-    return false;
-  }
-
-  // Compatible if each target feature specified by the environment is
-  // compatible with target feature of the image. The target feature is
-  // compatible if the iamge does not specify it (meaning Any), or if it
-  // specifies it with the same value (meaning On or Off).
-  for (const auto &ImgFeature : ImgMap) {
-    auto EnvFeature = EnvMap.find(ImgFeature.first());
-    if (EnvFeature == EnvMap.end()) {
-      DP("Incompatible: Value of Image's non-ANY feature is not matching with "
-         "the Environment feature's ANY value \t[Image: %s]\t:\t[Environment: "
-         "%s]\n",
-         ImgTID.data(), EnvTID.data());
-      return false;
-    } else if (EnvFeature->first() == ImgFeature.first() &&
-               EnvFeature->second != ImgFeature.second) {
-      DP("Incompatible: Value of Image's non-ANY feature is not matching with "
-         "the Environment feature's non-ANY value \t[Image: "
-         "%s]\t:\t[Environment: %s]\n",
-         ImgTID.data(), EnvTID.data());
-      return false;
-    }
-  }
-
-  // Image is compatible if all features of Environment are:
-  //   - either, present in the Image's features map with the same sign,
-  //   - or, the feature is missing from Image's features map i.e. it is
-  //   set to ANY
-  DP("Compatible: Target IDs are compatible \t[Image: %s]\t:\t[Environment: "
-     "%s]\n",
-     ImgTID.data(), EnvTID.data());
-  return true;
-}
-
 extern "C" {
 int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *Image) {
   return elfMachineIdIsAmdgcn(Image);
@@ -2054,13 +1901,16 @@ int32_t __tgt_rtl_is_valid_binary_info(__tgt_device_image *image,
       DP("Error iterating ISAs\n");
       return false;
     }
-    if (!IsImageCompatibleWithEnv(info->Arch, DeviceInfo().TargetID[DeviceId]))
+    if (!isImageCompatibleWithEnv(info, DeviceInfo().TargetID[DeviceId]))
       return false;
   }
   DP("Image has Target ID compatible with the current environment: %s\n",
      info->Arch);
   return true;
 }
+
+int32_t __tgt_rtl_init_plugin() { return OFFLOAD_SUCCESS; }
+int32_t __tgt_rtl_deinit_plugin() { return OFFLOAD_SUCCESS; }
 
 int __tgt_rtl_number_of_devices() {
   // If the construction failed, no methods are safe to call
@@ -2112,7 +1962,8 @@ int32_t __tgt_rtl_init_device(int DeviceId) {
 
   if (print_kernel_trace & STARTUP_DETAILS)
     DP("Device#%-2d CU's: %2d %s\n", DeviceId,
-       DeviceInfo().ComputeUnits[DeviceId], DeviceInfo().GPUName[DeviceId].c_str());
+       DeviceInfo().ComputeUnits[DeviceId],
+       DeviceInfo().GPUName[DeviceId].c_str());
 
   // Query attributes to determine number of threads/block and blocks/grid.
   uint16_t WorkgroupMaxDim[3];
@@ -2124,7 +1975,8 @@ int32_t __tgt_rtl_init_device(int DeviceId) {
        RTLDeviceInfoTy::DefaultNumTeams);
   } else if (WorkgroupMaxDim[0] <= RTLDeviceInfoTy::HardTeamLimit) {
     DeviceInfo().GroupsPerDevice[DeviceId] = WorkgroupMaxDim[0];
-    DP("Using %d ROCm blocks per grid\n", DeviceInfo().GroupsPerDevice[DeviceId]);
+    DP("Using %d ROCm blocks per grid\n",
+       DeviceInfo().GroupsPerDevice[DeviceId]);
   } else {
     DeviceInfo().GroupsPerDevice[DeviceId] = RTLDeviceInfoTy::HardTeamLimit;
     DP("Max ROCm blocks per grid %d exceeds the hard team limit %d, capping "
@@ -2250,7 +2102,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
   // per-image initialization work. Specifically:
   //
   // - Initialize an DeviceEnvironmentTy instance embedded in the
-  //   image at the symbol "omptarget_device_environment"
+  //   image at the symbol "__omp_rtl_device_environment"
   //   Fields DebugKind, DeviceNum, NumDevices. Used by the deviceRTL.
   //
   // - Allocate a large array per-gpu (could be moved to init_device)
@@ -2279,8 +2131,9 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
     return NULL;
 
   {
-    auto Env = DeviceEnvironment(DeviceId, DeviceInfo().NumberOfDevices,
-                                 DeviceInfo().Env.DynamicMemSize, Image, ImgSize);
+    auto Env =
+        DeviceEnvironment(DeviceId, DeviceInfo().NumberOfDevices,
+                          DeviceInfo().Env.DynamicMemSize, Image, ImgSize);
 
     auto &KernelInfo = DeviceInfo().KernelInfoTable[DeviceId];
     auto &SymbolInfo = DeviceInfo().SymbolInfoTable[DeviceId];
@@ -2373,8 +2226,8 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
         }
 
         // write ptr to device memory so it can be used by later kernels
-        Err = DeviceInfo().freesignalpoolMemcpyH2D(StatePtr, &Ptr, sizeof(void *),
-                                                 DeviceId);
+        Err = DeviceInfo().freesignalpoolMemcpyH2D(StatePtr, &Ptr,
+                                                   sizeof(void *), DeviceId);
         if (Err != HSA_STATUS_SUCCESS) {
           DP("memcpy install of state_ptr failed\n");
           return NULL;
@@ -2438,7 +2291,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
         // can access host addresses directly. There is no longer a
         // need for device copies.
         Err = DeviceInfo().freesignalpoolMemcpyH2D(Varptr, E->addr,
-                                                 sizeof(void *), DeviceId);
+                                                   sizeof(void *), DeviceId);
         if (Err != HSA_STATUS_SUCCESS)
           DP("Error when copying USM\n");
         DP("Copy linked variable host address (" DPxMOD ")"
@@ -2487,7 +2340,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
     KernDescNameStr += "_kern_desc";
     const char *KernDescName = KernDescNameStr.c_str();
 
-    void *KernDescPtr;
+    const void *KernDescPtr;
     uint32_t KernDescSize;
     void *CallStackAddr = nullptr;
     Err = interopGetSymbolInfo((char *)Image->ImageStart, ImgSize, KernDescName,
@@ -2526,7 +2379,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
       WGSizeNameStr += "_wg_size";
       const char *WGSizeName = WGSizeNameStr.c_str();
 
-      void *WGSizePtr;
+      const void *WGSizePtr;
       uint32_t WGSize;
       Err = interopGetSymbolInfo((char *)Image->ImageStart, ImgSize, WGSizeName,
                                  &WGSizePtr, &WGSize);
@@ -2565,7 +2418,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
     ExecModeNameStr += "_exec_mode";
     const char *ExecModeName = ExecModeNameStr.c_str();
 
-    void *ExecModePtr;
+    const void *ExecModePtr;
     uint32_t VarSize;
     Err = interopGetSymbolInfo((char *)Image->ImageStart, ImgSize, ExecModeName,
                                &ExecModePtr, &VarSize);
@@ -2614,13 +2467,23 @@ void *__tgt_rtl_data_alloc(int DeviceId, int64_t Size, void *, int32_t Kind) {
   void *Ptr = NULL;
   assert(DeviceId < DeviceInfo().NumberOfDevices && "Device ID too large");
 
-  if (Kind != TARGET_ALLOC_DEFAULT) {
+  hsa_amd_memory_pool_t MemoryPool;
+  switch (Kind) {
+  case TARGET_ALLOC_DEFAULT:
+  case TARGET_ALLOC_DEVICE:
+    // GPU memory
+    MemoryPool = DeviceInfo().getDeviceMemoryPool(DeviceId);
+    break;
+  case TARGET_ALLOC_HOST:
+    // non-migratable memory accessible by host and device(s)
+    MemoryPool = DeviceInfo().getHostMemoryPool();
+    break;
+  default:
     REPORT("Invalid target data allocation kind or requested allocator not "
            "implemented yet\n");
     return NULL;
   }
 
-  hsa_amd_memory_pool_t MemoryPool = DeviceInfo().getDeviceMemoryPool(DeviceId);
   hsa_status_t Err = hsa_amd_memory_pool_allocate(MemoryPool, Size, 0, &Ptr);
   DP("Tgt alloc data %ld bytes, (tgt:%016llx).\n", Size,
      (long long unsigned)(Elf64_Addr)Ptr);
@@ -2669,8 +2532,9 @@ int32_t __tgt_rtl_data_retrieve_async(int DeviceId, void *HstPtr, void *TgtPtr,
   return dataRetrieve(DeviceId, HstPtr, TgtPtr, Size, AsyncInfo);
 }
 
-int32_t __tgt_rtl_data_delete(int DeviceId, void *TgtPtr) {
+int32_t __tgt_rtl_data_delete(int DeviceId, void *TgtPtr, int32_t) {
   assert(DeviceId < DeviceInfo().NumberOfDevices && "Device ID too large");
+  // HSA can free pointers allocated from different types of memory pool.
   hsa_status_t Err;
   DP("Tgt free data (tgt:%016llx).\n", (long long unsigned)(Elf64_Addr)TgtPtr);
   Err = core::Runtime::Memfree(TgtPtr);
@@ -2681,58 +2545,24 @@ int32_t __tgt_rtl_data_delete(int DeviceId, void *TgtPtr) {
   return OFFLOAD_SUCCESS;
 }
 
-int32_t __tgt_rtl_run_target_team_region(int32_t DeviceId, void *TgtEntryPtr,
-                                         void **TgtArgs, ptrdiff_t *TgtOffsets,
-                                         int32_t ArgNum, int32_t NumTeams,
-                                         int32_t ThreadLimit,
-                                         uint64_t LoopTripcount) {
-
-  DeviceInfo().LoadRunLock.lock_shared();
-  int32_t Res = runRegionLocked(DeviceId, TgtEntryPtr, TgtArgs, TgtOffsets,
-                                ArgNum, NumTeams, ThreadLimit, LoopTripcount);
-
-  DeviceInfo().LoadRunLock.unlock_shared();
-  return Res;
-}
-
-int32_t __tgt_rtl_run_target_region(int32_t DeviceId, void *TgtEntryPtr,
-                                    void **TgtArgs, ptrdiff_t *TgtOffsets,
-                                    int32_t ArgNum) {
-  // use one team and one thread
-  // fix thread num
-  int32_t TeamNum = 1;
-  int32_t ThreadLimit = 0; // use default
-  return __tgt_rtl_run_target_team_region(DeviceId, TgtEntryPtr, TgtArgs,
-                                          TgtOffsets, ArgNum, TeamNum,
-                                          ThreadLimit, 0);
-}
-
-int32_t __tgt_rtl_run_target_team_region_async(
-    int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs, ptrdiff_t *TgtOffsets,
-    int32_t ArgNum, int32_t NumTeams, int32_t ThreadLimit,
-    uint64_t LoopTripcount, __tgt_async_info *AsyncInfo) {
+int32_t __tgt_rtl_launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
+                                void **TgtArgs, ptrdiff_t *TgtOffsets,
+                                KernelArgsTy *KernelArgs,
+                                __tgt_async_info *AsyncInfo) {
+  assert(!KernelArgs->NumTeams[1] && !KernelArgs->NumTeams[2] &&
+         !KernelArgs->ThreadLimit[1] && !KernelArgs->ThreadLimit[2] &&
+         "Only one dimensional kernels supported.");
   assert(AsyncInfo && "AsyncInfo is nullptr");
   initAsyncInfo(AsyncInfo);
 
   DeviceInfo().LoadRunLock.lock_shared();
-  int32_t Res = runRegionLocked(DeviceId, TgtEntryPtr, TgtArgs, TgtOffsets,
-                                ArgNum, NumTeams, ThreadLimit, LoopTripcount);
+  int32_t Res =
+      runRegionLocked(DeviceId, TgtEntryPtr, TgtArgs, TgtOffsets,
+                      KernelArgs->NumArgs, KernelArgs->NumTeams[0],
+                      KernelArgs->ThreadLimit[0], KernelArgs->Tripcount);
 
   DeviceInfo().LoadRunLock.unlock_shared();
   return Res;
-}
-
-int32_t __tgt_rtl_run_target_region_async(int32_t DeviceId, void *TgtEntryPtr,
-                                          void **TgtArgs, ptrdiff_t *TgtOffsets,
-                                          int32_t ArgNum,
-                                          __tgt_async_info *AsyncInfo) {
-  // use one team and one thread
-  // fix thread num
-  int32_t TeamNum = 1;
-  int32_t ThreadLimit = 0; // use default
-  return __tgt_rtl_run_target_team_region_async(DeviceId, TgtEntryPtr, TgtArgs,
-                                                TgtOffsets, ArgNum, TeamNum,
-                                                ThreadLimit, 0, AsyncInfo);
 }
 
 int32_t __tgt_rtl_synchronize(int32_t DeviceId, __tgt_async_info *AsyncInfo) {
@@ -2752,6 +2582,34 @@ void __tgt_rtl_print_device_info(int32_t DeviceId) {
   // NOTE: We don't need to set context for print device info.
 
   DeviceInfo().printDeviceInfo(DeviceId, DeviceInfo().HSAAgents[DeviceId]);
+}
+
+int32_t __tgt_rtl_data_lock(int32_t DeviceId, void *HostPtr, int64_t Size,
+                            void **LockedHostPtr) {
+  assert(DeviceId < DeviceInfo().NumberOfDevices && "Device ID too large");
+
+  hsa_agent_t Agent = DeviceInfo().HSAAgents[DeviceId];
+  hsa_status_t err = lock_memory(HostPtr, Size, Agent, LockedHostPtr);
+  if (err != HSA_STATUS_SUCCESS) {
+    DP("Error in tgt_rtl_data_lock\n");
+    return OFFLOAD_FAIL;
+  }
+  DP("Tgt lock host data %ld bytes, (HostPtr:%016llx).\n", Size,
+     (long long unsigned)(Elf64_Addr)*LockedHostPtr);
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t __tgt_rtl_data_unlock(int DeviceId, void *HostPtr) {
+  assert(DeviceId < DeviceInfo().NumberOfDevices && "Device ID too large");
+  hsa_status_t err = unlock_memory(HostPtr);
+  if (err != HSA_STATUS_SUCCESS) {
+    DP("Error in tgt_rtl_data_unlock\n");
+    return OFFLOAD_FAIL;
+  }
+
+  DP("Tgt unlock data (tgt:%016llx).\n",
+     (long long unsigned)(Elf64_Addr)HostPtr);
+  return OFFLOAD_SUCCESS;
 }
 
 } // extern "C"

@@ -115,8 +115,7 @@ void Symbol::Clear() {
 }
 
 bool Symbol::ValueIsAddress() const {
-  return m_addr_range.GetBaseAddress().GetSection().get() != nullptr ||
-         m_type == eSymbolTypeAbsolute;
+  return (bool)m_addr_range.GetBaseAddress().GetSection();
 }
 
 ConstString Symbol::GetDisplayName() const {

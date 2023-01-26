@@ -19,6 +19,8 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GVMaterializer.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PseudoProbe.h"
@@ -27,6 +29,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
+#include <optional>
 #include <utility>
 using namespace llvm;
 
@@ -313,7 +316,7 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
                                      cast<PointerType>(Ty)->getAddressSpace());
   case Type::FunctionTyID:
     return *Entry = FunctionType::get(ElementTypes[0],
-                                      makeArrayRef(ElementTypes).slice(1),
+                                      ArrayRef(ElementTypes).slice(1),
                                       cast<FunctionType>(Ty)->isVarArg());
   case Type::StructTyID: {
     auto *STy = cast<StructType>(Ty);
@@ -425,7 +428,7 @@ class IRLinker {
 
   /// The Error encountered during materialization. We use an Optional here to
   /// avoid needing to manage an unconsumed success value.
-  Optional<Error> FoundError;
+  std::optional<Error> FoundError;
   void setError(Error E) {
     if (E)
       FoundError = std::move(E);
@@ -524,6 +527,9 @@ class IRLinker {
   /// module.
   void prepareCompileUnitsForImport();
   void linkNamedMDNodes();
+
+  ///  Update attributes while linking.
+  void updateAttributes(GlobalValue &GV);
 
 public:
   IRLinker(Module &DstM, MDMapT &SharedMDs,
@@ -635,6 +641,7 @@ Value *IRLinker::materialize(Value *V, bool ForIndirectSymbol) {
   if (ForIndirectSymbol || shouldLink(New, *SGV))
     setError(linkGlobalValueBody(*New, *SGV));
 
+  updateAttributes(*New);
   return New;
 }
 
@@ -896,6 +903,10 @@ IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
     if (DstGV->getSection() != SrcGV->getSection())
       return stringErr(
           "Appending variables with different section name need to be linked!");
+
+    if (DstGV->getAddressSpace() != SrcGV->getAddressSpace())
+      return stringErr("Appending variables with different address spaces need "
+                       "to be linked!");
   }
 
   // Do not need to do anything if source is a declaration.
@@ -1119,7 +1130,7 @@ Error IRLinker::linkFunctionBody(Function &Dst, Function &Src) {
 
   // Steal arguments and splice the body of Src into Dst.
   Dst.stealArgumentListFrom(Src);
-  Dst.getBasicBlockList().splice(Dst.end(), Src.getBasicBlockList());
+  Dst.splice(Dst.end(), &Src);
 
   // Everything has been moved over.  Remap it.
   Mapper.scheduleRemapFunction(Dst);
@@ -1243,6 +1254,11 @@ void IRLinker::linkNamedMDNodes() {
                     DstM.getModuleIdentifier() + "' is not\n");
       continue;
     }
+    // The stats are computed per module and will all be merged in the binary.
+    // Importing the metadata will cause duplication of the stats.
+    if (IsPerformingImport && NMD.getName() == "llvm.stats")
+      continue;
+
     NamedMDNode *DestNMD = DstM.getOrInsertNamedMetadata(NMD.getName());
     // Add Src elements into Dest node.
     for (const MDNode *Op : NMD.operands())
@@ -1517,6 +1533,33 @@ static std::string adjustInlineAsm(const std::string &InlineAsm,
   return InlineAsm;
 }
 
+void IRLinker::updateAttributes(GlobalValue &GV) {
+  /// Remove nocallback attribute while linking, because nocallback attribute
+  /// indicates that the function is only allowed to jump back into caller's
+  /// module only by a return or an exception. When modules are linked, this
+  /// property cannot be guaranteed anymore. For example, the nocallback
+  /// function may contain a call to another module. But if we merge its caller
+  /// and callee module here, and not the module containing the nocallback
+  /// function definition itself, the nocallback property will be violated
+  /// (since the nocallback function will call back into the newly merged module
+  /// containing both its caller and callee). This could happen if the module
+  /// containing the nocallback function definition is native code, so it does
+  /// not participate in the LTO link. Note if the nocallback function does
+  /// participate in the LTO link, and thus ends up in the merged module
+  /// containing its caller and callee, removing the attribute doesn't hurt as
+  /// it has no effect on definitions in the same module.
+  if (auto *F = dyn_cast<Function>(&GV)) {
+    if (!F->isIntrinsic())
+      F->removeFnAttr(llvm::Attribute::NoCallback);
+
+    // Remove nocallback attribute when it is on a call-site.
+    for (BasicBlock &BB : *F)
+      for (Instruction &I : BB)
+        if (CallBase *CI = dyn_cast<CallBase>(&I))
+          CI->removeFnAttr(Attribute::NoCallback);
+  }
+}
+
 Error IRLinker::run() {
   // Ensure metadata materialized before value mapping.
   if (SrcM->getMaterializer())
@@ -1734,7 +1777,7 @@ IRMover::IRMover(Module &M) : Composite(M) {
   // Self-map metadatas in the destination module. This is needed when
   // DebugTypeODRUniquing is enabled on the LLVMContext, since metadata in the
   // destination module may be reached from the source module.
-  for (auto *MD : StructTypes.getVisitedMetadata()) {
+  for (const auto *MD : StructTypes.getVisitedMetadata()) {
     SharedMDs[MD].reset(const_cast<MDNode *>(MD));
   }
 }

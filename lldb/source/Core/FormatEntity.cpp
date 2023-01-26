@@ -618,11 +618,8 @@ static bool DumpRegister(Stream &s, StackFrame *frame, RegisterKind reg_kind,
 static ValueObjectSP ExpandIndexedExpression(ValueObject *valobj, size_t index,
                                              bool deref_pointer) {
   Log *log = GetLog(LLDBLog::DataFormatters);
-  const char *ptr_deref_format = "[%d]";
-  std::string ptr_deref_buffer(10, 0);
-  ::sprintf(&ptr_deref_buffer[0], ptr_deref_format, index);
-  LLDB_LOGF(log, "[ExpandIndexedExpression] name to deref: %s",
-            ptr_deref_buffer.c_str());
+  std::string name_to_deref = llvm::formatv("[{0}]", index);
+  LLDB_LOG(log, "[ExpandIndexedExpression] name to deref: {0}", name_to_deref);
   ValueObject::GetValueForExpressionPathOptions options;
   ValueObject::ExpressionPathEndResultType final_value_type;
   ValueObject::ExpressionPathScanEndReason reason_to_stop;
@@ -630,8 +627,7 @@ static ValueObjectSP ExpandIndexedExpression(ValueObject *valobj, size_t index,
       (deref_pointer ? ValueObject::eExpressionPathAftermathDereference
                      : ValueObject::eExpressionPathAftermathNothing);
   ValueObjectSP item = valobj->GetValueForExpressionPath(
-      ptr_deref_buffer.c_str(), &reason_to_stop, &final_value_type, options,
-      &what_next);
+      name_to_deref, &reason_to_stop, &final_value_type, options, &what_next);
   if (!item) {
     LLDB_LOGF(log,
               "[ExpandIndexedExpression] ERROR: why stopping = %d,"
@@ -696,7 +692,7 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
 
   case FormatEntity::Entry::Type::ScriptVariableSynthetic:
     is_script = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case FormatEntity::Entry::Type::VariableSynthetic:
     custom_format = entry.fmt;
     val_obj_display = (ValueObject::ValueObjectRepresentationStyle)entry.number;
@@ -710,9 +706,6 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
   default:
     return false;
   }
-
-  if (valobj == nullptr)
-    return false;
 
   ValueObject::ExpressionPathAftermath what_next =
       (do_deref_pointer ? ValueObject::eExpressionPathAftermathDereference
@@ -828,7 +821,7 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
     bitfield_name.Printf("%s:%d", target->GetTypeName().AsCString(),
                          target->GetBitfieldBitSize());
     auto type_sp = std::make_shared<TypeNameSpecifierImpl>(
-        bitfield_name.GetString(), false);
+        bitfield_name.GetString(), lldb::eFormatterMatchExact);
     if (val_obj_display ==
             ValueObject::eValueObjectRepresentationStyleSummary &&
         !DataVisualization::GetSummaryForType(type_sp))
@@ -1040,6 +1033,71 @@ static bool FormatThreadExtendedInfoRecurse(
 
 static inline bool IsToken(const char *var_name_begin, const char *var) {
   return (::strncmp(var_name_begin, var, strlen(var)) == 0);
+}
+
+/// Parses the basename out of a demangled function name
+/// that may include function arguments. Supports
+/// template functions.
+///
+/// Returns pointers to the opening and closing parenthesis of
+/// `full_name`. Can return nullptr for either parenthesis if
+/// none is exists.
+static std::pair<char const *, char const *>
+ParseBaseName(char const *full_name) {
+  const char *open_paren = strchr(full_name, '(');
+  const char *close_paren = nullptr;
+  const char *generic = strchr(full_name, '<');
+  // if before the arguments list begins there is a template sign
+  // then scan to the end of the generic args before you try to find
+  // the arguments list
+  if (generic && open_paren && generic < open_paren) {
+    int generic_depth = 1;
+    ++generic;
+    for (; *generic && generic_depth > 0; generic++) {
+      if (*generic == '<')
+        generic_depth++;
+      if (*generic == '>')
+        generic_depth--;
+    }
+    if (*generic)
+      open_paren = strchr(generic, '(');
+    else
+      open_paren = nullptr;
+  }
+
+  if (open_paren) {
+    if (IsToken(open_paren, "(anonymous namespace)")) {
+      open_paren = strchr(open_paren + strlen("(anonymous namespace)"), '(');
+      if (open_paren)
+        close_paren = strchr(open_paren, ')');
+    } else
+      close_paren = strchr(open_paren, ')');
+  }
+
+  return {open_paren, close_paren};
+}
+
+/// Writes out the function name in 'full_name' to 'out_stream'
+/// but replaces each argument type with the variable name
+/// and the corresponding pretty-printed value
+static void PrettyPrintFunctionNameWithArgs(Stream &out_stream,
+                                            char const *full_name,
+                                            ExecutionContextScope *exe_scope,
+                                            VariableList const &args) {
+  auto [open_paren, close_paren] = ParseBaseName(full_name);
+  if (open_paren)
+    out_stream.Write(full_name, open_paren - full_name + 1);
+  else {
+    out_stream.PutCString(full_name);
+    out_stream.PutChar('(');
+  }
+
+  FormatEntity::PrettyPrintFunctionArguments(out_stream, args, exe_scope);
+
+  if (close_paren)
+    out_stream.PutCString(close_paren);
+  else
+    out_stream.PutChar(')');
 }
 
 bool FormatEntity::FormatStringRef(const llvm::StringRef &format_str, Stream &s,
@@ -1648,100 +1706,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
             variable_list_sp->AppendVariablesWithScope(
                 eValueTypeVariableArgument, args);
           if (args.GetSize() > 0) {
-            const char *open_paren = strchr(cstr, '(');
-            const char *close_paren = nullptr;
-            const char *generic = strchr(cstr, '<');
-            // if before the arguments list begins there is a template sign
-            // then scan to the end of the generic args before you try to find
-            // the arguments list
-            if (generic && open_paren && generic < open_paren) {
-              int generic_depth = 1;
-              ++generic;
-              for (; *generic && generic_depth > 0; generic++) {
-                if (*generic == '<')
-                  generic_depth++;
-                if (*generic == '>')
-                  generic_depth--;
-              }
-              if (*generic)
-                open_paren = strchr(generic, '(');
-              else
-                open_paren = nullptr;
-            }
-            if (open_paren) {
-              if (IsToken(open_paren, "(anonymous namespace)")) {
-                open_paren =
-                    strchr(open_paren + strlen("(anonymous namespace)"), '(');
-                if (open_paren)
-                  close_paren = strchr(open_paren, ')');
-              } else
-                close_paren = strchr(open_paren, ')');
-            }
-
-            if (open_paren)
-              s.Write(cstr, open_paren - cstr + 1);
-            else {
-              s.PutCString(cstr);
-              s.PutChar('(');
-            }
-            const size_t num_args = args.GetSize();
-            for (size_t arg_idx = 0; arg_idx < num_args; ++arg_idx) {
-              std::string buffer;
-
-              VariableSP var_sp(args.GetVariableAtIndex(arg_idx));
-              ValueObjectSP var_value_sp(
-                  ValueObjectVariable::Create(exe_scope, var_sp));
-              StreamString ss;
-              llvm::StringRef var_representation;
-              const char *var_name = var_value_sp->GetName().GetCString();
-              if (var_value_sp->GetCompilerType().IsValid()) {
-                if (var_value_sp && exe_scope->CalculateTarget())
-                  var_value_sp =
-                      var_value_sp->GetQualifiedRepresentationIfAvailable(
-                          exe_scope->CalculateTarget()
-                              ->TargetProperties::GetPreferDynamicValue(),
-                          exe_scope->CalculateTarget()
-                              ->TargetProperties::GetEnableSyntheticValue());
-                if (var_value_sp->GetCompilerType().IsAggregateType() &&
-                    DataVisualization::ShouldPrintAsOneLiner(*var_value_sp)) {
-                  static StringSummaryFormat format(
-                      TypeSummaryImpl::Flags()
-                          .SetHideItemNames(false)
-                          .SetShowMembersOneLiner(true),
-                      "");
-                  format.FormatObject(var_value_sp.get(), buffer,
-                                      TypeSummaryOptions());
-                  var_representation = buffer;
-                } else
-                  var_value_sp->DumpPrintableRepresentation(
-                      ss,
-                      ValueObject::ValueObjectRepresentationStyle::
-                          eValueObjectRepresentationStyleSummary,
-                      eFormatDefault,
-                      ValueObject::PrintableRepresentationSpecialCases::eAllow,
-                      false);
-              }
-
-              if (!ss.GetString().empty())
-                var_representation = ss.GetString();
-              if (arg_idx > 0)
-                s.PutCString(", ");
-              if (var_value_sp->GetError().Success()) {
-                if (!var_representation.empty())
-                  s.Printf("%s=%s", var_name, var_representation.str().c_str());
-                else
-                  s.Printf("%s=%s at %s", var_name,
-                           var_value_sp->GetTypeName().GetCString(),
-                           var_value_sp->GetLocationAsCString());
-              } else
-                s.Printf("%s=<unavailable>", var_name);
-            }
-
-            if (close_paren)
-              s.PutCString(close_paren);
-            else
-              s.PutChar(')');
-
+            PrettyPrintFunctionNameWithArgs(s, cstr, exe_scope, args);
           } else {
             s.PutCString(cstr);
           }
@@ -2448,5 +2413,57 @@ void FormatEntity::AutoComplete(CompletionRequest &request) {
     StringList new_matches;
     AddMatches(entry_def, str, remainder, new_matches);
     request.AddCompletions(new_matches);
+  }
+}
+
+void FormatEntity::PrettyPrintFunctionArguments(
+    Stream &out_stream, VariableList const &args,
+    ExecutionContextScope *exe_scope) {
+  const size_t num_args = args.GetSize();
+  for (size_t arg_idx = 0; arg_idx < num_args; ++arg_idx) {
+    std::string buffer;
+
+    VariableSP var_sp(args.GetVariableAtIndex(arg_idx));
+    ValueObjectSP var_value_sp(ValueObjectVariable::Create(exe_scope, var_sp));
+    StreamString ss;
+    llvm::StringRef var_representation;
+    const char *var_name = var_value_sp->GetName().GetCString();
+    if (var_value_sp->GetCompilerType().IsValid()) {
+      if (exe_scope && exe_scope->CalculateTarget())
+        var_value_sp = var_value_sp->GetQualifiedRepresentationIfAvailable(
+            exe_scope->CalculateTarget()
+                ->TargetProperties::GetPreferDynamicValue(),
+            exe_scope->CalculateTarget()
+                ->TargetProperties::GetEnableSyntheticValue());
+      if (var_value_sp->GetCompilerType().IsAggregateType() &&
+          DataVisualization::ShouldPrintAsOneLiner(*var_value_sp)) {
+        static StringSummaryFormat format(TypeSummaryImpl::Flags()
+                                              .SetHideItemNames(false)
+                                              .SetShowMembersOneLiner(true),
+                                          "");
+        format.FormatObject(var_value_sp.get(), buffer, TypeSummaryOptions());
+        var_representation = buffer;
+      } else
+        var_value_sp->DumpPrintableRepresentation(
+            ss,
+            ValueObject::ValueObjectRepresentationStyle::
+                eValueObjectRepresentationStyleSummary,
+            eFormatDefault,
+            ValueObject::PrintableRepresentationSpecialCases::eAllow, false);
+    }
+
+    if (!ss.GetString().empty())
+      var_representation = ss.GetString();
+    if (arg_idx > 0)
+      out_stream.PutCString(", ");
+    if (var_value_sp->GetError().Success()) {
+      if (!var_representation.empty())
+        out_stream.Printf("%s=%s", var_name, var_representation.str().c_str());
+      else
+        out_stream.Printf("%s=%s at %s", var_name,
+                          var_value_sp->GetTypeName().GetCString(),
+                          var_value_sp->GetLocationAsCString());
+    } else
+      out_stream.Printf("%s=<unavailable>", var_name);
   }
 }

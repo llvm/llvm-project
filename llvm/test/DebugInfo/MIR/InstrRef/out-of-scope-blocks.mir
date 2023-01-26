@@ -11,22 +11,22 @@
 # CHECK:       ![[FIRSTVAR:[0-9]+]] = !DILocalVariable(name: "_First",
 #
 # CHECK-LABEL: bb.0.entry:
-# CHECK:       DBG_VALUE $rbx, $noreg, ![[FIRSTVAR]],
-# CHECK-SAME:        !DIExpression(DW_OP_LLVM_fragment, 64, 64)
+# CHECK:       DBG_VALUE_LIST ![[FIRSTVAR]],
+# CHECK-SAME:        !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 64), $rbx
 #
 # CHECK-LABEL: bb.1.if.then.i.i.i.i.i:
-# CHECK:       DBG_VALUE $rbx, $noreg, ![[FIRSTVAR]],
-# CHECK-SAME:        !DIExpression(DW_OP_LLVM_fragment, 64, 64)
-# CHECK:       DBG_INSTR_REF {{.*}} ![[FIRSTVAR]],
-# CHECK:       DBG_VALUE $rbx, $noreg, ![[FIRSTVAR]],
-# CHECK-SAME:        !DIExpression(DW_OP_LLVM_fragment, 64, 64)
+# CHECK:       DBG_VALUE_LIST ![[FIRSTVAR]],
+# CHECK-SAME:        !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 64), $rbx
+# CHECK:       DBG_INSTR_REF ![[FIRSTVAR]],
+# CHECK:       DBG_VALUE_LIST ![[FIRSTVAR]],
+# CHECK-SAME:        !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 64), $rbx
 
 # CHECK-LABEL: bb.2._Z17do_insert_cv_testI5_TreeEvv.exit:
-# CHECK:       DBG_VALUE $rbx, $noreg, ![[FIRSTVAR]],
-# CHECK-SAME:        !DIExpression(DW_OP_LLVM_fragment, 64, 64)
-# CHECK:       DBG_INSTR_REF {{.*}} ![[FIRSTVAR]],
-# CHECK:       DBG_VALUE $rbx, $noreg, ![[FIRSTVAR]],
-# CHECK-SAME:        !DIExpression(DW_OP_LLVM_fragment, 64, 64)
+# CHECK:       DBG_VALUE_LIST ![[FIRSTVAR]],
+# CHECK-SAME:        !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 64), $rbx
+# CHECK:       DBG_INSTR_REF ![[FIRSTVAR]],
+# CHECK:       DBG_VALUE_LIST ![[FIRSTVAR]],
+# CHECK-SAME:        !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 64), $rbx
 
 --- |
   source_filename = "reduced.ll"
@@ -86,6 +86,7 @@
 name:            main
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:
   - { reg: '$rsi' }
 frameInfo:
@@ -118,7 +119,7 @@ body:             |
     renamable $r14d = XOR32rr undef $r14d, undef $r14d, implicit-def dead $eflags, implicit-def $r14
     dead $edi = XOR32rr undef $edi, undef $edi, implicit-def dead $eflags, implicit-def $rdi
     CALL64r undef renamable $rax, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax, implicit-def dead $rdx
-    DBG_INSTR_REF 2, 0, !13, !DIExpression(DW_OP_LLVM_fragment, 64, 64), debug-location !15
+    DBG_INSTR_REF !13, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 64), dbg-instr-ref(2, 0), debug-location !15
     dead $edi = XOR32rr undef $edi, undef $edi, implicit-def dead $eflags, implicit-def $rdi, debug-location !15
     CALL64r undef renamable $rax, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def dead $al, debug-location !15
     TEST8rr renamable $r14b, renamable $r14b, implicit-def $eflags, implicit killed $r14
@@ -128,13 +129,13 @@ body:             |
     dead $edi = XOR32rr undef $edi, undef $edi, implicit-def dead $eflags, implicit-def $rdi
     CALL64r undef renamable $rax, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $rax, debug-instr-number 3
     $rbx = MOV64rr killed $rax
-    DBG_INSTR_REF 3, 7, !13, !DIExpression(DW_OP_LLVM_fragment, 64, 64), debug-location !15
+    DBG_INSTR_REF !13, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 64), dbg-instr-ref(3, 7), debug-location !15
   
   bb.2._Z17do_insert_cv_testI5_TreeEvv.exit:
     liveins: $rbx
   
     DBG_PHI $rbx, 1
-    DBG_INSTR_REF 1, 0, !13, !DIExpression(DW_OP_LLVM_fragment, 64, 64), debug-location !15
+    DBG_INSTR_REF !13, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 64), dbg-instr-ref(1, 0), debug-location !15
     dead $edi = XOR32rr undef $edi, undef $edi, implicit-def dead $eflags, implicit-def $rdi, debug-location !16
     $esi = XOR32rr undef $esi, undef $esi, implicit-def dead $eflags, debug-location !16
     $rdx = MOV64rr killed $rbx, debug-location !16

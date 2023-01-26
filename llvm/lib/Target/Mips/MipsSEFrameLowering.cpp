@@ -508,7 +508,8 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
       if (!MBB.isLiveIn(ABI.GetEhDataReg(I)))
         MBB.addLiveIn(ABI.GetEhDataReg(I));
       TII.storeRegToStackSlot(MBB, MBBI, ABI.GetEhDataReg(I), false,
-                              MipsFI->getEhDataRegFI(I), RC, &RegInfo);
+                              MipsFI->getEhDataRegFI(I), RC, &RegInfo,
+                              Register());
     }
 
     // Emit .cfi_offset directives for eh data registers.
@@ -726,7 +727,8 @@ void MipsSEFrameLowering::emitEpilogue(MachineFunction &MF,
     // Insert instructions that restore eh data registers.
     for (int J = 0; J < 4; ++J) {
       TII.loadRegFromStackSlot(MBB, I, ABI.GetEhDataReg(J),
-                               MipsFI->getEhDataRegFI(J), RC, &RegInfo);
+                               MipsFI->getEhDataRegFI(J), RC, &RegInfo,
+                               Register());
     }
   }
 
@@ -759,7 +761,7 @@ void MipsSEFrameLowering::emitInterruptEpilogueStub(
   // Restore EPC
   STI.getInstrInfo()->loadRegFromStackSlot(MBB, MBBI, Mips::K1,
                                            MipsFI->getISRRegFI(0), PtrRC,
-                                           STI.getRegisterInfo());
+                                           STI.getRegisterInfo(), Register());
   BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::MTC0), Mips::COP014)
       .addReg(Mips::K1)
       .addImm(0);
@@ -767,7 +769,7 @@ void MipsSEFrameLowering::emitInterruptEpilogueStub(
   // Restore Status
   STI.getInstrInfo()->loadRegFromStackSlot(MBB, MBBI, Mips::K1,
                                            MipsFI->getISRRegFI(1), PtrRC,
-                                           STI.getRegisterInfo());
+                                           STI.getRegisterInfo(), Register());
   BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::MTC0), Mips::COP012)
       .addReg(Mips::K1)
       .addImm(0);
@@ -830,7 +832,8 @@ bool MipsSEFrameLowering::spillCalleeSavedRegisters(
     // Insert the spill to the stack frame.
     bool IsKill = !IsRAAndRetAddrIsTaken;
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    TII.storeRegToStackSlot(MBB, MI, Reg, IsKill, I.getFrameIdx(), RC, TRI);
+    TII.storeRegToStackSlot(MBB, MI, Reg, IsKill, I.getFrameIdx(), RC, TRI,
+                            Register());
   }
 
   return true;

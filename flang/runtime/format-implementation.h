@@ -11,22 +11,51 @@
 #ifndef FORTRAN_RUNTIME_FORMAT_IMPLEMENTATION_H_
 #define FORTRAN_RUNTIME_FORMAT_IMPLEMENTATION_H_
 
+#include "emit-encoded.h"
 #include "format.h"
 #include "io-stmt.h"
+#include "memory.h"
 #include "flang/Common/format.h"
 #include "flang/Decimal/decimal.h"
 #include "flang/Runtime/main.h"
 #include <algorithm>
+#include <cstring>
 #include <limits>
 
 namespace Fortran::runtime::io {
 
 template <typename CONTEXT>
 FormatControl<CONTEXT>::FormatControl(const Terminator &terminator,
-    const CharType *format, std::size_t formatLength, int maxHeight)
+    const CharType *format, std::size_t formatLength,
+    const Descriptor *formatDescriptor, int maxHeight)
     : maxHeight_{static_cast<std::uint8_t>(maxHeight)}, format_{format},
       formatLength_{static_cast<int>(formatLength)} {
   RUNTIME_CHECK(terminator, maxHeight == maxHeight_);
+  if (!format && formatDescriptor) {
+    // The format is a character array passed via a descriptor.
+    std::size_t elements{formatDescriptor->Elements()};
+    std::size_t elementBytes{formatDescriptor->ElementBytes()};
+    formatLength = elements * elementBytes / sizeof(CharType);
+    formatLength_ = static_cast<int>(formatLength);
+    if (formatDescriptor->IsContiguous()) {
+      // Treat the contiguous array as a single character value.
+      format_ = const_cast<const CharType *>(
+          reinterpret_cast<CharType *>(formatDescriptor->raw().base_addr));
+    } else {
+      // Concatenate its elements into a temporary array.
+      char *p{reinterpret_cast<char *>(
+          AllocateMemoryOrCrash(terminator, formatLength * sizeof(CharType)))};
+      format_ = p;
+      SubscriptValue at[maxRank];
+      formatDescriptor->GetLowerBounds(at);
+      for (std::size_t j{0}; j < elements; ++j) {
+        std::memcpy(p, formatDescriptor->Element<char>(at), elementBytes);
+        p += elementBytes;
+        formatDescriptor->IncrementSubscripts(at);
+      }
+      freeFormat_ = true;
+    }
+  }
   RUNTIME_CHECK(
       terminator, formatLength == static_cast<std::size_t>(formatLength_));
   stack_[0].start = offset_;
@@ -130,6 +159,10 @@ static void HandleControl(CONTEXT &context, char ch, char next, int n) {
     break;
   case 'X':
     if (!next) {
+      ConnectionState &connection{context.GetConnectionState()};
+      if (connection.internalIoCharKind > 1) {
+        n *= connection.internalIoCharKind;
+      }
       context.HandleRelativePosition(n);
       return;
     }
@@ -146,7 +179,14 @@ static void HandleControl(CONTEXT &context, char ch, char next, int n) {
     break;
   case 'T': {
     if (!next) { // Tn
-      context.HandleAbsolutePosition(n - 1); // convert 1-based to 0-based
+      --n; // convert 1-based to 0-based
+    }
+    ConnectionState &connection{context.GetConnectionState()};
+    if (connection.internalIoCharKind > 1) {
+      n *= connection.internalIoCharKind;
+    }
+    if (!next) { // Tn
+      context.HandleAbsolutePosition(n);
       return;
     }
     if (next == 'L' || next == 'R') { // TLn & TRn
@@ -300,7 +340,7 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
       } else {
         --chars;
       }
-      context.Emit(format_ + start, chars);
+      EmitAscii(context, format_ + start, chars);
     } else if (ch == 'H') {
       // 9HHOLLERITH
       if (!repeat || *repeat < 1 || offset_ + *repeat > formatLength_) {
@@ -308,7 +348,7 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
             maybeReversionPoint);
         return 0;
       }
-      context.Emit(format_ + offset_, static_cast<std::size_t>(*repeat));
+      EmitAscii(context, format_ + offset_, static_cast<std::size_t>(*repeat));
       offset_ += *repeat;
     } else if (ch >= 'A' && ch <= 'Z') {
       int start{offset_ - 1};
@@ -350,7 +390,7 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
     } else if (ch == '\t' || ch == '\v') {
       // Tabs (extension)
       // TODO: any other raw characters?
-      context.Emit(format_ + offset_ - 1, 1);
+      EmitAscii(context, format_ + offset_ - 1, 1);
     } else {
       ReportBadFormat(
           context, "Invalid character in FORMAT", maybeReversionPoint);
@@ -462,6 +502,9 @@ DataEdit FormatControl<CONTEXT>::GetNextDataEdit(
 template <typename CONTEXT>
 void FormatControl<CONTEXT>::Finish(Context &context) {
   CueUpNextDataEdit(context, true /* stop at colon or end of FORMAT */);
+  if (freeFormat_) {
+    FreeMemory(const_cast<CharType *>(format_));
+  }
 }
 } // namespace Fortran::runtime::io
 #endif // FORTRAN_RUNTIME_FORMAT_IMPLEMENTATION_H_

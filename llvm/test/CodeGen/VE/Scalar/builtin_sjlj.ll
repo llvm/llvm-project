@@ -140,22 +140,22 @@ define signext i32 @t_setjmp() {
 ; PIC-NEXT:    ld %s10, 8(, %s11)
 ; PIC-NEXT:    ld %s9, (, %s11)
 ; PIC-NEXT:    b.l.t (, %s10)
-  %1 = call i8* @llvm.frameaddress(i32 0)
-  store i8* %1, i8** bitcast ([1 x %struct.__jmp_buf_tag]* @buf to i8**), align 8
-  %2 = call i8* @llvm.stacksave()
-  store i8* %2, i8** getelementptr inbounds (i8*, i8** bitcast ([1 x %struct.__jmp_buf_tag]* @buf to i8**), i64 2), align 8
-  %3 = call i32 @llvm.eh.sjlj.setjmp(i8* bitcast ([1 x %struct.__jmp_buf_tag]* @buf to i8*))
+  %1 = call ptr @llvm.frameaddress(i32 0)
+  store ptr %1, ptr @buf, align 8
+  %2 = call ptr @llvm.stacksave()
+  store ptr %2, ptr getelementptr inbounds (ptr, ptr @buf, i64 2), align 8
+  %3 = call i32 @llvm.eh.sjlj.setjmp(ptr @buf)
   ret i32 %3
 }
 
 ; Function Attrs: nounwind readnone
-declare i8* @llvm.frameaddress(i32)
+declare ptr @llvm.frameaddress(i32)
 
 ; Function Attrs: nounwind
-declare i8* @llvm.stacksave()
+declare ptr @llvm.stacksave()
 
 ; Function Attrs: nounwind
-declare i32 @llvm.eh.sjlj.setjmp(i8*)
+declare i32 @llvm.eh.sjlj.setjmp(ptr)
 
 ; Function Attrs: noinline nounwind optnone
 define void @t_longjmp() {
@@ -202,12 +202,12 @@ define void @t_longjmp() {
 ; PIC-NEXT:    or %s10, 0, %s0
 ; PIC-NEXT:    ld %s11, 16(, %s0)
 ; PIC-NEXT:    b.l.t (, %s1)
-  call void @llvm.eh.sjlj.longjmp(i8* bitcast ([1 x %struct.__jmp_buf_tag]* @buf to i8*))
+  call void @llvm.eh.sjlj.longjmp(ptr @buf)
   unreachable
                                                   ; No predecessors!
   ret void
 }
 
 ; Function Attrs: noreturn nounwind
-declare void @llvm.eh.sjlj.longjmp(i8*)
+declare void @llvm.eh.sjlj.longjmp(ptr)
 

@@ -2,10 +2,7 @@
 Test specific to MIPS
 """
 
-from __future__ import print_function
-
 import re
-import unittest2
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

@@ -4,7 +4,7 @@
 # RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=GCN,GFX9
 
 --- |
-  define amdgpu_kernel void @smrd_imm(i32 addrspace(4)* %const0) { ret void }
+  define amdgpu_kernel void @smrd_imm(ptr addrspace(4) %const0) { ret void }
   define amdgpu_kernel void @smrd_wide() { ret void }
   define amdgpu_kernel void @constant_address_positive() { ret void }
   define amdgpu_kernel void @smrd_sgpr() { ret void }

@@ -9,7 +9,7 @@ define float @mytan(float %x) {
 ; CHECK-LABEL: define float @mytan(
 ; CHECK:   ret float %x
 
-define float @test2(float ()* %fptr) {
+define float @test2(ptr %fptr) {
   %call1 = call fast float %fptr()
   %tan = call fast float @tanf(float %call1)
   ret float %tan

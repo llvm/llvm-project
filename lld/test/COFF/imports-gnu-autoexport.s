@@ -13,11 +13,6 @@
 # from the import library.
 
 EXPORT:      Export {
-EXPORT-NEXT:   Ordinal: 0
-EXPORT-NEXT:   Name:
-EXPORT-NEXT:   RVA: 0x0
-EXPORT-NEXT: }
-EXPORT-NEXT: Export {
 EXPORT-NEXT:   Ordinal: 1
 EXPORT-NEXT:   Name: main
 EXPORT-NEXT:   RVA: 0x1010

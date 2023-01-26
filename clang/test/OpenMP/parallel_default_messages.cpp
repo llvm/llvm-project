@@ -49,3 +49,10 @@ int main(int argc, char **argv) {
 
   return 0;
 }
+
+class A{
+  void a() {
+    #pragma omp parallel
+    a(b); // expected-error {{use of undeclared identifier 'b'}}
+ }
+};

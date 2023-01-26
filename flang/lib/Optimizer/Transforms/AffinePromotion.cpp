@@ -15,7 +15,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -28,8 +27,13 @@
 #include "mlir/IR/Visitors.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
+
+namespace fir {
+#define GEN_PASS_DEF_AFFINEDIALECTPROMOTION
+#include "flang/Optimizer/Transforms/Passes.h.inc"
+} // namespace fir
 
 #define DEBUG_TYPE "flang-affine-promotion"
 
@@ -164,7 +168,7 @@ namespace {
 /// final number of symbols and dimensions of the affine map. Integer set if
 /// possible is in Optional IntegerSet.
 struct AffineIfCondition {
-  using MaybeAffineExpr = llvm::Optional<mlir::AffineExpr>;
+  using MaybeAffineExpr = std::optional<mlir::AffineExpr>;
 
   explicit AffineIfCondition(mlir::Value fc) : firCondition(fc) {
     if (auto condDef = firCondition.getDefiningOp<mlir::arith::CmpIOp>())
@@ -175,7 +179,7 @@ struct AffineIfCondition {
 
   mlir::IntegerSet getIntegerSet() const {
     assert(hasIntegerSet() && "integer set is missing");
-    return integerSet.value();
+    return *integerSet;
   }
 
   mlir::ValueRange getAffineArgs() const { return affineArgs; }
@@ -243,7 +247,7 @@ private:
         dimCount, symCount, {constraintPair->first}, {constraintPair->second});
   }
 
-  llvm::Optional<std::pair<AffineExpr, bool>>
+  std::optional<std::pair<AffineExpr, bool>>
   constraint(mlir::arith::CmpIPredicate predicate, mlir::AffineExpr basic) {
     switch (predicate) {
     case mlir::arith::CmpIPredicate::slt:
@@ -262,7 +266,7 @@ private:
   }
 
   llvm::SmallVector<mlir::Value> affineArgs;
-  llvm::Optional<mlir::IntegerSet> integerSet;
+  std::optional<mlir::IntegerSet> integerSet;
   mlir::Value firCondition;
   unsigned symCount{0u};
   unsigned dimCount{0u};
@@ -325,7 +329,7 @@ static mlir::AffineMap createArrayIndexAffineMap(unsigned dimensions,
   return mlir::AffineMap::get(dimensions, dimensions * 3, index);
 }
 
-static Optional<int64_t> constantIntegerLike(const mlir::Value value) {
+static std::optional<int64_t> constantIntegerLike(const mlir::Value value) {
   if (auto definition = value.getDefiningOp<mlir::arith::ConstantOp>())
     if (auto stepAttr = definition.getValue().dyn_cast<IntegerAttr>())
       return stepAttr.getInt();
@@ -406,7 +410,8 @@ createAffineOps(mlir::Value arrayRef, mlir::PatternRewriter &rewriter) {
   auto affineApply = rewriter.create<mlir::AffineApplyOp>(acoOp.getLoc(),
                                                           affineMap, indexArgs);
   auto arrayElementType = coordinateArrayElement(acoOp);
-  auto newType = mlir::MemRefType::get({-1}, arrayElementType);
+  auto newType =
+      mlir::MemRefType::get({mlir::ShapedType::kDynamic}, arrayElementType);
   auto arrayConvert = rewriter.create<fir::ConvertOp>(acoOp.getLoc(), newType,
                                                       acoOp.getMemref());
   return std::make_pair(affineApply, arrayConvert);
@@ -579,7 +584,7 @@ public:
 /// Promote fir.do_loop and fir.if to affine.for and affine.if, in the cases
 /// where such a promotion is possible.
 class AffineDialectPromotion
-    : public AffineDialectPromotionBase<AffineDialectPromotion> {
+    : public fir::impl::AffineDialectPromotionBase<AffineDialectPromotion> {
 public:
   void runOnOperation() override {
 
@@ -591,9 +596,9 @@ public:
     patterns.insert<AffineIfConversion>(context, functionAnalysis);
     patterns.insert<AffineLoopConversion>(context, functionAnalysis);
     mlir::ConversionTarget target = *context;
-    target.addLegalDialect<
-        mlir::AffineDialect, FIROpsDialect, mlir::scf::SCFDialect,
-        mlir::arith::ArithmeticDialect, mlir::func::FuncDialect>();
+    target.addLegalDialect<mlir::AffineDialect, FIROpsDialect,
+                           mlir::scf::SCFDialect, mlir::arith::ArithDialect,
+                           mlir::func::FuncDialect>();
     target.addDynamicallyLegalOp<IfOp>([&functionAnalysis](fir::IfOp op) {
       return !(functionAnalysis.getChildIfAnalysis(op).canPromoteToAffine());
     });

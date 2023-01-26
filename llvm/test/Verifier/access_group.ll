@@ -1,13 +1,13 @@
 ; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
 
-define void @test(i8* %p) {
+define void @test(ptr %p) {
 ; CHECK: Access scope list contains invalid access scope
-  load i8, i8* %p, !llvm.access.group !1
+  load i8, ptr %p, !llvm.access.group !1
 ; CHECK: Access scope list must consist of MDNodes
-  load i8, i8* %p, !llvm.access.group !2
+  load i8, ptr %p, !llvm.access.group !2
 ; CHECK-NOT: Access scope
-  load i8, i8* %p, !llvm.access.group !3
-  load i8, i8* %p, !llvm.access.group !4
+  load i8, ptr %p, !llvm.access.group !3
+  load i8, ptr %p, !llvm.access.group !4
   ret void
 }
 

@@ -26,28 +26,9 @@ def TilingInterface : OpInterface<"TilingInterface"> {
   let methods = [
       InterfaceMethod<
         /*desc=*/[{
-          Returns a list of operands into which the result of the
-          tiled implementation is written into. With `tensor`
-          operands, this will be used as the initial tensor into which
-          the tiled results are inserted into. With `memref` operands,
-          this will be the operand into which the result of the tiled
-          operation is written into.
+          Returns a list of iterator types that describe the number of loops.
         }],
-        /*retType=*/"SmallVector<Value>",
-        /*methodName=*/"getDestinationOperands",
-        /*args=*/(ins "OpBuilder &":$b),
-        /*methodBody=*/"",
-        /*defaultImplementation=*/"return ValueRange{};"
-      >,
-      InterfaceMethod<
-        /*desc=*/[{
-          Returns a list of `StringRef`s that describe the number of
-          loops and the iterator types of the operation. The list is
-          expected to use
-          `getParallelIteratorTypeName()`/`getReductionIteratorTypeName()`
-          from MLIR Structured Op Utils.
-        }],
-        /*retType=*/"SmallVector<StringRef>",
+        /*retType=*/"SmallVector<utils::IteratorType>",
         /*methodName=*/"getLoopIteratorTypes",
         /*args=*/(ins),
         /*methodBody=*/"",
@@ -72,19 +53,12 @@ def TilingInterface : OpInterface<"TilingInterface"> {
           `getIterationDomain`. The caller provides the information of the
           tile within this iteration space whose implementation the
           caller needs.
-          - `dest` are the Value into which the result of the tiled
-            operation is to be inserted into. The type of the `dest`
-            Values is same as the types returned by
-            `getDestinationOperands` method.
           - `offsets` provides the offset of the tile in the coordinate system
             of the original iteration space, i.e., if an iteration space
             dimension had non-zero offset, it must be included in the offset
             provided here (as opposed to zero-based offset "relative" to the
             iteration space).
           - `sizes` provides the size of the tile.
-          - `tileDestOperands` specifies whether to also tile `dest` operands
-            or not. Avoiding tiling `dest` operands can be useful for 
-            composition with various looping container ops.
 
           The method returns the operation that is the tiled
           implementation.
@@ -93,10 +67,8 @@ def TilingInterface : OpInterface<"TilingInterface"> {
         /*methodName=*/"getTiledImplementation",
         /*args=*/(ins
             "OpBuilder &":$b,
-            "ValueRange ":$dest,
             "ArrayRef<OpFoldResult> ":$offsets,
-            "ArrayRef<OpFoldResult> ":$sizes,
-            "bool ":$tileDestOperands),
+            "ArrayRef<OpFoldResult> ":$sizes),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return {};
@@ -138,31 +110,22 @@ def TilingInterface : OpInterface<"TilingInterface"> {
           result required. This method enables fusion by using tile
           and fuse. The method returns failure if the operation can't be
           tiled to generate the result tile. In practical terms this
-          implies it cannot be tiled and fused with its consumers.        
+          implies it cannot be tiled and fused with its consumers.
 
-          - `dest` are the Value into which the result of the tiled
-            operation is to be inserted into. The type of the `dest`
-            Values is same as the types returned by
-            `getDestinationOperands` method.
           - `offsets` provides the offset of the tile in the coordinate system
             of the original iteration space, i.e., if an iteration space
             dimension had non-zero offset, it must be included in the offset
             provided here (as opposed to zero-based offset "relative" to the
             iteration space).
           - `sizes` provides the size of the tile.
-          - `tileDestOperands` specifies whether to also tile `dest` operands
-            or not. Avoiding tiling `dest` operands can be useful for 
-            composition with various looping container ops.
         }],
         /*retType=*/"FailureOr<Value>",
         /*methodName=*/"generateResultTileValue",
         /*args=*/(ins
           "OpBuilder &":$b,
           "unsigned":$resultNumber,
-          "ValueRange":$dest,
           "ArrayRef<OpFoldResult>":$offsets,
-          "ArrayRef<OpFoldResult>":$sizes,
-          "bool":$tileDestOperands),
+          "ArrayRef<OpFoldResult>":$sizes),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return failure();
@@ -170,13 +133,13 @@ def TilingInterface : OpInterface<"TilingInterface"> {
       >,
       InterfaceMethod<
         /*desc=*/[{
-          Generates the scalar implementation of the operation. 
+          Generates the scalar implementation of the operation.
 
           Given the list `ivs` that represent points in the iteration space
           (as specified by `getIterationDomain()`) returns the scalar operations
           that represent the computation at that point in the iteration space.
           This method is typically used as the "exit path", i.e. once all
-          transformations are done, this method can be used to lower to scalar 
+          transformations are done, this method can be used to lower to scalar
           code that can then be lowered to LLVM or SPIR-V dialects.
         }],
         /*retType=*/"LogicalResult",
@@ -190,6 +153,74 @@ def TilingInterface : OpInterface<"TilingInterface"> {
           return failure();
         }]
       >
-  ];  
+  ];
+}
+
+def PartialReductionOpInterface : OpInterface<"PartialReductionOpInterface"> {
+  let description = [{
+    Interface for allowing operations to expose information needed to
+    tile reductions using partial reduction followed by merge. This is
+    complementary to TilingInterface to tile reductions.
+  }];
+  let cppNamespace = "::mlir";
+  let methods = [
+      InterfaceMethod<
+        /*desc=*/[{
+          Method to generate a tensor initalized with the identity value of the
+          operation reduction. The tensor shape is equal to operation result
+          shape with new dimension for each non zero tile size.
+        }],
+        /*retType=*/"FailureOr<Operation*>",
+        /*methodName=*/"generateInitialTensorForPartialReduction",
+        /*args=*/(ins
+            "OpBuilder &":$b,
+            "Location ":$loc,
+            "ArrayRef<OpFoldResult>":$sizes,
+            "ArrayRef<int>":$reductionDim),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return failure();
+        }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Method to generate a tiled version of the operation where the tiled
+          reduction dimension are converted to parallel dimensions with a size
+          less or equal to the tile size. This is meant to be used with
+          `mergeReductions` method which will combine the partial reductions.
+        }],
+        /*retType=*/"Operation*",
+        /*methodName=*/"tileToPartialReduction",
+        /*args=*/(ins
+            "OpBuilder &":$b,
+            "Location ":$loc,
+            "ValueRange":$init,
+            "ArrayRef<OpFoldResult>":$offsets,
+            "ArrayRef<OpFoldResult>":$sizes,
+            "ArrayRef<int>":$reductionDims),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return nullptr;
+        }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Method to merge partial reductions for an operation that has been
+          tiled along the reduction dimensions. This will only apply the
+          reduction the operation.
+        }],
+        /*retType=*/"Operation*",
+        /*methodName=*/"mergeReductions",
+        /*args=*/(ins
+            "OpBuilder &":$b,
+            "Location ":$loc,
+            "ValueRange":$partialReduce,
+            "ArrayRef<int>":$reductionDim),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return nullptr;
+        }]
+      >
+  ];
 }
 #endif // MLIR_TILINGINTERFACE

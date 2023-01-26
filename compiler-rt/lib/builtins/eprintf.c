@@ -15,6 +15,7 @@
 //
 // It should never be exported from a dylib, so it is marked
 // visibility hidden.
+#ifndef DONT_DEFINE_EPRINTF
 #ifndef _WIN32
 __attribute__((visibility("hidden")))
 #endif
@@ -25,3 +26,4 @@ __eprintf(const char *format, const char *assertion_expression,
   fflush(stderr);
   compilerrt_abort();
 }
+#endif

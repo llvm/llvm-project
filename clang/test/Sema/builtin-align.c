@@ -64,7 +64,7 @@ void test_return_type(void *ptr, int i, long l) {
   _Static_assert(check_same_type(void *, result_type_ptr), "Should return void*");
   _Static_assert(check_same_type(int, result_type_int), "Should return int");
   _Static_assert(check_same_type(long, result_type_long), "Should return long");
-  // Check that we can use the alignment builtins on on array types (result should decay)
+  // Check that we can use the alignment builtins on array types (result should decay)
   _Static_assert(check_same_type(char *, result_type_char_array),
                  "Using the builtins on an array should yield the decayed type");
 #endif

@@ -44,11 +44,11 @@ define void @use() {
   call void @foo1()
   call void @foo2()
   call void @foo3()
-  %x1 = load i32, i32* @v1
-  %x2 = load i32, i32* @v2
-  %x3 = load i32, i32* @v3
-  %x4 = load i32, i32* @v4
-  %x5 = load i32, i32* @v5
-  %x6 = load i32, i32* @v6
+  %x1 = load i32, ptr @v1
+  %x2 = load i32, ptr @v2
+  %x3 = load i32, ptr @v3
+  %x4 = load i32, ptr @v4
+  %x5 = load i32, ptr @v5
+  %x6 = load i32, ptr @v6
   ret void
 }

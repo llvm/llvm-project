@@ -37,6 +37,7 @@ add_llvm_target(XCoreCodeGen
   SelectionDAG
   Support
   Target
+  TargetParser
   TransformUtils
   XCoreDesc
   XCoreInfo

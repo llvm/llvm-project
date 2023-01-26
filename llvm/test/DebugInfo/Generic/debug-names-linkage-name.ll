@@ -1,4 +1,4 @@
-; XFAIL: -aix
+; XFAIL: target={{.*}}-aix{{.*}}
 ; Generate one file with all linkage names, and another with only abstract ones.
 ; Then test both.
 ; RUN: %llc_dwarf -accel-tables=Dwarf -dwarf-linkage-names=All -filetype=obj -o %t.All < %s

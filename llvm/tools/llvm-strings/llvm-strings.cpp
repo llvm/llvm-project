@@ -39,11 +39,14 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "Opts.inc"
 #undef PREFIX
 
-const opt::OptTable::Info InfoTable[] = {
+static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
   {                                                                            \
@@ -55,9 +58,11 @@ const opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class StringsOptTable : public opt::OptTable {
+class StringsOptTable : public opt::GenericOptTable {
 public:
-  StringsOptTable() : OptTable(InfoTable) { setGroupedShortOptions(true); }
+  StringsOptTable() : GenericOptTable(InfoTable) {
+    setGroupedShortOptions(true);
+  }
 };
 } // namespace
 

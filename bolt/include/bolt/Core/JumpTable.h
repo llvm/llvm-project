@@ -109,7 +109,7 @@ public:
   /// starting at (or containing) 'Addr'.
   std::pair<size_t, size_t> getEntriesForAddress(const uint64_t Addr) const;
 
-  virtual bool isJumpTable() const override { return true; }
+  bool isJumpTable() const override { return true; }
 
   /// Change all entries of the jump table in \p JTAddress pointing to
   /// \p OldDest to \p NewDest. Return false if unsuccessful.
@@ -120,7 +120,7 @@ public:
   void updateOriginal();
 
   /// Print for debugging purposes.
-  virtual void print(raw_ostream &OS) const override;
+  void print(raw_ostream &OS) const override;
 };
 
 } // namespace bolt

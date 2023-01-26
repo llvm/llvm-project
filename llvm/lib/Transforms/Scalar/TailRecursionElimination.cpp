@@ -243,10 +243,12 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
           isa<PseudoProbeInst>(&I))
         continue;
 
-      // Special-case operand bundles "clang.arc.attachedcall" and "ptrauth".
-      bool IsNoTail =
-          CI->isNoTailCall() || CI->hasOperandBundlesOtherThan(
-            {LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_ptrauth});
+      // Special-case operand bundles "clang.arc.attachedcall", "ptrauth", and
+      // "kcfi".
+      bool IsNoTail = CI->isNoTailCall() ||
+                      CI->hasOperandBundlesOtherThan(
+                          {LLVMContext::OB_clang_arc_attachedcall,
+                           LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi});
 
       if (!IsNoTail && CI->doesNotAccessMemory()) {
         // A call to a readnone function whose arguments are all things computed
@@ -714,8 +716,8 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
   BranchInst *NewBI = BranchInst::Create(HeaderBB, Ret);
   NewBI->setDebugLoc(CI->getDebugLoc());
 
-  BB->getInstList().erase(Ret);  // Remove return.
-  BB->getInstList().erase(CI);   // Remove call.
+  Ret->eraseFromParent();  // Remove return.
+  CI->eraseFromParent();   // Remove call.
   DTU.applyUpdates({{DominatorTree::Insert, BB, HeaderBB}});
   ++NumEliminated;
   return true;

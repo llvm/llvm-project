@@ -23,6 +23,7 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/ValueHandle.h"
 #include <cstdint>
+#include <optional>
 #include <utility>
 
 namespace llvm {
@@ -57,6 +58,10 @@ bool isAllocationFn(const Value *V,
                     function_ref<const TargetLibraryInfo &(Function &)> GetTLI);
 
 /// Tests if a value is a call or invoke to a library function that
+/// allocates memory via new.
+bool isNewLikeFn(const Value *V, const TargetLibraryInfo *TLI);
+
+/// Tests if a value is a call or invoke to a library function that
 /// allocates memory similar to malloc or calloc.
 bool isMallocOrCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI);
 
@@ -66,10 +71,10 @@ bool isAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI);
 
 /// Tests if a function is a call or invoke to a library function that
 /// reallocates memory (e.g., realloc).
-bool isReallocLikeFn(const Function *F, const TargetLibraryInfo *TLI);
+bool isReallocLikeFn(const Function *F);
 
 /// If this is a call to a realloc function, return the reallocated operand.
-Value *getReallocatedOperand(const CallBase *CB, const TargetLibraryInfo *TLI);
+Value *getReallocatedOperand(const CallBase *CB);
 
 //===----------------------------------------------------------------------===//
 //  free Call Utility Functions.
@@ -107,7 +112,7 @@ Value *getAllocAlignment(const CallBase *V, const TargetLibraryInfo *TLI);
 /// calls that return their argument. A mapper function can be used to replace
 /// one Value* (operand to the allocation) with another. This is useful when
 /// doing abstract interpretation.
-Optional<APInt> getAllocSize(
+std::optional<APInt> getAllocSize(
     const CallBase *CB, const TargetLibraryInfo *TLI,
     function_ref<const Value *(const Value *)> Mapper = [](const Value *V) {
       return V;
@@ -123,8 +128,8 @@ Constant *getInitialValueOfAllocation(const Value *V,
 /// If a function is part of an allocation family (e.g.
 /// malloc/realloc/calloc/free), return the identifier for its family
 /// of functions.
-Optional<StringRef> getAllocationFamily(const Value *I,
-                                        const TargetLibraryInfo *TLI);
+std::optional<StringRef> getAllocationFamily(const Value *I,
+                                             const TargetLibraryInfo *TLI);
 
 //===----------------------------------------------------------------------===//
 //  Utility functions to compute size of objects.
@@ -134,17 +139,21 @@ Optional<StringRef> getAllocationFamily(const Value *I,
 struct ObjectSizeOpts {
   /// Controls how we handle conditional statements with unknown conditions.
   enum class Mode : uint8_t {
-    /// Fail to evaluate an unknown condition.
-    Exact,
+    /// All branches must be known and have the same size, starting from the
+    /// offset, to be merged.
+    ExactSizeFromOffset,
+    /// All branches must be known and have the same underlying size and offset
+    /// to be merged.
+    ExactUnderlyingSizeAndOffset,
     /// Evaluate all branches of an unknown condition. If all evaluations
     /// succeed, pick the minimum size.
     Min,
     /// Same as Min, except we pick the maximum size of all of the branches.
-    Max
+    Max,
   };
 
   /// How we want to evaluate this object's size.
-  Mode EvalMode = Mode::Exact;
+  Mode EvalMode = Mode::ExactSizeFromOffset;
   /// Whether to round the result up to the alignment of allocas, byval
   /// arguments, and global variables.
   bool RoundToAlign = false;

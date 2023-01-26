@@ -21,12 +21,10 @@ define void @foo() nounwind  {
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, [[BB7_OUTER]] ], [ [[INDVAR_NEXT:%.*]], [[BB1]] ]
-; CHECK-NEXT:    [[T4:%.*]] = getelementptr [1001 x [20000 x double]], [1001 x [20000 x double]]* @Nice, i64 0, i64 [[I]], i64 [[J]]
-; CHECK-NEXT:    [[Q:%.*]] = bitcast double* [[T4]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> zeroinitializer, <2 x double>* [[Q]], align 16
-; CHECK-NEXT:    [[S4:%.*]] = getelementptr [1001 x [20001 x double]], [1001 x [20001 x double]]* @Awkward, i64 0, i64 [[I]], i64 [[J]]
-; CHECK-NEXT:    [[R:%.*]] = bitcast double* [[S4]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> zeroinitializer, <2 x double>* [[R]], align 8
+; CHECK-NEXT:    [[T4:%.*]] = getelementptr [1001 x [20000 x double]], ptr @Nice, i64 0, i64 [[I]], i64 [[J]]
+; CHECK-NEXT:    store <2 x double> zeroinitializer, ptr [[T4]], align 16
+; CHECK-NEXT:    [[S4:%.*]] = getelementptr [1001 x [20001 x double]], ptr @Awkward, i64 0, i64 [[I]], i64 [[J]]
+; CHECK-NEXT:    store <2 x double> zeroinitializer, ptr [[S4]], align 8
 ; CHECK-NEXT:    [[INDVAR_NEXT]] = add i64 [[J]], 2
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVAR_NEXT]], 556
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[BB11]], label [[BB1]]
@@ -47,13 +45,11 @@ bb7.outer:
 bb1:
   %j = phi i64 [ 0, %bb7.outer ], [ %indvar.next, %bb1 ]
 
-  %t4 = getelementptr [1001 x [20000 x double]], [1001 x [20000 x double]]* @Nice, i64 0, i64 %i, i64 %j
-  %q = bitcast double* %t4 to <2 x double>*
-  store <2 x double><double 0.0, double 0.0>, <2 x double>* %q, align 8
+  %t4 = getelementptr [1001 x [20000 x double]], ptr @Nice, i64 0, i64 %i, i64 %j
+  store <2 x double><double 0.0, double 0.0>, ptr %t4, align 8
 
-  %s4 = getelementptr [1001 x [20001 x double]], [1001 x [20001 x double]]* @Awkward, i64 0, i64 %i, i64 %j
-  %r = bitcast double* %s4 to <2 x double>*
-  store <2 x double><double 0.0, double 0.0>, <2 x double>* %r, align 8
+  %s4 = getelementptr [1001 x [20001 x double]], ptr @Awkward, i64 0, i64 %i, i64 %j
+  store <2 x double><double 0.0, double 0.0>, ptr %s4, align 8
 
   %indvar.next = add i64 %j, 2
   %exitcond = icmp eq i64 %indvar.next, 556

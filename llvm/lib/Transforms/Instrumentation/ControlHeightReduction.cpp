@@ -29,6 +29,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
@@ -38,6 +39,7 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
+#include <optional>
 #include <set>
 #include <sstream>
 
@@ -46,6 +48,9 @@ using namespace llvm;
 #define DEBUG_TYPE "chr"
 
 #define CHR_DEBUG(X) LLVM_DEBUG(X)
+
+static cl::opt<bool> DisableCHR("disable-chr", cl::init(false), cl::Hidden,
+                                cl::desc("Disable CHR for all functions"));
 
 static cl::opt<bool> ForceCHR("force-chr", cl::init(false), cl::Hidden,
                               cl::desc("Apply CHR for all functions"));
@@ -65,6 +70,10 @@ static cl::opt<std::string> CHRModuleList(
 static cl::opt<std::string> CHRFunctionList(
     "chr-function-list", cl::init(""), cl::Hidden,
     cl::desc("Specify file to retrieve the list of functions to apply CHR to"));
+
+static cl::opt<unsigned> CHRDupThreshsold(
+    "chr-dup-threshold", cl::init(3), cl::Hidden,
+    cl::desc("Max number of duplications by CHR for a region"));
 
 static StringSet<> CHRModules;
 static StringSet<> CHRFunctions;
@@ -339,23 +348,27 @@ class CHR {
                                  BasicBlock *EntryBlock,
                                  BasicBlock *NewEntryBlock,
                                  ValueToValueMapTy &VMap);
-  void fixupBranchesAndSelects(CHRScope *Scope,
-                               BasicBlock *PreEntryBlock,
-                               BranchInst *MergedBR,
-                               uint64_t ProfileCount);
-  void fixupBranch(Region *R,
-                   CHRScope *Scope,
-                   IRBuilder<> &IRB,
+  void fixupBranchesAndSelects(CHRScope *Scope, BasicBlock *PreEntryBlock,
+                               BranchInst *MergedBR, uint64_t ProfileCount);
+  void fixupBranch(Region *R, CHRScope *Scope, IRBuilder<> &IRB,
                    Value *&MergedCondition, BranchProbability &CHRBranchBias);
-  void fixupSelect(SelectInst* SI,
-                   CHRScope *Scope,
-                   IRBuilder<> &IRB,
+  void fixupSelect(SelectInst *SI, CHRScope *Scope, IRBuilder<> &IRB,
                    Value *&MergedCondition, BranchProbability &CHRBranchBias);
   void addToMergedCondition(bool IsTrueBiased, Value *Cond,
-                            Instruction *BranchOrSelect,
-                            CHRScope *Scope,
-                            IRBuilder<> &IRB,
-                            Value *&MergedCondition);
+                            Instruction *BranchOrSelect, CHRScope *Scope,
+                            IRBuilder<> &IRB, Value *&MergedCondition);
+  unsigned getRegionDuplicationCount(const Region *R) {
+    unsigned Count = 0;
+    // Find out how many times region R is cloned. Note that if the parent
+    // of R is cloned, R is also cloned, but R's clone count is not updated
+    // from the clone of the parent. We need to accumlate all the counts
+    // from the ancestors to get the clone count.
+    while (R) {
+      Count += DuplicationCount[R];
+      R = R->getParent();
+    }
+    return Count;
+  }
 
   Function &F;
   BlockFrequencyInfo &BFI;
@@ -379,6 +392,8 @@ class CHR {
   DenseMap<SelectInst *, BranchProbability> SelectBiasMap;
   // All the scopes.
   DenseSet<CHRScope *> Scopes;
+  // This maps records how many times this region is cloned.
+  DenseMap<const Region *, unsigned> DuplicationCount;
 };
 
 } // end anonymous namespace
@@ -396,7 +411,10 @@ raw_ostream &operator<<(raw_ostream &OS, const CHRScope &Scope) {
   return OS;
 }
 
-static bool shouldApply(Function &F, ProfileSummaryInfo& PSI) {
+static bool shouldApply(Function &F, ProfileSummaryInfo &PSI) {
+  if (DisableCHR)
+    return false;
+
   if (ForceCHR)
     return true;
 
@@ -406,7 +424,6 @@ static bool shouldApply(Function &F, ProfileSummaryInfo& PSI) {
     return CHRFunctions.count(F.getName());
   }
 
-  assert(PSI.hasProfileSummary() && "Empty PSI?");
   return PSI.isFunctionEntryHot(&F);
 }
 
@@ -462,7 +479,7 @@ static bool isHoistableInstructionType(Instruction *I) {
 static bool isHoistable(Instruction *I, DominatorTree &DT) {
   if (!isHoistableInstructionType(I))
     return false;
-  return isSafeToSpeculativelyExecute(I, nullptr, &DT);
+  return isSafeToSpeculativelyExecute(I, nullptr, nullptr, &DT);
 }
 
 // Recursively traverse the use-def chains of the given value and return a set
@@ -559,32 +576,26 @@ checkHoistValue(Value *V, Instruction *InsertPoint, DominatorTree &DT,
   return true;
 }
 
-// Returns true and sets the true probability and false probability of an
-// MD_prof metadata if it's well-formed.
-static bool checkMDProf(MDNode *MD, BranchProbability &TrueProb,
-                        BranchProbability &FalseProb) {
-  if (!MD) return false;
-  MDString *MDName = cast<MDString>(MD->getOperand(0));
-  if (MDName->getString() != "branch_weights" ||
-      MD->getNumOperands() != 3)
+// Constructs the true and false branch probabilities if the the instruction has
+// valid branch weights. Returns true when this was successful, false otherwise.
+static bool extractBranchProbabilities(Instruction *I,
+                                       BranchProbability &TrueProb,
+                                       BranchProbability &FalseProb) {
+  uint64_t TrueWeight;
+  uint64_t FalseWeight;
+  if (!extractBranchWeights(*I, TrueWeight, FalseWeight))
     return false;
-  ConstantInt *TrueWeight = mdconst::extract<ConstantInt>(MD->getOperand(1));
-  ConstantInt *FalseWeight = mdconst::extract<ConstantInt>(MD->getOperand(2));
-  if (!TrueWeight || !FalseWeight)
-    return false;
-  uint64_t TrueWt = TrueWeight->getValue().getZExtValue();
-  uint64_t FalseWt = FalseWeight->getValue().getZExtValue();
-  uint64_t SumWt = TrueWt + FalseWt;
+  uint64_t SumWeight = TrueWeight + FalseWeight;
 
-  assert(SumWt >= TrueWt && SumWt >= FalseWt &&
+  assert(SumWeight >= TrueWeight && SumWeight >= FalseWeight &&
          "Overflow calculating branch probabilities.");
 
   // Guard against 0-to-0 branch weights to avoid a division-by-zero crash.
-  if (SumWt == 0)
+  if (SumWeight == 0)
     return false;
 
-  TrueProb = BranchProbability::getBranchProbability(TrueWt, SumWt);
-  FalseProb = BranchProbability::getBranchProbability(FalseWt, SumWt);
+  TrueProb = BranchProbability::getBranchProbability(TrueWeight, SumWeight);
+  FalseProb = BranchProbability::getBranchProbability(FalseWeight, SumWeight);
   return true;
 }
 
@@ -623,8 +634,7 @@ static bool checkBiasedBranch(BranchInst *BI, Region *R,
   if (!BI->isConditional())
     return false;
   BranchProbability ThenProb, ElseProb;
-  if (!checkMDProf(BI->getMetadata(LLVMContext::MD_prof),
-                   ThenProb, ElseProb))
+  if (!extractBranchProbabilities(BI, ThenProb, ElseProb))
     return false;
   BasicBlock *IfThen = BI->getSuccessor(0);
   BasicBlock *IfElse = BI->getSuccessor(1);
@@ -653,8 +663,7 @@ static bool checkBiasedSelect(
     DenseSet<SelectInst *> &FalseBiasedSelectsGlobal,
     DenseMap<SelectInst *, BranchProbability> &SelectBiasMap) {
   BranchProbability TrueProb, FalseProb;
-  if (!checkMDProf(SI->getMetadata(LLVMContext::MD_prof),
-                   TrueProb, FalseProb))
+  if (!extractBranchProbabilities(SI, TrueProb, FalseProb))
     return false;
   CHR_DEBUG(dbgs() << "SI " << *SI << " ");
   CHR_DEBUG(dbgs() << "TrueProb " << TrueProb << " ");
@@ -1667,11 +1676,32 @@ void CHR::transformScopes(CHRScope *Scope, DenseSet<PHINode *> &TrivialPHIs) {
   CHR_DEBUG(dbgs() << "transformScopes " << *Scope << "\n");
 
   assert(Scope->RegInfos.size() >= 1 && "Should have at least one Region");
+
+  for (RegInfo &RI : Scope->RegInfos) {
+    const Region *R = RI.R;
+    unsigned Duplication = getRegionDuplicationCount(R);
+    CHR_DEBUG(dbgs() << "Dup count for R=" << R << "  is " << Duplication
+                     << "\n");
+    if (Duplication >= CHRDupThreshsold) {
+      CHR_DEBUG(dbgs() << "Reached the dup threshold of " << Duplication
+                       << " for this region");
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "DupThresholdReached",
+                                        R->getEntry()->getTerminator())
+               << "Reached the duplication threshold for the region";
+      });
+      return;
+    }
+  }
+  for (RegInfo &RI : Scope->RegInfos) {
+    DuplicationCount[RI.R]++;
+  }
+
   Region *FirstRegion = Scope->RegInfos[0].R;
   BasicBlock *EntryBlock = FirstRegion->getEntry();
   Region *LastRegion = Scope->RegInfos[Scope->RegInfos.size() - 1].R;
   BasicBlock *ExitBlock = LastRegion->getExit();
-  Optional<uint64_t> ProfileCount = BFI.getBlockProfileCount(EntryBlock);
+  std::optional<uint64_t> ProfileCount = BFI.getBlockProfileCount(EntryBlock);
 
   if (ExitBlock) {
     // Insert a trivial phi at the exit block (where the CHR hot path and the
@@ -1753,13 +1783,12 @@ void CHR::cloneScopeBlocks(CHRScope *Scope,
   // Place the cloned blocks right after the original blocks (right before the
   // exit block of.)
   if (ExitBlock)
-    F.getBasicBlockList().splice(ExitBlock->getIterator(),
-                                 F.getBasicBlockList(),
-                                 NewBlocks[0]->getIterator(), F.end());
+    F.splice(ExitBlock->getIterator(), &F, NewBlocks[0]->getIterator(),
+             F.end());
 
   // Update the cloned blocks/instructions to refer to themselves.
-  for (unsigned i = 0, e = NewBlocks.size(); i != e; ++i)
-    for (Instruction &I : *NewBlocks[i])
+  for (BasicBlock *NewBB : NewBlocks)
+    for (Instruction &I : *NewBB)
       RemapInstruction(&I, VMap,
                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
 
@@ -1801,7 +1830,7 @@ BranchInst *CHR::createMergedBranch(BasicBlock *PreEntryBlock,
   BranchInst *NewBR = BranchInst::Create(NewEntryBlock,
                                          cast<BasicBlock>(VMap[NewEntryBlock]),
                                          ConstantInt::getTrue(F.getContext()));
-  PreEntryBlock->getInstList().push_back(NewBR);
+  NewBR->insertInto(PreEntryBlock, PreEntryBlock->end());
   assert(NewEntryBlock->getSinglePredecessor() == EntryBlock &&
          "NewEntryBlock's only pred must be EntryBlock");
   return NewBR;
@@ -1983,7 +2012,7 @@ bool CHR::run() {
     findScopes(AllScopes);
     CHR_DEBUG(dumpScopes(AllScopes, "All scopes"));
 
-    // Split the scopes if 1) the conditiona values of the biased
+    // Split the scopes if 1) the conditional values of the biased
     // branches/selects of the inner/lower scope can't be hoisted up to the
     // outermost/uppermost scope entry, or 2) the condition values of the biased
     // branches/selects in a scope (including subscopes) don't share at least

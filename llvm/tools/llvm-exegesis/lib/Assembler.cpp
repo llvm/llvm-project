@@ -209,6 +209,7 @@ Error assembleToStream(const ExegesisTarget &ET,
 
   // If the snippet setup is not complete, we disable liveliness tracking. This
   // means that we won't know what values are in the registers.
+  // FIXME: this should probably be an assertion.
   if (!IsSnippetSetupComplete)
     Properties.reset(MachineFunctionProperties::Property::TracksLiveness);
 

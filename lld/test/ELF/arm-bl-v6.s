@@ -1,10 +1,10 @@
 // REQUIRES: arm
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv6-none-linux-gnueabi %s -o %t
 // RUN: ld.lld %t -o %t2
-// RUN: llvm-objdump -d --triple=armv6-none-linux-gnueabi --start-address=0x21000 --stop-address=0x21008 %t2 | FileCheck --check-prefix=CHECK-ARM1 %s
-// RUN: llvm-objdump -d --triple=thumbv6-none-linux-gnueabi %t2 --start-address=0x21008 --stop-address=0x2100c | FileCheck --check-prefix=CHECK-THUMB1 %s
-// RUN: llvm-objdump -d --triple=armv6-none-linux-gnueabi --start-address=0x22100c --stop-address=0x221014 %t2 | FileCheck --check-prefix=CHECK-ARM2 %s
-// RUN: llvm-objdump -d --triple=thumbv6-none-linux-gnueabi %t2 --start-address=0x622000 --stop-address=0x622002 | FileCheck --check-prefix=CHECK-THUMB2 %s
+// RUN: llvm-objdump --no-print-imm-hex -d --triple=armv6-none-linux-gnueabi --start-address=0x21000 --stop-address=0x21008 %t2 | FileCheck --check-prefix=CHECK-ARM1 %s
+// RUN: llvm-objdump --no-print-imm-hex -d --triple=thumbv6-none-linux-gnueabi %t2 --start-address=0x21008 --stop-address=0x2100c | FileCheck --check-prefix=CHECK-THUMB1 %s
+// RUN: llvm-objdump --no-print-imm-hex -d --triple=armv6-none-linux-gnueabi --start-address=0x22100c --stop-address=0x221014 %t2 | FileCheck --check-prefix=CHECK-ARM2 %s
+// RUN: llvm-objdump --no-print-imm-hex -d --triple=thumbv6-none-linux-gnueabi %t2 --start-address=0x622000 --stop-address=0x622002 | FileCheck --check-prefix=CHECK-THUMB2 %s
 
 /// On Arm v6 the range of a Thumb BL instruction is only 4 megabytes as the
 /// extended range encoding is not supported. The following example has a Thumb
@@ -38,13 +38,13 @@ thumbfunc:
  bl farthumbfunc
 
 // CHECK-THUMB1: <thumbfunc>:
-// CHECK-THUMB1-NEXT:    21008: f200 e800 	 	blx	0x22100c <__ARMv5ABSLongThunk_farthumbfunc>
+// CHECK-THUMB1-NEXT:    21008: f200 e800 	 	blx	0x22100c <__ARMv5LongLdrPcThunk_farthumbfunc>
 /// 6 Megabytes, enough to make farthumbfunc out of range of caller
 /// on a v6 Arm, but not on a v7 Arm.
 
  .section .text.3, "ax", %progbits
  .space 0x200000
-// CHECK-ARM2: <__ARMv5ABSLongThunk_farthumbfunc>:
+// CHECK-ARM2: <__ARMv5LongLdrPcThunk_farthumbfunc>:
 // CHECK-ARM2-NEXT:   22100c:   e51ff004        ldr     pc, [pc, #-4]
 // CHECK-ARM2: <$d>:
 // CHECK-ARM2-NEXT:   221010:   01 20 62 00     .word   0x00622001

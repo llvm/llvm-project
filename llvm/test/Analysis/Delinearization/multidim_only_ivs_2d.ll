@@ -8,21 +8,21 @@
 ;       A[i][j] = 1.0;
 ; }
 
-; Inst:  %val = load double, double* %arrayidx
+; Inst:  %val = load double, ptr %arrayidx
 ; In Loop with Header: for.j
 ; AddRec: {{0,+,(%m * 8)}<%for.i>,+,8}<%for.j>
 ; Base offset: %A
 ; ArrayDecl[UnknownSize][%m] with elements of 8 bytes.
 ; ArrayRef[{0,+,1}<nuw><nsw><%for.i>][{0,+,1}<nuw><nsw><%for.j>]
 
-; Inst:  store double %val, double* %arrayidx
+; Inst:  store double %val, ptr %arrayidx
 ; In Loop with Header: for.j
 ; AddRec: {{%A,+,(8 * %m)}<%for.i>,+,8}<%for.j>
 ; CHECK: Base offset: %A
 ; CHECK: ArrayDecl[UnknownSize][%m] with elements of 8 bytes.
 ; CHECK: ArrayRef[{0,+,1}<nuw><nsw><%for.i>][{0,+,1}<nuw><nsw><%for.j>]
 
-define void @foo(i64 %n, i64 %m, double* %A) {
+define void @foo(i64 %n, i64 %m, ptr %A) {
 entry:
   br label %for.i
 
@@ -34,9 +34,9 @@ for.i:
 for.j:
   %j = phi i64 [ 0, %for.i ], [ %j.inc, %for.j ]
   %vlaarrayidx.sum = add i64 %j, %tmp
-  %arrayidx = getelementptr inbounds double, double* %A, i64 %vlaarrayidx.sum
-  %val = load double, double* %arrayidx
-  store double %val, double* %arrayidx
+  %arrayidx = getelementptr inbounds double, ptr %A, i64 %vlaarrayidx.sum
+  %val = load double, ptr %arrayidx
+  store double %val, ptr %arrayidx
   %j.inc = add nsw i64 %j, 1
   %j.exitcond = icmp eq i64 %j.inc, %m
   br i1 %j.exitcond, label %for.i.inc, label %for.j

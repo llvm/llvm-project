@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=xcore-unknown-unknown < %s | FileCheck %s
-; RUN: llc -mtriple=xcore-unknown-unknown -O=0 < %s | FileCheck %s -check-prefix=PHINODE
+; RUN: llc -opaque-pointers=0 -mtriple=xcore-unknown-unknown < %s | FileCheck %s
+; RUN: llc -opaque-pointers=0 -mtriple=xcore-unknown-unknown -O=0 < %s | FileCheck %s -check-prefix=PHINODE
 
 declare i8 addrspace(1)* @llvm.xcore.getst.p1i8.p1i8(i8 addrspace(1)* %r)
 declare void @llvm.xcore.msync.p1i8(i8 addrspace(1)* %r)

@@ -58,7 +58,7 @@ bool CSKYAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 #include "CSKYGenCompressInstEmitter.inc"
 void CSKYAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
   MCInst CInst;
-  bool Res = compressInst(CInst, Inst, *Subtarget, OutStreamer->getContext());
+  bool Res = compressInst(CInst, Inst, *Subtarget);
   if (Res)
     ++CSKYNumInstrsCompressed;
   AsmPrinter::EmitToStreamer(*OutStreamer, Res ? CInst : Inst);
@@ -105,7 +105,7 @@ void CSKYAsmPrinter::emitCustomConstantPool(const MachineInstr *MI) {
 
   // If this is the first entry of the pool, mark it.
   if (!InConstantPool) {
-    OutStreamer->emitValueToAlignment(4);
+    OutStreamer->emitValueToAlignment(Align(4));
     InConstantPool = true;
   }
 
@@ -208,6 +208,9 @@ void CSKYAsmPrinter::emitMachineConstantPoolValue(
   } else if (CCPV->isJT()) {
     signed JTI = cast<CSKYConstantPoolJT>(CCPV)->getJTI();
     MCSym = GetJTISymbol(JTI);
+  } else if (CCPV->isConstPool()) {
+    const Constant *C = cast<CSKYConstantPoolConstant>(CCPV)->getConstantPool();
+    MCSym = GetCPISymbol(MCP->getConstantPoolIndex(C, Align(4)));
   } else {
     assert(CCPV->isExtSymbol() && "unrecognized constant pool value");
     StringRef Sym = cast<CSKYConstantPoolSymbol>(CCPV)->getSymbol();

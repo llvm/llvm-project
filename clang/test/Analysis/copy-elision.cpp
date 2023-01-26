@@ -20,6 +20,7 @@
 #endif
 
 void clang_analyzer_eval(bool);
+void clang_analyzer_dump(int);
 
 namespace variable_functional_cast_crash {
 
@@ -418,3 +419,31 @@ void test_copy_elision() {
 }
 
 } // namespace address_vector_tests
+
+namespace arg_directly_from_return_in_loop {
+
+struct Result {
+  int value;
+};
+
+Result create() {
+  return Result{10};
+}
+
+int accessValue(Result r) {
+  return r.value;
+}
+
+void test() {
+  for (int i = 0; i < 3; ++i) {
+    int v = accessValue(create());
+    if (i == 0) {
+      clang_analyzer_dump(v); // expected-warning {{10 S32b}}
+    } else {
+      clang_analyzer_dump(v); // expected-warning {{10 S32b}}
+                              // was {{reg_${{[0-9]+}}<int r.value> }} for C++11
+    }
+  }
+}
+
+} // namespace arg_directly_from_return_in_loop

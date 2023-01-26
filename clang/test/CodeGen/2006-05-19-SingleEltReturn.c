@@ -1,6 +1,6 @@
 // Test returning a single element aggregate value containing a double.
-// RUN: %clang_cc1 -no-opaque-pointers -triple i686-linux %s -emit-llvm -o - | FileCheck %s --check-prefix=X86_32
-// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o -
+// RUN: %clang_cc1 -triple i686-linux %s -emit-llvm -o - | FileCheck %s --check-prefix=X86_32
+// RUN: %clang_cc1 %s -emit-llvm -o -
 
 struct X {
   double D;
@@ -23,8 +23,8 @@ struct Y bar(void) {
 }
 
 
-// X86_32: define{{.*}} void @foo(%struct.Y* noundef %P)
-// X86_32:   call void @bar(%struct.Y* sret(%struct.Y) align 4 %{{[^),]*}})
+// X86_32: define{{.*}} void @foo(ptr noundef %P)
+// X86_32:   call void @bar(ptr sret(%struct.Y) align 4 %{{[^),]*}})
 
-// X86_32: define{{.*}} void @bar(%struct.Y* noalias sret(%struct.Y) align 4 %{{[^,)]*}})
+// X86_32: define{{.*}} void @bar(ptr noalias sret(%struct.Y) align 4 %{{[^,)]*}})
 // X86_32:   ret void

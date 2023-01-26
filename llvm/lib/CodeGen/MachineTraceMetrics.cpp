@@ -9,7 +9,6 @@
 #include "llvm/CodeGen/MachineTraceMetrics.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -147,7 +146,7 @@ MachineTraceMetrics::getProcResourceCycles(unsigned MBBNum) const {
          "getResources() must be called before getProcResourceCycles()");
   unsigned PRKinds = SchedModel.getNumProcResourceKinds();
   assert((MBBNum+1) * PRKinds <= ProcResourceCycles.size());
-  return makeArrayRef(ProcResourceCycles.data() + MBBNum * PRKinds, PRKinds);
+  return ArrayRef(ProcResourceCycles.data() + MBBNum * PRKinds, PRKinds);
 }
 
 //===----------------------------------------------------------------------===//
@@ -265,7 +264,7 @@ MachineTraceMetrics::Ensemble::
 getProcResourceDepths(unsigned MBBNum) const {
   unsigned PRKinds = MTM.SchedModel.getNumProcResourceKinds();
   assert((MBBNum+1) * PRKinds <= ProcResourceDepths.size());
-  return makeArrayRef(ProcResourceDepths.data() + MBBNum * PRKinds, PRKinds);
+  return ArrayRef(ProcResourceDepths.data() + MBBNum * PRKinds, PRKinds);
 }
 
 /// Get an array of processor resource heights for MBB. Indexed by processor
@@ -278,7 +277,7 @@ MachineTraceMetrics::Ensemble::
 getProcResourceHeights(unsigned MBBNum) const {
   unsigned PRKinds = MTM.SchedModel.getNumProcResourceKinds();
   assert((MBBNum+1) * PRKinds <= ProcResourceHeights.size());
-  return makeArrayRef(ProcResourceHeights.data() + MBBNum * PRKinds, PRKinds);
+  return ArrayRef(ProcResourceHeights.data() + MBBNum * PRKinds, PRKinds);
 }
 
 //===----------------------------------------------------------------------===//
@@ -352,7 +351,7 @@ MinInstrCountEnsemble::pickTracePred(const MachineBasicBlock *MBB) {
 // Select the preferred successor for MBB.
 const MachineBasicBlock*
 MinInstrCountEnsemble::pickTraceSucc(const MachineBasicBlock *MBB) {
-  if (MBB->pred_empty())
+  if (MBB->succ_empty())
     return nullptr;
   const MachineLoop *CurLoop = getLoopFor(MBB);
   const MachineBasicBlock *Best = nullptr;
@@ -449,7 +448,7 @@ public:
 
   void finishPostorder(const MachineBasicBlock*) {}
 
-  bool insertEdge(Optional<const MachineBasicBlock *> From,
+  bool insertEdge(std::optional<const MachineBasicBlock *> From,
                   const MachineBasicBlock *To) {
     // Skip already visited To blocks.
     MachineTraceMetrics::TraceBlockInfo &TBI = LB.Blocks[To->getNumber()];
@@ -664,7 +663,7 @@ static bool getDataDeps(const MachineInstr &UseMI,
     Register Reg = MO.getReg();
     if (!Reg)
       continue;
-    if (Register::isPhysicalRegister(Reg)) {
+    if (Reg.isPhysical()) {
       HasPhysRegs = true;
       continue;
     }
@@ -903,7 +902,7 @@ static unsigned updatePhysDepsUpwards(const MachineInstr &MI, unsigned Height,
     if (!MO.isReg())
       continue;
     Register Reg = MO.getReg();
-    if (!Register::isPhysicalRegister(Reg))
+    if (!Reg.isPhysical())
       continue;
     if (MO.readsReg())
       ReadOps.push_back(MI.getOperandNo(MOI));
@@ -980,7 +979,7 @@ addLiveIns(const MachineInstr *DefMI, unsigned DefOp,
            ArrayRef<const MachineBasicBlock*> Trace) {
   assert(!Trace.empty() && "Trace should contain at least one block");
   Register Reg = DefMI->getOperand(DefOp).getReg();
-  assert(Register::isVirtualRegister(Reg));
+  assert(Reg.isVirtual());
   const MachineBasicBlock *DefMBB = DefMI->getParent();
 
   // Reg is live-in to all blocks in Trace that follow DefMBB.

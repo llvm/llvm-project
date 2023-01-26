@@ -7,13 +7,13 @@ target triple = "x86_64-grtev4-linux-gnu"
 declare double @sqrt(double)
 
 ; CHECK-LABEL: @f
-define internal fastcc double @f(i32* %n_, double* %dx) align 32 {
+define internal fastcc double @f(ptr %n_, ptr %dx) align 32 {
 entry:
 ; CHECK: entry:
 ; CHECK: MemoryUse(liveOnEntry)
 ; CHECK-NOT: 7 = MemoryPhi
 ; CHECK-NOT: 6 = MemoryPhi
-  %v0 = load i32, i32* %n_, align 4
+  %v0 = load i32, ptr %n_, align 4
   br label %for.cond
 
 for.cond:                                         ; preds = %for.body, %entry
@@ -24,8 +24,8 @@ for.cond:                                         ; preds = %for.body, %entry
 
 for.body:                                         ; preds = %for.cond
   %idxprom = zext i32 %i.0 to i64
-  %arrayidx = getelementptr inbounds double, double* %dx, i64 %idxprom
-  %v1 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %dx, i64 %idxprom
+  %v1 = load double, ptr %arrayidx, align 8
   %cmp1 = fcmp ueq double %v1, 0.000000e+00
   %xmax.1 = select i1 %cmp1, double %xmax.0, double %v1
   %inc = add nuw nsw i32 %i.0, 1
@@ -50,8 +50,8 @@ for.body7:                                        ; preds = %for.body7.lr.ph, %f
   %i.13 = phi i32 [ 0, %for.body7.lr.ph ], [ %inc14, %for.body7 ]
   %sum.02 = phi x86_fp80 [ undef, %for.body7.lr.ph ], [ %add, %for.body7 ]
   %idxprom9 = zext i32 %i.13 to i64
-  %arrayidx10 = getelementptr inbounds double, double* %dx, i64 %idxprom9
-  %v3 = load double, double* %arrayidx10, align 8
+  %arrayidx10 = getelementptr inbounds double, ptr %dx, i64 %idxprom9
+  %v3 = load double, ptr %arrayidx10, align 8
   %mul11 = fmul double %div, %v3
   %v2 = call double @sqrt(double %v3)
   %mul12 = fmul double %mul11, %v2

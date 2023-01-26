@@ -32,7 +32,7 @@ body: |
     %16.sub5:sgpr_256 = COPY %16.sub0
     %16.sub6:sgpr_256 = COPY %16.sub0
     %16.sub7:sgpr_256 = COPY %16.sub0
-    IMAGE_STORE_V4_V2_gfx10 %27, %26, %16, 0, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s32) into custom "ImageResource")
+    IMAGE_STORE_V4_V2_gfx10 %27, %26, %16, 0, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s32), addrspace 7)
     S_CBRANCH_SCC1 %bb.2, implicit undef $scc
     S_BRANCH %bb.1
 
@@ -41,7 +41,7 @@ body: |
     %30.sub2:vreg_128 = COPY %30.sub1
     %30.sub3:vreg_128 = COPY %30.sub1
     %26.sub1:vreg_64 = COPY %30.sub1
-    IMAGE_STORE_V4_V2_gfx10 %30, %26, %16, 0, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s32) into custom "ImageResource")
+    IMAGE_STORE_V4_V2_gfx10 %30, %26, %16, 0, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s32), addrspace 7)
 
   bb.2:
     S_ENDPGM 0
@@ -68,7 +68,7 @@ body: |
     %25.sub1:sgpr_256 = COPY %25.sub0
     %25.sub2:sgpr_256 = COPY %25.sub0
     %25.sub3:sgpr_256 = COPY %25.sub0
-    %19:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN %10, %25.sub0_sub1_sub2_sub3, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32))
+    %19:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN %10, %25.sub0_sub1_sub2_sub3, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32))
     %36:vreg_64 = DS_READ2_B32_gfx9 %10, 0, 2, 0, implicit $exec :: (load (s32)), (load (s32))
     %30:vgpr_32 = V_LSHLREV_B32_e32 2, %36.sub0, implicit $exec
     %3:vgpr_32 = V_ADD_U32_e32 %30, %6, implicit $exec

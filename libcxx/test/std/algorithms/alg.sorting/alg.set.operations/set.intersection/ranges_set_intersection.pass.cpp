@@ -9,7 +9,6 @@
 // <algorithm>
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<input_iterator I1, sentinel_for<I1> S1, input_iterator I2, sentinel_for<I2> S2,
 //          weakly_incrementable O, class Comp = ranges::less,
@@ -568,8 +567,8 @@ int main(int, char**) {
 
   // Cannot static_assert on the entire permutation test because it exceeds the constexpr execution step limit
   // due to the large number of combination of types of iterators (it is a 3-dimensional cartesian product)
-  // Instead of having one single static_assert that tests all the combinations, in the runAllIteratorPermutationsTests 
-  // function, it has lots of smaller static_assert and each of them test 2-dimensional cartesian product which is less 
+  // Instead of having one single static_assert that tests all the combinations, in the runAllIteratorPermutationsTests
+  // function, it has lots of smaller static_assert and each of them test 2-dimensional cartesian product which is less
   // than the step limit.
   runAllIteratorPermutationsTests();
 

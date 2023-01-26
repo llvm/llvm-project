@@ -1493,6 +1493,8 @@ void Sema::HandleDelayedAccessCheck(DelayedDiagnostic &DD, Decl *D) {
   } else if (TemplateDecl *TD = dyn_cast<TemplateDecl>(D)) {
     if (isa<DeclContext>(TD->getTemplatedDecl()))
       DC = cast<DeclContext>(TD->getTemplatedDecl());
+  } else if (auto *RD = dyn_cast<RequiresExprBodyDecl>(D)) {
+    DC = RD;
   }
 
   EffectiveContext EC(DC);

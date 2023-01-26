@@ -1,5 +1,5 @@
 ; Test to ensure no inlining is allowed into a caller with fewer nobuiltin attributes.
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -S -inline | FileCheck %s
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -S -passes=inline | FileCheck %s
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -S -passes='cgscc(inline)' | FileCheck %s
 
 ; Make sure we don't inline callees into a caller with a superset of the

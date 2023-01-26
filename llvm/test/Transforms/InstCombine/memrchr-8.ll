@@ -7,7 +7,7 @@
 ; Folding of equality expressions with the first argument plus the bound
 ; -1, i.e., memrchr(S, C, N) == N && S[N - 1] == C is not implemented.
 
-declare i8* @memrchr(i8*, i32, i64)
+declare ptr @memrchr(ptr, i32, i64)
 
 
 @a5 = constant [5 x i8] c"12345";
@@ -19,13 +19,12 @@ declare i8* @memrchr(i8*, i32, i64)
 
 define i1 @call_memrchr_a_c_9_eq_a(i32 %c) {
 ; CHECK-LABEL: @call_memrchr_a_c_9_eq_a(
-; CHECK-NEXT:    [[Q:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(9) getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 0, i64 0), i32 [[C:%.*]], i64 9)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[Q]], getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 0, i64 0)
+; CHECK-NEXT:    [[Q:%.*]] = call ptr @memrchr(ptr noundef nonnull dereferenceable(9) @a5, i32 [[C:%.*]], i64 9)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[Q]], @a5
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %p = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 0
-  %q = call i8* @memrchr(i8* %p, i32 %c, i64 9)
-  %cmp = icmp eq i8* %q, %p
+  %q = call ptr @memrchr(ptr @a5, i32 %c, i64 9)
+  %cmp = icmp eq ptr %q, @a5
   ret i1 %cmp
 }
 
@@ -34,54 +33,53 @@ define i1 @call_memrchr_a_c_9_eq_a(i32 %c) {
 
 define i1 @call_memrchr_a_c_n_eq_a(i32 %c, i64 %n) {
 ; CHECK-LABEL: @call_memrchr_a_c_n_eq_a(
-; CHECK-NEXT:    [[Q:%.*]] = call i8* @memrchr(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 0, i64 0), i32 [[C:%.*]], i64 [[N:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[Q]], getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 0, i64 0)
+; CHECK-NEXT:    [[Q:%.*]] = call ptr @memrchr(ptr nonnull @a5, i32 [[C:%.*]], i64 [[N:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[Q]], @a5
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %p = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 0
-  %q = call i8* @memrchr(i8* %p, i32 %c, i64 %n)
-  %cmp = icmp eq i8* %q, %p
+  %q = call ptr @memrchr(ptr @a5, i32 %c, i64 %n)
+  %cmp = icmp eq ptr %q, @a5
   ret i1 %cmp
 }
 
 
 ; Do not fold memrchr(s, c, 17).
 
-define i1 @call_memrchr_s_c_17_eq_s(i8* %s, i32 %c) {
+define i1 @call_memrchr_s_c_17_eq_s(ptr %s, i32 %c) {
 ; CHECK-LABEL: @call_memrchr_s_c_17_eq_s(
-; CHECK-NEXT:    [[P:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(17) [[S:%.*]], i32 [[C:%.*]], i64 17)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[P]], [[S]]
+; CHECK-NEXT:    [[P:%.*]] = call ptr @memrchr(ptr noundef nonnull dereferenceable(17) [[S:%.*]], i32 [[C:%.*]], i64 17)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P]], [[S]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %p = call i8* @memrchr(i8* %s, i32 %c, i64 17)
-  %cmp = icmp eq i8* %p, %s
+  %p = call ptr @memrchr(ptr %s, i32 %c, i64 17)
+  %cmp = icmp eq ptr %p, %s
   ret i1 %cmp
 }
 
 
 ; Do not fold memrchr(s, c, 9).
 
-define i1 @call_memrchr_s_c_9_neq_s(i8* %s, i32 %c) {
+define i1 @call_memrchr_s_c_9_neq_s(ptr %s, i32 %c) {
 ; CHECK-LABEL: @call_memrchr_s_c_9_neq_s(
-; CHECK-NEXT:    [[P:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(7) [[S:%.*]], i32 [[C:%.*]], i64 7)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8* [[P]], [[S]]
+; CHECK-NEXT:    [[P:%.*]] = call ptr @memrchr(ptr noundef nonnull dereferenceable(7) [[S:%.*]], i32 [[C:%.*]], i64 7)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[P]], [[S]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %p = call i8* @memrchr(i8* %s, i32 %c, i64 7)
-  %cmp = icmp ne i8* %p, %s
+  %p = call ptr @memrchr(ptr %s, i32 %c, i64 7)
+  %cmp = icmp ne ptr %p, %s
   ret i1 %cmp
 }
 
 
 ; Do not fold memrchr(s, c, n).
 
-define i1 @fold_memrchr_s_c_n_eq_s(i8* %s, i32 %c, i64 %n) {
+define i1 @fold_memrchr_s_c_n_eq_s(ptr %s, i32 %c, i64 %n) {
 ; CHECK-LABEL: @fold_memrchr_s_c_n_eq_s(
-; CHECK-NEXT:    [[P:%.*]] = call i8* @memrchr(i8* [[S:%.*]], i32 [[C:%.*]], i64 [[N:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[P]], [[S]]
+; CHECK-NEXT:    [[P:%.*]] = call ptr @memrchr(ptr [[S:%.*]], i32 [[C:%.*]], i64 [[N:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P]], [[S]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %p = call i8* @memrchr(i8* %s, i32 %c, i64 %n)
-  %cmp = icmp eq i8* %p, %s
+  %p = call ptr @memrchr(ptr %s, i32 %c, i64 %n)
+  %cmp = icmp eq ptr %p, %s
   ret i1 %cmp
 }

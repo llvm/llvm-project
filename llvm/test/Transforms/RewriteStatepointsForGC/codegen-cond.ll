@@ -1,12 +1,11 @@
-; RUN: opt -rewrite-statepoints-for-gc -S < %s | FileCheck %s
 ; RUN: opt -passes=rewrite-statepoints-for-gc -S < %s | FileCheck %s
 
 ; A null test of a single value
 
-define i1 @test(i8 addrspace(1)* %p, i1 %rare) gc "statepoint-example" {
+define i1 @test(ptr addrspace(1) %p, i1 %rare) gc "statepoint-example" {
 ; CHECK-LABEL: @test
 entry:
-  %cond = icmp eq i8 addrspace(1)* %p, null
+  %cond = icmp eq ptr addrspace(1) %p, null
   br i1 %rare, label %safepoint, label %continue, !prof !0
 
 safepoint:                                        ; preds = %entry
@@ -30,10 +29,10 @@ untaken:                                          ; preds = %continue
   ret i1 false
 }
 
-define i1 @test2(i8 addrspace(1)* %p, i8 addrspace(1)* %q, i1 %rare) gc "statepoint-example" {
+define i1 @test2(ptr addrspace(1) %p, ptr addrspace(1) %q, i1 %rare) gc "statepoint-example" {
 ; CHECK-LABEL: @test2
 entry:
-  %cond = icmp eq i8 addrspace(1)* %p, %q
+  %cond = icmp eq ptr addrspace(1) %p, %q
   br i1 %rare, label %safepoint, label %continue, !prof !0
 
 safepoint:                                        ; preds = %entry
@@ -61,14 +60,14 @@ untaken:                                          ; preds = %continue
   ret i1 false
 }
 
-define i1 @test3(i8 addrspace(1)* %p, i8 addrspace(1)* %q, i1 %rare) gc "statepoint-example" {
+define i1 @test3(ptr addrspace(1) %p, ptr addrspace(1) %q, i1 %rare) gc "statepoint-example" {
 ; CHECK-LABEL: @test3
 ; CHECK: gc.statepoint
 ; CHECK: %cond = icmp
 ; CHECK: br i1 %cond
 entry:
   call void @safepoint() [ "deopt"() ]
-  %cond = icmp eq i8 addrspace(1)* %p, %q
+  %cond = icmp eq ptr addrspace(1) %p, %q
   br i1 %cond, label %taken, label %untaken
 
 taken:                                            ; preds = %entry

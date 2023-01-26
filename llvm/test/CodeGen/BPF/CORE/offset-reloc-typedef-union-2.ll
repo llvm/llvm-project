@@ -18,12 +18,11 @@ target triple = "bpf"
 %union.__t = type { i32 }
 
 ; Function Attrs: nounwind readonly
-define dso_local i32 @test(%union.__t* readonly %arg) local_unnamed_addr #0 !dbg !13 {
+define dso_local i32 @test(ptr readonly %arg) local_unnamed_addr #0 !dbg !13 {
 entry:
-  call void @llvm.dbg.value(metadata %union.__t* %arg, metadata !18, metadata !DIExpression()), !dbg !19
-  %0 = tail call %union.__t* @llvm.preserve.union.access.index.p0s_union.__ts.p0s_union.__ts(%union.__t* %arg, i32 0), !dbg !20, !llvm.preserve.access.index !4
-  %a = getelementptr %union.__t, %union.__t* %0, i64 0, i32 0, !dbg !20
-  %1 = load i32, i32* %a, align 4, !dbg !20, !tbaa !21
+  call void @llvm.dbg.value(metadata ptr %arg, metadata !18, metadata !DIExpression()), !dbg !19
+  %0 = tail call ptr @llvm.preserve.union.access.index.p0.__ts.p0.__ts(ptr %arg, i32 0), !dbg !20, !llvm.preserve.access.index !4
+  %1 = load i32, ptr %0, align 4, !dbg !20, !tbaa !21
   ret i32 %1, !dbg !24
 }
 
@@ -51,7 +50,7 @@ entry:
 ; CHECK-NEXT:        .long   0
 
 ; Function Attrs: nounwind readnone
-declare %union.__t* @llvm.preserve.union.access.index.p0s_union.__ts.p0s_union.__ts(%union.__t*, i32) #1
+declare ptr @llvm.preserve.union.access.index.p0.__ts.p0.__ts(ptr, i32) #1
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.value(metadata, metadata, metadata) #2

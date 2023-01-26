@@ -1413,10 +1413,8 @@ body: |
     ; GFX9-NEXT: [[FMUL1:%[0-9]+]]:_(s32) = G_FMUL [[FPEXT2]], [[INT2]]
     ; GFX9-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL1]](s32)
     ; GFX9-NEXT: [[INT3:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[FPTRUNC1]](s16), [[TRUNC3]](s16), [[TRUNC1]](s16)
-    ; GFX9-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[INT1]](s16)
-    ; GFX9-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[INT3]](s16)
-    ; GFX9-NEXT: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT]](s32), [[ANYEXT1]](s32)
-    ; GFX9-NEXT: $vgpr0 = COPY [[BUILD_VECTOR_TRUNC]](<2 x s16>)
+    ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[INT1]](s16), [[INT3]](s16)
+    ; GFX9-NEXT: $vgpr0 = COPY [[BUILD_VECTOR]](<2 x s16>)
     ; GFX9-UNSAFE-LABEL: name: test_fdiv_v2s16
     ; GFX9-UNSAFE: liveins: $vgpr0, $vgpr1
     ; GFX9-UNSAFE-NEXT: {{  $}}
@@ -1435,10 +1433,8 @@ body: |
     ; GFX9-UNSAFE-NEXT: [[FMUL:%[0-9]+]]:_(s16) = G_FMUL [[TRUNC]], [[INT]]
     ; GFX9-UNSAFE-NEXT: [[INT1:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[TRUNC3]](s16)
     ; GFX9-UNSAFE-NEXT: [[FMUL1:%[0-9]+]]:_(s16) = G_FMUL [[TRUNC1]], [[INT1]]
-    ; GFX9-UNSAFE-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FMUL]](s16)
-    ; GFX9-UNSAFE-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[FMUL1]](s16)
-    ; GFX9-UNSAFE-NEXT: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT]](s32), [[ANYEXT1]](s32)
-    ; GFX9-UNSAFE-NEXT: $vgpr0 = COPY [[BUILD_VECTOR_TRUNC]](<2 x s16>)
+    ; GFX9-UNSAFE-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FMUL]](s16), [[FMUL1]](s16)
+    ; GFX9-UNSAFE-NEXT: $vgpr0 = COPY [[BUILD_VECTOR]](<2 x s16>)
     ; GFX10-LABEL: name: test_fdiv_v2s16
     ; GFX10: liveins: $vgpr0, $vgpr1
     ; GFX10-NEXT: {{  $}}
@@ -1465,10 +1461,8 @@ body: |
     ; GFX10-NEXT: [[FMUL1:%[0-9]+]]:_(s32) = G_FMUL [[FPEXT2]], [[INT2]]
     ; GFX10-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL1]](s32)
     ; GFX10-NEXT: [[INT3:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[FPTRUNC1]](s16), [[TRUNC3]](s16), [[TRUNC1]](s16)
-    ; GFX10-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[INT1]](s16)
-    ; GFX10-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[INT3]](s16)
-    ; GFX10-NEXT: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT]](s32), [[ANYEXT1]](s32)
-    ; GFX10-NEXT: $vgpr0 = COPY [[BUILD_VECTOR_TRUNC]](<2 x s16>)
+    ; GFX10-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[INT1]](s16), [[INT3]](s16)
+    ; GFX10-NEXT: $vgpr0 = COPY [[BUILD_VECTOR]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $vgpr0
     %1:_(<2 x s16>) = COPY $vgpr1
     %2:_(<2 x s16>) = G_FDIV %0, %1
@@ -1930,13 +1924,9 @@ body: |
     ; GFX9-NEXT: [[FMUL3:%[0-9]+]]:_(s32) = G_FMUL [[FPEXT6]], [[INT6]]
     ; GFX9-NEXT: [[FPTRUNC3:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL3]](s32)
     ; GFX9-NEXT: [[INT7:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[FPTRUNC3]](s16), [[TRUNC7]](s16), [[TRUNC3]](s16)
-    ; GFX9-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[INT1]](s16)
-    ; GFX9-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[INT3]](s16)
-    ; GFX9-NEXT: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT]](s32), [[ANYEXT1]](s32)
-    ; GFX9-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[INT5]](s16)
-    ; GFX9-NEXT: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[INT7]](s16)
-    ; GFX9-NEXT: [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT2]](s32), [[ANYEXT3]](s32)
-    ; GFX9-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
+    ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[INT1]](s16), [[INT3]](s16)
+    ; GFX9-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[INT5]](s16), [[INT7]](s16)
+    ; GFX9-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
     ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
     ; GFX9-UNSAFE-LABEL: name: test_fdiv_v4s16
     ; GFX9-UNSAFE: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -1970,13 +1960,9 @@ body: |
     ; GFX9-UNSAFE-NEXT: [[FMUL2:%[0-9]+]]:_(s16) = G_FMUL [[TRUNC2]], [[INT2]]
     ; GFX9-UNSAFE-NEXT: [[INT3:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[TRUNC7]](s16)
     ; GFX9-UNSAFE-NEXT: [[FMUL3:%[0-9]+]]:_(s16) = G_FMUL [[TRUNC3]], [[INT3]]
-    ; GFX9-UNSAFE-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FMUL]](s16)
-    ; GFX9-UNSAFE-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[FMUL1]](s16)
-    ; GFX9-UNSAFE-NEXT: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT]](s32), [[ANYEXT1]](s32)
-    ; GFX9-UNSAFE-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[FMUL2]](s16)
-    ; GFX9-UNSAFE-NEXT: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[FMUL3]](s16)
-    ; GFX9-UNSAFE-NEXT: [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT2]](s32), [[ANYEXT3]](s32)
-    ; GFX9-UNSAFE-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
+    ; GFX9-UNSAFE-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FMUL]](s16), [[FMUL1]](s16)
+    ; GFX9-UNSAFE-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FMUL2]](s16), [[FMUL3]](s16)
+    ; GFX9-UNSAFE-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
     ; GFX9-UNSAFE-NEXT: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
     ; GFX10-LABEL: name: test_fdiv_v4s16
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -2026,13 +2012,9 @@ body: |
     ; GFX10-NEXT: [[FMUL3:%[0-9]+]]:_(s32) = G_FMUL [[FPEXT6]], [[INT6]]
     ; GFX10-NEXT: [[FPTRUNC3:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL3]](s32)
     ; GFX10-NEXT: [[INT7:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[FPTRUNC3]](s16), [[TRUNC7]](s16), [[TRUNC3]](s16)
-    ; GFX10-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[INT1]](s16)
-    ; GFX10-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[INT3]](s16)
-    ; GFX10-NEXT: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT]](s32), [[ANYEXT1]](s32)
-    ; GFX10-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[INT5]](s16)
-    ; GFX10-NEXT: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[INT7]](s16)
-    ; GFX10-NEXT: [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT2]](s32), [[ANYEXT3]](s32)
-    ; GFX10-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
+    ; GFX10-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[INT1]](s16), [[INT3]](s16)
+    ; GFX10-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[INT5]](s16), [[INT7]](s16)
+    ; GFX10-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
     ; GFX10-NEXT: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
     %0:_(<4 x s16>) = COPY $vgpr0_vgpr1
     %1:_(<4 x s16>) = COPY $vgpr2_vgpr3

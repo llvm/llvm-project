@@ -1044,7 +1044,8 @@ void PatternEmitter::emitRewriteLogic() {
   }
 
   if (offsets.front() > 0) {
-    const char error[] = "no enough values generated to replace the matched op";
+    const char error[] =
+        "not enough values generated to replace the matched op";
     PrintFatalError(loc, error);
   }
 
@@ -1743,7 +1744,7 @@ void StaticMatcherHelper::addPattern(Record *record) {
 
 StringRef StaticMatcherHelper::getVerifierName(DagLeaf leaf) {
   if (leaf.isAttrMatcher()) {
-    Optional<StringRef> constraint =
+    std::optional<StringRef> constraint =
         staticVerifierEmitter.getAttrConstraintFn(leaf.getAsConstraint());
     assert(constraint && "attribute constraint was not uniqued");
     return *constraint;

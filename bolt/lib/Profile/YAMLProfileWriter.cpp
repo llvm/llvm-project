@@ -53,7 +53,7 @@ void convert(const BinaryFunction &BF,
         continue;
 
       yaml::bolt::CallSiteInfo CSI;
-      Optional<uint32_t> Offset = BC.MIB->getOffset(Instr);
+      std::optional<uint32_t> Offset = BC.MIB->getOffset(Instr);
       if (!Offset || *Offset < BB->getInputOffset())
         continue;
       CSI.Offset = *Offset - BB->getInputOffset();
@@ -154,14 +154,14 @@ std::error_code YAMLProfileWriter::writeProfile(const RewriteInstance &RI) {
   // Fill out the header info.
   BP.Header.Version = 1;
   BP.Header.FileName = std::string(BC.getFilename());
-  Optional<StringRef> BuildID = BC.getFileBuildID();
+  std::optional<StringRef> BuildID = BC.getFileBuildID();
   BP.Header.Id = BuildID ? std::string(*BuildID) : "<unknown>";
   BP.Header.Origin = std::string(RI.getProfileReader()->getReaderName());
 
   StringSet<> EventNames = RI.getProfileReader()->getEventNames();
   if (!EventNames.empty()) {
-    std::string Sep = "";
-    for (const StringMapEntry<NoneType> &EventEntry : EventNames) {
+    std::string Sep;
+    for (const StringMapEntry<std::nullopt_t> &EventEntry : EventNames) {
       BP.Header.EventNames += Sep + EventEntry.first().str();
       Sep = ",";
     }

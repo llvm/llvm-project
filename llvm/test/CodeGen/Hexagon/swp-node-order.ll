@@ -27,8 +27,8 @@ b1:                                               ; preds = %b1, %b0
 
 b2:                                               ; preds = %b1
   %v12 = trunc i64 %v5 to i32
-  %v13 = inttoptr i32 %v0 to i32*
-  store i32 %v12, i32* %v13, align 4, !tbaa !0
+  %v13 = inttoptr i32 %v0 to ptr
+  store i32 %v12, ptr %v13, align 4, !tbaa !0
   call void @llvm.trap()
   unreachable
 }

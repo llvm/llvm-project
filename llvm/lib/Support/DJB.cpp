@@ -57,7 +57,8 @@ static UTF32 foldCharDwarf(UTF32 C) {
   return sys::unicode::foldCharSimple(C);
 }
 
-static Optional<uint32_t> fastCaseFoldingDjbHash(StringRef Buffer, uint32_t H) {
+static std::optional<uint32_t> fastCaseFoldingDjbHash(StringRef Buffer,
+                                                      uint32_t H) {
   bool AllASCII = true;
   for (unsigned char C : Buffer) {
     H = H * 33 + ('A' <= C && C <= 'Z' ? C - 'A' + 'a' : C);
@@ -65,11 +66,11 @@ static Optional<uint32_t> fastCaseFoldingDjbHash(StringRef Buffer, uint32_t H) {
   }
   if (AllASCII)
     return H;
-  return None;
+  return std::nullopt;
 }
 
 uint32_t llvm::caseFoldingDjbHash(StringRef Buffer, uint32_t H) {
-  if (Optional<uint32_t> Result = fastCaseFoldingDjbHash(Buffer, H))
+  if (std::optional<uint32_t> Result = fastCaseFoldingDjbHash(Buffer, H))
     return *Result;
 
   std::array<UTF8, UNI_MAX_UTF8_BYTES_PER_CODE_POINT> Storage;

@@ -16,6 +16,7 @@
 #include "RISCV.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/Support/KnownBits.h"
 
 // RISCV-specific code to select RISCV machine instructions for
 // SelectionDAG operations.
@@ -24,13 +25,13 @@ class RISCVDAGToDAGISel : public SelectionDAGISel {
   const RISCVSubtarget *Subtarget = nullptr;
 
 public:
+  static char ID;
+
+  RISCVDAGToDAGISel() = delete;
+
   explicit RISCVDAGToDAGISel(RISCVTargetMachine &TargetMachine,
                              CodeGenOpt::Level OptLevel)
-      : SelectionDAGISel(TargetMachine, OptLevel) {}
-
-  StringRef getPassName() const override {
-    return "RISCV DAG->DAG Pattern Instruction Selection";
-  }
+      : SelectionDAGISel(ID, TargetMachine, OptLevel) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     Subtarget = &MF.getSubtarget<RISCVSubtarget>();
@@ -60,20 +61,23 @@ public:
   }
 
   bool selectSExti32(SDValue N, SDValue &Val);
-  bool selectZExti32(SDValue N, SDValue &Val);
+  bool selectZExtBits(SDValue N, unsigned Bits, SDValue &Val);
+  template <unsigned Bits> bool selectZExtBits(SDValue N, SDValue &Val) {
+    return selectZExtBits(N, Bits, Val);
+  }
 
   bool selectSHXADDOp(SDValue N, unsigned ShAmt, SDValue &Val);
-  bool selectSH1ADDOp(SDValue N, SDValue &Val) {
-    return selectSHXADDOp(N, 1, Val);
-  }
-  bool selectSH2ADDOp(SDValue N, SDValue &Val) {
-    return selectSHXADDOp(N, 2, Val);
-  }
-  bool selectSH3ADDOp(SDValue N, SDValue &Val) {
-    return selectSHXADDOp(N, 3, Val);
+  template <unsigned ShAmt> bool selectSHXADDOp(SDValue N, SDValue &Val) {
+    return selectSHXADDOp(N, ShAmt, Val);
   }
 
-  bool hasAllNBitUsers(SDNode *Node, unsigned Bits) const;
+  bool selectSHXADD_UWOp(SDValue N, unsigned ShAmt, SDValue &Val);
+  template <unsigned ShAmt> bool selectSHXADD_UWOp(SDValue N, SDValue &Val) {
+    return selectSHXADD_UWOp(N, ShAmt, Val);
+  }
+
+  bool hasAllNBitUsers(SDNode *Node, unsigned Bits,
+                       const unsigned Depth = 0) const;
   bool hasAllHUsers(SDNode *Node) const { return hasAllNBitUsers(Node, 16); }
   bool hasAllWUsers(SDNode *Node) const { return hasAllNBitUsers(Node, 32); }
 
@@ -132,6 +136,9 @@ public:
 private:
   bool doPeepholeSExtW(SDNode *Node);
   bool doPeepholeMaskedRVV(SDNode *Node);
+  bool doPeepholeMergeVVMFold();
+  bool performVMergeToVAdd(SDNode *N);
+  bool performCombineVMergeAndVOps(SDNode *N, bool IsTA);
 };
 
 namespace RISCV {

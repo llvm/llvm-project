@@ -126,7 +126,7 @@ public:
   }
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-    return llvm::makeArrayRef(g_permissions_options);
+    return llvm::ArrayRef(g_permissions_options);
   }
 
   // Instance variables to hold the values for command options.
@@ -379,8 +379,7 @@ class CommandObjectPlatformSettings : public CommandObjectParsed {
 public:
   CommandObjectPlatformSettings(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "platform settings",
-                            "Set settings for the current target's platform, "
-                            "or for a platform by name.",
+                            "Set settings for the current target's platform.",
                             "platform settings", 0),
         m_option_working_dir(LLDB_OPT_SET_1, false, "working-dir", 'w',
                              CommandCompletions::eRemoteDiskDirectoryCompletion,
@@ -456,12 +455,13 @@ public:
 
   Options *GetOptions() override {
     if (!m_options.DidFinalize()) {
-      m_options.Append(new OptionPermissions());
+      m_options.Append(&m_option_permissions);
       m_options.Finalize();
     }
     return &m_options;
   }
 
+  OptionPermissions m_option_permissions;
   OptionGroupOptions m_options;
 };
 
@@ -519,12 +519,13 @@ public:
 
   Options *GetOptions() override {
     if (!m_options.DidFinalize()) {
-      m_options.Append(new OptionPermissions());
+      m_options.Append(&m_option_permissions);
       m_options.Finalize();
     }
     return &m_options;
   }
 
+  OptionPermissions m_option_permissions;
   OptionGroupOptions m_options;
 };
 
@@ -651,7 +652,7 @@ protected:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_platform_fread_options);
+      return llvm::ArrayRef(g_platform_fread_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -744,7 +745,7 @@ protected:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_platform_fwrite_options);
+      return llvm::ArrayRef(g_platform_fwrite_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -1466,7 +1467,7 @@ protected:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_platform_process_list_options);
+      return llvm::ArrayRef(g_platform_process_list_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -1620,7 +1621,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_platform_process_attach_options);
+      return llvm::ArrayRef(g_platform_process_attach_options);
     }
 
     // Options table: Required for subclasses of Options.
@@ -1706,7 +1707,7 @@ public:
     ~CommandOptions() override = default;
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_platform_shell_options);
+      return llvm::ArrayRef(g_platform_shell_options);
     }
 
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,

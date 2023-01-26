@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -simplifycfg | FileCheck %s
+; RUN: opt < %s -S -passes=simplifycfg | FileCheck %s
 
 ; When SimplifyCFG changes the PHI node into a select instruction, the debug
 ; information becomes ambiguous. It causes the debugger to display wrong
@@ -15,14 +15,14 @@
 ;   volatile int foo = 4;
 ;   int read = foo;
 ;   int read1 = foo;
-; 
+;
 ;   int result = 0;
 ;   if (read == 4) {
 ;     result = read1 + 2;
 ;   } else {
 ;     result = read1 - 2;
 ;   }
-; 
+;
 ;   return result;
 ; }
 

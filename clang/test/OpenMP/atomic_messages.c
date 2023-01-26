@@ -669,7 +669,7 @@ void compare_capture(void) {
 #pragma omp atomic compare capture
   { if (x == e) { x = d; } v = d; }
 // omp51-error@+3 {{the statement for 'atomic compare capture' must be a compound statement of form '{v = x; cond-up-stmt}', ''{cond-up-stmt v = x;}', '{if(x == e) {x = d;} else {v = x;}}', '{r = x == e; if(r) {x = d;}}', or '{r = x == e; if(r) {x = d;} else {v = x;}}', where 'cond-update-stmt' can have one of the following forms: 'if(expr ordop x) {x = expr;}', 'if(x ordop expr) {x = expr;}', 'if(x == e) {x = d;}', or 'if(e == x) {x = d;}' where 'x' is an lvalue expression with scalar type, 'expr', 'e', and 'd' are expressions with scalar type, and 'ordop' is one of '<' or '>'.}}
-// omp51-note@+2 {{expect a 'if' statement}}
+// omp51-note@+2 {{expected assignment statement}}
 #pragma omp atomic compare capture
   { v = x; bbar(); }
 

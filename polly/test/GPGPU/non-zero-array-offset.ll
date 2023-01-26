@@ -32,16 +32,13 @@
 ; CODE: # kernel1
 ; CODE-NEXT: Stmt_bb11(t0);
 
-; IR:       %p_dev_array_MemRef_B = call i8* @polly_allocateMemoryForDevice(i64 32)
-; IR-NEXT:  %p_dev_array_MemRef_A = call i8* @polly_allocateMemoryForDevice(i64 32)
-; IR-NEXT:  [[REG0:%.+]] = getelementptr float, float* %B, i64 8
-; IR-NEXT:  [[REG1:%.+]] = bitcast float* [[REG0]] to i8*
-; IR-NEXT:  call void @polly_copyFromHostToDevice(i8* [[REG1]], i8* %p_dev_array_MemRef_B, i64 32)
+; IR:       %p_dev_array_MemRef_B = call ptr @polly_allocateMemoryForDevice(i64 32)
+; IR-NEXT:  %p_dev_array_MemRef_A = call ptr @polly_allocateMemoryForDevice(i64 32)
+; IR-NEXT:  [[REG0:%.+]] = getelementptr float, ptr %B, i64 8
+; IR-NEXT:  call void @polly_copyFromHostToDevice(ptr [[REG0]], ptr %p_dev_array_MemRef_B, i64 32)
 
-; IR:      [[REGA:%.+]] = call i8* @polly_getDevicePtr(i8* %p_dev_array_MemRef_B)
-; IR-NEXT: [[REGB:%.+]]  = bitcast i8* [[REGA]] to float*
-; IR-NEXT: [[REGC:%.+]]  = getelementptr float, float* [[REGB]], i64 -8
-; IR-NEXT: [[REGD:%.+]]  = bitcast float* [[REGC]] to i8*
+; IR:      [[REGA:%.+]] = call ptr @polly_getDevicePtr(ptr %p_dev_array_MemRef_B)
+; IR-NEXT: [[REGC:%.+]]  = getelementptr float, ptr [[REGA]], i64 -8
 
 ;    void foo(float A[], float B[]) {
 ;      for (long i = 0; i < 8; i++)
@@ -74,7 +71,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @foo(float* %A, float* %B) {
+define void @foo(ptr %A, ptr %B) {
 bb:
   br label %bb2
 
@@ -85,10 +82,10 @@ bb2:                                              ; preds = %bb7, %bb
 
 bb3:                                              ; preds = %bb2
   %tmp = add nuw nsw i64 %i.0, 8
-  %tmp4 = getelementptr inbounds float, float* %B, i64 %tmp
-  %tmp5 = load float, float* %tmp4, align 4
+  %tmp4 = getelementptr inbounds float, ptr %B, i64 %tmp
+  %tmp5 = load float, ptr %tmp4, align 4
   %tmp6 = fmul float %tmp5, 4.000000e+00
-  store float %tmp6, float* %tmp4, align 4
+  store float %tmp6, ptr %tmp4, align 4
   br label %bb7
 
 bb7:                                              ; preds = %bb3
@@ -104,10 +101,10 @@ bb10:                                             ; preds = %bb15, %bb9
   br i1 %exitcond, label %bb11, label %bb17
 
 bb11:                                             ; preds = %bb10
-  %tmp12 = getelementptr inbounds float, float* %A, i64 %i1.0
-  %tmp13 = load float, float* %tmp12, align 4
+  %tmp12 = getelementptr inbounds float, ptr %A, i64 %i1.0
+  %tmp13 = load float, ptr %tmp12, align 4
   %tmp14 = fmul float %tmp13, 1.200000e+01
-  store float %tmp14, float* %tmp12, align 4
+  store float %tmp14, ptr %tmp12, align 4
   br label %bb15
 
 bb15:                                             ; preds = %bb11

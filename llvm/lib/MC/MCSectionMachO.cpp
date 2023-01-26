@@ -62,6 +62,8 @@ static constexpr struct {
      StringLiteral("S_THREAD_LOCAL_VARIABLE_POINTERS")}, // 0x14
     {StringLiteral("thread_local_init_function_pointers"),
      StringLiteral("S_THREAD_LOCAL_INIT_FUNCTION_POINTERS")}, // 0x15
+    {StringLiteral("") /* linker-synthesized */,
+     StringLiteral("S_INIT_FUNC_OFFSETS")}, // 0x16
 };
 
 /// SectionAttrDescriptors - This is an array of descriptors for section

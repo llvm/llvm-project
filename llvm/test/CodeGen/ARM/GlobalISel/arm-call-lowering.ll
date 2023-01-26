@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple arm-unknown -mattr=+v5t -global-isel -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=V5T
 ; RUN: llc -mtriple thumb-unknown -mattr=+v6t2 -global-isel -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=THUMB
 
-define arm_aapcscc void @test_indirect_call(void() *%fptr) {
+define arm_aapcscc void @test_indirect_call(ptr %fptr) {
   ; NOV4T-LABEL: name: test_indirect_call
   ; NOV4T: bb.1.entry:
   ; NOV4T:   liveins: $r0

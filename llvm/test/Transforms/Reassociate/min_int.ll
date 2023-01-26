@@ -1,4 +1,4 @@
-; RUN: opt < %s -reassociate -dce -S | FileCheck %s
+; RUN: opt < %s -passes=reassociate,dce -S | FileCheck %s
 
 ; MIN_INT cannot be negated during reassociation
 

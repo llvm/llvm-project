@@ -3,6 +3,11 @@
 
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu %s -filetype=obj -o %t.o
 ; RUN: llvm-dwarfdump  %t.o | FileCheck %s
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: sed -e "s/Fortran90/Fortran18/" %s > %t/test.ll
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu %t/test.ll -filetype=obj -o %t/test.o
+; RUN: llvm-dwarfdump  %t/test.o | FileCheck %s
 
 ; CHECK-LABEL: DW_TAG_formal_parameter
 ; CHECK: DW_AT_name    ("array1")
@@ -44,44 +49,40 @@ target triple = "x86_64-unknown-linux-gnu"
 @.C350_sub_ = internal constant i64 8
 @.C349_sub_ = internal constant i64 7
 
-define void @sub_(i64* noalias %array1, i64* noalias %array2) #0 !dbg !5 {
+define void @sub_(ptr noalias %array1, ptr noalias %array2) #0 !dbg !5 {
 L.entry:
   %.dY0001_361 = alloca i64, align 8
   %"i$a_357" = alloca i64, align 8
-  call void @llvm.dbg.declare(metadata i64* %array1, metadata !16, metadata !DIExpression()), !dbg !17
-  call void @llvm.dbg.declare(metadata i64* %array2, metadata !18, metadata !DIExpression()), !dbg !17
+  call void @llvm.dbg.declare(metadata ptr %array1, metadata !16, metadata !DIExpression()), !dbg !17
+  call void @llvm.dbg.declare(metadata ptr %array2, metadata !18, metadata !DIExpression()), !dbg !17
   br label %L.LB1_364
 
 L.LB1_364:                                        ; preds = %L.entry
-  store i64 2, i64* %.dY0001_361, align 8, !dbg !19
-  call void @llvm.dbg.declare(metadata i64* %"i$a_357", metadata !20, metadata !DIExpression()), !dbg !17
-  store i64 7, i64* %"i$a_357", align 8, !dbg !19
+  store i64 2, ptr %.dY0001_361, align 8, !dbg !19
+  call void @llvm.dbg.declare(metadata ptr %"i$a_357", metadata !20, metadata !DIExpression()), !dbg !17
+  store i64 7, ptr %"i$a_357", align 8, !dbg !19
   br label %L.LB1_359
 
 L.LB1_359:                                        ; preds = %L.LB1_359, %L.LB1_364
-  %0 = load i64, i64* %"i$a_357", align 8, !dbg !19
+  %0 = load i64, ptr %"i$a_357", align 8, !dbg !19
   call void @llvm.dbg.value(metadata i64 %0, metadata !22, metadata !DIExpression()), !dbg !17
-  %1 = bitcast i64* %array1 to i8*, !dbg !19
-  %2 = getelementptr i8, i8* %1, i64 -4, !dbg !19
-  %3 = bitcast i8* %2 to i32*, !dbg !19
-  %4 = getelementptr i32, i32* %3, i64 %0, !dbg !19
-  store i32 9, i32* %4, align 4, !dbg !19
-  %5 = load i64, i64* %"i$a_357", align 8, !dbg !19
-  call void @llvm.dbg.value(metadata i64 %5, metadata !23, metadata !DIExpression()), !dbg !17
-  %6 = add nsw i64 %5, 1, !dbg !19
-  store i64 %6, i64* %"i$a_357", align 8, !dbg !19
-  %7 = load i64, i64* %.dY0001_361, align 8, !dbg !19
-  %8 = sub nsw i64 %7, 1, !dbg !19
-  store i64 %8, i64* %.dY0001_361, align 8, !dbg !19
-  %9 = load i64, i64* %.dY0001_361, align 8, !dbg !19
-  %10 = icmp sgt i64 %9, 0, !dbg !19
-  br i1 %10, label %L.LB1_359, label %L.LB1_383, !dbg !19
+  %1 = getelementptr i8, ptr %array1, i64 -4, !dbg !19
+  %2 = getelementptr i32, ptr %1, i64 %0, !dbg !19
+  store i32 9, ptr %2, align 4, !dbg !19
+  %3 = load i64, ptr %"i$a_357", align 8, !dbg !19
+  call void @llvm.dbg.value(metadata i64 %3, metadata !23, metadata !DIExpression()), !dbg !17
+  %4 = add nsw i64 %3, 1, !dbg !19
+  store i64 %4, ptr %"i$a_357", align 8, !dbg !19
+  %5 = load i64, ptr %.dY0001_361, align 8, !dbg !19
+  %6 = sub nsw i64 %5, 1, !dbg !19
+  store i64 %6, ptr %.dY0001_361, align 8, !dbg !19
+  %7 = load i64, ptr %.dY0001_361, align 8, !dbg !19
+  %8 = icmp sgt i64 %7, 0, !dbg !19
+  br i1 %8, label %L.LB1_359, label %L.LB1_383, !dbg !19
 
 L.LB1_383:                                        ; preds = %L.LB1_359
-  %11 = bitcast i64* %array2 to i8*, !dbg !24
-  %12 = getelementptr i8, i8* %11, i64 4, !dbg !24
-  %13 = bitcast i8* %12 to i32*, !dbg !24
-  store i32 10, i32* %13, align 4, !dbg !24
+  %9 = getelementptr i8, ptr %array2, i64 4, !dbg !24
+  store i32 10, ptr %9, align 4, !dbg !24
   ret void, !dbg !25
 }
 

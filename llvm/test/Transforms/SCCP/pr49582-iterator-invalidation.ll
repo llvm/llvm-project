@@ -2,7 +2,7 @@
 ; PR49582: This test checks for an iterator invalidation issue, which only gets
 ; exposed on a large-enough test case. We intentionally do not check the output.
 
-@c = external dso_local global i32*, align 8
+@c = external dso_local global ptr, align 8
 @d = external dso_local global i32, align 4
 
 define void @f(i32 %i) {
@@ -13,12 +13,12 @@ for.cond:                                         ; preds = %if.end628, %entry
   %e.0 = phi i32 [ 1, %entry ], [ %e.15, %if.end628 ]
   %cmp = icmp slt i32 %e.0, %i
   call void @llvm.assume(i1 %cmp)
-  %0 = load i32*, i32** @c, align 8
-  %tobool = icmp ne i32* %0, null
+  %0 = load ptr, ptr @c, align 8
+  %tobool = icmp ne ptr %0, null
   br i1 %tobool, label %if.then, label %if.end628
 
 if.then:                                          ; preds = %for.cond
-  %1 = load i32, i32* %0, align 4
+  %1 = load i32, ptr %0, align 4
   %tobool1 = icmp ne i32 %1, 0
   br i1 %tobool1, label %if.then2, label %if.else78
 
@@ -105,8 +105,8 @@ if.then49:                                        ; preds = %if.end47
 
 if.end51:                                         ; preds = %if.then49, %if.end47
   %e.5 = phi i32 [ %inc50, %if.then49 ], [ %e.4, %if.end47 ]
-  %2 = load i32*, i32** @c, align 8
-  %tobool52 = icmp ne i32* %2, null
+  %2 = load ptr, ptr @c, align 8
+  %tobool52 = icmp ne ptr %2, null
   br i1 %tobool52, label %if.then53, label %if.else
 
 if.then53:                                        ; preds = %if.end51
@@ -117,7 +117,7 @@ if.then55:                                        ; preds = %if.then53
   unreachable
 
 if.else:                                          ; preds = %if.end51
-  %3 = load i32, i32* @d, align 4
+  %3 = load i32, ptr @d, align 4
   %tobool57 = icmp ne i32 %3, 0
   br i1 %tobool57, label %if.then58, label %if.else68
 
@@ -273,8 +273,8 @@ if.then162:                                       ; preds = %if.end160
   unreachable
 
 if.else164:                                       ; preds = %if.then126
-  %4 = load i32*, i32** @c, align 8
-  %tobool165 = icmp ne i32* %4, null
+  %4 = load ptr, ptr @c, align 8
+  %tobool165 = icmp ne ptr %4, null
   br i1 %tobool165, label %if.then166, label %if.else195
 
 if.then166:                                       ; preds = %if.else164
@@ -307,7 +307,7 @@ if.then190:                                       ; preds = %if.end187
   br label %if.end628
 
 if.else195:                                       ; preds = %if.else164
-  %5 = load i32, i32* @d, align 4
+  %5 = load i32, ptr @d, align 4
   %tobool196 = icmp ne i32 %5, 0
   br i1 %tobool196, label %if.then197, label %if.else205
 
@@ -339,8 +339,8 @@ if.end215:                                        ; preds = %if.then208
   br label %if.end628
 
 if.else217:                                       ; preds = %if.else205
-  %7 = load i32*, i32** @c, align 8
-  %tobool218 = icmp ne i32* %7, null
+  %7 = load ptr, ptr @c, align 8
+  %tobool218 = icmp ne ptr %7, null
   br i1 %tobool218, label %if.then219, label %if.else227
 
 if.then219:                                       ; preds = %if.else217
@@ -374,8 +374,8 @@ if.then240:                                       ; preds = %if.end237
   br label %if.end628
 
 if.else245:                                       ; preds = %if.else227
-  %8 = load i32*, i32** @c, align 8
-  %tobool246 = icmp ne i32* %8, null
+  %8 = load ptr, ptr @c, align 8
+  %tobool246 = icmp ne ptr %8, null
   br i1 %tobool246, label %if.then247, label %if.else258
 
 if.then247:                                       ; preds = %if.else245
@@ -392,7 +392,7 @@ if.end254:                                        ; preds = %if.then247
   br label %if.end628
 
 if.else258:                                       ; preds = %if.else245
-  %10 = load i32, i32* @d, align 4
+  %10 = load i32, ptr @d, align 4
   %tobool259 = icmp ne i32 %10, 0
   br i1 %tobool259, label %if.then260, label %if.else268
 
@@ -420,8 +420,8 @@ if.then274:                                       ; preds = %if.then271
   br label %if.end628
 
 if.else279:                                       ; preds = %if.else268
-  %11 = load i32*, i32** @c, align 8
-  %tobool280 = icmp ne i32* %11, null
+  %11 = load ptr, ptr @c, align 8
+  %tobool280 = icmp ne ptr %11, null
   br i1 %tobool280, label %if.then281, label %if.else287
 
 if.then281:                                       ; preds = %if.else279
@@ -438,8 +438,8 @@ if.else287:                                       ; preds = %if.else279
   br i1 %tobool289, label %if.then290, label %if.else307
 
 if.then290:                                       ; preds = %if.else287
-  %12 = load i32*, i32** @c, align 8
-  %tobool291 = icmp ne i32* %12, null
+  %12 = load ptr, ptr @c, align 8
+  %tobool291 = icmp ne ptr %12, null
   br i1 %tobool291, label %if.then292, label %if.else298
 
 if.then292:                                       ; preds = %if.then290
@@ -460,8 +460,8 @@ if.then301:                                       ; preds = %if.else298
   br label %if.end628
 
 if.else307:                                       ; preds = %if.else287
-  %13 = load i32*, i32** @c, align 8
-  %tobool308 = icmp ne i32* %13, null
+  %13 = load ptr, ptr @c, align 8
+  %tobool308 = icmp ne ptr %13, null
   br i1 %tobool308, label %if.then309, label %if.else324
 
 if.then309:                                       ; preds = %if.else307

@@ -33,16 +33,42 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   bool isAsmClobberable(const MachineFunction &MF,
                         MCRegister PhysReg) const override;
 
-  bool isConstantPhysReg(MCRegister PhysReg) const override;
-
   const uint32_t *getNoPreservedMask() const override;
 
   bool hasReservedSpillSlot(const MachineFunction &MF, Register Reg,
                             int &FrameIdx) const override;
 
-  void eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
+  // Update DestReg to have the value SrcReg plus an offset.  This is
+  // used during frame layout, and we may need to ensure that if we
+  // split the offset internally that the DestReg is always aligned,
+  // assuming that source reg was.
+  void adjustReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator II,
+                 const DebugLoc &DL, Register DestReg, Register SrcReg,
+                 StackOffset Offset, MachineInstr::MIFlag Flag,
+                 MaybeAlign RequiredAlign) const;
+
+  bool eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
                            unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;
+
+  bool requiresVirtualBaseRegisters(const MachineFunction &MF) const override;
+
+  bool needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const override;
+
+  bool isFrameOffsetLegal(const MachineInstr *MI, Register BaseReg,
+                          int64_t Offset) const override;
+
+  Register materializeFrameBaseRegister(MachineBasicBlock *MBB, int FrameIdx,
+                                        int64_t Offset) const override;
+
+  void resolveFrameIndex(MachineInstr &MI, Register BaseReg,
+                         int64_t Offset) const override;
+
+  int64_t getFrameIndexInstrOffset(const MachineInstr *MI,
+                                   int Idx) const override;
+
+  void lowerVSPILL(MachineBasicBlock::iterator II) const;
+  void lowerVRELOAD(MachineBasicBlock::iterator II) const;
 
   Register getFrameRegister(const MachineFunction &MF) const override;
 
@@ -68,6 +94,11 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
                         SmallVectorImpl<uint64_t> &Ops) const override;
 
   unsigned getRegisterCostTableIndex(const MachineFunction &MF) const override;
+
+  bool getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
+                             SmallVectorImpl<MCPhysReg> &Hints,
+                             const MachineFunction &MF, const VirtRegMap *VRM,
+                             const LiveRegMatrix *Matrix) const override;
 };
 }
 

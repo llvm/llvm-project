@@ -9,12 +9,12 @@
 
 ; Test that we get the same result with or without lazy loading.
 
-; CHECK: %foo = type { i8* }
-; CHECK-DAG: bitcast i32* null to %foo*
-; CHECK-DAG: define void @g(%foo* %x)
+; CHECK: %foo = type { ptr }
+; CHECK-DAG: getelementptr %foo, ptr null, i64 1
+; CHECK-DAG: define void @g(%foo %x)
 
-%foo = type { i8* }
+%foo = type { ptr }
 define void @f() {
-  bitcast i32* null to %foo*
+  getelementptr %foo, ptr null, i64 1
   ret void
 }

@@ -15,6 +15,7 @@
 
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/Execution.h"
+#include <optional>
 
 namespace clang {
 namespace tooling {
@@ -83,7 +84,7 @@ public:
 
 private:
   // Used to store the parser when the executor is initialized with parser.
-  llvm::Optional<CommonOptionsParser> OptionsParser;
+  std::optional<CommonOptionsParser> OptionsParser;
   // FIXME: The standalone executor is currently just a wrapper of `ClangTool`.
   // Merge `ClangTool` implementation into the this.
   ClangTool Tool;

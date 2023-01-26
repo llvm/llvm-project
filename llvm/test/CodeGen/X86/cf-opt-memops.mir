@@ -17,14 +17,14 @@
   
   define dso_local void @initoutput() local_unnamed_addr {
   entry:
-    %call1 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([34 x i8], [34 x i8]* @.str.8, i64 0, i64 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.9, i64 0, i64 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.10, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.11, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.12, i64 0, i64 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.13, i64 0, i64 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.14, i64 0, i64 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.15, i64 0, i64 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.16, i64 0, i64 0))
+    %call1 = tail call i32 (ptr, ...) @printf(ptr nonnull dereferenceable(1) @.str.8, ptr @.str.9, ptr @.str.10, ptr @.str.11, ptr @.str.12, ptr @.str.13, ptr @.str.14, ptr @.str.15, ptr @.str.16)
     ret void
   }
   
-  declare dso_local i32 @printf(i8* nocapture readonly, ...) local_unnamed_addr
+  declare dso_local i32 @printf(ptr nocapture readonly, ...) local_unnamed_addr
   
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #0
+  declare void @llvm.stackprotector(ptr, ptr) #0
   
   attributes #0 = { nounwind }
 

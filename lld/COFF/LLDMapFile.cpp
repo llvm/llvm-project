@@ -73,12 +73,13 @@ static SymbolMapTy getSectionSyms(ArrayRef<DefinedRegular *> syms) {
 
 // Construct a map from symbols to their stringified representations.
 static DenseMap<DefinedRegular *, std::string>
-getSymbolStrings(ArrayRef<DefinedRegular *> syms) {
+getSymbolStrings(const COFFLinkerContext &ctx,
+                 ArrayRef<DefinedRegular *> syms) {
   std::vector<std::string> str(syms.size());
   parallelFor((size_t)0, syms.size(), [&](size_t i) {
     raw_string_ostream os(str[i]);
     writeHeader(os, syms[i]->getRVA(), 0, 0);
-    os << indent16 << toString(*syms[i]);
+    os << indent16 << toString(ctx, *syms[i]);
   });
 
   DenseMap<DefinedRegular *, std::string> ret;
@@ -88,18 +89,18 @@ getSymbolStrings(ArrayRef<DefinedRegular *> syms) {
 }
 
 void lld::coff::writeLLDMapFile(const COFFLinkerContext &ctx) {
-  if (config->lldmapFile.empty())
+  if (ctx.config.lldmapFile.empty())
     return;
 
   std::error_code ec;
-  raw_fd_ostream os(config->lldmapFile, ec, sys::fs::OF_None);
+  raw_fd_ostream os(ctx.config.lldmapFile, ec, sys::fs::OF_None);
   if (ec)
-    fatal("cannot open " + config->lldmapFile + ": " + ec.message());
+    fatal("cannot open " + ctx.config.lldmapFile + ": " + ec.message());
 
   // Collect symbol info that we want to print out.
   std::vector<DefinedRegular *> syms = getSymbols(ctx);
   SymbolMapTy sectionSyms = getSectionSyms(syms);
-  DenseMap<DefinedRegular *, std::string> symStr = getSymbolStrings(syms);
+  DenseMap<DefinedRegular *, std::string> symStr = getSymbolStrings(ctx, syms);
 
   // Print out the header line.
   os << "Address  Size     Align Out     In      Symbol\n";

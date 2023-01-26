@@ -14,8 +14,10 @@
 #ifndef FORTRAN_SEMANTICS_RUNTIME_TYPE_INFO_H_
 #define FORTRAN_SEMANTICS_RUNTIME_TYPE_INFO_H_
 
+#include "flang/Common/reference.h"
 #include <set>
 #include <string>
+#include <vector>
 
 namespace llvm {
 class raw_ostream;
@@ -25,6 +27,9 @@ namespace Fortran::semantics {
 class Scope;
 class SemanticsContext;
 class Symbol;
+
+using SymbolRef = common::Reference<const Symbol>;
+using SymbolVector = std::vector<SymbolRef>;
 
 struct RuntimeDerivedTypeTables {
   Scope *schemata{nullptr};
@@ -36,6 +41,8 @@ RuntimeDerivedTypeTables BuildRuntimeDerivedTypeTables(SemanticsContext &);
 /// Name of the builtin module that defines builtin derived types meant
 /// to describe other derived types at runtime in flang descriptor.
 constexpr char typeInfoBuiltinModule[]{"__fortran_type_info"};
+
+SymbolVector CollectBindings(const Scope &dtScope);
 
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_RUNTIME_TYPE_INFO_H_

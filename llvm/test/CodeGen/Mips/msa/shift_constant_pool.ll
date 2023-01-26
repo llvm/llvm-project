@@ -15,7 +15,7 @@
 define void @llvm_mips_bclr_w_test_const_vec() nounwind {
 entry:
   %0 = tail call <4 x i32> @llvm.mips.bclr.w(<4 x i32> <i32 2147483649, i32 2147483649, i32 7, i32 7>, <4 x i32> <i32 -1, i32 31, i32 2, i32 34>)
-  store <4 x i32> %0, <4 x i32>* @llvm_mips_bclr_w_test_const_vec_res
+  store <4 x i32> %0, ptr @llvm_mips_bclr_w_test_const_vec_res
   ret void
 }
 
@@ -43,7 +43,7 @@ declare <4 x i32> @llvm.mips.bclr.w(<4 x i32>, <4 x i32>) nounwind
 define void @llvm_mips_bneg_w_test_const_vec() nounwind {
 entry:
   %0 = tail call <4 x i32> @llvm.mips.bneg.w(<4 x i32> <i32 2147483649, i32 2147483649, i32 7, i32 7>, <4 x i32> <i32 -1, i32 31, i32 2, i32 34>)
-  store <4 x i32> %0, <4 x i32>* @llvm_mips_bneg_w_test_const_vec_res
+  store <4 x i32> %0, ptr @llvm_mips_bneg_w_test_const_vec_res
   ret void
 }
 
@@ -71,7 +71,7 @@ declare <4 x i32> @llvm.mips.bneg.w(<4 x i32>, <4 x i32>) nounwind
 define void @llvm_mips_bset_w_test_const_vec() nounwind {
 entry:
   %0 = tail call <4 x i32> @llvm.mips.bset.w(<4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 -1, i32 31, i32 2, i32 34>)
-  store <4 x i32> %0, <4 x i32>* @llvm_mips_bset_w_test_const_vec_res
+  store <4 x i32> %0, ptr @llvm_mips_bset_w_test_const_vec_res
   ret void
 }
 
@@ -98,7 +98,7 @@ declare <4 x i32> @llvm.mips.bset.w(<4 x i32>, <4 x i32>) nounwind
 define void @llvm_mips_sll_w_test_const_vec() nounwind {
 entry:
   %0 = tail call <4 x i32> @llvm.mips.sll.w(<4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32> <i32 -1, i32 31, i32 2, i32 34>)
-  store <4 x i32> %0, <4 x i32>* @llvm_mips_sll_w_test_const_vec_res
+  store <4 x i32> %0, ptr @llvm_mips_sll_w_test_const_vec_res
   ret void
 }
 
@@ -125,7 +125,7 @@ declare <4 x i32> @llvm.mips.sll.w(<4 x i32>, <4 x i32>) nounwind
 define void @llvm_mips_sra_w_test_const_vec() nounwind {
 entry:
   %0 = tail call <4 x i32> @llvm.mips.sra.w(<4 x i32> <i32 -16, i32 16, i32 16, i32 16>, <4 x i32> <i32 2, i32 -30, i32 33, i32 1>)
-  store <4 x i32> %0, <4 x i32>* @llvm_mips_sra_w_test_const_vec_res
+  store <4 x i32> %0, ptr @llvm_mips_sra_w_test_const_vec_res
   ret void
 }
 
@@ -152,7 +152,7 @@ declare <4 x i32> @llvm.mips.sra.w(<4 x i32>, <4 x i32>) nounwind
 define void @llvm_mips_srl_w_test_const_vec() nounwind {
 entry:
   %0 = tail call <4 x i32> @llvm.mips.srl.w(<4 x i32> <i32 -16, i32 16, i32 16, i32 16>, <4 x i32> <i32 2, i32 -30, i32 33, i32 1>)
-  store <4 x i32> %0, <4 x i32>* @llvm_mips_srl_w_test_const_vec_res
+  store <4 x i32> %0, ptr @llvm_mips_srl_w_test_const_vec_res
   ret void
 }
 

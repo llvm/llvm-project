@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   BinaryFormat
+  TargetParser
   )
 
 add_llvm_unittest(BinaryFormatTests

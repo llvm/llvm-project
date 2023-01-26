@@ -116,7 +116,7 @@ public:
 
   ~AllocatedMemoryCache();
 
-  void Clear();
+  void Clear(bool deallocate_memory);
 
   lldb::addr_t AllocateMemory(size_t byte_size, uint32_t permissions,
                               Status &error);

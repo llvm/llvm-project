@@ -385,8 +385,7 @@ define <4 x float> @PR31296(ptr %in) {
 ;
 ; X64-LABEL: PR31296:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movl (%rdi), %eax
-; X64-NEXT:    vmovq %rax, %xmm0
+; X64-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],zero,zero,mem[0]
 ; X64-NEXT:    retq
 entry:

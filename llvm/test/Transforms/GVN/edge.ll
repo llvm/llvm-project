@@ -1,4 +1,4 @@
-; RUN: opt -gvn -S < %s | FileCheck %s
+; RUN: opt -passes=gvn -S < %s | FileCheck %s
 
 define i32 @f1(i32 %x) {
   ; CHECK-LABEL: define i32 @f1(
@@ -45,15 +45,15 @@ bb2:
 }
 
 declare void @g(i1)
-define void @f4(i8 * %x)  {
+define void @f4(ptr %x)  {
 ; CHECK-LABEL: define void @f4(
 bb0:
-  %y = icmp eq i8* null, %x
+  %y = icmp eq ptr null, %x
   br i1 %y, label %bb2, label %bb1
 bb1:
   br label %bb2
 bb2:
-  %zed = icmp eq i8* null, %x
+  %zed = icmp eq ptr null, %x
   call void @g(i1 %zed)
 ; CHECK: call void @g(i1 %y)
   ret void

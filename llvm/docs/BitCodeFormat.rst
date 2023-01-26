@@ -1338,6 +1338,21 @@ TYPE_CODE_X86_AMX Record
 
 The ``X86_AMX`` record (code 24) adds an ``x86_amx`` type to the type table.
 
+TYPE_CODE_TARGET_TYPE Record
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``[TARGET_TYPE, num_tys, ...ty_params..., ...int_params... ]``
+
+The ``TARGET_TYPE`` record (code 26) adds a target extension type to the type
+table, with a name defined by a previously encountered ``STRUCT_NAME`` record.
+The operand fields are
+
+* *num_tys*: The number of parameters that are types (as opposed to integers)
+
+* *ty_params*: Type indices that represent type parameters
+
+* *int_params*: Numbers that correspond to the integer parameters.
+
 .. _CONSTANTS_BLOCK:
 
 CONSTANTS_BLOCK Contents

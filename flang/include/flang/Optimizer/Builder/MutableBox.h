@@ -38,9 +38,12 @@ namespace fir::factory {
 /// \p nonDeferredParams must provide the non deferred LEN parameters so that
 /// they can already be placed in the unallocated box (inquiries about these
 /// parameters are legal even in unallocated state).
+/// \p typeSourceBox provides the dynamic type information when the box is
+/// created for a polymorphic temporary.
 mlir::Value createUnallocatedBox(fir::FirOpBuilder &builder, mlir::Location loc,
                                  mlir::Type boxType,
-                                 mlir::ValueRange nonDeferredParams);
+                                 mlir::ValueRange nonDeferredParams,
+                                 mlir::Value typeSourceBox = {});
 
 /// Create a MutableBoxValue for a temporary allocatable.
 /// The created MutableBoxValue wraps a fir.ref<fir.box<fir.heap<type>>> and is
@@ -48,7 +51,8 @@ mlir::Value createUnallocatedBox(fir::FirOpBuilder &builder, mlir::Location loc,
 /// given to the created !fir.ref<fir.box>.
 fir::MutableBoxValue createTempMutableBox(fir::FirOpBuilder &builder,
                                           mlir::Location loc, mlir::Type type,
-                                          llvm::StringRef name = {});
+                                          llvm::StringRef name = {},
+                                          mlir::Value sourceBox = {});
 
 /// Update a MutableBoxValue to describe entity \p source (that must be in
 /// memory). If \lbounds is not empty, it is used to defined the MutableBoxValue
@@ -74,7 +78,8 @@ void associateMutableBoxWithRemap(fir::FirOpBuilder &builder,
 /// previously associated/allocated. The function generates code that sets the
 /// address field of the MutableBoxValue to zero.
 void disassociateMutableBox(fir::FirOpBuilder &builder, mlir::Location loc,
-                            const fir::MutableBoxValue &box);
+                            const fir::MutableBoxValue &box,
+                            bool polymorphicSetType = true);
 
 /// Generate code to conditionally reallocate a MutableBoxValue with a new
 /// shape, lower bounds, and LEN parameters if it is unallocated or if its

@@ -9,8 +9,8 @@ $f2 = comdat any
 @v = global i32 0, comdat($f)
 ; CHECK: @v = global i32 0, comdat($f)
 
-@a = alias i32, i32* @v
-; CHECK: @a = alias i32, i32* @v{{$}}
+@a = alias i32, ptr @v
+; CHECK: @a = alias i32, ptr @v{{$}}
 
 define void @f() comdat($f) {
   ret void

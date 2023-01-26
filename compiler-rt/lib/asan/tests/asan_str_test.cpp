@@ -51,7 +51,7 @@ std::string RightOOBReadMessage(OOBKind oob_kind, int oob_distance) {
 }  // namespace
 
 // Input to a test is a zero-terminated string str with given length
-// Accesses to the bytes to the left and to the right of str
+// Accesses to the bytes before and after str
 // are presumed to produce OOB errors
 void StrLenOOBTestTemplate(char *str, size_t length, OOBKind oob_kind) {
   // Normal strlen calls
@@ -62,7 +62,7 @@ void StrLenOOBTestTemplate(char *str, size_t length, OOBKind oob_kind) {
   }
   // Arg of strlen is not malloced, OOB access
   if (oob_kind != OOBKind::Global) {
-    // We don't insert RedZones to the left of global variables
+    // We don't insert RedZones before global variables
     EXPECT_DEATH(Ident(strlen(str - 1)), LeftOOBReadMessage(oob_kind, 1));
     EXPECT_DEATH(Ident(strlen(str - 5)), LeftOOBReadMessage(oob_kind, 5));
   }

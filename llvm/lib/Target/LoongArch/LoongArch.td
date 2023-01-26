@@ -17,6 +17,9 @@ include "llvm/Target/Target.td"
 def Feature64Bit
     : SubtargetFeature<"64bit", "HasLA64", "true",
                        "LA64 Basic Integer and Privilege Instruction Set">;
+def Feature32Bit
+    : SubtargetFeature<"32bit", "HasLA32", "true",
+                       "LA32 Basic Integer and Privilege Instruction Set">;
 def IsLA64
     : Predicate<"Subtarget->is64Bit()">,
       AssemblerPredicate<(all_of Feature64Bit),
@@ -85,6 +88,33 @@ def HasExtLBT
       AssemblerPredicate<(all_of FeatureExtLBT),
                          "'LBT' (Loongson Binary Translation Extension)">;
 
+// Expand la.global as la.pcrel
+def LaGlobalWithPcrel
+    : SubtargetFeature<"la-global-with-pcrel", "HasLaGlobalWithPcrel", "true",
+                       "Expand la.global as la.pcrel">;
+def HasLaGlobalWithPcrel
+    : Predicate<"Subtarget->hasLaGlobalWithPcrel()">,
+      AssemblerPredicate<(all_of LaGlobalWithPcrel),
+                         "Expand la.global as la.pcrel">;
+
+// Expand la.global as la.abs
+def LaGlobalWithAbs
+    : SubtargetFeature<"la-global-with-abs", "HasLaGlobalWithAbs", "true",
+                       "Expand la.global as la.abs">;
+def HasLaGlobalWithAbs
+    : Predicate<"Subtarget->hasLaGlobalWithAbs()">,
+      AssemblerPredicate<(all_of LaGlobalWithAbs),
+                         "Expand la.global as la.abs">;
+
+// Expand la.local as la.abs
+def LaLocalWithAbs
+    : SubtargetFeature<"la-local-with-abs", "HasLaLocalWithAbs", "true",
+                       "Expand la.local as la.abs">;
+def HasLaLocalWithAbs
+    : Predicate<"Subtarget->hasLaLocalWithAbs()">,
+      AssemblerPredicate<(all_of LaLocalWithAbs),
+                         "Expand la.local as la.abs">;
+
 //===----------------------------------------------------------------------===//
 // Registers, instruction descriptions ...
 //===----------------------------------------------------------------------===//
@@ -97,8 +127,12 @@ include "LoongArchInstrInfo.td"
 // LoongArch processors supported.
 //===----------------------------------------------------------------------===//
 
-def : ProcessorModel<"generic-la32", NoSchedModel, []>;
+def : ProcessorModel<"generic-la32", NoSchedModel, [Feature32Bit]>;
 def : ProcessorModel<"generic-la64", NoSchedModel, [Feature64Bit]>;
+
+// Support generic for compatibility with other targets. The triple will be used
+// to change to the appropriate la32/la64 version.
+def : ProcessorModel<"generic", NoSchedModel, []>;
 
 def : ProcessorModel<"la464", NoSchedModel, [Feature64Bit,
                                              FeatureExtLASX,

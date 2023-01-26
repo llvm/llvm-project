@@ -12,6 +12,7 @@ set(LLVM_LINK_COMPONENTS
   Option
   Support
   Symbolize
+  TargetParser
   )
 
 set(LLVM_TARGET_DEFINITIONS ObjdumpOpts.td)
@@ -35,6 +36,8 @@ add_llvm_tool(llvm-objdump
   ObjdumpOptsTableGen
   OtoolOptsTableGen
   )
+
+target_link_libraries(llvm-objdump PRIVATE LLVMDebuginfod)
 
 if(LLVM_HAVE_LIBXAR)
   target_link_libraries(llvm-objdump PRIVATE ${XAR_LIB})

@@ -92,7 +92,7 @@ subroutine cmplx_test_pointer_result(x, y)
     end function
   end interface
   print *, cmplx(x, return_pointer())
-! CHECK:  %[[VAL_9:.*]] = fir.call @_QPreturn_pointer() : () -> !fir.box<!fir.ptr<f32>>
+! CHECK:  %[[VAL_9:.*]] = fir.call @_QPreturn_pointer() {{.*}}: () -> !fir.box<!fir.ptr<f32>>
 ! CHECK:  fir.save_result %[[VAL_9]] to %[[VAL_2:.*]] : !fir.box<!fir.ptr<f32>>, !fir.ref<!fir.box<!fir.ptr<f32>>>
 ! CHECK:  %[[VAL_10:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.box<!fir.ptr<f32>>>
 ! CHECK:  %[[VAL_11:.*]] = fir.box_addr %[[VAL_10]] : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>

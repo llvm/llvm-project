@@ -12,6 +12,7 @@
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/Status.h"
+#include <optional>
 
 namespace llvm {
 class MCDisassembler;
@@ -72,8 +73,8 @@ public:
     return false;
   }
 
-  bool GetRegisterInfo(lldb::RegisterKind reg_kind, uint32_t reg_num,
-                       lldb_private::RegisterInfo &reg_info) override;
+  std::optional<lldb_private::RegisterInfo>
+  GetRegisterInfo(lldb::RegisterKind reg_kind, uint32_t reg_num) override;
 
   bool
   CreateFunctionEntryUnwind(lldb_private::UnwindPlan &unwind_plan) override;

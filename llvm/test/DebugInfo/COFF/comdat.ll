@@ -64,9 +64,9 @@ $f = comdat any
 ; Function Attrs: norecurse nounwind uwtable
 define void @bar() #0 !dbg !7 {
 entry:
-  %0 = load volatile i32, i32* @x, align 4, !dbg !10, !tbaa !11
+  %0 = load volatile i32, ptr @x, align 4, !dbg !10, !tbaa !11
   %inc = add nsw i32 %0, 1, !dbg !10
-  store volatile i32 %inc, i32* @x, align 4, !dbg !10, !tbaa !11
+  store volatile i32 %inc, ptr @x, align 4, !dbg !10, !tbaa !11
   ret void, !dbg !15
 }
 
@@ -78,17 +78,17 @@ entry:
 }
 
 ; Function Attrs: inlinehint noinline nounwind uwtable
-define linkonce_odr void @f(i32 %c) #2 comdat personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*) !dbg !22 {
+define linkonce_odr void @f(i32 %c) #2 comdat personality ptr @__C_specific_handler !dbg !22 {
 entry:
   tail call void @llvm.dbg.value(metadata i32 %c, metadata !26, metadata !27), !dbg !28
-  %0 = load volatile i32, i32* @x, align 4, !dbg !29, !tbaa !11
+  %0 = load volatile i32, ptr @x, align 4, !dbg !29, !tbaa !11
   %inc = add nsw i32 %0, 1, !dbg !29
-  store volatile i32 %inc, i32* @x, align 4, !dbg !29, !tbaa !11
+  store volatile i32 %inc, ptr @x, align 4, !dbg !29, !tbaa !11
   %tobool = icmp eq i32 %c, 0, !dbg !30
   br i1 %tobool, label %if.else, label %if.then, !dbg !32
 
 if.then:                                          ; preds = %entry
-  invoke void bitcast (void (...)* @foo to void ()*)() #6
+  invoke void @foo() #6
           to label %invoke.cont unwind label %ehcleanup, !dbg !33
 
 invoke.cont:                                      ; preds = %if.then
@@ -105,20 +105,20 @@ if.else:                                          ; preds = %entry
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %invoke.cont
-  %2 = load volatile i32, i32* @x, align 4, !dbg !39, !tbaa !11
+  %2 = load volatile i32, ptr @x, align 4, !dbg !39, !tbaa !11
   %inc1 = add nsw i32 %2, 1, !dbg !39
-  store volatile i32 %inc1, i32* @x, align 4, !dbg !39, !tbaa !11
+  store volatile i32 %inc1, ptr @x, align 4, !dbg !39, !tbaa !11
   ret void, !dbg !40
 }
 
 ; Function Attrs: nounwind
 define internal fastcc void @"\01?fin$0@0@f@@"() unnamed_addr #3 comdat($f) !dbg !41 {
 entry:
-  tail call void @llvm.dbg.value(metadata i8* null, metadata !44, metadata !27), !dbg !48
+  tail call void @llvm.dbg.value(metadata ptr null, metadata !44, metadata !27), !dbg !48
   tail call void @llvm.dbg.value(metadata i8 0, metadata !46, metadata !27), !dbg !48
-  %0 = load volatile i32, i32* @x, align 4, !dbg !49, !tbaa !11
+  %0 = load volatile i32, ptr @x, align 4, !dbg !49, !tbaa !11
   %inc = add nsw i32 %0, 1, !dbg !49
-  store volatile i32 %inc, i32* @x, align 4, !dbg !49, !tbaa !11
+  store volatile i32 %inc, ptr @x, align 4, !dbg !49, !tbaa !11
   ret void, !dbg !51
 }
 

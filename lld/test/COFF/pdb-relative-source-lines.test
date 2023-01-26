@@ -77,7 +77,7 @@ CHECK-NEXT:         - 'c:\src\lld-link'
 CHECK-NEXT:         - pdb 
 CHECK-NEXT:         - 'c:\src\out.pdb'
 CHECK-NEXT:         - cmd
-CHECK-NEXT:         - '-debug -pdbsourcepath:c:\src -entry:main -nodefaultlib -out:out.exe -pdb:out.pdb pdb_lines_1_relative.obj pdb_lines_2_relative.obj'
+CHECK-NEXT:         - '-debug -pdbsourcepath:c:\src -entry:main -nodefaultlib -out:out.exe -pdb:out.pdb'
 
 CHECK-LABEL: IpiStream:
 
@@ -125,7 +125,7 @@ POSIX-NEXT:         - '/usr/src/lld-link'
 POSIX-NEXT:         - pdb 
 POSIX-NEXT:         - '/usr/src/out.pdb'
 POSIX-NEXT:         - cmd
-POSIX-NEXT:         - '-debug -pdbsourcepath:/usr/src -entry:main -nodefaultlib -out:out.exe -pdb:out.pdb pdb_lines_1_relative.obj pdb_lines_2_relative.obj'
+POSIX-NEXT:         - '-debug -pdbsourcepath:/usr/src -entry:main -nodefaultlib -out:out.exe -pdb:out.pdb'
 
 ABSOLUTE-LABEL: StringTable:
 ABSOLUTE-NOT: {{/|\\}}.{{/|\\}}pdb_lines_1.c

@@ -14,8 +14,13 @@
 #ifndef FORTRAN_DIALECT_FIR_OPS
 #define FORTRAN_DIALECT_FIR_OPS
 
+include "mlir/Dialect/Arith/IR/ArithBase.td"
+include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.td"
 include "flang/Optimizer/Dialect/FIRDialect.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
+include "flang/Optimizer/Dialect/FIRAttr.td"
+include "flang/Optimizer/Dialect/FortranVariableInterface.td"
+include "mlir/IR/BuiltinAttributes.td"
 
 // Base class for FIR operations.
 // All operations automatically get a prefix of "fir.".
@@ -105,7 +110,7 @@ def fir_AllocaOp : fir_Op<"alloca", [AttrSizedOperandSegments,
     constant `1`, then pass that by reference to foo. Likewise for the second
     and third calls to foo, each stack slot being initialized accordingly. It is
     also a conforming implementation to reuse the same stack slot for all three
-    calls, just initializing each in turn. This is possible  as the lifetime of
+    calls, just initializing each in turn. This is possible as the lifetime of
     the copy of each constant need not exceed that of the CALL statement.
     Indeed, a user would likely expect a good Fortran compiler to perform such
     an optimization.
@@ -343,7 +348,6 @@ def fir_SaveResultOp : fir_Op<"save_result", [AttrSizedOperandSegments]> {
 
     The above fir.save_result allows saving a fir.array function result into
     a buffer to later access its 5th element.
-
   }];
 
   let arguments = (ins ArrayOrBoxOrRecord:$value,
@@ -399,7 +403,7 @@ def fir_CharConvertOp : fir_Op<"char_convert", []> {
   let hasVerifier = 1;
 }
 
-def fir_UndefOp : fir_OneResultOp<"undefined", [NoSideEffect]> {
+def fir_UndefOp : fir_OneResultOp<"undefined", [NoMemoryEffect]> {
   let summary = "explicit undefined value of some type";
   let description = [{
     Constructs an ssa-value of the specified type with an undefined value.
@@ -410,19 +414,19 @@ def fir_UndefOp : fir_OneResultOp<"undefined", [NoSideEffect]> {
       %a = fir.undefined !fir.array<10 x !fir.type<T>>
     ```
 
-    The example creates an array shaped ssa value. The array is rank 1, extent
+    The example creates an array shaped ssa-value. The array is rank 1, extent
     10, and each element has type `!fir.type<T>`.
   }];
 
   let results = (outs AnyType:$intype);
 
   let assemblyFormat = "type($intype) attr-dict";
-  
+
   // Note: we allow `undef : ref<T>` since it is a possible from transformations.
   let hasVerifier = 0;
 }
 
-def fir_ZeroOp : fir_OneResultOp<"zero_bits", [NoSideEffect]> {
+def fir_ZeroOp : fir_OneResultOp<"zero_bits", [NoMemoryEffect]> {
   let summary = "explicit polymorphic zero value of some type";
   let description = [{
     Constructs an ssa-value of the specified type with a value of zero for all
@@ -479,15 +483,15 @@ class fir_SwitchTerminatorOp<string mnemonic, list<Trait> traits = []> :
     // The number of blocks that may be branched to
     unsigned getNumDest() { return (*this)->getNumSuccessors(); }
 
-    llvm::Optional<mlir::OperandRange> getCompareOperands(unsigned cond);
-    llvm::Optional<llvm::ArrayRef<mlir::Value>> getCompareOperands(
+    std::optional<mlir::OperandRange> getCompareOperands(unsigned cond);
+    std::optional<llvm::ArrayRef<mlir::Value>> getCompareOperands(
         llvm::ArrayRef<mlir::Value> operands, unsigned cond);
-    llvm::Optional<mlir::ValueRange> getCompareOperands(
+    std::optional<mlir::ValueRange> getCompareOperands(
         mlir::ValueRange operands, unsigned cond);
 
-    llvm::Optional<llvm::ArrayRef<mlir::Value>> getSuccessorOperands(
+    std::optional<llvm::ArrayRef<mlir::Value>> getSuccessorOperands(
         llvm::ArrayRef<mlir::Value> operands, unsigned cond);
-    llvm::Optional<mlir::ValueRange> getSuccessorOperands(
+    std::optional<mlir::ValueRange> getSuccessorOperands(
         mlir::ValueRange operands, unsigned cond);
 
     // Helper function to deal with Optional operand forms
@@ -538,9 +542,9 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
         }
       }
       $_state.addAttribute(getOperandSegmentSizeAttr(),
-        $_builder.getI32VectorAttr({1, 0, sumArgs}));
+        $_builder.getDenseI32ArrayAttr({1, 0, sumArgs}));
       $_state.addAttribute(getTargetOffsetAttr(),
-        $_builder.getI32VectorAttr(argOffs));
+        $_builder.getDenseI32ArrayAttr(argOffs));
       $_state.addAttributes(attributes);
     }]
   >];
@@ -649,10 +653,10 @@ def fir_SelectTypeOp : fir_SwitchTerminatorOp<"select_type"> {
 
     ```mlir
       fir.select_type %arg : !fir.box<()> [
-          #fir.instance<!fir.type<type1>>, ^bb1(%0 : i32),
-          #fir.instance<!fir.type<type2>>, ^bb2(%2 : i32),
-          #fir.subsumed<!fir.type<type3>>, ^bb3(%2 : i32),
-          #fir.instance<!fir.type<type4>>, ^bb4(%1,%3 : i32,f32),
+          #fir.type_is<!fir.type<type1>>, ^bb1(%0 : i32),
+          #fir.type_is<!fir.type<type2>>, ^bb2(%2 : i32),
+          #fir.class_is<!fir.type<type3>>, ^bb3(%2 : i32),
+          #fir.type_is<!fir.type<type4>>, ^bb4(%1,%3 : i32,f32),
           unit, ^bb5]
     ```
   }];
@@ -728,13 +732,13 @@ def fir_HasValueOp : fir_Op<"has_value", [Terminator, HasParent<"GlobalOp">]> {
 // Operations on !fir.box<T> type objects
 //===----------------------------------------------------------------------===//
 
-def fir_EmboxOp : fir_Op<"embox", [NoSideEffect, AttrSizedOperandSegments]> {
+def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments]> {
   let summary = "boxes a given reference and (optional) dimension information";
 
   let description = [{
     Create a boxed reference value. In Fortran, the implementation can require
     extra information about an entity, such as its type, rank, etc.  This
-    auxilliary information is packaged and abstracted as a value with box type
+    auxiliary information is packaged and abstracted as a value with box type
     by the calling routine. (In Fortran, these are called descriptors.)
 
     ```mlir
@@ -759,23 +763,26 @@ def fir_EmboxOp : fir_Op<"embox", [NoSideEffect, AttrSizedOperandSegments]> {
     Optional<AnyShapeType>:$shape,
     Optional<fir_SliceType>:$slice,
     Variadic<AnyIntegerType>:$typeparams,
+    Optional<fir_ClassType>:$sourceBox,
     OptionalAttr<AffineMapAttr>:$accessMap
   );
 
-  let results = (outs fir_BoxType);
+  let results = (outs BoxOrClassType);
 
   let builders = [
     OpBuilder<(ins "llvm::ArrayRef<mlir::Type>":$resultTypes,
       "mlir::Value":$memref, CArg<"mlir::Value", "{}">:$shape,
       CArg<"mlir::Value", "{}">:$slice,
-      CArg<"mlir::ValueRange", "{}">:$typeparams),
+      CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"mlir::Value", "{}">:$sourceBox),
     [{ return build($_builder, $_state, resultTypes, memref, shape, slice,
-                    typeparams, mlir::AffineMapAttr{}); }]>
+                    typeparams, sourceBox, mlir::AffineMapAttr{}); }]>
   ];
 
   let assemblyFormat = [{
     $memref (`(` $shape^ `)`)? (`[` $slice^ `]`)? (`typeparams` $typeparams^)?
-      (`map` $accessMap^)? attr-dict `:` functional-type(operands, results)
+      (`source_box` $sourceBox^)? (`map` $accessMap^)? attr-dict `:`
+      functional-type(operands, results)
   }];
 
   let hasVerifier = 1;
@@ -783,10 +790,14 @@ def fir_EmboxOp : fir_Op<"embox", [NoSideEffect, AttrSizedOperandSegments]> {
   let extraClassDeclaration = [{
     bool hasLenParams() { return !getTypeparams().empty(); }
     unsigned numLenParams() { return getTypeparams().size(); }
+    unsigned getSourceBoxOffset() {
+      return 1 + (getShape() ? 1 : 0) + (getSlice() ? 1 : 0)
+          + numLenParams();
+    }
   }];
 }
 
-def fir_ReboxOp : fir_Op<"rebox", [NoSideEffect, AttrSizedOperandSegments]> {
+def fir_ReboxOp : fir_Op<"rebox", [NoMemoryEffect, AttrSizedOperandSegments]> {
   let summary =
       "create a box given another box and (optional) dimension information";
 
@@ -820,25 +831,25 @@ def fir_ReboxOp : fir_Op<"rebox", [NoSideEffect, AttrSizedOperandSegments]> {
       %3 = fir.shape %c3, %c4 : (index, index) -> !fir.shape<2>
       %4 = fir.rebox %2(%3) : (!fir.box<!fir.array<?xf32>>, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf32>>
     ```
-
   }];
 
   let arguments = (ins
-    fir_BoxType:$box,
+    BoxOrClassType:$box,
     Optional<AnyShapeOrShiftType>:$shape,
     Optional<fir_SliceType>:$slice
   );
 
-  let results = (outs fir_BoxType);
+  let results = (outs BoxOrClassType);
 
   let assemblyFormat = [{
-    $box (`(` $shape^ `)`)? (`[` $slice^ `]`)? attr-dict `:` functional-type(operands, results)
+    $box (`(` $shape^ `)`)? (`[` $slice^ `]`)?
+        attr-dict `:` functional-type(operands, results)
   }];
 
   let hasVerifier = 1;
 }
 
-def fir_EmboxCharOp : fir_Op<"emboxchar", [NoSideEffect]> {
+def fir_EmboxCharOp : fir_Op<"emboxchar", [NoMemoryEffect]> {
   let summary = "boxes a given CHARACTER reference and its LEN parameter";
 
   let description = [{
@@ -871,7 +882,7 @@ def fir_EmboxCharOp : fir_Op<"emboxchar", [NoSideEffect]> {
   let hasVerifier = 1;
 }
 
-def fir_EmboxProcOp : fir_Op<"emboxproc", [NoSideEffect]> {
+def fir_EmboxProcOp : fir_Op<"emboxproc", [NoMemoryEffect]> {
   let summary = "boxes a given procedure and optional host context";
 
   let description = [{
@@ -909,7 +920,7 @@ def fir_EmboxProcOp : fir_Op<"emboxproc", [NoSideEffect]> {
   let hasVerifier = 1;
 }
 
-def fir_UnboxCharOp : fir_SimpleOp<"unboxchar", [NoSideEffect]> {
+def fir_UnboxCharOp : fir_SimpleOp<"unboxchar", [NoMemoryEffect]> {
   let summary = "unbox a boxchar value into a pair value";
 
   let description = [{
@@ -927,7 +938,7 @@ def fir_UnboxCharOp : fir_SimpleOp<"unboxchar", [NoSideEffect]> {
   let results = (outs fir_ReferenceType, AnyIntegerLike);
 }
 
-def fir_UnboxProcOp : fir_SimpleOp<"unboxproc", [NoSideEffect]> {
+def fir_UnboxProcOp : fir_SimpleOp<"unboxproc", [NoMemoryEffect]> {
   let summary = "unbox a boxproc value into a pair value";
 
   let description = [{
@@ -947,7 +958,7 @@ def fir_UnboxProcOp : fir_SimpleOp<"unboxproc", [NoSideEffect]> {
   let results = (outs FunctionType, fir_ReferenceType:$refTuple);
 }
 
-def fir_BoxAddrOp : fir_SimpleOneResultOp<"box_addr", [NoSideEffect]> {
+def fir_BoxAddrOp : fir_SimpleOneResultOp<"box_addr", [NoMemoryEffect]> {
   let summary = "return a memory reference to the boxed value";
 
   let description = [{
@@ -968,9 +979,11 @@ def fir_BoxAddrOp : fir_SimpleOneResultOp<"box_addr", [NoSideEffect]> {
   let results = (outs AnyCodeOrDataRefLike);
 
   let hasFolder = 1;
+
+  let builders = [OpBuilder<(ins "mlir::Value":$val)>];
 }
 
-def fir_BoxCharLenOp : fir_SimpleOp<"boxchar_len", [NoSideEffect]> {
+def fir_BoxCharLenOp : fir_SimpleOp<"boxchar_len", [NoMemoryEffect]> {
   let summary = "return the LEN type parameter from a boxchar value";
 
   let description = [{
@@ -989,7 +1002,7 @@ def fir_BoxCharLenOp : fir_SimpleOp<"boxchar_len", [NoSideEffect]> {
   let hasFolder = 1;
 }
 
-def fir_BoxDimsOp : fir_Op<"box_dims", [NoSideEffect]> {
+def fir_BoxDimsOp : fir_Op<"box_dims", [NoMemoryEffect]> {
   let summary = "return the dynamic dimension information for the boxed value";
 
   let description = [{
@@ -1008,7 +1021,7 @@ def fir_BoxDimsOp : fir_Op<"box_dims", [NoSideEffect]> {
     are the values encoded in a standard descriptor.
   }];
 
-  let arguments = (ins fir_BoxType:$val, AnyIntegerLike:$dim);
+  let arguments = (ins BoxOrClassType:$val, AnyIntegerLike:$dim);
 
   let results = (outs Index, Index, Index);
 
@@ -1018,10 +1031,13 @@ def fir_BoxDimsOp : fir_Op<"box_dims", [NoSideEffect]> {
 
   let extraClassDeclaration = [{
     mlir::Type getTupleType();
+    mlir::Value getLowerBound() {return getResult(0);};
+    mlir::Value getExtent() {return getResult(1);};
+    mlir::Value getByteStride() {return getResult(2);};
   }];
 }
 
-def fir_BoxEleSizeOp : fir_SimpleOneResultOp<"box_elesize", [NoSideEffect]> {
+def fir_BoxEleSizeOp : fir_SimpleOneResultOp<"box_elesize", [NoMemoryEffect]> {
   let summary = "return the size of an element of the boxed value";
 
   let description = [{
@@ -1029,20 +1045,37 @@ def fir_BoxEleSizeOp : fir_SimpleOneResultOp<"box_elesize", [NoSideEffect]> {
     not be known until runtime.
 
     ```mlir
-      %53 = fir.box_elesize %40 : (!fir.box<f32>, i32) -> i32  // size=4
-      %54 = fir.box_elesize %40 : (!fir.box<!fir.array<*:f32>>, i32) -> i32
+      %53 = fir.box_elesize %40 : (!fir.box<f32>) -> i32  // size=4
+      %54 = fir.box_elesize %40 : (!fir.box<!fir.array<*:f32>>) -> i32
     ```
 
     In the above example, `%53` may box an array of REAL values while `%54`
     must box an array of REAL values (with dynamic rank and extent).
   }];
 
-  let arguments = (ins fir_BoxType:$val);
+  let arguments = (ins BoxOrClassType:$val);
 
   let results = (outs AnyIntegerLike);
 }
 
-def fir_BoxIsAllocOp : fir_SimpleOp<"box_isalloc", [NoSideEffect]> {
+def fir_BoxTypeCodeOp : fir_SimpleOneResultOp<"box_typecode", [NoMemoryEffect]>
+{
+  let summary = "return the type code the boxed value";
+
+  let description = [{
+    Returns the descriptor type code of an entity of `box` type.
+
+    ```mlir
+      %1 = fir.box_typecode %0 : (!fir.box<T>) -> i32
+    ```
+  }];
+
+  let arguments = (ins BoxOrClassType:$box);
+
+  let results = (outs AnyIntegerLike);
+}
+
+def fir_BoxIsAllocOp : fir_SimpleOp<"box_isalloc", [NoMemoryEffect]> {
   let summary = "is the boxed value an ALLOCATABLE?";
 
   let description = [{
@@ -1065,7 +1098,7 @@ def fir_BoxIsAllocOp : fir_SimpleOp<"box_isalloc", [NoSideEffect]> {
   let results = (outs BoolLike);
 }
 
-def fir_BoxIsArrayOp : fir_SimpleOp<"box_isarray", [NoSideEffect]> {
+def fir_BoxIsArrayOp : fir_SimpleOp<"box_isarray", [NoMemoryEffect]> {
   let summary = "is the boxed value an array?";
 
   let description = [{
@@ -1087,7 +1120,7 @@ def fir_BoxIsArrayOp : fir_SimpleOp<"box_isarray", [NoSideEffect]> {
   let results = (outs BoolLike);
 }
 
-def fir_BoxIsPtrOp : fir_SimpleOp<"box_isptr", [NoSideEffect]> {
+def fir_BoxIsPtrOp : fir_SimpleOp<"box_isptr", [NoMemoryEffect]> {
   let summary = "is the boxed value a POINTER?";
 
   let description = [{
@@ -1105,7 +1138,7 @@ def fir_BoxIsPtrOp : fir_SimpleOp<"box_isptr", [NoSideEffect]> {
   let results = (outs BoolLike);
 }
 
-def fir_BoxProcHostOp : fir_SimpleOp<"boxproc_host", [NoSideEffect]> {
+def fir_BoxProcHostOp : fir_SimpleOp<"boxproc_host", [NoMemoryEffect]> {
   let summary = "returns the host instance pointer (or null)";
 
   let description = [{
@@ -1127,7 +1160,7 @@ def fir_BoxProcHostOp : fir_SimpleOp<"boxproc_host", [NoSideEffect]> {
   let results = (outs fir_ReferenceType);
 }
 
-def fir_BoxRankOp : fir_SimpleOneResultOp<"box_rank", [NoSideEffect]> {
+def fir_BoxRankOp : fir_SimpleOneResultOp<"box_rank", [NoMemoryEffect]> {
   let summary = "return the number of dimensions for the boxed value";
 
   let description = [{
@@ -1149,7 +1182,7 @@ def fir_BoxRankOp : fir_SimpleOneResultOp<"box_rank", [NoSideEffect]> {
   let results = (outs AnyIntegerType);
 }
 
-def fir_BoxTypeDescOp : fir_SimpleOneResultOp<"box_tdesc", [NoSideEffect]> {
+def fir_BoxTypeDescOp : fir_SimpleOneResultOp<"box_tdesc", [NoMemoryEffect]> {
   let summary = "return the type descriptor for the boxed value";
 
   let description = [{
@@ -1162,7 +1195,7 @@ def fir_BoxTypeDescOp : fir_SimpleOneResultOp<"box_tdesc", [NoSideEffect]> {
     ```
   }];
 
-  let arguments = (ins fir_BoxType:$val);
+  let arguments = (ins BoxOrClassType:$box);
 
   let results = (outs fir_TypeDescType);
 }
@@ -1234,14 +1267,14 @@ def fir_ArrayLoadOp : fir_Op<"array_load", [AttrSizedOperandSegments]> {
     One can use `fir.array_load` to produce an ssa-value that captures an
     immutable value of the entire array `a`, as in the Fortran array expression
     shown above. Subsequent changes to the memory containing the array do not
-    alter its composite value. This operation let's one load an array as a
+    alter its composite value. This operation lets one load an array as a
     value while applying a runtime shape, shift, or slice to the memory
     reference, and its semantics guarantee immutability.
 
     ```mlir
-      %s = fir.shape_shift %o, %n, %p, %m : (index, index, index, index) -> !fir.shape<2>
+      %s = fir.shape_shift %o, %n, %p, %m : (index, index, index, index) -> !fir.shapeshift<2>
       // load the entire array 'a'
-      %v = fir.array_load %a(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.array<?x?xf32>
+      %v = fir.array_load %a(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
       // a fir.store here into array %a does not change %v
     ```
   }];
@@ -1268,7 +1301,7 @@ def fir_ArrayLoadOp : fir_Op<"array_load", [AttrSizedOperandSegments]> {
 }
 
 def fir_ArrayFetchOp : fir_Op<"array_fetch", [AttrSizedOperandSegments,
-    NoSideEffect]> {
+    NoMemoryEffect]> {
 
   let summary = "Fetch the value of an element of an array value";
 
@@ -1314,7 +1347,7 @@ def fir_ArrayFetchOp : fir_Op<"array_fetch", [AttrSizedOperandSegments,
 }
 
 def fir_ArrayUpdateOp : fir_Op<"array_update", [AttrSizedOperandSegments,
-    NoSideEffect]> {
+    NoMemoryEffect]> {
 
   let summary = "Update the value of an element of an array value";
 
@@ -1366,7 +1399,7 @@ def fir_ArrayUpdateOp : fir_Op<"array_update", [AttrSizedOperandSegments,
 }
 
 def fir_ArrayModifyOp : fir_Op<"array_modify", [AttrSizedOperandSegments,
-    NoSideEffect]> {
+    NoMemoryEffect]> {
   let summary = "Get an address for an array value to modify it.";
 
   let description = [{
@@ -1389,16 +1422,13 @@ def fir_ArrayModifyOp : fir_Op<"array_modify", [AttrSizedOperandSegments,
     ```mlir
       %s = fir.shape %n : (index) -> !fir.shape<1>
       // Load the entire array 'a'.
-      %v = fir.array_load %a(%s) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>)
-          -> !fir.array<?xf32>
+      %v = fir.array_load %a(%s) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.array<?xf32>
       // Update the value of one of the array value's elements with a user
       // defined assignment from %rhs.
       %new = fir.do_loop %i = ... (%inner = %v) {
         %rhs = ...
-        %addr, %r = fir.array_modify %inner, %i, %j : (!fir.array<?xf32>,
-	    index) -> fir.ref<f32>, !fir.array<?xf32>
-        fir.call @user_def_assign(%addr, %rhs) (fir.ref<f32>,
-	    fir.ref<!fir.type<SomeType>>) -> ()
+        %addr, %r = fir.array_modify %inner, %i : (!fir.array<?xf32>, index) -> (fir.ref<f32>, !fir.array<?xf32>)
+        fir.call @user_def_assign(%addr, %rhs) (fir.ref<f32>, fir.ref<!fir.type<SomeType>>) -> ()
         fir.result %r : !fir.ref<!fir.array<?xf32>>
       }
       fir.array_merge_store %v, %new to %a : !fir.ref<!fir.array<?xf32>>
@@ -1427,7 +1457,7 @@ def fir_ArrayModifyOp : fir_Op<"array_modify", [AttrSizedOperandSegments,
 }
 
 def fir_ArrayAccessOp : fir_Op<"array_access", [AttrSizedOperandSegments,
-    NoSideEffect]> {
+    NoMemoryEffect]> {
   let summary = "Fetch the reference of an element of an array value";
 
   let description = [{
@@ -1466,7 +1496,7 @@ def fir_ArrayAccessOp : fir_Op<"array_access", [AttrSizedOperandSegments,
     between.
 
     TODO: The above restriction is not enforced. The design of the operation
-    might need to be revisited to avoid such restructions.
+    might need to be revisited to avoid such restrictions.
 
     More information about `array_access` and other array operations can be
     found in flang/docs/FIRArrayOperations.md.
@@ -1488,7 +1518,7 @@ def fir_ArrayAccessOp : fir_Op<"array_access", [AttrSizedOperandSegments,
   let hasVerifier = 1;
 }
 
-def fir_ArrayAmendOp : fir_Op<"array_amend", [NoSideEffect]> {
+def fir_ArrayAmendOp : fir_Op<"array_amend", [NoMemoryEffect]> {
   let summary = "Mark an array value as having been changed by reference.";
 
   let description = [{
@@ -1570,7 +1600,7 @@ def fir_ArrayMergeStoreOp : fir_Op<"array_merge_store",
 //===----------------------------------------------------------------------===//
 
 def fir_ArrayCoorOp : fir_Op<"array_coor",
-    [NoSideEffect, AttrSizedOperandSegments]> {
+    [NoMemoryEffect, AttrSizedOperandSegments]> {
 
   let summary = "Find the coordinate of an element of an array";
 
@@ -1614,7 +1644,7 @@ def fir_ArrayCoorOp : fir_Op<"array_coor",
   let hasVerifier = 1;
 }
 
-def fir_CoordinateOp : fir_Op<"coordinate_of", [NoSideEffect]> {
+def fir_CoordinateOp : fir_Op<"coordinate_of", [NoMemoryEffect]> {
 
   let summary = "Finds the coordinate (location) of a value in memory";
 
@@ -1658,7 +1688,7 @@ def fir_CoordinateOp : fir_Op<"coordinate_of", [NoSideEffect]> {
   ];
 }
 
-def fir_ExtractValueOp : fir_OneResultOp<"extract_value", [NoSideEffect]> {
+def fir_ExtractValueOp : fir_OneResultOp<"extract_value", [NoMemoryEffect]> {
   let summary = "Extract a value from an aggregate SSA-value";
 
   let description = [{
@@ -1688,7 +1718,7 @@ def fir_ExtractValueOp : fir_OneResultOp<"extract_value", [NoSideEffect]> {
   }];
 }
 
-def fir_FieldIndexOp : fir_OneResultOp<"field_index", [NoSideEffect]> {
+def fir_FieldIndexOp : fir_OneResultOp<"field_index", [NoMemoryEffect]> {
   let summary = "create a field index value from a field identifier";
 
   let description = [{
@@ -1723,7 +1753,7 @@ def fir_FieldIndexOp : fir_OneResultOp<"field_index", [NoSideEffect]> {
   }];
 }
 
-def fir_ShapeOp : fir_Op<"shape", [NoSideEffect]> {
+def fir_ShapeOp : fir_Op<"shape", [NoMemoryEffect]> {
 
   let summary = "generate an abstract shape vector of type `!fir.shape`";
 
@@ -1748,9 +1778,11 @@ def fir_ShapeOp : fir_Op<"shape", [NoSideEffect]> {
   }];
 
   let hasVerifier = 1;
+
+  let builders = [OpBuilder<(ins "mlir::ValueRange":$extents)>];
 }
 
-def fir_ShapeShiftOp : fir_Op<"shape_shift", [NoSideEffect]> {
+def fir_ShapeShiftOp : fir_Op<"shape_shift", [NoMemoryEffect]> {
 
   let summary = [{
     generate an abstract shape and shift vector of type `!fir.shapeshift`
@@ -1800,7 +1832,7 @@ def fir_ShapeShiftOp : fir_Op<"shape_shift", [NoSideEffect]> {
   }];
 }
 
-def fir_ShiftOp : fir_Op<"shift", [NoSideEffect]> {
+def fir_ShiftOp : fir_Op<"shift", [NoMemoryEffect]> {
 
   let summary = "generate an abstract shift vector of type `!fir.shift`";
 
@@ -1827,7 +1859,7 @@ def fir_ShiftOp : fir_Op<"shift", [NoSideEffect]> {
   let hasVerifier = 1;
 }
 
-def fir_SliceOp : fir_Op<"slice", [NoSideEffect, AttrSizedOperandSegments]> {
+def fir_SliceOp : fir_Op<"slice", [NoMemoryEffect, AttrSizedOperandSegments]> {
 
   let summary = "generate an abstract slice vector of type `!fir.slice`";
 
@@ -1878,8 +1910,8 @@ def fir_SliceOp : fir_Op<"slice", [NoSideEffect, AttrSizedOperandSegments]> {
 
   let builders = [
     OpBuilder<(ins "mlir::ValueRange":$triples,
-      CArg<"mlir::ValueRange", "llvm::None">:$fields,
-      CArg<"mlir::ValueRange", "llvm::None">:$substr)>
+      CArg<"mlir::ValueRange", "std::nullopt">:$fields,
+      CArg<"mlir::ValueRange", "std::nullopt">:$substr)>
   ];
 
   let hasVerifier = 1;
@@ -1890,12 +1922,12 @@ def fir_SliceOp : fir_Op<"slice", [NoSideEffect, AttrSizedOperandSegments]> {
   }];
 }
 
-def fir_InsertValueOp : fir_OneResultOp<"insert_value", [NoSideEffect]> {
+def fir_InsertValueOp : fir_OneResultOp<"insert_value", [NoMemoryEffect]> {
   let summary = "insert a new sub-value into a copy of an existing aggregate";
 
   let description = [{
     Insert a value into an entity with a type composed of tuples, arrays,
-    and/or derived types. Returns a new ssa value with the same type as the
+    and/or derived types. Returns a new ssa-value with the same type as the
     original entity. Cannot be used on values of `!fir.box` type.
     It can also be used to set complex parts and elements of a character
     string.
@@ -1922,13 +1954,13 @@ def fir_InsertValueOp : fir_OneResultOp<"insert_value", [NoSideEffect]> {
   let hasCanonicalizer = 1;
 }
 
-def fir_InsertOnRangeOp : fir_OneResultOp<"insert_on_range", [NoSideEffect]> {
+def fir_InsertOnRangeOp : fir_OneResultOp<"insert_on_range", [NoMemoryEffect]> {
   let summary = "insert sub-value into a range on an existing sequence";
 
   let description = [{
     Insert copies of a value into an entity with an array type of constant shape
     and size.
-    Returns a new ssa value with the same type as the original entity.
+    Returns a new ssa-value with the same type as the original entity.
     The values are inserted at a contiguous range of indices in Fortran
     row-to-column element order as specified by lower and upper bound
     coordinates.
@@ -1953,12 +1985,12 @@ def fir_InsertOnRangeOp : fir_OneResultOp<"insert_on_range", [NoSideEffect]> {
   let hasVerifier = 1;
 }
 
-def fir_LenParamIndexOp : fir_OneResultOp<"len_param_index", [NoSideEffect]> {
+def fir_LenParamIndexOp : fir_OneResultOp<"len_param_index", [NoMemoryEffect]> {
   let summary =
     "create a field index value from a LEN type parameter identifier";
 
   let description = [{
-    Generate a LEN parameter (offset) value from an LEN parameter identifier.
+    Generate a LEN parameter (offset) value from a LEN parameter identifier.
     The type of a LEN parameter value is `!fir.len` and these values can be
     used with the `fir.coordinate_of` instructions to compute (abstract)
     addresses of LEN parameters.
@@ -1994,7 +2026,7 @@ def fir_LenParamIndexOp : fir_OneResultOp<"len_param_index", [NoSideEffect]> {
 //===----------------------------------------------------------------------===//
 
 def fir_ResultOp : fir_Op<"result",
-    [NoSideEffect, ReturnLike, Terminator,
+    [NoMemoryEffect, ReturnLike, Terminator,
      ParentOneOf<["IfOp", "DoLoopOp", "IterWhileOp"]>]> {
   let summary = "special terminator for use in fir region operations";
 
@@ -2017,7 +2049,8 @@ def FirRegionTerminator : SingleBlockImplicitTerminator<"ResultOp">;
 
 class region_Op<string mnemonic, list<Trait> traits = []> :
     fir_Op<mnemonic,
-    !listconcat(traits, [FirRegionTerminator, RecursiveSideEffects])> {
+    !listconcat(traits, [FirRegionTerminator, RecursivelySpeculatable,
+        RecursiveMemoryEffects])> {
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
@@ -2064,7 +2097,7 @@ def fir_DoLoopOp : region_Op<"do_loop",
     OpBuilder<(ins "mlir::Value":$lowerBound, "mlir::Value":$upperBound,
       "mlir::Value":$step, CArg<"bool", "false">:$unordered,
       CArg<"bool", "false">:$finalCountValue,
-      CArg<"mlir::ValueRange", "llvm::None">:$iterArgs,
+      CArg<"mlir::ValueRange", "std::nullopt">:$iterArgs,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>
   ];
 
@@ -2208,7 +2241,7 @@ def fir_IterWhileOp : region_Op<"iterate_while",
     OpBuilder<(ins "mlir::Value":$lowerBound, "mlir::Value":$upperBound,
       "mlir::Value":$step, "mlir::Value":$iterate,
       CArg<"bool", "false">:$finalCountValue,
-      CArg<"mlir::ValueRange", "llvm::None">:$iterArgs,
+      CArg<"mlir::ValueRange", "std::nullopt">:$iterArgs,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>
   ];
 
@@ -2259,7 +2292,8 @@ def fir_IterWhileOp : region_Op<"iterate_while",
 // Procedure call operations
 //===----------------------------------------------------------------------===//
 
-def fir_CallOp : fir_Op<"call", [CallOpInterface]> {
+def fir_CallOp : fir_Op<"call",
+    [CallOpInterface, DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
   let summary = "call a procedure";
 
   let description = [{
@@ -2276,7 +2310,9 @@ def fir_CallOp : fir_Op<"call", [CallOpInterface]> {
 
   let arguments = (ins
     OptionalAttr<SymbolRefAttr>:$callee,
-    Variadic<AnyType>:$args
+    Variadic<AnyType>:$args,
+    DefaultValuedAttr<Arith_FastMathAttr,
+                      "::mlir::arith::FastMathFlags::none">:$fastmath
   );
   let results = (outs Variadic<AnyType>);
 
@@ -2327,43 +2363,50 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
 
   let description = [{
     Perform a dynamic dispatch on the method name via the dispatch table
-    associated with the first argument.  The attribute 'pass_arg_pos' can be
-    used to select a dispatch argument other than the first one.
+    associated with the first operand.  The attribute `pass_arg_pos` can be
+    used to select a dispatch operand other than the first one.  The absence of
+    `pass_arg_pos` attribute means nopass.
 
     ```mlir
-      %r = fir.dispatch methodA(%o) : (!fir.box<none>) -> i32
+      // fir.dispatch with no attribute.
+      %r = fir.dispatch "methodA"(%o) : (!fir.class<T>) -> i32
+
+      // fir.dispatch with the `pass_arg_pos` attribute.
+      %r = fir.dispatch "methodA"(%o : !fir.class<T>) (%o : !fir.class<T>) -> i32 {pass_arg_pos = 0 : i32}
     ```
   }];
 
   let arguments = (ins
     StrAttr:$method,
-    fir_BoxType:$object,
-    Variadic<AnyType>:$args
+    fir_ClassType:$object,
+    Variadic<AnyType>:$args,
+    OptionalAttr<I32Attr>:$pass_arg_pos
   );
 
-  let results = (outs Variadic<AnyType>);
+  let results = (outs Variadic<AnyType>:$results);
 
-  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+
+  let assemblyFormat = [{
+    $method `(` $object `:` qualified(type($object)) `)`
+    ( `(` $args^ `:` type($args) `)` )? (`->` type($results)^)? attr-dict
+  }];
 
   let extraClassDeclaration = [{
     mlir::FunctionType getFunctionType();
     operand_range getArgOperands() {
       return {arg_operand_begin(), arg_operand_end()};
     }
-    // operand[0] is the object (of box type)
+    // operand[0] is the object (of class type)
     operand_iterator arg_operand_begin() { return operand_begin() + 1; }
     operand_iterator arg_operand_end() { return operand_end(); }
-    static constexpr llvm::StringRef getPassArgAttrName() {
-      return "pass_arg_pos";
-    }
     static constexpr llvm::StringRef getMethodAttrNameStr() { return "method"; }
-    unsigned passArgPos();
   }];
 }
 
 // Constant operations that support Fortran
 
-def fir_StringLitOp : fir_Op<"string_lit", [NoSideEffect]> {
+def fir_StringLitOp : fir_Op<"string_lit", [NoMemoryEffect]> {
   let summary = "create a string literal constant";
 
   let description = [{
@@ -2385,16 +2428,16 @@ def fir_StringLitOp : fir_Op<"string_lit", [NoSideEffect]> {
   let builders = [
     OpBuilder<(ins "fir::CharacterType":$inType,
       "llvm::StringRef":$value,
-      CArg<"llvm::Optional<int64_t>", "{}">:$len)>,
+      CArg<"std::optional<int64_t>", "{}">:$len)>,
     OpBuilder<(ins "fir::CharacterType":$inType,
       "llvm::ArrayRef<char>":$xlist,
-      CArg<"llvm::Optional<int64_t>", "{}">:$len)>,
+      CArg<"std::optional<int64_t>", "{}">:$len)>,
     OpBuilder<(ins "fir::CharacterType":$inType,
       "llvm::ArrayRef<char16_t>":$xlist,
-      CArg<"llvm::Optional<int64_t>", "{}">:$len)>,
+      CArg<"std::optional<int64_t>", "{}">:$len)>,
     OpBuilder<(ins "fir::CharacterType":$inType,
       "llvm::ArrayRef<char32_t>":$xlist,
-      CArg<"llvm::Optional<int64_t>", "{}">:$len)>];
+      CArg<"std::optional<int64_t>", "{}">:$len)>];
 
   let extraClassDeclaration = [{
     static constexpr const char *size() { return "size"; }
@@ -2419,19 +2462,19 @@ def fir_StringLitOp : fir_Op<"string_lit", [NoSideEffect]> {
 
 class fir_ArithmeticOp<string mnemonic, list<Trait> traits = []> :
     fir_Op<mnemonic,
-           !listconcat(traits, [NoSideEffect, SameOperandsAndResultType])>,
+           !listconcat(traits, [NoMemoryEffect, SameOperandsAndResultType])>,
     Results<(outs AnyType:$result)> {
   let assemblyFormat = "operands attr-dict `:` type($result)";
 }
 
 class fir_UnaryArithmeticOp<string mnemonic, list<Trait> traits = []> :
       fir_Op<mnemonic,
-             !listconcat(traits, [NoSideEffect, SameOperandsAndResultType])>,
+             !listconcat(traits, [NoMemoryEffect, SameOperandsAndResultType])>,
       Results<(outs AnyType:$result)> {
   let assemblyFormat = "operands attr-dict `:` type($result)";
 }
 
-def fir_ConstcOp : fir_Op<"constc", [NoSideEffect]> {
+def fir_ConstcOp : fir_Op<"constc", [NoMemoryEffect]> {
   let summary = "create a complex constant";
 
   let description = [{
@@ -2471,7 +2514,7 @@ def fir_DivcOp : ComplexArithmeticOp<"divc">;
 // Pow is a builtin call and not a primitive
 
 def fir_CmpcOp : fir_Op<"cmpc",
-    [NoSideEffect, SameTypeOperands, SameOperandsAndResultShape]> {
+    [NoMemoryEffect, SameTypeOperands, SameOperandsAndResultShape]> {
   let summary = "complex floating-point comparison operator";
 
   let description = [{
@@ -2505,12 +2548,12 @@ def fir_CmpcOp : fir_Op<"cmpc",
 
 // Other misc. operations
 
-def fir_AddrOfOp : fir_OneResultOp<"address_of", [NoSideEffect]> {
+def fir_AddrOfOp : fir_OneResultOp<"address_of", [NoMemoryEffect]> {
   let summary = "convert a symbol to an SSA value";
 
   let description = [{
     Convert a symbol (a function or global reference) to an SSA-value to be
-    used in other Operations. References to Fortran symbols are distinguished
+    used in other operations. References to Fortran symbols are distinguished
     via this operation from other arbitrary constant values.
 
     ```mlir
@@ -2525,13 +2568,14 @@ def fir_AddrOfOp : fir_OneResultOp<"address_of", [NoSideEffect]> {
   let assemblyFormat = "`(` $symbol `)` attr-dict `:` type($resTy)";
 }
 
-def fir_ConvertOp : fir_OneResultOp<"convert", [NoSideEffect]> {
-  let summary = "encapsulates all Fortran scalar type conversions";
+def fir_ConvertOp : fir_OneResultOp<"convert", [NoMemoryEffect]> {
+  let summary = "encapsulates all Fortran entity type conversions";
 
   let description = [{
-    Generalized type conversion. Convert the ssa value from type T to type U.
+    Generalized type conversion. Convert the ssa-value from type T to type U.
     Not all pairs of types have conversions. When types T and U are the same
-    type, this instruction is a NOP and may be folded away.
+    type, this instruction is a NOP and may be folded away. This also supports
+    integer to pointer conversion and pointer to integer conversion.
 
     ```mlir
       %v = ... : i64
@@ -2569,7 +2613,7 @@ def FortranTypeAttr : Attr<And<[CPred<"$_self.isa<mlir::TypeAttr>()">,
   let convertFromStorage = "$_self.getValue().cast<mlir::Type>()";
 }
 
-def fir_GenTypeDescOp : fir_OneResultOp<"gentypedesc", [NoSideEffect]> {
+def fir_GenTypeDescOp : fir_OneResultOp<"gentypedesc", [NoMemoryEffect]> {
   let summary = "generate a type descriptor for a given type";
   let description = [{
     Generates a constant object that is an abstract type descriptor of the
@@ -2591,7 +2635,7 @@ def fir_GenTypeDescOp : fir_OneResultOp<"gentypedesc", [NoSideEffect]> {
 }
 
 def fir_NoReassocOp : fir_OneResultOp<"no_reassoc",
-    [NoSideEffect, SameOperandsAndResultType]> {
+    [NoMemoryEffect, SameOperandsAndResultType]> {
   let summary = "synthetic op to prevent reassociation";
   let description = [{
     Primitive operation meant to intrusively prevent operator reassociation.
@@ -2647,6 +2691,7 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     TypeAttr:$type,
     OptionalAttr<AnyAttr>:$initVal,
     OptionalAttr<UnitAttr>:$constant,
+    OptionalAttr<UnitAttr>:$target,
     OptionalAttr<StrAttr>:$linkName
   );
 
@@ -2659,19 +2704,20 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     OpBuilder<(ins "llvm::StringRef":$name, "mlir::Type":$type,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs)>,
     OpBuilder<(ins "llvm::StringRef":$name, "bool":$isConstant,
-      "mlir::Type":$type,
+      "bool":$isTarget, "mlir::Type":$type,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs)>,
     OpBuilder<(ins "llvm::StringRef":$name, "mlir::Type":$type,
       CArg<"mlir::StringAttr", "{}">:$linkage,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs)>,
     OpBuilder<(ins "llvm::StringRef":$name, "bool":$isConstant,
+      "bool":$isTarget,
       "mlir::Type":$type, CArg<"mlir::StringAttr", "{}">:$linkage,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs)>,
     OpBuilder<(ins "llvm::StringRef":$name, "mlir::Type":$type,
       "mlir::Attribute":$initVal, CArg<"mlir::StringAttr", "{}">:$linkage,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs)>,
     OpBuilder<(ins "llvm::StringRef":$name, "bool":$isConstant,
-      "mlir::Type":$type, "mlir::Attribute":$initVal,
+      "bool":$isTarget, "mlir::Type":$type, "mlir::Attribute":$initVal,
       CArg<"mlir::StringAttr", "{}">:$linkage,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs)>,
   ];
@@ -2683,6 +2729,9 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     }
     static constexpr llvm::StringRef getLinkageAttrNameStr() {
       return "linkName";
+    }
+    static constexpr llvm::StringRef getTargetAttrNameStr() {
+      return "target";
     }
 
     /// The semantic type of the global
@@ -2762,25 +2811,26 @@ def fir_DispatchTableOp : fir_Op<"dispatch_table",
     ```
   }];
 
+  let arguments = (ins
+    SymbolNameAttr:$sym_name,
+    OptionalAttr<StrAttr>:$parent
+  );
+
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 
-  let regions = (region SizedRegion<1>:$region);
+  let regions = (region AnyRegion:$region);
 
   let skipDefaultBuilders = 1;
   let builders = [
     OpBuilder<(ins "llvm::StringRef":$name, "mlir::Type":$type,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs),
-    [{
-      $_state.addAttribute(mlir::SymbolTable::getSymbolAttrName(),
-                           $_builder.getStringAttr(name));
-      $_state.addAttributes(attrs);
-    }]>
+      "llvm::StringRef":$parent,
+      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs)>
   ];
 
   let extraClassDeclaration = [{
-    /// Append a dispatch table entry to the table.
-    void appendTableEntry(mlir::Operation *op);
+    static constexpr llvm::StringRef getParentAttrNameStr() { return "parent"; }
+    static constexpr llvm::StringRef getExtendsKeyword() { return "extends"; }
 
     mlir::Block &getBlock() {
       return getRegion().front();
@@ -2813,7 +2863,7 @@ def fir_DTEntryOp : fir_Op<"dt_entry", [HasParent<"DispatchTableOp">]> {
   }];
 }
 
-def fir_AbsentOp : fir_OneResultOp<"absent", [NoSideEffect]> {
+def fir_AbsentOp : fir_OneResultOp<"absent", [NoMemoryEffect]> {
   let summary = "create value to be passed for absent optional function argument";
   let description = [{
     Given the type of a function argument, create a value that will signal that
@@ -2833,7 +2883,7 @@ def fir_AbsentOp : fir_OneResultOp<"absent", [NoSideEffect]> {
   let assemblyFormat = "type($intype) attr-dict";
 }
 
-def fir_IsPresentOp : fir_SimpleOp<"is_present", [NoSideEffect]> {
+def fir_IsPresentOp : fir_SimpleOp<"is_present", [NoMemoryEffect]> {
   let summary = "is this optional function argument present?";
 
   let description = [{
@@ -2849,6 +2899,65 @@ def fir_IsPresentOp : fir_SimpleOp<"is_present", [NoSideEffect]> {
   let arguments = (ins AnyRefOrBoxLike:$val);
 
   let results = (outs BoolLike);
+}
+
+def fir_DeclareOp : fir_Op<"declare", [AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>]> {
+  let summary = "declare a variable";
+
+  let description = [{
+    Tie the properties of a Fortran variable to an address. The properties
+    include bounds, length parameters, and Fortran attributes.
+
+    The memref argument describes the storage of the variable. It may be a
+    raw address (fir.ref<T>), or a box or class value or address (fir.box<T>,
+    fir.ref<fir.box<T>>, fir.class<T>, fir.ref<fir.class<T>>).
+
+    The shape argument encodes explicit extents and lower bounds. It must be
+    provided if the memref is the raw address of an array.
+    The shape argument must not be provided if memref operand is a box or
+    class value or address, unless the shape is a shift (encodes lower bounds)
+    and the memref if a box value (this covers assumed shapes with local lower
+    bounds).
+
+    The typeparams values are meant to carry the non-deferred length parameters
+    (this includes both Fortran assumed and explicit length parameters).
+    It must always be provided for characters and parametrized derived types
+    when memref is not a box value or address.
+
+    Example:
+
+    CHARACTER(n), OPTIONAL, TARGET :: c(10:, 20:)
+
+    Can be represented as:
+    ```
+    func.func @foo(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,?>>>, %arg1: !fir.ref<i64>) {
+      %c10 = arith.constant 10 : index
+      %c20 = arith.constant 20 : index
+      %1 = fir.load %ag1 : fir.ref<i64>
+      %2 = fir.shift %c10, %c20 : (index, index) -> !fir.shift<2>
+      %3 = fir.declare %arg0(%2) typeparams %1 {fortran_attrs = #fir.var_attrs<optional, target>, uniq_name = "c"}
+      // ... uses %3 as "c"
+    }
+   ```
+  }];
+
+  let arguments = (ins
+    AnyRefOrBox:$memref,
+    Optional<AnyShapeOrShiftType>:$shape,
+    Variadic<AnyIntegerType>:$typeparams,
+    Builtin_StringAttr:$uniq_name,
+    OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs
+  );
+
+  let results = (outs AnyRefOrBox);
+
+  let assemblyFormat = [{
+    $memref (`(` $shape^ `)`)? (`typeparams` $typeparams^)?
+     attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
 }
 
 #endif

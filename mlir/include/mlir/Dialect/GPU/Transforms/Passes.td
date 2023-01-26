@@ -37,4 +37,23 @@ def GpuMapParallelLoopsPass
   let dependentDialects = ["mlir::gpu::GPUDialect"];
 }
 
+def GPULowerMemorySpaceAttributesPass
+    : Pass<"gpu-lower-memory-space-attributes"> {
+  let summary = "Assign numeric values to memref memory space symbolic placeholders";
+  let description = [{
+    Updates all memref types that have a memory space attribute
+    that is a `gpu::AddressSpaceAttr`. These attributes are
+    changed to `IntegerAttr`'s using a mapping that is given in the
+    options.
+  }];
+  let options = [
+    Option<"privateAddrSpace", "private", "unsigned", "5",
+      "private address space numeric value">,
+    Option<"workgroupAddrSpace", "workgroup", "unsigned", "3",
+      "workgroup address space numeric value">,
+    Option<"globalAddrSpace", "global", "unsigned", "1",
+      "global address space numeric value">
+  ];
+}
+
 #endif // MLIR_DIALECT_GPU_PASSES

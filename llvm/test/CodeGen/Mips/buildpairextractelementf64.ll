@@ -17,7 +17,7 @@
 
 define double @f(i32 %a1, double %d) nounwind {
 entry:
-  store i32 %a1, i32* @a, align 4
+  store i32 %a1, ptr @a, align 4
   %add = fadd double %d, 2.000000e+00
   ret double %add
 }

@@ -1,4 +1,4 @@
-// RUN: echo "GPU binary would be here" > %t
+// RUN: echo -n "GPU binary would be here." > %t
 // RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -target-sdk-version=8.0 -fcuda-include-gpubinary %t -o - \
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s \
@@ -159,8 +159,8 @@ __device__ void device_use() {
 // ALL: @3 = private unnamed_addr constant [19 x i8] c"ext_device_var_def\00"
 // ALL: @4 = private unnamed_addr constant [21 x i8] c"ext_constant_var_def\00"
 // * constant unnamed string with GPU binary
-// CUDA: @[[FATBIN:.*]] = private constant{{.*GPU binary would be here.*}}\00",
-// HIPEF: @[[FATBIN:.*]] = private constant{{.*GPU binary would be here.*}}\00",{{.*}}align 4096
+// CUDA: @[[FATBIN:.*]] = private constant{{.*}} c"GPU binary would be here.",
+// HIPEF: @[[FATBIN:.*]] = private constant{{.*}} c"GPU binary would be here.",{{.*}}align 4096
 // HIPNEF: @[[FATBIN:__hip_fatbin]] = external constant i8, section ".hip_fatbin"
 // CUDANORDC-SAME: section ".nv_fatbin", align 8
 // CUDARDC-SAME: section "__nv_relfatbin", align 8

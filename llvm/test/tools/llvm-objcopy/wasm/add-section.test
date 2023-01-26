@@ -20,6 +20,17 @@
 # REPLACE:   Name:    foo
 # REPLACE:   Payload: 3132330A
 
+## Check that raw data bytes can be imported and exported unchanged especially the ones containing empty bytes.
+# RUN: echo -e -n "\x02\x01\x00\x01\x02" > %t6
+# RUN: llvm-objcopy --add-section=bar=%t6 %t %t7
+# RUN: llvm-objcopy --dump-section=bar=%t8 %t7
+# RUN: diff %t8 %t6
+# RUN: obj2yaml %t7 | FileCheck %s --check-prefix=RAW-DATA
+
+## Check that raw data is well formated in the file as well.
+# RAW-DATA:      Name: bar
+# RAW-DATA-NEXT: Payload: '0201000102'
+
 --- !WASM
 FileHeader:
   Version: 0x00000001

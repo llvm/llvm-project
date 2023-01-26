@@ -8,13 +8,11 @@
 // Test bufferization using memref types that have no layout map.
 // RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs unknown-type-conversion=identity-layout-map bufferize-function-boundaries" -split-input-file -o /dev/null
 
-// CHECK-DAG: #[[$map_1d_dyn:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
-
 // CHECK-LABEL: func @insert_slice_fun
-//  CHECK-SAME:   %[[A0:[a-zA-Z0-9]*]]: memref<?xf32, #[[$map_1d_dyn]]>,
-//  CHECK-SAME:   %[[A1:[a-zA-Z0-9]*]]: memref<?xf32, #[[$map_1d_dyn]]>,
-//  CHECK-SAME:   %[[t0:[a-zA-Z0-9]*]]: memref<4xf32, #[[$map_1d_dyn]]>,
-//  CHECK-SAME:   %[[t1:[a-zA-Z0-9]*]]: memref<4xf32, #[[$map_1d_dyn]]>
+//  CHECK-SAME:   %[[A0:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>,
+//  CHECK-SAME:   %[[A1:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>,
+//  CHECK-SAME:   %[[t0:[a-zA-Z0-9]*]]: memref<4xf32, strided<[?], offset: ?>>,
+//  CHECK-SAME:   %[[t1:[a-zA-Z0-9]*]]: memref<4xf32, strided<[?], offset: ?>>
 func.func @insert_slice_fun(
     %A0 : tensor<?xf32> {bufferization.writable = false},
     %A1 : tensor<?xf32> {bufferization.writable = true},
@@ -56,11 +54,9 @@ func.func @insert_slice_fun(
 
 // -----
 
-// CHECK-DAG: #[[$map_1d_dyn:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
-
 // CHECK-LABEL: func @insert_slice_fun
-//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, #[[$map_1d_dyn]]>
-//  CHECK-SAME:   %[[t:[a-zA-Z0-9]*]]: memref<4xf32, #[[$map_1d_dyn]]>
+//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>
+//  CHECK-SAME:   %[[t:[a-zA-Z0-9]*]]: memref<4xf32, strided<[?], offset: ?>>
 func.func @insert_slice_fun(
     %A : tensor<?xf32> {bufferization.writable = true},
     %t : tensor<4xf32> {bufferization.writable = false})
@@ -84,11 +80,9 @@ func.func @insert_slice_fun(
 
 // -----
 
-// CHECK-DAG: #[[$map_1d_dyn:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
-
 // CHECK-LABEL: func @insert_slice_fun
-//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, #[[$map_1d_dyn]]>
-//  CHECK-SAME:   %[[t:[a-zA-Z0-9]*]]: memref<4xf32, #[[$map_1d_dyn]]>
+//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>
+//  CHECK-SAME:   %[[t:[a-zA-Z0-9]*]]: memref<4xf32, strided<[?], offset: ?>>
 func.func @insert_slice_fun(
     %A : tensor<?xf32> {bufferization.writable = true},
     %t : tensor<4xf32> {bufferization.writable = false})
@@ -112,20 +106,18 @@ func.func @insert_slice_fun(
 
 // -----
 
-// CHECK-DAG: #[[$map_1d_dyn:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
-
 // CHECK-LABEL: func @insert_slice_fun_not_inplace
-//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, #[[$map_1d_dyn]]>
-//  CHECK-SAME:   %[[t:[a-zA-Z0-9]*]]: memref<4xf32, #[[$map_1d_dyn]]>
+//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>
+//  CHECK-SAME:   %[[t:[a-zA-Z0-9]*]]: memref<4xf32, strided<[?], offset: ?>>
 func.func @insert_slice_fun_not_inplace(
     %A : tensor<?xf32> {bufferization.writable = false},
     %t : tensor<4xf32> {bufferization.writable = false})
   -> tensor<?xf32>
 {
-  //      CHECK: %[[ALLOC:.*]] = memref.alloc(%{{.*}}) {alignment = 128 : i64} : memref<?xf32>
+  //      CHECK: %[[ALLOC:.*]] = memref.alloc(%{{.*}}) {alignment = 64 : i64} : memref<?xf32>
   //      CHECK: memref.copy %[[A]], %[[ALLOC]] : memref<?xf32{{.*}} to memref<?xf32>
-  //      CHECK: %[[SV:.*]] = memref.subview %[[ALLOC]][0] [4] [1] : memref<?xf32> to memref<4xf32>
-  //      CHECK: memref.copy %[[t]], %[[SV]] : memref<4xf32, #map> to memref<4xf32>
+  //      CHECK: %[[SV:.*]] = memref.subview %[[ALLOC]][0] [4] [1] : memref<?xf32> to memref<4xf32, strided<[1]>>
+  //      CHECK: memref.copy %[[t]], %[[SV]] : memref<4xf32, strided{{.*}}> to memref<4xf32, strided<[1]>>
   %r0 = tensor.insert_slice %t into %A[0][4][1] : tensor<4xf32> into tensor<?xf32>
 
   //     CHECK: return %{{.*}} : memref<?xf32>
@@ -133,6 +125,9 @@ func.func @insert_slice_fun_not_inplace(
 }
 
 // -----
+
+// This test case could bufferize in-place with a better analysis. However, it
+// is simpler to let the canonicalizer fold away the tensor.insert_slice.
 
 // CHECK-LABEL: func @tensor_cast_not_in_place(
 //  CHECK-SAME:     %[[A:.*]]: memref<?xf32{{.*}}>, %[[B:.*]]: memref<?xf32{{.*}}>
@@ -196,21 +191,18 @@ func.func @rank_reducing(
 
 // -----
 
-// CHECK: #[[$MAP0:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
-// CHECK: #[[$MAP1:.*]] = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
-
 // CHECK-LABEL: func.func @rank_reducing_parallel_insert_slice
 func.func @rank_reducing_parallel_insert_slice(%in: tensor<100xf32>, %out: tensor<200x100xf32>) {
   %c1 = arith.constant 1 : index
   %num_threads = arith.constant 100 : index
 
   // CHECK: scf.foreach_thread {{.*}} {
-  %result = scf.foreach_thread (%thread_idx) in (%num_threads) -> tensor<200x100xf32> {
+  %result = scf.foreach_thread (%thread_idx) in (%num_threads) shared_outs (%o = %out) -> tensor<200x100xf32> {
       %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
       scf.foreach_thread.perform_concurrently {
-        // CHECK: memref.subview %{{.*}}[%{{.*}}] [1] [1] : memref<100xf32, #[[$MAP0]]> to memref<1xf32, #[[$MAP0]]>
-        // CHECK: memref.subview %{{.*}}[1, %{{.*}}] [1, 1] [1, 1] : memref<200x100xf32, #[[$MAP1]]> to memref<1xf32, #[[$MAP0]]>
-        tensor.parallel_insert_slice %1 into %out[1, %thread_idx][1, 1][1, 1] :
+        // CHECK: memref.subview %{{.*}}[%{{.*}}] [1] [1] : memref<100xf32, strided<[?], offset: ?>> to memref<1xf32, strided<[?], offset: ?>>
+        // CHECK: memref.subview %{{.*}}[1, %{{.*}}] [1, 1] [1, 1] : memref<200x100xf32, strided<[?, ?], offset: ?>> to memref<1xf32, strided<[?], offset: ?>>
+        tensor.parallel_insert_slice %1 into %o[1, %thread_idx][1, 1][1, 1] :
           tensor<1xf32> into tensor<200x100xf32>
       }
   }
@@ -225,8 +217,7 @@ func.func @dealloc_generate_buffer(%arg: tensor<*xf32>, %sz: index, %idx: index)
   -> index
 {
   // CHECK: memref.alloc
-  // CHECK: scf.parallel
-  // CHECK: memref.load
+  // CHECK: linalg.map
   // CHECK: memref.dealloc
   %0 = tensor.generate %sz {
   ^bb0(%i : index):
@@ -235,4 +226,124 @@ func.func @dealloc_generate_buffer(%arg: tensor<*xf32>, %sz: index, %idx: index)
   } : tensor<?xindex>
   %r = tensor.extract %0[%idx] : tensor<?xindex>
   return %r : index
+}
+
+// -----
+
+// CHECK-LABEL: func @dealloc_pad_buffer
+func.func @dealloc_pad_buffer(%t1: tensor<?x10xindex>, %l2: index, %h1: index,
+                              %h2: index, %idx: index) -> index {
+  // CHECK: memref.alloc
+  // CHECK: linalg.map
+  // CHECK: memref.dealloc
+  %0 = tensor.pad %t1 low[5, %l2] high[%h1, %h2] {
+  ^bb0(%arg0: index, %arg1: index):
+    %m = arith.muli %arg0, %arg1 : index
+    tensor.yield %m : index
+  } : tensor<?x10xindex> to tensor<?x?xindex>
+  %r = tensor.extract %0[%idx, %idx] : tensor<?x?xindex>
+  return %r : index
+}
+
+// -----
+
+// This test case could bufferize in-place with a better analysis. However, it
+// is simpler to let the canonicalizer fold away the tensor.insert_slice.
+
+// CHECK-LABEL: func @insert_equivalent_tensor
+func.func @insert_equivalent_tensor(%t: tensor<10xf32>) -> tensor<10xf32> {
+  // CHECK: memref.alloc
+  %cst = arith.constant 4.200000e+01 : f32
+  // CHECK: linalg.fill
+  %0 = linalg.fill ins(%cst : f32) outs(%t : tensor<10xf32>) -> tensor<10xf32>
+  // CHECK: memref.copy
+  %1 = tensor.insert_slice %0 into %t[0][10][1] : tensor<10xf32> into tensor<10xf32>
+  return %1 : tensor<10xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @pad_memory_space(
+//  CHECK-SAME:     %[[t:.*]]: memref<?xf32, strided<[?], offset: ?>>
+func.func @pad_memory_space(%t: tensor<?xf32>, %h1: index, %f: f32, %pos: index) -> f32
+{
+  // CHECK: %[[alloc_tensor:.*]] = memref.alloc{{.*}} : memref<?xf32, 3>
+  // CHECK: memref.copy %[[t]], %[[alloc_tensor]]
+  %0 = bufferization.alloc_tensor() copy(%t)
+      {memory_space = 3 : i64} : tensor<?xf32>
+  // CHECK: %[[padded_alloc:.*]] = memref.alloc() {{.*}} : memref<15xf32, 3>
+  // CHECK: linalg.map
+  // CHECK:     outs(%[[padded_alloc]] : memref<15xf32, 3>)
+  // CHECK:   linalg.yield %{{.*}}
+  // CHECK: }
+  // CHECK: %[[subview:.*]] = memref.subview {{.*}} : memref<15xf32, 3> to memref<?xf32, strided<[1], offset: 2>, 3>
+  // CHECK: memref.copy %[[alloc_tensor]], %[[subview]]
+  %1 = tensor.pad %0 low[2] high[%h1] {
+  ^bb0(%arg0: index):
+    tensor.yield %f : f32
+  } : tensor<?xf32> to tensor<15xf32>
+  // CHECK: memref.load {{.*}} : memref<15xf32, 3>
+  %2 = tensor.extract %1[%pos] : tensor<15xf32>
+  // CHECK-DAG: memref.dealloc %[[alloc_tensor]]
+  // CHECK-DAG: memref.dealloc %[[padded_alloc]]
+  return %2 : f32
+}
+
+// -----
+
+// CHECK-LABEL: func @insert_slice_regression(
+//  CHECK-SAME:   %[[t:.*]]: memref<10xf32,{{.*}}>, %[[b:.*]]: memref<5xf32
+func.func @insert_slice_regression(%t: tensor<10xf32>, %b: tensor<5xf32>) -> tensor<10xf32> {
+  %cst = arith.constant 0.0 : f32
+  %c0 = arith.constant 0 : index
+  // CHECK: %[[alloc:.*]] = memref.alloc() {{.*}} : memref<10xf32>
+  // CHECK: linalg.fill {{.*}} outs(%[[alloc]] : memref<10xf32>)
+  %1 = linalg.fill ins(%cst : f32) outs(%t : tensor<10xf32>) -> tensor<10xf32>
+
+  // Read %1 so that it does not DCE away.
+  %vec = vector.transfer_read %1[%c0], %cst : tensor<10xf32>, vector<10xf32>
+  vector.print %vec : vector<10xf32>
+
+  // Write back a different value (not %1).
+  // CHECK: %[[subview:.*]] = memref.subview %[[t]][0] [5] [1]
+  // CHECK: memref.copy %[[b]], %[[subview]]
+  %2 = tensor.insert_slice %b into %t[0][5][1] : tensor<5xf32> into tensor<10xf32>
+  return %2 : tensor<10xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @insert_slice_full_overwrite(
+//  CHECK-SAME:   %[[t:.*]]: memref<10xf32,{{.*}}>, %[[b:.*]]: memref<10xf32,{{.*}}>
+func.func @insert_slice_full_overwrite(%t: tensor<10xf32>, %b: tensor<10xf32>) -> tensor<10xf32> {
+  %cst = arith.constant 0.0 : f32
+  %c0 = arith.constant 0 : index
+  // CHECK: linalg.fill {{.*}} outs(%[[t]] : memref<10xf32,{{.*}}>)
+  %1 = linalg.fill ins(%cst : f32) outs(%t : tensor<10xf32>) -> tensor<10xf32>
+
+  // Read %1 so that it does not DCE away.
+  %vec = vector.transfer_read %1[%c0], %cst : tensor<10xf32>, vector<10xf32>
+  vector.print %vec : vector<10xf32>
+
+  // Write back a different value (not %1).
+  // CHECK: memref.copy %[[b]], %[[t]]
+  %2 = tensor.insert_slice %b into %t[0][10][1] : tensor<10xf32> into tensor<10xf32>
+  return %2 : tensor<10xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @dim_not_reading(
+//  CHECK-SAME:     %[[t:.*]]: memref<?xf32
+func.func @dim_not_reading(%t: tensor<?xf32>, %f: f32, %pos: index) 
+    -> (tensor<?xf32>, index)
+{
+  %c0 = arith.constant 0 : index
+  // CHECK-NOT: memref.alloc
+  // CHECK-NOT: memref.copy
+  //     CHECK: memref.store %{{.*}}, %[[t]]
+  %0 = tensor.insert %f into %t[%pos] : tensor<?xf32>
+  //     CHECK: memref.dim %[[t]]
+  %1 = tensor.dim %t, %c0 : tensor<?xf32>
+  return %0, %1 : tensor<?xf32>, index
 }

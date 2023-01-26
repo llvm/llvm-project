@@ -240,26 +240,30 @@ define <2 x half> @test_fdiv(<2 x half> %a, <2 x half> %b) #0 {
 
 ; CHECK-LABEL: test_frem(
 ; -- Load two 16x2 inputs and split them into f16 elements
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_frem_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_frem_param_1];
+; CHECK-DAG:  ld.param.b32       [[A:%hh[0-9]+]], [test_frem_param_0];
+; CHECK-DAG:  ld.param.b32       [[B:%hh[0-9]+]], [test_frem_param_1];
 ; -- Split into elements
-; CHECK-DAG:  mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-DAG:  mov.b32         {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
+; CHECK-DAG:  mov.b32            {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
+; CHECK-DAG:  mov.b32            {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
 ; -- promote to f32.
-; CHECK-DAG:  cvt.f32.f16     [[FA0:%f[0-9]+]], [[A0]];
-; CHECK-DAG:  cvt.f32.f16     [[FB0:%f[0-9]+]], [[B0]];
-; CHECK-DAG:  cvt.f32.f16     [[FA1:%f[0-9]+]], [[A1]];
-; CHECK-DAG:  cvt.f32.f16     [[FB1:%f[0-9]+]], [[B1]];
+; CHECK-DAG:  cvt.f32.f16        [[FA0:%f[0-9]+]], [[A0]];
+; CHECK-DAG:  cvt.f32.f16        [[FB0:%f[0-9]+]], [[B0]];
+; CHECK-DAG:  cvt.f32.f16        [[FA1:%f[0-9]+]], [[A1]];
+; CHECK-DAG:  cvt.f32.f16        [[FB1:%f[0-9]+]], [[B1]];
 ; -- frem(a[0],b[0]).
-; CHECK-DAG:  div.rn.f32      [[FD0:%f[0-9]+]], [[FA0]], [[FB0]];
-; CHECK-DAG:  cvt.rzi.f32.f32 [[DI0:%f[0-9]+]], [[FD0]];
-; CHECK-DAG:  mul.f32         [[RI0:%f[0-9]+]], [[DI0]], [[FB0]];
-; CHECK-DAG:  sub.f32         [[RF0:%f[0-9]+]], [[FA0]], [[RI0]];
+; CHECK-DAG:  div.rn.f32         [[FD0:%f[0-9]+]], [[FA0]], [[FB0]];
+; CHECK-DAG:  cvt.rzi.f32.f32    [[DI0:%f[0-9]+]], [[FD0]];
+; CHECK-DAG:  mul.f32            [[RI0:%f[0-9]+]], [[DI0]], [[FB0]];
+; CHECK-DAG:  sub.f32            [[RFNINF0:%f[0-9]+]], [[FA0]], [[RI0]];
+; CHECK-DAG:  testp.infinite.f32 [[ISB0INF:%p[0-9]+]], [[FB0]];
+; CHECK-DAG:  selp.f32           [[RF0:%f[0-9]+]], [[FA0]], [[RFNINF0]], [[ISB0INF]];
 ; -- frem(a[1],b[1]).
-; CHECK-DAG:  div.rn.f32      [[FD1:%f[0-9]+]], [[FA1]], [[FB1]];
-; CHECK-DAG:  cvt.rzi.f32.f32 [[DI1:%f[0-9]+]], [[FD1]];
-; CHECK-DAG:  mul.f32         [[RI1:%f[0-9]+]], [[DI1]], [[FB1]];
-; CHECK-DAG:  sub.f32         [[RF1:%f[0-9]+]], [[FA1]], [[RI1]];
+; CHECK-DAG:  div.rn.f32         [[FD1:%f[0-9]+]], [[FA1]], [[FB1]];
+; CHECK-DAG:  cvt.rzi.f32.f32    [[DI1:%f[0-9]+]], [[FD1]];
+; CHECK-DAG:  mul.f32            [[RI1:%f[0-9]+]], [[DI1]], [[FB1]];
+; CHECK-DAG:  sub.f32            [[RFNINF1:%f[0-9]+]], [[FA1]], [[RI1]];
+; CHECK-DAG:  testp.infinite.f32 [[ISB1INF:%p[0-9]+]], [[FB1]];
+; CHECK-DAG:  selp.f32           [[RF1:%f[0-9]+]], [[FA1]], [[RFNINF1]], [[ISB1INF]];
 ; -- convert back to f16.
 ; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%h[0-9]+]], [[RF0]];
 ; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%h[0-9]+]], [[RF1]];
@@ -279,9 +283,9 @@ define <2 x half> @test_frem(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK:        mov.b32         {[[E0:%h[0-9]+]], [[E1:%h[0-9]+]]}, [[E]];
 ; CHECK-DAG:    st.v2.b16       [%[[B]]], {[[E0]], [[E1]]};
 ; CHECK:        ret;
-define void @test_ldst_v2f16(<2 x half>* %a, <2 x half>* %b) {
-  %t1 = load <2 x half>, <2 x half>* %a
-  store <2 x half> %t1, <2 x half>* %b, align 16
+define void @test_ldst_v2f16(ptr %a, ptr %b) {
+  %t1 = load <2 x half>, ptr %a
+  store <2 x half> %t1, ptr %b, align 16
   ret void
 }
 
@@ -296,9 +300,9 @@ define void @test_ldst_v2f16(<2 x half>* %a, <2 x half>* %b) {
 ; CHECK-DAG:    st.u32          [%[[B]]],
 ; CHECK-DAG:    st.b16          [%[[B]]+4],
 ; CHECK:        ret;
-define void @test_ldst_v3f16(<3 x half>* %a, <3 x half>* %b) {
-  %t1 = load <3 x half>, <3 x half>* %a
-  store <3 x half> %t1, <3 x half>* %b, align 16
+define void @test_ldst_v3f16(ptr %a, ptr %b) {
+  %t1 = load <3 x half>, ptr %a
+  store <3 x half> %t1, ptr %b, align 16
   ret void
 }
 
@@ -308,9 +312,9 @@ define void @test_ldst_v3f16(<3 x half>* %a, <3 x half>* %b) {
 ; CHECK-DAG:    ld.v4.b16       {[[E0:%h[0-9]+]], [[E1:%h[0-9]+]], [[E2:%h[0-9]+]], [[E3:%h[0-9]+]]}, [%[[A]]];
 ; CHECK-DAG:    st.v4.b16       [%[[B]]], {[[E0]], [[E1]], [[E2]], [[E3]]};
 ; CHECK:        ret;
-define void @test_ldst_v4f16(<4 x half>* %a, <4 x half>* %b) {
-  %t1 = load <4 x half>, <4 x half>* %a
-  store <4 x half> %t1, <4 x half>* %b, align 16
+define void @test_ldst_v4f16(ptr %a, ptr %b) {
+  %t1 = load <4 x half>, ptr %a
+  store <4 x half> %t1, ptr %b, align 16
   ret void
 }
 
@@ -320,9 +324,9 @@ define void @test_ldst_v4f16(<4 x half>* %a, <4 x half>* %b) {
 ; CHECK-DAG:    ld.v4.b32       {[[E0:%r[0-9]+]], [[E1:%r[0-9]+]], [[E2:%r[0-9]+]], [[E3:%r[0-9]+]]}, [%[[A]]];
 ; CHECK-DAG:    st.v4.b32       [%[[B]]], {[[E0]], [[E1]], [[E2]], [[E3]]};
 ; CHECK:        ret;
-define void @test_ldst_v8f16(<8 x half>* %a, <8 x half>* %b) {
-  %t1 = load <8 x half>, <8 x half>* %a
-  store <8 x half> %t1, <8 x half>* %b, align 16
+define void @test_ldst_v8f16(ptr %a, ptr %b) {
+  %t1 = load <8 x half>, ptr %a
+  store <8 x half> %t1, ptr %b, align 16
   ret void
 }
 
@@ -1059,6 +1063,7 @@ declare <2 x half> @llvm.trunc.f16(<2 x half> %a) #0
 declare <2 x half> @llvm.rint.f16(<2 x half> %a) #0
 declare <2 x half> @llvm.nearbyint.f16(<2 x half> %a) #0
 declare <2 x half> @llvm.round.f16(<2 x half> %a) #0
+declare <2 x half> @llvm.roundeven.f16(<2 x half> %a) #0
 declare <2 x half> @llvm.fmuladd.f16(<2 x half> %a, <2 x half> %b, <2 x half> %c) #0
 
 ; CHECK-LABEL: test_sqrt(
@@ -1423,6 +1428,19 @@ define <2 x half> @test_rint(<2 x half> %a) #0 {
 ; CHECK:      ret;
 define <2 x half> @test_nearbyint(<2 x half> %a) #0 {
   %r = call <2 x half> @llvm.nearbyint.f16(<2 x half> %a)
+  ret <2 x half> %r
+}
+
+; CHECK-LABEL: test_roundeven(
+; CHECK:      ld.param.b32    [[A:%hh[0-9]+]], [test_roundeven_param_0];
+; CHECK-DAG:  mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]];
+; CHECK-DAG:  cvt.rni.f16.f16 [[R1:%h[0-9]+]], [[A1]];
+; CHECK-DAG:  cvt.rni.f16.f16 [[R0:%h[0-9]+]], [[A0]];
+; CHECK:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK:      st.param.b32    [func_retval0+0], [[R]];
+; CHECK:      ret;
+define <2 x half> @test_roundeven(<2 x half> %a) #0 {
+  %r = call <2 x half> @llvm.roundeven.f16(<2 x half> %a)
   ret <2 x half> %r
 }
 

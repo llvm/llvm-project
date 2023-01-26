@@ -20,10 +20,10 @@ static_assert(sizeof(pthread_t) == sizeof(__llvm_libc::Thread),
               "Mismatch between pthread_t and internal Thread.");
 
 LLVM_LIBC_FUNCTION(int, pthread_create,
-                   (pthread_t *__restrict th,
-                    const pthread_attr_t *__restrict attr,
+                   (pthread_t *__restrict th, const pthread_attr_t *__restrict,
                     __pthread_start_t func, void *arg)) {
   auto *thread = reinterpret_cast<__llvm_libc::Thread *>(th);
+  // TODO: Use the attributes parameter to set up thread properties.
   int result = thread->run(func, arg, nullptr, 0);
   if (result != 0 && result != EPERM)
     return EAGAIN;

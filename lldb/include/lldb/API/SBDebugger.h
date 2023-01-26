@@ -94,6 +94,8 @@ public:
 
   static void PrintStackTraceOnError();
 
+  static void PrintDiagnosticsOnError();
+
   static void Terminate();
 
   // Deprecated, use the one that takes a source_init_files bool.
@@ -114,6 +116,21 @@ public:
   bool IsValid() const;
 
   void Clear();
+
+  /// Getting a specific setting value into SBStructuredData format.
+  /// Client can specify empty string or null to get all settings.
+  ///
+  /// Example usages:
+  /// lldb::SBStructuredData settings = debugger.GetSetting();
+  /// lldb::SBStructuredData settings = debugger.GetSetting(nullptr);
+  /// lldb::SBStructuredData settings = debugger.GetSetting("");
+  /// lldb::SBStructuredData settings = debugger.GetSetting("target.arg0");
+  /// lldb::SBStructuredData settings = debugger.GetSetting("target");
+  ///
+  /// \param[out] setting
+  ///   Property setting path to retrieve values. e.g "target.source-map"
+  ///
+  lldb::SBStructuredData GetSetting(const char *setting = nullptr);
 
   void SetAsync(bool b);
 

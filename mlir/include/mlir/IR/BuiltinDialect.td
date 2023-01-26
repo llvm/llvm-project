@@ -34,7 +34,8 @@ def Builtin_Dialect : Dialect {
 
   public:
   }];
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
+
+  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 #endif // BUILTIN_BASE

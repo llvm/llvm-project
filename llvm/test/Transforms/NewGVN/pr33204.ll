@@ -20,20 +20,20 @@ define void @hoge(i32 %arg) {
 ; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ 0, [[BB1:%.*]] ], [ [[ARG:%.*]], [[BB:%.*]] ]
 ; CHECK-NEXT:    br label [[BB6:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* @global, align 4, !h !0
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr @global, align 4, !h !0
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb6:
-; CHECK-NEXT:    store i32 [[TMP]], i32* @global.1, align 4, !h !0
+; CHECK-NEXT:    store i32 [[TMP]], ptr @global.1, align 4, !h !0
 ; CHECK-NEXT:    br i1 undef, label [[BB7:%.*]], label [[BB1]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    br i1 undef, label [[BB10:%.*]], label [[BB8:%.*]]
 ; CHECK:       bb8:
 ; CHECK-NEXT:    br i1 false, label [[BB9:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb9:
-; CHECK-NEXT:    store i8 poison, i8* null, align 1
+; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    store i32 0, i32* @global, align 4, !h !0
+; CHECK-NEXT:    store i32 0, ptr @global, align 4, !h !0
 ; CHECK-NEXT:    br label [[BB7]]
 ;
 bb:
@@ -47,12 +47,12 @@ bb2:                                              ; preds = %bb1, %bb
   br label %bb6
 
 bb3:                                              ; preds = %bb9, %bb8
-  %tmp4 = load i32, i32* @global, !h !0
+  %tmp4 = load i32, ptr @global, !h !0
   %tmp5 = icmp eq i32 %tmp4, 0
   unreachable
 
 bb6:                                              ; preds = %bb2
-  store i32 %tmp, i32* @global.1, !h !0
+  store i32 %tmp, ptr @global.1, !h !0
   br i1 undef, label %bb7, label %bb1
 
 bb7:                                              ; preds = %bb10, %bb6
@@ -66,7 +66,7 @@ bb9:                                              ; preds = %bb8
   br label %bb3
 
 bb10:                                             ; preds = %bb7
-  store i32 0, i32* @global, !h !0
+  store i32 0, ptr @global, !h !0
   br label %bb7
 }
 

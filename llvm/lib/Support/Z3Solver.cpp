@@ -870,7 +870,7 @@ public:
     return toAPFloat(Sort, Assign, Float, true);
   }
 
-  Optional<bool> check() const override {
+  std::optional<bool> check() const override {
     Z3_lbool res = Z3_solver_check(Context.Context, Solver);
     if (res == Z3_L_TRUE)
       return true;
@@ -878,7 +878,7 @@ public:
     if (res == Z3_L_FALSE)
       return false;
 
-    return Optional<bool>();
+    return std::nullopt;
   }
 
   void push() override { return Z3_solver_push(Context.Context, Solver); }

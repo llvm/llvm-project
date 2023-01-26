@@ -17,8 +17,7 @@
 ; CHECK-NEXT:       - .offset:         24
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_global_offset_z
-; CHECK-NEXT:       - .address_space:  global
-; CHECK-NEXT:         .offset:         32
+; CHECK-NEXT:       - .offset:         32
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_hostcall_buffer
 ; CHECK:          .language:       OpenCL C

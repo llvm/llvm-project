@@ -74,35 +74,35 @@ define dso_local void @blam() local_unnamed_addr #0 {
 ; CHECK-NEXT:  .LBB0_2: // %bb19
 ; CHECK-NEXT:    ret
 bb:
-  %tmp = load i8, i8* getelementptr inbounds (%struct.blam, %struct.blam* @global, i32 0, i32 7, i32 9), align 2, !tbaa !3
+  %tmp = load i8, ptr getelementptr inbounds (%struct.blam, ptr @global, i32 0, i32 7, i32 9), align 2, !tbaa !3
   %tmp1 = and i8 %tmp, 1
   %tmp2 = icmp eq i8 %tmp1, 0
   br i1 %tmp2, label %bb3, label %bb19
 
 bb3:                                              ; preds = %bb
-  %tmp4 = load volatile i32, i32* inttoptr (i32 805874688 to i32*), align 1024, !tbaa !23
-  store i32 %tmp4, i32* getelementptr inbounds (%struct.blam, %struct.blam* @global, i32 0, i32 13, i32 0, i32 0), align 4, !tbaa !23
-  %tmp5 = load volatile i32, i32* inttoptr (i32 805874692 to i32*), align 4, !tbaa !23
+  %tmp4 = load volatile i32, ptr inttoptr (i32 805874688 to ptr), align 1024, !tbaa !23
+  store i32 %tmp4, ptr getelementptr inbounds (%struct.blam, ptr @global, i32 0, i32 13, i32 0, i32 0), align 4, !tbaa !23
+  %tmp5 = load volatile i32, ptr inttoptr (i32 805874692 to ptr), align 4, !tbaa !23
   %tmp6 = and i32 %tmp5, 65535
-  store i32 %tmp6, i32* getelementptr inbounds (%struct.blam, %struct.blam* @global, i32 0, i32 13, i32 0, i32 1), align 4, !tbaa !23
-  %tmp7 = load volatile i32, i32* inttoptr (i32 805874696 to i32*), align 8, !tbaa !23
+  store i32 %tmp6, ptr getelementptr inbounds (%struct.blam, ptr @global, i32 0, i32 13, i32 0, i32 1), align 4, !tbaa !23
+  %tmp7 = load volatile i32, ptr inttoptr (i32 805874696 to ptr), align 8, !tbaa !23
   %tmp8 = and i32 %tmp7, 522133279
-  store i32 %tmp8, i32* getelementptr inbounds (%struct.blam, %struct.blam* @global, i32 0, i32 13, i32 0, i32 2), align 4, !tbaa !23
-  %tmp9 = load volatile i32, i32* inttoptr (i32 805874700 to i32*), align 4, !tbaa !23
+  store i32 %tmp8, ptr getelementptr inbounds (%struct.blam, ptr @global, i32 0, i32 13, i32 0, i32 2), align 4, !tbaa !23
+  %tmp9 = load volatile i32, ptr inttoptr (i32 805874700 to ptr), align 4, !tbaa !23
   %tmp10 = and i32 %tmp9, 522133279
-  store i32 %tmp10, i32* getelementptr inbounds (%struct.blam, %struct.blam* @global, i32 0, i32 13, i32 0, i32 3), align 4, !tbaa !23
-  %tmp11 = load volatile i32, i32* inttoptr (i32 805874860 to i32*), align 4, !tbaa !23
+  store i32 %tmp10, ptr getelementptr inbounds (%struct.blam, ptr @global, i32 0, i32 13, i32 0, i32 3), align 4, !tbaa !23
+  %tmp11 = load volatile i32, ptr inttoptr (i32 805874860 to ptr), align 4, !tbaa !23
   %tmp12 = and i32 %tmp11, 16777215
-  store i32 %tmp12, i32* getelementptr inbounds (%struct.blam, %struct.blam* @global, i32 0, i32 13, i32 15), align 4, !tbaa !24
-  %tmp13 = load volatile i32, i32* inttoptr (i32 805874864 to i32*), align 16, !tbaa !23
+  store i32 %tmp12, ptr getelementptr inbounds (%struct.blam, ptr @global, i32 0, i32 13, i32 15), align 4, !tbaa !24
+  %tmp13 = load volatile i32, ptr inttoptr (i32 805874864 to ptr), align 16, !tbaa !23
   %tmp14 = and i32 %tmp13, 16777215
-  store i32 %tmp14, i32* getelementptr inbounds (%struct.blam, %struct.blam* @global, i32 0, i32 13, i32 16), align 4, !tbaa !25
-  %tmp15 = load volatile i32, i32* inttoptr (i32 805874868 to i32*), align 4, !tbaa !23
+  store i32 %tmp14, ptr getelementptr inbounds (%struct.blam, ptr @global, i32 0, i32 13, i32 16), align 4, !tbaa !25
+  %tmp15 = load volatile i32, ptr inttoptr (i32 805874868 to ptr), align 4, !tbaa !23
   %tmp16 = and i32 %tmp15, 16777215
-  store i32 %tmp16, i32* getelementptr inbounds (%struct.blam, %struct.blam* @global, i32 0, i32 13, i32 17), align 4, !tbaa !26
-  %tmp17 = load volatile i32, i32* inttoptr (i32 805874872 to i32*), align 8, !tbaa !23
+  store i32 %tmp16, ptr getelementptr inbounds (%struct.blam, ptr @global, i32 0, i32 13, i32 17), align 4, !tbaa !26
+  %tmp17 = load volatile i32, ptr inttoptr (i32 805874872 to ptr), align 8, !tbaa !23
   %tmp18 = and i32 %tmp17, 16777215
-  store i32 %tmp18, i32* getelementptr inbounds (%struct.blam, %struct.blam* @global, i32 0, i32 13, i32 18), align 4, !tbaa !27
+  store i32 %tmp18, ptr getelementptr inbounds (%struct.blam, ptr @global, i32 0, i32 13, i32 18), align 4, !tbaa !27
   br label %bb19
 
 bb19:                                             ; preds = %bb3, %bb

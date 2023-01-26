@@ -22,6 +22,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_DEX_TOKEN_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_DEX_TOKEN_H
 
+#include "llvm/ADT/Hashing.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 #include <vector>

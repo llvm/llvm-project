@@ -1,5 +1,5 @@
-; RUN: opt < %s -debug-only=loop-vectorize -loop-vectorize -vectorizer-maximize-bandwidth -mtriple=x86_64-unknown-linux -S 2>&1 | FileCheck %s
-; RUN: opt < %s -debug-only=loop-vectorize -loop-vectorize -vectorizer-maximize-bandwidth -mtriple=x86_64-unknown-linux -mattr=+avx512f -S 2>&1 | FileCheck %s --check-prefix=AVX512F
+; RUN: opt < %s -debug-only=loop-vectorize -passes=loop-vectorize -vectorizer-maximize-bandwidth -mtriple=x86_64-unknown-linux -S 2>&1 | FileCheck %s
+; RUN: opt < %s -debug-only=loop-vectorize -passes=loop-vectorize -vectorizer-maximize-bandwidth -mtriple=x86_64-unknown-linux -mattr=+avx512f -S 2>&1 | FileCheck %s --check-prefix=AVX512F
 ; REQUIRES: asserts
 
 @a = global [1024 x i8] zeroinitializer, align 16
@@ -31,11 +31,11 @@ for.cond.cleanup:
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %s.015 = phi i32 [ 0, %entry ], [ %add, %for.body ]
-  %arrayidx = getelementptr inbounds [1024 x i8], [1024 x i8]* @a, i64 0, i64 %indvars.iv
-  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds [1024 x i8], ptr @a, i64 0, i64 %indvars.iv
+  %0 = load i8, ptr %arrayidx, align 1
   %conv = zext i8 %0 to i32
-  %arrayidx2 = getelementptr inbounds [1024 x i8], [1024 x i8]* @b, i64 0, i64 %indvars.iv
-  %1 = load i8, i8* %arrayidx2, align 1
+  %arrayidx2 = getelementptr inbounds [1024 x i8], ptr @b, i64 0, i64 %indvars.iv
+  %1 = load i8, ptr %arrayidx2, align 1
   %conv3 = zext i8 %1 to i32
   %sub = sub nsw i32 %conv, %conv3
   %ispos = icmp sgt i32 %sub, -1
@@ -73,12 +73,12 @@ for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %s.015 = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %tmp1 = add nsw i64 %indvars.iv, 3
-  %arrayidx = getelementptr inbounds [1024 x i8], [1024 x i8]* @a, i64 0, i64 %tmp1
-  %tmp = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds [1024 x i8], ptr @a, i64 0, i64 %tmp1
+  %tmp = load i8, ptr %arrayidx, align 1
   %conv = zext i8 %tmp to i32
   %tmp2 = add nsw i64 %indvars.iv, 2
-  %arrayidx2 = getelementptr inbounds [1024 x i8], [1024 x i8]* @b, i64 0, i64 %tmp2
-  %tmp3 = load i8, i8* %arrayidx2, align 1
+  %arrayidx2 = getelementptr inbounds [1024 x i8], ptr @b, i64 0, i64 %tmp2
+  %tmp3 = load i8, ptr %arrayidx2, align 1
   %conv3 = zext i8 %tmp3 to i32
   %sub = sub nsw i32 %conv, %conv3
   %ispos = icmp sgt i32 %sub, -1
@@ -90,7 +90,7 @@ for.body:                                         ; preds = %for.body, %entry
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-define i64 @bar(i64* nocapture %a) {
+define i64 @bar(ptr nocapture %a) {
 ; CHECK-LABEL: bar
 ; CHECK:       LV(REG): VF = 2
 ; CHECK-NEXT: LV(REG): Found max usage: 2 item
@@ -108,10 +108,10 @@ for.cond.cleanup:
 for.body:
   %i.012 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   %s.011 = phi i64 [ 0, %entry ], [ %add2, %for.body ]
-  %arrayidx = getelementptr inbounds i64, i64* %a, i64 %i.012
-  %0 = load i64, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %a, i64 %i.012
+  %0 = load i64, ptr %arrayidx, align 8
   %add = add nsw i64 %0, %i.012
-  store i64 %add, i64* %arrayidx, align 8
+  store i64 %add, ptr %arrayidx, align 8
   %add2 = add nsw i64 %add, %s.011
   %inc = add nuw nsw i64 %i.012, 1
   %exitcond = icmp eq i64 %inc, 1024
@@ -138,12 +138,12 @@ entry:
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds [0 x i64], [0 x i64]* @d, i64 0, i64 %indvars.iv
-  %tmp = load i64, i64* %arrayidx, align 8
-  %arrayidx1 = getelementptr inbounds [0 x i32], [0 x i32]* @e, i64 0, i64 %tmp
-  %tmp1 = load i32, i32* %arrayidx1, align 4
-  %arrayidx3 = getelementptr inbounds [0 x i32], [0 x i32]* @c, i64 0, i64 %indvars.iv
-  store i32 %tmp1, i32* %arrayidx3, align 4
+  %arrayidx = getelementptr inbounds [0 x i64], ptr @d, i64 0, i64 %indvars.iv
+  %tmp = load i64, ptr %arrayidx, align 8
+  %arrayidx1 = getelementptr inbounds [0 x i32], ptr @e, i64 0, i64 %tmp
+  %tmp1 = load i32, ptr %arrayidx1, align 4
+  %arrayidx3 = getelementptr inbounds [0 x i32], ptr @c, i64 0, i64 %indvars.iv
+  store i32 %tmp1, ptr %arrayidx3, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 10000
   br i1 %exitcond, label %for.end, label %for.body

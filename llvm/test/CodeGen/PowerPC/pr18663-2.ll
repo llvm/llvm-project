@@ -4,19 +4,19 @@
 %"class.std::__1::locale::id.1580.4307.4610.8491" = type { %"struct.std::__1::once_flag.1579.4306.4609.8490", i32 }
 %"struct.std::__1::once_flag.1579.4306.4609.8490" = type { i64 }
 %"class.Foam::IOerror.1581.4308.4611.8505" = type { %"class.Foam::error.1535.4262.4565.8504", %"class.Foam::string.1530.4257.4560.8499", i32, i32 }
-%"class.Foam::error.1535.4262.4565.8504" = type { %"class.std::exception.1523.4250.4553.8492", [36 x i8], %"class.Foam::string.1530.4257.4560.8499", %"class.Foam::string.1530.4257.4560.8499", i32, i8, i8, %"class.Foam::OStringStream.1534.4261.4564.8503"* }
-%"class.std::exception.1523.4250.4553.8492" = type { i32 (...)** }
+%"class.Foam::error.1535.4262.4565.8504" = type { %"class.std::exception.1523.4250.4553.8492", [36 x i8], %"class.Foam::string.1530.4257.4560.8499", %"class.Foam::string.1530.4257.4560.8499", i32, i8, i8, ptr }
+%"class.std::exception.1523.4250.4553.8492" = type { ptr }
 %"class.Foam::OStringStream.1534.4261.4564.8503" = type { %"class.Foam::OSstream.1533.4260.4563.8502" }
-%"class.Foam::OSstream.1533.4260.4563.8502" = type { [50 x i8], %"class.Foam::fileName.1531.4258.4561.8500", %"class.std::__1::basic_ostream.1532.4259.4562.8501"* }
+%"class.Foam::OSstream.1533.4260.4563.8502" = type { [50 x i8], %"class.Foam::fileName.1531.4258.4561.8500", ptr }
 %"class.Foam::fileName.1531.4258.4561.8500" = type { %"class.Foam::string.1530.4257.4560.8499" }
-%"class.std::__1::basic_ostream.1532.4259.4562.8501" = type { i32 (...)**, [148 x i8] }
+%"class.std::__1::basic_ostream.1532.4259.4562.8501" = type { ptr, [148 x i8] }
 %"class.Foam::string.1530.4257.4560.8499" = type { %"class.std::__1::basic_string.1529.4256.4559.8498" }
 %"class.std::__1::basic_string.1529.4256.4559.8498" = type { %"class.std::__1::__compressed_pair.1528.4255.4558.8497" }
 %"class.std::__1::__compressed_pair.1528.4255.4558.8497" = type { %"class.std::__1::__libcpp_compressed_pair_imp.1527.4254.4557.8496" }
 %"class.std::__1::__libcpp_compressed_pair_imp.1527.4254.4557.8496" = type { %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep.1526.4253.4556.8495" }
 %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep.1526.4253.4556.8495" = type { %union.anon.1525.4252.4555.8494 }
 %union.anon.1525.4252.4555.8494 = type { %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__long.1524.4251.4554.8493" }
-%"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__long.1524.4251.4554.8493" = type { i64, i64, i8* }
+%"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__long.1524.4251.4554.8493" = type { i64, i64, ptr }
 
 @.str3 = external unnamed_addr constant [16 x i8], align 1
 @_ZNSt3__15ctypeIcE2idE = external global %"class.std::__1::locale::id.1580.4307.4610.8491"
@@ -46,7 +46,7 @@ declare void @_ZN4Foam7IOerror4exitEi() #0
 ; Function Attrs: inlinehint
 declare void @_ZN4Foam8fileName12stripInvalidEv() #2 align 2
 
-define void @_ZN4Foam3CSVINS_6VectorIdEEE4readEv() #0 align 2 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @_ZN4Foam3CSVINS_6VectorIdEEE4readEv() #0 align 2 personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @_ZN4Foam6string6expandEb()
           to label %invoke.cont unwind label %lpad
@@ -66,7 +66,7 @@ _ZN4Foam6stringC2ERKS0_.exit.i:                   ; preds = %invoke.cont
           to label %invoke.cont2 unwind label %lpad.i
 
 lpad.i:                                           ; preds = %_ZN4Foam6stringC2ERKS0_.exit.i
-  %0 = landingpad { i8*, i32 }
+  %0 = landingpad { ptr, i32 }
           cleanup
   br label %ehcleanup142
 
@@ -90,17 +90,17 @@ memptr.end.i:                                     ; preds = %invoke.cont8
           to label %if.end unwind label %lpad5
 
 lpad:                                             ; preds = %if.then.i.i.i.i176, %entry
-  %1 = landingpad { i8*, i32 }
+  %1 = landingpad { ptr, i32 }
           cleanup
   br label %ehcleanup142
 
 lpad3:                                            ; preds = %invoke.cont2
-  %2 = landingpad { i8*, i32 }
+  %2 = landingpad { ptr, i32 }
           cleanup
   br label %ehcleanup142
 
 lpad5:                                            ; preds = %memptr.end.i, %invoke.cont8, %if.then
-  %3 = landingpad { i8*, i32 }
+  %3 = landingpad { ptr, i32 }
           cleanup
   br label %ehcleanup142
 
@@ -119,12 +119,12 @@ invoke.cont.i.i.i:                                ; preds = %.noexc205
   unreachable
 
 lpad.i.i.i:                                       ; preds = %.noexc205
-  %4 = landingpad { i8*, i32 }
+  %4 = landingpad { ptr, i32 }
           cleanup
   br label %ehcleanup142
 
 lpad19:                                           ; preds = %for.body
-  %5 = landingpad { i8*, i32 }
+  %5 = landingpad { ptr, i32 }
           cleanup
   br label %ehcleanup142
 
@@ -144,7 +144,7 @@ vector.body:                                      ; preds = %vector.body, %if.en
   br label %vector.body
 
 ehcleanup142:                                     ; preds = %lpad19, %lpad.i.i.i, %lpad5, %lpad3, %lpad, %lpad.i
-  resume { i8*, i32 } undef
+  resume { ptr, i32 } undef
 }
 
 attributes #0 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

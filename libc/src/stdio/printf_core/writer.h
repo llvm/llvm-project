@@ -9,12 +9,15 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_WRITER_H
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_WRITER_H
 
+#include "src/__support/CPP/string_view.h"
 #include <stddef.h>
 
 namespace __llvm_libc {
 namespace printf_core {
 
-using WriteFunc = int (*)(void *, const char *__restrict, size_t);
+using WriteStrFunc = int (*)(void *, cpp::string_view);
+using WriteCharsFunc = int (*)(void *, char, size_t);
+using WriteCharFunc = int (*)(void *, char);
 
 class Writer final {
   // output is a pointer to the string or file that the writer is meant to write
@@ -25,23 +28,31 @@ class Writer final {
   // length, will copy the number of bytes equal to the length from the char*
   // onto the end of output. It should return a positive number or zero on
   // success, or a negative number on failure.
-  WriteFunc raw_write;
+  WriteStrFunc str_write;
+  WriteCharsFunc chars_write;
+  WriteCharFunc char_write;
 
   int chars_written = 0;
 
 public:
-  Writer(void *init_output, WriteFunc init_raw_write)
-      : output(init_output), raw_write(init_raw_write) {}
+  Writer(void *init_output, WriteStrFunc init_str_write,
+         WriteCharsFunc init_chars_write, WriteCharFunc init_char_write)
+      : output(init_output), str_write(init_str_write),
+        chars_write(init_chars_write), char_write(init_char_write) {}
 
-  // write will copy length bytes from new_string into output using
-  // raw_write. It increments chars_written by length always. It returns the
-  // result of raw_write.
-  int write(const char *new_string, size_t length);
+  // write will copy new_string into output using str_write. It increments
+  // chars_written by the length of new_string. It returns the result of
+  // str_write.
+  int write(cpp::string_view new_string);
 
-  // write_chars will copy length copies of new_char into output using the write
-  // function and a statically sized buffer. This is primarily used for padding.
-  // If write returns a negative value, this will return early with that value.
-  int write_chars(char new_char, size_t length);
+  // this version of write will copy length copies of new_char into output using
+  // chars_write. This is primarily used for padding.  It returns the result of
+  // chars_write.
+  int write(char new_char, size_t len);
+
+  // this version of write will copy just new_char into output. This is often
+  // used for negative signs. It returns the result of chars_write.
+  int write(char new_char);
 
   int get_chars_written() { return chars_written; }
 };

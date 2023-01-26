@@ -7,19 +7,21 @@
 ;; vreg that is never defined, which risks a crash. Check that we don't crash,
 ;; and produce an empty variable location.
 
-; CHECK: DBG_VALUE $noreg
+; CHECK: DBG_VALUE_LIST {{.+}}, $noreg
+; CHECK: DBG_VALUE_LIST {{.+}}, $noreg, 4
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"
 
 %class.Color = type { i8 }
 
-define hidden void @_Z14drawXZWideLineR4Vec3RK5Colorf(%class.Color* %color, float %width) local_unnamed_addr !dbg !7 {
+define hidden void @_Z14drawXZWideLineR4Vec3RK5Colorf(ptr %color, float %width) local_unnamed_addr !dbg !7 {
 cond.false.i:
   br label %_ZN4Vec39normalizeEv.exit, !dbg !12
 
 _ZN4Vec39normalizeEv.exit:                        ; preds = %cond.false.i
   call void @llvm.dbg.value(metadata float %width, metadata !11, metadata !DIExpression()), !dbg !12
+  call void @llvm.dbg.value(metadata !DIArgList(float %width, i32 4), metadata !11, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_mul, DW_OP_stack_value)), !dbg !12
   %mul.i = fmul float %width, 0.000000e+00, !dbg !12
   ret void, !dbg !12
 }

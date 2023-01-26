@@ -1,4 +1,4 @@
-; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64-pc-windows-msvc19.11.0 -mattr=+avx,+cx16 | FileCheck %s
+; RUN: llc < %s -verify-machineinstrs -stackrealign -mtriple=x86_64-pc-windows-msvc19.11.0 -mattr=+avx,+cx16 | FileCheck %s
 
 %struct.TestStruct = type { %union.Int128 }
 %union.Int128 = type { i128 }

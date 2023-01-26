@@ -13,7 +13,7 @@
 ; MACHO: @__llvm_profile_runtime = external hidden global i32
 ; ELF_GENERIC: @__llvm_profile_runtime = external hidden global i32
 ; ELF-NOT: @__llvm_profile_runtime = external global i32
-; XCOFF: @__llvm_profile_runtime = external hidden global i32
+; XCOFF-NOT: @__llvm_profile_runtime = external hidden global i32
 ; COFF: @__llvm_profile_runtime = external hidden global i32
 
 ; ELF: $__profc_foo = comdat nodeduplicate
@@ -87,7 +87,7 @@ define linkonce_odr void @foo_inline() {
 ; MACHO: @__profc_foo_extern = linkonce_odr hidden global
 ; MACHO: @__profd_foo_extern = linkonce_odr hidden global
 ; COFF: @__profc_foo_extern = linkonce_odr hidden global {{.*}}section ".lprfc$M", comdat, align 8
-; COFF: @__profd_foo_extern = private global {{.*}}section ".lprfd$M", comdat($__profc_foo_extern), align 8
+; COFF: @__profd_foo_extern = internal global {{.*}}section ".lprfd$M", comdat($__profc_foo_extern), align 8
 ; XCOFF: @__profc_foo_extern = private global
 ; XCOFF: @__profd_foo_extern = private global
 define available_externally void @foo_extern() {
@@ -101,7 +101,7 @@ declare void @llvm.instrprof.increment(ptr, i64, i32, i32)
 ; ELF_GENERIC: @llvm.compiler.used = appending global [6 x ptr] [ptr @__llvm_profile_runtime, ptr @__profd_foo, ptr @__profd_foo_weak, ptr @"__profd_linkage.ll:foo_internal", ptr @__profd_foo_inline, ptr @__profd_foo_extern]
 ; MACHO:       @llvm.compiler.used = appending global [6 x ptr] [ptr @__llvm_profile_runtime_user, ptr @__profd_foo, {{.*}}
 ; COFF:        @llvm.compiler.used = appending global [6 x ptr] [ptr @__llvm_profile_runtime_user, ptr @__profd_foo, ptr @__profd_foo_weak, ptr @"__profd_linkage.ll:foo_internal", ptr @__profd_foo_inline, ptr @__profd_foo_extern]
-; XCOFF:       @llvm.used = appending global [7 x ptr] [ptr @__llvm_profile_runtime_user, ptr @__profd_foo, ptr @__profd_foo_weak, ptr @"__profd_linkage.ll:foo_internal", ptr @__profd_foo_inline, ptr @__profd_foo_extern, ptr @__llvm_prf_nm]
+; XCOFF:       @llvm.used = appending global [6 x ptr] [ptr @__profd_foo, ptr @__profd_foo_weak, ptr @"__profd_linkage.ll:foo_internal", ptr @__profd_foo_inline, ptr @__profd_foo_extern, ptr @__llvm_prf_nm]
 
 ; MACHO: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} {
 ; MACHO:   %[[REG:.*]] = load i32, ptr @__llvm_profile_runtime
@@ -112,10 +112,7 @@ declare void @llvm.instrprof.increment(ptr, i64, i32, i32)
 ; ELFRT-NOT:   %[[REG:.*]] = load i32, ptr @__llvm_profile_runtime
 ; PS: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} {
 ; PS:   %[[REG:.*]] = load i32, ptr @__llvm_profile_runtime
-; XCOFF: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} {
-; XCOFF:   %[[REG:.*]] = load i32, ptr @__llvm_profile_runtime
-; XCOFF:   ret i32 %[[REG]]
-; XCOFF: }
+; XCOFF-NOT: define .* __llvm_profile_runtime_user
 
 ; ELF_GENERIC:      define internal void @__llvm_profile_register_functions() unnamed_addr {
 ; ELF_GENERIC-NEXT:   call void @__llvm_profile_register_function(ptr @__llvm_profile_runtime)

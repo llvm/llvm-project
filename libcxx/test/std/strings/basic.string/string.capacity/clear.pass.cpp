@@ -24,34 +24,24 @@ test(S s)
     assert(s.size() == 0);
 }
 
+template <class S>
+TEST_CONSTEXPR_CXX20 void test_string() {
+  S s;
+  test(s);
+
+  s.assign(10, 'a');
+  s.erase(5);
+  test(s);
+
+  s.assign(100, 'a');
+  s.erase(50);
+  test(s);
+}
+
 TEST_CONSTEXPR_CXX20 bool test() {
-  {
-    typedef std::string S;
-    S s;
-    test(s);
-
-    s.assign(10, 'a');
-    s.erase(5);
-    test(s);
-
-    s.assign(100, 'a');
-    s.erase(50);
-    test(s);
-  }
+  test_string<std::string>();
 #if TEST_STD_VER >= 11
-  {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    S s;
-    test(s);
-
-    s.assign(10, 'a');
-    s.erase(5);
-    test(s);
-
-    s.assign(100, 'a');
-    s.erase(50);
-    test(s);
-  }
+  test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
 #endif
 
   return true;

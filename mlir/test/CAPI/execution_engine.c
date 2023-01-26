@@ -9,7 +9,7 @@
 
 /* RUN: mlir-capi-execution-engine-test 2>&1 | FileCheck %s
  */
-/* REQUIRES: native
+/* REQUIRES: host-supports-jit
  */
 
 #include "mlir-c/Conversion.h"
@@ -35,8 +35,8 @@ void lowerModuleToLLVM(MlirContext ctx, MlirModule module) {
   MlirOpPassManager opm = mlirPassManagerGetNestedUnder(
       pm, mlirStringRefCreateFromCString("func.func"));
   mlirPassManagerAddOwnedPass(pm, mlirCreateConversionConvertFuncToLLVM());
-  mlirOpPassManagerAddOwnedPass(opm,
-                                mlirCreateConversionConvertArithmeticToLLVM());
+  mlirOpPassManagerAddOwnedPass(
+      opm, mlirCreateConversionArithToLLVMConversionPass());
   MlirLogicalResult status = mlirPassManagerRun(pm, module);
   if (mlirLogicalResultIsFailure(status)) {
     fprintf(stderr, "Unexpected failure running pass pipeline\n");
@@ -46,7 +46,7 @@ void lowerModuleToLLVM(MlirContext ctx, MlirModule module) {
 }
 
 // CHECK-LABEL: Running test 'testSimpleExecution'
-void testSimpleExecution() {
+void testSimpleExecution(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
 
@@ -63,7 +63,8 @@ void testSimpleExecution() {
   lowerModuleToLLVM(ctx, module);
   mlirRegisterAllLLVMTranslations(ctx);
   MlirExecutionEngine jit = mlirExecutionEngineCreate(
-      module, /*optLevel=*/2, /*numPaths=*/0, /*sharedLibPaths=*/NULL);
+      module, /*optLevel=*/2, /*numPaths=*/0, /*sharedLibPaths=*/NULL,
+      /*enableObjectDump=*/false);
   if (mlirExecutionEngineIsNull(jit)) {
     fprintf(stderr, "Execution engine creation failed");
     exit(2);
@@ -83,7 +84,7 @@ void testSimpleExecution() {
   mlirContextDestroy(ctx);
 }
 
-int main() {
+int main(void) {
 
 #define _STRINGIFY(x) #x
 #define STRINGIFY(x) _STRINGIFY(x)

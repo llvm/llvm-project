@@ -85,6 +85,12 @@ llvm::raw_ostream &fir::operator<<(llvm::raw_ostream &os,
 }
 
 llvm::raw_ostream &fir::operator<<(llvm::raw_ostream &os,
+                                   const fir::PolymorphicValue &p) {
+  return os << "polymorphicvalue: { addr: " << p.getAddr()
+            << ", sourceBox: " << p.getSourceBox() << " }";
+}
+
+llvm::raw_ostream &fir::operator<<(llvm::raw_ostream &os,
                                    const fir::ArrayBoxValue &box) {
   os << "boxarray { addr: " << box.getAddr();
   if (box.getLBounds().size()) {
@@ -185,7 +191,7 @@ bool fir::MutableBoxValue::verify() const {
   mlir::Type type = fir::dyn_cast_ptrEleTy(getAddr().getType());
   if (!type)
     return false;
-  auto box = type.dyn_cast<fir::BoxType>();
+  auto box = type.dyn_cast<fir::BaseBoxType>();
   if (!box)
     return false;
   // A boxed value always takes a memory reference,
@@ -204,7 +210,7 @@ bool fir::MutableBoxValue::verify() const {
 /// Debug verifier for BoxValue ctor. There is no guarantee this will
 /// always be called.
 bool fir::BoxValue::verify() const {
-  if (!addr.getType().isa<fir::BoxType>())
+  if (!addr.getType().isa<fir::BaseBoxType>())
     return false;
   if (!lbounds.empty() && lbounds.size() != rank())
     return false;

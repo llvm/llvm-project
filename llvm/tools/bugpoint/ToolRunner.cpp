@@ -58,9 +58,9 @@ static int RunProgramWithTimeout(StringRef ProgramPath,
                                  unsigned NumSeconds = 0,
                                  unsigned MemoryLimit = 0,
                                  std::string *ErrMsg = nullptr) {
-  Optional<StringRef> Redirects[3] = {StdInFile, StdOutFile, StdErrFile};
-  return sys::ExecuteAndWait(ProgramPath, Args, None, Redirects, NumSeconds,
-                             MemoryLimit, ErrMsg);
+  std::optional<StringRef> Redirects[3] = {StdInFile, StdOutFile, StdErrFile};
+  return sys::ExecuteAndWait(ProgramPath, Args, std::nullopt, Redirects,
+                             NumSeconds, MemoryLimit, ErrMsg);
 }
 
 /// RunProgramRemotelyWithTimeout - This function runs the given program
@@ -73,11 +73,11 @@ static int RunProgramRemotelyWithTimeout(
     StringRef RemoteClientPath, ArrayRef<StringRef> Args, StringRef StdInFile,
     StringRef StdOutFile, StringRef StdErrFile, unsigned NumSeconds = 0,
     unsigned MemoryLimit = 0) {
-  Optional<StringRef> Redirects[3] = {StdInFile, StdOutFile, StdErrFile};
+  std::optional<StringRef> Redirects[3] = {StdInFile, StdOutFile, StdErrFile};
 
   // Run the program remotely with the remote client
-  int ReturnCode = sys::ExecuteAndWait(RemoteClientPath, Args, None, Redirects,
-                                       NumSeconds, MemoryLimit);
+  int ReturnCode = sys::ExecuteAndWait(RemoteClientPath, Args, std::nullopt,
+                                       Redirects, NumSeconds, MemoryLimit);
 
   // Has the remote client fail?
   if (255 == ReturnCode) {

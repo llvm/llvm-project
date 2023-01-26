@@ -185,6 +185,10 @@ N: Jacques Pienaar
 E: jpienaar@google.com
 D: Lanai Backend
 
+N: Simon Pilgrim
+E: llvm-dev@redking.me.uk
+D: X86 Backend
+
 N: Philip Reames
 E: listmail@philipreames.com
 D: IndVar Simplify, Scalar Evolution
@@ -196,6 +200,10 @@ D: Sony PlayStation®4 support
 N: Chad Rosier
 E: mcrosier@codeaurora.org
 D: Fast-Isel
+
+N: Andrei Safronov
+E: andrei.safronov@espressif.com
+D: Xtensa backend (lib/Target/Xtensa/*)
 
 N: Duncan Sands
 E: baldrick@free.fr
@@ -225,8 +233,8 @@ N: Evgeniy Stepanov
 E: eugenis@google.com
 D: MemorySanitizer (LLVM part)
 
-N: Craig Topper
-E: craig.topper@gmail.com
+N: Phoebe Wang
+E: phoebe.wang@intel.com
 D: X86 Backend
 
 N: Ulrich Weigand
@@ -250,5 +258,5 @@ E: zixuan.wu@linux.alibaba.com
 D: C-SKY backend (lib/Target/CSKY/*)
 
 N: Ilia Diachkov
-E: iliya.diyachkov@intel.com
+E: ilia.diachkov@gmail.com
 D: SPIR-V backend (lib/Target/SPIRV/*)

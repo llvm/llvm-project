@@ -257,7 +257,7 @@ set(CROSS_TOOLCHAIN_FLAGS_NATIVE "${_CTF_NATIVE_DEFAULT}" CACHE STRING "")
 set(COMPILE_FLAGS
     -D_CRT_SECURE_NO_WARNINGS
     --target=${TRIPLE_ARCH}-windows-msvc
-    -fms-compatibility-version=19.20
+    -fms-compatibility-version=19.27
     -vctoolsversion ${MSVC_VER}
     -winsdkversion ${WINSDK_VER}
     -winsysroot ${LLVM_WINSYSROOT})

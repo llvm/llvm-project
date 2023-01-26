@@ -14,7 +14,7 @@
 ;     A[0] = val;
 ; }
 ;
-define void @func(i32 %n, double* noalias nonnull %A) {
+define void @func(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -29,11 +29,11 @@ for:
       br i1 %cond, label %bodyA_true, label %bodyB
 
     bodyA_true:
-      store double 42.0, double* %A
+      store double 42.0, ptr %A
       br label %bodyB
 
     bodyB:
-      store double %val, double* %A
+      store double %val, ptr %A
       br label %bodyB_exit
 
     bodyB_exit:
@@ -72,7 +72,7 @@ return:
 ; CHECK:                 [n] -> { Stmt_bodyB[i0] -> MemRef_A[0] };
 ; CHECK:             Instructions {
 ; CHECK:                   %val = fadd double 2.100000e+01, 2.100000e+01
-; CHECK:                   store double %val, double* %A, align 8
+; CHECK:                   store double %val, ptr %A, align 8
 ; CHECK:             }
 ; CHECK: }
 

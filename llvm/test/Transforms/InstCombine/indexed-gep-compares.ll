@@ -3,7 +3,7 @@
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:32-f32:32:32-f64:32:32-v64:64:64-v128:128:128-a0:0:64"
 
-define i32 *@test1(i32* %A, i32 %Offset) {
+define ptr@test1(ptr %A, i32 %Offset) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BB:%.*]]
@@ -13,25 +13,25 @@ define i32 *@test1(i32* %A, i32 %Offset) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 100
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[RHS_IDX]]
-; CHECK-NEXT:    ret i32* [[RHS_PTR]]
+; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[RHS_IDX]]
+; CHECK-NEXT:    ret ptr [[RHS_PTR]]
 ;
 entry:
-  %tmp = getelementptr inbounds i32, i32* %A, i32 %Offset
+  %tmp = getelementptr inbounds i32, ptr %A, i32 %Offset
   br label %bb
 
 bb:
-  %RHS = phi i32* [ %RHS.next, %bb ], [ %tmp, %entry ]
-  %LHS = getelementptr inbounds i32, i32* %A, i32 100
-  %RHS.next = getelementptr inbounds i32, i32* %RHS, i64 1
-  %cond = icmp ult i32 * %LHS, %RHS
+  %RHS = phi ptr [ %RHS.next, %bb ], [ %tmp, %entry ]
+  %LHS = getelementptr inbounds i32, ptr %A, i32 100
+  %RHS.next = getelementptr inbounds i32, ptr %RHS, i64 1
+  %cond = icmp ult ptr %LHS, %RHS
   br i1 %cond, label %bb2, label %bb
 
 bb2:
-  ret i32* %RHS
+  ret ptr %RHS
 }
 
-define i32 *@test2(i32 %A, i32 %Offset) {
+define ptr@test2(i32 %A, i32 %Offset) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BB:%.*]]
@@ -41,62 +41,62 @@ define i32 *@test2(i32 %A, i32 %Offset) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 100
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[RHSTO_PTR:%.*]] = inttoptr i32 [[A:%.*]] to i32*
-; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i32, i32* [[RHSTO_PTR]], i32 [[RHS_IDX]]
-; CHECK-NEXT:    ret i32* [[RHS_PTR]]
+; CHECK-NEXT:    [[RHSTO_PTR:%.*]] = inttoptr i32 [[A:%.*]] to ptr
+; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i32, ptr [[RHSTO_PTR]], i32 [[RHS_IDX]]
+; CHECK-NEXT:    ret ptr [[RHS_PTR]]
 ;
 entry:
-  %A.ptr = inttoptr i32 %A to i32*
-  %tmp = getelementptr inbounds i32, i32* %A.ptr, i32 %Offset
+  %A.ptr = inttoptr i32 %A to ptr
+  %tmp = getelementptr inbounds i32, ptr %A.ptr, i32 %Offset
   br label %bb
 
 bb:
-  %RHS = phi i32* [ %RHS.next, %bb ], [ %tmp, %entry ]
-  %LHS = getelementptr inbounds i32, i32* %A.ptr, i32 100
-  %RHS.next = getelementptr inbounds i32, i32* %RHS, i64 1
-  %cmp0 = ptrtoint i32 *%LHS to i32
-  %cmp1 = ptrtoint i32 *%RHS to i32
+  %RHS = phi ptr [ %RHS.next, %bb ], [ %tmp, %entry ]
+  %LHS = getelementptr inbounds i32, ptr %A.ptr, i32 100
+  %RHS.next = getelementptr inbounds i32, ptr %RHS, i64 1
+  %cmp0 = ptrtoint ptr %LHS to i32
+  %cmp1 = ptrtoint ptr %RHS to i32
   %cond = icmp ult i32 %cmp0, %cmp1
   br i1 %cond, label %bb2, label %bb
 
 bb2:
-  ret i32* %RHS
+  ret ptr %RHS
 }
 
 ; Perform the transformation only if we know that the GEPs used are inbounds.
-define i32 *@test3(i32* %A, i32 %Offset) {
+define ptr@test3(ptr %A, i32 %Offset) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = getelementptr i32, i32* [[A:%.*]], i32 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP:%.*]] = getelementptr i32, ptr [[A:%.*]], i32 [[OFFSET:%.*]]
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[RHS:%.*]] = phi i32* [ [[RHS_NEXT:%.*]], [[BB]] ], [ [[TMP]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[LHS:%.*]] = getelementptr i32, i32* [[A]], i32 100
-; CHECK-NEXT:    [[RHS_NEXT]] = getelementptr i32, i32* [[RHS]], i32 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32* [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[RHS:%.*]] = phi ptr [ [[RHS_NEXT:%.*]], [[BB]] ], [ [[TMP]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LHS:%.*]] = getelementptr i32, ptr [[A]], i32 100
+; CHECK-NEXT:    [[RHS_NEXT]] = getelementptr i32, ptr [[RHS]], i32 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult ptr [[LHS]], [[RHS]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    ret i32* [[RHS]]
+; CHECK-NEXT:    ret ptr [[RHS]]
 ;
 entry:
-  %tmp = getelementptr i32, i32* %A, i32 %Offset
+  %tmp = getelementptr i32, ptr %A, i32 %Offset
   br label %bb
 
 bb:
-  %RHS = phi i32* [ %RHS.next, %bb ], [ %tmp, %entry ]
-  %LHS = getelementptr i32, i32* %A, i32 100
-  %RHS.next = getelementptr i32, i32* %RHS, i64 1
-  %cond = icmp ult i32 * %LHS, %RHS
+  %RHS = phi ptr [ %RHS.next, %bb ], [ %tmp, %entry ]
+  %LHS = getelementptr i32, ptr %A, i32 100
+  %RHS.next = getelementptr i32, ptr %RHS, i64 1
+  %cond = icmp ult ptr %LHS, %RHS
   br i1 %cond, label %bb2, label %bb
 
 bb2:
-  ret i32* %RHS
+  ret ptr %RHS
 }
 
 ; An inttoptr that requires an extension or truncation will be opaque when determining
 ; the base pointer. In this case we can still perform the transformation by considering
 ; A.ptr as being the base pointer.
-define i32 *@test4(i16 %A, i32 %Offset) {
+define ptr@test4(i16 %A, i32 %Offset) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BB:%.*]]
@@ -107,34 +107,34 @@ define i32 *@test4(i16 %A, i32 %Offset) {
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[A:%.*]] to i32
-; CHECK-NEXT:    [[RHSTO_PTR:%.*]] = inttoptr i32 [[TMP0]] to i32*
-; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i32, i32* [[RHSTO_PTR]], i32 [[RHS_IDX]]
-; CHECK-NEXT:    ret i32* [[RHS_PTR]]
+; CHECK-NEXT:    [[RHSTO_PTR:%.*]] = inttoptr i32 [[TMP0]] to ptr
+; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i32, ptr [[RHSTO_PTR]], i32 [[RHS_IDX]]
+; CHECK-NEXT:    ret ptr [[RHS_PTR]]
 ;
 entry:
-  %A.ptr = inttoptr i16 %A to i32*
-  %tmp = getelementptr inbounds i32, i32* %A.ptr, i32 %Offset
+  %A.ptr = inttoptr i16 %A to ptr
+  %tmp = getelementptr inbounds i32, ptr %A.ptr, i32 %Offset
   br label %bb
 
 bb:
-  %RHS = phi i32* [ %RHS.next, %bb ], [ %tmp, %entry ]
-  %LHS = getelementptr inbounds i32, i32* %A.ptr, i32 100
-  %RHS.next = getelementptr inbounds i32, i32* %RHS, i64 1
-  %cmp0 = ptrtoint i32 *%LHS to i32
-  %cmp1 = ptrtoint i32 *%RHS to i32
+  %RHS = phi ptr [ %RHS.next, %bb ], [ %tmp, %entry ]
+  %LHS = getelementptr inbounds i32, ptr %A.ptr, i32 100
+  %RHS.next = getelementptr inbounds i32, ptr %RHS, i64 1
+  %cmp0 = ptrtoint ptr %LHS to i32
+  %cmp1 = ptrtoint ptr %RHS to i32
   %cond = icmp ult i32 %cmp0, %cmp1
   br i1 %cond, label %bb2, label %bb
 
 bb2:
-  ret i32* %RHS
+  ret ptr %RHS
 }
 
-declare i32* @fun_ptr()
+declare ptr @fun_ptr()
 
-define i32 *@test5(i32 %Offset) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define ptr@test5(i32 %Offset) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = invoke i32* @fun_ptr()
+; CHECK-NEXT:    [[A:%.*]] = invoke ptr @fun_ptr()
 ; CHECK-NEXT:    to label [[CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       cont:
 ; CHECK-NEXT:    br label [[BB:%.*]]
@@ -144,38 +144,38 @@ define i32 *@test5(i32 %Offset) personality i8* bitcast (i32 (...)* @__gxx_perso
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 100
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[RHS_IDX]]
-; CHECK-NEXT:    ret i32* [[RHS_PTR]]
+; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[RHS_IDX]]
+; CHECK-NEXT:    ret ptr [[RHS_PTR]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[L:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[L:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
-; CHECK-NEXT:    ret i32* null
+; CHECK-NEXT:    ret ptr null
 ;
 entry:
-  %A = invoke i32 *@fun_ptr() to label %cont unwind label %lpad
+  %A = invoke ptr@fun_ptr() to label %cont unwind label %lpad
 
 cont:
-  %tmp = getelementptr inbounds i32, i32* %A, i32 %Offset
+  %tmp = getelementptr inbounds i32, ptr %A, i32 %Offset
   br label %bb
 
 bb:
-  %RHS = phi i32* [ %RHS.next, %bb ], [ %tmp, %cont ]
-  %LHS = getelementptr inbounds i32, i32* %A, i32 100
-  %RHS.next = getelementptr inbounds i32, i32* %RHS, i64 1
-  %cond = icmp ult i32 * %LHS, %RHS
+  %RHS = phi ptr [ %RHS.next, %bb ], [ %tmp, %cont ]
+  %LHS = getelementptr inbounds i32, ptr %A, i32 100
+  %RHS.next = getelementptr inbounds i32, ptr %RHS, i64 1
+  %cond = icmp ult ptr %LHS, %RHS
   br i1 %cond, label %bb2, label %bb
 
 bb2:
-  ret i32* %RHS
+  ret ptr %RHS
 
 lpad:
-  %l = landingpad { i8*, i32 } cleanup
-  ret i32* null
+  %l = landingpad { ptr, i32 } cleanup
+  ret ptr null
 }
 
 declare i32 @fun_i32()
 
-define i32 *@test6(i32 %Offset) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define ptr@test6(i32 %Offset) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = invoke i32 @fun_i32()
@@ -188,35 +188,35 @@ define i32 *@test6(i32 %Offset) personality i8* bitcast (i32 (...)* @__gxx_perso
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 100
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[RHSTO_PTR:%.*]] = inttoptr i32 [[A]] to i32*
-; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i32, i32* [[RHSTO_PTR]], i32 [[RHS_IDX]]
-; CHECK-NEXT:    ret i32* [[RHS_PTR]]
+; CHECK-NEXT:    [[RHSTO_PTR:%.*]] = inttoptr i32 [[A]] to ptr
+; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i32, ptr [[RHSTO_PTR]], i32 [[RHS_IDX]]
+; CHECK-NEXT:    ret ptr [[RHS_PTR]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[L:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[L:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
-; CHECK-NEXT:    ret i32* null
+; CHECK-NEXT:    ret ptr null
 ;
 entry:
   %A = invoke i32 @fun_i32() to label %cont unwind label %lpad
 
 cont:
-  %A.ptr = inttoptr i32 %A to i32*
-  %tmp = getelementptr inbounds i32, i32* %A.ptr, i32 %Offset
+  %A.ptr = inttoptr i32 %A to ptr
+  %tmp = getelementptr inbounds i32, ptr %A.ptr, i32 %Offset
   br label %bb
 
 bb:
-  %RHS = phi i32* [ %RHS.next, %bb ], [ %tmp, %cont ]
-  %LHS = getelementptr inbounds i32, i32* %A.ptr, i32 100
-  %RHS.next = getelementptr inbounds i32, i32* %RHS, i64 1
-  %cond = icmp ult i32 * %LHS, %RHS
+  %RHS = phi ptr [ %RHS.next, %bb ], [ %tmp, %cont ]
+  %LHS = getelementptr inbounds i32, ptr %A.ptr, i32 100
+  %RHS.next = getelementptr inbounds i32, ptr %RHS, i64 1
+  %cond = icmp ult ptr %LHS, %RHS
   br i1 %cond, label %bb2, label %bb
 
 bb2:
-  ret i32* %RHS
+  ret ptr %RHS
 
 lpad:
-  %l = landingpad { i8*, i32 } cleanup
-  ret i32* null
+  %l = landingpad { ptr, i32 } cleanup
+  ret ptr null
 }
 
 
@@ -235,8 +235,8 @@ entry:
   br label %bb7
 
 bb7:                                              ; preds = %bb10, %entry-block
-  %phi = phi i64* [ @pr30402, %entry ], [ getelementptr inbounds (i64, i64* @pr30402, i32 1), %bb7 ]
-  %cmp = icmp eq i64* %phi, getelementptr inbounds (i64, i64* @pr30402, i32 1)
+  %phi = phi ptr [ @pr30402, %entry ], [ getelementptr inbounds (i64, ptr @pr30402, i32 1), %bb7 ]
+  %cmp = icmp eq ptr %phi, getelementptr inbounds (i64, ptr @pr30402, i32 1)
   br i1 %cmp, label %bb10, label %bb7
 
 bb10:
@@ -245,33 +245,31 @@ bb10:
 
 declare i32 @__gxx_personality_v0(...)
 
-define i1 @test8(i64* %in, i64 %offset) {
+define i1 @test8(ptr %in, i64 %offset) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LD:%.*]] = load i64, i64* [[IN:%.*]], align 8
+; CHECK-NEXT:    [[LD:%.*]] = load i64, ptr [[IN:%.*]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[LD]] to i32
-; CHECK-NEXT:    [[CASTI8:%.*]] = inttoptr i32 [[TMP0]] to i8*
+; CHECK-NEXT:    [[CASTI8:%.*]] = inttoptr i32 [[TMP0]] to ptr
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[OFFSET:%.*]] to i32
-; CHECK-NEXT:    [[GEPI8:%.*]] = getelementptr inbounds i8, i8* [[CASTI8]], i32 [[TMP1]]
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast i8* [[GEPI8]] to i32**
+; CHECK-NEXT:    [[GEPI8:%.*]] = getelementptr inbounds i8, ptr [[CASTI8]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[LD]] to i32
-; CHECK-NEXT:    [[PTRCAST:%.*]] = inttoptr i32 [[TMP2]] to i32**
-; CHECK-NEXT:    [[GEPI32:%.*]] = getelementptr inbounds i32*, i32** [[PTRCAST]], i32 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32** [[GEPI32]], [[CAST]]
+; CHECK-NEXT:    [[PTRCAST:%.*]] = inttoptr i32 [[TMP2]] to ptr
+; CHECK-NEXT:    [[GEPI32:%.*]] = getelementptr inbounds ptr, ptr [[PTRCAST]], i32 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[GEPI32]], [[GEPI8]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
-  %ld = load i64, i64* %in, align 8
-  %casti8 = inttoptr i64 %ld to i8*
-  %gepi8 = getelementptr inbounds i8, i8* %casti8, i64 %offset
-  %cast = bitcast i8* %gepi8 to i32**
-  %ptrcast = inttoptr i64 %ld to i32**
-  %gepi32 = getelementptr inbounds i32*, i32** %ptrcast, i64 1
-  %cmp = icmp eq i32** %gepi32, %cast
+  %ld = load i64, ptr %in, align 8
+  %casti8 = inttoptr i64 %ld to ptr
+  %gepi8 = getelementptr inbounds i8, ptr %casti8, i64 %offset
+  %ptrcast = inttoptr i64 %ld to ptr
+  %gepi32 = getelementptr inbounds ptr, ptr %ptrcast, i64 1
+  %cmp = icmp eq ptr %gepi32, %gepi8
   ret i1 %cmp
 }
 
-define void @test_zero_offset_cycle({ i64, i64 }* %arg) {
+define void @test_zero_offset_cycle(ptr %arg) {
 ; CHECK-LABEL: @test_zero_offset_cycle(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -281,17 +279,17 @@ define void @test_zero_offset_cycle({ i64, i64 }* %arg) {
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
-  %gep = getelementptr inbounds { i64, i64 }, { i64, i64 }* %arg, i32 0, i32 1
-  %gep.int = ptrtoint i64* %gep to i32
+  %gep = getelementptr inbounds { i64, i64 }, ptr %arg, i32 0, i32 1
+  %gep.int = ptrtoint ptr %gep to i32
   br label %loop
 
 loop:
   %phi = phi i32 [ %gep.int, %entry ], [ %gep.int2, %loop.cont ], [ %phi, %loop ]
-  %phi.ptr = inttoptr i32 %phi to i64*
-  %cmp = icmp eq i64* %gep, %phi.ptr
+  %phi.ptr = inttoptr i32 %phi to ptr
+  %cmp = icmp eq ptr %gep, %phi.ptr
   br i1 %cmp, label %loop, label %loop.cont
 
 loop.cont:
-  %gep.int2 = ptrtoint i64* %gep to i32
+  %gep.int2 = ptrtoint ptr %gep to i32
   br label %loop
 }

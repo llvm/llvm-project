@@ -37,8 +37,9 @@ protected:
     friend class MachOLinkGraphBuilder;
 
   private:
-    NormalizedSymbol(Optional<StringRef> Name, uint64_t Value, uint8_t Type,
-                     uint8_t Sect, uint16_t Desc, Linkage L, Scope S)
+    NormalizedSymbol(std::optional<StringRef> Name, uint64_t Value,
+                     uint8_t Type, uint8_t Sect, uint16_t Desc, Linkage L,
+                     Scope S)
         : Name(Name), Value(Value), Type(Type), Sect(Sect), Desc(Desc), L(L),
           S(S) {
       assert((!Name || !Name->empty()) && "Name must be none or non-empty");
@@ -50,7 +51,7 @@ protected:
     NormalizedSymbol(NormalizedSymbol &&) = delete;
     NormalizedSymbol &operator=(NormalizedSymbol &&) = delete;
 
-    Optional<StringRef> Name;
+    std::optional<StringRef> Name;
     uint64_t Value = 0;
     uint8_t Type = 0;
     uint8_t Sect = 0;
@@ -226,6 +227,7 @@ private:
   const object::MachOObjectFile &Obj;
   std::unique_ptr<LinkGraph> G;
 
+  bool SubsectionsViaSymbols = false;
   DenseMap<unsigned, NormalizedSection> IndexToSection;
   Section *CommonSection = nullptr;
 

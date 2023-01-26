@@ -23,6 +23,7 @@
 #include "lldb/lldb-types.h"
 
 #include <cstring>
+#include <optional>
 namespace lldb_private {
 class Declaration;
 }
@@ -94,7 +95,7 @@ size_t ValueObjectDynamicValue::CalculateNumChildren(uint32_t max) {
     return m_parent->GetNumChildren(max);
 }
 
-llvm::Optional<uint64_t> ValueObjectDynamicValue::GetByteSize() {
+std::optional<uint64_t> ValueObjectDynamicValue::GetByteSize() {
   const bool success = UpdateValueIfNeeded(false);
   if (success && m_dynamic_type_info.HasType()) {
     ExecutionContext exe_ctx(GetExecutionContextRef());

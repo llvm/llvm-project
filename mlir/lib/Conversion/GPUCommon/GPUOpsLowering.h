@@ -16,9 +16,10 @@ namespace mlir {
 
 struct GPUFuncOpLowering : ConvertOpToLLVMPattern<gpu::GPUFuncOp> {
   GPUFuncOpLowering(LLVMTypeConverter &converter, unsigned allocaAddrSpace,
-                    StringAttr kernelAttributeName)
+                    unsigned workgroupAddrSpace, StringAttr kernelAttributeName)
       : ConvertOpToLLVMPattern<gpu::GPUFuncOp>(converter),
         allocaAddrSpace(allocaAddrSpace),
+        workgroupAddrSpace(workgroupAddrSpace),
         kernelAttributeName(kernelAttributeName) {}
 
   LogicalResult
@@ -26,8 +27,10 @@ struct GPUFuncOpLowering : ConvertOpToLLVMPattern<gpu::GPUFuncOp> {
                   ConversionPatternRewriter &rewriter) const override;
 
 private:
-  /// The address spcae to use for `alloca`s in private memory.
+  /// The address space to use for `alloca`s in private memory.
   unsigned allocaAddrSpace;
+  /// The address space to use declaring workgroup memory.
+  unsigned workgroupAddrSpace;
 
   /// The attribute name to use instead of `gpu.kernel`.
   StringAttr kernelAttributeName;
@@ -67,6 +70,16 @@ private:
   int addressSpace;
 };
 
+/// Lowering of gpu.printf to a vprintf standard library.
+struct GPUPrintfOpToVPrintfLowering
+    : public ConvertOpToLLVMPattern<gpu::PrintfOp> {
+  using ConvertOpToLLVMPattern<gpu::PrintfOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::PrintfOp gpuPrintfOp, gpu::PrintfOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 struct GPUReturnOpLowering : public ConvertOpToLLVMPattern<gpu::ReturnOp> {
   using ConvertOpToLLVMPattern<gpu::ReturnOp>::ConvertOpToLLVMPattern;
 
@@ -75,6 +88,27 @@ struct GPUReturnOpLowering : public ConvertOpToLLVMPattern<gpu::ReturnOp> {
                   ConversionPatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(op, adaptor.getOperands());
     return success();
+  }
+};
+
+namespace impl {
+/// Unrolls op if it's operating on vectors.
+LogicalResult scalarizeVectorOp(Operation *op, ValueRange operands,
+                                ConversionPatternRewriter &rewriter,
+                                LLVMTypeConverter &converter);
+} // namespace impl
+
+/// Rewriting that unrolls SourceOp to scalars if it's operating on vectors.
+template <typename SourceOp>
+struct ScalarizeVectorOpLowering : public ConvertOpToLLVMPattern<SourceOp> {
+public:
+  using ConvertOpToLLVMPattern<SourceOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    return impl::scalarizeVectorOp(op, adaptor.getOperands(), rewriter,
+                                   *this->getTypeConverter());
   }
 };
 

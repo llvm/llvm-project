@@ -46,7 +46,7 @@ relative:
 ## Branch relocations
 ## If .dynsym does not exist, an undefined weak symbol is non-preemptible.
 ## Treat them as PC relative relocations.
-# RELOC:      0x18 R_RISCV_CALL target 0x0
+# RELOC:      0x18 R_RISCV_CALL_PLT target 0x0
 # RELOC-NEXT: 0x20 R_RISCV_JAL target 0x0
 # RELOC-NEXT: 0x24 R_RISCV_BRANCH target 0x0
 

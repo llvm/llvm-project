@@ -111,7 +111,7 @@ namespace {
 
 const ParsedAttrInfo &ParsedAttrInfo::get(const AttributeCommonInfo &A) {
   // If we have a ParsedAttrInfo for this ParsedAttr then return that.
-  if ((size_t)A.getParsedKind() < llvm::array_lengthof(AttrInfoMap))
+  if ((size_t)A.getParsedKind() < std::size(AttrInfoMap))
     return *AttrInfoMap[A.getParsedKind()];
 
   // If this is an ignored attribute then return an appropriate ParsedAttrInfo.
@@ -146,7 +146,7 @@ const ParsedAttrInfo &ParsedAttrInfo::get(const AttributeCommonInfo &A) {
 }
 
 ArrayRef<const ParsedAttrInfo *> ParsedAttrInfo::getAllBuiltin() {
-  return llvm::makeArrayRef(AttrInfoMap);
+  return llvm::ArrayRef(AttrInfoMap);
 }
 
 unsigned ParsedAttr::getMinArgs() const { return getInfo().NumArgs; }

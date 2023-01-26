@@ -1,14 +1,16 @@
 ; RUN: opt %s -passes='print<divergence>' -disable-output 2>&1 | FileCheck %s
+; RUN: opt %s -passes='print<uniformity>' -disable-output 2>&1 | FileCheck %s
 
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"
 
 define i32 @daorder(i32 %n) {
-; CHECK-LABEL: Divergence Analysis' for function 'daorder'
+; CHECK-LABEL: for function 'daorder'
 entry:
   %tid = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
   %cond = icmp slt i32 %tid, 0
   br i1 %cond, label %A, label %B ; divergent
+; CHECK:  DIVERGENT: %cond =
 ; CHECK: DIVERGENT: br i1 %cond,
 A:
   %defAtA = add i32 %n, 1 ; uniform
@@ -44,4 +46,4 @@ declare i32 @llvm.nvvm.read.ptx.sreg.tid.z()
 declare i32 @llvm.nvvm.read.ptx.sreg.laneid()
 
 !nvvm.annotations = !{!0}
-!0 = !{i32 (i32)* @daorder, !"kernel", i32 1}
+!0 = !{ptr @daorder, !"kernel", i32 1}

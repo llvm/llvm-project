@@ -13,7 +13,7 @@
 ; CHECK:                [y, p_1_loaded_from_j] -> { Stmt_for_body[i0] -> MemRef_p[p_1_loaded_from_j + i0] };
 
 
-define void @a(i32 %y, i32* nocapture %p, i32* nocapture readonly %j) local_unnamed_addr #0 {
+define void @a(i32 %y, ptr nocapture %p, ptr nocapture readonly %j) local_unnamed_addr #0 {
 entry:
   br label %entry.split
 
@@ -23,11 +23,11 @@ entry.split:
 
 for.body:
   %i.024 = phi i32 [ %inc, %for.body ], [ 0, %entry.split ]
-  %0 = load i32, i32* %j, align 4
+  %0 = load i32, ptr %j, align 4
   %add = add nsw i32 %0, %i.024
   %idxprom = sext i32 %add to i64
-  %arrayidx = getelementptr inbounds i32, i32* %p, i64 %idxprom
-  store i32 %i.024, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %p, i64 %idxprom
+  store i32 %i.024, ptr %arrayidx, align 4
   %inc = add nuw nsw i32 %i.024, 1
   %exitcond26 = icmp eq i32 %inc, 10000
   br i1 %exitcond26, label %if.end, label %for.body
@@ -35,11 +35,11 @@ for.body:
 for.body5:
   %i1.023 = phi i32 [ %inc10, %for.body5 ], [ 0, %entry.split ]
   %mul = shl nsw i32 %i1.023, 1
-  %1 = load i32, i32* %j, align 4
+  %1 = load i32, ptr %j, align 4
   %add6 = add nsw i32 %1, %i1.023
   %idxprom7 = sext i32 %add6 to i64
-  %arrayidx8 = getelementptr inbounds i32, i32* %p, i64 %idxprom7
-  store i32 %mul, i32* %arrayidx8, align 4
+  %arrayidx8 = getelementptr inbounds i32, ptr %p, i64 %idxprom7
+  store i32 %mul, ptr %arrayidx8, align 4
   %inc10 = add nuw nsw i32 %i1.023, 1
   %exitcond = icmp eq i32 %inc10, 10000
   br i1 %exitcond, label %if.end, label %for.body5

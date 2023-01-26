@@ -20,10 +20,10 @@ target triple = "x86_64-apple-macosx10.9.0"
 ; Function Attrs: nounwind optsize ssp uwtable
 define i32 @main() #0 {
 entry:
-  %0 = load i32, i32* getelementptr inbounds (%struct.anon, %struct.anon* @a, i64 0, i32 0), align 4, !tbaa !1
+  %0 = load i32, ptr @a, align 4, !tbaa !1
   %tobool7.i = icmp eq i32 %0, 0
-  %.promoted.i = load i32, i32* getelementptr inbounds (%struct.anon, %struct.anon* @a, i64 0, i32 2), align 4, !tbaa !6
-  %f.promoted.i = load i32, i32* @f, align 4, !tbaa !7
+  %.promoted.i = load i32, ptr getelementptr inbounds (%struct.anon, ptr @a, i64 0, i32 2), align 4, !tbaa !6
+  %f.promoted.i = load i32, ptr @f, align 4, !tbaa !7
   br label %for.body6.i.outer
 
 for.body6.i.outer:                                ; preds = %entry, %lor.end.i
@@ -42,9 +42,9 @@ if.end9.i:                                        ; preds = %for.body6.i.outer
   br i1 %tobool12.i, label %lor.rhs.i, label %lor.end.i
 
 lor.rhs.i:                                        ; preds = %if.end9.i
-  %1 = load i32, i32* @b, align 4, !tbaa !7
+  %1 = load i32, ptr @b, align 4, !tbaa !7
   %dec.i = add nsw i32 %1, -1
-  store i32 %dec.i, i32* @b, align 4, !tbaa !7
+  store i32 %dec.i, ptr @b, align 4, !tbaa !7
   %tobool13.i = icmp ne i32 %1, 0
   br label %lor.end.i
 
@@ -58,18 +58,18 @@ lor.end.i:                                        ; preds = %lor.rhs.i, %if.end9
   br i1 %cmp.i, label %for.body6.i.outer, label %fn1.exit
 
 fn1.exit:                                         ; preds = %lor.end.i
-  store i32 0, i32* @g, align 4, !tbaa !7
-  store i32 %or14.i, i32* getelementptr inbounds (%struct.anon, %struct.anon* @a, i64 0, i32 2), align 4, !tbaa !6
-  store i32 %or15.i, i32* @f, align 4, !tbaa !7
-  store i32 %add.i, i32* getelementptr inbounds (%struct.anon, %struct.anon* @e, i64 0, i32 1), align 4, !tbaa !8
-  store i32 0, i32* @h, align 4, !tbaa !7
-  %3 = load i32, i32* @b, align 4, !tbaa !7
-  %call1 = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i32 %3) #2
+  store i32 0, ptr @g, align 4, !tbaa !7
+  store i32 %or14.i, ptr getelementptr inbounds (%struct.anon, ptr @a, i64 0, i32 2), align 4, !tbaa !6
+  store i32 %or15.i, ptr @f, align 4, !tbaa !7
+  store i32 %add.i, ptr getelementptr inbounds (%struct.anon, ptr @e, i64 0, i32 1), align 4, !tbaa !8
+  store i32 0, ptr @h, align 4, !tbaa !7
+  %3 = load i32, ptr @b, align 4, !tbaa !7
+  %call1 = tail call i32 (ptr, ...) @printf(ptr @.str, i32 %3) #2
   ret i32 0
 }
 
 ; Function Attrs: nounwind optsize
-declare i32 @printf(i8* nocapture readonly, ...) #1
+declare i32 @printf(ptr nocapture readonly, ...) #1
 
 attributes #0 = { nounwind optsize ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind optsize "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

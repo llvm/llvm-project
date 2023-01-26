@@ -9,7 +9,6 @@
 #include <charconv>
 #include <chrono>
 #include <cmath>
-#include <fstream>
 #include <functional>
 #include <iterator>
 #include <limits>
@@ -49,7 +48,7 @@
 
 using namespace std;
 
-void initialize_randomness(mt19937_64& mt64, const int argc, char** const argv) {
+void initialize_randomness(mt19937_64& mt64, const int argc, char** const /*argv*/) {
     constexpr size_t n = mt19937_64::state_size;
     constexpr size_t w = mt19937_64::word_size;
     static_assert(w % 32 == 0);
@@ -59,32 +58,11 @@ void initialize_randomness(mt19937_64& mt64, const int argc, char** const argv) 
 
     puts("USAGE:");
     puts("test.exe              : generates seed data from random_device.");
-    puts("test.exe filename.txt : loads seed data from a given text file.");
 
     if (argc == 1) {
         random_device rd;
         generate(vec.begin(), vec.end(), ref(rd));
         puts("Generated seed data.");
-    } else if (argc == 2) {
-        const char* const filename = argv[1];
-
-        ifstream file(filename);
-
-        if (!file) {
-            printf("ERROR: Can't open %s.\n", filename);
-            abort();
-        }
-
-        for (auto& elem : vec) {
-            file >> elem;
-
-            if (!file) {
-                printf("ERROR: Can't read seed data from %s.\n", filename);
-                abort();
-            }
-        }
-
-        printf("Loaded seed data from %s.\n", filename);
     } else {
         puts("ERROR: Too many command-line arguments.");
         abort();

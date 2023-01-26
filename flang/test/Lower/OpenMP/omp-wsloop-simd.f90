@@ -21,8 +21,8 @@ program wsloop_dynamic
     print*, i
 !CHECK:    %[[RTBEGIN:.*]] = fir.call @_FortranAioBeginExternalListOutput
 !CHECK:    %[[LOAD:.*]] = fir.load %[[STORE]] : !fir.ref<i32>
-!CHECK:    fir.call @_FortranAioOutputInteger32(%[[RTBEGIN]], %[[LOAD]]) : (!fir.ref<i8>, i32) -> i1
-!CHECK:    fir.call @_FortranAioEndIoStatement(%[[RTBEGIN]]) : (!fir.ref<i8>) -> i32
+!CHECK:    fir.call @_FortranAioOutputInteger32(%[[RTBEGIN]], %[[LOAD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
+!CHECK:    fir.call @_FortranAioEndIoStatement(%[[RTBEGIN]]) {{.*}}: (!fir.ref<i8>) -> i32
   end do
 !CHECK:       omp.yield
 !CHECK:         }

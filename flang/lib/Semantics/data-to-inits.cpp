@@ -30,6 +30,11 @@ static constexpr bool makeDefaultInitializationExplicit{false};
 // objects and pointers.
 static constexpr bool removeOriginalInits{false};
 
+// Impose a hard limit that's more than large enough for real applications but
+// small enough to cause artificial stress tests to fail reasonably instead of
+// crashing the compiler with a memory allocation failure.
+static constexpr auto maxDataInitBytes{std::size_t{1000000000}}; // 1GiB
+
 namespace Fortran::semantics {
 
 // Steps through a list of values in a DATA statement set; implements
@@ -123,6 +128,7 @@ private:
   DataInitializations &inits_;
   evaluate::ExpressionAnalyzer &exprAnalyzer_;
   ValueListIterator<DSV> values_;
+  const Scope *scope_{nullptr};
 };
 
 template <typename DSV>
@@ -141,7 +147,9 @@ bool DataInitializationCompiler<DSV>::Scan(
 template <typename DSV>
 bool DataInitializationCompiler<DSV>::Scan(const parser::Variable &var) {
   if (const auto *expr{GetExpr(exprAnalyzer_.context(), var)}) {
-    exprAnalyzer_.GetFoldingContext().messages().SetLocation(var.GetSource());
+    parser::CharBlock at{var.GetSource()};
+    exprAnalyzer_.GetFoldingContext().messages().SetLocation(at);
+    scope_ = &exprAnalyzer_.context().FindScope(at);
     if (InitDesignator(*expr)) {
       return true;
     }
@@ -153,8 +161,9 @@ template <typename DSV>
 bool DataInitializationCompiler<DSV>::Scan(
     const parser::Designator &designator) {
   if (auto expr{exprAnalyzer_.Analyze(designator)}) {
-    exprAnalyzer_.GetFoldingContext().messages().SetLocation(
-        parser::FindSourceLocation(designator));
+    parser::CharBlock at{parser::FindSourceLocation(designator)};
+    exprAnalyzer_.GetFoldingContext().messages().SetLocation(at);
+    scope_ = &exprAnalyzer_.context().FindScope(at);
     if (InitDesignator(*expr)) {
       return true;
     }
@@ -352,6 +361,13 @@ bool DataInitializationCompiler<DSV>::InitElement(
   const SomeExpr *expr{*values_};
   if (!expr) {
     CHECK(exprAnalyzer_.context().AnyFatalError());
+  } else if (symbol.size() > maxDataInitBytes) {
+    evaluate::AttachDeclaration(
+        exprAnalyzer_.context().Say(
+            "'%s' is too large to initialize with a DATA statement"_todo_en_US,
+            symbol.name()),
+        symbol);
+    return false;
   } else if (isPointer) {
     if (static_cast<std::size_t>(offsetSymbol.offset() + offsetSymbol.size()) >
         symbol.size()) {
@@ -361,7 +377,7 @@ bool DataInitializationCompiler<DSV>::InitElement(
       return true;
     } else if (isProcPointer) {
       if (evaluate::IsProcedure(*expr)) {
-        if (CheckPointerAssignment(context, designator, *expr)) {
+        if (CheckPointerAssignment(context, designator, *expr, DEREF(scope_))) {
           if (lastSymbol->has<ProcEntityDetails>()) {
             GetImage().AddPointer(offsetSymbol.offset(), *expr);
             return true;
@@ -382,7 +398,7 @@ bool DataInitializationCompiler<DSV>::InitElement(
       exprAnalyzer_.Say(
           "Procedure '%s' may not be used to initialize '%s', which is not a procedure pointer"_err_en_US,
           expr->AsFortran(), DescribeElement());
-    } else if (CheckInitialTarget(context, designator, *expr)) {
+    } else if (CheckInitialTarget(context, designator, *expr, DEREF(scope_))) {
       GetImage().AddPointer(offsetSymbol.offset(), *expr);
       return true;
     }
@@ -862,7 +878,7 @@ void ConstructInitializer(const Symbol &symbol,
         CHECK(!procDesignator->GetComponent());
         mutableProc.set_init(DEREF(procDesignator->GetSymbol()));
       } else {
-        CHECK(evaluate::IsNullPointer(*expr));
+        CHECK(evaluate::IsNullProcedurePointer(*expr));
         mutableProc.set_init(nullptr);
       }
     } else {

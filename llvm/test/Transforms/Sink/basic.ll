@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -sink -S | FileCheck %s
+; RUN: opt < %s -passes=sink -S | FileCheck %s
 ; RUN: opt < %s -aa-pipeline='basic-aa' -passes='sink' -S | FileCheck %s
 
 @A = external global i32
@@ -9,12 +9,12 @@
 
 ;      CHECK-LABEL: @foo(
 ;      CHECK: true:
-; CHECK-NEXT: %l = load i32, i32* @A
+; CHECK-NEXT: %l = load i32, ptr @A
 ; CHECK-NEXT: ret i32 %l
 
 define i32 @foo(i1 %z) {
-  %l = load i32, i32* @A
-  store i32 0, i32* @B
+  %l = load i32, ptr @A
+  store i32 0, ptr @B
   br i1 %z, label %true, label %false
 true:
   ret i32 %l
@@ -29,8 +29,8 @@ false:
 ; CHECK-NEXT: store i32
 
 define i32 @foo2(i1 %z) {
-  %l = load volatile i32, i32* @A
-  store i32 0, i32* @B
+  %l = load volatile i32, ptr @A
+  store i32 0, ptr @B
   br i1 %z, label %true, label %false
 true:
   ret i32 %l
@@ -76,11 +76,11 @@ entry:
   br i1 %1, label %if, label %endif
 
 if:
-  %2 = getelementptr i32, i32* %0, i32 1
-  store i32 0, i32* %0
-  store i32 1, i32* %2
-  %3 = getelementptr i32, i32* %0, i32 %b
-  %4 = load i32, i32* %3
+  %2 = getelementptr i32, ptr %0, i32 1
+  store i32 0, ptr %0
+  store i32 1, ptr %2
+  %3 = getelementptr i32, ptr %0, i32 %b
+  %4 = load i32, ptr %3
   ret i32 %4
 
 endif:
@@ -101,11 +101,11 @@ entry:
   br i1 %1, label %if, label %endif
 
 if:
-  %2 = getelementptr i32, i32* %0, i32 1
-  store i32 0, i32* %0
-  store i32 1, i32* %2
-  %3 = getelementptr i32, i32* %0, i32 %b
-  %4 = load i32, i32* %3
+  %2 = getelementptr i32, ptr %0, i32 1
+  store i32 0, ptr %0
+  store i32 1, ptr %2
+  %3 = getelementptr i32, ptr %0, i32 %b
+  %4 = load i32, ptr %3
   ret i32 %4
 
 endif:
@@ -132,11 +132,11 @@ if0:
   br i1 %1, label %if, label %endif
 
 if:
-  %2 = getelementptr i32, i32* %0, i32 1
-  store i32 0, i32* %0
-  store i32 1, i32* %2
-  %3 = getelementptr i32, i32* %0, i32 %b
-  %4 = load i32, i32* %3
+  %2 = getelementptr i32, ptr %0, i32 1
+  store i32 0, ptr %0
+  store i32 1, ptr %2
+  %3 = getelementptr i32, ptr %0, i32 %b
+  %4 = load i32, ptr %3
   ret i32 %4
 
 endif:

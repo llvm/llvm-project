@@ -19,6 +19,7 @@
 #include <fcntl.h>
 #include <linux/futex.h>
 #include <sched.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
@@ -179,6 +180,39 @@ bool getRandom(void *Buffer, uptr Length, UNUSED bool Blocking) {
 // Allocation free syslog-like API.
 extern "C" WEAK int async_safe_write_log(int pri, const char *tag,
                                          const char *msg);
+
+static uptr GetRSSFromBuffer(const char *Buf) {
+  // The format of the file is:
+  // 1084 89 69 11 0 79 0
+  // We need the second number which is RSS in pages.
+  const char *Pos = Buf;
+  // Skip the first number.
+  while (*Pos >= '0' && *Pos <= '9')
+    Pos++;
+  // Skip whitespaces.
+  while (!(*Pos >= '0' && *Pos <= '9') && *Pos != 0)
+    Pos++;
+  // Read the number.
+  u64 Rss = 0;
+  for (; *Pos >= '0' && *Pos <= '9'; Pos++)
+    Rss = Rss * 10 + static_cast<u64>(*Pos) - '0';
+  return static_cast<uptr>(Rss * getPageSizeCached());
+}
+
+uptr GetRSS() {
+  // TODO: We currently use sanitizer_common's GetRSS which reads the
+  // RSS from /proc/self/statm by default. We might want to
+  // call getrusage directly, even if it's less accurate.
+  auto Fd = open("/proc/self/statm", O_RDONLY);
+  char Buf[64];
+  s64 Len = read(Fd, Buf, sizeof(Buf) - 1);
+  close(Fd);
+  if (Len <= 0)
+    return 0;
+  Buf[Len] = 0;
+
+  return GetRSSFromBuffer(Buf);
+}
 
 void outputRaw(const char *Buffer) {
   if (&async_safe_write_log) {

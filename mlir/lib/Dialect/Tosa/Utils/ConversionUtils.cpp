@@ -10,14 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Tosa/Utils/CoversionUtils.h"
+#include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 
 using namespace mlir;
 using namespace mlir::tosa;
 
-SmallVector<StringRef>
+SmallVector<utils::IteratorType>
 mlir::tosa::getNParallelLoopsAttrs(unsigned nParallelLoops) {
-  return SmallVector<StringRef>(nParallelLoops, getParallelIteratorTypeName());
+  return SmallVector<utils::IteratorType>(nParallelLoops,
+                                          utils::IteratorType::parallel);
 }
 
 SmallVector<Value>
@@ -27,4 +28,35 @@ mlir::tosa::condenseValues(const SmallVector<Value> &values) {
     if (value)
       condensedValues.push_back(value);
   return condensedValues;
+}
+
+Value mlir::tosa::clampFloatHelper(Location loc, Value arg, Value min,
+                                   Value max, OpBuilder &rewriter) {
+  Value minValue = rewriter.create<arith::MinFOp>(loc, arg, max);
+  return rewriter.create<arith::MaxFOp>(loc, minValue, min);
+}
+
+Value mlir::tosa::clampIntHelper(Location loc, Value arg, Value min, Value max,
+                                 OpBuilder &rewriter) {
+  auto smallerThanMin =
+      rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, arg, min);
+  auto minOrArg =
+      rewriter.create<arith::SelectOp>(loc, smallerThanMin, min, arg);
+  auto largerThanMax =
+      rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, max, arg);
+  return rewriter.create<arith::SelectOp>(loc, largerThanMax, max, minOrArg);
+}
+
+bool mlir::tosa::validIntegerRange(IntegerType ty, int64_t value) {
+  uint64_t bitwidth = ty.getIntOrFloatBitWidth();
+  if (ty.getSignedness() == IntegerType::Unsigned) {
+    uint64_t uvalue = value;
+    APInt intMin = APInt::getMinValue(bitwidth);
+    APInt intMax = APInt::getMaxValue(bitwidth);
+    return uvalue >= intMin.getZExtValue() && uvalue <= intMax.getZExtValue();
+  }
+
+  APInt intMin = APInt::getSignedMinValue(bitwidth);
+  APInt intMax = APInt::getSignedMaxValue(bitwidth);
+  return value >= intMin.getSExtValue() && value <= intMax.getSExtValue();
 }

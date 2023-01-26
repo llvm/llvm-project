@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -S | FileCheck %s
+; RUN: opt < %s -passes=indvars -S | FileCheck %s
 
 target triple = "nvptx64-unknown-unknown"
 
@@ -9,7 +9,7 @@ target triple = "nvptx64-unknown-unknown"
 ; variables to 64-bit integers even though i64 is a legal type in the 64-bit
 ; PTX ISA.
 
-define void @indvar_32_bit(i32 %n, i32* nocapture %output) {
+define void @indvar_32_bit(i32 %n, ptr nocapture %output) {
 ; CHECK-LABEL: @indvar_32_bit
 entry:
   %cmp5 = icmp sgt i32 %n, 0
@@ -23,8 +23,8 @@ for.body:                                         ; preds = %for.body.preheader,
 ; CHECK: phi i32
   %mul = mul nsw i32 %i.06, %i.06
   %0 = sext i32 %i.06 to i64
-  %arrayidx = getelementptr inbounds i32, i32* %output, i64 %0
-  store i32 %mul, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %output, i64 %0
+  store i32 %mul, ptr %arrayidx, align 4
   %add = add nsw i32 %i.06, 3
   %cmp = icmp slt i32 %add, %n
   br i1 %cmp, label %for.body, label %for.end.loopexit

@@ -12,13 +12,13 @@
 ; WITH: T bar
 ; WITH: T foo
 
-@a0foo = alias void (), void ()* @foo
+@a0foo = alias void (), ptr @foo
 
 define void @foo() {
   ret void
 }
 
-@a0bar = alias void (), void ()* @bar
+@a0bar = alias void (), ptr @bar
 
 define void @bar() {
   ret void

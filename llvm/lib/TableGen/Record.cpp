@@ -24,6 +24,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
@@ -415,7 +416,7 @@ BitsInit *BitsInit::get(RecordKeeper &RK, ArrayRef<Init *> Range) {
 }
 
 void BitsInit::Profile(FoldingSetNodeID &ID) const {
-  ProfileBitsInit(ID, makeArrayRef(getTrailingObjects<Init *>(), NumBits));
+  ProfileBitsInit(ID, ArrayRef(getTrailingObjects<Init *>(), NumBits));
 }
 
 Init *BitsInit::convertInitializerTo(RecTy *Ty) const {
@@ -885,6 +886,23 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
       }
     }
     break;
+
+  case LOG2:
+    if (IntInit *LHSi = dyn_cast_or_null<IntInit>(
+            LHS->convertInitializerTo(IntRecTy::get(RK)))) {
+      int64_t LHSv = LHSi->getValue();
+      if (LHSv <= 0) {
+        PrintFatalError(CurRec->getLoc(),
+                        "Illegal operation: logtwo is undefined "
+                        "on arguments less than or equal to 0");
+      } else {
+        uint64_t Log = Log2_64(LHSv);
+        assert(Log <= INT64_MAX &&
+               "Log of an int64_t must be smaller than INT64_MAX");
+        return IntInit::get(RK, static_cast<int64_t>(Log));
+      }
+    }
+    break;
   }
   return const_cast<UnOpInit *>(this);
 }
@@ -908,6 +926,7 @@ std::string UnOpInit::getAsString() const {
   case SIZE: Result = "!size"; break;
   case EMPTY: Result = "!empty"; break;
   case GETDAGOP: Result = "!getdagop"; break;
+  case LOG2 : Result = "!logtwo"; break;
   }
   return Result + "(" + LHS->getAsString() + ")";
 }
@@ -1018,7 +1037,83 @@ Init *BinOpInit::getListConcat(TypedInit *LHS, Init *RHS) {
    return BinOpInit::get(BinOpInit::LISTCONCAT, LHS, RHS, LHS->getType());
 }
 
-Init *BinOpInit::Fold(Record *CurRec) const {
+std::optional<bool> BinOpInit::CompareInit(unsigned Opc, Init *LHS, Init *RHS) const {
+   // First see if we have two bit, bits, or int.
+   IntInit *LHSi = dyn_cast_or_null<IntInit>(
+       LHS->convertInitializerTo(IntRecTy::get(getRecordKeeper())));
+   IntInit *RHSi = dyn_cast_or_null<IntInit>(
+       RHS->convertInitializerTo(IntRecTy::get(getRecordKeeper())));
+
+   if (LHSi && RHSi) {
+     bool Result;
+     switch (Opc) {
+     case EQ:
+       Result = LHSi->getValue() == RHSi->getValue();
+       break;
+     case NE:
+       Result = LHSi->getValue() != RHSi->getValue();
+       break;
+     case LE:
+       Result = LHSi->getValue() <= RHSi->getValue();
+       break;
+     case LT:
+       Result = LHSi->getValue() < RHSi->getValue();
+       break;
+     case GE:
+       Result = LHSi->getValue() >= RHSi->getValue();
+       break;
+     case GT:
+       Result = LHSi->getValue() > RHSi->getValue();
+       break;
+     default:
+       llvm_unreachable("unhandled comparison");
+     }
+     return Result;
+   }
+
+   // Next try strings.
+   StringInit *LHSs = dyn_cast<StringInit>(LHS);
+   StringInit *RHSs = dyn_cast<StringInit>(RHS);
+
+   if (LHSs && RHSs) {
+     bool Result;
+     switch (Opc) {
+     case EQ:
+       Result = LHSs->getValue() == RHSs->getValue();
+       break;
+     case NE:
+       Result = LHSs->getValue() != RHSs->getValue();
+       break;
+     case LE:
+       Result = LHSs->getValue() <= RHSs->getValue();
+       break;
+     case LT:
+       Result = LHSs->getValue() < RHSs->getValue();
+       break;
+     case GE:
+       Result = LHSs->getValue() >= RHSs->getValue();
+       break;
+     case GT:
+       Result = LHSs->getValue() > RHSs->getValue();
+       break;
+     default:
+       llvm_unreachable("unhandled comparison");
+     }
+     return Result;
+   }
+
+   // Finally, !eq and !ne can be used with records.
+   if (Opc == EQ || Opc == NE) {
+     DefInit *LHSd = dyn_cast<DefInit>(LHS);
+     DefInit *RHSd = dyn_cast<DefInit>(RHS);
+     if (LHSd && RHSd)
+       return (Opc == EQ) ? LHSd == RHSd : LHSd != RHSd;
+   }
+
+   return std::nullopt;
+}
+
+ Init *BinOpInit::Fold(Record *CurRec) const {
   switch (getOpcode()) {
   case CONCAT: {
     DagInit *LHSs = dyn_cast<DagInit>(LHS);
@@ -1072,6 +1167,28 @@ Init *BinOpInit::Fold(Record *CurRec) const {
     }
     break;
   }
+  case LISTREMOVE: {
+    ListInit *LHSs = dyn_cast<ListInit>(LHS);
+    ListInit *RHSs = dyn_cast<ListInit>(RHS);
+    if (LHSs && RHSs) {
+      SmallVector<Init *, 8> Args;
+      for (Init *EltLHS : *LHSs) {
+        bool Found = false;
+        for (Init *EltRHS : *RHSs) {
+          if (std::optional<bool> Result = CompareInit(EQ, EltLHS, EltRHS)) {
+            if (*Result) {
+              Found = true;
+              break;
+            }
+          }
+        }
+        if (!Found)
+          Args.push_back(EltLHS);
+      }
+      return ListInit::get(Args, LHSs->getElementType());
+    }
+    break;
+  }
   case STRCONCAT: {
     StringInit *LHSs = dyn_cast<StringInit>(LHS);
     StringInit *RHSs = dyn_cast<StringInit>(RHS);
@@ -1099,53 +1216,8 @@ Init *BinOpInit::Fold(Record *CurRec) const {
   case LT:
   case GE:
   case GT: {
-    // First see if we have two bit, bits, or int.
-    IntInit *LHSi = dyn_cast_or_null<IntInit>(
-        LHS->convertInitializerTo(IntRecTy::get(getRecordKeeper())));
-    IntInit *RHSi = dyn_cast_or_null<IntInit>(
-        RHS->convertInitializerTo(IntRecTy::get(getRecordKeeper())));
-
-    if (LHSi && RHSi) {
-      bool Result;
-      switch (getOpcode()) {
-      case EQ: Result = LHSi->getValue() == RHSi->getValue(); break;
-      case NE: Result = LHSi->getValue() != RHSi->getValue(); break;
-      case LE: Result = LHSi->getValue() <= RHSi->getValue(); break;
-      case LT: Result = LHSi->getValue() <  RHSi->getValue(); break;
-      case GE: Result = LHSi->getValue() >= RHSi->getValue(); break;
-      case GT: Result = LHSi->getValue() >  RHSi->getValue(); break;
-      default: llvm_unreachable("unhandled comparison");
-      }
-      return BitInit::get(getRecordKeeper(), Result);
-    }
-
-    // Next try strings.
-    StringInit *LHSs = dyn_cast<StringInit>(LHS);
-    StringInit *RHSs = dyn_cast<StringInit>(RHS);
-
-    if (LHSs && RHSs) {
-      bool Result;
-      switch (getOpcode()) {
-      case EQ: Result = LHSs->getValue() == RHSs->getValue(); break;
-      case NE: Result = LHSs->getValue() != RHSs->getValue(); break;
-      case LE: Result = LHSs->getValue() <= RHSs->getValue(); break;
-      case LT: Result = LHSs->getValue() <  RHSs->getValue(); break;
-      case GE: Result = LHSs->getValue() >= RHSs->getValue(); break;
-      case GT: Result = LHSs->getValue() >  RHSs->getValue(); break;
-      default: llvm_unreachable("unhandled comparison");
-      }
-      return BitInit::get(getRecordKeeper(), Result);
-    }
-
-    // Finally, !eq and !ne can be used with records.
-    if (getOpcode() == EQ || getOpcode() == NE) {
-      DefInit *LHSd = dyn_cast<DefInit>(LHS);
-      DefInit *RHSd = dyn_cast<DefInit>(RHS);
-      if (LHSd && RHSd)
-        return BitInit::get(getRecordKeeper(),
-                            (getOpcode() == EQ) ? LHSd == RHSd : LHSd != RHSd);
-    }
-
+    if (std::optional<bool> Result = CompareInit(getOpcode(), LHS, RHS))
+      return BitInit::get(getRecordKeeper(), *Result);
     break;
   }
   case SETDAGOP: {
@@ -1165,6 +1237,7 @@ Init *BinOpInit::Fold(Record *CurRec) const {
   case ADD:
   case SUB:
   case MUL:
+  case DIV:
   case AND:
   case OR:
   case XOR:
@@ -1183,6 +1256,16 @@ Init *BinOpInit::Fold(Record *CurRec) const {
       case ADD: Result = LHSv + RHSv; break;
       case SUB: Result = LHSv - RHSv; break;
       case MUL: Result = LHSv * RHSv; break;
+      case DIV:
+        if (RHSv == 0)
+          PrintFatalError(CurRec->getLoc(),
+                          "Illegal operation: division by zero");
+        else if (LHSv == INT64_MIN && RHSv == -1)
+          PrintFatalError(CurRec->getLoc(),
+                          "Illegal operation: INT64_MIN / -1");
+        else
+          Result = LHSv / RHSv;
+        break;
       case AND: Result = LHSv & RHSv; break;
       case OR:  Result = LHSv | RHSv; break;
       case XOR: Result = LHSv ^ RHSv; break;
@@ -1215,6 +1298,7 @@ std::string BinOpInit::getAsString() const {
   case ADD: Result = "!add"; break;
   case SUB: Result = "!sub"; break;
   case MUL: Result = "!mul"; break;
+  case DIV: Result = "!div"; break;
   case AND: Result = "!and"; break;
   case OR: Result = "!or"; break;
   case XOR: Result = "!xor"; break;
@@ -1229,6 +1313,7 @@ std::string BinOpInit::getAsString() const {
   case GT: Result = "!gt"; break;
   case LISTCONCAT: Result = "!listconcat"; break;
   case LISTSPLAT: Result = "!listsplat"; break;
+  case LISTREMOVE: Result = "!listremove"; break;
   case STRCONCAT: Result = "!strconcat"; break;
   case INTERLEAVE: Result = "!interleave"; break;
   case SETDAGOP: Result = "!setdagop"; break;
@@ -2105,10 +2190,9 @@ static void ProfileCondOpInit(FoldingSetNodeID &ID,
 }
 
 void CondOpInit::Profile(FoldingSetNodeID &ID) const {
-  ProfileCondOpInit(ID,
-      makeArrayRef(getTrailingObjects<Init *>(), NumConds),
-      makeArrayRef(getTrailingObjects<Init *>() + NumConds, NumConds),
-      ValType);
+  ProfileCondOpInit(ID, ArrayRef(getTrailingObjects<Init *>(), NumConds),
+                    ArrayRef(getTrailingObjects<Init *>() + NumConds, NumConds),
+                    ValType);
 }
 
 CondOpInit *CondOpInit::get(ArrayRef<Init *> CondRange,
@@ -2238,6 +2322,7 @@ static void ProfileDagInit(FoldingSetNodeID &ID, Init *V, StringInit *VN,
 
 DagInit *DagInit::get(Init *V, StringInit *VN, ArrayRef<Init *> ArgRange,
                       ArrayRef<StringInit *> NameRange) {
+  assert(ArgRange.size() == NameRange.size());
   FoldingSetNodeID ID;
   ProfileDagInit(ID, V, VN, ArgRange, NameRange);
 
@@ -2273,7 +2358,9 @@ DagInit::get(Init *V, StringInit *VN,
 }
 
 void DagInit::Profile(FoldingSetNodeID &ID) const {
-  ProfileDagInit(ID, Val, ValName, makeArrayRef(getTrailingObjects<Init *>(), NumArgs), makeArrayRef(getTrailingObjects<StringInit *>(), NumArgNames));
+  ProfileDagInit(ID, Val, ValName,
+                 ArrayRef(getTrailingObjects<Init *>(), NumArgs),
+                 ArrayRef(getTrailingObjects<StringInit *>(), NumArgNames));
 }
 
 Record *DagInit::getOperatorAsDef(ArrayRef<SMLoc> Loc) const {
@@ -2605,20 +2692,20 @@ Init *Record::getValueInit(StringRef FieldName) const {
 }
 
 StringRef Record::getValueAsString(StringRef FieldName) const {
-  llvm::Optional<StringRef> S = getValueAsOptionalString(FieldName);
+  std::optional<StringRef> S = getValueAsOptionalString(FieldName);
   if (!S)
     PrintFatalError(getLoc(), "Record `" + getName() +
       "' does not have a field named `" + FieldName + "'!\n");
-  return S.value();
+  return *S;
 }
 
-llvm::Optional<StringRef>
+std::optional<StringRef>
 Record::getValueAsOptionalString(StringRef FieldName) const {
   const RecordVal *R = getValue(FieldName);
   if (!R || !R->getValue())
-    return llvm::Optional<StringRef>();
+    return std::nullopt;
   if (isa<UnsetInit>(R->getValue()))
-    return llvm::Optional<StringRef>();
+    return std::nullopt;
 
   if (StringInit *SI = dyn_cast<StringInit>(R->getValue()))
     return SI->getValue();
@@ -2877,7 +2964,7 @@ RecordKeeper::getAllDerivedDefinitions(StringRef ClassName) const {
   // the same vectors multiple times.
   auto Pair = ClassRecordsMap.try_emplace(ClassName);
   if (Pair.second)
-    Pair.first->second = getAllDerivedDefinitions(makeArrayRef(ClassName));
+    Pair.first->second = getAllDerivedDefinitions(ArrayRef(ClassName));
 
   return Pair.first->second;
 }

@@ -45,7 +45,7 @@ define double @log_pow_not_fast(double %x, double %y) {
   ret double %log
 }
 
-define float @function_pointer(float ()* %fptr, float %p1) {
+define float @function_pointer(ptr %fptr, float %p1) {
 ; CHECK-LABEL: @function_pointer(
 ; CHECK-NEXT:    [[PTR:%.*]] = call float [[FPTR:%.*]]()
 ; CHECK-NEXT:    [[LOG:%.*]] = call float @logf(float [[PTR]])
@@ -97,7 +97,7 @@ define double @log_exp2_not_fast(double %x) {
   ret double %log
 }
 
-define double @pr43617(double %d, i32 %i, double (i32)* %f) {
+define double @pr43617(double %d, i32 %i, ptr %f) {
 entry:
   %sub = fsub double -0.000000e+00, %d
   %icall = tail call fast double %f(i32 %i)

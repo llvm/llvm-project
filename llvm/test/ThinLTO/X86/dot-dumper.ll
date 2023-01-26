@@ -71,9 +71,9 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: nounwind uwtable
 define i32 @main() local_unnamed_addr {
   %1 = tail call i32 (...) @foo()
-  %2 = load i32, i32* @A, align 4
+  %2 = load i32, ptr @A, align 4
   %3 = add nsw i32 %2, %1
   ret i32 %3
 }
-@main_alias = weak_odr alias i32 (), i32 ()* @main
+@main_alias = weak_odr alias i32 (), ptr @main
 declare i32 @foo(...) local_unnamed_addr

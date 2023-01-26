@@ -1,9 +1,9 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=thumbv7-windows %s -o %t.obj
-// RUN: lld-link -entry:main -subsystem:console %t.obj -out:%t.exe -verbose 2>&1 | FileCheck -check-prefix=VERBOSE %s
-// RUN: llvm-objdump -d %t.exe --start-address=0x401000 --stop-address=0x401022 | FileCheck --check-prefix=MAIN %s
-// RUN: llvm-objdump -d %t.exe --start-address=0x501022 --stop-address=0x501032 | FileCheck --check-prefix=FUNC1 %s
-// RUN: llvm-objdump -d %t.exe --start-address=0x601032 | FileCheck --check-prefix=FUNC2 %s
+// RUN: lld-link -entry:main -subsystem:console %t.obj -out:%t.exe -map -verbose 2>&1 | FileCheck -check-prefix=VERBOSE %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t.exe --start-address=0x401000 --stop-address=0x401022 | FileCheck --check-prefix=MAIN %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t.exe --start-address=0x501022 --stop-address=0x501032 | FileCheck --check-prefix=FUNC1 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t.exe --start-address=0x601032 | FileCheck --check-prefix=FUNC2 %s
 
 // VERBOSE: Added 3 thunks with margin {{.*}} in 1 passes
 

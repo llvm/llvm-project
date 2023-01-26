@@ -128,19 +128,6 @@ public:
   }
 };
 
-// Specialize is_trivially_copyable to avoid limitation of llvm::is_trivially_copyable
-// when compiled with gcc 4.9.
-template <typename PointerTy, unsigned IntBits, typename IntType,
-          typename PtrTraits,
-          typename Info>
-struct is_trivially_copyable<PointerIntPair<PointerTy, IntBits, IntType, PtrTraits, Info>> : std::true_type {
-#ifdef HAVE_STD_IS_TRIVIALLY_COPYABLE
-  static_assert(std::is_trivially_copyable<PointerIntPair<PointerTy, IntBits, IntType, PtrTraits, Info>>::value,
-                "inconsistent behavior between llvm:: and std:: implementation of is_trivially_copyable");
-#endif
-};
-
-
 template <typename PointerT, unsigned IntBits, typename PtrTraits>
 struct PointerIntPairInfo {
   static_assert(PtrTraits::NumLowBitsAvailable <
@@ -240,6 +227,32 @@ struct PointerLikeTypeTraits<
       PtrTraits::NumLowBitsAvailable - IntBits;
 };
 
+// Allow structured bindings on PointerIntPair.
+template <std::size_t I, typename PointerTy, unsigned IntBits, typename IntType,
+          typename PtrTraits, typename Info>
+decltype(auto)
+get(const PointerIntPair<PointerTy, IntBits, IntType, PtrTraits, Info> &Pair) {
+  static_assert(I < 2);
+  if constexpr (I == 0)
+    return Pair.getPointer();
+  else
+    return Pair.getInt();
+}
+
 } // end namespace llvm
+
+namespace std {
+template <typename PointerTy, unsigned IntBits, typename IntType,
+          typename PtrTraits, typename Info>
+struct tuple_size<
+    llvm::PointerIntPair<PointerTy, IntBits, IntType, PtrTraits, Info>>
+    : std::integral_constant<std::size_t, 2> {};
+
+template <std::size_t I, typename PointerTy, unsigned IntBits, typename IntType,
+          typename PtrTraits, typename Info>
+struct tuple_element<
+    I, llvm::PointerIntPair<PointerTy, IntBits, IntType, PtrTraits, Info>>
+    : std::conditional<I == 0, PointerTy, IntType> {};
+} // namespace std
 
 #endif // LLVM_ADT_POINTERINTPAIR_H

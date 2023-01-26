@@ -10,9 +10,9 @@
 #define MLIR_LIB_PARSER_TOKEN_H
 
 #include "mlir/Support/LLVM.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SMLoc.h"
+#include <optional>
 
 namespace mlir {
 
@@ -74,41 +74,42 @@ public:
   // Helpers to decode specific sorts of tokens.
 
   /// For an integer token, return its value as an unsigned.  If it doesn't fit,
-  /// return None.
-  Optional<unsigned> getUnsignedIntegerValue() const;
+  /// return std::nullopt.
+  std::optional<unsigned> getUnsignedIntegerValue() const;
 
   /// For an integer token, return its value as an uint64_t.  If it doesn't fit,
-  /// return None.
-  static Optional<uint64_t> getUInt64IntegerValue(StringRef spelling);
-  Optional<uint64_t> getUInt64IntegerValue() const {
+  /// return std::nullopt.
+  static std::optional<uint64_t> getUInt64IntegerValue(StringRef spelling);
+  std::optional<uint64_t> getUInt64IntegerValue() const {
     return getUInt64IntegerValue(getSpelling());
   }
 
-  /// For a floatliteral token, return its value as a double. Returns None in
-  /// the case of underflow or overflow.
-  Optional<double> getFloatingPointValue() const;
+  /// For a floatliteral token, return its value as a double. Returns
+  /// std::nullopt in the case of underflow or overflow.
+  std::optional<double> getFloatingPointValue() const;
 
   /// For an inttype token, return its bitwidth.
-  Optional<unsigned> getIntTypeBitwidth() const;
+  std::optional<unsigned> getIntTypeBitwidth() const;
 
-  /// For an inttype token, return its signedness semantics: llvm::None means no
-  /// signedness semantics; true means signed integer type; false means unsigned
-  /// integer type.
-  Optional<bool> getIntTypeSignedness() const;
+  /// For an inttype token, return its signedness semantics: std::nullopt means
+  /// no signedness semantics; true means signed integer type; false means
+  /// unsigned integer type.
+  std::optional<bool> getIntTypeSignedness() const;
 
   /// Given a hash_identifier token like #123, try to parse the number out of
-  /// the identifier, returning None if it is a named identifier like #x or
-  /// if the integer doesn't fit.
-  Optional<unsigned> getHashIdentifierNumber() const;
+  /// the identifier, returning std::nullopt if it is a named identifier like #x
+  /// or if the integer doesn't fit.
+  std::optional<unsigned> getHashIdentifierNumber() const;
 
   /// Given a token containing a string literal, return its value, including
   /// removing the quote characters and unescaping the contents of the string.
   std::string getStringValue() const;
 
-  /// Given a token containing a hex string literal, return its value or None if
-  /// the token does not contain a valid hex string. A hex string literal is a
-  /// string starting with `0x` and only containing hex digits.
-  Optional<std::string> getHexStringValue() const;
+  /// Given a token containing a hex string literal, return its value or
+  /// std::nullopt if the token does not contain a valid hex string. A hex
+  /// string literal is a string starting with `0x` and only containing hex
+  /// digits.
+  std::optional<std::string> getHexStringValue() const;
 
   /// Given a token containing a symbol reference, return the unescaped string
   /// value.

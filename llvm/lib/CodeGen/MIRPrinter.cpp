@@ -200,6 +200,7 @@ void MIRPrinter::print(const MachineFunction &MF) {
   YamlMF.HasEHCatchret = MF.hasEHCatchret();
   YamlMF.HasEHScopes = MF.hasEHScopes();
   YamlMF.HasEHFunclets = MF.hasEHFunclets();
+  YamlMF.UseDebugInstrRef = MF.useDebugInstrRef();
 
   YamlMF.Legalized = MF.getProperties().hasProperty(
       MachineFunctionProperties::Property::Legalized);
@@ -306,13 +307,13 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
 
   // Print the virtual register definitions.
   for (unsigned I = 0, E = RegInfo.getNumVirtRegs(); I < E; ++I) {
-    unsigned Reg = Register::index2VirtReg(I);
+    Register Reg = Register::index2VirtReg(I);
     yaml::VirtualRegisterDefinition VReg;
     VReg.ID = I;
     if (RegInfo.getVRegName(Reg) != "")
       continue;
     ::printRegClassOrBank(Reg, VReg.Class, RegInfo, TRI);
-    unsigned PreferredReg = RegInfo.getSimpleHint(Reg);
+    Register PreferredReg = RegInfo.getSimpleHint(Reg);
     if (PreferredReg)
       printRegMIR(PreferredReg, VReg.PreferredRegister, TRI);
     MF.VirtualRegisters.push_back(VReg);
@@ -819,6 +820,19 @@ void MIPrinter::print(const MachineInstr &MI) {
     HeapAllocMarker->printAsOperand(OS, MST);
     NeedComma = true;
   }
+  if (MDNode *PCSections = MI.getPCSections()) {
+    if (NeedComma)
+      OS << ',';
+    OS << " pcsections ";
+    PCSections->printAsOperand(OS, MST);
+    NeedComma = true;
+  }
+  if (uint32_t CFIType = MI.getCFIType()) {
+    if (NeedComma)
+      OS << ',';
+    OS << " cfi-type " << CFIType;
+    NeedComma = true;
+  }
 
   if (auto Num = MI.peekDebugInstrNum()) {
     if (NeedComma)
@@ -880,7 +894,7 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
       MachineOperand::printSubRegIdx(OS, Op.getImm(), TRI);
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MachineOperand::MO_Register:
   case MachineOperand::MO_CImmediate:
   case MachineOperand::MO_FPImmediate:
@@ -897,6 +911,7 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
   case MachineOperand::MO_IntrinsicID:
   case MachineOperand::MO_Predicate:
   case MachineOperand::MO_BlockAddress:
+  case MachineOperand::MO_DbgInstrRef:
   case MachineOperand::MO_ShuffleMask: {
     unsigned TiedOperandIdx = 0;
     if (ShouldPrintRegisterTies && Op.isReg() && Op.isTied() && !Op.isDef())

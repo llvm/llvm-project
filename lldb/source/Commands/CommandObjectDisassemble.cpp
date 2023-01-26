@@ -204,7 +204,7 @@ Status CommandObjectDisassemble::CommandOptions::OptionParsingFinished(
 
 llvm::ArrayRef<OptionDefinition>
 CommandObjectDisassemble::CommandOptions::GetDefinitions() {
-  return llvm::makeArrayRef(g_disassemble_options);
+  return llvm::ArrayRef(g_disassemble_options);
 }
 
 // CommandObjectDisassemble

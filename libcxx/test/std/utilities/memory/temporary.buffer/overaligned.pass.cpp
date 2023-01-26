@@ -25,8 +25,10 @@
 //   void
 //   return_temporary_buffer(T* p);
 
-#include <memory>
 #include <cassert>
+#include <cstdint>
+#include <memory>
+#include <utility>
 
 #include "test_macros.h"
 

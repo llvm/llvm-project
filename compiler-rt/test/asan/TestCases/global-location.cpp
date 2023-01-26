@@ -5,7 +5,7 @@
 // RUN: not %run %t l 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=LITERAL
 
 // COFF doesn't support debuginfo for globals. For the non-debuginfo tests, see global-location-nodebug.cpp.
-// XFAIL: windows-msvc
+// XFAIL: target={{.*windows-msvc.*}}
 
 // atos doesn't show source line numbers for global variables.
 // UNSUPPORTED: darwin
@@ -16,11 +16,11 @@
 
 struct C {
   static int array[10];
-  // CLASS_STATIC:      0x{{.*}} is located 4 bytes to the right of global variable 'C::array' defined in '{{.*}}global-location.cpp:[[@LINE-1]]' {{.*}} of size 40
+  // CLASS_STATIC:      0x{{.*}} is located 4 bytes after global variable 'C::array' defined in '{{.*}}global-location.cpp:[[@LINE-1]]' {{.*}} of size 40
 };
 
 int global[10];
-// GLOB:      0x{{.*}} is located 4 bytes to the right of global variable 'global' defined in '{{.*}}global-location.cpp:[[@LINE-1]]' {{.*}} of size 40
+// GLOB:      0x{{.*}} is located 4 bytes after global variable 'global' defined in '{{.*}}global-location.cpp:[[@LINE-1]]' {{.*}} of size 40
 int C::array[10];
 
 int main(int argc, char **argv) {
@@ -30,12 +30,12 @@ int main(int argc, char **argv) {
   case 'c': return C::array[one * 11];
   case 'f':
     static int array[10];
-    // FUNC_STATIC:      0x{{.*}} is located 4 bytes to the right of global variable 'main::array' defined in '{{.*}}global-location.cpp:[[@LINE-1]]' {{.*}} of size 40
+    // FUNC_STATIC:      0x{{.*}} is located 4 bytes after global variable 'main::array' defined in '{{.*}}global-location.cpp:[[@LINE-1]]' {{.*}} of size 40
     memset(array, 0, 10);
     return array[one * 11];
   case 'l':
     const char *str = "0123456789";
-    // LITERAL:      0x{{.*}} is located 0 bytes to the right of global variable {{.*}} defined in '{{.*}}global-location.cpp:[[@LINE-1]]' {{.*}} of size 11
+    // LITERAL:      0x{{.*}} is located 0 bytes after global variable {{.*}} defined in '{{.*}}global-location.cpp:[[@LINE-1]]' {{.*}} of size 11
     return str[one * 11];
   }
   return 0;

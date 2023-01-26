@@ -61,7 +61,7 @@ Register VirtRegAuxInfo::copyHint(const MachineInstr *MI, unsigned Reg,
   if (!HReg)
     return 0;
 
-  if (Register::isVirtualRegister(HReg))
+  if (HReg.isVirtual())
     return Sub == HSub ? HReg : Register();
 
   const TargetRegisterClass *RC = MRI.getRegClass(Reg);
@@ -107,7 +107,7 @@ bool VirtRegAuxInfo::isRematerializable(const LiveInterval &LI,
 
       // If the original (pre-splitting) registers match this
       // copy came from a split.
-      if (!Register::isVirtualRegister(Reg) || VRM.getOriginal(Reg) != Original)
+      if (!Reg.isVirtual() || VRM.getOriginal(Reg) != Original)
         return false;
 
       // Follow the copy live-in value.
@@ -278,7 +278,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
     if (TargetHint.first == 0 && TargetHint.second)
       MRI.clearSimpleHint(LI.reg());
 
-    std::set<Register> HintedRegs;
+    SmallSet<Register, 4> HintedRegs;
     for (const auto &Hint : CopyHints) {
       if (!HintedRegs.insert(Hint.Reg).second ||
           (TargetHint.first != 0 && Hint.Reg == TargetHint.second))

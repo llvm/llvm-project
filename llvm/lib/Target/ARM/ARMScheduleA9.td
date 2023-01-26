@@ -2239,9 +2239,9 @@ def A9WriteLMfpPostRA : SchedWriteVariant<[
 // Distinguish between our multiple MI-level forms of the same
 // VLDM/VSTM instructions.
 def A9PreRA : SchedPredicate<
-  "Register::isVirtualRegister(MI->getOperand(0).getReg())">;
+  "MI->getOperand(0).getReg().isVirtual()">;
 def A9PostRA : SchedPredicate<
-  "Register::isPhysicalRegister(MI->getOperand(0).getReg())">;
+  "MI->getOperand(0).getReg().isPhysical()">;
 
 // VLDM represents all destination registers as a single register
 // tuple, unlike LDM. So the number of write operands is not variadic.

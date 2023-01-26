@@ -35,7 +35,7 @@ define hidden void @julia_tryparse_internal_45896() #0 {
 ; CHECK-NEXT:  # %bb.9: # %L917
 ; CHECK-NEXT:  .LBB0_10: # %L994
 top:
-  %0 = load i64, i64* undef, align 8
+  %0 = load i64, ptr undef, align 8
   %1 = icmp ne i64 %0, 0
   %2 = sext i64 %0 to i128
   switch i64 %0, label %pass195 [

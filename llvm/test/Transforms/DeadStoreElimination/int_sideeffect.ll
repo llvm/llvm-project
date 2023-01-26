@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -dse | FileCheck %s
+; RUN: opt -S < %s -passes=dse | FileCheck %s
 
 declare void @llvm.sideeffect()
 
@@ -7,9 +7,9 @@ declare void @llvm.sideeffect()
 ; CHECK-LABEL: dse
 ; CHECK: store
 ; CHECK-NOT: store
-define void @dse(float* %p) {
-    store float 0.0, float* %p
+define void @dse(ptr %p) {
+    store float 0.0, ptr %p
     call void @llvm.sideeffect()
-    store float 0.0, float* %p
+    store float 0.0, ptr %p
     ret void
 }

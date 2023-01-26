@@ -1,11 +1,11 @@
 ; Check Default behaviour still emits dtors
-; RUN: opt < %s -passes='asan-pipeline' -S | \
+; RUN: opt < %s -passes=asan -S | \
 ; RUN:   FileCheck -check-prefix=CHECK-DEFAULT %s
 ; CHECK-DEFAULT: llvm.global_dtor{{.+}}asan.module_dtor
 ; CHECK-DEFAULT: define internal void @asan.module_dtor
 
 ; Check with dtor emission disabled
-; RUN: opt < %s -passes='asan-pipeline' \
+; RUN: opt < %s -passes=asan \
 ; RUN:   -asan-destructor-kind=none -S | \
 ; RUN:   FileCheck %s
 ; CHECK-NOT: llvm.global_dtor{{.+}}asan.module_dtor

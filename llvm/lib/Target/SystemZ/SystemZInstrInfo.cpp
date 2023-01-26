@@ -629,7 +629,7 @@ bool SystemZInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
   switch (UseOpc) {
   case SystemZ::SELRMux:
     TieOps = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case SystemZ::LOCRMux:
     if (!STI.hasLoadStoreOnCond2())
       return false;
@@ -643,7 +643,7 @@ bool SystemZInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
     break;
   case SystemZ::SELGR:
     TieOps = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case SystemZ::LOCGR:
     if (!STI.hasLoadStoreOnCond2())
       return false;
@@ -869,7 +869,7 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 void SystemZInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
     bool isKill, int FrameIdx, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI) const {
+    const TargetRegisterInfo *TRI, Register VReg) const {
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
 
   // Callers may expect a single instruction, so keep 128-bit moves
@@ -881,10 +881,12 @@ void SystemZInstrInfo::storeRegToStackSlot(
                     FrameIdx);
 }
 
-void SystemZInstrInfo::loadRegFromStackSlot(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register DestReg,
-    int FrameIdx, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI) const {
+void SystemZInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                            MachineBasicBlock::iterator MBBI,
+                                            Register DestReg, int FrameIdx,
+                                            const TargetRegisterClass *RC,
+                                            const TargetRegisterInfo *TRI,
+                                            Register VReg) const {
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
 
   // Callers may expect a single instruction, so keep 128-bit moves
@@ -1208,7 +1210,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     const TargetRegisterClass *RC = TRI->getRegClass(MCOI.RegClass);
     if (RC == &SystemZ::VR32BitRegClass || RC == &SystemZ::VR64BitRegClass) {
       Register Reg = MI.getOperand(I).getReg();
-      Register PhysReg = Register::isVirtualRegister(Reg)
+      Register PhysReg = Reg.isVirtual()
                              ? (VRM ? Register(VRM->getPhys(Reg)) : Register())
                              : Reg;
       if (!PhysReg ||
@@ -1255,15 +1257,13 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     else {
       Register DstReg = MI.getOperand(0).getReg();
       Register DstPhys =
-          (Register::isVirtualRegister(DstReg) ? Register(VRM->getPhys(DstReg))
-                                               : DstReg);
+          (DstReg.isVirtual() ? Register(VRM->getPhys(DstReg)) : DstReg);
       Register SrcReg = (OpNum == 2 ? MI.getOperand(1).getReg()
                                     : ((OpNum == 1 && MI.isCommutable())
                                            ? MI.getOperand(2).getReg()
                                            : Register()));
       if (DstPhys && !SystemZ::GRH32BitRegClass.contains(DstPhys) && SrcReg &&
-          Register::isVirtualRegister(SrcReg) &&
-          DstPhys == VRM->getPhys(SrcReg))
+          SrcReg.isVirtual() && DstPhys == VRM->getPhys(SrcReg))
         NeedsCommute = (OpNum == 1);
       else
         return nullptr;
@@ -1314,7 +1314,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     // Constrain the register classes if converted from a vector opcode. The
     // allocated regs are in an FP reg-class per previous check above.
     for (const MachineOperand &MO : MIB->operands())
-      if (MO.isReg() && Register::isVirtualRegister(MO.getReg())) {
+      if (MO.isReg() && MO.getReg().isVirtual()) {
         Register Reg = MO.getReg();
         if (MRI.getRegClass(Reg) == &SystemZ::VR32BitRegClass)
           MRI.setRegClass(Reg, &SystemZ::FP32BitRegClass);
@@ -1878,16 +1878,15 @@ prepareCompareSwapOperands(MachineBasicBlock::iterator const MBBI) const {
   MachineBasicBlock *MBB = MBBI->getParent();
   bool CCLive = true;
   SmallVector<MachineInstr *, 4> CCUsers;
-  for (MachineBasicBlock::iterator Itr = std::next(MBBI);
-       Itr != MBB->end(); ++Itr) {
-    if (Itr->readsRegister(SystemZ::CC)) {
-      unsigned Flags = Itr->getDesc().TSFlags;
+  for (MachineInstr &MI : llvm::make_range(std::next(MBBI), MBB->end())) {
+    if (MI.readsRegister(SystemZ::CC)) {
+      unsigned Flags = MI.getDesc().TSFlags;
       if ((Flags & SystemZII::CCMaskFirst) || (Flags & SystemZII::CCMaskLast))
-        CCUsers.push_back(&*Itr);
+        CCUsers.push_back(&MI);
       else
         return false;
     }
-    if (Itr->definesRegister(SystemZ::CC)) {
+    if (MI.definesRegister(SystemZ::CC)) {
       CCLive = false;
       break;
     }

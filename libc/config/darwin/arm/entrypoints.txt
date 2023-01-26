@@ -19,6 +19,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     
     # string.h entrypoints
     libc.src.string.bcmp
+    libc.src.string.bcopy
     libc.src.string.bzero
     libc.src.string.memccpy
     libc.src.string.memchr
@@ -30,6 +31,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.memset
     libc.src.string.stpcpy
     libc.src.string.stpncpy
+    libc.src.string.strcasecmp
     libc.src.string.strcat
     libc.src.string.strchr
     libc.src.string.strcmp
@@ -38,6 +40,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strlcat
     libc.src.string.strlcpy
     libc.src.string.strlen
+    libc.src.string.strncasecmp
     libc.src.string.strncat
     libc.src.string.strncmp
     libc.src.string.strncpy
@@ -105,14 +108,20 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.fenv.feupdateenv
 
     # math.h entrypoints
+    libc.src.math.acosf
+    libc.src.math.asinf
+    libc.src.math.atanf
+    libc.src.math.atanhf
     libc.src.math.copysign
     libc.src.math.copysignf
     libc.src.math.copysignl
     libc.src.math.ceil
     libc.src.math.ceilf
     libc.src.math.ceill
+    libc.src.math.coshf
     libc.src.math.cosf
     libc.src.math.expf
+    libc.src.math.exp10f
     libc.src.math.exp2f
     libc.src.math.expm1f
     libc.src.math.fabs
@@ -157,6 +166,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ldexp
     libc.src.math.ldexpf
     libc.src.math.ldexpl
+    libc.src.math.log10
     libc.src.math.log10f
     libc.src.math.log1pf
     libc.src.math.log2f
@@ -186,10 +196,13 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.roundf
     libc.src.math.roundl
     libc.src.math.sincosf
+    libc.src.math.sinhf
     libc.src.math.sinf
     libc.src.math.sqrt
     libc.src.math.sqrtf
     libc.src.math.sqrtl
+    libc.src.math.tanf
+    libc.src.math.tanhf
     libc.src.math.trunc
     libc.src.math.truncf
     libc.src.math.truncl

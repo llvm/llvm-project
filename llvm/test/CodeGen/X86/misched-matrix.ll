@@ -1,10 +1,10 @@
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=core2 -pre-RA-sched=source -enable-misched \
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=generic -pre-RA-sched=source -enable-misched \
 ; RUN:          -misched-topdown -verify-machineinstrs \
 ; RUN:     | FileCheck %s -check-prefix=TOPDOWN
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=core2 -pre-RA-sched=source -enable-misched \
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=generic -pre-RA-sched=source -enable-misched \
 ; RUN:          -misched=ilpmin -verify-machineinstrs \
 ; RUN:     | FileCheck %s -check-prefix=ILPMIN
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=core2 -pre-RA-sched=source -enable-misched \
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=generic -pre-RA-sched=source -enable-misched \
 ; RUN:          -misched=ilpmax -verify-machineinstrs \
 ; RUN:     | FileCheck %s -check-prefix=ILPMAX
 ;
@@ -33,24 +33,24 @@
 ; ILPMIN: imull
 ; ILPMIN: addl
 ; ILPMIN: imull
-; ILPMIN: addl
 ; ILPMIN: imull
+; ILPMIN: addl
 ; ILPMIN: addl
 ; ILPMIN: movl %{{.*}}, 4(
 ; ILPMIN: imull
 ; ILPMIN: imull
 ; ILPMIN: addl
 ; ILPMIN: imull
-; ILPMIN: addl
 ; ILPMIN: imull
+; ILPMIN: addl
 ; ILPMIN: addl
 ; ILPMIN: movl %{{.*}}, 8(
 ; ILPMIN: imull
 ; ILPMIN: imull
 ; ILPMIN: addl
 ; ILPMIN: imull
-; ILPMIN: addl
 ; ILPMIN: imull
+; ILPMIN: addl
 ; ILPMIN: addl
 ; ILPMIN: movl %{{.*}}, 12(
 ; ILPMIN-LABEL: %for.end

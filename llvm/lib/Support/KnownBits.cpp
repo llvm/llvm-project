@@ -330,65 +330,65 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS) {
   return Known;
 }
 
-Optional<bool> KnownBits::eq(const KnownBits &LHS, const KnownBits &RHS) {
+std::optional<bool> KnownBits::eq(const KnownBits &LHS, const KnownBits &RHS) {
   if (LHS.isConstant() && RHS.isConstant())
-    return Optional<bool>(LHS.getConstant() == RHS.getConstant());
+    return std::optional<bool>(LHS.getConstant() == RHS.getConstant());
   if (LHS.One.intersects(RHS.Zero) || RHS.One.intersects(LHS.Zero))
-    return Optional<bool>(false);
-  return None;
+    return std::optional<bool>(false);
+  return std::nullopt;
 }
 
-Optional<bool> KnownBits::ne(const KnownBits &LHS, const KnownBits &RHS) {
-  if (Optional<bool> KnownEQ = eq(LHS, RHS))
-    return Optional<bool>(!*KnownEQ);
-  return None;
+std::optional<bool> KnownBits::ne(const KnownBits &LHS, const KnownBits &RHS) {
+  if (std::optional<bool> KnownEQ = eq(LHS, RHS))
+    return std::optional<bool>(!*KnownEQ);
+  return std::nullopt;
 }
 
-Optional<bool> KnownBits::ugt(const KnownBits &LHS, const KnownBits &RHS) {
+std::optional<bool> KnownBits::ugt(const KnownBits &LHS, const KnownBits &RHS) {
   // LHS >u RHS -> false if umax(LHS) <= umax(RHS)
   if (LHS.getMaxValue().ule(RHS.getMinValue()))
-    return Optional<bool>(false);
+    return std::optional<bool>(false);
   // LHS >u RHS -> true if umin(LHS) > umax(RHS)
   if (LHS.getMinValue().ugt(RHS.getMaxValue()))
-    return Optional<bool>(true);
-  return None;
+    return std::optional<bool>(true);
+  return std::nullopt;
 }
 
-Optional<bool> KnownBits::uge(const KnownBits &LHS, const KnownBits &RHS) {
-  if (Optional<bool> IsUGT = ugt(RHS, LHS))
-    return Optional<bool>(!*IsUGT);
-  return None;
+std::optional<bool> KnownBits::uge(const KnownBits &LHS, const KnownBits &RHS) {
+  if (std::optional<bool> IsUGT = ugt(RHS, LHS))
+    return std::optional<bool>(!*IsUGT);
+  return std::nullopt;
 }
 
-Optional<bool> KnownBits::ult(const KnownBits &LHS, const KnownBits &RHS) {
+std::optional<bool> KnownBits::ult(const KnownBits &LHS, const KnownBits &RHS) {
   return ugt(RHS, LHS);
 }
 
-Optional<bool> KnownBits::ule(const KnownBits &LHS, const KnownBits &RHS) {
+std::optional<bool> KnownBits::ule(const KnownBits &LHS, const KnownBits &RHS) {
   return uge(RHS, LHS);
 }
 
-Optional<bool> KnownBits::sgt(const KnownBits &LHS, const KnownBits &RHS) {
+std::optional<bool> KnownBits::sgt(const KnownBits &LHS, const KnownBits &RHS) {
   // LHS >s RHS -> false if smax(LHS) <= smax(RHS)
   if (LHS.getSignedMaxValue().sle(RHS.getSignedMinValue()))
-    return Optional<bool>(false);
+    return std::optional<bool>(false);
   // LHS >s RHS -> true if smin(LHS) > smax(RHS)
   if (LHS.getSignedMinValue().sgt(RHS.getSignedMaxValue()))
-    return Optional<bool>(true);
-  return None;
+    return std::optional<bool>(true);
+  return std::nullopt;
 }
 
-Optional<bool> KnownBits::sge(const KnownBits &LHS, const KnownBits &RHS) {
-  if (Optional<bool> KnownSGT = sgt(RHS, LHS))
-    return Optional<bool>(!*KnownSGT);
-  return None;
+std::optional<bool> KnownBits::sge(const KnownBits &LHS, const KnownBits &RHS) {
+  if (std::optional<bool> KnownSGT = sgt(RHS, LHS))
+    return std::optional<bool>(!*KnownSGT);
+  return std::nullopt;
 }
 
-Optional<bool> KnownBits::slt(const KnownBits &LHS, const KnownBits &RHS) {
+std::optional<bool> KnownBits::slt(const KnownBits &LHS, const KnownBits &RHS) {
   return sgt(RHS, LHS);
 }
 
-Optional<bool> KnownBits::sle(const KnownBits &LHS, const KnownBits &RHS) {
+std::optional<bool> KnownBits::sle(const KnownBits &LHS, const KnownBits &RHS) {
   return sge(RHS, LHS);
 }
 

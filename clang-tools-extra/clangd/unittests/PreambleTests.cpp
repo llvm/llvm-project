@@ -25,6 +25,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -189,12 +190,12 @@ TEST(PreamblePatchTest, PatchesPreambleIncludes) {
                                 Field(&Inclusion::Resolved, testPath("a.h")))));
 }
 
-llvm::Optional<ParsedAST> createPatchedAST(llvm::StringRef Baseline,
-                                           llvm::StringRef Modified) {
+std::optional<ParsedAST> createPatchedAST(llvm::StringRef Baseline,
+                                          llvm::StringRef Modified) {
   auto BaselinePreamble = TestTU::withCode(Baseline).preamble();
   if (!BaselinePreamble) {
     ADD_FAILURE() << "Failed to build baseline preamble";
-    return llvm::None;
+    return std::nullopt;
   }
 
   IgnoreDiagnostics Diags;
@@ -203,7 +204,7 @@ llvm::Optional<ParsedAST> createPatchedAST(llvm::StringRef Baseline,
   auto CI = buildCompilerInvocation(TU.inputs(FS), Diags);
   if (!CI) {
     ADD_FAILURE() << "Failed to build compiler invocation";
-    return llvm::None;
+    return std::nullopt;
   }
   return ParsedAST::build(testPath(TU.Filename), TU.inputs(FS), std::move(CI),
                           {}, BaselinePreamble);

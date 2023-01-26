@@ -320,7 +320,7 @@ constexpr bool test() {
   // Test properties of the constructor of the unspecified-type returned by __bind_back.
   {
     {
-      MoveOnlyCallable value(true);
+      MoveOnlyCallable<bool> value(true);
       auto ret = std::__bind_back(std::move(value), 1);
       assert(ret());
       assert(ret(1, 2, 3));
@@ -337,7 +337,7 @@ constexpr bool test() {
       static_assert(!std::is_copy_assignable<RetT>::value);
     }
     {
-      CopyCallable value(true);
+      CopyCallable<bool> value(true);
       auto ret = std::__bind_back(value, 1);
       assert(ret());
       assert(ret(1, 2, 3));

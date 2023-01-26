@@ -51,7 +51,7 @@ To use this framework, we need to provide two things (and an optional third):
 ## Conversion Target
 
 For our purposes, we want to convert the compute-intensive `Toy` operations into
-a combination of operations from the `Affine`, `Arithmetic`, `Func`, and `MemRef` dialects
+a combination of operations from the `Affine`, `Arith`, `Func`, and `MemRef` dialects
 for further optimization. To start off the lowering, we first define our
 conversion target:
 
@@ -63,8 +63,8 @@ void ToyToAffineLoweringPass::runOnOperation() {
 
   // We define the specific operations, or dialects, that are legal targets for
   // this lowering. In our case, we are lowering to a combination of the
-  // `Affine`, `Arithmetic`, `Func`, and `MemRef` dialects.
-  target.addLegalDialect<AffineDialect, arith::ArithmeticDialect,
+  // `Affine`, `Arith`, `Func`, and `MemRef` dialects.
+  target.addLegalDialect<AffineDialect, arith::ArithDialect,
                          func::FuncDialect, memref::MemRefDialect>();
 
   // We also define the Toy dialect as Illegal so that the conversion will fail
@@ -201,7 +201,7 @@ many ways to go about this, each with their own tradeoffs:
     that operates on the lowered type. The benefit of this option is that there
     is no hidden, unnecessary copy to the optimizer. The downside is that
     another operation definition is needed that may duplicate many aspects of
-    the first. Defining a base class in [ODS](../../OpDefinitions.md) may
+    the first. Defining a base class in [ODS](../../DefiningDialects/Operations.md) may
     simplify this, but you still need to treat these operations separately.
 
 *   Update `toy.print` to allow for operating on the lowered type

@@ -12,16 +12,16 @@ define void @func(<4 x float> %vx) {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    movd %xmm0, %r8d
-; CHECK-NEXT:    leaq stuff(%r8), %rdi
-; CHECK-NEXT:    pextrd $1, %xmm0, %eax
-; CHECK-NEXT:    leaq stuff(%rax), %rsi
-; CHECK-NEXT:    pextrd $2, %xmm0, %edx
-; CHECK-NEXT:    pextrd $3, %xmm0, %ecx
-; CHECK-NEXT:    leaq stuff(%rdx), %rdx
-; CHECK-NEXT:    leaq stuff(%rcx), %rcx
-; CHECK-NEXT:    leaq stuff+8(%r8), %r8
-; CHECK-NEXT:    leaq stuff+8(%rax), %r9
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    leaq stuff(%rax), %rdi
+; CHECK-NEXT:    pextrd $1, %xmm0, %r9d
+; CHECK-NEXT:    leaq stuff(%r9), %rsi
+; CHECK-NEXT:    pextrd $2, %xmm0, %ecx
+; CHECK-NEXT:    pextrd $3, %xmm0, %r8d
+; CHECK-NEXT:    leaq stuff(%rcx), %rdx
+; CHECK-NEXT:    leaq stuff(%r8), %rcx
+; CHECK-NEXT:    leaq stuff+8(%rax), %r8
+; CHECK-NEXT:    leaq stuff+8(%r9), %r9
 ; CHECK-NEXT:    callq toto@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8

@@ -17,13 +17,13 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include <iterator>
+#include <optional>
 
 using namespace llvm;
 using namespace clang;
 
-using MaybeCount = Optional<unsigned>;
+using MaybeCount = std::optional<unsigned>;
 
 // A constructor helper.
 static MaybeCount readRequiredParams(MaybeCount RequiredArgs,
@@ -32,11 +32,11 @@ static MaybeCount readRequiredParams(MaybeCount RequiredArgs,
     return RequiredParams;
   if (RequiredArgs)
     return RequiredArgs;
-  return None;
+  return std::nullopt;
 }
 
 ento::CallDescription::CallDescription(CallDescriptionFlags Flags,
-                                       ArrayRef<const char *> QualifiedName,
+                                       ArrayRef<StringRef> QualifiedName,
                                        MaybeCount RequiredArgs /*= None*/,
                                        MaybeCount RequiredParams /*= None*/)
     : RequiredArgs(RequiredArgs),
@@ -44,11 +44,12 @@ ento::CallDescription::CallDescription(CallDescriptionFlags Flags,
       Flags(Flags) {
   assert(!QualifiedName.empty());
   this->QualifiedName.reserve(QualifiedName.size());
-  llvm::copy(QualifiedName, std::back_inserter(this->QualifiedName));
+  llvm::transform(QualifiedName, std::back_inserter(this->QualifiedName),
+                  [](StringRef From) { return From.str(); });
 }
 
 /// Construct a CallDescription with default flags.
-ento::CallDescription::CallDescription(ArrayRef<const char *> QualifiedName,
+ento::CallDescription::CallDescription(ArrayRef<StringRef> QualifiedName,
                                        MaybeCount RequiredArgs /*= None*/,
                                        MaybeCount RequiredParams /*= None*/)
     : CallDescription(CDF_None, QualifiedName, RequiredArgs, RequiredParams) {}

@@ -45,3 +45,15 @@ SCUDO_FLAG(bool, may_return_null, true,
 SCUDO_FLAG(int, release_to_os_interval_ms, SCUDO_ANDROID ? INT32_MIN : 5000,
            "Interval (in milliseconds) at which to attempt release of unused "
            "memory to the OS. Negative values disable the feature.")
+
+SCUDO_FLAG(int, hard_rss_limit_mb, 0,
+           "Hard RSS Limit in Mb. If non-zero, once the limit is achieved, "
+           "abort the process")
+
+SCUDO_FLAG(int, soft_rss_limit_mb, 0,
+           "Soft RSS Limit in Mb. If non-zero, once the limit is reached, all "
+           "subsequent calls will fail or return NULL until the RSS goes below "
+           "the soft limit")
+
+SCUDO_FLAG(int, allocation_ring_buffer_size, 32768,
+           "Entries to keep in the allocation ring buffer for scudo.")

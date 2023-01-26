@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include <map>
+#include <optional>
 
 namespace clang {
 namespace tidy {
@@ -27,8 +28,8 @@ public:
   explicit NamespaceAliaser(const SourceManager &SourceMgr);
   // Adds a namespace alias for \p Namespace valid near \p
   // Statement. Picks the first available name from \p Abbreviations.
-  // Returns ``llvm::None`` if an alias already exists or there is an error.
-  llvm::Optional<FixItHint>
+  // Returns ``std::nullopt`` if an alias already exists or there is an error.
+  std::optional<FixItHint>
   createAlias(ASTContext &Context, const Stmt &Statement,
               llvm::StringRef Namespace,
               const std::vector<std::string> &Abbreviations);

@@ -31,6 +31,7 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -314,7 +315,7 @@ template <class ELFT> class ELFState {
 
   BumpPtrAllocator StringAlloc;
   uint64_t alignToOffset(ContiguousBlobAccumulator &CBA, uint64_t Align,
-                         llvm::Optional<llvm::yaml::Hex64> Offset);
+                         std::optional<llvm::yaml::Hex64> Offset);
 
   uint64_t getSectionNameOffset(StringRef Name);
 
@@ -715,8 +716,8 @@ uint64_t ELFState<ELFT>::getSectionNameOffset(StringRef Name) {
 }
 
 static uint64_t writeContent(ContiguousBlobAccumulator &CBA,
-                             const Optional<yaml::BinaryRef> &Content,
-                             const Optional<llvm::yaml::Hex64> &Size) {
+                             const std::optional<yaml::BinaryRef> &Content,
+                             const std::optional<llvm::yaml::Hex64> &Size) {
   size_t ContentSize = 0;
   if (Content) {
     CBA.writeAsBinary(*Content);
@@ -775,7 +776,7 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
 
       if (!S->Offset)
         S->Offset = alignToOffset(CBA, sizeof(typename ELFT::uint),
-                                  /*Offset=*/None);
+                                  /*Offset=*/std::nullopt);
       else
         S->Offset = alignToOffset(CBA, /*Align=*/1, S->Offset);
 
@@ -1015,8 +1016,8 @@ void ELFState<ELFT>::initSymtabSectionHeader(Elf_Shdr &SHeader,
 
   assignSectionAddress(SHeader, YAMLSec);
 
-  SHeader.sh_offset =
-      alignToOffset(CBA, SHeader.sh_addralign, RawSec ? RawSec->Offset : None);
+  SHeader.sh_offset = alignToOffset(CBA, SHeader.sh_addralign,
+                                    RawSec ? RawSec->Offset : std::nullopt);
 
   if (RawSec && (RawSec->Content || RawSec->Size)) {
     assert(Symbols.empty());
@@ -1043,7 +1044,7 @@ void ELFState<ELFT>::initStrtabSectionHeader(Elf_Shdr &SHeader, StringRef Name,
       dyn_cast_or_null<ELFYAML::RawContentSection>(YAMLSec);
 
   SHeader.sh_offset = alignToOffset(CBA, SHeader.sh_addralign,
-                                    YAMLSec ? YAMLSec->Offset : None);
+                                    YAMLSec ? YAMLSec->Offset : std::nullopt);
 
   if (RawSec && (RawSec->Content || RawSec->Size)) {
     SHeader.sh_size = writeContent(CBA, RawSec->Content, RawSec->Size);
@@ -1097,7 +1098,7 @@ void ELFState<ELFT>::initDWARFSectionHeader(Elf_Shdr &SHeader, StringRef Name,
   SHeader.sh_type = YAMLSec ? YAMLSec->Type : ELF::SHT_PROGBITS;
   SHeader.sh_addralign = YAMLSec ? (uint64_t)YAMLSec->AddressAlign : 1;
   SHeader.sh_offset = alignToOffset(CBA, SHeader.sh_addralign,
-                                    YAMLSec ? YAMLSec->Offset : None);
+                                    YAMLSec ? YAMLSec->Offset : std::nullopt);
 
   ELFYAML::RawContentSection *RawSec =
       dyn_cast_or_null<ELFYAML::RawContentSection>(YAMLSec);
@@ -1395,7 +1396,7 @@ void ELFState<ELFT>::writeSectionContent(
   for (const ELFYAML::BBAddrMapEntry &E : *Section.Entries) {
     // Write version and feature values.
     if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP) {
-      if (E.Version > 1)
+      if (E.Version > 2)
         WithColor::warning() << "unsupported SHT_LLVM_BB_ADDR_MAP version: "
                              << static_cast<int>(E.Version)
                              << "; encoding using the most recent version";
@@ -1413,10 +1414,13 @@ void ELFState<ELFT>::writeSectionContent(
     // Write all BBEntries.
     if (!E.BBEntries)
       continue;
-    for (const ELFYAML::BBAddrMapEntry::BBEntry &BBE : *E.BBEntries)
+    for (const ELFYAML::BBAddrMapEntry::BBEntry &BBE : *E.BBEntries) {
+      if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP && E.Version > 1)
+        SHeader.sh_size += CBA.writeULEB128(BBE.ID);
       SHeader.sh_size += CBA.writeULEB128(BBE.AddressOffset) +
                          CBA.writeULEB128(BBE.Size) +
                          CBA.writeULEB128(BBE.Metadata);
+    }
   }
 }
 
@@ -1453,7 +1457,7 @@ void ELFState<ELFT>::writeSectionContent(
 template <class ELFT>
 uint64_t
 ELFState<ELFT>::alignToOffset(ContiguousBlobAccumulator &CBA, uint64_t Align,
-                              llvm::Optional<llvm::yaml::Hex64> Offset) {
+                              std::optional<llvm::yaml::Hex64> Offset) {
   uint64_t CurrentOffset = CBA.getOffset();
   uint64_t AlignedOffset;
 
@@ -1966,7 +1970,7 @@ bool ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc,
     return false;
 
   State.writeELFHeader(OS);
-  writeArrayData(OS, makeArrayRef(PHeaders));
+  writeArrayData(OS, ArrayRef(PHeaders));
 
   const ELFYAML::SectionHeaderTable &SHT = Doc.getSectionHeaderTable();
   if (!SHT.NoHeaders.value_or(false))

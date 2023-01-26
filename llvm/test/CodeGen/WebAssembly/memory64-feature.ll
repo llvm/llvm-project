@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -mcpu=mvp < %s | FileCheck %s
 
 ; Test that wasm64 is properly emitted into the target features section
 

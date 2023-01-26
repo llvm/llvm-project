@@ -77,8 +77,7 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagsBuffer);
   bool Success = CompilerInvocation::CreateFromArgs(
-      Clang->getInvocation(), llvm::makeArrayRef(Argv.begin(), Argv.size()),
-      Diags);
+      Clang->getInvocation(), llvm::ArrayRef(Argv.begin(), Argv.size()), Diags);
 
   // Infer the builtin include path if unspecified.
   if (Clang->getHeaderSearchOpts().UseBuiltinIncludes &&
@@ -138,13 +137,11 @@ IncrementalCompilerBuilder::create(std::vector<const char *> &ClangArgv) {
   // specified. By prepending we allow users to override the default
   // action and use other actions in incremental mode.
   // FIXME: Print proper driver diagnostics if the driver flags are wrong.
-  ClangArgv.insert(ClangArgv.begin() + 1, "-c");
-
-  if (!llvm::is_contained(ClangArgv, " -x")) {
-    // We do C++ by default; append right after argv[0] if no "-x" given
-    ClangArgv.push_back("-x");
-    ClangArgv.push_back("c++");
-  }
+  // We do C++ by default; append right after argv[0] if no "-x" given
+  ClangArgv.insert(ClangArgv.end(), "-xc++");
+  ClangArgv.insert(ClangArgv.end(), "-Xclang");
+  ClangArgv.insert(ClangArgv.end(), "-fincremental-extensions");
+  ClangArgv.insert(ClangArgv.end(), "-c");
 
   // Put a dummy C++ file on to ensure there's at least one compile job for the
   // driver to construct.
@@ -161,7 +158,7 @@ IncrementalCompilerBuilder::create(std::vector<const char *> &ClangArgv) {
   driver::Driver Driver(/*MainBinaryName=*/ClangArgv[0],
                         llvm::sys::getProcessTriple(), Diags);
   Driver.setCheckInputsExist(false); // the input comes from mem buffers
-  llvm::ArrayRef<const char *> RF = llvm::makeArrayRef(ClangArgv);
+  llvm::ArrayRef<const char *> RF = llvm::ArrayRef(ClangArgv);
   std::unique_ptr<driver::Compilation> Compilation(Driver.BuildCompilation(RF));
 
   if (Compilation->getArgs().hasArg(driver::options::OPT_v))

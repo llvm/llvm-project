@@ -975,13 +975,13 @@ private:
   // 0: Leaves in root.
   // 1: Root points to leaf.
   // 2: root->branch->leaf ...
-  unsigned height;
+  unsigned height = 0;
 
   // Number of entries in the root node.
-  unsigned rootSize;
+  unsigned rootSize = 0;
 
   // Allocator used for creating external nodes.
-  Allocator &allocator;
+  Allocator *allocator = nullptr;
 
   const RootLeaf &rootLeaf() const {
     assert(!branched() && "Cannot acces leaf data in branched root");
@@ -1007,12 +1007,12 @@ private:
   KeyT &rootBranchStart()      { return rootBranchData().start; }
 
   template <typename NodeT> NodeT *newNode() {
-    return new(allocator.template Allocate<NodeT>()) NodeT();
+    return new (allocator->template Allocate<NodeT>()) NodeT();
   }
 
   template <typename NodeT> void deleteNode(NodeT *P) {
     P->~NodeT();
-    allocator.Deallocate(P);
+    allocator->Deallocate(P);
   }
 
   IdxPair branchRoot(unsigned Position);
@@ -1038,20 +1038,59 @@ private:
   void deleteNode(IntervalMapImpl::NodeRef Node, unsigned Level);
 
 public:
-  explicit IntervalMap(Allocator &a) : height(0), rootSize(0), allocator(a) {
-    new(&rootLeaf()) RootLeaf();
+  explicit IntervalMap(Allocator &a) : allocator(&a) {
+    new (&rootLeaf()) RootLeaf();
   }
 
-  // The default copy/move constructors and assignment operators would perform
-  // a shallow copy, leading to an incorrect internal state. To prevent
-  // accidental use, explicitly delete these operators.
-  // If necessary, implement them to perform a deep copy.
-  IntervalMap(const IntervalMap &Other) = delete;
-  IntervalMap(IntervalMap &&Other) = delete;
-  // Note: these are already implicitly deleted, because RootLeaf (union
-  // member) has a non-trivial assignment operator (because of std::pair).
-  IntervalMap &operator=(const IntervalMap &Other) = delete;
-  IntervalMap &operator=(IntervalMap &&Other) = delete;
+  ///@{
+  /// NOTE: The moved-from or copied-from object's allocator needs to have a
+  /// lifetime equal to or exceeding the moved-to or copied-to object to avoid
+  /// undefined behaviour.
+  IntervalMap(IntervalMap const &RHS) : IntervalMap(*RHS.allocator) {
+    // Future-proofing assertion: this function assumes the IntervalMap
+    // constructor doesn't add any nodes.
+    assert(empty() && "Expected emptry tree");
+    *this = RHS;
+  }
+  IntervalMap &operator=(IntervalMap const &RHS) {
+    clear();
+    allocator = RHS.allocator;
+    for (auto It = RHS.begin(), End = RHS.end(); It != End; ++It)
+      insert(It.start(), It.stop(), It.value());
+    return *this;
+  }
+
+  IntervalMap(IntervalMap &&RHS) : IntervalMap(*RHS.allocator) {
+    // Future-proofing assertion: this function assumes the IntervalMap
+    // constructor doesn't add any nodes.
+    assert(empty() && "Expected emptry tree");
+    *this = std::move(RHS);
+  }
+  IntervalMap &operator=(IntervalMap &&RHS) {
+    // Calling clear deallocates memory and switches to rootLeaf.
+    clear();
+    // Destroy the new rootLeaf.
+    rootLeaf().~RootLeaf();
+
+    height = RHS.height;
+    rootSize = RHS.rootSize;
+    allocator = RHS.allocator;
+
+    // rootLeaf and rootBranch are both uninitialized. Move RHS data into
+    // appropriate field.
+    if (RHS.branched()) {
+      rootBranch() = std::move(RHS.rootBranch());
+      // Prevent RHS deallocating memory LHS now owns by replacing RHS
+      // rootBranch with a new rootLeaf.
+      RHS.rootBranch().~RootBranch();
+      RHS.height = 0;
+      new (&RHS.rootLeaf()) RootLeaf();
+    } else {
+      rootLeaf() = std::move(RHS.rootLeaf());
+    }
+    return *this;
+  }
+  ///@}
 
   ~IntervalMap() {
     clear();

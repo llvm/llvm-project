@@ -8,9 +8,9 @@
 ; CHECKMI: DBG_LABEL "end", debug-location !19
 source_filename = "debug-label-opt.c"
 
-define i32 @foo(i32* nocapture readonly %a, i32 %n) local_unnamed_addr !dbg !7 {
+define i32 @foo(ptr nocapture readonly %a, i32 %n) local_unnamed_addr !dbg !7 {
 entry:
-  call void @llvm.dbg.value(metadata i32* %a, metadata !13, metadata !DIExpression()), !dbg !6
+  call void @llvm.dbg.value(metadata ptr %a, metadata !13, metadata !DIExpression()), !dbg !6
   call void @llvm.dbg.value(metadata i32 %n, metadata !14, metadata !DIExpression()), !dbg !6
   switch i32 %n, label %end_sum [
     i32 2, label %end_sum.sink.split
@@ -18,22 +18,22 @@ entry:
   ], !dbg !6
 
 if.then3:                                         ; preds = %entry
-  %arrayidx4 = getelementptr inbounds i32, i32* %a, i64 1, !dbg !6
+  %arrayidx4 = getelementptr inbounds i32, ptr %a, i64 1, !dbg !6
   br label %end_sum.sink.split, !dbg !6
 
 end_sum.sink.split:                               ; preds = %entry, %if.then3
-  %a.sink = phi i32* [ %arrayidx4, %if.then3 ], [ %a, %entry ]
+  %a.sink = phi ptr [ %arrayidx4, %if.then3 ], [ %a, %entry ]
   %.sink = phi i64 [ 2, %if.then3 ], [ 1, %entry ]
-  %0 = load i32, i32* %a.sink, align 4
-  %arrayidx1 = getelementptr inbounds i32, i32* %a, i64 %.sink
-  %1 = load i32, i32* %arrayidx1, align 4
+  %0 = load i32, ptr %a.sink, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %a, i64 %.sink
+  %1 = load i32, ptr %arrayidx1, align 4
   %add = add nsw i32 %1, %0
   br label %end_sum, !dbg !6
 
 end_sum:                                          ; preds = %end_sum.sink.split, %entry
   %sum.0 = phi i32 [ 0, %entry ], [ %add, %end_sum.sink.split ]
   call void @llvm.dbg.label(metadata !15), !dbg !17
-  %2 = load i32, i32* %a, align 4, !dbg !6
+  %2 = load i32, ptr %a, align 4, !dbg !6
   %mul = mul nsw i32 %2, %sum.0, !dbg !18
   call void @llvm.dbg.label(metadata !16), !dbg !19
   ret i32 %mul, !dbg !6

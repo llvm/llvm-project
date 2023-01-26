@@ -66,7 +66,7 @@ void ClassDefinitionDumper::prettyPrintClassIntro(const ClassLayout &Layout) {
   if (BaseCount > 0) {
     Printer.Indent();
     char NextSeparator = ':';
-    for (auto BC : Layout.bases()) {
+    for (auto *BC : Layout.bases()) {
       const auto &Base = BC->getBase();
       if (Base.isIndirectVirtualBaseClass())
         continue;

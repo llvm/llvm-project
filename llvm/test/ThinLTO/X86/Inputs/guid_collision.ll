@@ -7,9 +7,9 @@ define internal fastcc i64 @F() {
   ret i64 0
 }
 
-@llvm.global_ctors = appending global [0 x { i32, void ()*, i8* }] zeroinitializer
+@llvm.global_ctors = appending global [0 x { i32, ptr, ptr }] zeroinitializer
 
 define i64 @G() {
-  ;%1 = load i32, i32* @dummy2, align 4
+  ;%1 = load i32, ptr @dummy2, align 4
   ret i64 0
 }

@@ -14,9 +14,9 @@ define void @multiple_store() {
 ; CHECK-NEXT:    movt r0, #18
 ; CHECK-NEXT:    str r1, [r0]
 ; CHECK-NEXT:    bx lr
-  store i32 42, i32* inttoptr(i32 1000000 to i32*)
-  store i32 42, i32* inttoptr(i32 1000024 to i32*)
-  store i32 42, i32* inttoptr(i32 1000042 to i32*)
-  store i32 42, i32* inttoptr(i32 1200042 to i32*)
+  store i32 42, ptr inttoptr(i32 1000000 to ptr)
+  store i32 42, ptr inttoptr(i32 1000024 to ptr)
+  store i32 42, ptr inttoptr(i32 1000042 to ptr)
+  store i32 42, ptr inttoptr(i32 1200042 to ptr)
   ret void
 }

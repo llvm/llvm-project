@@ -1,11 +1,11 @@
 ; RUN: llc -verify-machineinstrs -mtriple=arm64-apple-ios7.0 -o - %s | FileCheck %s
-@var = global void()* zeroinitializer
+@var = global ptr zeroinitializer
 
 declare void @bar()
 
 define void @foo() {
 ; CHECK-LABEL: foo:
-       %func = load void()*, void()** @var
+       %func = load ptr, ptr @var
 
        ; Calling a function encourages @foo to use a callee-saved register,
        ; which makes it a natural choice for the tail call itself. But we don't
@@ -24,10 +24,9 @@ define void @test_x30_tail() {
 ; CHECK-LABEL: test_x30_tail:
 ; CHECK: mov [[DEST:x[0-9]+]], x30
 ; CHECK: br [[DEST]]
-  %addr = call i8* @llvm.returnaddress(i32 0)
-  %faddr = bitcast i8* %addr to void()*
-  tail call void %faddr()
+  %addr = call ptr @llvm.returnaddress(i32 0)
+  tail call void %addr()
   ret void
 }
 
-declare i8* @llvm.returnaddress(i32)
+declare ptr @llvm.returnaddress(i32)

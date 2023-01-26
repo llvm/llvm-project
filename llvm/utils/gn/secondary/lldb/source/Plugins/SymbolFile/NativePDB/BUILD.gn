@@ -16,6 +16,7 @@ static_library("NativePDB") {
     "//llvm/lib/DebugInfo/CodeView",
     "//llvm/lib/DebugInfo/PDB",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
 
   # Reaches into Plugins/ExpressionParser.

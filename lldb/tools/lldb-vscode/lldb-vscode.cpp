@@ -79,11 +79,14 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
+  static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
+      NAME##_init, std::size(NAME##_init) - 1);
 #include "Options.inc"
 #undef PREFIX
 
-static const llvm::opt::OptTable::Info InfoTable[] = {
+static constexpr llvm::opt::OptTable::Info InfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
   {PREFIX,      NAME,      HELPTEXT,                                           \
@@ -93,9 +96,9 @@ static const llvm::opt::OptTable::Info InfoTable[] = {
 #include "Options.inc"
 #undef OPTION
 };
-class LLDBVSCodeOptTable : public llvm::opt::OptTable {
+class LLDBVSCodeOptTable : public llvm::opt::GenericOptTable {
 public:
-  LLDBVSCodeOptTable() : OptTable(InfoTable, true) {}
+  LLDBVSCodeOptTable() : llvm::opt::GenericOptTable(InfoTable, true) {}
 };
 
 typedef void (*RequestCallback)(const llvm::json::Object &command);
@@ -204,7 +207,7 @@ void SendTerminatedEvent() {
     g_vsc.sent_terminated_event = true;
     g_vsc.RunTerminateCommands();
     // Send a "terminated" event
-    llvm::json::Object event(CreateEventObject("terminated"));
+    llvm::json::Object event(CreateTerminatedEventObject());
     g_vsc.SendJSON(llvm::json::Value(std::move(event)));
   }
 }
@@ -1444,8 +1447,15 @@ void request_initialize(const llvm::json::Object &request) {
   auto log_cb = [](const char *buf, void *baton) -> void {
     g_vsc.SendOutput(OutputType::Console, llvm::StringRef{buf});
   };
+
+  auto arguments = request.getObject("arguments");
+  // sourceInitFile option is not from formal DAP specification. It is only
+  // used by unit tests to prevent sourcing .lldbinit files from environment
+  // which may affect the outcome of tests.
+  bool source_init_file = GetBoolean(arguments, "sourceInitFile", true);
+
   g_vsc.debugger =
-      lldb::SBDebugger::Create(true /*source_init_files*/, log_cb, nullptr);
+      lldb::SBDebugger::Create(source_init_file, log_cb, nullptr);
   g_vsc.progress_event_thread = std::thread(ProgressEventThreadFunction);
 
   // Start our event thread so we can receive events from the debugger, target,
@@ -2933,7 +2943,51 @@ void request_variables(const llvm::json::Object &request) {
     int64_t start_idx = 0;
     int64_t num_children = 0;
 
+    if (variablesReference == VARREF_REGS) {
+      // Change the default format of any pointer sized registers in the first
+      // register set to be the lldb::eFormatAddressInfo so we show the pointer
+      // and resolve what the pointer resolves to. Only change the format if the
+      // format was set to the default format or if it was hex as some registers
+      // have formats set for them.
+      const uint32_t addr_size = g_vsc.target.GetProcess().GetAddressByteSize();
+      lldb::SBValue reg_set = g_vsc.variables.registers.GetValueAtIndex(0);
+      const uint32_t num_regs = reg_set.GetNumChildren();
+      for (uint32_t reg_idx = 0; reg_idx < num_regs; ++reg_idx) {
+        lldb::SBValue reg = reg_set.GetChildAtIndex(reg_idx);
+        const lldb::Format format = reg.GetFormat();
+        if (format == lldb::eFormatDefault || format == lldb::eFormatHex) {
+          if (reg.GetByteSize() == addr_size)
+            reg.SetFormat(lldb::eFormatAddressInfo);
+        }
+      }
+    }
+
     num_children = top_scope->GetSize();
+    if (num_children == 0 && variablesReference == VARREF_LOCALS) {
+      // Check for an error in the SBValueList that might explain why we don't
+      // have locals. If we have an error display it as the sole value in the
+      // the locals.
+
+      // "error" owns the error string so we must keep it alive as long as we
+      // want to use the returns "const char *"
+      lldb::SBError error = top_scope->GetError();
+      const char *var_err = error.GetCString();
+      if (var_err) {
+        // Create a fake variable named "error" to explain why variables were
+        // not available. This new error will help let users know when there was
+        // a problem that kept variables from being available for display and
+        // allow users to fix this issue instead of seeing no variables. The
+        // errors are only set when there is a problem that the user could
+        // fix, so no error will show up when you have no debug info, only when
+        // we do have debug info and something that is fixable can be done.
+        llvm::json::Object object;
+        EmplaceSafeString(object, "name", "<error>");
+        EmplaceSafeString(object, "type", "const char *");
+        EmplaceSafeString(object, "value", var_err);
+        object.try_emplace("variablesReference", (int64_t)0);
+        variables.emplace_back(std::move(object));
+      }
+    }
     const int64_t end_idx = start_idx + ((count == 0) ? num_children : count);
 
     // We first find out which variable names are duplicated
@@ -3173,7 +3227,7 @@ int main(int argc, char *argv[]) {
 
   LLDBVSCodeOptTable T;
   unsigned MAI, MAC;
-  llvm::ArrayRef<const char *> ArgsArr = llvm::makeArrayRef(argv + 1, argc);
+  llvm::ArrayRef<const char *> ArgsArr = llvm::ArrayRef(argv + 1, argc);
   llvm::opt::InputArgList input_args = T.ParseArgs(ArgsArr, MAI, MAC);
 
   if (input_args.hasArg(OPT_help)) {

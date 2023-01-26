@@ -18,24 +18,6 @@
 namespace llvm {
 namespace jitlink {
 
-namespace ELF_x86_64_Edges {
-enum ELFX86RelocationKind : Edge::Kind {
-  Branch32 = Edge::FirstRelocation,
-  Pointer32Signed,
-  Pointer64,
-  PCRel32,
-  PCRel32GOTLoad,
-  PCRel32GOTLoadRelaxable,
-  PCRel32REXGOTLoadRelaxable,
-  PCRel32TLV,
-  PCRel64GOT,
-  GOTOFF64,
-  GOT64,
-  Delta64,
-};
-
-} // end namespace ELF_x86_64_Edges
-
 /// Create a LinkGraph from an ELF/x86-64 relocatable object.
 ///
 /// Note: The graph does not take ownership of the underlying buffer, nor copy
@@ -48,8 +30,6 @@ createLinkGraphFromELFObject_x86_64(MemoryBufferRef ObjectBuffer);
 void link_ELF_x86_64(std::unique_ptr<LinkGraph> G,
                      std::unique_ptr<JITLinkContext> Ctx);
 
-/// Return the string name of the given ELF x86-64 edge kind.
-const char *getELFX86RelocationKindName(Edge::Kind R);
 } // end namespace jitlink
 } // end namespace llvm
 

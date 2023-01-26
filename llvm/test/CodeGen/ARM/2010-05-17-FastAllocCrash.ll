@@ -9,8 +9,8 @@ target triple = "arm-pc-linux-gnu"
 
 %struct.CHESS_POSITION = type { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i32, i32, i8, i8, [64 x i8], i8, i8, i8, i8, i8 }
 
-@search = external global %struct.CHESS_POSITION  ; <%struct.CHESS_POSITION*> [#uses=1]
-@bishop_mobility_rr45 = external global [64 x [256 x i32]] ; <[64 x [256 x i32]]*> [#uses=1]
+@search = external global %struct.CHESS_POSITION  ; <ptr> [#uses=1]
+@bishop_mobility_rr45 = external global [64 x [256 x i32]] ; <ptr> [#uses=1]
 
 declare fastcc i32 @FirstOne()
 
@@ -82,17 +82,17 @@ cond_true1369.preheader:                          ; preds = %cond_true1254
   ret void
 
 bb1567:                                           ; preds = %cond_true1254
-  %tmp1591 = load i64, i64* getelementptr inbounds (%struct.CHESS_POSITION, %struct.CHESS_POSITION* @search, i32 0, i32 4) ; <i64> [#uses=1]
+  %tmp1591 = load i64, ptr getelementptr inbounds (%struct.CHESS_POSITION, ptr @search, i32 0, i32 4) ; <i64> [#uses=1]
   %tmp1572 = tail call fastcc i32 @FirstOne()     ; <i32> [#uses=1]
-  %tmp1594 = load i32, i32* undef                      ; <i32> [#uses=1]
+  %tmp1594 = load i32, ptr undef                      ; <i32> [#uses=1]
   %tmp1594.upgrd.5 = trunc i32 %tmp1594 to i8     ; <i8> [#uses=1]
   %shift.upgrd.6 = zext i8 %tmp1594.upgrd.5 to i64 ; <i64> [#uses=1]
   %tmp1595 = lshr i64 %tmp1591, %shift.upgrd.6    ; <i64> [#uses=1]
   %tmp1595.upgrd.7 = trunc i64 %tmp1595 to i32    ; <i32> [#uses=1]
   %tmp1596 = and i32 %tmp1595.upgrd.7, 255        ; <i32> [#uses=1]
   %gep.upgrd.8 = zext i32 %tmp1596 to i64         ; <i64> [#uses=1]
-  %tmp1598 = getelementptr [64 x [256 x i32]], [64 x [256 x i32]]* @bishop_mobility_rr45, i32 0, i32 %tmp1572, i64 %gep.upgrd.8 ; <i32*> [#uses=1]
-  %tmp1599 = load i32, i32* %tmp1598                   ; <i32> [#uses=1]
+  %tmp1598 = getelementptr [64 x [256 x i32]], ptr @bishop_mobility_rr45, i32 0, i32 %tmp1572, i64 %gep.upgrd.8 ; <ptr> [#uses=1]
+  %tmp1599 = load i32, ptr %tmp1598                   ; <i32> [#uses=1]
   %tmp1602 = sub i32 0, %tmp1599                  ; <i32> [#uses=1]
   br i1 undef, label %cond_next1637, label %cond_true1607
 

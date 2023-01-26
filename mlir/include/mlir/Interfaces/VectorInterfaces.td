@@ -28,7 +28,7 @@ def VectorUnrollOpInterface : OpInterface<"VectorUnrollOpInterface"> {
         `targetShape`. Return `None` if the op cannot be unrolled to the target
         vector shape.
       }],
-      /*retTy=*/"::llvm::Optional<::llvm::SmallVector<int64_t, 4>>",
+      /*retTy=*/"::std::optional<::llvm::SmallVector<int64_t, 4>>",
       /*methodName=*/"getShapeForUnroll",
       /*args=*/(ins),
       /*methodBody=*/"",
@@ -37,7 +37,7 @@ def VectorUnrollOpInterface : OpInterface<"VectorUnrollOpInterface"> {
         auto vt = $_op.getResult().getType().
           template dyn_cast<::mlir::VectorType>();
         if (!vt)
-          return ::mlir::None;
+          return ::std::nullopt;
         ::llvm::SmallVector<int64_t, 4> res(vt.getShape().begin(), vt.getShape().end());
         return res;
       }]
@@ -143,7 +143,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
     >,
     InterfaceMethod<
       /*desc=*/"Return the `in_bounds` boolean ArrayAttr.",
-      /*retTy=*/"::llvm::Optional<::mlir::ArrayAttr>",
+      /*retTy=*/"::std::optional<::mlir::ArrayAttr>",
       /*methodName=*/"in_bounds",
       /*args=*/(ins),
       /*methodBody=*/"return $_op.getInBounds();"
@@ -169,16 +169,25 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
         }]
     >,
     InterfaceMethod<
-      /*desc=*/"Return the mask type if the op has a mask.",
+      /*desc=*/"Return the mask operand if the op has a mask. Otherwise, "
+               "return a empty value.",
+      /*retTy=*/"Value",
+      /*methodName=*/"getMask",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return $_op.getMask();
+        }]
+    >,
+    InterfaceMethod<
+      /*desc=*/"Return the mask type if the op has a mask. Otherwise, return "
+               "an empty VectorType.",
       /*retTy=*/"::mlir::VectorType",
       /*methodName=*/"getMaskType",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return $_op.getMask()
-            ? ::mlir::vector::detail::transferMaskType(
-                $_op.getVectorType(), $_op.getPermutationMap())
-            : ::mlir::VectorType();
+        return $_op.getMask() ? $_op.getMask().getType() : ::mlir::VectorType();
       }]
     >,
     InterfaceMethod<

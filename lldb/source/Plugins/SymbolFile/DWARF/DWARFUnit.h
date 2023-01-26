@@ -16,6 +16,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugRnglists.h"
 #include "llvm/Support/RWMutex.h"
 #include <atomic>
+#include <optional>
 
 class DWARFUnit;
 class DWARFCompileUnit;
@@ -51,7 +52,7 @@ class DWARFUnitHeader {
   uint64_t m_type_hash = 0;
   uint32_t m_type_offset = 0;
 
-  uint64_t m_dwo_id = 0;
+  std::optional<uint64_t> m_dwo_id;
 
   DWARFUnitHeader() = default;
 
@@ -67,7 +68,7 @@ public:
   }
   uint64_t GetTypeHash() const { return m_type_hash; }
   dw_offset_t GetTypeOffset() const { return m_type_offset; }
-  uint64_t GetDWOId() const { return m_dwo_id; }
+  std::optional<uint64_t> GetDWOId() const { return m_dwo_id; }
   bool IsTypeUnit() const {
     return m_unit_type == llvm::dwarf::DW_UT_type ||
            m_unit_type == llvm::dwarf::DW_UT_split_type;
@@ -92,7 +93,7 @@ public:
   virtual ~DWARFUnit();
 
   bool IsDWOUnit() { return m_is_dwo; }
-  uint64_t GetDWOId();
+  std::optional<uint64_t> GetDWOId();
 
   void ExtractUnitDIEIfNeeded();
   void ExtractUnitDIENoDwoIfNeeded();
@@ -223,7 +224,7 @@ public:
   uint8_t GetUnitType() const { return m_header.GetUnitType(); }
   bool IsTypeUnit() const { return m_header.IsTypeUnit(); }
 
-  llvm::Optional<uint64_t> GetStringOffsetSectionItem(uint32_t index) const;
+  std::optional<uint64_t> GetStringOffsetSectionItem(uint32_t index) const;
 
   /// Return a list of address ranges resulting from a (possibly encoded)
   /// range list starting at a given offset in the appropriate ranges section.
@@ -239,14 +240,14 @@ public:
   /// DW_FORM_rnglistx.
   llvm::Expected<uint64_t> GetRnglistOffset(uint32_t Index);
 
-  llvm::Optional<uint64_t> GetLoclistOffset(uint32_t Index) {
+  std::optional<uint64_t> GetLoclistOffset(uint32_t Index) {
     if (!m_loclist_table_header)
-      return llvm::None;
+      return std::nullopt;
 
-    llvm::Optional<uint64_t> Offset = m_loclist_table_header->getOffsetEntry(
+    std::optional<uint64_t> Offset = m_loclist_table_header->getOffsetEntry(
         m_dwarf.GetDWARFContext().getOrLoadLocListsData().GetAsLLVM(), Index);
     if (!Offset)
-      return llvm::None;
+      return std::nullopt;
     return *Offset + m_loclists_base;
   }
 
@@ -256,6 +257,34 @@ public:
   GetLocationTable(const lldb_private::DataExtractor &data) const;
 
   lldb_private::DWARFDataExtractor GetLocationData() const;
+
+  /// Returns true if any DIEs in the unit match any DW_TAG values in \a tags.
+  ///
+  /// \param[in] tags
+  ///   An array of dw_tag_t values to check all abbrevitions for.
+  ///
+  /// \returns
+  ///   True if any DIEs match any tag in \a tags, false otherwise.
+  bool HasAny(llvm::ArrayRef<dw_tag_t> tags);
+
+
+  /// Get the fission .dwo file specific error for this compile unit.
+  ///
+  /// The skeleton compile unit only can have a DWO error. Any other type
+  /// of DWARFUnit will not have a valid DWO error.
+  ///
+  /// \returns
+  ///   A valid DWO error if there is a problem with anything in the
+  ///   locating or parsing inforamtion in the .dwo file
+  const lldb_private::Status &GetDwoError() const { return m_dwo_error; }
+
+  /// Set the fission .dwo file specific error for this compile unit.
+  ///
+  /// This helps tracks issues that arise when trying to locate or parse a
+  /// .dwo file. Things like a missing .dwo file, DWO ID mismatch, and other
+  /// .dwo errors can be stored in each compile unit so the issues can be
+  /// communicated to the user.
+  void SetDwoError(const lldb_private::Status &error) { m_dwo_error = error; }
 
 protected:
   DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
@@ -285,7 +314,7 @@ protected:
     return &m_die_array[0];
   }
 
-  const llvm::Optional<llvm::DWARFDebugRnglistTable> &GetRnglistTable();
+  const std::optional<llvm::DWARFDebugRnglistTable> &GetRnglistTable();
 
   lldb_private::DWARFDataExtractor GetRnglistData() const;
 
@@ -313,30 +342,34 @@ protected:
   dw_addr_t m_base_addr = 0;
   DWARFProducer m_producer = eProducerInvalid;
   llvm::VersionTuple m_producer_version;
-  llvm::Optional<uint64_t> m_language_type;
+  std::optional<uint64_t> m_language_type;
   lldb_private::LazyBool m_is_optimized = lldb_private::eLazyBoolCalculate;
-  llvm::Optional<lldb_private::FileSpec> m_comp_dir;
-  llvm::Optional<lldb_private::FileSpec> m_file_spec;
-  llvm::Optional<dw_addr_t> m_addr_base; ///< Value of DW_AT_addr_base.
+  std::optional<lldb_private::FileSpec> m_comp_dir;
+  std::optional<lldb_private::FileSpec> m_file_spec;
+  std::optional<dw_addr_t> m_addr_base;  ///< Value of DW_AT_addr_base.
   dw_addr_t m_loclists_base = 0;         ///< Value of DW_AT_loclists_base.
   dw_addr_t m_ranges_base = 0;           ///< Value of DW_AT_rnglists_base.
-  llvm::Optional<uint64_t> m_gnu_addr_base;
-  llvm::Optional<uint64_t> m_gnu_ranges_base;
+  std::optional<uint64_t> m_gnu_addr_base;
+  std::optional<uint64_t> m_gnu_ranges_base;
 
   /// Value of DW_AT_stmt_list.
   dw_offset_t m_line_table_offset = DW_INVALID_OFFSET;
 
   dw_offset_t m_str_offsets_base = 0; // Value of DW_AT_str_offsets_base.
 
-  llvm::Optional<llvm::DWARFDebugRnglistTable> m_rnglist_table;
+  std::optional<llvm::DWARFDebugRnglistTable> m_rnglist_table;
   bool m_rnglist_table_done = false;
-  llvm::Optional<llvm::DWARFListTableHeader> m_loclist_table_header;
+  std::optional<llvm::DWARFListTableHeader> m_loclist_table_header;
 
   const DIERef::Section m_section;
   bool m_is_dwo;
   bool m_has_parsed_non_skeleton_unit;
   /// Value of DW_AT_GNU_dwo_id (v4) or dwo_id from CU header (v5).
-  uint64_t m_dwo_id;
+  std::optional<uint64_t> m_dwo_id;
+  /// If we get an error when trying to load a .dwo file, save that error here.
+  /// Errors include .dwo/.dwp file not found, or the .dwp/.dwp file was found
+  /// but DWO ID doesn't match, etc.
+  lldb_private::Status m_dwo_error;
 
 private:
   void ParseProducerInfo();

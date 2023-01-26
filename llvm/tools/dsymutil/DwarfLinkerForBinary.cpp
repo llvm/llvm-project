@@ -18,8 +18,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -94,6 +92,7 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <tuple>
@@ -410,7 +409,7 @@ void DwarfLinkerForBinary::collectRelocationsToApplyToSwiftReflectionSections(
     }
 
     auto CalculateAddressOfSymbolInDwarfSegment =
-        [&]() -> llvm::Optional<int64_t> {
+        [&]() -> std::optional<int64_t> {
       auto Symbol = It->getSymbol();
       auto SymbolAbsoluteAddress = Symbol->getAddress();
       if (!SymbolAbsoluteAddress)
@@ -446,7 +445,7 @@ void DwarfLinkerForBinary::collectRelocationsToApplyToSwiftReflectionSections(
 
     bool ShouldSubtractDwarfVM = false;
     // For the second symbol there are two possibilities.
-    llvm::Optional<int64_t> SecondSymbolAddress;
+    std::optional<int64_t> SecondSymbolAddress;
     auto Sym = It->getSymbol();
     if (Sym != MO->symbol_end()) {
       Expected<StringRef> SymbolName = Sym->getName();
@@ -506,7 +505,7 @@ void DwarfLinkerForBinary::copySwiftReflectionMetadata(
   if (auto *MO = dyn_cast<llvm::object::MachOObjectFile>(OF->getBinary())) {
     // Collect the swift reflection sections before emitting them. This is
     // done so we control the order they're emitted.
-    std::array<Optional<object::SectionRef>,
+    std::array<std::optional<object::SectionRef>,
                Swift5ReflectionSectionKind::last + 1>
         SwiftSections;
     for (auto &Section : MO->sections()) {
@@ -543,7 +542,7 @@ void DwarfLinkerForBinary::copySwiftReflectionMetadata(
       // place.
       SectionToOffsetInDwarf[SectionKind] += Section.getSize();
       Streamer->emitSwiftReflectionSection(SectionKind, *SectionContents,
-                                           Section.getAlignment(),
+                                           Section.getAlignment().value(),
                                            Section.getSize());
     }
   }
@@ -578,7 +577,6 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
   GeneralLinker.setNoODR(Options.NoODR);
   GeneralLinker.setUpdate(Options.Update);
   GeneralLinker.setNumThreads(Options.Threads);
-  GeneralLinker.setAccelTableKind(Options.TheAccelTableKind);
   GeneralLinker.setPrependPath(Options.PrependPath);
   GeneralLinker.setKeepFunctionForStatic(Options.KeepFunctionForStatic);
   if (Options.Translator)
@@ -591,58 +589,58 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
       [&](const Twine &Error, StringRef Context, const DWARFDie *) {
         error(Error, Context);
       });
-  GeneralLinker.setObjFileLoader(
-      [&DebugMap, &RL, this](StringRef ContainerName,
-                             StringRef Path) -> ErrorOr<DWARFFile &> {
-        auto &Obj = DebugMap.addDebugMapObject(
-            Path, sys::TimePoint<std::chrono::seconds>(), MachO::N_OSO);
+  objFileLoader Loader = [&DebugMap, &RL,
+                          this](StringRef ContainerName,
+                                StringRef Path) -> ErrorOr<DWARFFile &> {
+    auto &Obj = DebugMap.addDebugMapObject(
+        Path, sys::TimePoint<std::chrono::seconds>(), MachO::N_OSO);
 
-        if (auto ErrorOrObj = loadObject(Obj, DebugMap, RL)) {
-          return *ErrorOrObj;
-        } else {
-          // Try and emit more helpful warnings by applying some heuristics.
-          StringRef ObjFile = ContainerName;
-          bool IsClangModule = sys::path::extension(Path).equals(".pcm");
-          bool IsArchive = ObjFile.endswith(")");
+    if (auto ErrorOrObj = loadObject(Obj, DebugMap, RL)) {
+      return *ErrorOrObj;
+    } else {
+      // Try and emit more helpful warnings by applying some heuristics.
+      StringRef ObjFile = ContainerName;
+      bool IsClangModule = sys::path::extension(Path).equals(".pcm");
+      bool IsArchive = ObjFile.endswith(")");
 
-          if (IsClangModule) {
-            StringRef ModuleCacheDir = sys::path::parent_path(Path);
-            if (sys::fs::exists(ModuleCacheDir)) {
-              // If the module's parent directory exists, we assume that the
-              // module cache has expired and was pruned by clang.  A more
-              // adventurous dsymutil would invoke clang to rebuild the module
-              // now.
-              if (!ModuleCacheHintDisplayed) {
-                WithColor::note()
-                    << "The clang module cache may have expired since "
-                       "this object file was built. Rebuilding the "
-                       "object file will rebuild the module cache.\n";
-                ModuleCacheHintDisplayed = true;
-              }
-            } else if (IsArchive) {
-              // If the module cache directory doesn't exist at all and the
-              // object file is inside a static library, we assume that the
-              // static library was built on a different machine. We don't want
-              // to discourage module debugging for convenience libraries within
-              // a project though.
-              if (!ArchiveHintDisplayed) {
-                WithColor::note()
-                    << "Linking a static library that was built with "
-                       "-gmodules, but the module cache was not found.  "
-                       "Redistributable static libraries should never be "
-                       "built with module debugging enabled.  The debug "
-                       "experience will be degraded due to incomplete "
-                       "debug information.\n";
-                ArchiveHintDisplayed = true;
-              }
-            }
+      if (IsClangModule) {
+        StringRef ModuleCacheDir = sys::path::parent_path(Path);
+        if (sys::fs::exists(ModuleCacheDir)) {
+          // If the module's parent directory exists, we assume that the
+          // module cache has expired and was pruned by clang.  A more
+          // adventurous dsymutil would invoke clang to rebuild the module
+          // now.
+          if (!ModuleCacheHintDisplayed) {
+            WithColor::note()
+                << "The clang module cache may have expired since "
+                   "this object file was built. Rebuilding the "
+                   "object file will rebuild the module cache.\n";
+            ModuleCacheHintDisplayed = true;
           }
-
-          return ErrorOrObj.getError();
+        } else if (IsArchive) {
+          // If the module cache directory doesn't exist at all and the
+          // object file is inside a static library, we assume that the
+          // static library was built on a different machine. We don't want
+          // to discourage module debugging for convenience libraries within
+          // a project though.
+          if (!ArchiveHintDisplayed) {
+            WithColor::note()
+                << "Linking a static library that was built with "
+                   "-gmodules, but the module cache was not found.  "
+                   "Redistributable static libraries should never be "
+                   "built with module debugging enabled.  The debug "
+                   "experience will be degraded due to incomplete "
+                   "debug information.\n";
+            ArchiveHintDisplayed = true;
+          }
         }
+      }
 
-        llvm_unreachable("Unhandled DebugMap object");
-      });
+      return ErrorOrObj.getError();
+    }
+
+    llvm_unreachable("Unhandled DebugMap object");
+  };
   GeneralLinker.setSwiftInterfacesMap(&ParseableSwiftInterfaces);
   bool ReflectionSectionsPresentInBinary = false;
   // If there is no output specified, no point in checking the binary for swift5
@@ -660,6 +658,12 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
       copySwiftReflectionMetadata(Obj.get(), Streamer.get(),
                                   SectionToOffsetInDwarf, RelocationsToApply);
   }
+
+  uint16_t MaxDWARFVersion = 0;
+  std::function<void(const DWARFUnit &Unit)> OnCUDieLoaded =
+      [&MaxDWARFVersion](const DWARFUnit &Unit) {
+        MaxDWARFVersion = std::max(Unit.getVersion(), MaxDWARFVersion);
+      };
 
   for (const auto &Obj : Map.objects()) {
     // N_AST objects (swiftmodule files) should get dumped directly into the
@@ -702,14 +706,43 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
 
       continue;
     }
+
     if (auto ErrorOrObj = loadObject(*Obj, Map, RL))
-      GeneralLinker.addObjectFile(*ErrorOrObj);
+      GeneralLinker.addObjectFile(*ErrorOrObj, Loader, OnCUDieLoaded);
     else {
       ObjectsForLinking.push_back(std::make_unique<DWARFFile>(
           Obj->getObjectFilename(), nullptr, nullptr,
           Obj->empty() ? Obj->getWarnings() : EmptyWarnings));
       GeneralLinker.addObjectFile(*ObjectsForLinking.back());
     }
+  }
+
+  // If we haven't seen any CUs, pick an arbitrary valid Dwarf version anyway.
+  if (MaxDWARFVersion == 0)
+    MaxDWARFVersion = 3;
+
+  if (Error E = GeneralLinker.setTargetDWARFVersion(MaxDWARFVersion))
+    return error(toString(std::move(E)));
+
+  switch (Options.TheAccelTableKind) {
+  case DsymutilAccelTableKind::Apple:
+    GeneralLinker.addAccelTableKind(DwarfLinkerAccelTableKind::Apple);
+    break;
+  case DsymutilAccelTableKind::Dwarf:
+    GeneralLinker.addAccelTableKind(DwarfLinkerAccelTableKind::DebugNames);
+    break;
+  case DsymutilAccelTableKind::Pub:
+    GeneralLinker.addAccelTableKind(DwarfLinkerAccelTableKind::Pub);
+    break;
+  case DsymutilAccelTableKind::Default:
+    if (MaxDWARFVersion >= 5)
+      GeneralLinker.addAccelTableKind(DwarfLinkerAccelTableKind::DebugNames);
+    else
+      GeneralLinker.addAccelTableKind(DwarfLinkerAccelTableKind::Apple);
+    break;
+  case DsymutilAccelTableKind::None:
+    // Nothing to do.
+    break;
   }
 
   // link debug info for loaded object files.
@@ -945,7 +978,7 @@ bool DwarfLinkerForBinary::AddressManager::isLiveVariable(
     const DWARFDie &DIE, CompileUnit::DIEInfo &MyInfo) {
   const auto *Abbrev = DIE.getAbbreviationDeclarationPtr();
 
-  Optional<uint32_t> LocationIdx =
+  std::optional<uint32_t> LocationIdx =
       Abbrev->findAttributeIndex(dwarf::DW_AT_location);
   if (!LocationIdx)
     return false;
@@ -964,7 +997,8 @@ bool DwarfLinkerForBinary::AddressManager::isLiveSubprogram(
     const DWARFDie &DIE, CompileUnit::DIEInfo &MyInfo) {
   const auto *Abbrev = DIE.getAbbreviationDeclarationPtr();
 
-  Optional<uint32_t> LowPcIdx = Abbrev->findAttributeIndex(dwarf::DW_AT_low_pc);
+  std::optional<uint32_t> LowPcIdx =
+      Abbrev->findAttributeIndex(dwarf::DW_AT_low_pc);
   if (!LowPcIdx)
     return false;
 
@@ -980,8 +1014,8 @@ bool DwarfLinkerForBinary::AddressManager::isLiveSubprogram(
   }
 
   if (Form == dwarf::DW_FORM_addrx) {
-    Optional<DWARFFormValue> AddrValue = DIE.find(dwarf::DW_AT_low_pc);
-    if (Optional<uint64_t> AddrOffsetSectionBase =
+    std::optional<DWARFFormValue> AddrValue = DIE.find(dwarf::DW_AT_low_pc);
+    if (std::optional<uint64_t> AddrOffsetSectionBase =
             DIE.getDwarfUnit()->getAddrOffsetSectionBase()) {
       uint64_t StartOffset = *AddrOffsetSectionBase + AddrValue->getRawUValue();
       uint64_t EndOffset =

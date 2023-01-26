@@ -50,14 +50,14 @@ define <8 x i16> @concat5(<4 x i16> %A, <4 x i16> %B) {
    ret <8 x i16> %v8i16
 }
 
-define <16 x i16> @concat6(<8 x i16>* %A, <8 x i16>* %B) {
+define <16 x i16> @concat6(ptr %A, ptr %B) {
 ; CHECK-LABEL: concat6:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    ret
-   %tmp1 = load <8 x i16>, <8 x i16>* %A
-   %tmp2 = load <8 x i16>, <8 x i16>* %B
+   %tmp1 = load <8 x i16>, ptr %A
+   %tmp2 = load <8 x i16>, ptr %B
    %v16i16 = shufflevector <8 x i16> %tmp1, <8 x i16> %tmp2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
    ret <16 x i16> %v16i16
 }
@@ -73,14 +73,14 @@ define <4 x i32> @concat7(<2 x i32> %A, <2 x i32> %B) {
    ret <4 x i32> %v4i32
 }
 
-define <8 x i32> @concat8(<4 x i32>* %A, <4 x i32>* %B) {
+define <8 x i32> @concat8(ptr %A, ptr %B) {
 ; CHECK-LABEL: concat8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    ret
-   %tmp1 = load <4 x i32>, <4 x i32>* %A
-   %tmp2 = load <4 x i32>, <4 x i32>* %B
+   %tmp1 = load <4 x i32>, ptr %A
+   %tmp2 = load <4 x i32>, ptr %B
    %v8i32 = shufflevector <4 x i32> %tmp1, <4 x i32> %tmp2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
    ret <8 x i32> %v8i32
 }

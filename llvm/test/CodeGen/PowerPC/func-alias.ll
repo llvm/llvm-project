@@ -1,6 +1,6 @@
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN: llc -opaque-pointers=0 -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr9 -ppc-asm-full-reg-names < %s | FileCheck %s --check-prefix=P9
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN: llc -opaque-pointers=0 -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names < %s | FileCheck %s --check-prefix=P10
 
 @newname = dso_local alias i32 (...), bitcast (i32 ()* @oldname to i32 (...)*)

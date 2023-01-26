@@ -5,6 +5,20 @@
 !TODO: all internal errors
 !      enable declare-reduction example after name resolution
 
+! 2.4 requires
+
+subroutine requires_1(a)
+  real(8), intent(inout) :: a
+  !$omp requires reverse_offload, unified_shared_memory, atomic_default_mem_order(relaxed)
+  a = a + 0.01
+end subroutine requires_1
+
+subroutine requires_2(a)
+  real(8), intent(inout) :: a
+  !$omp requires unified_address
+  a = a + 0.01
+end subroutine requires_2
+
 ! 2.8.2 declare-simd
 
 subroutine declare_simd_1(a, b)

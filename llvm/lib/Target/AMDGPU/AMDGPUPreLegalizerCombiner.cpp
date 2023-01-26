@@ -198,7 +198,8 @@ public:
 bool AMDGPUPreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
                                               MachineInstr &MI,
                                               MachineIRBuilder &B) const {
-  AMDGPUCombinerHelper Helper(Observer, B, KB, MDT);
+  const auto *LI = MI.getMF()->getSubtarget().getLegalizerInfo();
+  AMDGPUCombinerHelper Helper(Observer, B, /*IsPreLegalize*/ true, KB, MDT, LI);
   AMDGPUPreLegalizerCombinerHelper PreLegalizerHelper(B, Helper);
   AMDGPUGenPreLegalizerCombinerHelper Generated(GeneratedRuleCfg, Helper,
                                                 PreLegalizerHelper);

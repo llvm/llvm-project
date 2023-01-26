@@ -123,14 +123,14 @@ bool AppleObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
     }
   } else {
     // If it is not a pointer, see if we can make it into a pointer.
-    TypeSystemClang *ast_context =
+    TypeSystemClangSP scratch_ts_sp =
         ScratchTypeSystemClang::GetForTarget(*target);
-    if (!ast_context)
+    if (!scratch_ts_sp)
       return false;
 
-    CompilerType opaque_type = ast_context->GetBasicType(eBasicTypeObjCID);
+    CompilerType opaque_type = scratch_ts_sp->GetBasicType(eBasicTypeObjCID);
     if (!opaque_type)
-      opaque_type = ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
+      opaque_type = scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
     // value.SetContext(Value::eContextTypeClangType, opaque_type_ptr);
     value.SetCompilerType(opaque_type);
   }
@@ -139,11 +139,12 @@ bool AppleObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
   arg_value_list.PushValue(value);
 
   // This is the return value:
-  TypeSystemClang *ast_context = ScratchTypeSystemClang::GetForTarget(*target);
-  if (!ast_context)
+  TypeSystemClangSP scratch_ts_sp =
+      ScratchTypeSystemClang::GetForTarget(*target);
+  if (!scratch_ts_sp)
     return false;
 
-  CompilerType return_compiler_type = ast_context->GetCStringType(true);
+  CompilerType return_compiler_type = scratch_ts_sp->GetCStringType(true);
   Value ret;
   //    ret.SetContext(Value::eContextTypeClangType, return_compiler_type);
   ret.SetCompilerType(return_compiler_type);
@@ -503,7 +504,7 @@ ValueObjectSP AppleObjCRuntime::GetExceptionObjectForThread(
 /// \param msg The message to add to the log.
 /// \return An invalid ThreadSP to be returned from
 ///         GetBacktraceThreadFromException.
-LLVM_NODISCARD
+[[nodiscard]]
 static ThreadSP FailExceptionParsing(llvm::StringRef msg) {
   Log *log = GetLog(LLDBLog::Language);
   LLDB_LOG(log, "Failed getting backtrace from exception: {0}", msg);
@@ -521,12 +522,11 @@ ThreadSP AppleObjCRuntime::GetBacktraceThreadFromException(
   if (!reserved_dict)
     return FailExceptionParsing("Failed to get synthetic value.");
 
-  TypeSystemClang *clang_ast_context =
+  TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(*exception_sp->GetTargetSP());
-  if (!clang_ast_context)
+  if (!scratch_ts_sp)
     return FailExceptionParsing("Failed to get scratch AST.");
-  CompilerType objc_id =
-      clang_ast_context->GetBasicType(lldb::eBasicTypeObjCID);
+  CompilerType objc_id = scratch_ts_sp->GetBasicType(lldb::eBasicTypeObjCID);
   ValueObjectSP return_addresses;
 
   auto objc_object_from_address = [&exception_sp, &objc_id](uint64_t addr,

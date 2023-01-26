@@ -10,6 +10,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/Threading.h"
+#include <optional>
 
 using namespace clang;
 using namespace tooling;
@@ -67,7 +68,7 @@ EntryRef DependencyScanningWorkerFilesystem::scanForDirectivesIfNecessary(
                                         Directives)) {
     Contents->DepDirectiveTokens.clear();
     // FIXME: Propagate the diagnostic if desired by the client.
-    Contents->DepDirectives.store(new Optional<DependencyDirectivesTy>());
+    Contents->DepDirectives.store(new std::optional<DependencyDirectivesTy>());
     return EntryRef(Filename, Entry);
   }
 
@@ -76,7 +77,7 @@ EntryRef DependencyScanningWorkerFilesystem::scanForDirectivesIfNecessary(
   // threads may skip the
   // critical section (`DepDirectives != nullptr`), leading to a data race.
   Contents->DepDirectives.store(
-      new Optional<DependencyDirectivesTy>(std::move(Directives)));
+      new std::optional<DependencyDirectivesTy>(std::move(Directives)));
   return EntryRef(Filename, Entry);
 }
 

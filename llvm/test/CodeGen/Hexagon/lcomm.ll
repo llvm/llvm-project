@@ -8,7 +8,7 @@ target triple = "hexagon"
 ; Function Attrs: nounwind
 define i32 @f0() #0 {
 b0:
-  %v0 = load i32, i32* @g0, align 4
+  %v0 = load i32, ptr @g0, align 4
   ret i32 %v0
 }
 

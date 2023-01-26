@@ -338,7 +338,7 @@ template < unsigned > struct X {
   struct Y: Y<dim> { }; // expected-error{{circular inheritance between 'Y<dim>' and 'Y<dim>'}}
 };
 typedef X<3> X3;
-X3::Y<>::iterator it; // expected-error {{no type named 'iterator' in 'PR11421::X<3>::Y<3>'}}
+X3::Y<>::iterator it; // expected-error {{no type named 'iterator' in 'PR11421::X<3>::Y<>'}}
 }
 
 namespace rdar12629723 {

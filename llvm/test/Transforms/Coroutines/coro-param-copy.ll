@@ -1,6 +1,6 @@
 ; Check that we create copy the data from the alloca into the coroutine
 ; frame slot if it was written to.
-; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 define i8* @f() presplitcoroutine {
 entry:

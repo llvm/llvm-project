@@ -144,7 +144,7 @@ Language::GetHardcodedSynthetics() {
   return {};
 }
 
-std::vector<ConstString>
+std::vector<FormattersMatchCandidate>
 Language::GetPossibleFormattersMatches(ValueObject &valobj,
                                        lldb::DynamicValueType use_dynamic) {
   return {};
@@ -219,6 +219,17 @@ const char *Language::GetNameForLanguageType(LanguageType language) {
     return language_names[language].name;
   else
     return language_names[eLanguageTypeUnknown].name;
+}
+
+void Language::PrintSupportedLanguagesForExpressions(Stream &s,
+                                                     llvm::StringRef prefix,
+                                                     llvm::StringRef suffix) {
+  auto supported = Language::GetLanguagesSupportingTypeSystemsForExpressions();
+  for (size_t idx = 0; idx < num_languages; ++idx) {
+    auto const &lang = language_names[idx];
+    if (supported[lang.type])
+      s << prefix << lang.name << suffix;
+  }
 }
 
 void Language::PrintAllLanguages(Stream &s, const char *prefix,

@@ -1,4 +1,3 @@
-; RUN: opt -S -partial-inliner -min-block-execution=1 -skip-partial-inlining-cost-analysis < %s | FileCheck %s
 ; RUN: opt -S -passes=partial-inliner -min-block-execution=1 -skip-partial-inlining-cost-analysis < %s | FileCheck %s
 ; Require a dummy block (if.then.b) as successor to if.then due to PI requirement
 ; of region containing more than one BB.
@@ -8,57 +7,57 @@ entry:
   %ub.addr = alloca i32, align 4
   %sum = alloca i32, align 4
   %i = alloca i32, align 4
-  store i32 %value, i32* %value.addr, align 4
-  store i32 %ub, i32* %ub.addr, align 4
-  store i32 0, i32* %sum, align 4
-  store i32 0, i32* %i, align 4
+  store i32 %value, ptr %value.addr, align 4
+  store i32 %ub, ptr %ub.addr, align 4
+  store i32 0, ptr %sum, align 4
+  store i32 0, ptr %i, align 4
   br label %for.cond
 
 for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i32, i32* %i, align 4
-  %1 = load i32, i32* %ub.addr, align 4
+  %0 = load i32, ptr %i, align 4
+  %1 = load i32, ptr %ub.addr, align 4
   %cmp = icmp slt i32 %0, %1
   br i1 %cmp, label %for.body, label %for.end, !prof !31
 
 for.body:                                         ; preds = %for.cond
-  %2 = load i32, i32* %value.addr, align 4
+  %2 = load i32, ptr %value.addr, align 4
   %rem = srem i32 %2, 20
   %cmp1 = icmp eq i32 %rem, 0
   br i1 %cmp1, label %if.then, label %if.else, !prof !32
 
 if.then:                                          ; preds = %for.body
-  %3 = load i32, i32* %value.addr, align 4
-  %4 = load i32, i32* %i, align 4
+  %3 = load i32, ptr %value.addr, align 4
+  %4 = load i32, ptr %i, align 4
   %mul = mul nsw i32 %4, 5
   %add = add nsw i32 %3, %mul
-  %5 = load i32, i32* %sum, align 4
+  %5 = load i32, ptr %sum, align 4
   %add2 = add nsw i32 %5, %add
-  store i32 %add2, i32* %sum, align 4
+  store i32 %add2, ptr %sum, align 4
   br label %if.then.b
 
 if.then.b:                                        ; preds = %if.then
   br label %if.end
 
 if.else:                                          ; preds = %for.body
-  %6 = load i32, i32* %value.addr, align 4
-  %7 = load i32, i32* %i, align 4
+  %6 = load i32, ptr %value.addr, align 4
+  %7 = load i32, ptr %i, align 4
   %sub = sub nsw i32 %6, %7
-  %8 = load i32, i32* %sum, align 4
+  %8 = load i32, ptr %sum, align 4
   %add3 = add nsw i32 %8, %sub
-  store i32 %add3, i32* %sum, align 4
+  store i32 %add3, ptr %sum, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
   br label %for.inc
 
 for.inc:                                          ; preds = %if.end
-  %9 = load i32, i32* %i, align 4
+  %9 = load i32, ptr %i, align 4
   %inc = add nsw i32 %9, 1
-  store i32 %inc, i32* %i, align 4
+  store i32 %inc, ptr %i, align 4
   br label %for.cond
 
 for.end:                                          ; preds = %for.cond
-  %10 = load i32, i32* %sum, align 4
+  %10 = load i32, ptr %sum, align 4
   ret i32 %10
 }
 
@@ -70,10 +69,10 @@ define signext i32 @foo(i32 signext %value, i32 signext %ub) #0 !prof !30 {
 entry:
   %value.addr = alloca i32, align 4
   %ub.addr = alloca i32, align 4
-  store i32 %value, i32* %value.addr, align 4
-  store i32 %ub, i32* %ub.addr, align 4
-  %0 = load i32, i32* %value.addr, align 4
-  %1 = load i32, i32* %ub.addr, align 4
+  store i32 %value, ptr %value.addr, align 4
+  store i32 %ub, ptr %ub.addr, align 4
+  %0 = load i32, ptr %value.addr, align 4
+  %1 = load i32, ptr %ub.addr, align 4
   %call = call signext i32 @bar(i32 signext %0, i32 signext %1)
   ret i32 %call
 }

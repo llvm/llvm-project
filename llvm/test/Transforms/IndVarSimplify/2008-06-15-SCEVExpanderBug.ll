@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -disable-output
+; RUN: opt < %s -passes=indvars -disable-output
 ; PR2434
 
 define fastcc void @regcppop() nounwind  {

@@ -1,25 +1,25 @@
-; RUN: opt -objc-arc -S < %s | FileCheck %s
+; RUN: opt -passes=objc-arc -S < %s | FileCheck %s
 
 declare void @alterRefCount()
-declare void @use(i8*)
-declare void @readOnlyFunc(i8*, i8*)
+declare void @use(ptr)
+declare void @readOnlyFunc(ptr, ptr)
 
-@g0 = global i8* null, align 8
+@g0 = global ptr null, align 8
 
 ; Check that ARC optimizer doesn't reverse the order of the retain call and the
 ; release call when there are debug instructions.
 
-; CHECK: call i8* @llvm.objc.retain(i8* %x)
-; CHECK: call void @llvm.objc.release(i8* %x)
+; CHECK: call ptr @llvm.objc.retain(ptr %x)
+; CHECK: call void @llvm.objc.release(ptr %x)
 
-define i32 @test(i8* %x, i8* %y, i8 %z, i32 %i) {
+define i32 @test(ptr %x, ptr %y, i8 %z, i32 %i) {
   %i.addr = alloca i32, align 4
-  store i32 %i, i32* %i.addr, align 4
-  %v1 = tail call i8* @llvm.objc.retain(i8* %x)
-  store i8 %z, i8* %x
-  call void @llvm.dbg.declare(metadata i32* %i.addr, metadata !9, metadata !DIExpression()), !dbg !10
+  store i32 %i, ptr %i.addr, align 4
+  %v1 = tail call ptr @llvm.objc.retain(ptr %x)
+  store i8 %z, ptr %x
+  call void @llvm.dbg.declare(metadata ptr %i.addr, metadata !9, metadata !DIExpression()), !dbg !10
   call void @alterRefCount()
-  tail call void @llvm.objc.release(i8* %x)
+  tail call void @llvm.objc.release(ptr %x)
   ret i32 %i
 }
 
@@ -31,11 +31,11 @@ define i32 @test(i8* %x, i8* %y, i8 %z, i32 %i) {
 ; CHECK: call void @llvm.objc.release(
 
 define void @test2() {
-  %v0 = load i8*, i8** @g0, align 8
-  %v1 = tail call i8* @llvm.objc.retain(i8* %v0)
-  tail call void @use(i8* %v0)
+  %v0 = load ptr, ptr @g0, align 8
+  %v1 = tail call ptr @llvm.objc.retain(ptr %v0)
+  tail call void @use(ptr %v0)
   tail call void @alterRefCount()
-  tail call void @llvm.objc.release(i8* %v0)
+  tail call void @llvm.objc.release(ptr %v0)
   ret void
 }
 
@@ -43,100 +43,100 @@ define void @test2() {
 ; Previously, ARC optimizer would move the release past the retain.
 
 ; if.then:
-;   call void @readOnlyFunc(i8* %obj, i8* null)
-;   call void @llvm.objc.release(i8* %obj) #1, !clang.imprecise_release !2
+;   call void @readOnlyFunc(ptr %obj, ptr null)
+;   call void @llvm.objc.release(ptr %obj) #1, !clang.imprecise_release !2
 ;   %1 = add i32 1, 2
-;   %2 = tail call i8* @llvm.objc.retain(i8* %obj)
+;   %2 = tail call ptr @llvm.objc.retain(ptr %obj)
 ;
 ; Ideally, the retain/release pairs in BB if.then should be removed.
 
-define void @test3(i8* %obj, i1 %cond) {
+define void @test3(ptr %obj, i1 %cond) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call i8* @llvm.objc.retain(i8* [[OBJ:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call ptr @llvm.objc.retain(ptr [[OBJ:%.*]])
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    call void @readOnlyFunc(i8* [[OBJ]], i8* null)
+; CHECK-NEXT:    call void @readOnlyFunc(ptr [[OBJ]], ptr null)
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 1, 2
 ; CHECK-NEXT:    call void @alterRefCount()
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    call void @alterRefCount()
-; CHECK-NEXT:    call void @use(i8* [[OBJ]])
+; CHECK-NEXT:    call void @use(ptr [[OBJ]])
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    call void @llvm.objc.release(i8* [[OBJ]]) {{.*}}, !clang.imprecise_release !2
+; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ]]) {{.*}}, !clang.imprecise_release !2
 ; CHECK-NEXT:    ret void
 ;
-  %v0 = call i8* @llvm.objc.retain(i8* %obj)
+  %v0 = call ptr @llvm.objc.retain(ptr %obj)
   br i1 %cond, label %if.then, label %if.else
 
 if.then:
-  call void @readOnlyFunc(i8* %obj, i8* null) #0
+  call void @readOnlyFunc(ptr %obj, ptr null) #0
   add i32 1, 2
   call void @alterRefCount()
   br label %join
 
 if.else:
   call void @alterRefCount()
-  call void @use(i8* %obj)
+  call void @use(ptr %obj)
   br label %join
 
 join:
-  call void @llvm.objc.release(i8* %obj), !clang.imprecise_release !9
+  call void @llvm.objc.release(ptr %obj), !clang.imprecise_release !9
   ret void
 }
 
-define void @test4(i8* %obj0, i8* %obj1, i1 %cond) {
+define void @test4(ptr %obj0, ptr %obj1, i1 %cond) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call i8* @llvm.objc.retain(i8* [[OBJ0:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call i8* @llvm.objc.retain(i8* [[OBJ1:%.*]])
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call ptr @llvm.objc.retain(ptr [[OBJ0:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call ptr @llvm.objc.retain(ptr [[OBJ1:%.*]])
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    call void @readOnlyFunc(i8* [[OBJ0]], i8* [[OBJ1]])
+; CHECK-NEXT:    call void @readOnlyFunc(ptr [[OBJ0]], ptr [[OBJ1]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 1, 2
 ; CHECK-NEXT:    call void @alterRefCount()
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    call void @alterRefCount()
-; CHECK-NEXT:    call void @use(i8* [[OBJ0]])
-; CHECK-NEXT:    call void @use(i8* [[OBJ1]])
+; CHECK-NEXT:    call void @use(ptr [[OBJ0]])
+; CHECK-NEXT:    call void @use(ptr [[OBJ1]])
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    call void @llvm.objc.release(i8* [[OBJ0]]) {{.*}}, !clang.imprecise_release !2
-; CHECK-NEXT:    call void @llvm.objc.release(i8* [[OBJ1]]) {{.*}}, !clang.imprecise_release !2
+; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ0]]) {{.*}}, !clang.imprecise_release !2
+; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ1]]) {{.*}}, !clang.imprecise_release !2
 ; CHECK-NEXT:    ret void
 ;
-  %v0 = call i8* @llvm.objc.retain(i8* %obj0)
-  %v1 = call i8* @llvm.objc.retain(i8* %obj1)
+  %v0 = call ptr @llvm.objc.retain(ptr %obj0)
+  %v1 = call ptr @llvm.objc.retain(ptr %obj1)
   br i1 %cond, label %if.then, label %if.else
 
 if.then:
-  call void @readOnlyFunc(i8* %obj0, i8* %obj1) #0
+  call void @readOnlyFunc(ptr %obj0, ptr %obj1) #0
   add i32 1, 2
   call void @alterRefCount()
   br label %join
 
 if.else:
   call void @alterRefCount()
-  call void @use(i8* %obj0)
-  call void @use(i8* %obj1)
+  call void @use(ptr %obj0)
+  call void @use(ptr %obj1)
   br label %join
 
 join:
-  call void @llvm.objc.release(i8* %obj0), !clang.imprecise_release !9
-  call void @llvm.objc.release(i8* %obj1), !clang.imprecise_release !9
+  call void @llvm.objc.release(ptr %obj0), !clang.imprecise_release !9
+  call void @llvm.objc.release(ptr %obj1), !clang.imprecise_release !9
   ret void
 }
 
 ; In this test, insertion points for the retain and release calls that could be
 ; eliminated are in different blocks (bb1 and if.then).
 
-define void @test5(i8* %obj, i1 %cond0, i1 %cond1) {
+define void @test5(ptr %obj, i1 %cond0, i1 %cond1) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[V0:%.*]] = tail call i8* @llvm.objc.retain(i8* [[OBJ:%.*]])
+; CHECK-NEXT:    [[V0:%.*]] = tail call ptr @llvm.objc.retain(ptr [[OBJ:%.*]])
 ; CHECK-NEXT:    br i1 [[COND0:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    call void @readOnlyFunc(i8* [[OBJ]], i8* null)
+; CHECK-NEXT:    call void @readOnlyFunc(ptr [[OBJ]], ptr null)
 ; CHECK-NEXT:    br i1 [[COND1:%.*]], label [[IF_THEN2:%.*]], label [[IF_ELSE2:%.*]]
 ; CHECK:       if.then2:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
@@ -148,17 +148,17 @@ define void @test5(i8* %obj, i1 %cond0, i1 %cond1) {
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    call void @alterRefCount()
-; CHECK-NEXT:    call void @use(i8* [[OBJ]])
+; CHECK-NEXT:    call void @use(ptr [[OBJ]])
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    call void @llvm.objc.release(i8* [[OBJ]])
+; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ]])
 ; CHECK-NEXT:    ret void
 ;
-  %v0 = call i8* @llvm.objc.retain(i8* %obj)
+  %v0 = call ptr @llvm.objc.retain(ptr %obj)
   br i1 %cond0, label %if.then, label %if.else
 
 if.then:
-  call void @readOnlyFunc(i8* %obj, i8* null) #0
+  call void @readOnlyFunc(ptr %obj, ptr null) #0
   br i1 %cond1, label %if.then2, label %if.else2
 
 if.then2:
@@ -174,17 +174,17 @@ bb1:
 
 if.else:
   call void @alterRefCount()
-  call void @use(i8* %obj)
+  call void @use(ptr %obj)
   br label %join
 
 join:
-  call void @llvm.objc.release(i8* %obj), !clang.imprecise_release !9
+  call void @llvm.objc.release(ptr %obj), !clang.imprecise_release !9
   ret void
 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
-declare i8* @llvm.objc.retain(i8*) local_unnamed_addr
-declare void @llvm.objc.release(i8*) local_unnamed_addr
+declare ptr @llvm.objc.retain(ptr) local_unnamed_addr
+declare void @llvm.objc.release(ptr) local_unnamed_addr
 
 attributes #0 = { readonly }
 

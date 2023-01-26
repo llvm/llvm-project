@@ -21,4 +21,4 @@ class StepAndPrint:
         return "Does a step-over then runs frame variable passing the command args to it\n"
 
 def __lldb_init_module(debugger, unused):
-    debugger.HandleCommand("command script add -c step_and_print.StepAndPrint sap")
+    debugger.HandleCommand("command script add -o -c step_and_print.StepAndPrint sap")

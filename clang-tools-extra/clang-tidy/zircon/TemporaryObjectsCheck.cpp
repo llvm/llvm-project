@@ -16,14 +16,11 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace zircon {
+namespace clang::tidy::zircon {
 
 AST_MATCHER_P(CXXRecordDecl, matchesAnyName, ArrayRef<StringRef>, Names) {
   std::string QualifiedName = Node.getQualifiedNameAsString();
-  return llvm::any_of(Names,
-                      [&](StringRef Name) { return QualifiedName == Name; });
+  return llvm::is_contained(Names, QualifiedName);
 }
 
 void TemporaryObjectsCheck::registerMatchers(MatchFinder *Finder) {
@@ -55,6 +52,4 @@ void TemporaryObjectsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "Names", utils::options::serializeStringList(Names));
 }
 
-} // namespace zircon
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::zircon

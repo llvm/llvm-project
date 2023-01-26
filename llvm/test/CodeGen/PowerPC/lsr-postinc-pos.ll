@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -print-lsr-output 2>&1 | FileCheck %s
+; RUN: llc -opaque-pointers=0 -verify-machineinstrs < %s -print-lsr-output 2>&1 | FileCheck %s
 
 ; The icmp is a post-inc use, and the increment is in %bb11, but the
 ; scevgep needs to be inserted in %bb so that it is dominated by %t.

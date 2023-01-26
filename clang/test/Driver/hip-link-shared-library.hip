@@ -1,5 +1,5 @@
 // RUN: touch %t.o
-// RUN: %clang --hip-link -ccc-print-bindings -target x86_64-linux-gnu \
+// RUN: %clang --hip-link -ccc-print-bindings --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %t.o %S/Inputs/in.so \
 // RUN:   -fgpu-rdc 2>&1 | FileCheck %s
 

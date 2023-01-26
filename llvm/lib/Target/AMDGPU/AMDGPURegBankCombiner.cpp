@@ -161,7 +161,7 @@ bool AMDGPURegBankCombinerHelper::matchIntMinMaxToMed3(
 
   MinMaxMedOpc OpcodeTriple = getMinMaxPair(MI.getOpcode());
   Register Val;
-  Optional<ValueAndVReg> K0, K1;
+  std::optional<ValueAndVReg> K0, K1;
   // Match min(max(Val, K0), K1) or max(min(Val, K1), K0). Then see if K0 <= K1.
   if (!matchMed<GCstAndRegMatch>(MI, MRI, OpcodeTriple, Val, K0, K1))
     return false;
@@ -206,7 +206,7 @@ bool AMDGPURegBankCombinerHelper::matchFPMinMaxToMed3(
   auto OpcodeTriple = getMinMaxPair(MI.getOpcode());
 
   Register Val;
-  Optional<FPValueAndVReg> K0, K1;
+  std::optional<FPValueAndVReg> K0, K1;
   // Match min(max(Val, K0), K1) or max(min(Val, K1), K0). Then see if K0 <= K1.
   if (!matchMed<GFCstAndRegMatch>(MI, MRI, OpcodeTriple, Val, K0, K1))
     return false;
@@ -238,7 +238,7 @@ bool AMDGPURegBankCombinerHelper::matchFPMinMaxToClamp(MachineInstr &MI,
   // Clamp is available on all types after regbankselect (f16, f32, f64, v2f16).
   auto OpcodeTriple = getMinMaxPair(MI.getOpcode());
   Register Val;
-  Optional<FPValueAndVReg> K0, K1;
+  std::optional<FPValueAndVReg> K0, K1;
   // Match min(max(Val, K0), K1) or max(min(Val, K1), K0).
   if (!matchMed<GFCstOrSplatGFCstMatch>(MI, MRI, OpcodeTriple, Val, K0, K1))
     return false;
@@ -399,7 +399,7 @@ public:
 bool AMDGPURegBankCombinerInfo::combine(GISelChangeObserver &Observer,
                                               MachineInstr &MI,
                                               MachineIRBuilder &B) const {
-  CombinerHelper Helper(Observer, B, KB, MDT);
+  CombinerHelper Helper(Observer, B, /* IsPreLegalize*/ false, KB, MDT);
   AMDGPURegBankCombinerHelper RegBankHelper(B, Helper);
   AMDGPUGenRegBankCombinerHelper Generated(GeneratedRuleCfg, Helper,
                                            RegBankHelper);

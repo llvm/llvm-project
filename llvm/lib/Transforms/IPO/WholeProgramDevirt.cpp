@@ -259,8 +259,7 @@ wholeprogramdevirt::findLowestOffset(ArrayRef<VirtualCallTarget> Targets,
         if (I < B.size())
           BitsUsed |= B[I];
       if (BitsUsed != 0xff)
-        return (MinByte + I) * 8 +
-               countTrailingZeros(uint8_t(~BitsUsed), ZB_Undefined);
+        return (MinByte + I) * 8 + countTrailingZeros(uint8_t(~BitsUsed));
     }
   } else {
     // Find a free (Size/8) byte region in each member of Used.
@@ -387,7 +386,7 @@ bool mustBeUnreachableFunction(ValueInfo TheFnVI) {
     return false;
   }
 
-  for (auto &Summary : TheFnVI.getSummaryList()) {
+  for (const auto &Summary : TheFnVI.getSummaryList()) {
     // Conservatively returns false if any non-live functions are seen.
     // In general either all summaries should be live or all should be dead.
     if (!Summary->isLive())
@@ -814,8 +813,8 @@ void updatePublicTypeTestCalls(Module &M,
     for (Use &U : make_early_inc_range(PublicTypeTestFunc->uses())) {
       auto *CI = cast<CallInst>(U.getUser());
       auto *NewCI = CallInst::Create(
-          TypeTestFunc, {CI->getArgOperand(0), CI->getArgOperand(1)}, None, "",
-          CI);
+          TypeTestFunc, {CI->getArgOperand(0), CI->getArgOperand(1)},
+          std::nullopt, "", CI);
       CI->replaceAllUsesWith(NewCI);
       CI->eraseFromParent();
     }
@@ -1048,7 +1047,7 @@ bool DevirtIndex::tryFindVirtualCallTargets(
     // conservatively return false early.
     const GlobalVarSummary *VS = nullptr;
     bool LocalFound = false;
-    for (auto &S : P.VTableVI.getSummaryList()) {
+    for (const auto &S : P.VTableVI.getSummaryList()) {
       if (GlobalValue::isLocalLinkage(S->linkage())) {
         if (LocalFound)
           return false;
@@ -1278,7 +1277,7 @@ bool DevirtIndex::trySingleImplDevirt(MutableArrayRef<ValueInfo> TargetsForSlot,
 
   // If the summary list contains multiple summaries where at least one is
   // a local, give up, as we won't know which (possibly promoted) name to use.
-  for (auto &S : TheFn.getSummaryList())
+  for (const auto &S : TheFn.getSummaryList())
     if (GlobalValue::isLocalLinkage(S->linkage()) && Size > 1)
       return false;
 
@@ -1709,8 +1708,8 @@ bool DevirtModule::tryVirtualConstProp(
   // rather than using function attributes to perform local optimization.
   for (VirtualCallTarget &Target : TargetsForSlot) {
     if (Target.Fn->isDeclaration() ||
-        computeFunctionBodyMemoryAccess(*Target.Fn, AARGetter(*Target.Fn)) !=
-            FMRB_DoesNotAccessMemory ||
+        !computeFunctionBodyMemoryAccess(*Target.Fn, AARGetter(*Target.Fn))
+             .doesNotAccessMemory() ||
         Target.Fn->arg_empty() || !Target.Fn->arg_begin()->use_empty() ||
         Target.Fn->getReturnType() != RetType)
       return false;
@@ -1836,10 +1835,9 @@ void DevirtModule::rebuildGlobal(VTableBits &B) {
 bool DevirtModule::areRemarksEnabled() {
   const auto &FL = M.getFunctionList();
   for (const Function &Fn : FL) {
-    const auto &BBL = Fn.getBasicBlockList();
-    if (BBL.empty())
+    if (Fn.empty())
       continue;
-    auto DI = OptimizationRemark(DEBUG_TYPE, "", DebugLoc(), &BBL.front());
+    auto DI = OptimizationRemark(DEBUG_TYPE, "", DebugLoc(), &Fn.front());
     return DI.isEnabled();
   }
   return false;
@@ -1875,7 +1873,7 @@ void DevirtModule::scanTypeTestUsers(
 
     auto RemoveTypeTestAssumes = [&]() {
       // We no longer need the assumes or the type test.
-      for (auto Assume : Assumes)
+      for (auto *Assume : Assumes)
         Assume->eraseFromParent();
       // We can't use RecursivelyDeleteTriviallyDeadInstructions here because we
       // may use the vtable argument later.
@@ -2265,10 +2263,10 @@ bool DevirtModule::run() {
     if (ExportSummary && isa<MDString>(S.first.TypeID)) {
       auto GUID =
           GlobalValue::getGUID(cast<MDString>(S.first.TypeID)->getString());
-      for (auto FS : S.second.CSInfo.SummaryTypeCheckedLoadUsers)
+      for (auto *FS : S.second.CSInfo.SummaryTypeCheckedLoadUsers)
         FS->addTypeTest(GUID);
       for (auto &CCS : S.second.ConstCSInfo)
-        for (auto FS : CCS.second.SummaryTypeCheckedLoadUsers)
+        for (auto *FS : CCS.second.SummaryTypeCheckedLoadUsers)
           FS->addTypeTest(GUID);
     }
   }
@@ -2309,8 +2307,15 @@ void DevirtIndex::run() {
     return;
 
   DenseMap<GlobalValue::GUID, std::vector<StringRef>> NameByGUID;
-  for (auto &P : ExportSummary.typeIdCompatibleVtableMap()) {
+  for (const auto &P : ExportSummary.typeIdCompatibleVtableMap()) {
     NameByGUID[GlobalValue::getGUID(P.first)].push_back(P.first);
+    // Create the type id summary resolution regardlness of whether we can
+    // devirtualize, so that lower type tests knows the type id is used on
+    // a global and not Unsat. We do this here rather than in the loop over the
+    // CallSlots, since that handling will only see type tests that directly
+    // feed assumes, and we would miss any that aren't currently handled by WPD
+    // (such as type tests that feed assumes via phis).
+    ExportSummary.getOrInsertTypeIdSummary(P.first);
   }
 
   // Collect information from summary about which calls to try to devirtualize.
@@ -2358,12 +2363,11 @@ void DevirtIndex::run() {
     std::vector<ValueInfo> TargetsForSlot;
     auto TidSummary = ExportSummary.getTypeIdCompatibleVtableSummary(S.first.TypeID);
     assert(TidSummary);
-    // Create the type id summary resolution regardlness of whether we can
-    // devirtualize, so that lower type tests knows the type id is used on
-    // a global and not Unsat.
+    // The type id summary would have been created while building the NameByGUID
+    // map earlier.
     WholeProgramDevirtResolution *Res =
-        &ExportSummary.getOrInsertTypeIdSummary(S.first.TypeID)
-             .WPDRes[S.first.ByteOffset];
+        &ExportSummary.getTypeIdSummary(S.first.TypeID)
+             ->WPDRes[S.first.ByteOffset];
     if (tryFindVirtualCallTargets(TargetsForSlot, *TidSummary,
                                   S.first.ByteOffset)) {
 

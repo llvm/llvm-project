@@ -20,7 +20,7 @@ static const DiagnosticRecord BuiltinDiagnosticsByName[] = {
 };
 
 llvm::ArrayRef<DiagnosticRecord> diagtool::getBuiltinDiagnosticsByName() {
-  return llvm::makeArrayRef(BuiltinDiagnosticsByName);
+  return llvm::ArrayRef(BuiltinDiagnosticsByName);
 }
 
 
@@ -103,5 +103,5 @@ GroupRecord::diagnostics() const {
 }
 
 llvm::ArrayRef<GroupRecord> diagtool::getDiagnosticGroups() {
-  return llvm::makeArrayRef(OptionTable);
+  return llvm::ArrayRef(OptionTable);
 }

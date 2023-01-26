@@ -115,6 +115,7 @@ Clang-Tidy Checks
    `bugprone-sizeof-container <bugprone/sizeof-container.html>`_,
    `bugprone-sizeof-expression <bugprone/sizeof-expression.html>`_,
    `bugprone-spuriously-wake-up-functions <bugprone/spuriously-wake-up-functions.html>`_,
+   `bugprone-standalone-empty <bugprone/standalone-empty.html>`_, "Yes"
    `bugprone-string-constructor <bugprone/string-constructor.html>`_, "Yes"
    `bugprone-string-integer-assignment <bugprone/string-integer-assignment.html>`_, "Yes"
    `bugprone-string-literal-with-embedded-nul <bugprone/string-literal-with-embedded-nul.html>`_,
@@ -124,6 +125,7 @@ Clang-Tidy Checks
    `bugprone-suspicious-memory-comparison <bugprone/suspicious-memory-comparison.html>`_,
    `bugprone-suspicious-memset-usage <bugprone/suspicious-memset-usage.html>`_, "Yes"
    `bugprone-suspicious-missing-comma <bugprone/suspicious-missing-comma.html>`_,
+   `bugprone-suspicious-realloc-usage <bugprone/suspicious-realloc-usage.html>`_,
    `bugprone-suspicious-semicolon <bugprone/suspicious-semicolon.html>`_, "Yes"
    `bugprone-suspicious-string-compare <bugprone/suspicious-string-compare.html>`_, "Yes"
    `bugprone-swapped-arguments <bugprone/swapped-arguments.html>`_, "Yes"
@@ -176,8 +178,11 @@ Clang-Tidy Checks
    `clang-analyzer-valist.Unterminated <clang-analyzer/valist.Unterminated.html>`_,
    `concurrency-mt-unsafe <concurrency/mt-unsafe.html>`_,
    `concurrency-thread-canceltype-asynchronous <concurrency/thread-canceltype-asynchronous.html>`_,
+   `cppcoreguidelines-avoid-const-or-ref-data-members <cppcoreguidelines/avoid-const-or-ref-data-members.html>`_,
+   `cppcoreguidelines-avoid-do-while <cppcoreguidelines/avoid-do-while.html>`_,
    `cppcoreguidelines-avoid-goto <cppcoreguidelines/avoid-goto.html>`_,
    `cppcoreguidelines-avoid-non-const-global-variables <cppcoreguidelines/avoid-non-const-global-variables.html>`_,
+   `cppcoreguidelines-avoid-reference-coroutine-parameters <cppcoreguidelines/avoid-reference-coroutine-parameters.html>`_,
    `cppcoreguidelines-init-variables <cppcoreguidelines/init-variables.html>`_, "Yes"
    `cppcoreguidelines-interfaces-global-init <cppcoreguidelines/interfaces-global-init.html>`_,
    `cppcoreguidelines-macro-usage <cppcoreguidelines/macro-usage.html>`_,
@@ -256,6 +261,7 @@ Clang-Tidy Checks
    `misc-unused-alias-decls <misc/unused-alias-decls.html>`_, "Yes"
    `misc-unused-parameters <misc/unused-parameters.html>`_, "Yes"
    `misc-unused-using-decls <misc/unused-using-decls.html>`_, "Yes"
+   `misc-use-anonymous-namespace <misc/use-anonymous-namespace.html>`_,
    `modernize-avoid-bind <modernize/avoid-bind.html>`_, "Yes"
    `modernize-avoid-c-arrays <modernize/avoid-c-arrays.html>`_,
    `modernize-concat-nested-namespaces <modernize/concat-nested-namespaces.html>`_, "Yes"
@@ -295,6 +301,7 @@ Clang-Tidy Checks
    `objc-dealloc-in-category <objc/dealloc-in-category.html>`_,
    `objc-forbidden-subclassing <objc/forbidden-subclassing.html>`_,
    `objc-missing-hash <objc/missing-hash.html>`_,
+   `objc-nsdate-formatter <objc/nsdate-formatter.html>`_,
    `objc-nsinvocation-argument-lifetime <objc/nsinvocation-argument-lifetime.html>`_, "Yes"
    `objc-property-declaration <objc/property-declaration.html>`_, "Yes"
    `objc-super-self <objc/super-self.html>`_, "Yes"
@@ -382,6 +389,7 @@ Clang-Tidy Checks
    `cert-flp37-c <cert/flp37-c.html>`_, `bugprone-suspicious-memory-comparison <bugprone/suspicious-memory-comparison.html>`_,
    `cert-msc30-c <cert/msc30-c.html>`_, `cert-msc50-cpp <cert/msc50-cpp.html>`_,
    `cert-msc32-c <cert/msc32-c.html>`_, `cert-msc51-cpp <cert/msc51-cpp.html>`_,
+   `cert-msc54-cpp <cert/msc54-cpp.html>`_, `bugprone-signal-handler <bugprone/signal-handler.html>`_,
    `cert-oop11-cpp <cert/oop11-cpp.html>`_, `performance-move-constructor-init <performance/move-constructor-init.html>`_,
    `cert-oop54-cpp <cert/oop54-cpp.html>`_, `bugprone-unhandled-self-assignment <bugprone/unhandled-self-assignment.html>`_,
    `cert-pos44-c <cert/pos44-c.html>`_, `bugprone-bad-signal-to-kill-thread <bugprone/bad-signal-to-kill-thread.html>`_,

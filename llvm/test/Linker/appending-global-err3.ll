@@ -6,4 +6,4 @@
 
 ; CHECK: Appending variables with different element types
 
-@var = appending global [1 x i32* ] undef
+@var = appending global [1 x i32] undef

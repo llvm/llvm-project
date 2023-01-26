@@ -32,7 +32,9 @@ void test() {
 
 void test() {
   test<char>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test<wchar_t>();
+#endif
 #ifndef TEST_HAS_NO_CHAR8_T
   test<char8_t>();
 #endif

@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -loop-interchange -cache-line-size=64 -pass-remarks-missed='loop-interchange' -pass-remarks-output=%t -S \
+; RUN: opt < %s -passes=loop-interchange -cache-line-size=64 -pass-remarks-missed='loop-interchange' -pass-remarks-output=%t -S \
 ; RUN:     -verify-dom-info -verify-loop-info -verify-loop-lcssa 2>&1 | FileCheck -check-prefix=IR %s
 ; RUN: FileCheck --input-file=%t %s
 
@@ -39,8 +39,8 @@ for.body3:                                        ; preds = %for.body3, %for.bod
   br i1 %exitcond, label %outer.inc, label %for.body3
 
 outer.inc:                     ; preds = %for.body3
-  %arrayidx5 = getelementptr inbounds [500 x [500 x i32]], [500 x [500 x i32]]* @A, i64 0, i64 %indvars.iv, i64 %indvars.iv18
-  %0 = load i32, i32* %arrayidx5
+  %arrayidx5 = getelementptr inbounds [500 x [500 x i32]], ptr @A, i64 0, i64 %indvars.iv, i64 %indvars.iv18
+  %0 = load i32, ptr %arrayidx5
   %add = add nsw i32 %add15, %0
   %indvars.iv.next19 = add nuw nsw i64 %indvars.iv18, 1
   %lftr.wideiv20 = trunc i64 %indvars.iv.next19 to i32

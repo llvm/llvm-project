@@ -119,7 +119,7 @@ unsigned LLVMCallFrameAlignmentOfType(LLVMTargetDataRef TD, LLVMTypeRef Ty) {
 }
 
 unsigned LLVMPreferredAlignmentOfType(LLVMTargetDataRef TD, LLVMTypeRef Ty) {
-  return unwrap(TD)->getPrefTypeAlignment(unwrap(Ty));
+  return unwrap(TD)->getPrefTypeAlign(unwrap(Ty)).value();
 }
 
 unsigned LLVMPreferredAlignmentOfGlobal(LLVMTargetDataRef TD,

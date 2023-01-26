@@ -26,10 +26,10 @@
 
 #include "support/Context.h"
 #include "llvm/ADT/FunctionExtras.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include <functional>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -56,7 +56,7 @@ struct Config {
   struct CDBSearchSpec {
     enum { Ancestors, FixedDir, NoCDBSearch } Policy = Ancestors;
     // Absolute, native slashes, no trailing slash.
-    llvm::Optional<std::string> FixedCDBPath;
+    std::optional<std::string> FixedCDBPath;
   };
 
   /// Controls how the compile command for the current file is determined.
@@ -65,7 +65,7 @@ struct Config {
     std::vector<llvm::unique_function<void(std::vector<std::string> &) const>>
         Edits;
     /// Where to search for compilation databases for this file's flags.
-    CDBSearchSpec CDBSearch = {CDBSearchSpec::Ancestors, llvm::None};
+    CDBSearchSpec CDBSearch = {CDBSearchSpec::Ancestors, std::nullopt};
   } CompileFlags;
 
   enum class BackgroundPolicy { Build, Skip };
@@ -85,10 +85,16 @@ struct Config {
     /// Whether this TU should be background-indexed.
     BackgroundPolicy Background = BackgroundPolicy::Build;
     ExternalIndexSpec External;
-    bool StandardLibrary = false;
+    bool StandardLibrary = true;
   } Index;
 
-  enum UnusedIncludesPolicy { Strict, None };
+  enum UnusedIncludesPolicy {
+    /// Diagnose unused includes.
+    Strict,
+    None,
+    /// The same as Strict, but using the include-cleaner library.
+    Experiment,
+  };
   /// Controls warnings and errors when parsing code.
   struct {
     bool SuppressAll = false;

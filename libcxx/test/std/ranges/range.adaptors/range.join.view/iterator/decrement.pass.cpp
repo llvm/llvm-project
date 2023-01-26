@@ -7,16 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // constexpr iterator& operator--();
-//              requires ref-is-glvalue && bidirectional_­range<Base> &&
-//                       bidirectional_­range<range_reference_t<Base>> &&
-//                       common_­range<range_reference_t<Base>>;
+//              requires ref-is-glvalue && bidirectional_range<Base> &&
+//                       bidirectional_range<range_reference_t<Base>> &&
+//                       common_range<range_reference_t<Base>>;
 // constexpr iterator operator--(int);
-//              requires ref-is-glvalue && bidirectional_­range<Base> &&
-//                       bidirectional_­range<range_reference_t<Base>> &&
-//                       common_­range<range_reference_t<Base>>;
+//              requires ref-is-glvalue && bidirectional_range<Base> &&
+//                       bidirectional_range<range_reference_t<Base>> &&
+//                       common_range<range_reference_t<Base>>;
 
 #include <cassert>
 #include <ranges>
@@ -125,7 +124,7 @@ constexpr bool test() {
   }
 
   {
-    // !bidirectional_­range<Base>
+    // !bidirectional_range<Base>
     BidiCommonInner inners[2] = {buffer[0], buffer[1]};
     SimpleForwardCommonOuter<BidiCommonInner> outer{inners};
     std::ranges::join_view jv(outer);
@@ -133,7 +132,7 @@ constexpr bool test() {
   }
 
   {
-    // !bidirectional_­range<range_reference_t<Base>>
+    // !bidirectional_range<range_reference_t<Base>>
     ForwardCommonInner inners[2] = {buffer[0], buffer[1]};
     std::ranges::join_view jv(inners);
     noDecrementTest(jv);
@@ -142,7 +141,7 @@ constexpr bool test() {
   {
     // LWG3313 `join_view::iterator::operator--` is incorrectly constrained
     // `join_view::iterator` should not have `operator--` if
-    // !common_­range<range_reference_t<Base>>
+    // !common_range<range_reference_t<Base>>
     BidiNonCommonInner inners[2] = {buffer[0], buffer[1]};
     std::ranges::join_view jv(inners);
     auto iter = jv.begin();

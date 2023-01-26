@@ -1,47 +1,47 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s | FileCheck %s
 
-// CHECK-DAG: #map{{[0-9]+}} = affine_map<(d0, d1, d2, d3, d4)[s0] -> (d0, d1, d2, d4, d3)>
-#map0 = affine_map<(d0, d1, d2, d3, d4)[s0] -> (d0, d1, d2, d4, d3)>
+// CHECK-DAG: #map{{[0-9]*}} = affine_map<(d0, d1, d2, d3, d4)[s0] -> (d0, d1, d2, d4, d3)>
+#map = affine_map<(d0, d1, d2, d3, d4)[s0] -> (d0, d1, d2, d4, d3)>
 
-// CHECK-DAG: #map{{[0-9]+}} = affine_map<(d0) -> (d0)>
+// CHECK-DAG: #map{{[0-9]*}} = affine_map<(d0) -> (d0)>
 #map1 = affine_map<(d0) -> (d0)>
 
-// CHECK-DAG: #map{{[0-9]+}} = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+// CHECK-DAG: #map{{[0-9]*}} = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 #map2 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 
-// CHECK-DAG: #map{{[0-9]+}} = affine_map<(d0, d1, d2) -> (d1, d0, d2)>
+// CHECK-DAG: #map{{[0-9]*}} = affine_map<(d0, d1, d2) -> (d1, d0, d2)>
 #map3 = affine_map<(d0, d1, d2) -> (d1, d0, d2)>
 
-// CHECK-DAG: #map{{[0-9]+}} = affine_map<()[s0] -> (0, s0 - 1)>
+// CHECK-DAG: #map{{[0-9]*}} = affine_map<()[s0] -> (0, s0 - 1)>
 #inline_map_minmax_loop1 = affine_map<()[s0] -> (0, s0 - 1)>
 
-// CHECK-DAG: #map{{[0-9]+}} = affine_map<()[s0] -> (100, s0 + 1)>
+// CHECK-DAG: #map{{[0-9]*}} = affine_map<()[s0] -> (100, s0 + 1)>
 #inline_map_minmax_loop2 = affine_map<()[s0] -> (100, s0 + 1)>
 
-// CHECK-DAG: #map{{[0-9]+}} = affine_map<(d0, d1)[s0] -> (d0 + d1 + s0)>
+// CHECK-DAG: #map{{[0-9]*}} = affine_map<(d0, d1)[s0] -> (d0 + d1 + s0)>
 #bound_map1 = affine_map<(i, j)[s] -> (i + j + s)>
 
-// CHECK-DAG: #map{{[0-9]+}} = affine_map<(d0, d1) -> (d0 + d1)>
+// CHECK-DAG: #map{{[0-9]*}} = affine_map<(d0, d1) -> (d0 + d1)>
 #inline_map_loop_bounds2 = affine_map<(d0, d1) -> (d0 + d1)>
 
-// CHECK-DAG: #map{{[0-9]+}} = affine_map<(d0)[s0] -> (d0 + s0, d0 - s0)>
+// CHECK-DAG: #map{{[0-9]*}} = affine_map<(d0)[s0] -> (d0 + s0, d0 - s0)>
 #bound_map2 = affine_map<(i)[s] -> (i + s, i - s)>
 
 // All maps appear in arbitrary order before all sets, in arbitrary order.
 // CHECK-NOT: Placeholder
 
-// CHECK-DAG: #set{{[0-9]+}} = affine_set<(d0)[s0, s1] : (d0 >= 0, -d0 + s0 >= 0, s0 - 5 == 0, -d0 + s1 + 1 >= 0)>
+// CHECK-DAG: #set{{[0-9]*}} = affine_set<(d0)[s0, s1] : (d0 >= 0, -d0 + s0 >= 0, s0 - 5 == 0, -d0 + s1 + 1 >= 0)>
 #set0 = affine_set<(i)[N, M] : (i >= 0, -i + N >= 0, N - 5 == 0, -i + M + 1 >= 0)>
 
-// CHECK-DAG: #set{{[0-9]+}} = affine_set<(d0, d1)[s0] : (d0 >= 0, d1 >= 0)>
+// CHECK-DAG: #set{{[0-9]*}} = affine_set<(d0, d1)[s0] : (d0 >= 0, d1 >= 0)>
 #set1 = affine_set<(d0, d1)[s0] : (d0 >= 0, d1 >= 0)>
 
-// CHECK-DAG: #set{{[0-9]+}} = affine_set<(d0) : (d0 - 1 == 0)>
+// CHECK-DAG: #set{{[0-9]*}} = affine_set<(d0) : (d0 - 1 == 0)>
 #set2 = affine_set<(d0) : (d0 - 1 == 0)>
 
 // CHECK-DAG: [[$SET_TRUE:#set[0-9]+]] = affine_set<() : (0 == 0)>
 
-// CHECK-DAG: #set{{[0-9]+}} = affine_set<(d0)[s0] : (d0 - 2 >= 0, -d0 + 4 >= 0)>
+// CHECK-DAG: #set{{[0-9]*}} = affine_set<(d0)[s0] : (d0 - 2 >= 0, -d0 + 4 >= 0)>
 
 // CHECK: func private @foo(i32, i64) -> f32
 func.func private @foo(i32, i64) -> f32
@@ -80,8 +80,8 @@ func.func private @tensor_encoding(tensor<16x32xf64, "sparse">)
 // CHECK: func private @large_shape_dimension(tensor<9223372036854775807xf32>)
 func.func private @large_shape_dimension(tensor<9223372036854775807xf32>)
 
-// CHECK: func private @functions((memref<1x?x4x?x?xi32, #map0>, memref<8xi8>) -> (), () -> ())
-func.func private @functions((memref<1x?x4x?x?xi32, #map0, 0>, memref<8xi8, #map1, 0>) -> (), ()->())
+// CHECK: func private @functions((memref<1x?x4x?x?xi32, #map>, memref<8xi8>) -> (), () -> ())
+func.func private @functions((memref<1x?x4x?x?xi32, #map, 0>, memref<8xi8, #map1, 0>) -> (), ()->())
 
 // CHECK: func private @memrefs2(memref<2x4x8xi8, 1>)
 func.func private @memrefs2(memref<2x4x8xi8, #map2, 1>)
@@ -103,25 +103,25 @@ func.func private @memrefs_drop_triv_id_inline1(memref<2xi8, affine_map<(d0) -> 
 // CHECK: func private @memrefs_nomap_nospace(memref<5x6x7xf32>)
 func.func private @memrefs_nomap_nospace(memref<5x6x7xf32>)
 
-// CHECK: func private @memrefs_map_nospace(memref<5x6x7xf32, #map{{[0-9]+}}>)
+// CHECK: func private @memrefs_map_nospace(memref<5x6x7xf32, #map{{[0-9]*}}>)
 func.func private @memrefs_map_nospace(memref<5x6x7xf32, #map3>)
 
 // CHECK: func private @memrefs_nomap_intspace(memref<5x6x7xf32, 3>)
 func.func private @memrefs_nomap_intspace(memref<5x6x7xf32, 3>)
 
-// CHECK: func private @memrefs_map_intspace(memref<5x6x7xf32, #map{{[0-9]+}}, 5>)
+// CHECK: func private @memrefs_map_intspace(memref<5x6x7xf32, #map{{[0-9]*}}, 5>)
 func.func private @memrefs_map_intspace(memref<5x6x7xf32, #map3, 5>)
 
 // CHECK: func private @memrefs_nomap_strspace(memref<5x6x7xf32, "local">)
 func.func private @memrefs_nomap_strspace(memref<5x6x7xf32, "local">)
 
-// CHECK: func private @memrefs_map_strspace(memref<5x6x7xf32, #map{{[0-9]+}}, "private">)
+// CHECK: func private @memrefs_map_strspace(memref<5x6x7xf32, #map{{[0-9]*}}, "private">)
 func.func private @memrefs_map_strspace(memref<5x6x7xf32, #map3, "private">)
 
 // CHECK: func private @memrefs_nomap_dictspace(memref<5x6x7xf32, {memSpace = "special", subIndex = 1 : i64}>)
 func.func private @memrefs_nomap_dictspace(memref<5x6x7xf32, {memSpace = "special", subIndex = 1}>)
 
-// CHECK: func private @memrefs_map_dictspace(memref<5x6x7xf32, #map{{[0-9]+}}, {memSpace = "special", subIndex = 3 : i64}>)
+// CHECK: func private @memrefs_map_dictspace(memref<5x6x7xf32, #map{{[0-9]*}}, {memSpace = "special", subIndex = 3 : i64}>)
 func.func private @memrefs_map_dictspace(memref<5x6x7xf32, #map3, {memSpace = "special", subIndex = 3}>)
 
 // CHECK: func private @complex_types(complex<i1>) -> complex<f32>
@@ -289,7 +289,7 @@ func.func @complex_loops() {
 func.func @triang_loop(%arg0: index, %arg1: memref<?x?xi32>) {
   %c = arith.constant 0 : i32       // CHECK: %{{.*}} = arith.constant 0 : i32
   affine.for %i0 = 1 to %arg0 {      // CHECK: affine.for %{{.*}} = 1 to %{{.*}} {
-    affine.for %i1 = affine_map<(d0)[]->(d0)>(%i0)[] to %arg0 {  // CHECK:   affine.for %{{.*}} = #map{{[0-9]+}}(%{{.*}}) to %{{.*}} {
+    affine.for %i1 = affine_map<(d0)[]->(d0)>(%i0)[] to %arg0 {  // CHECK:   affine.for %{{.*}} = #map{{[0-9]*}}(%{{.*}}) to %{{.*}} {
       memref.store %c, %arg1[%i0, %i1] : memref<?x?xi32>  // CHECK: memref.store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}]
     }          // CHECK:     }
   }            // CHECK:   }
@@ -312,7 +312,7 @@ func.func @loop_bounds(%N : index) {
   %s = "foo"(%N) : (index) -> index
   // CHECK: affine.for %{{.*}} = %{{.*}} to %{{.*}}
   affine.for %i = %s to %N {
-    // CHECK: affine.for %{{.*}} = #map{{[0-9]+}}(%{{.*}}) to 0
+    // CHECK: affine.for %{{.*}} = #map{{[0-9]*}}(%{{.*}}) to 0
     affine.for %j = affine_map<(d0)[]->(d0)>(%i)[] to 0 step 1 {
        // CHECK: %{{.*}} = affine.apply #map{{.*}}(%{{.*}}, %{{.*}})[%{{.*}}]
        %w1 = affine.apply affine_map<(d0, d1)[s0] -> (d0+d1)> (%i, %j) [%s]
@@ -382,22 +382,22 @@ func.func @attributes() {
   // CHECK: "foo"() {a = 1 : i64, b = -423 : i64, c = [true, false], d = 1.600000e+01 : f64}  : () -> ()
   "foo"() {a = 1, b = -423, c = [true, false], d = 16.0 } : () -> ()
 
-  // CHECK: "foo"() {map1 = #map{{[0-9]+}}}
+  // CHECK: "foo"() {map1 = #map{{[0-9]*}}}
   "foo"() {map1 = #map1} : () -> ()
 
-  // CHECK: "foo"() {map2 = #map{{[0-9]+}}}
+  // CHECK: "foo"() {map2 = #map{{[0-9]*}}}
   "foo"() {map2 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>} : () -> ()
 
-  // CHECK: "foo"() {map12 = [#map{{[0-9]+}}, #map{{[0-9]+}}]}
+  // CHECK: "foo"() {map12 = [#map{{[0-9]*}}, #map{{[0-9]*}}]}
   "foo"() {map12 = [#map1, #map2]} : () -> ()
 
-  // CHECK: "foo"() {set1 = #set{{[0-9]+}}}
+  // CHECK: "foo"() {set1 = #set{{[0-9]*}}}
   "foo"() {set1 = #set1} : () -> ()
 
-  // CHECK: "foo"() {set2 = #set{{[0-9]+}}}
+  // CHECK: "foo"() {set2 = #set{{[0-9]*}}}
   "foo"() {set2 = affine_set<(d0, d1, d2) : (d0 >= 0, d1 >= 0, d2 - d1 == 0)>} : () -> ()
 
-  // CHECK: "foo"() {set12 = [#set{{[0-9]+}}, #set{{[0-9]+}}]}
+  // CHECK: "foo"() {set12 = [#set{{[0-9]*}}, #set{{[0-9]*}}]}
   "foo"() {set12 = [#set1, #set2]} : () -> ()
 
   // CHECK: "foo"() {dictionary = {bool = true, fn = @ifinst}}
@@ -457,7 +457,7 @@ func.func @verbose_terminators() -> (i1, i17) {
 
 ^bb1(%x : i1, %y : i17):
 // CHECK:  cf.cond_br %{{.*}}, ^bb2(%{{.*}} : i17), ^bb3(%{{.*}}, %{{.*}} : i1, i17)
-  "cf.cond_br"(%x, %y, %x, %y) [^bb2, ^bb3] {operand_segment_sizes = dense<[1, 1, 2]>: vector<3xi32>} : (i1, i17, i1, i17) -> ()
+  "cf.cond_br"(%x, %y, %x, %y) [^bb2, ^bb3] {operand_segment_sizes = array<i32: 1, 1, 2>} : (i1, i17, i1, i17) -> ()
 
 ^bb2(%a : i17):
   %true = arith.constant true
@@ -1182,6 +1182,13 @@ func.func @parse_integer_literal_test() {
 func.func @parse_wrapped_keyword_test() {
   // CHECK: test.parse_wrapped_keyword foo.keyword
   test.parse_wrapped_keyword foo.keyword
+  return
+}
+
+// CHECK-LABEL: func @parse_base64_test
+func.func @parse_base64_test() {
+  // CHECK: test.parse_b64 "hello world"
+  test.parse_b64 "aGVsbG8gd29ybGQ="
   return
 }
 

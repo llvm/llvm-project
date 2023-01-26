@@ -12,360 +12,344 @@ declare void @process36data_tS_S_(i64, i64, i64, i64, i64, i64)
 ; In all tests, we expect the i8 constant stores to get merged optimally
 ; (through SROA, combining, etc.) so that there are no store insts left.
 
-define void @bad1() #0 {
+define void @bad1() {
 ; CHECK-LABEL: @bad1(
-; CHECK-NEXT:    call void @process6data_t(i64 21542142465, i64 0)
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    tail call void @process6data_t(i64 21542142465, i64 0)
 ; CHECK-NEXT:    ret void
 ;
-  %1 = alloca %struct.data_t, align 1
-  %2 = getelementptr inbounds %struct.data_t, %struct.data_t* %1, i32 0, i32 0
-  %3 = getelementptr inbounds [16 x i8], [16 x i8]* %2, i64 0, i64 0
-  store i8 1, i8* %3, align 1
-  %4 = getelementptr inbounds i8, i8* %3, i64 1
-  store i8 2, i8* %4, align 1
-  %5 = getelementptr inbounds i8, i8* %4, i64 1
-  store i8 3, i8* %5, align 1
-  %6 = getelementptr inbounds i8, i8* %5, i64 1
-  store i8 4, i8* %6, align 1
-  %7 = getelementptr inbounds i8, i8* %6, i64 1
-  store i8 5, i8* %7, align 1
-  %8 = getelementptr inbounds i8, i8* %7, i64 1
-  %9 = getelementptr inbounds i8, i8* %3, i64 16
-  br label %10
+bb:
+  %i = alloca %struct.data_t, align 1
+  store i8 1, ptr %i, align 1
+  %i3 = getelementptr inbounds i8, ptr %i, i64 1
+  store i8 2, ptr %i3, align 1
+  %i4 = getelementptr inbounds i8, ptr %i3, i64 1
+  store i8 3, ptr %i4, align 1
+  %i5 = getelementptr inbounds i8, ptr %i4, i64 1
+  store i8 4, ptr %i5, align 1
+  %i6 = getelementptr inbounds i8, ptr %i5, i64 1
+  store i8 5, ptr %i6, align 1
+  %i7 = getelementptr inbounds i8, ptr %i6, i64 1
+  %i8 = getelementptr inbounds i8, ptr %i, i64 16
+  br label %bb9
 
-10:                                               ; preds = %10, %0
-  %11 = phi i8* [ %8, %0 ], [ %12, %10 ]
-  store i8 0, i8* %11, align 1
-  %12 = getelementptr inbounds i8, i8* %11, i64 1
-  %13 = icmp eq i8* %12, %9
-  br i1 %13, label %14, label %10
+bb9:                                              ; preds = %bb9, %bb
+  %i10 = phi ptr [ %i7, %bb ], [ %i11, %bb9 ]
+  store i8 0, ptr %i10, align 1
+  %i11 = getelementptr inbounds i8, ptr %i10, i64 1
+  %i12 = icmp eq ptr %i11, %i8
+  br i1 %i12, label %bb13, label %bb9
 
-14:                                               ; preds = %10
-  %15 = bitcast %struct.data_t* %1 to { i64, i64 }*
-  %16 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %15, i32 0, i32 0
-  %17 = load i64, i64* %16, align 1
-  %18 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %15, i32 0, i32 1
-  %19 = load i64, i64* %18, align 1
-  call void @process6data_t(i64 %17, i64 %19)
+bb13:                                             ; preds = %bb9
+  %i15 = getelementptr inbounds { i64, i64 }, ptr %i, i32 0, i32 0
+  %i16 = load i64, ptr %i15, align 1
+  %i17 = getelementptr inbounds { i64, i64 }, ptr %i, i32 0, i32 1
+  %i18 = load i64, ptr %i17, align 1
+  call void @process6data_t(i64 %i16, i64 %i18)
   ret void
 }
 
-define void @bad2() #0 {
+define void @bad2() {
 ; CHECK-LABEL: @bad2(
-; CHECK-NEXT:    call void @process6data_t(i64 216736853120975361, i64 1411785848587524)
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    tail call void @process6data_t(i64 216736853120975361, i64 1411785848587524)
 ; CHECK-NEXT:    ret void
 ;
-  %1 = alloca %struct.data_t, align 1
-  %2 = getelementptr inbounds %struct.data_t, %struct.data_t* %1, i32 0, i32 0
-  %3 = getelementptr inbounds [16 x i8], [16 x i8]* %2, i64 0, i64 0
-  store i8 1, i8* %3, align 1
-  %4 = getelementptr inbounds i8, i8* %3, i64 1
-  store i8 2, i8* %4, align 1
-  %5 = getelementptr inbounds i8, i8* %4, i64 1
-  store i8 3, i8* %5, align 1
-  %6 = getelementptr inbounds i8, i8* %5, i64 1
-  store i8 4, i8* %6, align 1
-  %7 = getelementptr inbounds i8, i8* %6, i64 1
-  store i8 5, i8* %7, align 1
-  %8 = getelementptr inbounds i8, i8* %7, i64 1
-  store i8 1, i8* %8, align 1
-  %9 = getelementptr inbounds i8, i8* %8, i64 1
-  store i8 2, i8* %9, align 1
-  %10 = getelementptr inbounds i8, i8* %9, i64 1
-  store i8 3, i8* %10, align 1
-  %11 = getelementptr inbounds i8, i8* %10, i64 1
-  store i8 4, i8* %11, align 1
-  %12 = getelementptr inbounds i8, i8* %11, i64 1
-  store i8 5, i8* %12, align 1
-  %13 = getelementptr inbounds i8, i8* %12, i64 1
-  store i8 1, i8* %13, align 1
-  %14 = getelementptr inbounds i8, i8* %13, i64 1
-  store i8 2, i8* %14, align 1
-  %15 = getelementptr inbounds i8, i8* %14, i64 1
-  store i8 3, i8* %15, align 1
-  %16 = getelementptr inbounds i8, i8* %15, i64 1
-  store i8 4, i8* %16, align 1
-  %17 = getelementptr inbounds i8, i8* %16, i64 1
-  store i8 5, i8* %17, align 1
-  %18 = getelementptr inbounds i8, i8* %17, i64 1
-  %19 = getelementptr inbounds i8, i8* %3, i64 16
-  br label %20
+bb:
+  %i = alloca %struct.data_t, align 1
+  store i8 1, ptr %i, align 1
+  %i3 = getelementptr inbounds i8, ptr %i, i64 1
+  store i8 2, ptr %i3, align 1
+  %i4 = getelementptr inbounds i8, ptr %i3, i64 1
+  store i8 3, ptr %i4, align 1
+  %i5 = getelementptr inbounds i8, ptr %i4, i64 1
+  store i8 4, ptr %i5, align 1
+  %i6 = getelementptr inbounds i8, ptr %i5, i64 1
+  store i8 5, ptr %i6, align 1
+  %i7 = getelementptr inbounds i8, ptr %i6, i64 1
+  store i8 1, ptr %i7, align 1
+  %i8 = getelementptr inbounds i8, ptr %i7, i64 1
+  store i8 2, ptr %i8, align 1
+  %i9 = getelementptr inbounds i8, ptr %i8, i64 1
+  store i8 3, ptr %i9, align 1
+  %i10 = getelementptr inbounds i8, ptr %i9, i64 1
+  store i8 4, ptr %i10, align 1
+  %i11 = getelementptr inbounds i8, ptr %i10, i64 1
+  store i8 5, ptr %i11, align 1
+  %i12 = getelementptr inbounds i8, ptr %i11, i64 1
+  store i8 1, ptr %i12, align 1
+  %i13 = getelementptr inbounds i8, ptr %i12, i64 1
+  store i8 2, ptr %i13, align 1
+  %i14 = getelementptr inbounds i8, ptr %i13, i64 1
+  store i8 3, ptr %i14, align 1
+  %i15 = getelementptr inbounds i8, ptr %i14, i64 1
+  store i8 4, ptr %i15, align 1
+  %i16 = getelementptr inbounds i8, ptr %i15, i64 1
+  store i8 5, ptr %i16, align 1
+  %i17 = getelementptr inbounds i8, ptr %i16, i64 1
+  %i18 = getelementptr inbounds i8, ptr %i, i64 16
+  br label %bb19
 
-20:                                               ; preds = %20, %0
-  %21 = phi i8* [ %18, %0 ], [ %22, %20 ]
-  store i8 0, i8* %21, align 1
-  %22 = getelementptr inbounds i8, i8* %21, i64 1
-  %23 = icmp eq i8* %22, %19
-  br i1 %23, label %24, label %20
+bb19:                                             ; preds = %bb19, %bb
+  %i20 = phi ptr [ %i17, %bb ], [ %i21, %bb19 ]
+  store i8 0, ptr %i20, align 1
+  %i21 = getelementptr inbounds i8, ptr %i20, i64 1
+  %i22 = icmp eq ptr %i21, %i18
+  br i1 %i22, label %bb23, label %bb19
 
-24:                                               ; preds = %20
-  %25 = bitcast %struct.data_t* %1 to { i64, i64 }*
-  %26 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %25, i32 0, i32 0
-  %27 = load i64, i64* %26, align 1
-  %28 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %25, i32 0, i32 1
-  %29 = load i64, i64* %28, align 1
-  call void @process6data_t(i64 %27, i64 %29)
+bb23:                                             ; preds = %bb19
+  %i25 = getelementptr inbounds { i64, i64 }, ptr %i, i32 0, i32 0
+  %i26 = load i64, ptr %i25, align 1
+  %i27 = getelementptr inbounds { i64, i64 }, ptr %i, i32 0, i32 1
+  %i28 = load i64, ptr %i27, align 1
+  call void @process6data_t(i64 %i26, i64 %i28)
   ret void
 }
 
 define void @bad3() {
 ; CHECK-LABEL: @bad3(
-; CHECK-NEXT:    call void @process36data_tS_S_(i64 21542142465, i64 0, i64 723401749922909195, i64 723401728380766730, i64 1446803478303675925, i64 5651576002974730)
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    tail call void @process36data_tS_S_(i64 21542142465, i64 0, i64 723401749922909195, i64 723401728380766730, i64 1446803478303675925, i64 5651576002974730)
 ; CHECK-NEXT:    ret void
 ;
-  %1 = alloca %struct.data_t, align 1
-  %2 = alloca %struct.data_t, align 1
-  %3 = alloca %struct.data_t, align 1
-  %4 = getelementptr inbounds %struct.data_t, %struct.data_t* %1, i32 0, i32 0
-  %5 = getelementptr inbounds [16 x i8], [16 x i8]* %4, i64 0, i64 0
-  store i8 1, i8* %5, align 1
-  %6 = getelementptr inbounds i8, i8* %5, i64 1
-  store i8 2, i8* %6, align 1
-  %7 = getelementptr inbounds i8, i8* %6, i64 1
-  store i8 3, i8* %7, align 1
-  %8 = getelementptr inbounds i8, i8* %7, i64 1
-  store i8 4, i8* %8, align 1
-  %9 = getelementptr inbounds i8, i8* %8, i64 1
-  store i8 5, i8* %9, align 1
-  %10 = getelementptr inbounds i8, i8* %9, i64 1
-  store i8 0, i8* %10, align 1
-  %11 = getelementptr inbounds i8, i8* %10, i64 1
-  store i8 0, i8* %11, align 1
-  %12 = getelementptr inbounds i8, i8* %11, i64 1
-  store i8 0, i8* %12, align 1
-  %13 = getelementptr inbounds i8, i8* %12, i64 1
-  store i8 0, i8* %13, align 1
-  %14 = getelementptr inbounds i8, i8* %13, i64 1
-  store i8 0, i8* %14, align 1
-  %15 = getelementptr inbounds i8, i8* %14, i64 1
-  store i8 0, i8* %15, align 1
-  %16 = getelementptr inbounds i8, i8* %15, i64 1
-  store i8 0, i8* %16, align 1
-  %17 = getelementptr inbounds i8, i8* %16, i64 1
-  store i8 0, i8* %17, align 1
-  %18 = getelementptr inbounds i8, i8* %17, i64 1
-  store i8 0, i8* %18, align 1
-  %19 = getelementptr inbounds i8, i8* %18, i64 1
-  store i8 0, i8* %19, align 1
-  %20 = getelementptr inbounds i8, i8* %19, i64 1
-  store i8 0, i8* %20, align 1
-  %21 = getelementptr inbounds %struct.data_t, %struct.data_t* %2, i32 0, i32 0
-  %22 = getelementptr inbounds [16 x i8], [16 x i8]* %21, i64 0, i64 0
-  store i8 11, i8* %22, align 1
-  %23 = getelementptr inbounds i8, i8* %22, i64 1
-  store i8 12, i8* %23, align 1
-  %24 = getelementptr inbounds i8, i8* %23, i64 1
-  store i8 13, i8* %24, align 1
-  %25 = getelementptr inbounds i8, i8* %24, i64 1
-  store i8 14, i8* %25, align 1
-  %26 = getelementptr inbounds i8, i8* %25, i64 1
-  store i8 15, i8* %26, align 1
-  %27 = getelementptr inbounds i8, i8* %26, i64 1
-  store i8 10, i8* %27, align 1
-  %28 = getelementptr inbounds i8, i8* %27, i64 1
-  store i8 10, i8* %28, align 1
-  %29 = getelementptr inbounds i8, i8* %28, i64 1
-  store i8 10, i8* %29, align 1
-  %30 = getelementptr inbounds i8, i8* %29, i64 1
-  store i8 10, i8* %30, align 1
-  %31 = getelementptr inbounds i8, i8* %30, i64 1
-  store i8 10, i8* %31, align 1
-  %32 = getelementptr inbounds i8, i8* %31, i64 1
-  store i8 10, i8* %32, align 1
-  %33 = getelementptr inbounds i8, i8* %32, i64 1
-  store i8 10, i8* %33, align 1
-  %34 = getelementptr inbounds i8, i8* %33, i64 1
-  store i8 10, i8* %34, align 1
-  %35 = getelementptr inbounds i8, i8* %34, i64 1
-  store i8 10, i8* %35, align 1
-  %36 = getelementptr inbounds i8, i8* %35, i64 1
-  store i8 10, i8* %36, align 1
-  %37 = getelementptr inbounds i8, i8* %36, i64 1
-  store i8 10, i8* %37, align 1
-  %38 = getelementptr inbounds %struct.data_t, %struct.data_t* %3, i32 0, i32 0
-  %39 = getelementptr inbounds [16 x i8], [16 x i8]* %38, i64 0, i64 0
-  store i8 21, i8* %39, align 1
-  %40 = getelementptr inbounds i8, i8* %39, i64 1
-  store i8 22, i8* %40, align 1
-  %41 = getelementptr inbounds i8, i8* %40, i64 1
-  store i8 23, i8* %41, align 1
-  %42 = getelementptr inbounds i8, i8* %41, i64 1
-  store i8 24, i8* %42, align 1
-  %43 = getelementptr inbounds i8, i8* %42, i64 1
-  store i8 25, i8* %43, align 1
-  %44 = getelementptr inbounds i8, i8* %43, i64 1
-  store i8 20, i8* %44, align 1
-  %45 = getelementptr inbounds i8, i8* %44, i64 1
-  store i8 20, i8* %45, align 1
-  %46 = getelementptr inbounds i8, i8* %45, i64 1
-  store i8 20, i8* %46, align 1
-  %47 = getelementptr inbounds i8, i8* %46, i64 1
-  store i8 10, i8* %47, align 1
-  %48 = getelementptr inbounds i8, i8* %47, i64 1
-  store i8 20, i8* %48, align 1
-  %49 = getelementptr inbounds i8, i8* %48, i64 1
-  store i8 20, i8* %49, align 1
-  %50 = getelementptr inbounds i8, i8* %49, i64 1
-  store i8 20, i8* %50, align 1
-  %51 = getelementptr inbounds i8, i8* %50, i64 1
-  store i8 20, i8* %51, align 1
-  %52 = getelementptr inbounds i8, i8* %51, i64 1
-  store i8 20, i8* %52, align 1
-  %53 = getelementptr inbounds i8, i8* %52, i64 1
-  store i8 20, i8* %53, align 1
-  %54 = getelementptr inbounds i8, i8* %53, i64 1
-  %55 = getelementptr inbounds i8, i8* %39, i64 16
-  br label %56
+bb:
+  %i = alloca %struct.data_t, align 1
+  %i1 = alloca %struct.data_t, align 1
+  %i2 = alloca %struct.data_t, align 1
+  store i8 1, ptr %i, align 1
+  %i5 = getelementptr inbounds i8, ptr %i, i64 1
+  store i8 2, ptr %i5, align 1
+  %i6 = getelementptr inbounds i8, ptr %i5, i64 1
+  store i8 3, ptr %i6, align 1
+  %i7 = getelementptr inbounds i8, ptr %i6, i64 1
+  store i8 4, ptr %i7, align 1
+  %i8 = getelementptr inbounds i8, ptr %i7, i64 1
+  store i8 5, ptr %i8, align 1
+  %i9 = getelementptr inbounds i8, ptr %i8, i64 1
+  store i8 0, ptr %i9, align 1
+  %i10 = getelementptr inbounds i8, ptr %i9, i64 1
+  store i8 0, ptr %i10, align 1
+  %i11 = getelementptr inbounds i8, ptr %i10, i64 1
+  store i8 0, ptr %i11, align 1
+  %i12 = getelementptr inbounds i8, ptr %i11, i64 1
+  store i8 0, ptr %i12, align 1
+  %i13 = getelementptr inbounds i8, ptr %i12, i64 1
+  store i8 0, ptr %i13, align 1
+  %i14 = getelementptr inbounds i8, ptr %i13, i64 1
+  store i8 0, ptr %i14, align 1
+  %i15 = getelementptr inbounds i8, ptr %i14, i64 1
+  store i8 0, ptr %i15, align 1
+  %i16 = getelementptr inbounds i8, ptr %i15, i64 1
+  store i8 0, ptr %i16, align 1
+  %i17 = getelementptr inbounds i8, ptr %i16, i64 1
+  store i8 0, ptr %i17, align 1
+  %i18 = getelementptr inbounds i8, ptr %i17, i64 1
+  store i8 0, ptr %i18, align 1
+  %i19 = getelementptr inbounds i8, ptr %i18, i64 1
+  store i8 0, ptr %i19, align 1
+  store i8 11, ptr %i1, align 1
+  %i22 = getelementptr inbounds i8, ptr %i1, i64 1
+  store i8 12, ptr %i22, align 1
+  %i23 = getelementptr inbounds i8, ptr %i22, i64 1
+  store i8 13, ptr %i23, align 1
+  %i24 = getelementptr inbounds i8, ptr %i23, i64 1
+  store i8 14, ptr %i24, align 1
+  %i25 = getelementptr inbounds i8, ptr %i24, i64 1
+  store i8 15, ptr %i25, align 1
+  %i26 = getelementptr inbounds i8, ptr %i25, i64 1
+  store i8 10, ptr %i26, align 1
+  %i27 = getelementptr inbounds i8, ptr %i26, i64 1
+  store i8 10, ptr %i27, align 1
+  %i28 = getelementptr inbounds i8, ptr %i27, i64 1
+  store i8 10, ptr %i28, align 1
+  %i29 = getelementptr inbounds i8, ptr %i28, i64 1
+  store i8 10, ptr %i29, align 1
+  %i30 = getelementptr inbounds i8, ptr %i29, i64 1
+  store i8 10, ptr %i30, align 1
+  %i31 = getelementptr inbounds i8, ptr %i30, i64 1
+  store i8 10, ptr %i31, align 1
+  %i32 = getelementptr inbounds i8, ptr %i31, i64 1
+  store i8 10, ptr %i32, align 1
+  %i33 = getelementptr inbounds i8, ptr %i32, i64 1
+  store i8 10, ptr %i33, align 1
+  %i34 = getelementptr inbounds i8, ptr %i33, i64 1
+  store i8 10, ptr %i34, align 1
+  %i35 = getelementptr inbounds i8, ptr %i34, i64 1
+  store i8 10, ptr %i35, align 1
+  %i36 = getelementptr inbounds i8, ptr %i35, i64 1
+  store i8 10, ptr %i36, align 1
+  store i8 21, ptr %i2, align 1
+  %i39 = getelementptr inbounds i8, ptr %i2, i64 1
+  store i8 22, ptr %i39, align 1
+  %i40 = getelementptr inbounds i8, ptr %i39, i64 1
+  store i8 23, ptr %i40, align 1
+  %i41 = getelementptr inbounds i8, ptr %i40, i64 1
+  store i8 24, ptr %i41, align 1
+  %i42 = getelementptr inbounds i8, ptr %i41, i64 1
+  store i8 25, ptr %i42, align 1
+  %i43 = getelementptr inbounds i8, ptr %i42, i64 1
+  store i8 20, ptr %i43, align 1
+  %i44 = getelementptr inbounds i8, ptr %i43, i64 1
+  store i8 20, ptr %i44, align 1
+  %i45 = getelementptr inbounds i8, ptr %i44, i64 1
+  store i8 20, ptr %i45, align 1
+  %i46 = getelementptr inbounds i8, ptr %i45, i64 1
+  store i8 10, ptr %i46, align 1
+  %i47 = getelementptr inbounds i8, ptr %i46, i64 1
+  store i8 20, ptr %i47, align 1
+  %i48 = getelementptr inbounds i8, ptr %i47, i64 1
+  store i8 20, ptr %i48, align 1
+  %i49 = getelementptr inbounds i8, ptr %i48, i64 1
+  store i8 20, ptr %i49, align 1
+  %i50 = getelementptr inbounds i8, ptr %i49, i64 1
+  store i8 20, ptr %i50, align 1
+  %i51 = getelementptr inbounds i8, ptr %i50, i64 1
+  store i8 20, ptr %i51, align 1
+  %i52 = getelementptr inbounds i8, ptr %i51, i64 1
+  store i8 20, ptr %i52, align 1
+  %i53 = getelementptr inbounds i8, ptr %i52, i64 1
+  %i54 = getelementptr inbounds i8, ptr %i2, i64 16
+  br label %bb55
 
-56:                                               ; preds = %56, %0
-  %57 = phi i8* [ %54, %0 ], [ %58, %56 ]
-  store i8 0, i8* %57, align 1
-  %58 = getelementptr inbounds i8, i8* %57, i64 1
-  %59 = icmp eq i8* %58, %55
-  br i1 %59, label %60, label %56
+bb55:                                             ; preds = %bb55, %bb
+  %i56 = phi ptr [ %i53, %bb ], [ %i57, %bb55 ]
+  store i8 0, ptr %i56, align 1
+  %i57 = getelementptr inbounds i8, ptr %i56, i64 1
+  %i58 = icmp eq ptr %i57, %i54
+  br i1 %i58, label %bb59, label %bb55
 
-60:                                               ; preds = %56
-  %61 = bitcast %struct.data_t* %1 to { i64, i64 }*
-  %62 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %61, i32 0, i32 0
-  %63 = load i64, i64* %62, align 1
-  %64 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %61, i32 0, i32 1
-  %65 = load i64, i64* %64, align 1
-  %66 = bitcast %struct.data_t* %2 to { i64, i64 }*
-  %67 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %66, i32 0, i32 0
-  %68 = load i64, i64* %67, align 1
-  %69 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %66, i32 0, i32 1
-  %70 = load i64, i64* %69, align 1
-  %71 = bitcast %struct.data_t* %3 to { i64, i64 }*
-  %72 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %71, i32 0, i32 0
-  %73 = load i64, i64* %72, align 1
-  %74 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %71, i32 0, i32 1
-  %75 = load i64, i64* %74, align 1
-  call void @process36data_tS_S_(i64 %63, i64 %65, i64 %68, i64 %70, i64 %73, i64 %75)
+bb59:                                             ; preds = %bb55
+  %i61 = getelementptr inbounds { i64, i64 }, ptr %i, i32 0, i32 0
+  %i62 = load i64, ptr %i61, align 1
+  %i63 = getelementptr inbounds { i64, i64 }, ptr %i, i32 0, i32 1
+  %i64 = load i64, ptr %i63, align 1
+  %i66 = getelementptr inbounds { i64, i64 }, ptr %i1, i32 0, i32 0
+  %i67 = load i64, ptr %i66, align 1
+  %i68 = getelementptr inbounds { i64, i64 }, ptr %i1, i32 0, i32 1
+  %i69 = load i64, ptr %i68, align 1
+  %i71 = getelementptr inbounds { i64, i64 }, ptr %i2, i32 0, i32 0
+  %i72 = load i64, ptr %i71, align 1
+  %i73 = getelementptr inbounds { i64, i64 }, ptr %i2, i32 0, i32 1
+  %i74 = load i64, ptr %i73, align 1
+  call void @process36data_tS_S_(i64 %i62, i64 %i64, i64 %i67, i64 %i69, i64 %i72, i64 %i74)
   ret void
 }
 
-define void @bad4() #0 {
+define void @bad4() {
 ; CHECK-LABEL: @bad4(
+; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    tail call void @process36data_tS_S_(i64 21542142465, i64 0, i64 723401749922909195, i64 723401728380766730, i64 1446803478303675925, i64 798285110420182026)
 ; CHECK-NEXT:    ret void
 ;
-  %1 = alloca %struct.data_t, align 1
-  %2 = alloca %struct.data_t, align 1
-  %3 = alloca %struct.data_t, align 1
-  %4 = getelementptr inbounds %struct.data_t, %struct.data_t* %1, i32 0, i32 0
-  %5 = getelementptr inbounds [16 x i8], [16 x i8]* %4, i64 0, i64 0
-  store i8 1, i8* %5, align 1
-  %6 = getelementptr inbounds i8, i8* %5, i64 1
-  store i8 2, i8* %6, align 1
-  %7 = getelementptr inbounds i8, i8* %6, i64 1
-  store i8 3, i8* %7, align 1
-  %8 = getelementptr inbounds i8, i8* %7, i64 1
-  store i8 4, i8* %8, align 1
-  %9 = getelementptr inbounds i8, i8* %8, i64 1
-  store i8 5, i8* %9, align 1
-  %10 = getelementptr inbounds i8, i8* %9, i64 1
-  store i8 0, i8* %10, align 1
-  %11 = getelementptr inbounds i8, i8* %10, i64 1
-  store i8 0, i8* %11, align 1
-  %12 = getelementptr inbounds i8, i8* %11, i64 1
-  store i8 0, i8* %12, align 1
-  %13 = getelementptr inbounds i8, i8* %12, i64 1
-  store i8 0, i8* %13, align 1
-  %14 = getelementptr inbounds i8, i8* %13, i64 1
-  store i8 0, i8* %14, align 1
-  %15 = getelementptr inbounds i8, i8* %14, i64 1
-  store i8 0, i8* %15, align 1
-  %16 = getelementptr inbounds i8, i8* %15, i64 1
-  store i8 0, i8* %16, align 1
-  %17 = getelementptr inbounds i8, i8* %16, i64 1
-  store i8 0, i8* %17, align 1
-  %18 = getelementptr inbounds i8, i8* %17, i64 1
-  store i8 0, i8* %18, align 1
-  %19 = getelementptr inbounds i8, i8* %18, i64 1
-  store i8 0, i8* %19, align 1
-  %20 = getelementptr inbounds i8, i8* %19, i64 1
-  store i8 0, i8* %20, align 1
-  %21 = getelementptr inbounds %struct.data_t, %struct.data_t* %2, i32 0, i32 0
-  %22 = getelementptr inbounds [16 x i8], [16 x i8]* %21, i64 0, i64 0
-  store i8 11, i8* %22, align 1
-  %23 = getelementptr inbounds i8, i8* %22, i64 1
-  store i8 12, i8* %23, align 1
-  %24 = getelementptr inbounds i8, i8* %23, i64 1
-  store i8 13, i8* %24, align 1
-  %25 = getelementptr inbounds i8, i8* %24, i64 1
-  store i8 14, i8* %25, align 1
-  %26 = getelementptr inbounds i8, i8* %25, i64 1
-  store i8 15, i8* %26, align 1
-  %27 = getelementptr inbounds i8, i8* %26, i64 1
-  store i8 10, i8* %27, align 1
-  %28 = getelementptr inbounds i8, i8* %27, i64 1
-  store i8 10, i8* %28, align 1
-  %29 = getelementptr inbounds i8, i8* %28, i64 1
-  store i8 10, i8* %29, align 1
-  %30 = getelementptr inbounds i8, i8* %29, i64 1
-  store i8 10, i8* %30, align 1
-  %31 = getelementptr inbounds i8, i8* %30, i64 1
-  store i8 10, i8* %31, align 1
-  %32 = getelementptr inbounds i8, i8* %31, i64 1
-  store i8 10, i8* %32, align 1
-  %33 = getelementptr inbounds i8, i8* %32, i64 1
-  store i8 10, i8* %33, align 1
-  %34 = getelementptr inbounds i8, i8* %33, i64 1
-  store i8 10, i8* %34, align 1
-  %35 = getelementptr inbounds i8, i8* %34, i64 1
-  store i8 10, i8* %35, align 1
-  %36 = getelementptr inbounds i8, i8* %35, i64 1
-  store i8 10, i8* %36, align 1
-  %37 = getelementptr inbounds i8, i8* %36, i64 1
-  store i8 10, i8* %37, align 1
-  %38 = getelementptr inbounds %struct.data_t, %struct.data_t* %3, i32 0, i32 0
-  %39 = getelementptr inbounds [16 x i8], [16 x i8]* %38, i64 0, i64 0
-  store i8 21, i8* %39, align 1
-  %40 = getelementptr inbounds i8, i8* %39, i64 1
-  store i8 22, i8* %40, align 1
-  %41 = getelementptr inbounds i8, i8* %40, i64 1
-  store i8 23, i8* %41, align 1
-  %42 = getelementptr inbounds i8, i8* %41, i64 1
-  store i8 24, i8* %42, align 1
-  %43 = getelementptr inbounds i8, i8* %42, i64 1
-  store i8 25, i8* %43, align 1
-  %44 = getelementptr inbounds i8, i8* %43, i64 1
-  store i8 20, i8* %44, align 1
-  %45 = getelementptr inbounds i8, i8* %44, i64 1
-  store i8 20, i8* %45, align 1
-  %46 = getelementptr inbounds i8, i8* %45, i64 1
-  store i8 20, i8* %46, align 1
-  %47 = getelementptr inbounds i8, i8* %46, i64 1
-  store i8 10, i8* %47, align 1
-  %48 = getelementptr inbounds i8, i8* %47, i64 1
-  store i8 20, i8* %48, align 1
-  %49 = getelementptr inbounds i8, i8* %48, i64 1
-  store i8 20, i8* %49, align 1
-  %50 = getelementptr inbounds i8, i8* %49, i64 1
-  store i8 20, i8* %50, align 1
-  %51 = getelementptr inbounds i8, i8* %50, i64 1
-  store i8 20, i8* %51, align 1
-  %52 = getelementptr inbounds i8, i8* %51, i64 1
-  store i8 20, i8* %52, align 1
-  %53 = getelementptr inbounds i8, i8* %52, i64 1
-  store i8 20, i8* %53, align 1
-  %54 = getelementptr inbounds i8, i8* %53, i64 1
-  store i8 11, i8* %54, align 1
-  %55 = bitcast %struct.data_t* %1 to { i64, i64 }*
-  %56 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %55, i32 0, i32 0
-  %57 = load i64, i64* %56, align 1
-  %58 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %55, i32 0, i32 1
-  %59 = load i64, i64* %58, align 1
-  %60 = bitcast %struct.data_t* %2 to { i64, i64 }*
-  %61 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %60, i32 0, i32 0
-  %62 = load i64, i64* %61, align 1
-  %63 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %60, i32 0, i32 1
-  %64 = load i64, i64* %63, align 1
-  %65 = bitcast %struct.data_t* %3 to { i64, i64 }*
-  %66 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %65, i32 0, i32 0
-  %67 = load i64, i64* %66, align 1
-  %68 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %65, i32 0, i32 1
-  %69 = load i64, i64* %68, align 1
-  call void @process36data_tS_S_(i64 %57, i64 %59, i64 %62, i64 %64, i64 %67, i64 %69)
+bb:
+  %i = alloca %struct.data_t, align 1
+  %i1 = alloca %struct.data_t, align 1
+  %i2 = alloca %struct.data_t, align 1
+  store i8 1, ptr %i, align 1
+  %i5 = getelementptr inbounds i8, ptr %i, i64 1
+  store i8 2, ptr %i5, align 1
+  %i6 = getelementptr inbounds i8, ptr %i5, i64 1
+  store i8 3, ptr %i6, align 1
+  %i7 = getelementptr inbounds i8, ptr %i6, i64 1
+  store i8 4, ptr %i7, align 1
+  %i8 = getelementptr inbounds i8, ptr %i7, i64 1
+  store i8 5, ptr %i8, align 1
+  %i9 = getelementptr inbounds i8, ptr %i8, i64 1
+  store i8 0, ptr %i9, align 1
+  %i10 = getelementptr inbounds i8, ptr %i9, i64 1
+  store i8 0, ptr %i10, align 1
+  %i11 = getelementptr inbounds i8, ptr %i10, i64 1
+  store i8 0, ptr %i11, align 1
+  %i12 = getelementptr inbounds i8, ptr %i11, i64 1
+  store i8 0, ptr %i12, align 1
+  %i13 = getelementptr inbounds i8, ptr %i12, i64 1
+  store i8 0, ptr %i13, align 1
+  %i14 = getelementptr inbounds i8, ptr %i13, i64 1
+  store i8 0, ptr %i14, align 1
+  %i15 = getelementptr inbounds i8, ptr %i14, i64 1
+  store i8 0, ptr %i15, align 1
+  %i16 = getelementptr inbounds i8, ptr %i15, i64 1
+  store i8 0, ptr %i16, align 1
+  %i17 = getelementptr inbounds i8, ptr %i16, i64 1
+  store i8 0, ptr %i17, align 1
+  %i18 = getelementptr inbounds i8, ptr %i17, i64 1
+  store i8 0, ptr %i18, align 1
+  %i19 = getelementptr inbounds i8, ptr %i18, i64 1
+  store i8 0, ptr %i19, align 1
+  store i8 11, ptr %i1, align 1
+  %i22 = getelementptr inbounds i8, ptr %i1, i64 1
+  store i8 12, ptr %i22, align 1
+  %i23 = getelementptr inbounds i8, ptr %i22, i64 1
+  store i8 13, ptr %i23, align 1
+  %i24 = getelementptr inbounds i8, ptr %i23, i64 1
+  store i8 14, ptr %i24, align 1
+  %i25 = getelementptr inbounds i8, ptr %i24, i64 1
+  store i8 15, ptr %i25, align 1
+  %i26 = getelementptr inbounds i8, ptr %i25, i64 1
+  store i8 10, ptr %i26, align 1
+  %i27 = getelementptr inbounds i8, ptr %i26, i64 1
+  store i8 10, ptr %i27, align 1
+  %i28 = getelementptr inbounds i8, ptr %i27, i64 1
+  store i8 10, ptr %i28, align 1
+  %i29 = getelementptr inbounds i8, ptr %i28, i64 1
+  store i8 10, ptr %i29, align 1
+  %i30 = getelementptr inbounds i8, ptr %i29, i64 1
+  store i8 10, ptr %i30, align 1
+  %i31 = getelementptr inbounds i8, ptr %i30, i64 1
+  store i8 10, ptr %i31, align 1
+  %i32 = getelementptr inbounds i8, ptr %i31, i64 1
+  store i8 10, ptr %i32, align 1
+  %i33 = getelementptr inbounds i8, ptr %i32, i64 1
+  store i8 10, ptr %i33, align 1
+  %i34 = getelementptr inbounds i8, ptr %i33, i64 1
+  store i8 10, ptr %i34, align 1
+  %i35 = getelementptr inbounds i8, ptr %i34, i64 1
+  store i8 10, ptr %i35, align 1
+  %i36 = getelementptr inbounds i8, ptr %i35, i64 1
+  store i8 10, ptr %i36, align 1
+  store i8 21, ptr %i2, align 1
+  %i39 = getelementptr inbounds i8, ptr %i2, i64 1
+  store i8 22, ptr %i39, align 1
+  %i40 = getelementptr inbounds i8, ptr %i39, i64 1
+  store i8 23, ptr %i40, align 1
+  %i41 = getelementptr inbounds i8, ptr %i40, i64 1
+  store i8 24, ptr %i41, align 1
+  %i42 = getelementptr inbounds i8, ptr %i41, i64 1
+  store i8 25, ptr %i42, align 1
+  %i43 = getelementptr inbounds i8, ptr %i42, i64 1
+  store i8 20, ptr %i43, align 1
+  %i44 = getelementptr inbounds i8, ptr %i43, i64 1
+  store i8 20, ptr %i44, align 1
+  %i45 = getelementptr inbounds i8, ptr %i44, i64 1
+  store i8 20, ptr %i45, align 1
+  %i46 = getelementptr inbounds i8, ptr %i45, i64 1
+  store i8 10, ptr %i46, align 1
+  %i47 = getelementptr inbounds i8, ptr %i46, i64 1
+  store i8 20, ptr %i47, align 1
+  %i48 = getelementptr inbounds i8, ptr %i47, i64 1
+  store i8 20, ptr %i48, align 1
+  %i49 = getelementptr inbounds i8, ptr %i48, i64 1
+  store i8 20, ptr %i49, align 1
+  %i50 = getelementptr inbounds i8, ptr %i49, i64 1
+  store i8 20, ptr %i50, align 1
+  %i51 = getelementptr inbounds i8, ptr %i50, i64 1
+  store i8 20, ptr %i51, align 1
+  %i52 = getelementptr inbounds i8, ptr %i51, i64 1
+  store i8 20, ptr %i52, align 1
+  %i53 = getelementptr inbounds i8, ptr %i52, i64 1
+  store i8 11, ptr %i53, align 1
+  %i55 = getelementptr inbounds { i64, i64 }, ptr %i, i32 0, i32 0
+  %i56 = load i64, ptr %i55, align 1
+  %i57 = getelementptr inbounds { i64, i64 }, ptr %i, i32 0, i32 1
+  %i58 = load i64, ptr %i57, align 1
+  %i60 = getelementptr inbounds { i64, i64 }, ptr %i1, i32 0, i32 0
+  %i61 = load i64, ptr %i60, align 1
+  %i62 = getelementptr inbounds { i64, i64 }, ptr %i1, i32 0, i32 1
+  %i63 = load i64, ptr %i62, align 1
+  %i65 = getelementptr inbounds { i64, i64 }, ptr %i2, i32 0, i32 0
+  %i66 = load i64, ptr %i65, align 1
+  %i67 = getelementptr inbounds { i64, i64 }, ptr %i2, i32 0, i32 1
+  %i68 = load i64, ptr %i67, align 1
+  call void @process36data_tS_S_(i64 %i56, i64 %i58, i64 %i61, i64 %i63, i64 %i66, i64 %i68)
   ret void
 }

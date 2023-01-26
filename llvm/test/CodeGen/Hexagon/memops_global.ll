@@ -11,9 +11,9 @@
 ; CHECK: memb(r{{[0-9]+}}+#0) += #1
 define void @f0() #0 {
 b0:
-  %v0 = load i8, i8* @g0, align 1, !tbaa !0
+  %v0 = load i8, ptr @g0, align 1, !tbaa !0
   %v1 = add i8 %v0, 1
-  store i8 %v1, i8* @g0, align 1, !tbaa !0
+  store i8 %v1, ptr @g0, align 1, !tbaa !0
   ret void
 }
 
@@ -21,9 +21,9 @@ b0:
 ; CHECK: memb(r{{[0-9]+}}+#0) -= #1
 define void @f1() #0 {
 b0:
-  %v0 = load i8, i8* @g0, align 1, !tbaa !0
+  %v0 = load i8, ptr @g0, align 1, !tbaa !0
   %v1 = add i8 %v0, -1
-  store i8 %v1, i8* @g0, align 1, !tbaa !0
+  store i8 %v1, ptr @g0, align 1, !tbaa !0
   ret void
 }
 
@@ -31,11 +31,11 @@ b0:
 ; CHECK: memb(r{{[0-9]+}}+#0) += #5
 define void @f2() #0 {
 b0:
-  %v0 = load i8, i8* @g0, align 1, !tbaa !0
+  %v0 = load i8, ptr @g0, align 1, !tbaa !0
   %v1 = zext i8 %v0 to i32
   %v2 = add nsw i32 %v1, 5
   %v3 = trunc i32 %v2 to i8
-  store i8 %v3, i8* @g0, align 1, !tbaa !0
+  store i8 %v3, ptr @g0, align 1, !tbaa !0
   ret void
 }
 
@@ -43,11 +43,11 @@ b0:
 ; CHECK: memb(r{{[0-9]+}}+#0) -= #5
 define void @f3() #0 {
 b0:
-  %v0 = load i8, i8* @g0, align 1, !tbaa !0
+  %v0 = load i8, ptr @g0, align 1, !tbaa !0
   %v1 = zext i8 %v0 to i32
   %v2 = add nsw i32 %v1, 251
   %v3 = trunc i32 %v2 to i8
-  store i8 %v3, i8* @g0, align 1, !tbaa !0
+  store i8 %v3, ptr @g0, align 1, !tbaa !0
   ret void
 }
 
@@ -55,11 +55,11 @@ b0:
 ; CHECK: memb(r{{[0-9]+}}+#0) -= #5
 define void @f4() #0 {
 b0:
-  %v0 = load i8, i8* @g0, align 1, !tbaa !0
+  %v0 = load i8, ptr @g0, align 1, !tbaa !0
   %v1 = zext i8 %v0 to i32
   %v2 = add nsw i32 %v1, 251
   %v3 = trunc i32 %v2 to i8
-  store i8 %v3, i8* @g0, align 1, !tbaa !0
+  store i8 %v3, ptr @g0, align 1, !tbaa !0
   ret void
 }
 
@@ -67,11 +67,11 @@ b0:
 ; CHECK: memb(r{{[0-9]+}}+#0) += #5
 define void @f5() #0 {
 b0:
-  %v0 = load i8, i8* @g0, align 1, !tbaa !0
+  %v0 = load i8, ptr @g0, align 1, !tbaa !0
   %v1 = zext i8 %v0 to i32
   %v2 = add nsw i32 %v1, 5
   %v3 = trunc i32 %v2 to i8
-  store i8 %v3, i8* @g0, align 1, !tbaa !0
+  store i8 %v3, ptr @g0, align 1, !tbaa !0
   ret void
 }
 
@@ -80,11 +80,11 @@ b0:
 define void @f6(i8 zeroext %a0) #0 {
 b0:
   %v0 = zext i8 %a0 to i32
-  %v1 = load i8, i8* @g0, align 1, !tbaa !0
+  %v1 = load i8, ptr @g0, align 1, !tbaa !0
   %v2 = zext i8 %v1 to i32
   %v3 = add nsw i32 %v2, %v0
   %v4 = trunc i32 %v3 to i8
-  store i8 %v4, i8* @g0, align 1, !tbaa !0
+  store i8 %v4, ptr @g0, align 1, !tbaa !0
   ret void
 }
 
@@ -93,11 +93,11 @@ b0:
 define void @f7(i8 zeroext %a0) #0 {
 b0:
   %v0 = zext i8 %a0 to i32
-  %v1 = load i8, i8* @g0, align 1, !tbaa !0
+  %v1 = load i8, ptr @g0, align 1, !tbaa !0
   %v2 = zext i8 %v1 to i32
   %v3 = sub nsw i32 %v2, %v0
   %v4 = trunc i32 %v3 to i8
-  store i8 %v4, i8* @g0, align 1, !tbaa !0
+  store i8 %v4, ptr @g0, align 1, !tbaa !0
   ret void
 }
 
@@ -105,9 +105,9 @@ b0:
 ; CHECK: memb(r{{[0-9]+}}+#0) |= r{{[0-9]+}}
 define void @f8(i8 zeroext %a0) #0 {
 b0:
-  %v0 = load i8, i8* @g0, align 1, !tbaa !0
+  %v0 = load i8, ptr @g0, align 1, !tbaa !0
   %v1 = or i8 %v0, %a0
-  store i8 %v1, i8* @g0, align 1, !tbaa !0
+  store i8 %v1, ptr @g0, align 1, !tbaa !0
   ret void
 }
 
@@ -115,9 +115,9 @@ b0:
 ; CHECK: memb(r{{[0-9]+}}+#0) &= r{{[0-9]+}}
 define void @f9(i8 zeroext %a0) #0 {
 b0:
-  %v0 = load i8, i8* @g0, align 1, !tbaa !0
+  %v0 = load i8, ptr @g0, align 1, !tbaa !0
   %v1 = and i8 %v0, %a0
-  store i8 %v1, i8* @g0, align 1, !tbaa !0
+  store i8 %v1, ptr @g0, align 1, !tbaa !0
   ret void
 }
 
@@ -125,11 +125,11 @@ b0:
 ; CHECK: memb(r{{[0-9]+}}+#0) = clrbit(#5)
 define void @f10() #0 {
 b0:
-  %v0 = load i8, i8* @g0, align 1, !tbaa !0
+  %v0 = load i8, ptr @g0, align 1, !tbaa !0
   %v1 = zext i8 %v0 to i32
   %v2 = and i32 %v1, 223
   %v3 = trunc i32 %v2 to i8
-  store i8 %v3, i8* @g0, align 1, !tbaa !0
+  store i8 %v3, ptr @g0, align 1, !tbaa !0
   ret void
 }
 
@@ -137,11 +137,11 @@ b0:
 ; CHECK: memb(r{{[0-9]+}}+#0) = setbit(#7)
 define void @f11() #0 {
 b0:
-  %v0 = load i8, i8* @g0, align 1, !tbaa !0
+  %v0 = load i8, ptr @g0, align 1, !tbaa !0
   %v1 = zext i8 %v0 to i32
   %v2 = or i32 %v1, 128
   %v3 = trunc i32 %v2 to i8
-  store i8 %v3, i8* @g0, align 1, !tbaa !0
+  store i8 %v3, ptr @g0, align 1, !tbaa !0
   ret void
 }
 
@@ -149,9 +149,9 @@ b0:
 ; CHECK: memb(r{{[0-9]+}}+#0) += #1
 define void @f12() #0 {
 b0:
-  %v0 = load i8, i8* @g1, align 1, !tbaa !0
+  %v0 = load i8, ptr @g1, align 1, !tbaa !0
   %v1 = add i8 %v0, 1
-  store i8 %v1, i8* @g1, align 1, !tbaa !0
+  store i8 %v1, ptr @g1, align 1, !tbaa !0
   ret void
 }
 
@@ -159,9 +159,9 @@ b0:
 ; CHECK: memb(r{{[0-9]+}}+#0) -= #1
 define void @f13() #0 {
 b0:
-  %v0 = load i8, i8* @g1, align 1, !tbaa !0
+  %v0 = load i8, ptr @g1, align 1, !tbaa !0
   %v1 = add i8 %v0, -1
-  store i8 %v1, i8* @g1, align 1, !tbaa !0
+  store i8 %v1, ptr @g1, align 1, !tbaa !0
   ret void
 }
 
@@ -169,11 +169,11 @@ b0:
 ; CHECK: memb(r{{[0-9]+}}+#0) += #5
 define void @f14() #0 {
 b0:
-  %v0 = load i8, i8* @g1, align 1, !tbaa !0
+  %v0 = load i8, ptr @g1, align 1, !tbaa !0
   %v1 = zext i8 %v0 to i32
   %v2 = add nsw i32 %v1, 5
   %v3 = trunc i32 %v2 to i8
-  store i8 %v3, i8* @g1, align 1, !tbaa !0
+  store i8 %v3, ptr @g1, align 1, !tbaa !0
   ret void
 }
 
@@ -181,11 +181,11 @@ b0:
 ; CHECK: memb(r{{[0-9]+}}+#0) -= #5
 define void @f15() #0 {
 b0:
-  %v0 = load i8, i8* @g1, align 1, !tbaa !0
+  %v0 = load i8, ptr @g1, align 1, !tbaa !0
   %v1 = zext i8 %v0 to i32
   %v2 = add nsw i32 %v1, 251
   %v3 = trunc i32 %v2 to i8
-  store i8 %v3, i8* @g1, align 1, !tbaa !0
+  store i8 %v3, ptr @g1, align 1, !tbaa !0
   ret void
 }
 
@@ -193,11 +193,11 @@ b0:
 ; CHECK: memb(r{{[0-9]+}}+#0) -= #5
 define void @f16() #0 {
 b0:
-  %v0 = load i8, i8* @g1, align 1, !tbaa !0
+  %v0 = load i8, ptr @g1, align 1, !tbaa !0
   %v1 = zext i8 %v0 to i32
   %v2 = add nsw i32 %v1, 251
   %v3 = trunc i32 %v2 to i8
-  store i8 %v3, i8* @g1, align 1, !tbaa !0
+  store i8 %v3, ptr @g1, align 1, !tbaa !0
   ret void
 }
 
@@ -205,11 +205,11 @@ b0:
 ; CHECK: memb(r{{[0-9]+}}+#0) += #5
 define void @f17() #0 {
 b0:
-  %v0 = load i8, i8* @g1, align 1, !tbaa !0
+  %v0 = load i8, ptr @g1, align 1, !tbaa !0
   %v1 = zext i8 %v0 to i32
   %v2 = add nsw i32 %v1, 5
   %v3 = trunc i32 %v2 to i8
-  store i8 %v3, i8* @g1, align 1, !tbaa !0
+  store i8 %v3, ptr @g1, align 1, !tbaa !0
   ret void
 }
 
@@ -218,11 +218,11 @@ b0:
 define void @f18(i8 signext %a0) #0 {
 b0:
   %v0 = zext i8 %a0 to i32
-  %v1 = load i8, i8* @g1, align 1, !tbaa !0
+  %v1 = load i8, ptr @g1, align 1, !tbaa !0
   %v2 = zext i8 %v1 to i32
   %v3 = add nsw i32 %v2, %v0
   %v4 = trunc i32 %v3 to i8
-  store i8 %v4, i8* @g1, align 1, !tbaa !0
+  store i8 %v4, ptr @g1, align 1, !tbaa !0
   ret void
 }
 
@@ -231,11 +231,11 @@ b0:
 define void @f19(i8 signext %a0) #0 {
 b0:
   %v0 = zext i8 %a0 to i32
-  %v1 = load i8, i8* @g1, align 1, !tbaa !0
+  %v1 = load i8, ptr @g1, align 1, !tbaa !0
   %v2 = zext i8 %v1 to i32
   %v3 = sub nsw i32 %v2, %v0
   %v4 = trunc i32 %v3 to i8
-  store i8 %v4, i8* @g1, align 1, !tbaa !0
+  store i8 %v4, ptr @g1, align 1, !tbaa !0
   ret void
 }
 
@@ -243,9 +243,9 @@ b0:
 ; CHECK: memb(r{{[0-9]+}}+#0) |= r{{[0-9]+}}
 define void @f20(i8 signext %a0) #0 {
 b0:
-  %v0 = load i8, i8* @g1, align 1, !tbaa !0
+  %v0 = load i8, ptr @g1, align 1, !tbaa !0
   %v1 = or i8 %v0, %a0
-  store i8 %v1, i8* @g1, align 1, !tbaa !0
+  store i8 %v1, ptr @g1, align 1, !tbaa !0
   ret void
 }
 
@@ -253,9 +253,9 @@ b0:
 ; CHECK: memb(r{{[0-9]+}}+#0) &= r{{[0-9]+}}
 define void @f21(i8 signext %a0) #0 {
 b0:
-  %v0 = load i8, i8* @g1, align 1, !tbaa !0
+  %v0 = load i8, ptr @g1, align 1, !tbaa !0
   %v1 = and i8 %v0, %a0
-  store i8 %v1, i8* @g1, align 1, !tbaa !0
+  store i8 %v1, ptr @g1, align 1, !tbaa !0
   ret void
 }
 
@@ -263,11 +263,11 @@ b0:
 ; CHECK: memb(r{{[0-9]+}}+#0) = clrbit(#5)
 define void @f22() #0 {
 b0:
-  %v0 = load i8, i8* @g1, align 1, !tbaa !0
+  %v0 = load i8, ptr @g1, align 1, !tbaa !0
   %v1 = zext i8 %v0 to i32
   %v2 = and i32 %v1, 223
   %v3 = trunc i32 %v2 to i8
-  store i8 %v3, i8* @g1, align 1, !tbaa !0
+  store i8 %v3, ptr @g1, align 1, !tbaa !0
   ret void
 }
 
@@ -275,11 +275,11 @@ b0:
 ; CHECK: memb(r{{[0-9]+}}+#0) = setbit(#7)
 define void @f23() #0 {
 b0:
-  %v0 = load i8, i8* @g1, align 1, !tbaa !0
+  %v0 = load i8, ptr @g1, align 1, !tbaa !0
   %v1 = zext i8 %v0 to i32
   %v2 = or i32 %v1, 128
   %v3 = trunc i32 %v2 to i8
-  store i8 %v3, i8* @g1, align 1, !tbaa !0
+  store i8 %v3, ptr @g1, align 1, !tbaa !0
   ret void
 }
 
@@ -287,9 +287,9 @@ b0:
 ; CHECK: memh(r{{[0-9]+}}+#0) += #1
 define void @f24() #0 {
 b0:
-  %v0 = load i16, i16* @g2, align 2, !tbaa !3
+  %v0 = load i16, ptr @g2, align 2, !tbaa !3
   %v1 = add i16 %v0, 1
-  store i16 %v1, i16* @g2, align 2, !tbaa !3
+  store i16 %v1, ptr @g2, align 2, !tbaa !3
   ret void
 }
 
@@ -297,9 +297,9 @@ b0:
 ; CHECK: memh(r{{[0-9]+}}+#0) -= #1
 define void @f25() #0 {
 b0:
-  %v0 = load i16, i16* @g2, align 2, !tbaa !3
+  %v0 = load i16, ptr @g2, align 2, !tbaa !3
   %v1 = add i16 %v0, -1
-  store i16 %v1, i16* @g2, align 2, !tbaa !3
+  store i16 %v1, ptr @g2, align 2, !tbaa !3
   ret void
 }
 
@@ -307,11 +307,11 @@ b0:
 ; CHECK: memh(r{{[0-9]+}}+#0) += #5
 define void @f26() #0 {
 b0:
-  %v0 = load i16, i16* @g2, align 2, !tbaa !3
+  %v0 = load i16, ptr @g2, align 2, !tbaa !3
   %v1 = zext i16 %v0 to i32
   %v2 = add nsw i32 %v1, 5
   %v3 = trunc i32 %v2 to i16
-  store i16 %v3, i16* @g2, align 2, !tbaa !3
+  store i16 %v3, ptr @g2, align 2, !tbaa !3
   ret void
 }
 
@@ -319,11 +319,11 @@ b0:
 ; CHECK: memh(r{{[0-9]+}}+#0) -= #5
 define void @f27() #0 {
 b0:
-  %v0 = load i16, i16* @g2, align 2, !tbaa !3
+  %v0 = load i16, ptr @g2, align 2, !tbaa !3
   %v1 = zext i16 %v0 to i32
   %v2 = add nsw i32 %v1, 65531
   %v3 = trunc i32 %v2 to i16
-  store i16 %v3, i16* @g2, align 2, !tbaa !3
+  store i16 %v3, ptr @g2, align 2, !tbaa !3
   ret void
 }
 
@@ -331,11 +331,11 @@ b0:
 ; CHECK: memh(r{{[0-9]+}}+#0) -= #5
 define void @f28() #0 {
 b0:
-  %v0 = load i16, i16* @g2, align 2, !tbaa !3
+  %v0 = load i16, ptr @g2, align 2, !tbaa !3
   %v1 = zext i16 %v0 to i32
   %v2 = add nsw i32 %v1, 65531
   %v3 = trunc i32 %v2 to i16
-  store i16 %v3, i16* @g2, align 2, !tbaa !3
+  store i16 %v3, ptr @g2, align 2, !tbaa !3
   ret void
 }
 
@@ -343,11 +343,11 @@ b0:
 ; CHECK: memh(r{{[0-9]+}}+#0) += #5
 define void @f29() #0 {
 b0:
-  %v0 = load i16, i16* @g2, align 2, !tbaa !3
+  %v0 = load i16, ptr @g2, align 2, !tbaa !3
   %v1 = zext i16 %v0 to i32
   %v2 = add nsw i32 %v1, 5
   %v3 = trunc i32 %v2 to i16
-  store i16 %v3, i16* @g2, align 2, !tbaa !3
+  store i16 %v3, ptr @g2, align 2, !tbaa !3
   ret void
 }
 
@@ -356,11 +356,11 @@ b0:
 define void @f30(i16 zeroext %a0) #0 {
 b0:
   %v0 = zext i16 %a0 to i32
-  %v1 = load i16, i16* @g2, align 2, !tbaa !3
+  %v1 = load i16, ptr @g2, align 2, !tbaa !3
   %v2 = zext i16 %v1 to i32
   %v3 = add nsw i32 %v2, %v0
   %v4 = trunc i32 %v3 to i16
-  store i16 %v4, i16* @g2, align 2, !tbaa !3
+  store i16 %v4, ptr @g2, align 2, !tbaa !3
   ret void
 }
 
@@ -369,11 +369,11 @@ b0:
 define void @f31(i16 zeroext %a0) #0 {
 b0:
   %v0 = zext i16 %a0 to i32
-  %v1 = load i16, i16* @g2, align 2, !tbaa !3
+  %v1 = load i16, ptr @g2, align 2, !tbaa !3
   %v2 = zext i16 %v1 to i32
   %v3 = sub nsw i32 %v2, %v0
   %v4 = trunc i32 %v3 to i16
-  store i16 %v4, i16* @g2, align 2, !tbaa !3
+  store i16 %v4, ptr @g2, align 2, !tbaa !3
   ret void
 }
 
@@ -381,9 +381,9 @@ b0:
 ; CHECK: memh(r{{[0-9]+}}+#0) |= r{{[0-9]+}}
 define void @f32(i16 zeroext %a0) #0 {
 b0:
-  %v0 = load i16, i16* @g2, align 2, !tbaa !3
+  %v0 = load i16, ptr @g2, align 2, !tbaa !3
   %v1 = or i16 %v0, %a0
-  store i16 %v1, i16* @g2, align 2, !tbaa !3
+  store i16 %v1, ptr @g2, align 2, !tbaa !3
   ret void
 }
 
@@ -391,9 +391,9 @@ b0:
 ; CHECK: memh(r{{[0-9]+}}+#0) &= r{{[0-9]+}}
 define void @f33(i16 zeroext %a0) #0 {
 b0:
-  %v0 = load i16, i16* @g2, align 2, !tbaa !3
+  %v0 = load i16, ptr @g2, align 2, !tbaa !3
   %v1 = and i16 %v0, %a0
-  store i16 %v1, i16* @g2, align 2, !tbaa !3
+  store i16 %v1, ptr @g2, align 2, !tbaa !3
   ret void
 }
 
@@ -401,11 +401,11 @@ b0:
 ; CHECK: memh(r{{[0-9]+}}+#0) = clrbit(#5)
 define void @f34() #0 {
 b0:
-  %v0 = load i16, i16* @g2, align 2, !tbaa !3
+  %v0 = load i16, ptr @g2, align 2, !tbaa !3
   %v1 = zext i16 %v0 to i32
   %v2 = and i32 %v1, 65503
   %v3 = trunc i32 %v2 to i16
-  store i16 %v3, i16* @g2, align 2, !tbaa !3
+  store i16 %v3, ptr @g2, align 2, !tbaa !3
   ret void
 }
 
@@ -413,11 +413,11 @@ b0:
 ; CHECK: memh(r{{[0-9]+}}+#0) = setbit(#7)
 define void @f35() #0 {
 b0:
-  %v0 = load i16, i16* @g2, align 2, !tbaa !3
+  %v0 = load i16, ptr @g2, align 2, !tbaa !3
   %v1 = zext i16 %v0 to i32
   %v2 = or i32 %v1, 128
   %v3 = trunc i32 %v2 to i16
-  store i16 %v3, i16* @g2, align 2, !tbaa !3
+  store i16 %v3, ptr @g2, align 2, !tbaa !3
   ret void
 }
 
@@ -425,9 +425,9 @@ b0:
 ; CHECK: memh(r{{[0-9]+}}+#0) += #1
 define void @f36() #0 {
 b0:
-  %v0 = load i16, i16* @g3, align 2, !tbaa !3
+  %v0 = load i16, ptr @g3, align 2, !tbaa !3
   %v1 = add i16 %v0, 1
-  store i16 %v1, i16* @g3, align 2, !tbaa !3
+  store i16 %v1, ptr @g3, align 2, !tbaa !3
   ret void
 }
 
@@ -435,9 +435,9 @@ b0:
 ; CHECK: memh(r{{[0-9]+}}+#0) -= #1
 define void @f37() #0 {
 b0:
-  %v0 = load i16, i16* @g3, align 2, !tbaa !3
+  %v0 = load i16, ptr @g3, align 2, !tbaa !3
   %v1 = add i16 %v0, -1
-  store i16 %v1, i16* @g3, align 2, !tbaa !3
+  store i16 %v1, ptr @g3, align 2, !tbaa !3
   ret void
 }
 
@@ -445,11 +445,11 @@ b0:
 ; CHECK: memh(r{{[0-9]+}}+#0) += #5
 define void @f38() #0 {
 b0:
-  %v0 = load i16, i16* @g3, align 2, !tbaa !3
+  %v0 = load i16, ptr @g3, align 2, !tbaa !3
   %v1 = zext i16 %v0 to i32
   %v2 = add nsw i32 %v1, 5
   %v3 = trunc i32 %v2 to i16
-  store i16 %v3, i16* @g3, align 2, !tbaa !3
+  store i16 %v3, ptr @g3, align 2, !tbaa !3
   ret void
 }
 
@@ -457,11 +457,11 @@ b0:
 ; CHECK: memh(r{{[0-9]+}}+#0) -= #5
 define void @f39() #0 {
 b0:
-  %v0 = load i16, i16* @g3, align 2, !tbaa !3
+  %v0 = load i16, ptr @g3, align 2, !tbaa !3
   %v1 = zext i16 %v0 to i32
   %v2 = add nsw i32 %v1, 65531
   %v3 = trunc i32 %v2 to i16
-  store i16 %v3, i16* @g3, align 2, !tbaa !3
+  store i16 %v3, ptr @g3, align 2, !tbaa !3
   ret void
 }
 
@@ -469,11 +469,11 @@ b0:
 ; CHECK: memh(r{{[0-9]+}}+#0) -= #5
 define void @f40() #0 {
 b0:
-  %v0 = load i16, i16* @g3, align 2, !tbaa !3
+  %v0 = load i16, ptr @g3, align 2, !tbaa !3
   %v1 = zext i16 %v0 to i32
   %v2 = add nsw i32 %v1, 65531
   %v3 = trunc i32 %v2 to i16
-  store i16 %v3, i16* @g3, align 2, !tbaa !3
+  store i16 %v3, ptr @g3, align 2, !tbaa !3
   ret void
 }
 
@@ -481,11 +481,11 @@ b0:
 ; CHECK: memh(r{{[0-9]+}}+#0) += #5
 define void @f41() #0 {
 b0:
-  %v0 = load i16, i16* @g3, align 2, !tbaa !3
+  %v0 = load i16, ptr @g3, align 2, !tbaa !3
   %v1 = zext i16 %v0 to i32
   %v2 = add nsw i32 %v1, 5
   %v3 = trunc i32 %v2 to i16
-  store i16 %v3, i16* @g3, align 2, !tbaa !3
+  store i16 %v3, ptr @g3, align 2, !tbaa !3
   ret void
 }
 
@@ -494,11 +494,11 @@ b0:
 define void @f42(i16 signext %a0) #0 {
 b0:
   %v0 = zext i16 %a0 to i32
-  %v1 = load i16, i16* @g3, align 2, !tbaa !3
+  %v1 = load i16, ptr @g3, align 2, !tbaa !3
   %v2 = zext i16 %v1 to i32
   %v3 = add nsw i32 %v2, %v0
   %v4 = trunc i32 %v3 to i16
-  store i16 %v4, i16* @g3, align 2, !tbaa !3
+  store i16 %v4, ptr @g3, align 2, !tbaa !3
   ret void
 }
 
@@ -507,11 +507,11 @@ b0:
 define void @f43(i16 signext %a0) #0 {
 b0:
   %v0 = zext i16 %a0 to i32
-  %v1 = load i16, i16* @g3, align 2, !tbaa !3
+  %v1 = load i16, ptr @g3, align 2, !tbaa !3
   %v2 = zext i16 %v1 to i32
   %v3 = sub nsw i32 %v2, %v0
   %v4 = trunc i32 %v3 to i16
-  store i16 %v4, i16* @g3, align 2, !tbaa !3
+  store i16 %v4, ptr @g3, align 2, !tbaa !3
   ret void
 }
 
@@ -519,9 +519,9 @@ b0:
 ; CHECK: memh(r{{[0-9]+}}+#0) |= r{{[0-9]+}}
 define void @f44(i16 signext %a0) #0 {
 b0:
-  %v0 = load i16, i16* @g3, align 2, !tbaa !3
+  %v0 = load i16, ptr @g3, align 2, !tbaa !3
   %v1 = or i16 %v0, %a0
-  store i16 %v1, i16* @g3, align 2, !tbaa !3
+  store i16 %v1, ptr @g3, align 2, !tbaa !3
   ret void
 }
 
@@ -529,9 +529,9 @@ b0:
 ; CHECK: memh(r{{[0-9]+}}+#0) &= r{{[0-9]+}}
 define void @f45(i16 signext %a0) #0 {
 b0:
-  %v0 = load i16, i16* @g3, align 2, !tbaa !3
+  %v0 = load i16, ptr @g3, align 2, !tbaa !3
   %v1 = and i16 %v0, %a0
-  store i16 %v1, i16* @g3, align 2, !tbaa !3
+  store i16 %v1, ptr @g3, align 2, !tbaa !3
   ret void
 }
 
@@ -539,11 +539,11 @@ b0:
 ; CHECK: memh(r{{[0-9]+}}+#0) = clrbit(#5)
 define void @f46() #0 {
 b0:
-  %v0 = load i16, i16* @g3, align 2, !tbaa !3
+  %v0 = load i16, ptr @g3, align 2, !tbaa !3
   %v1 = zext i16 %v0 to i32
   %v2 = and i32 %v1, 65503
   %v3 = trunc i32 %v2 to i16
-  store i16 %v3, i16* @g3, align 2, !tbaa !3
+  store i16 %v3, ptr @g3, align 2, !tbaa !3
   ret void
 }
 
@@ -551,11 +551,11 @@ b0:
 ; CHECK: memh(r{{[0-9]+}}+#0) = setbit(#7)
 define void @f47() #0 {
 b0:
-  %v0 = load i16, i16* @g3, align 2, !tbaa !3
+  %v0 = load i16, ptr @g3, align 2, !tbaa !3
   %v1 = zext i16 %v0 to i32
   %v2 = or i32 %v1, 128
   %v3 = trunc i32 %v2 to i16
-  store i16 %v3, i16* @g3, align 2, !tbaa !3
+  store i16 %v3, ptr @g3, align 2, !tbaa !3
   ret void
 }
 
@@ -563,9 +563,9 @@ b0:
 ; CHECK: memw(r{{[0-9]+}}+#0) += #1
 define void @f48() #0 {
 b0:
-  %v0 = load i32, i32* @g4, align 4, !tbaa !5
+  %v0 = load i32, ptr @g4, align 4, !tbaa !5
   %v1 = add nsw i32 %v0, 1
-  store i32 %v1, i32* @g4, align 4, !tbaa !5
+  store i32 %v1, ptr @g4, align 4, !tbaa !5
   ret void
 }
 
@@ -573,9 +573,9 @@ b0:
 ; CHECK: memw(r{{[0-9]+}}+#0) -= #1
 define void @f49() #0 {
 b0:
-  %v0 = load i32, i32* @g4, align 4, !tbaa !5
+  %v0 = load i32, ptr @g4, align 4, !tbaa !5
   %v1 = add nsw i32 %v0, -1
-  store i32 %v1, i32* @g4, align 4, !tbaa !5
+  store i32 %v1, ptr @g4, align 4, !tbaa !5
   ret void
 }
 
@@ -583,9 +583,9 @@ b0:
 ; CHECK: memw(r{{[0-9]+}}+#0) += #5
 define void @f50() #0 {
 b0:
-  %v0 = load i32, i32* @g4, align 4, !tbaa !5
+  %v0 = load i32, ptr @g4, align 4, !tbaa !5
   %v1 = add nsw i32 %v0, 5
-  store i32 %v1, i32* @g4, align 4, !tbaa !5
+  store i32 %v1, ptr @g4, align 4, !tbaa !5
   ret void
 }
 
@@ -593,9 +593,9 @@ b0:
 ; CHECK: memw(r{{[0-9]+}}+#0) -= #5
 define void @f51() #0 {
 b0:
-  %v0 = load i32, i32* @g4, align 4, !tbaa !5
+  %v0 = load i32, ptr @g4, align 4, !tbaa !5
   %v1 = add nsw i32 %v0, -5
-  store i32 %v1, i32* @g4, align 4, !tbaa !5
+  store i32 %v1, ptr @g4, align 4, !tbaa !5
   ret void
 }
 
@@ -603,9 +603,9 @@ b0:
 ; CHECK: memw(r{{[0-9]+}}+#0) -= #5
 define void @f52() #0 {
 b0:
-  %v0 = load i32, i32* @g4, align 4, !tbaa !5
+  %v0 = load i32, ptr @g4, align 4, !tbaa !5
   %v1 = add nsw i32 %v0, -5
-  store i32 %v1, i32* @g4, align 4, !tbaa !5
+  store i32 %v1, ptr @g4, align 4, !tbaa !5
   ret void
 }
 
@@ -613,9 +613,9 @@ b0:
 ; CHECK: memw(r{{[0-9]+}}+#0) += #5
 define void @f53() #0 {
 b0:
-  %v0 = load i32, i32* @g4, align 4, !tbaa !5
+  %v0 = load i32, ptr @g4, align 4, !tbaa !5
   %v1 = add nsw i32 %v0, 5
-  store i32 %v1, i32* @g4, align 4, !tbaa !5
+  store i32 %v1, ptr @g4, align 4, !tbaa !5
   ret void
 }
 
@@ -623,9 +623,9 @@ b0:
 ; CHECK: memw(r{{[0-9]+}}+#0) += r{{[0-9]+}}
 define void @f54(i32 %a0) #0 {
 b0:
-  %v0 = load i32, i32* @g4, align 4, !tbaa !5
+  %v0 = load i32, ptr @g4, align 4, !tbaa !5
   %v1 = add i32 %v0, %a0
-  store i32 %v1, i32* @g4, align 4, !tbaa !5
+  store i32 %v1, ptr @g4, align 4, !tbaa !5
   ret void
 }
 
@@ -633,9 +633,9 @@ b0:
 ; CHECK: memw(r{{[0-9]+}}+#0) -= r{{[0-9]+}}
 define void @f55(i32 %a0) #0 {
 b0:
-  %v0 = load i32, i32* @g4, align 4, !tbaa !5
+  %v0 = load i32, ptr @g4, align 4, !tbaa !5
   %v1 = sub i32 %v0, %a0
-  store i32 %v1, i32* @g4, align 4, !tbaa !5
+  store i32 %v1, ptr @g4, align 4, !tbaa !5
   ret void
 }
 
@@ -643,9 +643,9 @@ b0:
 ; CHECK: memw(r{{[0-9]+}}+#0) |= r{{[0-9]+}}
 define void @f56(i32 %a0) #0 {
 b0:
-  %v0 = load i32, i32* @g4, align 4, !tbaa !5
+  %v0 = load i32, ptr @g4, align 4, !tbaa !5
   %v1 = or i32 %v0, %a0
-  store i32 %v1, i32* @g4, align 4, !tbaa !5
+  store i32 %v1, ptr @g4, align 4, !tbaa !5
   ret void
 }
 
@@ -653,9 +653,9 @@ b0:
 ; CHECK: memw(r{{[0-9]+}}+#0) &= r{{[0-9]+}}
 define void @f57(i32 %a0) #0 {
 b0:
-  %v0 = load i32, i32* @g4, align 4, !tbaa !5
+  %v0 = load i32, ptr @g4, align 4, !tbaa !5
   %v1 = and i32 %v0, %a0
-  store i32 %v1, i32* @g4, align 4, !tbaa !5
+  store i32 %v1, ptr @g4, align 4, !tbaa !5
   ret void
 }
 
@@ -663,9 +663,9 @@ b0:
 ; CHECK: memw(r{{[0-9]+}}+#0) = clrbit(#5)
 define void @f58() #0 {
 b0:
-  %v0 = load i32, i32* @g4, align 4, !tbaa !5
+  %v0 = load i32, ptr @g4, align 4, !tbaa !5
   %v1 = and i32 %v0, -33
-  store i32 %v1, i32* @g4, align 4, !tbaa !5
+  store i32 %v1, ptr @g4, align 4, !tbaa !5
   ret void
 }
 
@@ -673,9 +673,9 @@ b0:
 ; CHECK: memw(r{{[0-9]+}}+#0) = setbit(#7)
 define void @f59() #0 {
 b0:
-  %v0 = load i32, i32* @g4, align 4, !tbaa !5
+  %v0 = load i32, ptr @g4, align 4, !tbaa !5
   %v1 = or i32 %v0, 128
-  store i32 %v1, i32* @g4, align 4, !tbaa !5
+  store i32 %v1, ptr @g4, align 4, !tbaa !5
   ret void
 }
 
@@ -683,9 +683,9 @@ b0:
 ; CHECK: memw(r{{[0-9]+}}+#0) += #1
 define void @f60() #0 {
 b0:
-  %v0 = load i32, i32* @g5, align 4, !tbaa !5
+  %v0 = load i32, ptr @g5, align 4, !tbaa !5
   %v1 = add i32 %v0, 1
-  store i32 %v1, i32* @g5, align 4, !tbaa !5
+  store i32 %v1, ptr @g5, align 4, !tbaa !5
   ret void
 }
 
@@ -693,9 +693,9 @@ b0:
 ; CHECK: memw(r{{[0-9]+}}+#0) -= #1
 define void @f61() #0 {
 b0:
-  %v0 = load i32, i32* @g5, align 4, !tbaa !5
+  %v0 = load i32, ptr @g5, align 4, !tbaa !5
   %v1 = add i32 %v0, -1
-  store i32 %v1, i32* @g5, align 4, !tbaa !5
+  store i32 %v1, ptr @g5, align 4, !tbaa !5
   ret void
 }
 
@@ -703,9 +703,9 @@ b0:
 ; CHECK: memw(r{{[0-9]+}}+#0) += #5
 define void @f62() #0 {
 b0:
-  %v0 = load i32, i32* @g5, align 4, !tbaa !5
+  %v0 = load i32, ptr @g5, align 4, !tbaa !5
   %v1 = add i32 %v0, 5
-  store i32 %v1, i32* @g5, align 4, !tbaa !5
+  store i32 %v1, ptr @g5, align 4, !tbaa !5
   ret void
 }
 
@@ -713,9 +713,9 @@ b0:
 ; CHECK: memw(r{{[0-9]+}}+#0) -= #5
 define void @f63() #0 {
 b0:
-  %v0 = load i32, i32* @g5, align 4, !tbaa !5
+  %v0 = load i32, ptr @g5, align 4, !tbaa !5
   %v1 = add i32 %v0, -5
-  store i32 %v1, i32* @g5, align 4, !tbaa !5
+  store i32 %v1, ptr @g5, align 4, !tbaa !5
   ret void
 }
 
@@ -723,9 +723,9 @@ b0:
 ; CHECK: memw(r{{[0-9]+}}+#0) -= #5
 define void @f64() #0 {
 b0:
-  %v0 = load i32, i32* @g5, align 4, !tbaa !5
+  %v0 = load i32, ptr @g5, align 4, !tbaa !5
   %v1 = add i32 %v0, -5
-  store i32 %v1, i32* @g5, align 4, !tbaa !5
+  store i32 %v1, ptr @g5, align 4, !tbaa !5
   ret void
 }
 
@@ -733,9 +733,9 @@ b0:
 ; CHECK: memw(r{{[0-9]+}}+#0) += #5
 define void @f65() #0 {
 b0:
-  %v0 = load i32, i32* @g5, align 4, !tbaa !5
+  %v0 = load i32, ptr @g5, align 4, !tbaa !5
   %v1 = add i32 %v0, 5
-  store i32 %v1, i32* @g5, align 4, !tbaa !5
+  store i32 %v1, ptr @g5, align 4, !tbaa !5
   ret void
 }
 
@@ -743,9 +743,9 @@ b0:
 ; CHECK: memw(r{{[0-9]+}}+#0) += r{{[0-9]+}}
 define void @f66(i32 %a0) #0 {
 b0:
-  %v0 = load i32, i32* @g5, align 4, !tbaa !5
+  %v0 = load i32, ptr @g5, align 4, !tbaa !5
   %v1 = add i32 %v0, %a0
-  store i32 %v1, i32* @g5, align 4, !tbaa !5
+  store i32 %v1, ptr @g5, align 4, !tbaa !5
   ret void
 }
 
@@ -753,9 +753,9 @@ b0:
 ; CHECK: memw(r{{[0-9]+}}+#0) -= r{{[0-9]+}}
 define void @f67(i32 %a0) #0 {
 b0:
-  %v0 = load i32, i32* @g5, align 4, !tbaa !5
+  %v0 = load i32, ptr @g5, align 4, !tbaa !5
   %v1 = sub i32 %v0, %a0
-  store i32 %v1, i32* @g5, align 4, !tbaa !5
+  store i32 %v1, ptr @g5, align 4, !tbaa !5
   ret void
 }
 
@@ -763,9 +763,9 @@ b0:
 ; CHECK: memw(r{{[0-9]+}}+#0) |= r{{[0-9]+}}
 define void @f68(i32 %a0) #0 {
 b0:
-  %v0 = load i32, i32* @g5, align 4, !tbaa !5
+  %v0 = load i32, ptr @g5, align 4, !tbaa !5
   %v1 = or i32 %v0, %a0
-  store i32 %v1, i32* @g5, align 4, !tbaa !5
+  store i32 %v1, ptr @g5, align 4, !tbaa !5
   ret void
 }
 
@@ -773,9 +773,9 @@ b0:
 ; CHECK: memw(r{{[0-9]+}}+#0) &= r{{[0-9]+}}
 define void @f69(i32 %a0) #0 {
 b0:
-  %v0 = load i32, i32* @g5, align 4, !tbaa !5
+  %v0 = load i32, ptr @g5, align 4, !tbaa !5
   %v1 = and i32 %v0, %a0
-  store i32 %v1, i32* @g5, align 4, !tbaa !5
+  store i32 %v1, ptr @g5, align 4, !tbaa !5
   ret void
 }
 
@@ -783,9 +783,9 @@ b0:
 ; CHECK: memw(r{{[0-9]+}}+#0) = clrbit(#5)
 define void @f70() #0 {
 b0:
-  %v0 = load i32, i32* @g5, align 4, !tbaa !5
+  %v0 = load i32, ptr @g5, align 4, !tbaa !5
   %v1 = and i32 %v0, -33
-  store i32 %v1, i32* @g5, align 4, !tbaa !5
+  store i32 %v1, ptr @g5, align 4, !tbaa !5
   ret void
 }
 
@@ -793,9 +793,9 @@ b0:
 ; CHECK: memw(r{{[0-9]+}}+#0) = setbit(#7)
 define void @f71() #0 {
 b0:
-  %v0 = load i32, i32* @g5, align 4, !tbaa !5
+  %v0 = load i32, ptr @g5, align 4, !tbaa !5
   %v1 = or i32 %v0, 128
-  store i32 %v1, i32* @g5, align 4, !tbaa !5
+  store i32 %v1, ptr @g5, align 4, !tbaa !5
   ret void
 }
 

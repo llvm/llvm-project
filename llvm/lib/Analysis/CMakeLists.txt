@@ -1,8 +1,8 @@
-if (DEFINED LLVM_HAVE_TF_AOT OR DEFINED LLVM_HAVE_TF_API)
+if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   include(TensorFlowCompile)
   set(LLVM_INLINER_MODEL_PATH_DEFAULT "models/inliner-Oz")
 
-  set(LLVM_INLINER_MODEL_CURRENT_URL "<UNSPECIFIED>")
+  set(LLVM_INLINER_MODEL_CURRENT_URL "<UNSPECIFIED>" CACHE STRING "URL to download the LLVM inliner model")
 
   if (DEFINED LLVM_HAVE_TF_AOT)
     tf_find_and_compile(
@@ -17,8 +17,9 @@ if (DEFINED LLVM_HAVE_TF_AOT OR DEFINED LLVM_HAVE_TF_API)
     )
   endif()
 
-  if (DEFINED LLVM_HAVE_TF_API)
-    list(APPEND MLLinkDeps ${tensorflow_c_api} ${tensorflow_fx})
+  if (LLVM_HAVE_TFLITE)
+    list(APPEND MLLinkDeps
+      tensorflow-lite::tensorflow-lite)
   endif()
 endif()
 
@@ -36,8 +37,7 @@ add_llvm_component_library(LLVMAnalysis
   BranchProbabilityInfo.cpp
   CFG.cpp
   CFGPrinter.cpp
-  CFLAndersAliasAnalysis.cpp
-  CFLSteensAliasAnalysis.cpp
+  CFGSCCPrinter.cpp
   CGSCCPassManager.cpp
   CallGraph.cpp
   CallGraphSCCPass.cpp
@@ -86,6 +86,7 @@ add_llvm_component_library(LLVMAnalysis
   LegacyDivergenceAnalysis.cpp
   Lint.cpp
   Loads.cpp
+  Local.cpp
   LoopAccessAnalysis.cpp
   LoopAnalysisManager.cpp
   LoopCacheAnalysis.cpp
@@ -129,13 +130,15 @@ add_llvm_component_library(LLVMAnalysis
   StackSafetyAnalysis.cpp
   SyncDependenceAnalysis.cpp
   SyntheticCountsUtils.cpp
-  TFUtils.cpp
-  TensorSpec.cpp
+  TFLiteUtils.cpp
   TargetLibraryInfo.cpp
   TargetTransformInfo.cpp
+  TensorSpec.cpp
   Trace.cpp
+  TrainingLogger.cpp
   TypeBasedAliasAnalysis.cpp
   TypeMetadataUtils.cpp
+  UniformityAnalysis.cpp
   ScopedNoAliasAA.cpp
   ValueLattice.cpp
   ValueLatticeUtils.cpp
@@ -160,4 +163,5 @@ add_llvm_component_library(LLVMAnalysis
   Object
   ProfileData
   Support
+  TargetParser
   )

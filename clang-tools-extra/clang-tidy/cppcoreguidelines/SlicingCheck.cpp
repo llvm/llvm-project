@@ -14,9 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace cppcoreguidelines {
+namespace clang::tidy::cppcoreguidelines {
 
 void SlicingCheck::registerMatchers(MatchFinder *Finder) {
   // When we see:
@@ -131,6 +129,4 @@ void SlicingCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace cppcoreguidelines
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cppcoreguidelines

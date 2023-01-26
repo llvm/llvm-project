@@ -364,3 +364,57 @@ define i64 @test_urem_i64(i64 %arg1, i64 %arg2) {
   %res = urem i64 %arg1, %arg2
   ret i64 %res
 }
+
+define <2 x float> @test_const_v2f32() {
+  ; CHECK-LABEL: name: test_const_v2f32
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32)
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<2 x s32>)
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[DEF]](s32), [[DEF]](s32)
+  ; CHECK-NEXT:   $xmm0 = COPY [[BUILD_VECTOR1]](<4 x s32>)
+  ; CHECK-NEXT:   RET 0, implicit $xmm0
+  ret <2 x float> <float 1.0, float 1.0>
+}
+
+define <3 x float> @test_const_v3f32() {
+  ; CHECK-LABEL: name: test_const_v3f32
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32)
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<3 x s32>)
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[UV2]](s32), [[DEF]](s32)
+  ; CHECK-NEXT:   $xmm0 = COPY [[BUILD_VECTOR1]](<4 x s32>)
+  ; CHECK-NEXT:   RET 0, implicit $xmm0
+  ret <3 x float> <float 1.0, float 1.0, float 1.0>
+}
+
+define <5 x float> @test_const_v5f32() {
+  ; CHECK-LABEL: name: test_const_v5f32
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $rdi
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<5 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
+  ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<5 x s32>), [[COPY]](p0) :: (store (<5 x s32>), align 32)
+  ; CHECK-NEXT:   $rax = COPY [[COPY]](p0)
+  ; CHECK-NEXT:   RET 0
+  ret <5 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>
+}
+
+define <6 x float> @test_const_v6f32() {
+  ; CHECK-LABEL: name: test_const_v6f32
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $rdi
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<6 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
+  ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<6 x s32>), [[COPY]](p0) :: (store (<6 x s32>), align 32)
+  ; CHECK-NEXT:   $rax = COPY [[COPY]](p0)
+  ; CHECK-NEXT:   RET 0
+  ret <6 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>
+}

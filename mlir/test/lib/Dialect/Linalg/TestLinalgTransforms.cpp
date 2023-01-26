@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -25,7 +25,6 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 
 using namespace mlir;
@@ -62,14 +61,6 @@ struct TestLinalgTransforms
   Option<bool> testPatterns{*this, "test-patterns",
                             llvm::cl::desc("Test a mixed set of patterns"),
                             llvm::cl::init(false)};
-  Option<bool> testTileAndDistributionOptions{
-      *this, "test-tile-and-distribute-options",
-      llvm::cl::desc("Test tile and distribute options"),
-      llvm::cl::init(false)};
-  Option<bool> testTileFuseAndDistributionOptions{
-      *this, "test-tile-fuse-and-distribute-options",
-      llvm::cl::desc("Test tile, fuse and distribute options"),
-      llvm::cl::init(false)};
   Option<bool> testVectorTransferForwardingPatterns{
       *this, "test-vector-transfer-forwarding-patterns",
       llvm::cl::desc(
@@ -80,13 +71,6 @@ struct TestLinalgTransforms
       llvm::cl::desc("Test a set of patterns that rewrite a linalg contraction "
                      "in vector.contract form"),
       llvm::cl::init(false)};
-  Option<bool> testTilePattern{*this, "test-tile-pattern",
-                               llvm::cl::desc("Test tile pattern"),
-                               llvm::cl::init(false)};
-  Option<bool> testTileScalarizeDynamicDims{
-      *this, "test-tile-scalarize-dynamic-dims",
-      llvm::cl::desc("Test tiling of dynamic dims by 1"),
-      llvm::cl::init(false)};
   Option<bool> testTransformPadTensor{
       *this, "test-transform-pad-tensor",
       llvm::cl::desc("Test transform pad tensor by copying with generic ops"),
@@ -95,14 +79,21 @@ struct TestLinalgTransforms
       *this, "test-generalize-pad-tensor",
       llvm::cl::desc("Test transform pad tensor by copying with generic ops"),
       llvm::cl::init(false)};
+  Option<bool> testGeneralizeTensorPackOp{
+      *this, "test-generalize-tensor-pack",
+      llvm::cl::desc("Test transform that generalizes pack ops into a sequence "
+                     "of tensor and Linalg ops"),
+      llvm::cl::init(false)};
+  Option<bool> testGeneralizeTensorUnPackOp{
+      *this, "test-generalize-tensor-unpack",
+      llvm::cl::desc(
+          "Test transform that generalizes unpack ops into a sequence "
+          "of tensor and Linalg ops"),
+      llvm::cl::init(false)};
   Option<bool> testSwapSubTensorPadTensor{
       *this, "test-swap-subtensor-padtensor",
       llvm::cl::desc("Test rewrite of subtensor(tensor.pad) into "
                      "tensor.pad(subtensor)"),
-      llvm::cl::init(false)};
-  Option<bool> testSplitReduction{
-      *this, "test-split-reduction",
-      llvm::cl::desc("Test split reduction transformation"),
       llvm::cl::init(false)};
   ListOption<int64_t> peeledLoops{
       *this, "peeled-loops",
@@ -124,98 +115,25 @@ struct TestLinalgTransforms
       llvm::cl::desc("Test rewrite of linalgOp + extract_slice into "
                      "extract_slice + linalgOp"),
       llvm::cl::init(false)};
+  Option<bool> testSwapExtractSliceWithFill{
+      *this, "test-swap-extract-slice-with-fill-pattern",
+      llvm::cl::desc(
+          "Test patterns to swap tensor.extract_slice(linalg.fill())"),
+      llvm::cl::init(false)};
+  Option<bool> testEraseUnusedOperandsAndResults{
+      *this, "test-erase-unused-operands-and-results",
+      llvm::cl::desc("Test patterns to erase unused operands and results"),
+      llvm::cl::init(false)};
+  Option<bool> testEraseUnnecessaryInputs{
+      *this, "test-erase-unnecessary-inputs",
+      llvm::cl::desc("Test patterns to erase unnecessary inputs"),
+      llvm::cl::init(false)};
 };
 } // namespace
 
 static void applyPatterns(func::FuncOp funcOp) {
   MLIRContext *ctx = funcOp.getContext();
   RewritePatternSet patterns(ctx);
-
-  //===--------------------------------------------------------------------===//
-  // Linalg tiling patterns.
-  //===--------------------------------------------------------------------===//
-  patterns.add<LinalgTilingPattern>(
-      MatmulOp::getOperationName(), ctx,
-      LinalgTilingOptions().setTileSizes({2000, 3000, 4000}),
-      LinalgTransformationFilter(StringAttr::get(ctx, "MEM"),
-                                 StringAttr::get(ctx, "L3")));
-  patterns.add<LinalgTilingPattern>(
-      MatmulOp::getOperationName(), ctx,
-      LinalgTilingOptions().setTileSizes({200, 300, 400}),
-      LinalgTransformationFilter(StringAttr::get(ctx, "L3"),
-                                 StringAttr::get(ctx, "L2")));
-  patterns.add<LinalgTilingPattern>(
-      MatmulOp::getOperationName(), ctx,
-      LinalgTilingOptions().setTileSizes({20, 30, 40}),
-      LinalgTransformationFilter(StringAttr::get(ctx, "L2"),
-                                 StringAttr::get(ctx, "L1")));
-  patterns.add<LinalgTilingPattern>(
-      MatmulOp::getOperationName(), ctx,
-      LinalgTilingOptions().setTileSizes({2, 3, 4}),
-      LinalgTransformationFilter(StringAttr::get(ctx, "L1"),
-                                 StringAttr::get(ctx, "REG")));
-
-  patterns.add<LinalgTilingPattern>(
-      MatvecOp::getOperationName(), ctx,
-      LinalgTilingOptions().setTileSizes({5, 6}).setLoopType(
-          LinalgTilingLoopType::ParallelLoops),
-      LinalgTransformationFilter(ArrayRef<StringAttr>{},
-                                 StringAttr::get(ctx, "L1")));
-
-  patterns.add<LinalgTilingPattern>(
-      DotOp::getOperationName(), ctx, LinalgTilingOptions().setTileSizes(8000),
-      LinalgTransformationFilter(
-          ArrayRef<StringAttr>{StringAttr::get(ctx, "MEM"),
-                               StringAttr::get(ctx, "L3"),
-                               StringAttr::get(ctx, "L2")},
-          StringAttr::get(ctx, "REG")));
-
-  //===--------------------------------------------------------------------===//
-  // Linalg tiling and permutation patterns.
-  //===--------------------------------------------------------------------===//
-  patterns.add<LinalgTilingPattern>(
-      MatmulOp::getOperationName(), ctx,
-      LinalgTilingOptions()
-          .setTileSizes({2000, 3000, 4000})
-          .setInterchange({1, 2, 0}),
-      LinalgTransformationFilter(StringAttr::get(ctx, "__with_perm__"),
-                                 StringAttr::get(ctx, "L2__with_perm__")));
-  patterns.add<LinalgTilingPattern>(
-      MatmulOp::getOperationName(), ctx,
-      LinalgTilingOptions()
-          .setTileSizes({200, 300, 400})
-          .setInterchange({1, 0, 2}),
-      LinalgTransformationFilter(StringAttr::get(ctx, "L2__with_perm__"),
-                                 StringAttr::get(ctx, "L1__with_perm__")));
-  patterns.add<LinalgTilingPattern>(
-      MatmulOp::getOperationName(), ctx,
-      LinalgTilingOptions().setTileSizes({20, 30, 40}),
-      LinalgTransformationFilter(StringAttr::get(ctx, "L1__with_perm__"),
-                                 StringAttr::get(ctx, "REG__with_perm__")));
-
-  patterns.add<LinalgTilingPattern>(
-      MatvecOp::getOperationName(), ctx,
-      LinalgTilingOptions().setTileSizes({5, 6}).setInterchange({1, 0}),
-      LinalgTransformationFilter(StringAttr::get(ctx, "__with_perm__"),
-                                 StringAttr::get(ctx, "L1__with_perm__")));
-
-  patterns.add<LinalgTilingPattern>(
-      MatmulOp::getOperationName(), ctx,
-      LinalgTilingOptions()
-          .setTileSizes({16, 8, 4})
-          .setInterchange({1, 2, 0})
-          .setLoopType(LinalgTilingLoopType::ParallelLoops),
-      LinalgTransformationFilter(
-          StringAttr::get(ctx, "par__with_perm__"),
-          StringAttr::get(ctx, "after_par__with_perm__")));
-
-  //===--------------------------------------------------------------------===//
-  // Linalg to loops patterns.
-  //===--------------------------------------------------------------------===//
-  patterns.add<LinalgLoweringPattern<DotOp>>(
-      ctx,
-      /*loweringType=*/LinalgLoweringType::Loops,
-      LinalgTransformationFilter(StringAttr::get(ctx, "REG")));
 
   //===--------------------------------------------------------------------===//
   // Linalg distribution patterns.
@@ -225,178 +143,9 @@ static void applyPatterns(func::FuncOp funcOp) {
   //===--------------------------------------------------------------------===//
   // Linalg to vector contraction patterns.
   //===--------------------------------------------------------------------===//
-  patterns.add<LinalgVectorizationPattern>(
-      ctx, LinalgTransformationFilter(StringAttr::get(ctx, "VECTORIZE"))
-               .addOpFilter<MatmulOp, FillOp, GenericOp>());
   patterns.add<CopyVectorizationPattern>(ctx);
 
-  //===--------------------------------------------------------------------===//
-  // Linalg generic interchange pattern.
-  //===--------------------------------------------------------------------===//
-  patterns.add<GenericOpInterchangePattern>(
-      ctx,
-      /*interchangeVector=*/ArrayRef<unsigned>{1, 2, 0},
-      LinalgTransformationFilter(ArrayRef<StringAttr>{},
-                                 StringAttr::get(ctx, "PERMUTED")));
-
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
-
-  // Drop the marker.
-  funcOp.walk([](LinalgOp op) {
-    op->removeAttr(LinalgTransforms::kLinalgTransformMarker);
-  });
-}
-
-template <typename IdOp, typename NProcsOp>
-static SmallVector<ProcInfo, 2>
-getGpuProcIds(OpBuilder &b, Location loc, ArrayRef<Range> parallelLoopRanges) {
-  size_t count = std::min<size_t>(3, parallelLoopRanges.size());
-  SmallVector<ProcInfo, 2> procInfo(count);
-  Type indexType = b.getIndexType();
-  for (unsigned i = 0; i < count; ++i) {
-    gpu::Dimension dim = *gpu::symbolizeDimension(i);
-    procInfo[count - 1 - i] = {b.create<IdOp>(loc, indexType, dim),
-                               b.create<NProcsOp>(loc, indexType, dim)};
-  }
-  return procInfo;
-}
-
-static void fillTileAndDistributePatterns(MLIRContext *context,
-                                          RewritePatternSet &patterns) {
-  {
-    LinalgLoopDistributionOptions cyclicNprocsEqNiters;
-    cyclicNprocsEqNiters.distributionMethod.resize(
-        2, DistributionMethod::CyclicNumProcsEqNumIters);
-    cyclicNprocsEqNiters.procInfo =
-        getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>;
-    patterns.add<LinalgTilingPattern>(
-        MatmulOp::getOperationName(), context,
-        LinalgTilingOptions()
-            .setTileSizes({8, 8, 4})
-            .setLoopType(LinalgTilingLoopType::ParallelLoops)
-            .setDistributionOptions(cyclicNprocsEqNiters),
-        LinalgTransformationFilter(
-            StringAttr::get(context, "distribute1"),
-            StringAttr::get(context, "after_distribute1")));
-  }
-
-  {
-    LinalgLoopDistributionOptions cyclicNprocsGeNiters;
-    cyclicNprocsGeNiters.distributionMethod.resize(
-        2, DistributionMethod::CyclicNumProcsGeNumIters);
-    cyclicNprocsGeNiters.procInfo =
-        getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>;
-    patterns.add<LinalgTilingPattern>(
-        MatmulOp::getOperationName(), context,
-        LinalgTilingOptions()
-            .setTileSizes({8, 8, 4})
-            .setLoopType(LinalgTilingLoopType::ParallelLoops)
-            .setDistributionOptions(cyclicNprocsGeNiters),
-        LinalgTransformationFilter(
-            StringAttr::get(context, "distribute2"),
-            StringAttr::get(context, "after_distribute2")));
-  }
-
-  {
-    LinalgLoopDistributionOptions cyclicNprocsDefault;
-    cyclicNprocsDefault.distributionMethod.resize(2,
-                                                  DistributionMethod::Cyclic);
-    cyclicNprocsDefault.procInfo =
-        getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>;
-    patterns.add<LinalgTilingPattern>(
-        MatmulOp::getOperationName(), context,
-        LinalgTilingOptions()
-            .setTileSizes({8, 8, 4})
-            .setLoopType(LinalgTilingLoopType::ParallelLoops)
-            .setDistributionOptions(cyclicNprocsDefault),
-        LinalgTransformationFilter(
-            StringAttr::get(context, "distribute3"),
-            StringAttr::get(context, "after_distribute3")));
-  }
-
-  {
-    LinalgLoopDistributionOptions cyclicNprocsMixed1;
-    cyclicNprocsMixed1.distributionMethod = {
-        DistributionMethod::CyclicNumProcsEqNumIters,
-        DistributionMethod::CyclicNumProcsGeNumIters};
-    cyclicNprocsMixed1.procInfo = getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>;
-    patterns.add<LinalgTilingPattern>(
-        MatmulOp::getOperationName(), context,
-        LinalgTilingOptions()
-            .setTileSizes({8, 8, 4})
-            .setLoopType(LinalgTilingLoopType::ParallelLoops)
-            .setDistributionOptions(cyclicNprocsMixed1),
-        LinalgTransformationFilter(
-            StringAttr::get(context, "distribute4"),
-            StringAttr::get(context, "after_distribute4")));
-  }
-
-  {
-    LinalgLoopDistributionOptions cyclicNprocsMixed2;
-    cyclicNprocsMixed2.distributionMethod = {
-        DistributionMethod::CyclicNumProcsGeNumIters,
-        DistributionMethod::Cyclic};
-    cyclicNprocsMixed2.procInfo = getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>;
-    patterns.add<LinalgTilingPattern>(
-        MatmulOp::getOperationName(), context,
-        LinalgTilingOptions()
-            .setTileSizes({8, 8, 4})
-            .setLoopType(LinalgTilingLoopType::ParallelLoops)
-            .setDistributionOptions(cyclicNprocsMixed2),
-        LinalgTransformationFilter(
-            StringAttr::get(context, "distribute5"),
-            StringAttr::get(context, "after_distribute5")));
-  }
-
-  {
-    LinalgLoopDistributionOptions cyclicNprocsMixed3;
-    cyclicNprocsMixed3.distributionMethod = {
-        DistributionMethod::Cyclic,
-        DistributionMethod::CyclicNumProcsEqNumIters};
-    cyclicNprocsMixed3.procInfo = getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>;
-
-    patterns.add<LinalgTilingPattern>(
-        MatmulOp::getOperationName(), context,
-        LinalgTilingOptions()
-            .setTileSizes({8, 8, 4})
-            .setLoopType(LinalgTilingLoopType::ParallelLoops)
-            .setDistributionOptions(cyclicNprocsMixed3),
-        LinalgTransformationFilter(
-            StringAttr::get(context, "distribute6"),
-            StringAttr::get(context, "after_distribute6")));
-  }
-
-  {
-    LinalgLoopDistributionOptions cyclicNprocsEqNiters;
-    cyclicNprocsEqNiters.distributionMethod.resize(2,
-                                                   DistributionMethod::Cyclic);
-    cyclicNprocsEqNiters.procInfo =
-        getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>;
-    patterns.add<LinalgTilingPattern>(
-        MatmulOp::getOperationName(), context,
-        LinalgTilingOptions()
-            .setTileSizes({8, 8, 4})
-            .setLoopType(LinalgTilingLoopType::Loops)
-            .setDistributionOptions(cyclicNprocsEqNiters),
-        LinalgTransformationFilter(
-            StringAttr::get(context, "tensors_distribute1"),
-            StringAttr::get(context, "tensors_after_distribute1")));
-  }
-}
-
-static void fillTileFuseAndDistributePatterns(MLIRContext *context,
-                                              RewritePatternSet &patterns) {
-  LinalgLoopDistributionOptions cyclicNprocsEqNiters;
-  cyclicNprocsEqNiters.distributionMethod.resize(2, DistributionMethod::Cyclic);
-  cyclicNprocsEqNiters.procInfo = getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>;
-  patterns.add<LinalgTileAndFuseTensorOpsPattern>(
-      MatmulOp::getOperationName(), context,
-      LinalgTilingAndFusionOptions()
-          .setTileSizes({8, 8, 4})
-          .setDistributionOptions(cyclicNprocsEqNiters),
-      LinalgTransformationFilter(
-          StringAttr::get(context, "tensors_fuse_distribute1"),
-          StringAttr::get(context, "tensors_after_fuse_distribute1")));
 }
 
 static void applyVectorTransferForwardingPatterns(func::FuncOp funcOp) {
@@ -409,9 +158,6 @@ static void applyVectorTransferForwardingPatterns(func::FuncOp funcOp) {
 static void applyLinalgToVectorPatterns(func::FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
   auto *ctx = funcOp.getContext();
-  patterns.add<LinalgVectorizationPattern>(
-      ctx, LinalgTransformationFilter()
-               .addOpFilter<ContractionOpInterface, FillOp, GenericOp>());
   patterns.add<CopyVectorizationPattern>(ctx);
   populatePadOpVectorizationPatterns(patterns);
   populateConvolutionVectorizationPatterns(patterns);
@@ -430,50 +176,21 @@ static void applyGeneralizePadTensorPatterns(func::FuncOp funcOp) {
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
-static void applyExtractSliceOfPadTensorSwapPattern(func::FuncOp funcOp) {
+static void applyGeneralizeTensorPackPatterns(func::FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
-  patterns.add<ExtractSliceOfPadTensorSwapPattern>(funcOp.getContext());
+  patterns.add<GeneralizeOuterUnitDimsPackOpPattern>(funcOp.getContext());
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
-static void applyTilePattern(func::FuncOp funcOp, const std::string &loopType,
-                             ArrayRef<int64_t> tileSizes,
-                             ArrayRef<int64_t> peeledLoops,
-                             bool scalarizeDynamicDims) {
-  MLIRContext *context = funcOp.getContext();
-  RewritePatternSet tilingPattern(context);
-  LinalgTilingLoopType type =
-      llvm::StringSwitch<LinalgTilingLoopType>(loopType)
-          .Case("for", LinalgTilingLoopType::Loops)
-          .Case("affine", LinalgTilingLoopType::AffineLoops)
-          .Case("parallel", LinalgTilingLoopType::ParallelLoops);
-  auto linalgTilingOptions = linalg::LinalgTilingOptions()
-                                 .setPeeledLoops(peeledLoops)
-                                 .setLoopType(type);
-  if (scalarizeDynamicDims) {
-    linalgTilingOptions.scalarizeDynamicDims();
-    assert(tileSizes.empty() &&
-           "tileSizes and scalarizeDynamicDims is mutually exclusive");
-  } else {
-    linalgTilingOptions.setTileSizes(tileSizes);
-  }
-  linalg::LinalgTransformationFilter f(StringAttr::get(context, "tile"));
-  TilingPatterns<linalg::MatmulOp, linalg::GenericOp>::insert(
-      tilingPattern, linalgTilingOptions, f);
-  (void)applyPatternsAndFoldGreedily(funcOp, std::move(tilingPattern));
+static void applyGeneralizeTensorUnPackPatterns(func::FuncOp funcOp) {
+  RewritePatternSet patterns(funcOp.getContext());
+  patterns.add<GeneralizeOuterUnitDimsUnPackOpPattern>(funcOp.getContext());
+  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
-static void applySplitReduction(func::FuncOp funcOp) {
+static void applyExtractSliceOfPadTensorSwapPattern(func::FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
-  linalg::populateSplitReductionPattern(
-      patterns,
-      [](LinalgOp op) {
-        unsigned insertDimIndex = op.getNumLoops() - 1;
-        return std::make_pair(4, insertDimIndex);
-      },
-      LinalgTransformationFilter(
-          ArrayRef<StringAttr>{},
-          StringAttr::get(funcOp.getContext(), "SPLIT")));
+  patterns.add<ExtractSliceOfPadTensorSwapPattern>(funcOp.getContext());
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
@@ -483,27 +200,26 @@ static void applyBubbleUpExtractSliceOpPattern(func::FuncOp funcOp) {
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
+static void applySwapExtractSliceWithFillPattern(func::FuncOp funcOp) {
+  RewritePatternSet patterns(funcOp.getContext());
+  populateSwapExtractSliceWithFillPatterns(patterns);
+  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+}
+
+static void applyEraseUnusedOperandsAndResultsPatterns(func::FuncOp funcOp) {
+  RewritePatternSet patterns(funcOp.getContext());
+  populateEraseUnusedOperandsAndResultsPatterns(patterns);
+  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+}
+
+static void applyEraseUnnecessaryInputs(func::FuncOp funcOp) {
+  RewritePatternSet patterns(funcOp.getContext());
+  populateEraseUnnecessaryInputsPatterns(patterns);
+  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+}
+
 /// Apply transformations specified as patterns.
 void TestLinalgTransforms::runOnOperation() {
-  auto lambda = [&](void *) {
-    getOperation().walk([](LinalgOp op) {
-      op->removeAttr(LinalgTransforms::kLinalgTransformMarker);
-    });
-  };
-  std::unique_ptr<void, decltype(lambda)> cleanupGuard{(void *)1, lambda};
-
-  if (testTileAndDistributionOptions) {
-    RewritePatternSet patterns(&getContext());
-    fillTileAndDistributePatterns(&getContext(), patterns);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
-    return;
-  }
-  if (testTileFuseAndDistributionOptions) {
-    RewritePatternSet patterns(&getContext());
-    fillTileFuseAndDistributePatterns(&getContext(), patterns);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
-    return;
-  }
   if (testPatterns)
     return applyPatterns(getOperation());
   if (testVectorTransferForwardingPatterns)
@@ -514,18 +230,20 @@ void TestLinalgTransforms::runOnOperation() {
     return applyPadTensorToGenericPatterns(getOperation());
   if (testGeneralizePadTensor)
     return applyGeneralizePadTensorPatterns(getOperation());
+  if (testGeneralizeTensorPackOp)
+    return applyGeneralizeTensorPackPatterns(getOperation());
+  if (testGeneralizeTensorUnPackOp)
+    return applyGeneralizeTensorUnPackPatterns(getOperation());
   if (testSwapSubTensorPadTensor)
     return applyExtractSliceOfPadTensorSwapPattern(getOperation());
-  if (testTilePattern)
-    return applyTilePattern(getOperation(), loopType, tileSizes, peeledLoops,
-                            /*scalarizeDynamicDims=*/false);
-  if (testTileScalarizeDynamicDims)
-    return applyTilePattern(getOperation(), loopType, tileSizes,
-                            /*peeledLoops=*/{}, /*scalarizeDynamicDims=*/true);
-  if (testSplitReduction)
-    return applySplitReduction(getOperation());
   if (testBubbleUpExtractSliceOpPattern)
     return applyBubbleUpExtractSliceOpPattern(getOperation());
+  if (testSwapExtractSliceWithFill)
+    return applySwapExtractSliceWithFillPattern(getOperation());
+  if (testEraseUnusedOperandsAndResults)
+    return applyEraseUnusedOperandsAndResultsPatterns(getOperation());
+  if (testEraseUnnecessaryInputs)
+    return applyEraseUnnecessaryInputs(getOperation());
 }
 
 namespace mlir {

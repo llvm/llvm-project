@@ -11,25 +11,24 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT: {{^}} call      $push2=, _ZN5AppleC1Ev, $pop1{{$}}
 ; CHECK-NEXT: return    $pop2{{$}}
 %class.Apple = type { i8 }
-declare noalias i8* @_Znwm(i32)
-declare %class.Apple* @_ZN5AppleC1Ev(%class.Apple* returned)
-define %class.Apple* @_Z3foov() {
+declare noalias ptr @_Znwm(i32)
+declare ptr @_ZN5AppleC1Ev(ptr returned)
+define ptr @_Z3foov() {
 entry:
-  %call = tail call noalias i8* @_Znwm(i32 1)
-  %0 = bitcast i8* %call to %class.Apple*
-  %call1 = tail call %class.Apple* @_ZN5AppleC1Ev(%class.Apple* %0)
-  ret %class.Apple* %0
+  %call = tail call noalias ptr @_Znwm(i32 1)
+  %call1 = tail call ptr @_ZN5AppleC1Ev(ptr %call)
+  ret ptr %call
 }
 
 ; CHECK-LABEL: _Z3barPvS_l:
 ; CHECK-NEXT: .functype _Z3barPvS_l (i32, i32, i32) -> (i32){{$}}
 ; CHECK-NEXT: {{^}} call     $push0=, memcpy, $0, $1, $2{{$}}
 ; CHECK-NEXT: return   $pop0{{$}}
-declare i8* @memcpy(i8* returned, i8*, i32)
-define i8* @_Z3barPvS_l(i8* %p, i8* %s, i32 %n) {
+declare ptr @memcpy(ptr returned, ptr, i32)
+define ptr @_Z3barPvS_l(ptr %p, ptr %s, i32 %n) {
 entry:
-  %call = tail call i8* @memcpy(i8* %p, i8* %s, i32 %n)
-  ret i8* %p
+  %call = tail call ptr @memcpy(ptr %p, ptr %s, i32 %n)
+  ret ptr %p
 }
 
 ; Test that the optimization isn't performed on constant arguments.
@@ -39,12 +38,12 @@ entry:
 ; CHECK-NEXT: {{^}} call        $drop=, returns_arg, $pop0{{$}}
 ; CHECK-NEXT: return{{$}}
 @global = external global i32
-@addr = global i32* @global
+@addr = global ptr @global
 define void @test_constant_arg() {
-  %call = call i32* @returns_arg(i32* @global)
+  %call = call ptr @returns_arg(ptr @global)
   ret void
 }
-declare i32* @returns_arg(i32* returned)
+declare ptr @returns_arg(ptr returned)
 
 ; Test that the optimization isn't performed on arguments without the
 ; "returned" attribute.

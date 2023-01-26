@@ -5,46 +5,43 @@
 ; ModuleID = 'bugpoint-reduced-simplified.bc'
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-%"DOMParentNode" = type { %"DOMNode"*, %"DOMNode"*, %"DOMNodeListImpl" }
-%"DOMDocumentRange" = type { i32 (...)** }
-%"DOMXPathEvaluator" = type { i32 (...)** }
-%"DOMDocumentTraversal" = type { i32 (...)** }
-%"DOMNode" = type { i32 (...)** }
-%"DOMNodeListImpl" = type { %"DOMNodeList", %"DOMNode"* }
-%"DOMNodeList" = type { i32 (...)** }
-%"DOMElementImpl" = type { %"DOMElement", %"DOMNodeImpl", %"DOMParentNode", %"DOMChildNode", %"DOMAttrMapImpl"*, %"DOMAttrMapImpl"*, i16* }
+%"DOMParentNode" = type { ptr, ptr, %"DOMNodeListImpl" }
+%"DOMDocumentRange" = type { ptr }
+%"DOMXPathEvaluator" = type { ptr }
+%"DOMDocumentTraversal" = type { ptr }
+%"DOMNode" = type { ptr }
+%"DOMNodeListImpl" = type { %"DOMNodeList", ptr }
+%"DOMNodeList" = type { ptr }
+%"DOMElementImpl" = type { %"DOMElement", %"DOMNodeImpl", %"DOMParentNode", %"DOMChildNode", ptr, ptr, ptr }
 %"DOMElement" = type { %"DOMNode" }
-%"DOMNodeImpl" = type <{ %"DOMNode"*, i16, [6 x i8] }>
-%"DOMChildNode" = type { %"DOMNode"*, %"DOMNode"* }
+%"DOMNodeImpl" = type <{ ptr, i16, [6 x i8] }>
+%"DOMChildNode" = type { ptr, ptr }
 %"DOMAttrMapImpl" = type <{ %"DOMNamedNodeMapImpl", i8, [7 x i8] }>
-%"DOMNamedNodeMapImpl" = type { %"DOMNamedNodeMap", %"DOMNode"* }
-%"DOMNamedNodeMap" = type { i32 (...)** }
+%"DOMNamedNodeMapImpl" = type { %"DOMNamedNodeMap", ptr }
+%"DOMNamedNodeMap" = type { ptr }
 %"DOMTextImpl" = type { %"DOMText", %"DOMNodeImpl", %"DOMChildNode" }
 %"DOMText" = type { %"DOMCharacterData" }
 %"DOMCharacterData" = type { %"DOMNode" }
 
 ; Function Attrs: uwtable
-define void @_ZN11xercesc_2_513DOMParentNode9lastChildEPNS_7DOMNodeE(%"DOMParentNode"* %this, %"DOMNode"* %node) #0 align 2 {
+define void @_ZN11xercesc_2_513DOMParentNode9lastChildEPNS_7DOMNodeE(ptr %this, ptr %node) #0 align 2 {
 entry:
   br label %entry.split
 
 entry.split:                                      ; preds = %entry
-  %fFirstChild = getelementptr inbounds %"DOMParentNode", %"DOMParentNode"* %this, i32 0, i32 1
-  %0 = load %"DOMNode"*, %"DOMNode"** %fFirstChild, align 8, !tbaa !1
-  %cmp = icmp ne %"DOMNode"* %0, null
+  %fFirstChild = getelementptr inbounds %"DOMParentNode", ptr %this, i32 0, i32 1
+  %0 = load ptr, ptr %fFirstChild, align 8, !tbaa !1
+  %cmp = icmp ne ptr %0, null
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry.split
-  %1 = bitcast %"DOMNode"* %0 to %"DOMElementImpl"*
-  %fNode.i = getelementptr inbounds %"DOMElementImpl", %"DOMElementImpl"* %1, i32 0, i32 1
-  %flags.i.i = getelementptr inbounds %"DOMNodeImpl", %"DOMNodeImpl"* %fNode.i, i32 0, i32 1
-  %2 = load i16, i16* %flags.i.i, align 8, !tbaa !7
-  %3 = bitcast %"DOMNode"* %0 to %"DOMTextImpl"*
-  %fChild.i = getelementptr inbounds %"DOMTextImpl", %"DOMTextImpl"* %3, i32 0, i32 2
-  %fChild1.i = getelementptr inbounds %"DOMElementImpl", %"DOMElementImpl"* %1, i32 0, i32 3
-  %retval.0.i = select i1 undef, %"DOMChildNode"* %fChild.i, %"DOMChildNode"* %fChild1.i
-  %previousSibling = getelementptr inbounds %"DOMChildNode", %"DOMChildNode"* %retval.0.i, i32 0, i32 0
-  store %"DOMNode"* %node, %"DOMNode"** %previousSibling, align 8, !tbaa !10
+  %fNode.i = getelementptr inbounds %"DOMElementImpl", ptr %0, i32 0, i32 1
+  %flags.i.i = getelementptr inbounds %"DOMNodeImpl", ptr %fNode.i, i32 0, i32 1
+  %1 = load i16, ptr %flags.i.i, align 8, !tbaa !7
+  %fChild.i = getelementptr inbounds %"DOMTextImpl", ptr %0, i32 0, i32 2
+  %fChild1.i = getelementptr inbounds %"DOMElementImpl", ptr %0, i32 0, i32 3
+  %retval.0.i = select i1 undef, ptr %fChild.i, ptr %fChild1.i
+  store ptr %node, ptr %retval.0.i, align 8, !tbaa !10
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry.split

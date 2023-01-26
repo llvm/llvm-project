@@ -96,7 +96,7 @@ void BrainF::header(LLVMContext& C) {
   allocsize = ConstantExpr::getTruncOrBitCast(allocsize, IntPtrTy);
   ptr_arr = CallInst::CreateMalloc(BB, IntPtrTy, Int8Ty, allocsize, val_mem, 
                                    nullptr, "arr");
-  BB->getInstList().push_back(cast<Instruction>(ptr_arr));
+  cast<Instruction>(ptr_arr)->insertInto(BB, BB->end());
 
   //call void @llvm.memset.p0i8.i32(i8 *%arr, i8 0, i32 %d, i1 0)
   {
@@ -128,7 +128,7 @@ void BrainF::header(LLVMContext& C) {
   endbb = BasicBlock::Create(C, label, brainf_func);
 
   //call free(i8 *%arr)
-  endbb->getInstList().push_back(CallInst::CreateFree(ptr_arr, endbb));
+  CallInst::CreateFree(ptr_arr, endbb)->insertInto(endbb, endbb->end());
 
   //ret void
   ReturnInst::Create(C, endbb);
@@ -335,7 +335,7 @@ void BrainF::readloop(PHINode *phi, BasicBlock *oldbb, BasicBlock *testbb,
         switch(c) {
           case '-':
             direction = -1;
-            LLVM_FALLTHROUGH;
+            [[fallthrough]];
 
           case '+':
             if (cursym == SYM_CHANGE) {
@@ -356,7 +356,7 @@ void BrainF::readloop(PHINode *phi, BasicBlock *oldbb, BasicBlock *testbb,
 
           case '<':
             direction = -1;
-            LLVM_FALLTHROUGH;
+            [[fallthrough]];
 
           case '>':
             if (cursym == SYM_MOVE) {

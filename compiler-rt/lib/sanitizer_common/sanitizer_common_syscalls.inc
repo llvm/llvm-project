@@ -910,6 +910,17 @@ POST_SYSCALL(statfs)(long res, const void *path, void *buf) {
   }
 }
 
+PRE_SYSCALL(fstatfs)(long fd, void *buf) {}
+
+POST_SYSCALL(fstatfs)(long res, long fd, void *buf) {
+  if (res >= 0) {
+    if (buf)
+      POST_WRITE(buf, struct_statfs_sz);
+  }
+}
+#  endif  // !SANITIZER_ANDROID
+
+#  if SANITIZER_GLIBC
 PRE_SYSCALL(statfs64)(const void *path, long sz, void *buf) {
   if (path)
     PRE_READ(path, __sanitizer::internal_strlen((const char *)path) + 1);
@@ -922,15 +933,6 @@ POST_SYSCALL(statfs64)(long res, const void *path, long sz, void *buf) {
   }
 }
 
-PRE_SYSCALL(fstatfs)(long fd, void *buf) {}
-
-POST_SYSCALL(fstatfs)(long res, long fd, void *buf) {
-  if (res >= 0) {
-    if (buf)
-      POST_WRITE(buf, struct_statfs_sz);
-  }
-}
-
 PRE_SYSCALL(fstatfs64)(long fd, long sz, void *buf) {}
 
 POST_SYSCALL(fstatfs64)(long res, long fd, long sz, void *buf) {
@@ -939,7 +941,7 @@ POST_SYSCALL(fstatfs64)(long res, long fd, long sz, void *buf) {
       POST_WRITE(buf, struct_statfs64_sz);
   }
 }
-#  endif  // !SANITIZER_ANDROID
+#  endif  // SANITIZER_GLIBC
 
 PRE_SYSCALL(lstat)(const void *filename, void *statbuf) {
   if (filename)
@@ -998,7 +1000,7 @@ POST_SYSCALL(newfstat)(long res, long fd, void *statbuf) {
   }
 }
 
-#  if !SANITIZER_ANDROID
+#  if SANITIZER_GLIBC
 PRE_SYSCALL(ustat)(long dev, void *ubuf) {}
 
 POST_SYSCALL(ustat)(long res, long dev, void *ubuf) {
@@ -1007,7 +1009,7 @@ POST_SYSCALL(ustat)(long res, long dev, void *ubuf) {
       POST_WRITE(ubuf, struct_ustat_sz);
   }
 }
-#  endif  // !SANITIZER_ANDROID
+#  endif  // SANITIZER_GLIBC
 
 PRE_SYSCALL(stat64)(const void *filename, void *statbuf) {
   if (filename)
@@ -2106,6 +2108,7 @@ PRE_SYSCALL(epoll_wait)
 POST_SYSCALL(epoll_wait)
 (long res, long epfd, void *events, long maxevents, long timeout) {
   if (res >= 0) {
+    COMMON_SYSCALL_FD_ACQUIRE(epfd);
     if (events)
       POST_WRITE(events, res * struct_epoll_event_sz);
   }
@@ -2122,6 +2125,7 @@ POST_SYSCALL(epoll_pwait)
 (long res, long epfd, void *events, long maxevents, long timeout,
  const void *sigmask, long sigsetsize) {
   if (res >= 0) {
+    COMMON_SYSCALL_FD_ACQUIRE(epfd);
     if (events)
       POST_WRITE(events, res * struct_epoll_event_sz);
   }
@@ -2142,6 +2146,7 @@ POST_SYSCALL(epoll_pwait2)
  const sanitizer_kernel_timespec *timeout, const void *sigmask,
  long sigsetsize) {
   if (res >= 0) {
+    COMMON_SYSCALL_FD_ACQUIRE(epfd);
     if (events)
       POST_WRITE(events, res * struct_epoll_event_sz);
   }
@@ -2228,7 +2233,7 @@ POST_SYSCALL(setrlimit)(long res, long resource, void *rlim) {
   }
 }
 
-#  if !SANITIZER_ANDROID
+#  if SANITIZER_GLIBC
 PRE_SYSCALL(prlimit64)
 (long pid, long resource, const void *new_rlim, void *old_rlim) {
   if (new_rlim)
@@ -2512,7 +2517,7 @@ PRE_SYSCALL(ptrace)(long request, long pid, long addr, long data) {
 #  if !SANITIZER_ANDROID &&                                                   \
       (defined(__i386) || defined(__x86_64) || defined(__mips64) ||           \
        defined(__powerpc64__) || defined(__aarch64__) || defined(__s390__) || \
-       SANITIZER_RISCV64)
+       defined(__loongarch__) || SANITIZER_RISCV64)
   if (data) {
     if (request == ptrace_setregs) {
       PRE_READ((void *)data, struct_user_regs_struct_sz);
@@ -2534,7 +2539,7 @@ POST_SYSCALL(ptrace)(long res, long request, long pid, long addr, long data) {
 #  if !SANITIZER_ANDROID &&                                                   \
       (defined(__i386) || defined(__x86_64) || defined(__mips64) ||           \
        defined(__powerpc64__) || defined(__aarch64__) || defined(__s390__) || \
-       SANITIZER_RISCV64)
+       defined(__loongarch__) || SANITIZER_RISCV64)
   if (res >= 0 && data) {
     // Note that this is different from the interceptor in
     // sanitizer_common_interceptors.inc.

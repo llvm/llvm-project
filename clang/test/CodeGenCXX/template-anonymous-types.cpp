@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple x86_64-unknown-linux-gnu -emit-llvm -w -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -emit-llvm -w -o - | FileCheck %s
 
 struct S {
   enum { FOO = 42 };
@@ -27,10 +27,10 @@ void test() {
   // Now check for the class template instantiations.
   //
   // BAR's instantiation of X:
-  // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN1XIN1SUt_EE1fEv(%struct.X* {{[^,]*}} %this)
-  // CHECK-LABEL: define linkonce_odr void @_ZN1XIN1SUt_EEC2ES1_(%struct.X* {{[^,]*}} %this, i32 noundef %t) unnamed_addr
+  // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN1XIN1SUt_EE1fEv(ptr {{[^,]*}} %this)
+  // CHECK-LABEL: define linkonce_odr void @_ZN1XIN1SUt_EEC2ES1_(ptr {{[^,]*}} %this, i32 noundef %t) unnamed_addr
   //
   // FOO's instantiation of X:
-  // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN1XIN1SUt0_EE1fEv(%struct.X.0* {{[^,]*}} %this)
-  // CHECK-LABEL: define linkonce_odr void @_ZN1XIN1SUt0_EEC2ES1_(%struct.X.0* {{[^,]*}} %this, i32 noundef %t) unnamed_addr
+  // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN1XIN1SUt0_EE1fEv(ptr {{[^,]*}} %this)
+  // CHECK-LABEL: define linkonce_odr void @_ZN1XIN1SUt0_EEC2ES1_(ptr {{[^,]*}} %this, i32 noundef %t) unnamed_addr
 }

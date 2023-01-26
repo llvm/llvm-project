@@ -10,4 +10,5 @@ add_llvm_component_library(LLVMWindowsDriver
   LINK_COMPONENTS
   Option
   Support
+  TargetParser
   )

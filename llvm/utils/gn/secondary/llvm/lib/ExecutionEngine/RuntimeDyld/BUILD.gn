@@ -5,6 +5,7 @@ static_library("RuntimeDyld") {
     "//llvm/lib/MC",
     "//llvm/lib/Object",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "JITSymbol.cpp",

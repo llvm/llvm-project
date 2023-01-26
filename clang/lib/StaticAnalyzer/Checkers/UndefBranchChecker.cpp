@@ -18,6 +18,7 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include <optional>
 #include <utility>
 
 using namespace clang;
@@ -93,7 +94,7 @@ void UndefBranchChecker::checkBranchCondition(const Stmt *Condition,
       ProgramPoint P = PrevN->getLocation();
       ProgramStateRef St = N->getState();
 
-      if (Optional<PostStmt> PS = P.getAs<PostStmt>())
+      if (std::optional<PostStmt> PS = P.getAs<PostStmt>())
         if (PS->getStmt() == Ex)
           St = PrevN->getState();
 

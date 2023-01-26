@@ -1,4 +1,4 @@
-; RUN: opt < %s -slsr -gvn -S | FileCheck %s
+; RUN: opt < %s -passes=slsr,gvn -S | FileCheck %s
 ; RUN: opt < %s -passes='slsr,gvn' -S | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -6,22 +6,21 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Do not perform SLSR on &input[s] and &input[s * 2] which fit into addressing
 ; modes of X86.
-define i32 @no_slsr_gep(i32* %input, i64 %s) {
+define i32 @no_slsr_gep(ptr %input, i64 %s) {
 ; CHECK-LABEL: @no_slsr_gep(
   ; v0 = input[0];
-  %p0 = getelementptr inbounds i32, i32* %input, i64 0
-  %v0 = load i32, i32* %p0
+  %v0 = load i32, ptr %input
 
   ; v1 = input[s];
-  %p1 = getelementptr inbounds i32, i32* %input, i64 %s
-; CHECK: %p1 = getelementptr inbounds i32, i32* %input, i64 %s
-  %v1 = load i32, i32* %p1
+  %p1 = getelementptr inbounds i32, ptr %input, i64 %s
+; CHECK: %p1 = getelementptr inbounds i32, ptr %input, i64 %s
+  %v1 = load i32, ptr %p1
 
   ; v2 = input[s * 2];
   %s2 = mul nsw i64 %s, 2
-  %p2 = getelementptr inbounds i32, i32* %input, i64 %s2
-; CHECK: %p2 = getelementptr inbounds i32, i32* %input, i64 %s2
-  %v2 = load i32, i32* %p2
+  %p2 = getelementptr inbounds i32, ptr %input, i64 %s2
+; CHECK: %p2 = getelementptr inbounds i32, ptr %input, i64 %s2
+  %v2 = load i32, ptr %p2
 
   ; return v0 + v1 + v2;
   %1 = add i32 %v0, %v1

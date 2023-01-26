@@ -29,17 +29,17 @@
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 
-@A = common global [20 x i64] zeroinitializer, align 8 ; <[20 x i64]*> [#uses=1]
+@A = common global [20 x i64] zeroinitializer, align 8 ; <ptr> [#uses=1]
 
 define i32 @main() nounwind {
 entry:
-  store i64 0, i64* getelementptr inbounds ([20 x i64], [20 x i64]* @A, i32 0, i32 0)
+  store i64 0, ptr @A
   fence seq_cst
   br label %do.body
 
 do.body:                                          ; preds = %do.cond, %entry
   %0 = phi i64 [ 0, %entry ], [ %inc, %do.cond ]  ; <i64> [#uses=2]
-  store i64 %0, i64* getelementptr inbounds ([20 x i64], [20 x i64]* @A, i32 0, i32 0)
+  store i64 %0, ptr @A
   %inc = add nsw i64 %0, 1                        ; <i64> [#uses=2]
   br label %do.cond
 
@@ -49,7 +49,7 @@ do.cond:                                          ; preds = %do.body
 
 do.end:                                           ; preds = %do.cond
   fence seq_cst
-  %tmp3 = load i64, i64* getelementptr inbounds ([20 x i64], [20 x i64]* @A, i32 0, i32 0) ; <i64> [#uses=1]
+  %tmp3 = load i64, ptr @A ; <i64> [#uses=1]
   %cmp4 = icmp eq i64 %tmp3, 9223372036854775806  ; <i1> [#uses=1]
   br i1 %cmp4, label %if.then, label %if.else
 

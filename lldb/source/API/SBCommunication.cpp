@@ -8,7 +8,7 @@
 
 #include "lldb/API/SBCommunication.h"
 #include "lldb/API/SBBroadcaster.h"
-#include "lldb/Core/Communication.h"
+#include "lldb/Core/ThreadedCommunication.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/Instrumentation.h"
@@ -19,7 +19,8 @@ using namespace lldb_private;
 SBCommunication::SBCommunication() { LLDB_INSTRUMENT_VA(this); }
 
 SBCommunication::SBCommunication(const char *broadcaster_name)
-    : m_opaque(new Communication(broadcaster_name)), m_opaque_owned(true) {
+    : m_opaque(new ThreadedCommunication(broadcaster_name)),
+      m_opaque_owned(true) {
   LLDB_INSTRUMENT_VA(this, broadcaster_name);
 }
 
@@ -106,7 +107,7 @@ size_t SBCommunication::Read(void *dst, size_t dst_len, uint32_t timeout_usec,
 
   size_t bytes_read = 0;
   Timeout<std::micro> timeout = timeout_usec == UINT32_MAX
-                                    ? Timeout<std::micro>(llvm::None)
+                                    ? Timeout<std::micro>(std::nullopt)
                                     : std::chrono::microseconds(timeout_usec);
   if (m_opaque)
     bytes_read = m_opaque->Read(dst, dst_len, timeout, status, nullptr);
@@ -169,5 +170,5 @@ SBBroadcaster SBCommunication::GetBroadcaster() {
 const char *SBCommunication::GetBroadcasterClass() {
   LLDB_INSTRUMENT();
 
-  return Communication::GetStaticBroadcasterClass().AsCString();
+  return ThreadedCommunication::GetStaticBroadcasterClass().AsCString();
 }

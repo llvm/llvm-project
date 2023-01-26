@@ -8,7 +8,7 @@
 ; DISASSEMBLY-VI: .long 0xdd348000                                           // {{[0-9]+}}: DD348000
 ; DISASSEMBLY-VI-NEXT: v_cndmask_b32_e32 v0, v0, v0, vcc                     // {{[0-9]+}}: 00000100
 
-define amdgpu_kernel void @global_atomic_fadd_noret_f32_wrong_subtarget(float addrspace(1)* %ptr) #0 {
+define amdgpu_kernel void @global_atomic_fadd_noret_f32_wrong_subtarget(ptr addrspace(1) %ptr) #0 {
 ; GCN-LABEL: global_atomic_fadd_noret_f32_wrong_subtarget:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -19,7 +19,7 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32_wrong_subtarget(float ad
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_wbinvl1_vol
 ; GCN-NEXT:    s_endpgm
-  %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 syncscope("agent") seq_cst
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, float 4.0 syncscope("agent") seq_cst
   ret void
 }
 

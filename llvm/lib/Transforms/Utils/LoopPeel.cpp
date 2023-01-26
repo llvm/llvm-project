@@ -11,7 +11,6 @@
 
 #include "llvm/Transforms/Utils/LoopPeel.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/Loads.h"
@@ -29,6 +28,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -41,6 +41,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -71,25 +72,20 @@ static cl::opt<unsigned> UnrollForcePeelCount(
     "unroll-force-peel-count", cl::init(0), cl::Hidden,
     cl::desc("Force a peel count regardless of profiling information."));
 
+static cl::opt<bool> DisableAdvancedPeeling(
+    "disable-advanced-peeling", cl::init(false), cl::Hidden,
+    cl::desc(
+        "Disable advance peeling. Issues for convergent targets (D134803)."));
+
 static const char *PeeledCountMetaData = "llvm.loop.peeled.count";
 
 // Check whether we are capable of peeling this loop.
-bool llvm::canPeel(Loop *L) {
+bool llvm::canPeel(const Loop *L) {
   // Make sure the loop is in simplified form
   if (!L->isLoopSimplifyForm())
     return false;
-
-  // Don't try to peel loops where the latch is not the exiting block.
-  // This can be an indication of two different things:
-  // 1) The loop is not rotated.
-  // 2) The loop contains irreducible control flow that involves the latch.
-  const BasicBlock *Latch = L->getLoopLatch();
-  if (!L->isLoopExiting(Latch))
-    return false;
-
-  // Peeling is only supported if the latch is a branch.
-  if (!isa<BranchInst>(Latch->getTerminator()))
-    return false;
+  if (!DisableAdvancedPeeling)
+    return true;
 
   SmallVector<BasicBlock *, 4> Exits;
   L->getUniqueNonLatchExitBlocks(Exits);
@@ -104,63 +100,182 @@ bool llvm::canPeel(Loop *L) {
   return llvm::all_of(Exits, IsBlockFollowedByDeoptOrUnreachable);
 }
 
-// This function calculates the number of iterations after which the given Phi
-// becomes an invariant. The pre-calculated values are memorized in the map. The
-// function (shortcut is I) is calculated according to the following definition:
+namespace {
+
+// As a loop is peeled, it may be the case that Phi nodes become
+// loop-invariant (ie, known because there is only one choice).
+// For example, consider the following function:
+//   void g(int);
+//   void binary() {
+//     int x = 0;
+//     int y = 0;
+//     int a = 0;
+//     for(int i = 0; i <100000; ++i) {
+//       g(x);
+//       x = y;
+//       g(a);
+//       y = a + 1;
+//       a = 5;
+//     }
+//   }
+// Peeling 3 iterations is beneficial because the values for x, y and a
+// become known.  The IR for this loop looks something like the following:
+//
+//   %i = phi i32 [ 0, %entry ], [ %inc, %if.end ]
+//   %a = phi i32 [ 0, %entry ], [ 5, %if.end ]
+//   %y = phi i32 [ 0, %entry ], [ %add, %if.end ]
+//   %x = phi i32 [ 0, %entry ], [ %y, %if.end ]
+//   ...
+//   tail call void @_Z1gi(i32 signext %x)
+//   tail call void @_Z1gi(i32 signext %a)
+//   %add = add nuw nsw i32 %a, 1
+//   %inc = add nuw nsw i32 %i, 1
+//   %exitcond = icmp eq i32 %inc, 100000
+//   br i1 %exitcond, label %for.cond.cleanup, label %for.body
+//
+// The arguments for the calls to g will become known after 3 iterations
+// of the loop, because the phi nodes values become known after 3 iterations
+// of the loop (ie, they are known on the 4th iteration, so peel 3 iterations).
+// The first iteration has g(0), g(0); the second has g(0), g(5); the
+// third has g(1), g(5) and the fourth (and all subsequent) have g(6), g(5).
+// Now consider the phi nodes:
+//   %a is a phi with constants so it is determined after iteration 1.
+//   %y is a phi based on a constant and %a so it is determined on
+//     the iteration after %a is determined, so iteration 2.
+//   %x is a phi based on a constant and %y so it is determined on
+//     the iteration after %y, so iteration 3.
+//   %i is based on itself (and is an induction variable) so it is
+//     never determined.
+// This means that peeling off 3 iterations will result in being able to
+// remove the phi nodes for %a, %y, and %x.  The arguments for the
+// corresponding calls to g are determined and the code for computing
+// x, y, and a can be removed.
+//
+// The PhiAnalyzer class calculates how many times a loop should be
+// peeled based on the above analysis of the phi nodes in the loop while
+// respecting the maximum specified.
+class PhiAnalyzer {
+public:
+  PhiAnalyzer(const Loop &L, unsigned MaxIterations);
+
+  // Calculate the sufficient minimum number of iterations of the loop to peel
+  // such that phi instructions become determined (subject to allowable limits)
+  std::optional<unsigned> calculateIterationsToPeel();
+
+protected:
+  using PeelCounter = std::optional<unsigned>;
+  const PeelCounter Unknown = std::nullopt;
+
+  // Add 1 respecting Unknown and return Unknown if result over MaxIterations
+  PeelCounter addOne(PeelCounter PC) const {
+    if (PC == Unknown)
+      return Unknown;
+    return (*PC + 1 <= MaxIterations) ? PeelCounter{*PC + 1} : Unknown;
+  }
+
+  // Calculate the number of iterations after which the given value
+  // becomes an invariant.
+  PeelCounter calculate(const Value &);
+
+  const Loop &L;
+  const unsigned MaxIterations;
+
+  // Map of Values to number of iterations to invariance
+  SmallDenseMap<const Value *, PeelCounter> IterationsToInvariance;
+};
+
+PhiAnalyzer::PhiAnalyzer(const Loop &L, unsigned MaxIterations)
+    : L(L), MaxIterations(MaxIterations) {
+  assert(canPeel(&L) && "loop is not suitable for peeling");
+  assert(MaxIterations > 0 && "no peeling is allowed?");
+}
+
+// This function calculates the number of iterations after which the value
+// becomes an invariant. The pre-calculated values are memorized in a map.
+// N.B. This number will be Unknown or <= MaxIterations.
+// The function is calculated according to the following definition:
 // Given %x = phi <Inputs from above the loop>, ..., [%y, %back.edge].
-//   If %y is a loop invariant, then I(%x) = 1.
-//   If %y is a Phi from the loop header, I(%x) = I(%y) + 1.
-//   Otherwise, I(%x) is infinite.
-// TODO: Actually if %y is an expression that depends only on Phi %z and some
-//       loop invariants, we can estimate I(%x) = I(%z) + 1. The example
-//       looks like:
-//         %x = phi(0, %a),  <-- becomes invariant starting from 3rd iteration.
-//         %y = phi(0, 5),
-//         %a = %y + 1.
-static Optional<unsigned> calculateIterationsToInvariance(
-    PHINode *Phi, Loop *L, BasicBlock *BackEdge,
-    SmallDenseMap<PHINode *, Optional<unsigned> > &IterationsToInvariance) {
-  assert(Phi->getParent() == L->getHeader() &&
-         "Non-loop Phi should not be checked for turning into invariant.");
-  assert(BackEdge == L->getLoopLatch() && "Wrong latch?");
+//   F(%x) = G(%y) + 1 (N.B. [MaxIterations | Unknown] + 1 => Unknown)
+//   G(%y) = 0 if %y is a loop invariant
+//   G(%y) = G(%BackEdgeValue) if %y is a phi in the header block
+//   G(%y) = TODO: if %y is an expression based on phis and loop invariants
+//           The example looks like:
+//           %x = phi(0, %a) <-- becomes invariant starting from 3rd iteration.
+//           %y = phi(0, 5)
+//           %a = %y + 1
+//   G(%y) = Unknown otherwise (including phi not in header block)
+PhiAnalyzer::PeelCounter PhiAnalyzer::calculate(const Value &V) {
   // If we already know the answer, take it from the map.
-  auto I = IterationsToInvariance.find(Phi);
+  auto I = IterationsToInvariance.find(&V);
   if (I != IterationsToInvariance.end())
     return I->second;
 
-  // Otherwise we need to analyze the input from the back edge.
-  Value *Input = Phi->getIncomingValueForBlock(BackEdge);
-  // Place infinity to map to avoid infinite recursion for cycled Phis. Such
+  // Place Unknown to map to avoid infinite recursion. Such
   // cycles can never stop on an invariant.
-  IterationsToInvariance[Phi] = None;
-  Optional<unsigned> ToInvariance = None;
+  IterationsToInvariance[&V] = Unknown;
 
-  if (L->isLoopInvariant(Input))
-    ToInvariance = 1u;
-  else if (PHINode *IncPhi = dyn_cast<PHINode>(Input)) {
-    // Only consider Phis in header block.
-    if (IncPhi->getParent() != L->getHeader())
-      return None;
-    // If the input becomes an invariant after X iterations, then our Phi
-    // becomes an invariant after X + 1 iterations.
-    auto InputToInvariance = calculateIterationsToInvariance(
-        IncPhi, L, BackEdge, IterationsToInvariance);
-    if (InputToInvariance)
-      ToInvariance = *InputToInvariance + 1u;
+  if (L.isLoopInvariant(&V))
+    // Loop invariant so known at start.
+    return (IterationsToInvariance[&V] = 0);
+  if (const PHINode *Phi = dyn_cast<PHINode>(&V)) {
+    if (Phi->getParent() != L.getHeader()) {
+      // Phi is not in header block so Unknown.
+      assert(IterationsToInvariance[&V] == Unknown && "unexpected value saved");
+      return Unknown;
+    }
+    // We need to analyze the input from the back edge and add 1.
+    Value *Input = Phi->getIncomingValueForBlock(L.getLoopLatch());
+    PeelCounter Iterations = calculate(*Input);
+    assert(IterationsToInvariance[Input] == Iterations &&
+           "unexpected value saved");
+    return (IterationsToInvariance[Phi] = addOne(Iterations));
   }
+  if (const Instruction *I = dyn_cast<Instruction>(&V)) {
+    if (isa<CmpInst>(I) || I->isBinaryOp()) {
+      // Binary instructions get the max of the operands.
+      PeelCounter LHS = calculate(*I->getOperand(0));
+      if (LHS == Unknown)
+        return Unknown;
+      PeelCounter RHS = calculate(*I->getOperand(1));
+      if (RHS == Unknown)
+        return Unknown;
+      return (IterationsToInvariance[I] = {std::max(*LHS, *RHS)});
+    }
+    if (I->isCast())
+      // Cast instructions get the value of the operand.
+      return (IterationsToInvariance[I] = calculate(*I->getOperand(0)));
+  }
+  // TODO: handle more expressions
 
-  // If we found that this Phi lies in an invariant chain, update the map.
-  if (ToInvariance)
-    IterationsToInvariance[Phi] = ToInvariance;
-  return ToInvariance;
+  // Everything else is Unknown.
+  assert(IterationsToInvariance[&V] == Unknown && "unexpected value saved");
+  return Unknown;
 }
+
+std::optional<unsigned> PhiAnalyzer::calculateIterationsToPeel() {
+  unsigned Iterations = 0;
+  for (auto &PHI : L.getHeader()->phis()) {
+    PeelCounter ToInvariance = calculate(PHI);
+    if (ToInvariance != Unknown) {
+      assert(*ToInvariance <= MaxIterations && "bad result in phi analysis");
+      Iterations = std::max(Iterations, *ToInvariance);
+      if (Iterations == MaxIterations)
+        break;
+    }
+  }
+  assert((Iterations <= MaxIterations) && "bad result in phi analysis");
+  return Iterations ? std::optional<unsigned>(Iterations) : std::nullopt;
+}
+
+} // unnamed namespace
 
 // Try to find any invariant memory reads that will become dereferenceable in
 // the remainder loop after peeling. The load must also be used (transitively)
 // by an exit condition. Returns the number of iterations to peel off (at the
 // moment either 0 or 1).
 static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
-                                                      DominatorTree &DT) {
+                                                      DominatorTree &DT,
+                                                      AssumptionCache *AC) {
   // Skip loops with a single exiting block, because there should be no benefit
   // for the heuristic below.
   if (L.getExitingBlock())
@@ -201,7 +316,7 @@ static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
       if (auto *LI = dyn_cast<LoadInst>(&I)) {
         Value *Ptr = LI->getPointerOperand();
         if (DT.dominates(BB, Latch) && L.isLoopInvariant(Ptr) &&
-            !isDereferenceablePointer(Ptr, LI->getType(), DL, LI, &DT))
+            !isDereferenceablePointer(Ptr, LI->getType(), DL, LI, AC, &DT))
           for (Value *U : I.users())
             LoadUsers.insert(U);
       }
@@ -330,7 +445,7 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
 
 /// This "heuristic" exactly matches implicit behavior which used to exist
 /// inside getLoopEstimatedTripCount.  It was added here to keep an
-/// improvement inside that API from causing peeling to become more agressive.
+/// improvement inside that API from causing peeling to become more aggressive.
 /// This should probably be removed.
 static bool violatesLegacyMultiExitLoopCheck(Loop *L) {
   BasicBlock *Latch = L->getLoopLatch();
@@ -357,7 +472,8 @@ static bool violatesLegacyMultiExitLoopCheck(Loop *L) {
 void llvm::computePeelCount(Loop *L, unsigned LoopSize,
                             TargetTransformInfo::PeelingPreferences &PP,
                             unsigned TripCount, DominatorTree &DT,
-                            ScalarEvolution &SE, unsigned Threshold) {
+                            ScalarEvolution &SE, AssumptionCache *AC,
+                            unsigned Threshold) {
   assert(LoopSize > 0 && "Zero loop size is not allowed!");
   // Save the PP.PeelCount value set by the target in
   // TTI.getPeelingPreferences or by the flag -unroll-peel-count.
@@ -397,38 +513,31 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   if (AlreadyPeeled >= UnrollPeelMaxCount)
     return;
 
+  // Pay respect to limitations implied by loop size and the max peel count.
+  unsigned MaxPeelCount = UnrollPeelMaxCount;
+  MaxPeelCount = std::min(MaxPeelCount, Threshold / LoopSize - 1);
+
+  // Start the max computation with the PP.PeelCount value set by the target
+  // in TTI.getPeelingPreferences or by the flag -unroll-peel-count.
+  unsigned DesiredPeelCount = TargetPeelCount;
+
   // Here we try to get rid of Phis which become invariants after 1, 2, ..., N
   // iterations of the loop. For this we compute the number for iterations after
   // which every Phi is guaranteed to become an invariant, and try to peel the
   // maximum number of iterations among these values, thus turning all those
   // Phis into invariants.
-
-  // Store the pre-calculated values here.
-  SmallDenseMap<PHINode *, Optional<unsigned>> IterationsToInvariance;
-  // Now go through all Phis to calculate their the number of iterations they
-  // need to become invariants.
-  // Start the max computation with the PP.PeelCount value set by the target
-  // in TTI.getPeelingPreferences or by the flag -unroll-peel-count.
-  unsigned DesiredPeelCount = TargetPeelCount;
-  BasicBlock *BackEdge = L->getLoopLatch();
-  assert(BackEdge && "Loop is not in simplified form?");
-  for (auto BI = L->getHeader()->begin(); isa<PHINode>(&*BI); ++BI) {
-    PHINode *Phi = cast<PHINode>(&*BI);
-    auto ToInvariance = calculateIterationsToInvariance(Phi, L, BackEdge,
-                                                        IterationsToInvariance);
-    if (ToInvariance)
-      DesiredPeelCount = std::max(DesiredPeelCount, *ToInvariance);
+  if (MaxPeelCount > DesiredPeelCount) {
+    // Check how many iterations are useful for resolving Phis
+    auto NumPeels = PhiAnalyzer(*L, MaxPeelCount).calculateIterationsToPeel();
+    if (NumPeels)
+      DesiredPeelCount = std::max(DesiredPeelCount, *NumPeels);
   }
-
-  // Pay respect to limitations implied by loop size and the max peel count.
-  unsigned MaxPeelCount = UnrollPeelMaxCount;
-  MaxPeelCount = std::min(MaxPeelCount, Threshold / LoopSize - 1);
 
   DesiredPeelCount = std::max(DesiredPeelCount,
                               countToEliminateCompares(*L, MaxPeelCount, SE));
 
   if (DesiredPeelCount == 0)
-    DesiredPeelCount = peelToTurnInvariantLoadsDerefencebale(*L, DT);
+    DesiredPeelCount = peelToTurnInvariantLoadsDerefencebale(*L, DT, AC);
 
   if (DesiredPeelCount > 0) {
     DesiredPeelCount = std::min(DesiredPeelCount, MaxPeelCount);
@@ -460,7 +569,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   if (L->getHeader()->getParent()->hasProfileData()) {
     if (violatesLegacyMultiExitLoopCheck(L))
       return;
-    Optional<unsigned> EstimatedTripCount = getLoopEstimatedTripCount(L);
+    std::optional<unsigned> EstimatedTripCount = getLoopEstimatedTripCount(L);
     if (!EstimatedTripCount)
       return;
 
@@ -484,82 +593,87 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   }
 }
 
-/// Update the branch weights of the latch of a peeled-off loop
+struct WeightInfo {
+  // Weights for current iteration.
+  SmallVector<uint32_t> Weights;
+  // Weights to subtract after each iteration.
+  const SmallVector<uint32_t> SubWeights;
+};
+
+/// Update the branch weights of an exiting block of a peeled-off loop
 /// iteration.
-/// This sets the branch weights for the latch of the recently peeled off loop
-/// iteration correctly.
-/// Let F is a weight of the edge from latch to header.
-/// Let E is a weight of the edge from latch to exit.
+/// Let F is a weight of the edge to continue (fallthrough) into the loop.
+/// Let E is a weight of the edge to an exit.
 /// F/(F+E) is a probability to go to loop and E/(F+E) is a probability to
 /// go to exit.
-/// Then, Estimated TripCount = F / E.
+/// Then, Estimated ExitCount = F / E.
 /// For I-th (counting from 0) peeled off iteration we set the the weights for
-/// the peeled latch as (TC - I, 1). It gives us reasonable distribution,
-/// The probability to go to exit 1/(TC-I) increases. At the same time
-/// the estimated trip count of remaining loop reduces by I.
+/// the peeled exit as (EC - I, 1). It gives us reasonable distribution,
+/// The probability to go to exit 1/(EC-I) increases. At the same time
+/// the estimated exit count in the remainder loop reduces by I.
 /// To avoid dealing with division rounding we can just multiple both part
 /// of weights to E and use weight as (F - I * E, E).
-///
-/// \param Header The copy of the header block that belongs to next iteration.
-/// \param LatchBR The copy of the latch branch that belongs to this iteration.
-/// \param[in,out] FallThroughWeight The weight of the edge from latch to
-/// header before peeling (in) and after peeled off one iteration (out).
-static void updateBranchWeights(BasicBlock *Header, BranchInst *LatchBR,
-                                uint64_t ExitWeight,
-                                uint64_t &FallThroughWeight) {
-  // FallThroughWeight is 0 means that there is no branch weights on original
-  // latch block or estimated trip count is zero.
-  if (!FallThroughWeight)
-    return;
-
-  unsigned HeaderIdx = (LatchBR->getSuccessor(0) == Header ? 0 : 1);
-  MDBuilder MDB(LatchBR->getContext());
-  MDNode *WeightNode =
-      HeaderIdx ? MDB.createBranchWeights(ExitWeight, FallThroughWeight)
-                : MDB.createBranchWeights(FallThroughWeight, ExitWeight);
-  LatchBR->setMetadata(LLVMContext::MD_prof, WeightNode);
-  FallThroughWeight =
-      FallThroughWeight > ExitWeight ? FallThroughWeight - ExitWeight : 1;
+static void updateBranchWeights(Instruction *Term, WeightInfo &Info) {
+  MDBuilder MDB(Term->getContext());
+  Term->setMetadata(LLVMContext::MD_prof,
+                    MDB.createBranchWeights(Info.Weights));
+  for (auto [Idx, SubWeight] : enumerate(Info.SubWeights))
+    if (SubWeight != 0)
+      Info.Weights[Idx] = Info.Weights[Idx] > SubWeight
+                              ? Info.Weights[Idx] - SubWeight
+                              : 1;
 }
 
-/// Initialize the weights.
-///
-/// \param Header The header block.
-/// \param LatchBR The latch branch.
-/// \param[out] ExitWeight The weight of the edge from Latch to Exit.
-/// \param[out] FallThroughWeight The weight of the edge from Latch to Header.
-static void initBranchWeights(BasicBlock *Header, BranchInst *LatchBR,
-                              uint64_t &ExitWeight,
-                              uint64_t &FallThroughWeight) {
-  uint64_t TrueWeight, FalseWeight;
-  if (!LatchBR->extractProfMetadata(TrueWeight, FalseWeight))
-    return;
-  unsigned HeaderIdx = LatchBR->getSuccessor(0) == Header ? 0 : 1;
-  ExitWeight = HeaderIdx ? TrueWeight : FalseWeight;
-  FallThroughWeight = HeaderIdx ? FalseWeight : TrueWeight;
+/// Initialize the weights for all exiting blocks.
+static void initBranchWeights(DenseMap<Instruction *, WeightInfo> &WeightInfos,
+                              Loop *L) {
+  SmallVector<BasicBlock *> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+  for (BasicBlock *ExitingBlock : ExitingBlocks) {
+    Instruction *Term = ExitingBlock->getTerminator();
+    SmallVector<uint32_t> Weights;
+    if (!extractBranchWeights(*Term, Weights))
+      continue;
+
+    // See the comment on updateBranchWeights() for an explanation of what we
+    // do here.
+    uint32_t FallThroughWeights = 0;
+    uint32_t ExitWeights = 0;
+    for (auto [Succ, Weight] : zip(successors(Term), Weights)) {
+      if (L->contains(Succ))
+        FallThroughWeights += Weight;
+      else
+        ExitWeights += Weight;
+    }
+
+    // Don't try to update weights for degenerate case.
+    if (FallThroughWeights == 0)
+      continue;
+
+    SmallVector<uint32_t> SubWeights;
+    for (auto [Succ, Weight] : zip(successors(Term), Weights)) {
+      if (!L->contains(Succ)) {
+        // Exit weights stay the same.
+        SubWeights.push_back(0);
+        continue;
+      }
+
+      // Subtract exit weights on each iteration, distributed across all
+      // fallthrough edges.
+      double W = (double)Weight / (double)FallThroughWeights;
+      SubWeights.push_back((uint32_t)(ExitWeights * W));
+    }
+
+    WeightInfos.insert({Term, {std::move(Weights), std::move(SubWeights)}});
+  }
 }
 
-/// Update the weights of original Latch block after peeling off all iterations.
-///
-/// \param Header The header block.
-/// \param LatchBR The latch branch.
-/// \param ExitWeight The weight of the edge from Latch to Exit.
-/// \param FallThroughWeight The weight of the edge from Latch to Header.
-static void fixupBranchWeights(BasicBlock *Header, BranchInst *LatchBR,
-                               uint64_t ExitWeight,
-                               uint64_t FallThroughWeight) {
-  // FallThroughWeight is 0 means that there is no branch weights on original
-  // latch block or estimated trip count is zero.
-  if (!FallThroughWeight)
-    return;
-
-  // Sets the branch weights on the loop exit.
-  MDBuilder MDB(LatchBR->getContext());
-  unsigned HeaderIdx = LatchBR->getSuccessor(0) == Header ? 0 : 1;
-  MDNode *WeightNode =
-      HeaderIdx ? MDB.createBranchWeights(ExitWeight, FallThroughWeight)
-                : MDB.createBranchWeights(FallThroughWeight, ExitWeight);
-  LatchBR->setMetadata(LLVMContext::MD_prof, WeightNode);
+/// Update the weights of original exiting block after peeling off all
+/// iterations.
+static void fixupBranchWeights(Instruction *Term, const WeightInfo &Info) {
+  MDBuilder MDB(Term->getContext());
+  Term->setMetadata(LLVMContext::MD_prof,
+                    MDB.createBranchWeights(Info.Weights));
 }
 
 /// Clones the body of the loop L, putting it between \p InsertTop and \p
@@ -641,10 +755,10 @@ static void cloneLoopBlocks(
   // header (for the last peeled iteration) or the copied header of the next
   // iteration (for every other iteration)
   BasicBlock *NewLatch = cast<BasicBlock>(VMap[Latch]);
-  BranchInst *LatchBR = cast<BranchInst>(NewLatch->getTerminator());
-  for (unsigned idx = 0, e = LatchBR->getNumSuccessors(); idx < e; ++idx)
-    if (LatchBR->getSuccessor(idx) == Header) {
-      LatchBR->setSuccessor(idx, InsertBot);
+  auto *LatchTerm = cast<Instruction>(NewLatch->getTerminator());
+  for (unsigned idx = 0, e = LatchTerm->getNumSuccessors(); idx < e; ++idx)
+    if (LatchTerm->getSuccessor(idx) == Header) {
+      LatchTerm->setSuccessor(idx, InsertBot);
       break;
     }
   if (DT)
@@ -670,7 +784,7 @@ static void cloneLoopBlocks(
       else
         VMap[&*I] = LatchVal;
     }
-    cast<BasicBlock>(VMap[Header])->getInstList().erase(NewPHI);
+    NewPHI->eraseFromParent();
   }
 
   // Fix up the outgoing values - we need to add a value for the iteration
@@ -693,10 +807,12 @@ static void cloneLoopBlocks(
     LVMap[KV.first] = KV.second;
 }
 
-TargetTransformInfo::PeelingPreferences llvm::gatherPeelingPreferences(
-    Loop *L, ScalarEvolution &SE, const TargetTransformInfo &TTI,
-    Optional<bool> UserAllowPeeling,
-    Optional<bool> UserAllowProfileBasedPeeling, bool UnrollingSpecficValues) {
+TargetTransformInfo::PeelingPreferences
+llvm::gatherPeelingPreferences(Loop *L, ScalarEvolution &SE,
+                               const TargetTransformInfo &TTI,
+                               std::optional<bool> UserAllowPeeling,
+                               std::optional<bool> UserAllowProfileBasedPeeling,
+                               bool UnrollingSpecficValues) {
   TargetTransformInfo::PeelingPreferences PP;
 
   // Set the default values.
@@ -738,7 +854,7 @@ TargetTransformInfo::PeelingPreferences llvm::gatherPeelingPreferences(
 /// optimizations.
 bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
                     ScalarEvolution *SE, DominatorTree &DT, AssumptionCache *AC,
-                    bool PreserveLCSSA) {
+                    bool PreserveLCSSA, ValueToValueMapTy &LVMap) {
   assert(PeelCount > 0 && "Attempt to peel out zero iterations?");
   assert(canPeel(L) && "Attempt to peel a loop which is not peelable?");
 
@@ -830,14 +946,13 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   InsertBot->setName(Header->getName() + ".peel.next");
   NewPreHeader->setName(PreHeader->getName() + ".peel.newph");
 
-  ValueToValueMapTy LVMap;
+  Instruction *LatchTerm =
+      cast<Instruction>(cast<BasicBlock>(Latch)->getTerminator());
 
   // If we have branch weight information, we'll want to update it for the
   // newly created branches.
-  BranchInst *LatchBR =
-      cast<BranchInst>(cast<BasicBlock>(Latch)->getTerminator());
-  uint64_t ExitWeight = 0, FallThroughWeight = 0;
-  initBranchWeights(Header, LatchBR, ExitWeight, FallThroughWeight);
+  DenseMap<Instruction *, WeightInfo> Weights;
+  initBranchWeights(Weights, L);
 
   // Identify what noalias metadata is inside the loop: if it is inside the
   // loop, the associated metadata must be cloned for each iteration.
@@ -866,19 +981,22 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
     assert(DT.verify(DominatorTree::VerificationLevel::Fast));
 #endif
 
-    auto *LatchBRCopy = cast<BranchInst>(VMap[LatchBR]);
-    updateBranchWeights(InsertBot, LatchBRCopy, ExitWeight, FallThroughWeight);
+    for (auto &[Term, Info] : Weights) {
+      auto *TermCopy = cast<Instruction>(VMap[Term]);
+      updateBranchWeights(TermCopy, Info);
+    }
+
     // Remove Loop metadata from the latch branch instruction
     // because it is not the Loop's latch branch anymore.
-    LatchBRCopy->setMetadata(LLVMContext::MD_loop, nullptr);
+    auto *LatchTermCopy = cast<Instruction>(VMap[LatchTerm]);
+    LatchTermCopy->setMetadata(LLVMContext::MD_loop, nullptr);
 
     InsertTop = InsertBot;
     InsertBot = SplitBlock(InsertBot, InsertBot->getTerminator(), &DT, LI);
     InsertBot->setName(Header->getName() + ".peel.next");
 
-    F->getBasicBlockList().splice(InsertTop->getIterator(),
-                                  F->getBasicBlockList(),
-                                  NewBlocks[0]->getIterator(), F->end());
+    F->splice(InsertTop->getIterator(), F, NewBlocks[0]->getIterator(),
+              F->end());
   }
 
   // Now adjust the phi nodes in the loop header to get their initial values
@@ -893,7 +1011,8 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
     PHI->setIncomingValueForBlock(NewPreHeader, NewVal);
   }
 
-  fixupBranchWeights(Header, LatchBR, ExitWeight, FallThroughWeight);
+  for (const auto &[Term, Info] : Weights)
+    fixupBranchWeights(Term, Info);
 
   // Update Metadata for count of peeled off iterations.
   unsigned AlreadyPeeled = 0;

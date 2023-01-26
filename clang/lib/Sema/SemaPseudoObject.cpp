@@ -737,11 +737,11 @@ ExprResult ObjCPropertyOpBuilder::buildGet() {
     assert(InstanceReceiver || RefExpr->isSuperReceiver());
     msg = S.BuildInstanceMessageImplicit(InstanceReceiver, receiverType,
                                          GenericLoc, Getter->getSelector(),
-                                         Getter, None);
+                                         Getter, std::nullopt);
   } else {
     msg = S.BuildClassMessageImplicit(receiverType, RefExpr->isSuperReceiver(),
-                                      GenericLoc, Getter->getSelector(),
-                                      Getter, None);
+                                      GenericLoc, Getter->getSelector(), Getter,
+                                      std::nullopt);
   }
   return msg;
 }
@@ -1200,7 +1200,7 @@ bool ObjCSubscriptOpBuilder::findAtIndexGetter() {
                                                 /*TInfo=*/nullptr,
                                                 SC_None,
                                                 nullptr);
-    AtIndexGetter->setMethodParams(S.Context, Argument, None);
+    AtIndexGetter->setMethodParams(S.Context, Argument, std::nullopt);
   }
 
   if (!AtIndexGetter) {
@@ -1316,7 +1316,7 @@ bool ObjCSubscriptOpBuilder::findAtIndexSetter() {
                                                 SC_None,
                                                 nullptr);
     Params.push_back(key);
-    AtIndexSetter->setMethodParams(S.Context, Params, None);
+    AtIndexSetter->setMethodParams(S.Context, Params, std::nullopt);
   }
 
   if (!AtIndexSetter) {

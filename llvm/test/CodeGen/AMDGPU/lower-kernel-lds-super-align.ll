@@ -1,7 +1,7 @@
-; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=true < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_ON %s
-; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=true < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_ON %s
-; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=false < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_OFF %s
-; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=false < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_OFF %s
+; RUN: opt -opaque-pointers=0 -S -mtriple=amdgcn-- -amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=true --amdgpu-lower-module-lds-strategy=module < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_ON %s
+; RUN: opt -opaque-pointers=0 -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=true --amdgpu-lower-module-lds-strategy=module < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_ON %s
+; RUN: opt -opaque-pointers=0 -S -mtriple=amdgcn-- -amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=false --amdgpu-lower-module-lds-strategy=module < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_OFF %s
+; RUN: opt -opaque-pointers=0 -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=false --amdgpu-lower-module-lds-strategy=module < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_OFF %s
 
 ; CHECK: %llvm.amdgcn.kernel.k1.lds.t = type { [32 x i8] }
 ; CHECK: %llvm.amdgcn.kernel.k2.lds.t = type { i16, [2 x i8], i16 }
@@ -11,6 +11,8 @@
 ; SUPER-ALIGN_ON: @lds.unused = addrspace(3) global i32 undef, align 4
 ; SUPER-ALIGN_OFF: @lds.unused = addrspace(3) global i32 undef, align 2
 @lds.unused = addrspace(3) global i32 undef, align 2
+
+@llvm.used = appending global [1 x i8*] [i8* addrspacecast (i32 addrspace(3)* @lds.unused to i8*)], section "llvm.metadata"
 
 ; CHECK-NOT: @lds.1
 @lds.1 = internal unnamed_addr addrspace(3) global [32 x i8] undef, align 1

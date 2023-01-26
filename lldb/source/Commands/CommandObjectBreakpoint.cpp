@@ -30,6 +30,7 @@
 #include "lldb/Utility/StreamString.h"
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 using namespace lldb;
@@ -55,7 +56,7 @@ public:
   ~BreakpointOptionGroup() override = default;
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-    return llvm::makeArrayRef(g_breakpoint_modify_options);
+    return llvm::ArrayRef(g_breakpoint_modify_options);
   }
 
   Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
@@ -110,24 +111,24 @@ public:
     } break;
     case 't': {
       lldb::tid_t thread_id = LLDB_INVALID_THREAD_ID;
-      if (option_arg[0] != '\0') {
-        if (option_arg == "current") {
-          if (!execution_context) {
-            error.SetErrorStringWithFormat("No context to determine current "
-                                           "thread");
+      if (option_arg == "current") {
+        if (!execution_context) {
+          error.SetErrorStringWithFormat("No context to determine current "
+                                         "thread");
+        } else {
+          ThreadSP ctx_thread_sp = execution_context->GetThreadSP();
+          if (!ctx_thread_sp || !ctx_thread_sp->IsValid()) {
+            error.SetErrorStringWithFormat("No currently selected thread");
           } else {
-            ThreadSP ctx_thread_sp = execution_context->GetThreadSP();
-            if (!ctx_thread_sp || !ctx_thread_sp->IsValid()) {
-              error.SetErrorStringWithFormat("No currently selected thread");
-            } else {
-              thread_id = ctx_thread_sp->GetID();
-            }
+            thread_id = ctx_thread_sp->GetID();
           }
-        } else if (option_arg.getAsInteger(0, thread_id))
-          error.SetErrorStringWithFormat("invalid thread id string '%s'",
-                                         option_arg.str().c_str());
+        }
+      } else if (option_arg.getAsInteger(0, thread_id)) {
+        error.SetErrorStringWithFormat("invalid thread id string '%s'",
+                                       option_arg.str().c_str());
       }
-      m_bp_opts.SetThreadID(thread_id);
+      if (thread_id != LLDB_INVALID_THREAD_ID)
+        m_bp_opts.SetThreadID(thread_id);
     } break;
     case 'T':
       m_bp_opts.GetThreadSpec()->SetName(option_arg.str().c_str());
@@ -137,12 +138,12 @@ public:
       break;
     case 'x': {
       uint32_t thread_index = UINT32_MAX;
-      if (option_arg[0] != '\n') {
-        if (option_arg.getAsInteger(0, thread_index))
-          error.SetErrorStringWithFormat("invalid thread index string '%s'",
-                                         option_arg.str().c_str());
+      if (option_arg.getAsInteger(0, thread_index)) {
+        error.SetErrorStringWithFormat("invalid thread index string '%s'",
+                                       option_arg.str().c_str());
+      } else {
+        m_bp_opts.GetThreadSpec()->SetIndex(thread_index);
       }
-      m_bp_opts.GetThreadSpec()->SetIndex(thread_index);
     } break;
     default:
       llvm_unreachable("Unimplemented option");
@@ -185,7 +186,7 @@ public:
   ~BreakpointDummyOptionGroup() override = default;
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-    return llvm::makeArrayRef(g_breakpoint_dummy_options);
+    return llvm::ArrayRef(g_breakpoint_dummy_options);
   }
 
   Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
@@ -496,7 +497,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_breakpoint_set_options);
+      return llvm::ArrayRef(g_breakpoint_set_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -1158,7 +1159,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_breakpoint_list_options);
+      return llvm::ArrayRef(g_breakpoint_list_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -1281,7 +1282,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_breakpoint_clear_options);
+      return llvm::ArrayRef(g_breakpoint_clear_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -1438,7 +1439,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_breakpoint_delete_options);
+      return llvm::ArrayRef(g_breakpoint_delete_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -1564,7 +1565,7 @@ public:
   ~BreakpointNameOptionGroup() override = default;
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-    return llvm::makeArrayRef(g_breakpoint_name_options);
+    return llvm::ArrayRef(g_breakpoint_name_options);
   }
 
   Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
@@ -1624,7 +1625,7 @@ public:
   ~BreakpointAccessOptionGroup() override = default;
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-    return llvm::makeArrayRef(g_breakpoint_access_options);
+    return llvm::ArrayRef(g_breakpoint_access_options);
   }
   Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                         ExecutionContext *execution_context) override {
@@ -2187,7 +2188,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_breakpoint_read_options);
+      return llvm::ArrayRef(g_breakpoint_read_options);
     }
 
     void HandleOptionArgumentCompletion(
@@ -2204,7 +2205,7 @@ public:
         break;
 
       case 'N':
-        llvm::Optional<FileSpec> file_spec;
+        std::optional<FileSpec> file_spec;
         const llvm::StringRef dash_f("-f");
         for (int arg_idx = 0; arg_idx < opt_arg_pos; arg_idx++) {
           if (dash_f == request.GetParsedLine().GetArgumentAtIndex(arg_idx)) {
@@ -2376,7 +2377,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_breakpoint_write_options);
+      return llvm::ArrayRef(g_breakpoint_write_options);
     }
 
     // Instance variables to hold the values for command options.

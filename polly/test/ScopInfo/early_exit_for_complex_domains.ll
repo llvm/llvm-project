@@ -7,12 +7,11 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 %struct.regnode_charclass_class.2.42.654.690.726.870.978.1770.1806.1842.2166.2274.2382.2598.2814.3030.3064 = type { i8, i8, i16, i32, [32 x i8], [4 x i8] }
 
 ; Function Attrs: nounwind uwtable
-define void @S_cl_or(%struct.regnode_charclass_class.2.42.654.690.726.870.978.1770.1806.1842.2166.2274.2382.2598.2814.3030.3064* %cl, %struct.regnode_charclass_class.2.42.654.690.726.870.978.1770.1806.1842.2166.2274.2382.2598.2814.3030.3064* %or_with) #0 {
+define void @S_cl_or(ptr %cl, ptr %or_with) #0 {
 entry:
-  %flags = getelementptr inbounds %struct.regnode_charclass_class.2.42.654.690.726.870.978.1770.1806.1842.2166.2274.2382.2598.2814.3030.3064, %struct.regnode_charclass_class.2.42.654.690.726.870.978.1770.1806.1842.2166.2274.2382.2598.2814.3030.3064* %or_with, i64 0, i32 0
-  %0 = load i8, i8* %flags, align 4, !tbaa !1
+  %0 = load i8, ptr %or_with, align 4, !tbaa !1
   %conv = zext i8 %0 to i32
-  %1 = load i8, i8* undef, align 4, !tbaa !1
+  %1 = load i8, ptr undef, align 4, !tbaa !1
   br label %land.lhs.true35
 
 land.lhs.true35:                                  ; preds = %entry
@@ -24,14 +23,14 @@ land.lhs.true35:                                  ; preds = %entry
   br i1 %or.cond45, label %if.end91, label %for.body49
 
 for.body49:                                       ; preds = %land.lhs.true35
-  %2 = load i8, i8* %flags, align 4, !tbaa !1
+  %2 = load i8, ptr %or_with, align 4, !tbaa !1
   %and65 = and i8 %2, 8
   %tobool66 = icmp eq i8 %and65, 0
   br i1 %tobool66, label %if.end91, label %for.body71
 
 for.body71:                                       ; preds = %for.body71, %for.body49
-  %arrayidx77 = getelementptr inbounds %struct.regnode_charclass_class.2.42.654.690.726.870.978.1770.1806.1842.2166.2274.2382.2598.2814.3030.3064, %struct.regnode_charclass_class.2.42.654.690.726.870.978.1770.1806.1842.2166.2274.2382.2598.2814.3030.3064* %cl, i64 0, i32 5, i64 0
-  store i8 undef, i8* %arrayidx77, align 1, !tbaa !7
+  %arrayidx77 = getelementptr inbounds %struct.regnode_charclass_class.2.42.654.690.726.870.978.1770.1806.1842.2166.2274.2382.2598.2814.3030.3064, ptr %cl, i64 0, i32 5, i64 0
+  store i8 undef, ptr %arrayidx77, align 1, !tbaa !7
   br i1 false, label %for.body71, label %if.end91
 
 if.end91:                                         ; preds = %for.body71, %for.body49, %land.lhs.true35

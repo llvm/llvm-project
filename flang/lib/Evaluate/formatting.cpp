@@ -421,7 +421,10 @@ template <int KIND>
 llvm::raw_ostream &
 ArrayConstructor<Type<TypeCategory::Character, KIND>>::AsFortran(
     llvm::raw_ostream &o) const {
-  o << '[' << GetType().AsFortran(LEN().AsFortran()) << "::";
+  o << '[';
+  if (const auto *len{LEN()}) {
+    o << GetType().AsFortran(len->AsFortran()) << "::";
+  }
   EmitArray(o, *this);
   return o << ']';
 }

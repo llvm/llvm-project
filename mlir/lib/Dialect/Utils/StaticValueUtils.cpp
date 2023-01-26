@@ -7,11 +7,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/APSInt.h"
 
 namespace mlir {
+
+std::tuple<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>,
+           SmallVector<OpFoldResult>>
+getOffsetsSizesAndStrides(ArrayRef<Range> ranges) {
+  SmallVector<OpFoldResult> offsets, sizes, strides;
+  offsets.reserve(ranges.size());
+  sizes.reserve(ranges.size());
+  strides.reserve(ranges.size());
+  for (const auto &[offset, size, stride] : ranges) {
+    offsets.push_back(offset);
+    sizes.push_back(size);
+    strides.push_back(stride);
+  }
+  return std::make_tuple(offsets, sizes, strides);
+}
 
 /// Helper function to dispatch an OpFoldResult into `staticVec` if:
 ///   a) it is an IntegerAttr
@@ -21,8 +37,7 @@ namespace mlir {
 /// come from an AttrSizedOperandSegments trait.
 void dispatchIndexOpFoldResult(OpFoldResult ofr,
                                SmallVectorImpl<Value> &dynamicVec,
-                               SmallVectorImpl<int64_t> &staticVec,
-                               int64_t sentinel) {
+                               SmallVectorImpl<int64_t> &staticVec) {
   auto v = ofr.dyn_cast<Value>();
   if (!v) {
     APInt apInt = ofr.get<Attribute>().cast<IntegerAttr>().getValue();
@@ -30,15 +45,14 @@ void dispatchIndexOpFoldResult(OpFoldResult ofr,
     return;
   }
   dynamicVec.push_back(v);
-  staticVec.push_back(sentinel);
+  staticVec.push_back(ShapedType::kDynamic);
 }
 
 void dispatchIndexOpFoldResults(ArrayRef<OpFoldResult> ofrs,
                                 SmallVectorImpl<Value> &dynamicVec,
-                                SmallVectorImpl<int64_t> &staticVec,
-                                int64_t sentinel) {
+                                SmallVectorImpl<int64_t> &staticVec) {
   for (OpFoldResult ofr : ofrs)
-    dispatchIndexOpFoldResult(ofr, dynamicVec, staticVec, sentinel);
+    dispatchIndexOpFoldResult(ofr, dynamicVec, staticVec);
 }
 
 /// Extract int64_t values from the assumed ArrayAttr of IntegerAttr.
@@ -77,19 +91,19 @@ SmallVector<OpFoldResult> getAsOpFoldResult(ArrayAttr arrayAttr) {
 }
 
 /// If ofr is a constant integer or an IntegerAttr, return the integer.
-Optional<int64_t> getConstantIntValue(OpFoldResult ofr) {
+std::optional<int64_t> getConstantIntValue(OpFoldResult ofr) {
   // Case 1: Check for Constant integer.
   if (auto val = ofr.dyn_cast<Value>()) {
     APSInt intVal;
     if (matchPattern(val, m_ConstantInt(&intVal)))
       return intVal.getSExtValue();
-    return llvm::None;
+    return std::nullopt;
   }
   // Case 2: Check for IntegerAttr.
   Attribute attr = ofr.dyn_cast<Attribute>();
   if (auto intAttr = attr.dyn_cast_or_null<IntegerAttr>())
     return intAttr.getValue().getSExtValue();
-  return llvm::None;
+  return std::nullopt;
 }
 
 /// Return true if `ofr` is constant integer equal to `value`.
@@ -109,4 +123,53 @@ bool isEqualConstantIntOrValue(OpFoldResult ofr1, OpFoldResult ofr2) {
   auto v1 = ofr1.dyn_cast<Value>(), v2 = ofr2.dyn_cast<Value>();
   return v1 && v1 == v2;
 }
+
+/// Helper function to convert a vector of `OpFoldResult`s into a vector of
+/// `Value`s. For each `OpFoldResult` in `valueOrAttrVec` return the fold result
+/// if it casts to  a `Value` or create an index-type constant if it casts to
+/// `IntegerAttr`. No other attribute types are supported.
+SmallVector<Value> getAsValues(OpBuilder &b, Location loc,
+                               ArrayRef<OpFoldResult> valueOrAttrVec) {
+  return llvm::to_vector<4>(
+      llvm::map_range(valueOrAttrVec, [&](OpFoldResult value) -> Value {
+        return getValueOrCreateConstantIndexOp(b, loc, value);
+      }));
+}
+
+/// Return a vector of OpFoldResults with the same size a staticValues, but all
+/// elements for which ShapedType::isDynamic is true, will be replaced by
+/// dynamicValues.
+SmallVector<OpFoldResult> getMixedValues(ArrayRef<int64_t> staticValues,
+                                         ValueRange dynamicValues, Builder &b) {
+  SmallVector<OpFoldResult> res;
+  res.reserve(staticValues.size());
+  unsigned numDynamic = 0;
+  unsigned count = static_cast<unsigned>(staticValues.size());
+  for (unsigned idx = 0; idx < count; ++idx) {
+    int64_t value = staticValues[idx];
+    res.push_back(ShapedType::isDynamic(value)
+                      ? OpFoldResult{dynamicValues[numDynamic++]}
+                      : OpFoldResult{b.getI64IntegerAttr(staticValues[idx])});
+  }
+  return res;
+}
+
+/// Decompose a vector of mixed static or dynamic values into the corresponding
+/// pair of arrays. This is the inverse function of `getMixedValues`.
+std::pair<ArrayAttr, SmallVector<Value>>
+decomposeMixedValues(Builder &b,
+                     const SmallVectorImpl<OpFoldResult> &mixedValues) {
+  SmallVector<int64_t> staticValues;
+  SmallVector<Value> dynamicValues;
+  for (const auto &it : mixedValues) {
+    if (it.is<Attribute>()) {
+      staticValues.push_back(it.get<Attribute>().cast<IntegerAttr>().getInt());
+    } else {
+      staticValues.push_back(ShapedType::kDynamic);
+      dynamicValues.push_back(it.get<Value>());
+    }
+  }
+  return {b.getI64ArrayAttr(staticValues), dynamicValues};
+}
+
 } // namespace mlir

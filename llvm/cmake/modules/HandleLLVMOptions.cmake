@@ -81,7 +81,7 @@ if( LLVM_ENABLE_ASSERTIONS )
         string (REGEX REPLACE "(^| )[/-]D *NDEBUG($| )" " "
           "${flags_var_to_scrub}" "${${flags_var_to_scrub}}")
       endforeach()
-     endif()
+    endif()
   endif()
 endif()
 
@@ -293,24 +293,34 @@ if( LLVM_ENABLE_LLD )
   if ( LLVM_USE_LINKER )
     message(FATAL_ERROR "LLVM_ENABLE_LLD and LLVM_USE_LINKER can't be set at the same time")
   endif()
+
   # In case of MSVC cmake always invokes the linker directly, so the linker
   # should be specified by CMAKE_LINKER cmake variable instead of by -fuse-ld
   # compiler option.
-  if ( NOT MSVC )
+  if ( MSVC )
+    if(NOT CMAKE_LINKER MATCHES "lld-link")
+      get_filename_component(CXX_COMPILER_DIR ${CMAKE_CXX_COMPILER} DIRECTORY)
+      get_filename_component(C_COMPILER_DIR ${CMAKE_C_COMPILER} DIRECTORY)
+      find_program(LLD_LINK NAMES "lld-link" "lld-link.exe" HINTS ${CXX_COMPILER_DIR} ${C_COMPILER_DIR} DOC "lld linker")
+      if(NOT LLD_LINK)
+        message(FATAL_ERROR
+          "LLVM_ENABLE_LLD set, but cannot find lld-link. "
+          "Consider setting CMAKE_LINKER to lld-link path.")
+      endif()
+      set(CMAKE_LINKER ${LLD_LINK})
+    endif()
+  else()
     set(LLVM_USE_LINKER "lld")
   endif()
 endif()
 
 if( LLVM_USE_LINKER )
-  set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -fuse-ld=${LLVM_USE_LINKER}")
+  append("-fuse-ld=${LLVM_USE_LINKER}"
+    CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
   check_cxx_source_compiles("int main() { return 0; }" CXX_SUPPORTS_CUSTOM_LINKER)
   if ( NOT CXX_SUPPORTS_CUSTOM_LINKER )
     message(FATAL_ERROR "Host compiler does not support '-fuse-ld=${LLVM_USE_LINKER}'")
   endif()
-  set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
-  append("-fuse-ld=${LLVM_USE_LINKER}"
-    CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
 endif()
 
 if( LLVM_ENABLE_PIC )
@@ -351,8 +361,11 @@ if( LLVM_ENABLE_PIC )
   endif()
 endif()
 
-if(NOT WIN32 AND NOT CYGWIN AND NOT (${CMAKE_SYSTEM_NAME} MATCHES "AIX"))
-  # MinGW warns if -fvisibility-inlines-hidden is used.
+if((NOT (${CMAKE_SYSTEM_NAME} MATCHES "AIX")) AND
+   (NOT (WIN32 OR CYGWIN) OR (MINGW AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")))
+  # GCC for MinGW does nothing about -fvisibility-inlines-hidden, but warns
+  # about use of the attributes. As long as we don't use the attributes (to
+  # override the default) we shouldn't set the command line options either.
   # GCC on AIX warns if -fvisibility-inlines-hidden is used and Clang on AIX doesn't currently support visibility.
   check_cxx_compiler_flag("-fvisibility-inlines-hidden" SUPPORTS_FVISIBILITY_INLINES_HIDDEN_FLAG)
   append_if(SUPPORTS_FVISIBILITY_INLINES_HIDDEN_FLAG "-fvisibility-inlines-hidden" CMAKE_CXX_FLAGS)
@@ -779,7 +792,7 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   # line is also a // comment.
   set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -Werror -Wcomment")
-  CHECK_C_SOURCE_COMPILES("// \\\\\\n//\\nint main() {return 0;}"
+  CHECK_C_SOURCE_COMPILES("// \\\\\\n//\\nint main(void) {return 0;}"
                           C_WCOMMENT_ALLOWS_LINE_WRAP)
   set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
   if (NOT C_WCOMMENT_ALLOWS_LINE_WRAP)
@@ -789,8 +802,19 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   # Enable -Wstring-conversion to catch misuse of string literals.
   add_flag_if_supported("-Wstring-conversion" STRING_CONVERSION_FLAG)
 
-  # Prevent bugs that can happen with llvm's brace style.
-  add_flag_if_supported("-Wmisleading-indentation" MISLEADING_INDENTATION_FLAG)
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Disable the misleading indentation warning with GCC; GCC can
+    # produce noisy notes about this getting disabled in large files.
+    # See e.g. https://gcc.gnu.org/bugzilla/show_bug.cgi?id=89549
+    check_cxx_compiler_flag("-Wmisleading-indentation" CXX_SUPPORTS_MISLEADING_INDENTATION_FLAG)
+    append_if(CXX_SUPPORTS_MISLEADING_INDENTATION_FLAG "-Wno-misleading-indentation" CMAKE_CXX_FLAGS)
+  else()
+    # Prevent bugs that can happen with llvm's brace style.
+    add_flag_if_supported("-Wmisleading-indentation" MISLEADING_INDENTATION_FLAG)
+  endif()
+
+  # Enable -Wctad-maybe-unsupported to catch unintended use of CTAD.
+  add_flag_if_supported("-Wctad-maybe-unsupported" CTAD_MAYBE_UNSPPORTED_FLAG)
 endif (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
 
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT LLVM_ENABLE_WARNINGS)
@@ -910,15 +934,11 @@ if(LLVM_USE_SANITIZER)
   else()
     message(FATAL_ERROR "LLVM_USE_SANITIZER is not supported on this platform.")
   endif()
-  if (LLVM_USE_SANITIZER MATCHES "(Undefined;)?Address(;Undefined)?")
-    add_flag_if_supported("-fsanitize-address-use-after-scope"
-                          FSANITIZE_USE_AFTER_SCOPE_FLAG)
-  endif()
   if (LLVM_USE_SANITIZE_COVERAGE)
     append("-fsanitize=fuzzer-no-link" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   endif()
   if (LLVM_USE_SANITIZER MATCHES ".*Undefined.*")
-    set(IGNORELIST_FILE "${CMAKE_SOURCE_DIR}/utils/sanitizers/ubsan_ignorelist.txt")
+    set(IGNORELIST_FILE "${PROJECT_SOURCE_DIR}/utils/sanitizers/ubsan_ignorelist.txt")
     if (EXISTS "${IGNORELIST_FILE}")
       # Use this option name version since -fsanitize-ignorelist is only
       # accepted with clang 13.0 or newer.
@@ -936,10 +956,10 @@ if (LLVM_USE_SPLIT_DWARF AND
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
       CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     add_compile_options(-gsplit-dwarf)
-  include(LLVMCheckLinkerFlag)
-  llvm_check_linker_flag(CXX "-Wl,--gdb-index" LINKER_SUPPORTS_GDB_INDEX)
-  append_if(LINKER_SUPPORTS_GDB_INDEX "-Wl,--gdb-index"
-    CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+    include(LLVMCheckLinkerFlag)
+    llvm_check_linker_flag(CXX "-Wl,--gdb-index" LINKER_SUPPORTS_GDB_INDEX)
+    append_if(LINKER_SUPPORTS_GDB_INDEX "-Wl,--gdb-index"
+      CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
   endif()
 endif()
 
@@ -1017,9 +1037,9 @@ if (LLVM_BUILD_INSTRUMENTED)
       CMAKE_CXX_FLAGS
       CMAKE_C_FLAGS)
     if(NOT LINKER_IS_LLD_LINK)
-        append("-fprofile-generate=\"${LLVM_PROFILE_DATA_DIR}\""
-          CMAKE_EXE_LINKER_FLAGS
-          CMAKE_SHARED_LINKER_FLAGS)
+      append("-fprofile-generate=\"${LLVM_PROFILE_DATA_DIR}\""
+        CMAKE_EXE_LINKER_FLAGS
+        CMAKE_SHARED_LINKER_FLAGS)
     endif()
     # Set this to avoid running out of the value profile node section
     # under clang in dynamic linking mode.
@@ -1254,10 +1274,5 @@ if(LLVM_USE_RELATIVE_PATHS_IN_FILES)
   add_flag_if_supported("-no-canonical-prefixes" NO_CANONICAL_PREFIXES)
 endif()
 
-if(LLVM_INCLUDE_TESTS)
-  # Lit test suite requires at least python 3.6
-  set(LLVM_MINIMUM_PYTHON_VERSION 3.6)
-else()
-  # FIXME: it is unknown if this is the actual minimum bound
-  set(LLVM_MINIMUM_PYTHON_VERSION 3.0)
-endif()
+set(LLVM_THIRD_PARTY_DIR  ${CMAKE_CURRENT_SOURCE_DIR}/../third-party CACHE STRING
+    "Directory containing third party software used by LLVM (e.g. googletest)")

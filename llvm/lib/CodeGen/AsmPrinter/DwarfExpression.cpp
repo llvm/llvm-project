@@ -99,7 +99,7 @@ void DwarfExpression::addAnd(unsigned Mask) {
 bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
                                     llvm::Register MachineReg,
                                     unsigned MaxSize) {
-  if (!llvm::Register::isPhysicalRegister(MachineReg)) {
+  if (!MachineReg.isPhysical()) {
     if (isFrameRegister(TRI, MachineReg)) {
       DwarfRegs.push_back(Register::createRegister(-1, nullptr));
       return true;
@@ -494,7 +494,7 @@ bool DwarfExpression::addExpression(
   // and not any other parts of the following DWARF expression.
   assert(!IsEmittingEntryValue && "Can't emit entry value around expression");
 
-  Optional<DIExpression::ExprOperand> PrevConvertOp = None;
+  std::optional<DIExpression::ExprOperand> PrevConvertOp;
 
   while (ExprCursor) {
     auto Op = ExprCursor.take();
@@ -604,7 +604,7 @@ bool DwarfExpression::addExpression(
             emitLegacySExt(PrevConvertOp->getArg(0));
           else if (Encoding == dwarf::DW_ATE_unsigned)
             emitLegacyZExt(PrevConvertOp->getArg(0));
-          PrevConvertOp = None;
+          PrevConvertOp = std::nullopt;
         } else {
           PrevConvertOp = Op;
         }

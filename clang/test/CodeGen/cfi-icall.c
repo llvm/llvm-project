@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -fsanitize=cfi-icall -fsanitize-trap=cfi-icall -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=ITANIUM %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-windows-msvc -fsanitize=cfi-icall -fsanitize-trap=cfi-icall -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=MS %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -fsanitize=cfi-icall -fsanitize-trap=cfi-icall -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=ITANIUM %s
+// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fsanitize=cfi-icall -fsanitize-trap=cfi-icall -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=MS %s
 
 // Tests that we assign appropriate identifiers to unprototyped functions.
 
@@ -12,7 +12,7 @@ void xf();
 // CHECK: define {{(dso_local )?}}void @g({{.*}} !type [[TINT:![0-9]+]] !type [[TINT_GENERALIZED:![0-9]+]]
 void g(int b) {
   void (*fp)() = b ? f : xf;
-  // ITANIUM: call i1 @llvm.type.test(i8* {{.*}}, metadata !"_ZTSFvE")
+  // ITANIUM: call i1 @llvm.type.test(ptr {{.*}}, metadata !"_ZTSFvE")
   fp();
 }
 

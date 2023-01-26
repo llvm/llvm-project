@@ -12,6 +12,7 @@ add_llvm_component_library(LLVMLanaiDesc
   MC
   MCDisassembler
   Support
+  TargetParser
 
   ADD_TO_COMPONENT
   Lanai

@@ -15,7 +15,7 @@
 ; CHECK: ds_write_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:4
 define amdgpu_kernel void @lds_no_offset() {
 entry:
-  %ptr = getelementptr [4 x i32], [4 x i32] addrspace(3)* @lds, i32 0, i32 1
-  store i32 0, i32 addrspace(3)* %ptr
+  %ptr = getelementptr [4 x i32], ptr addrspace(3) @lds, i32 0, i32 1
+  store i32 0, ptr addrspace(3) %ptr
   ret void
 }

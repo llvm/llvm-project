@@ -9,6 +9,7 @@
 ; this case right before the s_endpgm to avoid GPU hangs, which is what this
 ; tests.
 
+; FIXME: Immediate value 0x41200000 should be folded into the v_cmp instruction.
 define amdgpu_ps void @return_void(float %0) #0 {
 ; CHECK-LABEL: return_void:
 ; CHECK:       ; %bb.0: ; %main_body
@@ -104,15 +105,18 @@ define amdgpu_ps void @only_kill() #0 {
 ; CHECK-NEXT:  .LBB2_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_andn2_b64 s[0:1], s[0:1], exec
-; CHECK-NEXT:    s_cbranch_scc0 .LBB2_3
+; CHECK-NEXT:    s_cbranch_scc0 .LBB2_4
 ; CHECK-NEXT:  ; %bb.2: ; %loop
 ; CHECK-NEXT:    ; in Loop: Header=BB2_1 Depth=1
 ; CHECK-NEXT:    s_mov_b64 exec, 0
-; CHECK-NEXT:    s_branch .LBB2_1
-; CHECK-NEXT:  .LBB2_3:
-; CHECK-NEXT:    s_mov_b64 exec, 0
-; CHECK-NEXT:    exp null off, off, off, off done vm
+; CHECK-NEXT:    s_mov_b64 vcc, exec
+; CHECK-NEXT:    s_cbranch_execnz .LBB2_1
+; CHECK-NEXT:  ; %bb.3: ; %DummyReturnBlock
 ; CHECK-NEXT:    s_endpgm
+; CHECK-NEXT:  .LBB2_4:
+; CHECK-NEXT:  	 s_mov_b64 exec, 0
+; CHECK-NEXT:  	 exp null off, off, off, off done vm
+; CHECK-NEXT:  	 s_endpgm
 main_body:
   br label %loop
 

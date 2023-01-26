@@ -1,15 +1,14 @@
 ; Inlining in the presence of recursion presents special challenges that we
 ; test here.
 ;
-; RUN: opt -inline -S < %s | FileCheck %s
+; RUN: opt -passes=inline -S < %s | FileCheck %s
 ; RUN: opt -passes='cgscc(inline)' -S < %s | FileCheck %s
 
 define i32 @large_stack_callee(i32 %param) {
 ; CHECK-LABEL: define i32 @large_stack_callee(
 entry:
  %yyy = alloca [100000 x i8]
- %r = bitcast [100000 x i8]* %yyy to i8*
- call void @bar(i8* %r)
+ call void @bar(ptr %yyy)
  ret i32 4
 }
 
@@ -36,13 +35,13 @@ exit:
   ret i32 4
 }
 
-declare void @bar(i8* %in)
+declare void @bar(ptr %in)
 
 declare i32 @foo(i32 %param)
 
 ; Check that when inlining a non-recursive path into a function's own body that
 ; we get the re-mapping of instructions correct.
-define i32 @test_recursive_inlining_remapping(i1 %init, i8* %addr) {
+define i32 @test_recursive_inlining_remapping(i1 %init, ptr %addr) {
 ; CHECK-LABEL: define i32 @test_recursive_inlining_remapping(
 bb:
   %n = alloca i32
@@ -53,21 +52,18 @@ bb:
 ; CHECK-NEXT:    br i1 %init,
 
 store:
-  store i32 0, i32* %n
-  %cast = bitcast i32* %n to i8*
-  %v = call i32 @test_recursive_inlining_remapping(i1 false, i8* %cast)
+  store i32 0, ptr %n
+  %v = call i32 @test_recursive_inlining_remapping(i1 false, ptr %n)
   ret i32 %v
 ; CHECK-NOT:     call
 ;
-; CHECK:         store i32 0, i32* %[[N]]
-; CHECK-NEXT:    %[[CAST:.*]] = bitcast i32* %[[N]] to i8*
-; CHECK-NEXT:    %[[INLINED_LOAD:.*]] = load i32, i32* %[[N]]
+; CHECK:         store i32 0, ptr %[[N]]
+; CHECK-NEXT:    %[[INLINED_LOAD:.*]] = load i32, ptr %[[N]]
 ; CHECK-NEXT:    ret i32 %[[INLINED_LOAD]]
 ;
 ; CHECK-NOT:     call
 
 load:
-  %castback = bitcast i8* %addr to i32*
-  %n.load = load i32, i32* %castback
+  %n.load = load i32, ptr %addr
   ret i32 %n.load
 }

@@ -1,3 +1,7 @@
+set(LLVM_LINK_COMPONENTS
+Passes
+TargetParser
+)
 
 add_flang_tool(bbc bbc.cpp
 DEPENDS
@@ -11,6 +15,8 @@ FIRDialect
 FIRSupport
 FIRTransforms
 FIRBuilder
+HLFIRDialect
+HLFIRTransforms
 ${dialect_libs}
 MLIRAffineToStandard
 MLIRSCFToControlFlow
@@ -19,5 +25,4 @@ FortranParser
 FortranEvaluate
 FortranSemantics
 FortranLower
-LLVMPasses
 )

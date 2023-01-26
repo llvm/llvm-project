@@ -8,6 +8,7 @@
 
 #include "ABISysV_arm.h"
 
+#include <optional>
 #include <vector>
 
 #include "llvm/ADT/STLExtras.h"
@@ -1189,8 +1190,7 @@ static const RegisterInfo g_register_infos[] = {
      nullptr,
      }};
 
-static const uint32_t k_num_register_infos =
-    llvm::array_lengthof(g_register_infos);
+static const uint32_t k_num_register_infos = std::size(g_register_infos);
 
 const lldb_private::RegisterInfo *
 ABISysV_arm::GetRegisterInfoArray(uint32_t &count) {
@@ -1240,7 +1240,7 @@ bool ABISysV_arm::PrepareTrivialCall(Thread &thread, addr_t sp,
 
   llvm::ArrayRef<addr_t>::iterator ai = args.begin(), ae = args.end();
 
-  for (size_t i = 0; i < llvm::array_lengthof(reg_names); ++i) {
+  for (size_t i = 0; i < std::size(reg_names); ++i) {
     if (ai == ae)
       break;
 
@@ -1354,7 +1354,7 @@ bool ABISysV_arm::GetArgumentValues(Thread &thread, ValueList &values) const {
       size_t bit_width = 0;
       if (compiler_type.IsIntegerOrEnumerationType(is_signed) ||
           compiler_type.IsPointerOrReferenceType()) {
-        if (llvm::Optional<uint64_t> size = compiler_type.GetBitSize(&thread))
+        if (std::optional<uint64_t> size = compiler_type.GetBitSize(&thread))
           bit_width = *size;
       } else {
         // We only handle integer, pointer and reference types currently...
@@ -1461,8 +1461,8 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
 
   const RegisterInfo *r0_reg_info =
       reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
-  llvm::Optional<uint64_t> bit_width = compiler_type.GetBitSize(&thread);
-  llvm::Optional<uint64_t> byte_size = compiler_type.GetByteSize(&thread);
+  std::optional<uint64_t> bit_width = compiler_type.GetBitSize(&thread);
+  std::optional<uint64_t> byte_size = compiler_type.GetByteSize(&thread);
   if (!bit_width || !byte_size)
     return return_valobj_sp;
 
@@ -1539,7 +1539,7 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
       default:
         return return_valobj_sp;
       case 64: {
-        static_assert(sizeof(double) == sizeof(uint64_t), "");
+        static_assert(sizeof(double) == sizeof(uint64_t));
 
         if (IsArmHardFloat(thread)) {
           RegisterValue reg_value;
@@ -1563,7 +1563,7 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
       }
       case 16: // Half precision returned after a conversion to single precision
       case 32: {
-        static_assert(sizeof(float) == sizeof(uint32_t), "");
+        static_assert(sizeof(float) == sizeof(uint32_t));
 
         if (IsArmHardFloat(thread)) {
           RegisterValue reg_value;
@@ -1598,8 +1598,7 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
           compiler_type.IsHomogeneousAggregate(&base_type);
 
       if (homogeneous_count > 0 && homogeneous_count <= 4) {
-        llvm::Optional<uint64_t> base_byte_size =
-            base_type.GetByteSize(&thread);
+        std::optional<uint64_t> base_byte_size = base_type.GetByteSize(&thread);
         if (base_type.IsVectorType()) {
           if (base_byte_size &&
               (*base_byte_size == 8 || *base_byte_size == 16)) {
@@ -1627,7 +1626,7 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
                                                       nullptr, nullptr);
 
             if (base_type.IsFloatingPointType(float_count, is_complex)) {
-              llvm::Optional<uint64_t> base_byte_size =
+              std::optional<uint64_t> base_byte_size =
                   base_type.GetByteSize(&thread);
               if (float_count == 2 && is_complex) {
                 if (index != 0 && base_byte_size &&
@@ -1694,7 +1693,7 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
       if ((data_offset + vfp_byte_size) <= data_sp->GetByteSize()) {
         Status error;
         const size_t bytes_copied = reg_value.GetAsMemoryData(
-            reg_info, data_sp->GetBytes() + data_offset, vfp_byte_size,
+            *reg_info, data_sp->GetBytes() + data_offset, vfp_byte_size,
             byte_order, error);
         if (bytes_copied != vfp_byte_size)
           break;

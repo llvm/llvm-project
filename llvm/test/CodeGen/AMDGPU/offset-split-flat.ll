@@ -6,7 +6,7 @@
 ; Test splitting flat instruction offsets into the low and high bits
 ; when the offset doesn't fit in the offset field.
 
-define i8 @flat_inst_valu_offset_1(i8* %p) {
+define i8 @flat_inst_valu_offset_1(ptr %p) {
 ; GFX9-LABEL: flat_inst_valu_offset_1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -31,12 +31,12 @@ define i8 @flat_inst_valu_offset_1(i8* %p) {
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1] offset:1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, i8* %p, i64 1
-  %load = load i8, i8* %gep, align 4
+  %gep = getelementptr i8, ptr %p, i64 1
+  %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
 
-define i8 @flat_inst_valu_offset_11bit_max(i8* %p) {
+define i8 @flat_inst_valu_offset_11bit_max(ptr %p) {
 ; GFX9-LABEL: flat_inst_valu_offset_11bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -61,12 +61,12 @@ define i8 @flat_inst_valu_offset_11bit_max(i8* %p) {
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1] offset:2047
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, i8* %p, i64 2047
-  %load = load i8, i8* %gep, align 4
+  %gep = getelementptr i8, ptr %p, i64 2047
+  %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
 
-define i8 @flat_inst_valu_offset_12bit_max(i8* %p) {
+define i8 @flat_inst_valu_offset_12bit_max(ptr %p) {
 ; GFX9-LABEL: flat_inst_valu_offset_12bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -91,12 +91,12 @@ define i8 @flat_inst_valu_offset_12bit_max(i8* %p) {
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, i8* %p, i64 4095
-  %load = load i8, i8* %gep, align 4
+  %gep = getelementptr i8, ptr %p, i64 4095
+  %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
 
-define i8 @flat_inst_valu_offset_13bit_max(i8* %p) {
+define i8 @flat_inst_valu_offset_13bit_max(ptr %p) {
 ; GFX9-LABEL: flat_inst_valu_offset_13bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -125,12 +125,12 @@ define i8 @flat_inst_valu_offset_13bit_max(i8* %p) {
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, i8* %p, i64 8191
-  %load = load i8, i8* %gep, align 4
+  %gep = getelementptr i8, ptr %p, i64 8191
+  %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
 
-define i8 @flat_inst_valu_offset_neg_11bit_max(i8* %p) {
+define i8 @flat_inst_valu_offset_neg_11bit_max(ptr %p) {
 ; GFX9-LABEL: flat_inst_valu_offset_neg_11bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -159,12 +159,12 @@ define i8 @flat_inst_valu_offset_neg_11bit_max(i8* %p) {
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, i8* %p, i64 -2048
-  %load = load i8, i8* %gep, align 4
+  %gep = getelementptr i8, ptr %p, i64 -2048
+  %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
 
-define i8 @flat_inst_valu_offset_neg_12bit_max(i8* %p) {
+define i8 @flat_inst_valu_offset_neg_12bit_max(ptr %p) {
 ; GFX9-LABEL: flat_inst_valu_offset_neg_12bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -193,12 +193,12 @@ define i8 @flat_inst_valu_offset_neg_12bit_max(i8* %p) {
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, i8* %p, i64 -4096
-  %load = load i8, i8* %gep, align 4
+  %gep = getelementptr i8, ptr %p, i64 -4096
+  %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
 
-define i8 @flat_inst_valu_offset_neg_13bit_max(i8* %p) {
+define i8 @flat_inst_valu_offset_neg_13bit_max(ptr %p) {
 ; GFX9-LABEL: flat_inst_valu_offset_neg_13bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -227,12 +227,12 @@ define i8 @flat_inst_valu_offset_neg_13bit_max(i8* %p) {
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, i8* %p, i64 -8192
-  %load = load i8, i8* %gep, align 4
+  %gep = getelementptr i8, ptr %p, i64 -8192
+  %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
 
-define i8 @flat_inst_valu_offset_2x_11bit_max(i8* %p) {
+define i8 @flat_inst_valu_offset_2x_11bit_max(ptr %p) {
 ; GFX9-LABEL: flat_inst_valu_offset_2x_11bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -257,12 +257,12 @@ define i8 @flat_inst_valu_offset_2x_11bit_max(i8* %p) {
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, i8* %p, i64 4095
-  %load = load i8, i8* %gep, align 4
+  %gep = getelementptr i8, ptr %p, i64 4095
+  %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
 
-define i8 @flat_inst_valu_offset_2x_12bit_max(i8* %p) {
+define i8 @flat_inst_valu_offset_2x_12bit_max(ptr %p) {
 ; GFX9-LABEL: flat_inst_valu_offset_2x_12bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -291,12 +291,12 @@ define i8 @flat_inst_valu_offset_2x_12bit_max(i8* %p) {
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, i8* %p, i64 8191
-  %load = load i8, i8* %gep, align 4
+  %gep = getelementptr i8, ptr %p, i64 8191
+  %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
 
-define i8 @flat_inst_valu_offset_2x_13bit_max(i8* %p) {
+define i8 @flat_inst_valu_offset_2x_13bit_max(ptr %p) {
 ; GFX9-LABEL: flat_inst_valu_offset_2x_13bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -325,12 +325,12 @@ define i8 @flat_inst_valu_offset_2x_13bit_max(i8* %p) {
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, i8* %p, i64 16383
-  %load = load i8, i8* %gep, align 4
+  %gep = getelementptr i8, ptr %p, i64 16383
+  %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
 
-define i8 @flat_inst_valu_offset_2x_neg_11bit_max(i8* %p) {
+define i8 @flat_inst_valu_offset_2x_neg_11bit_max(ptr %p) {
 ; GFX9-LABEL: flat_inst_valu_offset_2x_neg_11bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -359,12 +359,12 @@ define i8 @flat_inst_valu_offset_2x_neg_11bit_max(i8* %p) {
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, i8* %p, i64 -4096
-  %load = load i8, i8* %gep, align 4
+  %gep = getelementptr i8, ptr %p, i64 -4096
+  %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
 
-define i8 @flat_inst_valu_offset_2x_neg_12bit_max(i8* %p) {
+define i8 @flat_inst_valu_offset_2x_neg_12bit_max(ptr %p) {
 ; GFX9-LABEL: flat_inst_valu_offset_2x_neg_12bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -393,12 +393,12 @@ define i8 @flat_inst_valu_offset_2x_neg_12bit_max(i8* %p) {
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, i8* %p, i64 -8192
-  %load = load i8, i8* %gep, align 4
+  %gep = getelementptr i8, ptr %p, i64 -8192
+  %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
 
-define i8 @flat_inst_valu_offset_2x_neg_13bit_max(i8* %p) {
+define i8 @flat_inst_valu_offset_2x_neg_13bit_max(ptr %p) {
 ; GFX9-LABEL: flat_inst_valu_offset_2x_neg_13bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -427,13 +427,13 @@ define i8 @flat_inst_valu_offset_2x_neg_13bit_max(i8* %p) {
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, i8* %p, i64 -16384
-  %load = load i8, i8* %gep, align 4
+  %gep = getelementptr i8, ptr %p, i64 -16384
+  %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
 
 ; Fill 11-bit low-bits (1ull << 33) | 2047
-define i8 @flat_inst_valu_offset_64bit_11bit_split0(i8* %p) {
+define i8 @flat_inst_valu_offset_64bit_11bit_split0(ptr %p) {
 ; GFX9-LABEL: flat_inst_valu_offset_64bit_11bit_split0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -462,13 +462,13 @@ define i8 @flat_inst_valu_offset_64bit_11bit_split0(i8* %p) {
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1] offset:2047
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, i8* %p, i64 8589936639
-  %load = load i8, i8* %gep, align 4
+  %gep = getelementptr i8, ptr %p, i64 8589936639
+  %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
 
 ; Fill 11-bit low-bits (1ull << 33) | 2048
-define i8 @flat_inst_valu_offset_64bit_11bit_split1(i8* %p) {
+define i8 @flat_inst_valu_offset_64bit_11bit_split1(ptr %p) {
 ; GFX9-LABEL: flat_inst_valu_offset_64bit_11bit_split1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -497,13 +497,13 @@ define i8 @flat_inst_valu_offset_64bit_11bit_split1(i8* %p) {
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1] offset:2048
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, i8* %p, i64 8589936640
-  %load = load i8, i8* %gep, align 4
+  %gep = getelementptr i8, ptr %p, i64 8589936640
+  %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
 
 ; Fill 12-bit low-bits (1ull << 33) | 4095
-define i8 @flat_inst_valu_offset_64bit_12bit_split0(i8* %p) {
+define i8 @flat_inst_valu_offset_64bit_12bit_split0(ptr %p) {
 ; GFX9-LABEL: flat_inst_valu_offset_64bit_12bit_split0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -532,13 +532,13 @@ define i8 @flat_inst_valu_offset_64bit_12bit_split0(i8* %p) {
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, i8* %p, i64 8589938687
-  %load = load i8, i8* %gep, align 4
+  %gep = getelementptr i8, ptr %p, i64 8589938687
+  %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
 
 ; Fill 12-bit low-bits (1ull << 33) | 4096
-define i8 @flat_inst_valu_offset_64bit_12bit_split1(i8* %p) {
+define i8 @flat_inst_valu_offset_64bit_12bit_split1(ptr %p) {
 ; GFX9-LABEL: flat_inst_valu_offset_64bit_12bit_split1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -567,13 +567,13 @@ define i8 @flat_inst_valu_offset_64bit_12bit_split1(i8* %p) {
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, i8* %p, i64 8589938688
-  %load = load i8, i8* %gep, align 4
+  %gep = getelementptr i8, ptr %p, i64 8589938688
+  %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
 
 ; Fill 13-bit low-bits (1ull << 33) | 8191
-define i8 @flat_inst_valu_offset_64bit_13bit_split0(i8* %p) {
+define i8 @flat_inst_valu_offset_64bit_13bit_split0(ptr %p) {
 ; GFX9-LABEL: flat_inst_valu_offset_64bit_13bit_split0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -602,13 +602,13 @@ define i8 @flat_inst_valu_offset_64bit_13bit_split0(i8* %p) {
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, i8* %p, i64 8589942783
-  %load = load i8, i8* %gep, align 4
+  %gep = getelementptr i8, ptr %p, i64 8589942783
+  %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
 
 ; Fill 13-bit low-bits (1ull << 33) | 8192
-define i8 @flat_inst_valu_offset_64bit_13bit_split1(i8* %p) {
+define i8 @flat_inst_valu_offset_64bit_13bit_split1(ptr %p) {
 ; GFX9-LABEL: flat_inst_valu_offset_64bit_13bit_split1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -637,13 +637,13 @@ define i8 @flat_inst_valu_offset_64bit_13bit_split1(i8* %p) {
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, i8* %p, i64 8589942784
-  %load = load i8, i8* %gep, align 4
+  %gep = getelementptr i8, ptr %p, i64 8589942784
+  %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
 
 ; Fill 11-bit low-bits, negative high bits (1ull << 63) | 2047
-define i8 @flat_inst_valu_offset_64bit_11bit_neg_high_split0(i8* %p) {
+define i8 @flat_inst_valu_offset_64bit_11bit_neg_high_split0(ptr %p) {
 ; GFX9-LABEL: flat_inst_valu_offset_64bit_11bit_neg_high_split0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -673,13 +673,13 @@ define i8 @flat_inst_valu_offset_64bit_11bit_neg_high_split0(i8* %p) {
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, i8* %p, i64 -9223372036854773761
-  %load = load i8, i8* %gep, align 4
+  %gep = getelementptr i8, ptr %p, i64 -9223372036854773761
+  %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
 
 ; Fill 11-bit low-bits, negative high bits (1ull << 63) | 2048
-define i8 @flat_inst_valu_offset_64bit_11bit_neg_high_split1(i8* %p) {
+define i8 @flat_inst_valu_offset_64bit_11bit_neg_high_split1(ptr %p) {
 ; GFX9-LABEL: flat_inst_valu_offset_64bit_11bit_neg_high_split1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -709,13 +709,13 @@ define i8 @flat_inst_valu_offset_64bit_11bit_neg_high_split1(i8* %p) {
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, i8* %p, i64 -9223372036854773760
-  %load = load i8, i8* %gep, align 4
+  %gep = getelementptr i8, ptr %p, i64 -9223372036854773760
+  %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
 
 ; Fill 12-bit low-bits, negative high bits (1ull << 63) | 4095
-define i8 @flat_inst_valu_offset_64bit_12bit_neg_high_split0(i8* %p) {
+define i8 @flat_inst_valu_offset_64bit_12bit_neg_high_split0(ptr %p) {
 ; GFX9-LABEL: flat_inst_valu_offset_64bit_12bit_neg_high_split0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -745,13 +745,13 @@ define i8 @flat_inst_valu_offset_64bit_12bit_neg_high_split0(i8* %p) {
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, i8* %p, i64 -9223372036854771713
-  %load = load i8, i8* %gep, align 4
+  %gep = getelementptr i8, ptr %p, i64 -9223372036854771713
+  %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
 
 ; Fill 12-bit low-bits, negative high bits (1ull << 63) | 4096
-define i8 @flat_inst_valu_offset_64bit_12bit_neg_high_split1(i8* %p) {
+define i8 @flat_inst_valu_offset_64bit_12bit_neg_high_split1(ptr %p) {
 ; GFX9-LABEL: flat_inst_valu_offset_64bit_12bit_neg_high_split1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -781,13 +781,13 @@ define i8 @flat_inst_valu_offset_64bit_12bit_neg_high_split1(i8* %p) {
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, i8* %p, i64 -9223372036854771712
-  %load = load i8, i8* %gep, align 4
+  %gep = getelementptr i8, ptr %p, i64 -9223372036854771712
+  %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
 
 ; Fill 13-bit low-bits, negative high bits (1ull << 63) | 8191
-define i8 @flat_inst_valu_offset_64bit_13bit_neg_high_split0(i8* %p) {
+define i8 @flat_inst_valu_offset_64bit_13bit_neg_high_split0(ptr %p) {
 ; GFX9-LABEL: flat_inst_valu_offset_64bit_13bit_neg_high_split0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -817,13 +817,13 @@ define i8 @flat_inst_valu_offset_64bit_13bit_neg_high_split0(i8* %p) {
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, i8* %p, i64 -9223372036854767617
-  %load = load i8, i8* %gep, align 4
+  %gep = getelementptr i8, ptr %p, i64 -9223372036854767617
+  %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
 
 ; Fill 13-bit low-bits, negative high bits (1ull << 63) | 8192
-define i8 @flat_inst_valu_offset_64bit_13bit_neg_high_split1(i8* %p) {
+define i8 @flat_inst_valu_offset_64bit_13bit_neg_high_split1(ptr %p) {
 ; GFX9-LABEL: flat_inst_valu_offset_64bit_13bit_neg_high_split1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -853,12 +853,12 @@ define i8 @flat_inst_valu_offset_64bit_13bit_neg_high_split1(i8* %p) {
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, i8* %p, i64 -9223372036854767616
-  %load = load i8, i8* %gep, align 4
+  %gep = getelementptr i8, ptr %p, i64 -9223372036854767616
+  %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
 
-define amdgpu_kernel void @flat_inst_salu_offset_1(i8* %p) {
+define amdgpu_kernel void @flat_inst_salu_offset_1(ptr %p) {
 ; GFX9-LABEL: flat_inst_salu_offset_1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -893,13 +893,13 @@ define amdgpu_kernel void @flat_inst_salu_offset_1(i8* %p) {
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep = getelementptr i8, i8* %p, i64 1
-  %load = load volatile i8, i8* %gep, align 1
-  store i8 %load, i8* undef
+  %gep = getelementptr i8, ptr %p, i64 1
+  %load = load volatile i8, ptr %gep, align 1
+  store i8 %load, ptr undef
   ret void
 }
 
-define amdgpu_kernel void @flat_inst_salu_offset_11bit_max(i8* %p) {
+define amdgpu_kernel void @flat_inst_salu_offset_11bit_max(ptr %p) {
 ; GFX9-LABEL: flat_inst_salu_offset_11bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -934,13 +934,13 @@ define amdgpu_kernel void @flat_inst_salu_offset_11bit_max(i8* %p) {
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep = getelementptr i8, i8* %p, i64 2047
-  %load = load volatile i8, i8* %gep, align 1
-  store i8 %load, i8* undef
+  %gep = getelementptr i8, ptr %p, i64 2047
+  %load = load volatile i8, ptr %gep, align 1
+  store i8 %load, ptr undef
   ret void
 }
 
-define amdgpu_kernel void @flat_inst_salu_offset_12bit_max(i8* %p) {
+define amdgpu_kernel void @flat_inst_salu_offset_12bit_max(ptr %p) {
 ; GFX9-LABEL: flat_inst_salu_offset_12bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -975,13 +975,13 @@ define amdgpu_kernel void @flat_inst_salu_offset_12bit_max(i8* %p) {
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep = getelementptr i8, i8* %p, i64 4095
-  %load = load volatile i8, i8* %gep, align 1
-  store i8 %load, i8* undef
+  %gep = getelementptr i8, ptr %p, i64 4095
+  %load = load volatile i8, ptr %gep, align 1
+  store i8 %load, ptr undef
   ret void
 }
 
-define amdgpu_kernel void @flat_inst_salu_offset_13bit_max(i8* %p) {
+define amdgpu_kernel void @flat_inst_salu_offset_13bit_max(ptr %p) {
 ; GFX9-LABEL: flat_inst_salu_offset_13bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1020,13 +1020,13 @@ define amdgpu_kernel void @flat_inst_salu_offset_13bit_max(i8* %p) {
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep = getelementptr i8, i8* %p, i64 8191
-  %load = load volatile i8, i8* %gep, align 1
-  store i8 %load, i8* undef
+  %gep = getelementptr i8, ptr %p, i64 8191
+  %load = load volatile i8, ptr %gep, align 1
+  store i8 %load, ptr undef
   ret void
 }
 
-define amdgpu_kernel void @flat_inst_salu_offset_neg_11bit_max(i8* %p) {
+define amdgpu_kernel void @flat_inst_salu_offset_neg_11bit_max(ptr %p) {
 ; GFX9-LABEL: flat_inst_salu_offset_neg_11bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1065,13 +1065,13 @@ define amdgpu_kernel void @flat_inst_salu_offset_neg_11bit_max(i8* %p) {
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep = getelementptr i8, i8* %p, i64 -2048
-  %load = load volatile i8, i8* %gep, align 1
-  store i8 %load, i8* undef
+  %gep = getelementptr i8, ptr %p, i64 -2048
+  %load = load volatile i8, ptr %gep, align 1
+  store i8 %load, ptr undef
   ret void
 }
 
-define amdgpu_kernel void @flat_inst_salu_offset_neg_12bit_max(i8* %p) {
+define amdgpu_kernel void @flat_inst_salu_offset_neg_12bit_max(ptr %p) {
 ; GFX9-LABEL: flat_inst_salu_offset_neg_12bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1110,13 +1110,13 @@ define amdgpu_kernel void @flat_inst_salu_offset_neg_12bit_max(i8* %p) {
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep = getelementptr i8, i8* %p, i64 -4096
-  %load = load volatile i8, i8* %gep, align 1
-  store i8 %load, i8* undef
+  %gep = getelementptr i8, ptr %p, i64 -4096
+  %load = load volatile i8, ptr %gep, align 1
+  store i8 %load, ptr undef
   ret void
 }
 
-define amdgpu_kernel void @flat_inst_salu_offset_neg_13bit_max(i8* %p) {
+define amdgpu_kernel void @flat_inst_salu_offset_neg_13bit_max(ptr %p) {
 ; GFX9-LABEL: flat_inst_salu_offset_neg_13bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1155,13 +1155,13 @@ define amdgpu_kernel void @flat_inst_salu_offset_neg_13bit_max(i8* %p) {
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep = getelementptr i8, i8* %p, i64 -8192
-  %load = load volatile i8, i8* %gep, align 1
-  store i8 %load, i8* undef
+  %gep = getelementptr i8, ptr %p, i64 -8192
+  %load = load volatile i8, ptr %gep, align 1
+  store i8 %load, ptr undef
   ret void
 }
 
-define amdgpu_kernel void @flat_inst_salu_offset_2x_11bit_max(i8* %p) {
+define amdgpu_kernel void @flat_inst_salu_offset_2x_11bit_max(ptr %p) {
 ; GFX9-LABEL: flat_inst_salu_offset_2x_11bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1196,13 +1196,13 @@ define amdgpu_kernel void @flat_inst_salu_offset_2x_11bit_max(i8* %p) {
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep = getelementptr i8, i8* %p, i64 4095
-  %load = load volatile i8, i8* %gep, align 1
-  store i8 %load, i8* undef
+  %gep = getelementptr i8, ptr %p, i64 4095
+  %load = load volatile i8, ptr %gep, align 1
+  store i8 %load, ptr undef
   ret void
 }
 
-define amdgpu_kernel void @flat_inst_salu_offset_2x_12bit_max(i8* %p) {
+define amdgpu_kernel void @flat_inst_salu_offset_2x_12bit_max(ptr %p) {
 ; GFX9-LABEL: flat_inst_salu_offset_2x_12bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1241,13 +1241,13 @@ define amdgpu_kernel void @flat_inst_salu_offset_2x_12bit_max(i8* %p) {
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep = getelementptr i8, i8* %p, i64 8191
-  %load = load volatile i8, i8* %gep, align 1
-  store i8 %load, i8* undef
+  %gep = getelementptr i8, ptr %p, i64 8191
+  %load = load volatile i8, ptr %gep, align 1
+  store i8 %load, ptr undef
   ret void
 }
 
-define amdgpu_kernel void @flat_inst_salu_offset_2x_13bit_max(i8* %p) {
+define amdgpu_kernel void @flat_inst_salu_offset_2x_13bit_max(ptr %p) {
 ; GFX9-LABEL: flat_inst_salu_offset_2x_13bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1286,13 +1286,13 @@ define amdgpu_kernel void @flat_inst_salu_offset_2x_13bit_max(i8* %p) {
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep = getelementptr i8, i8* %p, i64 16383
-  %load = load volatile i8, i8* %gep, align 1
-  store i8 %load, i8* undef
+  %gep = getelementptr i8, ptr %p, i64 16383
+  %load = load volatile i8, ptr %gep, align 1
+  store i8 %load, ptr undef
   ret void
 }
 
-define amdgpu_kernel void @flat_inst_salu_offset_2x_neg_11bit_max(i8* %p) {
+define amdgpu_kernel void @flat_inst_salu_offset_2x_neg_11bit_max(ptr %p) {
 ; GFX9-LABEL: flat_inst_salu_offset_2x_neg_11bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1331,13 +1331,13 @@ define amdgpu_kernel void @flat_inst_salu_offset_2x_neg_11bit_max(i8* %p) {
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep = getelementptr i8, i8* %p, i64 -4096
-  %load = load volatile i8, i8* %gep, align 1
-  store i8 %load, i8* undef
+  %gep = getelementptr i8, ptr %p, i64 -4096
+  %load = load volatile i8, ptr %gep, align 1
+  store i8 %load, ptr undef
   ret void
 }
 
-define amdgpu_kernel void @flat_inst_salu_offset_2x_neg_12bit_max(i8* %p) {
+define amdgpu_kernel void @flat_inst_salu_offset_2x_neg_12bit_max(ptr %p) {
 ; GFX9-LABEL: flat_inst_salu_offset_2x_neg_12bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1376,13 +1376,13 @@ define amdgpu_kernel void @flat_inst_salu_offset_2x_neg_12bit_max(i8* %p) {
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep = getelementptr i8, i8* %p, i64 -8192
-  %load = load volatile i8, i8* %gep, align 1
-  store i8 %load, i8* undef
+  %gep = getelementptr i8, ptr %p, i64 -8192
+  %load = load volatile i8, ptr %gep, align 1
+  store i8 %load, ptr undef
   ret void
 }
 
-define amdgpu_kernel void @flat_inst_salu_offset_2x_neg_13bit_max(i8* %p) {
+define amdgpu_kernel void @flat_inst_salu_offset_2x_neg_13bit_max(ptr %p) {
 ; GFX9-LABEL: flat_inst_salu_offset_2x_neg_13bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1421,14 +1421,14 @@ define amdgpu_kernel void @flat_inst_salu_offset_2x_neg_13bit_max(i8* %p) {
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep = getelementptr i8, i8* %p, i64 -16384
-  %load = load volatile i8, i8* %gep, align 1
-  store i8 %load, i8* undef
+  %gep = getelementptr i8, ptr %p, i64 -16384
+  %load = load volatile i8, ptr %gep, align 1
+  store i8 %load, ptr undef
   ret void
 }
 
 ; Fill 11-bit low-bits (1ull << 33) | 2047
-define amdgpu_kernel void @flat_inst_salu_offset_64bit_11bit_split0(i8* %p) {
+define amdgpu_kernel void @flat_inst_salu_offset_64bit_11bit_split0(ptr %p) {
 ; GFX9-LABEL: flat_inst_salu_offset_64bit_11bit_split0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1466,14 +1466,14 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_11bit_split0(i8* %p) {
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep = getelementptr i8, i8* %p, i64 8589936639
-  %load = load volatile i8, i8* %gep, align 1
-  store i8 %load, i8* undef
+  %gep = getelementptr i8, ptr %p, i64 8589936639
+  %load = load volatile i8, ptr %gep, align 1
+  store i8 %load, ptr undef
   ret void
 }
 
 ; Fill 11-bit low-bits (1ull << 33) | 2048
-define amdgpu_kernel void @flat_inst_salu_offset_64bit_11bit_split1(i8* %p) {
+define amdgpu_kernel void @flat_inst_salu_offset_64bit_11bit_split1(ptr %p) {
 ; GFX9-LABEL: flat_inst_salu_offset_64bit_11bit_split1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1511,14 +1511,14 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_11bit_split1(i8* %p) {
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep = getelementptr i8, i8* %p, i64 8589936640
-  %load = load volatile i8, i8* %gep, align 1
-  store i8 %load, i8* undef
+  %gep = getelementptr i8, ptr %p, i64 8589936640
+  %load = load volatile i8, ptr %gep, align 1
+  store i8 %load, ptr undef
   ret void
 }
 
 ; Fill 12-bit low-bits (1ull << 33) | 4095
-define amdgpu_kernel void @flat_inst_salu_offset_64bit_12bit_split0(i8* %p) {
+define amdgpu_kernel void @flat_inst_salu_offset_64bit_12bit_split0(ptr %p) {
 ; GFX9-LABEL: flat_inst_salu_offset_64bit_12bit_split0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1556,14 +1556,14 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_12bit_split0(i8* %p) {
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep = getelementptr i8, i8* %p, i64 8589938687
-  %load = load volatile i8, i8* %gep, align 1
-  store i8 %load, i8* undef
+  %gep = getelementptr i8, ptr %p, i64 8589938687
+  %load = load volatile i8, ptr %gep, align 1
+  store i8 %load, ptr undef
   ret void
 }
 
 ; Fill 12-bit low-bits (1ull << 33) | 4096
-define amdgpu_kernel void @flat_inst_salu_offset_64bit_12bit_split1(i8* %p) {
+define amdgpu_kernel void @flat_inst_salu_offset_64bit_12bit_split1(ptr %p) {
 ; GFX9-LABEL: flat_inst_salu_offset_64bit_12bit_split1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1602,14 +1602,14 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_12bit_split1(i8* %p) {
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep = getelementptr i8, i8* %p, i64 8589938688
-  %load = load volatile i8, i8* %gep, align 1
-  store i8 %load, i8* undef
+  %gep = getelementptr i8, ptr %p, i64 8589938688
+  %load = load volatile i8, ptr %gep, align 1
+  store i8 %load, ptr undef
   ret void
 }
 
 ; Fill 13-bit low-bits (1ull << 33) | 8191
-define amdgpu_kernel void @flat_inst_salu_offset_64bit_13bit_split0(i8* %p) {
+define amdgpu_kernel void @flat_inst_salu_offset_64bit_13bit_split0(ptr %p) {
 ; GFX9-LABEL: flat_inst_salu_offset_64bit_13bit_split0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1648,14 +1648,14 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_13bit_split0(i8* %p) {
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep = getelementptr i8, i8* %p, i64 8589942783
-  %load = load volatile i8, i8* %gep, align 1
-  store i8 %load, i8* undef
+  %gep = getelementptr i8, ptr %p, i64 8589942783
+  %load = load volatile i8, ptr %gep, align 1
+  store i8 %load, ptr undef
   ret void
 }
 
 ; Fill 13-bit low-bits (1ull << 33) | 8192
-define amdgpu_kernel void @flat_inst_salu_offset_64bit_13bit_split1(i8* %p) {
+define amdgpu_kernel void @flat_inst_salu_offset_64bit_13bit_split1(ptr %p) {
 ; GFX9-LABEL: flat_inst_salu_offset_64bit_13bit_split1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1694,14 +1694,14 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_13bit_split1(i8* %p) {
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep = getelementptr i8, i8* %p, i64 8589942784
-  %load = load volatile i8, i8* %gep, align 1
-  store i8 %load, i8* undef
+  %gep = getelementptr i8, ptr %p, i64 8589942784
+  %load = load volatile i8, ptr %gep, align 1
+  store i8 %load, ptr undef
   ret void
 }
 
 ; Fill 11-bit low-bits, negative high bits (1ull << 63) | 2047
-define amdgpu_kernel void @flat_inst_salu_offset_64bit_11bit_neg_high_split0(i8* %p) {
+define amdgpu_kernel void @flat_inst_salu_offset_64bit_11bit_neg_high_split0(ptr %p) {
 ; GFX9-LABEL: flat_inst_salu_offset_64bit_11bit_neg_high_split0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1742,14 +1742,14 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_11bit_neg_high_split0(i8*
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep = getelementptr i8, i8* %p, i64 -9223372036854773761
-  %load = load volatile i8, i8* %gep, align 1
-  store i8 %load, i8* undef
+  %gep = getelementptr i8, ptr %p, i64 -9223372036854773761
+  %load = load volatile i8, ptr %gep, align 1
+  store i8 %load, ptr undef
   ret void
 }
 
 ; Fill 11-bit low-bits, negative high bits (1ull << 63) | 2048
-define amdgpu_kernel void @flat_inst_salu_offset_64bit_11bit_neg_high_split1(i8* %p) {
+define amdgpu_kernel void @flat_inst_salu_offset_64bit_11bit_neg_high_split1(ptr %p) {
 ; GFX9-LABEL: flat_inst_salu_offset_64bit_11bit_neg_high_split1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1790,14 +1790,14 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_11bit_neg_high_split1(i8*
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep = getelementptr i8, i8* %p, i64 -9223372036854773760
-  %load = load volatile i8, i8* %gep, align 1
-  store i8 %load, i8* undef
+  %gep = getelementptr i8, ptr %p, i64 -9223372036854773760
+  %load = load volatile i8, ptr %gep, align 1
+  store i8 %load, ptr undef
   ret void
 }
 
 ; Fill 12-bit low-bits, negative high bits (1ull << 63) | 4095
-define amdgpu_kernel void @flat_inst_salu_offset_64bit_12bit_neg_high_split0(i8* %p) {
+define amdgpu_kernel void @flat_inst_salu_offset_64bit_12bit_neg_high_split0(ptr %p) {
 ; GFX9-LABEL: flat_inst_salu_offset_64bit_12bit_neg_high_split0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1838,14 +1838,14 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_12bit_neg_high_split0(i8*
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep = getelementptr i8, i8* %p, i64 -9223372036854771713
-  %load = load volatile i8, i8* %gep, align 1
-  store i8 %load, i8* undef
+  %gep = getelementptr i8, ptr %p, i64 -9223372036854771713
+  %load = load volatile i8, ptr %gep, align 1
+  store i8 %load, ptr undef
   ret void
 }
 
 ; Fill 12-bit low-bits, negative high bits (1ull << 63) | 4096
-define amdgpu_kernel void @flat_inst_salu_offset_64bit_12bit_neg_high_split1(i8* %p) {
+define amdgpu_kernel void @flat_inst_salu_offset_64bit_12bit_neg_high_split1(ptr %p) {
 ; GFX9-LABEL: flat_inst_salu_offset_64bit_12bit_neg_high_split1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1886,14 +1886,14 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_12bit_neg_high_split1(i8*
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep = getelementptr i8, i8* %p, i64 -9223372036854771712
-  %load = load volatile i8, i8* %gep, align 1
-  store i8 %load, i8* undef
+  %gep = getelementptr i8, ptr %p, i64 -9223372036854771712
+  %load = load volatile i8, ptr %gep, align 1
+  store i8 %load, ptr undef
   ret void
 }
 
 ; Fill 13-bit low-bits, negative high bits (1ull << 63) | 8191
-define amdgpu_kernel void @flat_inst_salu_offset_64bit_13bit_neg_high_split0(i8* %p) {
+define amdgpu_kernel void @flat_inst_salu_offset_64bit_13bit_neg_high_split0(ptr %p) {
 ; GFX9-LABEL: flat_inst_salu_offset_64bit_13bit_neg_high_split0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1934,14 +1934,14 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_13bit_neg_high_split0(i8*
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep = getelementptr i8, i8* %p, i64 -9223372036854767617
-  %load = load volatile i8, i8* %gep, align 1
-  store i8 %load, i8* undef
+  %gep = getelementptr i8, ptr %p, i64 -9223372036854767617
+  %load = load volatile i8, ptr %gep, align 1
+  store i8 %load, ptr undef
   ret void
 }
 
 ; Fill 13-bit low-bits, negative high bits (1ull << 63) | 8192
-define amdgpu_kernel void @flat_inst_salu_offset_64bit_13bit_neg_high_split1(i8* %p) {
+define amdgpu_kernel void @flat_inst_salu_offset_64bit_13bit_neg_high_split1(ptr %p) {
 ; GFX9-LABEL: flat_inst_salu_offset_64bit_13bit_neg_high_split1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1982,8 +1982,8 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_13bit_neg_high_split1(i8*
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep = getelementptr i8, i8* %p, i64 -9223372036854767616
-  %load = load volatile i8, i8* %gep, align 1
-  store i8 %load, i8* undef
+  %gep = getelementptr i8, ptr %p, i64 -9223372036854767616
+  %load = load volatile i8, ptr %gep, align 1
+  store i8 %load, ptr undef
   ret void
 }

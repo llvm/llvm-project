@@ -44,7 +44,7 @@ define double @u1tofp(i1 %i, double %d) #0 {
 ; CHECK-NEXT:    blr
 entry:
   %conv = tail call double @llvm.experimental.constrained.uitofp.f64.i1(i1 %i, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
-  store volatile double %d, double* @foo, align 8
+  store volatile double %d, ptr @foo, align 8
   ret double %conv
 }
 
@@ -68,7 +68,7 @@ define double @s1tofp(i1 %i, double %d) #0 {
 ; CHECK-NEXT:    blr
 entry:
   %conv = tail call double @llvm.experimental.constrained.sitofp.f64.i1(i1 %i, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
-  store volatile double %d, double* @foo, align 8
+  store volatile double %d, ptr @foo, align 8
   ret double %conv
 }
 

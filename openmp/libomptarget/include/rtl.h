@@ -14,11 +14,16 @@
 #define _OMPTARGET_RTL_H
 
 #include "omptarget.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/DynamicLibrary.h"
+
+#include "omptarget.h"
+
 #include <list>
 #include <map>
 #include <mutex>
 #include <string>
-#include <vector>
 
 // Forward declarations.
 struct DeviceTy;
@@ -44,19 +49,12 @@ struct RTLInfoTy {
   typedef int32_t(data_exchange_ty)(int32_t, void *, int32_t, void *, int64_t);
   typedef int32_t(data_exchange_async_ty)(int32_t, void *, int32_t, void *,
                                           int64_t, __tgt_async_info *);
-  typedef int32_t(data_delete_ty)(int32_t, void *);
-  typedef int32_t(run_region_ty)(int32_t, void *, void **, ptrdiff_t *,
-                                 int32_t);
-  typedef int32_t(run_region_async_ty)(int32_t, void *, void **, ptrdiff_t *,
-                                       int32_t, __tgt_async_info *);
-  typedef int32_t(run_team_region_ty)(int32_t, void *, void **, ptrdiff_t *,
-                                      int32_t, int32_t, int32_t, uint64_t);
-  typedef int32_t(run_team_region_async_ty)(int32_t, void *, void **,
-                                            ptrdiff_t *, int32_t, int32_t,
-                                            int32_t, uint64_t,
-                                            __tgt_async_info *);
+  typedef int32_t(data_delete_ty)(int32_t, void *, int32_t);
+  typedef int32_t(launch_kernel_ty)(int32_t, void *, void **, ptrdiff_t *,
+                                    const KernelArgsTy *, __tgt_async_info *);
   typedef int64_t(init_requires_ty)(int64_t);
   typedef int32_t(synchronize_ty)(int32_t, __tgt_async_info *);
+  typedef int32_t(query_async_ty)(int32_t, __tgt_async_info *);
   typedef int32_t (*register_lib_ty)(__tgt_bin_desc *);
   typedef int32_t(supports_empty_images_ty)();
   typedef void(print_device_info_ty)(int32_t);
@@ -70,6 +68,8 @@ struct RTLInfoTy {
   typedef int32_t(init_async_info_ty)(int32_t, __tgt_async_info **);
   typedef int64_t(init_device_into_ty)(int64_t, __tgt_device_info *,
                                        const char **);
+  typedef int32_t(data_lock_ty)(int32_t, void *, int64_t, void **);
+  typedef int32_t(data_unlock_ty)(int32_t, void *);
 
   int32_t Idx = -1;             // RTL index, index is the number of devices
                                 // of other RTLs that were registered before,
@@ -77,7 +77,7 @@ struct RTLInfoTy {
                                 // to be registered with this RTL.
   int32_t NumberOfDevices = -1; // Number of devices this RTL deals with.
 
-  void *LibraryHandler = nullptr;
+  std::unique_ptr<llvm::sys::DynamicLibrary> LibraryHandler;
 
 #ifdef OMPTARGET_DEBUG
   std::string RTLName;
@@ -101,12 +101,10 @@ struct RTLInfoTy {
   data_exchange_ty *data_exchange = nullptr;
   data_exchange_async_ty *data_exchange_async = nullptr;
   data_delete_ty *data_delete = nullptr;
-  run_region_ty *run_region = nullptr;
-  run_region_async_ty *run_region_async = nullptr;
-  run_team_region_ty *run_team_region = nullptr;
-  run_team_region_async_ty *run_team_region_async = nullptr;
+  launch_kernel_ty *launch_kernel = nullptr;
   init_requires_ty *init_requires = nullptr;
   synchronize_ty *synchronize = nullptr;
+  query_async_ty *query_async = nullptr;
   register_lib_ty register_lib = nullptr;
   register_lib_ty unregister_lib = nullptr;
   supports_empty_images_ty *supports_empty_images = nullptr;
@@ -120,9 +118,13 @@ struct RTLInfoTy {
   init_async_info_ty *init_async_info = nullptr;
   init_device_into_ty *init_device_info = nullptr;
   release_async_info_ty *release_async_info = nullptr;
+  data_lock_ty *data_lock = nullptr;
+  data_unlock_ty *data_unlock = nullptr;
 
   // Are there images associated with this RTL.
   bool IsUsed = false;
+
+  llvm::DenseSet<const __tgt_device_image *> UsedImages;
 
   // Mutex for thread-safety when calling RTL interface functions.
   // It is easier to enforce thread-safety at the libomptarget level,
@@ -137,7 +139,7 @@ struct RTLsTy {
 
   // Array of pointers to the detected runtime libraries that have compatible
   // binaries.
-  std::vector<RTLInfoTy *> UsedRTLs;
+  llvm::SmallVector<RTLInfoTy *> UsedRTLs;
 
   int64_t RequiresFlags = OMP_REQ_UNDEFINED;
 
@@ -158,10 +160,11 @@ struct RTLsTy {
   // Unregister a shared library from all RTLs.
   void unregisterLib(__tgt_bin_desc *Desc);
 
-  // Mutex-like object to guarantee thread-safety and unique initialization
-  // (i.e. the library attempts to load the RTLs (plugins) only once).
-  std::once_flag InitFlag;
-  void loadRTLs(); // not thread-safe
+  // not thread-safe, called from global constructor (i.e. once)
+  void loadRTLs();
+
+private:
+  static bool attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL);
 };
 
 /// Map between the host entry begin and the translation table. Each
@@ -172,10 +175,12 @@ struct TranslationTable {
   __tgt_target_table HostTable;
 
   // Image assigned to a given device.
-  std::vector<__tgt_device_image *> TargetsImages; // One image per device ID.
+  llvm::SmallVector<__tgt_device_image *>
+      TargetsImages; // One image per device ID.
 
   // Table of entry points or NULL if it was not already computed.
-  std::vector<__tgt_target_table *> TargetsTable; // One table per device ID.
+  llvm::SmallVector<__tgt_target_table *>
+      TargetsTable; // One table per device ID.
 };
 typedef std::map<__tgt_offload_entry *, TranslationTable>
     HostEntriesBeginToTransTableTy;

@@ -8,6 +8,7 @@
 
 #include "Linux.h"
 #include "Arch/ARM.h"
+#include "Arch/LoongArch.h"
 #include "Arch/Mips.h"
 #include "Arch/PPC.h"
 #include "Arch/RISCV.h"
@@ -238,24 +239,17 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   // Android loader does not support .gnu.hash until API 23.
   // Hexagon linker/loader does not support .gnu.hash
   if (!IsMips && !IsHexagon) {
-    if (Distro.IsRedhat() || Distro.IsOpenSUSE() || Distro.IsAlpineLinux() ||
-        (Distro.IsUbuntu() && Distro >= Distro::UbuntuMaverick) ||
-        (IsAndroid && !Triple.isAndroidVersionLT(23)))
-      ExtraOpts.push_back("--hash-style=gnu");
-
-    if (Distro.IsDebian() || Distro.IsOpenSUSE() ||
-        Distro == Distro::UbuntuLucid || Distro == Distro::UbuntuJaunty ||
-        Distro == Distro::UbuntuKarmic ||
+    if (Distro.IsOpenSUSE() || Distro == Distro::UbuntuLucid ||
+        Distro == Distro::UbuntuJaunty || Distro == Distro::UbuntuKarmic ||
         (IsAndroid && Triple.isAndroidVersionLT(23)))
       ExtraOpts.push_back("--hash-style=both");
+    else
+      ExtraOpts.push_back("--hash-style=gnu");
   }
 
 #ifdef ENABLE_LINKER_BUILD_ID
   ExtraOpts.push_back("--build-id");
 #endif
-
-  if (IsAndroid || Distro.IsOpenSUSE())
-    ExtraOpts.push_back("--enable-new-dtags");
 
   // The selection of paths to try here is designed to match the patterns which
   // the GCC driver itself uses, as this is part of the GCC-compatible driver.
@@ -473,6 +467,22 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
     Loader = HF ? "ld-linux-armhf.so.3" : "ld-linux.so.3";
     break;
   }
+  case llvm::Triple::loongarch32: {
+    LibDir = "lib32";
+    Loader =
+        ("ld-linux-loongarch-" +
+         tools::loongarch::getLoongArchABI(getDriver(), Args, Triple) + ".so.1")
+            .str();
+    break;
+  }
+  case llvm::Triple::loongarch64: {
+    LibDir = "lib64";
+    Loader =
+        ("ld-linux-loongarch-" +
+         tools::loongarch::getLoongArchABI(getDriver(), Args, Triple) + ".so.1")
+            .str();
+    break;
+  }
   case llvm::Triple::m68k:
     LibDir = "lib";
     Loader = "ld.so.1";
@@ -681,9 +691,13 @@ void Linux::AddHIPIncludeArgs(const ArgList &DriverArgs,
 
 void Linux::AddHIPRuntimeLibArgs(const ArgList &Args,
                                  ArgStringList &CmdArgs) const {
-  CmdArgs.append(
-      {Args.MakeArgString(StringRef("-L") + RocmInstallation.getLibPath()),
-       "-rpath", Args.MakeArgString(RocmInstallation.getLibPath())});
+  CmdArgs.push_back(
+      Args.MakeArgString(StringRef("-L") + RocmInstallation.getLibPath()));
+
+  if (Args.hasFlag(options::OPT_offload_add_rpath,
+                   options::OPT_no_offload_add_rpath, false))
+    CmdArgs.append(
+        {"-rpath", Args.MakeArgString(RocmInstallation.getLibPath())});
 
   CmdArgs.push_back("-lamdhip64");
 }
@@ -699,11 +713,8 @@ void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
 }
 
 bool Linux::isPIEDefault(const llvm::opt::ArgList &Args) const {
-  // TODO: Remove the special treatment for Flang once its frontend driver can
-  // generate position independent code.
-  return !getDriver().IsFlangMode() &&
-         (CLANG_DEFAULT_PIE_ON_LINUX || getTriple().isAndroid() ||
-          getTriple().isMusl() || getSanitizerArgs(Args).requiresPIE());
+  return CLANG_DEFAULT_PIE_ON_LINUX || getTriple().isAndroid() ||
+         getTriple().isMusl() || getSanitizerArgs(Args).requiresPIE();
 }
 
 bool Linux::IsAArch64OutlineAtomicsDefault(const ArgList &Args) const {
@@ -738,6 +749,7 @@ SanitizerMask Linux::getSupportedSanitizers() const {
                          getTriple().getArch() == llvm::Triple::thumb ||
                          getTriple().getArch() == llvm::Triple::armeb ||
                          getTriple().getArch() == llvm::Triple::thumbeb;
+  const bool IsLoongArch64 = getTriple().getArch() == llvm::Triple::loongarch64;
   const bool IsRISCV64 = getTriple().getArch() == llvm::Triple::riscv64;
   const bool IsSystemZ = getTriple().getArch() == llvm::Triple::systemz;
   const bool IsHexagon = getTriple().getArch() == llvm::Triple::hexagon;
@@ -754,19 +766,22 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   if (IsX86_64 || IsMIPS64 || IsAArch64)
     Res |= SanitizerKind::DataFlow;
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsX86 || IsArmArch || IsPowerPC64 ||
-      IsRISCV64 || IsSystemZ || IsHexagon)
+      IsRISCV64 || IsSystemZ || IsHexagon || IsLoongArch64)
     Res |= SanitizerKind::Leak;
-  if (IsX86_64 || IsMIPS64 || IsAArch64 || IsPowerPC64 || IsSystemZ)
+  if (IsX86_64 || IsMIPS64 || IsAArch64 || IsPowerPC64 || IsSystemZ ||
+      IsLoongArch64)
     Res |= SanitizerKind::Thread;
   if (IsX86_64)
     Res |= SanitizerKind::KernelMemory;
   if (IsX86 || IsX86_64)
     Res |= SanitizerKind::Function;
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsX86 || IsMIPS || IsArmArch ||
-      IsPowerPC64 || IsHexagon)
+      IsPowerPC64 || IsHexagon || IsLoongArch64)
     Res |= SanitizerKind::Scudo;
-  if (IsX86_64 || IsAArch64) {
+  if (IsX86_64 || IsAArch64 || IsRISCV64) {
     Res |= SanitizerKind::HWAddress;
+  }
+  if (IsX86_64 || IsAArch64) {
     Res |= SanitizerKind::KernelHWAddress;
   }
   return Res;
@@ -804,4 +819,10 @@ Linux::getDefaultDenormalModeForType(const llvm::opt::ArgList &DriverArgs,
 void Linux::addExtraOpts(llvm::opt::ArgStringList &CmdArgs) const {
   for (const auto &Opt : ExtraOpts)
     CmdArgs.push_back(Opt.c_str());
+}
+
+const char *Linux::getDefaultLinker() const {
+  if (getTriple().isAndroid())
+    return "ld.lld";
+  return Generic_ELF::getDefaultLinker();
 }

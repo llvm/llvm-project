@@ -190,5 +190,5 @@ llvm::Type *LLVM::TypeToLLVMIRTranslator::translateType(Type type) {
 
 unsigned LLVM::TypeToLLVMIRTranslator::getPreferredAlignment(
     Type type, const llvm::DataLayout &layout) {
-  return layout.getPrefTypeAlignment(translateType(type));
+  return layout.getPrefTypeAlign(translateType(type)).value();
 }

@@ -60,3 +60,11 @@ namespace ns {
 // expected-error@-3 {{cannot declare variable inside @interface or @protocol}}
 
 @end
+
+// This used to crash.
+@protocol Property0;
+@protocol Property0;
+id<Property0> x;
+@protocol Property0;
+id<Property0> y;
+id<Property0> z = true ? x : y;

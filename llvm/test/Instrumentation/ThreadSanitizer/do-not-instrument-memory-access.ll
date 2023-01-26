@@ -18,39 +18,39 @@ target triple = "x86_64-apple-macosx10.9"
 
 define i32 @test_gep() sanitize_thread {
 entry:
-  %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test_gep, i64 0, i64 0)
+  %pgocount = load i64, ptr @__profc_test_gep
   %0 = add i64 %pgocount, 1
-  store i64 %0, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test_gep, i64 0, i64 0)
+  store i64 %0, ptr @__profc_test_gep
 
-  %gcovcount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__llvm_gcov_ctr, i64 0, i64 0)
+  %gcovcount = load i64, ptr @__llvm_gcov_ctr
   %1 = add i64 %gcovcount, 1
-  store i64 %1, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__llvm_gcov_ctr, i64 0, i64 0)
+  store i64 %1, ptr @__llvm_gcov_ctr
 
-  %gcovcount.1 = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__llvm_gcov_ctr.1, i64 0, i64 0)
+  %gcovcount.1 = load i64, ptr @__llvm_gcov_ctr.1
   %2 = add i64 %gcovcount.1, 1
-  store i64 %2, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__llvm_gcov_ctr.1, i64 0, i64 0)
+  store i64 %2, ptr @__llvm_gcov_ctr.1
 
   ret i32 1
 }
 
 define i32 @test_bitcast() sanitize_thread {
 entry:
-  %0 = load <2 x i64>, <2 x i64>* bitcast ([2 x i64]* @__profc_test_bitcast to <2 x i64>*), align 8
-  %.promoted5 = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test_bitcast_foo, i64 0, i64 0), align 8
+  %0 = load <2 x i64>, ptr @__profc_test_bitcast, align 8
+  %.promoted5 = load i64, ptr @__profc_test_bitcast_foo, align 8
   %1 = add i64 %.promoted5, 10
   %2 = add <2 x i64> %0, <i64 1, i64 10>
-  store <2 x i64> %2, <2 x i64>* bitcast ([2 x i64]* @__profc_test_bitcast to <2 x i64>*), align 8
-  store i64 %1, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test_bitcast_foo, i64 0, i64 0), align 8
+  store <2 x i64> %2, ptr @__profc_test_bitcast, align 8
+  store i64 %1, ptr @__profc_test_bitcast_foo, align 8
   ret i32 undef
 }
 
 define void @test_load() sanitize_thread {
 entry:
-  %0 = load i32, i32* @__llvm_gcov_global_state_pred
-  store i32 1, i32* @__llvm_gcov_global_state_pred
+  %0 = load i32, ptr @__llvm_gcov_global_state_pred
+  store i32 1, ptr @__llvm_gcov_global_state_pred
 
-  %1 = load i32, i32* @__llvm_gcda_foo
-  store i32 1, i32* @__llvm_gcda_foo
+  %1 = load i32, ptr @__llvm_gcda_foo
+  store i32 1, ptr @__llvm_gcda_foo
 
   ret void
 }

@@ -32,10 +32,12 @@ class CodeGenOptionsBase {
 
 public:
 #define CODEGENOPT(Name, Bits, Default) unsigned Name : Bits;
+#define ENUM_CODEGENOPT(Name, Type, Bits, Default)
 #include "flang/Frontend/CodeGenOptions.def"
 
 protected:
 #define CODEGENOPT(Name, Bits, Default)
+#define ENUM_CODEGENOPT(Name, Type, Bits, Default) unsigned Name : Bits;
 #include "flang/Frontend/CodeGenOptions.def"
 };
 
@@ -44,6 +46,16 @@ protected:
 class CodeGenOptions : public CodeGenOptionsBase {
 
 public:
+  /// The paths to the pass plugins that were registered using -fpass-plugin.
+  std::vector<std::string> LLVMPassPlugins;
+
+  // Define accessors/mutators for code generation options of enumeration type.
+#define CODEGENOPT(Name, Bits, Default)
+#define ENUM_CODEGENOPT(Name, Type, Bits, Default)                             \
+  Type get##Name() const { return static_cast<Type>(Name); }                   \
+  void set##Name(Type Value) { Name = static_cast<unsigned>(Value); }
+#include "flang/Frontend/CodeGenOptions.def"
+
   CodeGenOptions();
 };
 

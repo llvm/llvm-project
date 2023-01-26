@@ -72,18 +72,27 @@ static size_t getL1DataCacheSize() {
   report_fatal_error("Unable to read L1 Cache Data Size");
 }
 
+static constexpr int64_t KiB = 1024;
+static constexpr int64_t ParameterStorageBytes = 4 * KiB;
+static constexpr int64_t L1LeftAsideBytes = 1 * KiB;
+
 static size_t getAvailableBufferSize() {
-  static constexpr int64_t KiB = 1024;
-  static constexpr int64_t ParameterStorageBytes = 4 * KiB;
-  static constexpr int64_t L1LeftAsideBytes = 1 * KiB;
   return getL1DataCacheSize() - L1LeftAsideBytes - ParameterStorageBytes;
 }
 
 ParameterBatch::ParameterBatch(size_t BufferCount)
     : BufferSize(getAvailableBufferSize() / BufferCount),
-      BatchSize(BufferSize / sizeof(ParameterType)), Parameters(BatchSize) {
+      BatchSize(ParameterStorageBytes / sizeof(ParameterType)),
+      Parameters(BatchSize) {
   if (BufferSize <= 0 || BatchSize < 100)
     report_fatal_error("Not enough L1 cache");
+  const size_t ParameterBytes = Parameters.size() * sizeof(ParameterType);
+  const size_t BufferBytes = BufferSize * BufferCount;
+  if (ParameterBytes + BufferBytes + L1LeftAsideBytes > getL1DataCacheSize())
+    report_fatal_error(
+        "We're splitting a buffer of the size of the L1 cache between a data "
+        "buffer and a benchmark parameters buffer, so by construction the "
+        "total should not exceed the size of the L1 cache");
 }
 
 size_t ParameterBatch::getBatchBytes() const {

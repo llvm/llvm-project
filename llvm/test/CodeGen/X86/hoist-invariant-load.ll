@@ -212,18 +212,18 @@ for.end:                                          ; preds = %for.body
 
 declare ptr @objc_msgSend(ptr, ptr, ...) nonlazybind
 
-define void @test_multi_def(ptr dereferenceable(8) %x1,
+define void @test_multi_def(ptr dereferenceable(8) align(8) %x1,
 ; CHECK-LABEL: test_multi_def:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movq %rdx, %rax
 ; CHECK-NEXT:    xorl %r8d, %r8d
 ; CHECK-NEXT:    movq (%rdi), %rdx
-; CHECK-NEXT:    movq (%rsi), %r9
+; CHECK-NEXT:    movq (%rsi), %rsi
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB4_2: ## %for.body
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mulxq %r9, %rsi, %rdi
-; CHECK-NEXT:    addq %rsi, (%rax)
+; CHECK-NEXT:    mulxq %rsi, %r9, %rdi
+; CHECK-NEXT:    addq %r9, (%rax)
 ; CHECK-NEXT:    adcq %rdi, 8(%rax)
 ; CHECK-NEXT:  ## %bb.1: ## %for.check
 ; CHECK-NEXT:    ## in Loop: Header=BB4_2 Depth=1
@@ -233,7 +233,7 @@ define void @test_multi_def(ptr dereferenceable(8) %x1,
 ; CHECK-NEXT:    jl LBB4_2
 ; CHECK-NEXT:  ## %bb.3: ## %exit
 ; CHECK-NEXT:    retq
-                            ptr dereferenceable(8) %x2,
+                            ptr dereferenceable(8) align(8) %x2,
                             ptr %y, i64 %count) nounwind nofree nosync {
 entry:
   br label %for.body
@@ -260,7 +260,7 @@ exit:
   ret void
 }
 
-define void @test_div_def(ptr dereferenceable(8) %x1,
+define void @test_div_def(ptr dereferenceable(8) align(8) %x1,
 ; CHECK-LABEL: test_div_def:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movq %rdx, %r8
@@ -281,7 +281,7 @@ define void @test_div_def(ptr dereferenceable(8) %x1,
 ; CHECK-NEXT:    jl LBB5_2
 ; CHECK-NEXT:  ## %bb.3: ## %exit
 ; CHECK-NEXT:    retq
-                          ptr dereferenceable(8) %x2,
+                          ptr dereferenceable(8) align(8) %x2,
                           ptr %y, i32 %count) nounwind nofree nosync {
 entry:
   br label %for.body

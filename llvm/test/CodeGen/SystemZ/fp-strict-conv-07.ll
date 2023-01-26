@@ -29,7 +29,7 @@ define double @f2(i64 %i) #0 {
 }
 
 ; Test i64->f128.
-define void @f3(i64 %i, fp128 *%dst) #0 {
+define void @f3(i64 %i, ptr %dst) #0 {
 ; CHECK-LABEL: f3:
 ; CHECK: cxgbr %f0, %r2
 ; CHECK: std %f0, 0(%r3)
@@ -38,7 +38,7 @@ define void @f3(i64 %i, fp128 *%dst) #0 {
   %conv = call fp128 @llvm.experimental.constrained.sitofp.f128.i64(i64 %i,
                                                metadata !"round.dynamic",
                                                metadata !"fpexcept.strict") #0
-  store fp128 %conv, fp128 *%dst
+  store fp128 %conv, ptr %dst
   ret void
 }
 

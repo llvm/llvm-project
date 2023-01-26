@@ -10,7 +10,7 @@
 ;     int flags;
 ;   } __attribute__((preserve_access_index));
 ;
-;   extern void output(void *);
+;   extern void output(ptr);
 ;   void test(struct info_t * args) {
 ;     int is_mask2 = args->flags & 0x10000;
 ;     struct data_t data = {};
@@ -28,44 +28,40 @@ target triple = "bpf"
 %struct.data_t = type { i32, i32 }
 
 ; Function Attrs: nounwind
-define dso_local void @test(%struct.info_t* readonly %args) local_unnamed_addr #0 !dbg !12 {
+define dso_local void @test(ptr readonly %args) local_unnamed_addr #0 !dbg !12 {
 entry:
   %data = alloca i64, align 8
-  %tmpcast = bitcast i64* %data to %struct.data_t*
-  call void @llvm.dbg.value(metadata %struct.info_t* %args, metadata !22, metadata !DIExpression()), !dbg !29
-  %0 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.info_ts(%struct.info_t* elementtype(%struct.info_t) %args, i32 1, i32 1), !dbg !30, !llvm.preserve.access.index !16
-  %1 = load i32, i32* %0, align 4, !dbg !30, !tbaa !31
+  call void @llvm.dbg.value(metadata ptr %args, metadata !22, metadata !DIExpression()), !dbg !29
+  %0 = tail call ptr @llvm.preserve.struct.access.index.p0.p0.info_ts(ptr elementtype(%struct.info_t) %args, i32 1, i32 1), !dbg !30, !llvm.preserve.access.index !16
+  %1 = load i32, ptr %0, align 4, !dbg !30, !tbaa !31
   %and = and i32 %1, 65536, !dbg !36
   call void @llvm.dbg.value(metadata i32 %and, metadata !23, metadata !DIExpression()), !dbg !29
-  %2 = bitcast i64* %data to i8*, !dbg !37
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %2) #5, !dbg !37
-  call void @llvm.dbg.declare(metadata %struct.data_t* %tmpcast, metadata !24, metadata !DIExpression()), !dbg !38
-  store i64 0, i64* %data, align 8, !dbg !38
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %data) #5, !dbg !37
+  call void @llvm.dbg.declare(metadata ptr %data, metadata !24, metadata !DIExpression()), !dbg !38
+  store i64 0, ptr %data, align 8, !dbg !38
   %tobool = icmp eq i32 %and, 0, !dbg !39
   br i1 %tobool, label %cond.false, label %lor.end.critedge, !dbg !39
 
 cond.false:                                       ; preds = %entry
-  %3 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.info_ts(%struct.info_t* elementtype(%struct.info_t) %args, i32 0, i32 0), !dbg !40, !llvm.preserve.access.index !16
-  %4 = load i32, i32* %3, align 4, !dbg !40, !tbaa !41
-  %d1 = bitcast i64* %data to i32*, !dbg !42
-  store i32 %4, i32* %d1, align 8, !dbg !43, !tbaa !44
-  %5 = load i32, i32* %0, align 4, !dbg !46, !tbaa !31
-  %and2 = and i32 %5, 32768, !dbg !47
+  %2 = tail call ptr @llvm.preserve.struct.access.index.p0.p0.info_ts(ptr elementtype(%struct.info_t) %args, i32 0, i32 0), !dbg !40, !llvm.preserve.access.index !16
+  %3 = load i32, ptr %2, align 4, !dbg !40, !tbaa !41
+  store i32 %3, ptr %data, align 8, !dbg !43, !tbaa !44
+  %4 = load i32, ptr %0, align 4, !dbg !46, !tbaa !31
+  %and2 = and i32 %4, 32768, !dbg !47
   %tobool3 = icmp eq i32 %and2, 0, !dbg !48
   %phitmp = select i1 %tobool3, i32 2, i32 1, !dbg !48
   br label %lor.end, !dbg !48
 
 lor.end.critedge:                                 ; preds = %entry
-  %d1.c = bitcast i64* %data to i32*, !dbg !42
-  store i32 2, i32* %d1.c, align 8, !dbg !43, !tbaa !44
+  store i32 2, ptr %data, align 8, !dbg !43, !tbaa !44
   br label %lor.end, !dbg !48
 
 lor.end:                                          ; preds = %lor.end.critedge, %cond.false
-  %6 = phi i32 [ %phitmp, %cond.false ], [ 1, %lor.end.critedge ]
-  %d2 = getelementptr inbounds %struct.data_t, %struct.data_t* %tmpcast, i64 0, i32 1, !dbg !49
-  store i32 %6, i32* %d2, align 4, !dbg !50, !tbaa !51
-  call void @output(i8* nonnull %2) #5, !dbg !52
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %2) #5, !dbg !53
+  %5 = phi i32 [ %phitmp, %cond.false ], [ 1, %lor.end.critedge ]
+  %d2 = getelementptr inbounds %struct.data_t, ptr %data, i64 0, i32 1, !dbg !49
+  store i32 %5, ptr %d2, align 4, !dbg !50, !tbaa !51
+  call void @output(ptr nonnull %data) #5, !dbg !52
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %data) #5, !dbg !53
   ret void, !dbg !53
 }
 
@@ -78,15 +74,15 @@ lor.end:                                          ; preds = %lor.end.critedge, %
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #2
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #2
 
 ; Function Attrs: nounwind readnone
-declare i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.info_ts(%struct.info_t*, i32 immarg, i32 immarg) #3
+declare ptr @llvm.preserve.struct.access.index.p0.p0.info_ts(ptr, i32 immarg, i32 immarg) #3
 
-declare !dbg !4 dso_local void @output(i8*) local_unnamed_addr #4
+declare !dbg !4 dso_local void @output(ptr) local_unnamed_addr #4
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #2
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #2
 
 ; Function Attrs: nounwind readnone speculatable willreturn
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1

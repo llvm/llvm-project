@@ -1,28 +1,27 @@
-; RUN: opt -openmp-opt-cgscc -pass-remarks=openmp-opt -disable-output < %s 2>&1 | FileCheck %s
 ; RUN: opt -passes=openmp-opt-cgscc -pass-remarks=openmp-opt -disable-output < %s 2>&1 | FileCheck %s
 ; ModuleID = 'deduplication_remarks.c'
 source_filename = "deduplication_remarks.c"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
-%struct.ident_t = type { i32, i32, i32, i32, i8* }
+%struct.ident_t = type { i32, i32, i32, i32, ptr }
 
-@0 = private unnamed_addr global %struct.ident_t { i32 0, i32 34, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str0, i32 0, i32 0) }, align 8
+@0 = private unnamed_addr global %struct.ident_t { i32 0, i32 34, i32 0, i32 0, ptr @.str0 }, align 8
 @.str0 = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00", align 1
 
 ; CHECK: remark: deduplication_remarks.c:7:10: OpenMP runtime call __kmpc_global_thread_num deduplicated
 ; CHECK: remark: deduplication_remarks.c:9:10: OpenMP runtime call __kmpc_global_thread_num deduplicated
 define dso_local void @deduplicate() local_unnamed_addr !dbg !14 {
-  %1 = tail call i32 @__kmpc_global_thread_num(%struct.ident_t* nonnull @0), !dbg !21
+  %1 = tail call i32 @__kmpc_global_thread_num(ptr nonnull @0), !dbg !21
   call void @useI32(i32 %1), !dbg !23
-  %2 = tail call i32 @__kmpc_global_thread_num(%struct.ident_t* nonnull @0), !dbg !24
+  %2 = tail call i32 @__kmpc_global_thread_num(ptr nonnull @0), !dbg !24
   call void @useI32(i32 %2), !dbg !25
-  %3 = tail call i32 @__kmpc_global_thread_num(%struct.ident_t* nonnull @0), !dbg !26
+  %3 = tail call i32 @__kmpc_global_thread_num(ptr nonnull @0), !dbg !26
   call void @useI32(i32 %3), !dbg !27
   ret void, !dbg !28
 }
 
-declare i32 @__kmpc_global_thread_num(%struct.ident_t*)
+declare i32 @__kmpc_global_thread_num(ptr)
 
 declare !dbg !4 void @useI32(i32) local_unnamed_addr
 

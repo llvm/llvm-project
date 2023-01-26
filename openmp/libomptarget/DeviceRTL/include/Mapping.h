@@ -14,7 +14,7 @@
 
 #include "Types.h"
 
-namespace _OMP {
+namespace ompx {
 
 namespace mapping {
 
@@ -97,6 +97,6 @@ uint32_t getNumberOfProcessorElements();
 
 } // namespace mapping
 
-} // namespace _OMP
+} // namespace ompx
 
 #endif

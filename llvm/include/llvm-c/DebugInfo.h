@@ -116,6 +116,15 @@ typedef enum {
   LLVMDWARFSourceLanguageFortran08,
   LLVMDWARFSourceLanguageRenderScript,
   LLVMDWARFSourceLanguageBLISS,
+  LLVMDWARFSourceLanguageKotlin,
+  LLVMDWARFSourceLanguageZig,
+  LLVMDWARFSourceLanguageCrystal,
+  LLVMDWARFSourceLanguageC_plus_plus_17,
+  LLVMDWARFSourceLanguageC_plus_plus_20,
+  LLVMDWARFSourceLanguageC17,
+  LLVMDWARFSourceLanguageFortran18,
+  LLVMDWARFSourceLanguageAda2005,
+  LLVMDWARFSourceLanguageAda2012,
   // Vendor extensions:
   LLVMDWARFSourceLanguageMips_Assembler,
   LLVMDWARFSourceLanguageGOOGLE_RenderScript,
@@ -169,7 +178,8 @@ enum {
   LLVMDICommonBlockMetadataKind,
   LLVMDIStringTypeMetadataKind,
   LLVMDIGenericSubrangeMetadataKind,
-  LLVMDIArgListMetadataKind
+  LLVMDIArgListMetadataKind,
+  LLVMDIAssignIDMetadataKind,
 };
 typedef unsigned LLVMMetadataKind;
 

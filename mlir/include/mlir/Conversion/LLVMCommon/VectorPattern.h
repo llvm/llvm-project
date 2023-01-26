@@ -47,7 +47,7 @@ SmallVector<int64_t, 4> getCoordinates(ArrayRef<int64_t> basis,
 // Iterate of linear index, convert to coords space and insert splatted 1-D
 // vector in each position.
 void nDVectorIterate(const NDVectorTypeInfo &info, OpBuilder &builder,
-                     function_ref<void(ArrayAttr)> fun);
+                     function_ref<void(ArrayRef<int64_t>)> fun);
 
 LogicalResult handleMultidimensionalVectors(
     Operation *op, ValueRange operands, LLVMTypeConverter &typeConverter,
@@ -56,14 +56,34 @@ LogicalResult handleMultidimensionalVectors(
 
 LogicalResult vectorOneToOneRewrite(Operation *op, StringRef targetOp,
                                     ValueRange operands,
+                                    ArrayRef<NamedAttribute> targetAttrs,
                                     LLVMTypeConverter &typeConverter,
                                     ConversionPatternRewriter &rewriter);
 } // namespace detail
 } // namespace LLVM
 
+// Default attribute conversion class, which passes all source attributes
+// through to the target op, unmodified.
+template <typename SourceOp, typename TargetOp>
+class AttrConvertPassThrough {
+public:
+  AttrConvertPassThrough(SourceOp srcOp) : srcAttrs(srcOp->getAttrs()) {}
+
+  ArrayRef<NamedAttribute> getAttrs() const { return srcAttrs; }
+
+private:
+  ArrayRef<NamedAttribute> srcAttrs;
+};
+
 /// Basic lowering implementation to rewrite Ops with just one result to the
 /// LLVM Dialect. This supports higher-dimensional vector types.
-template <typename SourceOp, typename TargetOp>
+/// The AttrConvert template template parameter should be a template class
+/// with SourceOp and TargetOp type parameters, a constructor that takes
+/// a SourceOp instance, and a getAttrs() method that returns
+/// ArrayRef<NamedAttribute>.
+template <typename SourceOp, typename TargetOp,
+          template <typename, typename> typename AttrConvert =
+              AttrConvertPassThrough>
 class VectorConvertToLLVMPattern : public ConvertOpToLLVMPattern<SourceOp> {
 public:
   using ConvertOpToLLVMPattern<SourceOp>::ConvertOpToLLVMPattern;
@@ -75,9 +95,12 @@ public:
     static_assert(
         std::is_base_of<OpTrait::OneResult<SourceOp>, SourceOp>::value,
         "expected single result op");
+    // Determine attributes for the target op
+    AttrConvert<SourceOp, TargetOp> attrConvert(op);
+
     return LLVM::detail::vectorOneToOneRewrite(
         op, TargetOp::getOperationName(), adaptor.getOperands(),
-        *this->getTypeConverter(), rewriter);
+        attrConvert.getAttrs(), *this->getTypeConverter(), rewriter);
   }
 };
 } // namespace mlir

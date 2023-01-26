@@ -30,10 +30,11 @@
 
 #include "clang-pseudo/Token.h"
 #include "clang/Basic/TokenKinds.h"
+#include <optional>
+#include <variant>
 #include <vector>
 
 namespace clang {
-class LangOptions;
 namespace pseudo {
 
 /// Describes the structure of a source file, as seen by the preprocessor.
@@ -82,11 +83,11 @@ struct DirectiveTree {
     /// None indicates no branch was taken (e.g. #if 0 ... #endif).
     /// The initial tree from `parse()` has no branches marked as taken.
     /// See `chooseConditionalBranches()`.
-    llvm::Optional<unsigned> Taken;
+    std::optional<unsigned> Taken;
   };
 
   /// Some piece of the file. {One of Code, Directive, Conditional}.
-  class Chunk; // Defined below.
+  using Chunk = std::variant<Code, Directive, Conditional>;
   std::vector<Chunk> Chunks;
 
   /// Extract preprocessor structure by examining the raw tokens.
@@ -99,7 +100,6 @@ struct DirectiveTree {
   TokenStream stripDirectives(const TokenStream &) const;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const DirectiveTree &);
-llvm::raw_ostream &operator<<(llvm::raw_ostream &, const DirectiveTree::Chunk &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const DirectiveTree::Code &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &,
                               const DirectiveTree::Directive &);
@@ -123,48 +123,6 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &,
 ///
 /// The choices are stored in Conditional::Taken nodes.
 void chooseConditionalBranches(DirectiveTree &, const TokenStream &Code);
-
-// FIXME: This approximates std::variant<Code, Directive, Conditional>.
-//         Switch once we can use C++17.
-class DirectiveTree::Chunk {
-public:
-  enum Kind { K_Empty, K_Code, K_Directive, K_Conditional };
-  Kind kind() const {
-    return CodeVariant          ? K_Code
-           : DirectiveVariant   ? K_Directive
-           : ConditionalVariant ? K_Conditional
-                                : K_Empty;
-  }
-
-  Chunk() = delete;
-  Chunk(const Chunk &) = delete;
-  Chunk(Chunk &&) = default;
-  Chunk &operator=(const Chunk &) = delete;
-  Chunk &operator=(Chunk &&) = default;
-  ~Chunk() = default;
-
-  // T => Chunk constructor.
-  Chunk(Code C) : CodeVariant(std::move(C)) {}
-  Chunk(Directive C) : DirectiveVariant(std::move(C)) {}
-  Chunk(Conditional C) : ConditionalVariant(std::move(C)) {}
-
-  // Chunk => T& and const T& conversions.
-#define CONVERSION(CONST, V)                                                   \
-  explicit operator CONST V &() CONST { return *V##Variant; }
-  CONVERSION(const, Code);
-  CONVERSION(, Code);
-  CONVERSION(const, Directive);
-  CONVERSION(, Directive);
-  CONVERSION(const, Conditional);
-  CONVERSION(, Conditional);
-#undef CONVERSION
-
-private:
-  // Wasteful, a union variant would be better!
-  llvm::Optional<Code> CodeVariant;
-  llvm::Optional<Directive> DirectiveVariant;
-  llvm::Optional<Conditional> ConditionalVariant;
-};
 
 } // namespace pseudo
 } // namespace clang

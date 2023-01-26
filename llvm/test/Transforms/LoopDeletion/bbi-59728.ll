@@ -9,7 +9,7 @@ define void @func_45() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY45:%.*]]
 ; CHECK:       for.body45:
-; CHECK-NEXT:    store i32 433429641, i32* undef, align 1
+; CHECK-NEXT:    store i32 433429641, ptr undef, align 1
 ; CHECK-NEXT:    br label [[FOR_BODY45]]
 ;
 entry:
@@ -19,7 +19,7 @@ for.body45:                                       ; preds = %for.end72, %entry
   br label %for.body48
 
 for.body48:                                       ; preds = %for.body48, %for.body45
-  store i32 433429641, i32* undef, align 1
+  store i32 433429641, ptr undef, align 1
   br i1 undef, label %for.body48, label %for.end72
 
 for.end72:                                        ; preds = %for.body48

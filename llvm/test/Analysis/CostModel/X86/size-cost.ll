@@ -46,21 +46,21 @@ define double @bitcast_i64_f64(i64 %x) {
   ret double %r
 }
 
-define i64* @inttoptr_i64_p64(i64 %x) {
+define ptr @inttoptr_i64_p64(i64 %x) {
 ; CHECK-LABEL: 'inttoptr_i64_p64'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r = inttoptr i64 %x to i64*
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i64* %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r = inttoptr i64 %x to ptr
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret ptr %r
 ;
-  %r = inttoptr i64 %x to i64*
-  ret i64* %r
+  %r = inttoptr i64 %x to ptr
+  ret ptr %r
 }
 
-define i64 @ptrtoint_p64_i64(i64* %x) {
+define i64 @ptrtoint_p64_i64(ptr %x) {
 ; CHECK-LABEL: 'ptrtoint_p64_i64'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r = ptrtoint i64* %x to i64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r = ptrtoint ptr %x to i64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i64 %r
 ;
-  %r = ptrtoint i64* %x to i64
+  %r = ptrtoint ptr %x to i64
   ret i64 %r
 }
 
@@ -216,11 +216,11 @@ define double @fmul_f64(double %x, double %y) {
   ret double %r
 }
 
-; FIXME: divsd is 1 instruction.
+; divsd is 1 instruction.
 
 define double @fdiv_f64(double %x, double %y) {
 ; CHECK-LABEL: 'fdiv_f64'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %r = fdiv double %x, %y
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r = fdiv double %x, %y
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret double %r
 ;
   %r = fdiv double %x, %y

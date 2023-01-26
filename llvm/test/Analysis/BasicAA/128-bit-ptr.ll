@@ -12,17 +12,15 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-i1
 
 ; CHECK:     Function: test0
 ; CHECK-NOT:   MayAlias:
-define void @test0(%T addrspace(100)* %P) {
-  %A = getelementptr %T, %T addrspace(100)* %P, i64 0
-  %B = getelementptr %T, %T addrspace(100)* %P, i64 0, i32 0
-  %C = getelementptr %T, %T addrspace(100)* %P, i64 0, i32 1
-  %D = getelementptr %T, %T addrspace(100)* %P, i64 0, i32 1, i64 0
-  %E = getelementptr %T, %T addrspace(100)* %P, i64 0, i32 1, i64 5
-  load %T, %T addrspace(100)* %A
-  load i32, i32 addrspace(100)* %B
-  load [10 x i8], [10 x i8] addrspace(100)* %C
-  load i8, i8 addrspace(100)* %D
-  load i8, i8 addrspace(100)* %E
+define void @test0(ptr addrspace(100) %P) {
+  %C = getelementptr %T, ptr addrspace(100) %P, i64 0, i32 1
+  %D = getelementptr %T, ptr addrspace(100) %P, i64 0, i32 1, i64 0
+  %E = getelementptr %T, ptr addrspace(100) %P, i64 0, i32 1, i64 5
+  load %T, ptr addrspace(100) %P
+  load i32, ptr addrspace(100) %P
+  load [10 x i8], ptr addrspace(100) %C
+  load i8, ptr addrspace(100) %D
+  load i8, ptr addrspace(100) %E
   ret void
 }
 
@@ -35,15 +33,15 @@ define void @test0(%T addrspace(100)* %P) {
 ; CHECK:       NoAlias:
 ; CHECK-SAME:  %A
 ; CHECK-SAME:  %B
-define void @test1(double addrspace(100)* %P, i128 %i) {
+define void @test1(ptr addrspace(100) %P, i128 %i) {
   ; 1180591620717411303424 is 2**70
   ;  590295810358705651712 is 2**69
   %i70 = add i128 %i, 1180591620717411303424 
   %i69 = add i128 %i, 590295810358705651712
-  %A = getelementptr double, double addrspace(100)* %P, i128 %i70
-  %B = getelementptr double, double addrspace(100)* %P, i128 %i69
-  load double, double addrspace(100)* %A
-  load double, double addrspace(100)* %B
+  %A = getelementptr double, ptr addrspace(100) %P, i128 %i70
+  %B = getelementptr double, ptr addrspace(100) %P, i128 %i69
+  load double, ptr addrspace(100) %A
+  load double, ptr addrspace(100) %B
   ret void
 }
 
@@ -55,15 +53,15 @@ define void @test1(double addrspace(100)* %P, i128 %i) {
 ; CHECK: MustAlias:
 ; CHECK-SAME: %A
 ; CHECK-SAME: %C
-define void @test2(double addrspace(100)* %P, i128 %i) {
+define void @test2(ptr addrspace(100) %P, i128 %i) {
   ; 1180591620717411303424 is 2**70
   ;  590295810358705651712 is 2**69
   %i70 = add i128 %i, 1180591620717411303424 
   %i69 = add i128 %i, 590295810358705651712
   %j70 = add i128 %i69, 590295810358705651712 
-  %A = getelementptr double, double addrspace(100)* %P, i128 %i70
-  %C = getelementptr double, double addrspace(100)* %P, i128 %j70
-  load double, double addrspace(100)* %A
-  load double, double addrspace(100)* %C
+  %A = getelementptr double, ptr addrspace(100) %P, i128 %i70
+  %C = getelementptr double, ptr addrspace(100) %P, i128 %j70
+  load double, ptr addrspace(100) %A
+  load double, ptr addrspace(100) %C
   ret void
 }

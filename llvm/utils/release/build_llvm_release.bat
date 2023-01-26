@@ -1,28 +1,58 @@
 @echo off
 setlocal enabledelayedexpansion
 
-if "%1"=="" goto usage
 goto begin
 
 :usage
 echo Script for building the LLVM installer on Windows,
 echo used for the releases at https://github.com/llvm/llvm-project/releases
 echo.
-echo Usage: build_llvm_release.bat ^<version^>
+echo Usage: build_llvm_release.bat --version ^<version^> [--x86,--x64]
 echo.
-echo Example: build_llvm_release.bat 14.0.4
+echo Options:
+echo --version: [required] version to build
+echo --help: display this help
+echo --x86: build and test x86 variant
+echo --x64: build and test x64 variant
 echo.
+echo Note: At least one variant to build is required.
+echo.
+echo Example: build_llvm_release.bat --version 15.0.0 --x86 --x64
 exit /b 1
 
 :begin
 
+::==============================================================================
+:: parse args
+set version=
+set help=
+set x86=
+set x64=
+call :parse_args %*
+
+if "%help%" NEQ "" goto usage
+
+if "%version%" == "" (
+    echo --version option is required
+    echo =============================
+    goto usage
+)
+
+if "%x64%" == "" if "%x86%" == "" (
+    echo nothing to build!
+    echo choose one or several variants from: --x86 --x64
+    exit /b 1
+)
+
+::==============================================================================
+:: check prerequisites
 REM Note:
 REM   7zip versions 21.x and higher will try to extract the symlinks in
 REM   llvm's git archive, which requires running as administrator.
 
 REM Check 7-zip version and/or administrator permissions.
-for /f "delims=" %%i in ('7z.exe ^| findstr /r "2[1-9].[0-9][0-9]"') do set version=%%i
-if not "%version%"=="" (
+for /f "delims=" %%i in ('7z.exe ^| findstr /r "2[1-9].[0-9][0-9]"') do set version_7z=%%i
+if not "%version_7z%"=="" (
   REM Unique temporary filename to use by the 'mklink' command.
   set "link_name=%temp%\%username%_%random%_%random%.tmp"
 
@@ -32,7 +62,7 @@ if not "%version%"=="" (
   if errorlevel 1 (
     echo.
     echo Script requires administrator permissions, or a 7-zip version 20.x or older.
-    echo Current version is "%version%"
+    echo Current version is "%version_7z%"
     exit /b 1
   ) else (
     REM Remove the temporary symbolic link.
@@ -50,30 +80,49 @@ REM
 REM
 REM   For LLDB, SWIG version <= 3.0.8 needs to be used to work around
 REM   https://github.com/swig/swig/issues/769
+REM
 
+:: Detect Visual Studio
+set vsinstall=
+set vswhere=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe
 
-REM You need to modify the paths below:
-set vsdevcmd=C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\Tools\VsDevCmd.bat
+if "%VSINSTALLDIR%" NEQ "" (
+  echo using enabled Visual Studio installation
+  set "vsinstall=%VSINSTALLDIR%"
+) else (
+  echo using vswhere to detect Visual Studio installation
+  FOR /F "delims=" %%r IN ('^""%vswhere%" -nologo -latest -products "*" -all -property installationPath^"') DO set vsinstall=%%r
+)
+set "vsdevcmd=%vsinstall%\Common7\Tools\VsDevCmd.bat"
+
+if not exist "%vsdevcmd%" (
+  echo Can't find any installation of Visual Studio
+  exit /b 1
+)
+echo Using VS devcmd: %vsdevcmd%
+
+::==============================================================================
+:: start echoing what we do
+@echo on
 
 set python32_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python310-32
 set python64_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python310
 
-set revision=llvmorg-%1
-set package_version=%1
+set revision=llvmorg-%version%
+set package_version=%version%
 set build_dir=%cd%\llvm_package_%package_version%
 
 echo Revision: %revision%
 echo Package version: %package_version%
 echo Build dir: %build_dir%
 echo.
-pause
 
 if exist %build_dir% (
   echo Build directory already exists: %build_dir%
   exit /b 1
 )
 mkdir %build_dir%
-cd %build_dir%
+cd %build_dir% || exit /b 1
 
 echo Checking out %revision%
 curl -L https://github.com/llvm/llvm-project/archive/%revision%.zip -o src.zip || exit /b 1
@@ -106,8 +155,8 @@ REM Preserve original path
 set OLDPATH=%PATH%
 
 REM Build the 32-bits and/or 64-bits binaries.
-call :do_build_32 || exit /b 1
-call :do_build_64 || exit /b 1
+if "%x86%" == "true" call :do_build_32 || exit /b 1
+if "%x64%" == "true" call :do_build_64 || exit /b 1
 exit /b 0
 
 ::==============================================================================
@@ -122,9 +171,11 @@ REM TODO: Run the "check-all" tests.
 REM Set Python environment
 set PYTHONHOME=%python32_dir%
 set PATH=%PYTHONHOME%;%PATH%
+%python32_dir%/python.exe --version || exit /b 1
 
 set "VSCMD_START_DIR=%build_dir%"
-call "%vsdevcmd%" -arch=x86
+call "%vsdevcmd%" -arch=x86 || exit /b 1
+@echo on
 mkdir build32_stage0
 cd build32_stage0
 
@@ -191,9 +242,11 @@ set PATH=%OLDPATH%
 REM Set Python environment
 set PYTHONHOME=%python64_dir%
 set PATH=%PYTHONHOME%;%PATH%
+%python64_dir%/python.exe --version || exit /b 1
 
 set "VSCMD_START_DIR=%build_dir%"
-call "%vsdevcmd%" -arch=amd64
+call "%vsdevcmd%" -arch=amd64 || exit /b 1
+@echo on
 mkdir build64_stage0
 cd build64_stage0
 
@@ -251,3 +304,62 @@ cd ..
 
 exit /b 0
 ::==============================================================================
+
+::=============================================================================
+:: Parse command line arguments.
+:: The format for the arguments is:
+::   Boolean: --option
+::   Value:   --option<separator>value
+::     with <separator> being: space, colon, semicolon or equal sign
+::
+:: Command line usage example:
+::   my-batch-file.bat --build --type=release --version 123
+:: It will create 3 variables:
+::   'build' with the value 'true'
+::   'type' with the value 'release'
+::   'version' with the value '123'
+::
+:: Usage:
+::   set "build="
+::   set "type="
+::   set "version="
+::
+::   REM Parse arguments.
+::   call :parse_args %*
+::
+::   if defined build (
+::     ...
+::   )
+::   if %type%=='release' (
+::     ...
+::   )
+::   if %version%=='123' (
+::     ...
+::   )
+::=============================================================================
+:parse_args
+  set "arg_name="
+  :parse_args_start
+  if "%1" == "" (
+    :: Set a seen boolean argument.
+    if "%arg_name%" neq "" (
+      set "%arg_name%=true"
+    )
+    goto :parse_args_done
+  )
+  set aux=%1
+  if "%aux:~0,2%" == "--" (
+    :: Set a seen boolean argument.
+    if "%arg_name%" neq "" (
+      set "%arg_name%=true"
+    )
+    set "arg_name=%aux:~2,250%"
+  ) else (
+    set "%arg_name%=%1"
+    set "arg_name="
+  )
+  shift
+  goto :parse_args_start
+
+:parse_args_done
+exit /b 0

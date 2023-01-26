@@ -5,16 +5,16 @@ define float @_Z1if(float %p) {
 ; CHECK-LABEL: @_Z1if(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P_ADDR:%.*]] = alloca float, align 4
-; CHECK-NEXT:    store float [[P:%.*]], float* [[P_ADDR]], align 4
+; CHECK-NEXT:    store float [[P:%.*]], ptr [[P_ADDR]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq float [[P]], 3.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    ret float [[P]]
 ;
 entry:
   %p.addr = alloca float, align 4
-  store float %p, float* %p.addr, align 4
+  store float %p, ptr %p.addr, align 4
 
-  %0 = load float, float* %p.addr, align 4
+  %0 = load float, ptr %p.addr, align 4
   %cmp = fcmp ueq float %0, 3.000000e+00 ; no nnan flag - can't propagate
   call void @llvm.assume(i1 %cmp)
 
@@ -31,7 +31,7 @@ define i32 @_Z1ii(i32 %p) {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br i1 true, label [[BB2]], label [[BB2]]
 ; CHECK:       0:
-; CHECK-NEXT:    store i8 poison, i8* null, align 1
+; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    ret i32 [[P]]
 ;
 entry:
@@ -82,7 +82,7 @@ define i32 @_Z1ik(i32 %p) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 false)
 ; CHECK-NEXT:    ret i32 15
 ; CHECK:       bb3:
-; CHECK-NEXT:    store i8 poison, i8* null, align 1
+; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    ret i32 17
 ;
 entry:

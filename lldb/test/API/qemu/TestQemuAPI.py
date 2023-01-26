@@ -1,4 +1,3 @@
-from __future__ import print_function
 import lldb
 import os
 from lldbsuite.test.lldbtest import *
@@ -24,3 +23,9 @@ class TestQemuAPI(TestBase):
         self.assertSuccess(qemu.MakeDirectory(
             self.getBuildArtifact("target_dir")))
         self.assertTrue(os.path.isdir(self.getBuildArtifact("target_dir")))
+
+    def test_process_api(self):
+        self.dbg.SetCurrentPlatform("qemu-user")
+        self.expect("platform process list",
+                substrs=['no processes were found on the "qemu-user" platform'],
+                error=True)

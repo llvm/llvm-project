@@ -13,7 +13,7 @@
 ; Check that fsomeval is not mapped to A[j] because it is read-only.
 ; There is no advantage in mapping values not modified within the SCoP.
 ;
-define void @func(double* noalias nonnull %A) {
+define void @func(ptr noalias nonnull %A) {
 entry:
   %fsomeval = fadd double 21.0, 21.0
   br label %outer.preheader
@@ -49,8 +49,8 @@ outer.for:
       br label %reduction.for
 
     reduction.exit:
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
-      store double %fsomeval, double* %A_idx
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+      store double %fsomeval, ptr %A_idx
       br label %outer.inc
 
 

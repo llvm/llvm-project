@@ -227,8 +227,8 @@ TEST_F(PointerUnionTest, NewCastInfra) {
   EXPECT_EQ(dyn_cast<float *>(b), nullptr);
   EXPECT_EQ(dyn_cast<int *>(c), &i);
   EXPECT_EQ(dyn_cast<float *>(c), nullptr);
-  EXPECT_EQ(dyn_cast<int *>(n), nullptr);
-  EXPECT_EQ(dyn_cast<float *>(n), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<int *>(n), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<float *>(n), nullptr);
   EXPECT_EQ(dyn_cast<int *>(i3), &i);
   EXPECT_EQ(dyn_cast<float *>(i3), nullptr);
   EXPECT_EQ(dyn_cast<long long *>(i3), nullptr);
@@ -254,22 +254,22 @@ TEST_F(PointerUnionTest, NewCastInfra) {
   EXPECT_EQ(dyn_cast<float *>(d4), nullptr);
   EXPECT_EQ(dyn_cast<long long *>(d4), nullptr);
   EXPECT_EQ(dyn_cast<double *>(d4), &d);
-  EXPECT_EQ(dyn_cast<int *>(i4null), nullptr);
-  EXPECT_EQ(dyn_cast<float *>(i4null), nullptr);
-  EXPECT_EQ(dyn_cast<long long *>(i4null), nullptr);
-  EXPECT_EQ(dyn_cast<double *>(i4null), nullptr);
-  EXPECT_EQ(dyn_cast<int *>(f4null), nullptr);
-  EXPECT_EQ(dyn_cast<float *>(f4null), nullptr);
-  EXPECT_EQ(dyn_cast<long long *>(f4null), nullptr);
-  EXPECT_EQ(dyn_cast<double *>(f4null), nullptr);
-  EXPECT_EQ(dyn_cast<int *>(l4null), nullptr);
-  EXPECT_EQ(dyn_cast<float *>(l4null), nullptr);
-  EXPECT_EQ(dyn_cast<long long *>(l4null), nullptr);
-  EXPECT_EQ(dyn_cast<double *>(l4null), nullptr);
-  EXPECT_EQ(dyn_cast<int *>(d4null), nullptr);
-  EXPECT_EQ(dyn_cast<float *>(d4null), nullptr);
-  EXPECT_EQ(dyn_cast<long long *>(d4null), nullptr);
-  EXPECT_EQ(dyn_cast<double *>(d4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<int *>(i4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<float *>(i4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<long long *>(i4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<double *>(i4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<int *>(f4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<float *>(f4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<long long *>(f4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<double *>(f4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<int *>(l4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<float *>(l4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<long long *>(l4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<double *>(l4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<int *>(d4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<float *>(d4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<long long *>(d4null), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<double *>(d4null), nullptr);
 
   // test for const
   const PU4 constd4(&d);
@@ -279,13 +279,13 @@ TEST_F(PointerUnionTest, NewCastInfra) {
   EXPECT_EQ(dyn_cast<long long *>(constd4), nullptr);
 
   auto *result1 = cast<double *>(constd4);
-  static_assert(std::is_same<double *, decltype(result1)>::value,
+  static_assert(std::is_same_v<double *, decltype(result1)>,
                 "type mismatch for cast with PointerUnion");
 
   PointerUnion<int *, const double *> constd2(&d);
   auto *result2 = cast<const double *>(constd2);
   EXPECT_EQ(result2, &d);
-  static_assert(std::is_same<const double *, decltype(result2)>::value,
+  static_assert(std::is_same_v<const double *, decltype(result2)>,
                 "type mismatch for cast with PointerUnion");
 }
 

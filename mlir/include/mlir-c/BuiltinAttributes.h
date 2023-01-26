@@ -23,7 +23,7 @@ extern "C" {
 #endif
 
 /// Returns an empty attribute.
-MLIR_CAPI_EXPORTED MlirAttribute mlirAttributeGetNull();
+MLIR_CAPI_EXPORTED MlirAttribute mlirAttributeGetNull(void);
 
 //===----------------------------------------------------------------------===//
 // Affine map attribute.
@@ -297,6 +297,61 @@ mlirElementsAttrIsValidIndex(MlirAttribute attr, intptr_t rank, uint64_t *idxs);
 MLIR_CAPI_EXPORTED int64_t mlirElementsAttrGetNumElements(MlirAttribute attr);
 
 //===----------------------------------------------------------------------===//
+// Dense array attribute.
+//===----------------------------------------------------------------------===//
+
+/// Checks whether the given attribute is a dense array attribute.
+MLIR_CAPI_EXPORTED bool mlirAttributeIsADenseBoolArray(MlirAttribute attr);
+MLIR_CAPI_EXPORTED bool mlirAttributeIsADenseI8Array(MlirAttribute attr);
+MLIR_CAPI_EXPORTED bool mlirAttributeIsADenseI16Array(MlirAttribute attr);
+MLIR_CAPI_EXPORTED bool mlirAttributeIsADenseI32Array(MlirAttribute attr);
+MLIR_CAPI_EXPORTED bool mlirAttributeIsADenseI64Array(MlirAttribute attr);
+MLIR_CAPI_EXPORTED bool mlirAttributeIsADenseF32Array(MlirAttribute attr);
+MLIR_CAPI_EXPORTED bool mlirAttributeIsADenseF64Array(MlirAttribute attr);
+
+/// Create a dense array attribute with the given elements.
+MLIR_CAPI_EXPORTED MlirAttribute mlirDenseBoolArrayGet(MlirContext ctx,
+                                                       intptr_t size,
+                                                       int const *values);
+MLIR_CAPI_EXPORTED MlirAttribute mlirDenseI8ArrayGet(MlirContext ctx,
+                                                     intptr_t size,
+                                                     int8_t const *values);
+MLIR_CAPI_EXPORTED MlirAttribute mlirDenseI16ArrayGet(MlirContext ctx,
+                                                      intptr_t size,
+                                                      int16_t const *values);
+MLIR_CAPI_EXPORTED MlirAttribute mlirDenseI32ArrayGet(MlirContext ctx,
+                                                      intptr_t size,
+                                                      int32_t const *values);
+MLIR_CAPI_EXPORTED MlirAttribute mlirDenseI64ArrayGet(MlirContext ctx,
+                                                      intptr_t size,
+                                                      int64_t const *values);
+MLIR_CAPI_EXPORTED MlirAttribute mlirDenseF32ArrayGet(MlirContext ctx,
+                                                      intptr_t size,
+                                                      float const *values);
+MLIR_CAPI_EXPORTED MlirAttribute mlirDenseF64ArrayGet(MlirContext ctx,
+                                                      intptr_t size,
+                                                      double const *values);
+
+/// Get the size of a dense array.
+MLIR_CAPI_EXPORTED intptr_t mlirDenseArrayGetNumElements(MlirAttribute attr);
+
+/// Get an element of a dense array.
+MLIR_CAPI_EXPORTED bool mlirDenseBoolArrayGetElement(MlirAttribute attr,
+                                                     intptr_t pos);
+MLIR_CAPI_EXPORTED int8_t mlirDenseI8ArrayGetElement(MlirAttribute attr,
+                                                     intptr_t pos);
+MLIR_CAPI_EXPORTED int16_t mlirDenseI16ArrayGetElement(MlirAttribute attr,
+                                                       intptr_t pos);
+MLIR_CAPI_EXPORTED int32_t mlirDenseI32ArrayGetElement(MlirAttribute attr,
+                                                       intptr_t pos);
+MLIR_CAPI_EXPORTED int64_t mlirDenseI64ArrayGetElement(MlirAttribute attr,
+                                                       intptr_t pos);
+MLIR_CAPI_EXPORTED float mlirDenseF32ArrayGetElement(MlirAttribute attr,
+                                                     intptr_t pos);
+MLIR_CAPI_EXPORTED double mlirDenseF64ArrayGetElement(MlirAttribute attr,
+                                                      intptr_t pos);
+
+//===----------------------------------------------------------------------===//
 // Dense elements attribute.
 //===----------------------------------------------------------------------===//
 
@@ -456,13 +511,75 @@ MLIR_CAPI_EXPORTED const void *
 mlirDenseElementsAttrGetRawData(MlirAttribute attr);
 
 //===----------------------------------------------------------------------===//
-// Opaque elements attribute.
+// Resource blob attributes.
 //===----------------------------------------------------------------------===//
 
-// TODO: expose Dialect to the bindings and implement accessors here.
+MLIR_CAPI_EXPORTED MlirAttribute mlirUnmanagedDenseBoolResourceElementsAttrGet(
+    MlirType shapedType, MlirStringRef name, intptr_t numElements,
+    const int *elements);
+MLIR_CAPI_EXPORTED MlirAttribute mlirUnmanagedDenseUInt8ResourceElementsAttrGet(
+    MlirType shapedType, MlirStringRef name, intptr_t numElements,
+    const uint8_t *elements);
+MLIR_CAPI_EXPORTED MlirAttribute mlirUnmanagedDenseInt8ResourceElementsAttrGet(
+    MlirType shapedType, MlirStringRef name, intptr_t numElements,
+    const int8_t *elements);
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirUnmanagedDenseUInt16ResourceElementsAttrGet(MlirType shapedType,
+                                                MlirStringRef name,
+                                                intptr_t numElements,
+                                                const uint16_t *elements);
+MLIR_CAPI_EXPORTED MlirAttribute mlirUnmanagedDenseInt16ResourceElementsAttrGet(
+    MlirType shapedType, MlirStringRef name, intptr_t numElements,
+    const int16_t *elements);
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirUnmanagedDenseUInt32ResourceElementsAttrGet(MlirType shapedType,
+                                                MlirStringRef name,
+                                                intptr_t numElements,
+                                                const uint32_t *elements);
+MLIR_CAPI_EXPORTED MlirAttribute mlirUnmanagedDenseInt32ResourceElementsAttrGet(
+    MlirType shapedType, MlirStringRef name, intptr_t numElements,
+    const int32_t *elements);
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirUnmanagedDenseUInt64ResourceElementsAttrGet(MlirType shapedType,
+                                                MlirStringRef name,
+                                                intptr_t numElements,
+                                                const uint64_t *elements);
+MLIR_CAPI_EXPORTED MlirAttribute mlirUnmanagedDenseInt64ResourceElementsAttrGet(
+    MlirType shapedType, MlirStringRef name, intptr_t numElements,
+    const int64_t *elements);
+MLIR_CAPI_EXPORTED MlirAttribute mlirUnmanagedDenseFloatResourceElementsAttrGet(
+    MlirType shapedType, MlirStringRef name, intptr_t numElements,
+    const float *elements);
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirUnmanagedDenseDoubleResourceElementsAttrGet(MlirType shapedType,
+                                                MlirStringRef name,
+                                                intptr_t numElements,
+                                                const double *elements);
 
-/// Checks whether the given attribute is an opaque elements attribute.
-MLIR_CAPI_EXPORTED bool mlirAttributeIsAOpaqueElements(MlirAttribute attr);
+/// Returns the pos-th value (flat contiguous indexing) of a specific type
+/// contained by the given dense resource elements attribute.
+MLIR_CAPI_EXPORTED bool
+mlirDenseBoolResourceElementsAttrGetValue(MlirAttribute attr, intptr_t pos);
+MLIR_CAPI_EXPORTED int8_t
+mlirDenseInt8ResourceElementsAttrGetValue(MlirAttribute attr, intptr_t pos);
+MLIR_CAPI_EXPORTED uint8_t
+mlirDenseUInt8ResourceElementsAttrGetValue(MlirAttribute attr, intptr_t pos);
+MLIR_CAPI_EXPORTED int16_t
+mlirDenseInt16ResourceElementsAttrGetValue(MlirAttribute attr, intptr_t pos);
+MLIR_CAPI_EXPORTED uint16_t
+mlirDenseUInt16ResourceElementsAttrGetValue(MlirAttribute attr, intptr_t pos);
+MLIR_CAPI_EXPORTED int32_t
+mlirDenseInt32ResourceElementsAttrGetValue(MlirAttribute attr, intptr_t pos);
+MLIR_CAPI_EXPORTED uint32_t
+mlirDenseUInt32ResourceElementsAttrGetValue(MlirAttribute attr, intptr_t pos);
+MLIR_CAPI_EXPORTED int64_t
+mlirDenseInt64ResourceElementsAttrGetValue(MlirAttribute attr, intptr_t pos);
+MLIR_CAPI_EXPORTED uint64_t
+mlirDenseUInt64ResourceElementsAttrGetValue(MlirAttribute attr, intptr_t pos);
+MLIR_CAPI_EXPORTED float
+mlirDenseFloatResourceElementsAttrGetValue(MlirAttribute attr, intptr_t pos);
+MLIR_CAPI_EXPORTED double
+mlirDenseDoubleResourceElementsAttrGetValue(MlirAttribute attr, intptr_t pos);
 
 //===----------------------------------------------------------------------===//
 // Sparse elements attribute.
@@ -488,6 +605,29 @@ mlirSparseElementsAttrGetIndices(MlirAttribute attr);
 /// given sparse elements attribute.
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirSparseElementsAttrGetValues(MlirAttribute attr);
+
+//===----------------------------------------------------------------------===//
+// Strided layout attribute.
+//===----------------------------------------------------------------------===//
+
+// Checks wheather the given attribute is a strided layout attribute.
+MLIR_CAPI_EXPORTED bool mlirAttributeIsAStridedLayout(MlirAttribute attr);
+
+// Creates a strided layout attribute from given strides and offset.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirStridedLayoutAttrGet(MlirContext ctx, int64_t offset, intptr_t numStrides,
+                         const int64_t *strides);
+
+// Returns the offset in the given strided layout layout attribute.
+MLIR_CAPI_EXPORTED int64_t mlirStridedLayoutAttrGetOffset(MlirAttribute attr);
+
+// Returns the number of strides in the given strided layout attribute.
+MLIR_CAPI_EXPORTED intptr_t
+mlirStridedLayoutAttrGetNumStrides(MlirAttribute attr);
+
+// Returns the pos-th stride stored in the given strided layout attribute.
+MLIR_CAPI_EXPORTED int64_t mlirStridedLayoutAttrGetStride(MlirAttribute attr,
+                                                          intptr_t pos);
 
 #ifdef __cplusplus
 }

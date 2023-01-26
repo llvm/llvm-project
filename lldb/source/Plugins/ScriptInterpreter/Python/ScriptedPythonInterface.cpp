@@ -18,6 +18,7 @@
 #include "SWIGPythonBridge.h"
 #include "ScriptInterpreterPythonImpl.h"
 #include "ScriptedPythonInterface.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -25,14 +26,6 @@ using namespace lldb_private;
 ScriptedPythonInterface::ScriptedPythonInterface(
     ScriptInterpreterPythonImpl &interpreter)
     : ScriptedInterface(), m_interpreter(interpreter) {}
-
-Status
-ScriptedPythonInterface::GetStatusFromMethod(llvm::StringRef method_name) {
-  Status error;
-  Dispatch<Status>(method_name, error);
-
-  return error;
-}
 
 template <>
 StructuredData::ArraySP
@@ -55,11 +48,11 @@ Status ScriptedPythonInterface::ExtractValueFromPythonObject<Status>(
     python::PythonObject &p, Status &error) {
   if (lldb::SBError *sb_error = reinterpret_cast<lldb::SBError *>(
           LLDBSWIGPython_CastPyObjectToSBError(p.get())))
-    error = m_interpreter.GetStatusFromSBError(*sb_error);
+    return m_interpreter.GetStatusFromSBError(*sb_error);
   else
     error.SetErrorString("Couldn't cast lldb::SBError to lldb::Status.");
 
-  return error;
+  return {};
 }
 
 template <>
@@ -79,9 +72,9 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DataExtractorSP>(
 }
 
 template <>
-llvm::Optional<MemoryRegionInfo>
+std::optional<MemoryRegionInfo>
 ScriptedPythonInterface::ExtractValueFromPythonObject<
-    llvm::Optional<MemoryRegionInfo>>(python::PythonObject &p, Status &error) {
+    std::optional<MemoryRegionInfo>>(python::PythonObject &p, Status &error) {
 
   lldb::SBMemoryRegionInfo *sb_mem_reg_info =
       reinterpret_cast<lldb::SBMemoryRegionInfo *>(

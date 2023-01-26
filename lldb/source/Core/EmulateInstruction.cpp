@@ -29,6 +29,7 @@
 
 #include <cstring>
 #include <memory>
+#include <optional>
 
 #include <cinttypes>
 #include <cstdio>
@@ -72,20 +73,29 @@ EmulateInstruction::FindPlugin(const ArchSpec &arch,
 
 EmulateInstruction::EmulateInstruction(const ArchSpec &arch) : m_arch(arch) {}
 
-bool EmulateInstruction::ReadRegister(const RegisterInfo *reg_info,
-                                      RegisterValue &reg_value) {
-  if (m_read_reg_callback != nullptr)
-    return m_read_reg_callback(this, m_baton, reg_info, reg_value);
-  return false;
+std::optional<RegisterValue>
+EmulateInstruction::ReadRegister(const RegisterInfo &reg_info) {
+  if (m_read_reg_callback == nullptr)
+    return {};
+
+  RegisterValue reg_value;
+  bool success = m_read_reg_callback(this, m_baton, &reg_info, reg_value);
+  if (success)
+    return reg_value;
+  return {};
 }
 
 bool EmulateInstruction::ReadRegister(lldb::RegisterKind reg_kind,
                                       uint32_t reg_num,
                                       RegisterValue &reg_value) {
-  RegisterInfo reg_info;
-  if (GetRegisterInfo(reg_kind, reg_num, reg_info))
-    return ReadRegister(&reg_info, reg_value);
-  return false;
+  std::optional<RegisterInfo> reg_info = GetRegisterInfo(reg_kind, reg_num);
+  if (!reg_info)
+    return false;
+
+  std::optional<RegisterValue> value = ReadRegister(*reg_info);
+  if (value)
+    reg_value = *value;
+  return value.has_value();
 }
 
 uint64_t EmulateInstruction::ReadRegisterUnsigned(lldb::RegisterKind reg_kind,
@@ -100,22 +110,24 @@ uint64_t EmulateInstruction::ReadRegisterUnsigned(lldb::RegisterKind reg_kind,
   return fail_value;
 }
 
-uint64_t EmulateInstruction::ReadRegisterUnsigned(const RegisterInfo *reg_info,
+uint64_t EmulateInstruction::ReadRegisterUnsigned(const RegisterInfo &reg_info,
                                                   uint64_t fail_value,
                                                   bool *success_ptr) {
-  RegisterValue reg_value;
-  if (ReadRegister(reg_info, reg_value))
-    return reg_value.GetAsUInt64(fail_value, success_ptr);
-  if (success_ptr)
-    *success_ptr = false;
-  return fail_value;
+  std::optional<RegisterValue> reg_value = ReadRegister(reg_info);
+  if (!reg_value) {
+    if (success_ptr)
+      *success_ptr = false;
+    return fail_value;
+  }
+
+  return reg_value->GetAsUInt64(fail_value, success_ptr);
 }
 
 bool EmulateInstruction::WriteRegister(const Context &context,
-                                       const RegisterInfo *reg_info,
+                                       const RegisterInfo &reg_info,
                                        const RegisterValue &reg_value) {
   if (m_write_reg_callback != nullptr)
-    return m_write_reg_callback(this, m_baton, context, reg_info, reg_value);
+    return m_write_reg_callback(this, m_baton, context, &reg_info, reg_value);
   return false;
 }
 
@@ -123,9 +135,9 @@ bool EmulateInstruction::WriteRegister(const Context &context,
                                        lldb::RegisterKind reg_kind,
                                        uint32_t reg_num,
                                        const RegisterValue &reg_value) {
-  RegisterInfo reg_info;
-  if (GetRegisterInfo(reg_kind, reg_num, reg_info))
-    return WriteRegister(context, &reg_info, reg_value);
+  std::optional<RegisterInfo> reg_info = GetRegisterInfo(reg_kind, reg_num);
+  if (reg_info)
+    return WriteRegister(context, *reg_info, reg_value);
   return false;
 }
 
@@ -133,23 +145,21 @@ bool EmulateInstruction::WriteRegisterUnsigned(const Context &context,
                                                lldb::RegisterKind reg_kind,
                                                uint32_t reg_num,
                                                uint64_t uint_value) {
-  RegisterInfo reg_info;
-  if (GetRegisterInfo(reg_kind, reg_num, reg_info)) {
+  std::optional<RegisterInfo> reg_info = GetRegisterInfo(reg_kind, reg_num);
+  if (reg_info) {
     RegisterValue reg_value;
-    if (reg_value.SetUInt(uint_value, reg_info.byte_size))
-      return WriteRegister(context, &reg_info, reg_value);
+    if (reg_value.SetUInt(uint_value, reg_info->byte_size))
+      return WriteRegister(context, *reg_info, reg_value);
   }
   return false;
 }
 
 bool EmulateInstruction::WriteRegisterUnsigned(const Context &context,
-                                               const RegisterInfo *reg_info,
+                                               const RegisterInfo &reg_info,
                                                uint64_t uint_value) {
-  if (reg_info != nullptr) {
-    RegisterValue reg_value;
-    if (reg_value.SetUInt(uint_value, reg_info->byte_size))
-      return WriteRegister(context, reg_info, reg_value);
-  }
+  RegisterValue reg_value;
+  if (reg_value.SetUInt(uint_value, reg_info.byte_size))
+    return WriteRegister(context, reg_info, reg_value);
   return false;
 }
 
@@ -440,7 +450,7 @@ void EmulateInstruction::Context::Dump(Stream &strm,
     break;
   }
 
-  switch (info_type) {
+  switch (GetInfoType()) {
   case eInfoTypeRegisterPlusOffset:
     strm.Printf(" (reg_plus_offset = %s%+" PRId64 ")",
                 info.RegisterPlusOffset.reg.name,

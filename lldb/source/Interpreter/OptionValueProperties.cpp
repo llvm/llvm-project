@@ -248,16 +248,22 @@ bool OptionValueProperties::GetPropertyAtIndexAsArgs(
     return false;
 
   const OptionValueArgs *arguments = value->GetAsArgs();
-  if (arguments)
-    return arguments->GetArgs(args);
+  if (arguments) {
+    arguments->GetArgs(args);
+    return true;
+  }
 
   const OptionValueArray *array = value->GetAsArray();
-  if (array)
-    return array->GetArgs(args);
+  if (array) {
+    array->GetArgs(args);
+    return true;
+  }
 
   const OptionValueDictionary *dict = value->GetAsDictionary();
-  if (dict)
-    return dict->GetArgs(args);
+  if (dict) {
+    dict->GetArgs(args);
+    return true;
+  }
 
   return false;
 }
@@ -545,10 +551,26 @@ void OptionValueProperties::DumpValue(const ExecutionContext *exe_ctx,
   }
 }
 
+llvm::json::Value
+OptionValueProperties::ToJSON(const ExecutionContext *exe_ctx) {
+  llvm::json::Object json_properties;
+  const size_t num_properties = m_properties.size();
+  for (size_t i = 0; i < num_properties; ++i) {
+    const Property *property = GetPropertyAtIndex(exe_ctx, false, i);
+    if (property) {
+      OptionValue *option_value = property->GetValue().get();
+      assert(option_value);
+      json_properties.try_emplace(property->GetName(),
+                                  option_value->ToJSON(exe_ctx));
+    }
+  }
+  return json_properties;
+}
+
 Status OptionValueProperties::DumpPropertyValue(const ExecutionContext *exe_ctx,
                                                 Stream &strm,
                                                 llvm::StringRef property_path,
-                                                uint32_t dump_mask) {
+                                                uint32_t dump_mask, bool is_json) {
   Status error;
   const bool will_modify = false;
   lldb::OptionValueSP value_sp(
@@ -560,7 +582,10 @@ Status OptionValueProperties::DumpPropertyValue(const ExecutionContext *exe_ctx,
       if (dump_mask & ~eDumpOptionName)
         strm.PutChar(' ');
     }
-    value_sp->DumpValue(exe_ctx, strm, dump_mask);
+    if (is_json) {
+      strm.Printf("%s", llvm::formatv("{0:2}", value_sp->ToJSON(exe_ctx)).str().c_str());
+    } else
+      value_sp->DumpValue(exe_ctx, strm, dump_mask);
   }
   return error;
 }

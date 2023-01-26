@@ -258,6 +258,13 @@ define i32 @movmskps_pow2_mask(<4 x i32> %a0) {
 ; SSE-NEXT:    movmskps %xmm0, %eax
 ; SSE-NEXT:    xorl $15, %eax
 ; SSE-NEXT:    retq
+;
+; AVX-LABEL: movmskps_pow2_mask:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpslld $29, %xmm0, %xmm0
+; AVX-NEXT:    vmovmskps %xmm0, %eax
+; AVX-NEXT:    xorl $15, %eax
+; AVX-NEXT:    retq
   %1 = and <4 x i32> %a0, <i32 4, i32 4, i32 4, i32 4>
   %2 = icmp eq <4 x i32> %1, zeroinitializer
   %3 = sext <4 x i1> %2 to <4 x i32>

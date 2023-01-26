@@ -15,6 +15,7 @@
 #include "InterferenceCache.h"
 #include "RegAllocBase.h"
 #include "RegAllocEvictionAdvisor.h"
+#include "RegAllocPriorityAdvisor.h"
 #include "SpillPlacement.h"
 #include "SplitKit.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -79,7 +80,7 @@ public:
     unsigned NextCascade = 1;
 
   public:
-    ExtraRegInfo() = default;
+    ExtraRegInfo() {}
     ExtraRegInfo(const ExtraRegInfo &) = delete;
 
     LiveRangeStage getStage(Register Reg) const { return Info[Reg].Stage; }
@@ -147,6 +148,13 @@ public:
   size_t getQueueSize() const { return Queue.size(); }
   // end (interface to eviction advisers)
 
+  // Interface to priority advisers
+  bool getRegClassPriorityTrumpsGlobalness() const {
+    return RegClassPriorityTrumpsGlobalness;
+  }
+  bool getReverseLocalAssignment() const { return ReverseLocalAssignment; }
+  // end (interface to priority advisers)
+
 private:
   // Convenient shortcuts.
   using PQueue = std::priority_queue<std::pair<unsigned, unsigned>>;
@@ -177,8 +185,10 @@ private:
   std::unique_ptr<Spiller> SpillerInstance;
   PQueue Queue;
   std::unique_ptr<VirtRegAuxInfo> VRAI;
-  Optional<ExtraRegInfo> ExtraInfo;
+  std::optional<ExtraRegInfo> ExtraInfo;
   std::unique_ptr<RegAllocEvictionAdvisor> EvictAdvisor;
+
+  std::unique_ptr<RegAllocPriorityAdvisor> PriorityAdvisor;
 
   // Enum CutOffStage to keep a track whether the register allocation failed
   // because of the cutoffs encountered in last chance recoloring.

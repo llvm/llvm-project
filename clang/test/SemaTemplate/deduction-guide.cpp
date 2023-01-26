@@ -156,9 +156,8 @@ using DT = D<int, int>;
 // CHECK:               |-BuiltinType {{.*}} 'int'
 // CHECK:               |-TemplateTypeParmType {{.*}} 'T' dependent contains_unexpanded_pack depth 0 index 0 pack
 // CHECK:               | `-TemplateTypeParm {{.*}} 'T'
-// CHECK:               `-SubstTemplateTypeParmPackType {{.*}} 'U' dependent contains_unexpanded_pack
-// CHECK:                 |-TemplateTypeParmType {{.*}} 'U' dependent contains_unexpanded_pack depth 1 index 0 pack
-// CHECK:                 | `-TemplateTypeParm {{.*}} 'U'
+// CHECK:               `-SubstTemplateTypeParmPackType {{.*}} 'U' dependent contains_unexpanded_pack typename depth 1 index 0 ... U
+// CHECK:                 |-TypeAliasTemplate {{.*}} 'B'
 // CHECK:                 `-TemplateArgument pack
 // CHECK:                   |-TemplateArgument type 'type-parameter-0-1'
 // CHECK-NOT: Subst
@@ -233,7 +232,7 @@ F s(0);
 // CHECK: | `-CXXBoolLiteralExpr {{.*}} 'bool' false
 // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for F> 'auto (type-parameter-0-1) -> F<>'
 // CHECK: | `-ParmVarDecl {{.*}} 'type-parameter-0-1'
-// CHECK: `-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for F> 'auto (int) -> F<'x'>'
+// CHECK: `-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for F> 'auto (int) -> F<>'
 // CHECK:   |-TemplateArgument integral 120
 // CHECK:   |-TemplateArgument type 'int'
 // CHECK:   | `-BuiltinType {{.*}} 'int'

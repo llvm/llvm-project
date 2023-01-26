@@ -1,20 +1,20 @@
-; RUN: opt -jump-threading -S < %s | FileCheck %s
+; RUN: opt -passes=jump-threading -S < %s | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-apple-darwin10.0.0"
 
-%class.StringSwitch = type { i8*, i32, i32, i8 }
+%class.StringSwitch = type { ptr, i32, i32, i8 }
 
-@.str = private constant [4 x i8] c"red\00"       ; <[4 x i8]*> [#uses=1]
-@.str1 = private constant [7 x i8] c"orange\00"   ; <[7 x i8]*> [#uses=1]
-@.str2 = private constant [7 x i8] c"yellow\00"   ; <[7 x i8]*> [#uses=1]
-@.str3 = private constant [6 x i8] c"green\00"    ; <[6 x i8]*> [#uses=1]
-@.str4 = private constant [5 x i8] c"blue\00"     ; <[5 x i8]*> [#uses=1]
-@.str5 = private constant [7 x i8] c"indigo\00"   ; <[7 x i8]*> [#uses=1]
-@.str6 = private constant [7 x i8] c"violet\00"   ; <[7 x i8]*> [#uses=1]
-@.str7 = private constant [12 x i8] c"Color = %d\0A\00" ; <[12 x i8]*> [#uses=1]
+@.str = private constant [4 x i8] c"red\00"       ; <ptr> [#uses=1]
+@.str1 = private constant [7 x i8] c"orange\00"   ; <ptr> [#uses=1]
+@.str2 = private constant [7 x i8] c"yellow\00"   ; <ptr> [#uses=1]
+@.str3 = private constant [6 x i8] c"green\00"    ; <ptr> [#uses=1]
+@.str4 = private constant [5 x i8] c"blue\00"     ; <ptr> [#uses=1]
+@.str5 = private constant [7 x i8] c"indigo\00"   ; <ptr> [#uses=1]
+@.str6 = private constant [7 x i8] c"violet\00"   ; <ptr> [#uses=1]
+@.str7 = private constant [12 x i8] c"Color = %d\0A\00" ; <ptr> [#uses=1]
 
-define i32 @main(i32 %argc, i8** nocapture %argv) nounwind ssp {
+define i32 @main(i32 %argc, ptr nocapture %argv) nounwind ssp {
 entry:
   %cmp142 = icmp sgt i32 %argc, 1                 ; <i1> [#uses=1]
   br i1 %cmp142, label %bb.nph, label %for.end
@@ -29,9 +29,9 @@ land.lhs.true.i:                                  ; preds = %_ZN12StringSwitchI5
   %retval.0.i.pre161 = phi i32 [ undef, %bb.nph ], [ %retval.0.i.pre, %_ZN12StringSwitchI5ColorE4CaseILj7EEERS1_RAT__KcRKS0_.exit134 ] ; <i32> [#uses=3]
   %indvar = phi i64 [ 0, %bb.nph ], [ %tmp146, %_ZN12StringSwitchI5ColorE4CaseILj7EEERS1_RAT__KcRKS0_.exit134 ] ; <i64> [#uses=1]
   %tmp146 = add i64 %indvar, 1                    ; <i64> [#uses=3]
-  %arrayidx = getelementptr i8*, i8** %argv, i64 %tmp146 ; <i8**> [#uses=1]
-  %tmp6 = load i8*, i8** %arrayidx, align 8            ; <i8*> [#uses=8]
-  %call.i.i = call i64 @strlen(i8* %tmp6) nounwind ; <i64> [#uses=1]
+  %arrayidx = getelementptr ptr, ptr %argv, i64 %tmp146 ; <ptr> [#uses=1]
+  %tmp6 = load ptr, ptr %arrayidx, align 8            ; <ptr> [#uses=8]
+  %call.i.i = call i64 @strlen(ptr %tmp6) nounwind ; <i64> [#uses=1]
   %conv.i.i = trunc i64 %call.i.i to i32          ; <i32> [#uses=6]\
 ; CHECK: switch i32 %conv.i.i
 ; CHECK-NOT: if.then.i40
@@ -42,7 +42,7 @@ land.lhs.true.i:                                  ; preds = %_ZN12StringSwitchI5
   ]
 
 land.lhs.true5.i:                                 ; preds = %land.lhs.true.i
-  %call.i = call i32 @memcmp(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i8* %tmp6, i64 4) nounwind ; <i32> [#uses=1]
+  %call.i = call i32 @memcmp(ptr @.str, ptr %tmp6, i64 4) nounwind ; <i32> [#uses=1]
   %cmp9.i = icmp eq i32 %call.i, 0                ; <i1> [#uses=1]
   br i1 %cmp9.i, label %_ZN12StringSwitchI5ColorE4CaseILj4EEERS1_RAT__KcRKS0_.exit, label %_ZN12StringSwitchI5ColorE4CaseILj7EEERS1_RAT__KcRKS0_.exit
 
@@ -50,7 +50,7 @@ _ZN12StringSwitchI5ColorE4CaseILj4EEERS1_RAT__KcRKS0_.exit: ; preds = %land.lhs.
   br label %_ZN12StringSwitchI5ColorE4CaseILj7EEERS1_RAT__KcRKS0_.exit
 
 land.lhs.true5.i37:                               ; preds = %land.lhs.true.i
-  %call.i35 = call i32 @memcmp(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str1, i64 0, i64 0), i8* %tmp6, i64 7) nounwind ; <i32> [#uses=1]
+  %call.i35 = call i32 @memcmp(ptr @.str1, ptr %tmp6, i64 7) nounwind ; <i32> [#uses=1]
   %cmp9.i36 = icmp eq i32 %call.i35, 0            ; <i1> [#uses=1]
   br i1 %cmp9.i36, label %if.then.i40, label %_ZN12StringSwitchI5ColorE4CaseILj7EEERS1_RAT__KcRKS0_.exit
 
@@ -66,7 +66,7 @@ _ZN12StringSwitchI5ColorE4CaseILj7EEERS1_RAT__KcRKS0_.exit: ; preds = %if.then.i
   br i1 %or.cond, label %land.lhs.true5.i55, label %_ZN12StringSwitchI5ColorE4CaseILj7EEERS1_RAT__KcRKS0_.exit60
 
 land.lhs.true5.i55:                               ; preds = %_ZN12StringSwitchI5ColorE4CaseILj7EEERS1_RAT__KcRKS0_.exit
-  %call.i53 = call i32 @memcmp(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str2, i64 0, i64 0), i8* %tmp6, i64 7) nounwind ; <i32> [#uses=1]
+  %call.i53 = call i32 @memcmp(ptr @.str2, ptr %tmp6, i64 7) nounwind ; <i32> [#uses=1]
   %cmp9.i54 = icmp eq i32 %call.i53, 0            ; <i1> [#uses=1]
   br i1 %cmp9.i54, label %if.then.i58, label %_ZN12StringSwitchI5ColorE4CaseILj7EEERS1_RAT__KcRKS0_.exit60
 
@@ -83,7 +83,7 @@ _ZN12StringSwitchI5ColorE4CaseILj7EEERS1_RAT__KcRKS0_.exit60: ; preds = %if.then
   br i1 %or.cond168, label %land.lhs.true5.i74, label %_ZN12StringSwitchI5ColorE4CaseILj6EEERS1_RAT__KcRKS0_.exit
 
 land.lhs.true5.i74:                               ; preds = %_ZN12StringSwitchI5ColorE4CaseILj7EEERS1_RAT__KcRKS0_.exit60
-  %call.i72 = call i32 @memcmp(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str3, i64 0, i64 0), i8* %tmp6, i64 6) nounwind ; <i32> [#uses=1]
+  %call.i72 = call i32 @memcmp(ptr @.str3, ptr %tmp6, i64 6) nounwind ; <i32> [#uses=1]
   %cmp9.i73 = icmp eq i32 %call.i72, 0            ; <i1> [#uses=1]
   br i1 %cmp9.i73, label %if.then.i77, label %_ZN12StringSwitchI5ColorE4CaseILj6EEERS1_RAT__KcRKS0_.exit
 
@@ -100,7 +100,7 @@ _ZN12StringSwitchI5ColorE4CaseILj6EEERS1_RAT__KcRKS0_.exit: ; preds = %if.then.i
   br i1 %or.cond169, label %land.lhs.true5.i92, label %_ZN12StringSwitchI5ColorE4CaseILj5EEERS1_RAT__KcRKS0_.exit
 
 land.lhs.true5.i92:                               ; preds = %_ZN12StringSwitchI5ColorE4CaseILj6EEERS1_RAT__KcRKS0_.exit
-  %call.i90 = call i32 @memcmp(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str4, i64 0, i64 0), i8* %tmp6, i64 5) nounwind ; <i32> [#uses=1]
+  %call.i90 = call i32 @memcmp(ptr @.str4, ptr %tmp6, i64 5) nounwind ; <i32> [#uses=1]
   %cmp9.i91 = icmp eq i32 %call.i90, 0            ; <i1> [#uses=1]
   br i1 %cmp9.i91, label %if.then.i95, label %_ZN12StringSwitchI5ColorE4CaseILj5EEERS1_RAT__KcRKS0_.exit
 
@@ -117,7 +117,7 @@ _ZN12StringSwitchI5ColorE4CaseILj5EEERS1_RAT__KcRKS0_.exit: ; preds = %if.then.i
   br i1 %or.cond170, label %land.lhs.true5.i110, label %_ZN12StringSwitchI5ColorE4CaseILj7EEERS1_RAT__KcRKS0_.exit115
 
 land.lhs.true5.i110:                              ; preds = %_ZN12StringSwitchI5ColorE4CaseILj5EEERS1_RAT__KcRKS0_.exit
-  %call.i108 = call i32 @memcmp(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str5, i64 0, i64 0), i8* %tmp6, i64 7) nounwind ; <i32> [#uses=1]
+  %call.i108 = call i32 @memcmp(ptr @.str5, ptr %tmp6, i64 7) nounwind ; <i32> [#uses=1]
   %cmp9.i109 = icmp eq i32 %call.i108, 0          ; <i1> [#uses=1]
   br i1 %cmp9.i109, label %if.then.i113, label %_ZN12StringSwitchI5ColorE4CaseILj7EEERS1_RAT__KcRKS0_.exit115
 
@@ -134,7 +134,7 @@ _ZN12StringSwitchI5ColorE4CaseILj7EEERS1_RAT__KcRKS0_.exit115: ; preds = %if.the
   br i1 %or.cond171, label %land.lhs.true5.i129, label %_ZN12StringSwitchI5ColorE4CaseILj7EEERS1_RAT__KcRKS0_.exit134
 
 land.lhs.true5.i129:                              ; preds = %_ZN12StringSwitchI5ColorE4CaseILj7EEERS1_RAT__KcRKS0_.exit115
-  %call.i127 = call i32 @memcmp(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str6, i64 0, i64 0), i8* %tmp6, i64 7) nounwind ; <i32> [#uses=1]
+  %call.i127 = call i32 @memcmp(ptr @.str6, ptr %tmp6, i64 7) nounwind ; <i32> [#uses=1]
   %cmp9.i128 = icmp eq i32 %call.i127, 0          ; <i1> [#uses=1]
   br i1 %cmp9.i128, label %if.then.i132, label %_ZN12StringSwitchI5ColorE4CaseILj7EEERS1_RAT__KcRKS0_.exit134
 
@@ -147,7 +147,7 @@ _ZN12StringSwitchI5ColorE4CaseILj7EEERS1_RAT__KcRKS0_.exit134: ; preds = %if.the
   %tmp7.i138 = and i8 %tmp2.i137, 1               ; <i8> [#uses=1]
   %tobool.i139 = icmp eq i8 %tmp7.i138, 0         ; <i1> [#uses=1]
   %retval.0.i = select i1 %tobool.i139, i32 0, i32 %retval.0.i.pre ; <i32> [#uses=1]
-  %call22 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str7, i64 0, i64 0), i32 %retval.0.i) ; <i32> [#uses=0]
+  %call22 = call i32 (ptr, ...) @printf(ptr @.str7, i32 %retval.0.i) ; <i32> [#uses=0]
   %exitcond = icmp eq i64 %tmp146, %tmp145        ; <i1> [#uses=1]
   br i1 %exitcond, label %for.end, label %land.lhs.true.i
 
@@ -155,8 +155,8 @@ for.end:                                          ; preds = %_ZN12StringSwitchI5
   ret i32 0
 }
 
-declare i32 @printf(i8* nocapture, ...) nounwind
+declare i32 @printf(ptr nocapture, ...) nounwind
 
-declare i32 @memcmp(i8* nocapture, i8* nocapture, i64) nounwind readonly
+declare i32 @memcmp(ptr nocapture, ptr nocapture, i64) nounwind readonly
 
-declare i64 @strlen(i8* nocapture) nounwind readonly
+declare i64 @strlen(ptr nocapture) nounwind readonly

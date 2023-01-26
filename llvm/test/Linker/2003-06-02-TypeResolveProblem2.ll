@@ -3,5 +3,5 @@
 ; RUN: llvm-link %t.1.bc %t.2.bc
 
 %T = type opaque
-@X = constant { %T* } zeroinitializer		; <{ %T* }*> [#uses=0]
+@X = constant { ptr } zeroinitializer		; <ptr> [#uses=0]
 

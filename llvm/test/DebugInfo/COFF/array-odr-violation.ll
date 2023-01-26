@@ -50,7 +50,7 @@ target triple = "x86_64-pc-windows-msvc19.10.24728"
 define void @"\01?fn1@@YAXXZ"() #0 !dbg !21 {
 entry:
   %a = alloca [1 x %union.YYSTYPE.0], align 1
-  call void @llvm.dbg.declare(metadata [1 x %union.YYSTYPE.0]* %a, metadata !24, metadata !29), !dbg !30
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !24, metadata !29), !dbg !30
   ret void, !dbg !30
 }
 

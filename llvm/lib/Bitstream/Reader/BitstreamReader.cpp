@@ -9,6 +9,7 @@
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/ADT/StringRef.h"
 #include <cassert>
+#include <optional>
 #include <string>
 
 using namespace llvm;
@@ -417,7 +418,7 @@ Error BitstreamCursor::ReadAbbrevRecord() {
   return Error::success();
 }
 
-Expected<Optional<BitstreamBlockInfo>>
+Expected<std::optional<BitstreamBlockInfo>>
 BitstreamCursor::ReadBlockInfoBlock(bool ReadBlockInfoNames) {
   if (llvm::Error Err = EnterSubBlock(bitc::BLOCKINFO_BLOCK_ID))
     return std::move(Err);
@@ -438,7 +439,7 @@ BitstreamCursor::ReadBlockInfoBlock(bool ReadBlockInfoNames) {
     switch (Entry.Kind) {
     case llvm::BitstreamEntry::SubBlock: // Handled for us already.
     case llvm::BitstreamEntry::Error:
-      return None;
+      return std::nullopt;
     case llvm::BitstreamEntry::EndBlock:
       return std::move(NewBlockInfo);
     case llvm::BitstreamEntry::Record:
@@ -448,7 +449,8 @@ BitstreamCursor::ReadBlockInfoBlock(bool ReadBlockInfoNames) {
 
     // Read abbrev records, associate them with CurBID.
     if (Entry.ID == bitc::DEFINE_ABBREV) {
-      if (!CurBlockInfo) return None;
+      if (!CurBlockInfo)
+        return std::nullopt;
       if (Error Err = ReadAbbrevRecord())
         return std::move(Err);
 
@@ -469,24 +471,25 @@ BitstreamCursor::ReadBlockInfoBlock(bool ReadBlockInfoNames) {
       break; // Default behavior, ignore unknown content.
     case bitc::BLOCKINFO_CODE_SETBID:
       if (Record.size() < 1)
-        return None;
+        return std::nullopt;
       CurBlockInfo = &NewBlockInfo.getOrCreateBlockInfo((unsigned)Record[0]);
       break;
     case bitc::BLOCKINFO_CODE_BLOCKNAME: {
       if (!CurBlockInfo)
-        return None;
+        return std::nullopt;
       if (!ReadBlockInfoNames)
         break; // Ignore name.
       CurBlockInfo->Name = std::string(Record.begin(), Record.end());
       break;
     }
       case bitc::BLOCKINFO_CODE_SETRECORDNAME: {
-        if (!CurBlockInfo) return None;
-        if (!ReadBlockInfoNames)
-          break; // Ignore name.
-        CurBlockInfo->RecordNames.emplace_back(
-            (unsigned)Record[0], std::string(Record.begin() + 1, Record.end()));
-        break;
+      if (!CurBlockInfo)
+        return std::nullopt;
+      if (!ReadBlockInfoNames)
+        break; // Ignore name.
+      CurBlockInfo->RecordNames.emplace_back(
+          (unsigned)Record[0], std::string(Record.begin() + 1, Record.end()));
+      break;
       }
       }
   }

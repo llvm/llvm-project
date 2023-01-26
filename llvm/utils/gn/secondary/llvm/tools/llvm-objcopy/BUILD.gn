@@ -68,6 +68,7 @@ driver_executable("llvm-objcopy") {
     "//llvm/lib/Object",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "ObjcopyOptions.cpp",

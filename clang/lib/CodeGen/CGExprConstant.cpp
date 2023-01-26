@@ -29,6 +29,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
+#include <optional>
 using namespace clang;
 using namespace CodeGen;
 
@@ -46,7 +47,7 @@ struct ConstantAggregateBuilderUtils {
 
   CharUnits getAlignment(const llvm::Constant *C) const {
     return CharUnits::fromQuantity(
-        CGM.getDataLayout().getABITypeAlignment(C->getType()));
+        CGM.getDataLayout().getABITypeAlign(C->getType()));
   }
 
   CharUnits getSize(llvm::Type *Ty) const {
@@ -94,7 +95,7 @@ class ConstantAggregateBuilder : private ConstantAggregateBuilderUtils {
   bool NaturalLayout = true;
 
   bool split(size_t Index, CharUnits Hint);
-  Optional<size_t> splitAt(CharUnits Pos);
+  std::optional<size_t> splitAt(CharUnits Pos);
 
   static llvm::Constant *buildFrom(CodeGenModule &CGM,
                                    ArrayRef<llvm::Constant *> Elems,
@@ -158,12 +159,12 @@ bool ConstantAggregateBuilder::add(llvm::Constant *C, CharUnits Offset,
   }
 
   // Uncommon case: constant overlaps what we've already created.
-  llvm::Optional<size_t> FirstElemToReplace = splitAt(Offset);
+  std::optional<size_t> FirstElemToReplace = splitAt(Offset);
   if (!FirstElemToReplace)
     return false;
 
   CharUnits CSize = getSize(C);
-  llvm::Optional<size_t> LastElemToReplace = splitAt(Offset + CSize);
+  std::optional<size_t> LastElemToReplace = splitAt(Offset + CSize);
   if (!LastElemToReplace)
     return false;
 
@@ -222,10 +223,10 @@ bool ConstantAggregateBuilder::addBits(llvm::APInt Bits, uint64_t OffsetInBits,
       // Partial byte: update the existing integer if there is one. If we
       // can't split out a 1-CharUnit range to update, then we can't add
       // these bits and fail the entire constant emission.
-      llvm::Optional<size_t> FirstElemToUpdate = splitAt(OffsetInChars);
+      std::optional<size_t> FirstElemToUpdate = splitAt(OffsetInChars);
       if (!FirstElemToUpdate)
         return false;
-      llvm::Optional<size_t> LastElemToUpdate =
+      std::optional<size_t> LastElemToUpdate =
           splitAt(OffsetInChars + CharUnits::One());
       if (!LastElemToUpdate)
         return false;
@@ -283,8 +284,8 @@ bool ConstantAggregateBuilder::addBits(llvm::APInt Bits, uint64_t OffsetInBits,
 /// Returns a position within Elems and Offsets such that all elements
 /// before the returned index end before Pos and all elements at or after
 /// the returned index begin at or after Pos. Splits elements as necessary
-/// to ensure this. Returns None if we find something we can't split.
-Optional<size_t> ConstantAggregateBuilder::splitAt(CharUnits Pos) {
+/// to ensure this. Returns std::nullopt if we find something we can't split.
+std::optional<size_t> ConstantAggregateBuilder::splitAt(CharUnits Pos) {
   if (Pos >= Size)
     return Offsets.size();
 
@@ -305,7 +306,7 @@ Optional<size_t> ConstantAggregateBuilder::splitAt(CharUnits Pos) {
 
     // Try to decompose it into smaller constants.
     if (!split(LastAtOrBeforePosIndex, Pos))
-      return None;
+      return std::nullopt;
   }
 }
 
@@ -517,12 +518,12 @@ void ConstantAggregateBuilder::condense(CharUnits Offset,
                                         llvm::Type *DesiredTy) {
   CharUnits Size = getSize(DesiredTy);
 
-  llvm::Optional<size_t> FirstElemToReplace = splitAt(Offset);
+  std::optional<size_t> FirstElemToReplace = splitAt(Offset);
   if (!FirstElemToReplace)
     return;
   size_t First = *FirstElemToReplace;
 
-  llvm::Optional<size_t> LastElemToReplace = splitAt(Offset + Size);
+  std::optional<size_t> LastElemToReplace = splitAt(Offset + Size);
   if (!LastElemToReplace)
     return;
   size_t Last = *LastElemToReplace;
@@ -543,8 +544,8 @@ void ConstantAggregateBuilder::condense(CharUnits Offset,
   }
 
   llvm::Constant *Replacement = buildFrom(
-      CGM, makeArrayRef(Elems).slice(First, Length),
-      makeArrayRef(Offsets).slice(First, Length), Offset, getSize(DesiredTy),
+      CGM, ArrayRef(Elems).slice(First, Length),
+      ArrayRef(Offsets).slice(First, Length), Offset, getSize(DesiredTy),
       /*known to have natural layout=*/false, DesiredTy, false);
   replace(Elems, First, Last, {Replacement});
   replace(Offsets, First, Last, {Offset});
@@ -913,17 +914,16 @@ bool ConstStructBuilder::UpdateStruct(ConstantEmitter &Emitter,
 //                             ConstExprEmitter
 //===----------------------------------------------------------------------===//
 
-static ConstantAddress tryEmitGlobalCompoundLiteral(CodeGenModule &CGM,
-                                                    CodeGenFunction *CGF,
-                                              const CompoundLiteralExpr *E) {
+static ConstantAddress
+tryEmitGlobalCompoundLiteral(ConstantEmitter &emitter,
+                             const CompoundLiteralExpr *E) {
+  CodeGenModule &CGM = emitter.CGM;
   CharUnits Align = CGM.getContext().getTypeAlignInChars(E->getType());
   if (llvm::GlobalVariable *Addr =
           CGM.getAddrOfConstantCompoundLiteralIfEmitted(E))
     return ConstantAddress(Addr, Addr->getValueType(), Align);
 
   LangAS addressSpace = E->getType().getAddressSpace();
-
-  ConstantEmitter emitter(CGM, CGF);
   llvm::Constant *C = emitter.tryEmitForInitializer(E->getInitializer(),
                                                     addressSpace, E->getType());
   if (!C) {
@@ -972,7 +972,7 @@ EmitArrayConstant(CodeGenModule &CGM, llvm::ArrayType *DesiredType,
     if (CommonElementType && NonzeroLength >= 8) {
       llvm::Constant *Initial = llvm::ConstantArray::get(
           llvm::ArrayType::get(CommonElementType, NonzeroLength),
-          makeArrayRef(Elements).take_front(NonzeroLength));
+          ArrayRef(Elements).take_front(NonzeroLength));
       Elements.resize(2);
       Elements[0] = Initial;
     } else {
@@ -1395,15 +1395,12 @@ ConstantEmitter::tryEmitAbstract(const APValue &value, QualType destType) {
 llvm::Constant *ConstantEmitter::tryEmitConstantExpr(const ConstantExpr *CE) {
   if (!CE->hasAPValueResult())
     return nullptr;
-  const Expr *Inner = CE->getSubExpr()->IgnoreImplicit();
-  QualType RetType;
-  if (auto *Call = dyn_cast<CallExpr>(Inner))
-    RetType = Call->getCallReturnType(CGM.getContext());
-  else if (auto *Ctor = dyn_cast<CXXConstructExpr>(Inner))
-    RetType = Ctor->getType();
-  llvm::Constant *Res =
-      emitAbstract(CE->getBeginLoc(), CE->getAPValueResult(), RetType);
-  return Res;
+
+  QualType RetType = CE->getType();
+  if (CE->isGLValue())
+    RetType = CGM.getContext().getLValueReferenceType(RetType);
+
+  return emitAbstract(CE->getBeginLoc(), CE->getAPValueResult(), RetType);
 }
 
 llvm::Constant *
@@ -1970,7 +1967,9 @@ ConstantLValueEmitter::VisitConstantExpr(const ConstantExpr *E) {
 
 ConstantLValue
 ConstantLValueEmitter::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
-  return tryEmitGlobalCompoundLiteral(CGM, Emitter.CGF, E);
+  ConstantEmitter CompoundLiteralEmitter(CGM, Emitter.CGF);
+  CompoundLiteralEmitter.setInConstantContext(Emitter.isInConstantContext());
+  return tryEmitGlobalCompoundLiteral(CompoundLiteralEmitter, E);
 }
 
 ConstantLValue
@@ -2214,7 +2213,8 @@ void CodeGenModule::setAddrOfConstantCompoundLiteral(
 ConstantAddress
 CodeGenModule::GetAddrOfConstantCompoundLiteral(const CompoundLiteralExpr *E) {
   assert(E->isFileScope() && "not a file-scope compound literal expr");
-  return tryEmitGlobalCompoundLiteral(*this, nullptr, E);
+  ConstantEmitter emitter(*this);
+  return tryEmitGlobalCompoundLiteral(emitter, E);
 }
 
 llvm::Constant *

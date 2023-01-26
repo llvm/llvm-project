@@ -4,7 +4,7 @@
 
 target triple = "wasm32-unknown-unknown"
 
-define void @foo(i32* nocapture %a, i32 %w, i32 %h) {
+define void @foo(ptr nocapture %a, i32 %w, i32 %h) {
 ; CHECK-LABEL: foo:
 ; CHECK-NEXT: .functype foo (i32, i32, i32) -> (){{$}}
 ; CHECK-NEXT: .local i32, i32, i32, i32, i32, i32{{$}}
@@ -28,8 +28,8 @@ for.body.3:
   %x.018 = phi i32 [ 0, %for.body.3.lr.ph ], [ %inc, %for.body.3 ]
   %mul = mul nsw i32 %x.018, %y.020
   %add = add nsw i32 %x.018, %mul4
-  %arrayidx = getelementptr inbounds i32, i32* %a, i32 %add
-  store i32 %mul, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i32 %add
+  store i32 %mul, ptr %arrayidx, align 4
   %inc = add nuw nsw i32 %x.018, 1
   %exitcond = icmp eq i32 %inc, %w
   br i1 %exitcond, label %for.inc.5.loopexit, label %for.body.3

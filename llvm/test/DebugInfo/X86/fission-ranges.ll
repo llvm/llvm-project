@@ -133,7 +133,7 @@ define internal fastcc void @foo() #0 !dbg !8 {
 entry:
   tail call void @llvm.dbg.value(metadata i32 1, metadata !13, metadata !DIExpression()), !dbg !30
   tail call void @llvm.dbg.value(metadata i32 0, metadata !14, metadata !DIExpression()), !dbg !31
-  %c.promoted9 = load i32, i32* @c, align 4, !dbg !32, !tbaa !33
+  %c.promoted9 = load i32, ptr @c, align 4, !dbg !32, !tbaa !33
   br label %for.cond1.preheader, !dbg !31
 
 for.cond1.preheader:                              ; preds = %for.inc16, %entry
@@ -154,7 +154,7 @@ for.cond7.preheader:                              ; preds = %for.inc10, %for.con
 for.body9:                                        ; preds = %for.body9, %for.cond7.preheader
   %and2 = phi i32 [ %and.lcssa5, %for.cond7.preheader ], [ %and, %for.body9 ], !dbg !40
   %e.01 = phi i32 [ 0, %for.cond7.preheader ], [ %inc, %for.body9 ]
-  tail call void @llvm.dbg.value(metadata i32* @c, metadata !19, metadata !DIExpression()), !dbg !40
+  tail call void @llvm.dbg.value(metadata ptr @c, metadata !19, metadata !DIExpression()), !dbg !40
   %and = and i32 %and2, 1, !dbg !32
   %inc = add i32 %e.01, 1, !dbg !39
   tail call void @llvm.dbg.value(metadata i32 %inc, metadata !18, metadata !DIExpression()), !dbg !42
@@ -180,7 +180,7 @@ for.inc16:                                        ; preds = %for.inc13
   br i1 %exitcond13, label %for.end18, label %for.cond1.preheader, !dbg !31
 
 for.end18:                                        ; preds = %for.inc16
-  store i32 %and, i32* @c, align 4, !dbg !32, !tbaa !33
+  store i32 %and, ptr @c, align 4, !dbg !32, !tbaa !33
   ret void, !dbg !42
 }
 
@@ -233,7 +233,7 @@ attributes #1 = { nounwind readnone }
 !38 = !DILocation(line: 9, scope: !22)
 !39 = !DILocation(line: 10, scope: !21)
 !40 = !DILocation(line: 12, scope: !20)
-!41 = !{i32* @c}
+!41 = !{ptr @c}
 !42 = !DILocation(line: 15, scope: !8)
 !43 = !{i32 1, !"Debug Info Version", i32 3}
 !44 = !{i32 0}

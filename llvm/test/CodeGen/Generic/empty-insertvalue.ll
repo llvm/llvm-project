@@ -2,6 +2,6 @@
 
 define void @f() {
 entry:
-  %0 = insertvalue { [0 x { i8*, i8* }], [0 x { i8*, i64 }] } undef, [0 x { i8*, i8* }] undef, 0
+  %0 = insertvalue { [0 x { ptr, ptr }], [0 x { ptr, i64 }] } undef, [0 x { ptr, ptr }] undef, 0
   ret void
 }

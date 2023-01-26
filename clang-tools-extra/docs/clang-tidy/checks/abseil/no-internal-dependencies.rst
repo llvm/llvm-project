@@ -1,4 +1,4 @@
-subl.. title:: clang-tidy - abseil-no-internal-dependencies
+.. title:: clang-tidy - abseil-no-internal-dependencies
 
 abseil-no-internal-dependencies
 ===============================

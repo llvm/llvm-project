@@ -6,7 +6,7 @@
   @arm_cmplx_conj_f32_mve.cmplx_conj_sign = internal constant [4 x float] [float 1.000000e+00, float -1.000000e+00, float 1.000000e+00, float -1.000000e+00], align 4
 
   ; Function Attrs: nounwind
-  define hidden void @arm_cmplx_conj_f32_mve(float* %pSrc, float* %pDst, i32 %blockSize) local_unnamed_addr #0 {
+  define hidden void @arm_cmplx_conj_f32_mve(ptr %pSrc, ptr %pDst, i32 %blockSize) local_unnamed_addr #0 {
   entry:
     ret void
   }

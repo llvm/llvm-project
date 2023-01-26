@@ -1,9 +1,9 @@
 // RUN: %libomptarget-compile-generic && env LIBOMPTARGET_DEBUG=1 %libomptarget-run-generic 2>&1 | %fcheck-generic -allow-empty -check-prefix=DEBUG
 // REQUIRES: libomptarget-debug
 
+#include <cassert>
 #include <cstdio>
 #include <cstdlib>
-#include <cassert>
 
 // Data structure definitions copied from OpenMP RTL.
 struct __tgt_target_non_contig {
@@ -12,9 +12,7 @@ struct __tgt_target_non_contig {
   int64_t stride;
 };
 
-enum tgt_map_type {
-  OMP_TGT_MAPTYPE_NON_CONTIG      = 0x100000000000
-};
+enum tgt_map_type { OMP_TGT_MAPTYPE_NON_CONTIG = 0x100000000000 };
 
 // OpenMP RTL interfaces
 #ifdef __cplusplus
@@ -93,4 +91,3 @@ int main() {
   // DEBUG: offset 456
   return 0;
 }
-

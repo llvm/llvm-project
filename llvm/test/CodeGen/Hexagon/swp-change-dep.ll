@@ -44,12 +44,12 @@ b12:                                              ; preds = %b12, %b11
 
 b13:                                              ; preds = %b13, %b12
   %v0 = phi i32 [ %v5, %b13 ], [ 0, %b12 ]
-  %v1 = getelementptr inbounds [11 x i32], [11 x i32]* undef, i32 0, i32 %v0
-  %v2 = load i32, i32* %v1, align 4
+  %v1 = getelementptr inbounds [11 x i32], ptr undef, i32 0, i32 %v0
+  %v2 = load i32, ptr %v1, align 4
   %v3 = add i32 %v2, 1
   %v4 = lshr i32 %v3, 1
-  store i32 %v4, i32* %v1, align 4
-  store i32 0, i32* %v1, align 4
+  store i32 %v4, ptr %v1, align 4
+  store i32 0, ptr %v1, align 4
   %v5 = add nsw i32 %v0, 1
   %v6 = icmp eq i32 %v5, 11
   br i1 %v6, label %b14, label %b13

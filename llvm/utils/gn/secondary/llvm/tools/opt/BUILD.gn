@@ -5,11 +5,13 @@ executable("opt") {
     "//llvm/lib/Bitcode/Writer",
     "//llvm/lib/CodeGen",
     "//llvm/lib/IR",
+    "//llvm/lib/IRPrinter",
     "//llvm/lib/MC",
     "//llvm/lib/Passes",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Transforms/AggressiveInstCombine",
     "//llvm/lib/Transforms/Coroutines",
     "//llvm/lib/Transforms/IPO",
@@ -22,9 +24,7 @@ executable("opt") {
   sources = [
     "AnalysisWrappers.cpp",
     "BreakpointPrinter.cpp",
-    "GraphPrinters.cpp",
     "NewPMDriver.cpp",
-    "PrintSCC.cpp",
     "opt.cpp",
   ]
 

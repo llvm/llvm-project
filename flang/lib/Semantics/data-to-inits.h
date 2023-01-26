@@ -18,7 +18,7 @@
 namespace Fortran::parser {
 struct DataStmtSet;
 struct DataStmtValue;
-}
+} // namespace Fortran::parser
 namespace Fortran::evaluate {
 class ExpressionAnalyzer;
 }

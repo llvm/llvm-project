@@ -280,14 +280,14 @@ void NestedNameSpecifier::print(raw_ostream &OS, const PrintingPolicy &Policy,
   case TypeSpecWithTemplate:
     OS << "template ";
     // Fall through to print the type.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case TypeSpec: {
     const auto *Record =
             dyn_cast_or_null<ClassTemplateSpecializationDecl>(getAsRecordDecl());
     if (ResolveTemplateArguments && Record) {
         // Print the type trait with resolved template parameters.
-        Record->printName(OS);
+        Record->printName(OS, Policy);
         printTemplateArgumentList(
             OS, Record->getTemplateArgs().asArray(), Policy,
             Record->getSpecializedTemplate()->getTemplateParameters());

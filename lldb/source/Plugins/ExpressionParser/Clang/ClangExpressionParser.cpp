@@ -86,7 +86,6 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/ReproducerProvider.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
@@ -96,6 +95,7 @@
 
 #include <cctype>
 #include <memory>
+#include <optional>
 
 using namespace clang;
 using namespace llvm;
@@ -391,18 +391,6 @@ ClangExpressionParser::ClangExpressionParser(
   // 1. Create a new compiler instance.
   m_compiler = std::make_unique<CompilerInstance>();
 
-  // When capturing a reproducer, hook up the file collector with clang to
-  // collector modules and headers.
-  if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator()) {
-    repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
-    m_compiler->setModuleDepCollector(
-        std::make_shared<ModuleDependencyCollectorAdaptor>(
-            fp.GetFileCollector()));
-    DependencyOutputOptions &opts = m_compiler->getDependencyOutputOpts();
-    opts.IncludeSystemHeaders = true;
-    opts.IncludeModuleFiles = true;
-  }
-
   // Make sure clang uses the same VFS as LLDB.
   m_compiler->createFileManager(FileSystem::Instance().GetVirtualFileSystem());
 
@@ -559,7 +547,7 @@ ClangExpressionParser::ClangExpressionParser(
   case lldb::eLanguageTypeC_plus_plus_14:
     lang_opts.CPlusPlus11 = true;
     m_compiler->getHeaderSearchOpts().UseLibcxx = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case lldb::eLanguageTypeC_plus_plus_03:
     lang_opts.CPlusPlus = true;
     if (process_sp)
@@ -714,7 +702,7 @@ ClangExpressionParser::ClangExpressionParser(
   m_compiler->createASTContext();
   clang::ASTContext &ast_context = m_compiler->getASTContext();
 
-  m_ast_context = std::make_unique<TypeSystemClang>(
+  m_ast_context = std::make_shared<TypeSystemClang>(
       "Expression ASTContext for '" + m_filename + "'", ast_context);
 
   std::string module_name("$__lldb_module");
@@ -887,9 +875,9 @@ private:
   /// non-deterministic order, so this function should have no side effects.
   /// To make this easier to enforce, this function and all its parameters
   /// should always be const-qualified.
-  /// \return Returns llvm::None if no completion should be provided for the
+  /// \return Returns std::nullopt if no completion should be provided for the
   ///         given CodeCompletionResult.
-  llvm::Optional<CompletionWithPriority>
+  std::optional<CompletionWithPriority>
   getCompletionForResult(const CodeCompletionResult &R) const {
     std::string ToInsert;
     std::string Description;
@@ -934,9 +922,9 @@ private:
     // We also filter some internal lldb identifiers here. The user
     // shouldn't see these.
     if (llvm::StringRef(ToInsert).startswith("$__lldb_"))
-      return llvm::None;
+      return std::nullopt;
     if (ToInsert.empty())
-      return llvm::None;
+      return std::nullopt;
     // Merge the suggested Token into the existing command line to comply
     // with the kind of result the lldb API expects.
     std::string CompletionSuggestion =
@@ -978,7 +966,7 @@ public:
         continue;
 
       CodeCompletionResult &R = Results[I];
-      llvm::Optional<CompletionWithPriority> CompletionAndPriority =
+      std::optional<CompletionWithPriority> CompletionAndPriority =
           getCompletionForResult(R);
       if (!CompletionAndPriority)
         continue;

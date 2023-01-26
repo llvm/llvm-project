@@ -41,25 +41,27 @@ class SBEnvironmentAPICase(TestBase):
         env = launch_info.GetEnvironment()
         env_count = env.GetNumValues()
 
-        env.Set("FOO", "bar", overwrite=True)
+        env.Set("FOO", "bar", True)
         self.assertEqual(env.GetNumValues(), env_count + 1)
 
         # Make sure we only modify the copy of the launchInfo's environment
         self.assertEqual(launch_info.GetEnvironment().GetNumValues(), env_count)
 
-        launch_info.SetEnvironment(env, append=True)
+        # Note: swig >= 3.0.3 can use named parameters, omit to support <= 3.0.2.
+        # i.e. launch_info.SetEnvironment(env, append=True)
+        launch_info.SetEnvironment(env, True)
         self.assertEqual(launch_info.GetEnvironment().GetNumValues(), env_count + 1)
 
-        env.Set("FOO", "baz", overwrite=True)
-        launch_info.SetEnvironment(env, append=True)
+        env.Set("FOO", "baz", True)
+        launch_info.SetEnvironment(env, True)
         self.assertEqual(launch_info.GetEnvironment().GetNumValues(), env_count + 1)
         self.assertEqual(launch_info.GetEnvironment().Get("FOO"), "baz")
 
         # Make sure we can replace the launchInfo's environment
         env.Clear()
-        env.Set("BAR", "foo", overwrite=True)
+        env.Set("BAR", "foo", True)
         env.PutEntry("X=y")
-        launch_info.SetEnvironment(env, append=False)
+        launch_info.SetEnvironment(env, False)
         self.assertEqualEntries(launch_info.GetEnvironment(), ["BAR=foo", "X=y"])
 
 
@@ -87,8 +89,10 @@ class SBEnvironmentAPICase(TestBase):
         self.assertEqual(env.Get("BAR"), None)
 
         # We also test empty values
-        self.assertTrue(env.Set("FOO", "", overwrite=False))
-        env.Set("BAR", "foo", overwrite=False)
+        # Note: swig >= 3.0.3 can use named parameters, omit to support <= 3.0.2.
+        # i.e. env.Set("FOO", "", overwrite=False)
+        self.assertTrue(env.Set("FOO", "", False))
+        env.Set("BAR", "foo", False)
 
         self.assertEqual(env.Get("FOO"), "")
         self.assertEqual(env.Get("BAR"), "foo")
@@ -98,7 +102,7 @@ class SBEnvironmentAPICase(TestBase):
         self.assertEqualEntries(env, ["FOO=", "BAR=foo"])
 
         # Make sure modifications work
-        self.assertFalse(env.Set("FOO", "bar", overwrite=False))
+        self.assertFalse(env.Set("FOO", "bar", False))
         self.assertEqual(env.Get("FOO"), "")
 
         env.PutEntry("FOO=bar")
@@ -115,15 +119,15 @@ class SBEnvironmentAPICase(TestBase):
         entries = lldb.SBStringList()
         entries.AppendList(["X=x", "Y=y"], 2)
 
-        env.SetEntries(entries, append=True)
+        env.SetEntries(entries, True)
         self.assertEqualEntries(env, ["BAR=foo", "X=x", "Y=y"])
 
-        env.SetEntries(entries, append=False)
+        env.SetEntries(entries, False)
         self.assertEqualEntries(env, ["X=x", "Y=y"])
 
         entries.Clear()
         entries.AppendList(["X=y", "Y=x"], 2)
-        env.SetEntries(entries, append=True)
+        env.SetEntries(entries, True)
         self.assertEqualEntries(env, ["X=y", "Y=x"])
 
         # Test clear

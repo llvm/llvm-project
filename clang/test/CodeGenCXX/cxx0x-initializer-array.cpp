@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-unknown -std=c++11 -S -emit-llvm -o - %s -Wno-address-of-temporary | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown -std=c++11 -S -emit-llvm -o - %s -Wno-address-of-temporary | FileCheck %s
 
 // CHECK: @[[THREE_NULL_MEMPTRS:.*]] = private constant [3 x i32] [i32 -1, i32 -1, i32 -1]
 
@@ -39,7 +39,7 @@ namespace ValueInitArrayOfMemPtr {
     // CHECK: store i32 -1,
 
     Agg2 b = { n };
-    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %{{.*}}, i8* align 4 bitcast ([3 x i32]* @[[THREE_NULL_MEMPTRS]] to i8*), i32 12, i1 false)
+    // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %{{.*}}, ptr align 4 @[[THREE_NULL_MEMPTRS]], i32 12, i1 false)
   }
 
   // Test dynamic initialization.

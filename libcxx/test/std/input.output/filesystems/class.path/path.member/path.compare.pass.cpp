@@ -22,9 +22,9 @@
 // bool operator<=(path const&, path const&) noexcept;
 // bool operator> (path const&, path const&) noexcept;
 // bool operator>=(path const&, path const&) noexcept;
+// strong_ordering operator<=>(path const&, path const&) noexcept;
 //
 // size_t hash_value(path const&) noexcept;
-
 
 #include "filesystem_include.h"
 #include <type_traits>
@@ -32,6 +32,7 @@
 #include <cassert>
 
 #include "test_macros.h"
+#include "test_comparisons.h"
 #include "test_iterators.h"
 #include "count_new.h"
 #include "filesystem_test_helper.h"
@@ -111,21 +112,19 @@ void test_compare_basic()
     { // comparison operators
       DisableAllocationGuard g; // none of these operations should allocate
 
-      // Check runtime result
-      assert((p1 == p2) == (E == 0));
-      assert((p1 != p2) == (E != 0));
-      assert((p1 <  p2) == (E <  0));
-      assert((p1 <= p2) == (E <= 0));
-      assert((p1 >  p2) == (E >  0));
-      assert((p1 >= p2) == (E >= 0));
+      // check signatures
+      AssertComparisonsAreNoexcept<path>();
+      AssertComparisonsReturnBool<path>();
+#if TEST_STD_VER > 17
+      AssertOrderAreNoexcept<path>();
+      AssertOrderReturn<std::strong_ordering, path>();
+#endif
 
-      // Check signatures
-      ASSERT_NOEXCEPT(p1 == p2);
-      ASSERT_NOEXCEPT(p1 != p2);
-      ASSERT_NOEXCEPT(p1 <  p2);
-      ASSERT_NOEXCEPT(p1 <= p2);
-      ASSERT_NOEXCEPT(p1 >  p2);
-      ASSERT_NOEXCEPT(p1 >= p2);
+      // check comarison results
+      assert(testComparisons(p1, p2, /*isEqual*/ E == 0, /*isLess*/ E < 0));
+#if TEST_STD_VER > 17
+      assert(testOrder(p1, p2, E <=> 0));
+#endif
     }
     { // check hash values
       auto h1 = hash_value(p1);

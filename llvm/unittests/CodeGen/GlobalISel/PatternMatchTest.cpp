@@ -45,7 +45,7 @@ TEST_F(AArch64GISelMITest, MatchIntConstantRegister) {
   if (!TM)
     return;
   auto MIBCst = B.buildConstant(LLT::scalar(64), 42);
-  Optional<ValueAndVReg> Src0;
+  std::optional<ValueAndVReg> Src0;
   bool match = mi_match(MIBCst.getReg(0), *MRI, m_GCst(Src0));
   EXPECT_TRUE(match);
   EXPECT_EQ(Src0->VReg, MIBCst.getReg(0));
@@ -57,6 +57,7 @@ TEST_F(AArch64GISelMITest, MatchIntConstantSplat) {
     return;
 
   LLT s64 = LLT::scalar(64);
+  LLT v2s64 = LLT::fixed_vector(2, s64);
   LLT v4s64 = LLT::fixed_vector(4, s64);
 
   MachineInstrBuilder FortyTwoSplat =
@@ -68,6 +69,11 @@ TEST_F(AArch64GISelMITest, MatchIntConstantSplat) {
   MachineInstrBuilder NonConstantSplat =
       B.buildBuildVector(v4s64, {Copies[0], Copies[0], Copies[0], Copies[0]});
   EXPECT_FALSE(mi_match(NonConstantSplat.getReg(0), *MRI, m_ICstOrSplat(Cst)));
+
+  auto ICst = B.buildConstant(s64, 15).getReg(0);
+  auto SmallSplat = B.buildBuildVector(v2s64, {ICst, ICst}).getReg(0);
+  auto LargeSplat = B.buildConcatVectors(v4s64, {SmallSplat, SmallSplat});
+  EXPECT_TRUE(mi_match(LargeSplat.getReg(0), *MRI, m_ICstOrSplat(Cst)));
 }
 
 TEST_F(AArch64GISelMITest, MachineInstrPtrBind) {
@@ -321,6 +327,64 @@ TEST_F(AArch64GISelMITest, MatchFCmp) {
   EXPECT_EQ(CmpInst::FCMP_OEQ, Pred);
   EXPECT_EQ(Copies[0], Reg0);
   EXPECT_EQ(Copies[1], Reg1);
+}
+
+TEST_F(AArch64GISelMITest, MatcCommutativeICmp) {
+  setUp();
+  if (!TM)
+    return;
+  const LLT s1 = LLT::scalar(1);
+  Register LHS = Copies[0];
+  Register RHS = Copies[1];
+  CmpInst::Predicate MatchedPred;
+  bool Match = false;
+  for (unsigned P = CmpInst::Predicate::FIRST_ICMP_PREDICATE;
+       P < CmpInst::Predicate::LAST_ICMP_PREDICATE; ++P) {
+    auto CurrPred = static_cast<CmpInst::Predicate>(P);
+    auto Cmp = B.buildICmp(CurrPred, s1, LHS, RHS);
+    // Basic matching.
+    Match = mi_match(
+        Cmp.getReg(0), *MRI,
+        m_c_GICmp(m_Pred(MatchedPred), m_SpecificReg(LHS), m_SpecificReg(RHS)));
+    EXPECT_TRUE(Match);
+    EXPECT_EQ(MatchedPred, CurrPred);
+    // Commuting operands should still match, but the predicate should be
+    // swapped.
+    Match = mi_match(
+        Cmp.getReg(0), *MRI,
+        m_c_GICmp(m_Pred(MatchedPred), m_SpecificReg(RHS), m_SpecificReg(LHS)));
+    EXPECT_TRUE(Match);
+    EXPECT_EQ(MatchedPred, CmpInst::getSwappedPredicate(CurrPred));
+  }
+}
+
+TEST_F(AArch64GISelMITest, MatcCommutativeFCmp) {
+  setUp();
+  if (!TM)
+    return;
+  const LLT s1 = LLT::scalar(1);
+  Register LHS = Copies[0];
+  Register RHS = Copies[1];
+  CmpInst::Predicate MatchedPred;
+  bool Match = false;
+  for (unsigned P = CmpInst::Predicate::FIRST_FCMP_PREDICATE;
+       P < CmpInst::Predicate::LAST_FCMP_PREDICATE; ++P) {
+    auto CurrPred = static_cast<CmpInst::Predicate>(P);
+    auto Cmp = B.buildFCmp(CurrPred, s1, LHS, RHS);
+    // Basic matching.
+    Match = mi_match(
+        Cmp.getReg(0), *MRI,
+        m_c_GFCmp(m_Pred(MatchedPred), m_SpecificReg(LHS), m_SpecificReg(RHS)));
+    EXPECT_TRUE(Match);
+    EXPECT_EQ(MatchedPred, CurrPred);
+    // Commuting operands should still match, but the predicate should be
+    // swapped.
+    Match = mi_match(
+        Cmp.getReg(0), *MRI,
+        m_c_GFCmp(m_Pred(MatchedPred), m_SpecificReg(RHS), m_SpecificReg(LHS)));
+    EXPECT_TRUE(Match);
+    EXPECT_EQ(MatchedPred, CmpInst::getSwappedPredicate(CurrPred));
+  }
 }
 
 TEST_F(AArch64GISelMITest, MatchFPUnaryOp) {
@@ -642,8 +706,8 @@ TEST_F(AArch64GISelMITest, MatchFPOrIntConst) {
 
   Register IntOne = B.buildConstant(LLT::scalar(64), 1).getReg(0);
   Register FPOne = B.buildFConstant(LLT::scalar(64), 1.0).getReg(0);
-  Optional<ValueAndVReg> ValReg;
-  Optional<FPValueAndVReg> FValReg;
+  std::optional<ValueAndVReg> ValReg;
+  std::optional<FPValueAndVReg> FValReg;
 
   EXPECT_TRUE(mi_match(IntOne, *MRI, m_GCst(ValReg)));
   EXPECT_EQ(IntOne, ValReg->VReg);
@@ -660,12 +724,13 @@ TEST_F(AArch64GISelMITest, MatchConstantSplat) {
     return;
 
   LLT s64 = LLT::scalar(64);
+  LLT v2s64 = LLT::fixed_vector(2, 64);
   LLT v4s64 = LLT::fixed_vector(4, 64);
 
   Register FPOne = B.buildFConstant(s64, 1.0).getReg(0);
   Register FPZero = B.buildFConstant(s64, 0.0).getReg(0);
   Register Undef = B.buildUndef(s64).getReg(0);
-  Optional<FPValueAndVReg> FValReg;
+  std::optional<FPValueAndVReg> FValReg;
 
   // GFCstOrSplatGFCstMatch allows undef as part of splat. Undef often comes
   // from padding to legalize into available operation and then ignore added
@@ -703,6 +768,44 @@ TEST_F(AArch64GISelMITest, MatchConstantSplat) {
   auto Mixed = B.buildBuildVector(v4s64, {FPZero, FPZero, FPZero, Copies[0]});
   EXPECT_FALSE(
       mi_match(Mixed.getReg(0), *MRI, GFCstOrSplatGFCstMatch(FValReg)));
+
+  // Look through G_CONCAT_VECTORS.
+  auto SmallZeroSplat = B.buildBuildVector(v2s64, {FPZero, FPZero}).getReg(0);
+  auto LargeZeroSplat =
+      B.buildConcatVectors(v4s64, {SmallZeroSplat, SmallZeroSplat});
+  EXPECT_TRUE(mi_match(LargeZeroSplat.getReg(0), *MRI,
+                       GFCstOrSplatGFCstMatch(FValReg)));
+
+  auto SmallZeroSplat2 = B.buildBuildVector(v2s64, {FPZero, FPZero}).getReg(0);
+  auto SmallZeroSplat3 = B.buildCopy(v2s64, SmallZeroSplat).getReg(0);
+  auto LargeZeroSplat2 =
+      B.buildConcatVectors(v4s64, {SmallZeroSplat2, SmallZeroSplat3});
+  EXPECT_TRUE(mi_match(LargeZeroSplat2.getReg(0), *MRI,
+                       GFCstOrSplatGFCstMatch(FValReg)));
+
+  // Not all G_CONCAT_VECTORS are splats.
+  auto SmallOneSplat = B.buildBuildVector(v2s64, {FPOne, FPOne}).getReg(0);
+  auto LargeMixedSplat =
+      B.buildConcatVectors(v4s64, {SmallZeroSplat, SmallOneSplat});
+  EXPECT_FALSE(mi_match(LargeMixedSplat.getReg(0), *MRI,
+                        GFCstOrSplatGFCstMatch(FValReg)));
+
+  auto SmallMixedSplat = B.buildBuildVector(v2s64, {FPOne, FPZero}).getReg(0);
+  auto LargeSplat =
+      B.buildConcatVectors(v4s64, {SmallMixedSplat, SmallMixedSplat});
+  EXPECT_FALSE(
+      mi_match(LargeSplat.getReg(0), *MRI, GFCstOrSplatGFCstMatch(FValReg)));
+
+  auto SmallUndefSplat = B.buildBuildVector(v2s64, {Undef, Undef}).getReg(0);
+  auto LargeUndefSplat =
+      B.buildConcatVectors(v4s64, {SmallUndefSplat, SmallUndefSplat});
+  EXPECT_FALSE(mi_match(LargeUndefSplat.getReg(0), *MRI,
+                        GFCstOrSplatGFCstMatch(FValReg)));
+
+  auto UndefVec = B.buildUndef(v2s64).getReg(0);
+  auto LargeUndefSplat2 = B.buildConcatVectors(v4s64, {UndefVec, UndefVec});
+  EXPECT_FALSE(mi_match(LargeUndefSplat2.getReg(0), *MRI,
+                        GFCstOrSplatGFCstMatch(FValReg)));
 }
 
 TEST_F(AArch64GISelMITest, MatchNeg) {
@@ -769,6 +872,23 @@ TEST_F(AArch64GISelMITest, MatchNot) {
   EXPECT_TRUE(mi_match(AddInst.getReg(2), *MRI, m_Not(m_Reg(NotReg))));
   EXPECT_EQ(NotReg, Copies[0]);
 }
+
+TEST_F(AArch64GISelMITest, MatchSpecificReg) {
+  setUp();
+  if (!TM)
+    return;
+  auto Cst1 = B.buildConstant(LLT::scalar(64), 42);
+  auto Cst2 = B.buildConstant(LLT::scalar(64), 314);
+  Register Reg = Cst1.getReg(0);
+  // Basic case: Same register twice.
+  EXPECT_TRUE(mi_match(Reg, *MRI, m_SpecificReg(Reg)));
+  // Basic case: Two explicitly different registers.
+  EXPECT_FALSE(mi_match(Reg, *MRI, m_SpecificReg(Cst2.getReg(0))));
+  // Check that we can tell that an instruction uses a specific register.
+  auto Add = B.buildAdd(LLT::scalar(64), Cst1, Cst2);
+  EXPECT_TRUE(mi_match(Add.getReg(0), *MRI, m_GAdd(m_SpecificReg(Reg), m_Reg())));
+}
+
 } // namespace
 
 int main(int argc, char **argv) {

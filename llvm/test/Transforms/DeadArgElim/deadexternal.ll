@@ -30,10 +30,10 @@ entry:
 define void @h() {
 entry:
   %i = alloca i32, align 4
-  store volatile i32 10, i32* %i, align 4
-; CHECK: %tmp = load volatile i32, i32* %i, align 4
+  store volatile i32 10, ptr %i, align 4
+; CHECK: %tmp = load volatile i32, ptr %i, align 4
 ; CHECK-NEXT: call void @f(i32 poison)
-  %tmp = load volatile i32, i32* %i, align 4
+  %tmp = load volatile i32, ptr %i, align 4
   call void @f(i32 %tmp)
   ret void
 }
@@ -52,7 +52,7 @@ entry:
 
 %swift_error = type opaque
 
-define void @unused_swifterror_arg(%swift_error** swifterror %dead_arg) {
+define void @unused_swifterror_arg(ptr swifterror %dead_arg) {
   tail call void @sideeffect() nounwind
   ret void
 }
@@ -60,8 +60,8 @@ define void @unused_swifterror_arg(%swift_error** swifterror %dead_arg) {
 ; CHECK-LABEL: @dont_replace_by_poison
 ; CHECK-NOT: call void @unused_swifterror_arg({{.*}}poison)
 define void @dont_replace_by_poison() {
-  %error_ptr_ref = alloca swifterror %swift_error*
-  store %swift_error* null, %swift_error** %error_ptr_ref
-  call void @unused_swifterror_arg(%swift_error** %error_ptr_ref)
+  %error_ptr_ref = alloca swifterror ptr
+  store ptr null, ptr %error_ptr_ref
+  call void @unused_swifterror_arg(ptr %error_ptr_ref)
   ret void
 }

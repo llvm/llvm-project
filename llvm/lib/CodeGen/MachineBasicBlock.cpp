@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveVariables.h"
@@ -34,6 +35,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include <algorithm>
+#include <cmath>
 using namespace llvm;
 
 #define DEBUG_TYPE "codegen"
@@ -253,6 +255,10 @@ MachineBasicBlock::instr_iterator MachineBasicBlock::getFirstInstrTerminator() {
   return I;
 }
 
+MachineBasicBlock::iterator MachineBasicBlock::getFirstTerminatorForward() {
+  return find_if(instrs(), [](auto &II) { return II.isTerminator(); });
+}
+
 MachineBasicBlock::iterator
 MachineBasicBlock::getFirstNonDebugInstr(bool SkipPseudoOp) {
   // Skip over begin-of-block dbg_value instructions.
@@ -450,8 +456,8 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
 
   if (IrrLoopHeaderWeight && IsStandalone) {
     if (Indexes) OS << '\t';
-    OS.indent(2) << "; Irreducible loop header weight: "
-                 << IrrLoopHeaderWeight.value() << '\n';
+    OS.indent(2) << "; Irreducible loop header weight: " << *IrrLoopHeaderWeight
+                 << '\n';
   }
 }
 
@@ -476,6 +482,28 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
   os << "bb." << getNumber();
   bool hasAttributes = false;
 
+  auto PrintBBRef = [&](const BasicBlock *bb) {
+    os << "%ir-block.";
+    if (bb->hasName()) {
+      os << bb->getName();
+    } else {
+      int slot = -1;
+
+      if (moduleSlotTracker) {
+        slot = moduleSlotTracker->getLocalSlot(bb);
+      } else if (bb->getParent()) {
+        ModuleSlotTracker tmpTracker(bb->getModule(), false);
+        tmpTracker.incorporateFunction(*bb->getParent());
+        slot = tmpTracker.getLocalSlot(bb);
+      }
+
+      if (slot == -1)
+        os << "<ir-block badref>";
+      else
+        os << slot;
+    }
+  };
+
   if (printNameFlags & PrintNameIr) {
     if (const auto *bb = getBasicBlock()) {
       if (bb->hasName()) {
@@ -483,29 +511,21 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
       } else {
         hasAttributes = true;
         os << " (";
-
-        int slot = -1;
-
-        if (moduleSlotTracker) {
-          slot = moduleSlotTracker->getLocalSlot(bb);
-        } else if (bb->getParent()) {
-          ModuleSlotTracker tmpTracker(bb->getModule(), false);
-          tmpTracker.incorporateFunction(*bb->getParent());
-          slot = tmpTracker.getLocalSlot(bb);
-        }
-
-        if (slot == -1)
-          os << "<ir-block badref>";
-        else
-          os << (Twine("%ir-block.") + Twine(slot)).str();
+        PrintBBRef(bb);
       }
     }
   }
 
   if (printNameFlags & PrintNameAttributes) {
-    if (hasAddressTaken()) {
+    if (isMachineBlockAddressTaken()) {
       os << (hasAttributes ? ", " : " (");
-      os << "address-taken";
+      os << "machine-block-address-taken";
+      hasAttributes = true;
+    }
+    if (isIRBlockAddressTaken()) {
+      os << (hasAttributes ? ", " : " (");
+      os << "ir-block-address-taken ";
+      PrintBBRef(getAddressTakenIRBlock());
       hasAttributes = true;
     }
     if (isEHPad()) {
@@ -541,6 +561,11 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
       default:
         os << getSectionID().Number;
       }
+      hasAttributes = true;
+    }
+    if (getBBID().has_value()) {
+      os << (hasAttributes ? ", " : " (");
+      os << "bb_id " << *getBBID();
       hasAttributes = true;
     }
   }
@@ -919,7 +944,7 @@ const MachineBasicBlock *MachineBasicBlock::getSingleSuccessor() const {
   return Successors.size() == 1 ? Successors[0] : nullptr;
 }
 
-MachineBasicBlock *MachineBasicBlock::getFallThrough() {
+MachineBasicBlock *MachineBasicBlock::getFallThrough(bool JumpToFallThrough) {
   MachineFunction::iterator Fallthrough = getIterator();
   ++Fallthrough;
   // If FallthroughBlock is off the end of the function, it can't fall through.
@@ -950,8 +975,8 @@ MachineBasicBlock *MachineBasicBlock::getFallThrough() {
 
   // If there is some explicit branch to the fallthrough block, it can obviously
   // reach, even though the branch should get folded to fall through implicitly.
-  if (MachineFunction::iterator(TBB) == Fallthrough ||
-      MachineFunction::iterator(FBB) == Fallthrough)
+  if (!JumpToFallThrough && (MachineFunction::iterator(TBB) == Fallthrough ||
+                           MachineFunction::iterator(FBB) == Fallthrough))
     return &*Fallthrough;
 
   // If it's an unconditional branch to some block not the fall through, it
@@ -1046,8 +1071,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
             MO.isUndef())
           continue;
         Register Reg = MO.getReg();
-        if (Register::isPhysicalRegister(Reg) ||
-            LV->getVarInfo(Reg).removeKill(MI)) {
+        if (Reg.isPhysical() || LV->getVarInfo(Reg).removeKill(MI)) {
           KilledRegs.push_back(Reg);
           LLVM_DEBUG(dbgs() << "Removing terminator kill: " << MI);
           MO.setIsKill(false);
@@ -1133,7 +1157,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
       for (instr_iterator I = instr_end(), E = instr_begin(); I != E;) {
         if (!(--I)->addRegisterKilled(Reg, TRI, /* AddIfNotFound= */ false))
           continue;
-        if (Register::isVirtualRegister(Reg))
+        if (Reg.isVirtual())
           LV->getVarInfo(Reg).Kills.push_back(&*I);
         LLVM_DEBUG(dbgs() << "Restored terminator kill: " << *I);
         break;
@@ -1629,6 +1653,11 @@ bool MachineBasicBlock::sizeWithoutDebugLargerThan(unsigned Limit) const {
       return true;
   }
   return false;
+}
+
+unsigned MachineBasicBlock::getBBIDOrNumber() const {
+  uint8_t BBAddrMapVersion = getParent()->getContext().getBBAddrMapVersion();
+  return BBAddrMapVersion < 2 ? getNumber() : *getBBID();
 }
 
 const MBBSectionID MBBSectionID::ColdSectionID(MBBSectionID::SectionType::Cold);

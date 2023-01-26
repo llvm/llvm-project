@@ -13,6 +13,7 @@
 #include "TraceIntelPT.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include <optional>
 
 namespace lldb_private {
 namespace trace_intel_pt {
@@ -33,7 +34,7 @@ public:
 
     uint64_t m_ipt_trace_size;
     bool m_enable_tsc;
-    llvm::Optional<uint64_t> m_psb_period;
+    std::optional<uint64_t> m_psb_period;
   };
 
   CommandObjectThreadTraceStartIntelPT(TraceIntelPT &trace,
@@ -77,7 +78,7 @@ public:
     uint64_t m_ipt_trace_size;
     uint64_t m_process_buffer_size_limit;
     bool m_enable_tsc;
-    llvm::Optional<uint64_t> m_psb_period;
+    std::optional<uint64_t> m_psb_period;
     bool m_per_cpu_tracing;
     bool m_disable_cgroup_filtering;
   };
@@ -121,9 +122,9 @@ namespace ParsingUtils {
 ///     MB and MiB for 2^20 bytes; and B for bytes. A single integral number is
 ///     considered bytes.
 /// \return
-///   The converted number of bytes or \a llvm::None if the expression is
+///   The converted number of bytes or \a std::nullopt if the expression is
 ///   invalid.
-llvm::Optional<uint64_t>
+std::optional<uint64_t>
 ParseUserFriendlySizeExpression(llvm::StringRef size_expression);
 } // namespace ParsingUtils
 

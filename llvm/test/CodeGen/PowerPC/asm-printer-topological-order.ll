@@ -1,8 +1,8 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
 
-@TestA = alias void (), void ()* @TestC
-@TestB = alias void (), void ()* @TestC
-@TestC = alias void (), void ()* @TestD
+@TestA = alias void (), ptr @TestC
+@TestB = alias void (), ptr @TestC
+@TestC = alias void (), ptr @TestD
 
 define void @TestD() {
 entry:

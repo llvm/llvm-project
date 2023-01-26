@@ -21,20 +21,20 @@ declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>) #0
 ; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16 glc{{$}}
 ; SI: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[A]], [[B]], [[C]]
 ; SI: buffer_store_dwordx2 [[RESULT]]
-define amdgpu_kernel void @combine_to_fma_f64_0(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_f64_0(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
-  %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
-  %gep.out = getelementptr double, double addrspace(1)* %out, i32 %tid
+  %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
+  %gep.2 = getelementptr double, ptr addrspace(1) %gep.0, i32 2
+  %gep.out = getelementptr double, ptr addrspace(1) %out, i32 %tid
 
-  %a = load volatile double, double addrspace(1)* %gep.0
-  %b = load volatile double, double addrspace(1)* %gep.1
-  %c = load volatile double, double addrspace(1)* %gep.2
+  %a = load volatile double, ptr addrspace(1) %gep.0
+  %b = load volatile double, ptr addrspace(1) %gep.1
+  %c = load volatile double, ptr addrspace(1) %gep.2
 
   %mul = fmul double %a, %b
   %fma = fadd double %mul, %c
-  store double %fma, double addrspace(1)* %gep.out
+  store double %fma, ptr addrspace(1) %gep.out
   ret void
 }
 
@@ -49,25 +49,25 @@ define amdgpu_kernel void @combine_to_fma_f64_0(double addrspace(1)* noalias %ou
 ; SI-DAG: buffer_store_dwordx2 [[RESULT0]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI-DAG: buffer_store_dwordx2 [[RESULT1]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
 ; SI: s_endpgm
-define amdgpu_kernel void @combine_to_fma_f64_0_2use(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_f64_0_2use(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
-  %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
-  %gep.3 = getelementptr double, double addrspace(1)* %gep.0, i32 3
-  %gep.out.0 = getelementptr double, double addrspace(1)* %out, i32 %tid
-  %gep.out.1 = getelementptr double, double addrspace(1)* %gep.out.0, i32 1
+  %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
+  %gep.2 = getelementptr double, ptr addrspace(1) %gep.0, i32 2
+  %gep.3 = getelementptr double, ptr addrspace(1) %gep.0, i32 3
+  %gep.out.0 = getelementptr double, ptr addrspace(1) %out, i32 %tid
+  %gep.out.1 = getelementptr double, ptr addrspace(1) %gep.out.0, i32 1
 
-  %a = load volatile double, double addrspace(1)* %gep.0
-  %b = load volatile double, double addrspace(1)* %gep.1
-  %c = load volatile double, double addrspace(1)* %gep.2
-  %d = load volatile double, double addrspace(1)* %gep.3
+  %a = load volatile double, ptr addrspace(1) %gep.0
+  %b = load volatile double, ptr addrspace(1) %gep.1
+  %c = load volatile double, ptr addrspace(1) %gep.2
+  %d = load volatile double, ptr addrspace(1) %gep.3
 
   %mul = fmul double %a, %b
   %fma0 = fadd double %mul, %c
   %fma1 = fadd double %mul, %d
-  store volatile double %fma0, double addrspace(1)* %gep.out.0
-  store volatile double %fma1, double addrspace(1)* %gep.out.1
+  store volatile double %fma0, ptr addrspace(1) %gep.out.0
+  store volatile double %fma1, ptr addrspace(1) %gep.out.1
   ret void
 }
 
@@ -78,20 +78,20 @@ define amdgpu_kernel void @combine_to_fma_f64_0_2use(double addrspace(1)* noalia
 ; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16 glc{{$}}
 ; SI: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[A]], [[B]], [[C]]
 ; SI: buffer_store_dwordx2 [[RESULT]]
-define amdgpu_kernel void @combine_to_fma_f64_1(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_f64_1(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
-  %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
-  %gep.out = getelementptr double, double addrspace(1)* %out, i32 %tid
+  %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
+  %gep.2 = getelementptr double, ptr addrspace(1) %gep.0, i32 2
+  %gep.out = getelementptr double, ptr addrspace(1) %out, i32 %tid
 
-  %a = load volatile double, double addrspace(1)* %gep.0
-  %b = load volatile double, double addrspace(1)* %gep.1
-  %c = load volatile double, double addrspace(1)* %gep.2
+  %a = load volatile double, ptr addrspace(1) %gep.0
+  %b = load volatile double, ptr addrspace(1) %gep.1
+  %c = load volatile double, ptr addrspace(1) %gep.2
 
   %mul = fmul double %a, %b
   %fma = fadd double %c, %mul
-  store double %fma, double addrspace(1)* %gep.out
+  store double %fma, ptr addrspace(1) %gep.out
   ret void
 }
 
@@ -102,20 +102,20 @@ define amdgpu_kernel void @combine_to_fma_f64_1(double addrspace(1)* noalias %ou
 ; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16 glc{{$}}
 ; SI: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[A]], [[B]], -[[C]]
 ; SI: buffer_store_dwordx2 [[RESULT]]
-define amdgpu_kernel void @combine_to_fma_fsub_0_f64(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_fsub_0_f64(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
-  %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
-  %gep.out = getelementptr double, double addrspace(1)* %out, i32 %tid
+  %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
+  %gep.2 = getelementptr double, ptr addrspace(1) %gep.0, i32 2
+  %gep.out = getelementptr double, ptr addrspace(1) %out, i32 %tid
 
-  %a = load volatile double, double addrspace(1)* %gep.0
-  %b = load volatile double, double addrspace(1)* %gep.1
-  %c = load volatile double, double addrspace(1)* %gep.2
+  %a = load volatile double, ptr addrspace(1) %gep.0
+  %b = load volatile double, ptr addrspace(1) %gep.1
+  %c = load volatile double, ptr addrspace(1) %gep.2
 
   %mul = fmul double %a, %b
   %fma = fsub double %mul, %c
-  store double %fma, double addrspace(1)* %gep.out
+  store double %fma, ptr addrspace(1) %gep.out
   ret void
 }
 
@@ -130,25 +130,25 @@ define amdgpu_kernel void @combine_to_fma_fsub_0_f64(double addrspace(1)* noalia
 ; SI-DAG: buffer_store_dwordx2 [[RESULT0]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI-DAG: buffer_store_dwordx2 [[RESULT1]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
 ; SI: s_endpgm
-define amdgpu_kernel void @combine_to_fma_fsub_f64_0_2use(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_fsub_f64_0_2use(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
-  %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
-  %gep.3 = getelementptr double, double addrspace(1)* %gep.0, i32 3
-  %gep.out.0 = getelementptr double, double addrspace(1)* %out, i32 %tid
-  %gep.out.1 = getelementptr double, double addrspace(1)* %gep.out.0, i32 1
+  %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
+  %gep.2 = getelementptr double, ptr addrspace(1) %gep.0, i32 2
+  %gep.3 = getelementptr double, ptr addrspace(1) %gep.0, i32 3
+  %gep.out.0 = getelementptr double, ptr addrspace(1) %out, i32 %tid
+  %gep.out.1 = getelementptr double, ptr addrspace(1) %gep.out.0, i32 1
 
-  %a = load volatile double, double addrspace(1)* %gep.0
-  %b = load volatile double, double addrspace(1)* %gep.1
-  %c = load volatile double, double addrspace(1)* %gep.2
-  %d = load volatile double, double addrspace(1)* %gep.3
+  %a = load volatile double, ptr addrspace(1) %gep.0
+  %b = load volatile double, ptr addrspace(1) %gep.1
+  %c = load volatile double, ptr addrspace(1) %gep.2
+  %d = load volatile double, ptr addrspace(1) %gep.3
 
   %mul = fmul double %a, %b
   %fma0 = fsub double %mul, %c
   %fma1 = fsub double %mul, %d
-  store volatile double %fma0, double addrspace(1)* %gep.out.0
-  store volatile double %fma1, double addrspace(1)* %gep.out.1
+  store volatile double %fma0, ptr addrspace(1) %gep.out.0
+  store volatile double %fma1, ptr addrspace(1) %gep.out.1
   ret void
 }
 
@@ -159,20 +159,20 @@ define amdgpu_kernel void @combine_to_fma_fsub_f64_0_2use(double addrspace(1)* n
 ; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16 glc{{$}}
 ; SI: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], -[[A]], [[B]], [[C]]
 ; SI: buffer_store_dwordx2 [[RESULT]]
-define amdgpu_kernel void @combine_to_fma_fsub_1_f64(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_fsub_1_f64(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
-  %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
-  %gep.out = getelementptr double, double addrspace(1)* %out, i32 %tid
+  %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
+  %gep.2 = getelementptr double, ptr addrspace(1) %gep.0, i32 2
+  %gep.out = getelementptr double, ptr addrspace(1) %out, i32 %tid
 
-  %a = load volatile double, double addrspace(1)* %gep.0
-  %b = load volatile double, double addrspace(1)* %gep.1
-  %c = load volatile double, double addrspace(1)* %gep.2
+  %a = load volatile double, ptr addrspace(1) %gep.0
+  %b = load volatile double, ptr addrspace(1) %gep.1
+  %c = load volatile double, ptr addrspace(1) %gep.2
 
   %mul = fmul double %a, %b
   %fma = fsub double %c, %mul
-  store double %fma, double addrspace(1)* %gep.out
+  store double %fma, ptr addrspace(1) %gep.out
   ret void
 }
 
@@ -187,25 +187,25 @@ define amdgpu_kernel void @combine_to_fma_fsub_1_f64(double addrspace(1)* noalia
 ; SI-DAG: buffer_store_dwordx2 [[RESULT0]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI-DAG: buffer_store_dwordx2 [[RESULT1]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
 ; SI: s_endpgm
-define amdgpu_kernel void @combine_to_fma_fsub_1_f64_2use(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_fsub_1_f64_2use(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
-  %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
-  %gep.3 = getelementptr double, double addrspace(1)* %gep.0, i32 3
-  %gep.out.0 = getelementptr double, double addrspace(1)* %out, i32 %tid
-  %gep.out.1 = getelementptr double, double addrspace(1)* %gep.out.0, i32 1
+  %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
+  %gep.2 = getelementptr double, ptr addrspace(1) %gep.0, i32 2
+  %gep.3 = getelementptr double, ptr addrspace(1) %gep.0, i32 3
+  %gep.out.0 = getelementptr double, ptr addrspace(1) %out, i32 %tid
+  %gep.out.1 = getelementptr double, ptr addrspace(1) %gep.out.0, i32 1
 
-  %a = load volatile double, double addrspace(1)* %gep.0
-  %b = load volatile double, double addrspace(1)* %gep.1
-  %c = load volatile double, double addrspace(1)* %gep.2
-  %d = load volatile double, double addrspace(1)* %gep.3
+  %a = load volatile double, ptr addrspace(1) %gep.0
+  %b = load volatile double, ptr addrspace(1) %gep.1
+  %c = load volatile double, ptr addrspace(1) %gep.2
+  %d = load volatile double, ptr addrspace(1) %gep.3
 
   %mul = fmul double %a, %b
   %fma0 = fsub double %c, %mul
   %fma1 = fsub double %d, %mul
-  store volatile double %fma0, double addrspace(1)* %gep.out.0
-  store volatile double %fma1, double addrspace(1)* %gep.out.1
+  store volatile double %fma0, ptr addrspace(1) %gep.out.0
+  store volatile double %fma1, ptr addrspace(1) %gep.out.1
   ret void
 }
 
@@ -216,22 +216,22 @@ define amdgpu_kernel void @combine_to_fma_fsub_1_f64_2use(double addrspace(1)* n
 ; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16 glc{{$}}
 ; SI: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], -[[A]], [[B]], -[[C]]
 ; SI: buffer_store_dwordx2 [[RESULT]]
-define amdgpu_kernel void @combine_to_fma_fsub_2_f64(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_fsub_2_f64(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
-  %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
-  %gep.out = getelementptr double, double addrspace(1)* %out, i32 %tid
+  %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
+  %gep.2 = getelementptr double, ptr addrspace(1) %gep.0, i32 2
+  %gep.out = getelementptr double, ptr addrspace(1) %out, i32 %tid
 
-  %a = load volatile double, double addrspace(1)* %gep.0
-  %b = load volatile double, double addrspace(1)* %gep.1
-  %c = load volatile double, double addrspace(1)* %gep.2
+  %a = load volatile double, ptr addrspace(1) %gep.0
+  %b = load volatile double, ptr addrspace(1) %gep.1
+  %c = load volatile double, ptr addrspace(1) %gep.2
 
   %mul = fmul double %a, %b
   %mul.neg = fsub double -0.0, %mul
   %fma = fsub double %mul.neg, %c
 
-  store double %fma, double addrspace(1)* %gep.out
+  store double %fma, ptr addrspace(1) %gep.out
   ret void
 }
 
@@ -246,27 +246,27 @@ define amdgpu_kernel void @combine_to_fma_fsub_2_f64(double addrspace(1)* noalia
 ; SI-DAG: buffer_store_dwordx2 [[RESULT0]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI-DAG: buffer_store_dwordx2 [[RESULT1]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
 ; SI: s_endpgm
-define amdgpu_kernel void @combine_to_fma_fsub_2_f64_2uses_neg(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_fsub_2_f64_2uses_neg(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
-  %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
-  %gep.3 = getelementptr double, double addrspace(1)* %gep.0, i32 3
-  %gep.out.0 = getelementptr double, double addrspace(1)* %out, i32 %tid
-  %gep.out.1 = getelementptr double, double addrspace(1)* %gep.out.0, i32 1
+  %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
+  %gep.2 = getelementptr double, ptr addrspace(1) %gep.0, i32 2
+  %gep.3 = getelementptr double, ptr addrspace(1) %gep.0, i32 3
+  %gep.out.0 = getelementptr double, ptr addrspace(1) %out, i32 %tid
+  %gep.out.1 = getelementptr double, ptr addrspace(1) %gep.out.0, i32 1
 
-  %a = load volatile double, double addrspace(1)* %gep.0
-  %b = load volatile double, double addrspace(1)* %gep.1
-  %c = load volatile double, double addrspace(1)* %gep.2
-  %d = load volatile double, double addrspace(1)* %gep.3
+  %a = load volatile double, ptr addrspace(1) %gep.0
+  %b = load volatile double, ptr addrspace(1) %gep.1
+  %c = load volatile double, ptr addrspace(1) %gep.2
+  %d = load volatile double, ptr addrspace(1) %gep.3
 
   %mul = fmul double %a, %b
   %mul.neg = fsub double -0.0, %mul
   %fma0 = fsub double %mul.neg, %c
   %fma1 = fsub double %mul.neg, %d
 
-  store volatile double %fma0, double addrspace(1)* %gep.out.0
-  store volatile double %fma1, double addrspace(1)* %gep.out.1
+  store volatile double %fma0, ptr addrspace(1) %gep.out.0
+  store volatile double %fma1, ptr addrspace(1) %gep.out.1
   ret void
 }
 
@@ -281,27 +281,27 @@ define amdgpu_kernel void @combine_to_fma_fsub_2_f64_2uses_neg(double addrspace(
 ; SI-DAG: buffer_store_dwordx2 [[RESULT0]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI-DAG: buffer_store_dwordx2 [[RESULT1]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
 ; SI: s_endpgm
-define amdgpu_kernel void @combine_to_fma_fsub_2_f64_2uses_mul(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_fsub_2_f64_2uses_mul(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
-  %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
-  %gep.3 = getelementptr double, double addrspace(1)* %gep.0, i32 3
-  %gep.out.0 = getelementptr double, double addrspace(1)* %out, i32 %tid
-  %gep.out.1 = getelementptr double, double addrspace(1)* %gep.out.0, i32 1
+  %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
+  %gep.2 = getelementptr double, ptr addrspace(1) %gep.0, i32 2
+  %gep.3 = getelementptr double, ptr addrspace(1) %gep.0, i32 3
+  %gep.out.0 = getelementptr double, ptr addrspace(1) %out, i32 %tid
+  %gep.out.1 = getelementptr double, ptr addrspace(1) %gep.out.0, i32 1
 
-  %a = load volatile double, double addrspace(1)* %gep.0
-  %b = load volatile double, double addrspace(1)* %gep.1
-  %c = load volatile double, double addrspace(1)* %gep.2
-  %d = load volatile double, double addrspace(1)* %gep.3
+  %a = load volatile double, ptr addrspace(1) %gep.0
+  %b = load volatile double, ptr addrspace(1) %gep.1
+  %c = load volatile double, ptr addrspace(1) %gep.2
+  %d = load volatile double, ptr addrspace(1) %gep.3
 
   %mul = fmul double %a, %b
   %mul.neg = fsub double -0.0, %mul
   %fma0 = fsub double %mul.neg, %c
   %fma1 = fsub double %mul, %d
 
-  store volatile double %fma0, double addrspace(1)* %gep.out.0
-  store volatile double %fma1, double addrspace(1)* %gep.out.1
+  store volatile double %fma0, ptr addrspace(1) %gep.out.0
+  store volatile double %fma1, ptr addrspace(1) %gep.out.1
   ret void
 }
 
@@ -322,26 +322,26 @@ define amdgpu_kernel void @combine_to_fma_fsub_2_f64_2uses_mul(double addrspace(
 ; SI-UNSAFE: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[X]], [[Y]], [[FMA0]]
 
 ; SI: buffer_store_dwordx2 [[RESULT]]
-define amdgpu_kernel void @aggressive_combine_to_fma_fsub_0_f64(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @aggressive_combine_to_fma_fsub_0_f64(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
-  %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
-  %gep.3 = getelementptr double, double addrspace(1)* %gep.0, i32 3
-  %gep.4 = getelementptr double, double addrspace(1)* %gep.0, i32 4
-  %gep.out = getelementptr double, double addrspace(1)* %out, i32 %tid
+  %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
+  %gep.2 = getelementptr double, ptr addrspace(1) %gep.0, i32 2
+  %gep.3 = getelementptr double, ptr addrspace(1) %gep.0, i32 3
+  %gep.4 = getelementptr double, ptr addrspace(1) %gep.0, i32 4
+  %gep.out = getelementptr double, ptr addrspace(1) %out, i32 %tid
 
-  %x = load volatile double, double addrspace(1)* %gep.0
-  %y = load volatile double, double addrspace(1)* %gep.1
-  %z = load volatile double, double addrspace(1)* %gep.2
-  %u = load volatile double, double addrspace(1)* %gep.3
-  %v = load volatile double, double addrspace(1)* %gep.4
+  %x = load volatile double, ptr addrspace(1) %gep.0
+  %y = load volatile double, ptr addrspace(1) %gep.1
+  %z = load volatile double, ptr addrspace(1) %gep.2
+  %u = load volatile double, ptr addrspace(1) %gep.3
+  %v = load volatile double, ptr addrspace(1) %gep.4
 
   %tmp0 = fmul double %u, %v
   %tmp1 = call double @llvm.fma.f64(double %x, double %y, double %tmp0) #0
   %tmp2 = fsub double %tmp1, %z
 
-  store double %tmp2, double addrspace(1)* %gep.out
+  store double %tmp2, ptr addrspace(1) %gep.out
   ret void
 }
 
@@ -363,27 +363,27 @@ define amdgpu_kernel void @aggressive_combine_to_fma_fsub_0_f64(double addrspace
 ; SI-UNSAFE: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], -[[Y]], [[Z]], [[FMA0]]
 
 ; SI: buffer_store_dwordx2 [[RESULT]]
-define amdgpu_kernel void @aggressive_combine_to_fma_fsub_1_f64(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @aggressive_combine_to_fma_fsub_1_f64(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
-  %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
-  %gep.3 = getelementptr double, double addrspace(1)* %gep.0, i32 3
-  %gep.4 = getelementptr double, double addrspace(1)* %gep.0, i32 4
-  %gep.out = getelementptr double, double addrspace(1)* %out, i32 %tid
+  %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
+  %gep.2 = getelementptr double, ptr addrspace(1) %gep.0, i32 2
+  %gep.3 = getelementptr double, ptr addrspace(1) %gep.0, i32 3
+  %gep.4 = getelementptr double, ptr addrspace(1) %gep.0, i32 4
+  %gep.out = getelementptr double, ptr addrspace(1) %out, i32 %tid
 
-  %x = load volatile double, double addrspace(1)* %gep.0
-  %y = load volatile double, double addrspace(1)* %gep.1
-  %z = load volatile double, double addrspace(1)* %gep.2
-  %u = load volatile double, double addrspace(1)* %gep.3
-  %v = load volatile double, double addrspace(1)* %gep.4
+  %x = load volatile double, ptr addrspace(1) %gep.0
+  %y = load volatile double, ptr addrspace(1) %gep.1
+  %z = load volatile double, ptr addrspace(1) %gep.2
+  %u = load volatile double, ptr addrspace(1) %gep.3
+  %v = load volatile double, ptr addrspace(1) %gep.4
 
   ; nsz flag is needed since this combine may change sign of zero
   %tmp0 = fmul nsz double %u, %v
   %tmp1 = call nsz double @llvm.fma.f64(double %y, double %z, double %tmp0) #0
   %tmp2 = fsub nsz double %x, %tmp1
 
-  store double %tmp2, double addrspace(1)* %gep.out
+  store double %tmp2, ptr addrspace(1) %gep.out
   ret void
 }
 
@@ -396,14 +396,14 @@ define amdgpu_kernel void @aggressive_combine_to_fma_fsub_1_f64(double addrspace
 ; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, [[VX:v[0-9]]], [[VY:v[0-9]]], [[VY:v[0-9]]]
-define amdgpu_kernel void @test_f32_mul_add_x_one_y(float addrspace(1)* %out,
-                                        float addrspace(1)* %in1,
-                                        float addrspace(1)* %in2) {
-  %x = load volatile float, float addrspace(1)* %in1
-  %y = load volatile float, float addrspace(1)* %in2
+define amdgpu_kernel void @test_f32_mul_add_x_one_y(ptr addrspace(1) %out,
+                                        ptr addrspace(1) %in1,
+                                        ptr addrspace(1) %in2) {
+  %x = load volatile float, ptr addrspace(1) %in1
+  %y = load volatile float, ptr addrspace(1) %in2
   %a = fadd float %x, 1.0
   %m = fmul float %a, %y
-  store float %m, float addrspace(1)* %out
+  store float %m, ptr addrspace(1) %out
   ret void
 }
 
@@ -412,14 +412,14 @@ define amdgpu_kernel void @test_f32_mul_add_x_one_y(float addrspace(1)* %out,
 ; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, [[VX:v[0-9]]], [[VY:v[0-9]]], [[VY:v[0-9]]]
-define amdgpu_kernel void @test_f32_mul_y_add_x_one(float addrspace(1)* %out,
-                                        float addrspace(1)* %in1,
-                                        float addrspace(1)* %in2) {
-  %x = load volatile float, float addrspace(1)* %in1
-  %y = load volatile float, float addrspace(1)* %in2
+define amdgpu_kernel void @test_f32_mul_y_add_x_one(ptr addrspace(1) %out,
+                                        ptr addrspace(1) %in1,
+                                        ptr addrspace(1) %in2) {
+  %x = load volatile float, ptr addrspace(1) %in1
+  %y = load volatile float, ptr addrspace(1) %in2
   %a = fadd float %x, 1.0
   %m = fmul float %y, %a
-  store float %m, float addrspace(1)* %out
+  store float %m, ptr addrspace(1) %out
   ret void
 }
 
@@ -428,14 +428,14 @@ define amdgpu_kernel void @test_f32_mul_y_add_x_one(float addrspace(1)* %out,
 ; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, [[VX:v[0-9]]], [[VY:v[0-9]]], -[[VY:v[0-9]]]
-define amdgpu_kernel void @test_f32_mul_add_x_negone_y(float addrspace(1)* %out,
-                                           float addrspace(1)* %in1,
-                                           float addrspace(1)* %in2) {
-  %x = load float, float addrspace(1)* %in1
-  %y = load float, float addrspace(1)* %in2
+define amdgpu_kernel void @test_f32_mul_add_x_negone_y(ptr addrspace(1) %out,
+                                           ptr addrspace(1) %in1,
+                                           ptr addrspace(1) %in2) {
+  %x = load float, ptr addrspace(1) %in1
+  %y = load float, ptr addrspace(1) %in2
   %a = fadd float %x, -1.0
   %m = fmul float %a, %y
-  store float %m, float addrspace(1)* %out
+  store float %m, ptr addrspace(1) %out
   ret void
 }
 
@@ -444,14 +444,14 @@ define amdgpu_kernel void @test_f32_mul_add_x_negone_y(float addrspace(1)* %out,
 ; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, [[VX:v[0-9]]], [[VY:v[0-9]]], -[[VY:v[0-9]]]
-define amdgpu_kernel void @test_f32_mul_y_add_x_negone(float addrspace(1)* %out,
-                                           float addrspace(1)* %in1,
-                                           float addrspace(1)* %in2) {
-  %x = load float, float addrspace(1)* %in1
-  %y = load float, float addrspace(1)* %in2
+define amdgpu_kernel void @test_f32_mul_y_add_x_negone(ptr addrspace(1) %out,
+                                           ptr addrspace(1) %in1,
+                                           ptr addrspace(1) %in2) {
+  %x = load float, ptr addrspace(1) %in1
+  %y = load float, ptr addrspace(1) %in2
   %a = fadd float %x, -1.0
   %m = fmul float %y, %a
-  store float %m, float addrspace(1)* %out
+  store float %m, ptr addrspace(1) %out
   ret void
 }
 
@@ -460,14 +460,14 @@ define amdgpu_kernel void @test_f32_mul_y_add_x_negone(float addrspace(1)* %out,
 ; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, -[[VX:v[0-9]]], [[VY:v[0-9]]], [[VY:v[0-9]]]
-define amdgpu_kernel void @test_f32_mul_sub_one_x_y(float addrspace(1)* %out,
-                                        float addrspace(1)* %in1,
-                                        float addrspace(1)* %in2) {
-  %x = load float, float addrspace(1)* %in1
-  %y = load float, float addrspace(1)* %in2
+define amdgpu_kernel void @test_f32_mul_sub_one_x_y(ptr addrspace(1) %out,
+                                        ptr addrspace(1) %in1,
+                                        ptr addrspace(1) %in2) {
+  %x = load float, ptr addrspace(1) %in1
+  %y = load float, ptr addrspace(1) %in2
   %s = fsub float 1.0, %x
   %m = fmul float %s, %y
-  store float %m, float addrspace(1)* %out
+  store float %m, ptr addrspace(1) %out
   ret void
 }
 
@@ -476,14 +476,14 @@ define amdgpu_kernel void @test_f32_mul_sub_one_x_y(float addrspace(1)* %out,
 ; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, -[[VX:v[0-9]]], [[VY:v[0-9]]], [[VY:v[0-9]]]
-define amdgpu_kernel void @test_f32_mul_y_sub_one_x(float addrspace(1)* %out,
-                                        float addrspace(1)* %in1,
-                                        float addrspace(1)* %in2) {
-  %x = load float, float addrspace(1)* %in1
-  %y = load float, float addrspace(1)* %in2
+define amdgpu_kernel void @test_f32_mul_y_sub_one_x(ptr addrspace(1) %out,
+                                        ptr addrspace(1) %in1,
+                                        ptr addrspace(1) %in2) {
+  %x = load float, ptr addrspace(1) %in1
+  %y = load float, ptr addrspace(1) %in2
   %s = fsub float 1.0, %x
   %m = fmul float %y, %s
-  store float %m, float addrspace(1)* %out
+  store float %m, ptr addrspace(1) %out
   ret void
 }
 
@@ -492,14 +492,14 @@ define amdgpu_kernel void @test_f32_mul_y_sub_one_x(float addrspace(1)* %out,
 ; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, -[[VX:v[0-9]]], [[VY:v[0-9]]], -[[VY:v[0-9]]]
-define amdgpu_kernel void @test_f32_mul_sub_negone_x_y(float addrspace(1)* %out,
-                                           float addrspace(1)* %in1,
-                                           float addrspace(1)* %in2) {
-  %x = load float, float addrspace(1)* %in1
-  %y = load float, float addrspace(1)* %in2
+define amdgpu_kernel void @test_f32_mul_sub_negone_x_y(ptr addrspace(1) %out,
+                                           ptr addrspace(1) %in1,
+                                           ptr addrspace(1) %in2) {
+  %x = load float, ptr addrspace(1) %in1
+  %y = load float, ptr addrspace(1) %in2
   %s = fsub float -1.0, %x
   %m = fmul float %s, %y
-  store float %m, float addrspace(1)* %out
+  store float %m, ptr addrspace(1) %out
   ret void
 }
 
@@ -508,14 +508,14 @@ define amdgpu_kernel void @test_f32_mul_sub_negone_x_y(float addrspace(1)* %out,
 ; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, -[[VX:v[0-9]]], [[VY:v[0-9]]], -[[VY:v[0-9]]]
-define amdgpu_kernel void @test_f32_mul_y_sub_negone_x(float addrspace(1)* %out,
-                                         float addrspace(1)* %in1,
-                                         float addrspace(1)* %in2) {
-  %x = load float, float addrspace(1)* %in1
-  %y = load float, float addrspace(1)* %in2
+define amdgpu_kernel void @test_f32_mul_y_sub_negone_x(ptr addrspace(1) %out,
+                                         ptr addrspace(1) %in1,
+                                         ptr addrspace(1) %in2) {
+  %x = load float, ptr addrspace(1) %in1
+  %y = load float, ptr addrspace(1) %in2
   %s = fsub float -1.0, %x
   %m = fmul float %y, %s
-  store float %m, float addrspace(1)* %out
+  store float %m, ptr addrspace(1) %out
   ret void
 }
 
@@ -524,14 +524,14 @@ define amdgpu_kernel void @test_f32_mul_y_sub_negone_x(float addrspace(1)* %out,
 ; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, [[VX:v[0-9]]], [[VY:v[0-9]]], -[[VY:v[0-9]]]
-define amdgpu_kernel void @test_f32_mul_sub_x_one_y(float addrspace(1)* %out,
-                                        float addrspace(1)* %in1,
-                                        float addrspace(1)* %in2) {
-  %x = load float, float addrspace(1)* %in1
-  %y = load float, float addrspace(1)* %in2
+define amdgpu_kernel void @test_f32_mul_sub_x_one_y(ptr addrspace(1) %out,
+                                        ptr addrspace(1) %in1,
+                                        ptr addrspace(1) %in2) {
+  %x = load float, ptr addrspace(1) %in1
+  %y = load float, ptr addrspace(1) %in2
   %s = fsub float %x, 1.0
   %m = fmul float %s, %y
-  store float %m, float addrspace(1)* %out
+  store float %m, ptr addrspace(1) %out
   ret void
 }
 
@@ -540,14 +540,14 @@ define amdgpu_kernel void @test_f32_mul_sub_x_one_y(float addrspace(1)* %out,
 ; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, [[VX:v[0-9]]], [[VY:v[0-9]]], -[[VY:v[0-9]]]
-define amdgpu_kernel void @test_f32_mul_y_sub_x_one(float addrspace(1)* %out,
-                                      float addrspace(1)* %in1,
-                                      float addrspace(1)* %in2) {
-  %x = load float, float addrspace(1)* %in1
-  %y = load float, float addrspace(1)* %in2
+define amdgpu_kernel void @test_f32_mul_y_sub_x_one(ptr addrspace(1) %out,
+                                      ptr addrspace(1) %in1,
+                                      ptr addrspace(1) %in2) {
+  %x = load float, ptr addrspace(1) %in1
+  %y = load float, ptr addrspace(1) %in2
   %s = fsub float %x, 1.0
   %m = fmul float %y, %s
-  store float %m, float addrspace(1)* %out
+  store float %m, ptr addrspace(1) %out
   ret void
 }
 
@@ -556,14 +556,14 @@ define amdgpu_kernel void @test_f32_mul_y_sub_x_one(float addrspace(1)* %out,
 ; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, [[VX:v[0-9]]], [[VY:v[0-9]]], [[VY:v[0-9]]]
-define amdgpu_kernel void @test_f32_mul_sub_x_negone_y(float addrspace(1)* %out,
-                                         float addrspace(1)* %in1,
-                                         float addrspace(1)* %in2) {
-  %x = load float, float addrspace(1)* %in1
-  %y = load float, float addrspace(1)* %in2
+define amdgpu_kernel void @test_f32_mul_sub_x_negone_y(ptr addrspace(1) %out,
+                                         ptr addrspace(1) %in1,
+                                         ptr addrspace(1) %in2) {
+  %x = load float, ptr addrspace(1) %in1
+  %y = load float, ptr addrspace(1) %in2
   %s = fsub float %x, -1.0
   %m = fmul float %s, %y
-  store float %m, float addrspace(1)* %out
+  store float %m, ptr addrspace(1) %out
   ret void
 }
 
@@ -572,14 +572,14 @@ define amdgpu_kernel void @test_f32_mul_sub_x_negone_y(float addrspace(1)* %out,
 ; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, [[VX:v[0-9]]], [[VY:v[0-9]]], [[VY:v[0-9]]]
-define amdgpu_kernel void @test_f32_mul_y_sub_x_negone(float addrspace(1)* %out,
-                                         float addrspace(1)* %in1,
-                                         float addrspace(1)* %in2) {
-  %x = load float, float addrspace(1)* %in1
-  %y = load float, float addrspace(1)* %in2
+define amdgpu_kernel void @test_f32_mul_y_sub_x_negone(ptr addrspace(1) %out,
+                                         ptr addrspace(1) %in1,
+                                         ptr addrspace(1) %in2) {
+  %x = load float, ptr addrspace(1) %in1
+  %y = load float, ptr addrspace(1) %in2
   %s = fsub float %x, -1.0
   %m = fmul float %y, %s
-  store float %m, float addrspace(1)* %out
+  store float %m, ptr addrspace(1) %out
   ret void
 }
 
@@ -594,18 +594,18 @@ define amdgpu_kernel void @test_f32_mul_y_sub_x_negone(float addrspace(1)* %out,
 ;
 ; SI-FMA: v_fma_f32 [[VR:v[0-9]]], -[[VT:v[0-9]]], [[VY:v[0-9]]], [[VY]]
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, [[VX:v[0-9]]], [[VT]], [[VR]]
-define amdgpu_kernel void @test_f32_interp(float addrspace(1)* %out,
-                             float addrspace(1)* %in1,
-                             float addrspace(1)* %in2,
-                             float addrspace(1)* %in3) {
-  %x = load float, float addrspace(1)* %in1
-  %y = load float, float addrspace(1)* %in2
-  %t = load float, float addrspace(1)* %in3
+define amdgpu_kernel void @test_f32_interp(ptr addrspace(1) %out,
+                             ptr addrspace(1) %in1,
+                             ptr addrspace(1) %in2,
+                             ptr addrspace(1) %in3) {
+  %x = load float, ptr addrspace(1) %in1
+  %y = load float, ptr addrspace(1) %in2
+  %t = load float, ptr addrspace(1) %in3
   %t1 = fsub float 1.0, %t
   %tx = fmul float %x, %t
   %ty = fmul float %y, %t1
   %r = fadd float %tx, %ty
-  store float %r, float addrspace(1)* %out
+  store float %r, ptr addrspace(1) %out
   ret void
 }
 
@@ -616,18 +616,18 @@ define amdgpu_kernel void @test_f32_interp(float addrspace(1)* %out,
 ;
 ; SI-FMA: v_fma_f64 [[VR:v\[[0-9]+:[0-9]+\]]], -[[VT:v\[[0-9]+:[0-9]+\]]], [[VY:v\[[0-9]+:[0-9]+\]]], [[VY]]
 ; SI-FMA: v_fma_f64 v{{\[[0-9]+:[0-9]+\]}}, [[VX:v\[[0-9]+:[0-9]+\]]], [[VT]], [[VR]]
-define amdgpu_kernel void @test_f64_interp(double addrspace(1)* %out,
-                             double addrspace(1)* %in1,
-                             double addrspace(1)* %in2,
-                             double addrspace(1)* %in3) {
-  %x = load double, double addrspace(1)* %in1
-  %y = load double, double addrspace(1)* %in2
-  %t = load double, double addrspace(1)* %in3
+define amdgpu_kernel void @test_f64_interp(ptr addrspace(1) %out,
+                             ptr addrspace(1) %in1,
+                             ptr addrspace(1) %in2,
+                             ptr addrspace(1) %in3) {
+  %x = load double, ptr addrspace(1) %in1
+  %y = load double, ptr addrspace(1) %in2
+  %t = load double, ptr addrspace(1) %in3
   %t1 = fsub double 1.0, %t
   %tx = fmul double %x, %t
   %ty = fmul double %y, %t1
   %r = fadd double %tx, %ty
-  store double %r, double addrspace(1)* %out
+  store double %r, ptr addrspace(1) %out
   ret void
 }
 
@@ -638,19 +638,19 @@ define amdgpu_kernel void @test_f64_interp(double addrspace(1)* %out,
 ; SI-NOT: [[A]]
 ; SI-NOT: [[B]]
 ; SI: v_fma_f32 v{{[0-9]+}}, [[A]], 2.0, [[B]]
-define amdgpu_kernel void @fma_neg_2.0_neg_a_b_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
+define amdgpu_kernel void @fma_neg_2.0_neg_a_b_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
-  %gep.out = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %gep.0 = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
+  %gep.out = getelementptr float, ptr addrspace(1) %out, i32 %tid
 
-  %r1 = load volatile float, float addrspace(1)* %gep.0
-  %r2 = load volatile float, float addrspace(1)* %gep.1
+  %r1 = load volatile float, ptr addrspace(1) %gep.0
+  %r2 = load volatile float, ptr addrspace(1) %gep.1
 
   %r1.fneg = fneg float %r1
 
   %r3 = tail call float @llvm.fma.f32(float -2.0, float %r1.fneg, float %r2)
-  store float %r3, float addrspace(1)* %gep.out
+  store float %r3, ptr addrspace(1) %gep.out
   ret void
 }
 
@@ -660,19 +660,19 @@ define amdgpu_kernel void @fma_neg_2.0_neg_a_b_f32(float addrspace(1)* %out, flo
 ; SI-NOT: [[A]]
 ; SI-NOT: [[B]]
 ; SI: v_fma_f32 v{{[0-9]+}}, [[A]], -2.0, [[B]]
-define amdgpu_kernel void @fma_2.0_neg_a_b_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
+define amdgpu_kernel void @fma_2.0_neg_a_b_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
-  %gep.out = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %gep.0 = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
+  %gep.out = getelementptr float, ptr addrspace(1) %out, i32 %tid
 
-  %r1 = load volatile float, float addrspace(1)* %gep.0
-  %r2 = load volatile float, float addrspace(1)* %gep.1
+  %r1 = load volatile float, ptr addrspace(1) %gep.0
+  %r2 = load volatile float, ptr addrspace(1) %gep.1
 
   %r1.fneg = fneg float %r1
 
   %r3 = tail call float @llvm.fma.f32(float 2.0, float %r1.fneg, float %r2)
-  store float %r3, float addrspace(1)* %gep.out
+  store float %r3, ptr addrspace(1) %gep.out
   ret void
 }
 
@@ -681,22 +681,22 @@ define amdgpu_kernel void @fma_2.0_neg_a_b_f32(float addrspace(1)* %out, float a
 ; SI: v_fma_f32 v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]+}}, -v{{[0-9]+}}
 ; SI: v_fma_f32 v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]+}}, -v{{[0-9]+}}
 ; SI: v_fma_f32 v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]+}}, -v{{[0-9]+}}
-define amdgpu_kernel void @fma_neg_b_c_v4f32(<4 x float> addrspace(1)* %out, <4 x float> addrspace(1)* %in) #2 {
+define amdgpu_kernel void @fma_neg_b_c_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.0 = getelementptr <4 x float>, <4 x float> addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr <4 x float>, <4 x float> addrspace(1)* %gep.0, i32 1
-  %gep.2 = getelementptr <4 x float>, <4 x float> addrspace(1)* %gep.1, i32 2
-  %gep.out = getelementptr <4 x float>, <4 x float> addrspace(1)* %out, i32 %tid
+  %gep.0 = getelementptr <4 x float>, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr <4 x float>, ptr addrspace(1) %gep.0, i32 1
+  %gep.2 = getelementptr <4 x float>, ptr addrspace(1) %gep.1, i32 2
+  %gep.out = getelementptr <4 x float>, ptr addrspace(1) %out, i32 %tid
 
-  %tmp0 = load <4 x float>, <4 x float> addrspace(1)* %gep.0
-  %tmp1 = load <4 x float>, <4 x float> addrspace(1)* %gep.1
-  %tmp2 = load <4 x float>, <4 x float> addrspace(1)* %gep.2
+  %tmp0 = load <4 x float>, ptr addrspace(1) %gep.0
+  %tmp1 = load <4 x float>, ptr addrspace(1) %gep.1
+  %tmp2 = load <4 x float>, ptr addrspace(1) %gep.2
 
   %fneg0 = fneg fast <4 x float> %tmp0
   %fneg1 = fneg fast <4 x float> %tmp1
   %fma0 = tail call fast <4 x float> @llvm.fma.v4f32(<4 x float> %tmp2, <4 x float> %fneg0, <4 x float> %fneg1)
 
-  store <4 x float> %fma0, <4 x float> addrspace(1)* %gep.out
+  store <4 x float> %fma0, ptr addrspace(1) %gep.out
   ret void
 }
 

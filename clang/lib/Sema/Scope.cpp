@@ -43,6 +43,9 @@ void Scope::setFlags(Scope *parent, unsigned flags) {
                   FunctionPrototypeScope | AtCatchScope | ObjCMethodScope)) ==
         0)
       Flags |= parent->getFlags() & OpenMPSimdDirectiveScope;
+    // transmit the parent's 'order' flag, if exists
+    if (parent->getFlags() & OpenMPOrderClauseScope)
+      Flags |= OpenMPOrderClauseScope;
   } else {
     Depth = 0;
     PrototypeDepth = 0;
@@ -91,7 +94,7 @@ void Scope::Init(Scope *parent, unsigned flags) {
   UsingDirectives.clear();
   Entity = nullptr;
   ErrorTrap.reset();
-  NRVO = None;
+  NRVO = std::nullopt;
 }
 
 bool Scope::containedInPrototypeScope() const {
@@ -156,11 +159,11 @@ void Scope::updateNRVOCandidate(VarDecl *VD) {
 
 void Scope::applyNRVO() {
   // There is no NRVO candidate in the current scope.
-  if (!NRVO.hasValue())
+  if (!NRVO.has_value())
     return;
 
   if (*NRVO && isDeclScope(*NRVO))
-    NRVO.getValue()->setNRVOVariable(true);
+    (*NRVO)->setNRVOVariable(true);
 
   // It's necessary to propagate NRVO candidate to the parent scope for cases
   // when the parent scope doesn't contain a return statement.

@@ -71,6 +71,14 @@ public:
 protected:
   ValueImpl(Type type, Kind kind) : typeAndKind(type, kind) {}
 
+  /// Expose a few methods explicitly for the debugger to call for
+  /// visualization.
+#ifndef NDEBUG
+  LLVM_DUMP_METHOD Type debug_getType() const { return getType(); }
+  LLVM_DUMP_METHOD Kind debug_getKind() const { return getKind(); }
+
+#endif
+
   /// The type of this result and the kind.
   llvm::PointerIntPair<Type, 3, Kind> typeAndKind;
 };
@@ -88,26 +96,22 @@ public:
 
   template <typename U>
   bool isa() const {
-    assert(*this && "isa<> used on a null type.");
-    return U::classof(*this);
+    return llvm::isa<U>(*this);
   }
 
-  template <typename First, typename Second, typename... Rest>
-  bool isa() const {
-    return isa<First>() || isa<Second, Rest...>();
-  }
   template <typename U>
   U dyn_cast() const {
-    return isa<U>() ? U(impl) : U(nullptr);
+    return llvm::dyn_cast<U>(*this);
   }
+
   template <typename U>
   U dyn_cast_or_null() const {
-    return (*this && isa<U>()) ? U(impl) : U(nullptr);
+    return llvm::dyn_cast_if_present<U>(*this);
   }
+
   template <typename U>
   U cast() const {
-    assert(isa<U>());
-    return U(impl);
+    return llvm::cast<U>(*this);
   }
 
   explicit operator bool() const { return impl; }
@@ -419,6 +423,27 @@ inline unsigned OpResultImpl::getResultNumber() const {
   return cast<InlineOpResult>(this)->getResultNumber();
 }
 
+/// TypedValue is a Value with a statically know type.
+/// TypedValue can be null/empty
+template <typename Ty>
+struct TypedValue : Value {
+  /// Return the known Type
+  Ty getType() { return Value::getType().template cast<Ty>(); }
+  void setType(mlir::Type ty) {
+    assert(ty.template isa<Ty>());
+    Value::setType(ty);
+  }
+
+  TypedValue(Value val) : Value(val) {
+    assert(!val || val.getType().template isa<Ty>());
+  }
+  TypedValue &operator=(const Value &other) {
+    assert(!other || other.getType().template isa<Ty>());
+    Value::operator=(other);
+    return *this;
+  }
+};
+
 } // namespace detail
 
 /// This is a value defined by a result of an operation.
@@ -458,6 +483,12 @@ private:
 inline ::llvm::hash_code hash_value(Value arg) {
   return ::llvm::hash_value(arg.getImpl());
 }
+
+template <typename Ty, typename Value = mlir::Value>
+/// If Ty is mlir::Type this will select `Value` instead of having a wrapper
+/// around it. This helps resolve ambiguous conversion issues.
+using TypedValue = std::conditional_t<std::is_same_v<Ty, mlir::Type>,
+                                      mlir::Value, detail::TypedValue<Ty>>;
 
 } // namespace mlir
 
@@ -531,6 +562,31 @@ public:
   static inline mlir::OpResult getFromVoidPointer(void *pointer) {
     return reinterpret_cast<mlir::detail::OpResultImpl *>(pointer);
   }
+};
+
+/// Add support for llvm style casts. We provide a cast between To and From if
+/// From is mlir::Value or derives from it.
+template <typename To, typename From>
+struct CastInfo<
+    To, From,
+    std::enable_if_t<std::is_same_v<mlir::Value, std::remove_const_t<From>> ||
+                     std::is_base_of_v<mlir::Value, From>>>
+    : NullableValueCastFailed<To>,
+      DefaultDoCastIfPossible<To, From, CastInfo<To, From>> {
+  /// Arguments are taken as mlir::Value here and not as `From`, because
+  /// when casting from an intermediate type of the hierarchy to one of its
+  /// children, the val.getKind() inside T::classof will use the static
+  /// getKind() of the parent instead of the non-static ValueImpl::getKind()
+  /// that returns the dynamic type. This means that T::classof would end up
+  /// comparing the static Kind of the children to the static Kind of its
+  /// parent, making it impossible to downcast from the parent to the child.
+  static inline bool isPossible(mlir::Value ty) {
+    /// Return a constant true instead of a dynamic true when casting to self or
+    /// up the hierarchy.
+    return std::is_same_v<To, std::remove_const_t<From>> ||
+           std::is_base_of_v<To, From> || To::classof(ty);
+  }
+  static inline To doCast(mlir::Value value) { return To(value.getImpl()); }
 };
 
 } // namespace llvm

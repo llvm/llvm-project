@@ -11,7 +11,7 @@
 ; Function Attrs: noinline nounwind optnone uwtable
 define void @foo() local_unnamed_addr #0 {
 bb:
-  %tmp = alloca [5 x i32*], align 16
+  %tmp = alloca [5 x ptr], align 16
   br label %bb7.preheader
 
 bb3.loopexit:                                     ; preds = %bb10
@@ -26,9 +26,9 @@ bb7.preheader:                                    ; preds = %bb3.loopexit, %bb
 bb10:                                             ; preds = %bb10, %bb7.preheader
   %indvars.iv = phi i64 [ 0, %bb7.preheader ], [ %indvars.iv.next, %bb10 ]
   %tmp1.14 = phi i32 [ %tmp1.06, %bb7.preheader ], [ %spec.select, %bb10 ]
-  %tmp13 = getelementptr inbounds [5 x i32*], [5 x i32*]* %tmp, i64 0, i64 %indvars.iv
-  %tmp14 = load i32*, i32** %tmp13, align 8
-  %tmp15.not = icmp ne i32* %tmp14, null
+  %tmp13 = getelementptr inbounds [5 x ptr], ptr %tmp, i64 0, i64 %indvars.iv
+  %tmp14 = load ptr, ptr %tmp13, align 8
+  %tmp15.not = icmp ne ptr %tmp14, null
   %tmp18 = sext i1 %tmp15.not to i32
   %spec.select = add nsw i32 %tmp1.14, %tmp18
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1

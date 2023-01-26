@@ -70,6 +70,10 @@ public:
                                          ~static_cast<uintptr_t>(1));
   }
 
+  /// Runs the given callback under the session lock, passing in the associated
+  /// ResourceKey. This is the safe way to associate resources with trackers.
+  template <typename Func> Error withResourceKeyDo(Func &&F);
+
   /// Remove all resources associated with this key.
   Error remove();
 
@@ -97,8 +101,9 @@ private:
 class ResourceManager {
 public:
   virtual ~ResourceManager();
-  virtual Error handleRemoveResources(ResourceKey K) = 0;
-  virtual void handleTransferResources(ResourceKey DstK, ResourceKey SrcK) = 0;
+  virtual Error handleRemoveResources(JITDylib &JD, ResourceKey K) = 0;
+  virtual void handleTransferResources(JITDylib &JD, ResourceKey DstK,
+                                       ResourceKey SrcK) = 0;
 };
 
 /// A set of symbol names (represented by SymbolStringPtrs for
@@ -192,7 +197,7 @@ public:
       std::initializer_list<SymbolStringPtr> Names,
       SymbolLookupFlags Flags = SymbolLookupFlags::RequiredSymbol) {
     Symbols.reserve(Names.size());
-    for (auto &Name : Names)
+    for (const auto &Name : Names)
       add(std::move(Name), Flags);
   }
 
@@ -331,7 +336,7 @@ public:
   SymbolNameVector getSymbolNames() const {
     SymbolNameVector Names;
     Names.reserve(Symbols.size());
-    for (auto &KV : Symbols)
+    for (const auto &KV : Symbols)
       Names.push_back(KV.first);
     return Names;
   }
@@ -530,8 +535,11 @@ public:
   ///        emitted or notified of an error.
   ~MaterializationResponsibility();
 
-  /// Returns the ResourceTracker for this instance.
-  template <typename Func> Error withResourceKeyDo(Func &&F) const;
+  /// Runs the given callback under the session lock, passing in the associated
+  /// ResourceKey. This is the safe way to associate resources with trackers.
+  template <typename Func> Error withResourceKeyDo(Func &&F) const {
+    return RT->withResourceKeyDo(std::forward<Func>(F));
+  }
 
   /// Returns the target JITDylib that these symbols are being materialized
   ///        into.
@@ -707,6 +715,13 @@ public:
   /// has been overridden.
   void doDiscard(const JITDylib &JD, const SymbolStringPtr &Name) {
     SymbolFlags.erase(Name);
+    if (InitSymbol == Name) {
+      DEBUG_WITH_TYPE("orc", {
+        dbgs() << "In " << getName() << ": discarding init symbol \""
+               << *Name << "\"\n";
+      });
+      InitSymbol = nullptr;
+    }
     discard(JD, std::move(Name));
   }
 
@@ -1763,19 +1778,18 @@ private:
       JITDispatchHandlers;
 };
 
+template <typename Func> Error ResourceTracker::withResourceKeyDo(Func &&F) {
+  return getJITDylib().getExecutionSession().runSessionLocked([&]() -> Error {
+    if (isDefunct())
+      return make_error<ResourceTrackerDefunct>(this);
+    F(getKeyUnsafe());
+    return Error::success();
+  });
+}
+
 inline ExecutionSession &
 MaterializationResponsibility::getExecutionSession() const {
   return JD.getExecutionSession();
-}
-
-template <typename Func>
-Error MaterializationResponsibility::withResourceKeyDo(Func &&F) const {
-  return JD.getExecutionSession().runSessionLocked([&]() -> Error {
-    if (RT->isDefunct())
-      return make_error<ResourceTrackerDefunct>(RT);
-    F(RT->getKeyUnsafe());
-    return Error::success();
-  });
 }
 
 template <typename GeneratorT>

@@ -12,13 +12,13 @@
 ; GCN: v_xor_b32_e32 [[NEG_SELECT:v[0-9]+]], 0x80000000, [[SELECT]]
 ; GCN-NEXT: buffer_store_dword [[NEG_SELECT]]
 define amdgpu_kernel void @select_fneg_posk_src_rcp_legacy_f32(i32 %c) #2 {
-  %x = load volatile float, float addrspace(1)* undef
-  %y = load volatile float, float addrspace(1)* undef
+  %x = load volatile float, ptr addrspace(1) undef
+  %y = load volatile float, ptr addrspace(1) undef
   %cmp = icmp eq i32 %c, 0
   %rcp = call float @llvm.amdgcn.rcp.legacy(float %x)
   %fneg = fsub float -0.0, %rcp
   %select = select i1 %cmp, float %fneg, float 2.0
-  store volatile float %select, float addrspace(1)* undef
+  store volatile float %select, ptr addrspace(1) undef
   ret void
 }
 
@@ -30,12 +30,12 @@ define amdgpu_kernel void @select_fneg_posk_src_rcp_legacy_f32(i32 %c) #2 {
 ; GCN: v_xor_b32_e32 [[NEG_SELECT:v[0-9]+]], 0x80000000, [[SELECT]]
 ; GCN-NEXT: buffer_store_dword [[NEG_SELECT]]
 define amdgpu_kernel void @select_fneg_posk_src_mul_legacy_f32(i32 %c) #2 {
-  %x = load volatile float, float addrspace(1)* undef
+  %x = load volatile float, ptr addrspace(1) undef
   %cmp = icmp eq i32 %c, 0
   %mul = call float @llvm.amdgcn.fmul.legacy(float %x, float 4.0)
   %fneg = fsub float -0.0, %mul
   %select = select i1 %cmp, float %fneg, float 2.0
-  store volatile float %select, float addrspace(1)* undef
+  store volatile float %select, ptr addrspace(1) undef
   ret void
 }
 

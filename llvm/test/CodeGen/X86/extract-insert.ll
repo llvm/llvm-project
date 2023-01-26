@@ -5,6 +5,7 @@
 define i32 @extractelt_undef_insertelt(i32 %x, i32 %y) {
 ; CHECK-LABEL: extractelt_undef_insertelt:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ret{{[l|q]}}
   %b = insertelement <4 x i32> zeroinitializer, i32 %x, i64 3
   %c = icmp uge i32 %y, %y

@@ -16,8 +16,6 @@
 # available.
 #----------------------------------------------------------------------
 
-from __future__ import print_function
-
 import optparse
 import os
 import shlex
@@ -130,5 +128,5 @@ def __lldb_init_module(debugger, internal_dict):
         # This initializer is being run from LLDB in the embedded command interpreter
         # Add any commands contained in this module to LLDB
         debugger.HandleCommand(
-            'command script add -f delta.parse_time_log parse_time_log')
+            'command script add -o -f delta.parse_time_log parse_time_log')
         print('The "parse_time_log" command is now installed and ready for use, type "parse_time_log --help" for more information')

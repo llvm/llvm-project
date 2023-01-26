@@ -1,4 +1,4 @@
-; RUN: opt -licm -verify-memoryssa %s -S | FileCheck %s
+; RUN: opt -passes=licm -verify-memoryssa %s -S | FileCheck %s
 ; REQUIRES: asserts
 ; Ensure verification doesn't fail with unreachable blocks.
 

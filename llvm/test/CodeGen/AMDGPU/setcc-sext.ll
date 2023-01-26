@@ -5,7 +5,7 @@
 ; GCN-NEXT: s_and_saveexec_b64 {{[^,]+}}, [[CC]]
 ; GCN-NOT:  v_cndmask_
 
-define amdgpu_kernel void @setcc_sgt_true_sext(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @setcc_sgt_true_sext(ptr addrspace(1) nocapture %arg) {
 bb:
   %x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %y = tail call i32 @llvm.amdgcn.workitem.id.y()
@@ -15,7 +15,7 @@ bb:
   br i1 %cond, label %then, label %endif
 
 then:
-  store i32 1, i32 addrspace(1)* %arg, align 4
+  store i32 1, ptr addrspace(1) %arg, align 4
   br label %endif
 
 endif:
@@ -27,7 +27,7 @@ endif:
 ; GCN-NEXT: s_and_saveexec_b64 {{[^,]+}}, [[CC]]
 ; GCN-NOT:  v_cndmask_
 
-define amdgpu_kernel void @setcc_sgt_true_sext_swap(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @setcc_sgt_true_sext_swap(ptr addrspace(1) nocapture %arg) {
 bb:
   %x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %y = tail call i32 @llvm.amdgcn.workitem.id.y()
@@ -37,7 +37,7 @@ bb:
   br i1 %cond, label %then, label %endif
 
 then:
-  store i32 1, i32 addrspace(1)* %arg, align 4
+  store i32 1, ptr addrspace(1) %arg, align 4
   br label %endif
 
 endif:
@@ -49,7 +49,7 @@ endif:
 ; GCN-NEXT: s_and_saveexec_b64 {{[^,]+}}, [[CC]]
 ; GCN-NOT:  v_cndmask_
 
-define amdgpu_kernel void @setcc_ne_true_sext(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @setcc_ne_true_sext(ptr addrspace(1) nocapture %arg) {
 bb:
   %x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %y = tail call i32 @llvm.amdgcn.workitem.id.y()
@@ -59,7 +59,7 @@ bb:
   br i1 %cond, label %then, label %endif
 
 then:
-  store i32 1, i32 addrspace(1)* %arg, align 4
+  store i32 1, ptr addrspace(1) %arg, align 4
   br label %endif
 
 endif:
@@ -71,7 +71,7 @@ endif:
 ; GCN-NEXT: s_and_saveexec_b64 {{[^,]+}}, [[CC]]
 ; GCN-NOT:  v_cndmask_
 
-define amdgpu_kernel void @setcc_ult_true_sext(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @setcc_ult_true_sext(ptr addrspace(1) nocapture %arg) {
 bb:
   %x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %y = tail call i32 @llvm.amdgcn.workitem.id.y()
@@ -81,7 +81,7 @@ bb:
   br i1 %cond, label %then, label %endif
 
 then:
-  store i32 1, i32 addrspace(1)* %arg, align 4
+  store i32 1, ptr addrspace(1) %arg, align 4
   br label %endif
 
 endif:
@@ -93,7 +93,7 @@ endif:
 ; GCN-NEXT: s_and_saveexec_b64 {{[^,]+}}, [[CC]]
 ; GCN-NOT:  v_cndmask_
 
-define amdgpu_kernel void @setcc_eq_true_sext(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @setcc_eq_true_sext(ptr addrspace(1) nocapture %arg) {
 bb:
   %x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %y = tail call i32 @llvm.amdgcn.workitem.id.y()
@@ -103,7 +103,7 @@ bb:
   br i1 %cond, label %then, label %endif
 
 then:
-  store i32 1, i32 addrspace(1)* %arg, align 4
+  store i32 1, ptr addrspace(1) %arg, align 4
   br label %endif
 
 endif:
@@ -115,7 +115,7 @@ endif:
 ; GCN-NEXT: s_and_saveexec_b64 {{[^,]+}}, [[CC]]
 ; GCN-NOT:  v_cndmask_
 
-define amdgpu_kernel void @setcc_sle_true_sext(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @setcc_sle_true_sext(ptr addrspace(1) nocapture %arg) {
 bb:
   %x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %y = tail call i32 @llvm.amdgcn.workitem.id.y()
@@ -125,7 +125,7 @@ bb:
   br i1 %cond, label %then, label %endif
 
 then:
-  store i32 1, i32 addrspace(1)* %arg, align 4
+  store i32 1, ptr addrspace(1) %arg, align 4
   br label %endif
 
 endif:
@@ -137,7 +137,7 @@ endif:
 ; GCN-NEXT: s_and_saveexec_b64 {{[^,]+}}, [[CC]]
 ; GCN-NOT:  v_cndmask_
 
-define amdgpu_kernel void @setcc_uge_true_sext(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @setcc_uge_true_sext(ptr addrspace(1) nocapture %arg) {
 bb:
   %x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %y = tail call i32 @llvm.amdgcn.workitem.id.y()
@@ -147,7 +147,7 @@ bb:
   br i1 %cond, label %then, label %endif
 
 then:
-  store i32 1, i32 addrspace(1)* %arg, align 4
+  store i32 1, ptr addrspace(1) %arg, align 4
   br label %endif
 
 endif:
@@ -159,7 +159,7 @@ endif:
 ; GCN-NEXT: s_and_saveexec_b64 {{[^,]+}}, [[CC]]
 ; GCN-NOT:  v_cndmask_
 
-define amdgpu_kernel void @setcc_eq_false_sext(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @setcc_eq_false_sext(ptr addrspace(1) nocapture %arg) {
 bb:
   %x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %y = tail call i32 @llvm.amdgcn.workitem.id.y()
@@ -169,7 +169,7 @@ bb:
   br i1 %cond, label %then, label %endif
 
 then:
-  store i32 1, i32 addrspace(1)* %arg, align 4
+  store i32 1, ptr addrspace(1) %arg, align 4
   br label %endif
 
 endif:
@@ -181,7 +181,7 @@ endif:
 ; GCN-NEXT: s_and_saveexec_b64 {{[^,]+}}, [[CC]]
 ; GCN-NOT:  v_cndmask_
 
-define amdgpu_kernel void @setcc_sge_false_sext(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @setcc_sge_false_sext(ptr addrspace(1) nocapture %arg) {
 bb:
   %x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %y = tail call i32 @llvm.amdgcn.workitem.id.y()
@@ -191,7 +191,7 @@ bb:
   br i1 %cond, label %then, label %endif
 
 then:
-  store i32 1, i32 addrspace(1)* %arg, align 4
+  store i32 1, ptr addrspace(1) %arg, align 4
   br label %endif
 
 endif:
@@ -203,7 +203,7 @@ endif:
 ; GCN-NEXT: s_and_saveexec_b64 {{[^,]+}}, [[CC]]
 ; GCN-NOT:  v_cndmask_
 
-define amdgpu_kernel void @setcc_ule_false_sext(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @setcc_ule_false_sext(ptr addrspace(1) nocapture %arg) {
 bb:
   %x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %y = tail call i32 @llvm.amdgcn.workitem.id.y()
@@ -213,7 +213,7 @@ bb:
   br i1 %cond, label %then, label %endif
 
 then:
-  store i32 1, i32 addrspace(1)* %arg, align 4
+  store i32 1, ptr addrspace(1) %arg, align 4
   br label %endif
 
 endif:
@@ -225,7 +225,7 @@ endif:
 ; GCN-NEXT: s_and_saveexec_b64 {{[^,]+}}, [[CC]]
 ; GCN-NOT:  v_cndmask_
 
-define amdgpu_kernel void @setcc_ne_false_sext(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @setcc_ne_false_sext(ptr addrspace(1) nocapture %arg) {
 bb:
   %x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %y = tail call i32 @llvm.amdgcn.workitem.id.y()
@@ -235,7 +235,7 @@ bb:
   br i1 %cond, label %then, label %endif
 
 then:
-  store i32 1, i32 addrspace(1)* %arg, align 4
+  store i32 1, ptr addrspace(1) %arg, align 4
   br label %endif
 
 endif:
@@ -246,7 +246,7 @@ endif:
 ; GCN-NEXT: s_and_saveexec_b64 {{[^,]+}}, [[CC]]
 ; GCN-NOT:  v_cndmask_
 
-define amdgpu_kernel void @setcc_ugt_false_sext(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @setcc_ugt_false_sext(ptr addrspace(1) nocapture %arg) {
 bb:
   %x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %y = tail call i32 @llvm.amdgcn.workitem.id.y()
@@ -256,7 +256,7 @@ bb:
   br i1 %cond, label %then, label %endif
 
 then:
-  store i32 1, i32 addrspace(1)* %arg, align 4
+  store i32 1, ptr addrspace(1) %arg, align 4
   br label %endif
 
 endif:
@@ -267,7 +267,7 @@ endif:
 ; GCN-NEXT: s_and_saveexec_b64 {{[^,]+}}, [[CC]]
 ; GCN-NOT:  v_cndmask_
 
-define amdgpu_kernel void @setcc_slt_false_sext(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @setcc_slt_false_sext(ptr addrspace(1) nocapture %arg) {
 bb:
   %x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %y = tail call i32 @llvm.amdgcn.workitem.id.y()
@@ -277,7 +277,7 @@ bb:
   br i1 %cond, label %then, label %endif
 
 then:
-  store i32 1, i32 addrspace(1)* %arg, align 4
+  store i32 1, ptr addrspace(1) %arg, align 4
   br label %endif
 
 endif:

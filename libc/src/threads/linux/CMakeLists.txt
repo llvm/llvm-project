@@ -1,17 +1,3 @@
-add_entrypoint_object(
-  call_once
-  SRCS
-    call_once.cpp
-  HDRS
-    ../call_once.h
-  DEPENDS
-    .threads_utils
-    libc.include.sys_syscall
-    libc.include.threads
-    libc.src.__support.CPP.atomic
-    libc.src.__support.OSUtil.osutil
-)
-
 add_header_library(
   threads_utils
   HDRS

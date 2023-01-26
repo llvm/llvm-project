@@ -117,9 +117,10 @@ exit:
 define void @test5(i32 %n) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    [[TRUNC:%.*]] = and i32 [[N:%.*]], 63
-; CHECK-NEXT:    [[DIV_LHS_TRUNC:%.*]] = trunc i32 [[TRUNC]] to i8
-; CHECK-NEXT:    [[DIV1:%.*]] = urem i8 [[DIV_LHS_TRUNC]], 42
-; CHECK-NEXT:    [[DIV_ZEXT:%.*]] = zext i8 [[DIV1]] to i32
+; CHECK-NEXT:    [[TRUNC_FROZEN:%.*]] = freeze i32 [[TRUNC]]
+; CHECK-NEXT:    [[DIV_UREM:%.*]] = sub nuw i32 [[TRUNC_FROZEN]], 42
+; CHECK-NEXT:    [[DIV_CMP:%.*]] = icmp ult i32 [[TRUNC_FROZEN]], 42
+; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[DIV_CMP]], i32 [[TRUNC_FROZEN]], i32 [[DIV_UREM]]
 ; CHECK-NEXT:    ret void
 ;
   %trunc = and i32 %n, 63
@@ -150,6 +151,26 @@ bb:
 
 exit:
   ret void
+}
+
+declare void @llvm.assume(i1)
+
+define i16 @test7(i16 %x, i16 %y) {
+; CHECK-LABEL: @test7(
+; CHECK-NEXT:    [[ABOVE_RANGE:%.*]] = icmp uge i16 [[Y:%.*]], 13
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ABOVE_RANGE]])
+; CHECK-NEXT:    [[BELOW_RANGE:%.*]] = icmp ult i16 [[X:%.*]], 13
+; CHECK-NEXT:    call void @llvm.assume(i1 [[BELOW_RANGE]])
+; CHECK-NEXT:    ret i16 [[X]]
+;
+  %above_range = icmp uge i16 %y, 13
+  call void @llvm.assume(i1 %above_range)
+
+  %below_range = icmp ult i16 %x, 13
+  call void @llvm.assume(i1 %below_range)
+
+  %r = urem i16 %x, %y
+  ret i16 %r
 }
 
 define void @non_power_of_2(i24 %n) {

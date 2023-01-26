@@ -8,7 +8,7 @@
 target triple = "wasm32-unknown-unknown"
 
 define void @foo() {
-  %L6 = load i32, i32* undef
+  %L6 = load i32, ptr undef
   br label %BB1
 
 BB1:                                              ; preds = %BB1, %0
@@ -16,6 +16,6 @@ BB1:                                              ; preds = %BB1, %0
   %E1 = extractelement <4 x i32> %bj, i32 0
   %E23 = extractelement <4 x i32> zeroinitializer, i32 %E1
   %I33 = insertelement <4 x i32> undef, i32 %E23, i1 undef
-  store <4 x i32> %I33, <4 x i32>* undef
+  store <4 x i32> %I33, ptr undef
   br label %BB1
 }

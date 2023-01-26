@@ -15,16 +15,16 @@
 ;    }
 ;
 ;                                           i    A[0]    A
-; CHECK: %polly.par.userContext = alloca { i64, float, float* }
+; CHECK: %polly.par.userContext = alloca { i64, float, ptr }
 ;
 ; CHECK:  %polly.access.B.load =
 ; CHECK:  %polly.subfn.storeaddr.polly.access.A.load = getelementptr inbounds
-; CHECK:  store float %polly.access.A.load, float* %polly.subfn.storeaddr.polly.access.A.load
-; CHECK-NOT:  store float %polly.access.B.load, float* %polly.subfn.storeaddr.polly.access.B.load
+; CHECK:  store float %polly.access.A.load, ptr %polly.subfn.storeaddr.polly.access.A.load
+; CHECK-NOT:  store float %polly.access.B.load, ptr %polly.subfn.storeaddr.polly.access.B.load
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(float* %A, float* %B) {
+define void @f(ptr %A, ptr %B) {
 entry:
   br label %for.cond
 
@@ -34,13 +34,13 @@ for.cond:                                         ; preds = %for.inc.9, %entry
   br i1 %exitcond3, label %for.body, label %for.end.11
 
 for.body:                                         ; preds = %for.cond
-  %tmp = load float, float* %B, align 4
-  %arrayidx1 = getelementptr inbounds float, float* %B, i64 %indvars.iv1
+  %tmp = load float, ptr %B, align 4
+  %arrayidx1 = getelementptr inbounds float, ptr %B, i64 %indvars.iv1
   %iv.add = add nsw i64 %indvars.iv1, 1
-  %arrayidx2 = getelementptr inbounds float, float* %B, i64 %iv.add
-  %tmp4 = load float, float* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %B, i64 %iv.add
+  %tmp4 = load float, ptr %arrayidx2, align 4
   %add = fadd float %tmp4, %tmp
-  store float %add, float* %arrayidx1, align 4
+  store float %add, ptr %arrayidx1, align 4
   br label %for.cond.2
 
 for.cond.2:                                       ; preds = %for.inc, %for.body
@@ -49,11 +49,11 @@ for.cond.2:                                       ; preds = %for.inc, %for.body
   br i1 %exitcond, label %for.body.4, label %for.end
 
 for.body.4:                                       ; preds = %for.cond.2
-  %tmp5 = load float, float* %A, align 4
-  %arrayidx7 = getelementptr inbounds float, float* %A, i64 %indvars.iv
-  %tmp6 = load float, float* %arrayidx7, align 4
+  %tmp5 = load float, ptr %A, align 4
+  %arrayidx7 = getelementptr inbounds float, ptr %A, i64 %indvars.iv
+  %tmp6 = load float, ptr %arrayidx7, align 4
   %add8 = fadd float %tmp6, %tmp5
-  store float %add8, float* %arrayidx7, align 4
+  store float %add8, ptr %arrayidx7, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body.4

@@ -194,10 +194,7 @@ template <typename T> static bool consume(InternalInstruction *insn, T &ptr) {
   uint64_t offset = insn->readerCursor - insn->startLocation;
   if (offset + sizeof(T) > r.size())
     return true;
-  T ret = 0;
-  for (unsigned i = 0; i < sizeof(T); ++i)
-    ret |= (uint64_t)r[offset + i] << (i * 8);
-  ptr = ret;
+  ptr = support::endian::read<T>(&r[offset], support::little);
   insn->readerCursor += sizeof(T);
   return false;
 }
@@ -713,7 +710,7 @@ static int readModRM(struct InternalInstruction *insn) {
       break;
     case 0x1:
       insn->displacementSize = 1;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case 0x2:
       insn->eaDisplacement = (mod == 0x1 ? EA_DISP_8 : EA_DISP_32);
       switch (rm & 7) {

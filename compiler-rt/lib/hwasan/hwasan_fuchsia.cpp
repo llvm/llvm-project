@@ -185,6 +185,8 @@ void InstallAtExitHandler() {}
 
 void HwasanInstallAtForkHandler() {}
 
+void InstallAtExitCheckLeaks() {}
+
 void InitializeOsSupport() {
 #ifdef __aarch64__
   uint32_t features = 0;
@@ -201,6 +203,12 @@ void InitializeOsSupport() {
 }
 
 }  // namespace __hwasan
+
+namespace __lsan {
+
+bool UseExitcodeOnLeak() { return __hwasan::flags()->halt_on_error; }
+
+}  // namespace __lsan
 
 extern "C" {
 
@@ -222,6 +230,10 @@ void __sanitizer_thread_start_hook(void *hook, thrd_t self) {
 
 void __sanitizer_thread_exit_hook(void *hook, thrd_t self) {
   __hwasan::ThreadExitHook(hook, self);
+}
+
+void __sanitizer_module_loaded(const struct dl_phdr_info *info, size_t) {
+  __hwasan_library_loaded(info->dlpi_addr, info->dlpi_phdr, info->dlpi_phnum);
 }
 
 }  // extern "C"

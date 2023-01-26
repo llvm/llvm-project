@@ -21,4 +21,5 @@ add_llvm_component_library(LLVMXRay
   LINK_COMPONENTS
   Support
   Object
+  TargetParser
   )

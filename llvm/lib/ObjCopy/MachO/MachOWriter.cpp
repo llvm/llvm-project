@@ -94,10 +94,11 @@ size_t MachOWriter::totalSize() const {
                      sizeof(uint32_t) * O.IndirectSymTable.Symbols.size());
   }
 
-  for (Optional<size_t> LinkEditDataCommandIndex :
-       {O.CodeSignatureCommandIndex, O.DataInCodeCommandIndex,
-        O.LinkerOptimizationHintCommandIndex, O.FunctionStartsCommandIndex,
-        O.ChainedFixupsCommandIndex, O.ExportsTrieCommandIndex})
+  for (std::optional<size_t> LinkEditDataCommandIndex :
+       {O.CodeSignatureCommandIndex, O.DylibCodeSignDRsIndex,
+        O.DataInCodeCommandIndex, O.LinkerOptimizationHintCommandIndex,
+        O.FunctionStartsCommandIndex, O.ChainedFixupsCommandIndex,
+        O.ExportsTrieCommandIndex})
     if (LinkEditDataCommandIndex) {
       const MachO::linkedit_data_command &LinkEditDataCommand =
           O.LoadCommands[*LinkEditDataCommandIndex]
@@ -302,9 +303,8 @@ void MachOWriter::writeSymbolTable() {
           .MachOLoadCommand.symtab_command_data;
 
   char *SymTable = (char *)Buf->getBufferStart() + SymTabCommand.symoff;
-  for (auto Iter = O.SymTable.Symbols.begin(), End = O.SymTable.Symbols.end();
-       Iter != End; Iter++) {
-    SymbolEntry *Sym = Iter->get();
+  for (auto &Symbol : O.SymTable.Symbols) {
+    SymbolEntry *Sym = Symbol.get();
     uint32_t Nstrx = LayoutBuilder.getStringTableBuilder().getOffset(Sym->Name);
 
     if (Is64Bit)
@@ -392,7 +392,8 @@ void MachOWriter::writeIndirectSymbolTable() {
   }
 }
 
-void MachOWriter::writeLinkData(Optional<size_t> LCIndex, const LinkData &LD) {
+void MachOWriter::writeLinkData(std::optional<size_t> LCIndex,
+                                const LinkData &LD) {
   if (!LCIndex)
     return;
   const MachO::linkedit_data_command &LinkEditDataCommand =
@@ -560,12 +561,24 @@ void MachOWriter::writeFunctionStartsData() {
   return writeLinkData(O.FunctionStartsCommandIndex, O.FunctionStarts);
 }
 
+void MachOWriter::writeDylibCodeSignDRsData() {
+  return writeLinkData(O.DylibCodeSignDRsIndex, O.DylibCodeSignDRs);
+}
+
 void MachOWriter::writeChainedFixupsData() {
   return writeLinkData(O.ChainedFixupsCommandIndex, O.ChainedFixups);
 }
 
 void MachOWriter::writeExportsTrieData() {
-  return writeLinkData(O.ExportsTrieCommandIndex, O.ExportsTrie);
+  if (!O.ExportsTrieCommandIndex)
+    return;
+  const MachO::linkedit_data_command &ExportsTrieCmd =
+      O.LoadCommands[*O.ExportsTrieCommandIndex]
+          .MachOLoadCommand.linkedit_data_command_data;
+  char *Out = (char *)Buf->getBufferStart() + ExportsTrieCmd.dataoff;
+  assert((ExportsTrieCmd.datasize == O.Exports.Trie.size()) &&
+         "Incorrect export trie size");
+  memcpy(Out, O.Exports.Trie.data(), O.Exports.Trie.size());
 }
 
 void MachOWriter::writeTail() {
@@ -613,9 +626,10 @@ void MachOWriter::writeTail() {
                          &MachOWriter::writeIndirectSymbolTable);
   }
 
-  std::initializer_list<std::pair<Optional<size_t>, WriteHandlerType>>
+  std::initializer_list<std::pair<std::optional<size_t>, WriteHandlerType>>
       LinkEditDataCommandWriters = {
           {O.CodeSignatureCommandIndex, &MachOWriter::writeCodeSignatureData},
+          {O.DylibCodeSignDRsIndex, &MachOWriter::writeDylibCodeSignDRsData},
           {O.DataInCodeCommandIndex, &MachOWriter::writeDataInCodeData},
           {O.LinkerOptimizationHintCommandIndex,
            &MachOWriter::writeLinkerOptimizationHint},
@@ -623,7 +637,7 @@ void MachOWriter::writeTail() {
           {O.ChainedFixupsCommandIndex, &MachOWriter::writeChainedFixupsData},
           {O.ExportsTrieCommandIndex, &MachOWriter::writeExportsTrieData}};
   for (const auto &W : LinkEditDataCommandWriters) {
-    Optional<size_t> LinkEditDataCommandIndex;
+    std::optional<size_t> LinkEditDataCommandIndex;
     WriteHandlerType WriteHandler;
     std::tie(LinkEditDataCommandIndex, WriteHandler) = W;
     if (LinkEditDataCommandIndex) {

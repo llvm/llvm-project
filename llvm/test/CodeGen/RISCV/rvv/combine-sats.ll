@@ -10,7 +10,7 @@ define <2 x i64> @add_umax_v2i64(<2 x i64> %a0) {
 ; CHECK-LABEL: add_umax_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 7
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %v1 = call <2 x i64> @llvm.umax.v2i64(<2 x i64> %a0, <2 x i64> <i64 7, i64 7>)
@@ -22,7 +22,7 @@ define <vscale x 2 x i64> @add_umax_nxv2i64(<vscale x 2 x i64> %a0) {
 ; CHECK-LABEL: add_umax_nxv2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 7
-; CHECK-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %ins1 = insertelement <vscale x 2 x i64> poison, i64 7, i32 0
@@ -40,7 +40,7 @@ define <vscale x 2 x i64> @add_umax_nxv2i64(<vscale x 2 x i64> %a0) {
 define <2 x i64> @sub_umax_v2i64(<2 x i64> %a0, <2 x i64> %a1) {
 ; CHECK-LABEL: sub_umax_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssubu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %v1 = call <2 x i64> @llvm.umax.v2i64(<2 x i64> %a0, <2 x i64> %a1)
@@ -51,7 +51,7 @@ define <2 x i64> @sub_umax_v2i64(<2 x i64> %a0, <2 x i64> %a1) {
 define <vscale x 2 x i64> @sub_umax_nxv2i64(<vscale x 2 x i64> %a0, <vscale x 2 x i64> %a1) {
 ; CHECK-LABEL: sub_umax_nxv2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vssubu.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %v1 = call <vscale x 2 x i64> @llvm.umax.nxv2i64(<vscale x 2 x i64> %a0, <vscale x 2 x i64> %a1)
@@ -62,7 +62,7 @@ define <vscale x 2 x i64> @sub_umax_nxv2i64(<vscale x 2 x i64> %a0, <vscale x 2 
 define <2 x i64> @sub_umin_v2i64(<2 x i64> %a0, <2 x i64> %a1) {
 ; CHECK-LABEL: sub_umin_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssubu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %v1 = call <2 x i64> @llvm.umin.v2i64(<2 x i64> %a0, <2 x i64> %a1)
@@ -73,7 +73,7 @@ define <2 x i64> @sub_umin_v2i64(<2 x i64> %a0, <2 x i64> %a1) {
 define <vscale x 2 x i64> @sub_umin_nxv2i64(<vscale x 2 x i64> %a0, <vscale x 2 x i64> %a1) {
 ; CHECK-LABEL: sub_umin_nxv2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vssubu.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %v1 = call <vscale x 2 x i64> @llvm.umin.nxv2i64(<vscale x 2 x i64> %a0, <vscale x 2 x i64> %a1)
@@ -88,7 +88,7 @@ define <vscale x 2 x i64> @sub_umin_nxv2i64(<vscale x 2 x i64> %a0, <vscale x 2 
 define <2 x i64> @vselect_sub_v2i64(<2 x i64> %a0, <2 x i64> %a1) {
 ; CHECK-LABEL: vselect_sub_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssubu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %cmp = icmp uge <2 x i64> %a0, %a1
@@ -100,7 +100,7 @@ define <2 x i64> @vselect_sub_v2i64(<2 x i64> %a0, <2 x i64> %a1) {
 define <vscale x 2 x i64> @vselect_sub_nxv2i64(<vscale x 2 x i64> %a0, <vscale x 2 x i64> %a1) {
 ; CHECK-LABEL: vselect_sub_nxv2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vssubu.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %cmp = icmp uge <vscale x 2 x i64> %a0, %a1
@@ -112,7 +112,7 @@ define <vscale x 2 x i64> @vselect_sub_nxv2i64(<vscale x 2 x i64> %a0, <vscale x
 define <8 x i16> @vselect_sub_2_v8i16(<8 x i16> %x, i16 zeroext %w) nounwind {
 ; CHECK-LABEL: vselect_sub_2_v8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
 entry:
@@ -127,7 +127,7 @@ entry:
 define <vscale x 8 x i16> @vselect_sub_2_nxv8i16(<vscale x 8 x i16> %x, i16 zeroext %w) nounwind {
 ; CHECK-LABEL: vselect_sub_2_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
 entry:
@@ -146,7 +146,7 @@ define <2 x i64> @vselect_add_const_v2i64(<2 x i64> %a0) {
 ; CHECK-LABEL: vselect_add_const_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 6
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %v1 = add <2 x i64> %a0, <i64 -6, i64 -6>
@@ -159,7 +159,7 @@ define <vscale x 2 x i64> @vselect_add_const_nxv2i64(<vscale x 2 x i64> %a0) {
 ; CHECK-LABEL: vselect_add_const_nxv2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 6
-; CHECK-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %cm1 = insertelement <vscale x 2 x i64> poison, i64 -6, i32 0
@@ -177,7 +177,7 @@ define <2 x i16> @vselect_add_const_signbit_v2i16(<2 x i16> %a0) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lui a0, 8
 ; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
+; RV32-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; RV32-NEXT:    vssubu.vx v8, v8, a0
 ; RV32-NEXT:    ret
 ;
@@ -185,7 +185,7 @@ define <2 x i16> @vselect_add_const_signbit_v2i16(<2 x i16> %a0) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lui a0, 8
 ; RV64-NEXT:    addiw a0, a0, -1
-; RV64-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
+; RV64-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; RV64-NEXT:    vssubu.vx v8, v8, a0
 ; RV64-NEXT:    ret
   %cmp = icmp ugt <2 x i16> %a0, <i16 32766, i16 32766>
@@ -199,7 +199,7 @@ define <vscale x 2 x i16> @vselect_add_const_signbit_nxv2i16(<vscale x 2 x i16> 
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lui a0, 8
 ; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    vsetvli a1, zero, e16, mf2, ta, mu
+; RV32-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
 ; RV32-NEXT:    vssubu.vx v8, v8, a0
 ; RV32-NEXT:    ret
 ;
@@ -207,7 +207,7 @@ define <vscale x 2 x i16> @vselect_add_const_signbit_nxv2i16(<vscale x 2 x i16> 
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lui a0, 8
 ; RV64-NEXT:    addiw a0, a0, -1
-; RV64-NEXT:    vsetvli a1, zero, e16, mf2, ta, mu
+; RV64-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
 ; RV64-NEXT:    vssubu.vx v8, v8, a0
 ; RV64-NEXT:    ret
   %cm1 = insertelement <vscale x 2 x i16> poison, i16 32766, i32 0
@@ -226,7 +226,7 @@ define <2 x i16> @vselect_xor_const_signbit_v2i16(<2 x i16> %a0) {
 ; CHECK-LABEL: vselect_xor_const_signbit_v2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, 8
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %cmp = icmp slt <2 x i16> %a0, zeroinitializer
@@ -239,7 +239,7 @@ define <vscale x 2 x i16> @vselect_xor_const_signbit_nxv2i16(<vscale x 2 x i16> 
 ; CHECK-LABEL: vselect_xor_const_signbit_nxv2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, 8
-; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %cmp = icmp slt <vscale x 2 x i16> %a0, zeroinitializer
@@ -258,7 +258,7 @@ define <vscale x 2 x i16> @vselect_xor_const_signbit_nxv2i16(<vscale x 2 x i16> 
 define <2 x i64> @vselect_add_v2i64(<2 x i64> %a0, <2 x i64> %a1) {
 ; CHECK-LABEL: vselect_add_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vsaddu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %v1 = add <2 x i64> %a0, %a1
@@ -270,7 +270,7 @@ define <2 x i64> @vselect_add_v2i64(<2 x i64> %a0, <2 x i64> %a1) {
 define <vscale x 2 x i64> @vselect_add_nxv2i64(<vscale x 2 x i64> %a0, <vscale x 2 x i64> %a1) {
 ; CHECK-LABEL: vselect_add_nxv2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vsaddu.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %v1 = add <vscale x 2 x i64> %a0, %a1
@@ -287,7 +287,7 @@ define <vscale x 2 x i64> @vselect_add_nxv2i64(<vscale x 2 x i64> %a0, <vscale x
 define <2 x i64> @vselect_add_const_2_v2i64(<2 x i64> %a0) {
 ; CHECK-LABEL: vselect_add_const_2_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vsaddu.vi v8, v8, 6
 ; CHECK-NEXT:    ret
   %v1 = add <2 x i64> %a0, <i64 6, i64 6>
@@ -299,7 +299,7 @@ define <2 x i64> @vselect_add_const_2_v2i64(<2 x i64> %a0) {
 define <vscale x 2 x i64> @vselect_add_const_2_nxv2i64(<vscale x 2 x i64> %a0) {
 ; CHECK-LABEL: vselect_add_const_2_nxv2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vsaddu.vi v8, v8, 6
 ; CHECK-NEXT:    ret
   %cm1 = insertelement <vscale x 2 x i64> poison, i64 6, i32 0

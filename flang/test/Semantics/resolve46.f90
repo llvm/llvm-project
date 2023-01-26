@@ -34,9 +34,9 @@ program main
   p => alog10 ! ditto, but already declared intrinsic
   p => cos ! ditto, but also generic
   p => tan ! a generic & an unrestricted specific, not already declared
-  !ERROR: Procedure pointer 'p' associated with incompatible procedure designator 'mod': function results have incompatible types: REAL(4) vs INTEGER(4)
+  !ERROR: Function pointer 'p' associated with incompatible function designator 'mod': function results have incompatible types: REAL(4) vs INTEGER(4)
   p => mod
-  !ERROR: Procedure pointer 'p' associated with incompatible procedure designator 'index': function results have incompatible types: REAL(4) vs INTEGER(4)
+  !ERROR: Function pointer 'p' associated with incompatible function designator 'index': function results have incompatible types: REAL(4) vs INTEGER(4)
   p => index
   !ERROR: 'bessel_j0' is not an unrestricted specific intrinsic procedure
   p => bessel_j0

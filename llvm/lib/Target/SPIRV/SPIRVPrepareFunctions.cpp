@@ -18,6 +18,7 @@
 #include "SPIRV.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
+#include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -141,6 +142,69 @@ static Function *getOrCreateFunction(Module *M, Type *RetTy,
   return NewF;
 }
 
+static void lowerIntrinsicToFunction(Module *M, IntrinsicInst *Intrinsic) {
+  // For @llvm.memset.* intrinsic cases with constant value and length arguments
+  // are emulated via "storing" a constant array to the destination. For other
+  // cases we wrap the intrinsic in @spirv.llvm_memset_* function and expand the
+  // intrinsic to a loop via expandMemSetAsLoop().
+  if (auto *MSI = dyn_cast<MemSetInst>(Intrinsic))
+    if (isa<Constant>(MSI->getValue()) && isa<ConstantInt>(MSI->getLength()))
+      return; // It is handled later using OpCopyMemorySized.
+
+  std::string FuncName = lowerLLVMIntrinsicName(Intrinsic);
+  if (Intrinsic->isVolatile())
+    FuncName += ".volatile";
+  // Redirect @llvm.intrinsic.* call to @spirv.llvm_intrinsic_*
+  Function *F = M->getFunction(FuncName);
+  if (F) {
+    Intrinsic->setCalledFunction(F);
+    return;
+  }
+  // TODO copy arguments attributes: nocapture writeonly.
+  FunctionCallee FC =
+      M->getOrInsertFunction(FuncName, Intrinsic->getFunctionType());
+  auto IntrinsicID = Intrinsic->getIntrinsicID();
+  Intrinsic->setCalledFunction(FC);
+
+  F = dyn_cast<Function>(FC.getCallee());
+  assert(F && "Callee must be a function");
+
+  switch (IntrinsicID) {
+  case Intrinsic::memset: {
+    auto *MSI = static_cast<MemSetInst *>(Intrinsic);
+    Argument *Dest = F->getArg(0);
+    Argument *Val = F->getArg(1);
+    Argument *Len = F->getArg(2);
+    Argument *IsVolatile = F->getArg(3);
+    Dest->setName("dest");
+    Val->setName("val");
+    Len->setName("len");
+    IsVolatile->setName("isvolatile");
+    BasicBlock *EntryBB = BasicBlock::Create(M->getContext(), "entry", F);
+    IRBuilder<> IRB(EntryBB);
+    auto *MemSet = IRB.CreateMemSet(Dest, Val, Len, MSI->getDestAlign(),
+                                    MSI->isVolatile());
+    IRB.CreateRetVoid();
+    expandMemSetAsLoop(cast<MemSetInst>(MemSet));
+    MemSet->eraseFromParent();
+    break;
+  }
+  case Intrinsic::bswap: {
+    BasicBlock *EntryBB = BasicBlock::Create(M->getContext(), "entry", F);
+    IRBuilder<> IRB(EntryBB);
+    auto *BSwap = IRB.CreateIntrinsic(Intrinsic::bswap, Intrinsic->getType(),
+                                      F->getArg(0));
+    IRB.CreateRet(BSwap);
+    IntrinsicLowering IL(M->getDataLayout());
+    IL.LowerIntrinsicCall(BSwap);
+    break;
+  }
+  default:
+    break;
+  }
+  return;
+}
+
 static void lowerFunnelShifts(Module *M, IntrinsicInst *FSHIntrinsic) {
   // Get a separate function - otherwise, we'd have to rework the CFG of the
   // current one. Then simply replace the intrinsic uses with a call to the new
@@ -219,7 +283,7 @@ static void buildUMulWithOverflowFunc(Module *M, Function *UMulFunc) {
   // umul.with.overflow intrinsic return a structure, where the first element
   // is the multiplication result, and the second is an overflow bit.
   Type *StructTy = UMulFunc->getReturnType();
-  Value *Agg = IRB.CreateInsertValue(UndefValue::get(StructTy), Mul, {0});
+  Value *Agg = IRB.CreateInsertValue(PoisonValue::get(StructTy), Mul, {0});
   Value *Res = IRB.CreateInsertValue(Agg, Overflow, {1});
   IRB.CreateRet(Res);
 }
@@ -248,8 +312,11 @@ static void substituteIntrinsicCalls(Module *M, Function *F) {
       if (!CF || !CF->isIntrinsic())
         continue;
       auto *II = cast<IntrinsicInst>(Call);
-      if (II->getIntrinsicID() == Intrinsic::fshl ||
-          II->getIntrinsicID() == Intrinsic::fshr)
+      if (II->getIntrinsicID() == Intrinsic::memset ||
+          II->getIntrinsicID() == Intrinsic::bswap)
+        lowerIntrinsicToFunction(M, II);
+      else if (II->getIntrinsicID() == Intrinsic::fshl ||
+               II->getIntrinsicID() == Intrinsic::fshr)
         lowerFunnelShifts(M, II);
       else if (II->getIntrinsicID() == Intrinsic::umul_with_overflow)
         lowerUMulWithOverflow(M, II);

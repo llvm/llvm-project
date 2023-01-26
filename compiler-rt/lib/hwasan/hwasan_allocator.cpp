@@ -21,6 +21,7 @@
 #include "hwasan_malloc_bisect.h"
 #include "hwasan_thread.h"
 #include "hwasan_report.h"
+#include "lsan/lsan_common.h"
 
 namespace __hwasan {
 
@@ -32,40 +33,34 @@ static atomic_uint8_t hwasan_allocator_tagging_enabled;
 static constexpr tag_t kFallbackAllocTag = 0xBB & kTagMask;
 static constexpr tag_t kFallbackFreeTag = 0xBC;
 
-enum RightAlignMode {
-  kRightAlignNever,
-  kRightAlignSometimes,
-  kRightAlignAlways
+enum {
+  // Either just allocated by underlying allocator, but AsanChunk is not yet
+  // ready, or almost returned to undelying allocator and AsanChunk is already
+  // meaningless.
+  CHUNK_INVALID = 0,
+  // The chunk is allocated and not yet freed.
+  CHUNK_ALLOCATED = 1,
 };
+
 
 // Initialized in HwasanAllocatorInit, an never changed.
 static ALIGNED(16) u8 tail_magic[kShadowAlignment - 1];
 
 bool HwasanChunkView::IsAllocated() const {
-  return metadata_ && metadata_->alloc_context_id &&
-         metadata_->get_requested_size();
-}
-
-// Aligns the 'addr' right to the granule boundary.
-static uptr AlignRight(uptr addr, uptr requested_size) {
-  uptr tail_size = requested_size % kShadowAlignment;
-  if (!tail_size) return addr;
-  return addr + kShadowAlignment - tail_size;
+  return metadata_ && metadata_->IsAllocated();
 }
 
 uptr HwasanChunkView::Beg() const {
-  if (metadata_ && metadata_->right_aligned)
-    return AlignRight(block_, metadata_->get_requested_size());
   return block_;
 }
 uptr HwasanChunkView::End() const {
   return Beg() + UsedSize();
 }
 uptr HwasanChunkView::UsedSize() const {
-  return metadata_->get_requested_size();
+  return metadata_->GetRequestedSize();
 }
 u32 HwasanChunkView::GetAllocStackId() const {
-  return metadata_->alloc_context_id;
+  return metadata_->GetAllocStackId();
 }
 
 uptr HwasanChunkView::ActualSize() const {
@@ -76,8 +71,52 @@ bool HwasanChunkView::FromSmallHeap() const {
   return allocator.FromPrimary(reinterpret_cast<void *>(block_));
 }
 
+bool HwasanChunkView::AddrIsInside(uptr addr) const {
+  return (addr >= Beg()) && (addr < Beg() + UsedSize());
+}
+
+inline void Metadata::SetAllocated(u32 stack, u64 size) {
+  Thread *t = GetCurrentThread();
+  u64 context = t ? t->unique_id() : kMainTid;
+  context <<= 32;
+  context += stack;
+  requested_size_low = size & ((1ul << 32) - 1);
+  requested_size_high = size >> 32;
+  atomic_store(&alloc_context_id, context, memory_order_relaxed);
+  atomic_store(&chunk_state, CHUNK_ALLOCATED, memory_order_release);
+}
+
+inline void Metadata::SetUnallocated() {
+  atomic_store(&chunk_state, CHUNK_INVALID, memory_order_release);
+  requested_size_low = 0;
+  requested_size_high = 0;
+  atomic_store(&alloc_context_id, 0, memory_order_relaxed);
+}
+
+inline bool Metadata::IsAllocated() const {
+  return atomic_load(&chunk_state, memory_order_relaxed) == CHUNK_ALLOCATED &&
+         GetRequestedSize();
+}
+
+inline u64 Metadata::GetRequestedSize() const {
+  return (static_cast<u64>(requested_size_high) << 32) + requested_size_low;
+}
+
+inline u32 Metadata::GetAllocStackId() const {
+  return atomic_load(&alloc_context_id, memory_order_relaxed);
+}
+
+
 void GetAllocatorStats(AllocatorStatCounters s) {
   allocator.GetStats(s);
+}
+
+inline void Metadata::SetLsanTag(__lsan::ChunkTag tag) {
+  lsan_tag = tag;
+}
+
+inline __lsan::ChunkTag Metadata::GetLsanTag() const {
+  return static_cast<__lsan::ChunkTag>(lsan_tag);
 }
 
 uptr GetAliasRegionStart() {
@@ -155,11 +194,6 @@ static void *HwasanAllocate(StackTrace *stack, uptr orig_size, uptr alignment,
       return nullptr;
     ReportOutOfMemory(size, stack);
   }
-  Metadata *meta =
-      reinterpret_cast<Metadata *>(allocator.GetMetaData(allocated));
-  meta->set_requested_size(orig_size);
-  meta->alloc_context_id = StackDepotPut(*stack);
-  meta->right_aligned = false;
   if (zeroise) {
     internal_memset(allocated, 0, size);
   } else if (flags()->max_malloc_fill_size > 0) {
@@ -199,6 +233,13 @@ static void *HwasanAllocate(StackTrace *stack, uptr orig_size, uptr alignment,
     }
   }
 
+  Metadata *meta =
+      reinterpret_cast<Metadata *>(allocator.GetMetaData(allocated));
+#if CAN_SANITIZE_LEAKS
+  meta->SetLsanTag(__lsan::DisabledInThisThread() ? __lsan::kIgnored
+                                                  : __lsan::kDirectlyLeaked);
+#endif
+  meta->SetAllocated(StackDepotPut(*stack), orig_size);
   RunMallocHooks(user_ptr, size);
   return user_ptr;
 }
@@ -244,9 +285,9 @@ static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
     ReportInvalidFree(stack, reinterpret_cast<uptr>(tagged_ptr));
     return;
   }
-  uptr orig_size = meta->get_requested_size();
+  uptr orig_size = meta->GetRequestedSize();
   u32 free_context_id = StackDepotPut(*stack);
-  u32 alloc_context_id = meta->alloc_context_id;
+  u32 alloc_context_id = meta->GetAllocStackId();
 
   // Check tail magic.
   uptr tagged_size = TaggedSize(orig_size);
@@ -265,8 +306,8 @@ static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
                             orig_size, tail_magic);
   }
 
-  meta->set_requested_size(0);
-  meta->alloc_context_id = 0;
+  // TODO(kstoimenov): consider meta->SetUnallocated(free_context_id).
+  meta->SetUnallocated();
   // This memory will not be reused by anyone else, so we are free to keep it
   // poisoned.
   Thread *t = GetCurrentThread();
@@ -322,7 +363,7 @@ static void *HwasanReallocate(StackTrace *stack, void *tagged_ptr_old,
         reinterpret_cast<Metadata *>(allocator.GetMetaData(untagged_ptr_old));
     internal_memcpy(
         UntagPtr(tagged_ptr_new), untagged_ptr_old,
-        Min(new_size, static_cast<uptr>(meta->get_requested_size())));
+        Min(new_size, static_cast<uptr>(meta->GetRequestedSize())));
     HwasanDeallocate(stack, tagged_ptr_old);
   }
   return tagged_ptr_new;
@@ -353,14 +394,8 @@ static uptr AllocationSize(const void *tagged_ptr) {
   if (!untagged_ptr) return 0;
   const void *beg = allocator.GetBlockBegin(untagged_ptr);
   Metadata *b = (Metadata *)allocator.GetMetaData(untagged_ptr);
-  if (b->right_aligned) {
-    if (beg != reinterpret_cast<void *>(RoundDownTo(
-                   reinterpret_cast<uptr>(untagged_ptr), kShadowAlignment)))
-      return 0;
-  } else {
-    if (beg != untagged_ptr) return 0;
-  }
-  return b->get_requested_size();
+  if (beg != untagged_ptr) return 0;
+  return b->GetRequestedSize();
 }
 
 void *hwasan_malloc(uptr size, StackTrace *stack) {
@@ -450,6 +485,109 @@ void hwasan_free(void *ptr, StackTrace *stack) {
 }
 
 }  // namespace __hwasan
+
+// --- Implementation of LSan-specific functions --- {{{1
+namespace __lsan {
+
+void LockAllocator() {
+  __hwasan::HwasanAllocatorLock();
+}
+
+void UnlockAllocator() {
+  __hwasan::HwasanAllocatorUnlock();
+}
+
+void GetAllocatorGlobalRange(uptr *begin, uptr *end) {
+  *begin = (uptr)&__hwasan::allocator;
+  *end = *begin + sizeof(__hwasan::allocator);
+}
+
+uptr PointsIntoChunk(void *p) {
+  void *block = __hwasan::allocator.GetBlockBeginFastLocked(p);
+  if (!block)
+    return 0;
+  __hwasan::Metadata *metadata = reinterpret_cast<__hwasan::Metadata *>(
+      __hwasan::allocator.GetMetaData(block));
+  if (!metadata || !metadata->IsAllocated())
+    return 0;
+
+  uptr chunk = reinterpret_cast<uptr>(p);
+  if (__hwasan::HwasanChunkView(chunk, metadata).AddrIsInside(chunk))
+    return chunk;
+  if (IsSpecialCaseOfOperatorNew0(chunk, metadata->GetRequestedSize(), chunk))
+    return chunk;
+  return 0;
+}
+
+uptr GetUserBegin(uptr chunk) {
+  void *block =
+      __hwasan::allocator.GetBlockBeginFastLocked(reinterpret_cast<void *>(chunk));
+  if (!block)
+    return 0;
+  __hwasan::Metadata *metadata = reinterpret_cast<__hwasan::Metadata *>(
+      __hwasan::allocator.GetMetaData(block));
+  if (!metadata || !metadata->IsAllocated())
+    return 0;
+
+  return reinterpret_cast<uptr>(block);
+}
+
+LsanMetadata::LsanMetadata(uptr chunk) {
+  metadata_ =
+      chunk ? __hwasan::allocator.GetMetaData(reinterpret_cast<void *>(chunk))
+            : nullptr;
+}
+
+bool LsanMetadata::allocated() const {
+  if (!metadata_)
+    return false;
+  __hwasan::Metadata *m = reinterpret_cast<__hwasan::Metadata *>(metadata_);
+  return m->IsAllocated();
+}
+
+ChunkTag LsanMetadata::tag() const {
+  __hwasan::Metadata *m = reinterpret_cast<__hwasan::Metadata *>(metadata_);
+  return m->GetLsanTag();
+}
+
+void LsanMetadata::set_tag(ChunkTag value) {
+  __hwasan::Metadata *m = reinterpret_cast<__hwasan::Metadata *>(metadata_);
+  m->SetLsanTag(value);
+}
+
+uptr LsanMetadata::requested_size() const {
+  __hwasan::Metadata *m = reinterpret_cast<__hwasan::Metadata *>(metadata_);
+  return m->GetRequestedSize();
+}
+
+u32 LsanMetadata::stack_trace_id() const {
+  __hwasan::Metadata *m = reinterpret_cast<__hwasan::Metadata *>(metadata_);
+  return m->GetAllocStackId();
+}
+
+void ForEachChunk(ForEachChunkCallback callback, void *arg) {
+  __hwasan::allocator.ForEachChunk(callback, arg);
+}
+
+IgnoreObjectResult IgnoreObjectLocked(const void *p) {
+  void *block =
+      __hwasan::allocator.GetBlockBeginFastLocked(const_cast<void *>(p));
+  if (!block)
+    return kIgnoreObjectInvalid;
+  __hwasan::Metadata *metadata = reinterpret_cast<__hwasan::Metadata *>(
+      __hwasan::allocator.GetMetaData(block));
+  uptr addr = reinterpret_cast<uptr>(p);
+  __hwasan::HwasanChunkView view(reinterpret_cast<uptr>(block), metadata);
+  if (!view.IsAllocated() || !view.AddrIsInside(addr)) {
+    return kIgnoreObjectInvalid;
+  }
+  if (metadata->GetLsanTag() == kIgnored)
+    return kIgnoreObjectAlreadyIgnored;
+  metadata->SetLsanTag(kIgnored);
+  return kIgnoreObjectSuccess;
+}
+
+}  // namespace __lsan
 
 using namespace __hwasan;
 

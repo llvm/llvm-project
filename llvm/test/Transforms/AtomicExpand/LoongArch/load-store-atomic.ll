@@ -98,8 +98,7 @@ define void @store_release_i32(ptr %ptr, i32 signext %v) {
 ; LA32-NEXT:    ret void
 ;
 ; LA64-LABEL: @store_release_i32(
-; LA64-NEXT:    fence release
-; LA64-NEXT:    store atomic i32 [[V:%.*]], ptr [[PTR:%.*]] monotonic, align 4
+; LA64-NEXT:    store atomic i32 [[V:%.*]], ptr [[PTR:%.*]] release, align 4
 ; LA64-NEXT:    ret void
 ;
   store atomic i32 %v, ptr %ptr release, align 4
@@ -112,8 +111,7 @@ define void @store_release_i64(ptr %ptr, i64 %v) {
 ; LA32-NEXT:    ret void
 ;
 ; LA64-LABEL: @store_release_i64(
-; LA64-NEXT:    fence release
-; LA64-NEXT:    store atomic i64 [[V:%.*]], ptr [[PTR:%.*]] monotonic, align 8
+; LA64-NEXT:    store atomic i64 [[V:%.*]], ptr [[PTR:%.*]] release, align 8
 ; LA64-NEXT:    ret void
 ;
   store atomic i64 %v, ptr %ptr release, align 8

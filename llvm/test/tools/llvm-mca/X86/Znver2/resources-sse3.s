@@ -61,8 +61,8 @@ mwait
 # CHECK-NEXT:  1      8     0.50    *                   movddup	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        movshdup	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   movshdup	(%rax), %xmm2
-# CHECK-NEXT:  1      100   0.25                        movsldup	%xmm0, %xmm2
-# CHECK-NEXT:  1      100   0.25    *                   movsldup	(%rax), %xmm2
+# CHECK-NEXT:  1      1     0.50                        movsldup	%xmm0, %xmm2
+# CHECK-NEXT:  1      8     0.50    *                   movsldup	(%rax), %xmm2
 # CHECK-NEXT:  1      100   0.25    *      *      U     mwait
 
 # CHECK:      Resources:
@@ -82,7 +82,7 @@ mwait
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 3.00   3.00   3.00    -      -      -      -      -      -     2.00   4.00   2.00    -
+# CHECK-NEXT: 3.33   3.33   3.33    -      -      -      -      -      -     3.00   5.00   2.00    -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
@@ -104,6 +104,6 @@ mwait
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -     0.50   0.50    -      -     movddup	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     movshdup	%xmm0, %xmm2
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -     0.50   0.50    -      -     movshdup	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     movsldup	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     movsldup	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     movsldup	%xmm0, %xmm2
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -     0.50   0.50    -      -     movsldup	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     mwait

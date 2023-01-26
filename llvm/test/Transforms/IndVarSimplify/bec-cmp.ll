@@ -1,9 +1,9 @@
-; RUN: opt -S -indvars < %s | FileCheck %s
+; RUN: opt -S -passes=indvars < %s | FileCheck %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
 ; Function Attrs: nounwind
-define void @foo(i32* nocapture %a, i32* nocapture readonly %b, i32 signext %n) #0 {
+define void @foo(ptr nocapture %a, ptr nocapture readonly %b, i32 signext %n) #0 {
 entry:
 
 ; CHECK-LABEL: @foo
@@ -30,11 +30,11 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
 
 if.then:                                          ; preds = %for.body
   %idxprom = sext i32 %i.011 to i64
-  %arrayidx = getelementptr inbounds i32, i32* %b, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %b, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %0, 1
-  %arrayidx3 = getelementptr inbounds i32, i32* %a, i64 %idxprom
-  store i32 %add, i32* %arrayidx3, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %a, i64 %idxprom
+  store i32 %add, ptr %arrayidx3, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body, %if.then

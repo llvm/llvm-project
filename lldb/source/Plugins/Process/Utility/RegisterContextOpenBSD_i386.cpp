@@ -62,7 +62,7 @@ RegisterContextOpenBSD_i386::RegisterContextOpenBSD_i386(
 size_t RegisterContextOpenBSD_i386::GetGPRSize() const { return sizeof(GPR); }
 
 const RegisterInfo *RegisterContextOpenBSD_i386::GetRegisterInfo() const {
-  switch (m_target_arch.GetMachine()) {
+  switch (GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86:
     return g_register_infos_i386;
   default:

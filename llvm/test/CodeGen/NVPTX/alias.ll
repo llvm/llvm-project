@@ -4,4 +4,4 @@
 
 define i32 @a() { ret i32 0 }
 ; CHECK: ERROR: Module has aliases
-@b = internal alias i32 (), i32 ()* @a
+@b = internal alias i32 (), ptr @a

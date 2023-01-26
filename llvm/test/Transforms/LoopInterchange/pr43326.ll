@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -loop-interchange -cache-line-size=64 -pass-remarks-missed='loop-interchange' -pass-remarks-output=%t -S \
+; RUN: opt < %s -passes=loop-interchange -cache-line-size=64 -pass-remarks-missed='loop-interchange' -pass-remarks-output=%t -S \
 ; RUN:     -verify-dom-info -verify-loop-info -verify-loop-lcssa -stats 2>&1
 ; RUN: FileCheck --input-file=%t --check-prefix=REMARKS %s
 
@@ -15,13 +15,13 @@
 
 define void @pr43326() {
 entry:
-  %0 = load i32, i32* @a
+  %0 = load i32, ptr @a
   %tobool.not2 = icmp eq i32 %0, 0
   br i1 %tobool.not2, label %for.end14, label %for.body.lr.ph
 
 for.body.lr.ph:                                   ; preds = %entry
-  %d.promoted = load i32, i32* @d
-  %a.promoted = load i32, i32* @a
+  %d.promoted = load i32, ptr @d
+  %a.promoted = load i32, ptr @a
   br label %for.body
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.inc12
@@ -39,8 +39,8 @@ for.body7:                                        ; preds = %for.body3, %for.inc
   %xor5 = phi i32 [ %xor.lcssa9, %for.body3 ], [ %xor, %for.inc ]
   %inc4 = phi i32 [ 0, %for.body3 ], [ %inc, %for.inc ]
   %idxprom = sext i32 %inc4 to i64
-  %arrayidx9 = getelementptr inbounds [1 x [1 x i32]], [1 x [1 x i32]]* @e, i64 0, i64 %idxprom, i64 %idxprom8
-  %1 = load i32, i32* %arrayidx9
+  %arrayidx9 = getelementptr inbounds [1 x [1 x i32]], ptr @e, i64 0, i64 %idxprom, i64 %idxprom8
+  %1 = load i32, ptr %arrayidx9
   %xor = xor i32 %xor5, %1
   br label %for.inc
 
@@ -75,10 +75,10 @@ for.cond.for.end14_crit_edge:                     ; preds = %for.inc12
   %inc.lcssa.lcssa.lcssa = phi i32 [ %inc.lcssa.lcssa, %for.inc12 ]
   %xor.lcssa.lcssa.lcssa = phi i32 [ %xor.lcssa.lcssa, %for.inc12 ]
   %dec.lcssa.lcssa = phi i8 [ %dec.lcssa, %for.inc12 ]
-  store i8 %dec.lcssa.lcssa, i8* @b
-  store i32 %xor.lcssa.lcssa.lcssa, i32* @d
-  store i32 %inc.lcssa.lcssa.lcssa, i32* @c
-  store i32 %inc13.lcssa, i32* @a
+  store i8 %dec.lcssa.lcssa, ptr @b
+  store i32 %xor.lcssa.lcssa.lcssa, ptr @d
+  store i32 %inc.lcssa.lcssa.lcssa, ptr @c
+  store i32 %inc13.lcssa, ptr @a
   br label %for.end14
 
 for.end14:                                        ; preds = %for.cond.for.end14_crit_edge, %entry

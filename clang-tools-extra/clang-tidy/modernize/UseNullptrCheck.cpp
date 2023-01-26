@@ -16,9 +16,7 @@ using namespace clang;
 using namespace clang::ast_matchers;
 using namespace llvm;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 namespace {
 
 const char CastSequence[] = "sequence";
@@ -62,7 +60,9 @@ StatementMatcher makeCastSequenceMatcher() {
                         ImplicitCastToNull,
                         hasAncestor(cxxRewrittenBinaryOperator().bind(
                             "checkBinopOperands")))
-                        .bind(CastSequence))))));
+                        .bind(CastSequence))),
+                // Skip defaulted comparison operators.
+                unless(hasAncestor(functionDecl(isDefaulted()))))));
 }
 
 bool isReplaceableRange(SourceLocation StartLoc, SourceLocation EndLoc,
@@ -508,6 +508,4 @@ void UseNullptrCheck::check(const MatchFinder::MatchResult &Result) {
       .TraverseStmt(const_cast<CastExpr *>(NullCast));
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

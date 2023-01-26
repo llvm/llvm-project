@@ -8,8 +8,8 @@ declare void @dummy_filter()
 declare void @f(i32)
 
 ; CHECK-LABEL: define void @test2(
-;Cxx: define void @test2(i1 %b) personality i32 (...)* @__CxxFrameHandler3 {
-;SEH: define void @test2(i1 %b) personality i32 (...)* @_except_handler3 {
+;Cxx: define void @test2(i1 %b) personality ptr @__CxxFrameHandler3 {
+;SEH: define void @test2(i1 %b) personality ptr @_except_handler3 {
 entry:
   ; CHECK: entry:
   ; CHECK:   store i32 1
@@ -26,16 +26,16 @@ right:
 catch.pad:
   %cs1 = catchswitch within none [label %catch.body] unwind to caller
 catch.body:
-;Cxx: %catch = catchpad within %cs1 [i8* null, i32 u0x40, i8* null]
-;SEH: %catch = catchpad within %cs1 [void ()* @dummy_filter]
+;Cxx: %catch = catchpad within %cs1 [ptr null, i32 u0x40, ptr null]
+;SEH: %catch = catchpad within %cs1 [ptr @dummy_filter]
   catchret from %catch to label %exit
 exit:
   ret void
 }
 
 ; CHECK-LABEL: define void @test3(
-;Cxx: define void @test3() personality i32 (...)* @__CxxFrameHandler3 {
-;SEH: define void @test3() personality i32 (...)* @_except_handler3 {
+;Cxx: define void @test3() personality ptr @__CxxFrameHandler3 {
+;SEH: define void @test3() personality ptr @_except_handler3 {
 entry:
   ; CHECK: entry:
   ; CHECK:   store i32 0
@@ -53,8 +53,8 @@ unreachable:
 catch.pad:
   %cs1 = catchswitch within none [label %catch.body] unwind to caller
 catch.body:
-;Cxx: %catch = catchpad within %cs1 [i8* null, i32 u0x40, i8* null]
-;SEH: %catch = catchpad within %cs1 [void ()* @dummy_filter]
+;Cxx: %catch = catchpad within %cs1 [ptr null, i32 u0x40, ptr null]
+;SEH: %catch = catchpad within %cs1 [ptr @dummy_filter]
   catchret from %catch to label %exit
 exit:
   ret void

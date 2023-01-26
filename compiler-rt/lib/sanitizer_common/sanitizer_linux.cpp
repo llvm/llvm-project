@@ -440,7 +440,7 @@ uptr internal_fstat(fd_t fd, void *buf) {
   return res;
 #      elif SANITIZER_LINUX && defined(__loongarch__)
   struct statx bufx;
-  int res = internal_syscall(SYSCALL(statx), fd, 0, AT_EMPTY_PATH,
+  int res = internal_syscall(SYSCALL(statx), fd, "", AT_EMPTY_PATH,
                              STATX_BASIC_STATS, (uptr)&bufx);
   statx_to_stat(&bufx, (struct stat *)buf);
   return res;
@@ -1105,7 +1105,7 @@ uptr GetMaxVirtualAddress() {
 #if SANITIZER_NETBSD && defined(__x86_64__)
   return 0x7f7ffffff000ULL;  // (0x00007f8000000000 - PAGE_SIZE)
 #elif SANITIZER_WORDSIZE == 64
-# if defined(__powerpc64__) || defined(__aarch64__)
+# if defined(__powerpc64__) || defined(__aarch64__) || defined(__loongarch__)
   // On PowerPC64 we have two different address space layouts: 44- and 46-bit.
   // We somehow need to figure out which one we are using now and choose
   // one of 0x00000fffffffffffUL and 0x00003fffffffffffUL.
@@ -1113,6 +1113,7 @@ uptr GetMaxVirtualAddress() {
   // of the address space, so simply checking the stack address is not enough.
   // This should (does) work for both PowerPC64 Endian modes.
   // Similarly, aarch64 has multiple address space layouts: 39, 42 and 47-bit.
+  // loongarch64 also has multiple address space layouts: default is 47-bit.
   return (1ULL << (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1)) - 1;
 #elif SANITIZER_RISCV64
   return (1ULL << 38) - 1;
@@ -1499,6 +1500,47 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
                          "r"(__ptid), "r"(__tls), "r"(__ctid),
                          "i"(__NR_clone), "i"(__NR_exit)
                        : "x30", "memory");
+  return res;
+}
+#elif SANITIZER_LOONGARCH64
+uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
+                    int *parent_tidptr, void *newtls, int *child_tidptr) {
+  if (!fn || !child_stack)
+    return -EINVAL;
+
+  CHECK_EQ(0, (uptr)child_stack % 16);
+
+  register int res __asm__("$a0");
+  register int __flags __asm__("$a0") = flags;
+  register void *__stack __asm__("$a1") = child_stack;
+  register int *__ptid __asm__("$a2") = parent_tidptr;
+  register int *__ctid __asm__("$a3") = child_tidptr;
+  register void *__tls __asm__("$a4") = newtls;
+  register int (*__fn)(void *) __asm__("$a5") = fn;
+  register void *__arg __asm__("$a6") = arg;
+  register int nr_clone __asm__("$a7") = __NR_clone;
+
+  __asm__ __volatile__(
+      "syscall 0\n"
+
+      // if ($a0 != 0)
+      //   return $a0;
+      "bnez $a0, 1f\n"
+
+      // In the child, now. Call "fn(arg)".
+      "move $a0, $a6\n"
+      "jirl $ra, $a5, 0\n"
+
+      // Call _exit($a0).
+      "addi.d $a7, $zero, %9\n"
+      "syscall 0\n"
+
+      "1:\n"
+
+      : "=r"(res)
+      : "0"(__flags), "r"(__stack), "r"(__ptid), "r"(__ctid), "r"(__tls),
+        "r"(__fn), "r"(__arg), "r"(nr_clone), "i"(__NR_exit)
+      : "memory", "$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7", "$t8");
   return res;
 }
 #elif defined(__powerpc64__)
@@ -1955,6 +1997,13 @@ SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
   u64 esr;
   if (!Aarch64GetESR(ucontext, &esr)) return Unknown;
   return esr & ESR_ELx_WNR ? Write : Read;
+#elif defined(__loongarch__)
+  u32 flags = ucontext->uc_mcontext.__flags;
+  if (flags & SC_ADDRERR_RD)
+    return SignalContext::Read;
+  if (flags & SC_ADDRERR_WR)
+    return SignalContext::Write;
+  return SignalContext::Unknown;
 #elif defined(__sparc__)
   // Decode the instruction to determine the access type.
   // From OpenSolaris $SRC/uts/sun4/os/trap.c (get_accesstype).

@@ -641,7 +641,7 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
           Hexagon::fixup_Hexagon_GPREL16_0, Hexagon::fixup_Hexagon_GPREL16_1,
           Hexagon::fixup_Hexagon_GPREL16_2, Hexagon::fixup_Hexagon_GPREL16_3
         };
-        assert(Shift < array_lengthof(GPRelFixups));
+        assert(Shift < std::size(GPRelFixups));
         auto UsesGP = [] (const MCInstrDesc &D) {
           for (const MCPhysReg *U = D.getImplicitUses(); U && *U; ++U)
             if (*U == Hexagon::GP)

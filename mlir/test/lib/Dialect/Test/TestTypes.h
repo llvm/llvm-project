@@ -15,6 +15,7 @@
 #define MLIR_TESTTYPES_H
 
 #include <tuple>
+#include <optional>
 
 #include "TestTraits.h"
 #include "mlir/IR/Diagnostics.h"
@@ -73,12 +74,12 @@ inline mlir::AsmPrinter &operator<<(mlir::AsmPrinter &printer,
 
 /// Overload the attribute parameter parser for optional integers.
 template <>
-struct FieldParser<Optional<int>> {
-  static FailureOr<Optional<int>> parse(AsmParser &parser) {
-    Optional<int> value;
+struct FieldParser<std::optional<int>> {
+  static FailureOr<std::optional<int>> parse(AsmParser &parser) {
+    std::optional<int> value;
     value.emplace();
     OptionalParseResult result = parser.parseOptionalInteger(*value);
-    if (result.hasValue()) {
+    if (result.has_value()) {
       if (succeeded(*result))
         return value;
       return failure();
@@ -101,8 +102,7 @@ namespace test {
 struct TestRecursiveTypeStorage : public ::mlir::TypeStorage {
   using KeyTy = ::llvm::StringRef;
 
-  explicit TestRecursiveTypeStorage(::llvm::StringRef key)
-      : name(key), body(::mlir::Type()) {}
+  explicit TestRecursiveTypeStorage(::llvm::StringRef key) : name(key) {}
 
   bool operator==(const KeyTy &other) const { return name == other; }
 

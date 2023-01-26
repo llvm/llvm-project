@@ -104,8 +104,7 @@ struct force_iteration_on_noniterable_enum_t {
   explicit force_iteration_on_noniterable_enum_t() = default;
 };
 
-// TODO: Make this `inline` once we update to C++17 to avoid ORD violations.
-constexpr force_iteration_on_noniterable_enum_t
+inline constexpr force_iteration_on_noniterable_enum_t
     force_iteration_on_noniterable_enum;
 
 namespace detail {
@@ -126,8 +125,8 @@ template <typename T, typename U> bool canTypeFitValue(const U Value) {
 // - its internal representation overflows.
 struct CheckedInt {
   // Integral constructor, asserts if Value cannot be represented as intmax_t.
-  template <typename Integral, typename std::enable_if_t<
-                                   std::is_integral<Integral>::value, bool> = 0>
+  template <typename Integral,
+            std::enable_if_t<std::is_integral<Integral>::value, bool> = 0>
   static CheckedInt from(Integral FromValue) {
     if (!canTypeFitValue<intmax_t>(FromValue))
       assertOutOfBounds();
@@ -138,9 +137,9 @@ struct CheckedInt {
 
   // Enum constructor, asserts if Value cannot be represented as intmax_t.
   template <typename Enum,
-            typename std::enable_if_t<std::is_enum<Enum>::value, bool> = 0>
+            std::enable_if_t<std::is_enum<Enum>::value, bool> = 0>
   static CheckedInt from(Enum FromValue) {
-    using type = typename std::underlying_type<Enum>::type;
+    using type = std::underlying_type_t<Enum>;
     return from<type>(static_cast<type>(FromValue));
   }
 
@@ -163,8 +162,8 @@ struct CheckedInt {
   }
 
   // Convert to integral, asserts if Value cannot be represented as Integral.
-  template <typename Integral, typename std::enable_if_t<
-                                   std::is_integral<Integral>::value, bool> = 0>
+  template <typename Integral,
+            std::enable_if_t<std::is_integral<Integral>::value, bool> = 0>
   Integral to() const {
     if (!canTypeFitValue<Integral>(Value))
       assertOutOfBounds();
@@ -174,9 +173,9 @@ struct CheckedInt {
   // Convert to enum, asserts if Value cannot be represented as Enum's
   // underlying type.
   template <typename Enum,
-            typename std::enable_if_t<std::is_enum<Enum>::value, bool> = 0>
+            std::enable_if_t<std::is_enum<Enum>::value, bool> = 0>
   Enum to() const {
-    using type = typename std::underlying_type<Enum>::type;
+    using type = std::underlying_type_t<Enum>;
     return Enum(to<type>());
   }
 

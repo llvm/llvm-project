@@ -1,6 +1,6 @@
-; RUN: opt < %s -simple-loop-unswitch -verify-memoryssa -disable-output
+; RUN: opt < %s -passes=simple-loop-unswitch -verify-memoryssa -disable-output
 
-define i32 @main(i32 %argc, i8** %argv) {
+define i32 @main(i32 %argc, ptr %argv) {
 entry:
 	%tmp1785365 = icmp ult i32 0, 100		; <i1> [#uses=1]
 	br label %bb

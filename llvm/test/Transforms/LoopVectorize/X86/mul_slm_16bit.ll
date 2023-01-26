@@ -1,10 +1,10 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -S -debug -loop-vectorize -mcpu=slm 2>&1 | FileCheck %s --check-prefix=SLM
+; RUN: opt < %s -S -debug -passes=loop-vectorize -mcpu=slm 2>&1 | FileCheck %s --check-prefix=SLM
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define i8 @mul_i8(i8* %dataA, i8* %dataB, i32 %N) {
+define i8 @mul_i8(ptr %dataA, ptr %dataB, i32 %N) {
 entry:
   %cmp12 = icmp eq i32 %N, 0
   br i1 %cmp12, label %for.cond.cleanup, label %for.body.preheader
@@ -24,14 +24,14 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %acc.013 = phi i32 [ %add4, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i8, i8* %dataA, i64 %indvars.iv
-  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %dataA, i64 %indvars.iv
+  %0 = load i8, ptr %arrayidx, align 1
   %conv = sext i8 %0 to i32
-  %arrayidx2 = getelementptr inbounds i8, i8* %dataB, i64 %indvars.iv
-  %1 = load i8, i8* %arrayidx2, align 1
+  %arrayidx2 = getelementptr inbounds i8, ptr %dataB, i64 %indvars.iv
+  %1 = load i8, ptr %arrayidx2, align 1
   %conv3 = sext i8 %1 to i32
-; sources of the mul is sext\sext from i8 
-; use pmullw\sext seq.   
+; sources of the mul is sext\sext from i8
+; use pmullw\sext seq.
 ; SLM:  cost of 3 for VF 2 {{.*}} mul nsw i32 %conv3, %conv
   %mul = mul nsw i32 %conv3, %conv
 ; sources of the mul is zext\sext from i8
@@ -73,7 +73,7 @@ for.body:                                         ; preds = %for.body.preheader,
   br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body
 }
 
-define i16 @mul_i16(i16* %dataA, i16* %dataB, i32 %N) {
+define i16 @mul_i16(ptr %dataA, ptr %dataB, i32 %N) {
 entry:
   %cmp12 = icmp eq i32 %N, 0
   br i1 %cmp12, label %for.cond.cleanup, label %for.body.preheader
@@ -93,14 +93,14 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %acc.013 = phi i32 [ %add4, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i16, i16* %dataA, i64 %indvars.iv
-  %0 = load i16, i16* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i16, ptr %dataA, i64 %indvars.iv
+  %0 = load i16, ptr %arrayidx, align 1
   %conv = sext i16 %0 to i32
-  %arrayidx2 = getelementptr inbounds i16, i16* %dataB, i64 %indvars.iv
-  %1 = load i16, i16* %arrayidx2, align 1
+  %arrayidx2 = getelementptr inbounds i16, ptr %dataB, i64 %indvars.iv
+  %1 = load i16, ptr %arrayidx2, align 1
   %conv3 = sext i16 %1 to i32
-; sources of the mul is sext\sext from i16 
-; use pmulhw\pmullw\pshuf seq.   
+; sources of the mul is sext\sext from i16
+; use pmulhw\pmullw\pshuf seq.
 ; SLM:  cost of 3 for VF 4 {{.*}} mul nsw i32 %conv3, %conv
   %mul = mul nsw i32 %conv3, %conv
 ; sources of the mul is zext\sext from i16

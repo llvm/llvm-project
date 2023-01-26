@@ -6,16 +6,20 @@
 # livedebugvars-crossbb-interval.mir.
 #
 # CHECK-LABEL: bb.0:
-# CHECK:       DBG_INSTR_REF 1, 0
+# CHECK:       DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
+# CHECK:       DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0), dbg-instr-ref(2, 0)
 # CHECK-NEXT:  JMP_1
 # CHECK-LABEL: bb.1:
-# CHECK:       DBG_INSTR_REF 2, 0
+# CHECK:       DBG_INSTR_REF {{.+}}, dbg-instr-ref(2, 0)
+# CHECK:       DBG_INSTR_REF {{.+}}, dbg-instr-ref(2, 0), dbg-instr-ref(3, 0)
 # CHECK-NEXT:  JMP_1
 # CHECK-LABEL: bb.2:
-# CHECK:       DBG_INSTR_REF 3, 0
+# CHECK:       DBG_INSTR_REF {{.+}}, dbg-instr-ref(3, 0)
+# CHECK:       DBG_INSTR_REF {{.+}}, dbg-instr-ref(3, 0), dbg-instr-ref(4, 0)
 # CHECK-NEXT:  CALL64pcrel32
 # CHECK-LABEL: bb.3:
-# CHECK:       DBG_INSTR_REF 4, 0
+# CHECK:       DBG_INSTR_REF {{.+}}, dbg-instr-ref(4, 0)
+# CHECK:       DBG_INSTR_REF {{.+}}, dbg-instr-ref(4, 0), dbg-instr-ref(5, 0)
 # CHECK-NEXT:  JMP_1
 #
 #
@@ -24,23 +28,28 @@
 # the DBG_INSTR_REF lands on.
 #
 # FASTREG-LABEL: bb.0:
-# FASTREG-DAG:   DBG_INSTR_REF 1, 0
+# FASTREG-DAG:   DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
+# FASTREG-DAG:   DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0), dbg-instr-ref(2, 0)
 # FASTREG-DAG:   MOV64mr
 # FASTREG-DAG:   MOV32mr
 # FASTREG-NEXT:  JMP_1
 # FASTREG-LABEL: bb.1:
-# FASTREG:       DBG_INSTR_REF 2, 0
+# FASTREG:       DBG_INSTR_REF {{.+}}, dbg-instr-ref(2, 0)
+# FASTREG-DAG:   DBG_INSTR_REF {{.+}}, dbg-instr-ref(2, 0), dbg-instr-ref(3, 0)
 # FASTREG-NEXT:  JMP_1
 # FASTREG-LABEL: bb.2:
-# FASTREG:       DBG_INSTR_REF 3, 0
+# FASTREG:       DBG_INSTR_REF {{.+}}, dbg-instr-ref(3, 0)
+# FASTREG-DAG:   DBG_INSTR_REF {{.+}}, dbg-instr-ref(3, 0), dbg-instr-ref(4, 0)
 # FASTREG-NEXT:  CALL64pcrel32
 # FASTREG-LABEL: bb.3:
 # FASTREG-DAG:   MOV32rm
-# FASTREG-DAG:   DBG_INSTR_REF 4, 0
+# FASTREG-DAG:   DBG_INSTR_REF {{.+}}, dbg-instr-ref(4, 0)
+# FASTREG-DAG:   DBG_INSTR_REF {{.+}}, dbg-instr-ref(4, 0), dbg-instr-ref(5, 0)
 # FASTREG-DAG:   MOV32mr
 # FASTREG-NEXT:  JMP_1
 # FASTREG-LABEL: bb.4:
-# FASTREG:       DBG_INSTR_REF 5, 0
+# FASTREG:       DBG_INSTR_REF {{.+}}, dbg-instr-ref(5, 0)
+# FASTREG-DAG:   DBG_INSTR_REF {{.+}}, dbg-instr-ref(5, 0), dbg-instr-ref(1, 0)
 # FASTREG-NEXT:  RET64
 
 --- |
@@ -83,12 +92,14 @@
   !17 = !DILocation(line: 6, column: 14, scope: !15)
   !18 = !DILocation(line: 8, column: 2, scope: !15)
   !19 = !DILocation(line: 7, column: 2, scope: !15)
+  !29 = !DILocalVariable(name: "c", scope: !4, file: !1, line: 5, type: !10)
 
 ...
 ---
 name:            bar
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 registers:
   - { id: 0, class: gr64 }
   - { id: 1, class: gr32 }
@@ -112,18 +123,21 @@ body:             |
     %2:gr64 = COPY $rdi
     %3:gr64 = COPY killed %2
     %5:gr32 = COPY killed %4
-    DBG_INSTR_REF 1, 0, !9, !DIExpression(), debug-location !16
+    DBG_INSTR_REF !9, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !16
+    DBG_INSTR_REF !29, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), dbg-instr-ref(1, 0), dbg-instr-ref(2, 0), debug-location !16
     JMP_1 %bb.3
 
   bb.1:
-    DBG_INSTR_REF 2, 0, !9, !DIExpression(), debug-location !16
+    DBG_INSTR_REF !9, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(2, 0), debug-location !16
+    DBG_INSTR_REF !29, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), dbg-instr-ref(2, 0), dbg-instr-ref(3, 0), debug-location !16
     JMP_1 %bb.4
 
   bb.2:
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp, debug-location !19
     $edi = COPY %6, debug-location !19
     $al = MOV8ri 0, debug-location !19
-    DBG_INSTR_REF 3, 0, !9, !DIExpression(), debug-location !16
+    DBG_INSTR_REF !9, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(3, 0), debug-location !16
+    DBG_INSTR_REF !29, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), dbg-instr-ref(3, 0), dbg-instr-ref(4, 0), debug-location !16
     CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $al, implicit $edi, implicit-def $eax, debug-location !19
     ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp, debug-location !19
     %7:gr32 = COPY $eax, debug-location !19
@@ -131,12 +145,14 @@ body:             |
 
   bb.3:
     %6:gr32 = MOV32rm %3, 1, $noreg, 0, $noreg, debug-location !17
-    DBG_INSTR_REF 4, 0, !9, !DIExpression(), debug-location !16
+    DBG_INSTR_REF !9, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(4, 0), debug-location !16
+    DBG_INSTR_REF !29, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), dbg-instr-ref(4, 0), dbg-instr-ref(5, 0), debug-location !16
     JMP_1 %bb.2
 
   bb.4:
     $eax = COPY %5, debug-location !18
-    DBG_INSTR_REF 5, 0, !9, !DIExpression(), debug-location !16
+    DBG_INSTR_REF !9, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(5, 0), debug-location !16
+    DBG_INSTR_REF !29, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), dbg-instr-ref(5, 0), dbg-instr-ref(1, 0), debug-location !16
     RET64 implicit $eax, debug-location !18
 
 ...

@@ -6,10 +6,10 @@
 @g4 = internal constant i32 4
 
 define i32 @test() {
-  %A = load i32, i32* @g1
-  %B = load i32, i32* @g2
-  %C = load i32, i32* @g3
-  %D = load i32, i32* @g4
+  %A = load i32, ptr @g1
+  %B = load i32, ptr @g2
+  %C = load i32, ptr @g3
+  %D = load i32, ptr @g4
   
   %a = add i32 %A, %B
   %b = add i32 %a, %C

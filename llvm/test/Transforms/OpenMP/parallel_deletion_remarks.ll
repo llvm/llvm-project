@@ -1,14 +1,13 @@
-; RUN: opt -S -pass-remarks=openmp-opt -attributor -openmp-opt-cgscc -disable-output < %s 2>&1 | FileCheck %s
 ; RUN: opt -S -pass-remarks=openmp-opt -passes='attributor,cgscc(openmp-opt-cgscc)' -disable-output < %s 2>&1 | FileCheck %s
 ; ModuleID = 'parallel_deletion_remarks.ll'
 source_filename = "parallel_deletion_remarks.c"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
-%struct.ident_t = type { i32, i32, i32, i32, i8* }
+%struct.ident_t = type { i32, i32, i32, i32, ptr }
 
 @.str = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00", align 1
-@0 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0) }, align 8
+@0 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @.str }, align 8
 
 ; void delete_parallel(void) {
 ; #pragma omp parallel
@@ -27,14 +26,14 @@ target triple = "x86_64-pc-linux-gnu"
 ; CHECK: remark: parallel_deletion_remarks.c:12:1: Removing parallel region with no side-effects.
 ; CHECK: remark: parallel_deletion_remarks.c:14:1: Removing parallel region with no side-effects.
 define dso_local void @delete_parallel() local_unnamed_addr !dbg !15 {
-  call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* nonnull @0, i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*)), !dbg !18
-  call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* nonnull @0, i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..2 to void (i32*, i32*, ...)*)), !dbg !19
-  call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* nonnull @0, i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..4 to void (i32*, i32*, ...)*)), !dbg !20
-  call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* nonnull @0, i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..6 to void (i32*, i32*, ...)*)), !dbg !21
+  call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr nonnull @0, i32 0, ptr @.omp_outlined.), !dbg !18
+  call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr nonnull @0, i32 0, ptr @.omp_outlined..2), !dbg !19
+  call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr nonnull @0, i32 0, ptr @.omp_outlined..4), !dbg !20
+  call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr nonnull @0, i32 0, ptr @.omp_outlined..6), !dbg !21
   ret void, !dbg !22
 }
 
-declare !callback !23 void @__kmpc_fork_call(%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) local_unnamed_addr
+declare !callback !23 void @__kmpc_fork_call(ptr, i32, ptr, ...) local_unnamed_addr
 
 ; Function Attrs: willreturn
 declare !dbg !4 void @unknown_willreturn(...) #0
@@ -45,22 +44,22 @@ declare !dbg !7 void @readonly_willreturn(...) #1
 ; Function Attrs: readnone willreturn
 declare !dbg !8 void @readnone_willreturn(...) #2
 
-define internal void @.omp_outlined.(i32* noalias nocapture readnone %0, i32* noalias nocapture readnone %1) !dbg !25 {
+define internal void @.omp_outlined.(ptr noalias nocapture readnone %0, ptr noalias nocapture readnone %1) !dbg !25 {
   call void (...) @unknown_willreturn(), !dbg !36
   ret void, !dbg !36
 }
 
-define internal void @.omp_outlined..2(i32* noalias nocapture readnone %0, i32* noalias nocapture readnone %1) !dbg !37 {
+define internal void @.omp_outlined..2(ptr noalias nocapture readnone %0, ptr noalias nocapture readnone %1) !dbg !37 {
   call void (...) @readonly_willreturn(), !dbg !41
   ret void, !dbg !41
 }
 
-define internal void @.omp_outlined..4(i32* noalias nocapture readnone %0, i32* noalias nocapture readnone %1) !dbg !42 {
+define internal void @.omp_outlined..4(ptr noalias nocapture readnone %0, ptr noalias nocapture readnone %1) !dbg !42 {
   call void (...) @readnone_willreturn(), !dbg !46
   ret void, !dbg !46
 }
 
-define internal void @.omp_outlined..6(i32* noalias nocapture %0, i32* noalias nocapture %1) !dbg !47 {
+define internal void @.omp_outlined..6(ptr noalias nocapture %0, ptr noalias nocapture %1) !dbg !47 {
   ret void, !dbg !51
 }
 

@@ -5,6 +5,6 @@ define internal void @_GLOBAL__I_a() section ".text.startup" {
   ret void
 }
 
-@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__I_a, i8* null }]
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__I_a, ptr null }]
 
 ; CHECK: .section .init_array

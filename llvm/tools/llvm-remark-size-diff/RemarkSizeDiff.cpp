@@ -15,7 +15,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c/Remarks.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Remarks/Remark.h"
@@ -404,13 +403,13 @@ getFunctionDiffListAsJSON(const SmallVector<FunctionDiff> &FunctionDiffs,
     InstCountA = InstCountB = StackSizeA = StackSizeB = 0;
     switch (WhichFiles) {
     case BOTH:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case A:
       InstCountA = Diff.getInstCountA();
       StackSizeA = Diff.getStackSizeA();
       if (WhichFiles != BOTH)
         break;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case B:
       InstCountB = Diff.getInstCountB();
       StackSizeB = Diff.getStackSizeB();

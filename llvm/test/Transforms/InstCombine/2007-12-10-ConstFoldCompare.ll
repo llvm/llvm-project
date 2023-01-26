@@ -4,6 +4,6 @@ target triple = "i686-pc-linux-gnu"
 ; PR1850
 
 define i1 @test() {
-	%cond = icmp ule i8* inttoptr (i64 4294967297 to i8*), inttoptr (i64 5 to i8*)
+	%cond = icmp ule ptr inttoptr (i64 4294967297 to ptr), inttoptr (i64 5 to ptr)
 	ret i1 %cond
 }

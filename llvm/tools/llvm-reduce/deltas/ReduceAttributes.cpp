@@ -42,142 +42,115 @@ using namespace llvm;
 
 namespace {
 
-using AttrPtrVecTy = std::vector<const Attribute *>;
-using AttrPtrIdxVecVecTy = std::pair<unsigned, AttrPtrVecTy>;
-using AttrPtrVecVecTy = SmallVector<AttrPtrIdxVecVecTy, 3>;
-
 /// Given ChunksToKeep, produce a map of global variables/functions/calls
 /// and indexes of attributes to be preserved for each of them.
 class AttributeRemapper : public InstVisitor<AttributeRemapper> {
   Oracle &O;
+  LLVMContext &Context;
 
 public:
-  DenseMap<GlobalVariable *, AttrPtrVecTy> GlobalVariablesToRefine;
-  DenseMap<Function *, AttrPtrVecVecTy> FunctionsToRefine;
-  DenseMap<CallBase *, AttrPtrVecVecTy> CallsToRefine;
-
-  explicit AttributeRemapper(Oracle &O) : O(O) {}
+  AttributeRemapper(Oracle &O, LLVMContext &C) : O(O), Context(C) {}
 
   void visitModule(Module &M) {
-    for (GlobalVariable &GV : M.getGlobalList())
+    for (GlobalVariable &GV : M.globals())
       visitGlobalVariable(GV);
   }
 
   void visitGlobalVariable(GlobalVariable &GV) {
     // Global variables only have one attribute set.
-    const AttributeSet &AS = GV.getAttributes();
-    if (AS.hasAttributes())
-      visitAttributeSet(AS, GlobalVariablesToRefine[&GV]);
-  }
-
-  void visitFunction(Function &F) {
-    if (F.getIntrinsicID() != Intrinsic::not_intrinsic)
-      return; // We can neither add nor remove attributes from intrinsics.
-    visitAttributeList(F.getAttributes(), FunctionsToRefine[&F]);
-  }
-
-  void visitCallBase(CallBase &I) {
-    visitAttributeList(I.getAttributes(), CallsToRefine[&I]);
-  }
-
-  void visitAttributeList(const AttributeList &AL,
-                          AttrPtrVecVecTy &AttributeSetsToPreserve) {
-    assert(AttributeSetsToPreserve.empty() && "Should not be sharing vectors.");
-    AttributeSetsToPreserve.reserve(AL.getNumAttrSets());
-    for (unsigned SetIdx : AL.indexes()) {
-      AttrPtrIdxVecVecTy AttributesToPreserve;
-      AttributesToPreserve.first = SetIdx;
-      visitAttributeSet(AL.getAttributes(AttributesToPreserve.first),
-                        AttributesToPreserve.second);
-      if (!AttributesToPreserve.second.empty())
-        AttributeSetsToPreserve.emplace_back(std::move(AttributesToPreserve));
+    AttributeSet AS = GV.getAttributes();
+    if (AS.hasAttributes()) {
+      AttrBuilder AttrsToPreserve(Context);
+      visitAttributeSet(AS, AttrsToPreserve);
+      GV.setAttributes(AttributeSet::get(Context, AttrsToPreserve));
     }
   }
 
-  void visitAttributeSet(const AttributeSet &AS,
-                         AttrPtrVecTy &AttrsToPreserve) {
-    assert(AttrsToPreserve.empty() && "Should not be sharing vectors.");
-    AttrsToPreserve.reserve(AS.getNumAttributes());
-    for (const Attribute &A : AS)
-      if (O.shouldKeep())
-        AttrsToPreserve.emplace_back(&A);
-  }
-};
-
-struct AttributeCounter : public InstVisitor<AttributeCounter> {
-  /// How many features (in this case, attributes) did we count, total?
-  int AttributeCount = 0;
-
-  void visitModule(Module &M) {
-    for (GlobalVariable &GV : M.getGlobalList())
-      visitGlobalVariable(GV);
-  }
-
-  void visitGlobalVariable(GlobalVariable &GV) {
-    // Global variables only have one attribute set.
-    visitAttributeSet(GV.getAttributes());
-  }
-
   void visitFunction(Function &F) {
-    if (F.getIntrinsicID() != Intrinsic::not_intrinsic)
-      return; // We can neither add nor remove attributes from intrinsics.
-    visitAttributeList(F.getAttributes());
+    // We can neither add nor remove attributes from intrinsics.
+    if (F.getIntrinsicID() == Intrinsic::not_intrinsic)
+      F.setAttributes(visitAttributeList(F.getAttributes()));
   }
 
-  void visitCallBase(CallBase &I) { visitAttributeList(I.getAttributes()); }
-
-  void visitAttributeList(const AttributeList &AL) {
-    for (const AttributeSet &AS : AL)
-      visitAttributeSet(AS);
+  void visitCallBase(CallBase &CB) {
+    CB.setAttributes(visitAttributeList(CB.getAttributes()));
   }
 
-  void visitAttributeSet(const AttributeSet &AS) {
-    AttributeCount += AS.getNumAttributes();
+  AttributeSet visitAttributeIndex(AttributeList AL, unsigned Index) {
+    AttrBuilder AttributesToPreserve(Context);
+    visitAttributeSet(AL.getAttributes(Index), AttributesToPreserve);
+
+    if (AttributesToPreserve.attrs().empty())
+      return {};
+    return AttributeSet::get(Context, AttributesToPreserve);
+  }
+
+  AttributeList visitAttributeList(AttributeList AL) {
+    SmallVector<std::pair<unsigned, AttributeSet>> NewAttrList;
+    NewAttrList.reserve(AL.getNumAttrSets());
+
+    for (unsigned SetIdx : AL.indexes()) {
+      if (SetIdx == AttributeList::FunctionIndex)
+        continue;
+
+      AttributeSet AttrSet = visitAttributeIndex(AL, SetIdx);
+      if (AttrSet.hasAttributes())
+        NewAttrList.emplace_back(SetIdx, AttrSet);
+    }
+
+    // FIXME: It's ridiculous that indexes() doesn't give us the correct order
+    // for contructing a new AttributeList. Special case the function index so
+    // we don't have to sort.
+    AttributeSet FnAttrSet =
+        visitAttributeIndex(AL, AttributeList::FunctionIndex);
+    if (FnAttrSet.hasAttributes())
+      NewAttrList.emplace_back(AttributeList::FunctionIndex, FnAttrSet);
+
+    return AttributeList::get(Context, NewAttrList);
+  }
+
+  void visitAttributeSet(const AttributeSet &AS, AttrBuilder &AttrsToPreserve) {
+    // Optnone requires noinline, so removing noinline requires removing the
+    // pair.
+    Attribute NoInline = AS.getAttribute(Attribute::NoInline);
+    bool RemoveNoInline = false;
+    if (NoInline.isValid()) {
+      RemoveNoInline = !O.shouldKeep();
+      if (!RemoveNoInline)
+        AttrsToPreserve.addAttribute(NoInline);
+    }
+
+    for (Attribute A : AS) {
+      if (A.isEnumAttribute()) {
+        Attribute::AttrKind Kind = A.getKindAsEnum();
+        if (Kind == Attribute::NoInline)
+          continue;
+
+        if (RemoveNoInline && Kind == Attribute::OptimizeNone)
+          continue;
+
+        // TODO: Could only remove this if there are no constrained calls in the
+        // function.
+        if (Kind == Attribute::StrictFP) {
+          AttrsToPreserve.addAttribute(A);
+          continue;
+        }
+      }
+
+      if (O.shouldKeep())
+        AttrsToPreserve.addAttribute(A);
+    }
   }
 };
 
 } // namespace
 
-AttributeSet
-convertAttributeRefToAttributeSet(LLVMContext &C,
-                                  ArrayRef<const Attribute *> Attributes) {
-  AttrBuilder B(C);
-  for (const Attribute *A : Attributes)
-    B.addAttribute(*A);
-  return AttributeSet::get(C, B);
-}
-
-AttributeList convertAttributeRefVecToAttributeList(
-    LLVMContext &C, ArrayRef<AttrPtrIdxVecVecTy> AttributeSets) {
-  std::vector<std::pair<unsigned, AttributeSet>> SetVec;
-  SetVec.reserve(AttributeSets.size());
-
-  transform(AttributeSets, std::back_inserter(SetVec),
-            [&C](const AttrPtrIdxVecVecTy &V) {
-              return std::make_pair(
-                  V.first, convertAttributeRefToAttributeSet(C, V.second));
-            });
-
-  llvm::sort(SetVec, llvm::less_first()); // All values are unique.
-
-  return AttributeList::get(C, SetVec);
-}
-
 /// Removes out-of-chunk attributes from module.
-static void extractAttributesFromModule(Oracle &O, Module &Program) {
-  AttributeRemapper R(O);
-  R.visit(Program);
-
-  LLVMContext &C = Program.getContext();
-  for (const auto &I : R.GlobalVariablesToRefine)
-    I.first->setAttributes(convertAttributeRefToAttributeSet(C, I.second));
-  for (const auto &I : R.FunctionsToRefine)
-    I.first->setAttributes(convertAttributeRefVecToAttributeList(C, I.second));
-  for (const auto &I : R.CallsToRefine)
-    I.first->setAttributes(convertAttributeRefVecToAttributeList(C, I.second));
+static void extractAttributesFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+  AttributeRemapper R(O, WorkItem.getContext());
+  R.visit(WorkItem.getModule());
 }
 
 void llvm::reduceAttributesDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing Attributes...\n";
-  runDeltaPass(Test, extractAttributesFromModule);
+  runDeltaPass(Test, extractAttributesFromModule, "Reducing Attributes");
 }

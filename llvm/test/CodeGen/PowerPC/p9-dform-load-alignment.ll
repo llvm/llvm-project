@@ -12,8 +12,8 @@ define dso_local void @AlignDSForm() local_unnamed_addr {
 ; CHECK-NEXT:    ld r3, 0(r3)
 ; CHECK-NEXT:    std r3, 0(r3)
 entry:
-  %0 = load <4 x i16>, <4 x i16>* bitcast ([4 x i16]* @best8x8mode to <4 x i16>*), align 2
-  store <4 x i16> %0, <4 x i16>* undef, align 4
+  %0 = load <4 x i16>, ptr @best8x8mode, align 2
+  store <4 x i16> %0, ptr undef, align 4
   unreachable
 }
 

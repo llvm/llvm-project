@@ -29,16 +29,38 @@ def NVVM_Dialect : Dialect {
   let cppNamespace = "::mlir::NVVM";
   let dependentDialects = ["LLVM::LLVMDialect"];
   let hasOperationAttrVerify = 1;
+  let useFoldAPI = kEmitFoldAdaptorFolder;
 
   let extraClassDeclaration = [{
     /// Get the name of the attribute used to annotate external kernel
     /// functions.
     static StringRef getKernelFuncAttrName() { return "nvvm.kernel"; }
+    /// Get the name of the attribute used to annotate max threads required
+    /// per CTA for kernel functions.
+    static StringRef getMaxntidAttrName() { return "nvvm.maxntid"; }
+    /// Get the name of the metadata names for each dimension
+    static StringRef getMaxntidXName() { return "maxntidx"; }
+    static StringRef getMaxntidYName() { return "maxntidy"; }
+    static StringRef getMaxntidZName() { return "maxntidz"; }
+
+    /// Get the name of the attribute used to annotate exact threads required
+    /// per CTA for kernel functions.
+    static StringRef getReqntidAttrName() { return "nvvm.reqntid"; }
+    /// Get the name of the metadata names for each dimension
+    static StringRef getReqntidXName() { return "reqntidx"; }
+    static StringRef getReqntidYName() { return "reqntidy"; }
+    static StringRef getReqntidZName() { return "reqntidz"; }
+
+    /// Get the name of the attribute used to annotate min CTA required
+    /// per SM for kernel functions.
+    static StringRef getMinctasmAttrName() { return "nvvm.minctasm"; }
+
+    /// Get the name of the attribute used to annotate max number of
+    /// registers that can be allocated per thread.
+    static StringRef getMaxnregAttrName() { return "nvvm.maxnreg"; }
   }];
 
   let useDefaultAttributePrinterParser = 1;
-
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 //===----------------------------------------------------------------------===//
@@ -75,7 +97,7 @@ class NVVM_IntrOp<string mnem, list<Trait> traits,
 //===----------------------------------------------------------------------===//
 
 class NVVM_SpecialRegisterOp<string mnemonic, list<Trait> traits = []> :
-  NVVM_IntrOp<mnemonic, !listconcat(traits, [NoSideEffect]), 1> {
+  NVVM_IntrOp<mnemonic, !listconcat(traits, [Pure]), 1> {
   let arguments = (ins);
   let assemblyFormat = "attr-dict `:` type($res)";
 }
@@ -107,10 +129,49 @@ def NVVM_GridDimZOp : NVVM_SpecialRegisterOp<"read.ptx.sreg.nctaid.z">;
 // NVVM approximate op definitions
 //===----------------------------------------------------------------------===//
 
-def NVVM_RcpApproxFtzF32Op : NVVM_IntrOp<"rcp.approx.ftz.f", [NoSideEffect], 1> {
+def NVVM_RcpApproxFtzF32Op : NVVM_IntrOp<"rcp.approx.ftz.f", [Pure], 1> {
   let arguments = (ins F32:$arg);
   let results = (outs F32:$res);
   let assemblyFormat = "$arg attr-dict `:` type($res)";
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM redux op definitions
+//===----------------------------------------------------------------------===//
+
+def ReduxKindNone : I32EnumAttrCase<"NONE", 0, "none">;
+def ReduxKindAdd  : I32EnumAttrCase<"ADD", 1, "add">;
+def ReduxKindAnd  : I32EnumAttrCase<"AND", 2, "and">;
+def ReduxKindMax  : I32EnumAttrCase<"MAX", 3, "max">;
+def ReduxKindMin  : I32EnumAttrCase<"MIN", 4, "min">;
+def ReduxKindOr   : I32EnumAttrCase<"OR", 5, "or">;
+def ReduxKindUmax : I32EnumAttrCase<"UMAX", 6, "umax">;
+def ReduxKindUmin : I32EnumAttrCase<"UMIN", 7, "umin">;
+def ReduxKindXor  : I32EnumAttrCase<"XOR", 8, "xor">; 
+
+/// Enum attribute of the different kinds.
+def ReduxKind : I32EnumAttr<"ReduxKind", "NVVM redux kind",
+  [ReduxKindAdd, ReduxKindAnd, ReduxKindMax, ReduxKindMin, ReduxKindOr, 
+    ReduxKindUmax, ReduxKindUmin, ReduxKindXor]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+
+def ReduxKindAttr : EnumAttr<NVVM_Dialect, ReduxKind, "redux_kind">;
+
+def NVVM_ReduxOp :
+  NVVM_Op<"redux.sync">,
+  Results<(outs LLVM_Type:$res)>,
+  Arguments<(ins LLVM_Type:$val,
+                 ReduxKindAttr:$kind,
+                 I32:$mask_and_clamp)> {
+  string llvmBuilder = [{
+      auto intId = getReduxIntrinsicId($_resultType, $kind);
+      $res = createIntrinsicCall(builder, intId, {$val, $mask_and_clamp});
+  }];
+  let assemblyFormat = [{
+    $kind $val `,` $mask_and_clamp  attr-dict `:` type($val) `->` type($res)
+   }];   
 }
 
 //===----------------------------------------------------------------------===//
@@ -168,6 +229,15 @@ def NVVM_VoteBallotOp :
             llvm::Intrinsic::nvvm_vote_ballot_sync, {$mask, $pred});
   }];
   let hasCustomAssemblyFormat = 1;
+}
+
+def NVVM_SyncWarpOp :
+  NVVM_Op<"bar.warp.sync">,
+  Arguments<(ins LLVM_Type:$mask)> {
+  string llvmBuilder = [{
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_bar_warp_sync, {$mask});
+  }];
+  let assemblyFormat = "$mask attr-dict `:` type($mask)";
 }
 
 
@@ -527,9 +597,9 @@ class NVVM_MMA_SUPPORTED<list<WMMA_REGS> frags, string layout_a, string layout_b
   );
 }
 
-// Returns a list of operation suffixes corresponding to possible b1 
-// multiply-and-accumulate operations for all fragments which have a 
-// b1 type. For all other fragments, the list returned holds a list 
+// Returns a list of operation suffixes corresponding to possible b1
+// multiply-and-accumulate operations for all fragments which have a
+// b1 type. For all other fragments, the list returned holds a list
 // containing the empty string.
 class NVVM_MMA_B1OPS<list<WMMA_REGS> frags> {
   list<string> ret = !cond(
@@ -548,7 +618,7 @@ class MMA_SYNC_NAME<string ALayout, string BLayout, string b1op, int Satfinite,
                 # "_" # ALayout
                 # "_" # BLayout
                 # !if(Satfinite, "_satfinite", "")
-                # signature;  
+                # signature;
 }
 
 /// Helper to create the mapping between the configuration and the mma.sync
@@ -565,13 +635,13 @@ class MMA_SYNC_INTR {
       "if (layoutA == \"" # layoutA #  "\" && layoutB == \"" # layoutB #  "\" && "
       "    m == " # op[0].m # " && n == " # op[0].n # " && k == " # op[0].k #
       "    && \"" # op[0].ptx_elt_type # "\" == eltypeA && \""
-       # op[1].ptx_elt_type # "\" == eltypeB && " 
+       # op[1].ptx_elt_type # "\" == eltypeB && "
        # " \"" # op[2].ptx_elt_type # "\" == eltypeC && "
        # " \"" # op[3].ptx_elt_type # "\" == eltypeD "
        # " && (sat.has_value()  ? " # sat # " == static_cast<int>(*sat) : true)"
-       # !if(!ne(b1op, ""), " && (b1Op.has_value() ? MMAB1Op::" # b1op # " == b1Op.value() : true)", "") # ")\n"
+       # !if(!ne(b1op, ""), " && (b1Op.has_value() ? MMAB1Op::" # b1op # " == *b1Op : true)", "") # ")\n"
        # "  return " #
-       MMA_SYNC_NAME<layoutA, layoutB, b1op, sat, op[0], op[1], op[2], op[3]>.id # ";", 
+       MMA_SYNC_NAME<layoutA, layoutB, b1op, sat, op[0], op[1], op[2], op[3]>.id # ";",
           "") // if supported
           ) // b1op
         ) // sat
@@ -579,7 +649,7 @@ class MMA_SYNC_INTR {
     ) // layoutA
   ); // all_mma_sync_ops
   list<list<list<string>>> f1 = !foldl([[[""]]],
-                                  !foldl([[[[""]]]], cond0, acc, el, 
+                                  !foldl([[[[""]]]], cond0, acc, el,
                                       !listconcat(acc, el)),
                                     acc1, el1, !listconcat(acc1, el1));
   list<list<string>> f2 = !foldl([[""]], f1, acc1, el1, !listconcat(acc1, el1));
@@ -769,7 +839,10 @@ def NVVM_WMMAStoreOp : NVVM_Op<"wmma.store">,
     ```
   }];
 
-  let assemblyFormat = "$ptr `,` $stride `,` $args attr-dict `:` type($ptr) `,` type($args)";
+  let assemblyFormat = [{
+    $ptr `,` $stride `,` $args attr-dict `:` qualified(type($ptr)) `,`
+    type($args)
+  }];
   let hasVerifier = 1;
 }
 
@@ -877,32 +950,32 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
 
   let description = [{
     The `nvvm.mma.sync` operation collectively performs the operation
-    `D = matmul(A, B) + C` using all threads in a warp.    
+    `D = matmul(A, B) + C` using all threads in a warp.
 
     All the threads in the warp must execute the same `mma.sync` operation.
 
     For each possible multiplicand PTX data type, there are one or more possible
     instruction shapes given as "mMnNkK". The below table describes the posssibilities
-    as well as the types required for the operands. Note that the data type for 
-    C (the accumulator) and D (the result) can vary independently when there are 
+    as well as the types required for the operands. Note that the data type for
+    C (the accumulator) and D (the result) can vary independently when there are
     multiple possibilities in the "C/D Type" column.
 
     When an optional attribute cannot be immediately inferred from the types of
     the operands and the result during parsing or validation, an error will be
     raised.
 
-    `b1Op` is only relevant when the binary (b1) type is given to 
+    `b1Op` is only relevant when the binary (b1) type is given to
     `multiplicandDataType`. It specifies how the multiply-and-acumulate is
     performed and is either `xor_popc` or `and_poc`. The default is `xor_popc`.
 
-    `intOverflowBehavior` is only relevant when the `multiplicandType` attribute 
+    `intOverflowBehavior` is only relevant when the `multiplicandType` attribute
     is one of `u8, s8, u4, s4`, this attribute describes how overflow is handled
     in the accumulator. When the attribute is `satfinite`, the accumulator values
     are clamped in the int32 range on overflow. This is the default behavior.
-    Alternatively, accumulator behavior `wrapped` can also be specified, in 
+    Alternatively, accumulator behavior `wrapped` can also be specified, in
     which case overflow wraps from one end of the range to the other.
 
-    `layoutA` and `layoutB` are required and should generally be set to 
+    `layoutA` and `layoutB` are required and should generally be set to
     `#nvvm.mma_layout<row>` and `#nvvm.mma_layout<col>` respectively, but other
     combinations are possible for certain layouts according to the table below.
 
@@ -931,12 +1004,12 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
     Example:
     ```mlir
 
-    %128 = nvvm.mma.sync A[%120, %121, %122, %123]  
-                         B[%124, %125]  
-                         C[%126, %127]  
-                         {layoutA = #nvvm.mma_layout<row>, 
-                          layoutB = #nvvm.mma_layout<col>, 
-                          shape = {k = 16 : i32, m = 16 : i32, n = 8 : i32}} 
+    %128 = nvvm.mma.sync A[%120, %121, %122, %123]
+                         B[%124, %125]
+                         C[%126, %127]
+                         {layoutA = #nvvm.mma_layout<row>,
+                          layoutB = #nvvm.mma_layout<col>,
+                          shape = {k = 16 : i32, m = 16 : i32, n = 8 : i32}}
         : (vector<2xf16>, vector<2xf16>, vector<2xf16>)
            -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
     ```
@@ -944,7 +1017,7 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
 
   let results = (outs LLVM_AnyStruct:$res);
   let arguments = (ins NVVM_MMAShapeAttr:$shape,
-             OptionalAttr<MMAB1OpAttr>:$b1Op, 
+             OptionalAttr<MMAB1OpAttr>:$b1Op,
              OptionalAttr<MMAIntOverflowAttr>:$intOverflowBehavior,
              MMALayoutAttr:$layoutA,
              MMALayoutAttr:$layoutB,
@@ -952,13 +1025,13 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
              OptionalAttr<MMATypesAttr>:$multiplicandBPtxType,
              Variadic<LLVM_Type>:$operandA,
              Variadic<LLVM_Type>:$operandB,
-             Variadic<LLVM_Type>:$operandC); 
+             Variadic<LLVM_Type>:$operandC);
 
   let extraClassDeclaration = !strconcat([{
       static llvm::Intrinsic::ID getIntrinsicID(
             int64_t m, int64_t n, uint64_t k,
-            llvm::Optional<MMAB1Op> b1Op, 
-            llvm::Optional<MMAIntOverflow> sat,
+            std::optional<MMAB1Op> b1Op,
+            std::optional<MMAIntOverflow> sat,
             mlir::NVVM::MMALayout layoutAEnum, mlir::NVVM::MMALayout layoutBEnum,
             mlir::NVVM::MMATypes eltypeAEnum, mlir::NVVM::MMATypes eltypeBEnum,
             mlir::NVVM::MMATypes eltypeCEnum, mlir::NVVM::MMATypes eltypeDEnum) {
@@ -973,7 +1046,7 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
         return 0;
       }
 
-      static Optional<mlir::NVVM::MMATypes> inferOperandMMAType(Type operandElType,
+      static std::optional<mlir::NVVM::MMATypes> inferOperandMMAType(Type operandElType,
         bool isAccumulator);
 
       MMATypes accumPtxType();
@@ -981,23 +1054,23 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
     }]);
 
   let builders = [
-      OpBuilder<(ins  "Type":$resultType, "ValueRange":$operandA, 
+      OpBuilder<(ins  "Type":$resultType, "ValueRange":$operandA,
         "ValueRange":$operandB, "ValueRange":$operandC,
-        "ArrayRef<int64_t>":$shape, "Optional<MMAB1Op>":$b1Op,
-        "Optional<MMAIntOverflow>":$intOverflow,
-        "Optional<std::array<MMATypes, 2>>":$multiplicandPtxTypes,
-        "Optional<std::array<MMALayout, 2>>":$multiplicandLayouts)>
+        "ArrayRef<int64_t>":$shape, "std::optional<MMAB1Op>":$b1Op,
+        "std::optional<MMAIntOverflow>":$intOverflow,
+        "std::optional<std::array<MMATypes, 2>>":$multiplicandPtxTypes,
+        "std::optional<std::array<MMALayout, 2>>":$multiplicandLayouts)>
     ];
 
   string llvmBuilder = [{
     auto operands = moduleTranslation.lookupValues(opInst.getOperands());
     auto intId = mlir::NVVM::MmaOp::getIntrinsicID(
-        $shape.getM(), $shape.getN(), $shape.getK(), 
+        $shape.getM(), $shape.getN(), $shape.getK(),
         $b1Op, $intOverflowBehavior,
         $layoutA, $layoutB,
-        $multiplicandAPtxType.value(), 
-        $multiplicandBPtxType.value(),
-        op.accumPtxType(), 
+        *$multiplicandAPtxType,
+        *$multiplicandBPtxType,
+        op.accumPtxType(),
         op.resultPtxType());
 
     $res = createIntrinsicCall(

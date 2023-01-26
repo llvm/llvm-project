@@ -5,6 +5,7 @@
 #include "hwasan_interface_internal.h"
 #include "hwasan_mapping.h"
 #include "hwasan_poisoning.h"
+#include "hwasan_thread_list.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_file.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
@@ -54,6 +55,7 @@ void Thread::Init(uptr stack_buffer_start, uptr stack_buffer_size,
   InitStackRingBuffer(stack_buffer_start, stack_buffer_size);
 #endif
   InitStackAndTls(state);
+  dtls_ = DTLS_Get();
 }
 
 void Thread::InitStackRingBuffer(uptr stack_buffer_start,
@@ -148,3 +150,55 @@ tag_t Thread::GenerateRandomTag(uptr num_bits) {
 }
 
 } // namespace __hwasan
+
+// --- Implementation of LSan-specific functions --- {{{1
+namespace __lsan {
+
+static __hwasan::HwasanThreadList *GetHwasanThreadListLocked() {
+  auto &tl = __hwasan::hwasanThreadList();
+  tl.CheckLocked();
+  return &tl;
+}
+
+static __hwasan::Thread *GetThreadByOsIDLocked(tid_t os_id) {
+  return GetHwasanThreadListLocked()->FindThreadLocked(
+      [os_id](__hwasan::Thread *t) { return t->os_id() == os_id; });
+}
+
+void LockThreadRegistry() { __hwasan::hwasanThreadList().Lock(); }
+
+void UnlockThreadRegistry() { __hwasan::hwasanThreadList().Unlock(); }
+
+void EnsureMainThreadIDIsCorrect() {
+  auto *t = __hwasan::GetCurrentThread();
+  if (t && (t->IsMainThread()))
+    t->set_os_id(GetTid());
+}
+
+bool GetThreadRangesLocked(tid_t os_id, uptr *stack_begin, uptr *stack_end,
+                           uptr *tls_begin, uptr *tls_end, uptr *cache_begin,
+                           uptr *cache_end, DTLS **dtls) {
+  auto *t = GetThreadByOsIDLocked(os_id);
+  if (!t)
+    return false;
+  *stack_begin = t->stack_bottom();
+  *stack_end = t->stack_top();
+  *tls_begin = t->tls_begin();
+  *tls_end = t->tls_end();
+  // Fixme: is this correct for HWASan.
+  *cache_begin = 0;
+  *cache_end = 0;
+  *dtls = t->dtls();
+  return true;
+}
+
+void GetAllThreadAllocatorCachesLocked(InternalMmapVector<uptr> *caches) {}
+
+void GetThreadExtraStackRangesLocked(tid_t os_id,
+                                     InternalMmapVector<Range> *ranges) {}
+void GetThreadExtraStackRangesLocked(InternalMmapVector<Range> *ranges) {}
+
+void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs) {}
+void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads) {}
+
+}  // namespace __lsan

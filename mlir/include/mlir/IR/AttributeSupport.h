@@ -129,9 +129,6 @@ class alignas(8) AttributeStorage : public StorageUniquer::BaseStorage {
   friend StorageUniquer;
 
 public:
-  /// Get the type of this attribute.
-  Type getType() const { return type; }
-
   /// Return the abstract descriptor for this attribute.
   const AbstractAttribute &getAbstractAttribute() const {
     assert(abstractAttribute && "Malformed attribute storage object.");
@@ -139,15 +136,6 @@ public:
   }
 
 protected:
-  /// Construct a new attribute storage instance with the given type.
-  /// Note: All attributes require a valid type. If no type is provided here,
-  ///       the type of the attribute will automatically default to NoneType
-  ///       upon initialization in the uniquer.
-  AttributeStorage(Type type = nullptr) : type(type) {}
-
-  /// Set the type of this attribute.
-  void setType(Type newType) { type = newType; }
-
   /// Set the abstract attribute for this storage instance. This is used by the
   /// AttributeUniquer when initializing a newly constructed storage object.
   void initializeAbstractAttribute(const AbstractAttribute &abstractAttr) {
@@ -159,9 +147,6 @@ protected:
   void initialize(MLIRContext *context) {}
 
 private:
-  /// The type of the attribute value.
-  Type type;
-
   /// The abstract descriptor for this attribute.
   const AbstractAttribute *abstractAttribute = nullptr;
 };
@@ -197,7 +182,7 @@ public:
   /// The use of this method is in general discouraged in favor of
   /// 'get<T, Args>(ctx, args)'.
   template <typename T, typename... Args>
-  static typename std::enable_if_t<
+  static std::enable_if_t<
       !std::is_same<typename T::ImplType, AttributeStorage>::value, T>
   getWithTypeID(MLIRContext *ctx, TypeID typeID, Args &&...args) {
 #ifndef NDEBUG
@@ -222,7 +207,7 @@ public:
   /// The use of this method is in general discouraged in favor of
   /// 'get<T, Args>(ctx, args)'.
   template <typename T>
-  static typename std::enable_if_t<
+  static std::enable_if_t<
       std::is_same<typename T::ImplType, AttributeStorage>::value, T>
   getWithTypeID(MLIRContext *ctx, TypeID typeID) {
 #ifndef NDEBUG
@@ -254,7 +239,7 @@ public:
   /// The use of this method is in general discouraged in favor of
   /// 'registerAttribute<T>(ctx)'.
   template <typename T>
-  static typename std::enable_if_t<
+  static std::enable_if_t<
       !std::is_same<typename T::ImplType, AttributeStorage>::value>
   registerAttribute(MLIRContext *ctx, TypeID typeID) {
     ctx->getAttributeUniquer()
@@ -264,7 +249,7 @@ public:
   /// The use of this method is in general discouraged in favor of
   /// 'registerAttribute<T>(ctx)'.
   template <typename T>
-  static typename std::enable_if_t<
+  static std::enable_if_t<
       std::is_same<typename T::ImplType, AttributeStorage>::value>
   registerAttribute(MLIRContext *ctx, TypeID typeID) {
     ctx->getAttributeUniquer()
@@ -279,6 +264,19 @@ private:
   static void initializeAttributeStorage(AttributeStorage *storage,
                                          MLIRContext *ctx, TypeID attrID);
 };
+
+// Internal function called by ODS generated code.
+// Default initializes the type within a FailureOr<T> if T is default
+// constructible and returns a reference to the instance.
+// Otherwise, returns a reference to the FailureOr<T>.
+template <class T>
+decltype(auto) unwrapForCustomParse(FailureOr<T> &failureOr) {
+  if constexpr (std::is_default_constructible_v<T>)
+    return failureOr.emplace();
+  else
+    return failureOr;
+}
+
 } // namespace detail
 
 } // namespace mlir

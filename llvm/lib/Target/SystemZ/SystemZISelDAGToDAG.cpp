@@ -21,6 +21,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "systemz-isel"
+#define PASS_NAME "SystemZ DAG->DAG Pattern Instruction Selection"
 
 namespace {
 // Used to build addressing modes.
@@ -345,8 +346,12 @@ class SystemZDAGToDAGISel : public SelectionDAGISel {
   SDValue expandSelectBoolean(SDNode *Node);
 
 public:
+  static char ID;
+
+  SystemZDAGToDAGISel() = delete;
+
   SystemZDAGToDAGISel(SystemZTargetMachine &TM, CodeGenOpt::Level OptLevel)
-      : SelectionDAGISel(TM, OptLevel) {}
+      : SelectionDAGISel(ID, TM, OptLevel) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     const Function &F = MF.getFunction();
@@ -361,11 +366,6 @@ public:
     return SelectionDAGISel::runOnMachineFunction(MF);
   }
 
-  // Override MachineFunctionPass.
-  StringRef getPassName() const override {
-    return "SystemZ DAG->DAG Pattern Instruction Selection";
-  }
-
   // Override SelectionDAGISel.
   void Select(SDNode *Node) override;
   bool SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
@@ -377,6 +377,10 @@ public:
   #include "SystemZGenDAGISel.inc"
 };
 } // end anonymous namespace
+
+char SystemZDAGToDAGISel::ID = 0;
+
+INITIALIZE_PASS(SystemZDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 FunctionPass *llvm::createSystemZISelDag(SystemZTargetMachine &TM,
                                          CodeGenOpt::Level OptLevel) {
@@ -860,7 +864,7 @@ bool SystemZDAGToDAGISel::expandRxSBG(RxSBGOperands &RxSBG) const {
       RxSBG.Input = N.getOperand(0);
       return true;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case ISD::SIGN_EXTEND: {
     // Check that the extension bits are don't-care (i.e. are masked out
@@ -1067,10 +1071,13 @@ bool SystemZDAGToDAGISel::tryRxSBG(SDNode *N, unsigned Opcode) {
   };
   unsigned Count[] = { 0, 0 };
   for (unsigned I = 0; I < 2; ++I)
-    while (expandRxSBG(RxSBG[I]))
-      // The widening or narrowing is expected to be free.
-      // Counting widening or narrowing as a saved operation will result in
-      // preferring an R*SBG over a simple shift/logical instruction.
+    while (RxSBG[I].Input->hasOneUse() && expandRxSBG(RxSBG[I]))
+      // In cases of multiple users it seems better to keep the simple
+      // instruction as they are one cycle faster, and it also helps in cases
+      // where both inputs share a common node.
+      // The widening or narrowing is expected to be free.  Counting widening
+      // or narrowing as a saved operation will result in preferring an R*SBG
+      // over a simple shift/logical instruction.
       if (RxSBG[I].Input.getOpcode() != ISD::ANY_EXTEND &&
           RxSBG[I].Input.getOpcode() != ISD::TRUNCATE)
         Count[I] += 1;
@@ -1349,7 +1356,7 @@ bool SystemZDAGToDAGISel::tryFoldLoadStoreIntoMemOperand(SDNode *Node) {
     return false;
   case SystemZISD::SSUBO:
     NegateOperand = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case SystemZISD::SADDO:
     if (MemVT == MVT::i32)
       NewOpc = SystemZ::ASI;
@@ -1360,7 +1367,7 @@ bool SystemZDAGToDAGISel::tryFoldLoadStoreIntoMemOperand(SDNode *Node) {
     break;
   case SystemZISD::USUBO:
     NegateOperand = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case SystemZISD::UADDO:
     if (MemVT == MVT::i32)
       NewOpc = SystemZ::ALSI;
@@ -1562,7 +1569,7 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
     if (Node->getOperand(1).getOpcode() != ISD::Constant)
       if (tryRxSBG(Node, SystemZ::RNSBG))
         return;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::ROTL:
   case ISD::SHL:
   case ISD::SRL:

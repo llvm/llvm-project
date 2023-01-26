@@ -16,6 +16,7 @@
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
 #include "CGDebugInfo.h"
+#include "CGHLSLRuntime.h"
 #include "CGOpenMPRuntime.h"
 #include "CodeGenModule.h"
 #include "CodeGenPGO.h"
@@ -45,6 +46,7 @@
 #include "llvm/Support/CRC.h"
 #include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
+#include <optional>
 
 using namespace clang;
 using namespace CodeGen;
@@ -172,10 +174,11 @@ void CodeGenFunction::CGFPOptionsRAII::ConstructorHelper(FPOptions FPFeatures) {
   mergeFnAttrValue("no-infs-fp-math", FPFeatures.getNoHonorInfs());
   mergeFnAttrValue("no-nans-fp-math", FPFeatures.getNoHonorNaNs());
   mergeFnAttrValue("no-signed-zeros-fp-math", FPFeatures.getNoSignedZero());
-  mergeFnAttrValue("unsafe-fp-math", FPFeatures.getAllowFPReassociate() &&
-                                         FPFeatures.getAllowReciprocal() &&
-                                         FPFeatures.getAllowApproxFunc() &&
-                                         FPFeatures.getNoSignedZero());
+  mergeFnAttrValue(
+      "unsafe-fp-math",
+      FPFeatures.getAllowFPReassociate() && FPFeatures.getAllowReciprocal() &&
+          FPFeatures.getAllowApproxFunc() && FPFeatures.getNoSignedZero() &&
+          FPFeatures.allowFPContractAcrossStatement());
 }
 
 CodeGenFunction::CGFPOptionsRAII::~CGFPOptionsRAII() {
@@ -317,8 +320,10 @@ llvm::DebugLoc CodeGenFunction::EmitReturnBlock() {
 
 static void EmitIfUsed(CodeGenFunction &CGF, llvm::BasicBlock *BB) {
   if (!BB) return;
-  if (!BB->use_empty())
-    return CGF.CurFn->getBasicBlockList().push_back(BB);
+  if (!BB->use_empty()) {
+    CGF.CurFn->insert(CGF.CurFn->end(), BB);
+    return;
+  }
   delete BB;
 }
 
@@ -359,7 +364,7 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   if (HasCleanups) {
     // Make sure the line table doesn't jump back into the body for
     // the ret after it's been at EndLoc.
-    Optional<ApplyDebugLocation> AL;
+    std::optional<ApplyDebugLocation> AL;
     if (CGDebugInfo *DI = getDebugInfo()) {
       if (OnlySimpleReturnStmts)
         DI->EmitLocation(Builder, EndLoc);
@@ -477,13 +482,13 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
     if (auto *VT = dyn_cast<llvm::VectorType>(A.getType()))
       LargestVectorWidth =
           std::max((uint64_t)LargestVectorWidth,
-                   VT->getPrimitiveSizeInBits().getKnownMinSize());
+                   VT->getPrimitiveSizeInBits().getKnownMinValue());
 
   // Update vector width based on return type.
   if (auto *VT = dyn_cast<llvm::VectorType>(CurFn->getReturnType()))
     LargestVectorWidth =
         std::max((uint64_t)LargestVectorWidth,
-                 VT->getPrimitiveSizeInBits().getKnownMinSize());
+                 VT->getPrimitiveSizeInBits().getKnownMinValue());
 
   if (CurFnInfo->getMaxVectorWidth() > LargestVectorWidth)
     LargestVectorWidth = CurFnInfo->getMaxVectorWidth();
@@ -495,10 +500,12 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   // 4. Width of vector arguments and return types for this function.
   // 5. Width of vector aguments and return types for functions called by this
   //    function.
-  CurFn->addFnAttr("min-legal-vector-width", llvm::utostr(LargestVectorWidth));
+  if (getContext().getTargetInfo().getTriple().isX86())
+    CurFn->addFnAttr("min-legal-vector-width",
+                     llvm::utostr(LargestVectorWidth));
 
   // Add vscale_range attribute if appropriate.
-  Optional<std::pair<unsigned, unsigned>> VScaleRange =
+  std::optional<std::pair<unsigned, unsigned>> VScaleRange =
       getContext().getTargetInfo().getVScaleRange(getLangOpts());
   if (VScaleRange) {
     CurFn->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
@@ -699,7 +706,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   CurCodeDecl = D;
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
   if (FD && FD->usesSEHTry())
-    CurSEHParent = FD;
+    CurSEHParent = GD;
   CurFuncDecl = (D ? D->getNonClosureContext() : nullptr);
   FnRetTy = RetTy;
   CurFn = Fn;
@@ -724,7 +731,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     const bool SanitizeBounds = SanOpts.hasOneOf(SanitizerKind::Bounds);
     bool NoSanitizeCoverage = false;
 
-    for (auto Attr : D->specific_attrs<NoSanitizeAttr>()) {
+    for (auto *Attr : D->specific_attrs<NoSanitizeAttr>()) {
       // Apply the no_sanitize* attributes to SanOpts.
       SanitizerMask mask = Attr->getMask();
       SanOpts.Mask &= ~mask;
@@ -842,8 +849,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
 
     auto FuncGroups = CGM.getCodeGenOpts().XRayTotalFunctionGroups;
     if (FuncGroups > 1) {
-      auto FuncName = llvm::makeArrayRef<uint8_t>(
-          CurFn->getName().bytes_begin(), CurFn->getName().bytes_end());
+      auto FuncName = llvm::ArrayRef<uint8_t>(CurFn->getName().bytes_begin(),
+                                              CurFn->getName().bytes_end());
       auto Group = crc32(FuncName) % FuncGroups;
       if (Group != CGM.getCodeGenOpts().XRaySelectedFunctionGroup &&
           !AlwaysXRayAttr)
@@ -851,9 +858,18 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     }
   }
 
-  if (CGM.getCodeGenOpts().getProfileInstr() != CodeGenOptions::ProfileNone)
-    if (CGM.isFunctionBlockedFromProfileInstr(Fn, Loc))
+  if (CGM.getCodeGenOpts().getProfileInstr() != CodeGenOptions::ProfileNone) {
+    switch (CGM.isFunctionBlockedFromProfileInstr(Fn, Loc)) {
+    case ProfileList::Skip:
+      Fn->addFnAttr(llvm::Attribute::SkipProfile);
+      break;
+    case ProfileList::Forbid:
       Fn->addFnAttr(llvm::Attribute::NoProfile);
+      break;
+    case ProfileList::Allow:
+      break;
+    }
+  }
 
   unsigned Count, Offset;
   if (const auto *Attr =
@@ -874,7 +890,9 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   // backends as they don't need it -- instructions on these architectures are
   // always atomically patchable at runtime.
   if (CGM.getCodeGenOpts().HotPatch &&
-      getContext().getTargetInfo().getTriple().isX86())
+      getContext().getTargetInfo().getTriple().isX86() &&
+      getContext().getTargetInfo().getTriple().getEnvironment() !=
+          llvm::Triple::CODE16)
     Fn->addFnAttr("patchable-function", "prologue-short-redirect");
 
   // Add no-jump-tables value.
@@ -941,7 +959,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   // If we're checking nullability, we need to know whether we can check the
   // return value. Initialize the flag to 'true' and refine it in EmitParmDecl.
   if (SanOpts.has(SanitizerKind::NullabilityReturn)) {
-    auto Nullability = FnRetTy->getNullability(getContext());
+    auto Nullability = FnRetTy->getNullability();
     if (Nullability && *Nullability == NullabilityKind::NonNull) {
       if (!(SanOpts.has(SanitizerKind::ReturnsNonnullAttribute) &&
             CurCodeDecl && CurCodeDecl->getAttr<ReturnsNonNullAttr>()))
@@ -1127,6 +1145,10 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   // Emit OpenMP specific initialization of the device functions.
   if (getLangOpts().OpenMP && CurCodeDecl)
     CGM.getOpenMPRuntime().emitFunctionProlog(*this, CurCodeDecl);
+
+  // Handle emitting HLSL entry functions.
+  if (D && D->hasAttr<HLSLShaderAttr>())
+    CGM.getHLSLRuntime().emitEntryFunction(FD, Fn);
 
   EmitFunctionProlog(*CurFnInfo, CurFn, Args);
 
@@ -1450,7 +1472,7 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
       llvm::Value *IsFalse = Builder.getFalse();
       EmitCheck(std::make_pair(IsFalse, SanitizerKind::Return),
                 SanitizerHandler::MissingReturn,
-                EmitCheckSourceLocation(FD->getLocation()), None);
+                EmitCheckSourceLocation(FD->getLocation()), std::nullopt);
     } else if (ShouldEmitUnreachable) {
       if (CGM.getCodeGenOpts().OptimizationLevel == 0)
         EmitTrapCall(llvm::Intrinsic::trap);
@@ -2429,8 +2451,6 @@ void CodeGenFunction::emitAlignmentAssumption(llvm::Value *PtrValue,
                                               SourceLocation AssumptionLoc,
                                               llvm::Value *Alignment,
                                               llvm::Value *OffsetValue) {
-  if (auto *CE = dyn_cast<CastExpr>(E))
-    E = CE->getSubExprAsWritten();
   QualType Ty = E->getType();
   SourceLocation Loc = E->getExprLoc();
 
@@ -2445,8 +2465,10 @@ llvm::Value *CodeGenFunction::EmitAnnotationCall(llvm::Function *AnnotationFn,
                                                  const AnnotateAttr *Attr) {
   SmallVector<llvm::Value *, 5> Args = {
       AnnotatedVal,
-      Builder.CreateBitCast(CGM.EmitAnnotationString(AnnotationStr), Int8PtrTy),
-      Builder.CreateBitCast(CGM.EmitAnnotationUnit(Location), Int8PtrTy),
+      Builder.CreateBitCast(CGM.EmitAnnotationString(AnnotationStr),
+                            ConstGlobalsPtrTy),
+      Builder.CreateBitCast(CGM.EmitAnnotationUnit(Location),
+                            ConstGlobalsPtrTy),
       CGM.EmitAnnotationLineNo(Location),
   };
   if (Attr)
@@ -2458,9 +2480,12 @@ void CodeGenFunction::EmitVarAnnotations(const VarDecl *D, llvm::Value *V) {
   assert(D->hasAttr<AnnotateAttr>() && "no annotate attribute");
   // FIXME We create a new bitcast for every annotation because that's what
   // llvm-gcc was doing.
+  unsigned AS = V->getType()->getPointerAddressSpace();
+  llvm::Type *I8PtrTy = Builder.getInt8PtrTy(AS);
   for (const auto *I : D->specific_attrs<AnnotateAttr>())
-    EmitAnnotationCall(CGM.getIntrinsic(llvm::Intrinsic::var_annotation),
-                       Builder.CreateBitCast(V, CGM.Int8PtrTy, V->getName()),
+    EmitAnnotationCall(CGM.getIntrinsic(llvm::Intrinsic::var_annotation,
+                                        {I8PtrTy, CGM.ConstGlobalsPtrTy}),
+                       Builder.CreateBitCast(V, I8PtrTy, V->getName()),
                        I->getAnnotation(), D->getLocation(), I);
 }
 
@@ -2473,8 +2498,8 @@ Address CodeGenFunction::EmitFieldAnnotations(const FieldDecl *D,
   unsigned AS = PTy ? PTy->getAddressSpace() : 0;
   llvm::PointerType *IntrinTy =
       llvm::PointerType::getWithSamePointeeType(CGM.Int8PtrTy, AS);
-  llvm::Function *F =
-      CGM.getIntrinsic(llvm::Intrinsic::ptr_annotation, IntrinTy);
+  llvm::Function *F = CGM.getIntrinsic(llvm::Intrinsic::ptr_annotation,
+                                       {IntrinTy, CGM.ConstGlobalsPtrTy});
 
   for (const auto *I : D->specific_attrs<AnnotateAttr>()) {
     // FIXME Always emit the cast inst so we can differentiate between
@@ -2597,8 +2622,30 @@ void CodeGenFunction::EmitSanitizerStatReport(llvm::SanitizerStatKind SSK) {
   CGM.getSanStats().create(IRB, SSK);
 }
 
-llvm::Value *
-CodeGenFunction::FormResolverCondition(const MultiVersionResolverOption &RO) {
+void CodeGenFunction::EmitKCFIOperandBundle(
+    const CGCallee &Callee, SmallVectorImpl<llvm::OperandBundleDef> &Bundles) {
+  const FunctionProtoType *FP =
+      Callee.getAbstractInfo().getCalleeFunctionProtoType();
+  if (FP)
+    Bundles.emplace_back("kcfi", CGM.CreateKCFITypeId(FP->desugar()));
+}
+
+llvm::Value *CodeGenFunction::FormAArch64ResolverCondition(
+    const MultiVersionResolverOption &RO) {
+  llvm::SmallVector<StringRef, 8> CondFeatures;
+  for (const StringRef &Feature : RO.Conditions.Features) {
+    // Form condition for features which are not yet enabled in target
+    if (!getContext().getTargetInfo().hasFeature(Feature))
+      CondFeatures.push_back(Feature);
+  }
+  if (!CondFeatures.empty()) {
+    return EmitAArch64CpuSupports(CondFeatures);
+  }
+  return nullptr;
+}
+
+llvm::Value *CodeGenFunction::FormX86ResolverCondition(
+    const MultiVersionResolverOption &RO) {
   llvm::Value *Condition = nullptr;
 
   if (!RO.Conditions.Architecture.empty())
@@ -2636,8 +2683,72 @@ static void CreateMultiVersionResolverReturn(CodeGenModule &CGM,
 
 void CodeGenFunction::EmitMultiVersionResolver(
     llvm::Function *Resolver, ArrayRef<MultiVersionResolverOption> Options) {
-  assert(getContext().getTargetInfo().getTriple().isX86() &&
-         "Only implemented for x86 targets");
+
+  llvm::Triple::ArchType ArchType =
+      getContext().getTargetInfo().getTriple().getArch();
+
+  switch (ArchType) {
+  case llvm::Triple::x86:
+  case llvm::Triple::x86_64:
+    EmitX86MultiVersionResolver(Resolver, Options);
+    return;
+  case llvm::Triple::aarch64:
+    EmitAArch64MultiVersionResolver(Resolver, Options);
+    return;
+
+  default:
+    assert(false && "Only implemented for x86 and AArch64 targets");
+  }
+}
+
+void CodeGenFunction::EmitAArch64MultiVersionResolver(
+    llvm::Function *Resolver, ArrayRef<MultiVersionResolverOption> Options) {
+  assert(!Options.empty() && "No multiversion resolver options found");
+  assert(Options.back().Conditions.Features.size() == 0 &&
+         "Default case must be last");
+  bool SupportsIFunc = getContext().getTargetInfo().supportsIFunc();
+  assert(SupportsIFunc &&
+         "Multiversion resolver requires target IFUNC support");
+  bool AArch64CpuInitialized = false;
+  llvm::BasicBlock *CurBlock = createBasicBlock("resolver_entry", Resolver);
+
+  for (const MultiVersionResolverOption &RO : Options) {
+    Builder.SetInsertPoint(CurBlock);
+    llvm::Value *Condition = FormAArch64ResolverCondition(RO);
+
+    // The 'default' or 'all features enabled' case.
+    if (!Condition) {
+      CreateMultiVersionResolverReturn(CGM, Resolver, Builder, RO.Function,
+                                       SupportsIFunc);
+      return;
+    }
+
+    if (!AArch64CpuInitialized) {
+      Builder.SetInsertPoint(CurBlock, CurBlock->begin());
+      EmitAArch64CpuInit();
+      AArch64CpuInitialized = true;
+      Builder.SetInsertPoint(CurBlock);
+    }
+
+    llvm::BasicBlock *RetBlock = createBasicBlock("resolver_return", Resolver);
+    CGBuilderTy RetBuilder(*this, RetBlock);
+    CreateMultiVersionResolverReturn(CGM, Resolver, RetBuilder, RO.Function,
+                                     SupportsIFunc);
+    CurBlock = createBasicBlock("resolver_else", Resolver);
+    Builder.CreateCondBr(Condition, RetBlock, CurBlock);
+  }
+
+  // If no default, emit an unreachable.
+  Builder.SetInsertPoint(CurBlock);
+  llvm::CallInst *TrapCall = EmitTrapCall(llvm::Intrinsic::trap);
+  TrapCall->setDoesNotReturn();
+  TrapCall->setDoesNotThrow();
+  Builder.CreateUnreachable();
+  Builder.ClearInsertionPoint();
+}
+
+void CodeGenFunction::EmitX86MultiVersionResolver(
+    llvm::Function *Resolver, ArrayRef<MultiVersionResolverOption> Options) {
 
   bool SupportsIFunc = getContext().getTargetInfo().supportsIFunc();
 
@@ -2648,7 +2759,7 @@ void CodeGenFunction::EmitMultiVersionResolver(
 
   for (const MultiVersionResolverOption &RO : Options) {
     Builder.SetInsertPoint(CurBlock);
-    llvm::Value *Condition = FormResolverCondition(RO);
+    llvm::Value *Condition = FormX86ResolverCondition(RO);
 
     // The 'default' or 'generic' case.
     if (!Condition) {

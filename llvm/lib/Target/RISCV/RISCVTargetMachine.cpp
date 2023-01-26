@@ -35,12 +35,37 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO.h"
+#include <optional>
 using namespace llvm;
 
 static cl::opt<bool> EnableRedundantCopyElimination(
     "riscv-enable-copyelim",
     cl::desc("Enable the redundant copy elimination pass"), cl::init(true),
     cl::Hidden);
+
+// FIXME: Unify control over GlobalMerge.
+static cl::opt<cl::boolOrDefault>
+    EnableGlobalMerge("riscv-enable-global-merge", cl::Hidden,
+                      cl::desc("Enable the global merge pass"));
+
+static cl::opt<bool>
+    EnableMachineCombiner("riscv-enable-machine-combiner",
+                          cl::desc("Enable the machine combiner pass"),
+                          cl::init(true), cl::Hidden);
+
+static cl::opt<unsigned> RVVVectorBitsMaxOpt(
+    "riscv-v-vector-bits-max",
+    cl::desc("Assume V extension vector registers are at most this big, "
+             "with zero meaning no maximum size is assumed."),
+    cl::init(0), cl::Hidden);
+
+static cl::opt<int> RVVVectorBitsMinOpt(
+    "riscv-v-vector-bits-min",
+    cl::desc("Assume V extension vector registers are at least this big, "
+             "with zero meaning no minimum size is assumed. A value of -1 "
+             "means use Zvl*b extension. This is primarily used to enable "
+             "autovectorization with fixed width vectors."),
+    cl::init(-1), cl::Hidden);
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
@@ -52,27 +77,30 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVCodeGenPreparePass(*PR);
   initializeRISCVMergeBaseOffsetOptPass(*PR);
   initializeRISCVSExtWRemovalPass(*PR);
+  initializeRISCVStripWSuffixPass(*PR);
+  initializeRISCVPreRAExpandPseudoPass(*PR);
   initializeRISCVExpandPseudoPass(*PR);
   initializeRISCVInsertVSETVLIPass(*PR);
+  initializeRISCVDAGToDAGISelPass(*PR);
 }
 
 static StringRef computeDataLayout(const Triple &TT) {
   if (TT.isArch64Bit())
-    return "e-m:e-p:64:64-i64:64-i128:128-n64-S128";
+    return "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128";
   assert(TT.isArch32Bit() && "only RV32 and RV64 are currently supported");
   return "e-m:e-p:32:32-i64:64-n32-S128";
 }
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
-                                           Optional<Reloc::Model> RM) {
+                                           std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
 }
 
 RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
                                        const TargetOptions &Options,
-                                       Optional<Reloc::Model> RM,
-                                       Optional<CodeModel::Model> CM,
+                                       std::optional<Reloc::Model> RM,
+                                       std::optional<CodeModel::Model> CM,
                                        CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
                         getEffectiveRelocModel(TT, RM),
@@ -97,7 +125,54 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
       TuneAttr.isValid() ? TuneAttr.getValueAsString().str() : CPU;
   std::string FS =
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
-  std::string Key = CPU + TuneCPU + FS;
+
+  unsigned RVVBitsMin = RVVVectorBitsMinOpt;
+  unsigned RVVBitsMax = RVVVectorBitsMaxOpt;
+
+  Attribute VScaleRangeAttr = F.getFnAttribute(Attribute::VScaleRange);
+  if (VScaleRangeAttr.isValid()) {
+    if (!RVVVectorBitsMinOpt.getNumOccurrences())
+      RVVBitsMin = VScaleRangeAttr.getVScaleRangeMin() * RISCV::RVVBitsPerBlock;
+    std::optional<unsigned> VScaleMax = VScaleRangeAttr.getVScaleRangeMax();
+    if (VScaleMax.has_value() && !RVVVectorBitsMaxOpt.getNumOccurrences())
+      RVVBitsMax = *VScaleMax * RISCV::RVVBitsPerBlock;
+  }
+
+  if (RVVBitsMin != -1U) {
+    // FIXME: Change to >= 32 when VLEN = 32 is supported.
+    assert((RVVBitsMin == 0 || (RVVBitsMin >= 64 && RVVBitsMin <= 65536 &&
+                                isPowerOf2_32(RVVBitsMin))) &&
+           "V or Zve* extension requires vector length to be in the range of "
+           "64 to 65536 and a power 2!");
+    assert((RVVBitsMax >= RVVBitsMin || RVVBitsMax == 0) &&
+           "Minimum V extension vector length should not be larger than its "
+           "maximum!");
+  }
+  assert((RVVBitsMax == 0 || (RVVBitsMax >= 64 && RVVBitsMax <= 65536 &&
+                              isPowerOf2_32(RVVBitsMax))) &&
+         "V or Zve* extension requires vector length to be in the range of "
+         "64 to 65536 and a power 2!");
+
+  if (RVVBitsMin != -1U) {
+    if (RVVBitsMax != 0) {
+      RVVBitsMin = std::min(RVVBitsMin, RVVBitsMax);
+      RVVBitsMax = std::max(RVVBitsMin, RVVBitsMax);
+    }
+
+    RVVBitsMin =
+        PowerOf2Floor((RVVBitsMin < 64 || RVVBitsMin > 65536) ? 0 : RVVBitsMin);
+  }
+  RVVBitsMax =
+      PowerOf2Floor((RVVBitsMax < 64 || RVVBitsMax > 65536) ? 0 : RVVBitsMax);
+
+  SmallString<512> Key;
+  Key += "RVVMin";
+  Key += std::to_string(RVVBitsMin);
+  Key += "RVVMax";
+  Key += std::to_string(RVVBitsMax);
+  Key += CPU;
+  Key += TuneCPU;
+  Key += FS;
   auto &I = SubtargetMap[Key];
   if (!I) {
     // This needs to be done before we create a new subtarget since any
@@ -114,9 +189,17 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
       }
       ABIName = ModuleTargetABI->getString();
     }
-    I = std::make_unique<RISCVSubtarget>(TargetTriple, CPU, TuneCPU, FS, ABIName, *this);
+    I = std::make_unique<RISCVSubtarget>(
+        TargetTriple, CPU, TuneCPU, FS, ABIName, RVVBitsMin, RVVBitsMax, *this);
   }
   return I.get();
+}
+
+MachineFunctionInfo *RISCVTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return RISCVMachineFunctionInfo::create<RISCVMachineFunctionInfo>(Allocator,
+                                                                    F, STI);
 }
 
 TargetTransformInfo
@@ -204,6 +287,13 @@ bool RISCVPassConfig::addPreISel() {
     // more details.
     addPass(createBarrierNoopPass());
   }
+
+  if (EnableGlobalMerge == cl::BOU_TRUE) {
+    addPass(createGlobalMergePass(TM, /* MaxOffset */ 2047,
+                                  /* OnlyOptimizeForSize */ false,
+                                  /* MergeExternalByDefault */ true));
+  }
+
   return false;
 }
 
@@ -250,12 +340,17 @@ void RISCVPassConfig::addPreEmitPass2() {
 
 void RISCVPassConfig::addMachineSSAOptimization() {
   TargetPassConfig::addMachineSSAOptimization();
+  if (EnableMachineCombiner)
+    addPass(&MachineCombinerID);
 
-  if (TM->getTargetTriple().getArch() == Triple::riscv64)
+  if (TM->getTargetTriple().getArch() == Triple::riscv64) {
     addPass(createRISCVSExtWRemovalPass());
+    addPass(createRISCVStripWSuffixPass());
+  }
 }
 
 void RISCVPassConfig::addPreRegAlloc() {
+  addPass(createRISCVPreRAExpandPseudoPass());
   if (TM->getOptLevel() != CodeGenOpt::None)
     addPass(createRISCVMergeBaseOffsetOptPass());
   addPass(createRISCVInsertVSETVLIPass());

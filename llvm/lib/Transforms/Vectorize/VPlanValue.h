@@ -85,35 +85,19 @@ public:
   const Value *getUnderlyingValue() const { return UnderlyingVal; }
 
   /// An enumeration for keeping track of the concrete subclass of VPValue that
-  /// are actually instantiated. Values of this enumeration are kept in the
-  /// SubclassID field of the VPValue objects. They are used for concrete
-  /// type identification.
+  /// are actually instantiated.
   enum {
-    VPValueSC,
-    VPVInstructionSC,
-    VPVMemoryInstructionSC,
-    VPVReductionSC,
-    VPVReplicateSC,
-    VPVWidenSC,
-    VPVWidenCallSC,
-    VPVWidenCanonicalIVSC,
-    VPVWidenGEPSC,
-    VPVWidenSelectSC,
-
-    // Phi-like VPValues. Need to be kept together.
-    VPVBlendSC,
-    VPVCanonicalIVPHISC,
-    VPVActiveLaneMaskPHISC,
-    VPVFirstOrderRecurrencePHISC,
-    VPVWidenPHISC,
-    VPVWidenIntOrFpInductionSC,
-    VPVWidenPointerInductionSC,
-    VPVPredInstPHI,
-    VPVReductionPHISC,
+    VPValueSC, /// A generic VPValue, like live-in values or defined by a recipe
+               /// that defines multiple values.
+    VPVRecipeSC /// A VPValue sub-class that is a VPRecipeBase.
   };
 
-  VPValue(Value *UV = nullptr, VPDef *Def = nullptr)
-      : VPValue(VPValueSC, UV, Def) {}
+  /// Create a live-in VPValue.
+  VPValue(Value *UV = nullptr) : VPValue(VPValueSC, UV, nullptr) {}
+  /// Create a VPValue for a \p Def which is a subclass of VPValue.
+  VPValue(VPDef *Def, Value *UV = nullptr) : VPValue(VPVRecipeSC, UV, Def) {}
+  /// Create a VPValue for a \p Def which defines multiple values.
+  VPValue(Value *UV, VPDef *Def) : VPValue(VPValueSC, UV, Def) {}
   VPValue(const VPValue &) = delete;
   VPValue &operator=(const VPValue &) = delete;
 
@@ -179,22 +163,32 @@ public:
 
   void replaceAllUsesWith(VPValue *New);
 
-  VPDef *getDef() { return Def; }
-  const VPDef *getDef() const { return Def; }
+  /// Returns the recipe defining this VPValue or nullptr if it is not defined
+  /// by a recipe, i.e. is a live-in.
+  VPRecipeBase *getDefiningRecipe();
+  const VPRecipeBase *getDefiningRecipe() const;
+
+  /// Returns true if this VPValue is defined by a recipe.
+  bool hasDefiningRecipe() const { return getDefiningRecipe(); }
 
   /// Returns the underlying IR value, if this VPValue is defined outside the
   /// scope of VPlan. Returns nullptr if the VPValue is defined by a VPDef
   /// inside a VPlan.
   Value *getLiveInIRValue() {
-    assert(!getDef() &&
+    assert(!hasDefiningRecipe() &&
            "VPValue is not a live-in; it is defined by a VPDef inside a VPlan");
     return getUnderlyingValue();
   }
   const Value *getLiveInIRValue() const {
-    assert(!getDef() &&
+    assert(!hasDefiningRecipe() &&
            "VPValue is not a live-in; it is defined by a VPDef inside a VPlan");
     return getUnderlyingValue();
   }
+
+  /// Returns true if the VPValue is defined outside any vector regions, i.e. it
+  /// is a live-in value.
+  /// TODO: Also handle recipes defined in pre-header blocks.
+  bool isDefinedOutsideVectorRegions() const { return !hasDefiningRecipe(); }
 };
 
 typedef DenseMap<Value *, VPValue *> Value2VPValueTy;
@@ -284,9 +278,6 @@ public:
     return const_operand_range(op_begin(), op_end());
   }
 
-  /// Method to support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const VPDef *Recipe);
-
   /// Returns true if the VPUser uses scalars of operand \p Op. Conservatively
   /// returns if only first (scalar) lane is used, as default.
   virtual bool usesScalars(const VPValue *Op) const {
@@ -320,7 +311,7 @@ class VPDef {
 
   /// Add \p V as a defined value by this VPDef.
   void addDefinedValue(VPValue *V) {
-    assert(V->getDef() == this &&
+    assert(V->Def == this &&
            "can only add VPValue already linked with this VPDef");
     DefinedValues.push_back(V);
   }
@@ -328,8 +319,7 @@ class VPDef {
   /// Remove \p V from the values defined by this VPDef. \p V must be a defined
   /// value of this VPDef.
   void removeDefinedValue(VPValue *V) {
-    assert(V->getDef() == this &&
-           "can only remove VPValue linked with this VPDef");
+    assert(V->Def == this && "can only remove VPValue linked with this VPDef");
     assert(is_contained(DefinedValues, V) &&
            "VPValue to remove must be in DefinedValues");
     erase_value(DefinedValues, V);
@@ -343,6 +333,7 @@ public:
   /// type identification.
   using VPRecipeTy = enum {
     VPBranchOnMaskSC,
+    VPDerivedIVSC,
     VPExpandSCEVSC,
     VPInstructionSC,
     VPInterleaveSC,
@@ -358,15 +349,17 @@ public:
 
     // Phi-like recipes. Need to be kept together.
     VPBlendSC,
+    VPPredInstPHISC,
+    // Header-phi recipes. Need to be kept together.
     VPCanonicalIVPHISC,
     VPActiveLaneMaskPHISC,
     VPFirstOrderRecurrencePHISC,
     VPWidenPHISC,
     VPWidenIntOrFpInductionSC,
     VPWidenPointerInductionSC,
-    VPPredInstPHISC,
     VPReductionPHISC,
     VPFirstPHISC = VPBlendSC,
+    VPFirstHeaderPHISC = VPCanonicalIVPHISC,
     VPLastPHISC = VPReductionPHISC,
   };
 

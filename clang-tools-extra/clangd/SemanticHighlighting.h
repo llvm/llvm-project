@@ -49,6 +49,8 @@ enum class HighlightingKind {
   Concept,
   Primitive,
   Macro,
+  Modifier,
+  Operator,
 
   // This one is different from the other kinds as it's a line style
   // rather than a token style.
@@ -61,7 +63,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingKind K);
 
 enum class HighlightingModifier {
   Declaration,
-  // FIXME: Definition (needs findExplicitReferences support)
+  Definition,
   Deprecated,
   Deduced,
   Readonly,
@@ -71,6 +73,9 @@ enum class HighlightingModifier {
   DependentName,
   DefaultLibrary,
   UsedAsMutableReference,
+  UsedAsMutablePointer,
+  ConstructorOrDestructor,
+  UserDefined,
 
   FunctionScope,
   ClassScope,

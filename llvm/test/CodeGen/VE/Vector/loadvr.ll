@@ -4,50 +4,50 @@
 @v256i64 = common dso_local local_unnamed_addr global <256 x i64> zeroinitializer, align 16
 
 ; Function Attrs: norecurse nounwind readonly
-define fastcc <256 x i64> @loadv256i64(<256 x i64>* nocapture readonly) {
+define fastcc <256 x i64> @loadv256i64(ptr nocapture readonly) {
 ; CHECK-LABEL: loadv256i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s1, 256
 ; CHECK-NEXT:    lvl %s1
 ; CHECK-NEXT:    vld %v0, 8, %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %2 = load <256 x i64>, <256 x i64>* %0, align 16
+  %2 = load <256 x i64>, ptr %0, align 16
   ret <256 x i64> %2
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define fastcc <256 x double> @loadv256f64(<256 x double>* nocapture readonly) {
+define fastcc <256 x double> @loadv256f64(ptr nocapture readonly) {
 ; CHECK-LABEL: loadv256f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s1, 256
 ; CHECK-NEXT:    lvl %s1
 ; CHECK-NEXT:    vld %v0, 8, %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %2 = load <256 x double>, <256 x double>* %0, align 16
+  %2 = load <256 x double>, ptr %0, align 16
   ret <256 x double> %2
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define fastcc <256 x i32> @loadv256i32(<256 x i32>* nocapture readonly) {
+define fastcc <256 x i32> @loadv256i32(ptr nocapture readonly) {
 ; CHECK-LABEL: loadv256i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s1, 256
 ; CHECK-NEXT:    lvl %s1
 ; CHECK-NEXT:    vldl.zx %v0, 4, %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %2 = load <256 x i32>, <256 x i32>* %0, align 16
+  %2 = load <256 x i32>, ptr %0, align 16
   ret <256 x i32> %2
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define fastcc <256 x float> @loadv256f32(<256 x float>* nocapture readonly) {
+define fastcc <256 x float> @loadv256f32(ptr nocapture readonly) {
 ; CHECK-LABEL: loadv256f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s1, 256
 ; CHECK-NEXT:    lvl %s1
 ; CHECK-NEXT:    vldu %v0, 4, %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %2 = load <256 x float>, <256 x float>* %0, align 16
+  %2 = load <256 x float>, ptr %0, align 16
   ret <256 x float> %2
 }
 
@@ -74,7 +74,7 @@ define fastcc <256 x i64> @loadv256i64stk() {
 ; CHECK-NEXT:    lea %s11, 2048(, %s11)
 ; CHECK-NEXT:    b.l.t (, %s10)
   %addr = alloca <256 x i64>, align 16
-  %1 = load <256 x i64>, <256 x i64>* %addr, align 16
+  %1 = load <256 x i64>, ptr %addr, align 16
   ret <256 x i64> %1
 }
 
@@ -89,6 +89,6 @@ define fastcc <256 x i64> @loadv256i64com() {
 ; CHECK-NEXT:    lvl %s1
 ; CHECK-NEXT:    vld %v0, 8, %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %1 = load <256 x i64>, <256 x i64>* @v256i64, align 16
+  %1 = load <256 x i64>, ptr @v256i64, align 16
   ret <256 x i64> %1
 }

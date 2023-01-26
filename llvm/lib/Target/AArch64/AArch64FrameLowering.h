@@ -18,16 +18,11 @@
 
 namespace llvm {
 
-class MCCFIInstruction;
-
 class AArch64FrameLowering : public TargetFrameLowering {
 public:
   explicit AArch64FrameLowering()
       : TargetFrameLowering(StackGrowsDown, Align(16), 0, Align(16),
                             true /*StackRealignable*/) {}
-
-  void emitCalleeSavedFrameMoves(MachineBasicBlock &MBB,
-                                 MachineBasicBlock::iterator MBBI) const;
 
   void resetCFIToInitialState(MachineBasicBlock &MBB) const override;
 

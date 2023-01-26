@@ -6,6 +6,7 @@
 define fastcc i64 @extract_rr_v256i64(i32 signext %idx, <256 x i64> %v) {
 ; CHECK-LABEL: extract_rr_v256i64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lvs %s0, %v0(%s0)
 ; CHECK-NEXT:    b.l.t (, %s10)
   %ret = extractelement <256 x i64> %v, i32 %idx
@@ -45,6 +46,7 @@ define fastcc i64 @extract_ri_v512i64(<512 x i64> %v) {
 define fastcc i32 @extract_rr_v256i32(i32 signext %idx, <256 x i32> %v) {
 ; CHECK-LABEL: extract_rr_v256i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lvs %s0, %v0(%s0)
 ; CHECK-NEXT:    b.l.t (, %s10)
   %ret = extractelement <256 x i32> %v, i32 %idx
@@ -84,7 +86,10 @@ define fastcc i32 @extract_ri_v512i32(<512 x i32> %v) {
 define fastcc i32 @extract_rr_v512i32(<512 x i32> %v, i32 signext %idx) {
 ; CHECK-LABEL: extract_rr_v512i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srl %s1, %s0, 1
+; CHECK-NEXT:    lea %s1, -2
+; CHECK-NEXT:    and %s1, %s1, (32)0
+; CHECK-NEXT:    and %s1, %s0, %s1
+; CHECK-NEXT:    srl %s1, %s1, 1
 ; CHECK-NEXT:    lvs %s1, %v0(%s1)
 ; CHECK-NEXT:    nnd %s0, %s0, (63)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 5
@@ -100,6 +105,7 @@ define fastcc i32 @extract_rr_v512i32(<512 x i32> %v, i32 signext %idx) {
 define fastcc double @extract_rr_v256f64(i32 signext %idx, <256 x double> %v) {
 ; CHECK-LABEL: extract_rr_v256f64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lvs %s0, %v0(%s0)
 ; CHECK-NEXT:    b.l.t (, %s10)
   %ret = extractelement <256 x double> %v, i32 %idx
@@ -139,6 +145,7 @@ define fastcc double @extract_ri_v512f64(<512 x double> %v) {
 define fastcc float @extract_rr_v256f32(i32 signext %idx, <256 x float> %v) {
 ; CHECK-LABEL: extract_rr_v256f32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lvs %s0, %v0(%s0)
 ; CHECK-NEXT:    b.l.t (, %s10)
   %ret = extractelement <256 x float> %v, i32 %idx
@@ -179,7 +186,10 @@ define fastcc float @extract_ri_v512f32(<512 x float> %v) {
 define fastcc float @extract_rr_v512f32(<512 x float> %v, i32 signext %idx) {
 ; CHECK-LABEL: extract_rr_v512f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srl %s1, %s0, 1
+; CHECK-NEXT:    lea %s1, -2
+; CHECK-NEXT:    and %s1, %s1, (32)0
+; CHECK-NEXT:    and %s1, %s0, %s1
+; CHECK-NEXT:    srl %s1, %s1, 1
 ; CHECK-NEXT:    lvs %s1, %v0(%s1)
 ; CHECK-NEXT:    nnd %s0, %s0, (63)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 5

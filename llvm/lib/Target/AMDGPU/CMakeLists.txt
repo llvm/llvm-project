@@ -92,6 +92,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUReplaceLDSUseWithPointer.cpp
   AMDGPUResourceUsageAnalysis.cpp
   AMDGPURewriteOutArguments.cpp
+  AMDGPURewriteUndefForPHI.cpp
   AMDGPUSetWavePriority.cpp
   AMDGPUSubtarget.cpp
   AMDGPUTargetMachine.cpp
@@ -176,6 +177,7 @@ add_llvm_target(AMDGPUCodeGen
   SelectionDAG
   Support
   Target
+  TargetParser
   TransformUtils
   Vectorize
   GlobalISel

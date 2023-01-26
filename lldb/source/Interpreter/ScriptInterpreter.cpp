@@ -21,6 +21,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <memory>
+#include <optional>
 #include <string>
 
 using namespace lldb;
@@ -28,10 +29,12 @@ using namespace lldb_private;
 
 ScriptInterpreter::ScriptInterpreter(
     Debugger &debugger, lldb::ScriptLanguage script_lang,
-    lldb::ScriptedProcessInterfaceUP scripted_process_interface_up)
+    lldb::ScriptedProcessInterfaceUP scripted_process_interface_up,
+    lldb::ScriptedPlatformInterfaceUP scripted_platform_interface_up)
     : m_debugger(debugger), m_script_lang(script_lang),
-      m_scripted_process_interface_up(
-          std::move(scripted_process_interface_up)) {}
+      m_scripted_process_interface_up(std::move(scripted_process_interface_up)),
+      m_scripted_platform_interface_up(
+          std::move(scripted_platform_interface_up)) {}
 
 void ScriptInterpreter::CollectDataForBreakpointCommandCallback(
     std::vector<std::reference_wrapper<BreakpointOptions>> &bp_options_vec,
@@ -82,16 +85,16 @@ ScriptInterpreter::GetDataExtractorFromSBData(const lldb::SBData &data) const {
 Status
 ScriptInterpreter::GetStatusFromSBError(const lldb::SBError &error) const {
   if (error.m_opaque_up)
-    return *error.m_opaque_up.get();
+    return *error.m_opaque_up;
 
   return Status();
 }
 
-llvm::Optional<MemoryRegionInfo>
+std::optional<MemoryRegionInfo>
 ScriptInterpreter::GetOpaqueTypeFromSBMemoryRegionInfo(
     const lldb::SBMemoryRegionInfo &mem_region) const {
   if (!mem_region.m_opaque_up)
-    return llvm::None;
+    return std::nullopt;
   return *mem_region.m_opaque_up.get();
 }
 

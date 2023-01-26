@@ -14,6 +14,7 @@
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/StreamString.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -133,10 +134,10 @@ uint32_t SBMemoryRegionInfo::GetNumDirtyPages() {
   LLDB_INSTRUMENT_VA(this);
 
   uint32_t num_dirty_pages = 0;
-  const llvm::Optional<std::vector<addr_t>> &dirty_page_list =
+  const std::optional<std::vector<addr_t>> &dirty_page_list =
       m_opaque_up->GetDirtyPageList();
   if (dirty_page_list)
-    num_dirty_pages = dirty_page_list.value().size();
+    num_dirty_pages = dirty_page_list->size();
 
   return num_dirty_pages;
 }
@@ -145,10 +146,10 @@ addr_t SBMemoryRegionInfo::GetDirtyPageAddressAtIndex(uint32_t idx) {
   LLDB_INSTRUMENT_VA(this, idx);
 
   addr_t dirty_page_addr = LLDB_INVALID_ADDRESS;
-  const llvm::Optional<std::vector<addr_t>> &dirty_page_list =
+  const std::optional<std::vector<addr_t>> &dirty_page_list =
       m_opaque_up->GetDirtyPageList();
-  if (dirty_page_list && idx < dirty_page_list.value().size())
-    dirty_page_addr = dirty_page_list.value()[idx];
+  if (dirty_page_list && idx < dirty_page_list->size())
+    dirty_page_addr = (*dirty_page_list)[idx];
 
   return dirty_page_addr;
 }

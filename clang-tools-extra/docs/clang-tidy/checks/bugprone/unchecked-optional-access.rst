@@ -8,7 +8,7 @@ results. Therefore, it may be more resource intensive (RAM, CPU) than the
 average clang-tidy check.
 
 This check identifies unsafe accesses to values contained in
-``std::optional<T>``, ``absl::optional<T>``, or ``base::Optional<T>``
+``std::optional<T>``, ``absl::optional<T>``, or ``base::std::optional<T>``
 objects. Below we will refer to all these types collectively as
 ``optional<T>``.
 
@@ -269,7 +269,7 @@ The check is aware of aliases of optional types that are created via
 Lambdas
 -------
 
-The check does not currently report unsafe optional acceses in lambdas.
+The check does not currently report unsafe optional accesses in lambdas.
 A future version will expand the scope to lambdas, following the rules
 outlined above. It is best to follow the same principles when using
 optionals in lambdas.

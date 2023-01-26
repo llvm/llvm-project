@@ -3,7 +3,7 @@
 ; and another bb outside of the loop. This case is not
 ; properly handled by LoopUnroll, currently.
 
-; RUN: opt -loop-unroll -verify-dom-info %s
+; RUN: opt -passes=loop-unroll -verify-dom-info %s
 ; REQUIRES: asserts
 
 define void @tinkywinky(i1 %patatino) {

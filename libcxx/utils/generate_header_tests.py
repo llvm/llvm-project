@@ -19,9 +19,12 @@ header_restrictions = {
 
     "filesystem": "!defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)",
 
+    # TODO LLVM17: simplify this to __cplusplus >= 202002L
+    "coroutine": "(defined(__cpp_impl_coroutine) && __cpp_impl_coroutine >= 201902L) || (defined(__cpp_coroutines) && __cpp_coroutines >= 201703L)",
+
     "clocale": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
     "codecvt": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "fstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
+    "fstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION) && !defined(_LIBCPP_HAS_NO_FSTREAM)",
     "iomanip": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
     "ios": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
     "iostream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
@@ -64,7 +67,7 @@ header_restrictions = {
 private_headers_still_public_in_modules = [
     '__assert', '__bsd_locale_defaults.h', '__bsd_locale_fallbacks.h', '__config',
     '__config_site.in', '__debug', '__hash_table',
-    '__threading_support', '__tree', '__undef_macros'
+    '__threading_support', '__tree', '__undef_macros', '__verbose_abort'
 ]
 
 def find_script(file):
@@ -113,7 +116,8 @@ def produce(test_file, variables):
 
 def is_header(file):
     """Returns whether the given file is a header (i.e. not a directory or the modulemap file)."""
-    return not file.is_dir() and not file.name == 'module.modulemap.in'
+    return not file.is_dir() and not file.name == 'module.modulemap.in' and file.name != 'libcxx.imp'
+
 
 def main():
     monorepo_root = pathlib.Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -136,7 +140,7 @@ def main():
         'private_headers_still_public_in_modules': private_headers_still_public_in_modules
     }
 
-    produce(test.joinpath('libcxx/assertions/headers_declare_assertion_handler.sh.cpp'), variables)
+    produce(test.joinpath('libcxx/assertions/headers_declare_verbose_abort.sh.cpp'), variables)
     produce(test.joinpath('libcxx/clang_tidy.sh.cpp'), variables)
     produce(test.joinpath('libcxx/double_include.sh.cpp'), variables)
     produce(test.joinpath('libcxx/min_max_macros.compile.pass.cpp'), variables)

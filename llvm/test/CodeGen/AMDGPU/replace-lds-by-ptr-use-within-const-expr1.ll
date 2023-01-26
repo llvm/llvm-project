@@ -18,18 +18,16 @@
 ; Pointer replacement code should be added.
 define void @f0(i32 %x) {
 ; CHECK-LABEL: entry:
-; CHECK:   %0 = load i16, i16 addrspace(3)* @used_only_within_func.ptr, align 2
-; CHECK:   %1 = getelementptr i8, i8 addrspace(3)* null, i16 %0
-; CHECK:   %2 = bitcast i8 addrspace(3)* %1 to [4 x i32] addrspace(3)*
-; CHECK:   %3 = getelementptr inbounds [4 x i32], [4 x i32] addrspace(3)* %2, i32 0, i32 0
-; CHECK:   %4 = addrspacecast i32 addrspace(3)* %3 to i32*
-; CHECK:   %5 = ptrtoint i32* %4 to i64
-; CHECK:   %6 = add i64 %5, %5
-; CHECK:   %7 = inttoptr i64 %6 to i32*
-; CHECK:   store i32 %x, i32* %7, align 4
+; CHECK:   %0 = load i16, ptr addrspace(3) @used_only_within_func.ptr, align 2
+; CHECK:   %1 = getelementptr i8, ptr addrspace(3) null, i16 %0
+; CHECK:   %2 = addrspacecast ptr addrspace(3) %1 to ptr
+; CHECK:   %3 = ptrtoint ptr %2 to i64
+; CHECK:   %4 = add i64 %3, %3
+; CHECK:   %5 = inttoptr i64 %4 to ptr
+; CHECK:   store i32 %x, ptr %5, align 4
 ; CHECK:   ret void
 entry:
-  store i32 %x, i32* inttoptr (i64 add (i64 ptrtoint (i32* addrspacecast (i32 addrspace(3)* bitcast ([4 x i32] addrspace(3)* @used_only_within_func to i32 addrspace(3)*) to i32*) to i64), i64 ptrtoint (i32* addrspacecast (i32 addrspace(3)* bitcast ([4 x i32] addrspace(3)* @used_only_within_func to i32 addrspace(3)*) to i32*) to i64)) to i32*), align 4
+  store i32 %x, ptr inttoptr (i64 add (i64 ptrtoint (ptr addrspacecast (ptr addrspace(3) @used_only_within_func to ptr) to i64), i64 ptrtoint (ptr addrspacecast (ptr addrspace(3) @used_only_within_func to ptr) to i64)) to ptr), align 4
   ret void
 }
 
@@ -41,7 +39,7 @@ define amdgpu_kernel void @k0() {
 ; CHECK:   br i1 %1, label %2, label %3
 ;
 ; CHECK-LABEL: 2:
-; CHECK:   store i16 ptrtoint ([4 x i32] addrspace(3)* @used_only_within_func to i16), i16 addrspace(3)* @used_only_within_func.ptr, align 2
+; CHECK:   store i16 ptrtoint (ptr addrspace(3) @used_only_within_func to i16), ptr addrspace(3) @used_only_within_func.ptr, align 2
 ; CHECK:   br label %3
 ;
 ; CHECK-LABEL: 3:

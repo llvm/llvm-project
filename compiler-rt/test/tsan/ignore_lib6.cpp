@@ -6,8 +6,8 @@
 
 // Copied from ignore_lib5.cpp:
 // REQUIRES: stable-runtime
-// UNSUPPORTED: powerpc64le
-// UNSUPPORTED: netbsd
+// UNSUPPORTED: target=powerpc64le{{.*}}
+// UNSUPPORTED: target={{.*netbsd.*}}
 
 // Test that pthread_detach works in libraries ignored by called_from_lib.
 // For more context see:

@@ -25,9 +25,9 @@
 #include "index/Index.h"
 #include "support/Path.h"
 #include "clang/Tooling/Core/Replacement.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 #include <string>
 
 namespace clang {
@@ -73,7 +73,7 @@ public:
 
   struct Effect {
     /// A message to be displayed to the user.
-    llvm::Optional<std::string> ShowMessage;
+    std::optional<std::string> ShowMessage;
     FileEdits ApplyEdits;
     /// Whether the edits should be formatted before presenting to the client.
     /// Note that it applies to all files.

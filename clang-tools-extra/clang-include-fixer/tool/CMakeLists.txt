@@ -20,9 +20,9 @@ target_link_libraries(clang-include-fixer
   findAllSymbols
   )
 
-install(PROGRAMS clang-include-fixer.el
+install(FILES clang-include-fixer.el
   DESTINATION "${CMAKE_INSTALL_DATADIR}/clang"
   COMPONENT clang-include-fixer)
-install(PROGRAMS clang-include-fixer.py
+install(FILES clang-include-fixer.py
   DESTINATION "${CMAKE_INSTALL_DATADIR}/clang"
   COMPONENT clang-include-fixer)

@@ -7,7 +7,7 @@
 
 # CHECK: Bad machine code: invalid instruction when using jump guards!
 --- |
-  define i32 @fooTail(i32 (i32)* nocapture %f1) {
+  define i32 @fooTail(ptr nocapture %f1) {
   entry:
     %0 = tail call i32 %f1(i32 14)
     ret i32 %0

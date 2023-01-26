@@ -384,7 +384,7 @@ TYPE_PARSER(construct<PrivateOrSequence>(Parser<PrivateStmt>{}) ||
 
 // R730 end-type-stmt -> END TYPE [type-name]
 TYPE_PARSER(construct<EndTypeStmt>(
-    recovery("END TYPE" >> maybe(name), endStmtErrorRecovery)))
+    recovery("END TYPE" >> maybe(name), namedConstructEndStmtErrorRecovery)))
 
 // R731 sequence-stmt -> SEQUENCE
 TYPE_PARSER(construct<SequenceStmt>("SEQUENCE"_tok))
@@ -522,6 +522,9 @@ TYPE_CONTEXT_PARSER("type bound procedure binding"_en_US,
 // R749 type-bound-procedure-stmt ->
 //        PROCEDURE [[, bind-attr-list] ::] type-bound-proc-decl-list |
 //        PROCEDURE ( interface-name ) , bind-attr-list :: binding-name-list
+// The "::" is required by the standard (C768) in the first production if
+// any type-bound-proc-decl has a "=>', but it's not strictly necessary to
+// avoid a bad parse.
 TYPE_CONTEXT_PARSER("type bound PROCEDURE statement"_en_US,
     "PROCEDURE" >>
         (construct<TypeBoundProcedureStmt>(
@@ -531,6 +534,15 @@ TYPE_CONTEXT_PARSER("type bound PROCEDURE statement"_en_US,
                      "," >> nonemptyList(Parser<BindAttr>{}), ok),
                  localRecovery("expected list of binding names"_err_en_US,
                      "::" >> listOfNames, SkipTo<'\n'>{}))) ||
+            construct<TypeBoundProcedureStmt>(construct<
+                TypeBoundProcedureStmt::WithoutInterface>(
+                pure<std::list<BindAttr>>(),
+                nonemptyList(
+                    "expected type bound procedure declarations"_err_en_US,
+                    construct<TypeBoundProcDecl>(name,
+                        maybe(extension<LanguageFeature::MissingColons>(
+                            "type-bound procedure statement should have '::' if it has '=>'"_port_en_US,
+                            "=>" >> name)))))) ||
             construct<TypeBoundProcedureStmt>(
                 construct<TypeBoundProcedureStmt::WithoutInterface>(
                     optionalListBeforeColons(Parser<BindAttr>{}),
@@ -607,7 +619,7 @@ TYPE_PARSER(
     construct<Enumerator>(namedConstant, maybe("=" >> scalarIntConstantExpr)))
 
 // R763 end-enum-stmt -> END ENUM
-TYPE_PARSER(recovery("END ENUM"_tok, "END" >> SkipPast<'\n'>{}) >>
+TYPE_PARSER(recovery("END ENUM"_tok, constructEndStmtErrorRecovery) >>
     construct<EndEnumStmt>())
 
 // R801 type-declaration-stmt ->
@@ -758,8 +770,8 @@ TYPE_PARSER(construct<AccessStmt>(accessSpec,
             Parser<AccessId>{}))))
 
 // R828 access-id -> access-name | generic-spec
-TYPE_PARSER(construct<AccessId>(indirect(genericSpec)) ||
-    construct<AccessId>(name)) // initially ambiguous with genericSpec
+// "access-name" is ambiguous with "generic-spec"
+TYPE_PARSER(construct<AccessId>(indirect(genericSpec)))
 
 // R829 allocatable-stmt -> ALLOCATABLE [::] allocatable-decl-list
 TYPE_PARSER(construct<AllocatableStmt>("ALLOCATABLE" >> maybe("::"_tok) >>
@@ -1197,14 +1209,20 @@ TYPE_PARSER(construct<StatOrErrmsg>("STAT =" >> statVariable) ||
 
 // Directives, extensions, and deprecated statements
 // !DIR$ IGNORE_TKR [ [(tkr...)] name ]...
+// !DIR$ LOOP COUNT (n1[, n2]...)
 // !DIR$ name...
 constexpr auto beginDirective{skipStuffBeforeStatement >> "!"_ch};
 constexpr auto endDirective{space >> endOfLine};
 constexpr auto ignore_tkr{
     "DIR$ IGNORE_TKR" >> optionalList(construct<CompilerDirective::IgnoreTKR>(
                              defaulted(parenthesized(some("tkr"_ch))), name))};
+constexpr auto loopCount{
+    "DIR$ LOOP COUNT" >> construct<CompilerDirective::LoopCount>(
+                             parenthesized(nonemptyList(digitString64)))};
+
 TYPE_PARSER(beginDirective >>
     sourced(construct<CompilerDirective>(ignore_tkr) ||
+        construct<CompilerDirective>(loopCount) ||
         construct<CompilerDirective>(
             "DIR$" >> many(construct<CompilerDirective::NameValue>(name,
                           maybe(("="_tok || ":"_tok) >> digitString64))))) /

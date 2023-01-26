@@ -1,4 +1,4 @@
-// XFAIL: aix
+// XFAIL: target={{.*}}-aix{{.*}}
 
 // Test to ensure -emit-llvm and -emit-llvm-bc work when invoking the
 // ThinLTO backend path.

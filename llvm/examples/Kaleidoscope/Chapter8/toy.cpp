@@ -1,5 +1,4 @@
 #include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
@@ -868,7 +867,7 @@ Value *IfExprAST::codegen() {
   ThenBB = Builder->GetInsertBlock();
 
   // Emit else block.
-  TheFunction->getBasicBlockList().push_back(ElseBB);
+  TheFunction->insert(TheFunction->end(), ElseBB);
   Builder->SetInsertPoint(ElseBB);
 
   Value *ElseV = Else->codegen();
@@ -880,7 +879,7 @@ Value *IfExprAST::codegen() {
   ElseBB = Builder->GetInsertBlock();
 
   // Emit merge block.
-  TheFunction->getBasicBlockList().push_back(MergeBB);
+  TheFunction->insert(TheFunction->end(), MergeBB);
   Builder->SetInsertPoint(MergeBB);
   PHINode *PN = Builder->CreatePHI(Type::getDoubleTy(*TheContext), 2, "iftmp");
 
@@ -1243,7 +1242,7 @@ int main() {
   auto Features = "";
 
   TargetOptions opt;
-  auto RM = Optional<Reloc::Model>();
+  auto RM = std::optional<Reloc::Model>();
   auto TheTargetMachine =
       Target->createTargetMachine(TargetTriple, CPU, Features, opt, RM);
 

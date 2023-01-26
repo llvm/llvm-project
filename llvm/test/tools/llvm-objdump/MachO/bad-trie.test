@@ -31,5 +31,5 @@ LOOP_OF_CHILDERN: macho-trie-node-loop': truncated or malformed object (loop in 
 RUN: not llvm-objdump --macho --exports-trie %p/Inputs/macho-trie-bad-library-ordinal 2>&1 | FileCheck --check-prefix BAD_LIBRARY_ORDINAL %s 
 BAD_LIBRARY_ORDINAL: macho-trie-bad-library-ordinal': truncated or malformed object (bad library ordinal: 69 (max 3) in export trie data at node: 0x33)
 
-RUN: not llvm-objdump --macho --exports-trie %p/Inputs/macho-inconsistant-export 2>&1 | FileCheck --check-prefix INCONSISTANT_EXPORT_SIZE %s 
-INCONSISTANT_EXPORT_SIZE: macho-inconsistant-export': truncated or malformed object (inconsistant export info size: 0x9 where actual size was: 0x5 in export trie data at node: 0x53)
+RUN: not llvm-objdump --macho --exports-trie %p/Inputs/macho-inconsistent-export 2>&1 | FileCheck --check-prefix INCONSISTENT_EXPORT_SIZE %s
+INCONSISTENT_EXPORT_SIZE: macho-inconsistent-export': truncated or malformed object (inconsistent export info size: 0x9 where actual size was: 0x5 in export trie data at node: 0x53)

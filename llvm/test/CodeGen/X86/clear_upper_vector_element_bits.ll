@@ -693,52 +693,52 @@ define <16 x i8> @_clearupper16xi8b(<16 x i8>) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rbx
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SSE2-NEXT:    movq %xmm1, %r10
-; SSE2-NEXT:    movq %r10, %r8
-; SSE2-NEXT:    shrq $56, %r8
+; SSE2-NEXT:    movq %xmm1, %rdx
+; SSE2-NEXT:    movq %rdx, %rax
+; SSE2-NEXT:    shrq $56, %rax
+; SSE2-NEXT:    andl $15, %eax
+; SSE2-NEXT:    movq %rdx, %rcx
+; SSE2-NEXT:    shrq $48, %rcx
+; SSE2-NEXT:    andl $15, %ecx
+; SSE2-NEXT:    movq %rdx, %rsi
+; SSE2-NEXT:    shrq $40, %rsi
+; SSE2-NEXT:    andl $15, %esi
+; SSE2-NEXT:    movq %rdx, %r8
+; SSE2-NEXT:    shrq $32, %r8
 ; SSE2-NEXT:    andl $15, %r8d
+; SSE2-NEXT:    movq %xmm0, %r10
+; SSE2-NEXT:    movq %r10, %rdi
+; SSE2-NEXT:    shrq $56, %rdi
+; SSE2-NEXT:    andl $15, %edi
 ; SSE2-NEXT:    movq %r10, %r9
 ; SSE2-NEXT:    shrq $48, %r9
 ; SSE2-NEXT:    andl $15, %r9d
-; SSE2-NEXT:    movq %r10, %rsi
-; SSE2-NEXT:    shrq $40, %rsi
-; SSE2-NEXT:    andl $15, %esi
 ; SSE2-NEXT:    movq %r10, %r11
-; SSE2-NEXT:    shrq $32, %r11
+; SSE2-NEXT:    shrq $40, %r11
 ; SSE2-NEXT:    andl $15, %r11d
-; SSE2-NEXT:    movq %xmm0, %rax
-; SSE2-NEXT:    movq %rax, %rdx
-; SSE2-NEXT:    shrq $56, %rdx
-; SSE2-NEXT:    andl $15, %edx
-; SSE2-NEXT:    movq %rax, %rcx
-; SSE2-NEXT:    shrq $48, %rcx
-; SSE2-NEXT:    andl $15, %ecx
-; SSE2-NEXT:    movq %rax, %rdi
-; SSE2-NEXT:    shrq $40, %rdi
-; SSE2-NEXT:    andl $15, %edi
-; SSE2-NEXT:    movq %rax, %rbx
+; SSE2-NEXT:    movq %r10, %rbx
 ; SSE2-NEXT:    shrq $32, %rbx
 ; SSE2-NEXT:    andl $15, %ebx
 ; SSE2-NEXT:    shlq $32, %rbx
-; SSE2-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
-; SSE2-NEXT:    orq %rbx, %rax
-; SSE2-NEXT:    shlq $40, %rdi
-; SSE2-NEXT:    orq %rax, %rdi
-; SSE2-NEXT:    shlq $48, %rcx
-; SSE2-NEXT:    orq %rdi, %rcx
-; SSE2-NEXT:    shlq $56, %rdx
-; SSE2-NEXT:    orq %rcx, %rdx
-; SSE2-NEXT:    shlq $32, %r11
 ; SSE2-NEXT:    andl $252645135, %r10d # imm = 0xF0F0F0F
-; SSE2-NEXT:    orq %r11, %r10
-; SSE2-NEXT:    shlq $40, %rsi
-; SSE2-NEXT:    orq %r10, %rsi
+; SSE2-NEXT:    orq %rbx, %r10
+; SSE2-NEXT:    shlq $40, %r11
+; SSE2-NEXT:    orq %r10, %r11
 ; SSE2-NEXT:    shlq $48, %r9
-; SSE2-NEXT:    orq %rsi, %r9
-; SSE2-NEXT:    shlq $56, %r8
-; SSE2-NEXT:    orq %r9, %r8
-; SSE2-NEXT:    movq %rdx, %xmm0
-; SSE2-NEXT:    movq %r8, %xmm1
+; SSE2-NEXT:    orq %r11, %r9
+; SSE2-NEXT:    shlq $56, %rdi
+; SSE2-NEXT:    orq %r9, %rdi
+; SSE2-NEXT:    shlq $32, %r8
+; SSE2-NEXT:    andl $252645135, %edx # imm = 0xF0F0F0F
+; SSE2-NEXT:    orq %r8, %rdx
+; SSE2-NEXT:    shlq $40, %rsi
+; SSE2-NEXT:    orq %rdx, %rsi
+; SSE2-NEXT:    shlq $48, %rcx
+; SSE2-NEXT:    orq %rsi, %rcx
+; SSE2-NEXT:    shlq $56, %rax
+; SSE2-NEXT:    orq %rcx, %rax
+; SSE2-NEXT:    movq %rdi, %xmm0
+; SSE2-NEXT:    movq %rax, %xmm1
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE2-NEXT:    popq %rbx
 ; SSE2-NEXT:    retq
@@ -746,52 +746,52 @@ define <16 x i8> @_clearupper16xi8b(<16 x i8>) nounwind {
 ; SSE42-LABEL: _clearupper16xi8b:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    pushq %rbx
-; SSE42-NEXT:    pextrq $1, %xmm0, %r10
-; SSE42-NEXT:    movq %r10, %r8
-; SSE42-NEXT:    shrq $56, %r8
+; SSE42-NEXT:    pextrq $1, %xmm0, %rdx
+; SSE42-NEXT:    movq %rdx, %rax
+; SSE42-NEXT:    shrq $56, %rax
+; SSE42-NEXT:    andl $15, %eax
+; SSE42-NEXT:    movq %rdx, %rcx
+; SSE42-NEXT:    shrq $48, %rcx
+; SSE42-NEXT:    andl $15, %ecx
+; SSE42-NEXT:    movq %rdx, %rsi
+; SSE42-NEXT:    shrq $40, %rsi
+; SSE42-NEXT:    andl $15, %esi
+; SSE42-NEXT:    movq %rdx, %r8
+; SSE42-NEXT:    shrq $32, %r8
 ; SSE42-NEXT:    andl $15, %r8d
+; SSE42-NEXT:    movq %xmm0, %r10
+; SSE42-NEXT:    movq %r10, %rdi
+; SSE42-NEXT:    shrq $56, %rdi
+; SSE42-NEXT:    andl $15, %edi
 ; SSE42-NEXT:    movq %r10, %r9
 ; SSE42-NEXT:    shrq $48, %r9
 ; SSE42-NEXT:    andl $15, %r9d
-; SSE42-NEXT:    movq %r10, %rsi
-; SSE42-NEXT:    shrq $40, %rsi
-; SSE42-NEXT:    andl $15, %esi
 ; SSE42-NEXT:    movq %r10, %r11
-; SSE42-NEXT:    shrq $32, %r11
+; SSE42-NEXT:    shrq $40, %r11
 ; SSE42-NEXT:    andl $15, %r11d
-; SSE42-NEXT:    movq %xmm0, %rax
-; SSE42-NEXT:    movq %rax, %rdx
-; SSE42-NEXT:    shrq $56, %rdx
-; SSE42-NEXT:    andl $15, %edx
-; SSE42-NEXT:    movq %rax, %rcx
-; SSE42-NEXT:    shrq $48, %rcx
-; SSE42-NEXT:    andl $15, %ecx
-; SSE42-NEXT:    movq %rax, %rdi
-; SSE42-NEXT:    shrq $40, %rdi
-; SSE42-NEXT:    andl $15, %edi
-; SSE42-NEXT:    movq %rax, %rbx
+; SSE42-NEXT:    movq %r10, %rbx
 ; SSE42-NEXT:    shrq $32, %rbx
 ; SSE42-NEXT:    andl $15, %ebx
 ; SSE42-NEXT:    shlq $32, %rbx
-; SSE42-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
-; SSE42-NEXT:    orq %rbx, %rax
-; SSE42-NEXT:    shlq $40, %rdi
-; SSE42-NEXT:    orq %rax, %rdi
-; SSE42-NEXT:    shlq $48, %rcx
-; SSE42-NEXT:    orq %rdi, %rcx
-; SSE42-NEXT:    shlq $56, %rdx
-; SSE42-NEXT:    orq %rcx, %rdx
-; SSE42-NEXT:    shlq $32, %r11
 ; SSE42-NEXT:    andl $252645135, %r10d # imm = 0xF0F0F0F
-; SSE42-NEXT:    orq %r11, %r10
-; SSE42-NEXT:    shlq $40, %rsi
-; SSE42-NEXT:    orq %r10, %rsi
+; SSE42-NEXT:    orq %rbx, %r10
+; SSE42-NEXT:    shlq $40, %r11
+; SSE42-NEXT:    orq %r10, %r11
 ; SSE42-NEXT:    shlq $48, %r9
-; SSE42-NEXT:    orq %rsi, %r9
-; SSE42-NEXT:    shlq $56, %r8
-; SSE42-NEXT:    orq %r9, %r8
-; SSE42-NEXT:    movq %r8, %xmm1
-; SSE42-NEXT:    movq %rdx, %xmm0
+; SSE42-NEXT:    orq %r11, %r9
+; SSE42-NEXT:    shlq $56, %rdi
+; SSE42-NEXT:    orq %r9, %rdi
+; SSE42-NEXT:    shlq $32, %r8
+; SSE42-NEXT:    andl $252645135, %edx # imm = 0xF0F0F0F
+; SSE42-NEXT:    orq %r8, %rdx
+; SSE42-NEXT:    shlq $40, %rsi
+; SSE42-NEXT:    orq %rdx, %rsi
+; SSE42-NEXT:    shlq $48, %rcx
+; SSE42-NEXT:    orq %rsi, %rcx
+; SSE42-NEXT:    shlq $56, %rax
+; SSE42-NEXT:    orq %rcx, %rax
+; SSE42-NEXT:    movq %rax, %xmm1
+; SSE42-NEXT:    movq %rdi, %xmm0
 ; SSE42-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE42-NEXT:    popq %rbx
 ; SSE42-NEXT:    retq
@@ -800,51 +800,51 @@ define <16 x i8> @_clearupper16xi8b(<16 x i8>) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    pushq %rbx
 ; AVX-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %r9
-; AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rdx
-; AVX-NEXT:    movq %r9, %r8
-; AVX-NEXT:    shrq $56, %r8
-; AVX-NEXT:    andl $15, %r8d
-; AVX-NEXT:    movq %r9, %r10
-; AVX-NEXT:    shrq $48, %r10
-; AVX-NEXT:    andl $15, %r10d
-; AVX-NEXT:    movq %r9, %rsi
-; AVX-NEXT:    shrq $40, %rsi
-; AVX-NEXT:    andl $15, %esi
-; AVX-NEXT:    movq %r9, %r11
-; AVX-NEXT:    shrq $32, %r11
-; AVX-NEXT:    andl $15, %r11d
-; AVX-NEXT:    movq %rdx, %rdi
-; AVX-NEXT:    shrq $56, %rdi
-; AVX-NEXT:    andl $15, %edi
-; AVX-NEXT:    movq %rdx, %rax
+; AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
+; AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rdi
+; AVX-NEXT:    movq %rcx, %rax
 ; AVX-NEXT:    shrq $48, %rax
 ; AVX-NEXT:    andl $15, %eax
-; AVX-NEXT:    movq %rdx, %rcx
-; AVX-NEXT:    shrq $40, %rcx
-; AVX-NEXT:    andl $15, %ecx
-; AVX-NEXT:    movq %rdx, %rbx
-; AVX-NEXT:    shrq $32, %rbx
+; AVX-NEXT:    movq %rcx, %rdx
+; AVX-NEXT:    shrq $40, %rdx
+; AVX-NEXT:    andl $15, %edx
+; AVX-NEXT:    movq %rcx, %rsi
+; AVX-NEXT:    shrq $32, %rsi
+; AVX-NEXT:    andl $15, %esi
+; AVX-NEXT:    movq %rdi, %r9
+; AVX-NEXT:    shrq $48, %r9
+; AVX-NEXT:    andl $15, %r9d
+; AVX-NEXT:    movq %rdi, %r10
+; AVX-NEXT:    shrq $40, %r10
+; AVX-NEXT:    andl $15, %r10d
+; AVX-NEXT:    movq %rdi, %r11
+; AVX-NEXT:    shrq $32, %r11
+; AVX-NEXT:    andl $15, %r11d
+; AVX-NEXT:    movq %rcx, %r8
+; AVX-NEXT:    shrq $56, %r8
+; AVX-NEXT:    andl $15, %r8d
+; AVX-NEXT:    movq %rdi, %rbx
+; AVX-NEXT:    shrq $56, %rbx
 ; AVX-NEXT:    andl $15, %ebx
-; AVX-NEXT:    shlq $32, %rbx
-; AVX-NEXT:    andl $252645135, %edx # imm = 0xF0F0F0F
-; AVX-NEXT:    orq %rbx, %rdx
-; AVX-NEXT:    shlq $40, %rcx
-; AVX-NEXT:    orq %rdx, %rcx
-; AVX-NEXT:    shlq $48, %rax
-; AVX-NEXT:    orq %rcx, %rax
-; AVX-NEXT:    shlq $56, %rdi
-; AVX-NEXT:    orq %rax, %rdi
-; AVX-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; AVX-NEXT:    shlq $32, %r11
-; AVX-NEXT:    andl $252645135, %r9d # imm = 0xF0F0F0F
-; AVX-NEXT:    orq %r11, %r9
-; AVX-NEXT:    shlq $40, %rsi
-; AVX-NEXT:    orq %r9, %rsi
-; AVX-NEXT:    shlq $48, %r10
-; AVX-NEXT:    orq %rsi, %r10
+; AVX-NEXT:    andl $252645135, %edi # imm = 0xF0F0F0F
+; AVX-NEXT:    orq %r11, %rdi
+; AVX-NEXT:    shlq $40, %r10
+; AVX-NEXT:    orq %rdi, %r10
+; AVX-NEXT:    shlq $48, %r9
+; AVX-NEXT:    orq %r10, %r9
+; AVX-NEXT:    shlq $56, %rbx
+; AVX-NEXT:    orq %r9, %rbx
+; AVX-NEXT:    movq %rbx, -{{[0-9]+}}(%rsp)
+; AVX-NEXT:    shlq $32, %rsi
+; AVX-NEXT:    andl $252645135, %ecx # imm = 0xF0F0F0F
+; AVX-NEXT:    orq %rsi, %rcx
+; AVX-NEXT:    shlq $40, %rdx
+; AVX-NEXT:    orq %rcx, %rdx
+; AVX-NEXT:    shlq $48, %rax
+; AVX-NEXT:    orq %rdx, %rax
 ; AVX-NEXT:    shlq $56, %r8
-; AVX-NEXT:    orq %r10, %r8
+; AVX-NEXT:    orq %rax, %r8
 ; AVX-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
 ; AVX-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
 ; AVX-NEXT:    popq %rbx
@@ -875,52 +875,52 @@ define <32 x i8> @_clearupper32xi8b(<32 x i8>) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rbx
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
-; SSE2-NEXT:    movq %xmm2, %r10
-; SSE2-NEXT:    movq %r10, %r8
-; SSE2-NEXT:    shrq $56, %r8
+; SSE2-NEXT:    movq %xmm2, %rdx
+; SSE2-NEXT:    movq %rdx, %rax
+; SSE2-NEXT:    shrq $56, %rax
+; SSE2-NEXT:    andl $15, %eax
+; SSE2-NEXT:    movq %rdx, %rcx
+; SSE2-NEXT:    shrq $48, %rcx
+; SSE2-NEXT:    andl $15, %ecx
+; SSE2-NEXT:    movq %rdx, %rsi
+; SSE2-NEXT:    shrq $40, %rsi
+; SSE2-NEXT:    andl $15, %esi
+; SSE2-NEXT:    movq %rdx, %r8
+; SSE2-NEXT:    shrq $32, %r8
 ; SSE2-NEXT:    andl $15, %r8d
+; SSE2-NEXT:    movq %xmm0, %r10
+; SSE2-NEXT:    movq %r10, %rdi
+; SSE2-NEXT:    shrq $56, %rdi
+; SSE2-NEXT:    andl $15, %edi
 ; SSE2-NEXT:    movq %r10, %r9
 ; SSE2-NEXT:    shrq $48, %r9
 ; SSE2-NEXT:    andl $15, %r9d
-; SSE2-NEXT:    movq %r10, %rsi
-; SSE2-NEXT:    shrq $40, %rsi
-; SSE2-NEXT:    andl $15, %esi
 ; SSE2-NEXT:    movq %r10, %r11
-; SSE2-NEXT:    shrq $32, %r11
+; SSE2-NEXT:    shrq $40, %r11
 ; SSE2-NEXT:    andl $15, %r11d
-; SSE2-NEXT:    movq %xmm0, %rax
-; SSE2-NEXT:    movq %rax, %rdx
-; SSE2-NEXT:    shrq $56, %rdx
-; SSE2-NEXT:    andl $15, %edx
-; SSE2-NEXT:    movq %rax, %rcx
-; SSE2-NEXT:    shrq $48, %rcx
-; SSE2-NEXT:    andl $15, %ecx
-; SSE2-NEXT:    movq %rax, %rdi
-; SSE2-NEXT:    shrq $40, %rdi
-; SSE2-NEXT:    andl $15, %edi
-; SSE2-NEXT:    movq %rax, %rbx
+; SSE2-NEXT:    movq %r10, %rbx
 ; SSE2-NEXT:    shrq $32, %rbx
 ; SSE2-NEXT:    andl $15, %ebx
 ; SSE2-NEXT:    shlq $32, %rbx
-; SSE2-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
-; SSE2-NEXT:    orq %rbx, %rax
-; SSE2-NEXT:    shlq $40, %rdi
-; SSE2-NEXT:    orq %rax, %rdi
-; SSE2-NEXT:    shlq $48, %rcx
-; SSE2-NEXT:    orq %rdi, %rcx
-; SSE2-NEXT:    shlq $56, %rdx
-; SSE2-NEXT:    orq %rcx, %rdx
-; SSE2-NEXT:    shlq $32, %r11
 ; SSE2-NEXT:    andl $252645135, %r10d # imm = 0xF0F0F0F
-; SSE2-NEXT:    orq %r11, %r10
-; SSE2-NEXT:    shlq $40, %rsi
-; SSE2-NEXT:    orq %r10, %rsi
+; SSE2-NEXT:    orq %rbx, %r10
+; SSE2-NEXT:    shlq $40, %r11
+; SSE2-NEXT:    orq %r10, %r11
 ; SSE2-NEXT:    shlq $48, %r9
-; SSE2-NEXT:    orq %rsi, %r9
-; SSE2-NEXT:    shlq $56, %r8
-; SSE2-NEXT:    orq %r9, %r8
-; SSE2-NEXT:    movq %rdx, %xmm0
-; SSE2-NEXT:    movq %r8, %xmm2
+; SSE2-NEXT:    orq %r11, %r9
+; SSE2-NEXT:    shlq $56, %rdi
+; SSE2-NEXT:    orq %r9, %rdi
+; SSE2-NEXT:    shlq $32, %r8
+; SSE2-NEXT:    andl $252645135, %edx # imm = 0xF0F0F0F
+; SSE2-NEXT:    orq %r8, %rdx
+; SSE2-NEXT:    shlq $40, %rsi
+; SSE2-NEXT:    orq %rdx, %rsi
+; SSE2-NEXT:    shlq $48, %rcx
+; SSE2-NEXT:    orq %rsi, %rcx
+; SSE2-NEXT:    shlq $56, %rax
+; SSE2-NEXT:    orq %rcx, %rax
+; SSE2-NEXT:    movq %rdi, %xmm0
+; SSE2-NEXT:    movq %rax, %xmm2
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSE2-NEXT:    popq %rbx
 ; SSE2-NEXT:    retq
@@ -928,251 +928,109 @@ define <32 x i8> @_clearupper32xi8b(<32 x i8>) nounwind {
 ; SSE42-LABEL: _clearupper32xi8b:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    pushq %rbx
-; SSE42-NEXT:    pextrq $1, %xmm0, %r10
-; SSE42-NEXT:    movq %r10, %r8
-; SSE42-NEXT:    shrq $56, %r8
+; SSE42-NEXT:    pextrq $1, %xmm0, %rdx
+; SSE42-NEXT:    movq %rdx, %rax
+; SSE42-NEXT:    shrq $56, %rax
+; SSE42-NEXT:    andl $15, %eax
+; SSE42-NEXT:    movq %rdx, %rcx
+; SSE42-NEXT:    shrq $48, %rcx
+; SSE42-NEXT:    andl $15, %ecx
+; SSE42-NEXT:    movq %rdx, %rsi
+; SSE42-NEXT:    shrq $40, %rsi
+; SSE42-NEXT:    andl $15, %esi
+; SSE42-NEXT:    movq %rdx, %r8
+; SSE42-NEXT:    shrq $32, %r8
 ; SSE42-NEXT:    andl $15, %r8d
+; SSE42-NEXT:    movq %xmm0, %r10
+; SSE42-NEXT:    movq %r10, %rdi
+; SSE42-NEXT:    shrq $56, %rdi
+; SSE42-NEXT:    andl $15, %edi
 ; SSE42-NEXT:    movq %r10, %r9
 ; SSE42-NEXT:    shrq $48, %r9
 ; SSE42-NEXT:    andl $15, %r9d
-; SSE42-NEXT:    movq %r10, %rsi
-; SSE42-NEXT:    shrq $40, %rsi
-; SSE42-NEXT:    andl $15, %esi
 ; SSE42-NEXT:    movq %r10, %r11
-; SSE42-NEXT:    shrq $32, %r11
+; SSE42-NEXT:    shrq $40, %r11
 ; SSE42-NEXT:    andl $15, %r11d
-; SSE42-NEXT:    movq %xmm0, %rax
-; SSE42-NEXT:    movq %rax, %rdx
-; SSE42-NEXT:    shrq $56, %rdx
-; SSE42-NEXT:    andl $15, %edx
-; SSE42-NEXT:    movq %rax, %rcx
-; SSE42-NEXT:    shrq $48, %rcx
-; SSE42-NEXT:    andl $15, %ecx
-; SSE42-NEXT:    movq %rax, %rdi
-; SSE42-NEXT:    shrq $40, %rdi
-; SSE42-NEXT:    andl $15, %edi
-; SSE42-NEXT:    movq %rax, %rbx
+; SSE42-NEXT:    movq %r10, %rbx
 ; SSE42-NEXT:    shrq $32, %rbx
 ; SSE42-NEXT:    andl $15, %ebx
 ; SSE42-NEXT:    shlq $32, %rbx
-; SSE42-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
-; SSE42-NEXT:    orq %rbx, %rax
-; SSE42-NEXT:    shlq $40, %rdi
-; SSE42-NEXT:    orq %rax, %rdi
-; SSE42-NEXT:    shlq $48, %rcx
-; SSE42-NEXT:    orq %rdi, %rcx
-; SSE42-NEXT:    shlq $56, %rdx
-; SSE42-NEXT:    orq %rcx, %rdx
-; SSE42-NEXT:    shlq $32, %r11
 ; SSE42-NEXT:    andl $252645135, %r10d # imm = 0xF0F0F0F
-; SSE42-NEXT:    orq %r11, %r10
-; SSE42-NEXT:    shlq $40, %rsi
-; SSE42-NEXT:    orq %r10, %rsi
+; SSE42-NEXT:    orq %rbx, %r10
+; SSE42-NEXT:    shlq $40, %r11
+; SSE42-NEXT:    orq %r10, %r11
 ; SSE42-NEXT:    shlq $48, %r9
-; SSE42-NEXT:    orq %rsi, %r9
-; SSE42-NEXT:    shlq $56, %r8
-; SSE42-NEXT:    orq %r9, %r8
-; SSE42-NEXT:    movq %r8, %xmm2
-; SSE42-NEXT:    movq %rdx, %xmm0
+; SSE42-NEXT:    orq %r11, %r9
+; SSE42-NEXT:    shlq $56, %rdi
+; SSE42-NEXT:    orq %r9, %rdi
+; SSE42-NEXT:    shlq $32, %r8
+; SSE42-NEXT:    andl $252645135, %edx # imm = 0xF0F0F0F
+; SSE42-NEXT:    orq %r8, %rdx
+; SSE42-NEXT:    shlq $40, %rsi
+; SSE42-NEXT:    orq %rdx, %rsi
+; SSE42-NEXT:    shlq $48, %rcx
+; SSE42-NEXT:    orq %rsi, %rcx
+; SSE42-NEXT:    shlq $56, %rax
+; SSE42-NEXT:    orq %rcx, %rax
+; SSE42-NEXT:    movq %rax, %xmm2
+; SSE42-NEXT:    movq %rdi, %xmm0
 ; SSE42-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSE42-NEXT:    popq %rbx
 ; SSE42-NEXT:    retq
 ;
-; AVX1-LABEL: _clearupper32xi8b:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; AVX1-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; AVX1-NEXT:    movq %rax, %rcx
-; AVX1-NEXT:    movq %rax, %rdx
-; AVX1-NEXT:    movq %rax, %rsi
-; AVX1-NEXT:    movq %rax, %rdi
-; AVX1-NEXT:    shrq $32, %rdi
-; AVX1-NEXT:    andl $15, %edi
-; AVX1-NEXT:    shlq $32, %rdi
-; AVX1-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
-; AVX1-NEXT:    orq %rdi, %rax
-; AVX1-NEXT:    movq -{{[0-9]+}}(%rsp), %rdi
-; AVX1-NEXT:    shrq $40, %rsi
-; AVX1-NEXT:    andl $15, %esi
-; AVX1-NEXT:    shlq $40, %rsi
-; AVX1-NEXT:    orq %rax, %rsi
-; AVX1-NEXT:    movq %rdi, %rax
-; AVX1-NEXT:    shrq $48, %rdx
-; AVX1-NEXT:    andl $15, %edx
-; AVX1-NEXT:    shlq $48, %rdx
-; AVX1-NEXT:    orq %rsi, %rdx
-; AVX1-NEXT:    movq %rdi, %rsi
-; AVX1-NEXT:    shrq $56, %rcx
-; AVX1-NEXT:    andl $15, %ecx
-; AVX1-NEXT:    shlq $56, %rcx
-; AVX1-NEXT:    orq %rdx, %rcx
-; AVX1-NEXT:    movq %rdi, %rdx
-; AVX1-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX1-NEXT:    movq %rdi, %rcx
-; AVX1-NEXT:    shrq $32, %rcx
-; AVX1-NEXT:    andl $15, %ecx
-; AVX1-NEXT:    shlq $32, %rcx
-; AVX1-NEXT:    andl $252645135, %edi # imm = 0xF0F0F0F
-; AVX1-NEXT:    orq %rcx, %rdi
-; AVX1-NEXT:    shrq $40, %rdx
-; AVX1-NEXT:    andl $15, %edx
-; AVX1-NEXT:    shlq $40, %rdx
-; AVX1-NEXT:    orq %rdi, %rdx
-; AVX1-NEXT:    shrq $48, %rsi
-; AVX1-NEXT:    andl $15, %esi
-; AVX1-NEXT:    shlq $48, %rsi
-; AVX1-NEXT:    orq %rdx, %rsi
-; AVX1-NEXT:    shrq $56, %rax
-; AVX1-NEXT:    andl $15, %eax
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    shlq $56, %rax
-; AVX1-NEXT:    orq %rsi, %rax
-; AVX1-NEXT:    vmovq %xmm0, %rcx
-; AVX1-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; AVX1-NEXT:    movl %ecx, %eax
-; AVX1-NEXT:    shrl $8, %eax
-; AVX1-NEXT:    vmovd %ecx, %xmm1
-; AVX1-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
-; AVX1-NEXT:    movl %ecx, %eax
-; AVX1-NEXT:    shrl $16, %eax
-; AVX1-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
-; AVX1-NEXT:    movl %ecx, %eax
-; AVX1-NEXT:    shrl $24, %eax
-; AVX1-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm1
-; AVX1-NEXT:    movq %rcx, %rax
-; AVX1-NEXT:    shrq $32, %rax
-; AVX1-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; AVX1-NEXT:    movq %rcx, %rax
-; AVX1-NEXT:    shrq $40, %rax
-; AVX1-NEXT:    vpinsrb $5, %eax, %xmm1, %xmm1
-; AVX1-NEXT:    movq %rcx, %rax
-; AVX1-NEXT:    shrq $48, %rax
-; AVX1-NEXT:    vpinsrb $6, %eax, %xmm1, %xmm1
-; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX1-NEXT:    shrq $56, %rcx
-; AVX1-NEXT:    vpinsrb $7, %ecx, %xmm1, %xmm0
-; AVX1-NEXT:    movl %eax, %ecx
-; AVX1-NEXT:    shrl $8, %ecx
-; AVX1-NEXT:    vpinsrb $8, %eax, %xmm0, %xmm0
-; AVX1-NEXT:    vpinsrb $9, %ecx, %xmm0, %xmm0
-; AVX1-NEXT:    movl %eax, %ecx
-; AVX1-NEXT:    shrl $16, %ecx
-; AVX1-NEXT:    vpinsrb $10, %ecx, %xmm0, %xmm0
-; AVX1-NEXT:    movl %eax, %ecx
-; AVX1-NEXT:    shrl $24, %ecx
-; AVX1-NEXT:    vpinsrb $11, %ecx, %xmm0, %xmm0
-; AVX1-NEXT:    movq %rax, %rcx
-; AVX1-NEXT:    shrq $32, %rcx
-; AVX1-NEXT:    vpinsrb $12, %ecx, %xmm0, %xmm0
-; AVX1-NEXT:    movq %rax, %rcx
-; AVX1-NEXT:    shrq $40, %rcx
-; AVX1-NEXT:    vpinsrb $13, %ecx, %xmm0, %xmm0
-; AVX1-NEXT:    movq %rax, %rcx
-; AVX1-NEXT:    shrq $48, %rcx
-; AVX1-NEXT:    vpinsrb $14, %ecx, %xmm0, %xmm0
-; AVX1-NEXT:    shrq $56, %rax
-; AVX1-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
-; AVX1-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: _clearupper32xi8b:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
-; AVX2-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; AVX2-NEXT:    movq %rax, %rcx
-; AVX2-NEXT:    movq %rax, %rdx
-; AVX2-NEXT:    movq %rax, %rsi
-; AVX2-NEXT:    movq %rax, %rdi
-; AVX2-NEXT:    shrq $32, %rdi
-; AVX2-NEXT:    andl $15, %edi
-; AVX2-NEXT:    shlq $32, %rdi
-; AVX2-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
-; AVX2-NEXT:    orq %rdi, %rax
-; AVX2-NEXT:    movq -{{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    shrq $40, %rsi
-; AVX2-NEXT:    andl $15, %esi
-; AVX2-NEXT:    shlq $40, %rsi
-; AVX2-NEXT:    orq %rax, %rsi
-; AVX2-NEXT:    movq %rdi, %rax
-; AVX2-NEXT:    shrq $48, %rdx
-; AVX2-NEXT:    andl $15, %edx
-; AVX2-NEXT:    shlq $48, %rdx
-; AVX2-NEXT:    orq %rsi, %rdx
-; AVX2-NEXT:    movq %rdi, %rsi
-; AVX2-NEXT:    shrq $56, %rcx
-; AVX2-NEXT:    andl $15, %ecx
-; AVX2-NEXT:    shlq $56, %rcx
-; AVX2-NEXT:    orq %rdx, %rcx
-; AVX2-NEXT:    movq %rdi, %rdx
-; AVX2-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX2-NEXT:    movq %rdi, %rcx
-; AVX2-NEXT:    shrq $32, %rcx
-; AVX2-NEXT:    andl $15, %ecx
-; AVX2-NEXT:    shlq $32, %rcx
-; AVX2-NEXT:    andl $252645135, %edi # imm = 0xF0F0F0F
-; AVX2-NEXT:    orq %rcx, %rdi
-; AVX2-NEXT:    shrq $40, %rdx
-; AVX2-NEXT:    andl $15, %edx
-; AVX2-NEXT:    shlq $40, %rdx
-; AVX2-NEXT:    orq %rdi, %rdx
-; AVX2-NEXT:    shrq $48, %rsi
-; AVX2-NEXT:    andl $15, %esi
-; AVX2-NEXT:    shlq $48, %rsi
-; AVX2-NEXT:    orq %rdx, %rsi
-; AVX2-NEXT:    shrq $56, %rax
-; AVX2-NEXT:    andl $15, %eax
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    shlq $56, %rax
-; AVX2-NEXT:    orq %rsi, %rax
-; AVX2-NEXT:    vmovq %xmm0, %rcx
-; AVX2-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; AVX2-NEXT:    movl %ecx, %eax
-; AVX2-NEXT:    shrl $8, %eax
-; AVX2-NEXT:    vmovd %ecx, %xmm1
-; AVX2-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
-; AVX2-NEXT:    movl %ecx, %eax
-; AVX2-NEXT:    shrl $16, %eax
-; AVX2-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
-; AVX2-NEXT:    movl %ecx, %eax
-; AVX2-NEXT:    shrl $24, %eax
-; AVX2-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm1
-; AVX2-NEXT:    movq %rcx, %rax
-; AVX2-NEXT:    shrq $32, %rax
-; AVX2-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; AVX2-NEXT:    movq %rcx, %rax
-; AVX2-NEXT:    shrq $40, %rax
-; AVX2-NEXT:    vpinsrb $5, %eax, %xmm1, %xmm1
-; AVX2-NEXT:    movq %rcx, %rax
-; AVX2-NEXT:    shrq $48, %rax
-; AVX2-NEXT:    vpinsrb $6, %eax, %xmm1, %xmm1
-; AVX2-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX2-NEXT:    shrq $56, %rcx
-; AVX2-NEXT:    vpinsrb $7, %ecx, %xmm1, %xmm0
-; AVX2-NEXT:    movl %eax, %ecx
-; AVX2-NEXT:    shrl $8, %ecx
-; AVX2-NEXT:    vpinsrb $8, %eax, %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $9, %ecx, %xmm0, %xmm0
-; AVX2-NEXT:    movl %eax, %ecx
-; AVX2-NEXT:    shrl $16, %ecx
-; AVX2-NEXT:    vpinsrb $10, %ecx, %xmm0, %xmm0
-; AVX2-NEXT:    movl %eax, %ecx
-; AVX2-NEXT:    shrl $24, %ecx
-; AVX2-NEXT:    vpinsrb $11, %ecx, %xmm0, %xmm0
-; AVX2-NEXT:    movq %rax, %rcx
-; AVX2-NEXT:    shrq $32, %rcx
-; AVX2-NEXT:    vpinsrb $12, %ecx, %xmm0, %xmm0
-; AVX2-NEXT:    movq %rax, %rcx
-; AVX2-NEXT:    shrq $40, %rcx
-; AVX2-NEXT:    vpinsrb $13, %ecx, %xmm0, %xmm0
-; AVX2-NEXT:    movq %rax, %rcx
-; AVX2-NEXT:    shrq $48, %rcx
-; AVX2-NEXT:    vpinsrb $14, %ecx, %xmm0, %xmm0
-; AVX2-NEXT:    shrq $56, %rax
-; AVX2-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
-; AVX2-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm1
-; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
-; AVX2-NEXT:    retq
+; AVX-LABEL: _clearupper32xi8b:
+; AVX:       # %bb.0:
+; AVX-NEXT:    pushq %rbx
+; AVX-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
+; AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
+; AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rdi
+; AVX-NEXT:    movq %rcx, %rax
+; AVX-NEXT:    shrq $48, %rax
+; AVX-NEXT:    andl $15, %eax
+; AVX-NEXT:    movq %rcx, %rdx
+; AVX-NEXT:    shrq $40, %rdx
+; AVX-NEXT:    andl $15, %edx
+; AVX-NEXT:    movq %rcx, %rsi
+; AVX-NEXT:    shrq $32, %rsi
+; AVX-NEXT:    andl $15, %esi
+; AVX-NEXT:    movq %rdi, %r9
+; AVX-NEXT:    shrq $48, %r9
+; AVX-NEXT:    andl $15, %r9d
+; AVX-NEXT:    movq %rdi, %r10
+; AVX-NEXT:    shrq $40, %r10
+; AVX-NEXT:    andl $15, %r10d
+; AVX-NEXT:    movq %rdi, %r11
+; AVX-NEXT:    shrq $32, %r11
+; AVX-NEXT:    andl $15, %r11d
+; AVX-NEXT:    movq %rcx, %r8
+; AVX-NEXT:    shrq $56, %r8
+; AVX-NEXT:    andl $15, %r8d
+; AVX-NEXT:    movq %rdi, %rbx
+; AVX-NEXT:    shrq $56, %rbx
+; AVX-NEXT:    andl $15, %ebx
+; AVX-NEXT:    shlq $32, %r11
+; AVX-NEXT:    andl $252645135, %edi # imm = 0xF0F0F0F
+; AVX-NEXT:    orq %r11, %rdi
+; AVX-NEXT:    shlq $40, %r10
+; AVX-NEXT:    orq %rdi, %r10
+; AVX-NEXT:    shlq $48, %r9
+; AVX-NEXT:    orq %r10, %r9
+; AVX-NEXT:    shlq $56, %rbx
+; AVX-NEXT:    orq %r9, %rbx
+; AVX-NEXT:    movq %rbx, -{{[0-9]+}}(%rsp)
+; AVX-NEXT:    shlq $32, %rsi
+; AVX-NEXT:    andl $252645135, %ecx # imm = 0xF0F0F0F
+; AVX-NEXT:    orq %rsi, %rcx
+; AVX-NEXT:    shlq $40, %rdx
+; AVX-NEXT:    orq %rcx, %rdx
+; AVX-NEXT:    shlq $48, %rax
+; AVX-NEXT:    orq %rdx, %rax
+; AVX-NEXT:    shlq $56, %r8
+; AVX-NEXT:    orq %rax, %r8
+; AVX-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
+; AVX-NEXT:    vinsertf128 $0, -{{[0-9]+}}(%rsp), %ymm0, %ymm0
+; AVX-NEXT:    popq %rbx
+; AVX-NEXT:    retq
   %x4  = bitcast <32 x i8> %0 to <64 x i4>
   %r0  = insertelement <64 x i4> %x4,  i4 zeroinitializer, i32 1
   %r1  = insertelement <64 x i4> %r0,  i4 zeroinitializer, i32 3

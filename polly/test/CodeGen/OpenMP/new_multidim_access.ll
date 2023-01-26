@@ -1,7 +1,7 @@
-; RUN: opt %loadPolly -polly-print-import-jscop \
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-print-import-jscop \
 ; RUN:                -disable-output < %s | FileCheck %s
 
-; RUN: opt %loadPolly -polly-import-jscop \
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-import-jscop \
 ; RUN:                -polly-codegen -S < %s \
 ; RUN:                -polly-parallel \
 ; RUN:                | FileCheck %s -check-prefix=IR

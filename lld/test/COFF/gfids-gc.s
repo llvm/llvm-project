@@ -1,10 +1,10 @@
 # REQUIRES: x86
 # RUN: llvm-mc -triple x86_64-windows-msvc %s -filetype=obj -o %t.obj
-# RUN: lld-link %t.obj -guard:cf -out:%t.exe -opt:noref -entry:main
+# RUN: lld-link %t.obj -guard:cf,nolongjmp -out:%t.exe -opt:noref -entry:main
 # RUN: llvm-readobj --file-headers --coff-load-config %t.exe | FileCheck %s --check-prefix=CHECK-NOGC
-# RUN: lld-link %t.obj -guard:cf -out:%t.exe -opt:noref -entry:main -debug:dwarf
+# RUN: lld-link %t.obj -guard:cf,nolongjmp -out:%t.exe -opt:noref -entry:main -debug:dwarf
 # RUN: llvm-readobj --file-headers --coff-load-config %t.exe | FileCheck %s --check-prefix=CHECK-NOGC
-# RUN: lld-link %t.obj -guard:cf -out:%t.exe -opt:ref -entry:main
+# RUN: lld-link %t.obj -guard:cf,nolongjmp -out:%t.exe -opt:ref -entry:main
 # RUN: llvm-readobj --file-headers --coff-load-config %t.exe | FileCheck %s --check-prefix=CHECK-GC
 
 # This assembly is meant to mimic what CL emits for this kind of C code when
@@ -29,7 +29,10 @@
 # CHECK-NOGC:   GuardCFCheckDispatch: 0x0
 # CHECK-NOGC:   GuardCFFunctionTable: 0x14000{{.*}}
 # CHECK-NOGC:   GuardCFFunctionCount: 3
-# CHECK-NOGC:   GuardFlags: 0x500
+# CHECK-NOGC:   GuardFlags [ (0x500)
+# CHECK-NOGC:     CF_FUNCTION_TABLE_PRESENT (0x400)
+# CHECK-NOGC:     CF_INSTRUMENTED (0x100)
+# CHECK-NOGC:   ]
 # CHECK-NOGC:   GuardAddressTakenIatEntryTable: 0x0
 # CHECK-NOGC:   GuardAddressTakenIatEntryCount: 0
 # CHECK-NOGC:   GuardLongJumpTargetTable: 0x0
@@ -52,7 +55,10 @@
 # CHECK-GC:   GuardCFCheckDispatch: 0x0
 # CHECK-GC:   GuardCFFunctionTable: 0x14000{{.*}}
 # CHECK-GC:   GuardCFFunctionCount: 2
-# CHECK-GC:   GuardFlags: 0x500
+# CHECK-GC:   GuardFlags [ (0x500)
+# CHECK-GC:     CF_FUNCTION_TABLE_PRESENT (0x400)
+# CHECK-GC:     CF_INSTRUMENTED (0x100)
+# CHECK-GC:   ]
 # CHECK-GC:   GuardAddressTakenIatEntryTable: 0x0
 # CHECK-GC:   GuardAddressTakenIatEntryCount: 0
 # CHECK-GC:   GuardLongJumpTargetTable: 0x0

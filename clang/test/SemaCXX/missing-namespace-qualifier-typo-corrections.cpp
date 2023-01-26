@@ -62,6 +62,7 @@ void f() {
   nylinkedlist w; // expected-error{{unknown type name 'nylinkedlist'; did you mean 'realstd::mylinkedlist'?}}
 }
 
+#if __cplusplus < 201703L
 // Test case from http://llvm.org/bugs/show_bug.cgi?id=10318
 namespace llvm {
  template <typename T> class GraphWriter {}; // expected-note 3{{declared here}}
@@ -73,6 +74,7 @@ void bar() {
  (void)new llvm::GraphWriter; // expected-error {{use of class template 'llvm::GraphWriter' requires template arguments}}
  (void)new llvm::Graphwriter<S>; // expected-error {{no template named 'Graphwriter' in namespace 'llvm'; did you mean 'GraphWriter'?}}
 }
+#endif
 
 // If namespace prefixes and character edits have the same weight, correcting
 // "fimish" to "N::famish" would have the same edit distance as correcting

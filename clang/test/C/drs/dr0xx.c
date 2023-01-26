@@ -70,6 +70,9 @@
  * WG14 DR080: yes
  * Merging of string constants
  *
+ * WG14 DR085: yes
+ * Returning from main
+ *
  * WG14 DR086: yes
  * Object-like macros in system headers
  *
@@ -160,7 +163,8 @@ void dr011(void) {
  */
 void dr012(void *p) {
   /* The behavior changed between C89 and C99. */
-  (void)&*p; /* c89only-warning {{ISO C forbids taking the address of an expression of type 'void'}} */
+  (void)&*p; /* c89only-warning {{ISO C forbids taking the address of an expression of type 'void'}}
+                c89only-warning {{ISO C does not allow indirection on operand of type 'void *'}} */
 }
 
 /* WG14 DR013: yes

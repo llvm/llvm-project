@@ -1,4 +1,4 @@
-import("//llvm/utils/unittest/unittest.gni")
+import("//third-party/unittest/unittest.gni")
 
 unittest("CFIVerifyTests") {
   deps = [
@@ -11,6 +11,7 @@ unittest("CFIVerifyTests") {
     "//llvm/lib/Target:AllTargetsDescs",
     "//llvm/lib/Target:AllTargetsDisassemblers",
     "//llvm/lib/Target:AllTargetsInfos",
+    "//llvm/lib/TargetParser",
     "//llvm/tools/llvm-cfi-verify/lib",
   ]
   sources = [

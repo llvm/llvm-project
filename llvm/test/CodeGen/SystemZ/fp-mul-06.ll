@@ -15,30 +15,30 @@ define float @f1(float %f1, float %f2, float %acc) {
   ret float %res
 }
 
-define float @f2(float %f1, float *%ptr, float %acc) {
+define float @f2(float %f1, ptr %ptr, float %acc) {
 ; CHECK-LABEL: f2:
 ; CHECK: maeb %f2, %f0, 0(%r2)
 ; CHECK-SCALAR: ler %f0, %f2
 ; CHECK-VECTOR: ldr %f0, %f2
 ; CHECK: br %r14
-  %f2 = load float, float *%ptr
+  %f2 = load float, ptr %ptr
   %res = call float @llvm.fma.f32 (float %f1, float %f2, float %acc)
   ret float %res
 }
 
-define float @f3(float %f1, float *%base, float %acc) {
+define float @f3(float %f1, ptr %base, float %acc) {
 ; CHECK-LABEL: f3:
 ; CHECK: maeb %f2, %f0, 4092(%r2)
 ; CHECK-SCALAR: ler %f0, %f2
 ; CHECK-VECTOR: ldr %f0, %f2
 ; CHECK: br %r14
-  %ptr = getelementptr float, float *%base, i64 1023
-  %f2 = load float, float *%ptr
+  %ptr = getelementptr float, ptr %base, i64 1023
+  %f2 = load float, ptr %ptr
   %res = call float @llvm.fma.f32 (float %f1, float %f2, float %acc)
   ret float %res
 }
 
-define float @f4(float %f1, float *%base, float %acc) {
+define float @f4(float %f1, ptr %base, float %acc) {
 ; The important thing here is that we don't generate an out-of-range
 ; displacement.  Other sequences besides this one would be OK.
 ;
@@ -48,13 +48,13 @@ define float @f4(float %f1, float *%base, float %acc) {
 ; CHECK-SCALAR: ler %f0, %f2
 ; CHECK-VECTOR: ldr %f0, %f2
 ; CHECK: br %r14
-  %ptr = getelementptr float, float *%base, i64 1024
-  %f2 = load float, float *%ptr
+  %ptr = getelementptr float, ptr %base, i64 1024
+  %f2 = load float, ptr %ptr
   %res = call float @llvm.fma.f32 (float %f1, float %f2, float %acc)
   ret float %res
 }
 
-define float @f5(float %f1, float *%base, float %acc) {
+define float @f5(float %f1, ptr %base, float %acc) {
 ; Here too the important thing is that we don't generate an out-of-range
 ; displacement.  Other sequences besides this one would be OK.
 ;
@@ -64,26 +64,26 @@ define float @f5(float %f1, float *%base, float %acc) {
 ; CHECK-SCALAR: ler %f0, %f2
 ; CHECK-VECTOR: ldr %f0, %f2
 ; CHECK: br %r14
-  %ptr = getelementptr float, float *%base, i64 -1
-  %f2 = load float, float *%ptr
+  %ptr = getelementptr float, ptr %base, i64 -1
+  %f2 = load float, ptr %ptr
   %res = call float @llvm.fma.f32 (float %f1, float %f2, float %acc)
   ret float %res
 }
 
-define float @f6(float %f1, float *%base, i64 %index, float %acc) {
+define float @f6(float %f1, ptr %base, i64 %index, float %acc) {
 ; CHECK-LABEL: f6:
 ; CHECK: sllg %r1, %r3, 2
 ; CHECK: maeb %f2, %f0, 0(%r1,%r2)
 ; CHECK-SCALAR: ler %f0, %f2
 ; CHECK-VECTOR: ldr %f0, %f2
 ; CHECK: br %r14
-  %ptr = getelementptr float, float *%base, i64 %index
-  %f2 = load float, float *%ptr
+  %ptr = getelementptr float, ptr %base, i64 %index
+  %f2 = load float, ptr %ptr
   %res = call float @llvm.fma.f32 (float %f1, float %f2, float %acc)
   ret float %res
 }
 
-define float @f7(float %f1, float *%base, i64 %index, float %acc) {
+define float @f7(float %f1, ptr %base, i64 %index, float %acc) {
 ; CHECK-LABEL: f7:
 ; CHECK: sllg %r1, %r3, 2
 ; CHECK: maeb %f2, %f0, 4092({{%r1,%r2|%r2,%r1}})
@@ -91,13 +91,13 @@ define float @f7(float %f1, float *%base, i64 %index, float %acc) {
 ; CHECK-VECTOR: ldr %f0, %f2
 ; CHECK: br %r14
   %index2 = add i64 %index, 1023
-  %ptr = getelementptr float, float *%base, i64 %index2
-  %f2 = load float, float *%ptr
+  %ptr = getelementptr float, ptr %base, i64 %index2
+  %f2 = load float, ptr %ptr
   %res = call float @llvm.fma.f32 (float %f1, float %f2, float %acc)
   ret float %res
 }
 
-define float @f8(float %f1, float *%base, i64 %index, float %acc) {
+define float @f8(float %f1, ptr %base, i64 %index, float %acc) {
 ; CHECK-LABEL: f8:
 ; CHECK: sllg %r1, %r3, 2
 ; CHECK: lay %r1, 4096({{%r1,%r2|%r2,%r1}})
@@ -106,8 +106,8 @@ define float @f8(float %f1, float *%base, i64 %index, float %acc) {
 ; CHECK-VECTOR: ldr %f0, %f2
 ; CHECK: br %r14
   %index2 = add i64 %index, 1024
-  %ptr = getelementptr float, float *%base, i64 %index2
-  %f2 = load float, float *%ptr
+  %ptr = getelementptr float, ptr %base, i64 %index2
+  %f2 = load float, ptr %ptr
   %res = call float @llvm.fma.f32 (float %f1, float %f2, float %acc)
   ret float %res
 }

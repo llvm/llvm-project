@@ -17,14 +17,14 @@ entry:
 ; CHECK-LABEL: @foo
 
 next:
-  %sunkaddr18 = ptrtoint %"class.llvm::MCOperand"* %MCOp to i64
+  %sunkaddr18 = ptrtoint ptr %MCOp to i64
   %sunkaddr19 = add i64 %sunkaddr18, 8
-  %sunkaddr20 = inttoptr i64 %sunkaddr19 to double*
-  store double 0.000000e+00, double* %sunkaddr20, align 8, !tbaa !1
-  %sunkaddr21 = ptrtoint %"class.llvm::MCOperand"* %MCOp to i64
+  %sunkaddr20 = inttoptr i64 %sunkaddr19 to ptr
+  store double 0.000000e+00, ptr %sunkaddr20, align 8, !tbaa !1
+  %sunkaddr21 = ptrtoint ptr %MCOp to i64
   %sunkaddr22 = add i64 %sunkaddr21, 8
-  %sunkaddr23 = inttoptr i64 %sunkaddr22 to i32*
-  store i32 %v, i32* %sunkaddr23, align 8, !tbaa !2
+  %sunkaddr23 = inttoptr i64 %sunkaddr22 to ptr
+  store i32 %v, ptr %sunkaddr23, align 8, !tbaa !2
   ret void
 
 ; Make sure that the 64-bit store comes first, regardless of what TBAA says

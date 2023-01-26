@@ -20,6 +20,10 @@
 namespace Fortran::runtime {
 class Descriptor;
 
+namespace typeInfo {
+class DerivedType;
+}
+
 extern "C" {
 
 // Initializes and allocates an object's components, if it has a derived type
@@ -37,6 +41,16 @@ void RTNAME(Destroy)(const Descriptor &);
 // conversion.
 void RTNAME(Assign)(const Descriptor &, const Descriptor &,
     const char *sourceFile = nullptr, int sourceLine = 0);
+
+// Perform the test of the CLASS IS type guard statement of the SELECT TYPE
+// construct.
+bool RTNAME(ClassIs)(const Descriptor &, const typeInfo::DerivedType &);
+
+// Perform the test of the SAME_TYPE_AS intrinsic.
+bool RTNAME(SameTypeAs)(const Descriptor &, const Descriptor &);
+
+// Perform the test of the EXTENDS_TYPE_OF intrinsic.
+bool RTNAME(ExtendsTypeOf)(const Descriptor &, const Descriptor &);
 
 } // extern "C"
 } // namespace Fortran::runtime

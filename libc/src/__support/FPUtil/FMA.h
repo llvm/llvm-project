@@ -10,6 +10,8 @@
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_FMA_H
 
 #include "src/__support/architectures.h"
+#include "src/__support/common.h"
+#include "src/__support/cpu_features.h"
 
 #if defined(LIBC_TARGET_HAS_FMA)
 
@@ -27,7 +29,7 @@
 namespace __llvm_libc {
 namespace fputil {
 
-template <typename T> static inline T fma(T x, T y, T z) {
+template <typename T> LIBC_INLINE T fma(T x, T y, T z) {
   return generic::fma(x, y, z);
 }
 

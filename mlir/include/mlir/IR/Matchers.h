@@ -28,11 +28,10 @@ template <
     typename AttrClass,
     // Require AttrClass to be a derived class from Attribute and get its
     // value type
-    typename ValueType =
-        typename std::enable_if<std::is_base_of<Attribute, AttrClass>::value,
-                                AttrClass>::type::ValueType,
+    typename ValueType = typename std::enable_if_t<
+        std::is_base_of<Attribute, AttrClass>::value, AttrClass>::ValueType,
     // Require the ValueType is not void
-    typename = typename std::enable_if<!std::is_void<ValueType>::value>::type>
+    typename = std::enable_if_t<!std::is_void<ValueType>::value>>
 struct attr_value_binder {
   ValueType *bind_value;
 
@@ -48,16 +47,9 @@ struct attr_value_binder {
   }
 };
 
-/// Check to see if the specified operation is ConstantLike.  This includes some
-/// quick filters to avoid a semi-expensive test in the common case.
-static bool isConstantLike(Operation *op) {
-  return op->getNumOperands() == 0 && op->getNumResults() == 1 &&
-         op->hasTrait<OpTrait::ConstantLike>();
-}
-
 /// The matcher that matches operations that have the `ConstantLike` trait.
 struct constant_op_matcher {
-  bool match(Operation *op) { return isConstantLike(op); }
+  bool match(Operation *op) { return op->hasTrait<OpTrait::ConstantLike>(); }
 };
 
 /// The matcher that matches operations that have the `ConstantLike` trait, and
@@ -73,12 +65,12 @@ struct constant_op_binder {
   constant_op_binder() : bind_value(nullptr) {}
 
   bool match(Operation *op) {
-    if (!isConstantLike(op))
+    if (!op->hasTrait<OpTrait::ConstantLike>())
       return false;
 
     // Fold the constant to an attribute.
     SmallVector<OpFoldResult, 1> foldedOp;
-    LogicalResult result = op->fold(/*operands=*/llvm::None, foldedOp);
+    LogicalResult result = op->fold(/*operands=*/std::nullopt, foldedOp);
     (void)result;
     assert(succeeded(result) && "expected ConstantLike op to be foldable");
 
@@ -179,20 +171,18 @@ using has_operation_or_value_matcher_t =
 
 /// Statically switch to a Value matcher.
 template <typename MatcherClass>
-typename std::enable_if_t<
-    llvm::is_detected<detail::has_operation_or_value_matcher_t, MatcherClass,
-                      Value>::value,
-    bool>
+std::enable_if_t<llvm::is_detected<detail::has_operation_or_value_matcher_t,
+                                   MatcherClass, Value>::value,
+                 bool>
 matchOperandOrValueAtIndex(Operation *op, unsigned idx, MatcherClass &matcher) {
   return matcher.match(op->getOperand(idx));
 }
 
 /// Statically switch to an Operation matcher.
 template <typename MatcherClass>
-typename std::enable_if_t<
-    llvm::is_detected<detail::has_operation_or_value_matcher_t, MatcherClass,
-                      Operation *>::value,
-    bool>
+std::enable_if_t<llvm::is_detected<detail::has_operation_or_value_matcher_t,
+                                   MatcherClass, Operation *>::value,
+                 bool>
 matchOperandOrValueAtIndex(Operation *op, unsigned idx, MatcherClass &matcher) {
   if (auto *defOp = op->getOperand(idx).getDefiningOp())
     return matcher.match(defOp);
@@ -224,10 +214,9 @@ struct PatternMatcherValue {
 template <typename TupleT, class CallbackT, std::size_t... Is>
 constexpr void enumerateImpl(TupleT &&tuple, CallbackT &&callback,
                              std::index_sequence<Is...>) {
-  (void)std::initializer_list<int>{
-      0,
-      (callback(std::integral_constant<std::size_t, Is>{}, std::get<Is>(tuple)),
-       0)...};
+
+  (callback(std::integral_constant<std::size_t, Is>{}, std::get<Is>(tuple)),
+   ...);
 }
 
 template <typename... Tys, typename CallbackT>

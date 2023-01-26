@@ -37,6 +37,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
+#include <optional>
 
 using namespace clang;
 using namespace CodeGen;
@@ -90,6 +91,7 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::Export:
   case Decl::ObjCPropertyImpl:
   case Decl::FileScopeAsm:
+  case Decl::TopLevelStmt:
   case Decl::Friend:
   case Decl::FriendTemplate:
   case Decl::Block:
@@ -100,6 +102,7 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::ObjCTypeParam:
   case Decl::Binding:
   case Decl::UnresolvedUsingIfExists:
+  case Decl::HLSLBuffer:
     llvm_unreachable("Declaration should not be in declstmts!");
   case Decl::Record:    // struct/union/class X;
   case Decl::CXXRecord: // struct/union/class X; [C++]
@@ -126,6 +129,7 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::OMPRequires:
   case Decl::Empty:
   case Decl::Concept:
+  case Decl::ImplicitConceptSpecialization:
   case Decl::LifetimeExtendedTemporary:
   case Decl::RequiresExprBody:
     // None of these decls require codegen support.
@@ -755,7 +759,7 @@ void CodeGenFunction::EmitNullabilityCheck(LValue LHS, llvm::Value *RHS,
   if (!SanOpts.has(SanitizerKind::NullabilityAssign))
     return;
 
-  auto Nullability = LHS.getType()->getNullability(getContext());
+  auto Nullability = LHS.getType()->getNullability();
   if (!Nullability || *Nullability != NullabilityKind::NonNull)
     return;
 
@@ -839,7 +843,7 @@ void CodeGenFunction::EmitScalarInit(const Expr *init, const ValueDecl *D,
     // If D is pseudo-strong, treat it like __unsafe_unretained here. This means
     // that we omit the retain, and causes non-autoreleased return values to be
     // immediately released.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
 
   case Qualifiers::OCL_ExplicitNone:
@@ -2612,7 +2616,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
   // function satisfy their nullability preconditions. This makes it necessary
   // to emit null checks for args in the function body itself.
   if (requiresReturnValueNullabilityCheck()) {
-    auto Nullability = Ty->getNullability(getContext());
+    auto Nullability = Ty->getNullability();
     if (Nullability && *Nullability == NullabilityKind::NonNull) {
       SanitizerScope SanScope(this);
       RetValNullabilityPrecondition =
@@ -2695,7 +2699,7 @@ void CodeGenModule::EmitOMPAllocateDecl(const OMPAllocateDecl *D) {
   }
 }
 
-llvm::Optional<CharUnits>
+std::optional<CharUnits>
 CodeGenModule::getOMPAllocateAlignment(const VarDecl *VD) {
   if (const auto *AA = VD->getAttr<OMPAllocateDeclAttr>()) {
     if (Expr *Alignment = AA->getAlignment()) {
@@ -2711,5 +2715,5 @@ CodeGenModule::getOMPAllocateAlignment(const VarDecl *VD) {
           std::max<unsigned>(UserAlign, NaturalAlign.getQuantity()));
     }
   }
-  return llvm::None;
+  return std::nullopt;
 }

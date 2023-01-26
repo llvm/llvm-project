@@ -1,15 +1,15 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr7 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr7 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64-unknown-linux-gnu -mcpu=pwr7 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
-// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s
-
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64le-unknown-freebsd13.0 -mcpu=pwr7 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
-// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64-unknown-freebsd13.0 -mcpu=pwr7 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64-unknown-linux-gnu -mcpu=pwr7 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s
 
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr7 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64le-unknown-freebsd13.0 -mcpu=pwr7 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s
+// RUN: %clang -S -emit-llvm -target powerpc64-unknown-freebsd13.0 -mcpu=pwr7 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s
+
+// RUN: %clang -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr7 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s
 
 #include <x86gprintrin.h>
@@ -168,7 +168,7 @@ test_bmi2intrin() {
 // CHECK: %[[SUB1:[0-9a-zA-Z._]+]] = sub i32 32, %{{[0-9a-zA-Z._]+}}
 // CHECK: lshr i32 %[[SHL]], %[[SUB1]]
 
-// CHECK-LABEL: define available_externally zeroext i32 @_mulx_u32(i32 noundef zeroext %{{[0-9a-zA-Z._]+}}, i32 noundef zeroext %{{[0-9a-zA-Z._]+}}, i32* noundef %{{[0-9a-zA-Z._]+}})
+// CHECK-LABEL: define available_externally zeroext i32 @_mulx_u32(i32 noundef zeroext %{{[0-9a-zA-Z._]+}}, i32 noundef zeroext %{{[0-9a-zA-Z._]+}}, ptr noundef %{{[0-9a-zA-Z._]+}})
 // CHECK: zext i32 %{{[0-9a-zA-Z._]+}} to i64
 // CHECK: zext i32 %{{[0-9a-zA-Z._]+}} to i64
 // CHECK: %[[SHR:[0-9a-zA-Z._]+]] = lshr i64 %{{[0-9a-zA-Z._]+}}, 32
@@ -181,7 +181,7 @@ test_bmi2intrin() {
 // CHECK: %[[SUB1:[0-9a-zA-Z._]+]] = sub i64 64, %{{[0-9a-zA-Z._]+}}
 // CHECK: lshr i64 %[[SHL]], %[[SUB1]]
 
-// CHECK-LABEL: define available_externally i64 @_mulx_u64(i64 noundef %{{[0-9a-zA-Z._]+}}, i64 noundef %{{[0-9a-zA-Z._]+}}, i64* noundef %{{[0-9a-zA-Z._]+}})
+// CHECK-LABEL: define available_externally i64 @_mulx_u64(i64 noundef %{{[0-9a-zA-Z._]+}}, i64 noundef %{{[0-9a-zA-Z._]+}}, ptr noundef %{{[0-9a-zA-Z._]+}})
 // CHECK: zext i64 %{{[0-9a-zA-Z._]+}} to i128
 // CHECK: zext i64 %{{[0-9a-zA-Z._]+}} to i128
 // CHECK: %[[SHR:[0-9a-zA-Z._]+]] = lshr i128 %{{[0-9a-zA-Z._]+}}, 64

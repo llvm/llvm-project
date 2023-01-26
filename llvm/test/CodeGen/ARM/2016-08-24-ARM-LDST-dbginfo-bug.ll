@@ -2,27 +2,26 @@
 
 ; When using -Oz and -g, this code generated an abort in the ARM load/store optimizer.
 
-%struct.s = type { %struct.s* }
+%struct.s = type { ptr }
 
 ; Function Attrs: minsize nounwind optsize readonly
-define %struct.s* @s_idx(%struct.s* readonly %xl) local_unnamed_addr #0 !dbg !8 {
+define ptr @s_idx(ptr readonly %xl) local_unnamed_addr #0 !dbg !8 {
 entry:
-  tail call void @llvm.dbg.value(metadata %struct.s* %xl, metadata !17, metadata !18), !dbg !19
+  tail call void @llvm.dbg.value(metadata ptr %xl, metadata !17, metadata !18), !dbg !19
   br label %while.cond, !dbg !20
 
 while.cond:                                       ; preds = %while.body, %entry
-  %xl.addr.0 = phi %struct.s* [ %xl, %entry ], [ %0, %while.body ]
-  %tobool = icmp eq %struct.s* %xl.addr.0, null
+  %xl.addr.0 = phi ptr [ %xl, %entry ], [ %0, %while.body ]
+  %tobool = icmp eq ptr %xl.addr.0, null
   br i1 %tobool, label %while.end, label %while.body
 
 while.body:                                       ; preds = %while.cond
-  %next = getelementptr inbounds %struct.s, %struct.s* %xl.addr.0, i32 0, i32 0
-  %0 = load %struct.s*, %struct.s** %next, align 4
-  tail call void @llvm.dbg.value(metadata %struct.s* %0, metadata !17, metadata !18), !dbg !19
+  %0 = load ptr, ptr %xl.addr.0, align 4
+  tail call void @llvm.dbg.value(metadata ptr %0, metadata !17, metadata !18), !dbg !19
   br label %while.cond
 
 while.end:                                        ; preds = %while.cond
-  ret %struct.s* null
+  ret ptr null
 }
 
 ; Function Attrs: nounwind readnone

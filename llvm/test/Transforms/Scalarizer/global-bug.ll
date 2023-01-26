@@ -11,13 +11,13 @@
 define dso_local void @test1() local_unnamed_addr {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[T0:%.*]] = ptrtoint i16* @a to i16
-; CHECK-NEXT:    store i16 [[T0]], i16* @b, align 1
+; CHECK-NEXT:    [[T0:%.*]] = ptrtoint ptr @a to i16
+; CHECK-NEXT:    store i16 [[T0]], ptr @b, align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %extract = extractelement <4 x i16*> <i16* @a, i16* @a, i16* @a, i16* @a>, i32 1
-  %t0 = ptrtoint i16* %extract to i16
-  store i16 %t0, i16* @b, align 1
+  %extract = extractelement <4 x ptr> <ptr @a, ptr @a, ptr @a, ptr @a>, i32 1
+  %t0 = ptrtoint ptr %extract to i16
+  store i16 %t0, ptr @b, align 1
   ret void
 }

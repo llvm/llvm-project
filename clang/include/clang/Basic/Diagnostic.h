@@ -21,7 +21,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -32,6 +31,7 @@
 #include <list>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -1346,8 +1346,8 @@ public:
   // It is necessary to limit this to rvalue reference to avoid calling this
   // function with a bitfield lvalue argument since non-const reference to
   // bitfield is not allowed.
-  template <typename T, typename = typename std::enable_if<
-                            !std::is_lvalue_reference<T>::value>::type>
+  template <typename T,
+            typename = std::enable_if_t<!std::is_lvalue_reference<T>::value>>
   const DiagnosticBuilder &operator<<(T &&V) const {
     assert(isActive() && "Clients must not add to cleared diagnostic!");
     const StreamingDiagnostic &DB = *this;
@@ -1472,6 +1472,12 @@ operator<<(const StreamingDiagnostic &DB, T *DC) {
 }
 
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             SourceLocation L) {
+  DB.AddSourceRange(CharSourceRange::getTokenRange(L));
+  return DB;
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
                                              SourceRange R) {
   DB.AddSourceRange(CharSourceRange::getTokenRange(R));
   return DB;
@@ -1505,7 +1511,7 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
 
 inline const StreamingDiagnostic &
 operator<<(const StreamingDiagnostic &DB,
-           const llvm::Optional<SourceRange> &Opt) {
+           const std::optional<SourceRange> &Opt) {
   if (Opt)
     DB << *Opt;
   return DB;
@@ -1513,15 +1519,14 @@ operator<<(const StreamingDiagnostic &DB,
 
 inline const StreamingDiagnostic &
 operator<<(const StreamingDiagnostic &DB,
-           const llvm::Optional<CharSourceRange> &Opt) {
+           const std::optional<CharSourceRange> &Opt) {
   if (Opt)
     DB << *Opt;
   return DB;
 }
 
 inline const StreamingDiagnostic &
-operator<<(const StreamingDiagnostic &DB,
-           const llvm::Optional<FixItHint> &Opt) {
+operator<<(const StreamingDiagnostic &DB, const std::optional<FixItHint> &Opt) {
   if (Opt)
     DB << *Opt;
   return DB;
@@ -1716,9 +1721,7 @@ public:
   range_iterator range_end() const { return Ranges.end(); }
   unsigned range_size() const { return Ranges.size(); }
 
-  ArrayRef<CharSourceRange> getRanges() const {
-    return llvm::makeArrayRef(Ranges);
-  }
+  ArrayRef<CharSourceRange> getRanges() const { return llvm::ArrayRef(Ranges); }
 
   using fixit_iterator = std::vector<FixItHint>::const_iterator;
 
@@ -1726,9 +1729,7 @@ public:
   fixit_iterator fixit_end() const { return FixIts.end(); }
   unsigned fixit_size() const { return FixIts.size(); }
 
-  ArrayRef<FixItHint> getFixIts() const {
-    return llvm::makeArrayRef(FixIts);
-  }
+  ArrayRef<FixItHint> getFixIts() const { return llvm::ArrayRef(FixIts); }
 };
 
 // Simple debug printing of StoredDiagnostic.

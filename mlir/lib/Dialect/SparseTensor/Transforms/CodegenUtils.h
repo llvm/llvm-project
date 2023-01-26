@@ -13,18 +13,26 @@
 #ifndef MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_CODEGENUTILS_H_
 #define MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_CODEGENUTILS_H_
 
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/SparseTensor/IR/Enums.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
-#include "mlir/ExecutionEngine/SparseTensorUtils.h"
+#include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/IR/Builders.h"
 
 namespace mlir {
+
 class Location;
 class Type;
 class Value;
 
 namespace sparse_tensor {
+
+/// Shorthand aliases for the `emitCInterface` argument to `getFunc()`,
+/// `createFuncCall()`, and `replaceOpWithFuncCall()`.
+enum class EmitCInterface : bool { Off = false, On = true };
 
 //===----------------------------------------------------------------------===//
 // ExecutionEngine/SparseTensorUtils helper functions.
@@ -40,18 +48,16 @@ OverheadType overheadTypeEncoding(Type tp);
 Type getOverheadType(Builder &builder, OverheadType ot);
 
 /// Returns the OverheadType for pointer overhead storage.
-OverheadType pointerOverheadTypeEncoding(const SparseTensorEncodingAttr &enc);
+OverheadType pointerOverheadTypeEncoding(SparseTensorEncodingAttr enc);
 
 /// Returns the OverheadType for index overhead storage.
-OverheadType indexOverheadTypeEncoding(const SparseTensorEncodingAttr &enc);
+OverheadType indexOverheadTypeEncoding(SparseTensorEncodingAttr enc);
 
 /// Returns the mlir::Type for pointer overhead storage.
-Type getPointerOverheadType(Builder &builder,
-                            const SparseTensorEncodingAttr &enc);
+Type getPointerOverheadType(Builder &builder, SparseTensorEncodingAttr enc);
 
 /// Returns the mlir::Type for index overhead storage.
-Type getIndexOverheadType(Builder &builder,
-                          const SparseTensorEncodingAttr &enc);
+Type getIndexOverheadType(Builder &builder, SparseTensorEncodingAttr enc);
 
 /// Convert OverheadType to its function-name suffix.
 StringRef overheadTypeFunctionSuffix(OverheadType ot);
@@ -68,15 +74,14 @@ StringRef primaryTypeFunctionSuffix(PrimaryType pt);
 /// Converts a primary storage type to its function-name suffix.
 StringRef primaryTypeFunctionSuffix(Type elemTp);
 
-/// Converts the IR's dimension level type to its internal type-encoding.
-DimLevelType dimLevelTypeEncoding(SparseTensorEncodingAttr::DimLevelType dlt);
+//===----------------------------------------------------------------------===//
+// Misc code generators and utilities.
+//===----------------------------------------------------------------------===//
 
-//===----------------------------------------------------------------------===//
-// Misc code generators.
-//
-// TODO: both of these should move upstream to their respective classes.
-// Once RFCs have been created for those changes, list them here.
-//===----------------------------------------------------------------------===//
+template <typename T>
+inline RankedTensorType getRankedTensorType(T t) {
+  return t.getType().template cast<RankedTensorType>();
+}
 
 /// Generates a 1-valued attribute of the given type.  This supports
 /// all the same types as `getZeroAttr`; however, unlike `getZeroAttr`,
@@ -89,8 +94,151 @@ Attribute getOneAttr(Builder &builder, Type tp);
 /// true if `v` is NaN).
 Value genIsNonzero(OpBuilder &builder, Location loc, Value v);
 
+/// Computes the shape of destination tensor of a reshape operator. This is only
+/// used when operands have dynamic shape. The shape of the destination is
+/// stored into dstShape.
+void genReshapeDstShape(Location loc, PatternRewriter &rewriter,
+                        SmallVectorImpl<Value> &dstShape,
+                        ArrayRef<Value> srcShape,
+                        ArrayRef<int64_t> staticDstShape,
+                        ArrayRef<ReassociationIndices> reassociation);
+
+/// Translate indices during a reshaping operation.
+void translateIndicesArray(OpBuilder &builder, Location loc,
+                           ArrayRef<ReassociationIndices> reassociation,
+                           ValueRange srcIndices, ArrayRef<Value> srcShape,
+                           ArrayRef<Value> dstShape,
+                           SmallVectorImpl<Value> &dstIndices);
+
+/// Returns a function reference (first hit also inserts into module). Sets
+/// the "_emit_c_interface" on the function declaration when requested,
+/// so that LLVM lowering generates a wrapper function that takes care
+/// of ABI complications with passing in and returning MemRefs to C functions.
+FlatSymbolRefAttr getFunc(ModuleOp module, StringRef name, TypeRange resultType,
+                          ValueRange operands, EmitCInterface emitCInterface);
+
+/// Creates a `CallOp` to the function reference returned by `getFunc()` in
+/// the builder's module.
+func::CallOp createFuncCall(OpBuilder &builder, Location loc, StringRef name,
+                            TypeRange resultType, ValueRange operands,
+                            EmitCInterface emitCInterface);
+
+/// Returns the equivalent of `void*` for opaque arguments to the
+/// execution engine.
+Type getOpaquePointerType(OpBuilder &builder);
+
+/// Generates an uninitialized temporary buffer of the given size and
+/// type, but returns it as type `memref<? x $tp>` (rather than as type
+/// `memref<$sz x $tp>`).
+Value genAlloca(OpBuilder &builder, Location loc, Value sz, Type tp);
+
+/// Generates an uninitialized temporary buffer of the given size and
+/// type, and returns it as type `memref<? x $tp>` (staticShape=false) or
+/// `memref<$sz x $tp>` (staticShape=true).
+Value genAlloca(OpBuilder &builder, Location loc, unsigned sz, Type tp,
+                bool staticShape = false);
+
+/// Generates an uninitialized temporary buffer with room for one value
+/// of the given type, and returns the `memref<$tp>`.
+Value genAllocaScalar(OpBuilder &builder, Location loc, Type tp);
+
+/// Generates a temporary buffer, initializes it with the given contents,
+/// and returns it as type `memref<? x $tp>` (rather than specifying the
+/// size of the buffer).
+Value allocaBuffer(OpBuilder &builder, Location loc, ValueRange values);
+
+/// Generates code to allocate a buffer of the given type, and zero
+/// initialize it.  If the buffer type has any dynamic sizes, then the
+/// `sizes` parameter should be as filled by sizesFromPtr(); that way
+/// we can reuse the genDimSizeCall() results generated by sizesFromPtr().
+Value allocDenseTensor(OpBuilder &builder, Location loc,
+                       RankedTensorType tensorTp, ValueRange sizes);
+
+/// Generates code to deallocate a dense buffer.
+void deallocDenseTensor(OpBuilder &builder, Location loc, Value buffer);
+
+/// Generates the code to read the value from tensor[ivs]. The generated code
+/// looks like the following and the insertion point after this routine is
+/// inside the if-then branch behind the assignment to ind.
+///    if (tensor[ivs] != 0)
+///      insert_point
+Value genValueForDense(OpBuilder &builder, Location loc, Value tensor,
+                       ValueRange ivs);
+
+/// Generates the loop structure to iterate over a dense tensor or a sparse
+/// tensor constant to support the lowering of dense-to-sparse convert operator.
+//
+// The loop to iterate a dense tensor:
+//   for i1 in dim1
+//    ..
+//     for ik in dimk
+//       val = a[i1,..,ik]
+//       if val != 0
+//         loop-body
+//
+// The loop to iterate a sparse tensor constant:
+//   for i in range(NNZ)
+//     val = values[i]
+//     [i1,..,ik] = indices[i]
+//     loop-body
+void genDenseTensorOrSparseConstantIterLoop(
+    OpBuilder &builder, Location loc, Value src, unsigned rank,
+    function_ref<void(OpBuilder &, Location, Value, ValueRange)> bodyBuilder);
+
+/// Populates given sizes array from dense tensor or sparse tensor constant.
+void sizesFromSrc(OpBuilder &builder, SmallVectorImpl<Value> &sizes,
+                  Location loc, Value src);
+
+/// Generates a 1D MemRefType with a dynamic size. When withLayout is set, the
+/// returned memref has a layout has unknown strides and offsets. Otherwise,
+/// a memref with a standard unit stride zero offset layout is returned.
+inline MemRefType get1DMemRefType(Type etp, bool withLayout) {
+  auto layout = withLayout ? StridedLayoutAttr::StridedLayoutAttr::get(
+                                 etp.getContext(), ShapedType::kDynamic,
+                                 {ShapedType::kDynamic})
+                           : StridedLayoutAttr();
+  return MemRefType::get(ShapedType::kDynamic, etp, layout);
+}
+
+/// Scans to top of generated loop.
+Operation *getTop(Operation *op);
+
+/// Iterate over a sparse constant, generates constantOp for value and indices.
+/// E.g.,
+/// sparse<[ [0], [28], [31] ],
+///          [ (-5.13, 2.0), (3.0, 4.0), (5.0, 6.0) ] >
+/// =>
+/// %c1 = arith.constant 0
+/// %v1 = complex.constant (5.13, 2.0)
+/// callback({%c1}, %v1)
+///
+/// %c2 = arith.constant 28
+/// %v2 = complex.constant (3.0, 4.0)
+/// callback({%c2}, %v2)
+///
+/// %c3 = arith.constant 31
+/// %v3 = complex.constant (5.0, 6.0)
+/// callback({%c3}, %v3)
+void foreachInSparseConstant(
+    Location loc, RewriterBase &rewriter, SparseElementsAttr attr,
+    function_ref<void(ArrayRef<Value>, Value)> callback);
+
+/// Converts the vector indices and store it into the memory pointed by
+/// `ind`, apply (optional) `offset` on `offsetDim`.
+void storeIndices(OpBuilder &builder, Location loc, unsigned rank, Value ind,
+                  ValueRange ivs, unsigned offsetDim = 0,
+                  Value offset = Value());
+
+/// Reshapes the linear values buffer for an annotated all dense sparse tensor
+/// to match the shape of the corresponding dense tensor to support direct
+/// access of the buffer through indices.
+Value reshapeValuesToLevels(OpBuilder &builder, Location loc,
+                            SparseTensorEncodingAttr enc,
+                            const SmallVectorImpl<Value> &dimSizes,
+                            Value valuesBuffer, Value idxBuffer);
+
 //===----------------------------------------------------------------------===//
-// Constant generators.
+// Inlined constant generators.
 //
 // All these functions are just wrappers to improve code legibility;
 // therefore, we mark them as `inline` to avoid introducing any additional
@@ -103,9 +251,9 @@ Value genIsNonzero(OpBuilder &builder, Location loc, Value v);
 //===----------------------------------------------------------------------===//
 
 /// Generates a 0-valued constant of the given type.  In addition to
-/// the scalar types (`ComplexType`, ``FloatType`, `IndexType`, `IntegerType`),
-/// this also works for `RankedTensorType` and `VectorType` (for which it
-/// generates a constant `DenseElementsAttr` of zeros).
+/// the scalar types (`ComplexType`, ``FloatType`, `IndexType`,
+/// `IntegerType`), this also works for `RankedTensorType` and `VectorType`
+/// (for which it generates a constant `DenseElementsAttr` of zeros).
 inline Value constantZero(OpBuilder &builder, Location loc, Type tp) {
   if (auto ctp = tp.dyn_cast<ComplexType>()) {
     auto zeroe = builder.getZeroAttr(ctp.getElementType());
@@ -167,14 +315,14 @@ inline Value constantOverheadTypeEncoding(OpBuilder &builder, Location loc,
 /// Generates a constant of the internal type-encoding for pointer
 /// overhead storage.
 inline Value constantPointerTypeEncoding(OpBuilder &builder, Location loc,
-                                         const SparseTensorEncodingAttr &enc) {
+                                         SparseTensorEncodingAttr enc) {
   return constantOverheadTypeEncoding(builder, loc, enc.getPointerBitWidth());
 }
 
 /// Generates a constant of the internal type-encoding for index overhead
 /// storage.
 inline Value constantIndexTypeEncoding(OpBuilder &builder, Location loc,
-                                       const SparseTensorEncodingAttr &enc) {
+                                       SparseTensorEncodingAttr enc) {
   return constantOverheadTypeEncoding(builder, loc, enc.getIndexBitWidth());
 }
 
@@ -186,12 +334,30 @@ inline Value constantPrimaryTypeEncoding(OpBuilder &builder, Location loc,
 }
 
 /// Generates a constant of the internal dimension level type encoding.
-inline Value
-constantDimLevelTypeEncoding(OpBuilder &builder, Location loc,
-                             SparseTensorEncodingAttr::DimLevelType dlt) {
-  return constantI8(builder, loc,
-                    static_cast<uint8_t>(dimLevelTypeEncoding(dlt)));
+inline Value constantDimLevelTypeEncoding(OpBuilder &builder, Location loc,
+                                          DimLevelType dlt) {
+  return constantI8(builder, loc, static_cast<uint8_t>(dlt));
 }
+
+inline bool isZeroRankedTensorOrScalar(Type type) {
+  auto rtp = type.dyn_cast<RankedTensorType>();
+  return !rtp || rtp.getRank() == 0;
+}
+
+/// Infers the result type and generates ToPointersOp.
+Value genToPointers(OpBuilder &builder, Location loc, Value tensor, uint64_t d);
+
+/// Infers the result type and generates ToIndicesOp. If the dim is within a COO
+/// region, the result type is a memref with unknown stride and offset.
+/// Otherwise, the result type is a memref without any specified layout.
+Value genToIndices(OpBuilder &builder, Location loc, Value tensor, uint64_t d,
+                   uint64_t cooStart);
+
+/// Infers the result type and generates ToValuesOp.
+Value genToValues(OpBuilder &builder, Location loc, Value tensor);
+
+/// Generates code to retrieve the values size for the sparse tensor.
+Value genValMemSize(OpBuilder &builder, Location loc, Value tensor);
 
 } // namespace sparse_tensor
 } // namespace mlir

@@ -5,7 +5,7 @@
 // RUN: %clangxx_asan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_asan -O2 %s -o %t && %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_asan -O3 %s -o %t && %run %t 2>&1 | FileCheck %s
-// XFAIL: freebsd
+// XFAIL: target={{.*freebsd.*}}
 
 // On Windows, defining strtoll in a static build results in linker errors, but
 // it works with the dynamic runtime.
@@ -13,7 +13,7 @@
 
 // On NetBSD, defining strtol in a static build results in linker errors, but
 // it works with the dynamic runtime.
-// XFAIL: netbsd && !asan-dynamic-runtime
+// XFAIL: target={{.*netbsd.*}} && !asan-dynamic-runtime
 
 #include <stdlib.h>
 #include <stdio.h>

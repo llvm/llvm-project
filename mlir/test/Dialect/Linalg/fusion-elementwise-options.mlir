@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-linalg-elementwise-fusion-patterns=fuse-generic-ops -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-linalg-elementwise-fusion-patterns=fuse-generic-ops-control -split-input-file | FileCheck %s
 
 #map0 = affine_map<(d0, d1) -> (d0, d1)>
 #binary2Dpointwise = {
@@ -17,7 +17,7 @@ func.func @test_fusion_limit(
   %c1 = arith.constant 1 : index
   %d0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
   %d1 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
-  %init = linalg.init_tensor [%d0, %d1] : tensor<?x?xf32>
+  %init = tensor.empty(%d0, %d1) : tensor<?x?xf32>
   %0 = linalg.generic #binary2Dpointwise
       ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%init : tensor<?x?xf32>) {
@@ -49,6 +49,7 @@ func.func @test_fusion_limit(
     } -> tensor<?x?xf32>
   return %6 : tensor<?x?xf32>
 }
+
 // CHECK-LABEL: func @test_fusion_limit
 //  CHECK-SAME:   %[[ARG0:[a-zA-z0-9_]+]]: tensor<?x?xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-z0-9_]+]]: tensor<?x?xf32>

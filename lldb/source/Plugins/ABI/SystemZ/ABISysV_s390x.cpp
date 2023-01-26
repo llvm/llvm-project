@@ -29,6 +29,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -172,8 +173,7 @@ static const RegisterInfo g_register_infos[] = {
     DEFINE_REG(f15, 8, nullptr, LLDB_INVALID_REGNUM),
 };
 
-static const uint32_t k_num_register_infos =
-    llvm::array_lengthof(g_register_infos);
+static const uint32_t k_num_register_infos = std::size(g_register_infos);
 
 const lldb_private::RegisterInfo *
 ABISysV_s390x::GetRegisterInfoArray(uint32_t &count) {
@@ -356,7 +356,7 @@ bool ABISysV_s390x::GetArgumentValues(Thread &thread, ValueList &values) const {
     // We currently only support extracting values with Clang QualTypes. Do we
     // care about others?
     CompilerType compiler_type = value->GetCompilerType();
-    llvm::Optional<uint64_t> bit_size = compiler_type.GetBitSize(&thread);
+    std::optional<uint64_t> bit_size = compiler_type.GetBitSize(&thread);
     if (!bit_size)
       return false;
     bool is_signed;
@@ -426,7 +426,7 @@ Status ABISysV_s390x::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
       error.SetErrorString(
           "We don't support returning complex values at present");
     else {
-      llvm::Optional<uint64_t> bit_width =
+      std::optional<uint64_t> bit_width =
           compiler_type.GetBitSize(frame_sp.get());
       if (!bit_width) {
         error.SetErrorString("can't get type size");
@@ -493,7 +493,7 @@ ValueObjectSP ABISysV_s390x::GetReturnValueObjectSimple(
     bool success = false;
     if (type_flags & eTypeIsInteger) {
       // Extract the register context so we can read arguments from registers.
-      llvm::Optional<uint64_t> byte_size =
+      std::optional<uint64_t> byte_size =
           return_compiler_type.GetByteSize(&thread);
       if (!byte_size)
         return return_valobj_sp;
@@ -540,7 +540,7 @@ ValueObjectSP ABISysV_s390x::GetReturnValueObjectSimple(
       if (type_flags & eTypeIsComplex) {
         // Don't handle complex yet.
       } else {
-        llvm::Optional<uint64_t> byte_size =
+        std::optional<uint64_t> byte_size =
             return_compiler_type.GetByteSize(&thread);
         if (byte_size && *byte_size <= sizeof(long double)) {
           const RegisterInfo *f0_info = reg_ctx->GetRegisterInfoByName("f0", 0);

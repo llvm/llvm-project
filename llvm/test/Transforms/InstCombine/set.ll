@@ -12,7 +12,7 @@ define i1 @test1(i32 %A) {
 ;
   %B = icmp eq i32 %A, %A
   ; Never true
-  %C = icmp eq i32* @X, null
+  %C = icmp eq ptr @X, null
   %D = and i1 %B, %C
   ret i1 %D
 }
@@ -23,7 +23,7 @@ define i1 @test1_logical(i32 %A) {
 ;
   %B = icmp eq i32 %A, %A
   ; Never true
-  %C = icmp eq i32* @X, null
+  %C = icmp eq ptr @X, null
   %D = select i1 %B, i1 %C, i1 false
   ret i1 %D
 }
@@ -34,7 +34,7 @@ define i1 @test2(i32 %A) {
 ;
   %B = icmp ne i32 %A, %A
   ; Never false
-  %C = icmp ne i32* @X, null
+  %C = icmp ne ptr @X, null
   %D = or i1 %B, %C
   ret i1 %D
 }
@@ -45,7 +45,7 @@ define i1 @test2_logical(i32 %A) {
 ;
   %B = icmp ne i32 %A, %A
   ; Never false
-  %C = icmp ne i32* @X, null
+  %C = icmp ne ptr @X, null
   %D = select i1 %B, i1 true, i1 %C
   ret i1 %D
 }

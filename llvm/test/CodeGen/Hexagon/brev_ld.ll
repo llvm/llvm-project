@@ -19,74 +19,66 @@ target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i
 target triple = "hexagon-unknown--elf"
 
 ; CHECK: @call_brev_ldd
-define i64* @call_brev_ldd(i64* %ptr, i64 %dst, i32 %mod) local_unnamed_addr #0 {
+define ptr @call_brev_ldd(ptr %ptr, i64 %dst, i32 %mod) local_unnamed_addr #0 {
 entry:
-  %0 = bitcast i64* %ptr to i8*
 ; CHECK: = memd(r{{[0-9]*}}++m{{[0-1]}}:brev)
-  %1 = tail call { i64, i8* } @llvm.hexagon.L2.loadrd.pbr(i8* %0, i32 %mod)
-  %2 = extractvalue { i64, i8* } %1, 1
-  %3 = bitcast i8* %2 to i64*
-  ret i64* %3
+  %0 = tail call { i64, ptr } @llvm.hexagon.L2.loadrd.pbr(ptr %ptr, i32 %mod)
+  %1 = extractvalue { i64, ptr } %0, 1
+  ret ptr %1
 }
 
 ; CHECK: @call_brev_ldw
-define i32* @call_brev_ldw(i32* %ptr, i32 %dst, i32 %mod) local_unnamed_addr #0 {
+define ptr @call_brev_ldw(ptr %ptr, i32 %dst, i32 %mod) local_unnamed_addr #0 {
 entry:
-  %0 = bitcast i32* %ptr to i8*
 ; CHECK: = memw(r{{[0-9]*}}++m{{[0-1]}}:brev)
-  %1 = tail call { i32, i8* } @llvm.hexagon.L2.loadri.pbr(i8* %0, i32 %mod)
-  %2 = extractvalue { i32, i8* } %1, 1
-  %3 = bitcast i8* %2 to i32*
-  ret i32* %3
+  %0 = tail call { i32, ptr } @llvm.hexagon.L2.loadri.pbr(ptr %ptr, i32 %mod)
+  %1 = extractvalue { i32, ptr } %0, 1
+  ret ptr %1
 }
 
 ; CHECK: @call_brev_ldh
-define i16* @call_brev_ldh(i16* %ptr, i16 signext %dst, i32 %mod) local_unnamed_addr #0 {
+define ptr @call_brev_ldh(ptr %ptr, i16 signext %dst, i32 %mod) local_unnamed_addr #0 {
 entry:
-  %0 = bitcast i16* %ptr to i8*
 ; CHECK: = memh(r{{[0-9]*}}++m{{[0-1]}}:brev)
-  %1 = tail call { i32, i8* } @llvm.hexagon.L2.loadrh.pbr(i8* %0, i32 %mod)
-  %2 = extractvalue { i32, i8* } %1, 1
-  %3 = bitcast i8* %2 to i16*
-  ret i16* %3
+  %0 = tail call { i32, ptr } @llvm.hexagon.L2.loadrh.pbr(ptr %ptr, i32 %mod)
+  %1 = extractvalue { i32, ptr } %0, 1
+  ret ptr %1
 }
 
 ; CHECK: @call_brev_lduh
-define i16* @call_brev_lduh(i16* %ptr, i16 zeroext %dst, i32 %mod) local_unnamed_addr #0 {
+define ptr @call_brev_lduh(ptr %ptr, i16 zeroext %dst, i32 %mod) local_unnamed_addr #0 {
 entry:
-  %0 = bitcast i16* %ptr to i8*
 ; CHECK: = memuh(r{{[0-9]*}}++m{{[0-1]}}:brev)
-  %1 = tail call { i32, i8* } @llvm.hexagon.L2.loadruh.pbr(i8* %0, i32 %mod)
-  %2 = extractvalue { i32, i8* } %1, 1
-  %3 = bitcast i8* %2 to i16*
-  ret i16* %3
+  %0 = tail call { i32, ptr } @llvm.hexagon.L2.loadruh.pbr(ptr %ptr, i32 %mod)
+  %1 = extractvalue { i32, ptr } %0, 1
+  ret ptr %1
 }
 
 ; CHECK: @call_brev_ldb
-define i8* @call_brev_ldb(i8* %ptr, i8 signext %dst, i32 %mod) local_unnamed_addr #0 {
+define ptr @call_brev_ldb(ptr %ptr, i8 signext %dst, i32 %mod) local_unnamed_addr #0 {
 entry:
 ; CHECK: = memb(r{{[0-9]*}}++m{{[0-1]}}:brev)
-  %0 = tail call { i32, i8* } @llvm.hexagon.L2.loadrb.pbr(i8* %ptr, i32 %mod)
-  %1 = extractvalue { i32, i8* } %0, 1
-  ret i8* %1
+  %0 = tail call { i32, ptr } @llvm.hexagon.L2.loadrb.pbr(ptr %ptr, i32 %mod)
+  %1 = extractvalue { i32, ptr } %0, 1
+  ret ptr %1
 }
 
 ; Function Attrs: nounwind readonly
 ; CHECK: @call_brev_ldub
-define i8* @call_brev_ldub(i8* %ptr, i8 zeroext %dst, i32 %mod) local_unnamed_addr #0 {
+define ptr @call_brev_ldub(ptr %ptr, i8 zeroext %dst, i32 %mod) local_unnamed_addr #0 {
 entry:
 ; CHECK: = memub(r{{[0-9]*}}++m{{[0-1]}}:brev)
-  %0 = tail call { i32, i8* } @llvm.hexagon.L2.loadrub.pbr(i8* %ptr, i32 %mod)
-  %1 = extractvalue { i32, i8* } %0, 1
-  ret i8* %1
+  %0 = tail call { i32, ptr } @llvm.hexagon.L2.loadrub.pbr(ptr %ptr, i32 %mod)
+  %1 = extractvalue { i32, ptr } %0, 1
+  ret ptr %1
 }
 
-declare { i64, i8* } @llvm.hexagon.L2.loadrd.pbr(i8*, i32) #1
-declare { i32, i8* } @llvm.hexagon.L2.loadri.pbr(i8*, i32) #1
-declare { i32, i8* } @llvm.hexagon.L2.loadrh.pbr(i8*, i32) #1
-declare { i32, i8* } @llvm.hexagon.L2.loadruh.pbr(i8*, i32) #1
-declare { i32, i8* } @llvm.hexagon.L2.loadrb.pbr(i8*, i32) #1
-declare { i32, i8* } @llvm.hexagon.L2.loadrub.pbr(i8*, i32) #1
+declare { i64, ptr } @llvm.hexagon.L2.loadrd.pbr(ptr, i32) #1
+declare { i32, ptr } @llvm.hexagon.L2.loadri.pbr(ptr, i32) #1
+declare { i32, ptr } @llvm.hexagon.L2.loadrh.pbr(ptr, i32) #1
+declare { i32, ptr } @llvm.hexagon.L2.loadruh.pbr(ptr, i32) #1
+declare { i32, ptr } @llvm.hexagon.L2.loadrb.pbr(ptr, i32) #1
+declare { i32, ptr } @llvm.hexagon.L2.loadrub.pbr(ptr, i32) #1
 
 attributes #0 = { nounwind readonly "target-cpu"="hexagonv60" }
 attributes #1 = { nounwind readonly }

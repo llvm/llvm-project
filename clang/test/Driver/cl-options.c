@@ -43,22 +43,28 @@
 // EXTERNAL_I: "-isystem" "path"
 
 // RUN: %clang_cl /fp:fast /fp:except -### -- %s 2>&1 | FileCheck -check-prefix=fpexcept %s
-// fpexcept-NOT: -menable-unsafe-fp-math
+// fpexcept-NOT: -funsafe-math-optimizations
+// fpexcept: -ffp-exception-behavior=strict
 
 // RUN: %clang_cl /fp:fast /fp:except /fp:except- -### -- %s 2>&1 | FileCheck -check-prefix=fpexcept_ %s
-// fpexcept_: -menable-unsafe-fp-math
+// fpexcept_: -funsafe-math-optimizations
+// fpexcept_: -ffp-exception-behavior=ignore
 
 // RUN: %clang_cl /fp:precise /fp:fast -### -- %s 2>&1 | FileCheck -check-prefix=fpfast %s
-// fpfast: -menable-unsafe-fp-math
+// fpfast: -funsafe-math-optimizations
 // fpfast: -ffast-math
 
 // RUN: %clang_cl /fp:fast /fp:precise -### -- %s 2>&1 | FileCheck -check-prefix=fpprecise %s
-// fpprecise-NOT: -menable-unsafe-fp-math
+// fpprecise-NOT: -funsafe-math-optimizations
 // fpprecise-NOT: -ffast-math
 
 // RUN: %clang_cl /fp:fast /fp:strict -### -- %s 2>&1 | FileCheck -check-prefix=fpstrict %s
-// fpstrict-NOT: -menable-unsafe-fp-math
+// fpstrict-NOT: -funsafe-math-optimizations
 // fpstrict-NOT: -ffast-math
+// fpstrict: -ffp-contract=off
+
+// RUN: %clang_cl /fp:strict /fp:contract -### -- %s 2>&1 | FileCheck -check-prefix=fpcontract %s
+// fpcontract: -ffp-contract=on
 
 // RUN: %clang_cl /fsanitize=address -### -- %s 2>&1 | FileCheck -check-prefix=fsanitize_address %s
 // fsanitize_address: -fsanitize=address
@@ -389,9 +395,6 @@
 // RUN:    /wd1234 \
 // RUN:    /Wv \
 // RUN:    /Wv:17 \
-// RUN:    /ZH:MD5 \
-// RUN:    /ZH:SHA1 \
-// RUN:    /ZH:SHA_256 \
 // RUN:    /Zm \
 // RUN:    /Zo \
 // RUN:    /Zo- \
@@ -423,6 +426,8 @@
 // RUN:     /Bt \
 // RUN:     /Bt+ \
 // RUN:     /clr:pure \
+// RUN:     /d1import_no_registry \
+// RUN:     /d1nodatetime \
 // RUN:     /d2FH4 \
 // RUN:     /docname \
 // RUN:     /experimental:external \
@@ -572,6 +577,17 @@
 // Z7_gdwarf: "-debug-info-kind=constructor"
 // Z7_gdwarf: "-dwarf-version=
 
+// RUN: %clang_cl /ZH:MD5 /c -### -- %s 2>&1 | FileCheck -check-prefix=ZH_MD5 %s
+// ZH_MD5: "-gsrc-hash=md5"
+
+// RUN: %clang_cl /ZH:SHA1 /c -### -- %s 2>&1 \
+// RUN:     | FileCheck -check-prefix=ZH_SHA1 %s
+// ZH_SHA1: "-gsrc-hash=sha1"
+
+// RUN: %clang_cl /ZH:SHA_256 /c -### -- %s 2>&1 \
+// RUN:     | FileCheck -check-prefix=ZH_SHA256 %s
+// ZH_SHA256: "-gsrc-hash=sha256"
+
 // RUN: %clang_cl -fmsc-version=1800 -TP -### -- %s 2>&1 | FileCheck -check-prefix=CXX11 %s
 // CXX11: -std=c++11
 
@@ -705,7 +721,6 @@
 // RUN:     -fimplicit-modules \
 // RUN:     -fno-implicit-modules \
 // RUN:     -ftrivial-auto-var-init=zero \
-// RUN:     -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang \
 // RUN:     --version \
 // RUN:     -Werror /Zs -- %s 2>&1
 
@@ -768,5 +783,12 @@
 // RUN: %clang_cl /external:W4 /c -### -- %s 2>&1 | FileCheck -check-prefix=EXTERNAL_Wn %s
 // EXTERNAL_W0: "-Wno-system-headers"
 // EXTERNAL_Wn: "-Wsystem-headers"
+
+// RUN: %clang_cl -vctoolsdir "" /arm64EC /c -### -- %s 2>&1 | FileCheck --check-prefix=ARM64EC %s 
+// ARM64EC-NOT: /arm64EC has been overridden by specified target
+// ARM64EC: "-triple" "arm64ec-pc-windows-msvc19.20.0"
+
+// RUN: %clang_cl -vctoolsdir "" /arm64EC /c -target x86_64-pc-windows-msvc  -### -- %s 2>&1 | FileCheck --check-prefix=ARM64EC_OVERRIDE %s
+// ARM64EC_OVERRIDE: warning: /arm64EC has been overridden by specified target: x86_64-pc-windows-msvc; option ignored
 
 void f(void) { }

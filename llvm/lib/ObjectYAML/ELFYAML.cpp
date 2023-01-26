@@ -23,6 +23,7 @@
 #include "llvm/Support/WithColor.h"
 #include <cassert>
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 
@@ -424,6 +425,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_ARM_EABI_VER3, EF_ARM_EABIMASK);
     BCaseMask(EF_ARM_EABI_VER4, EF_ARM_EABIMASK);
     BCaseMask(EF_ARM_EABI_VER5, EF_ARM_EABIMASK);
+    BCaseMask(EF_ARM_BE8, EF_ARM_BE8);
     break;
   case ELF::EM_MIPS:
     BCase(EF_MIPS_NOREORDER);
@@ -484,6 +486,9 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_HEXAGON_MACH_V67T, EF_HEXAGON_MACH);
     BCaseMask(EF_HEXAGON_MACH_V68, EF_HEXAGON_MACH);
     BCaseMask(EF_HEXAGON_MACH_V69, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V71, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V71T, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V73, EF_HEXAGON_MACH);
     BCaseMask(EF_HEXAGON_ISA_V2, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V3, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V4, EF_HEXAGON_ISA);
@@ -496,6 +501,8 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_HEXAGON_ISA_V67, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V68, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V69, EF_HEXAGON_ISA);
+    BCaseMask(EF_HEXAGON_ISA_V71, EF_HEXAGON_ISA);
+    BCaseMask(EF_HEXAGON_ISA_V73, EF_HEXAGON_ISA);
     break;
   case ELF::EM_AVR:
     BCaseMask(EF_AVR_ARCH_AVR1, EF_AVR_ARCH_MASK);
@@ -519,12 +526,11 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCase(EF_AVR_LINKRELAX_PREPARED);
     break;
   case ELF::EM_LOONGARCH:
-    BCaseMask(EF_LOONGARCH_BASE_ABI_ILP32S, EF_LOONGARCH_BASE_ABI_MASK);
-    BCaseMask(EF_LOONGARCH_BASE_ABI_ILP32F, EF_LOONGARCH_BASE_ABI_MASK);
-    BCaseMask(EF_LOONGARCH_BASE_ABI_ILP32D, EF_LOONGARCH_BASE_ABI_MASK);
-    BCaseMask(EF_LOONGARCH_BASE_ABI_LP64S, EF_LOONGARCH_BASE_ABI_MASK);
-    BCaseMask(EF_LOONGARCH_BASE_ABI_LP64F, EF_LOONGARCH_BASE_ABI_MASK);
-    BCaseMask(EF_LOONGARCH_BASE_ABI_LP64D, EF_LOONGARCH_BASE_ABI_MASK);
+    BCaseMask(EF_LOONGARCH_ABI_SOFT_FLOAT, EF_LOONGARCH_ABI_MODIFIER_MASK);
+    BCaseMask(EF_LOONGARCH_ABI_SINGLE_FLOAT, EF_LOONGARCH_ABI_MODIFIER_MASK);
+    BCaseMask(EF_LOONGARCH_ABI_DOUBLE_FLOAT, EF_LOONGARCH_ABI_MODIFIER_MASK);
+    BCaseMask(EF_LOONGARCH_OBJABI_V0, EF_LOONGARCH_OBJABI_MASK);
+    BCaseMask(EF_LOONGARCH_OBJABI_V1, EF_LOONGARCH_OBJABI_MASK);
     break;
   case ELF::EM_RISCV:
     BCase(EF_RISCV_RVC);
@@ -534,6 +540,11 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_RISCV_FLOAT_ABI_QUAD, EF_RISCV_FLOAT_ABI);
     BCase(EF_RISCV_RVE);
     BCase(EF_RISCV_TSO);
+    break;
+  case ELF::EM_XTENSA:
+    BCase(EF_XTENSA_XT_INSN);
+    BCaseMask(EF_XTENSA_MACH_NONE, EF_XTENSA_MACH);
+    BCase(EF_XTENSA_XT_LIT);
     break;
   case ELF::EM_AMDGPU:
     BCaseMask(EF_AMDGPU_MACH_NONE, EF_AMDGPU_MACH);
@@ -594,7 +605,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     switch (Object->Header.ABIVersion) {
     default:
       // ELFOSABI_AMDGPU_PAL, ELFOSABI_AMDGPU_MESA3D support *_V3 flags.
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
       BCase(EF_AMDGPU_FEATURE_XNACK_V3);
       BCase(EF_AMDGPU_FEATURE_SRAMECC_V3);
@@ -892,6 +903,9 @@ void ScalarEnumerationTraits<ELFYAML::ELF_REL>::enumeration(
   case ELF::EM_LOONGARCH:
 #include "llvm/BinaryFormat/ELFRelocs/LoongArch.def"
     break;
+  case ELF::EM_XTENSA:
+#include "llvm/BinaryFormat/ELFRelocs/Xtensa.def"
+    break;
   default:
     // Nothing to do.
     break;
@@ -1155,7 +1169,7 @@ namespace {
 
 struct NormalizedOther {
   NormalizedOther(IO &IO) : YamlIO(IO) {}
-  NormalizedOther(IO &IO, Optional<uint8_t> Original) : YamlIO(IO) {
+  NormalizedOther(IO &IO, std::optional<uint8_t> Original) : YamlIO(IO) {
     assert(Original && "This constructor is only used for outputting YAML and "
                        "assumes a non-empty Original");
     std::vector<StOtherPiece> Ret;
@@ -1195,9 +1209,9 @@ struct NormalizedOther {
     return 0;
   }
 
-  Optional<uint8_t> denormalize(IO &) {
+  std::optional<uint8_t> denormalize(IO &) {
     if (!Other)
-      return None;
+      return std::nullopt;
     uint8_t Ret = 0;
     for (StOtherPiece &Val : *Other)
       Ret |= toValue(Val);
@@ -1243,7 +1257,7 @@ struct NormalizedOther {
   }
 
   IO &YamlIO;
-  Optional<std::vector<StOtherPiece>> Other;
+  std::optional<std::vector<StOtherPiece>> Other;
   std::string UnknownFlagsHolder;
 };
 
@@ -1293,11 +1307,11 @@ void MappingTraits<ELFYAML::Symbol>::mapping(IO &IO, ELFYAML::Symbol &Symbol) {
 
   // Symbol's Other field is a bit special. It is usually a field that
   // represents st_other and holds the symbol visibility. However, on some
-  // platforms, it can contain bit fields and regular values, or even sometimes a
-  // crazy mix of them (see comments for NormalizedOther). Because of this, we
+  // platforms, it can contain bit fields and regular values, or even sometimes
+  // a crazy mix of them (see comments for NormalizedOther). Because of this, we
   // need special handling.
-  MappingNormalization<NormalizedOther, Optional<uint8_t>> Keys(IO,
-                                                                Symbol.Other);
+  MappingNormalization<NormalizedOther, std::optional<uint8_t>> Keys(
+      IO, Symbol.Other);
   IO.mapOptional("Other", Keys->Other);
 }
 
@@ -1789,6 +1803,7 @@ void MappingTraits<ELFYAML::BBAddrMapEntry>::mapping(
 void MappingTraits<ELFYAML::BBAddrMapEntry::BBEntry>::mapping(
     IO &IO, ELFYAML::BBAddrMapEntry::BBEntry &E) {
   assert(IO.getContext() && "The IO context is not initialized");
+  IO.mapOptional("ID", E.ID);
   IO.mapRequired("AddressOffset", E.AddressOffset);
   IO.mapRequired("Size", E.Size);
   IO.mapRequired("Metadata", E.Metadata);

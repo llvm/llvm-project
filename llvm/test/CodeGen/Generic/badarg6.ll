@@ -2,13 +2,13 @@
 
 ; On this code, llc did not pass the sixth argument (%reg321) to printf.
 ; It passed the first five in %o0 - %o4, but never initialized %o5.
-@.LC12 = internal global [44 x i8] c"\09\09M = %g, I = %g, V = %g\0A\09\09O = %g, E = %g\0A\0A\00"		; <[44 x i8]*> [#uses=1]
+@.LC12 = internal global [44 x i8] c"\09\09M = %g, I = %g, V = %g\0A\09\09O = %g, E = %g\0A\0A\00"		; <ptr> [#uses=1]
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)
 
 declare double @opaque(double)
 
-define i32 @main(i32 %argc, i8** %argv) {
+define i32 @main(i32 %argc, ptr %argv) {
 bb25:
 	%b = icmp sle i32 %argc, 2		; <i1> [#uses=1]
 	br i1 %b, label %bb42, label %bb43
@@ -27,6 +27,6 @@ bb43:		; preds = %bb42, %bb25
 	%reg323 = phi double [ -1.000000e+00, %bb25 ], [ %reg317, %bb42 ]		; <double> [#uses=1]
 	%reg324 = phi double [ -1.000000e+00, %bb25 ], [ %reg318, %bb42 ]		; <double> [#uses=1]
 	%reg325 = phi double [ 1.000000e+00, %bb25 ], [ %reg319, %bb42 ]		; <double> [#uses=1]
-	%reg609 = call i32 (i8*, ...) @printf( i8* getelementptr ([44 x i8], [44 x i8]* @.LC12, i64 0, i64 0), double %reg325, double %reg324, double %reg323, double %reg322, double %reg321 )		; <i32> [#uses=0]
+	%reg609 = call i32 (ptr, ...) @printf( ptr @.LC12, double %reg325, double %reg324, double %reg323, double %reg322, double %reg321 )		; <i32> [#uses=0]
 	ret i32 0
 }

@@ -38,14 +38,6 @@ public:
 
   /// Join the lattice across control-flow or callgraph edges.
   virtual ChangeResult join(const AbstractDenseLattice &rhs) = 0;
-
-  /// Reset the dense lattice to a pessimistic value. This occurs when the
-  /// analysis cannot reason about the data-flow.
-  virtual ChangeResult reset() = 0;
-
-  /// Returns true if the lattice state has reached a pessimistic fixpoint. That
-  /// is, no further modifications to the lattice can occur.
-  virtual bool isAtFixpoint() const = 0;
 };
 
 //===----------------------------------------------------------------------===//
@@ -92,27 +84,20 @@ protected:
   const AbstractDenseLattice *getLatticeFor(ProgramPoint dependent,
                                             ProgramPoint point);
 
-  /// Mark the dense lattice as having reached its pessimistic fixpoint and
-  /// propagate an update if it changed.
-  void reset(AbstractDenseLattice *lattice) {
-    propagateIfChanged(lattice, lattice->reset());
-  }
+  /// Set the dense lattice at control flow entry point and propagate an update
+  /// if it changed.
+  virtual void setToEntryState(AbstractDenseLattice *lattice) = 0;
 
   /// Join a lattice with another and propagate an update if it changed.
   void join(AbstractDenseLattice *lhs, const AbstractDenseLattice &rhs) {
     propagateIfChanged(lhs, lhs->join(rhs));
   }
 
-private:
   /// Visit an operation. If this is a call operation or region control-flow
   /// operation, then the state after the execution of the operation is set by
   /// control-flow or the callgraph. Otherwise, this function invokes the
   /// operation transfer function.
-  void visitOperation(Operation *op);
-
-  /// Visit a block. The state at the start of the block is propagated from
-  /// control-flow predecessors or callsites
-  void visitBlock(Block *block);
+  virtual void processOperation(Operation *op);
 
   /// Visit a program point within a region branch operation with predecessors
   /// in it. This can either be an entry block of one of the regions of the
@@ -120,6 +105,11 @@ private:
   void visitRegionBranchOperation(ProgramPoint point,
                                   RegionBranchOpInterface branch,
                                   AbstractDenseLattice *after);
+
+private:
+  /// Visit a block. The state at the start of the block is propagated from
+  /// control-flow predecessors or callsites
+  void visitBlock(Block *block);
 };
 
 //===----------------------------------------------------------------------===//
@@ -151,7 +141,13 @@ protected:
     return getOrCreate<LatticeT>(point);
   }
 
-private:
+  /// Set the dense lattice at control flow entry point and propagate an update
+  /// if it changed.
+  virtual void setToEntryState(LatticeT *lattice) = 0;
+  void setToEntryState(AbstractDenseLattice *lattice) override {
+    setToEntryState(static_cast<LatticeT *>(lattice));
+  }
+
   /// Type-erased wrappers that convert the abstract dense lattice to a derived
   /// lattice and invoke the virtual hooks operating on the derived lattice.
   void visitOperationImpl(Operation *op, const AbstractDenseLattice &before,

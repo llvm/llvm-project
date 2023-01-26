@@ -112,6 +112,23 @@ TEST_F(RuntimeCallTest, genMinValTest) {
   testGenMinVal(*firBuilder, i128Ty, "_FortranAMinvalInteger16");
 }
 
+TEST_F(RuntimeCallTest, genParityTest) {
+  mlir::Location loc = firBuilder->getUnknownLoc();
+  mlir::Value undef = firBuilder->create<fir::UndefOp>(loc, seqTy10);
+  mlir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
+  mlir::Value parity = fir::runtime::genParity(*firBuilder, loc, undef, dim);
+  checkCallOp(parity.getDefiningOp(), "_FortranAParity", 2);
+}
+
+TEST_F(RuntimeCallTest, genParityDescriptorTest) {
+  mlir::Location loc = firBuilder->getUnknownLoc();
+  mlir::Value result = firBuilder->create<fir::UndefOp>(loc, seqTy10);
+  mlir::Value mask = firBuilder->create<fir::UndefOp>(loc, seqTy10);
+  mlir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
+  fir::runtime::genParityDescriptor(*firBuilder, loc, result, mask, dim);
+  checkCallOpFromResultBox(result, "_FortranAParityDim", 3);
+}
+
 void testGenSum(
     fir::FirOpBuilder &builder, mlir::Type eleTy, llvm::StringRef fctName) {
   mlir::Location loc = builder.getUnknownLoc();
@@ -185,7 +202,8 @@ void testGenDotProduct(
   mlir::Type refSeqTy = fir::ReferenceType::get(seqTy);
   mlir::Value a = builder.create<fir::UndefOp>(loc, refSeqTy);
   mlir::Value b = builder.create<fir::UndefOp>(loc, refSeqTy);
-  mlir::Value result = builder.create<fir::UndefOp>(loc, seqTy);
+  mlir::Value result =
+      builder.create<fir::UndefOp>(loc, fir::ReferenceType::get(eleTy));
   mlir::Value prod = fir::runtime::genDotProduct(builder, loc, a, b, result);
   if (fir::isa_complex(eleTy))
     checkCallOpFromResultBox(result, fctName, 3);
@@ -209,14 +227,14 @@ TEST_F(RuntimeCallTest, genDotProduct) {
   testGenDotProduct(*firBuilder, c16Ty, "_FortranACppDotProductComplex16");
 }
 
-void checkGenMxxloc(fir::FirOpBuilder &builder,
+void checkGenMxxloc(fir::FirOpBuilder &builder, mlir::Type eleTy,
     void (*genFct)(fir::FirOpBuilder &, mlir::Location, mlir::Value,
         mlir::Value, mlir::Value, mlir::Value, mlir::Value),
     llvm::StringRef fctName, unsigned nbArgs) {
   mlir::Location loc = builder.getUnknownLoc();
   mlir::Type i32Ty = builder.getI32Type();
   mlir::Type seqTy =
-      fir::SequenceType::get(fir::SequenceType::Shape(1, 10), i32Ty);
+      fir::SequenceType::get(fir::SequenceType::Shape(1, 10), eleTy);
   mlir::Type refSeqTy = fir::ReferenceType::get(seqTy);
   mlir::Value a = builder.create<fir::UndefOp>(loc, refSeqTy);
   mlir::Value result = builder.create<fir::UndefOp>(loc, seqTy);
@@ -228,11 +246,57 @@ void checkGenMxxloc(fir::FirOpBuilder &builder,
 }
 
 TEST_F(RuntimeCallTest, genMaxlocTest) {
-  checkGenMxxloc(*firBuilder, fir::runtime::genMaxloc, "_FortranAMaxloc", 5);
+  checkGenMxxloc(*firBuilder, char1Ty, fir::runtime::genMaxloc,
+      "_FortranAMaxlocCharacter", 5);
+  checkGenMxxloc(*firBuilder, char2Ty, fir::runtime::genMaxloc,
+      "_FortranAMaxlocCharacter", 5);
+  checkGenMxxloc(*firBuilder, char4Ty, fir::runtime::genMaxloc,
+      "_FortranAMaxlocCharacter", 5);
+  checkGenMxxloc(
+      *firBuilder, i8Ty, fir::runtime::genMaxloc, "_FortranAMaxlocInteger1", 5);
+  checkGenMxxloc(*firBuilder, i16Ty, fir::runtime::genMaxloc,
+      "_FortranAMaxlocInteger2", 5);
+  checkGenMxxloc(*firBuilder, i32Ty, fir::runtime::genMaxloc,
+      "_FortranAMaxlocInteger4", 5);
+  checkGenMxxloc(*firBuilder, i64Ty, fir::runtime::genMaxloc,
+      "_FortranAMaxlocInteger8", 5);
+  checkGenMxxloc(*firBuilder, i128Ty, fir::runtime::genMaxloc,
+      "_FortranAMaxlocInteger16", 5);
+  checkGenMxxloc(
+      *firBuilder, f32Ty, fir::runtime::genMaxloc, "_FortranAMaxlocReal4", 5);
+  checkGenMxxloc(
+      *firBuilder, f64Ty, fir::runtime::genMaxloc, "_FortranAMaxlocReal8", 5);
+  checkGenMxxloc(
+      *firBuilder, f80Ty, fir::runtime::genMaxloc, "_FortranAMaxlocReal10", 5);
+  checkGenMxxloc(
+      *firBuilder, f128Ty, fir::runtime::genMaxloc, "_FortranAMaxlocReal16", 5);
 }
 
 TEST_F(RuntimeCallTest, genMinlocTest) {
-  checkGenMxxloc(*firBuilder, fir::runtime::genMinloc, "_FortranAMinloc", 5);
+  checkGenMxxloc(*firBuilder, char1Ty, fir::runtime::genMinloc,
+      "_FortranAMinlocCharacter", 5);
+  checkGenMxxloc(*firBuilder, char2Ty, fir::runtime::genMinloc,
+      "_FortranAMinlocCharacter", 5);
+  checkGenMxxloc(*firBuilder, char4Ty, fir::runtime::genMinloc,
+      "_FortranAMinlocCharacter", 5);
+  checkGenMxxloc(
+      *firBuilder, i8Ty, fir::runtime::genMinloc, "_FortranAMinlocInteger1", 5);
+  checkGenMxxloc(*firBuilder, i16Ty, fir::runtime::genMinloc,
+      "_FortranAMinlocInteger2", 5);
+  checkGenMxxloc(*firBuilder, i32Ty, fir::runtime::genMinloc,
+      "_FortranAMinlocInteger4", 5);
+  checkGenMxxloc(*firBuilder, i64Ty, fir::runtime::genMinloc,
+      "_FortranAMinlocInteger8", 5);
+  checkGenMxxloc(*firBuilder, i128Ty, fir::runtime::genMinloc,
+      "_FortranAMinlocInteger16", 5);
+  checkGenMxxloc(
+      *firBuilder, f32Ty, fir::runtime::genMinloc, "_FortranAMinlocReal4", 5);
+  checkGenMxxloc(
+      *firBuilder, f64Ty, fir::runtime::genMinloc, "_FortranAMinlocReal8", 5);
+  checkGenMxxloc(
+      *firBuilder, f80Ty, fir::runtime::genMinloc, "_FortranAMinlocReal10", 5);
+  checkGenMxxloc(
+      *firBuilder, f128Ty, fir::runtime::genMinloc, "_FortranAMinlocReal16", 5);
 }
 
 void checkGenMxxlocDim(fir::FirOpBuilder &builder,

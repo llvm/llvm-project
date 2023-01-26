@@ -20,12 +20,22 @@ class LLVMTypeConverter;
 class RewritePatternSet;
 class Pass;
 
+#define GEN_PASS_DECL_CONVERTCONTROLFLOWTOLLVM
+#include "mlir/Conversion/Passes.h.inc"
+
 namespace cf {
 /// Collect the patterns to convert from the ControlFlow dialect to LLVM. The
 /// conversion patterns capture the LLVMTypeConverter by reference meaning the
 /// references have to remain alive during the entire pattern lifetime.
 void populateControlFlowToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                                  RewritePatternSet &patterns);
+
+/// Populate the cf.assert to LLVM conversion pattern. If `abortOnFailure` is
+/// set to false, the program execution continues when a condition is
+/// unsatisfied.
+void populateAssertToLLVMConversionPattern(LLVMTypeConverter &converter,
+                                           RewritePatternSet &patterns,
+                                           bool abortOnFailure = true);
 
 /// Creates a pass to convert the ControlFlow dialect into the LLVMIR dialect.
 std::unique_ptr<Pass> createConvertControlFlowToLLVMPass();

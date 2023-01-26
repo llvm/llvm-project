@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -o /dev/null  -pass-remarks-output=%t -S \
+; RUN: opt < %s -passes=instcombine -o /dev/null  -pass-remarks-output=%t -S \
 ; RUN:     -pass-remarks=instcombine 2>&1 | FileCheck %s
 ; RUN: cat %t | FileCheck -check-prefix=YAML %s
 ; RUN: opt < %s -passes='require<opt-remark-emit>,instcombine' -o /dev/null \
@@ -19,16 +19,14 @@
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128"
 
-declare i32 @strlen(i8*)
+declare i32 @strlen(ptr)
 
 @hello = constant [6 x i8] c"hello\00"
 @longer = constant [7 x i8] c"longer\00"
 
 define i32 @f1(i1) !dbg !7 {
-  %hello = getelementptr [6 x i8], [6 x i8]* @hello, i32 0, i32 0, !dbg !10
-  %longer = getelementptr [7 x i8], [7 x i8]* @longer, i32 0, i32 0, !dbg !12
-  %2 = select i1 %0, i8* %hello, i8* %longer, !dbg !9
-  %3 = call i32 @strlen(i8* %2), !dbg !14
+  %2 = select i1 %0, ptr @hello, ptr @longer, !dbg !9
+  %3 = call i32 @strlen(ptr %2), !dbg !14
   ret i32 %3, !dbg !16
 }
 

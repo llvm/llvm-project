@@ -83,7 +83,7 @@ ELSE45:                                           ; preds = %ENDIF40
 ENDIF43:                                          ; preds = %ELSE45, %IF44
   %.sink = phi i32 [ %49, %IF44 ], [ %51, %ELSE45 ]
   %52 = bitcast i32 %.sink to float
-  %53 = load <4 x float>, <4 x float> addrspace(8)* null
+  %53 = load <4 x float>, ptr addrspace(8) null
   %54 = extractelement <4 x float> %53, i32 0
   %55 = bitcast float %54 to i32
   br label %LOOP47

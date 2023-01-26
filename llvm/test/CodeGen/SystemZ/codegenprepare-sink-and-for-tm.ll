@@ -29,12 +29,12 @@ entry:
 
 bb1:
   %i9 = zext i1 %i4 to i32
-  store i32 %i9, i32* undef
+  store i32 %i9, ptr undef
   br label %bb3
 
 bb2:
   %i13 = select i1 %i4, i32 4, i32 16
-  store i32 %i13, i32* undef
+  store i32 %i13, ptr undef
   br label %bb3
 
 bb3:

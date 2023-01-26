@@ -41,8 +41,8 @@ protected:
 
     TargetOptions Options;
     TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
-        T->createTargetMachine("AArch64", "", "+sve", Options, None, None,
-                               CodeGenOpt::Aggressive)));
+        T->createTargetMachine("AArch64", "", "+sve", Options, std::nullopt,
+                               std::nullopt, CodeGenOpt::Aggressive)));
     if (!TM)
       GTEST_SKIP();
 
@@ -65,7 +65,7 @@ protected:
     if (!DAG)
       report_fatal_error("DAG?");
     OptimizationRemarkEmitter ORE(F);
-    DAG->init(*MF, ORE, nullptr, nullptr, nullptr, nullptr, nullptr);
+    DAG->init(*MF, ORE, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
   }
 
   TargetLoweringBase::LegalizeTypeAction getTypeAction(EVT VT) {
@@ -224,11 +224,15 @@ TEST_F(AArch64SelectionDAGTest, SimplifyDemandedBitsSVE) {
 
   SDValue Op = DAG->getNode(ISD::AND, Loc, InVecVT, N0, Mask2V);
 
+  // N0 = ?000?0?0
+  // Mask2V = 01010101
+  //  =>
+  // Known.Zero = 00100000 (0xAA)
   KnownBits Known;
   APInt DemandedBits = APInt(8, 0xFF);
   TargetLowering::TargetLoweringOpt TLO(*DAG, false, false);
-  EXPECT_FALSE(TL.SimplifyDemandedBits(Op, DemandedBits, Known, TLO));
-  EXPECT_EQ(Known.Zero, APInt(8, 0));
+  EXPECT_TRUE(TL.SimplifyDemandedBits(Op, DemandedBits, Known, TLO));
+  EXPECT_EQ(Known.Zero, APInt(8, 0xAA));
 }
 
 // Piggy-backing on the AArch64 tests to verify SelectionDAG::computeKnownBits.
@@ -325,11 +329,7 @@ TEST_F(AArch64SelectionDAGTest, isSplatValue_Scalable_SPLAT_VECTOR) {
   EXPECT_TRUE(DAG->isSplatValue(Op, /*AllowUndefs=*/false));
 
   APInt UndefElts;
-  APInt DemandedElts;
-  EXPECT_TRUE(DAG->isSplatValue(Op, DemandedElts, UndefElts));
-
-  // Width=16, Mask=3. These bits should be ignored.
-  DemandedElts = APInt(16, 3);
+  APInt DemandedElts(1,1);
   EXPECT_TRUE(DAG->isSplatValue(Op, DemandedElts, UndefElts));
 }
 
@@ -349,11 +349,7 @@ TEST_F(AArch64SelectionDAGTest, isSplatValue_Scalable_ADD_of_SPLAT_VECTOR) {
   EXPECT_TRUE(DAG->isSplatValue(Op, /*AllowUndefs=*/false));
 
   APInt UndefElts;
-  APInt DemandedElts;
-  EXPECT_TRUE(DAG->isSplatValue(Op, DemandedElts, UndefElts));
-
-  // Width=16, Mask=3. These bits should be ignored.
-  DemandedElts = APInt(16, 3);
+  APInt DemandedElts(1, 1);
   EXPECT_TRUE(DAG->isSplatValue(Op, DemandedElts, UndefElts));
 }
 
@@ -589,6 +585,40 @@ TEST_F(AArch64SelectionDAGTest, TestFold_STEP_VECTOR) {
   SDValue Zero = DAG->getConstant(0, Loc, IntVT);
   SDValue Op = DAG->getNode(ISD::STEP_VECTOR, Loc, VecVT, Zero);
   EXPECT_EQ(Op.getOpcode(), ISD::SPLAT_VECTOR);
+}
+
+TEST_F(AArch64SelectionDAGTest, ReplaceAllUsesWith) {
+  SDLoc Loc;
+  EVT IntVT = EVT::getIntegerVT(Context, 8);
+
+  SDValue N0 = DAG->getConstant(0x42, Loc, IntVT);
+  SDValue N1 = DAG->getRegister(0, IntVT);
+  // Construct node to fill arbitrary ExtraInfo.
+  SDValue N2 = DAG->getNode(ISD::SUB, Loc, IntVT, N0, N1);
+  EXPECT_FALSE(DAG->getHeapAllocSite(N2.getNode()));
+  EXPECT_FALSE(DAG->getNoMergeSiteInfo(N2.getNode()));
+  EXPECT_FALSE(DAG->getPCSections(N2.getNode()));
+  MDNode *MD = MDNode::get(Context, std::nullopt);
+  DAG->addHeapAllocSite(N2.getNode(), MD);
+  DAG->addNoMergeSiteInfo(N2.getNode(), true);
+  DAG->addPCSections(N2.getNode(), MD);
+  EXPECT_EQ(DAG->getHeapAllocSite(N2.getNode()), MD);
+  EXPECT_TRUE(DAG->getNoMergeSiteInfo(N2.getNode()));
+  EXPECT_EQ(DAG->getPCSections(N2.getNode()), MD);
+
+  SDValue Root = DAG->getNode(ISD::ADD, Loc, IntVT, N2, N2);
+  EXPECT_EQ(Root->getOperand(0)->getOpcode(), ISD::SUB);
+  // Create new node and check that ExtraInfo is propagated on RAUW.
+  SDValue New = DAG->getNode(ISD::ADD, Loc, IntVT, N1, N1);
+  EXPECT_FALSE(DAG->getHeapAllocSite(New.getNode()));
+  EXPECT_FALSE(DAG->getNoMergeSiteInfo(New.getNode()));
+  EXPECT_FALSE(DAG->getPCSections(New.getNode()));
+
+  DAG->ReplaceAllUsesWith(N2, New);
+  EXPECT_EQ(Root->getOperand(0), New);
+  EXPECT_EQ(DAG->getHeapAllocSite(New.getNode()), MD);
+  EXPECT_TRUE(DAG->getNoMergeSiteInfo(New.getNode()));
+  EXPECT_EQ(DAG->getPCSections(New.getNode()), MD);
 }
 
 } // end namespace llvm

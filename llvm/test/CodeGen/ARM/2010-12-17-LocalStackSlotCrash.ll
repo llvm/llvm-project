@@ -9,7 +9,6 @@ entry:
   br label %bb
 
 bb:
-  %p.2 = getelementptr [8096 x i8], [8096 x i8]* %buf, i32 0, i32 0
-  store i8 undef, i8* %p.2, align 1
+  store i8 undef, ptr %buf, align 1
   ret void
 }

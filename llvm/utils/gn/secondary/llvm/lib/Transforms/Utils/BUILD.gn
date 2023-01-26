@@ -4,6 +4,7 @@ static_library("Utils") {
     "//llvm/lib/Analysis",
     "//llvm/lib/IR",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "AMDGPUEmitPrintf.cpp",
@@ -53,6 +54,7 @@ static_library("Utils") {
     "LoopVersioning.cpp",
     "LowerAtomic.cpp",
     "LowerGlobalDtors.cpp",
+    "LowerIFunc.cpp",
     "LowerInvoke.cpp",
     "LowerMemIntrinsics.cpp",
     "LowerSwitch.cpp",

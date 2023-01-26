@@ -3,8 +3,6 @@
 //
 // RUN: %clang_dfsan -fsanitize-coverage=trace-pc-guard,pc-table,func,trace-cmp %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
-//
-// REQUIRES: x86_64-target-arch
 
 #include <stdio.h>
 #include <stdint.h>

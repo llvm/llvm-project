@@ -47,17 +47,17 @@ target triple = "x86_64-unknown-linux-gnu"
 @.str = private unnamed_addr constant [13 x i8] c"m(main): %d\0A\00", align 1
 
 ; Function Attrs: nounwind uwtable
-define dso_local i32 @main(i32 %argc, i8** nocapture readonly %argv) #0 !dbg !10 {
+define dso_local i32 @main(i32 %argc, ptr nocapture readonly %argv) #0 !dbg !10 {
 entry:
   tail call void @llvm.dbg.value(metadata i32 %argc, metadata !17, metadata !20), !dbg !21
-  tail call void @llvm.dbg.value(metadata i8** %argv, metadata !18, metadata !20), !dbg !22
+  tail call void @llvm.dbg.value(metadata ptr %argv, metadata !18, metadata !20), !dbg !22
   %cmp = icmp eq i32 %argc, 2, !dbg !24
   br i1 %cmp, label %if.else, label %if.end, !dbg !26
 
 if.else:                                          ; preds = %entry
-  %arrayidx = getelementptr inbounds i8*, i8** %argv, i64 1, !dbg !27
-  %0 = load i8*, i8** %arrayidx, align 8, !dbg !27, !tbaa !28
-  %call = tail call i32 (i8*, ...) bitcast (i32 (...)* @atoi to i32 (i8*, ...)*)(i8* %0) #1, !dbg !32
+  %arrayidx = getelementptr inbounds ptr, ptr %argv, i64 1, !dbg !27
+  %0 = load ptr, ptr %arrayidx, align 8, !dbg !27, !tbaa !28
+  %call = tail call i32 (ptr, ...) @atoi(ptr %0) #1, !dbg !32
   tail call void @llvm.dbg.value(metadata i32 %call, metadata !19, metadata !20), !dbg !33
   br label %if.end
 
@@ -79,8 +79,8 @@ if.else.5:                                        ; preds = %if.end
 
 if.end.7:                                         ; preds = %if.else.5, %if.then.3
   %storemerge = phi i32 [ %call6, %if.else.5 ], [ %add, %if.then.3 ]
-  store i32 %storemerge, i32* @m, align 4, !dbg !43, !tbaa !44
-  %call8 = tail call i32 (i8*, ...) @printf(i8* nonnull getelementptr inbounds ([13 x i8], [13 x i8]* @.str, i64 0, i64 0), i32 %storemerge) #1, !dbg !46
+  store i32 %storemerge, ptr @m, align 4, !dbg !43, !tbaa !44
+  %call8 = tail call i32 (ptr, ...) @printf(ptr nonnull @.str, i32 %storemerge) #1, !dbg !46
   ret i32 0, !dbg !47
 }
 
@@ -97,7 +97,7 @@ declare i32 @modify(i32) #1
 declare i32 @inc(i32) #1
 
 ; Function Attrs: nounwind
-declare i32 @printf(i8* nocapture readonly, ...) #1
+declare i32 @printf(ptr nocapture readonly, ...) #1
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, metadata, metadata) #2

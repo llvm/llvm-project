@@ -1,5 +1,6 @@
 # Exclude tests from libMLIR.so
 add_mlir_library(MLIRLinalgTestPasses
+  TestDataLayoutPropagation.cpp
   TestLinalgDecomposeOps.cpp
   TestLinalgElementwiseFusion.cpp
   TestLinalgFusionTransforms.cpp
@@ -11,8 +12,8 @@ add_mlir_library(MLIRLinalgTestPasses
 
   LINK_LIBS PUBLIC
   MLIRAffineDialect
-  MLIRArithmeticDialect
-  MLIRArithmeticTransforms
+  MLIRArithDialect
+  MLIRArithTransforms
   MLIRBufferizationDialect
   MLIRBufferizationTransforms
   MLIRGPUTransforms

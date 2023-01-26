@@ -1,4 +1,3 @@
-; RUN: opt < %s -lcssa -S | FileCheck %s
 ; RUN: opt < %s -passes=lcssa -S | FileCheck %s
 
 declare i1 @c1()

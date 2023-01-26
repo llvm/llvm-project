@@ -688,37 +688,231 @@ define <2 x i16> @v_orn2_v2i16(<2 x i16> %src0, <2 x i16> %src1) {
   ret <2 x i16> %or
 }
 
-; FIXME:
-; define amdgpu_ps i48 @s_orn2_v3i16(<3 x i16> inreg %src0, <3 x i16> inreg %src1) {
-;   %not.src1 = xor <3 x i16> %src1, <i16 -1, i16 -1, i16 -1>
-;   %or = or <3 x i16> %src0, %not.src1
-;   %cast = bitcast <3 x i16> %or to i48
-;   ret i48 %cast
-; }
+define amdgpu_ps i48 @s_orn2_v3i16(<3 x i16> inreg %src0, <3 x i16> inreg %src1) {
+; GFX6-LABEL: s_orn2_v3i16:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_and_b32 s6, s6, 0xffff
+; GFX6-NEXT:    s_mov_b32 s0, -1
+; GFX6-NEXT:    s_and_b32 s5, s5, 0xffff
+; GFX6-NEXT:    s_lshl_b32 s6, s6, 16
+; GFX6-NEXT:    s_mov_b32 s1, 0xffff
+; GFX6-NEXT:    s_or_b32 s6, s5, s6
+; GFX6-NEXT:    s_and_b32 s7, s7, 0xffff
+; GFX6-NEXT:    s_and_b32 s3, s3, 0xffff
+; GFX6-NEXT:    s_xor_b64 s[0:1], s[6:7], s[0:1]
+; GFX6-NEXT:    s_and_b32 s2, s2, 0xffff
+; GFX6-NEXT:    s_lshl_b32 s3, s3, 16
+; GFX6-NEXT:    s_or_b32 s2, s2, s3
+; GFX6-NEXT:    s_and_b32 s3, s4, 0xffff
+; GFX6-NEXT:    s_and_b32 s1, s1, 0xffff
+; GFX6-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
+; GFX6-NEXT:    s_lshr_b32 s2, s0, 16
+; GFX6-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX6-NEXT:    s_lshl_b32 s2, s2, 16
+; GFX6-NEXT:    s_or_b32 s0, s0, s2
+; GFX6-NEXT:    s_and_b32 s1, s1, 0xffff
+; GFX6-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: s_orn2_v3i16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_mov_b64 s[0:1], -1
+; GFX9-NEXT:    s_xor_b64 s[0:1], s[4:5], s[0:1]
+; GFX9-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
+; GFX9-NEXT:    s_lshr_b32 s2, s0, 16
+; GFX9-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX9-NEXT:    s_lshl_b32 s2, s2, 16
+; GFX9-NEXT:    s_or_b32 s0, s0, s2
+; GFX9-NEXT:    s_and_b32 s1, s1, 0xffff
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10PLUS-LABEL: s_orn2_v3i16:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_mov_b64 s[0:1], -1
+; GFX10PLUS-NEXT:    s_xor_b64 s[0:1], s[4:5], s[0:1]
+; GFX10PLUS-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
+; GFX10PLUS-NEXT:    s_lshr_b32 s2, s0, 16
+; GFX10PLUS-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX10PLUS-NEXT:    s_lshl_b32 s2, s2, 16
+; GFX10PLUS-NEXT:    s_and_b32 s1, s1, 0xffff
+; GFX10PLUS-NEXT:    s_or_b32 s0, s0, s2
+; GFX10PLUS-NEXT:    ; return to shader part epilog
+  %not.src1 = xor <3 x i16> %src1, <i16 -1, i16 -1, i16 -1>
+  %or = or <3 x i16> %src0, %not.src1
+  %cast = bitcast <3 x i16> %or to i48
+  ret i48 %cast
+}
 
-; define amdgpu_ps i48 @s_orn2_v3i16_commute(<3 x i16> inreg %src0, <3 x i16> inreg %src1) {
-;   %not.src1 = xor <3 x i16> %src1, <i16 -1, i16 -1, i16 -1>
-;   %or = or <3 x i16> %not.src1, %src0
-;   %cast = bitcast <3 x i16> %or to i48
-;   ret i48 %cast
-; }
+define amdgpu_ps i48 @s_orn2_v3i16_commute(<3 x i16> inreg %src0, <3 x i16> inreg %src1) {
+; GFX6-LABEL: s_orn2_v3i16_commute:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_and_b32 s6, s6, 0xffff
+; GFX6-NEXT:    s_mov_b32 s0, -1
+; GFX6-NEXT:    s_and_b32 s5, s5, 0xffff
+; GFX6-NEXT:    s_lshl_b32 s6, s6, 16
+; GFX6-NEXT:    s_mov_b32 s1, 0xffff
+; GFX6-NEXT:    s_or_b32 s6, s5, s6
+; GFX6-NEXT:    s_and_b32 s7, s7, 0xffff
+; GFX6-NEXT:    s_and_b32 s3, s3, 0xffff
+; GFX6-NEXT:    s_xor_b64 s[0:1], s[6:7], s[0:1]
+; GFX6-NEXT:    s_and_b32 s2, s2, 0xffff
+; GFX6-NEXT:    s_lshl_b32 s3, s3, 16
+; GFX6-NEXT:    s_and_b32 s1, s1, 0xffff
+; GFX6-NEXT:    s_or_b32 s2, s2, s3
+; GFX6-NEXT:    s_and_b32 s3, s4, 0xffff
+; GFX6-NEXT:    s_or_b64 s[0:1], s[0:1], s[2:3]
+; GFX6-NEXT:    s_lshr_b32 s2, s0, 16
+; GFX6-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX6-NEXT:    s_lshl_b32 s2, s2, 16
+; GFX6-NEXT:    s_or_b32 s0, s0, s2
+; GFX6-NEXT:    s_and_b32 s1, s1, 0xffff
+; GFX6-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: s_orn2_v3i16_commute:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_mov_b64 s[0:1], -1
+; GFX9-NEXT:    s_xor_b64 s[0:1], s[4:5], s[0:1]
+; GFX9-NEXT:    s_or_b64 s[0:1], s[0:1], s[2:3]
+; GFX9-NEXT:    s_lshr_b32 s2, s0, 16
+; GFX9-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX9-NEXT:    s_lshl_b32 s2, s2, 16
+; GFX9-NEXT:    s_or_b32 s0, s0, s2
+; GFX9-NEXT:    s_and_b32 s1, s1, 0xffff
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10PLUS-LABEL: s_orn2_v3i16_commute:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_mov_b64 s[0:1], -1
+; GFX10PLUS-NEXT:    s_xor_b64 s[0:1], s[4:5], s[0:1]
+; GFX10PLUS-NEXT:    s_or_b64 s[0:1], s[0:1], s[2:3]
+; GFX10PLUS-NEXT:    s_lshr_b32 s2, s0, 16
+; GFX10PLUS-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX10PLUS-NEXT:    s_lshl_b32 s2, s2, 16
+; GFX10PLUS-NEXT:    s_and_b32 s1, s1, 0xffff
+; GFX10PLUS-NEXT:    s_or_b32 s0, s0, s2
+; GFX10PLUS-NEXT:    ; return to shader part epilog
+  %not.src1 = xor <3 x i16> %src1, <i16 -1, i16 -1, i16 -1>
+  %or = or <3 x i16> %not.src1, %src0
+  %cast = bitcast <3 x i16> %or to i48
+  ret i48 %cast
+}
 
-; define amdgpu_ps { i48, i48 } @s_orn2_v3i16_multi_use(<3 x i16> inreg %src0, <3 x i16> inreg %src1) {
-;   %not.src1 = xor <3 x i16> %src1, <i16 -1, i16 -1, i16 -1>
-;   %or = or <3 x i16> %src0, %not.src1
+define amdgpu_ps { i48, i48 } @s_orn2_v3i16_multi_use(<3 x i16> inreg %src0, <3 x i16> inreg %src1) {
+; GFX6-LABEL: s_orn2_v3i16_multi_use:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_and_b32 s6, s6, 0xffff
+; GFX6-NEXT:    s_mov_b32 s0, s2
+; GFX6-NEXT:    s_mov_b32 s1, s3
+; GFX6-NEXT:    s_mov_b32 s2, -1
+; GFX6-NEXT:    s_and_b32 s5, s5, 0xffff
+; GFX6-NEXT:    s_lshl_b32 s6, s6, 16
+; GFX6-NEXT:    s_mov_b32 s3, 0xffff
+; GFX6-NEXT:    s_or_b32 s6, s5, s6
+; GFX6-NEXT:    s_and_b32 s7, s7, 0xffff
+; GFX6-NEXT:    s_and_b32 s1, s1, 0xffff
+; GFX6-NEXT:    s_xor_b64 s[2:3], s[6:7], s[2:3]
+; GFX6-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX6-NEXT:    s_lshl_b32 s1, s1, 16
+; GFX6-NEXT:    s_or_b32 s0, s0, s1
+; GFX6-NEXT:    s_and_b32 s1, s4, 0xffff
+; GFX6-NEXT:    s_and_b32 s3, s3, 0xffff
+; GFX6-NEXT:    s_or_b64 s[0:1], s[0:1], s[2:3]
+; GFX6-NEXT:    s_lshr_b32 s4, s0, 16
+; GFX6-NEXT:    s_lshr_b32 s5, s2, 16
+; GFX6-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX6-NEXT:    s_lshl_b32 s4, s4, 16
+; GFX6-NEXT:    s_or_b32 s0, s0, s4
+; GFX6-NEXT:    s_and_b32 s2, s2, 0xffff
+; GFX6-NEXT:    s_lshl_b32 s4, s5, 16
+; GFX6-NEXT:    s_and_b32 s1, s1, 0xffff
+; GFX6-NEXT:    s_or_b32 s2, s2, s4
+; GFX6-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: s_orn2_v3i16_multi_use:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_mov_b64 s[0:1], -1
+; GFX9-NEXT:    s_xor_b64 s[4:5], s[4:5], s[0:1]
+; GFX9-NEXT:    s_or_b64 s[0:1], s[2:3], s[4:5]
+; GFX9-NEXT:    s_lshr_b32 s2, s0, 16
+; GFX9-NEXT:    s_lshr_b32 s6, s4, 16
+; GFX9-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX9-NEXT:    s_lshl_b32 s2, s2, 16
+; GFX9-NEXT:    s_or_b32 s0, s0, s2
+; GFX9-NEXT:    s_and_b32 s2, s4, 0xffff
+; GFX9-NEXT:    s_lshl_b32 s3, s6, 16
+; GFX9-NEXT:    s_and_b32 s1, s1, 0xffff
+; GFX9-NEXT:    s_or_b32 s2, s2, s3
+; GFX9-NEXT:    s_and_b32 s3, s5, 0xffff
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10PLUS-LABEL: s_orn2_v3i16_multi_use:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_mov_b64 s[0:1], -1
+; GFX10PLUS-NEXT:    s_xor_b64 s[4:5], s[4:5], s[0:1]
+; GFX10PLUS-NEXT:    s_or_b64 s[0:1], s[2:3], s[4:5]
+; GFX10PLUS-NEXT:    s_lshr_b32 s3, s4, 16
+; GFX10PLUS-NEXT:    s_lshr_b32 s2, s0, 16
+; GFX10PLUS-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX10PLUS-NEXT:    s_lshl_b32 s2, s2, 16
+; GFX10PLUS-NEXT:    s_lshl_b32 s3, s3, 16
+; GFX10PLUS-NEXT:    s_or_b32 s0, s0, s2
+; GFX10PLUS-NEXT:    s_and_b32 s2, s4, 0xffff
+; GFX10PLUS-NEXT:    s_and_b32 s1, s1, 0xffff
+; GFX10PLUS-NEXT:    s_or_b32 s2, s2, s3
+; GFX10PLUS-NEXT:    s_and_b32 s3, s5, 0xffff
+; GFX10PLUS-NEXT:    ; return to shader part epilog
+  %not.src1 = xor <3 x i16> %src1, <i16 -1, i16 -1, i16 -1>
+  %or = or <3 x i16> %src0, %not.src1
+  %cast.0 = bitcast <3 x i16> %or to i48
+  %cast.1 = bitcast <3 x i16> %not.src1 to i48
+  %insert.0 = insertvalue { i48, i48 } undef, i48 %cast.0, 0
+  %insert.1 = insertvalue { i48, i48 } %insert.0, i48 %cast.1, 1
+  ret { i48, i48 } %insert.1
+}
 
-;   %cast.0 = bitcast <3 x i16> %or to i48
-;   %cast.1 = bitcast <3 x i16> %not.src1 to i48
-;   %insert.0 = insertvalue { i48, i48 } undef, i48 %cast.0, 0
-;   %insert.1 = insertvalue { i48, i48 } %insert.0, i48 %cast.1, 1
-;   ret { i48, i48 } %insert.1
-; }
-
-; define <3 x i16> @v_orn2_v3i16(<3 x i16> %src0, <3 x i16> %src1) {
-;   %not.src1 = xor <3 x i16> %src1, <i16 -1, i16 -1, i16 -11>
-;   %or = or <3 x i16> %src0, %not.src1
-;   ret <3 x i16> %or
-; }
+define <3 x i16> @v_orn2_v3i16(<3 x i16> %src0, <3 x i16> %src1) {
+; GFX6-LABEL: v_orn2_v3i16:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_and_b32_e32 v4, 0xffff, v4
+; GFX6-NEXT:    v_and_b32_e32 v3, 0xffff, v3
+; GFX6-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
+; GFX6-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX6-NEXT:    v_or_b32_e32 v3, v3, v4
+; GFX6-NEXT:    v_and_b32_e32 v4, 0xffff, v5
+; GFX6-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX6-NEXT:    v_xor_b32_e32 v3, -1, v3
+; GFX6-NEXT:    v_xor_b32_e32 v4, 0xfff5, v4
+; GFX6-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX6-NEXT:    v_and_b32_e32 v1, 0xffff, v2
+; GFX6-NEXT:    v_and_b32_e32 v2, 0xffff, v4
+; GFX6-NEXT:    v_or_b32_e32 v0, v0, v3
+; GFX6-NEXT:    v_or_b32_e32 v2, v1, v2
+; GFX6-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_orn2_v3i16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_xor_b32_e32 v2, -1, v2
+; GFX9-NEXT:    v_xor_b32_e32 v3, -11, v3
+; GFX9-NEXT:    v_or_b32_e32 v0, v0, v2
+; GFX9-NEXT:    v_or_b32_e32 v1, v1, v3
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10PLUS-LABEL: v_orn2_v3i16:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10PLUS-NEXT:    v_xor_b32_e32 v2, -1, v2
+; GFX10PLUS-NEXT:    v_xor_b32_e32 v3, -11, v3
+; GFX10PLUS-NEXT:    v_or_b32_e32 v0, v0, v2
+; GFX10PLUS-NEXT:    v_or_b32_e32 v1, v1, v3
+; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
+  %not.src1 = xor <3 x i16> %src1, <i16 -1, i16 -1, i16 -11>
+  %or = or <3 x i16> %src0, %not.src1
+  ret <3 x i16> %or
+}
 
 define amdgpu_ps i64 @s_orn2_v4i16(<4 x i16> inreg %src0, <4 x i16> inreg %src1) {
 ; GFX6-LABEL: s_orn2_v4i16:

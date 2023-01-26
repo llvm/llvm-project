@@ -10,11 +10,11 @@ func.func private @ptr() -> !llvm.ptr<!test.smpla>
 func.func private @opaque_ptr() -> !llvm.ptr
 
 // CHECK-LABEL: @ptr_ptr()
-// CHECK: !llvm.ptr<ptr<i42>> 
+// CHECK: !llvm.ptr<ptr<i42>>
 func.func private @ptr_ptr() -> !llvm.ptr<!llvm.ptr<!test.smpla>>
 
 // CHECK-LABEL: @struct_ptr()
-// CHECK: !llvm.struct<(ptr<i42>)> 
+// CHECK: !llvm.struct<(ptr<i42>)>
 func.func private @struct_ptr() -> !llvm.struct<(ptr<!test.smpla>)>
 
 // CHECK-LABEL: @named_struct_ptr()
@@ -26,7 +26,7 @@ func.func private @named_struct_ptr() -> !llvm.struct<"named", (ptr<!test.smpla>
 func.func private @named_no_convert() -> !llvm.struct<"no_convert", (ptr<struct<"no_convert">>)>
 
 // CHECK-LABEL: @array_ptr()
-// CHECK: !llvm.array<10 x ptr<i42>> 
+// CHECK: !llvm.array<10 x ptr<i42>>
 func.func private @array_ptr() -> !llvm.array<10 x ptr<!test.smpla>>
 
 // CHECK-LABEL: @func()

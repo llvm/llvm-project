@@ -154,6 +154,9 @@ protected:
                                     const UUID &uuid, const ArchSpec &arch,
                                     lldb::ModuleSP &exe_module_sp);
 
+  bool LoadPlatformBinaryAndSetup(Process *process, lldb::addr_t addr,
+                                  bool notify) override;
+
   // Most of the ivars are assembled under FileSystem::EnumerateDirectory calls
   // where the function being called for each file/directory must be static.
   // We'll pass a this pointer as a baton and access the ivars directly.

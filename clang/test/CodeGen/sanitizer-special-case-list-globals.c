@@ -13,7 +13,7 @@
 /// first), which is hard to check for, as 'CHECK-DAG' doesn't play terribly
 /// nicely with 'CHECK-NOT'. This is why the 'always_ignored' and
 /// 'hwasan_ignored' comes first in this file.
-// RUN: %clang_cc1 -fsanitize=hwaddress -emit-llvm %s -o -\
+// RUN: %clang_cc1 -fsanitize=hwaddress -triple=aarch64-linux-android31 -emit-llvm %s -o -\
 // RUN: -fsanitize-ignorelist=%S/Inputs/sanitizer-special-case-list-globals.txt \
 // RUN: | FileCheck %s --check-prefix=HWASAN
 

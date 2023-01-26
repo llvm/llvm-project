@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 
 using namespace mlir;
 
@@ -158,11 +158,15 @@ void PDLPatternModule::mergeIn(PDLPatternModule &&other) {
   if (!other.pdlModule)
     return;
 
-  // Steal the functions of the other module.
+  // Steal the functions and config of the other module.
   for (auto &it : other.constraintFunctions)
     registerConstraintFunction(it.first(), std::move(it.second));
   for (auto &it : other.rewriteFunctions)
     registerRewriteFunction(it.first(), std::move(it.second));
+  for (auto &it : other.configs)
+    configs.emplace_back(std::move(it));
+  for (auto &it : other.configMap)
+    configMap.insert(it);
 
   // Steal the other state if we have no patterns.
   if (!pdlModule) {
@@ -174,6 +178,18 @@ void PDLPatternModule::mergeIn(PDLPatternModule &&other) {
   Block *block = pdlModule->getBody();
   block->getOperations().splice(block->end(),
                                 other.pdlModule->getBody()->getOperations());
+}
+
+void PDLPatternModule::attachConfigToPatterns(ModuleOp module,
+                                              PDLPatternConfigSet &configSet) {
+  // Attach the configuration to the symbols within the module. We only add
+  // to symbols to avoid hardcoding any specific operation names here (given
+  // that we don't depend on any PDL dialect). We can't use
+  // cast<SymbolOpInterface> here because patterns may be optional symbols.
+  module->walk([&](Operation *op) {
+    if (op->hasTrait<SymbolOpInterface::Trait>())
+      configMap[op] = &configSet;
+  });
 }
 
 //===----------------------------------------------------------------------===//
@@ -216,7 +232,7 @@ void RewriterBase::replaceOpWithIf(
          "incorrect number of values to replace operation");
 
   // Notify the rewriter subclass that we're about to replace this root.
-  notifyRootReplaced(op);
+  notifyRootReplaced(op, newValues);
 
   // Replace each use of the results when the functor is true.
   bool replacedAllUses = true;
@@ -244,7 +260,7 @@ void RewriterBase::replaceOpWithinBlock(Operation *op, ValueRange newValues,
 /// the operation.
 void RewriterBase::replaceOp(Operation *op, ValueRange newValues) {
   // Notify the rewriter subclass that we're about to replace this root.
-  notifyRootReplaced(op);
+  notifyRootReplaced(op, newValues);
 
   assert(op->getNumResults() == newValues.size() &&
          "incorrect # of replacement values");
@@ -291,6 +307,26 @@ void RewriterBase::mergeBlocks(Block *source, Block *dest,
   dest->getOperations().splice(dest->end(), source->getOperations());
   source->dropAllUses();
   source->erase();
+}
+
+/// Find uses of `from` and replace it with `to`
+void RewriterBase::replaceAllUsesWith(Value from, Value to) {
+  for (OpOperand &operand : llvm::make_early_inc_range(from.getUses())) {
+    Operation *op = operand.getOwner();
+    updateRootInPlace(op, [&]() { operand.set(to); });
+  }
+}
+
+/// Find uses of `from` and replace them with `to` if the `functor` returns
+/// true. It also marks every modified uses and notifies the rewriter that an
+/// in-place operation modification is about to happen.
+void RewriterBase::replaceUseIf(
+    Value from, Value to,
+    llvm::unique_function<bool(OpOperand &) const> functor) {
+  for (OpOperand &operand : llvm::make_early_inc_range(from.getUses())) {
+    if (functor(operand))
+      updateRootInPlace(operand.getOwner(), [&]() { operand.set(to); });
+  }
 }
 
 // Merge the operations of block 'source' before the operation 'op'. Source
@@ -350,12 +386,12 @@ void RewriterBase::inlineRegionBefore(Region &region, Block *before) {
 /// control to the region and passing it the correct block arguments.
 void RewriterBase::cloneRegionBefore(Region &region, Region &parent,
                                      Region::iterator before,
-                                     BlockAndValueMapping &mapping) {
+                                     IRMapping &mapping) {
   region.cloneInto(&parent, before, mapping);
 }
 void RewriterBase::cloneRegionBefore(Region &region, Region &parent,
                                      Region::iterator before) {
-  BlockAndValueMapping mapping;
+  IRMapping mapping;
   cloneRegionBefore(region, parent, before, mapping);
 }
 void RewriterBase::cloneRegionBefore(Region &region, Block *before) {

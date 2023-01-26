@@ -100,7 +100,7 @@ llvm.mlir.global weak @weak(42 : i32) : i32
 // CHECK: @common = common global i32 0
 llvm.mlir.global common @common(0 : i32) : i32
 // CHECK: @appending = appending global [3 x i32] [i32 1, i32 2, i32 3]
-llvm.mlir.global appending @appending(dense<[1,2,3]> : tensor<3xi32>) : !llvm.array<3xi32>
+llvm.mlir.global appending @appending(dense<[1,2,3]> : tensor<3xi32>) : !llvm.array<3 x i32>
 // CHECK: @extern_weak = extern_weak global i32
 llvm.mlir.global extern_weak @extern_weak() : i32
 // CHECK: @linkonce_odr = linkonce_odr global i32 42
@@ -939,7 +939,7 @@ llvm.func @vector_splat_nonzero() -> vector<4xf32> {
 
 // CHECK-LABEL: @vector_splat_nonzero_scalable
 llvm.func @vector_splat_nonzero_scalable() -> vector<[4]xf32> {
-  // CHECK: ret <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i32 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
+  // CHECK: ret <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
   %0 = llvm.mlir.constant(dense<1.000000e+00> : vector<[4]xf32>) : vector<[4]xf32>
   llvm.return %0 : vector<[4]xf32>
 }
@@ -993,11 +993,11 @@ llvm.func @ops(%arg0: f32, %arg1: f32, %arg2: i32, %arg3: i32) -> !llvm.struct<(
 
 // CHECK-LABEL: @gep
 llvm.func @gep(%ptr: !llvm.ptr<struct<(i32, struct<(i32, f32)>)>>, %idx: i64,
-               %ptr2: !llvm.ptr<struct<(array<10xf32>)>>) {
+               %ptr2: !llvm.ptr<struct<(array<10 x f32>)>>) {
   // CHECK: = getelementptr { i32, { i32, float } }, ptr %{{.*}}, i64 %{{.*}}, i32 1, i32 0
   llvm.getelementptr %ptr[%idx, 1, 0] : (!llvm.ptr<struct<(i32, struct<(i32, f32)>)>>, i64) -> !llvm.ptr<i32>
-  // CHECK: = getelementptr { [10 x float] }, ptr %{{.*}}, i64 %{{.*}}, i32 0, i64 %{{.*}}
-  llvm.getelementptr %ptr2[%idx, 0, %idx] : (!llvm.ptr<struct<(array<10xf32>)>>, i64, i64) -> !llvm.ptr<f32>
+  // CHECK: = getelementptr inbounds { [10 x float] }, ptr %{{.*}}, i64 %{{.*}}, i32 0, i64 %{{.*}}
+  llvm.getelementptr inbounds %ptr2[%idx, 0, %idx] : (!llvm.ptr<struct<(array<10 x f32>)>>, i64, i64) -> !llvm.ptr<f32>
   llvm.return
 }
 
@@ -1049,25 +1049,91 @@ llvm.func @llvm_noalias(%arg0: !llvm.ptr<f32> {llvm.noalias}) {
   llvm.return
 }
 
-// CHECK-LABEL: define void @byvalattr(ptr byval(i32) %
-llvm.func @byvalattr(%arg0: !llvm.ptr<i32> {llvm.byval}) {
+// CHECK-LABEL: declare void @llvm_noalias_decl(ptr noalias)
+llvm.func @llvm_noalias_decl(!llvm.ptr<f32> {llvm.noalias})
+
+// CHECK-LABEL: define void @byrefattr(ptr byref(i32) %
+llvm.func @byrefattr(%arg0: !llvm.ptr<i32> {llvm.byref = i32}) {
   llvm.return
 }
 
-// CHECK-LABEL: define void @sretattr(ptr sret(i32) %
-llvm.func @sretattr(%arg0: !llvm.ptr<i32> {llvm.sret}) {
+// CHECK-LABEL: declare void @byrefattr_decl(ptr byref(i32))
+llvm.func @byrefattr_decl(!llvm.ptr<i32> {llvm.byref = i32})
+
+// CHECK-LABEL: define void @byvalattr(ptr byval(i32) %
+llvm.func @byvalattr(%arg0: !llvm.ptr<i32> {llvm.byval = i32}) {
   llvm.return
 }
+
+// CHECK-LABEL: declare void @byvalattr_decl(ptr byval(i32))
+llvm.func @byvalattr_decl(!llvm.ptr<i32> {llvm.byval = i32})
+
+// CHECK-LABEL: define void @sretattr(ptr sret(i32) %
+llvm.func @sretattr(%arg0: !llvm.ptr<i32> {llvm.sret = i32}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @sretattr_decl(ptr sret(i32))
+llvm.func @sretattr_decl(!llvm.ptr<i32> {llvm.sret = i32})
 
 // CHECK-LABEL: define void @nestattr(ptr nest %
 llvm.func @nestattr(%arg0: !llvm.ptr<i32> {llvm.nest}) {
   llvm.return
 }
 
+// CHECK-LABEL: declare void @nestattr_decl(ptr nest)
+llvm.func @nestattr_decl(!llvm.ptr<i32> {llvm.nest})
+
+// CHECK-LABEL: define void @noundefattr(i32 noundef %
+llvm.func @noundefattr(%arg0: i32 {llvm.noundef}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @noundefattr_decl(i32 noundef)
+llvm.func @noundefattr_decl(i32 {llvm.noundef})
+
 // CHECK-LABEL: define void @llvm_align(ptr align 4 {{%*.}})
 llvm.func @llvm_align(%arg0: !llvm.ptr<f32> {llvm.align = 4}) {
   llvm.return
 }
+
+// CHECK-LABEL: declare void @llvm_align_decl(ptr align 4)
+llvm.func @llvm_align_decl(!llvm.ptr<f32> {llvm.align = 4})
+
+// CHECK-LABEL: define void @inallocaattr(ptr inalloca(i32) %
+llvm.func @inallocaattr(%arg0: !llvm.ptr<i32> {llvm.inalloca = i32}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @inallocaattr_decl(ptr inalloca(i32))
+llvm.func @inallocaattr_decl(!llvm.ptr<i32> {llvm.inalloca = i32})
+
+// CHECK-LABEL: define void @signextattr(i1 signext %
+llvm.func @signextattr(%arg0: i1 {llvm.signext}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @signextattr_decl(i1 signext)
+llvm.func @signextattr_decl(i1 {llvm.signext})
+
+// CHECK-LABEL: define void @zeroextattr(i1 zeroext %
+llvm.func @zeroextattr(%arg0: i1 {llvm.zeroext}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @zeroextattr_decl(i1 zeroext)
+llvm.func @zeroextattr_decl(i1 {llvm.zeroext})
+
+// CHECK-LABEL: declare align 4 ptr @alignattr_ret_decl()
+llvm.func @alignattr_ret_decl() -> (!llvm.ptr<i32> {llvm.align = 4})
+// CHECK-LABEL: declare noalias ptr @noaliasattr_ret_decl()
+llvm.func @noaliasattr_ret_decl() -> (!llvm.ptr<i32> {llvm.noalias})
+// CHECK-LABEL: declare noundef ptr @noundefattr_ret_decl()
+llvm.func @noundefattr_ret_decl() -> (!llvm.ptr<i32> {llvm.noundef})
+// CHECK-LABEL: declare signext i1 @signextattr_ret_decl()
+llvm.func @signextattr_ret_decl() -> (i1 {llvm.signext})
+// CHECK-LABEL: declare zeroext i1 @zeroextattr_ret_decl()
+llvm.func @zeroextattr_ret_decl() -> (i1 {llvm.zeroext})
 
 // CHECK-LABEL: @llvm_varargs(...)
 llvm.func @llvm_varargs(...)
@@ -1174,7 +1240,7 @@ llvm.func @vect(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
   // CHECK-NEXT: shufflevector <4 x float> {{.*}}, <4 x float> {{.*}}, <5 x i32> <i32 0, i32 0, i32 0, i32 0, i32 7>
   %0 = llvm.extractelement %arg0[%arg1 : i32] : vector<4xf32>
   %1 = llvm.insertelement %arg2, %arg0[%arg1 : i32] : vector<4xf32>
-  %2 = llvm.shufflevector %arg0, %arg0 [0 : i32, 0 : i32, 0 : i32, 0 : i32, 7 : i32] : vector<4xf32>, vector<4xf32>
+  %2 = llvm.shufflevector %arg0, %arg0 [0, 0, 0, 0, 7] : vector<4xf32>
   llvm.return
 }
 
@@ -1194,7 +1260,7 @@ llvm.func @scalable_vect(%arg0: vector<[4]xf32>, %arg1: i32, %arg2: f32) {
   // CHECK-NEXT: shufflevector <vscale x 4 x float> %0, <vscale x 4 x float> %0, <vscale x 4 x i32> zeroinitializer
   %0 = llvm.extractelement %arg0[%arg1 : i32] : vector<[4]xf32>
   %1 = llvm.insertelement %arg2, %arg0[%arg1 : i32] : vector<[4]xf32>
-  %2 = llvm.shufflevector %arg0, %arg0 [0 : i32, 0 : i32, 0 : i32, 0 : i32] : vector<[4]xf32>, vector<[4]xf32>
+  %2 = llvm.shufflevector %arg0, %arg0 [0, 0, 0, 0] : vector<[4]xf32>
   llvm.return
 }
 
@@ -1435,6 +1501,16 @@ llvm.func @callFreezeOp(%x : i32) {
   llvm.return
 }
 
+// CHECK-LABEL: @freezeUsed
+llvm.func @freezeUsed(%x : i32) -> i64 {
+  // CHECK: %[[frozen:.*]] = freeze i32
+  %frozen = llvm.freeze %x : i32
+  // CHECK: %[[ext:.*]] = sext i32 %[[frozen]] to i64
+  %ext = llvm.sext %frozen : i32 to i64
+  // CHECK: ret i64 %[[ext]]
+  llvm.return %ext : i64
+}
+
 // CHECK-LABEL: @boolConstArg
 llvm.func @boolConstArg() -> i1 {
   // CHECK: ret i1 false
@@ -1466,6 +1542,16 @@ llvm.func @passthrough() attributes {passthrough = ["noinline", ["alignstack", "
 // CHECK-DAG: alignstack=4
 // CHECK-DAG: null_pointer_is_valid
 // CHECK-DAG: "foo"="bar"
+
+// -----
+
+// CHECK-LABEL: @functionEntryCount
+// CHECK-SAME: !prof ![[PROF_ID:[0-9]*]]
+llvm.func @functionEntryCount() attributes {function_entry_count = 4242 : i64} {
+  llvm.return
+}
+
+// CHECK: ![[PROF_ID]] = !{!"function_entry_count", i64 4242}
 
 // -----
 
@@ -1506,8 +1592,8 @@ llvm.mlir.global linkonce @take_self_address() : !llvm.struct<(i32, !llvm.ptr<i3
   %0 = llvm.mlir.undef : !llvm.struct<(i32, !llvm.ptr<i32>)>
   %1 = llvm.mlir.addressof @take_self_address : !llvm.ptr<!llvm.struct<(i32, !llvm.ptr<i32>)>>
   %2 = llvm.getelementptr %1[%z32, 0] : (!llvm.ptr<!llvm.struct<(i32, !llvm.ptr<i32>)>>, i32) -> !llvm.ptr<i32>
-  %3 = llvm.insertvalue %z32, %0[0 : i32] : !llvm.struct<(i32, !llvm.ptr<i32>)>
-  %4 = llvm.insertvalue %2, %3[1 : i32] : !llvm.struct<(i32, !llvm.ptr<i32>)>
+  %3 = llvm.insertvalue %z32, %0[0] : !llvm.struct<(i32, !llvm.ptr<i32>)>
+  %4 = llvm.insertvalue %2, %3[1] : !llvm.struct<(i32, !llvm.ptr<i32>)>
   llvm.return %4 : !llvm.struct<(i32, !llvm.ptr<i32>)>
 }
 
@@ -1542,6 +1628,38 @@ llvm.func @cond_br_weights(%cond : i1, %arg0 : i32,  %arg1 : i32) -> i32 {
 }
 
 // CHECK: ![[NODE]] = !{!"branch_weights", i32 5, i32 10}
+
+// -----
+
+llvm.func @fn()
+
+// CHECK-LABEL: @call_branch_weights
+llvm.func @call_branch_weights() {
+  // CHECK: !prof ![[NODE:[0-9]+]]
+  llvm.call @fn() {branch_weights = dense<42> : vector<1xi32>} : () -> ()
+  llvm.return
+}
+
+// CHECK: ![[NODE]] = !{!"branch_weights", i32 42}
+
+// -----
+
+llvm.func @foo()
+llvm.func @__gxx_personality_v0(...) -> i32
+
+// CHECK-LABEL: @invoke_branch_weights
+llvm.func @invoke_branch_weights() -> i32 attributes {personality = @__gxx_personality_v0} {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: !prof ![[NODE:[0-9]+]]
+  llvm.invoke @foo() to ^bb2 unwind ^bb1 {branch_weights = dense<[42, 99]> : vector<2xi32>} : () -> ()
+^bb1:  // pred: ^bb0
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr<i8>, i32)>
+  llvm.br ^bb2
+^bb2:  // 2 preds: ^bb0, ^bb1
+  llvm.return %0 : i32
+}
+
+// CHECK: ![[NODE]] = !{!"branch_weights", i32 42, i32 99}
 
 // -----
 
@@ -1610,25 +1728,25 @@ llvm.func @useInlineAsm(%arg0: i32) {
   // Constraints string is checked at LLVM InlineAsm instruction construction time.
   // So we can't just use "bar" everywhere, number of in/out arguments has to match.
 
-  // CHECK-NEXT:  call void asm "foo", "r"(i32 {{.*}}), !dbg !7
+  // CHECK-NEXT:  call void asm "foo", "r"(i32 {{.*}})
   llvm.inline_asm "foo", "r" %arg0 : (i32) -> ()
 
-  // CHECK-NEXT:  call i8 asm "foo", "=r,r"(i32 {{.*}}), !dbg !9
+  // CHECK-NEXT:  call i8 asm "foo", "=r,r"(i32 {{.*}})
   %0 = llvm.inline_asm "foo", "=r,r" %arg0 : (i32) -> i8
 
-  // CHECK-NEXT:  call i8 asm "foo", "=r,r,r"(i32 {{.*}}, i32 {{.*}}), !dbg !10
+  // CHECK-NEXT:  call i8 asm "foo", "=r,r,r"(i32 {{.*}}, i32 {{.*}})
   %1 = llvm.inline_asm "foo", "=r,r,r" %arg0, %arg0 : (i32, i32) -> i8
 
-  // CHECK-NEXT:  call i8 asm sideeffect "foo", "=r,r,r"(i32 {{.*}}, i32 {{.*}}), !dbg !11
+  // CHECK-NEXT:  call i8 asm sideeffect "foo", "=r,r,r"(i32 {{.*}}, i32 {{.*}})
   %2 = llvm.inline_asm has_side_effects "foo", "=r,r,r" %arg0, %arg0 : (i32, i32) -> i8
 
-  // CHECK-NEXT:  call i8 asm alignstack "foo", "=r,r,r"(i32 {{.*}}, i32 {{.*}}), !dbg !12
+  // CHECK-NEXT:  call i8 asm alignstack "foo", "=r,r,r"(i32 {{.*}}, i32 {{.*}})
   %3 = llvm.inline_asm is_align_stack "foo", "=r,r,r" %arg0, %arg0 : (i32, i32) -> i8
 
-  // CHECK-NEXT:  call i8 asm inteldialect "foo", "=r,r,r"(i32 {{.*}}, i32 {{.*}}), !dbg !13
+  // CHECK-NEXT:  call i8 asm inteldialect "foo", "=r,r,r"(i32 {{.*}}, i32 {{.*}})
   %4 = llvm.inline_asm asm_dialect = "intel" "foo", "=r,r,r" %arg0, %arg0 : (i32, i32) -> i8
 
-  // CHECK-NEXT:  call { i8, i8 } asm "foo", "=r,=r,r"(i32 {{.*}}), !dbg !14
+  // CHECK-NEXT:  call { i8, i8 } asm "foo", "=r,=r,r"(i32 {{.*}})
   %5 = llvm.inline_asm "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
 
   llvm.return
@@ -1666,7 +1784,7 @@ llvm.func @fastmathFlags(%arg0: f32) {
 // CHECK: {{.*}} = call afn float @fastmathFlagsFunc({{.*}})
 // CHECK: {{.*}} = call reassoc float @fastmathFlagsFunc({{.*}})
 // CHECK: {{.*}} = call fast float @fastmathFlagsFunc({{.*}})
-  %8 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<>} : (f32) -> (f32)
+  %8 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<none>} : (f32) -> (f32)
   %9 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<nnan>} : (f32) -> (f32)
   %10 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<ninf>} : (f32) -> (f32)
   %11 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<nsz>} : (f32) -> (f32)
@@ -1675,6 +1793,17 @@ llvm.func @fastmathFlags(%arg0: f32) {
   %14 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<afn>} : (f32) -> (f32)
   %15 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<reassoc>} : (f32) -> (f32)
   %16 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<fast>} : (f32) -> (f32)
+
+// CHECK: call fast float @llvm.copysign.f32(float {{.*}}, float {{.*}})
+  %17 = "llvm.intr.copysign"(%arg0, %arg0) {fastmathFlags = #llvm.fastmath<fast>} : (f32, f32) -> f32
+// CHECK: call afn float @llvm.copysign.f32(float {{.*}}, float {{.*}})
+  %18 = "llvm.intr.copysign"(%arg0, %arg0) {fastmathFlags = #llvm.fastmath<afn>} : (f32, f32) -> f32
+
+// CHECK: call fast float @llvm.powi.f32.i32(float {{.*}}, i32 {{.*}})
+  %exp = llvm.mlir.constant(1 : i32) : i32
+  %19 = "llvm.intr.powi"(%arg0, %exp) {fastmathFlags = #llvm.fastmath<fast>} : (f32, i32) -> f32
+// CHECK: call afn float @llvm.powi.f32.i32(float {{.*}}, i32 {{.*}})
+  %20 = "llvm.intr.powi"(%arg0, %exp) {fastmathFlags = #llvm.fastmath<afn>} : (f32, i32) -> f32
   llvm.return
 }
 
@@ -1760,7 +1889,6 @@ module {
   llvm.metadata @metadata {
     llvm.access_group @group1
     llvm.access_group @group2
-    llvm.return
   }
 }
 
@@ -1791,7 +1919,6 @@ module {
     llvm.alias_scope @scope1 { domain = @domain, description = "The first scope" }
     llvm.alias_scope @scope2 { domain = @domain }
     llvm.alias_scope @scope3 { domain = @domain }
-    llvm.return
   }
 }
 
@@ -1937,3 +2064,24 @@ llvm.func @vararg_function(%arg0: i32, ...) {
   // CHECK: ret void
   llvm.return
 }
+
+// -----
+
+// CHECK: declare void @readonly_function([[PTR:.+]] readonly)
+llvm.func @readonly_function(%arg0: !llvm.ptr<f32> {llvm.readonly})
+
+// -----
+
+// CHECK: declare void @arg_mem_none_func() #[[ATTR:[0-9]+]]
+llvm.func @arg_mem_none_func() attributes {
+  memory = #llvm.memory_effects<other = readwrite, argMem = none, inaccessibleMem = readwrite>}
+
+// CHECK: attributes #[[ATTR]] = { memory(readwrite, argmem: none) }
+
+// -----
+
+// CHECK: declare void @readwrite_func() #[[ATTR:[0-9]+]]
+llvm.func @readwrite_func() attributes {
+  memory = #llvm.memory_effects<other = readwrite, argMem = readwrite, inaccessibleMem = readwrite>}
+
+// CHECK: attributes #[[ATTR]] = { memory(readwrite) }

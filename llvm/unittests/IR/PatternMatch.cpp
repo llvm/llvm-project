@@ -550,6 +550,20 @@ TEST_F(PatternMatchTest, Power2) {
   EXPECT_TRUE(m_NegatedPower2().match(CNegIntMin));
 }
 
+TEST_F(PatternMatchTest, Not) {
+  Value *C1 = IRB.getInt32(1);
+  Value *C2 = IRB.getInt32(2);
+  Value *C3 = IRB.getInt32(3);
+  Instruction *Not = BinaryOperator::CreateXor(C1, C2);
+
+  // When `m_Not` does not match the `not` itself,
+  // it should not try to apply the inner matcher.
+  Value *Val = C3;
+  EXPECT_FALSE(m_Not(m_Value(Val)).match(Not));
+  EXPECT_EQ(Val, C3);
+  Not->deleteValue();
+}
+
 TEST_F(PatternMatchTest, CommutativeDeferredValue) {
   Value *X = IRB.getInt32(1);
   Value *Y = IRB.getInt32(2);
@@ -1705,6 +1719,37 @@ TEST_F(PatternMatchTest, LogicalSelects) {
 
   EXPECT_FALSE(match(Or, m_c_LogicalOr(m_Specific(X), m_Specific(X))));
   EXPECT_FALSE(match(Or, m_c_LogicalOr(m_Specific(Y), m_Specific(Y))));
+}
+
+TEST_F(PatternMatchTest, VectorLogicalSelects) {
+  Type *i1 = IRB.getInt1Ty();
+  Type *v3i1 = FixedVectorType::get(i1, 3);
+
+  Value *Alloca = IRB.CreateAlloca(i1);
+  Value *AllocaVec = IRB.CreateAlloca(v3i1);
+  Value *Scalar = IRB.CreateLoad(i1, Alloca);
+  Value *Vector = IRB.CreateLoad(v3i1, AllocaVec);
+  Constant *F = Constant::getNullValue(v3i1);
+  Constant *T = Constant::getAllOnesValue(v3i1);
+
+  // select <3 x i1> Vector, <3 x i1> Vector, <3 x i1> <i1 0, i1 0, i1 0>
+  Value *VecAnd = IRB.CreateSelect(Vector, Vector, F);
+
+  // select i1 Scalar, <3 x i1> Vector, <3 x i1> <i1 0, i1 0, i1 0>
+  Value *MixedTypeAnd = IRB.CreateSelect(Scalar, Vector, F);
+
+  // select <3 x i1> Vector, <3 x i1> <i1 1, i1 1, i1 1>, <3 x i1> Vector
+  Value *VecOr = IRB.CreateSelect(Vector, T, Vector);
+
+  // select i1 Scalar, <3 x i1> <i1 1, i1 1, i1 1>, <3 x i1> Vector
+  Value *MixedTypeOr = IRB.CreateSelect(Scalar, T, Vector);
+
+  // We allow matching a real vector logical select,
+  // but not a scalar select of vector bools.
+  EXPECT_TRUE(match(VecAnd, m_LogicalAnd(m_Value(), m_Value())));
+  EXPECT_FALSE(match(MixedTypeAnd, m_LogicalAnd(m_Value(), m_Value())));
+  EXPECT_TRUE(match(VecOr, m_LogicalOr(m_Value(), m_Value())));
+  EXPECT_FALSE(match(MixedTypeOr, m_LogicalOr(m_Value(), m_Value())));
 }
 
 TEST_F(PatternMatchTest, VScale) {

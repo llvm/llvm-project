@@ -44,12 +44,15 @@ add_lldb_library(lldbPluginPlatformMacOSX PLUGIN
     lldbSymbol
     lldbTarget
     lldbUtility
+    lldbPluginDynamicLoaderDarwinKernel
+    lldbPluginObjectContainerMachOFileset
     lldbPluginPlatformPOSIX
     ${OBJC_LIBS}
   CLANG_LIBS
     clangBasic
   LINK_COMPONENTS
     Support
+    TargetParser
     )
 
 add_dependencies(lldbPluginPlatformMacOSX

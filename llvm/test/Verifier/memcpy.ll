@@ -1,9 +1,9 @@
-; RUN: not opt -verify < %s 2>&1 | FileCheck %s
+; RUN: not opt -passes=verify < %s 2>&1 | FileCheck %s
 
-; CHECK: alignment is not a power of two 
+; CHECK: alignment is not a power of two
 
-define void @foo(i8* %P, i8* %Q) {
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 3 %P, i8* %Q, i32 4, i1 false)
+define void @foo(ptr %P, ptr %Q) {
+  call void @llvm.memcpy.p0.p0.i32(ptr align 3 %P, ptr %Q, i32 4, i1 false)
   ret void
 }
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind

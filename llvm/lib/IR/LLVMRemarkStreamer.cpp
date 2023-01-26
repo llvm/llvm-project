@@ -18,6 +18,7 @@
 #include "llvm/Remarks/RemarkStreamer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -45,10 +46,10 @@ static remarks::Type toRemarkType(enum DiagnosticKind Kind) {
 }
 
 /// DiagnosticLocation -> remarks::RemarkLocation.
-static Optional<remarks::RemarkLocation>
+static std::optional<remarks::RemarkLocation>
 toRemarkLocation(const DiagnosticLocation &DL) {
   if (!DL.isValid())
-    return None;
+    return std::nullopt;
   StringRef File = DL.getRelativePath();
   unsigned Line = DL.getLine();
   unsigned Col = DL.getColumn();
@@ -94,7 +95,7 @@ char LLVMRemarkSetupFormatError::ID = 0;
 Expected<std::unique_ptr<ToolOutputFile>> llvm::setupLLVMOptimizationRemarks(
     LLVMContext &Context, StringRef RemarksFilename, StringRef RemarksPasses,
     StringRef RemarksFormat, bool RemarksWithHotness,
-    Optional<uint64_t> RemarksHotnessThreshold) {
+    std::optional<uint64_t> RemarksHotnessThreshold) {
   if (RemarksWithHotness)
     Context.setDiagnosticsHotnessRequested(true);
 
@@ -141,7 +142,7 @@ Expected<std::unique_ptr<ToolOutputFile>> llvm::setupLLVMOptimizationRemarks(
 Error llvm::setupLLVMOptimizationRemarks(
     LLVMContext &Context, raw_ostream &OS, StringRef RemarksPasses,
     StringRef RemarksFormat, bool RemarksWithHotness,
-    Optional<uint64_t> RemarksHotnessThreshold) {
+    std::optional<uint64_t> RemarksHotnessThreshold) {
   if (RemarksWithHotness)
     Context.setDiagnosticsHotnessRequested(true);
 

@@ -1,4 +1,4 @@
-; RUN: opt < %s  -basic-aa -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -dce -instcombine -S -enable-if-conversion | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize,dce,instcombine -force-vector-interleave=1 -force-vector-width=4 -S -enable-if-conversion | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -14,14 +14,14 @@ define i32 @_Z5test1v() nounwind uwtable ssp {
   br label %1
 
 ; <label>:1                                       ; preds = %0, %1
-  %p.02 = phi i32* [ getelementptr inbounds ([36 x i32], [36 x i32]* @A, i64 0, i64 18), %0 ], [ %4, %1 ]
-  %b.01 = phi i32* [ getelementptr inbounds ([36 x i32], [36 x i32]* @B, i64 0, i64 0), %0 ], [ %5, %1 ]
-  %2 = load i32, i32* %b.01, align 4
+  %p.02 = phi ptr [ getelementptr inbounds ([36 x i32], ptr @A, i64 0, i64 18), %0 ], [ %4, %1 ]
+  %b.01 = phi ptr [ @B, %0 ], [ %5, %1 ]
+  %2 = load i32, ptr %b.01, align 4
   %3 = shl nsw i32 %2, 1
-  store i32 %3, i32* %p.02, align 4
-  %4 = getelementptr inbounds i32, i32* %p.02, i64 -1
-  %5 = getelementptr inbounds i32, i32* %b.01, i64 1
-  %6 = icmp eq i32* %4, getelementptr ([36 x i32], [36 x i32]* @A, i64 128102389400760775, i64 3)
+  store i32 %3, ptr %p.02, align 4
+  %4 = getelementptr inbounds i32, ptr %p.02, i64 -1
+  %5 = getelementptr inbounds i32, ptr %b.01, i64 1
+  %6 = icmp eq ptr %4, getelementptr ([36 x i32], ptr @A, i64 128102389400760775, i64 3)
   br i1 %6, label %7, label %1
 
 ; <label>:7                                       ; preds = %1
@@ -37,13 +37,13 @@ define i32 @_Z5test2v() nounwind uwtable ssp {
   br label %1
 
 ; <label>:1                                       ; preds = %0, %1
-  %p.02 = phi i32* [ getelementptr inbounds ([36 x i32], [36 x i32]* @A, i64 0, i64 25), %0 ], [ %3, %1 ]
-  %b.01 = phi i32* [ getelementptr inbounds ([36 x i32], [36 x i32]* @B, i64 0, i64 2), %0 ], [ %4, %1 ]
-  %2 = load i32, i32* %b.01, align 4
-  store i32 %2, i32* %p.02, align 4
-  %3 = getelementptr inbounds i32, i32* %p.02, i64 -1
-  %4 = getelementptr inbounds i32, i32* %b.01, i64 1
-  %5 = icmp eq i32* %4, getelementptr inbounds ([36 x i32], [36 x i32]* @A, i64 0, i64 18)
+  %p.02 = phi ptr [ getelementptr inbounds ([36 x i32], ptr @A, i64 0, i64 25), %0 ], [ %3, %1 ]
+  %b.01 = phi ptr [ getelementptr inbounds ([36 x i32], ptr @B, i64 0, i64 2), %0 ], [ %4, %1 ]
+  %2 = load i32, ptr %b.01, align 4
+  store i32 %2, ptr %p.02, align 4
+  %3 = getelementptr inbounds i32, ptr %p.02, i64 -1
+  %4 = getelementptr inbounds i32, ptr %b.01, i64 1
+  %5 = icmp eq ptr %4, getelementptr inbounds ([36 x i32], ptr @A, i64 0, i64 18)
   br i1 %5, label %6, label %1
 
 ; <label>:6                                       ; preds = %1
@@ -59,13 +59,13 @@ define i32 @_Z5test3v() nounwind uwtable ssp {
   br label %1
 
 ; <label>:1                                       ; preds = %0, %1
-  %p.02 = phi i32* [ getelementptr inbounds ([36 x i32], [36 x i32]* @A, i64 0, i64 29), %0 ], [ %3, %1 ]
-  %b.01 = phi i32* [ getelementptr inbounds ([36 x i32], [36 x i32]* @B, i64 0, i64 5), %0 ], [ %4, %1 ]
-  %2 = load i32, i32* %b.01, align 4
-  store i32 %2, i32* %p.02, align 4
-  %3 = getelementptr inbounds i32, i32* %p.02, i64 -1
-  %4 = getelementptr inbounds i32, i32* %b.01, i64 1
-  %5 = icmp eq i32* %3, getelementptr ([36 x i32], [36 x i32]* @A, i64 128102389400760775, i64 3)
+  %p.02 = phi ptr [ getelementptr inbounds ([36 x i32], ptr @A, i64 0, i64 29), %0 ], [ %3, %1 ]
+  %b.01 = phi ptr [ getelementptr inbounds ([36 x i32], ptr @B, i64 0, i64 5), %0 ], [ %4, %1 ]
+  %2 = load i32, ptr %b.01, align 4
+  store i32 %2, ptr %p.02, align 4
+  %3 = getelementptr inbounds i32, ptr %p.02, i64 -1
+  %4 = getelementptr inbounds i32, ptr %b.01, i64 1
+  %5 = icmp eq ptr %3, getelementptr ([36 x i32], ptr @A, i64 128102389400760775, i64 3)
   br i1 %5, label %6, label %1
 
 ; <label>:6                                       ; preds = %1

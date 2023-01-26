@@ -1031,25 +1031,25 @@ define <8 x i64> @v8i64(<8 x i64> %x, <8 x i64> %y) nounwind {
 ; SSE-NEXT:    pcmpgtd %xmm4, %xmm10
 ; SSE-NEXT:    pshufd {{.*#+}} xmm11 = xmm10[0,0,2,2]
 ; SSE-NEXT:    pcmpeqd %xmm9, %xmm4
-; SSE-NEXT:    pshufd {{.*#+}} xmm9 = xmm4[1,1,3,3]
-; SSE-NEXT:    pand %xmm11, %xmm9
-; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm10[1,1,3,3]
-; SSE-NEXT:    por %xmm4, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[1,1,3,3]
+; SSE-NEXT:    pand %xmm11, %xmm4
+; SSE-NEXT:    pshufd {{.*#+}} xmm9 = xmm10[1,1,3,3]
 ; SSE-NEXT:    por %xmm9, %xmm0
-; SSE-NEXT:    movdqa %xmm1, %xmm9
-; SSE-NEXT:    pxor %xmm8, %xmm9
+; SSE-NEXT:    por %xmm4, %xmm0
+; SSE-NEXT:    movdqa %xmm1, %xmm4
+; SSE-NEXT:    pxor %xmm8, %xmm4
 ; SSE-NEXT:    paddq %xmm5, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm5
 ; SSE-NEXT:    pxor %xmm8, %xmm5
-; SSE-NEXT:    movdqa %xmm9, %xmm4
-; SSE-NEXT:    pcmpgtd %xmm5, %xmm4
-; SSE-NEXT:    pshufd {{.*#+}} xmm10 = xmm4[0,0,2,2]
-; SSE-NEXT:    pcmpeqd %xmm9, %xmm5
-; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[1,1,3,3]
-; SSE-NEXT:    pand %xmm10, %xmm5
-; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[1,1,3,3]
-; SSE-NEXT:    por %xmm4, %xmm1
+; SSE-NEXT:    movdqa %xmm4, %xmm9
+; SSE-NEXT:    pcmpgtd %xmm5, %xmm9
+; SSE-NEXT:    pshufd {{.*#+}} xmm10 = xmm9[0,0,2,2]
+; SSE-NEXT:    pcmpeqd %xmm4, %xmm5
+; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm5[1,1,3,3]
+; SSE-NEXT:    pand %xmm10, %xmm4
+; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm9[1,1,3,3]
 ; SSE-NEXT:    por %xmm5, %xmm1
+; SSE-NEXT:    por %xmm4, %xmm1
 ; SSE-NEXT:    movdqa %xmm2, %xmm4
 ; SSE-NEXT:    pxor %xmm8, %xmm4
 ; SSE-NEXT:    paddq %xmm6, %xmm2

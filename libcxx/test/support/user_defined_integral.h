@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef SUPPORT_USER_DEFINED_INTEGRAL_H
 #define SUPPORT_USER_DEFINED_INTEGRAL_H
 

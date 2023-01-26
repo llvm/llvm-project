@@ -31,12 +31,10 @@ using namespace llvm;
 /// ScalarOpts library.
 void llvm::initializeScalarOpts(PassRegistry &Registry) {
   initializeADCELegacyPassPass(Registry);
-  initializeAnnotationRemarksLegacyPass(Registry);
   initializeBDCELegacyPassPass(Registry);
   initializeAlignmentFromAssumptionsPass(Registry);
   initializeCallSiteSplittingLegacyPassPass(Registry);
   initializeConstantHoistingLegacyPassPass(Registry);
-  initializeConstraintEliminationPass(Registry);
   initializeCorrelatedValuePropagationPass(Registry);
   initializeDCELegacyPassPass(Registry);
   initializeDivRemPairsLegacyPassPass(Registry);

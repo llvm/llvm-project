@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "check-io.h"
+#include "definable.h"
 #include "flang/Common/format.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/tools.h"
@@ -230,6 +231,9 @@ void IoChecker::Enter(const parser::Format &spec) {
               if (!IsVariable(*expr)) {
                 context_.Say(format.source,
                     "Assigned format label must be a scalar variable"_err_en_US);
+              } else if (context_.ShouldWarn(common::LanguageFeature::Assign)) {
+                context_.Say(format.source,
+                    "Assigned format labels are deprecated"_port_en_US);
               }
               return;
             }
@@ -250,13 +254,6 @@ void IoChecker::Enter(const parser::Format &spec) {
                     context_.defaultKinds().GetDefaultKind(type->category())) {
               context_.Say(format.source,
                   "Format expression must be default character or default scalar integer"_err_en_US);
-              return;
-            }
-            if (expr->Rank() > 0 &&
-                !IsSimplyContiguous(*expr, context_.foldingContext())) {
-              // The runtime APIs don't allow arbitrary descriptors for formats.
-              context_.Say(format.source,
-                  "Format expression must be a simply contiguous array if not scalar"_err_en_US);
               return;
             }
             flags_.set(Flag::CharFmt);
@@ -329,7 +326,7 @@ void IoChecker::Enter(const parser::InputItem &spec) {
   }
   CheckForDefinableVariable(*var, "Input");
   if (auto expr{AnalyzeExpr(context_, *var)}) {
-    CheckForBadIoComponent(*expr,
+    CheckForBadIoType(*expr,
         flags_.test(Flag::FmtOrNml) ? GenericKind::DefinedIo::ReadFormatted
                                     : GenericKind::DefinedIo::ReadUnformatted,
         var->GetSource());
@@ -549,21 +546,50 @@ void IoChecker::Enter(const parser::IoControlSpec::Size &var) {
 
 void IoChecker::Enter(const parser::IoUnit &spec) {
   if (const parser::Variable * var{std::get_if<parser::Variable>(&spec.u)}) {
-    if (stmt_ == IoStmtKind::Write) {
-      CheckForDefinableVariable(*var, "Internal file");
+    // Only now after generic resolution can it be known whether a function
+    // call appearing as UNIT=f() is an integer scalar external unit number
+    // or a character pointer for internal I/O.
+    const auto *expr{GetExpr(context_, *var)};
+    std::optional<evaluate::DynamicType> dyType;
+    if (expr) {
+      dyType = expr->GetType();
     }
-    if (const auto *expr{GetExpr(context_, *var)}) {
+    if (dyType && dyType->category() == TypeCategory::Integer) {
+      if (expr->Rank() != 0) {
+        context_.Say(parser::FindSourceLocation(*var),
+            "I/O unit number must be scalar"_err_en_US);
+      }
+      // In the case of an integer unit number variable, rewrite the parse
+      // tree as if the unit had been parsed as a FileUnitNumber in order
+      // to ease lowering.
+      auto &mutableSpec{const_cast<parser::IoUnit &>(spec)};
+      auto &mutableVar{std::get<parser::Variable>(mutableSpec.u)};
+      auto source{mutableVar.GetSource()};
+      auto typedExpr{std::move(mutableVar.typedExpr)};
+      auto newExpr{common::visit(
+          [](auto &&indirection) {
+            return parser::Expr{std::move(indirection)};
+          },
+          std::move(mutableVar.u))};
+      newExpr.source = source;
+      newExpr.typedExpr = std::move(typedExpr);
+      mutableSpec.u = parser::FileUnitNumber{
+          parser::ScalarIntExpr{parser::IntExpr{std::move(newExpr)}}};
+    } else if (!dyType || dyType->category() != TypeCategory::Character) {
+      SetSpecifier(IoSpecKind::Unit);
+      context_.Say(parser::FindSourceLocation(*var),
+          "I/O unit must be a character variable or a scalar integer expression"_err_en_US);
+    } else { // CHARACTER variable (internal I/O)
+      if (stmt_ == IoStmtKind::Write) {
+        CheckForDefinableVariable(*var, "Internal file");
+      }
       if (HasVectorSubscript(*expr)) {
         context_.Say(parser::FindSourceLocation(*var), // C1201
             "Internal file must not have a vector subscript"_err_en_US);
-      } else if (!ExprTypeKindIsDefault(*expr, context_)) {
-        // This may be too restrictive; other kinds may be valid.
-        context_.Say(parser::FindSourceLocation(*var), // C1202
-            "Invalid character kind for an internal file variable"_err_en_US);
       }
+      SetSpecifier(IoSpecKind::Unit);
+      flags_.set(Flag::InternalUnit);
     }
-    SetSpecifier(IoSpecKind::Unit);
-    flags_.set(Flag::InternalUnit);
   } else if (std::get_if<parser::Star>(&spec.u)) {
     SetSpecifier(IoSpecKind::Unit);
     flags_.set(Flag::StarUnit);
@@ -593,7 +619,7 @@ void IoChecker::Enter(const parser::OutputItem &item) {
         context_.Say(parser::FindSourceLocation(*x),
             "Output item must not be a procedure pointer"_err_en_US); // C1233
       }
-      CheckForBadIoComponent(*expr,
+      CheckForBadIoType(*expr,
           flags_.test(Flag::FmtOrNml)
               ? GenericKind::DefinedIo::WriteFormatted
               : GenericKind::DefinedIo::WriteUnformatted,
@@ -715,29 +741,21 @@ void IoChecker::Leave(const parser::PrintStmt &) {
   Done();
 }
 
-static void CheckForDoVariableInNamelist(const Symbol &namelist,
-    SemanticsContext &context, parser::CharBlock namelistLocation) {
-  const auto &details{namelist.GetUltimate().get<NamelistDetails>()};
-  for (const Symbol &object : details.objects()) {
-    context.CheckIndexVarRedefine(namelistLocation, object);
-  }
-}
-
-static void CheckForDoVariableInNamelistSpec(
-    const parser::ReadStmt &readStmt, SemanticsContext &context) {
-  const std::list<parser::IoControlSpec> &controls{readStmt.controls};
+static const parser::Name *FindNamelist(
+    const std::list<parser::IoControlSpec> &controls) {
   for (const auto &control : controls) {
-    if (const auto *namelist{std::get_if<parser::Name>(&control.u)}) {
-      if (const Symbol * symbol{namelist->symbol}) {
-        CheckForDoVariableInNamelist(*symbol, context, namelist->source);
+    if (const parser::Name * namelist{std::get_if<parser::Name>(&control.u)}) {
+      if (namelist->symbol &&
+          namelist->symbol->GetUltimate().has<NamelistDetails>()) {
+        return namelist;
       }
     }
   }
+  return nullptr;
 }
 
 static void CheckForDoVariable(
     const parser::ReadStmt &readStmt, SemanticsContext &context) {
-  CheckForDoVariableInNamelistSpec(readStmt, context);
   const std::list<parser::InputItem> &items{readStmt.items};
   for (const auto &item : items) {
     if (const parser::Variable *
@@ -750,6 +768,12 @@ static void CheckForDoVariable(
 void IoChecker::Leave(const parser::ReadStmt &readStmt) {
   if (!flags_.test(Flag::InternalUnit)) {
     CheckForPureSubprogram();
+  }
+  if (const parser::Name * namelist{FindNamelist(readStmt.controls)}) {
+    if (namelist->symbol) {
+      CheckNamelist(*namelist->symbol, GenericKind::DefinedIo::ReadFormatted,
+          namelist->source);
+    }
   }
   CheckForDoVariable(readStmt, context_);
   if (!flags_.test(Flag::IoControlList)) {
@@ -784,9 +808,15 @@ void IoChecker::Leave(const parser::WaitStmt &) {
   Done();
 }
 
-void IoChecker::Leave(const parser::WriteStmt &) {
+void IoChecker::Leave(const parser::WriteStmt &writeStmt) {
   if (!flags_.test(Flag::InternalUnit)) {
     CheckForPureSubprogram();
+  }
+  if (const parser::Name * namelist{FindNamelist(writeStmt.controls)}) {
+    if (namelist->symbol) {
+      CheckNamelist(*namelist->symbol, GenericKind::DefinedIo::WriteFormatted,
+          namelist->source);
+    }
   }
   LeaveReadWrite();
   CheckForProhibitedSpecifier(IoSpecKind::Blank); // C1213
@@ -983,11 +1013,12 @@ void IoChecker::CheckForDefinableVariable(
   if (const auto *var{parser::Unwrap<parser::Variable>(variable)}) {
     if (auto expr{AnalyzeExpr(context_, *var)}) {
       auto at{var->GetSource()};
-      if (auto whyNot{WhyNotModifiable(at, *expr, context_.FindScope(at),
-              true /*vectorSubscriptIsOk*/)}) {
+      if (auto whyNot{WhyNotDefinable(at, context_.FindScope(at),
+              DefinabilityFlags{DefinabilityFlag::VectorSubscriptIsOk},
+              *expr)}) {
         const Symbol *base{GetFirstSymbol(*expr)};
         context_
-            .Say(at, "%s variable '%s' must be definable"_err_en_US, s,
+            .Say(at, "%s variable '%s' is not definable"_err_en_US, s,
                 (base ? base->name() : at).ToString())
             .Attach(std::move(*whyNot));
       }
@@ -1006,18 +1037,137 @@ void IoChecker::CheckForPureSubprogram() const { // C1597
   }
 }
 
-// Fortran 2018, 12.6.3 paragraph 7
-void IoChecker::CheckForBadIoComponent(const SomeExpr &expr,
+// Seeks out an allocatable or pointer ultimate component that is not
+// nested in a nonallocatable/nonpointer component with a specific
+// defined I/O procedure.
+static const Symbol *FindUnsafeIoDirectComponent(GenericKind::DefinedIo which,
+    const DerivedTypeSpec &derived, const Scope &scope) {
+  if (HasDefinedIo(which, derived, &scope)) {
+    return nullptr;
+  }
+  if (const Scope * dtScope{derived.scope()}) {
+    for (const auto &pair : *dtScope) {
+      const Symbol &symbol{*pair.second};
+      if (IsAllocatableOrPointer(symbol)) {
+        return &symbol;
+      }
+      if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
+        if (const DeclTypeSpec * type{details->type()}) {
+          if (type->category() == DeclTypeSpec::Category::TypeDerived) {
+            const DerivedTypeSpec &componentDerived{type->derivedTypeSpec()};
+            if (const Symbol *
+                bad{FindUnsafeIoDirectComponent(
+                    which, componentDerived, scope)}) {
+              return bad;
+            }
+          }
+        }
+      }
+    }
+  }
+  return nullptr;
+}
+
+// For a type that does not have a defined I/O subroutine, finds a direct
+// component that is a witness to an accessibility violation outside the module
+// in which the type was defined.
+static const Symbol *FindInaccessibleComponent(GenericKind::DefinedIo which,
+    const DerivedTypeSpec &derived, const Scope &scope) {
+  if (const Scope * dtScope{derived.scope()}) {
+    if (const Scope * module{FindModuleContaining(*dtScope)}) {
+      for (const auto &pair : *dtScope) {
+        const Symbol &symbol{*pair.second};
+        if (IsAllocatableOrPointer(symbol)) {
+          continue; // already an error
+        }
+        if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
+          const DerivedTypeSpec *componentDerived{nullptr};
+          if (const DeclTypeSpec * type{details->type()}) {
+            if (type->category() == DeclTypeSpec::Category::TypeDerived) {
+              componentDerived = &type->derivedTypeSpec();
+            }
+          }
+          if (componentDerived &&
+              HasDefinedIo(which, *componentDerived, &scope)) {
+            continue; // this component and its descendents are fine
+          }
+          if (symbol.attrs().test(Attr::PRIVATE) &&
+              !symbol.test(Symbol::Flag::ParentComp)) {
+            if (!DoesScopeContain(module, scope)) {
+              return &symbol;
+            }
+          }
+          if (componentDerived) {
+            if (const Symbol *
+                bad{FindInaccessibleComponent(
+                    which, *componentDerived, scope)}) {
+              return bad;
+            }
+          }
+        }
+      }
+    }
+  }
+  return nullptr;
+}
+
+// Fortran 2018, 12.6.3 paragraphs 5 & 7
+parser::Message *IoChecker::CheckForBadIoType(const evaluate::DynamicType &type,
+    GenericKind::DefinedIo which, parser::CharBlock where) const {
+  if (type.IsUnlimitedPolymorphic()) {
+    return &context_.Say(
+        where, "I/O list item may not be unlimited polymorphic"_err_en_US);
+  } else if (type.category() == TypeCategory::Derived) {
+    const auto &derived{type.GetDerivedTypeSpec()};
+    const Scope &scope{context_.FindScope(where)};
+    if (const Symbol *
+        bad{FindUnsafeIoDirectComponent(which, derived, scope)}) {
+      return &context_.SayWithDecl(*bad, where,
+          "Derived type '%s' in I/O cannot have an allocatable or pointer direct component '%s' unless using defined I/O"_err_en_US,
+          derived.name(), bad->name());
+    }
+    if (!HasDefinedIo(which, derived, &scope)) {
+      if (type.IsPolymorphic()) {
+        return &context_.Say(where,
+            "Derived type '%s' in I/O may not be polymorphic unless using defined I/O"_err_en_US,
+            derived.name());
+      }
+      if (const Symbol *
+          bad{FindInaccessibleComponent(which, derived, scope)}) {
+        return &context_.Say(where,
+            "I/O of the derived type '%s' may not be performed without defined I/O in a scope in which a direct component like '%s' is inaccessible"_err_en_US,
+            derived.name(), bad->name());
+      }
+    }
+  }
+  return nullptr;
+}
+
+void IoChecker::CheckForBadIoType(const SomeExpr &expr,
     GenericKind::DefinedIo which, parser::CharBlock where) const {
   if (auto type{expr.GetType()}) {
-    if (type->category() == TypeCategory::Derived &&
-        !type->IsUnlimitedPolymorphic()) {
-      if (const Symbol *
-          bad{FindUnsafeIoDirectComponent(
-              which, type->GetDerivedTypeSpec(), &context_.FindScope(where))}) {
-        context_.SayWithDecl(*bad, where,
-            "Derived type in I/O cannot have an allocatable or pointer direct component unless using defined I/O"_err_en_US);
-      }
+    CheckForBadIoType(*type, which, where);
+  }
+}
+
+parser::Message *IoChecker::CheckForBadIoType(const Symbol &symbol,
+    GenericKind::DefinedIo which, parser::CharBlock where) const {
+  if (auto type{evaluate::DynamicType::From(symbol)}) {
+    if (auto *msg{CheckForBadIoType(*type, which, where)}) {
+      evaluate::AttachDeclaration(*msg, symbol);
+      return msg;
+    }
+  }
+  return nullptr;
+}
+
+void IoChecker::CheckNamelist(const Symbol &namelist,
+    GenericKind::DefinedIo which, parser::CharBlock namelistLocation) const {
+  const auto &details{namelist.GetUltimate().get<NamelistDetails>()};
+  for (const Symbol &object : details.objects()) {
+    context_.CheckIndexVarRedefine(namelistLocation, object);
+    if (auto *msg{CheckForBadIoType(object, which, namelistLocation)}) {
+      evaluate::AttachDeclaration(*msg, namelist);
     }
   }
 }

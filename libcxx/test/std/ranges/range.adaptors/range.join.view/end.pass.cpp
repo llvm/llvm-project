@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // constexpr auto end();
 // constexpr auto end() const;
@@ -74,7 +73,7 @@ constexpr bool test() {
     std::ranges::join_view jv(outer);
     assert(jv.end() == std::ranges::next(jv.begin(), 12));
     assert(std::as_const(jv).end() == std::ranges::next(std::as_const(jv).begin(), 12));
-    
+
     static_assert(HasConstEnd<decltype(jv)>);
     static_assert(std::same_as<decltype(jv.end()), decltype(std::as_const(jv).end())>);
     static_assert(!std::ranges::common_range<decltype(jv)>);
@@ -162,7 +161,7 @@ constexpr bool test() {
     std::ranges::join_view jv(outer);
     assert(jv.end() == std::ranges::next(jv.begin(), 12));
     assert(std::as_const(jv).end() == std::ranges::next(std::as_const(jv).begin(), 12));
-    
+
     static_assert(HasConstEnd<decltype(jv)>);
     static_assert(!std::same_as<decltype(jv.end()), decltype(std::as_const(jv).end())>);
     static_assert(!std::ranges::common_range<decltype(jv)>);

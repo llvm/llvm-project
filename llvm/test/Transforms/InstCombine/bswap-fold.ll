@@ -71,15 +71,15 @@ define i32 @lshr12_i32(i32 %x) {
 
 ; negative test - uses
 
-define i32 @lshr8_i32_use(i32 %x, i32* %p) {
+define i32 @lshr8_i32_use(i32 %x, ptr %p) {
 ; CHECK-LABEL: @lshr8_i32_use(
 ; CHECK-NEXT:    [[S:%.*]] = lshr i32 [[X:%.*]], 12
-; CHECK-NEXT:    store i32 [[S]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[S]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.bswap.i32(i32 [[S]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = lshr i32 %x, 12
-  store i32 %s, i32* %p
+  store i32 %s, ptr %p
   %r = call i32 @llvm.bswap.i32(i32 %s)
   ret i32 %r
 }
@@ -133,15 +133,15 @@ define i64 @shl42_i64(i64 %x) {
 
 ; negative test - uses
 
-define i32 @shl8_i32_use(i32 %x, i32* %p) {
+define i32 @shl8_i32_use(i32 %x, ptr %p) {
 ; CHECK-LABEL: @shl8_i32_use(
 ; CHECK-NEXT:    [[S:%.*]] = shl i32 [[X:%.*]], 8
-; CHECK-NEXT:    store i32 [[S]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[S]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.bswap.i32(i32 [[S]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = shl i32 %x, 8
-  store i32 %s, i32* %p
+  store i32 %s, ptr %p
   %r = call i32 @llvm.bswap.i32(i32 %s)
   ret i32 %r
 }

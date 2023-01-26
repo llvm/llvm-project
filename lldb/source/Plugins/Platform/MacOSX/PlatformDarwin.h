@@ -20,7 +20,6 @@
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-forward.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -29,6 +28,7 @@
 #include "llvm/Support/VersionTuple.h"
 
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -87,7 +87,7 @@ public:
 
   void
   ARMGetSupportedArchitectures(std::vector<ArchSpec> &archs,
-                               llvm::Optional<llvm::Triple::OSType> os = {});
+                               std::optional<llvm::Triple::OSType> os = {});
 
   void x86GetSupportedArchitectures(std::vector<ArchSpec> &archs);
 
@@ -153,6 +153,10 @@ protected:
   ///     module spec, its UUID, the crash messages and the abort cause.
   ///     \b nullptr if process has no crash information annotations.
   StructuredData::ArraySP ExtractCrashInfoAnnotations(Process &process);
+
+  /// Extract the `Application Specific Information` messages from a crash
+  /// report.
+  StructuredData::DictionarySP ExtractAppSpecificInfo(Process &process);
 
   void ReadLibdispatchOffsetsAddress(Process *process);
 

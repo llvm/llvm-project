@@ -16,11 +16,11 @@ target datalayout = "A5"
 ; LOOP: br i1 %{{[^,]+}}, label %exit, label %loop.header
 
 ; FULL-UNROLL: alloca
-; FULL-UNROLL-COUNT-256: store i32 {{[0-9]+}}, i32 addrspace(5)*
+; FULL-UNROLL-COUNT-256: store i32 {{[0-9]+}}, ptr addrspace(5)
 ; FULL-UNROLL-NOT: br
 
-; FUNC: store i32 %{{[^,]+}}, i32 addrspace(1)* %out
-define amdgpu_kernel void @private_memory(i32 addrspace(1)* %out, i32 %n) {
+; FUNC: store i32 %{{[^,]+}}, ptr addrspace(1) %out
+define amdgpu_kernel void @private_memory(ptr addrspace(1) %out, i32 %n) {
 entry:
   %alloca = alloca [16 x i32], addrspace(5)
   br label %loop.header
@@ -32,8 +32,8 @@ loop.header:
 loop.body:
   %salt = xor i32 %counter, %n
   %idx = and i32 %salt, 15
-  %ptr = getelementptr [16 x i32], [16 x i32] addrspace(5)* %alloca, i32 0, i32 %idx
-  store i32 %counter, i32 addrspace(5)* %ptr
+  %ptr = getelementptr [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %idx
+  store i32 %counter, ptr addrspace(5) %ptr
   br label %loop.inc
 
 loop.inc:
@@ -42,8 +42,8 @@ loop.inc:
   br i1 %cmp, label  %exit, label %loop.header
 
 exit:
-  %gep = getelementptr [16 x i32], [16 x i32] addrspace(5)* %alloca, i32 0, i32 %n
-  %load = load i32, i32 addrspace(5)* %gep
-  store i32 %load, i32 addrspace(1)* %out
+  %gep = getelementptr [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %n
+  %load = load i32, ptr addrspace(5) %gep
+  store i32 %load, ptr addrspace(1) %out
   ret void
 }

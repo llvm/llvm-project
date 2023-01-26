@@ -12,6 +12,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <unordered_set>
 
 #include "llvm/Support/Casting.h"
@@ -158,7 +159,7 @@ public:
     virtual CompilerType RealizeType(const char *name, bool for_expression);
 
   protected:
-    std::unique_ptr<TypeSystemClang> m_scratch_ast_ctx_up;
+    std::shared_ptr<TypeSystemClang> m_scratch_ast_ctx_sp;
   };
 
   class ObjCExceptionPrecondition : public BreakpointPrecondition {
@@ -266,7 +267,7 @@ public:
 
   lldb::TypeSP LookupInCompleteClassCache(ConstString &name);
 
-  llvm::Optional<CompilerType> GetRuntimeType(CompilerType base_type) override;
+  std::optional<CompilerType> GetRuntimeType(CompilerType base_type) override;
 
   virtual llvm::Expected<std::unique_ptr<UtilityFunction>>
   CreateObjectChecker(std::string name, ExecutionContext &exe_ctx) = 0;

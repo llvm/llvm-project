@@ -15,11 +15,12 @@
 
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
-#include "llvm/ADT/Optional.h"
+#include "clang/Lex/HeaderMapTypes.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <memory>
+#include <optional>
 
 namespace clang {
 
@@ -38,6 +39,19 @@ public:
 
   // Check for a valid header and extract the byte swap.
   static bool checkHeader(const llvm::MemoryBuffer &File, bool &NeedsByteSwap);
+
+  // Make a call for every Key in the map.
+  template <typename Func> void forEachKey(Func Callback) const {
+    const HMapHeader &Hdr = getHeader();
+    unsigned NumBuckets = getEndianAdjustedWord(Hdr.NumBuckets);
+
+    for (unsigned Bucket = 0; Bucket < NumBuckets; ++Bucket) {
+      HMapBucket B = getBucket(Bucket);
+      if (B.Key != HMAP_EmptyBucketKey)
+        if (std::optional<StringRef> Key = getString(B.Key))
+          Callback(*Key);
+    }
+  }
 
   /// If the specified relative filename is located in this HeaderMap return
   /// the filename it is mapped to, otherwise return an empty StringRef.
@@ -59,8 +73,8 @@ private:
   HMapBucket getBucket(unsigned BucketNo) const;
 
   /// Look up the specified string in the string table.  If the string index is
-  /// not valid, return None.
-  Optional<StringRef> getString(unsigned StrTabIdx) const;
+  /// not valid, return std::nullopt.
+  std::optional<StringRef> getString(unsigned StrTabIdx) const;
 };
 
 /// This class represents an Apple concept known as a 'header map'.  To the
@@ -78,6 +92,7 @@ public:
                                            FileManager &FM);
 
   using HeaderMapImpl::dump;
+  using HeaderMapImpl::forEachKey;
   using HeaderMapImpl::getFileName;
   using HeaderMapImpl::lookupFilename;
   using HeaderMapImpl::reverseLookupFilename;

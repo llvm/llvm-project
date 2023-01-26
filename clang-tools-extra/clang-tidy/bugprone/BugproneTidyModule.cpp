@@ -49,6 +49,7 @@
 #include "SizeofContainerCheck.h"
 #include "SizeofExpressionCheck.h"
 #include "SpuriouslyWakeUpFunctionsCheck.h"
+#include "StandaloneEmptyCheck.h"
 #include "StringConstructorCheck.h"
 #include "StringIntegerAssignmentCheck.h"
 #include "StringLiteralWithEmbeddedNulCheck.h"
@@ -58,6 +59,7 @@
 #include "SuspiciousMemoryComparisonCheck.h"
 #include "SuspiciousMemsetUsageCheck.h"
 #include "SuspiciousMissingCommaCheck.h"
+#include "SuspiciousReallocUsageCheck.h"
 #include "SuspiciousSemicolonCheck.h"
 #include "SuspiciousStringCompareCheck.h"
 #include "SwappedArgumentsCheck.h"
@@ -74,8 +76,7 @@
 #include "UseAfterMoveCheck.h"
 #include "VirtualNearMissCheck.h"
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 namespace bugprone {
 
 class BugproneModule : public ClangTidyModule {
@@ -155,6 +156,8 @@ public:
         "bugprone-sizeof-expression");
     CheckFactories.registerCheck<SpuriouslyWakeUpFunctionsCheck>(
         "bugprone-spuriously-wake-up-functions");
+    CheckFactories.registerCheck<StandaloneEmptyCheck>(
+        "bugprone-standalone-empty");
     CheckFactories.registerCheck<StringConstructorCheck>(
         "bugprone-string-constructor");
     CheckFactories.registerCheck<StringIntegerAssignmentCheck>(
@@ -173,6 +176,8 @@ public:
         "bugprone-suspicious-memset-usage");
     CheckFactories.registerCheck<SuspiciousMissingCommaCheck>(
         "bugprone-suspicious-missing-comma");
+    CheckFactories.registerCheck<SuspiciousReallocUsageCheck>(
+        "bugprone-suspicious-realloc-usage");
     CheckFactories.registerCheck<SuspiciousSemicolonCheck>(
         "bugprone-suspicious-semicolon");
     CheckFactories.registerCheck<SuspiciousStringCompareCheck>(
@@ -214,5 +219,4 @@ static ClangTidyModuleRegistry::Add<bugprone::BugproneModule>
 // and thus register the BugproneModule.
 volatile int BugproneModuleAnchorSource = 0;
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

@@ -115,13 +115,12 @@ struct AArch64OutgoingValueAssigner
     bool IsCalleeWin = Subtarget.isCallingConvWin64(State.getCallingConv());
     bool UseVarArgsCCForFixed = IsCalleeWin && State.isVarArg();
 
-    if (!State.isVarArg() && !UseVarArgsCCForFixed && !IsReturn)
-      applyStackPassedSmallTypeDAGHack(OrigVT, ValVT, LocVT);
-
     bool Res;
-    if (Info.IsFixed && !UseVarArgsCCForFixed)
+    if (Info.IsFixed && !UseVarArgsCCForFixed) {
+      if (!IsReturn)
+        applyStackPassedSmallTypeDAGHack(OrigVT, ValVT, LocVT);
       Res = AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State);
-    else
+    } else
       Res = AssignFnVarArg(ValNo, ValVT, LocVT, LocInfo, Flags, State);
 
     StackOffset = State.getNextStackOffset();
@@ -383,7 +382,9 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
 
       // i1 is a special case because SDAG i1 true is naturally zero extended
       // when widened using ANYEXT. We need to do it explicitly here.
-      if (MRI.getType(CurVReg).getSizeInBits() == 1) {
+      auto &Flags = CurArgInfo.Flags[0];
+      if (MRI.getType(CurVReg).getSizeInBits() == 1 && !Flags.isSExt() &&
+          !Flags.isZExt()) {
         CurVReg = MIRBuilder.buildZExt(LLT::scalar(8), CurVReg).getReg(0);
       } else if (TLI.getNumRegistersForCallingConv(Ctx, CC, SplitEVTs[i]) ==
                  1) {
@@ -412,7 +413,8 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                 }
                 auto Undef = MIRBuilder.buildUndef({OldLLT});
                 CurVReg =
-                    MIRBuilder.buildMerge({NewLLT}, {CurVReg, Undef}).getReg(0);
+                    MIRBuilder.buildMergeLikeInstr({NewLLT}, {CurVReg, Undef})
+                        .getReg(0);
               } else {
                 // Just do a vector extend.
                 CurVReg = MIRBuilder.buildInstr(ExtendOp, {NewLLT}, {CurVReg})
@@ -535,6 +537,12 @@ bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
     LLVM_DEBUG(dbgs() << "Falling back to SDAG because we don't support no-NEON\n");
     return true;
   }
+
+  SMEAttrs Attrs(F);
+  if (Attrs.hasNewZAInterface() ||
+      (!Attrs.hasStreamingInterface() && Attrs.hasStreamingBody()))
+    return true;
+
   return false;
 }
 
@@ -569,7 +577,8 @@ bool AArch64CallLowering::lowerFormalArguments(
              MRI.getType(OrigArg.Regs[0]).getSizeInBits() == 1 &&
              "Unexpected registers used for i1 arg");
 
-      if (!OrigArg.Flags[0].isZExt()) {
+      auto &Flags = OrigArg.Flags[0];
+      if (!Flags.isZExt() && !Flags.isSExt()) {
         // Lower i1 argument as i8, and insert AssertZExt + Trunc later.
         Register OrigReg = OrigArg.Regs[0];
         Register WideReg = MRI.createGenericVirtualRegister(LLT::scalar(8));
@@ -979,6 +988,9 @@ bool AArch64CallLowering::lowerTailCall(
     TRI->UpdateCustomCallPreservedMask(MF, &Mask);
   MIB.addRegMask(Mask);
 
+  if (Info.CFIType)
+    MIB->setCFIType(MF, Info.CFIType->getZExtValue());
+
   if (TRI->isAnyArgRegReserved(MF))
     TRI->emitReservedArgRegCallError(MF);
 
@@ -1097,12 +1109,18 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   auto &DL = F.getParent()->getDataLayout();
   const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
+  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+
+  // Arm64EC has extra requirements for varargs calls; bail out for now.
+  if (Info.IsVarArg && Subtarget.isWindowsArm64EC())
+    return false;
 
   SmallVector<ArgInfo, 8> OutArgs;
   for (auto &OrigArg : Info.OrigArgs) {
     splitToValueTypes(OrigArg, OutArgs, DL, Info.CallConv);
     // AAPCS requires that we zero-extend i1 to 8 bits by the caller.
-    if (OrigArg.Ty->isIntegerTy(1)) {
+    auto &Flags = OrigArg.Flags[0];
+    if (OrigArg.Ty->isIntegerTy(1) && !Flags.isSExt() && !Flags.isZExt()) {
       ArgInfo &OutArg = OutArgs.back();
       assert(OutArg.Regs.size() == 1 &&
              MRI.getType(OutArg.Regs[0]).getSizeInBits() == 1 &&
@@ -1150,7 +1168,6 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // Create a temporarily-floating call instruction so we can add the implicit
   // uses of arg registers.
 
-  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
   unsigned Opc = 0;
   // Calls with operand bundle "clang.arc.attachedcall" are special. They should
   // be expanded to the call, directly followed by a special marker sequence and
@@ -1176,6 +1193,8 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     Function *ARCFn = *objcarc::getAttachedARCFunction(Info.CB);
     MIB.addGlobalAddress(ARCFn);
     ++CalleeOpNo;
+  } else if (Info.CFIType) {
+    MIB->setCFIType(MF, Info.CFIType->getZExtValue());
   }
 
   MIB.add(Info.Callee);
@@ -1227,7 +1246,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     if (!determineAndHandleAssignments(
             UsingReturnedArg ? ReturnedArgHandler : Handler, Assigner, InArgs,
             MIRBuilder, Info.CallConv, Info.IsVarArg,
-            UsingReturnedArg ? makeArrayRef(OutArgs[0].Regs) : None))
+            UsingReturnedArg ? ArrayRef(OutArgs[0].Regs) : std::nullopt))
       return false;
   }
 

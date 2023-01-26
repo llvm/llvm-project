@@ -3,7 +3,7 @@
 ; first instruction.  Breaking on the instrumented function in a debugger
 ; would then stop at that instruction, before the prologue is finished.
 
-; RUN: opt < %s -passes='asan-pipeline' -S | FileCheck %s
+; RUN: opt < %s -passes=asan -S | FileCheck %s
 ; 1: void f(int *arg) {
 ; 2: }
 ; 3: int main(int argc, char **argv) {
@@ -14,26 +14,26 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define dso_local i32 @main(i32 %argc, i8** %argv) #0 !dbg !15 {
+define dso_local i32 @main(i32 %argc, ptr %argv) #0 !dbg !15 {
 entry:
 ; No suffix like !dbg !123
 ; CHECK: %asan_local_stack_base = alloca i64, align 8{{$}}
 ; CHECK:     %3 = call i64 @__asan_stack_malloc_0(i64 64){{$}}
   %argc.addr = alloca i32, align 4
-  %argv.addr = alloca i8**, align 8
-  store i32 %argc, i32* %argc.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %argc.addr, metadata !21, metadata !DIExpression()), !dbg !22
-  store i8** %argv, i8*** %argv.addr, align 8
-  call void @llvm.dbg.declare(metadata i8*** %argv.addr, metadata !23, metadata !DIExpression()), !dbg !24
-  call void @f(i32* %argc.addr), !dbg !25
+  %argv.addr = alloca ptr, align 8
+  store i32 %argc, ptr %argc.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %argc.addr, metadata !21, metadata !DIExpression()), !dbg !22
+  store ptr %argv, ptr %argv.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %argv.addr, metadata !23, metadata !DIExpression()), !dbg !24
+  call void @f(ptr %argc.addr), !dbg !25
   ret i32 0, !dbg !26
 }
 
-define dso_local void @f(i32* %arg) #0 !dbg !7 {
+define dso_local void @f(ptr %arg) #0 !dbg !7 {
 entry:
-  %arg.addr = alloca i32*, align 8
-  store i32* %arg, i32** %arg.addr, align 8
-  call void @llvm.dbg.declare(metadata i32** %arg.addr, metadata !12, metadata !DIExpression()), !dbg !13
+  %arg.addr = alloca ptr, align 8
+  store ptr %arg, ptr %arg.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %arg.addr, metadata !12, metadata !DIExpression()), !dbg !13
   ret void, !dbg !14
 }
 

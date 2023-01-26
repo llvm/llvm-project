@@ -1,4 +1,4 @@
-// UNSUPPORTED: -zos, -aix
+// UNSUPPORTED: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
 // Test for rdar://10278815
 
 // Without PCH

@@ -14,6 +14,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/Lex/Preprocessor.h"
+#include <optional>
 
 namespace clang {
 
@@ -110,14 +111,13 @@ Nullability getNullabilityAnnotation(QualType Type) {
   return Nullability::Unspecified;
 }
 
-llvm::Optional<int> tryExpandAsInteger(StringRef Macro,
-                                       const Preprocessor &PP) {
+std::optional<int> tryExpandAsInteger(StringRef Macro, const Preprocessor &PP) {
   const auto *MacroII = PP.getIdentifierInfo(Macro);
   if (!MacroII)
-    return llvm::None;
+    return std::nullopt;
   const MacroInfo *MI = PP.getMacroInfo(MacroII);
   if (!MI)
-    return llvm::None;
+    return std::nullopt;
 
   // Filter out parens.
   std::vector<Token> FilteredTokens;
@@ -131,12 +131,12 @@ llvm::Optional<int> tryExpandAsInteger(StringRef Macro,
   // FIXME: EOF macro token coming from a PCH file on macOS while marked as
   //        literal, doesn't contain any literal data
   if (!T.isLiteral() || !T.getLiteralData())
-    return llvm::None;
+    return std::nullopt;
   StringRef ValueStr = StringRef(T.getLiteralData(), T.getLength());
   llvm::APInt IntValue;
   constexpr unsigned AutoSenseRadix = 0;
   if (ValueStr.getAsInteger(AutoSenseRadix, IntValue))
-    return llvm::None;
+    return std::nullopt;
 
   // Parse an optional minus sign.
   size_t Size = FilteredTokens.size();

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers  -triple x86_64-apple-darwin10 -fobjc-arc -std=c++11 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1  -triple x86_64-apple-darwin10 -fobjc-arc -std=c++11 -emit-llvm -o - %s | FileCheck %s
 // rdar://16299964
   
 @interface NSObject
@@ -22,13 +22,11 @@ class XClipboardDataSet
 }
 @end
 
-// CHECK: [[mClipData:%.*]] = getelementptr inbounds %class.XClipboardDataSet, %class.XClipboardDataSet*
-// CHECK: [[CLS:%.*]] = load %struct._class_t*, %struct._class_t** @"OBJC_CLASSLIST_REFERENCES_$_"
-// CHECK: [[RECV:%.*]] = bitcast %struct._class_t* [[CLS]] to i8*
-// CHECK: [[SEL:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_
-// CHECK: [[CALL:%.*]] = call noundef i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* noundef [[RECV]], i8* noundef [[SEL]])
-// CHECK: [[THREE:%.*]] = bitcast i8* [[CALL]] to [[T:%.*]]*
-// CHECK: store [[T]]* [[THREE]], [[T]]** [[mClipData]], align 8
+// CHECK: [[mClipData:%.*]] = getelementptr inbounds %class.XClipboardDataSet, ptr
+// CHECK: [[CLS:%.*]] = load ptr, ptr @"OBJC_CLASSLIST_REFERENCES_$_"
+// CHECK: [[SEL:%.*]] = load ptr, ptr @OBJC_SELECTOR_REFERENCES_
+// CHECK: [[CALL:%.*]] = call noundef ptr @objc_msgSend(ptr noundef [[CLS]], ptr noundef [[SEL]])
+// CHECK: store ptr [[CALL]], ptr [[mClipData]], align 8
 
 // rdar://18950072
 struct Butt { };
@@ -42,4 +40,4 @@ __attribute__((objc_root_class))
 @end
 @implementation Foo
 @end
-// CHECK-NOT: define internal noundef i8* @"\01-[Foo .cxx_construct
+// CHECK-NOT: define internal noundef ptr @"\01-[Foo .cxx_construct

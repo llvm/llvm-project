@@ -23,6 +23,26 @@
 // DWARF5-NEXT:      dir_index: 0
 // DWARF5-NOT:  file_names[ 1]:
 
+// RUN: llvm-mc -triple=x86_64 -filetype=obj -g -dwarf-version=4 -fdebug-prefix-map=/MyTest=/src_root %s -o %t.4.o
+// RUN: llvm-dwarfdump -debug-info -debug-line %t.4.o | FileCheck %s --check-prefixes=MAP,MAP_V4
+// RUN: llvm-mc -triple=x86_64 -filetype=obj -g -dwarf-version=5 -fdebug-prefix-map=/MyTest=/src_root %s -o %t.5.o
+// RUN: llvm-dwarfdump -debug-info -debug-line %t.5.o | FileCheck %s --check-prefixes=MAP,MAP_V5
+
+// MAP-LABEL:   DW_TAG_compile_unit
+// MAP:           DW_AT_name      ("/src_root/Inputs{{(/|\\)+}}other.S")
+// MAP-LABEL:     DW_TAG_label
+// MAP:             DW_AT_decl_file      ("/src_root/Inputs{{(/|\\)+}}other.S")
+
+// MAP_V4:      include_directories[  1] = "/src_root/Inputs"
+// MAP_V4-NEXT: file_names[  1]:
+// MAP_V4-NEXT:            name: "other.S"
+// MAP_V4-NEXT:       dir_index: 1
+
+// MAP_V5:      include_directories[  0] = "{{.*}}"
+// MAP_V5-NEXT: file_names[  0]:
+// MAP_V5-NEXT:            name: "/src_root/Inputs/other.S"
+// MAP_V5-NEXT:       dir_index: 0
+
 # 1 "/MyTest/Inputs/other.S"
 
 foo:

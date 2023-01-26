@@ -22,11 +22,19 @@ if (HAS_WERROR_GLOBAL_CTORS)
 endif()
 
 if(LLVM_ENABLE_ZLIB)
-  set(imported_libs ZLIB::ZLIB)
+  list(APPEND imported_libs ZLIB::ZLIB)
 endif()
 
 if(LLVM_ENABLE_ZSTD)
-  list(APPEND imported_libs zstd::libzstd_shared)
+  if(TARGET zstd::libzstd_shared AND NOT LLVM_USE_STATIC_ZSTD)
+    set(zstd_target zstd::libzstd_shared)
+  else()
+    set(zstd_target zstd::libzstd_static)
+  endif()
+endif()
+
+if(LLVM_ENABLE_ZSTD)
+  list(APPEND imported_libs ${zstd_target})
 endif()
 
 if( MSVC OR MINGW )
@@ -51,9 +59,7 @@ elseif( CMAKE_HOST_UNIX )
   if( LLVM_ENABLE_TERMINFO )
     set(imported_libs ${imported_libs} Terminfo::terminfo)
   endif()
-  if( LLVM_ENABLE_THREADS AND (HAVE_LIBATOMIC OR HAVE_CXX_LIBATOMICS64) )
-    set(system_libs ${system_libs} atomic)
-  endif()
+  set(system_libs ${system_libs} ${LLVM_ATOMIC_LIB})
   set(system_libs ${system_libs} ${LLVM_PTHREAD_LIB})
   if( UNIX AND NOT (BEOS OR HAIKU) )
     set(system_libs ${system_libs} m)
@@ -112,9 +118,7 @@ add_subdirectory(BLAKE3)
 
 add_llvm_component_library(LLVMSupport
   AddressRanges.cpp
-  AArch64TargetParser.cpp
   ABIBreak.cpp
-  ARMTargetParser.cpp
   AMDGPUMetadata.cpp
   APFixedPoint.cpp
   APFloat.cpp
@@ -125,6 +129,7 @@ add_llvm_component_library(LLVMSupport
   ARMWinEH.cpp
   Allocator.cpp
   AutoConvert.cpp
+  Base64.cpp
   BinaryStreamError.cpp
   BinaryStreamReader.cpp
   BinaryStreamRef.cpp
@@ -146,7 +151,6 @@ add_llvm_component_library(LLVMSupport
   CrashRecoveryContext.cpp
   CSKYAttributes.cpp
   CSKYAttributeParser.cpp
-  CSKYTargetParser.cpp
   DataExtractor.cpp
   Debug.cpp
   DebugCounter.cpp
@@ -217,13 +221,11 @@ add_llvm_component_library(LLVMSupport
   SymbolRemappingReader.cpp
   SystemUtils.cpp
   TarWriter.cpp
-  TargetParser.cpp
   ThreadPool.cpp
   TimeProfiler.cpp
   Timer.cpp
   ToolOutputFile.cpp
   TrigramIndex.cpp
-  Triple.cpp
   Twine.cpp
   TypeSize.cpp
   Unicode.cpp
@@ -233,7 +235,6 @@ add_llvm_component_library(LLVMSupport
   VersionTuple.cpp
   VirtualFileSystem.cpp
   WithColor.cpp
-  X86TargetParser.cpp
   YAMLParser.cpp
   YAMLTraits.cpp
   Yk.cpp
@@ -254,14 +255,12 @@ add_llvm_component_library(LLVMSupport
   Atomic.cpp
   DynamicLibrary.cpp
   Errno.cpp
-  Host.cpp
   Memory.cpp
   Path.cpp
   Process.cpp
   Program.cpp
   RWMutex.cpp
   Signals.cpp
-  ThreadLocal.cpp
   Threading.cpp
   Valgrind.cpp
   Watchdog.cpp
@@ -301,11 +300,12 @@ if(LLVM_ENABLE_ZSTD)
   # CMAKE_BUILD_TYPE is only meaningful to single-configuration generators.
   if(CMAKE_BUILD_TYPE)
     string(TOUPPER ${CMAKE_BUILD_TYPE} build_type)
-    get_property(zstd_library TARGET zstd::libzstd_shared PROPERTY LOCATION_${build_type})
+    get_property(zstd_library TARGET ${zstd_target} PROPERTY LOCATION_${build_type})
   endif()
   if(NOT zstd_library)
-    get_property(zstd_library TARGET zstd::libzstd_shared PROPERTY LOCATION)
+    get_property(zstd_library TARGET ${zstd_target} PROPERTY LOCATION)
   endif()
+  get_library_name(${zstd_library} zstd_library)
   set(llvm_system_libs ${llvm_system_libs} "${zstd_library}")
 endif()
 

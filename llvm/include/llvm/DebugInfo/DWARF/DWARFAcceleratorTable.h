@@ -51,14 +51,14 @@ public:
 
   public:
     /// Returns the Offset of the Compilation Unit associated with this
-    /// Accelerator Entry or None if the Compilation Unit offset is not recorded
-    /// in this Accelerator Entry.
-    virtual Optional<uint64_t> getCUOffset() const = 0;
+    /// Accelerator Entry or std::nullopt if the Compilation Unit offset is not
+    /// recorded in this Accelerator Entry.
+    virtual std::optional<uint64_t> getCUOffset() const = 0;
 
     /// Returns the Tag of the Debug Info Entry associated with this
-    /// Accelerator Entry or None if the Tag is not recorded in this
+    /// Accelerator Entry or std::nullopt if the Tag is not recorded in this
     /// Accelerator Entry.
-    virtual Optional<dwarf::Tag> getTag() const = 0;
+    virtual std::optional<dwarf::Tag> getTag() const = 0;
 
     /// Returns the raw values of fields in the Accelerator Entry. In general,
     /// these can only be interpreted with the help of the metadata in the
@@ -99,7 +99,8 @@ class AppleAcceleratorTable : public DWARFAcceleratorTable {
     uint64_t DIEOffsetBase;
     SmallVector<std::pair<AtomType, Form>, 3> Atoms;
 
-    Optional<uint64_t> extractOffset(Optional<DWARFFormValue> Value) const;
+    std::optional<uint64_t>
+    extractOffset(std::optional<DWARFFormValue> Value) const;
   };
 
   struct Header Hdr;
@@ -122,19 +123,19 @@ public:
     void extract(const AppleAcceleratorTable &AccelTable, uint64_t *Offset);
 
   public:
-    Optional<uint64_t> getCUOffset() const override;
+    std::optional<uint64_t> getCUOffset() const override;
 
     /// Returns the Section Offset of the Debug Info Entry associated with this
-    /// Accelerator Entry or None if the DIE offset is not recorded in this
-    /// Accelerator Entry. The returned offset is relative to the start of the
-    /// Section containing the DIE.
-    Optional<uint64_t> getDIESectionOffset() const;
+    /// Accelerator Entry or std::nullopt if the DIE offset is not recorded in
+    /// this Accelerator Entry. The returned offset is relative to the start of
+    /// the Section containing the DIE.
+    std::optional<uint64_t> getDIESectionOffset() const;
 
-    Optional<dwarf::Tag> getTag() const override;
+    std::optional<dwarf::Tag> getTag() const override;
 
     /// Returns the value of the Atom in this Accelerator Entry, if the Entry
     /// contains such Atom.
-    Optional<DWARFFormValue> lookup(HeaderData::AtomType Atom) const;
+    std::optional<DWARFFormValue> lookup(HeaderData::AtomType Atom) const;
 
     friend class AppleAcceleratorTable;
     friend class ValueIterator;
@@ -287,25 +288,25 @@ public:
     Entry(const NameIndex &NameIdx, const Abbrev &Abbr);
 
   public:
-    Optional<uint64_t> getCUOffset() const override;
-    Optional<dwarf::Tag> getTag() const override { return tag(); }
+    std::optional<uint64_t> getCUOffset() const override;
+    std::optional<dwarf::Tag> getTag() const override { return tag(); }
 
     /// Returns the Index into the Compilation Unit list of the owning Name
-    /// Index or None if this Accelerator Entry does not have an associated
-    /// Compilation Unit. It is up to the user to verify that the returned Index
-    /// is valid in the owning NameIndex (or use getCUOffset(), which will
-    /// handle that check itself). Note that entries in NameIndexes which index
-    /// just a single Compilation Unit are implicitly associated with that unit,
-    /// so this function will return 0 even without an explicit
+    /// Index or std::nullopt if this Accelerator Entry does not have an
+    /// associated Compilation Unit. It is up to the user to verify that the
+    /// returned Index is valid in the owning NameIndex (or use getCUOffset(),
+    /// which will handle that check itself). Note that entries in NameIndexes
+    /// which index just a single Compilation Unit are implicitly associated
+    /// with that unit, so this function will return 0 even without an explicit
     /// DW_IDX_compile_unit attribute.
-    Optional<uint64_t> getCUIndex() const;
+    std::optional<uint64_t> getCUIndex() const;
 
     /// .debug_names-specific getter, which always succeeds (DWARF v5 index
     /// entries always have a tag).
     dwarf::Tag tag() const { return Abbr->Tag; }
 
     /// Returns the Offset of the DIE within the containing CU or TU.
-    Optional<uint64_t> getDIEUnitOffset() const;
+    std::optional<uint64_t> getDIEUnitOffset() const;
 
     /// Return the Abbreviation that can be used to interpret the raw values of
     /// this Accelerator Entry.
@@ -313,7 +314,7 @@ public:
 
     /// Returns the value of the Index Attribute in this Accelerator Entry, if
     /// the Entry contains such Attribute.
-    Optional<DWARFFormValue> lookup(dwarf::Index Index) const;
+    std::optional<DWARFFormValue> lookup(dwarf::Index Index) const;
 
     void dump(ScopedPrinter &W) const;
 
@@ -406,7 +407,7 @@ public:
     void dumpAbbreviations(ScopedPrinter &W) const;
     bool dumpEntry(ScopedPrinter &W, uint64_t *Offset) const;
     void dumpName(ScopedPrinter &W, const NameTableEntry &NTE,
-                  Optional<uint32_t> Hash) const;
+                  std::optional<uint32_t> Hash) const;
     void dumpBucket(ScopedPrinter &W, uint32_t Bucket) const;
 
     Expected<AttributeEncoding> extractAttributeEncoding(uint64_t *Offset);
@@ -491,13 +492,13 @@ public:
     /// (searches all name indices).
     bool IsLocal;
 
-    Optional<Entry> CurrentEntry;
+    std::optional<Entry> CurrentEntry;
     uint64_t DataOffset = 0; ///< Offset into the section.
     std::string Key;         ///< The Key we are searching for.
-    Optional<uint32_t> Hash; ///< Hash of Key, if it has been computed.
+    std::optional<uint32_t> Hash; ///< Hash of Key, if it has been computed.
 
     bool getEntryAtCurrentOffset();
-    Optional<uint64_t> findEntryOffsetInCurrentIndex();
+    std::optional<uint64_t> findEntryOffsetInCurrentIndex();
     bool findInCurrentIndex();
     void searchFromStartOfCurrentIndex();
     void next();

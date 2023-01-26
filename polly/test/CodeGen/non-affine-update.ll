@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop \
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-import-jscop \
 ; RUN:     -polly-codegen -S < %s | FileCheck %s
 ;
 ;    void non-affine-update(double A[], double C[], double B[]) {
@@ -10,7 +10,7 @@
 ;      }
 ;    }
 
-; Verify that all changed memory access functions are corectly code generated.
+; Verify that all changed memory access functions are correctly code generated.
 ; At some point this did not work due to memory access identifiers not being
 ; unique within non-affine scop statements.
 

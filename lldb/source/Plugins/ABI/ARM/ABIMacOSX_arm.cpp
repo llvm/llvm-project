@@ -8,6 +8,7 @@
 
 #include "ABIMacOSX_arm.h"
 
+#include <optional>
 #include <vector>
 
 #include "llvm/ADT/STLExtras.h"
@@ -1186,8 +1187,7 @@ static const RegisterInfo g_register_infos[] = {
      nullptr,
      }};
 
-static const uint32_t k_num_register_infos =
-    llvm::array_lengthof(g_register_infos);
+static const uint32_t k_num_register_infos = std::size(g_register_infos);
 
 const lldb_private::RegisterInfo *
 ABIMacOSX_arm::GetRegisterInfoArray(uint32_t &count) {
@@ -1235,7 +1235,7 @@ bool ABIMacOSX_arm::PrepareTrivialCall(Thread &thread, addr_t sp,
 
   llvm::ArrayRef<addr_t>::iterator ai = args.begin(), ae = args.end();
 
-  for (size_t i = 0; i < llvm::array_lengthof(reg_names); ++i) {
+  for (size_t i = 0; i < std::size(reg_names); ++i) {
     if (ai == ae)
       break;
 
@@ -1349,7 +1349,7 @@ bool ABIMacOSX_arm::GetArgumentValues(Thread &thread, ValueList &values) const {
     if (compiler_type) {
       bool is_signed = false;
       size_t bit_width = 0;
-      llvm::Optional<uint64_t> bit_size = compiler_type.GetBitSize(&thread);
+      std::optional<uint64_t> bit_size = compiler_type.GetBitSize(&thread);
       if (!bit_size)
         return false;
       if (compiler_type.IsIntegerOrEnumerationType(is_signed))
@@ -1455,7 +1455,7 @@ ValueObjectSP ABIMacOSX_arm::GetReturnValueObjectImpl(
 
   const RegisterInfo *r0_reg_info = reg_ctx->GetRegisterInfoByName("r0", 0);
   if (compiler_type.IsIntegerOrEnumerationType(is_signed)) {
-    llvm::Optional<uint64_t> bit_width = compiler_type.GetBitSize(&thread);
+    std::optional<uint64_t> bit_width = compiler_type.GetBitSize(&thread);
     if (!bit_width)
       return return_valobj_sp;
 
@@ -1475,7 +1475,7 @@ ValueObjectSP ABIMacOSX_arm::GetReturnValueObjectImpl(
           const RegisterInfo *r3_reg_info =
               reg_ctx->GetRegisterInfoByName("r3", 0);
           if (r1_reg_info && r2_reg_info && r3_reg_info) {
-            llvm::Optional<uint64_t> byte_size =
+            std::optional<uint64_t> byte_size =
                 compiler_type.GetByteSize(&thread);
             if (!byte_size)
               return return_valobj_sp;
@@ -1496,16 +1496,16 @@ ValueObjectSP ABIMacOSX_arm::GetReturnValueObjectImpl(
                   reg_ctx->ReadRegister(r2_reg_info, r2_reg_value) &&
                   reg_ctx->ReadRegister(r3_reg_info, r3_reg_value)) {
                 Status error;
-                if (r0_reg_value.GetAsMemoryData(r0_reg_info,
+                if (r0_reg_value.GetAsMemoryData(*r0_reg_info,
                                                  heap_data_up->GetBytes() + 0,
                                                  4, byte_order, error) &&
-                    r1_reg_value.GetAsMemoryData(r1_reg_info,
+                    r1_reg_value.GetAsMemoryData(*r1_reg_info,
                                                  heap_data_up->GetBytes() + 4,
                                                  4, byte_order, error) &&
-                    r2_reg_value.GetAsMemoryData(r2_reg_info,
+                    r2_reg_value.GetAsMemoryData(*r2_reg_info,
                                                  heap_data_up->GetBytes() + 8,
                                                  4, byte_order, error) &&
-                    r3_reg_value.GetAsMemoryData(r3_reg_info,
+                    r3_reg_value.GetAsMemoryData(*r3_reg_info,
                                                  heap_data_up->GetBytes() + 12,
                                                  4, byte_order, error)) {
                   DataExtractor data(DataBufferSP(heap_data_up.release()),

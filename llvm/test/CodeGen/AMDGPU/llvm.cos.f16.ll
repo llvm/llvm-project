@@ -5,7 +5,7 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX10 %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX11 %s
 
-define amdgpu_kernel void @cos_f16(half addrspace(1)* %r, half addrspace(1)* %a) {
+define amdgpu_kernel void @cos_f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX6-LABEL: cos_f16:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -81,13 +81,13 @@ define amdgpu_kernel void @cos_f16(half addrspace(1)* %r, half addrspace(1)* %a)
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %a.val = load half, half addrspace(1)* %a
+  %a.val = load half, ptr addrspace(1) %a
   %r.val = call half @llvm.cos.f16(half %a.val)
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
-define amdgpu_kernel void @cos_v2f16(<2 x half> addrspace(1)* %r, <2 x half> addrspace(1)* %a) {
+define amdgpu_kernel void @cos_v2f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX6-LABEL: cos_v2f16:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -190,9 +190,9 @@ define amdgpu_kernel void @cos_v2f16(<2 x half> addrspace(1)* %r, <2 x half> add
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %a.val = load <2 x half>, <2 x half> addrspace(1)* %a
+  %a.val = load <2 x half>, ptr addrspace(1) %a
   %r.val = call <2 x half> @llvm.cos.v2f16(<2 x half> %a.val)
-  store <2 x half> %r.val, <2 x half> addrspace(1)* %r
+  store <2 x half> %r.val, ptr addrspace(1) %r
   ret void
 }
 

@@ -12,23 +12,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/TableGen/Argument.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Operator.h"
 
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
 using namespace llvm;
 using namespace mlir;
 
-static bool emitError(const Twine &message) {
-  llvm::errs() << message << "\n";
-  return false;
+static LogicalResult emitError(const Record &record, const Twine &message) {
+  PrintError(&record, message);
+  return failure();
 }
 
 namespace {
@@ -68,14 +71,14 @@ static StringLoc findNextVariable(StringRef str) {
   return {startPos, endPos - startPos};
 }
 
-// Check if `name` is the name of the variadic operand of `op`.  The variadic
-// operand can only appear at the last position in the list of operands.
+// Check if `name` is a variadic operand of `op`. Seach all operands since the
+// MLIR and LLVM IR operand order may differ and only for the latter the
+// variadic operand is guaranteed to be at the end of the operands list.
 static bool isVariadicOperandName(const tblgen::Operator &op, StringRef name) {
-  unsigned numOperands = op.getNumOperands();
-  if (numOperands == 0)
-    return false;
-  const auto &operand = op.getOperand(numOperands - 1);
-  return operand.isVariableLength() && operand.name == name;
+  for (int i = 0, e = op.getNumOperands(); i < e; ++i)
+    if (op.getOperand(i).name == name)
+      return op.getOperand(i).isVariadic();
+  return false;
 }
 
 // Check if `result` is a known name of a result of `op`.
@@ -101,25 +104,34 @@ static bool isOperandName(const tblgen::Operator &op, StringRef name) {
   return false;
 }
 
+// Return the `op` argument index of the argument with the given `name`.
+static FailureOr<int> getArgumentIndex(const tblgen::Operator &op,
+                                       StringRef name) {
+  for (int i = 0, e = op.getNumArgs(); i != e; ++i)
+    if (op.getArgName(i) == name)
+      return i;
+  return failure();
+}
+
 // Emit to `os` the operator-name driven check and the call to LLVM IRBuilder
-// for one definition of an LLVM IR Dialect operation.  Return true on success.
-static bool emitOneBuilder(const Record &record, raw_ostream &os) {
+// for one definition of an LLVM IR Dialect operation.
+static LogicalResult emitOneBuilder(const Record &record, raw_ostream &os) {
   auto op = tblgen::Operator(record);
 
   if (!record.getValue("llvmBuilder"))
-    return emitError("no 'llvmBuilder' field for op " + op.getOperationName());
+    return emitError(record, "expected 'llvmBuilder' field");
 
   // Return early if there is no builder specified.
-  auto builderStrRef = record.getValueAsString("llvmBuilder");
+  StringRef builderStrRef = record.getValueAsString("llvmBuilder");
   if (builderStrRef.empty())
-    return true;
+    return success();
 
   // Progressively create the builder string by replacing $-variables with
   // value lookups.  Keep only the not-yet-traversed part of the builder pattern
   // to avoid re-traversing the string multiple times.
   std::string builder;
   llvm::raw_string_ostream bs(builder);
-  while (auto loc = findNextVariable(builderStrRef)) {
+  while (StringLoc loc = findNextVariable(builderStrRef)) {
     auto name = loc.in(builderStrRef).drop_front();
     auto getterName = op.getGetterName(name);
     // First, insert the non-matched part as is.
@@ -147,8 +159,8 @@ static bool emitOneBuilder(const Record &record, raw_ostream &os) {
     } else if (name == "$") {
       bs << '$';
     } else {
-      return emitError(name + " is neither an argument nor a result of " +
-                       op.getOperationName());
+      return emitError(
+          record, "expected keyword, argument, or result, but got " + name);
     }
     // Finally, only keep the untraversed part of the string.
     builderStrRef = builderStrRef.substr(loc.pos + loc.length);
@@ -161,14 +173,158 @@ static bool emitOneBuilder(const Record &record, raw_ostream &os) {
   os << "  return success();\n";
   os << "}\n";
 
-  return true;
+  return success();
 }
 
 // Emit all builders.  Returns false on success because of the generator
 // registration requirements.
 static bool emitBuilders(const RecordKeeper &recordKeeper, raw_ostream &os) {
-  for (const auto *def : recordKeeper.getAllDerivedDefinitions("LLVM_OpBase")) {
-    if (!emitOneBuilder(*def, os))
+  for (const Record *def :
+       recordKeeper.getAllDerivedDefinitions("LLVM_OpBase")) {
+    if (failed(emitOneBuilder(*def, os)))
+      return true;
+  }
+  return false;
+}
+
+using ConditionFn = mlir::function_ref<llvm::Twine(const Record &record)>;
+
+// Emit a conditional call to the MLIR builder of the LLVM dialect operation to
+// build for the given LLVM IR instruction. A condition function `conditionFn`
+// emits a check to verify the opcode or intrinsic identifier of the LLVM IR
+// instruction matches the LLVM dialect operation to build.
+static LogicalResult emitOneMLIRBuilder(const Record &record, raw_ostream &os,
+                                        ConditionFn conditionFn) {
+  auto op = tblgen::Operator(record);
+
+  if (!record.getValue("mlirBuilder"))
+    return emitError(record, "expected 'mlirBuilder' field");
+
+  // Return early if there is no builder specified.
+  StringRef builderStrRef = record.getValueAsString("mlirBuilder");
+  if (builderStrRef.empty())
+    return success();
+
+  // Access the argument index array that maps argument indices to LLVM IR
+  // operand indices. If the operation defines no custom mapping, set the array
+  // to the identity permutation.
+  std::vector<int64_t> llvmArgIndices =
+      record.getValueAsListOfInts("llvmArgIndices");
+  if (llvmArgIndices.empty())
+    append_range(llvmArgIndices, seq<int64_t>(0, op.getNumArgs()));
+  if (llvmArgIndices.size() != static_cast<size_t>(op.getNumArgs())) {
+    return emitError(
+        record,
+        "expected 'llvmArgIndices' size to match the number of arguments");
+  }
+
+  // Progressively create the builder string by replacing $-variables. Keep only
+  // the not-yet-traversed part of the builder pattern to avoid re-traversing
+  // the string multiple times. Additionally, emit an argument string
+  // immediately before the builder string. This argument string converts all
+  // operands used by the builder to MLIR values and returns failure if one of
+  // the conversions fails.
+  std::string arguments, builder;
+  llvm::raw_string_ostream as(arguments), bs(builder);
+  while (StringLoc loc = findNextVariable(builderStrRef)) {
+    auto name = loc.in(builderStrRef).drop_front();
+    // First, insert the non-matched part as is.
+    bs << builderStrRef.substr(0, loc.pos);
+    // Then, rewrite the name based on its kind.
+    FailureOr<int> argIndex = getArgumentIndex(op, name);
+    if (succeeded(argIndex)) {
+      // Access the LLVM IR operand that maps to the given argument index using
+      // the provided argument indices mapping.
+      int64_t idx = llvmArgIndices[*argIndex];
+      if (idx < 0) {
+        return emitError(
+            record, "expected non-negative operand index for argument " + name);
+      }
+      if (isAttributeName(op, name)) {
+        bs << formatv("llvmOperands[{0}]", idx);
+      } else {
+        if (isVariadicOperandName(op, name)) {
+          as << formatv(
+              "FailureOr<SmallVector<Value>> _llvmir_gen_operand_{0} = "
+              "moduleImport.convertValues(llvmOperands.drop_front({1}));\n",
+              name, idx);
+        } else {
+          as << formatv("FailureOr<Value> _llvmir_gen_operand_{0} = "
+                        "moduleImport.convertValue(llvmOperands[{1}]);\n",
+                        name, idx);
+        }
+        as << formatv("if (failed(_llvmir_gen_operand_{0}))\n"
+                      "  return failure();\n",
+                      name);
+        bs << formatv("*_llvmir_gen_operand_{0}", name);
+      }
+    } else if (isResultName(op, name)) {
+      if (op.getNumResults() != 1)
+        return emitError(record, "expected op to have one result");
+      bs << "moduleImport.mapValue(inst)";
+    } else if (name == "_op") {
+      bs << "moduleImport.mapNoResultOp(inst)";
+    } else if (name == "_int_attr") {
+      bs << "moduleImport.matchIntegerAttr";
+    } else if (name == "_var_attr") {
+      bs << "moduleImport.matchLocalVariableAttr";
+    } else if (name == "_resultType") {
+      bs << "moduleImport.convertType(inst->getType())";
+    } else if (name == "_location") {
+      bs << "moduleImport.translateLoc(inst->getDebugLoc())";
+    } else if (name == "_builder") {
+      bs << "odsBuilder";
+    } else if (name == "_qualCppClassName") {
+      bs << op.getQualCppClassName();
+    } else if (name == "$") {
+      bs << '$';
+    } else {
+      return emitError(
+          record, "expected keyword, argument, or result, but got " + name);
+    }
+    // Finally, only keep the untraversed part of the string.
+    builderStrRef = builderStrRef.substr(loc.pos + loc.length);
+  }
+
+  // Output the check, the argument conversion, and the builder string.
+  os << "if (" << conditionFn(record) << ") {\n";
+  os << as.str() << "\n";
+  os << bs.str() << builderStrRef << "\n";
+  os << "  return success();\n";
+  os << "}\n";
+
+  return success();
+}
+
+// Emit all intrinsic MLIR builders. Returns false on success because of the
+// generator registration requirements.
+static bool emitIntrMLIRBuilders(const RecordKeeper &recordKeeper,
+                                 raw_ostream &os) {
+  // Emit condition to check if "llvmEnumName" matches the intrinsic id.
+  auto emitIntrCond = [](const Record &record) {
+    return "intrinsicID == llvm::Intrinsic::" +
+           record.getValueAsString("llvmEnumName");
+  };
+  for (const Record *def :
+       recordKeeper.getAllDerivedDefinitions("LLVM_IntrOpBase")) {
+    if (failed(emitOneMLIRBuilder(*def, os, emitIntrCond)))
+      return true;
+  }
+  return false;
+}
+
+// Emit all op builders. Returns false on success because of the
+// generator registration requirements.
+static bool emitOpMLIRBuilders(const RecordKeeper &recordKeeper,
+                               raw_ostream &os) {
+  // Emit condition to check if "llvmInstName" matches the instruction opcode.
+  auto emitOpcodeCond = [](const Record &record) {
+    return "inst->getOpcode() == llvm::Instruction::" +
+           record.getValueAsString("llvmInstName");
+  };
+  for (const Record *def :
+       recordKeeper.getAllDerivedDefinitions("LLVM_OpBase")) {
+    if (failed(emitOneMLIRBuilder(*def, os, emitOpcodeCond)))
       return true;
   }
   return false;
@@ -361,13 +517,14 @@ static void emitOneCEnumFromConversion(const llvm::Record *record,
 template <bool ConvertTo>
 static bool emitEnumConversionDefs(const RecordKeeper &recordKeeper,
                                    raw_ostream &os) {
-  for (const auto *def : recordKeeper.getAllDerivedDefinitions("LLVM_EnumAttr"))
+  for (const Record *def :
+       recordKeeper.getAllDerivedDefinitions("LLVM_EnumAttr"))
     if (ConvertTo)
       emitOneEnumToConversion(def, os);
     else
       emitOneEnumFromConversion(def, os);
 
-  for (const auto *def :
+  for (const Record *def :
        recordKeeper.getAllDerivedDefinitions("LLVM_CEnumAttr"))
     if (ConvertTo)
       emitOneCEnumToConversion(def, os);
@@ -377,16 +534,18 @@ static bool emitEnumConversionDefs(const RecordKeeper &recordKeeper,
   return false;
 }
 
-static void emitIntrOpPair(const Record &record, raw_ostream &os) {
+static void emitOneIntrinsic(const Record &record, raw_ostream &os) {
   auto op = tblgen::Operator(record);
-  os << "{llvm::Intrinsic::" << record.getValueAsString("llvmEnumName") << ", "
-     << op.getQualCppClassName() << "::getOperationName()},\n";
+  os << "llvm::Intrinsic::" << record.getValueAsString("llvmEnumName") << ",\n";
 }
 
-static bool emitIntrOpPairs(const RecordKeeper &recordKeeper, raw_ostream &os) {
-  for (const auto *def :
+// Emit the list of LLVM IR intrinsics identifiers that are convertible to a
+// matching MLIR LLVM dialect intrinsic operation.
+static bool emitConvertibleIntrinsics(const RecordKeeper &recordKeeper,
+                                      raw_ostream &os) {
+  for (const Record *def :
        recordKeeper.getAllDerivedDefinitions("LLVM_IntrOpBase"))
-    emitIntrOpPair(*def, os);
+    emitOneIntrinsic(*def, os);
 
   return false;
 }
@@ -394,6 +553,14 @@ static bool emitIntrOpPairs(const RecordKeeper &recordKeeper, raw_ostream &os) {
 static mlir::GenRegistration
     genLLVMIRConversions("gen-llvmir-conversions",
                          "Generate LLVM IR conversions", emitBuilders);
+
+static mlir::GenRegistration genOpFromLLVMIRConversions(
+    "gen-op-from-llvmir-conversions",
+    "Generate conversions of operations from LLVM IR", emitOpMLIRBuilders);
+
+static mlir::GenRegistration genIntrFromLLVMIRConversions(
+    "gen-intr-from-llvmir-conversions",
+    "Generate conversions of intrinsics from LLVM IR", emitIntrMLIRBuilders);
 
 static mlir::GenRegistration
     genEnumToLLVMConversion("gen-enum-to-llvmir-conversions",
@@ -405,7 +572,7 @@ static mlir::GenRegistration
                               "Generate conversions of EnumAttrs from LLVM IR",
                               emitEnumConversionDefs</*ConvertTo=*/false>);
 
-static mlir::GenRegistration
-    genLLVMIntrinsicToOpPairs("gen-llvmintrinsic-to-llvmirop-pairs",
-                              "Generate LLVM intrinsic to LLVMIR op pairs",
-                              emitIntrOpPairs);
+static mlir::GenRegistration genConvertibleLLVMIRIntrinsics(
+    "gen-convertible-llvmir-intrinsics",
+    "Generate list of convertible LLVM IR intrinsics",
+    emitConvertibleIntrinsics);

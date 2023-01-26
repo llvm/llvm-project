@@ -722,9 +722,13 @@ void DAGTypeLegalizer::SetPromotedInteger(SDValue Op, SDValue Result) {
 }
 
 void DAGTypeLegalizer::SetSoftenedFloat(SDValue Op, SDValue Result) {
-  assert(Result.getValueType() ==
-         TLI.getTypeToTransformTo(*DAG.getContext(), Op.getValueType()) &&
+#ifndef NDEBUG
+  EVT VT = Result.getValueType();
+  LLVMContext &Ctx = *DAG.getContext();
+  assert((VT == EVT::getIntegerVT(Ctx, 80) ||
+          VT == TLI.getTypeToTransformTo(Ctx, Op.getValueType())) &&
          "Invalid type for softened float");
+#endif
   AnalyzeNewValue(Result);
 
   auto &OpIdEntry = SoftenedFloats[getTableId(Op)];
@@ -759,7 +763,7 @@ void DAGTypeLegalizer::SetScalarizedVector(SDValue Op, SDValue Result) {
   // a constant i8 operand.
 
   // We don't currently support the scalarization of scalable vector types.
-  assert(Result.getValueSizeInBits().getFixedSize() >=
+  assert(Result.getValueSizeInBits().getFixedValue() >=
              Op.getScalarValueSizeInBits() &&
          "Invalid type for scalarized vector");
   AnalyzeNewValue(Result);

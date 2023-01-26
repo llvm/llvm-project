@@ -7,9 +7,9 @@
 target triple = "wasm32-unknown-unknown"
 
 ; 'hidden' here should be present to reproduce the bug
-declare hidden void @ham(i8*)
+declare hidden void @ham(ptr)
 
-define void @bar(i8* %ptr) {
+define void @bar(ptr %ptr) {
 bb1:
   br i1 undef, label %bb3, label %bb2
 
@@ -21,7 +21,7 @@ bb2:
   ; CHECK:      i32.const  ham
   ; CHECK-NEXT: i32.const  1
   ; CHECK-NEXT: i32.add
-  switch i32 ptrtoint (void (i8*)* @ham to i32), label %bb4 [
+  switch i32 ptrtoint (ptr @ham to i32), label %bb4 [
     i32 -1, label %bb3
     i32 0, label %bb3
   ]
@@ -30,6 +30,6 @@ bb3:
   unreachable
 
 bb4:
-  %tmp = load i8, i8* %ptr
+  %tmp = load i8, ptr %ptr
   unreachable
 }

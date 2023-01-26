@@ -343,7 +343,7 @@ void WebAssemblyFixIrreducibleControlFlow::makeSingleEntryLoop(
   BlockVector SortedEntries = getSortedEntries(Entries);
 
 #ifndef NDEBUG
-  for (auto Block : SortedEntries)
+  for (auto *Block : SortedEntries)
     assert(Block->getNumber() != -1);
   if (SortedEntries.size() > 1) {
     for (auto I = SortedEntries.begin(), E = SortedEntries.end() - 1; I != E;

@@ -8,16 +8,17 @@ define void @test1() {
 ; CHECK:       Flow:
 ; CHECK-NEXT:    br label [[FLOW1:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[CTR:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[CTR_NEXT:%.*]], [[FLOW1]] ]
-; CHECK-NEXT:    [[CTR_NEXT]] = add i32 [[CTR]], 1
+; CHECK-NEXT:    [[CTR:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP0:%.*]], [[FLOW1]] ]
+; CHECK-NEXT:    [[CTR_NEXT:%.*]] = add i32 [[CTR]], 1
 ; CHECK-NEXT:    br i1 undef, label [[LOOP_A:%.*]], label [[FLOW1]]
 ; CHECK:       loop.a:
 ; CHECK-NEXT:    br i1 undef, label [[LOOP_B:%.*]], label [[FLOW:%.*]]
 ; CHECK:       loop.b:
 ; CHECK-NEXT:    br label [[FLOW]]
 ; CHECK:       Flow1:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ false, [[FLOW]] ], [ true, [[LOOP]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK-NEXT:    [[TMP0]] = phi i32 [ [[CTR_NEXT]], [[FLOW]] ], [ undef, [[LOOP]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ false, [[FLOW]] ], [ true, [[LOOP]] ]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

@@ -6,7 +6,6 @@
 // RUN:   -analyzer-checker=apiModeling.StdCLibraryFunctions \
 // RUN:   -analyzer-config apiModeling.StdCLibraryFunctions:ModelPOSIX=true \
 // RUN:   -analyzer-checker=alpha.unix.StdCLibraryFunctionArgs \
-// RUN:   -analyzer-checker=alpha.unix.Stream \
 // RUN:   -triple x86_64-unknown-linux-gnu \
 // RUN:   -verify
 
@@ -18,7 +17,6 @@
 // RUN:   -analyzer-checker=apiModeling.StdCLibraryFunctions \
 // RUN:   -analyzer-config apiModeling.StdCLibraryFunctions:ModelPOSIX=true \
 // RUN:   -analyzer-checker=alpha.unix.StdCLibraryFunctionArgs \
-// RUN:   -analyzer-checker=alpha.unix.Stream \
 // RUN:   -analyzer-config apiModeling.StdCLibraryFunctions:DisplayLoadedSummaries=true \
 // RUN:   -triple x86_64-unknown-linux 2>&1 | FileCheck %s
 
@@ -56,9 +54,4 @@ void test_notnull_arg(FILE *F) {
   int *p = 0;
   fread(p, sizeof(int), 5, F); // \
   expected-warning{{Null pointer passed to 1st parameter expecting 'nonnull' [core.NonNullParamChecker]}}
-}
-
-void test_notnull_stream_arg(void) {
-  fileno(0); // \
-  // expected-warning{{Stream pointer might be NULL [alpha.unix.Stream]}}
 }

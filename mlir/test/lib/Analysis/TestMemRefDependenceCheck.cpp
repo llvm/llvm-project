@@ -53,13 +53,13 @@ getDirectionVectorStr(bool ret, unsigned numCommonLoops, unsigned loopNestDepth,
   for (const auto &dependenceComponent : dependenceComponents) {
     std::string lbStr = "-inf";
     if (dependenceComponent.lb.has_value() &&
-        dependenceComponent.lb.value() != std::numeric_limits<int64_t>::min())
-      lbStr = std::to_string(dependenceComponent.lb.value());
+        *dependenceComponent.lb != std::numeric_limits<int64_t>::min())
+      lbStr = std::to_string(*dependenceComponent.lb);
 
     std::string ubStr = "+inf";
     if (dependenceComponent.ub.has_value() &&
-        dependenceComponent.ub.value() != std::numeric_limits<int64_t>::max())
-      ubStr = std::to_string(dependenceComponent.ub.value());
+        *dependenceComponent.ub != std::numeric_limits<int64_t>::max())
+      ubStr = std::to_string(*dependenceComponent.ub);
 
     result += "[" + lbStr + ", " + ubStr + "]";
   }
@@ -86,15 +86,18 @@ static void checkDependences(ArrayRef<Operation *> loadsAndStores) {
         DependenceResult result = checkMemrefAccessDependence(
             srcAccess, dstAccess, d, &dependenceConstraints,
             &dependenceComponents);
-        assert(result.value != DependenceResult::Failure);
-        bool ret = hasDependence(result);
-        // TODO: Print dependence type (i.e. RAW, etc) and print
-        // distance vectors as: ([2, 3], [0, 10]). Also, shorten distance
-        // vectors from ([1, 1], [3, 3]) to (1, 3).
-        srcOpInst->emitRemark("dependence from ")
-            << i << " to " << j << " at depth " << d << " = "
-            << getDirectionVectorStr(ret, numCommonLoops, d,
-                                     dependenceComponents);
+        if (result.value == DependenceResult::Failure) {
+          srcOpInst->emitError("dependence check failed");
+        } else {
+          bool ret = hasDependence(result);
+          // TODO: Print dependence type (i.e. RAW, etc) and print
+          // distance vectors as: ([2, 3], [0, 10]). Also, shorten distance
+          // vectors from ([1, 1], [3, 3]) to (1, 3).
+          srcOpInst->emitRemark("dependence from ")
+              << i << " to " << j << " at depth " << d << " = "
+              << getDirectionVectorStr(ret, numCommonLoops, d,
+                                       dependenceComponents);
+        }
       }
     }
   }

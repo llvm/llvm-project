@@ -10,11 +10,11 @@ target triple = "hexagon"
 ; Function Attrs: nounwind
 define void @f0() #0 {
 b0:
-  %v0 = load <16 x i32>, <16 x i32>* @g0, align 64
-  %v1 = load <32 x i32>, <32 x i32>* @g1, align 128
+  %v0 = load <16 x i32>, ptr @g0, align 64
+  %v1 = load <32 x i32>, ptr @g1, align 128
   %v2 = call <16 x i32> @llvm.hexagon.V6.hi(<32 x i32> %v1)
   %v3 = tail call <32 x i32> @llvm.hexagon.V6.vcombine(<16 x i32> %v0, <16 x i32> %v2)
-  store <32 x i32> %v3, <32 x i32>* @g2, align 128
+  store <32 x i32> %v3, ptr @g2, align 128
   ret void
 }
 

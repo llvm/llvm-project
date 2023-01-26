@@ -13,19 +13,19 @@ target triple = "hexagon--linux"
 ; Function Attrs: norecurse nounwind
 define void @f0(i32 %a0) local_unnamed_addr #0 {
 b0:
-  store volatile i32 1, i32* @g0, align 4, !tbaa !1
+  store volatile i32 1, ptr @g0, align 4, !tbaa !1
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
 define zeroext i1 @f1() local_unnamed_addr #0 {
 b0:
-  %v0 = load volatile i32, i32* @g0, align 4, !tbaa !1
+  %v0 = load volatile i32, ptr @g0, align 4, !tbaa !1
   %v1 = icmp eq i32 %v0, 0
   br i1 %v1, label %b2, label %b1
 
 b1:                                               ; preds = %b0
-  store volatile i32 0, i32* @g0, align 4, !tbaa !1
+  store volatile i32 0, ptr @g0, align 4, !tbaa !1
   br label %b2
 
 b2:                                               ; preds = %b1, %b0

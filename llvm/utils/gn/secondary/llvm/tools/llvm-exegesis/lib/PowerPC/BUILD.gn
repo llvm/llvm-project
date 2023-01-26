@@ -9,6 +9,7 @@ static_library("PowerPC") {
   output_name = "LLVMExegesisPowerPC"
   deps = [
     ":PPCGenExegesis",
+    "//llvm/lib/TargetParser",
 
     # Exegesis reaches inside the Target/PowerPC tablegen internals and must
     # depend on these Target/PowerPC-internal build targets.

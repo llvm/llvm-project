@@ -3,25 +3,25 @@
 ; Functions with dynamic allocas can only be inlined into functions that
 ; already have dynamic allocas.
 
-; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes=inline -S | FileCheck %s
 ;
 ; FIXME: This test is xfailed because the inline cost rewrite disabled *all*
 ; inlining of functions which contain a dynamic alloca. It should be re-enabled
 ; once that functionality is restored.
 ; XFAIL: *
 
-declare void @ext(i32*)
+declare void @ext(ptr)
 
 define internal void @callee(i32 %N) {
   %P = alloca i32, i32 %N
-  call void @ext(i32* %P)
+  call void @ext(ptr %P)
   ret void
 }
 
 define void @foo(i32 %N) {
 ; CHECK-LABEL: @foo(
 ; CHECK: alloca i32, i32 %{{.*}}
-; CHECK: call i8* @llvm.stacksave()
+; CHECK: call ptr @llvm.stacksave()
 ; CHECK: alloca i32, i32 %{{.*}}
 ; CHECK: call void @ext
 ; CHECK: call void @llvm.stackrestore
@@ -29,7 +29,7 @@ define void @foo(i32 %N) {
 
 entry:
   %P = alloca i32, i32 %N
-  call void @ext(i32* %P)
+  call void @ext(ptr %P)
   br label %loop
 
 loop:

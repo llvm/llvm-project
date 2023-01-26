@@ -3,6 +3,7 @@ static_library("WindowsDriver") {
   deps = [
     "//llvm/lib/Option",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [ "MSVCPaths.cpp" ]
 }

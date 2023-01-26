@@ -1,0 +1,38 @@
+## Test decoding an invalid exception section and symbol index. 
+
+# RUN: yaml2obj --docnum=1 %s -o %t_invalid_size.o
+# RUN: yaml2obj --docnum=2 %s -o %t_invalid_sym.o
+# RUN: llvm-readobj --exception-section %t_invalid_size.o 2>&1 |\
+# RUN:   FileCheck -DFILE=%t_invalid_size.o %s --check-prefixes=CHECK-WARN-SIZE
+# RUN: llvm-readobj --exception-section %t_invalid_sym.o 2>&1 |\
+# RUN:   FileCheck -DFILE=%t_invalid_sym.o %s --check-prefixes=CHECK-WARN-SYM
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:       0x1DF
+Sections:
+  - Name:            .text
+    Flags:           [ STYP_TEXT ]
+  - Name:            .except
+    Size:            1000
+    Flags:           [ STYP_EXCEPT ]
+    SectionData:     "000000000000"
+Symbols:
+  - Name:            .bar
+    Section:         .text
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:       0x1F7
+Sections:
+  - Name:            .text
+    Flags:           [ STYP_TEXT ]
+  - Name:            .except
+    Flags:           [ STYP_EXCEPT ]
+    SectionData:     "00000004000000000000"
+Symbols:
+  - Name:            .bar
+    Section:         .text
+
+# CHECK-WARN-SIZE: warning: '[[FILE]]': The end of the file was unexpectedly encountered: expect section with offset 0x64 and size 0x3e8 goes past the end of the file
+# CHECK-WARN-SYM:  warning: '[[FILE]]': symbol index 4 exceeds symbol count 1

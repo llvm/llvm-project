@@ -747,13 +747,13 @@ bb:
   %cmp.var = fcmp olt float %var, 0.0
   ; TODO: We could do an early-exit here (the branch above is uniform!)
   call void @llvm.amdgcn.kill(i1 %cmp.var)
-  store volatile float %live.across, float addrspace(1)* undef
+  store volatile float %live.across, ptr addrspace(1) undef
   %live.out = call float asm sideeffect "v_mov_b32_e64 v9, -2", "={v9}"()
   br label %exit
 
 exit:
   %phi = phi float [ 0.0, %entry ], [ %live.out, %bb ]
-  store float %phi, float addrspace(1)* undef
+  store float %phi, ptr addrspace(1) undef
   ret void
 }
 
@@ -1127,12 +1127,12 @@ bb:
     v_nop_e64", "={v7}"()
   %cmp.var = fcmp olt float %var, 0.0
   call void @llvm.amdgcn.kill(i1 %cmp.var)
-  %vgpr = load volatile i32, i32 addrspace(1)* undef
+  %vgpr = load volatile i32, ptr addrspace(1) undef
   %loop.cond = icmp eq i32 %vgpr, 0
   br i1 %loop.cond, label %bb, label %exit
 
 exit:
-  store volatile i32 8, i32 addrspace(1)* undef
+  store volatile i32 8, ptr addrspace(1) undef
   ret void
 }
 
@@ -1277,11 +1277,11 @@ phibb:
   br i1 %tmp6, label %bb10, label %end
 
 bb8:
-  store volatile i32 8, i32 addrspace(1)* undef
+  store volatile i32 8, ptr addrspace(1) undef
   br label %phibb
 
 bb10:
-  store volatile i32 9, i32 addrspace(1)* undef
+  store volatile i32 9, ptr addrspace(1) undef
   br label %end
 
 end:
@@ -1397,28 +1397,20 @@ bb7:                                              ; preds = %bb4
 define amdgpu_ps void @if_after_kill_block(float %arg, float %arg1, float %arg2, float %arg3) #0 {
 ; SI-LABEL: if_after_kill_block:
 ; SI:       ; %bb.0: ; %bb
-; SI-NEXT:    s_mov_b64 s[2:3], exec
+; SI-NEXT:    s_mov_b64 s[0:1], exec
 ; SI-NEXT:    s_wqm_b64 exec, exec
-; SI-NEXT:    s_mov_b32 s0, 0
 ; SI-NEXT:    v_cmp_nle_f32_e32 vcc, 0, v1
-; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; SI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
+; SI-NEXT:    s_and_saveexec_b64 s[2:3], vcc
+; SI-NEXT:    s_xor_b64 s[2:3], exec, s[2:3]
 ; SI-NEXT:    s_cbranch_execz .LBB13_3
 ; SI-NEXT:  ; %bb.1: ; %bb3
 ; SI-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v0
-; SI-NEXT:    s_andn2_b64 s[2:3], s[2:3], vcc
+; SI-NEXT:    s_andn2_b64 s[0:1], s[0:1], vcc
 ; SI-NEXT:    s_cbranch_scc0 .LBB13_6
 ; SI-NEXT:  ; %bb.2: ; %bb3
 ; SI-NEXT:    s_andn2_b64 exec, exec, vcc
 ; SI-NEXT:  .LBB13_3: ; %bb4
-; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
-; SI-NEXT:    s_mov_b32 s1, s0
-; SI-NEXT:    s_mov_b32 s2, s0
-; SI-NEXT:    s_mov_b32 s3, s0
-; SI-NEXT:    s_mov_b32 s4, s0
-; SI-NEXT:    s_mov_b32 s5, s0
-; SI-NEXT:    s_mov_b32 s6, s0
-; SI-NEXT:    s_mov_b32 s7, s0
+; SI-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; SI-NEXT:    image_sample_c v0, v[2:3], s[0:7], s[0:3] dmask:0x10
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cmp_neq_f32_e32 vcc, 0, v0
@@ -1439,28 +1431,20 @@ define amdgpu_ps void @if_after_kill_block(float %arg, float %arg1, float %arg2,
 ;
 ; GFX10-WAVE64-LABEL: if_after_kill_block:
 ; GFX10-WAVE64:       ; %bb.0: ; %bb
-; GFX10-WAVE64-NEXT:    s_mov_b64 s[2:3], exec
+; GFX10-WAVE64-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX10-WAVE64-NEXT:    s_wqm_b64 exec, exec
 ; GFX10-WAVE64-NEXT:    v_cmp_nle_f32_e32 vcc, 0, v1
-; GFX10-WAVE64-NEXT:    s_mov_b32 s0, 0
-; GFX10-WAVE64-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX10-WAVE64-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
+; GFX10-WAVE64-NEXT:    s_and_saveexec_b64 s[2:3], vcc
+; GFX10-WAVE64-NEXT:    s_xor_b64 s[2:3], exec, s[2:3]
 ; GFX10-WAVE64-NEXT:    s_cbranch_execz .LBB13_3
 ; GFX10-WAVE64-NEXT:  ; %bb.1: ; %bb3
 ; GFX10-WAVE64-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v0
-; GFX10-WAVE64-NEXT:    s_andn2_b64 s[2:3], s[2:3], vcc
+; GFX10-WAVE64-NEXT:    s_andn2_b64 s[0:1], s[0:1], vcc
 ; GFX10-WAVE64-NEXT:    s_cbranch_scc0 .LBB13_6
 ; GFX10-WAVE64-NEXT:  ; %bb.2: ; %bb3
 ; GFX10-WAVE64-NEXT:    s_andn2_b64 exec, exec, vcc
 ; GFX10-WAVE64-NEXT:  .LBB13_3: ; %bb4
-; GFX10-WAVE64-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX10-WAVE64-NEXT:    s_mov_b32 s1, s0
-; GFX10-WAVE64-NEXT:    s_mov_b32 s2, s0
-; GFX10-WAVE64-NEXT:    s_mov_b32 s3, s0
-; GFX10-WAVE64-NEXT:    s_mov_b32 s4, s0
-; GFX10-WAVE64-NEXT:    s_mov_b32 s5, s0
-; GFX10-WAVE64-NEXT:    s_mov_b32 s6, s0
-; GFX10-WAVE64-NEXT:    s_mov_b32 s7, s0
+; GFX10-WAVE64-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX10-WAVE64-NEXT:    image_sample_c v0, v[2:3], s[0:7], s[0:3] dmask:0x10 dim:SQ_RSRC_IMG_1D
 ; GFX10-WAVE64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WAVE64-NEXT:    v_cmp_neq_f32_e32 vcc, 0, v0
@@ -1479,28 +1463,20 @@ define amdgpu_ps void @if_after_kill_block(float %arg, float %arg1, float %arg2,
 ;
 ; GFX10-WAVE32-LABEL: if_after_kill_block:
 ; GFX10-WAVE32:       ; %bb.0: ; %bb
-; GFX10-WAVE32-NEXT:    s_mov_b32 s1, exec_lo
+; GFX10-WAVE32-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX10-WAVE32-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX10-WAVE32-NEXT:    v_cmp_nle_f32_e32 vcc_lo, 0, v1
-; GFX10-WAVE32-NEXT:    s_mov_b32 s0, 0
-; GFX10-WAVE32-NEXT:    s_and_saveexec_b32 s2, vcc_lo
-; GFX10-WAVE32-NEXT:    s_xor_b32 s2, exec_lo, s2
+; GFX10-WAVE32-NEXT:    s_and_saveexec_b32 s1, vcc_lo
+; GFX10-WAVE32-NEXT:    s_xor_b32 s1, exec_lo, s1
 ; GFX10-WAVE32-NEXT:    s_cbranch_execz .LBB13_3
 ; GFX10-WAVE32-NEXT:  ; %bb.1: ; %bb3
 ; GFX10-WAVE32-NEXT:    v_cmp_ngt_f32_e32 vcc_lo, 0, v0
-; GFX10-WAVE32-NEXT:    s_andn2_b32 s1, s1, vcc_lo
+; GFX10-WAVE32-NEXT:    s_andn2_b32 s0, s0, vcc_lo
 ; GFX10-WAVE32-NEXT:    s_cbranch_scc0 .LBB13_6
 ; GFX10-WAVE32-NEXT:  ; %bb.2: ; %bb3
 ; GFX10-WAVE32-NEXT:    s_andn2_b32 exec_lo, exec_lo, vcc_lo
 ; GFX10-WAVE32-NEXT:  .LBB13_3: ; %bb4
-; GFX10-WAVE32-NEXT:    s_or_b32 exec_lo, exec_lo, s2
-; GFX10-WAVE32-NEXT:    s_mov_b32 s1, s0
-; GFX10-WAVE32-NEXT:    s_mov_b32 s2, s0
-; GFX10-WAVE32-NEXT:    s_mov_b32 s3, s0
-; GFX10-WAVE32-NEXT:    s_mov_b32 s4, s0
-; GFX10-WAVE32-NEXT:    s_mov_b32 s5, s0
-; GFX10-WAVE32-NEXT:    s_mov_b32 s6, s0
-; GFX10-WAVE32-NEXT:    s_mov_b32 s7, s0
+; GFX10-WAVE32-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GFX10-WAVE32-NEXT:    image_sample_c v0, v[2:3], s[0:7], s[0:3] dmask:0x10 dim:SQ_RSRC_IMG_1D
 ; GFX10-WAVE32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WAVE32-NEXT:    v_cmp_neq_f32_e32 vcc_lo, 0, v0
@@ -1519,29 +1495,22 @@ define amdgpu_ps void @if_after_kill_block(float %arg, float %arg1, float %arg2,
 ;
 ; GFX11-LABEL: if_after_kill_block:
 ; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_mov_b64 s[2:3], exec
+; GFX11-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX11-NEXT:    s_wqm_b64 exec, exec
-; GFX11-NEXT:    s_mov_b32 s0, 0
-; GFX11-NEXT:    s_mov_b64 s[4:5], exec
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX11-NEXT:    v_cmpx_nle_f32_e32 0, v1
-; GFX11-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
+; GFX11-NEXT:    s_xor_b64 s[2:3], exec, s[2:3]
 ; GFX11-NEXT:    s_cbranch_execz .LBB13_3
 ; GFX11-NEXT:  ; %bb.1: ; %bb3
 ; GFX11-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v0
-; GFX11-NEXT:    s_and_not1_b64 s[2:3], s[2:3], vcc
+; GFX11-NEXT:    s_and_not1_b64 s[0:1], s[0:1], vcc
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB13_6
 ; GFX11-NEXT:  ; %bb.2: ; %bb3
 ; GFX11-NEXT:    s_and_not1_b64 exec, exec, vcc
 ; GFX11-NEXT:  .LBB13_3: ; %bb4
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX11-NEXT:    s_mov_b32 s1, s0
-; GFX11-NEXT:    s_mov_b32 s2, s0
-; GFX11-NEXT:    s_mov_b32 s3, s0
-; GFX11-NEXT:    s_mov_b32 s4, s0
-; GFX11-NEXT:    s_mov_b32 s5, s0
-; GFX11-NEXT:    s_mov_b32 s6, s0
-; GFX11-NEXT:    s_mov_b32 s7, s0
+; GFX11-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX11-NEXT:    image_sample_c v0, v[2:3], s[0:7], s[0:3] dmask:0x10 dim:SQ_RSRC_IMG_1D
 ; GFX11-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -1574,7 +1543,7 @@ bb4:                                              ; preds = %bb3, %bb
   br i1 %tmp7, label %bb8, label %bb9
 
 bb8:                                              ; preds = %bb9, %bb4
-  store volatile i32 9, i32 addrspace(1)* undef
+  store volatile i32 9, ptr addrspace(1) undef
   ret void
 
 bb9:                                              ; preds = %bb4
@@ -1584,19 +1553,11 @@ bb9:                                              ; preds = %bb4
 define amdgpu_ps void @cbranch_kill(i32 inreg %0, float %val0, float %val1) {
 ; SI-LABEL: cbranch_kill:
 ; SI:       ; %bb.0: ; %.entry
-; SI-NEXT:    s_mov_b32 s4, 0
 ; SI-NEXT:    s_mov_b64 s[0:1], exec
 ; SI-NEXT:    v_mov_b32_e32 v4, 0
 ; SI-NEXT:    v_mov_b32_e32 v2, v1
 ; SI-NEXT:    v_mov_b32_e32 v3, v1
-; SI-NEXT:    s_mov_b32 s5, s4
-; SI-NEXT:    s_mov_b32 s6, s4
-; SI-NEXT:    s_mov_b32 s7, s4
-; SI-NEXT:    s_mov_b32 s8, s4
-; SI-NEXT:    s_mov_b32 s9, s4
-; SI-NEXT:    s_mov_b32 s10, s4
-; SI-NEXT:    s_mov_b32 s11, s4
-; SI-NEXT:    image_sample_l v1, v[1:4], s[4:11], s[0:3] dmask:0x1 da
+; SI-NEXT:    image_sample_l v1, v[1:4], s[0:7], s[0:3] dmask:0x1 da
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cmp_ge_f32_e32 vcc, 0, v1
 ; SI-NEXT:    s_and_saveexec_b64 s[2:3], vcc
@@ -1627,16 +1588,8 @@ define amdgpu_ps void @cbranch_kill(i32 inreg %0, float %val0, float %val1) {
 ; GFX10-WAVE64-LABEL: cbranch_kill:
 ; GFX10-WAVE64:       ; %bb.0: ; %.entry
 ; GFX10-WAVE64-NEXT:    v_mov_b32_e32 v2, 0
-; GFX10-WAVE64-NEXT:    s_mov_b32 s4, 0
 ; GFX10-WAVE64-NEXT:    s_mov_b64 s[0:1], exec
-; GFX10-WAVE64-NEXT:    s_mov_b32 s5, s4
-; GFX10-WAVE64-NEXT:    s_mov_b32 s6, s4
-; GFX10-WAVE64-NEXT:    s_mov_b32 s7, s4
-; GFX10-WAVE64-NEXT:    s_mov_b32 s8, s4
-; GFX10-WAVE64-NEXT:    s_mov_b32 s9, s4
-; GFX10-WAVE64-NEXT:    s_mov_b32 s10, s4
-; GFX10-WAVE64-NEXT:    s_mov_b32 s11, s4
-; GFX10-WAVE64-NEXT:    image_sample_l v1, [v1, v1, v1, v2], s[4:11], s[0:3] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
+; GFX10-WAVE64-NEXT:    image_sample_l v1, [v1, v1, v1, v2], s[0:7], s[0:3] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
 ; GFX10-WAVE64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WAVE64-NEXT:    v_cmp_ge_f32_e32 vcc, 0, v1
 ; GFX10-WAVE64-NEXT:    s_and_saveexec_b64 s[2:3], vcc
@@ -1667,16 +1620,8 @@ define amdgpu_ps void @cbranch_kill(i32 inreg %0, float %val0, float %val1) {
 ; GFX10-WAVE32-LABEL: cbranch_kill:
 ; GFX10-WAVE32:       ; %bb.0: ; %.entry
 ; GFX10-WAVE32-NEXT:    v_mov_b32_e32 v2, 0
-; GFX10-WAVE32-NEXT:    s_mov_b32 s4, 0
 ; GFX10-WAVE32-NEXT:    s_mov_b32 s0, exec_lo
-; GFX10-WAVE32-NEXT:    s_mov_b32 s5, s4
-; GFX10-WAVE32-NEXT:    s_mov_b32 s6, s4
-; GFX10-WAVE32-NEXT:    s_mov_b32 s7, s4
-; GFX10-WAVE32-NEXT:    s_mov_b32 s8, s4
-; GFX10-WAVE32-NEXT:    s_mov_b32 s9, s4
-; GFX10-WAVE32-NEXT:    s_mov_b32 s10, s4
-; GFX10-WAVE32-NEXT:    s_mov_b32 s11, s4
-; GFX10-WAVE32-NEXT:    image_sample_l v1, [v1, v1, v1, v2], s[4:11], s[0:3] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
+; GFX10-WAVE32-NEXT:    image_sample_l v1, [v1, v1, v1, v2], s[0:7], s[0:3] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
 ; GFX10-WAVE32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WAVE32-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v1
 ; GFX10-WAVE32-NEXT:    s_and_saveexec_b32 s1, vcc_lo
@@ -1707,16 +1652,8 @@ define amdgpu_ps void @cbranch_kill(i32 inreg %0, float %val0, float %val1) {
 ; GFX11-LABEL: cbranch_kill:
 ; GFX11:       ; %bb.0: ; %.entry
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11-NEXT:    s_mov_b32 s4, 0
 ; GFX11-NEXT:    s_mov_b64 s[0:1], exec
-; GFX11-NEXT:    s_mov_b32 s5, s4
-; GFX11-NEXT:    s_mov_b32 s6, s4
-; GFX11-NEXT:    s_mov_b32 s7, s4
-; GFX11-NEXT:    s_mov_b32 s8, s4
-; GFX11-NEXT:    s_mov_b32 s9, s4
-; GFX11-NEXT:    s_mov_b32 s10, s4
-; GFX11-NEXT:    s_mov_b32 s11, s4
-; GFX11-NEXT:    image_sample_l v1, [v1, v1, v1, v2], s[4:11], s[0:3] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
+; GFX11-NEXT:    image_sample_l v1, [v1, v1, v1, v2], s[0:7], s[0:3] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
 ; GFX11-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_cmpx_ge_f32_e32 0, v1

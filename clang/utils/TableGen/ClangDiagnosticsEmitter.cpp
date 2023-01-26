@@ -12,7 +12,6 @@
 
 #include "TableGenBackends.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -30,6 +29,7 @@
 #include <cctype>
 #include <functional>
 #include <map>
+#include <optional>
 #include <set>
 using namespace llvm;
 
@@ -250,8 +250,9 @@ typedef llvm::PointerUnion<RecordVec*, RecordSet*> VecOrSet;
 
 namespace {
 class InferPedantic {
-  typedef llvm::DenseMap<const Record*,
-                         std::pair<unsigned, Optional<unsigned> > > GMap;
+  typedef llvm::DenseMap<const Record *,
+                         std::pair<unsigned, std::optional<unsigned>>>
+      GMap;
 
   DiagGroupParentMap &DiagGroupParents;
   const std::vector<Record*> &Diags;
@@ -404,17 +405,14 @@ void InferPedantic::compute(VecOrSet DiagsInPedantic,
     if (!groupInPedantic(Group))
       continue;
 
-    unsigned ParentsInPedantic = 0;
     const std::vector<Record*> &Parents = DiagGroupParents.getParents(Group);
-    for (unsigned j = 0, ej = Parents.size(); j != ej; ++j) {
-      if (groupInPedantic(Parents[j]))
-        ++ParentsInPedantic;
-    }
+    bool AllParentsInPedantic =
+        llvm::all_of(Parents, [&](Record *R) { return groupInPedantic(R); });
     // If all the parents are in -Wpedantic, this means that this diagnostic
     // group will be indirectly included by -Wpedantic already.  In that
     // case, do not add it directly to -Wpedantic.  If the group has no
     // parents, obviously it should go into -Wpedantic.
-    if (Parents.size() > 0 && ParentsInPedantic == Parents.size())
+    if (Parents.size() > 0 && AllParentsInPedantic)
       continue;
 
     if (RecordVec *V = GroupsInPedantic.dyn_cast<RecordVec*>())
@@ -678,7 +676,7 @@ private:
 };
 
 template <class Derived> struct DiagTextVisitor {
-  using ModifierMappingsType = Optional<std::vector<int>>;
+  using ModifierMappingsType = std::optional<std::vector<int>>;
 
 private:
   Derived &getDerived() { return static_cast<Derived &>(*this); }
@@ -709,7 +707,7 @@ public:
 
   private:
     DiagTextVisitor &Visitor;
-    Optional<std::vector<int>> OldMappings;
+    std::optional<std::vector<int>> OldMappings;
 
   public:
     Piece *Substitution;
@@ -1168,7 +1166,7 @@ std::vector<std::string>
 DiagnosticTextBuilder::buildForDocumentation(StringRef Severity,
                                              const Record *R) {
   EvaluatingRecordGuard Guard(&EvaluatingRecord, R);
-  StringRef Text = R->getValueAsString("Text");
+  StringRef Text = R->getValueAsString("Summary");
 
   DiagText D(*this, Text);
   TextPiece *Prefix = D.New<TextPiece>(Severity, Severity);
@@ -1187,7 +1185,7 @@ DiagnosticTextBuilder::buildForDocumentation(StringRef Severity,
 
 std::string DiagnosticTextBuilder::buildForDefinition(const Record *R) {
   EvaluatingRecordGuard Guard(&EvaluatingRecord, R);
-  StringRef Text = R->getValueAsString("Text");
+  StringRef Text = R->getValueAsString("Summary");
   DiagText D(*this, Text);
   std::string Result;
   DiagTextPrinter{*this, Result}.Visit(D.Root);
@@ -1705,7 +1703,7 @@ void writeHeader(StringRef Str, raw_ostream &OS, char Kind = '-') {
 
 void writeDiagnosticText(DiagnosticTextBuilder &Builder, const Record *R,
                          StringRef Role, raw_ostream &OS) {
-  StringRef Text = R->getValueAsString("Text");
+  StringRef Text = R->getValueAsString("Summary");
   if (Text == "%0")
     OS << "The text of this diagnostic is not controlled by Clang.\n\n";
   else {

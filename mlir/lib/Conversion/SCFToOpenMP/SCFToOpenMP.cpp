@@ -12,17 +12,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/SCFToOpenMP/SCFToOpenMP.h"
-#include "../PassDetail.h"
+
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTSCFTOOPENMP
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -187,9 +193,10 @@ static omp::ReductionDeclareOp createDecl(PatternRewriter &builder,
   symbolTable.insert(decl);
 
   Type type = reduce.getOperand().getType();
-  builder.createBlock(&decl.initializerRegion(), decl.initializerRegion().end(),
-                      {type}, {reduce.getOperand().getLoc()});
-  builder.setInsertionPointToEnd(&decl.initializerRegion().back());
+  builder.createBlock(&decl.getInitializerRegion(),
+                      decl.getInitializerRegion().end(), {type},
+                      {reduce.getOperand().getLoc()});
+  builder.setInsertionPointToEnd(&decl.getInitializerRegion().back());
   Value init =
       builder.create<LLVM::ConstantOp>(reduce.getLoc(), type, initValue);
   builder.create<omp::YieldOp>(reduce.getLoc(), init);
@@ -200,8 +207,8 @@ static omp::ReductionDeclareOp createDecl(PatternRewriter &builder,
   builder.setInsertionPoint(terminator);
   builder.replaceOpWithNewOp<omp::YieldOp>(terminator,
                                            terminator->getOperands());
-  builder.inlineRegionBefore(reduce.getRegion(), decl.reductionRegion(),
-                             decl.reductionRegion().end());
+  builder.inlineRegionBefore(reduce.getRegion(), decl.getReductionRegion(),
+                             decl.getReductionRegion().end());
   return decl;
 }
 
@@ -215,10 +222,10 @@ static omp::ReductionDeclareOp addAtomicRMW(OpBuilder &builder,
   Type type = reduce.getOperand().getType();
   Type ptrType = LLVM::LLVMPointerType::get(type);
   Location reduceOperandLoc = reduce.getOperand().getLoc();
-  builder.createBlock(&decl.atomicReductionRegion(),
-                      decl.atomicReductionRegion().end(), {ptrType, ptrType},
+  builder.createBlock(&decl.getAtomicReductionRegion(),
+                      decl.getAtomicReductionRegion().end(), {ptrType, ptrType},
                       {reduceOperandLoc, reduceOperandLoc});
-  Block *atomicBlock = &decl.atomicReductionRegion().back();
+  Block *atomicBlock = &decl.getAtomicReductionRegion().back();
   builder.setInsertionPointToEnd(atomicBlock);
   Value loaded = builder.create<LLVM::LoadOp>(reduce.getLoc(),
                                               atomicBlock->getArgument(1));
@@ -343,7 +350,7 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
       if (!decl)
         return failure();
       reductionDeclSymbols.push_back(
-          SymbolRefAttr::get(rewriter.getContext(), decl.sym_name()));
+          SymbolRefAttr::get(rewriter.getContext(), decl.getSymName()));
     }
 
     // Allocate reduction variables. Make sure the we don't overflow the stack
@@ -381,7 +388,7 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
     {
 
       OpBuilder::InsertionGuard guard(rewriter);
-      rewriter.createBlock(&ompParallel.region());
+      rewriter.createBlock(&ompParallel.getRegion());
 
       // Replace the loop.
       {
@@ -391,13 +398,13 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
             parallelOp.getUpperBound(), parallelOp.getStep());
         rewriter.create<omp::TerminatorOp>(loc);
 
-        rewriter.inlineRegionBefore(parallelOp.getRegion(), loop.region(),
-                                    loop.region().begin());
+        rewriter.inlineRegionBefore(parallelOp.getRegion(), loop.getRegion(),
+                                    loop.getRegion().begin());
 
-        Block *ops = rewriter.splitBlock(&*loop.region().begin(),
-                                         loop.region().begin()->begin());
+        Block *ops = rewriter.splitBlock(&*loop.getRegion().begin(),
+                                         loop.getRegion().begin()->begin());
 
-        rewriter.setInsertionPointToStart(&*loop.region().begin());
+        rewriter.setInsertionPointToStart(&*loop.getRegion().begin());
 
         auto scope = rewriter.create<memref::AllocaScopeOp>(parallelOp.getLoc(),
                                                             TypeRange());
@@ -409,9 +416,9 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
         rewriter.replaceOpWithNewOp<memref::AllocaScopeReturnOp>(
             oldYield, oldYield->getOperands());
         if (!reductionVariables.empty()) {
-          loop.reductionsAttr(
+          loop.setReductionsAttr(
               ArrayAttr::get(rewriter.getContext(), reductionDeclSymbols));
-          loop.reduction_varsMutable().append(reductionVariables);
+          loop.getReductionVarsMutable().append(reductionVariables);
         }
       }
     }
@@ -443,7 +450,7 @@ static LogicalResult applyPatterns(ModuleOp module) {
 }
 
 /// A pass converting SCF operations to OpenMP operations.
-struct SCFToOpenMPPass : public ConvertSCFToOpenMPBase<SCFToOpenMPPass> {
+struct SCFToOpenMPPass : public impl::ConvertSCFToOpenMPBase<SCFToOpenMPPass> {
   /// Pass entry point.
   void runOnOperation() override {
     if (failed(applyPatterns(getOperation())))

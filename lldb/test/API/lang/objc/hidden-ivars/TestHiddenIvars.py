@@ -2,7 +2,6 @@
 
 
 
-import unittest2
 import subprocess
 
 import lldb

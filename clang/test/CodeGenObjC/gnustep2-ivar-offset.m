@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-freebsd -S -emit-llvm -fobjc-runtime=gnustep-2.0 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-freebsd -S -emit-llvm -fobjc-runtime=gnustep-2.0 -o - %s | FileCheck %s
 
 
 @class NSString;
@@ -25,6 +25,6 @@
 @implementation ANObject @end
 
 // Check that the ivar metadata contains 3 entries of the correct form and correctly sets the size.
-// CHECK: @.objc_ivar_list = private global { i32, i64, [4 x { i8*, i8*, i32*, i32, i32 }] } { i32 4, i64 32,
+// CHECK: @.objc_ivar_list = private global { i32, i64, [4 x { ptr, ptr, ptr, i32, i32 }] } { i32 4, i64 32,
 // Check that we emit 1 as the size of _Bool, not 0.
 // CHECK-SAME:  @__objc_ivar_offset_ANObject.boolIvar.B, i32 1, i32 4

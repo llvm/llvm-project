@@ -8,7 +8,7 @@
 ; CHECK-LABEL: {{^}}switch_unreachable:
 ; CHECK-NOT: s_endpgm
 ; CHECK: .Lfunc_end
-define amdgpu_kernel void @switch_unreachable(i32 addrspace(1)* %g, i8 addrspace(3)* %l, i32 %x) nounwind {
+define amdgpu_kernel void @switch_unreachable(ptr addrspace(1) %g, ptr addrspace(3) %l, i32 %x) nounwind {
 centry:
   switch i32 %x, label %sw.default [
     i32 0, label %sw.bb

@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <mutex>
+#include <optional>
 
 using namespace lldb_private;
 
@@ -66,12 +67,12 @@ llvm::VersionTuple HostInfoLinux::GetOSVersion() {
   return g_fields->m_os_version;
 }
 
-llvm::Optional<std::string> HostInfoLinux::GetOSBuildString() {
+std::optional<std::string> HostInfoLinux::GetOSBuildString() {
   struct utsname un;
   ::memset(&un, 0, sizeof(utsname));
 
   if (uname(&un) < 0)
-    return llvm::None;
+    return std::nullopt;
 
   return std::string(un.release);
 }
@@ -122,8 +123,7 @@ llvm::StringRef HostInfoLinux::GetDistributionId() {
         if (strstr(distribution_id, distributor_id_key)) {
           // strip newlines
           std::string id_string(distribution_id + strlen(distributor_id_key));
-          id_string.erase(std::remove(id_string.begin(), id_string.end(), '\n'),
-                          id_string.end());
+          llvm::erase_value(id_string, '\n');
 
           // lower case it and convert whitespace to underscores
           std::transform(
@@ -176,7 +176,7 @@ bool HostInfoLinux::ComputeSupportExeDirectory(FileSpec &file_spec) {
 }
 
 bool HostInfoLinux::ComputeSystemPluginsDirectory(FileSpec &file_spec) {
-  FileSpec temp_file("/usr/lib" LLDB_LIBDIR_SUFFIX "/lldb/plugins");
+  FileSpec temp_file("/usr/" LLDB_INSTALL_LIBDIR_BASENAME "/lldb/plugins");
   FileSystem::Instance().Resolve(temp_file);
   file_spec.SetDirectory(temp_file.GetPath());
   return true;

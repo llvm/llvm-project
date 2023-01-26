@@ -522,6 +522,13 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
                                    ? Changes[StartAt].indentAndNestingLevel()
                                    : std::tuple<unsigned, unsigned, unsigned>();
 
+  // Keep track if the first token has a non-zero indent and nesting level.
+  // This can happen when aligning the contents of "#else" preprocessor blocks,
+  // which is done separately.
+  bool HasInitialIndentAndNesting =
+      StartAt == 0 &&
+      IndentAndNestingLevel > std::tuple<unsigned, unsigned, unsigned>();
+
   // Keep track of the number of commas before the matching tokens, we will only
   // align a sequence of matching tokens if they are preceded by the same number
   // of commas.
@@ -556,8 +563,19 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
 
   unsigned i = StartAt;
   for (unsigned e = Changes.size(); i != e; ++i) {
-    if (Changes[i].indentAndNestingLevel() < IndentAndNestingLevel)
-      break;
+    if (Changes[i].indentAndNestingLevel() < IndentAndNestingLevel) {
+      if (!HasInitialIndentAndNesting)
+        break;
+      // The contents of preprocessor blocks are aligned separately.
+      // If the initial preprocessor block is indented or nested (e.g. it's in
+      // a function), do not align and exit after finishing this scope block.
+      // Instead, align, and then lower the baseline indent and nesting level
+      // in order to continue aligning subsequent blocks.
+      EndOfSequence = i;
+      AlignCurrentSequence();
+      IndentAndNestingLevel =
+          Changes[i].indentAndNestingLevel(); // new baseline
+    }
 
     if (Changes[i].NewlinesBefore != 0) {
       CommasBeforeMatch = 0;
@@ -591,7 +609,8 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
       ++CommasBeforeMatch;
     } else if (Changes[i].indentAndNestingLevel() > IndentAndNestingLevel) {
       // Call AlignTokens recursively, skipping over this scope block.
-      unsigned StoppedAt = AlignTokens(Style, Matches, Changes, i, ACS);
+      unsigned StoppedAt =
+          AlignTokens(Style, Matches, Changes, i, ACS, RightJustify);
       i = StoppedAt - 1;
       continue;
     }
@@ -852,9 +871,7 @@ void WhitespaceManager::alignConsecutiveDeclarations() {
   AlignTokens(
       Style,
       [](Change const &C) {
-        // tok::kw_operator is necessary for aligning operator overload
-        // definitions.
-        if (C.Tok->isOneOf(TT_FunctionDeclarationName, tok::kw_operator))
+        if (C.Tok->is(TT_FunctionDeclarationName))
           return true;
         if (C.Tok->isNot(TT_StartOfName))
           return false;
@@ -927,12 +944,31 @@ void WhitespaceManager::alignTrailingComments() {
   unsigned StartOfSequence = 0;
   bool BreakBeforeNext = false;
   unsigned Newlines = 0;
+  unsigned int NewLineThreshold = 1;
+  if (Style.AlignTrailingComments.Kind == FormatStyle::TCAS_Always)
+    NewLineThreshold = Style.AlignTrailingComments.OverEmptyLines + 1;
+
   for (unsigned i = 0, e = Changes.size(); i != e; ++i) {
     if (Changes[i].StartOfBlockComment)
       continue;
     Newlines += Changes[i].NewlinesBefore;
     if (!Changes[i].IsTrailingComment)
       continue;
+
+    if (Style.AlignTrailingComments.Kind == FormatStyle::TCAS_Leave) {
+      auto OriginalSpaces =
+          Changes[i].OriginalWhitespaceRange.getEnd().getRawEncoding() -
+          Changes[i].OriginalWhitespaceRange.getBegin().getRawEncoding() -
+          Changes[i].Tok->NewlinesBefore;
+      unsigned RestoredLineLength = Changes[i].StartOfTokenColumn +
+                                    Changes[i].TokenLength + OriginalSpaces;
+      // If leaving comments makes the line exceed the column limit, give up to
+      // leave the comments.
+      if (RestoredLineLength >= Style.ColumnLimit && Style.ColumnLimit != 0)
+        break;
+      Changes[i].Spaces = OriginalSpaces;
+      continue;
+    }
 
     unsigned ChangeMinColumn = Changes[i].StartOfTokenColumn;
     unsigned ChangeMaxColumn;
@@ -957,7 +993,7 @@ void WhitespaceManager::alignTrailingComments() {
                                   Changes[i - 1].Tok->is(tok::r_brace) &&
                                   Changes[i - 1].StartOfTokenColumn == 0;
     bool WasAlignedWithStartOfNextLine = false;
-    if (Changes[i].NewlinesBefore == 1) { // A comment on its own line.
+    if (Changes[i].NewlinesBefore >= 1) { // A comment on its own line.
       unsigned CommentColumn = SourceMgr.getSpellingColumnNumber(
           Changes[i].OriginalWhitespaceRange.getEnd());
       for (unsigned j = i + 1; j != e; ++j) {
@@ -974,12 +1010,13 @@ void WhitespaceManager::alignTrailingComments() {
         break;
       }
     }
-    if (!Style.AlignTrailingComments || FollowsRBraceInColumn0) {
+    if (Style.AlignTrailingComments.Kind == FormatStyle::TCAS_Never ||
+        FollowsRBraceInColumn0) {
       alignTrailingComments(StartOfSequence, i, MinColumn);
       MinColumn = ChangeMinColumn;
       MaxColumn = ChangeMinColumn;
       StartOfSequence = i;
-    } else if (BreakBeforeNext || Newlines > 1 ||
+    } else if (BreakBeforeNext || Newlines > NewLineThreshold ||
                (ChangeMinColumn > MaxColumn || ChangeMaxColumn < MinColumn) ||
                // Break the comment sequence if the previous line did not end
                // in a trailing comment.
@@ -1014,7 +1051,7 @@ void WhitespaceManager::alignTrailingComments(unsigned Start, unsigned End,
               Changes[i].StartOfBlockComment->StartOfTokenColumn -
               Changes[i].StartOfTokenColumn;
     }
-    if (Shift < 0)
+    if (Shift <= 0)
       continue;
     Changes[i].Spaces += Shift;
     if (i + 1 != Changes.size())

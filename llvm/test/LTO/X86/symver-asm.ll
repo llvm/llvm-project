@@ -17,7 +17,7 @@ module asm ".symver foo,foo@@VER1"
 
 ; Local values used in inline assembly must be specified on the
 ; llvm.compiler.used so they aren't incorrectly DCE'd during module linking.
-@llvm.compiler.used = appending global [1 x i8*] [i8* bitcast (i32 ()* @io_cancel_local_0_4 to i8*)], section "llvm.metadata"
+@llvm.compiler.used = appending global [1 x ptr] [ptr @io_cancel_local_0_4], section "llvm.metadata"
 
 define i32 @io_cancel_0_4() {
 ; CHECK-DAG: T io_cancel@@LIBAIO_0.4

@@ -1,6 +1,6 @@
-; RUN: opt -S -inline -mtriple=arm-eabi -pass-remarks=.* -pass-remarks-missed=.* < %s 2>&1 | FileCheck %s -check-prefix=NOFP
-; RUN: opt -S -inline -mtriple=arm-eabi -mattr=+vfp2 -pass-remarks=.* -pass-remarks-missed=.* < %s 2>&1 | FileCheck %s -check-prefix=FULLFP
-; RUN: opt -S -inline -mtriple=arm-eabi -mattr=+vfp2,-fp64 -pass-remarks=.* -pass-remarks-missed=.* < %s 2>&1 | FileCheck %s -check-prefix=SINGLEFP
+; RUN: opt -S -passes=inline -mtriple=arm-eabi -pass-remarks=.* -pass-remarks-missed=.* < %s 2>&1 | FileCheck %s -check-prefix=NOFP
+; RUN: opt -S -passes=inline -mtriple=arm-eabi -mattr=+vfp2 -pass-remarks=.* -pass-remarks-missed=.* < %s 2>&1 | FileCheck %s -check-prefix=FULLFP
+; RUN: opt -S -passes=inline -mtriple=arm-eabi -mattr=+vfp2,-fp64 -pass-remarks=.* -pass-remarks-missed=.* < %s 2>&1 | FileCheck %s -check-prefix=SINGLEFP
 ; Make sure that soft float implementations are calculated as being more expensive
 ; to the inliner.
 

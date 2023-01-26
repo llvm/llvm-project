@@ -18,7 +18,7 @@ entry:
   %cmp = icmp eq i32 %var1, 1
   %conv = zext i1 %cmp to i32
   %shl = shl nuw nsw i32 %conv, 19
-  store i32 %shl, i32* @res, align 4
+  store i32 %shl, ptr @res, align 4
   ret void
 }
 
@@ -37,8 +37,8 @@ define void @foo_multiple_use(i32 signext %var1) {
 entry:
   %cmp = icmp eq i32 %var1, 1
   %conv = zext i1 %cmp to i32
-  store i32 %conv, i32* @res2, align 4
+  store i32 %conv, ptr @res2, align 4
   %shl = shl nuw nsw i32 %conv, 19
-  store i32 %shl, i32* @res, align 4
+  store i32 %shl, ptr @res, align 4
   ret void
 }

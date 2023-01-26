@@ -1,0 +1,4 @@
+ompd init
+b test_ompd_get_scheduling_task_handle.c:14
+c
+ompdtestapi ompd_get_scheduling_task_handle

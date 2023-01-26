@@ -14,41 +14,41 @@ RUN: cat %T/hashes-combined.out | FileCheck --check-prefix=CHECK-SIX %s
 ; char**.  Both the local and global hashes should be the same, since the only
 ; back-references are for simple types which have fixed indices.
 CHECK-ONE:   obj-hashes-1
-CHECK-ONE:   TI: 0x1001, LocalHash: {{.*}}, GlobalHash: A7F8CF106F39A384
+CHECK-ONE:   TI: 0x1001, LocalHash: {{.*}}, GlobalHash: 912CE718D99C2F74
 CHECK-ONE:   obj-hashes-2
-CHECK-ONE:   TI: 0x1000, LocalHash: {{.*}}, GlobalHash: A7F8CF106F39A384
+CHECK-ONE:   TI: 0x1000, LocalHash: {{.*}}, GlobalHash: 912CE718D99C2F74
 
 ; int**.  Same as char**, both the local and global hashes should be the same.
 CHECK-TWO:   obj-hashes-1
-CHECK-TWO:   TI: 0x1000, LocalHash: {{.*}}, GlobalHash: 95D0616C5962F4B1
+CHECK-TWO:   TI: 0x1000, LocalHash: {{.*}}, GlobalHash: 20DAD105A7C67E1D
 CHECK-TWO:   obj-hashes-2
-CHECK-TWO:   TI: 0x1002, LocalHash: {{.*}}, GlobalHash: 95D0616C5962F4B1
+CHECK-TWO:   TI: 0x1002, LocalHash: {{.*}}, GlobalHash: 20DAD105A7C67E1D
 
 ; int***. Different local hashes, since the referent type (int**) is not at the
 ; same TypeIndex in both streams.  Same global hash, since they represent the
 ; same record.
 CHECK-THREE: obj-hashes-1
-CHECK-THREE: TI: 0x1002, LocalHash: {{.*}}, GlobalHash: 48D95F14F6176F4F
+CHECK-THREE: TI: 0x1002, LocalHash: {{.*}}, GlobalHash: 09CBAD68AF5C7998
 CHECK-THREE: obj-hashes-2
-CHECK-THREE: TI: 0x1001, LocalHash: {{.*}}, GlobalHash: 48D95F14F6176F4F
+CHECK-THREE: TI: 0x1001, LocalHash: {{.*}}, GlobalHash: 09CBAD68AF5C7998
 
 ; arg list (char**, int***).  Different local hashes, since the parameter types
 ; both occur at different TypeIndices in their respective input streams.  Same
 ; global hash, since the global hash of all referenced types is the same in
 ; both streams.
 CHECK-FOUR:  obj-hashes-1
-CHECK-FOUR:  TI: 0x1003, LocalHash: {{.*}}, GlobalHash: 99410CD14F5EE80D
+CHECK-FOUR:  TI: 0x1003, LocalHash: {{.*}}, GlobalHash: B6A17FFA392FDF6E
 CHECK-FOUR:  obj-hashes-2
-CHECK-FOUR:  TI: 0x1004, LocalHash: {{.*}}, GlobalHash: 99410CD14F5EE80D
+CHECK-FOUR:  TI: 0x1004, LocalHash: {{.*}}, GlobalHash: B6A17FFA392FDF6E
 
 ; double**.  This is only in stream 2, as a means to throw off the indexing.
 CHECK-FIVE:  obj-hashes-1
 CHECK-FIVE:  obj-hashes-2
-CHECK-FIVE:  TI: 0x1003, LocalHash: {{.*}}, GlobalHash: 20691EA9B88584CC
+CHECK-FIVE:  TI: 0x1003, LocalHash: {{.*}}, GlobalHash: 357B0B78DBFB83B4
 
 ; int** (char**, int***).  For the same logic as described in previous records,
 ; these two records have the same global hash but different local hashes.
 CHECK-SIX:   obj-hashes-1
-CHECK-SIX:   TI: 0x1004, LocalHash: {{.*}}, GlobalHash: 7ACF479173341AC1
+CHECK-SIX:   TI: 0x1004, LocalHash: {{.*}}, GlobalHash: 8356432DE786E196
 CHECK-SIX:   obj-hashes-2
-CHECK-SIX:   TI: 0x1005, LocalHash: {{.*}}, GlobalHash: 7ACF479173341AC1
+CHECK-SIX:   TI: 0x1005, LocalHash: {{.*}}, GlobalHash: 8356432DE786E196

@@ -1,0 +1,89 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-jitlink -noexec -abs __ImageBase=0xfff00000 \
+# RUN: -slab-allocate 100Kb -slab-address 0xfff00000 -slab-page-size 4096 \
+# RUN: -check %s %t 
+# 
+# Check IMAGE_REL_AMD64_SECTION and IMAGE_REL_AMD64_SECREL relocations
+# are working correctly.
+#
+# jitlink-check: *{2}(sect) = 2
+# jitlink-check: *{4}(sect+2) = 4
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       16
+    SectionData:     '0000000000000000'
+  - Name:            .func
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       16
+    SectionData:     '0000000000000000'
+  - Name:            .sect
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     '0000000000000000'
+    Relocations:
+      - VirtualAddress:  0
+        SymbolTableIndex: 7
+        Type:            IMAGE_REL_AMD64_SECTION
+      - VirtualAddress:  2
+        SymbolTableIndex: 7
+        Type:            IMAGE_REL_AMD64_SECREL
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          8
+      NumberOfRelocations: 0
+      CheckSum:            0
+      NumberOfLinenumbers: 0
+      Number:          1
+  - Name:            .func
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          8
+      NumberOfRelocations: 0
+      CheckSum:            0
+      NumberOfLinenumbers: 0
+      Number:          2
+  - Name:            .pdata
+    Value:           0
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          8
+      NumberOfRelocations: 1
+      CheckSum:            0
+      NumberOfLinenumbers: 0
+      Number:          3
+  - Name:            main
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            func
+    Value:           4
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            sect
+    Value:           0
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL

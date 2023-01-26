@@ -92,3 +92,14 @@ bool complex_chained_if_return_return_negated(int i) {
 // CHECK-FIXES: {{^}}  }{{$}}
 // CHECK-FIXES: {{^  return i <= 10;$}}
 // CHECK-FIXES: {{^}$}}
+
+
+bool PR57819(int x) {
+  // False positive introduced in clang-tidy-15
+  // Expect no warning here.
+  if (x > 0)
+    return false;
+  else {
+  }
+  return true;
+}

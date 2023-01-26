@@ -1,6 +1,6 @@
-; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-cxx-exceptions -S | FileCheck %s -DPTR=i32
-; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-cxx-exceptions -S --mattr=+atomics,+bulk-memory | FileCheck %s -DPTR=i32
-; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-cxx-exceptions --mtriple=wasm64-unknown-unknown -data-layout="e-m:e-p:64:64-i64:64-n32:64-S128" -S | FileCheck %s -DPTR=i64
+; RUN: opt -opaque-pointers=0 < %s -wasm-lower-em-ehsjlj -enable-emscripten-cxx-exceptions -S | FileCheck %s -DPTR=i32
+; RUN: opt -opaque-pointers=0 < %s -wasm-lower-em-ehsjlj -enable-emscripten-cxx-exceptions -S --mattr=+atomics,+bulk-memory | FileCheck %s -DPTR=i32
+; RUN: opt -opaque-pointers=0 < %s -wasm-lower-em-ehsjlj -enable-emscripten-cxx-exceptions --mtriple=wasm64-unknown-unknown -data-layout="e-m:e-p:64:64-i64:64-n32:64-S128" -S | FileCheck %s -DPTR=i64
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -37,7 +37,7 @@ lpad:                                             ; preds = %entry
   br label %catch.dispatch
 ; CHECK: lpad:
 ; CHECK-NEXT: %[[FMC:.*]] = call i8* @__cxa_find_matching_catch_4(i8* bitcast (i8** @_ZTIi to i8*), i8* null)
-; CHECK-NEXT: %[[IVI1:.*]] = insertvalue { i8*, i32 } undef, i8* %[[FMC]], 0
+; CHECK-NEXT: %[[IVI1:.*]] = insertvalue { i8*, i32 } poison, i8* %[[FMC]], 0
 ; CHECK-NEXT: %[[TEMPRET0_VAL:.*]] = call i32 @getTempRet0()
 ; CHECK-NEXT: %[[IVI2:.*]] = insertvalue { i8*, i32 } %[[IVI1]], i32 %[[TEMPRET0_VAL]], 1
 ; CHECK-NEXT: extractvalue { i8*, i32 } %[[IVI2]], 0
@@ -107,7 +107,7 @@ ehspec.unexpected:                                ; preds = %filter.dispatch
   unreachable
 
 eh.resume:                                        ; preds = %filter.dispatch
-  %lpad.val = insertvalue { i8*, i32 } undef, i8* %1, 0
+  %lpad.val = insertvalue { i8*, i32 } poison, i8* %1, 0
   %lpad.val3 = insertvalue { i8*, i32 } %lpad.val, i32 %2, 1
   resume { i8*, i32 } %lpad.val3
 ; CHECK: eh.resume:

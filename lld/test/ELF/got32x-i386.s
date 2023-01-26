@@ -29,7 +29,7 @@
 ## is only allowed for non-PIC code.
 ##
 # RUN: ld.lld %S/Inputs/i386-got32x-baseless.elf -o %t1
-# RUN: llvm-objdump --section-headers -d %t1 | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex --section-headers -d %t1 | FileCheck %s
 
 ## 73728 == 0x12000 == ADDR(.got)
 # CHECK: Sections:

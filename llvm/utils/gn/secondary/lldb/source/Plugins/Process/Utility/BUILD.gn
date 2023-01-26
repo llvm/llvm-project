@@ -12,6 +12,7 @@ static_library("Utility") {
     #"//lldb/source/Target", # Dependency cycle.
     "//lldb/source/Utility",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
 
   # Uses source-relative includes for own headers.
@@ -55,9 +56,11 @@ static_library("Utility") {
     "RegisterContextOpenBSD_x86_64.cpp",
     "RegisterContextPOSIX_arm.cpp",
     "RegisterContextPOSIX_arm64.cpp",
+    "RegisterContextPOSIX_loongarch64.cpp",
     "RegisterContextPOSIX_mips64.cpp",
     "RegisterContextPOSIX_powerpc.cpp",
     "RegisterContextPOSIX_ppc64le.cpp",
+    "RegisterContextPOSIX_riscv64.cpp",
     "RegisterContextPOSIX_s390x.cpp",
     "RegisterContextPOSIX_x86.cpp",
     "RegisterContextThreadMemory.cpp",
@@ -66,7 +69,9 @@ static_library("Utility") {
     "RegisterContext_x86.cpp",
     "RegisterInfoPOSIX_arm.cpp",
     "RegisterInfoPOSIX_arm64.cpp",
+    "RegisterInfoPOSIX_loongarch64.cpp",
     "RegisterInfoPOSIX_ppc64le.cpp",
+    "RegisterInfoPOSIX_riscv64.cpp",
     "StopInfoMachException.cpp",
     "ThreadMemory.cpp",
   ]

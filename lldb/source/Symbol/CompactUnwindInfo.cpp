@@ -155,9 +155,8 @@ FLAGS_ANONYMOUS_ENUM(){
 #endif
 
 #define EXTRACT_BITS(value, mask)                                              \
-  ((value >>                                                                   \
-    llvm::countTrailingZeros(static_cast<uint32_t>(mask), llvm::ZB_Width)) &   \
-   (((1 << llvm::countPopulation(static_cast<uint32_t>(mask)))) - 1))
+  ((value >> llvm::countTrailingZeros(static_cast<uint32_t>(mask))) &          \
+   (((1 << llvm::popcount(static_cast<uint32_t>(mask)))) - 1))
 
 // constructor
 
@@ -516,7 +515,7 @@ bool CompactUnwindInfo::GetCompactUnwindInfoForFunction(
   key.function_offset = function_offset;
 
   std::vector<UnwindIndex>::const_iterator it;
-  it = std::lower_bound(m_indexes.begin(), m_indexes.end(), key);
+  it = llvm::lower_bound(m_indexes, key);
   if (it == m_indexes.end()) {
     return false;
   }

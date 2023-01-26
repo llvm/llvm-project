@@ -4,30 +4,30 @@
 	%struct.CUMULATIVE_ARGS = type { i32, i32, i32, i32, i32, i32 }
 	%struct.arm_stack_offsets = type { i32, i32, i32, i32, i32 }
 	%struct.eh_status = type opaque
-	%struct.emit_status = type { i32, i32, %struct.rtx_def*, %struct.rtx_def*, %struct.sequence_stack*, i32, %struct.location_t, i32, i8*, %struct.rtx_def** }
-	%struct.expr_status = type { i32, i32, i32, %struct.rtx_def*, %struct.rtx_def*, %struct.rtx_def* }
-	%struct.function = type { %struct.eh_status*, %struct.expr_status*, %struct.emit_status*, %struct.varasm_status*, %struct.tree_node*, %struct.tree_node*, %struct.tree_node*, %struct.tree_node*, %struct.function*, i32, i32, i32, i32, %struct.rtx_def*, %struct.CUMULATIVE_ARGS, %struct.rtx_def*, %struct.rtx_def*, %struct.initial_value_struct*, %struct.rtx_def*, %struct.rtx_def*, %struct.rtx_def*, %struct.rtx_def*, %struct.rtx_def*, %struct.rtx_def*, i8, i32, i64, %struct.tree_node*, %struct.tree_node*, %struct.rtx_def*, %struct.varray_head_tag*, %struct.temp_slot*, i32, %struct.var_refs_queue*, i32, i32, %struct.rtvec_def*, %struct.tree_node*, i32, i32, i32, %struct.machine_function*, i32, i32, i8, i8, %struct.language_function*, %struct.rtx_def*, i32, i32, i32, i32, %struct.location_t, %struct.varray_head_tag*, %struct.tree_node*, i8, i8, i8 }
+	%struct.emit_status = type { i32, i32, ptr, ptr, ptr, i32, %struct.location_t, i32, ptr, ptr }
+	%struct.expr_status = type { i32, i32, i32, ptr, ptr, ptr }
+	%struct.function = type { ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i32, i32, i32, i32, ptr, %struct.CUMULATIVE_ARGS, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i8, i32, i64, ptr, ptr, ptr, ptr, ptr, i32, ptr, i32, i32, ptr, ptr, i32, i32, i32, ptr, i32, i32, i8, i8, ptr, ptr, i32, i32, i32, i32, %struct.location_t, ptr, ptr, i8, i8, i8 }
 	%struct.initial_value_struct = type opaque
 	%struct.lang_decl = type opaque
 	%struct.language_function = type opaque
-	%struct.location_t = type { i8*, i32 }
-	%struct.machine_function = type { %struct.rtx_def*, i32, i32, i32, %struct.arm_stack_offsets, i32, i32, i32, [14 x %struct.rtx_def*] }
-	%struct.rtvec_def = type { i32, [1 x %struct.rtx_def*] }
+	%struct.location_t = type { ptr, i32 }
+	%struct.machine_function = type { ptr, i32, i32, i32, %struct.arm_stack_offsets, i32, i32, i32, [14 x ptr] }
+	%struct.rtvec_def = type { i32, [1 x ptr] }
 	%struct.rtx_def = type { i16, i8, i8, %struct.u }
-	%struct.sequence_stack = type { %struct.rtx_def*, %struct.rtx_def*, %struct.sequence_stack* }
+	%struct.sequence_stack = type { ptr, ptr, ptr }
 	%struct.temp_slot = type opaque
-	%struct.tree_common = type { %struct.tree_node*, %struct.tree_node*, %union.tree_ann_d*, i8, i8, i8, i8, i8 }
-	%struct.tree_decl = type { %struct.tree_common, %struct.location_t, i32, %struct.tree_node*, i8, i8, i8, i8, i8, i8, i8, i8, i32, %struct.tree_decl_u1, %struct.tree_node*, %struct.tree_node*, %struct.tree_node*, %struct.tree_node*, %struct.tree_node*, %struct.tree_node*, %struct.tree_node*, %struct.tree_node*, %struct.tree_node*, %struct.tree_node*, %struct.rtx_def*, i32, %struct.tree_decl_u2, %struct.tree_node*, %struct.tree_node*, i64, %struct.lang_decl* }
+	%struct.tree_common = type { ptr, ptr, ptr, i8, i8, i8, i8, i8 }
+	%struct.tree_decl = type { %struct.tree_common, %struct.location_t, i32, ptr, i8, i8, i8, i8, i8, i8, i8, i8, i32, %struct.tree_decl_u1, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i32, %struct.tree_decl_u2, ptr, ptr, i64, ptr }
 	%struct.tree_decl_u1 = type { i64 }
-	%struct.tree_decl_u2 = type { %struct.function* }
+	%struct.tree_decl_u2 = type { ptr }
 	%struct.tree_node = type { %struct.tree_decl }
 	%struct.u = type { [1 x i64] }
-	%struct.var_refs_queue = type { %struct.rtx_def*, i32, i32, %struct.var_refs_queue* }
+	%struct.var_refs_queue = type { ptr, i32, i32, ptr }
 	%struct.varasm_status = type opaque
-	%struct.varray_head_tag = type { i32, i32, i32, i8*, %struct.u }
+	%struct.varray_head_tag = type { i32, i32, i32, ptr, %struct.u }
 	%union.tree_ann_d = type opaque
-@str469 = external global [42 x i8]		; <[42 x i8]*> [#uses=0]
-@__FUNCTION__.24265 = external global [19 x i8]		; <[19 x i8]*> [#uses=0]
+@str469 = external global [42 x i8]		; <ptr> [#uses=0]
+@__FUNCTION__.24265 = external global [19 x i8]		; <ptr> [#uses=0]
 
 declare void @fancy_abort()
 

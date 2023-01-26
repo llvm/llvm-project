@@ -107,8 +107,8 @@ public:
   static StringRef GetDefaultCPU();
   static StringRef GetTargetCPUVersion(const llvm::opt::ArgList &Args);
 
-  static Optional<unsigned> getSmallDataThreshold(
-      const llvm::opt::ArgList &Args);
+  static std::optional<unsigned>
+  getSmallDataThreshold(const llvm::opt::ArgList &Args);
 };
 
 } // end namespace toolchains

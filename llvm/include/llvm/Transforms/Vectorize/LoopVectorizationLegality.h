@@ -242,14 +242,13 @@ class LoopVectorizationLegality {
 public:
   LoopVectorizationLegality(
       Loop *L, PredicatedScalarEvolution &PSE, DominatorTree *DT,
-      TargetTransformInfo *TTI, TargetLibraryInfo *TLI, AAResults *AA,
-      Function *F, std::function<const LoopAccessInfo &(Loop &)> *GetLAA,
-      LoopInfo *LI, OptimizationRemarkEmitter *ORE,
+      TargetTransformInfo *TTI, TargetLibraryInfo *TLI, Function *F,
+      LoopAccessInfoManager &LAIs, LoopInfo *LI, OptimizationRemarkEmitter *ORE,
       LoopVectorizationRequirements *R, LoopVectorizeHints *H, DemandedBits *DB,
       AssumptionCache *AC, BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI)
-      : TheLoop(L), LI(LI), PSE(PSE), TTI(TTI), TLI(TLI), DT(DT),
-        GetLAA(GetLAA), ORE(ORE), Requirements(R), Hints(H), DB(DB), AC(AC),
-        BFI(BFI), PSI(PSI) {}
+      : TheLoop(L), LI(LI), PSE(PSE), TTI(TTI), TLI(TLI), DT(DT), LAIs(LAIs),
+        ORE(ORE), Requirements(R), Hints(H), DB(DB), AC(AC), BFI(BFI),
+        PSI(PSI) {}
 
   /// ReductionList contains the reduction descriptors for all
   /// of the reductions that were found in the loop.
@@ -291,10 +290,10 @@ public:
   /// Returns the induction variables found in the loop.
   const InductionList &getInductionVars() const { return Inductions; }
 
-  /// Return the first-order recurrences found in the loop.
-  RecurrenceSet &getFirstOrderRecurrences() { return FirstOrderRecurrences; }
+  /// Return the fixed-order recurrences found in the loop.
+  RecurrenceSet &getFixedOrderRecurrences() { return FixedOrderRecurrences; }
 
-  /// Return the set of instructions to sink to handle first-order recurrences.
+  /// Return the set of instructions to sink to handle fixed-order recurrences.
   MapVector<Instruction *, Instruction *> &getSinkAfter() { return SinkAfter; }
 
   /// Returns the widest induction type.
@@ -332,8 +331,8 @@ public:
   /// Returns True if PN is a reduction variable in this loop.
   bool isReductionVariable(PHINode *PN) const { return Reductions.count(PN); }
 
-  /// Returns True if Phi is a first-order recurrence in this loop.
-  bool isFirstOrderRecurrence(const PHINode *Phi) const;
+  /// Returns True if Phi is a fixed-order recurrence in this loop.
+  bool isFixedOrderRecurrence(const PHINode *Phi) const;
 
   /// Return true if the block BB needs to be predicated in order for the loop
   /// to be vectorized.
@@ -352,20 +351,11 @@ public:
   int isConsecutivePtr(Type *AccessTy, Value *Ptr) const;
 
   /// Returns true if the value V is uniform within the loop.
-  bool isUniform(Value *V);
+  bool isUniform(Value *V) const;
 
   /// A uniform memory op is a load or store which accesses the same memory
   /// location on all lanes.
-  bool isUniformMemOp(Instruction &I) {
-    Value *Ptr = getLoadStorePointerOperand(&I);
-    if (!Ptr)
-      return false;
-    // Note: There's nothing inherent which prevents predicated loads and
-    // stores from being uniform.  The current lowering simply doesn't handle
-    // it; in particular, the cost model distinguishes scatter/gather from
-    // scalar w/predication, and we currently rely on the scalar path.
-    return isUniform(Ptr) && !blockNeedsPredication(I.getParent());
-  }
+  bool isUniformMemOp(Instruction &I) const;
 
   /// Returns the information that we collected about runtime memory check.
   const RuntimePointerChecking *getRuntimePointerChecking() const {
@@ -495,10 +485,8 @@ private:
   DominatorTree *DT;
 
   // LoopAccess analysis.
-  std::function<const LoopAccessInfo &(Loop &)> *GetLAA;
+  LoopAccessInfoManager &LAIs;
 
-  // And the loop-accesses info corresponding to this loop.  This pointer is
-  // null until canVectorizeMemory sets it up.
   const LoopAccessInfo *LAI = nullptr;
 
   /// Interface to emit optimization remarks.
@@ -524,11 +512,11 @@ private:
   /// loop body.
   SmallPtrSet<Instruction *, 4> InductionCastsToIgnore;
 
-  /// Holds the phi nodes that are first-order recurrences.
-  RecurrenceSet FirstOrderRecurrences;
+  /// Holds the phi nodes that are fixed-order recurrences.
+  RecurrenceSet FixedOrderRecurrences;
 
   /// Holds instructions that need to sink past other instructions to handle
-  /// first-order recurrences.
+  /// fixed-order recurrences.
   MapVector<Instruction *, Instruction *> SinkAfter;
 
   /// Holds the widest induction type encountered.

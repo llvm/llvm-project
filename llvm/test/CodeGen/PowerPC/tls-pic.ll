@@ -12,8 +12,8 @@ target triple = "powerpc64-unknown-linux-gnu"
 define signext i32 @main() nounwind {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval
-  %0 = load i32, i32* @a, align 4
+  store i32 0, ptr %retval
+  %0 = load i32, ptr @a, align 4
   ret i32 %0
 }
 
@@ -54,8 +54,8 @@ entry:
 define signext i32 @main2() nounwind {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval
-  %0 = load i32, i32* @a2, align 4
+  store i32 0, ptr %retval
+  %0 = load i32, ptr @a2, align 4
   ret i32 %0
 }
 

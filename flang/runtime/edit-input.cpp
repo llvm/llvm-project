@@ -19,18 +19,19 @@ namespace Fortran::runtime::io {
 template <int LOG2_BASE>
 static bool EditBOZInput(
     IoStatementState &io, const DataEdit &edit, void *n, std::size_t bytes) {
-  std::optional<int> remaining;
-  std::optional<char32_t> next{io.PrepareInput(edit, remaining)};
+  // Skip leading white space & zeroes
+  std::optional<int> remaining{io.CueUpInput(edit)};
+  auto start{io.GetConnectionState().positionInRecord};
+  std::optional<char32_t> next{io.NextInField(remaining, edit)};
   if (next.value_or('?') == '0') {
     do {
+      start = io.GetConnectionState().positionInRecord;
       next = io.NextInField(remaining, edit);
     } while (next && *next == '0');
   }
   // Count significant digits after any leading white space & zeroes
   int digits{0};
-  int chars{0};
   for (; next; next = io.NextInField(remaining, edit)) {
-    ++chars;
     char32_t ch{*next};
     if (ch == ' ' || ch == '\t') {
       continue;
@@ -54,7 +55,7 @@ static bool EditBOZInput(
     return false;
   }
   // Reset to start of significant digits
-  io.HandleRelativePosition(-chars);
+  io.HandleAbsolutePosition(start);
   remaining.reset();
   // Make a second pass now that the digit count is known
   std::memset(n, 0, bytes);
@@ -99,7 +100,8 @@ static inline char32_t GetDecimalPoint(const DataEdit &edit) {
 // Returns true if there's a '-' sign.
 static bool ScanNumericPrefix(IoStatementState &io, const DataEdit &edit,
     std::optional<char32_t> &next, std::optional<int> &remaining) {
-  next = io.PrepareInput(edit, remaining);
+  remaining = io.CueUpInput(edit);
+  next = io.NextInField(remaining, edit);
   bool negative{false};
   if (next) {
     negative = *next == '-';
@@ -116,7 +118,7 @@ bool EditIntegerInput(
   RUNTIME_CHECK(io.GetIoErrorHandler(), kind >= 1 && !(kind & (kind - 1)));
   switch (edit.descriptor) {
   case DataEdit::ListDirected:
-    if (IsNamelistName(io)) {
+    if (IsNamelistNameOrSlash(io)) {
       return false;
     }
     break;
@@ -169,6 +171,11 @@ bool EditIntegerInput(
     value *= 10;
     value += digit;
     any = true;
+  }
+  if (!any && !remaining) {
+    io.GetIoErrorHandler().SignalError(
+        "Integer value absent from NAMELIST or list-directed input");
+    return false;
   }
   auto maxForKind{common::UnsignedInt128{1} << ((8 * kind) - 1)};
   overflow |= value >= maxForKind && (value > maxForKind || !negate);
@@ -384,10 +391,13 @@ static bool TryFastPathRealInput(
   if (edit.modes.scale != 0) {
     return false;
   }
+  const ConnectionState &connection{io.GetConnectionState()};
+  if (connection.internalIoCharKind > 1) {
+    return false; // reading non-default character
+  }
   const char *str{nullptr};
   std::size_t got{io.GetNextInputBytes(str)};
-  if (got == 0 || str == nullptr ||
-      !io.GetConnectionState().recordLength.has_value()) {
+  if (got == 0 || str == nullptr || !connection.recordLength.has_value()) {
     return false; // could not access reliably-terminated input stream
   }
   const char *p{str};
@@ -522,7 +532,7 @@ template <int KIND>
 bool EditRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
   switch (edit.descriptor) {
   case DataEdit::ListDirected:
-    if (IsNamelistName(io)) {
+    if (IsNamelistNameOrSlash(io)) {
       return false;
     }
     return EditCommonRealInput<KIND>(io, edit, n);
@@ -556,7 +566,7 @@ bool EditRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
 bool EditLogicalInput(IoStatementState &io, const DataEdit &edit, bool &x) {
   switch (edit.descriptor) {
   case DataEdit::ListDirected:
-    if (IsNamelistName(io)) {
+    if (IsNamelistNameOrSlash(io)) {
       return false;
     }
     break;
@@ -569,8 +579,8 @@ bool EditLogicalInput(IoStatementState &io, const DataEdit &edit, bool &x) {
         edit.descriptor);
     return false;
   }
-  std::optional<int> remaining;
-  std::optional<char32_t> next{io.PrepareInput(edit, remaining)};
+  std::optional<int> remaining{io.CueUpInput(edit)};
+  std::optional<char32_t> next{io.NextInField(remaining, edit)};
   if (next && *next == '.') { // skip optional period
     next = io.NextInField(remaining, edit);
   }
@@ -645,7 +655,7 @@ static bool EditListDirectedCharacterInput(
     io.HandleRelativePosition(byteCount);
     return EditDelimitedCharacterInput(io, x, length, *ch);
   }
-  if (IsNamelistName(io) || io.GetConnectionState().IsAtEOF()) {
+  if (IsNamelistNameOrSlash(io) || io.GetConnectionState().IsAtEOF()) {
     return false;
   }
   // Undelimited list-directed character input: stop at a value separator
@@ -738,6 +748,18 @@ bool EditCharacterInput(
       } else if (chunk == 0) {
         // error recovery: skip bad encoding
         chunk = 1;
+      }
+      --remaining;
+    } else if (connection.internalIoCharKind > 1) {
+      // Reading from non-default character internal unit
+      chunk = connection.internalIoCharKind;
+      if (skipping) {
+        --skip;
+      } else {
+        char32_t buffer{0};
+        std::memcpy(&buffer, input, chunk);
+        *x++ = buffer;
+        --length;
       }
       --remaining;
     } else if constexpr (sizeof *x > 1) {

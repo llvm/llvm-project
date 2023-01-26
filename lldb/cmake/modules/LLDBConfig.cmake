@@ -56,6 +56,7 @@ macro(add_optional_dependency variable description package found)
   message(STATUS "${description}: ${${variable}}")
 endmacro()
 
+add_optional_dependency(LLDB_ENABLE_SWIG "Enable SWIG to generate LLDB bindings" SWIG SWIG_FOUND VERSION 3)
 add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support in LLDB" LibEdit LibEdit_FOUND)
 add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support in LLDB" CursesAndPanel CURSESANDPANEL_FOUND)
 add_optional_dependency(LLDB_ENABLE_LZMA "Enable LZMA compression support in LLDB" LibLZMA LIBLZMA_FOUND)
@@ -100,6 +101,20 @@ if(LLDB_BUILD_FRAMEWORK)
   # Essentially, emit the framework's dSYM outside of the framework directory.
   set(LLDB_DEBUGINFO_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin CACHE STRING
       "Directory to emit dSYM files stripped from executables and libraries (Darwin Only)")
+
+  # Custom target to remove the targets (binaries, directories) that were
+  # copied into LLDB.framework in the build tree.
+  #
+  # These targets need to be removed before the install phase because otherwise
+  # because otherwise they may overwrite already installed binaries with the
+  # wrong RPATH (i.e. build RPATH instead of install RPATH).
+  #
+  # This target needs to be created here (rather than in API/CMakeLists.txt)
+  # because add_lldb_tool creates the custom rules to copy the binaries before
+  # the framework target exists and that's the only place where this is
+  # tracked.
+  add_custom_target(lldb-framework-cleanup
+    COMMENT "Cleaning up build-tree frameworks in preparation for install")
 endif()
 
 if(APPLE AND CMAKE_GENERATOR STREQUAL Xcode)
@@ -271,12 +286,12 @@ endif()
 # directory that LLDB is using for its embedded Clang instance needs to point
 # to the resource directory of the used Clang installation.
 if (NOT TARGET clang-resource-headers)
-  set(LLDB_CLANG_RESOURCE_DIR_NAME "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
+  set(LLDB_CLANG_RESOURCE_DIR_NAME "${LLVM_VERSION_MAJOR}")
   # Iterate over the possible places where the external resource directory
   # could be and pick the first that exists.
   foreach(CANDIDATE "${Clang_DIR}/../.." "${LLVM_DIR}" "${LLVM_LIBRARY_DIRS}"
                     "${LLVM_BUILD_LIBRARY_DIR}"
-                    "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}")
+                    "${LLVM_LIBRARY_DIR}")
     # Build the resource directory path by appending 'clang/<version number>'.
     set(CANDIDATE_RESOURCE_DIR "${CANDIDATE}/clang/${LLDB_CLANG_RESOURCE_DIR_NAME}")
     if (IS_DIRECTORY "${CANDIDATE_RESOURCE_DIR}")

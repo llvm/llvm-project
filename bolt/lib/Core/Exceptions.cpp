@@ -115,12 +115,13 @@ void BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
   uint8_t LPStartEncoding = Data.getU8(&Offset);
   uint64_t LPStart = 0;
   // Convert to offset if LPStartEncoding is typed absptr DW_EH_PE_absptr
-  if (Optional<uint64_t> MaybeLPStart = Data.getEncodedPointer(
+  if (std::optional<uint64_t> MaybeLPStart = Data.getEncodedPointer(
           &Offset, LPStartEncoding, Offset + LSDASectionAddress))
     LPStart = (LPStartEncoding && 0xFF == 0) ? *MaybeLPStart
                                              : *MaybeLPStart - Address;
 
   const uint8_t TTypeEncoding = Data.getU8(&Offset);
+  LSDATypeEncoding = TTypeEncoding;
   size_t TTypeEncodingSize = 0;
   uintptr_t TTypeEnd = 0;
   if (TTypeEncoding != DW_EH_PE_omit) {
@@ -191,6 +192,7 @@ void BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
                              BinaryFunction *Parent) -> bool {
         return (Fragment->isFragment() && Fragment->isParentFragment(Parent));
       };
+      (void)isFragmentOf;
       assert((isFragmentOf(this, Fragment) || isFragmentOf(Fragment, this)) &&
              "BOLT-ERROR: cannot have landing pads in different "
              "functions");
@@ -366,115 +368,95 @@ void BinaryFunction::updateEHRanges() {
     uint64_t Action;
   };
 
-  // If previous call can throw, this is its exception handler.
-  EHInfo PreviousEH = {nullptr, 0};
+  // Sites to update.
+  CallSitesList Sites;
 
-  // Marker for the beginning of exceptions range.
-  const MCSymbol *StartRange = nullptr;
+  for (FunctionFragment &FF : getLayout().fragments()) {
+    // If previous call can throw, this is its exception handler.
+    EHInfo PreviousEH = {nullptr, 0};
 
-  // Indicates whether the start range is located in a cold part.
-  bool IsStartInCold = false;
+    // Marker for the beginning of exceptions range.
+    const MCSymbol *StartRange = nullptr;
 
-  // Have we crossed hot/cold border for split functions?
-  bool SeenCold = false;
+    for (BinaryBasicBlock *const BB : FF) {
+      for (auto II = BB->begin(); II != BB->end(); ++II) {
+        if (!BC.MIB->isCall(*II))
+          continue;
 
-  // Sites to update - either regular or cold.
-  CallSitesType *Sites = &CallSites;
+        // Instruction can throw an exception that should be handled.
+        const bool Throws = BC.MIB->isInvoke(*II);
 
-  for (BinaryBasicBlock *BB : getLayout().blocks()) {
+        // Ignore the call if it's a continuation of a no-throw gap.
+        if (!Throws && !StartRange)
+          continue;
 
-    if (BB->isCold() && !SeenCold) {
-      SeenCold = true;
+        // Extract exception handling information from the instruction.
+        const MCSymbol *LP = nullptr;
+        uint64_t Action = 0;
+        if (const std::optional<MCPlus::MCLandingPad> EHInfo =
+                BC.MIB->getEHInfo(*II))
+          std::tie(LP, Action) = *EHInfo;
 
-      // Close the range (if any) and change the target call sites.
-      if (StartRange) {
-        Sites->emplace_back(CallSite{StartRange, getFunctionEndLabel(),
-                                     PreviousEH.LP, PreviousEH.Action});
+        // No action if the exception handler has not changed.
+        if (Throws && StartRange && PreviousEH.LP == LP &&
+            PreviousEH.Action == Action)
+          continue;
+
+        // Same symbol is used for the beginning and the end of the range.
+        const MCSymbol *EHSymbol;
+        MCInst EHLabel;
+        {
+          std::unique_lock<llvm::sys::RWMutex> Lock(BC.CtxMutex);
+          EHSymbol = BC.Ctx->createNamedTempSymbol("EH");
+          BC.MIB->createEHLabel(EHLabel, EHSymbol, BC.Ctx.get());
+        }
+
+        II = std::next(BB->insertPseudoInstr(II, EHLabel));
+
+        // At this point we could be in one of the following states:
+        //
+        // I. Exception handler has changed and we need to close previous range
+        //    and start a new one.
+        //
+        // II. Start a new exception range after the gap.
+        //
+        // III. Close current exception range and start a new gap.
+        const MCSymbol *EndRange;
+        if (StartRange) {
+          // I, III:
+          EndRange = EHSymbol;
+        } else {
+          // II:
+          StartRange = EHSymbol;
+          EndRange = nullptr;
+        }
+
+        // Close the previous range.
+        if (EndRange)
+          Sites.emplace_back(
+              FF.getFragmentNum(),
+              CallSite{StartRange, EndRange, PreviousEH.LP, PreviousEH.Action});
+
+        if (Throws) {
+          // I, II:
+          StartRange = EHSymbol;
+          PreviousEH = EHInfo{LP, Action};
+        } else {
+          StartRange = nullptr;
+        }
       }
-      Sites = &ColdCallSites;
-
-      // Reset the range.
-      StartRange = nullptr;
-      PreviousEH = {nullptr, 0};
     }
 
-    for (auto II = BB->begin(); II != BB->end(); ++II) {
-      if (!BC.MIB->isCall(*II))
-        continue;
-
-      // Instruction can throw an exception that should be handled.
-      const bool Throws = BC.MIB->isInvoke(*II);
-
-      // Ignore the call if it's a continuation of a no-throw gap.
-      if (!Throws && !StartRange)
-        continue;
-
-      // Extract exception handling information from the instruction.
-      const MCSymbol *LP = nullptr;
-      uint64_t Action = 0;
-      if (const Optional<MCPlus::MCLandingPad> EHInfo = BC.MIB->getEHInfo(*II))
-        std::tie(LP, Action) = *EHInfo;
-
-      // No action if the exception handler has not changed.
-      if (Throws && StartRange && PreviousEH.LP == LP &&
-          PreviousEH.Action == Action)
-        continue;
-
-      // Same symbol is used for the beginning and the end of the range.
-      const MCSymbol *EHSymbol;
-      MCInst EHLabel;
-      {
-        std::unique_lock<std::shared_timed_mutex> Lock(BC.CtxMutex);
-        EHSymbol = BC.Ctx->createNamedTempSymbol("EH");
-        BC.MIB->createEHLabel(EHLabel, EHSymbol, BC.Ctx.get());
-      }
-
-      II = std::next(BB->insertPseudoInstr(II, EHLabel));
-
-      // At this point we could be in one of the following states:
-      //
-      // I. Exception handler has changed and we need to close previous range
-      //    and start a new one.
-      //
-      // II. Start a new exception range after the gap.
-      //
-      // III. Close current exception range and start a new gap.
-      const MCSymbol *EndRange;
-      if (StartRange) {
-        // I, III:
-        EndRange = EHSymbol;
-      } else {
-        // II:
-        StartRange = EHSymbol;
-        IsStartInCold = SeenCold;
-        EndRange = nullptr;
-      }
-
-      // Close the previous range.
-      if (EndRange) {
-        Sites->emplace_back(
-            CallSite{StartRange, EndRange, PreviousEH.LP, PreviousEH.Action});
-      }
-
-      if (Throws) {
-        // I, II:
-        StartRange = EHSymbol;
-        IsStartInCold = SeenCold;
-        PreviousEH = EHInfo{LP, Action};
-      } else {
-        StartRange = nullptr;
-      }
+    // Check if we need to close the range.
+    if (StartRange) {
+      const MCSymbol *EndRange = getFunctionEndLabel(FF.getFragmentNum());
+      Sites.emplace_back(
+          FF.getFragmentNum(),
+          CallSite{StartRange, EndRange, PreviousEH.LP, PreviousEH.Action});
     }
   }
 
-  // Check if we need to close the range.
-  if (StartRange) {
-    assert((!isSplit() || Sites == &ColdCallSites) && "sites mismatch");
-    const MCSymbol *EndRange =
-        IsStartInCold ? getFunctionColdEndLabel() : getFunctionEndLabel();
-    Sites->emplace_back(
-        CallSite{StartRange, EndRange, PreviousEH.LP, PreviousEH.Action});
-  }
+  addCallSites(Sites);
 }
 
 const uint8_t DWARF_CFI_PRIMARY_OPCODE_MASK = 0xc0;
@@ -514,7 +496,7 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
     return true;
 
   const FDE &CurFDE = *I->second;
-  Optional<uint64_t> LSDA = CurFDE.getLSDAAddress();
+  std::optional<uint64_t> LSDA = CurFDE.getLSDAAddress();
   Function.setLSDAAddress(LSDA ? *LSDA : 0);
 
   uint64_t Offset = Function.getFirstInstructionOffset();
@@ -803,7 +785,7 @@ Error EHFrameParser::parseCIE(uint64_t StartOffset) {
       break;
     case 'P': {
       uint32_t PersonalityEncoding = Data.getU8(&Offset);
-      Optional<uint64_t> Personality =
+      std::optional<uint64_t> Personality =
           Data.getEncodedPointer(&Offset, PersonalityEncoding,
                                  EHFrameAddress ? EHFrameAddress + Offset : 0);
       // Patch personality address
@@ -835,7 +817,7 @@ Error EHFrameParser::parseCIE(uint64_t StartOffset) {
 
 Error EHFrameParser::parseFDE(uint64_t CIEPointer,
                               uint64_t StartStructureOffset) {
-  Optional<uint64_t> LSDAAddress;
+  std::optional<uint64_t> LSDAAddress;
   CIEInfo *Cie = CIEs[StartStructureOffset - CIEPointer];
 
   // The address size is encoded in the CIE we reference.

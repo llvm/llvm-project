@@ -12,6 +12,7 @@
 #include <dlfcn.h>
 #endif
 
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/HostInfo.h"
@@ -104,7 +105,7 @@ void PlatformAppleSimulator::GetStatus(Stream &strm) {
       strm << "   " << device.GetUDID() << ": " << device.GetName() << "\n";
     }
 
-    if (m_device.hasValue() && m_device->operator bool()) {
+    if (m_device.has_value() && m_device->operator bool()) {
       strm << "Current device: " << m_device->GetUDID() << ": "
            << m_device->GetName();
       if (m_device->GetState() == CoreSimulatorSupport::Device::State::Booted) {
@@ -226,13 +227,13 @@ PlatformAppleSimulator::DebugProcess(ProcessLaunchInfo &launch_info,
 FileSpec PlatformAppleSimulator::GetCoreSimulatorPath() {
 #if defined(__APPLE__)
   std::lock_guard<std::mutex> guard(m_core_sim_path_mutex);
-  if (!m_core_simulator_framework_path.hasValue()) {
+  if (!m_core_simulator_framework_path.has_value()) {
     m_core_simulator_framework_path =
         FileSpec("/Library/Developer/PrivateFrameworks/CoreSimulator.framework/"
                  "CoreSimulator");
     FileSystem::Instance().Resolve(*m_core_simulator_framework_path);
   }
-  return m_core_simulator_framework_path.getValue();
+  return m_core_simulator_framework_path.value();
 #else
   return FileSpec();
 #endif
@@ -251,16 +252,17 @@ void PlatformAppleSimulator::LoadCoreSimulator() {
 
 #if defined(__APPLE__)
 CoreSimulatorSupport::Device PlatformAppleSimulator::GetSimulatorDevice() {
-  if (!m_device.hasValue()) {
+  if (!m_device.has_value()) {
     const CoreSimulatorSupport::DeviceType::ProductFamilyID dev_id = m_kind;
-    std::string developer_dir = HostInfo::GetXcodeDeveloperDirectory().GetPath();
+    std::string developer_dir =
+        HostInfo::GetXcodeDeveloperDirectory().GetPath();
     m_device = CoreSimulatorSupport::DeviceSet::GetAvailableDevices(
                    developer_dir.c_str())
                    .GetFanciest(dev_id);
   }
 
-  if (m_device.hasValue())
-    return m_device.getValue();
+  if (m_device.has_value())
+    return m_device.value();
   else
     return CoreSimulatorSupport::Device();
 }
@@ -277,9 +279,19 @@ std::vector<ArchSpec> PlatformAppleSimulator::GetSupportedArchitectures(
 static llvm::StringRef GetXcodeSDKDir(std::string preferred,
                                       std::string secondary) {
   llvm::StringRef sdk;
-  sdk = HostInfo::GetXcodeSDKPath(XcodeSDK(std::move(preferred)));
+  auto get_sdk = [&](std::string sdk) -> llvm::StringRef {
+    auto sdk_path_or_err = HostInfo::GetXcodeSDKPath(XcodeSDK(std::move(sdk)));
+    if (!sdk_path_or_err) {
+      Debugger::ReportError("Error while searching for Xcode SDK: " +
+                            toString(sdk_path_or_err.takeError()));
+      return {};
+    }
+    return *sdk_path_or_err;
+  };
+
+  sdk = get_sdk(preferred);
   if (sdk.empty())
-    sdk = HostInfo::GetXcodeSDKPath(XcodeSDK(std::move(secondary)));
+    sdk = get_sdk(secondary);
   return sdk;
 }
 
@@ -331,7 +343,7 @@ PlatformSP PlatformAppleSimulator::CreateInstance(
       }
 
       if (create) {
-        if (std::count(supported_os.begin(), supported_os.end(), triple.getOS()))
+        if (llvm::is_contained(supported_os, triple.getOS()))
           create = true;
 #if defined(__APPLE__)
         // Only accept "unknown" for the OS if the host is Apple and it

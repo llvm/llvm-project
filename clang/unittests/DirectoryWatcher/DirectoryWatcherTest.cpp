@@ -15,6 +15,7 @@
 #include <condition_variable>
 #include <future>
 #include <mutex>
+#include <optional>
 #include <thread>
 
 using namespace llvm;
@@ -177,13 +178,13 @@ struct VerifyingConsumer {
   }
 
   // Not locking - caller has to lock Mtx.
-  llvm::Optional<bool> result() const {
+  std::optional<bool> result() const {
     if (ExpectedInitial.empty() && ExpectedNonInitial.empty() &&
         UnexpectedInitial.empty() && UnexpectedNonInitial.empty())
       return true;
     if (!UnexpectedInitial.empty() || !UnexpectedNonInitial.empty())
       return false;
-    return llvm::None;
+    return std::nullopt;
   }
 
   // This method is used by tests.
@@ -262,7 +263,7 @@ void checkEventualResultWithTimeout(VerifyingConsumer &TestConsumer) {
   if (TestConsumer.result()) {
     EXPECT_TRUE(*TestConsumer.result());
   }
-  if ((TestConsumer.result() && !TestConsumer.result().value()) ||
+  if ((TestConsumer.result() && !*TestConsumer.result()) ||
       !TestConsumer.result())
     TestConsumer.printUnmetExpectations(llvm::outs());
 }

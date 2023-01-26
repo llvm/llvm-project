@@ -17,7 +17,9 @@
 #include "Synchronization.h"
 #include "Types.h"
 
-using namespace _OMP;
+#include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
+
+using namespace ompx;
 
 #pragma omp begin declare target device_type(nohost)
 
@@ -35,7 +37,7 @@ static void genericStateMachine(IdentTy *Ident) {
   uint32_t TId = mapping::getThreadIdInBlock();
 
   do {
-    ParallelRegionFnTy WorkFn = 0;
+    ParallelRegionFnTy WorkFn = nullptr;
 
     // Wait for the signal that we have a new work function.
     synchronize::threads();
@@ -66,9 +68,10 @@ extern "C" {
 /// \param Ident               Source location identification, can be NULL.
 ///
 int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
-                           bool UseGenericStateMachine, bool) {
+                           bool UseGenericStateMachine) {
   FunctionTracingRAII();
-  const bool IsSPMD = Mode & OMP_TGT_EXEC_MODE_SPMD;
+  const bool IsSPMD =
+      Mode & llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD;
   if (IsSPMD) {
     inititializeRuntime(/* IsSPMD */ true);
     synchronize::threadsAligned();
@@ -100,8 +103,20 @@ int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
   // doing any work.  mapping::getBlockSize() does not include any of the main
   // thread's warp, so none of its threads can ever be active worker threads.
   if (UseGenericStateMachine &&
-      mapping::getThreadIdInBlock() < mapping::getBlockSize(IsSPMD))
+      mapping::getThreadIdInBlock() < mapping::getBlockSize(IsSPMD)) {
     genericStateMachine(Ident);
+  } else {
+    // Retrieve the work function just to ensure we always call
+    // __kmpc_kernel_parallel even if a custom state machine is used.
+    // TODO: this is not super pretty. The problem is we create the call to
+    // __kmpc_kernel_parallel in the openmp-opt pass but while we optimize it is
+    // not there yet. Thus, we assume we never reach it from
+    // __kmpc_target_deinit. That allows us to remove the store in there to
+    // ParallelRegionFn, which leads to bad results later on.
+    ParallelRegionFnTy WorkFn = nullptr;
+    __kmpc_kernel_parallel(&WorkFn);
+    ASSERT(WorkFn == nullptr);
+  }
 
   return mapping::getThreadIdInBlock();
 }
@@ -113,9 +128,10 @@ int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
 ///
 /// \param Ident Source location identification, can be NULL.
 ///
-void __kmpc_target_deinit(IdentTy *Ident, int8_t Mode, bool) {
+void __kmpc_target_deinit(IdentTy *Ident, int8_t Mode) {
   FunctionTracingRAII();
-  const bool IsSPMD = Mode & OMP_TGT_EXEC_MODE_SPMD;
+  const bool IsSPMD =
+      Mode & llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD;
   state::assumeInitialState(IsSPMD);
   if (IsSPMD)
     return;

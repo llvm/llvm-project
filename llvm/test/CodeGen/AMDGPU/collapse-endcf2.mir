@@ -45,7 +45,7 @@ body:             |
   ; GCN-NEXT:   %8.sub1:vreg_64, dead %10:sreg_64_xexec = V_ADDC_U32_e64 0, [[COPY3]], %9, 0, implicit $exec
   ; GCN-NEXT:   %5.sub3:sgpr_128 = S_MOV_B32 61440
   ; GCN-NEXT:   %5.sub2:sgpr_128 = S_MOV_B32 0
-  ; GCN-NEXT:   BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+  ; GCN-NEXT:   BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, implicit $exec :: (store (s32), addrspace 1)
   ; GCN-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_NE_U32_e64 2, [[COPY1]], implicit $exec
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
   ; GCN-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY4]], [[V_CMP_NE_U32_e64_]], implicit-def dead $scc
@@ -59,7 +59,7 @@ body:             |
   ; GCN-NEXT:   %5.sub0:sgpr_128 = COPY %5.sub2
   ; GCN-NEXT:   %5.sub1:sgpr_128 = COPY %5.sub2
   ; GCN-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-  ; GCN-NEXT:   BUFFER_STORE_DWORD_ADDR64 [[V_MOV_B32_e32_]], %8, %5, 0, 4, 0, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+  ; GCN-NEXT:   BUFFER_STORE_DWORD_ADDR64 [[V_MOV_B32_e32_]], %8, %5, 0, 4, 0, 0, implicit $exec :: (store (s32), addrspace 1)
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3:
   ; GCN-NEXT:   successors: %bb.4(0x80000000)
@@ -99,7 +99,7 @@ body:             |
     %8.sub1:vreg_64, dead %10:sreg_64_xexec = V_ADDC_U32_e64 0, %7, %9, 0, implicit $exec
     %5.sub3:sgpr_128 = S_MOV_B32 61440
     %5.sub2:sgpr_128 = S_MOV_B32 0
-    BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    BUFFER_STORE_DWORD_ADDR64 %6.sub1, %6, %5, 0, 0, 0, 0, implicit $exec :: (store (s32), addrspace 1)
     %11:sreg_64 = V_CMP_NE_U32_e64 2, %0, implicit $exec
     %12:sreg_64 = COPY $exec, implicit-def $exec
     %13:sreg_64 = S_AND_B64 %12, %11, implicit-def dead $scc
@@ -111,7 +111,7 @@ body:             |
     %5.sub0:sgpr_128 = COPY %5.sub2
     %5.sub1:sgpr_128 = COPY %5.sub2
     %14:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    BUFFER_STORE_DWORD_ADDR64 %14, %8, %5, 0, 4, 0, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    BUFFER_STORE_DWORD_ADDR64 %14, %8, %5, 0, 4, 0, 0, implicit $exec :: (store (s32), addrspace 1)
 
   bb.3:
     $exec = S_OR_B64 $exec, %12,  implicit-def $scc

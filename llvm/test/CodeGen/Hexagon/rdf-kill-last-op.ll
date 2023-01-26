@@ -4,7 +4,7 @@
 target triple = "hexagon"
 
 %s.0 = type { %s.1 }
-%s.1 = type { i32, i8* }
+%s.1 = type { i32, ptr }
 
 @g0 = external unnamed_addr constant [6 x [2 x i32]], align 8
 @g1 = external constant %s.0, align 4
@@ -90,9 +90,9 @@ b21:                                              ; preds = %b35, %b19
   br i1 %v6, label %b35, label %b22
 
 b22:                                              ; preds = %b21
-  %v7 = load i32, i32* undef, align 4, !tbaa !0
-  %v8 = load i32, i32* undef, align 4, !tbaa !4
-  %v9 = load i32, i32* undef, align 4, !tbaa !4
+  %v7 = load i32, ptr undef, align 4, !tbaa !0
+  %v8 = load i32, ptr undef, align 4, !tbaa !4
+  %v9 = load i32, ptr undef, align 4, !tbaa !4
   %v10 = icmp ne i32 %v8, 0
   %v11 = and i1 %v10, undef
   %v12 = and i1 undef, %v11
@@ -109,15 +109,15 @@ b24:                                              ; preds = %b23, %b22
   %v17 = icmp ugt i16 %v16, undef
   %v18 = zext i1 %v17 to i32
   %v19 = add nsw i32 %v18, %v0
-  %v20 = load i8, i8* undef, align 4, !tbaa !6
+  %v20 = load i8, ptr undef, align 4, !tbaa !6
   %v21 = zext i8 %v20 to i32
   %v22 = sub nsw i32 6, %v21
   %v23 = add nsw i32 %v22, -1
   br i1 false, label %b39, label %b25, !prof !19
 
 b25:                                              ; preds = %b24
-  %v24 = getelementptr inbounds [6 x [2 x i32]], [6 x [2 x i32]]* @g0, i32 0, i32 %v21, i32 0
-  %v25 = load i32, i32* %v24, align 8, !tbaa !0
+  %v24 = getelementptr inbounds [6 x [2 x i32]], ptr @g0, i32 0, i32 %v21, i32 0
+  %v25 = load i32, ptr %v24, align 8, !tbaa !0
   %v26 = icmp eq i32 undef, %v25
   br i1 %v26, label %b26, label %b27
 
@@ -125,8 +125,8 @@ b26:                                              ; preds = %b25
   br i1 undef, label %b32, label %b27
 
 b27:                                              ; preds = %b26, %b25
-  %v27 = getelementptr inbounds [6 x [2 x i32]], [6 x [2 x i32]]* @g0, i32 0, i32 %v23, i32 0
-  %v28 = load i32, i32* %v27, align 8, !tbaa !0
+  %v27 = getelementptr inbounds [6 x [2 x i32]], ptr @g0, i32 0, i32 %v23, i32 0
+  %v28 = load i32, ptr %v27, align 8, !tbaa !0
   %v29 = icmp eq i32 undef, %v28
   br i1 %v29, label %b28, label %b29
 
@@ -134,8 +134,8 @@ b28:                                              ; preds = %b27
   br i1 undef, label %b32, label %b29
 
 b29:                                              ; preds = %b28, %b27
-  %v30 = load i32, i32* undef, align 4, !tbaa !4
-  %v31 = load i32, i32* undef, align 4, !tbaa !4
+  %v30 = load i32, ptr undef, align 4, !tbaa !4
+  %v31 = load i32, ptr undef, align 4, !tbaa !4
   %v32 = icmp ne i32 %v30, 0
   %v33 = and i1 %v32, undef
   %v34 = and i1 undef, %v33
@@ -156,7 +156,7 @@ b32:                                              ; preds = %b31, %b28, %b26
   br i1 undef, label %b33, label %b34
 
 b33:                                              ; preds = %b32
-  call void (%s.0*, i32, ...) @f1(%s.0* nonnull @g1, i32 6, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 %v7) #0
+  call void (ptr, i32, ...) @f1(ptr nonnull @g1, i32 6, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 %v7) #0
   br label %b34
 
 b34:                                              ; preds = %b33, %b32
@@ -187,7 +187,7 @@ b40:                                              ; preds = %b6
 }
 
 ; Function Attrs: nounwind
-declare void @f1(%s.0*, i32, ...) #0
+declare void @f1(ptr, i32, ...) #0
 
 attributes #0 = { nounwind "target-cpu"="hexagonv55" }
 

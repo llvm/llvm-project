@@ -10,6 +10,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdio>
 #include <cstring>
+#include <optional>
 #include <sys/sysctl.h>
 #include <sys/types.h>
 #include <sys/utsname.h>
@@ -30,7 +31,7 @@ llvm::VersionTuple HostInfoFreeBSD::GetOSVersion() {
   return llvm::VersionTuple();
 }
 
-llvm::Optional<std::string> HostInfoFreeBSD::GetOSBuildString() {
+std::optional<std::string> HostInfoFreeBSD::GetOSBuildString() {
   int mib[2] = {CTL_KERN, KERN_OSREV};
   uint32_t osrev = 0;
   size_t osrev_len = sizeof(osrev);
@@ -38,7 +39,7 @@ llvm::Optional<std::string> HostInfoFreeBSD::GetOSBuildString() {
   if (::sysctl(mib, 2, &osrev, &osrev_len, NULL, 0) == 0)
     return llvm::formatv("{0,8:8}", osrev).str();
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 FileSpec HostInfoFreeBSD::GetProgramFileSpec() {

@@ -27,10 +27,8 @@
 #include "sanitizer_common/sanitizer_file.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
-#include "sanitizer_common/sanitizer_list.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
-#include "sanitizer_common/sanitizer_vector.h"
 
 #include <sched.h>
 #include <time.h>
@@ -275,7 +273,7 @@ struct Allocator {
 
   static void PrintCallback(const uptr Key, LockedMemInfoBlock *const &Value,
                             void *Arg) {
-    SpinMutexLock(&Value->mutex);
+    SpinMutexLock l(&Value->mutex);
     Print(Value->mib, Key, bool(Arg));
   }
 

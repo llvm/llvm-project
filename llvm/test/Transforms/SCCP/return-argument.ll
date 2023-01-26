@@ -2,31 +2,31 @@
 ; RUN: opt < %s -passes=ipsccp -S | FileCheck %s
 
 ;; This function returns its second argument on all return statements
-define internal i32* @incdec(i1 %C, i32* %V) {
+define internal ptr @incdec(i1 %C, ptr %V) {
 ; CHECK-LABEL: @incdec(
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[V:%.*]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[V:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       T:
 ; CHECK-NEXT:    [[X1:%.*]] = add i32 [[X]], 1
-; CHECK-NEXT:    store i32 [[X1]], i32* [[V]], align 4
-; CHECK-NEXT:    ret i32* [[V]]
+; CHECK-NEXT:    store i32 [[X1]], ptr [[V]], align 4
+; CHECK-NEXT:    ret ptr [[V]]
 ; CHECK:       F:
 ; CHECK-NEXT:    [[X2:%.*]] = sub i32 [[X]], 1
-; CHECK-NEXT:    store i32 [[X2]], i32* [[V]], align 4
-; CHECK-NEXT:    ret i32* [[V]]
+; CHECK-NEXT:    store i32 [[X2]], ptr [[V]], align 4
+; CHECK-NEXT:    ret ptr [[V]]
 ;
-  %X = load i32, i32* %V
+  %X = load i32, ptr %V
   br i1 %C, label %T, label %F
 
 T:              ; preds = %0
   %X1 = add i32 %X, 1
-  store i32 %X1, i32* %V
-  ret i32* %V
+  store i32 %X1, ptr %V
+  ret ptr %V
 
 F:              ; preds = %0
   %X2 = sub i32 %X, 1
-  store i32 %X2, i32* %V
-  ret i32* %V
+  store i32 %X2, ptr %V
+  ret ptr %V
 }
 
 ;; This function returns its first argument as a part of a multiple return
@@ -44,10 +44,10 @@ define internal { i32, i32 } @foo(i32 %A, i32 %B) {
   ret { i32, i32 } %Z
 }
 
-define void @caller(i1 %C) personality i32 (...)* @__gxx_personality_v0 {
+define void @caller(i1 %C) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @caller(
 ; CHECK-NEXT:    [[Q:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[W:%.*]] = call i32* @incdec(i1 [[C:%.*]], i32* [[Q]])
+; CHECK-NEXT:    [[W:%.*]] = call ptr @incdec(i1 [[C:%.*]], ptr [[Q]])
 ; CHECK-NEXT:    [[S1:%.*]] = call { i32, i32 } @foo(i32 1, i32 2)
 ; CHECK-NEXT:    [[X1:%.*]] = extractvalue { i32, i32 } [[S1]], 0
 ; CHECK-NEXT:    [[S2:%.*]] = invoke { i32, i32 } @foo(i32 3, i32 4)
@@ -55,10 +55,10 @@ define void @caller(i1 %C) personality i32 (...)* @__gxx_personality_v0 {
 ; CHECK:       OK:
 ; CHECK-NEXT:    [[X2:%.*]] = extractvalue { i32, i32 } [[S2]], 0
 ; CHECK-NEXT:    [[Z:%.*]] = add i32 [[X1]], [[X2]]
-; CHECK-NEXT:    store i32 [[Z]], i32* [[W]], align 4
+; CHECK-NEXT:    store i32 [[Z]], ptr [[W]], align 4
 ; CHECK-NEXT:    br label [[RET:%.*]]
 ; CHECK:       LPAD:
-; CHECK-NEXT:    [[EXN:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EXN:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    br label [[RET]]
 ; CHECK:       RET:
@@ -66,7 +66,7 @@ define void @caller(i1 %C) personality i32 (...)* @__gxx_personality_v0 {
 ;
   %Q = alloca i32
   ;; Call incdec to see if %W is properly replaced by %Q
-  %W = call i32* @incdec(i1 %C, i32* %Q )             ; <i32> [#uses=1]
+  %W = call ptr @incdec(i1 %C, ptr %Q )             ; <i32> [#uses=1]
   ;; Call @foo twice, to prevent the arguments from propagating into the
   ;; function (so we can check the returned argument is properly
   ;; propagated per-caller).
@@ -78,11 +78,11 @@ OK:
   %X2 = extractvalue { i32, i32 } %S2, 0
   ;; Do some stuff with the returned values which we can grep for
   %Z  = add i32 %X1, %X2
-  store i32 %Z, i32* %W
+  store i32 %Z, ptr %W
   br label %RET
 
 LPAD:
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
   cleanup
   br label %RET
 

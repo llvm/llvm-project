@@ -44,8 +44,16 @@ struct UnwrappedLine {
   /// The indent level of the \c UnwrappedLine.
   unsigned Level;
 
+  /// The \c PPBranchLevel (adjusted for header guards) if this line is a
+  /// \c InMacroBody line, and 0 otherwise.
+  unsigned PPLevel;
+
   /// Whether this \c UnwrappedLine is part of a preprocessor directive.
   bool InPPDirective;
+  /// Whether this \c UnwrappedLine is part of a pramga directive.
+  bool InPragmaDirective;
+  /// Whether it is part of a macro body.
+  bool InMacroBody;
 
   bool MustBeDeclaration;
 
@@ -115,9 +123,9 @@ private:
   void parsePPDirective();
   void parsePPDefine();
   void parsePPIf(bool IfDef);
-  void parsePPElIf();
   void parsePPElse();
   void parsePPEndIf();
+  void parsePPPragma();
   void parsePPUnknown();
   void readTokenWithJavaScriptASI();
   void parseStructuralElement(bool IsTopLevel = false,
@@ -135,6 +143,7 @@ private:
   void parseUnbracedBody(bool CheckEOF = false);
   void handleAttributes();
   bool handleCppAttributes();
+  bool isBlockBegin(const FormatToken &Tok) const;
   FormatToken *parseIfThenElse(IfStmtKind *IfKind, bool KeepBraces = false);
   void parseTryCatch();
   void parseLoopBody(bool KeepBraces, bool WrapRightBrace);
@@ -149,7 +158,6 @@ private:
   void parseAccessSpecifier();
   bool parseEnum();
   bool parseStructLike();
-  void parseConcept();
   bool parseRequires();
   void parseRequiresClause(FormatToken *RequiresToken);
   void parseRequiresExpression(FormatToken *RequiresToken);
@@ -208,7 +216,7 @@ private:
   //
   // NextTok specifies the next token. A null pointer NextTok is supported, and
   // signifies either the absence of a next token, or that the next token
-  // shouldn't be taken into accunt for the analysis.
+  // shouldn't be taken into account for the analysis.
   void distributeComments(const SmallVectorImpl<FormatToken *> &Comments,
                           const FormatToken *NextTok);
 
@@ -353,7 +361,8 @@ struct UnwrappedLineNode {
 };
 
 inline UnwrappedLine::UnwrappedLine()
-    : Level(0), InPPDirective(false), MustBeDeclaration(false),
+    : Level(0), PPLevel(0), InPPDirective(false), InPragmaDirective(false),
+      InMacroBody(false), MustBeDeclaration(false),
       MatchingOpeningBlockLineIndex(kInvalidIndex) {}
 
 } // end namespace format

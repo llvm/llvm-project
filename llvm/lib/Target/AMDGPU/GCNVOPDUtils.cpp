@@ -17,6 +17,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -36,11 +37,12 @@ using namespace llvm;
 bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
                                    const MachineInstr &FirstMI,
                                    const MachineInstr &SecondMI) {
+  namespace VOPD = AMDGPU::VOPD;
+
   const MachineFunction *MF = FirstMI.getMF();
   const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = dyn_cast<SIRegisterInfo>(ST.getRegisterInfo());
   const MachineRegisterInfo &MRI = MF->getRegInfo();
-  const unsigned NumVGPRBanks = 4;
   // Literals also count against scalar bus limit
   SmallVector<const MachineOperand *> UniqueLiterals;
   auto addLiteral = [&](const MachineOperand &Op) {
@@ -64,75 +66,44 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
     if (Use.isReg() && FirstMI.modifiesRegister(Use.getReg()))
       return false;
 
-  struct ComponentInfo {
-    ComponentInfo(const MachineInstr &MI) : MI(MI) {}
-    Register Dst, Reg0, Reg1, Reg2;
-    const MachineInstr &MI;
+  auto getVRegIdx = [&](unsigned OpcodeIdx, unsigned OperandIdx) {
+    const MachineInstr &MI = (OpcodeIdx == VOPD::X) ? FirstMI : SecondMI;
+    const MachineOperand &Operand = MI.getOperand(OperandIdx);
+    if (Operand.isReg() && TRI->isVectorRegister(MRI, Operand.getReg()))
+      return Operand.getReg();
+    return Register();
   };
-  ComponentInfo CInfo[] = {ComponentInfo(FirstMI), ComponentInfo(SecondMI)};
 
-  for (ComponentInfo &Comp : CInfo) {
-    switch (Comp.MI.getOpcode()) {
-    case AMDGPU::V_FMAMK_F32:
-      // cannot inline the fixed literal in fmamk
-      addLiteral(Comp.MI.getOperand(2));
-      Comp.Reg2 = Comp.MI.getOperand(3).getReg();
-      break;
-    case AMDGPU::V_FMAAK_F32:
-      // cannot inline the fixed literal in fmaak
-      addLiteral(Comp.MI.getOperand(3));
-      Comp.Reg1 = Comp.MI.getOperand(2).getReg();
-      break;
-    case AMDGPU::V_FMAC_F32_e32:
-    case AMDGPU::V_DOT2_F32_F16:
-    case AMDGPU::V_DOT2_F32_BF16:
-      Comp.Reg1 = Comp.MI.getOperand(2).getReg();
-      Comp.Reg2 = Comp.MI.getOperand(0).getReg();
-      break;
-    case AMDGPU::V_CNDMASK_B32_e32:
-      UniqueScalarRegs.push_back(AMDGPU::VCC_LO);
-      Comp.Reg1 = Comp.MI.getOperand(2).getReg();
-      break;
-    case AMDGPU::V_MOV_B32_e32:
-      break;
-    default:
-      Comp.Reg1 = Comp.MI.getOperand(2).getReg();
-      break;
-    }
+  auto InstInfo =
+      AMDGPU::getVOPDInstInfo(FirstMI.getDesc(), SecondMI.getDesc());
 
-    Comp.Dst = Comp.MI.getOperand(0).getReg();
+  for (auto CompIdx : VOPD::COMPONENTS) {
+    const MachineInstr &MI = (CompIdx == VOPD::X) ? FirstMI : SecondMI;
 
-    const MachineOperand &Op0 = Comp.MI.getOperand(1);
-    if (Op0.isReg()) {
-      if (!TRI->isVectorRegister(MRI, Op0.getReg())) {
-        if (!is_contained(UniqueScalarRegs, Op0.getReg()))
-          UniqueScalarRegs.push_back(Op0.getReg());
-      } else
-        Comp.Reg0 = Op0.getReg();
+    const MachineOperand &Src0 = MI.getOperand(VOPD::Component::SRC0);
+    if (Src0.isReg()) {
+      if (!TRI->isVectorRegister(MRI, Src0.getReg())) {
+        if (!is_contained(UniqueScalarRegs, Src0.getReg()))
+          UniqueScalarRegs.push_back(Src0.getReg());
+      }
     } else {
-      if (!TII.isInlineConstant(Comp.MI, 1))
-        addLiteral(Op0);
+      if (!TII.isInlineConstant(MI, VOPD::Component::SRC0))
+        addLiteral(Src0);
     }
+
+    if (InstInfo[CompIdx].hasMandatoryLiteral()) {
+      auto CompOprIdx = InstInfo[CompIdx].getMandatoryLiteralCompOperandIndex();
+      addLiteral(MI.getOperand(CompOprIdx));
+    }
+    if (MI.getDesc().hasImplicitUseOfPhysReg(AMDGPU::VCC))
+      UniqueScalarRegs.push_back(AMDGPU::VCC_LO);
   }
 
   if (UniqueLiterals.size() > 1)
     return false;
   if ((UniqueLiterals.size() + UniqueScalarRegs.size()) > 2)
     return false;
-
-  // check port 0
-  if (CInfo[0].Reg0 && CInfo[1].Reg0 &&
-      CInfo[0].Reg0 % NumVGPRBanks == CInfo[1].Reg0 % NumVGPRBanks)
-    return false;
-  // check port 1
-  if (CInfo[0].Reg1 && CInfo[1].Reg1 &&
-      CInfo[0].Reg1 % NumVGPRBanks == CInfo[1].Reg1 % NumVGPRBanks)
-    return false;
-  // check port 2
-  if (CInfo[0].Reg2 && CInfo[1].Reg2 &&
-      !((CInfo[0].Reg2 ^ CInfo[1].Reg2) & 0x1))
-    return false;
-  if (!((CInfo[0].Dst ^ CInfo[1].Dst) & 0x1))
+  if (InstInfo.hasInvalidOperand(getVRegIdx))
     return false;
 
   LLVM_DEBUG(dbgs() << "VOPD Reg Constraints Passed\n\tX: " << FirstMI
@@ -165,6 +136,7 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
   return checkVOPDRegConstraints(STII, *FirstMI, SecondMI);
 }
 
+namespace {
 /// Adapts design from MacroFusion
 /// Puts valid candidate instructions back-to-back so they can easily
 /// be turned into VOPD instructions
@@ -206,6 +178,7 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
     LLVM_DEBUG(dbgs() << "Completed VOPDPairingMutation\n");
   }
 };
+} // namespace
 
 std::unique_ptr<ScheduleDAGMutation> llvm::createVOPDPairingMutation() {
   return std::make_unique<VOPDPairingMutation>(shouldScheduleVOPDAdjacent);

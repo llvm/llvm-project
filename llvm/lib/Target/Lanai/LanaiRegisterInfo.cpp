@@ -128,7 +128,7 @@ static unsigned getRRMOpcodeVariant(unsigned Opcode) {
   }
 }
 
-void LanaiRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
+bool LanaiRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                             int SPAdj, unsigned FIOperandNum,
                                             RegScavenger *RS) const {
   assert(SPAdj == 0 && "Unexpected");
@@ -200,7 +200,7 @@ void LanaiRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
           .addReg(Reg)
           .addImm(LPCC::ICC_T);
       MI.eraseFromParent();
-      return;
+      return true;
     }
     if (isSPLSOpcode(MI.getOpcode()) || isRMOpcode(MI.getOpcode())) {
       MI.setDesc(TII->get(getRRMOpcodeVariant(MI.getOpcode())));
@@ -218,7 +218,7 @@ void LanaiRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     MI.getOperand(FIOperandNum + 1)
         .ChangeToRegister(Reg, /*isDef=*/false, /*isImp=*/false,
                           /*isKill=*/true);
-    return;
+    return false;
   }
 
   // ALU arithmetic ops take unsigned immediates. If the offset is negative,
@@ -239,6 +239,7 @@ void LanaiRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     MI.getOperand(FIOperandNum).ChangeToRegister(FrameReg, /*isDef=*/false);
     MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
   }
+  return false;
 }
 
 bool LanaiRegisterInfo::hasBasePointer(const MachineFunction &MF) const {

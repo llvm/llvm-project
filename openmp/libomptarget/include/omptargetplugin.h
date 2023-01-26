@@ -117,8 +117,9 @@ int32_t __tgt_rtl_data_exchange_async(int32_t SrcID, void *SrcPtr,
                                       __tgt_async_info *AsyncInfo);
 
 // De-allocate the data referenced by target ptr on the device. In case of
-// success, return zero. Otherwise, return an error code.
-int32_t __tgt_rtl_data_delete(int32_t ID, void *TargetPtr);
+// success, return zero. Otherwise, return an error code. Kind dictates what
+// allocator to use (e.g. shared, host, device).
+int32_t __tgt_rtl_data_delete(int32_t ID, void *TargetPtr, int32_t Kind);
 
 // Transfer control to the offloaded entry Entry on the target device.
 // Args and Offsets are arrays of NumArgs size of target addresses and
@@ -155,6 +156,16 @@ int32_t __tgt_rtl_run_target_team_region_async(
 // error code.
 int32_t __tgt_rtl_synchronize(int32_t ID, __tgt_async_info *AsyncInfo);
 
+// Queries for the completion of asynchronous operations. Instead of blocking
+// the calling thread as __tgt_rtl_synchronize, the progress of the operations
+// stored in AsyncInfo->Queue is queried in a non-blocking manner, partially
+// advancing their execution. If all operations are completed, AsyncInfo->Queue
+// is set to nullptr. If there are still pending operations, AsyncInfo->Queue is
+// kept as a valid queue. In any case of success (i.e., successful query
+// with/without completing all operations), return zero. Otherwise, return an
+// error code.
+int32_t __tgt_rtl_query_async(int32_t ID, __tgt_async_info *AsyncInfo);
+
 // Set plugin's internal information flag externally.
 void __tgt_rtl_set_info_flag(uint32_t);
 
@@ -190,6 +201,13 @@ int32_t __tgt_rtl_destroy_event(int32_t ID, void *Event);
 int32_t __tgt_rtl_init_async_info(int32_t ID, __tgt_async_info **AsyncInfoPtr);
 int32_t __tgt_rtl_init_device_info(int32_t ID, __tgt_device_info *DeviceInfoPtr,
                                    const char **ErrStr);
+
+// lock/pin host memory
+int32_t __tgt_rtl_data_lock(int32_t ID, void *HstPtr, int64_t Size,
+                            void **LockedPtr);
+
+// unlock/unpin host memory
+int32_t __tgt_rtl_data_unlock(int32_t ID, void *HstPtr);
 
 #ifdef __cplusplus
 }

@@ -1,6 +1,3 @@
-; RUN: opt -mcpu=cyclone -mtriple=arm64-apple-ios -loop-data-prefetch \
-; RUN:     -pass-remarks=loop-data-prefetch -S -max-prefetch-iters-ahead=100 \
-; RUN:     < %s 2>&1 | FileCheck %s
 ; RUN: opt -mcpu=cyclone -mtriple=arm64-apple-ios -passes=loop-data-prefetch \
 ; RUN:     -pass-remarks=loop-data-prefetch -S -max-prefetch-iters-ahead=100 \
 ; RUN:     < %s 2>&1 | FileCheck %s
@@ -27,15 +24,15 @@ target triple = "arm64-apple-ios5.0.0"
 
 %struct.MyStruct = type { i32, [2044 x i8] }
 
-@my_struct = common global %struct.MyStruct* null, align 8
+@my_struct = common global ptr null, align 8
 
-define i32 @f(%struct.MyStruct* nocapture readnone %p, i32 %N) !dbg !6 {
+define i32 @f(ptr nocapture readnone %p, i32 %N) !dbg !6 {
 entry:
   %cmp6 = icmp sgt i32 %N, 0, !dbg !8
   br i1 %cmp6, label %for.body.lr.ph, label %for.cond.cleanup, !dbg !9
 
 for.body.lr.ph:                                   ; preds = %entry
-  %0 = load %struct.MyStruct*, %struct.MyStruct** @my_struct, align 8, !dbg !10, !tbaa !11
+  %0 = load ptr, ptr @my_struct, align 8, !dbg !10, !tbaa !11
   br label %for.body, !dbg !9
 
 for.cond.cleanup:                                 ; preds = %for.body, %entry
@@ -45,8 +42,8 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 for.body:                                         ; preds = %for.body, %for.body.lr.ph
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body ]
   %total.07 = phi i32 [ 0, %for.body.lr.ph ], [ %add, %for.body ]
-  %field = getelementptr inbounds %struct.MyStruct, %struct.MyStruct* %0, i64 %indvars.iv, i32 0, !dbg !16
-  %1 = load i32, i32* %field, align 4, !dbg !16, !tbaa !17
+  %field = getelementptr inbounds %struct.MyStruct, ptr %0, i64 %indvars.iv, i32 0, !dbg !16
+  %1 = load i32, ptr %field, align 4, !dbg !16, !tbaa !17
   %add = add nsw i32 %1, %total.07, !dbg !20
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !9
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !9

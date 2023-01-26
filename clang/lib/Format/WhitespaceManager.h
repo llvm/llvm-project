@@ -199,7 +199,7 @@ private:
     SmallVector<unsigned> CellCounts;
     unsigned InitialSpaces = 0;
 
-    // Determine if every row in the the array
+    // Determine if every row in the array
     // has the same number of columns.
     bool isRectangular() const {
       if (CellCounts.empty())

@@ -3,7 +3,7 @@
 // REQUIRES: stable-runtime
 // XFAIL: android && asan
 // No libutil.
-// UNSUPPORTED: solaris
+// UNSUPPORTED: target={{.*solaris.*}}
 
 #include <assert.h>
 #include <stdio.h>

@@ -4,19 +4,16 @@
 
 ; CHECK-LABEL: f0:
 ; CHECK-NOT: vcombine
-define void @f0(i8* nocapture readonly %a0, i8* nocapture readonly %a1, i32 %a2, i8* nocapture %a3, i32 %a4, i32 %a5) #0 {
+define void @f0(ptr nocapture readonly %a0, ptr nocapture readonly %a1, i32 %a2, ptr nocapture %a3, i32 %a4, i32 %a5) #0 {
 b0:
-  %v0 = bitcast i8* %a1 to i64*
-  %v1 = load i64, i64* %v0, align 8
+  %v1 = load i64, ptr %a1, align 8
   %v2 = shl i64 %v1, 8
   %v3 = trunc i64 %v2 to i32
   %v4 = trunc i64 %v1 to i32
   %v5 = and i32 %v4, 16777215
-  %v6 = bitcast i8* %a0 to <32 x i32>*
-  %v7 = load <32 x i32>, <32 x i32>* %v6, align 128
-  %v8 = getelementptr inbounds i8, i8* %a0, i32 32
-  %v9 = bitcast i8* %v8 to <32 x i32>*
-  %v10 = load <32 x i32>, <32 x i32>* %v9, align 128
+  %v7 = load <32 x i32>, ptr %a0, align 128
+  %v8 = getelementptr inbounds i8, ptr %a0, i32 32
+  %v10 = load <32 x i32>, ptr %v8, align 128
   %v11 = tail call <64 x i32> @llvm.hexagon.V6.vcombine.128B(<32 x i32> %v10, <32 x i32> %v7)
   %v12 = tail call <64 x i32> @llvm.hexagon.V6.vrmpybusi.128B(<64 x i32> %v11, i32 %v5, i32 0)
   %v13 = tail call <64 x i32> @llvm.hexagon.V6.vrmpybusi.128B(<64 x i32> %v11, i32 %v3, i32 0)
@@ -24,11 +21,9 @@ b0:
   %v15 = tail call <32 x i32> @llvm.hexagon.V6.vasrwuhsat.128B(<32 x i32> %v14, <32 x i32> %v14, i32 %a2)
   %v16 = tail call <32 x i32> @llvm.hexagon.V6.lo.128B(<64 x i32> %v13)
   %v17 = tail call <32 x i32> @llvm.hexagon.V6.vasrwuhsat.128B(<32 x i32> %v16, <32 x i32> %v16, i32 %a2)
-  %v18 = getelementptr inbounds i8, i8* %a3, i32 32
-  %v19 = bitcast i8* %v18 to <32 x i32>*
-  store <32 x i32> %v15, <32 x i32>* %v19, align 128
-  %v20 = bitcast i8* %a3 to <32 x i32>*
-  store <32 x i32> %v17, <32 x i32>* %v20, align 128
+  %v18 = getelementptr inbounds i8, ptr %a3, i32 32
+  store <32 x i32> %v15, ptr %v18, align 128
+  store <32 x i32> %v17, ptr %a3, align 128
   ret void
 }
 

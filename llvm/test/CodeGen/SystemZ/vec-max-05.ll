@@ -157,77 +157,77 @@ define <4 x float> @f17(<4 x float> %dummy, <4 x float> %val1,
 }
 
 ; Test the fmaxl library function.
-define void @f21(fp128 *%ptr1, fp128 *%ptr2, fp128 *%dst) {
+define void @f21(ptr %ptr1, ptr %ptr2, ptr %dst) {
 ; CHECK-LABEL: f21:
 ; CHECK-DAG: vl [[REG1:%v[0-9]+]], 0(%r2)
 ; CHECK-DAG: vl [[REG2:%v[0-9]+]], 0(%r3)
 ; CHECK: wfmaxxb [[RES:%v[0-9]+]], [[REG1]], [[REG2]], 4
 ; CHECK: vst [[RES]], 0(%r4)
 ; CHECK: br %r14
-  %val1 = load fp128, fp128* %ptr1
-  %val2 = load fp128, fp128* %ptr2
+  %val1 = load fp128, ptr %ptr1
+  %val2 = load fp128, ptr %ptr2
   %res = call fp128 @fmaxl(fp128 %val1, fp128 %val2) readnone
-  store fp128 %res, fp128* %dst
+  store fp128 %res, ptr %dst
   ret void
 }
 
 ; Test the f128 maxnum intrinsic.
-define void @f22(fp128 *%ptr1, fp128 *%ptr2, fp128 *%dst) {
+define void @f22(ptr %ptr1, ptr %ptr2, ptr %dst) {
 ; CHECK-LABEL: f22:
 ; CHECK-DAG: vl [[REG1:%v[0-9]+]], 0(%r2)
 ; CHECK-DAG: vl [[REG2:%v[0-9]+]], 0(%r3)
 ; CHECK: wfmaxxb [[RES:%v[0-9]+]], [[REG1]], [[REG2]], 4
 ; CHECK: vst [[RES]], 0(%r4)
 ; CHECK: br %r14
-  %val1 = load fp128, fp128* %ptr1
-  %val2 = load fp128, fp128* %ptr2
+  %val1 = load fp128, ptr %ptr1
+  %val2 = load fp128, ptr %ptr2
   %res = call fp128 @llvm.maxnum.f128(fp128 %val1, fp128 %val2)
-  store fp128 %res, fp128* %dst
+  store fp128 %res, ptr %dst
   ret void
 }
 
 ; Test the f128 maximum intrinsic.
-define void @f23(fp128 *%ptr1, fp128 *%ptr2, fp128 *%dst) {
+define void @f23(ptr %ptr1, ptr %ptr2, ptr %dst) {
 ; CHECK-LABEL: f23:
 ; CHECK-DAG: vl [[REG1:%v[0-9]+]], 0(%r2)
 ; CHECK-DAG: vl [[REG2:%v[0-9]+]], 0(%r3)
 ; CHECK: wfmaxxb [[RES:%v[0-9]+]], [[REG1]], [[REG2]], 1
 ; CHECK: vst [[RES]], 0(%r4)
 ; CHECK: br %r14
-  %val1 = load fp128, fp128* %ptr1
-  %val2 = load fp128, fp128* %ptr2
+  %val1 = load fp128, ptr %ptr1
+  %val2 = load fp128, ptr %ptr2
   %res = call fp128 @llvm.maximum.f128(fp128 %val1, fp128 %val2)
-  store fp128 %res, fp128* %dst
+  store fp128 %res, ptr %dst
   ret void
 }
 
 ; Test a f128 constant compare/select resulting in maxnum.
-define void @f24(fp128 *%ptr, fp128 *%dst) {
+define void @f24(ptr %ptr, ptr %dst) {
 ; CHECK-LABEL: f24:
 ; CHECK-DAG: vl [[REG1:%v[0-9]+]], 0(%r2)
 ; CHECK-DAG: vzero [[REG2:%v[0-9]+]]
 ; CHECK: wfmaxxb [[RES:%v[0-9]+]], [[REG1]], [[REG2]], 4
 ; CHECK: vst [[RES]], 0(%r3)
 ; CHECK: br %r14
-  %val = load fp128, fp128* %ptr
+  %val = load fp128, ptr %ptr
   %cmp = fcmp ogt fp128 %val, 0xL00000000000000000000000000000000
   %res = select i1 %cmp, fp128 %val, fp128 0xL00000000000000000000000000000000
-  store fp128 %res, fp128* %dst
+  store fp128 %res, ptr %dst
   ret void
 }
 
 ; Test a f128 constant compare/select resulting in maximum.
-define void @f25(fp128 *%ptr, fp128 *%dst) {
+define void @f25(ptr %ptr, ptr %dst) {
 ; CHECK-LABEL: f25:
 ; CHECK-DAG: vl [[REG1:%v[0-9]+]], 0(%r2)
 ; CHECK-DAG: vzero [[REG2:%v[0-9]+]]
 ; CHECK: wfmaxxb [[RES:%v[0-9]+]], [[REG1]], [[REG2]], 1
 ; CHECK: vst [[RES]], 0(%r3)
 ; CHECK: br %r14
-  %val = load fp128, fp128* %ptr
+  %val = load fp128, ptr %ptr
   %cmp = fcmp ugt fp128 %val, 0xL00000000000000000000000000000000
   %res = select i1 %cmp, fp128 %val, fp128 0xL00000000000000000000000000000000
-  store fp128 %res, fp128* %dst
+  store fp128 %res, ptr %dst
   ret void
 }
 

@@ -21,4 +21,10 @@ entry:
   ret i32 %sub
 }
 
+define i32 @test3() skipprofile {
+entry:
+; CHECK-NOT: call void @llvm.instrprof.increment
+  ret i32 101
+}
+
 attributes #0 = { noprofile }

@@ -26,8 +26,15 @@ check_cxx_compiler_flag(-Wimplicit-fallthrough OPENMP_HAVE_WIMPLICIT_FALLTHROUGH
 check_cxx_compiler_flag(-Wsign-compare OPENMP_HAVE_WSIGN_COMPARE_FLAG)
 
 # Warnings that we want to disable because they are too verbose or fragile.
-check_cxx_compiler_flag(-Wno-extra OPENMP_HAVE_WNO_EXTRA_FLAG)
-check_cxx_compiler_flag(-Wno-pedantic OPENMP_HAVE_WNO_PEDANTIC_FLAG)
-check_cxx_compiler_flag(-Wno-maybe-uninitialized OPENMP_HAVE_WNO_MAYBE_UNINITIALIZED_FLAG)
 
-check_cxx_compiler_flag(-std=c++14 OPENMP_HAVE_STD_CPP14_FLAG)
+# GCC silently accepts any -Wno-<foo> option, but warns about those options
+# being unrecognized only if the compilation triggers other warnings to be
+# printed. Therefore, check for whether the compiler supports options in the
+# form -W<foo>, and if supported, add the corresponding -Wno-<foo> option.
+
+check_cxx_compiler_flag(-Wenum-constexpr-conversion OPENMP_HAVE_WENUM_CONSTEXPR_CONVERSION_FLAG)
+check_cxx_compiler_flag(-Wextra OPENMP_HAVE_WEXTRA_FLAG)
+check_cxx_compiler_flag(-Wpedantic OPENMP_HAVE_WPEDANTIC_FLAG)
+check_cxx_compiler_flag(-Wmaybe-uninitialized OPENMP_HAVE_WMAYBE_UNINITIALIZED_FLAG)
+
+check_cxx_compiler_flag(-std=c++17 OPENMP_HAVE_STD_CPP17_FLAG)

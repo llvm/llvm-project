@@ -9,7 +9,7 @@
 # CHECK: r1 = memw(r0++#8)
 
 --- |
-  define void @fred(i32* %a) { ret void }
+  define void @fred(ptr %a) { ret void }
 ...
 ---
 name: fred

@@ -249,7 +249,7 @@ bool lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetDataType() {
   static ConstString g_tree_("__tree_");
   static ConstString g_pair3("__pair3_");
 
-  if (m_element_type.GetOpaqueQualType() && m_element_type.GetTypeSystem())
+  if (m_element_type.IsValid())
     return true;
   m_element_type.Clear();
   ValueObjectSP deref;
@@ -295,8 +295,7 @@ void lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetValueOffset(
       UINT32_MAX) {
     m_skip_size = bit_offset / 8u;
   } else {
-    TypeSystemClang *ast_ctx =
-        llvm::dyn_cast_or_null<TypeSystemClang>(node_type.GetTypeSystem());
+    auto ast_ctx = node_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
     if (!ast_ctx)
       return;
     CompilerType tree_node_type = ast_ctx->CreateStructForIdentifier(
@@ -328,7 +327,7 @@ void lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetValueOffset(
 lldb::ValueObjectSP
 lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
     size_t idx) {
-  static ConstString g_cc("__cc");
+  static ConstString g_cc_("__cc_"), g_cc("__cc");
   static ConstString g_nc("__nc");
   static ConstString g_value_("__value_");
 
@@ -414,15 +413,17 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
     switch (potential_child_sp->GetNumChildren()) {
     case 1: {
       auto child0_sp = potential_child_sp->GetChildAtIndex(0, true);
-      if (child0_sp && child0_sp->GetName() == g_cc)
+      if (child0_sp &&
+          (child0_sp->GetName() == g_cc_ || child0_sp->GetName() == g_cc))
         potential_child_sp = child0_sp->Clone(ConstString(name.GetString()));
       break;
     }
     case 2: {
       auto child0_sp = potential_child_sp->GetChildAtIndex(0, true);
       auto child1_sp = potential_child_sp->GetChildAtIndex(1, true);
-      if (child0_sp && child0_sp->GetName() == g_cc && child1_sp &&
-          child1_sp->GetName() == g_nc)
+      if (child0_sp &&
+          (child0_sp->GetName() == g_cc_ || child0_sp->GetName() == g_cc) &&
+          child1_sp && child1_sp->GetName() == g_nc)
         potential_child_sp = child0_sp->Clone(ConstString(name.GetString()));
       break;
     }

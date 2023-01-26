@@ -14,8 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_TRACE_H_
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_TRACE_H_
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_TRACE_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_TRACE_H
 
 #include "support/Context.h"
 #include "llvm/ADT/StringRef.h"

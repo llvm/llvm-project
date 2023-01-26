@@ -12,9 +12,29 @@
 
 #include "Utils.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/GlobalAlias.h"
+#include "llvm/IR/GlobalIFunc.h"
 
 using namespace llvm;
 
+extern cl::OptionCategory LLVMReduceOptions;
+
+cl::opt<bool> llvm::Verbose("verbose",
+                            cl::desc("Print extra debugging information"),
+                            cl::init(false), cl::cat(LLVMReduceOptions));
+
 Value *llvm::getDefaultValue(Type *T) {
   return T->isVoidTy() ? PoisonValue::get(T) : Constant::getNullValue(T);
+}
+
+bool llvm::hasAliasUse(Function &F) {
+  return any_of(F.users(), [](User *U) {
+      return isa<GlobalAlias>(U) || isa<GlobalIFunc>(U);
+    });
+}
+
+bool llvm::hasAliasOrBlockAddressUse(Function &F) {
+  return any_of(F.users(), [](User *U) {
+    return isa<GlobalAlias, GlobalIFunc, BlockAddress>(U);
+  });
 }

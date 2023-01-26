@@ -61,7 +61,7 @@ gcc ^
   -O3 ^
   -fomit-frame-pointer ^
   -msse3 ^
-  -std=c++14
+  -std=c++17
 
 rem "-msse3" used above to ensure continued support of older
 rem cpus (for now), see https://github.com/golang/go/issues/53743.

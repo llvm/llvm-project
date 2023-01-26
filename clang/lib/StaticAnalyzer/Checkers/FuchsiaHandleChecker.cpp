@@ -101,6 +101,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "llvm/ADT/StringExtras.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -300,7 +301,7 @@ getFuchsiaHandleSymbols(QualType QT, SVal Arg, ProgramStateRef State) {
       }
     } else {
       assert(PtrToHandleLevel == 1);
-      if (Optional<Loc> ArgLoc = Arg.getAs<Loc>()) {
+      if (std::optional<Loc> ArgLoc = Arg.getAs<Loc>()) {
         SymbolRef Sym = State->getSVal(*ArgLoc).getAsSymbol();
         if (Sym) {
           return {Sym};

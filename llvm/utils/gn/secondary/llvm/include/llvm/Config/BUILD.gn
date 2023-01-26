@@ -2,6 +2,7 @@ import("//llvm/lib/DebugInfo/PDB/enable_dia.gni")
 import("//llvm/lib/Target/targets.gni")
 import("//llvm/lib/Target/targets_with_asm_parsers.gni")
 import("//llvm/lib/Target/targets_with_disassemblers.gni")
+import("//llvm/lib/Target/targets_with_exegesis.gni")
 import("//llvm/lib/Target/targets_with_mcas.gni")
 import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/buildflags.gni")
@@ -95,7 +96,6 @@ write_cmake_config("config") {
     "HAVE_LIBPSAPI=",
     "HAVE_MALLCTL=",
     "HAVE_SIGNAL_H=1",
-    "HAVE_STD_IS_TRIVIALLY_COPYABLE=1",
     "HAVE_STRERROR=1",
     "HAVE_SYS_STAT_H=1",
     "HAVE_SYS_TYPES_H=1",
@@ -326,7 +326,7 @@ write_cmake_config("llvm-config") {
     "LLVM_FORCE_ENABLE_STATS=",
     "LLVM_FORCE_USE_OLD_TOOLCHAIN=",
     "LLVM_HAS_ATOMICS=1",
-    "LLVM_HAVE_TF_API=",
+    "LLVM_HAVE_TFLITE=",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_NATIVE_ARCH=$native_target",
     "LLVM_UNREACHABLE_OPTIMIZE=1",
@@ -365,11 +365,13 @@ write_cmake_config("llvm-config") {
   if (current_os == "win") {
     values += [
       "HAVE_SYSEXITS_H=",
+      "LLVM_ENABLE_PLUGINS=",
       "LLVM_ON_UNIX=",
     ]
   } else {
     values += [
       "HAVE_SYSEXITS_H=1",
+      "LLVM_ENABLE_PLUGINS=1",
       "LLVM_ON_UNIX=1",
     ]
   }
@@ -466,6 +468,12 @@ write_target_def_file("TargetMCAs.def") {
   all_targets = targets_with_mcas
 }
 
+write_target_def_file("TargetExegesis.def") {
+  key = "LLVM_ENUM_EXEGESIS"
+  value = "LLVM_EXEGESIS"
+  all_targets = targets_with_exegesis
+}
+
 group("write_target_def_files") {
   visibility = [
     "//llvm/lib/Support",
@@ -475,6 +483,7 @@ group("write_target_def_files") {
     ":AsmParsers.def",
     ":AsmPrinters.def",
     ":Disassemblers.def",
+    ":TargetExegesis.def",
     ":TargetMCAs.def",
     ":Targets.def",
   ]

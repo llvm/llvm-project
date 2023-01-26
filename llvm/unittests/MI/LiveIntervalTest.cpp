@@ -44,9 +44,9 @@ std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
     return nullptr;
 
   TargetOptions Options;
-  return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine*>(
-      T->createTargetMachine("AMDGPU", "gfx900", "", Options, None, None,
-                             CodeGenOpt::Aggressive)));
+  return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+      T->createTargetMachine("AMDGPU", "gfx900", "", Options, std::nullopt,
+                             std::nullopt, CodeGenOpt::Aggressive)));
 }
 
 std::unique_ptr<Module> parseMIR(LLVMContext &Context,

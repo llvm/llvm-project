@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -debug-only=loop-vectorize -S -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -debug-only=loop-vectorize -S -disable-output 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; Make sure LV legal bails out when there is a non-int, non-ptr phi
@@ -23,12 +23,12 @@ for.end:
 ; Make sure LV legal bails out when the loop doesn't have a legal pre-header.
 ; CHECK-LABEL: 'inc'
 ; CHECK: LV: Not vectorizing: Loop doesn't have a legal pre-header.
-define void @inc(i32 %n, i8* %P) {
+define void @inc(i32 %n, ptr %P) {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %BB1, label %BB2
 
 BB1:
-  indirectbr i8* %P, [label %.lr.ph]
+  indirectbr ptr %P, [label %.lr.ph]
 
 BB2:
   br label %.lr.ph

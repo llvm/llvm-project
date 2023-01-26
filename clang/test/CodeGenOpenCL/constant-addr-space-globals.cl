@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple "spir64-unknown-unknown" -cl-opt-disable -ffake-address-space-map -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple "spir64-unknown-unknown" -cl-opt-disable -ffake-address-space-map -emit-llvm -o - | FileCheck %s
 
 // CHECK: @array ={{.*}} addrspace({{[0-9]+}}) constant
 __constant float array[2] = {0.0f, 1.0f};
@@ -26,6 +26,6 @@ kernel void k(void) {
 
   constant int var1 = 1;
   
-  // CHECK: call spir_func void @foo(i32 addrspace(2)* noundef @k.var1, i32 addrspace(2)* noundef getelementptr inbounds ([3 x i32], [3 x i32] addrspace(2)* @k.arr1, i64 0, i64 0)
+  // CHECK: call spir_func void @foo(ptr addrspace(2) noundef @k.var1, ptr addrspace(2) noundef @k.arr1
   foo(&var1, arr1, arr2, arr3);
 }

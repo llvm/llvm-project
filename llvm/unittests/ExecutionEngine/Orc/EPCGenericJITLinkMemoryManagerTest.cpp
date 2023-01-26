@@ -46,9 +46,9 @@ public:
       assert(Seg.Size <= std::numeric_limits<size_t>::max());
       if (auto EC = sys::Memory::protectMappedMemory(
               {Mem, static_cast<size_t>(Seg.Size)},
-              tpctypes::fromWireProtectionFlags(Seg.Prot)))
+              toSysMemoryProtectionFlags(Seg.AG.getMemProt())))
         return errorCodeToError(EC);
-      if (Seg.Prot & tpctypes::WPF_Exec)
+      if ((Seg.AG.getMemProt() & MemProt::Exec) != MemProt::Exec)
         sys::Memory::InvalidateInstructionCache(Mem, Seg.Size);
     }
     return Error::success();
@@ -117,9 +117,9 @@ TEST(EPCGenericJITLinkMemoryManagerTest, AllocFinalizeFree) {
 
   StringRef Hello = "hello";
   auto SSA = jitlink::SimpleSegmentAlloc::Create(
-      *MemMgr, nullptr, {{jitlink::MemProt::Read, {Hello.size(), Align(1)}}});
+      *MemMgr, nullptr, {{MemProt::Read, {Hello.size(), Align(1)}}});
   EXPECT_THAT_EXPECTED(SSA, Succeeded());
-  auto SegInfo = SSA->getSegInfo(jitlink::MemProt::Read);
+  auto SegInfo = SSA->getSegInfo(MemProt::Read);
   memcpy(SegInfo.WorkingMem.data(), Hello.data(), Hello.size());
 
   auto FA = SSA->finalize();

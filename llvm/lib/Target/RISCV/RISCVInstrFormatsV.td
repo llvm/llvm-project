@@ -20,6 +20,7 @@ def OPIVI : RISCVVFormat<0b011>;
 def OPIVX : RISCVVFormat<0b100>;
 def OPFVF : RISCVVFormat<0b101>;
 def OPMVX : RISCVVFormat<0b110>;
+def OPCFG : RISCVVFormat<0b111>;
 
 class RISCVMOP<bits<2> val> {
   bits<2> Value = val;
@@ -63,7 +64,7 @@ class RVInstSetiVLi<dag outs, dag ins, string opcodestr, string argstr>
   let Inst{30} = 1;
   let Inst{29-20} = vtypei{9-0};
   let Inst{19-15} = uimm;
-  let Inst{14-12} = 0b111;
+  let Inst{14-12} = OPCFG.Value;
   let Inst{11-7} = rd;
   let Opcode = OPC_OP_V.Value;
 
@@ -79,7 +80,7 @@ class RVInstSetVLi<dag outs, dag ins, string opcodestr, string argstr>
   let Inst{31} = 0;
   let Inst{30-20} = vtypei;
   let Inst{19-15} = rs1;
-  let Inst{14-12} = 0b111;
+  let Inst{14-12} = OPCFG.Value;
   let Inst{11-7} = rd;
   let Opcode = OPC_OP_V.Value;
 
@@ -96,7 +97,7 @@ class RVInstSetVL<dag outs, dag ins, string opcodestr, string argstr>
   let Inst{30-25} = 0b000000;
   let Inst{24-20} = rs2;
   let Inst{19-15} = rs1;
-  let Inst{14-12} = 0b111;
+  let Inst{14-12} = OPCFG.Value;
   let Inst{11-7} = rd;
   let Opcode = OPC_OP_V.Value;
 
@@ -174,7 +175,7 @@ class RVInstIVI<bits<6> funct6, dag outs, dag ins, string opcodestr,
   let Inst{25} = vm;
   let Inst{24-20} = vs2;
   let Inst{19-15} = imm;
-  let Inst{14-12} = 0b011;
+  let Inst{14-12} = OPIVI.Value;
   let Inst{11-7} = vd;
   let Opcode = OPC_OP_V.Value;
 

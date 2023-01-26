@@ -5,7 +5,7 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"
 
-define dso_local float @foo(float* noalias %dst, float* %src, i32 %offset, i32 %N) {
+define dso_local float @foo(ptr noalias %dst, ptr %src, i32 %offset, i32 %N) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 1, [[N:%.*]]
@@ -21,14 +21,14 @@ define dso_local float @foo(float* noalias %dst, float* %src, i32 %offset, i32 %
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 1, [[FOR_BODY_LR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[INDVARS_IV]], [[TMP0]]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[SRC:%.*]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, float* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[SRC:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i64 [[TMP1]], 1
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds float, float* [[SRC]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load float, float* [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[ADD4:%.*]] = fadd fast float [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, float* [[DST:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store float [[ADD4]], float* [[ARRAYIDX6]], align 4
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, ptr [[DST:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store float [[ADD4]], ptr [[ARRAYIDX6]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_COND_FOR_COND_CLEANUP_CRIT_EDGE:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -47,16 +47,16 @@ for.cond.cleanup:                                 ; preds = %for.cond
 for.body:                                         ; preds = %for.cond
   %add = add nsw i32 %i.0, %offset
   %idxprom = sext i32 %add to i64
-  %arrayidx = getelementptr inbounds float, float* %src, i64 %idxprom
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %src, i64 %idxprom
+  %0 = load float, ptr %arrayidx, align 4
   %add1 = add nsw i32 %add, 1
   %idxprom2 = sext i32 %add1 to i64
-  %arrayidx3 = getelementptr inbounds float, float* %src, i64 %idxprom2
-  %1 = load float, float* %arrayidx3, align 4
+  %arrayidx3 = getelementptr inbounds float, ptr %src, i64 %idxprom2
+  %1 = load float, ptr %arrayidx3, align 4
   %add4 = fadd fast float %0, %1
   %idxprom5 = zext i32 %i.0 to i64
-  %arrayidx6 = getelementptr inbounds float, float* %dst, i64 %idxprom5
-  store float %add4, float* %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds float, ptr %dst, i64 %idxprom5
+  store float %add4, ptr %arrayidx6, align 4
   %inc = add nuw nsw i32 %i.0, 1
   br label %for.cond, !llvm.loop !1
 }

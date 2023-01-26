@@ -55,6 +55,7 @@ using testing::ElementsAre;
 using testing::ElementsAreArray;
 using testing::Eq;
 using testing::Gt;
+using testing::IsEmpty;
 using testing::Matcher;
 using testing::NotNull;
 using testing::Property;
@@ -105,7 +106,8 @@ constexpr const char kTriple[] = "x86_64-unknown-linux";
 
 class X86TargetTest : public ::testing::Test {
 protected:
-  X86TargetTest(const char *Features) : State(kTriple, "core2", Features) {}
+  X86TargetTest(const char *Features)
+      : State(cantFail(LLVMState::Create(kTriple, "core2", Features))) {}
 
   static void SetUpTestCase() {
     LLVMInitializeX86TargetInfo();
@@ -139,6 +141,21 @@ public:
 class X86Core2Avx512TargetTest : public X86TargetTest {
 public:
   X86Core2Avx512TargetTest() : X86TargetTest("+avx512vl") {}
+};
+
+class X86Core2Avx512DQTargetTest : public X86TargetTest {
+public:
+  X86Core2Avx512DQTargetTest() : X86TargetTest("+avx512dq") {}
+};
+
+class X86Core2Avx512BWTargetTest : public X86TargetTest {
+public:
+  X86Core2Avx512BWTargetTest() : X86TargetTest("+avx512bw") {}
+};
+
+class X86Core2Avx512DQBWTargetTest : public X86TargetTest {
+public:
+  X86Core2Avx512DQBWTargetTest() : X86TargetTest("+avx512dq,+avx512bw") {}
 };
 
 TEST_F(X86Core2TargetTest, NoHighByteRegs) {
@@ -288,6 +305,174 @@ TEST_F(X86Core2Avx512TargetTest, SetRegToVR512Value) {
                         IsMovValueToStack(X86::MOV32mi, 0x11111111UL, 60),
                         IsMovValueFromStack(X86::VMOVDQU32Zrm, X86::ZMM0),
                         IsStackDeallocate(64)}));
+}
+
+TEST_F(X86Core2Avx512TargetTest, SetRegToK0_16Bits) {
+  const uint16_t Value = 0xABCDU;
+  const unsigned Reg = X86::K0;
+  const unsigned RegBitWidth = 16;
+  EXPECT_THAT(setRegTo(Reg, APInt(RegBitWidth, Value)),
+              ElementsAre(IsStackAllocate(2),
+                          IsMovValueToStack(X86::MOV16mi, Value, 0),
+                          IsMovValueFromStack(X86::KMOVWkm, Reg),
+                          IsStackDeallocate(2)));
+}
+
+TEST_F(X86Core2Avx512DQTargetTest, SetRegToK0_16Bits) {
+  const uint16_t Value = 0xABCDU;
+  const unsigned Reg = X86::K0;
+  const unsigned RegBitWidth = 16;
+  EXPECT_THAT(setRegTo(Reg, APInt(RegBitWidth, Value)),
+              ElementsAre(IsStackAllocate(2),
+                          IsMovValueToStack(X86::MOV16mi, Value, 0),
+                          IsMovValueFromStack(X86::KMOVWkm, Reg),
+                          IsStackDeallocate(2)));
+}
+
+TEST_F(X86Core2Avx512BWTargetTest, SetRegToK0_16Bits) {
+  const uint16_t Value = 0xABCDU;
+  const unsigned Reg = X86::K0;
+  const unsigned RegBitWidth = 16;
+  EXPECT_THAT(setRegTo(Reg, APInt(RegBitWidth, Value)),
+              ElementsAre(IsStackAllocate(RegBitWidth / 8),
+                          IsMovValueToStack(X86::MOV16mi, Value, 0),
+                          IsMovValueFromStack(X86::KMOVWkm, Reg),
+                          IsStackDeallocate(RegBitWidth / 8)));
+}
+
+TEST_F(X86Core2Avx512DQBWTargetTest, SetRegToK0_16Bits) {
+  const uint16_t Value = 0xABCDU;
+  const unsigned Reg = X86::K0;
+  const unsigned RegBitWidth = 16;
+  EXPECT_THAT(setRegTo(Reg, APInt(RegBitWidth, Value)),
+              ElementsAre(IsStackAllocate(RegBitWidth / 8),
+                          IsMovValueToStack(X86::MOV16mi, Value, 0),
+                          IsMovValueFromStack(X86::KMOVWkm, Reg),
+                          IsStackDeallocate(RegBitWidth / 8)));
+}
+
+TEST_F(X86Core2Avx512TargetTest, SetRegToK0_8Bits) {
+  const uint8_t Value = 0xABU;
+  const unsigned Reg = X86::K0;
+  const unsigned RegBitWidth = 8;
+  EXPECT_THAT(
+      setRegTo(Reg, APInt(RegBitWidth, Value)),
+      ElementsAre(IsStackAllocate(2),
+                  IsMovValueToStack(
+                      X86::MOV16mi,
+                      APInt(RegBitWidth, Value).zext(16).getZExtValue(), 0),
+                  IsMovValueFromStack(X86::KMOVWkm, Reg),
+                  IsStackDeallocate(2)));
+}
+
+TEST_F(X86Core2Avx512DQTargetTest, SetRegToK0_8Bits) {
+  const uint8_t Value = 0xABU;
+  const unsigned Reg = X86::K0;
+  const unsigned RegBitWidth = 8;
+  EXPECT_THAT(setRegTo(Reg, APInt(RegBitWidth, Value)),
+              ElementsAre(IsStackAllocate(RegBitWidth / 8),
+                          IsMovValueToStack(X86::MOV8mi, Value, 0),
+                          IsMovValueFromStack(X86::KMOVBkm, Reg),
+                          IsStackDeallocate(RegBitWidth / 8)));
+}
+
+TEST_F(X86Core2Avx512BWTargetTest, SetRegToK0_8Bits) {
+  const uint8_t Value = 0xABU;
+  const unsigned Reg = X86::K0;
+  const unsigned RegBitWidth = 8;
+  EXPECT_THAT(
+      setRegTo(Reg, APInt(RegBitWidth, Value)),
+      ElementsAre(IsStackAllocate(2),
+                  IsMovValueToStack(
+                      X86::MOV16mi,
+                      APInt(RegBitWidth, Value).zext(16).getZExtValue(), 0),
+                  IsMovValueFromStack(X86::KMOVWkm, Reg),
+                  IsStackDeallocate(2)));
+}
+
+TEST_F(X86Core2Avx512DQBWTargetTest, SetRegToK0_8Bits) {
+  const uint8_t Value = 0xABU;
+  const unsigned Reg = X86::K0;
+  const unsigned RegBitWidth = 8;
+  EXPECT_THAT(setRegTo(Reg, APInt(RegBitWidth, Value)),
+              ElementsAre(IsStackAllocate(RegBitWidth / 8),
+                          IsMovValueToStack(X86::MOV8mi, Value, 0),
+                          IsMovValueFromStack(X86::KMOVBkm, Reg),
+                          IsStackDeallocate(RegBitWidth / 8)));
+}
+
+TEST_F(X86Core2Avx512TargetTest, SetRegToK0_32Bits) {
+  const uint32_t Value = 0xABCDCABDU;
+  const unsigned Reg = X86::K0;
+  const unsigned RegBitWidth = 32;
+  EXPECT_THAT(setRegTo(Reg, APInt(RegBitWidth, Value)), IsEmpty());
+}
+
+TEST_F(X86Core2Avx512DQTargetTest, SetRegToK0_32Bits) {
+  const uint32_t Value = 0xABCDCABDU;
+  const unsigned Reg = X86::K0;
+  const unsigned RegBitWidth = 32;
+  EXPECT_THAT(setRegTo(Reg, APInt(RegBitWidth, Value)), IsEmpty());
+}
+
+TEST_F(X86Core2Avx512BWTargetTest, SetRegToK0_32Bits) {
+  const uint32_t Value = 0xABCDCABDU;
+  const unsigned Reg = X86::K0;
+  const unsigned RegBitWidth = 32;
+  EXPECT_THAT(setRegTo(Reg, APInt(RegBitWidth, Value)),
+              ElementsAre(IsStackAllocate(RegBitWidth / 8),
+                          IsMovValueToStack(X86::MOV32mi, Value, 0),
+                          IsMovValueFromStack(X86::KMOVDkm, Reg),
+                          IsStackDeallocate(RegBitWidth / 8)));
+}
+
+TEST_F(X86Core2Avx512DQBWTargetTest, SetRegToK0_32Bits) {
+  const uint32_t Value = 0xABCDCABDU;
+  const unsigned Reg = X86::K0;
+  const unsigned RegBitWidth = 32;
+  EXPECT_THAT(setRegTo(Reg, APInt(RegBitWidth, Value)),
+              ElementsAre(IsStackAllocate(RegBitWidth / 8),
+                          IsMovValueToStack(X86::MOV32mi, Value, 0),
+                          IsMovValueFromStack(X86::KMOVDkm, Reg),
+                          IsStackDeallocate(RegBitWidth / 8)));
+}
+
+TEST_F(X86Core2Avx512TargetTest, SetRegToK0_64Bits) {
+  const uint64_t Value = 0xABCDABCDCABDCABDU;
+  const unsigned Reg = X86::K0;
+  const unsigned RegBitWidth = 64;
+  EXPECT_THAT(setRegTo(Reg, APInt(RegBitWidth, Value)), IsEmpty());
+}
+
+TEST_F(X86Core2Avx512DQTargetTest, SetRegToK0_64Bits) {
+  const uint64_t Value = 0xABCDABCDCABDCABDU;
+  const unsigned Reg = X86::K0;
+  const unsigned RegBitWidth = 64;
+  EXPECT_THAT(setRegTo(Reg, APInt(RegBitWidth, Value)), IsEmpty());
+}
+
+TEST_F(X86Core2Avx512BWTargetTest, SetRegToK0_64Bits) {
+  const uint64_t Value = 0xABCDABCDCABDCABDUL;
+  const unsigned Reg = X86::K0;
+  const unsigned RegBitWidth = 64;
+  EXPECT_THAT(setRegTo(Reg, APInt(RegBitWidth, Value)),
+              ElementsAre(IsStackAllocate(RegBitWidth / 8),
+                          IsMovValueToStack(X86::MOV32mi, 0XCABDCABDUL, 0),
+                          IsMovValueToStack(X86::MOV32mi, 0xABCDABCDUL, 4),
+                          IsMovValueFromStack(X86::KMOVQkm, Reg),
+                          IsStackDeallocate(RegBitWidth / 8)));
+}
+
+TEST_F(X86Core2Avx512DQBWTargetTest, SetRegToK0_64Bits) {
+  const uint64_t Value = 0xABCDABCDCABDCABDU;
+  const unsigned Reg = X86::K0;
+  const unsigned RegBitWidth = 64;
+  EXPECT_THAT(setRegTo(Reg, APInt(RegBitWidth, Value)),
+              ElementsAre(IsStackAllocate(RegBitWidth / 8),
+                          IsMovValueToStack(X86::MOV32mi, 0XCABDCABDUL, 0),
+                          IsMovValueToStack(X86::MOV32mi, 0xABCDABCDUL, 4),
+                          IsMovValueFromStack(X86::KMOVQkm, Reg),
+                          IsStackDeallocate(RegBitWidth / 8)));
 }
 
 // Note: We always put 80 bits on the stack independently of the size of the

@@ -13,15 +13,16 @@
 #ifndef LLVM_CLANG_AST_INTERP_TYPE_H
 #define LLVM_CLANG_AST_INTERP_TYPE_H
 
+#include "Integral.h"
 #include <climits>
 #include <cstddef>
 #include <cstdint>
-#include "Boolean.h"
-#include "Integral.h"
-#include "Pointer.h"
 
 namespace clang {
 namespace interp {
+
+class Pointer;
+class Boolean;
 
 /// Enumeration of the primitive types of the VM.
 enum PrimType : unsigned {
@@ -56,6 +57,13 @@ size_t primSize(PrimType Type);
 /// Aligns a size to the pointer alignment.
 constexpr size_t align(size_t Size) {
   return ((Size + alignof(void *) - 1) / alignof(void *)) * alignof(void *);
+}
+
+constexpr bool aligned(uintptr_t Value) { return Value == align(Value); }
+static_assert(aligned(sizeof(void *)));
+
+static inline bool aligned(const void *P) {
+  return aligned(reinterpret_cast<uintptr_t>(P));
 }
 
 inline bool isPrimitiveIntegral(PrimType Type) {

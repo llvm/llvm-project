@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -std=c++11 -emit-llvm %s -o %t-64.ll
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -std=c++11 -emit-llvm %s -o %t-64.ll
 // RUN: FileCheck -check-prefix CHECK-LPLL64 --input-file=%t-64.ll %s
 
 extern "C" int printf(...);
@@ -18,6 +18,6 @@ int main()
   A c[3];
 }
 
-// CHECK-LPLL64: call void (%struct.A*, ...)
-// CHECK-LPLL64: call void (%struct.A*, ...)
-// CHECK-LPLL64: call void (%struct.A*, ...)
+// CHECK-LPLL64: call void (ptr, ...)
+// CHECK-LPLL64: call void (ptr, ...)
+// CHECK-LPLL64: call void (ptr, ...)

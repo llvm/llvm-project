@@ -15,7 +15,7 @@
 ; reverse order. With the kills inserted to artifically extend the
 ; pointer live ranges to hint the soft clause, we get worse
 ; allocation and need the extra copies before the loads.
-define <4 x half> @shuffle_v4f16_234u(<4 x half> addrspace(1)* %arg0, <4 x half> addrspace(1)* %arg1) {
+define <4 x half> @shuffle_v4f16_234u(ptr addrspace(1) %arg0, ptr addrspace(1) %arg1) {
 ; FORWARDXNACK-LABEL: shuffle_v4f16_234u:
 ; FORWARDXNACK:       ; %bb.0:
 ; FORWARDXNACK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -46,8 +46,8 @@ define <4 x half> @shuffle_v4f16_234u(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; NOXNACK-NEXT:    global_load_dwordx2 v[1:2], v[2:3], off
 ; NOXNACK-NEXT:    s_waitcnt vmcnt(0)
 ; NOXNACK-NEXT:    s_setpc_b64 s[30:31]
-  %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
-  %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
+  %val0 = load <4 x half>, ptr addrspace(1) %arg0
+  %val1 = load <4 x half>, ptr addrspace(1) %arg1
   %shuffle = shufflevector <4 x half> %val0, <4 x half> %val1, <4 x i32> <i32 2, i32 3, i32 4, i32 undef>
   ret <4 x half> %shuffle
 }

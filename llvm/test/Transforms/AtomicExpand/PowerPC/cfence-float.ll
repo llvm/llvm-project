@@ -4,15 +4,15 @@
 ; RUN: opt -S -atomic-expand -mtriple=powerpc64-unknown-unknown \
 ; RUN:   -opaque-pointers < %s 2>&1 | FileCheck %s
 
-define float @bar(float* %fp) {
+define float @bar(ptr %fp) {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load atomic i32, ptr [[FP:%.*]] monotonic, align 4
+; CHECK-NEXT:    call void @llvm.ppc.cfence.i32(i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[TMP0]] to float
-; CHECK-NEXT:    call void @llvm.ppc.cfence.f32(float [[TMP1]])
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
 entry:
-  %0 = load atomic float, float* %fp acquire, align 4
+  %0 = load atomic float, ptr %fp acquire, align 4
   ret float %0
 }

@@ -18,9 +18,7 @@
 using namespace clang::ast_matchers;
 using namespace clang::ast_matchers::internal;
 
-namespace clang {
-namespace tidy {
-namespace cppcoreguidelines {
+namespace clang::tidy::cppcoreguidelines {
 
 void NoMallocCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "Allocations", AllocList);
@@ -67,6 +65,4 @@ void NoMallocCheck::check(const MatchFinder::MatchResult &Result) {
       << Recommendation << SourceRange(Call->getBeginLoc(), Call->getEndLoc());
 }
 
-} // namespace cppcoreguidelines
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cppcoreguidelines

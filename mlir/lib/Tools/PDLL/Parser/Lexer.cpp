@@ -285,7 +285,7 @@ void Lexer::lexComment() {
         --curPtr;
         return;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     default:
       // Skip over other characters.
       break;

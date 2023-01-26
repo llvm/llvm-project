@@ -272,12 +272,6 @@ public:
   /// Sets the optimized use for a MemoryDef.
   inline void setOptimized(MemoryAccess *);
 
-  // Retrieve AliasResult type of the optimized access. Ideally this would be
-  // returned by the caching walker and may go away in the future.
-  Optional<AliasResult> getOptimizedAccessType() const {
-    return isOptimized() ? OptimizedAccessAlias : None;
-  }
-
   /// Reset the ID of what this MemoryUse was optimized to, causing it to
   /// be rewalked by the walker if necessary.
   /// This really should only be called by tests.
@@ -291,31 +285,23 @@ protected:
                  DeleteValueTy DeleteValue, Instruction *MI, BasicBlock *BB,
                  unsigned NumOperands)
       : MemoryAccess(C, Vty, DeleteValue, BB, NumOperands),
-        MemoryInstruction(MI), OptimizedAccessAlias(AliasResult::MayAlias) {
+        MemoryInstruction(MI) {
     setDefiningAccess(DMA);
   }
 
   // Use deleteValue() to delete a generic MemoryUseOrDef.
   ~MemoryUseOrDef() = default;
 
-  void setOptimizedAccessType(Optional<AliasResult> AR) {
-    OptimizedAccessAlias = AR;
-  }
-
-  void setDefiningAccess(
-      MemoryAccess *DMA, bool Optimized = false,
-      Optional<AliasResult> AR = AliasResult(AliasResult::MayAlias)) {
+  void setDefiningAccess(MemoryAccess *DMA, bool Optimized = false) {
     if (!Optimized) {
       setOperand(0, DMA);
       return;
     }
     setOptimized(DMA);
-    setOptimizedAccessType(AR);
   }
 
 private:
   Instruction *MemoryInstruction;
-  Optional<AliasResult> OptimizedAccessAlias;
 };
 
 /// Represents read-only accesses to memory
@@ -808,6 +794,8 @@ public:
   /// def-use chain of uses.
   void ensureOptimizedUses();
 
+  AliasAnalysis &getAA() { return *AA; }
+
 protected:
   // Used by Memory SSA dumpers and wrapper pass
   friend class MemorySSAPrinterLegacyPass;
@@ -854,12 +842,12 @@ protected:
                                       bool CreationMustSucceed = true);
 
 private:
-  template <class AliasAnalysisType> class ClobberWalkerBase;
-  template <class AliasAnalysisType> class CachingWalker;
-  template <class AliasAnalysisType> class SkipSelfWalker;
+  class ClobberWalkerBase;
+  class CachingWalker;
+  class SkipSelfWalker;
   class OptimizeUses;
 
-  CachingWalker<AliasAnalysis> *getWalkerImpl();
+  CachingWalker *getWalkerImpl();
   void buildMemorySSA(BatchAAResults &BAA);
 
   void prepareForMoveTo(MemoryAccess *, BasicBlock *);
@@ -906,9 +894,9 @@ private:
   mutable DenseMap<const MemoryAccess *, unsigned long> BlockNumbering;
 
   // Memory SSA building info
-  std::unique_ptr<ClobberWalkerBase<AliasAnalysis>> WalkerBase;
-  std::unique_ptr<CachingWalker<AliasAnalysis>> Walker;
-  std::unique_ptr<SkipSelfWalker<AliasAnalysis>> SkipWalker;
+  std::unique_ptr<ClobberWalkerBase> WalkerBase;
+  std::unique_ptr<CachingWalker> Walker;
+  std::unique_ptr<SkipSelfWalker> SkipWalker;
   unsigned NextID = 0;
   bool IsOptimized = false;
 };
@@ -1055,15 +1043,17 @@ public:
   ///
   /// calling this API on load(%a) will return the MemoryPhi, not the MemoryDef
   /// in the if (a) branch.
-  MemoryAccess *getClobberingMemoryAccess(const Instruction *I) {
+  MemoryAccess *getClobberingMemoryAccess(const Instruction *I,
+                                          BatchAAResults &AA) {
     MemoryAccess *MA = MSSA->getMemoryAccess(I);
     assert(MA && "Handed an instruction that MemorySSA doesn't recognize?");
-    return getClobberingMemoryAccess(MA);
+    return getClobberingMemoryAccess(MA, AA);
   }
 
   /// Does the same thing as getClobberingMemoryAccess(const Instruction *I),
   /// but takes a MemoryAccess instead of an Instruction.
-  virtual MemoryAccess *getClobberingMemoryAccess(MemoryAccess *) = 0;
+  virtual MemoryAccess *getClobberingMemoryAccess(MemoryAccess *,
+                                                  BatchAAResults &AA) = 0;
 
   /// Given a potentially clobbering memory access and a new location,
   /// calling this will give you the nearest dominating clobbering MemoryAccess
@@ -1077,7 +1067,24 @@ public:
   /// will return that MemoryDef, whereas the above would return the clobber
   /// starting from the use side of  the memory def.
   virtual MemoryAccess *getClobberingMemoryAccess(MemoryAccess *,
-                                                  const MemoryLocation &) = 0;
+                                                  const MemoryLocation &,
+                                                  BatchAAResults &AA) = 0;
+
+  MemoryAccess *getClobberingMemoryAccess(const Instruction *I) {
+    BatchAAResults BAA(MSSA->getAA());
+    return getClobberingMemoryAccess(I, BAA);
+  }
+
+  MemoryAccess *getClobberingMemoryAccess(MemoryAccess *MA) {
+    BatchAAResults BAA(MSSA->getAA());
+    return getClobberingMemoryAccess(MA, BAA);
+  }
+
+  MemoryAccess *getClobberingMemoryAccess(MemoryAccess *MA,
+                                          const MemoryLocation &Loc) {
+    BatchAAResults BAA(MSSA->getAA());
+    return getClobberingMemoryAccess(MA, Loc, BAA);
+  }
 
   /// Given a memory access, invalidate anything this walker knows about
   /// that access.
@@ -1100,9 +1107,11 @@ public:
   // getClobberingMemoryAccess.
   using MemorySSAWalker::getClobberingMemoryAccess;
 
-  MemoryAccess *getClobberingMemoryAccess(MemoryAccess *) override;
   MemoryAccess *getClobberingMemoryAccess(MemoryAccess *,
-                                          const MemoryLocation &) override;
+                                          BatchAAResults &) override;
+  MemoryAccess *getClobberingMemoryAccess(MemoryAccess *,
+                                          const MemoryLocation &,
+                                          BatchAAResults &) override;
 };
 
 using MemoryAccessPair = std::pair<MemoryAccess *, MemoryLocation>;
@@ -1216,11 +1225,9 @@ class upward_defs_iterator
   using BaseT = upward_defs_iterator::iterator_facade_base;
 
 public:
-  upward_defs_iterator(const MemoryAccessPair &Info, DominatorTree *DT,
-                       bool *PerformedPhiTranslation = nullptr)
+  upward_defs_iterator(const MemoryAccessPair &Info, DominatorTree *DT)
       : DefIterator(Info.first), Location(Info.second),
-        OriginalAccess(Info.first), DT(DT),
-        PerformedPhiTranslation(PerformedPhiTranslation) {
+        OriginalAccess(Info.first), DT(DT) {
     CurrentPair.first = nullptr;
 
     WalkingPhi = Info.first && isa<MemoryPhi>(Info.first);
@@ -1255,41 +1262,30 @@ private:
   /// Returns true if \p Ptr is guaranteed to be loop invariant for any possible
   /// loop. In particular, this guarantees that it only references a single
   /// MemoryLocation during execution of the containing function.
-  bool IsGuaranteedLoopInvariant(Value *Ptr) const;
+  bool IsGuaranteedLoopInvariant(const Value *Ptr) const;
 
   void fillInCurrentPair() {
     CurrentPair.first = *DefIterator;
     CurrentPair.second = Location;
     if (WalkingPhi && Location.Ptr) {
-      // Mark size as unknown, if the location is not guaranteed to be
-      // loop-invariant for any possible loop in the function. Setting the size
-      // to unknown guarantees that any memory accesses that access locations
-      // after the pointer are considered as clobbers, which is important to
-      // catch loop carried dependences.
-      if (Location.Ptr &&
-          !IsGuaranteedLoopInvariant(const_cast<Value *>(Location.Ptr)))
-        CurrentPair.second =
-            Location.getWithNewSize(LocationSize::beforeOrAfterPointer());
       PHITransAddr Translator(
           const_cast<Value *>(Location.Ptr),
           OriginalAccess->getBlock()->getModule()->getDataLayout(), nullptr);
 
       if (!Translator.PHITranslateValue(OriginalAccess->getBlock(),
-                                        DefIterator.getPhiArgBlock(), DT,
-                                        true)) {
-        Value *TransAddr = Translator.getAddr();
-        if (TransAddr != Location.Ptr) {
-          CurrentPair.second = CurrentPair.second.getWithNewPtr(TransAddr);
+                                        DefIterator.getPhiArgBlock(), DT, true))
+        if (Translator.getAddr() != CurrentPair.second.Ptr)
+          CurrentPair.second =
+              CurrentPair.second.getWithNewPtr(Translator.getAddr());
 
-          if (TransAddr &&
-              !IsGuaranteedLoopInvariant(const_cast<Value *>(TransAddr)))
-            CurrentPair.second = CurrentPair.second.getWithNewSize(
-                LocationSize::beforeOrAfterPointer());
-
-          if (PerformedPhiTranslation)
-            *PerformedPhiTranslation = true;
-        }
-      }
+      // Mark size as unknown, if the location is not guaranteed to be
+      // loop-invariant for any possible loop in the function. Setting the size
+      // to unknown guarantees that any memory accesses that access locations
+      // after the pointer are considered as clobbers, which is important to
+      // catch loop carried dependences.
+      if (!IsGuaranteedLoopInvariant(CurrentPair.second.Ptr))
+        CurrentPair.second = CurrentPair.second.getWithNewSize(
+            LocationSize::beforeOrAfterPointer());
     }
   }
 
@@ -1299,13 +1295,11 @@ private:
   MemoryAccess *OriginalAccess = nullptr;
   DominatorTree *DT = nullptr;
   bool WalkingPhi = false;
-  bool *PerformedPhiTranslation = nullptr;
 };
 
 inline upward_defs_iterator
-upward_defs_begin(const MemoryAccessPair &Pair, DominatorTree &DT,
-                  bool *PerformedPhiTranslation = nullptr) {
-  return upward_defs_iterator(Pair, &DT, PerformedPhiTranslation);
+upward_defs_begin(const MemoryAccessPair &Pair, DominatorTree &DT) {
+  return upward_defs_iterator(Pair, &DT);
 }
 
 inline upward_defs_iterator upward_defs_end() { return upward_defs_iterator(); }

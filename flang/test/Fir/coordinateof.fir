@@ -66,7 +66,7 @@ func.func @foo5(%box : !fir.box<!fir.ptr<!fir.array<?xi32>>>, %i : index) -> i32
 func.func @foo6(%box : !fir.box<!fir.ptr<!fir.array<?x!fir.char<1>>>>, %i : i64 , %res : !fir.ref<!fir.char<1>>) {
   // CHECK: %[[addr_gep:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[box]], i32 0, i32 0
   // CHECK: %[[addr:.*]] = load ptr, ptr %[[addr_gep]]
-  // CHECK: %[[stride_gep:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[box]], i32 0, i32 7, i64 0, i32 2
+  // CHECK: %[[stride_gep:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[box]], i32 0, i32 7, i32 0, i32 2
   // CHECK: %[[stride:.*]] = load i64, ptr %[[stride_gep]]
   // CHECK: %[[mul:.*]] = mul i64 %{{.*}}, %[[stride]]
   // CHECK: %[[offset:.*]] = add i64 %[[mul]], 0

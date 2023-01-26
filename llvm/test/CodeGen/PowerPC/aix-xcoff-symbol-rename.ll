@@ -23,7 +23,7 @@
 
 define internal i32 @f$o() {
 entry:
-  %call = call i32 bitcast (i32 (...)* @"f\40o" to i32 ()*)()
+  %call = call i32 @"f\40o"()
   ret i32 %call
 }
 
@@ -31,15 +31,15 @@ entry:
 define i32 @"f\26o"() {
 entry:
   %tmp = call i32 @f$o()
-  %tmp1 = load i32, i32* @"f\3do"
+  %tmp1 = load i32, ptr @"f\3do"
   %tmp2 = add i32 %tmp, %tmp1
   ret i32 %tmp2
 }
 
 ; This is f&_o
-define i32 (...)* @"f\26_o"() {
+define ptr @"f\26_o"() {
 entry:
-  ret i32 (...)* @"f\40o"
+  ret ptr @"f\40o"
 }
 
 ; This is f@o
@@ -107,8 +107,8 @@ declare i32 @"f\40o"(...)
 ; OBJ-EMPTY:
 ; OBJ-NEXT:  00000000 (idx: 7) .f$o:
 ; OBJ-NEXT:         0: 7c 08 02 a6   mflr 0
-; OBJ-NEXT:         4: 90 01 00 08   stw 0, 8(1)
-; OBJ-NEXT:         8: 94 21 ff c0   stwu 1, -64(1)
+; OBJ-NEXT:         4: 94 21 ff c0   stwu 1, -64(1)
+; OBJ-NEXT:         8: 90 01 00 48   stw 0, 72(1)
 ; OBJ-NEXT:         c: 4b ff ff f5   bl 0x0
 ; OBJ-NEXT:                          0000000c:  R_RBR        (idx: 1) .f@o[PR]
 ; OBJ-NEXT:        10: 60 00 00 00   nop
@@ -122,8 +122,8 @@ declare i32 @"f\40o"(...)
 ; OBJ-EMPTY:
 ; OBJ-NEXT:  00000030 (idx: 9) .f&o:
 ; OBJ-NEXT:        30: 7c 08 02 a6   mflr 0
-; OBJ-NEXT:        34: 90 01 00 08   stw 0, 8(1)
-; OBJ-NEXT:        38: 94 21 ff c0   stwu 1, -64(1)
+; OBJ-NEXT:        34: 94 21 ff c0   stwu 1, -64(1)
+; OBJ-NEXT:        38: 90 01 00 48   stw 0, 72(1)
 ; OBJ-NEXT:        3c: 4b ff ff c5   bl 0x0
 ; OBJ-NEXT:        40: 80 82 00 00   lwz 4, 0(2)
 ; OBJ-NEXT:                          00000042:  R_TOC        (idx: 25) f=o[TC]

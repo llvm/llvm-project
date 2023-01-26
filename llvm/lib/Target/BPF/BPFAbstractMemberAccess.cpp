@@ -107,7 +107,7 @@ Instruction *BPFCoreSharedInfo::insertPassThrough(Module *M, BasicBlock *BB,
                                          BPFCoreSharedInfo::SeqNum++);
 
   auto *NewInst = CallInst::Create(Fn, {SeqNumVal, Input});
-  BB->getInstList().insert(Before->getIterator(), NewInst);
+  NewInst->insertBefore(Before);
   return NewInst;
 }
 } // namespace llvm
@@ -126,7 +126,7 @@ public:
     uint32_t AccessIndex;
     MaybeAlign RecordAlignment;
     MDNode *Metadata;
-    Value *Base;
+    WeakTrackingVH Base;
   };
   typedef std::stack<std::pair<CallInst *, CallInfo>> CallInfoStack;
 
@@ -438,7 +438,7 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
 void BPFAbstractMemberAccess::replaceWithGEP(std::vector<CallInst *> &CallList,
                                              uint32_t DimensionIndex,
                                              uint32_t GEPIndex) {
-  for (auto Call : CallList) {
+  for (auto *Call : CallList) {
     uint32_t Dimension = 1;
     if (DimensionIndex > 0)
       Dimension = getConstant(Call->getArgOperand(DimensionIndex));
@@ -491,7 +491,7 @@ bool BPFAbstractMemberAccess::removePreserveAccessIndexIntrinsic(Function &F) {
   //     addr = GEP(base, 0, gep_index)
   replaceWithGEP(PreserveArrayIndexCalls, 1, 2);
   replaceWithGEP(PreserveStructIndexCalls, 0, 1);
-  for (auto Call : PreserveUnionIndexCalls) {
+  for (auto *Call : PreserveUnionIndexCalls) {
     Call->replaceAllUsesWith(Call->getArgOperand(0));
     Call->eraseFromParent();
   }
@@ -1135,16 +1135,16 @@ bool BPFAbstractMemberAccess::transformGEPChain(CallInst *Call,
 
   // Generate a BitCast
   auto *BCInst = new BitCastInst(Base, Type::getInt8PtrTy(BB->getContext()));
-  BB->getInstList().insert(Call->getIterator(), BCInst);
+  BCInst->insertBefore(Call);
 
   // Generate a GetElementPtr
   auto *GEP = GetElementPtrInst::Create(Type::getInt8Ty(BB->getContext()),
                                         BCInst, LDInst);
-  BB->getInstList().insert(Call->getIterator(), GEP);
+  GEP->insertBefore(Call);
 
   // Generate a BitCast
   auto *BCInst2 = new BitCastInst(GEP, Call->getType());
-  BB->getInstList().insert(Call->getIterator(), BCInst2);
+  BCInst2->insertBefore(Call);
 
   // For the following code,
   //    Block0:

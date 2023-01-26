@@ -8,6 +8,8 @@ set(LLVM_LINK_COMPONENTS
   Exegesis
   Core
   Support
+  TargetParser
+  MC
   )
 
 add_llvm_library(LLVMExegesisPowerPC

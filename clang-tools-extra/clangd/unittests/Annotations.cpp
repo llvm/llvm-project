@@ -13,38 +13,75 @@ namespace clang {
 namespace clangd {
 
 Position Annotations::point(llvm::StringRef Name) const {
-  return offsetToPosition(code(), Base::point(Name));
+  return pointWithPayload(Name).first;
+}
+
+std::pair<Position, llvm::StringRef>
+Annotations::pointWithPayload(llvm::StringRef Name) const {
+  auto [BasePoint, Payload] = Base::pointWithPayload(Name);
+  return {offsetToPosition(code(), BasePoint), Payload};
 }
 
 std::vector<Position> Annotations::points(llvm::StringRef Name) const {
-  auto Offsets = Base::points(Name);
+  auto BasePoints = Base::points(Name);
 
   std::vector<Position> Ps;
-  Ps.reserve(Offsets.size());
-  for (size_t O : Offsets)
-    Ps.push_back(offsetToPosition(code(), O));
+  Ps.reserve(BasePoints.size());
+  for (const auto Point : BasePoints)
+    Ps.push_back(offsetToPosition(code(), Point));
 
   return Ps;
 }
 
-static clangd::Range toLSPRange(llvm::StringRef Code, Annotations::Range R) {
+std::vector<std::pair<Position, llvm::StringRef>>
+Annotations::pointsWithPayload(llvm::StringRef Name) const {
+  auto BasePoints = Base::pointsWithPayload(Name);
+
+  std::vector<std::pair<Position, llvm::StringRef>> Ps;
+  Ps.reserve(BasePoints.size());
+  for (const auto &[Point, Payload] : BasePoints)
+    Ps.push_back({offsetToPosition(code(), Point), Payload});
+
+  return Ps;
+}
+
+static clangd::Range toLSPRange(llvm::StringRef Code,
+                                llvm::Annotations::Range R) {
   clangd::Range LSPRange;
   LSPRange.start = offsetToPosition(Code, R.Begin);
   LSPRange.end = offsetToPosition(Code, R.End);
   return LSPRange;
 }
 
-clangd::Range Annotations::range(llvm::StringRef Name) const {
-  return toLSPRange(code(), Base::range(Name));
+Range Annotations::range(llvm::StringRef Name) const {
+  return rangeWithPayload(Name).first;
 }
 
-std::vector<clangd::Range> Annotations::ranges(llvm::StringRef Name) const {
+std::pair<clangd::Range, llvm::StringRef>
+Annotations::rangeWithPayload(llvm::StringRef Name) const {
+  auto [BaseRange, Payload] = Base::rangeWithPayload(Name);
+  return {toLSPRange(code(), BaseRange), Payload};
+}
+
+std::vector<Range> Annotations::ranges(llvm::StringRef Name) const {
   auto OffsetRanges = Base::ranges(Name);
 
   std::vector<clangd::Range> Rs;
   Rs.reserve(OffsetRanges.size());
-  for (Annotations::Range R : OffsetRanges)
+  for (const auto &R : OffsetRanges)
     Rs.push_back(toLSPRange(code(), R));
+
+  return Rs;
+}
+
+std::vector<std::pair<clangd::Range, llvm::StringRef>>
+Annotations::rangesWithPayload(llvm::StringRef Name) const {
+  auto OffsetRanges = Base::rangesWithPayload(Name);
+
+  std::vector<std::pair<clangd::Range, llvm::StringRef>> Rs;
+  Rs.reserve(OffsetRanges.size());
+  for (const auto &[R, Payload] : OffsetRanges)
+    Rs.push_back({toLSPRange(code(), R), Payload});
 
   return Rs;
 }

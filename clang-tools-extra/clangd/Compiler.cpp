@@ -80,6 +80,15 @@ void disableUnsupportedOptions(CompilerInvocation &CI) {
   CI.getFrontendOpts().PluginArgs.clear();
   CI.getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   CI.getFrontendOpts().ActionName.clear();
+
+  // These options mostly affect codegen, and aren't relevant to clangd. And
+  // clang will die immediately when these files are not existed.
+  // Disable these uninteresting options to make clangd more robust.
+  CI.getLangOpts()->NoSanitizeFiles.clear();
+  CI.getLangOpts()->XRayAttrListFiles.clear();
+  CI.getLangOpts()->ProfileListFiles.clear();
+  CI.getLangOpts()->XRayAlwaysInstrumentFiles.clear();
+  CI.getLangOpts()->XRayNeverInstrumentFiles.clear();
 }
 
 std::unique_ptr<CompilerInvocation>

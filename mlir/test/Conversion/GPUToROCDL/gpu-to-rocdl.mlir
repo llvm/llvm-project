@@ -59,6 +59,36 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
+  // CHECK-LABEL: func @gpu_index_ops_range()
+  // CHECK-SAME: rocdl.flat_work_group_size = "1536,1536"
+  // CHECK-SAME: rocdl.reqd_work_group_size = array<i32: 8, 12, 16>
+  func.func @gpu_index_ops_range()
+      -> (index, index, index, index, index, index) attributes
+      {gpu.known_block_size = array<i32: 8, 12, 16>,
+       gpu.known_grid_size = array<i32: 20, 24, 28>} {
+
+    // CHECK: rocdl.workitem.id.x {range = array<i32: 0, 8>} : i32
+    %tIdX = gpu.thread_id x
+    // CHECK: rocdl.workitem.id.y {range = array<i32: 0, 12>} : i32
+    %tIdY = gpu.thread_id y
+    // CHECK: rocdl.workitem.id.z {range = array<i32: 0, 16>} : i32
+    %tIdZ = gpu.thread_id z
+
+    // CHECK: rocdl.workgroup.id.x {range = array<i32: 0, 20>} : i32
+    %bIdX = gpu.block_id x
+    // CHECK: rocdl.workgroup.id.y {range = array<i32: 0, 24>} : i32
+    %bIdY = gpu.block_id y
+    // CHECK: rocdl.workgroup.id.z {range = array<i32: 0, 28>} : i32
+    %bIdZ = gpu.block_id z
+
+    func.return %tIdX, %tIdY, %tIdZ, %bIdX, %bIdY, %bIdZ
+        : index, index, index, index, index, index
+  }
+}
+
+// -----
+
+gpu.module @test_module {
   // CHECK-LABEL: func @gpu_index_comp
   // CHECK32-LABEL: func @gpu_index_comp
   func.func @gpu_index_comp(%idx : index) -> index {
@@ -89,10 +119,25 @@ gpu.module @test_module {
   // CHECK: llvm.func @__ocml_fabs_f64(f64) -> f64
   // CHECK-LABEL: func @gpu_fabs
   func.func @gpu_fabs(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
-    %result32 = math.abs %arg_f32 : f32
+    %result32 = math.absf %arg_f32 : f32
     // CHECK: llvm.call @__ocml_fabs_f32(%{{.*}}) : (f32) -> f32
-    %result64 = math.abs %arg_f64 : f64
+    %result64 = math.absf %arg_f64 : f64
     // CHECK: llvm.call @__ocml_fabs_f64(%{{.*}}) : (f64) -> f64
+    func.return %result32, %result64 : f32, f64
+  }
+}
+
+// -----
+
+gpu.module @test_module {
+  // CHECK: llvm.func @__ocml_cbrt_f32(f32) -> f32
+  // CHECK: llvm.func @__ocml_cbrt_f64(f64) -> f64
+  // CHECK-LABEL: func @gpu_cbrt
+  func.func @gpu_cbrt(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = math.cbrt %arg_f32 : f32
+    // CHECK: llvm.call @__ocml_cbrt_f32(%{{.*}}) : (f32) -> f32
+    %result64 = math.cbrt %arg_f64 : f64
+    // CHECK: llvm.call @__ocml_cbrt_f64(%{{.*}}) : (f64) -> f64
     func.return %result32, %result64 : f32, f64
   }
 }
@@ -318,6 +363,21 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
+  // CHECK: llvm.func @__ocml_tan_f32(f32) -> f32
+  // CHECK: llvm.func @__ocml_tan_f64(f64) -> f64
+  // CHECK-LABEL: func @gpu_tan
+  func.func @gpu_tan(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = math.tan %arg_f32 : f32
+    // CHECK: llvm.call @__ocml_tan_f32(%{{.*}}) : (f32) -> f32
+    %result64 = math.tan %arg_f64 : f64
+    // CHECK: llvm.call @__ocml_tan_f64(%{{.*}}) : (f64) -> f64
+    func.return %result32, %result64 : f32, f64
+  }
+}
+
+// -----
+
+gpu.module @test_module {
   // CHECK: llvm.func @__ocml_tanh_f32(f32) -> f32
   // CHECK: llvm.func @__ocml_tanh_f64(f64) -> f64
   // CHECK-LABEL: func @gpu_tanh
@@ -378,6 +438,20 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
+  // CHECK-LABEL: func @gpu_unroll
+  func.func @gpu_unroll(%arg0 : vector<4xf32>) -> vector<4xf32> {
+    %result = math.exp %arg0 : vector<4xf32>
+    // CHECK: llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
+    // CHECK: llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
+    // CHECK: llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
+    // CHECK: llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
+    func.return %result : vector<4xf32>
+  }
+}
+
+// -----
+
+gpu.module @test_module {
   // CHECK-LABEL: @kernel_func
   // CHECK: attributes
   // CHECK: gpu.kernel
@@ -386,3 +460,15 @@ gpu.module @test_module {
     gpu.return
   }
 }
+
+// ----
+
+gpu.module @module {
+// CHECK-LABEL: @spirv_exp
+// CHECK: llvm.call @__ocml_exp_f32
+  spirv.func @spirv_exp(%arg0: vector<4xf32>) -> vector<4xf32> "None" {
+    %0 = math.exp %arg0 : vector<4xf32>
+    spirv.ReturnValue %0 : vector<4xf32>
+  }
+}
+

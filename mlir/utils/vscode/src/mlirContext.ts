@@ -25,49 +25,19 @@ class WorkspaceFolderContext implements vscode.Disposable {
 export class MLIRContext implements vscode.Disposable {
   subscriptions: vscode.Disposable[] = [];
   workspaceFolders: Map<string, WorkspaceFolderContext> = new Map();
+  outputChannel: vscode.OutputChannel;
 
   /**
    *  Activate the MLIR context, and start the language clients.
    */
   async activate(outputChannel: vscode.OutputChannel) {
+    this.outputChannel = outputChannel;
+
     // This lambda is used to lazily start language clients for the given
     // document. It removes the need to pro-actively start language clients for
     // every folder within the workspace and every language type we provide.
     const startClientOnOpenDocument = async (document: vscode.TextDocument) => {
-      if (document.uri.scheme !== 'file') {
-        return;
-      }
-      let serverSettingName: string;
-      if (document.languageId === 'mlir') {
-        serverSettingName = 'server_path';
-      } else if (document.languageId === 'pdll') {
-        serverSettingName = 'pdll_server_path';
-      } else if (document.languageId === 'tablegen') {
-        serverSettingName = 'tablegen_server_path';
-      } else {
-        return;
-      }
-
-      // Resolve the workspace folder if this document is in one. We use the
-      // workspace folder when determining if a server needs to be started.
-      const uri = document.uri;
-      let workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
-      let workspaceFolderStr =
-          workspaceFolder ? workspaceFolder.uri.toString() : "";
-
-      // Get or create a client context for this folder.
-      let folderContext = this.workspaceFolders.get(workspaceFolderStr);
-      if (!folderContext) {
-        folderContext = new WorkspaceFolderContext();
-        this.workspaceFolders.set(workspaceFolderStr, folderContext);
-      }
-      // Start the client for this language if necessary.
-      if (!folderContext.clients.has(document.languageId)) {
-        let client = await this.activateWorkspaceFolder(
-            workspaceFolder, serverSettingName, document.languageId,
-            outputChannel);
-        folderContext.clients.set(document.languageId, client);
-      }
+      await this.getOrActivateLanguageClient(document.uri, document.languageId);
     };
     // Process any existing documents.
     for (const textDoc of vscode.workspace.textDocuments) {
@@ -87,6 +57,50 @@ export class MLIRContext implements vscode.Disposable {
             }
           }
         }));
+  }
+
+  /**
+   * Open or return a language server for the given uri and language.
+   */
+  async getOrActivateLanguageClient(uri: vscode.Uri, languageId: string):
+      Promise<vscodelc.LanguageClient> {
+    let serverSettingName: string;
+    if (languageId === 'mlir') {
+      serverSettingName = 'server_path';
+    } else if (languageId === 'pdll') {
+      serverSettingName = 'pdll_server_path';
+    } else if (languageId === 'tablegen') {
+      serverSettingName = 'tablegen_server_path';
+    } else {
+      return null;
+    }
+
+    // Check the scheme of the uri.
+    let validSchemes = [ 'file', 'mlir.bytecode-mlir' ];
+    if (!validSchemes.includes(uri.scheme)) {
+      return null;
+    }
+
+    // Resolve the workspace folder if this document is in one. We use the
+    // workspace folder when determining if a server needs to be started.
+    let workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+    let workspaceFolderStr =
+        workspaceFolder ? workspaceFolder.uri.toString() : "";
+
+    // Get or create a client context for this folder.
+    let folderContext = this.workspaceFolders.get(workspaceFolderStr);
+    if (!folderContext) {
+      folderContext = new WorkspaceFolderContext();
+      this.workspaceFolders.set(workspaceFolderStr, folderContext);
+    }
+    // Start the client for this language if necessary.
+    let client = folderContext.clients.get(languageId);
+    if (!client) {
+      client = await this.activateWorkspaceFolder(
+          workspaceFolder, serverSettingName, languageId, this.outputChannel);
+      folderContext.clients.set(languageId, client);
+    }
+    return client;
   }
 
   /**
@@ -263,7 +277,7 @@ export class MLIRContext implements vscode.Disposable {
     // Configure the client options.
     const clientOptions: vscodelc.LanguageClientOptions = {
       documentSelector : [
-        {scheme : 'file', language : languageName, pattern : selectorPattern}
+        {language : languageName, pattern : selectorPattern},
       ],
       synchronize : {
         // Notify the server about file changes to language files contained in
@@ -353,11 +367,12 @@ export class MLIRContext implements vscode.Disposable {
   }
 
   /**
-   * Return the language client for the given language and workspace folder, or
-   * null if no client is active.
+   * Return the language client for the given language and uri, or null if no
+   * client is active.
    */
-  getLanguageClient(workspaceFolder: vscode.WorkspaceFolder,
+  getLanguageClient(uri: vscode.Uri,
                     languageName: string): vscodelc.LanguageClient {
+    let workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
     let workspaceFolderStr =
         workspaceFolder ? workspaceFolder.uri.toString() : "";
     let folderContext = this.workspaceFolders.get(workspaceFolderStr);

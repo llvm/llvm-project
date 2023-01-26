@@ -8,11 +8,11 @@ entry:
   br label %for.body, !dbg !39
 
 for.body:                                         ; preds = %for.body, %entry
-  %arrayidx5 = getelementptr inbounds i32, i32* null, i64 1, !dbg !43
-  %0 = load i32, i32* null, align 4, !dbg !45, !tbaa !46
+  %arrayidx5 = getelementptr inbounds i32, ptr null, i64 1, !dbg !43
+  %0 = load i32, ptr null, align 4, !dbg !45, !tbaa !46
   %s1 = sub nsw i32 0, %0, !dbg !50
   %n1 = sext i32 %s1 to i64, !dbg !50
-  %arrayidx21 = getelementptr inbounds i32, i32* null, i64 3, !dbg !51
+  %arrayidx21 = getelementptr inbounds i32, ptr null, i64 3, !dbg !51
   %add53 = add nsw i64 %n1, 0, !dbg !52
   %add55 = add nsw i64 %n1, 0, !dbg !53
   %mul63 = mul nsw i64 %add53, -20995, !dbg !54
@@ -24,13 +24,13 @@ for.body:                                         ; preds = %for.body, %entry
   %add82 = add i64 %add81, 0, !dbg !58
   %shr83351 = lshr i64 %add82, 11, !dbg !58
   %conv84 = trunc i64 %shr83351 to i32, !dbg !58
-  store i32 %conv84, i32* %arrayidx21, align 4, !dbg !58, !tbaa !46
+  store i32 %conv84, ptr %arrayidx21, align 4, !dbg !58, !tbaa !46
   %add86 = add i64 0, 1024, !dbg !59
   %add87 = add i64 %add86, 0, !dbg !59
   %add88 = add i64 %add87, %add67, !dbg !59
   %shr89352 = lshr i64 %add88, 11, !dbg !59
   %n2 = trunc i64 %shr89352 to i32, !dbg !59
-  store i32 %n2, i32* %arrayidx5, align 4, !dbg !59, !tbaa !46
+  store i32 %n2, ptr %arrayidx5, align 4, !dbg !59, !tbaa !46
   br label %for.body, !dbg !39
 }
 

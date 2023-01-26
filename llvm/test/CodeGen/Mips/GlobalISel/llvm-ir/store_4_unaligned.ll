@@ -29,7 +29,7 @@ define void @store_float_align1(float %a) {
 ; MIPS32R6-NEXT:    swc1 $f12, 0($1)
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  store float %a, float* @float_align1, align 1
+  store float %a, ptr @float_align1, align 1
   ret void
 }
 
@@ -51,7 +51,7 @@ define void @store_float_align2(float %a) {
 ; MIPS32R6-NEXT:    swc1 $f12, 0($1)
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  store float %a, float* @float_align2, align 2
+  store float %a, ptr @float_align2, align 2
   ret void
 }
 
@@ -71,7 +71,7 @@ define void @store_float_align4(float %a) {
 ; MIPS32R6-NEXT:    swc1 $f12, 0($1)
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  store float %a, float* @float_align4, align 4
+  store float %a, ptr @float_align4, align 4
   ret void
 }
 
@@ -91,7 +91,7 @@ define void @store_float_align8(float %a) {
 ; MIPS32R6-NEXT:    swc1 $f12, 0($1)
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  store float %a, float* @float_align8, align 8
+  store float %a, ptr @float_align8, align 8
   ret void
 }
 
@@ -112,7 +112,7 @@ define void @store_i32_align1(i32 signext %a) {
 ; MIPS32R6-NEXT:    sw $4, 0($1)
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  store i32 %a, i32* @i32_align1, align 1
+  store i32 %a, ptr @i32_align1, align 1
   ret void
 }
 
@@ -133,7 +133,7 @@ define void @store_i32_align2(i32 signext %a) {
 ; MIPS32R6-NEXT:    sw $4, 0($1)
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  store i32 %a, i32* @i32_align2, align 2
+  store i32 %a, ptr @i32_align2, align 2
   ret void
 }
 
@@ -153,7 +153,7 @@ define void @store_i32_align4(i32 signext %a) {
 ; MIPS32R6-NEXT:    sw $4, 0($1)
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  store i32 %a, i32* @i32_align4, align 4
+  store i32 %a, ptr @i32_align4, align 4
   ret void
 }
 
@@ -173,6 +173,6 @@ define void @store_i32_align8(i32 signext %a) {
 ; MIPS32R6-NEXT:    sw $4, 0($1)
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  store i32 %a, i32* @i32_align8, align 8
+  store i32 %a, ptr @i32_align8, align 8
   ret void
 }

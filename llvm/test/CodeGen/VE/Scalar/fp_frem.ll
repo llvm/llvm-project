@@ -3,7 +3,7 @@
 ;;; Test ‘frem’ Instruction
 ;;;
 ;;; Syntax:
-;;;   <result> = frem [fast-math flags]* <ty> <op1>, <op2> ; yields ty:result
+;;;   <result> = frem ptr <ty> <op1>, <op2> ; yields ty:result
 ;;;
 ;;; Overview:
 ;;;   The ‘frem’ instruction returns the remainder from the division of its two

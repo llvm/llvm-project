@@ -10,94 +10,106 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-grtev4-linux-gnu"
 
-%0 = type { i32 (...)**, %1 }
+%0 = type { ptr, %1 }
 %1 = type { %2 }
 %2 = type { %3 }
 %3 = type { %4, i64, %5 }
-%4 = type { i8* }
+%4 = type { ptr }
 %5 = type { i64, [8 x i8] }
 
-define void @fail(i1* noalias sret(i1), %0*, %1*, i8*) local_unnamed_addr #0 {
+define void @fail(ptr noalias sret(i1) %arg, ptr %arg1, ptr %arg2, ptr %arg3) local_unnamed_addr #0 {
 ; CHECK-LABEL: @fail(
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast %0* [[TMP1:%.*]] to i64 (%0*)***
-; CHECK-NEXT:    [[TMP6:%.*]] = load i64 (%0*)**, i64 (%0*)*** [[TMP5]], align 8, !invariant.group !6
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64 (%0*)*, i64 (%0*)** [[TMP6]], i64 6
-; CHECK-NEXT:    [[TMP8:%.*]] = load i64 (%0*)*, i64 (%0*)** [[TMP7]], align 8, !invariant.load !6
-; CHECK-NEXT:    [[TMP9:%.*]] = tail call i64 [[TMP8]](%0* [[TMP1]]) #1
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[TMP1]], %1* [[TMP2:%.*]], i64 0, i32 0, i32 0, i32 0, i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = load i8*, i8** [[TMP10]], align 8
-; CHECK-NEXT:    store i8 0, i8* [[TMP11]], align 1
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast i64 (%0*)** [[TMP6]] to i64 (%0*, i8*, i64)**
-; CHECK-NEXT:    br i1 undef
-; CHECK:         [[TMP14:%.*]] = bitcast %0* [[TMP1]] to i64 (%0*, i8*, i64)***
-; CHECK-NEXT:    [[DOTPHI_TRANS_INSERT:%.*]] = getelementptr inbounds i64 (%0*, i8*, i64)*, i64 (%0*, i8*, i64)** [[TMP12]], i64 22
-; CHECK-NEXT:    [[DOTPRE:%.*]] = load i64 (%0*, i8*, i64)*, i64 (%0*, i8*, i64)** [[DOTPHI_TRANS_INSERT]], align 8, !invariant.load !6
-; CHECK-NEXT:    br label [[TMP15:%.*]]
-; CHECK:         [[TMP16:%.*]] = call i64 [[DOTPRE]](%0* nonnull [[TMP1]], i8* null, i64 0) #1
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I4:%.*]] = load ptr, ptr [[ARG1:%.*]], align 8, !invariant.group !6
+; CHECK-NEXT:    [[I5:%.*]] = getelementptr inbounds ptr, ptr [[I4]], i64 6
+; CHECK-NEXT:    [[I6:%.*]] = load ptr, ptr [[I5]], align 8, !invariant.load !6
+; CHECK-NEXT:    [[I7:%.*]] = tail call i64 [[I6]](ptr [[ARG1]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[I9:%.*]] = load ptr, ptr [[ARG2:%.*]], align 8
+; CHECK-NEXT:    store i8 0, ptr [[I9]], align 1
+; CHECK-NEXT:    br i1 undef, label [[BB10:%.*]], label [[BB29:%.*]]
+; CHECK:       bb10:
+; CHECK-NEXT:    [[I14_PHI_TRANS_INSERT:%.*]] = getelementptr inbounds ptr, ptr [[I4]], i64 22
+; CHECK-NEXT:    [[I15_PRE:%.*]] = load ptr, ptr [[I14_PHI_TRANS_INSERT]], align 8, !invariant.load !6
+; CHECK-NEXT:    br label [[BB12:%.*]]
+; CHECK:       bb12:
+; CHECK-NEXT:    [[I16:%.*]] = call i64 [[I15_PRE]](ptr nonnull [[ARG1]], ptr null, i64 0) #[[ATTR1]]
+; CHECK-NEXT:    br i1 undef, label [[BB28:%.*]], label [[BB17:%.*]]
+; CHECK:       bb17:
+; CHECK-NEXT:    br i1 undef, label [[BB18:%.*]], label [[BB21:%.*]]
+; CHECK:       bb18:
+; CHECK-NEXT:    br label [[BB28]]
+; CHECK:       bb21:
+; CHECK-NEXT:    br i1 undef, label [[BB25:%.*]], label [[BB26:%.*]]
+; CHECK:       bb25:
+; CHECK-NEXT:    br label [[BB28]]
+; CHECK:       bb26:
+; CHECK-NEXT:    br label [[BB28]]
+; CHECK:       bb28:
+; CHECK-NEXT:    br i1 undef, label [[BB12]], label [[BB29]]
+; CHECK:       bb29:
+; CHECK-NEXT:    ret void
+;
+bb:
+  %i4 = load ptr, ptr %arg1, align 8, !invariant.group !6
+  %i5 = getelementptr inbounds ptr, ptr %i4, i64 6
+  %i6 = load ptr, ptr %i5, align 8, !invariant.load !6
+  %i7 = tail call i64 %i6(ptr %arg1) #1
+  %i9 = load ptr, ptr %arg2, align 8
+  store i8 0, ptr %i9, align 1
+  br i1 undef, label %bb10, label %bb29
 
-  %5 = bitcast %0* %1 to i64 (%0*)***
-  %6 = load i64 (%0*)**, i64 (%0*)*** %5, align 8, !invariant.group !6
-  %7 = getelementptr inbounds i64 (%0*)*, i64 (%0*)** %6, i64 6
-  %8 = load i64 (%0*)*, i64 (%0*)** %7, align 8, !invariant.load !6
-  %9 = tail call i64 %8(%0* %1) #1
-  %10 = getelementptr inbounds %1, %1* %2, i64 0, i32 0, i32 0, i32 0, i32 0
-  %11 = load i8*, i8** %10, align 8
-  store i8 0, i8* %11, align 1
-  br i1 undef, label %12, label %31
+bb10:                                             ; preds = %bb
+  br label %bb12
 
-; <label>:12:                                     ; preds = %4
-  %13 = bitcast %0* %1 to i64 (%0*, i8*, i64)***
-  br label %14
+bb12:                                             ; preds = %bb28, %bb10
+  %i13 = load ptr, ptr %arg1, align 8, !invariant.group !6
+  %i14 = getelementptr inbounds ptr, ptr %i13, i64 22
+  %i15 = load ptr, ptr %i14, align 8, !invariant.load !6
+  %i16 = call i64 %i15(ptr nonnull %arg1, ptr null, i64 0) #1
+  br i1 undef, label %bb28, label %bb17
 
-; <label>:14:                                     ; preds = %30, %12
-  %15 = load i64 (%0*, i8*, i64)**, i64 (%0*, i8*, i64)*** %13, align 8, !invariant.group !6
-  %16 = getelementptr inbounds i64 (%0*, i8*, i64)*, i64 (%0*, i8*, i64)** %15, i64 22
-  %17 = load i64 (%0*, i8*, i64)*, i64 (%0*, i8*, i64)** %16, align 8, !invariant.load !6
-  %18 = call i64 %17(%0* nonnull %1, i8* null, i64 0) #1
-  br i1 undef, label %30, label %19
+bb17:                                             ; preds = %bb12
+  br i1 undef, label %bb18, label %bb21
 
-; <label>:19:                                     ; preds = %14
-  br i1 undef, label %20, label %23
+bb18:                                             ; preds = %bb17
+  br label %bb19
 
-; <label>:20:                                     ; preds = %19
-  br label %21
+bb19:                                             ; preds = %bb18
+  br label %bb20
 
-; <label>:21:                                     ; preds = %20
-  br label %22
+bb20:                                             ; preds = %bb19
+  br label %bb28
 
-; <label>:22:                                     ; preds = %21
-  br label %30
+bb21:                                             ; preds = %bb17
+  br label %bb22
 
-; <label>:23:                                     ; preds = %19
-  br label %24
+bb22:                                             ; preds = %bb21
+  br label %bb23
 
-; <label>:24:                                     ; preds = %23
-  br label %25
+bb23:                                             ; preds = %bb22
+  br label %bb24
 
-; <label>:25:                                     ; preds = %24
-  br label %26
+bb24:                                             ; preds = %bb23
+  br i1 undef, label %bb25, label %bb26
 
-; <label>:26:                                     ; preds = %25
-  br i1 undef, label %27, label %28
+bb25:                                             ; preds = %bb24
+  br label %bb28
 
-; <label>:27:                                     ; preds = %26
-  br label %30
+bb26:                                             ; preds = %bb24
+  br label %bb27
 
-; <label>:28:                                     ; preds = %26
-  br label %29
+bb27:                                             ; preds = %bb26
+  br label %bb28
 
-; <label>:29:                                     ; preds = %28
-  br label %30
+bb28:                                             ; preds = %bb27, %bb25, %bb20, %bb12
+  br i1 undef, label %bb12, label %bb29
 
-; <label>:30:                                     ; preds = %29, %27, %22, %14
-  br i1 undef, label %14, label %31
-
-; <label>:31:                                     ; preds = %30, %4
+bb29:                                             ; preds = %bb28, %bb
   ret void
 }
 
-attributes #0 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="non-leaf" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="non-leaf" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.linker.options = !{}
 !llvm.module.flags = !{!0, !1, !3, !4, !5}
@@ -106,6 +118,6 @@ attributes #1 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="fals
 !1 = !{i32 3, !"StrictVTablePointersRequirement", !2}
 !2 = !{!"StrictVTablePointers", i32 1}
 !3 = !{i32 1, !"wchar_size", i32 4}
-!4 = !{i32 7, !"PIC Level", i32 2}
+!4 = !{i32 8, !"PIC Level", i32 2}
 !5 = !{i32 7, !"PIE Level", i32 2}
 !6 = !{}

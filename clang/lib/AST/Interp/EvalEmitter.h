@@ -23,7 +23,6 @@
 #include "llvm/Support/Error.h"
 
 namespace clang {
-class FunctionDecl;
 namespace interp {
 class Context;
 class Function;
@@ -71,7 +70,7 @@ protected:
   Local createLocal(Descriptor *D);
 
   /// Returns the source location of the current opcode.
-  SourceInfo getSource(Function *F, CodePtr PC) const override {
+  SourceInfo getSource(const Function *F, CodePtr PC) const override {
     return F ? F->getSource(PC) : CurrentSource;
   }
 
@@ -97,7 +96,7 @@ private:
   // value which is mapped to the location of the opcode being evaluated.
   CodePtr OpPC;
   /// Location of a failure.
-  llvm::Optional<SourceLocation> BailLocation;
+  std::optional<SourceLocation> BailLocation;
   /// Location of the current instruction.
   SourceInfo CurrentSource;
 
@@ -110,12 +109,7 @@ private:
 
   /// Since expressions can only jump forward, predicated execution is
   /// used to deal with if-else statements.
-  bool isActive() { return CurrentLabel == ActiveLabel; }
-
-  /// Helper to invoke a method.
-  bool ExecuteCall(Function *F, Pointer &&This, const SourceInfo &Info);
-  /// Helper to emit a diagnostic on a missing method.
-  bool ExecuteNoCall(const FunctionDecl *F, const SourceInfo &Info);
+  bool isActive() const { return CurrentLabel == ActiveLabel; }
 
 protected:
 #define GET_EVAL_PROTO

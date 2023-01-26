@@ -1,4 +1,4 @@
-; RUN: opt -objc-arc -S < %s | FileCheck %s
+; RUN: opt -passes=objc-arc -S < %s | FileCheck %s
 ; rdar://11744105
 ; bugzilla://14584
 
@@ -6,106 +6,104 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-apple-macosx10.9.0"
 
 %0 = type opaque
-%struct._class_t = type { %struct._class_t*, %struct._class_t*, %struct._objc_cache*, i8* (i8*, i8*)**, %struct._class_ro_t* }
+%struct._class_t = type { ptr, ptr, ptr, ptr, ptr }
 %struct._objc_cache = type opaque
-%struct._class_ro_t = type { i32, i32, i32, i8*, i8*, %struct.__method_list_t*, %struct._objc_protocol_list*, %struct._ivar_list_t*, i8*, %struct._prop_list_t* }
+%struct._class_ro_t = type { i32, i32, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr }
 %struct.__method_list_t = type { i32, i32, [0 x %struct._objc_method] }
-%struct._objc_method = type { i8*, i8*, i8* }
-%struct._objc_protocol_list = type { i64, [0 x %struct._protocol_t*] }
-%struct._protocol_t = type { i8*, i8*, %struct._objc_protocol_list*, %struct.__method_list_t*, %struct.__method_list_t*, %struct.__method_list_t*, %struct.__method_list_t*, %struct._prop_list_t*, i32, i32, i8** }
+%struct._objc_method = type { ptr, ptr, ptr }
+%struct._objc_protocol_list = type { i64, [0 x ptr] }
+%struct._protocol_t = type { ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i32, i32, ptr }
 %struct._prop_list_t = type { i32, i32, [0 x %struct._prop_t] }
-%struct._prop_t = type { i8*, i8* }
+%struct._prop_t = type { ptr, ptr }
 %struct._ivar_list_t = type { i32, i32, [0 x %struct._ivar_t] }
-%struct._ivar_t = type { i64*, i8*, i8*, i32, i32 }
-%struct.NSConstantString = type { i32*, i32, i8*, i64 }
+%struct._ivar_t = type { ptr, ptr, ptr, i32, i32 }
+%struct.NSConstantString = type { ptr, i32, ptr, i64 }
 
 @"OBJC_CLASS_$_NSObject" = external global %struct._class_t
-@"\01L_OBJC_CLASSLIST_REFERENCES_$_" = internal global %struct._class_t* @"OBJC_CLASS_$_NSObject", section "__DATA, __objc_classrefs, regular, no_dead_strip", align 8
+@"\01L_OBJC_CLASSLIST_REFERENCES_$_" = internal global ptr @"OBJC_CLASS_$_NSObject", section "__DATA, __objc_classrefs, regular, no_dead_strip", align 8
 @"\01L_OBJC_METH_VAR_NAME_" = internal global [4 x i8] c"new\00", section "__TEXT,__objc_methname,cstring_literals", align 1
-@"\01L_OBJC_SELECTOR_REFERENCES_" = internal global i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"\01L_OBJC_METH_VAR_NAME_", i64 0, i64 0), section "__DATA, __objc_selrefs, literal_pointers, no_dead_strip"
+@"\01L_OBJC_SELECTOR_REFERENCES_" = internal global ptr @"\01L_OBJC_METH_VAR_NAME_", section "__DATA, __objc_selrefs, literal_pointers, no_dead_strip"
 @__CFConstantStringClassReference = external global [0 x i32]
 @.str = private unnamed_addr constant [11 x i8] c"Failed: %@\00", align 1
-@_unnamed_cfstring_ = private constant %struct.NSConstantString { i32* getelementptr inbounds ([0 x i32], [0 x i32]* @__CFConstantStringClassReference, i32 0, i32 0), i32 1992, i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i32 0, i32 0), i64 10 }, section "__DATA,__cfstring"
+@_unnamed_cfstring_ = private constant %struct.NSConstantString { ptr @__CFConstantStringClassReference, i32 1992, ptr @.str, i64 10 }, section "__DATA,__cfstring"
 @"OBJC_CLASS_$_NSException" = external global %struct._class_t
-@"\01L_OBJC_CLASSLIST_REFERENCES_$_1" = internal global %struct._class_t* @"OBJC_CLASS_$_NSException", section "__DATA, __objc_classrefs, regular, no_dead_strip", align 8
+@"\01L_OBJC_CLASSLIST_REFERENCES_$_1" = internal global ptr @"OBJC_CLASS_$_NSException", section "__DATA, __objc_classrefs, regular, no_dead_strip", align 8
 @.str2 = private unnamed_addr constant [4 x i8] c"Foo\00", align 1
-@_unnamed_cfstring_3 = private constant %struct.NSConstantString { i32* getelementptr inbounds ([0 x i32], [0 x i32]* @__CFConstantStringClassReference, i32 0, i32 0), i32 1992, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str2, i32 0, i32 0), i64 3 }, section "__DATA,__cfstring"
+@_unnamed_cfstring_3 = private constant %struct.NSConstantString { ptr @__CFConstantStringClassReference, i32 1992, ptr @.str2, i64 3 }, section "__DATA,__cfstring"
 @"\01L_OBJC_METH_VAR_NAME_4" = internal global [14 x i8] c"raise:format:\00", section "__TEXT,__objc_methname,cstring_literals", align 1
-@"\01L_OBJC_SELECTOR_REFERENCES_5" = internal global i8* getelementptr inbounds ([14 x i8], [14 x i8]* @"\01L_OBJC_METH_VAR_NAME_4", i64 0, i64 0), section "__DATA, __objc_selrefs, literal_pointers, no_dead_strip"
-@llvm.used = appending global [6 x i8*] [i8* bitcast (%struct._class_t** @"\01L_OBJC_CLASSLIST_REFERENCES_$_" to i8*), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"\01L_OBJC_METH_VAR_NAME_", i32 0, i32 0), i8* bitcast (i8** @"\01L_OBJC_SELECTOR_REFERENCES_" to i8*), i8* bitcast (%struct._class_t** @"\01L_OBJC_CLASSLIST_REFERENCES_$_1" to i8*), i8* getelementptr inbounds ([14 x i8], [14 x i8]* @"\01L_OBJC_METH_VAR_NAME_4", i32 0, i32 0), i8* bitcast (i8** @"\01L_OBJC_SELECTOR_REFERENCES_5" to i8*)], section "llvm.metadata"
+@"\01L_OBJC_SELECTOR_REFERENCES_5" = internal global ptr @"\01L_OBJC_METH_VAR_NAME_4", section "__DATA, __objc_selrefs, literal_pointers, no_dead_strip"
+@llvm.used = appending global [6 x ptr] [ptr @"\01L_OBJC_CLASSLIST_REFERENCES_$_", ptr @"\01L_OBJC_METH_VAR_NAME_", ptr @"\01L_OBJC_SELECTOR_REFERENCES_", ptr @"\01L_OBJC_CLASSLIST_REFERENCES_$_1", ptr @"\01L_OBJC_METH_VAR_NAME_4", ptr @"\01L_OBJC_SELECTOR_REFERENCES_5"], section "llvm.metadata"
 
-define i32 @main() uwtable ssp personality i8* bitcast (i32 (...)* @__objc_personality_v0 to i8*) !dbg !5 {
+define i32 @main() uwtable ssp personality ptr @__objc_personality_v0 !dbg !5 {
 entry:
-  %tmp = load %struct._class_t*, %struct._class_t** @"\01L_OBJC_CLASSLIST_REFERENCES_$_", align 8, !dbg !37
-  %tmp1 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_", align 8, !dbg !37, !invariant.load !38
-  %tmp2 = bitcast %struct._class_t* %tmp to i8*, !dbg !37
-; CHECK: call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* %tmp2, i8* %tmp1)
-  %call = call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* %tmp2, i8* %tmp1), !dbg !37, !clang.arc.no_objc_arc_exceptions !38
-  call void @llvm.dbg.value(metadata i8* %call, metadata !25, metadata !DIExpression()), !dbg !37
-; CHECK: call i8* @llvm.objc.retain(i8* %call) [[NUW:#[0-9]+]]
-  %tmp3 = call i8* @llvm.objc.retain(i8* %call) nounwind, !dbg !39
-  call void @llvm.dbg.value(metadata i8* %call, metadata !25, metadata !DIExpression()), !dbg !39
-  invoke fastcc void @ThrowFunc(i8* %call)
+  %tmp = load ptr, ptr @"\01L_OBJC_CLASSLIST_REFERENCES_$_", align 8, !dbg !37
+  %tmp1 = load ptr, ptr @"\01L_OBJC_SELECTOR_REFERENCES_", align 8, !dbg !37, !invariant.load !38
+; CHECK: call ptr @objc_msgSend(ptr %tmp, ptr %tmp1)
+  %call = call ptr @objc_msgSend(ptr %tmp, ptr %tmp1), !dbg !37, !clang.arc.no_objc_arc_exceptions !38
+  call void @llvm.dbg.value(metadata ptr %call, metadata !25, metadata !DIExpression()), !dbg !37
+; CHECK: call ptr @llvm.objc.retain(ptr %call) [[NUW:#[0-9]+]]
+  %tmp3 = call ptr @llvm.objc.retain(ptr %call) nounwind, !dbg !39
+  call void @llvm.dbg.value(metadata ptr %call, metadata !25, metadata !DIExpression()), !dbg !39
+  invoke fastcc void @ThrowFunc(ptr %call)
           to label %eh.cont unwind label %lpad, !dbg !40, !clang.arc.no_objc_arc_exceptions !38
 
 eh.cont:                                          ; preds = %entry
-; CHECK: call void @llvm.objc.release(i8* %call)
-  call void @llvm.objc.release(i8* %call) nounwind, !dbg !42, !clang.imprecise_release !38
+; CHECK: call void @llvm.objc.release(ptr %call)
+  call void @llvm.objc.release(ptr %call) nounwind, !dbg !42, !clang.imprecise_release !38
   br label %if.end, !dbg !43
 
 lpad:                                             ; preds = %entry
-  %tmp4 = landingpad { i8*, i32 }
-          catch i8* null, !dbg !40
-  %tmp5 = extractvalue { i8*, i32 } %tmp4, 0, !dbg !40
-  %exn.adjusted = call i8* @llvm.objc.begin_catch(i8* %tmp5) nounwind, !dbg !44
+  %tmp4 = landingpad { ptr, i32 }
+          catch ptr null, !dbg !40
+  %tmp5 = extractvalue { ptr, i32 } %tmp4, 0, !dbg !40
+  %exn.adjusted = call ptr @llvm.objc.begin_catch(ptr %tmp5) nounwind, !dbg !44
   call void @llvm.dbg.value(metadata i8 0, metadata !21, metadata !DIExpression()), !dbg !46
   call void @llvm.objc.end_catch(), !dbg !49, !clang.arc.no_objc_arc_exceptions !38
-; CHECK: call void @llvm.objc.release(i8* %call)
-  call void @llvm.objc.release(i8* %call) nounwind, !dbg !42, !clang.imprecise_release !38
-  call void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring_ to i8*), i8* %call), !dbg !50, !clang.arc.no_objc_arc_exceptions !38
+; CHECK: call void @llvm.objc.release(ptr %call)
+  call void @llvm.objc.release(ptr %call) nounwind, !dbg !42, !clang.imprecise_release !38
+  call void (ptr, ...) @NSLog(ptr @_unnamed_cfstring_, ptr %call), !dbg !50, !clang.arc.no_objc_arc_exceptions !38
   br label %if.end, !dbg !52
 
 if.end:                                           ; preds = %lpad, %eh.cont
-  call void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring_ to i8*), i8* %call), !dbg !53, !clang.arc.no_objc_arc_exceptions !38
-; CHECK: call void @llvm.objc.release(i8* %call)
-  call void @llvm.objc.release(i8* %call) nounwind, !dbg !54, !clang.imprecise_release !38
+  call void (ptr, ...) @NSLog(ptr @_unnamed_cfstring_, ptr %call), !dbg !53, !clang.arc.no_objc_arc_exceptions !38
+; CHECK: call void @llvm.objc.release(ptr %call)
+  call void @llvm.objc.release(ptr %call) nounwind, !dbg !54, !clang.imprecise_release !38
   ret i32 0, !dbg !54
 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
-declare i8* @objc_msgSend(i8*, i8*, ...) nonlazybind
+declare ptr @objc_msgSend(ptr, ptr, ...) nonlazybind
 
-declare i8* @llvm.objc.retain(i8*) nonlazybind
+declare ptr @llvm.objc.retain(ptr) nonlazybind
 
-declare i8* @llvm.objc.begin_catch(i8*)
+declare ptr @llvm.objc.begin_catch(ptr)
 
 declare void @llvm.objc.end_catch()
 
 declare void @llvm.objc.exception_rethrow()
 
-define internal fastcc void @ThrowFunc(i8* %obj) uwtable noinline ssp !dbg !27 {
+define internal fastcc void @ThrowFunc(ptr %obj) uwtable noinline ssp !dbg !27 {
 entry:
-  %tmp = call i8* @llvm.objc.retain(i8* %obj) nounwind
-  call void @llvm.dbg.value(metadata i8* %obj, metadata !32, metadata !DIExpression()), !dbg !55
-  %tmp1 = load %struct._class_t*, %struct._class_t** @"\01L_OBJC_CLASSLIST_REFERENCES_$_1", align 8, !dbg !56
-  %tmp2 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_5", align 8, !dbg !56, !invariant.load !38
-  %tmp3 = bitcast %struct._class_t* %tmp1 to i8*, !dbg !56
-  call void (i8*, i8*, %0*, %0*, ...) bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, %0*, %0*, ...)*)(i8* %tmp3, i8* %tmp2, %0* bitcast (%struct.NSConstantString* @_unnamed_cfstring_3 to %0*), %0* bitcast (%struct.NSConstantString* @_unnamed_cfstring_3 to %0*)), !dbg !56, !clang.arc.no_objc_arc_exceptions !38
-  call void @llvm.objc.release(i8* %obj) nounwind, !dbg !58, !clang.imprecise_release !38
+  %tmp = call ptr @llvm.objc.retain(ptr %obj) nounwind
+  call void @llvm.dbg.value(metadata ptr %obj, metadata !32, metadata !DIExpression()), !dbg !55
+  %tmp1 = load ptr, ptr @"\01L_OBJC_CLASSLIST_REFERENCES_$_1", align 8, !dbg !56
+  %tmp2 = load ptr, ptr @"\01L_OBJC_SELECTOR_REFERENCES_5", align 8, !dbg !56, !invariant.load !38
+  call void (ptr, ptr, ptr, ptr, ...) @objc_msgSend(ptr %tmp1, ptr %tmp2, ptr @_unnamed_cfstring_3, ptr @_unnamed_cfstring_3), !dbg !56, !clang.arc.no_objc_arc_exceptions !38
+  call void @llvm.objc.release(ptr %obj) nounwind, !dbg !58, !clang.imprecise_release !38
   ret void, !dbg !58
 }
 
 declare i32 @__objc_personality_v0(...)
 
-declare void @llvm.objc.release(i8*) nonlazybind
+declare void @llvm.objc.release(ptr) nonlazybind
 
-declare void @NSLog(i8*, ...)
+declare void @NSLog(ptr, ...)
 
 declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 ; CHECK: attributes #0 = { ssp uwtable }
-; CHECK: attributes #1 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
+; CHECK: attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; CHECK: attributes #2 = { nonlazybind }
 ; CHECK: attributes [[NUW]] = { nounwind }
 ; CHECK: attributes #4 = { noinline ssp uwtable }

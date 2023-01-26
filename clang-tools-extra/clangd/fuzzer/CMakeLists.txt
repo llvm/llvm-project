@@ -21,5 +21,6 @@ clang_target_link_libraries(clangd-fuzzer
 target_link_libraries(clangd-fuzzer
   PRIVATE
   clangDaemon
+  clangIncludeCleaner
   clangdSupport
   )

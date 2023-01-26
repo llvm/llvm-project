@@ -18,6 +18,7 @@
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -135,7 +136,7 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
   case Intrinsic::x86_avx512_psrai_q_512:
   case Intrinsic::x86_avx512_psrai_w_512:
     IsImm = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Intrinsic::x86_sse2_psra_d:
   case Intrinsic::x86_sse2_psra_w:
   case Intrinsic::x86_avx2_psra_d:
@@ -158,7 +159,7 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
   case Intrinsic::x86_avx512_psrli_q_512:
   case Intrinsic::x86_avx512_psrli_w_512:
     IsImm = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Intrinsic::x86_sse2_psrl_d:
   case Intrinsic::x86_sse2_psrl_q:
   case Intrinsic::x86_sse2_psrl_w:
@@ -181,7 +182,7 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
   case Intrinsic::x86_avx512_pslli_q_512:
   case Intrinsic::x86_avx512_pslli_w_512:
     IsImm = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Intrinsic::x86_sse2_psll_d:
   case Intrinsic::x86_sse2_psll_q:
   case Intrinsic::x86_sse2_psll_w:
@@ -548,7 +549,7 @@ static Value *simplifyX86addcarry(const IntrinsicInst &II,
     Value *UAddResult = Builder.CreateExtractValue(UAdd, 0);
     Value *UAddOV = Builder.CreateZExt(Builder.CreateExtractValue(UAdd, 1),
                                        Builder.getInt8Ty());
-    Value *Res = UndefValue::get(RetTy);
+    Value *Res = PoisonValue::get(RetTy);
     Res = Builder.CreateInsertValue(Res, UAddOV, 0);
     return Builder.CreateInsertValue(Res, UAddResult, 1);
   }
@@ -840,7 +841,7 @@ static Value *simplifyX86pshufb(const IntrinsicInst &II,
 
   auto V1 = II.getArgOperand(0);
   auto V2 = Constant::getNullValue(VecTy);
-  return Builder.CreateShuffleVector(V1, V2, makeArrayRef(Indexes, NumElts));
+  return Builder.CreateShuffleVector(V1, V2, ArrayRef(Indexes, NumElts));
 }
 
 /// Attempt to convert vpermilvar* to shufflevector if the mask is constant.
@@ -887,7 +888,7 @@ static Value *simplifyX86vpermilvar(const IntrinsicInst &II,
   }
 
   auto V1 = II.getArgOperand(0);
-  return Builder.CreateShuffleVector(V1, makeArrayRef(Indexes, NumElts));
+  return Builder.CreateShuffleVector(V1, ArrayRef(Indexes, NumElts));
 }
 
 /// Attempt to convert vpermd/vpermps to shufflevector if the mask is constant.
@@ -921,10 +922,10 @@ static Value *simplifyX86vpermv(const IntrinsicInst &II,
   }
 
   auto V1 = II.getArgOperand(0);
-  return Builder.CreateShuffleVector(V1, makeArrayRef(Indexes, Size));
+  return Builder.CreateShuffleVector(V1, ArrayRef(Indexes, Size));
 }
 
-Optional<Instruction *>
+std::optional<Instruction *>
 X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   auto SimplifyDemandedVectorEltsLow = [&IC](Value *Op, unsigned Width,
                                              unsigned DemandedWidth) {
@@ -1730,10 +1731,10 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   default:
     break;
   }
-  return None;
+  return std::nullopt;
 }
 
-Optional<Value *> X86TTIImpl::simplifyDemandedUseBitsIntrinsic(
+std::optional<Value *> X86TTIImpl::simplifyDemandedUseBitsIntrinsic(
     InstCombiner &IC, IntrinsicInst &II, APInt DemandedMask, KnownBits &Known,
     bool &KnownBitsComputed) const {
   switch (II.getIntrinsicID()) {
@@ -1770,10 +1771,10 @@ Optional<Value *> X86TTIImpl::simplifyDemandedUseBitsIntrinsic(
     break;
   }
   }
-  return None;
+  return std::nullopt;
 }
 
-Optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
+std::optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
     InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
     APInt &UndefElts2, APInt &UndefElts3,
     std::function<void(Instruction *, unsigned, APInt, APInt &)>
@@ -2025,5 +2026,5 @@ Optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
     UndefElts.setHighBits(VWidth / 2);
     break;
   }
-  return None;
+  return std::nullopt;
 }

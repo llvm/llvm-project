@@ -23,6 +23,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -355,7 +356,7 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
 uint32_t PlatformRemoteDarwinDevice::GetConnectedSDKIndex() {
   if (IsConnected()) {
     if (m_connected_module_sdk_idx == UINT32_MAX) {
-      if (llvm::Optional<std::string> build = GetRemoteOSBuildString()) {
+      if (std::optional<std::string> build = GetRemoteOSBuildString()) {
         const uint32_t num_sdk_infos = m_sdk_directory_infos.size();
         for (uint32_t i = 0; i < num_sdk_infos; ++i) {
           const SDKDirectoryInfo &sdk_dir_info = m_sdk_directory_infos[i];

@@ -1,4 +1,9 @@
-// RUN: %clang_analyze_cc1 -Wno-unused-value -std=c++14 -analyzer-checker=core,debug.ExprInspection,alpha.core.PointerArithm -verify %s
+// RUN: %clang_analyze_cc1 -Wno-unused-value -std=c++14 -verify %s -triple x86_64-pc-linux-gnu \
+// RUN:    -analyzer-checker=core,debug.ExprInspection,alpha.core.PointerArithm
+
+// RUN: %clang_analyze_cc1 -Wno-unused-value -std=c++14 -verify %s -triple x86_64-pc-linux-gnu \
+// RUN:    -analyzer-config support-symbolic-integer-casts=true \
+// RUN:    -analyzer-checker=core,debug.ExprInspection,alpha.core.PointerArithm
 
 template <typename T> void clang_analyzer_dump(T);
 
@@ -134,10 +139,29 @@ struct parse_t {
 int parse(parse_t *p) {
   unsigned copy = p->bits2;
   clang_analyzer_dump(copy);
-  // expected-warning@-1 {{reg_$1<unsigned int SymRegion{reg_$0<parse_t * p>}.bits2>}}
+  // expected-warning@-1 {{reg_$1<unsigned int Element{SymRegion{reg_$0<parse_t * p>},0 S64b,struct Bug_55934::parse_t}.bits2>}}
   header *bits = (header *)&copy;
   clang_analyzer_dump(bits->b);
-  // expected-warning@-1 {{derived_$2{reg_$1<unsigned int SymRegion{reg_$0<parse_t * p>}.bits2>,Element{copy,0 S64b,struct Bug_55934::header}.b}}}
+  // expected-warning@-1 {{derived_$2{reg_$1<unsigned int Element{SymRegion{reg_$0<parse_t * p>},0 S64b,struct Bug_55934::parse_t}.bits2>,Element{copy,0 S64b,struct Bug_55934::header}.b}}}
   return bits->b; // no-warning
 }
 } // namespace Bug_55934
+
+void LValueToRValueBitCast_dumps(void *p, char (*array)[8]) {
+  clang_analyzer_dump(p);
+  clang_analyzer_dump(array);
+  // expected-warning@-2 {{&SymRegion{reg_$0<void * p>}}}
+  // expected-warning@-2 {{&SymRegion{reg_$1<char (*)[8] array>}}}
+  clang_analyzer_dump((unsigned long)p);
+  clang_analyzer_dump(__builtin_bit_cast(unsigned long, p));
+  // expected-warning@-2 {{&SymRegion{reg_$0<void * p>} [as 64 bit integer]}}
+  // expected-warning@-2 {{&SymRegion{reg_$0<void * p>} [as 64 bit integer]}}
+  clang_analyzer_dump((unsigned long)array);
+  clang_analyzer_dump(__builtin_bit_cast(unsigned long, array));
+  // expected-warning@-2 {{&SymRegion{reg_$1<char (*)[8] array>} [as 64 bit integer]}}
+  // expected-warning@-2 {{&SymRegion{reg_$1<char (*)[8] array>} [as 64 bit integer]}}
+}
+
+unsigned long ptr_arithmetic(void *p) {
+  return __builtin_bit_cast(unsigned long, p) + 1; // no-crash
+}

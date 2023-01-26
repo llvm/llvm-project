@@ -2,7 +2,7 @@
 ; RUN: llc -mcpu=pwr8 -mtriple=powerpc64-unknown-unknown -verify-machineinstrs < %s | FileCheck %s
 
 ; Function Attrs: norecurse nounwind readonly
-define float @testSingleAccess(i32* nocapture readonly %arr) local_unnamed_addr #0 {
+define float @testSingleAccess(ptr nocapture readonly %arr) local_unnamed_addr #0 {
 ; CHECK-LABEL: testSingleAccess:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi 3, 3, 8
@@ -10,14 +10,14 @@ define float @testSingleAccess(i32* nocapture readonly %arr) local_unnamed_addr 
 ; CHECK-NEXT:    xscvsxdsp 1, 0
 ; CHECK-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds i32, i32* %arr, i64 2
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %arr, i64 2
+  %0 = load i32, ptr %arrayidx, align 4
   %conv = sitofp i32 %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define float @testMultipleAccess(i32* nocapture readonly %arr) local_unnamed_addr #0 {
+define float @testMultipleAccess(ptr nocapture readonly %arr) local_unnamed_addr #0 {
 ; CHECK-LABEL: testMultipleAccess:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lwz 4, 8(3)
@@ -27,10 +27,10 @@ define float @testMultipleAccess(i32* nocapture readonly %arr) local_unnamed_add
 ; CHECK-NEXT:    xscvsxdsp 1, 0
 ; CHECK-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds i32, i32* %arr, i64 2
-  %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds i32, i32* %arr, i64 3
-  %1 = load i32, i32* %arrayidx1, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %arr, i64 2
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %arr, i64 3
+  %1 = load i32, ptr %arrayidx1, align 4
   %add = add nsw i32 %1, %0
   %conv = sitofp i32 %add to float
   ret float %conv

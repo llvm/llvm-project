@@ -105,12 +105,6 @@ TEST(FormatTest, PlaceHolderFmtStrWithBuilder) {
   EXPECT_THAT(result, StrEq("bbb"));
 }
 
-TEST(FormatTest, PlaceHolderFmtStrWithOp) {
-  FmtContext ctx;
-  std::string result = std::string(tgfmt("$_op", &ctx.withOp("ooo")));
-  EXPECT_THAT(result, StrEq("ooo"));
-}
-
 TEST(FormatTest, PlaceHolderMissingCtx) {
   std::string result = std::string(tgfmt("$_op", nullptr));
   EXPECT_THAT(result, StrEq("$_op<no-subst-found>"));

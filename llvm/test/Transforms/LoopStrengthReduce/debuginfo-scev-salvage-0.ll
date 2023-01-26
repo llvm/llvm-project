@@ -25,10 +25,10 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define dso_local void @_Z21mul_pow_of_2_to_shiftjPj(i32 %size, i32* nocapture %data) local_unnamed_addr !dbg !7 {
+define dso_local void @_Z21mul_pow_of_2_to_shiftjPj(i32 %size, ptr nocapture %data) local_unnamed_addr !dbg !7 {
 entry:
   call void @llvm.dbg.value(metadata i32 %size, metadata !12, metadata !DIExpression()), !dbg !13
-  call void @llvm.dbg.value(metadata i32* %data, metadata !14, metadata !DIExpression()), !dbg !13
+  call void @llvm.dbg.value(metadata ptr %data, metadata !14, metadata !DIExpression()), !dbg !13
   call void @llvm.dbg.value(metadata i32 0, metadata !15, metadata !DIExpression()), !dbg !13
   %cmp4.not = icmp eq i32 %size, 0, !dbg !13
   br i1 %cmp4.not, label %while.end, label %while.body.preheader, !dbg !13
@@ -43,8 +43,8 @@ while.body:                                       ; preds = %while.body, %while.
   %0 = trunc i64 %indvars.iv to i32, !dbg !16
   %mul = shl i32 %0, 3, !dbg !16
   call void @llvm.dbg.value(metadata i32 %mul, metadata !18, metadata !DIExpression()), !dbg !16
-  %arrayidx = getelementptr inbounds i32, i32* %data, i64 %indvars.iv, !dbg !16
-  store i32 %mul, i32* %arrayidx, align 4, !dbg !16
+  %arrayidx = getelementptr inbounds i32, ptr %data, i64 %indvars.iv, !dbg !16
+  store i32 %mul, ptr %arrayidx, align 4, !dbg !16
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !16
   call void @llvm.dbg.value(metadata i64 %indvars.iv.next, metadata !15, metadata !DIExpression()), !dbg !13
   %exitcond = icmp ne i64 %indvars.iv.next, %wide.trip.count, !dbg !13

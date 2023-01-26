@@ -35,6 +35,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -57,6 +58,11 @@ static cl::opt<unsigned> ColdCountThreshold(
         "Minimum number of times a block must be executed to be retained."),
     cl::init(1), cl::Hidden);
 
+static cl::opt<bool> SplitAllEHCode(
+    "mfs-split-ehcode",
+    cl::desc("Splits all EH code and it's descendants by default."),
+    cl::init(false), cl::Hidden);
+
 namespace {
 
 class MachineFunctionSplitter : public MachineFunctionPass {
@@ -76,10 +82,83 @@ public:
 };
 } // end anonymous namespace
 
+/// setDescendantEHBlocksCold - This splits all EH pads and blocks reachable
+/// only by EH pad as cold. This will help mark EH pads statically cold instead
+/// of relying on profile data.
+static void
+setDescendantEHBlocksCold(SmallVectorImpl<MachineBasicBlock *> &EHBlocks,
+                          MachineFunction &MF) {
+  MachineBasicBlock *StartBlock = &MF.front();
+  // A block can be unknown if its not reachable from anywhere
+  // EH if its only reachable from start blocks via some path through EH pads
+  // NonEH if it's reachable from Non EH blocks as well.
+  enum Status { Unknown = 0, EH = 1, NonEH = 2 };
+  DenseSet<MachineBasicBlock *> WorkList;
+  DenseMap<MachineBasicBlock *, Status> Statuses;
+
+  auto getStatus = [&](MachineBasicBlock *MBB) {
+    if (Statuses.find(MBB) != Statuses.end())
+      return Statuses[MBB];
+    else
+      return Unknown;
+  };
+
+  auto checkPredecessors = [&](MachineBasicBlock *MBB, Status Stat) {
+    for (auto *PredMBB : MBB->predecessors()) {
+      Status PredStatus = getStatus(PredMBB);
+      // If status of predecessor block has gone above current block
+      // we update current blocks status.
+      if (PredStatus > Stat)
+        Stat = PredStatus;
+    }
+    return Stat;
+  };
+
+  auto addSuccesors = [&](MachineBasicBlock *MBB) {
+    for (auto *SuccMBB : MBB->successors()) {
+      if (!SuccMBB->isEHPad())
+        WorkList.insert(SuccMBB);
+    }
+  };
+
+  // Insert the successors of start block
+  // and landing pads successor.
+  Statuses[StartBlock] = NonEH;
+  addSuccesors(StartBlock);
+  for (auto *LP : EHBlocks) {
+    addSuccesors(LP);
+    Statuses[LP] = EH;
+  }
+
+  // Worklist iterative algorithm.
+  while (!WorkList.empty()) {
+    auto *MBB = *WorkList.begin();
+    WorkList.erase(MBB);
+
+    Status OldStatus = getStatus(MBB);
+
+    // Check on predecessors and check for
+    // Status update.
+    Status NewStatus = checkPredecessors(MBB, OldStatus);
+
+    // Did the block status change?
+    bool changed = OldStatus != NewStatus;
+    if (changed) {
+      addSuccesors(MBB);
+      Statuses[MBB] = NewStatus;
+    }
+  }
+
+  for (auto Entry : Statuses) {
+    if (Entry.second == EH)
+      Entry.first->setSectionID(MBBSectionID::ColdSectionID);
+  }
+}
+
 static bool isColdBlock(const MachineBasicBlock &MBB,
                         const MachineBlockFrequencyInfo *MBFI,
                         ProfileSummaryInfo *PSI) {
-  Optional<uint64_t> Count = MBFI->getBlockProfileCount(&MBB);
+  std::optional<uint64_t> Count = MBFI->getBlockProfileCount(&MBB);
   if (!Count)
     return true;
 
@@ -90,9 +169,11 @@ static bool isColdBlock(const MachineBasicBlock &MBB,
 }
 
 bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
-  // TODO: We only target functions with profile data. Static information may
-  // also be considered but we don't see performance improvements yet.
-  if (!MF.getFunction().hasProfileData())
+  // We target functions with profile data. Static information in the form
+  // of exception handling code may be split to cold if user passes the
+  // mfs-split-ehcode flag.
+  bool UseProfileData = MF.getFunction().hasProfileData();
+  if (!UseProfileData && !SplitAllEHCode)
     return false;
 
   // TODO: We don't split functions where a section attribute has been set
@@ -105,9 +186,9 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
 
   // We don't want to proceed further for cold functions
   // or functions of unknown hotness. Lukewarm functions have no prefix.
-  Optional<StringRef> SectionPrefix = MF.getFunction().getSectionPrefix();
-  if (SectionPrefix && (SectionPrefix.value().equals("unlikely") ||
-                        SectionPrefix.value().equals("unknown"))) {
+  std::optional<StringRef> SectionPrefix = MF.getFunction().getSectionPrefix();
+  if (SectionPrefix &&
+      (*SectionPrefix == "unlikely" || *SectionPrefix == "unknown")) {
     return false;
   }
 
@@ -117,8 +198,13 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
   // made by prior passes such as MachineBlockPlacement.
   MF.RenumberBlocks();
   MF.setBBSectionsType(BasicBlockSection::Preset);
-  auto *MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
-  auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+
+  MachineBlockFrequencyInfo *MBFI = nullptr;
+  ProfileSummaryInfo *PSI = nullptr;
+  if (UseProfileData) {
+    MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
+    PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  }
 
   SmallVector<MachineBasicBlock *, 2> LandingPads;
   for (auto &MBB : MF) {
@@ -127,21 +213,25 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
 
     if (MBB.isEHPad())
       LandingPads.push_back(&MBB);
-    else if (isColdBlock(MBB, MBFI, PSI))
+    else if (UseProfileData && isColdBlock(MBB, MBFI, PSI) && !SplitAllEHCode)
       MBB.setSectionID(MBBSectionID::ColdSectionID);
   }
 
+  // Split all EH code and it's descendant statically by default.
+  if (SplitAllEHCode)
+    setDescendantEHBlocksCold(LandingPads, MF);
   // We only split out eh pads if all of them are cold.
-  bool HasHotLandingPads = false;
-  for (const MachineBasicBlock *LP : LandingPads) {
-    if (!isColdBlock(*LP, MBFI, PSI))
-      HasHotLandingPads = true;
+  else {
+    bool HasHotLandingPads = false;
+    for (const MachineBasicBlock *LP : LandingPads) {
+      if (!isColdBlock(*LP, MBFI, PSI))
+        HasHotLandingPads = true;
+    }
+    if (!HasHotLandingPads) {
+      for (MachineBasicBlock *LP : LandingPads)
+        LP->setSectionID(MBBSectionID::ColdSectionID);
+    }
   }
-  if (!HasHotLandingPads) {
-    for (MachineBasicBlock *LP : LandingPads)
-      LP->setSectionID(MBBSectionID::ColdSectionID);
-  }
-
   auto Comparator = [](const MachineBasicBlock &X, const MachineBasicBlock &Y) {
     return X.getSectionID().Type < Y.getSectionID().Type;
   };

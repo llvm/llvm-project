@@ -15,13 +15,17 @@
 #ifndef LLVM_CLANG_TOOLING_INCLUSIONS_STANDARDLIBRARY_H
 #define LLVM_CLANG_TOOLING_INCLUSIONS_STANDARDLIBRARY_H
 
-#include "clang/AST/Decl.h"
-#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <string>
 
 namespace clang {
+class Decl;
+class NamespaceDecl;
+class DeclContext;
 namespace tooling {
 namespace stdlib {
 
@@ -34,7 +38,7 @@ class Symbol;
 class Header {
 public:
   // Name should contain the angle brackets, e.g. "<vector>".
-  static llvm::Optional<Header> named(llvm::StringRef Name);
+  static std::optional<Header> named(llvm::StringRef Name);
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Header &H) {
     return OS << H.name();
@@ -61,7 +65,7 @@ class Symbol {
 public:
   /// \p Scope should have the trailing "::", for example:
   /// named("std::chrono::", "system_clock")
-  static llvm::Optional<Symbol> named(llvm::StringRef Scope,
+  static std::optional<Symbol> named(llvm::StringRef Scope,
                                       llvm::StringRef Name);
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Symbol &S) {
@@ -91,7 +95,7 @@ private:
 class Recognizer {
 public:
   Recognizer();
-  llvm::Optional<Symbol> operator()(const Decl *D);
+  std::optional<Symbol> operator()(const Decl *D);
 
 private:
   using NSSymbolMap = llvm::DenseMap<llvm::StringRef, unsigned>;

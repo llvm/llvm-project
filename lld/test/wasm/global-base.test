@@ -1,5 +1,15 @@
 RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/start.s -o %t.o
 
+# Check for error on `--global-base` with `-shared` and `-pie`
+RUN: not wasm-ld --global-base=2048 --experimental-pic -shared -o %t.wasm %t.o 2>&1 | FileCheck %s -check-prefix=SHARED-ERROR
+RUN: not wasm-ld --global-base=2048 --experimental-pic -pie -o %t.wasm %t.o 2>&1 | FileCheck %s -check-prefix=SHARED-ERROR
+SHARED-ERROR: error: --global-base may not be used with -shared/-pie
+
+# Check for error on `--global-base` which is lower than that end of the stack
+# when `--stack-first` is used.
+RUN: not wasm-ld --global-base=2048 --stack-first -o %t.wasm %t.o 2>&1 | FileCheck %s -check-prefix=STACK-ERROR
+STACK-ERROR: error: --global-base cannot be less than stack size when --stack-first is used
+
 RUN: wasm-ld --export=__global_base --export=__data_end --allow-undefined -o %t.wasm %t.o
 RUN: obj2yaml %t.wasm | FileCheck %s  -check-prefix=CHECK-1024
 CHECK-1024:       - Type:            GLOBAL

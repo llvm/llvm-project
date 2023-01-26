@@ -4,6 +4,7 @@ set(GWP_ASAN_UNITTEST_CFLAGS
   ${COMPILER_RT_UNITTEST_CFLAGS}
   ${COMPILER_RT_GTEST_CFLAGS}
   ${SANITIZER_TEST_CXX_CFLAGS}
+  -std=c++17
   -I${COMPILER_RT_SOURCE_DIR}/lib/
   -O2
   -g
@@ -25,7 +26,8 @@ set(GWP_ASAN_UNITTESTS
   harness.cpp
   enable_disable.cpp
   late_init.cpp
-  options.cpp)
+  options.cpp
+  recoverable.cpp)
 
 set(GWP_ASAN_UNIT_TEST_HEADERS
   ${GWP_ASAN_HEADERS}

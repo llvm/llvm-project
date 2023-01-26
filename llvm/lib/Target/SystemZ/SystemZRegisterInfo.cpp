@@ -107,9 +107,8 @@ bool SystemZRegisterInfo::getRegAllocationHints(
 
         auto tryAddHint = [&](const MachineOperand *MO) -> void {
           Register Reg = MO->getReg();
-          Register PhysReg = Register::isPhysicalRegister(Reg)
-                                 ? Reg
-                                 : Register(VRM->getPhys(Reg));
+          Register PhysReg =
+              Reg.isPhysical() ? Reg : Register(VRM->getPhys(Reg));
           if (PhysReg) {
             if (MO->getSubReg())
               PhysReg = getSubReg(PhysReg, MO->getSubReg());
@@ -282,7 +281,7 @@ SystemZRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
-void
+bool
 SystemZRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                          int SPAdj, unsigned FIOperandNum,
                                          RegScavenger *RS) const {
@@ -314,7 +313,7 @@ SystemZRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       MI->getDebugExpressionOp().setMetadata(
           DIExpression::appendOpsToArg(MI->getDebugExpression(), Ops, OpIdx));
     }
-    return;
+    return false;
   }
 
   // See if the offset is in range, or if an equivalent instruction that
@@ -374,6 +373,7 @@ SystemZRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   }
   MI->setDesc(TII->get(OpcodeForOffset));
   MI->getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
+  return false;
 }
 
 bool SystemZRegisterInfo::shouldCoalesce(MachineInstr *MI,
@@ -429,7 +429,7 @@ bool SystemZRegisterInfo::shouldCoalesce(MachineInstr *MI,
   MEE++;
   for (; MII != MEE; ++MII) {
     for (const MachineOperand &MO : MII->operands())
-      if (MO.isReg() && Register::isPhysicalRegister(MO.getReg())) {
+      if (MO.isReg() && MO.getReg().isPhysical()) {
         for (MCSuperRegIterator SI(MO.getReg(), this, true/*IncludeSelf*/);
              SI.isValid(); ++SI)
           if (NewRC->contains(*SI)) {

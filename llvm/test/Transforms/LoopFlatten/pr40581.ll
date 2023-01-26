@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -loop-flatten -verify-loop-info -verify-dom-info -verify-scev -verify | FileCheck %s
+; RUN: opt < %s -S -passes='loop(loop-flatten),verify' -verify-loop-info -verify-dom-info -verify-scev | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 
@@ -11,9 +11,9 @@ target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 ;     k++;
 ;   }
 ;
-; TODO: this case doesn't trigger yet. 
+; TODO: this case doesn't trigger yet.
 ;
-define dso_local void @v0(i32 %n, i32* nocapture %A, i32* nocapture readonly %B) local_unnamed_addr #0 {
+define dso_local void @v0(i32 %n, ptr nocapture %A, ptr nocapture readonly %B) local_unnamed_addr #0 {
 ;
 ; CHECK-LABEL: @v0
 ; CHECK-NOT:   %flatten.tripcount = mul i32 %n, %n
@@ -33,10 +33,10 @@ for.cond1.preheader.us:
 
 for.body4.us:
   %k.119.us = phi i32 [ %k.022.us, %for.cond1.preheader.us ], [ %inc.us, %for.body4.us ]
-  %arrayidx.us = getelementptr inbounds i32, i32* %B, i32 %k.119.us
-  %1 = load i32, i32* %arrayidx.us, align 4
-  %arrayidx5.us = getelementptr inbounds i32, i32* %A, i32 %k.119.us
-  store i32 %1, i32* %arrayidx5.us, align 4
+  %arrayidx.us = getelementptr inbounds i32, ptr %B, i32 %k.119.us
+  %1 = load i32, ptr %arrayidx.us, align 4
+  %arrayidx5.us = getelementptr inbounds i32, ptr %A, i32 %k.119.us
+  store i32 %1, ptr %arrayidx5.us, align 4
   %inc.us = add i32 %k.119.us, 1
   %exitcond = icmp ne i32 %inc.us, %0
   br i1 %exitcond, label %for.body4.us, label %for.cond1.for.cond.cleanup3_crit_edge.us
@@ -63,7 +63,7 @@ for.cond.cleanup:
 ;     k++;
 ;   }
 ;
-define dso_local void @v1(i32 %n, i32* nocapture %A, i32* nocapture readonly %B) local_unnamed_addr #0 {
+define dso_local void @v1(i32 %n, ptr nocapture %A, ptr nocapture readonly %B) local_unnamed_addr #0 {
 ;
 ; CHECK-LABEL: @v1
 ; CHECK:       for.cond1.preheader.us.preheader:
@@ -87,10 +87,10 @@ for.cond1.preheader.us:
 for.body4.us:
   %j.022.us = phi i32 [ 0, %for.cond1.preheader.us ], [ %inc6.us, %for.body4.us ]
   %add.us = add nsw i32 %j.022.us, %mul.us
-  %arrayidx.us = getelementptr inbounds i32, i32* %B, i32 %add.us
-  %0 = load i32, i32* %arrayidx.us, align 4
-  %arrayidx5.us = getelementptr inbounds i32, i32* %A, i32 %add.us
-  store i32 %0, i32* %arrayidx5.us, align 4
+  %arrayidx.us = getelementptr inbounds i32, ptr %B, i32 %add.us
+  %0 = load i32, ptr %arrayidx.us, align 4
+  %arrayidx5.us = getelementptr inbounds i32, ptr %A, i32 %add.us
+  store i32 %0, ptr %arrayidx5.us, align 4
   %inc6.us = add nuw nsw i32 %j.022.us, 1
   %exitcond = icmp ne i32 %inc6.us, %n
   br i1 %exitcond, label %for.body4.us, label %for.cond1.for.cond.cleanup3_crit_edge.us

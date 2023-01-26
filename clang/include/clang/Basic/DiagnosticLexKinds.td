@@ -80,6 +80,10 @@ def warn_cxx11_keyword : Warning<"'%0' is a keyword in C++11">,
   InGroup<CXX11Compat>, DefaultIgnore;
 def warn_cxx20_keyword : Warning<"'%0' is a keyword in C++20">,
   InGroup<CXX20Compat>, DefaultIgnore;
+def warn_c99_keyword : Warning<"'%0' is a keyword in C99">,
+  InGroup<C99Compat>, DefaultIgnore;
+def warn_c2x_keyword : Warning<"'%0' is a keyword in C2x">,
+  InGroup<C2xCompat>, DefaultIgnore;
 
 def ext_unterminated_char_or_string : ExtWarn<
   "missing terminating %select{'|'\"'}0 character">, InGroup<InvalidPPToken>;
@@ -123,11 +127,14 @@ def ext_unicode_whitespace : ExtWarn<
   "treating Unicode character as whitespace">,
   InGroup<DiagGroup<"unicode-whitespace">>;
 def warn_utf8_symbol_homoglyph : Warning<
-  "treating Unicode character <U+%0> as identifier character rather than "
+  "treating Unicode character <U+%0> as an identifier character rather than "
   "as '%1' symbol">, InGroup<DiagGroup<"unicode-homoglyph">>;
 def warn_utf8_symbol_zero_width : Warning<
   "identifier contains Unicode character <U+%0> that is invisible in "
   "some environments">, InGroup<DiagGroup<"unicode-zero-width">>;
+def ext_mathematical_notation : ExtWarn<
+  "mathematical notation character <U+%0> in an identifier is a Clang extension">,
+  InGroup<DiagGroup<"mathematical-notation-identifier-extension">>;
 
 def ext_delimited_escape_sequence : Extension<
   "%select{delimited|named}0 escape sequences are a "
@@ -457,7 +464,7 @@ def ext_pp_gnu_line_directive : Extension<
 def err_pp_invalid_directive : Error<
   "invalid preprocessing directive%select{|, did you mean '#%1'?}0">;
 def warn_pp_invalid_directive : Warning<
-  err_pp_invalid_directive.Text>, InGroup<DiagGroup<"unknown-directives">>;
+  err_pp_invalid_directive.Summary>, InGroup<DiagGroup<"unknown-directives">>;
 def err_pp_directive_required : Error<
   "%0 must be used within a preprocessing directive">;
 def err_pp_file_not_found : Error<"'%0' file not found">, DefaultFatal;
@@ -644,10 +651,14 @@ def warn_pragma_diagnostic_unknown_warning :
    ExtWarn<"unknown warning group '%0', ignored">,
    InGroup<UnknownWarningOption>;
 // - #pragma __debug
+def warn_pragma_debug_missing_command : Warning<
+  "missing debug command">, InGroup<IgnoredPragmas>;
 def warn_pragma_debug_unexpected_command : Warning<
   "unexpected debug command '%0'">, InGroup<IgnoredPragmas>;
 def warn_pragma_debug_missing_argument : Warning<
   "missing argument to debug command '%0'">, InGroup<IgnoredPragmas>;
+def warn_pragma_debug_unexpected_argument : Warning<
+  "unexpected argument to debug command">, InGroup<IgnoredPragmas>;
 def warn_pragma_debug_unknown_module : Warning<
   "unknown module '%0'">, InGroup<IgnoredPragmas>;
 // #pragma module
@@ -696,7 +707,7 @@ def ext_pp_bad_paste_ms : ExtWarn<
 def err_pp_operator_used_as_macro_name : Error<
   "C++ operator %0 (aka %1) used as a macro name">;
 def ext_pp_operator_used_as_macro_name : Extension<
-  err_pp_operator_used_as_macro_name.Text>, InGroup<MicrosoftCppMacro>;
+  err_pp_operator_used_as_macro_name.Summary>, InGroup<MicrosoftCppMacro>;
 def err_pp_illegal_floating_literal : Error<
   "floating point literal in preprocessor expression">;
 def err_pp_line_requires_integer : Error<

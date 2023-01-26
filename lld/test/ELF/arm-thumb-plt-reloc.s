@@ -2,9 +2,9 @@
 // RUN: llvm-mc -filetype=obj -triple=thumbv7a-none-linux-gnueabi %p/Inputs/arm-plt-reloc.s -o %t1
 // RUN: llvm-mc -filetype=obj -triple=thumbv7a-none-linux-gnueabi %s -o %t2
 // RUN: ld.lld %t1 %t2 -o %t
-// RUN: llvm-objdump --triple=thumbv7a-none-linux-gnueabi -d %t | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex --triple=thumbv7a-none-linux-gnueabi -d %t | FileCheck %s
 // RUN: ld.lld -shared %t1 %t2 -o %t.so
-// RUN: llvm-objdump --triple=thumbv7a-none-linux-gnueabi -d %t.so | FileCheck --check-prefix=DSO %s
+// RUN: llvm-objdump --no-print-imm-hex --triple=thumbv7a-none-linux-gnueabi -d %t.so | FileCheck --check-prefix=DSO %s
 // RUN: llvm-readobj -S -r %t.so | FileCheck -check-prefix=DSOREL %s
 //
 // Test PLT entry generation

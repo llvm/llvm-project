@@ -161,7 +161,7 @@ static int mmapForContinuousMode(uint64_t CurrentFileOffset, FILE *File) {
 
 #define INSTR_PROF_PROFILE_COUNTER_BIAS_DEFAULT_VAR                            \
   INSTR_PROF_CONCAT(INSTR_PROF_PROFILE_COUNTER_BIAS_VAR, _default)
-intptr_t INSTR_PROF_PROFILE_COUNTER_BIAS_DEFAULT_VAR = 0;
+COMPILER_RT_VISIBILITY intptr_t INSTR_PROF_PROFILE_COUNTER_BIAS_DEFAULT_VAR = 0;
 
 /* This variable is a weak external reference which could be used to detect
  * whether or not the compiler defined this symbol. */

@@ -18,7 +18,7 @@
 ;
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-n32-S64"
 
-define void @AandSum(i32* noalias %sum, i32* noalias %A) {
+define void @AandSum(ptr noalias %sum, ptr noalias %A) {
 entry:
   br label %for.cond
 
@@ -28,24 +28,24 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %exitcond, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %i.0
-  %tmp = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.0
+  %tmp = load i32, ptr %arrayidx, align 4
   %sub = add nsw i32 %i.0, -1
-  %arrayidx1 = getelementptr inbounds i32, i32* %A, i32 %sub
-  %tmp1 = load i32, i32* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %A, i32 %sub
+  %tmp1 = load i32, ptr %arrayidx1, align 4
   %add = add nsw i32 %tmp, %tmp1
-  %arrayidx2 = getelementptr inbounds i32, i32* %A, i32 %i.0
-  store i32 %add, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %A, i32 %i.0
+  store i32 %add, ptr %arrayidx2, align 4
   %sub4 = add nsw i32 %i.0, -2
-  %arrayidx5 = getelementptr inbounds i32, i32* %A, i32 %sub4
-  %tmp2 = load i32, i32* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds i32, ptr %A, i32 %sub4
+  %tmp2 = load i32, ptr %arrayidx5, align 4
   %add6 = add nsw i32 %add, %tmp2
   %sub7 = add nsw i32 %i.0, -1
-  %arrayidx8 = getelementptr inbounds i32, i32* %A, i32 %sub7
-  store i32 %add6, i32* %arrayidx8, align 4
-  %tmp3 = load i32, i32* %sum, align 4
+  %arrayidx8 = getelementptr inbounds i32, ptr %A, i32 %sub7
+  store i32 %add6, ptr %arrayidx8, align 4
+  %tmp3 = load i32, ptr %sum, align 4
   %add9 = add nsw i32 %tmp3, %i.0
-  store i32 %add9, i32* %sum, align 4
+  store i32 %add9, ptr %sum, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body

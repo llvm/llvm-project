@@ -60,12 +60,8 @@ Expr<SomeType> Parenthesize(Expr<SomeType> &&expr) {
 }
 
 std::optional<DataRef> ExtractDataRef(
-    const ActualArgument &arg, bool intoSubstring) {
-  if (const Expr<SomeType> *expr{arg.UnwrapExpr()}) {
-    return ExtractDataRef(*expr, intoSubstring);
-  } else {
-    return std::nullopt;
-  }
+    const ActualArgument &arg, bool intoSubstring, bool intoComplexPart) {
+  return ExtractDataRef(arg.UnwrapExpr(), intoSubstring, intoComplexPart);
 }
 
 std::optional<DataRef> ExtractSubstringBase(const Substring &substring) {
@@ -771,7 +767,7 @@ inline const ProcedureRef *UnwrapProcedureRef(const Expr<T> &expr) {
 
 // IsObjectPointer()
 bool IsObjectPointer(const Expr<SomeType> &expr, FoldingContext &context) {
-  if (IsNullPointer(expr)) {
+  if (IsNullObjectPointer(expr)) {
     return true;
   } else if (IsProcedurePointerTarget(expr)) {
     return false;
@@ -784,18 +780,54 @@ bool IsObjectPointer(const Expr<SomeType> &expr, FoldingContext &context) {
   }
 }
 
-bool IsBareNullPointer(const Expr<SomeType> *expr) {
-  return expr && std::holds_alternative<NullPointer>(expr->u);
+const ProcedureRef *GetProcedureRef(const Expr<SomeType> &expr) {
+  return UnwrapProcedureRef(expr);
 }
 
-// IsNullPointer()
-struct IsNullPointerHelper {
+// IsNullPointer() & variations
+
+template <bool IS_PROC_PTR> struct IsNullPointerHelper {
   template <typename A> bool operator()(const A &) const { return false; }
+  bool operator()(const ProcedureRef &call) const {
+    if constexpr (IS_PROC_PTR) {
+      const auto *intrinsic{call.proc().GetSpecificIntrinsic()};
+      return intrinsic &&
+          intrinsic->characteristics.value().attrs.test(
+              characteristics::Procedure::Attr::NullPointer);
+    } else {
+      return false;
+    }
+  }
   template <typename T> bool operator()(const FunctionRef<T> &call) const {
-    const auto *intrinsic{call.proc().GetSpecificIntrinsic()};
-    return intrinsic &&
-        intrinsic->characteristics.value().attrs.test(
-            characteristics::Procedure::Attr::NullPointer);
+    if constexpr (IS_PROC_PTR) {
+      return false;
+    } else {
+      const auto *intrinsic{call.proc().GetSpecificIntrinsic()};
+      return intrinsic &&
+          intrinsic->characteristics.value().attrs.test(
+              characteristics::Procedure::Attr::NullPointer);
+    }
+  }
+  template <typename T> bool operator()(const Designator<T> &x) const {
+    if (const auto *component{std::get_if<Component>(&x.u)}) {
+      if (const auto *baseSym{std::get_if<SymbolRef>(&component->base().u)}) {
+        const Symbol &base{**baseSym};
+        if (const auto *object{
+                base.detailsIf<semantics::ObjectEntityDetails>()}) {
+          // TODO: nested component and array references
+          if (IsNamedConstant(base) && object->init()) {
+            if (auto structCons{
+                    GetScalarConstantValue<SomeDerived>(*object->init())}) {
+              auto iter{structCons->values().find(component->GetLastSymbol())};
+              if (iter != structCons->values().end()) {
+                return (*this)(iter->second.value());
+              }
+            }
+          }
+        }
+      }
+    }
+    return false;
   }
   bool operator()(const NullPointer &) const { return true; }
   template <typename T> bool operator()(const Parentheses<T> &x) const {
@@ -806,17 +838,31 @@ struct IsNullPointerHelper {
   }
 };
 
+bool IsNullObjectPointer(const Expr<SomeType> &expr) {
+  return IsNullPointerHelper<false>{}(expr);
+}
+
+bool IsNullProcedurePointer(const Expr<SomeType> &expr) {
+  return IsNullPointerHelper<true>{}(expr);
+}
+
 bool IsNullPointer(const Expr<SomeType> &expr) {
-  return IsNullPointerHelper{}(expr);
+  return IsNullObjectPointer(expr) || IsNullProcedurePointer(expr);
+}
+
+bool IsBareNullPointer(const Expr<SomeType> *expr) {
+  return expr && std::holds_alternative<NullPointer>(expr->u);
 }
 
 // GetSymbolVector()
 auto GetSymbolVectorHelper::operator()(const Symbol &x) const -> Result {
   if (const auto *details{x.detailsIf<semantics::AssocEntityDetails>()}) {
-    return (*this)(details->expr());
-  } else {
-    return {x.GetUltimate()};
+    if (IsVariable(details->expr()) && !GetProcedureRef(*details->expr())) {
+      // associate(x => variable that is not a pointer returned by a function)
+      return (*this)(details->expr());
+    }
   }
+  return {x.GetUltimate()};
 }
 auto GetSymbolVectorHelper::operator()(const Component &x) const -> Result {
   Result result{(*this)(x.base())};
@@ -954,6 +1000,12 @@ std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
   } else if (!rhsProcedure) {
     msg = "In assignment to procedure %s, the characteristics of the target"
           " procedure '%s' could not be determined"_err_en_US;
+  } else if (!isCall && lhsProcedure->functionResult &&
+      rhsProcedure->functionResult &&
+      !lhsProcedure->functionResult->IsCompatibleWith(
+          *rhsProcedure->functionResult, &whyNotCompatible)) {
+    msg =
+        "Function %s associated with incompatible function designator '%s': %s"_err_en_US;
   } else if (lhsProcedure->IsCompatibleWith(
                  *rhsProcedure, &whyNotCompatible, specificIntrinsic)) {
     // OK
@@ -1202,9 +1254,9 @@ bool IsPureProcedure(const Symbol &original) {
   // An ENTRY is pure if its containing subprogram is
   const Symbol &symbol{DEREF(GetMainEntry(&original.GetUltimate()))};
   if (const auto *procDetails{symbol.detailsIf<ProcEntityDetails>()}) {
-    if (const Symbol * procInterface{procDetails->interface().symbol()}) {
+    if (procDetails->procInterface()) {
       // procedure with a pure interface
-      return IsPureProcedure(*procInterface);
+      return IsPureProcedure(*procDetails->procInterface());
     }
   } else if (const auto *details{symbol.detailsIf<ProcBindingDetails>()}) {
     return IsPureProcedure(details->symbol());
@@ -1216,6 +1268,9 @@ bool IsPureProcedure(const Symbol &original) {
     // reference an IMPURE procedure or a VOLATILE variable
     if (const auto &expr{symbol.get<SubprogramDetails>().stmtFunction()}) {
       for (const SymbolRef &ref : evaluate::CollectSymbols(*expr)) {
+        if (&*ref == &symbol) {
+          return false; // error recovery, recursion is caught elsewhere
+        }
         if (IsFunction(*ref) && !IsPureProcedure(*ref)) {
           return false;
         }
@@ -1240,14 +1295,15 @@ bool IsElementalProcedure(const Symbol &original) {
   // An ENTRY is elemental if its containing subprogram is
   const Symbol &symbol{DEREF(GetMainEntry(&original.GetUltimate()))};
   if (const auto *procDetails{symbol.detailsIf<ProcEntityDetails>()}) {
-    if (const Symbol * procInterface{procDetails->interface().symbol()}) {
+    if (const Symbol * procInterface{procDetails->procInterface()}) {
       // procedure with an elemental interface, ignoring the elemental
       // aspect of intrinsic functions
       return !procInterface->attrs().test(Attr::INTRINSIC) &&
           IsElementalProcedure(*procInterface);
     }
   } else if (const auto *details{symbol.detailsIf<ProcBindingDetails>()}) {
-    return IsElementalProcedure(details->symbol());
+    return !details->symbol().attrs().test(Attr::INTRINSIC) &&
+        IsElementalProcedure(details->symbol());
   } else if (!IsProcedure(symbol)) {
     return false;
   }
@@ -1262,9 +1318,8 @@ bool IsFunction(const Symbol &symbol) {
               common::visitors{
                   [](const SubprogramDetails &x) { return x.isFunction(); },
                   [](const ProcEntityDetails &x) {
-                    const auto &ifc{x.interface()};
-                    return ifc.type() ||
-                        (ifc.symbol() && IsFunction(*ifc.symbol()));
+                    const Symbol *ifc{x.procInterface()};
+                    return x.type() || (ifc && IsFunction(*ifc));
                   },
                   [](const ProcBindingDetails &x) {
                     return IsFunction(x.symbol());
@@ -1281,7 +1336,12 @@ bool IsFunction(const Scope &scope) {
 
 bool IsProcedure(const Symbol &symbol) {
   return common::visit(common::visitors{
-                           [](const SubprogramDetails &) { return true; },
+                           [&symbol](const SubprogramDetails &) {
+                             const Scope *scope{symbol.scope()};
+                             // Main programs & BLOCK DATA are not procedures.
+                             return !scope ||
+                                 scope->kind() == Scope::Kind::Subprogram;
+                           },
                            [](const SubprogramNameDetails &) { return true; },
                            [](const ProcEntityDetails &) { return true; },
                            [](const GenericDetails &) { return true; },
@@ -1354,6 +1414,8 @@ bool IsAutomatic(const Symbol &original) {
 bool IsSaved(const Symbol &original) {
   const Symbol &symbol{GetAssociationRoot(original)};
   const Scope &scope{symbol.owner()};
+  const common::LanguageFeatureControl &features{
+      scope.context().languageFeatures()};
   auto scopeKind{scope.kind()};
   if (symbol.has<AssocEntityDetails>()) {
     return false; // ASSOCIATE(non-variable)
@@ -1373,8 +1435,18 @@ bool IsSaved(const Symbol &original) {
     // BLOCK DATA entities must all be in COMMON,
     // which was checked above.
     return true;
-  } else if (scope.context().languageFeatures().IsEnabled(
-                 common::LanguageFeature::DefaultSave) &&
+  } else if (scopeKind == Scope::Kind::MainProgram &&
+      (features.IsEnabled(common::LanguageFeature::SaveMainProgram) ||
+          (features.IsEnabled(
+               common::LanguageFeature::SaveBigMainProgramVariables) &&
+              symbol.size() > 32))) {
+    // With SaveBigMainProgramVariables, keeping all unsaved main program
+    // variables of 32 bytes or less on the stack allows keeping numerical and
+    // logical scalars, small scalar characters or derived, small arrays, and
+    // scalar descriptors on the stack. This leaves more room for lower level
+    // optimizers to do register promotion or get easy aliasing information.
+    return true;
+  } else if (features.IsEnabled(common::LanguageFeature::DefaultSave) &&
       (scopeKind == Scope::Kind::MainProgram ||
           (scope.kind() == Scope::Kind::Subprogram &&
               !(scope.symbol() &&
@@ -1414,14 +1486,14 @@ bool IsAssumedShape(const Symbol &symbol) {
   const Symbol &ultimate{ResolveAssociations(symbol)};
   const auto *object{ultimate.detailsIf<ObjectEntityDetails>()};
   return object && object->CanBeAssumedShape() &&
-      !evaluate::IsAllocatableOrPointer(ultimate);
+      !semantics::IsAllocatableOrPointer(ultimate);
 }
 
 bool IsDeferredShape(const Symbol &symbol) {
   const Symbol &ultimate{ResolveAssociations(symbol)};
   const auto *object{ultimate.detailsIf<ObjectEntityDetails>()};
   return object && object->CanBeDeferredShape() &&
-      evaluate::IsAllocatableOrPointer(ultimate);
+      semantics::IsAllocatableOrPointer(ultimate);
 }
 
 bool IsFunctionResult(const Symbol &original) {
@@ -1462,6 +1534,13 @@ bool IsBuiltinDerivedType(const DerivedTypeSpec *derived, const char *name) {
   }
 }
 
+bool IsBuiltinCPtr(const Symbol &symbol) {
+  if (const DeclTypeSpec *declType = symbol.GetType())
+    if (const DerivedTypeSpec *derived = declType->AsDerived())
+      return IsIsoCType(derived);
+  return false;
+}
+
 bool IsIsoCType(const DerivedTypeSpec *derived) {
   return IsBuiltinDerivedType(derived, "c_ptr") ||
       IsBuiltinDerivedType(derived, "c_funptr");
@@ -1481,21 +1560,20 @@ bool IsEventTypeOrLockType(const DerivedTypeSpec *derivedTypeSpec) {
 }
 
 int CountLenParameters(const DerivedTypeSpec &type) {
-  return std::count_if(type.parameters().begin(), type.parameters().end(),
-      [](const auto &pair) { return pair.second.isLen(); });
+  return llvm::count_if(
+      type.parameters(), [](const auto &pair) { return pair.second.isLen(); });
 }
 
 int CountNonConstantLenParameters(const DerivedTypeSpec &type) {
-  return std::count_if(
-      type.parameters().begin(), type.parameters().end(), [](const auto &pair) {
-        if (!pair.second.isLen()) {
-          return false;
-        } else if (const auto &expr{pair.second.GetExplicit()}) {
-          return !IsConstantExpr(*expr);
-        } else {
-          return true;
-        }
-      });
+  return llvm::count_if(type.parameters(), [](const auto &pair) {
+    if (!pair.second.isLen()) {
+      return false;
+    } else if (const auto &expr{pair.second.GetExplicit()}) {
+      return !IsConstantExpr(*expr);
+    } else {
+      return true;
+    }
+  });
 }
 
 // Are the type parameters of type1 compile-time compatible with the
@@ -1539,7 +1617,7 @@ static const Symbol *FindFunctionResult(
                          return subp.isFunction() ? &subp.result() : nullptr;
                        },
           [&](const ProcEntityDetails &proc) {
-            const Symbol *iface{proc.interface().symbol()};
+            const Symbol *iface{proc.procInterface()};
             return iface ? FindFunctionResult(*iface, seen) : nullptr;
           },
           [&](const ProcBindingDetails &binding) {

@@ -16,6 +16,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/Analysis/FlowSensitive/DebugSupport.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/Support/Debug.h"
 #include <cassert>
 #include <memory>
@@ -24,15 +25,33 @@
 namespace clang {
 namespace dataflow {
 
-StorageLocation &
-DataflowAnalysisContext::getStableStorageLocation(QualType Type) {
+void DataflowAnalysisContext::addModeledFields(
+    const llvm::DenseSet<const FieldDecl *> &Fields) {
+  llvm::set_union(ModeledFields, Fields);
+}
+
+llvm::DenseSet<const FieldDecl *>
+DataflowAnalysisContext::getReferencedFields(QualType Type) {
+  llvm::DenseSet<const FieldDecl *> Fields = getObjectFields(Type);
+  llvm::set_intersect(Fields, ModeledFields);
+  return Fields;
+}
+
+StorageLocation &DataflowAnalysisContext::createStorageLocation(QualType Type) {
   if (!Type.isNull() &&
       (Type->isStructureOrClassType() || Type->isUnionType())) {
-    // FIXME: Explore options to avoid eager initialization of fields as some of
-    // them might not be needed for a particular analysis.
     llvm::DenseMap<const ValueDecl *, StorageLocation *> FieldLocs;
-    for (const FieldDecl *Field : getObjectFields(Type))
-      FieldLocs.insert({Field, &getStableStorageLocation(Field->getType())});
+    // During context-sensitive analysis, a struct may be allocated in one
+    // function, but its field accessed in a function lower in the stack than
+    // the allocation. Since we only collect fields used in the function where
+    // the allocation occurs, we can't apply that filter when performing
+    // context-sensitive analysis. But, this only applies to storage locations,
+    // since field access it not allowed to fail. In contrast, field *values*
+    // don't need this allowance, since the API allows for uninitialized fields.
+    auto Fields = Opts.ContextSensitiveOpts ? getObjectFields(Type)
+                                            : getReferencedFields(Type);
+    for (const FieldDecl *Field : Fields)
+      FieldLocs.insert({Field, &createStorageLocation(Field->getType())});
     return takeOwnership(
         std::make_unique<AggregateStorageLocation>(Type, std::move(FieldLocs)));
   }
@@ -43,7 +62,7 @@ StorageLocation &
 DataflowAnalysisContext::getStableStorageLocation(const VarDecl &D) {
   if (auto *Loc = getStorageLocation(D))
     return *Loc;
-  auto &Loc = getStableStorageLocation(D.getType());
+  auto &Loc = createStorageLocation(D.getType());
   setStorageLocation(D, Loc);
   return Loc;
 }
@@ -52,7 +71,7 @@ StorageLocation &
 DataflowAnalysisContext::getStableStorageLocation(const Expr &E) {
   if (auto *Loc = getStorageLocation(E))
     return *Loc;
-  auto &Loc = getStableStorageLocation(E.getType());
+  auto &Loc = createStorageLocation(E.getType());
   setStorageLocation(E, Loc);
   return Loc;
 }
@@ -63,7 +82,7 @@ DataflowAnalysisContext::getOrCreateNullPointerValue(QualType PointeeType) {
       PointeeType.isNull() ? PointeeType : PointeeType.getCanonicalType();
   auto Res = NullPointerVals.try_emplace(CanonicalPointeeType, nullptr);
   if (Res.second) {
-    auto &PointeeLoc = getStableStorageLocation(CanonicalPointeeType);
+    auto &PointeeLoc = createStorageLocation(CanonicalPointeeType);
     Res.first->second =
         &takeOwnership(std::make_unique<PointerValue>(PointeeLoc));
   }
@@ -333,6 +352,27 @@ void DataflowAnalysisContext::dumpFlowCondition(AtomicBoolValue &Token) {
       {&getBoolLiteralValue(false), "False"},
       {&getBoolLiteralValue(true), "True"}};
   llvm::dbgs() << debugString(Constraints, AtomNames);
+}
+
+const ControlFlowContext *
+DataflowAnalysisContext::getControlFlowContext(const FunctionDecl *F) {
+  // Canonicalize the key:
+  F = F->getDefinition();
+  if (F == nullptr)
+    return nullptr;
+  auto It = FunctionContexts.find(F);
+  if (It != FunctionContexts.end())
+    return &It->second;
+
+  if (Stmt *Body = F->getBody()) {
+    auto CFCtx = ControlFlowContext::build(F, *Body, F->getASTContext());
+    // FIXME: Handle errors.
+    assert(CFCtx);
+    auto Result = FunctionContexts.insert({F, std::move(*CFCtx)});
+    return &Result.first->second;
+  }
+
+  return nullptr;
 }
 
 } // namespace dataflow

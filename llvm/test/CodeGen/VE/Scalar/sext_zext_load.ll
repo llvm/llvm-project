@@ -7,7 +7,7 @@ define signext i16 @func1() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i8, align 1
-  %a.val = load i8, i8* %a, align 1
+  %a.val = load i8, ptr %a, align 1
   %a.conv = sext i8 %a.val to i16
   ret i16 %a.conv
 }
@@ -19,7 +19,7 @@ define i32 @func2() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i8, align 1
-  %a.val = load i8, i8* %a, align 1
+  %a.val = load i8, ptr %a, align 1
   %a.conv = sext i8 %a.val to i32
   ret i32 %a.conv
 }
@@ -31,7 +31,7 @@ define i64 @func3() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i8, align 1
-  %a.val = load i8, i8* %a, align 1
+  %a.val = load i8, ptr %a, align 1
   %a.conv = sext i8 %a.val to i64
   ret i64 %a.conv
 }
@@ -44,7 +44,7 @@ define zeroext i16 @func5() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i8, align 1
-  %a.val = load i8, i8* %a, align 1
+  %a.val = load i8, ptr %a, align 1
   %a.conv = sext i8 %a.val to i16
   ret i16 %a.conv
 }
@@ -56,7 +56,7 @@ define i32 @func6() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i8, align 1
-  %a.val = load i8, i8* %a, align 1
+  %a.val = load i8, ptr %a, align 1
   %a.conv = sext i8 %a.val to i32
   ret i32 %a.conv
 }
@@ -68,7 +68,7 @@ define i64 @func7() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i8, align 1
-  %a.val = load i8, i8* %a, align 1
+  %a.val = load i8, ptr %a, align 1
   %a.conv = sext i8 %a.val to i64
   ret i64 %a.conv
 }
@@ -80,7 +80,7 @@ define signext i16 @func9() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i8, align 1
-  %a.val = load i8, i8* %a, align 1
+  %a.val = load i8, ptr %a, align 1
   %a.conv = zext i8 %a.val to i16
   ret i16 %a.conv
 }
@@ -92,7 +92,7 @@ define i32 @func10() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i8, align 1
-  %a.val = load i8, i8* %a, align 1
+  %a.val = load i8, ptr %a, align 1
   %a.conv = zext i8 %a.val to i32
   ret i32 %a.conv
 }
@@ -104,7 +104,7 @@ define i64 @func11() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i8, align 1
-  %a.val = load i8, i8* %a, align 1
+  %a.val = load i8, ptr %a, align 1
   %a.conv = zext i8 %a.val to i64
   ret i64 %a.conv
 }
@@ -116,7 +116,7 @@ define zeroext i16 @func13() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i8, align 1
-  %a.val = load i8, i8* %a, align 1
+  %a.val = load i8, ptr %a, align 1
   %a.conv = zext i8 %a.val to i16
   ret i16 %a.conv
 }
@@ -128,7 +128,7 @@ define zeroext i16 @func14() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i8, align 1
-  %a.val = load i8, i8* %a, align 1
+  %a.val = load i8, ptr %a, align 1
   %a.conv = zext i8 %a.val to i16
   ret i16 %a.conv
 }
@@ -140,7 +140,7 @@ define i64 @func15() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i8, align 1
-  %a.val = load i8, i8* %a, align 1
+  %a.val = load i8, ptr %a, align 1
   %a.conv = zext i8 %a.val to i64
   ret i64 %a.conv
 }
@@ -152,7 +152,7 @@ define i32 @func17() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i16, align 2
-  %a.val = load i16, i16* %a, align 2
+  %a.val = load i16, ptr %a, align 2
   %a.conv = sext i16 %a.val to i32
   ret i32 %a.conv
 }
@@ -164,7 +164,7 @@ define i64 @func18() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i16, align 2
-  %a.val = load i16, i16* %a, align 2
+  %a.val = load i16, ptr %a, align 2
   %a.conv = sext i16 %a.val to i64
   ret i64 %a.conv
 }
@@ -176,7 +176,7 @@ define zeroext i16 @func20() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i16, align 2
-  %a.conv = load i16, i16* %a, align 2
+  %a.conv = load i16, ptr %a, align 2
   ret i16 %a.conv
 }
 
@@ -187,7 +187,7 @@ define i64 @func21() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i16, align 2
-  %a.val = load i16, i16* %a, align 2
+  %a.val = load i16, ptr %a, align 2
   %a.conv = sext i16 %a.val to i64
   ret i64 %a.conv
 }
@@ -199,7 +199,7 @@ define i32 @func23() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i16, align 2
-  %a.val = load i16, i16* %a, align 2
+  %a.val = load i16, ptr %a, align 2
   %a.conv = zext i16 %a.val to i32
   ret i32 %a.conv
 }
@@ -211,7 +211,7 @@ define i64 @func24() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i16, align 2
-  %a.val = load i16, i16* %a, align 2
+  %a.val = load i16, ptr %a, align 2
   %a.conv = zext i16 %a.val to i64
   ret i64 %a.conv
 }
@@ -223,7 +223,7 @@ define zeroext i16 @func26() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i16, align 2
-  %a.conv = load i16, i16* %a, align 2
+  %a.conv = load i16, ptr %a, align 2
   ret i16 %a.conv
 }
 
@@ -234,7 +234,7 @@ define i64 @func27() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i16, align 2
-  %a.val = load i16, i16* %a, align 2
+  %a.val = load i16, ptr %a, align 2
   %a.conv = zext i16 %a.val to i64
   ret i64 %a.conv
 }
@@ -246,7 +246,7 @@ define i64 @func29() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i32, align 4
-  %a.val = load i32, i32* %a, align 4
+  %a.val = load i32, ptr %a, align 4
   %a.conv = sext i32 %a.val to i64
   ret i64 %a.conv
 }
@@ -258,7 +258,7 @@ define i64 @func31() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i32, align 4
-  %a.val = load i32, i32* %a, align 4
+  %a.val = load i32, ptr %a, align 4
   %a.conv = sext i32 %a.val to i64
   ret i64 %a.conv
 }
@@ -270,7 +270,7 @@ define i64 @func33() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i32, align 4
-  %a.val = load i32, i32* %a, align 4
+  %a.val = load i32, ptr %a, align 4
   %a.conv = zext i32 %a.val to i64
   ret i64 %a.conv
 }
@@ -282,7 +282,7 @@ define i64 @func35() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i32, align 4
-  %a.val = load i32, i32* %a, align 4
+  %a.val = load i32, ptr %a, align 4
   %a.conv = zext i32 %a.val to i64
   ret i64 %a.conv
 }
@@ -296,7 +296,7 @@ define signext i8 @func37() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i1, align 1
-  %a.val = load i1, i1* %a, align 1
+  %a.val = load i1, ptr %a, align 1
   %a.conv = sext i1 %a.val to i8
   ret i8 %a.conv
 }
@@ -310,7 +310,7 @@ define signext i16 @func38() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i1, align 1
-  %a.val = load i1, i1* %a, align 1
+  %a.val = load i1, ptr %a, align 1
   %a.conv = sext i1 %a.val to i16
   ret i16 %a.conv
 }
@@ -324,7 +324,7 @@ define signext i32 @func39() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i1, align 1
-  %a.val = load i1, i1* %a, align 1
+  %a.val = load i1, ptr %a, align 1
   %a.conv = sext i1 %a.val to i32
   ret i32 %a.conv
 }
@@ -338,7 +338,7 @@ define signext i64 @func40() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i1, align 1
-  %a.val = load i1, i1* %a, align 1
+  %a.val = load i1, ptr %a, align 1
   %a.conv = sext i1 %a.val to i64
   ret i64 %a.conv
 }
@@ -350,7 +350,7 @@ define signext i8 @func42() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i1, align 1
-  %a.val = load i1, i1* %a, align 1
+  %a.val = load i1, ptr %a, align 1
   %a.conv = zext i1 %a.val to i8
   ret i8 %a.conv
 }
@@ -362,7 +362,7 @@ define signext i16 @func43() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i1, align 1
-  %a.val = load i1, i1* %a, align 1
+  %a.val = load i1, ptr %a, align 1
   %a.conv = zext i1 %a.val to i16
   ret i16 %a.conv
 }
@@ -374,7 +374,7 @@ define signext i32 @func44() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i1, align 1
-  %a.val = load i1, i1* %a, align 1
+  %a.val = load i1, ptr %a, align 1
   %a.conv = zext i1 %a.val to i32
   ret i32 %a.conv
 }
@@ -386,7 +386,7 @@ define signext i64 @func45() {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %a = alloca i1, align 1
-  %a.val = load i1, i1* %a, align 1
+  %a.val = load i1, ptr %a, align 1
   %a.conv = zext i1 %a.val to i64
   ret i64 %a.conv
 }

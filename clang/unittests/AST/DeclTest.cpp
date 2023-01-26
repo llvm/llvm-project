@@ -20,7 +20,7 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/Testing/Support/Annotations.h"
+#include "llvm/Testing/Annotations/Annotations.h"
 #include "gtest/gtest.h"
 
 using namespace clang::ast_matchers;
@@ -259,4 +259,234 @@ TEST(Decl, ModuleAndInternalLinkage) {
 
   EXPECT_EQ(b->getLinkageInternal(), ModuleLinkage);
   EXPECT_EQ(g->getLinkageInternal(), ModuleLinkage);
+}
+
+TEST(Decl, GetNonTransparentDeclContext) {
+  llvm::Annotations Code(R"(
+    export module m3;
+    export template <class> struct X {
+      template <class Self> friend void f(Self &&self) {
+        (Self&)self;
+      }
+    };)");
+
+  auto AST =
+      tooling::buildASTFromCodeWithArgs(Code.code(), /*Args=*/{"-std=c++20"});
+  ASTContext &Ctx = AST->getASTContext();
+
+  auto *f = selectFirst<FunctionDecl>(
+      "f", match(functionDecl(hasName("f")).bind("f"), Ctx));
+
+  EXPECT_TRUE(f->getNonTransparentDeclContext()->isFileContext());
+}
+
+TEST(Decl, MemberFunctionInModules) {
+  llvm::Annotations Code(R"(
+    module;
+    class G {
+      void bar() {}
+    };
+    export module M;
+    class A {
+      void foo() {}
+    };
+    )");
+
+  auto AST =
+      tooling::buildASTFromCodeWithArgs(Code.code(), /*Args=*/{"-std=c++20"});
+  ASTContext &Ctx = AST->getASTContext();
+
+  auto *foo = selectFirst<FunctionDecl>(
+      "foo", match(functionDecl(hasName("foo")).bind("foo"), Ctx));
+
+  // The function defined within a class definition is not implicitly inline
+  // if it is not attached to global module
+  EXPECT_FALSE(foo->isInlined());
+
+  auto *bar = selectFirst<FunctionDecl>(
+      "bar", match(functionDecl(hasName("bar")).bind("bar"), Ctx));
+
+  // In global module, the function defined within a class definition is
+  // implicitly inline.
+  EXPECT_TRUE(bar->isInlined());
+}
+
+TEST(Decl, MemberFunctionInHeaderUnit) {
+  llvm::Annotations Code(R"(
+    class foo {
+    public:
+      int memFn() {
+        return 43;
+      }
+    };
+    )");
+
+  auto AST = tooling::buildASTFromCodeWithArgs(
+      Code.code(), {"-std=c++20", " -xc++-user-header ", "-emit-header-unit"});
+  ASTContext &Ctx = AST->getASTContext();
+
+  auto *memFn = selectFirst<FunctionDecl>(
+      "memFn", match(functionDecl(hasName("memFn")).bind("memFn"), Ctx));
+
+  EXPECT_TRUE(memFn->isInlined());
+}
+
+TEST(Decl, FriendFunctionWithinClassInHeaderUnit) {
+  llvm::Annotations Code(R"(
+    class foo {
+      int value;
+    public:
+      foo(int v) : value(v) {}
+
+      friend int getFooValue(foo f) {
+        return f.value;
+      }
+    };
+    )");
+
+  auto AST = tooling::buildASTFromCodeWithArgs(
+      Code.code(), {"-std=c++20", " -xc++-user-header ", "-emit-header-unit"});
+  ASTContext &Ctx = AST->getASTContext();
+
+  auto *getFooValue = selectFirst<FunctionDecl>(
+      "getFooValue",
+      match(functionDecl(hasName("getFooValue")).bind("getFooValue"), Ctx));
+
+  EXPECT_TRUE(getFooValue->isInlined());
+}
+
+TEST(Decl, NoProtoFunctionDeclAttributes) {
+  llvm::Annotations Code(R"(
+    void f();
+    )");
+
+  auto AST = tooling::buildASTFromCodeWithArgs(
+      Code.code(),
+      /*Args=*/{"-target", "i386-apple-darwin", "-x", "objective-c",
+                "-std=c89"});
+  ASTContext &Ctx = AST->getASTContext();
+
+  auto *f = selectFirst<FunctionDecl>(
+      "f", match(functionDecl(hasName("f")).bind("f"), Ctx));
+
+  const auto *FPT = f->getType()->getAs<FunctionNoProtoType>();
+
+  // Functions without prototypes always have 0 initialized qualifiers
+  EXPECT_FALSE(FPT->isConst());
+  EXPECT_FALSE(FPT->isVolatile());
+  EXPECT_FALSE(FPT->isRestrict());
+}
+
+TEST(Decl, ImplicitlyDeclaredAllocationFunctionsInModules) {
+  // C++ [basic.stc.dynamic.general]p2:
+  //   The library provides default definitions for the global allocation
+  //   and deallocation functions. Some global allocation and deallocation
+  //   functions are replaceable ([new.delete]); these are attached to the
+  //   global module ([module.unit]).
+
+  llvm::Annotations Code(R"(
+    export module base;
+
+    export struct Base {
+        virtual void hello() = 0;
+        virtual ~Base() = default;
+    };
+  )");
+
+  auto AST =
+      tooling::buildASTFromCodeWithArgs(Code.code(), /*Args=*/{"-std=c++20"});
+  ASTContext &Ctx = AST->getASTContext();
+
+  // void* operator new(std::size_t);
+  auto *SizedOperatorNew = selectFirst<FunctionDecl>(
+      "operator new",
+      match(functionDecl(hasName("operator new"), parameterCountIs(1),
+                         hasParameter(0, hasType(isUnsignedInteger())))
+                .bind("operator new"),
+            Ctx));
+  ASSERT_TRUE(SizedOperatorNew->getOwningModule());
+  EXPECT_TRUE(SizedOperatorNew->getOwningModule()->isGlobalModule());
+
+  // void* operator new(std::size_t, std::align_val_t);
+  auto *SizedAlignedOperatorNew = selectFirst<FunctionDecl>(
+      "operator new",
+      match(functionDecl(
+                hasName("operator new"), parameterCountIs(2),
+                hasParameter(0, hasType(isUnsignedInteger())),
+                hasParameter(1, hasType(enumDecl(hasName("std::align_val_t")))))
+                .bind("operator new"),
+            Ctx));
+  ASSERT_TRUE(SizedAlignedOperatorNew->getOwningModule());
+  EXPECT_TRUE(SizedAlignedOperatorNew->getOwningModule()->isGlobalModule());
+
+  // void* operator new[](std::size_t);
+  auto *SizedArrayOperatorNew = selectFirst<FunctionDecl>(
+      "operator new[]",
+      match(functionDecl(hasName("operator new[]"), parameterCountIs(1),
+                         hasParameter(0, hasType(isUnsignedInteger())))
+                .bind("operator new[]"),
+            Ctx));
+  ASSERT_TRUE(SizedArrayOperatorNew->getOwningModule());
+  EXPECT_TRUE(SizedArrayOperatorNew->getOwningModule()->isGlobalModule());
+
+  // void* operator new[](std::size_t, std::align_val_t);
+  auto *SizedAlignedArrayOperatorNew = selectFirst<FunctionDecl>(
+      "operator new[]",
+      match(functionDecl(
+                hasName("operator new[]"), parameterCountIs(2),
+                hasParameter(0, hasType(isUnsignedInteger())),
+                hasParameter(1, hasType(enumDecl(hasName("std::align_val_t")))))
+                .bind("operator new[]"),
+            Ctx));
+  ASSERT_TRUE(SizedAlignedArrayOperatorNew->getOwningModule());
+  EXPECT_TRUE(
+      SizedAlignedArrayOperatorNew->getOwningModule()->isGlobalModule());
+
+  // void operator delete(void*) noexcept;
+  auto *Delete = selectFirst<FunctionDecl>(
+      "operator delete",
+      match(functionDecl(
+                hasName("operator delete"), parameterCountIs(1),
+                hasParameter(0, hasType(pointerType(pointee(voidType())))))
+                .bind("operator delete"),
+            Ctx));
+  ASSERT_TRUE(Delete->getOwningModule());
+  EXPECT_TRUE(Delete->getOwningModule()->isGlobalModule());
+
+  // void operator delete(void*, std::align_val_t) noexcept;
+  auto *AlignedDelete = selectFirst<FunctionDecl>(
+      "operator delete",
+      match(functionDecl(
+                hasName("operator delete"), parameterCountIs(2),
+                hasParameter(0, hasType(pointerType(pointee(voidType())))),
+                hasParameter(1, hasType(enumDecl(hasName("std::align_val_t")))))
+                .bind("operator delete"),
+            Ctx));
+  ASSERT_TRUE(AlignedDelete->getOwningModule());
+  EXPECT_TRUE(AlignedDelete->getOwningModule()->isGlobalModule());
+
+  // Sized deallocation is not enabled by default. So we skip it here.
+
+  // void operator delete[](void*) noexcept;
+  auto *ArrayDelete = selectFirst<FunctionDecl>(
+      "operator delete[]",
+      match(functionDecl(
+                hasName("operator delete[]"), parameterCountIs(1),
+                hasParameter(0, hasType(pointerType(pointee(voidType())))))
+                .bind("operator delete[]"),
+            Ctx));
+  ASSERT_TRUE(ArrayDelete->getOwningModule());
+  EXPECT_TRUE(ArrayDelete->getOwningModule()->isGlobalModule());
+
+  // void operator delete[](void*, std::align_val_t) noexcept;
+  auto *AlignedArrayDelete = selectFirst<FunctionDecl>(
+      "operator delete[]",
+      match(functionDecl(
+                hasName("operator delete[]"), parameterCountIs(2),
+                hasParameter(0, hasType(pointerType(pointee(voidType())))),
+                hasParameter(1, hasType(enumDecl(hasName("std::align_val_t")))))
+                .bind("operator delete[]"),
+            Ctx));
+  ASSERT_TRUE(AlignedArrayDelete->getOwningModule());
+  EXPECT_TRUE(AlignedArrayDelete->getOwningModule()->isGlobalModule());
 }

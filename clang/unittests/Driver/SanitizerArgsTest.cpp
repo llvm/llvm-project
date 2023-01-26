@@ -15,7 +15,6 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Host.h"
@@ -27,6 +26,7 @@
 #include "gtest/gtest.h"
 #include <cstdlib>
 #include <memory>
+#include <optional>
 #include <string>
 using namespace clang;
 using namespace clang::driver;
@@ -88,7 +88,7 @@ private:
     return FS;
   }
 
-  llvm::Optional<Driver> DriverInstance;
+  std::optional<Driver> DriverInstance;
   std::unique_ptr<driver::Compilation> CompilationJob;
 };
 

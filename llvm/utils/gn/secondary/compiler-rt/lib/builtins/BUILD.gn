@@ -193,10 +193,8 @@ static_library("builtins") {
     "subvsi3.c",
     "subvti3.c",
     "trampoline_setup.c",
-    "truncdfbf2.c",
     "truncdfhf2.c",
     "truncdfsf2.c",
-    "truncsfbf2.c",
     "truncsfhf2.c",
     "ucmpdi2.c",
     "ucmpti2.c",
@@ -282,6 +280,8 @@ static_library("builtins") {
       "i386/fp_mode.c",
       "mulxc3.c",
       "powixf2.c",
+      "truncdfbf2.c",
+      "truncsfbf2.c",
     ]
   }
   if (current_cpu == "x86") {
@@ -525,6 +525,10 @@ static_library("builtins") {
       "hexagon/umodsi3.S",
     ]
   }
+  if (current_cpu == "loongarch" || current_cpu == "loongarch64") {
+    sources -= [ "fp_mode.c" ]
+    sources += [ "loongarch/fp_mode.c" ]
+  }
 
   if (current_cpu == "ppc64") {
     sources += [
@@ -546,6 +550,7 @@ static_library("builtins") {
 
   if (current_cpu == "riscv" || current_cpu == "riscv64") {
     sources += [
+      "riscv/fp_mode.c",
       "riscv/restore.S",
       "riscv/save.S",
     ]

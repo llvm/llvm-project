@@ -18,7 +18,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/GraphTraits.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -43,6 +42,7 @@
 #include <iterator>
 #include <limits>
 #include <list>
+#include <optional>
 #include <queue>
 #include <string>
 #include <utility>
@@ -522,12 +522,12 @@ public:
   Scaled64 getFloatingBlockFreq(const BlockNode &Node) const;
 
   BlockFrequency getBlockFreq(const BlockNode &Node) const;
-  Optional<uint64_t> getBlockProfileCount(const Function &F,
-                                          const BlockNode &Node,
-                                          bool AllowSynthetic = false) const;
-  Optional<uint64_t> getProfileCountFromFreq(const Function &F,
-                                             uint64_t Freq,
-                                             bool AllowSynthetic = false) const;
+  std::optional<uint64_t>
+  getBlockProfileCount(const Function &F, const BlockNode &Node,
+                       bool AllowSynthetic = false) const;
+  std::optional<uint64_t>
+  getProfileCountFromFreq(const Function &F, uint64_t Freq,
+                          bool AllowSynthetic = false) const;
   bool isIrrLoopHeader(const BlockNode &Node);
 
   void setBlockFreq(const BlockNode &Node, uint64_t Freq);
@@ -1020,16 +1020,16 @@ public:
     return BlockFrequencyInfoImplBase::getBlockFreq(getNode(BB));
   }
 
-  Optional<uint64_t> getBlockProfileCount(const Function &F,
-                                          const BlockT *BB,
-                                          bool AllowSynthetic = false) const {
+  std::optional<uint64_t>
+  getBlockProfileCount(const Function &F, const BlockT *BB,
+                       bool AllowSynthetic = false) const {
     return BlockFrequencyInfoImplBase::getBlockProfileCount(F, getNode(BB),
                                                             AllowSynthetic);
   }
 
-  Optional<uint64_t> getProfileCountFromFreq(const Function &F,
-                                             uint64_t Freq,
-                                             bool AllowSynthetic = false) const {
+  std::optional<uint64_t>
+  getProfileCountFromFreq(const Function &F, uint64_t Freq,
+                          bool AllowSynthetic = false) const {
     return BlockFrequencyInfoImplBase::getProfileCountFromFreq(F, Freq,
                                                                AllowSynthetic);
   }
@@ -1262,14 +1262,14 @@ bool BlockFrequencyInfoImpl<BT>::computeMassInLoop(LoopData &Loop) {
     LLVM_DEBUG(dbgs() << "isIrreducible = true\n");
     Distribution Dist;
     unsigned NumHeadersWithWeight = 0;
-    Optional<uint64_t> MinHeaderWeight;
+    std::optional<uint64_t> MinHeaderWeight;
     DenseSet<uint32_t> HeadersWithoutWeight;
     HeadersWithoutWeight.reserve(Loop.NumHeaders);
     for (uint32_t H = 0; H < Loop.NumHeaders; ++H) {
       auto &HeaderNode = Loop.Nodes[H];
       const BlockT *Block = getBlock(HeaderNode);
       IsIrrLoopHeader.set(Loop.Nodes[H].Index);
-      Optional<uint64_t> HeaderWeight = Block->getIrrLoopHeaderWeight();
+      std::optional<uint64_t> HeaderWeight = Block->getIrrLoopHeaderWeight();
       if (!HeaderWeight) {
         LLVM_DEBUG(dbgs() << "Missing irr loop header metadata on "
                           << getBlockName(HeaderNode) << "\n");
@@ -1277,10 +1277,10 @@ bool BlockFrequencyInfoImpl<BT>::computeMassInLoop(LoopData &Loop) {
         continue;
       }
       LLVM_DEBUG(dbgs() << getBlockName(HeaderNode)
-                        << " has irr loop header weight "
-                        << HeaderWeight.value() << "\n");
+                        << " has irr loop header weight " << *HeaderWeight
+                        << "\n");
       NumHeadersWithWeight++;
-      uint64_t HeaderWeightValue = HeaderWeight.value();
+      uint64_t HeaderWeightValue = *HeaderWeight;
       if (!MinHeaderWeight || HeaderWeightValue < MinHeaderWeight)
         MinHeaderWeight = HeaderWeightValue;
       if (HeaderWeightValue) {
@@ -1442,7 +1442,7 @@ void BlockFrequencyInfoImpl<BT>::iterativeInference(
   // Successors[I] holds unique sucessors of the I-th block
   auto Successors = std::vector<std::vector<size_t>>(Freq.size());
   for (size_t I = 0; I < Freq.size(); I++) {
-    for (auto &Jump : ProbMatrix[I]) {
+    for (const auto &Jump : ProbMatrix[I]) {
       Successors[Jump.first].push_back(I);
     }
   }
@@ -1472,7 +1472,7 @@ void BlockFrequencyInfoImpl<BT>::iterativeInference(
     // (1.0 - SelfProb), where SelfProb is the sum of probabilities on the edges
     Scaled64 NewFreq;
     Scaled64 OneMinusSelfProb = Scaled64::getOne();
-    for (auto &Jump : ProbMatrix[I]) {
+    for (const auto &Jump : ProbMatrix[I]) {
       if (Jump.first == I) {
         OneMinusSelfProb -= Jump.second;
       } else {
@@ -1729,13 +1729,13 @@ raw_ostream &BlockFrequencyInfoImpl<BT>::print(raw_ostream &OS) const {
     OS << " - " << bfi_detail::getBlockName(&BB) << ": float = ";
     getFloatingBlockFreq(&BB).print(OS, 5)
         << ", int = " << getBlockFreq(&BB).getFrequency();
-    if (Optional<uint64_t> ProfileCount =
+    if (std::optional<uint64_t> ProfileCount =
         BlockFrequencyInfoImplBase::getBlockProfileCount(
             F->getFunction(), getNode(&BB)))
-      OS << ", count = " << ProfileCount.value();
-    if (Optional<uint64_t> IrrLoopHeaderWeight =
-        BB.getIrrLoopHeaderWeight())
-      OS << ", irr_loop_header_weight = " << IrrLoopHeaderWeight.value();
+      OS << ", count = " << *ProfileCount;
+    if (std::optional<uint64_t> IrrLoopHeaderWeight =
+            BB.getIrrLoopHeaderWeight())
+      OS << ", irr_loop_header_weight = " << *IrrLoopHeaderWeight;
     OS << "\n";
   }
 

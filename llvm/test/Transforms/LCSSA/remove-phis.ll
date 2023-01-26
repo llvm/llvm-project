@@ -1,4 +1,4 @@
-; RUN: opt < %s -lcssa -verify -S -o /dev/null
+; RUN: opt < %s -passes=lcssa,verify -S -o /dev/null
 
 ; This bugpoint reduced test case used to assert when removing unused PHI nodes.
 ; Just verify that we do not assert/crash.

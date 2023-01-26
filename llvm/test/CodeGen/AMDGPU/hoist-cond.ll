@@ -11,7 +11,7 @@
 ; CHECK: s_and_saveexec_b64 s[{{[0-9]+:[0-9]+}}], [[COND]]
 ; CHECK: ; %bb.2:
 
-define amdgpu_kernel void @hoist_cond(float addrspace(1)* nocapture %arg, float addrspace(1)* noalias nocapture readonly %arg1, i32 %arg3, i32 %arg4) {
+define amdgpu_kernel void @hoist_cond(ptr addrspace(1) nocapture %arg, ptr addrspace(1) noalias nocapture readonly %arg1, i32 %arg3, i32 %arg4) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tmp5 = icmp ult i32 %tmp, %arg3
@@ -24,8 +24,8 @@ bb1:                                              ; preds = %bb3, %bb
 
 bb2:                                              ; preds = %bb1
   %tmp10 = zext i32 %tmp7 to i64
-  %tmp11 = getelementptr inbounds float, float addrspace(1)* %arg1, i64 %tmp10
-  %tmp12 = load float, float addrspace(1)* %tmp11, align 4
+  %tmp11 = getelementptr inbounds float, ptr addrspace(1) %arg1, i64 %tmp10
+  %tmp12 = load float, ptr addrspace(1) %tmp11, align 4
   br label %bb3
 
 bb3:                                             ; preds = %bb2, %bb1
@@ -36,7 +36,7 @@ bb3:                                             ; preds = %bb2, %bb1
   br i1 %tmp17, label %bb4, label %bb1
 
 bb4:                                             ; preds = %bb3
-  store float %tmp15, float addrspace(1)* %arg, align 4
+  store float %tmp15, ptr addrspace(1) %arg, align 4
   ret void
 }
 

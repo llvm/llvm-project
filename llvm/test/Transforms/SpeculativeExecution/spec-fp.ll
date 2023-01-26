@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -speculative-execution \
+; RUN: opt < %s -S -passes=speculative-execution \
 ; RUN:   -spec-exec-max-speculation-cost 4 -spec-exec-max-not-hoisted 3 \
 ; RUN:   | FileCheck %s
 

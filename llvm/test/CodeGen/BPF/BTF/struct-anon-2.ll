@@ -4,20 +4,20 @@
 ; Source:
 ;   struct s1 {
 ;     struct { int A1; } a1;
-;     struct { long B1; } *b1;
+;     struct ptr b1;
 ;   };
 ;   int f1(struct s1 *s1) { return 0; }
 ; Compilation flag:
 ;   clang -target bpf -O2 -g -S -emit-llvm t.c
 
-%struct.s1 = type { %struct.anon, %struct.anon.0* }
+%struct.s1 = type { %struct.anon, ptr }
 %struct.anon = type { i32 }
 %struct.anon.0 = type { i64 }
 
 ; Function Attrs: norecurse nounwind readnone
-define dso_local i32 @f1(%struct.s1* nocapture readnone %s1) local_unnamed_addr #0 !dbg !7 {
+define dso_local i32 @f1(ptr nocapture readnone %s1) local_unnamed_addr #0 !dbg !7 {
 entry:
-  call void @llvm.dbg.value(metadata %struct.s1* %s1, metadata !25, metadata !DIExpression()), !dbg !26
+  call void @llvm.dbg.value(metadata ptr %s1, metadata !25, metadata !DIExpression()), !dbg !26
   ret i32 0, !dbg !27
 }
 

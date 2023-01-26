@@ -1,6 +1,6 @@
 ; ModuleID = 'bar.cpp'
 
-%class.B = type { i32, %class.A* }
+%class.B = type { i32, ptr }
 %class.A = type { %class.Base, i32 }
 %class.Base = type { i32 }
 
@@ -9,9 +9,9 @@ define void @_Z1gi(i32 %a) #0 !dbg !20 {
 entry:
   %a.addr = alloca i32, align 4
   %t = alloca %class.B, align 8
-  store i32 %a, i32* %a.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %a.addr, metadata !28, metadata !DIExpression()), !dbg !29
-  call void @llvm.dbg.declare(metadata %class.B* %t, metadata !30, metadata !DIExpression()), !dbg !31
+  store i32 %a, ptr %a.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !28, metadata !DIExpression()), !dbg !29
+  call void @llvm.dbg.declare(metadata ptr %t, metadata !30, metadata !DIExpression()), !dbg !31
   ret void, !dbg !32
 }
 
@@ -23,8 +23,8 @@ define i32 @main() #2 !dbg !24 {
 entry:
   %retval = alloca i32, align 4
   %a = alloca %class.A, align 4
-  store i32 0, i32* %retval
-  call void @llvm.dbg.declare(metadata %class.A* %a, metadata !33, metadata !DIExpression()), !dbg !34
+  store i32 0, ptr %retval
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !33, metadata !DIExpression()), !dbg !34
   call void @_Z1fi(i32 0), !dbg !35
   call void @_Z1gi(i32 1), !dbg !36
   ret i32 0, !dbg !37

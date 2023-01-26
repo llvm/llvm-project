@@ -18,6 +18,7 @@
 #include "lldb/lldb-enumerations.h"
 
 #include "llvm/Support/Process.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -66,11 +67,11 @@ NativeProcessProtocol::WriteMemoryTags(int32_t type, lldb::addr_t addr,
   return Status("not implemented");
 }
 
-llvm::Optional<WaitStatus> NativeProcessProtocol::GetExitStatus() {
+std::optional<WaitStatus> NativeProcessProtocol::GetExitStatus() {
   if (m_state == lldb::eStateExited)
     return m_exit_status;
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 bool NativeProcessProtocol::SetExitStatus(WaitStatus status,
@@ -127,7 +128,7 @@ NativeProcessProtocol::GetWatchpointMap() const {
   return m_watchpoint_list.GetWatchpointMap();
 }
 
-llvm::Optional<std::pair<uint32_t, uint32_t>>
+std::optional<std::pair<uint32_t, uint32_t>>
 NativeProcessProtocol::GetHardwareDebugSupportInfo() const {
   Log *log = GetLog(LLDBLog::Process);
 
@@ -136,7 +137,7 @@ NativeProcessProtocol::GetHardwareDebugSupportInfo() const {
       const_cast<NativeProcessProtocol *>(this)->GetThreadAtIndex(0));
   if (!thread) {
     LLDB_LOG(log, "failed to find a thread to grab a NativeRegisterContext!");
-    return llvm::None;
+    return std::nullopt;
   }
 
   NativeRegisterContext &reg_ctx = thread->GetRegisterContext();
@@ -245,7 +246,7 @@ Status NativeProcessProtocol::SetHardwareBreakpoint(lldb::addr_t addr,
   // Exit here if target does not have required hardware breakpoint capability.
   auto hw_debug_cap = GetHardwareDebugSupportInfo();
 
-  if (hw_debug_cap == llvm::None || hw_debug_cap->first == 0 ||
+  if (hw_debug_cap == std::nullopt || hw_debug_cap->first == 0 ||
       hw_debug_cap->first <= m_hw_breakpoints_map.size())
     return Status("Target does not have required no of hardware breakpoints");
 
@@ -382,7 +383,7 @@ Status NativeProcessProtocol::RemoveSoftwareBreakpoint(lldb::addr_t addr) {
   }
   const auto &saved = it->second.saved_opcodes;
   // Make sure the breakpoint opcode exists at this address
-  if (makeArrayRef(curr_break_op) != it->second.breakpoint_opcodes) {
+  if (llvm::ArrayRef(curr_break_op) != it->second.breakpoint_opcodes) {
     if (curr_break_op != it->second.saved_opcodes)
       return Status("Original breakpoint trap is no longer in memory.");
     LLDB_LOG(log,
@@ -482,7 +483,7 @@ NativeProcessProtocol::EnableSoftwareBreakpoint(lldb::addr_t addr,
         verify_bp_opcode_bytes.size(), verify_bytes_read);
   }
 
-  if (llvm::makeArrayRef(verify_bp_opcode_bytes.data(), verify_bytes_read) !=
+  if (llvm::ArrayRef(verify_bp_opcode_bytes.data(), verify_bytes_read) !=
       *expected_trap) {
     return llvm::createStringError(
         llvm::inconvertibleErrorCode(),
@@ -503,35 +504,49 @@ NativeProcessProtocol::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
   static const uint8_t g_mips64_opcode[] = {0x00, 0x00, 0x00, 0x0d};
   static const uint8_t g_mips64el_opcode[] = {0x0d, 0x00, 0x00, 0x00};
   static const uint8_t g_s390x_opcode[] = {0x00, 0x01};
-  static const uint8_t g_ppc_opcode[] = {0x7f, 0xe0, 0x00, 0x08}; // trap
+  static const uint8_t g_ppc_opcode[] = {0x7f, 0xe0, 0x00, 0x08};   // trap
   static const uint8_t g_ppcle_opcode[] = {0x08, 0x00, 0xe0, 0x7f}; // trap
+  static const uint8_t g_riscv_opcode[] = {0x73, 0x00, 0x10, 0x00}; // ebreak
+  static const uint8_t g_riscv_opcode_c[] = {0x02, 0x90};           // c.ebreak
+  static const uint8_t g_loongarch_opcode[] = {0x05, 0x00, 0x2a,
+                                               0x00}; // break 0x5
 
   switch (GetArchitecture().GetMachine()) {
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_32:
-    return llvm::makeArrayRef(g_aarch64_opcode);
+    return llvm::ArrayRef(g_aarch64_opcode);
 
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
-    return llvm::makeArrayRef(g_i386_opcode);
+    return llvm::ArrayRef(g_i386_opcode);
 
   case llvm::Triple::mips:
   case llvm::Triple::mips64:
-    return llvm::makeArrayRef(g_mips64_opcode);
+    return llvm::ArrayRef(g_mips64_opcode);
 
   case llvm::Triple::mipsel:
   case llvm::Triple::mips64el:
-    return llvm::makeArrayRef(g_mips64el_opcode);
+    return llvm::ArrayRef(g_mips64el_opcode);
 
   case llvm::Triple::systemz:
-    return llvm::makeArrayRef(g_s390x_opcode);
+    return llvm::ArrayRef(g_s390x_opcode);
 
   case llvm::Triple::ppc:
   case llvm::Triple::ppc64:
-    return llvm::makeArrayRef(g_ppc_opcode);
+    return llvm::ArrayRef(g_ppc_opcode);
 
   case llvm::Triple::ppc64le:
-    return llvm::makeArrayRef(g_ppcle_opcode);
+    return llvm::ArrayRef(g_ppcle_opcode);
+
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64: {
+    return size_hint == 2 ? llvm::ArrayRef(g_riscv_opcode_c)
+                          : llvm::ArrayRef(g_riscv_opcode);
+  }
+
+  case llvm::Triple::loongarch32:
+  case llvm::Triple::loongarch64:
+    return llvm::ArrayRef(g_loongarch_opcode);
 
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -557,6 +572,10 @@ size_t NativeProcessProtocol::GetSoftwareBreakpointPCOffset() {
   case llvm::Triple::ppc:
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
+  case llvm::Triple::loongarch32:
+  case llvm::Triple::loongarch64:
     // On these architectures the PC doesn't get updated for breakpoint hits.
     return 0;
 
@@ -630,11 +649,10 @@ Status NativeProcessProtocol::ReadMemoryWithoutTrap(lldb::addr_t addr,
   if (error.Fail())
     return error;
 
-  auto data =
-      llvm::makeMutableArrayRef(static_cast<uint8_t *>(buf), bytes_read);
+  llvm::MutableArrayRef data(static_cast<uint8_t *>(buf), bytes_read);
   for (const auto &pair : m_software_breakpoints) {
     lldb::addr_t bp_addr = pair.first;
-    auto saved_opcodes = makeArrayRef(pair.second.saved_opcodes);
+    auto saved_opcodes = llvm::ArrayRef(pair.second.saved_opcodes);
 
     if (bp_addr + saved_opcodes.size() < addr || addr + bytes_read <= bp_addr)
       continue; // Breakpoint not in range, ignore

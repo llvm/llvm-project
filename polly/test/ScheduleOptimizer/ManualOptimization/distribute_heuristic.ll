@@ -1,7 +1,7 @@
 ; RUN: opt %loadPolly -polly-reschedule=0 -polly-pragma-based-opts=1 -polly-print-opt-isl -disable-output < %s | FileCheck %s --match-full-lines --check-prefix=ON
 ; RUN: opt %loadPolly -polly-reschedule=0 -polly-pragma-based-opts=0 -polly-print-opt-isl -disable-output < %s | FileCheck %s --match-full-lines --check-prefix=OFF
 ;
-define void @func(i32 %n, double* noalias nonnull %A, double* noalias nonnull %B) {
+define void @func(i32 %n, ptr noalias nonnull %A, ptr noalias nonnull %B) {
 entry:
   br label %for
 
@@ -11,9 +11,9 @@ for:
   br i1 %j.cmp, label %body, label %exit
 
     body:
-      store double 42.0, double* %A
+      store double 42.0, ptr %A
       %c = fadd double 21.0, 21.0
-      store double %c, double* %B
+      store double %c, ptr %B
       br label %inc
 
 inc:

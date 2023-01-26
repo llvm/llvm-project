@@ -27,6 +27,7 @@
 #include "Diagnostics.h"
 #include "FS.h"
 #include "Headers.h"
+#include "clang-include-cleaner/Record.h"
 #include "index/CanonicalIncludes.h"
 #include "support/Path.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -57,6 +58,8 @@ struct PreambleData {
   // Processes like code completions and go-to-definitions will need #include
   // information, and their compile action skips preamble range.
   IncludeStructure Includes;
+  // Captures #include-mapping information in #included headers.
+  include_cleaner::PragmaIncludes Pragmas;
   // Macros defined in the preamble section of the main file.
   // Users care about headers vs main-file, not preamble vs non-preamble.
   // These should be treated as main-file entities e.g. for code completion.

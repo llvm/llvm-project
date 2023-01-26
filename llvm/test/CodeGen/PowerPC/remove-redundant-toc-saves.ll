@@ -2,7 +2,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix-xcoff < %s | FileCheck %s --check-prefix=AIX64
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc-ibm-aix-xcoff < %s | FileCheck %s --check-prefix=AIX32
 
-define signext i32 @test1(i32 signext %i, i32 (i32)* nocapture %Func, i32 (i32)* nocapture %Func2) {
+define signext i32 @test1(i32 signext %i, ptr nocapture %Func, ptr nocapture %Func2) {
 entry:
 ; CHECK-LABEL: test1:
 ; CHECK:    std 2, 24(1)
@@ -21,7 +21,7 @@ entry:
   ret i32 %add2
 }
 
-define signext i32 @test2(i32 signext %i, i32 signext %j, i32 (i32)* nocapture %Func, i32 (i32)* nocapture %Func2) {
+define signext i32 @test2(i32 signext %i, i32 signext %j, ptr nocapture %Func, ptr nocapture %Func2) {
 entry:
 ; CHECK-LABEL: test2:
 ; CHECK:    std 2, 24(1)
@@ -53,7 +53,7 @@ if.end:                                           ; preds = %entry, %if.then
 }
 
 ; Check for multiple TOC saves with if then else where neither dominates the other.
-define signext i32 @test3(i32 signext %i, i32 (i32)* nocapture %Func, i32 (i32)* nocapture %Func2) {
+define signext i32 @test3(i32 signext %i, ptr nocapture %Func, ptr nocapture %Func2) {
 ; CHECK-LABEL: test3:
 ; CHECK:    std 2, 24(1)
 ; CHECK-NOT:    std 2, 24(1)
@@ -82,7 +82,7 @@ if.end:                                           ; preds = %if.else, %if.then
   ret i32 %add4
 }
 
-define signext i32 @test4(i32 signext %i, i32 (i32)* nocapture %Func, i32 (i32)* nocapture %Func2) {
+define signext i32 @test4(i32 signext %i, ptr nocapture %Func, ptr nocapture %Func2) {
 ; CHECK-LABEL: test4:
 ; CHECK:    std 2, 24(1)
 ; CHECK-NOT:    std 2, 24(1)
@@ -114,7 +114,7 @@ if.end:                                           ; preds = %if.else, %if.then
 }
 
 ; Check for multiple TOC saves with if then where neither is redundant.
-define signext i32 @test5(i32 signext %i, i32 (i32)* nocapture %Func, i32 (i32)* nocapture readnone %Func2) {
+define signext i32 @test5(i32 signext %i, ptr nocapture %Func, ptr nocapture readnone %Func2) {
 entry:
 ; CHECK-LABEL: test5:
 ; CHECK:    std 2, 24(1)
@@ -139,7 +139,7 @@ if.end:                                           ; preds = %entry, %if.then
 }
 
 ; Check for multiple TOC saves if there are dynamic allocations on the stack.
-define signext i32 @test6(i32 signext %i, i32 (i32)* nocapture %Func, i32 (i32)* nocapture %Func2) {
+define signext i32 @test6(i32 signext %i, ptr nocapture %Func, ptr nocapture %Func2) {
 entry:
 ; CHECK-LABEL: test6:
 ; CHECK:    std 2, 24(1)
@@ -154,12 +154,11 @@ entry:
 ; AIX32: stw 2, 20(1)
   %conv = sext i32 %i to i64
   %0 = alloca i8, i64 %conv, align 16
-  %1 = bitcast i8* %0 to i32*
   %call = tail call signext i32 %Func(i32 signext %i)
-  call void @useAlloca(i32* nonnull %1, i32 signext %call)
+  call void @useAlloca(ptr nonnull %0, i32 signext %call)
   %call1 = call signext i32 %Func2(i32 signext %i)
   %add2 = add nsw i32 %call1, %call
   ret i32 %add2
 }
 
-declare void @useAlloca(i32*, i32 signext)
+declare void @useAlloca(ptr, i32 signext)

@@ -12,7 +12,6 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CSKYTargetParser.h"
@@ -25,7 +24,7 @@ using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
 
-llvm::Optional<llvm::StringRef>
+std::optional<llvm::StringRef>
 csky::getCSKYArchName(const Driver &D, const ArgList &Args,
                       const llvm::Triple &Triple) {
   if (const Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
@@ -33,21 +32,21 @@ csky::getCSKYArchName(const Driver &D, const ArgList &Args,
 
     if (ArchKind == llvm::CSKY::ArchKind::INVALID) {
       D.Diag(clang::diag::err_drv_invalid_arch_name) << A->getAsString(Args);
-      return llvm::Optional<llvm::StringRef>();
+      return std::nullopt;
     }
-    return llvm::Optional<llvm::StringRef>(A->getValue());
+    return std::optional<llvm::StringRef>(A->getValue());
   }
 
   if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_mcpu_EQ)) {
     llvm::CSKY::ArchKind ArchKind = llvm::CSKY::parseCPUArch(A->getValue());
     if (ArchKind == llvm::CSKY::ArchKind::INVALID) {
       D.Diag(clang::diag::err_drv_clang_unsupported) << A->getAsString(Args);
-      return llvm::Optional<llvm::StringRef>();
+      return std::nullopt;
     }
-    return llvm::Optional<llvm::StringRef>(llvm::CSKY::getArchName(ArchKind));
+    return std::optional<llvm::StringRef>(llvm::CSKY::getArchName(ArchKind));
   }
 
-  return llvm::Optional<llvm::StringRef>("ck810");
+  return std::optional<llvm::StringRef>("ck810");
 }
 
 csky::FloatABI csky::getCSKYFloatABI(const Driver &D, const ArgList &Args) {
@@ -99,7 +98,7 @@ getCSKYFPUFeatures(const Driver &D, const Arg *A, const ArgList &Args,
   auto RemoveTargetFPUFeature =
       [&Features](ArrayRef<const char *> FPUFeatures) {
         for (auto FPUFeature : FPUFeatures) {
-          auto it = std::find(Features.begin(), Features.end(), FPUFeature);
+          auto it = llvm::find(Features, FPUFeature);
           if (it != Features.end())
             Features.erase(it);
         }

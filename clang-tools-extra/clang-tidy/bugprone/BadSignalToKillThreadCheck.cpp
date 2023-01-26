@@ -10,12 +10,11 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Preprocessor.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 void BadSignalToKillThreadCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -34,19 +33,19 @@ void BadSignalToKillThreadCheck::check(const MatchFinder::MatchResult &Result) {
            KeyValue.first->hasMacroDefinition();
   };
   const auto TryExpandAsInteger =
-      [](Preprocessor::macro_iterator It) -> Optional<unsigned> {
+      [](Preprocessor::macro_iterator It) -> std::optional<unsigned> {
     if (It == PP->macro_end())
-      return llvm::None;
+      return std::nullopt;
     const MacroInfo *MI = PP->getMacroInfo(It->first);
     const Token &T = MI->tokens().back();
     if (!T.isLiteral() || !T.getLiteralData())
-      return llvm::None;
+      return std::nullopt;
     StringRef ValueStr = StringRef(T.getLiteralData(), T.getLength());
 
     llvm::APInt IntValue;
     constexpr unsigned AutoSenseRadix = 0;
     if (ValueStr.getAsInteger(AutoSenseRadix, IntValue))
-      return llvm::None;
+      return std::nullopt;
     return IntValue.getZExtValue();
   };
 
@@ -69,6 +68,4 @@ void BadSignalToKillThreadCheck::registerPPCallbacks(
   PP = Pp;
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

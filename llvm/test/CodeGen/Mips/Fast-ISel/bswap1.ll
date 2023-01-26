@@ -26,9 +26,9 @@ define void @b16() {
 
   ; 32R2:           wsbh  $[[RESULT:[0-9]+]], $[[A_VAL]]
 
-  %1 = load i16, i16* @a, align 2
+  %1 = load i16, ptr @a, align 2
   %2 = call i16 @llvm.bswap.i16(i16 %1)
-  store i16 %2, i16* @a1, align 2
+  store i16 %2, ptr @a1, align 2
   ret void
 }
 
@@ -51,8 +51,8 @@ define void @b32() {
   ; 32R2:           wsbh  $[[TMP:[0-9]+]], $[[B_VAL]]
   ; 32R2:           rotr  $[[RESULT:[0-9]+]], $[[TMP]], 16
 
-  %1 = load i32, i32* @b, align 4
+  %1 = load i32, ptr @b, align 4
   %2 = call i32 @llvm.bswap.i32(i32 %1)
-  store i32 %2, i32* @b1, align 4
+  store i32 %2, ptr @b1, align 4
   ret void
 }

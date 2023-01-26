@@ -39,7 +39,6 @@
 ;
 ;   void test(bool *B, bool *E) { f<false, 0>(B, E); }
 ;
-; RUN: opt -S < %s -inline -inline-threshold=150 -enable-new-pm=0 | FileCheck %s --check-prefixes=CHECK,OLD
 ; RUN: opt -S < %s -passes=inline -inline-threshold=150 | FileCheck %s --check-prefixes=CHECK,NEW
 ; RUN: opt -S < %s -passes=inliner-wrapper -inline-threshold=150 | FileCheck %s --check-prefixes=CHECK,NEW
 
@@ -48,15 +47,6 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 declare void @_Z1gi(i32)
 
 ; CHECK-LABEL: define void @_Z1fILb0ELi0EEvPbS0_(
-; OLD-NOT: call
-; OLD: call void @_Z1gi(
-; OLD-NOT: call
-; OLD: call void @_Z1fILb1ELi2EEvPbS0_(
-; OLD-NOT: call
-; OLD: call void @_Z1fILb0ELi2EEvPbS0_(
-; OLD-NOT: call
-; OLD: call void @_Z1fILb0ELi1EEvPbS0_(
-; OLD-NOT: call
 ; NEW-NOT: call
 ; NEW: call void @_Z1gi(
 ; NEW-NOT: call
@@ -68,23 +58,23 @@ declare void @_Z1gi(i32)
 ; NEW-NOT: call
 ; NEW: call void @_Z1fILb0ELi2EEvPbS0_(
 ; NEW-NOT: call
-define void @_Z1fILb0ELi0EEvPbS0_(i8* %B, i8* %E) {
+define void @_Z1fILb0ELi0EEvPbS0_(ptr %B, ptr %E) {
 entry:
-  %cmp = icmp eq i8* %B, %E
+  %cmp = icmp eq ptr %B, %E
   br i1 %cmp, label %if.end3, label %if.end
 
 if.end:
-  %0 = load i8, i8* %B, align 1
+  %0 = load i8, ptr %B, align 1
   %tobool = icmp eq i8 %0, 0
-  %add.ptr2 = getelementptr inbounds i8, i8* %B, i64 1
+  %add.ptr2 = getelementptr inbounds i8, ptr %B, i64 1
   br i1 %tobool, label %if.else, label %if.then1
 
 if.then1:
-  call void @_Z1fILb1ELi1EEvPbS0_(i8* %add.ptr2, i8* %E)
+  call void @_Z1fILb1ELi1EEvPbS0_(ptr %add.ptr2, ptr %E)
   br label %if.end3
 
 if.else:
-  call void @_Z1fILb0ELi1EEvPbS0_(i8* %add.ptr2, i8* %E)
+  call void @_Z1fILb0ELi1EEvPbS0_(ptr %add.ptr2, ptr %E)
   br label %if.end3
 
 if.end3:
@@ -92,17 +82,6 @@ if.end3:
 }
 
 ; CHECK-LABEL: define void @_Z1fILb1ELi0EEvPbS0_(
-; OLD-NOT: call
-; OLD: call void @_Z1gi(
-; OLD-NOT: call
-; OLD: call void @_Z1gi(
-; OLD-NOT: call
-; OLD: call void @_Z1fILb1ELi2EEvPbS0_(
-; OLD-NOT: call
-; OLD: call void @_Z1fILb0ELi2EEvPbS0_(
-; OLD-NOT: call
-; OLD: call void @_Z1fILb0ELi1EEvPbS0_(
-; OLD-NOT: call
 ; NEW-NOT: call
 ; NEW: call void @_Z1gi(
 ; NEW-NOT: call
@@ -112,24 +91,24 @@ if.end3:
 ; NEW-NOT: call
 ; NEW: call void @_Z1fILb0ELi2EEvPbS0_(
 ; NEW-NOT: call
-define void @_Z1fILb1ELi0EEvPbS0_(i8* %B, i8* %E) {
+define void @_Z1fILb1ELi0EEvPbS0_(ptr %B, ptr %E) {
 entry:
   call void @_Z1gi(i32 0)
-  %cmp = icmp eq i8* %B, %E
+  %cmp = icmp eq ptr %B, %E
   br i1 %cmp, label %if.end3, label %if.end
 
 if.end:
-  %0 = load i8, i8* %B, align 1
+  %0 = load i8, ptr %B, align 1
   %tobool = icmp eq i8 %0, 0
-  %add.ptr2 = getelementptr inbounds i8, i8* %B, i64 1
+  %add.ptr2 = getelementptr inbounds i8, ptr %B, i64 1
   br i1 %tobool, label %if.else, label %if.then1
 
 if.then1:
-  call void @_Z1fILb1ELi1EEvPbS0_(i8* %add.ptr2, i8* %E)
+  call void @_Z1fILb1ELi1EEvPbS0_(ptr %add.ptr2, ptr %E)
   br label %if.end3
 
 if.else:
-  call void @_Z1fILb0ELi1EEvPbS0_(i8* %add.ptr2, i8* %E)
+  call void @_Z1fILb0ELi1EEvPbS0_(ptr %add.ptr2, ptr %E)
   br label %if.end3
 
 if.end3:
@@ -137,21 +116,6 @@ if.end3:
 }
 
 ; CHECK-LABEL: define void @_Z1fILb0ELi1EEvPbS0_(
-; OLD-NOT: call
-; OLD: call void @_Z1gi(
-; OLD-NOT: call
-; OLD: call void @_Z1gi(
-; OLD-NOT: call
-; OLD: call void @_Z1fILb1ELi0EEvPbS0_(
-; OLD-NOT: call
-; OLD: call void @_Z1fILb0ELi0EEvPbS0_(
-; OLD-NOT: call
-; OLD: call void @_Z1fILb1ELi0EEvPbS0_(
-; OLD-NOT: call
-; OLD: call void @_Z1fILb0ELi0EEvPbS0_(
-; OLD-NOT: call
-; OLD: call void @_Z1fILb0ELi2EEvPbS0_(
-; OLD-NOT: call
 ; NEW-NOT: call
 ; NEW: call void @_Z1fILb1ELi2EEvPbS0_(
 ; NEW-NOT: call
@@ -159,23 +123,23 @@ if.end3:
 ; NEW-NOT: call
 ; NEW: call void @_Z1fILb0ELi3EEvPbS0_(
 ; NEW-NOT: call
-define void @_Z1fILb0ELi1EEvPbS0_(i8* %B, i8* %E) {
+define void @_Z1fILb0ELi1EEvPbS0_(ptr %B, ptr %E) {
 entry:
-  %cmp = icmp eq i8* %B, %E
+  %cmp = icmp eq ptr %B, %E
   br i1 %cmp, label %if.end3, label %if.end
 
 if.end:
-  %0 = load i8, i8* %B, align 1
+  %0 = load i8, ptr %B, align 1
   %tobool = icmp eq i8 %0, 0
-  %add.ptr2 = getelementptr inbounds i8, i8* %B, i64 1
+  %add.ptr2 = getelementptr inbounds i8, ptr %B, i64 1
   br i1 %tobool, label %if.else, label %if.then1
 
 if.then1:
-  call void @_Z1fILb1ELi2EEvPbS0_(i8* %add.ptr2, i8* %E)
+  call void @_Z1fILb1ELi2EEvPbS0_(ptr %add.ptr2, ptr %E)
   br label %if.end3
 
 if.else:
-  call void @_Z1fILb0ELi2EEvPbS0_(i8* %add.ptr2, i8* %E)
+  call void @_Z1fILb0ELi2EEvPbS0_(ptr %add.ptr2, ptr %E)
   br label %if.end3
 
 if.end3:
@@ -183,13 +147,6 @@ if.end3:
 }
 
 ; CHECK-LABEL: define void @_Z1fILb1ELi1EEvPbS0_(
-; OLD-NOT: call
-; OLD: call void @_Z1gi(
-; OLD-NOT: call
-; OLD: call void @_Z1fILb1ELi2EEvPbS0_(
-; OLD-NOT: call
-; OLD: call void @_Z1fILb0ELi2EEvPbS0_(
-; OLD-NOT: call
 ; NEW-NOT: call
 ; NEW: call void @_Z1gi(
 ; NEW-NOT: call
@@ -203,25 +160,25 @@ if.end3:
 ; NEW-NOT: call
 ; NEW: call void @_Z1fILb0ELi3EEvPbS0_(
 ; NEW-NOT: call
-define void @_Z1fILb1ELi1EEvPbS0_(i8* %B, i8* %E) {
+define void @_Z1fILb1ELi1EEvPbS0_(ptr %B, ptr %E) {
 entry:
   call void @_Z1gi(i32 1)
-  %cmp = icmp eq i8* %B, %E
+  %cmp = icmp eq ptr %B, %E
 ; CHECK-NOT: call
   br i1 %cmp, label %if.end3, label %if.end
 
 if.end:
-  %0 = load i8, i8* %B, align 1
+  %0 = load i8, ptr %B, align 1
   %tobool = icmp eq i8 %0, 0
-  %add.ptr2 = getelementptr inbounds i8, i8* %B, i64 1
+  %add.ptr2 = getelementptr inbounds i8, ptr %B, i64 1
   br i1 %tobool, label %if.else, label %if.then1
 
 if.then1:
-  call void @_Z1fILb1ELi2EEvPbS0_(i8* %add.ptr2, i8* %E)
+  call void @_Z1fILb1ELi2EEvPbS0_(ptr %add.ptr2, ptr %E)
   br label %if.end3
 
 if.else:
-  call void @_Z1fILb0ELi2EEvPbS0_(i8* %add.ptr2, i8* %E)
+  call void @_Z1fILb0ELi2EEvPbS0_(ptr %add.ptr2, ptr %E)
   br label %if.end3
 
 if.end3:
@@ -229,17 +186,6 @@ if.end3:
 }
 
 ; CHECK-LABEL: define void @_Z1fILb0ELi2EEvPbS0_(
-; OLD-NOT: call
-; OLD: call void @_Z1gi(
-; OLD-NOT: call
-; OLD: call void @_Z1fILb1ELi0EEvPbS0_(
-; OLD-NOT: call
-; OLD: call void @_Z1fILb0ELi0EEvPbS0_(
-; OLD-NOT: call
-; OLD: call void @_Z1fILb1ELi0EEvPbS0_(
-; OLD-NOT: call
-; OLD: call void @_Z1fILb0ELi0EEvPbS0_(
-; OLD-NOT: call
 ; NEW-NOT: call
 ; NEW: call void @_Z1gi(
 ; NEW-NOT: call
@@ -251,23 +197,23 @@ if.end3:
 ; NEW-NOT: call
 ; NEW: call void @_Z1fILb0ELi4EEvPbS0_(
 ; NEW-NOT: call
-define void @_Z1fILb0ELi2EEvPbS0_(i8* %B, i8* %E) {
+define void @_Z1fILb0ELi2EEvPbS0_(ptr %B, ptr %E) {
 entry:
-  %cmp = icmp eq i8* %B, %E
+  %cmp = icmp eq ptr %B, %E
   br i1 %cmp, label %if.end3, label %if.end
 
 if.end:
-  %0 = load i8, i8* %B, align 1
+  %0 = load i8, ptr %B, align 1
   %tobool = icmp eq i8 %0, 0
-  %add.ptr2 = getelementptr inbounds i8, i8* %B, i64 1
+  %add.ptr2 = getelementptr inbounds i8, ptr %B, i64 1
   br i1 %tobool, label %if.else, label %if.then1
 
 if.then1:
-  call void @_Z1fILb1ELi3EEvPbS0_(i8* %add.ptr2, i8* %E)
+  call void @_Z1fILb1ELi3EEvPbS0_(ptr %add.ptr2, ptr %E)
   br label %if.end3
 
 if.else:
-  call void @_Z1fILb0ELi3EEvPbS0_(i8* %add.ptr2, i8* %E)
+  call void @_Z1fILb0ELi3EEvPbS0_(ptr %add.ptr2, ptr %E)
   br label %if.end3
 
 if.end3:
@@ -275,19 +221,6 @@ if.end3:
 }
 
 ; CHECK-LABEL: define void @_Z1fILb1ELi2EEvPbS0_(
-; OLD-NOT: call
-; OLD: call void @_Z1gi(
-; OLD-NOT: call
-; OLD: call void @_Z1gi(
-; OLD-NOT: call
-; OLD: call void @_Z1fILb1ELi0EEvPbS0_(
-; OLD-NOT: call
-; OLD: call void @_Z1fILb0ELi0EEvPbS0_(
-; OLD-NOT: call
-; OLD: call void @_Z1fILb1ELi0EEvPbS0_(
-; OLD-NOT: call
-; OLD: call void @_Z1fILb0ELi0EEvPbS0_(
-; OLD-NOT: call
 ; NEW-NOT: call
 ; NEW: call void @_Z1gi(
 ; NEW-NOT: call
@@ -301,24 +234,24 @@ if.end3:
 ; NEW-NOT: call
 ; NEW: call void @_Z1fILb0ELi4EEvPbS0_(
 ; NEW-NOT: call
-define void @_Z1fILb1ELi2EEvPbS0_(i8* %B, i8* %E) {
+define void @_Z1fILb1ELi2EEvPbS0_(ptr %B, ptr %E) {
 entry:
   call void @_Z1gi(i32 2)
-  %cmp = icmp eq i8* %B, %E
+  %cmp = icmp eq ptr %B, %E
   br i1 %cmp, label %if.end3, label %if.end
 
 if.end:
-  %0 = load i8, i8* %B, align 1
+  %0 = load i8, ptr %B, align 1
   %tobool = icmp eq i8 %0, 0
-  %add.ptr2 = getelementptr inbounds i8, i8* %B, i64 1
+  %add.ptr2 = getelementptr inbounds i8, ptr %B, i64 1
   br i1 %tobool, label %if.else, label %if.then1
 
 if.then1:
-  call void @_Z1fILb1ELi3EEvPbS0_(i8* %add.ptr2, i8* %E)
+  call void @_Z1fILb1ELi3EEvPbS0_(ptr %add.ptr2, ptr %E)
   br label %if.end3
 
 if.else:
-  call void @_Z1fILb0ELi3EEvPbS0_(i8* %add.ptr2, i8* %E)
+  call void @_Z1fILb0ELi3EEvPbS0_(ptr %add.ptr2, ptr %E)
   br label %if.end3
 
 if.end3:
@@ -326,11 +259,6 @@ if.end3:
 }
 
 ; CHECK-LABEL: define void @_Z1fILb0ELi3EEvPbS0_(
-; OLD-NOT: call
-; OLD: call void @_Z1fILb1ELi0EEvPbS0_(
-; OLD-NOT: call
-; OLD: call void @_Z1fILb0ELi0EEvPbS0_(
-; OLD-NOT: call
 ; NEW-NOT: call
 ; NEW: call void @_Z1gi(
 ; NEW-NOT: call
@@ -340,23 +268,23 @@ if.end3:
 ; NEW-NOT: call
 ; NEW: call void @_Z1fILb0ELi0EEvPbS0_(
 ; NEW-NOT: call
-define void @_Z1fILb0ELi3EEvPbS0_(i8* %B, i8* %E) {
+define void @_Z1fILb0ELi3EEvPbS0_(ptr %B, ptr %E) {
 entry:
-  %cmp = icmp eq i8* %B, %E
+  %cmp = icmp eq ptr %B, %E
   br i1 %cmp, label %if.end3, label %if.end
 
 if.end:
-  %0 = load i8, i8* %B, align 1
+  %0 = load i8, ptr %B, align 1
   %tobool = icmp eq i8 %0, 0
-  %add.ptr2 = getelementptr inbounds i8, i8* %B, i64 1
+  %add.ptr2 = getelementptr inbounds i8, ptr %B, i64 1
   br i1 %tobool, label %if.else, label %if.then1
 
 if.then1:
-  call void @_Z1fILb1ELi4EEvPbS0_(i8* %add.ptr2, i8* %E)
+  call void @_Z1fILb1ELi4EEvPbS0_(ptr %add.ptr2, ptr %E)
   br label %if.end3
 
 if.else:
-  call void @_Z1fILb0ELi4EEvPbS0_(i8* %add.ptr2, i8* %E)
+  call void @_Z1fILb0ELi4EEvPbS0_(ptr %add.ptr2, ptr %E)
   br label %if.end3
 
 if.end3:
@@ -371,24 +299,24 @@ if.end3:
 ; CHECK-NOT: call
 ; CHECK: call void @_Z1fILb0ELi0EEvPbS0_(
 ; CHECK-NOT: call
-define void @_Z1fILb1ELi3EEvPbS0_(i8* %B, i8* %E) {
+define void @_Z1fILb1ELi3EEvPbS0_(ptr %B, ptr %E) {
 entry:
   call void @_Z1gi(i32 3)
-  %cmp = icmp eq i8* %B, %E
+  %cmp = icmp eq ptr %B, %E
   br i1 %cmp, label %if.end3, label %if.end
 
 if.end:
-  %0 = load i8, i8* %B, align 1
+  %0 = load i8, ptr %B, align 1
   %tobool = icmp eq i8 %0, 0
-  %add.ptr2 = getelementptr inbounds i8, i8* %B, i64 1
+  %add.ptr2 = getelementptr inbounds i8, ptr %B, i64 1
   br i1 %tobool, label %if.else, label %if.then1
 
 if.then1:
-  call void @_Z1fILb1ELi4EEvPbS0_(i8* %add.ptr2, i8* %E)
+  call void @_Z1fILb1ELi4EEvPbS0_(ptr %add.ptr2, ptr %E)
   br label %if.end3
 
 if.else:
-  call void @_Z1fILb0ELi4EEvPbS0_(i8* %add.ptr2, i8* %E)
+  call void @_Z1fILb0ELi4EEvPbS0_(ptr %add.ptr2, ptr %E)
   br label %if.end3
 
 if.end3:
@@ -399,16 +327,13 @@ if.end3:
 ; CHECK-NOT: call
 ; CHECK: call void @_Z1fILb0ELi0EEvPbS0_(
 ; CHECK-NOT: call
-define void @_Z1fILb0ELi4EEvPbS0_(i8* %B, i8* %E) {
+define void @_Z1fILb0ELi4EEvPbS0_(ptr %B, ptr %E) {
 entry:
-  call void @_Z1fILb0ELi0EEvPbS0_(i8* %B, i8* %E)
+  call void @_Z1fILb0ELi0EEvPbS0_(ptr %B, ptr %E)
   ret void
 }
 
 ; CHECK-LABEL: define void @_Z1fILb1ELi4EEvPbS0_(
-; OLD-NOT: call
-; OLD: call void @_Z1fILb1ELi0EEvPbS0_(
-; OLD-NOT: call
 ; NEW-NOT: call
 ; NEW: call void @_Z1gi(
 ; NEW-NOT: call
@@ -416,18 +341,18 @@ entry:
 ; NEW-NOT: call
 ; NEW: call void @_Z1fILb0ELi1EEvPbS0_(
 ; NEW-NOT: call
-define void @_Z1fILb1ELi4EEvPbS0_(i8* %B, i8* %E) {
+define void @_Z1fILb1ELi4EEvPbS0_(ptr %B, ptr %E) {
 entry:
-  call void @_Z1fILb1ELi0EEvPbS0_(i8* %B, i8* %E)
+  call void @_Z1fILb1ELi0EEvPbS0_(ptr %B, ptr %E)
   ret void
 }
 
 ; CHECK-LABEL: define void @_Z4testPbS_(
 ; CHECK: call
 ; CHECK-NOT: call
-define void @_Z4testPbS_(i8* %B, i8* %E) {
+define void @_Z4testPbS_(ptr %B, ptr %E) {
 entry:
-  call void @_Z1fILb0ELi0EEvPbS0_(i8* %B, i8* %E)
+  call void @_Z1fILb0ELi0EEvPbS0_(ptr %B, ptr %E)
   ret void
 }
 

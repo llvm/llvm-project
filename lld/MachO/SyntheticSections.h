@@ -19,9 +19,8 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/MC/StringTableBuilder.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -31,8 +30,7 @@ namespace llvm {
 class DWARFUnit;
 } // namespace llvm
 
-namespace lld {
-namespace macho {
+namespace lld::macho {
 
 class Defined;
 class DylibSymbol;
@@ -271,6 +269,12 @@ private:
 // order that the weak bindings may overwrite the non-lazy bindings if an
 // appropriate symbol is found at runtime. However, the bound addresses will
 // still be written (non-lazily) into the LazyPointerSection.
+//
+// Symbols are always bound eagerly when chained fixups are used. In that case,
+// StubsSection contains indirect jumps to addresses stored in the GotSection.
+// The GOT directly contains the fixup entries, which will be replaced by the
+// address of the target symbols on load. LazyPointerSection and
+// StubHelperSection are not used.
 
 class StubsSection final : public SyntheticSection {
 public:
@@ -280,9 +284,9 @@ public:
   void finalize() override;
   void writeTo(uint8_t *buf) const override;
   const llvm::SetVector<Symbol *> &getEntries() const { return entries; }
-  // Returns whether the symbol was added. Note that every stubs entry will
-  // have a corresponding entry in the LazyPointerSection.
-  bool addEntry(Symbol *);
+  // Creates a stub for the symbol and the corresponding entry in the
+  // LazyPointerSection.
+  void addEntry(Symbol *);
   uint64_t getVA(uint32_t stubsIndex) const {
     assert(isFinal || target->usesThunks());
     // ConcatOutputSection::finalize() can seek the address of a
@@ -305,10 +309,34 @@ public:
   bool isNeeded() const override;
   void writeTo(uint8_t *buf) const override;
 
-  void setup();
+  void setUp();
 
   DylibSymbol *stubBinder = nullptr;
   Defined *dyldPrivate = nullptr;
+};
+
+// Objective-C stubs are hoisted objc_msgSend calls per selector called in the
+// program. Apple Clang produces undefined symbols to each stub, such as
+// '_objc_msgSend$foo', which are then synthesized by the linker. The stubs
+// load the particular selector 'foo' from __objc_selrefs, setting it to the
+// first argument of the objc_msgSend call, and then jumps to objc_msgSend. The
+// actual stub contents are mirrored from ld64.
+class ObjCStubsSection final : public SyntheticSection {
+public:
+  ObjCStubsSection();
+  void addEntry(Symbol *sym);
+  uint64_t getSize() const override;
+  bool isNeeded() const override { return !symbols.empty(); }
+  void finalize() override { isec->isFinal = true; }
+  void writeTo(uint8_t *buf) const override;
+  void setUp();
+
+  static constexpr llvm::StringLiteral symbolPrefix = "_objc_msgSend$";
+
+private:
+  std::vector<Defined *> symbols;
+  std::vector<uint32_t> offsets;
+  int objcMsgSendGotIndex = 0;
 };
 
 // Note that this section may also be targeted by non-lazy bindings. In
@@ -319,6 +347,9 @@ public:
   uint64_t getSize() const override;
   bool isNeeded() const override;
   void writeTo(uint8_t *buf) const override;
+  uint64_t getVA(uint32_t index) const {
+    return addr + (index << target->p2WordSize);
+  }
 };
 
 class LazyBindingSection final : public LinkEditSection {
@@ -357,8 +388,9 @@ private:
   size_t size = 0;
 };
 
-// Stores 'data in code' entries that describe the locations of
-// data regions inside code sections.
+// Stores 'data in code' entries that describe the locations of data regions
+// inside code sections. This is used by llvm-objdump to distinguish jump tables
+// and stop them from being disassembled as instructions.
 class DataInCodeSection final : public LinkEditSection {
 public:
   DataInCodeSection();
@@ -515,7 +547,7 @@ private:
 
 class CStringSection : public SyntheticSection {
 public:
-  CStringSection();
+  CStringSection(const char *name);
   void addInput(CStringInputSection *);
   uint64_t getSize() const override { return size; }
   virtual void finalizeContents();
@@ -530,17 +562,21 @@ private:
 
 class DeduplicatedCStringSection final : public CStringSection {
 public:
+  DeduplicatedCStringSection(const char *name) : CStringSection(name){};
   uint64_t getSize() const override { return size; }
   void finalizeContents() override;
   void writeTo(uint8_t *buf) const override;
 
-private:
   struct StringOffset {
     uint8_t trailingZeros;
     uint64_t outSecOff = UINT64_MAX;
 
     explicit StringOffset(uint8_t zeros) : trailingZeros(zeros) {}
   };
+
+  StringOffset getStringOffset(StringRef str) const;
+
+private:
   llvm::DenseMap<llvm::CachedHashStringRef, StringOffset> stringOffsetMap;
   size_t size = 0;
 };
@@ -554,7 +590,7 @@ public:
   using UInt128 = std::pair<uint64_t, uint64_t>;
   // I don't think the standard guarantees the size of a pair, so let's make
   // sure it's exact -- that way we can construct it via `mmap`.
-  static_assert(sizeof(UInt128) == 16, "");
+  static_assert(sizeof(UInt128) == 16);
 
   WordLiteralSection();
   void addInput(WordLiteralInputSection *);
@@ -620,10 +656,142 @@ private:
   std::vector<const InputFile *> files; // files with image info
 };
 
+// This section stores 32-bit __TEXT segment offsets of initializer functions.
+//
+// The compiler stores pointers to initializers in __mod_init_func. These need
+// to be fixed up at load time, which takes time and dirties memory. By
+// synthesizing InitOffsetsSection from them, this data can live in the
+// read-only __TEXT segment instead. This section is used by default when
+// chained fixups are enabled.
+//
+// There is no similar counterpart to __mod_term_func, as that section is
+// deprecated, and static destructors are instead handled by registering them
+// via __cxa_atexit from an autogenerated initializer function (see D121736).
+class InitOffsetsSection final : public SyntheticSection {
+public:
+  InitOffsetsSection();
+  bool isNeeded() const override { return !sections.empty(); }
+  uint64_t getSize() const override;
+  void writeTo(uint8_t *buf) const override;
+  void setUp();
+
+  void addInput(ConcatInputSection *isec) { sections.push_back(isec); }
+  const std::vector<ConcatInputSection *> &inputs() const { return sections; }
+
+private:
+  std::vector<ConcatInputSection *> sections;
+};
+
+// Chained fixups are a replacement for classic dyld opcodes. In this format,
+// most of the metadata necessary for binding symbols and rebasing addresses is
+// stored directly in the memory location that will have the fixup applied.
+//
+// The fixups form singly linked lists; each one covering a single page in
+// memory. The __LINKEDIT,__chainfixups section stores the page offset of the
+// first fixup of each page; the rest can be found by walking the chain using
+// the offset that is embedded in each entry.
+//
+// This setup allows pages to be relocated lazily at page-in time and without
+// being dirtied. The kernel can discard and load them again as needed. This
+// technique, called page-in linking, was introduced in macOS 13.
+//
+// The benefits of this format are:
+//  - smaller __LINKEDIT segment, as most of the fixup information is stored in
+//    the data segment
+//  - faster startup, since not all relocations need to be done upfront
+//  - slightly lower memory usage, as fewer pages are dirtied
+//
+// Userspace x86_64 and arm64 binaries have two types of fixup entries:
+//   - Rebase entries contain an absolute address, to which the object's load
+//     address will be added to get the final value. This is used for loading
+//     the address of a symbol defined in the same binary.
+//   - Binding entries are mostly used for symbols imported from other dylibs,
+//     but for weakly bound and interposable symbols as well. They are looked up
+//     by a (symbol name, library) pair stored in __chainfixups. This import
+//     entry also encodes whether the import is weak (i.e. if the symbol is
+//     missing, it should be set to null instead of producing a load error).
+//     The fixup encodes an ordinal associated with the import, and an optional
+//     addend.
+//
+// The entries are tightly packed 64-bit bitfields. One of the bits specifies
+// which kind of fixup to interpret them as.
+//
+// LLD generates the fixup data in 5 stages:
+//   1. While scanning relocations, we make a note of each location that needs
+//      a fixup by calling addRebase() or addBinding(). During this, we assign
+//      a unique ordinal for each (symbol name, library, addend) import tuple.
+//   2. After addresses have been assigned to all sections, and thus the memory
+//      layout of the linked image is final; finalizeContents() is called. Here,
+//      the page offsets of the chain start entries are calculated.
+//   3. ChainedFixupsSection::writeTo() writes the page start offsets and the
+//      imports table to the output file.
+//   4. Each section's fixup entries are encoded and written to disk in
+//      ConcatInputSection::writeTo(), but without writing the offsets that form
+//      the chain.
+//   5. Finally, each page's (which might correspond to multiple sections)
+//      fixups are linked together in Writer::buildFixupChains().
+class ChainedFixupsSection final : public LinkEditSection {
+public:
+  ChainedFixupsSection();
+  void finalizeContents() override;
+  uint64_t getRawSize() const override { return size; }
+  bool isNeeded() const override;
+  void writeTo(uint8_t *buf) const override;
+
+  void addRebase(const InputSection *isec, uint64_t offset) {
+    locations.emplace_back(isec, offset);
+  }
+  void addBinding(const Symbol *dysym, const InputSection *isec,
+                  uint64_t offset, int64_t addend = 0);
+
+  void setHasNonWeakDefinition() { hasNonWeakDef = true; }
+
+  // Returns an (ordinal, inline addend) tuple used by dyld_chained_ptr_64_bind.
+  std::pair<uint32_t, uint8_t> getBinding(const Symbol *sym,
+                                          int64_t addend) const;
+
+  const std::vector<Location> &getLocations() const { return locations; }
+
+  bool hasWeakBinding() const { return hasWeakBind; }
+  bool hasNonWeakDefinition() const { return hasNonWeakDef; }
+
+private:
+  // Location::offset initially stores the offset within an InputSection, but
+  // contains output segment offsets after finalizeContents().
+  std::vector<Location> locations;
+  // (target symbol, addend) => import ordinal
+  llvm::MapVector<std::pair<const Symbol *, int64_t>, uint32_t> bindings;
+
+  struct SegmentInfo {
+    SegmentInfo(const OutputSegment *oseg) : oseg(oseg) {}
+
+    const OutputSegment *oseg;
+    // (page index, fixup starts offset)
+    llvm::SmallVector<std::pair<uint16_t, uint16_t>> pageStarts;
+
+    size_t getSize() const;
+    size_t writeTo(uint8_t *buf) const;
+  };
+  llvm::SmallVector<SegmentInfo, 4> fixupSegments;
+
+  size_t symtabSize = 0;
+  size_t size = 0;
+
+  bool needsAddend = false;
+  bool needsLargeAddend = false;
+  bool hasWeakBind = false;
+  bool hasNonWeakDef = false;
+  llvm::MachO::ChainedImportFormat importFormat;
+};
+
+void writeChainedRebase(uint8_t *buf, uint64_t targetVA);
+void writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend);
+
 struct InStruct {
   const uint8_t *bufferStart = nullptr;
   MachHeaderSection *header = nullptr;
   CStringSection *cStringSection = nullptr;
+  DeduplicatedCStringSection *objcMethnameSection = nullptr;
   WordLiteralSection *wordLiteralSection = nullptr;
   RebaseSection *rebase = nullptr;
   BindingSection *binding = nullptr;
@@ -635,9 +803,13 @@ struct InStruct {
   LazyPointerSection *lazyPointers = nullptr;
   StubsSection *stubs = nullptr;
   StubHelperSection *stubHelper = nullptr;
+  ObjCStubsSection *objcStubs = nullptr;
+  ConcatInputSection *objcSelrefs = nullptr;
   UnwindInfoSection *unwindInfo = nullptr;
   ObjCImageInfoSection *objCImageInfo = nullptr;
   ConcatInputSection *imageLoaderCache = nullptr;
+  InitOffsetsSection *initOffsets = nullptr;
+  ChainedFixupsSection *chainedFixups = nullptr;
 };
 
 extern InStruct in;
@@ -645,7 +817,6 @@ extern std::vector<SyntheticSection *> syntheticSections;
 
 void createSyntheticSymbols();
 
-} // namespace macho
-} // namespace lld
+} // namespace lld::macho
 
 #endif

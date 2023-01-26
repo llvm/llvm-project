@@ -20,6 +20,7 @@
 // RUN:   -verify=bugpath
 
 void clang_analyzer_eval(int);
+void clang_analyzer_warnIfReached();
 
 int glob;
 
@@ -215,6 +216,20 @@ void test_notnull_symbolic2(FILE *fp, int *buf) {
     // bugpath-note{{}} \
     // bugpath-note{{Function argument constraint is not satisfied}}
 }
+void test_no_node_after_bug(FILE *fp, size_t size, size_t n, void *buf) {
+  if (fp) // \
+  // bugpath-note{{Assuming 'fp' is null}} \
+  // bugpath-note{{Taking false branch}}
+    return;
+  size_t ret = fread(buf, size, n, fp); // \
+  // report-warning{{Function argument constraint is not satisfied}} \
+  // report-note{{}} \
+  // bugpath-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-note{{}} \
+  // bugpath-note{{Function argument constraint is not satisfied}}
+  clang_analyzer_warnIfReached(); // not reachable
+}
+
 typedef __WCHAR_TYPE__ wchar_t;
 // This is one test case for the ARR38-C SEI-CERT rule.
 void ARR38_C_F(FILE *file) {
@@ -239,6 +254,7 @@ void test_constraints_on_multiple_args(int x, int y) {
   // State split should not happen here. I.e. x == 1 should not be evaluated
   // FALSE.
   __two_constrained_args(x, y);
+  //NOTE! Because of the second `clang_analyzer_eval` call we have two bug
   clang_analyzer_eval(x == 1); // \
   // report-warning{{TRUE}} \
   // bugpath-warning{{TRUE}} \
@@ -252,7 +268,6 @@ void test_constraints_on_multiple_args(int x, int y) {
 int __arg_constrained_twice(int);
 void test_multiple_constraints_on_same_arg(int x) {
   __arg_constrained_twice(x);
-  // Check that both constraints are applied and only one branch is there.
   clang_analyzer_eval(x < 1 || x > 2); // \
   // report-warning{{TRUE}} \
   // bugpath-warning{{TRUE}} \

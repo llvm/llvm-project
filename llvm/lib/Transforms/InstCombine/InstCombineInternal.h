@@ -106,7 +106,8 @@ public:
   Value *simplifyRangeCheck(ICmpInst *Cmp0, ICmpInst *Cmp1, bool Inverted);
   Instruction *visitAnd(BinaryOperator &I);
   Instruction *visitOr(BinaryOperator &I);
-  bool sinkNotIntoOtherHandOfAndOrOr(BinaryOperator &I);
+  bool sinkNotIntoLogicalOp(Instruction &I);
+  bool sinkNotIntoOtherHandOfLogicalOp(Instruction &I);
   Instruction *visitXor(BinaryOperator &I);
   Instruction *visitShl(BinaryOperator &I);
   Value *reassociateShiftAmtsOfTwoSameDirectionShifts(
@@ -167,6 +168,7 @@ public:
   Instruction *visitInsertValueInst(InsertValueInst &IV);
   Instruction *visitInsertElementInst(InsertElementInst &IE);
   Instruction *visitExtractElementInst(ExtractElementInst &EI);
+  Instruction *simplifyBinOpSplats(ShuffleVectorInst &SVI);
   Instruction *visitShuffleVectorInst(ShuffleVectorInst &SVI);
   Instruction *visitExtractValueInst(ExtractValueInst &EV);
   Instruction *visitLandingPadInst(LandingPadInst &LI);
@@ -329,7 +331,7 @@ private:
   Instruction *matchSAddSubSat(IntrinsicInst &MinMax1);
   Instruction *foldNot(BinaryOperator &I);
 
-  void freelyInvertAllUsersOf(Value *V);
+  void freelyInvertAllUsersOf(Value *V, Value *IgnoredUser = nullptr);
 
   /// Determine if a pair of casts can be replaced by a single cast.
   ///
@@ -360,14 +362,24 @@ private:
   Value *foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS, bool IsAnd,
                           bool IsLogicalSelect = false);
 
+  Instruction *foldLogicOfIsFPClass(BinaryOperator &Operator, Value *LHS,
+                                    Value *RHS);
+
+  Instruction *
+  canonicalizeConditionalNegationViaMathToSelect(BinaryOperator &i);
+
   Value *foldAndOrOfICmpsOfAndWithPow2(ICmpInst *LHS, ICmpInst *RHS,
                                        Instruction *CxtI, bool IsAnd,
                                        bool IsLogical = false);
-  Value *matchSelectFromAndOr(Value *A, Value *B, Value *C, Value *D);
-  Value *getSelectCondition(Value *A, Value *B);
+  Value *matchSelectFromAndOr(Value *A, Value *B, Value *C, Value *D,
+                              bool InvertFalseVal = false);
+  Value *getSelectCondition(Value *A, Value *B, bool ABIsTheSame);
 
+  Instruction *foldLShrOverflowBit(BinaryOperator &I);
+  Instruction *foldExtractOfOverflowIntrinsic(ExtractValueInst &EV);
   Instruction *foldIntrinsicWithOverflowCommon(IntrinsicInst *II);
   Instruction *foldFPSignBitOps(BinaryOperator &I);
+  Instruction *foldFDivConstantDivisor(BinaryOperator &I);
 
   // Optimize one of these forms:
   //   and i1 Op, SI / select i1 Op, i1 SI, i1 false (if IsAnd = true)
@@ -377,64 +389,6 @@ private:
                                                  bool IsAnd);
 
 public:
-  /// Inserts an instruction \p New before instruction \p Old
-  ///
-  /// Also adds the new instruction to the worklist and returns \p New so that
-  /// it is suitable for use as the return from the visitation patterns.
-  Instruction *InsertNewInstBefore(Instruction *New, Instruction &Old) {
-    assert(New && !New->getParent() &&
-           "New instruction already inserted into a basic block!");
-    BasicBlock *BB = Old.getParent();
-    BB->getInstList().insert(Old.getIterator(), New); // Insert inst
-    Worklist.add(New);
-    return New;
-  }
-
-  /// Same as InsertNewInstBefore, but also sets the debug loc.
-  Instruction *InsertNewInstWith(Instruction *New, Instruction &Old) {
-    New->setDebugLoc(Old.getDebugLoc());
-    return InsertNewInstBefore(New, Old);
-  }
-
-  /// A combiner-aware RAUW-like routine.
-  ///
-  /// This method is to be used when an instruction is found to be dead,
-  /// replaceable with another preexisting expression. Here we add all uses of
-  /// I to the worklist, replace all uses of I with the new value, then return
-  /// I, so that the inst combiner will know that I was modified.
-  Instruction *replaceInstUsesWith(Instruction &I, Value *V) {
-    // If there are no uses to replace, then we return nullptr to indicate that
-    // no changes were made to the program.
-    if (I.use_empty()) return nullptr;
-
-    Worklist.pushUsersToWorkList(I); // Add all modified instrs to worklist.
-
-    // If we are replacing the instruction with itself, this must be in a
-    // segment of unreachable code, so just clobber the instruction.
-    if (&I == V)
-      V = PoisonValue::get(I.getType());
-
-    LLVM_DEBUG(dbgs() << "IC: Replacing " << I << "\n"
-                      << "    with " << *V << '\n');
-
-    I.replaceAllUsesWith(V);
-    MadeIRChange = true;
-    return &I;
-  }
-
-  /// Replace operand of instruction and add old operand to the worklist.
-  Instruction *replaceOperand(Instruction &I, unsigned OpNum, Value *V) {
-    Worklist.addValue(I.getOperand(OpNum));
-    I.setOperand(OpNum, V);
-    return &I;
-  }
-
-  /// Replace use and add the previously used value to the worklist.
-  void replaceUse(Use &U, Value *NewValue) {
-    Worklist.addValue(U);
-    U = NewValue;
-  }
-
   /// Create and insert the idiom we use to indicate a block is unreachable
   /// without having to rewrite the CFG from within InstCombine.
   void CreateNonTerminatorUnreachable(Instruction *InsertAt) {
@@ -467,67 +421,6 @@ public:
     return nullptr; // Don't do anything with FI
   }
 
-  void computeKnownBits(const Value *V, KnownBits &Known,
-                        unsigned Depth, const Instruction *CxtI) const {
-    llvm::computeKnownBits(V, Known, DL, Depth, &AC, CxtI, &DT);
-  }
-
-  KnownBits computeKnownBits(const Value *V, unsigned Depth,
-                             const Instruction *CxtI) const {
-    return llvm::computeKnownBits(V, DL, Depth, &AC, CxtI, &DT);
-  }
-
-  bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero = false,
-                              unsigned Depth = 0,
-                              const Instruction *CxtI = nullptr) {
-    return llvm::isKnownToBeAPowerOfTwo(V, DL, OrZero, Depth, &AC, CxtI, &DT);
-  }
-
-  bool MaskedValueIsZero(const Value *V, const APInt &Mask, unsigned Depth = 0,
-                         const Instruction *CxtI = nullptr) const {
-    return llvm::MaskedValueIsZero(V, Mask, DL, Depth, &AC, CxtI, &DT);
-  }
-
-  unsigned ComputeNumSignBits(const Value *Op, unsigned Depth = 0,
-                              const Instruction *CxtI = nullptr) const {
-    return llvm::ComputeNumSignBits(Op, DL, Depth, &AC, CxtI, &DT);
-  }
-
-  OverflowResult computeOverflowForUnsignedMul(const Value *LHS,
-                                               const Value *RHS,
-                                               const Instruction *CxtI) const {
-    return llvm::computeOverflowForUnsignedMul(LHS, RHS, DL, &AC, CxtI, &DT);
-  }
-
-  OverflowResult computeOverflowForSignedMul(const Value *LHS,
-                                             const Value *RHS,
-                                             const Instruction *CxtI) const {
-    return llvm::computeOverflowForSignedMul(LHS, RHS, DL, &AC, CxtI, &DT);
-  }
-
-  OverflowResult computeOverflowForUnsignedAdd(const Value *LHS,
-                                               const Value *RHS,
-                                               const Instruction *CxtI) const {
-    return llvm::computeOverflowForUnsignedAdd(LHS, RHS, DL, &AC, CxtI, &DT);
-  }
-
-  OverflowResult computeOverflowForSignedAdd(const Value *LHS,
-                                             const Value *RHS,
-                                             const Instruction *CxtI) const {
-    return llvm::computeOverflowForSignedAdd(LHS, RHS, DL, &AC, CxtI, &DT);
-  }
-
-  OverflowResult computeOverflowForUnsignedSub(const Value *LHS,
-                                               const Value *RHS,
-                                               const Instruction *CxtI) const {
-    return llvm::computeOverflowForUnsignedSub(LHS, RHS, DL, &AC, CxtI, &DT);
-  }
-
-  OverflowResult computeOverflowForSignedSub(const Value *LHS, const Value *RHS,
-                                             const Instruction *CxtI) const {
-    return llvm::computeOverflowForSignedSub(LHS, RHS, DL, &AC, CxtI, &DT);
-  }
-
   OverflowResult computeOverflow(
       Instruction::BinaryOps BinaryOp, bool IsSigned,
       Value *LHS, Value *RHS, Instruction *CxtI) const;
@@ -543,7 +436,7 @@ public:
   /// -> "A*(B+C)") or expanding out if this results in simplifications (eg: "A
   /// & (B | C) -> (A&B) | (A&C)" if this is a win).  Returns the simplified
   /// value, or null if it didn't simplify.
-  Value *SimplifyUsingDistributiveLaws(BinaryOperator &I);
+  Value *foldUsingDistributiveLaws(BinaryOperator &I);
 
   /// Tries to simplify add operations using the definition of remainder.
   ///
@@ -559,8 +452,7 @@ public:
 
   /// This tries to simplify binary operations by factorizing out common terms
   /// (e. g. "(A*B)+(A*C)" -> "A*(B+C)").
-  Value *tryFactorization(BinaryOperator &, Instruction::BinaryOps, Value *,
-                          Value *, Value *, Value *);
+  Value *tryFactorizationFolds(BinaryOperator &I);
 
   /// Match a select chain which produces one of three values based on whether
   /// the LHS is less than, equal to, or greater than RHS respectively.
@@ -647,7 +539,7 @@ public:
   /// If an integer typed PHI has only one use which is an IntToPtr operation,
   /// replace the PHI with an existing pointer typed PHI if it exists. Otherwise
   /// insert a new pointer typed PHI and replace the original one.
-  Instruction *foldIntegerTypedPHI(PHINode &PN);
+  bool foldIntegerTypedPHI(PHINode &PN);
 
   /// Helper function for FoldPHIArgXIntoPHI() to set debug location for the
   /// folded operation.
@@ -716,6 +608,8 @@ public:
                                      const APInt &C1);
   Instruction *foldICmpAndShift(ICmpInst &Cmp, BinaryOperator *And,
                                 const APInt &C1, const APInt &C2);
+  Instruction *foldICmpXorShiftConst(ICmpInst &Cmp, BinaryOperator *Xor,
+                                     const APInt &C);
   Instruction *foldICmpShrConstConst(ICmpInst &I, Value *ShAmt, const APInt &C1,
                                      const APInt &C2);
   Instruction *foldICmpShlConstConst(ICmpInst &I, Value *ShAmt, const APInt &C1,
@@ -731,6 +625,7 @@ public:
   Instruction *foldICmpBitCast(ICmpInst &Cmp);
 
   // Helpers of visitSelectInst().
+  Instruction *foldSelectOfBools(SelectInst &SI);
   Instruction *foldSelectExtConst(SelectInst &Sel);
   Instruction *foldSelectOpOp(SelectInst &SI, Instruction *TI, Instruction *FI);
   Instruction *foldSelectIntoOp(SelectInst &SI, Value *, Value *);
@@ -790,13 +685,13 @@ class Negator final {
 
   std::array<Value *, 2> getSortedOperandsOfBinOp(Instruction *I);
 
-  LLVM_NODISCARD Value *visitImpl(Value *V, unsigned Depth);
+  [[nodiscard]] Value *visitImpl(Value *V, unsigned Depth);
 
-  LLVM_NODISCARD Value *negate(Value *V, unsigned Depth);
+  [[nodiscard]] Value *negate(Value *V, unsigned Depth);
 
   /// Recurse depth-first and attempt to sink the negation.
   /// FIXME: use worklist?
-  LLVM_NODISCARD Optional<Result> run(Value *Root);
+  [[nodiscard]] std::optional<Result> run(Value *Root);
 
   Negator(const Negator &) = delete;
   Negator(Negator &&) = delete;
@@ -806,8 +701,8 @@ class Negator final {
 public:
   /// Attempt to negate \p Root. Retuns nullptr if negation can't be performed,
   /// otherwise returns negated value.
-  LLVM_NODISCARD static Value *Negate(bool LHSIsZero, Value *Root,
-                                      InstCombinerImpl &IC);
+  [[nodiscard]] static Value *Negate(bool LHSIsZero, Value *Root,
+                                     InstCombinerImpl &IC);
 };
 
 } // end namespace llvm

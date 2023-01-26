@@ -28,6 +28,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -40,11 +41,14 @@ enum {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "Options.inc"
 #undef PREFIX
 
-static const opt::OptTable::Info InfoTable[] = {
+static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X7, X8, X9, X10, X11, X12)      \
   {X1, X2, X10,         X11,         OPT_##ID, opt::Option::KIND##Class,       \
    X9, X8, OPT_##GROUP, OPT_##ALIAS, X7,       X12},
@@ -52,11 +56,10 @@ static const opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class LibOptTable : public opt::OptTable {
+class LibOptTable : public opt::GenericOptTable {
 public:
-  LibOptTable() : OptTable(InfoTable, true) {}
+  LibOptTable() : opt::GenericOptTable(InfoTable, true) {}
 };
-
 }
 
 static std::string getDefaultOutputPath(const NewArchiveMember &FirstMember) {
@@ -76,7 +79,7 @@ static std::vector<StringRef> getSearchPaths(opt::InputArgList *Args,
     Ret.push_back(Arg->getValue());
 
   // Add $LIB.
-  Optional<std::string> EnvOpt = sys::Process::GetEnv("LIB");
+  std::optional<std::string> EnvOpt = sys::Process::GetEnv("LIB");
   if (!EnvOpt)
     return Ret;
   StringRef Env = Saver.save(*EnvOpt);

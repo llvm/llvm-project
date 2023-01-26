@@ -28,12 +28,12 @@ const Expr *SourceInfo::asExpr() const {
   return nullptr;
 }
 
-const Expr *SourceMapper::getExpr(Function *F, CodePtr PC) const {
+const Expr *SourceMapper::getExpr(const Function *F, CodePtr PC) const {
   if (const Expr *E = getSource(F, PC).asExpr())
     return E;
   llvm::report_fatal_error("missing source expression");
 }
 
-SourceLocation SourceMapper::getLocation(Function *F, CodePtr PC) const {
+SourceLocation SourceMapper::getLocation(const Function *F, CodePtr PC) const {
   return getSource(F, PC).getLoc();
 }

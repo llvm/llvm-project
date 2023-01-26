@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=x86_64-darwin-unknown -S -consthoist < %s | FileCheck %s
+; RUN: opt -mtriple=x86_64-darwin-unknown -S -passes=consthoist < %s | FileCheck %s
 
 define i128 @test1(i128 %a) nounwind {
 ; CHECK-LABEL: test1

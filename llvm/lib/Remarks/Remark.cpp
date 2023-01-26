@@ -13,6 +13,7 @@
 #include "llvm/Remarks/Remark.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::remarks;
@@ -60,7 +61,7 @@ extern "C" LLVMRemarkStringRef LLVMRemarkArgGetValue(LLVMRemarkArgRef Arg) {
 
 extern "C" LLVMRemarkDebugLocRef
 LLVMRemarkArgGetDebugLoc(LLVMRemarkArgRef Arg) {
-  if (const Optional<RemarkLocation> &Loc = unwrap(Arg)->Loc)
+  if (const std::optional<RemarkLocation> &Loc = unwrap(Arg)->Loc)
     return wrap(&*Loc);
   return nullptr;
 }
@@ -91,13 +92,13 @@ LLVMRemarkEntryGetFunctionName(LLVMRemarkEntryRef Remark) {
 
 extern "C" LLVMRemarkDebugLocRef
 LLVMRemarkEntryGetDebugLoc(LLVMRemarkEntryRef Remark) {
-  if (const Optional<RemarkLocation> &Loc = unwrap(Remark)->Loc)
+  if (const std::optional<RemarkLocation> &Loc = unwrap(Remark)->Loc)
     return wrap(&*Loc);
   return nullptr;
 }
 
 extern "C" uint64_t LLVMRemarkEntryGetHotness(LLVMRemarkEntryRef Remark) {
-  if (const Optional<uint64_t> &Hotness = unwrap(Remark)->Hotness)
+  if (const std::optional<uint64_t> &Hotness = unwrap(Remark)->Hotness)
     return *Hotness;
   return 0;
 }

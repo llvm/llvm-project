@@ -47,11 +47,11 @@
 ; BOLT: DW_TAG_compile_unit
 ; BOLT: DW_AT_name [DW_FORM_strx1]  (indexed (00000001) string = "helper.cpp")
 ; BOLT: DW_AT_low_pc [DW_FORM_addrx]	(indexed (00000001) address = 0x0000000000000000)
-; BOLT-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x0) rangelist = 0x0000002b
+; BOLT-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x0) rangelist = 0x0000002e
 ; BOLT-NEXT: [0x[[#ADDR3]]
 ; BOLT-SAME: 0x[[#ADDR3 + 0x3D]]
 ; BOLT-NEXT: DW_AT_addr_base [DW_FORM_sec_offset]  (0x00000038)
-; BOLT-NEXT: DW_AT_rnglists_base [DW_FORM_sec_offset]  (0x00000023)
+; BOLT-NEXT: DW_AT_rnglists_base [DW_FORM_sec_offset]  (0x00000026)
 ; BOLT: DW_TAG_variable
 ; BOLT-NEXT: DW_AT_name [DW_FORM_strx1]  (indexed (00000003) string = "z")
 ; BOLT-NEXT: DW_AT_type
@@ -68,7 +68,7 @@
 ; BOLT-NEXT: DW_AT_location [DW_FORM_exprloc]  (DW_OP_addrx 0x3)
 ; BOLT: DW_TAG_subprogram
 ; BOLT-NEXT: DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000001) address = 0x0000000000000000)
-; BOLT-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x1) rangelist = 0x0000002f
+; BOLT-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x1) rangelist = 0x00000032
 ; BOLT-NEXT: [0x[[#ADDR3]]
 ; BOLT-SAME: 0x[[#ADDR3 + 0x3D]]
 

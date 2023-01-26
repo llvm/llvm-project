@@ -1,28 +1,28 @@
 // REQUIRES: powerpc-registered-target
 
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
-// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s
-
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64le-unknown-freebsd13.0 -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
-// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64-unknown-freebsd13.0 -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s
 
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64le-unknown-freebsd13.0 -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s
+// RUN: %clang -S -emit-llvm -target powerpc64-unknown-freebsd13.0 -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s
+
+// RUN: %clang -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefix=P10
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64-unknown-linux-gnu -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64-unknown-linux-gnu -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefix=P10
 
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64le-unknown-freebsd13.0 -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64le-unknown-freebsd13.0 -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64-unknown-freebsd13.0 -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64-unknown-freebsd13.0 -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s
 
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefix=P10
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s
 
 #include <smmintrin.h>
@@ -76,9 +76,9 @@ test_blend() {
 // CHECK: call <16 x i8> @vec_splats(signed char)(i8 noundef signext %[[TRUNC]])
 // CHECK: call <16 x i8> @llvm.ppc.altivec.vgbbd(<16 x i8> %{{[0-9a-zA-Z_.]+}})
 // CHECK: %[[PACK:[0-9a-zA-Z_.]+]] = call <8 x i16> @vec_unpackh(signed char vector[16])
-// CHECK: store <8 x i16> %[[PACK]], <8 x i16>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <8 x i16> %[[PACK]], ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // BE: %[[REVE:[0-9a-zA-Z_.]+]] = call <8 x i16> @vec_reve(unsigned short vector[8])
-// BE: store <8 x i16> %[[REVE]], <8 x i16>* %{{[0-9a-zA-Z_.]+}}, align 16
+// BE: store <8 x i16> %[[REVE]], ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK: call <8 x i16> @vec_sel(unsigned short vector[8], unsigned short vector[8], unsigned short vector[8])
 
 // P10-LABEL: define available_externally <2 x i64> @_mm_blendv_epi8(<2 x i64> noundef %{{[0-9a-zA-Z_.]+}}, <2 x i64> noundef %{{[0-9a-zA-Z_.]+}}, <2 x i64> noundef %{{[0-9a-zA-Z_.]+}})
@@ -220,7 +220,7 @@ test_minmax() {
 // CHECK: call <4 x i32> @vec_min(unsigned int vector[4], unsigned int vector[4])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_minpos_epu16(<2 x i64> noundef %{{[0-9a-zA-Z_.]+}})
-// CHECK: call void @llvm.memset.p0i8.i64(i8* align 16 %{{[0-9a-zA-Z_.]+}}, i8 0, i64 16, i1 false)
+// CHECK: call void @llvm.memset.p0.i64(ptr align 16 %{{[0-9a-zA-Z_.]+}}, i8 0, i64 16, i1 false)
 // CHECK: extractelement <8 x i16> %{{[0-9a-zA-Z_.]+}}, i16 %{{[0-9a-zA-Z_.]+}}
 // CHECK: %[[VEXT:[0-9a-zA-Z_.]+]] = extractelement <8 x i16> %{{[0-9a-zA-Z_.]+}}, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK: zext i16 %[[VEXT]] to i32
@@ -239,44 +239,44 @@ test_round() {
 // CHECK-LABEL: @test_round
 
 // CHECK-LABEL: define available_externally <4 x float> @_mm_round_ps(<4 x float> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef signext %{{[0-9a-zA-Z_.]+}})
-// CHECK: call signext i32 bitcast (i32 (...)* @__builtin_mffs to i32 ()*)()
-// CHECK: call signext i32 bitcast (i32 (...)* @__builtin_mtfsf to i32 (i32, double)*)(i32 noundef signext 3, double noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK: call signext i32 @__builtin_mffs()
+// CHECK: call signext i32 @__builtin_mtfsf(i32 noundef signext 3, double noundef %{{[0-9a-zA-Z_.]+}})
 // CHECK: %{{[0-9a-zA-Z_.]+}} = call <4 x float> asm "", "=^wa,0"
-// CHECK: call signext i32 bitcast (i32 (...)* @__builtin_mffsl to i32 ()*)()
-// CHECK: call signext i32 bitcast (i32 (...)* @__builtin_set_fpscr_rn to i32 (i32)*)(i32 noundef signext 0)
+// CHECK: call signext i32 @__builtin_mffsl()
+// CHECK: call signext i32 @__builtin_set_fpscr_rn(i32 noundef signext 0)
 // CHECK: %{{[0-9a-zA-Z_.]+}} = call <4 x float> asm "", "=^wa,0"
 // CHECK: call <4 x float> @vec_rint(float vector[4])
 // CHECK: call void asm sideeffect "", "^wa"
-// CHECK: call signext i32 bitcast (i32 (...)* @__builtin_set_fpscr_rn to i32 (i64)*)(i64 noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK: call signext i32 @__builtin_set_fpscr_rn(i64 noundef %{{[0-9a-zA-Z_.]+}})
 // CHECK: call <4 x float> @vec_floor(float vector[4])
 // CHECK: call <4 x float> @vec_ceil(float vector[4])
 // CHECK: call <4 x float> @vec_trunc(float vector[4])
 // CHECK: call <4 x float> @vec_rint(float vector[4])
 // CHECK: call void asm sideeffect "", "^wa"
-// CHECK: call signext i32 bitcast (i32 (...)* @__builtin_mffsl to i32 ()*)()
-// CHECK: call signext i32 bitcast (i32 (...)* @__builtin_mtfsf to i32 (i32, double)*)(i32 noundef signext 3, double noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK: call signext i32 @__builtin_mffsl()
+// CHECK: call signext i32 @__builtin_mtfsf(i32 noundef signext 3, double noundef %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally <4 x float> @_mm_round_ss(<4 x float> noundef %{{[0-9a-zA-Z_.]+}}, <4 x float> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef signext %{{[0-9a-zA-Z_.]+}})
 // CHECK: call <4 x float> @_mm_round_ps(<4 x float> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef signext %{{[0-9a-zA-Z_.]+}})
 // CHECK: extractelement <4 x float> %{{[0-9a-zA-Z_.]+}}, i32 0
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_round_pd(<2 x double> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef signext %{{[0-9a-zA-Z_.]+}})
-// CHECK: call signext i32 bitcast (i32 (...)* @__builtin_mffs to i32 ()*)()
-// CHECK: call signext i32 bitcast (i32 (...)* @__builtin_mtfsf to i32 (i32, double)*)(i32 noundef signext 3, double noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK: call signext i32 @__builtin_mffs()
+// CHECK: call signext i32 @__builtin_mtfsf(i32 noundef signext 3, double noundef %{{[0-9a-zA-Z_.]+}})
 // CHECK: %{{[0-9a-zA-Z_.]+}} = call <2 x double> asm "", "=^wa,0"
-// CHECK: call signext i32 bitcast (i32 (...)* @__builtin_mffsl to i32 ()*)()
-// CHECK: call signext i32 bitcast (i32 (...)* @__builtin_set_fpscr_rn to i32 (i32)*)(i32 noundef signext 0)
+// CHECK: call signext i32 @__builtin_mffsl()
+// CHECK: call signext i32 @__builtin_set_fpscr_rn(i32 noundef signext 0)
 // CHECK: %{{[0-9a-zA-Z_.]+}} = call <2 x double> asm "", "=^wa,0"
 // CHECK: call <2 x double> @vec_rint(double vector[2])
 // CHECK: call void asm sideeffect "", "^wa"
-// CHECK: call signext i32 bitcast (i32 (...)* @__builtin_set_fpscr_rn to i32 (i64)*)(i64 noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK: call signext i32 @__builtin_set_fpscr_rn(i64 noundef %{{[0-9a-zA-Z_.]+}})
 // CHECK: call <2 x double> @vec_floor(double vector[2])
 // CHECK: call <2 x double> @vec_ceil(double vector[2])
 // CHECK: call <2 x double> @vec_trunc(double vector[2])
 // CHECK: call <2 x double> @vec_rint(double vector[2])
 // CHECK: call void asm sideeffect "", "^wa"
-// CHECK: call signext i32 bitcast (i32 (...)* @__builtin_mffsl to i32 ()*)()
-// CHECK: call signext i32 bitcast (i32 (...)* @__builtin_mtfsf to i32 (i32, double)*)(i32 noundef signext 3, double noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK: call signext i32 @__builtin_mffsl()
+// CHECK: call signext i32 @__builtin_mtfsf(i32 noundef signext 3, double noundef %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_round_sd(<2 x double> noundef %{{[0-9a-zA-Z_.]+}}, <2 x double> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef signext %{{[0-9a-zA-Z_.]+}})
 // CHECK: call <2 x double> @_mm_round_pd(<2 x double> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef signext %{{[0-9a-zA-Z_.]+}})

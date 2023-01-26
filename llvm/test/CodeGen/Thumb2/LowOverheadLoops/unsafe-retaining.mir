@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=thumbv8.1m.main -mattr=+mve -run-pass=arm-low-overhead-loops %s -o - | FileCheck %s
 
 --- |
-  define arm_aapcs_vfpcc void @test_vmvn(<4 x i32>* %a, <4 x i32>* %b, <4 x i32>* %c, i32 %elts, i32 %iters) #0 {
+  define arm_aapcs_vfpcc void @test_vmvn(ptr %a, ptr %b, ptr %c, i32 %elts, i32 %iters) #0 {
   entry:
     %cmp = icmp slt i32 %elts, 1
     br i1 %cmp, label %exit, label %loop.ph
@@ -14,21 +14,21 @@
   loop.body:                                        ; preds = %loop.body, %loop.ph
     %lsr.iv = phi i32 [ %lsr.iv.next, %loop.body ], [ %start, %loop.ph ]
     %count = phi i32 [ %elts, %loop.ph ], [ %elts.rem, %loop.body ]
-    %addr.a = phi <4 x i32>* [ %a, %loop.ph ], [ %addr.a.next, %loop.body ]
-    %addr.b = phi <4 x i32>* [ %b, %loop.ph ], [ %addr.b.next, %loop.body ]
-    %addr.c = phi <4 x i32>* [ %c, %loop.ph ], [ %addr.c.next, %loop.body ]
+    %addr.a = phi ptr [ %a, %loop.ph ], [ %addr.a.next, %loop.body ]
+    %addr.b = phi ptr [ %b, %loop.ph ], [ %addr.b.next, %loop.body ]
+    %addr.c = phi ptr [ %c, %loop.ph ], [ %addr.c.next, %loop.body ]
     %pred = call <4 x i1> @llvm.arm.mve.vctp32(i32 %count)
     %elts.rem = sub i32 %count, 4
-    %masked.load.a = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %addr.a, i32 4, <4 x i1> %pred, <4 x i32> undef)
-    %masked.load.b = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %addr.b, i32 4, <4 x i1> %pred, <4 x i32> undef)
+    %masked.load.a = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %addr.a, i32 4, <4 x i1> %pred, <4 x i32> undef)
+    %masked.load.b = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %addr.b, i32 4, <4 x i1> %pred, <4 x i32> undef)
     %not = xor <4 x i32> %masked.load.b, <i32 -1, i32 -1, i32 -1, i32 -1>
     %bitcast.a = bitcast <4 x i32> %masked.load.a to <8 x i16>
     %shrn = call <8 x i16> @llvm.arm.mve.vshrn.v8i16.v4i32(<8 x i16> %bitcast.a, <4 x i32> %not, i32 15, i32 1, i32 0, i32 0, i32 0, i32 0)
     %bitcast = bitcast <8 x i16> %shrn to <4 x i32>
-    call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %bitcast, <4 x i32>* %addr.c, i32 4, <4 x i1> %pred)
-    %addr.a.next = getelementptr <4 x i32>, <4 x i32>* %addr.a, i32 1
-    %addr.b.next = getelementptr <4 x i32>, <4 x i32>* %addr.b, i32 1
-    %addr.c.next = getelementptr <4 x i32>, <4 x i32>* %addr.c, i32 1
+    call void @llvm.masked.store.v4i32.p0(<4 x i32> %bitcast, ptr %addr.c, i32 4, <4 x i1> %pred)
+    %addr.a.next = getelementptr <4 x i32>, ptr %addr.a, i32 1
+    %addr.b.next = getelementptr <4 x i32>, ptr %addr.b, i32 1
+    %addr.c.next = getelementptr <4 x i32>, ptr %addr.c, i32 1
     %loop.dec = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %lsr.iv, i32 1)
     %end = icmp ne i32 %loop.dec, 0
     %lsr.iv.next = add i32 %lsr.iv, -1
@@ -38,7 +38,7 @@
     ret void
   }
 
-  define arm_aapcs_vfpcc void @test_vorn(<4 x i32>* %a, <4 x i32>* %b, <4 x i32>* %c, i32 %elts, i32 %iters) #0 {
+  define arm_aapcs_vfpcc void @test_vorn(ptr %a, ptr %b, ptr %c, i32 %elts, i32 %iters) #0 {
   entry:
     %cmp = icmp slt i32 %elts, 1
     br i1 %cmp, label %exit, label %loop.ph
@@ -50,22 +50,22 @@
   loop.body:                                        ; preds = %loop.body, %loop.ph
     %lsr.iv = phi i32 [ %lsr.iv.next, %loop.body ], [ %start, %loop.ph ]
     %count = phi i32 [ %elts, %loop.ph ], [ %elts.rem, %loop.body ]
-    %addr.a = phi <4 x i32>* [ %a, %loop.ph ], [ %addr.a.next, %loop.body ]
-    %addr.b = phi <4 x i32>* [ %b, %loop.ph ], [ %addr.b.next, %loop.body ]
-    %addr.c = phi <4 x i32>* [ %c, %loop.ph ], [ %addr.c.next, %loop.body ]
+    %addr.a = phi ptr [ %a, %loop.ph ], [ %addr.a.next, %loop.body ]
+    %addr.b = phi ptr [ %b, %loop.ph ], [ %addr.b.next, %loop.body ]
+    %addr.c = phi ptr [ %c, %loop.ph ], [ %addr.c.next, %loop.body ]
     %pred = call <4 x i1> @llvm.arm.mve.vctp32(i32 %count)
     %elts.rem = sub i32 %count, 4
-    %masked.load.a = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %addr.a, i32 4, <4 x i1> %pred, <4 x i32> undef)
-    %masked.load.b = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %addr.b, i32 4, <4 x i1> %pred, <4 x i32> undef)
+    %masked.load.a = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %addr.a, i32 4, <4 x i1> %pred, <4 x i32> undef)
+    %masked.load.b = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %addr.b, i32 4, <4 x i1> %pred, <4 x i32> undef)
     %not = xor <4 x i32> %masked.load.b, <i32 -1, i32 -1, i32 -1, i32 -1>
     %or = or <4 x i32> %not, %masked.load.a
     %bitcast.a = bitcast <4 x i32> %masked.load.a to <8 x i16>
     %shrn = call <8 x i16> @llvm.arm.mve.vshrn.v8i16.v4i32(<8 x i16> %bitcast.a, <4 x i32> %or, i32 3, i32 1, i32 0, i32 1, i32 0, i32 1)
     %bitcast = bitcast <8 x i16> %shrn to <4 x i32>
-    call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %bitcast, <4 x i32>* %addr.c, i32 4, <4 x i1> %pred)
-    %addr.a.next = getelementptr <4 x i32>, <4 x i32>* %addr.a, i32 1
-    %addr.b.next = getelementptr <4 x i32>, <4 x i32>* %addr.b, i32 1
-    %addr.c.next = getelementptr <4 x i32>, <4 x i32>* %addr.c, i32 1
+    call void @llvm.masked.store.v4i32.p0(<4 x i32> %bitcast, ptr %addr.c, i32 4, <4 x i1> %pred)
+    %addr.a.next = getelementptr <4 x i32>, ptr %addr.a, i32 1
+    %addr.b.next = getelementptr <4 x i32>, ptr %addr.b, i32 1
+    %addr.c.next = getelementptr <4 x i32>, ptr %addr.c, i32 1
     %loop.dec = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %lsr.iv, i32 1)
     %end = icmp ne i32 %loop.dec, 0
     %lsr.iv.next = add i32 %lsr.iv, -1
@@ -78,8 +78,8 @@
   declare i32 @llvm.start.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
   declare <4 x i1> @llvm.arm.mve.vctp32(i32)
-  declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>)
-  declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32 immarg, <4 x i1>)
+  declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, i32 immarg, <4 x i1>, <4 x i32>)
+  declare void @llvm.masked.store.v4i32.p0(<4 x i32>, ptr, i32 immarg, <4 x i1>)
   declare <8 x i16> @llvm.arm.mve.vshrn.v8i16.v4i32(<8 x i16>, <4 x i32>, i32, i32, i32, i32, i32, i32)
 
 ...

@@ -27,7 +27,7 @@
 ; CHECK: @default_addrspace.var = global i8 1 
 
 @non_default_addrspace.var = addrspace(1) global i8* undef 
-; CHECK: @non_default_addrspace.var = addrspace(1) global i8* undef 
+; CHECK: @non_default_addrspace.var = addrspace(1) global ptr undef 
 
 @initialexec.var = thread_local(initialexec) global i32 0, align 4
 ; CHECK: @initialexec.var = thread_local(initialexec) global i32 0, align 4

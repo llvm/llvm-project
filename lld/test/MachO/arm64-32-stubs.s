@@ -12,7 +12,7 @@
 # RUN: %lld-watchos -dylib -install_name @executable_path/libbar.dylib %t/bar.o -o %t/libbar.dylib
 # RUN: %lld-watchos -lSystem %t/libfoo.dylib %t/libbar.dylib %t/test.o -o %t/test
 
-# RUN: llvm-objdump --macho -d --no-show-raw-insn --section="__TEXT,__stubs" --section="__TEXT,__stub_helper" %t/test | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex --macho -d --no-show-raw-insn --section="__TEXT,__stubs" --section="__TEXT,__stub_helper" %t/test | FileCheck %s
 
 # CHECK:       _main:
 # CHECK-NEXT:  bl 0x[[#%x,FOO:]] ; symbol stub for: _foo

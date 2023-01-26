@@ -45,12 +45,13 @@ void test_fread_fwrite(FILE *fp, int *buf) {
   clang_analyzer_eval(x <= 10); // \
  // stream-warning{{TRUE}} \
  // stdLib-warning{{TRUE}} \
- // both-warning{{TRUE}} \
+ // both-warning{{TRUE}}
 
   clang_analyzer_eval(x == 10); // \
   // stream-warning{{TRUE}} \
   // stream-warning{{FALSE}} \
-  // stdLib-warning{{UNKNOWN}} \
+  // stdLib-warning{{TRUE}} \
+  // stdLib-warning{{FALSE}} \
   // both-warning{{TRUE}} \
   // both-warning{{FALSE}}
 

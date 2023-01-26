@@ -30,6 +30,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -86,7 +87,7 @@ class MIGChecker : public Checker<check::PostCall, check::PreStmt<ReturnStmt>,
 #undef CALL
   };
 
-  CallDescription OsRefRetain{"os_ref_retain", 1};
+  CallDescription OsRefRetain{{"os_ref_retain"}, 1};
 
   void checkReturnAux(const ReturnStmt *RS, CheckerContext &C) const;
 
@@ -157,7 +158,7 @@ static bool isInMIGCall(CheckerContext &C) {
 
   const Decl *D = SFC->getDecl();
 
-  if (Optional<AnyCall> AC = AnyCall::forDecl(D)) {
+  if (std::optional<AnyCall> AC = AnyCall::forDecl(D)) {
     // Even though there's a Sema warning when the return type of an annotated
     // function is not a kern_return_t, this warning isn't an error, so we need
     // an extra check here.

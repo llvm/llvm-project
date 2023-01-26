@@ -12,6 +12,7 @@
 #include "mlir/Analysis/DataFlow/SparseAnalysis.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::dataflow;
@@ -20,23 +21,30 @@ namespace {
 /// This lattice represents a single underlying value for an SSA value.
 class UnderlyingValue {
 public:
-  /// The pessimistic underlying value of a value is itself.
-  static UnderlyingValue getPessimisticValueState(Value value) {
-    return {value};
-  }
-
   /// Create an underlying value state with a known underlying value.
-  UnderlyingValue(Value underlyingValue = {})
+  explicit UnderlyingValue(std::optional<Value> underlyingValue = std::nullopt)
       : underlyingValue(underlyingValue) {}
 
+  /// Whether the state is uninitialized.
+  bool isUninitialized() const { return !underlyingValue.has_value(); }
+
   /// Returns the underlying value.
-  Value getUnderlyingValue() const { return underlyingValue; }
+  Value getUnderlyingValue() const {
+    assert(!isUninitialized());
+    return *underlyingValue;
+  }
 
   /// Join two underlying values. If there are conflicting underlying values,
   /// go to the pessimistic value.
   static UnderlyingValue join(const UnderlyingValue &lhs,
                               const UnderlyingValue &rhs) {
-    return lhs.underlyingValue == rhs.underlyingValue ? lhs : UnderlyingValue();
+    if (lhs.isUninitialized())
+      return rhs;
+    if (rhs.isUninitialized())
+      return lhs;
+    return lhs.underlyingValue == rhs.underlyingValue
+               ? lhs
+               : UnderlyingValue(Value{});
   }
 
   /// Compare underlying values.
@@ -47,7 +55,7 @@ public:
   void print(raw_ostream &os) const { os << underlyingValue; }
 
 private:
-  Value underlyingValue;
+  std::optional<Value> underlyingValue;
 };
 
 /// This lattice represents, for a given memory resource, the potential last
@@ -58,23 +66,13 @@ public:
 
   using AbstractDenseLattice::AbstractDenseLattice;
 
-  /// The lattice is always initialized.
-  bool isUninitialized() const override { return false; }
-
-  /// Initialize the lattice. Does nothing.
-  ChangeResult defaultInitialize() override { return ChangeResult::NoChange; }
-
-  /// Mark the lattice as having reached its pessimistic fixpoint. That is, the
-  /// last modifications of all memory resources are unknown.
-  ChangeResult reset() override {
+  /// Clear all modifications.
+  ChangeResult reset() {
     if (lastMods.empty())
       return ChangeResult::NoChange;
     lastMods.clear();
     return ChangeResult::Change;
   }
-
-  /// The lattice is never at a fixpoint.
-  bool isAtFixpoint() const override { return false; }
 
   /// Join the last modifications.
   ChangeResult join(const AbstractDenseLattice &lattice) override {
@@ -104,7 +102,7 @@ public:
 
   /// Get the last modifications of a value. Returns none if the last
   /// modifications are not known.
-  Optional<ArrayRef<Operation *>> getLastModifiers(Value value) const {
+  std::optional<ArrayRef<Operation *>> getLastModifiers(Value value) const {
     auto it = lastMods.find(value);
     if (it == lastMods.end())
       return {};
@@ -137,6 +135,12 @@ public:
   /// resource, then its reaching definition is set to the written value.
   void visitOperation(Operation *op, const LastModification &before,
                       LastModification *after) override;
+
+  /// At an entry point, the last modifications of all memory resources are
+  /// unknown.
+  void setToEntryState(LastModification *lattice) override {
+    propagateIfChanged(lattice, lattice->reset());
+  }
 };
 
 /// Define the lattice class explicitly to provide a type ID.
@@ -158,7 +162,13 @@ public:
   void visitOperation(Operation *op,
                       ArrayRef<const UnderlyingValueLattice *> operands,
                       ArrayRef<UnderlyingValueLattice *> results) override {
-    markAllPessimisticFixpoint(results);
+    setAllToEntryStates(results);
+  }
+
+  /// At an entry point, the underlying value of a value is itself.
+  void setToEntryState(UnderlyingValueLattice *lattice) override {
+    propagateIfChanged(lattice,
+                       lattice->join(UnderlyingValue{lattice->getPoint()}));
   }
 };
 } // end anonymous namespace
@@ -170,7 +180,7 @@ static Value getMostUnderlyingValue(
   const UnderlyingValueLattice *underlying;
   do {
     underlying = getUnderlyingValueFn(value);
-    if (!underlying || underlying->isUninitialized())
+    if (!underlying || underlying->getValue().isUninitialized())
       return {};
     Value underlyingValue = underlying->getValue().getUnderlyingValue();
     if (underlyingValue == value)
@@ -187,7 +197,7 @@ void LastModifiedAnalysis::visitOperation(Operation *op,
   // If we can't reason about the memory effects, then conservatively assume we
   // can't deduce anything about the last modifications.
   if (!memory)
-    return reset(after);
+    return setToEntryState(after);
 
   SmallVector<MemoryEffects::EffectInstance> effects;
   memory.getEffects(effects);
@@ -199,7 +209,7 @@ void LastModifiedAnalysis::visitOperation(Operation *op,
     // If we see an effect on anything other than a value, assume we can't
     // deduce anything about the last modifications.
     if (!value)
-      return reset(after);
+      return setToEntryState(after);
 
     value = getMostUnderlyingValue(value, [&](Value value) {
       return getOrCreateFor<UnderlyingValueLattice>(op, value);
@@ -250,7 +260,7 @@ struct TestLastModifiedPass
           return solver.lookupState<UnderlyingValueLattice>(value);
         });
         assert(value && "expected an underlying value");
-        if (Optional<ArrayRef<Operation *>> lastMod =
+        if (std::optional<ArrayRef<Operation *>> lastMod =
                 lastMods->getLastModifiers(value)) {
           for (Operation *lastModifier : *lastMod) {
             if (auto tagName =

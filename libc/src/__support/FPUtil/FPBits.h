@@ -11,9 +11,9 @@
 
 #include "PlatformDefs.h"
 
-#include "src/__support/CPP/Bit.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/FPUtil/builtin_wrappers.h"
+#include "src/__support/builtin_wrappers.h"
 #include "src/__support/common.h"
 
 #include "FloatProperties.h"
@@ -104,8 +104,7 @@ template <typename T> struct FPBits {
   // We don't want accidental type promotions/conversions, so we require exact
   // type match.
   template <typename XType, cpp::enable_if_t<cpp::is_same_v<T, XType>, int> = 0>
-  constexpr explicit FPBits(XType x)
-      : bits(__llvm_libc::bit_cast<UIntType>(x)) {}
+  constexpr explicit FPBits(XType x) : bits(cpp::bit_cast<UIntType>(x)) {}
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_same_v<XType, UIntType>, int> = 0>
@@ -113,9 +112,9 @@ template <typename T> struct FPBits {
 
   FPBits() : bits(0) {}
 
-  T get_val() const { return __llvm_libc::bit_cast<T>(bits); }
+  T get_val() const { return cpp::bit_cast<T>(bits); }
 
-  void set_val(T value) { bits = __llvm_libc::bit_cast<UIntType>(value); }
+  void set_val(T value) { bits = cpp::bit_cast<UIntType>(value); }
 
   explicit operator T() const { return get_val(); }
 
@@ -153,8 +152,8 @@ template <typename T> struct FPBits {
 
   static constexpr FPBits<T> neg_zero() { return zero(true); }
 
-  static constexpr FPBits<T> inf() {
-    FPBits<T> bits;
+  static constexpr FPBits<T> inf(bool sign = false) {
+    FPBits<T> bits(sign ? FloatProp::SIGN_MASK : UIntType(0));
     bits.set_unbiased_exponent(MAX_EXPONENT);
     return bits;
   }
@@ -171,6 +170,10 @@ template <typename T> struct FPBits {
     return T(bits);
   }
 
+  static constexpr T build_quiet_nan(UIntType v) {
+    return build_nan(FloatProp::QUIET_NAN_MASK | v);
+  }
+
   // The function convert integer number and unbiased exponent to proper float
   // T type:
   //   Result = number * 2^(ep+1 - exponent_bias)
@@ -184,7 +187,7 @@ template <typename T> struct FPBits {
   inline static constexpr FPBits<T> make_value(UIntType number, int ep) {
     FPBits<T> result;
     // offset: +1 for sign, but -1 for implicit first bit
-    int lz = fputil::unsafe_clz(number) - FloatProp::EXPONENT_WIDTH;
+    int lz = unsafe_clz(number) - FloatProp::EXPONENT_WIDTH;
     number <<= lz;
     ep -= lz;
 
@@ -195,6 +198,15 @@ template <typename T> struct FPBits {
     } else {
       result.set_mantissa(number >> -ep);
     }
+    return result;
+  }
+
+  inline static FPBits<T> create_value(bool sign, UIntType unbiased_exp,
+                                       UIntType mantissa) {
+    FPBits<T> result;
+    result.set_sign(sign);
+    result.set_unbiased_exponent(unbiased_exp);
+    result.set_mantissa(mantissa);
     return result;
   }
 };

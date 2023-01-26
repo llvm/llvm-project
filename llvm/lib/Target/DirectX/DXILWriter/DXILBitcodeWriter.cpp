@@ -12,7 +12,7 @@
 
 #include "DXILBitcodeWriter.h"
 #include "DXILValueEnumerator.h"
-#include "PointerTypeAnalysis.h"
+#include "DirectXIRPasses/PointerTypeAnalysis.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Bitcode/BitcodeCommon.h"
@@ -49,6 +49,7 @@
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Object/IRSymtab.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/SHA1.h"
 
 namespace llvm {
@@ -276,6 +277,13 @@ private:
                       unsigned Abbrev) {
     llvm_unreachable("DXIL cannot contain DIArgList Nodes");
   }
+  void writeDIAssignID(const DIAssignID *N, SmallVectorImpl<uint64_t> &Record,
+                       unsigned Abbrev) {
+    // DIAssignID is experimental feature to track variable location in IR..
+    // FIXME: translate DIAssignID to debug info DXIL supports.
+    //   See https://github.com/llvm/llvm-project/issues/58989
+    llvm_unreachable("DXIL cannot contain DIAssignID Nodes");
+  }
   void writeDIModule(const DIModule *N, SmallVectorImpl<uint64_t> &Record,
                      unsigned Abbrev);
   void writeDITemplateTypeParameter(const DITemplateTypeParameter *N,
@@ -336,8 +344,6 @@ private:
   void writeFunctionLevelValueSymbolTable(const ValueSymbolTable &VST);
   void writeGlobalValueSymbolTable(
       DenseMap<const Function *, uint64_t> &FunctionToBitcodeIndex);
-  void writeUseList(UseListOrder &&Order);
-  void writeUseListBlock(const Function *F);
   void writeFunction(const Function &F);
   void writeBlockInfo();
 
@@ -346,7 +352,11 @@ private:
   unsigned getEncodedAlign(MaybeAlign Alignment) { return encode(Alignment); }
 
   unsigned getTypeID(Type *T, const Value *V = nullptr);
-  unsigned getTypeID(Type *T, const Function *F);
+  /// getGlobalObjectValueTypeID - returns the element type for a GlobalObject
+  ///
+  /// GlobalObject types are saved by PointerTypeAnalysis as pointers to the
+  /// GlobalObject, but in the bitcode writer we need the pointer element type.
+  unsigned getGlobalObjectValueTypeID(Type *T, const GlobalObject *G);
 };
 
 } // namespace dxil
@@ -371,7 +381,7 @@ dxil::BitcodeWriter::BitcodeWriter(SmallVectorImpl<char> &Buffer,
   Stream->Emit(0xD, 4);
 }
 
-dxil::BitcodeWriter::~BitcodeWriter() { assert(WroteStrtab); }
+dxil::BitcodeWriter::~BitcodeWriter() { }
 
 /// Write the specified module to the specified output stream.
 void dxil::WriteDXILToFile(const Module &M, raw_ostream &Out) {
@@ -386,8 +396,6 @@ void dxil::WriteDXILToFile(const Module &M, raw_ostream &Out) {
 
   BitcodeWriter Writer(Buffer, dyn_cast<raw_fd_stream>(&Out));
   Writer.writeModule(M);
-  Writer.writeSymtab();
-  Writer.writeStrtab();
 
   // Write the generated bitstream to "Out".
   if (!Buffer.empty())
@@ -407,53 +415,7 @@ void BitcodeWriter::writeBlob(unsigned Block, unsigned Record, StringRef Blob) {
   Stream->ExitBlock();
 }
 
-void BitcodeWriter::writeSymtab() {
-  assert(!WroteStrtab && !WroteSymtab);
-
-  // If any module has module-level inline asm, we will require a registered asm
-  // parser for the target so that we can create an accurate symbol table for
-  // the module.
-  for (Module *M : Mods) {
-    if (M->getModuleInlineAsm().empty())
-      continue;
-  }
-
-  WroteSymtab = true;
-  SmallVector<char, 0> Symtab;
-  // The irsymtab::build function may be unable to create a symbol table if the
-  // module is malformed (e.g. it contains an invalid alias). Writing a symbol
-  // table is not required for correctness, but we still want to be able to
-  // write malformed modules to bitcode files, so swallow the error.
-  if (Error E = irsymtab::build(Mods, Symtab, StrtabBuilder, Alloc)) {
-    consumeError(std::move(E));
-    return;
-  }
-
-  writeBlob(bitc::SYMTAB_BLOCK_ID, bitc::SYMTAB_BLOB,
-            {Symtab.data(), Symtab.size()});
-}
-
-void BitcodeWriter::writeStrtab() {
-  assert(!WroteStrtab);
-
-  std::vector<char> Strtab;
-  StrtabBuilder.finalizeInOrder();
-  Strtab.resize(StrtabBuilder.getSize());
-  StrtabBuilder.write((uint8_t *)Strtab.data());
-
-  writeBlob(bitc::STRTAB_BLOCK_ID, bitc::STRTAB_BLOB,
-            {Strtab.data(), Strtab.size()});
-
-  WroteStrtab = true;
-}
-
-void BitcodeWriter::copyStrtab(StringRef Strtab) {
-  writeBlob(bitc::STRTAB_BLOCK_ID, bitc::STRTAB_BLOB, Strtab);
-  WroteStrtab = true;
-}
-
 void BitcodeWriter::writeModule(const Module &M) {
-  assert(!WroteStrtab);
 
   // The Mods vector is used by irsymtab::build, which requires non-const
   // Modules in case it needs to materialize metadata. But the bitcode writer
@@ -551,18 +513,30 @@ unsigned DXILBitcodeWriter::getEncodedBinaryOpcode(unsigned Opcode) {
 }
 
 unsigned DXILBitcodeWriter::getTypeID(Type *T, const Value *V) {
-  if (!T->isOpaquePointerTy())
+  if (!T->isOpaquePointerTy() &&
+      // For Constant, always check PointerMap to make sure OpaquePointer in
+      // things like constant struct/array works.
+      (!V || !isa<Constant>(V)))
     return VE.getTypeID(T);
   auto It = PointerMap.find(V);
   if (It != PointerMap.end())
     return VE.getTypeID(It->second);
+  // For Constant, return T when cannot find in PointerMap.
+  // FIXME: support ConstantPointerNull which could map to more than one
+  // TypedPointerType.
+  // See https://github.com/llvm/llvm-project/issues/57942.
+  if (V && isa<Constant>(V) && !isa<ConstantPointerNull>(V))
+    return VE.getTypeID(T);
   return VE.getTypeID(I8PtrTy);
 }
 
-unsigned DXILBitcodeWriter::getTypeID(Type *T, const Function *F) {
-  auto It = PointerMap.find(F);
-  if (It != PointerMap.end())
-    return VE.getTypeID(It->second);
+unsigned DXILBitcodeWriter::getGlobalObjectValueTypeID(Type *T,
+                                                       const GlobalObject *G) {
+  auto It = PointerMap.find(G);
+  if (It != PointerMap.end()) {
+    TypedPointerType *PtrTy = cast<TypedPointerType>(It->second);
+    return VE.getTypeID(PtrTy->getElementType());
+  }
   return VE.getTypeID(T);
 }
 
@@ -645,8 +619,6 @@ uint64_t DXILBitcodeWriter::getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_ALIGNMENT;
   case Attribute::AlwaysInline:
     return bitc::ATTR_KIND_ALWAYS_INLINE;
-  case Attribute::ArgMemOnly:
-    return bitc::ATTR_KIND_ARGMEMONLY;
   case Attribute::Builtin:
     return bitc::ATTR_KIND_BUILTIN;
   case Attribute::ByVal:
@@ -913,12 +885,29 @@ void DXILBitcodeWriter::writeAttributeGroupTable() {
         Record.push_back(0);
         Record.push_back(Val);
       } else if (Attr.isIntAttribute()) {
-        uint64_t Val = getAttrKindEncoding(Attr.getKindAsEnum());
-        assert(Val <= bitc::ATTR_KIND_ARGMEMONLY &&
-               "DXIL does not support attributes above ATTR_KIND_ARGMEMONLY");
-        Record.push_back(1);
-        Record.push_back(Val);
-        Record.push_back(Attr.getValueAsInt());
+        if (Attr.getKindAsEnum() == Attribute::AttrKind::Memory) {
+          MemoryEffects ME = Attr.getMemoryEffects();
+          if (ME.doesNotAccessMemory()) {
+            Record.push_back(0);
+            Record.push_back(bitc::ATTR_KIND_READ_NONE);
+          } else {
+            if (ME.onlyReadsMemory()) {
+              Record.push_back(0);
+              Record.push_back(bitc::ATTR_KIND_READ_ONLY);
+            }
+            if (ME.onlyAccessesArgPointees()) {
+              Record.push_back(0);
+              Record.push_back(bitc::ATTR_KIND_ARGMEMONLY);
+            }
+          }
+        } else {
+          uint64_t Val = getAttrKindEncoding(Attr.getKindAsEnum());
+          assert(Val <= bitc::ATTR_KIND_ARGMEMONLY &&
+                 "DXIL does not support attributes above ATTR_KIND_ARGMEMONLY");
+          Record.push_back(1);
+          Record.push_back(Val);
+          Record.push_back(Attr.getValueAsInt());
+        }
       } else {
         StringRef Kind = Attr.getKindAsString();
         StringRef Val = Attr.getValueAsString();
@@ -1031,6 +1020,7 @@ void DXILBitcodeWriter::writeTypeTable() {
     case Type::BFloatTyID:
     case Type::X86_AMXTyID:
     case Type::TokenTyID:
+    case Type::TargetExtTyID:
       llvm_unreachable("These should never be used!!!");
       break;
     case Type::VoidTyID:
@@ -1068,7 +1058,7 @@ void DXILBitcodeWriter::writeTypeTable() {
       Code = bitc::TYPE_CODE_INTEGER;
       TypeVals.push_back(cast<IntegerType>(T)->getBitWidth());
       break;
-    case Type::DXILPointerTyID: {
+    case Type::TypedPointerTyID: {
       TypedPointerType *PTy = cast<TypedPointerType>(T);
       // POINTER: [pointee type, address space]
       Code = bitc::TYPE_CODE_POINTER;
@@ -1209,7 +1199,10 @@ void DXILBitcodeWriter::writeModuleInfo() {
   };
   for (const GlobalVariable &GV : M.globals()) {
     UpdateMaxAlignment(GV.getAlign());
-    MaxGlobalType = std::max(MaxGlobalType, getTypeID(GV.getValueType(), &GV));
+    // Use getGlobalObjectValueTypeID to look up the enumerated type ID for
+    // Global Variable types.
+    MaxGlobalType = std::max(
+        MaxGlobalType, getGlobalObjectValueTypeID(GV.getValueType(), &GV));
     if (GV.hasSection()) {
       // Give section names unique ID's.
       unsigned &Entry = SectionMap[std::string(GV.getSection())];
@@ -1281,7 +1274,7 @@ void DXILBitcodeWriter::writeModuleInfo() {
     //             linkage, alignment, section, visibility, threadlocal,
     //             unnamed_addr, externally_initialized, dllstorageclass,
     //             comdat]
-    Vals.push_back(getTypeID(GV.getValueType(), &GV));
+    Vals.push_back(getGlobalObjectValueTypeID(GV.getValueType(), &GV));
     Vals.push_back(
         GV.getType()->getAddressSpace() << 2 | 2 |
         (GV.isConstant() ? 1 : 0)); // HLSL Change - bitwise | was used with
@@ -1317,7 +1310,7 @@ void DXILBitcodeWriter::writeModuleInfo() {
     // FUNCTION:  [type, callingconv, isproto, linkage, paramattrs, alignment,
     //             section, visibility, gc, unnamed_addr, prologuedata,
     //             dllstorageclass, comdat, prefixdata, personalityfn]
-    Vals.push_back(getTypeID(F.getFunctionType(), &F));
+    Vals.push_back(getGlobalObjectValueTypeID(F.getFunctionType(), &F));
     Vals.push_back(F.getCallingConv());
     Vals.push_back(F.isDeclaration());
     Vals.push_back(getEncodedLinkage(F));
@@ -1971,7 +1964,7 @@ void DXILBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
     // If we need to switch types, do so now.
     if (V->getType() != LastTy) {
       LastTy = V->getType();
-      Record.push_back(getTypeID(LastTy));
+      Record.push_back(getTypeID(LastTy, V));
       Stream.EmitRecord(bitc::CST_CODE_SETTYPE, Record,
                         CONSTANTS_SETTYPE_ABBREV);
       Record.clear();
@@ -2070,7 +2063,7 @@ void DXILBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
     } else if (const ConstantDataSequential *CDS =
                    dyn_cast<ConstantDataSequential>(C)) {
       Code = bitc::CST_CODE_DATA;
-      Type *EltTy = CDS->getType()->getArrayElementType();
+      Type *EltTy = CDS->getElementType();
       if (isa<IntegerType>(EltTy)) {
         for (unsigned i = 0, e = CDS->getNumElements(); i != e; ++i)
           Record.push_back(CDS->getElementAsInteger(i));
@@ -2106,7 +2099,8 @@ void DXILBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
         if (Instruction::isCast(CE->getOpcode())) {
           Code = bitc::CST_CODE_CE_CAST;
           Record.push_back(getEncodedCastOpcode(CE->getOpcode()));
-          Record.push_back(getTypeID(C->getOperand(0)->getType()));
+          Record.push_back(
+              getTypeID(C->getOperand(0)->getType(), C->getOperand(0)));
           Record.push_back(VE.getValueID(C->getOperand(0)));
           AbbrevToUse = CONSTANTS_CE_CAST_Abbrev;
         } else {
@@ -2127,7 +2121,8 @@ void DXILBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
           Code = bitc::CST_CODE_CE_INBOUNDS_GEP;
         Record.push_back(getTypeID(GO->getSourceElementType()));
         for (unsigned i = 0, e = CE->getNumOperands(); i != e; ++i) {
-          Record.push_back(getTypeID(C->getOperand(i)->getType()));
+          Record.push_back(
+              getTypeID(C->getOperand(i)->getType(), C->getOperand(i)));
           Record.push_back(VE.getValueID(C->getOperand(i)));
         }
         break;
@@ -2318,7 +2313,8 @@ void DXILBitcodeWriter::writeInstruction(const Instruction &I, unsigned InstID,
     Code = bitc::FUNC_CODE_INST_SHUFFLEVEC;
     pushValueAndType(I.getOperand(0), InstID, Vals);
     pushValue(I.getOperand(1), InstID, Vals);
-    pushValue(I.getOperand(2), InstID, Vals);
+    pushValue(cast<ShuffleVectorInst>(&I)->getShuffleMaskForBitcode(), InstID,
+              Vals);
     break;
   case Instruction::ICmp:
   case Instruction::FCmp: {
@@ -2449,15 +2445,11 @@ void DXILBitcodeWriter::writeInstruction(const Instruction &I, unsigned InstID,
     Vals.push_back(getTypeID(AI.getAllocatedType()));
     Vals.push_back(getTypeID(I.getOperand(0)->getType()));
     Vals.push_back(VE.getValueID(I.getOperand(0))); // size.
-    using APV = AllocaPackedValues;
-    unsigned Record = 0;
-    unsigned EncodedAlign = getEncodedAlign(AI.getAlign());
-    Bitfield::set<APV::AlignLower>(
-        Record, EncodedAlign & ((1 << APV::AlignLower::Bits) - 1));
-    Bitfield::set<APV::AlignUpper>(Record,
-                                   EncodedAlign >> APV::AlignLower::Bits);
-    Bitfield::set<APV::UsedWithInAlloca>(Record, AI.isUsedWithInAlloca());
-    Vals.push_back(Record);
+    unsigned AlignRecord = Log2_32(AI.getAlign().value()) + 1;
+    assert(AlignRecord < 1 << 5 && "alignment greater than 1 << 64");
+    AlignRecord |= AI.isUsedWithInAlloca() << 5;
+    AlignRecord |= 1 << 6;
+    Vals.push_back(AlignRecord);
     break;
   }
 
@@ -2532,7 +2524,7 @@ void DXILBitcodeWriter::writeInstruction(const Instruction &I, unsigned InstID,
     Vals.push_back(VE.getAttributeListID(CI.getAttributes()));
     Vals.push_back((CI.getCallingConv() << 1) | unsigned(CI.isTailCall()) |
                    unsigned(CI.isMustTailCall()) << 14 | 1 << 15);
-    Vals.push_back(getTypeID(FTy, CI.getCalledFunction()));
+    Vals.push_back(getGlobalObjectValueTypeID(FTy, CI.getCalledFunction()));
     pushValueAndType(CI.getCalledOperand(), InstID, Vals); // Callee
 
     // Emit value #'s for the fixed parameters.
@@ -2631,35 +2623,6 @@ void DXILBitcodeWriter::writeFunctionLevelValueSymbolTable(
   Stream.ExitBlock();
 }
 
-void DXILBitcodeWriter::writeUseList(UseListOrder &&Order) {
-  assert(Order.Shuffle.size() >= 2 && "Shuffle too small");
-  unsigned Code;
-  if (isa<BasicBlock>(Order.V))
-    Code = bitc::USELIST_CODE_BB;
-  else
-    Code = bitc::USELIST_CODE_DEFAULT;
-
-  SmallVector<uint64_t, 64> Record(Order.Shuffle.begin(), Order.Shuffle.end());
-  Record.push_back(VE.getValueID(Order.V));
-  Stream.EmitRecord(Code, Record);
-}
-
-void DXILBitcodeWriter::writeUseListBlock(const Function *F) {
-  auto hasMore = [&]() {
-    return !VE.UseListOrders.empty() && VE.UseListOrders.back().F == F;
-  };
-  if (!hasMore())
-    // Nothing to do.
-    return;
-
-  Stream.EnterSubblock(bitc::USELIST_BLOCK_ID, 3);
-  while (hasMore()) {
-    writeUseList(std::move(VE.UseListOrders.back()));
-    VE.UseListOrders.pop_back();
-  }
-  Stream.ExitBlock();
-}
-
 /// Emit a function body to the module stream.
 void DXILBitcodeWriter::writeFunction(const Function &F) {
   Stream.EnterSubblock(bitc::FUNCTION_BLOCK_ID, 4);
@@ -2728,7 +2691,6 @@ void DXILBitcodeWriter::writeFunction(const Function &F) {
   if (NeedsMetadataAttachment)
     writeFunctionMetadataAttachment(F);
 
-  writeUseListBlock(&F);
   VE.purgeFunction();
   Stream.ExitBlock();
 }
@@ -2954,9 +2916,6 @@ void DXILBitcodeWriter::write() {
   // DXIL uses the same format for module-level value symbol table as for the
   // function level table.
   writeFunctionLevelValueSymbolTable(M.getValueSymbolTable());
-
-  // Emit module-level use-lists.
-  writeUseListBlock(nullptr);
 
   // Emit function bodies.
   for (const Function &F : M)

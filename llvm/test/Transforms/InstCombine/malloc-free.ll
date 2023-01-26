@@ -4,15 +4,15 @@
 
 target datalayout = "p:32:32:32"
 
-define i32 @main(i32 %argc, i8** %argv) {
+define i32 @main(i32 %argc, ptr %argv) {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %c_19 = alloca i8*
-  %malloc_206 = tail call i8* @malloc(i32 mul (i32 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i32), i32 10))
-  store i8* %malloc_206, i8** %c_19
-  %tmp_207 = load i8*, i8** %c_19
-  tail call void @free(i8* %tmp_207)
+  %c_19 = alloca ptr
+  %malloc_206 = tail call ptr @malloc(i32 mul (i32 ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i32), i32 10))
+  store ptr %malloc_206, ptr %c_19
+  %tmp_207 = load ptr, ptr %c_19
+  tail call void @free(ptr %tmp_207)
   ret i32 0
 }
 
@@ -20,48 +20,48 @@ define i32 @dead_aligned_alloc(i32 %size, i32 %alignment, i8 %value) {
 ; CHECK-LABEL: @dead_aligned_alloc(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %aligned_allocation = tail call i8* @aligned_alloc(i32 %alignment, i32 %size)
-  store i8 %value, i8* %aligned_allocation
-  tail call void @free(i8* %aligned_allocation)
+  %aligned_allocation = tail call ptr @aligned_alloc(i32 %alignment, i32 %size)
+  store i8 %value, ptr %aligned_allocation
+  tail call void @free(ptr %aligned_allocation)
   ret i32 0
 }
 
-declare noalias i8* @calloc(i32, i32) nounwind allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc"
-declare noalias i8* @malloc(i32) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc"
-declare noalias i8* @aligned_alloc(i32, i32) allockind("alloc,uninitialized,aligned") allocsize(1) "alloc-family"="malloc"
-declare void @free(i8*) allockind("free") "alloc-family"="malloc"
+declare noalias ptr @calloc(i32, i32) nounwind allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc"
+declare noalias ptr @malloc(i32) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc"
+declare noalias ptr @aligned_alloc(i32, i32) allockind("alloc,uninitialized,aligned") allocsize(1) "alloc-family"="malloc"
+declare void @free(ptr) allockind("free") "alloc-family"="malloc"
 
 define i1 @foo() {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %m = call i8* @malloc(i32 1)
-  %z = icmp eq i8* %m, null
-  call void @free(i8* %m)
+  %m = call ptr @malloc(i32 1)
+  %z = icmp eq ptr %m, null
+  call void @free(ptr %m)
   ret i1 %z
 }
 
-declare void @llvm.lifetime.start.p0i8(i64, i8*)
-declare void @llvm.lifetime.end.p0i8(i64, i8*)
-declare i64 @llvm.objectsize.i64(i8*, i1)
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
-declare void @llvm.memmove.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
-declare void @llvm.memset.p0i8.i32(i8*, i8, i32, i1) nounwind
+declare void @llvm.lifetime.start.p0(i64, ptr)
+declare void @llvm.lifetime.end.p0(i64, ptr)
+declare i64 @llvm.objectsize.i64(ptr, i1)
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind
+declare void @llvm.memmove.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind
+declare void @llvm.memset.p0.i32(ptr, i8, i32, i1) nounwind
 
-define void @test3(i8* %src) {
+define void @test3(ptr %src) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    ret void
 ;
-  %a = call noalias i8* @malloc(i32 10)
-  call void @llvm.lifetime.start.p0i8(i64 10, i8* %a)
-  call void @llvm.lifetime.end.p0i8(i64 10, i8* %a)
-  %size = call i64 @llvm.objectsize.i64(i8* %a, i1 true)
-  store i8 42, i8* %a
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a, i8* %src, i32 32, i1 false)
-  call void @llvm.memmove.p0i8.p0i8.i32(i8* %a, i8* %src, i32 32, i1 false)
-  call void @llvm.memset.p0i8.i32(i8* %a, i8 5, i32 32, i1 false)
-  %alloc2 = call noalias i8* @calloc(i32 5, i32 7) nounwind
-  %z = icmp ne i8* %alloc2, null
+  %a = call noalias ptr @malloc(i32 10)
+  call void @llvm.lifetime.start.p0(i64 10, ptr %a)
+  call void @llvm.lifetime.end.p0(i64 10, ptr %a)
+  %size = call i64 @llvm.objectsize.i64(ptr %a, i1 true)
+  store i8 42, ptr %a
+  call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr %src, i32 32, i1 false)
+  call void @llvm.memmove.p0.p0.i32(ptr %a, ptr %src, i32 32, i1 false)
+  call void @llvm.memset.p0.i32(ptr %a, i8 5, i32 32, i1 false)
+  %alloc2 = call noalias ptr @calloc(i32 5, i32 7) nounwind
+  %z = icmp ne ptr %alloc2, null
   ret void
 }
 
@@ -70,45 +70,43 @@ define void @test4() {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    ret void
 ;
-  %A = call i8* @malloc(i32 16000)
-  %B = bitcast i8* %A to double*
-  %C = bitcast double* %B to i8*
-  call void @free(i8* %C)
+  %A = call ptr @malloc(i32 16000)
+  call void @free(ptr %A)
   ret void
 }
 
-define void @test5(i8* %ptr, i8** %esc) {
+define void @test5(ptr %ptr, ptr %esc) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[A:%.*]] = call dereferenceable_or_null(700) i8* @malloc(i32 700)
-; CHECK-NEXT:    [[B:%.*]] = call dereferenceable_or_null(700) i8* @malloc(i32 700)
-; CHECK-NEXT:    [[C:%.*]] = call dereferenceable_or_null(700) i8* @malloc(i32 700)
-; CHECK-NEXT:    [[D:%.*]] = call dereferenceable_or_null(700) i8* @malloc(i32 700)
-; CHECK-NEXT:    [[E:%.*]] = call dereferenceable_or_null(700) i8* @malloc(i32 700)
-; CHECK-NEXT:    [[F:%.*]] = call dereferenceable_or_null(700) i8* @malloc(i32 700)
-; CHECK-NEXT:    [[G:%.*]] = call dereferenceable_or_null(700) i8* @malloc(i32 700)
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(32) [[PTR:%.*]], i8* noundef nonnull align 1 dereferenceable(32) [[A]], i32 32, i1 false)
-; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(32) [[PTR]], i8* noundef nonnull align 1 dereferenceable(32) [[B]], i32 32, i1 false)
-; CHECK-NEXT:    store i8* [[C]], i8** [[ESC:%.*]], align 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[D]], i8* [[PTR]], i32 32, i1 true)
-; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i32(i8* [[E]], i8* [[PTR]], i32 32, i1 true)
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* [[F]], i8 5, i32 32, i1 true)
-; CHECK-NEXT:    store volatile i8 4, i8* [[G]], align 1
+; CHECK-NEXT:    [[A:%.*]] = call dereferenceable_or_null(700) ptr @malloc(i32 700)
+; CHECK-NEXT:    [[B:%.*]] = call dereferenceable_or_null(700) ptr @malloc(i32 700)
+; CHECK-NEXT:    [[C:%.*]] = call dereferenceable_or_null(700) ptr @malloc(i32 700)
+; CHECK-NEXT:    [[D:%.*]] = call dereferenceable_or_null(700) ptr @malloc(i32 700)
+; CHECK-NEXT:    [[E:%.*]] = call dereferenceable_or_null(700) ptr @malloc(i32 700)
+; CHECK-NEXT:    [[F:%.*]] = call dereferenceable_or_null(700) ptr @malloc(i32 700)
+; CHECK-NEXT:    [[G:%.*]] = call dereferenceable_or_null(700) ptr @malloc(i32 700)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(32) [[PTR:%.*]], ptr noundef nonnull align 1 dereferenceable(32) [[A]], i32 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(32) [[PTR]], ptr noundef nonnull align 1 dereferenceable(32) [[B]], i32 32, i1 false)
+; CHECK-NEXT:    store ptr [[C]], ptr [[ESC:%.*]], align 4
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[D]], ptr [[PTR]], i32 32, i1 true)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i32(ptr [[E]], ptr [[PTR]], i32 32, i1 true)
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr [[F]], i8 5, i32 32, i1 true)
+; CHECK-NEXT:    store volatile i8 4, ptr [[G]], align 1
 ; CHECK-NEXT:    ret void
 ;
-  %a = call i8* @malloc(i32 700)
-  %b = call i8* @malloc(i32 700)
-  %c = call i8* @malloc(i32 700)
-  %d = call i8* @malloc(i32 700)
-  %e = call i8* @malloc(i32 700)
-  %f = call i8* @malloc(i32 700)
-  %g = call i8* @malloc(i32 700)
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %ptr, i8* %a, i32 32, i1 false)
-  call void @llvm.memmove.p0i8.p0i8.i32(i8* %ptr, i8* %b, i32 32, i1 false)
-  store i8* %c, i8** %esc
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %d, i8* %ptr, i32 32, i1 true)
-  call void @llvm.memmove.p0i8.p0i8.i32(i8* %e, i8* %ptr, i32 32, i1 true)
-  call void @llvm.memset.p0i8.i32(i8* %f, i8 5, i32 32, i1 true)
-  store volatile i8 4, i8* %g
+  %a = call ptr @malloc(i32 700)
+  %b = call ptr @malloc(i32 700)
+  %c = call ptr @malloc(i32 700)
+  %d = call ptr @malloc(i32 700)
+  %e = call ptr @malloc(i32 700)
+  %f = call ptr @malloc(i32 700)
+  %g = call ptr @malloc(i32 700)
+  call void @llvm.memcpy.p0.p0.i32(ptr %ptr, ptr %a, i32 32, i1 false)
+  call void @llvm.memmove.p0.p0.i32(ptr %ptr, ptr %b, i32 32, i1 false)
+  store ptr %c, ptr %esc
+  call void @llvm.memcpy.p0.p0.i32(ptr %d, ptr %ptr, i32 32, i1 true)
+  call void @llvm.memmove.p0.p0.i32(ptr %e, ptr %ptr, i32 32, i1 true)
+  call void @llvm.memset.p0.i32(ptr %f, i8 5, i32 32, i1 true)
+  store volatile i8 4, ptr %g
   ret void
 }
 
@@ -118,11 +116,11 @@ define void @test5(i8* %ptr, i8** %esc) {
 ;; Using simplifycfg will remove the empty basic block and the branch operation
 ;; Then, performing a dead elimination will remove the comparison.
 ;; This is what happens with -O1 and upper.
-define void @test6(i8* %foo) minsize {
+define void @test6(ptr %foo) minsize {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8* [[FOO:%.*]], null
-; CHECK-NEXT:    tail call void @free(i8* [[FOO]])
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq ptr [[FOO:%.*]], null
+; CHECK-NEXT:    tail call void @free(ptr [[FOO]])
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[IF_END]]
@@ -132,11 +130,11 @@ define void @test6(i8* %foo) minsize {
 ;; Call to free moved
 ;; Block is now empty and may be simplified by simplifycfg
 entry:
-  %tobool = icmp eq i8* %foo, null
+  %tobool = icmp eq ptr %foo, null
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  tail call void @free(i8* %foo)
+  tail call void @free(ptr %foo)
   br label %if.end
 
 if.end:                                           ; preds = %entry, %if.then
@@ -145,12 +143,11 @@ if.end:                                           ; preds = %entry, %if.then
 
 ;; Check that the optimization that moves a call to free in its predecessor
 ;; block (see test6) also happens when noop casts are involved.
-define void @test12(i32* %foo) minsize {
+define void @test12(ptr %foo) minsize {
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32* [[FOO:%.*]], null
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32* [[FOO]] to i8*
-; CHECK-NEXT:    tail call void @free(i8* [[BITCAST]])
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq ptr [[FOO:%.*]], null
+; CHECK-NEXT:    tail call void @free(ptr [[FOO]])
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[IF_END]]
@@ -161,12 +158,11 @@ define void @test12(i32* %foo) minsize {
 ;; Call to free moved
 ;; Block is now empty and may be simplified by simplifycfg
 entry:
-  %tobool = icmp eq i32* %foo, null
+  %tobool = icmp eq ptr %foo, null
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  %bitcast = bitcast i32* %foo to i8*
-  tail call void @free(i8* %bitcast)
+  tail call void @free(ptr %foo)
   br label %if.end
 
 if.end:                                           ; preds = %entry, %if.then
@@ -176,11 +172,11 @@ if.end:                                           ; preds = %entry, %if.then
 ;; Test that nonnull-implying attributes on the parameter are adjusted when the
 ;; call is moved, since they may no longer be valid and result in miscompiles if
 ;; kept unchanged.
-define void @test_nonnull_free_move(i8* %foo) minsize {
+define void @test_nonnull_free_move(ptr %foo) minsize {
 ; CHECK-LABEL: @test_nonnull_free_move(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8* [[FOO:%.*]], null
-; CHECK-NEXT:    tail call void @free(i8* [[FOO]])
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq ptr [[FOO:%.*]], null
+; CHECK-NEXT:    tail call void @free(ptr [[FOO]])
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[IF_END]]
@@ -188,22 +184,22 @@ define void @test_nonnull_free_move(i8* %foo) minsize {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %tobool = icmp eq i8* %foo, null
+  %tobool = icmp eq ptr %foo, null
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  tail call void @free(i8* nonnull %foo)
+  tail call void @free(ptr nonnull %foo)
   br label %if.end
 
 if.end:                                           ; preds = %entry, %if.then
   ret void
 }
 
-define void @test_dereferenceable_free_move(i8* %foo) minsize {
+define void @test_dereferenceable_free_move(ptr %foo) minsize {
 ; CHECK-LABEL: @test_dereferenceable_free_move(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8* [[FOO:%.*]], null
-; CHECK-NEXT:    tail call void @free(i8* dereferenceable_or_null(4) [[FOO]])
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq ptr [[FOO:%.*]], null
+; CHECK-NEXT:    tail call void @free(ptr dereferenceable_or_null(4) [[FOO]])
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[IF_END]]
@@ -211,22 +207,22 @@ define void @test_dereferenceable_free_move(i8* %foo) minsize {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %tobool = icmp eq i8* %foo, null
+  %tobool = icmp eq ptr %foo, null
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  tail call void @free(i8* dereferenceable(4) %foo)
+  tail call void @free(ptr dereferenceable(4) %foo)
   br label %if.end
 
 if.end:                                           ; preds = %entry, %if.then
   ret void
 }
 
-define void @test_nonnull_dereferenceable_free_move(i8* %foo) minsize {
+define void @test_nonnull_dereferenceable_free_move(ptr %foo) minsize {
 ; CHECK-LABEL: @test_nonnull_dereferenceable_free_move(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8* [[FOO:%.*]], null
-; CHECK-NEXT:    tail call void @free(i8* dereferenceable_or_null(16) [[FOO]])
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq ptr [[FOO:%.*]], null
+; CHECK-NEXT:    tail call void @free(ptr dereferenceable_or_null(16) [[FOO]])
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[IF_END]]
@@ -234,11 +230,11 @@ define void @test_nonnull_dereferenceable_free_move(i8* %foo) minsize {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %tobool = icmp eq i8* %foo, null
+  %tobool = icmp eq ptr %foo, null
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  tail call void @free(i8* nonnull dereferenceable(16) %foo)
+  tail call void @free(ptr nonnull dereferenceable(16) %foo)
   br label %if.end
 
 if.end:                                           ; preds = %entry, %if.then
@@ -250,41 +246,41 @@ if.end:                                           ; preds = %entry, %if.then
 ; been reverted once due to difficult to isolate fallout.
 
 ; TODO: Freeing a no-free pointer -> %foo must be null
-define void @test13(i8* nofree %foo) {
+define void @test13(ptr nofree %foo) {
 ; CHECK-LABEL: @test13(
-; CHECK-NEXT:    call void @free(i8* [[FOO:%.*]])
+; CHECK-NEXT:    call void @free(ptr [[FOO:%.*]])
 ; CHECK-NEXT:    ret void
 ;
-  call void @free(i8* %foo)
+  call void @free(ptr %foo)
   ret void
 }
 
 ; TODO: Freeing a no-free pointer -> %foo must be null
-define void @test14(i8* %foo) nofree {
+define void @test14(ptr %foo) nofree {
 ; CHECK-LABEL: @test14(
-; CHECK-NEXT:    call void @free(i8* [[FOO:%.*]])
+; CHECK-NEXT:    call void @free(ptr [[FOO:%.*]])
 ; CHECK-NEXT:    ret void
 ;
-  call void @free(i8* %foo)
+  call void @free(ptr %foo)
   ret void
 }
 
 ; TODO: free call marked no-free ->  %foo must be null
-define void @test15(i8* %foo) {
+define void @test15(ptr %foo) {
 ; CHECK-LABEL: @test15(
-; CHECK-NEXT:    call void @free(i8* [[FOO:%.*]]) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    call void @free(ptr [[FOO:%.*]]) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
-  call void @free(i8* %foo) nofree
+  call void @free(ptr %foo) nofree
   ret void
 }
 
 ; TODO: freeing a nonnull nofree pointer -> full UB
-define void @test16(i8* nonnull nofree %foo) {
+define void @test16(ptr nonnull nofree %foo) {
 ; CHECK-LABEL: @test16(
-; CHECK-NEXT:    call void @free(i8* [[FOO:%.*]])
+; CHECK-NEXT:    call void @free(ptr [[FOO:%.*]])
 ; CHECK-NEXT:    ret void
 ;
-  call void @free(i8* %foo)
+  call void @free(ptr %foo)
   ret void
 }

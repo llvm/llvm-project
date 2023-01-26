@@ -28,6 +28,7 @@ static constexpr llvm::StringRef kPrintI64 = "printI64";
 static constexpr llvm::StringRef kPrintU64 = "printU64";
 static constexpr llvm::StringRef kPrintF32 = "printF32";
 static constexpr llvm::StringRef kPrintF64 = "printF64";
+static constexpr llvm::StringRef kPrintStr = "puts";
 static constexpr llvm::StringRef kPrintOpen = "printOpen";
 static constexpr llvm::StringRef kPrintClose = "printClose";
 static constexpr llvm::StringRef kPrintComma = "printComma";
@@ -35,9 +36,10 @@ static constexpr llvm::StringRef kPrintNewline = "printNewline";
 static constexpr llvm::StringRef kMalloc = "malloc";
 static constexpr llvm::StringRef kAlignedAlloc = "aligned_alloc";
 static constexpr llvm::StringRef kFree = "free";
-static constexpr llvm::StringRef kGenericAlloc = "_mlir_alloc";
-static constexpr llvm::StringRef kGenericAlignedAlloc = "_mlir_aligned_alloc";
-static constexpr llvm::StringRef kGenericFree = "_mlir_free";
+static constexpr llvm::StringRef kGenericAlloc = "_mlir_memref_to_llvm_alloc";
+static constexpr llvm::StringRef kGenericAlignedAlloc =
+    "_mlir_memref_to_llvm_aligned_alloc";
+static constexpr llvm::StringRef kGenericFree = "_mlir_memref_to_llvm_free";
 static constexpr llvm::StringRef kMemRefCopy = "memrefCopy";
 
 /// Generic print function lookupOrCreate helper.
@@ -75,6 +77,13 @@ LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintF64Fn(ModuleOp moduleOp) {
   return lookupOrCreateFn(moduleOp, kPrintF64,
                           Float64Type::get(moduleOp->getContext()),
                           LLVM::LLVMVoidType::get(moduleOp->getContext()));
+}
+
+LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintStrFn(ModuleOp moduleOp) {
+  return lookupOrCreateFn(
+      moduleOp, kPrintStr,
+      LLVM::LLVMPointerType::get(IntegerType::get(moduleOp->getContext(), 8)),
+      LLVM::LLVMVoidType::get(moduleOp->getContext()));
 }
 
 LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintOpenFn(ModuleOp moduleOp) {
@@ -147,14 +156,4 @@ mlir::LLVM::lookupOrCreateMemRefCopyFn(ModuleOp moduleOp, Type indexType,
       moduleOp, kMemRefCopy,
       ArrayRef<Type>{indexType, unrankedDescriptorType, unrankedDescriptorType},
       LLVM::LLVMVoidType::get(moduleOp->getContext()));
-}
-
-Operation::result_range mlir::LLVM::createLLVMCall(OpBuilder &b, Location loc,
-                                                   LLVM::LLVMFuncOp fn,
-                                                   ValueRange paramTypes,
-                                                   ArrayRef<Type> resultTypes) {
-  return b
-      .create<LLVM::CallOp>(loc, resultTypes, SymbolRefAttr::get(fn),
-                            paramTypes)
-      ->getResults();
 }

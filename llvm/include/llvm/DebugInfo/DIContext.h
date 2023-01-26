@@ -21,6 +21,7 @@
 #include <cassert>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -36,11 +37,11 @@ struct DILineInfo {
   std::string FileName;
   std::string FunctionName;
   std::string StartFileName;
-  Optional<StringRef> Source;
+  std::optional<StringRef> Source;
   uint32_t Line = 0;
   uint32_t Column = 0;
   uint32_t StartLine = 0;
-  Optional<uint64_t> StartAddress;
+  std::optional<uint64_t> StartAddress;
 
   // DWARF-specific.
   uint32_t Discriminator = 0;
@@ -125,9 +126,9 @@ struct DILocal {
   std::string Name;
   std::string DeclFile;
   uint64_t DeclLine = 0;
-  Optional<int64_t> FrameOffset;
-  Optional<uint64_t> Size;
-  Optional<uint64_t> TagOffset;
+  std::optional<int64_t> FrameOffset;
+  std::optional<uint64_t> Size;
+  std::optional<uint64_t> TagOffset;
 };
 
 /// A DINameKind is passed to name search methods to specify a
@@ -198,6 +199,9 @@ struct DIDumpOptions {
   bool SummarizeTypes = false;
   bool Verbose = false;
   bool DisplayRawContents = false;
+  bool IsEH = false;
+  std::function<llvm::StringRef(uint64_t DwarfRegNum, bool IsEH)>
+      GetNameForDWARFReg;
 
   /// Return default option set for printing a single DIE without children.
   static DIDumpOptions getForSingleDIE() {

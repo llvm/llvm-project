@@ -17,6 +17,7 @@
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/WindowsError.h"
 #include <malloc.h>
+#include <optional>
 
 // The Windows.h header must be after LLVM and standard headers.
 #include "llvm/Support/Windows/WindowsSupport.h"
@@ -27,8 +28,8 @@
 #include <shellapi.h>
 
 #if !defined(__MINGW32__)
- #pragma comment(lib, "psapi.lib")
- #pragma comment(lib, "shell32.lib")
+#pragma comment(lib, "psapi.lib")
+#pragma comment(lib, "shell32.lib")
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -38,7 +39,7 @@
 
 #ifdef __MINGW32__
 // This ban should be lifted when MinGW 1.0+ has defined this value.
-#  define _HEAPOK (-2)
+#define _HEAPOK (-2)
 #endif
 
 using namespace llvm;
@@ -67,9 +68,7 @@ Expected<unsigned> Process::getPageSize() {
   return Ret;
 }
 
-size_t
-Process::GetMallocUsage()
-{
+size_t Process::GetMallocUsage() {
   _HEAPINFO hinfo;
   hinfo._pentry = NULL;
 
@@ -81,9 +80,11 @@ Process::GetMallocUsage()
   return size;
 }
 
-void Process::GetTimeUsage(TimePoint<> &elapsed, std::chrono::nanoseconds &user_time,
+void Process::GetTimeUsage(TimePoint<> &elapsed,
+                           std::chrono::nanoseconds &user_time,
                            std::chrono::nanoseconds &sys_time) {
-  elapsed = std::chrono::system_clock::now();;
+  elapsed = std::chrono::system_clock::now();
+  ;
 
   FILETIME ProcCreate, ProcExit, KernelTime, UserTime;
   if (GetProcessTimes(GetCurrentProcess(), &ProcCreate, &ProcExit, &KernelTime,
@@ -108,8 +109,7 @@ void Process::PreventCoreFiles() {
   //
   // Windows also has modal pop-up message boxes.  As this method is used by
   // bugpoint, preventing these pop-ups is additionally important.
-  SetErrorMode(SEM_FAILCRITICALERRORS |
-               SEM_NOGPFAULTERRORBOX |
+  SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX |
                SEM_NOOPENFILEERRORBOX);
 
   coreFilesPrevented = true;
@@ -117,11 +117,11 @@ void Process::PreventCoreFiles() {
 
 /// Returns the environment variable \arg Name's value as a string encoded in
 /// UTF-8. \arg Name is assumed to be in UTF-8 encoding.
-Optional<std::string> Process::GetEnv(StringRef Name) {
+std::optional<std::string> Process::GetEnv(StringRef Name) {
   // Convert the argument to UTF-16 to pass it to _wgetenv().
   SmallVector<wchar_t, 128> NameUTF16;
   if (windows::UTF8ToUTF16(Name, NameUTF16))
-    return None;
+    return std::nullopt;
 
   // Environment variable can be encoded in non-UTF8 encoding, and there's no
   // way to know what the encoding is. The only reliable way to look up
@@ -131,10 +131,9 @@ Optional<std::string> Process::GetEnv(StringRef Name) {
   do {
     Buf.resize_for_overwrite(Size);
     SetLastError(NO_ERROR);
-    Size =
-      GetEnvironmentVariableW(NameUTF16.data(), Buf.data(), Buf.size());
+    Size = GetEnvironmentVariableW(NameUTF16.data(), Buf.data(), Buf.size());
     if (Size == 0 && GetLastError() == ERROR_ENVVAR_NOT_FOUND)
-      return None;
+      return std::nullopt;
 
     // Try again with larger buffer.
   } while (Size > Buf.size());
@@ -143,7 +142,7 @@ Optional<std::string> Process::GetEnv(StringRef Name) {
   // Convert the result from UTF-16 to UTF-8.
   SmallVector<char, MAX_PATH> Res;
   if (windows::UTF16ToUTF8(Buf.data(), Size, Res))
-    return None;
+    return std::nullopt;
   return std::string(Res.data());
 }
 
@@ -281,20 +280,14 @@ std::error_code Process::SafelyCloseFileDescriptor(int FD) {
   return std::error_code();
 }
 
-bool Process::StandardInIsUserInput() {
-  return FileDescriptorIsDisplayed(0);
-}
+bool Process::StandardInIsUserInput() { return FileDescriptorIsDisplayed(0); }
 
-bool Process::StandardOutIsDisplayed() {
-  return FileDescriptorIsDisplayed(1);
-}
+bool Process::StandardOutIsDisplayed() { return FileDescriptorIsDisplayed(1); }
 
-bool Process::StandardErrIsDisplayed() {
-  return FileDescriptorIsDisplayed(2);
-}
+bool Process::StandardErrIsDisplayed() { return FileDescriptorIsDisplayed(2); }
 
 bool Process::FileDescriptorIsDisplayed(int fd) {
-  DWORD Mode;  // Unused
+  DWORD Mode; // Unused
   return (GetConsoleMode((HANDLE)_get_osfhandle(fd), &Mode) != 0);
 }
 
@@ -319,13 +312,9 @@ bool Process::FileDescriptorHasColors(int fd) {
   return FileDescriptorIsDisplayed(fd);
 }
 
-bool Process::StandardOutHasColors() {
-  return FileDescriptorHasColors(1);
-}
+bool Process::StandardOutHasColors() { return FileDescriptorHasColors(1); }
 
-bool Process::StandardErrHasColors() {
-  return FileDescriptorHasColors(2);
-}
+bool Process::StandardErrHasColors() { return FileDescriptorHasColors(2); }
 
 static bool UseANSI = false;
 void Process::UseANSIEscapeCodes(bool enable) {
@@ -342,41 +331,39 @@ void Process::UseANSIEscapeCodes(bool enable) {
 }
 
 namespace {
-class DefaultColors
-{
-  private:
-    WORD defaultColor;
-  public:
-    DefaultColors()
-     :defaultColor(GetCurrentColor()) {}
-    static unsigned GetCurrentColor() {
-      CONSOLE_SCREEN_BUFFER_INFO csbi;
-      if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi))
-        return csbi.wAttributes;
-      return 0;
-    }
-    WORD operator()() const { return defaultColor; }
+class DefaultColors {
+private:
+  WORD defaultColor;
+
+public:
+  DefaultColors() : defaultColor(GetCurrentColor()) {}
+  static unsigned GetCurrentColor() {
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi))
+      return csbi.wAttributes;
+    return 0;
+  }
+  WORD operator()() const { return defaultColor; }
 };
 
 DefaultColors defaultColors;
 
 WORD fg_color(WORD color) {
-  return color & (FOREGROUND_BLUE | FOREGROUND_GREEN |
-                  FOREGROUND_INTENSITY | FOREGROUND_RED);
+  return color & (FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_INTENSITY |
+                  FOREGROUND_RED);
 }
 
 WORD bg_color(WORD color) {
-  return color & (BACKGROUND_BLUE | BACKGROUND_GREEN |
-                  BACKGROUND_INTENSITY | BACKGROUND_RED);
+  return color & (BACKGROUND_BLUE | BACKGROUND_GREEN | BACKGROUND_INTENSITY |
+                  BACKGROUND_RED);
 }
-}
+} // namespace
 
-bool Process::ColorNeedsFlush() {
-  return !UseANSI;
-}
+bool Process::ColorNeedsFlush() { return !UseANSI; }
 
 const char *Process::OutputBold(bool bg) {
-  if (UseANSI) return "\033[1m";
+  if (UseANSI)
+    return "\033[1m";
 
   WORD colors = DefaultColors::GetCurrentColor();
   if (bg)
@@ -388,21 +375,22 @@ const char *Process::OutputBold(bool bg) {
 }
 
 const char *Process::OutputColor(char code, bool bold, bool bg) {
-  if (UseANSI) return colorcodes[bg?1:0][bold?1:0][code&7];
+  if (UseANSI)
+    return colorcodes[bg ? 1 : 0][bold ? 1 : 0][code & 7];
 
   WORD current = DefaultColors::GetCurrentColor();
   WORD colors;
   if (bg) {
-    colors = ((code&1) ? BACKGROUND_RED : 0) |
-      ((code&2) ? BACKGROUND_GREEN : 0 ) |
-      ((code&4) ? BACKGROUND_BLUE : 0);
+    colors = ((code & 1) ? BACKGROUND_RED : 0) |
+             ((code & 2) ? BACKGROUND_GREEN : 0) |
+             ((code & 4) ? BACKGROUND_BLUE : 0);
     if (bold)
       colors |= BACKGROUND_INTENSITY;
     colors |= fg_color(current);
   } else {
-    colors = ((code&1) ? FOREGROUND_RED : 0) |
-      ((code&2) ? FOREGROUND_GREEN : 0 ) |
-      ((code&4) ? FOREGROUND_BLUE : 0);
+    colors = ((code & 1) ? FOREGROUND_RED : 0) |
+             ((code & 2) ? FOREGROUND_GREEN : 0) |
+             ((code & 4) ? FOREGROUND_BLUE : 0);
     if (bold)
       colors |= FOREGROUND_INTENSITY;
     colors |= bg_color(current);
@@ -418,27 +406,27 @@ static WORD GetConsoleTextAttribute(HANDLE hConsoleOutput) {
 }
 
 const char *Process::OutputReverse() {
-  if (UseANSI) return "\033[7m";
+  if (UseANSI)
+    return "\033[7m";
 
-  const WORD attributes
-   = GetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE));
+  const WORD attributes =
+      GetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE));
 
   const WORD foreground_mask = FOREGROUND_BLUE | FOREGROUND_GREEN |
-    FOREGROUND_RED | FOREGROUND_INTENSITY;
+                               FOREGROUND_RED | FOREGROUND_INTENSITY;
   const WORD background_mask = BACKGROUND_BLUE | BACKGROUND_GREEN |
-    BACKGROUND_RED | BACKGROUND_INTENSITY;
+                               BACKGROUND_RED | BACKGROUND_INTENSITY;
   const WORD color_mask = foreground_mask | background_mask;
 
   WORD new_attributes =
-    ((attributes & FOREGROUND_BLUE     )?BACKGROUND_BLUE     :0) |
-    ((attributes & FOREGROUND_GREEN    )?BACKGROUND_GREEN    :0) |
-    ((attributes & FOREGROUND_RED      )?BACKGROUND_RED      :0) |
-    ((attributes & FOREGROUND_INTENSITY)?BACKGROUND_INTENSITY:0) |
-    ((attributes & BACKGROUND_BLUE     )?FOREGROUND_BLUE     :0) |
-    ((attributes & BACKGROUND_GREEN    )?FOREGROUND_GREEN    :0) |
-    ((attributes & BACKGROUND_RED      )?FOREGROUND_RED      :0) |
-    ((attributes & BACKGROUND_INTENSITY)?FOREGROUND_INTENSITY:0) |
-    0;
+      ((attributes & FOREGROUND_BLUE) ? BACKGROUND_BLUE : 0) |
+      ((attributes & FOREGROUND_GREEN) ? BACKGROUND_GREEN : 0) |
+      ((attributes & FOREGROUND_RED) ? BACKGROUND_RED : 0) |
+      ((attributes & FOREGROUND_INTENSITY) ? BACKGROUND_INTENSITY : 0) |
+      ((attributes & BACKGROUND_BLUE) ? FOREGROUND_BLUE : 0) |
+      ((attributes & BACKGROUND_GREEN) ? FOREGROUND_GREEN : 0) |
+      ((attributes & BACKGROUND_RED) ? FOREGROUND_RED : 0) |
+      ((attributes & BACKGROUND_INTENSITY) ? FOREGROUND_INTENSITY : 0) | 0;
   new_attributes = (attributes & ~color_mask) | (new_attributes & color_mask);
 
   SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), new_attributes);
@@ -446,7 +434,8 @@ const char *Process::OutputReverse() {
 }
 
 const char *Process::ResetColor() {
-  if (UseANSI) return "\033[0m";
+  if (UseANSI)
+    return "\033[0m";
   SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), defaultColors());
   return 0;
 }
@@ -485,28 +474,51 @@ unsigned Process::GetRandomNumber() {
   return GetPseudoRandomNumber();
 }
 
-typedef NTSTATUS(WINAPI* RtlGetVersionPtr)(PRTL_OSVERSIONINFOW);
+typedef NTSTATUS(WINAPI *RtlGetVersionPtr)(PRTL_OSVERSIONINFOW);
 #define STATUS_SUCCESS ((NTSTATUS)0x00000000L)
 
-llvm::VersionTuple llvm::GetWindowsOSVersion() {
-  HMODULE hMod = ::GetModuleHandleW(L"ntdll.dll");
-  if (hMod) {
+static RTL_OSVERSIONINFOEXW GetWindowsVer() {
+  auto getVer = []() -> RTL_OSVERSIONINFOEXW {
+    HMODULE hMod = ::GetModuleHandleW(L"ntdll.dll");
+    assert(hMod);
+
     auto getVer = (RtlGetVersionPtr)::GetProcAddress(hMod, "RtlGetVersion");
-    if (getVer) {
-      RTL_OSVERSIONINFOEXW info{};
-      info.dwOSVersionInfoSize = sizeof(info);
-      if (getVer((PRTL_OSVERSIONINFOW)&info) == STATUS_SUCCESS) {
-        return llvm::VersionTuple(info.dwMajorVersion, info.dwMinorVersion, 0,
-                                  info.dwBuildNumber);
-      }
-    }
-  }
-  return llvm::VersionTuple(0, 0, 0, 0);
+    assert(getVer);
+
+    RTL_OSVERSIONINFOEXW info{};
+    info.dwOSVersionInfoSize = sizeof(info);
+    NTSTATUS r = getVer((PRTL_OSVERSIONINFOW)&info);
+    (void)r;
+    assert(r == STATUS_SUCCESS);
+
+    return info;
+  };
+  static RTL_OSVERSIONINFOEXW info = getVer();
+  return info;
+}
+
+llvm::VersionTuple llvm::GetWindowsOSVersion() {
+  RTL_OSVERSIONINFOEXW info = GetWindowsVer();
+  return llvm::VersionTuple(info.dwMajorVersion, info.dwMinorVersion, 0,
+                            info.dwBuildNumber);
 }
 
 bool llvm::RunningWindows8OrGreater() {
   // Windows 8 is version 6.2, service pack 0.
   return GetWindowsOSVersion() >= llvm::VersionTuple(6, 2, 0, 0);
+}
+
+bool llvm::RunningWindows11OrGreater() {
+  RTL_OSVERSIONINFOEXW info = GetWindowsVer();
+  auto ver = llvm::VersionTuple(info.dwMajorVersion, info.dwMinorVersion, 0,
+                                info.dwBuildNumber);
+
+  // Windows Server 2022
+  if (info.wProductType == VER_NT_SERVER)
+    return ver >= llvm::VersionTuple(10, 0, 0, 20348);
+
+  // Windows 11
+  return ver >= llvm::VersionTuple(10, 0, 0, 22000);
 }
 
 [[noreturn]] void Process::ExitNoCleanup(int RetCode) {

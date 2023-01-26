@@ -14,6 +14,7 @@
 #define FORTRAN_FRONTEND_FRONTENDOPTIONS_H
 
 #include "flang/Common/Fortran-features.h"
+#include "flang/Lower/EnvironmentDefault.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/unparse.h"
 #include "llvm/ADT/StringRef.h"
@@ -257,6 +258,9 @@ struct FrontendOptions {
 
   // The form to process files in, if specified.
   FortranForm fortranForm = FortranForm::Unknown;
+
+  // Default values for environment variables to be set by the runtime.
+  std::vector<Fortran::lower::EnvironmentDefault> envDefaults;
 
   // The column after which characters are ignored in fixed form lines in the
   // source file.

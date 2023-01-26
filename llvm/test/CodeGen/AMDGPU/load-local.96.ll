@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX10 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX11 %s
 
-define <3 x i32> @load_lds_v3i32(<3 x i32> addrspace(3)* %ptr) {
+define <3 x i32> @load_lds_v3i32(ptr addrspace(3) %ptr) {
 ; GFX9-LABEL: load_lds_v3i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -47,11 +47,11 @@ define <3 x i32> @load_lds_v3i32(<3 x i32> addrspace(3)* %ptr) {
 ; GFX11-NEXT:    ds_load_b96 v[0:2], v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %load = load <3 x i32>, <3 x i32> addrspace(3)* %ptr
+  %load = load <3 x i32>, ptr addrspace(3) %ptr
   ret <3 x i32> %load
 }
 
-define <3 x i32> @load_lds_v3i32_align1(<3 x i32> addrspace(3)* %ptr) {
+define <3 x i32> @load_lds_v3i32_align1(ptr addrspace(3) %ptr) {
 ; GFX9-LABEL: load_lds_v3i32_align1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -252,11 +252,11 @@ define <3 x i32> @load_lds_v3i32_align1(<3 x i32> addrspace(3)* %ptr) {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-NEXT:    v_lshl_or_b32 v2, v6, 16, v5
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %load = load <3 x i32>, <3 x i32> addrspace(3)* %ptr, align 1
+  %load = load <3 x i32>, ptr addrspace(3) %ptr, align 1
   ret <3 x i32> %load
 }
 
-define <3 x i32> @load_lds_v3i32_align2(<3 x i32> addrspace(3)* %ptr) {
+define <3 x i32> @load_lds_v3i32_align2(ptr addrspace(3) %ptr) {
 ; GFX9-LABEL: load_lds_v3i32_align2:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -359,11 +359,11 @@ define <3 x i32> @load_lds_v3i32_align2(<3 x i32> addrspace(3)* %ptr) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_lshl_or_b32 v2, v6, 16, v5
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %load = load <3 x i32>, <3 x i32> addrspace(3)* %ptr, align 2
+  %load = load <3 x i32>, ptr addrspace(3) %ptr, align 2
   ret <3 x i32> %load
 }
 
-define <3 x i32> @load_lds_v3i32_align4(<3 x i32> addrspace(3)* %ptr) {
+define <3 x i32> @load_lds_v3i32_align4(ptr addrspace(3) %ptr) {
 ; GFX9-LABEL: load_lds_v3i32_align4:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -414,11 +414,11 @@ define <3 x i32> @load_lds_v3i32_align4(<3 x i32> addrspace(3)* %ptr) {
 ; GFX11-NEXT:    ds_load_b32 v2, v2 offset:8
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %load = load <3 x i32>, <3 x i32> addrspace(3)* %ptr, align 4
+  %load = load <3 x i32>, ptr addrspace(3) %ptr, align 4
   ret <3 x i32> %load
 }
 
-define <3 x i32> @load_lds_v3i32_align8(<3 x i32> addrspace(3)* %ptr) {
+define <3 x i32> @load_lds_v3i32_align8(ptr addrspace(3) %ptr) {
 ; GFX9-LABEL: load_lds_v3i32_align8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -468,11 +468,11 @@ define <3 x i32> @load_lds_v3i32_align8(<3 x i32> addrspace(3)* %ptr) {
 ; GFX11-NEXT:    ds_load_b32 v2, v2 offset:8
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %load = load <3 x i32>, <3 x i32> addrspace(3)* %ptr, align 8
+  %load = load <3 x i32>, ptr addrspace(3) %ptr, align 8
   ret <3 x i32> %load
 }
 
-define <3 x i32> @load_lds_v3i32_align16(<3 x i32> addrspace(3)* %ptr) {
+define <3 x i32> @load_lds_v3i32_align16(ptr addrspace(3) %ptr) {
 ; GFX9-LABEL: load_lds_v3i32_align16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -514,6 +514,6 @@ define <3 x i32> @load_lds_v3i32_align16(<3 x i32> addrspace(3)* %ptr) {
 ; GFX11-NEXT:    ds_load_b96 v[0:2], v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %load = load <3 x i32>, <3 x i32> addrspace(3)* %ptr, align 16
+  %load = load <3 x i32>, ptr addrspace(3) %ptr, align 16
   ret <3 x i32> %load
 }

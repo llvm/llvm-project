@@ -203,7 +203,7 @@ struct Precision<PrecisionE::Small> {
 
 template <>
 struct Precision<PrecisionE::Huge> {
-  // The maximum precision for a minimal sub normal long double is ±0x1p-16494.
+  // The maximum precision for a minimal sub normal long double is +/- 0x1p-16494.
   // This value is always larger than that value forcing the trailing zero path
   // to be executed.
   static constexpr const char* fmt = ".17000";

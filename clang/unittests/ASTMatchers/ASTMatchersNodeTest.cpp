@@ -655,7 +655,7 @@ TEST_P(ASTMatchersTest, FunctionDecl_CXX) {
                 CallFunctionF));
   }
 
-  // Depedent calls don't match.
+  // Dependent calls don't match.
   EXPECT_TRUE(
       notMatches("void f(int); template <typename T> void g(T t) { f(t); }",
                  CallFunctionF));
@@ -2304,6 +2304,30 @@ TEST_P(ASTMatchersTest,
       "int main() { auto lambda = [xx = 1] {return xx;}; }",
       lambdaExpr(hasAnyCapture(lambdaCapture(capturesVar(varDecl(
           hasName("cc"), hasInitializer(integerLiteral(equals(1))))))))));
+}
+
+TEST_P(ASTMatchersTest, LambdaCaptureTest_BindsToCaptureOfReferenceType) {
+  if (!GetParam().isCXX20OrLater()) {
+    return;
+  }
+  auto matcher = lambdaExpr(hasAnyCapture(
+      lambdaCapture(capturesVar(varDecl(hasType(referenceType()))))));
+  EXPECT_TRUE(matches("template <class ...T> void f(T &...args) {"
+                      "  [&...args = args] () mutable {"
+                      "  }();"
+                      "}"
+                      "int main() {"
+                      "  int a;"
+                      "  f(a);"
+                      "}", matcher));
+  EXPECT_FALSE(matches("template <class ...T> void f(T &...args) {"
+                       "  [...args = args] () mutable {"
+                       "  }();"
+                       "}"
+                       "int main() {"
+                       "  int a;"
+                       "  f(a);"
+                       "}", matcher));
 }
 
 TEST(ASTMatchersTestObjC, ObjCMessageCalees) {

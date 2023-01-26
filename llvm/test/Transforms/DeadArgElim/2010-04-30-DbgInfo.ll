@@ -4,26 +4,26 @@
 ; Apart from checking if debug metadata is correctly propagated, this also tests whether DW_CC_nocall
 ; calling convention is added when either return values or arguments are removed.
 
-@.str = private constant [1 x i8] zeroinitializer, align 1 ; <[1 x i8]*> [#uses=1]
+@.str = private constant [1 x i8] zeroinitializer, align 1 ; <ptr> [#uses=1]
 
-define i8* @vfs_addname(i8* %name, i32 %len, i32 %hash, i32 %flags) nounwind ssp !dbg !1 {
+define ptr @vfs_addname(ptr %name, i32 %len, i32 %hash, i32 %flags) nounwind ssp !dbg !1 {
 ;
 entry:
-  call void @llvm.dbg.value(metadata i8* %name, metadata !0, metadata !DIExpression()), !dbg !DILocation(scope: !1)
+  call void @llvm.dbg.value(metadata ptr %name, metadata !0, metadata !DIExpression()), !dbg !DILocation(scope: !1)
   call void @llvm.dbg.value(metadata i32 %len, metadata !10, metadata !DIExpression()), !dbg !DILocation(scope: !1)
   call void @llvm.dbg.value(metadata i32 %hash, metadata !11, metadata !DIExpression()), !dbg !DILocation(scope: !1)
   call void @llvm.dbg.value(metadata i32 %flags, metadata !12, metadata !DIExpression()), !dbg !DILocation(scope: !1)
-; CHECK:  call fastcc i8* @add_name_internal(i8* %name, i32 %hash) [[NUW:#[0-9]+]], !dbg !{{[0-9]+}}
-  %0 = call fastcc i8* @add_name_internal(i8* %name, i32 %len, i32 %hash, i8 zeroext 0, i32 %flags) nounwind, !dbg !13 ; <i8*> [#uses=1]
-  ret i8* %0, !dbg !13
+; CHECK:  call fastcc ptr @add_name_internal(ptr %name, i32 %hash) [[NUW:#[0-9]+]], !dbg !{{[0-9]+}}
+  %0 = call fastcc ptr @add_name_internal(ptr %name, i32 %len, i32 %hash, i8 zeroext 0, i32 %flags) nounwind, !dbg !13 ; <ptr> [#uses=1]
+  ret ptr %0, !dbg !13
 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
-define internal fastcc i8* @add_name_internal(i8* %name, i32 %len, i32 %hash, i8 zeroext %extra, i32 %flags) noinline nounwind ssp !dbg !16 {
+define internal fastcc ptr @add_name_internal(ptr %name, i32 %len, i32 %hash, i8 zeroext %extra, i32 %flags) noinline nounwind ssp !dbg !16 {
 ;
 entry:
-  call void @llvm.dbg.value(metadata i8* %name, metadata !15, metadata !DIExpression()), !dbg !DILocation(scope: !16)
+  call void @llvm.dbg.value(metadata ptr %name, metadata !15, metadata !DIExpression()), !dbg !DILocation(scope: !16)
   call void @llvm.dbg.value(metadata i32 %len, metadata !20, metadata !DIExpression()), !dbg !DILocation(scope: !16)
   call void @llvm.dbg.value(metadata i32 %hash, metadata !21, metadata !DIExpression()), !dbg !DILocation(scope: !16)
   call void @llvm.dbg.value(metadata i8 %extra, metadata !22, metadata !DIExpression()), !dbg !DILocation(scope: !16)
@@ -38,14 +38,14 @@ bb1:                                              ; preds = %entry
   br label %bb2, !dbg !27
 
 bb2:                                              ; preds = %bb1, %bb
-  %.0 = phi i8* [ getelementptr inbounds ([1 x i8], [1 x i8]* @.str, i64 0, i64 0), %bb ], [ %name, %bb1 ] ; <i8*> [#uses=1]
-  ret i8* %.0, !dbg !27
+  %.0 = phi ptr [ @.str, %bb ], [ %name, %bb1 ] ; <ptr> [#uses=1]
+  ret ptr %.0, !dbg !27
 }
 
 declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 ; CHECK: attributes #0 = { nounwind ssp }
-; CHECK: attributes #1 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
+; CHECK: attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; CHECK: attributes #2 = { noinline nounwind ssp }
 ; CHECK: attributes [[NUW]] = { nounwind }
 

@@ -1,4 +1,4 @@
-; RUN: opt -hotcoldsplit -hotcoldsplit-threshold=0 -S < %s | FileCheck %s
+; RUN: opt -passes=hotcoldsplit -hotcoldsplit-threshold=0 -S < %s | FileCheck %s
 
 ; When an llvm.dbg.label intrinsic is extracted into a new function, make sure
 ; that its metadata argument is a DILabel that points to a scope within the new
@@ -12,11 +12,18 @@ target triple = "x86_64-apple-macosx10.14.0"
 
 ; CHECK-LABEL: define {{.*}}@foo.cold.1
 ; CHECK: llvm.dbg.label(metadata [[LABEL:![0-9]+]]), !dbg [[LINE:![0-9]+]]
+; CHECK: llvm.dbg.label(metadata [[LABEL_IN_INLINE_ME:![0-9]+]]), !dbg [[LINE2:![0-9]+]]
+; CHECK: llvm.dbg.label(metadata [[SCOPED_LABEL:![0-9]+]]), !dbg [[LINE]]
 
 ; CHECK: [[FILE:![0-9]+]] = !DIFile
+; CHECK: [[INLINE_ME_SCOPE:![0-9]+]] = distinct !DISubprogram(name: "inline_me"
 ; CHECK: [[SCOPE:![0-9]+]] = distinct !DISubprogram(name: "foo.cold.1"
 ; CHECK: [[LINE]] = !DILocation(line: 1, column: 1, scope: [[SCOPE]]
 ; CHECK: [[LABEL]] = !DILabel(scope: [[SCOPE]], name: "bye", file: [[FILE]], line: 28
+; CHECK: [[LABEL_IN_INLINE_ME]] = !DILabel(scope: [[INLINE_ME_SCOPE]], name: "label_in_@inline_me", file: [[FILE]], line: 29
+; CHECK: [[LINE2]] = !DILocation(line: 2, column: 2, scope: [[INLINE_ME_SCOPE]], inlinedAt: [[LINE]]
+; CHECK: [[SCOPED_LABEL]] = !DILabel(scope: [[SCOPE_IN_FOO:![0-9]+]], name: "scoped_label_in_foo", file: [[FILE]], line: 30
+; CHECK: [[SCOPE_IN_FOO]] = !DILexicalBlock(scope: [[SCOPE]], file: [[FILE]], line: 31, column: 31)
 
 define void @foo(i32 %arg1) !dbg !6 {
 entry:
@@ -28,6 +35,8 @@ if.then:                                          ; preds = %entry
 
 if.end:                                           ; preds = %entry
   call void @llvm.dbg.label(metadata !12), !dbg !11
+  call void @llvm.dbg.label(metadata !14), !dbg !15
+  call void @llvm.dbg.label(metadata !16), !dbg !11
   call void @sink()
   ret void
 }
@@ -35,6 +44,10 @@ if.end:                                           ; preds = %entry
 declare void @llvm.dbg.label(metadata)
 
 declare void @sink() cold
+
+define void @inline_me() !dbg !13 {
+  ret void
+}
 
 !llvm.dbg.cu = !{!0}
 !llvm.debugify = !{!3, !4}
@@ -53,3 +66,8 @@ declare void @sink() cold
 !10 = !DIBasicType(name: "ty32", size: 32, encoding: DW_ATE_unsigned)
 !11 = !DILocation(line: 1, column: 1, scope: !6)
 !12 = !DILabel(scope: !6, name: "bye", file: !1, line: 28)
+!13 = distinct !DISubprogram(name: "inline_me", linkageName: "inline_me", scope: null, file: !1, line: 1, type: !7, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: true, unit: !0, retainedNodes: !8)
+!14 = !DILabel(scope: !13, name: "label_in_@inline_me", file: !1, line: 29)
+!15 = !DILocation(line: 2, column: 2, scope: !13, inlinedAt: !11)
+!16 = !DILabel(scope: !17, name: "scoped_label_in_foo", file: !1, line: 30)
+!17 = distinct !DILexicalBlock(scope: !6, file: !1, line: 31, column: 31)

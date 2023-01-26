@@ -13,7 +13,7 @@
 
 @.str_1 = internal constant [30 x i8] c"d = %d, ct = %d, d ^ ct = %d\0A\00"
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)
 
 define i32 @adj(i32 %d.1, i32 %ct.1) {
 entry:
@@ -28,7 +28,7 @@ entry:
 define i32 @main() {
 entry:
         %result = call i32 @adj( i32 3, i32 2 )         ; <i32> [#uses=1]
-        %tmp.0 = call i32 (i8*, ...) @printf( i8* getelementptr ([30 x i8], [30 x i8]* @.str_1, i64 0, i64 0), i32 3, i32 2, i32 %result )              ; <i32> [#uses=0]
+        %tmp.0 = call i32 (ptr, ...) @printf( ptr @.str_1, i32 3, i32 2, i32 %result )              ; <i32> [#uses=0]
         ret i32 0
 }
 

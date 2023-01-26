@@ -14,9 +14,9 @@ b1:                                               ; preds = %b0
   unreachable
 
 b2:                                               ; preds = %b0
-  %v0 = load i8*, i8** undef, align 4
-  %v1 = getelementptr inbounds i8, i8* %v0, i32 1
-  %v2 = load i8, i8* %v0, align 1, !tbaa !0
+  %v0 = load ptr, ptr undef, align 4
+  %v1 = getelementptr inbounds i8, ptr %v0, i32 1
+  %v2 = load i8, ptr %v0, align 1, !tbaa !0
   %v3 = zext i8 %v2 to i32
   %v4 = shl nuw nsw i32 %v3, 8
   br i1 undef, label %b3, label %b5
@@ -28,8 +28,8 @@ b4:                                               ; preds = %b3
   br label %b5
 
 b5:                                               ; preds = %b4, %b2
-  %v5 = phi i8* [ undef, %b4 ], [ %v1, %b2 ]
-  %v6 = load i8, i8* %v5, align 1, !tbaa !0
+  %v5 = phi ptr [ undef, %b4 ], [ %v1, %b2 ]
+  %v6 = load i8, ptr %v5, align 1, !tbaa !0
   %v7 = zext i8 %v6 to i32
   %v8 = add nsw i32 %v7, %v4
   %v9 = add nsw i32 %v8, -2
@@ -57,7 +57,7 @@ b12:                                              ; preds = %b11
   unreachable
 
 b13:                                              ; preds = %b11, %b10
-  store i32 %v9, i32* undef, align 4, !tbaa !3
+  store i32 %v9, ptr undef, align 4, !tbaa !3
   unreachable
 
 b14:                                              ; preds = %b9

@@ -6,16 +6,16 @@
 ; RUN: llc -mtriple=arm-eabi -mcpu=cortex-r52 %s -o - | FileCheck %s -check-prefix CHECK-NONEGOFF
 ; Should not generate negated register offset
 
-define void @sintzero(i32* %a) nounwind {
+define void @sintzero(ptr %a) nounwind {
 entry:
-	store i32 0, i32* %a
+	store i32 0, ptr %a
 	br label %cond_next
 
 cond_next:		; preds = %cond_next, %entry
 	%indvar = phi i32 [ 0, %entry ], [ %tmp25, %cond_next ]		; <i32> [#uses=1]
 	%tmp25 = add i32 %indvar, 1		; <i32> [#uses=3]
-	%tmp36 = getelementptr i32, i32* %a, i32 %tmp25		; <i32*> [#uses=1]
-	store i32 0, i32* %tmp36
+	%tmp36 = getelementptr i32, ptr %a, i32 %tmp25		; <ptr> [#uses=1]
+	store i32 0, ptr %tmp36
 	icmp eq i32 %tmp25, -1		; <i1>:0 [#uses=1]
 	br i1 %0, label %return, label %cond_next
 

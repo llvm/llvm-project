@@ -31,12 +31,12 @@ target triple = "x86_64-pc-windows-msvc19.0.24210"
 %struct.anon = type { i8 }
 
 ; Function Attrs: noinline nounwind uwtable
-define void @"\01?anchor@named_struct@@QEAAXXZ"(%struct.named_struct* %this) #0 align 2 !dbg !7 {
+define void @"\01?anchor@named_struct@@QEAAXXZ"(ptr %this) #0 align 2 !dbg !7 {
 entry:
-  %this.addr = alloca %struct.named_struct*, align 8
-  store %struct.named_struct* %this, %struct.named_struct** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.named_struct** %this.addr, metadata !21, metadata !23), !dbg !24
-  %this1 = load %struct.named_struct*, %struct.named_struct** %this.addr, align 8
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !21, metadata !23), !dbg !24
+  %this1 = load ptr, ptr %this.addr, align 8
   ret void, !dbg !25
 }
 

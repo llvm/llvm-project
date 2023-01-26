@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-arc -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-arc -disable-llvm-passes -o - %s | FileCheck %s
 // rdar://18249673
 
 @class MyObject;
@@ -44,7 +44,7 @@ void test4() {
 // CHECK: call void @_ZN8tderivedIiED1Ev
 
 // CHECK-LABEL: define linkonce_odr void @_ZN7derivedD2Ev
-// CHECK: call void @llvm.objc.storeStrong(i8** {{.*}}, i8* null)
+// CHECK: call void @llvm.objc.storeStrong(ptr {{.*}}, ptr null)
 
 // CHECK-LABEL: define linkonce_odr void @_ZN8tderivedIiED2Ev
-// CHECK: call void @llvm.objc.storeStrong(i8** {{.*}}, i8* null)
+// CHECK: call void @llvm.objc.storeStrong(ptr {{.*}}, ptr null)

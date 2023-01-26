@@ -7,17 +7,17 @@ entry:
 ; CHECK: call f_i16
 ; CHECK: *(u16 *)(r1 + 0) = r0
   %0 = call i16 @f_i16()
-  store volatile i16 %0, i16* @g_i16
+  store volatile i16 %0, ptr @g_i16
 
 ; CHECK: call f_i32
 ; CHECK: *(u32 *)(r1 + 0) = r0
   %1 = call i32 @f_i32()
-  store volatile i32 %1, i32* @g_i32
+  store volatile i32 %1, ptr @g_i32
 
 ; CHECK: call f_i64
 ; CHECK: *(u64 *)(r1 + 0) = r0
   %2 = call i64 @f_i64()
-  store volatile i64 %2, i64* @g_i64
+  store volatile i64 %2, ptr @g_i64
 
   ret void
 }

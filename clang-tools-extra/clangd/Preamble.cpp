@@ -11,6 +11,7 @@
 #include "Config.h"
 #include "Headers.h"
 #include "SourceCode.h"
+#include "clang-include-cleaner/Record.h"
 #include "support/Logger.h"
 #include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
@@ -32,7 +33,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -59,7 +59,7 @@ bool compileCommandsAreEqual(const tooling::CompileCommand &LHS,
                              const tooling::CompileCommand &RHS) {
   // We don't check for Output, it should not matter to clangd.
   return LHS.Directory == RHS.Directory && LHS.Filename == RHS.Filename &&
-         llvm::makeArrayRef(LHS.CommandLine).equals(RHS.CommandLine);
+         llvm::ArrayRef(LHS.CommandLine).equals(RHS.CommandLine);
 }
 
 class CppFilePreambleCallbacks : public PreambleCallbacks {
@@ -78,6 +78,9 @@ public:
 
   std::vector<PragmaMark> takeMarks() { return std::move(Marks); }
 
+  include_cleaner::PragmaIncludes takePragmaIncludes() {
+    return std::move(Pragmas);
+  }
   CanonicalIncludes takeCanonicalIncludes() { return std::move(CanonIncludes); }
 
   bool isMainFileIncludeGuarded() const { return IsMainFileIncludeGuarded; }
@@ -119,6 +122,9 @@ public:
     LangOpts = &CI.getLangOpts();
     SourceMgr = &CI.getSourceManager();
     Includes.collect(CI);
+    if (Config::current().Diagnostics.UnusedIncludes ==
+        Config::UnusedIncludesPolicy::Experiment)
+      Pragmas.record(CI);
     if (BeforeExecuteCallback)
       BeforeExecuteCallback(CI);
   }
@@ -188,6 +194,7 @@ private:
   PreambleParsedCallback ParsedCallback;
   IncludeStructure Includes;
   CanonicalIncludes CanonIncludes;
+  include_cleaner::PragmaIncludes Pragmas;
   MainFileMacros Macros;
   std::vector<PragmaMark> Marks;
   bool IsMainFileIncludeGuarded = false;
@@ -332,7 +339,7 @@ scanPreamble(llvm::StringRef Contents, const tooling::CompileCommand &Cmd) {
       std::move(CI), nullptr, std::move(PreambleContents),
       // Provide an empty FS to prevent preprocessor from performing IO. This
       // also implies missing resolved paths for includes.
-      FS.view(llvm::None), IgnoreDiags);
+      FS.view(std::nullopt), IgnoreDiags);
   if (Clang->getFrontendOpts().Inputs.empty())
     return error("compiler instance had no inputs");
   // We are only interested in main file includes.
@@ -552,7 +559,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   }
 
   if (BuiltPreamble) {
-    vlog("Built preamble of size {0} for file {1} version {2} in {3} seconds",
+    log("Built preamble of size {0} for file {1} version {2} in {3} seconds",
          BuiltPreamble->getSize(), FileName, Inputs.Version,
          PreambleTimer.getTime());
     std::vector<Diag> Diags = PreambleDiagnostics.take();
@@ -561,6 +568,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
     Result->CompileCommand = Inputs.CompileCommand;
     Result->Diags = std::move(Diags);
     Result->Includes = CapturedInfo.takeIncludes();
+    Result->Pragmas = CapturedInfo.takePragmaIncludes();
     Result->Macros = CapturedInfo.takeMacros();
     Result->Marks = CapturedInfo.takeMarks();
     Result->CanonIncludes = CapturedInfo.takeCanonicalIncludes();
@@ -571,6 +579,12 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
 
   elog("Could not build a preamble for file {0} version {1}: {2}", FileName,
        Inputs.Version, BuiltPreamble.getError().message());
+  for (const Diag &D : PreambleDiagnostics.take()) {
+    if (D.Severity < DiagnosticsEngine::Error)
+      continue;
+    // Not an ideal way to show errors, but better than nothing!
+    elog("  error: {0}", D.Message);
+  }
   return nullptr;
 }
 

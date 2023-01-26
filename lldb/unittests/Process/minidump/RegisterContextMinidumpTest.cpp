@@ -109,7 +109,7 @@ TEST(RegisterContextMinidump, ConvertMinidumpContext_x86_64) {
   Context.gs = 0x9091;
   Context.ss = 0x9293;
   Context.ds = 0x9495;
-  Context.ss = 0x9697;
+  Context.es = 0x9697;
   llvm::ArrayRef<uint8_t> ContextRef(reinterpret_cast<uint8_t *>(&Context),
                                      sizeof(Context));
 

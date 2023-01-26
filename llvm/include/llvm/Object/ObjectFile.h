@@ -99,8 +99,8 @@ public:
   uint64_t getSize() const;
   Expected<StringRef> getContents() const;
 
-  /// Get the alignment of this section as the actual value (not log 2).
-  uint64_t getAlignment() const;
+  /// Get the alignment of this section.
+  Align getAlignment() const;
 
   bool isCompressed() const;
   /// Whether this section contains instructions.
@@ -328,14 +328,18 @@ public:
     return section_iterator_range(section_begin(), section_end());
   }
 
+  virtual bool hasDebugInfo() const;
+
   /// The number of bytes used to represent an address in this object
   ///        file format.
   virtual uint8_t getBytesInAddress() const = 0;
 
   virtual StringRef getFileFormatName() const = 0;
   virtual Triple::ArchType getArch() const = 0;
-  virtual SubtargetFeatures getFeatures() const = 0;
-  virtual Optional<StringRef> tryGetCPUName() const { return None; };
+  virtual Expected<SubtargetFeatures> getFeatures() const = 0;
+  virtual std::optional<StringRef> tryGetCPUName() const {
+    return std::nullopt;
+  };
   virtual void setARMSubArch(Triple &TheTriple) const { }
   virtual Expected<uint64_t> getStartAddress() const {
     return errorCodeToError(object_error::parse_failed);
@@ -477,8 +481,9 @@ inline Expected<StringRef> SectionRef::getContents() const {
   return StringRef(reinterpret_cast<const char *>(Res->data()), Res->size());
 }
 
-inline uint64_t SectionRef::getAlignment() const {
-  return OwningObject->getSectionAlignment(SectionPimpl);
+inline Align SectionRef::getAlignment() const {
+  return MaybeAlign(OwningObject->getSectionAlignment(SectionPimpl))
+      .valueOrOne();
 }
 
 inline bool SectionRef::isCompressed() const {

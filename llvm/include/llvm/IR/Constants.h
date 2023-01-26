@@ -23,8 +23,6 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constant.h"
@@ -38,6 +36,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 
@@ -699,7 +698,7 @@ public:
   /// ArrayRef<ElementTy>. Calls get(LLVMContext, ArrayRef<ElementTy>).
   template <typename ArrayTy>
   static Constant *get(LLVMContext &Context, ArrayTy &Elts) {
-    return ConstantDataArray::get(Context, makeArrayRef(Elts));
+    return ConstantDataArray::get(Context, ArrayRef(Elts));
   }
 
   /// getRaw() constructor - Return a constant with array type with an element
@@ -841,6 +840,33 @@ public:
   /// Methods to support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Value *V) {
     return V->getValueID() == ConstantTokenNoneVal;
+  }
+};
+
+/// A constant target extension type default initializer
+class ConstantTargetNone final : public ConstantData {
+  friend class Constant;
+
+  explicit ConstantTargetNone(TargetExtType *T)
+      : ConstantData(T, Value::ConstantTargetNoneVal) {}
+
+  void destroyConstantImpl();
+
+public:
+  ConstantTargetNone(const ConstantTargetNone &) = delete;
+
+  /// Static factory methods - Return objects of the specified value.
+  static ConstantTargetNone *get(TargetExtType *T);
+
+  /// Specialize the getType() method to always return an TargetExtType,
+  /// which reduces the amount of casting needed in parts of the compiler.
+  inline TargetExtType *getType() const {
+    return cast<TargetExtType>(Value::getType());
+  }
+
+  /// Methods for support type inquiry through isa, cast, and dyn_cast.
+  static bool classof(const Value *V) {
+    return V->getValueID() == ConstantTargetNoneVal;
   }
 };
 
@@ -1013,7 +1039,6 @@ public:
 
   static Constant *getNeg(Constant *C, bool HasNUW = false,
                           bool HasNSW = false);
-  static Constant *getFNeg(Constant *C);
   static Constant *getNot(Constant *C);
   static Constant *getAdd(Constant *C1, Constant *C2, bool HasNUW = false,
                           bool HasNSW = false);
@@ -1190,13 +1215,6 @@ public:
   static Constant *getSelect(Constant *C, Constant *V1, Constant *V2,
                              Type *OnlyIfReducedTy = nullptr);
 
-  /// get - Return a unary operator constant expression,
-  /// folding if possible.
-  ///
-  /// \param OnlyIfReducedTy see \a getWithOperands() docs.
-  static Constant *get(unsigned Opcode, Constant *C1, unsigned Flags = 0,
-                       Type *OnlyIfReducedTy = nullptr);
-
   /// get - Return a binary or shift operator constant expression,
   /// folding if possible.
   ///
@@ -1221,32 +1239,32 @@ public:
   /// Getelementptr form.  Value* is only accepted for convenience;
   /// all elements must be Constants.
   ///
-  /// \param InRangeIndex the inrange index if present or None.
+  /// \param InRangeIndex the inrange index if present or std::nullopt.
   /// \param OnlyIfReducedTy see \a getWithOperands() docs.
-  static Constant *getGetElementPtr(Type *Ty, Constant *C,
-                                    ArrayRef<Constant *> IdxList,
-                                    bool InBounds = false,
-                                    Optional<unsigned> InRangeIndex = None,
-                                    Type *OnlyIfReducedTy = nullptr) {
+  static Constant *
+  getGetElementPtr(Type *Ty, Constant *C, ArrayRef<Constant *> IdxList,
+                   bool InBounds = false,
+                   std::optional<unsigned> InRangeIndex = std::nullopt,
+                   Type *OnlyIfReducedTy = nullptr) {
     return getGetElementPtr(
-        Ty, C, makeArrayRef((Value *const *)IdxList.data(), IdxList.size()),
+        Ty, C, ArrayRef((Value *const *)IdxList.data(), IdxList.size()),
         InBounds, InRangeIndex, OnlyIfReducedTy);
   }
-  static Constant *getGetElementPtr(Type *Ty, Constant *C, Constant *Idx,
-                                    bool InBounds = false,
-                                    Optional<unsigned> InRangeIndex = None,
-                                    Type *OnlyIfReducedTy = nullptr) {
+  static Constant *
+  getGetElementPtr(Type *Ty, Constant *C, Constant *Idx, bool InBounds = false,
+                   std::optional<unsigned> InRangeIndex = std::nullopt,
+                   Type *OnlyIfReducedTy = nullptr) {
     // This form of the function only exists to avoid ambiguous overload
     // warnings about whether to convert Idx to ArrayRef<Constant *> or
     // ArrayRef<Value *>.
     return getGetElementPtr(Ty, C, cast<Value>(Idx), InBounds, InRangeIndex,
                             OnlyIfReducedTy);
   }
-  static Constant *getGetElementPtr(Type *Ty, Constant *C,
-                                    ArrayRef<Value *> IdxList,
-                                    bool InBounds = false,
-                                    Optional<unsigned> InRangeIndex = None,
-                                    Type *OnlyIfReducedTy = nullptr);
+  static Constant *
+  getGetElementPtr(Type *Ty, Constant *C, ArrayRef<Value *> IdxList,
+                   bool InBounds = false,
+                   std::optional<unsigned> InRangeIndex = std::nullopt,
+                   Type *OnlyIfReducedTy = nullptr);
 
   /// Create an "inbounds" getelementptr. See the documentation for the
   /// "inbounds" flag in LangRef.html for details.

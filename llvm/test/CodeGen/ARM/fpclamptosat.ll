@@ -3764,7 +3764,6 @@ define i64 @stest_f32i64_mm(float %x) {
 ; SOFT-NEXT:  @ %bb.18: @ %entry
 ; SOFT-NEXT:    mov r3, r6
 ; SOFT-NEXT:  .LBB48_19: @ %entry
-; SOFT-NEXT:    ldr r0, .LCPI48_0
 ; SOFT-NEXT:    cmp r4, r0
 ; SOFT-NEXT:    ldr r4, [sp, #16] @ 4-byte Reload
 ; SOFT-NEXT:    beq .LBB48_21
@@ -4347,7 +4346,6 @@ define i64 @stest_f16i64_mm(half %x) {
 ; SOFT-NEXT:  @ %bb.18: @ %entry
 ; SOFT-NEXT:    mov r3, r6
 ; SOFT-NEXT:  .LBB51_19: @ %entry
-; SOFT-NEXT:    ldr r0, .LCPI51_0
 ; SOFT-NEXT:    cmp r4, r0
 ; SOFT-NEXT:    ldr r4, [sp, #16] @ 4-byte Reload
 ; SOFT-NEXT:    beq .LBB51_21
@@ -4867,7 +4865,7 @@ entry:
 }
 
 
-define void @unroll_maxmin(i32* nocapture %0, float* nocapture readonly %1, i32 %2) {
+define void @unroll_maxmin(ptr nocapture %0, ptr nocapture readonly %1, i32 %2) {
 ; SOFT-LABEL: unroll_maxmin:
 ; SOFT:       @ %bb.0:
 ; SOFT-NEXT:    .save {r4, r5, r6, r7, lr}
@@ -5037,8 +5035,8 @@ define void @unroll_maxmin(i32* nocapture %0, float* nocapture readonly %1, i32 
 
 5:                                                ; preds = %5, %3
   %6 = phi i32 [ 0, %3 ], [ %28, %5 ]
-  %7 = getelementptr inbounds float, float* %1, i32 %6
-  %8 = load float, float* %7, align 4
+  %7 = getelementptr inbounds float, ptr %1, i32 %6
+  %8 = load float, ptr %7, align 4
   %9 = fmul float %8, 0x41E0000000000000
   %10 = fptosi float %9 to i64
   %11 = icmp slt i64 %10, 2147483647
@@ -5046,11 +5044,11 @@ define void @unroll_maxmin(i32* nocapture %0, float* nocapture readonly %1, i32 
   %13 = icmp sgt i64 %12, -2147483648
   %14 = select i1 %13, i64 %12, i64 -2147483648
   %15 = trunc i64 %14 to i32
-  %16 = getelementptr inbounds i32, i32* %0, i32 %6
-  store i32 %15, i32* %16, align 4
+  %16 = getelementptr inbounds i32, ptr %0, i32 %6
+  store i32 %15, ptr %16, align 4
   %17 = or i32 %6, 1
-  %18 = getelementptr inbounds float, float* %1, i32 %17
-  %19 = load float, float* %18, align 4
+  %18 = getelementptr inbounds float, ptr %1, i32 %17
+  %19 = load float, ptr %18, align 4
   %20 = fmul float %19, 0x41E0000000000000
   %21 = fptosi float %20 to i64
   %22 = icmp slt i64 %21, 2147483647
@@ -5058,14 +5056,14 @@ define void @unroll_maxmin(i32* nocapture %0, float* nocapture readonly %1, i32 
   %24 = icmp sgt i64 %23, -2147483648
   %25 = select i1 %24, i64 %23, i64 -2147483648
   %26 = trunc i64 %25 to i32
-  %27 = getelementptr inbounds i32, i32* %0, i32 %17
-  store i32 %26, i32* %27, align 4
+  %27 = getelementptr inbounds i32, ptr %0, i32 %17
+  store i32 %26, ptr %27, align 4
   %28 = add nuw nsw i32 %6, 2
   %29 = icmp eq i32 %28, 1024
   br i1 %29, label %4, label %5
 }
 
-define void @unroll_minmax(i32* nocapture %0, float* nocapture readonly %1, i32 %2) {
+define void @unroll_minmax(ptr nocapture %0, ptr nocapture readonly %1, i32 %2) {
 ; SOFT-LABEL: unroll_minmax:
 ; SOFT:       @ %bb.0:
 ; SOFT-NEXT:    .save {r4, r5, r6, r7, lr}
@@ -5233,8 +5231,8 @@ define void @unroll_minmax(i32* nocapture %0, float* nocapture readonly %1, i32 
 
 5:                                                ; preds = %5, %3
   %6 = phi i32 [ 0, %3 ], [ %28, %5 ]
-  %7 = getelementptr inbounds float, float* %1, i32 %6
-  %8 = load float, float* %7, align 4
+  %7 = getelementptr inbounds float, ptr %1, i32 %6
+  %8 = load float, ptr %7, align 4
   %9 = fmul float %8, 0x41E0000000000000
   %10 = fptosi float %9 to i64
   %11 = icmp sgt i64 %10, -2147483648
@@ -5242,11 +5240,11 @@ define void @unroll_minmax(i32* nocapture %0, float* nocapture readonly %1, i32 
   %13 = icmp slt i64 %12, 2147483647
   %14 = select i1 %13, i64 %12, i64 2147483647
   %15 = trunc i64 %14 to i32
-  %16 = getelementptr inbounds i32, i32* %0, i32 %6
-  store i32 %15, i32* %16, align 4
+  %16 = getelementptr inbounds i32, ptr %0, i32 %6
+  store i32 %15, ptr %16, align 4
   %17 = or i32 %6, 1
-  %18 = getelementptr inbounds float, float* %1, i32 %17
-  %19 = load float, float* %18, align 4
+  %18 = getelementptr inbounds float, ptr %1, i32 %17
+  %19 = load float, ptr %18, align 4
   %20 = fmul float %19, 0x41E0000000000000
   %21 = fptosi float %20 to i64
   %22 = icmp sgt i64 %21, -2147483648
@@ -5254,8 +5252,8 @@ define void @unroll_minmax(i32* nocapture %0, float* nocapture readonly %1, i32 
   %24 = icmp slt i64 %23, 2147483647
   %25 = select i1 %24, i64 %23, i64 2147483647
   %26 = trunc i64 %25 to i32
-  %27 = getelementptr inbounds i32, i32* %0, i32 %17
-  store i32 %26, i32* %27, align 4
+  %27 = getelementptr inbounds i32, ptr %0, i32 %17
+  store i32 %26, ptr %27, align 4
   %28 = add nuw nsw i32 %6, 2
   %29 = icmp eq i32 %28, 1024
   br i1 %29, label %4, label %5

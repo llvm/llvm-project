@@ -8,15 +8,14 @@
 ; Requires protector.
 define void @foo(i32 %n) nounwind uwtable safestack {
 entry:
-  ; CHECK: %[[SP:.*]] = load i8*, i8** @__safestack_unsafe_stack_ptr
+  ; CHECK: %[[SP:.*]] = load ptr, ptr @__safestack_unsafe_stack_ptr
   %n.addr = alloca i32, align 4
-  %a = alloca i32*, align 8
-  store i32 %n, i32* %n.addr, align 4
-  %0 = load i32, i32* %n.addr, align 4
+  %a = alloca ptr, align 8
+  store i32 %n, ptr %n.addr, align 4
+  %0 = load i32, ptr %n.addr, align 4
   %conv = sext i32 %0 to i64
   %1 = alloca i8, i64 %conv
-  %2 = bitcast i8* %1 to i32*
-  store i32* %2, i32** %a, align 8
-  ; CHECK: store i8* %[[SP:.*]], i8** @__safestack_unsafe_stack_ptr
+  store ptr %1, ptr %a, align 8
+  ; CHECK: store ptr %[[SP:.*]], ptr @__safestack_unsafe_stack_ptr
   ret void
 }

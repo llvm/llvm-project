@@ -18,6 +18,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/YAMLTraits.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -32,7 +33,7 @@ class ELFDumper {
 
   DenseMap<StringRef, uint32_t> UsedSectionNames;
   std::vector<std::string> SectionNames;
-  Optional<uint32_t> ShStrTabIndex;
+  std::optional<uint32_t> ShStrTabIndex;
 
   DenseMap<StringRef, uint32_t> UsedSymbolNames;
   std::vector<std::string> SymbolNames;
@@ -53,11 +54,11 @@ class ELFDumper {
   Expected<std::vector<ELFYAML::ProgramHeader>>
   dumpProgramHeaders(ArrayRef<std::unique_ptr<ELFYAML::Chunk>> Sections);
 
-  Optional<DWARFYAML::Data>
+  std::optional<DWARFYAML::Data>
   dumpDWARFSections(std::vector<std::unique_ptr<ELFYAML::Chunk>> &Sections);
 
   Error dumpSymbols(const Elf_Shdr *Symtab,
-                    Optional<std::vector<ELFYAML::Symbol>> &Symbols);
+                    std::optional<std::vector<ELFYAML::Symbol>> &Symbols);
   Error dumpSymbol(const Elf_Sym *Sym, const Elf_Shdr *SymTab,
                    StringRef StrTable, ELFYAML::Symbol &S);
   Expected<std::vector<std::unique_ptr<ELFYAML::Chunk>>> dumpSections();
@@ -101,7 +102,7 @@ class ELFDumper {
   dumpPlaceholderSection(const Elf_Shdr *Shdr);
 
   bool shouldPrintSection(const ELFYAML::Section &S, const Elf_Shdr &SHdr,
-                          Optional<DWARFYAML::Data> DWARF);
+                          std::optional<DWARFYAML::Data> DWARF);
 
 public:
   ELFDumper(const object::ELFFile<ELFT> &O, std::unique_ptr<DWARFContext> DCtx);
@@ -182,7 +183,7 @@ ELFDumper<ELFT>::getUniquedSymbolName(const Elf_Sym *Sym, StringRef StrTable,
 template <class ELFT>
 bool ELFDumper<ELFT>::shouldPrintSection(const ELFYAML::Section &S,
                                          const Elf_Shdr &SHdr,
-                                         Optional<DWARFYAML::Data> DWARF) {
+                                         std::optional<DWARFYAML::Data> DWARF) {
   // We only print the SHT_NULL section at index 0 when it
   // has at least one non-null field, because yaml2obj
   // normally creates the zero section at index 0 implicitly.
@@ -246,8 +247,7 @@ static void dumpSectionOffsets(const typename ELFT::Ehdr &Header,
   else
     ExpectedOffset = sizeof(typename ELFT::Ehdr);
 
-  for (const std::unique_ptr<ELFYAML::Chunk> &C :
-       makeArrayRef(V).drop_front()) {
+  for (const std::unique_ptr<ELFYAML::Chunk> &C : ArrayRef(V).drop_front()) {
     ELFYAML::Section &Sec = *cast<ELFYAML::Section>(C.get());
     const typename ELFT::Shdr &SecHdr = S[Sec.OriginalSecNdx];
 
@@ -359,7 +359,7 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
   std::vector<ELFYAML::Section *> OriginalOrder;
   if (!Chunks.empty())
     for (const std::unique_ptr<ELFYAML::Chunk> &C :
-         makeArrayRef(Chunks).drop_front())
+         ArrayRef(Chunks).drop_front())
       OriginalOrder.push_back(cast<ELFYAML::Section>(C.get()));
 
   // Sometimes the order of sections in the section header table does not match
@@ -401,10 +401,10 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
   }
 
   llvm::erase_if(Chunks, [this, &Y](const std::unique_ptr<ELFYAML::Chunk> &C) {
-    if (isa<ELFYAML::SectionHeaderTable>(*C.get()))
+    if (isa<ELFYAML::SectionHeaderTable>(*C))
       return false;
 
-    const ELFYAML::Section &S = cast<ELFYAML::Section>(*C.get());
+    const ELFYAML::Section &S = cast<ELFYAML::Section>(*C);
     return !shouldPrintSection(S, Sections[S.OriginalSecNdx], Y->DWARF);
   });
 
@@ -494,7 +494,7 @@ ELFDumper<ELFT>::dumpProgramHeaders(
     // It is not possible to have a non-Section chunk, because
     // obj2yaml does not create Fill chunks.
     for (const std::unique_ptr<ELFYAML::Chunk> &C : Chunks) {
-      ELFYAML::Section &S = cast<ELFYAML::Section>(*C.get());
+      ELFYAML::Section &S = cast<ELFYAML::Section>(*C);
       if (isInSegment<ELFT>(S, Sections[S.OriginalSecNdx], Phdr)) {
         if (!PH.FirstSec)
           PH.FirstSec = S.Name;
@@ -510,7 +510,7 @@ ELFDumper<ELFT>::dumpProgramHeaders(
 }
 
 template <class ELFT>
-Optional<DWARFYAML::Data> ELFDumper<ELFT>::dumpDWARFSections(
+std::optional<DWARFYAML::Data> ELFDumper<ELFT>::dumpDWARFSections(
     std::vector<std::unique_ptr<ELFYAML::Chunk>> &Sections) {
   DWARFYAML::Data DWARF;
   for (std::unique_ptr<ELFYAML::Chunk> &C : Sections) {
@@ -529,13 +529,13 @@ Optional<DWARFYAML::Data> ELFDumper<ELFT>::dumpDWARFSections(
       cantFail(std::move(Err));
 
       if (RawSec->Name == ".debug_aranges")
-        Err = dumpDebugARanges(*DWARFCtx.get(), DWARF);
+        Err = dumpDebugARanges(*DWARFCtx, DWARF);
       else if (RawSec->Name == ".debug_str")
-        Err = dumpDebugStrings(*DWARFCtx.get(), DWARF);
+        Err = dumpDebugStrings(*DWARFCtx, DWARF);
       else if (RawSec->Name == ".debug_ranges")
-        Err = dumpDebugRanges(*DWARFCtx.get(), DWARF);
+        Err = dumpDebugRanges(*DWARFCtx, DWARF);
       else if (RawSec->Name == ".debug_addr")
-        Err = dumpDebugAddr(*DWARFCtx.get(), DWARF);
+        Err = dumpDebugAddr(*DWARFCtx, DWARF);
       else
         continue;
 
@@ -549,7 +549,7 @@ Optional<DWARFYAML::Data> ELFDumper<ELFT>::dumpDWARFSections(
   }
 
   if (DWARF.getNonEmptySectionNames().empty())
-    return None;
+    return std::nullopt;
   return DWARF;
 }
 
@@ -673,7 +673,8 @@ ELFDumper<ELFT>::dumpSections() {
 
 template <class ELFT>
 Error ELFDumper<ELFT>::dumpSymbols(
-    const Elf_Shdr *Symtab, Optional<std::vector<ELFYAML::Symbol>> &Symbols) {
+    const Elf_Shdr *Symtab,
+    std::optional<std::vector<ELFYAML::Symbol>> &Symbols) {
   if (!Symtab)
     return Error::success();
 
@@ -895,7 +896,7 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
   while (Cur && Cur.tell() < Content.size()) {
     if (Shdr->sh_type == ELF::SHT_LLVM_BB_ADDR_MAP) {
       Version = Data.getU8(Cur);
-      if (Cur && Version > 1)
+      if (Cur && Version > 2)
         return createStringError(
             errc::invalid_argument,
             "invalid SHT_LLVM_BB_ADDR_MAP section version: " +
@@ -906,11 +907,12 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
     uint64_t NumBlocks = Data.getULEB128(Cur);
     std::vector<ELFYAML::BBAddrMapEntry::BBEntry> BBEntries;
     // Read the specified number of BB entries, or until decoding fails.
-    for (uint64_t BlockID = 0; Cur && BlockID < NumBlocks; ++BlockID) {
+    for (uint64_t BlockIndex = 0; Cur && BlockIndex < NumBlocks; ++BlockIndex) {
+      uint32_t ID = Version >= 2 ? Data.getULEB128(Cur) : BlockIndex;
       uint64_t Offset = Data.getULEB128(Cur);
       uint64_t Size = Data.getULEB128(Cur);
       uint64_t Metadata = Data.getULEB128(Cur);
-      BBEntries.push_back({Offset, Size, Metadata});
+      BBEntries.push_back({ID, Offset, Size, Metadata});
     }
     Entries.push_back(
         {Version, Feature, Address, /*NumBlocks=*/{}, std::move(BBEntries)});

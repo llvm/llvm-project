@@ -111,21 +111,21 @@ def vfp_f64imm : Operand<f64>,
 }
 
 def alignedload16 : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-  return cast<LoadSDNode>(N)->getAlignment() >= 2;
+  return cast<LoadSDNode>(N)->getAlign() >= 2;
 }]>;
 
 def alignedload32 : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-  return cast<LoadSDNode>(N)->getAlignment() >= 4;
+  return cast<LoadSDNode>(N)->getAlign() >= 4;
 }]>;
 
 def alignedstore16 : PatFrag<(ops node:$val, node:$ptr),
                              (store node:$val, node:$ptr), [{
-  return cast<StoreSDNode>(N)->getAlignment() >= 2;
+  return cast<StoreSDNode>(N)->getAlign() >= 2;
 }]>;
 
 def alignedstore32 : PatFrag<(ops node:$val, node:$ptr),
                              (store node:$val, node:$ptr), [{
-  return cast<StoreSDNode>(N)->getAlignment() >= 4;
+  return cast<StoreSDNode>(N)->getAlign() >= 4;
 }]>;
 
 // The VCVT to/from fixed-point instructions encode the 'fbits' operand
@@ -496,12 +496,14 @@ def VMULH  : AHbI<0b11100, 0b10, 0, 0,
                   [(set (f16 HPR:$Sd), (fmul (f16 HPR:$Sn), (f16 HPR:$Sm)))]>,
              Sched<[WriteFPMUL32, ReadFPMUL, ReadFPMUL]>;
 
+let TwoOperandAliasConstraint = "$Dn = $Dd" in
 def VNMULD : ADbI<0b11100, 0b10, 1, 0,
                   (outs DPR:$Dd), (ins DPR:$Dn, DPR:$Dm),
                   IIC_fpMUL64, "vnmul", ".f64\t$Dd, $Dn, $Dm",
                   [(set DPR:$Dd, (fneg (fmul DPR:$Dn, (f64 DPR:$Dm))))]>,
              Sched<[WriteFPMUL64, ReadFPMUL, ReadFPMUL]>;
 
+let TwoOperandAliasConstraint = "$Sn = $Sd" in
 def VNMULS : ASbI<0b11100, 0b10, 1, 0,
                   (outs SPR:$Sd), (ins SPR:$Sn, SPR:$Sm),
                   IIC_fpMUL32, "vnmul", ".f32\t$Sd, $Sn, $Sm",
@@ -512,6 +514,7 @@ def VNMULS : ASbI<0b11100, 0b10, 1, 0,
   let D = VFPNeonA8Domain;
 }
 
+let TwoOperandAliasConstraint = "$Sn = $Sd" in
 def VNMULH : AHbI<0b11100, 0b10, 1, 0,
                   (outs HPR:$Sd), (ins HPR:$Sn, HPR:$Sm),
                   IIC_fpMUL16, "vnmul", ".f16\t$Sd, $Sn, $Sm",

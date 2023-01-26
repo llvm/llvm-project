@@ -15,17 +15,16 @@ entry:
   br i1 %tmp, label %bb, label %bb1
 
 bb:
-  %b = getelementptr i32, i32* %a, i32 0
   br label %bb2
 
 bb1:
   br label %bb2
 
 bb2:
-  %P = phi i32* [ %b, %bb ], [ @Y, %bb1 ]
-  %tmp1 = load i32, i32* @Z, align 4
-  store i32 123, i32* %P, align 4
-  %tmp2 = load i32, i32* @Z, align 4
+  %P = phi ptr [ %a, %bb ], [ @Y, %bb1 ]
+  %tmp1 = load i32, ptr @Z, align 4
+  store i32 123, ptr %P, align 4
+  %tmp2 = load i32, ptr @Z, align 4
   br label %return
 
 return:

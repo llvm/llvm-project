@@ -7,4 +7,5 @@ add_lldb_library(lldbPluginABIHexagon PLUGIN
     lldbTarget
   LINK_COMPONENTS
     Support
+    TargetParser
   )

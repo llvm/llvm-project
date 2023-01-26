@@ -2,318 +2,318 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zve64d,+f,+d,+zfh,+experimental-zvfh \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s
 
-declare void @llvm.riscv.vssseg2.nxv16i16(<vscale x 16 x i16>,<vscale x 16 x i16>, i16*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv16i16(<vscale x 16 x i16>,<vscale x 16 x i16>, i16*, i64, <vscale x 16 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv16i16(<vscale x 16 x i16>,<vscale x 16 x i16>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv16i16(<vscale x 16 x i16>,<vscale x 16 x i16>, ptr, i64, <vscale x 16 x i1>, i64)
 
-define void @test_vssseg2_nxv16i16(<vscale x 16 x i16> %val, i16* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv16i16(<vscale x 16 x i16> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
 ; CHECK-NEXT:    vssseg2e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv16i16(<vscale x 16 x i16> %val,<vscale x 16 x i16> %val, i16* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv16i16(<vscale x 16 x i16> %val,<vscale x 16 x i16> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv16i16(<vscale x 16 x i16> %val, i16* %base, i64 %offset, <vscale x 16 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv16i16(<vscale x 16 x i16> %val, ptr %base, i64 %offset, <vscale x 16 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
 ; CHECK-NEXT:    vssseg2e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv16i16(<vscale x 16 x i16> %val,<vscale x 16 x i16> %val, i16* %base, i64 %offset, <vscale x 16 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv16i16(<vscale x 16 x i16> %val,<vscale x 16 x i16> %val, ptr %base, i64 %offset, <vscale x 16 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv4i32(<vscale x 4 x i32>,<vscale x 4 x i32>, i32*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv4i32(<vscale x 4 x i32>,<vscale x 4 x i32>, i32*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv4i32(<vscale x 4 x i32>,<vscale x 4 x i32>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv4i32(<vscale x 4 x i32>,<vscale x 4 x i32>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg2_nxv4i32(<vscale x 4 x i32> %val, i32* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv4i32(<vscale x 4 x i32> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; CHECK-NEXT:    vssseg2e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv4i32(<vscale x 4 x i32> %val,<vscale x 4 x i32> %val, i32* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv4i32(<vscale x 4 x i32> %val,<vscale x 4 x i32> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv4i32(<vscale x 4 x i32> %val, i32* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv4i32(<vscale x 4 x i32> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; CHECK-NEXT:    vssseg2e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv4i32(<vscale x 4 x i32> %val,<vscale x 4 x i32> %val, i32* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv4i32(<vscale x 4 x i32> %val,<vscale x 4 x i32> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg3.nxv4i32(<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>, i32*, i64, i64)
-declare void @llvm.riscv.vssseg3.mask.nxv4i32(<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>, i32*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg3.nxv4i32(<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg3.mask.nxv4i32(<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg3_nxv4i32(<vscale x 4 x i32> %val, i32* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg3_nxv4i32(<vscale x 4 x i32> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; CHECK-NEXT:    vssseg3e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.nxv4i32(<vscale x 4 x i32> %val,<vscale x 4 x i32> %val,<vscale x 4 x i32> %val, i32* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.nxv4i32(<vscale x 4 x i32> %val,<vscale x 4 x i32> %val,<vscale x 4 x i32> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg3_mask_nxv4i32(<vscale x 4 x i32> %val, i32* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg3_mask_nxv4i32(<vscale x 4 x i32> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_mask_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; CHECK-NEXT:    vssseg3e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.mask.nxv4i32(<vscale x 4 x i32> %val,<vscale x 4 x i32> %val,<vscale x 4 x i32> %val, i32* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.mask.nxv4i32(<vscale x 4 x i32> %val,<vscale x 4 x i32> %val,<vscale x 4 x i32> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg4.nxv4i32(<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>, i32*, i64, i64)
-declare void @llvm.riscv.vssseg4.mask.nxv4i32(<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>, i32*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg4.nxv4i32(<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg4.mask.nxv4i32(<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg4_nxv4i32(<vscale x 4 x i32> %val, i32* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg4_nxv4i32(<vscale x 4 x i32> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2_v14m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; CHECK-NEXT:    vssseg4e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.nxv4i32(<vscale x 4 x i32> %val,<vscale x 4 x i32> %val,<vscale x 4 x i32> %val,<vscale x 4 x i32> %val, i32* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.nxv4i32(<vscale x 4 x i32> %val,<vscale x 4 x i32> %val,<vscale x 4 x i32> %val,<vscale x 4 x i32> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg4_mask_nxv4i32(<vscale x 4 x i32> %val, i32* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg4_mask_nxv4i32(<vscale x 4 x i32> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_mask_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2_v14m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; CHECK-NEXT:    vssseg4e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.mask.nxv4i32(<vscale x 4 x i32> %val,<vscale x 4 x i32> %val,<vscale x 4 x i32> %val,<vscale x 4 x i32> %val, i32* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.mask.nxv4i32(<vscale x 4 x i32> %val,<vscale x 4 x i32> %val,<vscale x 4 x i32> %val,<vscale x 4 x i32> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv16i8(<vscale x 16 x i8>,<vscale x 16 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv16i8(<vscale x 16 x i8>,<vscale x 16 x i8>, i8*, i64, <vscale x 16 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv16i8(<vscale x 16 x i8>,<vscale x 16 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv16i8(<vscale x 16 x i8>,<vscale x 16 x i8>, ptr, i64, <vscale x 16 x i1>, i64)
 
-define void @test_vssseg2_nxv16i8(<vscale x 16 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv16i8(<vscale x 16 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
 ; CHECK-NEXT:    vssseg2e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv16i8(<vscale x 16 x i8> %val,<vscale x 16 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv16i8(<vscale x 16 x i8> %val,<vscale x 16 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv16i8(<vscale x 16 x i8> %val, i8* %base, i64 %offset, <vscale x 16 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv16i8(<vscale x 16 x i8> %val, ptr %base, i64 %offset, <vscale x 16 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
 ; CHECK-NEXT:    vssseg2e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv16i8(<vscale x 16 x i8> %val,<vscale x 16 x i8> %val, i8* %base, i64 %offset, <vscale x 16 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv16i8(<vscale x 16 x i8> %val,<vscale x 16 x i8> %val, ptr %base, i64 %offset, <vscale x 16 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg3.nxv16i8(<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg3.mask.nxv16i8(<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x i8>, i8*, i64, <vscale x 16 x i1>, i64)
+declare void @llvm.riscv.vssseg3.nxv16i8(<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg3.mask.nxv16i8(<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x i8>, ptr, i64, <vscale x 16 x i1>, i64)
 
-define void @test_vssseg3_nxv16i8(<vscale x 16 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg3_nxv16i8(<vscale x 16 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
 ; CHECK-NEXT:    vssseg3e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.nxv16i8(<vscale x 16 x i8> %val,<vscale x 16 x i8> %val,<vscale x 16 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.nxv16i8(<vscale x 16 x i8> %val,<vscale x 16 x i8> %val,<vscale x 16 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg3_mask_nxv16i8(<vscale x 16 x i8> %val, i8* %base, i64 %offset, <vscale x 16 x i1> %mask, i64 %vl) {
+define void @test_vssseg3_mask_nxv16i8(<vscale x 16 x i8> %val, ptr %base, i64 %offset, <vscale x 16 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_mask_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
 ; CHECK-NEXT:    vssseg3e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.mask.nxv16i8(<vscale x 16 x i8> %val,<vscale x 16 x i8> %val,<vscale x 16 x i8> %val, i8* %base, i64 %offset, <vscale x 16 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.mask.nxv16i8(<vscale x 16 x i8> %val,<vscale x 16 x i8> %val,<vscale x 16 x i8> %val, ptr %base, i64 %offset, <vscale x 16 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg4.nxv16i8(<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg4.mask.nxv16i8(<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x i8>, i8*, i64, <vscale x 16 x i1>, i64)
+declare void @llvm.riscv.vssseg4.nxv16i8(<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg4.mask.nxv16i8(<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x i8>, ptr, i64, <vscale x 16 x i1>, i64)
 
-define void @test_vssseg4_nxv16i8(<vscale x 16 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg4_nxv16i8(<vscale x 16 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2_v14m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
 ; CHECK-NEXT:    vssseg4e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.nxv16i8(<vscale x 16 x i8> %val,<vscale x 16 x i8> %val,<vscale x 16 x i8> %val,<vscale x 16 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.nxv16i8(<vscale x 16 x i8> %val,<vscale x 16 x i8> %val,<vscale x 16 x i8> %val,<vscale x 16 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg4_mask_nxv16i8(<vscale x 16 x i8> %val, i8* %base, i64 %offset, <vscale x 16 x i1> %mask, i64 %vl) {
+define void @test_vssseg4_mask_nxv16i8(<vscale x 16 x i8> %val, ptr %base, i64 %offset, <vscale x 16 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_mask_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2_v14m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
 ; CHECK-NEXT:    vssseg4e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.mask.nxv16i8(<vscale x 16 x i8> %val,<vscale x 16 x i8> %val,<vscale x 16 x i8> %val,<vscale x 16 x i8> %val, i8* %base, i64 %offset, <vscale x 16 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.mask.nxv16i8(<vscale x 16 x i8> %val,<vscale x 16 x i8> %val,<vscale x 16 x i8> %val,<vscale x 16 x i8> %val, ptr %base, i64 %offset, <vscale x 16 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>, i64*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>, i64*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg2_nxv1i64(<vscale x 1 x i64> %val, i64* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv1i64(<vscale x 1 x i64> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg2e64.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, i64* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv1i64(<vscale x 1 x i64> %val, i64* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv1i64(<vscale x 1 x i64> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg2e64.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, i64* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg3.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>, i64*, i64, i64)
-declare void @llvm.riscv.vssseg3.mask.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>, i64*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg3.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg3.mask.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg3_nxv1i64(<vscale x 1 x i64> %val, i64* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg3_nxv1i64(<vscale x 1 x i64> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg3e64.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, i64* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg3_mask_nxv1i64(<vscale x 1 x i64> %val, i64* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg3_mask_nxv1i64(<vscale x 1 x i64> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_mask_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg3e64.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.mask.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, i64* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.mask.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg4.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>, i64*, i64, i64)
-declare void @llvm.riscv.vssseg4.mask.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>, i64*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg4.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg4.mask.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg4_nxv1i64(<vscale x 1 x i64> %val, i64* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg4_nxv1i64(<vscale x 1 x i64> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg4e64.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, i64* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg4_mask_nxv1i64(<vscale x 1 x i64> %val, i64* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg4_mask_nxv1i64(<vscale x 1 x i64> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_mask_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg4e64.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.mask.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, i64* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.mask.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg5.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>, i64*, i64, i64)
-declare void @llvm.riscv.vssseg5.mask.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>, i64*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg5.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg5.mask.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg5_nxv1i64(<vscale x 1 x i64> %val, i64* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg5_nxv1i64(<vscale x 1 x i64> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -321,15 +321,15 @@ define void @test_vssseg5_nxv1i64(<vscale x 1 x i64> %val, i64* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg5e64.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, i64* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg5_mask_nxv1i64(<vscale x 1 x i64> %val, i64* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg5_mask_nxv1i64(<vscale x 1 x i64> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_mask_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -337,18 +337,18 @@ define void @test_vssseg5_mask_nxv1i64(<vscale x 1 x i64> %val, i64* %base, i64 
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg5e64.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.mask.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, i64* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.mask.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg6.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>, i64*, i64, i64)
-declare void @llvm.riscv.vssseg6.mask.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>, i64*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg6.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg6.mask.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg6_nxv1i64(<vscale x 1 x i64> %val, i64* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg6_nxv1i64(<vscale x 1 x i64> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -357,15 +357,15 @@ define void @test_vssseg6_nxv1i64(<vscale x 1 x i64> %val, i64* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg6e64.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, i64* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg6_mask_nxv1i64(<vscale x 1 x i64> %val, i64* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg6_mask_nxv1i64(<vscale x 1 x i64> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_mask_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -374,18 +374,18 @@ define void @test_vssseg6_mask_nxv1i64(<vscale x 1 x i64> %val, i64* %base, i64 
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg6e64.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.mask.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, i64* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.mask.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg7.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>, i64*, i64, i64)
-declare void @llvm.riscv.vssseg7.mask.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>, i64*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg7.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg7.mask.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg7_nxv1i64(<vscale x 1 x i64> %val, i64* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg7_nxv1i64(<vscale x 1 x i64> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -395,15 +395,15 @@ define void @test_vssseg7_nxv1i64(<vscale x 1 x i64> %val, i64* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg7e64.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, i64* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg7_mask_nxv1i64(<vscale x 1 x i64> %val, i64* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg7_mask_nxv1i64(<vscale x 1 x i64> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_mask_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -413,18 +413,18 @@ define void @test_vssseg7_mask_nxv1i64(<vscale x 1 x i64> %val, i64* %base, i64 
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg7e64.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.mask.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, i64* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.mask.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg8.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>, i64*, i64, i64)
-declare void @llvm.riscv.vssseg8.mask.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>, i64*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg8.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg8.mask.nxv1i64(<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg8_nxv1i64(<vscale x 1 x i64> %val, i64* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg8_nxv1i64(<vscale x 1 x i64> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -435,15 +435,15 @@ define void @test_vssseg8_nxv1i64(<vscale x 1 x i64> %val, i64* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg8e64.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, i64* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg8_mask_nxv1i64(<vscale x 1 x i64> %val, i64* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg8_mask_nxv1i64(<vscale x 1 x i64> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_mask_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -454,111 +454,111 @@ define void @test_vssseg8_mask_nxv1i64(<vscale x 1 x i64> %val, i64* %base, i64 
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg8e64.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.mask.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, i64* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.mask.nxv1i64(<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val,<vscale x 1 x i64> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>, i32*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>, i32*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg2_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv1i32(<vscale x 1 x i32> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg2e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, i32* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv1i32(<vscale x 1 x i32> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg2e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, i32* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg3.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>, i32*, i64, i64)
-declare void @llvm.riscv.vssseg3.mask.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>, i32*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg3.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg3.mask.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg3_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg3_nxv1i32(<vscale x 1 x i32> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg3e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, i32* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg3_mask_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg3_mask_nxv1i32(<vscale x 1 x i32> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_mask_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg3e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.mask.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, i32* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.mask.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg4.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>, i32*, i64, i64)
-declare void @llvm.riscv.vssseg4.mask.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>, i32*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg4.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg4.mask.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg4_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg4_nxv1i32(<vscale x 1 x i32> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg4e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, i32* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg4_mask_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg4_mask_nxv1i32(<vscale x 1 x i32> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_mask_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg4e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.mask.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, i32* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.mask.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg5.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>, i32*, i64, i64)
-declare void @llvm.riscv.vssseg5.mask.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>, i32*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg5.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg5.mask.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg5_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg5_nxv1i32(<vscale x 1 x i32> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -566,15 +566,15 @@ define void @test_vssseg5_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg5e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, i32* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg5_mask_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg5_mask_nxv1i32(<vscale x 1 x i32> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_mask_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -582,18 +582,18 @@ define void @test_vssseg5_mask_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i64 
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg5e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.mask.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, i32* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.mask.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg6.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>, i32*, i64, i64)
-declare void @llvm.riscv.vssseg6.mask.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>, i32*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg6.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg6.mask.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg6_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg6_nxv1i32(<vscale x 1 x i32> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -602,15 +602,15 @@ define void @test_vssseg6_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg6e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, i32* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg6_mask_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg6_mask_nxv1i32(<vscale x 1 x i32> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_mask_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -619,18 +619,18 @@ define void @test_vssseg6_mask_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i64 
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg6e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.mask.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, i32* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.mask.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg7.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>, i32*, i64, i64)
-declare void @llvm.riscv.vssseg7.mask.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>, i32*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg7.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg7.mask.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg7_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg7_nxv1i32(<vscale x 1 x i32> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -640,15 +640,15 @@ define void @test_vssseg7_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg7e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, i32* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg7_mask_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg7_mask_nxv1i32(<vscale x 1 x i32> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_mask_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -658,18 +658,18 @@ define void @test_vssseg7_mask_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i64 
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg7e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.mask.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, i32* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.mask.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg8.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>, i32*, i64, i64)
-declare void @llvm.riscv.vssseg8.mask.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>, i32*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg8.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg8.mask.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg8_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg8_nxv1i32(<vscale x 1 x i32> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -680,15 +680,15 @@ define void @test_vssseg8_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg8e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, i32* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg8_mask_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg8_mask_nxv1i32(<vscale x 1 x i32> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_mask_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -699,204 +699,204 @@ define void @test_vssseg8_mask_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i64 
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg8e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.mask.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, i32* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.mask.nxv1i32(<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val,<vscale x 1 x i32> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv8i16(<vscale x 8 x i16>,<vscale x 8 x i16>, i16*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv8i16(<vscale x 8 x i16>,<vscale x 8 x i16>, i16*, i64, <vscale x 8 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv8i16(<vscale x 8 x i16>,<vscale x 8 x i16>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv8i16(<vscale x 8 x i16>,<vscale x 8 x i16>, ptr, i64, <vscale x 8 x i1>, i64)
 
-define void @test_vssseg2_nxv8i16(<vscale x 8 x i16> %val, i16* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv8i16(<vscale x 8 x i16> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, ma
 ; CHECK-NEXT:    vssseg2e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv8i16(<vscale x 8 x i16> %val,<vscale x 8 x i16> %val, i16* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv8i16(<vscale x 8 x i16> %val,<vscale x 8 x i16> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv8i16(<vscale x 8 x i16> %val, i16* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv8i16(<vscale x 8 x i16> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, ma
 ; CHECK-NEXT:    vssseg2e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv8i16(<vscale x 8 x i16> %val,<vscale x 8 x i16> %val, i16* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv8i16(<vscale x 8 x i16> %val,<vscale x 8 x i16> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg3.nxv8i16(<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>, i16*, i64, i64)
-declare void @llvm.riscv.vssseg3.mask.nxv8i16(<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>, i16*, i64, <vscale x 8 x i1>, i64)
+declare void @llvm.riscv.vssseg3.nxv8i16(<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg3.mask.nxv8i16(<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>, ptr, i64, <vscale x 8 x i1>, i64)
 
-define void @test_vssseg3_nxv8i16(<vscale x 8 x i16> %val, i16* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg3_nxv8i16(<vscale x 8 x i16> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, ma
 ; CHECK-NEXT:    vssseg3e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.nxv8i16(<vscale x 8 x i16> %val,<vscale x 8 x i16> %val,<vscale x 8 x i16> %val, i16* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.nxv8i16(<vscale x 8 x i16> %val,<vscale x 8 x i16> %val,<vscale x 8 x i16> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg3_mask_nxv8i16(<vscale x 8 x i16> %val, i16* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
+define void @test_vssseg3_mask_nxv8i16(<vscale x 8 x i16> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_mask_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, ma
 ; CHECK-NEXT:    vssseg3e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.mask.nxv8i16(<vscale x 8 x i16> %val,<vscale x 8 x i16> %val,<vscale x 8 x i16> %val, i16* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.mask.nxv8i16(<vscale x 8 x i16> %val,<vscale x 8 x i16> %val,<vscale x 8 x i16> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg4.nxv8i16(<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>, i16*, i64, i64)
-declare void @llvm.riscv.vssseg4.mask.nxv8i16(<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>, i16*, i64, <vscale x 8 x i1>, i64)
+declare void @llvm.riscv.vssseg4.nxv8i16(<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg4.mask.nxv8i16(<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>, ptr, i64, <vscale x 8 x i1>, i64)
 
-define void @test_vssseg4_nxv8i16(<vscale x 8 x i16> %val, i16* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg4_nxv8i16(<vscale x 8 x i16> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2_v14m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, ma
 ; CHECK-NEXT:    vssseg4e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.nxv8i16(<vscale x 8 x i16> %val,<vscale x 8 x i16> %val,<vscale x 8 x i16> %val,<vscale x 8 x i16> %val, i16* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.nxv8i16(<vscale x 8 x i16> %val,<vscale x 8 x i16> %val,<vscale x 8 x i16> %val,<vscale x 8 x i16> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg4_mask_nxv8i16(<vscale x 8 x i16> %val, i16* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
+define void @test_vssseg4_mask_nxv8i16(<vscale x 8 x i16> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_mask_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2_v14m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, ma
 ; CHECK-NEXT:    vssseg4e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.mask.nxv8i16(<vscale x 8 x i16> %val,<vscale x 8 x i16> %val,<vscale x 8 x i16> %val,<vscale x 8 x i16> %val, i16* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.mask.nxv8i16(<vscale x 8 x i16> %val,<vscale x 8 x i16> %val,<vscale x 8 x i16> %val,<vscale x 8 x i16> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>, i8*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg2_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv4i8(<vscale x 4 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, ma
 ; CHECK-NEXT:    vssseg2e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv4i8(<vscale x 4 x i8> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, ma
 ; CHECK-NEXT:    vssseg2e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, i8* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg3.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg3.mask.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>, i8*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg3.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg3.mask.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg3_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg3_nxv4i8(<vscale x 4 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, ma
 ; CHECK-NEXT:    vssseg3e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg3_mask_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg3_mask_nxv4i8(<vscale x 4 x i8> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_mask_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, ma
 ; CHECK-NEXT:    vssseg3e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.mask.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, i8* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.mask.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg4.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg4.mask.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>, i8*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg4.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg4.mask.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg4_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg4_nxv4i8(<vscale x 4 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, ma
 ; CHECK-NEXT:    vssseg4e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg4_mask_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg4_mask_nxv4i8(<vscale x 4 x i8> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_mask_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, ma
 ; CHECK-NEXT:    vssseg4e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.mask.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, i8* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.mask.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg5.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg5.mask.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>, i8*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg5.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg5.mask.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg5_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg5_nxv4i8(<vscale x 4 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -904,15 +904,15 @@ define void @test_vssseg5_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i64 %offset,
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, ma
 ; CHECK-NEXT:    vssseg5e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg5_mask_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg5_mask_nxv4i8(<vscale x 4 x i8> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_mask_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -920,18 +920,18 @@ define void @test_vssseg5_mask_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, ma
 ; CHECK-NEXT:    vssseg5e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.mask.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, i8* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.mask.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg6.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg6.mask.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>, i8*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg6.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg6.mask.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg6_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg6_nxv4i8(<vscale x 4 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -940,15 +940,15 @@ define void @test_vssseg6_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i64 %offset,
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, ma
 ; CHECK-NEXT:    vssseg6e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg6_mask_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg6_mask_nxv4i8(<vscale x 4 x i8> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_mask_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -957,18 +957,18 @@ define void @test_vssseg6_mask_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, ma
 ; CHECK-NEXT:    vssseg6e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.mask.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, i8* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.mask.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg7.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg7.mask.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>, i8*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg7.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg7.mask.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg7_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg7_nxv4i8(<vscale x 4 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -978,15 +978,15 @@ define void @test_vssseg7_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i64 %offset,
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, ma
 ; CHECK-NEXT:    vssseg7e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg7_mask_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg7_mask_nxv4i8(<vscale x 4 x i8> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_mask_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -996,18 +996,18 @@ define void @test_vssseg7_mask_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, ma
 ; CHECK-NEXT:    vssseg7e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.mask.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, i8* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.mask.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg8.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg8.mask.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>, i8*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg8.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg8.mask.nxv4i8(<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg8_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg8_nxv4i8(<vscale x 4 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -1018,15 +1018,15 @@ define void @test_vssseg8_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i64 %offset,
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, ma
 ; CHECK-NEXT:    vssseg8e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg8_mask_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg8_mask_nxv4i8(<vscale x 4 x i8> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_mask_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -1037,111 +1037,111 @@ define void @test_vssseg8_mask_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, ma
 ; CHECK-NEXT:    vssseg8e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.mask.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, i8* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.mask.nxv4i8(<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val,<vscale x 4 x i8> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>, i16*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>, i16*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg2_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv1i16(<vscale x 1 x i16> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg2e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, i16* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv1i16(<vscale x 1 x i16> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg2e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, i16* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg3.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>, i16*, i64, i64)
-declare void @llvm.riscv.vssseg3.mask.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>, i16*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg3.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg3.mask.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg3_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg3_nxv1i16(<vscale x 1 x i16> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg3e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, i16* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg3_mask_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg3_mask_nxv1i16(<vscale x 1 x i16> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_mask_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg3e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.mask.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, i16* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.mask.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg4.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>, i16*, i64, i64)
-declare void @llvm.riscv.vssseg4.mask.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>, i16*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg4.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg4.mask.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg4_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg4_nxv1i16(<vscale x 1 x i16> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg4e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, i16* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg4_mask_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg4_mask_nxv1i16(<vscale x 1 x i16> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_mask_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg4e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.mask.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, i16* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.mask.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg5.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>, i16*, i64, i64)
-declare void @llvm.riscv.vssseg5.mask.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>, i16*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg5.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg5.mask.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg5_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg5_nxv1i16(<vscale x 1 x i16> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -1149,15 +1149,15 @@ define void @test_vssseg5_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg5e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, i16* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg5_mask_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg5_mask_nxv1i16(<vscale x 1 x i16> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_mask_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -1165,18 +1165,18 @@ define void @test_vssseg5_mask_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i64 
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg5e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.mask.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, i16* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.mask.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg6.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>, i16*, i64, i64)
-declare void @llvm.riscv.vssseg6.mask.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>, i16*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg6.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg6.mask.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg6_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg6_nxv1i16(<vscale x 1 x i16> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -1185,15 +1185,15 @@ define void @test_vssseg6_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg6e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, i16* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg6_mask_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg6_mask_nxv1i16(<vscale x 1 x i16> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_mask_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -1202,18 +1202,18 @@ define void @test_vssseg6_mask_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i64 
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg6e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.mask.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, i16* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.mask.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg7.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>, i16*, i64, i64)
-declare void @llvm.riscv.vssseg7.mask.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>, i16*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg7.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg7.mask.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg7_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg7_nxv1i16(<vscale x 1 x i16> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -1223,15 +1223,15 @@ define void @test_vssseg7_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg7e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, i16* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg7_mask_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg7_mask_nxv1i16(<vscale x 1 x i16> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_mask_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -1241,18 +1241,18 @@ define void @test_vssseg7_mask_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i64 
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg7e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.mask.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, i16* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.mask.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg8.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>, i16*, i64, i64)
-declare void @llvm.riscv.vssseg8.mask.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>, i16*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg8.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg8.mask.nxv1i16(<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg8_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg8_nxv1i16(<vscale x 1 x i16> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -1263,15 +1263,15 @@ define void @test_vssseg8_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg8e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, i16* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg8_mask_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg8_mask_nxv1i16(<vscale x 1 x i16> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_mask_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -1282,111 +1282,111 @@ define void @test_vssseg8_mask_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i64 
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg8e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.mask.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, i16* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.mask.nxv1i16(<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val,<vscale x 1 x i16> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>, i32*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>, i32*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg2_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv2i32(<vscale x 2 x i32> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg2e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, i32* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv2i32(<vscale x 2 x i32> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg2e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, i32* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg3.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>, i32*, i64, i64)
-declare void @llvm.riscv.vssseg3.mask.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>, i32*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg3.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg3.mask.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg3_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg3_nxv2i32(<vscale x 2 x i32> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg3e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, i32* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg3_mask_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg3_mask_nxv2i32(<vscale x 2 x i32> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_mask_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg3e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.mask.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, i32* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.mask.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg4.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>, i32*, i64, i64)
-declare void @llvm.riscv.vssseg4.mask.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>, i32*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg4.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg4.mask.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg4_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg4_nxv2i32(<vscale x 2 x i32> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg4e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, i32* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg4_mask_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg4_mask_nxv2i32(<vscale x 2 x i32> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_mask_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg4e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.mask.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, i32* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.mask.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg5.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>, i32*, i64, i64)
-declare void @llvm.riscv.vssseg5.mask.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>, i32*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg5.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg5.mask.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg5_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg5_nxv2i32(<vscale x 2 x i32> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -1394,15 +1394,15 @@ define void @test_vssseg5_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg5e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, i32* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg5_mask_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg5_mask_nxv2i32(<vscale x 2 x i32> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_mask_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -1410,18 +1410,18 @@ define void @test_vssseg5_mask_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i64 
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg5e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.mask.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, i32* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.mask.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg6.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>, i32*, i64, i64)
-declare void @llvm.riscv.vssseg6.mask.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>, i32*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg6.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg6.mask.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg6_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg6_nxv2i32(<vscale x 2 x i32> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -1430,15 +1430,15 @@ define void @test_vssseg6_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg6e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, i32* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg6_mask_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg6_mask_nxv2i32(<vscale x 2 x i32> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_mask_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -1447,18 +1447,18 @@ define void @test_vssseg6_mask_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i64 
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg6e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.mask.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, i32* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.mask.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg7.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>, i32*, i64, i64)
-declare void @llvm.riscv.vssseg7.mask.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>, i32*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg7.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg7.mask.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg7_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg7_nxv2i32(<vscale x 2 x i32> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -1468,15 +1468,15 @@ define void @test_vssseg7_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg7e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, i32* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg7_mask_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg7_mask_nxv2i32(<vscale x 2 x i32> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_mask_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -1486,18 +1486,18 @@ define void @test_vssseg7_mask_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i64 
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg7e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.mask.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, i32* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.mask.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg8.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>, i32*, i64, i64)
-declare void @llvm.riscv.vssseg8.mask.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>, i32*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg8.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg8.mask.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg8_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg8_nxv2i32(<vscale x 2 x i32> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -1508,15 +1508,15 @@ define void @test_vssseg8_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg8e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, i32* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg8_mask_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg8_mask_nxv2i32(<vscale x 2 x i32> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_mask_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -1527,111 +1527,111 @@ define void @test_vssseg8_mask_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i64 
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg8e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.mask.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, i32* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.mask.nxv2i32(<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val,<vscale x 2 x i32> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>, i8*, i64, <vscale x 8 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>, ptr, i64, <vscale x 8 x i1>, i64)
 
-define void @test_vssseg2_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv8i8(<vscale x 8 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, ma
 ; CHECK-NEXT:    vssseg2e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv8i8(<vscale x 8 x i8> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, ma
 ; CHECK-NEXT:    vssseg2e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, i8* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg3.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg3.mask.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>, i8*, i64, <vscale x 8 x i1>, i64)
+declare void @llvm.riscv.vssseg3.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg3.mask.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>, ptr, i64, <vscale x 8 x i1>, i64)
 
-define void @test_vssseg3_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg3_nxv8i8(<vscale x 8 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, ma
 ; CHECK-NEXT:    vssseg3e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg3_mask_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
+define void @test_vssseg3_mask_nxv8i8(<vscale x 8 x i8> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_mask_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, ma
 ; CHECK-NEXT:    vssseg3e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.mask.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, i8* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.mask.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg4.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg4.mask.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>, i8*, i64, <vscale x 8 x i1>, i64)
+declare void @llvm.riscv.vssseg4.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg4.mask.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>, ptr, i64, <vscale x 8 x i1>, i64)
 
-define void @test_vssseg4_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg4_nxv8i8(<vscale x 8 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, ma
 ; CHECK-NEXT:    vssseg4e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg4_mask_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
+define void @test_vssseg4_mask_nxv8i8(<vscale x 8 x i8> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_mask_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, ma
 ; CHECK-NEXT:    vssseg4e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.mask.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, i8* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.mask.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg5.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg5.mask.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>, i8*, i64, <vscale x 8 x i1>, i64)
+declare void @llvm.riscv.vssseg5.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg5.mask.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>, ptr, i64, <vscale x 8 x i1>, i64)
 
-define void @test_vssseg5_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg5_nxv8i8(<vscale x 8 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -1639,15 +1639,15 @@ define void @test_vssseg5_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i64 %offset,
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, ma
 ; CHECK-NEXT:    vssseg5e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg5_mask_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
+define void @test_vssseg5_mask_nxv8i8(<vscale x 8 x i8> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_mask_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -1655,18 +1655,18 @@ define void @test_vssseg5_mask_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, ma
 ; CHECK-NEXT:    vssseg5e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.mask.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, i8* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.mask.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg6.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg6.mask.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>, i8*, i64, <vscale x 8 x i1>, i64)
+declare void @llvm.riscv.vssseg6.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg6.mask.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>, ptr, i64, <vscale x 8 x i1>, i64)
 
-define void @test_vssseg6_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg6_nxv8i8(<vscale x 8 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -1675,15 +1675,15 @@ define void @test_vssseg6_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i64 %offset,
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, ma
 ; CHECK-NEXT:    vssseg6e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg6_mask_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
+define void @test_vssseg6_mask_nxv8i8(<vscale x 8 x i8> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_mask_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -1692,18 +1692,18 @@ define void @test_vssseg6_mask_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, ma
 ; CHECK-NEXT:    vssseg6e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.mask.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, i8* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.mask.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg7.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg7.mask.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>, i8*, i64, <vscale x 8 x i1>, i64)
+declare void @llvm.riscv.vssseg7.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg7.mask.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>, ptr, i64, <vscale x 8 x i1>, i64)
 
-define void @test_vssseg7_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg7_nxv8i8(<vscale x 8 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -1713,15 +1713,15 @@ define void @test_vssseg7_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i64 %offset,
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, ma
 ; CHECK-NEXT:    vssseg7e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg7_mask_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
+define void @test_vssseg7_mask_nxv8i8(<vscale x 8 x i8> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_mask_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -1731,18 +1731,18 @@ define void @test_vssseg7_mask_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, ma
 ; CHECK-NEXT:    vssseg7e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.mask.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, i8* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.mask.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg8.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg8.mask.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>, i8*, i64, <vscale x 8 x i1>, i64)
+declare void @llvm.riscv.vssseg8.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg8.mask.nxv8i8(<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>, ptr, i64, <vscale x 8 x i1>, i64)
 
-define void @test_vssseg8_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg8_nxv8i8(<vscale x 8 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -1753,15 +1753,15 @@ define void @test_vssseg8_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i64 %offset,
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, ma
 ; CHECK-NEXT:    vssseg8e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg8_mask_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
+define void @test_vssseg8_mask_nxv8i8(<vscale x 8 x i8> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_mask_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -1772,140 +1772,140 @@ define void @test_vssseg8_mask_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, ma
 ; CHECK-NEXT:    vssseg8e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.mask.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, i8* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.mask.nxv8i8(<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val,<vscale x 8 x i8> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv4i64(<vscale x 4 x i64>,<vscale x 4 x i64>, i64*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv4i64(<vscale x 4 x i64>,<vscale x 4 x i64>, i64*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv4i64(<vscale x 4 x i64>,<vscale x 4 x i64>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv4i64(<vscale x 4 x i64>,<vscale x 4 x i64>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg2_nxv4i64(<vscale x 4 x i64> %val, i64* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv4i64(<vscale x 4 x i64> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m4, ta, ma
 ; CHECK-NEXT:    vssseg2e64.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv4i64(<vscale x 4 x i64> %val,<vscale x 4 x i64> %val, i64* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv4i64(<vscale x 4 x i64> %val,<vscale x 4 x i64> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv4i64(<vscale x 4 x i64> %val, i64* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv4i64(<vscale x 4 x i64> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m4, ta, ma
 ; CHECK-NEXT:    vssseg2e64.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv4i64(<vscale x 4 x i64> %val,<vscale x 4 x i64> %val, i64* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv4i64(<vscale x 4 x i64> %val,<vscale x 4 x i64> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>, i16*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>, i16*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg2_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv4i16(<vscale x 4 x i16> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg2e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, i16* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv4i16(<vscale x 4 x i16> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg2e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, i16* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg3.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>, i16*, i64, i64)
-declare void @llvm.riscv.vssseg3.mask.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>, i16*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg3.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg3.mask.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg3_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg3_nxv4i16(<vscale x 4 x i16> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg3e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, i16* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg3_mask_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg3_mask_nxv4i16(<vscale x 4 x i16> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_mask_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg3e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.mask.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, i16* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.mask.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg4.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>, i16*, i64, i64)
-declare void @llvm.riscv.vssseg4.mask.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>, i16*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg4.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg4.mask.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg4_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg4_nxv4i16(<vscale x 4 x i16> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg4e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, i16* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg4_mask_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg4_mask_nxv4i16(<vscale x 4 x i16> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_mask_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg4e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.mask.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, i16* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.mask.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg5.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>, i16*, i64, i64)
-declare void @llvm.riscv.vssseg5.mask.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>, i16*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg5.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg5.mask.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg5_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg5_nxv4i16(<vscale x 4 x i16> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -1913,15 +1913,15 @@ define void @test_vssseg5_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg5e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, i16* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg5_mask_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg5_mask_nxv4i16(<vscale x 4 x i16> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_mask_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -1929,18 +1929,18 @@ define void @test_vssseg5_mask_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i64 
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg5e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.mask.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, i16* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.mask.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg6.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>, i16*, i64, i64)
-declare void @llvm.riscv.vssseg6.mask.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>, i16*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg6.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg6.mask.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg6_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg6_nxv4i16(<vscale x 4 x i16> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -1949,15 +1949,15 @@ define void @test_vssseg6_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg6e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, i16* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg6_mask_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg6_mask_nxv4i16(<vscale x 4 x i16> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_mask_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -1966,18 +1966,18 @@ define void @test_vssseg6_mask_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i64 
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg6e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.mask.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, i16* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.mask.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg7.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>, i16*, i64, i64)
-declare void @llvm.riscv.vssseg7.mask.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>, i16*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg7.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg7.mask.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg7_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg7_nxv4i16(<vscale x 4 x i16> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -1987,15 +1987,15 @@ define void @test_vssseg7_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg7e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, i16* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg7_mask_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg7_mask_nxv4i16(<vscale x 4 x i16> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_mask_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -2005,18 +2005,18 @@ define void @test_vssseg7_mask_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i64 
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg7e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.mask.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, i16* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.mask.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg8.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>, i16*, i64, i64)
-declare void @llvm.riscv.vssseg8.mask.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>, i16*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg8.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg8.mask.nxv4i16(<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg8_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg8_nxv4i16(<vscale x 4 x i16> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -2027,15 +2027,15 @@ define void @test_vssseg8_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg8e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, i16* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg8_mask_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg8_mask_nxv4i16(<vscale x 4 x i16> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_mask_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -2046,111 +2046,111 @@ define void @test_vssseg8_mask_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i64 
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg8e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.mask.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, i16* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.mask.nxv4i16(<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val,<vscale x 4 x i16> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>, i8*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg2_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv1i8(<vscale x 1 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vssseg2e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv1i8(<vscale x 1 x i8> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vssseg2e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, i8* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg3.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg3.mask.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>, i8*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg3.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg3.mask.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg3_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg3_nxv1i8(<vscale x 1 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vssseg3e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg3_mask_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg3_mask_nxv1i8(<vscale x 1 x i8> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_mask_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vssseg3e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.mask.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, i8* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.mask.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg4.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg4.mask.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>, i8*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg4.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg4.mask.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg4_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg4_nxv1i8(<vscale x 1 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vssseg4e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg4_mask_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg4_mask_nxv1i8(<vscale x 1 x i8> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_mask_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vssseg4e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.mask.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, i8* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.mask.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg5.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg5.mask.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>, i8*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg5.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg5.mask.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg5_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg5_nxv1i8(<vscale x 1 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -2158,15 +2158,15 @@ define void @test_vssseg5_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i64 %offset,
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vssseg5e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg5_mask_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg5_mask_nxv1i8(<vscale x 1 x i8> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_mask_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -2174,18 +2174,18 @@ define void @test_vssseg5_mask_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vssseg5e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.mask.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, i8* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.mask.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg6.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg6.mask.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>, i8*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg6.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg6.mask.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg6_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg6_nxv1i8(<vscale x 1 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -2194,15 +2194,15 @@ define void @test_vssseg6_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i64 %offset,
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vssseg6e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg6_mask_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg6_mask_nxv1i8(<vscale x 1 x i8> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_mask_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -2211,18 +2211,18 @@ define void @test_vssseg6_mask_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vssseg6e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.mask.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, i8* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.mask.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg7.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg7.mask.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>, i8*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg7.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg7.mask.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg7_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg7_nxv1i8(<vscale x 1 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -2232,15 +2232,15 @@ define void @test_vssseg7_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i64 %offset,
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vssseg7e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg7_mask_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg7_mask_nxv1i8(<vscale x 1 x i8> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_mask_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -2250,18 +2250,18 @@ define void @test_vssseg7_mask_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vssseg7e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.mask.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, i8* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.mask.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg8.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg8.mask.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>, i8*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg8.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg8.mask.nxv1i8(<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg8_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg8_nxv1i8(<vscale x 1 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -2272,15 +2272,15 @@ define void @test_vssseg8_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i64 %offset,
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vssseg8e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg8_mask_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg8_mask_nxv1i8(<vscale x 1 x i8> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_mask_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -2291,111 +2291,111 @@ define void @test_vssseg8_mask_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vssseg8e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.mask.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, i8* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.mask.nxv1i8(<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val,<vscale x 1 x i8> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>, i8*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg2_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv2i8(<vscale x 2 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vssseg2e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv2i8(<vscale x 2 x i8> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vssseg2e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, i8* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg3.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg3.mask.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>, i8*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg3.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg3.mask.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg3_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg3_nxv2i8(<vscale x 2 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vssseg3e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg3_mask_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg3_mask_nxv2i8(<vscale x 2 x i8> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_mask_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vssseg3e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.mask.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, i8* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.mask.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg4.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg4.mask.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>, i8*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg4.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg4.mask.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg4_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg4_nxv2i8(<vscale x 2 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vssseg4e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg4_mask_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg4_mask_nxv2i8(<vscale x 2 x i8> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_mask_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vssseg4e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.mask.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, i8* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.mask.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg5.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg5.mask.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>, i8*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg5.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg5.mask.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg5_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg5_nxv2i8(<vscale x 2 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -2403,15 +2403,15 @@ define void @test_vssseg5_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i64 %offset,
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vssseg5e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg5_mask_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg5_mask_nxv2i8(<vscale x 2 x i8> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_mask_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -2419,18 +2419,18 @@ define void @test_vssseg5_mask_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vssseg5e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.mask.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, i8* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.mask.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg6.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg6.mask.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>, i8*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg6.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg6.mask.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg6_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg6_nxv2i8(<vscale x 2 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -2439,15 +2439,15 @@ define void @test_vssseg6_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i64 %offset,
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vssseg6e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg6_mask_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg6_mask_nxv2i8(<vscale x 2 x i8> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_mask_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -2456,18 +2456,18 @@ define void @test_vssseg6_mask_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vssseg6e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.mask.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, i8* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.mask.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg7.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg7.mask.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>, i8*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg7.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg7.mask.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg7_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg7_nxv2i8(<vscale x 2 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -2477,15 +2477,15 @@ define void @test_vssseg7_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i64 %offset,
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vssseg7e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg7_mask_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg7_mask_nxv2i8(<vscale x 2 x i8> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_mask_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -2495,18 +2495,18 @@ define void @test_vssseg7_mask_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vssseg7e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.mask.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, i8* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.mask.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg8.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg8.mask.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>, i8*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg8.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg8.mask.nxv2i8(<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg8_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg8_nxv2i8(<vscale x 2 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -2517,15 +2517,15 @@ define void @test_vssseg8_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i64 %offset,
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vssseg8e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg8_mask_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg8_mask_nxv2i8(<vscale x 2 x i8> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_mask_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -2536,169 +2536,169 @@ define void @test_vssseg8_mask_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vssseg8e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.mask.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, i8* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.mask.nxv2i8(<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val,<vscale x 2 x i8> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv8i32(<vscale x 8 x i32>,<vscale x 8 x i32>, i32*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv8i32(<vscale x 8 x i32>,<vscale x 8 x i32>, i32*, i64, <vscale x 8 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv8i32(<vscale x 8 x i32>,<vscale x 8 x i32>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv8i32(<vscale x 8 x i32>,<vscale x 8 x i32>, ptr, i64, <vscale x 8 x i1>, i64)
 
-define void @test_vssseg2_nxv8i32(<vscale x 8 x i32> %val, i32* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv8i32(<vscale x 8 x i32> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m4, ta, ma
 ; CHECK-NEXT:    vssseg2e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv8i32(<vscale x 8 x i32> %val,<vscale x 8 x i32> %val, i32* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv8i32(<vscale x 8 x i32> %val,<vscale x 8 x i32> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv8i32(<vscale x 8 x i32> %val, i32* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv8i32(<vscale x 8 x i32> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m4, ta, ma
 ; CHECK-NEXT:    vssseg2e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv8i32(<vscale x 8 x i32> %val,<vscale x 8 x i32> %val, i32* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv8i32(<vscale x 8 x i32> %val,<vscale x 8 x i32> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv32i8(<vscale x 32 x i8>,<vscale x 32 x i8>, i8*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv32i8(<vscale x 32 x i8>,<vscale x 32 x i8>, i8*, i64, <vscale x 32 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv32i8(<vscale x 32 x i8>,<vscale x 32 x i8>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv32i8(<vscale x 32 x i8>,<vscale x 32 x i8>, ptr, i64, <vscale x 32 x i1>, i64)
 
-define void @test_vssseg2_nxv32i8(<vscale x 32 x i8> %val, i8* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv32i8(<vscale x 32 x i8> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv32i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
 ; CHECK-NEXT:    vssseg2e8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv32i8(<vscale x 32 x i8> %val,<vscale x 32 x i8> %val, i8* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv32i8(<vscale x 32 x i8> %val,<vscale x 32 x i8> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv32i8(<vscale x 32 x i8> %val, i8* %base, i64 %offset, <vscale x 32 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv32i8(<vscale x 32 x i8> %val, ptr %base, i64 %offset, <vscale x 32 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv32i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e8, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
 ; CHECK-NEXT:    vssseg2e8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv32i8(<vscale x 32 x i8> %val,<vscale x 32 x i8> %val, i8* %base, i64 %offset, <vscale x 32 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv32i8(<vscale x 32 x i8> %val,<vscale x 32 x i8> %val, ptr %base, i64 %offset, <vscale x 32 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>, i16*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>, i16*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg2_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv2i16(<vscale x 2 x i16> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg2e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, i16* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv2i16(<vscale x 2 x i16> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg2e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, i16* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg3.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>, i16*, i64, i64)
-declare void @llvm.riscv.vssseg3.mask.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>, i16*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg3.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg3.mask.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg3_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg3_nxv2i16(<vscale x 2 x i16> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg3e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, i16* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg3_mask_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg3_mask_nxv2i16(<vscale x 2 x i16> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_mask_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg3e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.mask.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, i16* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.mask.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg4.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>, i16*, i64, i64)
-declare void @llvm.riscv.vssseg4.mask.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>, i16*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg4.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg4.mask.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg4_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg4_nxv2i16(<vscale x 2 x i16> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg4e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, i16* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg4_mask_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg4_mask_nxv2i16(<vscale x 2 x i16> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_mask_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg4e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.mask.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, i16* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.mask.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg5.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>, i16*, i64, i64)
-declare void @llvm.riscv.vssseg5.mask.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>, i16*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg5.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg5.mask.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg5_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg5_nxv2i16(<vscale x 2 x i16> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -2706,15 +2706,15 @@ define void @test_vssseg5_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg5e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, i16* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg5_mask_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg5_mask_nxv2i16(<vscale x 2 x i16> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_mask_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -2722,18 +2722,18 @@ define void @test_vssseg5_mask_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i64 
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg5e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.mask.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, i16* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.mask.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg6.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>, i16*, i64, i64)
-declare void @llvm.riscv.vssseg6.mask.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>, i16*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg6.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg6.mask.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg6_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg6_nxv2i16(<vscale x 2 x i16> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -2742,15 +2742,15 @@ define void @test_vssseg6_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg6e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, i16* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg6_mask_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg6_mask_nxv2i16(<vscale x 2 x i16> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_mask_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -2759,18 +2759,18 @@ define void @test_vssseg6_mask_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i64 
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg6e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.mask.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, i16* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.mask.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg7.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>, i16*, i64, i64)
-declare void @llvm.riscv.vssseg7.mask.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>, i16*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg7.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg7.mask.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg7_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg7_nxv2i16(<vscale x 2 x i16> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -2780,15 +2780,15 @@ define void @test_vssseg7_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg7e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, i16* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg7_mask_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg7_mask_nxv2i16(<vscale x 2 x i16> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_mask_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -2798,18 +2798,18 @@ define void @test_vssseg7_mask_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i64 
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg7e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.mask.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, i16* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.mask.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg8.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>, i16*, i64, i64)
-declare void @llvm.riscv.vssseg8.mask.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>, i16*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg8.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg8.mask.nxv2i16(<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg8_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg8_nxv2i16(<vscale x 2 x i16> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -2820,15 +2820,15 @@ define void @test_vssseg8_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg8e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, i16* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg8_mask_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg8_mask_nxv2i16(<vscale x 2 x i16> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_mask_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -2839,262 +2839,262 @@ define void @test_vssseg8_mask_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i64 
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg8e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.mask.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, i16* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.mask.nxv2i16(<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val,<vscale x 2 x i16> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv2i64(<vscale x 2 x i64>,<vscale x 2 x i64>, i64*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv2i64(<vscale x 2 x i64>,<vscale x 2 x i64>, i64*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv2i64(<vscale x 2 x i64>,<vscale x 2 x i64>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv2i64(<vscale x 2 x i64>,<vscale x 2 x i64>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg2_nxv2i64(<vscale x 2 x i64> %val, i64* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv2i64(<vscale x 2 x i64> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
 ; CHECK-NEXT:    vssseg2e64.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv2i64(<vscale x 2 x i64> %val,<vscale x 2 x i64> %val, i64* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv2i64(<vscale x 2 x i64> %val,<vscale x 2 x i64> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv2i64(<vscale x 2 x i64> %val, i64* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv2i64(<vscale x 2 x i64> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
 ; CHECK-NEXT:    vssseg2e64.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv2i64(<vscale x 2 x i64> %val,<vscale x 2 x i64> %val, i64* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv2i64(<vscale x 2 x i64> %val,<vscale x 2 x i64> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg3.nxv2i64(<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>, i64*, i64, i64)
-declare void @llvm.riscv.vssseg3.mask.nxv2i64(<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>, i64*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg3.nxv2i64(<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg3.mask.nxv2i64(<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg3_nxv2i64(<vscale x 2 x i64> %val, i64* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg3_nxv2i64(<vscale x 2 x i64> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
 ; CHECK-NEXT:    vssseg3e64.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.nxv2i64(<vscale x 2 x i64> %val,<vscale x 2 x i64> %val,<vscale x 2 x i64> %val, i64* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.nxv2i64(<vscale x 2 x i64> %val,<vscale x 2 x i64> %val,<vscale x 2 x i64> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg3_mask_nxv2i64(<vscale x 2 x i64> %val, i64* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg3_mask_nxv2i64(<vscale x 2 x i64> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_mask_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
 ; CHECK-NEXT:    vssseg3e64.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.mask.nxv2i64(<vscale x 2 x i64> %val,<vscale x 2 x i64> %val,<vscale x 2 x i64> %val, i64* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.mask.nxv2i64(<vscale x 2 x i64> %val,<vscale x 2 x i64> %val,<vscale x 2 x i64> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg4.nxv2i64(<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>, i64*, i64, i64)
-declare void @llvm.riscv.vssseg4.mask.nxv2i64(<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>, i64*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg4.nxv2i64(<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg4.mask.nxv2i64(<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg4_nxv2i64(<vscale x 2 x i64> %val, i64* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg4_nxv2i64(<vscale x 2 x i64> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2_v14m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
 ; CHECK-NEXT:    vssseg4e64.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.nxv2i64(<vscale x 2 x i64> %val,<vscale x 2 x i64> %val,<vscale x 2 x i64> %val,<vscale x 2 x i64> %val, i64* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.nxv2i64(<vscale x 2 x i64> %val,<vscale x 2 x i64> %val,<vscale x 2 x i64> %val,<vscale x 2 x i64> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg4_mask_nxv2i64(<vscale x 2 x i64> %val, i64* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg4_mask_nxv2i64(<vscale x 2 x i64> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_mask_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2_v14m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
 ; CHECK-NEXT:    vssseg4e64.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.mask.nxv2i64(<vscale x 2 x i64> %val,<vscale x 2 x i64> %val,<vscale x 2 x i64> %val,<vscale x 2 x i64> %val, i64* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.mask.nxv2i64(<vscale x 2 x i64> %val,<vscale x 2 x i64> %val,<vscale x 2 x i64> %val,<vscale x 2 x i64> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv16f16(<vscale x 16 x half>,<vscale x 16 x half>, half*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv16f16(<vscale x 16 x half>,<vscale x 16 x half>, half*, i64, <vscale x 16 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv16f16(<vscale x 16 x half>,<vscale x 16 x half>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv16f16(<vscale x 16 x half>,<vscale x 16 x half>, ptr, i64, <vscale x 16 x i1>, i64)
 
-define void @test_vssseg2_nxv16f16(<vscale x 16 x half> %val, half* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv16f16(<vscale x 16 x half> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv16f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
 ; CHECK-NEXT:    vssseg2e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv16f16(<vscale x 16 x half> %val,<vscale x 16 x half> %val, half* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv16f16(<vscale x 16 x half> %val,<vscale x 16 x half> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv16f16(<vscale x 16 x half> %val, half* %base, i64 %offset, <vscale x 16 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv16f16(<vscale x 16 x half> %val, ptr %base, i64 %offset, <vscale x 16 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv16f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
 ; CHECK-NEXT:    vssseg2e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv16f16(<vscale x 16 x half> %val,<vscale x 16 x half> %val, half* %base, i64 %offset, <vscale x 16 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv16f16(<vscale x 16 x half> %val,<vscale x 16 x half> %val, ptr %base, i64 %offset, <vscale x 16 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv4f64(<vscale x 4 x double>,<vscale x 4 x double>, double*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv4f64(<vscale x 4 x double>,<vscale x 4 x double>, double*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv4f64(<vscale x 4 x double>,<vscale x 4 x double>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv4f64(<vscale x 4 x double>,<vscale x 4 x double>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg2_nxv4f64(<vscale x 4 x double> %val, double* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv4f64(<vscale x 4 x double> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m4, ta, ma
 ; CHECK-NEXT:    vssseg2e64.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv4f64(<vscale x 4 x double> %val,<vscale x 4 x double> %val, double* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv4f64(<vscale x 4 x double> %val,<vscale x 4 x double> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv4f64(<vscale x 4 x double> %val, double* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv4f64(<vscale x 4 x double> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m4, ta, ma
 ; CHECK-NEXT:    vssseg2e64.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv4f64(<vscale x 4 x double> %val,<vscale x 4 x double> %val, double* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv4f64(<vscale x 4 x double> %val,<vscale x 4 x double> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>, double*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>, double*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg2_nxv1f64(<vscale x 1 x double> %val, double* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv1f64(<vscale x 1 x double> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv1f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg2e64.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val, double* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv1f64(<vscale x 1 x double> %val, double* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv1f64(<vscale x 1 x double> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv1f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg2e64.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val, double* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg3.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>, double*, i64, i64)
-declare void @llvm.riscv.vssseg3.mask.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>, double*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg3.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg3.mask.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg3_nxv1f64(<vscale x 1 x double> %val, double* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg3_nxv1f64(<vscale x 1 x double> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_nxv1f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg3e64.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val, double* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg3_mask_nxv1f64(<vscale x 1 x double> %val, double* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg3_mask_nxv1f64(<vscale x 1 x double> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_mask_nxv1f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg3e64.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.mask.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val, double* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.mask.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg4.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>, double*, i64, i64)
-declare void @llvm.riscv.vssseg4.mask.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>, double*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg4.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg4.mask.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg4_nxv1f64(<vscale x 1 x double> %val, double* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg4_nxv1f64(<vscale x 1 x double> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_nxv1f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg4e64.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val, double* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg4_mask_nxv1f64(<vscale x 1 x double> %val, double* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg4_mask_nxv1f64(<vscale x 1 x double> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_mask_nxv1f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg4e64.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.mask.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val, double* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.mask.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg5.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>, double*, i64, i64)
-declare void @llvm.riscv.vssseg5.mask.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>, double*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg5.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg5.mask.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg5_nxv1f64(<vscale x 1 x double> %val, double* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg5_nxv1f64(<vscale x 1 x double> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_nxv1f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -3102,15 +3102,15 @@ define void @test_vssseg5_nxv1f64(<vscale x 1 x double> %val, double* %base, i64
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg5e64.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val, double* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg5_mask_nxv1f64(<vscale x 1 x double> %val, double* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg5_mask_nxv1f64(<vscale x 1 x double> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_mask_nxv1f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -3118,18 +3118,18 @@ define void @test_vssseg5_mask_nxv1f64(<vscale x 1 x double> %val, double* %base
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg5e64.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.mask.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val, double* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.mask.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg6.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>, double*, i64, i64)
-declare void @llvm.riscv.vssseg6.mask.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>, double*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg6.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg6.mask.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg6_nxv1f64(<vscale x 1 x double> %val, double* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg6_nxv1f64(<vscale x 1 x double> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_nxv1f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -3138,15 +3138,15 @@ define void @test_vssseg6_nxv1f64(<vscale x 1 x double> %val, double* %base, i64
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg6e64.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val, double* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg6_mask_nxv1f64(<vscale x 1 x double> %val, double* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg6_mask_nxv1f64(<vscale x 1 x double> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_mask_nxv1f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -3155,18 +3155,18 @@ define void @test_vssseg6_mask_nxv1f64(<vscale x 1 x double> %val, double* %base
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg6e64.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.mask.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val, double* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.mask.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg7.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>, double*, i64, i64)
-declare void @llvm.riscv.vssseg7.mask.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>, double*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg7.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg7.mask.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg7_nxv1f64(<vscale x 1 x double> %val, double* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg7_nxv1f64(<vscale x 1 x double> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_nxv1f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -3176,15 +3176,15 @@ define void @test_vssseg7_nxv1f64(<vscale x 1 x double> %val, double* %base, i64
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg7e64.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val, double* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg7_mask_nxv1f64(<vscale x 1 x double> %val, double* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg7_mask_nxv1f64(<vscale x 1 x double> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_mask_nxv1f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -3194,18 +3194,18 @@ define void @test_vssseg7_mask_nxv1f64(<vscale x 1 x double> %val, double* %base
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg7e64.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.mask.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val, double* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.mask.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg8.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>, double*, i64, i64)
-declare void @llvm.riscv.vssseg8.mask.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>, double*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg8.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg8.mask.nxv1f64(<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg8_nxv1f64(<vscale x 1 x double> %val, double* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg8_nxv1f64(<vscale x 1 x double> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_nxv1f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -3216,15 +3216,15 @@ define void @test_vssseg8_nxv1f64(<vscale x 1 x double> %val, double* %base, i64
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg8e64.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val, double* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg8_mask_nxv1f64(<vscale x 1 x double> %val, double* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg8_mask_nxv1f64(<vscale x 1 x double> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_mask_nxv1f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -3235,111 +3235,111 @@ define void @test_vssseg8_mask_nxv1f64(<vscale x 1 x double> %val, double* %base
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vssseg8e64.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.mask.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val, double* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.mask.nxv1f64(<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val,<vscale x 1 x double> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>, float*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>, float*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg2_nxv2f32(<vscale x 2 x float> %val, float* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv2f32(<vscale x 2 x float> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv2f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg2e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val, float* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv2f32(<vscale x 2 x float> %val, float* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv2f32(<vscale x 2 x float> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv2f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg2e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val, float* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg3.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>, float*, i64, i64)
-declare void @llvm.riscv.vssseg3.mask.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>, float*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg3.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg3.mask.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg3_nxv2f32(<vscale x 2 x float> %val, float* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg3_nxv2f32(<vscale x 2 x float> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_nxv2f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg3e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val, float* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg3_mask_nxv2f32(<vscale x 2 x float> %val, float* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg3_mask_nxv2f32(<vscale x 2 x float> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_mask_nxv2f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg3e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.mask.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val, float* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.mask.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg4.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>, float*, i64, i64)
-declare void @llvm.riscv.vssseg4.mask.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>, float*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg4.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg4.mask.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg4_nxv2f32(<vscale x 2 x float> %val, float* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg4_nxv2f32(<vscale x 2 x float> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_nxv2f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg4e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val, float* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg4_mask_nxv2f32(<vscale x 2 x float> %val, float* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg4_mask_nxv2f32(<vscale x 2 x float> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_mask_nxv2f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg4e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.mask.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val, float* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.mask.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg5.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>, float*, i64, i64)
-declare void @llvm.riscv.vssseg5.mask.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>, float*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg5.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg5.mask.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg5_nxv2f32(<vscale x 2 x float> %val, float* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg5_nxv2f32(<vscale x 2 x float> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_nxv2f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -3347,15 +3347,15 @@ define void @test_vssseg5_nxv2f32(<vscale x 2 x float> %val, float* %base, i64 %
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg5e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val, float* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg5_mask_nxv2f32(<vscale x 2 x float> %val, float* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg5_mask_nxv2f32(<vscale x 2 x float> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_mask_nxv2f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -3363,18 +3363,18 @@ define void @test_vssseg5_mask_nxv2f32(<vscale x 2 x float> %val, float* %base, 
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg5e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.mask.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val, float* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.mask.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg6.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>, float*, i64, i64)
-declare void @llvm.riscv.vssseg6.mask.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>, float*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg6.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg6.mask.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg6_nxv2f32(<vscale x 2 x float> %val, float* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg6_nxv2f32(<vscale x 2 x float> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_nxv2f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -3383,15 +3383,15 @@ define void @test_vssseg6_nxv2f32(<vscale x 2 x float> %val, float* %base, i64 %
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg6e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val, float* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg6_mask_nxv2f32(<vscale x 2 x float> %val, float* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg6_mask_nxv2f32(<vscale x 2 x float> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_mask_nxv2f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -3400,18 +3400,18 @@ define void @test_vssseg6_mask_nxv2f32(<vscale x 2 x float> %val, float* %base, 
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg6e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.mask.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val, float* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.mask.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg7.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>, float*, i64, i64)
-declare void @llvm.riscv.vssseg7.mask.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>, float*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg7.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg7.mask.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg7_nxv2f32(<vscale x 2 x float> %val, float* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg7_nxv2f32(<vscale x 2 x float> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_nxv2f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -3421,15 +3421,15 @@ define void @test_vssseg7_nxv2f32(<vscale x 2 x float> %val, float* %base, i64 %
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg7e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val, float* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg7_mask_nxv2f32(<vscale x 2 x float> %val, float* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg7_mask_nxv2f32(<vscale x 2 x float> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_mask_nxv2f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -3439,18 +3439,18 @@ define void @test_vssseg7_mask_nxv2f32(<vscale x 2 x float> %val, float* %base, 
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg7e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.mask.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val, float* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.mask.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg8.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>, float*, i64, i64)
-declare void @llvm.riscv.vssseg8.mask.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>, float*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg8.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg8.mask.nxv2f32(<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg8_nxv2f32(<vscale x 2 x float> %val, float* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg8_nxv2f32(<vscale x 2 x float> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_nxv2f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -3461,15 +3461,15 @@ define void @test_vssseg8_nxv2f32(<vscale x 2 x float> %val, float* %base, i64 %
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg8e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val, float* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg8_mask_nxv2f32(<vscale x 2 x float> %val, float* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg8_mask_nxv2f32(<vscale x 2 x float> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_mask_nxv2f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -3480,111 +3480,111 @@ define void @test_vssseg8_mask_nxv2f32(<vscale x 2 x float> %val, float* %base, 
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vssseg8e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.mask.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val, float* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.mask.nxv2f32(<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val,<vscale x 2 x float> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>, half*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>, half*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg2_nxv1f16(<vscale x 1 x half> %val, half* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv1f16(<vscale x 1 x half> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg2e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val, half* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv1f16(<vscale x 1 x half> %val, half* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv1f16(<vscale x 1 x half> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg2e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val, half* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg3.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>, half*, i64, i64)
-declare void @llvm.riscv.vssseg3.mask.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>, half*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg3.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg3.mask.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg3_nxv1f16(<vscale x 1 x half> %val, half* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg3_nxv1f16(<vscale x 1 x half> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg3e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val, half* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg3_mask_nxv1f16(<vscale x 1 x half> %val, half* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg3_mask_nxv1f16(<vscale x 1 x half> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_mask_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg3e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.mask.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val, half* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.mask.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg4.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>, half*, i64, i64)
-declare void @llvm.riscv.vssseg4.mask.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>, half*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg4.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg4.mask.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg4_nxv1f16(<vscale x 1 x half> %val, half* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg4_nxv1f16(<vscale x 1 x half> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg4e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val, half* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg4_mask_nxv1f16(<vscale x 1 x half> %val, half* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg4_mask_nxv1f16(<vscale x 1 x half> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_mask_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg4e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.mask.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val, half* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.mask.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg5.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>, half*, i64, i64)
-declare void @llvm.riscv.vssseg5.mask.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>, half*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg5.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg5.mask.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg5_nxv1f16(<vscale x 1 x half> %val, half* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg5_nxv1f16(<vscale x 1 x half> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -3592,15 +3592,15 @@ define void @test_vssseg5_nxv1f16(<vscale x 1 x half> %val, half* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg5e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val, half* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg5_mask_nxv1f16(<vscale x 1 x half> %val, half* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg5_mask_nxv1f16(<vscale x 1 x half> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_mask_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -3608,18 +3608,18 @@ define void @test_vssseg5_mask_nxv1f16(<vscale x 1 x half> %val, half* %base, i6
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg5e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.mask.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val, half* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.mask.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg6.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>, half*, i64, i64)
-declare void @llvm.riscv.vssseg6.mask.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>, half*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg6.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg6.mask.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg6_nxv1f16(<vscale x 1 x half> %val, half* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg6_nxv1f16(<vscale x 1 x half> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -3628,15 +3628,15 @@ define void @test_vssseg6_nxv1f16(<vscale x 1 x half> %val, half* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg6e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val, half* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg6_mask_nxv1f16(<vscale x 1 x half> %val, half* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg6_mask_nxv1f16(<vscale x 1 x half> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_mask_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -3645,18 +3645,18 @@ define void @test_vssseg6_mask_nxv1f16(<vscale x 1 x half> %val, half* %base, i6
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg6e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.mask.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val, half* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.mask.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg7.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>, half*, i64, i64)
-declare void @llvm.riscv.vssseg7.mask.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>, half*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg7.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg7.mask.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg7_nxv1f16(<vscale x 1 x half> %val, half* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg7_nxv1f16(<vscale x 1 x half> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -3666,15 +3666,15 @@ define void @test_vssseg7_nxv1f16(<vscale x 1 x half> %val, half* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg7e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val, half* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg7_mask_nxv1f16(<vscale x 1 x half> %val, half* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg7_mask_nxv1f16(<vscale x 1 x half> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_mask_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -3684,18 +3684,18 @@ define void @test_vssseg7_mask_nxv1f16(<vscale x 1 x half> %val, half* %base, i6
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg7e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.mask.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val, half* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.mask.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg8.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>, half*, i64, i64)
-declare void @llvm.riscv.vssseg8.mask.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>, half*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg8.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg8.mask.nxv1f16(<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg8_nxv1f16(<vscale x 1 x half> %val, half* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg8_nxv1f16(<vscale x 1 x half> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -3706,15 +3706,15 @@ define void @test_vssseg8_nxv1f16(<vscale x 1 x half> %val, half* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg8e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val, half* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg8_mask_nxv1f16(<vscale x 1 x half> %val, half* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg8_mask_nxv1f16(<vscale x 1 x half> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_mask_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -3725,111 +3725,111 @@ define void @test_vssseg8_mask_nxv1f16(<vscale x 1 x half> %val, half* %base, i6
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssseg8e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.mask.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val, half* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.mask.nxv1f16(<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val,<vscale x 1 x half> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>, float*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>, float*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg2_nxv1f32(<vscale x 1 x float> %val, float* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv1f32(<vscale x 1 x float> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg2e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val, float* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv1f32(<vscale x 1 x float> %val, float* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv1f32(<vscale x 1 x float> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg2e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val, float* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg3.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>, float*, i64, i64)
-declare void @llvm.riscv.vssseg3.mask.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>, float*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg3.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg3.mask.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg3_nxv1f32(<vscale x 1 x float> %val, float* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg3_nxv1f32(<vscale x 1 x float> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg3e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val, float* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg3_mask_nxv1f32(<vscale x 1 x float> %val, float* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg3_mask_nxv1f32(<vscale x 1 x float> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_mask_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg3e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.mask.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val, float* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.mask.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg4.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>, float*, i64, i64)
-declare void @llvm.riscv.vssseg4.mask.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>, float*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg4.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg4.mask.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg4_nxv1f32(<vscale x 1 x float> %val, float* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg4_nxv1f32(<vscale x 1 x float> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg4e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val, float* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg4_mask_nxv1f32(<vscale x 1 x float> %val, float* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg4_mask_nxv1f32(<vscale x 1 x float> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_mask_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg4e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.mask.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val, float* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.mask.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg5.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>, float*, i64, i64)
-declare void @llvm.riscv.vssseg5.mask.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>, float*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg5.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg5.mask.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg5_nxv1f32(<vscale x 1 x float> %val, float* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg5_nxv1f32(<vscale x 1 x float> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -3837,15 +3837,15 @@ define void @test_vssseg5_nxv1f32(<vscale x 1 x float> %val, float* %base, i64 %
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg5e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val, float* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg5_mask_nxv1f32(<vscale x 1 x float> %val, float* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg5_mask_nxv1f32(<vscale x 1 x float> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_mask_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -3853,18 +3853,18 @@ define void @test_vssseg5_mask_nxv1f32(<vscale x 1 x float> %val, float* %base, 
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg5e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.mask.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val, float* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.mask.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg6.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>, float*, i64, i64)
-declare void @llvm.riscv.vssseg6.mask.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>, float*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg6.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg6.mask.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg6_nxv1f32(<vscale x 1 x float> %val, float* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg6_nxv1f32(<vscale x 1 x float> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -3873,15 +3873,15 @@ define void @test_vssseg6_nxv1f32(<vscale x 1 x float> %val, float* %base, i64 %
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg6e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val, float* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg6_mask_nxv1f32(<vscale x 1 x float> %val, float* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg6_mask_nxv1f32(<vscale x 1 x float> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_mask_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -3890,18 +3890,18 @@ define void @test_vssseg6_mask_nxv1f32(<vscale x 1 x float> %val, float* %base, 
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg6e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.mask.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val, float* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.mask.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg7.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>, float*, i64, i64)
-declare void @llvm.riscv.vssseg7.mask.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>, float*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg7.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg7.mask.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg7_nxv1f32(<vscale x 1 x float> %val, float* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg7_nxv1f32(<vscale x 1 x float> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -3911,15 +3911,15 @@ define void @test_vssseg7_nxv1f32(<vscale x 1 x float> %val, float* %base, i64 %
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg7e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val, float* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg7_mask_nxv1f32(<vscale x 1 x float> %val, float* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg7_mask_nxv1f32(<vscale x 1 x float> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_mask_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -3929,18 +3929,18 @@ define void @test_vssseg7_mask_nxv1f32(<vscale x 1 x float> %val, float* %base, 
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg7e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.mask.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val, float* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.mask.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg8.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>, float*, i64, i64)
-declare void @llvm.riscv.vssseg8.mask.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>, float*, i64, <vscale x 1 x i1>, i64)
+declare void @llvm.riscv.vssseg8.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg8.mask.nxv1f32(<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>, ptr, i64, <vscale x 1 x i1>, i64)
 
-define void @test_vssseg8_nxv1f32(<vscale x 1 x float> %val, float* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg8_nxv1f32(<vscale x 1 x float> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -3951,15 +3951,15 @@ define void @test_vssseg8_nxv1f32(<vscale x 1 x float> %val, float* %base, i64 %
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg8e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val, float* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg8_mask_nxv1f32(<vscale x 1 x float> %val, float* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
+define void @test_vssseg8_mask_nxv1f32(<vscale x 1 x float> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_mask_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -3970,326 +3970,326 @@ define void @test_vssseg8_mask_nxv1f32(<vscale x 1 x float> %val, float* %base, 
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vssseg8e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.mask.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val, float* %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.mask.nxv1f32(<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val,<vscale x 1 x float> %val, ptr %base, i64 %offset, <vscale x 1 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv8f16(<vscale x 8 x half>,<vscale x 8 x half>, half*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv8f16(<vscale x 8 x half>,<vscale x 8 x half>, half*, i64, <vscale x 8 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv8f16(<vscale x 8 x half>,<vscale x 8 x half>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv8f16(<vscale x 8 x half>,<vscale x 8 x half>, ptr, i64, <vscale x 8 x i1>, i64)
 
-define void @test_vssseg2_nxv8f16(<vscale x 8 x half> %val, half* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv8f16(<vscale x 8 x half> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv8f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, ma
 ; CHECK-NEXT:    vssseg2e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv8f16(<vscale x 8 x half> %val,<vscale x 8 x half> %val, half* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv8f16(<vscale x 8 x half> %val,<vscale x 8 x half> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv8f16(<vscale x 8 x half> %val, half* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv8f16(<vscale x 8 x half> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv8f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, ma
 ; CHECK-NEXT:    vssseg2e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv8f16(<vscale x 8 x half> %val,<vscale x 8 x half> %val, half* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv8f16(<vscale x 8 x half> %val,<vscale x 8 x half> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg3.nxv8f16(<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>, half*, i64, i64)
-declare void @llvm.riscv.vssseg3.mask.nxv8f16(<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>, half*, i64, <vscale x 8 x i1>, i64)
+declare void @llvm.riscv.vssseg3.nxv8f16(<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg3.mask.nxv8f16(<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>, ptr, i64, <vscale x 8 x i1>, i64)
 
-define void @test_vssseg3_nxv8f16(<vscale x 8 x half> %val, half* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg3_nxv8f16(<vscale x 8 x half> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_nxv8f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, ma
 ; CHECK-NEXT:    vssseg3e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.nxv8f16(<vscale x 8 x half> %val,<vscale x 8 x half> %val,<vscale x 8 x half> %val, half* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.nxv8f16(<vscale x 8 x half> %val,<vscale x 8 x half> %val,<vscale x 8 x half> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg3_mask_nxv8f16(<vscale x 8 x half> %val, half* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
+define void @test_vssseg3_mask_nxv8f16(<vscale x 8 x half> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_mask_nxv8f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, ma
 ; CHECK-NEXT:    vssseg3e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.mask.nxv8f16(<vscale x 8 x half> %val,<vscale x 8 x half> %val,<vscale x 8 x half> %val, half* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.mask.nxv8f16(<vscale x 8 x half> %val,<vscale x 8 x half> %val,<vscale x 8 x half> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg4.nxv8f16(<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>, half*, i64, i64)
-declare void @llvm.riscv.vssseg4.mask.nxv8f16(<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>, half*, i64, <vscale x 8 x i1>, i64)
+declare void @llvm.riscv.vssseg4.nxv8f16(<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg4.mask.nxv8f16(<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>, ptr, i64, <vscale x 8 x i1>, i64)
 
-define void @test_vssseg4_nxv8f16(<vscale x 8 x half> %val, half* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg4_nxv8f16(<vscale x 8 x half> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_nxv8f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2_v14m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, ma
 ; CHECK-NEXT:    vssseg4e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.nxv8f16(<vscale x 8 x half> %val,<vscale x 8 x half> %val,<vscale x 8 x half> %val,<vscale x 8 x half> %val, half* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.nxv8f16(<vscale x 8 x half> %val,<vscale x 8 x half> %val,<vscale x 8 x half> %val,<vscale x 8 x half> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg4_mask_nxv8f16(<vscale x 8 x half> %val, half* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
+define void @test_vssseg4_mask_nxv8f16(<vscale x 8 x half> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_mask_nxv8f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2_v14m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, ma
 ; CHECK-NEXT:    vssseg4e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.mask.nxv8f16(<vscale x 8 x half> %val,<vscale x 8 x half> %val,<vscale x 8 x half> %val,<vscale x 8 x half> %val, half* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.mask.nxv8f16(<vscale x 8 x half> %val,<vscale x 8 x half> %val,<vscale x 8 x half> %val,<vscale x 8 x half> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv8f32(<vscale x 8 x float>,<vscale x 8 x float>, float*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv8f32(<vscale x 8 x float>,<vscale x 8 x float>, float*, i64, <vscale x 8 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv8f32(<vscale x 8 x float>,<vscale x 8 x float>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv8f32(<vscale x 8 x float>,<vscale x 8 x float>, ptr, i64, <vscale x 8 x i1>, i64)
 
-define void @test_vssseg2_nxv8f32(<vscale x 8 x float> %val, float* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv8f32(<vscale x 8 x float> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv8f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m4, ta, ma
 ; CHECK-NEXT:    vssseg2e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv8f32(<vscale x 8 x float> %val,<vscale x 8 x float> %val, float* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv8f32(<vscale x 8 x float> %val,<vscale x 8 x float> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv8f32(<vscale x 8 x float> %val, float* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv8f32(<vscale x 8 x float> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv8f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m4, ta, ma
 ; CHECK-NEXT:    vssseg2e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv8f32(<vscale x 8 x float> %val,<vscale x 8 x float> %val, float* %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv8f32(<vscale x 8 x float> %val,<vscale x 8 x float> %val, ptr %base, i64 %offset, <vscale x 8 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv2f64(<vscale x 2 x double>,<vscale x 2 x double>, double*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv2f64(<vscale x 2 x double>,<vscale x 2 x double>, double*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv2f64(<vscale x 2 x double>,<vscale x 2 x double>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv2f64(<vscale x 2 x double>,<vscale x 2 x double>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg2_nxv2f64(<vscale x 2 x double> %val, double* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv2f64(<vscale x 2 x double> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
 ; CHECK-NEXT:    vssseg2e64.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv2f64(<vscale x 2 x double> %val,<vscale x 2 x double> %val, double* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv2f64(<vscale x 2 x double> %val,<vscale x 2 x double> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv2f64(<vscale x 2 x double> %val, double* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv2f64(<vscale x 2 x double> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
 ; CHECK-NEXT:    vssseg2e64.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv2f64(<vscale x 2 x double> %val,<vscale x 2 x double> %val, double* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv2f64(<vscale x 2 x double> %val,<vscale x 2 x double> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg3.nxv2f64(<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>, double*, i64, i64)
-declare void @llvm.riscv.vssseg3.mask.nxv2f64(<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>, double*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg3.nxv2f64(<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg3.mask.nxv2f64(<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg3_nxv2f64(<vscale x 2 x double> %val, double* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg3_nxv2f64(<vscale x 2 x double> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_nxv2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
 ; CHECK-NEXT:    vssseg3e64.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.nxv2f64(<vscale x 2 x double> %val,<vscale x 2 x double> %val,<vscale x 2 x double> %val, double* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.nxv2f64(<vscale x 2 x double> %val,<vscale x 2 x double> %val,<vscale x 2 x double> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg3_mask_nxv2f64(<vscale x 2 x double> %val, double* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg3_mask_nxv2f64(<vscale x 2 x double> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_mask_nxv2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
 ; CHECK-NEXT:    vssseg3e64.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.mask.nxv2f64(<vscale x 2 x double> %val,<vscale x 2 x double> %val,<vscale x 2 x double> %val, double* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.mask.nxv2f64(<vscale x 2 x double> %val,<vscale x 2 x double> %val,<vscale x 2 x double> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg4.nxv2f64(<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>, double*, i64, i64)
-declare void @llvm.riscv.vssseg4.mask.nxv2f64(<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>, double*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg4.nxv2f64(<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg4.mask.nxv2f64(<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg4_nxv2f64(<vscale x 2 x double> %val, double* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg4_nxv2f64(<vscale x 2 x double> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_nxv2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2_v14m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
 ; CHECK-NEXT:    vssseg4e64.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.nxv2f64(<vscale x 2 x double> %val,<vscale x 2 x double> %val,<vscale x 2 x double> %val,<vscale x 2 x double> %val, double* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.nxv2f64(<vscale x 2 x double> %val,<vscale x 2 x double> %val,<vscale x 2 x double> %val,<vscale x 2 x double> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg4_mask_nxv2f64(<vscale x 2 x double> %val, double* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg4_mask_nxv2f64(<vscale x 2 x double> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_mask_nxv2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2_v14m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
 ; CHECK-NEXT:    vssseg4e64.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.mask.nxv2f64(<vscale x 2 x double> %val,<vscale x 2 x double> %val,<vscale x 2 x double> %val,<vscale x 2 x double> %val, double* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.mask.nxv2f64(<vscale x 2 x double> %val,<vscale x 2 x double> %val,<vscale x 2 x double> %val,<vscale x 2 x double> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>, half*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>, half*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg2_nxv4f16(<vscale x 4 x half> %val, half* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv4f16(<vscale x 4 x half> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv4f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg2e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val, half* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv4f16(<vscale x 4 x half> %val, half* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv4f16(<vscale x 4 x half> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv4f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg2e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val, half* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg3.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>, half*, i64, i64)
-declare void @llvm.riscv.vssseg3.mask.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>, half*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg3.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg3.mask.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg3_nxv4f16(<vscale x 4 x half> %val, half* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg3_nxv4f16(<vscale x 4 x half> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_nxv4f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg3e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val, half* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg3_mask_nxv4f16(<vscale x 4 x half> %val, half* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg3_mask_nxv4f16(<vscale x 4 x half> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_mask_nxv4f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg3e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.mask.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val, half* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.mask.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg4.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>, half*, i64, i64)
-declare void @llvm.riscv.vssseg4.mask.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>, half*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg4.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg4.mask.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg4_nxv4f16(<vscale x 4 x half> %val, half* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg4_nxv4f16(<vscale x 4 x half> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_nxv4f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg4e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val, half* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg4_mask_nxv4f16(<vscale x 4 x half> %val, half* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg4_mask_nxv4f16(<vscale x 4 x half> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_mask_nxv4f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg4e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.mask.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val, half* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.mask.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg5.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>, half*, i64, i64)
-declare void @llvm.riscv.vssseg5.mask.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>, half*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg5.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg5.mask.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg5_nxv4f16(<vscale x 4 x half> %val, half* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg5_nxv4f16(<vscale x 4 x half> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_nxv4f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -4297,15 +4297,15 @@ define void @test_vssseg5_nxv4f16(<vscale x 4 x half> %val, half* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg5e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val, half* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg5_mask_nxv4f16(<vscale x 4 x half> %val, half* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg5_mask_nxv4f16(<vscale x 4 x half> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_mask_nxv4f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -4313,18 +4313,18 @@ define void @test_vssseg5_mask_nxv4f16(<vscale x 4 x half> %val, half* %base, i6
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg5e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.mask.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val, half* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.mask.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg6.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>, half*, i64, i64)
-declare void @llvm.riscv.vssseg6.mask.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>, half*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg6.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg6.mask.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg6_nxv4f16(<vscale x 4 x half> %val, half* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg6_nxv4f16(<vscale x 4 x half> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_nxv4f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -4333,15 +4333,15 @@ define void @test_vssseg6_nxv4f16(<vscale x 4 x half> %val, half* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg6e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val, half* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg6_mask_nxv4f16(<vscale x 4 x half> %val, half* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg6_mask_nxv4f16(<vscale x 4 x half> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_mask_nxv4f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -4350,18 +4350,18 @@ define void @test_vssseg6_mask_nxv4f16(<vscale x 4 x half> %val, half* %base, i6
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg6e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.mask.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val, half* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.mask.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg7.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>, half*, i64, i64)
-declare void @llvm.riscv.vssseg7.mask.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>, half*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg7.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg7.mask.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg7_nxv4f16(<vscale x 4 x half> %val, half* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg7_nxv4f16(<vscale x 4 x half> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_nxv4f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -4371,15 +4371,15 @@ define void @test_vssseg7_nxv4f16(<vscale x 4 x half> %val, half* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg7e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val, half* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg7_mask_nxv4f16(<vscale x 4 x half> %val, half* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg7_mask_nxv4f16(<vscale x 4 x half> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_mask_nxv4f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -4389,18 +4389,18 @@ define void @test_vssseg7_mask_nxv4f16(<vscale x 4 x half> %val, half* %base, i6
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg7e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.mask.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val, half* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.mask.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg8.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>, half*, i64, i64)
-declare void @llvm.riscv.vssseg8.mask.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>, half*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg8.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg8.mask.nxv4f16(<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg8_nxv4f16(<vscale x 4 x half> %val, half* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg8_nxv4f16(<vscale x 4 x half> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_nxv4f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -4411,15 +4411,15 @@ define void @test_vssseg8_nxv4f16(<vscale x 4 x half> %val, half* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg8e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val, half* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg8_mask_nxv4f16(<vscale x 4 x half> %val, half* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg8_mask_nxv4f16(<vscale x 4 x half> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_mask_nxv4f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -4430,111 +4430,111 @@ define void @test_vssseg8_mask_nxv4f16(<vscale x 4 x half> %val, half* %base, i6
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vssseg8e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.mask.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val, half* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.mask.nxv4f16(<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val,<vscale x 4 x half> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>, half*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>, half*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg2_nxv2f16(<vscale x 2 x half> %val, half* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv2f16(<vscale x 2 x half> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv2f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg2e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val, half* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv2f16(<vscale x 2 x half> %val, half* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv2f16(<vscale x 2 x half> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv2f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg2e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val, half* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg3.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>, half*, i64, i64)
-declare void @llvm.riscv.vssseg3.mask.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>, half*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg3.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg3.mask.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg3_nxv2f16(<vscale x 2 x half> %val, half* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg3_nxv2f16(<vscale x 2 x half> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_nxv2f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg3e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val, half* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg3_mask_nxv2f16(<vscale x 2 x half> %val, half* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg3_mask_nxv2f16(<vscale x 2 x half> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_mask_nxv2f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg3e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.mask.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val, half* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.mask.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg4.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>, half*, i64, i64)
-declare void @llvm.riscv.vssseg4.mask.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>, half*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg4.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg4.mask.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg4_nxv2f16(<vscale x 2 x half> %val, half* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg4_nxv2f16(<vscale x 2 x half> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_nxv2f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg4e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val, half* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg4_mask_nxv2f16(<vscale x 2 x half> %val, half* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg4_mask_nxv2f16(<vscale x 2 x half> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_mask_nxv2f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg4e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.mask.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val, half* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.mask.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg5.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>, half*, i64, i64)
-declare void @llvm.riscv.vssseg5.mask.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>, half*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg5.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg5.mask.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg5_nxv2f16(<vscale x 2 x half> %val, half* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg5_nxv2f16(<vscale x 2 x half> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_nxv2f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -4542,15 +4542,15 @@ define void @test_vssseg5_nxv2f16(<vscale x 2 x half> %val, half* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg5e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val, half* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg5_mask_nxv2f16(<vscale x 2 x half> %val, half* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg5_mask_nxv2f16(<vscale x 2 x half> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg5_mask_nxv2f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12
@@ -4558,18 +4558,18 @@ define void @test_vssseg5_mask_nxv2f16(<vscale x 2 x half> %val, half* %base, i6
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg5e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg5.mask.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val, half* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg5.mask.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg6.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>, half*, i64, i64)
-declare void @llvm.riscv.vssseg6.mask.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>, half*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg6.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg6.mask.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg6_nxv2f16(<vscale x 2 x half> %val, half* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg6_nxv2f16(<vscale x 2 x half> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_nxv2f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -4578,15 +4578,15 @@ define void @test_vssseg6_nxv2f16(<vscale x 2 x half> %val, half* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg6e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val, half* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg6_mask_nxv2f16(<vscale x 2 x half> %val, half* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg6_mask_nxv2f16(<vscale x 2 x half> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg6_mask_nxv2f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13
@@ -4595,18 +4595,18 @@ define void @test_vssseg6_mask_nxv2f16(<vscale x 2 x half> %val, half* %base, i6
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg6e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg6.mask.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val, half* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg6.mask.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg7.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>, half*, i64, i64)
-declare void @llvm.riscv.vssseg7.mask.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>, half*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg7.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg7.mask.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg7_nxv2f16(<vscale x 2 x half> %val, half* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg7_nxv2f16(<vscale x 2 x half> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_nxv2f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -4616,15 +4616,15 @@ define void @test_vssseg7_nxv2f16(<vscale x 2 x half> %val, half* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg7e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val, half* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg7_mask_nxv2f16(<vscale x 2 x half> %val, half* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg7_mask_nxv2f16(<vscale x 2 x half> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg7_mask_nxv2f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14
@@ -4634,18 +4634,18 @@ define void @test_vssseg7_mask_nxv2f16(<vscale x 2 x half> %val, half* %base, i6
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg7e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg7.mask.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val, half* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg7.mask.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg8.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>, half*, i64, i64)
-declare void @llvm.riscv.vssseg8.mask.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>, half*, i64, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vssseg8.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg8.mask.nxv2f16(<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>, ptr, i64, <vscale x 2 x i1>, i64)
 
-define void @test_vssseg8_nxv2f16(<vscale x 2 x half> %val, half* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg8_nxv2f16(<vscale x 2 x half> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_nxv2f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -4656,15 +4656,15 @@ define void @test_vssseg8_nxv2f16(<vscale x 2 x half> %val, half* %base, i64 %of
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg8e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val, half* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg8_mask_nxv2f16(<vscale x 2 x half> %val, half* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
+define void @test_vssseg8_mask_nxv2f16(<vscale x 2 x half> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg8_mask_nxv2f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10_v11_v12_v13_v14_v15
@@ -4675,103 +4675,103 @@ define void @test_vssseg8_mask_nxv2f16(<vscale x 2 x half> %val, half* %base, i6
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssseg8e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg8.mask.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val, half* %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg8.mask.nxv2f16(<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val,<vscale x 2 x half> %val, ptr %base, i64 %offset, <vscale x 2 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg2.nxv4f32(<vscale x 4 x float>,<vscale x 4 x float>, float*, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.nxv4f32(<vscale x 4 x float>,<vscale x 4 x float>, float*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg2.nxv4f32(<vscale x 4 x float>,<vscale x 4 x float>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg2.mask.nxv4f32(<vscale x 4 x float>,<vscale x 4 x float>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg2_nxv4f32(<vscale x 4 x float> %val, float* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg2_nxv4f32(<vscale x 4 x float> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_nxv4f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; CHECK-NEXT:    vssseg2e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.nxv4f32(<vscale x 4 x float> %val,<vscale x 4 x float> %val, float* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.nxv4f32(<vscale x 4 x float> %val,<vscale x 4 x float> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg2_mask_nxv4f32(<vscale x 4 x float> %val, float* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg2_mask_nxv4f32(<vscale x 4 x float> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg2_mask_nxv4f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; CHECK-NEXT:    vssseg2e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg2.mask.nxv4f32(<vscale x 4 x float> %val,<vscale x 4 x float> %val, float* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg2.mask.nxv4f32(<vscale x 4 x float> %val,<vscale x 4 x float> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg3.nxv4f32(<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>, float*, i64, i64)
-declare void @llvm.riscv.vssseg3.mask.nxv4f32(<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>, float*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg3.nxv4f32(<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg3.mask.nxv4f32(<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg3_nxv4f32(<vscale x 4 x float> %val, float* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg3_nxv4f32(<vscale x 4 x float> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_nxv4f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; CHECK-NEXT:    vssseg3e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.nxv4f32(<vscale x 4 x float> %val,<vscale x 4 x float> %val,<vscale x 4 x float> %val, float* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.nxv4f32(<vscale x 4 x float> %val,<vscale x 4 x float> %val,<vscale x 4 x float> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg3_mask_nxv4f32(<vscale x 4 x float> %val, float* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg3_mask_nxv4f32(<vscale x 4 x float> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg3_mask_nxv4f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; CHECK-NEXT:    vssseg3e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg3.mask.nxv4f32(<vscale x 4 x float> %val,<vscale x 4 x float> %val,<vscale x 4 x float> %val, float* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg3.mask.nxv4f32(<vscale x 4 x float> %val,<vscale x 4 x float> %val,<vscale x 4 x float> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }
 
-declare void @llvm.riscv.vssseg4.nxv4f32(<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>, float*, i64, i64)
-declare void @llvm.riscv.vssseg4.mask.nxv4f32(<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>, float*, i64, <vscale x 4 x i1>, i64)
+declare void @llvm.riscv.vssseg4.nxv4f32(<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>, ptr, i64, i64)
+declare void @llvm.riscv.vssseg4.mask.nxv4f32(<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>, ptr, i64, <vscale x 4 x i1>, i64)
 
-define void @test_vssseg4_nxv4f32(<vscale x 4 x float> %val, float* %base, i64 %offset, i64 %vl) {
+define void @test_vssseg4_nxv4f32(<vscale x 4 x float> %val, ptr %base, i64 %offset, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_nxv4f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2_v14m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; CHECK-NEXT:    vssseg4e32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.nxv4f32(<vscale x 4 x float> %val,<vscale x 4 x float> %val,<vscale x 4 x float> %val,<vscale x 4 x float> %val, float* %base, i64 %offset, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.nxv4f32(<vscale x 4 x float> %val,<vscale x 4 x float> %val,<vscale x 4 x float> %val,<vscale x 4 x float> %val, ptr %base, i64 %offset, i64 %vl)
   ret void
 }
 
-define void @test_vssseg4_mask_nxv4f32(<vscale x 4 x float> %val, float* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
+define void @test_vssseg4_mask_nxv4f32(<vscale x 4 x float> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl) {
 ; CHECK-LABEL: test_vssseg4_mask_nxv4f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2_v14m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; CHECK-NEXT:    vssseg4e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.riscv.vssseg4.mask.nxv4f32(<vscale x 4 x float> %val,<vscale x 4 x float> %val,<vscale x 4 x float> %val,<vscale x 4 x float> %val, float* %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
+  tail call void @llvm.riscv.vssseg4.mask.nxv4f32(<vscale x 4 x float> %val,<vscale x 4 x float> %val,<vscale x 4 x float> %val,<vscale x 4 x float> %val, ptr %base, i64 %offset, <vscale x 4 x i1> %mask, i64 %vl)
   ret void
 }

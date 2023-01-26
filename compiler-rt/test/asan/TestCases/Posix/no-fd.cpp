@@ -13,7 +13,7 @@
 // on them remaining closed across an execve(). This is not the case on newer
 // versions of Android. On PPC with ASLR turned on, this fails when linked with
 // lld - see https://bugs.llvm.org/show_bug.cgi?id=45076.
-// UNSUPPORTED: android, powerpc
+// UNSUPPORTED: android, target=powerpc{{.*}}
 
 #include <assert.h>
 #include <stdio.h>

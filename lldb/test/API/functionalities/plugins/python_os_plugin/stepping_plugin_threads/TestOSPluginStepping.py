@@ -3,9 +3,6 @@ Test that stepping works even when the OS Plugin doesn't report
 all threads at every stop.
 """
 
-from __future__ import print_function
-
-
 import os
 import lldb
 from lldbsuite.test.decorators import *

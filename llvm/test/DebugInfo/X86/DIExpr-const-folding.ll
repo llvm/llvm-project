@@ -11,17 +11,15 @@
 ; CHECK-NEXT: DW_AT_location (DW_OP_lit2, DW_OP_stack_value)
 ; CHECK-NEXT: DW_AT_name ("bIsShowingCollision")
 
-%class.UClient = type { %class.UWorld*, %struct.FFlags }
+%class.UClient = type { ptr, %struct.FFlags }
 %class.UWorld = type { i16 }
 %struct.FFlags = type { [9 x i8], i32 }
 
-define dso_local void @_ZN7UClient13ToggleVolumesEv(%class.UClient* nocapture nonnull align 8 dereferenceable(24) %this) local_unnamed_addr align 2 !dbg !8 {
+define dso_local void @_ZN7UClient13ToggleVolumesEv(ptr nocapture nonnull align 8 dereferenceable(24) %this) local_unnamed_addr align 2 !dbg !8 {
 entry:
   call void @llvm.dbg.value(metadata i72 2, metadata !43, metadata !DIExpression(DW_OP_LLVM_convert, 72, DW_ATE_unsigned, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_stack_value)), !dbg !48
-  %World = getelementptr inbounds %class.UClient, %class.UClient* %this, i64 0, i32 0, !dbg !49
-  %0 = load %class.UWorld*, %class.UWorld** %World, align 8, !dbg !49, !tbaa !51
-  %1 = getelementptr %class.UWorld, %class.UWorld* %0, i64 0, i32 0, !dbg !58
-  store i16 2, i16* %1, align 1, !dbg !59
+  %0 = load ptr, ptr %this, align 8, !dbg !49, !tbaa !51
+  store i16 2, ptr %0, align 1, !dbg !59
   ret void, !dbg !60
 }
 

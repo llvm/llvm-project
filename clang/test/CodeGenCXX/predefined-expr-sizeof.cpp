@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -o - | FileCheck %s
 
-// CHECK: store i32 59, i32* %size
-// CHECK: store i32 65, i32* %size
+// CHECK: store i32 59, ptr %size
+// CHECK: store i32 65, ptr %size
 template<typename T>
 class TemplateClass {
 public:
@@ -10,8 +10,8 @@ public:
   }
 };
 
-// CHECK: store i32 35, i32* %size
-// CHECK: store i32 38, i32* %size
+// CHECK: store i32 35, ptr %size
+// CHECK: store i32 38, ptr %size
 template<typename T>
 void functionTemplate(T t) {
   int size = sizeof(__PRETTY_FUNCTION__);

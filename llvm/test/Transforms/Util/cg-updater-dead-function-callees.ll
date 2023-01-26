@@ -1,4 +1,4 @@
-; RUN: opt -inline -attributor-cgscc -tailcallelim -S %s | FileCheck %s
+; RUN: opt -passes=inline,attributor-cgscc,tailcallelim -S %s | FileCheck %s
 ;
 ; CHECK: define void @foo()
 ; CHECK: declare i32 @baz()

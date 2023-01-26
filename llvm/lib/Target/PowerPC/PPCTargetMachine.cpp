@@ -13,13 +13,13 @@
 #include "PPCTargetMachine.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "PPC.h"
+#include "PPCMachineFunctionInfo.h"
 #include "PPCMachineScheduler.h"
 #include "PPCMacroFusion.h"
 #include "PPCSubtarget.h"
 #include "PPCTargetObjectFile.h"
 #include "PPCTargetTransformInfo.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
@@ -46,6 +46,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <string>
 
 using namespace llvm;
@@ -135,6 +136,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   initializePPCExpandAtomicPseudoPass(PR);
   initializeGlobalISel(PR);
   initializePPCCTRLoopsPass(PR);
+  initializePPCDAGToDAGISelPass(PR);
 }
 
 static bool isLittleEndianTriple(const Triple &T) {
@@ -231,9 +233,6 @@ static PPCTargetMachine::PPCABI computeTargetABI(const Triple &TT,
   assert(Options.MCOptions.getABIName().empty() &&
          "Unknown target-abi option!");
 
-  if (TT.isMacOSX())
-    return PPCTargetMachine::PPC_ABI_UNKNOWN;
-
   switch (TT.getArch()) {
   case Triple::ppc64le:
     return PPCTargetMachine::PPC_ABI_ELFv2;
@@ -245,7 +244,7 @@ static PPCTargetMachine::PPCABI computeTargetABI(const Triple &TT,
 }
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
-                                           Optional<Reloc::Model> RM) {
+                                           std::optional<Reloc::Model> RM) {
   assert((!TT.isOSAIX() || !RM || *RM == Reloc::PIC_) &&
          "Invalid relocation model for AIX.");
 
@@ -260,9 +259,9 @@ static Reloc::Model getEffectiveRelocModel(const Triple &TT,
   return Reloc::Static;
 }
 
-static CodeModel::Model getEffectivePPCCodeModel(const Triple &TT,
-                                                 Optional<CodeModel::Model> CM,
-                                                 bool JIT) {
+static CodeModel::Model
+getEffectivePPCCodeModel(const Triple &TT, std::optional<CodeModel::Model> CM,
+                         bool JIT) {
   if (CM) {
     if (*CM == CodeModel::Tiny)
       report_fatal_error("Target does not support the tiny CodeModel", false);
@@ -324,8 +323,8 @@ static ScheduleDAGInstrs *createPPCPostMachineScheduler(
 PPCTargetMachine::PPCTargetMachine(const Target &T, const Triple &TT,
                                    StringRef CPU, StringRef FS,
                                    const TargetOptions &Options,
-                                   Optional<Reloc::Model> RM,
-                                   Optional<CodeModel::Model> CM,
+                                   std::optional<Reloc::Model> RM,
+                                   std::optional<CodeModel::Model> CM,
                                    CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(T, getDataLayoutString(TT), TT, CPU,
                         computeFSAdditions(FS, OL, TT), Options,
@@ -342,10 +341,13 @@ PPCTargetMachine::~PPCTargetMachine() = default;
 const PPCSubtarget *
 PPCTargetMachine::getSubtargetImpl(const Function &F) const {
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
+  Attribute TuneAttr = F.getFnAttribute("tune-cpu");
   Attribute FSAttr = F.getFnAttribute("target-features");
 
   std::string CPU =
       CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
+  std::string TuneCPU =
+      TuneAttr.isValid() ? TuneAttr.getValueAsString().str() : CPU;
   std::string FS =
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
 
@@ -360,14 +362,14 @@ PPCTargetMachine::getSubtargetImpl(const Function &F) const {
   if (SoftFloat)
     FS += FS.empty() ? "-hard-float" : ",-hard-float";
 
-  auto &I = SubtargetMap[CPU + FS];
+  auto &I = SubtargetMap[CPU + TuneCPU + FS];
   if (!I) {
     // This needs to be done before we create a new subtarget since any
     // creation will depend on the TM and the code generation flags on the
     // function that reside in TargetOptions.
     resetTargetOptions(F);
     I = std::make_unique<PPCSubtarget>(
-        TargetTriple, CPU,
+        TargetTriple, CPU, TuneCPU,
         // FIXME: It would be good to have the subtarget additions here
         // not necessary. Anything that turns them on/off (overrides) ends
         // up being put at the end of the feature string, but the defaults
@@ -500,6 +502,11 @@ bool PPCPassConfig::addInstSelector() {
 }
 
 void PPCPassConfig::addMachineSSAOptimization() {
+  // Run CTR loops pass before any cfg modification pass to prevent the
+  // canonical form of hardware loop from being destroied.
+  if (!DisableCTRLoops && getOptLevel() != CodeGenOpt::None)
+    addPass(createPPCCTRLoopsPass());
+
   // PPCBranchCoalescingPass need to be done before machine sinking
   // since it merges empty blocks.
   if (EnableBranchCoalescing && getOptLevel() != CodeGenOpt::None)
@@ -540,16 +547,6 @@ void PPCPassConfig::addPreRegAlloc() {
   if (EnableExtraTOCRegDeps)
     addPass(createPPCTOCRegDepsPass());
 
-  // Run CTR loops pass before MachinePipeliner pass.
-  // MachinePipeliner will pipeline all instructions before the terminator, but
-  // we don't want DecreaseCTRPseudo to be pipelined.
-  // Note we may lose some MachinePipeliner opportunities if we run CTR loops
-  // generation pass before MachinePipeliner and the loop is converted back to
-  // a normal loop. We can revisit this later for running PPCCTRLoops after
-  // MachinePipeliner and handling DecreaseCTRPseudo in MachinePipeliner pass.
-  if (getOptLevel() != CodeGenOpt::None)
-    addPass(createPPCCTRLoopsPass());
-
   if (getOptLevel() != CodeGenOpt::None)
     addPass(&MachinePipelinerID);
 }
@@ -585,6 +582,12 @@ bool PPCTargetMachine::isLittleEndian() const {
   assert(Endianness != Endian::NOT_DETECTED &&
          "Unable to determine endianness");
   return Endianness == Endian::LITTLE;
+}
+
+MachineFunctionInfo *PPCTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return PPCFunctionInfo::create<PPCFunctionInfo>(Allocator, F, STI);
 }
 
 static MachineSchedRegistry

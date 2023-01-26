@@ -31,7 +31,7 @@ public:
                  const MCRegisterInfo &MRI, Triple T)
     : MCInstPrinter(MAI, MII, MRI), TT(T) {}
 
-  void printRegName(raw_ostream &OS, unsigned RegNo) const override;
+  void printRegName(raw_ostream &OS, MCRegister Reg) const override;
   void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
                  const MCSubtargetInfo &STI, raw_ostream &O) override;
 
@@ -39,7 +39,7 @@ public:
   std::pair<const char *, uint64_t> getMnemonic(const MCInst *MI) override;
   void printInstruction(const MCInst *MI, uint64_t Address,
                         const MCSubtargetInfo &STI, raw_ostream &O);
-  static const char *getRegisterName(unsigned RegNo);
+  static const char *getRegisterName(MCRegister Reg);
 
   bool printAliasInstr(const MCInst *MI, uint64_t Address,
                        const MCSubtargetInfo &STI, raw_ostream &OS);

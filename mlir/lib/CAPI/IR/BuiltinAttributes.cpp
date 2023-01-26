@@ -7,10 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir-c/BuiltinAttributes.h"
+#include "mlir-c/Support.h"
 #include "mlir/CAPI/AffineMap.h"
 #include "mlir/CAPI/IR.h"
 #include "mlir/CAPI/Support.h"
+#include "mlir/IR/AsmState.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 
 using namespace mlir;
@@ -298,17 +301,117 @@ MlirAttribute mlirElementsAttrGetValue(MlirAttribute attr, intptr_t rank,
                                        uint64_t *idxs) {
   return wrap(unwrap(attr)
                   .cast<ElementsAttr>()
-                  .getValues<Attribute>()[llvm::makeArrayRef(idxs, rank)]);
+                  .getValues<Attribute>()[llvm::ArrayRef(idxs, rank)]);
 }
 
 bool mlirElementsAttrIsValidIndex(MlirAttribute attr, intptr_t rank,
                                   uint64_t *idxs) {
   return unwrap(attr).cast<ElementsAttr>().isValidIndex(
-      llvm::makeArrayRef(idxs, rank));
+      llvm::ArrayRef(idxs, rank));
 }
 
 int64_t mlirElementsAttrGetNumElements(MlirAttribute attr) {
   return unwrap(attr).cast<ElementsAttr>().getNumElements();
+}
+
+//===----------------------------------------------------------------------===//
+// Dense array attribute.
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
+// IsA support.
+
+bool mlirAttributeIsADenseBoolArray(MlirAttribute attr) {
+  return unwrap(attr).isa<DenseBoolArrayAttr>();
+}
+bool mlirAttributeIsADenseI8Array(MlirAttribute attr) {
+  return unwrap(attr).isa<DenseI8ArrayAttr>();
+}
+bool mlirAttributeIsADenseI16Array(MlirAttribute attr) {
+  return unwrap(attr).isa<DenseI16ArrayAttr>();
+}
+bool mlirAttributeIsADenseI32Array(MlirAttribute attr) {
+  return unwrap(attr).isa<DenseI32ArrayAttr>();
+}
+bool mlirAttributeIsADenseI64Array(MlirAttribute attr) {
+  return unwrap(attr).isa<DenseI64ArrayAttr>();
+}
+bool mlirAttributeIsADenseF32Array(MlirAttribute attr) {
+  return unwrap(attr).isa<DenseF32ArrayAttr>();
+}
+bool mlirAttributeIsADenseF64Array(MlirAttribute attr) {
+  return unwrap(attr).isa<DenseF64ArrayAttr>();
+}
+
+//===----------------------------------------------------------------------===//
+// Constructors.
+
+MlirAttribute mlirDenseBoolArrayGet(MlirContext ctx, intptr_t size,
+                                    int const *values) {
+  SmallVector<bool, 4> elements(values, values + size);
+  return wrap(DenseBoolArrayAttr::get(unwrap(ctx), elements));
+}
+MlirAttribute mlirDenseI8ArrayGet(MlirContext ctx, intptr_t size,
+                                  int8_t const *values) {
+  return wrap(
+      DenseI8ArrayAttr::get(unwrap(ctx), ArrayRef<int8_t>(values, size)));
+}
+MlirAttribute mlirDenseI16ArrayGet(MlirContext ctx, intptr_t size,
+                                   int16_t const *values) {
+  return wrap(
+      DenseI16ArrayAttr::get(unwrap(ctx), ArrayRef<int16_t>(values, size)));
+}
+MlirAttribute mlirDenseI32ArrayGet(MlirContext ctx, intptr_t size,
+                                   int32_t const *values) {
+  return wrap(
+      DenseI32ArrayAttr::get(unwrap(ctx), ArrayRef<int32_t>(values, size)));
+}
+MlirAttribute mlirDenseI64ArrayGet(MlirContext ctx, intptr_t size,
+                                   int64_t const *values) {
+  return wrap(
+      DenseI64ArrayAttr::get(unwrap(ctx), ArrayRef<int64_t>(values, size)));
+}
+MlirAttribute mlirDenseF32ArrayGet(MlirContext ctx, intptr_t size,
+                                   float const *values) {
+  return wrap(
+      DenseF32ArrayAttr::get(unwrap(ctx), ArrayRef<float>(values, size)));
+}
+MlirAttribute mlirDenseF64ArrayGet(MlirContext ctx, intptr_t size,
+                                   double const *values) {
+  return wrap(
+      DenseF64ArrayAttr::get(unwrap(ctx), ArrayRef<double>(values, size)));
+}
+
+//===----------------------------------------------------------------------===//
+// Accessors.
+
+intptr_t mlirDenseArrayGetNumElements(MlirAttribute attr) {
+  return unwrap(attr).cast<DenseArrayAttr>().size();
+}
+
+//===----------------------------------------------------------------------===//
+// Indexed accessors.
+
+bool mlirDenseBoolArrayGetElement(MlirAttribute attr, intptr_t pos) {
+  return unwrap(attr).cast<DenseBoolArrayAttr>()[pos];
+}
+int8_t mlirDenseI8ArrayGetElement(MlirAttribute attr, intptr_t pos) {
+  return unwrap(attr).cast<DenseI8ArrayAttr>()[pos];
+}
+int16_t mlirDenseI16ArrayGetElement(MlirAttribute attr, intptr_t pos) {
+  return unwrap(attr).cast<DenseI16ArrayAttr>()[pos];
+}
+int32_t mlirDenseI32ArrayGetElement(MlirAttribute attr, intptr_t pos) {
+  return unwrap(attr).cast<DenseI32ArrayAttr>()[pos];
+}
+int64_t mlirDenseI64ArrayGetElement(MlirAttribute attr, intptr_t pos) {
+  return unwrap(attr).cast<DenseI64ArrayAttr>()[pos];
+}
+float mlirDenseF32ArrayGetElement(MlirAttribute attr, intptr_t pos) {
+  return unwrap(attr).cast<DenseF32ArrayAttr>()[pos];
+}
+double mlirDenseF64ArrayGetElement(MlirAttribute attr, intptr_t pos) {
+  return unwrap(attr).cast<DenseF64ArrayAttr>()[pos];
 }
 
 //===----------------------------------------------------------------------===//
@@ -417,9 +520,8 @@ template <typename T>
 static MlirAttribute getDenseAttribute(MlirType shapedType,
                                        intptr_t numElements,
                                        const T *elements) {
-  return wrap(
-      DenseElementsAttr::get(unwrap(shapedType).cast<ShapedType>(),
-                             llvm::makeArrayRef(elements, numElements)));
+  return wrap(DenseElementsAttr::get(unwrap(shapedType).cast<ShapedType>(),
+                                     llvm::ArrayRef(elements, numElements)));
 }
 
 MlirAttribute mlirDenseElementsAttrUInt8Get(MlirType shapedType,
@@ -599,11 +701,143 @@ const void *mlirDenseElementsAttrGetRawData(MlirAttribute attr) {
 }
 
 //===----------------------------------------------------------------------===//
-// Opaque elements attribute.
+// Resource blob attributes.
 //===----------------------------------------------------------------------===//
 
-bool mlirAttributeIsAOpaqueElements(MlirAttribute attr) {
-  return unwrap(attr).isa<OpaqueElementsAttr>();
+template <typename U, typename T>
+static MlirAttribute getDenseResource(MlirType shapedType, MlirStringRef name,
+                                      intptr_t numElements, const T *elements) {
+  return wrap(U::get(unwrap(shapedType).cast<ShapedType>(), unwrap(name),
+                     UnmanagedAsmResourceBlob::allocateInferAlign(
+                         llvm::ArrayRef(elements, numElements))));
+}
+
+MLIR_CAPI_EXPORTED MlirAttribute mlirUnmanagedDenseBoolResourceElementsAttrGet(
+    MlirType shapedType, MlirStringRef name, intptr_t numElements,
+    const int *elements) {
+  return getDenseResource<DenseBoolResourceElementsAttr>(shapedType, name,
+                                                         numElements, elements);
+}
+MLIR_CAPI_EXPORTED MlirAttribute mlirUnmanagedDenseUInt8ResourceElementsAttrGet(
+    MlirType shapedType, MlirStringRef name, intptr_t numElements,
+    const uint8_t *elements) {
+  return getDenseResource<DenseUI8ResourceElementsAttr>(shapedType, name,
+                                                        numElements, elements);
+}
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirUnmanagedDenseUInt16ResourceElementsAttrGet(MlirType shapedType,
+                                                MlirStringRef name,
+                                                intptr_t numElements,
+                                                const uint16_t *elements) {
+  return getDenseResource<DenseUI16ResourceElementsAttr>(shapedType, name,
+                                                         numElements, elements);
+}
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirUnmanagedDenseUInt32ResourceElementsAttrGet(MlirType shapedType,
+                                                MlirStringRef name,
+                                                intptr_t numElements,
+                                                const uint32_t *elements) {
+  return getDenseResource<DenseUI32ResourceElementsAttr>(shapedType, name,
+                                                         numElements, elements);
+}
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirUnmanagedDenseUInt64ResourceElementsAttrGet(MlirType shapedType,
+                                                MlirStringRef name,
+                                                intptr_t numElements,
+                                                const uint64_t *elements) {
+  return getDenseResource<DenseUI64ResourceElementsAttr>(shapedType, name,
+                                                         numElements, elements);
+}
+MLIR_CAPI_EXPORTED MlirAttribute mlirUnmanagedDenseInt8ResourceElementsAttrGet(
+    MlirType shapedType, MlirStringRef name, intptr_t numElements,
+    const int8_t *elements) {
+  return getDenseResource<DenseUI8ResourceElementsAttr>(shapedType, name,
+                                                        numElements, elements);
+}
+MLIR_CAPI_EXPORTED MlirAttribute mlirUnmanagedDenseInt16ResourceElementsAttrGet(
+    MlirType shapedType, MlirStringRef name, intptr_t numElements,
+    const int16_t *elements) {
+  return getDenseResource<DenseUI16ResourceElementsAttr>(shapedType, name,
+                                                         numElements, elements);
+}
+MLIR_CAPI_EXPORTED MlirAttribute mlirUnmanagedDenseInt32ResourceElementsAttrGet(
+    MlirType shapedType, MlirStringRef name, intptr_t numElements,
+    const int32_t *elements) {
+  return getDenseResource<DenseUI32ResourceElementsAttr>(shapedType, name,
+                                                         numElements, elements);
+}
+MLIR_CAPI_EXPORTED MlirAttribute mlirUnmanagedDenseInt64ResourceElementsAttrGet(
+    MlirType shapedType, MlirStringRef name, intptr_t numElements,
+    const int64_t *elements) {
+  return getDenseResource<DenseUI64ResourceElementsAttr>(shapedType, name,
+                                                         numElements, elements);
+}
+MLIR_CAPI_EXPORTED MlirAttribute mlirUnmanagedDenseFloatResourceElementsAttrGet(
+    MlirType shapedType, MlirStringRef name, intptr_t numElements,
+    const float *elements) {
+  return getDenseResource<DenseF32ResourceElementsAttr>(shapedType, name,
+                                                        numElements, elements);
+}
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirUnmanagedDenseDoubleResourceElementsAttrGet(MlirType shapedType,
+                                                MlirStringRef name,
+                                                intptr_t numElements,
+                                                const double *elements) {
+  return getDenseResource<DenseF64ResourceElementsAttr>(shapedType, name,
+                                                        numElements, elements);
+}
+
+template <typename U, typename T>
+static T getDenseResourceVal(MlirAttribute attr, intptr_t pos) {
+  return (*unwrap(attr).cast<U>().tryGetAsArrayRef())[pos];
+}
+
+MLIR_CAPI_EXPORTED bool
+mlirDenseBoolResourceElementsAttrGetValue(MlirAttribute attr, intptr_t pos) {
+  return getDenseResourceVal<DenseBoolResourceElementsAttr, uint8_t>(attr, pos);
+}
+MLIR_CAPI_EXPORTED uint8_t
+mlirDenseUInt8ResourceElementsAttrGetValue(MlirAttribute attr, intptr_t pos) {
+  return getDenseResourceVal<DenseUI8ResourceElementsAttr, uint8_t>(attr, pos);
+}
+MLIR_CAPI_EXPORTED uint16_t
+mlirDenseUInt16ResourceElementsAttrGetValue(MlirAttribute attr, intptr_t pos) {
+  return getDenseResourceVal<DenseUI16ResourceElementsAttr, uint16_t>(attr,
+                                                                      pos);
+}
+MLIR_CAPI_EXPORTED uint32_t
+mlirDenseUInt32ResourceElementsAttrGetValue(MlirAttribute attr, intptr_t pos) {
+  return getDenseResourceVal<DenseUI32ResourceElementsAttr, uint32_t>(attr,
+                                                                      pos);
+}
+MLIR_CAPI_EXPORTED uint64_t
+mlirDenseUInt64ResourceElementsAttrGetValue(MlirAttribute attr, intptr_t pos) {
+  return getDenseResourceVal<DenseUI64ResourceElementsAttr, uint64_t>(attr,
+                                                                      pos);
+}
+MLIR_CAPI_EXPORTED int8_t
+mlirDenseInt8ResourceElementsAttrGetValue(MlirAttribute attr, intptr_t pos) {
+  return getDenseResourceVal<DenseUI8ResourceElementsAttr, int8_t>(attr, pos);
+}
+MLIR_CAPI_EXPORTED int16_t
+mlirDenseInt16ResourceElementsAttrGetValue(MlirAttribute attr, intptr_t pos) {
+  return getDenseResourceVal<DenseUI16ResourceElementsAttr, int16_t>(attr, pos);
+}
+MLIR_CAPI_EXPORTED int32_t
+mlirDenseInt32ResourceElementsAttrGetValue(MlirAttribute attr, intptr_t pos) {
+  return getDenseResourceVal<DenseUI32ResourceElementsAttr, int32_t>(attr, pos);
+}
+MLIR_CAPI_EXPORTED int64_t
+mlirDenseInt64ResourceElementsAttrGetValue(MlirAttribute attr, intptr_t pos) {
+  return getDenseResourceVal<DenseUI64ResourceElementsAttr, int64_t>(attr, pos);
+}
+MLIR_CAPI_EXPORTED float
+mlirDenseFloatResourceElementsAttrGetValue(MlirAttribute attr, intptr_t pos) {
+  return getDenseResourceVal<DenseF32ResourceElementsAttr, float>(attr, pos);
+}
+MLIR_CAPI_EXPORTED double
+mlirDenseDoubleResourceElementsAttrGetValue(MlirAttribute attr, intptr_t pos) {
+  return getDenseResourceVal<DenseF64ResourceElementsAttr, double>(attr, pos);
 }
 
 //===----------------------------------------------------------------------===//
@@ -629,4 +863,32 @@ MlirAttribute mlirSparseElementsAttrGetIndices(MlirAttribute attr) {
 
 MlirAttribute mlirSparseElementsAttrGetValues(MlirAttribute attr) {
   return wrap(unwrap(attr).cast<SparseElementsAttr>().getValues());
+}
+
+//===----------------------------------------------------------------------===//
+// Strided layout attribute.
+//===----------------------------------------------------------------------===//
+
+bool mlirAttributeIsAStridedLayout(MlirAttribute attr) {
+  return unwrap(attr).isa<StridedLayoutAttr>();
+}
+
+MlirAttribute mlirStridedLayoutAttrGet(MlirContext ctx, int64_t offset,
+                                       intptr_t numStrides,
+                                       const int64_t *strides) {
+  return wrap(StridedLayoutAttr::get(unwrap(ctx), offset,
+                                     ArrayRef<int64_t>(strides, numStrides)));
+}
+
+int64_t mlirStridedLayoutAttrGetOffset(MlirAttribute attr) {
+  return unwrap(attr).cast<StridedLayoutAttr>().getOffset();
+}
+
+intptr_t mlirStridedLayoutAttrGetNumStrides(MlirAttribute attr) {
+  return static_cast<intptr_t>(
+      unwrap(attr).cast<StridedLayoutAttr>().getStrides().size());
+}
+
+int64_t mlirStridedLayoutAttrGetStride(MlirAttribute attr, intptr_t pos) {
+  return unwrap(attr).cast<StridedLayoutAttr>().getStrides()[pos];
 }

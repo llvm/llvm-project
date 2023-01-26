@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -force-vector-width=2 -force-vector-interleave=2 -scev-verify-ir -S %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=2 -force-vector-interleave=2 -scev-verify-ir -S %s | FileCheck %s
 
 ; Make sure SCEV is not queried while the IR is temporarily invalid. The tests
 ; deliberately do not check for details of the vectorized IR, because that's
@@ -31,7 +31,7 @@ exit:
   ret void
 }
 
-define void @pr49900(i32 %x, i64* %ptr) {
+define void @pr49900(i32 %x, ptr %ptr) {
 ; CHECK-LABEL: @pr49900
 ; CHECK: vector.body{{.*}}:
 ; CHECK: vector.body{{.*}}:
@@ -79,7 +79,7 @@ exit:
 ; CHECK-LABEL: @pr52024(
 ; CHECK: vector.body:
 ;
-define void @pr52024(i32* %dst, i16 %N) {
+define void @pr52024(ptr %dst, i16 %N) {
 entry:
   br label %loop.1
 
@@ -108,8 +108,8 @@ loop.3:
   %sub.phi = phi i16 [ 0, %loop.2.header ], [ %sub, %loop.3 ]
   %sub = sub i16 %sub.phi, %rem.trunc
   %sub.ext = zext i16 %sub to i32
-  %gep.dst = getelementptr i32, i32* %dst, i32 %iv.3
-  store i32 %sub.ext, i32* %gep.dst
+  %gep.dst = getelementptr i32, ptr %dst, i32 %iv.3
+  store i32 %sub.ext, ptr %gep.dst
   %iv.3.next= add nuw nsw i32 %iv.3, 1
   %exitcond.3 = icmp eq i32 %iv.3.next, 34
   br i1 %exitcond.3, label %loop.2.latch, label %loop.3

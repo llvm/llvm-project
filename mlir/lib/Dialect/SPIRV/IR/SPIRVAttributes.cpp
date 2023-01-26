@@ -82,17 +82,18 @@ struct VerCapExtAttributeStorage : public AttributeStorage {
 };
 
 struct TargetEnvAttributeStorage : public AttributeStorage {
-  using KeyTy = std::tuple<Attribute, Vendor, DeviceType, uint32_t, Attribute>;
+  using KeyTy =
+      std::tuple<Attribute, ClientAPI, Vendor, DeviceType, uint32_t, Attribute>;
 
-  TargetEnvAttributeStorage(Attribute triple, Vendor vendorID,
-                            DeviceType deviceType, uint32_t deviceID,
-                            Attribute limits)
-      : triple(triple), limits(limits), vendorID(vendorID),
-        deviceType(deviceType), deviceID(deviceID) {}
+  TargetEnvAttributeStorage(Attribute triple, ClientAPI clientAPI,
+                            Vendor vendorID, DeviceType deviceType,
+                            uint32_t deviceID, Attribute limits)
+      : triple(triple), limits(limits), clientAPI(clientAPI),
+        vendorID(vendorID), deviceType(deviceType), deviceID(deviceID) {}
 
   bool operator==(const KeyTy &key) const {
-    return key ==
-           std::make_tuple(triple, vendorID, deviceType, deviceID, limits);
+    return key == std::make_tuple(triple, clientAPI, vendorID, deviceType,
+                                  deviceID, limits);
   }
 
   static TargetEnvAttributeStorage *
@@ -100,11 +101,12 @@ struct TargetEnvAttributeStorage : public AttributeStorage {
     return new (allocator.allocate<TargetEnvAttributeStorage>())
         TargetEnvAttributeStorage(std::get<0>(key), std::get<1>(key),
                                   std::get<2>(key), std::get<3>(key),
-                                  std::get<4>(key));
+                                  std::get<4>(key), std::get<5>(key));
   }
 
   Attribute triple;
   Attribute limits;
+  ClientAPI clientAPI;
   Vendor vendorID;
   DeviceType deviceType;
   uint32_t deviceID;
@@ -119,7 +121,7 @@ struct TargetEnvAttributeStorage : public AttributeStorage {
 
 spirv::InterfaceVarABIAttr
 spirv::InterfaceVarABIAttr::get(uint32_t descriptorSet, uint32_t binding,
-                                Optional<spirv::StorageClass> storageClass,
+                                std::optional<spirv::StorageClass> storageClass,
                                 MLIRContext *context) {
   Builder b(context);
   auto descriptorSetAttr = b.getI32IntegerAttr(descriptorSet);
@@ -150,11 +152,12 @@ uint32_t spirv::InterfaceVarABIAttr::getDescriptorSet() {
   return getImpl()->descriptorSet.cast<IntegerAttr>().getInt();
 }
 
-Optional<spirv::StorageClass> spirv::InterfaceVarABIAttr::getStorageClass() {
+std::optional<spirv::StorageClass>
+spirv::InterfaceVarABIAttr::getStorageClass() {
   if (getImpl()->storageClass)
     return static_cast<spirv::StorageClass>(
         getImpl()->storageClass.cast<IntegerAttr>().getValue().getZExtValue());
-  return llvm::None;
+  return std::nullopt;
 }
 
 LogicalResult spirv::InterfaceVarABIAttr::verify(
@@ -282,14 +285,13 @@ spirv::VerCapExtAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 // TargetEnvAttr
 //===----------------------------------------------------------------------===//
 
-spirv::TargetEnvAttr spirv::TargetEnvAttr::get(spirv::VerCapExtAttr triple,
-                                               Vendor vendorID,
-                                               DeviceType deviceType,
-                                               uint32_t deviceID,
-                                               ResourceLimitsAttr limits) {
+spirv::TargetEnvAttr spirv::TargetEnvAttr::get(
+    spirv::VerCapExtAttr triple, ResourceLimitsAttr limits, ClientAPI clientAPI,
+    Vendor vendorID, DeviceType deviceType, uint32_t deviceID) {
   assert(triple && limits && "expected valid triple and limits");
   MLIRContext *context = triple.getContext();
-  return Base::get(context, triple, vendorID, deviceType, deviceID, limits);
+  return Base::get(context, triple, clientAPI, vendorID, deviceType, deviceID,
+                   limits);
 }
 
 StringRef spirv::TargetEnvAttr::getKindName() { return "target_env"; }
@@ -316,6 +318,10 @@ spirv::VerCapExtAttr::cap_range spirv::TargetEnvAttr::getCapabilities() {
 
 ArrayAttr spirv::TargetEnvAttr::getCapabilitiesAttr() {
   return getTripleAttr().getCapabilitiesAttr();
+}
+
+spirv::ClientAPI spirv::TargetEnvAttr::getClientAPI() const {
+  return getImpl()->clientAPI;
 }
 
 spirv::Vendor spirv::TargetEnvAttr::getVendorID() const {
@@ -387,7 +393,7 @@ static Attribute parseInterfaceVarABIAttr(DialectAsmParser &parser) {
     uint32_t descriptorSet = 0;
     auto descriptorSetParseResult = parser.parseOptionalInteger(descriptorSet);
 
-    if (!descriptorSetParseResult.hasValue() ||
+    if (!descriptorSetParseResult.has_value() ||
         failed(*descriptorSetParseResult)) {
       parser.emitError(loc, "missing descriptor set");
       return {};
@@ -404,7 +410,7 @@ static Attribute parseInterfaceVarABIAttr(DialectAsmParser &parser) {
     uint32_t binding = 0;
     auto bindingParseResult = parser.parseOptionalInteger(binding);
 
-    if (!bindingParseResult.hasValue() || failed(*bindingParseResult)) {
+    if (!bindingParseResult.has_value() || failed(*bindingParseResult)) {
       parser.emitError(loc, "missing binding");
       return {};
     }
@@ -523,6 +529,22 @@ static Attribute parseTargetEnvAttr(DialectAsmParser &parser) {
   if (parser.parseAttribute(tripleAttr) || parser.parseComma())
     return {};
 
+  auto clientAPI = spirv::ClientAPI::Unknown;
+  if (succeeded(parser.parseOptionalKeyword("api"))) {
+    if (parser.parseEqual())
+      return {};
+    auto loc = parser.getCurrentLocation();
+    StringRef apiStr;
+    if (parser.parseKeyword(&apiStr))
+      return {};
+    if (auto apiSymbol = spirv::symbolizeClientAPI(apiStr))
+      clientAPI = *apiSymbol;
+    else
+      parser.emitError(loc, "unknown client API: ") << apiStr;
+    if (parser.parseComma())
+      return {};
+  }
+
   // Parse [vendor[:device-type[:device-id]]]
   Vendor vendorID = Vendor::Unknown;
   DeviceType deviceType = DeviceType::Unknown;
@@ -531,22 +553,20 @@ static Attribute parseTargetEnvAttr(DialectAsmParser &parser) {
     auto loc = parser.getCurrentLocation();
     StringRef vendorStr;
     if (succeeded(parser.parseOptionalKeyword(&vendorStr))) {
-      if (auto vendorSymbol = spirv::symbolizeVendor(vendorStr)) {
+      if (auto vendorSymbol = spirv::symbolizeVendor(vendorStr))
         vendorID = *vendorSymbol;
-      } else {
+      else
         parser.emitError(loc, "unknown vendor: ") << vendorStr;
-      }
 
       if (succeeded(parser.parseOptionalColon())) {
         loc = parser.getCurrentLocation();
         StringRef deviceTypeStr;
         if (parser.parseKeyword(&deviceTypeStr))
           return {};
-        if (auto deviceTypeSymbol = spirv::symbolizeDeviceType(deviceTypeStr)) {
+        if (auto deviceTypeSymbol = spirv::symbolizeDeviceType(deviceTypeStr))
           deviceType = *deviceTypeSymbol;
-        } else {
+        else
           parser.emitError(loc, "unknown device type: ") << deviceTypeStr;
-        }
 
         if (succeeded(parser.parseOptionalColon())) {
           loc = parser.getCurrentLocation();
@@ -563,8 +583,8 @@ static Attribute parseTargetEnvAttr(DialectAsmParser &parser) {
   if (parser.parseAttribute(limitsAttr) || parser.parseGreater())
     return {};
 
-  return spirv::TargetEnvAttr::get(tripleAttr, vendorID, deviceType, deviceID,
-                                   limitsAttr);
+  return spirv::TargetEnvAttr::get(tripleAttr, limitsAttr, clientAPI, vendorID,
+                                   deviceType, deviceID);
 }
 
 Attribute SPIRVDialect::parseAttribute(DialectAsmParser &parser,
@@ -580,7 +600,7 @@ Attribute SPIRVDialect::parseAttribute(DialectAsmParser &parser,
   Attribute attr;
   OptionalParseResult result =
       generatedAttributeParser(parser, &attrKind, type, attr);
-  if (result.hasValue())
+  if (result.has_value())
     return attr;
 
   if (attrKind == spirv::TargetEnvAttr::getKindName())
@@ -614,8 +634,11 @@ static void print(spirv::VerCapExtAttr triple, DialectAsmPrinter &printer) {
 }
 
 static void print(spirv::TargetEnvAttr targetEnv, DialectAsmPrinter &printer) {
-  printer << spirv::TargetEnvAttr::getKindName() << "<#spv.";
+  printer << spirv::TargetEnvAttr::getKindName() << "<#spirv.";
   print(targetEnv.getTripleAttr(), printer);
+  auto clientAPI = targetEnv.getClientAPI();
+  if (clientAPI != spirv::ClientAPI::Unknown)
+    printer << ", api=" << clientAPI;
   spirv::Vendor vendorID = targetEnv.getVendorID();
   spirv::DeviceType deviceType = targetEnv.getDeviceType();
   uint32_t deviceID = targetEnv.getDeviceID();

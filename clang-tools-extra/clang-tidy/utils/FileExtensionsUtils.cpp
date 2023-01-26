@@ -9,10 +9,9 @@
 #include "FileExtensionsUtils.h"
 #include "clang/Basic/CharInfo.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 
-namespace clang {
-namespace tidy {
-namespace utils {
+namespace clang::tidy::utils {
 
 bool isExpansionLocInHeaderFile(SourceLocation Loc, const SourceManager &SM,
                                 const FileExtensionsSet &HeaderFileExtensions) {
@@ -53,14 +52,14 @@ bool parseFileExtensions(StringRef AllFileExtensions,
   return true;
 }
 
-llvm::Optional<StringRef>
+std::optional<StringRef>
 getFileExtension(StringRef FileName, const FileExtensionsSet &FileExtensions) {
   StringRef Extension = llvm::sys::path::extension(FileName);
   if (Extension.empty())
-    return llvm::None;
+    return std::nullopt;
   // Skip "." prefix.
   if (!FileExtensions.count(Extension.substr(1)))
-    return llvm::None;
+    return std::nullopt;
   return Extension;
 }
 
@@ -69,6 +68,4 @@ bool isFileExtension(StringRef FileName,
   return getFileExtension(FileName, FileExtensions).has_value();
 }
 
-} // namespace utils
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::utils

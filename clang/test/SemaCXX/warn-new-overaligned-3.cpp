@@ -1,4 +1,7 @@
-// RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -Wover-aligned %s -isystem %S/Inputs -verify
+// RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -Wover-aligned %s -isystem %S/Inputs -verify=precxx17 %std_cxx11-14
+// RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -Wover-aligned %s -isystem %S/Inputs -verify %std_cxx17-
+
+// expected-no-diagnostics
 
 // This test ensures that we still get the warning even if we #include <new>
 // where the header here simulates <new>.
@@ -16,8 +19,8 @@ struct Test {
 
 void helper() {
   Test t;
-  new Test;  // expected-warning {{type 'Test' requires 256 bytes of alignment and the default allocator only guarantees}}
-  new Test[10];  // expected-warning {{type 'Test' requires 256 bytes of alignment and the default allocator only guarantees}}
+  new Test;  // precxx17-warning {{type 'Test' requires 256 bytes of alignment and the default allocator only guarantees}}
+  new Test[10];  // precxx17-warning {{type 'Test' requires 256 bytes of alignment and the default allocator only guarantees}}
 }
 }
 

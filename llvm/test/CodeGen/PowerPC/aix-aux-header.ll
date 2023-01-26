@@ -16,6 +16,6 @@
 
 define hidden i32 @fun() {
 entry:
-  %0 = load i32, i32* @var, align 4
+  %0 = load i32, ptr @var, align 4
   ret i32 %0
 }

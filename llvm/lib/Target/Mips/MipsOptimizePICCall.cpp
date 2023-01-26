@@ -127,7 +127,7 @@ static MachineOperand *getCallTargetRegOpnd(MachineInstr &MI) {
 
   MachineOperand &MO = MI.getOperand(0);
 
-  if (!MO.isReg() || !MO.isUse() || !Register::isVirtualRegister(MO.getReg()))
+  if (!MO.isReg() || !MO.isUse() || !MO.getReg().isVirtual())
     return nullptr;
 
   return &MO;

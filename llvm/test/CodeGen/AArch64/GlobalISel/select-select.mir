@@ -574,7 +574,8 @@ body:             |
     ; CHECK-NEXT: %cond:gpr32common = COPY %reg0.sub_32
     ; CHECK-NEXT: %t:gpr64 = COPY $x2
     ; CHECK-NEXT: %negative_one:gpr32 = MOVi32imm -1
-    ; CHECK-NEXT: %zext:gpr64 = SUBREG_TO_REG 0, %negative_one, %subreg.sub_32
+    ; CHECK-NEXT: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, %negative_one, 0
+    ; CHECK-NEXT: %zext:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
     ; CHECK-NEXT: %xor:gpr64 = EORXrr %reg1, %zext
     ; CHECK-NEXT: [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri %cond, 0, implicit-def $nzcv
     ; CHECK-NEXT: %select:gpr64 = CSELXr %t, %xor, 1, implicit $nzcv

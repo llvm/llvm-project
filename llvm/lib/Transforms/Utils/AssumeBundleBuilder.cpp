@@ -254,7 +254,7 @@ struct AssumeBuilderState {
     unsigned DerefSize = MemInst->getModule()
                              ->getDataLayout()
                              .getTypeStoreSize(AccType)
-                             .getKnownMinSize();
+                             .getKnownMinValue();
     if (DerefSize != 0) {
       addKnowledge({Attribute::Dereferenceable, DerefSize, Pointer});
       if (!NullPointerIsDefined(MemInst->getFunction(),

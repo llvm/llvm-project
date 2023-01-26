@@ -13,11 +13,14 @@
 #include "index/SymbolLocation.h"
 #include "index/SymbolOrigin.h"
 #include "clang/Index/IndexSymbol.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/StringSaver.h"
 
 namespace clang {
 namespace clangd {
+
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 /// The class presents a C++ symbol, e.g. class, function.
 ///
@@ -84,12 +87,24 @@ struct Symbol {
   /// Only set when the symbol is indexed for completion.
   llvm::StringRef Type;
 
+  enum IncludeDirective : uint8_t {
+    Invalid = 0,
+    /// `#include "header.h"`
+    Include = 1,
+    /// `#import "header.h"`
+    Import = 2,
+
+    LLVM_MARK_AS_BITMASK_ENUM(Import)
+  };
+
   struct IncludeHeaderWithReferences {
     IncludeHeaderWithReferences() = default;
 
     IncludeHeaderWithReferences(llvm::StringRef IncludeHeader,
-                                unsigned References)
-        : IncludeHeader(IncludeHeader), References(References) {}
+                                uint32_t References,
+                                IncludeDirective SupportedDirectives)
+        : IncludeHeader(IncludeHeader), References(References),
+          SupportedDirectives(SupportedDirectives) {}
 
     /// This can be either a URI of the header to be #include'd
     /// for this symbol, or a literal header quoted with <> or "" that is
@@ -101,7 +116,14 @@ struct Symbol {
     llvm::StringRef IncludeHeader = "";
     /// The number of translation units that reference this symbol and include
     /// this header. This number is only meaningful if aggregated in an index.
-    unsigned References = 0;
+    uint32_t References : 30;
+    /// Bitfield of supported directives (IncludeDirective) that can be used
+    /// when including this header.
+    uint32_t SupportedDirectives : 2;
+
+    IncludeDirective supportedDirectives() const {
+      return static_cast<IncludeDirective>(SupportedDirectives);
+    }
   };
   /// One Symbol can potentially be included via different headers.
   ///   - If we haven't seen a definition, this covers all declarations.

@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=inline,instcombine -S | FileCheck %s
 
 ; This test case exposed a bug in instcombine where the early
 ; DCE of a call wasn't recognized as changing the IR.

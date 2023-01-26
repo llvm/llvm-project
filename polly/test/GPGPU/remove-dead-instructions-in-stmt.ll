@@ -10,13 +10,13 @@
 ; condition. This code referred to CPU registers and consequently resulted
 ; in invalid bitcode.
 
-; KERNEL-IR: store i32 0, i32 addrspace(1)* %polly.access.MemRef_sum_c, align 4
+; KERNEL-IR: store i32 0, ptr addrspace(1) %polly.access.MemRef_sum_c, align 4
 ; KERNEL-IR-NEXT: br label %polly.merge
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @kernel_dynprog([50 x [50 x i32]]* %sum_c) {
+define void @kernel_dynprog(ptr %sum_c) {
 entry:
   br label %for.cond1.preheader
 
@@ -36,8 +36,8 @@ for.body3:                                        ; preds = %for.cond1.loopexit,
 
 for.body6:                                        ; preds = %for.end, %for.body3
   %indvars.iv50 = phi i64 [ 0, %for.body3 ], [ %indvars.iv.next51, %for.end ]
-  %arrayidx10 = getelementptr inbounds [50 x [50 x i32]], [50 x [50 x i32]]* %sum_c, i64 %indvars.iv55, i64 %indvars.iv50, i64 %indvars.iv55
-  store i32 0, i32* %arrayidx10, align 4
+  %arrayidx10 = getelementptr inbounds [50 x [50 x i32]], ptr %sum_c, i64 %indvars.iv55, i64 %indvars.iv50, i64 %indvars.iv55
+  store i32 0, ptr %arrayidx10, align 4
   %cmp1334 = icmp slt i64 %indvars.iv.next56, %indvars.iv50
   br i1 %cmp1334, label %for.body14.lr.ph, label %for.end
 
@@ -45,7 +45,7 @@ for.body14.lr.ph:                                 ; preds = %for.body6
   br label %for.body14
 
 for.body14:                                       ; preds = %for.body14, %for.body14.lr.ph
-  %arrayidx32 = getelementptr inbounds [50 x [50 x i32]], [50 x [50 x i32]]* %sum_c, i64 %indvars.iv55, i64 %indvars.iv50, i64 0
+  %arrayidx32 = getelementptr inbounds [50 x [50 x i32]], ptr %sum_c, i64 %indvars.iv55, i64 %indvars.iv50, i64 0
   br i1 false, label %for.body14, label %for.cond12.for.end_crit_edge
 
 for.cond12.for.end_crit_edge:                     ; preds = %for.body14

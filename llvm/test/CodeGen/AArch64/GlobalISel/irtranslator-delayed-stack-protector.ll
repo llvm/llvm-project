@@ -32,9 +32,8 @@ define void @caller() sspreq {
   ; CHECK-NEXT:   RET_ReallyLR
 entry:
   %x = alloca i32, align 4
-  %0 = bitcast i32* %x to i8*
-  call void @callee(i32* nonnull %x)
+  call void @callee(ptr nonnull %x)
   ret void
 }
 
-declare void @callee(i32*)
+declare void @callee(ptr)

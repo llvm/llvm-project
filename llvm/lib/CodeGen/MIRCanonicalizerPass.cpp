@@ -155,7 +155,7 @@ static bool rescheduleCanonically(unsigned &PseudoIdempotentInstCount,
       if (!MO.isReg())
         continue;
 
-      if (Register::isVirtualRegister(MO.getReg()))
+      if (MO.getReg().isVirtual())
         continue;
 
       if (!MO.isDef())
@@ -172,7 +172,7 @@ static bool rescheduleCanonically(unsigned &PseudoIdempotentInstCount,
       continue;
 
     MachineOperand &MO = II->getOperand(0);
-    if (!MO.isReg() || !Register::isVirtualRegister(MO.getReg()))
+    if (!MO.isReg() || !MO.getReg().isVirtual())
       continue;
     if (!MO.isDef())
       continue;
@@ -185,7 +185,7 @@ static bool rescheduleCanonically(unsigned &PseudoIdempotentInstCount,
       }
 
       if (II->getOperand(i).isReg()) {
-        if (!Register::isVirtualRegister(II->getOperand(i).getReg()))
+        if (!II->getOperand(i).getReg().isVirtual())
           if (!llvm::is_contained(PhysRegDefs, II->getOperand(i).getReg())) {
             continue;
           }
@@ -307,9 +307,9 @@ static bool propagateLocalCopies(MachineBasicBlock *MBB) {
     const Register Dst = MI->getOperand(0).getReg();
     const Register Src = MI->getOperand(1).getReg();
 
-    if (!Register::isVirtualRegister(Dst))
+    if (!Dst.isVirtual())
       continue;
-    if (!Register::isVirtualRegister(Src))
+    if (!Src.isVirtual())
       continue;
     // Not folding COPY instructions if regbankselect has not set the RCs.
     // Why are we only considering Register Classes? Because the verifier

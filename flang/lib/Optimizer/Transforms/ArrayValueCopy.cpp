@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
 #include "flang/Optimizer/Builder/Array.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
@@ -21,6 +20,11 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/Debug.h"
+
+namespace fir {
+#define GEN_PASS_DEF_ARRAYVALUECOPY
+#include "flang/Optimizer/Transforms/Passes.h.inc"
+} // namespace fir
 
 #define DEBUG_TYPE "flang-array-value-copy"
 
@@ -683,7 +687,7 @@ conservativeCallConflict(llvm::ArrayRef<mlir::Operation *> reaches) {
       if (auto callee =
               call.getCallableForCallee().dyn_cast<mlir::SymbolRefAttr>()) {
         auto module = op->getParentOfType<mlir::ModuleOp>();
-        return hasHostAssociationArgument(
+        return isInternalPorcedure(
             module.lookupSymbol<mlir::func::FuncOp>(callee));
       }
     return false;
@@ -1050,7 +1054,7 @@ allocateArrayTemp(mlir::Location loc, mlir::PatternRewriter &rewriter,
     // The allocatable component descriptors need to be set to a clean
     // deallocated status before anything is done with them.
     mlir::Value box = rewriter.create<fir::EmboxOp>(
-        loc, fir::BoxType::get(baseType), allocmem, shape,
+        loc, fir::BoxType::get(allocmem.getType()), allocmem, shape,
         /*slice=*/mlir::Value{}, typeParams);
     auto module = load->getParentOfType<mlir::ModuleOp>();
     fir::KindMapping kindMap = getKindMapping(module);
@@ -1326,7 +1330,7 @@ public:
 };
 
 class ArrayValueCopyConverter
-    : public ArrayValueCopyBase<ArrayValueCopyConverter> {
+    : public fir::impl::ArrayValueCopyBase<ArrayValueCopyConverter> {
 public:
   void runOnOperation() override {
     auto func = getOperation();
@@ -1345,9 +1349,9 @@ public:
     patterns1.insert<ArrayAccessConversion>(context, analysis, useMap);
     patterns1.insert<ArrayAmendConversion>(context);
     mlir::ConversionTarget target(*context);
-    target.addLegalDialect<FIROpsDialect, mlir::scf::SCFDialect,
-                           mlir::arith::ArithmeticDialect,
-                           mlir::func::FuncDialect>();
+    target
+        .addLegalDialect<FIROpsDialect, mlir::scf::SCFDialect,
+                         mlir::arith::ArithDialect, mlir::func::FuncDialect>();
     target.addIllegalOp<ArrayAccessOp, ArrayAmendOp, ArrayFetchOp,
                         ArrayUpdateOp, ArrayModifyOp>();
     // Rewrite the array fetch and array update ops.

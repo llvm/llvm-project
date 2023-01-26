@@ -71,7 +71,7 @@ define i8 @sub_mask1_trunc_lshr(i64 %a0) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[A0:%.*]], 48
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 63
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i8
-; CHECK-NEXT:    [[NEG:%.*]] = add i8 [[TMP3]], 10
+; CHECK-NEXT:    [[NEG:%.*]] = add nsw i8 [[TMP3]], 10
 ; CHECK-NEXT:    ret i8 [[NEG]]
 ;
   %shift = lshr i64 %a0, 15
@@ -86,7 +86,7 @@ define i32 @sub_sext_mask1_trunc_lshr(i64 %a0) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[A0:%.*]], 48
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 63
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i8
-; CHECK-NEXT:    [[NARROW:%.*]] = add i8 [[TMP3]], 10
+; CHECK-NEXT:    [[NARROW:%.*]] = add nsw i8 [[TMP3]], 10
 ; CHECK-NEXT:    [[NEG:%.*]] = zext i8 [[NARROW]] to i32
 ; CHECK-NEXT:    ret i32 [[NEG]]
 ;
@@ -182,6 +182,129 @@ define <2 x i32> @neg_mask1_lshr_extrause_lshr(<2 x i32> %a0) {
   %neg = sub <2 x i32> zeroinitializer, %mask
   call void @usev2i32(<2 x i32> %shift)
   ret <2 x i32> %neg
+}
+
+define i32 @neg_signbit(i8 %x) {
+; CHECK-LABEL: @neg_signbit(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i8 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %s = lshr i8 %x, 7
+  %z = zext i8 %s to i32
+  %r = sub i32 0, %z
+  ret i32 %r
+}
+
+define <2 x i64> @neg_signbit_use1(<2 x i32> %x) {
+; CHECK-LABEL: @neg_signbit_use1(
+; CHECK-NEXT:    [[S:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 31, i32 poison>
+; CHECK-NEXT:    call void @usev2i32(<2 x i32> [[S]])
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i32> [[X]], <i32 31, i32 31>
+; CHECK-NEXT:    [[TMP2:%.*]] = sext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
+;
+  %s = lshr <2 x i32> %x, <i32 31, i32 poison>
+  call void @usev2i32(<2 x i32> %s)
+  %z = zext <2 x i32> %s to <2 x i64>
+  %r = sub <2 x i64> zeroinitializer, %z
+  ret <2 x i64> %r
+}
+
+; negative test - extra use
+
+define i8 @neg_signbit_use2(i5 %x) {
+; CHECK-LABEL: @neg_signbit_use2(
+; CHECK-NEXT:    [[S:%.*]] = lshr i5 [[X:%.*]], 4
+; CHECK-NEXT:    [[Z:%.*]] = zext i5 [[S]] to i8
+; CHECK-NEXT:    call void @usei8(i8 [[Z]])
+; CHECK-NEXT:    [[R:%.*]] = sub nsw i8 0, [[Z]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s = lshr i5 %x, 4
+  %z = zext i5 %s to i8
+  call void @usei8(i8 %z)
+  %r = sub i8 0, %z
+  ret i8 %r
+}
+
+; negative test - not negation
+; TODO: reduce to zext(x s> -1)
+
+define i32 @neg_not_signbit1(i8 %x) {
+; CHECK-LABEL: @neg_not_signbit1(
+; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[ISNOTNEG]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = lshr i8 %x, 7
+  %z = zext i8 %s to i32
+  %r = sub i32 1, %z
+  ret i32 %r
+}
+
+; negative test - wrong shift amount
+
+define i32 @neg_not_signbit2(i8 %x) {
+; CHECK-LABEL: @neg_not_signbit2(
+; CHECK-NEXT:    [[S:%.*]] = lshr i8 [[X:%.*]], 6
+; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[S]] to i32
+; CHECK-NEXT:    [[R:%.*]] = sub nsw i32 0, [[Z]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = lshr i8 %x, 6
+  %z = zext i8 %s to i32
+  %r = sub i32 0, %z
+  ret i32 %r
+}
+
+; negative test - wrong shift opcode
+
+define i32 @neg_not_signbit3(i8 %x) {
+; CHECK-LABEL: @neg_not_signbit3(
+; CHECK-NEXT:    [[S:%.*]] = ashr i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[S]] to i32
+; CHECK-NEXT:    [[R:%.*]] = sub nsw i32 0, [[Z]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = ashr i8 %x, 7
+  %z = zext i8 %s to i32
+  %r = sub i32 0, %z
+  ret i32 %r
+}
+
+define i32 @neg_mask(i32 %x, i16 %y) {
+; CHECK-LABEL: @neg_mask(
+; CHECK-NEXT:    [[S:%.*]] = sext i16 [[Y:%.*]] to i32
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i32 [[X:%.*]], [[S]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i16 [[Y]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISNEG]], i32 [[SUB1]], i32 0
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = sext i16 %y to i32
+  %sub1 = sub nsw i32 %x, %s
+  %sh = lshr i16 %y, 15
+  %z = zext i16 %sh to i32
+  %sub2 = sub nsw i32 0, %z
+  %r = and i32 %sub1, %sub2
+  ret i32 %r
+}
+
+define i32 @neg_mask_const(i16 %x) {
+; CHECK-LABEL: @neg_mask_const(
+; CHECK-NEXT:    [[S:%.*]] = sext i16 [[X:%.*]] to i32
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i32 1000, [[S]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i16 [[X]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISNEG]], i32 [[SUB1]], i32 0
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = sext i16 %x to i32
+  %sub1 = sub nsw i32 1000, %s
+  %sh = lshr i16 %x, 15
+  %z = zext i16 %sh to i32
+  %sub2 = sub nsw i32 0, %z
+  %r = and i32 %sub1, %sub2
+  ret i32 %r
 }
 
 declare void @usei8(i8)

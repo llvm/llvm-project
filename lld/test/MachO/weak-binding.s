@@ -4,13 +4,21 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/libfoo.s -o %t/libfoo.o
 # RUN: %lld -dylib %t/libfoo.o -o %t/libfoo.dylib
 # RUN: %lld %t/test.o -L%t -lfoo -o %t/test -lSystem
-# RUN: llvm-objdump -d --no-show-raw-insn --rebase --bind --lazy-bind \
-# RUN:   --weak-bind --full-contents %t/test | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --rebase --bind --lazy-bind --weak-bind \
+# RUN:     --full-contents %t/test | FileCheck --check-prefixes=COMMON,CHECK %s
 
-# CHECK:      Contents of section __DATA_CONST,__got:
+# RUN: %lld -fixup_chains %t/test.o -L%t -lfoo -o %t/chained -lSystem
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --syms --full-contents %t/chained > %t/chained.objdump
+# RUN: llvm-objdump --no-print-imm-hex --macho --dyld-info %t/chained >> %t/chained.objdump
+# RUN: FileCheck %s --check-prefixes=COMMON,CHAINED < %t/chained.objdump
+
+# CHAINED: SYMBOL TABLE:
+# CHAINED: [[#%x,WEAK_INT:]] l     F __TEXT,__text _weak_internal{{$}}
+
+# COMMON:      Contents of section __DATA_CONST,__got:
 ## Check that this section contains a nonzero pointer. It should point to
 ## _weak_external_for_gotpcrel.
-# CHECK-NEXT: {{[0-9a-f]+}} {{[0-9a-f ]*[1-9a-f]+[0-9a-f ]*}}
+# COMMON-NEXT: {{[0-9a-f]+}} {{[0-9a-f ]*[1-9a-f]+[0-9a-f ]*}}
 
 # CHECK:      Contents of section __DATA,__la_symbol_ptr:
 ## Check that this section contains a nonzero pointer. It should point to
@@ -18,16 +26,16 @@
 ## the bytes here are in little-endian order.
 # CHECK-NEXT: {{[0-9a-f]+}} {{[0-9a-f ]*[1-9a-f]+[0-9a-f ]*}}
 
-# CHECK:      <_main>:
-# CHECK-NEXT: movq  [[#]](%rip), %rax  ## 0x[[#%X,WEAK_DY_GOT_ADDR:]]
-# CHECK-NEXT: movq  [[#]](%rip), %rax  ## 0x[[#%X,WEAK_EXT_GOT_ADDR:]]
-# CHECK-NEXT: leaq  [[#]](%rip), %rax  ## 0x[[#%X,WEAK_INT_GOT_ADDR:]]
-# CHECK-NEXT: movq  [[#]](%rip), %rax  ## 0x[[#%X,WEAK_TLV_ADDR:]]
-# CHECK-NEXT: movq  [[#]](%rip), %rax  ## 0x[[#%X,WEAK_DY_TLV_ADDR:]]
-# CHECK-NEXT: leaq  [[#]](%rip), %rax  ## 0x[[#%X,WEAK_INT_TLV_ADDR:]]
-# CHECK-NEXT: callq 0x{{[0-9a-f]*}}
-# CHECK-NEXT: callq 0x{{[0-9a-f]*}}
-# CHECK-NEXT: callq 0x{{[0-9a-f]*}}
+# COMMON-LABEL:      <_main>:
+# COMMON-NEXT: movq  [[#]](%rip), %rax  ## 0x[[#%X,WEAK_DY_GOT_ADDR:]]
+# COMMON-NEXT: movq  [[#]](%rip), %rax  ## 0x[[#%X,WEAK_EXT_GOT_ADDR:]]
+# COMMON-NEXT: leaq  [[#]](%rip), %rax  ## 0x[[#%X,WEAK_INT_GOT_ADDR:]]
+# COMMON-NEXT: movq  [[#]](%rip), %rax  ## 0x[[#%X,WEAK_TLV_ADDR:]]
+# COMMON-NEXT: movq  [[#]](%rip), %rax  ## 0x[[#%X,WEAK_DY_TLV_ADDR:]]
+# COMMON-NEXT: leaq  [[#]](%rip), %rax  ## 0x[[#%X,WEAK_INT_TLV_ADDR:]]
+# COMMON-NEXT: callq 0x{{[0-9a-f]*}}
+# COMMON-NEXT: callq 0x{{[0-9a-f]*}}
+# COMMON-NEXT: callq 0x{{[0-9a-f]*}}
 
 # CHECK-LABEL: Rebase table:
 # CHECK:       __DATA        __la_symbol_ptr 0x[[#%x,WEAK_EXT_FN:]]  pointer
@@ -64,6 +72,21 @@
 # WEAK-INTERNAL-NOT: _weak_internal
 # WEAK-INTERNAL-NOT: _weak_internal_fn
 # WEAK-INTERNAL-NOT: _weak_internal_tlv
+
+# CHAINED-LABEL: dyld information:
+# CHAINED-NEXT:  segment      section       address                  pointer type  addend dylib      symbol/vm address
+# CHAINED-DAG:   __DATA_CONST __got         0x{{[0-9a-f]*}}          {{.*}}  bind  0x0    weak       _weak_external_fn
+# CHAINED-DAG:   __DATA_CONST __got         0x{{[0-9a-f]*}}          {{.*}}  bind  0x0    weak       _weak_dysym_fn
+# CHAINED-DAG:   __DATA_CONST __got         0x[[#WEAK_EXT_GOT_ADDR]] {{.*}}  bind  0x0    weak       _weak_external_for_gotpcrel
+# CHAINED-DAG:   __DATA_CONST __got         0x[[#WEAK_DY_GOT_ADDR]]  {{.*}}  bind  0x0    weak       _weak_dysym_for_gotpcrel
+# CHAINED-DAG:   __DATA       __data        0x{{[0-9a-f]*}}          {{.*}}  bind  0x0    weak       _weak_dysym
+# CHAINED-DAG:   __DATA       __data        0x{{[0-9a-f]*}}          {{.*}}  bind  0x2    weak       _weak_external
+# CHAINED-DAG:   __DATA       __data        0x{{[0-9a-f]*}}          {{.*}}  rebase                  0x[[#%X,WEAK_INT]]
+# CHAINED-DAG:   __DATA       __thread_vars 0x{{[0-9a-f]*}}          {{.*}}  bind  0x0    libSystem  __tlv_bootstrap
+# CHAINED-DAG:   __DATA       __thread_vars 0x{{[0-9a-f]*}}          {{.*}}  bind  0x0    libSystem  __tlv_bootstrap
+# CHAINED-DAG:   __DATA       __thread_ptrs 0x[[#WEAK_DY_TLV_ADDR]]  {{.*}}  bind  0x0    weak       _weak_dysym_tlv
+# CHAINED-DAG:   __DATA       __thread_ptrs 0x[[#WEAK_TLV_ADDR]]     {{.*}}  bind  0x0    weak       _weak_tlv
+# CHAINED-EMPTY:
 
 #--- libfoo.s
 

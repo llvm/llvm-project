@@ -5,7 +5,7 @@
 ; CHECK: nnan G_FADD
 define amdgpu_kernel void @fadd_nnan(float %arg0, float %arg1) {
   %res = fadd nnan float %arg0, %arg1
-  store float %res, float addrspace(1)* undef
+  store float %res, ptr addrspace(1) undef
   ret void
 }
 
@@ -14,7 +14,7 @@ define amdgpu_kernel void @fadd_nnan(float %arg0, float %arg1) {
 ; CHECK: nnan ninf nsz arcp contract afn reassoc G_FMA
 define amdgpu_kernel void @fma_fast(float %arg0, float %arg1, float %arg2) {
   %res = call fast float @llvm.fma.f32(float %arg0, float %arg1, float %arg2)
-  store float %res, float addrspace(1)* undef
+  store float %res, ptr addrspace(1) undef
   ret void
 }
 
@@ -23,7 +23,7 @@ define amdgpu_kernel void @fma_fast(float %arg0, float %arg1, float %arg2) {
 ; CHECK: = nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), %{{[0-9]+}}(s32)
 define amdgpu_kernel void @rcp_nsz(float %arg0) {
   %res = call nsz float @llvm.amdgcn.rcp.f32 (float %arg0)
-  store float %res, float addrspace(1)* undef
+  store float %res, ptr addrspace(1) undef
   ret void
 }
 

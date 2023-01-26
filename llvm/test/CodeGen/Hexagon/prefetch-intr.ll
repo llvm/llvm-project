@@ -7,14 +7,13 @@ target triple = "hexagon"
 define i32 @f0() #0 {
 b0:
   %v0 = alloca i32, align 4
-  store i32 0, i32* %v0, align 4, !tbaa !0
-  %v1 = bitcast i32* %v0 to i8*
-  call void @llvm.hexagon.prefetch(i8* %v1)
+  store i32 0, ptr %v0, align 4, !tbaa !0
+  call void @llvm.hexagon.prefetch(ptr %v0)
   ret i32 0
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.hexagon.prefetch(i8*) #1
+declare void @llvm.hexagon.prefetch(ptr) #1
 
 attributes #0 = { nounwind "target-cpu"="hexagonv60" }
 attributes #1 = { nounwind }

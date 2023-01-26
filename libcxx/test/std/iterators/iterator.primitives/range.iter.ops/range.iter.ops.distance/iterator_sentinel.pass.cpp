@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<class I, sentinel_for<I> S>
 //   requires (!sized_sentinel_for<S, I>)
@@ -131,7 +130,10 @@ struct SizedStrideCounter {
   SizedStrideCounter operator++(int);
   int& operator*() const;
   bool operator==(SizedStrideCounter) const;
-  constexpr int operator-(SizedStrideCounter rhs) const { *minus_ += 1; return it_ - rhs.it_; }
+  constexpr int operator-(SizedStrideCounter rhs) const {
+    *minus_ += 1;
+    return static_cast<int>(it_ - rhs.it_);
+  }
 };
 static_assert(std::forward_iterator<SizedStrideCounter>);
 static_assert(std::sized_sentinel_for<SizedStrideCounter, SizedStrideCounter>);

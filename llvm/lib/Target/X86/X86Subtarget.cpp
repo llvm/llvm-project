@@ -137,7 +137,7 @@ unsigned char X86Subtarget::classifyGlobalReference(const GlobalValue *GV,
 
   // Absolute symbols can be referenced directly.
   if (GV) {
-    if (Optional<ConstantRange> CR = GV->getAbsoluteSymbolRange()) {
+    if (std::optional<ConstantRange> CR = GV->getAbsoluteSymbolRange()) {
       // See if we can use the 8-bit immediate form. Note that some instructions
       // will sign extend the immediate operand, so to be conservative we only
       // accept the range [0,128).

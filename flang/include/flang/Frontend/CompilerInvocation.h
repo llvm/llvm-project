@@ -15,8 +15,10 @@
 
 #include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/FrontendOptions.h"
+#include "flang/Frontend/LangOptions.h"
 #include "flang/Frontend/PreprocessorOptions.h"
 #include "flang/Frontend/TargetOptions.h"
+#include "flang/Lower/LoweringOptions.h"
 #include "flang/Parser/parsing.h"
 #include "flang/Semantics/semantics.h"
 #include "clang/Basic/Diagnostic.h"
@@ -68,11 +70,17 @@ class CompilerInvocation : public CompilerInvocationBase {
   // of options.
   Fortran::parser::Options parserOpts;
 
+  /// Options controlling lowering.
+  Fortran::lower::LoweringOptions loweringOpts;
+
   /// Options controlling the target.
   Fortran::frontend::TargetOptions targetOpts;
 
   /// Options controlling IRgen and the backend.
   Fortran::frontend::CodeGenOptions codeGenOpts;
+
+  /// Options controlling language dialect.
+  Fortran::frontend::LangOptions langOpts;
 
   // Semantics context
   std::unique_ptr<Fortran::semantics::SemanticsContext> semanticsContext;
@@ -88,9 +96,10 @@ class CompilerInvocation : public CompilerInvocationBase {
 
   bool warnAsErr = false;
 
-  /// This flag controls the unparsing and is used to decide whether to print out
-  /// the semantically analyzed version of an object or expression or the plain
-  /// version that does not include any information from semantic analysis.
+  /// This flag controls the unparsing and is used to decide whether to print
+  /// out the semantically analyzed version of an object or expression or the
+  /// plain version that does not include any information from semantic
+  /// analysis.
   bool useAnalyzedObjectsForUnparse = true;
 
   // Fortran Dialect options
@@ -135,6 +144,14 @@ public:
 
   CodeGenOptions &getCodeGenOpts() { return codeGenOpts; }
   const CodeGenOptions &getCodeGenOpts() const { return codeGenOpts; }
+
+  LangOptions &getLangOpts() { return langOpts; }
+  const LangOptions &getLangOpts() const { return langOpts; }
+
+  Fortran::lower::LoweringOptions &getLoweringOpts() { return loweringOpts; }
+  const Fortran::lower::LoweringOptions &getLoweringOpts() const {
+    return loweringOpts;
+  }
 
   Fortran::semantics::SemanticsContext &getSemanticsContext() {
     return *semanticsContext;
@@ -226,6 +243,10 @@ public:
 
   /// Set the Semantic Options
   void setSemanticsOpts(Fortran::parser::AllCookedSources &);
+
+  /// Set \p loweringOptions controlling lowering behavior based
+  /// on the \p optimizationLevel.
+  void setLoweringOptions();
 };
 
 } // end namespace Fortran::frontend

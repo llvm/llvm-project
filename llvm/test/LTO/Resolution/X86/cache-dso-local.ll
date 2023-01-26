@@ -17,6 +17,6 @@ define weak void @foo() {
   ret void
 }
 
-define weak void()* @bar() {
-  ret void()* @foo
+define weak ptr @bar() {
+  ret ptr @foo
 }

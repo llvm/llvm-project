@@ -86,7 +86,30 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         error = lldb.SBError()
         target.Launch(lldb.SBListener(), None, None, None, None, None,
                 None, 0, True, error)
-        self.assertEquals("'A' packet returned an error: 71", error.GetCString())
+        self.assertRegex(error.GetCString(), "Cannot launch '.*a': Error 71")
+
+    def test_launch_rich_error(self):
+        class MyResponder(MockGDBServerResponder):
+            def qC(self):
+                return "E42"
+
+            def qfThreadInfo(self):
+                return "OK" # No threads.
+
+            # Then, when we are asked to attach, error out.
+            def vRun(self, packet):
+                return "Eff;" + seven.hexlify("I'm a teapot")
+
+        self.server.responder = MyResponder()
+
+        target = self.createTarget("a.yaml")
+        process = self.connect(target)
+        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process, [lldb.eStateConnected])
+
+        error = lldb.SBError()
+        target.Launch(lldb.SBListener(), None, None, None, None, None,
+                None, 0, True, error)
+        self.assertRegex(error.GetCString(), "Cannot launch '.*a': I'm a teapot")
 
     def test_read_registers_using_g_packets(self):
         """Test reading registers using 'g' packets (default behavior)"""

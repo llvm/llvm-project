@@ -49,4 +49,4 @@ def InferIntRangeInterface : OpInterface<"InferIntRangeInterface"> {
       "::mlir::SetIntRangeFn":$setResultRanges)
   >];
 }
-#endif // MLIR_DIALECT_ARITHMETIC_IR_INFERINTRANGEINTERFACE
+#endif // MLIR_INTERFACES_INFERINTRANGEINTERFACE

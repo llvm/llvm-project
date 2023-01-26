@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64"
 
-define dso_local void @_Z3fooPiii(i32* %A, i32 %N, i32 %M) #0 {
+define dso_local void @_Z3fooPiii(ptr %A, i32 %N, i32 %M) #0 {
 ; CHECK-LABEL: @_Z3fooPiii(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -18,8 +18,8 @@ define dso_local void @_Z3fooPiii(i32* %A, i32 %N, i32 %M) #0 {
 ; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER_US:%.*]]
 ; CHECK:       for.cond1.preheader.us:
 ; CHECK-NEXT:    [[INDVAR6:%.*]] = phi i64 [ [[INDVAR_NEXT7:%.*]], [[FOR_COND1_PREHEADER_US]] ], [ 0, [[FOR_COND1_PREHEADER_LR_PH_SPLIT_US]] ]
-; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDVAR6]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX_US]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVAR6]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX_US]], align 4
 ; CHECK-NEXT:    tail call void @_Z1fi(i32 [[TMP2]])
 ; CHECK-NEXT:    [[INDVAR_NEXT7]] = add nuw nsw i64 [[INDVAR6]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVAR_NEXT7]], [[FLATTEN_TRIPCOUNT]]
@@ -54,8 +54,8 @@ for.body4:
   %mul = mul nsw i32 %i.0, %M
   %add = add nsw i32 %mul, %j.0
   %idxprom = sext i32 %add to i64
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
   call void @_Z1fi(i32 %0)
   %inc = add nsw i32 %j.0, 1
   br label %for.cond1

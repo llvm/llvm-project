@@ -10,7 +10,7 @@ entry:
   ret void
 }
 
-define i32 @main(i32 %argc, i8** nocapture readnone %argv) {
+define i32 @main(i32 %argc, ptr nocapture readnone %argv) {
 entry:
   call void @0()
   tail call void @"\01L_foo"()

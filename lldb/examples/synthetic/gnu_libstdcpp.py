@@ -1,4 +1,3 @@
-from __future__ import division
 import lldb.formatters.Logger
 
 # C++ STL formatters for LLDB

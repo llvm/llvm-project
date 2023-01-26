@@ -36,7 +36,7 @@ void foo(int x) {
 // CHECK-NEXT:   ]},
 // CHECK-NEXT:   "environment": { "pointer": "{{0x[0-9a-f]+}}", "items": [
 // CHECK-NEXT:     { "lctx_id": {{[0-9]+}}, "location_context": "#0 Call", "calling": "foo", "location": null, "items": [
-// CHECK-NEXT:       { "stmt_id": {{[0-9]+}}, "pretty": "clang_analyzer_printState", "value": "&code{clang_analyzer_printState}" }
+// CHECK-NEXT:       { "stmt_id": {{[0-9]+}}, "kind": "ImplicitCastExpr", "pretty": "clang_analyzer_printState", "value": "&code{clang_analyzer_printState}" }
 // CHECK-NEXT:     ]}
 // CHECK-NEXT:   ]},
 // CHECK-NEXT:   "constraints": [
@@ -46,8 +46,6 @@ void foo(int x) {
 // CHECK-NEXT:   "disequality_info": null,
 // CHECK-NEXT:   "dynamic_types": null,
 // CHECK-NEXT:   "dynamic_casts": null,
-// CHECK-NEXT:   "constructing_objects": null,
-// CHECK-NEXT:   "index_of_element": null,
 // CHECK-NEXT:   "checker_messages": null
 // CHECK-NEXT: }
 
@@ -57,6 +55,6 @@ struct S {
 
 void test_field_dumps(struct S s, struct S *p) {
   clang_analyzer_dump_pointer(&s.x); // expected-warning{{&s.x}}
-  clang_analyzer_dump_pointer(&p->x); // expected-warning{{&SymRegion{reg_$1<struct S * p>}.x}}
+  clang_analyzer_dump_pointer(&p->x); // expected-warning{{&Element{SymRegion{reg_$1<struct S * p>},0 S64b,struct S}.x}}
   clang_analyzer_dumpSvalType_pointer(&s.x); // expected-warning {{int *}}
 }

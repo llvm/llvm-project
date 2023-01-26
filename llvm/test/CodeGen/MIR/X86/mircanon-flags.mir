@@ -12,15 +12,15 @@ body:             |
   bb.0:
 
     ; CHECK: COPY
-    ; CHECK-NEXT: %bb0_{{[0-9]+}}__1:fr32 = nnan VMULSSrr
-    ; CHECK-NEXT: %bb0_{{[0-9]+}}__1:fr32 = ninf VMULSSrr
-    ; CHECK-NEXT: %bb0_{{[0-9]+}}__1:fr32 = nsz VMULSSrr
-    ; CHECK-NEXT: %bb0_{{[0-9]+}}__1:fr32 = arcp VMULSSrr
-    ; CHECK-NEXT: %bb0_{{[0-9]+}}__1:fr32 = contract VMULSSrr
-    ; CHECK-NEXT: %bb0_{{[0-9]+}}__1:fr32 = afn VMULSSrr
-    ; CHECK-NEXT: %bb0_{{[0-9]+}}__1:fr32 = reassoc VMULSSrr
-    ; CHECK-NEXT: %bb0_{{[0-9]+}}__1:fr32 = nsz arcp contract afn reassoc VMULSSrr
-    ; CHECK-NEXT: %bb0_{{[0-9]+}}__1:fr32 = contract afn reassoc VMULSSrr
+    ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:fr32 = nnan VMULSSrr
+    ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:fr32 = ninf VMULSSrr
+    ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:fr32 = nsz VMULSSrr
+    ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:fr32 = arcp VMULSSrr
+    ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:fr32 = contract VMULSSrr
+    ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:fr32 = afn VMULSSrr
+    ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:fr32 = reassoc VMULSSrr
+    ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:fr32 = nsz arcp contract afn reassoc VMULSSrr
+    ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:fr32 = contract afn reassoc VMULSSrr
 
     %0:fr32 = COPY $xmm0
     %1:fr32 = nnan VMULSSrr %0, %0, implicit $mxcsr

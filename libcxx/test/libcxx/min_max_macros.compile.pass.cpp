@@ -95,8 +95,10 @@ TEST_MACROS();
 TEST_MACROS();
 #include <condition_variable>
 TEST_MACROS();
-#include <coroutine>
+#if (defined(__cpp_impl_coroutine) && __cpp_impl_coroutine >= 201902L) || (defined(__cpp_coroutines) && __cpp_coroutines >= 201703L)
+#   include <coroutine>
 TEST_MACROS();
+#endif
 #include <csetjmp>
 TEST_MACROS();
 #include <csignal>
@@ -139,6 +141,8 @@ TEST_MACROS();
 TEST_MACROS();
 #include <execution>
 TEST_MACROS();
+#include <expected>
+TEST_MACROS();
 #include <fenv.h>
 TEST_MACROS();
 #if !defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
@@ -151,7 +155,7 @@ TEST_MACROS();
 TEST_MACROS();
 #include <forward_list>
 TEST_MACROS();
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION) && !defined(_LIBCPP_HAS_NO_FSTREAM)
 #   include <fstream>
 TEST_MACROS();
 #endif
@@ -209,6 +213,8 @@ TEST_MACROS();
 TEST_MACROS();
 #include <memory>
 TEST_MACROS();
+#include <memory_resource>
+TEST_MACROS();
 #if !defined(_LIBCPP_HAS_NO_THREADS)
 #   include <mutex>
 TEST_MACROS();
@@ -251,6 +257,8 @@ TEST_MACROS();
 #   include <shared_mutex>
 TEST_MACROS();
 #endif
+#include <source_location>
+TEST_MACROS();
 #include <span>
 TEST_MACROS();
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)

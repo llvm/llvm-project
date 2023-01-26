@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 AST_MATCHER(clang::VarDecl, hasConstantDeclaration) {
   const Expr *Init = Node.getInit();
@@ -62,6 +60,4 @@ void DynamicStaticInitializersCheck::check(const MatchFinder::MatchResult &Resul
     << Var;
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

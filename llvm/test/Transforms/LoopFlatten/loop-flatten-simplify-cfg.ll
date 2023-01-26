@@ -1,11 +1,11 @@
 ;; This test was created to ensure that the LoopFlatten pass can
 ;; operate on loops that are not in simplified form before applying the pass.
 
-; RUN: opt < %s -S -loop-flatten  -simplifycfg -verify-loop-info -verify-dom-info -verify-scev -verify | FileCheck %s
+; RUN: opt < %s -S -passes='loop(loop-flatten),simplifycfg,verify' -verify-loop-info -verify-dom-info -verify-scev | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
-define void @test(i64 %N, i64* %A, i64 %val) {
+define void @test(i64 %N, ptr %A, i64 %val) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i64 [[N:%.*]], 0
@@ -17,10 +17,10 @@ define void @test(i64 %N, i64* %A, i64 %val) {
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[INC6:%.*]], [[FOR_COND_PREHEADER]] ], [ 0, [[FOR_COND_PREHEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[I]], [[N]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 0, [[MUL]]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, i64* [[A:%.*]], i64 [[I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[I]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD4:%.*]] = add nsw i64 [[TMP0]], [[VAL:%.*]]
-; CHECK-NEXT:    store i64 [[ADD4]], i64* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i64 [[ADD4]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[INC:%.*]] = add nuw nsw i64 0, 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[INC]], [[N]]
 ; CHECK-NEXT:    [[INC6]] = add nuw nsw i64 [[I]], 1
@@ -41,10 +41,10 @@ for.cond.preheader:
 for.body:
   %j = phi i64 [ 0, %for.cond.preheader ], [ %inc, %for.body ]
   %add = add i64 %j, %mul
-  %arrayidx = getelementptr inbounds i64, i64* %A, i64 %add
-  %0 = load i64, i64* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i64, ptr %A, i64 %add
+  %0 = load i64, ptr %arrayidx, align 4
   %add4 = add nsw i64 %0, %val
-  store i64 %add4, i64* %arrayidx, align 4
+  store i64 %add4, ptr %arrayidx, align 4
   %inc = add nuw nsw i64 %j, 1
   %cmp2 = icmp ult i64 %inc, %N
   br i1 %cmp2, label %for.body, label %for.cond.for.inc_crit_edge

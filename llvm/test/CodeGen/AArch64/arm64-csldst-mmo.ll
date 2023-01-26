@@ -20,6 +20,6 @@
 define void @test1() {
 entry:
   tail call void asm sideeffect "nop", "~{x20},~{x21},~{x22},~{x23}"() nounwind
-  store i32 0, i32* getelementptr inbounds ([0 x i32], [0 x i32]* @G, i64 0, i64 0), align 4
+  store i32 0, ptr @G, align 4
   ret void
 }

@@ -270,7 +270,7 @@ MCELFStreamer *createMipsNaClELFStreamer(MCContext &Context,
     S->getAssembler().setRelaxAll(true);
 
   // Set bundle-alignment as required by the NaCl ABI for the target.
-  S->emitBundleAlignMode(Log2(MIPS_NACL_BUNDLE_ALIGN));
+  S->emitBundleAlignMode(MIPS_NACL_BUNDLE_ALIGN);
 
   return S;
 }

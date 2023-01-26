@@ -1,5 +1,6 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -verify-machineinstrs < %s | FileCheck %s
 ; RUN: opt -S -codegenprepare -mtriple=aarch64-linux %s | FileCheck --check-prefix=CHECK-CGP %s
+; RUN: opt -S -codegenprepare -cgpp-huge-func=0 -mtriple=aarch64-linux %s | FileCheck --check-prefix=CHECK-CGP %s
 
 @A = dso_local global i32 zeroinitializer
 @B = dso_local global i32 zeroinitializer
@@ -23,7 +24,7 @@ bb0:
 ; CHECK-CGP-NEXT: store
 ; CHECK-CGP-NEXT: br
   %cmp = icmp eq i32 %and, 0
-  store i32 0, i32* @A
+  store i32 0, ptr @A
   br i1 %cmp, label %bb1, label %bb2
 bb1:
   ret i32 1
@@ -44,14 +45,14 @@ define dso_local i32 @and_sink2(i32 %a, i1 %c, i1 %c2) {
 ; CHECK-CGP-LABEL: @and_sink2(
 ; CHECK-CGP-NOT: and i32
   %and = and i32 %a, 4
-  store i32 0, i32* @A
+  store i32 0, ptr @A
   br i1 %c, label %bb0, label %bb3
 bb0:
 ; CHECK-CGP-LABEL: bb0:
 ; CHECK-CGP-NOT: and i32
 ; CHECK-CGP-NOT: icmp
   %cmp = icmp eq i32 %and, 0
-  store i32 0, i32* @B
+  store i32 0, ptr @B
   br i1 %c2, label %bb1, label %bb3
 bb1:
 ; CHECK-CGP-LABEL: bb1:
@@ -59,7 +60,7 @@ bb1:
 ; CHECK-CGP-NEXT: icmp eq i32
 ; CHECK-CGP-NEXT: store
 ; CHECK-CGP-NEXT: br
-  store i32 0, i32* @C
+  store i32 0, ptr @C
   br i1 %cmp, label %bb2, label %bb0
 bb2:
   ret i32 1
@@ -83,7 +84,7 @@ bb0:
 ; CHECK-CGP-LABEL: bb0:
 ; CHECK-CGP-NOT: and i32
   %cmp = icmp eq i32 %and, 0
-  store i32 0, i32* @A
+  store i32 0, ptr @A
   br i1 %cmp, label %bb0, label %bb2
 bb2:
   ret i32 0

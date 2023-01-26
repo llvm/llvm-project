@@ -15,7 +15,6 @@
 
 using namespace llvm;
 
-namespace {
 namespace details {
 
 // Basic hashing mechanism to detect structural change to the IR, used to verify
@@ -67,16 +66,14 @@ public:
 
 } // namespace details
 
-} // namespace
-
 uint64_t llvm::StructuralHash(const Function &F) {
-  details::StructuralHash H;
+  ::details::StructuralHash H;
   H.update(F);
   return H.getHash();
 }
 
 uint64_t llvm::StructuralHash(const Module &M) {
-  details::StructuralHash H;
+  ::details::StructuralHash H;
   H.update(M);
   return H.getHash();
 }

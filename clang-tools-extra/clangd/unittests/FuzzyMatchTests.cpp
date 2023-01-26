@@ -10,6 +10,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -22,7 +23,7 @@ struct ExpectedMatch {
     for (char C : "[]")
       Word.erase(std::remove(Word.begin(), Word.end(), C), Word.end());
     if (Word.size() == Annotated->size())
-      Annotated = llvm::None;
+      Annotated = std::nullopt;
   }
   bool accepts(llvm::StringRef ActualAnnotated) const {
     return !Annotated || ActualAnnotated == *Annotated;
@@ -39,13 +40,13 @@ struct ExpectedMatch {
   std::string Word;
 
 private:
-  llvm::Optional<llvm::StringRef> Annotated;
+  std::optional<llvm::StringRef> Annotated;
 };
 
 struct MatchesMatcher : public ::testing::MatcherInterface<llvm::StringRef> {
   ExpectedMatch Candidate;
-  llvm::Optional<float> Score;
-  MatchesMatcher(ExpectedMatch Candidate, llvm::Optional<float> Score)
+  std::optional<float> Score;
+  MatchesMatcher(ExpectedMatch Candidate, std::optional<float> Score)
       : Candidate(std::move(Candidate)), Score(Score) {}
 
   void DescribeTo(::std::ostream *OS) const override {
@@ -71,7 +72,7 @@ struct MatchesMatcher : public ::testing::MatcherInterface<llvm::StringRef> {
 // Accepts patterns that match a given word, optionally requiring a score.
 // Dumps the debug tables on match failure.
 ::testing::Matcher<llvm::StringRef> matches(llvm::StringRef M,
-                                            llvm::Optional<float> Score = {}) {
+                                            std::optional<float> Score = {}) {
   return ::testing::MakeMatcher<llvm::StringRef>(new MatchesMatcher(M, Score));
 }
 
@@ -199,7 +200,7 @@ struct RankMatcher : public ::testing::MatcherInterface<llvm::StringRef> {
             : new llvm::raw_null_ostream());
     FuzzyMatcher Matcher(Pattern);
     const ExpectedMatch *LastMatch;
-    llvm::Optional<float> LastScore;
+    std::optional<float> LastScore;
     bool Ok = true;
     for (const auto &Str : RankedStrings) {
       auto Score = Matcher.match(Str.Word);

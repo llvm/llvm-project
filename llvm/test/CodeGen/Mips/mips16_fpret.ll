@@ -11,7 +11,7 @@
 
 define float @foox()  {
 entry:
-  %0 = load float, float* @x, align 4
+  %0 = load float, ptr @x, align 4
   ret float %0
 ; 1: 	.ent	foox
 ; 1:	lw	$2, %lo(x)(${{[0-9]+}})
@@ -20,7 +20,7 @@ entry:
 
 define double @foodx()  {
 entry:
-  %0 = load double, double* @dx, align 8
+  %0 = load double, ptr @dx, align 8
   ret double %0
 ; 1: 	.ent	foodx
 ; 1: 	lw	$2, %lo(dx)(${{[0-9]+}})
@@ -34,13 +34,13 @@ entry:
 define { float, float } @foocx()  {
 entry:
   %retval = alloca { float, float }, align 4
-  %cx.real = load float, float* getelementptr inbounds ({ float, float }, { float, float }* @cx, i32 0, i32 0)
-  %cx.imag = load float, float* getelementptr inbounds ({ float, float }, { float, float }* @cx, i32 0, i32 1)
-  %real = getelementptr inbounds { float, float }, { float, float }* %retval, i32 0, i32 0
-  %imag = getelementptr inbounds { float, float }, { float, float }* %retval, i32 0, i32 1
-  store float %cx.real, float* %real
-  store float %cx.imag, float* %imag
-  %0 = load { float, float }, { float, float }* %retval
+  %cx.real = load float, ptr getelementptr inbounds ({ float, float }, ptr @cx, i32 0, i32 0)
+  %cx.imag = load float, ptr getelementptr inbounds ({ float, float }, ptr @cx, i32 0, i32 1)
+  %real = getelementptr inbounds { float, float }, ptr %retval, i32 0, i32 0
+  %imag = getelementptr inbounds { float, float }, ptr %retval, i32 0, i32 1
+  store float %cx.real, ptr %real
+  store float %cx.imag, ptr %imag
+  %0 = load { float, float }, ptr %retval
   ret { float, float } %0
 ; 1: 	.ent	foocx
 ; 1: 	lw	$2, %lo(cx)(${{[0-9]+}})
@@ -53,13 +53,13 @@ entry:
 define { double, double } @foodcx()  {
 entry:
   %retval = alloca { double, double }, align 8
-  %dcx.real = load double, double* getelementptr inbounds ({ double, double }, { double, double }* @dcx, i32 0, i32 0)
-  %dcx.imag = load double, double* getelementptr inbounds ({ double, double }, { double, double }* @dcx, i32 0, i32 1)
-  %real = getelementptr inbounds { double, double }, { double, double }* %retval, i32 0, i32 0
-  %imag = getelementptr inbounds { double, double }, { double, double }* %retval, i32 0, i32 1
-  store double %dcx.real, double* %real
-  store double %dcx.imag, double* %imag
-  %0 = load { double, double }, { double, double }* %retval
+  %dcx.real = load double, ptr getelementptr inbounds ({ double, double }, ptr @dcx, i32 0, i32 0)
+  %dcx.imag = load double, ptr getelementptr inbounds ({ double, double }, ptr @dcx, i32 0, i32 1)
+  %real = getelementptr inbounds { double, double }, ptr %retval, i32 0, i32 0
+  %imag = getelementptr inbounds { double, double }, ptr %retval, i32 0, i32 1
+  store double %dcx.real, ptr %real
+  store double %dcx.imag, ptr %imag
+  %0 = load { double, double }, ptr %retval
   ret { double, double } %0
 ; 1: 	.ent	foodcx
 ; 1: 	lw	${{[0-9]}}, %lo(dcx)(${{[0-9]+}})

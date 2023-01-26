@@ -8,7 +8,7 @@ unsigned char bitrev8(unsigned char data) {
     return __builtin_bitreverse8(data);
 }
 
-// CHECK: define{{.*}} zeroext i8 @bitrev8
+// CHECK: define{{.*}} i8 @bitrev8
 // CHECK: i8 @llvm.bitreverse.i8(i8
 
 unsigned int bitrev16(unsigned int data) {
@@ -35,7 +35,7 @@ unsigned char rotleft8(unsigned char x, unsigned char y) {
     return __builtin_rotateleft8(x, y);
 }
 
-// CHECK: define{{.*}} zeroext i8 @rotleft8
+// CHECK: define{{.*}} i8 @rotleft8
 // CHECK: i8 @llvm.fshl.i8(i8
 
 unsigned int rotleft16(unsigned int x, unsigned int y) {
@@ -62,7 +62,7 @@ unsigned char rotright8(unsigned char x, unsigned char y) {
     return __builtin_rotateright8(x, y);
 }
 
-// CHECK: define{{.*}} zeroext i8 @rotright8
+// CHECK: define{{.*}} i8 @rotright8
 // CHECK: i8 @llvm.fshr.i8(i8
 
 unsigned int rotright16(unsigned int x, unsigned int y) {

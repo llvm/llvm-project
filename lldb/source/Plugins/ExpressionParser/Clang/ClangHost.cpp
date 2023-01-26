@@ -55,11 +55,11 @@ static bool DefaultComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,
   static const llvm::StringRef kResourceDirSuffixes[] = {
       // LLVM.org's build of LLDB uses the clang resource directory placed
       // in $install_dir/lib{,64}/clang/$clang_version.
-      "lib" CLANG_LIBDIR_SUFFIX "/clang/" CLANG_VERSION_STRING,
+      CLANG_INSTALL_LIBDIR_BASENAME "/clang/" CLANG_VERSION_MAJOR_STRING,
       // swift-lldb uses the clang resource directory copied from swift, which
       // by default is placed in $install_dir/lib{,64}/lldb/clang. LLDB places
-      // it there, so we use LLDB_LIBDIR_SUFFIX.
-      "lib" LLDB_LIBDIR_SUFFIX "/lldb/clang",
+      // it there, so we use LLDB_INSTALL_LIBDIR_BASENAME.
+      LLDB_INSTALL_LIBDIR_BASENAME "/lldb/clang",
   };
 
   for (const auto &Suffix : kResourceDirSuffixes) {

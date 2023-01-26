@@ -1,5 +1,5 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-fusion -split-input-file | FileCheck %s
-// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-fusion="fusion-maximal" -split-input-file | FileCheck %s --check-prefix=MAXIMAL
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion))' -split-input-file | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion{fusion-maximal}))' -split-input-file | FileCheck %s --check-prefix=MAXIMAL
 
 // Part I of fusion tests in  mlir/test/Transforms/loop-fusion.mlir.
 // Part III of fusion tests in mlir/test/Transforms/loop-fusion-3.mlir
@@ -225,8 +225,8 @@ func.func @should_fuse_live_out_writer(%arg0 : memref<10xf32>) -> memref<10xf32>
 
 // The fused slice has 16 iterations from along %i0.
 
-// CHECK-DAG: [[$MAP_LB:#map[0-9]+]] = affine_map<(d0) -> (d0 * 16)>
-// CHECK-DAG: [[$MAP_UB:#map[0-9]+]] = affine_map<(d0) -> (d0 * 16 + 16)>
+// CHECK-DAG: [[$MAP_LB:#map[0-9]*]] = affine_map<(d0) -> (d0 * 16)>
+// CHECK-DAG: [[$MAP_UB:#map[0-9]*]] = affine_map<(d0) -> (d0 * 16 + 16)>
 
 // CHECK-LABEL: slice_tile
 func.func @slice_tile(%arg0: memref<128x8xf32>, %arg1: memref<32x8xf32>, %0 : f32) -> memref<32x8xf32> {
@@ -303,8 +303,8 @@ func.func @test_add_slice_bounds() {
 // CHECK:        affine.for %{{.*}} = 0 to 10 {
 // CHECK-NEXT:     affine.for %{{.*}} = 0 to 10 {
 // CHECK-NEXT:       affine.for %{{.*}} = 0 to 10 {
-// CHECK-NEXT:         affine.apply #map0(%{{.*}})
-// CHECK-NEXT:         affine.apply #map0(%{{.*}})
+// CHECK-NEXT:         affine.apply #map(%{{.*}})
+// CHECK-NEXT:         affine.apply #map(%{{.*}})
 // CHECK-NEXT:         affine.apply #map1(%{{.*}}, %{{.*}})
 // CHECK-NEXT:         affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
 // CHECK-NEXT:       }
@@ -484,14 +484,14 @@ func.func @should_not_slice_past_slice_barrier() {
 
 // -----
 
-#map0 = affine_map<(d0, d1) -> (d0 * 16 + d1)>
+#map = affine_map<(d0, d1) -> (d0 * 16 + d1)>
 func.func @fuse_across_dim_mismatch(%arg0: memref<4x4x16x1xf32>, %arg1: memref<144x9xf32>, %arg2: memref<9xf32>) {
   %1 = memref.alloc() : memref<144x4xf32>
   %2 = arith.constant 0.0 : f32
   affine.for %i2 = 0 to 9 {
     affine.for %i3 = 0 to 4 {
       affine.for %i5 = 0 to 16 {
-        %7 = affine.apply #map0(%i2, %i5)
+        %7 = affine.apply #map(%i2, %i5)
         affine.store %2, %1[%7, %i3] : memref<144x4xf32>
       }
     }
@@ -500,7 +500,7 @@ func.func @fuse_across_dim_mismatch(%arg0: memref<4x4x16x1xf32>, %arg1: memref<1
     affine.for %i7 = 0 to 9 {
       affine.for %i8 = 0 to 4 {
         affine.for %i10 = 0 to 16 {
-          %10 = affine.apply #map0(%i6, %i10)
+          %10 = affine.apply #map(%i6, %i10)
           %11 = affine.load %1[%10, %i8] : memref<144x4xf32>
         }
       }
@@ -508,16 +508,16 @@ func.func @fuse_across_dim_mismatch(%arg0: memref<4x4x16x1xf32>, %arg1: memref<1
   }
   return
 }
-// MAXIMAL:      #map = affine_map<(d0, d1) -> (d0 * 16 + d1)>
+// MAXIMAL:      #[[$MAP:.*]] = affine_map<(d0, d1) -> (d0 * 16 + d1)>
 // MAXIMAL-LABEL: func @fuse_across_dim_mismatch
 // MAXIMAL:        memref.alloc() : memref<1x1xf32>
 // MAXIMAL:        affine.for %{{.*}} = 0 to 9 {
 // MAXIMAL-NEXT:    affine.for %{{.*}} = 0 to 9 {
 // MAXIMAL-NEXT:      affine.for %{{.*}} = 0 to 4 {
 // MAXIMAL-NEXT:        affine.for %{{.*}} = 0 to 16 {
-// MAXIMAL-NEXT:          affine.apply #map(%{{.*}}, %{{.*}})
+// MAXIMAL-NEXT:          affine.apply #[[$MAP]](%{{.*}}, %{{.*}})
 // MAXIMAL-NEXT:          affine.store %{{.*}}, %{{.*}}[0, 0] : memref<1x1xf32>
-// MAXIMAL-NEXT:          affine.apply #map(%{{.*}}, %{{.*}})
+// MAXIMAL-NEXT:          affine.apply #[[$MAP]](%{{.*}}, %{{.*}})
 // MAXIMAL-NEXT:          affine.load %{{.*}}[0, 0] : memref<1x1xf32>
 // MAXIMAL-NEXT:        }
 // MAXIMAL-NEXT:      }
@@ -574,13 +574,13 @@ func.func @fuse_across_varying_dims_complex(%arg0: f32) {
   }
   return
 }
-// MAXIMAL-DAG: [[$MAP0:#map[0-9]+]] = affine_map<(d0, d1) -> ((d0 * 72 + d1) floordiv 2304)>
-// MAXIMAL-DAG: [[$MAP1:#map[0-9]+]] = affine_map<(d0, d1) -> (((d0 * 72 + d1) mod 2304) floordiv 1152)>
-// MAXIMAL-DAG: [[$MAP2:#map[0-9]+]] = affine_map<(d0, d1) -> ((((d0 * 72 + d1) mod 1152) floordiv 9) floordiv 8)>
-// MAXIMAL-DAG: [[$MAP3:#map[0-9]+]] = affine_map<(d0, d1) -> ((d1 mod 9) floordiv 3)>
-// MAXIMAL-DAG: [[$MAP4:#map[0-9]+]] = affine_map<(d0, d1) -> (d1 mod 3)>
-// MAXIMAL-DAG: [[$MAP7:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 16 + d1)>
-// MAXIMAL-DAG: [[$MAP8:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 16 - d1 + 15)>
+// MAXIMAL-DAG: [[$MAP0:#map[0-9]*]] = affine_map<(d0, d1) -> ((d0 * 72 + d1) floordiv 2304)>
+// MAXIMAL-DAG: [[$MAP1:#map[0-9]*]] = affine_map<(d0, d1) -> (((d0 * 72 + d1) mod 2304) floordiv 1152)>
+// MAXIMAL-DAG: [[$MAP2:#map[0-9]*]] = affine_map<(d0, d1) -> ((((d0 * 72 + d1) mod 1152) floordiv 9) floordiv 8)>
+// MAXIMAL-DAG: [[$MAP3:#map[0-9]*]] = affine_map<(d0, d1) -> ((d1 mod 9) floordiv 3)>
+// MAXIMAL-DAG: [[$MAP4:#map[0-9]*]] = affine_map<(d0, d1) -> (d1 mod 3)>
+// MAXIMAL-DAG: [[$MAP7:#map[0-9]*]] = affine_map<(d0, d1) -> (d0 * 16 + d1)>
+// MAXIMAL-DAG: [[$MAP8:#map[0-9]*]] = affine_map<(d0, d1) -> (d0 * 16 - d1 + 15)>
 // MAXIMAL-LABEL: func @fuse_across_varying_dims_complex
 // MAXIMAL-NEXT:  memref.alloc() : memref<64x1xf32>
 // MAXIMAL-NEXT:  arith.constant 0 : index

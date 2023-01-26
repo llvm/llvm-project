@@ -26,11 +26,14 @@
 namespace llvm {
 namespace symbolize {
 
+class LLVMSymbolizer;
+
 /// Filter to convert parsed log symbolizer markup elements into human-readable
 /// text.
 class MarkupFilter {
 public:
-  MarkupFilter(raw_ostream &OS, Optional<bool> ColorsEnabled = llvm::None);
+  MarkupFilter(raw_ostream &OS, LLVMSymbolizer &Symbolizer,
+               std::optional<bool> ColorsEnabled = std::nullopt);
 
   /// Filters a line containing symbolizer markup and writes the human-readable
   /// results to the output stream.
@@ -57,6 +60,7 @@ private:
     uint64_t ModuleRelativeAddr;
 
     bool contains(uint64_t Addr) const;
+    uint64_t getModuleRelativeAddr(uint64_t Addr) const;
   };
 
   // An informational module line currently being constructed. As many mmap
@@ -65,6 +69,15 @@ private:
     const Module *Mod;
 
     SmallVector<const MMap *> MMaps = {};
+  };
+
+  // The semantics of a possible program counter value.
+  enum class PCType {
+    // The address is a return address and must be adjusted to point to the call
+    // itself.
+    ReturnAddress,
+    // The address is the precise location in the code and needs no adjustment.
+    PreciseCode,
   };
 
   bool tryContextualElement(const MarkupNode &Node,
@@ -83,6 +96,9 @@ private:
 
   bool tryPresentation(const MarkupNode &Node);
   bool trySymbol(const MarkupNode &Node);
+  bool tryPC(const MarkupNode &Node);
+  bool tryBackTrace(const MarkupNode &Node);
+  bool tryData(const MarkupNode &Node);
 
   bool trySGR(const MarkupNode &Node);
 
@@ -91,27 +107,37 @@ private:
   void restoreColor();
   void resetColor();
 
-  Optional<Module> parseModule(const MarkupNode &Element) const;
-  Optional<MMap> parseMMap(const MarkupNode &Element) const;
+  void printRawElement(const MarkupNode &Element);
+  void printValue(Twine Value);
 
-  Optional<uint64_t> parseAddr(StringRef Str) const;
-  Optional<uint64_t> parseModuleID(StringRef Str) const;
-  Optional<uint64_t> parseSize(StringRef Str) const;
-  Optional<SmallVector<uint8_t>> parseBuildID(StringRef Str) const;
-  Optional<std::string> parseMode(StringRef Str) const;
+  std::optional<Module> parseModule(const MarkupNode &Element) const;
+  std::optional<MMap> parseMMap(const MarkupNode &Element) const;
+
+  std::optional<uint64_t> parseAddr(StringRef Str) const;
+  std::optional<uint64_t> parseModuleID(StringRef Str) const;
+  std::optional<uint64_t> parseSize(StringRef Str) const;
+  std::optional<SmallVector<uint8_t>> parseBuildID(StringRef Str) const;
+  std::optional<std::string> parseMode(StringRef Str) const;
+  std::optional<PCType> parsePCType(StringRef Str) const;
+  std::optional<uint64_t> parseFrameNumber(StringRef Str) const;
 
   bool checkTag(const MarkupNode &Node) const;
   bool checkNumFields(const MarkupNode &Element, size_t Size) const;
   bool checkNumFieldsAtLeast(const MarkupNode &Element, size_t Size) const;
+  bool checkNumFieldsAtMost(const MarkupNode &Element, size_t Size) const;
 
   void reportTypeError(StringRef Str, StringRef TypeName) const;
   void reportLocation(StringRef::iterator Loc) const;
 
-  const MMap *overlappingMMap(const MMap &Map) const;
+  const MMap *getOverlappingMMap(const MMap &Map) const;
+  const MMap *getContainingMMap(uint64_t Addr) const;
+
+  uint64_t adjustAddr(uint64_t Addr, PCType Type) const;
 
   StringRef lineEnding() const;
 
   raw_ostream &OS;
+  LLVMSymbolizer &Symbolizer;
   const bool ColorsEnabled;
 
   MarkupParser Parser;
@@ -121,10 +147,10 @@ private:
 
   // A module info line currently being built. This incorporates as much mmap
   // information as possible before being emitted.
-  Optional<ModuleInfoLine> MIL;
+  std::optional<ModuleInfoLine> MIL;
 
   // SGR state.
-  Optional<raw_ostream::Colors> Color;
+  std::optional<raw_ostream::Colors> Color;
   bool Bold = false;
 
   // Map from Module ID to Module.

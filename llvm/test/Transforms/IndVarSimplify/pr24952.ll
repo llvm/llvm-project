@@ -1,4 +1,4 @@
-; RUN: opt -indvars -S < %s | FileCheck %s
+; RUN: opt -passes=indvars -S < %s | FileCheck %s
 
 declare void @use(i1)
 
@@ -13,8 +13,8 @@ define void @f() {
   %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
   %iv.inc = add i32 %iv, 1
 
-  %x.gep = getelementptr i32, i32* %x, i32 %iv
-  %eql = icmp eq i32* %x.gep, %y
+  %x.gep = getelementptr i32, ptr %x, i32 %iv
+  %eql = icmp eq ptr %x.gep, %y
 ; CHECK-NOT: @use(i1 true)
   call void @use(i1 %eql)
 

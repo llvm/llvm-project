@@ -159,7 +159,7 @@ function(add_mlir_pdll_library target inputFile ofn)
       "  filepath: \"${LLVM_TARGET_DEFINITIONS_ABSOLUTE}\"\n"
       "  includes: \"${CMAKE_CURRENT_SOURCE_DIR};${tblgen_includes}\"\n"
   )
-  
+
   add_public_tablegen_target(${target})
 endfunction()
 
@@ -202,7 +202,7 @@ function(add_mlir_doc doc_filename output_file output_directory command)
 endfunction()
 
 # Declare an mlir library which can be compiled in libMLIR.so
-# In addition to everything that llvm_add_librar accepts, this
+# In addition to everything that llvm_add_library accepts, this
 # also has the following option:
 # EXCLUDE_FROM_LIBMLIR
 #   Don't include this library in libMLIR.so.  This option should be used
@@ -490,6 +490,17 @@ function(add_mlir_aggregate name)
     ${ARG_PUBLIC_LIBS}
   )
   target_sources(${name} PRIVATE ${_objects})
+
+  # Linux defaults to allowing undefined symbols in shared libraries whereas
+  # many other platforms are more strict. We want these libraries to be
+  # self contained, and we want any undefined symbols to be reported at
+  # library construction time, not at library use, so make Linux strict too.
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_options(${name} PRIVATE
+      "LINKER:-z,defs"
+    )
+  endif()
+
   # TODO: Should be transitive.
   set_target_properties(${name} PROPERTIES
     MLIR_AGGREGATE_EXCLUDE_LIBS "${_embed_libs}")

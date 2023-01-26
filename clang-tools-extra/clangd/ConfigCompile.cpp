@@ -33,8 +33,6 @@
 #include "support/Logger.h"
 #include "support/Path.h"
 #include "support/Trace.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -46,6 +44,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -103,7 +102,7 @@ struct FragmentCompiler {
   std::string FragmentDirectory;
   bool Trusted = false;
 
-  llvm::Optional<llvm::Regex>
+  std::optional<llvm::Regex>
   compileRegex(const Located<std::string> &Text,
                llvm::Regex::RegexFlags Flags = llvm::Regex::NoFlags) {
     std::string Anchored = "^(" + *Text + ")$";
@@ -111,14 +110,14 @@ struct FragmentCompiler {
     std::string RegexError;
     if (!Result.isValid(RegexError)) {
       diag(Error, "Invalid regex " + Anchored + ": " + RegexError, Text.Range);
-      return llvm::None;
+      return std::nullopt;
     }
-    return Result;
+    return std::move(Result);
   }
 
-  llvm::Optional<std::string> makeAbsolute(Located<std::string> Path,
-                                           llvm::StringLiteral Description,
-                                           llvm::sys::path::Style Style) {
+  std::optional<std::string> makeAbsolute(Located<std::string> Path,
+                                          llvm::StringLiteral Description,
+                                          llvm::sys::path::Style Style) {
     if (llvm::sys::path::is_absolute(*Path))
       return *Path;
     if (FragmentDirectory.empty()) {
@@ -129,7 +128,7 @@ struct FragmentCompiler {
                Description)
                .str(),
            Path.Range);
-      return llvm::None;
+      return std::nullopt;
     }
     llvm::SmallString<256> AbsPath = llvm::StringRef(*Path);
     llvm::sys::fs::make_absolute(FragmentDirectory, AbsPath);
@@ -142,7 +141,7 @@ struct FragmentCompiler {
     FragmentCompiler &Outer;
     llvm::StringRef EnumName;
     const Located<std::string> &Input;
-    llvm::Optional<T> Result;
+    std::optional<T> Result;
     llvm::SmallVector<llvm::StringLiteral> ValidValues;
 
   public:
@@ -158,7 +157,7 @@ struct FragmentCompiler {
       return *this;
     }
 
-    llvm::Optional<T> value() {
+    std::optional<T> value() {
       if (!Result)
         Outer.diag(
             Warning,
@@ -171,9 +170,9 @@ struct FragmentCompiler {
   };
 
   // Attempt to parse a specified string into an enum.
-  // Yields llvm::None and produces a diagnostic on failure.
+  // Yields std::nullopt and produces a diagnostic on failure.
   //
-  // Optional<T> Value = compileEnum<En>("Foo", Frag.Foo)
+  // std::optional<T> Value = compileEnum<En>("Foo", Frag.Foo)
   //    .map("Foo", Enum::Foo)
   //    .map("Bar", Enum::Bar)
   //    .value();
@@ -291,7 +290,7 @@ struct FragmentCompiler {
     }
 
     if (F.CompilationDatabase) {
-      llvm::Optional<Config::CDBSearchSpec> Spec;
+      std::optional<Config::CDBSearchSpec> Spec;
       if (**F.CompilationDatabase == "Ancestors") {
         Spec.emplace();
         Spec->Policy = Config::CDBSearchSpec::Ancestors;
@@ -432,11 +431,13 @@ struct FragmentCompiler {
           });
 
     if (F.UnusedIncludes)
-      if (auto Val = compileEnum<Config::UnusedIncludesPolicy>(
-                         "UnusedIncludes", **F.UnusedIncludes)
-                         .map("Strict", Config::UnusedIncludesPolicy::Strict)
-                         .map("None", Config::UnusedIncludesPolicy::None)
-                         .value())
+      if (auto Val =
+              compileEnum<Config::UnusedIncludesPolicy>("UnusedIncludes",
+                                                        **F.UnusedIncludes)
+                  .map("Strict", Config::UnusedIncludesPolicy::Strict)
+                  .map("Experiment", Config::UnusedIncludesPolicy::Experiment)
+                  .map("None", Config::UnusedIncludesPolicy::None)
+                  .value())
         Out.Apply.push_back([Val](const Params &, Config &C) {
           C.Diagnostics.UnusedIncludes = *Val;
         });

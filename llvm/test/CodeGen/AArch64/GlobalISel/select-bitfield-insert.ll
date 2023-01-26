@@ -109,7 +109,7 @@ bb:
   ret i64 %out
 }
 
-define i64 @extra_use1(i64 %in1, i64 %in2, i64* %p) {
+define i64 @extra_use1(i64 %in1, i64 %in2, ptr %p) {
 ; GISEL-LABEL: extra_use1:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    lsl x8, x0, #1
@@ -129,11 +129,11 @@ bb:
   %tmp3 = shl i64 %in1, 1
   %tmp4 = and i64 %in2, 1
   %out = or i64 %tmp3, %tmp4
-  store i64 %tmp3, i64* %p
+  store i64 %tmp3, ptr %p
   ret i64 %out
 }
 
-define i64 @extra_use2(i64 %in1, i64 %in2, i64* %p) {
+define i64 @extra_use2(i64 %in1, i64 %in2, ptr %p) {
 ; GISEL-LABEL: extra_use2:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    and x8, x1, #0x1
@@ -152,6 +152,6 @@ bb:
   %tmp3 = shl i64 %in1, 1
   %tmp4 = and i64 %in2, 1
   %out = or i64 %tmp3, %tmp4
-  store i64 %tmp4, i64* %p
+  store i64 %tmp4, ptr %p
   ret i64 %out
 }

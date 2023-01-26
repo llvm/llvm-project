@@ -1,9 +1,8 @@
 // Test host codegen.
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50  -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50  -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -verify -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -include-pch %t %s -emit-llvm -o - | FileCheck %s
 
-// expected-no-diagnostics
 #ifndef HEADER
 #define HEADER
 
@@ -39,6 +38,71 @@ void fie(void) {
   {}
   #pragma omp target uses_allocators(omp_pteam_mem_alloc) allocate(omp_pteam_mem_alloc: x) firstprivate(x)
   {}
+  #pragma omp target uses_allocators(omp_thread_mem_alloc) allocate(omp_thread_mem_alloc: x) firstprivate(x) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target' directive}}
+  {}
 }
 
 #endif
+
+// CHECK: %[[#R0:]] = call i32 @__kmpc_global_thread_num(ptr @1)
+// CHECK-NEXT: store i64 %x, ptr %x.addr, align 8
+// CHECK-NEXT: %.x..void.addr = call ptr @__kmpc_alloc(i32 %[[#R0]], i64 4, ptr null)
+// CHECK-NEXT: %[[#R1:]] = load i32, ptr %x.addr, align 4
+// CHECK-NEXT: store i32 %[[#R1]], ptr %.x..void.addr, align 4
+// CHECK-NEXT: call void @__kmpc_free(i32 %[[#R0]], ptr %.x..void.addr, ptr null)
+
+// CHECK: %[[#R0:]] = call i32 @__kmpc_global_thread_num(ptr @1)
+// CHECK-NEXT: store i64 %x, ptr %x.addr, align 8
+// CHECK-NEXT: %.x..void.addr = call ptr @__kmpc_alloc(i32 %[[#R0]], i64 4, ptr inttoptr (i64 1 to ptr))
+// CHECK-NEXT: %[[#R1:]] = load i32, ptr %x.addr, align 4
+// CHECK-NEXT: store i32 %[[#R1]], ptr %.x..void.addr, align 4
+// CHECK-NEXT: call void @__kmpc_free(i32 %[[#R0]], ptr %.x..void.addr, ptr inttoptr (i64 1 to ptr))
+
+// CHECK: %[[#R0:]] = call i32 @__kmpc_global_thread_num(ptr @1)
+// CHECK-NEXT: store i64 %x, ptr %x.addr, align 8
+// CHECK-NEXT: %.x..void.addr = call ptr @__kmpc_alloc(i32 %[[#R0]], i64 4, ptr inttoptr (i64 2 to ptr))
+// CHECK-NEXT: %[[#R1:]] = load i32, ptr %x.addr, align 4
+// CHECK-NEXT: store i32 %[[#R1]], ptr %.x..void.addr, align 4
+// CHECK-NEXT: call void @__kmpc_free(i32 %[[#R0]], ptr %.x..void.addr, ptr inttoptr (i64 2 to ptr))
+
+// CHECK: %[[#R0:]] = call i32 @__kmpc_global_thread_num(ptr @1)
+// CHECK-NEXT: store i64 %x, ptr %x.addr, align 8
+// CHECK-NEXT: %.x..void.addr = call ptr @__kmpc_alloc(i32 %[[#R0]], i64 4, ptr inttoptr (i64 3 to ptr))
+// CHECK-NEXT: %[[#R1:]] = load i32, ptr %x.addr, align 4
+// CHECK-NEXT: store i32 %[[#R1]], ptr %.x..void.addr, align 4
+// CHECK-NEXT: call void @__kmpc_free(i32 %[[#R0]], ptr %.x..void.addr, ptr inttoptr (i64 3 to ptr))
+
+// CHECK: %[[#R0:]] = call i32 @__kmpc_global_thread_num(ptr @1)
+// CHECK-NEXT: store i64 %x, ptr %x.addr, align 8
+// CHECK-NEXT: %.x..void.addr = call ptr @__kmpc_alloc(i32 %[[#R0]], i64 4, ptr inttoptr (i64 4 to ptr))
+// CHECK-NEXT: %[[#R1:]] = load i32, ptr %x.addr, align 4
+// CHECK-NEXT: store i32 %[[#R1]], ptr %.x..void.addr, align 4
+// CHECK-NEXT: call void @__kmpc_free(i32 %[[#R0]], ptr %.x..void.addr, ptr inttoptr (i64 4 to ptr))
+
+// CHECK: %[[#R0:]] = call i32 @__kmpc_global_thread_num(ptr @1)
+// CHECK-NEXT: store i64 %x, ptr %x.addr, align 8
+// CHECK-NEXT: %.x..void.addr = call ptr @__kmpc_alloc(i32 %[[#R0]], i64 4, ptr inttoptr (i64 5 to ptr))
+// CHECK-NEXT: %[[#R1:]] = load i32, ptr %x.addr, align 4
+// CHECK-NEXT: store i32 %[[#R1]], ptr %.x..void.addr, align 4
+// CHECK-NEXT: call void @__kmpc_free(i32 %[[#R0]], ptr %.x..void.addr, ptr inttoptr (i64 5 to ptr))
+
+// CHECK: %[[#R0:]] = call i32 @__kmpc_global_thread_num(ptr @1)
+// CHECK-NEXT: store i64 %x, ptr %x.addr, align 8
+// CHECK-NEXT: %.x..void.addr = call ptr @__kmpc_alloc(i32 %[[#R0]], i64 4, ptr inttoptr (i64 6 to ptr))
+// CHECK-NEXT: %[[#R1:]] = load i32, ptr %x.addr, align 4
+// CHECK-NEXT: store i32 %[[#R1]], ptr %.x..void.addr, align 4
+// CHECK-NEXT: call void @__kmpc_free(i32 %[[#R0]], ptr %.x..void.addr, ptr inttoptr (i64 6 to ptr))
+
+// CHECK: %[[#R0:]] = call i32 @__kmpc_global_thread_num(ptr @1)
+// CHECK-NEXT: store i64 %x, ptr %x.addr, align 8
+// CHECK-NEXT: %.x..void.addr = call ptr @__kmpc_alloc(i32 %[[#R0]], i64 4, ptr inttoptr (i64 7 to ptr))
+// CHECK-NEXT: %[[#R1:]] = load i32, ptr %x.addr, align 4
+// CHECK-NEXT: store i32 %[[#R1]], ptr %.x..void.addr, align 4
+// CHECK-NEXT: call void @__kmpc_free(i32 %[[#R0]], ptr %.x..void.addr, ptr inttoptr (i64 7 to ptr))
+
+// CHECK: %[[#R0:]] = call i32 @__kmpc_global_thread_num(ptr @1)
+// CHECK-NEXT: store i64 %x, ptr %x.addr, align 8
+// CHECK-NEXT: %.x..void.addr = call ptr @__kmpc_alloc(i32 %[[#R0]], i64 4, ptr inttoptr (i64 8 to ptr))
+// CHECK-NEXT: %[[#R1:]] = load i32, ptr %x.addr, align 4
+// CHECK-NEXT: store i32 %[[#R1]], ptr %.x..void.addr, align 4
+// CHECK-NEXT: call void @__kmpc_free(i32 %[[#R0]], ptr %.x..void.addr, ptr inttoptr (i64 8 to ptr))

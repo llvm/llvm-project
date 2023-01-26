@@ -7,7 +7,7 @@
 ; CHECK:                ret
 define void @a() nounwind {
   %1 = alloca i32, align 4
-  store i32 1, i32* %1, align 4
+  store i32 1, ptr %1, align 4
   ret void
 }
 

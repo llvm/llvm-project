@@ -10,6 +10,7 @@
 #define LLDB_TARGET_THREADPOSTMORTEMTRACE_H
 
 #include "lldb/Target/Thread.h"
+#include <optional>
 
 namespace lldb_private {
 
@@ -30,7 +31,7 @@ public:
   ///     The file that contains the list of instructions that were traced when
   ///     this thread was being executed.
   ThreadPostMortemTrace(Process &process, lldb::tid_t tid,
-                        const llvm::Optional<FileSpec> &trace_file)
+                        const std::optional<FileSpec> &trace_file)
       : Thread(process, tid), m_trace_file(trace_file) {}
 
   void RefreshStateAfterStop() override;
@@ -42,7 +43,7 @@ public:
 
   /// \return
   ///   The trace file of this thread.
-  const llvm::Optional<FileSpec> &GetTraceFile() const;
+  const std::optional<FileSpec> &GetTraceFile() const;
 
 protected:
   bool CalculateStopInfo() override;
@@ -50,7 +51,7 @@ protected:
   lldb::RegisterContextSP m_thread_reg_ctx_sp;
 
 private:
-  llvm::Optional<FileSpec> m_trace_file;
+  std::optional<FileSpec> m_trace_file;
 };
 
 } // namespace lldb_private

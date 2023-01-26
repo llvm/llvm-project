@@ -54,6 +54,7 @@ public:
 
   uint64_t tell() { return OS.tell(); }
   void write(uint64_t V) { LE.write<uint64_t>(V); }
+  void writeByte(uint8_t V) { LE.write<uint8_t>(V); }
 
   // \c patch can only be called when all data is written and flushed.
   // For raw_string_ostream, the patch is done on the target string
@@ -280,11 +281,19 @@ bool InstrProfWriter::addMemProfFrame(const memprof::FrameId Id,
   return true;
 }
 
+void InstrProfWriter::addBinaryIds(ArrayRef<llvm::object::BuildID> BIs) {
+  llvm::append_range(BinaryIds, BIs);
+}
+
 void InstrProfWriter::mergeRecordsFromWriter(InstrProfWriter &&IPW,
                                              function_ref<void(Error)> Warn) {
   for (auto &I : IPW.FunctionData)
     for (auto &Func : I.getValue())
       addRecord(I.getKey(), Func.first, std::move(Func.second), 1, Warn);
+
+  BinaryIds.reserve(BinaryIds.size() + IPW.BinaryIds.size());
+  for (auto &I : IPW.BinaryIds)
+    addBinaryIds(I);
 
   MemProfFrameData.reserve(IPW.MemProfFrameData.size());
   for (auto &I : IPW.MemProfFrameData) {
@@ -330,6 +339,7 @@ static void setSummary(IndexedInstrProf::Summary *TheSummary,
 
 Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   using namespace IndexedInstrProf;
+  using namespace support;
 
   OnDiskChainedHashTableGenerator<InstrProfRecordWriterTrait> Generator;
 
@@ -365,11 +375,13 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   Header.HashType = static_cast<uint64_t>(IndexedInstrProf::HashType);
   Header.HashOffset = 0;
   Header.MemProfOffset = 0;
+  Header.BinaryIdOffset = 0;
   int N = sizeof(IndexedInstrProf::Header) / sizeof(uint64_t);
 
-  // Only write out all the fields except 'HashOffset' and 'MemProfOffset'. We
-  // need to remember the offset of these fields to allow back patching later.
-  for (int I = 0; I < N - 2; I++)
+  // Only write out all the fields except 'HashOffset', 'MemProfOffset' and
+  // 'BinaryIdOffset'. We need to remember the offset of these fields to allow
+  // back patching later.
+  for (int I = 0; I < N - 3; I++)
     OS.write(reinterpret_cast<uint64_t *>(&Header)[I]);
 
   // Save the location of Header.HashOffset field in \c OS.
@@ -382,6 +394,12 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   uint64_t MemProfSectionOffset = OS.tell();
   // Reserve space for the MemProf table field to be patched later if this
   // profile contains memory profile information.
+  OS.write(0);
+
+  // Save the location of binary ids section.
+  uint64_t BinaryIdSectionOffset = OS.tell();
+  // Reserve space for the BinaryIdOffset field to be patched later if this
+  // profile contains binary ids.
   OS.write(0);
 
   // Reserve space to write profile summary data.
@@ -460,6 +478,43 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
     OS.patch(PatchItems, 3);
   }
 
+  // BinaryIdSection has two parts:
+  // 1. uint64_t BinaryIdsSectionSize
+  // 2. list of binary ids that consist of:
+  //    a. uint64_t BinaryIdLength
+  //    b. uint8_t  BinaryIdData
+  //    c. uint8_t  Padding (if necessary)
+  uint64_t BinaryIdSectionStart = OS.tell();
+  // Calculate size of binary section.
+  uint64_t BinaryIdsSectionSize = 0;
+
+  // Remove duplicate binary ids.
+  llvm::sort(BinaryIds);
+  BinaryIds.erase(std::unique(BinaryIds.begin(), BinaryIds.end()),
+                  BinaryIds.end());
+
+  for (auto BI : BinaryIds) {
+    // Increment by binary id length data type size.
+    BinaryIdsSectionSize += sizeof(uint64_t);
+    // Increment by binary id data length, aligned to 8 bytes.
+    BinaryIdsSectionSize += alignToPowerOf2(BI.size(), sizeof(uint64_t));
+  }
+  // Write binary ids section size.
+  OS.write(BinaryIdsSectionSize);
+
+  for (auto BI : BinaryIds) {
+    uint64_t BILen = BI.size();
+    // Write binary id length.
+    OS.write(BILen);
+    // Write binary id data.
+    for (unsigned K = 0; K < BILen; K++)
+      OS.writeByte(BI[K]);
+    // Write padding if necessary.
+    uint64_t PaddingSize = alignToPowerOf2(BILen, sizeof(uint64_t)) - BILen;
+    for (unsigned K = 0; K < PaddingSize; K++)
+      OS.writeByte(0);
+  }
+
   // Allocate space for data to be serialized out.
   std::unique_ptr<IndexedInstrProf::Summary> TheSummary =
       IndexedInstrProf::allocSummary(SummarySize);
@@ -482,15 +537,18 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   PatchItem PatchItems[] = {
       // Patch the Header.HashOffset field.
       {HashTableStartFieldOffset, &HashTableStart, 1},
-      // Patch the Header.MemProfOffset (=0 for profiles without MemProf data).
+      // Patch the Header.MemProfOffset (=0 for profiles without MemProf
+      // data).
       {MemProfSectionOffset, &MemProfSectionStart, 1},
+      // Patch the Header.BinaryIdSectionOffset.
+      {BinaryIdSectionOffset, &BinaryIdSectionStart, 1},
       // Patch the summary data.
       {SummaryOffset, reinterpret_cast<uint64_t *>(TheSummary.get()),
        (int)(SummarySize / sizeof(uint64_t))},
       {CSSummaryOffset, reinterpret_cast<uint64_t *>(TheCSSummary.get()),
        (int)CSSummarySize}};
 
-  OS.patch(PatchItems, sizeof(PatchItems) / sizeof(*PatchItems));
+  OS.patch(PatchItems, std::size(PatchItems));
 
   for (const auto &I : FunctionData)
     for (const auto &F : I.getValue())
@@ -530,13 +588,10 @@ Error InstrProfWriter::validateRecord(const InstrProfRecord &Func) {
     for (uint32_t S = 0; S < NS; S++) {
       uint32_t ND = Func.getNumValueDataForSite(VK, S);
       std::unique_ptr<InstrProfValueData[]> VD = Func.getValueForSite(VK, S);
-      bool WasZero = false;
+      DenseSet<uint64_t> SeenValues;
       for (uint32_t I = 0; I < ND; I++)
-        if ((VK != IPVK_IndirectCallTarget) && (VD[I].Value == 0)) {
-          if (WasZero)
-            return make_error<InstrProfError>(instrprof_error::invalid_prof);
-          WasZero = true;
-        }
+        if ((VK != IPVK_IndirectCallTarget) && !SeenValues.insert(VD[I].Value).second)
+          return make_error<InstrProfError>(instrprof_error::invalid_prof);
     }
   }
 

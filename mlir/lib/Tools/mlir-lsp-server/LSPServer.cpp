@@ -8,11 +8,12 @@
 
 #include "LSPServer.h"
 #include "../lsp-server-support/Logging.h"
-#include "../lsp-server-support/Protocol.h"
 #include "../lsp-server-support/Transport.h"
 #include "MLIRServer.h"
+#include "Protocol.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include <optional>
 
 #define DEBUG_TYPE "mlir-lsp-server"
 
@@ -54,7 +55,7 @@ struct LSPServer {
   // Hover
 
   void onHover(const TextDocumentPositionParams &params,
-               Callback<Optional<Hover>> reply);
+               Callback<std::optional<Hover>> reply);
 
   //===--------------------------------------------------------------------===//
   // Document Symbols
@@ -73,6 +74,14 @@ struct LSPServer {
 
   void onCodeAction(const CodeActionParams &params,
                     Callback<llvm::json::Value> reply);
+
+  //===--------------------------------------------------------------------===//
+  // Bytecode
+
+  void onConvertFromBytecode(const MLIRConvertBytecodeParams &params,
+                             Callback<MLIRConvertBytecodeResult> reply);
+  void onConvertToBytecode(const MLIRConvertBytecodeParams &params,
+                           Callback<MLIRConvertBytecodeResult> reply);
 
   //===--------------------------------------------------------------------===//
   // Fields
@@ -163,7 +172,8 @@ void LSPServer::onDocumentDidOpen(const DidOpenTextDocumentParams &params) {
   publishDiagnostics(diagParams);
 }
 void LSPServer::onDocumentDidClose(const DidCloseTextDocumentParams &params) {
-  Optional<int64_t> version = server.removeDocument(params.textDocument.uri);
+  std::optional<int64_t> version =
+      server.removeDocument(params.textDocument.uri);
   if (!version)
     return;
 
@@ -209,7 +219,7 @@ void LSPServer::onReference(const ReferenceParams &params,
 // Hover
 
 void LSPServer::onHover(const TextDocumentPositionParams &params,
-                        Callback<Optional<Hover>> reply) {
+                        Callback<std::optional<Hover>> reply) {
   reply(server.findHover(params.textDocument.uri, params.position));
 }
 
@@ -255,6 +265,20 @@ void LSPServer::onCodeAction(const CodeActionParams &params,
 }
 
 //===----------------------------------------------------------------------===//
+// Bytecode
+
+void LSPServer::onConvertFromBytecode(
+    const MLIRConvertBytecodeParams &params,
+    Callback<MLIRConvertBytecodeResult> reply) {
+  reply(server.convertFromBytecode(params.uri));
+}
+
+void LSPServer::onConvertToBytecode(const MLIRConvertBytecodeParams &params,
+                                    Callback<MLIRConvertBytecodeResult> reply) {
+  reply(server.convertToBytecode(params.uri));
+}
+
+//===----------------------------------------------------------------------===//
 // Entry point
 //===----------------------------------------------------------------------===//
 
@@ -297,6 +321,12 @@ LogicalResult lsp::runMlirLSPServer(MLIRServer &server,
   // Code Action
   messageHandler.method("textDocument/codeAction", &lspServer,
                         &LSPServer::onCodeAction);
+
+  // Bytecode
+  messageHandler.method("mlir/convertFromBytecode", &lspServer,
+                        &LSPServer::onConvertFromBytecode);
+  messageHandler.method("mlir/convertToBytecode", &lspServer,
+                        &LSPServer::onConvertToBytecode);
 
   // Diagnostics
   lspServer.publishDiagnostics =

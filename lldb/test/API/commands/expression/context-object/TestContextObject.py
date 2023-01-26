@@ -67,7 +67,7 @@ class ContextObjectTestCase(TestBase):
 
         # Test an expression evaluation
         value = obj_val.EvaluateExpression("1")
-        self.assertFalse(value.IsValid())
+        self.assertTrue(value.IsValid())
         self.assertFalse(value.GetError().Success())
 
         #
@@ -79,7 +79,7 @@ class ContextObjectTestCase(TestBase):
 
         # Test an expression evaluation
         value = obj_val.EvaluateExpression("1")
-        self.assertFalse(value.IsValid())
+        self.assertTrue(value.IsValid())
         self.assertFalse(value.GetError().Success())
 
         # Test retrieveing of an element's field
@@ -97,7 +97,7 @@ class ContextObjectTestCase(TestBase):
 
         # Test an expression evaluation
         value = obj_val.EvaluateExpression("1")
-        self.assertFalse(value.IsValid())
+        self.assertTrue(value.IsValid())
         self.assertFalse(value.GetError().Success())
 
         # Test retrieveing of a dereferenced object's field
@@ -127,7 +127,7 @@ class ContextObjectTestCase(TestBase):
 
         # Test an expression evaluation
         value = obj_val.EvaluateExpression("1")
-        self.assertFalse(value.IsValid())
+        self.assertTrue(value.IsValid())
         self.assertFalse(value.GetError().Success())
 
         # Test retrieveing of a dereferenced object's field

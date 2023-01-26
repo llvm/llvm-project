@@ -9,6 +9,9 @@ __tsan_java*
 __tsan_unaligned*
 __tsan_release
 __tsan_acquire
+__tsan_memcpy
+__tsan_memmove
+__tsan_memset
 __tsan_mutex_create
 __tsan_mutex_destroy
 __tsan_mutex_pre_lock

@@ -40,8 +40,8 @@ We expect 2 MIB entries, 1 each for the malloc calls in the program.
 
 CHECK:  MemprofProfile:
 CHECK-NEXT:  Summary:
-CHECK-NEXT:    Version: 1
-CHECK-NEXT:    NumSegments: 9
+CHECK-NEXT:    Version: 2
+CHECK-NEXT:    NumSegments: {{[0-9]+}}
 CHECK-NEXT:    NumMibInfo: 2
 CHECK-NEXT:    NumAllocFunctions: 1
 CHECK-NEXT:    NumStackOffsets: 2

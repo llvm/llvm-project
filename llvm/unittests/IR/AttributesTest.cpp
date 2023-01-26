@@ -97,7 +97,7 @@ TEST(Attributes, RemoveAlign) {
   EXPECT_TRUE(AS.hasAttribute(Attribute::ReadOnly));
   AS = AttributeSet::get(C, B_align_readonly);
   AS = AS.removeAttributes(C, B_align);
-  EXPECT_TRUE(AS.getAlignment() == None);
+  EXPECT_TRUE(AS.getAlignment() == std::nullopt);
   EXPECT_TRUE(AS.hasAttribute(Attribute::ReadOnly));
 
   AttributeList AL;
@@ -201,9 +201,9 @@ TEST(Attributes, HasParentContext) {
 
   {
     AttributeSet AS1 = AttributeSet::get(
-        C1, makeArrayRef(Attribute::get(C1, Attribute::NoReturn)));
+        C1, ArrayRef(Attribute::get(C1, Attribute::NoReturn)));
     AttributeSet AS2 = AttributeSet::get(
-        C2, makeArrayRef(Attribute::get(C2, Attribute::NoReturn)));
+        C2, ArrayRef(Attribute::get(C2, Attribute::NoReturn)));
     EXPECT_TRUE(AS1.hasParentContext(C1));
     EXPECT_FALSE(AS1.hasParentContext(C2));
     EXPECT_FALSE(AS2.hasParentContext(C1));
@@ -292,6 +292,19 @@ TEST(Attributes, MismatchedABIAttrs) {
     ASSERT_TRUE(I->isInAllocaArgument(0));
     ASSERT_TRUE(I->getParamInAllocaType(0));
   }
+}
+
+TEST(Attributes, RemoveParamAttributes) {
+  LLVMContext C;
+  AttributeList AL;
+  AL = AL.addParamAttribute(C, 1, Attribute::NoUndef);
+  EXPECT_EQ(AL.getNumAttrSets(), 4U);
+  AL = AL.addParamAttribute(C, 3, Attribute::NonNull);
+  EXPECT_EQ(AL.getNumAttrSets(), 6U);
+  AL = AL.removeParamAttributes(C, 3);
+  EXPECT_EQ(AL.getNumAttrSets(), 4U);
+  AL = AL.removeParamAttribute(C, 1, Attribute::NoUndef);
+  EXPECT_EQ(AL.getNumAttrSets(), 0U);
 }
 
 } // end anonymous namespace

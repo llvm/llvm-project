@@ -9,7 +9,6 @@
 // <algorithm>
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<bidirectional_iterator I1, sentinel_for<I1> S1, bidirectional_iterator I2>
 //   requires indirectly_movable<I1, I2>
@@ -23,7 +22,9 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <deque>
 #include <ranges>
+#include <vector>
 
 #include "almost_satisfies_types.h"
 #include "MoveOnly.h"
@@ -64,7 +65,7 @@ constexpr void test(std::array<int, N> in) {
     std::same_as<std::ranges::in_out_result<In, Out>> decltype(auto) ret =
       std::ranges::move_backward(In(in.data()), Sent(In(in.data() + in.size())), Out(out.data() + out.size()));
     assert(in == out);
-    assert(base(ret.in) == in.data());
+    assert(base(ret.in) == in.data() + in.size());
     assert(base(ret.out) == out.data());
   }
   {
@@ -73,7 +74,7 @@ constexpr void test(std::array<int, N> in) {
     std::same_as<std::ranges::in_out_result<In, Out>> decltype(auto) ret =
         std::ranges::move_backward(range, Out(out.data() + out.size()));
     assert(in == out);
-    assert(base(ret.in) == in.data());
+    assert(base(ret.in) == in.data() + in.size());
     assert(base(ret.out) == out.data());
   }
 }
@@ -86,20 +87,73 @@ constexpr void test_iterators() {
   test<In, Out, Sent, 0>({});
 }
 
-template <class Out>
-constexpr void test_in_iterators() {
-  test_iterators<bidirectional_iterator<int*>, Out, sentinel_wrapper<bidirectional_iterator<int*>>>();
-  test_iterators<bidirectional_iterator<int*>, Out>();
-  test_iterators<random_access_iterator<int*>, Out>();
-  test_iterators<contiguous_iterator<int*>, Out>();
+template <class InContainer, class OutContainer, class In, class Out, class Sent = In>
+constexpr void test_containers() {
+  {
+    InContainer in {1, 2, 3, 4};
+    OutContainer out(4);
+    std::same_as<std::ranges::in_out_result<In, Out>> auto ret =
+      std::ranges::move_backward(In(in.begin()), Sent(In(in.end())), Out(out.end()));
+    assert(std::ranges::equal(in, out));
+    assert(base(ret.in) == in.end());
+    assert(base(ret.out) == out.begin());
+  }
+  {
+    InContainer in {1, 2, 3, 4};
+    OutContainer out(4);
+    auto range = std::ranges::subrange(In(in.begin()), Sent(In(in.end())));
+    std::same_as<std::ranges::in_out_result<In, Out>> auto ret = std::ranges::move_backward(range, Out(out.end()));
+    assert(std::ranges::equal(in, out));
+    assert(base(ret.in) == in.end());
+    assert(base(ret.out) == out.begin());
+  }
 }
 
-template <class Out>
+template <template <class> class InIter, template <class> class OutIter>
+constexpr void test_sentinels() {
+  test_iterators<InIter<int*>, OutIter<int*>, InIter<int*>>();
+  test_iterators<InIter<int*>, OutIter<int*>, sentinel_wrapper<InIter<int*>>>();
+  test_iterators<InIter<int*>, OutIter<int*>, sized_sentinel<InIter<int*>>>();
+
+  if (!std::is_constant_evaluated()) {
+    if constexpr (!std::is_same_v<InIter<int*>, contiguous_iterator<int*>> &&
+                  !std::is_same_v<OutIter<int*>, contiguous_iterator<int*>> &&
+                  !std::is_same_v<InIter<int*>, ContiguousProxyIterator<int*>> &&
+                  !std::is_same_v<OutIter<int*>, ContiguousProxyIterator<int*>>) {
+      test_containers<std::deque<int>,
+                      std::deque<int>,
+                      InIter<std::deque<int>::iterator>,
+                      OutIter<std::deque<int>::iterator>>();
+      test_containers<std::deque<int>,
+                      std::vector<int>,
+                      InIter<std::deque<int>::iterator>,
+                      OutIter<std::vector<int>::iterator>>();
+      test_containers<std::vector<int>,
+                      std::deque<int>,
+                      InIter<std::vector<int>::iterator>,
+                      OutIter<std::deque<int>::iterator>>();
+      test_containers<std::vector<int>,
+                      std::vector<int>,
+                      InIter<std::vector<int>::iterator>,
+                      OutIter<std::vector<int>::iterator>>();
+    }
+  }
+}
+
+template <template <class> class Out>
+constexpr void test_in_iterators() {
+  test_sentinels<bidirectional_iterator, Out>();
+  test_sentinels<random_access_iterator, Out>();
+  test_sentinels<contiguous_iterator, Out>();
+  test_sentinels<std::type_identity_t, Out>();
+}
+
+template <template <class> class Out>
 constexpr void test_proxy_in_iterators() {
-  test_iterators<ProxyIterator<bidirectional_iterator<int*>>, Out, sentinel_wrapper<ProxyIterator<bidirectional_iterator<int*>>>>();
-  test_iterators<ProxyIterator<bidirectional_iterator<int*>>, Out>();
-  test_iterators<ProxyIterator<random_access_iterator<int*>>, Out>();
-  test_iterators<ProxyIterator<contiguous_iterator<int*>>, Out>();
+  test_sentinels<BidirectionalProxyIterator, Out>();
+  test_sentinels<RandomAccessProxyIterator, Out>();
+  test_sentinels<ContiguousProxyIterator, Out>();
+  test_sentinels<ProxyIterator, Out>();
 }
 
 struct IteratorWithMoveIter {
@@ -123,13 +177,15 @@ struct IteratorWithMoveIter {
 };
 
 constexpr bool test() {
-  test_in_iterators<bidirectional_iterator<int*>>();
-  test_in_iterators<random_access_iterator<int*>>();
-  test_in_iterators<contiguous_iterator<int*>>();
+  test_in_iterators<bidirectional_iterator>();
+  test_in_iterators<random_access_iterator>();
+  test_in_iterators<contiguous_iterator>();
+  test_in_iterators<std::type_identity_t>();
 
-  test_proxy_in_iterators<ProxyIterator<bidirectional_iterator<int*>>>();
-  test_proxy_in_iterators<ProxyIterator<random_access_iterator<int*>>>();
-  test_proxy_in_iterators<ProxyIterator<contiguous_iterator<int*>>>();
+  test_proxy_in_iterators<BidirectionalProxyIterator>();
+  test_proxy_in_iterators<RandomAccessProxyIterator>();
+  test_proxy_in_iterators<ContiguousProxyIterator>();
+  test_proxy_in_iterators<ProxyIterator>();
 
   { // check that a move-only type works
     {
@@ -186,7 +242,7 @@ constexpr bool test() {
     std::array<int, 4> out;
     std::same_as<std::ranges::in_out_result<int*, int*>> auto ret =
         std::ranges::move_backward(std::views::all(in), out.data() + out.size());
-    assert(ret.in == in.data());
+    assert(ret.in == in.data() + in.size());
     assert(ret.out == out.data());
     assert(in == out);
   }
@@ -206,7 +262,7 @@ constexpr bool test() {
       std::array<MoveOnce, 4> in {};
       std::array<MoveOnce, 4> out {};
       auto ret = std::ranges::move_backward(in.begin(), in.end(), out.end());
-      assert(ret.in == in.begin());
+      assert(ret.in == in.end());
       assert(ret.out == out.begin());
       assert(std::all_of(out.begin(), out.end(), [](const auto& e) { return e.moved; }));
     }
@@ -214,7 +270,7 @@ constexpr bool test() {
       std::array<MoveOnce, 4> in {};
       std::array<MoveOnce, 4> out {};
       auto ret = std::ranges::move_backward(in, out.end());
-      assert(ret.in == in.begin());
+      assert(ret.in == in.end());
       assert(ret.out == out.begin());
       assert(std::all_of(out.begin(), out.end(), [](const auto& e) { return e.moved; }));
     }
@@ -239,7 +295,7 @@ constexpr bool test() {
       out[2].next = &out[1];
       out[2].canMove = true;
       auto ret = std::ranges::move_backward(in, out.end());
-      assert(ret.in == in.begin());
+      assert(ret.in == in.end());
       assert(ret.out == out.begin());
       assert(out[0].canMove);
       assert(out[1].canMove);
@@ -252,7 +308,7 @@ constexpr bool test() {
       out[2].next = &out[1];
       out[2].canMove = true;
       auto ret = std::ranges::move_backward(in.begin(), in.end(), out.end());
-      assert(ret.in == in.begin());
+      assert(ret.in == in.end());
       assert(ret.out == out.begin());
       assert(out[0].canMove);
       assert(out[1].canMove);
@@ -265,7 +321,7 @@ constexpr bool test() {
       int a[] = {1, 2, 3, 4};
       std::array<int, 4> b;
       auto ret = std::ranges::move_backward(IteratorWithMoveIter(a), IteratorWithMoveIter(a + 4), b.data() + b.size());
-      assert(ret.in == a);
+      assert(ret.in == a + 4);
       assert(ret.out == b.data());
       assert((b == std::array {42, 42, 42, 42}));
     }
@@ -274,7 +330,7 @@ constexpr bool test() {
       std::array<int, 4> b;
       auto range = std::ranges::subrange(IteratorWithMoveIter(a), IteratorWithMoveIter(a + 4));
       auto ret = std::ranges::move_backward(range, b.data() + b.size());
-      assert(ret.in == a);
+      assert(ret.in == a + 4);
       assert(ret.out == b.data());
       assert((b == std::array {42, 42, 42, 42}));
     }

@@ -5,18 +5,18 @@
 
 # RUN: ld.lld -shared %t.o %t1.o -o %t.so
 # RUN: llvm-readobj -r -x .got %t.so | FileCheck --check-prefix=GD-RELA %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck --check-prefix=GD %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.so | FileCheck --check-prefix=GD %s
 
 # RUN: ld.lld -shared %t.o %t1.o -o %t-rel.so -z rel
 # RUN: llvm-readobj -r -x .got %t-rel.so | FileCheck --check-prefix=GD-REL %s
 
 # RUN: ld.lld %t.o %t1.o -o %t
 # RUN: llvm-readelf -r %t | FileCheck --check-prefix=NOREL %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=LE %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck --check-prefix=LE %s
 
 # RUN: ld.lld %t.o %t1.so -o %t
 # RUN: llvm-readobj -r %t | FileCheck --check-prefix=IE-REL %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=IE %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck --check-prefix=IE %s
 
 # GD-RELA:      .rela.dyn {
 # GD-RELA-NEXT:   0x23D0 R_X86_64_TLSDESC - 0xB
