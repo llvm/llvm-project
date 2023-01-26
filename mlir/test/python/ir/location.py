@@ -29,7 +29,7 @@ run(testUnknown)
 def testLocationAttr():
   with Context() as ctxt:
     loc = Location.unknown()
-    attr = loc.get_attr()
+    attr = loc.attr
     clone = Location.from_attr(attr)
   gc.collect()
   # CHECK: loc: loc(unknown)
