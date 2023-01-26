@@ -556,7 +556,7 @@ bool AMDGPUTargetLowering::mayIgnoreSignedZero(SDValue Op) const {
 //===----------------------------------------------------------------------===//
 
 LLVM_READNONE
-static bool fnegFoldsIntoOp(unsigned Opc) {
+static bool fnegFoldsIntoOpcode(unsigned Opc) {
   switch (Opc) {
   case ISD::FADD:
   case ISD::FSUB:
@@ -583,9 +583,25 @@ static bool fnegFoldsIntoOp(unsigned Opc) {
   case AMDGPUISD::FMED3:
     // TODO: handle llvm.amdgcn.fma.legacy
     return true;
+  case ISD::BITCAST:
+    llvm_unreachable("bitcast is special cased");
   default:
     return false;
   }
+}
+
+static bool fnegFoldsIntoOp(const SDNode *N) {
+  unsigned Opc = N->getOpcode();
+  if (Opc == ISD::BITCAST) {
+    // TODO: Is there a benefit to checking the conditions performFNegCombine
+    // does? We don't for the other cases.
+    SDValue BCSrc = N->getOperand(0);
+    return BCSrc.getOpcode() == ISD::BUILD_VECTOR &&
+           BCSrc.getNumOperands() == 2 &&
+           BCSrc.getOperand(1).getValueSizeInBits() == 32;
+  }
+
+  return fnegFoldsIntoOpcode(Opc);
 }
 
 /// \p returns true if the operation will definitely need to use a 64-bit
@@ -3773,7 +3789,7 @@ AMDGPUTargetLowering::foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
 
     if (NewLHS.hasOneUse()) {
       unsigned Opc = NewLHS.getOpcode();
-      if (LHS.getOpcode() == ISD::FNEG && fnegFoldsIntoOp(Opc))
+      if (LHS.getOpcode() == ISD::FNEG && fnegFoldsIntoOp(NewLHS.getNode()))
         ShouldFoldNeg = false;
       if (LHS.getOpcode() == ISD::FABS && Opc == ISD::FMUL)
         ShouldFoldNeg = false;
@@ -3915,8 +3931,6 @@ static unsigned inverseMinMax(unsigned Opc) {
 /// \return true if it's profitable to try to push an fneg into its source
 /// instruction.
 bool AMDGPUTargetLowering::shouldFoldFNegIntoSrc(SDNode *N, SDValue N0) {
-  unsigned Opc = N0.getOpcode();
-
   // If the input has multiple uses and we can either fold the negate down, or
   // the other uses cannot, give up. This both prevents unprofitable
   // transformations and infinite loops: we won't repeatedly try to fold around
@@ -3927,7 +3941,7 @@ bool AMDGPUTargetLowering::shouldFoldFNegIntoSrc(SDNode *N, SDValue N0) {
     if (allUsesHaveSourceMods(N, 0))
       return false;
   } else {
-    if (fnegFoldsIntoOp(Opc) &&
+    if (fnegFoldsIntoOp(N0.getNode()) &&
         (allUsesHaveSourceMods(N) || !allUsesHaveSourceMods(N0.getNode())))
       return false;
   }
@@ -4131,6 +4145,43 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   case ISD::SELECT: {
     // fneg (select c, a, b) -> select c, (fneg a), (fneg b)
     // TODO: Invert conditions of foldFreeOpFromSelect
+    return SDValue();
+  }
+  case ISD::BITCAST: {
+    SDLoc SL(N);
+    SDValue BCSrc = N0.getOperand(0);
+    if (BCSrc.getOpcode() == ISD::BUILD_VECTOR) {
+      SDValue HighBits = BCSrc.getOperand(BCSrc.getNumOperands() - 1);
+      if (HighBits.getValueType().getSizeInBits() != 32 ||
+          !fnegFoldsIntoOp(HighBits.getNode()))
+        return SDValue();
+
+      // f64 fneg only really needs to operate on the high half of of the
+      // register, so try to force it to an f32 operation to help make use of
+      // source modifiers.
+      //
+      //
+      // fneg (f64 (bitcast (build_vector x, y))) ->
+      // f64 (bitcast (build_vector (bitcast i32:x to f32),
+      //                            (fneg (bitcast i32:y to f32)))
+
+      SDValue CastHi = DAG.getNode(ISD::BITCAST, SL, MVT::f32, HighBits);
+      SDValue NegHi = DAG.getNode(ISD::FNEG, SL, MVT::f32, CastHi);
+      SDValue CastBack =
+          DAG.getNode(ISD::BITCAST, SL, HighBits.getValueType(), NegHi);
+
+      SmallVector<SDValue, 8> Ops(BCSrc->op_begin(), BCSrc->op_end());
+      Ops.back() = CastBack;
+      DCI.AddToWorklist(NegHi.getNode());
+      SDValue Build =
+          DAG.getNode(ISD::BUILD_VECTOR, SL, BCSrc.getValueType(), Ops);
+      SDValue Result = DAG.getNode(ISD::BITCAST, SL, VT, Build);
+
+      if (!N0.hasOneUse())
+        DAG.ReplaceAllUsesWith(N0, DAG.getNode(ISD::FNEG, SL, VT, Result));
+      return Result;
+    }
+
     return SDValue();
   }
   default:

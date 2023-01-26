@@ -3026,11 +3026,10 @@ define amdgpu_kernel void @s_fneg_select_infloop_regression_f64(double %arg, i1 
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_and_b32 s4, 1, s4
 ; SI-NEXT:    s_cselect_b32 s3, 0, s3
-; SI-NEXT:    s_cselect_b32 s2, 0, s2
 ; SI-NEXT:    s_xor_b32 s3, s3, 0x80000000
 ; SI-NEXT:    s_cmp_eq_u32 s4, 1
-; SI-NEXT:    s_cselect_b32 s3, 0, s3
 ; SI-NEXT:    s_cselect_b32 s2, 0, s2
+; SI-NEXT:    s_cselect_b32 s3, 0, s3
 ; SI-NEXT:    v_mov_b32_e32 v3, s1
 ; SI-NEXT:    v_mov_b32_e32 v0, s2
 ; SI-NEXT:    v_mov_b32_e32 v1, s3
@@ -3046,11 +3045,10 @@ define amdgpu_kernel void @s_fneg_select_infloop_regression_f64(double %arg, i1 
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_and_b32 s4, 1, s4
 ; VI-NEXT:    s_cselect_b32 s3, 0, s3
-; VI-NEXT:    s_cselect_b32 s2, 0, s2
 ; VI-NEXT:    s_xor_b32 s3, s3, 0x80000000
 ; VI-NEXT:    s_cmp_eq_u32 s4, 1
-; VI-NEXT:    s_cselect_b32 s3, 0, s3
 ; VI-NEXT:    s_cselect_b32 s2, 0, s2
+; VI-NEXT:    s_cselect_b32 s3, 0, s3
 ; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
@@ -3071,7 +3069,6 @@ define double @v_fneg_select_infloop_regression_f64(double %arg, i1 %arg1) {
 ; GCN-NEXT:    v_and_b32_e32 v2, 1, v2
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v2
 ; GCN-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
 ; GCN-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
 ; GCN-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
