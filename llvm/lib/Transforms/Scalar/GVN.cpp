@@ -1611,6 +1611,7 @@ bool GVNPass::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
       CriticalEdgePredAndLoad.size();
   assert(NumUnavailablePreds != 0 &&
          "Fully available value should already be eliminated!");
+  (void)NumUnavailablePreds;
 
   // If we need to insert new load in multiple predecessors, reject it.
   // FIXME: If we could restructure the CFG, we could make a common pred with
