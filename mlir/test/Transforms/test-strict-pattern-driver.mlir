@@ -7,6 +7,7 @@
 // RUN:     --split-input-file %s | FileCheck %s --check-prefix=CHECK-EX
 
 // CHECK-EN-LABEL: func @test_erase
+//  CHECK-EN-SAME:     pattern_driver_all_erased = true, pattern_driver_changed = true}
 //       CHECK-EN:   test.arg0
 //       CHECK-EN:   test.arg1
 //   CHECK-EN-NOT:   test.erase_op
@@ -20,6 +21,7 @@ func.func @test_erase() {
 // -----
 
 // CHECK-EN-LABEL: func @test_insert_same_op
+//  CHECK-EN-SAME:     {pattern_driver_all_erased = false, pattern_driver_changed = true}
 //       CHECK-EN:   "test.insert_same_op"() {skip = true}
 //       CHECK-EN:   "test.insert_same_op"() {skip = true}
 func.func @test_insert_same_op() {
@@ -30,6 +32,7 @@ func.func @test_insert_same_op() {
 // -----
 
 // CHECK-EN-LABEL: func @test_replace_with_new_op
+//  CHECK-EN-SAME:     {pattern_driver_all_erased = true, pattern_driver_changed = true}
 //       CHECK-EN:   %[[n:.*]] = "test.new_op"
 //       CHECK-EN:   "test.dummy_user"(%[[n]])
 //       CHECK-EN:   "test.dummy_user"(%[[n]])
@@ -43,10 +46,12 @@ func.func @test_replace_with_new_op() {
 // -----
 
 // CHECK-EN-LABEL: func @test_replace_with_erase_op
+//  CHECK-EN-SAME:     {pattern_driver_all_erased = true, pattern_driver_changed = true}
 //   CHECK-EN-NOT:   test.replace_with_new_op
 //   CHECK-EN-NOT:   test.erase_op
 
 // CHECK-EX-LABEL: func @test_replace_with_erase_op
+//  CHECK-EX-SAME:     {pattern_driver_all_erased = true, pattern_driver_changed = true}
 //   CHECK-EX-NOT:   test.replace_with_new_op
 //       CHECK-EX:   test.erase_op
 func.func @test_replace_with_erase_op() {
