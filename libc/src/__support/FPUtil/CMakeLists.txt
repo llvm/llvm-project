@@ -59,6 +59,7 @@ add_header_library(
   DEPENDS
     .fp_bits
     libc.src.__support.CPP.type_traits
+    libc.src.__support.common
 )
 
 add_header_library(
@@ -163,6 +164,7 @@ add_header_library(
     multiply_add.h
   DEPENDS
     .fma
+    libc.src.__support.common
 )
 
 add_header_library(

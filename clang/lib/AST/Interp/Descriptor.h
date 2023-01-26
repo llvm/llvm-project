@@ -44,9 +44,6 @@ using BlockDtorFn = void (*)(Block *Storage, char *FieldPtr,
 using BlockMoveFn = void (*)(Block *Storage, char *SrcFieldPtr,
                              char *DstFieldPtr, Descriptor *FieldDesc);
 
-/// Object size as used by the interpreter.
-using InterpSize = unsigned;
-
 /// Inline descriptor embedded in structures and arrays.
 ///
 /// Such descriptors precede all composite array elements and structure fields.
@@ -81,13 +78,13 @@ private:
   /// Original declaration, used to emit the error message.
   const DeclTy Source;
   /// Size of an element, in host bytes.
-  const InterpSize ElemSize;
+  const unsigned ElemSize;
   /// Size of the storage, in host bytes.
-  const InterpSize Size;
+  const unsigned Size;
   // Size of the metadata.
-  const InterpSize MDSize;
+  const unsigned MDSize;
   /// Size of the allocation (storage + metadata), in host bytes.
-  const InterpSize AllocSize;
+  const unsigned AllocSize;
 
   /// Value to denote arrays of unknown size.
   static constexpr unsigned UnknownSizeMark = (unsigned)-1;
@@ -96,7 +93,7 @@ public:
   /// Token to denote structures of unknown size.
   struct UnknownSize {};
 
-  using MetadataSize = std::optional<InterpSize>;
+  using MetadataSize = std::optional<unsigned>;
   static constexpr MetadataSize InlineDescMD = sizeof(InlineDescriptor);
 
   /// Pointer to the record, if block contains records.

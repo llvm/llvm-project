@@ -63,9 +63,9 @@ define i32 @test3(i32 %X) {
 
 define i32 @test4(i32 %X) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[X_LOBIT_NOT:%.*]] = xor i32 [[X_LOBIT]], -1
-; CHECK-NEXT:    ret i32 [[X_LOBIT_NOT]]
+; CHECK-NEXT:    [[A:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[B:%.*]] = sext i1 [[A]] to i32
+; CHECK-NEXT:    ret i32 [[B]]
 ;
   %a = icmp ult i32 %X, -2147483648
   %b = sext i1 %a to i32

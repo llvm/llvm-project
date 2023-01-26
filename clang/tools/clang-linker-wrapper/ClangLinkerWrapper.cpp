@@ -1136,9 +1136,125 @@ std::optional<std::string> searchLibrary(StringRef Input, StringRef Root,
   return searchLibraryBaseName(Input, Root, SearchPaths);
 }
 
-/// Search the input files and libraries for embedded device offloading code and
-/// add it to the list of files to be linked. Files coming from static libraries
-/// are only added to the input if they are used by an existing input file.
+/// Common redeclaration of needed symbol flags.
+enum Symbol : uint32_t {
+  Sym_None = 0,
+  Sym_Undefined = 1U << 1,
+  Sym_Weak = 1U << 2,
+};
+
+/// Scan the symbols from a BitcodeFile \p Buffer and record if we need to
+/// extract any symbols from it.
+Expected<bool> getSymbolsFromBitcode(MemoryBufferRef Buffer, StringSaver &Saver,
+                                     DenseMap<StringRef, Symbol> &Syms) {
+  Expected<IRSymtabFile> IRSymtabOrErr = readIRSymtab(Buffer);
+  if (!IRSymtabOrErr)
+    return IRSymtabOrErr.takeError();
+
+  bool ShouldExtract = false;
+  for (unsigned I = 0; I != IRSymtabOrErr->Mods.size(); ++I) {
+    for (const auto &Sym : IRSymtabOrErr->TheReader.module_symbols(I)) {
+      if (Sym.isFormatSpecific() || !Sym.isGlobal())
+        continue;
+
+      bool NewSymbol = Syms.count(Sym.getName()) == 0;
+      auto &OldSym = Syms[Saver.save(Sym.getName())];
+
+      // We will extract if it defines a currenlty undefined non-weak symbol.
+      bool ResolvesStrongReference =
+          ((OldSym & Sym_Undefined && !(OldSym & Sym_Weak)) &&
+           !Sym.isUndefined());
+      // We will extract if it defines a new global symbol visible to the host.
+      bool NewGlobalSymbol =
+          ((NewSymbol || (OldSym & Sym_Undefined)) && !Sym.isUndefined() &&
+           !Sym.canBeOmittedFromSymbolTable() &&
+           (Sym.getVisibility() != GlobalValue::HiddenVisibility));
+      ShouldExtract |= ResolvesStrongReference | NewGlobalSymbol;
+
+      // Update this symbol in the "table" with the new information.
+      if (OldSym & Sym_Undefined && !Sym.isUndefined())
+        OldSym = static_cast<Symbol>(OldSym & ~Sym_Undefined);
+      if (Sym.isUndefined() && NewSymbol)
+        OldSym = static_cast<Symbol>(OldSym | Sym_Undefined);
+      if (Sym.isWeak())
+        OldSym = static_cast<Symbol>(OldSym | Sym_Weak);
+    }
+  }
+
+  return ShouldExtract;
+}
+
+/// Scan the symbols from an ObjectFile \p Obj and record if we need to extract
+/// any symbols from it.
+Expected<bool> getSymbolsFromObject(const ObjectFile &Obj, StringSaver &Saver,
+                                    DenseMap<StringRef, Symbol> &Syms) {
+  bool ShouldExtract = false;
+  for (SymbolRef Sym : Obj.symbols()) {
+    auto FlagsOrErr = Sym.getFlags();
+    if (!FlagsOrErr)
+      return FlagsOrErr.takeError();
+
+    if (!(*FlagsOrErr & SymbolRef::SF_Global) ||
+        (*FlagsOrErr & SymbolRef::SF_FormatSpecific))
+      continue;
+
+    auto NameOrErr = Sym.getName();
+    if (!NameOrErr)
+      return NameOrErr.takeError();
+
+    bool NewSymbol = Syms.count(*NameOrErr) == 0;
+    auto &OldSym = Syms[Saver.save(*NameOrErr)];
+
+    // We will extract if it defines a currenlty undefined non-weak symbol.
+    bool ResolvesStrongReference = (OldSym & Sym_Undefined) &&
+                                   !(OldSym & Sym_Weak) &&
+                                   !(*FlagsOrErr & SymbolRef::SF_Undefined);
+
+    // We will extract if it defines a new global symbol visible to the host.
+    bool NewGlobalSymbol = ((NewSymbol || (OldSym & Sym_Undefined)) &&
+                            !(*FlagsOrErr & SymbolRef::SF_Undefined) &&
+                            !(*FlagsOrErr & SymbolRef::SF_Hidden));
+    ShouldExtract |= ResolvesStrongReference | NewGlobalSymbol;
+
+    // Update this symbol in the "table" with the new information.
+    if (OldSym & Sym_Undefined && !(*FlagsOrErr & SymbolRef::SF_Undefined))
+      OldSym = static_cast<Symbol>(OldSym & ~Sym_Undefined);
+    if (*FlagsOrErr & SymbolRef::SF_Undefined && NewSymbol)
+      OldSym = static_cast<Symbol>(OldSym | Sym_Undefined);
+    if (*FlagsOrErr & SymbolRef::SF_Weak)
+      OldSym = static_cast<Symbol>(OldSym | Sym_Weak);
+  }
+  return ShouldExtract;
+}
+
+/// Attempt to 'resolve' symbols found in input files. We use this to
+/// determine if an archive member needs to be extracted. An archive member
+/// will be extracted if any of the following is true.
+///   1) It defines an undefined symbol in a regular object filie.
+///   2) It defines a global symbol without hidden visibility that has not
+///      yet been defined.
+Expected<bool> getSymbols(StringRef Image, StringSaver &Saver,
+                          DenseMap<StringRef, Symbol> &Syms) {
+  MemoryBufferRef Buffer = MemoryBufferRef(Image, "");
+  switch (identify_magic(Image)) {
+  case file_magic::bitcode:
+    return getSymbolsFromBitcode(Buffer, Saver, Syms);
+  case file_magic::elf_relocatable: {
+    Expected<std::unique_ptr<ObjectFile>> ObjFile =
+        ObjectFile::createObjectFile(Buffer);
+    if (!ObjFile)
+      return ObjFile.takeError();
+    return getSymbolsFromObject(**ObjFile, Saver, Syms);
+  }
+  default:
+    return false;
+  }
+}
+
+/// Search the input files and libraries for embedded device offloading code
+/// and add it to the list of files to be linked. Files coming from static
+/// libraries are only added to the input if they are used by an existing
+/// input file.
 Expected<SmallVector<OffloadFile>> getDeviceInput(const ArgList &Args) {
   llvm::TimeTraceScope TimeScope("ExtractDeviceCode");
 
@@ -1147,47 +1263,68 @@ Expected<SmallVector<OffloadFile>> getDeviceInput(const ArgList &Args) {
   for (const opt::Arg *Arg : Args.filtered(OPT_library_path))
     LibraryPaths.push_back(Arg->getValue());
 
+  BumpPtrAllocator Alloc;
+  StringSaver Saver(Alloc);
+
   // Try to extract device code from the linker input files.
   SmallVector<OffloadFile> InputFiles;
-  SmallVector<OffloadFile> LazyInputFiles;
-  for (const opt::Arg *Arg : Args.filtered(OPT_INPUT)) {
-    StringRef Filename = Arg->getValue();
-    if (!sys::fs::exists(Filename) || sys::fs::is_directory(Filename))
-      continue;
+  DenseMap<OffloadFile::TargetID, DenseMap<StringRef, Symbol>> Syms;
+  for (const opt::Arg *Arg : Args.filtered(OPT_INPUT, OPT_library)) {
+    std::optional<std::string> Filename =
+        Arg->getOption().matches(OPT_library)
+            ? searchLibrary(Arg->getValue(), Root, LibraryPaths)
+            : std::string(Arg->getValue());
 
-    ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-        MemoryBuffer::getFileOrSTDIN(Filename);
-    if (std::error_code EC = BufferOrErr.getError())
-      return createFileError(Filename, EC);
-
-    if (identify_magic((*BufferOrErr)->getBuffer()) ==
-        file_magic::elf_shared_object)
-      continue;
-
-    bool IsLazy =
-        identify_magic((*BufferOrErr)->getBuffer()) == file_magic::archive;
-    if (Error Err = extractOffloadBinaries(
-            **BufferOrErr, IsLazy ? LazyInputFiles : InputFiles))
-      return std::move(Err);
-  }
-
-  // Try to extract input from input archive libraries.
-  for (const opt::Arg *Arg : Args.filtered(OPT_library)) {
-    if (auto Library = searchLibrary(Arg->getValue(), Root, LibraryPaths)) {
-      ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-          MemoryBuffer::getFileOrSTDIN(*Library);
-      if (std::error_code EC = BufferOrErr.getError())
-        reportError(createFileError(*Library, EC));
-
-      if (identify_magic((*BufferOrErr)->getBuffer()) != file_magic::archive)
-        continue;
-
-      if (Error Err = extractOffloadBinaries(**BufferOrErr, LazyInputFiles))
-        return std::move(Err);
-    } else {
+    if (!Filename && Arg->getOption().matches(OPT_library))
       reportError(createStringError(inconvertibleErrorCode(),
                                     "unable to find library -l%s",
                                     Arg->getValue()));
+
+    if (!Filename || !sys::fs::exists(*Filename) ||
+        sys::fs::is_directory(*Filename))
+      continue;
+
+    ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
+        MemoryBuffer::getFileOrSTDIN(*Filename);
+    if (std::error_code EC = BufferOrErr.getError())
+      return createFileError(*Filename, EC);
+
+    MemoryBufferRef Buffer = **BufferOrErr;
+    if (identify_magic(Buffer.getBuffer()) == file_magic::elf_shared_object)
+      continue;
+
+    SmallVector<OffloadFile> Binaries;
+    if (Error Err = extractOffloadBinaries(Buffer, Binaries))
+      return std::move(Err);
+
+    // We only extract archive members that are needed.
+    bool IsArchive = identify_magic(Buffer.getBuffer()) == file_magic::archive;
+    bool Extracted = true;
+    while (Extracted) {
+      Extracted = false;
+      for (OffloadFile &Binary : Binaries) {
+        if (!Binary.getBinary())
+          continue;
+
+        // If we don't have an object file for this architecture do not
+        // extract.
+        if (IsArchive && !Syms.count(Binary))
+          continue;
+
+        Expected<bool> ExtractOrErr =
+            getSymbols(Binary.getBinary()->getImage(), Saver, Syms[Binary]);
+        if (!ExtractOrErr)
+          return ExtractOrErr.takeError();
+
+        Extracted = IsArchive && *ExtractOrErr;
+
+        if (!IsArchive || Extracted)
+          InputFiles.emplace_back(std::move(Binary));
+
+        // If we extracted any files we need to check all the symbols again.
+        if (Extracted)
+          break;
+      }
     }
   }
 
@@ -1197,16 +1334,6 @@ Expected<SmallVector<OffloadFile>> getDeviceInput(const ArgList &Args) {
       return FileOrErr.takeError();
     InputFiles.push_back(std::move(*FileOrErr));
   }
-
-  DenseSet<OffloadFile::TargetID> IsTargetUsed;
-  for (const auto &File : InputFiles)
-    IsTargetUsed.insert(File);
-
-  // We should only include input files that are used.
-  // TODO: Only load a library if it defined undefined symbols in the input.
-  for (auto &LazyFile : LazyInputFiles)
-    if (IsTargetUsed.contains(LazyFile))
-      InputFiles.emplace_back(std::move(LazyFile));
 
   return std::move(InputFiles);
 }

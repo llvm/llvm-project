@@ -745,28 +745,9 @@ DWARFASTParserClang::GetDIEClassTemplateParams(const DWARFDIE &die) {
   if (llvm::StringRef(die.GetName()).contains("<"))
     return ConstString();
 
-  clang::DeclContext *decl_ctx = GetClangDeclContextContainingDIE(die, nullptr);
   TypeSystemClang::TemplateParameterInfos template_param_infos;
   if (ParseTemplateParameterInfos(die, template_param_infos)) {
-    // Most of the parameters here don't matter, but we make sure the base name
-    // is empty so when we print the name we only get the template parameters.
-    clang::ClassTemplateDecl *class_template_decl =
-        m_ast.ParseClassTemplateDecl(decl_ctx, GetOwningClangModule(die),
-                                     eAccessPublic, "", clang::TTK_Struct,
-                                     template_param_infos);
-    if (!class_template_decl)
-      return ConstString();
-
-    clang::ClassTemplateSpecializationDecl *class_specialization_decl =
-        m_ast.CreateClassTemplateSpecializationDecl(
-            decl_ctx, GetOwningClangModule(die), class_template_decl,
-            clang::TTK_Struct, template_param_infos);
-    if (!class_specialization_decl)
-      return ConstString();
-    CompilerType clang_type =
-        m_ast.CreateClassTemplateSpecializationType(class_specialization_decl);
-    ConstString name = clang_type.GetTypeName(/*BaseOnly*/ true);
-    return name;
+    return ConstString(m_ast.PrintTemplateParams(template_param_infos));
   }
   return ConstString();
 }
@@ -1541,9 +1522,9 @@ DWARFASTParserClang::GetCPlusPlusQualifiedName(const DWARFDIE &die) {
   DWARFDIE parent_decl_ctx_die = die.GetParentDeclContextDIE();
   // TODO: change this to get the correct decl context parent....
   while (parent_decl_ctx_die) {
-    // The name may not contain template parameters due to simplified template
-    // names; we must reconstruct the full name from child template parameter
-    // dies via GetTemplateParametersString().
+    // The name may not contain template parameters due to
+    // -gsimple-template-names; we must reconstruct the full name from child
+    // template parameter dies via GetDIEClassTemplateParams().
     const dw_tag_t parent_tag = parent_decl_ctx_die.Tag();
     switch (parent_tag) {
     case DW_TAG_namespace: {

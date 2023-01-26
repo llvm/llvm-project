@@ -643,14 +643,12 @@ SCRUB_IR_COMMENT_RE = re.compile(r'\s*;.*')
 # TODO: We should also derive check lines for global, debug, loop declarations, etc..
 
 class NamelessValue:
-  def __init__(self, check_prefix, check_key, ir_prefix, global_ir_prefix, global_ir_prefix_regexp,
-               ir_regexp, global_ir_rhs_regexp, is_before_functions, *,
-               is_number=False, replace_number_with_counter=False):
+  def __init__(self, check_prefix, check_key, ir_prefix, ir_regexp,
+               global_ir_rhs_regexp, *, is_before_functions=False, is_number=False,
+               replace_number_with_counter=False):
     self.check_prefix = check_prefix
     self.check_key = check_key
     self.ir_prefix = ir_prefix
-    self.global_ir_prefix = global_ir_prefix
-    self.global_ir_prefix_regexp = global_ir_prefix_regexp
     self.ir_regexp = ir_regexp
     self.global_ir_rhs_regexp = global_ir_rhs_regexp
     self.is_before_functions = is_before_functions
@@ -666,23 +664,19 @@ class NamelessValue:
 
   # Return true if this kind of IR value is "global", basically if it matches '#{{.*}}'.
   def is_global_scope_ir_value_match(self, match):
-    return self.global_ir_prefix is not None
+    return self.global_ir_rhs_regexp is not None
 
   # Return the IR prefix and check prefix we use for this kind or IR value,
   # e.g., (%, TMP) for locals.
   def get_ir_prefix_from_ir_value_match(self, match):
-    if self.ir_prefix and match.group(0).strip().startswith(self.ir_prefix):
-      return self.ir_prefix, self.check_prefix
-    return self.global_ir_prefix, self.check_prefix
+    return self.ir_prefix, self.check_prefix
 
   # Return the IR regexp we use for this kind or IR value, e.g., [\w.-]+? for locals
   def get_ir_regex_from_ir_value_re_match(self, match):
     # for backwards compatibility we check locals with '.*'
     if self.is_local_def_ir_value_match(match):
       return '.*'
-    if self.ir_prefix and match.group(0).strip().startswith(self.ir_prefix):
-      return self.ir_regexp
-    return self.global_ir_prefix_regexp
+    return self.ir_regexp
 
   # Create a FileCheck variable name based on an IR name.
   def get_value_name(self, var: str, check_prefix: str):
@@ -735,28 +729,27 @@ class NamelessValue:
 # Description of the different "unnamed" values we match in the IR, e.g.,
 # (local) ssa values, (debug) metadata, etc.
 ir_nameless_values = [
-    NamelessValue(r'TMP'        , '%' , r'%'                   , None            , None                   , r'[\w$.-]+?' , None                 , False) ,
-    NamelessValue(r'ATTR'       , '#' , r'#'                   , None            , None                   , r'[0-9]+'    , None                 , False) ,
-    NamelessValue(r'ATTR'       , '#' , None                   , r'attributes #' , r'[0-9]+'              , None         , r'{[^}]*}'           , False) ,
-    NamelessValue(r'GLOB'       , '@' , r'@'                   , None            , None                   , r'[0-9]+'    , None                 , False) ,
-    NamelessValue(r'GLOB'       , '@' , None                   , r'@'            , r'[a-zA-Z0-9_$"\\.-]+' , None         , r'.+'                , True)  ,
-    NamelessValue(r'DBG'        , '!' , r'!dbg '               , None            , None                   , r'![0-9]+'   , None                 , False) ,
-    NamelessValue(r'DIASSIGNID' , '!' , r'!DIAssignID '               , None            , None                   , r'![0-9]+'   , None                 , False) ,
-    NamelessValue(r'PROF'       , '!' , r'!prof '              , None            , None                   , r'![0-9]+'   , None                 , False) ,
-    NamelessValue(r'TBAA'       , '!' , r'!tbaa '              , None            , None                   , r'![0-9]+'   , None                 , False) ,
-    NamelessValue(r'TBAA_STRUCT', '!' , r'!tbaa.struct '       , None            , None                   , r'![0-9]+'   , None                 , False) ,
-    NamelessValue(r'RNG'        , '!' , r'!range '             , None            , None                   , r'![0-9]+'   , None                 , False) ,
-    NamelessValue(r'LOOP'       , '!' , r'!llvm.loop '         , None            , None                   , r'![0-9]+'   , None                 , False) ,
-    NamelessValue(r'META'       , '!' , r'metadata '           , None            , None                   , r'![0-9]+'   , None                 , False) ,
-    NamelessValue(r'META'       , '!' , None                   , r''             , r'![0-9]+'             , None         , r'(?:distinct |)!.*' , False) ,
-    NamelessValue(r'ACC_GRP'    , '!' , r'!llvm.access.group ' , None            , None                   , r'![0-9]+'   , None                 , False) ,
+    #            check_prefix   check_key  ir_prefix           ir_regexp                global_ir_rhs_regexp
+    NamelessValue(r'TMP'        , '%' , r'%'                   , r'[\w$.-]+?'           , None                 ) ,
+    NamelessValue(r'ATTR'       , '#' , r'#'                   , r'[0-9]+'              , None                 ) ,
+    NamelessValue(r'ATTR'       , '#' , r'attributes #'        , r'[0-9]+'              , r'{[^}]*}'           ) ,
+    NamelessValue(r'GLOB'       , '@' , r'@'                   , r'[0-9]+'              , None                 ) ,
+    NamelessValue(r'GLOB'       , '@' , r'@'                   , r'[a-zA-Z0-9_$"\\.-]+' , r'.+'                , is_before_functions=True)  ,
+    NamelessValue(r'DBG'        , '!' , r'!dbg '               , r'![0-9]+'             , None                 ) ,
+    NamelessValue(r'DIASSIGNID' , '!' , r'!DIAssignID '        , r'![0-9]+'             , None                 ) ,
+    NamelessValue(r'PROF'       , '!' , r'!prof '              , r'![0-9]+'             , None                 ) ,
+    NamelessValue(r'TBAA'       , '!' , r'!tbaa '              , r'![0-9]+'             , None                 ) ,
+    NamelessValue(r'TBAA_STRUCT', '!' , r'!tbaa.struct '       , r'![0-9]+'             , None                 ) ,
+    NamelessValue(r'RNG'        , '!' , r'!range '             , r'![0-9]+'             , None                 ) ,
+    NamelessValue(r'LOOP'       , '!' , r'!llvm.loop '         , r'![0-9]+'             , None                 ) ,
+    NamelessValue(r'META'       , '!' , r'metadata '           , r'![0-9]+'             , None                 ) ,
+    NamelessValue(r'META'       , '!' , r''                    , r'![0-9]+'             , r'(?:distinct |)!.*' ) ,
+    NamelessValue(r'ACC_GRP'    , '!' , r'!llvm.access.group ' , r'![0-9]+'             , None                 ) ,
 ]
 
 asm_nameless_values = [
- NamelessValue(r'MCINST', 'Inst#', None, '<MCInst #', r'\d+', None, r'.+',
-               False, is_number=True, replace_number_with_counter=True),
- NamelessValue(r'MCREG',  'Reg:', None, '<MCOperand Reg:', r'\d+', None, r'.+',
-               False, is_number=True, replace_number_with_counter=True),
+    NamelessValue(r'MCINST'     , 'Inst#' , '<MCInst #'        , r'\d+'                 , r'.+', is_number=True, replace_number_with_counter=True),
+    NamelessValue(r'MCREG'      , 'Reg:'  , '<MCOperand Reg:'  , r'\d+'                 , r'.+', is_number=True, replace_number_with_counter=True),
 ]
 
 def createOrRegexp(old, new):
@@ -767,8 +760,6 @@ def createOrRegexp(old, new):
   return old + '|' + new
 
 def createPrefixMatch(prefix_str, prefix_re):
-  if prefix_str is None or prefix_re is None:
-    return ''
   return '(?:' + prefix_str + '(' + prefix_re + '))'
 
 # Build the regexp that matches an "IR value". This can be a local variable,
@@ -778,22 +769,18 @@ def createPrefixMatch(prefix_str, prefix_re):
 IR_VALUE_REGEXP_PREFIX = r'(\s*)'
 IR_VALUE_REGEXP_STRING = r''
 for nameless_value in ir_nameless_values:
-  lcl_match = createPrefixMatch(nameless_value.ir_prefix, nameless_value.ir_regexp)
-  glb_match = createPrefixMatch(nameless_value.global_ir_prefix, nameless_value.global_ir_prefix_regexp)
-  assert((lcl_match or glb_match) and not (lcl_match and glb_match))
-  if lcl_match:
-    IR_VALUE_REGEXP_STRING = createOrRegexp(IR_VALUE_REGEXP_STRING, lcl_match)
-  elif glb_match:
-    IR_VALUE_REGEXP_STRING = createOrRegexp(IR_VALUE_REGEXP_STRING, '^' + glb_match)
+  match = createPrefixMatch(nameless_value.ir_prefix, nameless_value.ir_regexp)
+  if nameless_value.global_ir_rhs_regexp is not None:
+    match = '^' + match
+  IR_VALUE_REGEXP_STRING = createOrRegexp(IR_VALUE_REGEXP_STRING, match)
 IR_VALUE_REGEXP_SUFFIX = r'([,\s\(\)]|\Z)'
 IR_VALUE_RE = re.compile(IR_VALUE_REGEXP_PREFIX + r'(' + IR_VALUE_REGEXP_STRING + r')' + IR_VALUE_REGEXP_SUFFIX)
 
 # Build the regexp that matches an "ASM value" (currently only for --asm-show-inst comments).
 ASM_VALUE_REGEXP_STRING = ''
 for nameless_value in asm_nameless_values:
-  glb_match = createPrefixMatch(nameless_value.global_ir_prefix, nameless_value.global_ir_prefix_regexp)
-  assert not nameless_value.ir_prefix and not nameless_value.ir_regexp
-  ASM_VALUE_REGEXP_STRING = createOrRegexp(ASM_VALUE_REGEXP_STRING, glb_match)
+  match = createPrefixMatch(nameless_value.ir_prefix, nameless_value.ir_regexp)
+  ASM_VALUE_REGEXP_STRING = createOrRegexp(ASM_VALUE_REGEXP_STRING, match)
 ASM_VALUE_REGEXP_SUFFIX = r'([>\s]|\Z)'
 ASM_VALUE_RE = re.compile(r'((?:#|//)\s*)' + '(' + ASM_VALUE_REGEXP_STRING + ')' + ASM_VALUE_REGEXP_SUFFIX)
 
@@ -1045,10 +1032,10 @@ def add_analyze_checks(output_lines, comment_marker, prefix_list, func_dict, fun
 
 def build_global_values_dictionary(glob_val_dict, raw_tool_output, prefixes):
   for nameless_value in itertools.chain(ir_nameless_values, asm_nameless_values):
-    if nameless_value.global_ir_prefix is None:
+    if nameless_value.global_ir_rhs_regexp is None:
       continue
 
-    lhs_re_str = nameless_value.global_ir_prefix + nameless_value.global_ir_prefix_regexp
+    lhs_re_str = nameless_value.ir_prefix + nameless_value.ir_regexp
     rhs_re_str = nameless_value.global_ir_rhs_regexp
 
     global_ir_value_re_str = r'^' + lhs_re_str + r'\s=\s' + rhs_re_str + r'$'
@@ -1073,7 +1060,7 @@ def build_global_values_dictionary(glob_val_dict, raw_tool_output, prefixes):
 def add_global_checks(glob_val_dict, comment_marker, prefix_list, output_lines, global_vars_seen_dict, is_analyze, is_before_functions):
   printed_prefixes = set()
   for nameless_value in ir_nameless_values:
-    if nameless_value.global_ir_prefix is None:
+    if nameless_value.global_ir_rhs_regexp is None:
       continue
     if nameless_value.is_before_functions != is_before_functions:
       continue

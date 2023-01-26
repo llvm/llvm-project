@@ -48,7 +48,7 @@ int Initialize(const Descriptor &instance, const typeInfo::DerivedType &derived,
       // non-allocatable non-automatic components
       std::size_t bytes{comp.SizeInBytes(instance)};
       for (std::size_t j{0}; j < elements; ++j) {
-        char *ptr{instance.OffsetElement<char>(j * byteStride + comp.offset())};
+        char *ptr{instance.ZeroBasedIndexedElement<char>(j) + comp.offset()};
         std::memcpy(ptr, init, bytes);
       }
     } else if (comp.genre() == typeInfo::Component::Genre::Data &&

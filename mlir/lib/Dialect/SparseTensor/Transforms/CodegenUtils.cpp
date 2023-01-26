@@ -558,7 +558,7 @@ Value sparse_tensor::reshapeValuesToLevels(
   idxBuffer = builder.create<memref::CastOp>(
       loc, MemRefType::get({rank}, builder.getIndexType()), idxBuffer);
   SmallVector<int64_t> shape(rank, ShapedType::kDynamic);
-  Type elemTp = valuesBuffer.getType().cast<MemRefType>().getElementType();
+  Type elemTp = getMemRefType(valuesBuffer).getElementType();
   return builder.create<memref::ReshapeOp>(loc, MemRefType::get(shape, elemTp),
                                            valuesBuffer, idxBuffer);
 }

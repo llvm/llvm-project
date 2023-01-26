@@ -1557,6 +1557,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     auto llvmBoxPtrTy = convTy.template cast<mlir::LLVM::LLVMPointerType>();
     auto llvmBoxTy = llvmBoxPtrTy.getElementType();
     bool isUnlimitedPolymorphic = fir::isUnlimitedPolymorphicType(boxTy);
+    bool useInputType = fir::isPolymorphicType(boxTy) || isUnlimitedPolymorphic;
     mlir::Value descriptor =
         rewriter.create<mlir::LLVM::UndefOp>(loc, llvmBoxTy);
     descriptor =
@@ -1577,7 +1578,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     if (hasAddendum) {
       unsigned typeDescFieldId = getTypeDescFieldId(boxTy);
       if (!typeDesc) {
-        if (isUnlimitedPolymorphic) {
+        if (useInputType) {
           mlir::Type innerType = fir::unwrapInnerType(inputType);
           if (innerType && innerType.template isa<fir::RecordType>()) {
             auto recTy = innerType.template dyn_cast<fir::RecordType>();
@@ -1660,7 +1661,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
         getSizeAndTypeCode(loc, rewriter, boxTy.getEleTy(), typeparams);
 
     // Reboxing to a polymorphic entity. eleSize and type code need to
-    // be retrived from the initial box and propagated to the new box.
+    // be retrieved from the initial box and propagated to the new box.
     // If the initial box has an addendum, the type desc must be propagated as
     // well.
     if (fir::isPolymorphicType(boxTy)) {

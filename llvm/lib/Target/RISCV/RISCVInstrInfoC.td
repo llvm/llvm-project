@@ -284,7 +284,7 @@ class Shift_right<bits<2> funct2, string OpcodeStr, RegisterClass cls,
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class CS_ALU<bits<6> funct6, bits<2> funct2, string OpcodeStr,
+class CA_ALU<bits<6> funct6, bits<2> funct2, string OpcodeStr,
              RegisterClass cls>
     : RVInst16CA<funct6, funct2, 0b01, (outs cls:$rd_wb), (ins cls:$rd, cls:$rs2),
                  OpcodeStr, "$rd, $rs2"> {
@@ -465,19 +465,19 @@ def C_ANDI : RVInst16CB<0b100, 0b01, (outs GPRC:$rs1_wb), (ins GPRC:$rs1, simm6:
   let Inst{6-2} = imm{4-0};
 }
 
-def C_SUB  : CS_ALU<0b100011, 0b00, "c.sub", GPRC>,
+def C_SUB  : CA_ALU<0b100011, 0b00, "c.sub", GPRC>,
              Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-def C_XOR  : CS_ALU<0b100011, 0b01, "c.xor", GPRC>,
+def C_XOR  : CA_ALU<0b100011, 0b01, "c.xor", GPRC>,
              Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-def C_OR   : CS_ALU<0b100011, 0b10, "c.or" , GPRC>,
+def C_OR   : CA_ALU<0b100011, 0b10, "c.or" , GPRC>,
              Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-def C_AND  : CS_ALU<0b100011, 0b11, "c.and", GPRC>,
+def C_AND  : CA_ALU<0b100011, 0b11, "c.and", GPRC>,
              Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 
 let Predicates = [HasStdExtCOrZca, IsRV64] in {
-def C_SUBW : CS_ALU<0b100111, 0b00, "c.subw", GPRC>,
+def C_SUBW : CA_ALU<0b100111, 0b00, "c.subw", GPRC>,
              Sched<[WriteIALU32, ReadIALU32, ReadIALU32]>;
-def C_ADDW : CS_ALU<0b100111, 0b01, "c.addw", GPRC>,
+def C_ADDW : CA_ALU<0b100111, 0b01, "c.addw", GPRC>,
              Sched<[WriteIALU32, ReadIALU32, ReadIALU32]>;
 }
 

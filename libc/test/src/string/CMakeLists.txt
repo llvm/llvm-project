@@ -115,6 +115,16 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  strcasestr_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    strcasestr_test.cpp
+  DEPENDS
+    libc.src.string.strcasestr
+)
+
+add_libc_unittest(
   strcoll_test
   SUITE
     libc_string_unittests

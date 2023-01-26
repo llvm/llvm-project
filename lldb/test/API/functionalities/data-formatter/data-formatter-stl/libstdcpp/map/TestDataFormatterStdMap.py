@@ -91,7 +91,7 @@ class StdMapDataFormatterTestCase(TestBase):
                              'first = 7',
                              'second = 1'])
 
-        self.expect("p ii",
+        self.expect("expression ii",
                     substrs=['map has 9 items',
                              '[5] = ',
                              'first = 5',
@@ -158,7 +158,7 @@ class StdMapDataFormatterTestCase(TestBase):
             ])
 
         self.expect(
-            "p si",
+            "expression si",
             substrs=[
                 'map has 5 items',
                 '[0] = (first = "four", second = 4)',
@@ -210,7 +210,7 @@ class StdMapDataFormatterTestCase(TestBase):
             ])
 
         self.expect(
-            "p is",
+            "expression is",
             substrs=[
                 'map has 4 items', '[0] = (first = 1, second = "is")',
                 '[1] = (first = 2, second = "smart")',
@@ -261,7 +261,7 @@ class StdMapDataFormatterTestCase(TestBase):
             ])
 
         self.expect(
-            "p ss",
+            "expression ss",
             substrs=[
                 'map has 4 items',
                 '[0] = (first = "a Mac..", second = "..is always a Mac!")',

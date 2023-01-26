@@ -638,8 +638,6 @@ def: J<"plugin-opt=obj-path=">,
   HelpText<"Alias for --lto-obj-path=">;
 def plugin_opt_opaque_pointers: F<"plugin-opt=opaque-pointers">,
   HelpText<"Use opaque pointers in IR during LTO (default)">;
-def plugin_opt_no_opaque_pointers: F<"plugin-opt=no-opaque-pointers">,
-  HelpText<"Use typed pointers in IR during LTO">;
 def: J<"plugin-opt=opt-remarks-filename=">,
   Alias<opt_remarks_filename>,
   HelpText<"Alias for --opt-remarks-filename">;

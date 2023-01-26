@@ -687,18 +687,14 @@ define i32 @test15(ptr noalias nocapture readonly dereferenceable(8) align 4 %x,
 ; CHECK-LABEL: @test15(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[A:%.*]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL]], label [[ENTRY_IF_END_CRIT_EDGE:%.*]], label [[IF_THEN:%.*]]
-; CHECK:       entry.if.end_crit_edge:
 ; CHECK-NEXT:    [[VV_PRE:%.*]] = load i32, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[UU:%.*]] = load i32, ptr [[X]], align 4
-; CHECK-NEXT:    store i32 [[UU]], ptr [[R:%.*]], align 4
+; CHECK-NEXT:    store i32 [[VV_PRE]], ptr [[R:%.*]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[VV:%.*]] = phi i32 [ [[VV_PRE]], [[ENTRY_IF_END_CRIT_EDGE]] ], [ [[UU]], [[IF_THEN]] ]
 ; CHECK-NEXT:    call void @f()
-; CHECK-NEXT:    ret i32 [[VV]]
+; CHECK-NEXT:    ret i32 [[VV_PRE]]
 ;
 
 entry:
@@ -728,18 +724,14 @@ define i32 @test16(ptr noalias nocapture readonly dereferenceable(8) align 4 %x,
 ; CHECK-LABEL: @test16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[A:%.*]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL]], label [[ENTRY_IF_END_CRIT_EDGE:%.*]], label [[IF_THEN:%.*]]
-; CHECK:       entry.if.end_crit_edge:
 ; CHECK-NEXT:    [[VV_PRE:%.*]] = load i32, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[UU:%.*]] = load i32, ptr [[X]], align 4
-; CHECK-NEXT:    store i32 [[UU]], ptr [[R:%.*]], align 4
+; CHECK-NEXT:    store i32 [[VV_PRE]], ptr [[R:%.*]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[VV:%.*]] = phi i32 [ [[VV_PRE]], [[ENTRY_IF_END_CRIT_EDGE]] ], [ [[UU]], [[IF_THEN]] ]
 ; CHECK-NEXT:    call void @f()
-; CHECK-NEXT:    ret i32 [[VV]]
+; CHECK-NEXT:    ret i32 [[VV_PRE]]
 ;
 
 entry:
@@ -787,22 +779,22 @@ define void @test17(ptr %p1, ptr %p2, ptr %p3, ptr %p4)
 ; CHECK-NEXT:    store i64 [[V2]], ptr [[P1]], align 8
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[V3:%.*]] = load i64, ptr [[P1]], align 8
+; CHECK-NEXT:    [[V3:%.*]] = phi i64 [ [[V3_PRE:%.*]], [[BB200]] ], [ [[V3_PRE1:%.*]], [[BB100]] ], [ [[V2]], [[BB2]] ]
 ; CHECK-NEXT:    store i64 [[V3]], ptr [[P2:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb100:
 ; CHECK-NEXT:    [[COND3:%.*]] = call i1 @foo()
+; CHECK-NEXT:    [[V3_PRE1]] = load i64, ptr [[P1]], align 8
 ; CHECK-NEXT:    br i1 [[COND3]], label [[BB3]], label [[BB101:%.*]]
 ; CHECK:       bb101:
-; CHECK-NEXT:    [[V4:%.*]] = load i64, ptr [[P1]], align 8
-; CHECK-NEXT:    store i64 [[V4]], ptr [[P3:%.*]], align 8
+; CHECK-NEXT:    store i64 [[V3_PRE1]], ptr [[P3:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb200:
 ; CHECK-NEXT:    [[COND4:%.*]] = call i1 @bar()
+; CHECK-NEXT:    [[V3_PRE]] = load i64, ptr [[P1]], align 8
 ; CHECK-NEXT:    br i1 [[COND4]], label [[BB3]], label [[BB201:%.*]]
 ; CHECK:       bb201:
-; CHECK-NEXT:    [[V5:%.*]] = load i64, ptr [[P1]], align 8
-; CHECK-NEXT:    store i64 [[V5]], ptr [[P4:%.*]], align 8
+; CHECK-NEXT:    store i64 [[V3_PRE]], ptr [[P4:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 {
@@ -841,5 +833,174 @@ bb200:
 bb201:
   %v5 = load i64, ptr %p1, align 8
   store i64 %v5, ptr %p4, align 8
+  ret void
+}
+
+; The output value from %if.then block is %dec, not loaded %v1.
+; So ValuesPerBlock[%if.then] should not be replaced when the load instruction
+; is moved to %entry.
+define void @test18(i1 %cond, ptr %p1, ptr %p2) {
+; CHECK-LABEL: @test18(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[V2_PRE:%.*]] = load i16, ptr [[P1:%.*]], align 2
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[DEC:%.*]] = add i16 [[V2_PRE]], -1
+; CHECK-NEXT:    store i16 [[DEC]], ptr [[P1]], align 2
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[V2:%.*]] = phi i16 [ [[DEC]], [[IF_THEN]] ], [ [[V2_PRE]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    store i16 [[V2]], ptr [[P2:%.*]], align 2
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond, label %if.end, label %if.then
+
+if.then:
+  %v1 = load i16, ptr %p1
+  %dec = add i16 %v1, -1
+  store i16 %dec, ptr %p1
+  br label %if.end
+
+if.end:
+  %v2 = load i16, ptr %p1
+  store i16 %v2, ptr %p2
+  ret void
+}
+
+; PRE of load instructions should not cross exception handling instructions.
+define void @test19(i1 %cond, ptr %p1, ptr %p2)
+; CHECK-LABEL: @test19(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[V2:%.*]] = load i64, ptr [[P2:%.*]], align 8
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[V2]], 1
+; CHECK-NEXT:    store i64 [[ADD]], ptr [[P1:%.*]], align 8
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    invoke void @f()
+; CHECK-NEXT:    to label [[ELSE_END_CRIT_EDGE:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       else.end_crit_edge:
+; CHECK-NEXT:    [[V1_PRE:%.*]] = load i64, ptr [[P1]], align 8
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[V1:%.*]] = phi i64 [ [[V1_PRE]], [[ELSE_END_CRIT_EDGE]] ], [ [[ADD]], [[THEN]] ]
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[V1]], 100
+; CHECK-NEXT:    store i64 [[AND]], ptr [[P2]], align 8
+; CHECK-NEXT:    ret void
+; CHECK:       lpad:
+; CHECK-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    [[V3:%.*]] = load i64, ptr [[P1]], align 8
+; CHECK-NEXT:    [[OR:%.*]] = or i64 [[V3]], 200
+; CHECK-NEXT:    store i64 [[OR]], ptr [[P1]], align 8
+; CHECK-NEXT:    resume { ptr, i32 } [[LP]]
+;
+  personality ptr @__CxxFrameHandler3 {
+entry:
+  br i1 %cond, label %then, label %else
+
+then:
+  %v2 = load i64, ptr %p2
+  %add = add i64 %v2, 1
+  store i64 %add, ptr %p1
+  br label %end
+
+else:
+  invoke void @f()
+  to label %end unwind label %lpad
+
+end:
+  %v1 = load i64, ptr %p1
+  %and = and i64 %v1, 100
+  store i64 %and, ptr %p2
+  ret void
+
+lpad:
+  %lp = landingpad { ptr, i32 }
+  cleanup
+  %v3 = load i64, ptr %p1
+  %or = or i64 %v3, 200
+  store i64 %or, ptr %p1
+  resume { ptr, i32 } %lp
+}
+
+; A predecessor BB has both successors to the same BB, for simplicity we don't
+; handle it, nothing should be changed.
+define void @test20(i1 %cond, i1 %cond2, ptr %p1, ptr %p2) {
+; CHECK-LABEL: @test20(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[V1:%.*]] = load i16, ptr [[P1:%.*]], align 2
+; CHECK-NEXT:    [[DEC:%.*]] = add i16 [[V1]], -1
+; CHECK-NEXT:    store i16 [[DEC]], ptr [[P1]], align 2
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[IF_END]], label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[V2:%.*]] = load i16, ptr [[P1]], align 2
+; CHECK-NEXT:    store i16 [[V2]], ptr [[P2:%.*]], align 2
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond, label %if.then, label %if.else
+
+if.then:
+  %v1 = load i16, ptr %p1
+  %dec = add i16 %v1, -1
+  store i16 %dec, ptr %p1
+  br label %if.end
+
+if.else:
+  br i1 %cond2, label %if.end, label %if.end
+
+if.end:
+  %v2 = load i16, ptr %p1
+  store i16 %v2, ptr %p2
+  ret void
+}
+
+; More edges from the same BB to LoadBB. Don't change anything.
+define void @test21(i1 %cond, i32 %code, ptr %p1, ptr %p2) {
+; CHECK-LABEL: @test21(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[V1:%.*]] = load i16, ptr [[P1:%.*]], align 2
+; CHECK-NEXT:    [[DEC:%.*]] = add i16 [[V1]], -1
+; CHECK-NEXT:    store i16 [[DEC]], ptr [[P1]], align 2
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    switch i32 [[CODE:%.*]], label [[IF_END]] [
+; CHECK-NEXT:    i32 1, label [[IF_END]]
+; CHECK-NEXT:    i32 2, label [[IF_END]]
+; CHECK-NEXT:    i32 3, label [[IF_END]]
+; CHECK-NEXT:    ]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[V2:%.*]] = load i16, ptr [[P1]], align 2
+; CHECK-NEXT:    store i16 [[V2]], ptr [[P2:%.*]], align 2
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond, label %if.then, label %if.else
+
+if.then:
+  %v1 = load i16, ptr %p1
+  %dec = add i16 %v1, -1
+  store i16 %dec, ptr %p1
+  br label %if.end
+
+if.else:
+  switch i32 %code, label %if.end [
+  i32 1, label %if.end
+  i32 2, label %if.end
+  i32 3, label %if.end
+  ]
+
+if.end:
+  %v2 = load i16, ptr %p1
+  store i16 %v2, ptr %p2
   ret void
 }

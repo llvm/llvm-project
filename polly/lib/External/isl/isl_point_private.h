@@ -24,4 +24,8 @@ __isl_give isl_vec *isl_point_take_vec(__isl_keep isl_point *pnt);
 __isl_give isl_point *isl_point_restore_vec(__isl_take isl_point *pnt,
 	__isl_take isl_vec *vec);
 
+isl_stat isl_point_check_named_params(__isl_keep isl_point *pnt);
+__isl_give isl_point *isl_point_align_params(__isl_take isl_point *pnt,
+	__isl_take isl_space *model);
+
 #endif

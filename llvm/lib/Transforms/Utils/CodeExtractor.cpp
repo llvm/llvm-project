@@ -1663,14 +1663,14 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     }
   }
 
-  // Remove @llvm.assume calls that will be moved to the new function from the
-  // old function's assumption cache.
+  // Remove CondGuardInsts that will be moved to the new function from the old
+  // function's assumption cache.
   for (BasicBlock *Block : Blocks) {
     for (Instruction &I : llvm::make_early_inc_range(*Block)) {
-      if (auto *AI = dyn_cast<AssumeInst>(&I)) {
+      if (auto *CI = dyn_cast<CondGuardInst>(&I)) {
         if (AC)
-          AC->unregisterAssumption(AI);
-        AI->eraseFromParent();
+          AC->unregisterAssumption(CI);
+        CI->eraseFromParent();
       }
     }
   }
@@ -1864,7 +1864,7 @@ bool CodeExtractor::verifyAssumptionCache(const Function &OldFunc,
                                           const Function &NewFunc,
                                           AssumptionCache *AC) {
   for (auto AssumeVH : AC->assumptions()) {
-    auto *I = dyn_cast_or_null<CallInst>(AssumeVH);
+    auto *I = dyn_cast_or_null<CondGuardInst>(AssumeVH);
     if (!I)
       continue;
 
@@ -1876,7 +1876,7 @@ bool CodeExtractor::verifyAssumptionCache(const Function &OldFunc,
     // that were previously in the old function, but that have now been moved
     // to the new function.
     for (auto AffectedValVH : AC->assumptionsFor(I->getOperand(0))) {
-      auto *AffectedCI = dyn_cast_or_null<CallInst>(AffectedValVH);
+      auto *AffectedCI = dyn_cast_or_null<CondGuardInst>(AffectedValVH);
       if (!AffectedCI)
         continue;
       if (AffectedCI->getFunction() != &OldFunc)

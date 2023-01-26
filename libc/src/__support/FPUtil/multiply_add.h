@@ -11,6 +11,7 @@
 
 #include "src/__support/architectures.h"
 #include "src/__support/common.h"
+#include "src/__support/cpu_features.h"
 
 namespace __llvm_libc {
 namespace fputil {
@@ -34,11 +35,12 @@ template <typename T> LIBC_INLINE T multiply_add(T x, T y, T z) {
 namespace __llvm_libc {
 namespace fputil {
 
-template <> inline float multiply_add<float>(float x, float y, float z) {
+template <> LIBC_INLINE float multiply_add<float>(float x, float y, float z) {
   return fma(x, y, z);
 }
 
-template <> inline double multiply_add<double>(double x, double y, double z) {
+template <>
+LIBC_INLINE double multiply_add<double>(double x, double y, double z) {
   return fma(x, y, z);
 }
 

@@ -135,7 +135,7 @@ class FileHandleTestCase(lldbtest.TestBase):
     def test_legacy_file_out(self):
         with open(self.out_filename, 'w') as f:
             self.dbg.SetOutputFileHandle(f, False)
-            self.handleCmd('p/x 3735928559', collect_result=False, check=False)
+            self.handleCmd('expression/x 3735928559', collect_result=False, check=False)
         with open(self.out_filename, 'r') as f:
             self.assertIn('deadbeef', f.read())
 
@@ -359,7 +359,7 @@ class FileHandleTestCase(lldbtest.TestBase):
 
 
     def test_string_inout(self):
-        inf = io.StringIO("help help\np/x ~0\n")
+        inf = io.StringIO("help help\nexpression/x ~0\n")
         outf = io.StringIO()
         status = self.dbg.SetOutputFile(lldb.SBFile(outf))
         self.assertSuccess(status)

@@ -208,8 +208,6 @@ namespace options {
   static std::string stats_file;
   // Asserts that LTO link has whole program visibility
   static bool whole_program_visibility = false;
-  // Use opaque pointer types.
-  static bool opaque_pointers = true;
 
   // Optimization remarks filename, accepted passes and hotness options
   static std::string RemarksFilename;
@@ -311,9 +309,7 @@ namespace options {
     } else if (opt.consume_front("stats-file=")) {
       stats_file = std::string(opt);
     } else if (opt == "opaque-pointers") {
-      opaque_pointers = true;
-    } else if (opt == "no-opaque-pointers") {
-      opaque_pointers = false;
+      // We always use opaque pointers.
     } else {
       // Save this option to pass to the code generator.
       // ParseCommandLineOptions() expects argv[0] to be program name. Lazily
@@ -959,8 +955,6 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   Conf.DebugPassManager = options::debug_pass_manager;
 
   Conf.HasWholeProgramVisibility = options::whole_program_visibility;
-
-  Conf.OpaquePointers = options::opaque_pointers;
 
   Conf.StatsFile = options::stats_file;
   return std::make_unique<LTO>(std::move(Conf), Backend,

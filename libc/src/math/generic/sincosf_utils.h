@@ -12,6 +12,7 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/common.h"
+#include "src/__support/cpu_features.h"
 
 #if defined(LIBC_TARGET_HAS_FMA)
 #include "range_reduction_fma.h"

@@ -7,96 +7,6 @@ func.func @foo() {
 
 // -----
 
-// expected-error @below{{llvm.noalias attribute attached to LLVM non-pointer argument}}
-llvm.func @invalid_noalias(%arg0 : f32 {llvm.noalias}) -> f32 {
-  llvm.return %arg0 : f32
-}
-
-// -----
-
-// expected-error @below{{llvm.sret attribute attached to LLVM non-pointer argument}}
-llvm.func @invalid_sret(%arg0 : f32 {llvm.sret = f32}) -> f32 {
-  llvm.return %arg0 : f32
-}
-
-// -----
-
-// expected-error @below{{llvm.sret attribute attached to LLVM pointer argument of a different type}}
-llvm.func @invalid_sret(%arg0 : !llvm.ptr<f32> {llvm.sret = i32}) -> !llvm.ptr<f32> {
-  llvm.return %arg0 : !llvm.ptr<f32>
-}
-
-// -----
-
-// expected-error @below{{llvm.nest attribute attached to LLVM non-pointer argument}}
-llvm.func @invalid_nest(%arg0 : f32 {llvm.nest}) -> f32 {
-  llvm.return %arg0 : f32
-}
-// -----
-
-// expected-error @below{{llvm.byval attribute attached to LLVM non-pointer argument}}
-llvm.func @invalid_byval(%arg0 : f32 {llvm.byval = f32}) -> f32 {
-  llvm.return %arg0 : f32
-}
-
-// -----
-
-// expected-error @below{{llvm.byval attribute attached to LLVM pointer argument of a different type}}
-llvm.func @invalid_sret(%arg0 : !llvm.ptr<f32> {llvm.byval = i32}) -> !llvm.ptr<f32> {
-  llvm.return %arg0 : !llvm.ptr<f32>
-}
-
-// -----
-
-// expected-error @below{{llvm.byref attribute attached to LLVM non-pointer argument}}
-llvm.func @invalid_byval(%arg0 : f32 {llvm.byref = f32}) -> f32 {
-  llvm.return %arg0 : f32
-}
-
-// -----
-
-// expected-error @below{{llvm.byref attribute attached to LLVM pointer argument of a different type}}
-llvm.func @invalid_sret(%arg0 : !llvm.ptr<f32> {llvm.byref = i32}) -> !llvm.ptr<f32> {
-  llvm.return %arg0 : !llvm.ptr<f32>
-}
-
-// -----
-
-// expected-error @below{{llvm.inalloca attribute attached to LLVM non-pointer argument}}
-llvm.func @invalid_byval(%arg0 : f32 {llvm.inalloca = f32}) -> f32 {
-  llvm.return %arg0 : f32
-}
-
-// -----
-
-// expected-error @below{{llvm.inalloca attribute attached to LLVM pointer argument of a different type}}
-llvm.func @invalid_sret(%arg0 : !llvm.ptr<f32> {llvm.inalloca = i32}) -> !llvm.ptr<f32> {
-  llvm.return %arg0 : !llvm.ptr<f32>
-}
-
-// -----
-
-// expected-error @below{{llvm.align attribute attached to LLVM non-pointer argument}}
-llvm.func @invalid_align(%arg0 : f32 {llvm.align = 4}) -> f32 {
-  llvm.return %arg0 : f32
-}
-
-// -----
-
-// expected-error @below{{llvm.signext attribute attached to LLVM non-integer argument}}
-llvm.func @invalid_signext(%arg0: f32 {llvm.signext}) {
-  "llvm.return"() : () -> ()
-}
-
-// -----
-
-// expected-error @below{{llvm.zeroext attribute attached to LLVM non-integer argument}}
-llvm.func @invalid_zeroext(%arg0: f32 {llvm.zeroext}) {
-  "llvm.return"() : () -> ()
-}
-
-// -----
-
 llvm.func @no_non_complex_struct() -> !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>> {
   // expected-error @below{{expected struct type to be a complex number}}
   %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : tensor<2x2x2xi32>) : !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>>
@@ -347,11 +257,4 @@ llvm.func @stepvector_intr_wrong_type() -> vector<7xf32> {
   // expected-error @below{{op result #0 must be LLVM dialect-compatible vector of signless integer, but got 'vector<7xf32>'}}
   %0 = llvm.intr.experimental.stepvector : vector<7xf32>
   llvm.return %0 : vector<7xf32>
-}
-
-// -----
-
-// expected-error @below{{llvm.readonly attribute attached to LLVM non-pointer argument}}
-llvm.func @wrong_readonly_attribute(%vec : f32 {llvm.readonly}) {
-  llvm.return
 }
