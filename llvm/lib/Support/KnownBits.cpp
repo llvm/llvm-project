@@ -623,6 +623,27 @@ KnownBits &KnownBits::operator^=(const KnownBits &RHS) {
   return *this;
 }
 
+KnownBits KnownBits::blsi() const {
+  unsigned BitWidth = getBitWidth();
+  KnownBits Known(Zero, APInt(BitWidth, 0));
+  unsigned Max = countMaxTrailingZeros();
+  Known.Zero.setBitsFrom(std::min(Max + 1, BitWidth));
+  unsigned Min = countMinTrailingZeros();
+  if (Max == Min && Max < BitWidth)
+    Known.One.setBit(Max);
+  return Known;
+}
+
+KnownBits KnownBits::blsmsk() const {
+  unsigned BitWidth = getBitWidth();
+  KnownBits Known(BitWidth);
+  unsigned Max = countMaxTrailingZeros();
+  Known.Zero.setBitsFrom(std::min(Max + 1, BitWidth));
+  unsigned Min = countMinTrailingZeros();
+  Known.One.setLowBits(std::min(Min + 1, BitWidth));
+  return Known;
+}
+
 void KnownBits::print(raw_ostream &OS) const {
   OS << "{Zero=" << Zero << ", One=" << One << "}";
 }
