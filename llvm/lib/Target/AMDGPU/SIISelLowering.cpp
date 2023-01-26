@@ -9468,12 +9468,33 @@ SDValue SITargetLowering::performUCharToFloatCombine(SDNode *N,
 
 SDValue SITargetLowering::performFCopySignCombine(SDNode *N,
                                                   DAGCombinerInfo &DCI) const {
+  SDValue MagnitudeOp = N->getOperand(0);
   SDValue SignOp = N->getOperand(1);
-  if (SignOp.getValueType() != MVT::f64)
-    return SDValue();
-
   SelectionDAG &DAG = DCI.DAG;
   SDLoc DL(N);
+
+  // f64 fcopysign is really an f32 copysign on the high bits, so replace the
+  // lower half with a copy.
+  // fcopysign f64:x, _:y -> x.lo32, (fcopysign (f32 x.hi32), _:y)
+  if (MagnitudeOp.getValueType() == MVT::f64) {
+    SDValue MagAsVector = DAG.getNode(ISD::BITCAST, DL, MVT::v2f32, MagnitudeOp);
+    SDValue MagLo =
+      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, MagAsVector,
+                  DAG.getConstant(0, DL, MVT::i32));
+    SDValue MagHi =
+      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, MagAsVector,
+                  DAG.getConstant(1, DL, MVT::i32));
+
+    SDValue HiOp =
+      DAG.getNode(ISD::FCOPYSIGN, DL, MVT::f32, MagHi, SignOp);
+
+    SDValue Vector = DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v2f32, MagLo, HiOp);
+
+    return DAG.getNode(ISD::BITCAST, DL, MVT::f64, Vector);
+  }
+
+  if (SignOp.getValueType() != MVT::f64)
+    return SDValue();
 
   // Reduce width of sign operand, we only need the highest bit.
   //
