@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple spir64 -aux-triple x86_64-unknown-linux-gnu -fsycl-is-device -verify -fsyntax-only %s
 
 template <typename Name, typename Func>
-__attribute__((sycl_kernel)) void kernel(Func kernelFunc) {
+__attribute__((sycl_kernel)) void kernel(const Func &kernelFunc) {
   kernelFunc(); // expected-note {{called by 'kernel}}
 }
 
