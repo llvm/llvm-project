@@ -205,8 +205,7 @@ public:
   static Expected<std::vector<std::unique_ptr<BinaryCoverageReader>>>
   create(MemoryBufferRef ObjectBuffer, StringRef Arch,
          SmallVectorImpl<std::unique_ptr<MemoryBuffer>> &ObjectFileBuffers,
-         StringRef CompilationDir = "",
-         SmallVectorImpl<object::BuildIDRef> *BinaryIDs = nullptr);
+         StringRef CompilationDir = "");
 
   static Expected<std::unique_ptr<BinaryCoverageReader>>
   createCoverageReaderFromBuffer(StringRef Coverage,

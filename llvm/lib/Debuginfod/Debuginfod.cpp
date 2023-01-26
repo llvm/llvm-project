@@ -55,11 +55,7 @@ static std::string buildIDToString(BuildIDRef ID) {
   return llvm::toHex(ID, /*LowerCase=*/true);
 }
 
-bool canUseDebuginfod() {
-  return HTTPClient::isAvailable() && !getDefaultDebuginfodUrls().empty();
-}
-
-SmallVector<StringRef> getDefaultDebuginfodUrls() {
+Expected<SmallVector<StringRef>> getDefaultDebuginfodUrls() {
   const char *DebuginfodUrlsEnv = std::getenv("DEBUGINFOD_URLS");
   if (DebuginfodUrlsEnv == nullptr)
     return SmallVector<StringRef>();
@@ -130,8 +126,13 @@ Expected<std::string> getCachedOrDownloadArtifact(StringRef UniqueKey,
     return CacheDirOrErr.takeError();
   CacheDir = *CacheDirOrErr;
 
+  Expected<SmallVector<StringRef>> DebuginfodUrlsOrErr =
+      getDefaultDebuginfodUrls();
+  if (!DebuginfodUrlsOrErr)
+    return DebuginfodUrlsOrErr.takeError();
+  SmallVector<StringRef> &DebuginfodUrls = *DebuginfodUrlsOrErr;
   return getCachedOrDownloadArtifact(UniqueKey, UrlPath, CacheDir,
-                                     getDefaultDebuginfodUrls(),
+                                     DebuginfodUrls,
                                      getDefaultDebuginfodTimeout());
 }
 
@@ -158,8 +159,7 @@ public:
 
 Error StreamedHTTPResponseHandler::handleBodyChunk(StringRef BodyChunk) {
   if (!FileStream) {
-    unsigned Code = Client.responseCode();
-    if (Code && Code != 200)
+    if (Client.responseCode() != 200)
       return Error::success();
     Expected<std::unique_ptr<CachedFileStream>> FileStreamOrError =
         CreateStream();
@@ -259,8 +259,7 @@ Expected<std::string> getCachedOrDownloadArtifact(
     if (Err)
       return std::move(Err);
 
-    unsigned Code = Client.responseCode();
-    if (Code && Code != 200)
+    if (Client.responseCode() != 200)
       continue;
 
     // Return the path to the artifact on disk.
