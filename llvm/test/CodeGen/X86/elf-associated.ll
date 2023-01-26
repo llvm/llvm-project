@@ -38,13 +38,8 @@
 !5 = !{ptr null}
 ; CHECK-DAG: .section	ccc,"awo",@progbits,0,unique,3
 
-; Null metadata.
-@m = global i32 1, section "ddd", !associated !6
-!6 = distinct !{null}
-; CHECK-DAG: .section	ddd,"awo",@progbits,0,unique,4
-
 ; Aliases are OK.
 @n = alias i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @a to i64), i64 1297036692682702848) to ptr)
 @o = global i32 1, section "eee", !associated !7
 !7 = !{ptr @n}
-; CHECK-DAG: .section	eee,"awo",@progbits,n,unique,5
+; CHECK-DAG: .section	eee,"awo",@progbits,n,unique,4
