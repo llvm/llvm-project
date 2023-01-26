@@ -990,10 +990,11 @@ LazyValueInfoImpl::solveBlockValueOverflowIntrinsic(WithOverflowInst *WO,
 
 std::optional<ValueLatticeElement>
 LazyValueInfoImpl::solveBlockValueIntrinsic(IntrinsicInst *II, BasicBlock *BB) {
+  ValueLatticeElement MetadataVal = getFromRangeMetadata(II);
   if (!ConstantRange::isIntrinsicSupported(II->getIntrinsicID())) {
     LLVM_DEBUG(dbgs() << " compute BB '" << BB->getName()
                       << "' - unknown intrinsic.\n");
-    return getFromRangeMetadata(II);
+    return MetadataVal;
   }
 
   SmallVector<ConstantRange, 2> OpRanges;
@@ -1004,8 +1005,9 @@ LazyValueInfoImpl::solveBlockValueIntrinsic(IntrinsicInst *II, BasicBlock *BB) {
     OpRanges.push_back(*Range);
   }
 
-  return ValueLatticeElement::getRange(
-      ConstantRange::intrinsic(II->getIntrinsicID(), OpRanges));
+  return intersect(ValueLatticeElement::getRange(ConstantRange::intrinsic(
+                       II->getIntrinsicID(), OpRanges)),
+                   MetadataVal);
 }
 
 std::optional<ValueLatticeElement>

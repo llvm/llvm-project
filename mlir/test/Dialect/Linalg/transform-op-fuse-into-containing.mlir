@@ -43,8 +43,8 @@ module {
 
   transform.sequence failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.fill"]} in %arg1
-    %1 = transform.structured.match ops{["scf.foreach_thread"]} in %arg1
+    %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!pdl.operation) -> !pdl.operation
+    %1 = transform.structured.match ops{["scf.foreach_thread"]} in %arg1 : (!pdl.operation) -> !pdl.operation
 
     // linalg.fill is tileable. The op is tiled and fused.
     transform.structured.fuse_into_containing_op %0 into %1
@@ -86,8 +86,8 @@ module {
 
   transform.sequence failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["tensor.empty"]} in %arg1
-    %1 = transform.structured.match ops{["scf.foreach_thread"]} in %arg1
+    %0 = transform.structured.match ops{["tensor.empty"]} in %arg1 : (!pdl.operation) -> !pdl.operation
+    %1 = transform.structured.match ops{["scf.foreach_thread"]} in %arg1 : (!pdl.operation) -> !pdl.operation
 
     // tensor.empty is not tileable. The op is cloned and fused.
     transform.structured.fuse_into_containing_op %0 into %1
@@ -132,8 +132,8 @@ module {
 
   transform.sequence failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.fill"]} in %arg1
-    %1 = transform.structured.match ops{["scf.foreach_thread"]} in %arg1
+    %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!pdl.operation) -> !pdl.operation
+    %1 = transform.structured.match ops{["scf.foreach_thread"]} in %arg1 : (!pdl.operation) -> !pdl.operation
 
     // linalg.fill is tileable. The op is tiled and fused.
     transform.structured.fuse_into_containing_op %0 into %1
@@ -180,8 +180,8 @@ module {
 
   transform.sequence failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.fill"]} in %arg1
-    %1 = transform.structured.match ops{["scf.foreach_thread"]} in %arg1
+    %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!pdl.operation) -> !pdl.operation
+    %1 = transform.structured.match ops{["scf.foreach_thread"]} in %arg1 : (!pdl.operation) -> !pdl.operation
 
     // linalg.fill is tileable. The op is tiled and fused.
     transform.structured.fuse_into_containing_op %0 into %1
@@ -240,8 +240,8 @@ module {
 
   transform.sequence failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
-    %1 = transform.structured.match ops{["scf.foreach_thread"]} in %arg1
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
+    %1 = transform.structured.match ops{["scf.foreach_thread"]} in %arg1 : (!pdl.operation) -> !pdl.operation
 
     // linalg.generic is tileable. The op is tiled and fused.
     transform.structured.fuse_into_containing_op %0 into %1
