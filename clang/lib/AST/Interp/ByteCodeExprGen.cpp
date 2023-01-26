@@ -187,6 +187,10 @@ bool ByteCodeExprGen<Emitter>::VisitParenExpr(const ParenExpr *PE) {
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
+  // Need short-circuiting for these.
+  if (BO->isLogicalOp())
+    return this->VisitLogicalBinOp(BO);
+
   const Expr *LHS = BO->getLHS();
   const Expr *RHS = BO->getRHS();
 
@@ -270,8 +274,9 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
     return Discard(this->emitShr(*LT, *RT, BO));
   case BO_Xor:
     return Discard(this->emitBitXor(*T, BO));
-  case BO_LAnd:
   case BO_LOr:
+  case BO_LAnd:
+    llvm_unreachable("Already handled earlier");
   default:
     return this->bail(BO);
   }
@@ -327,6 +332,65 @@ bool ByteCodeExprGen<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
     return this->emitSubOffset(OffsetType, E);
 
   return this->bail(E);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitLogicalBinOp(const BinaryOperator *E) {
+  assert(E->isLogicalOp());
+  BinaryOperatorKind Op = E->getOpcode();
+  const Expr *LHS = E->getLHS();
+  const Expr *RHS = E->getRHS();
+
+  if (Op == BO_LOr) {
+    // Logical OR. Visit LHS and only evaluate RHS if LHS was FALSE.
+    LabelTy LabelTrue = this->getLabel();
+    LabelTy LabelEnd = this->getLabel();
+
+    if (!this->visit(LHS))
+      return false;
+    if (!this->jumpTrue(LabelTrue))
+      return false;
+
+    if (!this->visit(RHS))
+      return false;
+    if (!this->jump(LabelEnd))
+      return false;
+
+    this->emitLabel(LabelTrue);
+    this->emitConstBool(true, E);
+    this->fallthrough(LabelEnd);
+    this->emitLabel(LabelEnd);
+
+    if (DiscardResult)
+      return this->emitPopBool(E);
+
+    return true;
+  }
+
+  // Logical AND.
+  // Visit LHS. Only visit RHS if LHS was TRUE.
+  LabelTy LabelFalse = this->getLabel();
+  LabelTy LabelEnd = this->getLabel();
+
+  if (!this->visit(LHS))
+    return false;
+  if (!this->jumpFalse(LabelFalse))
+    return false;
+
+  if (!this->visit(RHS))
+    return false;
+  if (!this->jump(LabelEnd))
+    return false;
+
+  this->emitLabel(LabelFalse);
+  this->emitConstBool(false, E);
+  this->fallthrough(LabelEnd);
+  this->emitLabel(LabelEnd);
+
+  if (DiscardResult)
+    return this->emitPopBool(E);
+
+  return true;
 }
 
 template <class Emitter>
