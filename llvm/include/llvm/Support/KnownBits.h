@@ -422,6 +422,14 @@ public:
     return KnownBits(Zero.reverseBits(), One.reverseBits());
   }
 
+  /// Compute known bits for X & -X, which has only the lowest bit set of X set.
+  /// The name comes from the X86 BMI instruction
+  KnownBits blsi() const;
+
+  /// Compute known bits for X ^ (X - 1), which has all bits up to and including
+  /// the lowest set bit of X set. The name comes from the X86 BMI instruction.
+  KnownBits blsmsk() const;
+
   bool operator==(const KnownBits &Other) const {
     return Zero == Other.Zero && One == Other.One;
   }
