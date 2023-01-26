@@ -143,4 +143,13 @@ namespace shifts {
 
   constexpr char c2 = 1;
   constexpr int i3 = c2 << (__CHAR_BIT__ + 1); // Not ill-formed
+
+  /// The purpose of these few lines is to test that we can shift more bits
+  /// than an unsigned *of the host* has. There was a bug where we casted
+  /// to host-unsigned. However, we cannot query what a host-unsigned even is
+  /// here, so only test this on platforms where `sizeof(long long) > sizeof(unsigned)`.
+  constexpr long long int L = 1;
+  constexpr signed int R = (sizeof(unsigned) * 8) + 1;
+  constexpr decltype(L) M  = (R > 32 && R < 64) ?  L << R : 0;
+  constexpr decltype(L) M2 = (R > 32 && R < 64) ?  L >> R : 0;
 };
