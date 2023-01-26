@@ -423,17 +423,30 @@ void NVPTXLowerArgs::markPointerAsGlobal(Value *Ptr) {
 // =============================================================================
 bool NVPTXLowerArgs::runOnKernelFunction(const NVPTXTargetMachine &TM,
                                          Function &F) {
+  // Copying of byval aggregates + SROA may result in pointers being loaded as
+  // integers, followed by intotoptr. We may want to mark those as global, too,
+  // but only if the loaded integer is used exclusively for conversion to a
+  // pointer with inttoptr.
+  auto HandleIntToPtr = [this](Value &V) {
+    if (llvm::all_of(V.users(), [](User *U) { return isa<IntToPtrInst>(U); })) {
+      SmallVector<User *, 16> UsersToUpdate(V.users());
+      llvm::for_each(UsersToUpdate, [&](User *U) { markPointerAsGlobal(U); });
+    }
+  };
   if (TM.getDrvInterface() == NVPTX::CUDA) {
     // Mark pointers in byval structs as global.
     for (auto &B : F) {
       for (auto &I : B) {
         if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
-          if (LI->getType()->isPointerTy()) {
+          if (LI->getType()->isPointerTy() || LI->getType()->isIntegerTy()) {
             Value *UO = getUnderlyingObject(LI->getPointerOperand());
             if (Argument *Arg = dyn_cast<Argument>(UO)) {
               if (Arg->hasByValAttr()) {
                 // LI is a load from a pointer within a byval kernel parameter.
-                markPointerAsGlobal(LI);
+                if (LI->getType()->isPointerTy())
+                  markPointerAsGlobal(LI);
+                else
+                  HandleIntToPtr(*LI);
               }
             }
           }
@@ -449,6 +462,9 @@ bool NVPTXLowerArgs::runOnKernelFunction(const NVPTXTargetMachine &TM,
         handleByValParam(TM, &Arg);
       else if (TM.getDrvInterface() == NVPTX::CUDA)
         markPointerAsGlobal(&Arg);
+    } else if (Arg.getType()->isIntegerTy() &&
+               TM.getDrvInterface() == NVPTX::CUDA) {
+      HandleIntToPtr(Arg);
     }
   }
   return true;
