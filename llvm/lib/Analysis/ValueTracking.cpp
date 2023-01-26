@@ -1115,16 +1115,23 @@ static KnownBits getKnownBitsFromAndXorOr(const Operator *I,
   }
 
   // and(x, add (x, -1)) is a common idiom that always clears the low bit;
+  // xor/or(x, add (x, -1)) is an idiom that will always set the low bit.
   // here we handle the more general case of adding any odd number by
-  // matching the form and(x, add(x, y)) where y is odd.
+  // matching the form and/xor/or(x, add(x, y)) where y is odd.
   // TODO: This could be generalized to clearing any bit set in y where the
   // following bit is known to be unset in y.
-  if (IsAnd && !KnownOut.Zero[0] && !KnownOut.One[0] &&
-      match(I, m_c_BinOp(m_Value(X), m_c_Add(m_Deferred(X), m_Value(Y))))) {
+  if (!KnownOut.Zero[0] && !KnownOut.One[0] &&
+      (match(I, m_c_BinOp(m_Value(X), m_c_Add(m_Deferred(X), m_Value(Y)))) ||
+       match(I, m_c_BinOp(m_Value(X), m_Sub(m_Deferred(X), m_Value(Y)))) ||
+       match(I, m_c_BinOp(m_Value(X), m_Sub(m_Value(Y), m_Deferred(X)))))) {
     KnownBits KnownY(BitWidth);
     computeKnownBits(Y, DemandedElts, KnownY, Depth + 1, Q);
-    if (KnownY.countMinTrailingOnes() > 0)
-      KnownOut.Zero.setBit(0);
+    if (KnownY.countMinTrailingOnes() > 0) {
+      if (IsAnd)
+        KnownOut.Zero.setBit(0);
+      else
+        KnownOut.One.setBit(0);
+    }
   }
   return KnownOut;
 }

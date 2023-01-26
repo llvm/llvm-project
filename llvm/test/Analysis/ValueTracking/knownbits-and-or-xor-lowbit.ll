@@ -3,11 +3,7 @@
 
 define <2 x i1> @sub_XY_and_bit0_is_zero(<2 x i8> %x, <2 x i8> %C) nounwind {
 ; CHECK-LABEL: @sub_XY_and_bit0_is_zero(
-; CHECK-NEXT:    [[C1:%.*]] = or <2 x i8> [[C:%.*]], <i8 9, i8 9>
-; CHECK-NEXT:    [[Y:%.*]] = sub <2 x i8> [[X:%.*]], [[C1]]
-; CHECK-NEXT:    [[W:%.*]] = and <2 x i8> [[Y]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[W]], <i8 -1, i8 -1>
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %C1 = or <2 x i8> %C, <i8 9, i8 9>
   %y = sub <2 x i8> %x, %C1
@@ -18,11 +14,7 @@ define <2 x i1> @sub_XY_and_bit0_is_zero(<2 x i8> %x, <2 x i8> %C) nounwind {
 
 define i1 @sub_XY_xor_bit0_is_one(i8 %x, i8 %C) nounwind {
 ; CHECK-LABEL: @sub_XY_xor_bit0_is_one(
-; CHECK-NEXT:    [[C1:%.*]] = or i8 [[C:%.*]], 1
-; CHECK-NEXT:    [[Y:%.*]] = sub i8 [[X:%.*]], [[C1]]
-; CHECK-NEXT:    [[W:%.*]] = xor i8 [[Y]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[W]], 10
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %C1 = or i8 %C, 1
   %y = sub i8 %x, %C1
@@ -33,11 +25,7 @@ define i1 @sub_XY_xor_bit0_is_one(i8 %x, i8 %C) nounwind {
 
 define i1 @sub_XY_or_bit0_is_one(i8 %x, i8 %C) nounwind {
 ; CHECK-LABEL: @sub_XY_or_bit0_is_one(
-; CHECK-NEXT:    [[C1:%.*]] = or i8 [[C:%.*]], 1
-; CHECK-NEXT:    [[Y:%.*]] = sub i8 [[X:%.*]], [[C1]]
-; CHECK-NEXT:    [[W:%.*]] = or i8 [[Y]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[W]], 10
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %C1 = or i8 %C, 1
   %y = sub i8 %x, %C1
@@ -48,11 +36,7 @@ define i1 @sub_XY_or_bit0_is_one(i8 %x, i8 %C) nounwind {
 
 define i1 @sub_YX_and_bit0_is_zero(i8 %x, i8 %C) nounwind {
 ; CHECK-LABEL: @sub_YX_and_bit0_is_zero(
-; CHECK-NEXT:    [[C1:%.*]] = or i8 [[C:%.*]], 1
-; CHECK-NEXT:    [[Y:%.*]] = sub i8 [[C1]], [[X:%.*]]
-; CHECK-NEXT:    [[W:%.*]] = and i8 [[Y]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[W]], -1
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %C1 = or i8 %C, 1
   %y = sub i8 %C1, %x
@@ -63,11 +47,7 @@ define i1 @sub_YX_and_bit0_is_zero(i8 %x, i8 %C) nounwind {
 
 define <2 x i1> @sub_YX_xor_bit0_is_one(<2 x i8> %x, <2 x i8> %C) nounwind {
 ; CHECK-LABEL: @sub_YX_xor_bit0_is_one(
-; CHECK-NEXT:    [[C1:%.*]] = or <2 x i8> [[C:%.*]], <i8 1, i8 1>
-; CHECK-NEXT:    [[Y:%.*]] = sub <2 x i8> [[C1]], [[X:%.*]]
-; CHECK-NEXT:    [[W:%.*]] = xor <2 x i8> [[Y]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[W]], <i8 12, i8 12>
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %C1 = or <2 x i8> %C, <i8 1, i8 1>
   %y = sub <2 x i8> %C1, %x
@@ -78,11 +58,7 @@ define <2 x i1> @sub_YX_xor_bit0_is_one(<2 x i8> %x, <2 x i8> %C) nounwind {
 
 define i1 @sub_YX_or_bit0_is_one(i8 %x, i8 %C) nounwind {
 ; CHECK-LABEL: @sub_YX_or_bit0_is_one(
-; CHECK-NEXT:    [[C1:%.*]] = or i8 [[C:%.*]], 1
-; CHECK-NEXT:    [[Y:%.*]] = sub i8 [[C1]], [[X:%.*]]
-; CHECK-NEXT:    [[W:%.*]] = or i8 [[Y]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[W]], 32
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %C1 = or i8 %C, 1
   %y = sub i8 %C1, %x
@@ -93,11 +69,7 @@ define i1 @sub_YX_or_bit0_is_one(i8 %x, i8 %C) nounwind {
 
 define i1 @add_YX_xor_bit0_is_one(i8 %x, i8 %C) nounwind {
 ; CHECK-LABEL: @add_YX_xor_bit0_is_one(
-; CHECK-NEXT:    [[C1:%.*]] = or i8 [[C:%.*]], 1
-; CHECK-NEXT:    [[Y:%.*]] = add i8 [[C1]], [[X:%.*]]
-; CHECK-NEXT:    [[W:%.*]] = xor i8 [[Y]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[W]], 32
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %C1 = or i8 %C, 1
   %y = add i8 %C1, %x
@@ -108,11 +80,7 @@ define i1 @add_YX_xor_bit0_is_one(i8 %x, i8 %C) nounwind {
 
 define <2 x i1> @add_XY_or_bit0_is_one(<2 x i8> %x, <2 x i8> %C) nounwind {
 ; CHECK-LABEL: @add_XY_or_bit0_is_one(
-; CHECK-NEXT:    [[C1:%.*]] = or <2 x i8> [[C:%.*]], <i8 1, i8 1>
-; CHECK-NEXT:    [[Y:%.*]] = add <2 x i8> [[C1]], [[X:%.*]]
-; CHECK-NEXT:    [[W:%.*]] = or <2 x i8> [[Y]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[W]], <i8 90, i8 90>
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %C1 = or <2 x i8> %C, <i8 1, i8 1>
   %y = add <2 x i8> %C1, %x
