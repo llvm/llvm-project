@@ -242,8 +242,8 @@ int foo(int n) {
 // OMP50-32:       [[DEVICE_CAP:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* %{{.+}}, i32 0, i32 3
 // CHECK:       [[DEV:%.+]] = load i32, i32* [[DEVICE_CAP]],
 // CHECK:       [[DEVICE:%.+]] = sext i32 [[DEV]] to i64
-// OMP45:       [[RET:%.+]] = call i32 @__tgt_target_kernel_nowait(%struct.ident_t* @{{.+}}, i64 [[DEVICE]], i32 0, i32 1, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* %{{.+}})
-// OMP50:       [[RET:%.+]] = call i32 @__tgt_target_kernel_nowait(%struct.ident_t* @{{.+}}, i64 [[DEVICE]], i32 0, i32 1, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* %{{.+}})
+// OMP45:       [[RET:%.+]] = call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 [[DEVICE]], i32 0, i32 1, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* %{{.+}})
+// OMP50:       [[RET:%.+]] = call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 [[DEVICE]], i32 0, i32 1, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* %{{.+}})
 
 // CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
 // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]

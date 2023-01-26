@@ -403,7 +403,7 @@ int foo(int n) {
 
 // CHECK: define internal void [[HVT0_:@.+]](i[[SZ]]* noundef {{%[^,]+}}, i[[SZ]] noundef {{%[^,]+}})
 // CHECK: define internal {{.*}}i32 [[OMP_TASK_ENTRY]](i32 {{.*}}%0, [[KMP_TASK_T_WITH_PRIVATES]]* noalias noundef %1)
-// CHECK-DAG: [[RET:%.+]] = call i32 @__tgt_target_kernel_nowait(%struct.ident_t* @{{.+}}, i64 [[DEVICE:%.+]], i32 {{.+}}, i32 {{.+}}, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]], i32 0, i8* null, i32 0, i8* null)
+// CHECK-DAG: [[RET:%.+]] = call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 [[DEVICE:%.+]], i32 {{.+}}, i32 {{.+}}, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
 // CHECK-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
 // CHECK-DAG: store i8** [[BPR:%.+]], i8*** [[BPARG]]
 // CHECK-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3

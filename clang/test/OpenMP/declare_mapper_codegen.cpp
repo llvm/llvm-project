@@ -507,7 +507,7 @@ void foo(int a){
 // CK0: }
 
 // CK0: define internal void [[OUTLINED:@.+]](i32 {{.*}}{{[^,]+}}, [[ANON_T]]* noalias noundef [[CTXARG:%.+]])
-// CK0-DAG: call i32 @__tgt_target_kernel_nowait(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]], i32 0, i8* null, i32 0, i8* null)
+// CK0-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
 // CK0-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
 // CK0-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
 // CK0-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
@@ -547,7 +547,7 @@ void foo(int a){
 // CK0: }
 
 // CK0: define internal void [[OUTLINE_1:@.+]](i32 {{.*}}%.global_tid.{{.+}}, [[ANON_T_0]]* noalias noundef [[CTXARG:%.+]])
-// CK0-DAG: call i32 @__tgt_target_kernel_nowait(%struct.ident_t* @{{.+}}, i64 -1, i32 0, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]], i32 0, i8* null, i32 0, i8* null)
+// CK0-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 0, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
 // CK0-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
 // CK0-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
 // CK0-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
