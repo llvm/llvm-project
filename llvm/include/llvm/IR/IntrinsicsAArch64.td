@@ -3132,4 +3132,10 @@ let TargetPrefix = "aarch64" in {
 
   def int_aarch64_sme_write_vg1x2 : SME2_ZA_ArrayVector_Write_VG2_Intrinsic;
   def int_aarch64_sme_write_vg1x4 : SME2_ZA_ArrayVector_Write_VG4_Intrinsic;
+
+  //
+  // Multi-Single Vector add
+  //
+  def int_aarch64_sve_add_single_x2 : SME2_VG2_Multi_Single_Intrinsic;
+  def int_aarch64_sve_add_single_x4 : SME2_VG4_Multi_Single_Intrinsic;
 }

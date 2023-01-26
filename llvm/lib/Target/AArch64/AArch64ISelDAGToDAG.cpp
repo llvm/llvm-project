@@ -5061,6 +5061,20 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
                AArch64::FCLAMP_VG4_4Z4Z_D}))
         SelectClamp(Node, 4, Op);
       return;
+    case Intrinsic::aarch64_sve_add_single_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::ADD_VG2_2ZZ_B, AArch64::ADD_VG2_2ZZ_H,
+               AArch64::ADD_VG2_2ZZ_S, AArch64::ADD_VG2_2ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, false, Op);
+      return;
+    case Intrinsic::aarch64_sve_add_single_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::ADD_VG4_4ZZ_B, AArch64::ADD_VG4_4ZZ_H,
+               AArch64::ADD_VG4_4ZZ_S, AArch64::ADD_VG4_4ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, false, Op);
+      return;
     }
     break;
   }

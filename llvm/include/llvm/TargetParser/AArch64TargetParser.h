@@ -444,23 +444,26 @@ inline constexpr CpuInfo CpuInfos[] = {
     {"apple-a11", ARMV8_2A, (AArch64::AEK_CRYPTO | AArch64::AEK_FP16)},
     {"apple-a12", ARMV8_3A, (AArch64::AEK_CRYPTO | AArch64::AEK_FP16)},
     {"apple-a13", ARMV8_4A,
-     (AArch64::AEK_CRYPTO | AArch64::AEK_FP16 | AArch64::AEK_FP16FML |
-      AArch64::AEK_SHA3)},
+     (AArch64::AEK_AES | AArch64::AEK_SHA2 | AArch64::AEK_SHA3 |
+      AArch64::AEK_FP16 | AArch64::AEK_FP16FML | AArch64::AEK_SHA3)},
     {"apple-a14", ARMV8_5A,
-     (AArch64::AEK_CRYPTO | AArch64::AEK_FP16 | AArch64::AEK_FP16FML |
-      AArch64::AEK_SHA3)},
+     (AArch64::AEK_AES | AArch64::AEK_SHA2 | AArch64::AEK_SHA3 |
+      AArch64::AEK_FP16 | AArch64::AEK_FP16FML | AArch64::AEK_SHA3)},
     {"apple-a15", ARMV8_5A,
-     (AArch64::AEK_CRYPTO | AArch64::AEK_FP16 | AArch64::AEK_FP16FML |
-      AArch64::AEK_SHA3 | AArch64::AEK_BF16 | AArch64::AEK_I8MM)},
+     (AArch64::AEK_AES | AArch64::AEK_SHA2 | AArch64::AEK_SHA3 |
+      AArch64::AEK_FP16 | AArch64::AEK_FP16FML | AArch64::AEK_SHA3 |
+      AArch64::AEK_BF16 | AArch64::AEK_I8MM)},
     {"apple-a16", ARMV8_5A,
-     (AArch64::AEK_CRYPTO | AArch64::AEK_FP16 | AArch64::AEK_FP16FML |
-      AArch64::AEK_SHA3 | AArch64::AEK_BF16 | AArch64::AEK_I8MM)},
+     (AArch64::AEK_AES | AArch64::AEK_SHA2 | AArch64::AEK_SHA3 |
+      AArch64::AEK_FP16 | AArch64::AEK_FP16FML | AArch64::AEK_SHA3 |
+      AArch64::AEK_BF16 | AArch64::AEK_I8MM)},
     {"apple-m1", ARMV8_5A,
-     (AArch64::AEK_CRYPTO | AArch64::AEK_FP16 | AArch64::AEK_FP16FML |
-      AArch64::AEK_SHA3)},
+     (AArch64::AEK_AES | AArch64::AEK_SHA2 | AArch64::AEK_SHA3 |
+      AArch64::AEK_FP16 | AArch64::AEK_FP16FML | AArch64::AEK_SHA3)},
     {"apple-m2", ARMV8_5A,
-     (AArch64::AEK_CRYPTO | AArch64::AEK_FP16 | AArch64::AEK_FP16FML |
-      AArch64::AEK_SHA3 | AArch64::AEK_BF16 | AArch64::AEK_I8MM)},
+     (AArch64::AEK_AES | AArch64::AEK_SHA2 | AArch64::AEK_SHA3 |
+      AArch64::AEK_FP16 | AArch64::AEK_FP16FML | AArch64::AEK_SHA3 |
+      AArch64::AEK_BF16 | AArch64::AEK_I8MM)},
     {"apple-s4", ARMV8_3A, (AArch64::AEK_CRYPTO | AArch64::AEK_FP16)},
     {"apple-s5", ARMV8_3A, (AArch64::AEK_CRYPTO | AArch64::AEK_FP16)},
     {"exynos-m3", ARMV8A, (AArch64::AEK_CRYPTO | AArch64::AEK_CRC)},
