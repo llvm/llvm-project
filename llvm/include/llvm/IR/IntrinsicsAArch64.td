@@ -2784,6 +2784,35 @@ let TargetPrefix = "aarch64" in {
                 LLVMMatchType<0>,  LLVMMatchType<0>],
                []>;
 
+  class SME2_VG2_Multi_Single_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
+                [LLVMMatchType<0>, LLVMMatchType<0>,
+                 LLVMMatchType<0>],
+                [IntrNoMem]>;
+
+  class SME2_VG4_Multi_Single_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>,
+                             LLVMMatchType<0>,  LLVMMatchType<0>],
+                            [LLVMMatchType<0>,  LLVMMatchType<0>,
+                             LLVMMatchType<0>,  LLVMMatchType<0>,
+                             LLVMMatchType<0>],
+                            [IntrNoMem]>;
+
+  class SME2_VG2_Multi_Multi_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
+                [LLVMMatchType<0>, LLVMMatchType<0>,
+                 LLVMMatchType<0>, LLVMMatchType<0>],
+                [IntrNoMem]>;
+
+  class SME2_VG4_Multi_Multi_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>,
+                             LLVMMatchType<0>,  LLVMMatchType<0>],
+                            [LLVMMatchType<0>,  LLVMMatchType<0>,
+                             LLVMMatchType<0>,  LLVMMatchType<0>,
+                             LLVMMatchType<0>, LLVMMatchType<0>,
+                             LLVMMatchType<0>, LLVMMatchType<0>],
+                            [IntrNoMem]>;
+
   class SME2_CVT_VG2_SINGLE_Intrinsic
     : DefaultAttrsIntrinsic<[LLVMSubdivide2VectorType<0>],
                             [llvm_anyvector_ty, LLVMMatchType<0>],
@@ -2921,6 +2950,14 @@ let TargetPrefix = "aarch64" in {
       def int_aarch64_sme_ # ty # instr # _lane_vg2x4  : SME2_Matrix_ArrayVector_VG4_Multi_Index_Intrinsic;
     }
   }
+
+  // Multi-vector signed saturating doubling multiply high
+
+  def int_aarch64_sve_sqdmulh_single_vgx2 : SME2_VG2_Multi_Single_Intrinsic;
+  def int_aarch64_sve_sqdmulh_single_vgx4 : SME2_VG4_Multi_Single_Intrinsic;
+
+  def int_aarch64_sve_sqdmulh_vgx2 : SME2_VG2_Multi_Multi_Intrinsic;
+  def int_aarch64_sve_sqdmulh_vgx4 : SME2_VG4_Multi_Multi_Intrinsic;
 
   //
   // Multi-vector vertical dot-products

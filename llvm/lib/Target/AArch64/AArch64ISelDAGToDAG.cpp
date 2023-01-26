@@ -360,6 +360,8 @@ public:
   void SelectPredicatedLoad(SDNode *N, unsigned NumVecs, unsigned Scale,
                             unsigned Opc_rr, unsigned Opc_ri,
                             bool IsIntr = false);
+  void SelectDestructiveMultiIntrinsic(SDNode *N, unsigned NumVecs,
+                                       bool IsZmMulti, unsigned Opcode);
   void SelectWhilePair(SDNode *N, unsigned Opc);
   void SelectCVTIntrinsic(SDNode *N, unsigned NumVecs, unsigned Opcode);
   void SelectClamp(SDNode *N, unsigned NumVecs, unsigned Opcode);
@@ -1787,6 +1789,40 @@ void AArch64DAGToDAGISel::SelectCVTIntrinsic(SDNode *N, unsigned NumVecs,
   SDValue Ops = createZTuple(Regs);
   SDLoc DL(N);
   SDNode *Intrinsic = CurDAG->getMachineNode(Opcode, DL, MVT::Untyped, Ops);
+  SDValue SuperReg = SDValue(Intrinsic, 0);
+  for (unsigned i = 0; i < NumVecs; ++i)
+    ReplaceUses(SDValue(N, i), CurDAG->getTargetExtractSubreg(
+                                   AArch64::zsub0 + i, DL, VT, SuperReg));
+
+  CurDAG->RemoveDeadNode(N);
+  return;
+}
+
+void AArch64DAGToDAGISel::SelectDestructiveMultiIntrinsic(SDNode *N,
+                                                          unsigned NumVecs,
+                                                          bool IsZmMulti,
+                                                          unsigned Opcode) {
+  assert(Opcode != 0 && "Unexpected opcode");
+
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+
+  auto GetMultiVecOperand = [=](unsigned StartIdx) {
+    SmallVector<SDValue, 4> Regs(N->op_begin() + StartIdx,
+                                 N->op_begin() + StartIdx + NumVecs);
+    return createZMulTuple(Regs);
+  };
+
+  SDValue Zdn = GetMultiVecOperand(1);
+
+  SDValue Zm;
+  if (IsZmMulti)
+    Zm = GetMultiVecOperand(NumVecs + 1);
+  else
+    Zm = N->getOperand(NumVecs + 1);
+
+  SDNode *Intrinsic = CurDAG->getMachineNode(Opcode, DL, MVT::Untyped, Zdn, Zm);
+
   SDValue SuperReg = SDValue(Intrinsic, 0);
   for (unsigned i = 0; i < NumVecs; ++i)
     ReplaceUses(SDValue(N, i), CurDAG->getTargetExtractSubreg(
@@ -4903,6 +4939,34 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       if (tryMULLV64LaneV128(IntNo, Node))
         return;
       break;
+    case Intrinsic::aarch64_sve_sqdmulh_single_vgx2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::SQDMULH_VG2_2ZZ_B, AArch64::SQDMULH_VG2_2ZZ_H,
+               AArch64::SQDMULH_VG2_2ZZ_S, AArch64::SQDMULH_VG2_2ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, false, Op);
+      return;
+    case Intrinsic::aarch64_sve_sqdmulh_single_vgx4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::SQDMULH_VG4_4ZZ_B, AArch64::SQDMULH_VG4_4ZZ_H,
+               AArch64::SQDMULH_VG4_4ZZ_S, AArch64::SQDMULH_VG4_4ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, false, Op);
+      return;
+    case Intrinsic::aarch64_sve_sqdmulh_vgx2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::SQDMULH_VG2_2Z2Z_B, AArch64::SQDMULH_VG2_2Z2Z_H,
+               AArch64::SQDMULH_VG2_2Z2Z_S, AArch64::SQDMULH_VG2_2Z2Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, true, Op);
+      return;
+    case Intrinsic::aarch64_sve_sqdmulh_vgx4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::SQDMULH_VG4_4Z4Z_B, AArch64::SQDMULH_VG4_4Z4Z_H,
+               AArch64::SQDMULH_VG4_4Z4Z_S, AArch64::SQDMULH_VG4_4Z4Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, true, Op);
+      return;
     case Intrinsic::aarch64_sve_whilege_x2:
       if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int1>(
               Node->getValueType(0),
