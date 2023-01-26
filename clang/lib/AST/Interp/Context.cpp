@@ -42,6 +42,11 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
     }
   }
 
+  APValue DummyResult;
+  if (!Run(Parent, Func, DummyResult)) {
+    return false;
+  }
+
   return Func->isConstexpr();
 }
 
@@ -112,6 +117,9 @@ std::optional<PrimType> Context::classify(QualType T) const {
 
   if (T->isNullPtrType())
     return PT_Ptr;
+
+  if (T->isFloatingType())
+    return PT_Float;
 
   if (auto *AT = dyn_cast<AtomicType>(T))
     return classify(AT->getValueType());

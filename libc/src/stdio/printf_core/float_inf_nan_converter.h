@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_FLOAT_INF_NAN_CONVERTER_H
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/common.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/writer.h"
@@ -22,7 +23,7 @@ namespace printf_core {
 
 using MantissaInt = fputil::FPBits<long double>::UIntType;
 
-int inline convert_inf_nan(Writer *writer, const FormatSection &to_conv) {
+LIBC_INLINE int convert_inf_nan(Writer *writer, const FormatSection &to_conv) {
   // All of the letters will be defined relative to variable a, which will be
   // the appropriate case based on the case of the conversion.
   const char a = (to_conv.conv_name & 32) | 'A';

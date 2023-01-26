@@ -595,12 +595,15 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
     const MachineOperand &CopySrc = *CopyOperands->Source;
     Register CopySrcReg = CopySrc.getReg();
 
-    // FIXME: Don't handle partial uses of wider COPYs yet.
+    // When the use is a subregister of the COPY destination,
+    // record the subreg index.
+    unsigned SubregIdx = 0;
+
+    // This can only occur when we are dealing with physical registers.
     if (MOUse.getReg() != CopyDstReg) {
-      LLVM_DEBUG(
-          dbgs() << "MCP: FIXME! Not forwarding COPY to sub-register use:\n  "
-                 << MI);
-      continue;
+      SubregIdx = TRI->getSubRegIndex(CopyDstReg, MOUse.getReg());
+      if (!SubregIdx)
+        continue;
     }
 
     // Don't forward COPYs of reserved regs unless they are constant.
@@ -633,7 +636,11 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
                       << "\n     with " << printReg(CopySrcReg, TRI)
                       << "\n     in " << MI << "     from " << *Copy);
 
-    MOUse.setReg(CopySrcReg);
+    if (SubregIdx)
+      MOUse.setReg(TRI->getSubReg(CopySrcReg, SubregIdx));
+    else
+      MOUse.setReg(CopySrcReg);
+
     if (!CopySrc.isRenamable())
       MOUse.setIsRenamable(false);
     MOUse.setIsUndef(CopySrc.isUndef());

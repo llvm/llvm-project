@@ -15,7 +15,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsCst) {
                         "  %4:_(s8) = COPY %3\n";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
   unsigned CopyReg = Copies[Copies.size() - 1];
   MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
   unsigned SrcReg = FinalCopy->getOperand(1).getReg();
@@ -35,7 +35,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsCstWithClass) {
                         "  %4:_(s32) = COPY %10\n";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
   unsigned CopyReg = Copies[Copies.size() - 1];
   MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
   unsigned SrcReg = FinalCopy->getOperand(1).getReg();
@@ -74,7 +74,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsCstPHI) {
                         "  %14:_(s8) = COPY %13\n";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
   Register CopyReg = Copies[Copies.size() - 1];
   MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
   Register SrcReg = FinalCopy->getOperand(1).getReg();
@@ -108,7 +108,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsCstPHIToNonGenericReg) {
                         "  %14:_(s8) = COPY %13\n";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
   Register CopyReg = Copies[Copies.size() - 1];
   MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
   Register SrcReg = FinalCopy->getOperand(1).getReg();
@@ -146,7 +146,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsUnknownPHI) {
       "  %14:_(s64) = COPY %13\n";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
   Register CopyReg = Copies[Copies.size() - 1];
   MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
   Register SrcReg = FinalCopy->getOperand(1).getReg();
@@ -183,7 +183,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsCstPHIWithLoop) {
       "  G_BR %bb.12\n";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
   Register CopyReg = Copies[Copies.size() - 1];
   MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
   Register SrcReg = FinalCopy->getOperand(1).getReg();
@@ -222,7 +222,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsDecreasingCstPHIWithLoop) {
                         "  G_BR %bb.12\n";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
   Register CopyReg = Copies[Copies.size() - 1];
   MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
   Register SrcReg = FinalCopy->getOperand(1).getReg();
@@ -250,7 +250,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsPtrToIntViceVersa) {
                         "  %6:_(s32) = COPY %5\n";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
   unsigned CopyReg = Copies[Copies.size() - 1];
   MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
   unsigned SrcReg = FinalCopy->getOperand(1).getReg();
@@ -278,7 +278,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsAND) {
 
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   Register CopyReg = Copies[Copies.size() - 1];
   MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
@@ -310,7 +310,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsOR) {
 
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   Register CopyReg = Copies[Copies.size() - 1];
   MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
@@ -342,7 +342,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsXOR) {
 
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   Register CopyReg = Copies[Copies.size() - 1];
   MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
@@ -365,7 +365,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsXORConstant) {
                         "  %6:_(s8) = COPY %5\n";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
   unsigned CopyReg = Copies[Copies.size() - 1];
   MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
   unsigned SrcReg = FinalCopy->getOperand(1).getReg();
@@ -397,7 +397,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsASHR) {
 
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   Register CopyReg0 = Copies[Copies.size() - 2];
   MachineInstr *FinalCopy0 = MRI->getVRegDef(CopyReg0);
@@ -441,7 +441,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsLSHR) {
 
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   Register CopyReg0 = Copies[Copies.size() - 2];
   MachineInstr *FinalCopy0 = MRI->getVRegDef(CopyReg0);
@@ -478,7 +478,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsSHL) {
 
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   Register CopyReg = Copies[Copies.size() - 1];
   MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
@@ -509,7 +509,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsADD) {
 
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   Register CopyReg = Copies[Copies.size() - 1];
   MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
@@ -542,7 +542,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsSUB) {
 
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   Register CopyReg = Copies[Copies.size() - 1];
   MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
@@ -569,7 +569,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsMUL) {
 
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   Register CopyReg = Copies[Copies.size() - 1];
   MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
@@ -597,7 +597,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsICMP) {
 
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   Register CopyReg = Copies[Copies.size() - 1];
   MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
@@ -620,7 +620,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsFCMP) {
 
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   Register CopyReg = Copies[Copies.size() - 1];
   MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
@@ -652,7 +652,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsSelect) {
 
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   Register CopyReg = Copies[Copies.size() - 1];
   MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
@@ -685,7 +685,7 @@ TEST_F(AArch64GISelMITest, TestKnownBits) {
                   "  %13:_(s32) = COPY %12\n";
   setUp(MIR);
   if (!TM)
-    return;
+    GTEST_SKIP();
   unsigned CopyReg = Copies[Copies.size() - 1];
   MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
   unsigned SrcReg = FinalCopy->getOperand(1).getReg();
@@ -701,7 +701,7 @@ TEST_F(AArch64GISelMITest, TestKnownBits) {
 TEST_F(AArch64GISelMITest, TestSignBitIsZero) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   const LLT S32 = LLT::scalar(32);
   auto SignBit = B.buildConstant(S32, 0x80000000);
@@ -730,7 +730,7 @@ TEST_F(AArch64GISelMITest, TestNumSignBitsConstant) {
                         "  %12:_(s8) = COPY %11\n";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
   Register CopyReg1 = Copies[Copies.size() - 5];
   Register CopyRegNeg1 = Copies[Copies.size() - 4];
   Register CopyReg127 = Copies[Copies.size() - 3];
@@ -756,7 +756,7 @@ TEST_F(AArch64GISelMITest, TestNumSignBitsSext) {
                         "  %9:_(s32) = COPY %8\n";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
   Register CopySextLoad = Copies[Copies.size() - 2];
   Register CopySextNeg1 = Copies[Copies.size() - 1];
 
@@ -803,7 +803,7 @@ TEST_F(AArch64GISelMITest, TestNumSignBitsSextInReg) {
 
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   Register CopyInReg7 = Copies[Copies.size() - 9];
   Register CopyInReg8 = Copies[Copies.size() - 8];
@@ -870,7 +870,7 @@ TEST_F(AArch64GISelMITest, TestNumSignBitsAssertSext) {
 
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   Register CopyInReg1 = Copies[Copies.size() - 10];
   Register CopyInReg7 = Copies[Copies.size() - 9];
@@ -913,7 +913,7 @@ TEST_F(AArch64GISelMITest, TestNumSignBitsTrunc) {
                         "  %12:_(s8) = COPY %11\n";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
   Register CopyTruncLoad = Copies[Copies.size() - 3];
   Register CopyTruncNeg1 = Copies[Copies.size() - 2];
   Register CopyTrunc7 = Copies[Copies.size() - 1];
@@ -941,7 +941,7 @@ TEST_F(AArch64GISelMITest, TestNumSignBitsCmp) {
 
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
   Register CopyVecFCMP = Copies[Copies.size() - 4];
   Register CopyVecICMP = Copies[Copies.size() - 3];
   Register CopyScalarFCMP = Copies[Copies.size() - 2];
@@ -972,7 +972,7 @@ TEST_F(AMDGPUGISelMITest, TestNumSignBitsTrunc) {
 
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   Register CopyLoadUByte = Copies[Copies.size() - 4];
   Register CopyLoadSByte = Copies[Copies.size() - 3];
@@ -1002,7 +1002,7 @@ TEST_F(AMDGPUGISelMITest, TestTargetKnownAlign) {
 
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   Register CopyDispatchPtr = Copies[Copies.size() - 5];
   Register CopyQueuePtr = Copies[Copies.size() - 4];
@@ -1064,7 +1064,7 @@ TEST_F(AMDGPUGISelMITest, TestIsKnownToBeAPowerOfTwo) {
 )MIR";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   GISelKnownBits KB(*MF);
 
@@ -1109,7 +1109,7 @@ TEST_F(AArch64GISelMITest, TestMetadata) {
                         "  %copy:_(s32) = COPY %and(s32)\n";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   Register CopyReg = Copies[Copies.size() - 1];
   MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
@@ -1160,7 +1160,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsExt) {
                         "  %r3:_(s32) = COPY %sext\n";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
   Register CopyRegAny = Copies[Copies.size() - 3];
   Register CopyRegZ = Copies[Copies.size() - 2];
   Register CopyRegS = Copies[Copies.size() - 1];
@@ -1230,7 +1230,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsSextInReg) {
 )";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
   GISelKnownBits Info(*MF);
   KnownBits Res;
   auto GetKB = [&](unsigned Idx) {
@@ -1301,7 +1301,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsAssertSext) {
 )";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
   GISelKnownBits Info(*MF);
   KnownBits Res;
   auto GetKB = [&](unsigned Idx) {
@@ -1346,7 +1346,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsMergeValues) {
 )";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   const uint64_t TestVal = UINT64_C(0xabcd123344568998);
   Register CopyMerge = Copies[Copies.size() - 1];
@@ -1370,7 +1370,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsUnmergeValues) {
 )";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   const uint64_t TestVal = UINT64_C(0xabcd123344568998);
   GISelKnownBits Info(*MF);
@@ -1397,7 +1397,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsBSwapBitReverse) {
 )";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   const uint32_t ByteSwappedVal = 0x44332211;
   const uint32_t BitSwappedVal = 0x22cc4488;
@@ -1447,7 +1447,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsUMAX) {
 
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   Register CopyReg0 = Copies[Copies.size() - 2];
   MachineInstr *FinalCopy0 = MRI->getVRegDef(CopyReg0);
@@ -1485,7 +1485,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsUMax) {
 )";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   Register CopyUMax = Copies[Copies.size() - 1];
   GISelKnownBits Info(*MF);
@@ -1517,7 +1517,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsUMIN) {
 
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   Register CopyReg0 = Copies[Copies.size() - 1];
   MachineInstr *FinalCopy0 = MRI->getVRegDef(CopyReg0);
@@ -1551,7 +1551,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsSMAX) {
 
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   Register CopyReg0 = Copies[Copies.size() - 1];
   MachineInstr *FinalCopy0 = MRI->getVRegDef(CopyReg0);
@@ -1586,7 +1586,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsSMIN) {
 
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   Register CopyReg0 = Copies[Copies.size() - 1];
   MachineInstr *FinalCopy0 = MRI->getVRegDef(CopyReg0);
@@ -1615,7 +1615,7 @@ TEST_F(AArch64GISelMITest, TestInvalidQueries) {
 )";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   Register EqSizedCopyReg = Copies[Copies.size() - 2];
   MachineInstr *EqSizedCopy = MRI->getVRegDef(EqSizedCopyReg);
@@ -1657,7 +1657,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsAssertZext) {
 
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   Register CopyAssert8 = Copies[Copies.size() - 4];
   Register CopyAssert1 = Copies[Copies.size() - 3];
@@ -1719,7 +1719,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsCTPOP) {
 )";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   Register UnknownCopy = Copies[Copies.size() - 4];
   Register ThirtytwoCopy = Copies[Copies.size() - 3];
@@ -1779,7 +1779,7 @@ TEST_F(AMDGPUGISelMITest, TestKnownBitsUBFX) {
                         "  %ubfx_copy_unk_width:_(s32) = COPY %13\n";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
   Register CopyBfxReg = Copies[Copies.size() - 5];
   Register CopyValBfxReg = Copies[Copies.size() - 4];
   Register CopyUnkBfxReg = Copies[Copies.size() - 3];
@@ -1839,7 +1839,7 @@ TEST_F(AMDGPUGISelMITest, TestKnownBitsSBFX) {
                         "  %sbfx_copy_unk_width:_(s32) = COPY %13\n";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
   Register CopyBfxReg = Copies[Copies.size() - 5];
   Register CopyValBfxReg = Copies[Copies.size() - 4];
   Register CopyNegValBfxReg = Copies[Copies.size() - 3];
@@ -1899,7 +1899,7 @@ TEST_F(AMDGPUGISelMITest, TestNumSignBitsUBFX) {
                         "  %ubfx_copy_unk_width:_(s32) = COPY %13\n";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
   Register CopyUnkBfxReg = Copies[Copies.size() - 5];
   Register CopyPosBfxReg = Copies[Copies.size() - 4];
   Register CopyNegBfxReg = Copies[Copies.size() - 3];
@@ -1933,7 +1933,7 @@ TEST_F(AMDGPUGISelMITest, TestNumSignBitsSBFX) {
                         "  %sbfx_copy_unk_off:_(s32) = COPY %13\n";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
   Register CopyNegBfxReg = Copies[Copies.size() - 5];
   Register CopyPosBfxReg = Copies[Copies.size() - 4];
   Register CopyHiSetBfxReg = Copies[Copies.size() - 3];
@@ -1970,7 +1970,7 @@ TEST_F(AMDGPUGISelMITest, TestKnownBitsAssertAlign) {
 )MIR";
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
   GISelKnownBits Info(*MF);
 
   KnownBits Res;
@@ -2008,7 +2008,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsUADDO) {
 
   setUp(MIRString);
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   Register CopyOverflow = Copies[Copies.size() - 1];
   GISelKnownBits Info(*MF);

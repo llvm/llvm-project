@@ -261,9 +261,8 @@ private:
           return std::optional<LogicalResult>();
         });
   }
-  /// With callback of form: `std::optional<LogicalResult>(T,
-  /// SmallVectorImpl<Type>
-  /// &)`
+  /// With callback of form: `std::optional<LogicalResult>(
+  ///     T, SmallVectorImpl<Type> &)`.
   template <typename T, typename FnT>
   std::enable_if_t<std::is_invocable_v<FnT, T, SmallVectorImpl<Type> &>,
                    ConversionCallbackFn>
@@ -274,9 +273,8 @@ private:
           return callback(type, results);
         });
   }
-  /// With callback of form: `std::optional<LogicalResult>(T,
-  /// SmallVectorImpl<Type>
-  /// &, ArrayRef<Type>)`.
+  /// With callback of form: `std::optional<LogicalResult>(
+  ///     T, SmallVectorImpl<Type> &, ArrayRef<Type>)`.
   template <typename T, typename FnT>
   std::enable_if_t<
       std::is_invocable_v<FnT, T, SmallVectorImpl<Type> &, ArrayRef<Type>>,

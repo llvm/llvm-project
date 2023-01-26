@@ -868,6 +868,7 @@ inline void isl_sioimath_tdiv_q(isl_sioimath_ptr dst, isl_sioimath_src lhs,
 	    isl_sioimath_bigarg_src(rhs, &rhsscratch),
 	    isl_sioimath_reinit_big(dst), NULL);
 	isl_sioimath_try_demote(dst);
+	return;
 }
 
 /* Divide lhs by an unsigned long rhs, rounding to zero (Truncate).

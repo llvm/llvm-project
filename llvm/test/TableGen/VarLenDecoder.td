@@ -34,12 +34,13 @@ class MyVarInst<MyMemOperand memory_op> : Instruction {
 def FOO16 : MyVarInst<MemOp16> {
   let Inst = (ascend
       (descend (operand "$dst", 3), 0b01000, (operand "$src.reg", 3)),
-      (slice "$src.offset", 15, 0)
+      (slice "$src.offset", 15, 0, (decoder "myCustomDecoder"))
   );
 }
 def FOO32 : MyVarInst<MemOp32> {
   let Inst = (ascend
-      (descend (operand "$dst", 3), 0b01001, (operand "$src.reg", 3)),
+      (descend (operand "$dst", 3), 0b01001,
+      (operand "$src.reg", 3, (decoder "myCustomDecoder"))),
       (slice "$src.offset", 31, 16),
       (slice "$src.offset", 15, 0)
   );
@@ -63,13 +64,13 @@ def FOO32 : MyVarInst<MemOp32> {
 // CHECK-NEXT: tmp = fieldFromInstruction(insn, 0, 3);
 // CHECK-NEXT: if (!Check(S, DecodeRegClassRegisterClass(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }
 // CHECK-NEXT: tmp = fieldFromInstruction(insn, 11, 16);
-// CHECK-NEXT: MI.addOperand(MCOperand::createImm(tmp));
+// CHECK-NEXT: if (!Check(S, myCustomDecoder(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }
 // CHECK-NEXT: return S;
 // CHECK-NEXT: case 1:
 // CHECK-NEXT: tmp = fieldFromInstruction(insn, 8, 3);
 // CHECK-NEXT: if (!Check(S, DecodeRegClassRegisterClass(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }
 // CHECK-NEXT: tmp = fieldFromInstruction(insn, 0, 3);
-// CHECK-NEXT: if (!Check(S, DecodeRegClassRegisterClass(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }
+// CHECK-NEXT: if (!Check(S, myCustomDecoder(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }
 // CHECK-NEXT: tmp = 0x0;
 // CHECK-NEXT: insertBits(tmp, fieldFromInstruction(insn, 11, 16), 16, 16);
 // CHECK-NEXT: insertBits(tmp, fieldFromInstruction(insn, 27, 16), 0, 16);

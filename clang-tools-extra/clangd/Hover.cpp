@@ -1033,8 +1033,7 @@ void maybeAddCalleeArgInfo(const SelectionTree::Node *N, HoverInfo &HI,
         PassType.PassBy = HoverInfo::PassType::Value;
       else
         PassType.Converted = true;
-    } else if (const auto *MTE =
-                   CastNode->ASTNode.get<MaterializeTemporaryExpr>()) {
+    } else if (CastNode->ASTNode.get<MaterializeTemporaryExpr>()) {
       // Can't bind a non-const-ref to a temporary, so has to be const-ref
       PassType.PassBy = HoverInfo::PassType::ConstRef;
     } else { // Unknown implicit node, assume type conversion.

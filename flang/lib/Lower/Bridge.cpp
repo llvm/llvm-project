@@ -708,7 +708,10 @@ public:
               loc = cooked->GetSourcePositionRange(block)) {
         // loc is a pair (begin, end); use the beginning position
         Fortran::parser::SourcePosition &filePos = loc->first;
-        return mlir::FileLineColLoc::get(&getMLIRContext(), filePos.file.path(),
+        llvm::SmallString<256> filePath(filePos.file.path());
+        llvm::sys::fs::make_absolute(filePath);
+        llvm::sys::path::remove_dots(filePath);
+        return mlir::FileLineColLoc::get(&getMLIRContext(), filePath.str(),
                                          filePos.line, filePos.column);
       }
     }
@@ -2647,25 +2650,31 @@ private:
       assert(lbounds.size() && ubounds.size());
       mlir::Type indexTy = builder->getIndexType();
       mlir::Type boundArrayTy = fir::SequenceType::get(
-          {static_cast<int64_t>(lbounds.size()) * 2}, builder->getI64Type());
+          {static_cast<int64_t>(lbounds.size()), 2}, builder->getI64Type());
       mlir::Value boundArray =
           builder->create<fir::AllocaOp>(loc, boundArrayTy);
       mlir::Value array = builder->create<fir::UndefOp>(loc, boundArrayTy);
       for (unsigned i = 0; i < lbounds.size(); ++i) {
         array = builder->create<fir::InsertValueOp>(
             loc, boundArrayTy, array, lbounds[i],
-            builder->getArrayAttr({builder->getIntegerAttr(
-                builder->getIndexType(), static_cast<int>(i * 2))}));
+            builder->getArrayAttr(
+                {builder->getIntegerAttr(builder->getIndexType(),
+                                         static_cast<int>(i)),
+                 builder->getIntegerAttr(builder->getIndexType(), 0)}));
         array = builder->create<fir::InsertValueOp>(
             loc, boundArrayTy, array, ubounds[i],
-            builder->getArrayAttr({builder->getIntegerAttr(
-                builder->getIndexType(), static_cast<int>(i * 2 + 1))}));
+            builder->getArrayAttr(
+                {builder->getIntegerAttr(builder->getIndexType(),
+                                         static_cast<int>(i)),
+                 builder->getIntegerAttr(builder->getIndexType(), 1)}));
       }
       builder->create<fir::StoreOp>(loc, array, boundArray);
       mlir::Type boxTy = fir::BoxType::get(boundArrayTy);
       mlir::Value ext =
-          builder->createIntegerConstant(loc, indexTy, lbounds.size() * 2);
-      mlir::Value shapeOp = builder->genShape(loc, {ext});
+          builder->createIntegerConstant(loc, indexTy, lbounds.size());
+      mlir::Value c2 = builder->createIntegerConstant(loc, indexTy, 2);
+      llvm::SmallVector<mlir::Value> shapes = {ext, c2};
+      mlir::Value shapeOp = builder->genShape(loc, shapes);
       mlir::Value boundsDesc =
           builder->create<fir::EmboxOp>(loc, boxTy, boundArray, shapeOp);
       Fortran::lower::genPointerAssociateRemapping(*builder, loc, lhs, rhs,

@@ -40,8 +40,8 @@ static std::string LibPath(const std::string Name = "TestPlugin") {
 
 TEST(PluginsTests, LoadPlugin) {
 #if !defined(LLVM_ENABLE_PLUGINS)
-  // Disable the test if plugins are disabled.
-  return;
+  // Skip the test if plugins are disabled.
+  GTEST_SKIP();
 #endif
 
   auto PluginPath = LibPath();
@@ -66,8 +66,8 @@ TEST(PluginsTests, LoadPlugin) {
 // -fpass-plugin=DoublerPlugin.
 TEST(PluginsTests, LoadMultiplePlugins) {
 #if !defined(LLVM_ENABLE_PLUGINS)
-  // Disable the test if plugins are disabled.
-  return;
+  // Skip the test if plugins are disabled.
+  GTEST_SKIP();
 #endif
 
   auto DoublerPluginPath = LibPath("DoublerPlugin");

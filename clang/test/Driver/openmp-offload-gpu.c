@@ -304,8 +304,15 @@
 // CHECK-IR: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[INPUT_IR:.+]]"], output: "[[OBJECT:.+]]"
 // CHECK-IR: "x86_64-unknown-linux-gnu" - "Offload::Linker", inputs: ["[[OBJECT]]"], output: "a.out"
 
-// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -emit-llvm -S -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_52 -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-EMIT-LLVM-IR
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -emit-llvm -S -fopenmp=libomp --offload-device-only \
+// RUN:     -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_52 -nogpulib %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-EMIT-LLVM-IR
 // CHECK-EMIT-LLVM-IR: "-cc1"{{.*}}"-triple" "nvptx64-nvidia-cuda"{{.*}}"-emit-llvm"
+
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -emit-llvm -S -fopenmp=libomp \
+// RUN:     -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_52 -nogpulib %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-EMIT-LLVM-IR-BC
+// CHECK-EMIT-LLVM-IR-BC: "-cc1"{{.*}}"-triple" "nvptx64-nvidia-cuda"{{.*}}"-emit-llvm-bc"
 
 // RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvida-cuda -march=sm_70 \
 // RUN:          --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-new-nvptx-test.bc \
@@ -333,6 +340,11 @@
 // RUN:     -foffload-lto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-LIBRARY %s
 
 // CHECK-LTO-LIBRARY: {{.*}}-lomptarget{{.*}}-lomptarget.devicertl
+
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=sm_52 \
+// RUN:     %s 2>&1 | FileCheck --check-prefix=CHECK-NO-LTO-LIBRARY %s
+
+// CHECK-NO-LTO-LIBRARY: {{.*}}-lomptarget{{.*}}-lomptarget.devicertl
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=sm_52 -nogpulib \
 // RUN:     -foffload-lto %s 2>&1 | FileCheck --check-prefix=CHECK-NO-LIBRARY %s

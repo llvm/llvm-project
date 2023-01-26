@@ -1067,6 +1067,10 @@ public:
 
   bool SetDeclIsForcefullyCompleted(const clang::TagDecl *td);
 
+  /// Return the template parameters (including surrounding <>) in string form.
+  std::string
+  PrintTemplateParams(const TemplateParameterInfos &template_param_infos);
+
 private:
   /// Returns the PrintingPolicy used when generating the internal type names.
   /// These type names are mostly used for the formatter selection.

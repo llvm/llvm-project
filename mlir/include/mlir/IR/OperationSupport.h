@@ -322,6 +322,9 @@ public:
   /// Return the operation name with dialect name stripped, if it has one.
   StringRef stripDialect() const { return getStringRef().split('.').second; }
 
+  /// Return the context this operation is associated with.
+  MLIRContext *getContext() { return getIdentifier().getContext(); }
+
   /// Return the name of this operation. This always succeeds.
   StringRef getStringRef() const { return getIdentifier(); }
 

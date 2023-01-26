@@ -51,6 +51,8 @@ add_header_library(
   string_view
   HDRS
     string_view.h
+  DEPENDS
+    libc.src.__support.common
 )
 
 add_header_library(
@@ -101,4 +103,5 @@ add_object_library(
     new.h
   DEPENDS
     libc.include.stdlib
+    libc.src.__support.common
 )

@@ -1,4 +1,4 @@
-llvm_version_major = 16
+llvm_version_major = 17
 llvm_version_minor = 0
 llvm_version_patch = 0
 llvm_version = "$llvm_version_major.$llvm_version_minor.$llvm_version_patch"

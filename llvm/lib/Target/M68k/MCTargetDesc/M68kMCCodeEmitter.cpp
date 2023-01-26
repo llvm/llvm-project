@@ -84,24 +84,6 @@ template <unsigned Size> struct select_uint_t {
                                     uint64_t>::type>::type>::type;
 };
 
-// On a LE host:
-// MSB                   LSB    MSB                   LSB
-// | 0x12 0x34 | 0xAB 0xCD | -> | 0xAB 0xCD | 0x12 0x34 |
-// (On a BE host nothing changes)
-template <typename value_t> static value_t swapWord(value_t Val) {
-  const unsigned NumWords = sizeof(Val) / 2;
-  if (NumWords <= 1)
-    return Val;
-  Val = support::endian::byte_swap(Val, support::big);
-  value_t NewVal = 0;
-  for (unsigned i = 0U; i != NumWords; ++i) {
-    uint16_t Part = (Val >> (i * 16)) & 0xFFFF;
-    Part = support::endian::byte_swap(Part, support::big);
-    NewVal |= (Part << (i * 16));
-  }
-  return NewVal;
-}
-
 // Figure out which byte we're at in big endian mode.
 template <unsigned Size> static unsigned getBytePosition(unsigned BitPos) {
   if (Size % 16) {
@@ -135,14 +117,14 @@ void M68kMCCodeEmitter::encodeRelocImm(const MCInst &MI, unsigned OpIdx,
   using value_t = typename select_uint_t<Size>::type;
   const MCOperand &MCO = MI.getOperand(OpIdx);
   if (MCO.isImm()) {
-    Value |= swapWord<value_t>(static_cast<value_t>(MCO.getImm()));
+    Value |= M68k::swapWord<value_t>(static_cast<value_t>(MCO.getImm()));
   } else if (MCO.isExpr()) {
     const MCExpr *Expr = MCO.getExpr();
 
     // Absolute address
     int64_t Addr;
     if (Expr->evaluateAsAbsolute(Addr)) {
-      Value |= swapWord<value_t>(static_cast<value_t>(Addr));
+      Value |= M68k::swapWord<value_t>(static_cast<value_t>(Addr));
       return;
     }
 
@@ -162,7 +144,7 @@ void M68kMCCodeEmitter::encodePCRelImm(const MCInst &MI, unsigned OpIdx,
   const MCOperand &MCO = MI.getOperand(OpIdx);
   if (MCO.isImm()) {
     using value_t = typename select_uint_t<Size>::type;
-    Value |= swapWord<value_t>(static_cast<value_t>(MCO.getImm()));
+    Value |= M68k::swapWord<value_t>(static_cast<value_t>(MCO.getImm()));
   } else if (MCO.isExpr()) {
     const MCExpr *Expr = MCO.getExpr();
     unsigned InsertByte = getBytePosition<Size>(InsertPos);

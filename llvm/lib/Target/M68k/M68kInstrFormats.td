@@ -326,10 +326,13 @@ class MxEncAddrMode_i<string opnd_name, int size> : MxEncMemOp {
   // Immediate
   let Supplement =
     !cond(
-      !eq(size, 8)  : (descend 0b00000000, (operand "$"#opnd_name, 8)),
-      !eq(size, 16) : (operand "$"#opnd_name, 16),
-      !eq(size, 32) : (ascend (slice "$"#opnd_name, 31, 16),
-                              (slice "$"#opnd_name, 15, 0))
+      !eq(size, 8)  : (descend 0b00000000, (operand "$"#opnd_name, 8,
+	                   (encoder "encodeRelocImm<8>"))),
+      !eq(size, 16) : (operand "$"#opnd_name, 16,
+                           (encoder "encodeRelocImm<16>")),
+      !eq(size, 32) : (operand "$"#opnd_name, 32,
+                           (encoder "encodeRelocImm<32>"),
+                           (decoder "DecodeImm32"))
     );
 }
 
@@ -346,7 +349,8 @@ class MxEncAddrMode_abs<string opnd_name, bit size_w_l = false> : MxEncMemOp {
   // Absolute address
   let Supplement = !if(size_w_l,
     // abs.L
-    (operand "$"#opnd_name, 32, (encoder "encodeRelocImm<32>")),
+    (operand "$"#opnd_name, 32, (encoder "encodeRelocImm<32>"),
+                                (decoder "DecodeImm32")),
     // abs.W
     (operand "$"#opnd_name, 16, (encoder "encodeRelocImm<16>"))
   );

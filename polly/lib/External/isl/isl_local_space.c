@@ -245,22 +245,44 @@ isl_size isl_local_space_dim(__isl_keep isl_local_space *ls,
 #define TYPE	isl_local_space
 #include "check_type_range_templ.c"
 
-unsigned isl_local_space_offset(__isl_keep isl_local_space *ls,
+/* Return the position of the variables of the given type
+ * within the sequence of variables of "ls".
+ */
+isl_size isl_local_space_var_offset(__isl_keep isl_local_space *ls,
 	enum isl_dim_type type)
 {
 	isl_space *space;
 
+	space = isl_local_space_peek_space(ls);
+	if (space < 0)
+		return isl_size_error;
+	switch (type) {
+	case isl_dim_param:
+	case isl_dim_in:
+	case isl_dim_out:	return isl_space_offset(space, type);
+	case isl_dim_div:	return isl_space_dim(space, isl_dim_all);
+	case isl_dim_cst:
+	default:
+		isl_die(isl_local_space_get_ctx(ls), isl_error_invalid,
+			"invalid dimension type", return isl_size_error);
+	}
+}
+
+/* Return the position of the coefficients of the variables of the given type
+ * within the sequence of coefficients of "ls".
+ */
+unsigned isl_local_space_offset(__isl_keep isl_local_space *ls,
+	enum isl_dim_type type)
+{
 	if (!ls)
 		return 0;
 
-	space = ls->dim;
 	switch (type) {
 	case isl_dim_cst:	return 0;
-	case isl_dim_param:	return 1;
-	case isl_dim_in:	return 1 + space->nparam;
-	case isl_dim_out:	return 1 + space->nparam + space->n_in;
-	case isl_dim_div:
-		return 1 + space->nparam + space->n_in + space->n_out;
+	case isl_dim_param:
+	case isl_dim_in:
+	case isl_dim_out:
+	case isl_dim_div:	return 1 + isl_local_space_var_offset(ls, type);
 	default:		return 0;
 	}
 }
@@ -464,6 +486,66 @@ __isl_keep isl_local *isl_local_space_peek_local(__isl_keep isl_local_space *ls)
 	return ls ? ls->div : NULL;
 }
 
+/* Return a copy of the local variables of "ls".
+ */
+__isl_keep isl_local *isl_local_space_get_local(__isl_keep isl_local_space *ls)
+{
+	return isl_local_copy(isl_local_space_peek_local(ls));
+}
+
+/* Return the local variables of "ls".
+ * This may be either a copy or the local variables itself
+ * if there is only one reference to "ls".
+ * This allows the local variables to be modified inplace
+ * if both the local space and its local variables have only a single reference.
+ * The caller is not allowed to modify "ls" between this call and
+ * the subsequent call to isl_local_space_restore_local.
+ * The only exception is that isl_local_space_free can be called instead.
+ */
+static __isl_give isl_local *isl_local_space_take_local(
+	__isl_keep isl_local_space *ls)
+{
+	isl_local *local;
+
+	if (!ls)
+		return NULL;
+	if (ls->ref != 1)
+		return isl_local_space_get_local(ls);
+	local = ls->div;
+	ls->div = NULL;
+	return local;
+}
+
+/* Set the local variables of "ls" to "local",
+ * where the local variables of "ls" may be missing
+ * due to a preceding call to isl_local_space_take_local.
+ * However, in this case, "ls" only has a single reference and
+ * then the call to isl_local_space_cow has no effect.
+ */
+static __isl_give isl_local_space *isl_local_space_restore_local(
+	__isl_take isl_local_space *ls, __isl_take isl_local *local)
+{
+	if (!ls || !local)
+		goto error;
+
+	if (ls->div == local) {
+		isl_local_free(local);
+		return ls;
+	}
+
+	ls = isl_local_space_cow(ls);
+	if (!ls)
+		goto error;
+	isl_local_free(ls->div);
+	ls->div = local;
+
+	return ls;
+error:
+	isl_local_space_free(ls);
+	isl_local_free(local);
+	return NULL;
+}
+
 /* Replace the identifier of the tuple of type "type" by "id".
  */
 __isl_give isl_local_space *isl_local_space_set_tuple_id(
@@ -551,22 +633,16 @@ error:
 __isl_give isl_local_space *isl_local_space_realign(
 	__isl_take isl_local_space *ls, __isl_take isl_reordering *r)
 {
-	ls = isl_local_space_cow(ls);
-	if (!ls || !r)
-		goto error;
+	isl_local *local;
 
-	ls->div = isl_local_reorder(ls->div, isl_reordering_copy(r));
-	if (!ls->div)
-		goto error;
+	local = isl_local_space_take_local(ls);
+	local = isl_local_reorder(local, isl_reordering_copy(r));
+	ls = isl_local_space_restore_local(ls, local);
 
 	ls = isl_local_space_reset_space(ls, isl_reordering_get_space(r));
 
 	isl_reordering_free(r);
 	return ls;
-error:
-	isl_local_space_free(ls);
-	isl_reordering_free(r);
-	return NULL;
 }
 
 __isl_give isl_local_space *isl_local_space_add_div(
@@ -1557,6 +1633,9 @@ __isl_give isl_local_space *isl_local_space_move_dims(
 	enum isl_dim_type dst_type, unsigned dst_pos,
 	enum isl_dim_type src_type, unsigned src_pos, unsigned n)
 {
+	isl_space *space;
+	isl_local *local;
+	isl_size v_src, v_dst;
 	unsigned g_dst_pos;
 	unsigned g_src_pos;
 
@@ -1584,21 +1663,23 @@ __isl_give isl_local_space *isl_local_space_move_dims(
 			"moving dims within the same type not supported",
 			return isl_local_space_free(ls));
 
-	ls = isl_local_space_cow(ls);
-	if (!ls)
-		return NULL;
-
-	g_src_pos = 1 + isl_local_space_offset(ls, src_type) + src_pos;
-	g_dst_pos = 1 + isl_local_space_offset(ls, dst_type) + dst_pos;
+	v_src = isl_local_space_var_offset(ls, src_type);
+	v_dst = isl_local_space_var_offset(ls, dst_type);
+	if (v_src < 0 || v_dst < 0)
+		return isl_local_space_free(ls);
+	g_src_pos = v_src + src_pos;
+	g_dst_pos = v_dst + dst_pos;
 	if (dst_type > src_type)
 		g_dst_pos -= n;
-	ls->div = isl_mat_move_cols(ls->div, g_dst_pos, g_src_pos, n);
-	if (!ls->div)
-		return isl_local_space_free(ls);
-	ls->dim = isl_space_move_dims(ls->dim, dst_type, dst_pos,
+
+	local = isl_local_space_take_local(ls);
+	local = isl_local_move_vars(local, g_dst_pos, g_src_pos, n);
+	ls = isl_local_space_restore_local(ls, local);
+
+	space = isl_local_space_take_space(ls);
+	space = isl_space_move_dims(space, dst_type, dst_pos,
 					src_type, src_pos, n);
-	if (!ls->dim)
-		return isl_local_space_free(ls);
+	ls = isl_local_space_restore_space(ls, space);
 
 	return ls;
 }
