@@ -1334,9 +1334,8 @@ inline bool Shr(InterpState &S, CodePtr OpPC) {
   if (!CheckShift<RT>(S, OpPC, RHS, Bits))
     return false;
 
-  Integral<LT::bitWidth(), false> R;
-  Integral<LT::bitWidth(), false>::shiftRight(LHS.toUnsigned(), RHS, Bits, &R);
-  S.Stk.push<LT>(R);
+  unsigned URHS = static_cast<unsigned>(RHS);
+  S.Stk.push<LT>(LT::from(static_cast<unsigned>(LHS) >> URHS, LHS.bitWidth()));
   return true;
 }
 
@@ -1351,9 +1350,9 @@ inline bool Shl(InterpState &S, CodePtr OpPC) {
   if (!CheckShift<RT>(S, OpPC, RHS, Bits))
     return false;
 
-  Integral<LT::bitWidth(), false> R;
-  Integral<LT::bitWidth(), false>::shiftLeft(LHS.toUnsigned(), RHS, Bits, &R);
-  S.Stk.push<LT>(R);
+  unsigned URHS = static_cast<unsigned>(RHS);
+  S.Stk.push<LT>(LT::from(static_cast<unsigned>(LHS) << URHS, LHS.bitWidth()));
+
   return true;
 }
 
