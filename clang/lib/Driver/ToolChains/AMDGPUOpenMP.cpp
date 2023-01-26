@@ -160,7 +160,7 @@ AMDGPUOpenMPToolChain::getDeviceLibs(const llvm::opt::ArgList &Args) const {
   if (Args.hasArg(options::OPT_nogpulib))
     return {};
 
-  if (!RocmInstallation.hasDeviceLibrary()) {
+  if (!RocmInstallation->hasDeviceLibrary()) {
     getDriver().Diag(diag::err_drv_no_rocm_device_lib) << 0;
     return {};
   }
