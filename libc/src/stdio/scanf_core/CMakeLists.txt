@@ -80,6 +80,7 @@ add_object_library(
     string_converter.cpp
     int_converter.cpp
     float_converter.cpp
+    ptr_converter.cpp
   HDRS
     converter.h
     converter_utils.h
@@ -87,6 +88,7 @@ add_object_library(
     string_converter.h
     float_converter.h
     current_pos_converter.h
+    ptr_converter.h
   DEPENDS
     .reader
     .core_structs

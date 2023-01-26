@@ -79,7 +79,7 @@ int convert_int(Reader *reader, const FormatSection &to_conv) {
     is_signed = true;
   } else if (to_conv.conv_name == 'o') {
     base = 8;
-  } else if (to_lower(to_conv.conv_name) == 'x') {
+  } else if (to_lower(to_conv.conv_name) == 'x' || to_conv.conv_name == 'p') {
     base = 16;
   } else if (to_conv.conv_name == 'd') {
     base = 10;
