@@ -118,10 +118,12 @@ LogicalResult applyOpPatternsAndFold(Operation *op,
 ///
 /// Returns success if the iterative process converged and no more patterns can
 /// be matched. `changed` is set to true if the IR was modified at all.
+/// `allOpsErased` is set to true if all ops in `ops` were erased.
 LogicalResult applyOpPatternsAndFold(ArrayRef<Operation *> ops,
                                      const FrozenRewritePatternSet &patterns,
                                      GreedyRewriteStrictness strictMode,
-                                     bool *changed = nullptr);
+                                     bool *changed = nullptr,
+                                     bool *allErased = nullptr);
 
 } // namespace mlir
 
