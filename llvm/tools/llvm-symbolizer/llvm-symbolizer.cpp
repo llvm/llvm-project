@@ -443,13 +443,7 @@ int main(int argc, char **argv) {
 
   LLVMSymbolizer Symbolizer(Opts);
 
-  // A debuginfod lookup could succeed if a HTTP client is available and at
-  // least one backing URL is configured.
-  bool ShouldUseDebuginfodByDefault =
-      HTTPClient::isAvailable() &&
-      !ExitOnErr(getDefaultDebuginfodUrls()).empty();
-  if (Args.hasFlag(OPT_debuginfod, OPT_no_debuginfod,
-                   ShouldUseDebuginfodByDefault))
+  if (Args.hasFlag(OPT_debuginfod, OPT_no_debuginfod, canUseDebuginfod()))
     enableDebuginfod(Symbolizer, Args);
 
   if (Args.hasArg(OPT_filter_markup)) {
