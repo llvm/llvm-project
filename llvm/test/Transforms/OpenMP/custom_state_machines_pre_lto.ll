@@ -2,7 +2,9 @@
 ; RUN: opt --mtriple=amdgcn-amd-amdhsa --data-layout=A5 -S -passes=openmp-opt < %s | FileCheck %s --check-prefix=AMDGPU
 ; RUN: opt --mtriple=nvptx64--         -S -passes=openmp-opt < %s | FileCheck %s --check-prefix=NVPTX
 ; RUN: opt --mtriple=amdgcn-amd-amdhsa --data-layout=A5 -openmp-opt-disable-state-machine-rewrite -S -passes=openmp-opt < %s | FileCheck %s --check-prefix=AMDGPU
+; RUN: opt --mtriple=amdgcn-amd-amdhsa --data-layout=A5 -S -passes=openmp-opt-postlink < %s | FileCheck %s --check-prefix=AMDGPU
 ; RUN: opt --mtriple=nvptx64--         -openmp-opt-disable-state-machine-rewrite -S -passes=openmp-opt < %s | FileCheck %s --check-prefix=NVPTX
+; RUN: opt --mtriple=nvptx64--         -S -passes=openmp-opt-postlink < %s | FileCheck %s --check-prefix=NVPTX
 
 ;; void p0(void);
 ;; void p1(void);

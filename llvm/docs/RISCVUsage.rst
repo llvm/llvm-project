@@ -144,6 +144,9 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-zcf``
   LLVM implements the `0.70 draft specification <https://github.com/riscv/riscv-code-size-reduction/releases/tag/V0.70.1-TOOLCHAIN-DEV>`_.
 
+``experimental-zcb``
+  LLVM implements the `0.70 draft specification <https://github.com/riscv/riscv-code-size-reduction/releases/tag/V0.70.1-TOOLCHAIN-DEV>`_.
+
 ``experimental-zihintntl``
   LLVM implements the `0.2 draft specification <https://github.com/riscv/riscv-isa-manual/releases/tag/draft-20220831-bf5a151>`_.
 

@@ -141,7 +141,10 @@ def should_keep_microsoft_symbol(symbol, calling_convention_decoration):
             # Remove calling convention decoration from names
             match = re.match('[_@]([^@]+)', symbol)
             if match:
-                return match.group(1)
+                symbol = match.group(1)
+        # Discard floating point/SIMD constants.
+        if symbol.startswith(("__xmm@", "__ymm@", "__real@")):
+            return None
         return symbol
     # Function template instantiations start with ?$; keep the instantiations of
     # clang::Type::getAs, as some of them are explipict specializations that are
@@ -164,6 +167,9 @@ def should_keep_microsoft_symbol(symbol, calling_convention_decoration):
     # that mentions an anonymous namespace can be discarded, as the anonymous
     # namespace doesn't exist outside of that translation unit.
     elif re.search('\?A(0x\w+)?@', symbol):
+        return None
+    # Skip X86GenMnemonicTables functions, they are not exposed from llvm/include/.
+    elif re.match('\?is[A-Z0-9]*@X86@llvm', symbol):
         return None
     # Keep mangled llvm:: and clang:: function symbols. How we detect these is a
     # bit of a mess and imprecise, but that avoids having to completely demangle
