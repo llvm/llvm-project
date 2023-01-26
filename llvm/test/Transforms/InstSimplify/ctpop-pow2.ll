@@ -44,8 +44,7 @@ define i8 @ctpop_x_nz_and_negx(i8 %x) {
 ; CHECK-NEXT:    [[X1:%.*]] = or i8 [[X:%.*]], 1
 ; CHECK-NEXT:    [[V0:%.*]] = sub i8 0, [[X1]]
 ; CHECK-NEXT:    [[V1:%.*]] = and i8 [[X1]], [[V0]]
-; CHECK-NEXT:    [[CNT:%.*]] = call i8 @llvm.ctpop.i8(i8 [[V1]])
-; CHECK-NEXT:    ret i8 [[CNT]]
+; CHECK-NEXT:    ret i8 [[V1]]
 ;
   %x1 = or i8 %x, 1
   %v0 = sub i8 0, %x1
