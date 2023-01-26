@@ -950,8 +950,7 @@ define i1 @supported_intrinsic_range(i16 %x) {
 ; CHECK-LABEL: @supported_intrinsic_range(
 ; CHECK-NEXT:    [[ABS:%.*]] = call i16 @llvm.abs.i16(i16 [[X:%.*]], i1 false), !range [[RNG5]]
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i16 [[ABS]] to i8
-; CHECK-NEXT:    [[RES:%.*]] = icmp ult i8 [[TRUNC]], 8
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %abs = call i16 @llvm.abs.i16(i16 %x, i1 false), !range !{i16 0, i16 8}
   %trunc = trunc i16 %abs to i8
