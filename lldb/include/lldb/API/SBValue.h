@@ -309,7 +309,9 @@ public:
                                    const SBExpressionOptions &options,
                                    const char *name) const;
 
+#ifndef SWIG
   SBValue(const lldb::ValueObjectSP &value_sp);
+#endif
 
   /// Watch this value if it resides in memory.
   ///
@@ -368,6 +370,7 @@ public:
   lldb::SBWatchpoint WatchPointee(bool resolve_location, bool read, bool write,
                                   SBError &error);
 
+#ifndef SWIG
   /// Same as the protected version of GetSP that takes a locker, except that we
   /// make the
   /// locker locally in the function.  Since the Target API mutex is recursive,
@@ -380,6 +383,7 @@ public:
   ///     A ValueObjectSP of the best kind (static, dynamic or synthetic) we
   ///     can cons up, in accordance with the SBValue's settings.
   lldb::ValueObjectSP GetSP() const;
+#endif
 
 protected:
   friend class SBBlock;
