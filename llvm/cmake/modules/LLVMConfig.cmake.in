@@ -83,6 +83,11 @@ if(LLVM_ENABLE_LIBXML2)
   find_package(LibXml2)
 endif()
 
+set(LLVM_ENABLE_CURL @LLVM_ENABLE_CURL@)
+if(LLVM_ENABLE_CURL)
+  find_package(CURL)
+endif()
+
 set(LLVM_WITH_Z3 @LLVM_WITH_Z3@)
 
 set(LLVM_ENABLE_DIA_SDK @LLVM_ENABLE_DIA_SDK@)
