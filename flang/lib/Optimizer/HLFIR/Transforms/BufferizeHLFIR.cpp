@@ -331,24 +331,25 @@ struct AssociateOpConversion
   }
 };
 
-static void genFreeIfMustFree(mlir::Location loc,
-                              mlir::ConversionPatternRewriter &rewriter,
+static void genFreeIfMustFree(mlir::Location loc, fir::FirOpBuilder &builder,
                               mlir::Value var, mlir::Value mustFree) {
   auto genFree = [&]() {
-    if (var.getType().isa<fir::BaseBoxType>())
-      TODO(loc, "unbox");
-    if (!var.getType().isa<fir::HeapType>())
-      var = rewriter.create<fir::ConvertOp>(
-          loc, fir::HeapType::get(fir::unwrapRefType(var.getType())), var);
-    rewriter.create<fir::FreeMemOp>(loc, var);
+    // fir::FreeMemOp operand type must be a fir::HeapType.
+    mlir::Type heapType = fir::HeapType::get(
+        hlfir::getFortranElementOrSequenceType(var.getType()));
+    if (var.getType().isa<fir::BaseBoxType, fir::BoxCharType>())
+      var = builder.create<fir::BoxAddrOp>(loc, heapType, var);
+    else if (!var.getType().isa<fir::HeapType>())
+      var = builder.create<fir::ConvertOp>(loc, heapType, var);
+    builder.create<fir::FreeMemOp>(loc, var);
   };
   if (auto cstMustFree = fir::getIntIfConstant(mustFree)) {
     if (*cstMustFree != 0)
       genFree();
-    // else, nothing to do.
+    // else, mustFree is false, nothing to do.
     return;
   }
-  TODO(loc, "conditional free");
+  builder.genIfThen(loc, mustFree).genThen(genFree).end();
 }
 
 struct EndAssociateOpConversion
@@ -360,7 +361,9 @@ struct EndAssociateOpConversion
   matchAndRewrite(hlfir::EndAssociateOp endAssociate, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = endAssociate->getLoc();
-    genFreeIfMustFree(loc, rewriter, adaptor.getVar(), adaptor.getMustFree());
+    auto module = endAssociate->getParentOfType<mlir::ModuleOp>();
+    fir::FirOpBuilder builder(rewriter, fir::getKindMapping(module));
+    genFreeIfMustFree(loc, builder, adaptor.getVar(), adaptor.getMustFree());
     rewriter.eraseOp(endAssociate);
     return mlir::success();
   }
@@ -378,9 +381,11 @@ struct DestroyOpConversion
     mlir::Location loc = destroy->getLoc();
     mlir::Value bufferizedExpr = getBufferizedExprStorage(adaptor.getExpr());
     if (!fir::isa_trivial(bufferizedExpr.getType())) {
+      auto module = destroy->getParentOfType<mlir::ModuleOp>();
+      fir::FirOpBuilder builder(rewriter, fir::getKindMapping(module));
       mlir::Value mustFree = getBufferizedExprMustFreeFlag(adaptor.getExpr());
       mlir::Value firBase = hlfir::Entity(bufferizedExpr).getFirBase();
-      genFreeIfMustFree(loc, rewriter, firBase, mustFree);
+      genFreeIfMustFree(loc, builder, firBase, mustFree);
     }
     rewriter.eraseOp(destroy);
     return mlir::success();
