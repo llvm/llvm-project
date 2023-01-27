@@ -25,19 +25,6 @@ static unsigned checkArchVersion(llvm::StringRef Arch) {
   return 0;
 }
 
-uint64_t AArch64::getDefaultExtensions(StringRef CPU,
-                                       const AArch64::ArchInfo &AI) {
-  if (CPU == "generic")
-    return AI.DefaultExts;
-
-  // Note: this now takes cpu aliases into account
-  std::optional<CpuInfo> Cpu = parseCpu(CPU);
-  if (!Cpu)
-    return AI.DefaultExts;
-
-  return Cpu->Arch.DefaultExts | Cpu->DefaultExtensions;
-}
-
 void AArch64::getFeatureOption(StringRef Name, std::string &Feature) {
   for (const auto &E : llvm::AArch64::Extensions) {
     if (Name == E.Name) {
