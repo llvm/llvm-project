@@ -2244,6 +2244,55 @@ llvm.func @omp_task(%x: i32, %y: i32, %zaddr: !llvm.ptr<i32>) {
 
 // -----
 
+// CHECK-LABEL: define void @omp_task_with_deps
+// CHECK-SAME: (ptr %[[zaddr:.+]])
+// CHECK:  %[[dep_arr_addr:.+]] = alloca [1 x %struct.kmp_dep_info], align 8
+// CHECK:  %[[dep_arr_addr_0:.+]] = getelementptr inbounds [1 x %struct.kmp_dep_info], ptr %[[dep_arr_addr]], i64 0, i64 0
+// CHECK:  %[[dep_arr_addr_0_val:.+]] = getelementptr inbounds %struct.kmp_dep_info, ptr %[[dep_arr_addr_0]], i32 0, i32 0
+// CHECK:  %[[dep_arr_addr_0_val_int:.+]] = ptrtoint ptr %0 to i64
+// CHECK:  store i64 %[[dep_arr_addr_0_val_int]], ptr %[[dep_arr_addr_0_val]], align 4
+// CHECK:  %[[dep_arr_addr_0_size:.+]] = getelementptr inbounds %struct.kmp_dep_info, ptr %[[dep_arr_addr_0]], i32 0, i32 1
+// CHECK:  store i64 8, ptr %[[dep_arr_addr_0_size]], align 4
+// CHECK:  %[[dep_arr_addr_0_kind:.+]] = getelementptr inbounds %struct.kmp_dep_info, ptr %[[dep_arr_addr_0]], i32 0, i32 2
+// CHECK: store i8 1, ptr %[[dep_arr_addr_0_kind]], align 1
+llvm.func @omp_task_with_deps(%zaddr: !llvm.ptr<i32>) {
+  // CHECK: %[[omp_global_thread_num:.+]] = call i32 @__kmpc_global_thread_num({{.+}})
+  // CHECK: %[[task_data:.+]] = call ptr @__kmpc_omp_task_alloc
+  // CHECK-SAME: (ptr @{{.+}}, i32 %[[omp_global_thread_num]], i32 1, i64 0,
+  // CHECK-SAME:  i64 0, ptr @[[wrapper_fn:.+]])
+  // CHECK: call i32 @__kmpc_omp_task_with_deps(ptr @{{.+}}, i32 %[[omp_global_thread_num]], ptr %[[task_data]], {{.*}})
+  omp.task depend(taskdependin -> %zaddr : !llvm.ptr<i32>) {
+    %n = llvm.mlir.constant(1 : i64) : i64
+    %valaddr = llvm.alloca %n x i32 : (i64) -> !llvm.ptr<i32>
+    %val = llvm.load %valaddr : !llvm.ptr<i32>
+    %double = llvm.add %val, %val : i32
+    llvm.store %double, %valaddr : !llvm.ptr<i32>
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK: define internal void @[[outlined_fn:.+]]()
+// CHECK: task.alloca{{.*}}:
+// CHECK:   br label %[[task_body:[^, ]+]]
+// CHECK: [[task_body]]:
+// CHECK:   br label %[[task_region:[^, ]+]]
+// CHECK: [[task_region]]:
+// CHECK:   %[[alloca:.+]] = alloca i32, i64 1
+// CHECK:   %[[val:.+]] = load i32, ptr %[[alloca]]
+// CHECK:   %[[newval:.+]] = add i32 %[[val]], %[[val]]
+// CHECK:   store i32 %[[newval]], ptr %{{[^, ]+}}
+// CHECK:   br label %[[exit_stub:[^, ]+]]
+// CHECK: [[exit_stub]]:
+// CHECK:   ret void
+
+// CHECK: define i32 @[[wrapper_fn]](i32 %{{.+}}) {
+// CHECK:   call void @[[outlined_fn]]()
+// CHECK:   ret i32 0
+// CHECK: }
+
+// -----
+
 // CHECK-LABEL: define void @omp_task
 // CHECK-SAME: (i32 %[[x:.+]], i32 %[[y:.+]], ptr %[[zaddr:.+]])
 module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu"} {
