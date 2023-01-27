@@ -275,6 +275,8 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   // Is the type associated with taskVal a coroutine task? Uses IsTaskTyCache
   // or compute it from associated AST node.
   bool isTaskType(mlir::Value taskVal);
+  // Addresses of coroutine Tasks found in the current function.
+  SmallPtrSet<mlir::Value, 8> tasks;
 
   ///
   /// Scope, context and guards
@@ -440,6 +442,7 @@ void LifetimeCheckPass::kill(const State &s, InvalidStyle invalidStyle,
   if (invalidStyle == InvalidStyle::EndOfScope) {
     owners.erase(v);
     ptrs.erase(v);
+    tasks.erase(v);
     getPmap().erase(v);
   }
 }
@@ -867,11 +870,19 @@ void LifetimeCheckPass::checkCoroTaskStore(StoreOp storeOp) {
   // pset of %task - this effectively leads to some invalidation of %task
   // when %arg0 finishes its lifetime at the end of the enclosing cir.scope.
   if (auto call = dyn_cast<mlir::cir::CallOp>(taskTmp.getDefiningOp())) {
+    bool potentialTaintedTask = false;
     for (auto arg : call.getOperands()) {
       auto alloca = dyn_cast<mlir::cir::AllocaOp>(arg.getDefiningOp());
-      if (alloca && currScope->localValues.count(alloca))
+      if (alloca && currScope->localValues.count(alloca)) {
         getPmap()[taskAddr].insert(State::getLocalValue(alloca));
+        potentialTaintedTask = true;
+      }
     }
+
+    // Task are only interesting when there are local addresses leaking
+    // via the coroutine creation, only track those.
+    if (potentialTaintedTask)
+      tasks.insert(taskAddr);
     return;
   }
   llvm_unreachable("expecting cir.call defining op");
@@ -1228,11 +1239,15 @@ void LifetimeCheckPass::checkForOwnerAndPointerArguments(CallOp callOp,
     //
     // - Owners: always invalidate.
     // - Pointers: always check for deref.
+    // - Coroutine tasks: check the task for deref when calling methods of
+    //   the task, but also when the passing the task around to other functions.
     //
     // FIXME: even before 2.5 we should only invalidate non-const param types.
     if (owners.count(arg))
       ownersToInvalidate.insert(arg);
     if (ptrs.count(arg))
+      ptrsToDeref.insert(arg);
+    if (tasks.count(arg))
       ptrsToDeref.insert(arg);
   }
 
@@ -1247,7 +1262,12 @@ void LifetimeCheckPass::checkForOwnerAndPointerArguments(CallOp callOp,
 void LifetimeCheckPass::checkOtherMethodsAndFunctions(
     CallOp callOp, const clang::CXXMethodDecl *m) {
   unsigned firstArgIdx = 0;
-  if (m) // Skip 'this' pointer
+
+  // Looks at a method 'this' pointer:
+  // - If a method call to a class we consider interesting, like a method
+  //   call on a coroutine task (promise_type).
+  // - Skip the 'this' for any other method.
+  if (m && !tasks.count(callOp.getOperand(firstArgIdx)))
     firstArgIdx++;
   checkForOwnerAndPointerArguments(callOp, firstArgIdx);
 }
