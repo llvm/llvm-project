@@ -502,6 +502,13 @@ public:
                                    ArrayRef<CanonicalLoopInfo *> Loops,
                                    InsertPointTy ComputeIP);
 
+  /// Get the default alignment value for given target
+  ///
+  /// \param TargetTriple   Target triple
+  /// \param Features       StringMap which describes extra CPU features
+  static unsigned getOpenMPDefaultSimdAlign(const Triple &TargetTriple,
+                                            const StringMap<bool> &Features);
+
 private:
   /// Modifies the canonical loop to be a statically-scheduled workshare loop.
   ///
