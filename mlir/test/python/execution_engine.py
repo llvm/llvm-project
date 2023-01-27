@@ -63,7 +63,7 @@ run(testInvalidModule)
 
 def lowerToLLVM(module):
   pm = PassManager.parse(
-      "builtin.module(convert-complex-to-llvm,convert-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts)")
+      "builtin.module(convert-complex-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts)")
   pm.run(module)
   return module
 

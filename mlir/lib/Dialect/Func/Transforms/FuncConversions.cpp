@@ -29,6 +29,11 @@ struct CallOpSignatureConversion : public OpConversionPattern<CallOp> {
                                            convertedResults)))
       return failure();
 
+    // If this isn't a one-to-one type mapping, we don't know how to aggregate
+    // the results.
+    if (callOp->getNumResults() != convertedResults.size())
+      return failure();
+
     // Substitute with the new result types from the corresponding FuncType
     // conversion.
     rewriter.replaceOpWithNewOp<CallOp>(

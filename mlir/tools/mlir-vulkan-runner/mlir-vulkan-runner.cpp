@@ -70,7 +70,7 @@ static LogicalResult runMLIRPasses(Operation *op,
 
   passManager.addPass(createConvertGpuLaunchFuncToVulkanLaunchFuncPass());
   LowerToLLVMOptions llvmOptions(module.getContext(), DataLayout(module));
-  passManager.addPass(createMemRefToLLVMConversionPass());
+  passManager.addPass(createFinalizeMemRefToLLVMConversionPass());
   passManager.addPass(createConvertVectorToLLVMPass());
   passManager.nest<func::FuncOp>().addPass(LLVM::createRequestCWrappersPass());
   passManager.addPass(createConvertFuncToLLVMPass(llvmOptions));
