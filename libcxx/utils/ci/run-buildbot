@@ -44,7 +44,7 @@ GIT_CLANG_FORMAT    The git-clang-format binary to use in the 'format' builder.
                     when running the 'format' builder.
 
 ENABLE_CLANG_TIDY   Whether to compile and run clang-tidy checks. This variable
-                    is optional
+                    is optional.
 EOF
 }
 

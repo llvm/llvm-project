@@ -100,6 +100,8 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
+* Assembler support for the Zcb extension was added.
+
 Changes to the WebAssembly Backend
 ----------------------------------
 
