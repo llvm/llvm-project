@@ -125,8 +125,8 @@ define i16 @sge_with_sext_to_zext_conversion(i8 %a)  {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[SEXT:%.*]] = zext i8 [[A]] to i16
-; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw i16 [[SEXT]], 1
-; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw i16 [[SEXT]], -128
+; CHECK-NEXT:    [[ADD_1:%.*]] = add i16 [[SEXT]], 1
+; CHECK-NEXT:    [[ADD_2:%.*]] = add i16 [[SEXT]], -128
 ; CHECK-NEXT:    [[ADD_3:%.*]] = add i16 [[SEXT]], -127
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i16 [[ADD_1]], [[ADD_2]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i16 [[RES_1]], [[ADD_3]]
