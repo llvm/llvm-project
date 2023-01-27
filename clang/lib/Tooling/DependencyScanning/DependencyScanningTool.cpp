@@ -608,6 +608,23 @@ Error FullDependencyConsumer::initialize(CompilerInstance &ScanInstance,
   return Error::success();
 }
 
+/// Ensure that all files reachable from imported modules/pch are tracked.
+/// These could be loaded lazily during compilation.
+static void trackASTFileInputs(CompilerInstance &CI,
+                               llvm::cas::CachingOnDiskFileSystem &CacheFS) {
+  auto Reader = CI.getASTReader();
+  if (!Reader)
+    return;
+
+  for (serialization::ModuleFile &MF : Reader->getModuleManager()) {
+    Reader->visitInputFiles(
+        MF, /*IncludeSystem=*/true, /*Complain=*/false,
+        [](const serialization::InputFile &IF, bool isSystem) {
+          // Visiting input files triggers the file system lookup.
+        });
+  }
+}
+
 Error FullDependencyConsumer::finalize(CompilerInstance &ScanInstance,
                                        CompilerInvocation &NewInvocation) {
   if (CacheFS) {
@@ -622,6 +639,8 @@ Error FullDependencyConsumer::finalize(CompilerInstance &ScanInstance,
         NewInvocation.getCodeGenOpts().ProfileInstrumentUsePath);
     (void)CacheFS->status(NewInvocation.getCodeGenOpts().SampleProfileFile);
     (void)CacheFS->status(NewInvocation.getCodeGenOpts().ProfileRemappingFile);
+
+    trackASTFileInputs(ScanInstance, *CacheFS);
 
     auto E = CacheFS
                  ->createTreeFromNewAccesses(
@@ -669,6 +688,8 @@ Error FullDependencyConsumer::initializeModuleBuild(
 Error FullDependencyConsumer::finalizeModuleBuild(
     CompilerInstance &ModuleScanInstance) {
   if (CacheFS) {
+    trackASTFileInputs(ModuleScanInstance, *CacheFS);
+
     std::optional<cas::CASID> RootID;
     auto E = CacheFS
                  ->createTreeFromNewAccesses(
