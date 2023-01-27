@@ -132,3 +132,28 @@ int bar() { return weak; }
 // LIBRARY-GLOBAL-DEFINED: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx1030 {{.*}}.o {{.*}}.o
 // LIBRARY-GLOBAL-DEFINED-NOT: {{.*}}gfx1030{{.*}}.o
 // LIBRARY-GLOBAL-DEFINED: clang{{.*}} -o {{.*}}.img --target=nvptx64-nvidia-cuda -march=sm_70 {{.*}}.s {{.*}}.o
+
+//
+// Check that we can use --[no-]whole-archive to control extraction.
+//
+// RUN: %clang -cc1 %s -triple nvptx64-nvidia-cuda -emit-llvm-bc -DGLOBAL -o %t.nvptx.global.bc
+// RUN: %clang -cc1 %s -triple amdgcn-amd-amdhsa -emit-llvm-bc -DGLOBAL -o %t.amdgpu.global.bc
+// RUN: clang-offload-packager -o %t-lib.out \
+// RUN:   --image=file=%t.nvptx.global.bc,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70 \
+// RUN:   --image=file=%t.nvptx.global.bc,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_52 \
+// RUN:   --image=file=%t.amdgpu.global.bc,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx1030 \
+// RUN:   --image=file=%t.amdgpu.global.bc,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx90a
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t-lib.out
+// RUN: llvm-ar rcs %t.a %t.o
+// RUN: clang-offload-packager -o %t.out \
+// RUN:   --image=file=%t.elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70 \
+// RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx1030
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld -- %t.o --whole-archive %t.a -o a.out 2>&1 \
+// RUN: | FileCheck %s --check-prefix=LIBRARY-WHOLE-ARCHIVE
+
+// LIBRARY-WHOLE-ARCHIVE: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx1030 {{.*}}.o {{.*}}.o
+// LIBRARY-WHOLE-ARCHIVE: clang{{.*}} -o {{.*}}.img --target=nvptx64-nvidia-cuda -march=sm_52 {{.*}}.s
+// LIBRARY-WHOLE-ARCHIVE: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx90a {{.*}}.o
+// LIBRARY-WHOLE-ARCHIVE: clang{{.*}} -o {{.*}}.img --target=nvptx64-nvidia-cuda -march=sm_70 {{.*}}.s {{.*}}.o
