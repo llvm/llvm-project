@@ -11,6 +11,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
 
@@ -262,6 +263,16 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   void printPset(PSetType &pset, llvm::raw_ostream &OS = llvm::errs());
   LLVM_DUMP_METHOD void dumpPmap(PMapType &pmap);
   LLVM_DUMP_METHOD void dumpCurrentPmap();
+
+  ///
+  /// Coroutine tasks (promise_type)
+  /// ----------------------------------------------
+
+  // Track types we already know to be a coroutine task (promise_type)
+  llvm::DenseMap<mlir::Type, bool> IsTaskTyCache;
+  // Is the type associated with taskVal a coroutine task? Uses IsTaskTyCache
+  // or compute it from associated AST node.
+  bool isTaskType(mlir::Value taskVal);
 
   ///
   /// Scope, context and guards
@@ -1227,18 +1238,45 @@ bool LifetimeCheckPass::isOwnerOrPointerClassMethod(
   return false;
 }
 
+bool LifetimeCheckPass::isTaskType(mlir::Value taskVal) {
+  auto ty = taskVal.getType();
+  if (IsTaskTyCache.count(ty))
+    return IsTaskTyCache[ty];
+
+  IsTaskTyCache[ty] = false;
+  auto taskTy = taskVal.getType().dyn_cast<mlir::cir::StructType>();
+  if (!taskTy)
+    return false;
+  auto recordDecl = taskTy.getAst()->getAstDecl();
+  auto *spec = dyn_cast<clang::ClassTemplateSpecializationDecl>(recordDecl);
+  if (!spec)
+    return false;
+
+  for (auto *sub : spec->decls()) {
+    auto *subRec = dyn_cast<clang::CXXRecordDecl>(sub);
+    if (subRec && subRec->getDeclName().isIdentifier() &&
+        subRec->getName() == "promise_type") {
+      IsTaskTyCache[ty] = true;
+      break;
+    }
+  }
+
+  return IsTaskTyCache[ty];
+}
+
 void LifetimeCheckPass::checkCall(CallOp callOp) {
   if (callOp.getNumOperands() == 0)
     return;
 
-  // Identify calls to coroutines, and start tracking which local resources
-  // might scape into one.
+  // Identify calls to coroutines and track returning temporary task types.
   //
-  // Calls to coroutines return the coroutine task, keep track of it.
-  auto callee = getCalleeFromSymbol(theModule, callOp.getCallee());
-  if (callee && callee.getCoroutine()) {
-    assert(callOp->getNumResults() > 0 &&
-           "expected coroutine initialization or resume");
+  // Note that we can't reliably know if a function is a coroutine only as
+  // part of declaration
+  auto calleeFuncOp = getCalleeFromSymbol(theModule, callOp.getCallee());
+  if (calleeFuncOp &&
+      (calleeFuncOp.getCoroutine() ||
+       (calleeFuncOp.isDeclaration() && callOp->getNumResults() > 0 &&
+        isTaskType(callOp->getResult(0))))) {
     currScope->localTempTasks.insert(callOp->getResult(0));
   }
 
