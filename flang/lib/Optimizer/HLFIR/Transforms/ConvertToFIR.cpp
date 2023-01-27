@@ -92,12 +92,26 @@ public:
            "variable to fir::ExtendedValue must not require cleanup");
 
     if (lhs.isArray()) {
+      const bool rhsIsValue = fir::isa_trivial(fir::getBase(rhsExv).getType());
+      if (rhsIsValue) {
+        // createBox can only be called for fir::ExtendedValue that are
+        // already in memory. Place the integer/real/complex/logical scalar
+        // in memory (convert to the LHS type so that i1 are allocated in
+        // a proper Fortran logical storage).
+        mlir::Type lhsValueType = lhs.getFortranElementType();
+        mlir::Value rhsVal =
+            builder.createConvert(loc, lhsValueType, fir::getBase(rhsExv));
+        mlir::Value temp = builder.create<fir::AllocaOp>(loc, lhsValueType);
+        builder.create<fir::StoreOp>(loc, rhsVal, temp);
+        rhsExv = temp;
+      }
+
       // Use the runtime for simplicity. An optimization pass will be added to
       // inline array assignment when profitable.
       auto to = fir::getBase(builder.createBox(loc, lhsExv));
       auto from = fir::getBase(builder.createBox(loc, rhsExv));
       bool cleanUpTemp = false;
-      if (mayAlias(rhs, lhs))
+      if (!rhsIsValue && mayAlias(rhs, lhs))
         std::tie(from, cleanUpTemp) = genTempFromSourceBox(loc, builder, from);
 
       auto toMutableBox = builder.createTemporary(loc, to.getType());
