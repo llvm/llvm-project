@@ -65,11 +65,14 @@
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/CallPromotionUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <cassert>
 #include <numeric>
 #include <optional>
+#include <string>
 
 using namespace llvm;
 
@@ -188,6 +191,7 @@ PIPE_OPERATOR(AAPointerInfo)
 PIPE_OPERATOR(AAAssumptionInfo)
 PIPE_OPERATOR(AAUnderlyingObjects)
 PIPE_OPERATOR(AAAddressSpace)
+PIPE_OPERATOR(AAIndirectCallInfo)
 
 #undef PIPE_OPERATOR
 
@@ -10560,15 +10564,12 @@ struct AACallEdgesCallSite : public AACallEdgesImpl {
       return Change;
     }
 
-    // Process callee metadata if available.
-    if (auto *MD = getCtxI()->getMetadata(LLVMContext::MD_callees)) {
-      for (const auto &Op : MD->operands()) {
-        Function *Callee = mdconst::dyn_extract_or_null<Function>(Op);
-        if (Callee)
-          addCalledFunction(Callee, Change);
-      }
-      return Change;
-    }
+    if (CB->isIndirectCall())
+      if (auto *IndirectCallAA = A.getAAFor<AAIndirectCallInfo>(
+              *this, getIRPosition(), DepClassTy::OPTIONAL))
+        if (IndirectCallAA->foreachCallee(
+                [&](Function *Fn) { return VisitValue(*Fn, CB); }))
+          return Change;
 
     // The most simple case.
     ProcessCalledOperand(CB->getCalledOperand(), CB);
@@ -12051,6 +12052,224 @@ struct AAUnderlyingObjectsFunction final : AAUnderlyingObjectsImpl {
 };
 } // namespace
 
+/// ------------------------ Indirect Call Info  -------------------------------
+namespace {
+struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
+  AAIndirectCallInfoCallSite(const IRPosition &IRP, Attributor &A)
+      : AAIndirectCallInfo(IRP, A) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    auto *MD = getCtxI()->getMetadata(LLVMContext::MD_callees);
+    if (!MD)
+      return;
+    for (const auto &Op : MD->operands())
+      if (Function *Callee = mdconst::dyn_extract_or_null<Function>(Op))
+        PotentialCallees.insert(Callee);
+  }
+
+  ChangeStatus updateImpl(Attributor &A) override {
+    CallBase *CB = cast<CallBase>(getCtxI());
+    Value *FP = CB->getCalledOperand();
+
+    SmallSetVector<Function *, 4> AssumedCalleesNow;
+    bool AllCalleesKnownNow = AllCalleesKnown;
+
+    // Use simplification to find potential callees, if !callees was present,
+    // fallback to that set if necessary.
+    bool UsedAssumedInformation;
+    SmallVector<AA::ValueAndContext> Values;
+    if (!A.getAssumedSimplifiedValues(IRPosition::value(*FP), this, Values,
+                                      AA::ValueScope::AnyScope,
+                                      UsedAssumedInformation)) {
+      if (PotentialCallees.empty())
+        return indicatePessimisticFixpoint();
+      AssumedCalleesNow.set_union(PotentialCallees);
+    }
+
+    // Check simplification result, prune known UB callees, also restrict it to
+    // the !callees set, if present.
+    for (auto &VAC : Values) {
+      if (isa<UndefValue>(VAC.getValue()))
+        continue;
+      if (isa<ConstantPointerNull>(VAC.getValue()) &&
+          VAC.getValue()->getType()->getPointerAddressSpace() == 0)
+        continue;
+      // TODO: Check for known UB, e.g., poison + noundef.
+      if (auto *VACFn = dyn_cast<Function>(VAC.getValue())) {
+        if (PotentialCallees.empty() || PotentialCallees.count(VACFn))
+          AssumedCalleesNow.insert(VACFn);
+        continue;
+      }
+      if (!PotentialCallees.empty()) {
+        AssumedCalleesNow.set_union(PotentialCallees);
+        break;
+      }
+      AllCalleesKnownNow = false;
+    }
+
+    // If we can't specialize at all, give up now.
+    if (!AllCalleesKnownNow && AssumedCalleesNow.empty())
+      return indicatePessimisticFixpoint();
+
+    if (AssumedCalleesNow == AssumedCalles &&
+        AllCalleesKnown == AllCalleesKnownNow)
+      return ChangeStatus::UNCHANGED;
+
+    std::swap(AssumedCalles, AssumedCalleesNow);
+    AllCalleesKnown = AllCalleesKnownNow;
+    return ChangeStatus::CHANGED;
+  }
+
+  /// See AbstractAttribute::manifest(...).
+  ChangeStatus manifest(Attributor &A) override {
+
+    ChangeStatus Changed = ChangeStatus::UNCHANGED;
+    CallBase *CB = cast<CallBase>(getCtxI());
+    Value *FP = CB->getCalledOperand();
+
+    bool CBIsVoid = CB->getType()->isVoidTy();
+    Instruction *IP = CB;
+    FunctionType *CSFT = CB->getFunctionType();
+    SmallVector<Value *> CSArgs(CB->arg_begin(), CB->arg_end());
+
+    // If we know all callees and there are none, the call site is (effectively)
+    // dead (or UB).
+    if (AssumedCalles.empty()) {
+      assert(AllCalleesKnown &&
+             "Expected all callees to be known if there are none.");
+      A.changeToUnreachableAfterManifest(CB);
+      return ChangeStatus::CHANGED;
+    }
+
+    // Special handling for the single callee case.
+    if (AllCalleesKnown && AssumedCalles.size() == 1) {
+      auto *NewCallee = AssumedCalles.front();
+      if (isLegalToPromote(*CB, NewCallee)) {
+        promoteCall(*CB, NewCallee, nullptr);
+        return ChangeStatus::CHANGED;
+      }
+      Instruction *NewCall = CallInst::Create(FunctionCallee(CSFT, NewCallee),
+                                              CSArgs, CB->getName(), CB);
+      if (!CBIsVoid)
+        A.changeAfterManifest(IRPosition::callsite_returned(*CB), *NewCall);
+      A.deleteAfterManifest(*CB);
+      return ChangeStatus::CHANGED;
+    }
+
+    // For each potential value we create a conditional
+    //
+    // ```
+    // if (ptr == value) value(args);
+    // else ...
+    // ```
+    //
+    ICmpInst *LastCmp = nullptr;
+    SmallVector<std::pair<CallInst *, Instruction *>> NewCalls;
+    for (Function *NewCallee : AssumedCalles) {
+      LastCmp = new ICmpInst(IP, llvm::CmpInst::ICMP_EQ, FP, NewCallee);
+      Instruction *ThenTI =
+          SplitBlockAndInsertIfThen(LastCmp, IP, /* Unreachable */ false);
+      BasicBlock *CBBB = CB->getParent();
+      auto *SplitTI = cast<BranchInst>(LastCmp->getNextNode());
+      BasicBlock *ElseBB;
+      if (IP == CB) {
+        ElseBB = BasicBlock::Create(ThenTI->getContext(), "",
+                                    ThenTI->getFunction(), CBBB);
+        IP = BranchInst::Create(CBBB, ElseBB);
+        SplitTI->replaceUsesOfWith(CBBB, ElseBB);
+      } else {
+        ElseBB = IP->getParent();
+        ThenTI->replaceUsesOfWith(ElseBB, CBBB);
+      }
+      CastInst *RetBC = nullptr;
+      CallInst *NewCall = nullptr;
+      if (isLegalToPromote(*CB, NewCallee)) {
+        auto *CBClone = cast<CallBase>(CB->clone());
+        CBClone->insertBefore(ThenTI);
+        NewCall = &cast<CallInst>(promoteCall(*CBClone, NewCallee, &RetBC));
+      } else {
+        NewCall = CallInst::Create(FunctionCallee(CSFT, NewCallee), CSArgs,
+                                   CB->getName(), ThenTI);
+      }
+      NewCalls.push_back({NewCall, RetBC});
+    }
+
+    // Check if we need the fallback indirect call still.
+    if (AllCalleesKnown) {
+      LastCmp->replaceAllUsesWith(ConstantInt::getTrue(LastCmp->getContext()));
+      LastCmp->eraseFromParent();
+      new UnreachableInst(IP->getContext(), IP);
+      IP->eraseFromParent();
+    } else {
+      auto *CBClone = cast<CallInst>(CB->clone());
+      CBClone->setName(CB->getName());
+      CBClone->insertBefore(IP);
+      NewCalls.push_back({CBClone, nullptr});
+    }
+
+    // Check if we need a PHI to merge the results.
+    if (!CBIsVoid) {
+      auto *PHI = PHINode::Create(CB->getType(), NewCalls.size(),
+                                  CB->getName() + ".phi",
+                                  &*CB->getParent()->getFirstInsertionPt());
+      for (auto &It : NewCalls) {
+        CallBase *NewCall = It.first;
+        Instruction *CallRet = It.second ? It.second : It.first;
+        if (CallRet->getType() == CB->getType())
+          PHI->addIncoming(CallRet, CallRet->getParent());
+        else if (NewCall->getType()->isVoidTy())
+          PHI->addIncoming(PoisonValue::get(CB->getType()),
+                           NewCall->getParent());
+        else
+          llvm_unreachable("Call return should match or be void!");
+      }
+      A.changeAfterManifest(IRPosition::callsite_returned(*CB), *PHI);
+    }
+
+    A.deleteAfterManifest(*CB);
+    Changed = ChangeStatus::CHANGED;
+
+    return Changed;
+  }
+
+  /// See AbstractAttribute::getAsStr().
+  const std::string getAsStr(Attributor *A) const override {
+    return std::string(AllCalleesKnown ? "eliminate" : "specialize") +
+           " indirect call site with " + std::to_string(AssumedCalles.size()) +
+           " functions";
+  }
+
+  void trackStatistics() const override {
+    if (AllCalleesKnown) {
+      STATS_DECLTRACK(
+          Eliminated, CallSites,
+          "Number of indirect call sites eliminated via specialization")
+    } else {
+      STATS_DECLTRACK(Specialized, CallSites,
+                      "Number of indirect call sites specialized")
+    }
+  }
+
+  bool foreachCallee(function_ref<bool(Function *)> CB) const override {
+    return isValidState() && AllCalleesKnown && all_of(AssumedCalles, CB);
+  }
+
+private:
+  /// If the !callee metadata was present, this set will contain all potential
+  /// callees (superset).
+  SmallSetVector<Function *, 4> PotentialCallees;
+
+  /// This set contains all currently assumed calllees, which might grow over
+  /// time.
+  SmallSetVector<Function *, 4> AssumedCalles;
+
+  /// Flag to indicate if all possible callees are in the AssumedCalles set or
+  /// if there could be others.
+  bool AllCalleesKnown = true;
+};
+} // namespace
+
 /// ------------------------ Address Space  ------------------------------------
 namespace {
 struct AAAddressSpaceImpl : public AAAddressSpace {
@@ -12259,6 +12478,7 @@ const char AAPointerInfo::ID = 0;
 const char AAAssumptionInfo::ID = 0;
 const char AAUnderlyingObjects::ID = 0;
 const char AAAddressSpace::ID = 0;
+const char AAIndirectCallInfo::ID = 0;
 
 // Macro magic to create the static generator function for attributes that
 // follow the naming scheme.
@@ -12301,6 +12521,18 @@ const char AAAddressSpace::ID = 0;
       SWITCH_PK_CREATE(CLASS, IRP, IRP_RETURNED, Returned)                     \
       SWITCH_PK_CREATE(CLASS, IRP, IRP_CALL_SITE_RETURNED, CallSiteReturned)   \
       SWITCH_PK_CREATE(CLASS, IRP, IRP_CALL_SITE_ARGUMENT, CallSiteArgument)   \
+    }                                                                          \
+    return *AA;                                                                \
+  }
+
+#define CREATE_ABSTRACT_ATTRIBUTE_FOR_ONE_POSITION(POS, SUFFIX, CLASS)         \
+  CLASS &CLASS::createForPosition(const IRPosition &IRP, Attributor &A) {      \
+    CLASS *AA = nullptr;                                                       \
+    switch (IRP.getPositionKind()) {                                           \
+      SWITCH_PK_CREATE(CLASS, IRP, POS, SUFFIX)                                \
+    default:                                                                   \
+      llvm_unreachable("Cannot create " #CLASS " for position otherthan " #POS \
+                       " position!");                                          \
     }                                                                          \
     return *AA;                                                                \
   }
@@ -12383,6 +12615,9 @@ CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAIsDead)
 CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoFree)
 CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAUnderlyingObjects)
 
+CREATE_ABSTRACT_ATTRIBUTE_FOR_ONE_POSITION(IRP_CALL_SITE, CallSite,
+                                           AAIndirectCallInfo)
+
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAHeapToStack)
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAUndefinedBehavior)
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANonConvergent)
@@ -12396,5 +12631,6 @@ CREATE_NON_RET_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAMemoryBehavior)
 #undef CREATE_NON_RET_ABSTRACT_ATTRIBUTE_FOR_POSITION
 #undef CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION
 #undef CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION
+#undef CREATE_ABSTRACT_ATTRIBUTE_FOR_ONE_POSITION
 #undef SWITCH_PK_CREATE
 #undef SWITCH_PK_INV

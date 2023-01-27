@@ -5419,6 +5419,11 @@ void OpenMPOpt::registerAAsForFunction(Attributor &A, const Function &F) {
                              UsedAssumedInformation, AA::Interprocedural);
       continue;
     }
+    if (auto *CI = dyn_cast<CallBase>(&I)) {
+      if (CI->isIndirectCall())
+        A.getOrCreateAAFor<AAIndirectCallInfo>(
+            IRPosition::callsite_function(*CI));
+    }
     if (auto *SI = dyn_cast<StoreInst>(&I)) {
       A.getOrCreateAAFor<AAIsDead>(IRPosition::value(*SI));
       continue;
