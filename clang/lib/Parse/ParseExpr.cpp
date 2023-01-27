@@ -2652,12 +2652,6 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
     Comps.back().U.IdentInfo = Tok.getIdentifierInfo();
     Comps.back().LocStart = Comps.back().LocEnd = ConsumeToken();
 
-    enum class Kind { MemberAccess, ArraySubscript };
-    auto DiagExt = [&](SourceLocation Loc, Kind K) {
-      Diag(Loc, diag::ext_offsetof_member_designator)
-          << (K == Kind::ArraySubscript) << (OOK == Sema::OOK_Macro);
-    };
-
     // FIXME: This loop leaks the index expressions on error.
     while (true) {
       if (Tok.is(tok::period)) {
@@ -2671,7 +2665,6 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
           SkipUntil(tok::r_paren, StopAtSemi);
           return ExprError();
         }
-        DiagExt(Comps.back().LocStart, Kind::MemberAccess);
         Comps.back().U.IdentInfo = Tok.getIdentifierInfo();
         Comps.back().LocEnd = ConsumeToken();
       } else if (Tok.is(tok::l_square)) {
@@ -2689,7 +2682,6 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
           SkipUntil(tok::r_paren, StopAtSemi);
           return Res;
         }
-        DiagExt(Comps.back().LocStart, Kind::ArraySubscript);
         Comps.back().U.E = Res.get();
 
         ST.consumeClose();
