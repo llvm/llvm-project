@@ -19,8 +19,9 @@ def get_required_attr(config, attr_name):
 # Setup source root.
 config.test_source_root = os.path.dirname(__file__)
 
-# Choose between standalone and LSan+ASan modes.
+# Choose between standalone and LSan+(ASan|HWAsan) modes.
 lsan_lit_test_mode = get_required_attr(config, 'lsan_lit_test_mode')
+target_arch = getattr(config, 'target_arch', None)
 
 if lsan_lit_test_mode == "Standalone":
   config.name = "LeakSanitizer-Standalone"
@@ -29,6 +30,15 @@ elif lsan_lit_test_mode == "AddressSanitizer":
   config.name = "LeakSanitizer-AddressSanitizer"
   lsan_cflags = ["-fsanitize=address"]
   config.available_features.add('asan')
+  if config.host_os == 'NetBSD':
+    config.substitutions.insert(0, ('%run', config.netbsd_noaslr_prefix))
+elif lsan_lit_test_mode == "HWAddressSanitizer":
+  config.name = "LeakSanitizer-HWAddressSanitizer"
+  lsan_cflags = ["-fsanitize=hwaddress"]
+  if target_arch == "x86_64":
+    lsan_cflags = lsan_cflags + ['-fuse-ld=lld',
+        '-fsanitize-hwaddress-experimental-aliasing']
+  config.available_features.add('hwasan')
   if config.host_os == 'NetBSD':
     config.substitutions.insert(0, ('%run', config.netbsd_noaslr_prefix))
 else:
@@ -72,6 +82,9 @@ config.substitutions.append( ("%clang ", build_invocation(clang_cflags)) )
 config.substitutions.append( ("%clangxx ", build_invocation(clang_cxxflags)) )
 config.substitutions.append( ("%clang_lsan ", build_invocation(clang_lsan_cflags)) )
 config.substitutions.append( ("%clangxx_lsan ", build_invocation(clang_lsan_cxxflags)) )
+config.substitutions.append( ("%clang_hwasan ", build_invocation(clang_lsan_cflags)) )
+config.substitutions.append( ("%clangxx_hwasan ", build_invocation(clang_lsan_cxxflags)) )
+
 
 # LeakSanitizer tests are currently supported on
 # Android{aarch64, x86, x86_64}, x86-64 Linux, PowerPC64 Linux, arm Linux, mips64 Linux, s390x Linux, loongarch64 Linux and x86_64 Darwin.
