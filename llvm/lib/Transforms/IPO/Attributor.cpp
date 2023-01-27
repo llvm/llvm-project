@@ -3460,8 +3460,10 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
     Function *Callee = dyn_cast_if_present<Function>(CB.getCalledOperand());
     // TODO: Even if the callee is not known now we might be able to simplify
     //       the call/callee.
-    if (!Callee)
+    if (!Callee) {
+      getOrCreateAAFor<AAIndirectCallInfo>(CBFnPos);
       return true;
+    }
 
     // Every call site can track active assumptions.
     getOrCreateAAFor<AAAssumptionInfo>(CBFnPos);
