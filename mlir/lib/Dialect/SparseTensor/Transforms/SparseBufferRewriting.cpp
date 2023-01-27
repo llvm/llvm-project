@@ -814,11 +814,13 @@ LogicalResult matchAndRewriteSortOp(OpTy op, ValueRange xys, uint64_t nx,
     }
     operands.push_back(v);
   }
+  bool isStable =
+      (op.getAlgorithm() == SparseTensorSortKind::InsertionSortStable);
   auto insertPoint = op->template getParentOfType<func::FuncOp>();
-  SmallString<32> funcName(op.getStable() ? kSortStableFuncNamePrefix
-                                          : kSortNonstableFuncNamePrefix);
+  SmallString<32> funcName(isStable ? kSortStableFuncNamePrefix
+                                    : kSortNonstableFuncNamePrefix);
   FuncGeneratorType funcGenerator =
-      op.getStable() ? createSortStableFunc : createSortNonstableFunc;
+      isStable ? createSortStableFunc : createSortNonstableFunc;
   FlatSymbolRefAttr func =
       getMangledSortHelperFunc(rewriter, insertPoint, TypeRange(), funcName, nx,
                                ny, isCoo, operands, funcGenerator);

@@ -50,22 +50,22 @@ module {
 
     // Sort 0 elements.
     // CHECK: [10,  2,  0,  5,  1]
-    sparse_tensor.sort %i0, %x0 : memref<?xi32>
+    sparse_tensor.sort hybrid_quick_sort %i0, %x0 : memref<?xi32>
     call @printMemref1dI32(%x0) : (memref<?xi32>) -> ()
     // Stable sort.
     // CHECK: [10,  2,  0,  5,  1]
-    sparse_tensor.sort stable %i0, %x0 : memref<?xi32>
+    sparse_tensor.sort insertion_sort_stable %i0, %x0 : memref<?xi32>
     call @printMemref1dI32(%x0) : (memref<?xi32>) -> ()
 
     // Sort the first 4 elements, with the last valid value untouched.
     // CHECK: [0,  2,  5, 10,  1]
-    sparse_tensor.sort %i4, %x0 : memref<?xi32>
+    sparse_tensor.sort hybrid_quick_sort %i4, %x0 : memref<?xi32>
     call @printMemref1dI32(%x0) : (memref<?xi32>) -> ()
     // Stable sort.
     // CHECK: [0,  2,  5,  10,  1]
     call @storeValuesTo(%x0, %c10, %c2, %c0, %c5, %c1)
       : (memref<?xi32>, i32, i32, i32, i32, i32) -> ()
-    sparse_tensor.sort stable %i4, %x0 : memref<?xi32>
+    sparse_tensor.sort insertion_sort_stable %i4, %x0 : memref<?xi32>
     call @printMemref1dI32(%x0) : (memref<?xi32>) -> ()
 
     // Prepare more buffers of different dimensions.
@@ -89,7 +89,7 @@ module {
       : (memref<?xi32>, i32, i32, i32, i32, i32) -> ()
     call @storeValuesTo(%y0, %c6, %c10, %c8, %c9, %c7)
       : (memref<?xi32>, i32, i32, i32, i32, i32) -> ()
-    sparse_tensor.sort %i5, %x0, %x1, %x2 jointly %y0
+    sparse_tensor.sort hybrid_quick_sort %i5, %x0, %x1, %x2 jointly %y0
       : memref<?xi32>, memref<?xi32>, memref<?xi32> jointly memref<?xi32>
     call @printMemref1dI32(%x0) : (memref<?xi32>) -> ()
     call @printMemref1dI32(%x1) : (memref<?xi32>) -> ()
@@ -108,7 +108,7 @@ module {
       : (memref<?xi32>, i32, i32, i32, i32, i32) -> ()
     call @storeValuesTo(%y0, %c6, %c10, %c8, %c9, %c7)
       : (memref<?xi32>, i32, i32, i32, i32, i32) -> ()
-    sparse_tensor.sort stable %i5, %x0, %x1, %x2 jointly %y0
+    sparse_tensor.sort insertion_sort_stable %i5, %x0, %x1, %x2 jointly %y0
       : memref<?xi32>, memref<?xi32>, memref<?xi32> jointly memref<?xi32>
     call @printMemref1dI32(%x0) : (memref<?xi32>) -> ()
     call @printMemref1dI32(%x1) : (memref<?xi32>) -> ()
