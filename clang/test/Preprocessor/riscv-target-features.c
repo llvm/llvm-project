@@ -44,6 +44,8 @@
 // CHECK-NOT: __riscv_svpbmt
 // CHECK-NOT: __riscv_svinval
 // CHECK-NOT: __riscv_xventanacondops
+// CHECK-NOT: __riscv_zca
+// CHECK-NOT: __riscv_zcb
 // CHECK-NOT: __riscv_zcd
 // CHECK-NOT: __riscv_zcf
 // CHECK-NOT: __riscv_h
@@ -463,6 +465,19 @@
 // RUN: %clang -target riscv64 -march=rv64ixtheadvdot -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-XTHEADVDOT-EXT %s
 // CHECK-XTHEADVDOT-EXT: __riscv_xtheadvdot 1000000{{$}}
+
+// RUN: %clang -target riscv32 -march=rv32izca0p70 -menable-experimental-extensions \
+// RUN: -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-ZCA-EXT %s
+// RUN: %clang -target riscv64 -march=rv64izca0p70 -menable-experimental-extensions \
+// RUN: -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-ZCA-EXT %s
+// CHECK-ZCA-EXT: __riscv_zca 70000{{$}}
+
+// RUN: %clang -target riscv32 -march=rv32izcb0p70 -menable-experimental-extensions \
+// RUN: -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-ZCB-EXT %s
+// RUN: %clang -target riscv64 -march=rv64izcb0p70 -menable-experimental-extensions \
+// RUN: -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-ZCB-EXT %s
+// CHECK-ZCB-EXT: __riscv_zca 70000{{$}}
+// CHECK-ZCB-EXT: __riscv_zcb 70000{{$}}
 
 // RUN: %clang -target riscv32 -march=rv32izcd0p70 -menable-experimental-extensions \
 // RUN: -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-ZCD-EXT %s
