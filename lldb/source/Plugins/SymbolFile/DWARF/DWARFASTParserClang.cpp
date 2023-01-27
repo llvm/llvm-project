@@ -1964,7 +1964,6 @@ bool DWARFASTParserClang::ParseTemplateDIE(
     CompilerType clang_type;
     uint64_t uval64 = 0;
     bool uval64_valid = false;
-    bool is_default_template_arg = false;
     if (num_attributes > 0) {
       DWARFFormValue form_value;
       for (size_t i = 0; i < num_attributes; ++i) {
@@ -1995,10 +1994,6 @@ bool DWARFASTParserClang::ParseTemplateDIE(
             uval64 = form_value.Unsigned();
           }
           break;
-        case DW_AT_default_value:
-          if (attributes.ExtractFormValueAtIndex(i, form_value))
-            is_default_template_arg = form_value.Boolean();
-          break;
         default:
           break;
         }
@@ -2024,19 +2019,16 @@ bool DWARFASTParserClang::ParseTemplateDIE(
           template_param_infos.InsertArg(
               name,
               clang::TemplateArgument(ast, llvm::APSInt(apint, !is_signed),
-                                      ClangUtil::GetQualType(clang_type),
-                                      is_default_template_arg));
+                                      ClangUtil::GetQualType(clang_type)));
         } else {
           template_param_infos.InsertArg(
-              name, clang::TemplateArgument(ClangUtil::GetQualType(clang_type),
-                                            /*isNullPtr*/ false,
-                                            is_default_template_arg));
+              name,
+              clang::TemplateArgument(ClangUtil::GetQualType(clang_type)));
         }
       } else {
         auto *tplt_type = m_ast.CreateTemplateTemplateParmDecl(template_name);
         template_param_infos.InsertArg(
-            name, clang::TemplateArgument(clang::TemplateName(tplt_type),
-                                          is_default_template_arg));
+            name, clang::TemplateArgument(clang::TemplateName(tplt_type)));
       }
     }
   }

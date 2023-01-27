@@ -60,7 +60,7 @@ class TestCase(TestBase):
 
         valobj = self.expect_var_path(
             "sp_str",
-            type="std::shared_ptr<std::basic_string<char> >",
+            type="std::shared_ptr<std::basic_string<char, std::char_traits<char>, std::allocator<char> > >",
             children=[ValueCheck(name="__ptr_", summary='"hello"')],
         )
         self.assertRegex(valobj.summary, r'^"hello"( strong=1)? weak=1$')
