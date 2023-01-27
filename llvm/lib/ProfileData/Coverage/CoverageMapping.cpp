@@ -410,24 +410,30 @@ CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames,
   }
 
   if (BIDFetcher) {
-    const auto &Compare = [](object::BuildIDRef A, object::BuildIDRef B) {
+    const auto &CompareLT = [](object::BuildIDRef A, object::BuildIDRef B) {
       return StringRef(reinterpret_cast<const char *>(A.data()), A.size()) <
+             StringRef(reinterpret_cast<const char *>(B.data()), B.size());
+    };
+    const auto &CompareEQ = [](object::BuildIDRef A, object::BuildIDRef B) {
+      return StringRef(reinterpret_cast<const char *>(A.data()), A.size()) ==
              StringRef(reinterpret_cast<const char *>(B.data()), B.size());
     };
     std::vector<object::BuildID> ProfileBinaryIDs;
     if (Error E = ProfileReader->readBinaryIds(ProfileBinaryIDs))
       return createFileError(ProfileFilename, std::move(E));
-    llvm::sort(ProfileBinaryIDs, Compare);
-    std::unique(ProfileBinaryIDs.begin(), ProfileBinaryIDs.end(), Compare);
+    llvm::sort(ProfileBinaryIDs, CompareLT);
+    ProfileBinaryIDs.erase(llvm::unique(ProfileBinaryIDs, CompareEQ),
+                           ProfileBinaryIDs.end());
 
     SmallVector<object::BuildIDRef> BinaryIDsToFetch;
     if (!ProfileBinaryIDs.empty()) {
-      llvm::sort(FoundBinaryIDs, Compare);
-      std::unique(FoundBinaryIDs.begin(), FoundBinaryIDs.end(), Compare);
+      llvm::sort(FoundBinaryIDs, CompareLT);
+      FoundBinaryIDs.erase(llvm::unique(FoundBinaryIDs, CompareEQ),
+                           FoundBinaryIDs.end());
       std::set_difference(
           ProfileBinaryIDs.begin(), ProfileBinaryIDs.end(),
           FoundBinaryIDs.begin(), FoundBinaryIDs.end(),
-          std::inserter(BinaryIDsToFetch, BinaryIDsToFetch.end()), Compare);
+          std::inserter(BinaryIDsToFetch, BinaryIDsToFetch.end()), CompareLT);
     }
 
     for (object::BuildIDRef BinaryID : BinaryIDsToFetch) {
