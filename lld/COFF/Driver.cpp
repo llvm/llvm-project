@@ -1506,7 +1506,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   }
 
   // Construct search path list.
-  searchPaths.push_back("");
+  searchPaths.emplace_back("");
   for (auto *arg : args.filtered(OPT_libpath))
     searchPaths.push_back(arg->getValue());
   detectWinSysRoot(args);
@@ -1761,8 +1761,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         tailMerge = 2;
       } else if (s == "nolldtailmerge") {
         tailMerge = 0;
-      } else if (s == "ltonewpassmanager") {
-        /* We always use the new PM. */
       } else if (s == "ltodebugpassmanager") {
         ltoDebugPM = true;
       } else if (s == "noltodebugpassmanager") {

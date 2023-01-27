@@ -3111,6 +3111,13 @@ const MCPhysReg *X86TargetLowering::getScratchRegisters(CallingConv::ID) const {
   return ScratchRegs;
 }
 
+const MCPhysReg *X86TargetLowering::getRoundingControlRegisters() const {
+  // FIXME: We should def X86::FPCW for x87 as well. But it affects a lot of lit
+  // tests at the moment, which is not what we expected.
+  static const MCPhysReg RCRegs[] = { X86::MXCSR, 0 };
+  return RCRegs;
+}
+
 /// Lowers masks values (v*i1) to the local register values
 /// \returns DAG node after lowering to register type
 static SDValue lowerMasksToReg(const SDValue &ValArg, const EVT &ValLoc,

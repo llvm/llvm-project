@@ -1161,6 +1161,14 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
     }
   }
 
+  // Add rounding control registers as implicit def for function call.
+  if (II.isCall() && MF->getFunction().hasFnAttribute(Attribute::StrictFP)) {
+    const MCPhysReg *RCRegs = TLI->getRoundingControlRegisters();
+    if (RCRegs)
+      for (; *RCRegs; ++RCRegs)
+        UsedRegs.push_back(*RCRegs);
+  }
+
   // Finally mark unused registers as dead.
   if (!UsedRegs.empty() || !II.implicit_defs().empty() || II.hasOptionalDef())
     MIB->setPhysRegsDeadExcept(UsedRegs, *TRI);

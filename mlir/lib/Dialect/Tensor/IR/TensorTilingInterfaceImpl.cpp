@@ -654,3 +654,11 @@ void mlir::tensor::registerTilingInterfaceExternalModels(
     tensor::UnPackOp::attachInterface<UnPackOpTiling>(*ctx);
   });
 }
+
+void mlir::tensor::registerTilingInterfaceExternalModelsForPackUnPackOps(
+    DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, TensorDialect *dialect) {
+    tensor::PackOp::attachInterface<PackOpTiling>(*ctx);
+    tensor::UnPackOp::attachInterface<UnPackOpTiling>(*ctx);
+  });
+}

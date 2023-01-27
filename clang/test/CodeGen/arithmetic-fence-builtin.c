@@ -12,6 +12,12 @@
 // RUN: %clang_cc1 -triple i386-pc-linux-gnu -emit-llvm -fprotect-parens\
 // RUN: -o - %s | FileCheck --implicit-check-not="llvm.arithmetic.fence" %s
 //
+// Test with fast math on spir target
+// RUN: %clang_cc1 -triple spir64  -emit-llvm -DFAST \
+// RUN: -mreassociate -o - %s \
+// RUN: | FileCheck --check-prefixes CHECK,CHECKFAST,CHECKNP %s
+//
+
 int v;
 int addit(float a, float b) {
   // CHECK: define {{.*}}@addit(float noundef %a, float noundef %b) #0 {
