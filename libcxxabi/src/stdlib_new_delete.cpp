@@ -9,8 +9,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "__cxxabi_config.h"
-#include <new>
+#include <__memory/aligned_alloc.h>
 #include <cstdlib>
+#include <new>
 
 #if !defined(_THROW_BAD_ALLOC) || !defined(_LIBCXXABI_WEAK)
 #error The _THROW_BAD_ALLOC and _LIBCXXABI_WEAK libc++ macros must \

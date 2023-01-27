@@ -42,6 +42,11 @@
 
 #include "test_macros.h"
 
+TEST_DIAGNOSTIC_PUSH
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wprivate-header")
+#include <__memory/aligned_alloc.h>
+TEST_DIAGNOSTIC_POP
+
 struct alloc_stats {
   alloc_stats() { reset(); }
 
