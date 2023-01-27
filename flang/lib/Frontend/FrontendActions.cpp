@@ -781,7 +781,7 @@ void CodeGenAction::executeAction() {
   llvmModule->setDataLayout(tm->createDataLayout());
 
   // Run LLVM's middle-end (i.e. the optimizer).
-  runOptimizationPipeline(*os);
+  runOptimizationPipeline(ci.isOutputStreamNull() ? *os : ci.getOutputStream());
 
   if (action == BackendActionTy::Backend_EmitLL) {
     llvmModule->print(ci.isOutputStreamNull() ? *os : ci.getOutputStream(),
