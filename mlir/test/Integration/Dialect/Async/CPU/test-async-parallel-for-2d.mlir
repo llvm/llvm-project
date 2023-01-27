@@ -5,7 +5,7 @@
 // RUN:               -arith-expand                                            \
 // RUN:               -convert-async-to-llvm                                   \
 // RUN:               -convert-scf-to-cf                                      \
-// RUN:               -convert-memref-to-llvm                                  \
+// RUN:               -finalize-memref-to-llvm                                  \
 // RUN:               -convert-func-to-llvm                                     \
 // RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \
@@ -20,7 +20,7 @@
 // RUN:               -arith-expand                                            \
 // RUN:               -convert-async-to-llvm                                   \
 // RUN:               -convert-scf-to-cf                                      \
-// RUN:               -convert-memref-to-llvm                                  \
+// RUN:               -finalize-memref-to-llvm                                  \
 // RUN:               -convert-func-to-llvm                                     \
 // RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \
@@ -38,7 +38,7 @@
 // RUN:               -arith-expand                                            \
 // RUN:               -convert-async-to-llvm                                   \
 // RUN:               -convert-scf-to-cf                                      \
-// RUN:               -convert-memref-to-llvm                                  \
+// RUN:               -finalize-memref-to-llvm                                  \
 // RUN:               -convert-func-to-llvm                                     \
 // RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \

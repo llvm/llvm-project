@@ -1,4 +1,4 @@
-// RUN: mlir-opt -expand-strided-metadata -convert-memref-to-llvm -lower-affine -convert-arith-to-llvm -cse %s -split-input-file | FileCheck %s
+// RUN: mlir-opt -expand-strided-metadata -finalize-memref-to-llvm -lower-affine -convert-arith-to-llvm -cse %s -split-input-file | FileCheck %s
 //
 // This test demonstrates a full "memref to llvm" pipeline where
 // we first expand some of the memref operations (using affine,
@@ -7,7 +7,7 @@
 //
 // Note: We run CSE in that test to get rid of duplicated
 // unrealized_conversion_cast that are inserted with
-// convert-memref-to-llvm and then convert-arith-to-llvm.
+// finalize-memref-to-llvm and then convert-arith-to-llvm.
 // The final code is still not perfect, because we have
 // noop unrealized_conversion_cast from i64 to index
 // and back.

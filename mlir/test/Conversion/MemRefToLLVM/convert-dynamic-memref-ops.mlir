@@ -1,6 +1,6 @@
-// RUN: mlir-opt -split-input-file -convert-memref-to-llvm %s | FileCheck %s
-// RUN: mlir-opt -split-input-file -convert-memref-to-llvm='use-aligned-alloc=1' %s | FileCheck %s --check-prefix=ALIGNED-ALLOC
-// RUN: mlir-opt -split-input-file -convert-memref-to-llvm='index-bitwidth=32' %s | FileCheck --check-prefix=CHECK32 %s
+// RUN: mlir-opt -split-input-file -finalize-memref-to-llvm %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -finalize-memref-to-llvm='use-aligned-alloc=1' %s | FileCheck %s --check-prefix=ALIGNED-ALLOC
+// RUN: mlir-opt -split-input-file -finalize-memref-to-llvm='index-bitwidth=32' %s | FileCheck --check-prefix=CHECK32 %s
 
 // CHECK-LABEL: func @mixed_alloc(
 //       CHECK:   %[[Marg:.*]]: index, %[[Narg:.*]]: index)
