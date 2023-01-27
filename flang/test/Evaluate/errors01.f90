@@ -2,6 +2,9 @@
 ! Check errors found in folding
 ! TODO: test others emitted from flang/lib/Evaluate
 module m
+  type t
+    real x
+  end type t
  contains
   subroutine s1(a,b)
     real :: a(*), b(:)
@@ -99,6 +102,14 @@ module m
     integer, parameter :: bad2 = spread(matrix, 0, 1)
     !CHECK: error: DIM=4 argument to SPREAD must be between 1 and 3
     integer, parameter :: bad3 = spread(matrix, 4, 1)
+  end subroutine
+  subroutine s12(x,y)
+    class(t), intent(in) :: x
+    class(*), intent(in) :: y
+    !CHERK: error: Must be a constant value
+    integer, parameter :: bad1 = storage_size(x)
+    !CHERK: error: Must be a constant value
+    integer, parameter :: bad2 = storage_size(y)
   end subroutine
   subroutine warnings
     real, parameter :: ok1 = scale(0.0, 99999) ! 0.0
