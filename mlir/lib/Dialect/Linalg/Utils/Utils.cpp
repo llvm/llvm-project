@@ -164,7 +164,7 @@ bool hasOnlyScalarElementwiseOp(Region &r) {
     return false;
   for (Operation &op : r.front()) {
     if (!(isa<arith::ConstantOp, func::ConstantOp, tensor::ExtractOp,
-              linalg::YieldOp, linalg::IndexOp>(op) ||
+              linalg::YieldOp, linalg::IndexOp, AffineApplyOp>(op) ||
           OpTrait::hasElementwiseMappableTraits(&op)) ||
         llvm::any_of(op.getResultTypes(),
                      [](Type type) { return !type.isIntOrIndexOrFloat(); }))

@@ -966,6 +966,14 @@ inline bool GetPtrActiveThisField(InterpState &S, CodePtr OpPC, uint32_t Off) {
 }
 
 inline bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckNull(S, OpPC, Ptr, CSK_Base))
+    return false;
+  S.Stk.push<Pointer>(Ptr.atField(Off));
+  return true;
+}
+
+inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckNull(S, OpPC, Ptr, CSK_Base))
     return false;
