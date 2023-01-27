@@ -73,14 +73,22 @@ public:
   void getDependentDialects(mlir::DialectRegistry &registry) const override;
 
 private:
-  /// Helper function to replace a reduction type of call with its
+  /// Helper functions to replace a reduction type of call with its
   /// simplified form. The actual function is generated using a callback
   /// function.
   /// \p call is the call to be replaced
   /// \p kindMap is used to create FIROpBuilder
   /// \p genBodyFunc is the callback that builds the replacement function
-  void simplifyReduction(fir::CallOp call, const fir::KindMapping &kindMap,
-                         GenReductionBodyTy genBodyFunc);
+  void simplifyIntOrFloatReduction(fir::CallOp call,
+                                   const fir::KindMapping &kindMap,
+                                   GenReductionBodyTy genBodyFunc);
+  void simplifyLogicalReduction(fir::CallOp call,
+                                const fir::KindMapping &kindMap,
+                                GenReductionBodyTy genBodyFunc);
+  void simplifyReductionBody(fir::CallOp call, const fir::KindMapping &kindMap,
+                             GenReductionBodyTy genBodyFunc,
+                             fir::FirOpBuilder &builder,
+                             const mlir::StringRef &basename);
 };
 
 } // namespace
@@ -131,17 +139,18 @@ using InitValGeneratorTy = llvm::function_ref<mlir::Value(
 
 /// Generate the reduction loop into \p funcOp.
 ///
+/// \p elementType is the type of the elements in the input array,
+///    which may be different to the return type.
 /// \p initVal is a function, called to get the initial value for
 ///    the reduction value
 /// \p genBody is called to fill in the actual reduciton operation
 ///    for example add for SUM, MAX for MAXVAL, etc.
 /// \p rank is the rank of the input argument.
-static void genReductionLoop(fir::FirOpBuilder &builder,
+static void genReductionLoop(fir::FirOpBuilder &builder, mlir::Type elementType,
                              mlir::func::FuncOp &funcOp,
                              InitValGeneratorTy initVal,
                              BodyOpGeneratorTy genBody, unsigned rank) {
   auto loc = mlir::UnknownLoc::get(builder.getContext());
-  mlir::Type elementType = funcOp.getResultTypes()[0];
   builder.setInsertionPointToEnd(funcOp.addEntryBlock());
 
   mlir::IndexType idxTy = builder.getIndexType();
@@ -156,7 +165,8 @@ static void genReductionLoop(fir::FirOpBuilder &builder,
   mlir::Type arrTy = fir::SequenceType::get(flatShape, elementType);
   mlir::Type boxArrTy = fir::BoxType::get(arrTy);
   mlir::Value array = builder.create<fir::ConvertOp>(loc, boxArrTy, arg);
-  mlir::Value init = initVal(builder, loc, elementType);
+  mlir::Type resultType = funcOp.getResultTypes()[0];
+  mlir::Value init = initVal(builder, loc, resultType);
 
   llvm::SmallVector<mlir::Value, 15> bounds;
 
@@ -265,7 +275,9 @@ static void genRuntimeSumBody(fir::FirOpBuilder &builder,
     return {};
   };
 
-  genReductionLoop(builder, funcOp, zero, genBodyOp, rank);
+  mlir::Type elementType = funcOp.getResultTypes()[0];
+
+  genReductionLoop(builder, elementType, funcOp, zero, genBodyOp, rank);
 }
 
 static void genRuntimeMaxvalBody(fir::FirOpBuilder &builder,
@@ -293,7 +305,38 @@ static void genRuntimeMaxvalBody(fir::FirOpBuilder &builder,
     llvm_unreachable("unsupported type");
     return {};
   };
-  genReductionLoop(builder, funcOp, init, genBodyOp, rank);
+
+  mlir::Type elementType = funcOp.getResultTypes()[0];
+
+  genReductionLoop(builder, elementType, funcOp, init, genBodyOp, rank);
+}
+
+static void genRuntimeCountBody(fir::FirOpBuilder &builder,
+                                mlir::func::FuncOp &funcOp, unsigned rank) {
+  auto zero = [](fir::FirOpBuilder builder, mlir::Location loc,
+                 mlir::Type elementType) {
+    unsigned bits = elementType.getIntOrFloatBitWidth();
+    int64_t zeroInt = llvm::APInt::getZero(bits).getSExtValue();
+    return builder.createIntegerConstant(loc, elementType, zeroInt);
+  };
+
+  auto genBodyOp = [](fir::FirOpBuilder builder, mlir::Location loc,
+                      mlir::Type elementType, mlir::Value elem1,
+                      mlir::Value elem2) -> mlir::Value {
+    auto zero32 = builder.createIntegerConstant(loc, builder.getI32Type(), 0);
+    auto zero64 = builder.createIntegerConstant(loc, builder.getI64Type(), 0);
+    auto one64 = builder.createIntegerConstant(loc, builder.getI64Type(), 1);
+
+    auto compare = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::eq, elem1, zero32);
+    auto select =
+        builder.create<mlir::arith::SelectOp>(loc, compare, zero64, one64);
+    return builder.create<mlir::arith::AddIOp>(loc, select, elem2);
+  };
+
+  mlir::Type elementType = builder.getI32Type();
+
+  genReductionLoop(builder, elementType, funcOp, zero, genBodyOp, rank);
 }
 
 /// Generate function type for the simplified version of RTNAME(DotProduct)
@@ -526,58 +569,99 @@ static std::optional<mlir::Type> getArgElementType(mlir::Value val) {
   } while (true);
 }
 
-void SimplifyIntrinsicsPass::simplifyReduction(fir::CallOp call,
-                                               const fir::KindMapping &kindMap,
-                                               GenReductionBodyTy genBodyFunc) {
-  mlir::SymbolRefAttr callee = call.getCalleeAttr();
-  mlir::Operation::operand_range args = call.getArgs();
+void SimplifyIntrinsicsPass::simplifyIntOrFloatReduction(
+    fir::CallOp call, const fir::KindMapping &kindMap,
+    GenReductionBodyTy genBodyFunc) {
   // args[1] and args[2] are source filename and line number, ignored.
+  mlir::Operation::operand_range args = call.getArgs();
+
   const mlir::Value &dim = args[3];
   const mlir::Value &mask = args[4];
   // dim is zero when it is absent, which is an implementation
   // detail in the runtime library.
+
   bool dimAndMaskAbsent = isZero(dim) && isOperandAbsent(mask);
   unsigned rank = getDimCount(args[0]);
-  if (dimAndMaskAbsent && rank > 0) {
-    mlir::Location loc = call.getLoc();
-    fir::FirOpBuilder builder{getSimplificationBuilder(call, kindMap)};
-    std::string fmfString{getFastMathFlagsString(builder)};
 
-    // Support only floating point and integer results now.
-    mlir::Type resultType = call.getResult(0).getType();
-    if (!resultType.isa<mlir::FloatType>() &&
-        !resultType.isa<mlir::IntegerType>())
-      return;
+  if (!(dimAndMaskAbsent && rank > 0))
+    return;
 
-    auto argType = getArgElementType(args[0]);
-    if (!argType)
-      return;
-    assert(*argType == resultType &&
-           "Argument/result types mismatch in reduction");
+  mlir::Type resultType = call.getResult(0).getType();
 
-    auto typeGenerator = [&resultType](fir::FirOpBuilder &builder) {
-      return genNoneBoxType(builder, resultType);
-    };
-    auto bodyGenerator = [&rank, &genBodyFunc](fir::FirOpBuilder &builder,
-                                               mlir::func::FuncOp &funcOp) {
-      genBodyFunc(builder, funcOp, rank);
-    };
-    // Mangle the function name with the rank value as "x<rank>".
-    std::string funcName =
-        (mlir::Twine{callee.getLeafReference().getValue(), "x"} +
-         mlir::Twine{rank} +
-         // We must mangle the generated function name with FastMathFlags
-         // value.
-         (fmfString.empty() ? mlir::Twine{} : mlir::Twine{"_", fmfString}))
-            .str();
-    mlir::func::FuncOp newFunc =
-        getOrCreateFunction(builder, funcName, typeGenerator, bodyGenerator);
-    auto newCall =
-        builder.create<fir::CallOp>(loc, newFunc, mlir::ValueRange{args[0]});
-    call->replaceAllUsesWith(newCall.getResults());
-    call->dropAllReferences();
-    call->erase();
-  }
+  if (!resultType.isa<mlir::FloatType>() &&
+      !resultType.isa<mlir::IntegerType>())
+    return;
+
+  auto argType = getArgElementType(args[0]);
+  if (!argType)
+    return;
+  assert(*argType == resultType &&
+         "Argument/result types mismatch in reduction");
+
+  mlir::SymbolRefAttr callee = call.getCalleeAttr();
+
+  fir::FirOpBuilder builder{getSimplificationBuilder(call, kindMap)};
+  std::string fmfString{getFastMathFlagsString(builder)};
+  std::string funcName =
+      (mlir::Twine{callee.getLeafReference().getValue(), "x"} +
+       mlir::Twine{rank} +
+       // We must mangle the generated function name with FastMathFlags
+       // value.
+       (fmfString.empty() ? mlir::Twine{} : mlir::Twine{"_", fmfString}))
+          .str();
+
+  simplifyReductionBody(call, kindMap, genBodyFunc, builder, funcName);
+}
+
+void SimplifyIntrinsicsPass::simplifyLogicalReduction(
+    fir::CallOp call, const fir::KindMapping &kindMap,
+    GenReductionBodyTy genBodyFunc) {
+
+  mlir::Operation::operand_range args = call.getArgs();
+  const mlir::Value &dim = args[3];
+
+  if (!isZero(dim))
+    return;
+
+  unsigned rank = getDimCount(args[0]);
+  mlir::SymbolRefAttr callee = call.getCalleeAttr();
+
+  fir::FirOpBuilder builder{getSimplificationBuilder(call, kindMap)};
+  std::string funcName =
+      (mlir::Twine{callee.getLeafReference().getValue(), "x"} +
+       mlir::Twine{rank})
+          .str();
+
+  simplifyReductionBody(call, kindMap, genBodyFunc, builder, funcName);
+}
+
+void SimplifyIntrinsicsPass::simplifyReductionBody(
+    fir::CallOp call, const fir::KindMapping &kindMap,
+    GenReductionBodyTy genBodyFunc, fir::FirOpBuilder &builder,
+    const mlir::StringRef &funcName) {
+
+  mlir::Operation::operand_range args = call.getArgs();
+
+  mlir::Type resultType = call.getResult(0).getType();
+  unsigned rank = getDimCount(args[0]);
+
+  mlir::Location loc = call.getLoc();
+
+  auto typeGenerator = [&resultType](fir::FirOpBuilder &builder) {
+    return genNoneBoxType(builder, resultType);
+  };
+  auto bodyGenerator = [&rank, &genBodyFunc](fir::FirOpBuilder &builder,
+                                             mlir::func::FuncOp &funcOp) {
+    genBodyFunc(builder, funcOp, rank);
+  };
+  // Mangle the function name with the rank value as "x<rank>".
+  mlir::func::FuncOp newFunc =
+      getOrCreateFunction(builder, funcName, typeGenerator, bodyGenerator);
+  auto newCall =
+      builder.create<fir::CallOp>(loc, newFunc, mlir::ValueRange{args[0]});
+  call->replaceAllUsesWith(newCall.getResults());
+  call->dropAllReferences();
+  call->erase();
 }
 
 void SimplifyIntrinsicsPass::runOnOperation() {
@@ -598,7 +682,7 @@ void SimplifyIntrinsicsPass::runOnOperation() {
         //                int dim, const Descriptor *mask)
         //
         if (funcName.startswith(RTNAME_STRING(Sum))) {
-          simplifyReduction(call, kindMap, genRuntimeSumBody);
+          simplifyIntOrFloatReduction(call, kindMap, genRuntimeSumBody);
           return;
         }
         if (funcName.startswith(RTNAME_STRING(DotProduct))) {
@@ -669,7 +753,11 @@ void SimplifyIntrinsicsPass::runOnOperation() {
           return;
         }
         if (funcName.startswith(RTNAME_STRING(Maxval))) {
-          simplifyReduction(call, kindMap, genRuntimeMaxvalBody);
+          simplifyIntOrFloatReduction(call, kindMap, genRuntimeMaxvalBody);
+          return;
+        }
+        if (funcName.startswith(RTNAME_STRING(Count))) {
+          simplifyLogicalReduction(call, kindMap, genRuntimeCountBody);
           return;
         }
       }
