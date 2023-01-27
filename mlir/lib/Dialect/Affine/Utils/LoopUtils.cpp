@@ -321,9 +321,10 @@ LogicalResult mlir::affineForOpBodySkew(AffineForOp forOp,
         // Simplify/canonicalize the affine.for.
         RewritePatternSet patterns(res.getContext());
         AffineForOp::getCanonicalizationPatterns(patterns, res.getContext());
+        GreedyRewriteConfig config;
+        config.strictMode = GreedyRewriteStrictness::ExistingOps;
         bool erased;
-        (void)applyOpPatternsAndFold(res, std::move(patterns),
-                                     GreedyRewriteConfig(), &erased);
+        (void)applyOpPatternsAndFold(res, std::move(patterns), config, &erased);
         if (!erased && !prologue)
           prologue = res;
         if (!erased)
