@@ -1005,6 +1005,7 @@ void RVVIntrinsic::updateNamesAndPolicy(bool IsMasked, bool HasPolicy,
   // This follows the naming guideline under riscv-c-api-doc to add the
   // `__riscv_` suffix for all RVV intrinsics.
   Name = "__riscv_" + Name;
+  OverloadedName = "__riscv_" + OverloadedName;
 
   if (IsMasked) {
     if (PolicyAttrs.isTUMUPolicy())

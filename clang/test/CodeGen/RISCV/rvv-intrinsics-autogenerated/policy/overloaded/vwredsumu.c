@@ -12,7 +12,7 @@
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vwredsumu_vs_u8mf8_u16m1_tu(vuint16m1_t maskedoff, vuint8mf8_t vector, vuint16m1_t scalar, size_t vl) {
-  return vwredsumu_tu(maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tu(maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u8mf4_u16m1_tu(
@@ -21,7 +21,7 @@ vuint16m1_t test_vwredsumu_vs_u8mf8_u16m1_tu(vuint16m1_t maskedoff, vuint8mf8_t 
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vwredsumu_vs_u8mf4_u16m1_tu(vuint16m1_t maskedoff, vuint8mf4_t vector, vuint16m1_t scalar, size_t vl) {
-  return vwredsumu_tu(maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tu(maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u8mf2_u16m1_tu(
@@ -30,7 +30,7 @@ vuint16m1_t test_vwredsumu_vs_u8mf4_u16m1_tu(vuint16m1_t maskedoff, vuint8mf4_t 
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vwredsumu_vs_u8mf2_u16m1_tu(vuint16m1_t maskedoff, vuint8mf2_t vector, vuint16m1_t scalar, size_t vl) {
-  return vwredsumu_tu(maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tu(maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u8m1_u16m1_tu(
@@ -39,7 +39,7 @@ vuint16m1_t test_vwredsumu_vs_u8mf2_u16m1_tu(vuint16m1_t maskedoff, vuint8mf2_t 
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vwredsumu_vs_u8m1_u16m1_tu(vuint16m1_t maskedoff, vuint8m1_t vector, vuint16m1_t scalar, size_t vl) {
-  return vwredsumu_tu(maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tu(maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u8m2_u16m1_tu(
@@ -48,7 +48,7 @@ vuint16m1_t test_vwredsumu_vs_u8m1_u16m1_tu(vuint16m1_t maskedoff, vuint8m1_t ve
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vwredsumu_vs_u8m2_u16m1_tu(vuint16m1_t maskedoff, vuint8m2_t vector, vuint16m1_t scalar, size_t vl) {
-  return vwredsumu_tu(maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tu(maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u8m4_u16m1_tu(
@@ -57,7 +57,7 @@ vuint16m1_t test_vwredsumu_vs_u8m2_u16m1_tu(vuint16m1_t maskedoff, vuint8m2_t ve
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vwredsumu_vs_u8m4_u16m1_tu(vuint16m1_t maskedoff, vuint8m4_t vector, vuint16m1_t scalar, size_t vl) {
-  return vwredsumu_tu(maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tu(maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u8m8_u16m1_tu(
@@ -66,7 +66,7 @@ vuint16m1_t test_vwredsumu_vs_u8m4_u16m1_tu(vuint16m1_t maskedoff, vuint8m4_t ve
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vwredsumu_vs_u8m8_u16m1_tu(vuint16m1_t maskedoff, vuint8m8_t vector, vuint16m1_t scalar, size_t vl) {
-  return vwredsumu_tu(maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tu(maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u16mf4_u32m1_tu(
@@ -75,7 +75,7 @@ vuint16m1_t test_vwredsumu_vs_u8m8_u16m1_tu(vuint16m1_t maskedoff, vuint8m8_t ve
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vwredsumu_vs_u16mf4_u32m1_tu(vuint32m1_t maskedoff, vuint16mf4_t vector, vuint32m1_t scalar, size_t vl) {
-  return vwredsumu_tu(maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tu(maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u16mf2_u32m1_tu(
@@ -84,7 +84,7 @@ vuint32m1_t test_vwredsumu_vs_u16mf4_u32m1_tu(vuint32m1_t maskedoff, vuint16mf4_
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vwredsumu_vs_u16mf2_u32m1_tu(vuint32m1_t maskedoff, vuint16mf2_t vector, vuint32m1_t scalar, size_t vl) {
-  return vwredsumu_tu(maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tu(maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u16m1_u32m1_tu(
@@ -93,7 +93,7 @@ vuint32m1_t test_vwredsumu_vs_u16mf2_u32m1_tu(vuint32m1_t maskedoff, vuint16mf2_
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vwredsumu_vs_u16m1_u32m1_tu(vuint32m1_t maskedoff, vuint16m1_t vector, vuint32m1_t scalar, size_t vl) {
-  return vwredsumu_tu(maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tu(maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u16m2_u32m1_tu(
@@ -102,7 +102,7 @@ vuint32m1_t test_vwredsumu_vs_u16m1_u32m1_tu(vuint32m1_t maskedoff, vuint16m1_t 
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vwredsumu_vs_u16m2_u32m1_tu(vuint32m1_t maskedoff, vuint16m2_t vector, vuint32m1_t scalar, size_t vl) {
-  return vwredsumu_tu(maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tu(maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u16m4_u32m1_tu(
@@ -111,7 +111,7 @@ vuint32m1_t test_vwredsumu_vs_u16m2_u32m1_tu(vuint32m1_t maskedoff, vuint16m2_t 
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vwredsumu_vs_u16m4_u32m1_tu(vuint32m1_t maskedoff, vuint16m4_t vector, vuint32m1_t scalar, size_t vl) {
-  return vwredsumu_tu(maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tu(maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u16m8_u32m1_tu(
@@ -120,7 +120,7 @@ vuint32m1_t test_vwredsumu_vs_u16m4_u32m1_tu(vuint32m1_t maskedoff, vuint16m4_t 
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vwredsumu_vs_u16m8_u32m1_tu(vuint32m1_t maskedoff, vuint16m8_t vector, vuint32m1_t scalar, size_t vl) {
-  return vwredsumu_tu(maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tu(maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u32mf2_u64m1_tu(
@@ -129,7 +129,7 @@ vuint32m1_t test_vwredsumu_vs_u16m8_u32m1_tu(vuint32m1_t maskedoff, vuint16m8_t 
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vwredsumu_vs_u32mf2_u64m1_tu(vuint64m1_t maskedoff, vuint32mf2_t vector, vuint64m1_t scalar, size_t vl) {
-  return vwredsumu_tu(maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tu(maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u32m1_u64m1_tu(
@@ -138,7 +138,7 @@ vuint64m1_t test_vwredsumu_vs_u32mf2_u64m1_tu(vuint64m1_t maskedoff, vuint32mf2_
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vwredsumu_vs_u32m1_u64m1_tu(vuint64m1_t maskedoff, vuint32m1_t vector, vuint64m1_t scalar, size_t vl) {
-  return vwredsumu_tu(maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tu(maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u32m2_u64m1_tu(
@@ -147,7 +147,7 @@ vuint64m1_t test_vwredsumu_vs_u32m1_u64m1_tu(vuint64m1_t maskedoff, vuint32m1_t 
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vwredsumu_vs_u32m2_u64m1_tu(vuint64m1_t maskedoff, vuint32m2_t vector, vuint64m1_t scalar, size_t vl) {
-  return vwredsumu_tu(maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tu(maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u32m4_u64m1_tu(
@@ -156,7 +156,7 @@ vuint64m1_t test_vwredsumu_vs_u32m2_u64m1_tu(vuint64m1_t maskedoff, vuint32m2_t 
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vwredsumu_vs_u32m4_u64m1_tu(vuint64m1_t maskedoff, vuint32m4_t vector, vuint64m1_t scalar, size_t vl) {
-  return vwredsumu_tu(maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tu(maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u32m8_u64m1_tu(
@@ -165,7 +165,7 @@ vuint64m1_t test_vwredsumu_vs_u32m4_u64m1_tu(vuint64m1_t maskedoff, vuint32m4_t 
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vwredsumu_vs_u32m8_u64m1_tu(vuint64m1_t maskedoff, vuint32m8_t vector, vuint64m1_t scalar, size_t vl) {
-  return vwredsumu_tu(maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tu(maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u8mf8_u16m1_tum(
@@ -174,7 +174,7 @@ vuint64m1_t test_vwredsumu_vs_u32m8_u64m1_tu(vuint64m1_t maskedoff, vuint32m8_t 
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vwredsumu_vs_u8mf8_u16m1_tum(vbool64_t mask, vuint16m1_t maskedoff, vuint8mf8_t vector, vuint16m1_t scalar, size_t vl) {
-  return vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u8mf4_u16m1_tum(
@@ -183,7 +183,7 @@ vuint16m1_t test_vwredsumu_vs_u8mf8_u16m1_tum(vbool64_t mask, vuint16m1_t masked
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vwredsumu_vs_u8mf4_u16m1_tum(vbool32_t mask, vuint16m1_t maskedoff, vuint8mf4_t vector, vuint16m1_t scalar, size_t vl) {
-  return vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u8mf2_u16m1_tum(
@@ -192,7 +192,7 @@ vuint16m1_t test_vwredsumu_vs_u8mf4_u16m1_tum(vbool32_t mask, vuint16m1_t masked
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vwredsumu_vs_u8mf2_u16m1_tum(vbool16_t mask, vuint16m1_t maskedoff, vuint8mf2_t vector, vuint16m1_t scalar, size_t vl) {
-  return vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u8m1_u16m1_tum(
@@ -201,7 +201,7 @@ vuint16m1_t test_vwredsumu_vs_u8mf2_u16m1_tum(vbool16_t mask, vuint16m1_t masked
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vwredsumu_vs_u8m1_u16m1_tum(vbool8_t mask, vuint16m1_t maskedoff, vuint8m1_t vector, vuint16m1_t scalar, size_t vl) {
-  return vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u8m2_u16m1_tum(
@@ -210,7 +210,7 @@ vuint16m1_t test_vwredsumu_vs_u8m1_u16m1_tum(vbool8_t mask, vuint16m1_t maskedof
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vwredsumu_vs_u8m2_u16m1_tum(vbool4_t mask, vuint16m1_t maskedoff, vuint8m2_t vector, vuint16m1_t scalar, size_t vl) {
-  return vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u8m4_u16m1_tum(
@@ -219,7 +219,7 @@ vuint16m1_t test_vwredsumu_vs_u8m2_u16m1_tum(vbool4_t mask, vuint16m1_t maskedof
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vwredsumu_vs_u8m4_u16m1_tum(vbool2_t mask, vuint16m1_t maskedoff, vuint8m4_t vector, vuint16m1_t scalar, size_t vl) {
-  return vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u8m8_u16m1_tum(
@@ -228,7 +228,7 @@ vuint16m1_t test_vwredsumu_vs_u8m4_u16m1_tum(vbool2_t mask, vuint16m1_t maskedof
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vwredsumu_vs_u8m8_u16m1_tum(vbool1_t mask, vuint16m1_t maskedoff, vuint8m8_t vector, vuint16m1_t scalar, size_t vl) {
-  return vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u16mf4_u32m1_tum(
@@ -237,7 +237,7 @@ vuint16m1_t test_vwredsumu_vs_u8m8_u16m1_tum(vbool1_t mask, vuint16m1_t maskedof
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vwredsumu_vs_u16mf4_u32m1_tum(vbool64_t mask, vuint32m1_t maskedoff, vuint16mf4_t vector, vuint32m1_t scalar, size_t vl) {
-  return vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u16mf2_u32m1_tum(
@@ -246,7 +246,7 @@ vuint32m1_t test_vwredsumu_vs_u16mf4_u32m1_tum(vbool64_t mask, vuint32m1_t maske
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vwredsumu_vs_u16mf2_u32m1_tum(vbool32_t mask, vuint32m1_t maskedoff, vuint16mf2_t vector, vuint32m1_t scalar, size_t vl) {
-  return vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u16m1_u32m1_tum(
@@ -255,7 +255,7 @@ vuint32m1_t test_vwredsumu_vs_u16mf2_u32m1_tum(vbool32_t mask, vuint32m1_t maske
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vwredsumu_vs_u16m1_u32m1_tum(vbool16_t mask, vuint32m1_t maskedoff, vuint16m1_t vector, vuint32m1_t scalar, size_t vl) {
-  return vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u16m2_u32m1_tum(
@@ -264,7 +264,7 @@ vuint32m1_t test_vwredsumu_vs_u16m1_u32m1_tum(vbool16_t mask, vuint32m1_t masked
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vwredsumu_vs_u16m2_u32m1_tum(vbool8_t mask, vuint32m1_t maskedoff, vuint16m2_t vector, vuint32m1_t scalar, size_t vl) {
-  return vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u16m4_u32m1_tum(
@@ -273,7 +273,7 @@ vuint32m1_t test_vwredsumu_vs_u16m2_u32m1_tum(vbool8_t mask, vuint32m1_t maskedo
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vwredsumu_vs_u16m4_u32m1_tum(vbool4_t mask, vuint32m1_t maskedoff, vuint16m4_t vector, vuint32m1_t scalar, size_t vl) {
-  return vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u16m8_u32m1_tum(
@@ -282,7 +282,7 @@ vuint32m1_t test_vwredsumu_vs_u16m4_u32m1_tum(vbool4_t mask, vuint32m1_t maskedo
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vwredsumu_vs_u16m8_u32m1_tum(vbool2_t mask, vuint32m1_t maskedoff, vuint16m8_t vector, vuint32m1_t scalar, size_t vl) {
-  return vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u32mf2_u64m1_tum(
@@ -291,7 +291,7 @@ vuint32m1_t test_vwredsumu_vs_u16m8_u32m1_tum(vbool2_t mask, vuint32m1_t maskedo
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vwredsumu_vs_u32mf2_u64m1_tum(vbool64_t mask, vuint64m1_t maskedoff, vuint32mf2_t vector, vuint64m1_t scalar, size_t vl) {
-  return vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u32m1_u64m1_tum(
@@ -300,7 +300,7 @@ vuint64m1_t test_vwredsumu_vs_u32mf2_u64m1_tum(vbool64_t mask, vuint64m1_t maske
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vwredsumu_vs_u32m1_u64m1_tum(vbool32_t mask, vuint64m1_t maskedoff, vuint32m1_t vector, vuint64m1_t scalar, size_t vl) {
-  return vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u32m2_u64m1_tum(
@@ -309,7 +309,7 @@ vuint64m1_t test_vwredsumu_vs_u32m1_u64m1_tum(vbool32_t mask, vuint64m1_t masked
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vwredsumu_vs_u32m2_u64m1_tum(vbool16_t mask, vuint64m1_t maskedoff, vuint32m2_t vector, vuint64m1_t scalar, size_t vl) {
-  return vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u32m4_u64m1_tum(
@@ -318,7 +318,7 @@ vuint64m1_t test_vwredsumu_vs_u32m2_u64m1_tum(vbool16_t mask, vuint64m1_t masked
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vwredsumu_vs_u32m4_u64m1_tum(vbool8_t mask, vuint64m1_t maskedoff, vuint32m4_t vector, vuint64m1_t scalar, size_t vl) {
-  return vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u32m8_u64m1_tum(
@@ -327,6 +327,6 @@ vuint64m1_t test_vwredsumu_vs_u32m4_u64m1_tum(vbool8_t mask, vuint64m1_t maskedo
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vwredsumu_vs_u32m8_u64m1_tum(vbool4_t mask, vuint64m1_t maskedoff, vuint32m8_t vector, vuint64m1_t scalar, size_t vl) {
-  return vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
+  return __riscv_vwredsumu_tum(mask, maskedoff, vector, scalar, vl);
 }
 
