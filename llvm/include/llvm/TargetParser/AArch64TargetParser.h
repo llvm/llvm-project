@@ -513,7 +513,6 @@ StringRef getArchExtFeature(StringRef ArchExt);
 StringRef resolveCPUAlias(StringRef CPU);
 
 // Information by Name
-void getFeatureOption(StringRef Name, std::string &Feature);
 std::optional<ArchInfo> getArchForCpu(StringRef CPU);
 
 // Parser

@@ -1297,6 +1297,22 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  asinhf
+  SRCS
+    asinhf.cpp
+  HDRS
+    ../asinhf.h
+  DEPENDS
+    .explogxf
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.sqrt
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   atanhf
   SRCS
     atanhf.cpp

@@ -113,6 +113,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.acosf
     libc.src.math.asin
     libc.src.math.asinf
+    libc.src.math.asinhf
     libc.src.math.atanf    
     libc.src.math.atanhf
     libc.src.math.copysign

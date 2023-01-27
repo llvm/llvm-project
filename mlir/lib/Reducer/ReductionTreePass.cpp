@@ -60,10 +60,13 @@ static void applyPatterns(Region &region,
   // matching in above iteration. Besides, erase op not-in-range may end up in
   // invalid module, so `applyOpPatternsAndFold` should come before that
   // transform.
-  for (Operation *op : opsInRange)
+  for (Operation *op : opsInRange) {
     // `applyOpPatternsAndFold` returns whether the op is convered. Omit it
     // because we don't have expectation this reduction will be success or not.
-    (void)applyOpPatternsAndFold(op, patterns);
+    GreedyRewriteConfig config;
+    config.strictMode = GreedyRewriteStrictness::ExistingOps;
+    (void)applyOpPatternsAndFold(op, patterns, config);
+  }
 
   if (eraseOpNotInRange)
     for (Operation *op : opsNotInRange) {
