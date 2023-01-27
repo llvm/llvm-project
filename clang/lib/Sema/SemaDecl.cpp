@@ -7674,7 +7674,12 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
     // If we have any template parameter lists that don't directly belong to
     // the variable (matching the scope specifier), store them.
-    unsigned VDTemplateParamLists = TemplateParams ? 1 : 0;
+    // An explicit variable template specialization does not own any template
+    // parameter lists.
+    bool IsExplicitSpecialization =
+        IsVariableTemplateSpecialization && !IsPartialSpecialization;
+    unsigned VDTemplateParamLists =
+        (TemplateParams && !IsExplicitSpecialization) ? 1 : 0;
     if (TemplateParamLists.size() > VDTemplateParamLists)
       NewVD->setTemplateParameterListsInfo(
           Context, TemplateParamLists.drop_back(VDTemplateParamLists));
