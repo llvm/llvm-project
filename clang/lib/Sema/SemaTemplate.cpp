@@ -5898,6 +5898,11 @@ bool Sema::CheckTemplateArgumentList(
                                 CTAK_Specified))
         return true;
 
+      CanonicalConverted.back().setIsDefaulted(
+          clang::isSubstitutedDefaultArgument(
+              Context, NewArgs[ArgIdx].getArgument(), *Param,
+              CanonicalConverted, Params->getDepth()));
+
       bool PackExpansionIntoNonPack =
           NewArgs[ArgIdx].getArgument().isPackExpansion() &&
           (!(*Param)->isTemplateParameterPack() || getExpandedPackSize(*Param));
@@ -6072,6 +6077,8 @@ bool Sema::CheckTemplateArgumentList(
                               SugaredConverted, CanonicalConverted,
                               CTAK_Specified))
       return true;
+
+    CanonicalConverted.back().setIsDefaulted(true);
 
     // Core issue 150 (assumed resolution): if this is a template template
     // parameter, keep track of the default template arguments from the

@@ -745,8 +745,11 @@ let Class = PropertyTypeCase<TemplateArgument, "Type"> in {
   def : Property<"type", QualType> {
     let Read = [{ node.getAsType() }];
   }
+  def : Property<"isDefaulted", Bool> {
+    let Read = [{ node.getIsDefaulted() }];
+  }
   def : Creator<[{
-    return TemplateArgument(type);
+    return TemplateArgument(type, /* isNullPtr */ false, isDefaulted);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateArgument, "Declaration"> in {
@@ -756,16 +759,22 @@ let Class = PropertyTypeCase<TemplateArgument, "Declaration"> in {
   def : Property<"parameterType", QualType> {
     let Read = [{ node.getParamTypeForDecl() }];
   }
+  def : Property<"isDefaulted", Bool> {
+    let Read = [{ node.getIsDefaulted() }];
+  }
   def : Creator<[{
-    return TemplateArgument(declaration, parameterType);
+    return TemplateArgument(declaration, parameterType, isDefaulted);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateArgument, "NullPtr"> in {
   def : Property<"type", QualType> {
     let Read = [{ node.getNullPtrType() }];
   }
+  def : Property<"isDefaulted", Bool> {
+    let Read = [{ node.getIsDefaulted() }];
+  }
   def : Creator<[{
-    return TemplateArgument(type, /*nullptr*/ true);
+    return TemplateArgument(type, /*nullptr*/ true, isDefaulted);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateArgument, "Integral"> in {
@@ -775,16 +784,22 @@ let Class = PropertyTypeCase<TemplateArgument, "Integral"> in {
   def : Property<"type", QualType> {
     let Read = [{ node.getIntegralType() }];
   }
+  def : Property<"isDefaulted", Bool> {
+    let Read = [{ node.getIsDefaulted() }];
+  }
   def : Creator<[{
-    return TemplateArgument(ctx, value, type);
+    return TemplateArgument(ctx, value, type, isDefaulted);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateArgument, "Template"> in {
   def : Property<"name", TemplateName> {
     let Read = [{ node.getAsTemplateOrTemplatePattern() }];
   }
+  def : Property<"isDefaulted", Bool> {
+    let Read = [{ node.getIsDefaulted() }];
+  }
   def : Creator<[{
-    return TemplateArgument(name);
+    return TemplateArgument(name, isDefaulted);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateArgument, "TemplateExpansion"> in {
@@ -798,19 +813,25 @@ let Class = PropertyTypeCase<TemplateArgument, "TemplateExpansion"> in {
                               [](unsigned i) { return uint32_t(i); })
     }];
   }
+  def : Property<"isDefaulted", Bool> {
+    let Read = [{ node.getIsDefaulted() }];
+  }
   def : Creator<[{
     auto numExpansionsUnsigned = llvm::transformOptional(
         numExpansions, [](uint32_t i) { return unsigned(i); });
 
-    return TemplateArgument(name, numExpansionsUnsigned);
+    return TemplateArgument(name, numExpansionsUnsigned, isDefaulted);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateArgument, "Expression"> in {
   def : Property<"expression", ExprRef> {
     let Read = [{ node.getAsExpr() }];
   }
+  def : Property<"isDefaulted", Bool> {
+    let Read = [{ node.getIsDefaulted() }];
+  }
   def : Creator<[{
-    return TemplateArgument(expression);
+    return TemplateArgument(expression, isDefaulted);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateArgument, "Pack"> in {
