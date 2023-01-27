@@ -138,7 +138,7 @@ void SIMDIntrinsicsCheck::check(const MatchFinder::MatchResult &Result) {
           << SimdRegex.sub(SmallString<32>({Std, "::simd"}),
                            StdRegex.sub(Std, New));
     } else {
-      diag("'%0' is a non-portable %1 intrinsic function")
+      diag(Call->getExprLoc(), "'%0' is a non-portable %1 intrinsic function")
           << Old << llvm::Triple::getArchTypeName(Arch);
     }
   }
