@@ -43,6 +43,7 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   void checkAwait(AwaitOp awaitOp);
 
   void checkPointerDeref(mlir::Value addr, mlir::Location loc);
+  void checkCoroTaskStore(StoreOp storeOp);
 
   void checkCtor(CallOp callOp, const clang::CXXConstructorDecl *ctor);
   void checkMoveAssignment(CallOp callOp, const clang::CXXMethodDecl *m);
@@ -842,6 +843,40 @@ void LifetimeCheckPass::checkAlloca(AllocaOp allocaOp) {
   }
 }
 
+void LifetimeCheckPass::checkCoroTaskStore(StoreOp storeOp) {
+  // Given:
+  //  auto task = [init task];
+  // Extend pset(task) such that:
+  //  pset(task) = pset(task) U {any local values used to init task}
+  auto taskTmp = storeOp.getValue();
+  // FIXME: check it's initialization 'init' attr.
+  auto taskAddr = storeOp.getAddr();
+
+  // Take the following coroutine creation pattern:
+  //
+  //   %task = cir.alloca ...
+  //   cir.scope {
+  //     %arg0 = cir.alloca ...
+  //     ...
+  //     %tmp_task = cir.call @corotine_call(%arg0, %arg1, ...)
+  //     cir.store %tmp_task, %task
+  //     ...
+  //   }
+  //
+  // Bind values that are coming from alloca's (like %arg0 above) to the
+  // pset of %task - this effectively leads to some invalidation of %task
+  // when %arg0 finishes its lifetime at the end of the enclosing cir.scope.
+  if (auto call = dyn_cast<mlir::cir::CallOp>(taskTmp.getDefiningOp())) {
+    for (auto arg : call.getOperands()) {
+      auto alloca = dyn_cast<mlir::cir::AllocaOp>(arg.getDefiningOp());
+      if (alloca && currScope->localValues.count(alloca))
+        getPmap()[taskAddr].insert(State::getLocalValue(alloca));
+    }
+    return;
+  }
+  llvm_unreachable("expecting cir.call defining op");
+}
+
 void LifetimeCheckPass::checkStore(StoreOp storeOp) {
   auto addr = storeOp.getAddr();
 
@@ -851,42 +886,12 @@ void LifetimeCheckPass::checkStore(StoreOp storeOp) {
   // We handle some special local values, like coroutine tasks, which could
   // be holding references to things with dangling lifetime.
   if (!ptrs.count(addr)) {
-    if (currScope->localTempTasks.count(storeOp.getValue())) {
-      // Given:
-      //  auto task = [init task];
-      // Extend pset(task) such that:
-      //  pset(task) = pset(task) U {any local values used to init task}
-      auto taskTmp = storeOp.getValue();
-      // FIXME: check it's initialization 'init' attr.
-      auto taskAddr = storeOp.getAddr();
-
-      // Take the following coroutine creation pattern:
-      //
-      //   %task = cir.alloca ...
-      //   cir.scope {
-      //     %arg0 = cir.alloca ...
-      //     ...
-      //     %tmp_task = cir.call @corotine_call(%arg0, %arg1, ...)
-      //     cir.store %tmp_task, %task
-      //     ...
-      //   }
-      //
-      // Bind values that are coming from alloca's (like %arg0 above) to the
-      // pset of %task - this effectively leads to some invalidation of %task
-      // when %arg0 finishes its lifetime at the end of the enclosing cir.scope.
-      if (auto call = dyn_cast<mlir::cir::CallOp>(taskTmp.getDefiningOp())) {
-        for (auto arg : call.getOperands()) {
-          auto alloca = dyn_cast<mlir::cir::AllocaOp>(arg.getDefiningOp());
-          if (alloca && currScope->localValues.count(alloca))
-            getPmap()[taskAddr].insert(State::getLocalValue(alloca));
-        }
-        return;
-      }
-      llvm_unreachable("expecting calls");
-    }
-    // Only handle ptrs from here on.
+    if (currScope->localTempTasks.count(storeOp.getValue()))
+      checkCoroTaskStore(storeOp);
     return;
   }
+
+  // Only handle ptrs from here on.
 
   auto getArrayFromSubscript = [&](PtrStrideOp strideOp) -> mlir::Value {
     auto castOp = dyn_cast<CastOp>(strideOp.getBase().getDefiningOp());
