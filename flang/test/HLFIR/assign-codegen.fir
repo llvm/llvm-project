@@ -155,3 +155,32 @@ func.func @array(%arg0: !fir.box<!fir.array<?xi32>>, %arg1: !fir.ref<!fir.array<
 // CHECK:  %[[VAL_29:.*]] = fir.call @_FortranAAssign(%[[VAL_26]], %[[VAL_27]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
 // CHECK:  %[[VAL_30:.*]] = fir.box_addr %[[VAL_22]] : (!fir.box<!fir.heap<!fir.array<100xi32>>>) -> !fir.heap<!fir.array<100xi32>>
 // CHECK:  fir.freemem %[[VAL_30]] : !fir.heap<!fir.array<100xi32>>
+
+
+func.func @test_scalar_to_array(%lhs: !fir.box<!fir.array<?xi32>>, %rhs: i32) {
+  hlfir.assign %rhs to %lhs : i32, !fir.box<!fir.array<?xi32>>
+  return
+}
+// CHECK-LABEL:   func.func @test_scalar_to_array(
+// CHECK-SAME:    %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>>,
+// CHECK-SAME:    %[[VAL_1:.*]]: i32) {
+// CHECK:  %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.array<?xi32>>
+// CHECK:  %[[VAL_5:.*]] = fir.alloca i32
+// CHECK:  fir.store %[[VAL_1]] to %[[VAL_5]] : !fir.ref<i32>
+// CHECK:  %[[VAL_6:.*]] = fir.embox %[[VAL_5]] : (!fir.ref<i32>) -> !fir.box<i32>
+// CHECK:  fir.store %[[VAL_0]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.array<?xi32>>>
+// CHECK:  %[[VAL_10:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> !fir.ref<!fir.box<none>>
+// CHECK:  %[[VAL_11:.*]] = fir.convert %[[VAL_6]] : (!fir.box<i32>) -> !fir.box<none>
+// CHECK:  %[[VAL_13:.*]] = fir.call @_FortranAAssign(%[[VAL_10]], %[[VAL_11]]
+
+
+func.func @test_i1_scalar_to_array(%lhs: !fir.box<!fir.array<?x!fir.logical<4>>>, %rhs: i1) {
+  hlfir.assign %rhs to %lhs : i1, !fir.box<!fir.array<?x!fir.logical<4>>>
+  return
+}
+// CHECK-LABEL:   func.func @test_i1_scalar_to_array(
+// CHECK:  %[[VAL_5:.*]] = fir.convert %{{.*}} : (i1) -> !fir.logical<4>
+// CHECK:  %[[VAL_6:.*]] = fir.alloca !fir.logical<4>
+// CHECK:  %[[VAL_7:.*]] = fir.embox %[[VAL_6]] : (!fir.ref<!fir.logical<4>>) -> !fir.box<!fir.logical<4>>
+// CHECK:  %[[VAL_12:.*]] = fir.convert %[[VAL_7]] : (!fir.box<!fir.logical<4>>) -> !fir.box<none>
+// CHECK:  %[[VAL_14:.*]] = fir.call @_FortranAAssign(%{{.*}}, %[[VAL_12]]
