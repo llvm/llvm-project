@@ -1633,8 +1633,7 @@ struct TestSelectiveReplacementPatternDriver
     MLIRContext *context = &getContext();
     mlir::RewritePatternSet patterns(context);
     patterns.add<TestSelectiveOpReplacementPattern>(context);
-    (void)applyPatternsAndFoldGreedily(getOperation()->getRegions(),
-                                       std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
 } // namespace
