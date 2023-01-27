@@ -1113,7 +1113,13 @@ def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
     }]>
   ];
 
-  let extraClassDeclaration = commonExtraClassDeclaration;
+  let extraClassDeclaration = commonExtraClassDeclaration # [{  
+    static RankedTensorType
+    inferCollapsedType(RankedTensorType type, ArrayRef<AffineMap> reassociation);
+    static RankedTensorType
+    inferCollapsedType(RankedTensorType type, 
+                       SmallVector<ReassociationIndices> reassociation);
+  }];
   let hasVerifier = 1;
 }
 
