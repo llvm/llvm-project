@@ -1,13 +1,5 @@
 // RUN: mlir-opt <%s -split-input-file -verify-diagnostics
 
-func.func @dim(%arg : tensor<1x?xf32>) {
-  %c2 = arith.constant 2 : index
-  tensor.dim %arg, %c2 : tensor<1x?xf32> // expected-error {{'tensor.dim' op index is out of range}}
-  return
-}
-
-// -----
-
 // Asking the dimension of a 0-D shape doesn't make sense.
 func.func @dim_0_ranked(%arg : tensor<f32>, %arg1 : index) {
   tensor.dim %arg, %arg1 : tensor<f32> // expected-error {{'tensor.dim' op operand #0 must be unranked.tensor of any type values or non-0-ranked.tensor of any type values, but got 'tensor<f32>'}}

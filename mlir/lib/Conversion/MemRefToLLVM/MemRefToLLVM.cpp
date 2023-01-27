@@ -495,14 +495,16 @@ private:
     MemRefType memRefType = operandType.cast<MemRefType>();
     if (std::optional<int64_t> index = getConstantDimIndex(dimOp)) {
       int64_t i = *index;
-      if (memRefType.isDynamicDim(i)) {
-        // extract dynamic size from the memref descriptor.
-        MemRefDescriptor descriptor(adaptor.getSource());
-        return descriptor.size(rewriter, loc, i);
+      if (i >= 0 && i < memRefType.getRank()) {
+        if (memRefType.isDynamicDim(i)) {
+          // extract dynamic size from the memref descriptor.
+          MemRefDescriptor descriptor(adaptor.getSource());
+          return descriptor.size(rewriter, loc, i);
+        }
+        // Use constant for static size.
+        int64_t dimSize = memRefType.getDimSize(i);
+        return createIndexConstant(rewriter, loc, dimSize);
       }
-      // Use constant for static size.
-      int64_t dimSize = memRefType.getDimSize(i);
-      return createIndexConstant(rewriter, loc, dimSize);
     }
     Value index = adaptor.getIndex();
     int64_t rank = memRefType.getRank();
