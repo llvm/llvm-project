@@ -18,10 +18,20 @@
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallSet.h"
 
+#include <functional>
+
 using namespace mlir;
 using namespace cir;
 
 namespace {
+
+struct LocOrdering {
+  bool operator()(mlir::Location L1, mlir::Location L2) const {
+    return std::less<const void *>()(L1.getAsOpaquePointer(),
+                                     L2.getAsOpaquePointer());
+  }
+};
+
 struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   LifetimeCheckPass() = default;
   void runOnOperation() override;
@@ -65,7 +75,8 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
                                    const clang::CXXMethodDecl *m);
 
   // Diagnostic helpers.
-  void emitInvalidHistory(mlir::InFlightDiagnostic &D, mlir::Value histKey);
+  void emitInvalidHistory(mlir::InFlightDiagnostic &D, mlir::Value histKey,
+                          mlir::Location warningLoc);
 
   ///
   /// Pass options handling
@@ -277,6 +288,9 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   bool isTaskType(mlir::Value taskVal);
   // Addresses of coroutine Tasks found in the current function.
   SmallPtrSet<mlir::Value, 8> tasks;
+  // Since coawait encapsulates several calls to a promise, do not emit
+  // the same warning multiple times, e.g. under the same coawait.
+  llvm::SmallSet<mlir::Location, 8, LocOrdering> emittedDanglingTasks;
 
   ///
   /// Scope, context and guards
@@ -972,7 +986,8 @@ void LifetimeCheckPass::checkLoad(LoadOp loadOp) {
 }
 
 void LifetimeCheckPass::emitInvalidHistory(mlir::InFlightDiagnostic &D,
-                                           mlir::Value histKey) {
+                                           mlir::Value histKey,
+                                           mlir::Location warningLoc) {
   assert(invalidHist.count(histKey) && "expected invalid hist");
   auto &hist = invalidHist[histKey];
   unsigned limit = opts.histLimit;
@@ -987,9 +1002,16 @@ void LifetimeCheckPass::emitInvalidHistory(mlir::InFlightDiagnostic &D,
       break;
     }
     case InvalidStyle::EndOfScope: {
-      StringRef outOfScopeVarName = getVarNameFromValue(*info.val);
-      D.attachNote(info.loc) << "pointee '" << outOfScopeVarName
-                             << "' invalidated at end of scope";
+      if (!tasks.count(histKey)) {
+        StringRef outOfScopeVarName = getVarNameFromValue(*info.val);
+        D.attachNote(info.loc) << "pointee '" << outOfScopeVarName
+                               << "' invalidated at end of scope";
+      } else {
+        D.attachNote((*info.val).getLoc()) << "coroutine bound to resource "
+                                           << "with expired lifetime";
+        D.attachNote(info.loc) << "at the end of scope or full-expression";
+        emittedDanglingTasks.insert(warningLoc);
+      }
       break;
     }
     case InvalidStyle::NonConstUseOfOwner: {
@@ -1014,6 +1036,12 @@ void LifetimeCheckPass::checkPointerDeref(mlir::Value addr,
     emitRemark(loc) << "pset => " << Out.str();
   };
 
+  // Do not emit more than one diagonistic for the same task deref location.
+  // Since cowait hides a bunch of logic and calls to the promise type, just
+  // have one per suspend expr.
+  if (tasks.count(addr) && emittedDanglingTasks.count(loc))
+    return;
+
   bool psetRemarkEmitted = false;
   if (opts.emitRemarkPsetAlways()) {
     emitPsetRemark();
@@ -1028,10 +1056,14 @@ void LifetimeCheckPass::checkPointerDeref(mlir::Value addr,
   // diagnose it.
   StringRef varName = getVarNameFromValue(addr);
   auto D = emitWarning(loc);
-  D << "use of invalid pointer '" << varName << "'";
+
+  if (tasks.count(addr)) {
+    D << "use of coroutine '" << varName << "' with dangling reference";
+  } else
+    D << "use of invalid pointer '" << varName << "'";
 
   if (hasInvalid && opts.emitHistoryInvalid())
-    emitInvalidHistory(D, addr);
+    emitInvalidHistory(D, addr, loc);
 
   if (hasNullptr && opts.emitHistoryNull()) {
     assert(pmapNullHist.count(addr) && "expected nullptr hist");
