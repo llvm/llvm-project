@@ -448,6 +448,8 @@ public:
 
   Error writeObject(const MemoryBuffer &OutputBuffer,
                     StringRef OutputPath) final {
+    // Clear output file if exists for hard-linking.
+    sys::fs::remove(OutputPath);
     // Cache is enabled, hard-link the entry (or copy if hard-link fails).
     std::string CacheEntryPath = getEntryPath();
     auto Err = sys::fs::create_hard_link(CacheEntryPath, OutputPath);
@@ -833,11 +835,8 @@ Optional<std::string> ModuleCacheEntry::computeCacheKey(
 
 Error ModuleCacheEntry::writeObject(const MemoryBuffer &OutputBuffer,
                                     StringRef OutputPath) {
-  if (sys::fs::exists(OutputPath))
-    sys::fs::remove(OutputPath);
-
   std::error_code Err;
-  raw_fd_ostream OS(OutputPath, Err, sys::fs::OF_None);
+  raw_fd_ostream OS(OutputPath, Err, sys::fs::CD_CreateAlways);
   if (Err)
     return createStringError(Err, Twine("Can't open output '") + OutputPath);
   OS << OutputBuffer.getBuffer();
@@ -1249,11 +1248,8 @@ ThinLTOCodeGenerator::writeGeneratedObject(StringRef OutputPath,
     return OutputPath.str();
   }
   // No cache entry, just write out the buffer.
-  if (sys::fs::exists(OutputPath))
-    sys::fs::remove(OutputPath);
-
   std::error_code Err;
-  raw_fd_ostream OS(OutputPath, Err, sys::fs::OF_None);
+  raw_fd_ostream OS(OutputPath, Err, sys::fs::CD_CreateAlways);
   if (Err)
     report_fatal_error(Twine("Can't open output '") + OutputPath + "'\n");
   OS << OutputBuffer.getBuffer();
