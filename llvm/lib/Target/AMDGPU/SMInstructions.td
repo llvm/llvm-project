@@ -982,6 +982,32 @@ multiclass SLoadPatternWithExtension <string Instr, SDPatternOperator node, Valu
   }
 }
 
+multiclass ScalarBufferLoadIntrinsicPat <SDPatternOperator name, string Instr> {
+
+  // 1. Offset as an immediate
+  def : GCNPat <
+    (name v4i32:$sbase, (SMRDBufferImm i32:$offset), timm:$cachepolicy),
+    (i32 (!cast<SM_Pseudo>(Instr#"_IMM") SReg_128:$sbase, i32imm:$offset, (extract_cpol $cachepolicy)))> {
+    let OtherPredicates = [isGFX12Plus];
+  }
+
+  // 2. Offset as an 32-bit SGPR
+  def : GCNPat <
+    (name v4i32:$sbase, i32:$soffset, timm:$cachepolicy),
+    (i32 (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") SReg_128:$sbase, SReg_32:$soffset, 0, (extract_cpol $cachepolicy)))> {
+    let OtherPredicates = [isGFX12Plus];
+  }
+
+  // 3. Offset as an 32-bit SGPR + immediate
+  def : GCNPat <
+    (name v4i32:$sbase, (SMRDBufferSgprImm i32:$soffset, i32:$offset),
+                    timm:$cachepolicy),
+    (i32 (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") SReg_128:$sbase, SReg_32:$soffset, i32imm:$offset,
+                                             (extract_cpol $cachepolicy)))> {
+    let OtherPredicates = [isGFX12Plus];
+  }
+}
+
 // Global and constant loads can be selected to either MUBUF or SMRD
 // instructions, but SMRD instructions are faster so we want the instruction
 // selector to prefer those.
@@ -991,6 +1017,10 @@ defm : SLoadPatternWithExtension <"S_LOAD_U8", zextloadi8_constant, i32>;
 defm : SLoadPatternWithExtension <"S_LOAD_I8", sextloadi8_constant, i32>;
 defm : SLoadPatternWithExtension <"S_LOAD_U16", zextloadi16_constant, i32>;
 defm : SLoadPatternWithExtension <"S_LOAD_I16", sextloadi16_constant, i32>;
+defm : ScalarBufferLoadIntrinsicPat <SIsbuffer_load_byte, "S_BUFFER_LOAD_I8">;
+defm : ScalarBufferLoadIntrinsicPat <SIsbuffer_load_ubyte, "S_BUFFER_LOAD_U8">;
+defm : ScalarBufferLoadIntrinsicPat <SIsbuffer_load_short, "S_BUFFER_LOAD_I16">;
+defm : ScalarBufferLoadIntrinsicPat <SIsbuffer_load_ushort, "S_BUFFER_LOAD_U16">;
 
 foreach vt = Reg32Types.types in {
 defm : SMRD_Pattern <"S_LOAD_DWORD", vt>;

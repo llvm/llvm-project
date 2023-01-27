@@ -420,6 +420,8 @@ public:
     return GFX9Insts;
   }
 
+  bool hasScalarSubwordLoads() const { return getGeneration() >= GFX12; }
+
   TrapHandlerAbi getTrapHandlerAbi() const {
     return isAmdHsaOS() ? TrapHandlerAbi::AMDHSA : TrapHandlerAbi::NONE;
   }
