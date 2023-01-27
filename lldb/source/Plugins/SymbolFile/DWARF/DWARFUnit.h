@@ -222,6 +222,8 @@ public:
 
   uint8_t GetUnitType() const { return m_header.GetUnitType(); }
   bool IsTypeUnit() const { return m_header.IsTypeUnit(); }
+  /// Note that this check only works for DWARF5+.
+  bool IsSkeletonUnit() const { return GetUnitType() == llvm::dwarf::DW_UT_skeleton; }
 
   llvm::Optional<uint64_t> GetStringOffsetSectionItem(uint32_t index) const;
 
