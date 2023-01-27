@@ -31,8 +31,11 @@ uint64_t AArch64::getDefaultExtensions(StringRef CPU,
     return AI.DefaultExts;
 
   // Note: this now takes cpu aliases into account
-  const CpuInfo &Cpu = parseCpu(CPU);
-  return Cpu.Arch.DefaultExts | Cpu.DefaultExtensions;
+  std::optional<CpuInfo> Cpu = parseCpu(CPU);
+  if (!Cpu)
+    return AI.DefaultExts;
+
+  return Cpu->Arch.DefaultExts | Cpu->DefaultExtensions;
 }
 
 void AArch64::getFeatureOption(StringRef Name, std::string &Feature) {
@@ -45,20 +48,22 @@ void AArch64::getFeatureOption(StringRef Name, std::string &Feature) {
   Feature = Name.str();
 }
 
-const AArch64::ArchInfo &AArch64::getArchForCpu(StringRef CPU) {
+std::optional<AArch64::ArchInfo> AArch64::getArchForCpu(StringRef CPU) {
   if (CPU == "generic")
     return ARMV8A;
 
   // Note: this now takes cpu aliases into account
-  const CpuInfo &Cpu = parseCpu(CPU);
-  return Cpu.Arch;
+  std::optional<CpuInfo> Cpu = parseCpu(CPU);
+  if (!Cpu)
+    return {};
+  return Cpu->Arch;
 }
 
-const AArch64::ArchInfo &AArch64::ArchInfo::findBySubArch(StringRef SubArch) {
+std::optional<AArch64::ArchInfo> AArch64::ArchInfo::findBySubArch(StringRef SubArch) {
   for (const auto *A : AArch64::ArchInfos)
     if (A->getSubArch() == SubArch)
       return *A;
-  return AArch64::INVALID;
+  return {};
 }
 
 uint64_t AArch64::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
@@ -75,9 +80,6 @@ uint64_t AArch64::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
 
 bool AArch64::getExtensionFeatures(uint64_t InputExts,
                                    std::vector<StringRef> &Features) {
-  if (InputExts == AArch64::AEK_INVALID)
-    return false;
-
   for (const auto &E : Extensions)
     /* INVALID and NONE have no feature name. */
     if ((InputExts & E.ID) && !E.Feature.empty())
@@ -110,7 +112,6 @@ StringRef AArch64::getArchExtFeature(StringRef ArchExt) {
 
 void AArch64::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values) {
   for (const auto &C : CpuInfos)
-    if (C.Arch != INVALID)
       Values.push_back(C.Name);
 
   for (const auto &Alias : CpuAliases)
@@ -123,28 +124,28 @@ bool AArch64::isX18ReservedByDefault(const Triple &TT) {
 }
 
 // Allows partial match, ex. "v8a" matches "armv8a".
-const AArch64::ArchInfo &AArch64::parseArch(StringRef Arch) {
+std::optional<AArch64::ArchInfo> AArch64::parseArch(StringRef Arch) {
   Arch = llvm::ARM::getCanonicalArchName(Arch);
   if (checkArchVersion(Arch) < 8)
-    return AArch64::INVALID;
+    return {};
 
   StringRef Syn = llvm::ARM::getArchSynonym(Arch);
   for (const auto *A : ArchInfos) {
     if (A->Name.endswith(Syn))
       return *A;
   }
-  return AArch64::INVALID;
+  return {};
 }
 
-AArch64::ArchExtKind AArch64::parseArchExt(StringRef ArchExt) {
+std::optional<AArch64::ExtensionInfo> AArch64::parseArchExtension(StringRef ArchExt) {
   for (const auto &A : Extensions) {
     if (ArchExt == A.Name)
-      return static_cast<ArchExtKind>(A.ID);
+      return A;
   }
-  return AArch64::AEK_INVALID;
+  return {};
 }
 
-const AArch64::CpuInfo &AArch64::parseCpu(StringRef Name) {
+std::optional<AArch64::CpuInfo> AArch64::parseCpu(StringRef Name) {
   // Resolve aliases first.
   Name = resolveCPUAlias(Name);
 
@@ -153,7 +154,5 @@ const AArch64::CpuInfo &AArch64::parseCpu(StringRef Name) {
     if (Name == C.Name)
       return C;
 
-  // "generic" returns invalid.
-  assert(Name != "invalid" && "Unexpected recursion.");
-  return parseCpu("invalid");
+  return {};
 }
