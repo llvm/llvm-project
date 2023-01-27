@@ -86,18 +86,6 @@ inline LogicalResult applyPatternsAndFoldGreedily(
   return applyPatternsAndFoldGreedily(op->getRegions(), patterns, config);
 }
 
-/// Applies the specified patterns on `op` alone while also trying to fold it,
-/// by selecting the highest benefits patterns in a greedy manner. Returns
-/// success if no more patterns can be matched. `erased` is set to true if `op`
-/// was folded away or erased as a result of becoming dead. Note: This does not
-/// apply any patterns recursively to the regions of `op`.
-///
-/// Returns success if the iterative process converged and no more patterns can
-/// be matched.
-LogicalResult applyOpPatternsAndFold(Operation *op,
-                                     const FrozenRewritePatternSet &patterns,
-                                     bool *erased = nullptr);
-
 /// Applies the specified rewrite patterns on `ops` while also trying to fold
 /// these ops.
 ///
@@ -131,6 +119,21 @@ LogicalResult applyOpPatternsAndFold(ArrayRef<Operation *> ops,
                                      bool *changed = nullptr,
                                      bool *allErased = nullptr,
                                      Region *scope = nullptr);
+
+/// Applies the specified patterns on `op` alone while also trying to fold it,
+/// by selecting the highest benefits patterns in a greedy manner. Returns
+/// success if no more patterns can be matched. `erased` is set to true if `op`
+/// was folded away or erased as a result of becoming dead.
+///
+/// Returns success if the iterative process converged and no more patterns can
+/// be matched.
+inline LogicalResult
+applyOpPatternsAndFold(Operation *op, const FrozenRewritePatternSet &patterns,
+                       bool *erased = nullptr) {
+  return applyOpPatternsAndFold(ArrayRef(op), patterns,
+                                GreedyRewriteStrictness::ExistingOps,
+                                /*changed=*/nullptr, erased);
+}
 
 } // namespace mlir
 
