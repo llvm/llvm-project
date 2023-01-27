@@ -111,14 +111,8 @@ def library_S : Separate<["--", "-"], "library">, Flags<[HelpHidden]>,
 def library_EQ : Joined<["--", "-"], "library=">, Flags<[HelpHidden]>,
   Alias<library_path>;
 
-def as_needed : Flag<["--", "-"], "as-needed">;
-def no_as_needed : Flag<["--", "-"], "no-as-needed">;
-
 def rpath : Separate<["--", "-"], "rpath">;
 def rpath_EQ : Joined<["--", "-"], "rpath=">, Flags<[HelpHidden]>, Alias<rpath>;
-
-def dynamic_linker : Separate<["--", "-"], "dynamic-linker">;
-def dynamic_linker_EQ : Joined<["--", "-"], "dynamic-linker=">, Alias<dynamic_linker>;
 
 def v : Flag<["--", "-"], "v">, HelpText<"Display the version number and exit">;
 def version : Flag<["--", "-"], "version">, Flags<[HelpHidden]>, Alias<v>;
