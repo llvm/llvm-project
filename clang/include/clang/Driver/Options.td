@@ -505,6 +505,7 @@ defvar hip = LangOpts<"HIP">;
 defvar gnu_mode = LangOpts<"GNUMode">;
 defvar asm_preprocessor = LangOpts<"AsmPreprocessor">;
 defvar hlsl = LangOpts<"HLSL">;
+defvar objc = LangOpts<"ObjC">;
 
 defvar std = !strconcat("LangStandard::getLangStandardForKind(", lang_std.KeyPath, ")");
 
@@ -1516,8 +1517,9 @@ defm async_exceptions: BoolFOption<"async-exceptions",
   LangOpts<"EHAsynch">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Enable EH Asynchronous exceptions">, NegFlag<SetFalse>>;
 defm cxx_modules : BoolFOption<"cxx-modules",
-  LangOpts<"CPlusPlusModules">, Default<cpp20.KeyPath>,
-  NegFlag<SetFalse, [CC1Option], "Disable">, PosFlag<SetTrue, [], "Enable">,
+  // FIXME: improve tblgen to not need strconcat here.
+  LangOpts<"CPlusPlusModules">, Default<!strconcat(cpp20.KeyPath, " && !", objc.KeyPath)>,
+  NegFlag<SetFalse, [CC1Option], "Disable">, PosFlag<SetTrue, [CC1Option], "Enable">,
   BothFlags<[NoXarchOption], " modules for C++">>,
   ShouldParseIf<cplusplus.KeyPath>;
 def fdebug_pass_arguments : Flag<["-"], "fdebug-pass-arguments">, Group<f_Group>;
@@ -6001,12 +6003,15 @@ defm fimplicit_modules_use_lock : BoolOption<"f", "implicit-modules-use-lock",
           "duplicating work in competing clang invocations.">>;
 // FIXME: We only need this in C++ modules / Modules TS if we might textually
 // enter a different module (eg, when building a header unit).
-def fmodules_local_submodule_visibility :
-  Flag<["-"], "fmodules-local-submodule-visibility">,
-  HelpText<"Enforce name visibility rules across submodules of the same "
-           "top-level module.">,
-  MarshallingInfoFlag<LangOpts<"ModulesLocalVisibility">>,
-  ImpliedByAnyOf<[fmodules_ts.KeyPath, fcxx_modules.KeyPath]>;
+defm modules_local_submodule_visibility :
+  BoolFOption<"modules-local-submodule-visibility",
+    LangOpts<"ModulesLocalVisibility">,
+    // FIXME: improve tblgen to not need strconcat here.
+    Default<!strconcat("(", fmodules_ts.KeyPath, "||", fcxx_modules.KeyPath,
+                       ")")>,
+    PosFlag<SetTrue, [], "name visibility rules across submodules of the same "
+                         "top-level module">,
+    NegFlag<SetFalse>>;
 def fmodules_codegen :
   Flag<["-"], "fmodules-codegen">,
   HelpText<"Generate code for uses of this module that assumes an explicit "
