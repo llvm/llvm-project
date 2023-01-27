@@ -275,6 +275,12 @@ def GetPtrBase : Opcode {
   let Args = [ArgUint32];
 }
 // [Pointer] -> [Pointer]
+def GetPtrBasePop : Opcode {
+  // Offset of field, which is a base.
+  let Args = [ArgUint32];
+}
+
+// [Pointer] -> [Pointer]
 def GetPtrVirtBase : Opcode {
   // RecordDecl of base class.
   let Args = [ArgRecordDecl];
