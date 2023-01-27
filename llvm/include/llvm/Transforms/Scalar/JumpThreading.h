@@ -20,9 +20,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/IR/ValueHandle.h"
-#include <optional>
 #include <utility>
 
 namespace llvm {
@@ -33,6 +31,7 @@ class BinaryOperator;
 class BranchInst;
 class CmpInst;
 class Constant;
+class DomTreeUpdater;
 class Function;
 class Instruction;
 class IntrinsicInst;
@@ -76,18 +75,15 @@ enum ConstantPreference { WantInteger, WantBlockAddress };
 /// In this case, the unconditional branch at the end of the first if can be
 /// revectored to the false side of the second if.
 class JumpThreadingPass : public PassInfoMixin<JumpThreadingPass> {
-  Function *F = nullptr;
-  FunctionAnalysisManager *FAM = nullptr;
-  TargetLibraryInfo *TLI = nullptr;
-  TargetTransformInfo *TTI = nullptr;
-  LazyValueInfo *LVI = nullptr;
-  AAResults *AA = nullptr;
-  std::unique_ptr<DomTreeUpdater> DTU;
-  std::optional<BlockFrequencyInfo *> BFI = std::nullopt;
-  std::optional<BranchProbabilityInfo *> BPI = std::nullopt;
-  bool ChangedSinceLastAnalysisUpdate = false;
+  TargetLibraryInfo *TLI;
+  TargetTransformInfo *TTI;
+  LazyValueInfo *LVI;
+  AAResults *AA;
+  DomTreeUpdater *DTU;
+  std::unique_ptr<BlockFrequencyInfo> BFI;
+  std::unique_ptr<BranchProbabilityInfo> BPI;
+  bool HasProfileData = false;
   bool HasGuards = false;
-  bool HasProfile = false;
 #ifndef LLVM_ENABLE_ABI_BREAKING_CHECKS
   SmallPtrSet<const BasicBlock *, 16> LoopHeaders;
 #else
@@ -101,16 +97,18 @@ public:
   JumpThreadingPass(int T = -1);
 
   // Glue for old PM.
-  bool runImpl(Function &F, FunctionAnalysisManager *FAM,
-               TargetLibraryInfo *TLI, TargetTransformInfo *TTI,
-               LazyValueInfo *LVI, AAResults *AA,
-               std::unique_ptr<DomTreeUpdater> DTU,
-               std::optional<BlockFrequencyInfo *> BFI,
-               std::optional<BranchProbabilityInfo *> BPI);
+  bool runImpl(Function &F, TargetLibraryInfo *TLI, TargetTransformInfo *TTI,
+               LazyValueInfo *LVI, AAResults *AA, DomTreeUpdater *DTU,
+               bool HasProfileData, std::unique_ptr<BlockFrequencyInfo> BFI,
+               std::unique_ptr<BranchProbabilityInfo> BPI);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
-  DomTreeUpdater *getDomTreeUpdater() const { return DTU.get(); }
+  void releaseMemory() {
+    BFI.reset();
+    BPI.reset();
+  }
+
   void findLoopHeaders(Function &F);
   bool processBlock(BasicBlock *BB);
   bool maybeMergeBasicBlockIntoOnlyPred(BasicBlock *BB);
@@ -173,35 +171,6 @@ private:
                                     BasicBlock *NewBB, BasicBlock *SuccBB);
   /// Check if the block has profile metadata for its outgoing edges.
   bool doesBlockHaveProfileData(BasicBlock *BB);
-
-  /// Returns analysis preserved by the pass.
-  PreservedAnalyses getPreservedAnalysis() const;
-
-  /// Helper function to run "external" analysis in the middle of JumpThreading.
-  /// It takes care of updating/invalidating other existing analysis
-  /// before/after  running the "external" one.
-  template <typename AnalysisT>
-  typename AnalysisT::Result *runExternalAnalysis();
-
-  /// Returns an existing instance of BPI if any, otherwise nullptr. By
-  /// "existing" we mean either cached result provided by FunctionAnalysisManger
-  /// or created by preceding call to 'getOrCreateBPI'.
-  BranchProbabilityInfo *getBPI();
-
-  /// Returns an existing instance of BFI if any, otherwise nullptr. By
-  /// "existing" we mean either cached result provided by FunctionAnalysisManger
-  /// or created by preceding call to 'getOrCreateBFI'.
-  BlockFrequencyInfo *getBFI();
-
-  /// Returns an existing instance of BPI if any, otherwise:
-  ///   if 'HasProfile' is true creates new instance through
-  ///   FunctionAnalysisManager, otherwise nullptr.
-  BranchProbabilityInfo *getOrCreateBPI(bool Force = false);
-
-  /// Returns an existing instance of BFI if any, otherwise:
-  ///   if 'HasProfile' is true creates new instance through
-  ///   FunctionAnalysisManager, otherwise nullptr.
-  BlockFrequencyInfo *getOrCreateBFI(bool Force = false);
 };
 
 } // end namespace llvm
