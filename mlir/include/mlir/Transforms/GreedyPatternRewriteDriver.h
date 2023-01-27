@@ -59,9 +59,9 @@ public:
 // applyPatternsGreedily
 //===----------------------------------------------------------------------===//
 
-/// Rewrite the regions of the specified operation, which must be isolated from
-/// above, by repeatedly applying the highest benefit patterns in a greedy
-/// work-list driven manner.
+/// Rewrite ops in the given region, which must be isolated from above, by
+/// repeatedly applying the highest benefit patterns in a greedy work-list
+/// driven manner.
 ///
 /// This variant may stop after a predefined number of iterations, see the
 /// alternative below to provide a specific number of iterations before stopping
@@ -76,14 +76,18 @@ public:
 ///
 /// You may configure several aspects of this with GreedyRewriteConfig.
 LogicalResult applyPatternsAndFoldGreedily(
-    MutableArrayRef<Region> regions, const FrozenRewritePatternSet &patterns,
+    Region &region, const FrozenRewritePatternSet &patterns,
     GreedyRewriteConfig config = GreedyRewriteConfig());
 
-/// Rewrite the given regions, which must be isolated from above.
+/// Rewrite ops in all regions of the given op, which must be isolated from
+/// above.
 inline LogicalResult applyPatternsAndFoldGreedily(
     Operation *op, const FrozenRewritePatternSet &patterns,
     GreedyRewriteConfig config = GreedyRewriteConfig()) {
-  return applyPatternsAndFoldGreedily(op->getRegions(), patterns, config);
+  bool failed = false;
+  for (Region &region : op->getRegions())
+    failed |= applyPatternsAndFoldGreedily(region, patterns, config).failed();
+  return failure(failed);
 }
 
 /// Applies the specified rewrite patterns on `ops` while also trying to fold
