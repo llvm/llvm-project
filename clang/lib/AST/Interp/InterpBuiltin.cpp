@@ -13,35 +13,17 @@
 namespace clang {
 namespace interp {
 
-/// This is a slightly simplified version of the Ret() we have in Interp.cpp
-/// If they end up diverging in the future, we should get rid of the code
-/// duplication.
-template <PrimType Name, class T = typename PrimConv<Name>::T>
-static bool Ret(InterpState &S, CodePtr &PC) {
-  S.CallStackDepth--;
-  const T &Ret = S.Stk.pop<T>();
+bool InterpretBuiltin(InterpState &S, CodePtr &PC, unsigned BuiltinID) {
+  APValue Dummy;
 
-  assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
-  if (!S.checkingPotentialConstantExpression())
-    S.Current->popArgs();
-
-  InterpFrame *Caller = S.Current->Caller;
-  assert(Caller);
-
-  PC = S.Current->getRetPC();
-  delete S.Current;
-  S.Current = Caller;
-  S.Stk.push<T>(Ret);
-
-  return true;
-}
-
-bool InterpretBuiltin(InterpState &S, CodePtr PC, unsigned BuiltinID) {
   switch (BuiltinID) {
   case Builtin::BI__builtin_is_constant_evaluated:
     S.Stk.push<Boolean>(Boolean::from(S.inConstantContext()));
-    Ret<PT_Bool>(S, PC);
-    return true;
+    return Ret<PT_Bool, true>(S, PC, Dummy);
+  case Builtin::BI__builtin_assume:
+    return RetVoid<true>(S, PC, Dummy);
+  default:
+    return false;
   }
 
   return false;

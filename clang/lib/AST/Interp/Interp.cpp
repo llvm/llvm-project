@@ -26,51 +26,6 @@
 using namespace clang;
 using namespace clang::interp;
 
-//===----------------------------------------------------------------------===//
-// Ret
-//===----------------------------------------------------------------------===//
-
-template <PrimType Name, class T = typename PrimConv<Name>::T>
-static bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
-  S.CallStackDepth--;
-  const T &Ret = S.Stk.pop<T>();
-
-  assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
-  if (!S.checkingPotentialConstantExpression())
-    S.Current->popArgs();
-
-  if (InterpFrame *Caller = S.Current->Caller) {
-    PC = S.Current->getRetPC();
-    delete S.Current;
-    S.Current = Caller;
-    S.Stk.push<T>(Ret);
-  } else {
-    delete S.Current;
-    S.Current = nullptr;
-    if (!ReturnValue<T>(Ret, Result))
-      return false;
-  }
-  return true;
-}
-
-static bool RetVoid(InterpState &S, CodePtr &PC, APValue &Result) {
-  S.CallStackDepth--;
-
-  assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
-  if (!S.checkingPotentialConstantExpression())
-    S.Current->popArgs();
-
-  if (InterpFrame *Caller = S.Current->Caller) {
-    PC = S.Current->getRetPC();
-    delete S.Current;
-    S.Current = Caller;
-  } else {
-    delete S.Current;
-    S.Current = nullptr;
-  }
-  return true;
-}
-
 static bool RetValue(InterpState &S, CodePtr &Pt, APValue &Result) {
   llvm::report_fatal_error("Interpreter cannot return values");
 }

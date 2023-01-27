@@ -22,3 +22,10 @@ static_assert(std::is_constant_evaluated() , "");
 bool is_this_constant() {
   return __builtin_is_constant_evaluated(); // CHECK: ret i1 false
 }
+
+constexpr bool assume() {
+  __builtin_assume(true);
+  __builtin_assume(false);
+  return true;
+}
+static_assert(assume(), "");
