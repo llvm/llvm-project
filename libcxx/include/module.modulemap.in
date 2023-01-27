@@ -755,13 +755,19 @@ module std [system] {
       module derived_from               { private header "__concepts/derived_from.h" }
       module destructible               { private header "__concepts/destructible.h" }
       module different_from             { private header "__concepts/different_from.h" }
-      module equality_comparable        { private header "__concepts/equality_comparable.h" }
+      module equality_comparable {
+        private header "__concepts/equality_comparable.h"
+        export type_traits.common_reference
+      }
       module invocable                  { private header "__concepts/invocable.h" }
       module movable                    { private header "__concepts/movable.h" }
       module predicate                  { private header "__concepts/predicate.h" }
       module regular                    { private header "__concepts/regular.h" }
       module relation                   { private header "__concepts/relation.h" }
-      module same_as                    { private header "__concepts/same_as.h" }
+      module same_as {
+        private header "__concepts/same_as.h"
+        export type_traits.is_same
+      }
       module semiregular                { private header "__concepts/semiregular.h" }
       module swappable                  { private header "__concepts/swappable.h" }
       module totally_ordered            { private header "__concepts/totally_ordered.h" }
@@ -979,7 +985,11 @@ module std [system] {
       module back_insert_iterator  { private header "__iterator/back_insert_iterator.h" }
       module bounded_iter          { private header "__iterator/bounded_iter.h" }
       module common_iterator       { private header "__iterator/common_iterator.h" }
-      module concepts              { private header "__iterator/concepts.h" }
+      module concepts {
+        private header "__iterator/concepts.h"
+        export concepts.equality_comparable
+        export type_traits.common_reference
+      }
       module counted_iterator      { private header "__iterator/counted_iterator.h" }
       module data                  { private header "__iterator/data.h" }
       module default_sentinel      { private header "__iterator/default_sentinel.h" }
