@@ -10302,17 +10302,16 @@ the alignment is not set to a value which is at least the size in bytes of the
 pointee. ``!nontemporal`` does not have any defined semantics for atomic stores.
 
 The optional constant ``align`` argument specifies the alignment of the
-operation (that is, the alignment of the memory address). A value of 0
-or an omitted ``align`` argument means that the operation has the ABI
-alignment for the target. It is the responsibility of the code emitter
-to ensure that the alignment information is correct. Overestimating the
-alignment results in undefined behavior. Underestimating the
-alignment may produce less efficient code. An alignment of 1 is always
-safe. The maximum possible alignment is ``1 << 32``. An alignment
-value higher than the size of the stored type implies memory up to the
-alignment value bytes can be stored to without trapping in the default
-address space. Storing to the higher bytes however may result in data
-races if another thread can access the same address. Introducing a
+operation (that is, the alignment of the memory address). An omitted ``align``
+argument means that the operation has the ABI alignment for the target.
+It is the responsibility of the code emitter to ensure that the alignment
+information is correct. Overestimating the alignment results in undefined
+behavior. Underestimating the alignment may produce less efficient code.
+An alignment of 1 is always safe. The maximum possible alignment is ``1 << 32``.
+An alignment value higher than the size of the stored type implies memory
+up to the alignment value bytes can be stored to without trapping in
+the default address space. Storing to the higher bytes however may result in
+data races if another thread can access the same address. Introducing a
 data race is not allowed. Storing to the extra bytes is not allowed
 even in situations where a data race is known to not exist if the
 function has the ``sanitize_address`` attribute.
