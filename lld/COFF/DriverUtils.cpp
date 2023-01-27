@@ -347,9 +347,7 @@ public:
     }
   }
 
-  TemporaryFile(TemporaryFile &&obj) {
-    std::swap(path, obj.path);
-  }
+  TemporaryFile(TemporaryFile &&obj) noexcept { std::swap(path, obj.path); }
 
   ~TemporaryFile() {
     if (path.empty())
@@ -869,7 +867,7 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
   ctx.config.argv = {argv[0]};
   for (opt::Arg *arg : args) {
     if (arg->getOption().getKind() != opt::Option::InputClass) {
-      ctx.config.argv.push_back(args.getArgString(arg->getIndex()));
+      ctx.config.argv.emplace_back(args.getArgString(arg->getIndex()));
     }
   }
 

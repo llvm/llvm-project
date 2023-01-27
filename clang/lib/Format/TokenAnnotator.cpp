@@ -185,6 +185,8 @@ private:
         } else {
           CurrentToken->setType(TT_TemplateCloser);
         }
+        if (CurrentToken->Next && CurrentToken->Next->Tok.isLiteral())
+          return false;
         next();
         return true;
       }
