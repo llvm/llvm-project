@@ -280,7 +280,14 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
     ~LexicalScopeContext() = default;
 
     // Track all local values added in this scope
-    llvm::SmallVector<mlir::Value, 4> localValues;
+    SmallPtrSet<mlir::Value, 4> localValues;
+
+    // Track the result of temporaries with coroutine call results,
+    // they are used to initialize a task.
+    //
+    // Value must come directly out of a cir.call to a cir.func which
+    // is a coroutine.
+    SmallPtrSet<mlir::Value, 2> localTempTasks;
 
     LLVM_DUMP_METHOD void dumpLocalValues();
   };
@@ -792,12 +799,12 @@ void LifetimeCheckPass::checkAlloca(AllocaOp allocaOp) {
     // 2.4.2 - When a local Owner x is declared, add (x, {x__1'}) to pmap.
     addOwner(addr);
     getPmap()[addr].insert(State::getOwnedBy(addr));
-    currScope->localValues.push_back(addr);
+    currScope->localValues.insert(addr);
     break;
   case TypeCategory::Value: {
     // 2.4.2 - When a local Value x is declared, add (x, {x}) to pmap.
     getPmap()[addr].insert(State::getLocalValue(addr));
-    currScope->localValues.push_back(addr);
+    currScope->localValues.insert(addr);
     return;
   }
   default:
@@ -808,10 +815,48 @@ void LifetimeCheckPass::checkAlloca(AllocaOp allocaOp) {
 void LifetimeCheckPass::checkStore(StoreOp storeOp) {
   auto addr = storeOp.getAddr();
 
-  // We only care about stores that change local pointers, local values
-  // are not interesting here (just yet).
-  if (!ptrs.count(addr))
+  // The bulk of the check is done on top of store to pointer categories,
+  // which usually represent the most common case.
+  //
+  // We handle some special local values, like coroutine tasks, which could
+  // be holding references to things with dangling lifetime.
+  if (!ptrs.count(addr)) {
+    if (currScope->localTempTasks.count(storeOp.getValue())) {
+      // Given:
+      //  auto task = [init task];
+      // Extend pset(task) such that:
+      //  pset(task) = pset(task) U {any local values used to init task}
+      auto taskTmp = storeOp.getValue();
+      // FIXME: check it's initialization 'init' attr.
+      auto taskAddr = storeOp.getAddr();
+
+      // Take the following coroutine creation pattern:
+      //
+      //   %task = cir.alloca ...
+      //   cir.scope {
+      //     %arg0 = cir.alloca ...
+      //     ...
+      //     %tmp_task = cir.call @corotine_call(%arg0, %arg1, ...)
+      //     cir.store %tmp_task, %task
+      //     ...
+      //   }
+      //
+      // Bind values that are coming from alloca's (like %arg0 above) to the
+      // pset of %task - this effectively leads to some invalidation of %task
+      // when %arg0 finishes its lifetime at the end of the enclosing cir.scope.
+      if (auto call = dyn_cast<mlir::cir::CallOp>(taskTmp.getDefiningOp())) {
+        for (auto arg : call.getOperands()) {
+          auto alloca = dyn_cast<mlir::cir::AllocaOp>(arg.getDefiningOp());
+          if (alloca && currScope->localValues.count(alloca))
+            getPmap()[taskAddr].insert(State::getLocalValue(alloca));
+        }
+        return;
+      }
+      llvm_unreachable("expecting calls");
+    }
+    // Only handle ptrs from here on.
     return;
+  }
 
   auto getArrayFromSubscript = [&](PtrStrideOp strideOp) -> mlir::Value {
     auto castOp = dyn_cast<CastOp>(strideOp.getBase().getDefiningOp());
@@ -952,10 +997,14 @@ void LifetimeCheckPass::checkPointerDeref(mlir::Value addr,
     emitPsetRemark();
 }
 
-const clang::CXXMethodDecl *getMethod(ModuleOp mod, StringRef name) {
-  auto *global = mlir::SymbolTable::lookupSymbolIn(mod, name);
-  assert(global && "expected to find symbol");
-  auto method = dyn_cast<FuncOp>(global);
+static FuncOp getCalleeFromSymbol(ModuleOp mod, StringRef name) {
+  auto global = mlir::SymbolTable::lookupSymbolIn(mod, name);
+  assert(global && "expected to find symbol for function");
+  return dyn_cast<FuncOp>(global);
+}
+
+static const clang::CXXMethodDecl *getMethod(ModuleOp mod, StringRef name) {
+  auto method = getCalleeFromSymbol(mod, name);
   if (!method || method.getBuiltin())
     return nullptr;
   return dyn_cast<clang::CXXMethodDecl>(method.getAstAttr().getAstDecl());
@@ -1181,6 +1230,17 @@ bool LifetimeCheckPass::isOwnerOrPointerClassMethod(
 void LifetimeCheckPass::checkCall(CallOp callOp) {
   if (callOp.getNumOperands() == 0)
     return;
+
+  // Identify calls to coroutines, and start tracking which local resources
+  // might scape into one.
+  //
+  // Calls to coroutines return the coroutine task, keep track of it.
+  auto callee = getCalleeFromSymbol(theModule, callOp.getCallee());
+  if (callee && callee.getCoroutine()) {
+    assert(callOp->getNumResults() > 0 &&
+           "expected coroutine initialization or resume");
+    currScope->localTempTasks.insert(callOp->getResult(0));
+  }
 
   const auto *methodDecl = getMethod(theModule, callOp.getCallee());
   if (!isOwnerOrPointerClassMethod(callOp.getOperand(0), methodDecl))
