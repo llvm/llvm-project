@@ -24,7 +24,6 @@ add_lldb_unittest(SymbolFileDWARFTests
   )
 
 set(test_inputs
-   test-dwarf.exe
-   DW_AT_default_value-test.yaml)
+   test-dwarf.exe)
 
 add_unittest_inputs(SymbolFileDWARFTests "${test_inputs}")
