@@ -161,12 +161,12 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
   // though as some functions have template parameter types and other things
   // that cause extra copies of types to be included, but we should find these
   // types in the .dwo file only as methods could have return types removed and
-  // we don't have to index incomplete types from the skeletone compile unit.
+  // we don't have to index incomplete types from the skeleton compile unit.
   if (unit.GetDWOId()) {
     if (SymbolFileDWARFDwo *dwo_symbol_file = unit.GetDwoSymbolFile()) {
       // Type units in a dwp file are indexed separately, so we just need to
-      // process the split unit here. However, if the split unit is in a dwo file,
-      // then we need to process type units here.
+      // process the split unit here. However, if the split unit is in a dwo
+      // file, then we need to process type units here.
       if (dwo_symbol_file == dwp) {
         IndexUnitImpl(unit.GetNonSkeletonUnit(), cu_language, set);
       } else {
@@ -174,11 +174,14 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
         for (size_t i = 0; i < dwo_info.GetNumUnits(); ++i)
           IndexUnitImpl(*dwo_info.GetUnitAtIndex(i), cu_language, set);
       }
+      return;
     }
-  } else {
-    // We either have a normal compile unit which we want to index.
-    IndexUnitImpl(unit, cu_language, set);
+    // The unit has a dwo_id, but this isn't a .dwo skeleton unit, so
+    // the assumption is that this is a file produced by -gmodules and
+    // that we want to index it.
   }
+  // We have a normal compile unit which we want to index.
+  IndexUnitImpl(unit, cu_language, set);
 }
 
 void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
