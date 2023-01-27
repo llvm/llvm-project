@@ -2385,10 +2385,8 @@ Target::GetScratchTypeSystems(bool create_on_demand) {
       if (auto ts = *type_system_or_err)
         scratch_type_systems.push_back(ts);
   }
-  std::sort(scratch_type_systems.begin(), scratch_type_systems.end(),
-            [](lldb::TypeSystemSP a, lldb::TypeSystemSP b) {
-              return a.get() <= b.get();
-            });
+
+  std::sort(scratch_type_systems.begin(), scratch_type_systems.end());
   scratch_type_systems.erase(
       std::unique(scratch_type_systems.begin(), scratch_type_systems.end()),
       scratch_type_systems.end());
