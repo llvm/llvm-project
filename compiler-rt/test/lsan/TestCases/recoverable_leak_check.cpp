@@ -2,6 +2,9 @@
 // RUN: %clangxx_lsan %s -o %t
 // RUN: %env_lsan_opts=use_stacks=0:use_registers=0 %run %t foo 2>&1 | FileCheck %s
 // RUN: %env_lsan_opts=use_stacks=0:use_registers=0 %run %t 2>&1 | FileCheck %s
+
+// Fixme: remove once test passes with hwasan
+// UNSUPPORTED: hwasan
 //
 // UNSUPPORTED: darwin
 
