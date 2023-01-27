@@ -33,7 +33,9 @@ public:
 
   SBThread(const lldb::SBThread &thread);
 
+#ifndef SWIG
   SBThread(const lldb::ThreadSP &lldb_object_sp);
+#endif
 
   ~SBThread();
 
@@ -77,7 +79,7 @@ public:
   SBThreadCollection
   GetStopReasonExtendedBacktraces(InstrumentationRuntimeType type);
 
-  size_t GetStopDescription(char *dst, size_t dst_len);
+  size_t GetStopDescription(char *dst_or_null, size_t dst_len);
 
   SBValue GetStopReturnValue();
 
