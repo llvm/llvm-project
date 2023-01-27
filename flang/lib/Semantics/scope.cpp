@@ -88,6 +88,9 @@ Symbol *Scope::FindSymbol(const SourceName &name) const {
   auto it{find(name)};
   if (it != end()) {
     return &*it->second;
+  } else if (IsSubmodule()) {
+    const Scope *parent{symbol_->get<ModuleDetails>().parent()};
+    return parent ? parent->FindSymbol(name) : nullptr;
   } else if (CanImport(name)) {
     return parent_.FindSymbol(name);
   } else {

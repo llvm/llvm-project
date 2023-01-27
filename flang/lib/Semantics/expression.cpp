@@ -4068,7 +4068,7 @@ std::string ArgumentAnalyzer::TypeAsFortran(std::size_t i) {
   } else if (std::optional<DynamicType> type{GetType(i)}) {
     return type->IsAssumedType()         ? "TYPE(*)"s
         : type->IsUnlimitedPolymorphic() ? "CLASS(*)"s
-        : type->IsPolymorphic()          ? "CLASS("s + type->AsFortran() + ')'
+        : type->IsPolymorphic()          ? type->AsFortran()
         : type->category() == TypeCategory::Derived
         ? "TYPE("s + type->AsFortran() + ')'
         : type->category() == TypeCategory::Character
