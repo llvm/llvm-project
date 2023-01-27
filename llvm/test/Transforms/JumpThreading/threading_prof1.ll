@@ -95,4 +95,4 @@ declare i32 @b()
 
 !0 = !{!"branch_weights", i32 2146410443, i32 1073205}
 ;CHECK: ![[PROF1]] = !{!"branch_weights", i32 1073205, i32 2146410443}
-;CHECK: ![[PROF2]] = !{!"branch_weights", i32 -2147483648, i32 0}
+;CHECK: ![[PROF2]] = !{!"branch_weights", i32 2146410443, i32 1073205}
