@@ -415,7 +415,8 @@ LogicalResult mlir::hoistAffineIfOp(AffineIfOp ifOp, bool *folded) {
   AffineIfOp::getCanonicalizationPatterns(patterns, ifOp.getContext());
   bool erased;
   FrozenRewritePatternSet frozenPatterns(std::move(patterns));
-  (void)applyOpPatternsAndFold(ifOp, frozenPatterns, &erased);
+  (void)applyOpPatternsAndFold(ifOp, frozenPatterns, GreedyRewriteConfig(),
+                               &erased);
   if (erased) {
     if (folded)
       *folded = true;

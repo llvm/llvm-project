@@ -322,8 +322,8 @@ LogicalResult mlir::affineForOpBodySkew(AffineForOp forOp,
         RewritePatternSet patterns(res.getContext());
         AffineForOp::getCanonicalizationPatterns(patterns, res.getContext());
         bool erased;
-        (void)applyOpPatternsAndFold(res, std::move(patterns), &erased);
-
+        (void)applyOpPatternsAndFold(res, std::move(patterns),
+                                     GreedyRewriteConfig(), &erased);
         if (!erased && !prologue)
           prologue = res;
         if (!erased)
