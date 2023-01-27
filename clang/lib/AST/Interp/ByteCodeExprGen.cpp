@@ -93,7 +93,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     const Record::Base *ToBase = R->getBase(ToDecl);
     assert(ToBase);
 
-    return this->emitGetPtrBase(ToBase->Offset, CE);
+    return this->emitGetPtrBasePop(ToBase->Offset, CE);
   }
 
   case CK_FloatingCast: {
