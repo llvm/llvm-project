@@ -90,46 +90,6 @@ TEST(MathExtras, onesMask) {
   EXPECT_EQ(0xFFFFFFFFFFFF0000ULL, maskLeadingOnes<uint64_t>(48U));
 }
 
-TEST(MathExtras, findFirstSet) {
-  uint8_t Z8 = 0;
-  uint16_t Z16 = 0;
-  uint32_t Z32 = 0;
-  uint64_t Z64 = 0;
-  EXPECT_EQ(0xFFULL, findFirstSet(Z8));
-  EXPECT_EQ(0xFFFFULL, findFirstSet(Z16));
-  EXPECT_EQ(0xFFFFFFFFULL, findFirstSet(Z32));
-  EXPECT_EQ(0xFFFFFFFFFFFFFFFFULL, findFirstSet(Z64));
-
-  uint8_t NZ8 = 42;
-  uint16_t NZ16 = 42;
-  uint32_t NZ32 = 42;
-  uint64_t NZ64 = 42;
-  EXPECT_EQ(1u, findFirstSet(NZ8));
-  EXPECT_EQ(1u, findFirstSet(NZ16));
-  EXPECT_EQ(1u, findFirstSet(NZ32));
-  EXPECT_EQ(1u, findFirstSet(NZ64));
-}
-
-TEST(MathExtras, findLastSet) {
-  uint8_t Z8 = 0;
-  uint16_t Z16 = 0;
-  uint32_t Z32 = 0;
-  uint64_t Z64 = 0;
-  EXPECT_EQ(0xFFULL, findLastSet(Z8));
-  EXPECT_EQ(0xFFFFULL, findLastSet(Z16));
-  EXPECT_EQ(0xFFFFFFFFULL, findLastSet(Z32));
-  EXPECT_EQ(0xFFFFFFFFFFFFFFFFULL, findLastSet(Z64));
-
-  uint8_t NZ8 = 42;
-  uint16_t NZ16 = 42;
-  uint32_t NZ32 = 42;
-  uint64_t NZ64 = 42;
-  EXPECT_EQ(5u, findLastSet(NZ8));
-  EXPECT_EQ(5u, findLastSet(NZ16));
-  EXPECT_EQ(5u, findLastSet(NZ32));
-  EXPECT_EQ(5u, findLastSet(NZ64));
-}
-
 TEST(MathExtras, isIntN) {
   EXPECT_TRUE(isIntN(16, 32767));
   EXPECT_FALSE(isIntN(16, 32768));

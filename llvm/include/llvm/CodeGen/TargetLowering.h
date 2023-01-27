@@ -4488,6 +4488,12 @@ public:
     return nullptr;
   }
 
+  /// Returns a 0 terminated array of rounding control registers that can be
+  /// attached into strict FP call.
+  virtual const MCPhysReg *getRoundingControlRegisters() const {
+    return nullptr;
+  }
+
   /// This callback is used to prepare for a volatile or atomic load.
   /// It takes a chain node as input and returns the chain for the load itself.
   ///

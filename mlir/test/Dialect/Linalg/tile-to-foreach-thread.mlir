@@ -34,7 +34,7 @@ module {
 
   transform.sequence failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
     %1:2 = transform.structured.tile_to_foreach_thread_op %0 num_threads [10, 20] (mapping = [ #gpu.thread<y>, #gpu.thread<x> ] )
   }
 }
@@ -76,8 +76,8 @@ func.func @matmul_tile_size_dynamic_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?x
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
-  %sz = transform.structured.match ops{["test.dummy"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
+  %sz = transform.structured.match ops{["test.dummy"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1:2 = transform.structured.tile_to_foreach_thread_op %0 tile_sizes %sz
 }
 
@@ -117,7 +117,7 @@ func.func @matmul_static(%A: tensor<100x200xf32>, %B: tensor<200x300xf32>, %C: t
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1:2 = transform.structured.tile_to_foreach_thread_op %0 num_threads [10, 21]
 }
 
@@ -158,7 +158,7 @@ func.func @matmul_tile_size_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1:2 = transform.structured.tile_to_foreach_thread_op %0 tile_sizes [10, 20]
 }
 
@@ -196,7 +196,7 @@ func.func @matmul_tile_size_static(%A: tensor<100x200xf32>, %B: tensor<200x300xf
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1:2 = transform.structured.tile_to_foreach_thread_op %0 tile_sizes [10, 21]
 }
 
@@ -218,7 +218,7 @@ module {
 
   transform.sequence failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
     %1:2 = transform.structured.tile_to_foreach_thread_op %0 num_threads [2] ( mapping = [#gpu.thread<x>])
   }
 }
@@ -269,8 +269,8 @@ func.func @matmul_tile_size_dynamic_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?x
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
-  %sz = transform.structured.match ops{["test.dummy"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
+  %sz = transform.structured.match ops{["test.dummy"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1:2 = transform.structured.tile_to_foreach_thread_op %0 tile_sizes [%sz, 20]
 }
 
@@ -324,7 +324,7 @@ transform.sequence failures(propagate) {
 
   transform.sequence failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
     %foreach_thread, %tiled_generic = transform.structured.tile_to_foreach_thread_op %0 num_threads [7]
   }
 
@@ -378,7 +378,7 @@ transform.sequence failures(propagate) {
 
   transform.sequence failures(propagate) {
   ^bb1(%IN_MAT2: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.generic"]} in %IN_MAT2
+    %0 = transform.structured.match ops{["linalg.generic"]} in %IN_MAT2 : (!pdl.operation) -> !pdl.operation
     %foreach_thread, %tiled_generic = transform.structured.tile_to_foreach_thread_op %0 num_threads [4]
   }
 

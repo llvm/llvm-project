@@ -8379,6 +8379,7 @@ cc_library(
         ":Parser",
         ":SCFTransforms",
         ":SideEffectInterfaces",
+        ":Support",
         ":TensorDialect",
         ":TilingInterface",
         ":TransformDialect",

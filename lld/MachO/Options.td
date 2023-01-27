@@ -53,9 +53,6 @@ def reproduce_eq: Joined<["--"], "reproduce=">,
 def version: Flag<["--"], "version">,
     HelpText<"Display the version number and exit">,
     Group<grp_lld>;
-def no_lto_legacy_pass_manager : Flag<["--"], "no-lto-legacy-pass-manager">,
-    HelpText<"Use the new pass manager in LLVM">,
-    Group<grp_lld>;
 def time_trace_eq: Joined<["--"], "time-trace=">,
     HelpText<"Record time trace to <file>">,
     MetaVarName<"<file>">,

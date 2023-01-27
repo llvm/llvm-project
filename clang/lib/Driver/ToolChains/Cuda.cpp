@@ -707,7 +707,7 @@ NVPTXToolChain::NVPTXToolChain(const Driver &D, const llvm::Triple &Triple,
     getProgramPaths().push_back(std::string(CudaInstallation.getBinPath()));
   }
   // Lookup binaries into the driver directory, this is used to
-  // discover the clang-offload-bundler executable.
+  // discover the 'nvptx-arch' executable.
   getProgramPaths().push_back(getDriver().Dir);
 }
 
