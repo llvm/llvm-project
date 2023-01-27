@@ -112,6 +112,12 @@ LogicalResult applyOpPatternsAndFold(Operation *op,
 /// * GreedyRewriteStrictness::ExistingOps: Only pre-existing ops are
 ///   simplified. All other ops are excluded.
 ///
+/// In addition to strictness, a region scope can be specified. Only ops within
+/// the scope are simplified. This is similar to `applyPatternsAndFoldGreedily`,
+/// where only ops within the given regions are simplified. If no scope is
+/// specified, it is assumed to be the first common enclosing region of the
+/// given ops.
+///
 /// Note that ops in `ops` could be erased as result of folding, becoming dead,
 /// or via pattern rewrites. If more far reaching simplification is desired,
 /// applyPatternsAndFoldGreedily should be used.
@@ -123,7 +129,8 @@ LogicalResult applyOpPatternsAndFold(ArrayRef<Operation *> ops,
                                      const FrozenRewritePatternSet &patterns,
                                      GreedyRewriteStrictness strictMode,
                                      bool *changed = nullptr,
-                                     bool *allErased = nullptr);
+                                     bool *allErased = nullptr,
+                                     Region *scope = nullptr);
 
 } // namespace mlir
 
