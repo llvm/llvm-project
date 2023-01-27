@@ -781,8 +781,7 @@ struct ExpandStridedMetadataPass final
 void ExpandStridedMetadataPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   memref::populateExpandStridedMetadataPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(getOperation()->getRegions(),
-                                     std::move(patterns));
+  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
 }
 
 std::unique_ptr<Pass> memref::createExpandStridedMetadataPass() {

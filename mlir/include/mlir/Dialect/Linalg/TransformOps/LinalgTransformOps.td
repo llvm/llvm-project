@@ -1507,6 +1507,12 @@ def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
     SSA values, the handle must be mapped to exactly one payload op with
     exactly one index-typed result.
 
+    Note: The input vector sizes must be bigger than or equal to their
+    counterpart iteration space sizes.
+
+    Typically this operator should be applied to linalg operations that have
+    already be tiled to the appropriate sizes.
+
     #### Return modes:
 
     This operation produces a definite failure if the dynamic vector sizes (SSA

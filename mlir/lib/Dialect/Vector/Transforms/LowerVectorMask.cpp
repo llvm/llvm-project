@@ -120,8 +120,7 @@ struct LowerVectorMaskPass
     RewritePatternSet loweringPatterns(context);
     populateVectorMaskLoweringPatternsForSideEffectingOps(loweringPatterns);
 
-    if (failed(applyPatternsAndFoldGreedily(op->getRegions(),
-                                            std::move(loweringPatterns))))
+    if (failed(applyPatternsAndFoldGreedily(op, std::move(loweringPatterns))))
       signalPassFailure();
   }
 
