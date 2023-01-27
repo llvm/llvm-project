@@ -167,7 +167,7 @@ struct LowerGpuOpsToROCDLOpsPass
     populateVectorToLLVMConversionPatterns(converter, llvmPatterns);
     cf::populateControlFlowToLLVMConversionPatterns(converter, llvmPatterns);
     populateFuncToLLVMConversionPatterns(converter, llvmPatterns);
-    populateMemRefToLLVMConversionPatterns(converter, llvmPatterns);
+    populateFinalizeMemRefToLLVMConversionPatterns(converter, llvmPatterns);
     populateGpuToROCDLConversionPatterns(converter, llvmPatterns, runtime);
     LLVMConversionTarget target(getContext());
     configureGpuToROCDLConversionLegality(target);

@@ -25,7 +25,7 @@
 #include <optional>
 
 namespace mlir {
-#define GEN_PASS_DEF_MEMREFTOLLVMCONVERSIONPASS
+#define GEN_PASS_DEF_FINALIZEMEMREFTOLLVMCONVERSIONPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -1703,8 +1703,8 @@ public:
 
 } // namespace
 
-void mlir::populateMemRefToLLVMConversionPatterns(LLVMTypeConverter &converter,
-                                                  RewritePatternSet &patterns) {
+void mlir::populateFinalizeMemRefToLLVMConversionPatterns(
+    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   // clang-format off
   patterns.add<
       AllocaOpLowering,
@@ -1741,9 +1741,11 @@ void mlir::populateMemRefToLLVMConversionPatterns(LLVMTypeConverter &converter,
 }
 
 namespace {
-struct MemRefToLLVMConversionPass
-    : public impl::MemRefToLLVMConversionPassBase<MemRefToLLVMConversionPass> {
-  using MemRefToLLVMConversionPassBase::MemRefToLLVMConversionPassBase;
+struct FinalizeMemRefToLLVMConversionPass
+    : public impl::FinalizeMemRefToLLVMConversionPassBase<
+          FinalizeMemRefToLLVMConversionPass> {
+  using FinalizeMemRefToLLVMConversionPassBase::
+      FinalizeMemRefToLLVMConversionPassBase;
 
   void runOnOperation() override {
     Operation *op = getOperation();
@@ -1762,7 +1764,7 @@ struct MemRefToLLVMConversionPass
     LLVMTypeConverter typeConverter(&getContext(), options,
                                     &dataLayoutAnalysis);
     RewritePatternSet patterns(&getContext());
-    populateMemRefToLLVMConversionPatterns(typeConverter, patterns);
+    populateFinalizeMemRefToLLVMConversionPatterns(typeConverter, patterns);
     LLVMConversionTarget target(getContext());
     target.addLegalOp<func::FuncOp>();
     if (failed(applyPartialConversion(op, target, std::move(patterns))))

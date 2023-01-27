@@ -2,7 +2,7 @@
 // RUN: -arith-bufferize -tensor-bufferize -func-bufferize \
 // RUN: -finalizing-bufferize -buffer-deallocation -convert-linalg-to-llvm \
 // RUN: -expand-strided-metadata -lower-affine \
-// RUN: -convert-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
+// RUN: -finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_lib_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s

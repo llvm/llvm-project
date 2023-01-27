@@ -303,7 +303,7 @@ public:
     RewritePatternSet patterns(context);
     LLVMTypeConverter typeConverter(context, options);
     mlir::arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
-    populateMemRefToLLVMConversionPatterns(typeConverter, patterns);
+    populateFinalizeMemRefToLLVMConversionPatterns(typeConverter, patterns);
     populateFuncToLLVMConversionPatterns(typeConverter, patterns);
     patterns.add<GPULaunchLowering>(typeConverter);
 

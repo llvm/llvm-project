@@ -605,8 +605,7 @@ struct FoldMemRefAliasOpsPass final
 void FoldMemRefAliasOpsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   memref::populateFoldMemRefAliasOpPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(getOperation()->getRegions(),
-                                     std::move(patterns));
+  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
 }
 
 std::unique_ptr<Pass> memref::createFoldMemRefAliasOpsPass() {
