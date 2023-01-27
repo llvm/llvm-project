@@ -13,7 +13,7 @@ func.func @indexed_vector(%arg0: memref<50xindex>) {
 
 transform.sequence failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
     %1, %loop = transform.structured.tile %0 [10] : (!pdl.operation) -> (!pdl.operation, !pdl.operation)
 }
 
@@ -43,7 +43,7 @@ func.func @indexed_matrix(%arg0: memref<50x50xindex>) {
 
 transform.sequence failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
     %1, %loop:2 = transform.structured.tile %0 [10, 25] : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation)
 }
 

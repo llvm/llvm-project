@@ -16,7 +16,7 @@ func.func @reduction_tile(%arg0: tensor<?x?xf32>, %out: tensor<?xf32>) -> tensor
 
 transform.sequence failures(propagate) {
 ^bb0(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %loop, %1, %2, %3 = transform.structured.tile_reduction_using_scf %0
     by tile_sizes = [0, 5]
 }
@@ -71,7 +71,7 @@ func.func @reduction_tile_transpose(%arg0: tensor<?x?xf32>, %out: tensor<?xf32>)
 
 transform.sequence failures(propagate) {
 ^bb0(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %loop, %1, %2, %3 = transform.structured.tile_reduction_using_scf %0 
     by tile_sizes = [5, 0]
 }
@@ -108,7 +108,7 @@ func.func @reduction_tile_parallel(
 
 transform.sequence failures(propagate) {
 ^bb0(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %loop, %1, %2, %3 = transform.structured.tile_reduction_using_foreach_thread %0
     by num_threads = [0, 5], tile_sizes = []
 }
@@ -161,7 +161,7 @@ func.func @matmul_tile_parallel(
 
 transform.sequence failures(propagate) {
 ^bb0(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %loop, %1, %2, %3 = transform.structured.tile_reduction_using_foreach_thread %0
     by num_threads = [0, 0, 5], tile_sizes = []
 }
@@ -221,7 +221,7 @@ func.func @reduction_tile_parallel_cyclic_dist(
 
 transform.sequence failures(propagate) {
 ^bb0(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %loop, %1, %2, %3 = transform.structured.tile_reduction_using_foreach_thread %0 
     by num_threads = [0, 5], tile_sizes = [0, 3], mapping = [#gpu.thread<x>]
 }
@@ -287,7 +287,7 @@ func.func @reduction_tile_parallel_cyclic_dist(
 
 transform.sequence failures(propagate) {
 ^bb0(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %loop, %1, %2, %3 = transform.structured.tile_reduction_using_foreach_thread %0 
     by num_threads = [0, 5], tile_sizes = [0, 3], mapping = [#gpu.thread<x>]
   
@@ -324,7 +324,7 @@ func.func @reduction_untiled_foreach_thread(
 
 transform.sequence failures(propagate) {
 ^bb0(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   // expected-error @below {{could not tile reduction}}
   %loop, %1, %2, %3 = transform.structured.tile_reduction_using_foreach_thread %0
     by num_threads = [5], tile_sizes = [3], mapping = [#gpu.thread<x>]
