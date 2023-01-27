@@ -157,7 +157,7 @@ static void writeMapFile(raw_fd_ostream &os) {
   os << right_justify("VMA", w) << ' ' << right_justify("LMA", w)
      << "     Size Align Out     In      Symbol\n";
 
-  OutputSection* osec = nullptr;
+  OutputSection *osec = nullptr;
   for (SectionCommand *cmd : script->sectionCommands) {
     if (auto *assign = dyn_cast<SymbolAssignment>(cmd)) {
       if (assign->provide && !assign->sym)

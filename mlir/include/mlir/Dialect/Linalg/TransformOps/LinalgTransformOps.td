@@ -370,7 +370,7 @@ def MultiTileSizesOp : Op<Transform_Dialect, "structured.multitile_sizes",
 
 def PackOp : Op<Transform_Dialect, "structured.pack", [
                 DeclareOpInterfaceMethods<TransformOpInterface>,
-                DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,]> {
+                DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let description = [{
     Pack a LinalgOp by applying a data tiling transformation on the op and
     packing the operands according to the `packed_sizes` specification.
@@ -450,6 +450,84 @@ def PackOp : Op<Transform_Dialect, "structured.pack", [
 
   let extraClassDeclaration = [{
     ::llvm::SmallVector<::mlir::OpFoldResult> getMixedPackedSizes();
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// PackGreedilyOp
+//===----------------------------------------------------------------------===//
+def PackGreedilyOp : Op<Transform_Dialect, "structured.pack_greedily", [
+                        DeclareOpInterfaceMethods<TransformOpInterface>,
+                        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let description = [{
+    Target a Linalg op and rewrite it into packed LinalgOp form by trying to
+    infer whether a known suboperation is embedded
+
+    Different packing strategies are applied in order, when one applies
+    successfully, the transform returns:
+      1. Gemm packing: Try to infer a gemm operation embedded in the target op.
+         Specifically, this looks for 2 parallel dimensions that participate in
+         an outer-product and 1 reduction dimension.
+         These dimensions are referred as (m, n, k) to match canonical gemm
+         terminology.
+         The packed sizes for (m, n, k) are specified by `gemm_packed_sizes`.
+         The ordering of the packed dimensions (mm, nn, kk) is specified by the
+         `gemm_inner_dims_order` attribute.
+
+    Packing occurs as follows:
+      1. Find the dimensions to pack according to the strategy.
+      2. The target is converted to linalg.generic form.
+      3. An interchange transform is applied to isolate the dimensions to pack as
+         the most minor indexing dimensions of the linalg.generic. The most minor
+         dimensions are themselves ordered according to `inner_dims_order`.
+      4. Packing is performed by `packed_sizes` and following `inner_dims_order`.
+
+    By normalizing the most minor dimensions to `inner_dims_order`, the transform
+    guarantees that packing immediates generates inner dimensions in a desirable
+    layout.
+
+    Outer dimension layout permutations are not controlled by this transform op
+    at the moment and can be obtained by composing with the pack_transpose
+    transformation.
+
+    #### Return modes
+
+    This operation ignores non-Linalg ops and drops them in the return.
+    It returns the list of packed Linalg ops or the original op when all available
+    packing strategies failed to apply.
+  }];
+
+  // TODO: Transform_ConcreteOpType<linalg::LinalgOp> needs interface.
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                   Variadic<PDL_Operation>:$gemm_packed_sizes,
+                   DefaultValuedAttr<DenseI64ArrayAttr, "{}">
+                     :$static_gemm_packed_sizes,
+                   DefaultValuedAttr<DenseI64ArrayAttr, "{}">
+                     :$gemm_inner_dims_order);
+  let results = (outs Transform_ConcreteOpType<"linalg.generic">:$packed_op);
+
+  let builders = [
+    OpBuilder<(ins "Value":$target,
+                   "ArrayRef<OpFoldResult>":$mixedGemmPackedSizes,
+                   CArg<"ArrayRef<int64_t>", "{}">:$gemmDimsInnerDimsOrder)>
+  ];
+
+  let assemblyFormat = [{
+    $target
+    oilist(
+      `gemm_packed_sizes` `=` custom<DynamicIndexList>($gemm_packed_sizes,
+                                                       $static_gemm_packed_sizes)
+      `gemm_inner_dims_order` `=` $gemm_inner_dims_order
+    )
+    attr-dict
+    `:` functional-type($target, results)
+  }];
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    /// Returns the list of tile sizes, which may be static (Attribute) or
+    /// dynamic (Value).
+    SmallVector<OpFoldResult> getMixedGemmPackedSizes();
   }];
 }
 
