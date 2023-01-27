@@ -46,6 +46,8 @@ function(get_arch_and_system_from_triple triple arch_var sys_var)
   if(target_arch MATCHES "^mips")
     set(target_arch "mips")
   elseif(target_arch MATCHES "^arm")
+    # TODO(lntue): Shall we separate `arm64`?  It is currently recognized as
+    # `arm` here.
     set(target_arch "arm")
   elseif(target_arch MATCHES "^aarch64")
     set(target_arch "aarch64")
@@ -59,6 +61,16 @@ function(get_arch_and_system_from_triple triple arch_var sys_var)
 
   set(${arch_var} ${target_arch} PARENT_SCOPE)
   list(GET triple_comps ${system_index} target_sys)
+
+  # Correcting OS name for Apple's systems.
+  if(target_sys STREQUAL "apple")
+    list(GET triple_comps 2 target_sys)
+  endif()
+  # Strip version from `darwin###`
+  if(target_sys MATCHES "^darwin")
+    set(target_sys "darwin")
+  endif()
+
   set(${sys_var} ${target_sys} PARENT_SCOPE)
 endfunction(get_arch_and_system_from_triple)
 
