@@ -819,7 +819,8 @@ public:
     // in the "added" array prior to applying the compression.
     unsigned rank = dstType.getShape().size();
     if (isOrderedDim(dstType, rank - 1))
-      rewriter.create<SortOp>(loc, count, ValueRange{added}, ValueRange{});
+      rewriter.create<SortOp>(loc, count, ValueRange{added}, ValueRange{},
+                              SparseTensorSortKind::HybridQuickSort);
     // While performing the insertions, we also need to reset the elements
     // of the values/filled-switch by only iterating over the set elements,
     // to ensure that the runtime complexity remains proportional to the
