@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/Transforms/TransformInterpreterPassBase.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
@@ -21,16 +22,22 @@ using namespace mlir;
 namespace {
 /// Simple pass that applies transform dialect ops directly contained in a
 /// module.
+
+template <typename Derived>
+class ModulePassWrapper : public PassWrapper<Derived, OperationPass<ModuleOp>> {
+};
+
 class TestTransformDialectInterpreterPass
-    : public PassWrapper<TestTransformDialectInterpreterPass,
-                         OperationPass<ModuleOp>> {
+    : public transform::TransformInterpreterPassBase<
+          TestTransformDialectInterpreterPass, ModulePassWrapper> {
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
       TestTransformDialectInterpreterPass)
 
   TestTransformDialectInterpreterPass() = default;
   TestTransformDialectInterpreterPass(
-      const TestTransformDialectInterpreterPass &) {}
+      const TestTransformDialectInterpreterPass &pass)
+      : TransformInterpreterPassBase(pass) {}
 
   StringRef getArgument() const override {
     return "test-transform-dialect-interpreter";
@@ -101,15 +108,12 @@ public:
           getContext(), bindSecondExtraToParams, extraMappingStorage));
     }
 
-    ModuleOp module = getOperation();
-    for (auto op :
-         module.getBody()->getOps<transform::TransformOpInterface>()) {
-      if (failed(transform::applyTransforms(
-              module, op, extraMapping,
-              transform::TransformOptions().enableExpensiveChecks(
-                  enableExpensiveChecks))))
-        return signalPassFailure();
-    }
+    options = options.enableExpensiveChecks(enableExpensiveChecks);
+    if (failed(transform::detail::interpreterBaseRunOnOperationImpl(
+            getOperation(), getArgument(), getSharedTransformModule(),
+            extraMapping, options, transformFileName, debugPayloadRootTag,
+            debugTransformRootTag, getBinaryName())))
+      return signalPassFailure();
   }
 
   Option<bool> enableExpensiveChecks{
@@ -134,6 +138,25 @@ public:
       *this, "bind-second-extra-to-params",
       llvm::cl::desc("bind the second extra argument of the top-level op to "
                      "the given integer parameters")};
+  Option<std::string> transformFileName{
+      *this, "transform-file-name", llvm::cl::init(""),
+      llvm::cl::desc(
+          "Optional filename containing a transform dialect specification to "
+          "apply. If left empty, the IR is assumed to contain one top-level "
+          "transform dialect operation somewhere in the module.")};
+  Option<std::string> debugPayloadRootTag{
+      *this, "debug-payload-root-tag", llvm::cl::init(""),
+      llvm::cl::desc(
+          "Select the operation with 'transform.target_tag' attribute having "
+          "the given value as payload IR root. If empty select the pass anchor "
+          "operation as the payload IR root.")};
+  Option<std::string> debugTransformRootTag{
+      *this, "debug-transform-root-tag", llvm::cl::init(""),
+      llvm::cl::desc(
+          "Select the operation with 'transform.target_tag' attribute having "
+          "the given value as container IR for top-level transform ops. This "
+          "allows user control on what transformation to apply. If empty, "
+          "select the container of the top-level transform op.")};
 };
 
 struct TestTransformDialectEraseSchedulePass
