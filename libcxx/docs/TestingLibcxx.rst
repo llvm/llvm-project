@@ -100,6 +100,26 @@ The libc++ test suite uses a few optional tools to improve the code quality.
 These tools are:
 - clang-tidy (you might need additional dev packages to compile libc++-specific clang-tidy checks)
 
+Reproducing CI issues locally
+-----------------------------
+
+Libc++ has extensive CI that tests various configurations of the library. The testing for
+all these configurations is located in ``libcxx/utils/ci/run-buildbot``. Most of our
+CI jobs are being run on a Docker image for reproducibility. The definition of this Docker
+image is located in ``libcxx/utils/ci/Dockerfile``. If you are looking to reproduce the
+failure of a specific CI job locally, you should first drop into a Docker container that
+matches our CI images by running ``libcxx/utils/ci/run-buildbot-container``, and then run
+the specific CI job that you're interested in (from within the container) using the ``run-buildbot``
+script above. If you want to control which compiler is used, you can set the ``CC`` and the
+``CXX`` environment variables before calling ``run-buildbot`` to select the right compiler.
+Take note that some CI jobs are testing the library on specific platforms and are *not* run
+in our Docker image. In the general case, it is not possible to reproduce these failures
+locally, unless they aren't specific to the platform.
+
+Also note that the Docker container shares the same filesystem as your local machine, so
+modifying files on your local machine will also modify what the Docker container sees.
+This is useful for editing source files as you're testing your code in the Docker container.
+
 Writing Tests
 -------------
 

@@ -115,3 +115,14 @@ Data *test_struct_array() {
 
 }
 
+namespace std {
+// A builtin function with the body generated on the fly.
+template <typename T> T&& move(T &&) noexcept;
+} // namespace std
+
+char buf[2];
+
+void top() {
+  // see https://github.com/llvm/llvm-project/issues/55347
+  (void)std::move(*(buf + 3)); // no-crash
+}

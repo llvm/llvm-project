@@ -370,6 +370,153 @@ define void @multi_vector_add_za_vg1x4_f64(i32 %slice, <vscale x 2 x double> %zn
   ret void
 }
 
+;
+; ADD Vectors Multi-Single x2
+;
+
+define { <vscale x 16 x i8>, <vscale x 16 x i8> } @multi_vec_add_single_x2_s8(<vscale x 16 x i8> %unused, <vscale x 16 x i8> %zdn1, <vscale x 16 x i8> %zdn2, <vscale x 16 x i8> %zm) {
+; CHECK-LABEL: multi_vec_add_single_x2_s8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    add { z4.b, z5.b }, { z4.b, z5.b }, z3.b
+; CHECK-NEXT:    mov z0.d, z4.d
+; CHECK-NEXT:    mov z1.d, z5.d
+; CHECK-NEXT:    ret
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8> }
+               @llvm.aarch64.sve.add.single.x2.nxv16i8(<vscale x 16 x i8> %zdn1, <vscale x 16 x i8> %zdn2,
+                                                         <vscale x 16 x i8> %zm)
+  ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %res
+}
+
+define { <vscale x 8 x i16>, <vscale x 8 x i16> } @multi_vec_add_single_x2_s16(<vscale x 8 x i16> %unused, <vscale x 8 x i16> %zdn1, <vscale x 8 x i16> %zdn2, <vscale x 8 x i16> %zm) {
+; CHECK-LABEL: multi_vec_add_single_x2_s16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    add { z4.h, z5.h }, { z4.h, z5.h }, z3.h
+; CHECK-NEXT:    mov z0.d, z4.d
+; CHECK-NEXT:    mov z1.d, z5.d
+; CHECK-NEXT:    ret
+  %res = call { <vscale x 8 x i16>, <vscale x 8 x i16> }
+               @llvm.aarch64.sve.add.single.x2.nxv8i16(<vscale x 8 x i16> %zdn1, <vscale x 8 x i16> %zdn2,
+                                                         <vscale x 8 x i16> %zm)
+  ret { <vscale x 8 x i16>, <vscale x 8 x i16> } %res
+}
+
+define { <vscale x 4 x i32>, <vscale x 4 x i32> } @multi_vec_add_single_x2_s32(<vscale x 4 x i32> %unused, <vscale x 4 x i32> %zdn1, <vscale x 4 x i32> %zdn2, <vscale x 4 x i32> %zm) {
+; CHECK-LABEL: multi_vec_add_single_x2_s32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    add { z4.s, z5.s }, { z4.s, z5.s }, z3.s
+; CHECK-NEXT:    mov z0.d, z4.d
+; CHECK-NEXT:    mov z1.d, z5.d
+; CHECK-NEXT:    ret
+  %res = call { <vscale x 4 x i32>, <vscale x 4 x i32> }
+               @llvm.aarch64.sve.add.single.x2.nxv4i32(<vscale x 4 x i32> %zdn1, <vscale x 4 x i32> %zdn2,
+                                                         <vscale x 4 x i32> %zm)
+  ret { <vscale x 4 x i32>, <vscale x 4 x i32> } %res
+}
+
+define { <vscale x 2 x i64>, <vscale x 2 x i64> } @multi_vec_add_single_x2_s64(<vscale x 2 x i64> %unused, <vscale x 2 x i64> %zdn1, <vscale x 2 x i64> %zdn2, <vscale x 2 x i64> %zm) {
+; CHECK-LABEL: multi_vec_add_single_x2_s64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    add { z4.d, z5.d }, { z4.d, z5.d }, z3.d
+; CHECK-NEXT:    mov z0.d, z4.d
+; CHECK-NEXT:    mov z1.d, z5.d
+; CHECK-NEXT:    ret
+ %res = call { <vscale x 2 x i64>, <vscale x 2 x i64> }
+              @llvm.aarch64.sve.add.single.x2.nxv2i64(<vscale x 2 x i64> %zdn1, <vscale x 2 x i64> %zdn2,
+                                                        <vscale x 2 x i64> %zm)
+  ret { <vscale x 2 x i64>, <vscale x 2 x i64> } %res
+}
+
+;
+; ADD Vectors Multi-Single x4
+;
+
+define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @multi_vec_add_single_x4_s8(<vscale x 16 x i8> %unused, <vscale x 16 x i8> %zdn1, <vscale x 16 x i8> %zdn2, <vscale x 16 x i8> %zdn3, <vscale x 16 x i8> %zdn4, <vscale x 16 x i8>%zm) {
+; CHECK-LABEL: multi_vec_add_single_x4_s8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z27.d, z4.d
+; CHECK-NEXT:    mov z26.d, z3.d
+; CHECK-NEXT:    mov z25.d, z2.d
+; CHECK-NEXT:    mov z24.d, z1.d
+; CHECK-NEXT:    add { z24.b - z27.b }, { z24.b - z27.b }, z5.b
+; CHECK-NEXT:    mov z0.d, z24.d
+; CHECK-NEXT:    mov z1.d, z25.d
+; CHECK-NEXT:    mov z2.d, z26.d
+; CHECK-NEXT:    mov z3.d, z27.d
+; CHECK-NEXT:    ret
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }
+              @llvm.aarch64.sve.add.single.x4.nxv16i8(<vscale x 16 x i8> %zdn1, <vscale x 16 x i8> %zdn2,
+                                                        <vscale x 16 x i8> %zdn3, <vscale x 16 x i8> %zdn4,
+                                                        <vscale x 16 x i8> %zm)
+  ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
+}
+
+define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @multi_vec_add_x4_single_s16(<vscale x 8 x i16> %unused, <vscale x 8 x i16> %zdn1, <vscale x 8 x i16> %zdn2, <vscale x 8 x i16> %zdn3, <vscale x 8 x i16> %zdn4, <vscale x 8 x i16> %zm) {
+; CHECK-LABEL: multi_vec_add_x4_single_s16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z27.d, z4.d
+; CHECK-NEXT:    mov z26.d, z3.d
+; CHECK-NEXT:    mov z25.d, z2.d
+; CHECK-NEXT:    mov z24.d, z1.d
+; CHECK-NEXT:    add { z24.h - z27.h }, { z24.h - z27.h }, z5.h
+; CHECK-NEXT:    mov z0.d, z24.d
+; CHECK-NEXT:    mov z1.d, z25.d
+; CHECK-NEXT:    mov z2.d, z26.d
+; CHECK-NEXT:    mov z3.d, z27.d
+; CHECK-NEXT:    ret
+  %res = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }
+              @llvm.aarch64.sve.add.single.x4.nxv8i16(<vscale x 8 x i16> %zdn1, <vscale x 8 x i16> %zdn2,
+                                                        <vscale x 8 x i16> %zdn3, <vscale x 8 x i16> %zdn4,
+                                                        <vscale x 8 x i16> %zm)
+  ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %res
+}
+
+define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @multi_vec_add_x4_single_s32(<vscale x 4 x i32> %unused, <vscale x 4 x i32> %zdn1, <vscale x 4 x i32> %zdn2, <vscale x 4 x i32> %zdn3, <vscale x 4 x i32> %zdn4, <vscale x 4 x i32> %zm) {
+; CHECK-LABEL: multi_vec_add_x4_single_s32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z27.d, z4.d
+; CHECK-NEXT:    mov z26.d, z3.d
+; CHECK-NEXT:    mov z25.d, z2.d
+; CHECK-NEXT:    mov z24.d, z1.d
+; CHECK-NEXT:    add { z24.s - z27.s }, { z24.s - z27.s }, z5.s
+; CHECK-NEXT:    mov z0.d, z24.d
+; CHECK-NEXT:    mov z1.d, z25.d
+; CHECK-NEXT:    mov z2.d, z26.d
+; CHECK-NEXT:    mov z3.d, z27.d
+; CHECK-NEXT:    ret
+  %res = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }
+              @llvm.aarch64.sve.add.single.x4.nxv4i32(<vscale x 4 x i32> %zdn1, <vscale x 4 x i32> %zdn2,
+                                                        <vscale x 4 x i32> %zdn3, <vscale x 4 x i32> %zdn4,
+                                                        <vscale x 4 x i32> %zm)
+  ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %res
+}
+
+define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @multi_vec_add_x4_single_s64(<vscale x 2 x i64> %unused, <vscale x 2 x i64> %zdn1, <vscale x 2 x i64> %zdn2, <vscale x 2 x i64> %zdn3, <vscale x 2 x i64> %zdn4, <vscale x 2 x i64> %zm) {
+; CHECK-LABEL: multi_vec_add_x4_single_s64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z27.d, z4.d
+; CHECK-NEXT:    mov z26.d, z3.d
+; CHECK-NEXT:    mov z25.d, z2.d
+; CHECK-NEXT:    mov z24.d, z1.d
+; CHECK-NEXT:    add { z24.d - z27.d }, { z24.d - z27.d }, z5.d
+; CHECK-NEXT:    mov z0.d, z24.d
+; CHECK-NEXT:    mov z1.d, z25.d
+; CHECK-NEXT:    mov z2.d, z26.d
+; CHECK-NEXT:    mov z3.d, z27.d
+; CHECK-NEXT:    ret
+  %res = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }
+              @llvm.aarch64.sve.add.single.x4.nxv2i64(<vscale x 2 x i64> %zdn1, <vscale x 2 x i64> %zdn2,
+                                                        <vscale x 2 x i64> %zdn3, <vscale x 2 x i64> %zdn4,
+                                                        <vscale x 2 x i64> %zm)
+  ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } %res
+}
 declare void@llvm.aarch64.sme.add.write.single.za.vg1x2.nxv4i32(i32, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>)
 declare void@llvm.aarch64.sme.add.write.single.za.vg1x2.nxv2i64(i32, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>)
 declare void@llvm.aarch64.sme.add.write.single.za.vg1x4.nxv4i32(i32, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>)
@@ -386,3 +533,11 @@ declare void@llvm.aarch64.sme.add.za32.vg1x2.nxv4f32(i32, <vscale x 4 x float>, 
 declare void@llvm.aarch64.sme.add.za64.vg1x2.nxv2f64(i32, <vscale x 2 x double>, <vscale x 2 x double>)
 declare void@llvm.aarch64.sme.add.za32.vg1x4.nxv4f32(i32, <vscale x 4 x float>, <vscale x 4 x float>,<vscale x 4 x float>, <vscale x 4 x float>)
 declare void@llvm.aarch64.sme.add.za64.vg1x4.nxv2f64(i32, <vscale x 2 x double>, <vscale x 2 x double>,<vscale x 2 x double>, <vscale x 2 x double>)
+declare { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.add.single.x2.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>)
+declare { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.add.single.x2.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>)
+declare { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.add.single.x2.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>)
+declare { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.add.single.x2.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>)
+declare { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.add.single.x4.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>)
+declare { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.add.single.x4.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>)
+declare { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.add.single.x4.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>)
+declare { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.add.single.x4.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>)

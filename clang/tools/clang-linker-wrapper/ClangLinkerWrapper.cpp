@@ -513,8 +513,6 @@ std::unique_ptr<lto::LTO> createLTO(
   assert(CGOptLevelOrNone && "Invalid optimization level");
   Conf.CGOptLevel = *CGOptLevelOrNone;
   Conf.OptLevel = OptLevel[1] - '0';
-  if (Conf.OptLevel > 0)
-    Conf.UseDefaultPipeline = true;
   Conf.DefaultTriple = Triple.getTriple();
 
   LTOError = false;

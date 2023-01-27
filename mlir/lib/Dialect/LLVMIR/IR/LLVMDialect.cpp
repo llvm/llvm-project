@@ -2848,6 +2848,33 @@ struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
 // DialectInlinerInterface
 //===----------------------------------------------------------------------===//
 
+/// Move all alloca operations with a constant size in the former entry block of
+/// the newly inlined callee into the entry block of the caller.
+static void moveConstantAllocasToEntryBlock(
+    iterator_range<Region::iterator> inlinedBlocks) {
+  Block *calleeEntryBlock = &(*inlinedBlocks.begin());
+  Block *callerEntryBlock = &(*calleeEntryBlock->getParent()->begin());
+  if (calleeEntryBlock == callerEntryBlock)
+    // Nothing to do.
+    return;
+  SmallVector<std::pair<LLVM::AllocaOp, IntegerAttr>> allocasToMove;
+  // Conservatively only move alloca operations that are part of the entry block
+  // and do not inspect nested regions, since they may execute conditionally or
+  // have other unknown semantics.
+  for (auto allocaOp : calleeEntryBlock->getOps<LLVM::AllocaOp>()) {
+    IntegerAttr arraySize;
+    if (matchPattern(allocaOp.getArraySize(), m_Constant(&arraySize)))
+      allocasToMove.emplace_back(allocaOp, arraySize);
+  }
+  OpBuilder builder(callerEntryBlock, callerEntryBlock->begin());
+  for (auto &[allocaOp, arraySize] : allocasToMove) {
+    auto newConstant = builder.create<LLVM::ConstantOp>(
+        allocaOp->getLoc(), allocaOp.getArraySize().getType(), arraySize);
+    allocaOp->moveAfter(newConstant);
+    allocaOp.getArraySizeMutable().assign(newConstant.getResult());
+  }
+}
+
 namespace {
 struct LLVMInlinerInterface : public DialectInlinerInterface {
   using DialectInlinerInterface::DialectInlinerInterface;
@@ -2885,7 +2912,7 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
             return false;
           return true;
         })
-        .Case<LLVM::CallOp>([](auto) { return true; })
+        .Case<LLVM::CallOp, LLVM::AllocaOp>([](auto) { return true; })
         .Default([](auto) { return false; });
   }
 
@@ -2916,6 +2943,17 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
     for (const auto &[dst, src] :
          llvm::zip(valuesToRepl, returnOp.getOperands()))
       dst.replaceAllUsesWith(src);
+  }
+
+  void processInlinedCallBlocks(
+      Operation *call,
+      iterator_range<Region::iterator> inlinedBlocks) const override {
+    // Alloca operations with a constant size that were in the entry block of
+    // the callee should be moved to the entry block of the caller, as this will
+    // fold into prologue/epilogue code during code generation.
+    // This is not implemented as a standalone pattern because we need to know
+    // which newly inlined block was previously the entry block of the callee.
+    moveConstantAllocasToEntryBlock(inlinedBlocks);
   }
 
 private:

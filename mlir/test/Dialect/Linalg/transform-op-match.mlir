@@ -11,11 +11,11 @@ func.func @bar() {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %match_name = transform.structured.match ops{["arith.constant"]} in %arg1
+  %match_name = transform.structured.match ops{["arith.constant"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   transform.test_print_remark_at_operand %match_name, "matched op name" : !pdl.operation
   transform.test_consume_operand %match_name
 
-  %match_attr = transform.structured.match ops{["arith.constant"]} attributes{my_attr} in %arg1
+  %match_attr = transform.structured.match ops{["arith.constant"]} attributes{my_attr} in %arg1 : (!pdl.operation) -> !pdl.operation
   transform.test_print_remark_at_operand %match_attr, "matched attr name" : !pdl.operation
   transform.test_consume_operand %match_attr
 }
@@ -32,7 +32,7 @@ func.func @by_type() {
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %match_name = transform.structured.match
-    ops{["arith.constant"]} filter_result_type = f32 in %arg1
+    ops{["arith.constant"]} filter_result_type = f32 in %arg1 : (!pdl.operation) -> !pdl.operation
   transform.test_print_remark_at_operand %match_name, "matched op name" : !pdl.operation
   transform.test_consume_operand %match_name
 }
@@ -63,7 +63,7 @@ transform.sequence failures(propagate) {
         #linalg.iterator_type<parallel>,
         #linalg.iterator_type<parallel>,
         #linalg.iterator_type<parallel>]}
-      in %arg1
+      in %arg1 : (!pdl.operation) -> !pdl.operation
   transform.test_print_remark_at_operand %match_attr, "matched complex attr" : !pdl.operation
   transform.test_consume_operand %match_attr
 
@@ -72,7 +72,7 @@ transform.sequence failures(propagate) {
         #linalg.iterator_type<parallel>,
         #linalg.iterator_type<parallel>,
         #linalg.iterator_type<reduction>]}
-      in %arg1
+      in %arg1 : (!pdl.operation) -> !pdl.operation
 // expected-remark @below {{0}}
   transform.test_print_number_of_associated_payload_ir_ops %no_match
 }

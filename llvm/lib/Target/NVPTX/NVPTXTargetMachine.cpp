@@ -326,7 +326,7 @@ void NVPTXPassConfig::addIRPasses() {
 
   // NVPTXLowerArgs is required for correctness and should be run right
   // before the address space inference passes.
-  addPass(createNVPTXLowerArgsPass(&getNVPTXTargetMachine()));
+  addPass(createNVPTXLowerArgsPass());
   if (getOptLevel() != CodeGenOpt::None) {
     addAddressSpaceInferencePasses();
     addStraightLineScalarOptimizationPasses();

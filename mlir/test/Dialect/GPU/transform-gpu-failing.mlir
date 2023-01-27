@@ -6,7 +6,7 @@ func.func @map_nested_foreach_to_threads_not_gpu_launch() -> () {
 }
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
-  %funcop = transform.structured.match ops{["tensor.empty"]} in %arg0
+  %funcop = transform.structured.match ops{["tensor.empty"]} in %arg0 : (!pdl.operation) -> !pdl.operation
   // expected-error @below {{Given target is not gpu.launch}}
   %1 = transform.gpu.map_nested_foreach_to_threads %funcop
 }
@@ -46,7 +46,7 @@ func.func @map_nested_foreach_to_threads_excessive_threads(%x: memref<2 x 32 x f
 }
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
-  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0
+  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
   // expected-error @below {{Trying to launch a GPU kernel with gridDim = (1, 1, 1) blockDim = (1200, 9, 1). It is larger than the limits.}}
   // expected-note @below {{"blockDim" is very large}}
   transform.gpu.map_nested_foreach_to_threads %funcop { blockDim = [1200, 9, 1] }
@@ -88,7 +88,7 @@ func.func @map_nested_foreach_to_threads_fewer_threads(%x: memref<2 x 32 x f32>,
 
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
-  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0
+  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
   // expected-error @below {{The requested GPU threads are fewer than the number of loop trip counts. Try to tile scf.foreach_thread before mapping or set small blockDim.}}
   transform.gpu.map_nested_foreach_to_threads %funcop { blockDim = [128, 4, 1] }
 }
@@ -114,7 +114,7 @@ func.func @map_nested_foreach_to_threads_dynamic_trip_count(%x: memref<2 x 32 x 
 
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
-  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0
+  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
   // expected-error @below {{unsupported dynamic blockdim size}}
   transform.gpu.map_nested_foreach_to_threads %funcop { blockDim = [128, 4, 1] }
 }
@@ -134,9 +134,9 @@ func.func @map_nested_foreach_to_threads_not_buffer(%x: tensor<32x32xf32>, %y: t
 
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
-  %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg0
+  %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg0 : (!pdl.operation) -> !pdl.operation
   %foreach, %tiled = transform.structured.tile_to_foreach_thread_op %matmul num_threads [10, 20, 30] (mapping = [ #gpu.thread<y>, #gpu.thread<x>, #gpu.thread<z> ] )
-  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0
+  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
   // expected-error @below {{only bufferized scf.foreach_thread lowers to gpu.thread_id}}
   transform.gpu.map_nested_foreach_to_threads %funcop { blockDim = [128, 4, 1] }
 }
@@ -151,7 +151,7 @@ func.func @map_foreach_to_blocks_not_gpu_launch() -> () {
 }
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
-  %funcop = transform.structured.match ops{["tensor.empty"]} in %arg0
+  %funcop = transform.structured.match ops{["tensor.empty"]} in %arg0 : (!pdl.operation) -> !pdl.operation
   // expected-error @below {{Given target is not gpu.launch}}
   %1 = transform.gpu.map_foreach_to_blocks %funcop
 }
@@ -188,7 +188,7 @@ func.func @map_foreach_to_blocks_not_unique(%x: memref<2 x 32 x f32>, %y: memref
 
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
-  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0
+  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
   // expected-error @below {{could not find a unique topLevel scf.foreach_thread}}
   %1 = transform.gpu.map_foreach_to_blocks %funcop
 }
@@ -221,7 +221,7 @@ func.func @map_foreach_to_blocks_large_loop(%x: memref<2 x 32 x f32>, %y: memref
 
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
-  %funcop = transform.structured.match ops{["func.func"]} in %arg0
+  %funcop = transform.structured.match ops{["func.func"]} in %arg0 : (!pdl.operation) -> !pdl.operation
   // expected-error @below {{could not find a unique topLevel scf.foreach_thread}}
   %1 = transform.gpu.map_foreach_to_blocks %funcop { generate_gpu_launch }
 }
@@ -242,7 +242,7 @@ func.func @map_foreach_to_blocks_large_loop(%x: memref<2 x 32 x f32>, %y: memref
 
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
-  %funcop = transform.structured.match ops{["func.func"]} in %arg0
+  %funcop = transform.structured.match ops{["func.func"]} in %arg0 : (!pdl.operation) -> !pdl.operation
   // expected-error @below {{Trying to launch a GPU kernel with gridDim = (65535, 65535, 1) blockDim = (1, 1, 1). It is larger than the limits.}}
   %1 = transform.gpu.map_foreach_to_blocks %funcop { generate_gpu_launch }
 }
@@ -269,7 +269,7 @@ func.func @saxpy2d_singleloop(%x: !type, %y: !type, %stream : !gpu.async.token) 
 
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
-  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0
+  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
   // expected-error @below {{#gpu.thread<x> is duplicated, cannot map different loops to the same processor}}
   transform.gpu.map_nested_foreach_to_threads %funcop { blockDim = [32, 32]}
 }
@@ -296,7 +296,7 @@ func.func @saxpy2d_wrong_mapping(%x: !type, %y: !type, %stream : !gpu.async.toke
 
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
-  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0
+  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
   // expected-error @below {{mapping must be one of #gpu.thread<x>, #gpu.thread<y>, #gpu.thread<z>}}
   transform.gpu.map_nested_foreach_to_threads %funcop { blockDim = [32, 32]}
 }

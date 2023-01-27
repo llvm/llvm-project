@@ -1061,6 +1061,7 @@ module std [system] {
     module __memory {
       module addressof                       { private header "__memory/addressof.h" }
       module align                           { private header "__memory/align.h" }
+      module aligned_alloc                   { private header "__memory/aligned_alloc.h" }
       module allocate_at_least               { private header "__memory/allocate_at_least.h" }
       module allocation_guard                { private header "__memory/allocation_guard.h" }
       module allocator                       { private header "__memory/allocator.h" }
