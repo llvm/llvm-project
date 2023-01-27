@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ANALYSIS_EHPERSONALITIES_H
-#define LLVM_ANALYSIS_EHPERSONALITIES_H
+#ifndef LLVM_IR_EHPERSONALITIES_H
+#define LLVM_IR_EHPERSONALITIES_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TinyPtrVector.h"
@@ -115,4 +115,4 @@ DenseMap<BasicBlock *, ColorVector> colorEHFunclets(Function &F);
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_IR_EHPERSONALITIES_H
