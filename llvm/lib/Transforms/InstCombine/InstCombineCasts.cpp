@@ -501,12 +501,16 @@ static bool canEvaluateTruncated(Value *V, Type *Ty, InstCombinerImpl &IC,
     // If the integer type can hold the max FP value, it is safe to cast
     // directly to that type. Otherwise, we may create poison via overflow
     // that did not exist in the original code.
+    //
+    // The max FP value is pow(2, MaxExponent) * (1 + MaxFraction), so we need
+    // at least one more bit than the MaxExponent to hold the max FP value.
     Type *InputTy = I->getOperand(0)->getType()->getScalarType();
     const fltSemantics &Semantics = InputTy->getFltSemantics();
-    uint32_t MinBitWidth =
-      APFloatBase::semanticsIntSizeInBits(Semantics,
-          I->getOpcode() == Instruction::FPToSI);
-    return Ty->getScalarSizeInBits() >= MinBitWidth;
+    uint32_t MinBitWidth = APFloatBase::semanticsMaxExponent(Semantics);
+    // Extra sign bit needed.
+    if (I->getOpcode() == Instruction::FPToSI)
+      ++MinBitWidth;
+    return Ty->getScalarSizeInBits() > MinBitWidth;
   }
   default:
     // TODO: Can handle more cases here.
