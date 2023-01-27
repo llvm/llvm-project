@@ -115,7 +115,7 @@ const CustomOperand<const MCSubtargetInfo &> Opr[] = {
   {{"HW_REG_HW_ID1"},        ID_HW_ID1,      isGFX10Plus},
   {{"HW_REG_HW_ID2"},        ID_HW_ID2,      isGFX10Plus},
   {{"HW_REG_POPS_PACKER"},   ID_POPS_PACKER, isGFX10},
-  {{""}},
+  {{"HW_REG_SCHED_MODE"},    ID_SCHED_MODE,  isGFX12Plus},
   {{"HW_REG_PERF_SNAPSHOT_DATA"}, ID_PERF_SNAPSHOT_DATA_gfx11, isGFX11},
   {{""}},
   {{"HW_REG_SHADER_CYCLES"},    ID_SHADER_CYCLES,    isGFX10_3_GFX11},

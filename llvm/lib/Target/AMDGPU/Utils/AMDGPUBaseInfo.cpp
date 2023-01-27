@@ -1687,6 +1687,10 @@ int encodeDepCtr(const StringRef Name, int64_t Val, unsigned &UsedOprMask,
                              STI);
 }
 
+unsigned getVaVdstBitMask() { return (1 << getVaVdstBitWidth()) - 1; }
+
+unsigned getVmVsrcBitMask() { return (1 << getVmVsrcBitWidth()) - 1; }
+
 unsigned decodeFieldVmVsrc(unsigned Encoded) {
   return unpackBits(Encoded, getVmVsrcBitShift(), getVmVsrcBitWidth());
 }
