@@ -451,8 +451,10 @@ static bool getPotentialCopiesOfMemoryValue(
     AA::RangeTy Range;
     auto &PI = A.getAAFor<AAPointerInfo>(QueryingAA, IRPosition::value(Obj),
                                          DepClassTy::NONE);
-    if (!PI.forallInterferingAccesses(A, QueryingAA, I, CheckAccess,
-                                      HasBeenWrittenTo, Range)) {
+    if (!PI.forallInterferingAccesses(A, QueryingAA, I,
+                                      /* FindInterferingWrites */ IsLoad,
+                                      /* FindInterferingReads */ !IsLoad,
+                                      CheckAccess, HasBeenWrittenTo, Range)) {
       LLVM_DEBUG(
           dbgs()
           << "Failed to verify all interfering accesses for underlying object: "
