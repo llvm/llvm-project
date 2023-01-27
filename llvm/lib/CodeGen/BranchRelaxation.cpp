@@ -284,12 +284,6 @@ MachineBasicBlock *BranchRelaxation::splitBlockBeforeInstr(MachineInstr &MI,
 /// specific BB can fit in MI's displacement field.
 bool BranchRelaxation::isBlockInRange(
   const MachineInstr &MI, const MachineBasicBlock &DestBB) const {
-
-  // FAULTING_OP's destination is not encoded in the instruction stream
-  // and thus always in range.
-  if (MI.getOpcode() == TargetOpcode::FAULTING_OP)
-    return true;
-
   int64_t BrOffset = getInstrOffset(MI);
   int64_t DestOffset = BlockInfo[DestBB.getNumber()].Offset;
 
@@ -562,6 +556,11 @@ bool BranchRelaxation::relaxBranchInstructions() {
       MachineInstr &MI = *J;
 
       if (!MI.isConditionalBranch())
+        continue;
+
+      if (MI.getOpcode() == TargetOpcode::FAULTING_OP)
+        // FAULTING_OP's destination is not encoded in the instruction stream
+        // and thus never needs relaxed.
         continue;
 
       MachineBasicBlock *DestBB = TII->getBranchDestBlock(MI);
