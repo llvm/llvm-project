@@ -35,7 +35,7 @@ AMDGPUOpenMPToolChain::AMDGPUOpenMPToolChain(const Driver &D,
                                              const ArgList &Args)
     : ROCMToolChain(D, Triple, Args), HostTC(HostTC) {
   // Lookup binaries into the driver directory, this is used to
-  // discover the clang-offload-bundler executable.
+  // discover the 'amdgpu-arch' executable.
   getProgramPaths().push_back(getDriver().Dir);
 }
 
