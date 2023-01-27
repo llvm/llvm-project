@@ -47,70 +47,9 @@ struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
     if (lhs == getTombstoneKey() || lhs == getEmptyKey() ||
         rhs == getTombstoneKey() || rhs == getEmptyKey())
       return false;
-
-    // If op has no regions, operation equivalence w.r.t operands alone is
-    // enough.
-    if (lhs->getNumRegions() == 0 && rhs->getNumRegions() == 0) {
-      return OperationEquivalence::isEquivalentTo(
-          const_cast<Operation *>(lhsC), const_cast<Operation *>(rhsC),
-          OperationEquivalence::exactValueMatch,
-          OperationEquivalence::ignoreValueEquivalence,
-          OperationEquivalence::IgnoreLocations);
-    }
-
-    // If lhs or rhs does not have a single region with a single block, they
-    // aren't CSEed for now.
-    if (lhs->getNumRegions() != 1 || rhs->getNumRegions() != 1 ||
-        !llvm::hasSingleElement(lhs->getRegion(0)) ||
-        !llvm::hasSingleElement(rhs->getRegion(0)))
-      return false;
-
-    // Compare the two blocks.
-    Block &lhsBlock = lhs->getRegion(0).front();
-    Block &rhsBlock = rhs->getRegion(0).front();
-
-    // Don't CSE if number of arguments differ.
-    if (lhsBlock.getNumArguments() != rhsBlock.getNumArguments())
-      return false;
-
-    // Map to store `Value`s from `lhsBlock` that are equivalent to `Value`s in
-    // `rhsBlock`. `Value`s from `lhsBlock` are the key.
-    DenseMap<Value, Value> areEquivalentValues;
-    for (auto bbArgs : llvm::zip(lhs->getRegion(0).getArguments(),
-                                 rhs->getRegion(0).getArguments())) {
-      areEquivalentValues[std::get<0>(bbArgs)] = std::get<1>(bbArgs);
-    }
-
-    // Helper function to get the parent operation.
-    auto getParent = [](Value v) -> Operation * {
-      if (auto blockArg = v.dyn_cast<BlockArgument>())
-        return blockArg.getParentBlock()->getParentOp();
-      return v.getDefiningOp()->getParentOp();
-    };
-
-    // Callback to compare if operands of ops in the region of `lhs` and `rhs`
-    // are equivalent.
-    auto mapOperands = [&](Value lhsValue, Value rhsValue) -> LogicalResult {
-      if (lhsValue == rhsValue)
-        return success();
-      if (areEquivalentValues.lookup(lhsValue) == rhsValue)
-        return success();
-      return failure();
-    };
-
-    // Callback to compare if results of ops in the region of `lhs` and `rhs`
-    // are equivalent.
-    auto mapResults = [&](Value lhsResult, Value rhsResult) -> LogicalResult {
-      if (getParent(lhsResult) == lhs && getParent(rhsResult) == rhs) {
-        auto insertion = areEquivalentValues.insert({lhsResult, rhsResult});
-        return success(insertion.first->second == rhsResult);
-      }
-      return success();
-    };
-
     return OperationEquivalence::isEquivalentTo(
         const_cast<Operation *>(lhsC), const_cast<Operation *>(rhsC),
-        mapOperands, mapResults, OperationEquivalence::IgnoreLocations);
+        OperationEquivalence::IgnoreLocations);
   }
 };
 } // namespace

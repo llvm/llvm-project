@@ -493,7 +493,7 @@ LogicalResult BlockMergeCluster::addToCluster(BlockEquivalenceData &blockData) {
     // Check that the operations are equivalent.
     if (!OperationEquivalence::isEquivalentTo(
             &*lhsIt, &*rhsIt, OperationEquivalence::ignoreValueEquivalence,
-            OperationEquivalence::ignoreValueEquivalence,
+            /*markEquivalent=*/nullptr,
             OperationEquivalence::Flags::IgnoreLocations))
       return failure();
 
