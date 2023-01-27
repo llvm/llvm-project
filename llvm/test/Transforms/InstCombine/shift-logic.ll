@@ -332,3 +332,185 @@ define i64 @lshr_mul_negative_nsw(i64 %0) {
   %3 = lshr i64 %2, 2
   ret i64 %3
 }
+
+define i8 @shl_add(i8 %x, i8 %y) {
+; CHECK-LABEL: @shl_add(
+; CHECK-NEXT:    [[SH0:%.*]] = shl i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[SH0]], [[Y:%.*]]
+; CHECK-NEXT:    [[SH1:%.*]] = shl i8 [[R]], 2
+; CHECK-NEXT:    ret i8 [[SH1]]
+;
+  %sh0 = shl i8 %x, 3
+  %r = add i8 %sh0, %y
+  %sh1 = shl i8 %r, 2
+  ret i8 %sh1
+}
+
+define <2 x i8> @shl_add_nonuniform(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @shl_add_nonuniform(
+; CHECK-NEXT:    [[SH0:%.*]] = shl <2 x i8> [[X:%.*]], <i8 3, i8 4>
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[SH0]], [[Y:%.*]]
+; CHECK-NEXT:    [[SH1:%.*]] = shl <2 x i8> [[R]], <i8 2, i8 0>
+; CHECK-NEXT:    ret <2 x i8> [[SH1]]
+;
+  %sh0 = shl <2 x i8> %x, <i8 3, i8 4>
+  %r = add <2 x i8> %sh0, %y
+  %sh1 = shl <2 x i8> %r, <i8 2, i8 0>
+  ret <2 x i8> %sh1
+}
+
+
+define <2 x i64> @shl_add_undef(<2 x i64> %x, <2 x i64> %py) {
+; CHECK-LABEL: @shl_add_undef(
+; CHECK-NEXT:    [[Y:%.*]] = srem <2 x i64> [[PY:%.*]], <i64 42, i64 42>
+; CHECK-NEXT:    [[SH0:%.*]] = shl <2 x i64> [[X:%.*]], <i64 5, i64 undef>
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i64> [[Y]], [[SH0]]
+; CHECK-NEXT:    [[SH1:%.*]] = shl <2 x i64> [[R]], <i64 7, i64 undef>
+; CHECK-NEXT:    ret <2 x i64> [[SH1]]
+;
+  %y = srem <2 x i64> %py, <i64 42, i64 42> ; thwart complexity-based canonicalization
+  %sh0 = shl <2 x i64> %x, <i64 5, i64 undef>
+  %r = add <2 x i64> %y, %sh0
+  %sh1 = shl <2 x i64> %r, <i64 7, i64 undef>
+  ret <2 x i64> %sh1
+}
+
+
+define i8 @lshr_add(i8 %x, i8 %y) {
+; CHECK-LABEL: @lshr_add(
+; CHECK-NEXT:    [[SH0:%.*]] = lshr i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[SH0]], [[Y:%.*]]
+; CHECK-NEXT:    [[SH1:%.*]] = lshr i8 [[R]], 2
+; CHECK-NEXT:    ret i8 [[SH1]]
+;
+  %sh0 = lshr i8 %x, 3
+  %r = add i8 %sh0, %y
+  %sh1 = lshr i8 %r, 2
+  ret i8 %sh1
+}
+
+define <2 x i8> @lshr_add_nonuniform(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @lshr_add_nonuniform(
+; CHECK-NEXT:    [[SH0:%.*]] = lshr <2 x i8> [[X:%.*]], <i8 3, i8 4>
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[SH0]], [[Y:%.*]]
+; CHECK-NEXT:    [[SH1:%.*]] = lshr <2 x i8> [[R]], <i8 2, i8 0>
+; CHECK-NEXT:    ret <2 x i8> [[SH1]]
+;
+  %sh0 = lshr <2 x i8> %x, <i8 3, i8 4>
+  %r = add <2 x i8> %sh0, %y
+  %sh1 = lshr <2 x i8> %r, <i8 2, i8 0>
+  ret <2 x i8> %sh1
+}
+
+define <2 x i64> @lshr_add_undef(<2 x i64> %x, <2 x i64> %py) {
+; CHECK-LABEL: @lshr_add_undef(
+; CHECK-NEXT:    [[Y:%.*]] = srem <2 x i64> [[PY:%.*]], <i64 42, i64 42>
+; CHECK-NEXT:    [[SH0:%.*]] = lshr <2 x i64> [[X:%.*]], <i64 5, i64 undef>
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i64> [[Y]], [[SH0]]
+; CHECK-NEXT:    [[SH1:%.*]] = lshr <2 x i64> [[R]], <i64 7, i64 undef>
+; CHECK-NEXT:    ret <2 x i64> [[SH1]]
+;
+  %y = srem <2 x i64> %py, <i64 42, i64 42> ; thwart complexity-based canonicalization
+  %sh0 = lshr <2 x i64> %x, <i64 5, i64 undef>
+  %r = add <2 x i64> %y, %sh0
+  %sh1 = lshr <2 x i64> %r, <i64 7, i64 undef>
+  ret <2 x i64> %sh1
+}
+
+define i8 @shl_sub(i8 %x, i8 %y) {
+; CHECK-LABEL: @shl_sub(
+; CHECK-NEXT:    [[SH0:%.*]] = shl i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[SH0]], [[Y:%.*]]
+; CHECK-NEXT:    [[SH1:%.*]] = shl i8 [[R]], 2
+; CHECK-NEXT:    ret i8 [[SH1]]
+;
+  %sh0 = shl i8 %x, 3
+  %r = sub i8 %sh0, %y
+  %sh1 = shl i8 %r, 2
+  ret i8 %sh1
+}
+
+; Make sure we don't commute operands for sub
+define i8 @shl_sub_no_commute(i8 %x, i8 %y) {
+; CHECK-LABEL: @shl_sub_no_commute(
+; CHECK-NEXT:    [[SH0:%.*]] = shl i8 [[Y:%.*]], 3
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X:%.*]], [[SH0]]
+; CHECK-NEXT:    [[SH1:%.*]] = shl i8 [[R]], 2
+; CHECK-NEXT:    ret i8 [[SH1]]
+;
+  %sh0 = shl i8 %y, 3
+  %r = sub i8 %x, %sh0
+  %sh1 = shl i8 %r, 2
+  ret i8 %sh1
+}
+
+define <2 x i8> @shl_sub_nonuniform(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @shl_sub_nonuniform(
+; CHECK-NEXT:    [[SH0:%.*]] = shl <2 x i8> [[X:%.*]], <i8 3, i8 4>
+; CHECK-NEXT:    [[R:%.*]] = sub <2 x i8> [[SH0]], [[Y:%.*]]
+; CHECK-NEXT:    [[SH1:%.*]] = shl <2 x i8> [[R]], <i8 2, i8 0>
+; CHECK-NEXT:    ret <2 x i8> [[SH1]]
+;
+  %sh0 = shl <2 x i8> %x, <i8 3, i8 4>
+  %r = sub <2 x i8> %sh0, %y
+  %sh1 = shl <2 x i8> %r, <i8 2, i8 0>
+  ret <2 x i8> %sh1
+}
+
+
+define <2 x i64> @shl_sub_undef(<2 x i64> %x, <2 x i64> %py) {
+; CHECK-LABEL: @shl_sub_undef(
+; CHECK-NEXT:    [[Y:%.*]] = srem <2 x i64> [[PY:%.*]], <i64 42, i64 42>
+; CHECK-NEXT:    [[SH0:%.*]] = shl <2 x i64> [[X:%.*]], <i64 5, i64 undef>
+; CHECK-NEXT:    [[R:%.*]] = sub <2 x i64> [[Y]], [[SH0]]
+; CHECK-NEXT:    [[SH1:%.*]] = shl <2 x i64> [[R]], <i64 7, i64 undef>
+; CHECK-NEXT:    ret <2 x i64> [[SH1]]
+;
+  %y = srem <2 x i64> %py, <i64 42, i64 42> ; thwart complexity-based canonicalization
+  %sh0 = shl <2 x i64> %x, <i64 5, i64 undef>
+  %r = sub <2 x i64> %y, %sh0
+  %sh1 = shl <2 x i64> %r, <i64 7, i64 undef>
+  ret <2 x i64> %sh1
+}
+
+
+define i8 @lshr_sub(i8 %x, i8 %y) {
+; CHECK-LABEL: @lshr_sub(
+; CHECK-NEXT:    [[SH0:%.*]] = lshr i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[SH0]], [[Y:%.*]]
+; CHECK-NEXT:    [[SH1:%.*]] = lshr i8 [[R]], 2
+; CHECK-NEXT:    ret i8 [[SH1]]
+;
+  %sh0 = lshr i8 %x, 3
+  %r = sub i8 %sh0, %y
+  %sh1 = lshr i8 %r, 2
+  ret i8 %sh1
+}
+
+define <2 x i8> @lshr_sub_nonuniform(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @lshr_sub_nonuniform(
+; CHECK-NEXT:    [[SH0:%.*]] = lshr <2 x i8> [[X:%.*]], <i8 3, i8 4>
+; CHECK-NEXT:    [[R:%.*]] = sub <2 x i8> [[SH0]], [[Y:%.*]]
+; CHECK-NEXT:    [[SH1:%.*]] = lshr <2 x i8> [[R]], <i8 2, i8 0>
+; CHECK-NEXT:    ret <2 x i8> [[SH1]]
+;
+  %sh0 = lshr <2 x i8> %x, <i8 3, i8 4>
+  %r = sub <2 x i8> %sh0, %y
+  %sh1 = lshr <2 x i8> %r, <i8 2, i8 0>
+  ret <2 x i8> %sh1
+}
+
+define <2 x i64> @lshr_sub_undef(<2 x i64> %x, <2 x i64> %py) {
+; CHECK-LABEL: @lshr_sub_undef(
+; CHECK-NEXT:    [[Y:%.*]] = srem <2 x i64> [[PY:%.*]], <i64 42, i64 42>
+; CHECK-NEXT:    [[SH0:%.*]] = lshr <2 x i64> [[X:%.*]], <i64 5, i64 undef>
+; CHECK-NEXT:    [[R:%.*]] = sub <2 x i64> [[Y]], [[SH0]]
+; CHECK-NEXT:    [[SH1:%.*]] = lshr <2 x i64> [[R]], <i64 7, i64 undef>
+; CHECK-NEXT:    ret <2 x i64> [[SH1]]
+;
+  %y = srem <2 x i64> %py, <i64 42, i64 42> ; thwart complexity-based canonicalization
+  %sh0 = lshr <2 x i64> %x, <i64 5, i64 undef>
+  %r = sub <2 x i64> %y, %sh0
+  %sh1 = lshr <2 x i64> %r, <i64 7, i64 undef>
+  ret <2 x i64> %sh1
+}
