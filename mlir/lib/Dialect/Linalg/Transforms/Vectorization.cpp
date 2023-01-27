@@ -9,6 +9,7 @@
 // This file implements the linalg dialect Vectorization transformations.
 //
 //===----------------------------------------------------------------------===//
+#include "mlir/Dialect/Affine/Utils.h"
 
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -1048,6 +1049,21 @@ mlir::linalg::vectorizeLinalgOpPrecondition(LinalgOp linalgOp,
   return success();
 }
 
+/// Converts affine.apply Ops to arithmetic operations.
+static void convertAffineApply(RewriterBase &rewriter, LinalgOp linalgOp) {
+  auto &newIP = linalgOp.getBlock()->front();
+  OpBuilder::InsertionGuard g(rewriter);
+  rewriter.setInsertionPointAfter(&newIP);
+  auto toReplace = linalgOp.getBlock()->getOps<AffineApplyOp>();
+
+  for (auto op : make_early_inc_range(toReplace)) {
+    auto expanded =
+        expandAffineExpr(rewriter, op->getLoc(), op.getAffineMap().getResult(0),
+                         op.getOperands(), ValueRange{});
+    rewriter.replaceOp(op, expanded);
+  }
+}
+
 /// Emit a suitable vector form for a Linalg op. If provided, `inputVectorSizes`
 /// are used to vectorize this operation. `inputVectorSizes` must match the rank
 /// of the iteration space of the operation and the sizes must be smaller or
@@ -1084,6 +1100,10 @@ LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, LinalgOp linalgOp,
                                              vectorizeNDExtract)))
       return failure();
     LDBG("Vectorize generic by broadcasting to the canonical vector shape\n");
+
+    // Pre-process before proceeding.
+    convertAffineApply(rewriter, linalgOp);
+
     // TODO: 'vectorize' takes in a 'RewriterBase' which is up-casted to
     // 'OpBuilder' when it is passed over to some methods like
     // 'vectorizeAsLinalgGeneric'. This is highly problematic: if we erase an op
