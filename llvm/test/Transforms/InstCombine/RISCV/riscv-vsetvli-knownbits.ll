@@ -48,6 +48,30 @@ entry:
   ret i64 %2
 }
 
+define i32 @vsetvli_and17_i32() nounwind {
+; CHECK-LABEL: @vsetvli_and17_i32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.vsetvli.i32(i32 1, i32 1, i32 1)
+; CHECK-NEXT:    ret i32 [[TMP0]]
+;
+entry:
+  %0 = call i32 @llvm.riscv.vsetvli.i32(i32 1, i32 1, i32 1)
+  %1 = and i32 %0, 131071
+  ret i32 %1
+}
+
+define i64 @vsetvli_and17_i64() nounwind {
+; CHECK-LABEL: @vsetvli_and17_i64(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 1, i64 1, i64 1)
+; CHECK-NEXT:    ret i64 [[TMP0]]
+;
+entry:
+  %0 = call i64 @llvm.riscv.vsetvli.i64(i64 1, i64 1, i64 1)
+  %1 = and i64 %0, 131071
+  ret i64 %1
+}
+
 define i32 @vsetvlimax_i32() nounwind {
 ; CHECK-LABEL: @vsetvlimax_i32(
 ; CHECK-NEXT:  entry:
@@ -84,6 +108,30 @@ entry:
   %1 = trunc i64 %0 to i32
   %2 = zext i32 %1 to i64
   ret i64 %2
+}
+
+define i32 @vsetvlimax_and17_i32() nounwind {
+; CHECK-LABEL: @vsetvlimax_and17_i32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.vsetvlimax.i32(i32 1, i32 1)
+; CHECK-NEXT:    ret i32 [[TMP0]]
+;
+entry:
+  %0 = call i32 @llvm.riscv.vsetvlimax.i32(i32 1, i32 1)
+  %1 = and i32 %0, 131071
+  ret i32 %1
+}
+
+define i64 @vsetvlimax_and17_i64() nounwind {
+; CHECK-LABEL: @vsetvlimax_and17_i64(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvlimax.i64(i64 1, i64 1)
+; CHECK-NEXT:    ret i64 [[TMP0]]
+;
+entry:
+  %0 = call i64 @llvm.riscv.vsetvlimax.i64(i64 1, i64 1)
+  %1 = and i64 %0, 131071
+  ret i64 %1
 }
 
 define i32 @vsetvli_opt_i32() nounwind {
@@ -124,6 +172,30 @@ entry:
   ret i64 %2
 }
 
+define i32 @vsetvli_opt_and17_i32() nounwind {
+; CHECK-LABEL: @vsetvli_opt_and17_i32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.vsetvli.opt.i32(i32 1, i32 1, i32 1)
+; CHECK-NEXT:    ret i32 [[TMP0]]
+;
+entry:
+  %0 = call i32 @llvm.riscv.vsetvli.opt.i32(i32 1, i32 1, i32 1)
+  %1 = and i32 %0, 131071
+  ret i32 %1
+}
+
+define i64 @vsetvli_opt_and17_i64() nounwind {
+; CHECK-LABEL: @vsetvli_opt_and17_i64(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.opt.i64(i64 1, i64 1, i64 1)
+; CHECK-NEXT:    ret i64 [[TMP0]]
+;
+entry:
+  %0 = call i64 @llvm.riscv.vsetvli.opt.i64(i64 1, i64 1, i64 1)
+  %1 = and i64 %0, 131071
+  ret i64 %1
+}
+
 define i32 @vsetvlimax_opt_i32() nounwind {
 ; CHECK-LABEL: @vsetvlimax_opt_i32(
 ; CHECK-NEXT:  entry:
@@ -160,4 +232,28 @@ entry:
   %1 = trunc i64 %0 to i32
   %2 = zext i32 %1 to i64
   ret i64 %2
+}
+
+define i32 @vsetvlimax_opt_and17_i32() nounwind {
+; CHECK-LABEL: @vsetvlimax_opt_and17_i32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.vsetvlimax.opt.i32(i32 1, i32 1)
+; CHECK-NEXT:    ret i32 [[TMP0]]
+;
+entry:
+  %0 = call i32 @llvm.riscv.vsetvlimax.opt.i32(i32 1, i32 1)
+  %1 = and i32 %0, 131071
+  ret i32 %1
+}
+
+define i64 @vsetvlimax_opt_and17_i64() nounwind {
+; CHECK-LABEL: @vsetvlimax_opt_and17_i64(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvlimax.opt.i64(i64 1, i64 1)
+; CHECK-NEXT:    ret i64 [[TMP0]]
+;
+entry:
+  %0 = call i64 @llvm.riscv.vsetvlimax.opt.i64(i64 1, i64 1)
+  %1 = and i64 %0, 131071
+  ret i64 %1
 }
