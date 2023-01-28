@@ -72,7 +72,7 @@ static bool iterateCodepoints(llvm::StringRef U8, const Callback &CB) {
       continue;
     }
     // This convenient property of UTF-8 holds for all non-ASCII characters.
-    size_t UTF8Length = llvm::countLeadingOnes(C);
+    size_t UTF8Length = llvm::countl_one(C);
     // 0xxx is ASCII, handled above. 10xxx is a trailing byte, invalid here.
     // 11111xxx is not valid UTF-8 at all, maybe some ISO-8859-*.
     if (LLVM_UNLIKELY(UTF8Length < 2 || UTF8Length > 4)) {

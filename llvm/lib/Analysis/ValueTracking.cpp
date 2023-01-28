@@ -1376,7 +1376,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
       if (IndexTypeSize.isScalable()) {
         // For scalable types the only thing we know about sizeof is
         // that this is a multiple of the minimum size.
-        ScalingFactor.Zero.setLowBits(countTrailingZeros(TypeSizeInBytes));
+        ScalingFactor.Zero.setLowBits(llvm::countr_zero(TypeSizeInBytes));
       } else if (IndexBits.isConstant()) {
         APInt IndexConst = IndexBits.getConstant();
         APInt ScalingFactor(IndexBitWidth, TypeSizeInBytes);
