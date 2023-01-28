@@ -157,7 +157,7 @@ std::optional<Expr<SubscriptInteger>> DynamicType::MeasureSizeInBytes(
     }
     break;
   case TypeCategory::Derived:
-    if (derived_ && derived_->scope()) {
+    if (!IsPolymorphic() && derived_ && derived_->scope()) {
       auto size{derived_->scope()->size()};
       auto align{aligned ? derived_->scope()->alignment().value_or(0) : 0};
       auto alignedSize{align > 0 ? ((size + align - 1) / align) * align : size};
@@ -215,14 +215,7 @@ static const semantics::Symbol *FindParentComponent(
   }
   if (scope) {
     const auto &dtDetails{typeSymbol.get<semantics::DerivedTypeDetails>()};
-    if (auto extends{dtDetails.GetParentComponentName()}) {
-      if (auto iter{scope->find(*extends)}; iter != scope->cend()) {
-        if (const Symbol & symbol{*iter->second};
-            symbol.test(Symbol::Flag::ParentComp)) {
-          return &symbol;
-        }
-      }
-    }
+    return dtDetails.GetParentComponent(*scope);
   }
   return nullptr;
 }

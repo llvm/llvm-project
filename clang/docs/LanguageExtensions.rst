@@ -2386,21 +2386,19 @@ calculates the offset (in bytes) to a given member of the given type.
 
   const int offset_to_i = __builtin_offsetof(struct S, i);
   const int ext1 = __builtin_offsetof(struct U { int i; }, i); // C extension
-  const int ext2 = __builtin_offsetof(struct S, t.f[1]); // C & C++ extension
+  const int ext2 = __builtin_offsetof(struct S, t.f[1]);
 
 **Description**:
 
 This builtin is usable in an integer constant expression which returns a value
 of type ``size_t``. The value returned is the offset in bytes to the subobject
 designated by the member-designator from the beginning of an object of type
-``type-name``. Clang extends the required standard functionality in a few ways:
+``type-name``. Clang extends the required standard functionality in the
+following way:
 
 * In C language modes, the first argument may be the definition of a new type.
   Any type declared this way is scoped to the nearest scope containing the call
   to the builtin.
-* The second argument may be a member-designator designated by a series of
-  member access expressions using the dot (``.``) operator or array subscript
-  expressions.
 
 Query for this feature with ``__has_builtin(__builtin_offsetof)``.
 

@@ -41,10 +41,11 @@ void LlvmLibcExhaustiveTest<T, FloatType>::test_full_range(
           range_begin = current_value;
           if (stop >= increment && stop - increment >= current_value) {
             range_end = current_value + increment;
-          } else
+          } else {
             range_end = stop;
+          }
           current_value = range_end;
-          int pc = 100.0 * double(range_end - start) / double(stop - start);
+          int pc = 100.0 * (range_end - start) / (stop - start);
           if (current_percent != pc) {
             new_percent = pc;
             current_percent = pc;
@@ -54,7 +55,6 @@ void LlvmLibcExhaustiveTest<T, FloatType>::test_full_range(
           std::stringstream msg;
           msg << new_percent << "% is in process     \r";
           std::cout << msg.str() << std::flush;
-          ;
         }
 
         bool check_passed = check(range_begin, range_end, rounding);
@@ -84,6 +84,7 @@ void LlvmLibcExhaustiveTest<T, FloatType>::test_full_range(
   }
   std::cout << std::endl;
   std::cout << "Test " << ((failed > 0) ? "FAILED" : "PASSED") << std::endl;
+  ASSERT_EQ(failed.load(), uint64_t(0));
 }
 
 template void

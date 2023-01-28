@@ -246,8 +246,6 @@ struct APFloatBase {
   static ExponentType semanticsMinExponent(const fltSemantics &);
   static ExponentType semanticsMaxExponent(const fltSemantics &);
   static unsigned int semanticsSizeInBits(const fltSemantics &);
-  static unsigned int semanticsIntSizeInBits(const fltSemantics&,
-                                             bool isSigned);
 
   /// Returns the size of the floating point number (in bits) in the given
   /// semantics.

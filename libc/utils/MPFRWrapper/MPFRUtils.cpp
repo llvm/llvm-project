@@ -196,6 +196,11 @@ public:
     return result;
   }
 
+  MPFRNumber asinh() const {
+    MPFRNumber result(*this);
+    mpfr_asinh(result.value, value, mpfr_rounding);
+    return result;
+  }
   MPFRNumber atan() const {
     MPFRNumber result(*this);
     mpfr_atan(result.value, value, mpfr_rounding);
@@ -542,6 +547,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.acos();
   case Operation::Asin:
     return mpfrInput.asin();
+  case Operation::Asinh:
+    return mpfrInput.asinh();
   case Operation::Atan:
     return mpfrInput.atan();
   case Operation::Atanh:
