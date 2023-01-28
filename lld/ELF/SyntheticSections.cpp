@@ -2777,7 +2777,7 @@ createSymbols(
   // speed it up.
   constexpr size_t numShards = 32;
   const size_t concurrency =
-      PowerOf2Floor(std::min<size_t>(config->threadCount, numShards));
+      llvm::bit_floor(std::min<size_t>(config->threadCount, numShards));
 
   // A sharded map to uniquify symbols by name.
   auto map =
@@ -3265,7 +3265,7 @@ void MergeNoTailSection::finalizeContents() {
   // Concurrency level. Must be a power of 2 to avoid expensive modulo
   // operations in the following tight loop.
   const size_t concurrency =
-      PowerOf2Floor(std::min<size_t>(config->threadCount, numShards));
+      llvm::bit_floor(std::min<size_t>(config->threadCount, numShards));
 
   // Add section pieces to the builders.
   parallelFor(0, concurrency, [&](size_t threadId) {
