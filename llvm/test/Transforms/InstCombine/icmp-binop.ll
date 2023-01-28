@@ -6,7 +6,8 @@ declare void @llvm.assume(i1)
 
 define i1 @mul_unkV_oddC_eq(i32 %v) {
 ; CHECK-LABEL: @mul_unkV_oddC_eq(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[V:%.*]], 0
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[V:%.*]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MUL]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %mul = mul i32 %v, 3
@@ -27,7 +28,8 @@ define i1 @mul_unkV_oddC_eq_nonzero(i32 %v) {
 
 define <2 x i1> @mul_unkV_oddC_ne_vec(<2 x i64> %v) {
 ; CHECK-LABEL: @mul_unkV_oddC_ne_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i64> [[V:%.*]], zeroinitializer
+; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i64> [[V:%.*]], <i64 3, i64 3>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i64> [[MUL]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %mul = mul <2 x i64> %v, <i64 3, i64 3>
@@ -70,7 +72,7 @@ define i1 @mul_unkV_oddC_sge(i8 %v) {
 define i1 @mul_reused_unkV_oddC_ne(i64 %v) {
 ; CHECK-LABEL: @mul_reused_unkV_oddC_ne(
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[V:%.*]], 3
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[V]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[MUL]], 0
 ; CHECK-NEXT:    call void @use64(i64 [[MUL]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -85,7 +87,8 @@ define i1 @mul_assumeoddV_unkV_eq(i16 %v, i16 %v2) {
 ; CHECK-NEXT:    [[LB:%.*]] = and i16 [[V2:%.*]], 1
 ; CHECK-NEXT:    [[ODD:%.*]] = icmp ne i16 [[LB]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ODD]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[V:%.*]], 0
+; CHECK-NEXT:    [[MUL:%.*]] = mul i16 [[V:%.*]], [[V2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[MUL]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %lb = and i16 %v2, 1
@@ -102,7 +105,7 @@ define i1 @mul_reusedassumeoddV_unkV_ne(i64 %v, i64 %v2) {
 ; CHECK-NEXT:    [[ODD:%.*]] = icmp ne i64 [[LB]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ODD]])
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[V]], [[V2:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[V2]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[MUL]], 0
 ; CHECK-NEXT:    call void @use64(i64 [[MUL]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -117,7 +120,9 @@ define i1 @mul_reusedassumeoddV_unkV_ne(i64 %v, i64 %v2) {
 
 define <2 x i1> @mul_setoddV_unkV_ne(<2 x i32> %v1, <2 x i32> %v2) {
 ; CHECK-LABEL: @mul_setoddV_unkV_ne(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[V2:%.*]], zeroinitializer
+; CHECK-NEXT:    [[V:%.*]] = or <2 x i32> [[V1:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i32> [[V]], [[V2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[MUL]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %v = or <2 x i32> %v1, <i32 1, i32 1>
@@ -185,7 +190,8 @@ define i1 @mul_assumenzV_unkV_nsw_ne(i32 %v, i32 %v2) {
 ; CHECK-LABEL: @mul_assumenzV_unkV_nsw_ne(
 ; CHECK-NEXT:    [[NZ:%.*]] = icmp ne i32 [[V:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NZ]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[V2:%.*]], 0
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[V]], [[V2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[MUL]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %nz = icmp ne i32 %v, 0
@@ -223,7 +229,9 @@ define <2 x i1> @mul_unkV_unkV_nsw_nuw_ne(<2 x i16> %v, <2 x i16> %v2) {
 
 define i1 @mul_setnzV_unkV_nuw_eq(i8 %v1, i8 %v2) {
 ; CHECK-LABEL: @mul_setnzV_unkV_nuw_eq(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[V2:%.*]], 0
+; CHECK-NEXT:    [[V:%.*]] = or i8 [[V1:%.*]], 2
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i8 [[V]], [[V2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[MUL]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %v = or i8 %v1, 2
@@ -237,7 +245,8 @@ define i1 @mul_brnzV_unkV_nuw_eq(i64 %v, i64 %v2) {
 ; CHECK-NEXT:    [[NZ_NOT:%.*]] = icmp eq i64 [[V2:%.*]], 0
 ; CHECK-NEXT:    br i1 [[NZ_NOT]], label [[FALSE:%.*]], label [[TRUE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[V:%.*]], 0
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i64 [[V:%.*]], [[V2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[MUL]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ; CHECK:       false:
 ; CHECK-NEXT:    call void @use64(i64 [[V]])
