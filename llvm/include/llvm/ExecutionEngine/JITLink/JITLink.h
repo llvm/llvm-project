@@ -163,7 +163,7 @@ private:
     assert(AlignmentOffset <= MaxAlignmentOffset &&
            "Alignment offset exceeds maximum");
     ContentMutable = false;
-    P2Align = Alignment ? countTrailingZeros(Alignment) : 0;
+    P2Align = Alignment ? llvm::countr_zero(Alignment) : 0;
     this->AlignmentOffset = AlignmentOffset;
   }
 
@@ -180,7 +180,7 @@ private:
     assert(AlignmentOffset <= MaxAlignmentOffset &&
            "Alignment offset exceeds maximum");
     ContentMutable = false;
-    P2Align = Alignment ? countTrailingZeros(Alignment) : 0;
+    P2Align = Alignment ? llvm::countr_zero(Alignment) : 0;
     this->AlignmentOffset = AlignmentOffset;
   }
 
@@ -199,7 +199,7 @@ private:
     assert(AlignmentOffset <= MaxAlignmentOffset &&
            "Alignment offset exceeds maximum");
     ContentMutable = true;
-    P2Align = Alignment ? countTrailingZeros(Alignment) : 0;
+    P2Align = Alignment ? llvm::countr_zero(Alignment) : 0;
     this->AlignmentOffset = AlignmentOffset;
   }
 
@@ -289,7 +289,7 @@ public:
   /// Set the alignment for this content.
   void setAlignment(uint64_t Alignment) {
     assert(isPowerOf2_64(Alignment) && "Alignment must be a power of two");
-    P2Align = Alignment ? countTrailingZeros(Alignment) : 0;
+    P2Align = Alignment ? llvm::countr_zero(Alignment) : 0;
   }
 
   /// Get the alignment offset for this content.

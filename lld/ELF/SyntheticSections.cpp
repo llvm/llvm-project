@@ -2782,7 +2782,7 @@ createSymbols(
   // A sharded map to uniquify symbols by name.
   auto map =
       std::make_unique<DenseMap<CachedHashStringRef, size_t>[]>(numShards);
-  size_t shift = 32 - countTrailingZeros(numShards);
+  size_t shift = 32 - llvm::countr_zero(numShards);
 
   // Instantiate GdbSymbols while uniqufying them by name.
   auto symbols = std::make_unique<SmallVector<GdbSymbol, 0>[]>(numShards);
