@@ -2412,8 +2412,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     // according to the size of the final vector - use i8 chunks rather than
     // XLenVT if we're producing a v8i1. This results in more consistent
     // codegen across RV32 and RV64.
-    unsigned NumViaIntegerBits =
-        std::min(std::max(NumElts, 8u), Subtarget.getXLen());
+    unsigned NumViaIntegerBits = std::clamp(NumElts, 8u, Subtarget.getXLen());
     NumViaIntegerBits = std::min(NumViaIntegerBits, Subtarget.getELEN());
     if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode())) {
       // If we have to use more than one INSERT_VECTOR_ELT then this
