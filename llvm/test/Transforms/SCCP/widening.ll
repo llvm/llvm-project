@@ -447,8 +447,8 @@ define void @foo(ptr %arg) {
 ; SCCP:       bb4:
 ; SCCP-NEXT:    [[TMP5:%.*]] = add i64 [[TMP2]], 3
 ; SCCP-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], 3
-; SCCP-NEXT:    [[TMP7:%.*]] = sub nuw nsw i64 3, [[TMP6]]
-; SCCP-NEXT:    [[TMP8:%.*]] = shl nuw nsw i64 [[TMP7]], 1
+; SCCP-NEXT:    [[TMP7:%.*]] = sub i64 3, [[TMP6]]
+; SCCP-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP7]], 1
 ; SCCP-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP8]] to i32
 ; SCCP-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
 ; SCCP-NEXT:    br label [[BB11:%.*]]
@@ -484,8 +484,8 @@ define void @foo(ptr %arg) {
 ; IPSCCP:       bb4:
 ; IPSCCP-NEXT:    [[TMP5:%.*]] = add i64 [[TMP2]], 3
 ; IPSCCP-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], 3
-; IPSCCP-NEXT:    [[TMP7:%.*]] = sub nuw nsw i64 3, [[TMP6]]
-; IPSCCP-NEXT:    [[TMP8:%.*]] = shl nuw nsw i64 [[TMP7]], 1
+; IPSCCP-NEXT:    [[TMP7:%.*]] = sub i64 3, [[TMP6]]
+; IPSCCP-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP7]], 1
 ; IPSCCP-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP8]] to i32
 ; IPSCCP-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
 ; IPSCCP-NEXT:    br label [[BB11:%.*]]
