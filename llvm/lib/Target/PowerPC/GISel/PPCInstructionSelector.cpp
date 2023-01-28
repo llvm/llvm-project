@@ -266,8 +266,8 @@ bool PPCInstructionSelector::selectZExt(MachineInstr &I, MachineBasicBlock &MBB,
 // For any 32 < Num < 64, check if the Imm contains at least Num consecutive
 // zeros and return the number of bits by the left of these consecutive zeros.
 static uint32_t findContiguousZerosAtLeast(uint64_t Imm, unsigned Num) {
-  uint32_t HiTZ = countTrailingZeros<uint32_t>(Hi_32(Imm));
-  uint32_t LoLZ = countLeadingZeros<uint32_t>(Lo_32(Imm));
+  uint32_t HiTZ = llvm::countr_zero<uint32_t>(Hi_32(Imm));
+  uint32_t LoLZ = llvm::countl_zero<uint32_t>(Lo_32(Imm));
   if ((HiTZ + LoLZ) >= Num)
     return (32 + HiTZ);
   return 0;
@@ -280,10 +280,10 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
                                                 MachineRegisterInfo &MRI,
                                                 Register Reg,
                                                 uint64_t Imm) const {
-  unsigned TZ = countTrailingZeros<uint64_t>(Imm);
-  unsigned LZ = countLeadingZeros<uint64_t>(Imm);
-  unsigned TO = countTrailingOnes<uint64_t>(Imm);
-  unsigned LO = countLeadingOnes<uint64_t>(Imm);
+  unsigned TZ = llvm::countr_zero<uint64_t>(Imm);
+  unsigned LZ = llvm::countl_zero<uint64_t>(Imm);
+  unsigned TO = llvm::countr_one<uint64_t>(Imm);
+  unsigned LO = llvm::countl_one<uint64_t>(Imm);
   uint32_t Hi32 = Hi_32(Imm);
   uint32_t Lo32 = Lo_32(Imm);
   uint32_t Shift = 0;
@@ -307,7 +307,7 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
 
   assert(LZ < 64 && "Unexpected leading zeros here.");
   // Count of ones follwing the leading zeros.
-  unsigned FO = countLeadingOnes<uint64_t>(Imm << LZ);
+  unsigned FO = llvm::countl_one<uint64_t>(Imm << LZ);
   // 2-1) Patterns : {zeros}{31-bit value}
   //                 {ones}{31-bit value}
   if (isInt<32>(Imm)) {

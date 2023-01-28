@@ -87,7 +87,7 @@ static bool canUseShiftPair(Instruction *Inst, const APInt &Imm) {
   // (and (shl x, c2), c1) will be matched to (srli (slli x, c2+c3), c3) if c1
   // is a mask shifted by c2 bits with c3 leading zeros.
   if (isShiftedMask_64(Mask)) {
-    unsigned Trailing = countTrailingZeros(Mask);
+    unsigned Trailing = llvm::countr_zero(Mask);
     if (ShAmt == Trailing)
       return true;
   }

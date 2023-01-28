@@ -159,11 +159,11 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
       RVVBitsMax = std::max(RVVBitsMin, RVVBitsMax);
     }
 
-    RVVBitsMin =
-        PowerOf2Floor((RVVBitsMin < 64 || RVVBitsMin > 65536) ? 0 : RVVBitsMin);
+    RVVBitsMin = llvm::bit_floor(
+        (RVVBitsMin < 64 || RVVBitsMin > 65536) ? 0 : RVVBitsMin);
   }
   RVVBitsMax =
-      PowerOf2Floor((RVVBitsMax < 64 || RVVBitsMax > 65536) ? 0 : RVVBitsMax);
+      llvm::bit_floor((RVVBitsMax < 64 || RVVBitsMax > 65536) ? 0 : RVVBitsMax);
 
   SmallString<512> Key;
   Key += "RVVMin";

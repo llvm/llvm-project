@@ -127,9 +127,7 @@ public:
     return Compare(V, RHS.V);
   }
 
-  unsigned countLeadingZeros() const {
-    return llvm::countLeadingZeros<ReprT>(V);
-  }
+  unsigned countLeadingZeros() const { return llvm::countl_zero<ReprT>(V); }
 
   Integral truncate(unsigned TruncBits) const {
     if (TruncBits >= Bits)
