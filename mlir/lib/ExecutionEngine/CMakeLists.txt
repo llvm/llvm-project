@@ -206,8 +206,14 @@ if(MLIR_ENABLE_ROCM_RUNNER)
       set(ROCM_PATH $ENV{ROCM_PATH} CACHE PATH "Path to which ROCm has been installed")
     endif()
   endif()
+  # A lot of the ROCm CMake files expect to find their own dependencies in
+  # CMAKE_PREFIX_PATH and don't respect PATHS or HINTS :( .
+  # Therefore, temporarily add the ROCm path to CMAKE_PREFIX_PATH so we can
+  # load HIP, then remove it
+  set(REAL_CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}")
   list(APPEND CMAKE_PREFIX_PATH ${ROCM_PATH} "${ROCM_PATH}/hip")
   find_package(hip REQUIRED)
+  set(CMAKE_PREFIX_PATH "${REAL_CMAKE_PREFIX_PATH}")
 
   if (NOT DEFINED ROCM_TEST_CHIPSET)
     execute_process(COMMAND "${ROCM_PATH}/bin/rocm_agent_enumerator"

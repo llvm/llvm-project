@@ -67,9 +67,57 @@ define void @ptr_nongeneric(ptr addrspace(1) %out, ptr addrspace(4) %in) {
   ret void
 }
 
+; COMMON-LABEL: ptr_as_int
+ define void @ptr_as_int(i64 noundef %i, i32 noundef %v) {
+; IR:   [[P:%.*]] = inttoptr i64 %i to ptr
+; IRC:  [[P1:%.*]] = addrspacecast ptr [[P]] to ptr addrspace(1)
+; IRC:  addrspacecast ptr addrspace(1) [[P1]] to ptr
+; IRO-NOT: addrspacecast
+
+; PTXC-DAG:  ld.param.u64    [[I:%rd.*]], [ptr_as_int_param_0];
+; PTXC-DAG:  ld.param.u32    [[V:%r.*]], [ptr_as_int_param_1];
+; PTXC:      cvta.to.global.u64 %[[P:rd.*]], [[I]];
+; PTXC:      st.global.u32    [%[[P]]], [[V]];
+
+; PTXO-DAG:  ld.param.u64    %[[P:rd.*]], [ptr_as_int_param_0];
+; PTXO-DAG:  ld.param.u32    [[V:%r.*]], [ptr_as_int_param_1];
+; PTXO:      st.u32   [%[[P]]], [[V]];
+
+  %p = inttoptr i64 %i to ptr
+  store i32 %v, ptr %p, align 4
+  ret void
+}
+
+%struct.S = type { i64 }
+
+; COMMON-LABEL: ptr_as_int_aggr
+define void @ptr_as_int_aggr(ptr nocapture noundef readonly byval(%struct.S) align 8 %s, i32 noundef %v) {
+; IR:   [[S:%.*]] = addrspacecast ptr %s to ptr addrspace(101)
+; IR:   [[I:%.*]] = load i64, ptr addrspace(101) [[S]], align 8
+; IR:   [[P0:%.*]] = inttoptr i64 [[I]] to ptr
+; IRC:  [[P1:%.*]] = addrspacecast ptr [[P]] to ptr addrspace(1)
+; IRC:  [[P:%.*]] = addrspacecast ptr addrspace(1) [[P1]] to ptr
+; IRO-NOT: addrspacecast
+
+; PTXC-DAG:  ld.param.u64    [[I:%rd.*]], [ptr_as_int_aggr_param_0];
+; PTXC-DAG:  ld.param.u32    [[V:%r.*]], [ptr_as_int_aggr_param_1];
+; PTXC:      cvta.to.global.u64 %[[P:rd.*]], [[I]];
+; PTXC:      st.global.u32    [%[[P]]], [[V]];
+
+; PTXO-DAG:  ld.param.u64    %[[P:rd.*]], [ptr_as_int_aggr_param_0];
+; PTXO-DAG:  ld.param.u32    [[V:%r.*]], [ptr_as_int_aggr_param_1];
+; PTXO:      st.u32   [%[[P]]], [[V]];
+  %i = load i64, ptr %s, align 8
+  %p = inttoptr i64 %i to ptr
+  store i32 %v, ptr %p, align 4
+  ret void
+}
+
 
 ; Function Attrs: convergent nounwind
 declare dso_local ptr @escape(ptr) local_unnamed_addr
-!nvvm.annotations = !{!0, !1}
+!nvvm.annotations = !{!0, !1, !2, !3}
 !0 = !{ptr @ptr_generic, !"kernel", i32 1}
 !1 = !{ptr @ptr_nongeneric, !"kernel", i32 1}
+!2 = !{ptr @ptr_as_int, !"kernel", i32 1}
+!3 = !{ptr @ptr_as_int_aggr, !"kernel", i32 1}

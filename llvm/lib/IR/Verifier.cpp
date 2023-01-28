@@ -72,6 +72,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GCStrategy.h"
 #include "llvm/IR/GlobalAlias.h"
@@ -327,6 +328,10 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   // Maps catchswitches and cleanuppads that unwind to siblings to the
   // terminators that indicate the unwind, used to detect cycles therein.
   MapVector<Instruction *, Instruction *> SiblingFuncletInfo;
+
+  /// Cache which blocks are in which funclet, if an EH funclet personality is
+  /// in use. Otherwise empty.
+  DenseMap<BasicBlock *, ColorVector> BlockEHFuncletColors;
 
   /// Cache of constants visited in search of ConstantExprs.
   SmallPtrSet<const Constant *, 32> ConstantExprVisited;
@@ -2651,6 +2656,9 @@ void Verifier::visitFunction(const Function &F) {
             "Referencing personality function in another module!", &F,
             F.getParent(), Per, Per->getParent());
   }
+
+  // EH funclet coloring can be expensive, recompute on-demand
+  BlockEHFuncletColors.clear();
 
   if (F.isMaterializable()) {
     // Function has a body somewhere we can't see.
@@ -5817,6 +5825,37 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   }
   };
+
+  // Verify that there aren't any unmediated control transfers between funclets.
+  if (IntrinsicInst::mayLowerToFunctionCall(ID)) {
+    Function *F = Call.getParent()->getParent();
+    if (F->hasPersonalityFn() &&
+        isScopedEHPersonality(classifyEHPersonality(F->getPersonalityFn()))) {
+      // Run EH funclet coloring on-demand and cache results for other intrinsic
+      // calls in this function
+      if (BlockEHFuncletColors.empty())
+        BlockEHFuncletColors = colorEHFunclets(*F);
+
+      // Check for catch-/cleanup-pad in first funclet block
+      bool InEHFunclet = false;
+      BasicBlock *CallBB = Call.getParent();
+      const ColorVector &CV = BlockEHFuncletColors.find(CallBB)->second;
+      assert(CV.size() > 0 && "Uncolored block");
+      for (BasicBlock *ColorFirstBB : CV)
+        if (dyn_cast_or_null<FuncletPadInst>(ColorFirstBB->getFirstNonPHI()))
+          InEHFunclet = true;
+
+      // Check for funclet operand bundle
+      bool HasToken = false;
+      for (unsigned I = 0, E = Call.getNumOperandBundles(); I != E; ++I)
+        if (Call.getOperandBundleAt(I).getTagID() == LLVMContext::OB_funclet)
+          HasToken = true;
+
+      // This would cause silent code truncation in WinEHPrepare
+      if (InEHFunclet)
+        Check(HasToken, "Missing funclet token on intrinsic call", &Call);
+    }
+  }
 }
 
 /// Carefully grab the subprogram from a local scope.

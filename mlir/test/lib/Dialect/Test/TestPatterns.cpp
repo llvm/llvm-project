@@ -266,13 +266,13 @@ public:
       }
     });
 
-    GreedyRewriteStrictness mode;
+    GreedyRewriteConfig config;
     if (strictMode == "AnyOp") {
-      mode = GreedyRewriteStrictness::AnyOp;
+      config.strictMode = GreedyRewriteStrictness::AnyOp;
     } else if (strictMode == "ExistingAndNewOps") {
-      mode = GreedyRewriteStrictness::ExistingAndNewOps;
+      config.strictMode = GreedyRewriteStrictness::ExistingAndNewOps;
     } else if (strictMode == "ExistingOps") {
-      mode = GreedyRewriteStrictness::ExistingOps;
+      config.strictMode = GreedyRewriteStrictness::ExistingOps;
     } else {
       llvm_unreachable("invalid strictness option");
     }
@@ -282,8 +282,8 @@ public:
     // operation will trigger the assertion while processing.
     bool changed = false;
     bool allErased = false;
-    (void)applyOpPatternsAndFold(ArrayRef(ops), std::move(patterns), mode,
-                                 GreedyRewriteConfig(), &changed, &allErased);
+    (void)applyOpPatternsAndFold(ArrayRef(ops), std::move(patterns), config,
+                                 &changed, &allErased);
     Builder b(ctx);
     getOperation()->setAttr("pattern_driver_changed", b.getBoolAttr(changed));
     getOperation()->setAttr("pattern_driver_all_erased",

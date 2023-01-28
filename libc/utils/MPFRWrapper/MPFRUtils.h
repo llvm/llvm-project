@@ -27,6 +27,7 @@ enum class Operation : int {
   Abs,
   Acos,
   Asin,
+  Asinh,
   Atan,
   Atanh,
   Ceil,
