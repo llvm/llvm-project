@@ -10164,18 +10164,16 @@ alignment is not set to a value which is at least the size in bytes of the
 pointee. ``!nontemporal`` does not have any defined semantics for atomic loads.
 
 The optional constant ``align`` argument specifies the alignment of the
-operation (that is, the alignment of the memory address). A value of 0
-or an omitted ``align`` argument means that the operation has the ABI
-alignment for the target. It is the responsibility of the code emitter
-to ensure that the alignment information is correct. Overestimating the
-alignment results in undefined behavior. Underestimating the alignment
-may produce less efficient code. An alignment of 1 is always safe. The
-maximum possible alignment is ``1 << 32``. An alignment value higher
-than the size of the loaded type implies memory up to the alignment
-value bytes can be safely loaded without trapping in the default
-address space. Access of the high bytes can interfere with debugging
-tools, so should not be accessed if the function has the
-``sanitize_thread`` or ``sanitize_address`` attributes.
+operation (that is, the alignment of the memory address). An omitted ``align``
+argument means that the operation has the ABI alignment for the target. It is
+the responsibility of the code emitter to ensure that the alignment information
+is correct. Overestimating the alignment results in undefined behavior.
+Underestimating the alignment may produce less efficient code. An alignment of 1 is
+always safe. The maximum possible alignment is ``1 << 32``. An alignment value higher
+than the size of the loaded type implies memory up to the alignment value bytes can
+be safely loaded without trapping in the default address space. Access of the high
+bytes can interfere with debugging tools, so should not be  accessed if the function
+has the ``sanitize_thread`` or ``sanitize_address`` attributes.
 
 The optional ``!nontemporal`` metadata must reference a single
 metadata name ``<nontemp_node>`` corresponding to a metadata node with one
