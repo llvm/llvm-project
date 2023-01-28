@@ -99,6 +99,25 @@ TEST(OnDiskGraphDBTest, Basic) {
   ASSERT_THAT_ERROR(DB->load(ID3).moveInto(Obj2), Succeeded());
   ASSERT_TRUE(Obj2.has_value());
   EXPECT_EQ(toStringRef(DB->getObjectData(*Obj2)), "world");
+
+  size_t LargeDataSize = 256LL * 1024LL; // 256K.
+  // The precise size number is not important, we mainly check that the large
+  // object will be properly accounted for.
+  EXPECT_TRUE(DB->getStorageSize() > 10 &&
+              DB->getStorageSize() < LargeDataSize);
+
+  SmallString<16> Buffer;
+  Buffer.resize(LargeDataSize);
+  ASSERT_THAT_ERROR(store(Buffer, {}).moveInto(ID1), Succeeded());
+  size_t StorageSize = DB->getStorageSize();
+  EXPECT_TRUE(StorageSize > LargeDataSize);
+
+  // Close & re-open the DB and check that it reports the same storage size.
+  DB.reset();
+  ASSERT_THAT_ERROR(
+      OnDiskGraphDB::open(Temp.path(), "blake3", sizeof(HashType)).moveInto(DB),
+      Succeeded());
+  EXPECT_EQ(DB->getStorageSize(), StorageSize);
 }
 
 TEST(OnDiskGraphDBTest, FaultInSingleNode) {

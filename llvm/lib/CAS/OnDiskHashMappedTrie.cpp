@@ -143,6 +143,8 @@ public:
     return DatabaseFile(std::move(LMFR));
   }
 
+  size_t size() const { return Alloc.size(); }
+
 private:
   static Error validate(LazyMappedFileRegion &LMFR);
 
@@ -1019,6 +1021,8 @@ static Error checkTable(StringRef Label, size_t Expected, size_t Observed,
                                     ", observed: " + Twine(Observed) + ")");
 }
 
+size_t OnDiskHashMappedTrie::size() const { return Impl->File.size(); }
+
 Expected<OnDiskHashMappedTrie> OnDiskHashMappedTrie::create(
     const Twine &PathTwine, const Twine &TrieNameTwine, size_t NumHashBits,
     uint64_t DataSize, uint64_t MaxFileSize,
@@ -1124,6 +1128,8 @@ namespace {
 /// DataAllocator table layout:
 /// - [8-bytes: Generic table header]
 /// - 8-bytes: AllocatorOffset (reserved for implementing free lists)
+/// - 8-bytes: Size for user data header
+/// - <user data buffer>
 ///
 /// Record layout:
 /// - <data>
@@ -1135,6 +1141,7 @@ public:
   struct Header {
     TableHandle::Header GenericHeader;
     std::atomic<int64_t> AllocatorOffset;
+    const uint64_t UserHeaderSize;
   };
 
   operator TableHandle() const {
@@ -1153,8 +1160,13 @@ public:
   const Header &getHeader() const { return *H; }
   LazyMappedFileRegion &getRegion() const { return *LMFR; }
 
+  MutableArrayRef<uint8_t> getUserHeader() {
+    return MutableArrayRef(reinterpret_cast<uint8_t *>(H + 1),
+                           H->UserHeaderSize);
+  }
+
   static DataAllocatorHandle create(LazyMappedFileRegionBumpPtr &Alloc,
-                                    StringRef Name);
+                                    StringRef Name, uint32_t UserHeaderSize);
 
   DataAllocatorHandle() = default;
   DataAllocatorHandle(LazyMappedFileRegion &LMFR, Header &H)
@@ -1176,27 +1188,31 @@ struct OnDiskDataAllocator::ImplType {
 };
 
 DataAllocatorHandle
-DataAllocatorHandle::create(LazyMappedFileRegionBumpPtr &Alloc,
-                            StringRef Name) {
+DataAllocatorHandle::create(LazyMappedFileRegionBumpPtr &Alloc, StringRef Name,
+                            uint32_t UserHeaderSize) {
   // Allocate.
-  intptr_t Offset = Alloc.allocateOffset(sizeof(Header) + Name.size() + 1);
+  intptr_t Offset =
+      Alloc.allocateOffset(sizeof(Header) + UserHeaderSize + Name.size() + 1);
 
   // Construct the header and the name.
   assert(Name.size() <= UINT16_MAX && "Expected smaller table name");
   auto *H = new (Alloc.getRegion().data() + Offset)
       Header{{TableHandle::TableKind::DataAllocator, (uint16_t)Name.size(),
-              (uint32_t)sizeof(Header)},
-             /*AllocatorOffset=*/{0}};
-  char *NameStorage = reinterpret_cast<char *>(H + 1);
+              (int32_t)(sizeof(Header) + UserHeaderSize)},
+             /*AllocatorOffset=*/{0},
+             /*UserHeaderSize=*/UserHeaderSize};
+  memset(H + 1, 0, UserHeaderSize);
+  char *NameStorage = reinterpret_cast<char *>(H + 1) + UserHeaderSize;
   llvm::copy(Name, NameStorage);
   NameStorage[Name.size()] = 0;
   return DataAllocatorHandle(Alloc.getRegion(), *H);
 }
 
-Expected<OnDiskDataAllocator>
-OnDiskDataAllocator::create(const Twine &PathTwine, const Twine &TableNameTwine,
-                            uint64_t MaxFileSize,
-                            Optional<uint64_t> NewFileInitialSize) {
+Expected<OnDiskDataAllocator> OnDiskDataAllocator::create(
+    const Twine &PathTwine, const Twine &TableNameTwine, uint64_t MaxFileSize,
+    Optional<uint64_t> NewFileInitialSize, uint32_t UserHeaderSize,
+    function_ref<void(void *)> UserHeaderInit) {
+  assert(!UserHeaderSize || UserHeaderInit);
   SmallString<128> PathStorage;
   StringRef Path = PathTwine.toStringRef(PathStorage);
   SmallString<128> TableNameStorage;
@@ -1209,8 +1225,10 @@ OnDiskDataAllocator::create(const Twine &PathTwine, const Twine &TableNameTwine,
       return DB.takeError();
 
     DataAllocatorHandle Store =
-        DataAllocatorHandle::create(DB->getAlloc(), TableName);
+        DataAllocatorHandle::create(DB->getAlloc(), TableName, UserHeaderSize);
     DB->addTable(Store);
+    if (UserHeaderSize)
+      UserHeaderInit(Store.getUserHeader().data());
     return Error::success();
   };
 
@@ -1256,6 +1274,12 @@ const char *OnDiskDataAllocator::beginData(FileOffset Offset) const {
   assert(Offset.get() < (int64_t)Impl->File.getAlloc().size());
   return Impl->File.getRegion().data() + Offset.get();
 }
+
+MutableArrayRef<uint8_t> OnDiskDataAllocator::getUserHeader() {
+  return Impl->Store.getUserHeader();
+}
+
+size_t OnDiskDataAllocator::size() const { return Impl->File.size(); }
 
 OnDiskDataAllocator::OnDiskDataAllocator(std::unique_ptr<ImplType> Impl)
     : Impl(std::move(Impl)) {}

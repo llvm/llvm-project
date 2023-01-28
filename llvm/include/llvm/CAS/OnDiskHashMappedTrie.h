@@ -272,6 +272,8 @@ public:
     return insert(const_pointer(), Value);
   }
 
+  size_t size() const;
+
   /// Gets or creates a file at \p Path with a hash-mapped trie named \p
   /// TrieName. The hash size is \p NumHashBits (in bits) and the records store
   /// data of size \p DataSize (in bytes).
@@ -355,9 +357,17 @@ public:
     return save(ArrayRef<char>(Data.begin(), Data.size()));
   }
 
+  /// \returns the buffer that was allocated at \p create time, with size
+  /// \p UserHeaderSize.
+  MutableArrayRef<uint8_t> getUserHeader();
+
+  size_t size() const;
+
   static Expected<OnDiskDataAllocator>
   create(const Twine &Path, const Twine &TableName, uint64_t MaxFileSize,
-         std::optional<uint64_t> NewFileInitialSize);
+         std::optional<uint64_t> NewFileInitialSize,
+         uint32_t UserHeaderSize = 0,
+         function_ref<void(void *)> UserHeaderInit = nullptr);
 
   OnDiskDataAllocator(OnDiskDataAllocator &&RHS);
   OnDiskDataAllocator &operator=(OnDiskDataAllocator &&RHS);
