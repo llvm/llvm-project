@@ -36,8 +36,7 @@ elif lsan_lit_test_mode == "HWAddressSanitizer":
   config.name = "LeakSanitizer-HWAddressSanitizer"
   lsan_cflags = ["-fsanitize=hwaddress"]
   if target_arch == "x86_64":
-    lsan_cflags = lsan_cflags + ['-fuse-ld=lld',
-        '-fsanitize-hwaddress-experimental-aliasing']
+    lsan_cflags = lsan_cflags + [ '-fsanitize-hwaddress-experimental-aliasing']
   config.available_features.add('hwasan')
   if config.host_os == 'NetBSD':
     config.substitutions.insert(0, ('%run', config.netbsd_noaslr_prefix))
