@@ -104,7 +104,7 @@ def BSETINVTwoBitsMask : PatLeaf<(imm), [{
 
 def BSETINVTwoBitsMaskHigh : SDNodeXForm<imm, [{
   uint64_t I = N->getZExtValue();
-  return CurDAG->getTargetConstant(63 - llvm::countl_zero(I), SDLoc(N),
+  return CurDAG->getTargetConstant(llvm::Log2_64(I), SDLoc(N),
                                    N->getValueType(0));
 }]>;
 
@@ -146,7 +146,7 @@ def BCLRITwoBitsMaskHigh : SDNodeXForm<imm, [{
   uint64_t I = N->getSExtValue();
   if (!Subtarget->is64Bit())
     I |= 0xffffffffull << 32;
-  return CurDAG->getTargetConstant(63 - llvm::countl_zero(~I), SDLoc(N),
+  return CurDAG->getTargetConstant(llvm::Log2_64(~I), SDLoc(N),
                                    N->getValueType(0));
 }]>;
 
