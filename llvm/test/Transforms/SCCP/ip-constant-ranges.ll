@@ -243,7 +243,7 @@ define internal i32 @recursive_f(i32 %i) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[RETURN:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[I]], 1
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @recursive_f(i32 [[SUB]])
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[I]], [[CALL]]
 ; CHECK-NEXT:    br label [[RETURN]]

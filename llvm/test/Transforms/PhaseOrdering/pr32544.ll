@@ -5,7 +5,7 @@
 define void @foo(i1 %which, i32 %a, i32 %b, ptr %result) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 0, [[B:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i32 0, [[B:%.*]]
 ; CHECK-NEXT:    [[Z_V_P:%.*]] = select i1 [[WHICH:%.*]], i32 [[B]], i32 [[TMP0]]
 ; CHECK-NEXT:    [[Z_V:%.*]] = add i32 [[Z_V_P]], [[A:%.*]]
 ; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[Z_V]] to i64
@@ -35,7 +35,7 @@ final:
 define void @bar(i1 %which, i32 %a, i32 %b, ptr %result) {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 0, [[B:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i32 0, [[B:%.*]]
 ; CHECK-NEXT:    [[SPEC_SELECT_P:%.*]] = select i1 [[WHICH:%.*]], i32 [[B]], i32 [[TMP0]]
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = add i32 [[SPEC_SELECT_P]], [[A:%.*]]
 ; CHECK-NEXT:    [[Z2:%.*]] = zext i32 [[SPEC_SELECT]] to i64
@@ -64,7 +64,7 @@ final:
 define void @foo_opt(i1 %which, i32 %a, i32 %b, ptr nocapture %result) {
 ; CHECK-LABEL: @foo_opt(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 0, [[B:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i32 0, [[B:%.*]]
 ; CHECK-NEXT:    [[Z_V_P:%.*]] = select i1 [[WHICH:%.*]], i32 [[B]], i32 [[TMP0]]
 ; CHECK-NEXT:    [[Z_V:%.*]] = add i32 [[Z_V_P]], [[A:%.*]]
 ; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[Z_V]] to i64
