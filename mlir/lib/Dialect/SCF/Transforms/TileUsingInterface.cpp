@@ -24,6 +24,7 @@
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "tile-using-interface"
 
@@ -579,7 +580,7 @@ mlir::scf::tileAndFuseProducerOfSlice(RewriterBase &rewriter,
   // TODO: This can be modeled better if the `DestinationStyleOpInterface`.
   // Update to use that when it does become available.
   scf::ForOp outerMostLoop = loops.front();
-  Optional<unsigned> iterArgNumber;
+  std::optional<unsigned> iterArgNumber;
   if (destinationIterArg) {
     iterArgNumber =
         outerMostLoop.getIterArgNumberForOpOperand(*destinationIterArg.value());
