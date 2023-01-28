@@ -9773,8 +9773,7 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     // movw+movk+fmov vs. adrp+ldr (it's one instruction longer, but the
     // movw+movk is fused). So we limit up to 2 instrdduction at most.
     SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
-    AArch64_IMM::expandMOVImm(ImmInt.getZExtValue(), VT.getSizeInBits(),
-			      Insn);
+    AArch64_IMM::expandMOVImm(ImmInt.getZExtValue(), VT.getSizeInBits(), Insn);
     unsigned Limit = (OptForSize ? 1 : (Subtarget->hasFuseLiterals() ? 5 : 2));
     IsLegal = Insn.size() <= Limit;
   }
@@ -14819,7 +14818,9 @@ bool AArch64TargetLowering::isMulAddWithConstProfitable(
   if (!isLegalAddImmediate(C1) || isLegalAddImmediate(C1C2.getSExtValue()))
     return true;
   SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
-  AArch64_IMM::expandMOVImm(C1C2.getZExtValue(), VT.getSizeInBits(), Insn);
+  // Adapt to the width of a register.
+  unsigned BitSize = VT.getSizeInBits() <= 32 ? 32 : 64;
+  AArch64_IMM::expandMOVImm(C1C2.getZExtValue(), BitSize, Insn);
   if (Insn.size() > 1)
     return false;
 
