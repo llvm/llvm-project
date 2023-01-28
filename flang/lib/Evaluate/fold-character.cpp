@@ -56,7 +56,13 @@ Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
   if (name == "achar" || name == "char") {
     using IntT = SubscriptInteger;
     return FoldElementalIntrinsic<T, IntT>(context, std::move(funcRef),
-        ScalarFunc<T, IntT>([](const Scalar<IntT> &i) {
+        ScalarFunc<T, IntT>([&](const Scalar<IntT> &i) {
+          if (i.IsNegative() || i.BGE(Scalar<IntT>{0}.IBSET(8 * KIND))) {
+            context.messages().Say(
+                "%s(I=%jd) is out of range for CHARACTER(KIND=%d)"_warn_en_US,
+                parser::ToUpperCaseLetters(name),
+                static_cast<std::intmax_t>(i.ToInt64()), KIND);
+          }
           return CharacterUtils<KIND>::CHAR(i.ToUInt64());
         }));
   } else if (name == "adjustl") {

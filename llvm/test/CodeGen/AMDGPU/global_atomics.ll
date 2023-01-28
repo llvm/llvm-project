@@ -6598,3 +6598,185 @@ entry:
   store atomic half %in, ptr addrspace(1) %out seq_cst, align 2
   ret void
 }
+
+; GCN-LABEL: {{^}}atomic_inc_i32_offset:
+; SIVI: buffer_atomic_inc v{{[0-9]+}}, off, s[{{[0-9]+}}:{{[0-9]+}}], 0 offset:16{{$}}
+; GFX9: global_atomic_inc v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}] offset:16{{$}}
+define amdgpu_kernel void @atomic_inc_i32_offset(ptr addrspace(1) %out, i32 %in) {
+entry:
+  %gep = getelementptr i32, ptr addrspace(1) %out, i64 4
+  %val = atomicrmw volatile uinc_wrap ptr addrspace(1) %gep, i32 %in seq_cst
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_inc_i32_max_neg_offset:
+; GFX9: global_atomic_inc v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}] offset:-4096{{$}}
+define amdgpu_kernel void @atomic_inc_i32_max_neg_offset(ptr addrspace(1) %out, i32 %in) {
+entry:
+  %gep = getelementptr i32, ptr addrspace(1) %out, i64 -1024
+  %val = atomicrmw volatile uinc_wrap ptr addrspace(1) %gep, i32 %in seq_cst
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_inc_i32_soffset:
+; SIVI: s_mov_b32 [[SREG:s[0-9]+]], 0x8ca0
+; SIVI: buffer_atomic_inc v{{[0-9]+}}, off, s[{{[0-9]+}}:{{[0-9]+}}], [[SREG]]{{$}}
+
+; GFX9: v_mov_b32_e32 [[OFFSET:v[0-9]+]], 0x8000{{$}}
+; GFX9: global_atomic_inc [[OFFSET]], v{{[0-9]+}}, s{{\[[0-9]:[0-9]+\]}} offset:3232{{$}}
+define amdgpu_kernel void @atomic_inc_i32_soffset(ptr addrspace(1) %out, i32 %in) {
+entry:
+  %gep = getelementptr i32, ptr addrspace(1) %out, i64 9000
+  %val = atomicrmw volatile uinc_wrap ptr addrspace(1) %gep, i32 %in seq_cst
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_inc_i32_huge_offset:
+; SI-DAG: v_mov_b32_e32 v[[PTRLO:[0-9]+]], 0xdeac
+; SI-DAG: v_mov_b32_e32 v[[PTRHI:[0-9]+]], 0xabcd
+; SI: buffer_atomic_inc v{{[0-9]+}}, v[[[PTRLO]]:[[PTRHI]]], s[{{[0-9]+}}:{{[0-9]+}}], 0 addr64{{$}}
+
+; VI: flat_atomic_inc
+
+; GFX9: s_add_u32 s[[LOW_K:[0-9]+]], s{{[0-9]+}}, 0xdeac
+; GFX9: s_addc_u32 s[[HIGH_K:[0-9]+]], s{{[0-9]+}}, 0xabcd
+; GFX9: global_atomic_inc v{{[0-9]+}}, v{{[0-9]+}}, s[[[LOW_K]]:[[HIGH_K]]]{{$}}
+define amdgpu_kernel void @atomic_inc_i32_huge_offset(ptr addrspace(1) %out, i32 %in) {
+entry:
+  %gep = getelementptr i32, ptr addrspace(1) %out, i64 47224239175595
+
+  %val = atomicrmw volatile uinc_wrap ptr addrspace(1) %gep, i32 %in seq_cst
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_inc_i32_ret_offset:
+; SIVI: buffer_atomic_inc [[RET:v[0-9]+]], off, s[{{[0-9]+}}:{{[0-9]+}}], 0 offset:16 glc{{$}}
+; SIVI: buffer_store_dword [[RET]]
+
+; GFX9: global_atomic_inc v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}} offset:16 glc{{$}}
+define amdgpu_kernel void @atomic_inc_i32_ret_offset(ptr addrspace(1) %out, ptr addrspace(1) %out2, i32 %in) {
+entry:
+  %gep = getelementptr i32, ptr addrspace(1) %out, i64 4
+  %val = atomicrmw volatile uinc_wrap ptr addrspace(1) %gep, i32 %in seq_cst
+  store i32 %val, ptr addrspace(1) %out2
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_inc_i32_addr64_offset:
+; SI: buffer_atomic_inc v{{[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}], s[{{[0-9]+}}:{{[0-9]+}}], 0 addr64 offset:16{{$}}
+; VI: flat_atomic_inc v[{{[0-9]+:[0-9]+}}], v{{[0-9]+$}}
+; GFX9: global_atomic_inc v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}] offset:16{{$}}
+define amdgpu_kernel void @atomic_inc_i32_addr64_offset(ptr addrspace(1) %out, i32 %in, i64 %index) {
+entry:
+  %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4
+  %val = atomicrmw volatile uinc_wrap ptr addrspace(1) %gep, i32 %in seq_cst
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_inc_i32_ret_addr64_offset:
+; SI: buffer_atomic_inc [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}], s[{{[0-9]+}}:{{[0-9]+}}], 0 addr64 offset:16 glc{{$}}
+; VI: flat_atomic_inc [[RET:v[0-9]+]], v[{{[0-9]+:[0-9]+}}], v{{[0-9]+}} glc{{$}}
+; SIVI: buffer_store_dword [[RET]]
+
+; GFX9: global_atomic_inc [[RET:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}] offset:16 glc{{$}}
+; GFX9: global_store_dword v{{[0-9]+}}, [[RET]], s
+define amdgpu_kernel void @atomic_inc_i32_ret_addr64_offset(ptr addrspace(1) %out, ptr addrspace(1) %out2, i32 %in, i64 %index) {
+entry:
+  %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4
+  %val = atomicrmw volatile uinc_wrap ptr addrspace(1) %gep, i32 %in seq_cst
+  store i32 %val, ptr addrspace(1) %out2
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_dec_i32_offset:
+; SIVI: buffer_atomic_dec v{{[0-9]+}}, off, s[{{[0-9]+}}:{{[0-9]+}}], 0 offset:16{{$}}
+; GFX9: global_atomic_dec v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}] offset:16{{$}}
+define amdgpu_kernel void @atomic_dec_i32_offset(ptr addrspace(1) %out, i32 %in) {
+entry:
+  %gep = getelementptr i32, ptr addrspace(1) %out, i64 4
+  %val = atomicrmw volatile udec_wrap ptr addrspace(1) %gep, i32 %in seq_cst
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_dec_i32_max_neg_offset:
+; GFX9: global_atomic_dec v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}] offset:-4096{{$}}
+define amdgpu_kernel void @atomic_dec_i32_max_neg_offset(ptr addrspace(1) %out, i32 %in) {
+entry:
+  %gep = getelementptr i32, ptr addrspace(1) %out, i64 -1024
+  %val = atomicrmw volatile udec_wrap ptr addrspace(1) %gep, i32 %in seq_cst
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_dec_i32_soffset:
+; SIVI: s_mov_b32 [[SREG:s[0-9]+]], 0x8ca0
+; SIVI: buffer_atomic_dec v{{[0-9]+}}, off, s[{{[0-9]+}}:{{[0-9]+}}], [[SREG]]{{$}}
+
+; GFX9: v_mov_b32_e32 [[OFFSET:v[0-9]+]], 0x8000{{$}}
+; GFX9: global_atomic_dec [[OFFSET]], v{{[0-9]+}}, s{{\[[0-9]:[0-9]+\]}} offset:3232{{$}}
+define amdgpu_kernel void @atomic_dec_i32_soffset(ptr addrspace(1) %out, i32 %in) {
+entry:
+  %gep = getelementptr i32, ptr addrspace(1) %out, i64 9000
+  %val = atomicrmw volatile udec_wrap ptr addrspace(1) %gep, i32 %in seq_cst
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_dec_i32_huge_offset:
+; SI-DAG: v_mov_b32_e32 v[[PTRLO:[0-9]+]], 0xdeac
+; SI-DAG: v_mov_b32_e32 v[[PTRHI:[0-9]+]], 0xabcd
+; SI: buffer_atomic_dec v{{[0-9]+}}, v[[[PTRLO]]:[[PTRHI]]], s[{{[0-9]+}}:{{[0-9]+}}], 0 addr64{{$}}
+
+; VI: flat_atomic_dec
+
+; GFX9: s_add_u32 s[[LOW_K:[0-9]+]], s{{[0-9]+}}, 0xdeac
+; GFX9: s_addc_u32 s[[HIGH_K:[0-9]+]], s{{[0-9]+}}, 0xabcd
+; GFX9: global_atomic_dec v{{[0-9]+}}, v{{[0-9]+}}, s[[[LOW_K]]:[[HIGH_K]]]{{$}}
+define amdgpu_kernel void @atomic_dec_i32_huge_offset(ptr addrspace(1) %out, i32 %in) {
+entry:
+  %gep = getelementptr i32, ptr addrspace(1) %out, i64 47224239175595
+
+  %val = atomicrmw volatile udec_wrap ptr addrspace(1) %gep, i32 %in seq_cst
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_dec_i32_ret_offset:
+; SIVI: buffer_atomic_dec [[RET:v[0-9]+]], off, s[{{[0-9]+}}:{{[0-9]+}}], 0 offset:16 glc{{$}}
+; SIVI: buffer_store_dword [[RET]]
+
+; GFX9: global_atomic_dec v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}} offset:16 glc{{$}}
+define amdgpu_kernel void @atomic_dec_i32_ret_offset(ptr addrspace(1) %out, ptr addrspace(1) %out2, i32 %in) {
+entry:
+  %gep = getelementptr i32, ptr addrspace(1) %out, i64 4
+  %val = atomicrmw volatile udec_wrap ptr addrspace(1) %gep, i32 %in seq_cst
+  store i32 %val, ptr addrspace(1) %out2
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_dec_i32_addr64_offset:
+; SI: buffer_atomic_dec v{{[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}], s[{{[0-9]+}}:{{[0-9]+}}], 0 addr64 offset:16{{$}}
+; VI: flat_atomic_dec v[{{[0-9]+:[0-9]+}}], v{{[0-9]+$}}
+; GFX9: global_atomic_dec v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}] offset:16{{$}}
+define amdgpu_kernel void @atomic_dec_i32_addr64_offset(ptr addrspace(1) %out, i32 %in, i64 %index) {
+entry:
+  %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4
+  %val = atomicrmw volatile udec_wrap ptr addrspace(1) %gep, i32 %in seq_cst
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_dec_i32_ret_addr64_offset:
+; SI: buffer_atomic_dec [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}], s[{{[0-9]+}}:{{[0-9]+}}], 0 addr64 offset:16 glc{{$}}
+; VI: flat_atomic_dec [[RET:v[0-9]+]], v[{{[0-9]+:[0-9]+}}], v{{[0-9]+}} glc{{$}}
+; SIVI: buffer_store_dword [[RET]]
+
+; GFX9: global_atomic_dec [[RET:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}] offset:16 glc{{$}}
+; GFX9: global_store_dword v{{[0-9]+}}, [[RET]], s
+define amdgpu_kernel void @atomic_dec_i32_ret_addr64_offset(ptr addrspace(1) %out, ptr addrspace(1) %out2, i32 %in, i64 %index) {
+entry:
+  %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4
+  %val = atomicrmw volatile udec_wrap ptr addrspace(1) %gep, i32 %in seq_cst
+  store i32 %val, ptr addrspace(1) %out2
+  ret void
+}
