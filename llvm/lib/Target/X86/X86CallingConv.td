@@ -1154,11 +1154,11 @@ def CSR_64_CXX_TLS_Darwin_PE : CalleeSavedRegs<(add RBP)>;
 // CSRs that are handled explicitly via copies.
 def CSR_64_CXX_TLS_Darwin_ViaCopy : CalleeSavedRegs<(sub CSR_64_TLS_Darwin, RBP)>;
 
-// All GPRs - except r11 and return registers.
+// All GPRs - except r11
 def CSR_64_RT_MostRegs : CalleeSavedRegs<(add CSR_64, RAX, RCX, RDX, RSI, RDI,
                                               R8, R9, R10)>;
 
-// All registers - except r11 and return registers.
+// All registers - except r11
 def CSR_64_RT_AllRegs     : CalleeSavedRegs<(add CSR_64_RT_MostRegs,
                                                  (sequence "XMM%u", 0, 15))>;
 def CSR_64_RT_AllRegs_AVX : CalleeSavedRegs<(add CSR_64_RT_MostRegs,
