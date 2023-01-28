@@ -2200,6 +2200,7 @@ gentbl(
             ":MCParser",
             ":Support",
             ":Target",
+            ":TargetParser",
             ":" + target["name"] + "CodeGen",
             ":" + target["name"] + "CommonTableGen",
             ":" + target["name"] + "Info",
