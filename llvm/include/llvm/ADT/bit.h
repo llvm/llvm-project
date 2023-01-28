@@ -297,7 +297,7 @@ template <typename T> [[nodiscard]] T bit_floor(T Value) {
 }
 
 /// Returns the smallest integral power of two no smaller than Value if Value is
-/// nonzero.  Returns 0 otherwise.
+/// nonzero.  Returns 1 otherwise.
 ///
 /// Ex. bit_ceil(5) == 8.
 ///
