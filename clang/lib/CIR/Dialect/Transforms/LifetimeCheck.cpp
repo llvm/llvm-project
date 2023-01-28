@@ -97,22 +97,27 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
     unsigned val = None;
     unsigned histLimit = 1;
 
-    void parseOptions(LifetimeCheckPass &pass) {
-      for (auto &remark : pass.remarksList) {
+    void parseOptions(ArrayRef<std::string> remarks, ArrayRef<std::string> hist,
+                      unsigned hist_limit) {
+      for (auto &remark : remarks) {
         val |= StringSwitch<unsigned>(remark)
                    .Case("pset-invalid", RemarkPsetInvalid)
                    .Case("pset-always", RemarkPsetAlways)
                    .Case("all", RemarkAll)
                    .Default(None);
       }
-      for (auto &h : pass.historyList) {
+      for (auto &h : hist) {
         val |= StringSwitch<unsigned>(h)
                    .Case("invalid", HistoryInvalid)
                    .Case("null", HistoryNull)
                    .Case("all", HistoryAll)
                    .Default(None);
       }
-      histLimit = pass.historyLimit;
+      histLimit = hist_limit;
+    }
+
+    void parseOptions(LifetimeCheckPass &pass) {
+      parseOptions(pass.remarksList, pass.historyList, pass.historyLimit);
     }
 
     bool emitRemarkAll() { return val & RemarkAll; }
