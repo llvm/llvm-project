@@ -497,7 +497,7 @@ bool SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI) const {
 
   if (Opc == AMDGPU::S_AND_B32) {
     if (isPowerOf2_32(~Imm)) {
-      NewImm = countTrailingOnes(Imm);
+      NewImm = llvm::countr_one(Imm);
       Opc = AMDGPU::S_BITSET0_B32;
     } else if (AMDGPU::isInlinableLiteral32(~Imm, ST->hasInv2PiInlineImm())) {
       NewImm = ~Imm;
@@ -505,7 +505,7 @@ bool SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI) const {
     }
   } else if (Opc == AMDGPU::S_OR_B32) {
     if (isPowerOf2_32(Imm)) {
-      NewImm = countTrailingZeros(Imm);
+      NewImm = llvm::countr_zero(Imm);
       Opc = AMDGPU::S_BITSET1_B32;
     } else if (AMDGPU::isInlinableLiteral32(~Imm, ST->hasInv2PiInlineImm())) {
       NewImm = ~Imm;
