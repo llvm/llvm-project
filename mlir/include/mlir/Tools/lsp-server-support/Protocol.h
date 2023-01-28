@@ -20,8 +20,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIB_MLIR_TOOLS_LSPSERVERSUPPORT_PROTOCOL_H_
-#define LIB_MLIR_TOOLS_LSPSERVERSUPPORT_PROTOCOL_H_
+#ifndef MLIR_TOOLS_LSPSERVERSUPPORT_PROTOCOL_H
+#define MLIR_TOOLS_LSPSERVERSUPPORT_PROTOCOL_H
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/Support/JSON.h"
@@ -29,10 +29,10 @@
 #include "llvm/Support/raw_ostream.h"
 #include <bitset>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
-#include <optional>
 
 namespace mlir {
 struct LogicalResult;

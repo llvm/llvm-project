@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIB_MLIR_TOOLS_LSPSERVERSUPPORT_LOGGING_H
-#define LIB_MLIR_TOOLS_LSPSERVERSUPPORT_LOGGING_H
+#ifndef MLIR_TOOLS_LSPSERVERSUPPORT_LOGGING_H
+#define MLIR_TOOLS_LSPSERVERSUPPORT_LOGGING_H
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/Support/Debug.h"
@@ -62,4 +62,4 @@ private:
 } // namespace lsp
 } // namespace mlir
 
-#endif // LIB_MLIR_TOOLS_LSPSERVERSUPPORT_LOGGING_H
+#endif // MLIR_TOOLS_LSPSERVERSUPPORT_LOGGING_H

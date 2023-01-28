@@ -20,7 +20,7 @@
 #ifndef LIB_MLIR_TOOLS_MLIRLSPSERVER_PROTOCOL_H_
 #define LIB_MLIR_TOOLS_MLIRLSPSERVER_PROTOCOL_H_
 
-#include "../lsp-server-support/Protocol.h"
+#include "mlir/Tools/lsp-server-support/Protocol.h"
 
 namespace mlir {
 namespace lsp {

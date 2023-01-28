@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SourceMgrUtils.h"
+#include "mlir/Tools/lsp-server-support/SourceMgrUtils.h"
 #include "llvm/Support/Path.h"
 #include <optional>
 
@@ -43,7 +43,7 @@ static const char *lexLocStringTok(const char *curPtr) {
   return curPtr - 1;
 }
 
-SMRange lsp::convertTokenLocToRange(SMLoc loc) {
+SMRange lsp::convertTokenLocToRange(SMLoc loc, StringRef identifierChars) {
   if (!loc.isValid())
     return SMRange();
   const char *curPtr = loc.getPointer();
@@ -55,8 +55,8 @@ SMRange lsp::convertTokenLocToRange(SMLoc loc) {
     // Otherwise, default to handling an identifier.
   } else {
     // Return if the given character is a valid identifier character.
-    auto isIdentifierChar = [](char c) {
-      return isalnum(c) || c == '$' || c == '.' || c == '_' || c == '-';
+    auto isIdentifierChar = [=](char c) {
+      return isalnum(c) || c == '_' || identifierChars.contains(c);
     };
 
     while (*curPtr && isIdentifierChar(*(++curPtr)))
