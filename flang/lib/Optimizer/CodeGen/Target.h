@@ -29,21 +29,29 @@ namespace details {
 /// LLVMContext.
 class Attributes {
 public:
+  enum class IntegerExtension { None, Zero, Sign };
+
   Attributes(unsigned short alignment = 0, bool byval = false,
-             bool sret = false, bool append = false)
-      : alignment{alignment}, byval{byval}, sret{sret}, append{append} {}
+             bool sret = false, bool append = false,
+             IntegerExtension intExt = IntegerExtension::None)
+      : alignment{alignment}, byval{byval}, sret{sret}, append{append},
+        intExt{intExt} {}
 
   unsigned getAlignment() const { return alignment; }
   bool hasAlignment() const { return alignment != 0; }
   bool isByVal() const { return byval; }
   bool isSRet() const { return sret; }
   bool isAppend() const { return append; }
+  bool isZeroExt() const { return intExt == IntegerExtension::Zero; }
+  bool isSignExt() const { return intExt == IntegerExtension::Sign; }
+  llvm::StringRef getIntExtensionAttrName() const;
 
 private:
   unsigned short alignment{};
   bool byval : 1;
   bool sret : 1;
   bool append : 1;
+  IntegerExtension intExt;
 };
 
 } // namespace details
@@ -93,6 +101,47 @@ public:
   /// a pointer and the length of that space (a boxchar) to the called function.
   virtual Marshalling boxcharArgumentType(mlir::Type eleTy,
                                           bool sret = false) const = 0;
+
+  // Compute ABI rules for an integer argument of the given mlir::IntegerType
+  // \p argTy. Note that this methods is supposed to be called for
+  // arguments passed by value not via reference, e.g. the 'i1' argument here:
+  //   declare i1 @_FortranAioOutputLogical(ptr, i1)
+  //
+  // \p loc is the location of the operation using/specifying the argument.
+  //
+  // Currently, the only supported marshalling is whether the argument
+  // should be zero or sign extended.
+  //
+  // The zero/sign extension is especially important to comply with the ABI
+  // used by C/C++ compiler that builds Fortran runtime. As in the above
+  // example the callee will expect the caller to zero extend the second
+  // argument up to the size of the C/C++'s 'int' type.
+  // The corresponding handling in clang is done in
+  // DefaultABIInfo::classifyArgumentType(), and the logic may brielfy
+  // be explained as some sort of extension is required if the integer
+  // type is shorter than the size of 'int' for the target.
+  // The related code is located in ASTContext::isPromotableIntegerType()
+  // and ABIInfo::isPromotableIntegerTypeForABI().
+  // In particular, the latter returns 'true' for 'bool', several kinds
+  // of 'char', 'short', 'wchar' and enumerated types.
+  // The type of the extensions (zero or sign) depends on the signedness
+  // of the original language type.
+  //
+  // It is not clear how to handle signless integer types.
+  // From the point of Fortran-C interface all supported integer types
+  // seem to be signed except for CFI_type_Bool/bool that is supported
+  // via signless 'i1', but that is treated as unsigned type by clang
+  // (e.g. 'bool' arguments are using 'zeroext' ABI).
+  virtual Marshalling integerArgumentType(mlir::Location loc,
+                                          mlir::IntegerType argTy) const = 0;
+
+  // By default, integer argument and return values use the same
+  // zero/sign extension rules.
+  virtual Marshalling integerReturnType(mlir::Location loc,
+                                        mlir::IntegerType argTy) const = 0;
+
+  // Returns width in bits of C/C++ 'int' type size.
+  virtual unsigned char getCIntTypeWidth() const = 0;
 
 protected:
   mlir::MLIRContext &context;
