@@ -12,13 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIB_MLIR_TOOLS_LSPSERVERSUPPORT_TRANSPORT_H_
-#define LIB_MLIR_TOOLS_LSPSERVERSUPPORT_TRANSPORT_H_
+#ifndef MLIR_TOOLS_LSPSERVERSUPPORT_TRANSPORT_H
+#define MLIR_TOOLS_LSPSERVERSUPPORT_TRANSPORT_H
 
-#include "Logging.h"
-#include "Protocol.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Tools/lsp-server-support/Logging.h"
+#include "mlir/Tools/lsp-server-support/Protocol.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
