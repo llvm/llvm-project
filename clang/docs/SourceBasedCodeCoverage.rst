@@ -127,11 +127,11 @@ copy that's mapped into memory). This implementation can be also enabled for
 other platforms by passing the ``-runtime-counter-relocation`` option to the
 backend during compilation.
 
-For a program such as the :doc:`Lit <CommandGuide/lit>` testing tool which
-invokes other programs, it may be necessary to set ``LLVM_PROFILE_FILE`` for
-each invocation. The pattern strings "%p" or "%Nm" may help to avoid
-corruption due to concurrency. Note that "%p" is also a Lit token and needs
-to be escaped as "%%p".
+For a program such as the `Lit <https://llvm.org/docs/CommandGuide/lit.html>`_
+testing tool which invokes other programs, it may be necessary to set
+``LLVM_PROFILE_FILE`` for each invocation. The pattern strings "%p" or "%Nm"
+may help to avoid corruption due to concurrency. Note that "%p" is also a Lit
+token and needs to be escaped as "%%p".
 
 .. code-block:: console
 
