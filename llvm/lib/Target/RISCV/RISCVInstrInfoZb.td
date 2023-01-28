@@ -66,13 +66,13 @@ def shfl_uimm : Operand<XLenVT>, ImmLeaf<XLenVT, [{
 
 def BCLRXForm : SDNodeXForm<imm, [{
   // Find the lowest 0.
-  return CurDAG->getTargetConstant(countTrailingOnes(N->getZExtValue()),
+  return CurDAG->getTargetConstant(llvm::countr_one(N->getZExtValue()),
                                    SDLoc(N), N->getValueType(0));
 }]>;
 
 def SingleBitSetMaskToIndex : SDNodeXForm<imm, [{
   // Find the lowest 1.
-  return CurDAG->getTargetConstant(countTrailingZeros(N->getZExtValue()),
+  return CurDAG->getTargetConstant(llvm::countr_zero(N->getZExtValue()),
                                    SDLoc(N), N->getValueType(0));
 }]>;
 
@@ -104,7 +104,7 @@ def BSETINVTwoBitsMask : PatLeaf<(imm), [{
 
 def BSETINVTwoBitsMaskHigh : SDNodeXForm<imm, [{
   uint64_t I = N->getZExtValue();
-  return CurDAG->getTargetConstant(63 - countLeadingZeros(I), SDLoc(N),
+  return CurDAG->getTargetConstant(63 - llvm::countl_zero(I), SDLoc(N),
                                    N->getValueType(0));
 }]>;
 
@@ -138,7 +138,7 @@ def BCLRITwoBitsMask : PatLeaf<(imm), [{
 }]>;
 
 def BCLRITwoBitsMaskLow : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(countTrailingZeros(~N->getZExtValue()),
+  return CurDAG->getTargetConstant(llvm::countr_zero(~N->getZExtValue()),
                                    SDLoc(N), N->getValueType(0));
 }]>;
 
@@ -146,7 +146,7 @@ def BCLRITwoBitsMaskHigh : SDNodeXForm<imm, [{
   uint64_t I = N->getSExtValue();
   if (!Subtarget->is64Bit())
     I |= 0xffffffffull << 32;
-  return CurDAG->getTargetConstant(63 - countLeadingZeros(~I), SDLoc(N),
+  return CurDAG->getTargetConstant(63 - llvm::countl_zero(~I), SDLoc(N),
                                    N->getValueType(0));
 }]>;
 
@@ -248,7 +248,7 @@ def Shifted32OnesMask : PatLeaf<(imm), [{
   if (!isShiftedMask_64(Imm))
     return false;
 
-  unsigned TrailingZeros = countTrailingZeros(Imm);
+  unsigned TrailingZeros = llvm::countr_zero(Imm);
   return TrailingZeros > 0 && TrailingZeros < 32 &&
          Imm == UINT64_C(0xFFFFFFFF) << TrailingZeros;
 }], TrailingZeros>;

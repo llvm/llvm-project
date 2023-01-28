@@ -3259,7 +3259,7 @@ bool AMDGPULegalizerInfo::loadInputValue(Register DstReg, MachineIRBuilder &B,
     // TODO: Should we try to emit this once in the entry block?
     const LLT S32 = LLT::scalar(32);
     const unsigned Mask = Arg->getMask();
-    const unsigned Shift = countTrailingZeros<unsigned>(Mask);
+    const unsigned Shift = llvm::countr_zero<unsigned>(Mask);
 
     Register AndMaskSrc = LiveIn;
 

@@ -132,7 +132,7 @@ namespace ARM_AM {
     if ((Imm & ~255U) == 0) return 0;
 
     // Use CTZ to compute the rotate amount.
-    unsigned TZ = countTrailingZeros(Imm);
+    unsigned TZ = llvm::countr_zero(Imm);
 
     // Rotate amount must be even.  Something like 0x200 must be rotated 8 bits,
     // not 9.
@@ -145,7 +145,7 @@ namespace ARM_AM {
     // For values like 0xF000000F, we should ignore the low 6 bits, then
     // retry the hunt.
     if (Imm & 63U) {
-      unsigned TZ2 = countTrailingZeros(Imm & ~63U);
+      unsigned TZ2 = llvm::countr_zero(Imm & ~63U);
       unsigned RotAmt2 = TZ2 & ~1;
       if ((rotr32(Imm, RotAmt2) & ~255U) == 0)
         return (32-RotAmt2)&31;  // HW rotates right, not left.
@@ -227,7 +227,7 @@ namespace ARM_AM {
     if ((Imm & ~255U) == 0) return 0;
 
     // Use CTZ to compute the shift amount.
-    return countTrailingZeros(Imm);
+    return llvm::countr_zero(Imm);
   }
 
   /// isThumbImmShiftedVal - Return true if the specified value can be obtained
@@ -246,7 +246,7 @@ namespace ARM_AM {
     if ((Imm & ~65535U) == 0) return 0;
 
     // Use CTZ to compute the shift amount.
-    return countTrailingZeros(Imm);
+    return llvm::countr_zero(Imm);
   }
 
   /// isThumbImm16ShiftedVal - Return true if the specified value can be
@@ -302,7 +302,7 @@ namespace ARM_AM {
   /// encoding is possible.
   /// See ARM Reference Manual A6.3.2.
   inline int getT2SOImmValRotateVal(unsigned V) {
-    unsigned RotAmt = countLeadingZeros(V);
+    unsigned RotAmt = llvm::countl_zero(V);
     if (RotAmt >= 24)
       return -1;
 
@@ -334,7 +334,7 @@ namespace ARM_AM {
   inline unsigned getT2SOImmValRotate(unsigned V) {
     if ((V & ~255U) == 0) return 0;
     // Use CTZ to compute the rotate amount.
-    unsigned RotAmt = countTrailingZeros(V);
+    unsigned RotAmt = llvm::countr_zero(V);
     return (32 - RotAmt) & 31;
   }
 

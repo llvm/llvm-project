@@ -701,7 +701,7 @@ bool AMDGPUCallLowering::lowerFormalArguments(
       if ((PsInputBits & 0x7F) == 0 ||
           ((PsInputBits & 0xF) == 0 &&
            (PsInputBits >> 11 & 1)))
-        Info->markPSInputEnabled(countTrailingZeros(Info->getPSInputAddr()));
+        Info->markPSInputEnabled(llvm::countr_zero(Info->getPSInputAddr()));
     }
   }
 

@@ -2306,8 +2306,9 @@ static bool isBitfieldExtractOpFromAnd(SelectionDAG *CurDAG, SDNode *N,
   }
 
   LSB = SrlImm;
-  MSB = SrlImm + (VT == MVT::i32 ? countTrailingOnes<uint32_t>(AndImm)
-                                 : countTrailingOnes<uint64_t>(AndImm)) -
+  MSB = SrlImm +
+        (VT == MVT::i32 ? llvm::countr_one<uint32_t>(AndImm)
+                        : llvm::countr_one<uint64_t>(AndImm)) -
         1;
   if (ClampMSB)
     // Since we're moving the extend before the right shift operation, we need
@@ -2949,8 +2950,8 @@ static bool isBitfieldPositioningOpFromAnd(SelectionDAG *CurDAG, SDValue Op,
   if (!BiggerPattern && !AndOp0.hasOneUse())
     return false;
 
-  DstLSB = countTrailingZeros(NonZeroBits);
-  Width = countTrailingOnes(NonZeroBits >> DstLSB);
+  DstLSB = llvm::countr_zero(NonZeroBits);
+  Width = llvm::countr_one(NonZeroBits >> DstLSB);
 
   // Bail out on large Width. This happens when no proper combining / constant
   // folding was performed.
@@ -3008,7 +3009,7 @@ static bool isSeveralBitsPositioningOpFromShl(const uint64_t ShlImm, SDValue Op,
     // For example, xyz11111 (with {x,y,z} being 0 or 1) is fine if ShlImm >= 3;
     // the AND result corresponding to those bits are shifted out, so it's fine
     // to not extract them.
-    Width = countTrailingOnes(ShiftedAndImm);
+    Width = llvm::countr_one(ShiftedAndImm);
     DstLSB = ShlImm;
     Src = Op0.getOperand(0);
     return true;
@@ -3038,8 +3039,8 @@ static bool isBitfieldPositioningOpFromShl(SelectionDAG *CurDAG, SDValue Op,
   if (isSeveralBitsPositioningOpFromShl(ShlImm, Op, Src, DstLSB, Width))
     return true;
 
-  DstLSB = countTrailingZeros(NonZeroBits);
-  Width = countTrailingOnes(NonZeroBits >> DstLSB);
+  DstLSB = llvm::countr_zero(NonZeroBits);
+  Width = llvm::countr_one(NonZeroBits >> DstLSB);
 
   if (ShlImm != uint64_t(DstLSB) && !BiggerPattern)
     return false;
@@ -3103,7 +3104,7 @@ static bool tryBitfieldInsertOpFromOrAndImm(SDNode *N, SelectionDAG *CurDAG) {
   }
 
   // BFI/BFXIL dst, src, #lsb, #width.
-  int LSB = countTrailingOnes(NotKnownZero);
+  int LSB = llvm::countr_one(NotKnownZero);
   int Width = BitWidth - APInt(BitWidth, NotKnownZero).countPopulation();
 
   // BFI/BFXIL is an alias of BFM, so translate to BFM operands.
@@ -3181,10 +3182,10 @@ static bool isWorthFoldingIntoOrrWithShift(SDValue Dst, SelectionDAG *CurDAG,
     // the dependency chain is improved after the transformation.
     uint64_t SrlImm;
     if (isOpcWithIntImmediate(DstOp0.getNode(), ISD::SRL, SrlImm)) {
-      uint64_t NumTrailingZeroInShiftedMask = countTrailingZeros(AndImm);
+      uint64_t NumTrailingZeroInShiftedMask = llvm::countr_zero(AndImm);
       if ((SrlImm + NumTrailingZeroInShiftedMask) < SizeInBits) {
         unsigned MaskWidth =
-            countTrailingOnes(AndImm >> NumTrailingZeroInShiftedMask);
+            llvm::countr_one(AndImm >> NumTrailingZeroInShiftedMask);
         unsigned UBFMOpc =
             (VT == MVT::i32) ? AArch64::UBFMWri : AArch64::UBFMXri;
         SDNode *UBFMNode = CurDAG->getMachineNode(
@@ -3459,7 +3460,7 @@ static bool tryBitfieldInsertOpFromOr(SDNode *N, const APInt &UsefulBits,
 
     SDValue Src = And1->getOperand(0);
     SDValue Dst = And0->getOperand(0);
-    unsigned LSB = countTrailingZeros(Mask1Imm);
+    unsigned LSB = llvm::countr_zero(Mask1Imm);
     int Width = BitWidth - APInt(BitWidth, Mask0Imm).countPopulation();
 
     // The BFXIL inserts the low-order bits from a source register, so right
@@ -3647,7 +3648,7 @@ bool AArch64DAGToDAGISel::tryShiftAmountMod(SDNode *N) {
         !isOpcWithIntImmediate(ShiftAmt.getNode(), AArch64ISD::ANDS, MaskImm))
       return false;
 
-    if (countTrailingOnes(MaskImm) < Bits)
+    if ((unsigned)llvm::countr_one(MaskImm) < Bits)
       return false;
 
     NewShiftAmt = ShiftAmt->getOperand(0);
