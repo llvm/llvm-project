@@ -130,7 +130,8 @@ backend during compilation.
 For a program such as the :doc:`Lit <CommandGuide/lit>` testing tool which
 invokes other programs, it may be necessary to set ``LLVM_PROFILE_FILE`` for
 each invocation. The pattern strings "%p" or "%Nm" may help to avoid
-corruption due to concurrency.
+corruption due to concurrency. Note that "%p" is also a Lit token and needs
+to be escaped as "%%p".
 
 .. code-block:: console
 
