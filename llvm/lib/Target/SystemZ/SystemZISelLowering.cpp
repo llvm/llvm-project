@@ -2535,8 +2535,7 @@ static unsigned getTestUnderMaskCond(unsigned BitSize, unsigned CCMask,
     return 0;
 
   // Work out the masks for the lowest and highest bits.
-  unsigned HighShift = 63 - llvm::countl_zero(Mask);
-  uint64_t High = uint64_t(1) << HighShift;
+  uint64_t High = llvm::bit_floor(Mask);
   uint64_t Low = uint64_t(1) << llvm::countr_zero(Mask);
 
   // Signed ordered comparisons are effectively unsigned if the sign
