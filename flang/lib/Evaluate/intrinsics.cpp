@@ -2656,129 +2656,6 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
   }
 }
 
-static bool CheckAssociated(SpecificCall &call, FoldingContext &context) {
-  bool ok{true};
-  if (const auto &pointerArg{call.arguments[0]}) {
-    if (const auto *pointerExpr{pointerArg->UnwrapExpr()}) {
-      if (const Symbol *pointerSymbol{GetLastSymbol(*pointerExpr)}) {
-        if (!pointerSymbol->attrs().test(semantics::Attr::POINTER)) {
-          AttachDeclaration(context.messages().Say(pointerArg->sourceLocation(),
-                                "POINTER= argument of ASSOCIATED() must be a "
-                                "POINTER"_err_en_US),
-              *pointerSymbol);
-        } else {
-          if (const auto &targetArg{call.arguments[1]}) {
-            if (const auto *targetExpr{targetArg->UnwrapExpr()}) {
-              std::optional<characteristics::Procedure> pointerProc, targetProc;
-              const auto *targetProcDesignator{
-                  UnwrapExpr<ProcedureDesignator>(*targetExpr)};
-              const Symbol *targetSymbol{GetLastSymbol(*targetExpr)};
-              bool isCall{false};
-              std::string targetName;
-              if (const auto *targetProcRef{// target is a function call
-                      std::get_if<ProcedureRef>(&targetExpr->u)}) {
-                if (auto targetRefedChars{
-                        characteristics::Procedure::Characterize(
-                            *targetProcRef, context)}) {
-                  targetProc = *targetRefedChars;
-                  targetName = targetProcRef->proc().GetName() + "()";
-                  isCall = true;
-                }
-              } else if (targetProcDesignator) {
-                targetProc = characteristics::Procedure::Characterize(
-                    *targetProcDesignator, context);
-                targetName = targetProcDesignator->GetName();
-              } else if (targetSymbol) {
-                if (IsProcedure(*targetSymbol)) {
-                  // proc that's not a call
-                  targetProc = characteristics::Procedure::Characterize(
-                      *targetSymbol, context);
-                }
-                targetName = targetSymbol->name().ToString();
-              }
-              if (IsProcedure(*pointerSymbol)) {
-                pointerProc = characteristics::Procedure::Characterize(
-                    *pointerSymbol, context);
-              }
-              if (pointerProc) {
-                if (targetProc) {
-                  // procedure pointer and procedure target
-                  std::string whyNot;
-                  const SpecificIntrinsic *specificIntrinsic{nullptr};
-                  if (targetProcDesignator) {
-                    specificIntrinsic =
-                        targetProcDesignator->GetSpecificIntrinsic();
-                  }
-                  if (std::optional<parser::MessageFixedText> msg{
-                          CheckProcCompatibility(isCall, pointerProc,
-                              &*targetProc, specificIntrinsic, whyNot)}) {
-                    msg->set_severity(parser::Severity::Warning);
-                    AttachDeclaration(
-                        context.messages().Say(std::move(*msg),
-                            "pointer '" + pointerSymbol->name().ToString() +
-                                "'",
-                            targetName, whyNot),
-                        *pointerSymbol);
-                  }
-                } else if (!IsNullProcedurePointer(*targetExpr)) {
-                  // procedure pointer and object target
-                  AttachDeclaration(
-                      context.messages().Say(
-                          "POINTER= argument '%s' is a procedure "
-                          "pointer but the TARGET= argument '%s' is not a "
-                          "procedure or procedure pointer"_err_en_US,
-                          pointerSymbol->name(), targetName),
-                      *pointerSymbol);
-                }
-              } else if (targetProc) {
-                // object pointer and procedure target
-                AttachDeclaration(
-                    context.messages().Say(
-                        "POINTER= argument '%s' is an object pointer "
-                        "but the TARGET= argument '%s' is a "
-                        "procedure designator"_err_en_US,
-                        pointerSymbol->name(), targetName),
-                    *pointerSymbol);
-              } else if (targetSymbol) {
-                // object pointer and target
-                SymbolVector symbols{GetSymbolVector(*targetExpr)};
-                CHECK(!symbols.empty());
-                if (!GetLastTarget(symbols)) {
-                  parser::Message *msg{context.messages().Say(
-                      targetArg->sourceLocation(),
-                      "TARGET= argument '%s' must have either the POINTER or the TARGET attribute"_err_en_US,
-                      targetExpr->AsFortran())};
-                  for (SymbolRef ref : symbols) {
-                    msg = AttachDeclaration(msg, *ref);
-                  }
-                } else if (HasVectorSubscript(*targetExpr) ||
-                    ExtractCoarrayRef(*targetExpr)) {
-                  context.messages().Say(targetArg->sourceLocation(),
-                      "TARGET= argument '%s' may not have a vector subscript or coindexing"_err_en_US,
-                      targetExpr->AsFortran());
-                }
-                if (const auto pointerType{pointerArg->GetType()}) {
-                  if (const auto targetType{targetArg->GetType()}) {
-                    ok = pointerType->IsTkCompatibleWith(*targetType);
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  } else {
-    // No arguments to ASSOCIATED()
-    ok = false;
-  }
-  if (!ok) {
-    context.messages().Say(
-        "Arguments of ASSOCIATED() must be a POINTER and an optional valid target"_err_en_US);
-  }
-  return ok;
-}
-
 static bool CheckForNonPositiveValues(FoldingContext &context,
     const ActualArgument &arg, const std::string &procName,
     const std::string &argName) {
@@ -2875,6 +2752,8 @@ static bool CheckAtomicDefineAndRef(FoldingContext &context,
 }
 
 // Applies any semantic checks peculiar to an intrinsic.
+// TODO: Move the rest of these checks to Semantics/check-call.cpp, which is
+// where ASSOCIATED() is now validated.
 static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
   bool ok{true};
   const std::string &name{call.specificIntrinsic.name};
@@ -2891,7 +2770,7 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
           "Argument of ALLOCATED() must be an ALLOCATABLE object or component"_err_en_US);
     }
   } else if (name == "associated") {
-    return CheckAssociated(call, context);
+    // Now handled in Semantics/check-call.cpp
   } else if (name == "atomic_and" || name == "atomic_or" ||
       name == "atomic_xor") {
     return CheckForCoindexedObject(context, call.arguments[2], name, "stat");

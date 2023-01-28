@@ -422,4 +422,25 @@ TEST(SparseElementsAttrTest, GetZero) {
   EXPECT_TRUE(zeroStringValue.getType() == stringTy);
 }
 
+//===----------------------------------------------------------------------===//
+// SubElements
+//===----------------------------------------------------------------------===//
+
+TEST(SubElementTest, Nested) {
+  MLIRContext context;
+  Builder builder(&context);
+
+  BoolAttr trueAttr = builder.getBoolAttr(true);
+  BoolAttr falseAttr = builder.getBoolAttr(false);
+  ArrayAttr boolArrayAttr = builder.getArrayAttr({trueAttr, falseAttr});
+  StringAttr strAttr = builder.getStringAttr("array");
+  DictionaryAttr dictAttr =
+      builder.getDictionaryAttr(builder.getNamedAttr(strAttr, boolArrayAttr));
+
+  SmallVector<Attribute> subAttrs;
+  dictAttr.walk([&](Attribute attr) { subAttrs.push_back(attr); });
+  EXPECT_EQ(llvm::ArrayRef(subAttrs),
+            ArrayRef<Attribute>(
+                {strAttr, trueAttr, falseAttr, boolArrayAttr, dictAttr}));
+}
 } // namespace

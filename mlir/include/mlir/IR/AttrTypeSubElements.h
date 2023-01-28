@@ -1,4 +1,4 @@
-//===- SubElementInterfaces.h - Attr and Type SubElements -------*- C++ -*-===//
+//===- AttrTypeSubElements.h - Attr and Type SubElements -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,20 +6,112 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains interfaces and utilities for querying the sub elements of
-// an attribute or type.
+// This file contains utilities for querying the sub elements of an attribute or
+// type.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_IR_SUBELEMENTINTERFACES_H
-#define MLIR_IR_SUBELEMENTINTERFACES_H
+#ifndef MLIR_IR_ATTRTYPESUBELEMENTS_H
+#define MLIR_IR_ATTRTYPESUBELEMENTS_H
 
-#include "mlir/IR/Attributes.h"
-#include "mlir/IR/Types.h"
+#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Visitors.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include <optional>
 
 namespace mlir {
+class Attribute;
+class Type;
+
+//===----------------------------------------------------------------------===//
+/// AttrTypeWalker
+//===----------------------------------------------------------------------===//
+
+/// This class provides a utility for walking attributes/types, and their sub
+/// elements. Multiple walk functions may be registered.
+class AttrTypeWalker {
+public:
+  //===--------------------------------------------------------------------===//
+  // Application
+  //===--------------------------------------------------------------------===//
+
+  /// Walk the given attribute/type, and recursively walk any sub elements.
+  template <WalkOrder Order, typename T>
+  WalkResult walk(T element) {
+    return walkImpl(element, Order);
+  }
+  template <typename T>
+  WalkResult walk(T element) {
+    return walk<WalkOrder::PostOrder, T>(element);
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Registration
+  //===--------------------------------------------------------------------===//
+
+  template <typename T>
+  using WalkFn = std::function<WalkResult(T)>;
+
+  /// Register a walk function for a given attribute or type. A walk function
+  /// must be convertible to any of the following forms(where `T` is a class
+  /// derived from `Type` or `Attribute`:
+  ///
+  ///   * WalkResult(T)
+  ///     - Returns a walk result, which can be used to control the walk
+  ///
+  ///   * void(T)
+  ///     - Returns void, i.e. the walk always continues.
+  ///
+  /// Note: When walking, the mostly recently added walk functions will be
+  ///       invoked first.
+  void addWalk(WalkFn<Attribute> &&fn) {
+    attrWalkFns.emplace_back(std::move(fn));
+  }
+  void addWalk(WalkFn<Type> &&fn) { typeWalkFns.push_back(std::move(fn)); }
+
+  /// Register a replacement function that doesn't match the default signature,
+  /// either because it uses a derived parameter type, or it uses a simplified
+  /// result type.
+  template <typename FnT,
+            typename T = typename llvm::function_traits<
+                std::decay_t<FnT>>::template arg_t<0>,
+            typename BaseT = std::conditional_t<std::is_base_of_v<Attribute, T>,
+                                                Attribute, Type>,
+            typename ResultT = std::invoke_result_t<FnT, T>>
+  std::enable_if_t<!std::is_same_v<T, BaseT> || std::is_same_v<ResultT, void>>
+  addWalk(FnT &&callback) {
+    addWalk([callback = std::forward<FnT>(callback)](BaseT base) -> WalkResult {
+      if (auto derived = dyn_cast<T>(base)) {
+        if constexpr (std::is_convertible_v<ResultT, WalkResult>)
+          return callback(derived);
+        else
+          callback(derived);
+      }
+      return WalkResult::advance();
+    });
+  }
+
+private:
+  WalkResult walkImpl(Attribute attr, WalkOrder order);
+  WalkResult walkImpl(Type type, WalkOrder order);
+
+  /// Internal implementation of the `walk` methods above.
+  template <typename T, typename WalkFns>
+  WalkResult walkImpl(T element, WalkFns &walkFns, WalkOrder order);
+
+  /// Walk the sub elements of the given interface.
+  template <typename T>
+  WalkResult walkSubElements(T interface, WalkOrder order);
+
+  /// The set of walk functions that map sub elements.
+  std::vector<WalkFn<Attribute>> attrWalkFns;
+  std::vector<WalkFn<Type>> typeWalkFns;
+
+  /// The set of visited attributes/types.
+  DenseMap<std::pair<const void *, int>, WalkResult> visitedAttrTypes;
+};
+
 //===----------------------------------------------------------------------===//
 /// AttrTypeReplacer
 //===----------------------------------------------------------------------===//
@@ -84,12 +176,8 @@ public:
   ///
   /// Note: When replacing, the mostly recently added replacement functions will
   ///       be invoked first.
-  void addReplacement(ReplaceFn<Attribute> fn) {
-    attrReplacementFns.emplace_back(std::move(fn));
-  }
-  void addReplacement(ReplaceFn<Type> fn) {
-    typeReplacementFns.push_back(std::move(fn));
-  }
+  void addReplacement(ReplaceFn<Attribute> fn);
+  void addReplacement(ReplaceFn<Type> fn);
 
   /// Register a replacement function that doesn't match the default signature,
   /// either because it uses a derived parameter type, or it uses a simplified
@@ -120,20 +208,19 @@ public:
 
 private:
   /// Internal implementation of the `replace` methods above.
-  template <typename InterfaceT, typename ReplaceFns, typename T>
-  T replaceImpl(T element, ReplaceFns &replaceFns, DenseMap<T, T> &map);
+  template <typename T, typename ReplaceFns>
+  T replaceImpl(T element, ReplaceFns &replaceFns);
 
   /// Replace the sub elements of the given interface.
-  template <typename InterfaceT, typename T = typename InterfaceT::ValueType>
-  T replaceSubElements(InterfaceT interface, DenseMap<T, T> &interfaceMap);
+  template <typename T>
+  T replaceSubElements(T interface);
 
   /// The set of replacement functions that map sub elements.
   std::vector<ReplaceFn<Attribute>> attrReplacementFns;
   std::vector<ReplaceFn<Type>> typeReplacementFns;
 
   /// The set of cached mappings for attributes/types.
-  DenseMap<Attribute, Attribute> attrMap;
-  DenseMap<Type, Type> typeMap;
+  DenseMap<const void *, const void *> attrTypeMap;
 };
 
 //===----------------------------------------------------------------------===//
@@ -142,22 +229,16 @@ private:
 
 /// This class is used by AttrTypeSubElementHandler instances to walking sub
 /// attributes and types.
-class AttrTypeSubElementWalker {
+class AttrTypeImmediateSubElementWalker {
 public:
-  AttrTypeSubElementWalker(function_ref<void(Attribute)> walkAttrsFn,
-                           function_ref<void(Type)> walkTypesFn)
+  AttrTypeImmediateSubElementWalker(function_ref<void(Attribute)> walkAttrsFn,
+                                    function_ref<void(Type)> walkTypesFn)
       : walkAttrsFn(walkAttrsFn), walkTypesFn(walkTypesFn) {}
 
   /// Walk an attribute.
-  void walk(Attribute element) {
-    if (element)
-      walkAttrsFn(element);
-  }
+  void walk(Attribute element);
   /// Walk a type.
-  void walk(Type element) {
-    if (element)
-      walkTypesFn(element);
-  }
+  void walk(Type element);
   /// Walk a range of attributes or types.
   template <typename RangeT>
   void walkRange(RangeT &&elements) {
@@ -212,7 +293,8 @@ using TypeSubElementReplacements = AttrTypeSubElementReplacements<Type>;
 template <typename T, typename Enable = void>
 struct AttrTypeSubElementHandler {
   /// Default walk implementation that does nothing.
-  static inline void walk(const T &param, AttrTypeSubElementWalker &walker) {}
+  static inline void walk(const T &param,
+                          AttrTypeImmediateSubElementWalker &walker) {}
 
   /// Default replace implementation just forwards the parameter.
   template <typename ParamT>
@@ -241,7 +323,7 @@ template <typename T>
 struct AttrTypeSubElementHandler<
     T, std::enable_if_t<std::is_base_of_v<Attribute, T> ||
                         std::is_base_of_v<Type, T>>> {
-  static void walk(T param, AttrTypeSubElementWalker &walker) {
+  static void walk(T param, AttrTypeImmediateSubElementWalker &walker) {
     walker.walk(param);
   }
   static T replace(T param, AttrSubElementReplacements &attrRepls,
@@ -255,27 +337,14 @@ struct AttrTypeSubElementHandler<
     }
   }
 };
-template <>
-struct AttrTypeSubElementHandler<NamedAttribute> {
-  template <typename T>
-  static void walk(T param, AttrTypeSubElementWalker &walker) {
-    walker.walk(param.getName());
-    walker.walk(param.getValue());
-  }
-  template <typename T>
-  static T replace(T param, AttrSubElementReplacements &attrRepls,
-                   TypeSubElementReplacements &typeRepls) {
-    ArrayRef<Attribute> paramRepls = attrRepls.take_front(2);
-    return T(cast<decltype(param.getName())>(paramRepls[0]), paramRepls[1]);
-  }
-};
 /// Implementation for derived ArrayRef.
 template <typename T>
 struct AttrTypeSubElementHandler<ArrayRef<T>,
                                  std::enable_if_t<has_sub_attr_or_type_v<T>>> {
   using EltHandler = AttrTypeSubElementHandler<T>;
 
-  static void walk(ArrayRef<T> param, AttrTypeSubElementWalker &walker) {
+  static void walk(ArrayRef<T> param,
+                   AttrTypeImmediateSubElementWalker &walker) {
     for (const T &subElement : param)
       EltHandler::walk(subElement, walker);
   }
@@ -283,11 +352,11 @@ struct AttrTypeSubElementHandler<ArrayRef<T>,
                       TypeSubElementReplacements &typeRepls) {
     // Normal attributes/types can extract using the replacer directly.
     if constexpr (std::is_base_of_v<Attribute, T> &&
-                  sizeof(T) == sizeof(Attribute)) {
+                  sizeof(T) == sizeof(void *)) {
       ArrayRef<Attribute> attrs = attrRepls.take_front(param.size());
       return ArrayRef<T>((const T *)attrs.data(), attrs.size());
     } else if constexpr (std::is_base_of_v<Type, T> &&
-                         sizeof(T) == sizeof(Type)) {
+                         sizeof(T) == sizeof(void *)) {
       ArrayRef<Type> types = typeRepls.take_front(param.size());
       return ArrayRef<T>((const T *)types.data(), types.size());
     } else {
@@ -305,7 +374,7 @@ template <typename... Ts>
 struct AttrTypeSubElementHandler<
     std::tuple<Ts...>, std::enable_if_t<has_sub_attr_or_type_v<Ts...>>> {
   static void walk(const std::tuple<Ts...> &param,
-                   AttrTypeSubElementWalker &walker) {
+                   AttrTypeImmediateSubElementWalker &walker) {
     std::apply(
         [&](const Ts &...params) {
           (AttrTypeSubElementHandler<Ts>::walk(params, walker), ...);
@@ -333,6 +402,8 @@ template <typename... Ts>
 struct is_tuple<std::tuple<Ts...>> : public std::true_type {};
 template <typename T, typename... Ts>
 using has_get_method = decltype(T::get(std::declval<Ts>()...));
+template <typename T, typename... Ts>
+using has_get_as_key = decltype(std::declval<T>().getAsKey());
 
 /// This function provides the underlying implementation for the
 /// SubElementInterface walk method, using the key type of the derived
@@ -341,21 +412,24 @@ template <typename T>
 void walkImmediateSubElementsImpl(T derived,
                                   function_ref<void(Attribute)> walkAttrsFn,
                                   function_ref<void(Type)> walkTypesFn) {
-  auto key = static_cast<typename T::ImplType *>(derived.getImpl())->getAsKey();
+  using ImplT = typename T::ImplType;
+  if constexpr (llvm::is_detected<has_get_as_key, ImplT>::value) {
+    auto key = static_cast<ImplT *>(derived.getImpl())->getAsKey();
 
-  // If we don't have any sub-elements, there is nothing to do.
-  if constexpr (!has_sub_attr_or_type_v<decltype(key)>) {
-    return;
-  } else {
-    AttrTypeSubElementWalker walker(walkAttrsFn, walkTypesFn);
-    AttrTypeSubElementHandler<decltype(key)>::walk(key, walker);
+    // If we don't have any sub-elements, there is nothing to do.
+    if constexpr (!has_sub_attr_or_type_v<decltype(key)>) {
+      return;
+    } else {
+      AttrTypeImmediateSubElementWalker walker(walkAttrsFn, walkTypesFn);
+      AttrTypeSubElementHandler<decltype(key)>::walk(key, walker);
+    }
   }
 }
 
 /// This function invokes the proper `get` method for  a type `T` with the given
 /// values.
 template <typename T, typename... Ts>
-T constructSubElementReplacement(MLIRContext *ctx, Ts &&...params) {
+auto constructSubElementReplacement(MLIRContext *ctx, Ts &&...params) {
   // Prefer a direct `get` method if one exists.
   if constexpr (llvm::is_detected<has_get_method, T, Ts...>::value) {
     (void)ctx;
@@ -373,38 +447,39 @@ T constructSubElementReplacement(MLIRContext *ctx, Ts &&...params) {
 /// SubElementInterface replace method, using the key type of the derived
 /// attribute/type to interact with the individual parameters.
 template <typename T>
-T replaceImmediateSubElementsImpl(T derived, ArrayRef<Attribute> &replAttrs,
-                                  ArrayRef<Type> &replTypes) {
-  auto key = static_cast<typename T::ImplType *>(derived.getImpl())->getAsKey();
+auto replaceImmediateSubElementsImpl(T derived, ArrayRef<Attribute> &replAttrs,
+                                     ArrayRef<Type> &replTypes) {
+  using ImplT = typename T::ImplType;
+  if constexpr (llvm::is_detected<has_get_as_key, ImplT>::value) {
+    auto key = static_cast<ImplT *>(derived.getImpl())->getAsKey();
 
-  // If we don't have any sub-elements, we can just return the original.
-  if constexpr (!has_sub_attr_or_type_v<decltype(key)>) {
-    return derived;
+    // If we don't have any sub-elements, we can just return the original.
+    if constexpr (!has_sub_attr_or_type_v<decltype(key)>) {
+      return derived;
 
-    // Otherwise, we need to replace any necessary sub-elements.
-  } else {
-    AttrSubElementReplacements attrRepls(replAttrs);
-    TypeSubElementReplacements typeRepls(replTypes);
-    auto newKey = AttrTypeSubElementHandler<decltype(key)>::replace(
-        key, attrRepls, typeRepls);
-    if constexpr (is_tuple<decltype(key)>::value) {
-      return std::apply(
-          [&](auto &&...params) {
-            return constructSubElementReplacement<T>(
-                derived.getContext(),
-                std::forward<decltype(params)>(params)...);
-          },
-          newKey);
+      // Otherwise, we need to replace any necessary sub-elements.
     } else {
-      return constructSubElementReplacement<T>(derived.getContext(), newKey);
+      AttrSubElementReplacements attrRepls(replAttrs);
+      TypeSubElementReplacements typeRepls(replTypes);
+      auto newKey = AttrTypeSubElementHandler<decltype(key)>::replace(
+          key, attrRepls, typeRepls);
+      if constexpr (is_tuple<decltype(key)>::value) {
+        return std::apply(
+            [&](auto &&...params) {
+              return constructSubElementReplacement<T>(
+                  derived.getContext(),
+                  std::forward<decltype(params)>(params)...);
+            },
+            newKey);
+      } else {
+        return constructSubElementReplacement<T>(derived.getContext(), newKey);
+      }
     }
+  } else {
+    return derived;
   }
 }
 } // namespace detail
 } // namespace mlir
 
-/// Include the definitions of the sub element interfaces.
-#include "mlir/IR/SubElementAttrInterfaces.h.inc"
-#include "mlir/IR/SubElementTypeInterfaces.h.inc"
-
-#endif // MLIR_IR_SUBELEMENTINTERFACES_H
+#endif // MLIR_IR_ATTRTYPESUBELEMENTS_H

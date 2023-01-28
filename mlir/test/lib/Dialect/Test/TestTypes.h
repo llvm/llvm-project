@@ -22,7 +22,6 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/IR/SubElementInterfaces.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 
@@ -132,7 +131,6 @@ struct TestRecursiveTypeStorage : public ::mlir::TypeStorage {
 class TestRecursiveType
     : public ::mlir::Type::TypeBase<TestRecursiveType, ::mlir::Type,
                                     TestRecursiveTypeStorage,
-                                    ::mlir::SubElementTypeInterface::Trait,
                                     ::mlir::TypeTrait::IsMutable> {
 public:
   using Base::Base;

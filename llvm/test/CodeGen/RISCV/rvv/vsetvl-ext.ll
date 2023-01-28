@@ -23,3 +23,13 @@ define zeroext i32 @vsetvl_zext() {
   %b = trunc i64 %a to i32
   ret i32 %b
 }
+
+define i64 @vsetvl_and17bits() {
+; CHECK-LABEL: vsetvl_and17bits:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli a0, 1, e16, m2, ta, mu
+; CHECK-NEXT:    ret
+  %a = call i64 @llvm.riscv.vsetvli(i64 1, i64 1, i64 1)
+  %b = and i64 %a, 131071
+  ret i64 %b
+}
