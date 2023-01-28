@@ -1181,8 +1181,10 @@ Error OnDiskGraphDB::createStandaloneLeaf(IndexProxy &I, ArrayRef<char> Data) {
   TrieRecord::Data Existing;
   {
     TrieRecord::Data Leaf{SK, FileOffset()};
-    if (I.Ref.compare_exchange_strong(Existing, Leaf))
+    if (I.Ref.compare_exchange_strong(Existing, Leaf)) {
+      recordStandaloneSizeIncrease(FileSize);
       return Error::success();
+    }
   }
 
   // If there was a race, confirm that the new value has valid storage.
@@ -1223,6 +1225,7 @@ Error OnDiskGraphDB::store(ObjectID ID, ArrayRef<ObjectID> Refs,
   FileOffset PoolOffset;
   SmallString<256> Path;
   std::optional<MappedTempFile> File;
+  std::optional<uint64_t> FileSize;
   auto Alloc = [&](size_t Size) -> Expected<char *> {
     if (Size <= TrieRecord::MaxEmbeddedSize) {
       SK = TrieRecord::StorageKind::DataPool;
@@ -1240,6 +1243,8 @@ Error OnDiskGraphDB::store(ObjectID ID, ArrayRef<ObjectID> Refs,
     getStandalonePath(TrieRecord::getStandaloneFileSuffix(SK), I, Path);
     if (Error E = createTempFile(Path, Size).moveInto(File))
       return std::move(E);
+    assert(File->size() == Size);
+    FileSize = Size;
     return File->data();
   };
   DataRecordHandle Record;
@@ -1275,8 +1280,11 @@ Error OnDiskGraphDB::store(ObjectID ID, ArrayRef<ObjectID> Refs,
     // TODO: Find a way to reuse the storage from the new-but-abandoned record
     // handle.
     if (Existing.SK == TrieRecord::StorageKind::Unknown) {
-      if (I.Ref.compare_exchange_strong(Existing, NewObject))
+      if (I.Ref.compare_exchange_strong(Existing, NewObject)) {
+        if (FileSize)
+          recordStandaloneSizeIncrease(*FileSize);
         return Error::success();
+      }
     }
   }
 
@@ -1285,6 +1293,26 @@ Error OnDiskGraphDB::store(ObjectID ID, ArrayRef<ObjectID> Refs,
 
   // Load existing object.
   return Error::success();
+}
+
+void OnDiskGraphDB::recordStandaloneSizeIncrease(size_t SizeIncrease) {
+  getStandaloneStorageSize().fetch_add(SizeIncrease, std::memory_order_relaxed);
+}
+
+std::atomic<uint64_t> &OnDiskGraphDB::getStandaloneStorageSize() {
+  MutableArrayRef<uint8_t> UserHeader = DataPool.getUserHeader();
+  assert(UserHeader.size() == sizeof(std::atomic<uint64_t>));
+  assert(isAddrAligned(Align(8), UserHeader.data()));
+  return *reinterpret_cast<std::atomic<uint64_t> *>(UserHeader.data());
+}
+
+uint64_t OnDiskGraphDB::getStandaloneStorageSize() const {
+  return const_cast<OnDiskGraphDB *>(this)->getStandaloneStorageSize().load(
+      std::memory_order_relaxed);
+}
+
+size_t OnDiskGraphDB::getStorageSize() const {
+  return Index.size() + DataPool.size() + getStandaloneStorageSize();
 }
 
 Expected<std::unique_ptr<OnDiskGraphDB>> OnDiskGraphDB::open(
@@ -1306,15 +1334,23 @@ Expected<std::unique_ptr<OnDiskGraphDB>> OnDiskGraphDB::open(
               .moveInto(Index))
     return std::move(E);
 
+  uint32_t UserHeaderSize = sizeof(std::atomic<uint64_t>);
   std::optional<OnDiskDataAllocator> DataPool;
   StringRef PolicyName =
       Policy == FaultInPolicy::SingleNode ? "single" : "full";
   if (Error E = OnDiskDataAllocator::create(
                     AbsPath + Slash + FilePrefix + DataPoolFile,
                     DataPoolTableName + "[" + HashName + "]" + PolicyName,
-                    /*MaxFileSize=*/16 * GB, /*MinFileSize=*/MB)
+                    /*MaxFileSize=*/16 * GB, /*MinFileSize=*/MB, UserHeaderSize,
+                    [](void *UserHeaderPtr) {
+                      new (UserHeaderPtr) std::atomic<uint64_t>(0);
+                    })
                     .moveInto(DataPool))
     return std::move(E);
+  if (DataPool->getUserHeader().size() != UserHeaderSize)
+    return createStringError(llvm::errc::argument_out_of_domain,
+                             "unexpected user header in '" + AbsPath + Slash +
+                                 FilePrefix + DataPoolFile + "'");
 
   return std::unique_ptr<OnDiskGraphDB>(
       new OnDiskGraphDB(AbsPath, std::move(*Index), std::move(*DataPool),

@@ -291,6 +291,12 @@ public:
     return make_range(Refs.begin(), Refs.end());
   }
 
+  /// \returns Total size of stored objects.
+  ///
+  /// NOTE: There's a possibility that the returned size is not including a
+  /// large object if the process crashed right at the point of inserting it.
+  size_t getStorageSize() const;
+
   void print(raw_ostream &OS) const;
 
   /// How to fault-in nodes if an upstream database is used.
@@ -365,6 +371,11 @@ private:
   getIndexProxyFromPointer(OnDiskHashMappedTrie::const_pointer P) const;
 
   InternalRefArrayRef getInternalRefs(ObjectHandle Node) const;
+
+  void recordStandaloneSizeIncrease(size_t SizeIncrease);
+
+  std::atomic<uint64_t> &getStandaloneStorageSize();
+  uint64_t getStandaloneStorageSize() const;
 
   OnDiskGraphDB(StringRef RootPath, OnDiskHashMappedTrie Index,
                 OnDiskDataAllocator DataPool,
