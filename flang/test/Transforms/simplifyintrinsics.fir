@@ -1098,3 +1098,119 @@ fir.global linkonce @_QQcl.2E2F6973756D5F352E66393000 constant : !fir.char<1,13>
 // CHECK: arith.addf %{{.*}}, %{{.*}} fastmath<reassoc,contract> : f64
 // CHECK-LABEL: func.func private @_FortranASumReal8x1_fast_simplified
 // CHECK: arith.addf %{{.*}}, %{{.*}} fastmath<fast> : f64
+
+// -----
+// Ensure count is simplified in valid case
+
+func.func @_QMtestPcount_generate_mask(%arg0: !fir.ref<f32> {fir.bindc_name = "a"}) -> i32 {
+  %0 = fir.alloca i32 {bindc_name = "count_generate_mask", uniq_name = "_QMtestFcount_generate_maskEcount_generate_mask"}
+  %c10 = arith.constant 10 : index
+  %1 = fir.alloca !fir.array<10x!fir.logical<4>> {bindc_name = "mask", uniq_name = "_QMtestFcount_generate_maskEmask"}
+  %2 = fir.shape %c10 : (index) -> !fir.shape<1>
+  %3 = fir.embox %1(%2) : (!fir.ref<!fir.array<10x!fir.logical<4>>>, !fir.shape<1>) -> !fir.box<!fir.array<10x!fir.logical<4>>>
+  %c0 = arith.constant 0 : index
+  %4 = fir.address_of(@_QQcl.2E2F746573746661696C2E66393000) : !fir.ref<!fir.char<1,15>>
+  %c10_i32 = arith.constant 10 : i32
+  %5 = fir.convert %3 : (!fir.box<!fir.array<10x!fir.logical<4>>>) -> !fir.box<none>
+  %6 = fir.convert %4 : (!fir.ref<!fir.char<1,15>>) -> !fir.ref<i8>
+  %7 = fir.convert %c0 : (index) -> i32
+  %8 = fir.call @_FortranACount(%5, %6, %c10_i32, %7) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32, i32) -> i64
+  %9 = fir.convert %8 : (i64) -> i32
+  fir.store %9 to %0 : !fir.ref<i32>
+  %10 = fir.load %0 : !fir.ref<i32>
+  return %10 : i32
+}
+func.func private @_FortranACount(!fir.box<none>, !fir.ref<i8>, i32, i32) -> i64 attributes {fir.runtime}
+fir.global linkonce @_QQcl.2E2F746573746661696C2E66393000 constant : !fir.char<1,15> {
+  %0 = fir.string_lit "./test.f90\00"(15) : !fir.char<1,15>
+  fir.has_value %0 : !fir.char<1,15>
+}
+
+// CHECK-LABEL:   func.func @_QMtestPcount_generate_mask(
+// CHECK-SAME:                                           %[[A:.*]]: !fir.ref<f32> {fir.bindc_name = "a"}) -> i32 {
+// CHECK:           %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
+// CHECK:           %[[A_BOX_LOGICAL:.*]] = fir.embox %{{.*}}(%[[SHAPE]]) : (!fir.ref<!fir.array<10x!fir.logical<4>>>, !fir.shape<1>) -> !fir.box<!fir.array<10x!fir.logical<4>>>
+// CHECK:           %[[A_BOX_NONE:.*]] = fir.convert %[[A_BOX_LOGICAL]] : (!fir.box<!fir.array<10x!fir.logical<4>>>) -> !fir.box<none>
+// CHECK-NOT:       fir.call @_FortranACount({{.*}})
+// CHECK:           %[[RES:.*]] = fir.call @_FortranACountx1_simplified(%[[A_BOX_NONE]]) fastmath<contract> : (!fir.box<none>) -> i64
+// CHECK-NOT:       fir.call @_FortranACount({{.*}})
+// CHECK:           return %{{.*}} : i32
+// CHECK:         }
+// CHECK:         func.func private @_FortranACount(!fir.box<none>, !fir.ref<i8>, i32, i32) -> i64 attributes {fir.runtime}
+
+// CHECK-LABEL:   func.func private @_FortranACountx1_simplified(
+// CHECK-SAME:                                                            %[[ARR:.*]]: !fir.box<none>) -> i64 attributes {llvm.linkage = #llvm.linkage<linkonce_odr>} {
+// CHECK:           %[[C_INDEX0:.*]] = arith.constant 0 : index
+// CHECK:           %[[ARR_BOX_I32:.*]] = fir.convert %[[ARR]] : (!fir.box<none>) -> !fir.box<!fir.array<?xi32>>
+// CHECK:           %[[IZERO:.*]] = arith.constant 0 : i64
+// CHECK:           %[[C_INDEX1:.*]] = arith.constant 1 : index
+// CHECK:           %[[DIMIDX_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ARR_BOX_I32]], %[[DIMIDX_0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+// CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[C_INDEX1]] : index
+// CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %[[C_INDEX0]] to %[[EXTENT]] step %[[C_INDEX1]] iter_args(%[[COUNT:.*]] = %[[IZERO]]) -> (i64) {
+// CHECK:             %[[ITEM:.*]] = fir.coordinate_of %[[ARR_BOX_I32]], %[[ITER]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+// CHECK:             %[[ITEM_VAL:.*]] = fir.load %[[ITEM]] : !fir.ref<i32>
+// CHECK:             %[[I32_0:.*]] = arith.constant 0 : i32
+// CHECK:             %[[I64_0:.*]] = arith.constant 0 : i64
+// CHECK:             %[[I64_1:.*]] = arith.constant 1 : i64
+// CHECK:             %[[CMP:.*]] = arith.cmpi eq, %[[ITEM_VAL]], %[[I32_0]] : i32
+// CHECK:             %[[SELECT:.*]] = arith.select %[[CMP]], %[[I64_0]], %[[I64_1]] : i64
+// CHECK:             %[[NEW_COUNT:.*]] = arith.addi %[[SELECT]], %[[COUNT]] : i64
+// CHECK:             fir.result %[[NEW_COUNT]] : i64
+// CHECK:           }
+// CHECK:           return %[[RES:.*]] : i64
+// CHECK:         }
+
+// -----
+// Ensure count isn't simplified when given dim argument
+
+func.func @_QMtestPcount_generate_mask(%arg0: !fir.ref<!fir.array<10x10x!fir.logical<4>>> {fir.bindc_name = "mask"}) -> !fir.array<10xi32> {
+  %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
+  %c10 = arith.constant 10 : index
+  %c10_0 = arith.constant 10 : index
+  %c10_1 = arith.constant 10 : index
+  %1 = fir.alloca !fir.array<10xi32> {bindc_name = "res", uniq_name = "_QMtestFcount_generate_maskEres"}
+  %2 = fir.shape %c10_1 : (index) -> !fir.shape<1>
+  %3 = fir.array_load %1(%2) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.array<10xi32>
+  %c2_i32 = arith.constant 2 : i32
+  %4 = fir.shape %c10, %c10_0 : (index, index) -> !fir.shape<2>
+  %5 = fir.embox %arg0(%4) : (!fir.ref<!fir.array<10x10x!fir.logical<4>>>, !fir.shape<2>) -> !fir.box<!fir.array<10x10x!fir.logical<4>>>
+  %c4 = arith.constant 4 : index
+  %6 = fir.zero_bits !fir.heap<!fir.array<?xi32>>
+  %c0 = arith.constant 0 : index
+  %7 = fir.shape %c0 : (index) -> !fir.shape<1>
+  %8 = fir.embox %6(%7) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+  fir.store %8 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+  %9 = fir.address_of(@_QQcl.2E2F746573746661696C2E66393000) : !fir.ref<!fir.char<1,15>>
+  %c11_i32 = arith.constant 11 : i32
+  %10 = fir.convert %0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+  %11 = fir.convert %5 : (!fir.box<!fir.array<10x10x!fir.logical<4>>>) -> !fir.box<none>
+  %12 = fir.convert %c4 : (index) -> i32
+  %13 = fir.convert %9 : (!fir.ref<!fir.char<1,15>>) -> !fir.ref<i8>
+  %14 = fir.call @_FortranACountDim(%10, %11, %c2_i32, %12, %13, %c11_i32) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32) -> none
+  %15 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+  %c0_2 = arith.constant 0 : index
+  %16:3 = fir.box_dims %15, %c0_2 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
+  %17 = fir.box_addr %15 : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+  %18 = fir.shape_shift %16#0, %16#1 : (index, index) -> !fir.shapeshift<1>
+  %19 = fir.array_load %17(%18) : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.array<?xi32>
+  %c1 = arith.constant 1 : index
+  %c0_3 = arith.constant 0 : index
+  %20 = arith.subi %c10_1, %c1 : index
+  %21 = fir.do_loop %arg1 = %c0_3 to %20 step %c1 unordered iter_args(%arg2 = %3) -> (!fir.array<10xi32>) {
+    %23 = fir.array_fetch %19, %arg1 : (!fir.array<?xi32>, index) -> i32
+    %24 = fir.array_update %arg2, %23, %arg1 : (!fir.array<10xi32>, i32, index) -> !fir.array<10xi32>
+    fir.result %24 : !fir.array<10xi32>
+  }
+  fir.array_merge_store %3, %21 to %1 : !fir.array<10xi32>, !fir.array<10xi32>, !fir.ref<!fir.array<10xi32>>
+  fir.freemem %17 : !fir.heap<!fir.array<?xi32>>
+  %22 = fir.load %1 : !fir.ref<!fir.array<10xi32>>
+  return %22 : !fir.array<10xi32>
+}
+func.func private @_FortranACountDim(!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32) -> none attributes {fir.runtime}
+
+// CHECK-LABEL:   func.func @_QMtestPcount_generate_mask(
+// CHECK-SAME:                                           %[[A:.*]]: !fir.ref<!fir.array<10x10x!fir.logical<4>>> {fir.bindc_name = "mask"}) -> !fir.array<10xi32> {
+// CHECK-NOT        fir.call @_FortranACountDim_simplified({{.*}})
+// CHECK:           %[[RES:.*]] = fir.call @_FortranACountDim({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32) -> none
+// CHECK-NOT        fir.call @_FortranACountDim_simplified({{.*}})

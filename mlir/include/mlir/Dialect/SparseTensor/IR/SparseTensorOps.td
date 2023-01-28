@@ -119,6 +119,8 @@ def SparseTensor_ToPointersOp : SparseTensor_Op<"pointers", [Pure]>,
     lowers into code that extracts the pointers array from the sparse storage
     scheme (either by calling a support library or through direct code).
 
+    Writing into the result of this operation is undefined behavior.
+
     Example:
 
     ```mlir
@@ -142,6 +144,8 @@ def SparseTensor_ToIndicesOp : SparseTensor_Op<"indices", [Pure]>,
     `bufferization.to_memref` operation, however, this sparse operation actually
     lowers into code that extracts the indices array from the sparse storage
     scheme (either by calling a support library or through direct code).
+
+    Writing into the result of this operation is undefined behavior.
 
     Example:
 
@@ -171,6 +175,8 @@ def SparseTensor_ToIndicesBufferOp : SparseTensor_Op<"indices_buffer", [Pure]>,
     stored in a linear buffer as (1, 4, 3, 6) instead of two buffer as (1, 4)
     and (3, 6).
 
+    Writing into the result of this operation is undefined behavior.
+
     Example:
 
     ```mlir
@@ -194,6 +200,8 @@ def SparseTensor_ToValuesOp : SparseTensor_Op<"values", [Pure]>,
     `bufferization.to_memref` operation, however, this sparse operation actually
     lowers into code that extracts the values array from the sparse storage
     scheme (either by calling a support library or through direct code).
+
+    Writing into the result of this operation is undefined behavior.
 
     Example:
 

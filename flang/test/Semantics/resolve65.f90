@@ -65,6 +65,18 @@ module m2
         end
       end interface
     end
+    !ERROR: In defined assignment subroutine 's3', second dummy argument 'y' must not be a pointer
+    subroutine s3(x, y)
+      import t
+      type(t), intent(out) :: x
+      type(t), intent(in), pointer :: y
+    end
+    !ERROR: In defined assignment subroutine 's4', second dummy argument 'y' must not be an allocatable
+    subroutine s4(x, y)
+      import t
+      type(t), intent(out) :: x
+      type(t), intent(in), allocatable :: y
+    end
   end interface
 end
 

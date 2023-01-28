@@ -14,10 +14,21 @@ set(LIBC_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 # The top-level directory in which libc is being built.
 set(LIBC_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
-# For a runtimes build we need to manually include tablgen and LLVM directories.
-if ("libc" IN_LIST LLVM_ENABLE_RUNTIMES)
-  include(TableGen)
-  set(LLVM_LIBC_INCLUDE_DIRS ${LLVM_MAIN_INCLUDE_DIR} ${LLVM_BINARY_DIR}/include)
+if(LLVM_LIBC_FULL_BUILD)
+  if(NOT LIBC_HDRGEN_EXE)
+    # We need to set up hdrgen first since other targets depend on it.
+    add_subdirectory(utils/LibcTableGenUtil)
+    add_subdirectory(utils/HdrGen)
+  else()
+    message(STATUS "Will use ${LIBC_HDRGEN_EXE} for libc header generation.")
+  endif()
+endif()
+
+if(LLVM_ENABLE_RUNTIMES AND NOT LLVM_RUNTIMES_BUILD)
+  # When libc is build as part of the runtimes/bootstrap build's CMake run, we
+  # only need to build the host tools to build the libc. So, we just do enough
+  # to build libc-hdrgen and return.
+  return()
 endif()
 
 # Path libc/scripts directory.
@@ -149,12 +160,6 @@ foreach(entrypoint IN LISTS TARGET_LLVMLIBC_ENTRYPOINTS)
   string(SUBSTRING ${entrypoint} ${name_loc} -1 entrypoint_name)
   list(APPEND TARGET_ENTRYPOINT_NAME_LIST ${entrypoint_name})
 endforeach()
-
-if(LLVM_LIBC_FULL_BUILD)
-  # We need to set up hdrgen first since other targets depend on it.
-  add_subdirectory(utils/LibcTableGenUtil)
-  add_subdirectory(utils/HdrGen)
-endif()
 
 set(LIBC_TARGET)
 set(LIBC_COMPONENT)
