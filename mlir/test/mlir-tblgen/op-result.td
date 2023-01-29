@@ -100,7 +100,7 @@ def OpI : NS_Op<"mix_variadic_and_normal_results_op", [SameVariadicResultSize]> 
 // CHECK-NEXT:    return getODSResults(0);
 
 // CHECK-LABEL: ::mlir::TypedValue<::mlir::TensorType> OpI::getOutput2
-// CHECK-NEXT:    return *getODSResults(1).begin();
+// CHECK-NEXT:    return ::llvm::cast<::mlir::TypedValue<::mlir::TensorType>>(*getODSResults(1).begin());
 
 // CHECK-LABEL: OpI::build
 // CHECK-NEXT:    odsState.addTypes(output1);
