@@ -1033,7 +1033,7 @@ struct UnrollTransferWriteConversion
     auto vec = getDataVector(xferOp);
     auto xferVecType = xferOp.getVectorType();
     int64_t dimSize = xferVecType.getShape()[0];
-    auto source = xferOp.getSource(); // memref or tensor to be written to.
+    Value source = xferOp.getSource(); // memref or tensor to be written to.
     auto sourceType = isTensorOp(xferOp) ? xferOp.getShapedType() : Type();
 
     // Generate fully unrolled loop of transfer ops.

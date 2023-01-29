@@ -152,6 +152,9 @@ public:
   /// Get the name of the method.
   StringRef getName() const { return methodName; }
 
+  /// Get the return type of the method
+  StringRef getReturnType() const { return returnType; }
+
   /// Get the number of parameters.
   unsigned getNumParameters() const { return parameters.getNumParameters(); }
 
@@ -343,6 +346,9 @@ public:
 
   /// Returns the name of this method.
   StringRef getName() const { return methodSignature.getName(); }
+
+  /// Returns the return type of this method
+  StringRef getReturnType() const { return methodSignature.getReturnType(); }
 
   /// Returns if this method makes the `other` method redundant.
   bool makesRedundant(const Method &other) const {
