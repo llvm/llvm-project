@@ -102,8 +102,8 @@ static void initializeUsedResources(InstrDesc &ID,
   // Sort elements by mask popcount, so that we prioritize resource units over
   // resource groups, and smaller groups over larger groups.
   sort(Worklist, [](const ResourcePlusCycles &A, const ResourcePlusCycles &B) {
-    unsigned popcntA = countPopulation(A.first);
-    unsigned popcntB = countPopulation(B.first);
+    unsigned popcntA = llvm::popcount(A.first);
+    unsigned popcntB = llvm::popcount(B.first);
     if (popcntA < popcntB)
       return true;
     if (popcntA > popcntB)
@@ -122,7 +122,7 @@ static void initializeUsedResources(InstrDesc &ID,
   for (unsigned I = 0, E = Worklist.size(); I < E; ++I) {
     ResourcePlusCycles &A = Worklist[I];
     if (!A.second.size()) {
-      assert(countPopulation(A.first) > 1 && "Expected a group!");
+      assert(llvm::popcount(A.first) > 1 && "Expected a group!");
       UsedResourceGroups |= PowerOf2Floor(A.first);
       continue;
     }
@@ -130,7 +130,7 @@ static void initializeUsedResources(InstrDesc &ID,
     ID.Resources.emplace_back(A);
     uint64_t NormalizedMask = A.first;
 
-    if (countPopulation(A.first) == 1) {
+    if (llvm::popcount(A.first) == 1) {
       UsedResourceUnits |= A.first;
     } else {
       // Remove the leading 1 from the resource group mask.
@@ -146,7 +146,7 @@ static void initializeUsedResources(InstrDesc &ID,
       ResourcePlusCycles &B = Worklist[J];
       if ((NormalizedMask & B.first) == NormalizedMask) {
         B.second.CS.subtract(A.second.size() - SuperResources[A.first]);
-        if (countPopulation(B.first) > 1)
+        if (llvm::popcount(B.first) > 1)
           B.second.NumUnits++;
       }
     }
@@ -170,11 +170,11 @@ static void initializeUsedResources(InstrDesc &ID,
   // extra delay on top of the 2 cycles latency.
   // During those extra cycles, HWPort01 is not usable by other instructions.
   for (ResourcePlusCycles &RPC : ID.Resources) {
-    if (countPopulation(RPC.first) > 1 && !RPC.second.isReserved()) {
+    if (llvm::popcount(RPC.first) > 1 && !RPC.second.isReserved()) {
       // Remove the leading 1 from the resource group mask.
       uint64_t Mask = RPC.first ^ PowerOf2Floor(RPC.first);
-      uint64_t MaxResourceUnits = countPopulation(Mask);
-      if (RPC.second.NumUnits > countPopulation(Mask)) {
+      uint64_t MaxResourceUnits = llvm::popcount(Mask);
+      if (RPC.second.NumUnits > (unsigned)llvm::popcount(Mask)) {
         RPC.second.setReserved();
         RPC.second.NumUnits = MaxResourceUnits;
       }

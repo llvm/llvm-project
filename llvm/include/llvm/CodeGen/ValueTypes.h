@@ -388,7 +388,7 @@ namespace llvm {
       unsigned BitWidth = getSizeInBits();
       if (BitWidth <= 8)
         return EVT(MVT::i8);
-      return getIntegerVT(Context, 1 << Log2_32_Ceil(BitWidth));
+      return getIntegerVT(Context, llvm::bit_ceil(BitWidth));
     }
 
     /// Finds the smallest simple value type that is greater than or equal to

@@ -8970,7 +8970,7 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream *s,
   for (auto *enumerator : enum_decl->enumerators()) {
     uint64_t val = enumerator->getInitVal().getSExtValue();
     val = llvm::SignExtend64(val, 8*byte_size);
-    if (llvm::countPopulation(val) != 1 && (val & ~covered_bits) != 0)
+    if (llvm::popcount(val) != 1 && (val & ~covered_bits) != 0)
       can_be_bitfield = false;
     covered_bits |= val;
     ++num_enumerators;
@@ -9006,9 +9006,10 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream *s,
   // Sort in reverse order of the number of the population count,  so that in
   // `enum {A, B, ALL = A|B }` we visit ALL first. Use a stable sort so that
   // A | C where A is declared before C is displayed in this order.
-  std::stable_sort(values.begin(), values.end(), [](const auto &a, const auto &b) {
-        return llvm::countPopulation(a.first) > llvm::countPopulation(b.first);
-      });
+  std::stable_sort(values.begin(), values.end(),
+                   [](const auto &a, const auto &b) {
+                     return llvm::popcount(a.first) > llvm::popcount(b.first);
+                   });
 
   for (const auto &val : values) {
     if ((remaining_value & val.first) != val.first)

@@ -3146,12 +3146,15 @@ public:
   /// fragments and imports.  If we are not parsing a C++20 TU, or we find
   /// an error in state transition, the state is set to NotACXX20Module.
   enum class ModuleImportState {
-    FirstDecl,       ///< Parsing the first decl in a TU.
-    GlobalFragment,  ///< after 'module;' but before 'module X;'
-    ImportAllowed,   ///< after 'module X;' but before any non-import decl.
-    ImportFinished,  ///< after any non-import decl.
-    PrivateFragment, ///< after 'module :private;'.
-    NotACXX20Module  ///< Not a C++20 TU, or an invalid state was found.
+    FirstDecl,      ///< Parsing the first decl in a TU.
+    GlobalFragment, ///< after 'module;' but before 'module X;'
+    ImportAllowed,  ///< after 'module X;' but before any non-import decl.
+    ImportFinished, ///< after any non-import decl.
+    PrivateFragmentImportAllowed,  ///< after 'module :private;' but before any
+                                   ///< non-import decl.
+    PrivateFragmentImportFinished, ///< after 'module :private;' but a
+                                   ///< non-import decl has already been seen.
+    NotACXX20Module ///< Not a C++20 TU, or an invalid state was found.
   };
 
 private:

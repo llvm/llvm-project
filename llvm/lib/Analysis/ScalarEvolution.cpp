@@ -4094,6 +4094,33 @@ public:
 
 } // namespace
 
+static bool scevUnconditionallyPropagatesPoisonFromOperands(SCEVTypes Kind) {
+  switch (Kind) {
+  case scConstant:
+  case scTruncate:
+  case scZeroExtend:
+  case scSignExtend:
+  case scPtrToInt:
+  case scAddExpr:
+  case scMulExpr:
+  case scUDivExpr:
+  case scAddRecExpr:
+  case scUMaxExpr:
+  case scSMaxExpr:
+  case scUMinExpr:
+  case scSMinExpr:
+  case scUnknown:
+    // If any operand is poison, the whole expression is poison.
+    return true;
+  case scSequentialUMinExpr:
+    // FIXME: if the *first* operand is poison, the whole expression is poison.
+    return false; // Pessimistically, say that it does not propagate poison.
+  case scCouldNotCompute:
+    llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
+  }
+  llvm_unreachable("Unknown SCEV kind!");
+}
+
 /// Return true if V is poison given that AssumedPoison is already poison.
 static bool impliesPoison(const SCEV *AssumedPoison, const SCEV *S) {
   // The only way poison may be introduced in a SCEV expression is from a
@@ -4110,10 +4137,33 @@ static bool impliesPoison(const SCEV *AssumedPoison, const SCEV *S) {
     SCEVPoisonCollector(bool LookThroughSeq) : LookThroughSeq(LookThroughSeq) {}
 
     bool follow(const SCEV *S) {
-      // TODO: We can always follow the first operand, but the SCEVTraversal
-      // API doesn't support this.
-      if (!LookThroughSeq && isa<SCEVSequentialMinMaxExpr>(S))
-        return false;
+      if (!scevUnconditionallyPropagatesPoisonFromOperands(S->getSCEVType())) {
+        switch (S->getSCEVType()) {
+        case scConstant:
+        case scTruncate:
+        case scZeroExtend:
+        case scSignExtend:
+        case scPtrToInt:
+        case scAddExpr:
+        case scMulExpr:
+        case scUDivExpr:
+        case scAddRecExpr:
+        case scUMaxExpr:
+        case scSMaxExpr:
+        case scUMinExpr:
+        case scSMinExpr:
+        case scUnknown:
+          llvm_unreachable("These all unconditionally propagate poison.");
+        case scSequentialUMinExpr:
+          // TODO: We can always follow the first operand,
+          // but the SCEVTraversal API doesn't support this.
+          if (!LookThroughSeq)
+            return false;
+          break;
+        case scCouldNotCompute:
+          llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
+        }
+      }
 
       if (auto *SU = dyn_cast<SCEVUnknown>(S)) {
         if (!isGuaranteedNotToBePoison(SU->getValue()))
@@ -6264,31 +6314,30 @@ const SCEV *ScalarEvolution::createNodeForGEP(GEPOperator *GEP) {
 }
 
 uint32_t ScalarEvolution::GetMinTrailingZerosImpl(const SCEV *S) {
-  if (const SCEVConstant *C = dyn_cast<SCEVConstant>(S))
-    return C->getAPInt().countTrailingZeros();
-
-  if (const SCEVPtrToIntExpr *I = dyn_cast<SCEVPtrToIntExpr>(S))
-    return GetMinTrailingZeros(I->getOperand());
-
-  if (const SCEVTruncateExpr *T = dyn_cast<SCEVTruncateExpr>(S))
+  switch (S->getSCEVType()) {
+  case scConstant:
+    return cast<SCEVConstant>(S)->getAPInt().countTrailingZeros();
+  case scTruncate: {
+    const SCEVTruncateExpr *T = cast<SCEVTruncateExpr>(S);
     return std::min(GetMinTrailingZeros(T->getOperand()),
                     (uint32_t)getTypeSizeInBits(T->getType()));
-
-  if (const SCEVZeroExtendExpr *E = dyn_cast<SCEVZeroExtendExpr>(S)) {
+  }
+  case scZeroExtend: {
+    const SCEVZeroExtendExpr *E = cast<SCEVZeroExtendExpr>(S);
     uint32_t OpRes = GetMinTrailingZeros(E->getOperand());
     return OpRes == getTypeSizeInBits(E->getOperand()->getType())
                ? getTypeSizeInBits(E->getType())
                : OpRes;
   }
-
-  if (const SCEVSignExtendExpr *E = dyn_cast<SCEVSignExtendExpr>(S)) {
+  case scSignExtend: {
+    const SCEVSignExtendExpr *E = cast<SCEVSignExtendExpr>(S);
     uint32_t OpRes = GetMinTrailingZeros(E->getOperand());
     return OpRes == getTypeSizeInBits(E->getOperand()->getType())
                ? getTypeSizeInBits(E->getType())
                : OpRes;
   }
-
-  if (const SCEVMulExpr *M = dyn_cast<SCEVMulExpr>(S)) {
+  case scMulExpr: {
+    const SCEVMulExpr *M = cast<SCEVMulExpr>(S);
     // The result is the sum of all operands results.
     uint32_t SumOpRes = GetMinTrailingZeros(M->getOperand(0));
     uint32_t BitWidth = getTypeSizeInBits(M->getType());
@@ -6298,25 +6347,34 @@ uint32_t ScalarEvolution::GetMinTrailingZerosImpl(const SCEV *S) {
           std::min(SumOpRes + GetMinTrailingZeros(M->getOperand(i)), BitWidth);
     return SumOpRes;
   }
-
-  if (isa<SCEVAddExpr>(S) || isa<SCEVAddRecExpr>(S) || isa<SCEVMinMaxExpr>(S) ||
-      isa<SCEVSequentialMinMaxExpr>(S)) {
+  case scUDivExpr:
+    return 0;
+  case scPtrToInt:
+  case scAddExpr:
+  case scAddRecExpr:
+  case scUMaxExpr:
+  case scSMaxExpr:
+  case scUMinExpr:
+  case scSMinExpr:
+  case scSequentialUMinExpr: {
     // The result is the min of all operands results.
-    const SCEVNAryExpr *M = cast<SCEVNAryExpr>(S);
-    uint32_t MinOpRes = GetMinTrailingZeros(M->getOperand(0));
-    for (unsigned I = 1, E = M->getNumOperands(); MinOpRes && I != E; ++I)
-      MinOpRes = std::min(MinOpRes, GetMinTrailingZeros(M->getOperand(I)));
+    ArrayRef<const SCEV *> Ops = S->operands();
+    uint32_t MinOpRes = GetMinTrailingZeros(Ops[0]);
+    for (unsigned I = 1, E = Ops.size(); MinOpRes && I != E; ++I)
+      MinOpRes = std::min(MinOpRes, GetMinTrailingZeros(Ops[I]));
     return MinOpRes;
   }
-
-  if (const SCEVUnknown *U = dyn_cast<SCEVUnknown>(S)) {
+  case scUnknown: {
+    const SCEVUnknown *U = cast<SCEVUnknown>(S);
     // For a SCEVUnknown, ask ValueTracking.
-    KnownBits Known = computeKnownBits(U->getValue(), getDataLayout(), 0, &AC, nullptr, &DT);
+    KnownBits Known =
+        computeKnownBits(U->getValue(), getDataLayout(), 0, &AC, nullptr, &DT);
     return Known.countMinTrailingZeros();
   }
-
-  // SCEVUDivExpr
-  return 0;
+  case scCouldNotCompute:
+    llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
+  }
+  llvm_unreachable("Unknown SCEV kind!");
 }
 
 uint32_t ScalarEvolution::GetMinTrailingZeros(const SCEV *S) {
@@ -6483,31 +6541,49 @@ ScalarEvolution::getRangeRefIter(const SCEV *S,
       return;
     if (Cache.find(Expr) != Cache.end())
       return;
-    if (isa<SCEVNAryExpr>(Expr) || isa<SCEVUDivExpr>(Expr))
+    switch (Expr->getSCEVType()) {
+    case scUnknown:
+      if (!isa<PHINode>(cast<SCEVUnknown>(Expr)->getValue()))
+        break;
+      [[fallthrough]];
+    case scConstant:
+    case scTruncate:
+    case scZeroExtend:
+    case scSignExtend:
+    case scPtrToInt:
+    case scAddExpr:
+    case scMulExpr:
+    case scUDivExpr:
+    case scAddRecExpr:
+    case scUMaxExpr:
+    case scSMaxExpr:
+    case scUMinExpr:
+    case scSMinExpr:
+    case scSequentialUMinExpr:
       WorkList.push_back(Expr);
-    else if (auto *UnknownS = dyn_cast<SCEVUnknown>(Expr))
-      if (isa<PHINode>(UnknownS->getValue()))
-        WorkList.push_back(Expr);
+      break;
+    case scCouldNotCompute:
+      llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
+    }
   };
   AddToWorklist(S);
 
   // Build worklist by queuing operands of N-ary expressions and phi nodes.
   for (unsigned I = 0; I != WorkList.size(); ++I) {
     const SCEV *P = WorkList[I];
-    if (auto *NaryS = dyn_cast<SCEVNAryExpr>(P)) {
-      for (const SCEV *Op : NaryS->operands())
+    auto *UnknownS = dyn_cast<SCEVUnknown>(P);
+    // If it is not a `SCEVUnknown`, just recurse into operands.
+    if (!UnknownS) {
+      for (const SCEV *Op : P->operands())
         AddToWorklist(Op);
-    } else if (auto *UDiv = dyn_cast<SCEVUDivExpr>(P)) {
-      AddToWorklist(UDiv->getLHS());
-      AddToWorklist(UDiv->getRHS());
-    } else {
-      auto *UnknownS = cast<SCEVUnknown>(P);
-      if (const PHINode *P = dyn_cast<PHINode>(UnknownS->getValue())) {
-        if (!PendingPhiRangesIter.insert(P).second)
-          continue;
-        for (auto &Op : reverse(P->operands()))
-          AddToWorklist(getSCEV(Op));
-      }
+      continue;
+    }
+    // `SCEVUnknown`'s require special treatment.
+    if (const PHINode *P = dyn_cast<PHINode>(UnknownS->getValue())) {
+      if (!PendingPhiRangesIter.insert(P).second)
+        continue;
+      for (auto &Op : reverse(P->operands()))
+        AddToWorklist(getSCEV(Op));
     }
   }
 
@@ -9773,24 +9849,6 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
   switch (V->getSCEVType()) {
   case scConstant:
     return V;
-  case scTruncate:
-  case scZeroExtend:
-  case scSignExtend:
-  case scPtrToInt: {
-    const SCEVCastExpr *Cast = cast<SCEVCastExpr>(V);
-    const SCEV *Op = getSCEVAtScope(Cast->getOperand(), L);
-    if (Op == Cast->getOperand())
-      return Cast; // must be loop invariant
-    return getCastExpr(Cast->getSCEVType(), Op, Cast->getType());
-  }
-  case scUDivExpr: {
-    const SCEVUDivExpr *Div = cast<SCEVUDivExpr>(V);
-    const SCEV *LHS = getSCEVAtScope(Div->getLHS(), L);
-    const SCEV *RHS = getSCEVAtScope(Div->getRHS(), L);
-    if (LHS == Div->getLHS() && RHS == Div->getRHS())
-      return Div; // must be loop invariant
-    return getUDivExpr(LHS, RHS);
-  }
   case scAddRecExpr: {
     // If this is a loop recurrence for a loop that does not contain L, then we
     // are dealing with the final value computed by the loop.
@@ -9838,43 +9896,66 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
 
     return AddRec;
   }
+  case scTruncate:
+  case scZeroExtend:
+  case scSignExtend:
+  case scPtrToInt:
   case scAddExpr:
   case scMulExpr:
+  case scUDivExpr:
   case scUMaxExpr:
   case scSMaxExpr:
   case scUMinExpr:
   case scSMinExpr:
   case scSequentialUMinExpr: {
-    const auto *Comm = cast<SCEVNAryExpr>(V);
+    ArrayRef<const SCEV *> Ops = V->operands();
     // Avoid performing the look-up in the common case where the specified
     // expression has no loop-variant portions.
-    for (unsigned i = 0, e = Comm->getNumOperands(); i != e; ++i) {
-      const SCEV *OpAtScope = getSCEVAtScope(Comm->getOperand(i), L);
-      if (OpAtScope != Comm->getOperand(i)) {
+    for (unsigned i = 0, e = Ops.size(); i != e; ++i) {
+      const SCEV *OpAtScope = getSCEVAtScope(Ops[i], L);
+      if (OpAtScope != Ops[i]) {
         // Okay, at least one of these operands is loop variant but might be
         // foldable.  Build a new instance of the folded commutative expression.
         SmallVector<const SCEV *, 8> NewOps;
-        NewOps.reserve(Comm->getNumOperands());
-        append_range(NewOps, Comm->operands().take_front(i));
+        NewOps.reserve(Ops.size());
+        append_range(NewOps, Ops.take_front(i));
         NewOps.push_back(OpAtScope);
 
         for (++i; i != e; ++i) {
-          OpAtScope = getSCEVAtScope(Comm->getOperand(i), L);
+          OpAtScope = getSCEVAtScope(Ops[i], L);
           NewOps.push_back(OpAtScope);
         }
-        if (isa<SCEVAddExpr>(Comm))
-          return getAddExpr(NewOps, Comm->getNoWrapFlags());
-        if (isa<SCEVMulExpr>(Comm))
-          return getMulExpr(NewOps, Comm->getNoWrapFlags());
-        if (isa<SCEVMinMaxExpr>(Comm))
-          return getMinMaxExpr(Comm->getSCEVType(), NewOps);
-        if (isa<SCEVSequentialMinMaxExpr>(Comm))
-          return getSequentialMinMaxExpr(Comm->getSCEVType(), NewOps);
-        llvm_unreachable("Unknown commutative / sequential min/max SCEV type!");
+
+        switch (V->getSCEVType()) {
+        case scTruncate:
+        case scZeroExtend:
+        case scSignExtend:
+        case scPtrToInt:
+          return getCastExpr(V->getSCEVType(), NewOps[0], V->getType());
+        case scAddExpr:
+          return getAddExpr(NewOps, cast<SCEVAddExpr>(V)->getNoWrapFlags());
+        case scMulExpr:
+          return getMulExpr(NewOps, cast<SCEVMulExpr>(V)->getNoWrapFlags());
+        case scUDivExpr:
+          return getUDivExpr(NewOps[0], NewOps[1]);
+        case scUMaxExpr:
+        case scSMaxExpr:
+        case scUMinExpr:
+        case scSMinExpr:
+          return getMinMaxExpr(V->getSCEVType(), NewOps);
+        case scSequentialUMinExpr:
+          return getSequentialMinMaxExpr(V->getSCEVType(), NewOps);
+        case scConstant:
+        case scAddRecExpr:
+        case scUnknown:
+        case scCouldNotCompute:
+          llvm_unreachable("Can not get those expressions here.");
+        }
+        llvm_unreachable("Unknown n-ary-like SCEV type!");
       }
     }
     // If we got here, all operands are loop invariant.
-    return Comm;
+    return V;
   }
   case scUnknown: {
     // If this instruction is evolved from a constant-evolving PHI, compute the
@@ -13651,11 +13732,6 @@ ScalarEvolution::computeLoopDisposition(const SCEV *S, const Loop *L) {
   switch (S->getSCEVType()) {
   case scConstant:
     return LoopInvariant;
-  case scPtrToInt:
-  case scTruncate:
-  case scZeroExtend:
-  case scSignExtend:
-    return getLoopDisposition(cast<SCEVCastExpr>(S)->getOperand(), L);
   case scAddRecExpr: {
     const SCEVAddRecExpr *AR = cast<SCEVAddRecExpr>(S);
 
@@ -13686,15 +13762,20 @@ ScalarEvolution::computeLoopDisposition(const SCEV *S, const Loop *L) {
     // Otherwise it's loop-invariant.
     return LoopInvariant;
   }
+  case scTruncate:
+  case scZeroExtend:
+  case scSignExtend:
+  case scPtrToInt:
   case scAddExpr:
   case scMulExpr:
+  case scUDivExpr:
   case scUMaxExpr:
   case scSMaxExpr:
   case scUMinExpr:
   case scSMinExpr:
   case scSequentialUMinExpr: {
     bool HasVarying = false;
-    for (const auto *Op : cast<SCEVNAryExpr>(S)->operands()) {
+    for (const auto *Op : S->operands()) {
       LoopDisposition D = getLoopDisposition(Op, L);
       if (D == LoopVariant)
         return LoopVariant;
@@ -13702,17 +13783,6 @@ ScalarEvolution::computeLoopDisposition(const SCEV *S, const Loop *L) {
         HasVarying = true;
     }
     return HasVarying ? LoopComputable : LoopInvariant;
-  }
-  case scUDivExpr: {
-    const SCEVUDivExpr *UDiv = cast<SCEVUDivExpr>(S);
-    LoopDisposition LD = getLoopDisposition(UDiv->getLHS(), L);
-    if (LD == LoopVariant)
-      return LoopVariant;
-    LoopDisposition RD = getLoopDisposition(UDiv->getRHS(), L);
-    if (RD == LoopVariant)
-      return LoopVariant;
-    return (LD == LoopInvariant && RD == LoopInvariant) ?
-           LoopInvariant : LoopComputable;
   }
   case scUnknown:
     // All non-instruction values are loop invariant.  All instructions are loop
@@ -13760,11 +13830,6 @@ ScalarEvolution::computeBlockDisposition(const SCEV *S, const BasicBlock *BB) {
   switch (S->getSCEVType()) {
   case scConstant:
     return ProperlyDominatesBlock;
-  case scPtrToInt:
-  case scTruncate:
-  case scZeroExtend:
-  case scSignExtend:
-    return getBlockDisposition(cast<SCEVCastExpr>(S)->getOperand(), BB);
   case scAddRecExpr: {
     // This uses a "dominates" query instead of "properly dominates" query
     // to test for proper dominance too, because the instruction which
@@ -13777,16 +13842,20 @@ ScalarEvolution::computeBlockDisposition(const SCEV *S, const BasicBlock *BB) {
     // Fall through into SCEVNAryExpr handling.
     [[fallthrough]];
   }
+  case scTruncate:
+  case scZeroExtend:
+  case scSignExtend:
+  case scPtrToInt:
   case scAddExpr:
   case scMulExpr:
+  case scUDivExpr:
   case scUMaxExpr:
   case scSMaxExpr:
   case scUMinExpr:
   case scSMinExpr:
   case scSequentialUMinExpr: {
-    const SCEVNAryExpr *NAry = cast<SCEVNAryExpr>(S);
     bool Proper = true;
-    for (const SCEV *NAryOp : NAry->operands()) {
+    for (const SCEV *NAryOp : S->operands()) {
       BlockDisposition D = getBlockDisposition(NAryOp, BB);
       if (D == DoesNotDominateBlock)
         return DoesNotDominateBlock;
@@ -13794,18 +13863,6 @@ ScalarEvolution::computeBlockDisposition(const SCEV *S, const BasicBlock *BB) {
         Proper = false;
     }
     return Proper ? ProperlyDominatesBlock : DominatesBlock;
-  }
-  case scUDivExpr: {
-    const SCEVUDivExpr *UDiv = cast<SCEVUDivExpr>(S);
-    const SCEV *LHS = UDiv->getLHS(), *RHS = UDiv->getRHS();
-    BlockDisposition LD = getBlockDisposition(LHS, BB);
-    if (LD == DoesNotDominateBlock)
-      return DoesNotDominateBlock;
-    BlockDisposition RD = getBlockDisposition(RHS, BB);
-    if (RD == DoesNotDominateBlock)
-      return DoesNotDominateBlock;
-    return (LD == ProperlyDominatesBlock && RD == ProperlyDominatesBlock) ?
-      ProperlyDominatesBlock : DominatesBlock;
   }
   case scUnknown:
     if (Instruction *I =

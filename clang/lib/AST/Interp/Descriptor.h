@@ -205,13 +205,14 @@ private:
 
   /// Returns a pointer to storage.
   T *data();
+  const T *data() const;
 
 public:
   /// Initializes an element. Returns true when object if fully initialized.
   bool initialize(unsigned I);
 
   /// Checks if an element was initialized.
-  bool isInitialized(unsigned I);
+  bool isInitialized(unsigned I) const;
 
   /// Allocates a map holding N elements.
   static InitMap *allocate(unsigned N);

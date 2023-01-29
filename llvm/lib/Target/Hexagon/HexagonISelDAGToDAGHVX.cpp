@@ -1968,7 +1968,7 @@ SmallVector<uint32_t, 8> HvxSelector::getPerfectCompletions(ShuffleMask SM,
     unsigned P = Sorted[I], Count = 1;
     while (++I != E && P == Sorted[I])
       ++Count;
-    if (countPopulation(P) < Count) {
+    if ((unsigned)llvm::popcount(P) < Count) {
       // Reset all occurences of P, if there are more occurrences of P
       // than there are bits in P.
       for_each(Worklist, [P](unsigned &Q) {

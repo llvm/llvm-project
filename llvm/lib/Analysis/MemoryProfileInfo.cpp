@@ -92,7 +92,7 @@ static void addAllocTypeAttribute(LLVMContext &Ctx, CallBase *CI,
 }
 
 static bool hasSingleAllocType(uint8_t AllocTypes) {
-  const unsigned NumAllocTypes = countPopulation(AllocTypes);
+  const unsigned NumAllocTypes = llvm::popcount(AllocTypes);
   assert(NumAllocTypes != 0);
   return NumAllocTypes == 1;
 }

@@ -264,6 +264,19 @@ private:
   static void initializeAttributeStorage(AttributeStorage *storage,
                                          MLIRContext *ctx, TypeID attrID);
 };
+
+// Internal function called by ODS generated code.
+// Default initializes the type within a FailureOr<T> if T is default
+// constructible and returns a reference to the instance.
+// Otherwise, returns a reference to the FailureOr<T>.
+template <class T>
+decltype(auto) unwrapForCustomParse(FailureOr<T> &failureOr) {
+  if constexpr (std::is_default_constructible_v<T>)
+    return failureOr.emplace();
+  else
+    return failureOr;
+}
+
 } // namespace detail
 
 } // namespace mlir

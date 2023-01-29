@@ -934,7 +934,7 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
   }
 
   unsigned DMask = MI.getOperand(DMaskIdx).getImm() & 0xf;
-  unsigned DstSize = IsGather4 ? 4 : std::max(countPopulation(DMask), 1u);
+  unsigned DstSize = IsGather4 ? 4 : std::max(llvm::popcount(DMask), 1);
 
   bool D16 = D16Idx >= 0 && MI.getOperand(D16Idx).getImm();
   if (D16 && AMDGPU::hasPackedD16(STI)) {

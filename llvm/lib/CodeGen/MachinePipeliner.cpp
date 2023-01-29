@@ -1022,7 +1022,7 @@ struct FuncUnitSorter {
            make_range(InstrItins->beginStage(SchedClass),
                       InstrItins->endStage(SchedClass))) {
         InstrStage::FuncUnits funcUnits = IS.getUnits();
-        unsigned numAlternatives = countPopulation(funcUnits);
+        unsigned numAlternatives = llvm::popcount(funcUnits);
         if (numAlternatives < min) {
           min = numAlternatives;
           F = funcUnits;
@@ -1068,7 +1068,7 @@ struct FuncUnitSorter {
            make_range(InstrItins->beginStage(SchedClass),
                       InstrItins->endStage(SchedClass))) {
         InstrStage::FuncUnits FuncUnits = IS.getUnits();
-        if (countPopulation(FuncUnits) == 1)
+        if (llvm::popcount(FuncUnits) == 1)
           Resources[FuncUnits]++;
       }
       return;

@@ -17,4 +17,5 @@ e327b52766ed [C2x] reject type definitions in offsetof
 
 16a385ba21a9 [OpenMP] Modernize the kernel launching interface and APIs
 366fc10f065d [OpenMP][FIX] Remove version check lines in clang test
+40f9bf082ff0 [OpenMP] Introduce the `ompx_dyn_cgroup_mem(<N>)` clause
 

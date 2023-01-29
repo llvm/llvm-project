@@ -138,7 +138,7 @@ struct ValueKnowledge {
     ValueKnowledge result = getPessimisticValueState();
     result.hasError = true;
 
-    if (!rhs || !rhs || lhs.dtype != rhs.dtype)
+    if (!lhs || !rhs || lhs.dtype != rhs.dtype)
       return result;
 
     result.hasError = false;

@@ -684,7 +684,7 @@ unsigned APInt::countTrailingOnesSlowCase() const {
 unsigned APInt::countPopulationSlowCase() const {
   unsigned Count = 0;
   for (unsigned i = 0; i < getNumWords(); ++i)
-    Count += llvm::countPopulation(U.pVal[i]);
+    Count += llvm::popcount(U.pVal[i]);
   return Count;
 }
 

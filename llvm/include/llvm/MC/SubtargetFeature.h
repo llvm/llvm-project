@@ -95,7 +95,7 @@ public:
   size_t count() const {
     size_t Count = 0;
     for (auto B : Bits)
-      Count += countPopulation(B);
+      Count += llvm::popcount(B);
     return Count;
   }
 

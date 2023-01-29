@@ -33,10 +33,8 @@ constexpr const static unsigned kBitsInByte = 8;
 // custom<FunctionTypes>
 //===----------------------------------------------------------------------===//
 
-static ParseResult parseFunctionTypes(AsmParser &p,
-                                      FailureOr<SmallVector<Type>> &params,
-                                      FailureOr<bool> &isVarArg) {
-  params.emplace();
+static ParseResult parseFunctionTypes(AsmParser &p, SmallVector<Type> &params,
+                                      bool &isVarArg) {
   isVarArg = false;
   // `(` `)`
   if (succeeded(p.parseOptionalRParen()))
@@ -49,10 +47,10 @@ static ParseResult parseFunctionTypes(AsmParser &p,
   }
 
   // type (`,` type)* (`,` `...`)?
-  FailureOr<Type> type;
+  Type type;
   if (parsePrettyLLVMType(p, type))
     return failure();
-  params->push_back(*type);
+  params.push_back(type);
   while (succeeded(p.parseOptionalComma())) {
     if (succeeded(p.parseOptionalEllipsis())) {
       isVarArg = true;
@@ -60,7 +58,7 @@ static ParseResult parseFunctionTypes(AsmParser &p,
     }
     if (parsePrettyLLVMType(p, type))
       return failure();
-    params->push_back(*type);
+    params.push_back(type);
   }
   return p.parseRParen();
 }
@@ -81,11 +79,10 @@ static void printFunctionTypes(AsmPrinter &p, ArrayRef<Type> params,
 // custom<Pointer>
 //===----------------------------------------------------------------------===//
 
-static ParseResult parsePointer(AsmParser &p, FailureOr<Type> &elementType,
-                                FailureOr<unsigned> &addressSpace) {
-  addressSpace = 0;
+static ParseResult parsePointer(AsmParser &p, Type &elementType,
+                                unsigned &addressSpace) {
   // `<` addressSpace `>`
-  OptionalParseResult result = p.parseOptionalInteger(*addressSpace);
+  OptionalParseResult result = p.parseOptionalInteger(addressSpace);
   if (result.has_value()) {
     if (failed(result.value()))
       return failure();
@@ -96,7 +93,7 @@ static ParseResult parsePointer(AsmParser &p, FailureOr<Type> &elementType,
   if (parsePrettyLLVMType(p, elementType))
     return failure();
   if (succeeded(p.parseOptionalComma()))
-    return p.parseInteger(*addressSpace);
+    return p.parseInteger(addressSpace);
 
   return success();
 }

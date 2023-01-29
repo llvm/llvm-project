@@ -4899,8 +4899,18 @@ void OpenMPOpt::registerAAsForFunction(Attributor &A, const Function &F) {
       bool UsedAssumedInformation = false;
       A.getAssumedSimplified(IRPosition::value(*LI), /* AA */ nullptr,
                              UsedAssumedInformation, AA::Interprocedural);
-    } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
+      continue;
+    }
+    if (auto *SI = dyn_cast<StoreInst>(&I)) {
       A.getOrCreateAAFor<AAIsDead>(IRPosition::value(*SI));
+      continue;
+    }
+    if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+      if (II->getIntrinsicID() == Intrinsic::assume) {
+        A.getOrCreateAAFor<AAPotentialValues>(
+            IRPosition::value(*II->getArgOperand(0)));
+        continue;
+      }
     }
   }
 }

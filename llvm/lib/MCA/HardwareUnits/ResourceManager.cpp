@@ -65,7 +65,7 @@ void DefaultResourceStrategy::used(uint64_t Mask) {
 ResourceState::ResourceState(const MCProcResourceDesc &Desc, unsigned Index,
                              uint64_t Mask)
     : ProcResourceDescIndex(Index), ResourceMask(Mask),
-      BufferSize(Desc.BufferSize), IsAGroup(countPopulation(ResourceMask) > 1) {
+      BufferSize(Desc.BufferSize), IsAGroup(llvm::popcount(ResourceMask) > 1) {
   if (IsAGroup) {
     ResourceSizeMask =
         ResourceMask ^ 1ULL << getResourceStateIndex(ResourceMask);
@@ -79,7 +79,7 @@ ResourceState::ResourceState(const MCProcResourceDesc &Desc, unsigned Index,
 
 bool ResourceState::isReady(unsigned NumUnits) const {
   return (!isReserved() || isADispatchHazard()) &&
-         countPopulation(ReadyMask) >= NumUnits;
+         (unsigned)llvm::popcount(ReadyMask) >= NumUnits;
 }
 
 ResourceStateEvent ResourceState::isBufferAvailable() const {
@@ -293,7 +293,7 @@ uint64_t ResourceManager::checkAvailability(const InstrDesc &Desc) const {
     }
 
     if (Desc.HasPartiallyOverlappingGroups && !RS.isAResourceGroup()) {
-      unsigned NumAvailableUnits = countPopulation(RS.getReadyMask());
+      unsigned NumAvailableUnits = llvm::popcount(RS.getReadyMask());
       NumAvailableUnits -= NumUnits;
       AvailableUnits[E.first] = NumAvailableUnits;
       if (!NumAvailableUnits)
@@ -325,7 +325,7 @@ uint64_t ResourceManager::checkAvailability(const InstrDesc &Desc) const {
       auto it = AvailableUnits.find(ResourceMask);
       if (it == AvailableUnits.end()) {
         unsigned Index = getResourceStateIndex(ResourceMask);
-        unsigned NumUnits = countPopulation(Resources[Index]->getReadyMask());
+        unsigned NumUnits = llvm::popcount(Resources[Index]->getReadyMask());
         it =
             AvailableUnits.insert(std::make_pair(ResourceMask, NumUnits)).first;
       }
@@ -362,7 +362,7 @@ void ResourceManager::issueInstruction(
       Pipes.emplace_back(std::pair<ResourceRef, ResourceCycles>(
           Pipe, ResourceCycles(CS.size())));
     } else {
-      assert((countPopulation(R.first) > 1) && "Expected a group!");
+      assert((llvm::popcount(R.first) > 1) && "Expected a group!");
       // Mark this group as reserved.
       assert(R.second.isReserved());
       reserveResource(R.first);
@@ -379,7 +379,7 @@ void ResourceManager::cycleEvent(SmallVectorImpl<ResourceRef> &ResourcesFreed) {
       // Release this resource.
       const ResourceRef &RR = BR.first;
 
-      if (countPopulation(RR.first) == 1)
+      if (llvm::popcount(RR.first) == 1)
         release(RR);
       releaseResource(RR.first);
       ResourcesFreed.push_back(RR);

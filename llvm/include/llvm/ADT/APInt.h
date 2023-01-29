@@ -1618,7 +1618,7 @@ public:
   /// \returns 0 if the value is zero, otherwise returns the number of set bits.
   unsigned countPopulation() const {
     if (isSingleWord())
-      return llvm::countPopulation(U.VAL);
+      return llvm::popcount(U.VAL);
     return countPopulationSlowCase();
   }
 

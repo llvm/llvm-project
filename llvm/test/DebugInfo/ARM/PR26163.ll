@@ -17,7 +17,7 @@
 ; CHECK-NEXT:     DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_piece 0x4)
 ; CHECK-NEXT:     DW_AT_abstract_origin
 
-; Created form the following test case (PR26163) with
+; Created from the following test case (PR26163) with
 ; clang -cc1 -triple armv4t--freebsd11.0-gnueabi -emit-obj -debug-info-kind=standalone -O2 -x c test.c
 ;
 ; typedef	unsigned int	size_t;

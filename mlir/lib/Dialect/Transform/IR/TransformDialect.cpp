@@ -74,7 +74,7 @@ void transform::TransformDialect::initialize() {
 
 void transform::TransformDialect::mergeInPDLMatchHooks(
     llvm::StringMap<PDLConstraintFunction> &&constraintFns) {
-  // Steal the constraint functions form the given map.
+  // Steal the constraint functions from the given map.
   for (auto &it : constraintFns)
     pdlMatchHooks.registerConstraintFunction(it.getKey(), std::move(it.second));
 }

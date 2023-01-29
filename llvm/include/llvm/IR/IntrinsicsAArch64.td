@@ -1612,27 +1612,40 @@ def int_aarch64_sve_adrd : AdvSIMD_2VectorArg_Intrinsic;
 //
 
 def int_aarch64_sve_add   : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_add_u : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_sub   : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_sub_u : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_subr  : AdvSIMD_Pred2VectorArg_Intrinsic;
 
 def int_aarch64_sve_pmul       : AdvSIMD_2VectorArg_Intrinsic;
 
 def int_aarch64_sve_mul        : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_mul_u      : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_mul_lane   : AdvSIMD_2VectorArgIndexed_Intrinsic;
 def int_aarch64_sve_smulh      : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_smulh_u    : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_umulh      : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_umulh_u    : AdvSIMD_Pred2VectorArg_Intrinsic;
 
 def int_aarch64_sve_sdiv       : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_sdiv_u     : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_udiv       : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_udiv_u     : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_sdivr      : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_udivr      : AdvSIMD_Pred2VectorArg_Intrinsic;
 
 def int_aarch64_sve_smax       : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_smax_u     : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_umax       : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_umax_u     : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_smin       : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_smin_u     : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_umin       : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_umin_u     : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_sabd       : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_sabd_u     : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_uabd       : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_uabd_u     : AdvSIMD_Pred2VectorArg_Intrinsic;
 
 def int_aarch64_sve_mad        : AdvSIMD_Pred3VectorArg_Intrinsic;
 def int_aarch64_sve_msb        : AdvSIMD_Pred3VectorArg_Intrinsic;
@@ -1670,12 +1683,15 @@ def int_aarch64_sve_uqsub_x   : AdvSIMD_2VectorArg_Intrinsic;
 // Shifts
 
 def int_aarch64_sve_asr      : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_asr_u    : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_asr_wide : AdvSIMD_SVE_ShiftWide_Intrinsic;
 def int_aarch64_sve_asrd     : AdvSIMD_SVE_ShiftByImm_Intrinsic;
 def int_aarch64_sve_insr     : AdvSIMD_SVE_INSR_Intrinsic;
 def int_aarch64_sve_lsl      : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_lsl_u    : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_lsl_wide : AdvSIMD_SVE_ShiftWide_Intrinsic;
 def int_aarch64_sve_lsr      : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_lsr_u    : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_lsr_wide : AdvSIMD_SVE_ShiftWide_Intrinsic;
 
 //

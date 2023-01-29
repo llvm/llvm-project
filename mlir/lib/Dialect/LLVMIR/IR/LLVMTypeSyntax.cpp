@@ -356,9 +356,8 @@ Type mlir::LLVM::detail::parseType(DialectAsmParser &parser) {
   return type;
 }
 
-ParseResult LLVM::parsePrettyLLVMType(AsmParser &p, FailureOr<Type> &type) {
-  type.emplace();
-  return dispatchParse(p, *type);
+ParseResult LLVM::parsePrettyLLVMType(AsmParser &p, Type &type) {
+  return dispatchParse(p, type);
 }
 
 void LLVM::printPrettyLLVMType(AsmPrinter &p, Type type) {

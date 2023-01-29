@@ -397,7 +397,7 @@ static void emitAvailabilityQueryForBitEnum(const Record &enumDef,
                   enumName);
 
     os << formatv(
-        "  assert(::llvm::countPopulation(static_cast<{0}>(value)) <= 1"
+        "  assert(::llvm::popcount(static_cast<{0}>(value)) <= 1"
         " && \"cannot have more than one bit set\");\n",
         underlyingType);
 

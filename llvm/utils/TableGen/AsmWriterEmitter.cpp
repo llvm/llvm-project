@@ -412,7 +412,7 @@ void AsmWriterEmitter::EmitGetMnemonic(
          << "_t Bits = 0;\n";
   while (BytesNeeded != 0) {
     // Figure out how big this table section needs to be, but no bigger than 4.
-    unsigned TableSize = std::min(1 << Log2_32(BytesNeeded), 4);
+    unsigned TableSize = std::min(llvm::bit_floor(BytesNeeded), 4u);
     BytesNeeded -= TableSize;
     TableSize *= 8; // Convert to bits;
     uint64_t Mask = (1ULL << TableSize) - 1;

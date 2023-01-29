@@ -22,6 +22,16 @@
 
 namespace llvm {
 
+template <> struct DomTreeNodeTraits<VPBlockBase> {
+  using NodeType = VPBlockBase;
+  using NodePtr = VPBlockBase *;
+  using ParentPtr = VPRegionBlock *;
+
+  static NodePtr getEntryNode(ParentPtr Parent) { return Parent->getEntry(); }
+  static ParentPtr getParent(VPBlockBase *B) { return B->getParent(); }
+};
+
+///
 /// Template specialization of the standard LLVM dominator tree utility for
 /// VPBlockBases.
 using VPDominatorTree = DomTreeBase<VPBlockBase>;

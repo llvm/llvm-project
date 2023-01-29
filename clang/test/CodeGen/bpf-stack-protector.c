@@ -24,7 +24,7 @@ char *strcpy(char *s1, const char *s2);
 //      STRONG: warning: ignoring '-fstack-protector-strong'
 // COMMON-SAME: option as it is not currently supported for target 'bpf'
 
-// COMMON: define {{.*}}void @test1(ptr noundef %msg) #[[A:.*]] {
+// COMMON: define {{.*}}void @test1(ptr noundef %{{[0-9a-z]+}}) #[[A:.*]] {
 void test1(const char *msg) {
   char a[strlen(msg) + 1];
   strcpy(a, msg);

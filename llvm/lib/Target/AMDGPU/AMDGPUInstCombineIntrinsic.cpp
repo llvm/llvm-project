@@ -1140,7 +1140,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
     unsigned DMaskVal = DMask->getZExtValue() & 0xf;
 
     // Mask off values that are undefined because the dmask doesn't cover them
-    DemandedElts &= (1 << countPopulation(DMaskVal)) - 1;
+    DemandedElts &= (1 << llvm::popcount(DMaskVal)) - 1;
 
     unsigned NewDMaskVal = 0;
     unsigned OrigLoadIdx = 0;

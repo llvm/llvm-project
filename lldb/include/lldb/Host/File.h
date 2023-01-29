@@ -226,7 +226,7 @@ public:
   ///     A buffer where to put the bytes that are read.
   ///
   /// \param[in,out] num_bytes
-  ///     The number of bytes to read form the current file position
+  ///     The number of bytes to read from the current file position
   ///     which gets modified with the number of bytes that were read.
   ///
   /// \param[in,out] offset

@@ -226,7 +226,7 @@ private:
       // Count the number of values since the checkpoint.
       Word BelowKeyMask = KeyMask - 1;
       unsigned CountSinceCheckpoint =
-          llvm::countPopulation(HasValue[KeyWord] & BelowKeyMask);
+          llvm::popcount(HasValue[KeyWord] & BelowKeyMask);
       // Find the value relative to the last checkpoint.
       return Values[Checkpoints[KeyWord] + CountSinceCheckpoint];
     }

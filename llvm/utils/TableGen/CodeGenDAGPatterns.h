@@ -69,7 +69,7 @@ struct MachineValueTypeSet {
   unsigned size() const {
     unsigned Count = 0;
     for (WordType W : Words)
-      Count += countPopulation(W);
+      Count += llvm::popcount(W);
     return Count;
   }
   LLVM_ATTRIBUTE_ALWAYS_INLINE

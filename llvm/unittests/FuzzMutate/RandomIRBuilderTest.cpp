@@ -130,7 +130,7 @@ TEST(RandomIRBuilderTest, InsertValueIndexes) {
 }
 
 TEST(RandomIRBuilderTest, ShuffleVectorSink) {
-  // Check that we will never use shuffle vector mask as a sink form the
+  // Check that we will never use shuffle vector mask as a sink from the
   // unrelated operation.
 
   LLVMContext Ctx;
