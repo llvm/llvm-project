@@ -4674,6 +4674,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BImove:
   case Builtin::BImove_if_noexcept:
   case Builtin::BIforward:
+  case Builtin::BIforward_like:
   case Builtin::BIas_const:
     return RValue::get(EmitLValue(E->getArg(0)).getPointer(*this));
   case Builtin::BI__GetExceptionInfo: {
