@@ -59,7 +59,7 @@ public:
     severity_ = severity;
     return *this;
   }
-  bool isFatal() const {
+  bool IsFatal() const {
     return severity_ == Severity::Error || severity_ == Severity::Todo;
   }
 
@@ -111,7 +111,7 @@ public:
   MessageFormattedText &operator=(const MessageFormattedText &) = default;
   MessageFormattedText &operator=(MessageFormattedText &&) = default;
   const std::string &string() const { return string_; }
-  bool isFatal() const {
+  bool IsFatal() const {
     return severity_ == Severity::Error || severity_ == Severity::Todo;
   }
   Severity severity() const { return severity_; }

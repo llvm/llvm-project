@@ -54,8 +54,8 @@ static uint32_t calculateFileAlignment(const MachOObjectFile &O) {
       }
     } else {
       P2CurrentAlignment =
-          countTrailingZeros(Is64Bit ? O.getSegment64LoadCommand(LC).vmaddr
-                                     : O.getSegmentLoadCommand(LC).vmaddr);
+          llvm::countr_zero(Is64Bit ? O.getSegment64LoadCommand(LC).vmaddr
+                                    : O.getSegmentLoadCommand(LC).vmaddr);
     }
     P2MinAlignment = std::min(P2MinAlignment, P2CurrentAlignment);
   }

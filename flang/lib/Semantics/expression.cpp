@@ -2766,28 +2766,24 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
           "References to the procedure '%s' require an explicit interface"_err_en_US,
           DEREF(procSymbol).name());
     }
-    // Checks for ASSOCIATED() are done in intrinsic table processing
     const SpecificIntrinsic *specificIntrinsic{proc.GetSpecificIntrinsic()};
-    bool procIsAssociated{
-        specificIntrinsic && specificIntrinsic->name == "associated"};
-    if (!procIsAssociated) {
-      bool procIsDummy{procSymbol && IsDummy(*procSymbol)};
-      if (chars->functionResult &&
-          chars->functionResult->IsAssumedLengthCharacter() &&
-          !specificIntrinsic && !procIsDummy) {
+    bool procIsDummy{procSymbol && IsDummy(*procSymbol)};
+    if (chars->functionResult &&
+        chars->functionResult->IsAssumedLengthCharacter() &&
+        !specificIntrinsic && !procIsDummy) {
+      Say(callSite,
+          "Assumed-length character function must be defined with a length to be called"_err_en_US);
+    }
+    ok &= semantics::CheckArguments(*chars, arguments, GetFoldingContext(),
+        context_.FindScope(callSite), treatExternalAsImplicit,
+        specificIntrinsic);
+    if (procSymbol && !IsPureProcedure(*procSymbol)) {
+      if (const semantics::Scope *
+          pure{semantics::FindPureProcedureContaining(
+              context_.FindScope(callSite))}) {
         Say(callSite,
-            "Assumed-length character function must be defined with a length to be called"_err_en_US);
-      }
-      ok &= semantics::CheckArguments(*chars, arguments, GetFoldingContext(),
-          context_.FindScope(callSite), treatExternalAsImplicit,
-          specificIntrinsic);
-      if (procSymbol && !IsPureProcedure(*procSymbol)) {
-        if (const semantics::Scope *pure{semantics::FindPureProcedureContaining(
-                context_.FindScope(callSite))}) {
-          Say(callSite,
-              "Procedure '%s' referenced in pure subprogram '%s' must be pure too"_err_en_US,
-              procSymbol->name(), DEREF(pure->symbol()).name());
-        }
+            "Procedure '%s' referenced in pure subprogram '%s' must be pure too"_err_en_US,
+            procSymbol->name(), DEREF(pure->symbol()).name());
       }
     }
   }

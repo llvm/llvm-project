@@ -269,9 +269,9 @@ void Prescanner::NextLine() {
 }
 
 void Prescanner::LabelField(TokenSequence &token) {
-  const char *bad{nullptr};
   int outCol{1};
   const char *start{at_};
+  std::optional<int> badColumn;
   for (; *at_ != '\n' && column_ <= 6; ++at_) {
     if (*at_ == '\t') {
       ++at_;
@@ -282,18 +282,24 @@ void Prescanner::LabelField(TokenSequence &token) {
         !(*at_ == '0' && column_ == 6)) { // '0' in column 6 becomes space
       EmitChar(token, *at_);
       ++outCol;
-      if (!bad && !IsDecimalDigit(*at_)) {
-        bad = at_;
+      if (!badColumn && (column_ == 6 || !IsDecimalDigit(*at_))) {
+        badColumn = column_;
       }
     }
     ++column_;
   }
-  if (bad && !preprocessor_.IsNameDefined(token.CurrentOpenToken())) {
-    Say(GetProvenance(bad),
-        "Character in fixed-form label field must be a digit"_warn_en_US);
+  if (badColumn && !preprocessor_.IsNameDefined(token.CurrentOpenToken())) {
+    Say(GetProvenance(start + *badColumn - 1),
+        *badColumn == 6
+            ? "Statement should not begin with a continuation line"_warn_en_US
+            : "Character in fixed-form label field must be a digit"_warn_en_US);
     token.clear();
-    at_ = start;
-    return;
+    if (*badColumn < 6) {
+      at_ = start;
+      column_ = 1;
+      return;
+    }
+    outCol = 1;
   }
   if (outCol == 1) { // empty label field
     // Emit a space so that, if the line is rescanned after preprocessing,

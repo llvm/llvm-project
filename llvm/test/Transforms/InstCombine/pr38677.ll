@@ -12,9 +12,7 @@ define i32 @foo(i1 %which, ptr %dst) {
 ; CHECK-NEXT:    br label [[FINAL]]
 ; CHECK:       final:
 ; CHECK-NEXT:    [[USE2:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ select (i1 icmp eq (ptr @A, ptr @B), i32 2, i32 1), [[DELAY]] ]
-; CHECK-NEXT:    [[B7:%.*]] = mul i32 [[USE2]], 2147483647
-; CHECK-NEXT:    [[C3:%.*]] = icmp eq i32 [[B7]], 0
-; CHECK-NEXT:    store i1 [[C3]], ptr [[DST:%.*]], align 1
+; CHECK-NEXT:    store i1 false, ptr [[DST:%.*]], align 1
 ; CHECK-NEXT:    ret i32 [[USE2]]
 ;
 entry:

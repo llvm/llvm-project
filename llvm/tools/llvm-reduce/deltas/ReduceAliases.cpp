@@ -31,15 +31,17 @@ static void extractAliasesFromModule(Oracle &O, ReducerWorkItem &Program) {
   }
 }
 
-static void extractIFuncsFromModule(Oracle &O, Module &Program) {
+static void extractIFuncsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+  Module &Mod = WorkItem.getModule();
+
   std::vector<GlobalIFunc *> IFuncs;
-  for (GlobalIFunc &GI : Program.ifuncs()) {
+  for (GlobalIFunc &GI : Mod.ifuncs()) {
     if (!O.shouldKeep())
       IFuncs.push_back(&GI);
   }
 
   if (!IFuncs.empty())
-    lowerGlobalIFuncUsersAsGlobalCtor(Program, IFuncs);
+    lowerGlobalIFuncUsersAsGlobalCtor(Mod, IFuncs);
 }
 
 void llvm::reduceAliasesDeltaPass(TestRunner &Test) {

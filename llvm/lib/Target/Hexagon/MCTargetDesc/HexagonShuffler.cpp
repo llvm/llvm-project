@@ -101,7 +101,7 @@ unsigned HexagonResource::setWeight(unsigned s) {
     return Weight = 0;
 
   unsigned Ctpop = llvm::popcount(Units);
-  unsigned Cttz = countTrailingZeros(Units);
+  unsigned Cttz = llvm::countr_zero(Units);
   Weight = (1u << (SlotWeight * s)) * ((MaskWeight - Ctpop) << Cttz);
   return Weight;
 }

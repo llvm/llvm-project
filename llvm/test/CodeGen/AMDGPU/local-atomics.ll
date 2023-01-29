@@ -728,3 +728,103 @@ define amdgpu_kernel void @lds_atomic_umax_noret_i32_offset(ptr addrspace(3) %pt
   %result = atomicrmw umax ptr addrspace(3) %gep, i32 4 seq_cst
   ret void
 }
+
+; FUNC-LABEL: {{^}}lds_atomic_inc_ret_i32:
+; SICIVI: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; EG: LDS_CMPST
+; GCN: ds_inc_rtn_u32
+; GCN: s_endpgm
+define amdgpu_kernel void @lds_atomic_inc_ret_i32(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
+  %result = atomicrmw uinc_wrap ptr addrspace(3) %ptr, i32 4 seq_cst
+  store i32 %result, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; FUNC-LABEL: {{^}}lds_atomic_inc_ret_i32_offset:
+; SICIVI: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; EG: LDS_CMPST
+; GCN: ds_inc_rtn_u32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset:16
+; GCN: s_endpgm
+define amdgpu_kernel void @lds_atomic_inc_ret_i32_offset(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
+  %gep = getelementptr i32, ptr addrspace(3) %ptr, i32 4
+  %result = atomicrmw uinc_wrap ptr addrspace(3) %gep, i32 4 seq_cst
+  store i32 %result, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; FUNC-LABEL: {{^}}lds_atomic_inc_noret_i32:
+; SICIVI: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN: ds_inc_u32
+; GCN: s_endpgm
+define amdgpu_kernel void @lds_atomic_inc_noret_i32(ptr addrspace(3) %ptr) nounwind {
+  %result = atomicrmw uinc_wrap ptr addrspace(3) %ptr, i32 4 seq_cst
+  ret void
+}
+
+; FUNC-LABEL: {{^}}lds_atomic_inc_noret_i32_offset:
+; SICIVI: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN: ds_inc_u32 v{{[0-9]+}}, v{{[0-9]+}} offset:16
+; GCN: s_endpgm
+define amdgpu_kernel void @lds_atomic_inc_noret_i32_offset(ptr addrspace(3) %ptr) nounwind {
+  %gep = getelementptr i32, ptr addrspace(3) %ptr, i32 4
+  %result = atomicrmw uinc_wrap ptr addrspace(3) %gep, i32 4 seq_cst
+  ret void
+}
+
+; FUNC-LABEL: {{^}}lds_atomic_dec_ret_i32:
+; SICIVI: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; EG: LDS_CMPST
+; GCN: ds_dec_rtn_u32
+; GCN: s_endpgm
+define amdgpu_kernel void @lds_atomic_dec_ret_i32(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
+  %result = atomicrmw udec_wrap ptr addrspace(3) %ptr, i32 4 seq_cst
+  store i32 %result, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; FUNC-LABEL: {{^}}lds_atomic_dec_ret_i32_offset:
+; SICIVI: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; EG: LDS_CMPST
+; GCN: ds_dec_rtn_u32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset:16
+; GCN: s_endpgm
+define amdgpu_kernel void @lds_atomic_dec_ret_i32_offset(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
+  %gep = getelementptr i32, ptr addrspace(3) %ptr, i32 4
+  %result = atomicrmw udec_wrap ptr addrspace(3) %gep, i32 4 seq_cst
+  store i32 %result, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; FUNC-LABEL: {{^}}lds_atomic_dec_noret_i32:
+; SICIVI: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN: ds_dec_u32
+; GCN: s_endpgm
+define amdgpu_kernel void @lds_atomic_dec_noret_i32(ptr addrspace(3) %ptr) nounwind {
+  %result = atomicrmw udec_wrap ptr addrspace(3) %ptr, i32 4 seq_cst
+  ret void
+}
+
+; FUNC-LABEL: {{^}}lds_atomic_dec_noret_i32_offset:
+; SICIVI: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN: ds_dec_u32 v{{[0-9]+}}, v{{[0-9]+}} offset:16
+; GCN: s_endpgm
+define amdgpu_kernel void @lds_atomic_dec_noret_i32_offset(ptr addrspace(3) %ptr) nounwind {
+  %gep = getelementptr i32, ptr addrspace(3) %ptr, i32 4
+  %result = atomicrmw udec_wrap ptr addrspace(3) %gep, i32 4 seq_cst
+  ret void
+}

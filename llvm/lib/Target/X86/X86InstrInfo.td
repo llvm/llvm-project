@@ -2634,11 +2634,11 @@ let Predicates = [HasBMI2], Defs = [EFLAGS] in {
 
 def CountTrailingOnes : SDNodeXForm<imm, [{
   // Count the trailing ones in the immediate.
-  return getI8Imm(countTrailingOnes(N->getZExtValue()), SDLoc(N));
+  return getI8Imm(llvm::countr_one(N->getZExtValue()), SDLoc(N));
 }]>;
 
 def BEXTRMaskXForm : SDNodeXForm<imm, [{
-  unsigned Length = countTrailingOnes(N->getZExtValue());
+  unsigned Length = llvm::countr_one(N->getZExtValue());
   return getI32Imm(Length << 8, SDLoc(N));
 }]>;
 

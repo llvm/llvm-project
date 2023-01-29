@@ -230,19 +230,24 @@ TYPE_PARSER(construct<KindSelector>(
         construct<KindSelector>(construct<KindSelector::StarSize>(
             "*" >> digitString64 / spaceCheck))))
 
+constexpr auto noSpace{
+    recovery(withMessage("invalid space"_err_en_US, !" "_ch), space)};
+
 // R707 signed-int-literal-constant -> [sign] int-literal-constant
-TYPE_PARSER(sourced(construct<SignedIntLiteralConstant>(
-    SignedIntLiteralConstantWithoutKind{}, maybe(underscore >> kindParam))))
+TYPE_PARSER(sourced(
+    construct<SignedIntLiteralConstant>(SignedIntLiteralConstantWithoutKind{},
+        maybe(noSpace >> underscore >> noSpace >> kindParam))))
 
 // R708 int-literal-constant -> digit-string [_ kind-param]
 // The negated look-ahead for a trailing underscore prevents misrecognition
 // when the digit string is a numeric kind parameter of a character literal.
-TYPE_PARSER(construct<IntLiteralConstant>(
-    space >> digitString, maybe(underscore >> kindParam) / !underscore))
+TYPE_PARSER(construct<IntLiteralConstant>(space >> digitString,
+    maybe(underscore >> noSpace >> kindParam) / !underscore))
 
 // R709 kind-param -> digit-string | scalar-int-constant-name
 TYPE_PARSER(construct<KindParam>(digitString64) ||
-    construct<KindParam>(scalar(integer(constant(name)))))
+    construct<KindParam>(
+        scalar(integer(constant(sourced(rawName >> construct<Name>()))))))
 
 // R712 sign -> + | -
 // N.B. A sign constitutes a whole token, so a space is allowed in free form
@@ -278,7 +283,7 @@ TYPE_CONTEXT_PARSER("REAL literal constant"_en_US,
                         "."_ch >> digitString >> maybe(exponentPart) >> ok ||
                         digitString >> exponentPart >> ok) >>
                 construct<RealLiteralConstant::Real>()),
-            maybe(underscore >> kindParam)))
+            maybe(noSpace >> underscore >> noSpace >> kindParam)))
 
 // R718 complex-literal-constant -> ( real-part , imag-part )
 TYPE_CONTEXT_PARSER("COMPLEX literal constant"_en_US,
@@ -343,10 +348,10 @@ TYPE_CONTEXT_PARSER(
 // R725 logical-literal-constant ->
 //        .TRUE. [_ kind-param] | .FALSE. [_ kind-param]
 // Also accept .T. and .F. as extensions.
-TYPE_PARSER(construct<LogicalLiteralConstant>(
-                logicalTRUE, maybe(underscore >> kindParam)) ||
+TYPE_PARSER(construct<LogicalLiteralConstant>(logicalTRUE,
+                maybe(noSpace >> underscore >> noSpace >> kindParam)) ||
     construct<LogicalLiteralConstant>(
-        logicalFALSE, maybe(underscore >> kindParam)))
+        logicalFALSE, maybe(noSpace >> underscore >> noSpace >> kindParam)))
 
 // R726 derived-type-def ->
 //        derived-type-stmt [type-param-def-stmt]...

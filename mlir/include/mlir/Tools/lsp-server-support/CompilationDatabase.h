@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIB_MLIR_TOOLS_LSPSERVERSUPPORT_COMPILATIONDATABASE_H_
-#define LIB_MLIR_TOOLS_LSPSERVERSUPPORT_COMPILATIONDATABASE_H_
+#ifndef MLIR_TOOLS_LSPSERVERSUPPORT_COMPILATIONDATABASE_H
+#define MLIR_TOOLS_LSPSERVERSUPPORT_COMPILATIONDATABASE_H
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringMap.h"
@@ -67,4 +67,4 @@ private:
 } // namespace lsp
 } // namespace mlir
 
-#endif // LIB_MLIR_TOOLS_LSPSERVERSUPPORT_COMPILATIONDATABASE_H_
+#endif // MLIR_TOOLS_LSPSERVERSUPPORT_COMPILATIONDATABASE_H

@@ -192,7 +192,7 @@ void RISCVIntrinsicManagerImpl::InitIntrinsicList() {
     PolicyScheme MaskedPolicyScheme =
         static_cast<PolicyScheme>(Record.MaskedPolicyScheme);
 
-    const Policy DefaultPolicy(Record.HasTailPolicy, Record.HasMaskPolicy);
+    const Policy DefaultPolicy;
 
     llvm::SmallVector<PrototypeDescriptor> ProtoSeq =
         RVVIntrinsic::computeBuiltinTypes(BasicProtoSeq, /*IsMasked=*/false,
@@ -208,8 +208,7 @@ void RISCVIntrinsicManagerImpl::InitIntrinsicList() {
     bool UnMaskedHasPolicy = UnMaskedPolicyScheme != PolicyScheme::SchemeNone;
     bool MaskedHasPolicy = MaskedPolicyScheme != PolicyScheme::SchemeNone;
     SmallVector<Policy> SupportedUnMaskedPolicies =
-        RVVIntrinsic::getSupportedUnMaskedPolicies(Record.HasTailPolicy,
-                                                   Record.HasMaskPolicy);
+        RVVIntrinsic::getSupportedUnMaskedPolicies();
     SmallVector<Policy> SupportedMaskedPolicies =
         RVVIntrinsic::getSupportedMaskedPolicies(Record.HasTailPolicy,
                                                  Record.HasMaskPolicy);

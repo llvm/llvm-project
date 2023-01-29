@@ -444,7 +444,7 @@ static DecodeStatus decodeCRBitMOperand(MCInst &Inst, uint64_t Imm,
                                         const MCDisassembler *Decoder) {
   // The cr bit encoding is 0x80 >> cr_reg_num.
 
-  unsigned Zeros = countTrailingZeros(Imm);
+  unsigned Zeros = llvm::countr_zero(Imm);
   assert(Zeros < 8 && "Invalid CR bit value");
 
   Inst.addOperand(MCOperand::createReg(CRRegs[7 - Zeros]));

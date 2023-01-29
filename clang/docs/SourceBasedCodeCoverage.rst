@@ -127,6 +127,12 @@ copy that's mapped into memory). This implementation can be also enabled for
 other platforms by passing the ``-runtime-counter-relocation`` option to the
 backend during compilation.
 
+For a program such as the `Lit <https://llvm.org/docs/CommandGuide/lit.html>`_
+testing tool which invokes other programs, it may be necessary to set
+``LLVM_PROFILE_FILE`` for each invocation. The pattern strings "%p" or "%Nm"
+may help to avoid corruption due to concurrency. Note that "%p" is also a Lit
+token and needs to be escaped as "%%p".
+
 .. code-block:: console
 
     % clang++ -fprofile-instr-generate -fcoverage-mapping -mllvm -runtime-counter-relocation foo.cc -o foo
@@ -142,6 +148,9 @@ coverage reports. This is done using the "merge" tool in ``llvm-profdata``
 
     # Step 3(a): Index the raw profile.
     % llvm-profdata merge -sparse foo.profraw -o foo.profdata
+
+For an example of merging multiple profiles created by testing,
+see the LLVM `coverage build script <https://github.com/llvm/llvm-zorg/blob/main/zorg/jenkins/jobs/jobs/llvm-coverage>`_.
 
 There are multiple different ways to render coverage reports. The simplest
 option is to generate a line-oriented report:

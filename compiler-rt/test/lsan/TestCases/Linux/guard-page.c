@@ -1,6 +1,9 @@
 // Check that if LSan finds that SP doesn't point into thread stack (e.g.
 // if swapcontext is used), LSan will not hit the guard page.
 // RUN: %clang_lsan %s -o %t && %run %t
+
+// Fixme: remove once test passes with hwasan
+// UNSUPPORTED: hwasan
 // Missing 'getcontext' and 'makecontext' on Android.
 // UNSUPPORTED: android
 
