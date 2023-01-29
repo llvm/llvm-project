@@ -160,7 +160,14 @@ bool DataInitializationCompiler<DSV>::Scan(const parser::Variable &var) {
 template <typename DSV>
 bool DataInitializationCompiler<DSV>::Scan(
     const parser::Designator &designator) {
-  if (auto expr{exprAnalyzer_.Analyze(designator)}) {
+  MaybeExpr expr;
+  { // The out-of-range subscript errors from the designator folder are a
+    // more specific than the default ones from expression semantics, so
+    // disable those to avoid piling on.
+    auto restorer{exprAnalyzer_.GetContextualMessages().DiscardMessages()};
+    expr = exprAnalyzer_.Analyze(designator);
+  }
+  if (expr) {
     parser::CharBlock at{parser::FindSourceLocation(designator)};
     exprAnalyzer_.GetFoldingContext().messages().SetLocation(at);
     scope_ = &exprAnalyzer_.context().FindScope(at);

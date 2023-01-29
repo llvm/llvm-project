@@ -276,6 +276,12 @@ MaybeExpr ExpressionAnalyzer::CompleteSubscripts(ArrayRef &&ref) {
     // SELECT TYPE/RANK or ASSOCIATE.
     CHECK(symbol.has<semantics::AssocEntityDetails>());
   }
+  if (!semantics::IsNamedConstant(symbol) && !inDataStmtObject_) {
+    // Subscripts of named constants are checked in folding.
+    // Subscripts of DATA statement objects are checked in data statement
+    // conversion to initializers.
+    CheckConstantSubscripts(ref);
+  }
   return Designate(DataRef{std::move(ref)});
 }
 
@@ -300,6 +306,111 @@ MaybeExpr ExpressionAnalyzer::ApplySubscripts(
           },
       },
       std::move(dataRef.u));
+}
+
+void ExpressionAnalyzer::CheckConstantSubscripts(ArrayRef &ref) {
+  // Fold subscript expressions and check for an empty triplet.
+  Shape lb{GetLBOUNDs(foldingContext_, ref.base())};
+  Shape ub{GetUBOUNDs(foldingContext_, ref.base())};
+  bool anyPossiblyEmptyDim{false};
+  int dim{0};
+  for (Subscript &ss : ref.subscript()) {
+    if (Triplet * triplet{std::get_if<Triplet>(&ss.u)}) {
+      auto expr{Fold(triplet->stride())};
+      auto stride{ToInt64(expr)};
+      triplet->set_stride(std::move(expr));
+      if (stride) {
+        if (*stride == 0) {
+          Say("Stride of triplet must not be zero"_err_en_US);
+          return;
+        }
+        std::optional<ConstantSubscript> lower, upper;
+        if (auto expr{triplet->lower()}) {
+          *expr = Fold(std::move(*expr));
+          lower = ToInt64(*expr);
+          triplet->set_lower(std::move(*expr));
+        } else {
+          lower = ToInt64(lb[dim]);
+        }
+        if (auto expr{triplet->upper()}) {
+          *expr = Fold(std::move(*expr));
+          upper = ToInt64(*expr);
+          triplet->set_upper(std::move(*expr));
+        } else {
+          upper = ToInt64(ub[dim]);
+        }
+        if (lower && upper) {
+          if (*stride > 0) {
+            anyPossiblyEmptyDim |= *lower > *upper;
+          } else {
+            anyPossiblyEmptyDim |= *lower < *upper;
+          }
+        } else {
+          anyPossiblyEmptyDim = true;
+        }
+      } else {
+        anyPossiblyEmptyDim = true;
+      }
+    } else { // not triplet
+      auto &expr{std::get<IndirectSubscriptIntegerExpr>(ss.u).value()};
+      expr = Fold(std::move(expr));
+      anyPossiblyEmptyDim |= expr.Rank() > 0; // vector subscript
+    }
+    ++dim;
+  }
+  if (anyPossiblyEmptyDim) {
+    return;
+  }
+  dim = 0;
+  for (Subscript &ss : ref.subscript()) {
+    auto dimLB{ToInt64(lb[dim])};
+    auto dimUB{ToInt64(ub[dim])};
+    std::optional<ConstantSubscript> val[2];
+    int vals{0};
+    if (auto *triplet{std::get_if<Triplet>(&ss.u)}) {
+      auto stride{ToInt64(triplet->stride())};
+      std::optional<ConstantSubscript> lower, upper;
+      if (const auto *lowerExpr{triplet->GetLower()}) {
+        lower = ToInt64(*lowerExpr);
+      } else if (lb[dim]) {
+        lower = ToInt64(*lb[dim]);
+      }
+      if (const auto *upperExpr{triplet->GetUpper()}) {
+        upper = ToInt64(*upperExpr);
+      } else if (ub[dim]) {
+        upper = ToInt64(*ub[dim]);
+      }
+      if (stride && *stride != 0 && lower && upper) {
+        // Normalize upper bound for non-unit stride
+        // 1:10:2 -> 1:9:2, 10:1:-2 -> 10:2:-2
+        *upper = *lower + *stride * ((*upper - *lower) / *stride);
+        val[vals++] = lower;
+        val[vals++] = upper;
+      }
+    } else {
+      val[vals++] =
+          ToInt64(std::get<IndirectSubscriptIntegerExpr>(ss.u).value());
+    }
+    for (int j{0}; j < vals; ++j) {
+      if (val[j]) {
+        if (dimLB && *val[j] < *dimLB) {
+          AttachDeclaration(
+              Say("Subscript %jd is less than lower bound %jd for dimension %d of array"_err_en_US,
+                  static_cast<std::intmax_t>(*val[j]),
+                  static_cast<std::intmax_t>(*dimLB), dim + 1),
+              ref.base().GetLastSymbol());
+        }
+        if (dimUB && *val[j] > *dimUB) {
+          AttachDeclaration(
+              Say("Subscript %jd is greater than upper bound %jd for dimension %d of array"_err_en_US,
+                  static_cast<std::intmax_t>(*val[j]),
+                  static_cast<std::intmax_t>(*dimUB), dim + 1),
+              ref.base().GetLastSymbol());
+        }
+      }
+    }
+    ++dim;
+  }
 }
 
 // C919a - only one part-ref of a data-ref may have rank > 0
@@ -4097,6 +4208,15 @@ evaluate::Expr<evaluate::SubscriptInteger> AnalyzeKindSelector(
 }
 
 ExprChecker::ExprChecker(SemanticsContext &context) : context_{context} {}
+
+bool ExprChecker::Pre(const parser::DataStmtObject &obj) {
+  exprAnalyzer_.set_inDataStmtObject(true);
+  return true;
+}
+
+void ExprChecker::Post(const parser::DataStmtObject &obj) {
+  exprAnalyzer_.set_inDataStmtObject(false);
+}
 
 bool ExprChecker::Pre(const parser::DataImpliedDo &ido) {
   parser::Walk(std::get<parser::DataImpliedDo::Bounds>(ido.t), *this);

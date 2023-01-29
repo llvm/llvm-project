@@ -78,7 +78,7 @@ uint8_t ArmUnwindInfo::GetByteAtOffset(const uint32_t *data,
                                        uint16_t offset) const {
   uint32_t value = data[offset / 4];
   if (m_byte_order != endian::InlHostByteOrder())
-    value = llvm::ByteSwap_32(value);
+    value = llvm::byteswap<uint32_t>(value);
   return (value >> ((3 - (offset % 4)) * 8)) & 0xff;
 }
 
