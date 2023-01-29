@@ -1064,6 +1064,86 @@ static void computeKnownBitsFromShiftOperator(
     Known.setAllZero();
 }
 
+static KnownBits getKnownBitsFromAndXorOr(const Operator *I,
+                                          const APInt &DemandedElts,
+                                          const KnownBits &KnownLHS,
+                                          const KnownBits &KnownRHS,
+                                          unsigned Depth, const Query &Q) {
+  unsigned BitWidth = KnownLHS.getBitWidth();
+  KnownBits KnownOut(BitWidth);
+  bool IsAnd = false;
+  bool HasKnownOne = !KnownLHS.One.isZero() || !KnownRHS.One.isZero();
+  Value *X = nullptr, *Y = nullptr;
+
+  switch (I->getOpcode()) {
+  case Instruction::And:
+    KnownOut = KnownLHS & KnownRHS;
+    IsAnd = true;
+    // and(x, -x) is common idioms that will clear all but lowest set
+    // bit. If we have a single known bit in x, we can clear all bits
+    // above it.
+    // TODO: instcombine often reassociates independent `and` which can hide
+    // this pattern. Try to match and(x, and(-x, y)) / and(and(x, y), -x).
+    if (HasKnownOne && match(I, m_c_And(m_Value(X), m_Neg(m_Deferred(X))))) {
+      // -(-x) == x so using whichever (LHS/RHS) gets us a better result.
+      if (KnownLHS.countMaxTrailingZeros() <= KnownRHS.countMaxTrailingZeros())
+        KnownOut = KnownLHS.blsi();
+      else
+        KnownOut = KnownRHS.blsi();
+    }
+    break;
+  case Instruction::Or:
+    KnownOut = KnownLHS | KnownRHS;
+    break;
+  case Instruction::Xor:
+    KnownOut = KnownLHS ^ KnownRHS;
+    // xor(x, x-1) is common idioms that will clear all but lowest set
+    // bit. If we have a single known bit in x, we can clear all bits
+    // above it.
+    // TODO: xor(x, x-1) is often rewritting as xor(x, x-C) where C !=
+    // -1 but for the purpose of demanded bits (xor(x, x-C) &
+    // Demanded) == (xor(x, x-1) & Demanded). Extend the xor pattern
+    // to use arbitrary C if xor(x, x-C) as the same as xor(x, x-1).
+    if (HasKnownOne &&
+        match(I, m_c_Xor(m_Value(X), m_c_Add(m_Deferred(X), m_AllOnes())))) {
+      const KnownBits &XBits = I->getOperand(0) == X ? KnownLHS : KnownRHS;
+      KnownOut = XBits.blsmsk();
+    }
+    break;
+  default:
+    llvm_unreachable("Invalid Op used in 'analyzeKnownBitsFromAndXorOr'");
+  }
+
+  // and(x, add (x, -1)) is a common idiom that always clears the low bit;
+  // here we handle the more general case of adding any odd number by
+  // matching the form and(x, add(x, y)) where y is odd.
+  // TODO: This could be generalized to clearing any bit set in y where the
+  // following bit is known to be unset in y.
+  if (IsAnd && !KnownOut.Zero[0] && !KnownOut.One[0] &&
+      match(I, m_c_BinOp(m_Value(X), m_c_Add(m_Deferred(X), m_Value(Y))))) {
+    KnownBits KnownY(BitWidth);
+    computeKnownBits(Y, DemandedElts, KnownY, Depth + 1, Q);
+    if (KnownY.countMinTrailingOnes() > 0)
+      KnownOut.Zero.setBit(0);
+  }
+  return KnownOut;
+}
+
+// Public so this can be used in `SimplifyDemandedUseBits`.
+KnownBits llvm::analyzeKnownBitsFromAndXorOr(
+    const Operator *I, const KnownBits &KnownLHS, const KnownBits &KnownRHS,
+    unsigned Depth, const DataLayout &DL, AssumptionCache *AC,
+    const Instruction *CxtI, const DominatorTree *DT,
+    OptimizationRemarkEmitter *ORE, bool UseInstrInfo) {
+  auto *FVTy = dyn_cast<FixedVectorType>(I->getType());
+  APInt DemandedElts =
+      FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
+
+  return getKnownBitsFromAndXorOr(
+      I, DemandedElts, KnownLHS, KnownRHS, Depth,
+      Query(DL, AC, safeCxtI(I, CxtI), DT, UseInstrInfo, ORE));
+}
+
 static void computeKnownBitsFromOperator(const Operator *I,
                                          const APInt &DemandedElts,
                                          KnownBits &Known, unsigned Depth,
@@ -1078,69 +1158,24 @@ static void computeKnownBitsFromOperator(const Operator *I,
             Q.IIQ.getMetadata(cast<LoadInst>(I), LLVMContext::MD_range))
       computeKnownBitsFromRangeMetadata(*MD, Known);
     break;
-  case Instruction::And: {
-    // If either the LHS or the RHS are Zero, the result is zero.
+  case Instruction::And:
     computeKnownBits(I->getOperand(1), DemandedElts, Known, Depth + 1, Q);
     computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
 
-    Value *X = nullptr, *Y = nullptr;
-    // and(x, -x) is a common idiom for clearing all but lowest set bit. If we
-    // have a single known bit in x, we can clear all bits above it.
-    // TODO: instcombine often reassociates independent `and` which can hide
-    // this pattern. Try to match and(x, and(-x, y)) / and(and(x, y), -x).
-    if (!Known.One.isZero() || !Known2.One.isZero()) {
-      if (match(I, m_c_BinOp(m_Value(X), m_Neg(m_Deferred(X))))) {
-        // -(-x) == x so pick whichever we can get a better result with.
-        if (Known.countMaxTrailingZeros() <= Known2.countMaxTrailingZeros())
-          Known = Known.blsi();
-        else
-          Known = Known2.blsi();
-
-        break;
-      }
-    }
-    Known &= Known2;
-
-    // and(x, add (x, -1)) is a common idiom that always clears the low bit;
-    // here we handle the more general case of adding any odd number by
-    // matching the form add(x, add(x, y)) where y is odd.
-    // TODO: This could be generalized to clearing any bit set in y where the
-    // following bit is known to be unset in y.
-    if (!Known.Zero[0] && !Known.One[0] &&
-        match(I, m_c_BinOp(m_Value(X), m_Add(m_Deferred(X), m_Value(Y))))) {
-      Known2.resetAll();
-      computeKnownBits(Y, DemandedElts, Known2, Depth + 1, Q);
-      if (Known2.countMinTrailingOnes() > 0)
-        Known.Zero.setBit(0);
-    }
+    Known = getKnownBitsFromAndXorOr(I, DemandedElts, Known2, Known, Depth, Q);
     break;
-  }
   case Instruction::Or:
     computeKnownBits(I->getOperand(1), DemandedElts, Known, Depth + 1, Q);
     computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
 
-    Known |= Known2;
+    Known = getKnownBitsFromAndXorOr(I, DemandedElts, Known2, Known, Depth, Q);
     break;
-  case Instruction::Xor: {
+  case Instruction::Xor:
     computeKnownBits(I->getOperand(1), DemandedElts, Known, Depth + 1, Q);
     computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
 
-    Value *X = nullptr;
-    // xor(x, x + -1) is a common idiom that will clear all bits above
-    // the lowest set bit. We can safely say any bit past the lowest
-    // known one must be zero.
-    // TODO: `x + -1` is often shrunk `x + C` which `C` is minimum bits needed
-    // for demanded. This can cause us to miss this pattern. Expand to account
-    // for `x + -1` in the context of demanded bits.
-    if ((!Known.One.isZero() || !Known2.One.isZero()) &&
-        match(I, m_c_BinOp(m_Value(X), m_c_Add(m_Deferred(X), m_AllOnes())))) {
-      // Known2 is confusingly LHS.
-      const KnownBits &XBits = I->getOperand(0) == X ? Known2 : Known;
-      Known = XBits.blsmsk();
-    } else {
-      Known ^= Known2;
-    }
-  } break;
+    Known = getKnownBitsFromAndXorOr(I, DemandedElts, Known2, Known, Depth, Q);
+    break;
   case Instruction::Mul: {
     bool NSW = Q.IIQ.hasNoSignedWrap(cast<OverflowingBinaryOperator>(I));
     computeKnownBitsMul(I->getOperand(0), I->getOperand(1), NSW, DemandedElts,
