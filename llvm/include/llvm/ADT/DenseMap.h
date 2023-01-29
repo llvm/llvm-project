@@ -803,7 +803,7 @@ public:
     unsigned OldNumBuckets = NumBuckets;
     BucketT *OldBuckets = Buckets;
 
-    allocateBuckets(std::max<unsigned>(64, static_cast<unsigned>(NextPowerOf2(AtLeast-1))));
+    allocateBuckets(llvm::bit_ceil(std::max(64u, AtLeast)));
     assert(Buckets);
     if (!OldBuckets) {
       this->BaseT::initEmpty();
@@ -1042,7 +1042,7 @@ public:
 
   void grow(unsigned AtLeast) {
     if (AtLeast > InlineBuckets)
-      AtLeast = std::max<unsigned>(64, NextPowerOf2(AtLeast-1));
+      AtLeast = llvm::bit_ceil(std::max(64u, AtLeast));
 
     if (Small) {
       // First move the inline buckets into a temporary storage.
