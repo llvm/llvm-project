@@ -528,7 +528,7 @@ void X86FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
   BitVector GPRsToZero(TRI->getNumRegs());
   for (MCRegister Reg : RegsToZero.set_bits())
     if (TRI->isGeneralPurposeRegister(MF, Reg)) {
-      GPRsToZero.set(getX86SubSuperRegisterOrZero(Reg, 32));
+      GPRsToZero.set(getX86SubSuperRegister(Reg, 32));
       RegsToZero.reset(Reg);
     }
 
