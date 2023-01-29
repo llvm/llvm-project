@@ -75,12 +75,12 @@ define i1 @opt_setcc_srl_eq_zero(i128 %a) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    orl %ecx, %edx
 ; X86-NEXT:    orl %eax, %edx
-; X86-NEXT:    orl %ecx, %eax
-; X86-NEXT:    shldl $15, %edx, %eax
+; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    orl %eax, %ecx
+; X86-NEXT:    shldl $15, %edx, %ecx
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 ;
@@ -100,12 +100,12 @@ define i1 @opt_setcc_srl_ne_zero(i128 %a) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    orl %ecx, %edx
 ; X86-NEXT:    orl %eax, %edx
-; X86-NEXT:    orl %ecx, %eax
-; X86-NEXT:    shldl $15, %edx, %eax
+; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    orl %eax, %ecx
+; X86-NEXT:    shldl $15, %edx, %ecx
 ; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
 ;
@@ -173,22 +173,22 @@ define i1 @opt_setcc_shl_eq_zero_multiple_shl_users(i128 %a) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    shldl $17, %esi, %edx
-; X86-NEXT:    shldl $17, %ecx, %esi
+; X86-NEXT:    shldl $17, %edx, %esi
+; X86-NEXT:    shldl $17, %ecx, %edx
 ; X86-NEXT:    shldl $17, %eax, %ecx
 ; X86-NEXT:    shll $17, %eax
 ; X86-NEXT:    movl %ecx, %edi
-; X86-NEXT:    orl %edx, %edi
+; X86-NEXT:    orl %esi, %edi
 ; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    orl %esi, %ebx
+; X86-NEXT:    orl %edx, %ebx
 ; X86-NEXT:    orl %edi, %ebx
 ; X86-NEXT:    sete %bl
-; X86-NEXT:    pushl %edx
 ; X86-NEXT:    pushl %esi
+; X86-NEXT:    pushl %edx
 ; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll use@PLT

@@ -510,3 +510,11 @@ void foo(int arg) {
 }
 
 #endif
+//.
+// CHECK-PPC64LE: attributes #0 = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="-altivec,-bpermd,-crbits,-crypto,-direct-move,-extdiv,-htm,-isa-v206-instructions,-isa-v207-instructions,-isa-v30-instructions,-power8-vector,-power9-vector,-privileged,-quadword-atomics,-rop-protect,-spe,-vsx" }
+// CHECK-PPC64LE: attributes #1 = { nounwind }
+// CHECK-PPC64LE: attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+//.
+// CHECK-I386: attributes #0 = { mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+x87" }
+// CHECK-I386: attributes #1 = { nounwind }
+// CHECK-I386: attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }

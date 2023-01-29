@@ -1238,35 +1238,95 @@ define i1 @eq_i256_op(i256 %a, i256 %b) {
 }
 
 define i1 @eq_i512_op(i512 %a, i512 %b) {
-; ANY-LABEL: eq_i512_op:
-; ANY:       # %bb.0:
-; ANY-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; ANY-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; ANY-NEXT:    addq $1, %rdi
-; ANY-NEXT:    adcq $0, %rsi
-; ANY-NEXT:    adcq $0, %rdx
-; ANY-NEXT:    adcq $0, %rcx
-; ANY-NEXT:    adcq $0, %r8
-; ANY-NEXT:    adcq $0, %r9
-; ANY-NEXT:    adcq $0, %r10
-; ANY-NEXT:    adcq $0, %rax
-; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rsi
-; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r9
-; ANY-NEXT:    orq %rsi, %r9
-; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rcx
-; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rax
-; ANY-NEXT:    orq %rcx, %rax
-; ANY-NEXT:    orq %r9, %rax
-; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rdx
-; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r10
-; ANY-NEXT:    orq %rdx, %r10
-; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r8
-; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rdi
-; ANY-NEXT:    orq %r8, %rdi
-; ANY-NEXT:    orq %r10, %rdi
-; ANY-NEXT:    orq %rax, %rdi
-; ANY-NEXT:    sete %al
-; ANY-NEXT:    retq
+; SSE2-LABEL: eq_i512_op:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; SSE2-NEXT:    addq $1, %rdi
+; SSE2-NEXT:    adcq $0, %rsi
+; SSE2-NEXT:    adcq $0, %rdx
+; SSE2-NEXT:    adcq $0, %rcx
+; SSE2-NEXT:    adcq $0, %r8
+; SSE2-NEXT:    adcq $0, %r9
+; SSE2-NEXT:    adcq $0, %r10
+; SSE2-NEXT:    adcq $0, %rax
+; SSE2-NEXT:    xorq {{[0-9]+}}(%rsp), %rsi
+; SSE2-NEXT:    xorq {{[0-9]+}}(%rsp), %r9
+; SSE2-NEXT:    orq %rsi, %r9
+; SSE2-NEXT:    xorq {{[0-9]+}}(%rsp), %rcx
+; SSE2-NEXT:    xorq {{[0-9]+}}(%rsp), %rax
+; SSE2-NEXT:    orq %rcx, %rax
+; SSE2-NEXT:    orq %r9, %rax
+; SSE2-NEXT:    xorq {{[0-9]+}}(%rsp), %rdx
+; SSE2-NEXT:    xorq {{[0-9]+}}(%rsp), %r10
+; SSE2-NEXT:    orq %rdx, %r10
+; SSE2-NEXT:    xorq {{[0-9]+}}(%rsp), %r8
+; SSE2-NEXT:    xorq {{[0-9]+}}(%rsp), %rdi
+; SSE2-NEXT:    orq %r8, %rdi
+; SSE2-NEXT:    orq %r10, %rdi
+; SSE2-NEXT:    orq %rax, %rdi
+; SSE2-NEXT:    sete %al
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: eq_i512_op:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; SSE41-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; SSE41-NEXT:    addq $1, %rdi
+; SSE41-NEXT:    adcq $0, %rsi
+; SSE41-NEXT:    adcq $0, %rdx
+; SSE41-NEXT:    adcq $0, %rcx
+; SSE41-NEXT:    adcq $0, %r8
+; SSE41-NEXT:    adcq $0, %r9
+; SSE41-NEXT:    adcq $0, %r10
+; SSE41-NEXT:    adcq $0, %rax
+; SSE41-NEXT:    xorq {{[0-9]+}}(%rsp), %rsi
+; SSE41-NEXT:    xorq {{[0-9]+}}(%rsp), %r9
+; SSE41-NEXT:    orq %rsi, %r9
+; SSE41-NEXT:    xorq {{[0-9]+}}(%rsp), %rcx
+; SSE41-NEXT:    xorq {{[0-9]+}}(%rsp), %rax
+; SSE41-NEXT:    orq %rcx, %rax
+; SSE41-NEXT:    orq %r9, %rax
+; SSE41-NEXT:    xorq {{[0-9]+}}(%rsp), %rdx
+; SSE41-NEXT:    xorq {{[0-9]+}}(%rsp), %r10
+; SSE41-NEXT:    orq %rdx, %r10
+; SSE41-NEXT:    xorq {{[0-9]+}}(%rsp), %r8
+; SSE41-NEXT:    xorq {{[0-9]+}}(%rsp), %rdi
+; SSE41-NEXT:    orq %r8, %rdi
+; SSE41-NEXT:    orq %r10, %rdi
+; SSE41-NEXT:    orq %rax, %rdi
+; SSE41-NEXT:    sete %al
+; SSE41-NEXT:    retq
+;
+; AVXANY-LABEL: eq_i512_op:
+; AVXANY:       # %bb.0:
+; AVXANY-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; AVXANY-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; AVXANY-NEXT:    addq $1, %rdi
+; AVXANY-NEXT:    adcq $0, %rsi
+; AVXANY-NEXT:    adcq $0, %rdx
+; AVXANY-NEXT:    adcq $0, %rcx
+; AVXANY-NEXT:    adcq $0, %r8
+; AVXANY-NEXT:    adcq $0, %r9
+; AVXANY-NEXT:    adcq $0, %r10
+; AVXANY-NEXT:    adcq $0, %rax
+; AVXANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rsi
+; AVXANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r9
+; AVXANY-NEXT:    orq %rsi, %r9
+; AVXANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rcx
+; AVXANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rax
+; AVXANY-NEXT:    orq %rcx, %rax
+; AVXANY-NEXT:    orq %r9, %rax
+; AVXANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rdx
+; AVXANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r10
+; AVXANY-NEXT:    orq %rdx, %r10
+; AVXANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r8
+; AVXANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rdi
+; AVXANY-NEXT:    orq %r8, %rdi
+; AVXANY-NEXT:    orq %r10, %rdi
+; AVXANY-NEXT:    orq %rax, %rdi
+; AVXANY-NEXT:    sete %al
+; AVXANY-NEXT:    retq
   %a2 = add i512 %a, 1
   %r = icmp eq i512 %a2, %b
   ret i1 %r
