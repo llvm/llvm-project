@@ -177,7 +177,7 @@ define void @load_i32_stride3_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX2-ONLY-NEXT:    vblendps {{.*#+}} ymm4 = ymm0[0,1],ymm1[2,3],ymm0[4,5,6,7]
 ; AVX2-ONLY-NEXT:    vpermps %ymm4, %ymm3, %ymm3
 ; AVX2-ONLY-NEXT:    vmovaps {{.*#+}} xmm4 = [2,5,0,3]
-; AVX2-ONLY-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2],ymm1[3,4],ymm0[5],ymm1[6,7]
+; AVX2-ONLY-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2],ymm1[3],ymm0[4,5,6,7]
 ; AVX2-ONLY-NEXT:    vpermps %ymm0, %ymm4, %ymm0
 ; AVX2-ONLY-NEXT:    vmovaps %xmm2, (%rsi)
 ; AVX2-ONLY-NEXT:    vmovaps %xmm3, (%rdx)

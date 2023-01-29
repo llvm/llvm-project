@@ -12942,7 +12942,7 @@ static SDValue getVectorMaskingNode(SDValue Op, SDValue Mask,
                                     const X86Subtarget &Subtarget,
                                     SelectionDAG &DAG);
 
-static bool matchShuffleAsBlend(SDValue V1, SDValue V2,
+static bool matchShuffleAsBlend(MVT VT, SDValue V1, SDValue V2,
                                 MutableArrayRef<int> Mask,
                                 const APInt &Zeroable, bool &ForceV1Zero,
                                 bool &ForceV2Zero, uint64_t &BlendMask) {
@@ -12955,37 +12955,67 @@ static bool matchShuffleAsBlend(SDValue V1, SDValue V2,
   ForceV1Zero = false, ForceV2Zero = false;
   assert(Mask.size() <= 64 && "Shuffle mask too big for blend mask");
 
+  int NumElts = Mask.size();
+  int NumLanes = VT.getSizeInBits() / 128;
+  int NumEltsPerLane = NumElts / NumLanes;
+  assert((NumLanes * NumEltsPerLane) == NumElts && "Value type mismatch");
+
+  // For 32/64-bit elements, if we only reference one input (plus any undefs),
+  // then ensure the blend mask part for that lane just references that input.
+  bool ForceWholeLaneMasks =
+      VT.is256BitVector() && VT.getScalarSizeInBits() >= 32;
+
   // Attempt to generate the binary blend mask. If an input is zero then
   // we can use any lane.
-  for (int i = 0, Size = Mask.size(); i < Size; ++i) {
-    int M = Mask[i];
-    if (M == SM_SentinelUndef)
-      continue;
-    if (M == i ||
-        (0 <= M && M < Size && IsElementEquivalent(Size, V1, V1, M, i))) {
-      Mask[i] = i;
-      continue;
-    }
-    if (M == (i + Size) ||
-        (Size <= M && IsElementEquivalent(Size, V2, V2, M - Size, i))) {
-      BlendMask |= 1ull << i;
-      Mask[i] = i + Size;
-      continue;
-    }
-    if (Zeroable[i]) {
-      if (V1IsZeroOrUndef) {
-        ForceV1Zero = true;
-        Mask[i] = i;
+  for (int Lane = 0; Lane != NumLanes; ++Lane) {
+    // Keep track of the inputs used per lane.
+    bool LaneV1InUse = false;
+    bool LaneV2InUse = false;
+    uint64_t LaneBlendMask = 0;
+    for (int LaneElt = 0; LaneElt != NumEltsPerLane; ++LaneElt) {
+      int Elt = (Lane * NumEltsPerLane) + LaneElt;
+      int M = Mask[Elt];
+      if (M == SM_SentinelUndef)
+        continue;
+      if (M == Elt || (0 <= M && M < NumElts &&
+                     IsElementEquivalent(NumElts, V1, V1, M, Elt))) {
+        Mask[Elt] = Elt;
+        LaneV1InUse = true;
         continue;
       }
-      if (V2IsZeroOrUndef) {
-        ForceV2Zero = true;
-        BlendMask |= 1ull << i;
-        Mask[i] = i + Size;
+      if (M == (Elt + NumElts) ||
+          (NumElts <= M &&
+           IsElementEquivalent(NumElts, V2, V2, M - NumElts, Elt))) {
+        LaneBlendMask |= 1ull << LaneElt;
+        Mask[Elt] = Elt + NumElts;
+        LaneV2InUse = true;
         continue;
       }
+      if (Zeroable[Elt]) {
+        if (V1IsZeroOrUndef) {
+          ForceV1Zero = true;
+          Mask[Elt] = Elt;
+          LaneV1InUse = true;
+          continue;
+        }
+        if (V2IsZeroOrUndef) {
+          ForceV2Zero = true;
+          LaneBlendMask |= 1ull << LaneElt;
+          Mask[Elt] = Elt + NumElts;
+          LaneV2InUse = true;
+          continue;
+        }
+      }
+      return false;
     }
-    return false;
+
+    // If we only used V2 then splat the lane blend mask to avoid any demanded
+    // elts from V1 in this lane (the V1 equivalent is implicit with a zero
+    // blend mask bit).
+    if (ForceWholeLaneMasks && LaneV2InUse && !LaneV1InUse)
+      LaneBlendMask = (1ull << NumEltsPerLane) - 1;
+
+    BlendMask |= LaneBlendMask << (Lane * NumEltsPerLane);
   }
   return true;
 }
@@ -13013,7 +13043,7 @@ static SDValue lowerShuffleAsBlend(const SDLoc &DL, MVT VT, SDValue V1,
   uint64_t BlendMask = 0;
   bool ForceV1Zero = false, ForceV2Zero = false;
   SmallVector<int, 64> Mask(Original);
-  if (!matchShuffleAsBlend(V1, V2, Mask, Zeroable, ForceV1Zero, ForceV2Zero,
+  if (!matchShuffleAsBlend(VT, V1, V2, Mask, Zeroable, ForceV1Zero, ForceV2Zero,
                            BlendMask))
     return SDValue();
 
@@ -38722,7 +38752,7 @@ static bool matchBinaryPermuteShuffle(
     uint64_t BlendMask = 0;
     bool ForceV1Zero = false, ForceV2Zero = false;
     SmallVector<int, 8> TargetMask(Mask);
-    if (matchShuffleAsBlend(V1, V2, TargetMask, Zeroable, ForceV1Zero,
+    if (matchShuffleAsBlend(MaskVT, V1, V2, TargetMask, Zeroable, ForceV1Zero,
                             ForceV2Zero, BlendMask)) {
       if (MaskVT == MVT::v16i16) {
         // We can only use v16i16 PBLENDW if the lanes are repeated.
