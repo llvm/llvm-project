@@ -140,7 +140,7 @@ defvar FXIN64X = [FX_64, FX_INX_64];
 def FRMArg : AsmOperandClass {
   let Name = "FRMArg";
   let RenderMethod = "addFRMArgOperands";
-  let DiagnosticType = "InvalidFRMArg";
+  let ParserMethod = "parseFRMArg";
 }
 
 def frmarg : Operand<XLenVT> {
