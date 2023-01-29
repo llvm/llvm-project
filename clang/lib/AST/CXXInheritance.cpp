@@ -64,16 +64,14 @@ void CXXBasePaths::swap(CXXBasePaths &Other) {
   std::swap(DetectedVirtual, Other.DetectedVirtual);
 }
 
-bool CXXRecordDecl::isDerivedFrom(const CXXRecordDecl *Base,
-                                  bool LookupIndependent) const {
+bool CXXRecordDecl::isDerivedFrom(const CXXRecordDecl *Base) const {
   CXXBasePaths Paths(/*FindAmbiguities=*/false, /*RecordPaths=*/false,
                      /*DetectVirtual=*/false);
-  return isDerivedFrom(Base, Paths, LookupIndependent);
+  return isDerivedFrom(Base, Paths);
 }
 
 bool CXXRecordDecl::isDerivedFrom(const CXXRecordDecl *Base,
-                                  CXXBasePaths &Paths,
-                                  bool LookupIndependent) const {
+                                  CXXBasePaths &Paths) const {
   if (getCanonicalDecl() == Base->getCanonicalDecl())
     return false;
 
@@ -85,7 +83,7 @@ bool CXXRecordDecl::isDerivedFrom(const CXXRecordDecl *Base,
         return Specifier->getType()->getAsRecordDecl() &&
                FindBaseClass(Specifier, Path, BaseDecl);
       },
-      Paths, LookupIndependent);
+      Paths);
 }
 
 bool CXXRecordDecl::isVirtuallyDerivedFrom(const CXXRecordDecl *Base) const {
