@@ -576,8 +576,7 @@ bool TargetLowering::ShrinkDemandedOp(SDValue Op, unsigned BitWidth,
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   unsigned DemandedSize = Demanded.getActiveBits();
   unsigned SmallVTBits = DemandedSize;
-  if (!isPowerOf2_32(SmallVTBits))
-    SmallVTBits = NextPowerOf2(SmallVTBits);
+  SmallVTBits = llvm::bit_ceil(SmallVTBits);
   for (; SmallVTBits < BitWidth; SmallVTBits = NextPowerOf2(SmallVTBits)) {
     EVT SmallVT = EVT::getIntegerVT(*DAG.getContext(), SmallVTBits);
     if (TLI.isTruncateFree(Op.getValueType(), SmallVT) &&

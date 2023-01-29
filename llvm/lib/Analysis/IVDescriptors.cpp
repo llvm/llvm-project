@@ -128,8 +128,7 @@ static std::pair<Type *, bool> computeRecurrenceType(Instruction *Exit,
       ++MaxBitWidth;
     }
   }
-  if (!isPowerOf2_64(MaxBitWidth))
-    MaxBitWidth = NextPowerOf2(MaxBitWidth);
+  MaxBitWidth = llvm::bit_ceil(MaxBitWidth);
 
   return std::make_pair(Type::getIntNTy(Exit->getContext(), MaxBitWidth),
                         IsSigned);
