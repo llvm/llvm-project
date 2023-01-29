@@ -14,6 +14,7 @@
 #include <__availability>
 #include <__chrono/statically_widen.h>
 #include <__config>
+#include <__format/buffer.h>
 #include <__format/concepts.h>
 #include <__format/format_args.h>
 #include <__format/format_context.h>
@@ -91,26 +92,25 @@ struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT __formatter_tuple {
     if (!__specs.__has_width())
       return __format_tuple(__tuple, __ctx);
 
-    basic_string<_CharT> __str;
-
-    // Since the output is written to a different iterator a new context is
-    // created. Since the underlying formatter uses the default formatting it
-    // doesn't need a locale or the formatting arguments. So creating a new
-    // context works.
-    //
-    // This solution works for this formatter, but it will not work for the
-    // range_formatter. In that patch a generic solution is work in progress.
-    // Once that is finished it can be used here. (The range_formatter will use
-    // these features so it's easier to add it there and then port it.)
-    //
-    // TODO FMT Use formatting wrapping used in the range_formatter.
-    basic_format_context __c = std::__format_context_create(
-        back_insert_iterator{__str},
-        basic_format_args<basic_format_context<back_insert_iterator<basic_string<_CharT>>, _CharT>>{});
+    // The size of the buffer needed is:
+    // - open bracket characters
+    // - close bracket character
+    // - n elements where every element may have a different size
+    // - (n -1) separators
+    // The size of the element is hard to predict, knowing the type helps but
+    // it depends on the format-spec. As an initial estimate we guess 6
+    // characters.
+    // Typically both brackets are 1 character and the separator is 2
+    // characters. Which means there will be
+    //   (n - 1) * 2 + 1 + 1 = n * 2 character
+    // So estimate 8 times the range size as buffer.
+    __format::__retarget_buffer<_CharT> __buffer{8 * tuple_size_v<_Tuple>};
+    basic_format_context<typename __format::__retarget_buffer<_CharT>::__iterator, _CharT> __c{
+        __buffer.__make_output_iterator(), __ctx};
 
     __format_tuple(__tuple, __c);
 
-    return __formatter::__write_string_no_precision(basic_string_view{__str}, __ctx.out(), __specs);
+    return __formatter::__write_string_no_precision(basic_string_view{__buffer.__view()}, __ctx.out(), __specs);
   }
 
   template <class _FormatContext>
