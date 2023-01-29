@@ -6829,8 +6829,7 @@ SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
     return Val;
 
   // Preserve the known bits after expansion to a copy.
-  EVT SmallVT =
-      EVT::getIntegerVT(*DAG.getContext(), 32 - countLeadingZeros(MaxID));
+  EVT SmallVT = EVT::getIntegerVT(*DAG.getContext(), llvm::bit_width(MaxID));
   return DAG.getNode(ISD::AssertZext, SL, MVT::i32, Val,
                      DAG.getValueType(SmallVT));
 }

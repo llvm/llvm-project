@@ -10818,14 +10818,14 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   case RISCVISD::CTZW: {
     KnownBits Known2 = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
     unsigned PossibleTZ = Known2.trunc(32).countMaxTrailingZeros();
-    unsigned LowBits = Log2_32(PossibleTZ) + 1;
+    unsigned LowBits = llvm::bit_width(PossibleTZ);
     Known.Zero.setBitsFrom(LowBits);
     break;
   }
   case RISCVISD::CLZW: {
     KnownBits Known2 = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
     unsigned PossibleLZ = Known2.trunc(32).countMaxLeadingZeros();
-    unsigned LowBits = Log2_32(PossibleLZ) + 1;
+    unsigned LowBits = llvm::bit_width(PossibleLZ);
     Known.Zero.setBitsFrom(LowBits);
     break;
   }

@@ -23860,7 +23860,7 @@ bool AArch64TargetLowering::SimplifyDemandedBitsForTargetNode(
       // over the true required bits, as this is based on the "ALL" pattern. The
       // other patterns are also exposed by these intrinsics, but they all
       // return a value that's strictly less than "ALL".
-      unsigned RequiredBits = Log2_32(MaxElements) + 1;
+      unsigned RequiredBits = llvm::bit_width(MaxElements);
       unsigned BitWidth = Known.Zero.getBitWidth();
       if (RequiredBits < BitWidth)
         Known.Zero.setHighBits(BitWidth - RequiredBits);

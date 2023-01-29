@@ -857,7 +857,7 @@ struct TestLegalizePatternDriver
   TestLegalizePatternDriver(ConversionMode mode) : mode(mode) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<func::FuncDialect>();
+    registry.insert<func::FuncDialect, test::TestDialect>();
   }
 
   void runOnOperation() override {

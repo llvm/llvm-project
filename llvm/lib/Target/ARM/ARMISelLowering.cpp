@@ -14754,7 +14754,7 @@ static SDValue PerformBFICombine(SDNode *N, SelectionDAG &DAG) {
       return SDValue();
     unsigned InvMask = cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
     unsigned LSB = countTrailingZeros(~InvMask);
-    unsigned Width = (32 - countLeadingZeros(~InvMask)) - LSB;
+    unsigned Width = llvm::bit_width<unsigned>(~InvMask) - LSB;
     assert(Width <
                static_cast<unsigned>(std::numeric_limits<unsigned>::digits) &&
            "undefined behavior");

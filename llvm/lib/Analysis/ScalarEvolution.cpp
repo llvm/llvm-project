@@ -804,79 +804,37 @@ CompareSCEVComplexity(EquivalenceClasses<const SCEV *> &EqCacheSCEV,
       return -1;
     }
 
-    // Addrec complexity grows with operand count.
-    unsigned LNumOps = LA->getNumOperands(), RNumOps = RA->getNumOperands();
-    if (LNumOps != RNumOps)
-      return (int)LNumOps - (int)RNumOps;
-
-    // Lexicographically compare.
-    for (unsigned i = 0; i != LNumOps; ++i) {
-      auto X = CompareSCEVComplexity(EqCacheSCEV, EqCacheValue, LI,
-                                     LA->getOperand(i), RA->getOperand(i), DT,
-                                     Depth + 1);
-      if (X != 0)
-        return X;
-    }
-    EqCacheSCEV.unionSets(LHS, RHS);
-    return 0;
+    [[fallthrough]];
   }
 
+  case scTruncate:
+  case scZeroExtend:
+  case scSignExtend:
+  case scPtrToInt:
   case scAddExpr:
   case scMulExpr:
+  case scUDivExpr:
   case scSMaxExpr:
   case scUMaxExpr:
   case scSMinExpr:
   case scUMinExpr:
   case scSequentialUMinExpr: {
-    const SCEVNAryExpr *LC = cast<SCEVNAryExpr>(LHS);
-    const SCEVNAryExpr *RC = cast<SCEVNAryExpr>(RHS);
+    ArrayRef<const SCEV *> LOps = LHS->operands();
+    ArrayRef<const SCEV *> ROps = RHS->operands();
 
-    // Lexicographically compare n-ary expressions.
-    unsigned LNumOps = LC->getNumOperands(), RNumOps = RC->getNumOperands();
+    // Lexicographically compare n-ary-like expressions.
+    unsigned LNumOps = LOps.size(), RNumOps = ROps.size();
     if (LNumOps != RNumOps)
       return (int)LNumOps - (int)RNumOps;
 
     for (unsigned i = 0; i != LNumOps; ++i) {
-      auto X = CompareSCEVComplexity(EqCacheSCEV, EqCacheValue, LI,
-                                     LC->getOperand(i), RC->getOperand(i), DT,
-                                     Depth + 1);
+      auto X = CompareSCEVComplexity(EqCacheSCEV, EqCacheValue, LI, LOps[i],
+                                     ROps[i], DT, Depth + 1);
       if (X != 0)
         return X;
     }
     EqCacheSCEV.unionSets(LHS, RHS);
     return 0;
-  }
-
-  case scUDivExpr: {
-    const SCEVUDivExpr *LC = cast<SCEVUDivExpr>(LHS);
-    const SCEVUDivExpr *RC = cast<SCEVUDivExpr>(RHS);
-
-    // Lexicographically compare udiv expressions.
-    auto X = CompareSCEVComplexity(EqCacheSCEV, EqCacheValue, LI, LC->getLHS(),
-                                   RC->getLHS(), DT, Depth + 1);
-    if (X != 0)
-      return X;
-    X = CompareSCEVComplexity(EqCacheSCEV, EqCacheValue, LI, LC->getRHS(),
-                              RC->getRHS(), DT, Depth + 1);
-    if (X == 0)
-      EqCacheSCEV.unionSets(LHS, RHS);
-    return X;
-  }
-
-  case scPtrToInt:
-  case scTruncate:
-  case scZeroExtend:
-  case scSignExtend: {
-    const SCEVCastExpr *LC = cast<SCEVCastExpr>(LHS);
-    const SCEVCastExpr *RC = cast<SCEVCastExpr>(RHS);
-
-    // Compare cast expressions by operand.
-    auto X =
-        CompareSCEVComplexity(EqCacheSCEV, EqCacheValue, LI, LC->getOperand(),
-                              RC->getOperand(), DT, Depth + 1);
-    if (X == 0)
-      EqCacheSCEV.unionSets(LHS, RHS);
-    return X;
   }
 
   case scCouldNotCompute:
@@ -6103,8 +6061,11 @@ bool SCEVMinMaxExprContains(const SCEV *Root, const SCEV *OperandToFind,
   return FC.Found;
 }
 
-const SCEV *ScalarEvolution::createNodeForSelectOrPHIInstWithICmpInstCond(
-    Instruction *I, ICmpInst *Cond, Value *TrueVal, Value *FalseVal) {
+std::optional<const SCEV *>
+ScalarEvolution::createNodeForSelectOrPHIInstWithICmpInstCond(Type *Ty,
+                                                              ICmpInst *Cond,
+                                                              Value *TrueVal,
+                                                              Value *FalseVal) {
   // Try to match some simple smax or umax patterns.
   auto *ICI = Cond;
 
@@ -6124,7 +6085,7 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHIInstWithICmpInstCond(
   case ICmpInst::ICMP_UGE:
     // a > b ? a+x : b+x  ->  max(a, b)+x
     // a > b ? b+x : a+x  ->  min(a, b)+x
-    if (getTypeSizeInBits(LHS->getType()) <= getTypeSizeInBits(I->getType())) {
+    if (getTypeSizeInBits(LHS->getType()) <= getTypeSizeInBits(Ty)) {
       bool Signed = ICI->isSigned();
       const SCEV *LA = getSCEV(TrueVal);
       const SCEV *RA = getSCEV(FalseVal);
@@ -6146,9 +6107,9 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHIInstWithICmpInstCond(
             return Op;
         }
         if (Signed)
-          Op = getNoopOrSignExtend(Op, I->getType());
+          Op = getNoopOrSignExtend(Op, Ty);
         else
-          Op = getNoopOrZeroExtend(Op, I->getType());
+          Op = getNoopOrZeroExtend(Op, Ty);
         return Op;
       };
       LS = CoerceOperand(LS);
@@ -6173,9 +6134,9 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHIInstWithICmpInstCond(
     [[fallthrough]];
   case ICmpInst::ICMP_EQ:
     // x == 0 ? C+y : x+y  ->  umax(x, C)+y   iff C u<= 1
-    if (getTypeSizeInBits(LHS->getType()) <= getTypeSizeInBits(I->getType()) &&
+    if (getTypeSizeInBits(LHS->getType()) <= getTypeSizeInBits(Ty) &&
         isa<ConstantInt>(RHS) && cast<ConstantInt>(RHS)->isZero()) {
-      const SCEV *X = getNoopOrZeroExtend(getSCEV(LHS), I->getType());
+      const SCEV *X = getNoopOrZeroExtend(getSCEV(LHS), Ty);
       const SCEV *TrueValExpr = getSCEV(TrueVal);    // C+y
       const SCEV *FalseValExpr = getSCEV(FalseVal);  // x+y
       const SCEV *Y = getMinusSCEV(FalseValExpr, X); // y = (x+y)-x
@@ -6192,10 +6153,10 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHIInstWithICmpInstCond(
       const SCEV *X = getSCEV(LHS);
       while (auto *ZExt = dyn_cast<SCEVZeroExtendExpr>(X))
         X = ZExt->getOperand();
-      if (getTypeSizeInBits(X->getType()) <= getTypeSizeInBits(I->getType())) {
+      if (getTypeSizeInBits(X->getType()) <= getTypeSizeInBits(Ty)) {
         const SCEV *FalseValExpr = getSCEV(FalseVal);
         if (SCEVMinMaxExprContains(FalseValExpr, X, scSequentialUMinExpr))
-          return getUMinExpr(getNoopOrZeroExtend(X, I->getType()), FalseValExpr,
+          return getUMinExpr(getNoopOrZeroExtend(X, Ty), FalseValExpr,
                              /*Sequential=*/true);
       }
     }
@@ -6204,7 +6165,7 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHIInstWithICmpInstCond(
     break;
   }
 
-  return getUnknown(I);
+  return std::nullopt;
 }
 
 static std::optional<const SCEV *>
@@ -6280,10 +6241,10 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHI(Value *V, Value *Cond,
 
   if (auto *I = dyn_cast<Instruction>(V)) {
     if (auto *ICI = dyn_cast<ICmpInst>(Cond)) {
-      const SCEV *S = createNodeForSelectOrPHIInstWithICmpInstCond(
-          I, ICI, TrueVal, FalseVal);
-      if (!isa<SCEVUnknown>(S))
-        return S;
+      if (std::optional<const SCEV *> S =
+              createNodeForSelectOrPHIInstWithICmpInstCond(I->getType(), ICI,
+                                                           TrueVal, FalseVal))
+        return *S;
     }
   }
 
@@ -6610,7 +6571,37 @@ const ConstantRange &ScalarEvolution::getRangeRef(
           APInt::getSignedMaxValue(BitWidth).ashr(TZ).shl(TZ) + 1);
   }
 
-  if (const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(S)) {
+  switch (S->getSCEVType()) {
+  case scConstant:
+    llvm_unreachable("Already handled above.");
+  case scTruncate: {
+    const SCEVTruncateExpr *Trunc = cast<SCEVTruncateExpr>(S);
+    ConstantRange X = getRangeRef(Trunc->getOperand(), SignHint, Depth + 1);
+    return setRange(
+        Trunc, SignHint,
+        ConservativeResult.intersectWith(X.truncate(BitWidth), RangeType));
+  }
+  case scZeroExtend: {
+    const SCEVZeroExtendExpr *ZExt = cast<SCEVZeroExtendExpr>(S);
+    ConstantRange X = getRangeRef(ZExt->getOperand(), SignHint, Depth + 1);
+    return setRange(
+        ZExt, SignHint,
+        ConservativeResult.intersectWith(X.zeroExtend(BitWidth), RangeType));
+  }
+  case scSignExtend: {
+    const SCEVSignExtendExpr *SExt = cast<SCEVSignExtendExpr>(S);
+    ConstantRange X = getRangeRef(SExt->getOperand(), SignHint, Depth + 1);
+    return setRange(
+        SExt, SignHint,
+        ConservativeResult.intersectWith(X.signExtend(BitWidth), RangeType));
+  }
+  case scPtrToInt: {
+    const SCEVPtrToIntExpr *PtrToInt = cast<SCEVPtrToIntExpr>(S);
+    ConstantRange X = getRangeRef(PtrToInt->getOperand(), SignHint, Depth + 1);
+    return setRange(PtrToInt, SignHint, X);
+  }
+  case scAddExpr: {
+    const SCEVAddExpr *Add = cast<SCEVAddExpr>(S);
     ConstantRange X = getRangeRef(Add->getOperand(0), SignHint, Depth + 1);
     unsigned WrapType = OBO::AnyWrap;
     if (Add->hasNoSignedWrap())
@@ -6623,78 +6614,23 @@ const ConstantRange &ScalarEvolution::getRangeRef(
     return setRange(Add, SignHint,
                     ConservativeResult.intersectWith(X, RangeType));
   }
-
-  if (const SCEVMulExpr *Mul = dyn_cast<SCEVMulExpr>(S)) {
+  case scMulExpr: {
+    const SCEVMulExpr *Mul = cast<SCEVMulExpr>(S);
     ConstantRange X = getRangeRef(Mul->getOperand(0), SignHint, Depth + 1);
     for (unsigned i = 1, e = Mul->getNumOperands(); i != e; ++i)
       X = X.multiply(getRangeRef(Mul->getOperand(i), SignHint, Depth + 1));
     return setRange(Mul, SignHint,
                     ConservativeResult.intersectWith(X, RangeType));
   }
-
-  if (isa<SCEVMinMaxExpr>(S) || isa<SCEVSequentialMinMaxExpr>(S)) {
-    Intrinsic::ID ID;
-    switch (S->getSCEVType()) {
-    case scUMaxExpr:
-      ID = Intrinsic::umax;
-      break;
-    case scSMaxExpr:
-      ID = Intrinsic::smax;
-      break;
-    case scUMinExpr:
-    case scSequentialUMinExpr:
-      ID = Intrinsic::umin;
-      break;
-    case scSMinExpr:
-      ID = Intrinsic::smin;
-      break;
-    default:
-      llvm_unreachable("Unknown SCEVMinMaxExpr/SCEVSequentialMinMaxExpr.");
-    }
-
-    const auto *NAry = cast<SCEVNAryExpr>(S);
-    ConstantRange X = getRangeRef(NAry->getOperand(0), SignHint, Depth + 1);
-    for (unsigned i = 1, e = NAry->getNumOperands(); i != e; ++i)
-      X = X.intrinsic(
-          ID, {X, getRangeRef(NAry->getOperand(i), SignHint, Depth + 1)});
-    return setRange(S, SignHint,
-                    ConservativeResult.intersectWith(X, RangeType));
-  }
-
-  if (const SCEVUDivExpr *UDiv = dyn_cast<SCEVUDivExpr>(S)) {
+  case scUDivExpr: {
+    const SCEVUDivExpr *UDiv = cast<SCEVUDivExpr>(S);
     ConstantRange X = getRangeRef(UDiv->getLHS(), SignHint, Depth + 1);
     ConstantRange Y = getRangeRef(UDiv->getRHS(), SignHint, Depth + 1);
     return setRange(UDiv, SignHint,
                     ConservativeResult.intersectWith(X.udiv(Y), RangeType));
   }
-
-  if (const SCEVZeroExtendExpr *ZExt = dyn_cast<SCEVZeroExtendExpr>(S)) {
-    ConstantRange X = getRangeRef(ZExt->getOperand(), SignHint, Depth + 1);
-    return setRange(ZExt, SignHint,
-                    ConservativeResult.intersectWith(X.zeroExtend(BitWidth),
-                                                     RangeType));
-  }
-
-  if (const SCEVSignExtendExpr *SExt = dyn_cast<SCEVSignExtendExpr>(S)) {
-    ConstantRange X = getRangeRef(SExt->getOperand(), SignHint, Depth + 1);
-    return setRange(SExt, SignHint,
-                    ConservativeResult.intersectWith(X.signExtend(BitWidth),
-                                                     RangeType));
-  }
-
-  if (const SCEVPtrToIntExpr *PtrToInt = dyn_cast<SCEVPtrToIntExpr>(S)) {
-    ConstantRange X = getRangeRef(PtrToInt->getOperand(), SignHint, Depth + 1);
-    return setRange(PtrToInt, SignHint, X);
-  }
-
-  if (const SCEVTruncateExpr *Trunc = dyn_cast<SCEVTruncateExpr>(S)) {
-    ConstantRange X = getRangeRef(Trunc->getOperand(), SignHint, Depth + 1);
-    return setRange(Trunc, SignHint,
-                    ConservativeResult.intersectWith(X.truncate(BitWidth),
-                                                     RangeType));
-  }
-
-  if (const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(S)) {
+  case scAddRecExpr: {
+    const SCEVAddRecExpr *AddRec = cast<SCEVAddRecExpr>(S);
     // If there's no unsigned wrap, the value will never be less than its
     // initial value.
     if (AddRec->hasNoUnsignedWrap()) {
@@ -6725,15 +6661,16 @@ const ConstantRange &ScalarEvolution::getRangeRef(
             RangeType);
       else if (AllNonPos)
         ConservativeResult = ConservativeResult.intersectWith(
-            ConstantRange::getNonEmpty(
-                APInt::getSignedMinValue(BitWidth),
-                getSignedRangeMax(AddRec->getStart()) + 1),
+            ConstantRange::getNonEmpty(APInt::getSignedMinValue(BitWidth),
+                                       getSignedRangeMax(AddRec->getStart()) +
+                                           1),
             RangeType);
     }
 
     // TODO: non-affine addrec
     if (AddRec->isAffine()) {
-      const SCEV *MaxBECount = getConstantMaxBackedgeTakenCount(AddRec->getLoop());
+      const SCEV *MaxBECount =
+          getConstantMaxBackedgeTakenCount(AddRec->getLoop());
       if (!isa<SCEVCouldNotCompute>(MaxBECount) &&
           getTypeSizeInBits(MaxBECount->getType()) <= BitWidth) {
         auto RangeFromAffine = getRangeForAffineAR(
@@ -6766,8 +6703,40 @@ const ConstantRange &ScalarEvolution::getRangeRef(
 
     return setRange(AddRec, SignHint, std::move(ConservativeResult));
   }
+  case scUMaxExpr:
+  case scSMaxExpr:
+  case scUMinExpr:
+  case scSMinExpr:
+  case scSequentialUMinExpr: {
+    Intrinsic::ID ID;
+    switch (S->getSCEVType()) {
+    case scUMaxExpr:
+      ID = Intrinsic::umax;
+      break;
+    case scSMaxExpr:
+      ID = Intrinsic::smax;
+      break;
+    case scUMinExpr:
+    case scSequentialUMinExpr:
+      ID = Intrinsic::umin;
+      break;
+    case scSMinExpr:
+      ID = Intrinsic::smin;
+      break;
+    default:
+      llvm_unreachable("Unknown SCEVMinMaxExpr/SCEVSequentialMinMaxExpr.");
+    }
 
-  if (const SCEVUnknown *U = dyn_cast<SCEVUnknown>(S)) {
+    const auto *NAry = cast<SCEVNAryExpr>(S);
+    ConstantRange X = getRangeRef(NAry->getOperand(0), SignHint, Depth + 1);
+    for (unsigned i = 1, e = NAry->getNumOperands(); i != e; ++i)
+      X = X.intrinsic(
+          ID, {X, getRangeRef(NAry->getOperand(i), SignHint, Depth + 1)});
+    return setRange(S, SignHint,
+                    ConservativeResult.intersectWith(X, RangeType));
+  }
+  case scUnknown: {
+    const SCEVUnknown *U = cast<SCEVUnknown>(S);
 
     // Check if the IR explicitly contains !range metadata.
     std::optional<ConstantRange> MDRange = GetRangeFromMetadata(U->getValue());
@@ -6834,7 +6803,7 @@ const ConstantRange &ScalarEvolution::getRangeRef(
             ConservativeResult.intersectWith(RangeFromOps, RangeType);
         bool Erased = PendingPhiRanges.erase(Phi);
         assert(Erased && "Failed to erase Phi properly?");
-        (void) Erased;
+        (void)Erased;
       }
     }
 
@@ -6846,6 +6815,9 @@ const ConstantRange &ScalarEvolution::getRangeRef(
       }
 
     return setRange(U, SignHint, std::move(ConservativeResult));
+  }
+  case scCouldNotCompute:
+    llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
   }
 
   return setRange(S, SignHint, std::move(ConservativeResult));

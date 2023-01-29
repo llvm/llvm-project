@@ -15,3 +15,6 @@ fada90286008 [CUDA][HIP] Support '--offload-arch=native' for the new driver
 #break nekbone, cxx20 offsetof
 e327b52766ed [C2x] reject type definitions in offsetof
 
+16a385ba21a9 [OpenMP] Modernize the kernel launching interface and APIs
+366fc10f065d [OpenMP][FIX] Remove version check lines in clang test
+

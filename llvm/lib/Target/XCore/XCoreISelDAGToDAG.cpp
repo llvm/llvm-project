@@ -63,7 +63,7 @@ namespace {
       if (!isMask_32(value)) {
         return false;
       }
-      int msksize = 32 - countLeadingZeros(value);
+      int msksize = llvm::bit_width(value);
       return (msksize >= 1 && msksize <= 8) ||
               msksize == 16 || msksize == 24 || msksize == 32;
     }
@@ -145,9 +145,9 @@ void XCoreDAGToDAGISel::Select(SDNode *N) {
     if (immMskBitp(N)) {
       // Transformation function: get the size of a mask
       // Look for the first non-zero bit
-      SDValue MskSize = getI32Imm(32 - countLeadingZeros((uint32_t)Val), dl);
-      ReplaceNode(N, CurDAG->getMachineNode(XCore::MKMSK_rus, dl,
-                                            MVT::i32, MskSize));
+      SDValue MskSize = getI32Imm(llvm::bit_width((uint32_t)Val), dl);
+      ReplaceNode(
+          N, CurDAG->getMachineNode(XCore::MKMSK_rus, dl, MVT::i32, MskSize));
       return;
     }
     else if (!isUInt<16>(Val)) {
