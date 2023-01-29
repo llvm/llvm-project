@@ -465,6 +465,18 @@ TEST(CompletionTest, Qualifiers) {
               Not(Contains(AllOf(qualifier(""), named("foo")))));
 }
 
+// https://github.com/clangd/clangd/issues/1451
+TEST(CompletionTest, QualificationWithInlineNamespace) {
+  auto Results = completions(R"cpp(
+    namespace a { inline namespace b {} }
+    using namespace a::b;
+    void f() { Foo^ }
+  )cpp",
+                             {cls("a::Foo")});
+  EXPECT_THAT(Results.Completions,
+              UnorderedElementsAre(AllOf(qualifier("a::"), named("Foo"))));
+}
+
 TEST(CompletionTest, InjectedTypename) {
   // These are suppressed when accessed as a member...
   EXPECT_THAT(completions("struct X{}; void foo(){ X().^ }").Completions,
