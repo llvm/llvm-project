@@ -102,7 +102,7 @@ struct DomainValue {
 
   /// First domain available.
   unsigned getFirstDomain() const {
-    return countTrailingZeros(AvailableDomains);
+    return llvm::countr_zero(AvailableDomains);
   }
 
   /// Clear this DomainValue and point to next which has all its data.

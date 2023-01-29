@@ -76,6 +76,7 @@ add_llvm_component_library(LLVMAnalysis
   InstCount.cpp
   InstructionPrecedenceTracking.cpp
   InstructionSimplify.cpp
+  InteractiveModelRunner.cpp
   Interval.cpp
   IntervalPartition.cpp
   LazyBranchProbabilityInfo.cpp

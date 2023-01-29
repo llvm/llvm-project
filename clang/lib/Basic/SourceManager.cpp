@@ -1302,8 +1302,7 @@ LineOffsetMapping LineOffsetMapping::get(llvm::MemoryBufferRef Buffer,
       // in [\n, \r + 1 [
 
       // Scan for the next newline - it's very likely there's one.
-      unsigned N =
-          llvm::countTrailingZeros(Mask) - 7; // -7 because 0x80 is the marker
+      unsigned N = llvm::countr_zero(Mask) - 7; // -7 because 0x80 is the marker
       Word >>= N;
       Buf += N / 8 + 1;
       unsigned char Byte = Word;

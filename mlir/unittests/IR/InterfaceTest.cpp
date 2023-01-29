@@ -41,24 +41,6 @@ TEST(InterfaceTest, OpInterfaceDenseMapKey) {
   EXPECT_FALSE(opSet.contains(op3));
 }
 
-TEST(InterfaceTest, AttrInterfaceDenseMapKey) {
-  MLIRContext context;
-  context.loadDialect<test::TestDialect>();
-
-  OpBuilder builder(&context);
-
-  DenseSet<SubElementAttrInterface> attrSet;
-  auto attr1 = builder.getArrayAttr({});
-  auto attr2 = builder.getI32ArrayAttr({0});
-  auto attr3 = builder.getI32ArrayAttr({1});
-  attrSet.insert(attr1);
-  attrSet.insert(attr2);
-  attrSet.erase(attr1);
-  EXPECT_FALSE(attrSet.contains(attr1));
-  EXPECT_TRUE(attrSet.contains(attr2));
-  EXPECT_FALSE(attrSet.contains(attr3));
-}
-
 TEST(InterfaceTest, TypeInterfaceDenseMapKey) {
   MLIRContext context;
   context.loadDialect<test::TestDialect>();

@@ -193,7 +193,7 @@ static unsigned getKnownLeadingZeroCount(const unsigned Reg,
 
   if (Opcode == PPC::ANDI_rec) {
     uint16_t Imm = MI->getOperand(2).getImm();
-    return 48 + countLeadingZeros(Imm);
+    return 48 + llvm::countl_zero(Imm);
   }
 
   if (Opcode == PPC::CNTLZW || Opcode == PPC::CNTLZW_rec ||

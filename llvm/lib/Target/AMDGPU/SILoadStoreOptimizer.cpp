@@ -887,7 +887,7 @@ bool SILoadStoreOptimizer::dmasksCanBeCombined(const CombineInfo &CI,
   unsigned MaxMask = std::max(CI.DMask, Paired.DMask);
   unsigned MinMask = std::min(CI.DMask, Paired.DMask);
 
-  unsigned AllowedBitsForMin = llvm::countTrailingZeros(MaxMask);
+  unsigned AllowedBitsForMin = llvm::countr_zero(MaxMask);
   if ((1u << AllowedBitsForMin) <= MinMask)
     return false;
 
@@ -926,7 +926,7 @@ static unsigned getBufferFormatWithCompCount(unsigned OldFormat,
 // - if Lo == 0, return 0 (even though the "- 1" below underflows
 // - if Lo > Hi, return 0 (as if the range wrapped around)
 static uint32_t mostAlignedValueInRange(uint32_t Lo, uint32_t Hi) {
-  return Hi & maskLeadingOnes<uint32_t>(countLeadingZeros((Lo - 1) ^ Hi) + 1);
+  return Hi & maskLeadingOnes<uint32_t>(llvm::countl_zero((Lo - 1) ^ Hi) + 1);
 }
 
 bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,

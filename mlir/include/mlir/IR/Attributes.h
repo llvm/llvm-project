@@ -101,6 +101,48 @@ public:
     return impl->getAbstractAttribute();
   }
 
+  /// Walk all of the immediately nested sub-attributes and sub-types. This
+  /// method does not recurse into sub elements.
+  void walkImmediateSubElements(function_ref<void(Attribute)> walkAttrsFn,
+                                function_ref<void(Type)> walkTypesFn) const {
+    getAbstractAttribute().walkImmediateSubElements(*this, walkAttrsFn,
+                                                    walkTypesFn);
+  }
+
+  /// Replace the immediately nested sub-attributes and sub-types with those
+  /// provided. The order of the provided elements is derived from the order of
+  /// the elements returned by the callbacks of `walkImmediateSubElements`. The
+  /// element at index 0 would replace the very first attribute given by
+  /// `walkImmediateSubElements`. On success, the new instance with the values
+  /// replaced is returned. If replacement fails, nullptr is returned.
+  auto replaceImmediateSubElements(ArrayRef<Attribute> replAttrs,
+                                   ArrayRef<Type> replTypes) const {
+    return getAbstractAttribute().replaceImmediateSubElements(*this, replAttrs,
+                                                              replTypes);
+  }
+
+  /// Walk this attribute and all attibutes/types nested within using the
+  /// provided walk functions. See `AttrTypeWalker` for information on the
+  /// supported walk function types.
+  template <WalkOrder Order = WalkOrder::PostOrder, typename... WalkFns>
+  auto walk(WalkFns &&...walkFns) {
+    AttrTypeWalker walker;
+    (walker.addWalk(std::forward<WalkFns>(walkFns)), ...);
+    return walker.walk<Order>(*this);
+  }
+
+  /// Recursively replace all of the nested sub-attributes and sub-types using
+  /// the provided map functions. Returns nullptr in the case of failure. See
+  /// `AttrTypeReplacer` for information on the support replacement function
+  /// types.
+  template <typename... ReplacementFns>
+  auto replace(ReplacementFns &&...replacementFns) {
+    AttrTypeReplacer replacer;
+    (replacer.addReplacement(std::forward<ReplacementFns>(replacementFns)),
+     ...);
+    return replacer.replace(*this);
+  }
+
   /// Return the internal Attribute implementation.
   ImplType *getImpl() const { return impl; }
 
@@ -200,6 +242,22 @@ inline ::llvm::hash_code hash_value(const NamedAttribute &arg) {
   using AttrPairT = std::pair<Attribute, Attribute>;
   return DenseMapInfo<AttrPairT>::getHashValue(AttrPairT(arg.name, arg.value));
 }
+
+/// Allow walking and replacing the subelements of a NamedAttribute.
+template <>
+struct AttrTypeSubElementHandler<NamedAttribute> {
+  template <typename T>
+  static void walk(T param, AttrTypeImmediateSubElementWalker &walker) {
+    walker.walk(param.getName());
+    walker.walk(param.getValue());
+  }
+  template <typename T>
+  static T replace(T param, AttrSubElementReplacements &attrRepls,
+                   TypeSubElementReplacements &typeRepls) {
+    ArrayRef<Attribute> paramRepls = attrRepls.take_front(2);
+    return T(cast<decltype(param.getName())>(paramRepls[0]), paramRepls[1]);
+  }
+};
 
 //===----------------------------------------------------------------------===//
 // AttributeTraitBase

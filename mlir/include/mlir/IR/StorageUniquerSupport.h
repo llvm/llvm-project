@@ -13,6 +13,7 @@
 #ifndef MLIR_IR_STORAGEUNIQUERSUPPORT_H
 #define MLIR_IR_STORAGEUNIQUERSUPPORT_H
 
+#include "mlir/IR/AttrTypeSubElements.h"
 #include "mlir/Support/InterfaceSupport.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/StorageUniquer.h"
@@ -123,6 +124,51 @@ public:
   static HasTraitFn getHasTraitFn() {
     return [](TypeID id) {
       return storage_user_base_impl::hasTrait<Traits...>(id);
+    };
+  }
+
+  /// Walk all of the immediately nested sub-attributes and sub-types. This
+  /// method does not recurse into sub elements.
+  void walkImmediateSubElements(function_ref<void(Attribute)> walkAttrsFn,
+                                function_ref<void(Type)> walkTypesFn) const {
+    ::mlir::detail::walkImmediateSubElementsImpl(
+        *static_cast<const ConcreteT *>(this), walkAttrsFn, walkTypesFn);
+  }
+
+  /// Replace the immediately nested sub-attributes and sub-types with those
+  /// provided. The order of the provided elements is derived from the order of
+  /// the elements returned by the callbacks of `walkImmediateSubElements`. The
+  /// element at index 0 would replace the very first attribute given by
+  /// `walkImmediateSubElements`. On success, the new instance with the values
+  /// replaced is returned. If replacement fails, nullptr is returned.
+  ///
+  /// Note that replacing the sub-elements of mutable types or attributes is
+  /// not currently supported by the interface. If an implementing type or
+  /// attribute is mutable, it should return `nullptr` if it has no mechanism
+  /// for replacing sub elements.
+  auto replaceImmediateSubElements(ArrayRef<Attribute> replAttrs,
+                                   ArrayRef<Type> replTypes) const {
+    return ::mlir::detail::replaceImmediateSubElementsImpl(
+        *static_cast<const ConcreteT *>(this), replAttrs, replTypes);
+  }
+
+  /// Returns a function that walks immediate sub elements of a given instance
+  /// of the storage user.
+  static auto getWalkImmediateSubElementsFn() {
+    return [](auto instance, function_ref<void(Attribute)> walkAttrsFn,
+              function_ref<void(Type)> walkTypesFn) {
+      cast<ConcreteT>(instance).walkImmediateSubElements(walkAttrsFn,
+                                                         walkTypesFn);
+    };
+  }
+
+  /// Returns a function that replaces immediate sub elements of a given
+  /// instance of the storage user.
+  static auto getReplaceImmediateSubElementsFn() {
+    return [](auto instance, ArrayRef<Attribute> replAttrs,
+              ArrayRef<Type> replTypes) {
+      return cast<ConcreteT>(instance).replaceImmediateSubElements(replAttrs,
+                                                                   replTypes);
     };
   }
 

@@ -59,7 +59,7 @@ void ResourcePressureView::onEvent(const HWInstructionEvent &Event) {
     const ResourceRef &RR = Use.first;
     assert(Resource2VecIndex.find(RR.first) != Resource2VecIndex.end());
     unsigned R2VIndex = Resource2VecIndex[RR.first];
-    R2VIndex += countTrailingZeros(RR.second);
+    R2VIndex += llvm::countr_zero(RR.second);
     ResourceUsage[R2VIndex + NumResourceUnits * SourceIdx] += Use.second;
     ResourceUsage[R2VIndex + NumResourceUnits * Source.size()] += Use.second;
   }

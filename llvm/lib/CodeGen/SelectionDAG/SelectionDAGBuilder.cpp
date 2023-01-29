@@ -2901,14 +2901,13 @@ void SelectionDAGBuilder::visitBitTestCase(BitTestBlock &BB,
     // would need to be to shift a 1 bit in that position.
     Cmp = DAG.getSetCC(
         dl, TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT),
-        ShiftOp, DAG.getConstant(countTrailingZeros(B.Mask), dl, VT),
+        ShiftOp, DAG.getConstant(llvm::countr_zero(B.Mask), dl, VT),
         ISD::SETEQ);
   } else if (PopCount == BB.Range) {
     // There is only one zero bit in the range, test for it directly.
     Cmp = DAG.getSetCC(
         dl, TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT),
-        ShiftOp, DAG.getConstant(countTrailingOnes(B.Mask), dl, VT),
-        ISD::SETNE);
+        ShiftOp, DAG.getConstant(llvm::countr_one(B.Mask), dl, VT), ISD::SETNE);
   } else {
     // Make desired shift
     SDValue SwitchVal = DAG.getNode(ISD::SHL, dl, VT,

@@ -1277,7 +1277,7 @@ void MCAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
       unsigned Remaining = Size - Emitted;
       // The size of our partial emission must be a power of two less than
       // Size.
-      unsigned EmissionSize = PowerOf2Floor(std::min(Remaining, Size - 1));
+      unsigned EmissionSize = llvm::bit_floor(std::min(Remaining, Size - 1));
       // Calculate the byte offset of our partial emission taking into account
       // the endianness of the target.
       unsigned ByteOffset =

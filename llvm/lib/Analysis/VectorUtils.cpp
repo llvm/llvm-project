@@ -771,7 +771,7 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
       LeaderDemandedBits |= DBits[M];
 
     uint64_t MinBW = (sizeof(LeaderDemandedBits) * 8) -
-                     llvm::countLeadingZeros(LeaderDemandedBits);
+                     llvm::countl_zero(LeaderDemandedBits);
     // Round up to a power of 2
     if (!isPowerOf2_64((uint64_t)MinBW))
       MinBW = NextPowerOf2(MinBW);
