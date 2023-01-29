@@ -191,41 +191,43 @@ define void @__arm_2d_impl_rgb16_colour_filling_with_alpha_sched(i16* noalias no
 ; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    sub sp, #64
+; CHECK-NEXT:    sub sp, #80
 ; CHECK-NEXT:    ldrsh.w r12, [r2, #2]
 ; CHECK-NEXT:    cmp.w r12, #1
 ; CHECK-NEXT:    blt.w .LBB1_6
 ; CHECK-NEXT:  @ %bb.1: @ %for.cond3.preheader.lr.ph
 ; CHECK-NEXT:    ldrsh.w r2, [r2]
 ; CHECK-NEXT:    cmp r2, #1
-; CHECK-NEXT:    blt.w .LBB1_6
+; CHECK-NEXT:    blt .LBB1_6
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond3.preheader.us.preheader
-; CHECK-NEXT:    ldr r7, [sp, #152]
-; CHECK-NEXT:    movs r4, #252
-; CHECK-NEXT:    lsls r6, r3, #3
-; CHECK-NEXT:    and.w r4, r4, r3, lsr #3
-; CHECK-NEXT:    uxtb r6, r6
+; CHECK-NEXT:    ldr r7, [sp, #168]
 ; CHECK-NEXT:    movs r5, #120
-; CHECK-NEXT:    mul lr, r4, r7
+; CHECK-NEXT:    lsls r6, r3, #3
+; CHECK-NEXT:    movs r4, #252
 ; CHECK-NEXT:    and.w r5, r5, r3, lsr #9
+; CHECK-NEXT:    uxtb r6, r6
+; CHECK-NEXT:    and.w r3, r4, r3, lsr #3
 ; CHECK-NEXT:    muls r6, r7, r6
-; CHECK-NEXT:    vmov.i16 q0, #0x78
-; CHECK-NEXT:    rsb.w r3, r7, #256
-; CHECK-NEXT:    muls r5, r7, r5
-; CHECK-NEXT:    lsls r7, r1, #1
-; CHECK-NEXT:    vstrw.32 q0, [sp, #48] @ 16-byte Spill
-; CHECK-NEXT:    vdup.16 q4, r6
-; CHECK-NEXT:    mov.w r6, #2016
+; CHECK-NEXT:    mul lr, r3, r7
+; CHECK-NEXT:    vdup.16 q0, r6
+; CHECK-NEXT:    vstrw.32 q0, [sp, #64] @ 16-byte Spill
 ; CHECK-NEXT:    vdup.16 q0, lr
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vmov.i16 q2, #0xf8
-; CHECK-NEXT:    vmov.i16 q5, #0xfc
+; CHECK-NEXT:    muls r5, r7, r5
+; CHECK-NEXT:    vstrw.32 q0, [sp, #48] @ 16-byte Spill
+; CHECK-NEXT:    vmov.i16 q0, #0xfc
+; CHECK-NEXT:    mov.w r6, #2016
 ; CHECK-NEXT:    vstrw.32 q0, [sp, #32] @ 16-byte Spill
 ; CHECK-NEXT:    vdup.16 q0, r5
-; CHECK-NEXT:    vdup.16 q6, r6
-; CHECK-NEXT:    vmov.i16 q3, #0xf800
+; CHECK-NEXT:    rsb.w r3, r7, #256
+; CHECK-NEXT:    lsls r7, r1, #1
 ; CHECK-NEXT:    vstrw.32 q0, [sp, #16] @ 16-byte Spill
-; CHECK-NEXT:    vstrw.32 q3, [sp] @ 16-byte Spill
+; CHECK-NEXT:    vdup.16 q0, r6
+; CHECK-NEXT:    vmov.i16 q2, #0xf8
+; CHECK-NEXT:    vmov.i16 q5, #0x78
+; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
+; CHECK-NEXT:    vmov.i16 q6, #0xf800
+; CHECK-NEXT:    movs r4, #0
+; CHECK-NEXT:    vldrw.u32 q7, [sp] @ 16-byte Reload
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  .LBB1_3: @ %vector.ph
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
@@ -237,48 +239,39 @@ define void @__arm_2d_impl_rgb16_colour_filling_with_alpha_sched(i16* noalias no
 ; CHECK-NEXT:    @ Parent Loop BB1_3 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    vldrh.u16 q0, [r5]
+; CHECK-NEXT:    vshl.i16 q1, q0, #3
+; CHECK-NEXT:    vldrw.u32 q4, [sp, #64] @ 16-byte Reload
+; CHECK-NEXT:    vand q1, q1, q2
+; CHECK-NEXT:    vmla.i16 q4, q1, r3
 ; CHECK-NEXT:    vmov.f64 d6, d4
 ; CHECK-NEXT:    vmov.f64 d7, d5
-; CHECK-NEXT:    vshl.i16 q1, q0, #3
-; CHECK-NEXT:    vand q1, q1, q2
-; CHECK-NEXT:    vmov q2, q4
-; CHECK-NEXT:    vmla.i16 q2, q1, r3
-; CHECK-NEXT:    vshr.u16 q1, q0, #3
-; CHECK-NEXT:    vand q1, q1, q5
-; CHECK-NEXT:    vmov.f64 d14, d10
-; CHECK-NEXT:    vmov.f64 d15, d11
-; CHECK-NEXT:    vmov.f64 d10, d8
-; CHECK-NEXT:    vmov.f64 d11, d9
-; CHECK-NEXT:    vldrw.u32 q4, [sp, #32] @ 16-byte Reload
-; CHECK-NEXT:    vshr.u16 q0, q0, #9
-; CHECK-NEXT:    vmla.i16 q4, q1, r3
-; CHECK-NEXT:    vldrw.u32 q1, [sp, #48] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q1, [sp, #32] @ 16-byte Reload
+; CHECK-NEXT:    vshr.u16 q2, q0, #9
+; CHECK-NEXT:    vshr.u16 q0, q0, #3
 ; CHECK-NEXT:    vand q0, q0, q1
-; CHECK-NEXT:    vldrw.u32 q1, [sp, #16] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q1, [sp, #48] @ 16-byte Reload
 ; CHECK-NEXT:    vmla.i16 q1, q0, r3
-; CHECK-NEXT:    vshr.u16 q0, q2, #11
-; CHECK-NEXT:    vshr.u16 q2, q4, #5
-; CHECK-NEXT:    vand q2, q2, q6
-; CHECK-NEXT:    vorr q0, q2, q0
+; CHECK-NEXT:    vand q2, q2, q5
+; CHECK-NEXT:    vshr.u16 q0, q4, #11
+; CHECK-NEXT:    vldrw.u32 q4, [sp, #16] @ 16-byte Reload
+; CHECK-NEXT:    vshr.u16 q1, q1, #5
+; CHECK-NEXT:    vmla.i16 q4, q2, r3
+; CHECK-NEXT:    vand q1, q1, q7
+; CHECK-NEXT:    vorr q0, q1, q0
+; CHECK-NEXT:    vand q1, q4, q6
+; CHECK-NEXT:    vorr q0, q0, q1
+; CHECK-NEXT:    vstrh.16 q0, [r5], #16
 ; CHECK-NEXT:    vmov.f64 d4, d6
 ; CHECK-NEXT:    vmov.f64 d5, d7
-; CHECK-NEXT:    vldrw.u32 q3, [sp] @ 16-byte Reload
-; CHECK-NEXT:    vmov.f64 d8, d10
-; CHECK-NEXT:    vmov.f64 d9, d11
-; CHECK-NEXT:    vand q1, q1, q3
-; CHECK-NEXT:    vorr q0, q0, q1
-; CHECK-NEXT:    vmov.f64 d10, d14
-; CHECK-NEXT:    vmov.f64 d11, d15
-; CHECK-NEXT:    vstrh.16 q0, [r5], #16
 ; CHECK-NEXT:    letp lr, .LBB1_4
 ; CHECK-NEXT:  @ %bb.5: @ %for.cond3.for.cond.cleanup7_crit_edge.us
 ; CHECK-NEXT:    @ in Loop: Header=BB1_3 Depth=1
 ; CHECK-NEXT:    adds r4, #1
-; CHECK-NEXT:    cmp r4, r12
 ; CHECK-NEXT:    add r0, r7
+; CHECK-NEXT:    cmp r4, r12
 ; CHECK-NEXT:    bne .LBB1_3
 ; CHECK-NEXT:  .LBB1_6: @ %for.cond.cleanup
-; CHECK-NEXT:    add sp, #64
+; CHECK-NEXT:    add sp, #80
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}

@@ -109,15 +109,18 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
 bool VPlanTransforms::sinkScalarOperands(VPlan &Plan) {
   auto Iter = vp_depth_first_deep(Plan.getEntry());
   bool Changed = false;
-  // First, collect the operands of all predicated replicate recipes as seeds
-  // for sinking.
+  // First, collect the operands of all recipes in replicate blocks as seeds for
+  // sinking.
   SetVector<std::pair<VPBasicBlock *, VPRecipeBase *>> WorkList;
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
+  for (VPRegionBlock *VPR : VPBlockUtils::blocksOnly<VPRegionBlock>(Iter)) {
+    VPBasicBlock *EntryVPBB = VPR->getEntryBasicBlock();
+    if (!VPR->isReplicator() || EntryVPBB->getSuccessors().size() != 2)
+      continue;
+    VPBasicBlock *VPBB = dyn_cast<VPBasicBlock>(EntryVPBB->getSuccessors()[0]);
+    if (!VPBB || VPBB->getSingleSuccessor() != VPR->getExitingBasicBlock())
+      continue;
     for (auto &Recipe : *VPBB) {
-      auto *RepR = dyn_cast<VPReplicateRecipe>(&Recipe);
-      if (!RepR || !RepR->isPredicated())
-        continue;
-      for (VPValue *Op : RepR->operands())
+      for (VPValue *Op : Recipe.operands())
         if (auto *Def = Op->getDefiningRecipe())
           WorkList.insert(std::make_pair(VPBB, Def));
     }

@@ -41,3 +41,37 @@ define <8 x i16> @test_v8i16_nosignbit(<8 x i16> %a, <8 x i16> %b) {
   %4 = select <8 x i1> %3, <8 x i16> %1, <8 x i16> %2
   ret <8 x i16> %4
 }
+
+define <16 x i8> @test_v16i8_reassociation(<16 x i8> %a) {
+; SSE2-LABEL: test_v16i8_reassociation:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; SSE2-NEXT:    pmaxub %xmm1, %xmm0
+; SSE2-NEXT:    pmaxub %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: test_v16i8_reassociation:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; SSE41-NEXT:    pmaxub %xmm1, %xmm0
+; SSE41-NEXT:    pmaxub %xmm1, %xmm0
+; SSE41-NEXT:    retq
+;
+; SSE42-LABEL: test_v16i8_reassociation:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; SSE42-NEXT:    pmaxub %xmm1, %xmm0
+; SSE42-NEXT:    pmaxub %xmm1, %xmm0
+; SSE42-NEXT:    retq
+;
+; AVX-LABEL: test_v16i8_reassociation:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; AVX-NEXT:    vpmaxub %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpmaxub %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = call <16 x i8> @llvm.umax.v16i8(<16 x i8> %a, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>)
+  %2 = call <16 x i8> @llvm.umax.v16i8(<16 x i8> %1, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>)
+  ret <16 x i8> %2
+}
+declare <16 x i8> @llvm.umax.v16i8(<16 x i8> %x, <16 x i8> %y)
