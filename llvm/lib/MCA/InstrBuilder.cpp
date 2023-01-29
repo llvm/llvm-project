@@ -123,7 +123,7 @@ static void initializeUsedResources(InstrDesc &ID,
     ResourcePlusCycles &A = Worklist[I];
     if (!A.second.size()) {
       assert(llvm::popcount(A.first) > 1 && "Expected a group!");
-      UsedResourceGroups |= PowerOf2Floor(A.first);
+      UsedResourceGroups |= llvm::bit_floor(A.first);
       continue;
     }
 
@@ -134,7 +134,7 @@ static void initializeUsedResources(InstrDesc &ID,
       UsedResourceUnits |= A.first;
     } else {
       // Remove the leading 1 from the resource group mask.
-      NormalizedMask ^= PowerOf2Floor(NormalizedMask);
+      NormalizedMask ^= llvm::bit_floor(NormalizedMask);
       if (UnitsFromResourceGroups & NormalizedMask)
         ID.HasPartiallyOverlappingGroups = true;
 
@@ -172,7 +172,7 @@ static void initializeUsedResources(InstrDesc &ID,
   for (ResourcePlusCycles &RPC : ID.Resources) {
     if (llvm::popcount(RPC.first) > 1 && !RPC.second.isReserved()) {
       // Remove the leading 1 from the resource group mask.
-      uint64_t Mask = RPC.first ^ PowerOf2Floor(RPC.first);
+      uint64_t Mask = RPC.first ^ llvm::bit_floor(RPC.first);
       uint64_t MaxResourceUnits = llvm::popcount(Mask);
       if (RPC.second.NumUnits > (unsigned)llvm::popcount(Mask)) {
         RPC.second.setReserved();

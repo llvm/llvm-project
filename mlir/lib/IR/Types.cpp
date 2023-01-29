@@ -13,6 +13,22 @@ using namespace mlir;
 using namespace mlir::detail;
 
 //===----------------------------------------------------------------------===//
+// AbstractType
+//===----------------------------------------------------------------------===//
+
+void AbstractType::walkImmediateSubElements(
+    Type type, function_ref<void(Attribute)> walkAttrsFn,
+    function_ref<void(Type)> walkTypesFn) const {
+  walkImmediateSubElementsFn(type, walkAttrsFn, walkTypesFn);
+}
+
+Type AbstractType::replaceImmediateSubElements(Type type,
+                                               ArrayRef<Attribute> replAttrs,
+                                               ArrayRef<Type> replTypes) const {
+  return replaceImmediateSubElementsFn(type, replAttrs, replTypes);
+}
+
+//===----------------------------------------------------------------------===//
 // Type
 //===----------------------------------------------------------------------===//
 

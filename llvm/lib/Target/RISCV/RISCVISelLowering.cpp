@@ -2412,8 +2412,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     // according to the size of the final vector - use i8 chunks rather than
     // XLenVT if we're producing a v8i1. This results in more consistent
     // codegen across RV32 and RV64.
-    unsigned NumViaIntegerBits =
-        std::min(std::max(NumElts, 8u), Subtarget.getXLen());
+    unsigned NumViaIntegerBits = std::clamp(NumElts, 8u, Subtarget.getXLen());
     NumViaIntegerBits = std::min(NumViaIntegerBits, Subtarget.getELEN());
     if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode())) {
       // If we have to use more than one INSERT_VECTOR_ELT then this
@@ -10887,10 +10886,10 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     case Intrinsic::riscv_vsetvlimax:
     case Intrinsic::riscv_vsetvli_opt:
     case Intrinsic::riscv_vsetvlimax_opt:
-      // Assume that VL output is positive and would fit in an int32_t.
-      // TODO: VLEN might be capped at 16 bits in a future V spec update.
-      if (BitWidth >= 32)
-        Known.Zero.setBitsFrom(31);
+      // Assume that VL output is >= 65536.
+      // TODO: Take SEW and LMUL into account.
+      if (BitWidth > 17)
+        Known.Zero.setBitsFrom(17);
       break;
     }
     break;

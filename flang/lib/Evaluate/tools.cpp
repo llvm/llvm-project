@@ -737,6 +737,18 @@ bool IsFunction(const Expr<SomeType> &expr) {
   return designator && designator->GetType().has_value();
 }
 
+bool IsProcedurePointer(const Expr<SomeType> &expr) {
+  return common::visit(common::visitors{
+                           [](const NullPointer &) { return true; },
+                           [](const ProcedureRef &) { return false; },
+                           [&](const auto &) {
+                             const Symbol *last{GetLastSymbol(expr)};
+                             return last && IsProcedurePointer(*last);
+                           },
+                       },
+      expr.u);
+}
+
 bool IsProcedurePointerTarget(const Expr<SomeType> &expr) {
   return common::visit(common::visitors{
                            [](const NullPointer &) { return true; },

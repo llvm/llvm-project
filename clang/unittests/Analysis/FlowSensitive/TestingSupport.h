@@ -262,7 +262,7 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
 
     // If successful, the dataflow analysis returns a mapping from block IDs to
     // the post-analysis states for the CFG blocks that have been evaluated.
-    llvm::Expected<std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>>>
+    llvm::Expected<std::vector<std::optional<TypeErasedDataflowAnalysisState>>>
         MaybeBlockStates = runTypeErasedDataflowAnalysis(
             CFCtx, Analysis, InitEnv, TypeErasedPostVisitCFG);
     if (!MaybeBlockStates) return MaybeBlockStates.takeError();

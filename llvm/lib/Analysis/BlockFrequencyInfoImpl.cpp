@@ -256,7 +256,7 @@ void Distribution::normalize() {
   if (DidOverflow)
     Shift = 33;
   else if (Total > UINT32_MAX)
-    Shift = 33 - countLeadingZeros(Total);
+    Shift = 33 - llvm::countl_zero(Total);
 
   // Early exit if nothing needs to be scaled.
   if (!Shift) {

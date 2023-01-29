@@ -432,7 +432,7 @@ static std::pair<uint32_t, uint32_t> getRemAndLZForGroup(unsigned group,
                                                          uint32_t val) {
   uint32_t rem, lz;
   do {
-    lz = llvm::countLeadingZeros(val) & ~1;
+    lz = llvm::countl_zero(val) & ~1;
     rem = val;
     if (lz == 32) // implies rem == 0
       break;

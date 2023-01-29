@@ -136,7 +136,7 @@ static bool splitBitmaskImm(T Imm, unsigned RegSize, T &Imm1Enc, T &Imm2Enc) {
   // consecutive ones. We can split it in to two bitmask immediate like
   // 0b00000000001111111111110000000000 and 0b11111111111000000000011111111111.
   // If we do AND with these two bitmask immediate, we can see original one.
-  unsigned LowestBitSet = countTrailingZeros(UImm);
+  unsigned LowestBitSet = llvm::countr_zero(UImm);
   unsigned HighestBitSet = Log2_64(UImm);
 
   // Create a mask which is filled with one from the position of lowest bit set

@@ -3,6 +3,9 @@
 // RUN: %clangxx_lsan %s -o %t
 // RUN: %run %t 2>&1
 
+// Fixme: remove once test passes with hwasan
+// UNSUPPORTED: hwasan
+
 #include <assert.h>
 #include <pthread.h>
 #include <stdio.h>

@@ -243,10 +243,10 @@ namespace clang {
     };
 
     SVETypeFlags(uint64_t F) : Flags(F) {
-      EltTypeShift = llvm::countTrailingZeros(EltTypeMask);
-      MemEltTypeShift = llvm::countTrailingZeros(MemEltTypeMask);
-      MergeTypeShift = llvm::countTrailingZeros(MergeTypeMask);
-      SplatOperandMaskShift = llvm::countTrailingZeros(SplatOperandMask);
+      EltTypeShift = llvm::countr_zero(EltTypeMask);
+      MemEltTypeShift = llvm::countr_zero(MemEltTypeMask);
+      MergeTypeShift = llvm::countr_zero(MergeTypeMask);
+      SplatOperandMaskShift = llvm::countr_zero(SplatOperandMask);
     }
 
     EltType getEltType() const {

@@ -742,7 +742,7 @@ public:
   /// Set the maximum vector width in the arguments.
   void setMaxVectorWidth(unsigned Width) {
     assert(llvm::isPowerOf2_32(Width) && "Expected power of 2 vector");
-    MaxVectorWidth = llvm::countTrailingZeros(Width) + 1;
+    MaxVectorWidth = llvm::countr_zero(Width) + 1;
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) {

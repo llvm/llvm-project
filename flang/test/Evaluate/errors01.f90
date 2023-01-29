@@ -103,6 +103,32 @@ module m
     !CHECK: error: DIM=4 argument to SPREAD must be between 1 and 3
     integer, parameter :: bad3 = spread(matrix, 4, 1)
   end subroutine
+  subroutine s10
+    !CHECK: warning: CHAR(I=-1) is out of range for CHARACTER(KIND=1)
+    character(kind=1), parameter :: badc11 = char(-1,kind=1)
+    !CHECK: warning: ACHAR(I=-1) is out of range for CHARACTER(KIND=1)
+    character(kind=1), parameter :: bada11 = achar(-1,kind=1)
+    !CHECK: warning: CHAR(I=-1) is out of range for CHARACTER(KIND=2)
+    character(kind=2), parameter :: badc21 = char(-1,kind=2)
+    !CHECK: warning: ACHAR(I=-1) is out of range for CHARACTER(KIND=2)
+    character(kind=2), parameter :: bada21 = achar(-1,kind=2)
+    !CHECK: warning: CHAR(I=-1) is out of range for CHARACTER(KIND=4)
+    character(kind=4), parameter :: badc41 = char(-1,kind=4)
+    !CHECK: warning: ACHAR(I=-1) is out of range for CHARACTER(KIND=4)
+    character(kind=4), parameter :: bada41 = achar(-1,kind=4)
+    !CHECK: warning: CHAR(I=256) is out of range for CHARACTER(KIND=1)
+    character(kind=1), parameter :: badc12 = char(256,kind=1)
+    !CHECK: warning: ACHAR(I=256) is out of range for CHARACTER(KIND=1)
+    character(kind=1), parameter :: bada12 = achar(256,kind=1)
+    !CHECK: warning: CHAR(I=65536) is out of range for CHARACTER(KIND=2)
+    character(kind=2), parameter :: badc22 = char(65536,kind=2)
+    !CHECK: warning: ACHAR(I=65536) is out of range for CHARACTER(KIND=2)
+    character(kind=2), parameter :: bada22 = achar(65536,kind=2)
+    !CHECK: warning: CHAR(I=4294967296) is out of range for CHARACTER(KIND=4)
+    character(kind=4), parameter :: badc42 = char(4294967296_8,kind=4)
+    !CHECK: warning: ACHAR(I=4294967296) is out of range for CHARACTER(KIND=4)
+    character(kind=4), parameter :: bada42 = achar(4294967296_8,kind=4)
+  end subroutine
   subroutine s12(x,y)
     class(t), intent(in) :: x
     class(*), intent(in) :: y

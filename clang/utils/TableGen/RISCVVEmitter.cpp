@@ -521,10 +521,9 @@ void RVVEmitter::createRVVIntrinsics(
     StringRef MaskedIRName = R->getValueAsString("MaskedIRName");
     unsigned NF = R->getValueAsInt("NF");
 
-    const Policy DefaultPolicy(HasTailPolicy, HasMaskPolicy);
+    const Policy DefaultPolicy;
     SmallVector<Policy> SupportedUnMaskedPolicies =
-        RVVIntrinsic::getSupportedUnMaskedPolicies(HasTailPolicy,
-                                                   HasMaskPolicy);
+        RVVIntrinsic::getSupportedUnMaskedPolicies();
     SmallVector<Policy> SupportedMaskedPolicies =
         RVVIntrinsic::getSupportedMaskedPolicies(HasTailPolicy, HasMaskPolicy);
 

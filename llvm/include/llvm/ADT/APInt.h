@@ -1552,7 +1552,7 @@ public:
   unsigned countLeadingZeros() const {
     if (isSingleWord()) {
       unsigned unusedBits = APINT_BITS_PER_WORD - BitWidth;
-      return llvm::countLeadingZeros(U.VAL) - unusedBits;
+      return llvm::countl_zero(U.VAL) - unusedBits;
     }
     return countLeadingZerosSlowCase();
   }
@@ -1569,7 +1569,7 @@ public:
     if (isSingleWord()) {
       if (LLVM_UNLIKELY(BitWidth == 0))
         return 0;
-      return llvm::countLeadingOnes(U.VAL << (APINT_BITS_PER_WORD - BitWidth));
+      return llvm::countl_one(U.VAL << (APINT_BITS_PER_WORD - BitWidth));
     }
     return countLeadingOnesSlowCase();
   }
@@ -1590,7 +1590,7 @@ public:
   /// zeros from the least significant bit to the first one bit.
   unsigned countTrailingZeros() const {
     if (isSingleWord()) {
-      unsigned TrailingZeros = llvm::countTrailingZeros(U.VAL);
+      unsigned TrailingZeros = llvm::countr_zero(U.VAL);
       return (TrailingZeros > BitWidth ? BitWidth : TrailingZeros);
     }
     return countTrailingZerosSlowCase();
@@ -1606,7 +1606,7 @@ public:
   /// of ones from the least significant bit to the first zero bit.
   unsigned countTrailingOnes() const {
     if (isSingleWord())
-      return llvm::countTrailingOnes(U.VAL);
+      return llvm::countr_one(U.VAL);
     return countTrailingOnesSlowCase();
   }
 

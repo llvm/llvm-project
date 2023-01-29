@@ -318,7 +318,7 @@ class ARMAsmParser : public MCTargetAsmParser {
   bool inImplicitITBlock() { return inITBlock() && !ITState.IsExplicit; }
 
   bool lastInITBlock() {
-    return ITState.CurPosition == 4 - countTrailingZeros(ITState.Mask);
+    return ITState.CurPosition == 4 - (unsigned)llvm::countr_zero(ITState.Mask);
   }
 
   void forwardITPosition() {
@@ -326,7 +326,7 @@ class ARMAsmParser : public MCTargetAsmParser {
     // Move to the next instruction in the IT block, if there is one. If not,
     // mark the block as done, except for implicit IT blocks, which we leave
     // open until we find an instruction that can't be added to it.
-    unsigned TZ = countTrailingZeros(ITState.Mask);
+    unsigned TZ = llvm::countr_zero(ITState.Mask);
     if (++ITState.CurPosition == 5 - TZ && ITState.IsExplicit)
       ITState.CurPosition = ~0U; // Done with the IT block after this.
   }
@@ -336,7 +336,7 @@ class ARMAsmParser : public MCTargetAsmParser {
     assert(inImplicitITBlock());
     assert(ITState.CurPosition > 1);
     ITState.CurPosition--;
-    unsigned TZ = countTrailingZeros(ITState.Mask);
+    unsigned TZ = llvm::countr_zero(ITState.Mask);
     unsigned NewMask = 0;
     NewMask |= ITState.Mask & (0xC << TZ);
     NewMask |= 0x2 << TZ;
@@ -384,7 +384,7 @@ class ARMAsmParser : public MCTargetAsmParser {
     assert(!isITBlockFull());
     assert(Cond == ITState.Cond ||
            Cond == ARMCC::getOppositeCondition(ITState.Cond));
-    unsigned TZ = countTrailingZeros(ITState.Mask);
+    unsigned TZ = llvm::countr_zero(ITState.Mask);
     unsigned NewMask = 0;
     // Keep any existing condition bits.
     NewMask |= ITState.Mask & (0xE << TZ);
@@ -423,7 +423,7 @@ class ARMAsmParser : public MCTargetAsmParser {
   bool inVPTBlock() { return VPTState.CurPosition != ~0U; }
   void forwardVPTPosition() {
     if (!inVPTBlock()) return;
-    unsigned TZ = countTrailingZeros(VPTState.Mask);
+    unsigned TZ = llvm::countr_zero(VPTState.Mask);
     if (++VPTState.CurPosition == 5 - TZ)
       VPTState.CurPosition = ~0U;
   }

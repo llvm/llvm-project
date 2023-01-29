@@ -2155,7 +2155,7 @@ unsigned PPCFastISel::PPCMaterialize64BitInt(int64_t Imm,
   // If the value doesn't fit in 32 bits, see if we can shift it
   // so that it fits in 32 bits.
   if (!isInt<32>(Imm)) {
-    Shift = countTrailingZeros<uint64_t>(Imm);
+    Shift = llvm::countr_zero<uint64_t>(Imm);
     int64_t ImmSh = static_cast<uint64_t>(Imm) >> Shift;
 
     if (isInt<32>(ImmSh))

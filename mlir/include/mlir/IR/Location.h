@@ -15,7 +15,6 @@
 #define MLIR_IR_LOCATION_H
 
 #include "mlir/IR/Attributes.h"
-#include "mlir/IR/SubElementInterfaces.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 
 namespace mlir {
@@ -172,13 +171,13 @@ inline OpaqueLoc OpaqueLoc::get(T underlyingLocation, MLIRContext *context) {
 }
 
 //===----------------------------------------------------------------------===//
-// SubElementInterfaces
+// SubElements
 //===----------------------------------------------------------------------===//
 
 /// Enable locations to be introspected as sub-elements.
 template <>
 struct AttrTypeSubElementHandler<Location> {
-  static void walk(Location param, AttrTypeSubElementWalker &walker) {
+  static void walk(Location param, AttrTypeImmediateSubElementWalker &walker) {
     walker.walk(param);
   }
   static Location replace(Location param, AttrSubElementReplacements &attrRepls,

@@ -11,6 +11,7 @@
 #include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "int-range-analysis"
 
@@ -222,11 +223,11 @@ void CmpOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   APInt min = APInt::getZero(1);
   APInt max = APInt::getAllOnesValue(1);
 
-  Optional<bool> truthValue64 = intrange::evaluatePred(pred, lhs, rhs);
+  std::optional<bool> truthValue64 = intrange::evaluatePred(pred, lhs, rhs);
 
   ConstantIntRanges lhsTrunc = truncRange(lhs, indexMinWidth),
                     rhsTrunc = truncRange(rhs, indexMinWidth);
-  Optional<bool> truthValue32 =
+  std::optional<bool> truthValue32 =
       intrange::evaluatePred(pred, lhsTrunc, rhsTrunc);
 
   if (truthValue64 == truthValue32) {

@@ -305,7 +305,7 @@ bool LoadStoreOpt::mergeStores(SmallVectorImpl<GStore *> &StoresToMerge) {
   const auto &DL = MF->getFunction().getParent()->getDataLayout();
   bool AnyMerged = false;
   do {
-    unsigned NumPow2 = PowerOf2Floor(StoresToMerge.size());
+    unsigned NumPow2 = llvm::bit_floor(StoresToMerge.size());
     unsigned MaxSizeBits = NumPow2 * OrigTy.getSizeInBits().getFixedValue();
     // Compute the biggest store we can generate to handle the number of stores.
     unsigned MergeSizeBits;

@@ -237,17 +237,17 @@ static inline bool processLogicalImmediate(uint64_t Imm, unsigned RegSize,
   Imm &= Mask;
 
   if (isShiftedMask_64(Imm)) {
-    I = countTrailingZeros(Imm);
+    I = llvm::countr_zero(Imm);
     assert(I < 64 && "undefined behavior");
-    CTO = countTrailingOnes(Imm >> I);
+    CTO = llvm::countr_one(Imm >> I);
   } else {
     Imm |= ~Mask;
     if (!isShiftedMask_64(~Imm))
       return false;
 
-    unsigned CLO = countLeadingOnes(Imm);
+    unsigned CLO = llvm::countl_one(Imm);
     I = 64 - CLO;
-    CTO = CLO + countTrailingOnes(Imm) - (64 - Size);
+    CTO = CLO + llvm::countr_one(Imm) - (64 - Size);
   }
 
   // Encode in Immr the number of RORs it would take to get *from* 0^m 1^n
@@ -298,7 +298,7 @@ static inline uint64_t decodeLogicalImmediate(uint64_t val, unsigned regSize) {
   unsigned imms = val & 0x3f;
 
   assert((regSize == 64 || N == 0) && "undefined logical immediate encoding");
-  int len = 31 - countLeadingZeros((N << 6) | (~imms & 0x3f));
+  int len = 31 - llvm::countl_zero((N << 6) | (~imms & 0x3f));
   assert(len >= 0 && "undefined logical immediate encoding");
   unsigned size = (1 << len);
   unsigned R = immr & (size - 1);
@@ -327,7 +327,7 @@ static inline bool isValidDecodeLogicalImmediate(uint64_t val,
 
   if (regSize == 32 && N != 0) // undefined logical immediate encoding
     return false;
-  int len = 31 - countLeadingZeros((N << 6) | (~imms & 0x3f));
+  int len = 31 - llvm::countl_zero((N << 6) | (~imms & 0x3f));
   if (len < 0) // undefined logical immediate encoding
     return false;
   unsigned size = (1 << len);
