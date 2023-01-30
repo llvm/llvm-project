@@ -1044,6 +1044,17 @@ public:
     return RecursiveASTVisitor::TraverseConstructorInitializer(Init);
   }
 
+  bool TraverseTypeConstraint(const TypeConstraint *TC) {
+    // We want to handle all ConceptReferences but RAV is missing a
+    // polymorphic Visit or Traverse method for it, so we handle
+    // TypeConstraints specially here.
+    Out(ReferenceLoc{TC->getNestedNameSpecifierLoc(),
+                     TC->getConceptNameLoc(),
+                     /*IsDecl=*/false,
+                     {TC->getNamedConcept()}});
+    return RecursiveASTVisitor::TraverseTypeConstraint(TC);
+  }
+
 private:
   /// Obtain information about a reference directly defined in \p N. Does not
   /// recurse into child nodes, e.g. do not expect references for constructor
