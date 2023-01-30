@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.13.4)
 
 project( libclc VERSION 0.2.0 LANGUAGES CXX C)
 
+set(CMAKE_CXX_STANDARD 17)
+
 include( GNUInstallDirs )
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   amdgcn-amdhsa/lib/SOURCES;
