@@ -1161,6 +1161,14 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     EXPECT_TRUE(Recipe.mayWriteToMemory());
     EXPECT_TRUE(Recipe.mayReadOrWriteMemory());
   }
+  {
+    VPValue Op1;
+    VPPredInstPHIRecipe Recipe(&Op1);
+    EXPECT_FALSE(Recipe.mayHaveSideEffects());
+    EXPECT_TRUE(Recipe.mayReadFromMemory());
+    EXPECT_TRUE(Recipe.mayWriteToMemory());
+    EXPECT_TRUE(Recipe.mayReadOrWriteMemory());
+  }
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

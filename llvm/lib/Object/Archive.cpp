@@ -949,7 +949,15 @@ Archive::child_iterator Archive::child_begin(Error &Err,
     return child_iterator::itr(
         Child(this, FirstRegularData, FirstRegularStartOfFile), Err);
 
-  const char *Loc = Data.getBufferStart() + getFirstChildOffset();
+  uint64_t FirstChildOffset = getFirstChildOffset();
+  const char *Loc = Data.getBufferStart() + FirstChildOffset;
+  if (Loc >= Data.getBufferEnd()) {
+    Err = malformedError("First member offset " + Twine(FirstChildOffset) +
+                         " is beyond the data buffer which has size of " +
+                         Twine(Data.getBufferSize()));
+    return child_end();
+  }
+
   Child C(this, Loc, &Err);
   if (Err)
     return child_end();

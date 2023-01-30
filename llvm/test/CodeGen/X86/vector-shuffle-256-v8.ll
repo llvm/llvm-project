@@ -3807,7 +3807,7 @@ define <8 x i32> @lowhalf_v8i32(<8 x i32> %x, <8 x i32> %y) {
 ;
 ; AVX2-LABEL: lowhalf_v8i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; AVX2-NEXT:    vmovaps {{.*#+}} xmm1 = [2,6,3,6]
 ; AVX2-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
@@ -3833,7 +3833,7 @@ define <8 x float> @lowhalf_v8f32(<8 x float> %x, <8 x float> %y) {
 ;
 ; AVX2-LABEL: lowhalf_v8f32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; AVX2-NEXT:    vmovaps {{.*#+}} xmm1 = [2,6,3,6]
 ; AVX2-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// This file describes the RISC-V instructions from the 'Zc*' compressed
-/// instruction extensions, version 0.70.4.
+/// instruction extensions, version 1.0.1.
 /// This version is still experimental as the 'Zc*' extensions haven't been
 /// ratified yet.
 ///

@@ -4477,7 +4477,7 @@ IEEEFloat scalbn(IEEEFloat X, int Exp, IEEEFloat::roundingMode RoundingMode) {
   int MaxIncrement = MaxExp - (MinExp - SignificandBits) + 1;
 
   // Clamp to one past the range ends to let normalize handle overlflow.
-  X.exponent += std::min(std::max(Exp, -MaxIncrement - 1), MaxIncrement);
+  X.exponent += std::clamp(Exp, -MaxIncrement - 1, MaxIncrement);
   X.normalize(RoundingMode, lfExactlyZero);
   if (X.isNaN())
     X.makeQuiet();

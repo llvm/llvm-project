@@ -1349,8 +1349,9 @@ defm S_ATC_PROBE_BUFFER : SM_Real_Probe_gfx11 <0x23, "S_ATC_PROBE_BUFFER">;
 //===----------------------------------------------------------------------===//
 // GFX12.
 //===----------------------------------------------------------------------===//
+
 class SMEM_Real_gfx12Plus<bits<6> op, SM_Pseudo ps, string opName,
-                              int subtarget, RegisterWithSubRegs sgpr_null> :
+                          int subtarget, RegisterWithSubRegs sgpr_null> :
     SM_Real<ps, opName>, SIMCInstr<ps.PseudoInstr, subtarget>, Enc64 {
     
   let Inst{18-13} = op;
@@ -1363,7 +1364,7 @@ class SMEM_Real_gfx12Plus<bits<6> op, SM_Pseudo ps, string opName,
 
 class SMEM_Real_gfx12<bits<6> op, SM_Pseudo ps, string opName = ps.Mnemonic> :
     SMEM_Real_gfx12Plus<op, ps, opName, SIEncodingFamily.GFX12,
-                            SGPR_NULL_gfx11plus> {
+                        SGPR_NULL_gfx11plus> {
   let AssemblerPredicate = isGFX12Plus;
   let DecoderNamespace = "GFX12";
 
@@ -1375,7 +1376,7 @@ class SMEM_Real_gfx12<bits<6> op, SM_Pseudo ps, string opName = ps.Mnemonic> :
 }
 
 class SMEM_Real_Prefetch_gfx12<bits<6> op, SM_Pseudo ps> :
-      SMEM_Real_gfx12<op, ps> {
+    SMEM_Real_gfx12<op, ps> {
   bits<7> sdata; // Only 5 bits of sdata are supported.
 
   let sdst = ?;
@@ -1423,3 +1424,11 @@ def S_PREFETCH_INST_PC_REL_gfx12 : SMEM_Real_Prefetch_gfx12<0x25, S_PREFETCH_INS
 def S_PREFETCH_DATA_gfx12        : SMEM_Real_Prefetch_gfx12<0x26, S_PREFETCH_DATA>;
 def S_BUFFER_PREFETCH_DATA_gfx12 : SMEM_Real_Prefetch_gfx12<0x27, S_BUFFER_PREFETCH_DATA>;
 def S_PREFETCH_DATA_PC_REL_gfx12 : SMEM_Real_Prefetch_gfx12<0x28, S_PREFETCH_DATA_PC_REL>;
+
+multiclass SMEM_Real_Probe_gfx12<bits<6> op, string ps> {
+  def _IMM_gfx12      : SMEM_Real_Prefetch_gfx12<op, !cast<SM_Probe_Pseudo>(ps#_IMM)>;
+  def _SGPR_IMM_gfx12 : SMEM_Real_Prefetch_gfx12<op, !cast<SM_Probe_Pseudo>(ps#_SGPR_IMM)>;
+}
+
+defm S_ATC_PROBE        : SMEM_Real_Probe_gfx12<0x22, "S_ATC_PROBE">;
+defm S_ATC_PROBE_BUFFER : SMEM_Real_Probe_gfx12<0x23, "S_ATC_PROBE_BUFFER">;

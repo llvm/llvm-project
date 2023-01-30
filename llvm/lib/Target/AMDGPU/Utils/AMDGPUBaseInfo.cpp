@@ -505,6 +505,7 @@ bool isMAC(unsigned Opc) {
          Opc == AMDGPU::V_MAC_LEGACY_F32_e64_gfx10 ||
          Opc == AMDGPU::V_MAC_F16_e64_vi ||
          Opc == AMDGPU::V_FMAC_F64_e64_gfx90a ||
+         Opc == AMDGPU::V_FMAC_F64_e64_gfx12 ||
          Opc == AMDGPU::V_FMAC_F32_e64_gfx10 ||
          Opc == AMDGPU::V_FMAC_F32_e64_gfx11 ||
          Opc == AMDGPU::V_FMAC_F32_e64_gfx12 ||
@@ -2723,10 +2724,11 @@ std::optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
 }
 
 unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST) {
-  // Address offset is 12-bit signed for GFX10, 13-bit for GFX9 and GFX11+.
   if (AMDGPU::isGFX10(ST))
     return 12;
 
+  if (AMDGPU::isGFX12(ST))
+    return 24;
   return 13;
 }
 
