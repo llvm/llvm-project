@@ -167,6 +167,8 @@ set(CLANG_ENABLE_BOOTSTRAP ON CACHE BOOL "")
 set(CLANG_BOOTSTRAP_EXTRA_DEPS
   builtins
   runtimes
+  llvm-rc
+  llvm-mt
   CACHE STRING "")
 set(CLANG_BOOTSTRAP_CMAKE_ARGS
   ${EXTRA_ARGS}
