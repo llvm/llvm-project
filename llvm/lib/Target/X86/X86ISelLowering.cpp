@@ -19508,7 +19508,7 @@ static SDValue lower1BitShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   assert(SubvecElts != NumElts && "Identity shuffle?");
 
   // Clip to a power 2.
-  SubvecElts = PowerOf2Floor(SubvecElts);
+  SubvecElts = llvm::bit_floor<uint32_t>(SubvecElts);
 
   // Make sure the number of zeroable bits in the top at least covers the bits
   // not covered by the subvector.
