@@ -333,7 +333,7 @@ struct ExtractSliceOpInterface
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
                                 const AnalysisState &state) const {
-    return BufferRelation::None;
+    return BufferRelation::Unknown;
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
@@ -712,7 +712,7 @@ static bool isNotConflictingInsertSliceLikeOp(Operation *op, OpOperand *uRead,
     // In the above example:
     // uRead             = OpOperand 0 (%1) of vector.transfer_read
     // uConflictingWrite = OpOperand 1 (%t) of tensor.insert_slice
-    // lastWrite         = %1
+    // definition        = %1
     //
     // This is not a conflict because the InsertSliceOp overwrites the
     // memory segment of %1 with the exact same data. (Effectively, there
