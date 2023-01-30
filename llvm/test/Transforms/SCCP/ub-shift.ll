@@ -5,7 +5,7 @@ define void @shift_undef_64(ptr %p) {
 ; CHECK-LABEL: @shift_undef_64(
 ; CHECK-NEXT:    store i64 0, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    store i64 -1, ptr [[P]], align 4
-; CHECK-NEXT:    [[R3:%.*]] = shl nuw nsw i64 -1, 4294967298
+; CHECK-NEXT:    [[R3:%.*]] = shl i64 -1, 4294967298
 ; CHECK-NEXT:    store i64 [[R3]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -25,7 +25,7 @@ define void @shift_undef_65(ptr %p) {
 ; CHECK-LABEL: @shift_undef_65(
 ; CHECK-NEXT:    store i65 0, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    store i65 0, ptr [[P]], align 4
-; CHECK-NEXT:    [[R3:%.*]] = shl nuw i65 1, -18446744073709551615
+; CHECK-NEXT:    [[R3:%.*]] = shl i65 1, -18446744073709551615
 ; CHECK-NEXT:    store i65 [[R3]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -45,7 +45,7 @@ define void @shift_undef_256(ptr %p) {
 ; CHECK-LABEL: @shift_undef_256(
 ; CHECK-NEXT:    store i256 0, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    store i256 0, ptr [[P]], align 4
-; CHECK-NEXT:    [[R3:%.*]] = shl nuw nsw i256 1, 18446744073709551619
+; CHECK-NEXT:    [[R3:%.*]] = shl i256 1, 18446744073709551619
 ; CHECK-NEXT:    store i256 [[R3]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -65,7 +65,7 @@ define void @shift_undef_511(ptr %p) {
 ; CHECK-LABEL: @shift_undef_511(
 ; CHECK-NEXT:    store i511 0, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    store i511 -1, ptr [[P]], align 4
-; CHECK-NEXT:    [[R3:%.*]] = shl nuw nsw i511 -3, 1208925819614629174706180
+; CHECK-NEXT:    [[R3:%.*]] = shl i511 -3, 1208925819614629174706180
 ; CHECK-NEXT:    store i511 [[R3]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
