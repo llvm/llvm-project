@@ -107,6 +107,10 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
     tensor = shapedValue;
   } else if (shapedValue.getType().isa<MemRefType>()) {
     tensor = b.create<ToTensorOp>(loc, shapedValue);
+  } else if (shapedValue.getType().isa<UnrankedTensorType>() ||
+             shapedValue.getType().isa<UnrankedMemRefType>()) {
+    return getOwnerOfValue(shapedValue)
+        ->emitError("copying of unranked tensors is not implemented");
   } else {
     llvm_unreachable("expected RankedTensorType or MemRefType");
   }
@@ -175,7 +179,7 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
     if (state.isInPlace(opOperand))
       continue;
     if (operandType.isa<UnrankedTensorType>())
-      return op->emitError("copies of unranked tensors are not supported");
+      return op->emitError("copying of unranked tensors is not implemented");
 
     SmallVector<OpResult> aliasingOpResults =
         state.getAliasingOpResult(opOperand);
@@ -189,11 +193,14 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
 
     if (aliasingOpResults.size() == 1 &&
         !state.bufferizesToMemoryWrite(opOperand) &&
-        state.getAliasingOpOperand(aliasingOpResults.front()).size() == 1) {
+        state.getAliasingOpOperand(aliasingOpResults.front()).size() == 1 &&
+        !aliasingOpResults.front().getType().isa<UnrankedTensorType>()) {
       // The op itself does not write but may create exactly one alias. Instead
       // of copying the OpOperand, copy the OpResult. The OpResult can sometimes
       // be smaller than the OpOperand (e.g., in the case of an extract_slice,
-      // where the result is usually a smaller part of the source).
+      // where the result is usually a smaller part of the source). Do not apply
+      // this optimization if the OpResult is an unranked tensor (because those
+      // cannot be copied at the moment).
       outOfPlaceOpResults.push_back(aliasingOpResults.front());
       if (!state.canOmitTensorCopy(opOperand))
         copiedOpResults.insert(aliasingOpResults.front());
