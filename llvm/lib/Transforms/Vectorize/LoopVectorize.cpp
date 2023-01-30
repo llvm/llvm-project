@@ -1569,14 +1569,15 @@ public:
   }
 
   /// Returns the TailFoldingStyle that is best for the current loop.
-  TailFoldingStyle getTailFoldingStyle() const {
+  TailFoldingStyle
+  getTailFoldingStyle(bool IVUpdateMayOverflow = true) const {
     if (!CanFoldTailByMasking)
       return TailFoldingStyle::None;
 
     if (ForceTailFoldingStyle.getNumOccurrences())
       return ForceTailFoldingStyle;
 
-    return TTI.getPreferredTailFoldingStyle();
+    return TTI.getPreferredTailFoldingStyle(IVUpdateMayOverflow);
   }
 
   /// Returns true if all loop blocks should be masked to fold tail loop.
@@ -2596,6 +2597,39 @@ std::optional<unsigned> getMaxVScale(const Function &F,
   return std::nullopt;
 }
 
+/// For the given VF and UF and maximum trip count computed for the loop, return
+/// whether the induction variable might overflow in the vectorized loop. If not,
+/// then we know a runtime overflow check always evaluates to false and can be
+/// removed.
+static bool isIndvarOverflowCheckKnownFalse(
+    const LoopVectorizationCostModel *Cost,
+    ElementCount VF, std::optional<unsigned> UF = std::nullopt) {
+  // Always be conservative if we don't know the exact unroll factor.
+  unsigned MaxUF = UF ? *UF : Cost->TTI.getMaxInterleaveFactor(VF);
+
+  Type *IdxTy = Cost->Legal->getWidestInductionType();
+  APInt MaxUIntTripCount = cast<IntegerType>(IdxTy)->getMask();
+
+  // We know the runtime overflow check is known false iff the (max) trip-count
+  // is known and (max) trip-count + (VF * UF) does not overflow in the type of
+  // the vector loop induction variable.
+  if (unsigned TC =
+          Cost->PSE.getSE()->getSmallConstantMaxTripCount(Cost->TheLoop)) {
+    uint64_t MaxVF = VF.getKnownMinValue();
+    if (VF.isScalable()) {
+      std::optional<unsigned> MaxVScale =
+          getMaxVScale(*Cost->TheFunction, Cost->TTI);
+      if (!MaxVScale)
+        return false;
+      MaxVF *= *MaxVScale;
+    }
+
+    return (MaxUIntTripCount - TC).ugt(MaxVF * MaxUF);
+  }
+
+  return false;
+}
+
 void InnerLoopVectorizer::packScalarIntoVectorValue(VPValue *Def,
                                                     const VPIteration &Instance,
                                                     VPTransformState &State) {
@@ -3052,6 +3086,7 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
     CheckMinIters =
         Builder.CreateICmp(P, Count, CreateStep(), "min.iters.check");
   else if (VF.isScalable() &&
+           !isIndvarOverflowCheckKnownFalse(Cost, VF, UF) &&
            Style != TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck) {
     // vscale is not necessarily a power-of-2, which means we cannot guarantee
     // an overflow to zero when updating induction variables and so an
@@ -8984,11 +9019,19 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   VPBasicBlock *MiddleVPBB = new VPBasicBlock("middle.block");
   VPBlockUtils::insertBlockAfter(MiddleVPBB, TopRegion);
 
+  // Don't use getDecisionAndClampRange here, because we don't know the UF
+  // so this function is better to be conservative, rather than to split
+  // it up into different VPlans.
+  bool IVUpdateMayOverflow = false;
+  for (ElementCount VF = Range.Start;
+       ElementCount::isKnownLT(VF, Range.End); VF *= 2)
+    IVUpdateMayOverflow |= !isIndvarOverflowCheckKnownFalse(&CM, VF);
+
   Instruction *DLInst =
       getDebugLocFromInstOrOperands(Legal->getPrimaryInduction());
   addCanonicalIVRecipes(*Plan, Legal->getWidestInductionType(),
                         DLInst ? DLInst->getDebugLoc() : DebugLoc(),
-                        CM.getTailFoldingStyle());
+                        CM.getTailFoldingStyle(IVUpdateMayOverflow));
 
   // Scan the body of the loop in a topological order to visit each basic block
   // after having visited its predecessor basic blocks.
