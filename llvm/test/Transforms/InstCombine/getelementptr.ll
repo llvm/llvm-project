@@ -1334,7 +1334,7 @@ define ptr @const_gep_global_di_i8_larger() {
 
 define ptr @const_gep_global_di_i64_larger() {
 ; CHECK-LABEL: @const_gep_global_di_i64_larger(
-; CHECK-NEXT:    ret ptr getelementptr inbounds (i32, ptr @g_i32_di, i64 2)
+; CHECK-NEXT:    ret ptr getelementptr (i32, ptr @g_i32_di, i64 2)
 ;
   ret ptr getelementptr (i64, ptr @g_i32_di, i64 1)
 }

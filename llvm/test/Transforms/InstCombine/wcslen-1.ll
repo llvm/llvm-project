@@ -231,7 +231,7 @@ define i64 @fold_wcslen_1() {
 ; with an offset that isn't a multiple of the element size).
 define i64 @no_fold_wcslen_1() {
 ; CHECK-LABEL: @no_fold_wcslen_1(
-; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @wcslen(ptr nonnull getelementptr inbounds ([15 x i8], ptr @ws, i64 0, i64 3))
+; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @wcslen(ptr getelementptr ([15 x i8], ptr @ws, i64 0, i64 3))
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
   %p = getelementptr [15 x i8], ptr @ws, i64 0, i64 3

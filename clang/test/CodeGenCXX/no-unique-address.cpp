@@ -64,7 +64,7 @@ FieldOverlap fo = {{}, {}, {}, {}, 1234};
 
 // CHECK-DAG: @e1 ={{.*}} constant ptr @fo
 Empty1 &e1 = fo.e1;
-// CHECK-DAG: @e2 ={{.*}} constant ptr getelementptr inbounds (i8, ptr @fo, i64 1)
+// CHECK-DAG: @e2 ={{.*}} constant ptr getelementptr (i8, ptr @fo, i64 1)
 Empty1 &e2 = fo.e2;
 
 // CHECK-LABEL: accessE1

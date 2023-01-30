@@ -24,9 +24,9 @@ define void @fold_memchr_A_pIb_cst_cst(ptr %pchr) {
 ; CHECK-NEXT:    [[PST_0_4_4:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 2
 ; CHECK-NEXT:    store ptr null, ptr [[PST_0_4_4]], align 8
 ; CHECK-NEXT:    [[PST_1_0_1:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 3
-; CHECK-NEXT:    store ptr getelementptr inbounds (i8, ptr @a, i64 1), ptr [[PST_1_0_1]], align 8
+; CHECK-NEXT:    store ptr getelementptr (i8, ptr @a, i64 1), ptr [[PST_1_0_1]], align 8
 ; CHECK-NEXT:    [[PST_1_0_3:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 4
-; CHECK-NEXT:    store ptr getelementptr inbounds (i8, ptr @a, i64 1), ptr [[PST_1_0_3]], align 8
+; CHECK-NEXT:    store ptr getelementptr (i8, ptr @a, i64 1), ptr [[PST_1_0_3]], align 8
 ; CHECK-NEXT:    [[PST_1_1_1:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 5
 ; CHECK-NEXT:    store ptr null, ptr [[PST_1_1_1]], align 8
 ; CHECK-NEXT:    [[PST_1_1_2:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 6
@@ -116,7 +116,7 @@ define void @fold_memchr_A_pIb_cst_N(i64 %N, ptr %pchr) {
 ; CHECK-NEXT:    store ptr null, ptr [[PST_0_4_N]], align 8
 ; CHECK-NEXT:    [[PST_1_0_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 3
 ; CHECK-NEXT:    [[MEMCHR_CMP2:%.*]] = icmp eq i64 [[N]], 0
-; CHECK-NEXT:    [[CHR_1_0_N:%.*]] = select i1 [[MEMCHR_CMP2]], ptr null, ptr getelementptr inbounds (i8, ptr @a, i64 1)
+; CHECK-NEXT:    [[CHR_1_0_N:%.*]] = select i1 [[MEMCHR_CMP2]], ptr null, ptr getelementptr (i8, ptr @a, i64 1)
 ; CHECK-NEXT:    store ptr [[CHR_1_0_N]], ptr [[PST_1_0_N]], align 8
 ; CHECK-NEXT:    [[PST_1_1_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 4
 ; CHECK-NEXT:    [[MEMCHR_CMP3:%.*]] = icmp ult i64 [[N]], 2
@@ -297,7 +297,7 @@ define ptr @fold_memchr_gep_gep_gep() {
 
 define ptr @fold_memchr_union_member() {
 ; BE-CHECK-LABEL: @fold_memchr_union_member(
-; BE-CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @u, i64 5)
+; BE-CHECK-NEXT:    ret ptr getelementptr (i8, ptr @u, i64 5)
 ;
 ; LE-CHECK-LABEL: @fold_memchr_union_member(
 ; LE-CHECK-NEXT:    ret ptr getelementptr inbounds ([[UNION_U:%.*]], ptr @u, i64 0, i32 0, i64 1)
