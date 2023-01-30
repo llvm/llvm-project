@@ -119,6 +119,8 @@ std::string tensorValueToString(const char *Buffer, const TensorSpec &Spec) {
   case TensorType::Invalid:
     llvm_unreachable("invalid tensor type");
   }
+  // To appease warnings about not all control paths returning a value.
+  return "";
 }
 
 } // namespace llvm
