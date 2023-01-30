@@ -156,14 +156,14 @@ This pass, only available in ``opt``, prints the dominator tree into a ``.dot``
 graph, omitting the function bodies.  This graph can then be processed with the
 :program:`dot` tool to convert it to postscript or some other suitable format.
 
-``-dot-postdom``: Print postdominance tree of function to "dot" file
+``-dot-post-dom``: Print postdominance tree of function to "dot" file
 --------------------------------------------------------------------
 
 This pass, only available in ``opt``, prints the post dominator tree into a
 ``.dot`` graph.  This graph can then be processed with the :program:`dot` tool
 to convert it to postscript or some other suitable format.
 
-``-dot-postdom-only``: Print postdominance tree of function to "dot" file (with no function bodies)
+``-dot-post-dom-only``: Print postdominance tree of function to "dot" file (with no function bodies)
 ---------------------------------------------------------------------------------------------------
 
 This pass, only available in ``opt``, prints the post dominator tree into a

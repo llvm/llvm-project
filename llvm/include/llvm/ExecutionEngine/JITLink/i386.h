@@ -124,6 +124,69 @@ enum EdgeKind_i386 : Edge::Kind {
   ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
   ///     phase will result in an assert/unreachable during the fixup phase
   RequestGOTAndTransformToDelta32FromGOT,
+
+  /// A 32-bit PC-relative branch.
+  ///
+  /// Represents a PC-relative call or branch to a target. This can be used to
+  /// identify, record, and/or patch call sites.
+  ///
+  /// The fixup expression for this kind includes an implicit offset to account
+  /// for the PC (unlike the Delta edges) so that a Branch32PCRel with a target
+  /// T and addend zero is a call/branch to the start (offset zero) of T.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- Target - (Fixup + 4) + Addend : int32
+  ///
+  /// Errors:
+  ///   - The result of the fixup expression must fit into an int32, otherwise
+  ///     an out-of-range error will be returned.
+  ///
+  BranchPCRel32,
+
+  /// A 32-bit PC-relative branch to a pointer jump stub.
+  ///
+  /// The target of this relocation should be a pointer jump stub of the form:
+  ///
+  /// \code{.s}
+  ///   .text
+  ///   jmp *tgtptr
+  ///   ; ...
+  ///
+  ///   .data
+  ///   tgtptr:
+  ///     .quad 0
+  /// \endcode
+  ///
+  /// This edge kind has the same fixup expression as BranchPCRel32, but further
+  /// identifies the call/branch as being to a pointer jump stub. For edges of
+  /// this kind the jump stub should not be bypassed (use
+  /// BranchPCRel32ToPtrJumpStubBypassable for that), but the pointer location
+  /// target may be recorded to allow manipulation at runtime.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- Target - Fixup + Addend - 4 : int32
+  ///
+  /// Errors:
+  ///   - The result of the fixup expression must fit into an int32, otherwise
+  ///     an out-of-range error will be returned.
+  ///
+  BranchPCRel32ToPtrJumpStub,
+
+  /// A relaxable version of BranchPCRel32ToPtrJumpStub.
+  ///
+  /// The edge kind has the same fixup expression as BranchPCRel32ToPtrJumpStub,
+  /// but identifies the call/branch as being to a pointer jump stub that may be
+  /// bypassed with a direct jump to the ultimate target if the ultimate target
+  /// is within range of the fixup location.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- Target - Fixup + Addend - 4: int32
+  ///
+  /// Errors:
+  ///   - The result of the fixup expression must fit into an int32, otherwise
+  ///     an out-of-range error will be returned.
+  ///
+  BranchPCRel32ToPtrJumpStubBypassable,
 };
 
 /// Returns a string name for the given i386 edge. For debugging purposes
@@ -139,6 +202,12 @@ inline bool isInRangeForImmU16(uint32_t Value) {
 inline bool isInRangeForImmS16(int32_t Value) {
   return (Value >= std::numeric_limits<int16_t>::min() &&
           Value <= std::numeric_limits<int16_t>::max());
+}
+
+/// Returns true if the given int64_t value is in range for an int32_t.
+inline bool isInRangeForImmS32(int64_t Value) {
+  return (Value >= std::numeric_limits<int32_t>::min() &&
+          Value <= std::numeric_limits<int32_t>::max());
 }
 
 /// Apply fixup expression for edge to block content.
@@ -202,6 +271,15 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
     break;
   }
 
+  case i386::BranchPCRel32:
+  case i386::BranchPCRel32ToPtrJumpStub:
+  case i386::BranchPCRel32ToPtrJumpStubBypassable: {
+    int32_t Value =
+        E.getTarget().getAddress() - (FixupAddress + 4) + E.getAddend();
+    *(little32_t *)FixupPtr = Value;
+    break;
+  }
+
   default:
     return make_error<JITLinkError>(
         "In graph " + G.getName() + ", section " + B.getSection().getName() +
@@ -216,6 +294,13 @@ constexpr uint32_t PointerSize = 4;
 
 /// i386 null pointer content.
 extern const char NullPointerContent[PointerSize];
+
+/// i386 pointer jump stub content.
+///
+/// Contains the instruction sequence for an indirect jump via an in-memory
+/// pointer:
+///   jmpq *ptr
+extern const char PointerJumpStubContent[6];
 
 /// Creates a new pointer block in the given section and returns an anonymous
 /// symbol pointing to it.
@@ -235,6 +320,36 @@ inline Symbol &createAnonymousPointer(LinkGraph &G, Section &PointerSection,
   if (InitialTarget)
     B.addEdge(Pointer32, 0, *InitialTarget, InitialAddend);
   return G.addAnonymousSymbol(B, 0, PointerSize, false, false);
+}
+
+/// Create a jump stub block that jumps via the pointer at the given symbol.
+///
+/// The stub block will have the following default values:
+///   alignment: 8-bit
+///   alignment-offset: 0
+///   address: highest allowable: (~5U)
+inline Block &createPointerJumpStubBlock(LinkGraph &G, Section &StubSection,
+                                         Symbol &PointerSymbol) {
+  auto &B = G.createContentBlock(StubSection, PointerJumpStubContent,
+                                 orc::ExecutorAddr(), 8, 0);
+  B.addEdge(Pointer32,
+            // Offset is 2 because the the first 2 bytes of the
+            // jump stub block are {0xff, 0x25} -- an indirect absolute
+            // jump.
+            2, PointerSymbol, 0);
+  return B;
+}
+
+/// Create a jump stub that jumps via the pointer at the given symbol and
+/// an anonymous symbol pointing to it. Return the anonymous symbol.
+///
+/// The stub block will be created by createPointerJumpStubBlock.
+inline Symbol &createAnonymousPointerJumpStub(LinkGraph &G,
+                                              Section &StubSection,
+                                              Symbol &PointerSymbol) {
+  return G.addAnonymousSymbol(
+      createPointerJumpStubBlock(G, StubSection, PointerSymbol), 0, 6, true,
+      false);
 }
 
 /// Global Offset Table Builder.
@@ -282,6 +397,54 @@ private:
 
   Section *GOTSection = nullptr;
 };
+
+/// Procedure Linkage Table Builder.
+class PLTTableManager : public TableManager<PLTTableManager> {
+public:
+  PLTTableManager(GOTTableManager &GOT) : GOT(GOT) {}
+
+  static StringRef getSectionName() { return "$__STUBS"; }
+
+  bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
+    if (E.getKind() == i386::BranchPCRel32 && !E.getTarget().isDefined()) {
+      DEBUG_WITH_TYPE("jitlink", {
+        dbgs() << "  Fixing " << G.getEdgeKindName(E.getKind()) << " edge at "
+               << B->getFixupAddress(E) << " (" << B->getAddress() << " + "
+               << formatv("{0:x}", E.getOffset()) << ")\n";
+      });
+      // Set the edge kind to Branch32ToPtrJumpStubBypassable to enable it to
+      // be optimized when the target is in-range.
+      E.setKind(i386::BranchPCRel32ToPtrJumpStubBypassable);
+      E.setTarget(getEntryForTarget(G, E.getTarget()));
+      return true;
+    }
+    return false;
+  }
+
+  Symbol &createEntry(LinkGraph &G, Symbol &Target) {
+    return createAnonymousPointerJumpStub(G, getStubsSection(G),
+                                          GOT.getEntryForTarget(G, Target));
+  }
+
+public:
+  Section &getStubsSection(LinkGraph &G) {
+    if (!PLTSection)
+      PLTSection = &G.createSection(getSectionName(),
+                                    orc::MemProt::Read | orc::MemProt::Exec);
+    return *PLTSection;
+  }
+
+  GOTTableManager &GOT;
+  Section *PLTSection = nullptr;
+};
+
+/// Optimize the GOT and Stub relocations if the edge target address is in range
+/// 1. PCRel32GOTLoadRelaxable. For this edge kind, if the target is in range,
+/// then replace GOT load with lea. (THIS IS UNIMPLEMENTED RIGHT NOW!)
+/// 2. BranchPCRel32ToPtrJumpStubRelaxable. For this edge kind, if the target is
+/// in range, replace a indirect jump by plt stub with a direct jump to the
+/// target
+Error optimizeGOTAndStubAccesses(LinkGraph &G);
 
 } // namespace llvm::jitlink::i386
 

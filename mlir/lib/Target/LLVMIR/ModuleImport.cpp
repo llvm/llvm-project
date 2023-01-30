@@ -14,6 +14,7 @@
 #include "mlir/Target/LLVMIR/ModuleImport.h"
 #include "mlir/Target/LLVMIR/Import.h"
 
+#include "AttrKindDetail.h"
 #include "DebugImporter.h"
 
 #include "mlir/Dialect/DLTI/DLTI.h"
@@ -1490,24 +1491,8 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
 DictionaryAttr
 ModuleImport::convertParameterAttribute(llvm::AttributeSet llvmParamAttrs,
                                         OpBuilder &builder) {
-  using ElemTy = std::pair<llvm::Attribute::AttrKind, StringRef>;
-  // Mapping from llvm attribute kinds to their corresponding MLIR name.
-  static const SmallVector<ElemTy> kindNamePairs = {
-      {llvm::Attribute::AttrKind::NoAlias, LLVMDialect::getNoAliasAttrName()},
-      {llvm::Attribute::AttrKind::ReadOnly, LLVMDialect::getReadonlyAttrName()},
-      {llvm::Attribute::AttrKind::Nest, LLVMDialect::getNestAttrName()},
-      {llvm::Attribute::AttrKind::SExt, LLVMDialect::getSExtAttrName()},
-      {llvm::Attribute::AttrKind::ZExt, LLVMDialect::getZExtAttrName()},
-      {llvm::Attribute::AttrKind::NoUndef, LLVMDialect::getNoUndefAttrName()},
-      {llvm::Attribute::AttrKind::StructRet,
-       LLVMDialect::getStructRetAttrName()},
-      {llvm::Attribute::AttrKind::ByVal, LLVMDialect::getByValAttrName()},
-      {llvm::Attribute::AttrKind::ByRef, LLVMDialect::getByRefAttrName()},
-      {llvm::Attribute::AttrKind::InAlloca, LLVMDialect::getInAllocaAttrName()},
-      {llvm::Attribute::AttrKind::Alignment, LLVMDialect::getAlignAttrName()}};
-
   SmallVector<NamedAttribute> paramAttrs;
-  for (auto [llvmKind, mlirName] : kindNamePairs) {
+  for (auto [llvmKind, mlirName] : getAttrKindToNameMapping()) {
     auto llvmAttr = llvmParamAttrs.getAttribute(llvmKind);
     // Skip attributes that are not attached.
     if (!llvmAttr.isValid())

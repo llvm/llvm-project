@@ -866,9 +866,9 @@ private:
             get1DMemRefType(getIndexOverheadType(rewriter, encSrc),
                             /*withLayout=*/false);
         Value xs = rewriter.create<ToIndicesBufferOp>(loc, indTp, src);
-        rewriter.create<SortCooOp>(loc, nnz, xs, ValueRange{y},
-                                   rewriter.getIndexAttr(rank),
-                                   rewriter.getIndexAttr(0));
+        rewriter.create<SortCooOp>(
+            loc, nnz, xs, ValueRange{y}, rewriter.getIndexAttr(rank),
+            rewriter.getIndexAttr(0), SparseTensorSortKind::HybridQuickSort);
       } else {
         // Gather the indices-arrays in the dst tensor storage order.
         SmallVector<Value> xs(rank, Value());
@@ -877,7 +877,8 @@ private:
           xs[toStoredDim(encDst, orgDim)] =
               genToIndices(rewriter, loc, src, i, /*cooStart=*/0);
         }
-        rewriter.create<SortOp>(loc, nnz, xs, ValueRange{y});
+        rewriter.create<SortOp>(loc, nnz, xs, ValueRange{y},
+                                SparseTensorSortKind::HybridQuickSort);
       }
     }
 

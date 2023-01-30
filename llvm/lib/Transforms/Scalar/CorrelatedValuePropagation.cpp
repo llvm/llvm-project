@@ -717,7 +717,6 @@ static bool narrowSDivOrSRem(BinaryOperator *Instr, const ConstantRange &LCR,
 
   // What is the smallest bit width that can accommodate the entire value ranges
   // of both of the operands?
-  std::array<std::optional<ConstantRange>, 2> CRs;
   unsigned MinSignedBits =
       std::max(LCR.getMinSignedBits(), RCR.getMinSignedBits());
 

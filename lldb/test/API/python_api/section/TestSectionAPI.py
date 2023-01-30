@@ -48,18 +48,3 @@ class SectionAPITestCase(TestBase):
         section = target.modules[0].sections[0]
         self.assertEqual(section.GetAlignment(), 0x1000)
         self.assertEqual(section.alignment, 0x1000)
-
-    def test_compressed_section_data(self):
-        exe = self.getBuildArtifact("compressed-sections.out")
-        self.yaml2obj("compressed-sections.yaml", exe)
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # exe contains a single section with SHF_COMPRESSED. Check that
-        # GetSectionData returns the uncompressed data and not the raw contents
-        # of the section.
-        section = target.modules[0].sections[0]
-        section_data = section.GetSectionData().uint8s
-        self.assertEqual(section_data,
-                         [0x20, 0x30, 0x40, 0x50, 0x60, 0x70, 0x80, 0x90])
-
