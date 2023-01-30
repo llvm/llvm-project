@@ -4918,8 +4918,7 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
       Result = lowerRangeToAssertZExt(DAG, I, Result);
 
     MaybeAlign Alignment = I.getRetAlign();
-    if (!Alignment)
-      Alignment = F->getAttributes().getRetAlignment();
+
     // Insert `assertalign` node if there's an alignment.
     if (InsertAssertAlign && Alignment) {
       Result =
