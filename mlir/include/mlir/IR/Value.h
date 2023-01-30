@@ -583,8 +583,11 @@ struct CastInfo<
   static inline bool isPossible(mlir::Value ty) {
     /// Return a constant true instead of a dynamic true when casting to self or
     /// up the hierarchy.
-    return std::is_same_v<To, std::remove_const_t<From>> ||
-           std::is_base_of_v<To, From> || To::classof(ty);
+    if constexpr (std::is_base_of_v<To, From>) {
+      return true;
+    } else {
+      return To::classof(ty);
+    }
   }
   static inline To doCast(mlir::Value value) { return To(value.getImpl()); }
 };
