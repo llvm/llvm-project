@@ -331,6 +331,11 @@ public:
   /// the op is not bufferizable.
   bool bufferizesToMemoryWrite(OpOperand &opOperand) const;
 
+  /// Return true if the given `value` bufferizes to a memory write. Return
+  /// true if the value is a block argument. Return `true` if the defining op is
+  /// not bufferizable. Otherwise, consult the BufferizableOpInterface.
+  bool bufferizesToMemoryWrite(Value value) const;
+
   /// Return true if `opOperand` does neither read nor write but bufferizes to
   /// an alias. Return false if the op is not bufferizable.
   bool bufferizesToAliasOnly(OpOperand &opOperand) const;
@@ -543,6 +548,12 @@ namespace detail {
 FailureOr<BaseMemRefType>
 defaultGetBufferType(Value value, const BufferizationOptions &options,
                      const DenseMap<Value, BaseMemRefType> &fixedTypes);
+
+/// This is the default implementation of
+/// BufferizableOpInterface::resultBufferizesToMemoryWrite. Should not be called
+/// from other places.
+bool defaultResultBufferizesToMemoryWrite(OpResult opResult,
+                                          const AnalysisState &state);
 
 /// This is the default implementation of
 /// BufferizableOpInterface::isRepetitiveRegion. Should not be called from other

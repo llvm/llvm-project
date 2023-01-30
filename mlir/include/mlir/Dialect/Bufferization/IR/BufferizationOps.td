@@ -89,7 +89,8 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     LogicalResult bufferize(RewriterBase &rewriter,
                             const BufferizationOptions &options);
 
-    bool isMemoryWrite(OpResult opResult, const AnalysisState &state);
+    bool resultBufferizesToMemoryWrite(OpResult opResult,
+                                       const AnalysisState &state);
 
     bool bufferizesToAllocation(OpResult opResult) { return true; }
 
