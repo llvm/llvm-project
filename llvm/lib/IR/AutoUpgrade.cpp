@@ -802,10 +802,14 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         Name == "arm.mve.vqdmull.predicated.v2i64.v4i32.v4i1" ||
         Name == "arm.mve.vldr.gather.base.predicated.v2i64.v2i64.v4i1" ||
         Name == "arm.mve.vldr.gather.base.wb.predicated.v2i64.v2i64.v4i1" ||
-        Name == "arm.mve.vldr.gather.offset.predicated.v2i64.p0i64.v2i64.v4i1" ||
+        Name ==
+            "arm.mve.vldr.gather.offset.predicated.v2i64.p0i64.v2i64.v4i1" ||
+        Name == "arm.mve.vldr.gather.offset.predicated.v2i64.p0.v2i64.v4i1" ||
         Name == "arm.mve.vstr.scatter.base.predicated.v2i64.v2i64.v4i1" ||
         Name == "arm.mve.vstr.scatter.base.wb.predicated.v2i64.v2i64.v4i1" ||
-        Name == "arm.mve.vstr.scatter.offset.predicated.p0i64.v2i64.v2i64.v4i1" ||
+        Name ==
+            "arm.mve.vstr.scatter.offset.predicated.p0i64.v2i64.v2i64.v4i1" ||
+        Name == "arm.mve.vstr.scatter.offset.predicated.p0.v2i64.v2i64.v4i1" ||
         Name == "arm.cde.vcx1q.predicated.v2i64.v4i1" ||
         Name == "arm.cde.vcx1qa.predicated.v2i64.v4i1" ||
         Name == "arm.cde.vcx2q.predicated.v2i64.v4i1" ||
@@ -1994,10 +1998,14 @@ static Value *UpgradeARMIntrinsicCall(StringRef Name, CallBase *CI, Function *F,
              Name == "mve.vqdmull.predicated.v2i64.v4i32.v4i1" ||
              Name == "mve.vldr.gather.base.predicated.v2i64.v2i64.v4i1" ||
              Name == "mve.vldr.gather.base.wb.predicated.v2i64.v2i64.v4i1" ||
-             Name == "mve.vldr.gather.offset.predicated.v2i64.p0i64.v2i64.v4i1" ||
+             Name ==
+                 "mve.vldr.gather.offset.predicated.v2i64.p0i64.v2i64.v4i1" ||
+             Name == "mve.vldr.gather.offset.predicated.v2i64.p0.v2i64.v4i1" ||
              Name == "mve.vstr.scatter.base.predicated.v2i64.v2i64.v4i1" ||
              Name == "mve.vstr.scatter.base.wb.predicated.v2i64.v2i64.v4i1" ||
-             Name == "mve.vstr.scatter.offset.predicated.p0i64.v2i64.v2i64.v4i1" ||
+             Name ==
+                 "mve.vstr.scatter.offset.predicated.p0i64.v2i64.v2i64.v4i1" ||
+             Name == "mve.vstr.scatter.offset.predicated.p0.v2i64.v2i64.v4i1" ||
              Name == "cde.vcx1q.predicated.v2i64.v4i1" ||
              Name == "cde.vcx1qa.predicated.v2i64.v4i1" ||
              Name == "cde.vcx2q.predicated.v2i64.v4i1" ||

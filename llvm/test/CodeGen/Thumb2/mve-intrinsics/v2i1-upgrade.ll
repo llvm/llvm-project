@@ -142,8 +142,10 @@ define arm_aapcs_vfpcc <2 x i64> @test_vldrdq_gather_offset_z_s64(ptr %base, <2 
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.arm.mve.vldr.gather.offset.predicated.v2i64.p0.v2i64.v4i1(ptr [[BASE:%.*]], <2 x i64> [[OFFSET:%.*]], i32 64, i32 0, i32 0, <4 x i1> [[TMP1]])
-; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.arm.mve.pred.v2i.v4i1(<4 x i1> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.arm.mve.vldr.gather.offset.predicated.v2i64.p0.v2i64.v2i1(ptr [[BASE:%.*]], <2 x i64> [[OFFSET:%.*]], i32 64, i32 0, i32 0, <2 x i1> [[TMP3]])
+; CHECK-NEXT:    ret <2 x i64> [[TMP4]]
 ;
 entry:
   %0 = zext i16 %p to i32
@@ -195,7 +197,9 @@ define arm_aapcs_vfpcc void @test_vstrdq_scatter_offset_p_s64(ptr %base, <2 x i6
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-; CHECK-NEXT:    call void @llvm.arm.mve.vstr.scatter.offset.predicated.p0.v2i64.v2i64.v4i1(ptr [[BASE:%.*]], <2 x i64> [[OFFSET:%.*]], <2 x i64> [[VALUE:%.*]], i32 64, i32 0, <4 x i1> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.arm.mve.pred.v2i.v4i1(<4 x i1> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 [[TMP2]])
+; CHECK-NEXT:    call void @llvm.arm.mve.vstr.scatter.offset.predicated.p0.v2i64.v2i64.v2i1(ptr [[BASE:%.*]], <2 x i64> [[OFFSET:%.*]], <2 x i64> [[VALUE:%.*]], i32 64, i32 0, <2 x i1> [[TMP3]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
