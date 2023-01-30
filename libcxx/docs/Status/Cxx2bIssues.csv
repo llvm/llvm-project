@@ -226,7 +226,7 @@
 "`3774 <https://wg21.link/LWG3774>`__","``<flat_set>`` should include ``<compare>``", "November 2022","","","|flat_containers|"
 "`3775 <https://wg21.link/LWG3775>`__","Broken dependencies in the ``Cpp17Allocator`` requirements", "November 2022","","",""
 "`3778 <https://wg21.link/LWG3778>`__","``vector<bool>`` missing exception specifications", "November 2022","","",""
-"`3781 <https://wg21.link/LWG3781>`__","The exposition-only alias templates ``cont-key-type`` and ``cont-mapped-type`` should be removed", "November 2022","","",""
+"`3781 <https://wg21.link/LWG3781>`__","The exposition-only alias templates ``cont-key-type`` and ``cont-mapped-type`` should be removed", "November 2022","|Nothing to do|","",""
 "`3782 <https://wg21.link/LWG3782>`__","Should ``<math.h>`` declare ``::lerp``?", "November 2022","","",""
 "`3784 <https://wg21.link/LWG3784>`__","std.compat should not provide ``::byte`` and its friends", "November 2022","","",""
 "`3785 <https://wg21.link/LWG3785>`__","``ranges::to`` is over-constrained on the destination type being a range", "November 2022","","","|ranges|"
