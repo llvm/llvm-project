@@ -60,9 +60,6 @@ public:
   template <typename U>
   U cast() const;
 
-  // Support dyn_cast'ing Attribute to itself.
-  static bool classof(Attribute) { return true; }
-
   /// Return a unique identifier for the concrete attribute type. This is used
   /// to support dynamic type casting.
   TypeID getTypeID() { return impl->getAbstractAttribute().getTypeID(); }
@@ -394,8 +391,11 @@ struct CastInfo<To, From,
   static inline bool isPossible(mlir::Attribute ty) {
     /// Return a constant true instead of a dynamic true when casting to self or
     /// up the hierarchy.
-    return std::is_same_v<To, std::remove_const_t<From>> ||
-           std::is_base_of_v<To, From> || To::classof(ty);
+    if constexpr (std::is_base_of_v<To, From>) {
+      return true;
+    } else {
+      return To::classof(ty);
+    }
   }
   static inline To doCast(mlir::Attribute attr) { return To(attr.getImpl()); }
 };
