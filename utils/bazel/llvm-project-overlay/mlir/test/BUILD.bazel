@@ -564,7 +564,6 @@ cc_library(
         "//mlir:FuncTransforms",
         "//mlir:GPUDialect",
         "//mlir:IR",
-        "//mlir:LinalgAnalysis",
         "//mlir:LinalgDialect",
         "//mlir:LinalgTransforms",
         "//mlir:LinalgUtils",
