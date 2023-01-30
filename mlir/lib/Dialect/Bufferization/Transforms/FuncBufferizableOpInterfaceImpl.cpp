@@ -181,15 +181,9 @@ struct CallOpInterface
     func::CallOp callOp = cast<func::CallOp>(op);
     FuncOp funcOp = getCalledFunction(callOp);
     assert(funcOp && "expected CallOp to a FuncOp");
-    if (getFuncOpAnalysisState(state, funcOp) !=
-        FuncOpAnalysisState::Analyzed) {
+    if (getFuncOpAnalysisState(state, funcOp) != FuncOpAnalysisState::Analyzed)
       // FuncOp not analyzed yet. Any OpResult may be aliasing.
-      SmallVector<OpResult> result;
-      for (OpResult opResult : op->getOpResults())
-        if (opResult.getType().isa<TensorType>())
-          result.push_back(opResult);
-      return result;
-    }
+      return detail::unknownGetAliasingOpResult(opOperand);
 
     // Get aliasing results from state.
     const FuncAnalysisState &funcState = getFuncAnalysisState(state);
@@ -208,15 +202,9 @@ struct CallOpInterface
     func::CallOp callOp = cast<func::CallOp>(op);
     FuncOp funcOp = getCalledFunction(callOp);
     assert(funcOp && "expected CallOp to a FuncOp");
-    if (getFuncOpAnalysisState(state, funcOp) !=
-        FuncOpAnalysisState::Analyzed) {
+    if (getFuncOpAnalysisState(state, funcOp) != FuncOpAnalysisState::Analyzed)
       // FuncOp not analyzed yet. Any OpOperand may be aliasing.
-      SmallVector<OpOperand *> result;
-      for (OpOperand &opOperand : op->getOpOperands())
-        if (opOperand.get().getType().isa<TensorType>())
-          result.push_back(&opOperand);
-      return result;
-    }
+      return detail::unknownGetAliasingOpOperand(opResult);
 
     // Get aliasing bbArgs from state.
     const FuncAnalysisState &funcState = getFuncAnalysisState(state);

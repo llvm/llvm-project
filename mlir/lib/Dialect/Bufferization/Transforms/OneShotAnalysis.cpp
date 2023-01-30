@@ -895,10 +895,9 @@ static LogicalResult inPlaceAnalysis(SmallVector<Operation *> &ops,
   auto analyzeOp = [&](Operation *op) {
     for (OpOperand &opOperand : op->getOpOperands())
       if (opOperand.get().getType().isa<TensorType>())
-        if (auto bufferizableOp = state.getOptions().dynCastBufferizableOp(op))
-          if (failed(bufferizableInPlaceAnalysisImpl(opOperand, aliasInfo,
-                                                     state, domInfo)))
-            return failure();
+        if (failed(bufferizableInPlaceAnalysisImpl(opOperand, aliasInfo, state,
+                                                   domInfo)))
+          return failure();
     return success();
   };
 
@@ -1024,11 +1023,10 @@ annotateOpsWithBufferizationMarkers(Operation *op,
                                     const BufferizationAliasInfo &aliasInfo,
                                     const BufferizationOptions &options) {
   // Add __inplace_operands_attr__.
-  op->walk([&](BufferizableOpInterface bufferizableOp) {
-    if (options.isOpAllowed(bufferizableOp.getOperation()))
-      for (OpOperand &opOperand : bufferizableOp->getOpOperands())
-        if (opOperand.get().getType().isa<TensorType>())
-          setInPlaceOpOperand(opOperand, aliasInfo.isInPlace(opOperand));
+  op->walk([&](Operation *op) {
+    for (OpOperand &opOperand : op->getOpOperands())
+      if (opOperand.get().getType().isa<TensorType>())
+        setInPlaceOpOperand(opOperand, aliasInfo.isInPlace(opOperand));
   });
 }
 
