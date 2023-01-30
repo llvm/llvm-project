@@ -80,7 +80,7 @@ module {
     // CHECK: [1,  1,  2,  5,  10]
     // CHECK: [3,  3,  1,  10,  1
     // CHECK: [9,  9,  4,  7,  2
-    // CHECK: [8,  7,  10,  9,  6
+    // CHECK: [7,  8,  10,  9,  6
     call @storeValuesTo(%x0, %c10, %c2, %c1, %c5, %c1)
       : (memref<?xi32>, i32, i32, i32, i32, i32) -> ()
     call @storeValuesTo(%x1, %c1, %c1, %c3, %c10, %c3)

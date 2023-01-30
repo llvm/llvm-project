@@ -443,6 +443,93 @@ createScanLoop(OpBuilder &builder, ModuleOp module, func::FuncOp func,
   return std::make_pair(whileOp.getResult(0), compareEq);
 }
 
+/// Creates a code block to swap the values so that data[mi] is the median among
+/// data[lo], data[hi], and data[mi].
+//  The generated code corresponds to this C-like algorithm:
+//  median = mi
+//  if (data[mi] < data[lo]).                               (if1)
+//    if (data[hi] < data[lo])                              (if2)
+//       median = data[hi] < data[mi] ? mi : hi
+//    else
+//       median = lo
+//  else
+//    if data[hi] < data[mi]                                (if3)
+//      median = data[hi] < data[lo] ? lo : hi
+//  if median != mi swap data[median] with data[mi]
+static void createChoosePivot(OpBuilder &builder, ModuleOp module,
+                              func::FuncOp func, uint64_t nx, uint64_t ny,
+                              bool isCoo, Value lo, Value hi, Value mi,
+                              ValueRange args) {
+  SmallVector<Value> compareOperands{mi, lo};
+  uint64_t numXBuffers = isCoo ? 1 : nx;
+  compareOperands.append(args.begin() + xStartIdx,
+                         args.begin() + xStartIdx + numXBuffers);
+  Type i1Type = IntegerType::get(module.getContext(), 1, IntegerType::Signless);
+  SmallVector<Type, 1> cmpTypes{i1Type};
+  FlatSymbolRefAttr lessThanFunc = getMangledSortHelperFunc(
+      builder, func, cmpTypes, kLessThanFuncNamePrefix, nx, ny, isCoo,
+      compareOperands, createLessThanFunc);
+  Location loc = func.getLoc();
+  // Compare data[mi] < data[lo].
+  Value cond1 =
+      builder.create<func::CallOp>(loc, lessThanFunc, cmpTypes, compareOperands)
+          .getResult(0);
+  SmallVector<Type, 1> ifTypes{lo.getType()};
+  scf::IfOp ifOp1 =
+      builder.create<scf::IfOp>(loc, ifTypes, cond1, /*else=*/true);
+
+  // Generate an if-stmt to find the median value, assuming we already know that
+  // data[b] < data[a] and we haven't compare data[c] yet.
+  auto createFindMedian = [&](Value a, Value b, Value c) -> scf::IfOp {
+    compareOperands[0] = c;
+    compareOperands[1] = a;
+    // Compare data[c]] < data[a].
+    Value cond2 =
+        builder
+            .create<func::CallOp>(loc, lessThanFunc, cmpTypes, compareOperands)
+            .getResult(0);
+    scf::IfOp ifOp2 =
+        builder.create<scf::IfOp>(loc, ifTypes, cond2, /*else=*/true);
+    builder.setInsertionPointToStart(&ifOp2.getThenRegion().front());
+    compareOperands[0] = c;
+    compareOperands[1] = b;
+    // Compare data[c] < data[b].
+    Value cond3 =
+        builder
+            .create<func::CallOp>(loc, lessThanFunc, cmpTypes, compareOperands)
+            .getResult(0);
+    builder.create<scf::YieldOp>(
+        loc, ValueRange{builder.create<arith::SelectOp>(loc, cond3, b, c)});
+    builder.setInsertionPointToStart(&ifOp2.getElseRegion().front());
+    builder.create<scf::YieldOp>(loc, ValueRange{a});
+    return ifOp2;
+  };
+
+  builder.setInsertionPointToStart(&ifOp1.getThenRegion().front());
+  scf::IfOp ifOp2 = createFindMedian(lo, mi, hi);
+  builder.setInsertionPointAfter(ifOp2);
+  builder.create<scf::YieldOp>(loc, ValueRange{ifOp2.getResult(0)});
+
+  builder.setInsertionPointToStart(&ifOp1.getElseRegion().front());
+  scf::IfOp ifOp3 = createFindMedian(mi, lo, hi);
+
+  builder.setInsertionPointAfter(ifOp3);
+  builder.create<scf::YieldOp>(loc, ValueRange{ifOp3.getResult(0)});
+
+  builder.setInsertionPointAfter(ifOp1);
+  Value median = ifOp1.getResult(0);
+  Value cond =
+      builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ne, mi, median);
+  scf::IfOp ifOp =
+      builder.create<scf::IfOp>(loc, TypeRange(), cond, /*else=*/false);
+
+  SmallVector<Value> swapOperands{median, mi};
+  swapOperands.append(args.begin() + xStartIdx, args.end());
+  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+  createSwap(builder, loc, swapOperands, nx, ny, isCoo);
+  builder.setInsertionPointAfter(ifOp);
+}
+
 /// Creates a function to perform quick sort partition on the values in the
 /// range of index [lo, hi), assuming lo < hi.
 //
@@ -489,7 +576,8 @@ static void createPartitionFunc(OpBuilder &builder, ModuleOp module,
 
   Value i = lo;
   Value j = builder.create<arith::SubIOp>(loc, hi, c1);
-  SmallVector<Value, 3> operands{i, j, p}; // exactly three
+  createChoosePivot(builder, module, func, nx, ny, isCoo, i, j, p, args);
+  SmallVector<Value, 3> operands{i, j, p}; // Exactly three values.
   SmallVector<Type, 3> types{i.getType(), j.getType(), p.getType()};
   scf::WhileOp whileOp = builder.create<scf::WhileOp>(loc, types, operands);
 
