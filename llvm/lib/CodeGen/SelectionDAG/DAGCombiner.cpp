@@ -5108,7 +5108,7 @@ SDValue DAGCombiner::visitMULO(SDNode *N) {
 // same as SimplifySelectCC. N0<N1 ? N2 : N3.
 static SDValue isSaturatingMinMax(SDValue N0, SDValue N1, SDValue N2,
                                   SDValue N3, ISD::CondCode CC, unsigned &BW,
-                                  bool &Unsigned) {
+                                  bool &Unsigned, SelectionDAG &DAG) {
   auto isSignedMinMax = [&](SDValue N0, SDValue N1, SDValue N2, SDValue N3,
                             ISD::CondCode CC) {
     // The compare and select operand should be the same or the select operands
@@ -5131,6 +5131,26 @@ static SDValue isSaturatingMinMax(SDValue N0, SDValue N1, SDValue N2,
   unsigned Opcode0 = isSignedMinMax(N0, N1, N2, N3, CC);
   if (!Opcode0)
     return SDValue();
+
+  // We could only need one range check, if the fptosi could never produce
+  // the upper value.
+  if (N0.getOpcode() == ISD::FP_TO_SINT && Opcode0 == ISD::SMAX) {
+    if (isNullOrNullSplat(N3)) {
+      EVT IntVT = N0.getValueType().getScalarType();
+      EVT FPVT = N0.getOperand(0).getValueType().getScalarType();
+      if (FPVT.isSimple()) {
+        Type *InputTy = FPVT.getTypeForEVT(*DAG.getContext());
+        const fltSemantics &Semantics = InputTy->getFltSemantics();
+        uint32_t MinBitWidth =
+          APFloatBase::semanticsIntSizeInBits(Semantics, /*isSigned*/ true);
+        if (IntVT.getSizeInBits() >= MinBitWidth) {
+          Unsigned = true;
+          BW = PowerOf2Ceil(MinBitWidth);
+          return N0;
+        }
+      }
+    }
+  }
 
   SDValue N00, N01, N02, N03;
   ISD::CondCode N0CC;
@@ -5194,7 +5214,7 @@ static SDValue PerformMinMaxFpToSatCombine(SDValue N0, SDValue N1, SDValue N2,
                                            SelectionDAG &DAG) {
   unsigned BW;
   bool Unsigned;
-  SDValue Fp = isSaturatingMinMax(N0, N1, N2, N3, CC, BW, Unsigned);
+  SDValue Fp = isSaturatingMinMax(N0, N1, N2, N3, CC, BW, Unsigned, DAG);
   if (!Fp || Fp.getOpcode() != ISD::FP_TO_SINT)
     return SDValue();
   EVT FPVT = Fp.getOperand(0).getValueType();
