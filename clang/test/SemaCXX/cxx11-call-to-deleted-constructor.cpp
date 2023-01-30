@@ -34,7 +34,7 @@ void getLaplacianClosedForm()
 {
     Matrix<double> winI(0, 3);
     RGBFValue* inputPreL;
-    winI = { inputPreL->at() }; // expected-error {{call to deleted constructor of 'cva::Matrix<double, 0, 0> &&'}}
+    winI = { inputPreL->at() }; // expected-error {{call to deleted constructor of 'cva::Matrix<double> &&'}}
 }
 
 }
