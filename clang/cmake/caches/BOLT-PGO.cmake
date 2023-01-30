@@ -1,9 +1,11 @@
 set(LLVM_ENABLE_PROJECTS "bolt;clang;lld" CACHE STRING "")
 
 set(CLANG_BOOTSTRAP_TARGETS
+  stage2-clang-bolt
   stage2-clang++-bolt
   CACHE STRING "")
 set(BOOTSTRAP_CLANG_BOOTSTRAP_TARGETS
+  clang-bolt
   clang++-bolt
   CACHE STRING "")
 
