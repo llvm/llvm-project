@@ -2,6 +2,7 @@
 ! Check out-of-range subscripts
 real a(10)
 integer, parameter :: n(2) = [1, 2]
+integer unknown
 !ERROR: DATA statement designator 'a(0_8)' is out of range
 !ERROR: DATA statement designator 'a(11_8)' is out of range
 data a(0)/0./, a(10+1)/0./
@@ -25,5 +26,8 @@ print *, a(10:-1:-3) ! ok
 print *, a(10:-2:-3)
 print *, a(-1:-2) ! empty section is ok
 print *, a(0:11:-1) ! empty section is ok
+!ERROR: Subscript 0 is less than lower bound 1 for dimension 1 of array
+print *, a(0:0:unknown) ! lower==upper, can ignore stride
+!ERROR: Subscript 11 is greater than upper bound 10 for dimension 1 of array
+print *, a(11:11:unknown) ! lower==upper, can ignore stride
 end
-
