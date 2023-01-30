@@ -1797,48 +1797,43 @@ MatchFail:
 }
 
 OperandMatchResultTy RISCVAsmParser::parseMaskReg(OperandVector &Operands) {
-  switch (getLexer().getKind()) {
-  default:
+  if (getLexer().isNot(AsmToken::Identifier))
     return MatchOperand_NoMatch;
-  case AsmToken::Identifier:
-    StringRef Name = getLexer().getTok().getIdentifier();
-    if (!Name.consume_back(".t")) {
-      Error(getLoc(), "expected '.t' suffix");
-      return MatchOperand_ParseFail;
-    }
-    MCRegister RegNo;
-    matchRegisterNameHelper(isRV32E(), RegNo, Name);
 
-    if (RegNo == RISCV::NoRegister)
-      return MatchOperand_NoMatch;
-    if (RegNo != RISCV::V0)
-      return MatchOperand_NoMatch;
-    SMLoc S = getLoc();
-    SMLoc E = SMLoc::getFromPointer(S.getPointer() + Name.size());
-    getLexer().Lex();
-    Operands.push_back(RISCVOperand::createReg(RegNo, S, E, isRV64()));
+  StringRef Name = getLexer().getTok().getIdentifier();
+  if (!Name.consume_back(".t")) {
+    Error(getLoc(), "expected '.t' suffix");
+    return MatchOperand_ParseFail;
   }
+  MCRegister RegNo;
+  matchRegisterNameHelper(isRV32E(), RegNo, Name);
 
+  if (RegNo == RISCV::NoRegister)
+    return MatchOperand_NoMatch;
+  if (RegNo != RISCV::V0)
+    return MatchOperand_NoMatch;
+  SMLoc S = getLoc();
+  SMLoc E = SMLoc::getFromPointer(S.getPointer() + Name.size());
+  getLexer().Lex();
+  Operands.push_back(RISCVOperand::createReg(RegNo, S, E, isRV64()));
   return MatchOperand_Success;
 }
 
 OperandMatchResultTy RISCVAsmParser::parseGPRAsFPR(OperandVector &Operands) {
-  switch (getLexer().getKind()) {
-  default:
+  if (getLexer().isNot(AsmToken::Identifier))
     return MatchOperand_NoMatch;
-  case AsmToken::Identifier:
-    StringRef Name = getLexer().getTok().getIdentifier();
-    MCRegister RegNo;
-    matchRegisterNameHelper(isRV32E(), RegNo, Name);
 
-    if (RegNo == RISCV::NoRegister)
-      return MatchOperand_NoMatch;
-    SMLoc S = getLoc();
-    SMLoc E = SMLoc::getFromPointer(S.getPointer() - 1);
-    getLexer().Lex();
-    Operands.push_back(RISCVOperand::createReg(
-        RegNo, S, E, isRV64(), !getSTI().hasFeature(RISCV::FeatureStdExtF)));
-  }
+  StringRef Name = getLexer().getTok().getIdentifier();
+  MCRegister RegNo;
+  matchRegisterNameHelper(isRV32E(), RegNo, Name);
+
+  if (RegNo == RISCV::NoRegister)
+    return MatchOperand_NoMatch;
+  SMLoc S = getLoc();
+  SMLoc E = SMLoc::getFromPointer(S.getPointer() - 1);
+  getLexer().Lex();
+  Operands.push_back(RISCVOperand::createReg(
+      RegNo, S, E, isRV64(), !getSTI().hasFeature(RISCV::FeatureStdExtF)));
   return MatchOperand_Success;
 }
 
