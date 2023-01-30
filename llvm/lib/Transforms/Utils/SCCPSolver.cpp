@@ -153,8 +153,8 @@ static bool refineInstruction(SCCPSolver &Solver,
   }
   if (!Inst.hasNoSignedWrap()) {
     auto NSWRange = ConstantRange::makeGuaranteedNoWrapRegion(
-        Instruction::Add, RangeA, OverflowingBinaryOperator::NoSignedWrap);
-    if (NSWRange.contains(RangeB)) {
+        Instruction::Add, RangeB, OverflowingBinaryOperator::NoSignedWrap);
+    if (NSWRange.contains(RangeA)) {
       Inst.setHasNoSignedWrap();
       Changed = true;
     }
