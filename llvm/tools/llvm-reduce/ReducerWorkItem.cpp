@@ -807,7 +807,7 @@ llvm::parseReducerWorkItem(StringRef ToolName, StringRef Filename,
 
     if (!isBitcode((const unsigned char *)(*MB)->getBufferStart(),
                    (const unsigned char *)(*MB)->getBufferEnd())) {
-      std::unique_ptr<Module> Result = parseIRFile(Filename, Err, Ctxt);
+      std::unique_ptr<Module> Result = parseIR(**MB, Err, Ctxt);
       if (!Result) {
         Err.print(ToolName.data(), errs());
         return {nullptr, false};
