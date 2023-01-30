@@ -378,6 +378,9 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
 
   // Analyze ops.
   for (func::FuncOp funcOp : orderedFuncOps) {
+    if (!state.getOptions().isOpAllowed(funcOp))
+      continue;
+
     // Now analyzing function.
     funcState.startFunctionAnalysis(funcOp);
 
@@ -410,7 +413,8 @@ void mlir::bufferization::removeBufferizationAttributesInModule(
 
 LogicalResult mlir::bufferization::bufferizeModuleOp(
     ModuleOp moduleOp, const OneShotBufferizationOptions &options,
-    BufferizationStatistics *statistics) {
+    BufferizationStatistics *statistics,
+    OpFilter::Entry::FilterFn analysisFilterFn) {
   assert(options.bufferizeFunctionBoundaries &&
          "expected that function boundary bufferization is activated");
   IRRewriter rewriter(moduleOp.getContext());
@@ -428,7 +432,9 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
   for (func::FuncOp funcOp : orderedFuncOps) {
     // Note: It would be good to apply cleanups here but we cannot as aliasInfo
     // would be invalidated.
-    if (failed(bufferizeOp(funcOp, options, options.copyBeforeWrite,
+    bool copyBeforeWrite = options.copyBeforeWrite ||
+                           (analysisFilterFn && analysisFilterFn(funcOp));
+    if (failed(bufferizeOp(funcOp, options, copyBeforeWrite,
                            /*opFilter=*/nullptr, statistics)))
       return failure();
     // Change buffer return types to more precise layout maps.
@@ -445,18 +451,28 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
 
 LogicalResult mlir::bufferization::runOneShotModuleBufferize(
     ModuleOp moduleOp, const OneShotBufferizationOptions &options,
-    BufferizationStatistics *statistics) {
+    BufferizationStatistics *statistics,
+    OpFilter::Entry::FilterFn analysisFilterFn) {
   assert(options.bufferizeFunctionBoundaries &&
          "expected that function boundary bufferization is activated");
   assert(!(options.copyBeforeWrite && options.testAnalysisOnly) &&
          "invalid combination of bufferization flags");
   if (!options.copyBeforeWrite) {
-    if (failed(insertTensorCopies(moduleOp, options, statistics)))
-      return failure();
+    if (!analysisFilterFn) {
+      if (failed(insertTensorCopies(moduleOp, options, statistics)))
+        return failure();
+    } else {
+      OneShotBufferizationOptions updatedOptions(options);
+      updatedOptions.opFilter.denyOperation(analysisFilterFn);
+      if (failed(insertTensorCopies(moduleOp, updatedOptions, statistics)))
+        return failure();
+    }
   }
   if (options.testAnalysisOnly)
     return success();
-  if (failed(bufferizeModuleOp(moduleOp, options, statistics)))
+
+  if (failed(
+          bufferizeModuleOp(moduleOp, options, statistics, analysisFilterFn)))
     return failure();
   return success();
 }
