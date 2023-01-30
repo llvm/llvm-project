@@ -27,8 +27,12 @@
 #include "omptarget.h"
 #include "omptargetplugin.h"
 
+#ifndef TARGET_NAME
 #define TARGET_NAME CUDA
+#endif
+#ifndef DEBUG_PREFIX
 #define DEBUG_PREFIX "Target " GETNAME(TARGET_NAME) " RTL"
+#endif
 
 #include "MemoryManager.h"
 
