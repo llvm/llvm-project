@@ -297,7 +297,7 @@ public:
 
   virtual void emitDestruction() {}
 
-  VariableScope *getParent() { return Parent; }
+  VariableScope *getParent() const { return Parent; }
 
 protected:
   /// ByteCodeExprGen instance.
