@@ -443,7 +443,8 @@ bool ReducerWorkItem::isReduced(const TestRunner &Test) const {
       CurrentFilepath,
       UseBitcode && !isMIR() ? sys::fs::OF_None : sys::fs::OF_Text);
   if (EC) {
-    errs() << "Error making unique filename: " << EC.message() << "!\n";
+    WithColor::error(errs(), Test.getToolName())
+        << "error making unique filename: " << EC.message() << '\n';
     exit(1);
   }
 
@@ -453,8 +454,9 @@ bool ReducerWorkItem::isReduced(const TestRunner &Test) const {
 
   Out.os().close();
   if (Out.os().has_error()) {
-    errs() << "Error emitting bitcode to file '" << CurrentFilepath
-           << "': " << Out.os().error().message();
+    WithColor::error(errs(), Test.getToolName())
+        << "error emitting bitcode to file '" << CurrentFilepath
+        << "': " << Out.os().error().message() << '\n';
     exit(1);
   }
 
