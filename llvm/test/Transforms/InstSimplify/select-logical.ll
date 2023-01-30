@@ -285,12 +285,11 @@ define i1 @logical_not_or_and_negative1(i1 %x, i1 %y, i1 %z) {
   ret i1 %r
 }
 
+; !(x && y) || x --> true
+
 define i1 @logical_nand_logical_or_common_op_commute1(i1 %x, i1 %y) {
 ; CHECK-LABEL: @logical_nand_logical_or_common_op_commute1(
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[X:%.*]], i1 [[Y:%.*]], i1 false
-; CHECK-NEXT:    [[NAND:%.*]] = xor i1 [[AND]], true
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[NAND]], i1 true, i1 [[X]]
-; CHECK-NEXT:    ret i1 [[OR]]
+; CHECK-NEXT:    ret i1 true
 ;
   %and = select i1 %x, i1 %y, i1 false
   %nand = xor i1 %and, -1
@@ -300,10 +299,7 @@ define i1 @logical_nand_logical_or_common_op_commute1(i1 %x, i1 %y) {
 
 define <2 x i1> @logical_nand_logical_or_common_op_commute2(<2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @logical_nand_logical_or_common_op_commute2(
-; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[Y:%.*]], <2 x i1> [[X:%.*]], <2 x i1> zeroinitializer
-; CHECK-NEXT:    [[NAND:%.*]] = xor <2 x i1> [[AND]], <i1 true, i1 true>
-; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[NAND]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[X]]
-; CHECK-NEXT:    ret <2 x i1> [[OR]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %and = select <2 x i1> %y, <2 x i1> %x, <2 x i1> zeroinitializer
   %nand = xor <2 x i1> %and, <i1 -1, i1 -1>
@@ -313,10 +309,7 @@ define <2 x i1> @logical_nand_logical_or_common_op_commute2(<2 x i1> %x, <2 x i1
 
 define <2 x i1> @logical_nand_logical_or_common_op_commute3(<2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @logical_nand_logical_or_common_op_commute3(
-; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[X:%.*]], <2 x i1> [[Y:%.*]], <2 x i1> zeroinitializer
-; CHECK-NEXT:    [[NAND:%.*]] = xor <2 x i1> [[AND]], <i1 true, i1 poison>
-; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[X]], <2 x i1> <i1 true, i1 poison>, <2 x i1> [[NAND]]
-; CHECK-NEXT:    ret <2 x i1> [[OR]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %and = select <2 x i1> %x, <2 x i1> %y, <2 x i1> zeroinitializer
   %nand = xor <2 x i1> %and, <i1 -1, i1 poison>
@@ -326,16 +319,15 @@ define <2 x i1> @logical_nand_logical_or_common_op_commute3(<2 x i1> %x, <2 x i1
 
 define i1 @logical_nand_logical_or_common_op_commute4(i1 %x, i1 %y) {
 ; CHECK-LABEL: @logical_nand_logical_or_common_op_commute4(
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[Y:%.*]], i1 [[X:%.*]], i1 false
-; CHECK-NEXT:    [[NAND:%.*]] = xor i1 [[AND]], true
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[X]], i1 true, i1 [[NAND]]
-; CHECK-NEXT:    ret i1 [[OR]]
+; CHECK-NEXT:    ret i1 true
 ;
   %and = select i1 %y, i1 %x, i1 false
   %nand = xor i1 %and, -1
   %or = select i1 %x, i1 true, i1 %nand
   ret i1 %or
 }
+
+; TODO: This could fold the same as above (we don't match a partial poison vector as logical op).
 
 define <2 x i1> @logical_nand_logical_or_common_op_commute4_poison_vec(<2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @logical_nand_logical_or_common_op_commute4_poison_vec(
@@ -349,6 +341,8 @@ define <2 x i1> @logical_nand_logical_or_common_op_commute4_poison_vec(<2 x i1> 
   %or = select <2 x i1> %x, <2 x i1> <i1 -1, i1 -1>, <2 x i1> %nand
   ret <2 x i1> %or
 }
+
+; negative test - need common operand
 
 define i1 @logical_nand_logical_or(i1 %x, i1 %y, i1 %z) {
 ; CHECK-LABEL: @logical_nand_logical_or(
