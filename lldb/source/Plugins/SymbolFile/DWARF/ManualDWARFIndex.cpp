@@ -163,6 +163,7 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
   // types in the .dwo file only as methods could have return types removed and
   // we don't have to index incomplete types from the skeleton compile unit.
   if (unit.GetDWOId()) {
+    // Index the .dwo or dwp instead of the skeleton unit.
     if (SymbolFileDWARFDwo *dwo_symbol_file = unit.GetDwoSymbolFile()) {
       // Type units in a dwp file are indexed separately, so we just need to
       // process the split unit here. However, if the split unit is in a dwo
@@ -176,9 +177,17 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
       }
       return;
     }
-    // The unit has a dwo_id, but this isn't a .dwo skeleton unit, so
-    // the assumption is that this is a file produced by -gmodules and
-    // that we want to index it.
+    // This was a DWARF5 skeleton CU and the .dwo file couldn't be located.
+    if (unit.GetVersion() >= 5 && unit.IsSkeletonUnit())
+      return;
+
+    // Either this is a DWARF 4 + fission CU with the .dwo file
+    // missing, or it's a -gmodules pch or pcm. Try to detect the
+    // latter by checking whether the first DIE is a DW_TAG_module.
+    // If it's a pch/pcm, continue indexing it.
+    if (unit.GetDIE(unit.GetFirstDIEOffset()).GetFirstChild().Tag() !=
+        llvm::dwarf::DW_TAG_module)
+      return;
   }
   // We have a normal compile unit which we want to index.
   IndexUnitImpl(unit, cu_language, set);

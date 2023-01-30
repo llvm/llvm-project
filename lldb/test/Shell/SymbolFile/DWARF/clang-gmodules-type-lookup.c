@@ -2,7 +2,7 @@
 
 // Test that LLDB can follow DWO links produced by -gmodules debug
 // info to find a type in a precompiled header.
-// 
+//
 // RUN: %clangxx_host -g -gmodules -fmodules -std=c99 -x c-header %S/Inputs/pch.h -g -c -o %t.pch
 // RUN: %clangxx_host -g -gmodules -fmodules -std=c99 -x c -include-pch %t.pch %s -c -o %t.o
 // RUN: %clangxx_host %t.o -o %t.exe
