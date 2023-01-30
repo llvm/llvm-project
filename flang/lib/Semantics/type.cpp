@@ -325,28 +325,33 @@ void DerivedTypeSpec::Instantiate(Scope &containingScope) {
     const SourceName &name{symbol.name()};
     if (typeScope.find(symbol.name()) != typeScope.end()) {
       // This type parameter belongs to the derived type itself, not to
-      // one of its ancestors.  Put the type parameter expression value
-      // into the new scope as the initialization value for the parameter.
+      // one of its ancestors.  Put the type parameter expression value,
+      // when there is one, into the new scope as the initialization value
+      // for the parameter.  And when there is no explicit value, add an
+      // uninitialized type parameter to forestall use of any default.
       if (ParamValue * paramValue{FindParameter(name)}) {
         const TypeParamDetails &details{symbol.get<TypeParamDetails>()};
         paramValue->set_attr(details.attr());
+        TypeParamDetails instanceDetails{details.attr()};
+        if (const DeclTypeSpec * type{details.type()}) {
+          instanceDetails.set_type(*type);
+        }
+        desc += sep;
+        desc += name.ToString();
+        desc += '=';
+        sep = ',';
         if (MaybeIntExpr expr{paramValue->GetExplicit()}) {
           if (auto folded{evaluate::NonPointerInitializationExpr(symbol,
                   SomeExpr{std::move(*expr)}, foldingContext, &newScope)}) {
-            desc += sep;
-            desc += name.ToString();
-            desc += '=';
             desc += folded->AsFortran();
-            sep = ',';
-            TypeParamDetails instanceDetails{details.attr()};
-            if (const DeclTypeSpec * type{details.type()}) {
-              instanceDetails.set_type(*type);
-            }
             instanceDetails.set_init(
                 std::move(DEREF(evaluate::UnwrapExpr<SomeIntExpr>(*folded))));
-            newScope.try_emplace(name, std::move(instanceDetails));
           }
         }
+        if (!instanceDetails.init()) {
+          desc += '*';
+        }
+        newScope.try_emplace(name, std::move(instanceDetails));
       }
     }
   }
