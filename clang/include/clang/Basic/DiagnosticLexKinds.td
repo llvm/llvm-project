@@ -888,6 +888,8 @@ def warn_use_of_private_header_outside_module : Warning<
   InGroup<DiagGroup<"private-header">>, DefaultError;
 def err_undeclared_use_of_module : Error<
   "module %0 does not depend on a module exporting '%1'">;
+def err_undeclared_use_of_module_indirect : Error<
+  "module %0 does not directly depend on a module exporting '%1', which is part of indirectly-used module %2">;
 def warn_non_modular_include_in_framework_module : Warning<
   "include of non-modular header inside framework module '%0': '%1'">,
   InGroup<NonModularIncludeInFrameworkModule>, DefaultIgnore;
