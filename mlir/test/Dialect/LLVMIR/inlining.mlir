@@ -231,7 +231,9 @@ llvm.func @test_inline(%cond : i1, %size : i32) -> f32 {
   // CHECK: ^{{.+}}:
 ^bb1:
   // CHECK-NOT: llvm.call @static_alloca
+  // CHECK: llvm.intr.lifetime.start
   %0 = llvm.call @static_alloca() : () -> f32
+  // CHECK: llvm.intr.lifetime.end
   // CHECK: llvm.br
   llvm.br ^bb3(%0: f32)
   // CHECK: ^{{.+}}:
@@ -274,4 +276,80 @@ llvm.func @test_inline(%cond : i1) -> f32 {
   // CHECK: llvm.alloca
   %0 = llvm.call @static_alloca_not_in_entry(%cond) : (i1) -> f32
   llvm.return %0 : f32
+}
+
+// -----
+
+llvm.func @static_alloca(%cond: i1) -> f32 {
+  %0 = llvm.mlir.constant(4 : i32) : i32
+  %1 = llvm.alloca %0 x f32 : (i32) -> !llvm.ptr
+  llvm.cond_br %cond, ^bb1, ^bb2
+^bb1:
+  %2 = llvm.load %1 : !llvm.ptr -> f32
+  llvm.return %2 : f32
+^bb2:
+  %3 = llvm.mlir.constant(3.14192 : f32) : f32
+  llvm.return %3 : f32
+}
+
+// CHECK-LABEL: llvm.func @test_inline
+llvm.func @test_inline(%cond0 : i1, %cond1 : i1, %funcArg : f32) -> f32 {
+  // CHECK-NOT: llvm.cond_br
+  // CHECK: %[[PTR:.+]] = llvm.alloca
+  // CHECK: llvm.cond_br %{{.+}}, ^[[BB1:.+]], ^{{.+}}
+  llvm.cond_br %cond0, ^bb1, ^bb2
+  // CHECK: ^[[BB1]]
+^bb1:
+  // Make sure the lifetime begin intrinsic has been inserted where the call
+  // used to be, even though the alloca has been moved to the entry block.
+  // CHECK-NEXT: llvm.intr.lifetime.start 4, %[[PTR]]
+  %0 = llvm.call @static_alloca(%cond1) : (i1) -> f32
+  // CHECK: llvm.cond_br %{{.+}}, ^[[BB2:.+]], ^[[BB3:.+]]
+  llvm.br ^bb3(%0: f32)
+  // Make sure the lifetime end intrinsic has been inserted at both former
+  // return sites of the callee.
+  // CHECK: ^[[BB2]]:
+  // CHECK-NEXT: llvm.load
+  // CHECK-NEXT: llvm.intr.lifetime.end 4, %[[PTR]]
+  // CHECK: ^[[BB3]]:
+  // CHECK-NEXT: llvm.intr.lifetime.end 4, %[[PTR]]
+^bb2:
+  llvm.br ^bb3(%funcArg: f32)
+^bb3(%blockArg: f32):
+  llvm.return %blockArg : f32
+}
+
+// -----
+
+llvm.func @alloca_with_lifetime(%cond: i1) -> f32 {
+  %0 = llvm.mlir.constant(4 : i32) : i32
+  %1 = llvm.alloca %0 x f32 : (i32) -> !llvm.ptr
+  llvm.intr.lifetime.start 4, %1 : !llvm.ptr
+  %2 = llvm.load %1 : !llvm.ptr -> f32
+  llvm.intr.lifetime.end 4, %1 : !llvm.ptr
+  %3 = llvm.fadd %2, %2 : f32
+  llvm.return %3 : f32
+}
+
+// CHECK-LABEL: llvm.func @test_inline
+llvm.func @test_inline(%cond0 : i1, %cond1 : i1, %funcArg : f32) -> f32 {
+  // CHECK-NOT: llvm.cond_br
+  // CHECK: %[[PTR:.+]] = llvm.alloca
+  // CHECK: llvm.cond_br %{{.+}}, ^[[BB1:.+]], ^{{.+}}
+  llvm.cond_br %cond0, ^bb1, ^bb2
+  // CHECK: ^[[BB1]]
+^bb1:
+  // Make sure the original lifetime intrinsic has been preserved, rather than
+  // inserting a new one with a larger scope.
+  // CHECK: llvm.intr.lifetime.start 4, %[[PTR]]
+  // CHECK-NEXT: llvm.load %[[PTR]]
+  // CHECK-NEXT: llvm.intr.lifetime.end 4, %[[PTR]]
+  // CHECK: llvm.fadd
+  // CHECK-NOT: llvm.intr.lifetime.end
+  %0 = llvm.call @alloca_with_lifetime(%cond1) : (i1) -> f32
+  llvm.br ^bb3(%0: f32)
+^bb2:
+  llvm.br ^bb3(%funcArg: f32)
+^bb3(%blockArg: f32):
+  llvm.return %blockArg : f32
 }
