@@ -30,7 +30,8 @@ Error buildTables_ELF_i386(LinkGraph &G) {
   LLVM_DEBUG(dbgs() << "Visiting edges in graph:\n");
 
   i386::GOTTableManager GOT;
-  visitExistingEdges(G, GOT);
+  i386::PLTTableManager PLT(GOT);
+  visitExistingEdges(G, GOT, PLT);
   return Error::success();
 }
 } // namespace
@@ -130,6 +131,8 @@ private:
       return EdgeKind_i386::Delta32;
     case ELF::R_386_GOTOFF:
       return EdgeKind_i386::Delta32FromGOT;
+    case ELF::R_386_PLT32:
+      return EdgeKind_i386::BranchPCRel32;
     }
 
     return make_error<JITLinkError>("Unsupported i386 relocation:" +
@@ -243,8 +246,11 @@ void link_ELF_i386(std::unique_ptr<LinkGraph> G,
     else
       Config.PrePrunePasses.push_back(markAllSymbolsLive);
 
-    // Add an in-place GOT build pass.
+    // Add an in-place GOT and PLT build pass.
     Config.PostPrunePasses.push_back(buildTables_ELF_i386);
+
+    // Add GOT/Stubs optimizer pass.
+    Config.PreFixupPasses.push_back(i386::optimizeGOTAndStubAccesses);
   }
   if (auto Err = Ctx->modifyPassConfig(*G, Config))
     return Ctx->notifyFailed(std::move(Err));
