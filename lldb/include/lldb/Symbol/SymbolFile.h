@@ -444,6 +444,21 @@ public:
   virtual bool GetDebugInfoHadFrameVariableErrors() const = 0;
   virtual void SetDebugInfoHadFrameVariableErrors() = 0;
 
+  /// This function is used to create types that belong to a SymbolFile. The
+  /// symbol file will own a strong reference to the type in an internal type
+  /// list.
+  virtual lldb::TypeSP MakeType(lldb::user_id_t uid, ConstString name,
+                                llvm::Optional<uint64_t> byte_size,
+                                SymbolContextScope *context,
+                                lldb::user_id_t encoding_uid,
+                                Type::EncodingDataType encoding_uid_type,
+                                const Declaration &decl,
+                                const CompilerType &compiler_qual_type,
+                                Type::ResolveState compiler_type_resolve_state,
+                                uint32_t opaque_payload = 0) = 0;
+
+  virtual lldb::TypeSP CopyType(const lldb::TypeSP &other_type) = 0;
+
 protected:
   void AssertModuleLock();
 
@@ -522,6 +537,31 @@ public:
   }
   void SetDebugInfoHadFrameVariableErrors() override {
      m_debug_info_had_variable_errors = true;
+  }
+
+  lldb::TypeSP MakeType(lldb::user_id_t uid, ConstString name,
+                        llvm::Optional<uint64_t> byte_size,
+                        SymbolContextScope *context,
+                        lldb::user_id_t encoding_uid,
+                        Type::EncodingDataType encoding_uid_type,
+                        const Declaration &decl,
+                        const CompilerType &compiler_qual_type,
+                        Type::ResolveState compiler_type_resolve_state,
+                        uint32_t opaque_payload = 0) override {
+    lldb::TypeSP type_sp(new Type(
+        uid, this, name, byte_size, context, encoding_uid, encoding_uid_type,
+        decl, compiler_qual_type, compiler_type_resolve_state, opaque_payload));
+    m_type_list.Insert(type_sp);
+    return type_sp;
+  }
+
+  lldb::TypeSP CopyType(const lldb::TypeSP &other_type) override {
+     // Make sure the real symbol file matches when copying types.
+     if (GetBackingSymbolFile() != other_type->GetSymbolFile())
+      return lldb::TypeSP();
+     lldb::TypeSP type_sp(new Type(*other_type));
+     m_type_list.Insert(type_sp);
+     return type_sp;
   }
 
 protected:
