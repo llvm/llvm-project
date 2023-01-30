@@ -78,6 +78,7 @@ add_llvm_component_library(LLVMCore
 
   LINK_COMPONENTS
   BinaryFormat
+  Demangle
   Remarks
   Support
   TargetParser
