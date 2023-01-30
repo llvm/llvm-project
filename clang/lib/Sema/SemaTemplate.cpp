@@ -5900,10 +5900,10 @@ bool Sema::CheckTemplateArgumentList(
                                 ArgumentPack.size(), Converted))
         return true;
 
-      CanonicalConverted.back().setIsDefaulted(
+      Converted.back().setIsDefaulted(
           clang::isSubstitutedDefaultArgument(
               Context, NewArgs[ArgIdx].getArgument(), *Param,
-              CanonicalConverted, Params->getDepth()));
+              Converted, Params->getDepth()));
 
       bool PackExpansionIntoNonPack =
           NewArgs[ArgIdx].getArgument().isPackExpansion() &&
@@ -6066,7 +6066,7 @@ bool Sema::CheckTemplateArgumentList(
                               RAngleLoc, 0, Converted))
       return true;
 
-    CanonicalConverted.back().setIsDefaulted(true);
+    Converted.back().setIsDefaulted(true);
 
     // Core issue 150 (assumed resolution): if this is a template template
     // parameter, keep track of the default template arguments from the
