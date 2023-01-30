@@ -269,7 +269,7 @@ void arith::CmpIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   APInt min = APInt::getZero(1);
   APInt max = APInt::getAllOnesValue(1);
 
-  Optional<bool> truthValue = intrange::evaluatePred(pred, lhs, rhs);
+  std::optional<bool> truthValue = intrange::evaluatePred(pred, lhs, rhs);
   if (truthValue.has_value() && *truthValue)
     min = max;
   else if (truthValue.has_value() && !(*truthValue))
