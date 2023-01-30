@@ -106,46 +106,46 @@ define void @fold_memchr_A_pIb_cst_cst(ptr %pchr) {
 define void @fold_memchr_A_pIb_cst_N(i64 %N, ptr %pchr) {
 ; CHECK-LABEL: @fold_memchr_A_pIb_cst_N(
 ; CHECK-NEXT:    [[MEMCHR_CMP:%.*]] = icmp eq i64 [[N:%.*]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[MEMCHR_CMP]], ptr null, ptr @a
-; CHECK-NEXT:    store ptr [[TMP1]], ptr [[PCHR:%.*]], align 8
+; CHECK-NEXT:    [[CHR_0_0_N:%.*]] = select i1 [[MEMCHR_CMP]], ptr null, ptr @a
+; CHECK-NEXT:    store ptr [[CHR_0_0_N]], ptr [[PCHR:%.*]], align 8
 ; CHECK-NEXT:    [[PST_0_1_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 1
 ; CHECK-NEXT:    [[MEMCHR_CMP1:%.*]] = icmp ult i64 [[N]], 3
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[MEMCHR_CMP1]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 0, i64 1)
-; CHECK-NEXT:    store ptr [[TMP2]], ptr [[PST_0_1_N]], align 8
+; CHECK-NEXT:    [[CHR_0_1_N:%.*]] = select i1 [[MEMCHR_CMP1]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 0, i64 1)
+; CHECK-NEXT:    store ptr [[CHR_0_1_N]], ptr [[PST_0_1_N]], align 8
 ; CHECK-NEXT:    [[PST_0_4_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 2
 ; CHECK-NEXT:    store ptr null, ptr [[PST_0_4_N]], align 8
 ; CHECK-NEXT:    [[PST_1_0_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 3
 ; CHECK-NEXT:    [[MEMCHR_CMP2:%.*]] = icmp eq i64 [[N]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[MEMCHR_CMP2]], ptr null, ptr getelementptr inbounds (i8, ptr @a, i64 1)
-; CHECK-NEXT:    store ptr [[TMP3]], ptr [[PST_1_0_N]], align 8
+; CHECK-NEXT:    [[CHR_1_0_N:%.*]] = select i1 [[MEMCHR_CMP2]], ptr null, ptr getelementptr inbounds (i8, ptr @a, i64 1)
+; CHECK-NEXT:    store ptr [[CHR_1_0_N]], ptr [[PST_1_0_N]], align 8
 ; CHECK-NEXT:    [[PST_1_1_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 4
 ; CHECK-NEXT:    [[MEMCHR_CMP3:%.*]] = icmp ult i64 [[N]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[MEMCHR_CMP3]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 0, i64 1)
-; CHECK-NEXT:    store ptr [[TMP4]], ptr [[PST_1_1_N]], align 8
+; CHECK-NEXT:    [[CHR_1_1_N:%.*]] = select i1 [[MEMCHR_CMP3]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 0, i64 1)
+; CHECK-NEXT:    store ptr [[CHR_1_1_N]], ptr [[PST_1_1_N]], align 8
 ; CHECK-NEXT:    [[PST_1_2_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 5
 ; CHECK-NEXT:    [[MEMCHR_CMP4:%.*]] = icmp ult i64 [[N]], 4
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[MEMCHR_CMP4]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 0)
-; CHECK-NEXT:    store ptr [[TMP5]], ptr [[PST_1_2_N]], align 8
+; CHECK-NEXT:    [[CHR_1_2_N:%.*]] = select i1 [[MEMCHR_CMP4]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 0)
+; CHECK-NEXT:    store ptr [[CHR_1_2_N]], ptr [[PST_1_2_N]], align 8
 ; CHECK-NEXT:    [[PST_1_3_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 6
 ; CHECK-NEXT:    [[MEMCHR_CMP5:%.*]] = icmp ult i64 [[N]], 6
-; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[MEMCHR_CMP5]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 1)
-; CHECK-NEXT:    store ptr [[TMP6]], ptr [[PST_1_3_N]], align 8
+; CHECK-NEXT:    [[CHR_1_3_N:%.*]] = select i1 [[MEMCHR_CMP5]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 1)
+; CHECK-NEXT:    store ptr [[CHR_1_3_N]], ptr [[PST_1_3_N]], align 8
 ; CHECK-NEXT:    [[PST_1_4_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 7
 ; CHECK-NEXT:    store ptr null, ptr [[PST_1_4_N]], align 8
 ; CHECK-NEXT:    [[PST_2_0_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 8
 ; CHECK-NEXT:    store ptr null, ptr [[PST_2_0_N]], align 8
 ; CHECK-NEXT:    [[PST_2_1_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 9
 ; CHECK-NEXT:    [[MEMCHR_CMP6:%.*]] = icmp eq i64 [[N]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[MEMCHR_CMP6]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 0, i64 1)
-; CHECK-NEXT:    store ptr [[TMP7]], ptr [[PST_2_1_N]], align 8
+; CHECK-NEXT:    [[CHR_2_1_N:%.*]] = select i1 [[MEMCHR_CMP6]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 0, i64 1)
+; CHECK-NEXT:    store ptr [[CHR_2_1_N]], ptr [[PST_2_1_N]], align 8
 ; CHECK-NEXT:    [[PST_2_2_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 10
 ; CHECK-NEXT:    [[MEMCHR_CMP7:%.*]] = icmp ult i64 [[N]], 3
-; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[MEMCHR_CMP7]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 0)
-; CHECK-NEXT:    store ptr [[TMP8]], ptr [[PST_2_2_N]], align 8
+; CHECK-NEXT:    [[CHR_2_2_N:%.*]] = select i1 [[MEMCHR_CMP7]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 0)
+; CHECK-NEXT:    store ptr [[CHR_2_2_N]], ptr [[PST_2_2_N]], align 8
 ; CHECK-NEXT:    [[PST_2_3_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 11
 ; CHECK-NEXT:    [[MEMCHR_CMP8:%.*]] = icmp ult i64 [[N]], 5
-; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[MEMCHR_CMP8]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 1)
-; CHECK-NEXT:    store ptr [[TMP9]], ptr [[PST_2_3_N]], align 8
+; CHECK-NEXT:    [[CHR_2_3_N:%.*]] = select i1 [[MEMCHR_CMP8]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 1)
+; CHECK-NEXT:    store ptr [[CHR_2_3_N]], ptr [[PST_2_3_N]], align 8
 ; CHECK-NEXT:    [[PST_2_4_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 12
 ; CHECK-NEXT:    store ptr null, ptr [[PST_2_4_N]], align 8
 ; CHECK-NEXT:    ret void

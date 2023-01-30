@@ -9,10 +9,8 @@
 #ifndef MLIR_DIALECT_LINALG_UTILS_UTILS_H
 #define MLIR_DIALECT_LINALG_UTILS_UTILS_H
 
-#include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringSet.h"
 #include <optional>
 
@@ -27,7 +25,6 @@ class ExtractSliceOp;
 } // namespace tensor
 
 namespace linalg {
-class LinalgDependenceGraph;
 
 //===----------------------------------------------------------------------===//
 // General utilities
@@ -153,19 +150,6 @@ enum class LinalgTilingLoopType {
   ParallelLoops = 2
 };
 
-/// Checks whether the specific `producer` is the last write to exactly the
-/// whole `consumedView`. This checks structural dominance, that the dependence
-/// is a RAW without any interleaved write to any piece of `consumedView`.
-bool isProducerLastWriteOfView(const LinalgDependenceGraph &graph,
-                               LinalgOp consumer, Value consumedView,
-                               LinalgOp producer);
-
-/// Checks whether fusing the specific `producer` of the `consumedView` is
-/// feasible. This checks `producer` is the last write of `consumedView` and
-/// that no interleaved dependence would be violated (RAW, WAR or WAW).
-bool isFusableInto(const LinalgDependenceGraph &graph, LinalgOp consumer,
-                   Value consumedView, LinalgOp producer);
-
 /// Computes tile offsets, given a list of loop `ivs` and `tileSizes`. In case a
 /// tile size is zero (i.e., no tiling), the corresponding offset is also zero.
 SmallVector<OpFoldResult> computeTileOffsets(OpBuilder &b, Location loc,
@@ -268,13 +252,6 @@ void offsetIndices(OpBuilder &b, LinalgOp linalgOp,
 void offsetIndices(RewriterBase &b, LinalgOp linalgOp,
                    ArrayRef<OpFoldResult> offests);
 
-using FusableOpDependencesTy = llvm::MapVector<
-    Operation *,
-    SmallVector<LinalgDependenceGraph::LinalgDependenceGraphElem, 1>>;
-FusableOpDependencesTy
-findAllFusableDependences(ArrayRef<LinalgOp> ops,
-                          const LinalgDependenceGraph &dependenceGraph);
-
 /// A struct containing the Linalg producer before and after fusion.
 /// When operating on tensors, `fusedProducer` may feed into a `tensor.cast` op
 /// before the consumer Linalg op, until enough canonicalizations have applied.
@@ -283,14 +260,6 @@ struct FusionInfo {
   LinalgOp fusedProducer;
 };
 
-/// Fuses producer into consumer if the producer is structurally feasible and
-/// the fusion would not violate dependencies.
-/// Implements the fusion part of the "tileAndFuse on buffers" transformation
-/// and thus requires the `consumerOpOperand` to be a `subview` op (generally
-/// obtained by applying the tiling transformation).
-FailureOr<FusionInfo> fuseProducerOfBuffer(OpBuilder &b,
-                                           OpOperand &consumerOpOperand,
-                                           const LinalgDependenceGraph &graph);
 /// Tensor counterpart of `fuseProducerOfBuffer`.
 /// This implements the fusion part of the "tileAndFuse on tensors"
 /// transformation and thus requires the `consumerOpOperand` to be a
