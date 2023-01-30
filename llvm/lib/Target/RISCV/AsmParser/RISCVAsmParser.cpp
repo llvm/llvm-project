@@ -172,6 +172,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   OperandMatchResultTy parseInsnDirectiveOpcode(OperandVector &Operands);
   OperandMatchResultTy parseGPRAsFPR(OperandVector &Operands);
   OperandMatchResultTy parseFRMArg(OperandVector &Operands);
+  OperandMatchResultTy parseFenceArg(OperandVector &Operands);
 
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
 
@@ -278,6 +279,7 @@ struct RISCVOperand final : public MCParsedAsmOperand {
     SystemRegister,
     VType,
     FRM,
+    Fence,
   } Kind;
 
   struct RegOp {
@@ -307,6 +309,10 @@ struct RISCVOperand final : public MCParsedAsmOperand {
     RISCVFPRndMode::RoundingMode FRM;
   };
 
+  struct FenceOp {
+    unsigned Val;
+  };
+
   SMLoc StartLoc, EndLoc;
   union {
     StringRef Tok;
@@ -315,6 +321,7 @@ struct RISCVOperand final : public MCParsedAsmOperand {
     struct SysRegOp SysReg;
     struct VTypeOp VType;
     struct FRMOp FRM;
+    struct FenceOp Fence;
   };
 
   RISCVOperand(KindTy K) : Kind(K) {}
@@ -342,6 +349,9 @@ public:
       break;
     case KindTy::FRM:
       FRM = o.FRM;
+      break;
+    case KindTy::Fence:
+      Fence = o.Fence;
       break;
     }
   }
@@ -470,36 +480,7 @@ public:
 
   /// Return true if the operand is a valid for the fence instruction e.g.
   /// ('iorw').
-  bool isFenceArg() const {
-    if (!isImm())
-      return false;
-
-    int64_t Imm;
-    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
-    if (evaluateConstantImm(getImm(), Imm, VK)) {
-      // Only accept 0 as a constant immediate.
-      return VK == RISCVMCExpr::VK_RISCV_None && Imm == 0;
-    }
-
-    auto *SVal = dyn_cast<MCSymbolRefExpr>(getImm());
-
-    if (!SVal || SVal->getKind() != MCSymbolRefExpr::VK_None)
-      return false;
-
-    StringRef Str = SVal->getSymbol().getName();
-    // Letters must be unique, taken from 'iorw', and in ascending order. This
-    // holds as long as each individual character is one of 'iorw' and is
-    // greater than the previous character.
-    char Prev = '\0';
-    for (char c : Str) {
-      if (c != 'i' && c != 'o' && c != 'r' && c != 'w')
-        return false;
-      if (c <= Prev)
-        return false;
-      Prev = c;
-    }
-    return true;
-  }
+  bool isFenceArg() const { return Kind == KindTy::Fence; }
 
   /// Return true if the operand is a valid floating point rounding mode.
   bool isFRMArg() const { return Kind == KindTy::FRM; }
@@ -820,6 +801,11 @@ public:
     return FRM.FRM;
   }
 
+  unsigned getFence() const {
+    assert(Kind == KindTy::Fence && "Invalid type access!");
+    return Fence.Val;
+  }
+
   void print(raw_ostream &OS) const override {
     auto RegName = [](MCRegister Reg) {
       if (Reg)
@@ -849,6 +835,11 @@ public:
     case KindTy::FRM:
       OS << "<frm: ";
       roundingModeToString(getFRM());
+      OS << '>';
+      break;
+    case KindTy::Fence:
+      OS << "<fence: ";
+      OS << getFence();
       OS << '>';
       break;
     }
@@ -904,6 +895,14 @@ public:
     return Op;
   }
 
+  static std::unique_ptr<RISCVOperand> createFenceArg(unsigned Val, SMLoc S) {
+    auto Op = std::make_unique<RISCVOperand>(KindTy::Fence);
+    Op->Fence.Val = Val;
+    Op->StartLoc = S;
+    Op->EndLoc = S;
+    return Op;
+  }
+
   static std::unique_ptr<RISCVOperand> createVType(unsigned VTypeI, SMLoc S) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::VType);
     Op->VType.Val = VTypeI;
@@ -937,40 +936,7 @@ public:
 
   void addFenceArgOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-
-    int64_t Constant = 0;
-    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
-    if (evaluateConstantImm(getImm(), Constant, VK)) {
-      if (Constant == 0) {
-        Inst.addOperand(MCOperand::createImm(Constant));
-        return;
-      }
-      llvm_unreachable("FenceArg must contain only [iorw] or be 0");
-    }
-
-    // isFenceArg has validated the operand, meaning this cast is safe
-    auto SE = cast<MCSymbolRefExpr>(getImm());
-
-    unsigned Imm = 0;
-    for (char c : SE->getSymbol().getName()) {
-      switch (c) {
-      default:
-        llvm_unreachable("FenceArg must contain only [iorw] or be 0");
-      case 'i':
-        Imm |= RISCVFenceField::I;
-        break;
-      case 'o':
-        Imm |= RISCVFenceField::O;
-        break;
-      case 'r':
-        Imm |= RISCVFenceField::R;
-        break;
-      case 'w':
-        Imm |= RISCVFenceField::W;
-        break;
-      }
-    }
-    Inst.addOperand(MCOperand::createImm(Imm));
+    Inst.addOperand(MCOperand::createImm(Fence.Val));
   }
 
   void addCSRSystemRegisterOperands(MCInst &Inst, unsigned N) const {
@@ -1252,11 +1218,6 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 12) - 1,
                                       "operand must be a valid system register "
                                       "name or an integer in the range");
-  }
-  case Match_InvalidFenceArg: {
-    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
-    return Error(ErrorLoc, "operand must be formed of letters selected "
-                           "in-order from 'iorw' or be 0");
   }
   case Match_InvalidBareSymbol: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
@@ -1852,6 +1813,67 @@ OperandMatchResultTy RISCVAsmParser::parseFRMArg(OperandVector &Operands) {
   Operands.push_back(RISCVOperand::createFRMArg(FRM, getLoc()));
   Lex(); // Eat identifier token.
   return MatchOperand_Success;
+}
+
+OperandMatchResultTy RISCVAsmParser::parseFenceArg(OperandVector &Operands) {
+  const AsmToken &Tok = getLexer().getTok();
+
+  if (Tok.is(AsmToken::Integer)) {
+    if (Tok.getIntVal() != 0)
+      goto ParseFail;
+
+    Operands.push_back(RISCVOperand::createFenceArg(0, getLoc()));
+    Lex();
+    return MatchOperand_Success;
+  }
+
+  if (Tok.is(AsmToken::Identifier)) {
+    StringRef Str = Tok.getIdentifier();
+
+    // Letters must be unique, taken from 'iorw', and in ascending order. This
+    // holds as long as each individual character is one of 'iorw' and is
+    // greater than the previous character.
+    unsigned Imm = 0;
+    bool Valid = true;
+    char Prev = '\0';
+    for (char c : Str) {
+      switch (c) {
+      default:
+        Valid = false;
+        break;
+      case 'i':
+        Imm |= RISCVFenceField::I;
+        break;
+      case 'o':
+        Imm |= RISCVFenceField::O;
+        break;
+      case 'r':
+        Imm |= RISCVFenceField::R;
+        break;
+      case 'w':
+        Imm |= RISCVFenceField::W;
+        break;
+      }
+
+      if (c <= Prev) {
+        Valid = false;
+        break;
+      }
+      Prev = c;
+    }
+
+    if (!Valid)
+      goto ParseFail;
+
+    Operands.push_back(RISCVOperand::createFenceArg(Imm, getLoc()));
+    Lex();
+    return MatchOperand_Success;
+  }
+
+ParseFail:
+  TokError("operand must be formed of letters selected in-order from 'iorw' "
+           "or be 0");
+  return MatchOperand_ParseFail;
 }
 
 OperandMatchResultTy

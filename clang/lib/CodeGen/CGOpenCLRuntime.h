@@ -44,7 +44,7 @@ protected:
   /// Structure for enqueued block information.
   struct EnqueuedBlockInfo {
     llvm::Function *InvokeFunc; /// Block invoke function.
-    llvm::Function *Kernel;     /// Enqueued block kernel.
+    llvm::Value *KernelHandle;  /// Enqueued block kernel reference.
     llvm::Value *BlockArg;      /// The first argument to enqueued block kernel.
     llvm::Type *BlockTy;        /// Type of the block argument.
   };

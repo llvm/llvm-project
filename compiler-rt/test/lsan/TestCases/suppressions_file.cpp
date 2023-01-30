@@ -1,8 +1,5 @@
 // RUN: %clangxx_lsan %s -o %t
 
-// Fixme: remove once test passes with hwasan
-// UNSUPPORTED: hwasan
-
 // RUN: rm -f %t.supp
 // RUN: touch %t.supp
 // RUN: %push_to_device %t.supp %device_rundir/%t.supp

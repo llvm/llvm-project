@@ -2386,7 +2386,7 @@ calculates the offset (in bytes) to a given member of the given type.
 
   const int offset_to_i = __builtin_offsetof(struct S, i);
   const int ext1 = __builtin_offsetof(struct U { int i; }, i); // C extension
-  const int ext2 = __builtin_offsetof(struct S, t.f[1]);
+  const int offset_to_subobject = __builtin_offsetof(struct S, t.f[1]);
 
 **Description**:
 
