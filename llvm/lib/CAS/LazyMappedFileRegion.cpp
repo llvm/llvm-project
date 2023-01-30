@@ -242,9 +242,59 @@ Expected<LazyMappedFileRegion> LazyMappedFileRegion::create(
 
   sys::fs::file_t File = sys::fs::convertFDToNativeFile(FD);
 
+  struct FileLockRAII {
+    LazyMappedFileRegion &LMFR;
+    bool IsLocked = false;
+
+    enum LockKind { Shared, Exclusive };
+
+    FileLockRAII(LazyMappedFileRegion &LMFR) : LMFR(LMFR) {}
+    ~FileLockRAII() { consumeError(unlock()); }
+
+    Error lock(LockKind LK) {
+      if (IsLocked)
+        return createStringError(inconvertibleErrorCode(),
+                                 LMFR.Path + " already locked");
+      if (std::error_code EC = sys::fs::lockFile(*LMFR.FD, LK == Exclusive))
+        return createFileError(LMFR.Path, EC);
+      IsLocked = true;
+      return Error::success();
+    }
+
+    Error unlock() {
+      if (IsLocked) {
+        IsLocked = false;
+        if (std::error_code EC = sys::fs::unlockFile(*LMFR.FD))
+          return createFileError(LMFR.Path, EC);
+      }
+      return Error::success();
+    }
+
+  } FileLock(LMFR);
+
+  // Use shared/reader locking in case another process is in the process of
+  // initializing the file.
+  if (Error E = FileLock.lock(FileLockRAII::Shared))
+    return std::move(E);
+
   sys::fs::file_status Status;
   if (std::error_code EC = sys::fs::status(File, Status))
     return errorCodeToError(EC);
+
+  if (Status.getSize() == 0) {
+    // Lock the file exclusively so only one process will do the initialization.
+    if (Error E = FileLock.unlock())
+      return std::move(E);
+    if (Error E = FileLock.lock(FileLockRAII::Exclusive))
+      return std::move(E);
+    if (std::error_code EC = sys::fs::status(File, Status))
+      return errorCodeToError(EC);
+  }
+
+  // At this point either the file is still empty (this process won the race to
+  // do the initialization) or we have the size for the completely initialized
+  // file.
+
   if (Status.getSize() > 0)
     // The file was already constructed.
     LMFR.CachedSize = Status.getSize();
@@ -262,11 +312,6 @@ Expected<LazyMappedFileRegion> LazyMappedFileRegion::create(
 
   if (!LMFR.IsConstructingNewFile)
     return std::move(LMFR);
-
-  // Lock the file so we can initialize it.
-  if (std::error_code EC = sys::fs::lockFile(*LMFR.FD))
-    return createFileError(Path, EC);
-  auto Unlock = make_scope_exit([FD = *LMFR.FD]() { sys::fs::unlockFile(FD); });
 
   // This is a new file. Resize to NewFileSize and run the constructor.
   if (Error E = NewFileConstructor(LMFR))
