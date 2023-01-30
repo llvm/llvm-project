@@ -208,6 +208,7 @@ namespace std {
 #include <__functional/hash.h>
 #include <__functional/unary_function.h>
 #include <__fwd/string_view.h>
+#include <__iterator/bounded_iter.h>
 #include <__iterator/concepts.h>
 #include <__iterator/readable_traits.h>
 #include <__iterator/reverse_iterator.h>
@@ -265,7 +266,11 @@ public:
     using const_pointer          = const _CharT*;
     using reference              = _CharT&;
     using const_reference        = const _CharT&;
+#ifdef _LIBCPP_DEBUG_ITERATOR_BOUNDS_CHECKING
+    using const_iterator         = __bounded_iter<const_pointer>;
+#else
     using const_iterator         = const_pointer; // See [string.view.iterators]
+#endif
     using iterator               = const_iterator;
     using const_reverse_iterator = _VSTD::reverse_iterator<const_iterator>;
     using reverse_iterator       = const_reverse_iterator;
@@ -343,10 +348,22 @@ public:
     const_iterator end()    const _NOEXCEPT { return cend(); }
 
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
-    const_iterator cbegin() const _NOEXCEPT { return __data_; }
+    const_iterator cbegin() const _NOEXCEPT {
+#ifdef _LIBCPP_DEBUG_ITERATOR_BOUNDS_CHECKING
+        return std::__make_bounded_iter(data(), data(), data() + size());
+#else
+        return __data_;
+#endif
+    }
 
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
-    const_iterator cend()   const _NOEXCEPT { return __data_ + __size_; }
+    const_iterator cend()   const _NOEXCEPT {
+#ifdef _LIBCPP_DEBUG_ITERATOR_BOUNDS_CHECKING
+        return std::__make_bounded_iter(data() + size(), data(), data() + size());
+#else
+        return __data_ + __size_;
+#endif
+    }
 
     _LIBCPP_CONSTEXPR_SINCE_CXX17 _LIBCPP_INLINE_VISIBILITY
     const_reverse_iterator rbegin()   const _NOEXCEPT { return const_reverse_iterator(cend()); }

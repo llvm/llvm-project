@@ -55,8 +55,8 @@ struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT range_formatter {
 
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __parse_ctx) {
-    const _CharT* __begin = __parser_.__parse(__parse_ctx, __format_spec::__fields_range);
-    const _CharT* __end   = __parse_ctx.end();
+    auto __begin = __parser_.__parse(__parse_ctx, __format_spec::__fields_range);
+    auto __end   = __parse_ctx.end();
     if (__begin == __end)
       return __begin;
 
@@ -211,7 +211,8 @@ struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT range_formatter {
   __format_spec::__parser<_CharT> __parser_{.__alignment_ = __format_spec::__alignment::__left};
 
 private:
-  _LIBCPP_HIDE_FROM_ABI constexpr void __parse_type(const _CharT*& __begin, const _CharT* __end) {
+  template <contiguous_iterator _Iterator>
+  _LIBCPP_HIDE_FROM_ABI constexpr void __parse_type(_Iterator& __begin, _Iterator __end) {
     switch (*__begin) {
     case _CharT('m'):
       if constexpr (__fmt_pair_like<_Tp>) {
