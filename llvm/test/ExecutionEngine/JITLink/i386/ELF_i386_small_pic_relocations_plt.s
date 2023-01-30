@@ -1,7 +1,7 @@
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: llvm-mc -triple=i386-unknown-linux-gnu -position-independent \
 # RUN:     -filetype=obj -o %t/elf_sm_pic_reloc_plt.o %s
-# RUN: /home/ec2-user/llvm-project/build-32/bin/llvm-jitlink -noexec \
+# RUN: llvm-jitlink -noexec \
 # RUN:     -slab-allocate 100Kb -slab-address 0xfff00000 -slab-page-size 4096 \
 # RUN:     -abs external_func=0xffff0010 \
 # RUN:     -check %s %t/elf_sm_pic_reloc_plt.o
