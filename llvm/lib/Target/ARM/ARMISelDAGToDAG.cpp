@@ -3435,7 +3435,7 @@ bool ARMDAGToDAGISel::tryV6T2BitfieldExtractOp(SDNode *N, bool isSigned) {
     // Shift must be the same as the ands lsb
     if (isInt32Immediate(N->getOperand(1), Srl_imm) && Srl_imm == LSB) {
       assert(Srl_imm > 0 && Srl_imm < 32 && "bad amount in shift node!");
-      unsigned MSB = 31 - llvm::countl_zero(And_imm);
+      unsigned MSB = llvm::Log2_32(And_imm);
       // Note: The width operand is encoded as width-1.
       unsigned Width = MSB - LSB;
       SDValue Reg0 = CurDAG->getRegister(0, MVT::i32);
