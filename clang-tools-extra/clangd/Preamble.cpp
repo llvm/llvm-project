@@ -792,5 +792,9 @@ SourceLocation translatePreamblePatchLocation(SourceLocation Loc,
   return Loc;
 }
 
+bool PreamblePatch::preserveDiagnostics() const {
+  return PatchContents.empty() ||
+         Config::current().Diagnostics.AllowStalePreamble;
+}
 } // namespace clangd
 } // namespace clang
