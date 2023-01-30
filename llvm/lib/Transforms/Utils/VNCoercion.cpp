@@ -472,9 +472,7 @@ Value *getLoadValueForLoad(LoadInst *SrcVal, unsigned Offset, Type *LoadTy,
     assert(SrcVal->getType()->isIntegerTy() && "Can't widen non-integer load");
     // If we have a load/load clobber an DepLI can be widened to cover this
     // load, then we should widen it to the next power of 2 size big enough!
-    unsigned NewLoadSize = Offset + LoadSize;
-    if (!isPowerOf2_32(NewLoadSize))
-      NewLoadSize = NextPowerOf2(NewLoadSize);
+    unsigned NewLoadSize = llvm::bit_ceil(Offset + LoadSize);
 
     Value *PtrVal = SrcVal->getPointerOperand();
     // Insert the new load after the old load.  This ensures that subsequent

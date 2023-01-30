@@ -85,7 +85,7 @@ inline std::pair<DigitsT, int16_t> getAdjusted(uint64_t Digits,
     return std::make_pair(Digits, Scale);
 
   // Shift right and round.
-  int Shift = 64 - Width - llvm::countl_zero(Digits);
+  int Shift = llvm::bit_width(Digits) - Width;
   return getRounded<DigitsT>(Digits >> Shift, Scale + Shift,
                              Digits & (UINT64_C(1) << (Shift - 1)));
 }

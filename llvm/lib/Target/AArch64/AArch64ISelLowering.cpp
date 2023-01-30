@@ -15040,8 +15040,7 @@ bool AArch64TargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   if (BitSize == 32)
     Val &= (1LL << 32) - 1;
 
-  unsigned LZ = llvm::countl_zero((uint64_t)Val);
-  unsigned Shift = (63 - LZ) / 16;
+  unsigned Shift = llvm::Log2_64((uint64_t)Val) / 16;
   // MOVZ is free so return true for one or fewer MOVK.
   return Shift < 3;
 }

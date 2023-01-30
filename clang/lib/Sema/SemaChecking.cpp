@@ -2471,6 +2471,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BIaddressof:
   case Builtin::BI__addressof:
   case Builtin::BIforward:
+  case Builtin::BIforward_like:
   case Builtin::BImove:
   case Builtin::BImove_if_noexcept:
   case Builtin::BIas_const: {
