@@ -100,11 +100,14 @@ func.func @use_of_bufferizable_op_in_unbufferizable_op(
     %t1: tensor<?xf32>, %o: index, %s: index) -> (tensor<?xf32>, tensor<?xf32>) {
   // CHECK: %[[m1:.*]] = bufferization.to_memref %[[t1]]
   // CHECK: %[[subview:.*]] = memref.subview %[[m1]]
+  // The op must alloc because "test.dummy" may bufferize to a memory write.
+  // CHECK: %[[alloc:.*]] = memref.alloc
+  // CHECK: memref.copy %[[subview]], %[[alloc]]
   %0 = tensor.extract_slice %t1[%o][%s][1] : tensor<?xf32> to tensor<?xf32>
-  // CHECK: %[[subview_tensor:.*]] = bufferization.to_tensor %[[subview]]
-  // CHECK: %[[dummy:.*]] = "test.dummy_op"(%[[subview_tensor]])
+  // CHECK: %[[alloc_tensor:.*]] = bufferization.to_tensor %[[alloc]]
+  // CHECK: %[[dummy:.*]] = "test.dummy_op"(%[[alloc_tensor]])
   %1 = "test.dummy_op"(%0) : (tensor<?xf32>) -> tensor<?xf32>
-  // CHECK: return %[[subview_tensor]], %[[dummy]]
+  // CHECK: return %[[alloc_tensor]], %[[dummy]]
   return %0, %1 : tensor<?xf32>, tensor<?xf32>
 }
 

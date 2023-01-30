@@ -1,7 +1,6 @@
 add_subdirectory(Dialect)
 
 set(LLVM_OPTIONAL_SOURCES
-  AttrKindDetail.cpp
   ConvertFromLLVMIR.cpp
   ConvertToLLVMIR.cpp
   DebugTranslation.cpp
@@ -14,7 +13,6 @@ set(LLVM_OPTIONAL_SOURCES
 
 
 add_mlir_translation_library(MLIRTargetLLVMIRExport
-  AttrKindDetail.cpp
   DebugTranslation.cpp
   ModuleTranslation.cpp
   TypeToLLVM.cpp
@@ -54,7 +52,6 @@ add_mlir_translation_library(MLIRToLLVMIRTranslationRegistration
   )
 
 add_mlir_translation_library(MLIRTargetLLVMIRImport
-  AttrKindDetail.cpp
   DebugImporter.cpp
   ModuleImport.cpp
   TypeFromLLVM.cpp

@@ -16,4 +16,6 @@ int main(int, char**) {
   auto guard = std::__make_exception_guard([] {});
   auto guard2 = std::move(guard);
   guard2.__complete();
+
+  return 0;
 }
