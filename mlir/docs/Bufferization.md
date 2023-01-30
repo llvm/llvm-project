@@ -369,9 +369,9 @@ must at least implement the following interface methods.
 *   `bufferRelation`: Return `BufferRelation::Equivalent` if the given OpResult
     is the exact same memref as the aliasing OpOperand after bufferization (in
     case of in-place bufferization). Otherwise, (e.g., they overlap but are not
-    necessarily the exact same memrefs), `BufferRelation::None` should be
+    necessarily the exact same memrefs), `BufferRelation::Unknown` should be
     returned. Additional buffer relations will be added in the future, but
-    `BufferRelation::None` is always safe.
+    `BufferRelation::Unknown` is always safe.
 *   `bufferize`: Rewrite the op with the given rewriter. Ops should be replaced
     with `bufferization::replaceOpWithBufferizedValues`.
 
