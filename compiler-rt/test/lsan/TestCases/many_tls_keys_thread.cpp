@@ -4,9 +4,6 @@
 // RUN: %env_lsan_opts="report_objects=1:use_stacks=0:use_registers=0:use_tls=1" %run %t 2>&1
 // RUN: %env_lsan_opts="" %run %t 2>&1
 
-// Fixme: remove once test passes with hwasan
-// UNSUPPORTED: hwasan
-
 // Patch r303906 did not fix all the problems.
 // UNSUPPORTED: arm-linux,armhf-linux
 

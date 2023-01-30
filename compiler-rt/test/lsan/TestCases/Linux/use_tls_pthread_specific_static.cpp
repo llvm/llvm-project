@@ -4,9 +4,6 @@
 // RUN: %env_lsan_opts="report_objects=1:use_stacks=0:use_registers=0:use_tls=1" %run %t 2>&1
 // RUN: %env_lsan_opts="" %run %t 2>&1
 
-// Fixme: remove once test passes with hwasan
-// UNSUPPORTED: hwasan
-
 #include <assert.h>
 #include <pthread.h>
 #include <stdio.h>

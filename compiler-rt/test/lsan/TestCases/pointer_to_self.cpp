@@ -3,9 +3,6 @@
 // RUN: %clangxx_lsan %s -o %t
 // RUN: %env_lsan_opts="report_objects=1:use_registers=0:use_stacks=0" not %run %t 2>&1 | FileCheck %s
 
-// Fixme: remove once test passes with hwasan
-// UNSUPPORTED: hwasan
-
 #include <stdio.h>
 #include <stdlib.h>
 #include "sanitizer_common/print_address.h"
