@@ -355,7 +355,8 @@ public:
   /// traversed any further.
   ///
   /// When reaching the end of a chain (BlockArgument or Value without aliasing
-  /// OpOperands), also return the last Value of that chain.
+  /// OpOperands), also return the last Value of that chain if
+  /// `alwaysIncludeLeaves` is set.
   ///
   /// Example:
   ///
@@ -374,20 +375,41 @@ public:
   /// { 2, 7, 8, 5 }
   ///
   /// If `followEquivalentOnly` is set, only equivalent OpOperands are selected.
-  SetVector<Value>
-  findValueInReverseUseDefChain(Value value,
-                                llvm::function_ref<bool(Value)> condition,
-                                bool followEquivalentOnly = false) const;
+  SetVector<Value> findValueInReverseUseDefChain(
+      Value value, llvm::function_ref<bool(Value)> condition,
+      bool followEquivalentOnly = false, bool alwaysIncludeLeaves = true) const;
 
-  /// Find the Values of the last preceding write of a given Value.
+  /// Find the values that may define the contents of the given value at
+  /// runtime. A block argument is always a definition. An OpResult is a
+  /// definition if it bufferizes to memory write. If it does not bufferize to
+  /// a memory write but has aliasing operands, we continue the lookup on these
+  /// values.
   ///
-  /// Note: Unknown ops are handled conservatively and assumed to be writes.
-  /// Furthermore, BlockArguments are also assumed to be writes. There is no
-  /// analysis across block boundaries.
+  /// Example: %r = tensor.insert %f into %t[%c0] : tensor<?xf32>
+  /// findDefinitions(%r) = {%r} because %r bufferizes to memory write.
+  ///
+  /// Example: %r = tensor.empty() : tensor<10xf32>
+  /// findDefinitions(%r) = {} because tensor.empty does not the define the
+  /// contents of its result (i.e., it does not bufferize to a memory write)
+  /// and it has no aliasing OpOperands.
+  ///
+  /// Example:
+  /// %a = arith.constant ... : tensor<10xf32>
+  /// %b1 = tensor.insert %f into %t : tensor<50xf32>
+  /// %b2 = tensor.extract_slice %b1[0][10][1] : tensor<50xf32> tensor<10xf32>
+  /// %r = arith.select %cond, %a, %b : tensor<10xf32>
+  /// findDefinitions(%r) = {%a, %b1}. %r and %b2 are skipped (lookup continues
+  /// in the operands) because their defining ops do not define the contents of
+  /// the tensor.
+  ///
+  /// Note: OpResults of unknown ops are handled conservatively and assumed to
+  /// be definitions.
   ///
   /// Note: When reaching an end of the reverse SSA use-def chain, that value
-  /// is returned regardless of whether it is a memory write or not.
-  SetVector<Value> findLastPrecedingWrite(Value value) const;
+  /// is included regardless of whether it is a definition or not unless
+  /// `alwaysIncludeLeaves` is unset.
+  SetVector<Value> findDefinitions(Value value,
+                                   bool alwaysIncludeLeaves = true) const;
 
   /// Return `true` if the given OpResult has been decided to bufferize inplace.
   virtual bool isInPlace(OpOperand &opOperand) const;
