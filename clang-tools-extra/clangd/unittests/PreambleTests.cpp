@@ -8,9 +8,13 @@
 
 #include "Annotations.h"
 #include "Compiler.h"
+#include "Config.h"
+#include "Diagnostics.h"
 #include "Headers.h"
 #include "Hover.h"
+#include "ParsedAST.h"
 #include "Preamble.h"
+#include "Protocol.h"
 #include "SourceCode.h"
 #include "TestFS.h"
 #include "TestTU.h"
@@ -19,10 +23,13 @@
 #include "clang/Format/Format.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest-matchers.h"
 #include "gtest/gtest.h"
@@ -31,10 +38,18 @@
 #include <string>
 #include <vector>
 
+using testing::AllOf;
 using testing::Contains;
+using testing::ElementsAre;
+using testing::Eq;
 using testing::Field;
+using testing::HasSubstr;
+using testing::IsEmpty;
 using testing::Matcher;
 using testing::MatchesRegex;
+using testing::Not;
+using testing::UnorderedElementsAre;
+using testing::UnorderedElementsAreArray;
 
 namespace clang {
 namespace clangd {
@@ -204,9 +219,12 @@ TEST(PreamblePatchTest, PatchesPreambleIncludes) {
           Field(&Inclusion::FileKind, SrcMgr::CharacteristicKind::C_User))));
 }
 
-std::optional<ParsedAST> createPatchedAST(llvm::StringRef Baseline,
-                                          llvm::StringRef Modified) {
-  auto BaselinePreamble = TestTU::withCode(Baseline).preamble();
+std::optional<ParsedAST>
+createPatchedAST(llvm::StringRef Baseline, llvm::StringRef Modified,
+                 llvm::StringMap<std::string> AdditionalFiles = {}) {
+  auto TU = TestTU::withCode(Baseline);
+  TU.AdditionalFiles = std::move(AdditionalFiles);
+  auto BaselinePreamble = TU.preamble();
   if (!BaselinePreamble) {
     ADD_FAILURE() << "Failed to build baseline preamble";
     return std::nullopt;
@@ -214,7 +232,7 @@ std::optional<ParsedAST> createPatchedAST(llvm::StringRef Baseline,
 
   IgnoreDiagnostics Diags;
   MockFS FS;
-  auto TU = TestTU::withCode(Modified);
+  TU.Code = Modified.str();
   auto CI = buildCompilerInvocation(TU.inputs(FS), Diags);
   if (!CI) {
     ADD_FAILURE() << "Failed to build compiler invocation";
@@ -598,6 +616,161 @@ TEST(PreamblePatch, NoopWhenNotRequested) {
   auto PP = PreamblePatch::createMacroPatch(testPath(TU.Filename),
                                             TU.inputs(FS), *BaselinePreamble);
   EXPECT_TRUE(PP.text().empty());
+}
+
+::testing::Matcher<const Diag &>
+withNote(::testing::Matcher<Note> NoteMatcher) {
+  return Field(&Diag::Notes, ElementsAre(NoteMatcher));
+}
+MATCHER_P(Diag, Range, "Diag at " + llvm::to_string(Range)) {
+  return arg.Range == Range;
+}
+MATCHER_P2(Diag, Range, Name,
+           "Diag at " + llvm::to_string(Range) + " = [" + Name + "]") {
+  return arg.Range == Range && arg.Name == Name;
+}
+
+TEST(PreamblePatch, DiagnosticsFromMainASTAreInRightPlace) {
+  Config Cfg;
+  Cfg.Diagnostics.AllowStalePreamble = true;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+
+  {
+    Annotations Code("#define FOO");
+    // Check with removals from preamble.
+    Annotations NewCode("[[x]];/* error-ok */");
+    auto AST = createPatchedAST(Code.code(), NewCode.code());
+    EXPECT_THAT(*AST->getDiagnostics(),
+                ElementsAre(Diag(NewCode.range(), "missing_type_specifier")));
+  }
+  {
+    // Check with additions to preamble.
+    Annotations Code("#define FOO");
+    Annotations NewCode(R"(
+#define FOO
+#define BAR
+[[x]];/* error-ok */)");
+    auto AST = createPatchedAST(Code.code(), NewCode.code());
+    EXPECT_THAT(*AST->getDiagnostics(),
+                ElementsAre(Diag(NewCode.range(), "missing_type_specifier")));
+  }
+}
+
+TEST(PreamblePatch, DiagnosticsToPreamble) {
+  Config Cfg;
+  Cfg.Diagnostics.AllowStalePreamble = true;
+  Cfg.Diagnostics.UnusedIncludes = Config::UnusedIncludesPolicy::Strict;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+
+  llvm::StringMap<std::string> AdditionalFiles;
+  AdditionalFiles["foo.h"] = "#pragma once";
+  AdditionalFiles["bar.h"] = "#pragma once";
+  {
+    Annotations Code(R"(
+// Test comment
+[[#include "foo.h"]])");
+    // Check with removals from preamble.
+    Annotations NewCode(R"([[#  include "foo.h"]])");
+    auto AST = createPatchedAST(Code.code(), NewCode.code(), AdditionalFiles);
+    EXPECT_THAT(*AST->getDiagnostics(),
+                ElementsAre(Diag(NewCode.range(), "unused-includes")));
+  }
+  {
+    // Check with additions to preamble.
+    Annotations Code(R"(
+// Test comment
+[[#include "foo.h"]])");
+    Annotations NewCode(R"(
+$bar[[#include "bar.h"]]
+// Test comment
+$foo[[#include "foo.h"]])");
+    auto AST = createPatchedAST(Code.code(), NewCode.code(), AdditionalFiles);
+    EXPECT_THAT(
+        *AST->getDiagnostics(),
+        UnorderedElementsAre(Diag(NewCode.range("bar"), "unused-includes"),
+                             Diag(NewCode.range("foo"), "unused-includes")));
+  }
+  {
+    Annotations Code("#define [[FOO]] 1\n");
+    // Check ranges for notes.
+    Annotations NewCode(R"(#define $barxyz[[BARXYZ]] 1
+#define $foo1[[FOO]] 1
+void foo();
+#define $foo2[[FOO]] 2)");
+    auto AST = createPatchedAST(Code.code(), NewCode.code(), AdditionalFiles);
+    EXPECT_THAT(
+        *AST->getDiagnostics(),
+        ElementsAre(
+            // FIXME: This diagnostics shouldn't exist. It's emitted from the
+            // preamble patch to the stale location inside preamble.
+            AllOf(Field(&Diag::Name, Eq("-Wmacro-redefined")),
+                  Field(&Diag::File, HasSubstr("_preamble_patch_")),
+                  withNote(Diag(NewCode.range("barxyz")))),
+            AllOf(
+                Diag(NewCode.range("foo2"), "-Wmacro-redefined"),
+                // FIXME: This should be translated into main file.
+                withNote(Field(&Note::File, HasSubstr("_preamble_patch_"))))));
+  }
+}
+
+TEST(PreamblePatch, TranslatesDiagnosticsInPreamble) {
+  Config Cfg;
+  Cfg.Diagnostics.AllowStalePreamble = true;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+
+  {
+    // Check with additions to preamble.
+    Annotations Code("#include [[<foo>]]");
+    Annotations NewCode(R"(
+#define BAR
+#include [[<foo>]])");
+    auto AST = createPatchedAST(Code.code(), NewCode.code());
+    // FIXME: We should point at the correct coordinates in NewCode.
+    EXPECT_THAT(*AST->getDiagnostics(),
+                ElementsAre(Diag(Code.range(), "pp_file_not_found")));
+  }
+  {
+    // Check with removals from preamble.
+    Annotations Code(R"(
+#define BAR
+#include [[<foo>]])");
+    Annotations NewCode("#include [[<foo>]]");
+    auto AST = createPatchedAST(Code.code(), NewCode.code());
+    // FIXME: We should point at the correct coordinates in NewCode.
+    EXPECT_THAT(*AST->getDiagnostics(),
+                ElementsAre(Diag(Code.range(), "pp_file_not_found")));
+  }
+  {
+    // Drop line with diags.
+    Annotations Code("#include [[<foo>]]");
+    Annotations NewCode("#define BAR\n#define BAZ\n");
+    auto AST = createPatchedAST(Code.code(), NewCode.code());
+    // FIXME: No diagnostics.
+    EXPECT_THAT(*AST->getDiagnostics(),
+                ElementsAre(Diag(Code.range(), "pp_file_not_found")));
+  }
+  {
+    // Picks closest line in case of multiple alternatives.
+    Annotations Code("#include [[<foo>]]");
+    Annotations NewCode(R"(
+#define BAR
+#include [[<foo>]]
+#define BAR
+#include <foo>)");
+    auto AST = createPatchedAST(Code.code(), NewCode.code());
+    // FIXME: We should point at the correct coordinates in NewCode.
+    EXPECT_THAT(*AST->getDiagnostics(),
+                ElementsAre(Diag(Code.range(), "pp_file_not_found")));
+  }
+  {
+    // Drop diag if line spelling has changed.
+    Annotations Code("#include [[<foo>]]");
+    Annotations NewCode(" # include <foo>");
+    auto AST = createPatchedAST(Code.code(), NewCode.code());
+    // FIXME: No diags.
+    EXPECT_THAT(*AST->getDiagnostics(),
+                ElementsAre(Diag(Code.range(), "pp_file_not_found")));
+  }
 }
 } // namespace
 } // namespace clangd

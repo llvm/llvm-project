@@ -232,8 +232,12 @@ struct Fragment {
     ///
     /// Valid values are:
     /// - Strict
+    /// - Experiment
     /// - None
     std::optional<Located<std::string>> UnusedIncludes;
+
+    /// Enable emitting diagnostics using stale preambles.
+    std::optional<Located<bool>> AllowStalePreamble;
 
     /// Controls IncludeCleaner diagnostics.
     struct IncludesBlock {
