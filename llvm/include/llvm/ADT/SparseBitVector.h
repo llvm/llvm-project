@@ -128,7 +128,7 @@ public:
   int find_first() const {
     for (unsigned i = 0; i < BITWORDS_PER_ELEMENT; ++i)
       if (Bits[i] != 0)
-        return i * BITWORD_SIZE + countTrailingZeros(Bits[i]);
+        return i * BITWORD_SIZE + llvm::countr_zero(Bits[i]);
     llvm_unreachable("Illegal empty element");
   }
 
@@ -138,7 +138,7 @@ public:
       unsigned Idx = BITWORDS_PER_ELEMENT - I - 1;
       if (Bits[Idx] != 0)
         return Idx * BITWORD_SIZE + BITWORD_SIZE -
-               countLeadingZeros(Bits[Idx]) - 1;
+               llvm::countl_zero(Bits[Idx]) - 1;
     }
     llvm_unreachable("Illegal empty element");
   }
@@ -159,12 +159,12 @@ public:
     Copy &= ~0UL << BitPos;
 
     if (Copy != 0)
-      return WordPos * BITWORD_SIZE + countTrailingZeros(Copy);
+      return WordPos * BITWORD_SIZE + llvm::countr_zero(Copy);
 
     // Check subsequent words.
     for (unsigned i = WordPos+1; i < BITWORDS_PER_ELEMENT; ++i)
       if (Bits[i] != 0)
-        return i * BITWORD_SIZE + countTrailingZeros(Bits[i]);
+        return i * BITWORD_SIZE + llvm::countr_zero(Bits[i]);
     return -1;
   }
 

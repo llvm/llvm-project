@@ -405,7 +405,7 @@ void UnwindInfoSectionImpl::encodePersonalities() {
       personalityIndex = personalities.size();
     }
     cu.encoding |=
-        personalityIndex << countTrailingZeros(
+        personalityIndex << llvm::countr_zero(
             static_cast<compact_unwind_encoding_t>(UNWIND_PERSONALITY_MASK));
   }
   if (personalities.size() > 3)

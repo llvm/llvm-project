@@ -295,10 +295,10 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   // We need to erase the highest countTrailingZeros(ElementSize) bits of Idx.
   unsigned ElementSize =
       DL.getTypeAllocSize(Init->getType()->getArrayElementType());
-  auto MaskIdx = [&](Value* Idx){
-    if (!GEP->isInBounds() && countTrailingZeros(ElementSize) != 0) {
+  auto MaskIdx = [&](Value *Idx) {
+    if (!GEP->isInBounds() && llvm::countr_zero(ElementSize) != 0) {
       Value *Mask = ConstantInt::get(Idx->getType(), -1);
-      Mask = Builder.CreateLShr(Mask, countTrailingZeros(ElementSize));
+      Mask = Builder.CreateLShr(Mask, llvm::countr_zero(ElementSize));
       Idx = Builder.CreateAnd(Idx, Mask);
     }
     return Idx;
