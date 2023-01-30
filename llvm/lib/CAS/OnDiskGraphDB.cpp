@@ -1164,7 +1164,6 @@ Error OnDiskGraphDB::createStandaloneLeaf(IndexProxy &I, ArrayRef<char> Data) {
   if (Existing.SK == TrieRecord::StorageKind::Unknown)
     return createCorruptObjectError(getDigest(I));
 
-  // Get and return the inserted leaf node.
   return Error::success();
 }
 
@@ -1298,10 +1297,6 @@ OnDiskGraphDB::OnDiskGraphDB(StringRef RootPath, OnDiskHashMappedTrie Index,
                              OnDiskDataAllocator DataPool)
     : Index(std::move(Index)), DataPool(std::move(DataPool)),
       RootPath(RootPath.str()) {
-  SmallString<128> Temp = RootPath;
-  sys::path::append(Temp, "tmp.");
-  TempPrefix = Temp.str().str();
-
   /// Lifetime for "big" objects not in DataPool.
   ///
   /// NOTE: Could use ThreadSafeHashMappedTrie here. For now, doing something

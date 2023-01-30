@@ -330,10 +330,6 @@ private:
 
   InternalRefArrayRef getInternalRefs(ObjectHandle Node) const;
 
-  Expected<std::unique_ptr<MemoryBuffer>> openFile(StringRef Path);
-  Expected<std::unique_ptr<MemoryBuffer>> openFileWithID(StringRef BaseDir,
-                                                         ArrayRef<uint8_t> ID);
-
   OnDiskGraphDB(StringRef RootPath, OnDiskHashMappedTrie Index,
                 OnDiskDataAllocator DataPool);
 
@@ -350,7 +346,6 @@ private:
   void *StandaloneData; // a StandaloneDataMap.
 
   std::string RootPath;
-  std::string TempPrefix;
 };
 
 } // namespace llvm::cas::ondisk
