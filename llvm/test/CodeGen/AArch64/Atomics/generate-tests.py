@@ -113,6 +113,7 @@ class Feature(enum.Flag):
     outline_atomics = enum.auto()  # -moutline-atomics
     rcpc3 = enum.auto()  # FEAT_LSE2 + FEAT_LRCPC3
     lse128 = enum.auto()  # FEAT_LSE128
+    lse2_lse128 = enum.auto()  # FEAT_LSE2 + FEAT_LSE128
 
     @property
     def mattr(self):
@@ -122,6 +123,8 @@ class Feature(enum.Flag):
             return '+v8.1a'
         if self == Feature.rcpc3:
             return '+lse2,+rcpc3'
+        if self == Feature.lse2_lse128:
+            return '+lse2,+lse128'
         return '+' + self.name
 
 

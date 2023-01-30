@@ -583,6 +583,8 @@ void SimplifyIntrinsicsPass::simplifyIntOrFloatReduction(
   bool dimAndMaskAbsent = isZero(dim) && isOperandAbsent(mask);
   unsigned rank = getDimCount(args[0]);
 
+  // Rank is set to 0 for assumed shape arrays, don't simplify
+  // in these cases
   if (!(dimAndMaskAbsent && rank > 0))
     return;
 
@@ -619,11 +621,13 @@ void SimplifyIntrinsicsPass::simplifyLogicalReduction(
 
   mlir::Operation::operand_range args = call.getArgs();
   const mlir::Value &dim = args[3];
+  unsigned rank = getDimCount(args[0]);
 
-  if (!isZero(dim))
+  // Rank is set to 0 for assumed shape arrays, don't simplify
+  // in these cases
+  if (!(isZero(dim) && rank > 0))
     return;
 
-  unsigned rank = getDimCount(args[0]);
   mlir::SymbolRefAttr callee = call.getCalleeAttr();
 
   fir::FirOpBuilder builder{getSimplificationBuilder(call, kindMap)};
