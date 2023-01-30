@@ -1295,6 +1295,48 @@ Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
       return new ICmpInst(Pred, X, Cmp.getOperand(1));
   }
 
+  // (icmp eq/ne (mul X Y)) -> (icmp eq/ne X/Y) if we know about whether X/Y are
+  // odd/non-zero/there is no overflow.
+  if (match(Cmp.getOperand(0), m_Mul(m_Value(X), m_Value(Y))) &&
+      ICmpInst::isEquality(Pred)) {
+
+    KnownBits XKnown = computeKnownBits(X, 0, &Cmp);
+    // if X % 2 != 0
+    //    (icmp eq/ne Y)
+    if (XKnown.countMaxTrailingZeros() == 0)
+      return new ICmpInst(Pred, Y, Cmp.getOperand(1));
+
+    KnownBits YKnown = computeKnownBits(Y, 0, &Cmp);
+    // if Y % 2 != 0
+    //    (icmp eq/ne X)
+    if (YKnown.countMaxTrailingZeros() == 0)
+      return new ICmpInst(Pred, X, Cmp.getOperand(1));
+
+    auto *BO0 = cast<OverflowingBinaryOperator>(Cmp.getOperand(0));
+    if (BO0->hasNoUnsignedWrap() || BO0->hasNoSignedWrap()) {
+      const SimplifyQuery Q = SQ.getWithInstruction(&Cmp);
+      // `isKnownNonZero` does more analysis than just `!KnownBits.One.isZero()`
+      // but to avoid unnecessary work, first just if this is an obvious case.
+
+      // if X non-zero and NoOverflow(X * Y)
+      //    (icmp eq/ne Y)
+      if (!XKnown.One.isZero() || isKnownNonZero(X, DL, 0, Q.AC, Q.CxtI, Q.DT))
+        return new ICmpInst(Pred, Y, Cmp.getOperand(1));
+
+      // if Y non-zero and NoOverflow(X * Y)
+      //    (icmp eq/ne X)
+      if (!YKnown.One.isZero() || isKnownNonZero(Y, DL, 0, Q.AC, Q.CxtI, Q.DT))
+        return new ICmpInst(Pred, X, Cmp.getOperand(1));
+    }
+    // Note, we are skipping cases:
+    //      if Y % 2 != 0 AND X % 2 != 0
+    //          (false/true)
+    //      if X non-zero and Y non-zero and NoOverflow(X * Y)
+    //          (false/true)
+    // Those can be simplified later as we would have already replaced the (icmp
+    // eq/ne (mul X, Y)) with (icmp eq/ne X/Y) and if X/Y is known non-zero that
+    // will fold to a constant elsewhere.
+  }
   return nullptr;
 }
 
