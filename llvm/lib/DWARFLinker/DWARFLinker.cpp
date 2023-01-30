@@ -1659,7 +1659,7 @@ void DWARFLinker::patchRangesForUnit(const CompileUnit &Unit,
   DWARFDataExtractor RangeExtractor(OrigDwarf.getDWARFObj(),
                                     OrigDwarf.getDWARFObj().getRangesSection(),
                                     OrigDwarf.isLittleEndian(), AddressSize);
-  std::optional<std::pair<AddressRange, int64_t>> CachedRange;
+  std::optional<AddressRangeValuePair> CachedRange;
   DWARFUnit &OrigUnit = Unit.getOrigUnit();
   auto OrigUnitDie = OrigUnit.getUnitDIE(false);
   uint64_t UnitBaseAddress =
@@ -1687,9 +1687,9 @@ void DWARFLinker::patchRangesForUnit(const CompileUnit &Unit,
         }
 
         if (!CachedRange ||
-            !CachedRange->first.contains(Range.StartAddress + BaseAddress))
-          CachedRange = FunctionRanges.getRangeValueThatContains(
-              Range.StartAddress + BaseAddress);
+            !CachedRange->Range.contains(Range.StartAddress + BaseAddress))
+          CachedRange = FunctionRanges.getRangeThatContains(Range.StartAddress +
+                                                            BaseAddress);
 
         // All range entries should lie in the function range.
         if (!CachedRange) {
@@ -1698,8 +1698,8 @@ void DWARFLinker::patchRangesForUnit(const CompileUnit &Unit,
         }
 
         LinkedRanges.insert(
-            {Range.StartAddress + BaseAddress + CachedRange->second,
-             Range.EndAddress + BaseAddress + CachedRange->second});
+            {Range.StartAddress + BaseAddress + CachedRange->Value,
+             Range.EndAddress + BaseAddress + CachedRange->Value});
       }
     }
 
@@ -1802,7 +1802,7 @@ void DWARFLinker::patchLineTableForUnit(CompileUnit &Unit,
   // in NewRows.
   std::vector<DWARFDebugLine::Row> Seq;
   const auto &FunctionRanges = Unit.getFunctionRanges();
-  std::optional<std::pair<AddressRange, int64_t>> CurrRange;
+  std::optional<AddressRangeValuePair> CurrRange;
 
   // FIXME: This logic is meant to generate exactly the same output as
   // Darwin's classic dsymutil. There is a nicer way to implement this
@@ -1821,13 +1821,13 @@ void DWARFLinker::patchLineTableForUnit(CompileUnit &Unit,
     // it is marked as end_sequence in the input (because in that
     // case, the relocation offset is accurate and that entry won't
     // serve as the start of another function).
-    if (!CurrRange || !CurrRange->first.contains(Row.Address.Address) ||
-        (Row.Address.Address == CurrRange->first.end() && !Row.EndSequence)) {
+    if (!CurrRange || !CurrRange->Range.contains(Row.Address.Address) ||
+        (Row.Address.Address == CurrRange->Range.end() && !Row.EndSequence)) {
       // We just stepped out of a known range. Insert a end_sequence
       // corresponding to the end of the range.
       uint64_t StopAddress =
-          CurrRange ? CurrRange->first.end() + CurrRange->second : -1ULL;
-      CurrRange = FunctionRanges.getRangeValueThatContains(Row.Address.Address);
+          CurrRange ? CurrRange->Range.end() + CurrRange->Value : -1ULL;
+      CurrRange = FunctionRanges.getRangeThatContains(Row.Address.Address);
       if (!CurrRange) {
         if (StopAddress != -1ULL) {
           // Try harder by looking in the Address ranges map.
@@ -1836,9 +1836,9 @@ void DWARFLinker::patchLineTableForUnit(CompileUnit &Unit,
           // for now do as dsymutil.
           // FIXME: Understand exactly what cases this addresses and
           // potentially remove it along with the Ranges map.
-          if (std::optional<std::pair<AddressRange, int64_t>> Range =
-                  Ranges.getRangeValueThatContains(Row.Address.Address))
-            StopAddress = Row.Address.Address + (*Range).second;
+          if (std::optional<AddressRangeValuePair> Range =
+                  Ranges.getRangeThatContains(Row.Address.Address))
+            StopAddress = Row.Address.Address + (*Range).Value;
         }
       }
       if (StopAddress != -1ULL && !Seq.empty()) {
@@ -1863,7 +1863,7 @@ void DWARFLinker::patchLineTableForUnit(CompileUnit &Unit,
       continue;
 
     // Relocate row address and add it to the current sequence.
-    Row.Address.Address += CurrRange->second;
+    Row.Address.Address += CurrRange->Value;
     Seq.emplace_back(Row);
 
     if (Row.EndSequence)
@@ -2002,8 +2002,8 @@ void DWARFLinker::patchFrameInfoForObject(const DWARFFile &File,
     // the function entry point, thus we can't just lookup the address
     // in the debug map. Use the AddressInfo's range map to see if the FDE
     // describes something that we can relocate.
-    std::optional<std::pair<AddressRange, int64_t>> Range =
-        Ranges.getRangeValueThatContains(Loc);
+    std::optional<AddressRangeValuePair> Range =
+        Ranges.getRangeThatContains(Loc);
     if (!Range) {
       // The +4 is to account for the size of the InitialLength field itself.
       InputOffset = EntryOffset + InitialLength + 4;
@@ -2032,7 +2032,7 @@ void DWARFLinker::patchFrameInfoForObject(const DWARFFile &File,
     // fields that will get reconstructed by emitFDE().
     unsigned FDERemainingBytes = InitialLength - (4 + AddrSize);
     TheDwarfEmitter->emitFDE(IteratorInserted.first->getValue(), AddrSize,
-                             Loc + Range->second,
+                             Loc + Range->Value,
                              FrameData.substr(InputOffset, FDERemainingBytes));
     InputOffset += FDERemainingBytes;
   }
