@@ -1738,10 +1738,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
       case Intrinsic::riscv_vsetvli_opt:
       case Intrinsic::riscv_vsetvlimax:
       case Intrinsic::riscv_vsetvlimax_opt:
-        // Assume that VL output is positive and would fit in an int32_t.
-        // TODO: VLEN might be capped at 16 bits in a future V spec update.
-        if (BitWidth >= 32)
-          Known.Zero.setBitsFrom(31);
+        // Assume that VL output is >= 65536.
+        // TODO: Take SEW and LMUL into account.
+        if (BitWidth > 17)
+          Known.Zero.setBitsFrom(17);
         break;
       case Intrinsic::vscale: {
         if (!II->getParent() || !II->getFunction() ||
