@@ -707,18 +707,18 @@ bool APInt::isSubsetOfSlowCase(const APInt &RHS) const {
 APInt APInt::byteSwap() const {
   assert(BitWidth >= 16 && BitWidth % 8 == 0 && "Cannot byteswap!");
   if (BitWidth == 16)
-    return APInt(BitWidth, ByteSwap_16(uint16_t(U.VAL)));
+    return APInt(BitWidth, llvm::byteswap<uint16_t>(U.VAL));
   if (BitWidth == 32)
-    return APInt(BitWidth, ByteSwap_32(unsigned(U.VAL)));
+    return APInt(BitWidth, llvm::byteswap<uint32_t>(U.VAL));
   if (BitWidth <= 64) {
-    uint64_t Tmp1 = ByteSwap_64(U.VAL);
+    uint64_t Tmp1 = llvm::byteswap<uint64_t>(U.VAL);
     Tmp1 >>= (64 - BitWidth);
     return APInt(BitWidth, Tmp1);
   }
 
   APInt Result(getNumWords() * APINT_BITS_PER_WORD, 0);
   for (unsigned I = 0, N = getNumWords(); I != N; ++I)
-    Result.U.pVal[I] = ByteSwap_64(U.pVal[N - I - 1]);
+    Result.U.pVal[I] = llvm::byteswap<uint64_t>(U.pVal[N - I - 1]);
   if (Result.BitWidth != BitWidth) {
     Result.lshrInPlace(Result.BitWidth - BitWidth);
     Result.BitWidth = BitWidth;
