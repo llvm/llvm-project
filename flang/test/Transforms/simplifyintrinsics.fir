@@ -1214,3 +1214,28 @@ func.func private @_FortranACountDim(!fir.ref<!fir.box<none>>, !fir.box<none>, i
 // CHECK-NOT        fir.call @_FortranACountDim_simplified({{.*}})
 // CHECK:           %[[RES:.*]] = fir.call @_FortranACountDim({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32) -> none
 // CHECK-NOT        fir.call @_FortranACountDim_simplified({{.*}})
+
+// -----
+// Ensure count isn't simplified for unknown dimension arrays
+
+func.func @_QPmc(%arg0: !fir.box<!fir.array<?x?x?x!fir.logical<4>>> {fir.bindc_name = "m"}) -> i32 {
+  %0 = fir.alloca i32 {bindc_name = "mc", uniq_name = "_QFmcEmc"}
+  %c0 = arith.constant 0 : index
+  %1 = fir.address_of(@_QQcl.95529933117f47914fc21e220c1a0896) : !fir.ref<!fir.char<1,58>>
+  %c3_i32 = arith.constant 3 : i32
+  %2 = fir.convert %arg0 : (!fir.box<!fir.array<?x?x?x!fir.logical<4>>>) -> !fir.box<none>
+  %3 = fir.convert %1 : (!fir.ref<!fir.char<1,58>>) -> !fir.ref<i8>
+  %4 = fir.convert %c0 : (index) -> i32
+  %5 = fir.call @_FortranACount(%2, %3, %c3_i32, %4) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32, i32) -> i64
+  %6 = fir.convert %5 : (i64) -> i32
+  fir.store %6 to %0 : !fir.ref<i32>
+  %7 = fir.load %0 : !fir.ref<i32>
+  return %7 : i32
+}
+func.func private @_FortranACount(!fir.box<none>, !fir.ref<i8>, i32, i32) -> i64 attributes {fir.runtime}
+
+// CHECK-LABEL:   func.func @_QPmc(
+// CHECK-SAME:                     %[[VAL_0:.*]]: !fir.box<!fir.array<?x?x?x!fir.logical<4>>> {fir.bindc_name = "m"}) -> i32 {
+// CHECK-NOT        fir.call @_FortranACount_simplified({{.*}})
+// CHECK:           %[[RES:.*]] = fir.call @_FortranACount({{.*}}) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32, i32) -> i64
+// CHECK-NOT        fir.call @_FortranACount_simplified({{.*}})
