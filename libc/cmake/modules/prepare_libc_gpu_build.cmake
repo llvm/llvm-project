@@ -4,12 +4,14 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
 endif()
 
 # Set up the target architectures to build the GPU libc for.
-set(all_gpu_architectures "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62;"
-                          "sm_70;sm_72;sm_75;sm_80;sm_86;gfx700;gfx701;gfx801;"
-                          "gfx803;gfx900;gfx902;gfx906;gfx908;gfx90a;gfx90c;"
-                          "gfx940;gfx1010;gfx1030;gfx1031;gfx1032;gfx1033;"
-                          "gfx1034;gfx1035;gfx1036;gfx1100;gfx1101;gfx1102;"
-                          "gfx1103")
+set(all_amdgpu_architectures "gfx700;gfx701;gfx801;gfx803;gfx900;gfx902;gfx906;"
+                             "gfx908;gfx90a;gfx90c;gfx940;gfx1010;gfx1030;"
+                             "gfx1031;gfx1032;gfx1033;gfx1034;gfx1035;gfx1036;"
+                             "gfx1100;gfx1101;gfx1102;gfx1103")
+set(all_nvptx_architectures "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62;"
+                            "sm_70;sm_72;sm_75;sm_80;sm_86")
+set(all_gpu_architectures
+    "${all_amdgpu_architectures};${all_nvptx_architectures}")
 set(LIBC_GPU_ARCHITECTURES ${all_gpu_architectures} CACHE STRING
     "List of GPU architectures to build the libc for.")
 if(LIBC_GPU_ARCHITECTURES STREQUAL "all")
@@ -27,6 +29,15 @@ endif()
 if(NOT LLVM_LIBC_FULL_BUILD)
   message(FATAL_ERROR "LLVM_LIBC_FULL_BUILD must be enabled to build libc for "
                       "GPU.")
+endif()
+
+# Identify the program used to package multiple images into a single binary.
+find_program(LIBC_CLANG_OFFLOAD_PACKAGER
+             NAMES clang-offload-packager
+             PATHS ${LLVM_BINARY_DIR}/bin)
+if(NOT LIBC_CLANG_OFFLOAD_PACKAGER)
+  message(FATAL_ERROR "Cannot find the 'clang-offload-packager' for the GPU "
+                      "build")
 endif()
 
 # Identify any locally installed AMD GPUs on the system to use for testing.
