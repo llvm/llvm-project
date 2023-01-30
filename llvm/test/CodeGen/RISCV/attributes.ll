@@ -42,6 +42,8 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+svinval %s -o - | FileCheck --check-prefix=RV32SVINVAL %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zca %s -o - | FileCheck --check-prefix=RV32ZCA %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zcb %s -o - | FileCheck --check-prefix=RV32ZCB %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-zcd %s -o - | FileCheck --check-prefix=RV32ZCD %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-zcf %s -o - | FileCheck --check-prefix=RV32ZCF %s
 
 ; RUN: llc -mtriple=riscv64 -mattr=+m %s -o - | FileCheck --check-prefix=RV64M %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zmmul %s -o - | FileCheck --check-prefix=RV64ZMMUL %s
@@ -89,6 +91,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-ztso %s -o - | FileCheck --check-prefix=RV64ZTSO %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zca %s -o - | FileCheck --check-prefix=RV64ZCA %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zcb %s -o - | FileCheck --check-prefix=RV64ZCB %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-zcd %s -o - | FileCheck --check-prefix=RV64ZCD %s
 
 ; RV32M: .attribute 5, "rv32i2p0_m2p0"
 ; RV32ZMMUL: .attribute 5, "rv32i2p0_zmmul1p0"
@@ -130,8 +133,10 @@
 ; RV32SVNAPOT: .attribute 5, "rv32i2p0_svnapot1p0"
 ; RV32SVPBMT: .attribute 5, "rv32i2p0_svpbmt1p0"
 ; RV32SVINVAL: .attribute 5, "rv32i2p0_svinval1p0"
-; RV32ZCA: .attribute 5, "rv32i2p0_zca0p70"
-; RV32ZCB: .attribute 5, "rv32i2p0_zca0p70_zcb0p70"
+; RV32ZCA: .attribute 5, "rv32i2p0_zca1p0"
+; RV32ZCB: .attribute 5, "rv32i2p0_zca1p0_zcb1p0"
+; RV32ZCD: .attribute 5, "rv32i2p0_zcd1p0"
+; RV32ZCF: .attribute 5, "rv32i2p0_zcf1p0"
 
 ; RV64M: .attribute 5, "rv64i2p0_m2p0"
 ; RV64ZMMUL: .attribute 5, "rv64i2p0_zmmul1p0"
@@ -177,8 +182,9 @@
 ; RV64XVENTANACONDOPS: .attribute 5, "rv64i2p0_xventanacondops1p0"
 ; RV64XTHEADVDOT: .attribute 5, "rv64i2p0_f2p0_d2p0_v1p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0_xtheadvdot1p0"
 ; RV64ZTSO: .attribute 5, "rv64i2p0_ztso0p1"
-; RV64ZCA: .attribute 5, "rv64i2p0_zca0p70"
-; RV64ZCB: .attribute 5, "rv64i2p0_zca0p70_zcb0p70"
+; RV64ZCA: .attribute 5, "rv64i2p0_zca1p0"
+; RV64ZCB: .attribute 5, "rv64i2p0_zca1p0_zcb1p0"
+; RV64ZCD: .attribute 5, "rv64i2p0_zcd1p0"
 
 define i32 @addi(i32 %a) {
   %1 = add i32 %a, 1

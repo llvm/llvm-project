@@ -100,7 +100,8 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
-* Assembler support for the Zcb extension was added.
+* Assembler support for version 1.0.1 of the Zcb extension was added.
+* Zca, Zcf, and Zcd extensions were upgraded to version 1.0.1.
 
 Changes to the WebAssembly Backend
 ----------------------------------
