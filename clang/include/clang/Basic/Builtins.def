@@ -1565,6 +1565,7 @@ LIBBUILTIN(addressof, "v*v&", "zfncThE", MEMORY, CXX_LANG)
 LANGBUILTIN(__addressof, "v*v&", "zfncTE", CXX_LANG)
 LIBBUILTIN(as_const, "v&v&", "zfncThE", UTILITY, CXX_LANG)
 LIBBUILTIN(forward, "v&v&", "zfncThE", UTILITY, CXX_LANG)
+LIBBUILTIN(forward_like, "v&v&", "zfncThE", UTILITY, CXX_LANG)
 LIBBUILTIN(move, "v&v&", "zfncThE", UTILITY, CXX_LANG)
 LIBBUILTIN(move_if_noexcept, "v&v&", "zfncThE", UTILITY, CXX_LANG)
 
