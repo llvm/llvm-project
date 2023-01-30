@@ -5,6 +5,7 @@
 // RUN: rm -rf %t
 // RUN: %clang -cc1depscand -execute %{clang-daemon-dir}/%basename_t -cas-args -fcas-path %t/cas -faction-cache-path %t/cache -- \
 // RUN:   %clang -target x86_64-apple-macos11 -I %S/Inputs \
+// RUN:     -Xclang -fcas-path -Xclang %t/cas -Xclang -faction-cache-path -Xclang %t/cache \
 // RUN:     -fdepscan=daemon -fdepscan-daemon=%{clang-daemon-dir}/%basename_t -fsyntax-only -x c %s
 
 #include "test.h"
