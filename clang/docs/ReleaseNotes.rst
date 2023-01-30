@@ -57,6 +57,9 @@ Bug Fixes
 - Fix crash on invalid code when looking up a destructor in a templated class
   inside a namespace. This fixes
   `Issue 59446 <https://github.com/llvm/llvm-project/issues/59446>`_.
+- Fix crash when diagnosing incorrect usage of ``_Nullable`` involving alias
+  templates. This fixes
+  `Issue 60344 <https://github.com/llvm/llvm-project/issues/60344>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
