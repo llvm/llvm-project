@@ -127,3 +127,131 @@ TEST(TypePrinter, TemplateIdWithNTTP) {
         Policy.EntireContentsOfLargeArray = true;
       }));
 }
+
+TEST(TypePrinter, TemplateArgumentsSubstitution_Expressions) {
+  /// Tests clang::isSubstitutedDefaultArgument on TemplateArguments
+  /// that are of kind TemplateArgument::Expression
+  constexpr char Code[] = R"cpp(
+    constexpr bool func() { return true; }
+
+    template <typename T1 = int,
+              int      T2 = 42,
+              T1       T3 = 43,
+              int      T4 = sizeof(T1),
+              bool     T5 = func()
+              >
+    struct Foo {
+    };
+
+    Foo<int, 40 + 2> X;
+  )cpp";
+
+  auto AST = tooling::buildASTFromCodeWithArgs(Code, /*Args=*/{"-std=c++20"});
+  ASTContext &Ctx = AST->getASTContext();
+
+  auto const *CTD = selectFirst<ClassTemplateDecl>(
+      "id", match(classTemplateDecl(hasName("Foo")).bind("id"), Ctx));
+  ASSERT_NE(CTD, nullptr);
+  auto const *CTSD = *CTD->specializations().begin();
+  ASSERT_NE(CTSD, nullptr);
+  auto const *Params = CTD->getTemplateParameters();
+  ASSERT_NE(Params, nullptr);
+  auto const &ArgList = CTSD->getTemplateArgs();
+
+  auto createBinOpExpr = [&](uint32_t LHS, uint32_t RHS,
+                             uint32_t Result) -> ConstantExpr * {
+    const int numBits = 32;
+    clang::APValue ResultVal{llvm::APSInt(llvm::APInt(numBits, Result))};
+    auto *LHSInt = IntegerLiteral::Create(Ctx, llvm::APInt(numBits, LHS),
+                                          Ctx.UnsignedIntTy, {});
+    auto *RHSInt = IntegerLiteral::Create(Ctx, llvm::APInt(numBits, RHS),
+                                          Ctx.UnsignedIntTy, {});
+    auto *BinOp = BinaryOperator::Create(
+        Ctx, LHSInt, RHSInt, BinaryOperatorKind::BO_Add, Ctx.UnsignedIntTy,
+        ExprValueKind::VK_PRValue, ExprObjectKind::OK_Ordinary, {}, {});
+    return ConstantExpr::Create(Ctx, dyn_cast<Expr>(BinOp), ResultVal);
+  };
+
+  {
+    // Arg is an integral '42'
+    auto const &Arg = ArgList.get(1);
+    ASSERT_EQ(Arg.getKind(), TemplateArgument::Integral);
+
+    // Param has default expr which evaluates to '42'
+    auto const *Param = Params->getParam(1);
+
+    EXPECT_TRUE(clang::isSubstitutedDefaultArgument(
+        Ctx, Arg, Param, ArgList.asArray(), Params->getDepth()));
+  }
+
+  {
+    // Arg is an integral '41'
+    llvm::APInt Int(32, 41);
+    TemplateArgument Arg(Ctx, llvm::APSInt(Int), Ctx.UnsignedIntTy);
+
+    // Param has default expr which evaluates to '42'
+    auto const *Param = Params->getParam(1);
+
+    EXPECT_FALSE(clang::isSubstitutedDefaultArgument(
+        Ctx, Arg, Param, ArgList.asArray(), Params->getDepth()));
+  }
+
+  {
+    // Arg is an integral '4'
+    llvm::APInt Int(32, 4);
+    TemplateArgument Arg(Ctx, llvm::APSInt(Int), Ctx.UnsignedIntTy);
+
+    // Param has is value-dependent expression (i.e., sizeof(T))
+    auto const *Param = Params->getParam(3);
+
+    EXPECT_FALSE(clang::isSubstitutedDefaultArgument(
+        Ctx, Arg, Param, ArgList.asArray(), Params->getDepth()));
+  }
+
+  {
+    const int LHS = 40;
+    const int RHS = 2;
+    const int Result = 42;
+    auto *ConstExpr = createBinOpExpr(LHS, RHS, Result);
+    // Arg is instantiated with '40 + 2'
+    TemplateArgument Arg(ConstExpr);
+
+    // Param has default expr of '42'
+    auto const *Param = Params->getParam(1);
+
+    EXPECT_TRUE(clang::isSubstitutedDefaultArgument(
+        Ctx, Arg, Param, ArgList.asArray(), Params->getDepth()));
+  }
+
+  {
+    const int LHS = 40;
+    const int RHS = 1;
+    const int Result = 41;
+    auto *ConstExpr = createBinOpExpr(LHS, RHS, Result);
+
+    // Arg is instantiated with '40 + 1'
+    TemplateArgument Arg(ConstExpr);
+
+    // Param has default expr of '42'
+    auto const *Param = Params->getParam(1);
+
+    EXPECT_FALSE(clang::isSubstitutedDefaultArgument(
+        Ctx, Arg, Param, ArgList.asArray(), Params->getDepth()));
+  }
+
+  {
+    const int LHS = 4;
+    const int RHS = 0;
+    const int Result = 4;
+    auto *ConstExpr = createBinOpExpr(LHS, RHS, Result);
+
+    // Arg is instantiated with '4 + 0'
+    TemplateArgument Arg(ConstExpr);
+
+    // Param has is value-dependent expression (i.e., sizeof(T))
+    auto const *Param = Params->getParam(3);
+
+    EXPECT_FALSE(clang::isSubstitutedDefaultArgument(
+        Ctx, Arg, Param, ArgList.asArray(), Params->getDepth()));
+  }
+}
