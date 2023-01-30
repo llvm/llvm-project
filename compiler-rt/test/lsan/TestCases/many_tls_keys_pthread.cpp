@@ -4,9 +4,6 @@
 // RUN: %env_lsan_opts="report_objects=1:use_stacks=0:use_registers=0:use_tls=1" %run %t 2>&1
 // RUN: %env_lsan_opts="" %run %t 2>&1
 
-// Fixme: remove once test passes with hwasan
-// UNSUPPORTED: hwasan
-
 // On glibc, this requires the range returned by GetTLS to include
 // specific_1stblock and specific in `struct pthread`.
 // UNSUPPORTED: arm-linux, armhf-linux

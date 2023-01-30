@@ -4,9 +4,6 @@
 // RUN: %env_lsan_opts="report_objects=1:use_registers=0:use_stacks=1" %run %t 2>&1
 // RUN: %env_lsan_opts="" %run %t 2>&1
 
-// Fixme: remove once test passes with hwasan
-// UNSUPPORTED: hwasan
-
 #include <stdio.h>
 #include <stdlib.h>
 #include "sanitizer_common/print_address.h"

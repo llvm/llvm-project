@@ -1,9 +1,6 @@
 // We can't unwind stack if we're running coroutines on heap-allocated
 // memory. Make sure we don't report these leaks.
 
-// Fixme: remove once test passes with hwasan
-// UNSUPPORTED: hwasan
-
 // RUN: %clangxx_lsan %s -o %t
 // RUN: %env_lsan_opts= %run %t 2>&1
 // RUN: %env_lsan_opts= not %run %t foo 2>&1 | FileCheck %s
