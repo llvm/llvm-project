@@ -97,6 +97,9 @@ C2x Feature Support
 
 C++ Language Changes in Clang
 -----------------------------
+- Improved ``-O0`` code generation for calls to ``std::forward_like``. Similarly to
+  ``std::move, std::forward`` et al. it is now treated as a compiler builtin and implemented
+  directly rather than instantiating the definition from the standard library.
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
