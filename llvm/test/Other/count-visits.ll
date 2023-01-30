@@ -1,3 +1,4 @@
+; REQUIRES: asserts
 ; RUN: opt -passes=count-visits -stats 2>&1 -disable-output < %s | FileCheck %s --check-prefix=ONE
 ; RUN: opt -passes='cgscc(count-visits)' -stats 2>&1 -disable-output < %s | FileCheck %s --check-prefix=ONE
 ; RUN: opt -passes='cgscc(count-visits,instcombine)' -stats 2>&1 -disable-output < %s | FileCheck %s --check-prefix=TWO
