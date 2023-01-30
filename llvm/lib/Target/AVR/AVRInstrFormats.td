@@ -432,6 +432,8 @@ class FBRsk<bit f, bits<3> s, dag outs, dag ins, string asmstr,
   let Inst{10} = f;
   let Inst{9 - 3} = k;
   let Inst{2 - 0} = s;
+
+  let DecoderMethod = "decodeCondBranch";
 }
 
 //===----------------------------------------------------------------------===//
@@ -561,6 +563,8 @@ class FSK<bit f, dag outs, dag ins, string asmstr, list<dag> pattern>
 
   let Inst{3} = k{0};
   let Inst{2 - 0} = s;
+
+  let DecoderMethod = "decodeCondBranch";
 }
 
 class ExtensionPseudo<dag outs, dag ins, string asmstr, list<dag> pattern>

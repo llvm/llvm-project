@@ -466,25 +466,25 @@
 // RUN: -o - | FileCheck --check-prefix=CHECK-XTHEADVDOT-EXT %s
 // CHECK-XTHEADVDOT-EXT: __riscv_xtheadvdot 1000000{{$}}
 
-// RUN: %clang -target riscv32 -march=rv32izca0p70 -menable-experimental-extensions \
+// RUN: %clang -target riscv32 -march=rv32izca1p0 -menable-experimental-extensions \
 // RUN: -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-ZCA-EXT %s
-// RUN: %clang -target riscv64 -march=rv64izca0p70 -menable-experimental-extensions \
+// RUN: %clang -target riscv64 -march=rv64izca1p0 -menable-experimental-extensions \
 // RUN: -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-ZCA-EXT %s
-// CHECK-ZCA-EXT: __riscv_zca 70000{{$}}
+// CHECK-ZCA-EXT: __riscv_zca 1000000{{$}}
 
-// RUN: %clang -target riscv32 -march=rv32izcb0p70 -menable-experimental-extensions \
+// RUN: %clang -target riscv32 -march=rv32izcb1p0 -menable-experimental-extensions \
 // RUN: -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-ZCB-EXT %s
-// RUN: %clang -target riscv64 -march=rv64izcb0p70 -menable-experimental-extensions \
+// RUN: %clang -target riscv64 -march=rv64izcb1p0 -menable-experimental-extensions \
 // RUN: -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-ZCB-EXT %s
-// CHECK-ZCB-EXT: __riscv_zca 70000{{$}}
-// CHECK-ZCB-EXT: __riscv_zcb 70000{{$}}
+// CHECK-ZCB-EXT: __riscv_zca 1000000{{$}}
+// CHECK-ZCB-EXT: __riscv_zcb 1000000{{$}}
 
-// RUN: %clang -target riscv32 -march=rv32izcd0p70 -menable-experimental-extensions \
+// RUN: %clang -target riscv32 -march=rv32izcd1p0 -menable-experimental-extensions \
 // RUN: -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-ZCD-EXT %s
-// RUN: %clang -target riscv64 -march=rv64izcd0p70 -menable-experimental-extensions \
+// RUN: %clang -target riscv64 -march=rv64izcd1p0 -menable-experimental-extensions \
 // RUN: -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-ZCD-EXT %s
-// CHECK-ZCD-EXT: __riscv_zcd 70000{{$}}
+// CHECK-ZCD-EXT: __riscv_zcd 1000000{{$}}
 
-// RUN: %clang -target riscv32 -march=rv32izcf0p70 -menable-experimental-extensions \
+// RUN: %clang -target riscv32 -march=rv32izcf1p0 -menable-experimental-extensions \
 // RUN: -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-ZCF-EXT %s
-// CHECK-ZCF-EXT: __riscv_zcf 70000{{$}}
+// CHECK-ZCF-EXT: __riscv_zcf 1000000{{$}}

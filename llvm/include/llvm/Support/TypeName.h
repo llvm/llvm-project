@@ -59,6 +59,6 @@ inline StringRef getTypeName() {
 #endif
 }
 
-}
+} // namespace llvm
 
 #endif
