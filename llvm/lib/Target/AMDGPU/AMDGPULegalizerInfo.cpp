@@ -1335,7 +1335,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     {G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD, G_ATOMICRMW_SUB,
      G_ATOMICRMW_AND, G_ATOMICRMW_OR, G_ATOMICRMW_XOR,
      G_ATOMICRMW_MAX, G_ATOMICRMW_MIN, G_ATOMICRMW_UMAX,
-     G_ATOMICRMW_UMIN})
+     G_ATOMICRMW_UMIN, G_ATOMICRMW_UINC_WRAP, G_ATOMICRMW_UDEC_WRAP})
     .legalFor({{S32, GlobalPtr}, {S32, LocalPtr},
                {S64, GlobalPtr}, {S64, LocalPtr},
                {S32, RegionPtr}, {S64, RegionPtr}});
@@ -4627,8 +4627,8 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
 bool AMDGPULegalizerInfo::legalizeAtomicIncDec(MachineInstr &MI,
                                                MachineIRBuilder &B,
                                                bool IsInc) const {
-  unsigned Opc = IsInc ? AMDGPU::G_AMDGPU_ATOMIC_INC :
-                         AMDGPU::G_AMDGPU_ATOMIC_DEC;
+  unsigned Opc = IsInc ? AMDGPU::G_ATOMICRMW_UINC_WRAP :
+                         AMDGPU::G_ATOMICRMW_UDEC_WRAP;
   B.buildInstr(Opc)
     .addDef(MI.getOperand(0).getReg())
     .addUse(MI.getOperand(2).getReg())

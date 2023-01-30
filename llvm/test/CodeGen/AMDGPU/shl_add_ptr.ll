@@ -280,6 +280,34 @@ define amdgpu_kernel void @atomic_umax_shl_base_lds_0(ptr addrspace(1) %out, ptr
   ret void
 }
 
+; GCN-LABEL: {{^}}atomic_inc_shl_base_lds_0:
+; GCN: v_lshlrev_b32_e32 [[PTR:v[0-9]+]], 2, {{v[0-9]+}}
+; GCN: ds_inc_rtn_u32 {{v[0-9]+}}, [[PTR]], {{v[0-9]+}} offset:8
+; GCN: s_endpgm
+define amdgpu_kernel void @atomic_inc_shl_base_lds_0(ptr addrspace(1) %out, ptr addrspace(1) %add_use) #0 {
+  %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %idx.0 = add nsw i32 %tid.x, 2
+  %arrayidx0 = getelementptr inbounds [512 x i32], ptr addrspace(3) @lds2, i32 0, i32 %idx.0
+  %val = atomicrmw uinc_wrap ptr addrspace(3) %arrayidx0, i32 31 seq_cst
+  store i32 %val, ptr addrspace(1) %out, align 4
+  store i32 %idx.0, ptr addrspace(1) %add_use, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_dec_shl_base_lds_0:
+; GCN: v_lshlrev_b32_e32 [[PTR:v[0-9]+]], 2, {{v[0-9]+}}
+; GCN: ds_dec_rtn_u32 {{v[0-9]+}}, [[PTR]], {{v[0-9]+}} offset:8
+; GCN: s_endpgm
+define amdgpu_kernel void @atomic_dec_shl_base_lds_0(ptr addrspace(1) %out, ptr addrspace(1) %add_use) #0 {
+  %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %idx.0 = add nsw i32 %tid.x, 2
+  %arrayidx0 = getelementptr inbounds [512 x i32], ptr addrspace(3) @lds2, i32 0, i32 %idx.0
+  %val = atomicrmw udec_wrap ptr addrspace(3) %arrayidx0, i32 31 seq_cst
+  store i32 %val, ptr addrspace(1) %out, align 4
+  store i32 %idx.0, ptr addrspace(1) %add_use, align 4
+  ret void
+}
+
 ; GCN-LABEL: {{^}}shl_add_ptr_combine_2use_lds:
 ; GCN: v_lshlrev_b32_e32 [[SCALE0:v[0-9]+]], 3, v0
 ; GCN: v_lshlrev_b32_e32 [[SCALE1:v[0-9]+]], 4, v0
