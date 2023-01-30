@@ -187,187 +187,7 @@ void test_vlseg2e8ff_v_u8m4_tu(vuint8m4_t *v0, vuint8m4_t *v1, vuint8m4_t masked
   return vlseg2e8ff_v_u8m4_tu(v0, v1, maskedoff0, maskedoff1, base, new_vl, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8mf8_ta(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, i64 } @llvm.riscv.vlseg2ff.nxv1i8.i64(<vscale x 1 x i8> poison, <vscale x 1 x i8> poison, ptr [[BASE:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, i64 } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 1 x i8> [[TMP1]], ptr [[V0:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, i64 } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 1 x i8> [[TMP2]], ptr [[V1:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, i64 } [[TMP0]], 2
-// CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vlseg2e8ff_v_i8mf8_ta(vint8mf8_t *v0, vint8mf8_t *v1, const int8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_i8mf8_ta(v0, v1, base, new_vl, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8mf4_ta(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, i64 } @llvm.riscv.vlseg2ff.nxv2i8.i64(<vscale x 2 x i8> poison, <vscale x 2 x i8> poison, ptr [[BASE:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, i64 } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 2 x i8> [[TMP1]], ptr [[V0:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, i64 } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 2 x i8> [[TMP2]], ptr [[V1:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, i64 } [[TMP0]], 2
-// CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vlseg2e8ff_v_i8mf4_ta(vint8mf4_t *v0, vint8mf4_t *v1, const int8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_i8mf4_ta(v0, v1, base, new_vl, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8mf2_ta(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, i64 } @llvm.riscv.vlseg2ff.nxv4i8.i64(<vscale x 4 x i8> poison, <vscale x 4 x i8> poison, ptr [[BASE:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, i64 } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 4 x i8> [[TMP1]], ptr [[V0:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, i64 } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 4 x i8> [[TMP2]], ptr [[V1:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, i64 } [[TMP0]], 2
-// CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vlseg2e8ff_v_i8mf2_ta(vint8mf2_t *v0, vint8mf2_t *v1, const int8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_i8mf2_ta(v0, v1, base, new_vl, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8m1_ta(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, i64 } @llvm.riscv.vlseg2ff.nxv8i8.i64(<vscale x 8 x i8> poison, <vscale x 8 x i8> poison, ptr [[BASE:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, i64 } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 8 x i8> [[TMP1]], ptr [[V0:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, i64 } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 8 x i8> [[TMP2]], ptr [[V1:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, i64 } [[TMP0]], 2
-// CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vlseg2e8ff_v_i8m1_ta(vint8m1_t *v0, vint8m1_t *v1, const int8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_i8m1_ta(v0, v1, base, new_vl, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8m2_ta(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, i64 } @llvm.riscv.vlseg2ff.nxv16i8.i64(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison, ptr [[BASE:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, i64 } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 16 x i8> [[TMP1]], ptr [[V0:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, i64 } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 16 x i8> [[TMP2]], ptr [[V1:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, i64 } [[TMP0]], 2
-// CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vlseg2e8ff_v_i8m2_ta(vint8m2_t *v0, vint8m2_t *v1, const int8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_i8m2_ta(v0, v1, base, new_vl, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8m4_ta(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 32 x i8>, <vscale x 32 x i8>, i64 } @llvm.riscv.vlseg2ff.nxv32i8.i64(<vscale x 32 x i8> poison, <vscale x 32 x i8> poison, ptr [[BASE:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8>, i64 } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 32 x i8> [[TMP1]], ptr [[V0:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8>, i64 } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 32 x i8> [[TMP2]], ptr [[V1:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8>, i64 } [[TMP0]], 2
-// CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vlseg2e8ff_v_i8m4_ta(vint8m4_t *v0, vint8m4_t *v1, const int8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_i8m4_ta(v0, v1, base, new_vl, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8mf8_ta(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, i64 } @llvm.riscv.vlseg2ff.nxv1i8.i64(<vscale x 1 x i8> poison, <vscale x 1 x i8> poison, ptr [[BASE:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, i64 } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 1 x i8> [[TMP1]], ptr [[V0:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, i64 } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 1 x i8> [[TMP2]], ptr [[V1:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, i64 } [[TMP0]], 2
-// CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vlseg2e8ff_v_u8mf8_ta(vuint8mf8_t *v0, vuint8mf8_t *v1, const uint8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_u8mf8_ta(v0, v1, base, new_vl, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8mf4_ta(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, i64 } @llvm.riscv.vlseg2ff.nxv2i8.i64(<vscale x 2 x i8> poison, <vscale x 2 x i8> poison, ptr [[BASE:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, i64 } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 2 x i8> [[TMP1]], ptr [[V0:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, i64 } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 2 x i8> [[TMP2]], ptr [[V1:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, i64 } [[TMP0]], 2
-// CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vlseg2e8ff_v_u8mf4_ta(vuint8mf4_t *v0, vuint8mf4_t *v1, const uint8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_u8mf4_ta(v0, v1, base, new_vl, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8mf2_ta(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, i64 } @llvm.riscv.vlseg2ff.nxv4i8.i64(<vscale x 4 x i8> poison, <vscale x 4 x i8> poison, ptr [[BASE:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, i64 } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 4 x i8> [[TMP1]], ptr [[V0:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, i64 } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 4 x i8> [[TMP2]], ptr [[V1:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, i64 } [[TMP0]], 2
-// CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vlseg2e8ff_v_u8mf2_ta(vuint8mf2_t *v0, vuint8mf2_t *v1, const uint8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_u8mf2_ta(v0, v1, base, new_vl, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8m1_ta(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, i64 } @llvm.riscv.vlseg2ff.nxv8i8.i64(<vscale x 8 x i8> poison, <vscale x 8 x i8> poison, ptr [[BASE:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, i64 } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 8 x i8> [[TMP1]], ptr [[V0:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, i64 } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 8 x i8> [[TMP2]], ptr [[V1:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, i64 } [[TMP0]], 2
-// CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vlseg2e8ff_v_u8m1_ta(vuint8m1_t *v0, vuint8m1_t *v1, const uint8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_u8m1_ta(v0, v1, base, new_vl, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8m2_ta(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, i64 } @llvm.riscv.vlseg2ff.nxv16i8.i64(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison, ptr [[BASE:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, i64 } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 16 x i8> [[TMP1]], ptr [[V0:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, i64 } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 16 x i8> [[TMP2]], ptr [[V1:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, i64 } [[TMP0]], 2
-// CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vlseg2e8ff_v_u8m2_ta(vuint8m2_t *v0, vuint8m2_t *v1, const uint8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_u8m2_ta(v0, v1, base, new_vl, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8m4_ta(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 32 x i8>, <vscale x 32 x i8>, i64 } @llvm.riscv.vlseg2ff.nxv32i8.i64(<vscale x 32 x i8> poison, <vscale x 32 x i8> poison, ptr [[BASE:%.*]], i64 [[VL:%.*]])
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8>, i64 } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 32 x i8> [[TMP1]], ptr [[V0:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8>, i64 } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 32 x i8> [[TMP2]], ptr [[V1:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8>, i64 } [[TMP0]], 2
-// CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vlseg2e8ff_v_u8m4_ta(vuint8m4_t *v0, vuint8m4_t *v1, const uint8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_u8m4_ta(v0, v1, base, new_vl, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8mf8_tuma(
+// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8mf8_tum(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv1i8.i64(<vscale x 1 x i8> [[MASKEDOFF0:%.*]], <vscale x 1 x i8> [[MASKEDOFF1:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, i64 } [[TMP0]], 0
@@ -378,11 +198,11 @@ void test_vlseg2e8ff_v_u8m4_ta(vuint8m4_t *v0, vuint8m4_t *v1, const uint8_t *ba
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vlseg2e8ff_v_i8mf8_tuma(vint8mf8_t *v0, vint8mf8_t *v1, vbool64_t mask, vint8mf8_t maskedoff0, vint8mf8_t maskedoff1, const int8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_i8mf8_tuma(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
+void test_vlseg2e8ff_v_i8mf8_tum(vint8mf8_t *v0, vint8mf8_t *v1, vbool64_t mask, vint8mf8_t maskedoff0, vint8mf8_t maskedoff1, const int8_t *base, size_t *new_vl, size_t vl) {
+  return vlseg2e8ff_v_i8mf8_tum(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8mf4_tuma(
+// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8mf4_tum(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv2i8.i64(<vscale x 2 x i8> [[MASKEDOFF0:%.*]], <vscale x 2 x i8> [[MASKEDOFF1:%.*]], ptr [[BASE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, i64 } [[TMP0]], 0
@@ -393,11 +213,11 @@ void test_vlseg2e8ff_v_i8mf8_tuma(vint8mf8_t *v0, vint8mf8_t *v1, vbool64_t mask
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vlseg2e8ff_v_i8mf4_tuma(vint8mf4_t *v0, vint8mf4_t *v1, vbool32_t mask, vint8mf4_t maskedoff0, vint8mf4_t maskedoff1, const int8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_i8mf4_tuma(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
+void test_vlseg2e8ff_v_i8mf4_tum(vint8mf4_t *v0, vint8mf4_t *v1, vbool32_t mask, vint8mf4_t maskedoff0, vint8mf4_t maskedoff1, const int8_t *base, size_t *new_vl, size_t vl) {
+  return vlseg2e8ff_v_i8mf4_tum(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8mf2_tuma(
+// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8mf2_tum(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv4i8.i64(<vscale x 4 x i8> [[MASKEDOFF0:%.*]], <vscale x 4 x i8> [[MASKEDOFF1:%.*]], ptr [[BASE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, i64 } [[TMP0]], 0
@@ -408,11 +228,11 @@ void test_vlseg2e8ff_v_i8mf4_tuma(vint8mf4_t *v0, vint8mf4_t *v1, vbool32_t mask
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vlseg2e8ff_v_i8mf2_tuma(vint8mf2_t *v0, vint8mf2_t *v1, vbool16_t mask, vint8mf2_t maskedoff0, vint8mf2_t maskedoff1, const int8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_i8mf2_tuma(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
+void test_vlseg2e8ff_v_i8mf2_tum(vint8mf2_t *v0, vint8mf2_t *v1, vbool16_t mask, vint8mf2_t maskedoff0, vint8mf2_t maskedoff1, const int8_t *base, size_t *new_vl, size_t vl) {
+  return vlseg2e8ff_v_i8mf2_tum(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8m1_tuma(
+// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8m1_tum(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv8i8.i64(<vscale x 8 x i8> [[MASKEDOFF0:%.*]], <vscale x 8 x i8> [[MASKEDOFF1:%.*]], ptr [[BASE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, i64 } [[TMP0]], 0
@@ -423,11 +243,11 @@ void test_vlseg2e8ff_v_i8mf2_tuma(vint8mf2_t *v0, vint8mf2_t *v1, vbool16_t mask
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vlseg2e8ff_v_i8m1_tuma(vint8m1_t *v0, vint8m1_t *v1, vbool8_t mask, vint8m1_t maskedoff0, vint8m1_t maskedoff1, const int8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_i8m1_tuma(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
+void test_vlseg2e8ff_v_i8m1_tum(vint8m1_t *v0, vint8m1_t *v1, vbool8_t mask, vint8m1_t maskedoff0, vint8m1_t maskedoff1, const int8_t *base, size_t *new_vl, size_t vl) {
+  return vlseg2e8ff_v_i8m1_tum(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8m2_tuma(
+// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8m2_tum(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv16i8.i64(<vscale x 16 x i8> [[MASKEDOFF0:%.*]], <vscale x 16 x i8> [[MASKEDOFF1:%.*]], ptr [[BASE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, i64 } [[TMP0]], 0
@@ -438,11 +258,11 @@ void test_vlseg2e8ff_v_i8m1_tuma(vint8m1_t *v0, vint8m1_t *v1, vbool8_t mask, vi
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vlseg2e8ff_v_i8m2_tuma(vint8m2_t *v0, vint8m2_t *v1, vbool4_t mask, vint8m2_t maskedoff0, vint8m2_t maskedoff1, const int8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_i8m2_tuma(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
+void test_vlseg2e8ff_v_i8m2_tum(vint8m2_t *v0, vint8m2_t *v1, vbool4_t mask, vint8m2_t maskedoff0, vint8m2_t maskedoff1, const int8_t *base, size_t *new_vl, size_t vl) {
+  return vlseg2e8ff_v_i8m2_tum(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8m4_tuma(
+// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8m4_tum(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 32 x i8>, <vscale x 32 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv32i8.i64(<vscale x 32 x i8> [[MASKEDOFF0:%.*]], <vscale x 32 x i8> [[MASKEDOFF1:%.*]], ptr [[BASE:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8>, i64 } [[TMP0]], 0
@@ -453,11 +273,11 @@ void test_vlseg2e8ff_v_i8m2_tuma(vint8m2_t *v0, vint8m2_t *v1, vbool4_t mask, vi
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vlseg2e8ff_v_i8m4_tuma(vint8m4_t *v0, vint8m4_t *v1, vbool2_t mask, vint8m4_t maskedoff0, vint8m4_t maskedoff1, const int8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_i8m4_tuma(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
+void test_vlseg2e8ff_v_i8m4_tum(vint8m4_t *v0, vint8m4_t *v1, vbool2_t mask, vint8m4_t maskedoff0, vint8m4_t maskedoff1, const int8_t *base, size_t *new_vl, size_t vl) {
+  return vlseg2e8ff_v_i8m4_tum(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8mf8_tuma(
+// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8mf8_tum(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv1i8.i64(<vscale x 1 x i8> [[MASKEDOFF0:%.*]], <vscale x 1 x i8> [[MASKEDOFF1:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, i64 } [[TMP0]], 0
@@ -468,11 +288,11 @@ void test_vlseg2e8ff_v_i8m4_tuma(vint8m4_t *v0, vint8m4_t *v1, vbool2_t mask, vi
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vlseg2e8ff_v_u8mf8_tuma(vuint8mf8_t *v0, vuint8mf8_t *v1, vbool64_t mask, vuint8mf8_t maskedoff0, vuint8mf8_t maskedoff1, const uint8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_u8mf8_tuma(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
+void test_vlseg2e8ff_v_u8mf8_tum(vuint8mf8_t *v0, vuint8mf8_t *v1, vbool64_t mask, vuint8mf8_t maskedoff0, vuint8mf8_t maskedoff1, const uint8_t *base, size_t *new_vl, size_t vl) {
+  return vlseg2e8ff_v_u8mf8_tum(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8mf4_tuma(
+// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8mf4_tum(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv2i8.i64(<vscale x 2 x i8> [[MASKEDOFF0:%.*]], <vscale x 2 x i8> [[MASKEDOFF1:%.*]], ptr [[BASE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, i64 } [[TMP0]], 0
@@ -483,11 +303,11 @@ void test_vlseg2e8ff_v_u8mf8_tuma(vuint8mf8_t *v0, vuint8mf8_t *v1, vbool64_t ma
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vlseg2e8ff_v_u8mf4_tuma(vuint8mf4_t *v0, vuint8mf4_t *v1, vbool32_t mask, vuint8mf4_t maskedoff0, vuint8mf4_t maskedoff1, const uint8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_u8mf4_tuma(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
+void test_vlseg2e8ff_v_u8mf4_tum(vuint8mf4_t *v0, vuint8mf4_t *v1, vbool32_t mask, vuint8mf4_t maskedoff0, vuint8mf4_t maskedoff1, const uint8_t *base, size_t *new_vl, size_t vl) {
+  return vlseg2e8ff_v_u8mf4_tum(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8mf2_tuma(
+// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8mf2_tum(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv4i8.i64(<vscale x 4 x i8> [[MASKEDOFF0:%.*]], <vscale x 4 x i8> [[MASKEDOFF1:%.*]], ptr [[BASE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, i64 } [[TMP0]], 0
@@ -498,11 +318,11 @@ void test_vlseg2e8ff_v_u8mf4_tuma(vuint8mf4_t *v0, vuint8mf4_t *v1, vbool32_t ma
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vlseg2e8ff_v_u8mf2_tuma(vuint8mf2_t *v0, vuint8mf2_t *v1, vbool16_t mask, vuint8mf2_t maskedoff0, vuint8mf2_t maskedoff1, const uint8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_u8mf2_tuma(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
+void test_vlseg2e8ff_v_u8mf2_tum(vuint8mf2_t *v0, vuint8mf2_t *v1, vbool16_t mask, vuint8mf2_t maskedoff0, vuint8mf2_t maskedoff1, const uint8_t *base, size_t *new_vl, size_t vl) {
+  return vlseg2e8ff_v_u8mf2_tum(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8m1_tuma(
+// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8m1_tum(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv8i8.i64(<vscale x 8 x i8> [[MASKEDOFF0:%.*]], <vscale x 8 x i8> [[MASKEDOFF1:%.*]], ptr [[BASE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, i64 } [[TMP0]], 0
@@ -513,11 +333,11 @@ void test_vlseg2e8ff_v_u8mf2_tuma(vuint8mf2_t *v0, vuint8mf2_t *v1, vbool16_t ma
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vlseg2e8ff_v_u8m1_tuma(vuint8m1_t *v0, vuint8m1_t *v1, vbool8_t mask, vuint8m1_t maskedoff0, vuint8m1_t maskedoff1, const uint8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_u8m1_tuma(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
+void test_vlseg2e8ff_v_u8m1_tum(vuint8m1_t *v0, vuint8m1_t *v1, vbool8_t mask, vuint8m1_t maskedoff0, vuint8m1_t maskedoff1, const uint8_t *base, size_t *new_vl, size_t vl) {
+  return vlseg2e8ff_v_u8m1_tum(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8m2_tuma(
+// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8m2_tum(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv16i8.i64(<vscale x 16 x i8> [[MASKEDOFF0:%.*]], <vscale x 16 x i8> [[MASKEDOFF1:%.*]], ptr [[BASE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, i64 } [[TMP0]], 0
@@ -528,11 +348,11 @@ void test_vlseg2e8ff_v_u8m1_tuma(vuint8m1_t *v0, vuint8m1_t *v1, vbool8_t mask, 
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vlseg2e8ff_v_u8m2_tuma(vuint8m2_t *v0, vuint8m2_t *v1, vbool4_t mask, vuint8m2_t maskedoff0, vuint8m2_t maskedoff1, const uint8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_u8m2_tuma(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
+void test_vlseg2e8ff_v_u8m2_tum(vuint8m2_t *v0, vuint8m2_t *v1, vbool4_t mask, vuint8m2_t maskedoff0, vuint8m2_t maskedoff1, const uint8_t *base, size_t *new_vl, size_t vl) {
+  return vlseg2e8ff_v_u8m2_tum(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8m4_tuma(
+// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8m4_tum(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 32 x i8>, <vscale x 32 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv32i8.i64(<vscale x 32 x i8> [[MASKEDOFF0:%.*]], <vscale x 32 x i8> [[MASKEDOFF1:%.*]], ptr [[BASE:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8>, i64 } [[TMP0]], 0
@@ -543,8 +363,8 @@ void test_vlseg2e8ff_v_u8m2_tuma(vuint8m2_t *v0, vuint8m2_t *v1, vbool4_t mask, 
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vlseg2e8ff_v_u8m4_tuma(vuint8m4_t *v0, vuint8m4_t *v1, vbool2_t mask, vuint8m4_t maskedoff0, vuint8m4_t maskedoff1, const uint8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_u8m4_tuma(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
+void test_vlseg2e8ff_v_u8m4_tum(vuint8m4_t *v0, vuint8m4_t *v1, vbool2_t mask, vuint8m4_t maskedoff0, vuint8m4_t maskedoff1, const uint8_t *base, size_t *new_vl, size_t vl) {
+  return vlseg2e8ff_v_u8m4_tum(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8mf8_tumu(
@@ -727,187 +547,7 @@ void test_vlseg2e8ff_v_u8m4_tumu(vuint8m4_t *v0, vuint8m4_t *v1, vbool2_t mask, 
   return vlseg2e8ff_v_u8m4_tumu(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8mf8_tama(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv1i8.i64(<vscale x 1 x i8> poison, <vscale x 1 x i8> poison, ptr [[BASE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, i64 } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 1 x i8> [[TMP1]], ptr [[V0:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, i64 } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 1 x i8> [[TMP2]], ptr [[V1:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, i64 } [[TMP0]], 2
-// CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vlseg2e8ff_v_i8mf8_tama(vint8mf8_t *v0, vint8mf8_t *v1, vbool64_t mask, const int8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_i8mf8_tama(v0, v1, mask, base, new_vl, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8mf4_tama(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv2i8.i64(<vscale x 2 x i8> poison, <vscale x 2 x i8> poison, ptr [[BASE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, i64 } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 2 x i8> [[TMP1]], ptr [[V0:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, i64 } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 2 x i8> [[TMP2]], ptr [[V1:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, i64 } [[TMP0]], 2
-// CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vlseg2e8ff_v_i8mf4_tama(vint8mf4_t *v0, vint8mf4_t *v1, vbool32_t mask, const int8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_i8mf4_tama(v0, v1, mask, base, new_vl, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8mf2_tama(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv4i8.i64(<vscale x 4 x i8> poison, <vscale x 4 x i8> poison, ptr [[BASE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, i64 } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 4 x i8> [[TMP1]], ptr [[V0:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, i64 } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 4 x i8> [[TMP2]], ptr [[V1:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, i64 } [[TMP0]], 2
-// CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vlseg2e8ff_v_i8mf2_tama(vint8mf2_t *v0, vint8mf2_t *v1, vbool16_t mask, const int8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_i8mf2_tama(v0, v1, mask, base, new_vl, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8m1_tama(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv8i8.i64(<vscale x 8 x i8> poison, <vscale x 8 x i8> poison, ptr [[BASE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, i64 } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 8 x i8> [[TMP1]], ptr [[V0:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, i64 } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 8 x i8> [[TMP2]], ptr [[V1:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, i64 } [[TMP0]], 2
-// CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vlseg2e8ff_v_i8m1_tama(vint8m1_t *v0, vint8m1_t *v1, vbool8_t mask, const int8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_i8m1_tama(v0, v1, mask, base, new_vl, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8m2_tama(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv16i8.i64(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison, ptr [[BASE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, i64 } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 16 x i8> [[TMP1]], ptr [[V0:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, i64 } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 16 x i8> [[TMP2]], ptr [[V1:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, i64 } [[TMP0]], 2
-// CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vlseg2e8ff_v_i8m2_tama(vint8m2_t *v0, vint8m2_t *v1, vbool4_t mask, const int8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_i8m2_tama(v0, v1, mask, base, new_vl, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8m4_tama(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 32 x i8>, <vscale x 32 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv32i8.i64(<vscale x 32 x i8> poison, <vscale x 32 x i8> poison, ptr [[BASE:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8>, i64 } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 32 x i8> [[TMP1]], ptr [[V0:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8>, i64 } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 32 x i8> [[TMP2]], ptr [[V1:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8>, i64 } [[TMP0]], 2
-// CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vlseg2e8ff_v_i8m4_tama(vint8m4_t *v0, vint8m4_t *v1, vbool2_t mask, const int8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_i8m4_tama(v0, v1, mask, base, new_vl, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8mf8_tama(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv1i8.i64(<vscale x 1 x i8> poison, <vscale x 1 x i8> poison, ptr [[BASE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, i64 } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 1 x i8> [[TMP1]], ptr [[V0:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, i64 } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 1 x i8> [[TMP2]], ptr [[V1:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, i64 } [[TMP0]], 2
-// CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vlseg2e8ff_v_u8mf8_tama(vuint8mf8_t *v0, vuint8mf8_t *v1, vbool64_t mask, const uint8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_u8mf8_tama(v0, v1, mask, base, new_vl, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8mf4_tama(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv2i8.i64(<vscale x 2 x i8> poison, <vscale x 2 x i8> poison, ptr [[BASE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, i64 } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 2 x i8> [[TMP1]], ptr [[V0:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, i64 } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 2 x i8> [[TMP2]], ptr [[V1:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, i64 } [[TMP0]], 2
-// CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vlseg2e8ff_v_u8mf4_tama(vuint8mf4_t *v0, vuint8mf4_t *v1, vbool32_t mask, const uint8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_u8mf4_tama(v0, v1, mask, base, new_vl, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8mf2_tama(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv4i8.i64(<vscale x 4 x i8> poison, <vscale x 4 x i8> poison, ptr [[BASE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, i64 } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 4 x i8> [[TMP1]], ptr [[V0:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, i64 } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 4 x i8> [[TMP2]], ptr [[V1:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, i64 } [[TMP0]], 2
-// CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vlseg2e8ff_v_u8mf2_tama(vuint8mf2_t *v0, vuint8mf2_t *v1, vbool16_t mask, const uint8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_u8mf2_tama(v0, v1, mask, base, new_vl, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8m1_tama(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv8i8.i64(<vscale x 8 x i8> poison, <vscale x 8 x i8> poison, ptr [[BASE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, i64 } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 8 x i8> [[TMP1]], ptr [[V0:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, i64 } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 8 x i8> [[TMP2]], ptr [[V1:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, i64 } [[TMP0]], 2
-// CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vlseg2e8ff_v_u8m1_tama(vuint8m1_t *v0, vuint8m1_t *v1, vbool8_t mask, const uint8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_u8m1_tama(v0, v1, mask, base, new_vl, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8m2_tama(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv16i8.i64(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison, ptr [[BASE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, i64 } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 16 x i8> [[TMP1]], ptr [[V0:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, i64 } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 16 x i8> [[TMP2]], ptr [[V1:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, i64 } [[TMP0]], 2
-// CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vlseg2e8ff_v_u8m2_tama(vuint8m2_t *v0, vuint8m2_t *v1, vbool4_t mask, const uint8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_u8m2_tama(v0, v1, mask, base, new_vl, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8m4_tama(
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 32 x i8>, <vscale x 32 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv32i8.i64(<vscale x 32 x i8> poison, <vscale x 32 x i8> poison, ptr [[BASE:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8>, i64 } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 32 x i8> [[TMP1]], ptr [[V0:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8>, i64 } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 32 x i8> [[TMP2]], ptr [[V1:%.*]], align 1
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8>, i64 } [[TMP0]], 2
-// CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
-// CHECK-RV64-NEXT:    ret void
-//
-void test_vlseg2e8ff_v_u8m4_tama(vuint8m4_t *v0, vuint8m4_t *v1, vbool2_t mask, const uint8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_u8m4_tama(v0, v1, mask, base, new_vl, vl);
-}
-
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8mf8_tamu(
+// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8mf8_mu(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv1i8.i64(<vscale x 1 x i8> [[MASKEDOFF0:%.*]], <vscale x 1 x i8> [[MASKEDOFF1:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, i64 } [[TMP0]], 0
@@ -918,11 +558,11 @@ void test_vlseg2e8ff_v_u8m4_tama(vuint8m4_t *v0, vuint8m4_t *v1, vbool2_t mask, 
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vlseg2e8ff_v_i8mf8_tamu(vint8mf8_t *v0, vint8mf8_t *v1, vbool64_t mask, vint8mf8_t maskedoff0, vint8mf8_t maskedoff1, const int8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_i8mf8_tamu(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
+void test_vlseg2e8ff_v_i8mf8_mu(vint8mf8_t *v0, vint8mf8_t *v1, vbool64_t mask, vint8mf8_t maskedoff0, vint8mf8_t maskedoff1, const int8_t *base, size_t *new_vl, size_t vl) {
+  return vlseg2e8ff_v_i8mf8_mu(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8mf4_tamu(
+// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8mf4_mu(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv2i8.i64(<vscale x 2 x i8> [[MASKEDOFF0:%.*]], <vscale x 2 x i8> [[MASKEDOFF1:%.*]], ptr [[BASE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, i64 } [[TMP0]], 0
@@ -933,11 +573,11 @@ void test_vlseg2e8ff_v_i8mf8_tamu(vint8mf8_t *v0, vint8mf8_t *v1, vbool64_t mask
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vlseg2e8ff_v_i8mf4_tamu(vint8mf4_t *v0, vint8mf4_t *v1, vbool32_t mask, vint8mf4_t maskedoff0, vint8mf4_t maskedoff1, const int8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_i8mf4_tamu(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
+void test_vlseg2e8ff_v_i8mf4_mu(vint8mf4_t *v0, vint8mf4_t *v1, vbool32_t mask, vint8mf4_t maskedoff0, vint8mf4_t maskedoff1, const int8_t *base, size_t *new_vl, size_t vl) {
+  return vlseg2e8ff_v_i8mf4_mu(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8mf2_tamu(
+// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8mf2_mu(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv4i8.i64(<vscale x 4 x i8> [[MASKEDOFF0:%.*]], <vscale x 4 x i8> [[MASKEDOFF1:%.*]], ptr [[BASE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, i64 } [[TMP0]], 0
@@ -948,11 +588,11 @@ void test_vlseg2e8ff_v_i8mf4_tamu(vint8mf4_t *v0, vint8mf4_t *v1, vbool32_t mask
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vlseg2e8ff_v_i8mf2_tamu(vint8mf2_t *v0, vint8mf2_t *v1, vbool16_t mask, vint8mf2_t maskedoff0, vint8mf2_t maskedoff1, const int8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_i8mf2_tamu(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
+void test_vlseg2e8ff_v_i8mf2_mu(vint8mf2_t *v0, vint8mf2_t *v1, vbool16_t mask, vint8mf2_t maskedoff0, vint8mf2_t maskedoff1, const int8_t *base, size_t *new_vl, size_t vl) {
+  return vlseg2e8ff_v_i8mf2_mu(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8m1_tamu(
+// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8m1_mu(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv8i8.i64(<vscale x 8 x i8> [[MASKEDOFF0:%.*]], <vscale x 8 x i8> [[MASKEDOFF1:%.*]], ptr [[BASE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, i64 } [[TMP0]], 0
@@ -963,11 +603,11 @@ void test_vlseg2e8ff_v_i8mf2_tamu(vint8mf2_t *v0, vint8mf2_t *v1, vbool16_t mask
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vlseg2e8ff_v_i8m1_tamu(vint8m1_t *v0, vint8m1_t *v1, vbool8_t mask, vint8m1_t maskedoff0, vint8m1_t maskedoff1, const int8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_i8m1_tamu(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
+void test_vlseg2e8ff_v_i8m1_mu(vint8m1_t *v0, vint8m1_t *v1, vbool8_t mask, vint8m1_t maskedoff0, vint8m1_t maskedoff1, const int8_t *base, size_t *new_vl, size_t vl) {
+  return vlseg2e8ff_v_i8m1_mu(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8m2_tamu(
+// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8m2_mu(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv16i8.i64(<vscale x 16 x i8> [[MASKEDOFF0:%.*]], <vscale x 16 x i8> [[MASKEDOFF1:%.*]], ptr [[BASE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, i64 } [[TMP0]], 0
@@ -978,11 +618,11 @@ void test_vlseg2e8ff_v_i8m1_tamu(vint8m1_t *v0, vint8m1_t *v1, vbool8_t mask, vi
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vlseg2e8ff_v_i8m2_tamu(vint8m2_t *v0, vint8m2_t *v1, vbool4_t mask, vint8m2_t maskedoff0, vint8m2_t maskedoff1, const int8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_i8m2_tamu(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
+void test_vlseg2e8ff_v_i8m2_mu(vint8m2_t *v0, vint8m2_t *v1, vbool4_t mask, vint8m2_t maskedoff0, vint8m2_t maskedoff1, const int8_t *base, size_t *new_vl, size_t vl) {
+  return vlseg2e8ff_v_i8m2_mu(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8m4_tamu(
+// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_i8m4_mu(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 32 x i8>, <vscale x 32 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv32i8.i64(<vscale x 32 x i8> [[MASKEDOFF0:%.*]], <vscale x 32 x i8> [[MASKEDOFF1:%.*]], ptr [[BASE:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8>, i64 } [[TMP0]], 0
@@ -993,11 +633,11 @@ void test_vlseg2e8ff_v_i8m2_tamu(vint8m2_t *v0, vint8m2_t *v1, vbool4_t mask, vi
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vlseg2e8ff_v_i8m4_tamu(vint8m4_t *v0, vint8m4_t *v1, vbool2_t mask, vint8m4_t maskedoff0, vint8m4_t maskedoff1, const int8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_i8m4_tamu(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
+void test_vlseg2e8ff_v_i8m4_mu(vint8m4_t *v0, vint8m4_t *v1, vbool2_t mask, vint8m4_t maskedoff0, vint8m4_t maskedoff1, const int8_t *base, size_t *new_vl, size_t vl) {
+  return vlseg2e8ff_v_i8m4_mu(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8mf8_tamu(
+// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8mf8_mu(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv1i8.i64(<vscale x 1 x i8> [[MASKEDOFF0:%.*]], <vscale x 1 x i8> [[MASKEDOFF1:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, i64 } [[TMP0]], 0
@@ -1008,11 +648,11 @@ void test_vlseg2e8ff_v_i8m4_tamu(vint8m4_t *v0, vint8m4_t *v1, vbool2_t mask, vi
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vlseg2e8ff_v_u8mf8_tamu(vuint8mf8_t *v0, vuint8mf8_t *v1, vbool64_t mask, vuint8mf8_t maskedoff0, vuint8mf8_t maskedoff1, const uint8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_u8mf8_tamu(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
+void test_vlseg2e8ff_v_u8mf8_mu(vuint8mf8_t *v0, vuint8mf8_t *v1, vbool64_t mask, vuint8mf8_t maskedoff0, vuint8mf8_t maskedoff1, const uint8_t *base, size_t *new_vl, size_t vl) {
+  return vlseg2e8ff_v_u8mf8_mu(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8mf4_tamu(
+// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8mf4_mu(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv2i8.i64(<vscale x 2 x i8> [[MASKEDOFF0:%.*]], <vscale x 2 x i8> [[MASKEDOFF1:%.*]], ptr [[BASE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, i64 } [[TMP0]], 0
@@ -1023,11 +663,11 @@ void test_vlseg2e8ff_v_u8mf8_tamu(vuint8mf8_t *v0, vuint8mf8_t *v1, vbool64_t ma
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vlseg2e8ff_v_u8mf4_tamu(vuint8mf4_t *v0, vuint8mf4_t *v1, vbool32_t mask, vuint8mf4_t maskedoff0, vuint8mf4_t maskedoff1, const uint8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_u8mf4_tamu(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
+void test_vlseg2e8ff_v_u8mf4_mu(vuint8mf4_t *v0, vuint8mf4_t *v1, vbool32_t mask, vuint8mf4_t maskedoff0, vuint8mf4_t maskedoff1, const uint8_t *base, size_t *new_vl, size_t vl) {
+  return vlseg2e8ff_v_u8mf4_mu(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8mf2_tamu(
+// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8mf2_mu(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv4i8.i64(<vscale x 4 x i8> [[MASKEDOFF0:%.*]], <vscale x 4 x i8> [[MASKEDOFF1:%.*]], ptr [[BASE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, i64 } [[TMP0]], 0
@@ -1038,11 +678,11 @@ void test_vlseg2e8ff_v_u8mf4_tamu(vuint8mf4_t *v0, vuint8mf4_t *v1, vbool32_t ma
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vlseg2e8ff_v_u8mf2_tamu(vuint8mf2_t *v0, vuint8mf2_t *v1, vbool16_t mask, vuint8mf2_t maskedoff0, vuint8mf2_t maskedoff1, const uint8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_u8mf2_tamu(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
+void test_vlseg2e8ff_v_u8mf2_mu(vuint8mf2_t *v0, vuint8mf2_t *v1, vbool16_t mask, vuint8mf2_t maskedoff0, vuint8mf2_t maskedoff1, const uint8_t *base, size_t *new_vl, size_t vl) {
+  return vlseg2e8ff_v_u8mf2_mu(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8m1_tamu(
+// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8m1_mu(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv8i8.i64(<vscale x 8 x i8> [[MASKEDOFF0:%.*]], <vscale x 8 x i8> [[MASKEDOFF1:%.*]], ptr [[BASE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, i64 } [[TMP0]], 0
@@ -1053,11 +693,11 @@ void test_vlseg2e8ff_v_u8mf2_tamu(vuint8mf2_t *v0, vuint8mf2_t *v1, vbool16_t ma
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vlseg2e8ff_v_u8m1_tamu(vuint8m1_t *v0, vuint8m1_t *v1, vbool8_t mask, vuint8m1_t maskedoff0, vuint8m1_t maskedoff1, const uint8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_u8m1_tamu(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
+void test_vlseg2e8ff_v_u8m1_mu(vuint8m1_t *v0, vuint8m1_t *v1, vbool8_t mask, vuint8m1_t maskedoff0, vuint8m1_t maskedoff1, const uint8_t *base, size_t *new_vl, size_t vl) {
+  return vlseg2e8ff_v_u8m1_mu(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8m2_tamu(
+// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8m2_mu(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv16i8.i64(<vscale x 16 x i8> [[MASKEDOFF0:%.*]], <vscale x 16 x i8> [[MASKEDOFF1:%.*]], ptr [[BASE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, i64 } [[TMP0]], 0
@@ -1068,11 +708,11 @@ void test_vlseg2e8ff_v_u8m1_tamu(vuint8m1_t *v0, vuint8m1_t *v1, vbool8_t mask, 
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vlseg2e8ff_v_u8m2_tamu(vuint8m2_t *v0, vuint8m2_t *v1, vbool4_t mask, vuint8m2_t maskedoff0, vuint8m2_t maskedoff1, const uint8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_u8m2_tamu(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
+void test_vlseg2e8ff_v_u8m2_mu(vuint8m2_t *v0, vuint8m2_t *v1, vbool4_t mask, vuint8m2_t maskedoff0, vuint8m2_t maskedoff1, const uint8_t *base, size_t *new_vl, size_t vl) {
+  return vlseg2e8ff_v_u8m2_mu(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
 }
 
-// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8m4_tamu(
+// CHECK-RV64-LABEL: @test_vlseg2e8ff_v_u8m4_mu(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 32 x i8>, <vscale x 32 x i8>, i64 } @llvm.riscv.vlseg2ff.mask.nxv32i8.i64(<vscale x 32 x i8> [[MASKEDOFF0:%.*]], <vscale x 32 x i8> [[MASKEDOFF1:%.*]], ptr [[BASE:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8>, i64 } [[TMP0]], 0
@@ -1083,7 +723,7 @@ void test_vlseg2e8ff_v_u8m2_tamu(vuint8m2_t *v0, vuint8m2_t *v1, vbool4_t mask, 
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], ptr [[NEW_VL:%.*]], align 1
 // CHECK-RV64-NEXT:    ret void
 //
-void test_vlseg2e8ff_v_u8m4_tamu(vuint8m4_t *v0, vuint8m4_t *v1, vbool2_t mask, vuint8m4_t maskedoff0, vuint8m4_t maskedoff1, const uint8_t *base, size_t *new_vl, size_t vl) {
-  return vlseg2e8ff_v_u8m4_tamu(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
+void test_vlseg2e8ff_v_u8m4_mu(vuint8m4_t *v0, vuint8m4_t *v1, vbool2_t mask, vuint8m4_t maskedoff0, vuint8m4_t maskedoff1, const uint8_t *base, size_t *new_vl, size_t vl) {
+  return vlseg2e8ff_v_u8m4_mu(v0, v1, mask, maskedoff0, maskedoff1, base, new_vl, vl);
 }
 
