@@ -56,7 +56,6 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRMemRefDialect
   MLIRMemRefTransforms
   MLIRLinalgDialect
-  MLIRLinalgAnalysis
   MLIRLinalgUtils
   MLIRSCFDialect
   MLIRSCFTransforms

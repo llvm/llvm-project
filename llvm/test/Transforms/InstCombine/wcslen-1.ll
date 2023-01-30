@@ -96,8 +96,8 @@ define i1 @test_simplify8(ptr %str_p) {
 
 define i64 @test_simplify9(i1 %x) {
 ; CHECK-LABEL: @test_simplify9(
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[X:%.*]], i64 5, i64 6
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-NEXT:    [[L:%.*]] = select i1 [[X:%.*]], i64 5, i64 6
+; CHECK-NEXT:    ret i64 [[L]]
 ;
   %s = select i1 %x, ptr @hello, ptr @longer
   %l = call i64 @wcslen(ptr %s)
@@ -110,8 +110,8 @@ define i64 @test_simplify9(i1 %x) {
 define i64 @test_simplify10(i32 %x) {
 ; CHECK-LABEL: @test_simplify10(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw i64 5, [[TMP1]]
-; CHECK-NEXT:    ret i64 [[TMP2]]
+; CHECK-NEXT:    [[HELLO_L:%.*]] = sub nsw i64 5, [[TMP1]]
+; CHECK-NEXT:    ret i64 [[HELLO_L]]
 ;
   %hello_p = getelementptr inbounds [6 x i32], ptr @hello, i32 0, i32 %x
   %hello_l = call i64 @wcslen(ptr %hello_p)
@@ -124,8 +124,8 @@ define i64 @test_simplify11(i32 %x) {
 ; CHECK-LABEL: @test_simplify11(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 7
 ; CHECK-NEXT:    [[NARROW:%.*]] = sub nuw nsw i32 9, [[AND]]
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[NARROW]] to i64
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-NEXT:    [[HELLO_L:%.*]] = zext i32 [[NARROW]] to i64
+; CHECK-NEXT:    ret i64 [[HELLO_L]]
 ;
   %and = and i32 %x, 7
   %hello_p = getelementptr inbounds [13 x i32], ptr @null_hello_mid, i32 0, i32 %and
@@ -231,8 +231,8 @@ define i64 @fold_wcslen_1() {
 ; with an offset that isn't a multiple of the element size).
 define i64 @no_fold_wcslen_1() {
 ; CHECK-LABEL: @no_fold_wcslen_1(
-; CHECK-NEXT:    %len = tail call i64 @wcslen(ptr nonnull getelementptr inbounds ([15 x i8], ptr @ws, i64 0, i64 3))
-; CHECK-NEXT:    ret i64 %len
+; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @wcslen(ptr nonnull getelementptr inbounds ([15 x i8], ptr @ws, i64 0, i64 3))
+; CHECK-NEXT:    ret i64 [[LEN]]
 ;
   %p = getelementptr [15 x i8], ptr @ws, i64 0, i64 3
   %len = tail call i64 @wcslen(ptr %p)
@@ -246,8 +246,8 @@ define i64 @no_fold_wcslen_1() {
 ; with an offset that isn't a multiple of the element size).
 define i64 @no_fold_wcslen_2() {
 ; CHECK-LABEL: @no_fold_wcslen_2(
-; CHECK-NEXT:    %len = tail call i64 @wcslen(ptr nonnull getelementptr inbounds ([10 x i8], ptr @s8, i64 0, i64 3))
-; CHECK-NEXT:    ret i64 %len
+; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @wcslen(ptr nonnull getelementptr inbounds ([10 x i8], ptr @s8, i64 0, i64 3))
+; CHECK-NEXT:    ret i64 [[LEN]]
 ;
   %p = getelementptr [10 x i8], ptr @s8, i64 0, i64 3
   %len = tail call i64 @wcslen(ptr %p)
