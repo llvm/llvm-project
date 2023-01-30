@@ -444,7 +444,7 @@ bool AnalysisState::isValueRead(Value value) const {
 // further.
 llvm::SetVector<Value> AnalysisState::findValueInReverseUseDefChain(
     Value value, llvm::function_ref<bool(Value)> condition,
-    bool followEquivalentOnly) const {
+    bool followEquivalentOnly, bool alwaysIncludeLeaves) const {
   llvm::SetVector<Value> result, workingSet;
   workingSet.insert(value);
 
@@ -469,7 +469,8 @@ llvm::SetVector<Value> AnalysisState::findValueInReverseUseDefChain(
         (followEquivalentOnly &&
          bufferizableOp.bufferRelation(opResult, *this) !=
              BufferRelation::Equivalent)) {
-      result.insert(value);
+      if (alwaysIncludeLeaves)
+        result.insert(value);
       continue;
     }
 
@@ -480,11 +481,12 @@ llvm::SetVector<Value> AnalysisState::findValueInReverseUseDefChain(
   return result;
 }
 
-// Find the Values of the last preceding write of a given Value.
+// Find the values that define the contents of the given value.
 llvm::SetVector<Value>
-AnalysisState::findLastPrecedingWrite(Value value) const {
+AnalysisState::findDefinitions(Value value, bool alwaysIncludeLeaves) const {
   return findValueInReverseUseDefChain(
-      value, [&](Value v) { return this->bufferizesToMemoryWrite(v); });
+      value, [&](Value v) { return this->bufferizesToMemoryWrite(v); },
+      /*followEquivalentOnly=*/false, alwaysIncludeLeaves);
 }
 
 AnalysisState::AnalysisState(const BufferizationOptions &options)
