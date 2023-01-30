@@ -277,10 +277,7 @@ void OneShotAnalysisState::gatherUndefinedTensorUses(Operation *op) {
       // memory write or not.
       SetVector<Value> lastWrites = findLastPrecedingWrite(opResult);
       bool isUndefined = llvm::none_of(lastWrites, [&](Value lastWrite) {
-        if (auto bufferizableOp = getOptions().dynCastBufferizableOp(lastWrite))
-          return bufferizableOp.isMemoryWrite(lastWrite.cast<OpResult>(),
-                                              *this);
-        return true;
+        return this->bufferizesToMemoryWrite(lastWrite);
       });
       if (isUndefined)
         for (OpOperand &use : opResult.getUses())
@@ -354,19 +351,6 @@ static bool happensBefore(Operation *a, Operation *b,
       return true;
   } while ((a = a->getParentOp()));
   return false;
-}
-
-/// Return `true` if the given tensor value is a memory write. Most values are
-/// tensor writes, but ops that define a tensor SSA value without specifying its
-/// contents (e.g., alloc_tensor) are not.
-static bool isMemoryWrite(Value value, const AnalysisState &state) {
-  auto opResult = value.dyn_cast<OpResult>();
-  if (!opResult)
-    return true;
-  auto bufferizableOp = state.getOptions().dynCastBufferizableOp(value);
-  if (!bufferizableOp)
-    return true;
-  return bufferizableOp.isMemoryWrite(opResult, state);
 }
 
 /// Return `true` if op dominance can be used to rule out read-after-write
@@ -471,7 +455,7 @@ bool canUseOpDominance(const DenseSet<OpOperand *> &usesRead,
   // In case of a read, take the region which the read value is defined.
   for (OpOperand *uRead : usesRead) {
     // Optimization: Skip reads of values that have no defined contents.
-    if (!isMemoryWrite(uRead->get(), state))
+    if (!state.bufferizesToMemoryWrite(uRead->get()))
       continue;
     Region *r = getEnclosingRepetitiveRegion(uRead->get(), options);
     if (!commonEnclosingRegion.has_value()) {
