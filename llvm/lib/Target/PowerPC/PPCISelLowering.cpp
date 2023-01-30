@@ -16929,7 +16929,7 @@ bool PPCTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
     // 2. If the multiplier after shifted fits 16 bits, an extra shift
     // instruction is needed than case 1, ie. MULLI and RLDICR
     int64_t Imm = ConstNode->getSExtValue();
-    unsigned Shift = countTrailingZeros<uint64_t>(Imm);
+    unsigned Shift = llvm::countr_zero<uint64_t>(Imm);
     Imm >>= Shift;
     if (isInt<16>(Imm))
       return false;

@@ -284,7 +284,7 @@ public:
 
   /// Return the number of high bits known to be zero for a frame index.
   unsigned getKnownHighZeroBitsForFrameIndex() const {
-    return countLeadingZeros(getMaxWaveScratchSize()) + getWavefrontSizeLog2();
+    return llvm::countl_zero(getMaxWaveScratchSize()) + getWavefrontSizeLog2();
   }
 
   int getLDSBankCount() const {

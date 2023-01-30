@@ -1700,8 +1700,8 @@ getBitfieldInvertedMaskOpValue(const MCInst &MI, unsigned Op,
   // msb of the mask.
   const MCOperand &MO = MI.getOperand(Op);
   uint32_t v = ~MO.getImm();
-  uint32_t lsb = countTrailingZeros(v);
-  uint32_t msb = (32 - countLeadingZeros (v)) - 1;
+  uint32_t lsb = llvm::countr_zero(v);
+  uint32_t msb = (32 - llvm::countl_zero(v)) - 1;
   assert(v != 0 && lsb < 32 && msb < 32 && "Illegal bitfield mask!");
   return lsb | (msb << 5);
 }
@@ -1988,7 +1988,7 @@ getPowerTwoOpValue(const MCInst &MI, unsigned OpIdx,
                    const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpIdx);
   assert(MO.isImm() && "Unexpected operand type!");
-  return countTrailingZeros((uint64_t)MO.getImm());
+  return llvm::countr_zero((uint64_t)MO.getImm());
 }
 
 template <unsigned start>

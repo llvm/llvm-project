@@ -8622,7 +8622,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     else
       return false;
 
-    unsigned BitNo = countTrailingZeros((uint64_t)Mask);
+    unsigned BitNo = llvm::countr_zero((uint64_t)Mask);
     if (IsSigned && BitNo == SrcSize - 1)
       return false;
 

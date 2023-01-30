@@ -222,8 +222,8 @@ Status SIModeRegister::getInstructionMode(MachineInstr &MI,
 void SIModeRegister::insertSetreg(MachineBasicBlock &MBB, MachineInstr *MI,
                                   const SIInstrInfo *TII, Status InstrMode) {
   while (InstrMode.Mask) {
-    unsigned Offset = countTrailingZeros<unsigned>(InstrMode.Mask);
-    unsigned Width = countTrailingOnes<unsigned>(InstrMode.Mask >> Offset);
+    unsigned Offset = llvm::countr_zero<unsigned>(InstrMode.Mask);
+    unsigned Width = llvm::countr_one<unsigned>(InstrMode.Mask >> Offset);
     unsigned Value = (InstrMode.Mode >> Offset) & ((1 << Width) - 1);
     BuildMI(MBB, MI, nullptr, TII->get(AMDGPU::S_SETREG_IMM32_B32))
         .addImm(Value)
