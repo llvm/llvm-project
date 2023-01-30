@@ -212,7 +212,7 @@
 "`3751 <https://wg21.link/LWG3751>`__","Missing feature macro for ``flat_set``", "November 2022","","","|flat_containers|"
 "`3753 <https://wg21.link/LWG3753>`__","Clarify entity vs. freestanding entity", "November 2022","","",""
 "`3754 <https://wg21.link/LWG3754>`__","Class template expected synopsis contains declarations that do not match the detailed description", "November 2022","|Nothing to do|","",""
-"`3755 <https://wg21.link/LWG3755>`__","``tuple-for-each`` can call ``user-defined`` ``operator,``", "November 2022","","",""
+"`3755 <https://wg21.link/LWG3755>`__","``tuple-for-each`` can call ``user-defined`` ``operator,``", "November 2022","|Complete|","17.0",""
 "`3757 <https://wg21.link/LWG3757>`__","What's the effect of ``std::forward_like<void>(x)``?", "November 2022","","",""
 "`3759 <https://wg21.link/LWG3759>`__","``ranges::rotate_copy`` should use ``std::move``", "November 2022","","","|ranges|"
 "`3760 <https://wg21.link/LWG3760>`__","``cartesian_product_view::iterator``'s ``parent_`` is never valid", "November 2022","","","|ranges|"
