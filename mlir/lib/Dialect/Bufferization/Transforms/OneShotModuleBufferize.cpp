@@ -139,7 +139,6 @@ aliasingFuncOpBBArgsAnalysis(FuncOp funcOp, OneShotAnalysisState &state,
           continue;
         int64_t returnIdx = resultIt.index();
         int64_t bbArgIdx = inputIt.index();
-        funcState.aliasingFuncArgs[funcOp][returnIdx].push_back(bbArgIdx);
         funcState.aliasingReturnVals[funcOp][bbArgIdx].push_back(returnIdx);
       }
     }
@@ -161,10 +160,8 @@ aliasingFuncOpBBArgsAnalysis(FuncOp funcOp, OneShotAnalysisState &state,
             if (state.getOptions().testAnalysisOnly)
               annotateEquivalentReturnBbArg(returnVal, bbArg);
           }
-          if (state.areAliasingBufferizedValues(returnVal.get(), bbArg)) {
-            funcState.aliasingFuncArgs[funcOp][returnIdx].push_back(bbArgIdx);
+          if (state.areAliasingBufferizedValues(returnVal.get(), bbArg))
             funcState.aliasingReturnVals[funcOp][bbArgIdx].push_back(returnIdx);
-          }
         }
 
   return success();

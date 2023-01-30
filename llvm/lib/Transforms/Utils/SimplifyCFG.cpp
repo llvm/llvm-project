@@ -6552,7 +6552,7 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
 
     // Make the mask's bitwidth at least 8-bit and a power-of-2 to avoid
     // unnecessary illegal types.
-    uint64_t TableSizePowOf2 = llvm::bit_ceil(std::max<uint64_t>(8, TableSize));
+    uint64_t TableSizePowOf2 = NextPowerOf2(std::max(7ULL, TableSize - 1ULL));
     APInt MaskInt(TableSizePowOf2, 0);
     APInt One(TableSizePowOf2, 1);
     // Build bitmask; fill in a 1 bit for every case.
