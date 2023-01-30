@@ -259,9 +259,9 @@ bool AVRAsmPrinter::doFinalization(Module &M) {
     auto *Section = cast<MCSectionELF>(TLOF.SectionForGlobal(&GO, TM));
     if (Section->getName().startswith(".data"))
       NeedsCopyData = true;
-    else if (Section->getName().startswith(".rodata") && SubTM->hasPROGMEM())
-      // AVRs that have a separate PROGMEM (that's most AVRs) store .rodata
-      // sections in RAM.
+    else if (Section->getName().startswith(".rodata") && SubTM->hasLPM())
+      // AVRs that have a separate program memory (that's most AVRs) store
+      // .rodata sections in RAM.
       NeedsCopyData = true;
     else if (Section->getName().startswith(".bss"))
       NeedsClearBSS = true;

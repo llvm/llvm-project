@@ -1124,16 +1124,65 @@ llvm.func @zeroextattr(%arg0: i1 {llvm.zeroext}) {
 // CHECK-LABEL: declare void @zeroextattr_decl(i1 zeroext)
 llvm.func @zeroextattr_decl(i1 {llvm.zeroext})
 
+// CHECK-LABEL: declare void @alignattr_decl(ptr align 64)
+llvm.func @alignattr_decl(!llvm.ptr {llvm.align = 64 : i64})
+
+// CHECK-LABEL: declare void @dereferenceableattr_decl(ptr dereferenceable(32))
+llvm.func @dereferenceableattr_decl(!llvm.ptr {llvm.dereferenceable = 32 : i64})
+
+// CHECK-LABEL: declare void @dereferenceableornullattr_decl(ptr dereferenceable_or_null(32))
+llvm.func @dereferenceableornullattr_decl(!llvm.ptr {llvm.dereferenceable_or_null = 32 : i64})
+
+// CHECK-LABEL: declare void @inregattr_decl(ptr inreg)
+llvm.func @inregattr_decl(!llvm.ptr {llvm.inreg})
+
+// CHECK-LABEL: declare void @nocaptureattr_decl(ptr nocapture)
+llvm.func @nocaptureattr_decl(!llvm.ptr {llvm.nocapture})
+
+// CHECK-LABEL: declare void @nofreeattr_decl(ptr nofree)
+llvm.func @nofreeattr_decl(!llvm.ptr {llvm.nofree})
+
+// CHECK-LABEL: declare void @nonnullattr_decl(ptr nonnull)
+llvm.func @nonnullattr_decl(!llvm.ptr {llvm.nonnull})
+
+// CHECK-LABEL: declare void @preallocatedattr_decl(ptr preallocated(float))
+llvm.func @preallocatedattr_decl(!llvm.ptr {llvm.preallocated = f32})
+
+// CHECK-LABEL: declare ptr @returnedattr_decl(ptr returned)
+llvm.func @returnedattr_decl(!llvm.ptr {llvm.returned}) -> !llvm.ptr
+
+// CHECK-LABEL: declare void @alignstackattr_decl(ptr alignstack(32))
+llvm.func @alignstackattr_decl(!llvm.ptr {llvm.alignstack = 32 : i64})
+
+// CHECK-LABEL: declare void @writeonlyattr_decl(ptr writeonly)
+llvm.func @writeonlyattr_decl(!llvm.ptr {llvm.writeonly})
+
 // CHECK-LABEL: declare align 4 ptr @alignattr_ret_decl()
 llvm.func @alignattr_ret_decl() -> (!llvm.ptr<i32> {llvm.align = 4})
+
 // CHECK-LABEL: declare noalias ptr @noaliasattr_ret_decl()
 llvm.func @noaliasattr_ret_decl() -> (!llvm.ptr<i32> {llvm.noalias})
+
 // CHECK-LABEL: declare noundef ptr @noundefattr_ret_decl()
 llvm.func @noundefattr_ret_decl() -> (!llvm.ptr<i32> {llvm.noundef})
+
 // CHECK-LABEL: declare signext i1 @signextattr_ret_decl()
 llvm.func @signextattr_ret_decl() -> (i1 {llvm.signext})
+
 // CHECK-LABEL: declare zeroext i1 @zeroextattr_ret_decl()
 llvm.func @zeroextattr_ret_decl() -> (i1 {llvm.zeroext})
+
+// CHECK-LABEL: declare nonnull ptr @nonnullattr_ret_decl()
+llvm.func @nonnullattr_ret_decl() -> (!llvm.ptr {llvm.nonnull})
+
+// CHECK-LABEL: declare dereferenceable(32) ptr @dereferenceableattr_ret_decl()
+llvm.func @dereferenceableattr_ret_decl() -> (!llvm.ptr {llvm.dereferenceable = 32 : i64})
+
+// CHECK-LABEL: declare dereferenceable_or_null(16) ptr @dereferenceableornullattr_ret_decl()
+llvm.func @dereferenceableornullattr_ret_decl() -> (!llvm.ptr {llvm.dereferenceable_or_null = 16 : i64})
+
+// CHECK-LABEL: declare inreg ptr @inregattr_ret_decl()
+llvm.func @inregattr_ret_decl() -> (!llvm.ptr {llvm.inreg})
 
 // CHECK-LABEL: @llvm_varargs(...)
 llvm.func @llvm_varargs(...)

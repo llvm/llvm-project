@@ -1,11 +1,11 @@
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: llvm-mc -triple=i386-unknown-linux-gnu -position-independent \
-# RUN:  -filetype=obj -o %t/elf_sm_pic_reloc.o %s
+# RUN:  -filetype=obj -o %t/elf_sm_pic_reloc_got.o %s
 # RUN: llvm-jitlink -noexec \
 # RUN:     -slab-allocate 100Kb -slab-address 0xfff00000 -slab-page-size 4096 \
-# RUN:     -check %s %t/elf_sm_pic_reloc.o
+# RUN:     -check %s %t/elf_sm_pic_reloc_got.o
 #
-# Test ELF small/PIC relocations.
+# Test ELF small/PIC GOT relocations.
 
         .text
         .globl  main
@@ -19,11 +19,11 @@ main:
 # Test GOT32 handling.
 # 
 # We want to check both the offset to the GOT entry and its contents. 
-# jitlink-check: decode_operand(test_got, 4) = got_addr(elf_sm_pic_reloc.o, named_data1) - _GLOBAL_OFFSET_TABLE_
-# jitlink-check: *{4}(got_addr(elf_sm_pic_reloc.o, named_data1)) = named_data1
+# jitlink-check: decode_operand(test_got, 4) = got_addr(elf_sm_pic_reloc_got.o, named_data1) - _GLOBAL_OFFSET_TABLE_
+# jitlink-check: *{4}(got_addr(elf_sm_pic_reloc_got.o, named_data1)) = named_data1
 # 
-# jitlink-check: decode_operand(test_got+6, 4) = got_addr(elf_sm_pic_reloc.o, named_data2) - _GLOBAL_OFFSET_TABLE_
-# jitlink-check: *{4}(got_addr(elf_sm_pic_reloc.o, named_data2)) = named_data2
+# jitlink-check: decode_operand(test_got+6, 4) = got_addr(elf_sm_pic_reloc_got.o, named_data2) - _GLOBAL_OFFSET_TABLE_
+# jitlink-check: *{4}(got_addr(elf_sm_pic_reloc_got.o, named_data2)) = named_data2
 
         .globl test_got
         .p2align      4, 0x90

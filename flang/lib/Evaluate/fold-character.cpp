@@ -97,9 +97,16 @@ Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
   } else if (name == "repeat") { // not elemental
     if (auto scalars{GetScalarConstantArguments<T, SubscriptInteger>(
             context, funcRef.arguments())}) {
-      return Expr<T>{Constant<T>{
-          CharacterUtils<KIND>::REPEAT(std::get<Scalar<T>>(*scalars),
-              std::get<Scalar<SubscriptInteger>>(*scalars).ToInt64())}};
+      auto str{std::get<Scalar<T>>(*scalars)};
+      auto n{std::get<Scalar<SubscriptInteger>>(*scalars).ToInt64()};
+      if (static_cast<double>(n) * str.size() >
+          (1 << 20)) { // sanity limit of 1MiB
+        context.messages().Say(
+            "Result of REPEAT() is too large to compute at compilation time (%g characters)"_port_en_US,
+            static_cast<double>(n) * str.size());
+      } else {
+        return Expr<T>{Constant<T>{CharacterUtils<KIND>::REPEAT(str, n)}};
+      }
     }
   } else if (name == "trim") { // not elemental
     if (auto scalar{

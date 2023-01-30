@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_IR_MODREF_H
-#define LLVM_IR_MODREF_H
+#ifndef LLVM_SUPPORT_MODREF_H
+#define LLVM_SUPPORT_MODREF_H
 
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/Sequence.h"

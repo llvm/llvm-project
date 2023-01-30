@@ -696,7 +696,7 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>, %arg1: f32) -> (
 
 func.func @sparse_sort_x_type( %arg0: index, %arg1: memref<?xf32>) {
   // expected-error@+1 {{operand #1 must be 1D memref of integer or index values}}
-  sparse_tensor.sort %arg0, %arg1: memref<?xf32>
+  sparse_tensor.sort hybrid_quick_sort %arg0, %arg1: memref<?xf32>
 }
 
 // -----
@@ -704,7 +704,7 @@ func.func @sparse_sort_x_type( %arg0: index, %arg1: memref<?xf32>) {
 func.func @sparse_sort_dim_too_small(%arg0: memref<10xindex>) {
   %i20 = arith.constant 20 : index
   // expected-error@+1 {{xs and ys need to have a dimension >= n: 10 < 20}}
-  sparse_tensor.sort %i20, %arg0 : memref<10xindex>
+  sparse_tensor.sort insertion_sort_stable %i20, %arg0 : memref<10xindex>
   return
 }
 
@@ -712,7 +712,7 @@ func.func @sparse_sort_dim_too_small(%arg0: memref<10xindex>) {
 
 func.func @sparse_sort_mismatch_x_type(%arg0: index, %arg1: memref<10xindex>, %arg2: memref<10xi8>) {
   // expected-error@+1 {{mismatch xs element types}}
-  sparse_tensor.sort %arg0, %arg1, %arg2 : memref<10xindex>, memref<10xi8>
+  sparse_tensor.sort hybrid_quick_sort %arg0, %arg1, %arg2 : memref<10xindex>, memref<10xi8>
   return
 }
 
@@ -720,7 +720,7 @@ func.func @sparse_sort_mismatch_x_type(%arg0: index, %arg1: memref<10xindex>, %a
 
 func.func @sparse_sort_coo_x_type( %arg0: index, %arg1: memref<?xf32>) {
   // expected-error@+1 {{operand #1 must be 1D memref of integer or index values}}
-  sparse_tensor.sort_coo %arg0, %arg1: memref<?xf32>
+  sparse_tensor.sort_coo insertion_sort_stable %arg0, %arg1: memref<?xf32>
   return
 }
 
@@ -729,7 +729,7 @@ func.func @sparse_sort_coo_x_type( %arg0: index, %arg1: memref<?xf32>) {
 func.func @sparse_sort_coo_x_too_small(%arg0: memref<50xindex>) {
   %i20 = arith.constant 20 : index
   // expected-error@+1 {{Expected dimension(xy) >= n * (nx + ny) got 50 < 60}}
-  sparse_tensor.sort_coo %i20, %arg0 {nx = 2 : index, ny = 1 : index} : memref<50xindex>
+  sparse_tensor.sort_coo hybrid_quick_sort %i20, %arg0 {nx = 2 : index, ny = 1 : index} : memref<50xindex>
   return
 }
 
@@ -738,7 +738,7 @@ func.func @sparse_sort_coo_x_too_small(%arg0: memref<50xindex>) {
 func.func @sparse_sort_coo_y_too_small(%arg0: memref<60xindex>, %arg1: memref<10xf32>) {
   %i20 = arith.constant 20 : index
   // expected-error@+1 {{Expected dimension(y) >= n got 10 < 20}}
-  sparse_tensor.sort_coo %i20, %arg0 jointly %arg1 {nx = 2 : index, ny = 1 : index} : memref<60xindex> jointly memref<10xf32>
+  sparse_tensor.sort_coo insertion_sort_stable %i20, %arg0 jointly %arg1 {nx = 2 : index, ny = 1 : index} : memref<60xindex> jointly memref<10xf32>
   return
 }
 
