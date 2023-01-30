@@ -298,7 +298,10 @@ module std [system] {
       module min                             { private header "__algorithm/min.h" }
       module min_element                     { private header "__algorithm/min_element.h" }
       module min_max_result                  { private header "__algorithm/min_max_result.h" }
-      module minmax                          { private header "__algorithm/minmax.h" }
+      module minmax                          {
+        private header "__algorithm/minmax.h"
+        export *
+      }
       module minmax_element                  { private header "__algorithm/minmax_element.h" }
       module mismatch                        { private header "__algorithm/mismatch.h" }
       module move                            { private header "__algorithm/move.h" }
