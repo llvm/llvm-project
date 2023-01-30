@@ -365,6 +365,8 @@ public:
   void SelectWhilePair(SDNode *N, unsigned Opc);
   void SelectCVTIntrinsic(SDNode *N, unsigned NumVecs, unsigned Opcode);
   void SelectClamp(SDNode *N, unsigned NumVecs, unsigned Opcode);
+  void SelectUnaryMultiIntrinsic(SDNode *N, unsigned NumOutVecs,
+                                 bool IsTupleInput, unsigned Opc);
 
   template <unsigned MaxIdx, unsigned Scale>
   void SelectMultiVectorMove(SDNode *N, unsigned NumVecs, unsigned BaseReg,
@@ -1720,6 +1722,7 @@ enum class SelectTypeKind {
   Int1 = 0,
   Int = 1,
   FP = 2,
+  AnyType = 3,
 };
 
 /// This function selects an opcode from a list of opcodes, which is
@@ -1733,6 +1736,8 @@ static unsigned SelectOpcodeFromVT(EVT VT, ArrayRef<unsigned> Opcodes) {
 
   EVT EltVT = VT.getVectorElementType();
   switch (Kind) {
+  case SelectTypeKind::AnyType:
+    break;
   case SelectTypeKind::Int:
     if (EltVT != MVT::i8 && EltVT != MVT::i16 && EltVT != MVT::i32 &&
         EltVT != MVT::i64)
@@ -1949,6 +1954,36 @@ void AArch64DAGToDAGISel::SelectMultiVectorMove(SDNode *N, unsigned NumVecs,
   // Copy chain
   unsigned ChainIdx = NumVecs;
   ReplaceUses(SDValue(N, ChainIdx), SDValue(Mov, 1));
+  CurDAG->RemoveDeadNode(N);
+}
+
+void AArch64DAGToDAGISel::SelectUnaryMultiIntrinsic(SDNode *N,
+                                                    unsigned NumOutVecs,
+                                                    bool IsTupleInput,
+                                                    unsigned Opc) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  unsigned NumInVecs = N->getNumOperands() - 1;
+
+  SmallVector<SDValue, 6> Ops;
+  if (IsTupleInput) {
+    assert((NumInVecs == 2 || NumInVecs == 4) &&
+           "Don't know how to handle multi-register input!");
+    SmallVector<SDValue, 4> Regs(N->op_begin() + 1,
+                                 N->op_begin() + 1 + NumInVecs);
+    Ops.push_back(createZMulTuple(Regs));
+  } else {
+    // All intrinsic nodes have the ID as the first operand, hence the "1 + I".
+    for (unsigned I = 0; I < NumInVecs; I++)
+      Ops.push_back(N->getOperand(1 + I));
+  }
+
+  SDNode *Res = CurDAG->getMachineNode(Opc, DL, MVT::Untyped, Ops);
+  SDValue SuperReg = SDValue(Res, 0);
+
+  for (unsigned I = 0; I < NumOutVecs; I++)
+    ReplaceUses(SDValue(N, I), CurDAG->getTargetExtractSubreg(
+                                   AArch64::zsub0 + I, DL, VT, SuperReg));
   CurDAG->RemoveDeadNode(N);
 }
 
@@ -5243,6 +5278,50 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
               {AArch64::ADD_VG4_4ZZ_B, AArch64::ADD_VG4_4ZZ_H,
                AArch64::ADD_VG4_4ZZ_S, AArch64::ADD_VG4_4ZZ_D}))
         SelectDestructiveMultiIntrinsic(Node, 4, false, Op);
+      return;
+    case Intrinsic::aarch64_sve_zip_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::AnyType>(
+              Node->getValueType(0),
+              {AArch64::ZIP_VG2_2ZZZ_B, AArch64::ZIP_VG2_2ZZZ_H,
+               AArch64::ZIP_VG2_2ZZZ_S, AArch64::ZIP_VG2_2ZZZ_D}))
+        SelectUnaryMultiIntrinsic(Node, 2, /*IsTupleInput=*/false, Op);
+      return;
+    case Intrinsic::aarch64_sve_zipq_x2:
+      SelectUnaryMultiIntrinsic(Node, 2, /*IsTupleInput=*/false,
+                                AArch64::ZIP_VG2_2ZZZ_Q);
+      return;
+    case Intrinsic::aarch64_sve_zip_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::AnyType>(
+              Node->getValueType(0),
+              {AArch64::ZIP_VG4_4Z4Z_B, AArch64::ZIP_VG4_4Z4Z_H,
+               AArch64::ZIP_VG4_4Z4Z_S, AArch64::ZIP_VG4_4Z4Z_D}))
+        SelectUnaryMultiIntrinsic(Node, 4, /*IsTupleInput=*/true, Op);
+      return;
+    case Intrinsic::aarch64_sve_zipq_x4:
+      SelectUnaryMultiIntrinsic(Node, 4, /*IsTupleInput=*/true,
+                                AArch64::ZIP_VG4_4Z4Z_Q);
+      return;
+    case Intrinsic::aarch64_sve_uzp_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::AnyType>(
+              Node->getValueType(0),
+              {AArch64::UZP_VG2_2ZZZ_B, AArch64::UZP_VG2_2ZZZ_H,
+               AArch64::UZP_VG2_2ZZZ_S, AArch64::UZP_VG2_2ZZZ_D}))
+        SelectUnaryMultiIntrinsic(Node, 2, /*IsTupleInput=*/false, Op);
+      return;
+    case Intrinsic::aarch64_sve_uzpq_x2:
+      SelectUnaryMultiIntrinsic(Node, 2, /*IsTupleInput=*/false,
+                                AArch64::UZP_VG2_2ZZZ_Q);
+      return;
+    case Intrinsic::aarch64_sve_uzp_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::AnyType>(
+              Node->getValueType(0),
+              {AArch64::UZP_VG4_4Z4Z_B, AArch64::UZP_VG4_4Z4Z_H,
+               AArch64::UZP_VG4_4Z4Z_S, AArch64::UZP_VG4_4Z4Z_D}))
+        SelectUnaryMultiIntrinsic(Node, 4, /*IsTupleInput=*/true, Op);
+      return;
+    case Intrinsic::aarch64_sve_uzpq_x4:
+      SelectUnaryMultiIntrinsic(Node, 4, /*IsTupleInput=*/true,
+                                AArch64::UZP_VG4_4Z4Z_Q);
       return;
     }
     break;

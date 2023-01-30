@@ -2956,6 +2956,16 @@ let TargetPrefix = "aarch64" in {
                  LLVMMatchType<0>, LLVMMatchType<0>],
                 [IntrNoMem]>;
 
+  class SVE2_VG2_ZipUzp_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
+                [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem]>;
+
+  class SVE2_VG4_ZipUzp_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>,
+                             LLVMMatchType<0>, LLVMMatchType<0>],
+                [LLVMMatchType<0>, LLVMMatchType<0>,
+                 LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem]>;
+
 
   //
   // Multi-vector fused multiply-add/subtract
@@ -3199,4 +3209,14 @@ let TargetPrefix = "aarch64" in {
 
   def int_aarch64_sme_fdot_lane_za32_vg1x2 : SME2_Matrix_ArrayVector_VG2_Multi_Index_Intrinsic;
   def int_aarch64_sme_fdot_lane_za32_vg1x4 : SME2_Matrix_ArrayVector_VG4_Multi_Index_Intrinsic;
+
+  // Multi-vector zip and unzips
+  def int_aarch64_sve_zip_x2  : SVE2_VG2_ZipUzp_Intrinsic;
+  def int_aarch64_sve_zipq_x2 : SVE2_VG2_ZipUzp_Intrinsic;
+  def int_aarch64_sve_zip_x4  : SVE2_VG4_ZipUzp_Intrinsic;
+  def int_aarch64_sve_zipq_x4 : SVE2_VG4_ZipUzp_Intrinsic;
+  def int_aarch64_sve_uzp_x2  : SVE2_VG2_ZipUzp_Intrinsic;
+  def int_aarch64_sve_uzpq_x2 : SVE2_VG2_ZipUzp_Intrinsic;
+  def int_aarch64_sve_uzp_x4  : SVE2_VG4_ZipUzp_Intrinsic;
+  def int_aarch64_sve_uzpq_x4 : SVE2_VG4_ZipUzp_Intrinsic;
 }
