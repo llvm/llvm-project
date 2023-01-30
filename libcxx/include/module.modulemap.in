@@ -775,7 +775,6 @@ module std [system] {
     export *
   }
   module coroutine {
-    requires coroutines
     header "coroutine"
     export compare
     export *
@@ -1642,11 +1641,6 @@ module std [system] {
 
     module algorithm {
       header "experimental/algorithm"
-      export *
-    }
-    module coroutine {
-      requires coroutines
-      header "experimental/coroutine"
       export *
     }
     module deque {

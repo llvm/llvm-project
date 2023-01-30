@@ -824,6 +824,7 @@ cc_library(
     textual_hdrs = glob(["include/llvm/IR/*.def"]),
     deps = [
         ":BinaryFormat",
+        ":Demangle",
         ":Remarks",
         ":Support",
         ":attributes_gen",

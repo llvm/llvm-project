@@ -169,12 +169,6 @@ expected version
 experimental/algorithm algorithm
 experimental/algorithm cstddef
 experimental/algorithm type_traits
-experimental/coroutine cstddef
-experimental/coroutine cstdint
-experimental/coroutine cstring
-experimental/coroutine limits
-experimental/coroutine new
-experimental/coroutine type_traits
 experimental/deque deque
 experimental/deque experimental/memory_resource
 experimental/forward_list experimental/memory_resource
