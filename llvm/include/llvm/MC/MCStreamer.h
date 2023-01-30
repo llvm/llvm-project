@@ -214,6 +214,10 @@ class MCStreamer {
   std::unique_ptr<MCTargetStreamer> TargetStreamer;
 
   std::vector<MCDwarfFrameInfo> DwarfFrameInfos;
+  // This is a pair of index into DwarfFrameInfos and the MCSection associated
+  // with the frame. Note, we use an index instead of an iterator because they
+  // can be invalidated in std::vector.
+  SmallVector<std::pair<size_t, MCSection *>, 1> FrameInfoStack;
   MCDwarfFrameInfo *getCurrentDwarfFrameInfo();
 
   /// Similar to DwarfFrameInfos, but for SEH unwind info. Chained frames may
