@@ -2,7 +2,6 @@
 
 // Wrong results on amdgpu
 // XFAIL: amdgcn-amd-amdhsa
-// XFAIL: amdgcn-amd-amdhsa-LTO
 
 #include <stdint.h>
 #include <stdio.h>
