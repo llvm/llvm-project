@@ -40,7 +40,10 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+// Note: `join_view` is still marked experimental because there is an ABI-breaking change that affects `join_view` in
+// the pipeline (https://isocpp.org/files/papers/D2770R0.html).
+// TODO: make `join_view` non-experimental once D2770 is implemented.
+#if _LIBCPP_STD_VER > 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
 
 namespace ranges {
   template<class>
@@ -445,7 +448,7 @@ struct __segmented_iterator_traits<ranges::__join_view_iterator<_View, _Const>> 
   }
 };
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // #if _LIBCPP_STD_VER > 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
 
 _LIBCPP_END_NAMESPACE_STD
 

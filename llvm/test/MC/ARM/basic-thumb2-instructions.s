@@ -27,6 +27,8 @@ _func:
         adc r5, r3, #0x87000000
         adc r4, r2, #0x7f800000
         adc r4, r2, #0x00000680
+        adc r0, #1
+        adc r1, #0x7f800000
 
 @ CHECK: adc	r0, r1, #4              @ encoding: [0x41,0xf1,0x04,0x00]
 @ CHECK: adcs	r0, r1, #0              @ encoding: [0x51,0xf1,0x00,0x00]
@@ -37,6 +39,8 @@ _func:
 @ CHECK: adc	r5, r3, #2264924160     @ encoding: [0x43,0xf1,0x07,0x45]
 @ CHECK: adc	r4, r2, #2139095040     @ encoding: [0x42,0xf1,0xff,0x44]
 @ CHECK: adc	r4, r2, #1664           @ encoding: [0x42,0xf5,0xd0,0x64]
+@ CHECK: adc	r0, r0, #1              @ encoding: [0x40,0xf1,0x01,0x00]
+@ CHECK: adc	r1, r1, #2139095040     @ encoding: [0x41,0xf1,0xff,0x41]
 
 @------------------------------------------------------------------------------
 @ ADC (register)
@@ -49,6 +53,10 @@ _func:
         adcs	r0, r1, r3, lsl #7
         adc.w	r0, r1, r3, lsr #31
         adcs.w	r0, r1, r3, asr #32
+        adc r4, r5
+        adc.w r9, r1
+        adc	r0, r1, ror #4
+        adc.w	r0, r1, lsr #31
 
 @ CHECK: adc.w	r4, r5, r6              @ encoding: [0x45,0xeb,0x06,0x04]
 @ CHECK: adcs.w	r4, r5, r6              @ encoding: [0x55,0xeb,0x06,0x04]
@@ -58,6 +66,10 @@ _func:
 @ CHECK: adcs.w	r0, r1, r3, lsl #7      @ encoding: [0x51,0xeb,0xc3,0x10]
 @ CHECK: adc.w	r0, r1, r3, lsr #31     @ encoding: [0x41,0xeb,0xd3,0x70]
 @ CHECK: adcs.w	r0, r1, r3, asr #32     @ encoding: [0x51,0xeb,0x23,0x00]
+@ CHECK: adc.w	r4, r4, r5              @ encoding: [0x44,0xeb,0x05,0x04]
+@ CHECK: adc.w	r9, r9, r1              @ encoding: [0x49,0xeb,0x01,0x09]
+@ CHECK: adc.w	r0, r0, r1, ror #4      @ encoding: [0x40,0xeb,0x31,0x10]
+@ CHECK: adc.w	r0, r0, r1, lsr #31     @ encoding: [0x40,0xeb,0xd1,0x70]
 
 
 @------------------------------------------------------------------------------
