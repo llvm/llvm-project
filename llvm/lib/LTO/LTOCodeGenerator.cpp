@@ -629,7 +629,7 @@ bool LTOCodeGenerator::optimize() {
   this->applyScopeRestrictions();
 
   // Write LTOPostLink flag for passes that require all the modules.
-  MergedModule->addModuleFlag(Module::Error, "LTOPostLink", 1);
+  MergedModule->setModuleFlag(Module::Error, "LTOPostLink", 1);
 
   // Add an appropriate DataLayout instance for this module...
   MergedModule->setDataLayout(TargetMach->createDataLayout());
