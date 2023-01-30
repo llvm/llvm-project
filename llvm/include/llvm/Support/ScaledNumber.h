@@ -192,7 +192,8 @@ inline std::pair<int32_t, int> getLgImpl(DigitsT Digits, int16_t Scale) {
     return std::make_pair(INT32_MIN, 0);
 
   // Get the floor of the lg of Digits.
-  int32_t LocalFloor = sizeof(Digits) * 8 - countLeadingZeros(Digits) - 1;
+  static_assert(sizeof(Digits) <= sizeof(uint64_t));
+  int32_t LocalFloor = llvm::Log2_64(Digits);
 
   // Get the actual floor.
   int32_t Floor = Scale + LocalFloor;
