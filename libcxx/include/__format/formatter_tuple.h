@@ -51,7 +51,7 @@ struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT __formatter_tuple {
 
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __parse_ctx) {
-    const _CharT* __begin = __parser_.__parse(__parse_ctx, __format_spec::__fields_tuple);
+    auto __begin = __parser_.__parse(__parse_ctx, __format_spec::__fields_tuple);
 
     // [format.tuple]/7
     //   ... For each element e in underlying_, if e.set_debug_format()
@@ -61,7 +61,7 @@ struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT __formatter_tuple {
       std::__set_debug_format(std::get<_Index>(__underlying_));
     });
 
-    const _CharT* __end = __parse_ctx.end();
+    auto __end = __parse_ctx.end();
     if (__begin == __end)
       return __begin;
 
