@@ -1065,16 +1065,20 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     if (!isMask_64(C2))
       break;
 
-    // If this can be an ANDI, ZEXT.H or ZEXT.W, don't do this if the ANDI/ZEXT
-    // has multiple users or the constant is a simm12. This prevents inserting
-    // a shift and still have uses of the AND/ZEXT. Shifting a simm12 will
-    // likely make it more costly to materialize. Otherwise, using a SLLI
-    // might allow it to be compressed.
+    // If this can be an ANDI or ZEXT.H, don't do this if the ANDI/ZEXT has
+    // multiple users or the constant is a simm12. This prevents inserting a
+    // shift and still have uses of the AND/ZEXT. Shifting a simm12 will likely
+    // make it more costly to materialize. Otherwise, using a SLLI might allow
+    // it to be compressed.
     bool IsANDIOrZExt =
         isInt<12>(C2) ||
-        (C2 == UINT64_C(0xFFFF) && Subtarget->hasStdExtZbb()) ||
-        (C2 == UINT64_C(0xFFFFFFFF) && Subtarget->hasStdExtZba());
+        (C2 == UINT64_C(0xFFFF) && Subtarget->hasStdExtZbb());
     if (IsANDIOrZExt && (isInt<12>(N1C->getSExtValue()) || !N0.hasOneUse()))
+      break;
+    // If this can be a ZEXT.w, don't do this if the ZEXT has multiple users or
+    // the constant is a simm32.
+    bool IsZExtW = C2 == UINT64_C(0xFFFFFFFF) && Subtarget->hasStdExtZba();
+    if (IsZExtW && (isInt<32>(N1C->getSExtValue()) || !N0.hasOneUse()))
       break;
 
     // We need to shift left the AND input and C1 by a total of XLen bits.
