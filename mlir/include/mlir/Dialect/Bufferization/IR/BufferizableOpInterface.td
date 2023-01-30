@@ -156,6 +156,10 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           sets and inplace attributes will be set up accordingly before making
           any other bufferization decisions. This method will never be called on
           OpOperands that do not have a tensor type.
+
+          Note: Unranked tensor OpOperands always bufferize in-place. This could
+          be extended in the future. Unranked tensors are used with external
+          functions only.
         }],
         /*retType=*/"bool",
         /*methodName=*/"mustBufferizeInPlace",
@@ -163,7 +167,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
                       "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
-          return false;
+          return opOperand.get().getType().isa<UnrankedTensorType>();
         }]
       >,
       InterfaceMethod<
