@@ -544,83 +544,79 @@ END-SCRIPT
 #include <experimental/algorithm>
 #endif
 // RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_123
-#if defined(TEST_123) && __cplusplus >= 201103L && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_COROUTINES)
-#include <experimental/coroutine>
+#if defined(TEST_123) && __cplusplus >= 201103L
+#include <experimental/deque>
 #endif
 // RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_124
 #if defined(TEST_124) && __cplusplus >= 201103L
-#include <experimental/deque>
+#include <experimental/forward_list>
 #endif
 // RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_125
 #if defined(TEST_125) && __cplusplus >= 201103L
-#include <experimental/forward_list>
+#include <experimental/functional>
 #endif
 // RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_126
 #if defined(TEST_126) && __cplusplus >= 201103L
-#include <experimental/functional>
+#include <experimental/iterator>
 #endif
 // RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_127
 #if defined(TEST_127) && __cplusplus >= 201103L
-#include <experimental/iterator>
+#include <experimental/list>
 #endif
 // RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_128
 #if defined(TEST_128) && __cplusplus >= 201103L
-#include <experimental/list>
+#include <experimental/map>
 #endif
 // RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_129
 #if defined(TEST_129) && __cplusplus >= 201103L
-#include <experimental/map>
+#include <experimental/memory_resource>
 #endif
 // RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_130
 #if defined(TEST_130) && __cplusplus >= 201103L
-#include <experimental/memory_resource>
-#endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_131
-#if defined(TEST_131) && __cplusplus >= 201103L
 #include <experimental/propagate_const>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_132
-#if defined(TEST_132) && !defined(_LIBCPP_HAS_NO_LOCALIZATION) && __cplusplus >= 201103L
+// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_131
+#if defined(TEST_131) && !defined(_LIBCPP_HAS_NO_LOCALIZATION) && __cplusplus >= 201103L
 #include <experimental/regex>
+#endif
+// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_132
+#if defined(TEST_132) && __cplusplus >= 201103L
+#include <experimental/set>
 #endif
 // RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_133
 #if defined(TEST_133) && __cplusplus >= 201103L
-#include <experimental/set>
+#include <experimental/simd>
 #endif
 // RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_134
 #if defined(TEST_134) && __cplusplus >= 201103L
-#include <experimental/simd>
+#include <experimental/string>
 #endif
 // RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_135
 #if defined(TEST_135) && __cplusplus >= 201103L
-#include <experimental/string>
+#include <experimental/type_traits>
 #endif
 // RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_136
 #if defined(TEST_136) && __cplusplus >= 201103L
-#include <experimental/type_traits>
+#include <experimental/unordered_map>
 #endif
 // RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_137
 #if defined(TEST_137) && __cplusplus >= 201103L
-#include <experimental/unordered_map>
+#include <experimental/unordered_set>
 #endif
 // RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_138
 #if defined(TEST_138) && __cplusplus >= 201103L
-#include <experimental/unordered_set>
+#include <experimental/utility>
 #endif
 // RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_139
 #if defined(TEST_139) && __cplusplus >= 201103L
-#include <experimental/utility>
+#include <experimental/vector>
 #endif
 // RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_140
-#if defined(TEST_140) && __cplusplus >= 201103L
-#include <experimental/vector>
+#if defined(TEST_140)
+#include <ext/hash_map>
 #endif
 // RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_141
 #if defined(TEST_141)
-#include <ext/hash_map>
-#endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_142
-#if defined(TEST_142)
 #include <ext/hash_set>
 #endif
 // GENERATED-MARKER

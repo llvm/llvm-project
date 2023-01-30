@@ -46,7 +46,10 @@ struct __fn {
   template <class _Type, class _Proj = identity,
             indirect_strict_weak_order<projected<const _Type*, _Proj>> _Comp = ranges::less>
   _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr ranges::minmax_result<const _Type&>
-  operator()(const _Type& __a, const _Type& __b, _Comp __comp = {}, _Proj __proj = {}) const {
+  operator()(_LIBCPP_LIFETIMEBOUND const _Type& __a,
+             _LIBCPP_LIFETIMEBOUND const _Type& __b,
+             _Comp __comp = {},
+             _Proj __proj = {}) const {
     if (std::invoke(__comp, std::invoke(__proj, __b), std::invoke(__proj, __a)))
       return {__b, __a};
     return {__a, __b};

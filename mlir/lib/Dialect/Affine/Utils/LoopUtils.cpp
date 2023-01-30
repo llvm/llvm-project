@@ -324,7 +324,8 @@ LogicalResult mlir::affineForOpBodySkew(AffineForOp forOp,
         GreedyRewriteConfig config;
         config.strictMode = GreedyRewriteStrictness::ExistingOps;
         bool erased;
-        (void)applyOpPatternsAndFold(res, std::move(patterns), config, &erased);
+        (void)applyOpPatternsAndFold(res.getOperation(), std::move(patterns),
+                                     config, /*changed=*/nullptr, &erased);
         if (!erased && !prologue)
           prologue = res;
         if (!erased)

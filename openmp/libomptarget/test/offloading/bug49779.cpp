@@ -2,7 +2,6 @@
 // RUN:   env LIBOMPTARGET_STACK_SIZE=2048 %libomptarget-run-generic
 
 // UNSUPPORTED: amdgcn-amd-amdhsa
-// UNSUPPORTED: amdgcn-amd-amdhsa-LTO
 
 #include <cassert>
 #include <iostream>

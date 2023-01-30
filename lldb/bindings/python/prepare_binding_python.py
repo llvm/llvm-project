@@ -205,7 +205,6 @@ def do_swig_rebuild(options, dependency_file, config_build_dir, settings):
     command = ([
             options.swig_executable,
             "-c++",
-            "-shadow",
             "-python",
             "-features", "autodoc",
             "-threads",

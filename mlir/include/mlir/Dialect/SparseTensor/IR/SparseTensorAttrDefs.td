@@ -325,4 +325,39 @@ class RankedSparseTensorOf<list<Type> allowedTypes>
 
 def AnyRankedSparseTensor : RankedSparseTensorOf<[AnyType]>;
 
+//===----------------------------------------------------------------------===//
+// Sparse Tensor Sorting Algorithm Attribute.
+//===----------------------------------------------------------------------===//
+
+// TODO: Currently, we only provide four implementations, and expose the
+// implementations via attribute algorithm. In the future, if we will need
+// to support both stable and non-stable quick sort, we may add
+// quick_sort_nonstable enum to the attribute. Alternative, we may use two
+// attributes, (stable|nonstable, algorithm), to specify a sorting
+// implementation.
+//
+// --------------------------------------------------------------------------
+// |           | hybrid_qsort| insertion_sort | qsort       | heap_sort.    |
+// |non-stable | Impl        | X              |  Impl       | Impl          |
+// |stable     | X           | Impl           |  Not Impl   | X             |
+// --------------------------------------------------------------------------
+
+// The C++ enum for sparse tensor sort kind.
+def SparseTensorSortKindEnum
+    : I32EnumAttr<"SparseTensorSortKind", "sparse tensor sort algorithm", [
+        I32EnumAttrCase<"HybridQuickSort",    0, "hybrid_quick_sort">,
+        I32EnumAttrCase<"InsertionSortStable", 1, "insertion_sort_stable">,
+        I32EnumAttrCase<"QuickSort", 2, "quick_sort">,
+        I32EnumAttrCase<"HeapSort", 3, "heap_sort">,
+      ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = SparseTensor_Dialect.cppNamespace;
+}
+
+// Define the enum sparse tensor sort kind attribute.
+def SparseTensorSortKindAttr
+    : EnumAttr<SparseTensor_Dialect, SparseTensorSortKindEnum,
+               "SparseTensorSortAlgorithm"> {
+}
+
 #endif // SPARSETENSOR_ATTRDEFS

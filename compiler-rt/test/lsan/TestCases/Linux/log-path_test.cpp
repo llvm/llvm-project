@@ -1,7 +1,4 @@
 // RUN: %clangxx_lsan %s -o %t
-
-// Fixme: remove once test passes with hwasan
-// UNSUPPORTED: hwasan
 // The globs below do not work in the lit shell.
 
 // Regular run.

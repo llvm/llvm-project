@@ -2848,8 +2848,25 @@ struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
 // DialectInlinerInterface
 //===----------------------------------------------------------------------===//
 
+/// Check whether the given alloca is an input to a lifetime intrinsic,
+/// optionally passing through one or more casts on the way. This is not
+/// transitive through block arguments.
+static bool hasLifetimeMarkers(LLVM::AllocaOp allocaOp) {
+  SmallVector<Operation *> stack(allocaOp->getUsers().begin(),
+                                 allocaOp->getUsers().end());
+  while (!stack.empty()) {
+    Operation *op = stack.pop_back_val();
+    if (isa<LLVM::LifetimeStartOp, LLVM::LifetimeEndOp>(op))
+      return true;
+    if (isa<LLVM::BitcastOp>(op))
+      stack.append(op->getUsers().begin(), op->getUsers().end());
+  }
+  return false;
+}
+
 /// Move all alloca operations with a constant size in the former entry block of
-/// the newly inlined callee into the entry block of the caller.
+/// the newly inlined callee into the entry block of the caller, and insert
+/// lifetime intrinsics that limit their scope to the inlined blocks.
 static void moveConstantAllocasToEntryBlock(
     iterator_range<Region::iterator> inlinedBlocks) {
   Block *calleeEntryBlock = &(*inlinedBlocks.begin());
@@ -2857,21 +2874,51 @@ static void moveConstantAllocasToEntryBlock(
   if (calleeEntryBlock == callerEntryBlock)
     // Nothing to do.
     return;
-  SmallVector<std::pair<LLVM::AllocaOp, IntegerAttr>> allocasToMove;
+  SmallVector<std::tuple<LLVM::AllocaOp, IntegerAttr, bool>> allocasToMove;
+  bool shouldInsertLifetimes = false;
   // Conservatively only move alloca operations that are part of the entry block
   // and do not inspect nested regions, since they may execute conditionally or
   // have other unknown semantics.
   for (auto allocaOp : calleeEntryBlock->getOps<LLVM::AllocaOp>()) {
     IntegerAttr arraySize;
-    if (matchPattern(allocaOp.getArraySize(), m_Constant(&arraySize)))
-      allocasToMove.emplace_back(allocaOp, arraySize);
+    if (!matchPattern(allocaOp.getArraySize(), m_Constant(&arraySize)))
+      continue;
+    bool shouldInsertLifetime =
+        arraySize.getValue() != 0 && !hasLifetimeMarkers(allocaOp);
+    shouldInsertLifetimes |= shouldInsertLifetime;
+    allocasToMove.emplace_back(allocaOp, arraySize, shouldInsertLifetime);
   }
+  if (allocasToMove.empty())
+    return;
   OpBuilder builder(callerEntryBlock, callerEntryBlock->begin());
-  for (auto &[allocaOp, arraySize] : allocasToMove) {
+  for (auto &[allocaOp, arraySize, shouldInsertLifetime] : allocasToMove) {
     auto newConstant = builder.create<LLVM::ConstantOp>(
         allocaOp->getLoc(), allocaOp.getArraySize().getType(), arraySize);
+    // Insert a lifetime start intrinsic where the alloca was before moving it.
+    if (shouldInsertLifetime) {
+      OpBuilder::InsertionGuard insertionGuard(builder);
+      builder.setInsertionPoint(allocaOp);
+      builder.create<LLVM::LifetimeStartOp>(
+          allocaOp.getLoc(), arraySize.getValue().getLimitedValue(),
+          allocaOp.getResult());
+    }
     allocaOp->moveAfter(newConstant);
     allocaOp.getArraySizeMutable().assign(newConstant.getResult());
+  }
+  if (!shouldInsertLifetimes)
+    return;
+  // Insert a lifetime end intrinsic before each return in the callee function.
+  for (Block &block : inlinedBlocks) {
+    if (!block.getTerminator()->hasTrait<OpTrait::ReturnLike>())
+      continue;
+    builder.setInsertionPoint(block.getTerminator());
+    for (auto &[allocaOp, arraySize, shouldInsertLifetime] : allocasToMove) {
+      if (!shouldInsertLifetime)
+        continue;
+      builder.create<LLVM::LifetimeEndOp>(
+          allocaOp.getLoc(), arraySize.getValue().getLimitedValue(),
+          allocaOp.getResult());
+    }
   }
 }
 
@@ -2912,7 +2959,8 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
             return false;
           return true;
         })
-        .Case<LLVM::CallOp, LLVM::AllocaOp>([](auto) { return true; })
+        .Case<LLVM::CallOp, LLVM::AllocaOp, LLVM::LifetimeStartOp,
+              LLVM::LifetimeEndOp>([](auto) { return true; })
         .Default([](auto) { return false; });
   }
 

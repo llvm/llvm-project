@@ -13,6 +13,7 @@
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/EHUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
@@ -32,7 +33,7 @@
 #include <vector>
 
 using namespace llvm;
-#define DEBUG_TYPE "sample-profile-probe"
+#define DEBUG_TYPE "pseudo-probe"
 
 STATISTIC(ArtificialDbgLine,
           "Number of probes that have an artificial debug line");
@@ -253,8 +254,14 @@ void SampleProfileProber::computeCFGHash() {
 }
 
 void SampleProfileProber::computeProbeIdForBlocks() {
+  DenseSet<BasicBlock *> KnownColdBlocks;
+  computeEHOnlyBlocks(*F, KnownColdBlocks);
+  // Insert pseudo probe to non-cold blocks only. This will reduce IR size as
+  // well as the binary size while retaining the profile quality.
   for (auto &BB : *F) {
-    BlockProbeIds[&BB] = ++LastProbeId;
+    ++LastProbeId;
+    if (!KnownColdBlocks.contains(&BB))
+      BlockProbeIds[&BB] = LastProbeId;
   }
 }
 

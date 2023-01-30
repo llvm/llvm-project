@@ -745,15 +745,21 @@ RecurrenceDescriptor::isConditionalRdxPattern(RecurKind Kind, Instruction *I) {
     return InstDesc(false, I);
 
   Value *Op1, *Op2;
-  if ((m_FAdd(m_Value(Op1), m_Value(Op2)).match(I1)  ||
-       m_FSub(m_Value(Op1), m_Value(Op2)).match(I1)) &&
-      I1->isFast())
-    return InstDesc(Kind == RecurKind::FAdd, SI);
+  if (!(((m_FAdd(m_Value(Op1), m_Value(Op2)).match(I1) ||
+          m_FSub(m_Value(Op1), m_Value(Op2)).match(I1)) &&
+         I1->isFast()) ||
+        (m_FMul(m_Value(Op1), m_Value(Op2)).match(I1) && (I1->isFast())) ||
+        ((m_Add(m_Value(Op1), m_Value(Op2)).match(I1) ||
+          m_Sub(m_Value(Op1), m_Value(Op2)).match(I1))) ||
+        (m_Mul(m_Value(Op1), m_Value(Op2)).match(I1))))
+    return InstDesc(false, I);
 
-  if (m_FMul(m_Value(Op1), m_Value(Op2)).match(I1) && (I1->isFast()))
-    return InstDesc(Kind == RecurKind::FMul, SI);
+  Instruction *IPhi = isa<PHINode>(*Op1) ? dyn_cast<Instruction>(Op1)
+                                         : dyn_cast<Instruction>(Op2);
+  if (!IPhi || IPhi != FalseVal)
+    return InstDesc(false, I);
 
-  return InstDesc(false, I);
+  return InstDesc(true, SI);
 }
 
 RecurrenceDescriptor::InstDesc
@@ -786,7 +792,8 @@ RecurrenceDescriptor::isRecurrenceInstr(Loop *L, PHINode *OrigPhi,
     return InstDesc(Kind == RecurKind::FAdd, I,
                     I->hasAllowReassoc() ? nullptr : I);
   case Instruction::Select:
-    if (Kind == RecurKind::FAdd || Kind == RecurKind::FMul)
+    if (Kind == RecurKind::FAdd || Kind == RecurKind::FMul ||
+        Kind == RecurKind::Add || Kind == RecurKind::Mul)
       return isConditionalRdxPattern(Kind, I);
     [[fallthrough]];
   case Instruction::FCmp:

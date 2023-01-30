@@ -1,3 +1,10 @@
+set(SWIG_EXTRA_FLAGS -c++ -threads -python)
+
+if ("${SWIG_VERSION}" VERSION_LESS "4.1.0")
+  set(SWIG_EXTRA_FLAGS ${SWIG_EXTRA_FLAGS} -py3)
+  message(STATUS "SWIG version ${SWIG_VERSION} uses `-py3` flag.")
+endif()
+
 add_custom_command(
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/LLDBWrapPython.cpp
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/lldb.py

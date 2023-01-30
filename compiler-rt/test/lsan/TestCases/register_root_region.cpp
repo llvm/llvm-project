@@ -4,9 +4,6 @@
 // RUN: %env_lsan_opts=use_stacks=0:use_registers=0 not %run %t foo 2>&1 | FileCheck %s
 // RUN: %env_lsan_opts=use_stacks=0:use_registers=0:use_root_regions=0 not %run %t 2>&1 | FileCheck %s
 
-// Fixme: remove once test passes with hwasan
-// UNSUPPORTED: hwasan
-
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>

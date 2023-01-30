@@ -1283,16 +1283,16 @@ func.func @write_to_same_alloc_tensor_out_of_place(
 
 // -----
 
-// CHECK-LABEL: func.func private @ext_func(tensor<*xf32> {bufferization.access = "read-write"})
-func.func private @ext_func(%t: tensor<*xf32>)
+// CHECK-LABEL: func.func private @ext_func(tensor<?xf32> {bufferization.access = "read-write"})
+func.func private @ext_func(%t: tensor<?xf32>)
 
 // CHECK: func.func @private_func_read_write(%{{.*}}: tensor<5xf32> {bufferization.access = "read"})
 func.func @private_func_read_write(%t: tensor<5xf32>) -> f32 {
   %c0 = arith.constant 0 : index
   // Bufferizes out-of-place because `ext_func` may modify the buffer.
   // CHECK: tensor.cast {{.*}} {__inplace_operands_attr__ = ["false"]}
-  %0 = tensor.cast %t : tensor<5xf32> to tensor<*xf32>
-  func.call @ext_func(%0) : (tensor<*xf32>) -> ()
+  %0 = tensor.cast %t : tensor<5xf32> to tensor<?xf32>
+  func.call @ext_func(%0) : (tensor<?xf32>) -> ()
   %1 = tensor.extract %t[%c0] : tensor<5xf32>
   return %1 : f32
 }

@@ -44,6 +44,10 @@ Improvements and New Features
 Deprecations and Removals
 -------------------------
 
+- The ``<experimental/coroutine>`` header has been removed in this release. The ``<coroutine>`` header
+  has been shipping since LLVM 14, so the Coroutines TS implementation is being removed per our policy
+  for removing TSes.
+
 Upcoming Deprecations and Removals
 ----------------------------------
 

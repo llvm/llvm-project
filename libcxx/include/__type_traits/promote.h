@@ -13,7 +13,6 @@
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_same.h>
 #include <__utility/declval.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
