@@ -189,16 +189,17 @@ void RISCVMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   // RISCVInstrInfo::getInstSizeInBytes expects that the total size of the
   // expanded instructions for each pseudo is correct in the Size field of the
   // tablegen definition for the pseudo.
-  if (MI.getOpcode() == RISCV::PseudoCALLReg ||
-      MI.getOpcode() == RISCV::PseudoCALL ||
-      MI.getOpcode() == RISCV::PseudoTAIL ||
-      MI.getOpcode() == RISCV::PseudoJump) {
+  switch (MI.getOpcode()) {
+  default:
+    break;
+  case RISCV::PseudoCALLReg:
+  case RISCV::PseudoCALL:
+  case RISCV::PseudoTAIL:
+  case RISCV::PseudoJump:
     expandFunctionCall(MI, OS, Fixups, STI);
     MCNumEmitted += 2;
     return;
-  }
-
-  if (MI.getOpcode() == RISCV::PseudoAddTPRel) {
+  case RISCV::PseudoAddTPRel:
     expandAddTPRel(MI, OS, Fixups, STI);
     MCNumEmitted += 1;
     return;
