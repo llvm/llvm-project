@@ -139,17 +139,6 @@ applyOpPatternsAndFold(ArrayRef<Operation *> ops,
                        GreedyRewriteConfig config = GreedyRewriteConfig(),
                        bool *changed = nullptr, bool *allErased = nullptr);
 
-/// Applies the specified patterns on `op` while also trying to fold it.
-/// This function is a shortcut for the ArrayRef<Operation *> overload and
-/// behaves the same way.
-inline LogicalResult
-applyOpPatternsAndFold(Operation *op, const FrozenRewritePatternSet &patterns,
-                       GreedyRewriteConfig config = GreedyRewriteConfig(),
-                       bool *erased = nullptr) {
-  return applyOpPatternsAndFold(ArrayRef(op), patterns, config,
-                                /*changed=*/nullptr, erased);
-}
-
 } // namespace mlir
 
 #endif // MLIR_TRANSFORMS_GREEDYPATTERNREWRITEDRIVER_H_
