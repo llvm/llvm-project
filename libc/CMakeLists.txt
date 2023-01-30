@@ -31,6 +31,8 @@ if(LLVM_ENABLE_RUNTIMES AND NOT LLVM_RUNTIMES_BUILD)
   return()
 endif()
 
+option(LIBC_CMAKE_VERBOSE_LOGGING
+       "Log details warnings and notifications during CMake configuration." OFF)
 # Path libc/scripts directory.
 set(LIBC_BUILD_SCRIPTS_DIR "${LIBC_SOURCE_DIR}/utils/build_scripts")
 
