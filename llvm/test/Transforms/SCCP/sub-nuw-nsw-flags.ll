@@ -5,7 +5,7 @@ define i8 @range_from_lshr(i8 %a) {
 ; CHECK-LABEL: @range_from_lshr(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SHR:%.*]] = lshr i8 [[A:%.*]], 1
-; CHECK-NEXT:    [[SUB_1:%.*]] = sub i8 [[A_SHR]], 1
+; CHECK-NEXT:    [[SUB_1:%.*]] = sub nsw i8 [[A_SHR]], 1
 ; CHECK-NEXT:    [[SUB_2:%.*]] = sub i8 [[A_SHR]], -128
 ; CHECK-NEXT:    [[SUB_3:%.*]] = sub i8 [[A_SHR]], -127
 ; CHECK-NEXT:    [[SUB_4:%.*]] = sub i8 [[A_SHR]], -1
@@ -31,7 +31,7 @@ define i8 @sub_zero(i8 %a) {
 ; CHECK-LABEL: @sub_zero(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SUB_1:%.*]] = sub i8 0, [[A:%.*]]
-; CHECK-NEXT:    [[SUB_2:%.*]] = sub i8 -1, [[A]]
+; CHECK-NEXT:    [[SUB_2:%.*]] = sub nuw nsw i8 -1, [[A]]
 ; CHECK-NEXT:    [[SUB_3:%.*]] = sub i8 1, [[A]]
 ; CHECK-NEXT:    [[SUB_4:%.*]] = sub i8 [[A]], -1
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i8 [[SUB_1]], [[SUB_2]]
