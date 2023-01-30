@@ -1260,10 +1260,10 @@ std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
   return make_error_code(errc::no_lock_available);
 }
 
-std::error_code lockFile(int FD) {
+std::error_code lockFile(int FD, bool Exclusive) {
   struct flock Lock;
   memset(&Lock, 0, sizeof(Lock));
-  Lock.l_type = F_WRLCK;
+  Lock.l_type = Exclusive ? F_WRLCK : F_RDLCK;
   Lock.l_whence = SEEK_SET;
   Lock.l_start = 0;
   Lock.l_len = 0;
