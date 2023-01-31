@@ -32,7 +32,8 @@ protected:
   } while (false);
 
 TEST_F(IndexedTokenSourceTest, EmptyInput) {
-  IndexedTokenSource Source(lex(""));
+  TokenList Tokens = lex("");
+  IndexedTokenSource Source(Tokens);
   EXPECT_FALSE(Source.isEOF());
   EXPECT_TOKEN_KIND(Source.getNextToken(), tok::eof);
   EXPECT_TRUE(Source.isEOF());
@@ -45,7 +46,8 @@ TEST_F(IndexedTokenSourceTest, EmptyInput) {
 }
 
 TEST_F(IndexedTokenSourceTest, NavigateTokenStream) {
-  IndexedTokenSource Source(lex("int a;"));
+  TokenList Tokens = lex("int a;");
+  IndexedTokenSource Source(Tokens);
   EXPECT_TOKEN_KIND(Source.peekNextToken(), tok::kw_int);
   EXPECT_TOKEN_KIND(Source.getNextToken(), tok::kw_int);
   EXPECT_EQ(Source.getPreviousToken(), nullptr);
@@ -61,7 +63,8 @@ TEST_F(IndexedTokenSourceTest, NavigateTokenStream) {
 }
 
 TEST_F(IndexedTokenSourceTest, ResetPosition) {
-  IndexedTokenSource Source(lex("int a;"));
+  TokenList Tokens = lex("int a;");
+  IndexedTokenSource Source(Tokens);
   Source.getNextToken();
   unsigned Position = Source.getPosition();
   Source.getNextToken();

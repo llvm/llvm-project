@@ -52,7 +52,7 @@ public:
   virtual FormatToken *setPosition(unsigned Position) = 0;
 };
 
-class IndexedTokenSource : public FormatTokenSource {
+class LLVM_GSL_POINTER IndexedTokenSource : public FormatTokenSource {
 public:
   IndexedTokenSource(ArrayRef<FormatToken *> Tokens)
       : Tokens(Tokens), Position(-1) {}
