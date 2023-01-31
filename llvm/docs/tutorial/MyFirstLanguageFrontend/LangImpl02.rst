@@ -38,7 +38,7 @@ We'll start with expressions first:
     /// ExprAST - Base class for all expression nodes.
     class ExprAST {
     public:
-      virtual ~ExprAST() {}
+      virtual ~ExprAST() = default;
     };
 
     /// NumberExprAST - Expression class for numeric literals like "1.0".
@@ -77,9 +77,9 @@ language:
       std::unique_ptr<ExprAST> LHS, RHS;
 
     public:
-      BinaryExprAST(char op, std::unique_ptr<ExprAST> LHS,
+      BinaryExprAST(char Op, std::unique_ptr<ExprAST> LHS,
                     std::unique_ptr<ExprAST> RHS)
-        : Op(op), LHS(std::move(LHS)), RHS(std::move(RHS)) {}
+        : Op(Op), LHS(std::move(LHS)), RHS(std::move(RHS)) {}
     };
 
     /// CallExprAST - Expression class for function calls.
@@ -117,8 +117,8 @@ way to talk about functions themselves:
       std::vector<std::string> Args;
 
     public:
-      PrototypeAST(const std::string &name, std::vector<std::string> Args)
-        : Name(name), Args(std::move(Args)) {}
+      PrototypeAST(const std::string &Name, std::vector<std::string> Args)
+        : Name(Name), Args(std::move(Args)) {}
 
       const std::string &getName() const { return Name; }
     };
@@ -180,7 +180,7 @@ be parsed.
 
     /// LogError* - These are little helper functions for error handling.
     std::unique_ptr<ExprAST> LogError(const char *Str) {
-      fprintf(stderr, "LogError: %s\n", Str);
+      fprintf(stderr, "Error: %s\n", Str);
       return nullptr;
     }
     std::unique_ptr<PrototypeAST> LogErrorP(const char *Str) {
@@ -280,7 +280,7 @@ function calls:
       getNextToken();  // eat (
       std::vector<std::unique_ptr<ExprAST>> Args;
       if (CurTok != ')') {
-        while (1) {
+        while (true) {
           if (auto Arg = ParseExpression())
             Args.push_back(std::move(Arg));
           else
@@ -444,7 +444,7 @@ starts with:
     static std::unique_ptr<ExprAST> ParseBinOpRHS(int ExprPrec,
                                                   std::unique_ptr<ExprAST> LHS) {
       // If this is a binop, find its precedence.
-      while (1) {
+      while (true) {
         int TokPrec = GetTokPrecedence();
 
         // If this is a binop that binds at least as tightly as the current binop,
@@ -653,7 +653,7 @@ include the top-level loop. See `below <#full-code-listing>`_ for full code in t
 
     /// top ::= definition | external | expression | ';'
     static void MainLoop() {
-      while (1) {
+      while (true) {
         fprintf(stderr, "ready> ");
         switch (CurTok) {
         case tok_eof:
