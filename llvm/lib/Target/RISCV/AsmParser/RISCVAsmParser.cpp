@@ -1832,7 +1832,7 @@ OperandMatchResultTy RISCVAsmParser::parseGPRAsFPR(OperandVector &Operands) {
   if (RegNo == RISCV::NoRegister)
     return MatchOperand_NoMatch;
   SMLoc S = getLoc();
-  SMLoc E = SMLoc::getFromPointer(S.getPointer() - 1);
+  SMLoc E = SMLoc::getFromPointer(S.getPointer() + Name.size());
   getLexer().Lex();
   Operands.push_back(RISCVOperand::createReg(
       RegNo, S, E, isRV64(), !getSTI().hasFeature(RISCV::FeatureStdExtF)));
