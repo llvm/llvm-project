@@ -1319,18 +1319,68 @@ static SDNode *selectI64Imm(SelectionDAG *CurDAG, const SDLoc &dl, uint64_t Imm,
   auto getI32Imm = [CurDAG, dl](unsigned Imm) {
     return CurDAG->getTargetConstant(Imm, dl, MVT::i32);
   };
+
+  uint32_t Hi16OfLo32 = (Lo_32(Imm) >> 16) & 0xffff;
+  uint32_t Lo16OfLo32 = Lo_32(Imm) & 0xffff;
+
+  // Try to use 4 instructions to materialize the immediate which is "almost" a
+  // splat of a 32 bit immediate.
+  if (Hi16OfLo32 && Lo16OfLo32) {
+    uint32_t Hi16OfHi32 = (Hi_32(Imm) >> 16) & 0xffff;
+    uint32_t Lo16OfHi32 = Hi_32(Imm) & 0xffff;
+    bool IsSelected = false;
+
+    auto getSplat = [CurDAG, dl, getI32Imm](uint32_t Hi16, uint32_t Lo16) {
+      SDNode *Result =
+          CurDAG->getMachineNode(PPC::LIS8, dl, MVT::i64, getI32Imm(Hi16));
+      Result = CurDAG->getMachineNode(PPC::ORI8, dl, MVT::i64,
+                                      SDValue(Result, 0), getI32Imm(Lo16));
+      SDValue Ops[] = {SDValue(Result, 0), SDValue(Result, 0), getI32Imm(32),
+                       getI32Imm(0)};
+      return CurDAG->getMachineNode(PPC::RLDIMI, dl, MVT::i64, Ops);
+    };
+
+    if (Hi16OfHi32 == Lo16OfHi32 && Lo16OfHi32 == Lo16OfLo32) {
+      IsSelected = true;
+      Result = getSplat(Hi16OfLo32, Lo16OfLo32);
+      // Modify Hi16OfHi32.
+      SDValue Ops[] = {SDValue(Result, 0), SDValue(Result, 0), getI32Imm(48),
+                       getI32Imm(0)};
+      Result = CurDAG->getMachineNode(PPC::RLDIMI, dl, MVT::i64, Ops);
+    } else if (Hi16OfHi32 == Hi16OfLo32 && Hi16OfLo32 == Lo16OfLo32) {
+      IsSelected = true;
+      Result = getSplat(Hi16OfHi32, Lo16OfHi32);
+      // Modify Lo16OfLo32.
+      SDValue Ops[] = {SDValue(Result, 0), SDValue(Result, 0), getI32Imm(16),
+                       getI32Imm(16), getI32Imm(31)};
+      Result = CurDAG->getMachineNode(PPC::RLWIMI8, dl, MVT::i64, Ops);
+    } else if (Lo16OfHi32 == Lo16OfLo32 && Hi16OfLo32 == Lo16OfLo32) {
+      IsSelected = true;
+      Result = getSplat(Hi16OfHi32, Lo16OfHi32);
+      // Modify Hi16OfLo32.
+      SDValue Ops[] = {SDValue(Result, 0), SDValue(Result, 0), getI32Imm(16),
+                       getI32Imm(0), getI32Imm(15)};
+      Result = CurDAG->getMachineNode(PPC::RLWIMI8, dl, MVT::i64, Ops);
+    }
+    if (IsSelected == true) {
+      if (InstCnt)
+        *InstCnt = 4;
+      return Result;
+    }
+  }
+
   // Handle the upper 32 bit value.
   Result =
       selectI64ImmDirect(CurDAG, dl, Imm & 0xffffffff00000000, InstCntDirect);
   // Add in the last bits as required.
-  if (uint32_t Hi16 = (Lo_32(Imm) >> 16) & 0xffff) {
+  if (Hi16OfLo32) {
     Result = CurDAG->getMachineNode(PPC::ORIS8, dl, MVT::i64,
-                                    SDValue(Result, 0), getI32Imm(Hi16));
+                                    SDValue(Result, 0), getI32Imm(Hi16OfLo32));
     ++InstCntDirect;
   }
-  if (uint32_t Lo16 = Lo_32(Imm) & 0xffff) {
+  if (Lo16OfLo32) {
     Result = CurDAG->getMachineNode(PPC::ORI8, dl, MVT::i64, SDValue(Result, 0),
-                                    getI32Imm(Lo16));
+                                    getI32Imm(Lo16OfLo32));
     ++InstCntDirect;
   }
   if (InstCnt)
