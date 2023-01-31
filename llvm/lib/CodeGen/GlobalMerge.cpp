@@ -652,14 +652,6 @@ bool GlobalMerge::doInitialization(Module &M) {
     if (isMustKeepGlobalVariable(&GV))
       continue;
 
-    // Don't merge tagged globals, as each global should have its own unique
-    // memory tag at runtime. TODO(hctim): This can be relaxed: constant globals
-    // with compatible alignment and the same contents may be merged as long as
-    // the globals occupy the same number of tag granules (i.e. `size_a / 16 ==
-    // size_b / 16`).
-    if (GV.isTagged())
-      continue;
-
     Type *Ty = GV.getValueType();
     if (DL.getTypeAllocSize(Ty) < MaxOffset) {
       if (TM &&
