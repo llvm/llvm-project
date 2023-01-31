@@ -3034,6 +3034,20 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_sqdmulh_vgx4 : SME2_VG4_Multi_Multi_Intrinsic;
 
   //
+  // Multi-vector min/max
+  //
+
+  foreach ty = ["f", "s", "u"] in {
+    foreach instr = ["max", "min"] in {
+      def int_aarch64_sve_ # ty # instr # _single_x2 : SME2_VG2_Multi_Single_Intrinsic;
+      def int_aarch64_sve_ # ty # instr # _single_x4 : SME2_VG4_Multi_Single_Intrinsic;
+
+      def int_aarch64_sve_ # ty # instr # _x2 : SME2_VG2_Multi_Multi_Intrinsic;
+      def int_aarch64_sve_ # ty # instr # _x4 : SME2_VG4_Multi_Multi_Intrinsic;
+    }
+  }
+
+  //
   // Multi-vector vertical dot-products
   //
 
