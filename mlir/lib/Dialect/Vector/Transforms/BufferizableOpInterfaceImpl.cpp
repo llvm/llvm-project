@@ -200,7 +200,8 @@ struct MaskOpInterface
     });
 
     // Create a new vector.mask op.
-    TypeRange newResultTypes(newYieldedValues);
+    ValueRange newYieldedValuesRange(newYieldedValues);
+    TypeRange newResultTypes(newYieldedValuesRange);
     auto newOp = rewriter.create<vector::MaskOp>(
         op->getLoc(), newResultTypes, maskOp.getMask(), maskOp.getPassthru(),
         /*maskableOp=*/nullptr,
