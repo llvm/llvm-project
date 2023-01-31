@@ -6275,6 +6275,7 @@ attribute requires a string literal argument to identify the handle being releas
 }
 
 def UnsafeBufferUsageDocs : Documentation {
+  let Category = DocCatFunction;
   let Content = [{
 The attribute ``[[clang::unsafe_buffer_usage]]`` should be placed on functions
 that need to be avoided as they are prone to buffer overflows. It is designed to
@@ -6295,6 +6296,7 @@ would make sense to put the attribute on function ``foo()`` below because
 passing an incorrect size parameter would cause a buffer overflow:
 
 .. code-block:: c++
+
   [[clang::unsafe_buffer_usage]]
   void foo(int *buf, size_t size) {
     for (size_t i = 0; i < size; ++i) {
