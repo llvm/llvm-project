@@ -92,35 +92,63 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
          }]
       >,
       InterfaceMethod<
-          /*desc=*/[{
-            Return `true` if the given OpResult is a memory write. This is the
-            case if in the following cases:
+        /*desc=*/[{
+          Return `true` if the given OpResult bufferizes to a memory write.
+          This is the same property as `bufferizesToMemoryWrite`, but from The
+          perspective of OpResults.
 
-            * The corresponding aliasing OpOperand bufferizes to a memory write.
-            * Or: There is no corresponding aliasing OpOperand.
+          This method will never be called on OpResults that do not have a
+          tensor type.
 
-            If the OpResult has multiple aliasing OpOperands, this method
-            returns `true` if at least one of them bufferizes to a memory write.
+          This method has a default implementation. By default, it returns
+          `true` if any of the following three cases applies.
+
+          1. There is no corresponding aliasing OpOperand.
+
+             Example: `tensor.generate ... : tensor<10xf32>`
+             The op fills a newly allocated buffer and bufferizes to a memory
+             write.
+
+             Counter-example: bufferization.alloc_tensor
+             The op just allocates and does not specifiy the data of the tensor,
+             so resultBufferizesToMemoryWrite is overridden to return false.
+
+          2. At least one aliasing OpOperand bufferizes to a memory write.
+
+             Example: `tensor.insert %f into %t[...] : tensor<?xf32>`
+             The destination OpOperand bufferizes to a memory write, so the
+             result also bufferizes to a memory write.
+
+          3. At least one aliasing OpOperand's value is defined inside the
+             defining op of the given OpResult and it is a memory write or the
+             reverse SSA use-def chain ends in the defining op.
+
+             According to this rule, an aliasing OpOperand value that is defined
+             inside this op and is bufferizing to a memory write makes the given
+             OpResult bufferize to a memory write.
+
+             Example:
+             ```
+             %r = scf.if ... -> tensor<?xf32> {
+               %1 = tensor.insert %f into %t[...] : tensor<?xf32>
+               scf.yield %1 : tensor<?xf32>
+             } else { ... }
+             ```
+             The scf.if result bufferizes to a memory write because %1 (an
+             OpResult defined inside the scf.if op) bufferizes to a memory
+             write.
           }],
-          /*retType=*/"bool",
-          /*methodName=*/"isMemoryWrite",
-          /*args=*/(ins "::mlir::OpResult":$opResult,
-                        "const ::mlir::bufferization::AnalysisState &":$state),
-          /*methodBody=*/"",
-          /*defaultImplementation=*/[{
-            auto bufferizableOp =
-                cast<BufferizableOpInterface>($_op.getOperation());
-            SmallVector<OpOperand*> opOperands =
-              bufferizableOp.getAliasingOpOperand(opResult, state);
-            if (opOperands.empty())
-              return true;
-            return llvm::any_of(
-                opOperands,
-                [&](OpOperand *operand) {
-                  return bufferizableOp.bufferizesToMemoryWrite(*operand,
-                                                                state);
-                });
-          }]
+        /*retType=*/"bool",
+        /*methodName=*/"resultBufferizesToMemoryWrite",
+        /*args=*/(ins "::mlir::OpResult":$opResult,
+                      "const ::mlir::bufferization::AnalysisState &":$state),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          assert(opResult.getDefiningOp() == $_op.getOperation() &&
+                 "invalid OpResult");
+          return bufferization::detail::defaultResultBufferizesToMemoryWrite(
+              opResult, state);
+        }]
       >,
       InterfaceMethod<
         /*desc=*/[{

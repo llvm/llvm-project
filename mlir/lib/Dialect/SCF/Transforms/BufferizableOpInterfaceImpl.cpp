@@ -123,18 +123,6 @@ struct ExecuteRegionOpInterface
     return {&yieldOp->getOpOperand(resultNum)};
   }
 
-  // TODO: For better bufferization results, this could return `true` only if
-  // there is a memory write in the region.
-  bool isMemoryWrite(Operation *op, OpResult opResult,
-                     const AnalysisState &state) const {
-    // Similar to scf.if, results of this op are always considered memory writes
-    // in the analysis. This is a useful pattern for all ops that have tensor
-    // OpResults but no tensor OpOperands. By default, `isMemoryWrite` is
-    // implemented in terms of `bufferizesToMemoryWrite`, which does not work on
-    // ops without OpOperands.
-    return true;
-  }
-
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     auto executeRegionOp = cast<scf::ExecuteRegionOp>(op);
@@ -188,37 +176,6 @@ struct IfOpInterface
                                      llvm::find(op->getOpResults(), opResult));
     return {&ifOp.thenYield()->getOpOperand(resultNum),
             &ifOp.elseYield()->getOpOperand(resultNum)};
-  }
-
-  // TODO: For better bufferization results, this could return `true` only if
-  // there is a memory write in one (or both) of the branches. Since this is not
-  // allowed at the moment, we should never encounter scf.ifs that yield
-  // unmodified tensors. Such scf.yield ops could just fold away.
-  bool isMemoryWrite(Operation *op, OpResult opResult,
-                     const AnalysisState &state) const {
-    // IfOp results are always considered memory writes in the analysis. This
-    // design decision simplifies the analysis considerably. E.g., consider the
-    // following test case:
-    //
-    // %0 = "some_writing_op" : tensor<?xf32>
-    // %r = scf.if %c -> (tensor<?xf32>) {
-    //   scf.yield %0
-    // } else {
-    //   %1 = "another_writing_op"(%0) : tensor<?xf32>
-    // }
-    // "some_reading_op"(%r)
-    //
-    // "another_writing_op" in the above example should be able to bufferize
-    // inplace in the absence of another read of %0. However, if the scf.if op
-    // would not be considered a "write", the analysis would detect the
-    // following conflict:
-    //
-    // * read = some_reading_op
-    // * lastWrite = %0  (Note: The last write of %r would be a set: {%0, %1}.)
-    // * conflictingWrite = %1
-    //
-    // For more details, check the "scf.IfOp" section of the design document.
-    return true;
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,

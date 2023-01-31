@@ -405,6 +405,16 @@ bool AnalysisState::bufferizesToAliasOnly(OpOperand &opOperand) const {
   return false;
 }
 
+bool AnalysisState::bufferizesToMemoryWrite(Value value) const {
+  auto opResult = value.dyn_cast<OpResult>();
+  if (!opResult)
+    return true;
+  auto bufferizableOp = getOptions().dynCastBufferizableOp(value);
+  if (!bufferizableOp)
+    return true;
+  return bufferizableOp.resultBufferizesToMemoryWrite(opResult, *this);
+}
+
 /// Return true if the given value is read by an op that bufferizes to a memory
 /// read. Also takes into account ops that create an alias but do not read by
 /// themselves (e.g., ExtractSliceOp).
@@ -473,15 +483,8 @@ llvm::SetVector<Value> AnalysisState::findValueInReverseUseDefChain(
 // Find the Values of the last preceding write of a given Value.
 llvm::SetVector<Value>
 AnalysisState::findLastPrecedingWrite(Value value) const {
-  return findValueInReverseUseDefChain(value, [&](Value value) {
-    Operation *op = value.getDefiningOp();
-    if (!op)
-      return true;
-    auto bufferizableOp = options.dynCastBufferizableOp(op);
-    if (!bufferizableOp)
-      return true;
-    return bufferizableOp.isMemoryWrite(value.cast<OpResult>(), *this);
-  });
+  return findValueInReverseUseDefChain(
+      value, [&](Value v) { return this->bufferizesToMemoryWrite(v); });
 }
 
 AnalysisState::AnalysisState(const BufferizationOptions &options)
@@ -616,6 +619,70 @@ FailureOr<Value> bufferization::getBuffer(RewriterBase &rewriter, Value value,
   return rewriter
       .create<bufferization::ToMemrefOp>(value.getLoc(), *memrefType, value)
       .getResult();
+}
+
+bool bufferization::detail::defaultResultBufferizesToMemoryWrite(
+    OpResult opResult, const AnalysisState &state) {
+  auto bufferizableOp = cast<BufferizableOpInterface>(opResult.getDefiningOp());
+  SmallVector<OpOperand *> opOperands =
+      bufferizableOp.getAliasingOpOperand(opResult, state);
+
+  // Case 1: OpResults that have no aliasing OpOperand usually bufferize to
+  // memory writes.
+  if (opOperands.empty())
+    return true;
+
+  // Case 2: If an aliasing OpOperand bufferizes to a memory write, the OpResult
+  // may bufferize to a memory write.
+  if (llvm::any_of(opOperands, [&](OpOperand *operand) {
+        return state.bufferizesToMemoryWrite(*operand);
+      }))
+    return true;
+
+  // Case 3: Check if a nested aliasing OpOperand value bufferizes to a memory
+  // write. (Or: The reverse SSA use-def chain ends inside the reigon.) In that
+  // case, the OpResult bufferizes to a memory write. E.g.:
+  //
+  // %0 = "some_writing_op" : tensor<?xf32>
+  // %r = scf.if ... -> tensor<?xf32> {
+  //   scf.yield %0 : tensor<?xf32>
+  // } else {
+  //   %1 = "another_writing_op"(%0) : tensor<?xf32>
+  //   scf.yield %1 : tensor<?xf32>
+  // }
+  // "some_reading_op"(%r)
+  //
+  // %r bufferizes to a memory write because an aliasing OpOperand value (%1)
+  // bufferizes to a memory write and the defining op is inside the scf.if.
+  //
+  // Note: This treatment of surrouding ops is useful for ops that have a
+  // region but no OpOperand such as scf.if or scf.execute_region. It simplifies
+  // the analysis considerably.
+  //
+  // "another_writing_op" in the above example should be able to bufferize
+  // inplace in the absence of another read of %0. However, if the scf.if op
+  // would not be considered a "write", the analysis would detect the
+  // following conflict:
+  //
+  // * read = some_reading_op
+  // * lastWrite = %0  (Note: The last write of %r would be a set: {%0, %1}.)
+  // * conflictingWrite = %1
+  //
+  auto isMemoryWriteInsideOp = [&](Value v) {
+    Operation *op = getOwnerOfValue(v);
+    if (!opResult.getDefiningOp()->isAncestor(op))
+      return false;
+    return state.bufferizesToMemoryWrite(v);
+  };
+  for (OpOperand *operand : opOperands) {
+    if (!state
+             .findValueInReverseUseDefChain(operand->get(),
+                                            isMemoryWriteInsideOp,
+                                            /*followEquivalentOnly=*/false)
+             .empty())
+      return true;
+  }
+  return false;
 }
 
 FailureOr<BaseMemRefType> bufferization::detail::defaultGetBufferType(
