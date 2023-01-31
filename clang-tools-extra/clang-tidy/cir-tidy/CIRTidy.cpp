@@ -21,9 +21,13 @@
 #include "clang-tidy-config.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Tooling/DiagnosticsYaml.h"
 #include "clang/Tooling/Refactoring.h"
+#include "clang/Tooling/ReplacementsYaml.h"
+#include "clang/Tooling/Tooling.h"
 
 using namespace clang::tooling;
+using namespace llvm;
 
 namespace cir {
 namespace tidy {
@@ -48,6 +52,20 @@ std::vector<std::string> CIRTidyASTConsumerFactory::getCheckNames() {
 
   llvm::sort(CheckNames);
   return CheckNames;
+}
+
+void exportReplacements(const llvm::StringRef MainFilePath,
+                        const std::vector<ClangTidyError> &Errors,
+                        raw_ostream &OS) {
+  TranslationUnitDiagnostics TUD;
+  TUD.MainSourceFile = std::string(MainFilePath);
+  for (const auto &Error : Errors) {
+    tooling::Diagnostic Diag = Error;
+    TUD.Diagnostics.insert(TUD.Diagnostics.end(), Diag);
+  }
+
+  yaml::Output YAML(OS);
+  YAML << TUD;
 }
 
 std::vector<ClangTidyError>
