@@ -11,14 +11,13 @@ define ptr @test(i1 %cond, ptr %p) {
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[VAR5:%.*]] = load atomic i32, ptr [[P:%.*]] unordered, align 8
 ; CHECK-NEXT:    [[VAR6:%.*]] = icmp ugt i32 [[VAR5]], 0
-; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[VAR6]], [[COND]]
-; CHECK-NEXT:    [[VAR7:%.*]] = and i1 [[WIDE_CHK]], [[VAR]]
+; CHECK-NEXT:    [[VAR7:%.*]] = and i1 [[VAR6]], [[VAR]]
 ; CHECK-NEXT:    br i1 [[VAR7]], label [[BB10:%.*]], label [[BB8:%.*]]
 ; CHECK:       bb8:
 ; CHECK-NEXT:    [[VAR9:%.*]] = call ptr (...) @llvm.experimental.deoptimize.p0(i32 13) [ "deopt"(i32 0) ]
 ; CHECK-NEXT:    ret ptr [[VAR9]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    br i1 true, label [[BB13:%.*]], label [[BB11:%.*]]
+; CHECK-NEXT:    br i1 [[VAR3]], label [[BB13:%.*]], label [[BB11:%.*]]
 ; CHECK:       bb11:
 ; CHECK-NEXT:    [[VAR12:%.*]] = call ptr (...) @llvm.experimental.deoptimize.p0(i32 13) [ "deopt"(i32 1) ]
 ; CHECK-NEXT:    ret ptr [[VAR12]]
