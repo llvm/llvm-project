@@ -975,6 +975,16 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
     }
   }
 
+  // Fold (add (zext (add X, -1)), 1) -> (zext X) if X is non-zero.
+  // TODO: There's a general form for any constant on the outer add.
+  if (C->isOne()) {
+    if (match(Op0, m_ZExt(m_Add(m_Value(X), m_AllOnes())))) {
+      const SimplifyQuery Q = SQ.getWithInstruction(&Add);
+      if (llvm::isKnownNonZero(X, DL, 0, Q.AC, Q.CxtI, Q.DT))
+        return new ZExtInst(X, Ty);
+    }
+  }
+
   return nullptr;
 }
 
