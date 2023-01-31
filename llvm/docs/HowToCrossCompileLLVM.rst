@@ -42,7 +42,6 @@ The CMake options you need to add are:
 
  * ``-DCMAKE_SYSTEM_NAME=<target-system>``
  * ``-DCMAKE_INSTALL_PREFIX=<install-dir>``
- * ``-DLLVM_NATIVE_TOOL_DIR=<path-to-host-bin>``
  * ``-DLLVM_HOST_TRIPLE=arm-linux-gnueabihf``
  * ``-DLLVM_TARGETS_TO_BUILD=ARM``
 
@@ -69,10 +68,13 @@ In addition to the ones above, you'll also need:
  * Appropriate use of ``-I`` and ``-L``, depending on how the cross GCC is installed,
    and where are the libraries and headers.
 
-The ``LLVM_NATIVE_TOOL_DIR`` option allows you to reuse prebuilt binaries
-(``llvm-tblgen``, ``clang-tblgen`` etc) for the build host, if such are
-available. If that's not available, the LLVM cross build will automatically
-launch a nested build to build the tools that are required.
+You may also want to set the ``LLVM_NATIVE_TOOL_DIR`` option - pointing
+at a directory with prebuilt LLVM tools (``llvm-tblgen``, ``clang-tblgen``
+etc) for the build host, allowing you to them reuse them if available.
+E.g. ``-DLLVM_NATIVE_TOOL_DIR=<path-to-native-llvm-build>/bin``.
+If the option isn't set (or the directory doesn't contain all needed tools),
+the LLVM cross build will automatically launch a nested build to build the
+tools that are required.
 
 The CXX flags define the target, cpu (which in this case
 defaults to ``fpu=VFP3`` with NEON), and forcing the hard-float ABI. If you're
