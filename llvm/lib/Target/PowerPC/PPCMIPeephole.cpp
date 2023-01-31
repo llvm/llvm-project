@@ -839,7 +839,8 @@ bool PPCMIPeephole::simplifyCode() {
           if (SrcMI->getOperand(1).isGlobal()) {
             const GlobalObject *GO =
                 dyn_cast<GlobalObject>(SrcMI->getOperand(1).getGlobal());
-            if (GO && GO->getAlign() && *GO->getAlign() >= 4)
+            if (GO && GO->getAlign() && *GO->getAlign() >= 4 &&
+                (SrcMI->getOperand(1).getOffset() % 4 == 0))
               IsWordAligned = true;
           } else if (SrcMI->getOperand(1).isImm()) {
             int64_t Value = SrcMI->getOperand(1).getImm();
