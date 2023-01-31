@@ -363,6 +363,13 @@ AArch64Subtarget::ClassifyGlobalReference(const GlobalValue *GV,
   if (TM.getCodeModel() == CodeModel::Large && isTargetMachO())
     return AArch64II::MO_GOT;
 
+  // All globals dynamically protected by MTE must have their address tags
+  // synthesized. This is done by having the loader stash the tag in the GOT
+  // entry. Force all tagged globals (even ones with internal linkage) through
+  // the GOT.
+  if (GV->isTagged())
+    return AArch64II::MO_GOT;
+
   if (!TM.shouldAssumeDSOLocal(*GV->getParent(), GV)) {
     if (GV->hasDLLImportStorageClass()) {
       if (isWindowsArm64EC() && GV->getValueType()->isFunctionTy())
