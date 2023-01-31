@@ -14876,7 +14876,7 @@ void Sema::CheckForIntOverflow (Expr *E) {
     Expr *OriginalE = Exprs.pop_back_val();
     Expr *E = OriginalE->IgnoreParenCasts();
 
-    if (isa<BinaryOperator>(E)) {
+    if (isa<BinaryOperator, UnaryOperator>(E)) {
       E->EvaluateForOverflow(Context);
       continue;
     }
