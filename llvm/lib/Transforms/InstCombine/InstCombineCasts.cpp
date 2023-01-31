@@ -252,6 +252,20 @@ Value *InstCombinerImpl::EvaluateInDifferentType(Value *V, Type *Ty,
     Res = CastInst::Create(
       static_cast<Instruction::CastOps>(Opc), I->getOperand(0), Ty);
     break;
+  case Instruction::Call:
+    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+      switch (II->getIntrinsicID()) {
+      default:
+        llvm_unreachable("Unsupported call!");
+      case Intrinsic::vscale: {
+        Function *Fn =
+            Intrinsic::getDeclaration(I->getModule(), Intrinsic::vscale, {Ty});
+        Res = CallInst::Create(Fn->getFunctionType(), Fn);
+        break;
+      }
+      }
+    }
+    break;
   default:
     // TODO: Can handle more cases here.
     llvm_unreachable("Unreachable!");
@@ -1213,6 +1227,13 @@ static bool canEvaluateZExtd(Value *V, Type *Ty, unsigned &BitsToClear,
         return false;
     return true;
   }
+  case Instruction::Call:
+    // llvm.vscale() can always be executed in larger type, because the
+    // value is automatically zero-extended.
+    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
+      if (II->getIntrinsicID() == Intrinsic::vscale)
+        return true;
+    return false;
   default:
     // TODO: Can handle more cases here.
     return false;
