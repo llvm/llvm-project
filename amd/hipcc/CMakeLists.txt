@@ -50,7 +50,7 @@ if(NOT WIN32)
   target_link_libraries(${HIPCONFIG_BIN} ${ADDITIONAL_SHARED_LIBRARIES_TO_LINK})
 endif()
 
-set(CPACK_GENERATOR "DEB;RPM" CACHE STRING "Default packaging generators")
+set(CPACK_GENERATOR "DEB;RPM;ZIP" CACHE STRING "Default packaging generators")
 set(CPACK_PACKAGE_CONTACT "ROCm Compiler Support <rocm.compiler.support@amd.com>")
 set(CPACK_PACKAGE_DESCRIPTION "HIP Compiler Driver")
 set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
