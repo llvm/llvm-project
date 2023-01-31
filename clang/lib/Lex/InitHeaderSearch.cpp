@@ -233,8 +233,6 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
     switch (os) {
     case llvm::Triple::CloudABI:
     case llvm::Triple::NaCl:
-    case llvm::Triple::PS4:
-    case llvm::Triple::PS5:
     case llvm::Triple::ELFIAMCU:
       break;
     case llvm::Triple::Win32:
@@ -339,31 +337,6 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
   case llvm::Triple::NaCl:
   case llvm::Triple::ELFIAMCU:
     break;
-  case llvm::Triple::PS4:
-  case llvm::Triple::PS5: {
-    // <isysroot> gets prepended later in AddPath().
-    std::string BaseSDKPath;
-    if (!HasSysroot) {
-      const char *EnvVar = (os == llvm::Triple::PS4) ? "SCE_ORBIS_SDK_DIR"
-                                                     : "SCE_PROSPERO_SDK_DIR";
-      const char *envValue = getenv(EnvVar);
-      if (envValue)
-        BaseSDKPath = envValue;
-      else {
-        // HSOpts.ResourceDir variable contains the location of Clang's
-        // resource files.
-        // Assuming that Clang is configured for PS4 without
-        // --with-clang-resource-dir option, the location of Clang's resource
-        // files is <SDK_DIR>/host_tools/lib/clang
-        SmallString<128> P = StringRef(HSOpts.ResourceDir);
-        llvm::sys::path::append(P, "../../..");
-        BaseSDKPath = std::string(P.str());
-      }
-    }
-    AddPath(BaseSDKPath + "/target/include", System, false);
-    AddPath(BaseSDKPath + "/target/include_common", System, false);
-    break;
-  }
   default:
     AddPath("/usr/include", ExternCSystem, false);
     break;
@@ -412,6 +385,8 @@ bool InitHeaderSearch::ShouldAddDefaultIncludePaths(
   case llvm::Triple::FreeBSD:
   case llvm::Triple::NetBSD:
   case llvm::Triple::OpenBSD:
+  case llvm::Triple::PS4:
+  case llvm::Triple::PS5:
   case llvm::Triple::Fuchsia:
   case llvm::Triple::Hurd:
   case llvm::Triple::Linux:
