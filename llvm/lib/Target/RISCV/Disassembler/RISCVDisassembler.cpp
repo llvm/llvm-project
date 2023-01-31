@@ -478,6 +478,13 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       if (Result != MCDisassembler::Fail)
         return Result;
     }
+    if (STI.getFeatureBits()[RISCV::FeatureVendorXTHeadBb]) {
+      LLVM_DEBUG(dbgs() << "Trying XTHeadBb custom opcode table:\n");
+      Result = decodeInstruction(DecoderTableTHeadBb32, MI, Insn, Address, this,
+                                 STI);
+      if (Result != MCDisassembler::Fail)
+        return Result;
+    }
     if (STI.getFeatureBits()[RISCV::FeatureVendorXTHeadBs]) {
       LLVM_DEBUG(dbgs() << "Trying XTHeadBs custom opcode table:\n");
       Result = decodeInstruction(DecoderTableTHeadBs32, MI, Insn, Address, this,
