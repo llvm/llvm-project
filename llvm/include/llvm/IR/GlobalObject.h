@@ -82,12 +82,6 @@ public:
     return decodeMaybeAlign(AlignmentData);
   }
 
-  /// Sets the alignment attribute of the GlobalObject.
-  void setAlignment(Align Align);
-
-  /// Sets the alignment attribute of the GlobalObject.
-  /// This method will be deprecated as the alignment property should always be
-  /// defined.
   void setAlignment(MaybeAlign Align);
 
   unsigned getGlobalObjectSubClassData() const {
