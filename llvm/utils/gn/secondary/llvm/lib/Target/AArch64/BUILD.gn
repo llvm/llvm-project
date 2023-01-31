@@ -124,6 +124,7 @@ static_library("LLVMAArch64CodeGen") {
     "AArch64FalkorHWPFFix.cpp",
     "AArch64FastISel.cpp",
     "AArch64FrameLowering.cpp",
+    "AArch64GlobalsTagging.cpp",
     "AArch64ISelDAGToDAG.cpp",
     "AArch64ISelLowering.cpp",
     "AArch64InstrInfo.cpp",
