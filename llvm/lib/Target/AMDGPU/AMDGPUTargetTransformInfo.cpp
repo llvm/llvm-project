@@ -928,19 +928,8 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
 }
 
 bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
-  if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(V)) {
-    switch (Intrinsic->getIntrinsicID()) {
-    default:
-      return false;
-    case Intrinsic::amdgcn_readfirstlane:
-    case Intrinsic::amdgcn_readlane:
-    case Intrinsic::amdgcn_icmp:
-    case Intrinsic::amdgcn_fcmp:
-    case Intrinsic::amdgcn_ballot:
-    case Intrinsic::amdgcn_if_break:
-      return true;
-    }
-  }
+  if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(V))
+    return AMDGPU::isIntrinsicAlwaysUniform(Intrinsic->getIntrinsicID());
 
   if (const CallInst *CI = dyn_cast<CallInst>(V)) {
     if (CI->isInlineAsm())

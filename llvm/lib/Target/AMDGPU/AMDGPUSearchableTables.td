@@ -379,3 +379,22 @@ def : SourceOfDivergence<int_amdgcn_loop>;
 
 foreach intr = AMDGPUImageDimAtomicIntrinsics in
 def : SourceOfDivergence<intr>;
+
+class AlwaysUniform<Intrinsic intr> {
+  Intrinsic Intr = intr;
+}
+
+def UniformIntrinsics : GenericTable {
+  let FilterClass = "AlwaysUniform";
+  let Fields = ["Intr"];
+
+  let PrimaryKey = ["Intr"];
+  let PrimaryKeyName = "lookupAlwaysUniform";
+}
+
+def : AlwaysUniform<int_amdgcn_readfirstlane>;
+def : AlwaysUniform<int_amdgcn_readlane>;
+def : AlwaysUniform<int_amdgcn_icmp>;
+def : AlwaysUniform<int_amdgcn_fcmp>;
+def : AlwaysUniform<int_amdgcn_ballot>;
+def : AlwaysUniform<int_amdgcn_if_break>;
