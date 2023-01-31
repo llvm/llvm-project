@@ -975,23 +975,27 @@ INSTANTIATE_TEST_SUITE_P(
     AArch64CPUTests, AArch64CPUTestFixture,
     ::testing::Values(
         ARMCPUTestParams("cortex-a34", "armv8-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_SIMD,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
+                             AArch64::AEK_SIMD,
                          "8-A"),
         ARMCPUTestParams("cortex-a35", "armv8-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_SIMD,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
+                             AArch64::AEK_SIMD,
                          "8-A"),
         ARMCPUTestParams("cortex-a53", "armv8-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_SIMD,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
+                             AArch64::AEK_SIMD,
                          "8-A"),
         ARMCPUTestParams("cortex-a55", "armv8.2-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_SIMD |
-                             AArch64::AEK_RAS | AArch64::AEK_LSE |
-                             AArch64::AEK_RDM | AArch64::AEK_FP16 |
-                             AArch64::AEK_DOTPROD | AArch64::AEK_RCPC,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
+                             AArch64::AEK_SIMD | AArch64::AEK_RAS |
+                             AArch64::AEK_LSE | AArch64::AEK_RDM |
+                             AArch64::AEK_FP16 | AArch64::AEK_DOTPROD |
+                             AArch64::AEK_RCPC,
                          "8.2-A"),
         ARMCPUTestParams(
             "cortex-a510", "armv9-a", "neon-fp-armv8",
@@ -1004,82 +1008,86 @@ INSTANTIATE_TEST_SUITE_P(
                 AArch64::AEK_FP16FML | AArch64::AEK_SB,
             "9-A"),
         ARMCPUTestParams("cortex-a57", "armv8-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_SIMD,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
+                             AArch64::AEK_SIMD,
                          "8-A"),
         ARMCPUTestParams("cortex-a65", "armv8.2-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_DOTPROD | AArch64::AEK_FP |
-                             AArch64::AEK_FP16 | AArch64::AEK_LSE |
-                             AArch64::AEK_RAS | AArch64::AEK_RCPC |
-                             AArch64::AEK_RDM | AArch64::AEK_SIMD |
-                             AArch64::AEK_SSBS,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_DOTPROD |
+                             AArch64::AEK_FP | AArch64::AEK_FP16 |
+                             AArch64::AEK_LSE | AArch64::AEK_RAS |
+                             AArch64::AEK_RCPC | AArch64::AEK_RDM |
+                             AArch64::AEK_SIMD | AArch64::AEK_SSBS,
                          "8.2-A"),
         ARMCPUTestParams("cortex-a65ae", "armv8.2-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_DOTPROD | AArch64::AEK_FP |
-                             AArch64::AEK_FP16 | AArch64::AEK_LSE |
-                             AArch64::AEK_RAS | AArch64::AEK_RCPC |
-                             AArch64::AEK_RDM | AArch64::AEK_SIMD |
-                             AArch64::AEK_SSBS,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_DOTPROD |
+                             AArch64::AEK_FP | AArch64::AEK_FP16 |
+                             AArch64::AEK_LSE | AArch64::AEK_RAS |
+                             AArch64::AEK_RCPC | AArch64::AEK_RDM |
+                             AArch64::AEK_SIMD | AArch64::AEK_SSBS,
                          "8.2-A"),
         ARMCPUTestParams("cortex-a72", "armv8-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_SIMD,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
+                             AArch64::AEK_SIMD,
                          "8-A"),
         ARMCPUTestParams("cortex-a73", "armv8-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_SIMD,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
+                             AArch64::AEK_SIMD,
                          "8-A"),
         ARMCPUTestParams("cortex-a75", "armv8.2-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_SIMD |
-                             AArch64::AEK_RAS | AArch64::AEK_LSE |
-                             AArch64::AEK_RDM | AArch64::AEK_FP16 |
-                             AArch64::AEK_DOTPROD | AArch64::AEK_RCPC,
-                         "8.2-A"),
-        ARMCPUTestParams("cortex-a76", "armv8.2-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_RDM |
-                             AArch64::AEK_SIMD | AArch64::AEK_RAS |
-                             AArch64::AEK_LSE | AArch64::AEK_FP16 |
-                             AArch64::AEK_DOTPROD | AArch64::AEK_RCPC |
-                             AArch64::AEK_SSBS,
-                         "8.2-A"),
-        ARMCPUTestParams("cortex-a76ae", "armv8.2-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_RDM |
-                             AArch64::AEK_SIMD | AArch64::AEK_RAS |
-                             AArch64::AEK_LSE | AArch64::AEK_FP16 |
-                             AArch64::AEK_DOTPROD | AArch64::AEK_RCPC |
-                             AArch64::AEK_SSBS,
-                         "8.2-A"),
-        ARMCPUTestParams("cortex-a77", "armv8.2-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_RDM |
-                             AArch64::AEK_SIMD | AArch64::AEK_RAS |
-                             AArch64::AEK_LSE | AArch64::AEK_FP16 |
-                             AArch64::AEK_DOTPROD | AArch64::AEK_RCPC |
-                             AArch64::AEK_SSBS,
-                         "8.2-A"),
-        ARMCPUTestParams("cortex-a78", "armv8.2-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_RDM |
-                             AArch64::AEK_SIMD | AArch64::AEK_RAS |
-                             AArch64::AEK_LSE | AArch64::AEK_FP16 |
-                             AArch64::AEK_DOTPROD | AArch64::AEK_RCPC |
-                             AArch64::AEK_SSBS | AArch64::AEK_PROFILE,
-                         "8.2-A"),
-        ARMCPUTestParams("cortex-a78c", "armv8.2-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_RAS | AArch64::AEK_CRC |
-                             AArch64::AEK_CRYPTO | AArch64::AEK_FP |
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
                              AArch64::AEK_SIMD | AArch64::AEK_RAS |
                              AArch64::AEK_LSE | AArch64::AEK_RDM |
                              AArch64::AEK_FP16 | AArch64::AEK_DOTPROD |
-                             AArch64::AEK_RCPC | AArch64::AEK_SSBS |
-                             AArch64::AEK_PROFILE | AArch64::AEK_FLAGM |
-                             AArch64::AEK_PAUTH | AArch64::AEK_FP16FML,
+                             AArch64::AEK_RCPC,
                          "8.2-A"),
+        ARMCPUTestParams("cortex-a76", "armv8.2-a", "crypto-neon-fp-armv8",
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
+                             AArch64::AEK_RDM | AArch64::AEK_SIMD |
+                             AArch64::AEK_RAS | AArch64::AEK_LSE |
+                             AArch64::AEK_FP16 | AArch64::AEK_DOTPROD |
+                             AArch64::AEK_RCPC | AArch64::AEK_SSBS,
+                         "8.2-A"),
+        ARMCPUTestParams("cortex-a76ae", "armv8.2-a", "crypto-neon-fp-armv8",
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
+                             AArch64::AEK_RDM | AArch64::AEK_SIMD |
+                             AArch64::AEK_RAS | AArch64::AEK_LSE |
+                             AArch64::AEK_FP16 | AArch64::AEK_DOTPROD |
+                             AArch64::AEK_RCPC | AArch64::AEK_SSBS,
+                         "8.2-A"),
+        ARMCPUTestParams("cortex-a77", "armv8.2-a", "crypto-neon-fp-armv8",
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
+                             AArch64::AEK_RDM | AArch64::AEK_SIMD |
+                             AArch64::AEK_RAS | AArch64::AEK_LSE |
+                             AArch64::AEK_FP16 | AArch64::AEK_DOTPROD |
+                             AArch64::AEK_RCPC | AArch64::AEK_SSBS,
+                         "8.2-A"),
+        ARMCPUTestParams("cortex-a78", "armv8.2-a", "crypto-neon-fp-armv8",
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
+                             AArch64::AEK_RDM | AArch64::AEK_SIMD |
+                             AArch64::AEK_RAS | AArch64::AEK_LSE |
+                             AArch64::AEK_FP16 | AArch64::AEK_DOTPROD |
+                             AArch64::AEK_RCPC | AArch64::AEK_SSBS |
+                             AArch64::AEK_PROFILE,
+                         "8.2-A"),
+        ARMCPUTestParams(
+            "cortex-a78c", "armv8.2-a", "crypto-neon-fp-armv8",
+            AArch64::AEK_RAS | AArch64::AEK_CRC | AArch64::AEK_AES |
+                AArch64::AEK_SHA2 | AArch64::AEK_FP | AArch64::AEK_SIMD |
+                AArch64::AEK_RAS | AArch64::AEK_LSE | AArch64::AEK_RDM |
+                AArch64::AEK_FP16 | AArch64::AEK_DOTPROD | AArch64::AEK_RCPC |
+                AArch64::AEK_SSBS | AArch64::AEK_PROFILE | AArch64::AEK_FLAGM |
+                AArch64::AEK_PAUTH | AArch64::AEK_FP16FML,
+            "8.2-A"),
         ARMCPUTestParams(
             "cortex-a710", "armv9-a", "neon-fp-armv8",
             AArch64::AEK_CRC | AArch64::AEK_FP | AArch64::AEK_SIMD |
@@ -1108,7 +1116,8 @@ INSTANTIATE_TEST_SUITE_P(
                 AArch64::AEK_RCPC | AArch64::AEK_CRC | AArch64::AEK_FP |
                 AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
                 AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
-                AArch64::AEK_CRYPTO | AArch64::AEK_FP16 | AArch64::AEK_BF16 |
+                AArch64::AEK_AES | AArch64::AEK_SHA2 | AArch64::AEK_SHA3 |
+                AArch64::AEK_SM4 | AArch64::AEK_FP16 | AArch64::AEK_BF16 |
                 AArch64::AEK_PROFILE | AArch64::AEK_RAND |
                 AArch64::AEK_FP16FML | AArch64::AEK_I8MM,
             "8.4-A"),
@@ -1133,21 +1142,22 @@ INSTANTIATE_TEST_SUITE_P(
                              AArch64::AEK_LSE | AArch64::AEK_SB,
                          "8-R"),
         ARMCPUTestParams("cortex-x1", "armv8.2-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_RDM |
-                             AArch64::AEK_SIMD | AArch64::AEK_RAS |
-                             AArch64::AEK_LSE | AArch64::AEK_FP16 |
-                             AArch64::AEK_DOTPROD | AArch64::AEK_RCPC |
-                             AArch64::AEK_SSBS | AArch64::AEK_PROFILE,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
+                             AArch64::AEK_RDM | AArch64::AEK_SIMD |
+                             AArch64::AEK_RAS | AArch64::AEK_LSE |
+                             AArch64::AEK_FP16 | AArch64::AEK_DOTPROD |
+                             AArch64::AEK_RCPC | AArch64::AEK_SSBS |
+                             AArch64::AEK_PROFILE,
                          "8.2-A"),
         ARMCPUTestParams("cortex-x1c", "armv8.2-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_RDM |
-                             AArch64::AEK_SIMD | AArch64::AEK_RAS |
-                             AArch64::AEK_LSE | AArch64::AEK_FP16 |
-                             AArch64::AEK_DOTPROD | AArch64::AEK_RCPC |
-                             AArch64::AEK_SSBS | AArch64::AEK_PAUTH |
-                             AArch64::AEK_PROFILE,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
+                             AArch64::AEK_RDM | AArch64::AEK_SIMD |
+                             AArch64::AEK_RAS | AArch64::AEK_LSE |
+                             AArch64::AEK_FP16 | AArch64::AEK_DOTPROD |
+                             AArch64::AEK_RCPC | AArch64::AEK_SSBS |
+                             AArch64::AEK_PAUTH | AArch64::AEK_PROFILE,
                          "8.2-A"),
         ARMCPUTestParams("cortex-x2", "armv9-a", "neon-fp-armv8",
                          AArch64::AEK_CRC | AArch64::AEK_FP |
@@ -1174,38 +1184,43 @@ INSTANTIATE_TEST_SUITE_P(
                 AArch64::AEK_PREDRES | AArch64::AEK_FLAGM | AArch64::AEK_SSBS,
             "9-A"),
         ARMCPUTestParams("cyclone", "armv8-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_NONE | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_SIMD,
-                         "8-A"),
-        ARMCPUTestParams("apple-a7", "armv8-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_NONE | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_SIMD,
-                         "8-A"),
-        ARMCPUTestParams("apple-a8", "armv8-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_NONE | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_SIMD,
-                         "8-A"),
-        ARMCPUTestParams("apple-a9", "armv8-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_NONE | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_SIMD,
-                         "8-A"),
-        ARMCPUTestParams("apple-a10", "armv8-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_RDM |
+                         AArch64::AEK_NONE | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
                              AArch64::AEK_SIMD,
                          "8-A"),
+        ARMCPUTestParams("apple-a7", "armv8-a", "crypto-neon-fp-armv8",
+                         AArch64::AEK_NONE | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
+                             AArch64::AEK_SIMD,
+                         "8-A"),
+        ARMCPUTestParams("apple-a8", "armv8-a", "crypto-neon-fp-armv8",
+                         AArch64::AEK_NONE | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
+                             AArch64::AEK_SIMD,
+                         "8-A"),
+        ARMCPUTestParams("apple-a9", "armv8-a", "crypto-neon-fp-armv8",
+                         AArch64::AEK_NONE | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
+                             AArch64::AEK_SIMD,
+                         "8-A"),
+        ARMCPUTestParams("apple-a10", "armv8-a", "crypto-neon-fp-armv8",
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
+                             AArch64::AEK_RDM | AArch64::AEK_SIMD,
+                         "8-A"),
         ARMCPUTestParams("apple-a11", "armv8.2-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_LSE |
-                             AArch64::AEK_RAS | AArch64::AEK_RDM |
-                             AArch64::AEK_SIMD | AArch64::AEK_FP16,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
+                             AArch64::AEK_LSE | AArch64::AEK_RAS |
+                             AArch64::AEK_RDM | AArch64::AEK_SIMD |
+                             AArch64::AEK_FP16,
                          "8.2-A"),
         ARMCPUTestParams("apple-a12", "armv8.3-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_SIMD |
-                             AArch64::AEK_LSE | AArch64::AEK_RAS |
-                             AArch64::AEK_RDM | AArch64::AEK_RCPC |
-                             AArch64::AEK_FP16,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
+                             AArch64::AEK_SIMD | AArch64::AEK_LSE |
+                             AArch64::AEK_RAS | AArch64::AEK_RDM |
+                             AArch64::AEK_RCPC | AArch64::AEK_FP16,
                          "8.3-A"),
         ARMCPUTestParams("apple-a13", "armv8.4-a", "crypto-neon-fp-armv8",
                          AArch64::AEK_CRC | AArch64::AEK_AES |
@@ -1265,73 +1280,76 @@ INSTANTIATE_TEST_SUITE_P(
                              AArch64::AEK_BF16 | AArch64::AEK_I8MM,
                          "8.5-A"),
         ARMCPUTestParams("apple-s4", "armv8.3-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_SIMD |
-                             AArch64::AEK_LSE | AArch64::AEK_RAS |
-                             AArch64::AEK_RDM | AArch64::AEK_RCPC |
-                             AArch64::AEK_FP16,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
+                             AArch64::AEK_SIMD | AArch64::AEK_LSE |
+                             AArch64::AEK_RAS | AArch64::AEK_RDM |
+                             AArch64::AEK_RCPC | AArch64::AEK_FP16,
                          "8.3-A"),
         ARMCPUTestParams("apple-s5", "armv8.3-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_SIMD |
-                             AArch64::AEK_LSE | AArch64::AEK_RAS |
-                             AArch64::AEK_RDM | AArch64::AEK_RCPC |
-                             AArch64::AEK_FP16,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
+                             AArch64::AEK_SIMD | AArch64::AEK_LSE |
+                             AArch64::AEK_RAS | AArch64::AEK_RDM |
+                             AArch64::AEK_RCPC | AArch64::AEK_FP16,
                          "8.3-A"),
         ARMCPUTestParams("exynos-m3", "armv8-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_SIMD,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
+                             AArch64::AEK_SIMD,
                          "8-A"),
         ARMCPUTestParams("exynos-m4", "armv8.2-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_DOTPROD | AArch64::AEK_FP |
-                             AArch64::AEK_FP16 | AArch64::AEK_LSE |
-                             AArch64::AEK_RAS | AArch64::AEK_RDM |
-                             AArch64::AEK_SIMD,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_DOTPROD |
+                             AArch64::AEK_FP | AArch64::AEK_FP16 |
+                             AArch64::AEK_LSE | AArch64::AEK_RAS |
+                             AArch64::AEK_RDM | AArch64::AEK_SIMD,
                          "8.2-A"),
         ARMCPUTestParams("exynos-m5", "armv8.2-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_DOTPROD | AArch64::AEK_FP |
-                             AArch64::AEK_FP16 | AArch64::AEK_LSE |
-                             AArch64::AEK_RAS | AArch64::AEK_RDM |
-                             AArch64::AEK_SIMD,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_DOTPROD |
+                             AArch64::AEK_FP | AArch64::AEK_FP16 |
+                             AArch64::AEK_LSE | AArch64::AEK_RAS |
+                             AArch64::AEK_RDM | AArch64::AEK_SIMD,
                          "8.2-A"),
         ARMCPUTestParams("falkor", "armv8-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_SIMD |
-                             AArch64::AEK_RDM,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
+                             AArch64::AEK_SIMD | AArch64::AEK_RDM,
                          "8-A"),
         ARMCPUTestParams("kryo", "armv8-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_SIMD,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
+                             AArch64::AEK_SIMD,
                          "8-A"),
         ARMCPUTestParams("neoverse-e1", "armv8.2-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_DOTPROD | AArch64::AEK_FP |
-                             AArch64::AEK_FP16 | AArch64::AEK_LSE |
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_DOTPROD |
+                             AArch64::AEK_FP | AArch64::AEK_FP16 |
+                             AArch64::AEK_LSE | AArch64::AEK_RAS |
+                             AArch64::AEK_RCPC | AArch64::AEK_RDM |
+                             AArch64::AEK_SIMD | AArch64::AEK_SSBS,
+                         "8.2-A"),
+        ARMCPUTestParams("neoverse-n1", "armv8.2-a", "crypto-neon-fp-armv8",
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_DOTPROD |
+                             AArch64::AEK_FP | AArch64::AEK_FP16 |
+                             AArch64::AEK_LSE | AArch64::AEK_PROFILE |
                              AArch64::AEK_RAS | AArch64::AEK_RCPC |
                              AArch64::AEK_RDM | AArch64::AEK_SIMD |
                              AArch64::AEK_SSBS,
                          "8.2-A"),
-        ARMCPUTestParams("neoverse-n1", "armv8.2-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_DOTPROD | AArch64::AEK_FP |
-                             AArch64::AEK_FP16 | AArch64::AEK_LSE |
-                             AArch64::AEK_PROFILE | AArch64::AEK_RAS |
-                             AArch64::AEK_RCPC | AArch64::AEK_RDM |
-                             AArch64::AEK_SIMD | AArch64::AEK_SSBS,
-                         "8.2-A"),
-        ARMCPUTestParams("neoverse-n2", "armv8.5-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_SIMD |
-                             AArch64::AEK_FP16 | AArch64::AEK_RAS |
-                             AArch64::AEK_LSE | AArch64::AEK_SVE |
-                             AArch64::AEK_DOTPROD | AArch64::AEK_RCPC |
-                             AArch64::AEK_RDM | AArch64::AEK_MTE |
-                             AArch64::AEK_SSBS | AArch64::AEK_SB |
-                             AArch64::AEK_SVE2 | AArch64::AEK_SVE2BITPERM |
-                             AArch64::AEK_BF16 | AArch64::AEK_I8MM,
-                         "8.5-A"),
+        ARMCPUTestParams(
+            "neoverse-n2", "armv8.5-a", "crypto-neon-fp-armv8",
+            AArch64::AEK_CRC | AArch64::AEK_AES | AArch64::AEK_SHA2 |
+                AArch64::AEK_SHA3 | AArch64::AEK_SM4 | AArch64::AEK_FP |
+                AArch64::AEK_SIMD | AArch64::AEK_FP16 | AArch64::AEK_RAS |
+                AArch64::AEK_LSE | AArch64::AEK_SVE | AArch64::AEK_DOTPROD |
+                AArch64::AEK_RCPC | AArch64::AEK_RDM | AArch64::AEK_MTE |
+                AArch64::AEK_SSBS | AArch64::AEK_SB | AArch64::AEK_SVE2 |
+                AArch64::AEK_SVE2BITPERM | AArch64::AEK_BF16 |
+                AArch64::AEK_I8MM,
+            "8.5-A"),
         ARMCPUTestParams(
             "ampere1", "armv8.6-a", "crypto-neon-fp-armv8",
             AArch64::AEK_CRC | AArch64::AEK_FP | AArch64::AEK_FP16 |
@@ -1357,57 +1375,65 @@ INSTANTIATE_TEST_SUITE_P(
                 AArch64::AEK_RCPC | AArch64::AEK_CRC | AArch64::AEK_FP |
                 AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
                 AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
-                AArch64::AEK_CRYPTO | AArch64::AEK_FP16 | AArch64::AEK_BF16 |
+                AArch64::AEK_AES | AArch64::AEK_SHA2 | AArch64::AEK_SHA3 |
+                AArch64::AEK_SM4 | AArch64::AEK_FP16 | AArch64::AEK_BF16 |
                 AArch64::AEK_PROFILE | AArch64::AEK_RAND |
                 AArch64::AEK_FP16FML | AArch64::AEK_I8MM,
             "8.4-A"),
         ARMCPUTestParams("thunderx2t99", "armv8.1-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_LSE | AArch64::AEK_RDM |
-                             AArch64::AEK_FP | AArch64::AEK_SIMD,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_LSE |
+                             AArch64::AEK_RDM | AArch64::AEK_FP |
+                             AArch64::AEK_SIMD,
                          "8.1-A"),
         ARMCPUTestParams("thunderx3t110", "armv8.3-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_LSE | AArch64::AEK_RDM |
-                             AArch64::AEK_FP | AArch64::AEK_SIMD |
-                             AArch64::AEK_RAS | AArch64::AEK_RCPC,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_LSE |
+                             AArch64::AEK_RDM | AArch64::AEK_FP |
+                             AArch64::AEK_SIMD | AArch64::AEK_RAS |
+                             AArch64::AEK_RCPC,
                          "8.3-A"),
         ARMCPUTestParams("thunderx", "armv8-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_SIMD | AArch64::AEK_FP,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_SIMD |
+                             AArch64::AEK_FP,
                          "8-A"),
         ARMCPUTestParams("thunderxt81", "armv8-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_SIMD | AArch64::AEK_FP,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_SIMD |
+                             AArch64::AEK_FP,
                          "8-A"),
         ARMCPUTestParams("thunderxt83", "armv8-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_SIMD | AArch64::AEK_FP,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_SIMD |
+                             AArch64::AEK_FP,
                          "8-A"),
         ARMCPUTestParams("thunderxt88", "armv8-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_SIMD | AArch64::AEK_FP,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_SIMD |
+                             AArch64::AEK_FP,
                          "8-A"),
         ARMCPUTestParams("tsv110", "armv8.2-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_SIMD |
-                             AArch64::AEK_RAS | AArch64::AEK_LSE |
-                             AArch64::AEK_RDM | AArch64::AEK_PROFILE |
-                             AArch64::AEK_FP16 | AArch64::AEK_FP16FML |
-                             AArch64::AEK_DOTPROD,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
+                             AArch64::AEK_SIMD | AArch64::AEK_RAS |
+                             AArch64::AEK_LSE | AArch64::AEK_RDM |
+                             AArch64::AEK_PROFILE | AArch64::AEK_FP16 |
+                             AArch64::AEK_FP16FML | AArch64::AEK_DOTPROD,
                          "8.2-A"),
         ARMCPUTestParams("a64fx", "armv8.2-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_SIMD |
-                             AArch64::AEK_FP16 | AArch64::AEK_RAS |
-                             AArch64::AEK_LSE | AArch64::AEK_SVE |
-                             AArch64::AEK_RDM,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
+                             AArch64::AEK_SIMD | AArch64::AEK_FP16 |
+                             AArch64::AEK_RAS | AArch64::AEK_LSE |
+                             AArch64::AEK_SVE | AArch64::AEK_RDM,
                          "8.2-A"),
         ARMCPUTestParams("carmel", "armv8.2-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                             AArch64::AEK_FP | AArch64::AEK_SIMD |
-                             AArch64::AEK_FP16 | AArch64::AEK_RAS |
-                             AArch64::AEK_LSE | AArch64::AEK_RDM,
+                         AArch64::AEK_CRC | AArch64::AEK_AES |
+                             AArch64::AEK_SHA2 | AArch64::AEK_FP |
+                             AArch64::AEK_SIMD | AArch64::AEK_FP16 |
+                             AArch64::AEK_RAS | AArch64::AEK_LSE |
+                             AArch64::AEK_RDM,
                          "8.2-A")));
 
 // Note: number of CPUs includes aliases.
@@ -1527,7 +1553,8 @@ TEST(TargetParserTest, testAArch64Extension) {
   EXPECT_FALSE(testAArch64Extension("thunderxt81", "lse"));
   EXPECT_FALSE(testAArch64Extension("thunderxt83", "lse"));
   EXPECT_FALSE(testAArch64Extension("thunderxt88", "lse"));
-  EXPECT_TRUE(testAArch64Extension("tsv110", "crypto"));
+  EXPECT_TRUE(testAArch64Extension("tsv110", "aes"));
+  EXPECT_TRUE(testAArch64Extension("tsv110", "sha2"));
   EXPECT_FALSE(testAArch64Extension("tsv110", "sha3"));
   EXPECT_FALSE(testAArch64Extension("tsv110", "sm4"));
   EXPECT_TRUE(testAArch64Extension("tsv110", "ras"));
@@ -1538,7 +1565,8 @@ TEST(TargetParserTest, testAArch64Extension) {
   EXPECT_TRUE(testAArch64Extension("a64fx", "fp16"));
   EXPECT_TRUE(testAArch64Extension("a64fx", "sve"));
   EXPECT_FALSE(testAArch64Extension("a64fx", "sve2"));
-  EXPECT_TRUE(testAArch64Extension("carmel", "crypto"));
+  EXPECT_TRUE(testAArch64Extension("carmel", "aes"));
+  EXPECT_TRUE(testAArch64Extension("carmel", "sha2"));
   EXPECT_TRUE(testAArch64Extension("carmel", "fp16"));
 
   EXPECT_FALSE(testAArch64Extension(AArch64::ARMV8A, "ras"));

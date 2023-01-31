@@ -435,7 +435,7 @@ protected:
 
   /// Get the MinimalPhysRegClass for Reg.
   /// \pre Reg is a physical register.
-  const TargetRegisterClass &
+  const TargetRegisterClass *
   getMinimalPhysRegClass(Register Reg, const TargetRegisterInfo &TRI) const;
 
   /// Try to get the mapping of \p MI.

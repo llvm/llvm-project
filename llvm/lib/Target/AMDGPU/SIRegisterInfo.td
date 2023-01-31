@@ -1376,6 +1376,11 @@ def AVLdSt_160 : RegisterOperand<AV_160> {
   let EncoderMethod = "getAVOperandEncoding";
 }
 
+def AVLdSt_1024 : RegisterOperand<AV_1024> {
+  let DecoderMethod = "DecodeAVLdSt_1024RegisterClass";
+  let EncoderMethod = "getAVOperandEncoding";
+}
+
 //===----------------------------------------------------------------------===//
 //  ACSrc_* Operands with an AGPR or an inline constant
 //===----------------------------------------------------------------------===//

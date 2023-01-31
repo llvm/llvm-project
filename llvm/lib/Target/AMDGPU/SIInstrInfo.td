@@ -2403,8 +2403,9 @@ class getLdStRegisterOperand<RegisterClass RC> {
         !if(!eq(RC.Size, 96), AVLdSt_96,
           !if(!eq(RC.Size, 128), AVLdSt_128,
             !if(!eq(RC.Size, 160), AVLdSt_160,
-              RegisterOperand<VReg_1> // invalid register
-    )))));
+              !if(!eq(RC.Size, 1024), AVLdSt_1024,
+                RegisterOperand<VReg_1> // invalid register
+    ))))));
 }
 
 class BitOr<bit a, bit b> {

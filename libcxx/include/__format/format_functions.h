@@ -38,7 +38,9 @@
 #include <__format/formatter_string.h>
 #include <__format/parser_std_format_spec.h>
 #include <__iterator/back_insert_iterator.h>
+#include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
+#include <__iterator/readable_traits.h> // iter_value_t
 #include <__variant/monostate.h>
 #include <array>
 #include <string>
@@ -236,21 +238,22 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __compile_time_visit_format_arg(basic_forma
   std::__throw_format_error("Invalid argument");
 }
 
-template <class _CharT, class _ParseCtx, class _Ctx>
-_LIBCPP_HIDE_FROM_ABI constexpr const _CharT*
-__handle_replacement_field(const _CharT* __begin, const _CharT* __end,
+template <contiguous_iterator _Iterator, class _ParseCtx, class _Ctx>
+_LIBCPP_HIDE_FROM_ABI constexpr _Iterator
+__handle_replacement_field(_Iterator __begin, _Iterator __end,
                            _ParseCtx& __parse_ctx, _Ctx& __ctx) {
+  using _CharT = iter_value_t<_Iterator>;
   __format::__parse_number_result __r = __format::__parse_arg_id(__begin, __end, __parse_ctx);
 
-  bool __parse = *__r.__ptr == _CharT(':');
-  switch (*__r.__ptr) {
+  bool __parse = *__r.__last == _CharT(':');
+  switch (*__r.__last) {
   case _CharT(':'):
     // The arg-id has a format-specifier, advance the input to the format-spec.
-    __parse_ctx.advance_to(__r.__ptr + 1);
+    __parse_ctx.advance_to(__r.__last + 1);
     break;
   case _CharT('}'):
     // The arg-id has no format-specifier.
-    __parse_ctx.advance_to(__r.__ptr);
+    __parse_ctx.advance_to(__r.__last);
     break;
   default:
     std::__throw_format_error("The replacement field arg-id should terminate at a ':' or '}'");
@@ -291,8 +294,8 @@ __vformat_to(_ParseCtx&& __parse_ctx, _Ctx&& __ctx) {
   using _CharT = typename _ParseCtx::char_type;
   static_assert(same_as<typename _Ctx::char_type, _CharT>);
 
-  const _CharT* __begin = __parse_ctx.begin();
-  const _CharT* __end = __parse_ctx.end();
+  auto __begin = __parse_ctx.begin();
+  auto __end = __parse_ctx.end();
   typename _Ctx::iterator __out_it = __ctx.out();
   while (__begin != __end) {
     switch (*__begin) {

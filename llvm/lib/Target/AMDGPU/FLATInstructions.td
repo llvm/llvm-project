@@ -940,6 +940,13 @@ defm SCRATCH_LOAD_LDS_DWORD  : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_d
 
 } // End SubtargetPredicate = HasFlatScratchInsts
 
+let SubtargetPredicate = isGFX12Plus, Uses = [M0] in {
+defm GLOBAL_LOAD_BLOCK  : FLAT_Global_Load_Pseudo <"global_load_block", VReg_1024>;
+defm GLOBAL_STORE_BLOCK  : FLAT_Global_Store_Pseudo <"global_store_block", VReg_1024>;
+defm SCRATCH_LOAD_BLOCK : FLAT_Scratch_Load_Pseudo <"scratch_load_block", VReg_1024>;
+defm SCRATCH_STORE_BLOCK : FLAT_Scratch_Store_Pseudo <"scratch_store_block", VReg_1024>;
+} // End SubtargetPredicate = isGFX12Plus, Uses = [M0]
+
 let SubtargetPredicate = isGFX10Plus, is_flat_global = 1 in {
   defm GLOBAL_ATOMIC_FCMPSWAP :
     FLAT_Global_Atomic_Pseudo<"global_atomic_fcmpswap", VGPR_32, f32, v2f32, VReg_64>;
@@ -2575,6 +2582,9 @@ defm GLOBAL_STORE_D16_HI_B8     : VGLOBAL_Real_AllAddr_gfx12<0x024, "GLOBAL_STOR
 defm GLOBAL_STORE_D16_HI_B16    : VGLOBAL_Real_AllAddr_gfx12<0x025, "GLOBAL_STORE_SHORT_D16_HI", "global_store_d16_hi_b16">;
 defm GLOBAL_LOAD_ADDTID_B32     : VGLOBAL_Real_AllAddr_gfx12<0x028, "GLOBAL_LOAD_DWORD_ADDTID", "global_load_addtid_b32">;
 defm GLOBAL_STORE_ADDTID_B32    : VGLOBAL_Real_AllAddr_gfx12<0x029, "GLOBAL_STORE_DWORD_ADDTID", "global_store_addtid_b32">;
+defm GLOBAL_LOAD_BLOCK          : VGLOBAL_Real_AllAddr_gfx12<0x053, "GLOBAL_LOAD_BLOCK", "global_load_block">;
+defm GLOBAL_STORE_BLOCK         : VGLOBAL_Real_AllAddr_gfx12<0x054, "GLOBAL_STORE_BLOCK", "global_store_block">;
+
 defm GLOBAL_ATOMIC_SWAP_B32     : VGLOBAL_Real_Atomics_gfx12<0x033, "GLOBAL_ATOMIC_SWAP", "global_atomic_swap_b32", true>;
 defm GLOBAL_ATOMIC_CMPSWAP_B32  : VGLOBAL_Real_Atomics_gfx12<0x034, "GLOBAL_ATOMIC_CMPSWAP", "global_atomic_cmpswap_b32", true>;
 defm GLOBAL_ATOMIC_ADD_U32      : VGLOBAL_Real_Atomics_gfx12<0x035, "GLOBAL_ATOMIC_ADD", "global_atomic_add_u32", true>;
@@ -2630,3 +2640,6 @@ defm SCRATCH_LOAD_D16_HI_I8     : VSCRATCH_Real_AllAddr_gfx12<0x22, "SCRATCH_LOA
 defm SCRATCH_LOAD_D16_HI_B16    : VSCRATCH_Real_AllAddr_gfx12<0x23, "SCRATCH_LOAD_SHORT_D16_HI", "scratch_load_d16_hi_b16">;
 defm SCRATCH_STORE_D16_HI_B8    : VSCRATCH_Real_AllAddr_gfx12<0x24, "SCRATCH_STORE_BYTE_D16_HI", "scratch_store_d16_hi_b8">;
 defm SCRATCH_STORE_D16_HI_B16   : VSCRATCH_Real_AllAddr_gfx12<0x25, "SCRATCH_STORE_SHORT_D16_HI", "scratch_store_d16_hi_b16">;
+
+defm SCRATCH_LOAD_BLOCK         : VSCRATCH_Real_AllAddr_gfx12<0x53, "SCRATCH_LOAD_BLOCK", "scratch_load_block">;
+defm SCRATCH_STORE_BLOCK        : VSCRATCH_Real_AllAddr_gfx12<0x54, "SCRATCH_STORE_BLOCK", "scratch_store_block">;

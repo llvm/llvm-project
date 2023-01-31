@@ -2988,7 +2988,7 @@ def : Pat<(v2f64 (build_vector (f64 (fpextend (extractelt v4f32:$A, 0))),
           (v2f64 (XVCVSPDP $A))>;
 def : Pat<(v2f64 (build_vector (f64 (fpextend (extractelt v4f32:$A, 1))),
                                (f64 (fpextend (extractelt v4f32:$A, 3))))),
-          (v2f64 (XVCVSPDP (XXSLDWI $A, $A, 3)))>;
+          (v2f64 (XVCVSPDP (XXSLDWI $A, $A, 1)))>;
 def : Pat<(v2f64 (build_vector (f64 (fpextend (extractelt v4f32:$A, 2))),
                                (f64 (fpextend (extractelt v4f32:$A, 3))))),
           (v2f64 (XVCVSPDP (XXMRGLW $A, $A)))>;
