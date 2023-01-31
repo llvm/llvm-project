@@ -24,12 +24,11 @@ namespace {
 /// module.
 
 template <typename Derived>
-class ModulePassWrapper : public PassWrapper<Derived, OperationPass<ModuleOp>> {
-};
+class OpPassWrapper : public PassWrapper<Derived, OperationPass<>> {};
 
 class TestTransformDialectInterpreterPass
     : public transform::TransformInterpreterPassBase<
-          TestTransformDialectInterpreterPass, ModulePassWrapper> {
+          TestTransformDialectInterpreterPass, OpPassWrapper> {
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
       TestTransformDialectInterpreterPass)

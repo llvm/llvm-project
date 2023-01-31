@@ -7,11 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
-#include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/IR/OwningOpRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Debug.h"
@@ -829,25 +827,6 @@ transform::applyTransforms(Operation *payloadRoot,
                              /*gen_crash_diag=*/false);
   }
 #endif // NDEBUG
-
-  // If the transform dialect may use PDL which may modify the IR, clone it
-  // before use to avoid concurrent modification in case this is being called
-  // from pass instances running concurrently with a shared transform script.
-  auto *pdlDialect =
-      transform->getContext()->getLoadedDialect<pdl::PDLDialect>();
-  bool hasPDL = transform
-                    .walk([pdlDialect](Operation *op) {
-                      if (op->getDialect() == pdlDialect)
-                        return WalkResult::interrupt();
-                      return WalkResult::advance();
-                    })
-                    .wasInterrupted();
-
-  OwningOpRef<TransformOpInterface> owningCopy;
-  if (hasPDL) {
-    owningCopy = OwningOpRef<TransformOpInterface>(transform->clone());
-    transform = owningCopy.get();
-  }
 
   TransformState state(transform->getParentRegion(), payloadRoot, extraMapping,
                        options);
