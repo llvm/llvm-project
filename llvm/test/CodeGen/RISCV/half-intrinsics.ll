@@ -1526,9 +1526,9 @@ define half @floor_f16(half %a) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: floor_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    lui a0, %hi(.LCPI17_0)
-; CHECKIZFHMIN-NEXT:    flw ft1, %lo(.LCPI17_0)(a0)
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h ft0, fa0
+; CHECKIZFHMIN-NEXT:    lui a0, 307200
+; CHECKIZFHMIN-NEXT:    fmv.w.x ft1, a0
 ; CHECKIZFHMIN-NEXT:    fabs.s ft2, ft0
 ; CHECKIZFHMIN-NEXT:    flt.s a0, ft2, ft1
 ; CHECKIZFHMIN-NEXT:    beqz a0, .LBB17_2
@@ -1588,9 +1588,9 @@ define half @ceil_f16(half %a) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: ceil_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    lui a0, %hi(.LCPI18_0)
-; CHECKIZFHMIN-NEXT:    flw ft1, %lo(.LCPI18_0)(a0)
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h ft0, fa0
+; CHECKIZFHMIN-NEXT:    lui a0, 307200
+; CHECKIZFHMIN-NEXT:    fmv.w.x ft1, a0
 ; CHECKIZFHMIN-NEXT:    fabs.s ft2, ft0
 ; CHECKIZFHMIN-NEXT:    flt.s a0, ft2, ft1
 ; CHECKIZFHMIN-NEXT:    beqz a0, .LBB18_2
@@ -1650,9 +1650,9 @@ define half @trunc_f16(half %a) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: trunc_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    lui a0, %hi(.LCPI19_0)
-; CHECKIZFHMIN-NEXT:    flw ft1, %lo(.LCPI19_0)(a0)
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h ft0, fa0
+; CHECKIZFHMIN-NEXT:    lui a0, 307200
+; CHECKIZFHMIN-NEXT:    fmv.w.x ft1, a0
 ; CHECKIZFHMIN-NEXT:    fabs.s ft2, ft0
 ; CHECKIZFHMIN-NEXT:    flt.s a0, ft2, ft1
 ; CHECKIZFHMIN-NEXT:    beqz a0, .LBB19_2
@@ -1712,9 +1712,9 @@ define half @rint_f16(half %a) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: rint_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    lui a0, %hi(.LCPI20_0)
-; CHECKIZFHMIN-NEXT:    flw ft1, %lo(.LCPI20_0)(a0)
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h ft0, fa0
+; CHECKIZFHMIN-NEXT:    lui a0, 307200
+; CHECKIZFHMIN-NEXT:    fmv.w.x ft1, a0
 ; CHECKIZFHMIN-NEXT:    fabs.s ft2, ft0
 ; CHECKIZFHMIN-NEXT:    flt.s a0, ft2, ft1
 ; CHECKIZFHMIN-NEXT:    beqz a0, .LBB20_2
@@ -1850,9 +1850,9 @@ define half @round_f16(half %a) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: round_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    lui a0, %hi(.LCPI22_0)
-; CHECKIZFHMIN-NEXT:    flw ft1, %lo(.LCPI22_0)(a0)
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h ft0, fa0
+; CHECKIZFHMIN-NEXT:    lui a0, 307200
+; CHECKIZFHMIN-NEXT:    fmv.w.x ft1, a0
 ; CHECKIZFHMIN-NEXT:    fabs.s ft2, ft0
 ; CHECKIZFHMIN-NEXT:    flt.s a0, ft2, ft1
 ; CHECKIZFHMIN-NEXT:    beqz a0, .LBB22_2
@@ -1912,9 +1912,9 @@ define half @roundeven_f16(half %a) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: roundeven_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    lui a0, %hi(.LCPI23_0)
-; CHECKIZFHMIN-NEXT:    flw ft1, %lo(.LCPI23_0)(a0)
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h ft0, fa0
+; CHECKIZFHMIN-NEXT:    lui a0, 307200
+; CHECKIZFHMIN-NEXT:    fmv.w.x ft1, a0
 ; CHECKIZFHMIN-NEXT:    fabs.s ft2, ft0
 ; CHECKIZFHMIN-NEXT:    flt.s a0, ft2, ft1
 ; CHECKIZFHMIN-NEXT:    beqz a0, .LBB23_2
