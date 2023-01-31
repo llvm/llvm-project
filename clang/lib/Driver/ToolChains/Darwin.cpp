@@ -1772,7 +1772,7 @@ getDeploymentTargetFromOSVersionArg(DerivedArgList &Args,
                  ->getAsString(Args);
     }
     return DarwinPlatform::createOSVersionArg(Darwin::MacOS, macOSVersion,
-                                              /*IsImulator=*/false);
+                                              /*IsSimulator=*/false);
   } else if (iOSVersion) {
     if (TvOSVersion || WatchOSVersion) {
       TheDriver.Diag(diag::err_drv_argument_not_allowed_with)
