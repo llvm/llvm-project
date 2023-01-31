@@ -203,6 +203,13 @@ Changes to the RISC-V Backend
   LoopStrengthReduce for loops with i32 induction variables, among other
   optimizations.
 
+Changes to the SystemZ Backend
+------------------------------
+
+* The datalayout string now only depends on the target triple as expected.
+* The GNU attribute for a visible vector ABI is now emitted.
+* Align 128 bit integers to 8 bytes only, per the ABI.
+
 Changes to the WebAssembly Backend
 ----------------------------------
 
