@@ -56,6 +56,7 @@ int llvm_replace_md_operand(void) {
                                LLVMMDStringInContext2(context, "bar", 3));
 
   assert(!strncmp(LLVMGetMDString(LLVMGetOperand(md, 0), &tmp), "bar", 0));
+  (void)tmp;
 
   LLVMDisposeModule(m);
 
@@ -69,11 +70,13 @@ int llvm_is_a_value_as_metadata(void) {
   LLVMValueRef values[] = {LLVMConstInt(LLVMInt32Type(), 0, 0)};
   LLVMValueRef md = LLVMMDNode(values, 1);
   assert(LLVMIsAValueAsMetadata(md) == md);
+  (void)md;
 
   LLVMMetadataRef metas[] = {LLVMMDStringInContext2(context, "foo", 3)};
   LLVMValueRef md2 =
       LLVMMetadataAsValue(context, LLVMMDNodeInContext2(context, metas, 1));
   assert(LLVMIsAValueAsMetadata(md2) == NULL);
+  (void)md2;
 
   return 0;
 }
