@@ -11,8 +11,9 @@ define dso_local signext i32 @main() #0 {
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    addis r3, r2, var@toc@ha
 ; CHECK-NEXT:    lis r4, 0
-; CHECK-NEXT:    lwa r3, var@toc@l+7(r3)
+; CHECK-NEXT:    lwz r3, var@toc@l+7(r3)
 ; CHECK-NEXT:    ori r4, r4, 50000
+; CHECK-NEXT:    extsw r3, r3
 ; CHECK-NEXT:    sub r3, r3, r4
 ; CHECK-NEXT:    addis r4, r2, ans@toc@ha
 ; CHECK-NEXT:    rldicl r3, r3, 1, 63
