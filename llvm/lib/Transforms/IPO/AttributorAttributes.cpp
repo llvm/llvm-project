@@ -4161,12 +4161,14 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
         return true;
       if (auto *LI = dyn_cast<LoadInst>(V)) {
         if (llvm::all_of(LI->uses(), [&](const Use &U) {
-              return InfoCache.isOnlyUsedByAssume(
-                         cast<Instruction>(*U.getUser())) ||
-                     A.isAssumedDead(U, this, nullptr, UsedAssumedInformation);
+              auto &UserI = cast<Instruction>(*U.getUser());
+              if (InfoCache.isOnlyUsedByAssume(UserI)) {
+                if (AssumeOnlyInst)
+                  AssumeOnlyInst->insert(&UserI);
+                return true;
+              }
+              return A.isAssumedDead(U, this, nullptr, UsedAssumedInformation);
             })) {
-          if (AssumeOnlyInst)
-            AssumeOnlyInst->insert(LI);
           return true;
         }
       }
