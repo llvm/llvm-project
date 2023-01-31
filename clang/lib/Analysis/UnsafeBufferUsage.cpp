@@ -366,6 +366,33 @@ public:
   // FIXME: pointer adding zero should be fine
   //FIXME: this gadge will need a fix-it
 };
+
+
+/// A call of a function or method that performs unchecked buffer operations
+/// over one of its pointer parameters.
+class UnsafeBufferUsageAttrGadget : public WarningGadget {
+    constexpr static const char *const OpTag = "call_expr";
+    const CallExpr *Op;
+
+public:
+    UnsafeBufferUsageAttrGadget(const MatchFinder::MatchResult &Result)
+      : WarningGadget(Kind::UnsafeBufferUsageAttr),
+        Op(Result.Nodes.getNodeAs<CallExpr>(OpTag)) {}
+
+  static bool classof(const Gadget *G) {
+    return G->getKind() == Kind::UnsafeBufferUsageAttr;
+  }
+
+  static Matcher matcher() {
+    return stmt(callExpr(callee(functionDecl(hasAttr(attr::UnsafeBufferUsage))))
+                          .bind(OpTag));
+  }
+  const Stmt *getBaseStmt() const override { return Op; }
+
+  DeclUseList getClaimedVarUseSites() const override {
+    return {};
+  }
+};
 } // namespace
 
 namespace {

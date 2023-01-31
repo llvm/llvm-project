@@ -29,6 +29,7 @@ WARNING_GADGET(Increment)
 WARNING_GADGET(Decrement)
 WARNING_GADGET(ArraySubscript)
 WARNING_GADGET(PointerArithmetic)
+WARNING_GADGET(UnsafeBufferUsageAttr)
 
 #undef FIXABLE_GADGET
 #undef WARNING_GADGET
