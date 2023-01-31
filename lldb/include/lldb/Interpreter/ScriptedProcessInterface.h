@@ -28,6 +28,8 @@ public:
     return {};
   }
 
+  virtual StructuredData::DictionarySP GetCapabilities() { return {}; }
+
   virtual Status Launch() { return Status("ScriptedProcess did not launch"); }
 
   virtual Status Resume() { return Status("ScriptedProcess did not resume"); }
