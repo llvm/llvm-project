@@ -1744,4 +1744,42 @@ TEST_F(ScalarEvolutionsTest, ComputeMaxTripCountFromMultiDemArray) {
   });
 }
 
+TEST_F(ScalarEvolutionsTest, ApplyLoopGuards) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      "declare void @llvm.assume(i1)\n"
+      "define void @test(i32 %num) {\n"
+      "entry:\n"
+      "  %u = urem i32 %num, 4\n"
+      "  %cmp = icmp eq i32 %u, 0\n"
+      "  tail call void @llvm.assume(i1 %cmp)\n"
+      "  %cmp.1 = icmp ugt i32 %num, 0\n"
+      "  tail call void @llvm.assume(i1 %cmp.1)\n"
+      "  br label %for.body\n"
+      "for.body:\n"
+      "  %i.010 = phi i32 [ 0, %entry ], [ %inc, %for.body ]\n"
+      "  %inc = add nuw nsw i32 %i.010, 1\n"
+      "  %cmp2 = icmp ult i32 %inc, %num\n"
+      "  br i1 %cmp2, label %for.body, label %exit\n"
+      "exit:\n"
+      "  ret void\n"
+      "}\n",
+      Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "test", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    auto *TCScev = SE.getSCEV(getArgByName(F, "num"));
+    auto *ApplyLoopGuardsTC = SE.applyLoopGuards(TCScev, *LI.begin());
+    // Assert that the new TC is (4 * ((4 umax %num) /u 4))
+    APInt Four(32, 4);
+    auto *Constant4 = SE.getConstant(Four);
+    auto *Max = SE.getUMaxExpr(TCScev, Constant4);
+    auto *Mul = SE.getMulExpr(SE.getUDivExpr(Max, Constant4), Constant4);
+    ASSERT_TRUE(Mul == ApplyLoopGuardsTC);
+  });
+}
+
 }  // end namespace llvm
