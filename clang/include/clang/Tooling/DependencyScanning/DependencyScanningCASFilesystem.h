@@ -69,7 +69,7 @@ public:
 
   /// \returns The scanned preprocessor directive tokens of the file that are
   /// used to speed up preprocessing, if available.
-  Optional<ArrayRef<dependency_directives_scan::Directive>>
+  std::optional<ArrayRef<dependency_directives_scan::Directive>>
   getDirectiveTokens(const Twine &Path);
 
 private:
@@ -80,11 +80,11 @@ private:
 
   struct FileEntry {
     std::error_code EC; // If non-zero, caches a stat failure.
-    Optional<StringRef> Buffer;
+    std::optional<StringRef> Buffer;
     SmallVector<dependency_directives_scan::Token, 64> DepTokens;
     SmallVector<dependency_directives_scan::Directive, 16> DepDirectives;
     llvm::vfs::Status Status;
-    Optional<llvm::cas::ObjectRef> CASContents;
+    std::optional<llvm::cas::ObjectRef> CASContents;
   };
   llvm::BumpPtrAllocator EntryAlloc;
   llvm::StringMap<FileEntry, llvm::BumpPtrAllocator &> Entries;
@@ -108,9 +108,9 @@ private:
 
   llvm::cas::ObjectStore &CAS;
   llvm::cas::ActionCache &Cache;
-  Optional<llvm::cas::ObjectRef> ClangFullVersionID;
-  Optional<llvm::cas::ObjectRef> DepDirectivesID;
-  Optional<llvm::cas::ObjectRef> EmptyBlobID;
+  std::optional<llvm::cas::ObjectRef> ClangFullVersionID;
+  std::optional<llvm::cas::ObjectRef> DepDirectivesID;
+  std::optional<llvm::cas::ObjectRef> EmptyBlobID;
 };
 
 } // end namespace dependencies

@@ -84,7 +84,7 @@ public:
     return IncludeInfo.Tree.getCheckResult(Index);
   }
 
-  Optional<FileID>
+  std::optional<FileID>
   handleIncludeDirective(Preprocessor &PP, SourceLocation IncludeLoc,
                          SourceLocation AfterDirectiveLoc) override {
     if (HasCASErrorOccurred)
@@ -101,7 +101,7 @@ public:
     if (ExpectedLoc != AfterDirectiveLoc)
       return std::nullopt;
 
-    auto reportError = [&](llvm::Error &&E) -> Optional<FileID> {
+    auto reportError = [&](llvm::Error &&E) -> std::optional<FileID> {
       this->reportError(PP, std::move(E));
       return std::nullopt;
     };

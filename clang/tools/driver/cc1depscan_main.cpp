@@ -275,7 +275,7 @@ ProcessAncestorIterator &ProcessAncestorIterator::setPID(uint64_t NewPID) {
   return *this;
 }
 
-static Optional<std::string>
+static std::optional<std::string>
 makeDepscanDaemonKey(StringRef Mode, const DepscanSharing &Sharing) {
   auto completeKey = [&Sharing](llvm::BLAKE3 &Hasher) -> std::string {
     // Only share depscan daemons that originated from the same clang version.
@@ -339,7 +339,7 @@ makeDepscanDaemonKey(StringRef Mode, const DepscanSharing &Sharing) {
   return std::nullopt;
 }
 
-static Optional<std::string>
+static std::optional<std::string>
 makeDepscanDaemonPath(StringRef Mode, const DepscanSharing &Sharing) {
   if (Mode == "inline")
     return std::nullopt;
@@ -471,7 +471,7 @@ static int scanAndUpdateCC1(const char *Exec, ArrayRef<const char *> OldArgs,
                             const CASOptions &CASOpts,
                             std::shared_ptr<llvm::cas::ObjectStore> DB,
                             std::shared_ptr<llvm::cas::ActionCache> Cache,
-                            llvm::Optional<llvm::cas::CASID> &RootID) {
+                            std::optional<llvm::cas::CASID> &RootID) {
   using namespace clang::driver;
 
   llvm::ScopedDurationTimer ScopedTime([&Diag](double Seconds) {
@@ -540,7 +540,8 @@ static int scanAndUpdateCC1(const char *Exec, ArrayRef<const char *> OldArgs,
 
   bool DiagnosticErrorOccurred = false;
   auto ScanAndUpdate = [&]() {
-    if (Optional<std::string> DaemonPath = makeDepscanDaemonPath(Mode, Sharing))
+    if (std::optional<std::string> DaemonPath =
+            makeDepscanDaemonPath(Mode, Sharing))
       return scanAndUpdateCC1UsingDaemon(
           Exec, OldArgs, WorkingDirectory, NewArgs, DiagnosticErrorOccurred,
           PrefixMapping, *DaemonPath, Sharing, SaveArg, *DB);
@@ -598,13 +599,13 @@ int cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0,
   auto *OutputArg = Args.getLastArg(clang::driver::options::OPT_o);
   std::string OutputPath = OutputArg ? OutputArg->getValue() : "-";
 
-  Optional<StringRef> DumpDepscanTree;
+  std::optional<StringRef> DumpDepscanTree;
   if (auto *Arg =
           Args.getLastArg(clang::driver::options::OPT_dump_depscan_tree_EQ))
     DumpDepscanTree = Arg->getValue();
 
   SmallVector<const char *> NewArgs;
-  Optional<llvm::cas::CASID> RootID;
+  std::optional<llvm::cas::CASID> RootID;
 
   CASOptions CASOpts;
   auto ParsedCC1Args =
@@ -901,7 +902,7 @@ int ScanServer::listen() {
 
   auto ServiceLoop = [this, &CAS, &Service, &NumRunning, &Start,
                       &SecondsSinceLastClose, &SharedOS](unsigned I) {
-    Optional<tooling::dependencies::DependencyScanningTool> Tool;
+    std::optional<tooling::dependencies::DependencyScanningTool> Tool;
     SmallString<256> Message;
     while (true) {
       if (ShutDown.load())
@@ -928,7 +929,7 @@ int ScanServer::listen() {
         // Check again for shutdown, since the main thread could have
         // requested it before we created the service.
         //
-        // FIXME: Return Optional<ServiceReference> from the map, handling
+        // FIXME: Return std::optional<ServiceReference> from the map, handling
         // this condition in getOrCreateService().
         if (ShutDown.load()) {
           // Abort the work in shutdown state since the thread can go down

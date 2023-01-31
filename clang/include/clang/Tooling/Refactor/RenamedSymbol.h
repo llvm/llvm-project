@@ -34,7 +34,7 @@ public:
   /// symbol. May not be the most canonical declaration.
   const NamedDecl *FoundDecl;
   /// An optional Objective-C selector.
-  llvm::Optional<Selector> ObjCSelector;
+  std::optional<Selector> ObjCSelector;
 
   Symbol(const NamedDecl *FoundDecl, unsigned SymbolIndex,
          const LangOptions &LangOpts);

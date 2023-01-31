@@ -1961,7 +1961,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
     // expansions.
     if (IncludePos.isMacroID())
       IncludePos = SourceMgr.getExpansionRange(IncludePos).getEnd();
-    Optional<FileID> FID = CActions->handleIncludeDirective(
+    std::optional<FileID> FID = CActions->handleIncludeDirective(
         *this, IncludePos, CurLexer->getSourceLocation());
     if (!FID) {
       // FIXME: Report \p Callbacks->FileSkipped? Note that it currently

@@ -122,9 +122,10 @@ public:
   void getUnitPathForOutputFile(StringRef FilePath, SmallVectorImpl<char> &Str);
   /// If the unit file exists and \p timeCompareFilePath is provided, it will
   /// return true if \p timeCompareFilePath is older than the unit file.
-  Optional<bool> isUnitUpToDateForOutputFile(StringRef FilePath,
-                                             Optional<StringRef> TimeCompareFilePath,
-                                             std::string &Error);
+  std::optional<bool>
+  isUnitUpToDateForOutputFile(StringRef FilePath,
+                              std::optional<StringRef> TimeCompareFilePath,
+                              std::string &Error);
   static void getUnitNameForAbsoluteOutputFile(StringRef FilePath, SmallVectorImpl<char> &Str,
                                                const PathRemapper &Remapper);
   static bool initIndexDirectory(StringRef StorePath, std::string &Error);

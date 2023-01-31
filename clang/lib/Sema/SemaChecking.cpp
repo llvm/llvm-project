@@ -1928,7 +1928,7 @@ static bool checkPointerAuthKey(Sema &S, Expr *&Arg) {
 
 bool Sema::checkConstantPointerAuthKey(Expr *Arg, unsigned &Result) {
   // Attempt to constant-evaluate the expression.
-  Optional<llvm::APSInt> KeyValue = Arg->getIntegerConstantExpr(Context);
+  std::optional<llvm::APSInt> KeyValue = Arg->getIntegerConstantExpr(Context);
   if (!KeyValue) {
     Diag(Arg->getExprLoc(), diag::err_expr_not_ice) << 0
       << Arg->getSourceRange();

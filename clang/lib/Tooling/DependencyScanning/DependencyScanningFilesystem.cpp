@@ -143,7 +143,7 @@ const CachedFileSystemEntry &
 DependencyScanningFilesystemSharedCache::CacheShard::getOrEmplaceEntryForUID(
     llvm::sys::fs::UniqueID UID, llvm::vfs::Status Stat,
     std::unique_ptr<llvm::MemoryBuffer> Contents,
-    Optional<cas::ObjectRef> CASContents) {
+    std::optional<cas::ObjectRef> CASContents) {
   std::lock_guard<std::mutex> LockGuard(CacheLock);
   auto Insertion = EntriesByUID.insert({UID, nullptr});
   if (Insertion.second) {
@@ -277,7 +277,7 @@ namespace {
 class DepScanFile final : public llvm::vfs::File {
 public:
   DepScanFile(std::unique_ptr<llvm::MemoryBuffer> Buffer,
-              Optional<cas::ObjectRef> CASContents, llvm::vfs::Status Stat)
+              std::optional<cas::ObjectRef> CASContents, llvm::vfs::Status Stat)
       : Buffer(std::move(Buffer)), CASContents(std::move(CASContents)),
         Stat(std::move(Stat)) {}
 
@@ -291,7 +291,8 @@ public:
     return std::move(Buffer);
   }
 
-  llvm::ErrorOr<Optional<cas::ObjectRef>> getObjectRefForContent() override {
+  llvm::ErrorOr<std::optional<cas::ObjectRef>>
+  getObjectRefForContent() override {
     return CASContents;
   }
 
@@ -299,7 +300,7 @@ public:
 
 private:
   std::unique_ptr<llvm::MemoryBuffer> Buffer;
-  Optional<cas::ObjectRef> CASContents;
+  std::optional<cas::ObjectRef> CASContents;
   llvm::vfs::Status Stat;
 };
 

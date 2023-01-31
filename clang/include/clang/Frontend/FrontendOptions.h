@@ -227,7 +227,7 @@ class FrontendInputFile {
   std::optional<llvm::MemoryBufferRef> Buffer;
 
   /// The input, if it comes from \p FrontendOptions::CASIncludeTreeID.
-  Optional<cas::ObjectRef> IncludeTree;
+  std::optional<cas::ObjectRef> IncludeTree;
 
   /// The kind of input, e.g., C source, AST file, LLVM IR.
   InputKind Kind;

@@ -152,7 +152,7 @@ void DependencyScanningCASFilesystem::scanForDirectives(
     EmptyBlobID = reportAsFatalIfError(CAS.storeFromString(std::nullopt, ""));
 
   // Construct a tree for the input.
-  Optional<CASID> InputID;
+  std::optional<CASID> InputID;
   {
     HierarchicalTreeBuilder Builder;
     Builder.push(*ClangFullVersionID, TreeEntry::Regular, "version");
@@ -162,9 +162,9 @@ void DependencyScanningCASFilesystem::scanForDirectives(
   }
 
   // Check the result cache.
-  if (Optional<CASID> OutputID =
+  if (std::optional<CASID> OutputID =
           reportAsFatalIfError(Cache.get(*InputID))) {
-    if (Optional<ObjectRef> OutputRef = CAS.getReference(*OutputID)) {
+    if (std::optional<ObjectRef> OutputRef = CAS.getReference(*OutputID)) {
       reportAsFatalIfError(
           loadDepDirectives(CAS, *OutputRef, Tokens, Directives));
       return;
@@ -250,7 +250,7 @@ DependencyScanningCASFilesystem::lookupPath(const Twine &Path) {
     }
   }
 
-  Optional<cas::CASID> FileID;
+  std::optional<cas::CASID> FileID;
   llvm::ErrorOr<llvm::vfs::Status> MaybeStatus =
       getCachingFS().statusAndFileID(PathRef, FileID);
   if (!MaybeStatus) {
@@ -311,7 +311,7 @@ namespace {
 
 class DepScanFile final : public llvm::vfs::File {
 public:
-  DepScanFile(StringRef Buffer, Optional<cas::ObjectRef> CASContents,
+  DepScanFile(StringRef Buffer, std::optional<cas::ObjectRef> CASContents,
               llvm::vfs::Status Stat)
       : Buffer(Buffer), CASContents(std::move(CASContents)),
         Stat(std::move(Stat)) {}
@@ -325,7 +325,8 @@ public:
     return llvm::MemoryBuffer::getMemBuffer(Buffer, Name.toStringRef(Storage));
   }
 
-  llvm::ErrorOr<Optional<cas::ObjectRef>> getObjectRefForContent() override {
+  llvm::ErrorOr<std::optional<cas::ObjectRef>>
+  getObjectRefForContent() override {
     return CASContents;
   }
 
@@ -333,7 +334,7 @@ public:
 
 private:
   StringRef Buffer;
-  Optional<cas::ObjectRef> CASContents;
+  std::optional<cas::ObjectRef> CASContents;
   llvm::vfs::Status Stat;
 };
 
@@ -356,7 +357,7 @@ DependencyScanningCASFilesystem::openFileForRead(const Twine &Path) {
       *Result.Entry->Buffer, Result.Entry->CASContents, Result.Entry->Status);
 }
 
-Optional<ArrayRef<dependency_directives_scan::Directive>>
+std::optional<ArrayRef<dependency_directives_scan::Directive>>
 DependencyScanningCASFilesystem::getDirectiveTokens(const Twine &Path) {
   LookupPathResult Result = lookupPath(Path);
   if (Result.Entry && !Result.Entry->DepDirectives.empty())

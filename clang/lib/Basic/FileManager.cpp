@@ -540,7 +540,7 @@ void FileManager::fillRealPathName(FileEntry *UFE, llvm::StringRef FileName) {
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 FileManager::getBufferForFile(const FileEntry *Entry, bool isVolatile,
                               bool RequiresNullTerminator,
-                              Optional<cas::ObjectRef> *CASContents) {
+                              std::optional<cas::ObjectRef> *CASContents) {
   // If the content is living on the file entry, return a reference to it.
   if (Entry->Content)
     return llvm::MemoryBuffer::getMemBuffer(Entry->Content->getMemBufferRef());
@@ -574,7 +574,7 @@ FileManager::getBufferForFile(const FileEntry *Entry, bool isVolatile,
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 FileManager::getBufferForFileImpl(StringRef Filename, int64_t FileSize,
                                   bool isVolatile, bool RequiresNullTerminator,
-                                  Optional<cas::ObjectRef> *CASContents) {
+                                  std::optional<cas::ObjectRef> *CASContents) {
   if (FileSystemOpts.WorkingDir.empty())
     return FS->getBufferForFile(Filename, FileSize, RequiresNullTerminator,
                                 isVolatile, CASContents);
@@ -585,7 +585,7 @@ FileManager::getBufferForFileImpl(StringRef Filename, int64_t FileSize,
                               isVolatile, CASContents);
 }
 
-llvm::ErrorOr<Optional<cas::ObjectRef>>
+llvm::ErrorOr<std::optional<cas::ObjectRef>>
 FileManager::getObjectRefForFileContent(const Twine &Filename) {
   if (FileSystemOpts.WorkingDir.empty())
     return FS->getObjectRefForFileContent(Filename);

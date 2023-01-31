@@ -528,7 +528,7 @@ class VirtualEnvironment {
 public:
   /// Get the environment block, only if it has been overridden. This is a valid
   /// environment block and includes the terminating \a nullptr.
-  Optional<ArrayRef<const char *>> getEnvironmentIfOverridden() const {
+  std::optional<ArrayRef<const char *>> getEnvironmentIfOverridden() const {
     if (Environment)
       return ArrayRef(*Environment);
     return std::nullopt;
@@ -545,16 +545,16 @@ public:
 
 private:
   static const char **findName(const char **I, StringRef Name,
-                               Optional<StringRef> &Existing);
+                               std::optional<StringRef> &Existing);
   static const char **getHostEnvironment();
   void copyHostEnvironment(const char **I = nullptr);
-  Optional<SmallVector<const char *>> Environment;
+  std::optional<SmallVector<const char *>> Environment;
   SmallVector<const char *> OverriddenEnvironment;
 };
 } // end namespace
 
 const char **VirtualEnvironment::findName(const char **I, StringRef Name,
-                                          Optional<StringRef> &Existing) {
+                                          std::optional<StringRef> &Existing) {
   std::string Prefix = (Name + Twine("=")).str();
   for (; *I; ++I) {
     StringRef NameValue = *I;
@@ -595,7 +595,7 @@ void VirtualEnvironment::set(
     llvm::function_ref<const char *(StringRef)> SaveString) {
   const char **B =
       Environment ? Environment->data() : const_cast<const char **>(environ);
-  Optional<StringRef> Existing;
+  std::optional<StringRef> Existing;
   const char **I = findName(B, Name, Existing);
   if (Existing && Existing->drop_front(Name.size() + 1) == Value)
     return;
@@ -877,7 +877,7 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Cmd->setInputFileList(std::move(InputFileList));
 
   // Set the environment, if it has been overridden.
-  if (Optional<ArrayRef<const char *>> Env =
+  if (std::optional<ArrayRef<const char *>> Env =
           Environment.getEnvironmentIfOverridden()) {
     Cmd->setEnvironment(Env->drop_back());
     Cmd->setEnvironmentDisplay(Environment.getOverriddenEnvironment());

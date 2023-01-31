@@ -34,7 +34,7 @@ Error CompileJobCacheResult::forEachOutput(
   return Error::success();
 }
 
-Optional<CompileJobCacheResult::Output>
+std::optional<CompileJobCacheResult::Output>
 CompileJobCacheResult::getOutput(OutputKind Kind) const {
   size_t Count = getNumOutputs();
   for (size_t I = 0; I < Count; ++I) {

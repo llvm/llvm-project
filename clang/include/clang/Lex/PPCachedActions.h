@@ -39,7 +39,7 @@ public:
 
   /// \returns the \p FileID that should be entered for an include directive.
   /// \p None indicates that the directive should be skipped.
-  virtual Optional<FileID>
+  virtual std::optional<FileID>
   handleIncludeDirective(Preprocessor &PP, SourceLocation IncludeLoc,
                          SourceLocation AfterDirectiveLoc) = 0;
 

@@ -412,7 +412,7 @@ public:
           DepCASFS;
       ScanInstance.getPreprocessorOpts().DependencyDirectivesForFile =
           [LocalDepCASFS = std::move(LocalDepCASFS)](FileEntryRef File)
-          -> Optional<ArrayRef<dependency_directives_scan::Directive>> {
+          -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
         return LocalDepCASFS->getDirectiveTokens(File.getName());
       };
     }

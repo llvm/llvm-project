@@ -179,7 +179,7 @@ static void addScanServerArgs(const char *SocketPath,
   addCommonArgs(/*ForDriver*/ false, Args, Saver);
 }
 
-Optional<int>
+std::optional<int>
 clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
                                   llvm::StringSaver &Saver) {
   assert(Args.size() >= 1);

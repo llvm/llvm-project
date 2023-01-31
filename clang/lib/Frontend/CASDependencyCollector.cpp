@@ -25,7 +25,7 @@ static DependencyOutputOptions dropExtraDeps(DependencyOutputOptions Opts) {
 
 CASDependencyCollector::CASDependencyCollector(
     DependencyOutputOptions Opts, cas::ObjectStore &CAS,
-    std::function<void(Optional<cas::ObjectRef>)> Callback)
+    std::function<void(std::optional<cas::ObjectRef>)> Callback)
     : DependencyFileGenerator(dropExtraDeps(std::move(Opts)),
                               llvm::vfs::makeNullOutputBackend()),
       CAS(CAS), Callback(std::move(Callback)) {}

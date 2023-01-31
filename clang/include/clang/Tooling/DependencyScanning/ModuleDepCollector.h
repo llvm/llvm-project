@@ -35,7 +35,7 @@ struct PrebuiltModuleDep {
   std::string ModuleName;
   std::string PCMFile;
   std::string ModuleMapFile;
-  Optional<std::string> ModuleCacheKey;
+  std::optional<std::string> ModuleCacheKey;
 
   explicit PrebuiltModuleDep(const Module *M)
       : ModuleName(M->getTopLevelModuleName()),
@@ -115,10 +115,10 @@ struct ModuleDeps {
   bool ImportedByMainFile = false;
 
   /// The CASID for the module input dependency tree, if any.
-  llvm::Optional<llvm::cas::CASID> CASFileSystemRootID;
+  std::optional<llvm::cas::CASID> CASFileSystemRootID;
 
   /// The \c ActionCache key for this module, if any.
-  llvm::Optional<std::string> ModuleCacheKey;
+  std::optional<std::string> ModuleCacheKey;
 
   /// Compiler invocation that can be used to build this module. Does not
   /// include argv[0].

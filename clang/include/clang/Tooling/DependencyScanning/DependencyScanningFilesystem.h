@@ -31,14 +31,14 @@ using DependencyDirectivesTy =
 /// be shared between multiple entries.
 struct CachedFileContents {
   CachedFileContents(std::unique_ptr<llvm::MemoryBuffer> Contents,
-                     Optional<cas::ObjectRef> CASContents)
+                     std::optional<cas::ObjectRef> CASContents)
       : Original(std::move(Contents)), CASContents(std::move(CASContents)),
         DepDirectives(nullptr) {}
 
   /// Owning storage for the original contents.
   std::unique_ptr<llvm::MemoryBuffer> Original;
 
-  Optional<cas::ObjectRef> CASContents;
+  std::optional<cas::ObjectRef> CASContents;
 
   /// The mutex that must be locked before mutating directive tokens.
   std::mutex ValueLock;
@@ -92,7 +92,7 @@ public:
     return Contents->Original->getBuffer();
   }
 
-  Optional<cas::ObjectRef> getObjectRefForContent() const {
+  std::optional<cas::ObjectRef> getObjectRefForContent() const {
     assert(!isError() && "error");
     assert(!MaybeStat->isDirectory() && "not a file");
     assert(Contents && "contents not initialized");
@@ -200,7 +200,7 @@ public:
     const CachedFileSystemEntry &
     getOrEmplaceEntryForUID(llvm::sys::fs::UniqueID UID, llvm::vfs::Status Stat,
                             std::unique_ptr<llvm::MemoryBuffer> Contents,
-                            Optional<cas::ObjectRef> CASContents);
+                            std::optional<cas::ObjectRef> CASContents);
 
     /// Returns entry associated with the filename if there is some. Otherwise,
     /// associates the given entry with the filename and returns it.
@@ -275,7 +275,7 @@ public:
   }
 
   StringRef getContents() const { return Entry.getOriginalContents(); }
-  Optional<cas::ObjectRef> getObjectRefForContent() const {
+  std::optional<cas::ObjectRef> getObjectRefForContent() const {
     return Entry.getObjectRefForContent();
   }
 
@@ -333,11 +333,11 @@ private:
   struct TentativeEntry {
     llvm::vfs::Status Status;
     std::unique_ptr<llvm::MemoryBuffer> Contents;
-    Optional<cas::ObjectRef> CASContents;
+    std::optional<cas::ObjectRef> CASContents;
 
     TentativeEntry(llvm::vfs::Status Status,
                    std::unique_ptr<llvm::MemoryBuffer> Contents = nullptr,
-                   Optional<cas::ObjectRef> CASContents = std::nullopt)
+                   std::optional<cas::ObjectRef> CASContents = std::nullopt)
         : Status(std::move(Status)), Contents(std::move(Contents)),
           CASContents(std::move(CASContents)) {}
   };

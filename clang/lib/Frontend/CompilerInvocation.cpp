@@ -1321,7 +1321,7 @@ createBaseFS(const FileSystemOptions &FSOpts, const FrontendOptions &FEOpts,
   // Helper for creating a valid (but empty) CASFS if an error is encountered.
   auto makeEmptyCASFS = [&CAS]() {
     // Try to use the configured CAS, if any.
-    Optional<llvm::cas::CASID> EmptyRootID;
+    std::optional<llvm::cas::CASID> EmptyRootID;
     if (CAS) {
       llvm::cas::TreeSchema Schema(*CAS);
       // If we cannot create an empty tree, fall back to creating an empty
@@ -1358,9 +1358,9 @@ createBaseFS(const FileSystemOptions &FSOpts, const FrontendOptions &FEOpts,
   }
 
   auto makeIncludeTreeFS = [&](std::shared_ptr<llvm::cas::ObjectStore> CAS,
-                              llvm::cas::CASID &ID)
+                               llvm::cas::CASID &ID)
       -> Expected<IntrusiveRefCntPtr<llvm::vfs::FileSystem>> {
-    Optional<llvm::cas::ObjectRef> Ref = CAS->getReference(ID);
+    std::optional<llvm::cas::ObjectRef> Ref = CAS->getReference(ID);
     if (!Ref)
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "RootID does not exist");
@@ -2943,9 +2943,11 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
       Args.push_back(SA(Input.getFile()));
 }
 
-static void determineInputFromIncludeTree(
-    StringRef IncludeTreeID, CASOptions &CASOpts, DiagnosticsEngine &Diags,
-    Optional<cas::IncludeTreeRoot> &IncludeTree, StringRef &InputFilename) {
+static void
+determineInputFromIncludeTree(StringRef IncludeTreeID, CASOptions &CASOpts,
+                              DiagnosticsEngine &Diags,
+                              std::optional<cas::IncludeTreeRoot> &IncludeTree,
+                              StringRef &InputFilename) {
   assert(!IncludeTreeID.empty());
   auto reportError = [&](llvm::Error &&E) {
     Diags.Report(diag::err_fe_unable_to_load_include_tree)
@@ -3203,7 +3205,7 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   std::vector<std::string> Inputs = Args.getAllArgValues(OPT_INPUT);
   Opts.Inputs.clear();
 
-  Optional<cas::IncludeTreeRoot> Tree;
+  std::optional<cas::IncludeTreeRoot> Tree;
   if (!Opts.CASIncludeTreeID.empty()) {
     if (!Inputs.empty()) {
       Diags.Report(diag::err_drv_inputs_and_include_tree);

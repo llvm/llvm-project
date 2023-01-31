@@ -289,7 +289,7 @@ public:
 
   ObjectRef getFileListRef() const { return getReference(1); }
 
-  Optional<ObjectRef> getPCHRef() const {
+  std::optional<ObjectRef> getPCHRef() const {
     if (getNumReferences() > 2)
       return getReference(2);
     return std::nullopt;
@@ -309,8 +309,8 @@ public:
     return IncludeFileList(std::move(*Node));
   }
 
-  Expected<Optional<StringRef>> getPCHBuffer() {
-    if (Optional<ObjectRef> Ref = getPCHRef()) {
+  Expected<std::optional<StringRef>> getPCHBuffer() {
+    if (std::optional<ObjectRef> Ref = getPCHRef()) {
       auto Node = getCAS().getProxy(*Ref);
       if (!Node)
         return Node.takeError();
@@ -322,7 +322,7 @@ public:
   static Expected<IncludeTreeRoot> create(ObjectStore &DB,
                                           ObjectRef MainFileTree,
                                           ObjectRef FileList,
-                                          Optional<ObjectRef> PCHRef);
+                                          std::optional<ObjectRef> PCHRef);
 
   static Expected<IncludeTreeRoot> get(ObjectStore &DB, ObjectRef Ref);
 

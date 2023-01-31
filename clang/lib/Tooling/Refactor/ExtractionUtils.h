@@ -23,7 +23,7 @@ namespace extract {
 
 /// Returns a good name for an extracted variable based on the declaration
 /// that's used in the given expression \p E.
-Optional<StringRef> nameForExtractedVariable(const Expr *E);
+std::optional<StringRef> nameForExtractedVariable(const Expr *E);
 
 /// Returns an appropriate location for a variable declaration that will be
 /// visible to all the given expressions.

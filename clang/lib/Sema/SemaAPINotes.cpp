@@ -927,7 +927,7 @@ void Sema::ProcessAPINotes(Decl *D) {
   if (auto ObjCContainer = dyn_cast<ObjCContainerDecl>(D->getDeclContext())) {
     // Location function that looks up an Objective-C context.
     auto GetContext = [&](api_notes::APINotesReader *Reader)
-                        -> Optional<api_notes::ContextID> {
+        -> std::optional<api_notes::ContextID> {
       if (auto Protocol = dyn_cast<ObjCProtocolDecl>(ObjCContainer)) {
         if (auto Found = Reader->lookupObjCProtocolID(Protocol->getName()))
           return *Found;

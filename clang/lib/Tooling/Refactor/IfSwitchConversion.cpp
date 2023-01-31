@@ -96,7 +96,7 @@ static bool checkIfsHaveConditionExpression(const IfStmt *If) {
   return false;
 }
 
-static Optional<std::pair<const Expr *, const Expr *>>
+static std::optional<std::pair<const Expr *, const Expr *>>
 matchBinOp(const Expr *E, BinaryOperator::Opcode Kind) {
   const auto *BinOp = dyn_cast<BinaryOperator>(E->IgnoreParens());
   if (!BinOp || BinOp->getOpcode() != Kind)
@@ -109,9 +109,10 @@ typedef llvm::SmallDenseSet<int64_t, 4> RHSValueSet;
 
 /// Returns true if the conditional expression of an 'if' statement allows
 /// the "convert to switch" refactoring action.
-static bool isConditionValid(const Expr *E, ASTContext &Context,
-                             Optional<llvm::FoldingSetNodeID> &MatchedLHSNodeID,
-                             RHSValueSet &RHSValues) {
+static bool
+isConditionValid(const Expr *E, ASTContext &Context,
+                 std::optional<llvm::FoldingSetNodeID> &MatchedLHSNodeID,
+                 RHSValueSet &RHSValues) {
   auto Equals = matchBinOp(E, BO_EQ);
   if (!Equals) {
     auto LogicalOr = matchBinOp(E, BO_LOr);
@@ -201,7 +202,7 @@ RefactoringOperationResult clang::tooling::initiateIfSwitchConversionOperation(
         "if's body contains a 'break'/'default'/'case' statement");
 
   // FIXME: Use ASTMatchers if possible.
-  Optional<llvm::FoldingSetNodeID> MatchedLHSNodeID;
+  std::optional<llvm::FoldingSetNodeID> MatchedLHSNodeID;
   RHSValueSet RHSValues;
   for (const IfStmt *CurrentIf = If; CurrentIf;
        CurrentIf = dyn_cast_or_null<IfStmt>(CurrentIf->getElse())) {

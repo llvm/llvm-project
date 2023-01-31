@@ -234,9 +234,9 @@ void IndexUnitWriter::getUnitPathForOutputFile(StringRef FilePath,
   return getUnitNameForOutputFile(FilePath, Str);
 }
 
-Optional<bool> IndexUnitWriter::isUnitUpToDateForOutputFile(StringRef FilePath,
-                                                            Optional<StringRef> TimeCompareFilePath,
-                                                            std::string &Error) {
+std::optional<bool> IndexUnitWriter::isUnitUpToDateForOutputFile(
+    StringRef FilePath, std::optional<StringRef> TimeCompareFilePath,
+    std::string &Error) {
   SmallString<256> UnitPath;
   getUnitPathForOutputFile(FilePath, UnitPath);
 

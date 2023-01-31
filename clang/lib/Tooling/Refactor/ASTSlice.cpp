@@ -288,7 +288,7 @@ canonicalizeSelectedExpr(const Stmt *S, unsigned Index,
   return Same;
 }
 
-Optional<ASTSlice::SelectedStmt> ASTSlice::nearestSelectedStmt(
+std::optional<ASTSlice::SelectedStmt> ASTSlice::nearestSelectedStmt(
     llvm::function_ref<bool(const Stmt *)> Predicate) {
   for (const auto &Node : llvm::enumerate(NodeTree)) {
     const Stmt *S = Node.value().getStmtOrNull();
@@ -316,7 +316,7 @@ Optional<ASTSlice::SelectedStmt> ASTSlice::nearestSelectedStmt(
   return std::nullopt;
 }
 
-Optional<ASTSlice::SelectedStmt>
+std::optional<ASTSlice::SelectedStmt>
 ASTSlice::nearestSelectedStmt(Stmt::StmtClass Class) {
   return nearestSelectedStmt(
       [Class](const Stmt *S) -> bool { return S->getStmtClass() == Class; });
@@ -327,7 +327,7 @@ const Stmt *ASTSlice::nearestStmt(Stmt::StmtClass Class) {
   return Result ? Result->getStmt() : nullptr;
 }
 
-Optional<ASTSlice::SelectedDecl> ASTSlice::innermostSelectedDecl(
+std::optional<ASTSlice::SelectedDecl> ASTSlice::innermostSelectedDecl(
     llvm::function_ref<bool(const Decl *)> Predicate, unsigned Options) {
   if (SelectionRange.isValid()) {
     if (Options & ASTSlice::InnermostDeclOnly) {
@@ -365,7 +365,7 @@ Optional<ASTSlice::SelectedDecl> ASTSlice::innermostSelectedDecl(
   return std::nullopt;
 }
 
-Optional<ASTSlice::SelectedDecl>
+std::optional<ASTSlice::SelectedDecl>
 ASTSlice::innermostSelectedDecl(ArrayRef<Decl::Kind> Classes,
                                 unsigned Options) {
   assert(!Classes.empty() && "Expected at least one decl kind");
@@ -475,14 +475,14 @@ SelectedStmtSet SelectedStmtSet::createFromEntirelySelected(const Stmt *S,
   return Result;
 }
 
-Optional<ASTSlice::SelectedDecl>
+std::optional<ASTSlice::SelectedDecl>
 ASTSlice::getInnermostCompletelySelectedDecl() {
   assert(SelectionRange.isValid() && "No selection range!");
   if (CachedSelectedInnermostDecl)
     return *CachedSelectedInnermostDecl;
   computeSelectionRangeOverlapKinds(NodeTree, SelectionRange,
                                     Context.getSourceManager());
-  Optional<SelectedDecl> Result;
+  std::optional<SelectedDecl> Result;
   for (const auto &N : llvm::enumerate(NodeTree)) {
     const Decl *D = N.value().getDeclOrNull();
     if (!D)
@@ -507,7 +507,7 @@ static bool isCaseSelected(const SwitchStmt *S, SourceRange SelectionRange,
   return false;
 }
 
-Optional<SelectedStmtSet> ASTSlice::computeSelectedStmtSet() {
+std::optional<SelectedStmtSet> ASTSlice::computeSelectedStmtSet() {
   if (SelectionRange.isInvalid())
     return std::nullopt;
   computeSelectionRangeOverlapKinds(NodeTree, SelectionRange,
@@ -610,7 +610,7 @@ Optional<SelectedStmtSet> ASTSlice::computeSelectedStmtSet() {
   return Result;
 }
 
-Optional<SelectedStmtSet> ASTSlice::getSelectedStmtSet() {
+std::optional<SelectedStmtSet> ASTSlice::getSelectedStmtSet() {
   if (CachedSelectedStmtSet)
     return *CachedSelectedStmtSet;
   CachedSelectedStmtSet = computeSelectedStmtSet();

@@ -32,9 +32,9 @@ using tooling::dependencies::DepscanPrefixMapping;
 struct DepscanSharing {
   bool OnlyShareParent = false;
   bool ShareViaIdentifier = false;
-  Optional<StringRef> Name;
-  Optional<StringRef> Stop;
-  Optional<StringRef> Path;
+  std::optional<StringRef> Name;
+  std::optional<StringRef> Stop;
+  std::optional<StringRef> Path;
   SmallVector<const char *> CASArgs;
 };
 

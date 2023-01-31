@@ -2385,7 +2385,7 @@ static bool addCachedModuleFileToInMemoryCache(
     return true;
   }
 
-  Optional<cas::CompileJobCacheResult> Result;
+  std::optional<cas::CompileJobCacheResult> Result;
   cas::CompileJobResultSchema Schema(CAS);
   if (llvm::Error E = Schema.load(*ValueRef).moveInto(Result)) {
     Diags.Report(diag::err_cas_cannot_get_module_cache_key)

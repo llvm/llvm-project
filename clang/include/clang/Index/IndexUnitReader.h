@@ -35,9 +35,9 @@ public:
     createWithFilePath(StringRef FilePath, const PathRemapper &Remapper,
                        std::string &Error);
 
-  static Optional<llvm::sys::TimePoint<>>
-    getModificationTimeForUnit(StringRef UnitFilename, StringRef StorePath,
-                               std::string &Error);
+  static std::optional<llvm::sys::TimePoint<>>
+  getModificationTimeForUnit(StringRef UnitFilename, StringRef StorePath,
+                             std::string &Error);
 
   StringRef getProviderIdentifier() const;
   StringRef getProviderVersion() const;

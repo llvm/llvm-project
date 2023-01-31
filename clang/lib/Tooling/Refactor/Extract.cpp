@@ -80,8 +80,8 @@ public:
   ExtractOperation(const Stmt *S, const Stmt *ParentStmt,
                    const Decl *FunctionLikeParentDecl,
                    std::vector<std::string> Candidates,
-                   Optional<CompoundStatementRange> ExtractedStmtRange,
-                   Optional<CandidateInfo> FirstCandidateInfo,
+                   std::optional<CompoundStatementRange> ExtractedStmtRange,
+                   std::optional<CandidateInfo> FirstCandidateInfo,
                    ExtractionKind Kind)
       : S(S), ParentStmt(ParentStmt),
         FunctionLikeParentDecl(FunctionLikeParentDecl),
@@ -135,7 +135,7 @@ public:
   std::vector<std::string> Candidates;
   /// A set of extraction candidates that correspond to the extracted code.
   SmallVector<CandidateInfo, 2> CandidateExtractionInfo;
-  Optional<CompoundStatementRange> ExtractedStmtRange;
+  std::optional<CompoundStatementRange> ExtractedStmtRange;
   ExtractionKind Kind;
 };
 
@@ -178,9 +178,9 @@ findSelectedStmt(CompoundStmt::body_const_range Statements,
 
 /// Returns the first and the last statements that should be extracted from a
 /// compound statement.
-Optional<CompoundStatementRange> getExtractedStatements(const CompoundStmt *CS,
-                                                        const Stmt *Begin,
-                                                        const Stmt *End) {
+std::optional<CompoundStatementRange>
+getExtractedStatements(const CompoundStmt *CS, const Stmt *Begin,
+                       const Stmt *End) {
   if (CS->body_empty())
     return std::nullopt;
   assert(Begin && End);
@@ -239,11 +239,11 @@ initiateAnyExtractOperation(ASTSlice &Slice, ASTContext &Context,
   if (!CreateOperation)
     return Result;
 
-  Optional<CompoundStatementRange> ExtractedStmtRange;
+  std::optional<CompoundStatementRange> ExtractedStmtRange;
 
   // Check if there are multiple candidates that can be extracted.
   std::vector<std::string> Candidates;
-  Optional<ExtractOperation::CandidateInfo> FirstCandidateInfo;
+  std::optional<ExtractOperation::CandidateInfo> FirstCandidateInfo;
   if (const auto *BinOp = dyn_cast<BinaryOperator>(Selected)) {
     // Binary '+' and '-' operators allow multiple candidates when the
     // selection range starts after the LHS expression but still overlaps

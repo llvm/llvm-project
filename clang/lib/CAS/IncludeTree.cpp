@@ -211,10 +211,9 @@ bool IncludeFileList::isValid(const ObjectProxy &Node) {
          Base.getData().size() == NumFiles * sizeof(FileSizeTy);
 }
 
-Expected<IncludeTreeRoot> IncludeTreeRoot::create(ObjectStore &DB,
-                                                  ObjectRef MainFileTree,
-                                                  ObjectRef FileList,
-                                                  Optional<ObjectRef> PCHRef) {
+Expected<IncludeTreeRoot>
+IncludeTreeRoot::create(ObjectStore &DB, ObjectRef MainFileTree,
+                        ObjectRef FileList, std::optional<ObjectRef> PCHRef) {
   assert(IncludeTree::isValid(DB, MainFileTree));
   assert(IncludeFileList::isValid(DB, FileList));
   if (PCHRef) {
@@ -275,18 +274,18 @@ llvm::Error IncludeFileList::print(llvm::raw_ostream &OS, unsigned Indent) {
 }
 
 llvm::Error IncludeTreeRoot::print(llvm::raw_ostream &OS, unsigned Indent) {
-  if (Optional<ObjectRef> PCHRef = getPCHRef()) {
+  if (std::optional<ObjectRef> PCHRef = getPCHRef()) {
     OS.indent(Indent) << "(PCH) ";
     getCAS().getID(*PCHRef).print(OS);
     OS << '\n';
   }
-  Optional<cas::IncludeTree> MainTree;
+  std::optional<cas::IncludeTree> MainTree;
   if (llvm::Error E = getMainFileTree().moveInto(MainTree))
     return E;
   if (llvm::Error E = MainTree->print(OS.indent(Indent), Indent))
     return E;
   OS.indent(Indent) << "Files:\n";
-  Optional<cas::IncludeFileList> List;
+  std::optional<cas::IncludeFileList> List;
   if (llvm::Error E = getFileList().moveInto(List))
     return E;
   return List->print(OS, Indent);
@@ -322,7 +321,8 @@ public:
                                               Name.toStringRef(NameBuf));
     }
 
-    llvm::ErrorOr<Optional<cas::ObjectRef>> getObjectRefForContent() override {
+    llvm::ErrorOr<std::optional<cas::ObjectRef>>
+    getObjectRefForContent() override {
       return ContentsRef;
     }
 

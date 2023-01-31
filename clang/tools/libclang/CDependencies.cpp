@@ -181,7 +181,7 @@ static CXErrorCode getFullDependencies(
     const char *WorkingDirectory, CXModuleDiscoveredCallback *MDC,
     void *Context, CXString *Error, DiagnosticConsumer *DiagConsumer,
     LookupModuleOutputCallback LookupOutput, bool DeprecatedDriverCommand,
-    llvm::Optional<StringRef> ModuleName,
+    std::optional<StringRef> ModuleName,
     HandleFullDepsCallback HandleFullDeps) {
   llvm::StringSet<> AlreadySeen;
   FullDependencyConsumer DepConsumer(AlreadySeen, LookupOutput,
@@ -241,7 +241,7 @@ static CXErrorCode getFileDependencies(
     const char *WorkingDirectory, CXModuleDiscoveredCallback *MDC,
     void *Context, CXString *Error, DiagnosticConsumer *DiagConsumer,
     LookupModuleOutputCallback LookupOutput, bool DeprecatedDriverCommand,
-    llvm::Optional<StringRef> ModuleName,
+    std::optional<StringRef> ModuleName,
     HandleFullDepsCallback HandleFullDeps) {
   if (!W || argc < 2 || !argv)
     return CXError_InvalidArguments;
@@ -287,7 +287,7 @@ clang_experimental_DependencyScannerWorker_getFileDependencies_v3(
       W, argc, argv, WorkingDirectory, MDC, MDCContext, Error, nullptr,
       LookupOutputs,
       /*DeprecatedDriverCommand=*/true,
-      ModuleName ? Optional<StringRef>(ModuleName) : std::nullopt,
+      ModuleName ? std::optional<StringRef>(ModuleName) : std::nullopt,
       [&](FullDependencies FD) {
         assert(!FD.DriverCommandLine.empty());
         std::vector<std::string> Modules;
@@ -323,7 +323,7 @@ CXErrorCode clang_experimental_DependencyScannerWorker_getFileDependencies_v4(
       W, argc, argv, WorkingDirectory, MDC, MDCContext, Error, nullptr,
       LookupOutputs,
       /*DeprecatedDriverCommand=*/false,
-      ModuleName ? Optional<StringRef>(ModuleName) : std::nullopt,
+      ModuleName ? std::optional<StringRef>(ModuleName) : std::nullopt,
       [&](FullDependencies FD) {
         assert(FD.DriverCommandLine.empty());
         std::vector<std::string> Modules;
@@ -366,7 +366,7 @@ CXErrorCode clang_experimental_DependencyScannerWorker_getFileDependencies_v5(
       W, argc, argv, WorkingDirectory, MDC, MDCContext, nullptr, &DiagConsumer,
       LookupOutputs,
       /*DeprecatedDriverCommand=*/false,
-      ModuleName ? Optional<StringRef>(ModuleName) : std::nullopt,
+      ModuleName ? std::optional<StringRef>(ModuleName) : std::nullopt,
       [&](FullDependencies FD) {
         assert(FD.DriverCommandLine.empty());
         std::vector<std::string> Modules;

@@ -28,7 +28,7 @@ public:
   ///                 completion, or \c None if an error occurred.
   CASDependencyCollector(
       DependencyOutputOptions Opts, cas::ObjectStore &CAS,
-      std::function<void(Optional<cas::ObjectRef>)> Callback);
+      std::function<void(std::optional<cas::ObjectRef>)> Callback);
 
   /// Replay the given result, which should have been created by a
   /// \c CASDependencyCollector instance.
@@ -46,7 +46,7 @@ private:
   void finishedMainFile(DiagnosticsEngine &Diags) override;
 
   cas::ObjectStore &CAS;
-  std::function<void(Optional<cas::ObjectRef>)> Callback;
+  std::function<void(std::optional<cas::ObjectRef>)> Callback;
 };
 
 } // namespace clang

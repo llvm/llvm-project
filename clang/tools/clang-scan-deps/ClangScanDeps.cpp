@@ -478,7 +478,7 @@ handleIncludeTreeToolResult(llvm::cas::ObjectStore &CAS,
     return true;
   };
 
-  Optional<llvm::Error> E;
+  std::optional<llvm::Error> E;
   OS.applyLocked([&](llvm::raw_ostream &OS) {
     MaybeTree->getID().print(OS);
     OS << " - " << Input << "\n";
@@ -655,7 +655,7 @@ private:
     std::string ContextHash;
     std::vector<std::string> FileDeps;
     std::vector<ModuleID> ModuleDeps;
-    llvm::Optional<llvm::cas::CASID> CASFileSystemRootID;
+    std::optional<llvm::cas::CASID> CASFileSystemRootID;
     std::vector<std::string> DriverCommandLine;
     std::vector<Command> Commands;
   };
@@ -879,8 +879,8 @@ int main(int argc, const char **argv) {
   struct DepTreeResult {
     size_t Index;
     std::string Filename;
-    Optional<Expected<cas::ObjectProxy>> MaybeTree;
-    Optional<Expected<cas::IncludeTreeRoot>> MaybeIncludeTree;
+    std::optional<Expected<cas::ObjectProxy>> MaybeTree;
+    std::optional<Expected<cas::IncludeTreeRoot>> MaybeIncludeTree;
 
     DepTreeResult(size_t Index, std::string Filename,
                   Expected<cas::ObjectProxy> Tree)

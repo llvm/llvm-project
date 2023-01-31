@@ -49,7 +49,7 @@ public:
   size_t getNumOutputs() const;
 
   /// Retrieves a specific output specified by \p Kind, if it exists.
-  Optional<Output> getOutput(OutputKind Kind) const;
+  std::optional<Output> getOutput(OutputKind Kind) const;
 
   /// Print this result to \p OS.
   llvm::Error print(llvm::raw_ostream &OS);

@@ -93,7 +93,7 @@ class CompilerInstance : public ModuleLoader {
   std::shared_ptr<llvm::cas::ActionCache> ActionCache;
 
   /// The \c ActionCache key for this compilation, if caching is enabled.
-  Optional<cas::CASID> CompileJobCacheKey;
+  std::optional<cas::CASID> CompileJobCacheKey;
 
   /// The file manager.
   IntrusiveRefCntPtr<FileManager> FileMgr;
@@ -352,7 +352,7 @@ public:
     return Invocation->getCASOpts();
   }
 
-  Optional<cas::CASID> getCompileJobCacheKey() const {
+  std::optional<cas::CASID> getCompileJobCacheKey() const {
     return CompileJobCacheKey;
   }
   void setCompileJobCacheKey(cas::CASID Key) {

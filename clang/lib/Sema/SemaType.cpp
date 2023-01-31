@@ -8202,7 +8202,7 @@ static void HandlePtrAuthQualifier(QualType &type, const ParsedAttr &attr,
   auto checkArg = [&](Expr *arg, unsigned argIndex) -> unsigned {
     if (!arg) return 0;
 
-    Optional<llvm::APSInt> result = arg->getIntegerConstantExpr(S.Context);
+    std::optional<llvm::APSInt> result = arg->getIntegerConstantExpr(S.Context);
     if (!result) {
       isInvalid = true;
       S.Diag(arg->getExprLoc(), diag::err_ptrauth_qualifier_arg_not_ice);

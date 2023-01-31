@@ -260,14 +260,14 @@ TEST(DependencyScanner, DepScanFSWithCASProvider) {
   {
     DependencyScanningWorkerFilesystem DepFS(Service.getSharedCache(),
                                              std::move(CASFS));
-    Optional<ObjectRef> CASContents;
+    std::optional<ObjectRef> CASContents;
     auto Buf = DepFS.getBufferForFile(Path, /*FileSize*/ -1,
                                       /*RequiresNullTerminator*/ false,
                                       /*IsVolatile*/ false, &CASContents);
     ASSERT_TRUE(Buf);
     EXPECT_EQ(Contents, (*Buf)->getBuffer());
     ASSERT_TRUE(CASContents);
-    Optional<ObjectProxy> BlobContents;
+    std::optional<ObjectProxy> BlobContents;
     ASSERT_THAT_ERROR(DB->getProxy(*CASContents).moveInto(BlobContents),
                       llvm::Succeeded());
     EXPECT_EQ(BlobContents->getData(), Contents);
@@ -282,10 +282,11 @@ TEST(DependencyScanner, DepScanFSWithCASProvider) {
         DepFS.openFileForRead(Path);
     ASSERT_TRUE(File);
     ASSERT_TRUE(*File);
-    llvm::ErrorOr<Optional<ObjectRef>> Ref = (*File)->getObjectRefForContent();
+    llvm::ErrorOr<std::optional<ObjectRef>> Ref =
+        (*File)->getObjectRefForContent();
     ASSERT_TRUE(Ref);
     ASSERT_TRUE(*Ref);
-    Optional<ObjectProxy> BlobContents;
+    std::optional<ObjectProxy> BlobContents;
     ASSERT_THAT_ERROR(DB->getProxy(**Ref).moveInto(BlobContents),
                       llvm::Succeeded());
     EXPECT_EQ(BlobContents->getData(), Contents);

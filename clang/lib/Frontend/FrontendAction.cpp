@@ -859,7 +859,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     CI.getLangOpts().CurrentModule = CI.getLangOpts().ModuleName;
   }
 
-  Optional<StringRef> IncludeTreePCHBuffer;
+  std::optional<StringRef> IncludeTreePCHBuffer;
   if (Input.isIncludeTree()) {
     auto reportError = [&](llvm::Error &&E) -> bool {
       std::string IncludeTreeID =

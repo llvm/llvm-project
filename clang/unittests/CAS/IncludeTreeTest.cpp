@@ -52,19 +52,19 @@ TEST(IncludeTree, IncludeTreeScan) {
                                           "t.cpp",
                                           "-o"
                                           "t.cpp.o"};
-  Optional<IncludeTreeRoot> Root;
+  std::optional<IncludeTreeRoot> Root;
   DepscanPrefixMapping PrefixMapping;
   ASSERT_THAT_ERROR(
       ScanTool.getIncludeTree(*DB, CommandLine, /*CWD*/ "", PrefixMapping)
           .moveInto(Root),
       llvm::Succeeded());
 
-  Optional<IncludeFile> MainFile;
-  Optional<IncludeFile> A1File;
-  Optional<IncludeFile> B1File;
-  Optional<IncludeFile> SysFile;
+  std::optional<IncludeFile> MainFile;
+  std::optional<IncludeFile> A1File;
+  std::optional<IncludeFile> B1File;
+  std::optional<IncludeFile> SysFile;
 
-  Optional<IncludeTree> Main;
+  std::optional<IncludeTree> Main;
   ASSERT_THAT_ERROR(Root->getMainFileTree().moveInto(Main), llvm::Succeeded());
   {
     ASSERT_THAT_ERROR(Main->getBaseFile().moveInto(MainFile),
@@ -77,7 +77,7 @@ TEST(IncludeTree, IncludeTreeScan) {
   }
   ASSERT_EQ(Main->getNumIncludes(), uint32_t(3));
 
-  Optional<IncludeTree> Predef;
+  std::optional<IncludeTree> Predef;
   ASSERT_THAT_ERROR(Main->getInclude(0).moveInto(Predef), llvm::Succeeded());
   EXPECT_EQ(Main->getIncludeOffset(0), uint32_t(0));
   {
@@ -88,7 +88,7 @@ TEST(IncludeTree, IncludeTreeScan) {
     EXPECT_EQ(FI.Filename, "<built-in>");
   }
 
-  Optional<IncludeTree> A1;
+  std::optional<IncludeTree> A1;
   ASSERT_THAT_ERROR(Main->getInclude(1).moveInto(A1), llvm::Succeeded());
   EXPECT_EQ(Main->getIncludeOffset(1), uint32_t(21));
   {
@@ -102,7 +102,7 @@ TEST(IncludeTree, IncludeTreeScan) {
     EXPECT_TRUE(A1->getCheckResult(1));
 
     ASSERT_EQ(A1->getNumIncludes(), uint32_t(1));
-    Optional<IncludeTree> B1;
+    std::optional<IncludeTree> B1;
     ASSERT_THAT_ERROR(A1->getInclude(0).moveInto(B1), llvm::Succeeded());
     EXPECT_EQ(A1->getIncludeOffset(0), uint32_t(122));
     {
@@ -117,7 +117,7 @@ TEST(IncludeTree, IncludeTreeScan) {
     }
   }
 
-  Optional<IncludeTree> Sys;
+  std::optional<IncludeTree> Sys;
   ASSERT_THAT_ERROR(Main->getInclude(2).moveInto(Sys), llvm::Succeeded());
   EXPECT_EQ(Main->getIncludeOffset(2), uint32_t(42));
   {
@@ -131,29 +131,29 @@ TEST(IncludeTree, IncludeTreeScan) {
     ASSERT_EQ(Sys->getNumIncludes(), uint32_t(0));
   }
 
-  Optional<IncludeFileList> FileList;
+  std::optional<IncludeFileList> FileList;
   ASSERT_THAT_ERROR(Root->getFileList().moveInto(FileList), llvm::Succeeded());
   ASSERT_EQ(FileList->getNumFiles(), size_t(4));
   {
-    Optional<IncludeFile> File;
+    std::optional<IncludeFile> File;
     ASSERT_THAT_ERROR(FileList->getFile(0).moveInto(File), llvm::Succeeded());
     EXPECT_EQ(File->getRef(), MainFile->getRef());
     EXPECT_EQ(FileList->getFileSize(0), MainContents.size());
   }
   {
-    Optional<IncludeFile> File;
+    std::optional<IncludeFile> File;
     ASSERT_THAT_ERROR(FileList->getFile(1).moveInto(File), llvm::Succeeded());
     EXPECT_EQ(File->getRef(), A1File->getRef());
     EXPECT_EQ(FileList->getFileSize(1), A1Contents.size());
   }
   {
-    Optional<IncludeFile> File;
+    std::optional<IncludeFile> File;
     ASSERT_THAT_ERROR(FileList->getFile(2).moveInto(File), llvm::Succeeded());
     EXPECT_EQ(File->getRef(), B1File->getRef());
     EXPECT_EQ(FileList->getFileSize(2), IncludeFileList::FileSizeTy(0));
   }
   {
-    Optional<IncludeFile> File;
+    std::optional<IncludeFile> File;
     ASSERT_THAT_ERROR(FileList->getFile(3).moveInto(File), llvm::Succeeded());
     EXPECT_EQ(File->getRef(), SysFile->getRef());
     EXPECT_EQ(FileList->getFileSize(3), IncludeFileList::FileSizeTy(0));

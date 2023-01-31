@@ -248,7 +248,7 @@ Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
   // failed, but warnings are ignored and deferred for the main compilation.
   ScanInvocation->getDiagnosticOpts().IgnoreWarnings = true;
 
-  Optional<llvm::cas::CASID> Root;
+  std::optional<llvm::cas::CASID> Root;
   if (ProduceIncludeTree) {
     if (Error E = Tool.getIncludeTreeFromCompilerInvocation(
                           DB, std::move(ScanInvocation), WorkingDirectory,

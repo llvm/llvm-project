@@ -785,7 +785,7 @@ struct ParsedSourceLineRange : ParsedSourceLocation {
   ParsedSourceLineRange(const ParsedSourceLocation &Loc)
       : ParsedSourceLocation(Loc), MaxColumn(Loc.Column) {}
 
-  static Optional<ParsedSourceLineRange> FromString(StringRef Str) {
+  static std::optional<ParsedSourceLineRange> FromString(StringRef Str) {
     std::pair<StringRef, StringRef> RangeSplit = Str.rsplit('-');
     auto PSL = ParsedSourceLocation::FromString(RangeSplit.first);
     ParsedSourceLineRange Result;
@@ -811,7 +811,7 @@ struct OldParsedSourceRange {
                     const ParsedSourceLocation &End)
       : Begin(Begin), End(End) {}
 
-  static Optional<OldParsedSourceRange> FromString(StringRef Str) {
+  static std::optional<OldParsedSourceRange> FromString(StringRef Str) {
     std::pair<StringRef, StringRef> RangeSplit = Str.rsplit('-');
     auto Begin = ParsedSourceLocation::FromString(RangeSplit.first);
     if (Begin.FileName.empty())
@@ -1003,7 +1003,7 @@ static std::string queryResultsForFile(StringRef Filename, StringRef Name,
                                Sub1);
 }
 
-static Optional<std::pair<unsigned, unsigned>>
+static std::optional<std::pair<unsigned, unsigned>>
 findSelectionLocInSource(StringRef Buffer, StringRef Label) {
   size_t I = Buffer.find(Label);
   if (I == StringRef::npos)
@@ -1031,8 +1031,8 @@ findSelectionLocInSource(StringRef Buffer, StringRef Label) {
   return std::make_pair(Line, Column);
 }
 
-static Optional<ParsedSourceLocation> selectionLocForFile(StringRef Filename,
-                                                          StringRef Name) {
+static std::optional<ParsedSourceLocation>
+selectionLocForFile(StringRef Filename, StringRef Name) {
   auto Buf = llvm::MemoryBuffer::getFile(Filename);
   if (!Buf)
     return std::nullopt;
@@ -1050,8 +1050,8 @@ static Optional<ParsedSourceLocation> selectionLocForFile(StringRef Filename,
   return ParsedSourceLocation::FromString(OS.str());
 }
 
-static Optional<OldParsedSourceRange> selectionRangeForFile(StringRef Filename,
-                                                         StringRef Name) {
+static std::optional<OldParsedSourceRange>
+selectionRangeForFile(StringRef Filename, StringRef Name) {
   auto Buf = llvm::MemoryBuffer::getFile(Filename);
   if (!Buf)
     return std::nullopt;
@@ -1216,7 +1216,7 @@ int initiateAndPerformAction(CXTranslationUnit TU, ArrayRef<const char *> Args,
     return 1;
   }
 
-  auto ActionTypeOrNone = StringSwitch<Optional<CXRefactoringActionType>>(
+  auto ActionTypeOrNone = StringSwitch<std::optional<CXRefactoringActionType>>(
                               opts::initiateAndPerform::ActionName)
 #define REFACTORING_OPERATION_ACTION(Name, Spelling, Command)                  \
   .Case(Command, CXRefactor_##Name)
@@ -1231,13 +1231,13 @@ int initiateAndPerformAction(CXTranslationUnit TU, ArrayRef<const char *> Args,
   }
   CXRefactoringActionType ActionType = *ActionTypeOrNone;
 
-  Optional<bool> Initiated;
-  Optional<std::string> InitiationFailureReason;
-  Optional<std::string> LocationCandidateInformation;
-  auto InitiateAndPerform = [&](const ParsedSourceLocation &Location,
-                                unsigned Column,
-                                Optional<OldParsedSourceRange> SelectionRange =
-                                    std::nullopt) -> bool {
+  std::optional<bool> Initiated;
+  std::optional<std::string> InitiationFailureReason;
+  std::optional<std::string> LocationCandidateInformation;
+  auto InitiateAndPerform =
+      [&](const ParsedSourceLocation &Location, unsigned Column,
+          std::optional<OldParsedSourceRange> SelectionRange =
+              std::nullopt) -> bool {
     CXSourceLocation Loc =
         clang_getLocation(TU, clang_getFile(TU, Location.FileName.c_str()),
                           Location.Line, Column);

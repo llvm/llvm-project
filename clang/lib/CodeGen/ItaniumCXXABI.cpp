@@ -857,7 +857,7 @@ llvm::Value *ItaniumCXXABI::EmitMemberDataPointerAddress(
 static llvm::Constant *pointerAuthResignConstant(
     llvm::Value *Ptr, const CGPointerAuthInfo &CurAuthInfo,
     const CGPointerAuthInfo &NewAuthInfo, CodeGenModule &CGM) {
-  Optional<llvm::GlobalPtrAuthInfo> Info =
+  std::optional<llvm::GlobalPtrAuthInfo> Info =
       llvm::GlobalPtrAuthInfo::analyze(Ptr);
 
   if (!Info || !isa<llvm::Constant>(NewAuthInfo.getDiscriminator()))
