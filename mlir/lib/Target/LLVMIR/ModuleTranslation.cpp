@@ -13,6 +13,7 @@
 
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
+#include "AttrKindDetail.h"
 #include "DebugTranslation.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -29,6 +30,7 @@
 
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -899,42 +901,27 @@ static void convertFunctionAttributes(LLVMFuncOp func,
 llvm::AttrBuilder
 ModuleTranslation::convertParameterAttrs(DictionaryAttr paramAttrs) {
   llvm::AttrBuilder attrBuilder(llvmModule->getContext());
-  if (auto attr = paramAttrs.getAs<UnitAttr>(LLVMDialect::getNoAliasAttrName()))
-    attrBuilder.addAttribute(llvm::Attribute::AttrKind::NoAlias);
 
-  if (auto attr =
-          paramAttrs.getAs<UnitAttr>(LLVMDialect::getReadonlyAttrName()))
-    attrBuilder.addAttribute(llvm::Attribute::AttrKind::ReadOnly);
+  for (auto [llvmKind, mlirName] : getAttrKindToNameMapping()) {
+    Attribute attr = paramAttrs.get(mlirName);
+    // Skip attributes that are not present.
+    if (!attr)
+      continue;
 
-  if (auto attr =
-          paramAttrs.getAs<IntegerAttr>(LLVMDialect::getAlignAttrName()))
-    attrBuilder.addAlignmentAttr(llvm::Align(attr.getInt()));
+    // NOTE: C++17 does not support capturing structured bindings.
+    llvm::Attribute::AttrKind llvmKindCap = llvmKind;
 
-  if (auto attr =
-          paramAttrs.getAs<TypeAttr>(LLVMDialect::getStructRetAttrName()))
-    attrBuilder.addStructRetAttr(convertType(attr.getValue()));
+    llvm::TypeSwitch<Attribute>(attr)
+        .Case<TypeAttr>([&](auto typeAttr) {
+          attrBuilder.addTypeAttr(llvmKindCap,
+                                  convertType(typeAttr.getValue()));
+        })
+        .Case<IntegerAttr>([&](auto intAttr) {
+          attrBuilder.addRawIntAttr(llvmKindCap, intAttr.getInt());
+        })
+        .Case<UnitAttr>([&](auto) { attrBuilder.addAttribute(llvmKindCap); });
+  }
 
-  if (auto attr = paramAttrs.getAs<TypeAttr>(LLVMDialect::getByValAttrName()))
-    attrBuilder.addByValAttr(convertType(attr.getValue()));
-
-  if (auto attr = paramAttrs.getAs<TypeAttr>(LLVMDialect::getByRefAttrName()))
-    attrBuilder.addByRefAttr(convertType(attr.getValue()));
-
-  if (auto attr =
-          paramAttrs.getAs<TypeAttr>(LLVMDialect::getInAllocaAttrName()))
-    attrBuilder.addInAllocaAttr(convertType(attr.getValue()));
-
-  if (auto attr = paramAttrs.getAs<UnitAttr>(LLVMDialect::getNestAttrName()))
-    attrBuilder.addAttribute(llvm::Attribute::Nest);
-
-  if (auto attr = paramAttrs.getAs<UnitAttr>(LLVMDialect::getNoUndefAttrName()))
-    attrBuilder.addAttribute(llvm::Attribute::NoUndef);
-
-  if (auto attr = paramAttrs.getAs<UnitAttr>(LLVMDialect::getSExtAttrName()))
-    attrBuilder.addAttribute(llvm::Attribute::SExt);
-
-  if (auto attr = paramAttrs.getAs<UnitAttr>(LLVMDialect::getZExtAttrName()))
-    attrBuilder.addAttribute(llvm::Attribute::ZExt);
   return attrBuilder;
 }
 
