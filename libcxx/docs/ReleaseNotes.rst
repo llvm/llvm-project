@@ -59,7 +59,7 @@ Deprecations and Removals
   includes are removed based on the language version used. Incidental transitive
   inclusions of the following headers have been removed:
 
-  - C++2b: ``bit``, ``cstring``, ``type_traits``
+  - C++2b: ``atomic``, ``bit``, ``cstring``, ``type_traits``
 
 - The headers ``<experimental/algorithm>`` and ``<experimental/functional>`` have been removed, since all the contents
   have been implemented in namespace ``std`` for at least two releases.

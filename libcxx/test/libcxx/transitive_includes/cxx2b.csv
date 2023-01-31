@@ -34,7 +34,6 @@ atomic iosfwd
 atomic limits
 atomic ratio
 atomic version
-barrier atomic
 barrier cstddef
 barrier cstdint
 barrier cstring
@@ -43,6 +42,7 @@ barrier iosfwd
 barrier limits
 barrier new
 barrier ratio
+barrier version
 bit cstdint
 bit cstdlib
 bit limits
@@ -109,11 +109,11 @@ complex stdexcept
 complex version
 concepts cstddef
 concepts version
-condition_variable atomic
 condition_variable cstddef
 condition_variable cstdint
 condition_variable cstdlib
 condition_variable cstring
+condition_variable ctime
 condition_variable initializer_list
 condition_variable iosfwd
 condition_variable limits
@@ -273,7 +273,6 @@ fstream string
 fstream typeinfo
 fstream version
 functional array
-functional atomic
 functional cstddef
 functional cstdint
 functional cstdlib
@@ -290,7 +289,6 @@ functional typeinfo
 functional unordered_map
 functional vector
 functional version
-future atomic
 future cstddef
 future cstdint
 future cstdlib
@@ -310,7 +308,6 @@ future version
 initializer_list cstddef
 iomanip istream
 iomanip version
-ios atomic
 ios cctype
 ios cstddef
 ios cstdint
@@ -339,8 +336,13 @@ iterator iosfwd
 iterator limits
 iterator variant
 iterator version
-latch atomic
+latch cstddef
+latch cstdint
+latch cstring
+latch ctime
+latch iosfwd
 latch limits
+latch ratio
 latch version
 limits version
 list compare
@@ -380,7 +382,6 @@ map optional
 map stdexcept
 map tuple
 map version
-memory atomic
 memory compare
 memory cstddef
 memory cstdint
@@ -402,11 +403,11 @@ memory_resource new
 memory_resource stdexcept
 memory_resource tuple
 memory_resource version
-mutex atomic
 mutex cstddef
 mutex cstdint
 mutex cstdlib
 mutex cstring
+mutex ctime
 mutex initializer_list
 mutex iosfwd
 mutex limits
@@ -435,7 +436,6 @@ optional limits
 optional new
 optional stdexcept
 optional version
-ostream atomic
 ostream bitset
 ostream cstddef
 ostream cstdint
@@ -505,8 +505,9 @@ scoped_allocator limits
 scoped_allocator new
 scoped_allocator tuple
 scoped_allocator version
-semaphore atomic
 semaphore cstddef
+semaphore cstdint
+semaphore cstring
 semaphore ctime
 semaphore iosfwd
 semaphore limits

@@ -74,6 +74,7 @@ barrier ratio
 barrier stdexcept
 barrier type_traits
 barrier variant
+barrier version
 bit cstdint
 bit cstdlib
 bit iosfwd
@@ -162,6 +163,7 @@ condition_variable cstddef
 condition_variable cstdint
 condition_variable cstdlib
 condition_variable cstring
+condition_variable ctime
 condition_variable initializer_list
 condition_variable iosfwd
 condition_variable limits
@@ -460,7 +462,14 @@ iterator utility
 iterator variant
 iterator version
 latch atomic
+latch cstddef
+latch cstdint
+latch cstring
+latch ctime
+latch iosfwd
 latch limits
+latch ratio
+latch type_traits
 latch version
 limits type_traits
 limits version
@@ -553,6 +562,7 @@ mutex cstddef
 mutex cstdint
 mutex cstdlib
 mutex cstring
+mutex ctime
 mutex functional
 mutex initializer_list
 mutex iosfwd
@@ -704,6 +714,8 @@ scoped_allocator variant
 scoped_allocator version
 semaphore atomic
 semaphore cstddef
+semaphore cstdint
+semaphore cstring
 semaphore ctime
 semaphore iosfwd
 semaphore limits
