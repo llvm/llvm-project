@@ -180,12 +180,6 @@ public:
     if (isa<FixedVectorType>(DataType) && !ST->useRVVForFixedLengthVectors())
       return false;
 
-    // Don't allow elements larger than the ELEN.
-    // FIXME: How to limit for scalable vectors?
-    if (isa<FixedVectorType>(DataType) &&
-        DataType->getScalarSizeInBits() > ST->getELEN())
-      return false;
-
     if (Alignment <
         DL.getTypeStoreSize(DataType->getScalarType()).getFixedValue())
       return false;
@@ -206,12 +200,6 @@ public:
 
     // Only support fixed vectors if we know the minimum vector size.
     if (isa<FixedVectorType>(DataType) && !ST->useRVVForFixedLengthVectors())
-      return false;
-
-    // Don't allow elements larger than the ELEN.
-    // FIXME: How to limit for scalable vectors?
-    if (isa<FixedVectorType>(DataType) &&
-        DataType->getScalarSizeInBits() > ST->getELEN())
       return false;
 
     if (Alignment <
