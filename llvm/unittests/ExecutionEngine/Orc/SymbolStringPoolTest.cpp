@@ -90,6 +90,9 @@ TEST_F(SymbolStringPoolTest, NonOwningPointerBasics) {
   // Assignment.
   ANP2 = ANP1;
   ANP2 = A;
+
+  SymbolStringPtr S(ANP1); // Construct SymbolStringPtr from non-owning.
+  EXPECT_EQ(S, A);
 }
 
 TEST_F(SymbolStringPoolTest, NonOwningPointerRefCounts) {
