@@ -2815,11 +2815,7 @@ define i1 @neg_global_alias() {
 
 define i1 @icmp_lshr_known_non_zero_ult_true(i8 %x) {
 ; CHECK-LABEL: @icmp_lshr_known_non_zero_ult_true(
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[X1:%.*]] = shl nuw i8 [[OR]], 1
-; CHECK-NEXT:    [[X2:%.*]] = shl nuw i8 [[OR]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X1]], [[X2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %or = or i8 %x, 1
   %x1 = shl nuw i8 %or, 1
@@ -2830,11 +2826,7 @@ define i1 @icmp_lshr_known_non_zero_ult_true(i8 %x) {
 
 define i1 @icmp_lshr_known_non_zero_ult_false(i8 %x) {
 ; CHECK-LABEL: @icmp_lshr_known_non_zero_ult_false(
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[X1:%.*]] = shl nuw i8 [[OR]], 1
-; CHECK-NEXT:    [[X2:%.*]] = shl nuw i8 [[OR]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X1]], [[X2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %or = or i8 %x, 1
   %x1 = shl nuw i8 %or, 1
@@ -2845,11 +2837,7 @@ define i1 @icmp_lshr_known_non_zero_ult_false(i8 %x) {
 
 define i1 @icmp_lshr_known_non_zero_slt_true(i8 %x) {
 ; CHECK-LABEL: @icmp_lshr_known_non_zero_slt_true(
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[X1:%.*]] = shl nuw nsw i8 [[OR]], 1
-; CHECK-NEXT:    [[X2:%.*]] = shl nuw nsw i8 [[OR]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X1]], [[X2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %or = or i8 %x, 1
   %x1 = shl nuw nsw i8 %or, 1
@@ -2860,11 +2848,7 @@ define i1 @icmp_lshr_known_non_zero_slt_true(i8 %x) {
 
 define i1 @icmp_lshr_known_non_zero_slt_false(i8 %x) {
 ; CHECK-LABEL: @icmp_lshr_known_non_zero_slt_false(
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[X1:%.*]] = shl nuw nsw i8 [[OR]], 2
-; CHECK-NEXT:    [[X2:%.*]] = shl nuw nsw i8 [[OR]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X1]], [[X2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %or = or i8 %x, 1
   %x1 = shl nuw nsw i8 %or, 2
@@ -2884,6 +2868,21 @@ define i1 @neg_icmp_lshr_known_non_zero_slt_no_nsw(i8 %x) {
   %or = or i8 %x, 1
   %x1 = shl nuw i8 %or, 1
   %x2 = shl nuw i8 %or, 2
+  %cmp = icmp slt i8 %x1, %x2
+  ret i1 %cmp
+}
+
+define i1 @neg_icmp_lshr_known_non_zero_ult_no_nuw(i8 %x) {
+; CHECK-LABEL: @neg_icmp_lshr_known_non_zero_ult_no_nuw(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[X1:%.*]] = shl i8 [[OR]], 1
+; CHECK-NEXT:    [[X2:%.*]] = shl i8 [[OR]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X1]], [[X2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %or = or i8 %x, 1
+  %x1 = shl i8 %or, 1
+  %x2 = shl i8 %or, 2
   %cmp = icmp slt i8 %x1, %x2
   ret i1 %cmp
 }
@@ -2946,11 +2945,7 @@ define i1 @neg_icmp_lshr_different_shift_values(i8 %x, i8 %y) {
 
 define i1 @icmp_ult_vscale_true(i8 %x, i8 %y) {
 ; CHECK-LABEL: @icmp_ult_vscale_true(
-; CHECK-NEXT:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[X1:%.*]] = shl nuw nsw i64 [[VSCALE]], 1
-; CHECK-NEXT:    [[X2:%.*]] = shl nuw nsw i64 [[VSCALE]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[X1]], [[X2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %vscale = call i64 @llvm.vscale.i64()
   %x1 = shl nuw nsw i64 %vscale, 1
@@ -2961,11 +2956,7 @@ define i1 @icmp_ult_vscale_true(i8 %x, i8 %y) {
 
 define i1 @icmp_ult_vscale_false(i8 %x, i8 %y) {
 ; CHECK-LABEL: @icmp_ult_vscale_false(
-; CHECK-NEXT:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[X1:%.*]] = shl nuw nsw i64 [[VSCALE]], 1
-; CHECK-NEXT:    [[X2:%.*]] = shl nuw nsw i64 [[VSCALE]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[X1]], [[X2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %vscale = call i64 @llvm.vscale.i64()
   %x1 = shl nuw nsw i64 %vscale, 1
