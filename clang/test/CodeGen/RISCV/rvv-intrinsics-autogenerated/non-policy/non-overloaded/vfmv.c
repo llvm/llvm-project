@@ -13,7 +13,7 @@
 // CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
 //
 vfloat16mf4_t test_vfmv_v_f_f16mf4(_Float16 src, size_t vl) {
-  return __riscv_vfmv_v_f_f16mf4(src, vl);
+  return vfmv_v_f_f16mf4(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_v_f_f16mf2(
@@ -22,7 +22,7 @@ vfloat16mf4_t test_vfmv_v_f_f16mf4(_Float16 src, size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
 //
 vfloat16mf2_t test_vfmv_v_f_f16mf2(_Float16 src, size_t vl) {
-  return __riscv_vfmv_v_f_f16mf2(src, vl);
+  return vfmv_v_f_f16mf2(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_v_f_f16m1(
@@ -31,7 +31,7 @@ vfloat16mf2_t test_vfmv_v_f_f16mf2(_Float16 src, size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
 //
 vfloat16m1_t test_vfmv_v_f_f16m1(_Float16 src, size_t vl) {
-  return __riscv_vfmv_v_f_f16m1(src, vl);
+  return vfmv_v_f_f16m1(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_v_f_f16m2(
@@ -40,7 +40,7 @@ vfloat16m1_t test_vfmv_v_f_f16m1(_Float16 src, size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
 vfloat16m2_t test_vfmv_v_f_f16m2(_Float16 src, size_t vl) {
-  return __riscv_vfmv_v_f_f16m2(src, vl);
+  return vfmv_v_f_f16m2(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_v_f_f16m4(
@@ -49,7 +49,7 @@ vfloat16m2_t test_vfmv_v_f_f16m2(_Float16 src, size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 16 x half> [[TMP0]]
 //
 vfloat16m4_t test_vfmv_v_f_f16m4(_Float16 src, size_t vl) {
-  return __riscv_vfmv_v_f_f16m4(src, vl);
+  return vfmv_v_f_f16m4(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_v_f_f16m8(
@@ -58,7 +58,7 @@ vfloat16m4_t test_vfmv_v_f_f16m4(_Float16 src, size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 32 x half> [[TMP0]]
 //
 vfloat16m8_t test_vfmv_v_f_f16m8(_Float16 src, size_t vl) {
-  return __riscv_vfmv_v_f_f16m8(src, vl);
+  return vfmv_v_f_f16m8(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_v_f_f32mf2(
@@ -67,7 +67,7 @@ vfloat16m8_t test_vfmv_v_f_f16m8(_Float16 src, size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
 //
 vfloat32mf2_t test_vfmv_v_f_f32mf2(float src, size_t vl) {
-  return __riscv_vfmv_v_f_f32mf2(src, vl);
+  return vfmv_v_f_f32mf2(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_v_f_f32m1(
@@ -76,7 +76,7 @@ vfloat32mf2_t test_vfmv_v_f_f32mf2(float src, size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
 //
 vfloat32m1_t test_vfmv_v_f_f32m1(float src, size_t vl) {
-  return __riscv_vfmv_v_f_f32m1(src, vl);
+  return vfmv_v_f_f32m1(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_v_f_f32m2(
@@ -85,7 +85,7 @@ vfloat32m1_t test_vfmv_v_f_f32m1(float src, size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 vfloat32m2_t test_vfmv_v_f_f32m2(float src, size_t vl) {
-  return __riscv_vfmv_v_f_f32m2(src, vl);
+  return vfmv_v_f_f32m2(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_v_f_f32m4(
@@ -94,7 +94,7 @@ vfloat32m2_t test_vfmv_v_f_f32m2(float src, size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 8 x float> [[TMP0]]
 //
 vfloat32m4_t test_vfmv_v_f_f32m4(float src, size_t vl) {
-  return __riscv_vfmv_v_f_f32m4(src, vl);
+  return vfmv_v_f_f32m4(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_v_f_f32m8(
@@ -103,7 +103,7 @@ vfloat32m4_t test_vfmv_v_f_f32m4(float src, size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 16 x float> [[TMP0]]
 //
 vfloat32m8_t test_vfmv_v_f_f32m8(float src, size_t vl) {
-  return __riscv_vfmv_v_f_f32m8(src, vl);
+  return vfmv_v_f_f32m8(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_v_f_f64m1(
@@ -112,7 +112,7 @@ vfloat32m8_t test_vfmv_v_f_f32m8(float src, size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP0]]
 //
 vfloat64m1_t test_vfmv_v_f_f64m1(double src, size_t vl) {
-  return __riscv_vfmv_v_f_f64m1(src, vl);
+  return vfmv_v_f_f64m1(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_v_f_f64m2(
@@ -121,7 +121,7 @@ vfloat64m1_t test_vfmv_v_f_f64m1(double src, size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
 vfloat64m2_t test_vfmv_v_f_f64m2(double src, size_t vl) {
-  return __riscv_vfmv_v_f_f64m2(src, vl);
+  return vfmv_v_f_f64m2(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_v_f_f64m4(
@@ -130,7 +130,7 @@ vfloat64m2_t test_vfmv_v_f_f64m2(double src, size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 4 x double> [[TMP0]]
 //
 vfloat64m4_t test_vfmv_v_f_f64m4(double src, size_t vl) {
-  return __riscv_vfmv_v_f_f64m4(src, vl);
+  return vfmv_v_f_f64m4(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_v_f_f64m8(
@@ -139,7 +139,7 @@ vfloat64m4_t test_vfmv_v_f_f64m4(double src, size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 8 x double> [[TMP0]]
 //
 vfloat64m8_t test_vfmv_v_f_f64m8(double src, size_t vl) {
-  return __riscv_vfmv_v_f_f64m8(src, vl);
+  return vfmv_v_f_f64m8(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_f_s_f16mf4_f16(
@@ -148,7 +148,7 @@ vfloat64m8_t test_vfmv_v_f_f64m8(double src, size_t vl) {
 // CHECK-RV64-NEXT:    ret half [[TMP0]]
 //
 _Float16 test_vfmv_f_s_f16mf4_f16(vfloat16mf4_t src) {
-  return __riscv_vfmv_f_s_f16mf4_f16(src);
+  return vfmv_f_s_f16mf4_f16(src);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_s_f_f16mf4(
@@ -157,7 +157,7 @@ _Float16 test_vfmv_f_s_f16mf4_f16(vfloat16mf4_t src) {
 // CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
 //
 vfloat16mf4_t test_vfmv_s_f_f16mf4(_Float16 src, size_t vl) {
-  return __riscv_vfmv_s_f_f16mf4(src, vl);
+  return vfmv_s_f_f16mf4(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_f_s_f16mf2_f16(
@@ -166,7 +166,7 @@ vfloat16mf4_t test_vfmv_s_f_f16mf4(_Float16 src, size_t vl) {
 // CHECK-RV64-NEXT:    ret half [[TMP0]]
 //
 _Float16 test_vfmv_f_s_f16mf2_f16(vfloat16mf2_t src) {
-  return __riscv_vfmv_f_s_f16mf2_f16(src);
+  return vfmv_f_s_f16mf2_f16(src);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_s_f_f16mf2(
@@ -175,7 +175,7 @@ _Float16 test_vfmv_f_s_f16mf2_f16(vfloat16mf2_t src) {
 // CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
 //
 vfloat16mf2_t test_vfmv_s_f_f16mf2(_Float16 src, size_t vl) {
-  return __riscv_vfmv_s_f_f16mf2(src, vl);
+  return vfmv_s_f_f16mf2(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_f_s_f16m1_f16(
@@ -184,7 +184,7 @@ vfloat16mf2_t test_vfmv_s_f_f16mf2(_Float16 src, size_t vl) {
 // CHECK-RV64-NEXT:    ret half [[TMP0]]
 //
 _Float16 test_vfmv_f_s_f16m1_f16(vfloat16m1_t src) {
-  return __riscv_vfmv_f_s_f16m1_f16(src);
+  return vfmv_f_s_f16m1_f16(src);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_s_f_f16m1(
@@ -193,7 +193,7 @@ _Float16 test_vfmv_f_s_f16m1_f16(vfloat16m1_t src) {
 // CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
 //
 vfloat16m1_t test_vfmv_s_f_f16m1(_Float16 src, size_t vl) {
-  return __riscv_vfmv_s_f_f16m1(src, vl);
+  return vfmv_s_f_f16m1(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_f_s_f16m2_f16(
@@ -202,7 +202,7 @@ vfloat16m1_t test_vfmv_s_f_f16m1(_Float16 src, size_t vl) {
 // CHECK-RV64-NEXT:    ret half [[TMP0]]
 //
 _Float16 test_vfmv_f_s_f16m2_f16(vfloat16m2_t src) {
-  return __riscv_vfmv_f_s_f16m2_f16(src);
+  return vfmv_f_s_f16m2_f16(src);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_s_f_f16m2(
@@ -211,7 +211,7 @@ _Float16 test_vfmv_f_s_f16m2_f16(vfloat16m2_t src) {
 // CHECK-RV64-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
 vfloat16m2_t test_vfmv_s_f_f16m2(_Float16 src, size_t vl) {
-  return __riscv_vfmv_s_f_f16m2(src, vl);
+  return vfmv_s_f_f16m2(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_f_s_f16m4_f16(
@@ -220,7 +220,7 @@ vfloat16m2_t test_vfmv_s_f_f16m2(_Float16 src, size_t vl) {
 // CHECK-RV64-NEXT:    ret half [[TMP0]]
 //
 _Float16 test_vfmv_f_s_f16m4_f16(vfloat16m4_t src) {
-  return __riscv_vfmv_f_s_f16m4_f16(src);
+  return vfmv_f_s_f16m4_f16(src);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_s_f_f16m4(
@@ -229,7 +229,7 @@ _Float16 test_vfmv_f_s_f16m4_f16(vfloat16m4_t src) {
 // CHECK-RV64-NEXT:    ret <vscale x 16 x half> [[TMP0]]
 //
 vfloat16m4_t test_vfmv_s_f_f16m4(_Float16 src, size_t vl) {
-  return __riscv_vfmv_s_f_f16m4(src, vl);
+  return vfmv_s_f_f16m4(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_f_s_f16m8_f16(
@@ -238,7 +238,7 @@ vfloat16m4_t test_vfmv_s_f_f16m4(_Float16 src, size_t vl) {
 // CHECK-RV64-NEXT:    ret half [[TMP0]]
 //
 _Float16 test_vfmv_f_s_f16m8_f16(vfloat16m8_t src) {
-  return __riscv_vfmv_f_s_f16m8_f16(src);
+  return vfmv_f_s_f16m8_f16(src);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_s_f_f16m8(
@@ -247,7 +247,7 @@ _Float16 test_vfmv_f_s_f16m8_f16(vfloat16m8_t src) {
 // CHECK-RV64-NEXT:    ret <vscale x 32 x half> [[TMP0]]
 //
 vfloat16m8_t test_vfmv_s_f_f16m8(_Float16 src, size_t vl) {
-  return __riscv_vfmv_s_f_f16m8(src, vl);
+  return vfmv_s_f_f16m8(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_f_s_f32mf2_f32(
@@ -256,7 +256,7 @@ vfloat16m8_t test_vfmv_s_f_f16m8(_Float16 src, size_t vl) {
 // CHECK-RV64-NEXT:    ret float [[TMP0]]
 //
 float test_vfmv_f_s_f32mf2_f32(vfloat32mf2_t src) {
-  return __riscv_vfmv_f_s_f32mf2_f32(src);
+  return vfmv_f_s_f32mf2_f32(src);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_s_f_f32mf2(
@@ -265,7 +265,7 @@ float test_vfmv_f_s_f32mf2_f32(vfloat32mf2_t src) {
 // CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
 //
 vfloat32mf2_t test_vfmv_s_f_f32mf2(float src, size_t vl) {
-  return __riscv_vfmv_s_f_f32mf2(src, vl);
+  return vfmv_s_f_f32mf2(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_f_s_f32m1_f32(
@@ -274,7 +274,7 @@ vfloat32mf2_t test_vfmv_s_f_f32mf2(float src, size_t vl) {
 // CHECK-RV64-NEXT:    ret float [[TMP0]]
 //
 float test_vfmv_f_s_f32m1_f32(vfloat32m1_t src) {
-  return __riscv_vfmv_f_s_f32m1_f32(src);
+  return vfmv_f_s_f32m1_f32(src);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_s_f_f32m1(
@@ -283,7 +283,7 @@ float test_vfmv_f_s_f32m1_f32(vfloat32m1_t src) {
 // CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
 //
 vfloat32m1_t test_vfmv_s_f_f32m1(float src, size_t vl) {
-  return __riscv_vfmv_s_f_f32m1(src, vl);
+  return vfmv_s_f_f32m1(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_f_s_f32m2_f32(
@@ -292,7 +292,7 @@ vfloat32m1_t test_vfmv_s_f_f32m1(float src, size_t vl) {
 // CHECK-RV64-NEXT:    ret float [[TMP0]]
 //
 float test_vfmv_f_s_f32m2_f32(vfloat32m2_t src) {
-  return __riscv_vfmv_f_s_f32m2_f32(src);
+  return vfmv_f_s_f32m2_f32(src);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_s_f_f32m2(
@@ -301,7 +301,7 @@ float test_vfmv_f_s_f32m2_f32(vfloat32m2_t src) {
 // CHECK-RV64-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 vfloat32m2_t test_vfmv_s_f_f32m2(float src, size_t vl) {
-  return __riscv_vfmv_s_f_f32m2(src, vl);
+  return vfmv_s_f_f32m2(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_f_s_f32m4_f32(
@@ -310,7 +310,7 @@ vfloat32m2_t test_vfmv_s_f_f32m2(float src, size_t vl) {
 // CHECK-RV64-NEXT:    ret float [[TMP0]]
 //
 float test_vfmv_f_s_f32m4_f32(vfloat32m4_t src) {
-  return __riscv_vfmv_f_s_f32m4_f32(src);
+  return vfmv_f_s_f32m4_f32(src);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_s_f_f32m4(
@@ -319,7 +319,7 @@ float test_vfmv_f_s_f32m4_f32(vfloat32m4_t src) {
 // CHECK-RV64-NEXT:    ret <vscale x 8 x float> [[TMP0]]
 //
 vfloat32m4_t test_vfmv_s_f_f32m4(float src, size_t vl) {
-  return __riscv_vfmv_s_f_f32m4(src, vl);
+  return vfmv_s_f_f32m4(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_f_s_f32m8_f32(
@@ -328,7 +328,7 @@ vfloat32m4_t test_vfmv_s_f_f32m4(float src, size_t vl) {
 // CHECK-RV64-NEXT:    ret float [[TMP0]]
 //
 float test_vfmv_f_s_f32m8_f32(vfloat32m8_t src) {
-  return __riscv_vfmv_f_s_f32m8_f32(src);
+  return vfmv_f_s_f32m8_f32(src);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_s_f_f32m8(
@@ -337,7 +337,7 @@ float test_vfmv_f_s_f32m8_f32(vfloat32m8_t src) {
 // CHECK-RV64-NEXT:    ret <vscale x 16 x float> [[TMP0]]
 //
 vfloat32m8_t test_vfmv_s_f_f32m8(float src, size_t vl) {
-  return __riscv_vfmv_s_f_f32m8(src, vl);
+  return vfmv_s_f_f32m8(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_f_s_f64m1_f64(
@@ -346,7 +346,7 @@ vfloat32m8_t test_vfmv_s_f_f32m8(float src, size_t vl) {
 // CHECK-RV64-NEXT:    ret double [[TMP0]]
 //
 double test_vfmv_f_s_f64m1_f64(vfloat64m1_t src) {
-  return __riscv_vfmv_f_s_f64m1_f64(src);
+  return vfmv_f_s_f64m1_f64(src);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_s_f_f64m1(
@@ -355,7 +355,7 @@ double test_vfmv_f_s_f64m1_f64(vfloat64m1_t src) {
 // CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP0]]
 //
 vfloat64m1_t test_vfmv_s_f_f64m1(double src, size_t vl) {
-  return __riscv_vfmv_s_f_f64m1(src, vl);
+  return vfmv_s_f_f64m1(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_f_s_f64m2_f64(
@@ -364,7 +364,7 @@ vfloat64m1_t test_vfmv_s_f_f64m1(double src, size_t vl) {
 // CHECK-RV64-NEXT:    ret double [[TMP0]]
 //
 double test_vfmv_f_s_f64m2_f64(vfloat64m2_t src) {
-  return __riscv_vfmv_f_s_f64m2_f64(src);
+  return vfmv_f_s_f64m2_f64(src);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_s_f_f64m2(
@@ -373,7 +373,7 @@ double test_vfmv_f_s_f64m2_f64(vfloat64m2_t src) {
 // CHECK-RV64-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
 vfloat64m2_t test_vfmv_s_f_f64m2(double src, size_t vl) {
-  return __riscv_vfmv_s_f_f64m2(src, vl);
+  return vfmv_s_f_f64m2(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_f_s_f64m4_f64(
@@ -382,7 +382,7 @@ vfloat64m2_t test_vfmv_s_f_f64m2(double src, size_t vl) {
 // CHECK-RV64-NEXT:    ret double [[TMP0]]
 //
 double test_vfmv_f_s_f64m4_f64(vfloat64m4_t src) {
-  return __riscv_vfmv_f_s_f64m4_f64(src);
+  return vfmv_f_s_f64m4_f64(src);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_s_f_f64m4(
@@ -391,7 +391,7 @@ double test_vfmv_f_s_f64m4_f64(vfloat64m4_t src) {
 // CHECK-RV64-NEXT:    ret <vscale x 4 x double> [[TMP0]]
 //
 vfloat64m4_t test_vfmv_s_f_f64m4(double src, size_t vl) {
-  return __riscv_vfmv_s_f_f64m4(src, vl);
+  return vfmv_s_f_f64m4(src, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_f_s_f64m8_f64(
@@ -400,7 +400,7 @@ vfloat64m4_t test_vfmv_s_f_f64m4(double src, size_t vl) {
 // CHECK-RV64-NEXT:    ret double [[TMP0]]
 //
 double test_vfmv_f_s_f64m8_f64(vfloat64m8_t src) {
-  return __riscv_vfmv_f_s_f64m8_f64(src);
+  return vfmv_f_s_f64m8_f64(src);
 }
 
 // CHECK-RV64-LABEL: @test_vfmv_s_f_f64m8(
@@ -409,6 +409,6 @@ double test_vfmv_f_s_f64m8_f64(vfloat64m8_t src) {
 // CHECK-RV64-NEXT:    ret <vscale x 8 x double> [[TMP0]]
 //
 vfloat64m8_t test_vfmv_s_f_f64m8(double src, size_t vl) {
-  return __riscv_vfmv_s_f_f64m8(src, vl);
+  return vfmv_s_f_f64m8(src, vl);
 }
 

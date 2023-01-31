@@ -13,7 +13,7 @@
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_f16mf4(_Float16 *base, ptrdiff_t bstride, vfloat16mf4_t value, size_t vl) {
-  return __riscv_vsse16_v_f16mf4(base, bstride, value, vl);
+  return vsse16_v_f16mf4(base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_f16mf2(
@@ -22,7 +22,7 @@ void test_vsse16_v_f16mf4(_Float16 *base, ptrdiff_t bstride, vfloat16mf4_t value
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_f16mf2(_Float16 *base, ptrdiff_t bstride, vfloat16mf2_t value, size_t vl) {
-  return __riscv_vsse16_v_f16mf2(base, bstride, value, vl);
+  return vsse16_v_f16mf2(base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_f16m1(
@@ -31,7 +31,7 @@ void test_vsse16_v_f16mf2(_Float16 *base, ptrdiff_t bstride, vfloat16mf2_t value
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_f16m1(_Float16 *base, ptrdiff_t bstride, vfloat16m1_t value, size_t vl) {
-  return __riscv_vsse16_v_f16m1(base, bstride, value, vl);
+  return vsse16_v_f16m1(base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_f16m2(
@@ -40,7 +40,7 @@ void test_vsse16_v_f16m1(_Float16 *base, ptrdiff_t bstride, vfloat16m1_t value, 
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_f16m2(_Float16 *base, ptrdiff_t bstride, vfloat16m2_t value, size_t vl) {
-  return __riscv_vsse16_v_f16m2(base, bstride, value, vl);
+  return vsse16_v_f16m2(base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_f16m4(
@@ -49,7 +49,7 @@ void test_vsse16_v_f16m2(_Float16 *base, ptrdiff_t bstride, vfloat16m2_t value, 
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_f16m4(_Float16 *base, ptrdiff_t bstride, vfloat16m4_t value, size_t vl) {
-  return __riscv_vsse16_v_f16m4(base, bstride, value, vl);
+  return vsse16_v_f16m4(base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_f16m8(
@@ -58,7 +58,7 @@ void test_vsse16_v_f16m4(_Float16 *base, ptrdiff_t bstride, vfloat16m4_t value, 
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_f16m8(_Float16 *base, ptrdiff_t bstride, vfloat16m8_t value, size_t vl) {
-  return __riscv_vsse16_v_f16m8(base, bstride, value, vl);
+  return vsse16_v_f16m8(base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_i16mf4(
@@ -67,7 +67,7 @@ void test_vsse16_v_f16m8(_Float16 *base, ptrdiff_t bstride, vfloat16m8_t value, 
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_i16mf4(int16_t *base, ptrdiff_t bstride, vint16mf4_t value, size_t vl) {
-  return __riscv_vsse16_v_i16mf4(base, bstride, value, vl);
+  return vsse16_v_i16mf4(base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_i16mf2(
@@ -76,7 +76,7 @@ void test_vsse16_v_i16mf4(int16_t *base, ptrdiff_t bstride, vint16mf4_t value, s
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_i16mf2(int16_t *base, ptrdiff_t bstride, vint16mf2_t value, size_t vl) {
-  return __riscv_vsse16_v_i16mf2(base, bstride, value, vl);
+  return vsse16_v_i16mf2(base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_i16m1(
@@ -85,7 +85,7 @@ void test_vsse16_v_i16mf2(int16_t *base, ptrdiff_t bstride, vint16mf2_t value, s
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_i16m1(int16_t *base, ptrdiff_t bstride, vint16m1_t value, size_t vl) {
-  return __riscv_vsse16_v_i16m1(base, bstride, value, vl);
+  return vsse16_v_i16m1(base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_i16m2(
@@ -94,7 +94,7 @@ void test_vsse16_v_i16m1(int16_t *base, ptrdiff_t bstride, vint16m1_t value, siz
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_i16m2(int16_t *base, ptrdiff_t bstride, vint16m2_t value, size_t vl) {
-  return __riscv_vsse16_v_i16m2(base, bstride, value, vl);
+  return vsse16_v_i16m2(base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_i16m4(
@@ -103,7 +103,7 @@ void test_vsse16_v_i16m2(int16_t *base, ptrdiff_t bstride, vint16m2_t value, siz
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_i16m4(int16_t *base, ptrdiff_t bstride, vint16m4_t value, size_t vl) {
-  return __riscv_vsse16_v_i16m4(base, bstride, value, vl);
+  return vsse16_v_i16m4(base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_i16m8(
@@ -112,7 +112,7 @@ void test_vsse16_v_i16m4(int16_t *base, ptrdiff_t bstride, vint16m4_t value, siz
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_i16m8(int16_t *base, ptrdiff_t bstride, vint16m8_t value, size_t vl) {
-  return __riscv_vsse16_v_i16m8(base, bstride, value, vl);
+  return vsse16_v_i16m8(base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_u16mf4(
@@ -121,7 +121,7 @@ void test_vsse16_v_i16m8(int16_t *base, ptrdiff_t bstride, vint16m8_t value, siz
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_u16mf4(uint16_t *base, ptrdiff_t bstride, vuint16mf4_t value, size_t vl) {
-  return __riscv_vsse16_v_u16mf4(base, bstride, value, vl);
+  return vsse16_v_u16mf4(base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_u16mf2(
@@ -130,7 +130,7 @@ void test_vsse16_v_u16mf4(uint16_t *base, ptrdiff_t bstride, vuint16mf4_t value,
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_u16mf2(uint16_t *base, ptrdiff_t bstride, vuint16mf2_t value, size_t vl) {
-  return __riscv_vsse16_v_u16mf2(base, bstride, value, vl);
+  return vsse16_v_u16mf2(base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_u16m1(
@@ -139,7 +139,7 @@ void test_vsse16_v_u16mf2(uint16_t *base, ptrdiff_t bstride, vuint16mf2_t value,
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_u16m1(uint16_t *base, ptrdiff_t bstride, vuint16m1_t value, size_t vl) {
-  return __riscv_vsse16_v_u16m1(base, bstride, value, vl);
+  return vsse16_v_u16m1(base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_u16m2(
@@ -148,7 +148,7 @@ void test_vsse16_v_u16m1(uint16_t *base, ptrdiff_t bstride, vuint16m1_t value, s
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_u16m2(uint16_t *base, ptrdiff_t bstride, vuint16m2_t value, size_t vl) {
-  return __riscv_vsse16_v_u16m2(base, bstride, value, vl);
+  return vsse16_v_u16m2(base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_u16m4(
@@ -157,7 +157,7 @@ void test_vsse16_v_u16m2(uint16_t *base, ptrdiff_t bstride, vuint16m2_t value, s
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_u16m4(uint16_t *base, ptrdiff_t bstride, vuint16m4_t value, size_t vl) {
-  return __riscv_vsse16_v_u16m4(base, bstride, value, vl);
+  return vsse16_v_u16m4(base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_u16m8(
@@ -166,7 +166,7 @@ void test_vsse16_v_u16m4(uint16_t *base, ptrdiff_t bstride, vuint16m4_t value, s
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_u16m8(uint16_t *base, ptrdiff_t bstride, vuint16m8_t value, size_t vl) {
-  return __riscv_vsse16_v_u16m8(base, bstride, value, vl);
+  return vsse16_v_u16m8(base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_f16mf4_m(
@@ -175,7 +175,7 @@ void test_vsse16_v_u16m8(uint16_t *base, ptrdiff_t bstride, vuint16m8_t value, s
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_f16mf4_m(vbool64_t mask, _Float16 *base, ptrdiff_t bstride, vfloat16mf4_t value, size_t vl) {
-  return __riscv_vsse16_v_f16mf4_m(mask, base, bstride, value, vl);
+  return vsse16_v_f16mf4_m(mask, base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_f16mf2_m(
@@ -184,7 +184,7 @@ void test_vsse16_v_f16mf4_m(vbool64_t mask, _Float16 *base, ptrdiff_t bstride, v
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_f16mf2_m(vbool32_t mask, _Float16 *base, ptrdiff_t bstride, vfloat16mf2_t value, size_t vl) {
-  return __riscv_vsse16_v_f16mf2_m(mask, base, bstride, value, vl);
+  return vsse16_v_f16mf2_m(mask, base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_f16m1_m(
@@ -193,7 +193,7 @@ void test_vsse16_v_f16mf2_m(vbool32_t mask, _Float16 *base, ptrdiff_t bstride, v
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_f16m1_m(vbool16_t mask, _Float16 *base, ptrdiff_t bstride, vfloat16m1_t value, size_t vl) {
-  return __riscv_vsse16_v_f16m1_m(mask, base, bstride, value, vl);
+  return vsse16_v_f16m1_m(mask, base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_f16m2_m(
@@ -202,7 +202,7 @@ void test_vsse16_v_f16m1_m(vbool16_t mask, _Float16 *base, ptrdiff_t bstride, vf
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_f16m2_m(vbool8_t mask, _Float16 *base, ptrdiff_t bstride, vfloat16m2_t value, size_t vl) {
-  return __riscv_vsse16_v_f16m2_m(mask, base, bstride, value, vl);
+  return vsse16_v_f16m2_m(mask, base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_f16m4_m(
@@ -211,7 +211,7 @@ void test_vsse16_v_f16m2_m(vbool8_t mask, _Float16 *base, ptrdiff_t bstride, vfl
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_f16m4_m(vbool4_t mask, _Float16 *base, ptrdiff_t bstride, vfloat16m4_t value, size_t vl) {
-  return __riscv_vsse16_v_f16m4_m(mask, base, bstride, value, vl);
+  return vsse16_v_f16m4_m(mask, base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_f16m8_m(
@@ -220,7 +220,7 @@ void test_vsse16_v_f16m4_m(vbool4_t mask, _Float16 *base, ptrdiff_t bstride, vfl
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_f16m8_m(vbool2_t mask, _Float16 *base, ptrdiff_t bstride, vfloat16m8_t value, size_t vl) {
-  return __riscv_vsse16_v_f16m8_m(mask, base, bstride, value, vl);
+  return vsse16_v_f16m8_m(mask, base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_i16mf4_m(
@@ -229,7 +229,7 @@ void test_vsse16_v_f16m8_m(vbool2_t mask, _Float16 *base, ptrdiff_t bstride, vfl
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_i16mf4_m(vbool64_t mask, int16_t *base, ptrdiff_t bstride, vint16mf4_t value, size_t vl) {
-  return __riscv_vsse16_v_i16mf4_m(mask, base, bstride, value, vl);
+  return vsse16_v_i16mf4_m(mask, base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_i16mf2_m(
@@ -238,7 +238,7 @@ void test_vsse16_v_i16mf4_m(vbool64_t mask, int16_t *base, ptrdiff_t bstride, vi
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_i16mf2_m(vbool32_t mask, int16_t *base, ptrdiff_t bstride, vint16mf2_t value, size_t vl) {
-  return __riscv_vsse16_v_i16mf2_m(mask, base, bstride, value, vl);
+  return vsse16_v_i16mf2_m(mask, base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_i16m1_m(
@@ -247,7 +247,7 @@ void test_vsse16_v_i16mf2_m(vbool32_t mask, int16_t *base, ptrdiff_t bstride, vi
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_i16m1_m(vbool16_t mask, int16_t *base, ptrdiff_t bstride, vint16m1_t value, size_t vl) {
-  return __riscv_vsse16_v_i16m1_m(mask, base, bstride, value, vl);
+  return vsse16_v_i16m1_m(mask, base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_i16m2_m(
@@ -256,7 +256,7 @@ void test_vsse16_v_i16m1_m(vbool16_t mask, int16_t *base, ptrdiff_t bstride, vin
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_i16m2_m(vbool8_t mask, int16_t *base, ptrdiff_t bstride, vint16m2_t value, size_t vl) {
-  return __riscv_vsse16_v_i16m2_m(mask, base, bstride, value, vl);
+  return vsse16_v_i16m2_m(mask, base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_i16m4_m(
@@ -265,7 +265,7 @@ void test_vsse16_v_i16m2_m(vbool8_t mask, int16_t *base, ptrdiff_t bstride, vint
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_i16m4_m(vbool4_t mask, int16_t *base, ptrdiff_t bstride, vint16m4_t value, size_t vl) {
-  return __riscv_vsse16_v_i16m4_m(mask, base, bstride, value, vl);
+  return vsse16_v_i16m4_m(mask, base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_i16m8_m(
@@ -274,7 +274,7 @@ void test_vsse16_v_i16m4_m(vbool4_t mask, int16_t *base, ptrdiff_t bstride, vint
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_i16m8_m(vbool2_t mask, int16_t *base, ptrdiff_t bstride, vint16m8_t value, size_t vl) {
-  return __riscv_vsse16_v_i16m8_m(mask, base, bstride, value, vl);
+  return vsse16_v_i16m8_m(mask, base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_u16mf4_m(
@@ -283,7 +283,7 @@ void test_vsse16_v_i16m8_m(vbool2_t mask, int16_t *base, ptrdiff_t bstride, vint
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_u16mf4_m(vbool64_t mask, uint16_t *base, ptrdiff_t bstride, vuint16mf4_t value, size_t vl) {
-  return __riscv_vsse16_v_u16mf4_m(mask, base, bstride, value, vl);
+  return vsse16_v_u16mf4_m(mask, base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_u16mf2_m(
@@ -292,7 +292,7 @@ void test_vsse16_v_u16mf4_m(vbool64_t mask, uint16_t *base, ptrdiff_t bstride, v
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_u16mf2_m(vbool32_t mask, uint16_t *base, ptrdiff_t bstride, vuint16mf2_t value, size_t vl) {
-  return __riscv_vsse16_v_u16mf2_m(mask, base, bstride, value, vl);
+  return vsse16_v_u16mf2_m(mask, base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_u16m1_m(
@@ -301,7 +301,7 @@ void test_vsse16_v_u16mf2_m(vbool32_t mask, uint16_t *base, ptrdiff_t bstride, v
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_u16m1_m(vbool16_t mask, uint16_t *base, ptrdiff_t bstride, vuint16m1_t value, size_t vl) {
-  return __riscv_vsse16_v_u16m1_m(mask, base, bstride, value, vl);
+  return vsse16_v_u16m1_m(mask, base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_u16m2_m(
@@ -310,7 +310,7 @@ void test_vsse16_v_u16m1_m(vbool16_t mask, uint16_t *base, ptrdiff_t bstride, vu
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_u16m2_m(vbool8_t mask, uint16_t *base, ptrdiff_t bstride, vuint16m2_t value, size_t vl) {
-  return __riscv_vsse16_v_u16m2_m(mask, base, bstride, value, vl);
+  return vsse16_v_u16m2_m(mask, base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_u16m4_m(
@@ -319,7 +319,7 @@ void test_vsse16_v_u16m2_m(vbool8_t mask, uint16_t *base, ptrdiff_t bstride, vui
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_u16m4_m(vbool4_t mask, uint16_t *base, ptrdiff_t bstride, vuint16m4_t value, size_t vl) {
-  return __riscv_vsse16_v_u16m4_m(mask, base, bstride, value, vl);
+  return vsse16_v_u16m4_m(mask, base, bstride, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsse16_v_u16m8_m(
@@ -328,6 +328,6 @@ void test_vsse16_v_u16m4_m(vbool4_t mask, uint16_t *base, ptrdiff_t bstride, vui
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsse16_v_u16m8_m(vbool2_t mask, uint16_t *base, ptrdiff_t bstride, vuint16m8_t value, size_t vl) {
-  return __riscv_vsse16_v_u16m8_m(mask, base, bstride, value, vl);
+  return vsse16_v_u16m8_m(mask, base, bstride, value, vl);
 }
 
