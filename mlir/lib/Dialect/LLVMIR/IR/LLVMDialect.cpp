@@ -3226,7 +3226,12 @@ LogicalResult LLVMDialect::verifyParameterAttribute(Operation *op,
   // Check a unit attribute that is attached to a pointer value.
   if (name == LLVMDialect::getNoAliasAttrName() ||
       name == LLVMDialect::getReadonlyAttrName() ||
-      name == LLVMDialect::getNestAttrName()) {
+      name == LLVMDialect::getReadnoneAttrName() ||
+      name == LLVMDialect::getWriteOnlyAttrName() ||
+      name == LLVMDialect::getNestAttrName() ||
+      name == LLVMDialect::getNoCaptureAttrName() ||
+      name == LLVMDialect::getNoFreeAttrName() ||
+      name == LLVMDialect::getNonNullAttrName()) {
     if (failed(checkUnitAttrType()))
       return failure();
     if (verifyValueType && failed(checkPointerType()))
@@ -3238,7 +3243,8 @@ LogicalResult LLVMDialect::verifyParameterAttribute(Operation *op,
   if (name == LLVMDialect::getStructRetAttrName() ||
       name == LLVMDialect::getByValAttrName() ||
       name == LLVMDialect::getByRefAttrName() ||
-      name == LLVMDialect::getInAllocaAttrName()) {
+      name == LLVMDialect::getInAllocaAttrName() ||
+      name == LLVMDialect::getPreallocatedAttrName()) {
     if (failed(checkTypeAttrType()))
       return failure();
     if (verifyValueType && failed(checkPointerTypeMatches()))
@@ -3257,7 +3263,10 @@ LogicalResult LLVMDialect::verifyParameterAttribute(Operation *op,
   }
 
   // Check an integer attribute that is attached to a pointer value.
-  if (name == LLVMDialect::getAlignAttrName()) {
+  if (name == LLVMDialect::getAlignAttrName() ||
+      name == LLVMDialect::getDereferenceableAttrName() ||
+      name == LLVMDialect::getDereferenceableOrNullAttrName() ||
+      name == LLVMDialect::getStackAlignmentAttrName()) {
     if (failed(checkIntegerAttrType()))
       return failure();
     if (verifyValueType && failed(checkPointerType()))
@@ -3265,8 +3274,12 @@ LogicalResult LLVMDialect::verifyParameterAttribute(Operation *op,
     return success();
   }
 
-  if (name == LLVMDialect::getNoUndefAttrName())
+  // Check a unit attribute that can be attached to arbitrary types.
+  if (name == LLVMDialect::getNoUndefAttrName() ||
+      name == LLVMDialect::getInRegAttrName() ||
+      name == LLVMDialect::getReturnedAttrName())
     return checkUnitAttrType();
+
   return success();
 }
 
@@ -3301,12 +3314,21 @@ LogicalResult LLVMDialect::verifyRegionResultAttribute(Operation *op,
   // Check to see if this attribute is allowed as a result attribute. Only
   // explicitly forbidden LLVM attributes will cause an error.
   auto name = resAttr.getName();
-  if (name == LLVMDialect::getReadonlyAttrName() ||
-      name == LLVMDialect::getNestAttrName() ||
-      name == LLVMDialect::getStructRetAttrName() ||
+  if (name == LLVMDialect::getAllocAlignAttrName() ||
+      name == LLVMDialect::getAllocatedPointerAttrName() ||
       name == LLVMDialect::getByValAttrName() ||
       name == LLVMDialect::getByRefAttrName() ||
-      name == LLVMDialect::getInAllocaAttrName())
+      name == LLVMDialect::getInAllocaAttrName() ||
+      name == LLVMDialect::getNestAttrName() ||
+      name == LLVMDialect::getNoCaptureAttrName() ||
+      name == LLVMDialect::getNoFreeAttrName() ||
+      name == LLVMDialect::getPreallocatedAttrName() ||
+      name == LLVMDialect::getReadnoneAttrName() ||
+      name == LLVMDialect::getReadonlyAttrName() ||
+      name == LLVMDialect::getReturnedAttrName() ||
+      name == LLVMDialect::getStackAlignmentAttrName() ||
+      name == LLVMDialect::getStructRetAttrName() ||
+      name == LLVMDialect::getWriteOnlyAttrName())
     return op->emitError() << name << " is not a valid result attribute";
   return verifyParameterAttribute(op, resType, resAttr);
 }
