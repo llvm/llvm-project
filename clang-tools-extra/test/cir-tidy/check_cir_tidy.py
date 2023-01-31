@@ -26,7 +26,7 @@ import argparse
 import re
 import subprocess
 import sys
-
+import shutil
 
 def write_file(file_name, text):
   with open(file_name, 'w', encoding='utf-8') as f:
@@ -102,7 +102,21 @@ def run_test_once(args, extra_args):
 
   args = ['cir-tidy', temp_file_name, '--checks=-*,' + check_name] + \
       cir_tidy_extra_args + ['--'] + cir_extra_args
-  print('Running ' + repr(args) + '...')
+
+  arg_print_list = []
+  for arg_print in cir_tidy_extra_args:
+    if (arg_print.startswith("-config=")):
+      conf = arg_print.replace("-config=", "-config='")
+      conf += "'"
+      arg_print_list.append(conf)
+      continue
+    arg_print_list.append(arg_print)
+
+  cir_tidy_bin = shutil.which('cir-tidy')
+  args_for_print = [cir_tidy_bin, temp_file_name, "--checks='-*," + check_name + "'"] + \
+      arg_print_list + ['--'] + cir_extra_args
+  print('Running: ' + " ".join(args_for_print))
+
   try:
     cir_tidy_output = \
         subprocess.check_output(args, stderr=subprocess.STDOUT).decode()

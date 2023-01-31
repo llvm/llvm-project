@@ -476,6 +476,16 @@ int CIRTidyMain(int argc, const char **argv) {
       runCIRTidy(Context, OptionsParser->getCompilations(), PathList, BaseFS,
                  FixNotes, EnableCheckProfile, ProfilePrefix);
 
+  if (!ExportFixes.empty() && !Errors.empty()) {
+    std::error_code EC;
+    llvm::raw_fd_ostream OS(ExportFixes, EC, llvm::sys::fs::OF_None);
+    if (EC) {
+      llvm::errs() << "Error opening output file: " << EC.message() << '\n';
+      return 1;
+    }
+    exportReplacements(FilePath.str(), Errors, OS);
+  }
+
   return 0;
 }
 
