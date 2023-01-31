@@ -563,14 +563,14 @@ defm UMLSLL_VG4_M4ZZ_BtoS  : sme2_mla_ll_array_vg24_single<"umlsll", 0b01110, Ma
 defm UMLSLL_VG2_M2Z2Z_BtoS : sme2_mla_ll_array_vg2_multi<"umlsll", 0b0110, MatrixOp32, ZZ_b_mul_r>;
 defm UMLSLL_VG4_M4Z4Z_BtoS : sme2_mla_ll_array_vg4_multi<"umlsll", 0b0110, MatrixOp32, ZZZZ_b_mul_r>;
 
-defm BMOPA_MPPZZ_S : sme2_bfp_mopx_tile<"bmopa", 0b100>;
-defm BMOPS_MPPZZ_S : sme2_bfp_mopx_tile<"bmops", 0b101>;
+defm BMOPA_MPPZZ_S : sme2_int_bmopx_tile<"bmopa", 0b100, int_aarch64_sme_bmopa_za32>;
+defm BMOPS_MPPZZ_S : sme2_int_bmopx_tile<"bmops", 0b101, int_aarch64_sme_bmops_za32>;
 
-defm SMOPA_MPPZZ_HtoS : sme2_int_mopx_tile<"smopa", 0b000>;
-defm SMOPS_MPPZZ_HtoS : sme2_int_mopx_tile<"smops", 0b001>;
+defm SMOPA_MPPZZ_HtoS : sme2_int_mopx_tile<"smopa", 0b000, int_aarch64_sme_smopa_za32>;
+defm SMOPS_MPPZZ_HtoS : sme2_int_mopx_tile<"smops", 0b001, int_aarch64_sme_smops_za32>;
 
-defm UMOPA_MPPZZ_HtoS : sme2_int_mopx_tile<"umopa", 0b100>;
-defm UMOPS_MPPZZ_HtoS : sme2_int_mopx_tile<"umops", 0b101>;
+defm UMOPA_MPPZZ_HtoS : sme2_int_mopx_tile<"umopa", 0b100, int_aarch64_sme_umopa_za32>;
+defm UMOPS_MPPZZ_HtoS : sme2_int_mopx_tile<"umops", 0b101, int_aarch64_sme_umops_za32>;
 
 def ZERO_T : sme2_zero_zt<"zero", 0b0001>;
 

@@ -234,6 +234,8 @@ public:
   /// Get the KindMap.
   virtual const fir::KindMapping &getKindMap() = 0;
 
+  virtual Fortran::lower::StatementContext &getFctCtx() = 0;
+
   AbstractConverter(const Fortran::lower::LoweringOptions &loweringOptions)
       : loweringOptions(loweringOptions) {}
   virtual ~AbstractConverter() = default;

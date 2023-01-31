@@ -23,7 +23,7 @@
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vlsseg5e64_v_f64m1_m(vfloat64m1_t *v0, vfloat64m1_t *v1, vfloat64m1_t *v2, vfloat64m1_t *v3, vfloat64m1_t *v4, vbool64_t mask, const double *base, ptrdiff_t bstride, size_t vl) {
-  return vlsseg5e64(v0, v1, v2, v3, v4, mask, base, bstride, vl);
+  return __riscv_vlsseg5e64(v0, v1, v2, v3, v4, mask, base, bstride, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vlsseg5e64_v_i64m1_m(
@@ -42,7 +42,7 @@ void test_vlsseg5e64_v_f64m1_m(vfloat64m1_t *v0, vfloat64m1_t *v1, vfloat64m1_t 
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vlsseg5e64_v_i64m1_m(vint64m1_t *v0, vint64m1_t *v1, vint64m1_t *v2, vint64m1_t *v3, vint64m1_t *v4, vbool64_t mask, const int64_t *base, ptrdiff_t bstride, size_t vl) {
-  return vlsseg5e64(v0, v1, v2, v3, v4, mask, base, bstride, vl);
+  return __riscv_vlsseg5e64(v0, v1, v2, v3, v4, mask, base, bstride, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vlsseg5e64_v_u64m1_m(
@@ -61,6 +61,6 @@ void test_vlsseg5e64_v_i64m1_m(vint64m1_t *v0, vint64m1_t *v1, vint64m1_t *v2, v
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vlsseg5e64_v_u64m1_m(vuint64m1_t *v0, vuint64m1_t *v1, vuint64m1_t *v2, vuint64m1_t *v3, vuint64m1_t *v4, vbool64_t mask, const uint64_t *base, ptrdiff_t bstride, size_t vl) {
-  return vlsseg5e64(v0, v1, v2, v3, v4, mask, base, bstride, vl);
+  return __riscv_vlsseg5e64(v0, v1, v2, v3, v4, mask, base, bstride, vl);
 }
 

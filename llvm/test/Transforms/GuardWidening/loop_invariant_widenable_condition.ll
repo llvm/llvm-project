@@ -3,17 +3,17 @@
 
 declare i32 @llvm.experimental.deoptimize.i32(...)
 
-; FIXME: Make sure the two loop-invariant conditions can be widened together,
-;        and the widening point is outside the loop.
+; Make sure the two loop-invariant conditions can be widened together,
+; and the widening point is outside the loop.
 define i32 @test_01(i32 %start, i32 %x) {
 ; CHECK-LABEL: @test_01(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[START:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 true, [[COND]]
 ; CHECK-NEXT:    [[WC1:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 true, [[COND]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[WIDE_CHK]], [[WC1]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[GUARD_BLOCK:%.*]], label [[EXIT_BY_WC:%.*]]
 ; CHECK:       exit_by_wc:
@@ -65,7 +65,7 @@ failure:
 }
 
 
-; FIXME: Make sure the loop-variant condition is not widened into loop-invariant.
+; Make sure the loop-variant condition is not widened into loop-invariant.
 define i32 @test_02(i32 %start, i32 %x) {
 ; CHECK-LABEL: @test_02(
 ; CHECK-NEXT:  entry:
@@ -73,17 +73,15 @@ define i32 @test_02(i32 %start, i32 %x) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV]], [[X:%.*]]
-; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 true, [[COND]]
-; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[WIDE_CHK]], [[WC1]]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[GUARD_BLOCK:%.*]], label [[EXIT_BY_WC:%.*]]
+; CHECK-NEXT:    br i1 [[WC1]], label [[GUARD_BLOCK:%.*]], label [[EXIT_BY_WC:%.*]]
 ; CHECK:       exit_by_wc:
 ; CHECK-NEXT:    [[RVAL1:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"(i32 [[IV]]) ]
 ; CHECK-NEXT:    ret i32 [[RVAL1]]
 ; CHECK:       guard_block:
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV]], [[X:%.*]]
 ; CHECK-NEXT:    [[WC2:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[GUARD:%.*]] = and i1 [[COND]], [[WC2]]
-; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[FAILURE:%.*]]
+; CHECK-NEXT:    br i1 [[GUARD]], label [[BACKEDGE]], label [[FAILURE:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    call void @side_effect()
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
@@ -125,16 +123,16 @@ failure:
   ret i32 %rval2
 }
 
-; FIXME: Same as test_01, but the initial condition is not immediately WC.
+; Same as test_01, but the initial condition is not immediately WC.
 define i32 @test_03(i32 %start, i32 %x, i1 %c) {
 ; CHECK-LABEL: @test_03(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[START:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[C:%.*]], [[COND]]
 ; CHECK-NEXT:    [[WC1:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[C:%.*]], [[COND]]
 ; CHECK-NEXT:    [[INVARIANT:%.*]] = and i1 [[WIDE_CHK]], [[WC1]]
 ; CHECK-NEXT:    br i1 [[INVARIANT]], label [[GUARD_BLOCK:%.*]], label [[EXIT_BY_WC:%.*]]
 ; CHECK:       exit_by_wc:
