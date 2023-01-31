@@ -77,6 +77,9 @@ static StringRef ExecutableName;
 /// Binary path for the CUDA installation.
 static std::string CudaBinaryPath;
 
+/// Mutex lock to protect writes to shared TempFiles in parallel.
+static std::mutex TempFilesMutex;
+
 /// Temporary files created by the linker wrapper.
 static std::list<SmallString<128>> TempFiles;
 
@@ -200,6 +203,7 @@ std::string getMainExecutable(const char *Name) {
 
 /// Get a temporary filename suitable for output.
 Expected<StringRef> createOutputFile(const Twine &Prefix, StringRef Extension) {
+  std::scoped_lock<decltype(TempFilesMutex)> Lock(TempFilesMutex);
   SmallString<128> OutputFile;
   if (SaveTemps) {
     (Prefix + "." + Extension).toNullTerminatedStringRef(OutputFile);
@@ -1047,6 +1051,7 @@ linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles,
           return createFileError(*OutputOrErr, EC);
       }
 
+      std::scoped_lock<decltype(ImageMtx)> Guard(ImageMtx);
       OffloadingImage TheImage{};
       TheImage.TheImageKind =
           Args.hasArg(OPT_embed_bitcode) ? IMG_Bitcode : IMG_Object;
@@ -1058,7 +1063,6 @@ linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles,
            Args.MakeArgString(LinkerArgs.getLastArgValue(OPT_arch_EQ))}};
       TheImage.Image = std::move(*FileOrErr);
 
-      std::lock_guard<decltype(ImageMtx)> Guard(ImageMtx);
       Images[Kind].emplace_back(std::move(TheImage));
     }
     return Error::success();
