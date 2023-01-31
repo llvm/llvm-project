@@ -92,5 +92,5 @@ foreach(target IN LISTS startup_components)
   get_target_property(startup_object ${fq_target_name} STARTUP_OBJECT)
   install(FILES ${startup_object}
           DESTINATION ${CMAKE_INSTALL_LIBDIR}
-          COMPONENT ${LIBC_COMPONENT})
+          COMPONENT libc)
 endforeach()
