@@ -709,6 +709,38 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, selectImm(CurDAG, DL, VT, Imm, *Subtarget));
     return;
   }
+  case ISD::ConstantFP: {
+    unsigned BitSize = VT.getSizeInBits().getFixedValue();
+    const APFloat &APF = cast<ConstantFPSDNode>(Node)->getValueAPF();
+    // td can handle +0.0 already.
+    if (APF.isPosZero())
+      break;
+    // Special case: a 64 bit -0.0 uses more instructions than fmv + fneg.
+    if (APF.isNegZero() && BitSize == 64)
+      break;
+    assert((BitSize <= Subtarget->getXLen()) &&
+           "Cannot create a 64 bit floating-point immediate value for rv32");
+    SDValue Imm =
+        SDValue(selectImm(CurDAG, DL, XLenVT,
+                          APF.bitcastToAPInt().getSExtValue(), *Subtarget),
+                0);
+    unsigned Opc;
+    switch (BitSize) {
+    default:
+      llvm_unreachable("Unexpected size");
+    case 16:
+      Opc = RISCV::FMV_H_X;
+      break;
+    case 32:
+      Opc = RISCV::FMV_W_X;
+      break;
+    case 64:
+      Opc = RISCV::FMV_D_X;
+      break;
+    }
+    ReplaceNode(Node, CurDAG->getMachineNode(Opc, DL, VT, Imm));
+    return;
+  }
   case ISD::SHL: {
     auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
     if (!N1C)
@@ -2551,6 +2583,22 @@ bool RISCVDAGToDAGISel::selectVSplatUimm5(SDValue N, SDValue &SplatVal) {
   SplatVal =
       CurDAG->getTargetConstant(SplatImm, SDLoc(N), Subtarget->getXLenVT());
 
+  return true;
+}
+
+bool RISCVDAGToDAGISel::selectFPImm(SDValue N, SDValue &Imm) {
+  ConstantFPSDNode *CFP = dyn_cast<ConstantFPSDNode>(N.getNode());
+  if (!CFP)
+    return false;
+  const APFloat &APF = CFP->getValueAPF();
+  // td can handle +0.0 already.
+  if (APF.isPosZero())
+    return false;
+  SDLoc DL(N);
+  MVT XLenVT = Subtarget->getXLenVT();
+  Imm = SDValue(selectImm(CurDAG, DL, XLenVT,
+                          APF.bitcastToAPInt().getSExtValue(), *Subtarget),
+                0);
   return true;
 }
 

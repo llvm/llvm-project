@@ -17,8 +17,8 @@ define float @float_imm() nounwind {
 define float @float_imm_op(float %a) nounwind {
 ; CHECK-LABEL: float_imm_op:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI1_0)
-; CHECK-NEXT:    flw ft0, %lo(.LCPI1_0)(a0)
+; CHECK-NEXT:    lui a0, 260096
+; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    fadd.s fa0, fa0, ft0
 ; CHECK-NEXT:    ret
   %1 = fadd float %a, 1.0

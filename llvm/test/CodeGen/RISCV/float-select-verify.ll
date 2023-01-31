@@ -13,10 +13,10 @@ define dso_local void @buz(i1 %pred, float %a, float %b) {
   ; CHECK-NEXT:   [[FMV_W_X:%[0-9]+]]:fpr32 = FMV_W_X [[COPY]]
   ; CHECK-NEXT:   [[ANDI:%[0-9]+]]:gpr = ANDI [[COPY2]], 1
   ; CHECK-NEXT:   [[FMV_W_X1:%[0-9]+]]:fpr32 = FMV_W_X [[COPY1]]
-  ; CHECK-NEXT:   [[LUI:%[0-9]+]]:gpr = LUI target-flags(riscv-hi) %const.0
-  ; CHECK-NEXT:   [[FLW:%[0-9]+]]:fpr32 = FLW killed [[LUI]], target-flags(riscv-lo) %const.0 :: (load (s32) from constant-pool)
+  ; CHECK-NEXT:   [[LUI:%[0-9]+]]:gpr = LUI 307200
+  ; CHECK-NEXT:   [[FMV_W_X2:%[0-9]+]]:fpr32 = FMV_W_X killed [[LUI]]
   ; CHECK-NEXT:   [[FSGNJX_S:%[0-9]+]]:fpr32 = FSGNJX_S [[FMV_W_X1]], [[FMV_W_X1]]
-  ; CHECK-NEXT:   [[FLT_S:%[0-9]+]]:gpr = nofpexcept FLT_S [[FSGNJX_S]], [[FLW]]
+  ; CHECK-NEXT:   [[FLT_S:%[0-9]+]]:gpr = nofpexcept FLT_S [[FSGNJX_S]], [[FMV_W_X2]]
   ; CHECK-NEXT:   BEQ [[FLT_S]], $x0, %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.entry:
@@ -41,7 +41,7 @@ define dso_local void @buz(i1 %pred, float %a, float %b) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:fpr32 = PHI [[PHI]], %bb.2, [[FMV_W_X1]], %bb.3
   ; CHECK-NEXT:   [[FSGNJX_S1:%[0-9]+]]:fpr32 = FSGNJX_S [[FMV_W_X]], [[FMV_W_X]]
-  ; CHECK-NEXT:   [[FLT_S1:%[0-9]+]]:gpr = nofpexcept FLT_S [[FSGNJX_S1]], [[FLW]]
+  ; CHECK-NEXT:   [[FLT_S1:%[0-9]+]]:gpr = nofpexcept FLT_S [[FSGNJX_S1]], [[FMV_W_X2]]
   ; CHECK-NEXT:   BEQ [[FLT_S1]], $x0, %bb.6
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5.entry:
