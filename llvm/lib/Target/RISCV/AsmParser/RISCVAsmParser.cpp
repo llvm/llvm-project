@@ -280,15 +280,15 @@ struct RISCVOperand final : public MCParsedAsmOperand {
     FRM,
   } Kind;
 
-  bool IsRV64;
-
   struct RegOp {
     MCRegister RegNum;
+    bool IsRV64;
     bool IsGPRAsFPR;
   };
 
   struct ImmOp {
     const MCExpr *Val;
+    bool IsRV64;
   };
 
   struct SysRegOp {
@@ -322,7 +322,6 @@ struct RISCVOperand final : public MCParsedAsmOperand {
 public:
   RISCVOperand(const RISCVOperand &o) : MCParsedAsmOperand() {
     Kind = o.Kind;
-    IsRV64 = o.IsRV64;
     StartLoc = o.StartLoc;
     EndLoc = o.EndLoc;
     switch (Kind) {
@@ -363,10 +362,10 @@ public:
 
   bool isGPRAsFPR() const { return isGPR() && Reg.IsGPRAsFPR; }
 
-  bool isGPRF64AsFPR() const { return isGPR() && Reg.IsGPRAsFPR && IsRV64; }
+  bool isGPRF64AsFPR() const { return isGPR() && Reg.IsGPRAsFPR && Reg.IsRV64; }
 
   bool isGPRPF64AsFPR() const {
-    return isGPR() && Reg.IsGPRAsFPR && !IsRV64 &&
+    return isGPR() && Reg.IsGPRAsFPR && !Reg.IsRV64 &&
            !((Reg.RegNum - RISCV::X0) & 1);
   }
 
@@ -516,7 +515,7 @@ public:
     // Given only Imm, ensuring that the actually specified constant is either
     // a signed or unsigned 64-bit number is unfortunately impossible.
     return IsConstantImm && VK == RISCVMCExpr::VK_RISCV_None &&
-           (isRV64() || (isInt<32>(Imm) || isUInt<32>(Imm)));
+           (isRV64Imm() || (isInt<32>(Imm) || isUInt<32>(Imm)));
   }
 
   bool isUImmLog2XLen() const {
@@ -527,7 +526,7 @@ public:
     if (!evaluateConstantImm(getImm(), Imm, VK) ||
         VK != RISCVMCExpr::VK_RISCV_None)
       return false;
-    return (isRV64() && isUInt<6>(Imm)) || isUInt<5>(Imm);
+    return (isRV64Imm() && isUInt<6>(Imm)) || isUInt<5>(Imm);
   }
 
   bool isUImmLog2XLenNonZero() const {
@@ -540,7 +539,7 @@ public:
       return false;
     if (Imm == 0)
       return false;
-    return (isRV64() && isUInt<6>(Imm)) || isUInt<5>(Imm);
+    return (isRV64Imm() && isUInt<6>(Imm)) || isUInt<5>(Imm);
   }
 
   bool isUImmLog2XLenHalf() const {
@@ -551,7 +550,7 @@ public:
     if (!evaluateConstantImm(getImm(), Imm, VK) ||
         VK != RISCVMCExpr::VK_RISCV_None)
       return false;
-    return (isRV64() && isUInt<5>(Imm)) || isUInt<4>(Imm);
+    return (isRV64Imm() && isUInt<5>(Imm)) || isUInt<4>(Imm);
   }
 
   template <unsigned N> bool IsUImm() const {
@@ -786,7 +785,10 @@ public:
   /// getEndLoc - Gets location of the last token of this operand
   SMLoc getEndLoc() const override { return EndLoc; }
   /// True if this operand is for an RV64 instruction
-  bool isRV64() const { return IsRV64; }
+  bool isRV64Imm() const {
+    assert(Kind == KindTy::Immediate && "Invalid type access!");
+    return Imm.IsRV64;
+  }
 
   unsigned getReg() const override {
     assert(Kind == KindTy::Register && "Invalid type access!");
@@ -852,13 +854,11 @@ public:
     }
   }
 
-  static std::unique_ptr<RISCVOperand> createToken(StringRef Str, SMLoc S,
-                                                   bool IsRV64) {
+  static std::unique_ptr<RISCVOperand> createToken(StringRef Str, SMLoc S) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::Token);
     Op->Tok = Str;
     Op->StartLoc = S;
     Op->EndLoc = S;
-    Op->IsRV64 = IsRV64;
     return Op;
   }
 
@@ -867,10 +867,10 @@ public:
                                                  bool IsGPRAsFPR = false) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::Register);
     Op->Reg.RegNum = RegNo;
+    Op->Reg.IsRV64 = IsRV64;
     Op->Reg.IsGPRAsFPR = IsGPRAsFPR;
     Op->StartLoc = S;
     Op->EndLoc = E;
-    Op->IsRV64 = IsRV64;
     return Op;
   }
 
@@ -878,41 +878,37 @@ public:
                                                  SMLoc E, bool IsRV64) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::Immediate);
     Op->Imm.Val = Val;
+    Op->Imm.IsRV64 = IsRV64;
     Op->StartLoc = S;
     Op->EndLoc = E;
-    Op->IsRV64 = IsRV64;
     return Op;
   }
 
-  static std::unique_ptr<RISCVOperand>
-  createSysReg(StringRef Str, SMLoc S, unsigned Encoding, bool IsRV64) {
+  static std::unique_ptr<RISCVOperand> createSysReg(StringRef Str, SMLoc S,
+                                                    unsigned Encoding) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::SystemRegister);
     Op->SysReg.Data = Str.data();
     Op->SysReg.Length = Str.size();
     Op->SysReg.Encoding = Encoding;
     Op->StartLoc = S;
     Op->EndLoc = S;
-    Op->IsRV64 = IsRV64;
     return Op;
   }
 
   static std::unique_ptr<RISCVOperand>
-  createFRMArg(RISCVFPRndMode::RoundingMode FRM, SMLoc S, bool IsRV64) {
+  createFRMArg(RISCVFPRndMode::RoundingMode FRM, SMLoc S) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::FRM);
     Op->FRM.FRM = FRM;
     Op->StartLoc = S;
     Op->EndLoc = S;
-    Op->IsRV64 = IsRV64;
     return Op;
   }
 
-  static std::unique_ptr<RISCVOperand> createVType(unsigned VTypeI, SMLoc S,
-                                                   bool IsRV64) {
+  static std::unique_ptr<RISCVOperand> createVType(unsigned VTypeI, SMLoc S) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::VType);
     Op->VType.Val = VTypeI;
     Op->StartLoc = S;
     Op->EndLoc = S;
-    Op->IsRV64 = IsRV64;
     return Op;
   }
 
@@ -1380,7 +1376,7 @@ OperandMatchResultTy RISCVAsmParser::parseRegister(OperandVector &Operands,
       return MatchOperand_NoMatch;
     }
     if (HadParens)
-      Operands.push_back(RISCVOperand::createToken("(", FirstS, isRV64()));
+      Operands.push_back(RISCVOperand::createToken("(", FirstS));
     SMLoc S = getLoc();
     SMLoc E = SMLoc::getFromPointer(S.getPointer() + Name.size());
     getLexer().Lex();
@@ -1389,7 +1385,7 @@ OperandMatchResultTy RISCVAsmParser::parseRegister(OperandVector &Operands,
 
   if (HadParens) {
     getParser().Lex(); // Eat ')'
-    Operands.push_back(RISCVOperand::createToken(")", getLoc(), isRV64()));
+    Operands.push_back(RISCVOperand::createToken(")", getLoc()));
   }
 
   return MatchOperand_Success;
@@ -1481,8 +1477,8 @@ RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
         auto SysReg = RISCVSysReg::lookupSysRegByEncoding(Imm);
         // Accept an immediate representing a named or un-named Sys Reg
         // if the range is valid, regardless of the required features.
-        Operands.push_back(RISCVOperand::createSysReg(
-            SysReg ? SysReg->Name : "", S, Imm, isRV64()));
+        Operands.push_back(
+            RISCVOperand::createSysReg(SysReg ? SysReg->Name : "", S, Imm));
         return MatchOperand_Success;
       }
     }
@@ -1510,8 +1506,8 @@ RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
         Error(S, "system register use requires an option to be enabled");
         return MatchOperand_ParseFail;
       }
-      Operands.push_back(RISCVOperand::createSysReg(
-          Identifier, S, SysReg->Encoding, isRV64()));
+      Operands.push_back(
+          RISCVOperand::createSysReg(Identifier, S, SysReg->Encoding));
       return MatchOperand_Success;
     }
 
@@ -1787,7 +1783,7 @@ OperandMatchResultTy RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
 
     unsigned VTypeI =
         RISCVVType::encodeVTYPE(VLMUL, Sew, TailAgnostic, MaskAgnostic);
-    Operands.push_back(RISCVOperand::createVType(VTypeI, S, isRV64()));
+    Operands.push_back(RISCVOperand::createVType(VTypeI, S));
     return MatchOperand_Success;
   }
 
@@ -1853,7 +1849,7 @@ OperandMatchResultTy RISCVAsmParser::parseFRMArg(OperandVector &Operands) {
     return MatchOperand_ParseFail;
   }
 
-  Operands.push_back(RISCVOperand::createFRMArg(FRM, getLoc(), isRV64()));
+  Operands.push_back(RISCVOperand::createFRMArg(FRM, getLoc()));
   Lex(); // Eat identifier token.
   return MatchOperand_Success;
 }
@@ -1866,7 +1862,7 @@ RISCVAsmParser::parseMemOpBaseReg(OperandVector &Operands) {
   }
 
   getParser().Lex(); // Eat '('
-  Operands.push_back(RISCVOperand::createToken("(", getLoc(), isRV64()));
+  Operands.push_back(RISCVOperand::createToken("(", getLoc()));
 
   if (parseRegister(Operands) != MatchOperand_Success) {
     Error(getLoc(), "expected register");
@@ -1879,7 +1875,7 @@ RISCVAsmParser::parseMemOpBaseReg(OperandVector &Operands) {
   }
 
   getParser().Lex(); // Eat ')'
-  Operands.push_back(RISCVOperand::createToken(")", getLoc(), isRV64()));
+  Operands.push_back(RISCVOperand::createToken(")", getLoc()));
 
   return MatchOperand_Success;
 }
@@ -2001,7 +1997,7 @@ bool RISCVAsmParser::ParseInstruction(ParseInstructionInfo &Info,
   }
 
   // First operand is token for instruction
-  Operands.push_back(RISCVOperand::createToken(Name, NameLoc, isRV64()));
+  Operands.push_back(RISCVOperand::createToken(Name, NameLoc));
 
   // If there are no more operands, then finish
   if (getLexer().is(AsmToken::EndOfStatement)) {
