@@ -20,7 +20,11 @@ class TestBasicForwardList(TestBase):
 
         self.runCmd("settings set target.import-std-module true")
 
-        list_type = "std::forward_list<int>"
+        if self.expectedCompilerVersion(['>', '16.0']):
+            list_type = "std::forward_list<int>"
+        else:
+            list_type = "std::forward_list<int, std::allocator<int> >"
+
         value_type = "value_type"
 
         # FIXME: This has three elements in it but the formatter seems to
