@@ -23,8 +23,8 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include <utility>
 #include <optional>
+#include <utility>
 
 namespace mlir {
 #define GEN_PASS_DEF_LINALGFOLDUNITEXTENTDIMS
@@ -73,6 +73,9 @@ static AffineMap getIndexingMapOfProducerOperandsInCoordinatesOfFusedOp(
 
 /// Conditions for elementwise fusion of generic operations.
 bool mlir::linalg::areElementwiseOpsFusable(OpOperand *fusedOperand) {
+  if (!fusedOperand)
+    return false;
+
   auto producer = fusedOperand->get().getDefiningOp<GenericOp>();
   auto consumer = dyn_cast<GenericOp>(fusedOperand->getOwner());
 
@@ -270,7 +273,7 @@ static void generateFusedElementwiseOpRegion(
          "Ill-formed GenericOp region");
 }
 
-FailureOr<Operation *>
+FailureOr<mlir::linalg::ElementwiseOpFusionResult>
 mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
                                  OpOperand *fusedOperand) {
   assert(areElementwiseOpsFusable(fusedOperand) &&
@@ -390,7 +393,15 @@ mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
   generateFusedElementwiseOpRegion(
       rewriter, fusedOp, consumerToProducerLoopsMap, fusedOperand,
       consumer.getNumLoops(), preservedProducerResults);
-  return fusedOp.getOperation();
+  ElementwiseOpFusionResult result;
+  result.fusedOp = fusedOp;
+  int resultNum = 0;
+  for (auto [index, producerResult] : llvm::enumerate(producer->getResults()))
+    if (preservedProducerResults.count(index))
+      result.replacements[producerResult] = fusedOp->getResult(resultNum++);
+  for (auto consumerResult : consumer->getResults())
+    result.replacements[consumerResult] = fusedOp->getResult(resultNum++);
+  return result;
 }
 
 namespace {
@@ -411,13 +422,20 @@ public:
       if (!controlFn(&opOperand))
         continue;
 
-      FailureOr<Operation *> fusedOp = fuseElementwiseOps(rewriter, &opOperand);
-      if (succeeded(fusedOp)) {
-        auto replacements =
-            (*fusedOp)->getResults().take_back(genericOp.getNumResults());
-        rewriter.replaceOp(genericOp, replacements);
-        return success();
+      FailureOr<ElementwiseOpFusionResult> fusionResult =
+          fuseElementwiseOps(rewriter, &opOperand);
+      if (failed(fusionResult))
+        rewriter.notifyMatchFailure(genericOp, "fusion failed");
+      Operation *producer = opOperand.get().getDefiningOp();
+      for (auto [origVal, replacement] : fusionResult->replacements) {
+        Value origValCopy = origVal;
+        rewriter.replaceUseIf(origVal, replacement, [&](OpOperand &use) {
+          // Only replace consumer uses.
+          return use.get().getDefiningOp() != producer;
+        });
       }
+      rewriter.eraseOp(genericOp);
+      return success();
     }
     return failure();
   }
