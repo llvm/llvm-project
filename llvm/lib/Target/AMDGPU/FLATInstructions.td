@@ -2437,22 +2437,6 @@ multiclass VFLAT_Real_Base_gfx12<bits<8> op, string ps, string opName, int renam
     def _renamed_gfx12 : MnemonicAlias<!cast<FLAT_Pseudo>(ps).Mnemonic, opName>, Requires<[isGFX12Plus]>;
 }
 
-multiclass VGLOBAL_Real_Base_gfx12<bits<8> op, string ps, string opName, int renamed = false> {
-  def _gfx12 : VFLAT_Real_gfx12<op, !cast<FLAT_Pseudo>(ps), opName> {
-    let Inst{6-0} = !cast<int>(SGPR_NULL_gfx11plus.HWEncoding);
-  }
-  if renamed then
-    def _renamed_gfx12 : MnemonicAlias<!cast<FLAT_Pseudo>(ps).Mnemonic, opName>, Requires<[isGFX12Plus]>;
-}
-
-multiclass VSCRATCH_Real_Base_gfx12<bits<8> op, string ps, string opName, int renamed = false> {
-  def _gfx12 : VFLAT_Real_gfx12<op, !cast<FLAT_Pseudo>(ps), opName> {
-    let Inst{6-0} = !cast<int>(SGPR_NULL_gfx11plus.HWEncoding);
-  }
-  if renamed then
-    def _renamed_gfx12 : MnemonicAlias<!cast<FLAT_Pseudo>(ps).Mnemonic, opName>, Requires<[isGFX12Plus]>;
-}
-
 multiclass VFLAT_Real_RTN_gfx12<bits<8> op, string ps, string opName> {
   def _RTN_gfx12 : VFLAT_Real_gfx12<op, !cast<FLAT_Pseudo>(ps#"_RTN"), opName> {
     let Inst{6-0} = !cast<int>(SGPR_NULL_gfx11plus.HWEncoding);
@@ -2485,7 +2469,7 @@ multiclass VFLAT_Real_Atomics_gfx12<bits<8> op, string ps, string opName, int re
   VFLAT_Real_RTN_gfx12<op, ps, opName>;
 
 multiclass VGLOBAL_Real_AllAddr_gfx12<bits<8> op, string ps, string opName, int renamed = false> :
-  VGLOBAL_Real_Base_gfx12<op, ps, opName, renamed>,
+  VFLAT_Real_Base_gfx12<op, ps, opName, renamed>,
   VFLAT_Real_SADDR_gfx12<op, ps, opName>;
 
 multiclass VGLOBAL_Real_Atomics_gfx12<bits<8> op, string ps, string opName, int renamed = false> :
@@ -2498,7 +2482,7 @@ multiclass VGLOBAL_Real_Atomics_RTN_gfx12<bits<8> op, string ps, string opName> 
   VFLAT_Real_SADDR_RTN_gfx12<op, ps, opName>;
 
 multiclass VSCRATCH_Real_AllAddr_gfx12<bits<8> op, string ps, string opName, int renamed = false> :
-  VSCRATCH_Real_Base_gfx12<op, ps, opName, renamed>,
+  VFLAT_Real_Base_gfx12<op, ps, opName, renamed>,
   VFLAT_Real_SADDR_gfx12<op, ps, opName>,
   VFLAT_Real_ST_gfx12<op, ps, opName>,
   VFLAT_Real_SVS_gfx12<op, ps, opName>;
