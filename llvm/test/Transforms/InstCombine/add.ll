@@ -2873,3 +2873,82 @@ define i8 @signum_i8_i8_wrong_pred(i8 %x) {
   %r = add i8 %zgt0, %signbit
   ret i8 %r
 }
+
+define i32 @dec_zext_add_assume_nonzero(i8 %x) {
+; CHECK-LABEL: @dec_zext_add_assume_nonzero(
+; CHECK-NEXT:    [[Z:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[Z]])
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[X]], -1
+; CHECK-NEXT:    [[B:%.*]] = zext i8 [[A]] to i32
+; CHECK-NEXT:    [[C:%.*]] = add nuw nsw i32 [[B]], 1
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %z = icmp ne i8 %x, 0
+  call void @llvm.assume(i1 %z)
+  %a = add i8 %x, -1
+  %b = zext i8 %a to i32
+  %c = add i32 %b, 1
+  ret i32 %c
+}
+
+define i32 @dec_zext_add_nonzero(i8 %x) {
+; CHECK-LABEL: @dec_zext_add_nonzero(
+; CHECK-NEXT:    [[O:%.*]] = or i8 [[X:%.*]], 4
+; CHECK-NEXT:    [[A:%.*]] = add nsw i8 [[O]], -1
+; CHECK-NEXT:    [[B:%.*]] = zext i8 [[A]] to i32
+; CHECK-NEXT:    [[C:%.*]] = add nuw nsw i32 [[B]], 1
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %o = or i8 %x, 4
+  %a = add i8 %o, -1
+  %b = zext i8 %a to i32
+  %c = add i32 %b, 1
+  ret i32 %c
+}
+
+define <2 x i32> @dec_zext_add_nonzero_vec(<2 x i8> %x) {
+; CHECK-LABEL: @dec_zext_add_nonzero_vec(
+; CHECK-NEXT:    [[O:%.*]] = or <2 x i8> [[X:%.*]], <i8 8, i8 8>
+; CHECK-NEXT:    [[A:%.*]] = add nsw <2 x i8> [[O]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[B:%.*]] = zext <2 x i8> [[A]] to <2 x i32>
+; CHECK-NEXT:    [[C:%.*]] = add nuw nsw <2 x i32> [[B]], <i32 1, i32 1>
+; CHECK-NEXT:    ret <2 x i32> [[C]]
+;
+  %o = or <2 x i8> %x, <i8 8, i8 8>
+  %a = add <2 x i8> %o, <i8 -1, i8 -1>
+  %b = zext <2 x i8> %a to <2 x i32>
+  %c = add <2 x i32> %b, <i32 1, i32 1>
+  ret <2 x i32> %c
+}
+
+define <2 x i32> @dec_zext_add_nonzero_vec_poison1(<2 x i8> %x) {
+; CHECK-LABEL: @dec_zext_add_nonzero_vec_poison1(
+; CHECK-NEXT:    [[O:%.*]] = or <2 x i8> [[X:%.*]], <i8 8, i8 8>
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[O]], <i8 -1, i8 poison>
+; CHECK-NEXT:    [[B:%.*]] = zext <2 x i8> [[A]] to <2 x i32>
+; CHECK-NEXT:    [[C:%.*]] = add nuw nsw <2 x i32> [[B]], <i32 1, i32 1>
+; CHECK-NEXT:    ret <2 x i32> [[C]]
+;
+  %o = or <2 x i8> %x, <i8 8, i8 8>
+  %a = add <2 x i8> %o, <i8 -1, i8 poison>
+  %b = zext <2 x i8> %a to <2 x i32>
+  %c = add <2 x i32> %b, <i32 1, i32 1>
+  ret <2 x i32> %c
+}
+
+define <2 x i32> @dec_zext_add_nonzero_vec_poison2(<2 x i8> %x) {
+; CHECK-LABEL: @dec_zext_add_nonzero_vec_poison2(
+; CHECK-NEXT:    [[O:%.*]] = or <2 x i8> [[X:%.*]], <i8 8, i8 8>
+; CHECK-NEXT:    [[A:%.*]] = add nsw <2 x i8> [[O]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[B:%.*]] = zext <2 x i8> [[A]] to <2 x i32>
+; CHECK-NEXT:    [[C:%.*]] = add <2 x i32> [[B]], <i32 1, i32 poison>
+; CHECK-NEXT:    ret <2 x i32> [[C]]
+;
+  %o = or <2 x i8> %x, <i8 8, i8 8>
+  %a = add <2 x i8> %o, <i8 -1, i8 -1>
+  %b = zext <2 x i8> %a to <2 x i32>
+  %c = add <2 x i32> %b, <i32 1, i32 poison>
+  ret <2 x i32> %c
+}
+
+declare void @llvm.assume(i1)
