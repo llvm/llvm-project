@@ -77,6 +77,7 @@ DefinedFunction *WasmSym::callDtors;
 DefinedFunction *WasmSym::initMemory;
 DefinedFunction *WasmSym::applyDataRelocs;
 DefinedFunction *WasmSym::applyGlobalRelocs;
+DefinedFunction *WasmSym::applyTLSRelocs;
 DefinedFunction *WasmSym::applyGlobalTLSRelocs;
 DefinedFunction *WasmSym::initTLS;
 DefinedFunction *WasmSym::startFunction;
@@ -308,7 +309,7 @@ uint64_t DefinedData::getVA() const {
   // output segment (__tls_base).  When building without shared memory, TLS
   // symbols absolute, just like non-TLS.
   if (isTLS() && config->sharedMemory)
-    return getOutputSegmentOffset() + value;
+    return getOutputSegmentOffset();
   if (segment)
     return segment->getVA(value);
   return value;
