@@ -53,10 +53,10 @@ RISCVToolChain::RISCVToolChain(const Driver &D, const llvm::Triple &Triple,
   GCCInstallation.init(Triple, Args);
   if (GCCInstallation.isValid()) {
     Multilibs = GCCInstallation.getMultilibs();
-    SelectedMultilib = GCCInstallation.getMultilib();
+    SelectedMultilibs.assign({GCCInstallation.getMultilib()});
     path_list &Paths = getFilePaths();
     // Add toolchain/multilib specific file paths.
-    addMultilibsFilePaths(D, Multilibs, SelectedMultilib,
+    addMultilibsFilePaths(D, Multilibs, SelectedMultilibs.back(),
                           GCCInstallation.getInstallPath(), Paths);
     getFilePaths().push_back(GCCInstallation.getInstallPath().str());
     ToolChain::path_list &PPaths = getProgramPaths();

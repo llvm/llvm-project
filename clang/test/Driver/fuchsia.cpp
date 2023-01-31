@@ -139,3 +139,14 @@
 // CHECK-MULTILIB-HWASAN-NOEXCEPT-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}hwasan+noexcept"
 // CHECK-MULTILIB-COMPAT-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}compat"
 // CHECK-MULTILIB-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia"
+
+// Check that -print-multi-directory only outputs one multilib directory.
+// This may be relaxed later but for now preserve existing behaviour.
+// RUN: %clangxx -print-multi-directory --target=x86_64-unknown-fuchsia -fsanitize=address -fno-exceptions \
+// RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     | FileCheck %s -check-prefixes=CHECK-PRINT-MULTI-LIB
+// CHECK-PRINT-MULTI-LIB-NOT: .
+// CHECK-PRINT-MULTI-LIB-NOT: noexcept
+// CHECK-PRINT-MULTI-LIB-NOT: asan
+// CHECK-PRINT-MULTI-LIB: asan+noexcept
