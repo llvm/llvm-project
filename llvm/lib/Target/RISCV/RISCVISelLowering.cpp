@@ -696,6 +696,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_FP_TO_UINT,  ISD::VP_SETCC,       ISD::VP_SIGN_EXTEND,
         ISD::VP_ZERO_EXTEND, ISD::VP_TRUNCATE,    ISD::VP_SMIN,
         ISD::VP_SMAX,        ISD::VP_UMIN,        ISD::VP_UMAX,
+        ISD::VP_MULHU, ISD::VP_MULHS,
         ISD::VP_ABS, ISD::EXPERIMENTAL_VP_REVERSE, ISD::EXPERIMENTAL_VP_SPLICE,
         ISD::VP_SADDSAT,     ISD::VP_UADDSAT,     ISD::VP_SSUBSAT,
         ISD::VP_USUBSAT,     ISD::VP_CTTZ_ELTS,   ISD::VP_CTTZ_ELTS_ZERO_UNDEF,
@@ -6410,6 +6411,8 @@ static unsigned getRISCVVLOp(SDValue Op) {
   VP_CASE(ADD)        // VP_ADD
   VP_CASE(SUB)        // VP_SUB
   VP_CASE(MUL)        // VP_MUL
+  VP_CASE(MULHS)      // VP_MULHS
+  VP_CASE(MULHU)      // VP_MULHU
   VP_CASE(SDIV)       // VP_SDIV
   VP_CASE(SREM)       // VP_SREM
   VP_CASE(UDIV)       // VP_UDIV
@@ -7605,6 +7608,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_ADD:
   case ISD::VP_SUB:
   case ISD::VP_MUL:
+  case ISD::VP_MULHS:
+  case ISD::VP_MULHU:
   case ISD::VP_SDIV:
   case ISD::VP_UDIV:
   case ISD::VP_SREM:
