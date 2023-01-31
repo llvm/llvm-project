@@ -538,11 +538,6 @@ function(cxx_add_basic_build_flags target)
     target_add_compile_flags_if_supported(${target} PRIVATE -fvisibility=hidden)
   endif()
 
-  if (LIBCXX_CONFIGURE_IDE)
-    # This simply allows IDE to process <experimental/coroutine>
-    target_add_compile_flags_if_supported(${target} PRIVATE -fcoroutines-ts)
-  endif()
-
   # Let the library headers know they are currently being used to build the
   # library.
   target_compile_definitions(${target} PRIVATE -D_LIBCPP_BUILDING_LIBRARY)

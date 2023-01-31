@@ -6364,7 +6364,7 @@ entry:
 define dso_local <2 x double> @fp_extend13(<4 x float> %a) {
 ; P9BE-LABEL: fp_extend13:
 ; P9BE:       # %bb.0: # %entry
-; P9BE-NEXT:    xxsldwi vs0, v2, v2, 3
+; P9BE-NEXT:    xxsldwi vs0, v2, v2, 1
 ; P9BE-NEXT:    xvcvspdp v2, vs0
 ; P9BE-NEXT:    blr
 ;
@@ -6375,7 +6375,7 @@ define dso_local <2 x double> @fp_extend13(<4 x float> %a) {
 ;
 ; P8BE-LABEL: fp_extend13:
 ; P8BE:       # %bb.0: # %entry
-; P8BE-NEXT:    xxsldwi vs0, v2, v2, 3
+; P8BE-NEXT:    xxsldwi vs0, v2, v2, 1
 ; P8BE-NEXT:    xvcvspdp v2, vs0
 ; P8BE-NEXT:    blr
 ;

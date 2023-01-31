@@ -156,7 +156,7 @@ void CGOpenCLRuntime::recordBlockInfo(const BlockExpr *E,
   EnqueuedBlockMap[E].InvokeFunc = InvokeF;
   EnqueuedBlockMap[E].BlockArg = Block;
   EnqueuedBlockMap[E].BlockTy = BlockTy;
-  EnqueuedBlockMap[E].Kernel = nullptr;
+  EnqueuedBlockMap[E].KernelHandle = nullptr;
 }
 
 llvm::Function *CGOpenCLRuntime::getInvokeFunction(const Expr *E) {
@@ -175,7 +175,7 @@ CGOpenCLRuntime::emitOpenCLEnqueuedBlock(CodeGenFunction &CGF, const Expr *E) {
          "Block expression not emitted");
 
   // Do not emit the block wrapper again if it has been emitted.
-  if (EnqueuedBlockMap[Block].Kernel) {
+  if (EnqueuedBlockMap[Block].KernelHandle) {
     return EnqueuedBlockMap[Block];
   }
 
@@ -183,9 +183,6 @@ CGOpenCLRuntime::emitOpenCLEnqueuedBlock(CodeGenFunction &CGF, const Expr *E) {
       CGF, EnqueuedBlockMap[Block].InvokeFunc, EnqueuedBlockMap[Block].BlockTy);
 
   // The common part of the post-processing of the kernel goes here.
-  F->addFnAttr(llvm::Attribute::NoUnwind);
-  F->setCallingConv(
-      CGF.getTypes().ClangCallConvToLLVMCallConv(CallingConv::CC_OpenCLKernel));
-  EnqueuedBlockMap[Block].Kernel = F;
+  EnqueuedBlockMap[Block].KernelHandle = F;
   return EnqueuedBlockMap[Block];
 }

@@ -2769,6 +2769,9 @@ public:
   /// Return whether the first element a DW_OP_deref.
   bool startsWithDeref() const;
 
+  /// Return whether there is exactly one operator and it is a DW_OP_deref;
+  bool isDeref() const;
+
   /// Holds the characteristics of one fragment of a larger variable.
   struct FragmentInfo {
     uint64_t SizeInBits;
