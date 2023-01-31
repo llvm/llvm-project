@@ -31,13 +31,20 @@ class TestCase(TestBase):
             ValueCheck(value="2"),
         ]
 
-        vector_type = "std::vector<int>"
+        if self.expectedCompilerVersion(['>', '16.0']):
+            vector_type = "std::vector<int>"
+            dbg_vec_type = "std::vector<DbgInfoClass>"
+            module_vector_type = "std::vector<int>"
+        else:
+            vector_type = "std::vector<int, std::allocator<int> >"
+            dbg_vec_type = "std::vector<DbgInfoClass, std::allocator<DbgInfoClass> >"
+            module_vector_type = "std::vector<int>"
 
         # First muddy the scratch AST with non-C++ module types.
         self.expect_expr("a", result_type=vector_type,
                          result_children=children)
         self.expect_expr("dbg_info_vec",
-                         result_type="std::vector<DbgInfoClass>",
+                         result_type=dbg_vec_type,
                          result_children=[
             ValueCheck(type="DbgInfoClass", children=[
                 ValueCheck(name="ints", type=vector_type, children=[
@@ -48,15 +55,15 @@ class TestCase(TestBase):
 
         # Enable the C++ module import and get the module vector type.
         self.runCmd("settings set target.import-std-module true")
-        self.expect_expr("a", result_type=vector_type,
+        self.expect_expr("a", result_type=module_vector_type,
                          result_children=children)
 
         # Test mixed debug info/module types
         self.expect_expr("dbg_info_vec",
-                         result_type="std::vector<DbgInfoClass>",
+                         result_type=dbg_vec_type,
                          result_children=[
             ValueCheck(type="DbgInfoClass", children=[
-                ValueCheck(name="ints", type=vector_type, children=[
+                ValueCheck(name="ints", type=module_vector_type, children=[
                     ValueCheck(value="1")
                 ])
             ])
@@ -70,7 +77,7 @@ class TestCase(TestBase):
 
         # Test the types that were previoiusly mixed debug info/module types.
         self.expect_expr("dbg_info_vec",
-                         result_type="std::vector<DbgInfoClass>",
+                         result_type=dbg_vec_type,
                          result_children=[
             ValueCheck(type="DbgInfoClass", children=[
                 ValueCheck(name="ints", type=vector_type, children=[

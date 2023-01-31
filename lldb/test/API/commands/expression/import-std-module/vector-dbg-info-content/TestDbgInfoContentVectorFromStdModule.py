@@ -22,7 +22,11 @@ class TestDbgInfoContentVector(TestBase):
 
         self.runCmd("settings set target.import-std-module true")
 
-        vector_type = "std::vector<Foo>"
+        if self.expectedCompilerVersion(['>', '16.0']):
+            vector_type = "std::vector<Foo>"
+        else:
+            vector_type = "std::vector<Foo, std::allocator<Foo> >"
+
         size_type = "size_type"
         value_type = "value_type"
         iterator = "iterator"
