@@ -2613,16 +2613,15 @@ def FortranTypeAttr : Attr<And<[CPred<"$_self.isa<mlir::TypeAttr>()">,
   let convertFromStorage = "$_self.getValue().cast<mlir::Type>()";
 }
 
-def fir_GenTypeDescOp : fir_OneResultOp<"gentypedesc", [NoMemoryEffect]> {
-  let summary = "generate a type descriptor for a given type";
+def fir_TypeDescOp : fir_OneResultOp<"type_desc", [NoMemoryEffect]> {
+  let summary = "get type descriptor for a given type";
   let description = [{
     Generates a constant object that is an abstract type descriptor of the
     specified type.  The meta-type of a type descriptor for the type `T`
     is `!fir.tdesc<T>`.
 
     ```mlir
-      !T = !fir.type<T{...}>
-      %t = fir.gentypedesc !T  // returns value of !fir.tdesc<!T>
+      %t = fir.type_desc !fir.type<> // returns value of !fir.tdesc<!T>
     ```
   }];
 
