@@ -13,7 +13,7 @@
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsseg2e32_v_f32mf2(float *base, vfloat32mf2_t v0, vfloat32mf2_t v1, size_t vl) {
-  return vsseg2e32_v_f32mf2(base, v0, v1, vl);
+  return __riscv_vsseg2e32_v_f32mf2(base, v0, v1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsseg2e32_v_f32m1(
@@ -22,7 +22,7 @@ void test_vsseg2e32_v_f32mf2(float *base, vfloat32mf2_t v0, vfloat32mf2_t v1, si
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsseg2e32_v_f32m1(float *base, vfloat32m1_t v0, vfloat32m1_t v1, size_t vl) {
-  return vsseg2e32_v_f32m1(base, v0, v1, vl);
+  return __riscv_vsseg2e32_v_f32m1(base, v0, v1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsseg2e32_v_f32m2(
@@ -31,7 +31,7 @@ void test_vsseg2e32_v_f32m1(float *base, vfloat32m1_t v0, vfloat32m1_t v1, size_
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsseg2e32_v_f32m2(float *base, vfloat32m2_t v0, vfloat32m2_t v1, size_t vl) {
-  return vsseg2e32_v_f32m2(base, v0, v1, vl);
+  return __riscv_vsseg2e32_v_f32m2(base, v0, v1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsseg2e32_v_f32m4(
@@ -40,7 +40,7 @@ void test_vsseg2e32_v_f32m2(float *base, vfloat32m2_t v0, vfloat32m2_t v1, size_
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsseg2e32_v_f32m4(float *base, vfloat32m4_t v0, vfloat32m4_t v1, size_t vl) {
-  return vsseg2e32_v_f32m4(base, v0, v1, vl);
+  return __riscv_vsseg2e32_v_f32m4(base, v0, v1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsseg2e32_v_i32mf2(
@@ -49,7 +49,7 @@ void test_vsseg2e32_v_f32m4(float *base, vfloat32m4_t v0, vfloat32m4_t v1, size_
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsseg2e32_v_i32mf2(int32_t *base, vint32mf2_t v0, vint32mf2_t v1, size_t vl) {
-  return vsseg2e32_v_i32mf2(base, v0, v1, vl);
+  return __riscv_vsseg2e32_v_i32mf2(base, v0, v1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsseg2e32_v_i32m1(
@@ -58,7 +58,7 @@ void test_vsseg2e32_v_i32mf2(int32_t *base, vint32mf2_t v0, vint32mf2_t v1, size
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsseg2e32_v_i32m1(int32_t *base, vint32m1_t v0, vint32m1_t v1, size_t vl) {
-  return vsseg2e32_v_i32m1(base, v0, v1, vl);
+  return __riscv_vsseg2e32_v_i32m1(base, v0, v1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsseg2e32_v_i32m2(
@@ -67,7 +67,7 @@ void test_vsseg2e32_v_i32m1(int32_t *base, vint32m1_t v0, vint32m1_t v1, size_t 
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsseg2e32_v_i32m2(int32_t *base, vint32m2_t v0, vint32m2_t v1, size_t vl) {
-  return vsseg2e32_v_i32m2(base, v0, v1, vl);
+  return __riscv_vsseg2e32_v_i32m2(base, v0, v1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsseg2e32_v_i32m4(
@@ -76,7 +76,7 @@ void test_vsseg2e32_v_i32m2(int32_t *base, vint32m2_t v0, vint32m2_t v1, size_t 
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsseg2e32_v_i32m4(int32_t *base, vint32m4_t v0, vint32m4_t v1, size_t vl) {
-  return vsseg2e32_v_i32m4(base, v0, v1, vl);
+  return __riscv_vsseg2e32_v_i32m4(base, v0, v1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsseg2e32_v_u32mf2(
@@ -85,7 +85,7 @@ void test_vsseg2e32_v_i32m4(int32_t *base, vint32m4_t v0, vint32m4_t v1, size_t 
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsseg2e32_v_u32mf2(uint32_t *base, vuint32mf2_t v0, vuint32mf2_t v1, size_t vl) {
-  return vsseg2e32_v_u32mf2(base, v0, v1, vl);
+  return __riscv_vsseg2e32_v_u32mf2(base, v0, v1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsseg2e32_v_u32m1(
@@ -94,7 +94,7 @@ void test_vsseg2e32_v_u32mf2(uint32_t *base, vuint32mf2_t v0, vuint32mf2_t v1, s
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsseg2e32_v_u32m1(uint32_t *base, vuint32m1_t v0, vuint32m1_t v1, size_t vl) {
-  return vsseg2e32_v_u32m1(base, v0, v1, vl);
+  return __riscv_vsseg2e32_v_u32m1(base, v0, v1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsseg2e32_v_u32m2(
@@ -103,7 +103,7 @@ void test_vsseg2e32_v_u32m1(uint32_t *base, vuint32m1_t v0, vuint32m1_t v1, size
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsseg2e32_v_u32m2(uint32_t *base, vuint32m2_t v0, vuint32m2_t v1, size_t vl) {
-  return vsseg2e32_v_u32m2(base, v0, v1, vl);
+  return __riscv_vsseg2e32_v_u32m2(base, v0, v1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsseg2e32_v_u32m4(
@@ -112,7 +112,7 @@ void test_vsseg2e32_v_u32m2(uint32_t *base, vuint32m2_t v0, vuint32m2_t v1, size
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsseg2e32_v_u32m4(uint32_t *base, vuint32m4_t v0, vuint32m4_t v1, size_t vl) {
-  return vsseg2e32_v_u32m4(base, v0, v1, vl);
+  return __riscv_vsseg2e32_v_u32m4(base, v0, v1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsseg2e32_v_f32mf2_m(
@@ -121,7 +121,7 @@ void test_vsseg2e32_v_u32m4(uint32_t *base, vuint32m4_t v0, vuint32m4_t v1, size
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsseg2e32_v_f32mf2_m(vbool64_t mask, float *base, vfloat32mf2_t v0, vfloat32mf2_t v1, size_t vl) {
-  return vsseg2e32_v_f32mf2_m(mask, base, v0, v1, vl);
+  return __riscv_vsseg2e32_v_f32mf2_m(mask, base, v0, v1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsseg2e32_v_f32m1_m(
@@ -130,7 +130,7 @@ void test_vsseg2e32_v_f32mf2_m(vbool64_t mask, float *base, vfloat32mf2_t v0, vf
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsseg2e32_v_f32m1_m(vbool32_t mask, float *base, vfloat32m1_t v0, vfloat32m1_t v1, size_t vl) {
-  return vsseg2e32_v_f32m1_m(mask, base, v0, v1, vl);
+  return __riscv_vsseg2e32_v_f32m1_m(mask, base, v0, v1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsseg2e32_v_f32m2_m(
@@ -139,7 +139,7 @@ void test_vsseg2e32_v_f32m1_m(vbool32_t mask, float *base, vfloat32m1_t v0, vflo
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsseg2e32_v_f32m2_m(vbool16_t mask, float *base, vfloat32m2_t v0, vfloat32m2_t v1, size_t vl) {
-  return vsseg2e32_v_f32m2_m(mask, base, v0, v1, vl);
+  return __riscv_vsseg2e32_v_f32m2_m(mask, base, v0, v1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsseg2e32_v_f32m4_m(
@@ -148,7 +148,7 @@ void test_vsseg2e32_v_f32m2_m(vbool16_t mask, float *base, vfloat32m2_t v0, vflo
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsseg2e32_v_f32m4_m(vbool8_t mask, float *base, vfloat32m4_t v0, vfloat32m4_t v1, size_t vl) {
-  return vsseg2e32_v_f32m4_m(mask, base, v0, v1, vl);
+  return __riscv_vsseg2e32_v_f32m4_m(mask, base, v0, v1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsseg2e32_v_i32mf2_m(
@@ -157,7 +157,7 @@ void test_vsseg2e32_v_f32m4_m(vbool8_t mask, float *base, vfloat32m4_t v0, vfloa
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsseg2e32_v_i32mf2_m(vbool64_t mask, int32_t *base, vint32mf2_t v0, vint32mf2_t v1, size_t vl) {
-  return vsseg2e32_v_i32mf2_m(mask, base, v0, v1, vl);
+  return __riscv_vsseg2e32_v_i32mf2_m(mask, base, v0, v1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsseg2e32_v_i32m1_m(
@@ -166,7 +166,7 @@ void test_vsseg2e32_v_i32mf2_m(vbool64_t mask, int32_t *base, vint32mf2_t v0, vi
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsseg2e32_v_i32m1_m(vbool32_t mask, int32_t *base, vint32m1_t v0, vint32m1_t v1, size_t vl) {
-  return vsseg2e32_v_i32m1_m(mask, base, v0, v1, vl);
+  return __riscv_vsseg2e32_v_i32m1_m(mask, base, v0, v1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsseg2e32_v_i32m2_m(
@@ -175,7 +175,7 @@ void test_vsseg2e32_v_i32m1_m(vbool32_t mask, int32_t *base, vint32m1_t v0, vint
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsseg2e32_v_i32m2_m(vbool16_t mask, int32_t *base, vint32m2_t v0, vint32m2_t v1, size_t vl) {
-  return vsseg2e32_v_i32m2_m(mask, base, v0, v1, vl);
+  return __riscv_vsseg2e32_v_i32m2_m(mask, base, v0, v1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsseg2e32_v_i32m4_m(
@@ -184,7 +184,7 @@ void test_vsseg2e32_v_i32m2_m(vbool16_t mask, int32_t *base, vint32m2_t v0, vint
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsseg2e32_v_i32m4_m(vbool8_t mask, int32_t *base, vint32m4_t v0, vint32m4_t v1, size_t vl) {
-  return vsseg2e32_v_i32m4_m(mask, base, v0, v1, vl);
+  return __riscv_vsseg2e32_v_i32m4_m(mask, base, v0, v1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsseg2e32_v_u32mf2_m(
@@ -193,7 +193,7 @@ void test_vsseg2e32_v_i32m4_m(vbool8_t mask, int32_t *base, vint32m4_t v0, vint3
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsseg2e32_v_u32mf2_m(vbool64_t mask, uint32_t *base, vuint32mf2_t v0, vuint32mf2_t v1, size_t vl) {
-  return vsseg2e32_v_u32mf2_m(mask, base, v0, v1, vl);
+  return __riscv_vsseg2e32_v_u32mf2_m(mask, base, v0, v1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsseg2e32_v_u32m1_m(
@@ -202,7 +202,7 @@ void test_vsseg2e32_v_u32mf2_m(vbool64_t mask, uint32_t *base, vuint32mf2_t v0, 
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsseg2e32_v_u32m1_m(vbool32_t mask, uint32_t *base, vuint32m1_t v0, vuint32m1_t v1, size_t vl) {
-  return vsseg2e32_v_u32m1_m(mask, base, v0, v1, vl);
+  return __riscv_vsseg2e32_v_u32m1_m(mask, base, v0, v1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsseg2e32_v_u32m2_m(
@@ -211,7 +211,7 @@ void test_vsseg2e32_v_u32m1_m(vbool32_t mask, uint32_t *base, vuint32m1_t v0, vu
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsseg2e32_v_u32m2_m(vbool16_t mask, uint32_t *base, vuint32m2_t v0, vuint32m2_t v1, size_t vl) {
-  return vsseg2e32_v_u32m2_m(mask, base, v0, v1, vl);
+  return __riscv_vsseg2e32_v_u32m2_m(mask, base, v0, v1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsseg2e32_v_u32m4_m(
@@ -220,6 +220,6 @@ void test_vsseg2e32_v_u32m2_m(vbool16_t mask, uint32_t *base, vuint32m2_t v0, vu
 // CHECK-RV64-NEXT:    ret void
 //
 void test_vsseg2e32_v_u32m4_m(vbool8_t mask, uint32_t *base, vuint32m4_t v0, vuint32m4_t v1, size_t vl) {
-  return vsseg2e32_v_u32m4_m(mask, base, v0, v1, vl);
+  return __riscv_vsseg2e32_v_u32m4_m(mask, base, v0, v1, vl);
 }
 

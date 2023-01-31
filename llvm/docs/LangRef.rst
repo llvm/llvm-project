@@ -10077,11 +10077,15 @@ The '``alloca``' instruction allocates ``sizeof(<type>)*NumElements``
 bytes of memory on the runtime stack, returning a pointer of the
 appropriate type to the program. If "NumElements" is specified, it is
 the number of elements allocated, otherwise "NumElements" is defaulted
-to be one. If a constant alignment is specified, the value result of the
+to be one.
+
+If a constant alignment is specified, the value result of the
 allocation is guaranteed to be aligned to at least that boundary. The
-alignment may not be greater than ``1 << 32``. If not specified, or if
-zero, the target can choose to align the allocation on any convenient
-boundary compatible with the type.
+alignment may not be greater than ``1 << 32``.
+
+The alignment is only optional when parsing textual IR; for in-memory IR,
+it is always present. If not specified, the target can choose to align the
+allocation on any convenient boundary compatible with the type.
 
 '``type``' may be any sized type.
 
@@ -10163,16 +10167,20 @@ alignment is not set to a value which is at least the size in bytes of the
 pointee. ``!nontemporal`` does not have any defined semantics for atomic loads.
 
 The optional constant ``align`` argument specifies the alignment of the
-operation (that is, the alignment of the memory address). An omitted ``align``
-argument means that the operation has the ABI alignment for the target. It is
-the responsibility of the code emitter to ensure that the alignment information
-is correct. Overestimating the alignment results in undefined behavior.
-Underestimating the alignment may produce less efficient code. An alignment of 1 is
-always safe. The maximum possible alignment is ``1 << 32``. An alignment value higher
-than the size of the loaded type implies memory up to the alignment value bytes can
-be safely loaded without trapping in the default address space. Access of the high
-bytes can interfere with debugging tools, so should not be  accessed if the function
-has the ``sanitize_thread`` or ``sanitize_address`` attributes.
+operation (that is, the alignment of the memory address). It is the 
+responsibility of the code emitter to ensure that the alignment information is
+correct. Overestimating the alignment results in undefined behavior. 
+Underestimating the alignment may produce less efficient code. An alignment of
+1 is always safe. The maximum possible alignment is ``1 << 32``. An alignment 
+value higher than the size of the loaded type implies memory up to the
+alignment value bytes can be safely loaded without trapping in the default
+address space. Access of the high bytes can interfere with debugging tools, so
+should not be accessed if the function has the ``sanitize_thread`` or
+``sanitize_address`` attributes.
+
+The alignment is only optional when parsing textual IR; for in-memory IR, it is
+always present. An omitted ``align`` argument means that the operation has the
+ABI alignment for the target.
 
 The optional ``!nontemporal`` metadata must reference a single
 metadata name ``<nontemp_node>`` corresponding to a metadata node with one
@@ -10299,19 +10307,20 @@ the alignment is not set to a value which is at least the size in bytes of the
 pointee. ``!nontemporal`` does not have any defined semantics for atomic stores.
 
 The optional constant ``align`` argument specifies the alignment of the
-operation (that is, the alignment of the memory address). An omitted ``align``
-argument means that the operation has the ABI alignment for the target.
-It is the responsibility of the code emitter to ensure that the alignment
-information is correct. Overestimating the alignment results in undefined
-behavior. Underestimating the alignment may produce less efficient code.
-An alignment of 1 is always safe. The maximum possible alignment is ``1 << 32``.
-An alignment value higher than the size of the stored type implies memory
-up to the alignment value bytes can be stored to without trapping in
-the default address space. Storing to the higher bytes however may result in
-data races if another thread can access the same address. Introducing a
-data race is not allowed. Storing to the extra bytes is not allowed
-even in situations where a data race is known to not exist if the
-function has the ``sanitize_address`` attribute.
+operation (that is, the alignment of the memory address). It is the 
+responsibility of the code emitter to ensure that the alignment information is
+correct. Overestimating the alignment results in undefined behavior. 
+Underestimating the alignment may produce less efficient code. An alignment of
+1 is always safe. The maximum possible alignment is ``1 << 32``. An alignment 
+value higher than the size of the loaded type implies memory up to the
+alignment value bytes can be safely loaded without trapping in the default
+address space. Access of the high bytes can interfere with debugging tools, so
+should not be accessed if the function has the ``sanitize_thread`` or
+``sanitize_address`` attributes.
+
+The alignment is only optional when parsing textual IR; for in-memory IR, it is
+always present. An omitted ``align`` argument means that the operation has the
+ABI alignment for the target.
 
 The optional ``!nontemporal`` metadata must reference a single metadata
 name ``<nontemp_node>`` corresponding to a metadata node with one ``i32`` entry
@@ -10445,9 +10454,11 @@ must be at least ``monotonic``, the failure ordering cannot be either
 A ``cmpxchg`` instruction can also take an optional
 ":ref:`syncscope <syncscope>`" argument.
 
-The instruction can take an optional ``align`` attribute.
 The alignment must be a power of two greater or equal to the size of the
-`<value>` type. If unspecified, the alignment is assumed to be equal to the
+`<value>` type.
+
+The alignment is only optional when parsing textual IR; for in-memory IR, it is
+always present. If unspecified, the alignment is assumed to be equal to the
 size of the '<value>' type. Note that this default alignment assumption is
 different from the alignment used for the load/store instructions when align
 isn't specified.
@@ -10546,9 +10557,11 @@ the ``atomicrmw`` is marked as ``volatile``, then the optimizer is not
 allowed to modify the number or order of execution of this
 ``atomicrmw`` with other :ref:`volatile operations <volatile>`.
 
-The instruction can take an optional ``align`` attribute.
 The alignment must be a power of two greater or equal to the size of the
-`<value>` type. If unspecified, the alignment is assumed to be equal to the
+`<value>` type.
+
+The alignment is only optional when parsing textual IR; for in-memory IR, it is
+always present. If unspecified, the alignment is assumed to be equal to the
 size of the '<value>' type. Note that this default alignment assumption is
 different from the alignment used for the load/store instructions when align
 isn't specified.

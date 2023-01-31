@@ -18,6 +18,7 @@
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/StatementContext.h"
+#include "flang/Lower/Support/Utils.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Character.h"
@@ -306,6 +307,8 @@ struct IntrinsicLibrary {
   mlir::Value genSpacing(mlir::Type resultType,
                          llvm::ArrayRef<mlir::Value> args);
   fir::ExtendedValue genSpread(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genStorageSize(mlir::Type,
+                                    llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSum(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genSystemClock(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genTrailz(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -817,6 +820,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"spread",
      &I::genSpread,
      {{{"source", asBox}, {"dim", asValue}, {"ncopies", asValue}}},
+     /*isElemental=*/false},
+    {"storage_size",
+     &I::genStorageSize,
+     {{{"a", asInquired}, {"kind", asValue}}},
      /*isElemental=*/false},
     {"sum",
      &I::genSum,
@@ -4785,6 +4792,57 @@ IntrinsicLibrary::genSpread(mlir::Type resultType,
   fir::runtime::genSpread(builder, loc, resultIrBox, source, dim, ncopies);
 
   return readAndAddCleanUp(resultMutableBox, resultType, "SPREAD");
+}
+
+// STORAGE_SIZE
+fir::ExtendedValue
+IntrinsicLibrary::genStorageSize(mlir::Type resultType,
+                                 llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2 || args.size() == 1);
+  mlir::Value box = fir::getBase(args[0]);
+  mlir::Type boxTy = box.getType();
+  mlir::Type kindTy = builder.getDefaultIntegerType();
+  bool needRuntimeCheck = false;
+  std::string errorMsg;
+
+  if (fir::isUnlimitedPolymorphicType(boxTy) &&
+      (fir::isAllocatableType(boxTy) || fir::isPointerType(boxTy))) {
+    needRuntimeCheck = true;
+    errorMsg =
+        fir::isPointerType(boxTy)
+            ? "unlimited polymorphic disassociated POINTER in STORAGE_SIZE"
+            : "unlimited polymorphic unallocated ALLOCATABLE in STORAGE_SIZE";
+  } else if (fir::isPolymorphicType(boxTy) && fir::isPointerType(boxTy)) {
+    needRuntimeCheck = true;
+    errorMsg = "polymorphic disassociated POINTER in STORAGE_SIZE";
+  }
+  const fir::MutableBoxValue *mutBox = args[0].getBoxOf<fir::MutableBoxValue>();
+  if (needRuntimeCheck && mutBox) {
+    mlir::Value isNotAllocOrAssoc =
+        fir::factory::genIsNotAllocatedOrAssociatedTest(builder, loc, *mutBox);
+    builder.genIfThen(loc, isNotAllocOrAssoc)
+        .genThen([&]() {
+          fir::runtime::genReportFatalUserError(builder, loc, errorMsg);
+        })
+        .end();
+  }
+
+  // Handle optional kind argument
+  bool absentKind = isStaticallyAbsent(args, 1);
+  if (!absentKind) {
+    mlir::Operation *defKind = fir::getBase(args[1]).getDefiningOp();
+    assert(mlir::isa<mlir::arith::ConstantOp>(*defKind) &&
+           "kind not a constant");
+    auto constOp = mlir::dyn_cast<mlir::arith::ConstantOp>(*defKind);
+    kindTy = builder.getIntegerType(
+        builder.getKindMap().getIntegerBitsize(fir::toInt(constOp)));
+  }
+
+  if (box.getType().isa<fir::ReferenceType>())
+    box = builder.create<fir::LoadOp>(loc, box);
+  mlir::Value eleSize = builder.create<fir::BoxEleSizeOp>(loc, kindTy, box);
+  mlir::Value c8 = builder.createIntegerConstant(loc, kindTy, 8);
+  return builder.create<mlir::arith::MulIOp>(loc, eleSize, c8);
 }
 
 // SUM

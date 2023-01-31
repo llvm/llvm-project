@@ -249,11 +249,26 @@ struct OneShotBufferizePass
     BufferizationStatistics statistics;
     ModuleOp moduleOp = getOperation();
     if (opt.bufferizeFunctionBoundaries) {
-      if (failed(runOneShotModuleBufferize(moduleOp, opt, &statistics))) {
+      OpFilter::Entry::FilterFn analysisFilterFn = nullptr;
+      // FuncOps whose names are specified in noAnalysisFuncFilter will not be
+      // analyzed. Ops in these FuncOps will not be analyzed as well.
+      if (this->noAnalysisFuncFilter.hasValue())
+        analysisFilterFn = [=](Operation *op) {
+          auto func = dyn_cast<func::FuncOp>(op);
+          if (!func)
+            func = op->getParentOfType<func::FuncOp>();
+          if (func)
+            return llvm::is_contained(noAnalysisFuncFilter, func.getSymName());
+          return false;
+        };
+      if (failed(runOneShotModuleBufferize(moduleOp, opt, &statistics,
+                                           analysisFilterFn))) {
         signalPassFailure();
         return;
       }
     } else {
+      assert(!this->noAnalysisFuncFilter.hasValue() &&
+             "invalid combination of bufferization flags");
       if (failed(runOneShotBufferize(moduleOp, opt, &statistics))) {
         signalPassFailure();
         return;
@@ -495,6 +510,15 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
     (void)bufferization::foldToMemrefToTensorPair(rewriter,
                                                   cast<ToMemrefOp>(op));
   }
+
+  // Remove all dead to_tensor ops.
+  op->walk<WalkOrder::PostOrder>([&](ToTensorOp toTensorOp) {
+    if (toTensorOp->getUses().empty()) {
+      rewriter.eraseOp(toTensorOp);
+      return WalkResult::skip();
+    }
+    return WalkResult::advance();
+  });
 
   /// Check the result of bufferization. Return an error if an op was not
   /// bufferized, unless partial bufferization is allowed.

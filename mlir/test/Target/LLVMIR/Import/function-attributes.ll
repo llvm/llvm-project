@@ -37,7 +37,17 @@ attributes #0 = { readnone }
 ; CHECK-SAME:  i32 {llvm.signext}
 ; CHECK-SAME:  i64 {llvm.zeroext}
 ; CHECK-SAME:  !llvm.ptr {llvm.align = 64 : i64, llvm.noundef}
-define void @func_arg_attrs(
+; CHECK-SAME:  !llvm.ptr {llvm.dereferenceable = 12 : i64}
+; CHECK-SAME:  !llvm.ptr {llvm.dereferenceable_or_null = 42 : i64}
+; CHECK-SAME:  f64 {llvm.inreg}
+; CHECK-SAME:  !llvm.ptr {llvm.nocapture}
+; CHECK-SAME:  !llvm.ptr {llvm.nofree}
+; CHECK-SAME:  !llvm.ptr {llvm.nonnull}
+; CHECK-SAME:  !llvm.ptr {llvm.preallocated = f64}
+; CHECK-SAME:  !llvm.ptr {llvm.returned}
+; CHECK-SAME:  !llvm.ptr {llvm.alignstack = 32 : i64}
+; CHECK-SAME:  !llvm.ptr {llvm.writeonly}
+define ptr @func_arg_attrs(
     ptr byval(i64) %arg0,
     ptr byref(i64) %arg1,
     ptr sret(i64) %arg2,
@@ -47,21 +57,36 @@ define void @func_arg_attrs(
     ptr nest %arg6,
     i32 signext %arg7,
     i64 zeroext %arg8,
-    ptr align(64) noundef %arg9) {
-  ret void
+    ptr align(64) noundef %arg9,
+    ptr dereferenceable(12) %arg10,
+    ptr dereferenceable_or_null(42) %arg11,
+    double inreg %arg12,
+    ptr nocapture %arg13,
+    ptr nofree %arg14,
+    ptr nonnull %arg15,
+    ptr preallocated(double) %arg16,
+    ptr returned %arg17,
+    ptr alignstack(32) %arg18,
+    ptr writeonly %arg19) {
+  ret ptr %arg17
 }
 
-; // -----
-
-; CHECK-LABEL: @func_res_attr_align
-; CHECK-SAME:  !llvm.ptr {llvm.align = 16 : i64}
-declare align(16) ptr @func_res_attr_align()
+; CHECK-LABEL: @allocator
+; CHECK-SAME:  i64 {llvm.allocalign}
+; CHECK-SAME:  ptr {llvm.allocptr}
+declare ptr @allocator(i64 allocalign, ptr allocptr)
 
 ; // -----
 
 ; CHECK-LABEL: @func_res_attr_noalias
 ; CHECK-SAME:  !llvm.ptr {llvm.noalias}
 declare noalias ptr @func_res_attr_noalias()
+
+; // -----
+
+; CHECK-LABEL: @func_res_attr_nonnull
+; CHECK-SAME:  !llvm.ptr {llvm.nonnull}
+declare nonnull ptr @func_res_attr_nonnull()
 
 ; // -----
 
@@ -76,6 +101,35 @@ declare noundef signext i32 @func_res_attr_signext()
 ; CHECK-SAME:  i32 {llvm.zeroext}
 declare zeroext i32 @func_res_attr_zeroext()
 
+; // -----
+
+; CHECK-LABEL: @func_res_attr_align
+; CHECK-SAME:  !llvm.ptr {llvm.align = 16 : i64}
+declare align(16) ptr @func_res_attr_align()
+
+; // -----
+
+; CHECK-LABEL: @func_res_attr_noundef
+; CHECK-SAME:  !llvm.ptr {llvm.noundef}
+declare noundef ptr @func_res_attr_noundef()
+
+; // -----
+
+; CHECK-LABEL: @func_res_attr_dereferenceable
+; CHECK-SAME:  !llvm.ptr {llvm.dereferenceable = 42 : i64}
+declare dereferenceable(42) ptr @func_res_attr_dereferenceable()
+
+; // -----
+
+; CHECK-LABEL: @func_res_attr_dereferenceable_or_null
+; CHECK-SAME:  !llvm.ptr {llvm.dereferenceable_or_null = 42 : i64}
+declare dereferenceable_or_null(42) ptr @func_res_attr_dereferenceable_or_null()
+
+; // -----
+
+; CHECK-LABEL: @func_res_attr_inreg
+; CHECK-SAME:  !llvm.ptr {llvm.inreg}
+declare inreg ptr @func_res_attr_inreg()
 
 ; // -----
 

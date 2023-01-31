@@ -440,6 +440,13 @@ fir::factory::genIsAllocatedOrAssociatedTest(fir::FirOpBuilder &builder,
   return builder.genIsNotNullAddr(loc, addr);
 }
 
+mlir::Value fir::factory::genIsNotAllocatedOrAssociatedTest(
+    fir::FirOpBuilder &builder, mlir::Location loc,
+    const fir::MutableBoxValue &box) {
+  auto addr = MutablePropertyReader(builder, loc, box).readBaseAddress();
+  return builder.genIsNullAddr(loc, addr);
+}
+
 /// Generate finalizer call and inlined free. This does not check that the
 /// address was allocated.
 static void genFinalizeAndFree(fir::FirOpBuilder &builder, mlir::Location loc,
