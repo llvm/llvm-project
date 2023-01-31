@@ -8371,16 +8371,10 @@ SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
     auto IID = static_cast<Intrinsic::ID>(MI.getIntrinsicID());
     if (AMDGPU::isIntrinsicSourceOfDivergence(IID))
       return InstructionUniformity::NeverUniform;
-
-    // FIXME: Get a tablegen table for this.
-    switch (IID) {
-    case Intrinsic::amdgcn_readfirstlane:
-    case Intrinsic::amdgcn_readlane:
-    case Intrinsic::amdgcn_icmp:
-    case Intrinsic::amdgcn_fcmp:
-    case Intrinsic::amdgcn_ballot:
-    case Intrinsic::amdgcn_if_break:
+    if (AMDGPU::isIntrinsicAlwaysUniform(IID))
       return InstructionUniformity::AlwaysUniform;
+
+    switch (IID) {
     case Intrinsic::amdgcn_if:
     case Intrinsic::amdgcn_else:
       // FIXME: Uniform if second result
