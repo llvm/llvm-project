@@ -77,7 +77,9 @@ public:
     return Position > 0 ? Tokens[Position - 1] : nullptr;
   }
 
-  FormatToken *peekNextToken(bool SkipComment) override {
+  FormatToken *peekNextToken(bool SkipComment = false) override {
+    if (isEOF())
+      return Tokens[Position];
     int Next = Position + 1;
     if (SkipComment)
       while (Tokens[Next]->is(tok::comment))
@@ -89,7 +91,9 @@ public:
     return Tokens[Next];
   }
 
-  bool isEOF() override { return Tokens[Position]->is(tok::eof); }
+  bool isEOF() override {
+    return Position == -1 ? false : Tokens[Position]->is(tok::eof);
+  }
 
   unsigned getPosition() override {
     LLVM_DEBUG(llvm::dbgs() << "Getting Position: " << Position << "\n");
