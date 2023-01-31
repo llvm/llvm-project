@@ -29,6 +29,8 @@ public:
                      StructuredData::DictionarySP args_sp,
                      StructuredData::Generic *script_obj = nullptr) override;
 
+  StructuredData::DictionarySP GetCapabilities() override;
+
   Status Launch() override;
 
   Status Resume() override;
