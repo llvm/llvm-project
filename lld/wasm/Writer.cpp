@@ -63,6 +63,7 @@ private:
   void createStartFunction();
   void createApplyDataRelocationsFunction();
   void createApplyGlobalRelocationsFunction();
+  void createApplyTLSRelocationsFunction();
   void createApplyGlobalTLSRelocationsFunction();
   void createCallCtorsFunction();
   void createInitTLSFunction();
@@ -1043,14 +1044,31 @@ void Writer::createSyntheticInitFunctions() {
     }
   }
 
-  if (config->sharedMemory && out.globalSec->needsTLSRelocations()) {
-    WasmSym::applyGlobalTLSRelocs = symtab->addSyntheticFunction(
-        "__wasm_apply_global_tls_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
-        make<SyntheticFunction>(nullSignature,
-                                "__wasm_apply_global_tls_relocs"));
-    WasmSym::applyGlobalTLSRelocs->markLive();
-    // TLS relocations depend on  the __tls_base symbols
-    WasmSym::tlsBase->markLive();
+  if (config->sharedMemory) {
+    if (out.globalSec->needsTLSRelocations()) {
+      WasmSym::applyGlobalTLSRelocs = symtab->addSyntheticFunction(
+          "__wasm_apply_global_tls_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
+          make<SyntheticFunction>(nullSignature,
+                                  "__wasm_apply_global_tls_relocs"));
+      WasmSym::applyGlobalTLSRelocs->markLive();
+      // TLS relocations depend on  the __tls_base symbols
+      WasmSym::tlsBase->markLive();
+    }
+
+    auto hasTLSRelocs = [](const OutputSegment *segment) {
+      if (segment->isTLS())
+        for (const auto* is: segment->inputSegments)
+          if (is->getRelocations().size())
+            return true;
+      return false;
+    };
+    if (llvm::any_of(segments, hasTLSRelocs)) {
+      WasmSym::applyTLSRelocs = symtab->addSyntheticFunction(
+          "__wasm_apply_tls_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
+          make<SyntheticFunction>(nullSignature,
+                                  "__wasm_apply_tls_relocs"));
+      WasmSym::applyTLSRelocs->markLive();
+    }
   }
 
   if (config->isPic && out.globalSec->needsRelocations()) {
@@ -1332,13 +1350,31 @@ void Writer::createApplyDataRelocationsFunction() {
     raw_string_ostream os(bodyContent);
     writeUleb128(os, 0, "num locals");
     for (const OutputSegment *seg : segments)
-      for (const InputChunk *inSeg : seg->inputSegments)
-        inSeg->generateRelocationCode(os);
+      if (!config->sharedMemory || !seg->isTLS())
+        for (const InputChunk *inSeg : seg->inputSegments)
+          inSeg->generateRelocationCode(os);
 
     writeU8(os, WASM_OPCODE_END, "END");
   }
 
   createFunction(WasmSym::applyDataRelocs, bodyContent);
+}
+
+void Writer::createApplyTLSRelocationsFunction() {
+  LLVM_DEBUG(dbgs() << "createApplyTLSRelocationsFunction\n");
+  std::string bodyContent;
+  {
+    raw_string_ostream os(bodyContent);
+    writeUleb128(os, 0, "num locals");
+    for (const OutputSegment *seg : segments)
+      if (seg->isTLS())
+        for (const InputChunk *inSeg : seg->inputSegments)
+          inSeg->generateRelocationCode(os);
+
+    writeU8(os, WASM_OPCODE_END, "END");
+  }
+
+  createFunction(WasmSym::applyTLSRelocs, bodyContent);
 }
 
 // Similar to createApplyDataRelocationsFunction but generates relocation code
@@ -1474,6 +1510,12 @@ void Writer::createInitTLSFunction() {
       writeUleb128(os, WASM_OPCODE_MEMORY_INIT, "MEMORY.INIT");
       writeUleb128(os, tlsSeg->index, "segment index immediate");
       writeU8(os, 0, "memory index immediate");
+    }
+
+    if (WasmSym::applyTLSRelocs) {
+      writeU8(os, WASM_OPCODE_CALL, "CALL");
+      writeUleb128(os, WasmSym::applyTLSRelocs->getFunctionIndex(),
+                   "function index");
     }
 
     if (WasmSym::applyGlobalTLSRelocs) {
@@ -1619,6 +1661,8 @@ void Writer::run() {
       createApplyDataRelocationsFunction();
     if (WasmSym::applyGlobalRelocs)
       createApplyGlobalRelocationsFunction();
+    if (WasmSym::applyTLSRelocs)
+      createApplyTLSRelocationsFunction();
     if (WasmSym::applyGlobalTLSRelocs)
       createApplyGlobalTLSRelocationsFunction();
     if (WasmSym::initMemory)
