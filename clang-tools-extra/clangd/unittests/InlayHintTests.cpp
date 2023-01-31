@@ -1256,6 +1256,13 @@ TEST(TypeHints, StructuredBindings_NoInitializer) {
   )cpp");
 }
 
+TEST(TypeHints, InvalidType) {
+  assertTypeHints(R"cpp(
+    auto x = (unknown_type)42; /*error-ok*/
+    auto *y = (unknown_ptr)nullptr;
+  )cpp");
+}
+
 TEST(TypeHints, ReturnTypeDeduction) {
   assertTypeHints(
       R"cpp(
