@@ -53,6 +53,17 @@ StructuredData::GenericSP ScriptedProcessPythonInterface::CreatePluginObject(
   return m_object_instance_sp;
 }
 
+StructuredData::DictionarySP ScriptedProcessPythonInterface::GetCapabilities() {
+  Status error;
+  StructuredData::DictionarySP dict =
+      Dispatch<StructuredData::DictionarySP>("get_capabilities", error);
+
+  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, dict, error))
+    return {};
+
+  return dict;
+}
+
 Status ScriptedProcessPythonInterface::Launch() {
   return GetStatusFromMethod("launch");
 }
@@ -137,14 +148,8 @@ StructuredData::ArraySP ScriptedProcessPythonInterface::GetLoadedImages() {
   StructuredData::ArraySP array =
       Dispatch<StructuredData::ArraySP>("get_loaded_images", error);
 
-  if (!array || !array->IsValid() || error.Fail()) {
-    return ScriptedInterface::ErrorWithMessage<StructuredData::ArraySP>(
-        LLVM_PRETTY_FUNCTION,
-        llvm::Twine("Null or invalid object (" +
-                    llvm::Twine(error.AsCString()) + llvm::Twine(")."))
-            .str(),
-        error);
-  }
+  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, array, error))
+    return {};
 
   return array;
 }

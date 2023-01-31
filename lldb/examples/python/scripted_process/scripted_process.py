@@ -14,6 +14,7 @@ class ScriptedProcess(metaclass=ABCMeta):
                 THE METHODS EXPOSED MIGHT CHANGE IN THE FUTURE.
     """
 
+    capabilities = None
     memory_regions = None
     loaded_images = None
     threads = None
@@ -42,6 +43,17 @@ class ScriptedProcess(metaclass=ABCMeta):
         self.threads = {}
         self.loaded_images = []
         self.metadata = {}
+        self.capabilities = {}
+
+    def get_capabilities(self):
+        """ Get a dictionary containing the process capabilities.
+
+        Returns:
+            Dict[str:bool]: The dictionary of capability, with the capability
+            name as the key and a boolean flag as the value.
+            The dictionary can be empty.
+        """
+        return self.capabilities
 
     @abstractmethod
     def get_memory_region_containing_address(self, addr):
