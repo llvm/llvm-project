@@ -9458,10 +9458,9 @@ public:
                                          SyncScope Scope,
                                          llvm::AtomicOrdering Ordering,
                                          llvm::LLVMContext &Ctx) const override;
-  llvm::Function *
-  createEnqueuedBlockKernel(CodeGenFunction &CGF,
-                            llvm::Function *BlockInvokeFunc,
-                            llvm::Type *BlockTy) const override;
+  llvm::Value *createEnqueuedBlockKernel(CodeGenFunction &CGF,
+                                         llvm::Function *BlockInvokeFunc,
+                                         llvm::Type *BlockTy) const override;
   bool shouldEmitStaticExternCAliases() const override;
   void setCUDAKernelCallingConvention(const FunctionType *&FT) const override;
 };
@@ -12429,10 +12428,8 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
 /// The kernel has the same function type as the block invoke function. Its
 /// name is the name of the block invoke function postfixed with "_kernel".
 /// It simply calls the block invoke function then returns.
-llvm::Function *
-TargetCodeGenInfo::createEnqueuedBlockKernel(CodeGenFunction &CGF,
-                                             llvm::Function *Invoke,
-                                             llvm::Type *BlockTy) const {
+llvm::Value *TargetCodeGenInfo::createEnqueuedBlockKernel(
+    CodeGenFunction &CGF, llvm::Function *Invoke, llvm::Type *BlockTy) const {
   auto *InvokeFT = Invoke->getFunctionType();
   auto &C = CGF.getLLVMContext();
   std::string Name = Invoke->getName().str() + "_kernel";
@@ -12440,13 +12437,24 @@ TargetCodeGenInfo::createEnqueuedBlockKernel(CodeGenFunction &CGF,
                                      InvokeFT->params(), false);
   auto *F = llvm::Function::Create(FT, llvm::GlobalValue::ExternalLinkage, Name,
                                    &CGF.CGM.getModule());
+  llvm::CallingConv::ID KernelCC =
+      CGF.getTypes().ClangCallConvToLLVMCallConv(CallingConv::CC_OpenCLKernel);
+  F->setCallingConv(KernelCC);
+
+  llvm::AttrBuilder KernelAttrs(C);
+
+  // FIXME: This is missing setTargetAttributes
+  CGF.CGM.addDefaultFunctionDefinitionAttributes(KernelAttrs);
+  F->addFnAttrs(KernelAttrs);
+
   auto IP = CGF.Builder.saveIP();
   auto *BB = llvm::BasicBlock::Create(C, "entry", F);
   auto &Builder = CGF.Builder;
   Builder.SetInsertPoint(BB);
   llvm::SmallVector<llvm::Value *, 2> Args(llvm::make_pointer_range(F->args()));
-  llvm::CallInst *call = Builder.CreateCall(Invoke, Args);
-  call->setCallingConv(Invoke->getCallingConv());
+  llvm::CallInst *Call = Builder.CreateCall(Invoke, Args);
+  Call->setCallingConv(Invoke->getCallingConv());
+
   Builder.CreateRetVoid();
   Builder.restoreIP(IP);
   return F;
@@ -12460,9 +12468,8 @@ TargetCodeGenInfo::createEnqueuedBlockKernel(CodeGenFunction &CGF,
 /// allocates the same type of struct on stack and stores the block literal
 /// to it and passes its pointer to the block invoke function. The kernel
 /// has "enqueued-block" function attribute and kernel argument metadata.
-llvm::Function *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
-    CodeGenFunction &CGF, llvm::Function *Invoke,
-    llvm::Type *BlockTy) const {
+llvm::Value *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
+    CodeGenFunction &CGF, llvm::Function *Invoke, llvm::Type *BlockTy) const {
   auto &Builder = CGF.Builder;
   auto &C = CGF.getLLVMContext();
 
@@ -12496,7 +12503,15 @@ llvm::Function *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
   auto *FT = llvm::FunctionType::get(llvm::Type::getVoidTy(C), ArgTys, false);
   auto *F = llvm::Function::Create(FT, llvm::GlobalValue::InternalLinkage, Name,
                                    &CGF.CGM.getModule());
-  F->addFnAttr("enqueued-block");
+  F->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
+
+  llvm::AttrBuilder KernelAttrs(C);
+  // FIXME: The invoke isn't applying the right attributes either
+  // FIXME: This is missing setTargetAttributes
+  CGF.CGM.addDefaultFunctionDefinitionAttributes(KernelAttrs);
+  KernelAttrs.addAttribute("enqueued-block");
+  F->addFnAttrs(KernelAttrs);
+
   auto IP = CGF.Builder.saveIP();
   auto *BB = llvm::BasicBlock::Create(C, "entry", F);
   Builder.SetInsertPoint(BB);

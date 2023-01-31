@@ -79,13 +79,13 @@ bool RegisterBankInfo::verify(const TargetRegisterInfo &TRI) const {
 const RegisterBank *
 RegisterBankInfo::getRegBank(Register Reg, const MachineRegisterInfo &MRI,
                              const TargetRegisterInfo &TRI) const {
-  if (Reg.isPhysical()) {
+  if (!Reg.isVirtual()) {
     // FIXME: This was probably a copy to a virtual register that does have a
     // type we could use.
-    return &getRegBankFromRegClass(getMinimalPhysRegClass(Reg, TRI), LLT());
+    const TargetRegisterClass *RC = getMinimalPhysRegClass(Reg, TRI);
+    return RC ? &getRegBankFromRegClass(*RC, LLT()) : nullptr;
   }
 
-  assert(Reg && "NoRegister does not have a register bank");
   const RegClassOrRegBank &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
   if (auto *RB = RegClassOrBank.dyn_cast<const RegisterBank *>())
     return RB;
@@ -94,16 +94,16 @@ RegisterBankInfo::getRegBank(Register Reg, const MachineRegisterInfo &MRI,
   return nullptr;
 }
 
-const TargetRegisterClass &
+const TargetRegisterClass *
 RegisterBankInfo::getMinimalPhysRegClass(Register Reg,
                                          const TargetRegisterInfo &TRI) const {
   assert(Reg.isPhysical() && "Reg must be a physreg");
   const auto &RegRCIt = PhysRegMinimalRCs.find(Reg);
   if (RegRCIt != PhysRegMinimalRCs.end())
-    return *RegRCIt->second;
-  const TargetRegisterClass *PhysRC = TRI.getMinimalPhysRegClass(Reg);
+    return RegRCIt->second;
+  const TargetRegisterClass *PhysRC = TRI.getMinimalPhysRegClassLLT(Reg, LLT());
   PhysRegMinimalRCs[Reg] = PhysRC;
-  return *PhysRC;
+  return PhysRC;
 }
 
 const RegisterBank *RegisterBankInfo::getRegBankFromConstraints(
@@ -498,7 +498,7 @@ unsigned RegisterBankInfo::getSizeInBits(Register Reg,
     // Instead, we need to access a register class that contains Reg and
     // get the size of that register class.
     // Because this is expensive, we'll cache the register class by calling
-    auto *RC = &getMinimalPhysRegClass(Reg, TRI);
+    auto *RC = getMinimalPhysRegClass(Reg, TRI);
     assert(RC && "Expecting Register class");
     return TRI.getRegSizeInBits(*RC);
   }

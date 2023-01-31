@@ -773,7 +773,6 @@ set(files
   experimental/__config
   experimental/__memory
   experimental/algorithm
-  experimental/coroutine
   experimental/deque
   experimental/forward_list
   experimental/functional

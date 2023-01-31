@@ -271,7 +271,9 @@ function(create_entrypoint_object fq_target_name)
         "DEPS" ""
         "SKIPPED" "YES"
     )
-    message(STATUS "Skipping libc entrypoint ${fq_target_name}.")
+    if(LIBC_CMAKE_VERBOSE_LOGGING)
+      message(STATUS "Skipping libc entrypoint ${fq_target_name}.")
+    endif()
     return()
   endif()
 

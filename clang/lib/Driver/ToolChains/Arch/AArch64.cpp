@@ -410,6 +410,7 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     } else if (*I == "-crypto") {
       HasCrypto = false;
       HasNoCrypto = true;
+      HasSM4 = HasSHA2 = HasSHA3 = HasAES = false;
     }
     // Register the iterator position if this is an architecture feature
     if (ArchFeatPos == -1 && (V8Version != -1 || V9Version != -1))

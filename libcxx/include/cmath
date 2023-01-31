@@ -311,6 +311,7 @@ constexpr long double lerp(long double a, long double b, long double t) noexcept
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_floating_point.h>
 #include <__type_traits/is_same.h>
+#include <__type_traits/promote.h>
 #include <__type_traits/remove_cv.h>
 #include <version>
 
