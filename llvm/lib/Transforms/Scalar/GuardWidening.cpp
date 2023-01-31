@@ -113,23 +113,6 @@ static void eliminateGuard(Instruction *GuardInst, MemorySSAUpdater *MSSAU) {
   ++GuardsEliminated;
 }
 
-/// Find a point at which the widened condition of \p Guard should be inserted.
-/// When it is represented as intrinsic call, we can do it right before the call
-/// instruction. However, when we are dealing with widenable branch, we must
-/// account for the following situation: widening should not turn a
-/// loop-invariant condition into a loop-variant. It means that if
-/// widenable.condition() call is invariant (w.r.t. any loop), the new wide
-/// condition should stay invariant. Otherwise there can be a miscompile, like
-/// the one described at https://github.com/llvm/llvm-project/issues/60234. The
-/// safest way to do it is to expand the new condition at WC's block.
-static Instruction *findInsertionPointForWideCondition(Instruction *Guard) {
-  Value *Condition, *WC;
-  BasicBlock *IfTrue, *IfFalse;
-  if (parseWidenableBranch(Guard, Condition, WC, IfTrue, IfFalse))
-    return cast<Instruction>(WC);
-  return Guard;
-}
-
 class GuardWideningImpl {
   DominatorTree &DT;
   PostDominatorTree *PDT;
@@ -280,8 +263,8 @@ class GuardWideningImpl {
   void widenGuard(Instruction *ToWiden, Value *NewCondition,
                   bool InvertCondition) {
     Value *Result;
-    Instruction *InsertPt = findInsertionPointForWideCondition(ToWiden);
-    widenCondCommon(getCondition(ToWiden), NewCondition, InsertPt, Result,
+
+    widenCondCommon(getCondition(ToWiden), NewCondition, ToWiden, Result,
                     InvertCondition);
     if (isGuardAsWidenableBranch(ToWiden)) {
       setWidenableBranchCond(cast<BranchInst>(ToWiden), Result);
@@ -439,8 +422,7 @@ GuardWideningImpl::computeWideningScore(Instruction *DominatedInstr,
     HoistingOutOfLoop = true;
   }
 
-  auto *WideningPoint = findInsertionPointForWideCondition(DominatingGuard);
-  if (!isAvailableAt(getCondition(DominatedInstr), WideningPoint))
+  if (!isAvailableAt(getCondition(DominatedInstr), DominatingGuard))
     return WS_IllegalOrNegative;
 
   // If the guard was conditional executed, it may never be reached

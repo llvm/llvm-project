@@ -3,10 +3,10 @@
 
 declare i32 @llvm.experimental.deoptimize.i32(...)
 
-; Make sure that guard widening does not turn loop-invariant condition
-; (that then gets optimized basing on this fact) into non-invariant.
-; https://github.com/llvm/llvm-project/issues/60234 explains how it causes
-; a miscompile.
+; FIXME: Make sure that guard widening does not turn loop-invariant condition
+;        (that then gets optimized basing on this fact) into non-invariant.
+;        https://github.com/llvm/llvm-project/issues/60234 explains how it causes
+;        a miscompile.
 define i32 @test(i32 %start) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
@@ -14,17 +14,19 @@ define i32 @test(i32 %start) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    br i1 [[WC1]], label [[GUARD_BLOCK:%.*]], label [[EXIT_BY_WC:%.*]]
+; CHECK-NEXT:    [[START_PLUS_1:%.*]] = add i32 [[START]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[START_PLUS_1]], [[IV]]
+; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 true, [[COND]]
+; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[WIDE_CHK]], [[WC1]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[GUARD_BLOCK:%.*]], label [[EXIT_BY_WC:%.*]]
 ; CHECK:       exit_by_wc:
 ; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[START]], [[LOOP]] ]
 ; CHECK-NEXT:    [[RVAL1:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"(i32 [[IV_LCSSA]]) ]
 ; CHECK-NEXT:    ret i32 [[RVAL1]]
 ; CHECK:       guard_block:
-; CHECK-NEXT:    [[START_PLUS_1:%.*]] = add i32 [[START]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[START_PLUS_1]], [[IV]]
 ; CHECK-NEXT:    [[WC2:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[GUARD:%.*]] = and i1 [[COND]], [[WC2]]
-; CHECK-NEXT:    br i1 [[GUARD]], label [[BACKEDGE]], label [[FAILURE:%.*]]
+; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[FAILURE:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    call void @side_effect()
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
