@@ -129,6 +129,9 @@ static void InitializeFlags() {
   // Override from user-specified string.
   if (__hwasan_default_options)
     parser.ParseString(__hwasan_default_options());
+#if CAN_SANITIZE_LEAKS
+  lsan_parser.ParseString(__lsan_default_options());
+#endif
 #if HWASAN_CONTAINS_UBSAN
   const char *ubsan_default_options = __ubsan_default_options();
   ubsan_parser.ParseString(ubsan_default_options);

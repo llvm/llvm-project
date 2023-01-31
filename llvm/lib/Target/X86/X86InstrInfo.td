@@ -1381,7 +1381,7 @@ def PUSH32rmm: I<0xFF, MRM6m, (outs), (ins i32mem:$src), "push{l}\t$src", []>,
 
 }
 
-let mayLoad = 1, mayStore = 1, usesCustomInserter = 1,
+let isPseudo = 1, mayLoad = 1, mayStore = 1,
     SchedRW = [WriteRMW], Defs = [ESP] in {
   let Uses = [ESP] in
   def RDFLAGS32 : PseudoI<(outs GR32:$dst), (ins),
@@ -1394,7 +1394,7 @@ let mayLoad = 1, mayStore = 1, usesCustomInserter = 1,
                 Requires<[In64BitMode]>;
 }
 
-let mayLoad = 1, mayStore = 1, usesCustomInserter = 1,
+let isPseudo = 1, mayLoad = 1, mayStore = 1,
     SchedRW = [WriteRMW] in {
   let Defs = [ESP, EFLAGS, DF], Uses = [ESP] in
   def WRFLAGS32 : PseudoI<(outs), (ins GR32:$src),
