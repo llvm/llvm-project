@@ -10,6 +10,7 @@
 #define ATOMIC_HELPERS_H
 
 #include <cassert>
+#include <cstdint>
 
 #include "test_macros.h"
 
