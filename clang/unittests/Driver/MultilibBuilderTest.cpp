@@ -163,18 +163,20 @@ TEST(MultilibBuilderTest, SetSelection1) {
                         .makeMultilibSet();
 
   Multilib::flags_list FlagM64 = {"-m64"};
-  Multilib SelectionM64;
+  llvm::SmallVector<Multilib> SelectionM64;
   ASSERT_TRUE(MS1.select(FlagM64, SelectionM64))
       << "Flag set was {\"-m64\"}, but selection not found";
-  ASSERT_TRUE(SelectionM64.gccSuffix() == "/64")
-      << "Selection picked " << SelectionM64 << " which was not expected";
+  ASSERT_TRUE(SelectionM64.back().gccSuffix() == "/64")
+      << "Selection picked " << SelectionM64.back()
+      << " which was not expected";
 
   Multilib::flags_list FlagNoM64 = {"!m64"};
-  Multilib SelectionNoM64;
+  llvm::SmallVector<Multilib> SelectionNoM64;
   ASSERT_TRUE(MS1.select(FlagNoM64, SelectionNoM64))
       << "Flag set was {\"!m64\"}, but selection not found";
-  ASSERT_TRUE(SelectionNoM64.gccSuffix() == "")
-      << "Selection picked " << SelectionNoM64 << " which was not expected";
+  ASSERT_TRUE(SelectionNoM64.back().gccSuffix() == "")
+      << "Selection picked " << SelectionNoM64.back()
+      << " which was not expected";
 }
 
 TEST(MultilibBuilderTest, SetSelection2) {
@@ -197,7 +199,7 @@ TEST(MultilibBuilderTest, SetSelection2) {
     else
       Flags.push_back("!SF");
 
-    Multilib Selection;
+    llvm::SmallVector<Multilib> Selection;
     ASSERT_TRUE(MS2.select(Flags, Selection))
         << "Selection failed for " << (IsEL ? "-EL" : "!EL") << " "
         << (IsSF ? "-SF" : "!SF");
@@ -208,7 +210,8 @@ TEST(MultilibBuilderTest, SetSelection2) {
     if (IsSF)
       Suffix += "/sf";
 
-    ASSERT_EQ(Selection.gccSuffix(), Suffix)
-        << "Selection picked " << Selection << " which was not expected ";
+    ASSERT_EQ(Selection.back().gccSuffix(), Suffix)
+        << "Selection picked " << Selection.back()
+        << " which was not expected ";
   }
 }

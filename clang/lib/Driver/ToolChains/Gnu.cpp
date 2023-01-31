@@ -1151,7 +1151,7 @@ static bool findMipsCsMultilibs(const Multilib::flags_list &Flags,
   if (CSMipsMultilibs.size() < DebianMipsMultilibs.size())
     std::iter_swap(Candidates, Candidates + 1);
   for (const MultilibSet *Candidate : Candidates) {
-    if (Candidate->select(Flags, Result.SelectedMultilib)) {
+    if (Candidate->select(Flags, Result.SelectedMultilibs)) {
       if (Candidate == &DebianMipsMultilibs)
         Result.BiarchSibling = Multilib();
       Result.Multilibs = *Candidate;
@@ -1200,7 +1200,7 @@ static bool findMipsAndroidMultilibs(llvm::vfs::FileSystem &VFS, StringRef Path,
     MS = &AndroidMipselMultilibs;
   else if (VFS.exists(Path + "/32"))
     MS = &AndroidMips64elMultilibs;
-  if (MS->select(Flags, Result.SelectedMultilib)) {
+  if (MS->select(Flags, Result.SelectedMultilibs)) {
     Result.Multilibs = *MS;
     return true;
   }
@@ -1234,7 +1234,7 @@ static bool findMipsMuslMultilibs(const Multilib::flags_list &Flags,
           {"/../sysroot" + M.osSuffix() + "/usr/include"});
     });
   }
-  if (MuslMipsMultilibs.select(Flags, Result.SelectedMultilib)) {
+  if (MuslMipsMultilibs.select(Flags, Result.SelectedMultilibs)) {
     Result.Multilibs = MuslMipsMultilibs;
     return true;
   }
@@ -1419,7 +1419,7 @@ static bool findMipsMtiMultilibs(const Multilib::flags_list &Flags,
             });
   }
   for (auto *Candidate : {&MtiMipsMultilibsV1, &MtiMipsMultilibsV2}) {
-    if (Candidate->select(Flags, Result.SelectedMultilib)) {
+    if (Candidate->select(Flags, Result.SelectedMultilibs)) {
       Result.Multilibs = *Candidate;
       return true;
     }
@@ -1525,7 +1525,7 @@ static bool findMipsImgMultilibs(const Multilib::flags_list &Flags,
             });
   }
   for (auto *Candidate : {&ImgMultilibsV1, &ImgMultilibsV2}) {
-    if (Candidate->select(Flags, Result.SelectedMultilib)) {
+    if (Candidate->select(Flags, Result.SelectedMultilibs)) {
       Result.Multilibs = *Candidate;
       return true;
     }
@@ -1598,7 +1598,7 @@ bool clang::driver::findMIPSMultilibs(const Driver &D,
   Result.Multilibs.push_back(Default);
   Result.Multilibs.FilterOut(NonExistent);
 
-  if (Result.Multilibs.select(Flags, Result.SelectedMultilib)) {
+  if (Result.Multilibs.select(Flags, Result.SelectedMultilibs)) {
     Result.BiarchSibling = Multilib();
     return true;
   }
@@ -1645,7 +1645,7 @@ static void findAndroidArmMultilibs(const Driver &D,
   addMultilibFlag(IsArmV7Mode, "-march=armv7-a", Flags);
   addMultilibFlag(IsThumbMode, "-mthumb", Flags);
 
-  if (AndroidArmMultilibs.select(Flags, Result.SelectedMultilib))
+  if (AndroidArmMultilibs.select(Flags, Result.SelectedMultilibs))
     Result.Multilibs = AndroidArmMultilibs;
 }
 
@@ -1671,7 +1671,7 @@ static bool findMSP430Multilibs(const Driver &D,
   addMultilibFlag(Args.hasFlag(options::OPT_fexceptions,
                                options::OPT_fno_exceptions, false),
                   "-exceptions", Flags);
-  if (Result.Multilibs.select(Flags, Result.SelectedMultilib))
+  if (Result.Multilibs.select(Flags, Result.SelectedMultilibs))
     return true;
 
   return false;
@@ -1738,7 +1738,7 @@ static void findCSKYMultilibs(const Driver &D, const llvm::Triple &TargetTriple,
           .makeMultilibSet()
           .FilterOut(NonExistent);
 
-  if (CSKYMultilibs.select(Flags, Result.SelectedMultilib))
+  if (CSKYMultilibs.select(Flags, Result.SelectedMultilibs))
     Result.Multilibs = CSKYMultilibs;
 }
 
@@ -1793,7 +1793,7 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
     }
   }
 
-  if (RISCVMultilibs.select(Flags, Result.SelectedMultilib))
+  if (RISCVMultilibs.select(Flags, Result.SelectedMultilibs))
     Result.Multilibs = RISCVMultilibs;
 }
 
@@ -1835,7 +1835,7 @@ static void findRISCVMultilibs(const Driver &D,
   addMultilibFlag(ABIName == "lp64f", "-mabi=lp64f", Flags);
   addMultilibFlag(ABIName == "lp64d", "-mabi=lp64d", Flags);
 
-  if (RISCVMultilibs.select(Flags, Result.SelectedMultilib))
+  if (RISCVMultilibs.select(Flags, Result.SelectedMultilibs))
     Result.Multilibs = RISCVMultilibs;
 }
 
@@ -1944,11 +1944,12 @@ static bool findBiarchMultilibs(const Driver &D,
   addMultilibFlag(TargetTriple.isArch32Bit(), "-m32", Flags);
   addMultilibFlag(TargetTriple.isArch64Bit() && IsX32, "-mx32", Flags);
 
-  if (!Result.Multilibs.select(Flags, Result.SelectedMultilib))
+  if (!Result.Multilibs.select(Flags, Result.SelectedMultilibs))
     return false;
 
-  if (Result.SelectedMultilib == Alt64 || Result.SelectedMultilib == Alt32 ||
-      Result.SelectedMultilib == Altx32)
+  if (Result.SelectedMultilibs.back() == Alt64 ||
+      Result.SelectedMultilibs.back() == Alt32 ||
+      Result.SelectedMultilibs.back() == Altx32)
     Result.BiarchSibling = Default;
 
   return true;
@@ -2713,7 +2714,9 @@ bool Generic_GCC::GCCInstallationDetector::ScanGCCForMultilibs(
   }
 
   Multilibs = Detected.Multilibs;
-  SelectedMultilib = Detected.SelectedMultilib;
+  SelectedMultilib = Detected.SelectedMultilibs.empty()
+                         ? Multilib()
+                         : Detected.SelectedMultilibs.back();
   BiarchSibling = Detected.BiarchSibling;
 
   return true;
@@ -2983,6 +2986,7 @@ void Generic_GCC::AddMultilibPaths(const Driver &D,
                                    path_list &Paths) {
   // Add the multilib suffixed paths where they are available.
   if (GCCInstallation.isValid()) {
+    assert(!SelectedMultilibs.empty());
     const llvm::Triple &GCCTriple = GCCInstallation.getTriple();
     const std::string &LibPath =
         std::string(GCCInstallation.getParentLibPath());
@@ -2990,13 +2994,14 @@ void Generic_GCC::AddMultilibPaths(const Driver &D,
     // Sourcery CodeBench MIPS toolchain holds some libraries under
     // a biarch-like suffix of the GCC installation.
     if (const auto &PathsCallback = Multilibs.filePathsCallback())
-      for (const auto &Path : PathsCallback(SelectedMultilib))
+      for (const auto &Path : PathsCallback(SelectedMultilibs.back()))
         addPathIfExists(D, GCCInstallation.getInstallPath() + Path, Paths);
 
     // Add lib/gcc/$triple/$version, with an optional /multilib suffix.
-    addPathIfExists(
-        D, GCCInstallation.getInstallPath() + SelectedMultilib.gccSuffix(),
-        Paths);
+    addPathIfExists(D,
+                    GCCInstallation.getInstallPath() +
+                        SelectedMultilibs.back().gccSuffix(),
+                    Paths);
 
     // Add lib/gcc/$triple/$libdir
     // For GCC built with --enable-version-specific-runtime-libs.
@@ -3023,7 +3028,7 @@ void Generic_GCC::AddMultilibPaths(const Driver &D,
     // Clang diverges from GCC's behavior.
     addPathIfExists(D,
                     LibPath + "/../" + GCCTriple.str() + "/lib/../" + OSLibDir +
-                        SelectedMultilib.osSuffix(),
+                        SelectedMultilibs.back().osSuffix(),
                     Paths);
 
     // If the GCC installation we found is inside of the sysroot, we want to

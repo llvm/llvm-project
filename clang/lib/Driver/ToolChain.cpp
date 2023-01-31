@@ -591,7 +591,9 @@ std::string ToolChain::getCompilerRTPath() const {
   SmallString<128> Path(getDriver().ResourceDir);
   if (isBareMetal()) {
     llvm::sys::path::append(Path, "lib", getOSLibName());
-    Path += SelectedMultilib.gccSuffix();
+    if (!SelectedMultilibs.empty()) {
+      Path += SelectedMultilibs.back().gccSuffix();
+    }
   } else if (Triple.isOSUnknown()) {
     llvm::sys::path::append(Path, "lib");
   } else {
