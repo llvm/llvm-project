@@ -124,11 +124,6 @@ public:
   ///     \b true if and only if the cursor ends up pointing to a valid item.
   bool Seek(int64_t offset, lldb::TraceCursorSeekType origin);
 
-  /// \return
-  ///   The \a ExecutionContextRef of the backing thread from the creation time
-  ///   of this cursor.
-  SBExecutionContext &GetExecutionContextRef();
-
   /// Trace item information (instructions, errors and events)
   /// \{
 
