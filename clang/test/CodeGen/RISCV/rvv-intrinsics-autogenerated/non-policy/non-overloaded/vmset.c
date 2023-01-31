@@ -12,7 +12,7 @@
 // CHECK-RV64-NEXT:    ret <vscale x 64 x i1> [[TMP0]]
 //
 vbool1_t test_vmset_m_b1(size_t vl) {
-  return __riscv_vmset_m_b1(vl);
+  return vmset_m_b1(vl);
 }
 
 // CHECK-RV64-LABEL: @test_vmset_m_b2(
@@ -21,7 +21,7 @@ vbool1_t test_vmset_m_b1(size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 32 x i1> [[TMP0]]
 //
 vbool2_t test_vmset_m_b2(size_t vl) {
-  return __riscv_vmset_m_b2(vl);
+  return vmset_m_b2(vl);
 }
 
 // CHECK-RV64-LABEL: @test_vmset_m_b4(
@@ -30,7 +30,7 @@ vbool2_t test_vmset_m_b2(size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
 vbool4_t test_vmset_m_b4(size_t vl) {
-  return __riscv_vmset_m_b4(vl);
+  return vmset_m_b4(vl);
 }
 
 // CHECK-RV64-LABEL: @test_vmset_m_b8(
@@ -39,7 +39,7 @@ vbool4_t test_vmset_m_b4(size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i1> [[TMP0]]
 //
 vbool8_t test_vmset_m_b8(size_t vl) {
-  return __riscv_vmset_m_b8(vl);
+  return vmset_m_b8(vl);
 }
 
 // CHECK-RV64-LABEL: @test_vmset_m_b16(
@@ -48,7 +48,7 @@ vbool8_t test_vmset_m_b8(size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i1> [[TMP0]]
 //
 vbool16_t test_vmset_m_b16(size_t vl) {
-  return __riscv_vmset_m_b16(vl);
+  return vmset_m_b16(vl);
 }
 
 // CHECK-RV64-LABEL: @test_vmset_m_b32(
@@ -57,7 +57,7 @@ vbool16_t test_vmset_m_b16(size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i1> [[TMP0]]
 //
 vbool32_t test_vmset_m_b32(size_t vl) {
-  return __riscv_vmset_m_b32(vl);
+  return vmset_m_b32(vl);
 }
 
 // CHECK-RV64-LABEL: @test_vmset_m_b64(
@@ -66,6 +66,6 @@ vbool32_t test_vmset_m_b32(size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i1> [[TMP0]]
 //
 vbool64_t test_vmset_m_b64(size_t vl) {
-  return __riscv_vmset_m_b64(vl);
+  return vmset_m_b64(vl);
 }
 
