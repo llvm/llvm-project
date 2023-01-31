@@ -260,6 +260,8 @@ define i1 @umin_seq_comparison(i8 %x, i8 %y) {
   ret i1 %cmp2
 }
 
+; ((A ? TC : FC) & (B ? TC : FC)) == 0 --> xor A, B
+
 define i1 @select_constants_and_icmp_eq0(i1 %x, i1 %y) {
 ; CHECK-LABEL: @select_constants_and_icmp_eq0(
 ; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[X:%.*]], [[Y:%.*]]
@@ -419,12 +421,12 @@ define i1 @select_constants_and_icmp_eq_fval(i1 %x, i1 %y) {
   ret i1 %cmp
 }
 
+; ((A ? TC : FC) & (B ? TC : FC)) != 0 --> not(xor A, B)
+
 define i1 @select_constants_and_icmp_ne0(i1 %x, i1 %y) {
 ; CHECK-LABEL: @select_constants_and_icmp_ne0(
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[X:%.*]], i8 2, i8 1
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[Y:%.*]], i8 2, i8 1
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[S1]], [[S2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[AND]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %s1 = select i1 %x, i8 2, i8 1
@@ -434,14 +436,16 @@ define i1 @select_constants_and_icmp_ne0(i1 %x, i1 %y) {
   ret i1 %cmp
 }
 
+; extra uses on select intermediates are ok
+
 define i1 @select_constants_and_icmp_ne0_uses(i1 %x, i1 %y) {
 ; CHECK-LABEL: @select_constants_and_icmp_ne0_uses(
 ; CHECK-NEXT:    [[S1:%.*]] = select i1 [[X:%.*]], i8 2, i8 1
 ; CHECK-NEXT:    call void @use(i8 [[S1]])
 ; CHECK-NEXT:    [[S2:%.*]] = select i1 [[Y:%.*]], i8 2, i8 1
 ; CHECK-NEXT:    call void @use(i8 [[S2]])
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[S1]], [[S2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[AND]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[X]], [[Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %s1 = select i1 %x, i8 2, i8 1
@@ -452,6 +456,8 @@ define i1 @select_constants_and_icmp_ne0_uses(i1 %x, i1 %y) {
   %cmp = icmp ne i8 %and, 0
   ret i1 %cmp
 }
+
+; negative test - don't create extra instructions
 
 define i1 @select_constants_and_icmp_ne0_all_uses(i1 %x, i1 %y) {
 ; CHECK-LABEL: @select_constants_and_icmp_ne0_all_uses(
@@ -474,12 +480,12 @@ define i1 @select_constants_and_icmp_ne0_all_uses(i1 %x, i1 %y) {
   ret i1 %cmp
 }
 
+; vector splat constants are ok
+
 define <2 x i1> @select_constants_and_icmp_ne0_vec_splat(<2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @select_constants_and_icmp_ne0_vec_splat(
-; CHECK-NEXT:    [[S1:%.*]] = select <2 x i1> [[X:%.*]], <2 x i9> <i9 3, i9 3>, <2 x i9> <i9 48, i9 48>
-; CHECK-NEXT:    [[S2:%.*]] = select <2 x i1> [[Y:%.*]], <2 x i9> <i9 3, i9 3>, <2 x i9> <i9 48, i9 48>
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i9> [[S1]], [[S2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i9> [[AND]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = xor <2 x i1> [[TMP1]], <i1 true, i1 true>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %s1 = select <2 x i1> %x, <2 x i9> <i9 3, i9 3>, <2 x i9> <i9 48, i9 48>
@@ -488,6 +494,8 @@ define <2 x i1> @select_constants_and_icmp_ne0_vec_splat(<2 x i1> %x, <2 x i1> %
   %cmp = icmp ne <2 x i9> %and, zeroinitializer
   ret <2 x i1> %cmp
 }
+
+; common bit set - simplified via known bits
 
 define i1 @select_constants_and_icmp_ne0_common_bit(i1 %x, i1 %y) {
 ; CHECK-LABEL: @select_constants_and_icmp_ne0_common_bit(
@@ -499,6 +507,8 @@ define i1 @select_constants_and_icmp_ne0_common_bit(i1 %x, i1 %y) {
   %cmp = icmp ne i8 %and, 0
   ret i1 %cmp
 }
+
+; negative test - need matching constants
 
 define i1 @select_constants_and_icmp_ne0_no_common_op1(i1 %x, i1 %y) {
 ; CHECK-LABEL: @select_constants_and_icmp_ne0_no_common_op1(
@@ -515,6 +525,8 @@ define i1 @select_constants_and_icmp_ne0_no_common_op1(i1 %x, i1 %y) {
   ret i1 %cmp
 }
 
+; negative test - need matching constants
+
 define i1 @select_constants_and_icmp_ne0_no_common_op2(i1 %x, i1 %y) {
 ; CHECK-LABEL: @select_constants_and_icmp_ne0_no_common_op2(
 ; CHECK-NEXT:    [[S1:%.*]] = select i1 [[X:%.*]], i8 16, i8 3
@@ -530,6 +542,8 @@ define i1 @select_constants_and_icmp_ne0_no_common_op2(i1 %x, i1 %y) {
   ret i1 %cmp
 }
 
+; reduces via FoldOpInstSelect, but this could be a simple 'nor'
+
 define i1 @select_constants_and_icmp_ne0_zero_tval(i1 %x, i1 %y) {
 ; CHECK-LABEL: @select_constants_and_icmp_ne0_zero_tval(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[X:%.*]], i1 true, i1 [[Y:%.*]]
@@ -543,6 +557,8 @@ define i1 @select_constants_and_icmp_ne0_zero_tval(i1 %x, i1 %y) {
   ret i1 %cmp
 }
 
+; reduces via FoldOpInstSelect, but this could be a simple 'and'
+
 define i1 @select_constants_and_icmp_ne0_zero_fval(i1 %x, i1 %y) {
 ; CHECK-LABEL: @select_constants_and_icmp_ne0_zero_fval(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[X:%.*]], i1 [[Y:%.*]], i1 false
@@ -554,6 +570,8 @@ define i1 @select_constants_and_icmp_ne0_zero_fval(i1 %x, i1 %y) {
   %cmp = icmp ne i8 %and, 0
   ret i1 %cmp
 }
+
+; TODO: ~(x & y)
 
 define i1 @select_constants_and_icmp_ne_tval(i1 %x, i1 %y) {
 ; CHECK-LABEL: @select_constants_and_icmp_ne_tval(
@@ -569,6 +587,8 @@ define i1 @select_constants_and_icmp_ne_tval(i1 %x, i1 %y) {
   %cmp = icmp ne i8 %and, 6
   ret i1 %cmp
 }
+
+; TODO: (x | y)
 
 define i1 @select_constants_and_icmp_ne_fval(i1 %x, i1 %y) {
 ; CHECK-LABEL: @select_constants_and_icmp_ne_fval(
