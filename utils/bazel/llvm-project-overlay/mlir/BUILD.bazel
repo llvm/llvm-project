@@ -6500,6 +6500,7 @@ cc_library(
         "include/mlir/Target/LLVMIR/LLVMTranslationInterface.h",
         "include/mlir/Target/LLVMIR/ModuleTranslation.h",
         "include/mlir/Target/LLVMIR/TypeToLLVM.h",
+        "lib/Target/LLVMIR/AttrKindDetail.h",
     ],
     includes = ["include"],
     deps = [
@@ -6724,6 +6725,7 @@ cc_library(
         "include/mlir/Target/LLVMIR/LLVMImportInterface.h",
         "include/mlir/Target/LLVMIR/ModuleImport.h",
         "include/mlir/Target/LLVMIR/TypeFromLLVM.h",
+        "lib/Target/LLVMIR/AttrKindDetail.h",
         "lib/Target/LLVMIR/DebugImporter.h",
     ],
     includes = ["include"],
