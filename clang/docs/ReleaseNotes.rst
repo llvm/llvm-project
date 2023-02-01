@@ -63,6 +63,9 @@ Bug Fixes
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+- We now generate a diagnostic for signed integer overflow due to unary minus
+  in a non-constant expression context. This fixes
+  `Issue 31643 <https://github.com/llvm/llvm-project/issues/31643>`_
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
