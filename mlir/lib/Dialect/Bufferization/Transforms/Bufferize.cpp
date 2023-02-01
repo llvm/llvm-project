@@ -496,6 +496,15 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
                                                   cast<ToMemrefOp>(op));
   }
 
+  // Remove all dead to_tensor ops.
+  op->walk<WalkOrder::PostOrder>([&](ToTensorOp toTensorOp) {
+    if (toTensorOp->getUses().empty()) {
+      rewriter.eraseOp(toTensorOp);
+      return WalkResult::skip();
+    }
+    return WalkResult::advance();
+  });
+
   /// Check the result of bufferization. Return an error if an op was not
   /// bufferized, unless partial bufferization is allowed.
   if (options.allowUnknownOps)
