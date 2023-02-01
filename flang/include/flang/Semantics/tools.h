@@ -186,6 +186,7 @@ bool IsModuleProcedure(const Symbol &);
 bool HasCoarray(const parser::Expr &);
 bool IsAssumedType(const Symbol &);
 bool IsPolymorphic(const Symbol &);
+bool IsUnlimitedPolymorphic(const Symbol &);
 bool IsPolymorphicAllocatable(const Symbol &);
 
 // Return an error if a symbol is not accessible from a scope

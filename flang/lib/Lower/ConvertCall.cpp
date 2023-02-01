@@ -22,6 +22,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/LowLevelIntrinsics.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
+#include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
@@ -375,6 +376,33 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
   }
 
   if (allocatedResult) {
+    // 7.5.6.3 point 5. Derived-type finalization.
+    // Check if the derived-type is finalizable if it is a monorphic
+    // derived-type.
+    // For polymorphic and unlimited polymorphic enities call the runtime
+    // in any cases.
+    std::optional<Fortran::evaluate::DynamicType> retTy =
+        caller.getCallDescription().proc().GetType();
+    if (retTy && (retTy->category() == Fortran::common::TypeCategory::Derived ||
+                  retTy->IsPolymorphic() || retTy->IsUnlimitedPolymorphic())) {
+      if (retTy->IsPolymorphic() || retTy->IsUnlimitedPolymorphic()) {
+        auto *bldr = &converter.getFirOpBuilder();
+        stmtCtx.attachCleanup([bldr, loc, allocatedResult]() {
+          fir::runtime::genDerivedTypeDestroy(*bldr, loc,
+                                              fir::getBase(*allocatedResult));
+        });
+      } else {
+        const Fortran::semantics::DerivedTypeSpec &typeSpec =
+            retTy->GetDerivedTypeSpec();
+        if (Fortran::semantics::IsFinalizable(typeSpec)) {
+          auto *bldr = &converter.getFirOpBuilder();
+          stmtCtx.attachCleanup([bldr, loc, allocatedResult]() {
+            mlir::Value box = bldr->createBox(loc, *allocatedResult);
+            fir::runtime::genDerivedTypeDestroy(*bldr, loc, box);
+          });
+        }
+      }
+    }
     allocatedResult->match(
         [&](const fir::MutableBoxValue &box) {
           if (box.isAllocatable()) {
