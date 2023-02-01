@@ -992,6 +992,7 @@ def Extra : DiagGroup<"extra", [
     EmptyInitStatement,
     StringConcatation,
     FUseLdPath,
+    TypeLimits,
   ]>;
 
 def Most : DiagGroup<"most", [
