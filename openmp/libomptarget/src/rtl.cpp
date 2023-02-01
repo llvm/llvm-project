@@ -293,6 +293,12 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
       DynLibrary->getAddressOfSymbol("__tgt_rtl_sync_event");
   *((void **)&RTL.destroy_event) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_destroy_event");
+  *((void **)&RTL.set_coarse_grain_mem_region) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_set_coarse_grain_mem_region");
+  *((void **)&RTL.query_coarse_grain_mem_region) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_query_coarse_grain_mem_region");
+  *((void **)&RTL.enable_access_to_all_agents) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_enable_access_to_all_agents");
   *((void **)&RTL.release_async_info) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_release_async_info");
   *((void **)&RTL.init_async_info) =
