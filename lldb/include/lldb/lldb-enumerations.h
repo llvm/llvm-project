@@ -476,13 +476,25 @@ enum LanguageType {
   eLanguageTypeC_plus_plus_14 = 0x0021, ///< ISO C++:2014.
   eLanguageTypeFortran03 = 0x0022,      ///< ISO Fortran 2003.
   eLanguageTypeFortran08 = 0x0023,      ///< ISO Fortran 2008.
+  eLanguageTypeRenderScript = 0x0024,
+  eLanguageTypeBLISS = 0x0025,
+  eLanguageTypeKotlin = 0x0026,
+  eLanguageTypeZig = 0x0027,
+  eLanguageTypeCrystal = 0x0028,
+  eLanguageTypeC_plus_plus_17 = 0x002a, ///< ISO C++:2017.
+  eLanguageTypeC_plus_plus_20 = 0x002b, ///< ISO C++:2020.
+  eLanguageTypeC17 = 0x002c,
+  eLanguageTypeFortran18 = 0x002d,
+  eLanguageTypeAda2005 = 0x002e,
+  eLanguageTypeAda2012 = 0x002f,
+
   // Vendor Extensions
   // Note: Language::GetNameForLanguageType
   // assumes these can be used as indexes into array language_names, and
   // Language::SetLanguageFromCString and Language::AsCString assume these can
   // be used as indexes into array g_languages.
-  eLanguageTypeMipsAssembler = 0x0024,   ///< Mips_Assembler.
-  eLanguageTypeExtRenderScript = 0x0025, ///< RenderScript.
+  eLanguageTypeMipsAssembler,           ///< Mips_Assembler.
+  eLanguageTypeExtRenderScript,         ///< GOOGLE_RenderScript.
   eNumLanguageTypes
 };
 
