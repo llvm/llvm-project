@@ -161,12 +161,6 @@ endif()
 # for all variables that will apply to runtimes.
 foreach(entry ${runtimes})
   get_filename_component(projName ${entry} NAME)
-  if(projName STREQUAL "libc")
-    # For now, we will use the name "llvmlibc" for the libc project as it is
-    # not a full libc yet. Also, if we leave it as is, the "lib" prefix gets
-    # stripped below and the targets endup having the name "c", "check-c" etc.
-    set(projName "llvmlibc")
-  endif()
   string(REPLACE "-" "_" canon_name ${projName})
   string(TOUPPER ${canon_name} canon_name)
   list(APPEND prefixes ${canon_name})
@@ -178,13 +172,13 @@ foreach(entry ${runtimes})
   if(canon_name STREQUAL "COMPILER_RT")
     list(APPEND prefixes SANITIZER DARWIN)
   endif()
-  if(canon_name STREQUAL "LLVMLIBC")
+  if(canon_name STREQUAL "LIBC")
     list(APPEND prefixes "LLVM_LIBC")
     list(APPEND prefixes "LIBC_")
   endif()
 
   string(FIND ${projName} "lib" LIB_IDX)
-  if(LIB_IDX EQUAL 0)
+  if(LIB_IDX EQUAL 0 AND NOT projName STREQUAL "libc")
     string(SUBSTRING ${projName} 3 -1 projName)
   endif()
   list(APPEND runtime_names ${projName})

@@ -1249,10 +1249,10 @@ def BUFFER_INV : MUBUF_Invalidate<"buffer_inv"> {
   let AsmOperands = "$cpol";
 }
 
-let SubtargetPredicate = isGFX10Plus in {
+let SubtargetPredicate = isGFX10GFX11 in {
   def BUFFER_GL0_INV : MUBUF_Invalidate<"buffer_gl0_inv">;
   def BUFFER_GL1_INV : MUBUF_Invalidate<"buffer_gl1_inv">;
-} // End SubtargetPredicate = isGFX10Plus
+} // End SubtargetPredicate = isGFX10GFX11
 
 //===----------------------------------------------------------------------===//
 // MUBUF Patterns

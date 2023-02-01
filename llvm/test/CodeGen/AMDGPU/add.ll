@@ -6,7 +6,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1200 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10,FUNC,GFX12 %s
 
 ; FUNC-LABEL: {{^}}s_add_i32:
-; GCN: s_add_i32 s[[REG:[0-9]+]], {{s[0-9]+, s[0-9]+}}
+; GCN: s_add_{{(co_)?}}i32 s[[REG:[0-9]+]], {{s[0-9]+, s[0-9]+}}
 ; GCN: v_mov_b32_e32 v[[V_REG:[0-9]+]], s[[REG]]
 ; GCN: buffer_store_{{dword|b32}} v[[V_REG]],
 define amdgpu_kernel void @s_add_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
@@ -19,8 +19,8 @@ define amdgpu_kernel void @s_add_i32(ptr addrspace(1) %out, ptr addrspace(1) %in
 }
 
 ; FUNC-LABEL: {{^}}s_add_v2i32:
-; GCN: s_add_i32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
-; GCN: s_add_i32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
+; GCN: s_add_{{(co_)?}}i32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
+; GCN: s_add_{{(co_)?}}i32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
 define amdgpu_kernel void @s_add_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %b_ptr = getelementptr <2 x i32>, ptr addrspace(1) %in, i32 1
   %a = load <2 x i32>, ptr addrspace(1) %in
@@ -31,10 +31,10 @@ define amdgpu_kernel void @s_add_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %
 }
 
 ; FUNC-LABEL: {{^}}s_add_v4i32:
-; GCN: s_add_i32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
-; GCN: s_add_i32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
-; GCN: s_add_i32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
-; GCN: s_add_i32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
+; GCN: s_add_{{(co_)?}}i32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
+; GCN: s_add_{{(co_)?}}i32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
+; GCN: s_add_{{(co_)?}}i32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
+; GCN: s_add_{{(co_)?}}i32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
 define amdgpu_kernel void @s_add_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %b_ptr = getelementptr <4 x i32>, ptr addrspace(1) %in, i32 1
   %a = load <4 x i32>, ptr addrspace(1) %in
@@ -45,14 +45,14 @@ define amdgpu_kernel void @s_add_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %
 }
 
 ; FUNC-LABEL: {{^}}s_add_v8i32:
-; GCN: s_add_i32
-; GCN: s_add_i32
-; GCN: s_add_i32
-; GCN: s_add_i32
-; GCN: s_add_i32
-; GCN: s_add_i32
-; GCN: s_add_i32
-; GCN: s_add_i32
+; GCN: s_add_{{(co_)?}}i32
+; GCN: s_add_{{(co_)?}}i32
+; GCN: s_add_{{(co_)?}}i32
+; GCN: s_add_{{(co_)?}}i32
+; GCN: s_add_{{(co_)?}}i32
+; GCN: s_add_{{(co_)?}}i32
+; GCN: s_add_{{(co_)?}}i32
+; GCN: s_add_{{(co_)?}}i32
 define amdgpu_kernel void @s_add_v8i32(ptr addrspace(1) %out, <8 x i32> %a, <8 x i32> %b) {
 entry:
   %0 = add <8 x i32> %a, %b
@@ -61,22 +61,22 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}s_add_v16i32:
-; GCN: s_add_i32
-; GCN: s_add_i32
-; GCN: s_add_i32
-; GCN: s_add_i32
-; GCN: s_add_i32
-; GCN: s_add_i32
-; GCN: s_add_i32
-; GCN: s_add_i32
-; GCN: s_add_i32
-; GCN: s_add_i32
-; GCN: s_add_i32
-; GCN: s_add_i32
-; GCN: s_add_i32
-; GCN: s_add_i32
-; GCN: s_add_i32
-; GCN: s_add_i32
+; GCN: s_add_{{(co_)?}}i32
+; GCN: s_add_{{(co_)?}}i32
+; GCN: s_add_{{(co_)?}}i32
+; GCN: s_add_{{(co_)?}}i32
+; GCN: s_add_{{(co_)?}}i32
+; GCN: s_add_{{(co_)?}}i32
+; GCN: s_add_{{(co_)?}}i32
+; GCN: s_add_{{(co_)?}}i32
+; GCN: s_add_{{(co_)?}}i32
+; GCN: s_add_{{(co_)?}}i32
+; GCN: s_add_{{(co_)?}}i32
+; GCN: s_add_{{(co_)?}}i32
+; GCN: s_add_{{(co_)?}}i32
+; GCN: s_add_{{(co_)?}}i32
+; GCN: s_add_{{(co_)?}}i32
+; GCN: s_add_{{(co_)?}}i32
 define amdgpu_kernel void @s_add_v16i32(ptr addrspace(1) %out, <16 x i32> %a, <16 x i32> %b) {
 entry:
   %0 = add <16 x i32> %a, %b
@@ -119,7 +119,7 @@ define amdgpu_kernel void @v_add_imm_i32(ptr addrspace(1) %out, ptr addrspace(1)
 ; FUNC-LABEL: {{^}}add64:
 ; PREGFX12: s_add_u32
 ; PREGFX12: s_addc_u32
-; GFX12: s_add_u64
+; GFX12: s_add_nc_u64
 define amdgpu_kernel void @add64(ptr addrspace(1) %out, i64 %a, i64 %b) {
 entry:
   %add = add i64 %a, %b
@@ -146,7 +146,7 @@ entry:
 ; FUNC-LABEL: {{^}}add64_in_branch:
 ; PREGFX12: s_add_u32
 ; PREGFX12: s_addc_u32
-; GFX12: s_add_u64
+; GFX12: s_add_nc_u64
 define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(1) %in, i64 %a, i64 %b, i64 %c) {
 entry:
   %0 = icmp eq i64 %a, 0

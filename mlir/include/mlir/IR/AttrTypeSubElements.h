@@ -459,21 +459,29 @@ auto replaceImmediateSubElementsImpl(T derived, ArrayRef<Attribute> &replAttrs,
 
       // Otherwise, we need to replace any necessary sub-elements.
     } else {
+      // Functor used to build the replacement on success.
+      auto buildReplacement = [&](auto newKey, MLIRContext *ctx) {
+        if constexpr (is_tuple<decltype(key)>::value) {
+          return std::apply(
+              [&](auto &&...params) {
+                return constructSubElementReplacement<T>(
+                    ctx, std::forward<decltype(params)>(params)...);
+              },
+              newKey);
+        } else {
+          return constructSubElementReplacement<T>(ctx, newKey);
+        }
+      };
+
       AttrSubElementReplacements attrRepls(replAttrs);
       TypeSubElementReplacements typeRepls(replTypes);
       auto newKey = AttrTypeSubElementHandler<decltype(key)>::replace(
           key, attrRepls, typeRepls);
-      if constexpr (is_tuple<decltype(key)>::value) {
-        return std::apply(
-            [&](auto &&...params) {
-              return constructSubElementReplacement<T>(
-                  derived.getContext(),
-                  std::forward<decltype(params)>(params)...);
-            },
-            newKey);
-      } else {
-        return constructSubElementReplacement<T>(derived.getContext(), newKey);
-      }
+      MLIRContext *ctx = derived.getContext();
+      if constexpr (std::is_convertible_v<decltype(newKey), LogicalResult>)
+        return succeeded(newKey) ? buildReplacement(*newKey, ctx) : nullptr;
+      else
+        return buildReplacement(newKey, ctx);
     }
   } else {
     return derived;

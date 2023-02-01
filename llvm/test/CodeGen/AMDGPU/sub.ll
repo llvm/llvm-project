@@ -5,18 +5,18 @@
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
 
-; GCN-LABEL: {{^}}s_sub_i32:
+; GCN-LABEL: {{^}}s_sub_{{(co_)?}}i32:
 ; GCN: s_load_{{dwordx4|b128}} s[[[#LOAD:]]:{{[0-9]+}}]
-; GCN: s_sub_i32 s{{[0-9]+}}, s[[#LOAD + 2]], s[[#LOAD + 3]]
+; GCN: s_sub_{{(co_)?}}i32 s{{[0-9]+}}, s[[#LOAD + 2]], s[[#LOAD + 3]]
 define amdgpu_kernel void @s_sub_i32(ptr addrspace(1) %out, i32 %a, i32 %b) {
   %result = sub i32 %a, %b
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-; GCN-LABEL: {{^}}s_sub_imm_i32:
+; GCN-LABEL: {{^}}s_sub_{{(co_)?}}imm_i32:
 ; GCN: s_load_{{dword|b32}} [[A:s[0-9]+]]
-; GCN: s_sub_i32 s{{[0-9]+}}, 0x4d2, [[A]]
+; GCN: s_sub_{{(co_)?}}i32 s{{[0-9]+}}, 0x4d2, [[A]]
 define amdgpu_kernel void @s_sub_imm_i32(ptr addrspace(1) %out, i32 %a) {
   %result = sub i32 1234, %a
   store i32 %result, ptr addrspace(1) %out
@@ -128,11 +128,11 @@ define amdgpu_kernel void @test_sub_v4i16(ptr addrspace(1) %out, ptr addrspace(1
   ret void
 }
 
-; GCN-LABEL: {{^}}s_sub_i64:
+; GCN-LABEL: {{^}}s_sub_{{(co_)?}}i64:
 ; PREGFX12: s_sub_u32
 ; PREGFX12: s_subb_u32
 ;
-; GFX12: s_sub_u64
+; GFX12: s_sub_nc_u64
 define amdgpu_kernel void @s_sub_i64(ptr addrspace(1) noalias %out, i64 %a, i64 %b) nounwind {
   %result = sub i64 %a, %b
   store i64 %result, ptr addrspace(1) %out, align 8
