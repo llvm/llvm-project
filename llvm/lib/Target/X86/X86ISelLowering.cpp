@@ -44283,17 +44283,21 @@ static SDValue combinePredicateReduction(SDNode *Extract, SelectionDAG &DAG,
       Movmsk = DAG.getBitcast(MovmskVT, Match);
     } else {
       // For all_of(setcc(x,y,eq)) - use PMOVMSKB(PCMPEQB()).
-      if (BinOp == ISD::AND && Match.getOpcode() == ISD::SETCC &&
-          cast<CondCodeSDNode>(Match.getOperand(2))->get() ==
-              ISD::CondCode::SETEQ) {
-        EVT VecSVT = Match.getOperand(0).getValueType().getScalarType();
-        if (VecSVT != MVT::i8 && (VecSVT.getSizeInBits() % 8) == 0) {
-          NumElts *= VecSVT.getSizeInBits() / 8;
-          EVT CmpVT = EVT::getVectorVT(*DAG.getContext(), MVT::i8, NumElts);
-          MatchVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1, NumElts);
-          Match = DAG.getSetCC(
-              DL, MatchVT, DAG.getBitcast(CmpVT, Match.getOperand(0)),
-              DAG.getBitcast(CmpVT, Match.getOperand(1)), ISD::CondCode::SETEQ);
+      // TODO: any_of(setcc(x,y,ne)) - use PMOVMSKB(NOT(PCMPEQB())).
+      if (Match.getOpcode() == ISD::SETCC) {
+        ISD::CondCode CC = cast<CondCodeSDNode>(Match.getOperand(2))->get();
+        if (BinOp == ISD::AND && CC == ISD::CondCode::SETEQ) {
+          EVT VecVT = Match.getOperand(0).getValueType();
+          EVT VecSVT = VecVT.getScalarType();
+          if (VecSVT != MVT::i8 && (VecSVT.getSizeInBits() % 8) == 0) {
+            NumElts *= VecSVT.getSizeInBits() / 8;
+            EVT CmpVT = EVT::getVectorVT(*DAG.getContext(), MVT::i8, NumElts);
+            MatchVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1, NumElts);
+            Match = DAG.getSetCC(DL, MatchVT,
+                                 DAG.getBitcast(CmpVT, Match.getOperand(0)),
+                                 DAG.getBitcast(CmpVT, Match.getOperand(1)),
+                                 ISD::CondCode::SETEQ);
+          }
         }
       }
 
