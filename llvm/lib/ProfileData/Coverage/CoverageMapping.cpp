@@ -383,10 +383,9 @@ Error CoverageMapping::loadFromFile(
 }
 
 Expected<std::unique_ptr<CoverageMapping>>
-CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames, StringRef ProfileFilename,
-                      vfs::FileSystem &FS,
-                      ArrayRef<StringRef> Arches,
-                      StringRef CompilationDir,
+CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames,
+                      StringRef ProfileFilename, vfs::FileSystem &FS,
+                      ArrayRef<StringRef> Arches, StringRef CompilationDir,
                       const object::BuildIDFetcher *BIDFetcher) {
   auto ProfileReaderOrErr = IndexedInstrProfReader::create(ProfileFilename, FS);
   if (Error E = ProfileReaderOrErr.takeError())

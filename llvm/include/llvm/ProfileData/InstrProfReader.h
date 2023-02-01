@@ -42,6 +42,10 @@ namespace llvm {
 
 class InstrProfReader;
 
+namespace vfs {
+class FileSystem;
+} // namespace vfs
+
 /// A file format agnostic iterator over profiling data.
 template <class record_type = NamedInstrProfRecord,
           class reader_type = InstrProfReader>

@@ -308,11 +308,11 @@ let FPDPRounding = 1 in {
     defm V_FMA_F16 : VOP3Inst <"v_fma_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, any_fma>;
   } // End Predicates = [Has16BitInsts, isGFX8Only]
 
-  let renamedInGFX9 = 1, Predicates = [Has16BitInsts, isGFX9Plus] in {
+  let renamedInGFX9 = 1, SubtargetPredicate = isGFX9Plus in {
     defm V_DIV_FIXUP_F16_gfx9 : VOP3Inst <"v_div_fixup_f16_gfx9",
                                           VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>, AMDGPUdiv_fixup>;
     defm V_FMA_F16_gfx9 : VOP3Inst <"v_fma_f16_gfx9", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>, any_fma>;
-  } // End renamedInGFX9 = 1, Predicates = [Has16BitInsts, isGFX9Plus]
+  } // End renamedInGFX9 = 1, SubtargetPredicate = isGFX9Plus
 } // End FPDPRounding = 1
 
 let SubtargetPredicate = Has16BitInsts, isCommutable = 1 in {

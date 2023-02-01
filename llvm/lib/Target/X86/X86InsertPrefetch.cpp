@@ -28,6 +28,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/ProfileData/SampleProfReader.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Transforms/IPO/SampleProfile.h"
 using namespace llvm;
 using namespace sampleprof;
@@ -159,6 +160,7 @@ bool X86InsertPrefetch::doInitialization(Module &M) {
     return false;
 
   LLVMContext &Ctx = M.getContext();
+  // TODO: Propagate virtual file system into LLVM targets.
   auto FS = vfs::getRealFileSystem();
   ErrorOr<std::unique_ptr<SampleProfileReader>> ReaderOrErr =
       SampleProfileReader::create(Filename, Ctx, *FS);

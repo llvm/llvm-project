@@ -172,21 +172,21 @@ struct CallOpInterface
         opOperand.getOperandNumber());
   }
 
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     func::CallOp callOp = cast<func::CallOp>(op);
     FuncOp funcOp = getCalledFunction(callOp);
     assert(funcOp && "expected CallOp to a FuncOp");
     if (getFuncOpAnalysisState(state, funcOp) != FuncOpAnalysisState::Analyzed)
       // FuncOp not analyzed yet. Any OpResult may be aliasing.
-      return detail::unknownGetAliasingOpResult(opOperand);
+      return detail::unknownGetAliasingOpResults(opOperand);
 
     // Get aliasing results from state.
     const FuncAnalysisState &funcState = getFuncAnalysisState(state);
     auto aliasingReturnVals =
         funcState.aliasingReturnVals.lookup(funcOp).lookup(
             opOperand.getOperandNumber());
-    SmallVector<OpResult> result;
+    AliasingOpResultList result;
     for (int64_t resultIdx : aliasingReturnVals)
       result.push_back(callOp->getOpResult(resultIdx));
     return result;
@@ -209,7 +209,7 @@ struct CallOpInterface
     if (maybeEquiv) {
 #ifndef NDEBUG
       SmallVector<OpOperand *> aliasingOpOperands =
-          getAliasingOpOperand(op, opResult, state);
+          getAliasingOpOperands(op, opResult, state);
       assert(aliasingOpOperands.size() == 1 &&
              "expected exactly 1 aliasing OpOperand");
       assert(aliasingOpOperands.front()->getOperandNumber() == *maybeEquiv &&
@@ -329,7 +329,7 @@ struct ReturnOpInterface
     return false;
   }
 
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     return {};
   }

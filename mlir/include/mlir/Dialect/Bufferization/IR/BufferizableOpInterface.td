@@ -172,22 +172,52 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
       >,
       InterfaceMethod<
         /*desc=*/[{
-          Return the OpResult that aliases with a given OpOperand when
+          Return the OpResults that may alias with a given OpOperand when
           bufferized in-place. This method will never be called on OpOperands
           that do not have a tensor type.
 
-          Note: This method can return multiple OpResults, indicating that a
-          given OpOperand may at runtime alias with any (or multiple) of the
-          returned OpResults.
+          This method can return multiple OpResults, indicating that a given
+          OpOperand may at runtime alias with any (or multiple) of the returned
+          OpResults.
+
+          False positives are allowed in the list of OpResults, but they can
+          adversely affect the accuracy of the anlysis. On the contrary,
+          omitting potential aliases is incorrect.
+
+          One possible (conservative) implementation of this interface method,
+          that is always safe, is to return all tensor OpResults.
+
+          Examples:
+
+          ```
+          // aliasingOpResults(%t) = {%r}
+          %r = tensor.insert_slice %f into %t : tensor<10xf32>
+
+          // aliasingOpResults(%t) = {%r}
+          %r = tensor.extract_slice %t[0]][5][1]
+              : tensor<10xf32> to tensor<5xf32>
+
+          // aliasingOpResults(%t1) = {%r}
+          // aliasingOpResults(%t2) = {%r}
+          %r = arith.select %c, %t1, %t2 : tensor<10xf32>
+
+          // A hypothetical op that bufferizes to rolling a dice and based on
+          // the result to either return buffer(%t) or a newly allocated copy
+          // thereof.
+          // aliasingOpResults(%t) = {%r}
+          %r = "dummy.alias_or_copy(%t) : (tensor<10xf32>) -> (tensor<10xf32>)"
+          ```
         }],
-        /*retType=*/"::mlir::SmallVector<::mlir::OpResult>",
-        /*methodName=*/"getAliasingOpResult",
+        /*retType=*/"::mlir::bufferization::AliasingOpResultList",
+        /*methodName=*/"getAliasingOpResults",
         /*args=*/(ins "::mlir::OpOperand &":$opOperand,
                       "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           // Does not have to be implemented for ops without tensor OpOperands.
-          llvm_unreachable("getAliasingOpResult not implemented");
+          assert(opOperand.get().getType().isa<TensorType>() &&
+                 "expected OpOperand with tensor type");
+          llvm_unreachable("getAliasingOpResults not implemented");
         }]
       >,
       InterfaceMethod<
@@ -196,35 +226,51 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           bufferized in-place. This method will never be called on OpResults
           that do not have a tensor type.
 
-          By default, this method is the inverse of `getAliasingOpResult`. Ops
+          By default, this method is the inverse of `getAliasingOpResults`. Ops
           with a region that yield values may want to override this method to
           return the OpOperands that are yielded by the terminator.
 
-          Note: This method can return multiple OpOperands, indicating that the
-          given OpResult may at runtime alias with any (or multiple) of the
-          returned OpOperands. This can be useful for branches and for ops such
-          as `arith.select`.
+          This method can return multiple OpOperands, indicating that a given
+          OpResult may at runtime alias with any (or multiple) of the returned
+          OpOperands.
+
+          False positives are allowed in the list of OpOperands, but they can
+          adversely affect the accuracy of the anlysis. On the contrary,
+          omitting potential aliases is incorrect.
+
+          One possible (conservative) implementation of this interface method,
+          that is always safe, is to return all tensor OpOperands.
+
+          Note: If the returned list of OpOperands is empty, this op definitely
+          bufferizes to a new allocation. In that case `bufferizesToAllocation`
+          must return `true`.
+
+          Examples:
+
+          ```
+          // aliasingOpOperands(%r) = {%t}
+          %r = tensor.insert_slice %f into %t : tensor<10xf32>
+
+          // aliasingOpOperands(%r) = {%t}
+          %r = tensor.extract_slice %t[0]][5][1]
+              : tensor<10xf32> to tensor<5xf32>
+
+          // aliasingOpOperands(%r) = {%t1, %t2}
+          %r = arith.select %c, %t1, %t2 : tensor<10xf32>
+
+          // aliasingOpOperands(%r) = {}
+          %r = te
         }],
-        /*retType=*/"::mlir::SmallVector<::mlir::OpOperand *>",
-        /*methodName=*/"getAliasingOpOperand",
+        /*retType=*/"::mlir::bufferization::AliasingOpOperandList",
+        /*methodName=*/"getAliasingOpOperands",
         /*args=*/(ins "::mlir::OpResult":$opResult,
                       "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           assert(opResult.getType().isa<TensorType>() &&
                  "expected OpResult with tensor type");
-          SmallVector<OpOperand *> result;
-          auto bufferizableOp =
-              cast<BufferizableOpInterface>($_op.getOperation());
-          for (OpOperand &opOperand : $_op.getOperation()->getOpOperands()) {
-            if (!opOperand.get().getType().isa<TensorType>())
-              continue;
-            SmallVector<OpResult> aliasingOpResults =
-                bufferizableOp.getAliasingOpResult(opOperand, state);
-            if (llvm::is_contained(aliasingOpResults, opResult))
-              result.push_back(&opOperand);
-          }
-          return result;
+          return ::mlir::bufferization::detail::defaultGetAliasingOpOperands(
+              opResult, state);
         }]
       >,
       InterfaceMethod<
@@ -285,10 +331,11 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           conversion.
 
           The implementation of this method must be consistent with the
-          remaining methods, in particular `getAliasingOpOperand`. I.e., a
+          remaining methods, in particular `getAliasingOpOperands`. I.e., a
           tensor result `r` may only be replaced with:
-          a) A buffer that aliases one of buffers in getAliasingOpOperand(r).
-          b) Or: A newly allocated buffer.
+
+          a) One of the buffers in getAliasingOpOperands(r).
+          b) Or: A newly allocated buffer (only if `bufferizesToAllocation`).
 
           This method will never be called on ops that do not have at least one
           tensor operand/result.
@@ -440,7 +487,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           cast<BufferizableOpInterface>(getOperation());
       return !bufferizableOp.bufferizesToMemoryRead(opOperand, state)
           && !bufferizableOp.bufferizesToMemoryWrite(opOperand, state)
-          && !bufferizableOp.getAliasingOpResult(opOperand, state).empty();
+          && !bufferizableOp.getAliasingOpResults(opOperand, state).empty();
     }
   }];
 }

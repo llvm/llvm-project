@@ -1486,6 +1486,20 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  acoshf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    acoshf_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.src.errno.errno
+    libc.src.math.acoshf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   asinf_test
   NEED_MPFR
   SUITE

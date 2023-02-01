@@ -26,6 +26,8 @@
 ; CHECK-NEXT:       Expand vector predication intrinsics
 ; CHECK-NEXT:       Scalarize Masked Memory Intrinsics
 ; CHECK-NEXT:       Expand reduction intrinsics
+; CHECK-NEXT:     AArch64 Globals Tagging
+; CHECK-NEXT:     FunctionPass Manager
 ; CHECK-NEXT:       AArch64 Stack Tagging
 ; CHECK-NEXT:       SME ABI Pass
 ; CHECK-NEXT:       Exception handling preparation

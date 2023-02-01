@@ -252,6 +252,10 @@ namespace llvm {
 class raw_ostream;
 class Twine;
 
+namespace vfs {
+class FileSystem;
+} // namespace vfs
+
 namespace sampleprof {
 
 class SampleProfileReader;

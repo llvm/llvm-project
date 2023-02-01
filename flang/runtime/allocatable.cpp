@@ -127,8 +127,7 @@ int RTNAME(AllocatableAllocateSource)(Descriptor &alloc,
       alloc, hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
     Terminator terminator{sourceFile, sourceLine};
-    // 9.7.1.2(7)
-    Assign(alloc, source, terminator, /*skipRealloc=*/true);
+    DoFromSourceAssign(alloc, source, terminator);
   }
   return stat;
 }

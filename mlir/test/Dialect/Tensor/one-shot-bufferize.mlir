@@ -347,3 +347,26 @@ func.func @dim_not_reading(%t: tensor<?xf32>, %f: f32, %pos: index)
   %1 = tensor.dim %t, %c0 : tensor<?xf32>
   return %0, %1 : tensor<?xf32>, index
 }
+
+// -----
+
+//       CHECK: #[[$map:.*]] = affine_map<(d0) -> (d0 + 5)>
+// CHECK-LABEL: func.func @cast_retains_buffer_layout(
+//  CHECK-SAME:     %[[t:.*]]: memref<?xf32, #[[$map]]>, %[[sz:.*]]: index) -> memref<?xf32, strided<[1], offset: 7>> {
+//       CHECK:   %[[casted:.*]] = memref.cast %[[t]] : memref<?xf32, #[[$map]]> to memref<10xf32, #[[$map]]>
+//       CHECK:   %[[slice:.*]] = memref.subview %[[casted]][2] [%[[sz]]] [1] : memref<10xf32, #[[$map]]> to memref<?xf32, strided<[1], offset: 7>>
+//       CHECK:   return %[[slice]]
+func.func @cast_retains_buffer_layout(
+    %t: tensor<?xf32>
+        {bufferization.buffer_layout = affine_map<(d0) -> (d0 + 5)>},
+    %sz: index)
+  -> (tensor<10xf32>, tensor<?xf32>)
+{
+  %casted = tensor.cast %t : tensor<?xf32> to tensor<10xf32>
+  %slice = tensor.extract_slice %casted[2][%sz][1] : tensor<10xf32> to tensor<?xf32>
+
+  // Note: The %casted return type is folded away because both buffers are
+  // equivalent. Therefore, we currently loose some static type information
+  // in the caller.
+  return %casted, %slice : tensor<10xf32>, tensor<?xf32>
+}

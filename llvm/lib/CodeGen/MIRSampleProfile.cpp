@@ -77,7 +77,7 @@ FunctionPass *
 llvm::createMIRProfileLoaderPass(std::string File, std::string RemappingFile,
                                  FSDiscriminatorPass P,
                                  IntrusiveRefCntPtr<vfs::FileSystem> FS) {
-  return new MIRProfileLoaderPass(File, RemappingFile, P, FS);
+  return new MIRProfileLoaderPass(File, RemappingFile, P, std::move(FS));
 }
 
 namespace llvm {
@@ -141,7 +141,7 @@ public:
   MIRProfileLoader(StringRef Name, StringRef RemapName,
                    IntrusiveRefCntPtr<vfs::FileSystem> FS)
       : SampleProfileLoaderBaseImpl(std::string(Name), std::string(RemapName),
-                                    FS) {}
+                                    std::move(FS)) {}
 
   void setBranchProbs(MachineFunction &F);
   bool runOnFunction(MachineFunction &F);
@@ -301,9 +301,9 @@ MIRProfileLoaderPass::MIRProfileLoaderPass(
   LowBit = getFSPassBitBegin(P);
   HighBit = getFSPassBitEnd(P);
 
-  this->FS = FS ? std::move(FS) : vfs::getRealFileSystem();
-  MIRSampleLoader =
-      std::make_unique<MIRProfileLoader>(FileName, RemappingFileName, this->FS);
+  auto VFS = FS ? std::move(FS) : vfs::getRealFileSystem();
+  MIRSampleLoader = std::make_unique<MIRProfileLoader>(
+      FileName, RemappingFileName, std::move(VFS));
   assert(LowBit < HighBit && "HighBit needs to be greater than Lowbit");
 }
 

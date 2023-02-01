@@ -166,58 +166,6 @@ public:
   DecodeStatus convertVOPCDPPInst(MCInst &MI) const;
   void convertMacDPPInst(MCInst &MI) const;
 
-  MCOperand decodeOperand_VGPR_32(unsigned Val) const;
-  MCOperand decodeOperand_VGPR_32_Lo128(unsigned Val) const;
-  MCOperand decodeOperand_VRegOrLds_32(unsigned Val) const;
-
-  MCOperand decodeOperand_VS_32(unsigned Val) const;
-  MCOperand decodeOperand_VS_64(unsigned Val) const;
-  MCOperand decodeOperand_VS_128(unsigned Val) const;
-  MCOperand decodeOperand_VSrc16(unsigned Val) const;
-  MCOperand decodeOperand_VSrcV216(unsigned Val) const;
-  MCOperand decodeOperand_VSrcV232(unsigned Val) const;
-
-  MCOperand decodeOperand_VReg_64(unsigned Val) const;
-  MCOperand decodeOperand_VReg_96(unsigned Val) const;
-  MCOperand decodeOperand_VReg_128(unsigned Val) const;
-  MCOperand decodeOperand_VReg_256(unsigned Val) const;
-  MCOperand decodeOperand_VReg_288(unsigned Val) const;
-  MCOperand decodeOperand_VReg_320(unsigned Val) const;
-  MCOperand decodeOperand_VReg_352(unsigned Val) const;
-  MCOperand decodeOperand_VReg_384(unsigned Val) const;
-  MCOperand decodeOperand_VReg_512(unsigned Val) const;
-  MCOperand decodeOperand_VReg_1024(unsigned Val) const;
-
-  MCOperand decodeOperand_SReg_32(unsigned Val) const;
-  MCOperand decodeOperand_SReg_32_XM0_XEXEC(unsigned Val) const;
-  MCOperand decodeOperand_SReg_32_XEXEC_HI(unsigned Val) const;
-  MCOperand decodeOperand_SRegOrLds_32(unsigned Val) const;
-  MCOperand decodeOperand_SReg_64(unsigned Val) const;
-  MCOperand decodeOperand_SReg_64_XEXEC(unsigned Val) const;
-  MCOperand decodeOperand_SReg_128(unsigned Val) const;
-  MCOperand decodeOperand_SReg_256(unsigned Val) const;
-  MCOperand decodeOperand_SReg_288(unsigned Val) const;
-  MCOperand decodeOperand_SReg_320(unsigned Val) const;
-  MCOperand decodeOperand_SReg_352(unsigned Val) const;
-  MCOperand decodeOperand_SReg_384(unsigned Val) const;
-  MCOperand decodeOperand_SReg_512(unsigned Val) const;
-
-  MCOperand decodeOperand_AGPR_32(unsigned Val) const;
-  MCOperand decodeOperand_AReg_64(unsigned Val) const;
-  MCOperand decodeOperand_AReg_128(unsigned Val) const;
-  MCOperand decodeOperand_AReg_256(unsigned Val) const;
-  MCOperand decodeOperand_AReg_288(unsigned Val) const;
-  MCOperand decodeOperand_AReg_320(unsigned Val) const;
-  MCOperand decodeOperand_AReg_352(unsigned Val) const;
-  MCOperand decodeOperand_AReg_384(unsigned Val) const;
-  MCOperand decodeOperand_AReg_512(unsigned Val) const;
-  MCOperand decodeOperand_AReg_1024(unsigned Val) const;
-  MCOperand decodeOperand_AV_32(unsigned Val) const;
-  MCOperand decodeOperand_AV_64(unsigned Val) const;
-  MCOperand decodeOperand_AV_128(unsigned Val) const;
-  MCOperand decodeOperand_AVDst_128(unsigned Val) const;
-  MCOperand decodeOperand_AVDst_512(unsigned Val) const;
-
   enum OpWidthTy {
     OPW32,
     OPW64,
@@ -244,18 +192,21 @@ public:
   unsigned getTtmpClassId(const OpWidthTy Width) const;
 
   static MCOperand decodeIntImmed(unsigned Imm);
-  static MCOperand decodeFPImmed(OpWidthTy Width, unsigned Imm);
+  static MCOperand decodeFPImmed(unsigned ImmWidth, unsigned Imm);
+
   MCOperand decodeMandatoryLiteralConstant(unsigned Imm) const;
   MCOperand decodeLiteralConstant() const;
 
   MCOperand decodeSrcOp(const OpWidthTy Width, unsigned Val,
-                        bool MandatoryLiteral = false) const;
-  MCOperand decodeDstOp(const OpWidthTy Width, unsigned Val) const;
+                        bool MandatoryLiteral = false,
+                        unsigned ImmWidth = 0) const;
+
   MCOperand decodeVOPDDstYOp(MCInst &Inst, unsigned Val) const;
   MCOperand decodeSpecialReg32(unsigned Val) const;
   MCOperand decodeSpecialReg64(unsigned Val) const;
 
-  MCOperand decodeSDWASrc(const OpWidthTy Width, unsigned Val) const;
+  MCOperand decodeSDWASrc(const OpWidthTy Width, unsigned Val,
+                          unsigned ImmWidth = 0) const;
   MCOperand decodeSDWASrc16(unsigned Val) const;
   MCOperand decodeSDWASrc32(unsigned Val) const;
   MCOperand decodeSDWAVopcDst(unsigned Val) const;

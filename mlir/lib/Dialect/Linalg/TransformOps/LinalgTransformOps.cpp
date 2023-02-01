@@ -782,8 +782,8 @@ struct LowerPackResult {
 };
 
 /// Rewrite pack as pad + reshape + transpose.
-static FailureOr<LowerPackResult> rewriteLowerPack(RewriterBase &rewriter,
-                                                   tensor::PackOp packOp) {
+static FailureOr<LowerPackResult> lowerPack(RewriterBase &rewriter,
+                                            tensor::PackOp packOp) {
   // 1. Filter out NYI cases.
   if (!packOp.getOuterDimsPerm().empty())
     return rewriter.notifyMatchFailure(packOp, "outer dims perm NYI");
@@ -822,7 +822,7 @@ static FailureOr<LowerPackResult> rewriteLowerPack(RewriterBase &rewriter,
       packingMetadata.reassociations);
   Value paddingValue = packOp.getPaddingValue();
   if (!paddingValue) {
-    paddingValue = rewriter.create<arith::ConstantOp>(
+    rewriter.create<arith::ConstantOp>(
         loc, rewriter.getZeroAttr(getElementTypeOrSelf(collapsed)));
   }
   auto padOp =
@@ -876,7 +876,7 @@ DiagnosedSilenceableFailure transform::LowerPackOp::applyToOne(
     transform::TransformState &state) {
   IRRewriter rewriter(target->getContext());
   rewriter.setInsertionPoint(target);
-  FailureOr<LowerPackResult> res = rewriteLowerPack(rewriter, target);
+  FailureOr<LowerPackResult> res = lowerPack(rewriter, target);
   if (failed(res)) {
     Diagnostic diag(target->getLoc(), DiagnosticSeverity::Error);
     diag << "cannot lower to pad + expand + transpose";
@@ -885,6 +885,117 @@ DiagnosedSilenceableFailure transform::LowerPackOp::applyToOne(
   transformResults.push_back(res->padOp);
   transformResults.push_back(res->expandShapeOp);
   transformResults.push_back(res->transposeOp);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// LowerUnPackOp
+//===----------------------------------------------------------------------===//
+
+struct LowerUnPackOpResult {
+  tensor::EmptyOp emptyOp;
+  linalg::TransposeOp transposeOp;
+  tensor::CollapseShapeOp collapseShapeOp;
+  tensor::ExtractSliceOp extractSliceOp;
+};
+
+/// Rewrite pack as empty + transpose + reshape + extract_slice.
+static FailureOr<LowerUnPackOpResult> lowerUnPack(RewriterBase &rewriter,
+                                                  tensor::UnPackOp unPackOp) {
+  // 1. Filter out NYI cases.
+  if (!unPackOp.getOuterDimsPerm().empty())
+    return rewriter.notifyMatchFailure(unPackOp, "outer dims perm NYI");
+
+  RankedTensorType packedTensorType = unPackOp.getSourceType();
+  if (!packedTensorType.hasStaticShape()) {
+    return rewriter.notifyMatchFailure(
+        unPackOp,
+        "non-static shape NYI, needs a more powerful tensor.expand_shape op");
+  }
+
+  Location loc = unPackOp->getLoc();
+  OpBuilder::InsertionGuard g(rewriter);
+  rewriter.setInsertionPoint(unPackOp);
+
+  // 2. Compute the permutation vector to move the last `numPackedDims` into the
+  // `innerPosDims` of a shape of rank `packedRank`.
+  int64_t numPackedDims = unPackOp.getInnerDimsPos().size();
+  int64_t packedRank = packedTensorType.getRank();
+  auto lastDims = llvm::to_vector(
+      llvm::seq<int64_t>(packedRank - numPackedDims, packedRank));
+  PackingMetadata packingMetadata =
+      computePackingMetadata(packedRank, unPackOp.getInnerDimsPos());
+  SmallVector<int64_t> lastDimsToInsertPositionsPerm = computePermutationVector(
+      packedRank, lastDims, packingMetadata.insertPositions);
+
+  // 3. Compute the stripMinedShape: this is the packed shape without outer and
+  // inner permutations.
+  SmallVector<int64_t> stripMinedShape(packedTensorType.getShape());
+  applyPermutationToVector(stripMinedShape, lastDimsToInsertPositionsPerm);
+
+  // 4. Transpose packedShape to stripMinedShape.
+  RankedTensorType stripMinedTensorType =
+      RankedTensorType::Builder(packedTensorType).setShape(stripMinedShape);
+  RankedTensorType collapsedType = tensor::CollapseShapeOp::inferCollapsedType(
+      stripMinedTensorType, packingMetadata.reassociations);
+  auto emptyOp =
+      rewriter.create<tensor::EmptyOp>(loc, stripMinedTensorType, ValueRange{});
+  auto transposeOp = rewriter.create<linalg::TransposeOp>(
+      loc, unPackOp.getSource(), emptyOp, lastDimsToInsertPositionsPerm);
+
+  LLVM_DEBUG(
+      DBGSNL(); DBGSNL(); llvm::interleaveComma(packingMetadata.insertPositions,
+                                                DBGS() << "insertPositions: ");
+      DBGSNL(); llvm::interleaveComma(packedTensorType.getShape(),
+                                      DBGS() << "packedShape: ");
+      DBGSNL();
+      llvm::interleaveComma(lastDimsToInsertPositionsPerm,
+                            DBGS() << "lastDimsToInsertPositionsPerm: ");
+      DBGSNL(); llvm::interleaveComma(
+          packingMetadata.reassociations, DBGS() << "reassociations: ",
+          [&](ReassociationIndices ri) {
+            llvm::interleaveComma(ri, llvm::dbgs() << "|");
+          });
+      DBGSNL();
+      llvm::interleaveComma(stripMinedShape, DBGS() << "stripMinedShape: ");
+      DBGSNL(); DBGS() << "collapsed type: " << collapsedType; DBGSNL(););
+
+  // 5. Collapse from the stripMinedShape to the padded result.
+  auto reshapeOp = rewriter.create<tensor::CollapseShapeOp>(
+      loc, collapsedType, transposeOp->getResult(0),
+      packingMetadata.reassociations);
+
+  // 6. ExtractSlice
+  auto destTensorType = unPackOp.getDest().getType().cast<RankedTensorType>();
+  int64_t destRank = destTensorType.getRank();
+  OpFoldResult zero = rewriter.getIndexAttr(0), one = rewriter.getIndexAttr(1);
+  auto extractSliceOp = rewriter.create<tensor::ExtractSliceOp>(
+      loc, destTensorType, reshapeOp->getResult(0),
+      SmallVector<OpFoldResult>(destRank, zero),
+      tensor::getMixedSizes(rewriter, loc, unPackOp->getResult(0)),
+      SmallVector<OpFoldResult>(destRank, one));
+
+  // 7. Replace unPackOp by transposeOp.
+  rewriter.replaceOp(unPackOp, extractSliceOp->getResults());
+
+  return LowerUnPackOpResult{emptyOp, transposeOp, reshapeOp, extractSliceOp};
+}
+
+DiagnosedSilenceableFailure transform::LowerUnPackOp::applyToOne(
+    tensor::UnPackOp target, transform::ApplyToEachResultList &transformResults,
+    transform::TransformState &state) {
+  IRRewriter rewriter(target->getContext());
+  rewriter.setInsertionPoint(target);
+  FailureOr<LowerUnPackOpResult> res = lowerUnPack(rewriter, target);
+  if (failed(res)) {
+    Diagnostic diag(target->getLoc(), DiagnosticSeverity::Error);
+    diag << "cannot rewrite to pad + expand + transpose";
+    return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
+  }
+  transformResults.push_back(res->emptyOp);
+  transformResults.push_back(res->transposeOp);
+  transformResults.push_back(res->collapseShapeOp);
+  transformResults.push_back(res->extractSliceOp);
   return DiagnosedSilenceableFailure::success();
 }
 

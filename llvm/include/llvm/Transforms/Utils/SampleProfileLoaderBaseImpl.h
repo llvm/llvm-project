@@ -18,6 +18,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -46,6 +47,10 @@ namespace llvm {
 using namespace sampleprof;
 using namespace sampleprofutil;
 using ProfileCount = Function::ProfileCount;
+
+namespace vfs {
+class FileSystem;
+} // namespace vfs
 
 #define DEBUG_TYPE "sample-profile-impl"
 
@@ -82,7 +87,7 @@ template <typename BT> class SampleProfileLoaderBaseImpl {
 public:
   SampleProfileLoaderBaseImpl(std::string Name, std::string RemapName,
                               IntrusiveRefCntPtr<vfs::FileSystem> FS)
-      : Filename(Name), RemappingFilename(RemapName), FS(FS) {}
+      : Filename(Name), RemappingFilename(RemapName), FS(std::move(FS)) {}
   void dump() { Reader->dump(); }
 
   using InstructionT = typename afdo_detail::IRTraits<BT>::InstructionT;

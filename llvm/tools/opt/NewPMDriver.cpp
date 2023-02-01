@@ -341,7 +341,8 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
     P = PGOOptions(ProfileFile, "", "", FS, PGOOptions::IRInstr);
     break;
   case InstrUse:
-    P = PGOOptions(ProfileFile, "", ProfileRemappingFile, FS, PGOOptions::IRUse);
+    P = PGOOptions(ProfileFile, "", ProfileRemappingFile, FS,
+                   PGOOptions::IRUse);
     break;
   case SampleUse:
     P = PGOOptions(ProfileFile, "", ProfileRemappingFile, FS,

@@ -582,6 +582,16 @@
 // CHECK371-NOT: "+reserved-r19"
 
 // -----------------------------------------------------------------------------
+// mcabac
+// -----------------------------------------------------------------------------
+// RUN: %clang -### -target hexagon-unknown-elf -mcabac %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK372 %s
+// CHECK372: "-target-feature" "+cabac"
+// RUN: %clang -### -target hexagon-unknown-elf %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK373 %s
+// CHECK373-NOT: "+cabac"
+
+// -----------------------------------------------------------------------------
 // Misc Defaults
 // -----------------------------------------------------------------------------
 // RUN: %clang -### -target hexagon-unknown-elf \

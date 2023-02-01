@@ -7418,6 +7418,8 @@ llvm/unittests/XRay/FDRRecordsTest.cpp
 llvm/unittests/XRay/FDRTraceWriterTest.cpp
 llvm/unittests/XRay/ProfileTest.cpp
 llvm/utils/not/not.cpp
+llvm/Utils/TableGen/CodeGenInstAlias.cpp
+llvm/Utils/TableGen/CodeGenInstAlias.h
 llvm/utils/TableGen/CodeBeadsGen.cpp
 llvm/utils/TableGen/CompressInstEmitter.cpp
 llvm/utils/TableGen/DFAEmitter.h

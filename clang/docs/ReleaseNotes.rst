@@ -61,6 +61,9 @@ Bug Fixes
   templates. This fixes
   `Issue 60344 <https://github.com/llvm/llvm-project/issues/60344>`_.
 
+- ``-Wtype-limits`` was added to ``-Wextra`` for GCC compatibility. This fixes
+  `Issue 58375 <https://github.com/llvm/llvm-project/issues/58375>`_.
+
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - We now generate a diagnostic for signed integer overflow due to unary minus
@@ -162,6 +165,13 @@ DWARF Support in Clang
 
 Arm and AArch64 Support in Clang
 --------------------------------
+
+* The hard-float ABI is now available in Armv8.1-M configurations that
+  have integer MVE instructions (and therefore have FP registers) but
+  no scalar or vector floating point computation. Previously, trying
+  to select the hard-float ABI on such a target (via
+  ``-mfloat-abi=hard`` or a triple ending in ``hf``) would silently
+  use the soft-float ABI instead.
 
 Floating Point Support in Clang
 -------------------------------

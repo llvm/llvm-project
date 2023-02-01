@@ -229,9 +229,9 @@ defm V_MOV_B64 : VOP1Inst <"v_mov_b64", VOP_I64_I64>;
 // TODO: Make profile for this, there is VOP3 encoding also
 def V_READFIRSTLANE_B32 :
   InstSI <(outs SReg_32:$vdst),
-    (ins VRegOrLds_32:$src0),
+    (ins VRegOrLdsSrc_32:$src0),
     "v_readfirstlane_b32 $vdst, $src0",
-    [(set i32:$vdst, (int_amdgcn_readfirstlane (i32 VRegOrLds_32:$src0)))]>,
+    [(set i32:$vdst, (int_amdgcn_readfirstlane (i32 VRegOrLdsSrc_32:$src0)))]>,
   Enc32 {
 
   let isCodeGenOnly = 0;
@@ -529,8 +529,8 @@ def : GCNPat<
 }
 
 def VOP_SWAP_I32 : VOPProfile<[i32, i32, i32, untyped]> {
-  let Outs32 = (outs VGPR_32:$vdst, VGPR_32:$vdst1);
-  let Ins32 = (ins VGPR_32:$src0, VGPR_32:$src1);
+  let Outs32 = (outs VGPR_32:$vdst, VRegSrc_32:$vdst1);
+  let Ins32 = (ins VRegSrc_32:$src0, VGPR_32:$src1);
   let Outs64 = Outs32;
   let Asm32 = " $vdst, $src0";
   let Asm64 = "";
@@ -633,7 +633,7 @@ let SubtargetPredicate = isGFX10Plus in {
 
 def VOPProfileAccMov : VOP_NO_EXT<VOP_I32_I32> {
   let DstRC = RegisterOperand<AGPR_32>;
-  let Src0RC32 = RegisterOperand<AGPR_32>;
+  let Src0RC32 = ARegSrc_32;
   let Asm32 = " $vdst, $src0";
 }
 

@@ -73,9 +73,9 @@ end subroutine
 ! CHECK:  %[[VAL_13:.*]] = hlfir.elemental %[[VAL_5]] : (!fir.shape<1>) -> !hlfir.expr<100xi32> {
 ! CHECK:  ^bb0(%[[VAL_14:.*]]: index):
 ! CHECK:    %[[VAL_15:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_14]])  typeparams %[[VAL_2]]#1 : (!fir.box<!fir.array<100x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
+! CHECK:    %[[VAL_18:.*]]:2 = fir.unboxchar %[[VAL_15]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:    %[[VAL_16:.*]] = fir.box_elesize %[[VAL_7]]#1 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
 ! CHECK:    %[[VAL_17:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_14]])  typeparams %[[VAL_16]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
-! CHECK:    %[[VAL_18:.*]]:2 = fir.unboxchar %[[VAL_15]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:    %[[VAL_19:.*]]:2 = fir.unboxchar %[[VAL_17]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:    %[[VAL_20:.*]] = arith.constant false
 ! CHECK:    %[[VAL_21:.*]] = fir.convert %[[VAL_18]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
@@ -139,10 +139,10 @@ end subroutine
 ! CHECK:  %[[VAL_16:.*]] = hlfir.elemental %[[VAL_9]] typeparams %[[VAL_6]]#1 : (!fir.shape<1>, index) -> !hlfir.expr<100x!fir.char<1,?>> {
 ! CHECK:  ^bb0(%[[VAL_17:.*]]: index):
 ! CHECK:    %[[VAL_18:.*]] = hlfir.designate %[[VAL_10]]#0 (%[[VAL_17]])  typeparams %[[VAL_6]]#1 : (!fir.box<!fir.array<100x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
-! CHECK:    %[[VAL_19:.*]] = hlfir.designate %[[VAL_15]]#0 (%[[VAL_17]])  typeparams %[[VAL_11]]#1 : (!fir.box<!fir.array<100x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
-! CHECK:    %[[VAL_20:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_17]])  : (!fir.ref<!fir.array<100x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
 ! CHECK:    %[[VAL_21:.*]]:2 = fir.unboxchar %[[VAL_18]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+! CHECK:    %[[VAL_19:.*]] = hlfir.designate %[[VAL_15]]#0 (%[[VAL_17]])  typeparams %[[VAL_11]]#1 : (!fir.box<!fir.array<100x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
 ! CHECK:    %[[VAL_22:.*]]:2 = fir.unboxchar %[[VAL_19]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+! CHECK:    %[[VAL_20:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_17]])  : (!fir.ref<!fir.array<100x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
 ! CHECK:    %[[VAL_23:.*]] = fir.load %[[VAL_20]] : !fir.ref<!fir.logical<4>>
 ! CHECK:    %[[VAL_24:.*]] = fir.convert %[[VAL_23]] : (!fir.logical<4>) -> i1
 ! CHECK:    %[[VAL_25:.*]] = arith.select %[[VAL_24]], %[[VAL_21]]#0, %[[VAL_22]]#0 : !fir.ref<!fir.char<1,?>>
