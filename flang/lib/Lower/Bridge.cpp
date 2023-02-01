@@ -3438,8 +3438,16 @@ private:
   void endNewFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
     setCurrentPosition(Fortran::lower::pft::stmtSourceLoc(funit.endStmt));
     if (funit.isMainProgram()) {
-      bridge.fctCtx().finalizeAndPop();
-      genExitRoutine();
+      if (!blockIsUnterminated()) {
+        auto insertPt = builder->saveInsertionPoint();
+        mlir::Block *currentBlock = builder->getBlock();
+        builder->setInsertionPoint(&currentBlock->back());
+        bridge.fctCtx().finalizeAndPop();
+        builder->restoreInsertionPoint(insertPt);
+      } else {
+        bridge.fctCtx().finalizeAndPop();
+        genExitRoutine();
+      }
     } else {
       genFIRProcedureExit(funit, funit.getSubprogramSymbol());
     }

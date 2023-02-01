@@ -149,3 +149,16 @@ contains
 ! CHECK: return
 
 end module
+
+program p
+  use derived_type_finalization
+  type(t1) :: t
+  print *, 'end of program'
+end program
+
+! CHECK-LABEL: func.func @_QQmain() {
+! CHECK: %[[T:.*]] = fir.alloca !fir.type<_QMderived_type_finalizationTt1{a:i32}> {bindc_name = "t", uniq_name = "_QFEt"}
+! CHECK: %[[EMBOX:.*]] = fir.embox %[[T]] : (!fir.ref<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>) -> !fir.box<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>
+! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[EMBOX]] : (!fir.box<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>) -> !fir.box<none>
+! CHECK: %{{.*}} = fir.call @_FortranADestroy(%[[BOX_NONE]]) {{.*}} : (!fir.box<none>) -> none
+! CHECK: return
