@@ -153,7 +153,7 @@ protected:
                            SmallVectorImpl<OpFoldResult> &) final;
     void getCanonicalizationPatterns(RewritePatternSet &, MLIRContext *) final;
     bool hasTrait(TypeID) final;
-    virtual OperationName::ParseAssemblyFn getParseAssemblyFn() final;
+    OperationName::ParseAssemblyFn getParseAssemblyFn() final;
     void populateDefaultAttrs(const OperationName &, NamedAttrList &) final;
     void printAssembly(Operation *, OpAsmPrinter &, StringRef) final;
     LogicalResult verifyInvariants(Operation *) final;
