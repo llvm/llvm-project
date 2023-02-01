@@ -14,12 +14,12 @@
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/CustomIntrinsicCall.h"
-#include "flang/Lower/IntrinsicCall.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/LowLevelIntrinsics.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
@@ -1074,11 +1074,11 @@ genUserCall(PreparedActualArguments &loweredActuals,
 
 /// Lower calls to intrinsic procedures with actual arguments that have been
 /// pre-lowered but have not yet been prepared according to the interface.
-static std::optional<hlfir::EntityWithAttributes> genIntrinsicRefCore(
-    PreparedActualArguments &loweredActuals,
-    const Fortran::evaluate::SpecificIntrinsic &intrinsic,
-    const Fortran::lower::IntrinsicArgumentLoweringRules *argLowering,
-    CallContext &callContext) {
+static std::optional<hlfir::EntityWithAttributes>
+genIntrinsicRefCore(PreparedActualArguments &loweredActuals,
+                    const Fortran::evaluate::SpecificIntrinsic &intrinsic,
+                    const fir::IntrinsicArgumentLoweringRules *argLowering,
+                    CallContext &callContext) {
   llvm::SmallVector<fir::ExtendedValue> operands;
   auto &stmtCtx = callContext.stmtCtx;
   auto &converter = callContext.converter;
@@ -1086,7 +1086,7 @@ static std::optional<hlfir::EntityWithAttributes> genIntrinsicRefCore(
   mlir::Location loc = callContext.loc;
   for (auto arg : llvm::enumerate(loweredActuals)) {
     if (!arg.value()) {
-      operands.emplace_back(Fortran::lower::getAbsentIntrinsicArgument());
+      operands.emplace_back(fir::getAbsentIntrinsicArgument());
       continue;
     }
     if (arg.value()->handleDynamicOptional())
@@ -1099,22 +1099,22 @@ static std::optional<hlfir::EntityWithAttributes> genIntrinsicRefCore(
       continue;
     }
     // Ad-hoc argument lowering handling.
-    Fortran::lower::ArgLoweringRule argRules =
-        Fortran::lower::lowerIntrinsicArgumentAs(*argLowering, arg.index());
+    fir::ArgLoweringRule argRules =
+        fir::lowerIntrinsicArgumentAs(*argLowering, arg.index());
     switch (argRules.lowerAs) {
-    case Fortran::lower::LowerIntrinsicArgAs::Value:
+    case fir::LowerIntrinsicArgAs::Value:
       operands.emplace_back(
           Fortran::lower::convertToValue(loc, converter, actual, stmtCtx));
       continue;
-    case Fortran::lower::LowerIntrinsicArgAs::Addr:
+    case fir::LowerIntrinsicArgAs::Addr:
       operands.emplace_back(
           Fortran::lower::convertToAddress(loc, converter, actual, stmtCtx));
       continue;
-    case Fortran::lower::LowerIntrinsicArgAs::Box:
+    case fir::LowerIntrinsicArgAs::Box:
       operands.emplace_back(
           Fortran::lower::convertToBox(loc, converter, actual, stmtCtx));
       continue;
-    case Fortran::lower::LowerIntrinsicArgAs::Inquired:
+    case fir::LowerIntrinsicArgAs::Inquired:
       // Place hlfir.expr in memory, and unbox fir.boxchar. Other entities
       // are translated to fir::ExtendedValue without transformation (notably,
       // pointers/allocatable are not dereferenced).
@@ -1134,9 +1134,9 @@ static std::optional<hlfir::EntityWithAttributes> genIntrinsicRefCore(
   if (callContext.resultType)
     scalarResultType = hlfir::getFortranElementType(*callContext.resultType);
   // Let the intrinsic library lower the intrinsic procedure call.
-  auto [resultExv, mustBeFreed] = Fortran::lower::genIntrinsicCall(
-      callContext.getBuilder(), loc, intrinsic.name, scalarResultType,
-      operands);
+  auto [resultExv, mustBeFreed] =
+      genIntrinsicCall(callContext.getBuilder(), loc, intrinsic.name,
+                       scalarResultType, operands);
   if (!fir::getBase(resultExv))
     return std::nullopt;
   hlfir::EntityWithAttributes resultEntity = extendedValueToHlfirEntity(
@@ -1326,8 +1326,7 @@ class ElementalIntrinsicCallBuilder
 public:
   ElementalIntrinsicCallBuilder(
       const Fortran::evaluate::SpecificIntrinsic &intrinsic,
-      const Fortran::lower::IntrinsicArgumentLoweringRules *argLowering,
-      bool isFunction)
+      const fir::IntrinsicArgumentLoweringRules *argLowering, bool isFunction)
       : intrinsic{intrinsic}, argLowering{argLowering}, isFunction{isFunction} {
   }
   std::optional<hlfir::Entity>
@@ -1360,7 +1359,7 @@ public:
 
 private:
   const Fortran::evaluate::SpecificIntrinsic &intrinsic;
-  const Fortran::lower::IntrinsicArgumentLoweringRules *argLowering;
+  const fir::IntrinsicArgumentLoweringRules *argLowering;
   const bool isFunction;
 };
 } // namespace
@@ -1408,8 +1407,8 @@ genIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic &intrinsic,
     TODO(loc, "special cases of intrinsic with optional arguments");
 
   PreparedActualArguments loweredActuals;
-  const Fortran::lower::IntrinsicArgumentLoweringRules *argLowering =
-      Fortran::lower::getIntrinsicArgumentLowering(intrinsic.name);
+  const fir::IntrinsicArgumentLoweringRules *argLowering =
+      fir::getIntrinsicArgumentLowering(intrinsic.name);
   for (const auto &arg : llvm::enumerate(callContext.procRef.arguments())) {
     auto *expr =
         Fortran::evaluate::UnwrapExpr<Fortran::lower::SomeExpr>(arg.value());
@@ -1423,8 +1422,8 @@ genIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic &intrinsic,
         callContext.stmtCtx);
     std::optional<mlir::Value> isPresent;
     if (argLowering) {
-      Fortran::lower::ArgLoweringRule argRules =
-          Fortran::lower::lowerIntrinsicArgumentAs(*argLowering, arg.index());
+      fir::ArgLoweringRule argRules =
+          fir::lowerIntrinsicArgumentAs(*argLowering, arg.index());
       if (argRules.handleDynamicOptional)
         isPresent =
             genIsPresentIfArgMaybeAbsent(loc, loweredActual, *expr, callContext,

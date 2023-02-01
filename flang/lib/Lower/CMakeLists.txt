@@ -15,7 +15,6 @@ add_flang_library(FortranLower
   CustomIntrinsicCall.cpp
   DumpEvaluateExpr.cpp
   HostAssociations.cpp
-  IntrinsicCall.cpp
   IO.cpp
   IterationSpace.cpp
   LoweringOptions.cpp
