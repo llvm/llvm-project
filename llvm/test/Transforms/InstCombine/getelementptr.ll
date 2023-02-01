@@ -1384,7 +1384,7 @@ define ptr @const_gep_global_ew_larger() {
 
 define ptr @const_gep_0xi8_global() {
 ; CHECK-LABEL: @const_gep_0xi8_global(
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([0 x i8], ptr @g_0xi8_e, i64 0, i64 10)
+; CHECK-NEXT:    ret ptr getelementptr ([0 x i8], ptr @g_0xi8_e, i64 0, i64 10)
 ;
   ret ptr getelementptr ([0 x i8], ptr @g_0xi8_e, i64 0, i64 10)
 }
