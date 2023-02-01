@@ -51,6 +51,38 @@ static bool setFusedOpOperandLimit(OpOperand *fusedOperand) {
 }
 
 namespace {
+
+/// Pattern to test fusion of producer with consumer, even if producer has
+/// multiple uses.
+struct TestMultiUseProducerFusion : public OpRewritePattern<linalg::GenericOp> {
+  using OpRewritePattern<linalg::GenericOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(linalg::GenericOp genericOp,
+                                PatternRewriter &rewriter) const override {
+    OpOperand *fusableOperand = nullptr;
+    for (OpOperand &operand : genericOp->getOpOperands()) {
+      if (linalg::areElementwiseOpsFusable(&operand)) {
+        fusableOperand = &operand;
+        break;
+      }
+    }
+    if (!fusableOperand) {
+      return rewriter.notifyMatchFailure(genericOp, "no fusable operand found");
+    }
+    std::optional<linalg::ElementwiseOpFusionResult> fusionResult =
+        linalg::fuseElementwiseOps(rewriter, fusableOperand);
+    if (!fusionResult)
+      rewriter.notifyMatchFailure(genericOp, "fusion failed");
+    for (auto [origValue, replacement] : fusionResult->replacements) {
+      rewriter.replaceUseIf(origValue, replacement, [&](OpOperand &use) {
+        return use.getOwner() != genericOp.getOperation();
+      });
+    }
+    rewriter.eraseOp(genericOp);
+    return success();
+  }
+};
+
 struct TestLinalgElementwiseFusion
     : public PassWrapper<TestLinalgElementwiseFusion,
                          OperationPass<func::FuncOp>> {
@@ -105,6 +137,12 @@ struct TestLinalgElementwiseFusion
                      "fusion patterns that "
                      "collapse the iteration space of the consumer"),
       llvm::cl::init(false)};
+
+  Option<bool> fuseMultiUseProducer{
+      *this, "fuse-multiuse-producer",
+      llvm::cl::desc("Test fusion of producer ops with multiple uses"),
+      llvm::cl::init(false)};
+
   ListOption<int64_t> collapseDimensions{
       *this, "collapse-dimensions-control",
       llvm::cl::desc("Test controlling dimension collapse pattern")};
@@ -117,8 +155,9 @@ struct TestLinalgElementwiseFusion
       RewritePatternSet fusionPatterns(context);
       auto controlFn = [](OpOperand *operand) { return true; };
       linalg::populateElementwiseOpsFusionPatterns(fusionPatterns, controlFn);
-      (void)applyPatternsAndFoldGreedily(funcOp.getBody(),
-                                         std::move(fusionPatterns));
+      if (failed(applyPatternsAndFoldGreedily(funcOp.getBody(),
+                                              std::move(fusionPatterns))))
+        return signalPassFailure();
       return;
     }
 
@@ -127,8 +166,9 @@ struct TestLinalgElementwiseFusion
       linalg::populateElementwiseOpsFusionPatterns(fusionPatterns,
                                                    setFusedOpOperandLimit<4>);
 
-      (void)applyPatternsAndFoldGreedily(funcOp.getBody(),
-                                         std::move(fusionPatterns));
+      if (failed(applyPatternsAndFoldGreedily(funcOp.getBody(),
+                                              std::move(fusionPatterns))))
+        return signalPassFailure();
       return;
     }
 
@@ -172,8 +212,9 @@ struct TestLinalgElementwiseFusion
 
       linalg::populateFoldReshapeOpsByExpansionPatterns(fusionPatterns,
                                                         controlReshapeFusionFn);
-      (void)applyPatternsAndFoldGreedily(funcOp.getBody(),
-                                         std::move(fusionPatterns));
+      if (failed(applyPatternsAndFoldGreedily(funcOp.getBody(),
+                                              std::move(fusionPatterns))))
+        return signalPassFailure();
       return;
     }
 
@@ -181,7 +222,10 @@ struct TestLinalgElementwiseFusion
       RewritePatternSet patterns(context);
       linalg::populateFoldReshapeOpsByCollapsingPatterns(
           patterns, [](OpOperand * /*fusedOperand */) { return true; });
-      (void)applyPatternsAndFoldGreedily(funcOp.getBody(), std::move(patterns));
+      if (failed(applyPatternsAndFoldGreedily(funcOp.getBody(),
+                                              std::move(patterns))))
+        return signalPassFailure();
+      return;
     }
 
     if (fuseWithReshapeByCollapsingWithControlFn) {
@@ -195,7 +239,19 @@ struct TestLinalgElementwiseFusion
         return true;
       };
       linalg::populateFoldReshapeOpsByCollapsingPatterns(patterns, controlFn);
-      (void)applyPatternsAndFoldGreedily(funcOp.getBody(), std::move(patterns));
+      if (failed(applyPatternsAndFoldGreedily(funcOp.getBody(),
+                                              std::move(patterns))))
+        return signalPassFailure();
+      return;
+    }
+
+    if (fuseMultiUseProducer) {
+      RewritePatternSet patterns(context);
+      patterns.insert<TestMultiUseProducerFusion>(context);
+      if (failed(applyPatternsAndFoldGreedily(funcOp.getBody(),
+                                              std::move(patterns))))
+        return signalPassFailure();
+      return;
     }
 
     if (!collapseDimensions.empty()) {
@@ -209,7 +265,10 @@ struct TestLinalgElementwiseFusion
           };
       RewritePatternSet patterns(context);
       linalg::populateCollapseDimensions(patterns, collapseFn);
-      (void)applyPatternsAndFoldGreedily(funcOp.getBody(), std::move(patterns));
+      if (failed(applyPatternsAndFoldGreedily(funcOp.getBody(),
+                                              std::move(patterns))))
+        return signalPassFailure();
+      return;
     }
   }
 };
