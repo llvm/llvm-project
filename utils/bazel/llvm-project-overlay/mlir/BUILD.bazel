@@ -8772,6 +8772,7 @@ cc_library(
         ":Pass",
         ":SCFDialect",
         ":Support",
+        ":TensorDialect",
         ":Transforms",
         ":VectorDialect",
         ":VectorTransforms",
