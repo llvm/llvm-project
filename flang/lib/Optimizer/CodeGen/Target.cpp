@@ -465,6 +465,33 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
 };
 } // namespace
 
+//===----------------------------------------------------------------------===//
+// AMDGPU linux target specifics.
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct TargetAMDGPU : public GenericTarget<TargetAMDGPU> {
+  using GenericTarget::GenericTarget;
+
+  // Default size (in bits) of the index type for strings.
+  static constexpr int defaultWidth = 64;
+
+  CodeGenSpecifics::Marshalling
+  complexArgumentType(mlir::Location loc, mlir::Type eleTy) const override {
+    CodeGenSpecifics::Marshalling marshal;
+    TODO(loc, "handle complex argument types");
+    return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  complexReturnType(mlir::Location loc, mlir::Type eleTy) const override {
+    CodeGenSpecifics::Marshalling marshal;
+    TODO(loc, "handle complex return types");
+    return marshal;
+  }
+};
+} // namespace
+
 // Instantiate the overloaded target instance based on the triple value.
 // TODO: Add other targets to this file as needed.
 std::unique_ptr<fir::CodeGenSpecifics>
@@ -497,6 +524,9 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
   case llvm::Triple::ArchType::riscv64:
     return std::make_unique<TargetRISCV64>(ctx, std::move(trp),
                                            std::move(kindMap));
+  case llvm::Triple::ArchType::amdgcn:
+    return std::make_unique<TargetAMDGPU>(ctx, std::move(trp),
+                                          std::move(kindMap));
   }
   TODO(mlir::UnknownLoc::get(ctx), "target not implemented");
 }
