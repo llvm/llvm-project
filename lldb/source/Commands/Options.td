@@ -387,6 +387,12 @@ let Command = "expression" in {
     Arg<"Boolean">,
     Desc<"Controls whether the expression can fall back to being JITted if it's "
     "not supported by the interpreter (defaults to true).">;
+  // BEGIN SWIFT
+  def bind_generic_types : Option<"bind-generic-types", "\\x01">,
+    EnumArg<"Value", "BindGenTypeParamValue()">, Desc<"Controls whether any "
+    "generic types in the current context should be bound to their dynamic "
+    "type before evaluating. Defaults to auto.">;
+  // END SWIFT
 }
 
 let Command = "frame diag" in {

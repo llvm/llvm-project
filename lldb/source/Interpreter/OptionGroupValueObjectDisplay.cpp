@@ -59,11 +59,6 @@ static const OptionDefinition g_option_table[] = {
      OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeCount,
      "Treat the result of the expression as if its type is an array of this "
      "many values."},
-    {LLDB_OPT_SET_1, false, "bind-generic-types", /* no short option */ 1,
-     OptionParser::eRequiredArgument, nullptr, GetBindGenericTypesOptions(), 0,
-     eArgTypeNone, "Controls whether any generic types in the current "
-       "context should be bound to their dynamic concrete types before "
-       "evaluating. Defaults to auto."}
 };
 
 llvm::ArrayRef<OptionDefinition>
@@ -155,14 +150,6 @@ Status OptionGroupValueObjectDisplay::SetOptionValue(
                                      option_arg.str().c_str());
     break;
 
-  case 1:
-    int32_t result;
-    result = OptionArgParser::ToOptionEnum(option_arg, GetBindGenericTypesOptions(),
-                                           0, error);
-    if (error.Success())
-      bind_generic_types = (lldb::BindGenericTypes)result;
-    break;
-
   default:
     llvm_unreachable("Unimplemented option");
   }
@@ -186,7 +173,6 @@ void OptionGroupValueObjectDisplay::OptionParsingStarting(
   be_raw = false;
   ignore_cap = false;
   run_validator = false;
-  bind_generic_types = lldb::eBindAuto;
 
   TargetSP target_sp =
       execution_context ? execution_context->GetTargetSP() : TargetSP();
