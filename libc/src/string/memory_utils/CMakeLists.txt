@@ -66,3 +66,9 @@ add_header_library(
   HDRS
     strcmp_implementations.h
 )
+
+add_header_library(
+  strstr_implementation
+  HDRS
+    strstr_implementations.h
+)

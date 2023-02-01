@@ -67,7 +67,7 @@ static __isl_give isl_schedule_tree *isl_schedule_tree_alloc(isl_ctx *ctx,
 
 /* Return a fresh copy of "tree".
  */
-__isl_take isl_schedule_tree *isl_schedule_tree_dup(
+__isl_give isl_schedule_tree *isl_schedule_tree_dup(
 	__isl_keep isl_schedule_tree *tree)
 {
 	isl_ctx *ctx;

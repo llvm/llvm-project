@@ -15,8 +15,8 @@
 #define MLIR_TARGET_LLVMIR_MODULETRANSLATION_H
 
 #include "mlir/IR/Operation.h"
-#include "mlir/IR/Value.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
@@ -273,7 +273,7 @@ public:
     ModuleTranslation &moduleTranslation;
   };
 
-  SymbolTableCollection& symbolTable() { return symbolTableCollection; }
+  SymbolTableCollection &symbolTable() { return symbolTableCollection; }
 
 private:
   ModuleTranslation(Operation *module,
@@ -305,6 +305,9 @@ private:
 
   /// Translates dialect attributes attached to the given operation.
   LogicalResult convertDialectAttributes(Operation *op);
+
+  /// Translates parameter attributes and adds them to the returned AttrBuilder.
+  llvm::AttrBuilder convertParameterAttrs(DictionaryAttr paramAttrs);
 
   /// Original and translated module.
   Operation *mlirModule;

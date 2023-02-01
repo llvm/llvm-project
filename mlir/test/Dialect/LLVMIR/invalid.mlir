@@ -33,20 +33,6 @@ llvm.func @dtor()
 // expected-error@+1{{'dtor' does not have a definition}}
 llvm.mlir.global_dtors {dtors = [@dtor], priorities = [0 : i32]}
 
-// -----
-
-// expected-error@+1{{expected llvm.noalias argument attribute to be a unit attribute}}
-func.func @invalid_noalias(%arg0: i32 {llvm.noalias = 3}) {
-  "llvm.return"() : () -> ()
-}
-
-// -----
-
-// expected-error@+1{{llvm.align argument attribute of non integer type}}
-func.func @invalid_align(%arg0: i32 {llvm.align = "foo"}) {
-  "llvm.return"() : () -> ()
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 
 // Check that parser errors are properly produced and do not crash the compiler.

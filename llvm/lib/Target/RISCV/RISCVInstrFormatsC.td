@@ -157,3 +157,14 @@ class RVInst16CJ<bits<3> funct3, bits<2> opcode, dag outs, dag ins,
   let Inst{2} = offset{4};
   let Inst{1-0} = opcode;
 }
+
+class RVInst16CSZN<bits<6> funct6, bits<5> funct5, bits<2> opcode, dag outs,
+                   dag ins, string opcodestr, string argstr>
+    : RVInst16<outs, ins, opcodestr, argstr, [], InstFormatCSZN>{
+  bits<3> rd;
+
+  let Inst{15-10} = funct6;
+  let Inst{9-7} = rd;
+  let Inst{6-2} = funct5;
+  let Inst{1-0} = opcode;
+}

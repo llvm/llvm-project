@@ -17,6 +17,7 @@
 #include "src/__support/FPUtil/PlatformDefs.h"
 #include "src/__support/UInt128.h"
 #include "src/__support/builtin_wrappers.h"
+#include "src/__support/common.h"
 
 namespace __llvm_libc {
 namespace fputil {
@@ -44,12 +45,12 @@ LIBC_INLINE void normalize(int &exponent,
 
 #ifdef LONG_DOUBLE_IS_DOUBLE
 template <>
-inline void normalize<long double>(int &exponent, uint64_t &mantissa) {
+LIBC_INLINE void normalize<long double>(int &exponent, uint64_t &mantissa) {
   normalize<double>(exponent, mantissa);
 }
 #elif !defined(SPECIAL_X86_LONG_DOUBLE)
 template <>
-inline void normalize<long double>(int &exponent, UInt128 &mantissa) {
+LIBC_INLINE void normalize<long double>(int &exponent, UInt128 &mantissa) {
   const uint64_t hi_bits = static_cast<uint64_t>(mantissa >> 64);
   const int shift = hi_bits
                         ? (unsafe_clz(hi_bits) - 15)

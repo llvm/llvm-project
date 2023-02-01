@@ -12,7 +12,7 @@ func.func @contraction_dot(%A: memref<1584xf32>, %B: memref<1584xf32>, %C: memre
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.dot"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.dot"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns }
 }
@@ -31,7 +31,7 @@ func.func @contraction_matvec(%A: memref<1584x1584xf32>, %B: memref<1584xf32>, %
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matvec"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.matvec"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns }
 }
@@ -49,7 +49,7 @@ func.func @contraction_matmul(%A: memref<1584x1584xf32>, %B: memref<1584x1584xf3
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns }
 }
@@ -68,7 +68,7 @@ func.func @contraction_batch_matmul(%A: memref<1584x1584x1584xf32>, %B: memref<1
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.batch_matmul"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.batch_matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns }
 }
@@ -108,7 +108,7 @@ func.func @vectorization_test(%A: memref<8x16xf32>, %B: memref<16x32xf32>,
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
 }
@@ -148,7 +148,7 @@ func.func @generic_output_transpose(%A: memref<8x16xf32>, %B: memref<16x32xf32>,
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
 }
@@ -175,7 +175,7 @@ func.func @generic_interchanged_transpose(%arg0: tensor<12x128x32xf32>) -> tenso
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
 }
@@ -215,7 +215,7 @@ func.func @vectorization_test_integer(%A: memref<8x16xi32>, %B: memref<16x32xi32
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
 }
@@ -235,7 +235,7 @@ func.func @vectorization_test_2(%A: memref<8x16xf32>, %B: memref<16x32xf32>,
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns }
 }
@@ -259,7 +259,7 @@ func.func @test_vectorize_scalar_input(%A : memref<8x16xf32>, %arg0 : f32) {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1
 }
@@ -283,7 +283,7 @@ func.func @test_do_not_vectorize_unsupported_element_types(%A : memref<8x16xcomp
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1
 }
@@ -300,7 +300,7 @@ func.func @test_vectorize_fill(%A : memref<8x16xf32>, %arg0 : f32) {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.fill"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1
 }
@@ -318,7 +318,7 @@ func.func @test_vectorize_fill_scalar(%A : memref<f32>, %arg0 : f32) {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.fill"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1
 }
@@ -335,7 +335,7 @@ func.func @test_vectorize_copy(%A : memref<8x16xf32>, %B : memref<8x16xf32>) {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["memref.copy"]} in %arg1
+  %0 = transform.structured.match ops{["memref.copy"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1
 }
@@ -355,7 +355,7 @@ func.func @test_vectorize_copy_scalar(%A : memref<f32>, %B : memref<f32>) {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["memref.copy"]} in %arg1
+  %0 = transform.structured.match ops{["memref.copy"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1
 }
@@ -371,7 +371,7 @@ func.func @test_vectorize_copy_complex(%A : memref<8x16xcomplex<f32>>, %B : memr
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["memref.copy"]} in %arg1
+  %0 = transform.structured.match ops{["memref.copy"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1
 }
@@ -399,7 +399,7 @@ func.func @test_vectorize_trailing_index(%arg0: memref<1x2x4x8xindex>) {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1
 }
@@ -428,7 +428,7 @@ func.func @test_vectorize_inner_index(%arg0: memref<1x2x4x8xindex>) {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1
 }
@@ -513,7 +513,7 @@ func.func @generic_vectorize(%arg0: memref<4x256xf32>,
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1  { disable_transfer_permutation_map_lowering_patterns }
 }
@@ -604,7 +604,7 @@ func.func @generic_vectorize_tensor(%arg0: tensor<4x256xf32>,
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1 { disable_transfer_permutation_map_lowering_patterns }
 }
@@ -648,7 +648,7 @@ func.func @generic_vectorize_broadcast_transpose(
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1  { disable_transfer_permutation_map_lowering_patterns }
 }
@@ -691,7 +691,7 @@ func.func @vectorization_transpose(%A: memref<14x7xf32>, %B: memref<16x14xf32>,
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1  { disable_transfer_permutation_map_lowering_patterns }
 }
@@ -723,7 +723,7 @@ func.func @matmul_tensors(
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
 }
@@ -752,7 +752,7 @@ func.func @pad_static(%arg0: tensor<2x?x2xf32>, %pad_value: f32) -> tensor<2x3x4
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
+  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1 { vectorize_padding }
 }
@@ -781,7 +781,7 @@ func.func @pad_static_source(%arg0: tensor<2x5x2xf32>, %pad_value: f32) -> tenso
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
+  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1  { vectorize_padding }
 }
@@ -818,7 +818,7 @@ func.func @pad_static_dynamic(%arg0: tensor<1x2x2x?xf32>, %low: index, %high: in
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
+  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1  { vectorize_padding }
 }
@@ -838,7 +838,7 @@ func.func @pad_static_complex(%arg0: tensor<2x5x2xcomplex<f32>>, %pad_value: com
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
+  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1  { vectorize_padding }
 }
@@ -868,7 +868,7 @@ func.func @pad_and_transfer_read(%arg0: tensor<5x6xf32>) -> vector<7x9xf32> {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
+  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1 { vectorize_padding }
 }
@@ -901,7 +901,7 @@ func.func @pad_and_transfer_write_static(
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %3 = transform.structured.match ops{["tensor.pad"]} in %arg1
+  %3 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
   %5 = transform.structured.vectorize %4  { vectorize_padding }
 }
@@ -938,7 +938,7 @@ func.func @pad_and_transfer_write_dynamic_static(
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %3 = transform.structured.match ops{["tensor.pad"]} in %arg1
+  %3 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
   %5 = transform.structured.vectorize %4 { vectorize_padding }
 }
@@ -972,7 +972,7 @@ func.func @pad_and_insert_slice_source(
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %3 = transform.structured.match ops{["tensor.pad"]} in %arg1
+  %3 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
   %5 = transform.structured.vectorize %4  { vectorize_padding }
 }
@@ -1000,7 +1000,7 @@ func.func @pad_and_insert_slice_dest(
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %3 = transform.structured.match ops{["tensor.pad"]} in %arg1
+  %3 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
   %5 = transform.structured.vectorize %4
 }
@@ -1037,7 +1037,7 @@ func.func @pad_tensor_non_const_pad_value(%arg0: tensor<5x6xf32>) -> tensor<12x1
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %3 = transform.structured.match ops{["tensor.pad"]} in %arg1
+  %3 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
   %5 = transform.structured.vectorize %4  { vectorize_padding }
 }
@@ -1072,7 +1072,7 @@ func.func @sum_exp(%input: tensor<4x16x8xf32>, %output: tensor<4x16xf32>)
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %3 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %3 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
   %5 = transform.structured.vectorize %4
 }
@@ -1117,7 +1117,7 @@ func.func @sum_exp_2(%input: tensor<3x2xf32>, %input_2: tensor<5x4xf32>, %output
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %3 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %3 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
   %5 = transform.structured.vectorize %4  { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
 }
@@ -1147,7 +1147,7 @@ func.func @red_max_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %3 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %3 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
   %5 = transform.structured.vectorize %4 { vectorize_padding }
 }
@@ -1178,7 +1178,7 @@ func.func @red_min_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %3 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %3 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
   %5 = transform.structured.vectorize %4
 }
@@ -1208,7 +1208,7 @@ func.func @red_mul_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %3 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %3 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
   %5 = transform.structured.vectorize %4
 }
@@ -1238,7 +1238,7 @@ func.func @red_or_2d(%arg0: tensor<4x4xi1>) -> tensor<4xi1> {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %3 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %3 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
   %5 = transform.structured.vectorize %4
 }
@@ -1268,7 +1268,7 @@ func.func @red_and_2d(%arg0: tensor<4x4xi1>) -> tensor<4xi1> {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %3 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %3 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
   %5 = transform.structured.vectorize %4
 }
@@ -1298,7 +1298,7 @@ func.func @red_xor_2d(%arg0: tensor<4x4xi1>) -> tensor<4xi1> {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %3 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %3 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
   %5 = transform.structured.vectorize %4
 }
@@ -1332,7 +1332,7 @@ func.func @explicit_broadcast(%arg0: tensor<4x4xf32>, %arg1: tensor<4x1xf32>) ->
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %3 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %3 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
   %5 = transform.structured.vectorize %4
 }
@@ -1370,11 +1370,11 @@ func.func @fused_broadcast_red_2d(%arg0: tensor<4x4xf32>, %arg1: tensor<4x1xf32>
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.fill"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1
 
-  %3 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %3 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
   %5 = transform.structured.vectorize %4
 }
@@ -1417,7 +1417,7 @@ func.func @reduce_1d(%arg0: tensor<32xf32>) -> tensor<f32> {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1
 }
@@ -1448,7 +1448,7 @@ func.func @not_projected_permutation(%arg0: tensor<8x8xf32>) -> tensor<6x6x3x3xf
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1
 }
@@ -1487,7 +1487,7 @@ func.func @mixed_parallel_reduced_results(%arg0 : tensor<2x4x8xf32>,
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
 }
@@ -1523,7 +1523,7 @@ func.func @vectorize_1d_tensor_extract(%arg0: tensor<3xf32>, %arg1: tensor<4x3xi
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1
 }
@@ -1560,7 +1560,7 @@ func.func @vectorize_nd_tensor_extract_constant_idx(%arg0: tensor<3x3xf32>, %arg
 
 transform.sequence failures(propagate) {
  ^bb1(%arg1: !pdl.operation):
-   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
    %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
    %2 = transform.structured.vectorize %1 { vectorize_nd_extract }
  }
@@ -1596,7 +1596,7 @@ func.func @vectorize_nd_tensor_extract_idx_from_iteration_index(%arg0: tensor<3x
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1 { vectorize_nd_extract }
 }
@@ -1644,7 +1644,7 @@ func.func @vectorize_nd_tensor_extract_index_from_tensor(%arg0: tensor<3x3xf32>,
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1 { vectorize_nd_extract }
 }
@@ -1668,7 +1668,7 @@ func.func @vectorize_map(%arg0: memref<64xf32>,
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.map"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.map"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1
 }
@@ -1687,7 +1687,7 @@ func.func @vectorize_transpose(%arg0: memref<16x32x64xf32>,
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.transpose"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.transpose"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1
 }
@@ -1710,7 +1710,7 @@ func.func @vectorize_reduce(%arg0: memref<16x32x64xf32>,
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.reduce"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.reduce"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1
 }
@@ -1745,7 +1745,7 @@ func.func @vectorize_dynamic_identity(%arg0: tensor<?xf32>,
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   transform.structured.masked_vectorize %0 vector_sizes [4]
 }
 
@@ -1779,7 +1779,7 @@ func.func @vectorize_dynamic_1d_broadcast(%arg0: tensor<?xf32>,
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   transform.structured.masked_vectorize %0 vector_sizes [4]
 }
 
@@ -1817,7 +1817,7 @@ func.func @vectorize_dynamic_2d_transpose(%arg0: tensor<?x?xf32>,
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   transform.structured.masked_vectorize %0 vector_sizes [4, 8]
 }
 
@@ -1854,7 +1854,7 @@ func.func @vectorize_dynamic_generic_2d_broadcast(%arg0: tensor<?x?xf32>,
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   transform.structured.masked_vectorize %0 vector_sizes [4, 8]
 }
 
@@ -1876,7 +1876,7 @@ func.func @vectorize_dynamic_reduction(%arg0: tensor<?x?xf32>,
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   transform.structured.masked_vectorize %0 vector_sizes [4, 8]
 }
 
@@ -1914,7 +1914,7 @@ func.func @vectorize_dynamic_transpose_reduction(%arg0: tensor<?x?x?xf32>,
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   transform.structured.masked_vectorize %0 vector_sizes [4, 8, 16]
 }
 
@@ -1962,7 +1962,7 @@ func.func @not_vectorizable(%arg0: tensor<1x?xf32>, %arg1: index, %arg2: index, 
 }
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
-  %0 = transform.structured.match ops{["func.func"]} in %arg0
+  %0 = transform.structured.match ops{["func.func"]} in %arg0 : (!pdl.operation) -> !pdl.operation
   %1 = transform.structured.vectorize %0
 }
 
@@ -1996,7 +1996,7 @@ func.func @wrong_reduction_detection(%input: tensor<120x64xf32>) -> tensor<120x6
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1
 }

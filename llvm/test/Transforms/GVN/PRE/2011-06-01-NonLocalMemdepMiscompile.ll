@@ -57,7 +57,7 @@ bb15:
 ; CHECK-NEXT:    br label %bb15
 
 ; CHECK-LABEL: bb15:
-; CHECK:         %tmp17 = phi i8 [ %tmp8, %bb15split ], [ %tmp17.pre, %bb1.bb15_crit_edge ]
+; CHECK:         %tmp17 = phi i8 [ %tmp12.pre3, %bb15split ], [ %tmp17.pre, %bb1.bb15_crit_edge ]
 
 bb19:                                             ; preds = %bb15
   ret i1 %tmp18

@@ -260,13 +260,13 @@ class CategoriesDataFormatterTestCase(TestBase):
             "type summary add Shape -w BaseCategory --summary-string \"AShape\"")
         self.runCmd("type category enable BaseCategory")
 
-        self.expect("print (Shape*)&c1",
+        self.expect("expression (Shape*)&c1",
                     substrs=['AShape'])
-        self.expect("print (Shape*)&r1",
+        self.expect("expression (Shape*)&r1",
                     substrs=['AShape'])
-        self.expect("print (Shape*)c_ptr",
+        self.expect("expression (Shape*)c_ptr",
                     substrs=['AShape'])
-        self.expect("print (Shape*)r_ptr",
+        self.expect("expression (Shape*)r_ptr",
                     substrs=['AShape'])
 
         self.runCmd(

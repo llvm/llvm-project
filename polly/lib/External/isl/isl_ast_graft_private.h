@@ -6,6 +6,7 @@
 #include <isl/set.h>
 #include <isl/list.h>
 #include <isl/printer.h>
+#include <isl/stream.h>
 
 struct isl_ast_graft;
 typedef struct isl_ast_graft isl_ast_graft;
@@ -101,5 +102,7 @@ __isl_give isl_ast_graft_list *isl_ast_graft_list_gist_guards(
 
 __isl_give isl_printer *isl_printer_print_ast_graft(__isl_take isl_printer *p,
 	__isl_keep isl_ast_graft *graft);
+
+__isl_give isl_ast_graft_list *isl_stream_read_ast_graft_list(isl_stream *s);
 
 #endif

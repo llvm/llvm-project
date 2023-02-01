@@ -260,13 +260,13 @@ def MatchOp : Op<Transform_Dialect, "structured.match",
     it is a navigation op.
   }];
 
-  let arguments = (ins PDL_Operation:$target,
+  let arguments = (ins TransformHandleTypeInterface:$target,
                        OptionalAttr<StrArrayAttr>:$ops,
                        OptionalAttr<MatchInterfaceEnum>:$interface,
                        OptionalAttr<DictionaryAttr>:$op_attrs,
                        OptionalAttr<TypeAttr>:$filter_result_type);
   // TODO: variadic results when needed.
-  let results = (outs PDL_Operation:$results);
+  let results = (outs TransformHandleTypeInterface:$results);
 
   let builders = [
     OpBuilder<(ins "Value":$target, "ArrayRef<StringRef>":$opNames)>
@@ -278,6 +278,7 @@ def MatchOp : Op<Transform_Dialect, "structured.match",
     (`attributes` $op_attrs^)?
     (`filter_result_type` `=` $filter_result_type^)?
     `in` $target attr-dict
+    `:` functional-type($target, results)
   }];
 }
 

@@ -38,6 +38,18 @@
 namespace mlir {
 namespace sparse_tensor {
 
+/// Convenience method to abbreviate casting `getType()`.
+template <typename T>
+inline RankedTensorType getRankedTensorType(T t) {
+  return t.getType().template cast<RankedTensorType>();
+}
+
+/// Convenience method to abbreviate casting `getType()`.
+template <typename T>
+inline MemRefType getMemRefType(T t) {
+  return t.getType().template cast<MemRefType>();
+}
+
 /// Convenience method to get a sparse encoding attribute from a type.
 /// Returns null-attribute for any type without an encoding.
 SparseTensorEncodingAttr getSparseTensorEncoding(Type type);

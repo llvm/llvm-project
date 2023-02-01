@@ -635,7 +635,7 @@ class getMUBUFAtomicInsDA<RegisterClass vdataClass, bit vdata_in,
   dag MainInputs = (ins SReg_128:$srsrc, SCSrc_b32:$soffset, offset:$offset);
   dag CPol = !if(vdata_in, (ins CPol_GLC1:$cpol), (ins CPol_0:$cpol));
 
-  dag ret = !con(Data, !con(MainInputs, CPol));
+  dag ret = !con(Data, MainInputs, CPol);
 }
 
 class getMUBUFAtomicIns<int addrKind,
@@ -724,23 +724,15 @@ multiclass MUBUF_Pseudo_Atomics_NO_RTN <string opName,
                                         RegisterClass vdataClass,
                                         ValueType vdataType,
                                         bit isFP = isFloatType<vdataType>.ret> {
-  let FPAtomic = isFP in
-  def _OFFSET : MUBUF_AtomicNoRet_Pseudo <opName, BUFAddrKind.Offset, vdataClass>,
-                MUBUFAddr64Table <0, NAME>;
-
-  let FPAtomic = isFP in
-  def _ADDR64 : MUBUF_AtomicNoRet_Pseudo <opName, BUFAddrKind.Addr64, vdataClass>,
-                MUBUFAddr64Table <1, NAME>;
-
-  let FPAtomic = isFP in
-  def _OFFEN  : MUBUF_AtomicNoRet_Pseudo <opName, BUFAddrKind.OffEn,  vdataClass>;
-
-  let FPAtomic = isFP in
-
-  def _IDXEN  : MUBUF_AtomicNoRet_Pseudo <opName, BUFAddrKind.IdxEn,  vdataClass>;
-
-  let FPAtomic = isFP in
-  def _BOTHEN : MUBUF_AtomicNoRet_Pseudo <opName, BUFAddrKind.BothEn, vdataClass>;
+  let FPAtomic = isFP in {
+    def _OFFSET : MUBUF_AtomicNoRet_Pseudo <opName, BUFAddrKind.Offset, vdataClass>,
+                  MUBUFAddr64Table <0, NAME>;
+    def _ADDR64 : MUBUF_AtomicNoRet_Pseudo <opName, BUFAddrKind.Addr64, vdataClass>,
+                  MUBUFAddr64Table <1, NAME>;
+    def _OFFEN  : MUBUF_AtomicNoRet_Pseudo <opName, BUFAddrKind.OffEn,  vdataClass>;
+    def _IDXEN  : MUBUF_AtomicNoRet_Pseudo <opName, BUFAddrKind.IdxEn,  vdataClass>;
+    def _BOTHEN : MUBUF_AtomicNoRet_Pseudo <opName, BUFAddrKind.BothEn, vdataClass>;
+  }
 }
 
 multiclass MUBUF_Pseudo_Atomics_RTN <string opName,
@@ -748,28 +740,23 @@ multiclass MUBUF_Pseudo_Atomics_RTN <string opName,
                                      ValueType vdataType,
                                      SDPatternOperator atomic,
                                      bit isFP = isFloatType<vdataType>.ret> {
-  let FPAtomic = isFP in
-  def _OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Offset, vdataClass,
-    [(set vdataType:$vdata,
-     (atomic (MUBUFOffset v4i32:$srsrc, i32:$soffset, i16:$offset),
-             vdataType:$vdata_in))]>,
-    MUBUFAddr64Table <0, NAME # "_RTN">;
+  let FPAtomic = isFP in {
+    def _OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Offset, vdataClass,
+      [(set vdataType:$vdata,
+       (atomic (MUBUFOffset v4i32:$srsrc, i32:$soffset, i16:$offset),
+               vdataType:$vdata_in))]>,
+      MUBUFAddr64Table <0, NAME # "_RTN">;
 
-  let FPAtomic = isFP in
-  def _ADDR64_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Addr64, vdataClass,
-    [(set vdataType:$vdata,
-     (atomic (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset, i16:$offset),
-              vdataType:$vdata_in))]>,
-    MUBUFAddr64Table <1, NAME # "_RTN">;
+    def _ADDR64_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Addr64, vdataClass,
+      [(set vdataType:$vdata,
+       (atomic (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset, i16:$offset),
+                vdataType:$vdata_in))]>,
+      MUBUFAddr64Table <1, NAME # "_RTN">;
 
-  let FPAtomic = isFP in
-  def _OFFEN_RTN  : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.OffEn,  vdataClass>;
-
-  let FPAtomic = isFP in
-  def _IDXEN_RTN  : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.IdxEn,  vdataClass>;
-
-  let FPAtomic = isFP in
-  def _BOTHEN_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.BothEn, vdataClass>;
+    def _OFFEN_RTN  : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.OffEn,  vdataClass>;
+    def _IDXEN_RTN  : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.IdxEn,  vdataClass>;
+    def _BOTHEN_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.BothEn, vdataClass>;
+  }
 }
 
 multiclass MUBUF_Pseudo_Atomics <string opName,

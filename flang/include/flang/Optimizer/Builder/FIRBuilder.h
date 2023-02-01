@@ -404,6 +404,11 @@ public:
     return IfBuilder(op, *this);
   }
 
+  mlir::Value genNot(mlir::Location loc, mlir::Value boolean) {
+    return create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::eq,
+                                       boolean, createBool(loc, false));
+  }
+
   /// Generate code testing \p addr is not a null address.
   mlir::Value genIsNotNullAddr(mlir::Location loc, mlir::Value addr);
 

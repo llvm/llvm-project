@@ -216,6 +216,170 @@ define void @multi_vector_sub_write_za_vg1x4_i64(i32 %slice, <vscale x 2 x i64> 
   ret void
 }
 
+
+;
+; SUB and accumulate into ZA
+;
+
+; x2
+define void @multi_vector_sub_za_vg1x2_i32(i32 %slice, <vscale x 4 x i32> %zn0, <vscale x 4 x i32> %zn1) {
+; CHECK-LABEL: multi_vector_sub_za_vg1x2_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    sub za.s[w8, 0, vgx2], { z0.s, z1.s }
+; CHECK-NEXT:    sub za.s[w8, 7, vgx2], { z0.s, z1.s }
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.sub.za32.vg1x2.nxv4i32(i32 %slice,<vscale x 4 x i32> %zn0, <vscale x 4 x i32> %zn1)
+  %slice.7 = add i32 %slice, 7
+  call void @llvm.aarch64.sme.sub.za32.vg1x2.nxv4i32(i32 %slice.7, <vscale x 4 x i32> %zn0, <vscale x 4 x i32> %zn1)
+  ret void
+}
+
+define void @multi_vector_sub_za_vg1x2_i64(i32 %slice, <vscale x 2 x i64> %zn0, <vscale x 2 x i64> %zn1) {
+; CHECK-LABEL: multi_vector_sub_za_vg1x2_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    sub za.d[w8, 0, vgx2], { z0.d, z1.d }
+; CHECK-NEXT:    sub za.d[w8, 7, vgx2], { z0.d, z1.d }
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.sub.za64.vg1x2.nxv2i64(i32 %slice, <vscale x 2 x i64> %zn0, <vscale x 2 x i64> %zn1)
+  %slice.7 = add i32 %slice, 7
+  call void @llvm.aarch64.sme.sub.za64.vg1x2.nxv2i64(i32 %slice.7, <vscale x 2 x i64> %zn0, <vscale x 2 x i64> %zn1)
+  ret void
+}
+
+define void @multi_vector_sub_za_vg1x2_f32(i32 %slice, <vscale x 4 x float> %zn0, <vscale x 4 x float> %zn1) {
+; CHECK-LABEL: multi_vector_sub_za_vg1x2_f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    fsub za.s[w8, 0, vgx2], { z0.s, z1.s }
+; CHECK-NEXT:    fsub za.s[w8, 7, vgx2], { z0.s, z1.s }
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.sub.za32.vg1x2.nxv4f32(i32 %slice,
+                                                       <vscale x 4 x float> %zn0, <vscale x 4 x float> %zn1)
+  %slice.7 = add i32 %slice, 7
+  call void @llvm.aarch64.sme.sub.za32.vg1x2.nxv4f32(i32 %slice.7,
+                                                       <vscale x 4 x float> %zn0, <vscale x 4 x float> %zn1)
+  ret void
+}
+
+define void @multi_vector_sub_za_vg1x2_f64(i32 %slice, <vscale x 2 x double> %zn0, <vscale x 2 x double> %zn1) {
+; CHECK-LABEL: multi_vector_sub_za_vg1x2_f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    fsub za.d[w8, 0, vgx2], { z0.d, z1.d }
+; CHECK-NEXT:    fsub za.d[w8, 7, vgx2], { z0.d, z1.d }
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.sub.za64.vg1x2.nxv2f64(i32 %slice,
+                                                       <vscale x 2 x double> %zn0, <vscale x 2 x double> %zn1)
+  %slice.7 = add i32 %slice, 7
+  call void @llvm.aarch64.sme.sub.za64.vg1x2.nxv2f64(i32 %slice.7,
+                                                       <vscale x 2 x double> %zn0, <vscale x 2 x double> %zn1)
+  ret void
+}
+
+; x4
+
+define void @multi_vector_sub_za_vg1x4_i32(i32 %slice,
+; CHECK-LABEL: multi_vector_sub_za_vg1x4_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    sub za.s[w8, 0, vgx4], { z0.s - z3.s }
+; CHECK-NEXT:    sub za.s[w8, 7, vgx4], { z0.s - z3.s }
+; CHECK-NEXT:    ret
+                                                <vscale x 4 x i32> %zn0, <vscale x 4 x i32> %zn1,
+                                                <vscale x 4 x i32> %zn2, <vscale x 4 x i32> %zn3) {
+  call void @llvm.aarch64.sme.sub.za32.vg1x4.nxv4i32(i32 %slice,
+                                                   <vscale x 4 x i32> %zn0, <vscale x 4 x i32> %zn1,
+                                                   <vscale x 4 x i32> %zn2, <vscale x 4 x i32> %zn3)
+  %slice.7 = add  i32 %slice, 7
+  call void @llvm.aarch64.sme.sub.za32.vg1x4.nxv4i32(i32 %slice.7,
+                                                   <vscale x 4 x i32> %zn0, <vscale x 4 x i32> %zn1,
+                                                   <vscale x 4 x i32> %zn2, <vscale x 4 x i32> %zn3)
+  ret void
+}
+
+define void @multi_vector_sub_za_vg1x4_i64(i32 %slice,
+; CHECK-LABEL: multi_vector_sub_za_vg1x4_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    sub za.d[w8, 0, vgx4], { z0.d - z3.d }
+; CHECK-NEXT:    sub za.d[w8, 7, vgx4], { z0.d - z3.d }
+; CHECK-NEXT:    ret
+                                               <vscale x 2 x i64> %zn0, <vscale x 2 x i64> %zn1,
+                                               <vscale x 2 x i64> %zn2, <vscale x 2 x i64> %zn3) {
+  call void @llvm.aarch64.sme.sub.za64.vg1x4.nxv2i64(i32 %slice,
+                                                   <vscale x 2 x i64> %zn0, <vscale x 2 x i64> %zn1,
+                                                   <vscale x 2 x i64> %zn2, <vscale x 2 x i64> %zn3)
+  %slice.7 = add i32 %slice, 7
+  call void @llvm.aarch64.sme.sub.za64.vg1x4.nxv2i64(i32 %slice.7,
+                                                   <vscale x 2 x i64> %zn0, <vscale x 2 x i64> %zn1,
+                                                   <vscale x 2 x i64> %zn2, <vscale x 2 x i64> %zn3)
+  ret void
+}
+
+define void @multi_vector_sub_za_vg1x4_f32(i32 %slice,
+; CHECK-LABEL: multi_vector_sub_za_vg1x4_f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    fsub za.s[w8, 0, vgx4], { z0.s - z3.s }
+; CHECK-NEXT:    fsub za.s[w8, 7, vgx4], { z0.s - z3.s }
+; CHECK-NEXT:    ret
+                   <vscale x 4 x float> %zn0, <vscale x 4 x float> %zn1,
+                   <vscale x 4 x float> %zn2, <vscale x 4 x float> %zn3) {
+  call void @llvm.aarch64.sme.sub.za32.vg1x4.nxv4f32(i32 %slice,
+                   <vscale x 4 x float> %zn0, <vscale x 4 x float> %zn1,
+                   <vscale x 4 x float> %zn2, <vscale x 4 x float> %zn3)
+  %slice.7 = add i32 %slice, 7
+  call void @llvm.aarch64.sme.sub.za32.vg1x4.nxv4f32(i32 %slice.7,
+                   <vscale x 4 x float> %zn0, <vscale x 4 x float> %zn1,
+                   <vscale x 4 x float> %zn2, <vscale x 4 x float> %zn3)
+  ret void
+}
+
+define void @multi_vector_sub_za_vg1x4_f64(i32 %slice,
+; CHECK-LABEL: multi_vector_sub_za_vg1x4_f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    fsub za.d[w8, 0, vgx4], { z0.d - z3.d }
+; CHECK-NEXT:    fsub za.d[w8, 7, vgx4], { z0.d - z3.d }
+; CHECK-NEXT:    ret
+                   <vscale x 2 x double> %zn0, <vscale x 2 x double> %zn1,
+                   <vscale x 2 x double> %zn2, <vscale x 2 x double> %zn3) {
+  call void @llvm.aarch64.sme.sub.za64.vg1x4.nxv2f64(i32 %slice,
+                   <vscale x 2 x double> %zn0, <vscale x 2 x double> %zn1,
+                   <vscale x 2 x double> %zn2, <vscale x 2 x double> %zn3)
+  %slice.7 = add i32 %slice, 7
+  call void @llvm.aarch64.sme.sub.za64.vg1x4.nxv2f64(i32 %slice.7,
+                   <vscale x 2 x double> %zn0, <vscale x 2 x double> %zn1,
+                   <vscale x 2 x double> %zn2, <vscale x 2 x double> %zn3)
+  ret void
+}
+
 declare void@llvm.aarch64.sme.sub.write.single.za.vg1x2.nxv4i32(i32, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>)
 declare void@llvm.aarch64.sme.sub.write.single.za.vg1x2.nxv2i64(i32, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>)
 declare void@llvm.aarch64.sme.sub.write.single.za.vg1x4.nxv4i32(i32, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>,
@@ -226,3 +390,11 @@ declare void@llvm.aarch64.sme.sub.write.za.vg1x2.nxv4i32(i32, <vscale x 4 x i32>
 declare void@llvm.aarch64.sme.sub.write.za.vg1x2.nxv2i64(i32, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>)
 declare void@llvm.aarch64.sme.sub.write.za.vg1x4.nxv4i32(i32, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>)
 declare void@llvm.aarch64.sme.sub.write.za.vg1x4.nxv2i64(i32, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>)
+declare void@llvm.aarch64.sme.sub.za32.vg1x2.nxv4i32(i32, <vscale x 4 x i32>,<vscale x 4 x i32>)
+declare void@llvm.aarch64.sme.sub.za64.vg1x2.nxv2i64(i32, <vscale x 2 x i64>,<vscale x 2 x i64>)
+declare void@llvm.aarch64.sme.sub.za32.vg1x4.nxv4i32(i32, <vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>)
+declare void@llvm.aarch64.sme.sub.za64.vg1x4.nxv2i64(i32, <vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>, <vscale x 2 x i64>)
+declare void@llvm.aarch64.sme.sub.za32.vg1x2.nxv4f32(i32, <vscale x 4 x float>, <vscale x 4 x float>)
+declare void@llvm.aarch64.sme.sub.za64.vg1x2.nxv2f64(i32, <vscale x 2 x double>, <vscale x 2 x double>)
+declare void@llvm.aarch64.sme.sub.za32.vg1x4.nxv4f32(i32, <vscale x 4 x float>, <vscale x 4 x float>,<vscale x 4 x float>, <vscale x 4 x float>)
+declare void@llvm.aarch64.sme.sub.za64.vg1x4.nxv2f64(i32, <vscale x 2 x double>, <vscale x 2 x double>,<vscale x 2 x double>, <vscale x 2 x double>)
