@@ -34,6 +34,7 @@
 #include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <memory>
@@ -157,6 +158,9 @@ public:
   /// Whether diagnostics generated using this patch are trustable.
   bool preserveDiagnostics() const;
 
+  /// Returns diag locations for Modified contents.
+  llvm::ArrayRef<Diag> patchedDiags() const { return PatchedDiags; }
+
   static constexpr llvm::StringLiteral HeaderName = "__preamble_patch__.h";
 
 private:
@@ -168,9 +172,11 @@ private:
   PreamblePatch() = default;
   std::string PatchContents;
   std::string PatchFileName;
-  /// Includes that are present in both \p Baseline and \p Modified. Used for
-  /// patching includes of baseline preamble.
+  // Includes that are present in both Baseline and Modified. Used for
+  // patching includes of baseline preamble.
   std::vector<Inclusion> PreambleIncludes;
+  // Diags that were attached to a line preserved in Modified contents.
+  std::vector<Diag> PatchedDiags;
   PreambleBounds ModifiedBounds = {0, false};
 };
 
