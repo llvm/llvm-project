@@ -410,6 +410,21 @@ public:
   bool isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
 
   bool hasBitPreservingFPLogic(EVT VT) const override;
+  bool isMultiStoresCheaperThanBitsMerge(EVT LTy, EVT HTy) const override {
+    // If the pair to store is a mixture of float and int values, we will
+    // save two bitwise instructions and one float-to-int instruction and
+    // increase one store instruction. There is potentially a more
+    // significant benefit because it avoids the float->int domain switch
+    // for input value. So It is more likely a win.
+    if ((LTy.isFloatingPoint() && HTy.isInteger()) ||
+        (LTy.isInteger() && HTy.isFloatingPoint()))
+      return true;
+    // If the pair only contains int values, we will save two bitwise
+    // instructions and increase one store instruction (costing one more
+    // store buffer). Since the benefit is more blurred we leave such a pair
+    // out until we get testcase to prove it is a win.
+    return false;
+  }
   bool
   shouldExpandBuildVectorWithShuffles(EVT VT,
                                       unsigned DefinedValues) const override;

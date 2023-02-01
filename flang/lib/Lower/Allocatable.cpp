@@ -13,6 +13,7 @@
 #include "flang/Lower/Allocatable.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/ConvertType.h"
 #include "flang/Lower/IterationSpace.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
@@ -670,7 +671,7 @@ private:
       return;
 
     auto typeDescAddr = Fortran::lower::getTypeDescAddr(
-        builder, loc, typeSpec->derivedTypeSpec());
+        converter, loc, typeSpec->derivedTypeSpec());
     genInitDerived(box, typeDescAddr, alloc.getSymbol().Rank());
   }
 
@@ -777,7 +778,7 @@ void Fortran::lower::genDeallocateStmt(
       if (const Fortran::semantics::DerivedTypeSpec *derivedTypeSpec =
               symbol.GetType()->AsDerived()) {
         declaredTypeDesc =
-            Fortran::lower::getTypeDescAddr(builder, loc, *derivedTypeSpec);
+            Fortran::lower::getTypeDescAddr(converter, loc, *derivedTypeSpec);
       }
     }
     genDeallocate(builder, loc, box, errorManager, declaredTypeDesc);
@@ -1000,15 +1001,10 @@ mlir::Value Fortran::lower::getAssumedCharAllocatableOrPointerLen(
 }
 
 mlir::Value Fortran::lower::getTypeDescAddr(
-    fir::FirOpBuilder &builder, mlir::Location loc,
+    AbstractConverter &converter, mlir::Location loc,
     const Fortran::semantics::DerivedTypeSpec &typeSpec) {
-  std::string typeName = Fortran::lower::mangle::mangleName(typeSpec);
-  std::string typeDescName = fir::NameUniquer::getTypeDescriptorName(typeName);
-  auto typeDescGlobal =
-      builder.getModule().lookupSymbol<fir::GlobalOp>(typeDescName);
-  if (!typeDescGlobal)
-    fir::emitFatalError(loc, "type descriptor not defined");
-  return builder.create<fir::AddrOfOp>(
-      loc, fir::ReferenceType::get(typeDescGlobal.getType()),
-      typeDescGlobal.getSymbol());
+  mlir::Type typeDesc =
+      Fortran::lower::translateDerivedTypeToFIRType(converter, typeSpec);
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  return builder.create<fir::TypeDescOp>(loc, mlir::TypeAttr::get(typeDesc));
 }

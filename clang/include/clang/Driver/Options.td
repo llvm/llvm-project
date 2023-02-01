@@ -1224,7 +1224,7 @@ defm experimental_library : BoolFOption<"experimental-library",
   NegFlag<SetFalse>>;
 
 def fembed_offload_object_EQ : Joined<["-"], "fembed-offload-object=">,
-  Group<f_Group>, Flags<[NoXarchOption, CC1Option]>,
+  Group<f_Group>, Flags<[NoXarchOption, CC1Option, FC1Option]>,
   HelpText<"Embed Offloading device-side binary into host object file as a section.">,
   MarshallingInfoStringVector<CodeGenOpts<"OffloadObjects">>;
 def fembed_bitcode_EQ : Joined<["-"], "fembed-bitcode=">,
@@ -4559,6 +4559,8 @@ def mnvs : Flag<["-"], "mnvs">, Group<m_hexagon_Features_Group>,
   Flags<[CC1Option]>, HelpText<"Enable generation of new-value stores">;
 def mno_nvs : Flag<["-"], "mno-nvs">, Group<m_hexagon_Features_Group>,
   Flags<[CC1Option]>, HelpText<"Disable generation of new-value stores">;
+def mcabac: Flag<["-"], "mcabac">, Group<m_hexagon_Features_Group>,
+  HelpText<"Enable CABAC instructions">;
 
 // SPARC feature flags
 def mfpu : Flag<["-"], "mfpu">, Group<m_sparc_Features_Group>;

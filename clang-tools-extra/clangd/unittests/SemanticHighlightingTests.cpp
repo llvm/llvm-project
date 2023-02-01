@@ -130,17 +130,17 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
     )cpp",
       R"cpp(
       namespace $Namespace_decl[[abc]] {
-        template<typename $TemplateParameter_def[[T]]>
+        template$Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
         struct $Class_def[[A]] {
           $TemplateParameter[[T]] $Field_decl[[t]];
         };
       }
-      template<typename $TemplateParameter_def[[T]]>
-      struct $Class_def[[C]] : $Namespace[[abc]]::$Class[[A]]<$TemplateParameter[[T]]> {
+      template$Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
+      struct $Class_def[[C]] : $Namespace[[abc]]::$Class[[A]]$Bracket[[<]]$TemplateParameter[[T]]$Bracket[[>]] {
         typename $TemplateParameter[[T]]::$Type_dependentName[[A]]* $Field_decl[[D]];
       };
-      $Namespace[[abc]]::$Class[[A]]<int> $Variable_def[[AA]];
-      typedef $Namespace[[abc]]::$Class[[A]]<int> $Class_decl[[AAA]];
+      $Namespace[[abc]]::$Class[[A]]$Bracket[[<]]int$Bracket[[>]] $Variable_def[[AA]];
+      typedef $Namespace[[abc]]::$Class[[A]]$Bracket[[<]]int$Bracket[[>]] $Class_decl[[AAA]];
       struct $Class_def[[B]] {
         $Class_decl_constrDestr[[B]]();
         ~$Class_decl_constrDestr[[B]]();
@@ -243,36 +243,36 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       typedef float $Primitive_decl[[F]];
     )cpp",
       R"cpp(
-      template<typename $TemplateParameter_def[[T]], typename = void>
+      template$Bracket[[<]]typename $TemplateParameter_def[[T]], typename = void$Bracket[[>]]
       class $Class_def[[A]] {
         $TemplateParameter[[T]] $Field_decl[[AA]];
         $TemplateParameter[[T]] $Method_decl[[foo]]();
       };
-      template<class $TemplateParameter_def[[TT]]>
+      template$Bracket[[<]]class $TemplateParameter_def[[TT]]$Bracket[[>]]
       class $Class_def[[B]] {
-        $Class[[A]]<$TemplateParameter[[TT]]> $Field_decl[[AA]];
+        $Class[[A]]$Bracket[[<]]$TemplateParameter[[TT]]$Bracket[[>]] $Field_decl[[AA]];
       };
-      template<class $TemplateParameter_def[[TT]], class $TemplateParameter_def[[GG]]>
+      template$Bracket[[<]]class $TemplateParameter_def[[TT]], class $TemplateParameter_def[[GG]]$Bracket[[>]]
       class $Class_def[[BB]] {};
-      template<class $TemplateParameter_def[[T]]>
-      class $Class_def[[BB]]<$TemplateParameter[[T]], int> {};
-      template<class $TemplateParameter_def[[T]]>
-      class $Class_def[[BB]]<$TemplateParameter[[T]], $TemplateParameter[[T]]*> {};
+      template$Bracket[[<]]class $TemplateParameter_def[[T]]$Bracket[[>]]
+      class $Class_def[[BB]]$Bracket[[<]]$TemplateParameter[[T]], int$Bracket[[>]] {};
+      template$Bracket[[<]]class $TemplateParameter_def[[T]]$Bracket[[>]]
+      class $Class_def[[BB]]$Bracket[[<]]$TemplateParameter[[T]], $TemplateParameter[[T]]*$Bracket[[>]] {};
 
-      template<template<class> class $TemplateParameter_def[[T]], class $TemplateParameter_def[[C]]>
-      $TemplateParameter[[T]]<$TemplateParameter[[C]]> $Function_decl[[f]]();
+      template$Bracket[[<]]template$Bracket[[<]]class$Bracket[[>]] class $TemplateParameter_def[[T]], class $TemplateParameter_def[[C]]$Bracket[[>]]
+      $TemplateParameter[[T]]$Bracket[[<]]$TemplateParameter[[C]]$Bracket[[>]] $Function_decl[[f]]();
 
-      template<typename>
+      template$Bracket[[<]]typename$Bracket[[>]]
       class $Class_def[[Foo]] {};
 
-      template<typename $TemplateParameter_def[[T]]>
+      template$Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
       void $Function_decl[[foo]]($TemplateParameter[[T]] ...);
     )cpp",
       R"cpp(
-      template <class $TemplateParameter_def[[T]]>
+      template $Bracket[[<]]class $TemplateParameter_def[[T]]$Bracket[[>]]
       struct $Class_def[[Tmpl]] {$TemplateParameter[[T]] $Field_decl[[x]] = 0;};
-      extern template struct $Class_def[[Tmpl]]<float>;
-      template struct $Class_def[[Tmpl]]<double>;
+      extern template struct $Class_def[[Tmpl]]$Bracket[[<]]float$Bracket[[>]];
+      template struct $Class_def[[Tmpl]]$Bracket[[<]]double$Bracket[[>]];
     )cpp",
       // This test is to guard against highlightings disappearing when using
       // conversion operators as their behaviour in the clang AST differ from
@@ -335,17 +335,17 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
     )cpp",
       R"cpp(
       class $Class_def[[G]] {};
-      template<$Class[[G]] *$TemplateParameter_def_readonly[[U]]>
+      template$Bracket[[<]]$Class[[G]] *$TemplateParameter_def_readonly[[U]]$Bracket[[>]]
       class $Class_def[[GP]] {};
-      template<$Class[[G]] &$TemplateParameter_def_readonly[[U]]>
+      template$Bracket[[<]]$Class[[G]] &$TemplateParameter_def_readonly[[U]]$Bracket[[>]]
       class $Class_def[[GR]] {};
-      template<int *$TemplateParameter_def_readonly[[U]]>
+      template$Bracket[[<]]int *$TemplateParameter_def_readonly[[U]]$Bracket[[>]]
       class $Class_def[[IP]] {
         void $Method_def[[f]]() {
           $Operator[[*]]$TemplateParameter_readonly[[U]] $Operator[[+=]] 5;
         }
       };
-      template<unsigned $TemplateParameter_def_readonly[[U]] = 2>
+      template$Bracket[[<]]unsigned $TemplateParameter_def_readonly[[U]] = 2$Bracket[[>]]
       class $Class_def[[Foo]] {
         void $Method_def[[f]]() {
           for(int $LocalVariable_def[[I]] = 0;
@@ -355,14 +355,14 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
 
       $Class[[G]] $Variable_def[[L]];
       void $Function_def[[f]]() {
-        $Class[[Foo]]<123> $LocalVariable_def[[F]];
-        $Class[[GP]]<$Operator[[&]]$Variable[[L]]> $LocalVariable_def[[LL]];
-        $Class[[GR]]<$Variable[[L]]> $LocalVariable_def[[LLL]];
+        $Class[[Foo]]$Bracket[[<]]123$Bracket[[>]] $LocalVariable_def[[F]];
+        $Class[[GP]]$Bracket[[<]]$Operator[[&]]$Variable[[L]]$Bracket[[>]] $LocalVariable_def[[LL]];
+        $Class[[GR]]$Bracket[[<]]$Variable[[L]]$Bracket[[>]] $LocalVariable_def[[LLL]];
       }
     )cpp",
       R"cpp(
-      template<typename $TemplateParameter_def[[T]],
-        void ($TemplateParameter[[T]]::*$TemplateParameter_def_readonly[[method]])(int)>
+      template$Bracket[[<]]typename $TemplateParameter_def[[T]],
+        void ($TemplateParameter[[T]]::*$TemplateParameter_def_readonly[[method]])(int)$Bracket[[>]]
       struct $Class_def[[G]] {
         void $Method_def[[foo]](
             $TemplateParameter[[T]] *$Parameter_def[[O]]) {
@@ -373,7 +373,7 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       struct $Class_def[[F]] {
         void $Method_decl[[f]](int);
       };
-      template<void (*$TemplateParameter_def_readonly[[Func]])()>
+      template$Bracket[[<]]void (*$TemplateParameter_def_readonly[[Func]])()$Bracket[[>]]
       struct $Class_def[[A]] {
         void $Method_def[[f]]() {
           ($Operator[[*]]$TemplateParameter_readonly[[Func]])();
@@ -382,9 +382,9 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
 
       void $Function_def[[foo]]() {
         $Class[[F]] $LocalVariable_def[[FF]];
-        $Class[[G]]<$Class[[F]], $Operator[[&]]$Class[[F]]::$Method[[f]]> $LocalVariable_def[[GG]];
+        $Class[[G]]$Bracket[[<]]$Class[[F]], $Operator[[&]]$Class[[F]]::$Method[[f]]$Bracket[[>]] $LocalVariable_def[[GG]];
         $LocalVariable[[GG]].$Method[[foo]]($Operator[[&]]$LocalVariable_usedAsMutablePointer[[FF]]);
-        $Class[[A]]<$Function[[foo]]> $LocalVariable_def[[AA]];
+        $Class[[A]]$Bracket[[<]]$Function[[foo]]$Bracket[[>]] $LocalVariable_def[[AA]];
       }
     )cpp",
       // Tokens that share a source range but have conflicting Kinds are not
@@ -472,7 +472,7 @@ $InactiveCode[[#endif]]
       }
     )cpp",
       R"cpp(
-      template<class $TemplateParameter_def[[T]]>
+      template$Bracket[[<]]class $TemplateParameter_def[[T]]$Bracket[[>]]
       class $Class_def[[A]] {
         using $TemplateParameter_decl[[TemplateParam1]] = $TemplateParameter[[T]];
         typedef $TemplateParameter[[T]] $TemplateParameter_decl[[TemplateParam2]];
@@ -491,9 +491,9 @@ $InactiveCode[[#endif]]
       };
     )cpp",
       R"cpp(
-      template <class $TemplateParameter_def[[T]]>
+      template $Bracket[[<]]class $TemplateParameter_def[[T]]$Bracket[[>]]
       void $Function_decl[[phase1]]($TemplateParameter[[T]]);
-      template <class $TemplateParameter_def[[T]]>
+      template $Bracket[[<]]class $TemplateParameter_def[[T]]$Bracket[[>]]
       void $Function_def[[foo]]($TemplateParameter[[T]] $Parameter_def[[P]]) {
         $Function[[phase1]]($Parameter[[P]]);
         $Unknown_dependentName[[phase2]]($Parameter[[P]]);
@@ -501,22 +501,22 @@ $InactiveCode[[#endif]]
     )cpp",
       R"cpp(
       class $Class_def[[A]] {
-        template <class $TemplateParameter_def[[T]]>
+        template $Bracket[[<]]class $TemplateParameter_def[[T]]$Bracket[[>]]
         void $Method_decl[[bar]]($TemplateParameter[[T]]);
       };
 
-      template <class $TemplateParameter_def[[U]]>
+      template $Bracket[[<]]class $TemplateParameter_def[[U]]$Bracket[[>]]
       void $Function_def[[foo]]($TemplateParameter[[U]] $Parameter_def[[P]]) {
         $Class[[A]]().$Method[[bar]]($Parameter[[P]]);
       }
     )cpp",
       R"cpp(
       struct $Class_def[[A]] {
-        template <class $TemplateParameter_def[[T]]>
+        template $Bracket[[<]]class $TemplateParameter_def[[T]]$Bracket[[>]]
         static void $StaticMethod_decl_static[[foo]]($TemplateParameter[[T]]);
       };
 
-      template <class $TemplateParameter_def[[T]]>
+      template $Bracket[[<]]class $TemplateParameter_def[[T]]$Bracket[[>]]
       struct $Class_def[[B]] {
         void $Method_def[[bar]]() {
           $Class[[A]]::$StaticMethod_static[[foo]]($TemplateParameter[[T]]());
@@ -524,18 +524,18 @@ $InactiveCode[[#endif]]
       };
     )cpp",
       R"cpp(
-      template <class $TemplateParameter_def[[T]]>
+      template $Bracket[[<]]class $TemplateParameter_def[[T]]$Bracket[[>]]
       void $Function_decl[[foo]](typename $TemplateParameter[[T]]::$Type_dependentName[[Type]]
                                             = $TemplateParameter[[T]]::$Unknown_dependentName[[val]]);
     )cpp",
       R"cpp(
-      template <class $TemplateParameter_def[[T]]>
+      template $Bracket[[<]]class $TemplateParameter_def[[T]]$Bracket[[>]]
       void $Function_def[[foo]]($TemplateParameter[[T]] $Parameter_def[[P]]) {
         $Parameter[[P]].$Unknown_dependentName[[Field]];
       }
     )cpp",
       R"cpp(
-      template <class $TemplateParameter_def[[T]]>
+      template $Bracket[[<]]class $TemplateParameter_def[[T]]$Bracket[[>]]
       class $Class_def[[A]] {
         int $Method_def[[foo]]() {
           return $TemplateParameter[[T]]::$Unknown_dependentName[[Field]];
@@ -549,10 +549,10 @@ $InactiveCode[[#endif]]
     )cpp",
       // Highlighting of template template arguments.
       R"cpp(
-      template <template <class> class $TemplateParameter_def[[TT]],
-                template <class> class ...$TemplateParameter_def[[TTs]]>
+      template $Bracket[[<]]template $Bracket[[<]]class$Bracket[[>]] class $TemplateParameter_def[[TT]],
+                template $Bracket[[<]]class$Bracket[[>]] class ...$TemplateParameter_def[[TTs]]$Bracket[[>]]
       struct $Class_def[[Foo]] {
-        $Class[[Foo]]<$TemplateParameter[[TT]], $TemplateParameter[[TTs]]...>
+        $Class[[Foo]]$Bracket[[<]]$TemplateParameter[[TT]], $TemplateParameter[[TTs]]...$Bracket[[>]]
           *$Field_decl[[t]];
       };
     )cpp",
@@ -590,7 +590,7 @@ $InactiveCode[[#else]]
     )cpp",
       // Argument to 'sizeof...'
       R"cpp(
-      template <typename... $TemplateParameter_def[[Elements]]>
+      template $Bracket[[<]]typename... $TemplateParameter_def[[Elements]]$Bracket[[>]]
       struct $Class_def[[TupleSize]] {
         static const int $StaticField_decl_readonly_static[[size]] =
 sizeof...($TemplateParameter[[Elements]]);
@@ -598,61 +598,61 @@ sizeof...($TemplateParameter[[Elements]]);
     )cpp",
       // More dependent types
       R"cpp(
-      template <typename $TemplateParameter_def[[T]]>
+      template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
       struct $Class_def[[Waldo]] {
         using $Typedef_decl[[Location1]] = typename $TemplateParameter[[T]]
             ::$Type_dependentName[[Resolver]]::$Type_dependentName[[Location]];
         using $Typedef_decl[[Location2]] = typename $TemplateParameter[[T]]
-            ::template $Type_dependentName[[Resolver]]<$TemplateParameter[[T]]>
+            ::template $Type_dependentName[[Resolver]]$Bracket[[<]]$TemplateParameter[[T]]$Bracket[[>]]
             ::$Type_dependentName[[Location]];
         using $Typedef_decl[[Location3]] = typename $TemplateParameter[[T]]
             ::$Type_dependentName[[Resolver]]
-            ::template $Type_dependentName[[Location]]<$TemplateParameter[[T]]>;
+            ::template $Type_dependentName[[Location]]$Bracket[[<]]$TemplateParameter[[T]]$Bracket[[>]];
         static const int $StaticField_decl_readonly_static[[Value]] = $TemplateParameter[[T]]
             ::$Type_dependentName[[Resolver]]::$Unknown_dependentName[[Value]];
       };
     )cpp",
       // Dependent name with heuristic target
       R"cpp(
-      template <typename>
+      template $Bracket[[<]]typename$Bracket[[>]]
       struct $Class_def[[Foo]] {
         int $Field_decl[[Waldo]];
         void $Method_def[[bar]]() {
           $Class[[Foo]]().$Field_dependentName[[Waldo]];
         }
-        template <typename $TemplateParameter_def[[U]]>
+        template $Bracket[[<]]typename $TemplateParameter_def[[U]]$Bracket[[>]]
         void $Method_def[[bar1]]() {
-          $Class[[Foo]]<$TemplateParameter[[U]]>().$Field_dependentName[[Waldo]];
+          $Class[[Foo]]$Bracket[[<]]$TemplateParameter[[U]]$Bracket[[>]]().$Field_dependentName[[Waldo]];
         }
 
         void $Method_decl[[Overload]]();
         void $Method_decl_readonly[[Overload]]() const;
       };
-      template <typename $TemplateParameter_def[[T]]>
-      void $Function_def[[baz]]($Class[[Foo]]<$TemplateParameter[[T]]> $Parameter_def[[o]]) {
+      template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
+      void $Function_def[[baz]]($Class[[Foo]]$Bracket[[<]]$TemplateParameter[[T]]$Bracket[[>]] $Parameter_def[[o]]) {
         $Parameter[[o]].$Method_readonly_dependentName[[Overload]]();
       }
     )cpp",
       // Concepts
       R"cpp(
-      template <typename $TemplateParameter_def[[T]]>
+      template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
       concept $Concept_decl[[Fooable]] =
           requires($TemplateParameter[[T]] $Parameter_def[[F]]) {
             $Parameter[[F]].$Unknown_dependentName[[foo]]();
           };
-      template <typename $TemplateParameter_def[[T]]>
-          requires $Concept[[Fooable]]<$TemplateParameter[[T]]>
+      template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
+          requires $Concept[[Fooable]]$Bracket[[<]]$TemplateParameter[[T]]$Bracket[[>]]
       void $Function_def[[bar]]($TemplateParameter[[T]] $Parameter_def[[F]]) {
         $Parameter[[F]].$Unknown_dependentName[[foo]]();
       }
     )cpp",
       // Dependent template name
       R"cpp(
-      template <template <typename> class> struct $Class_def[[A]] {};
-      template <typename $TemplateParameter_def[[T]]>
-      using $Typedef_decl[[W]] = $Class[[A]]<
+      template $Bracket[[<]]template $Bracket[[<]]typename$Bracket[[>]] class$Bracket[[>]] struct $Class_def[[A]] {};
+      template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
+      using $Typedef_decl[[W]] = $Class[[A]]$Bracket[[<]]
         $TemplateParameter[[T]]::template $Class_dependentName[[Waldo]]
-      >;
+      $Bracket[[>]];
     )cpp",
       R"cpp(
       class $Class_def_abstract[[Abstract]] {
@@ -733,12 +733,12 @@ sizeof...($TemplateParameter[[Elements]]);
       )cpp",
       // Member imported from dependent base
       R"cpp(
-        template <typename> struct $Class_def[[Base]] {
+        template $Bracket[[<]]typename$Bracket[[>]] struct $Class_def[[Base]] {
           int $Field_decl[[member]];
         };
-        template <typename $TemplateParameter_def[[T]]>
-        struct $Class_def[[Derived]] : $Class[[Base]]<$TemplateParameter[[T]]> {
-          using $Class[[Base]]<$TemplateParameter[[T]]>::$Field_dependentName[[member]];
+        template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
+        struct $Class_def[[Derived]] : $Class[[Base]]$Bracket[[<]]$TemplateParameter[[T]]$Bracket[[>]] {
+          using $Class[[Base]]$Bracket[[<]]$TemplateParameter[[T]]$Bracket[[>]]::$Field_dependentName[[member]];
 
           void $Method_def[[method]]() {
             (void)$Field_dependentName[[member]];
@@ -814,7 +814,7 @@ sizeof...($TemplateParameter[[Elements]]);
           int $Field_decl[[field]];
           static int $StaticField_decl_static[[staticField]];
         };
-        template <typename $TemplateParameter_def[[X]]>
+        template $Bracket[[<]]typename $TemplateParameter_def[[X]]$Bracket[[>]]
         void $Function_def[[foo]]($TemplateParameter[[X]]& $Parameter_def[[x]]) {
           // We do not support dependent types, so this one should *not* get the modifier.
           $Function[[foo]]($Parameter[[x]]);
@@ -852,7 +852,7 @@ sizeof...($TemplateParameter[[Elements]]);
         // Use <: :> digraphs for deprecated attribute to avoid conflict with annotation syntax
         <:<:deprecated:>:> void $Function_decl_deprecated[[Foo]](int* $Parameter_def[[x]]);
         void $Function_decl[[Foo]](int $Parameter_def[[x]]);
-        template <typename $TemplateParameter_def[[T]]>
+        template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
         void $Function_def[[Bar]]($TemplateParameter[[T]] $Parameter_def[[x]]) {
             $Function_deprecated[[Foo]]($Parameter[[x]]);
             $Function_deprecated[[Foo]]($Parameter[[x]]);
@@ -873,7 +873,7 @@ sizeof...($TemplateParameter[[Elements]]);
       )cpp",
       // Issue 1222: readonly modifier for generic parameter
       R"cpp(
-        template <typename $TemplateParameter_def[[T]]>
+        template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
         auto $Function_def[[foo]](const $TemplateParameter[[T]] $Parameter_def_readonly[[template_type]], 
                                   const $TemplateParameter[[auto]] $Parameter_def_readonly[[auto_type]], 
                                   const int $Parameter_def_readonly[[explicit_type]]) {
@@ -885,19 +885,19 @@ sizeof...($TemplateParameter[[Elements]]);
       // Explicit template specialization
       R"cpp(
         struct $Class_def[[Base]]{};
-        template <typename $TemplateParameter_def[[T]]>
+        template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
         struct $Class_def[[S]] : public $Class[[Base]] {};
-        template <>
-        struct $Class_def[[S]]<void> : public $Class[[Base]] {};
+        template $Bracket[[<]]$Bracket[[>]]
+        struct $Class_def[[S]]$Bracket[[<]]void$Bracket[[>]] : public $Class[[Base]] {};
 
-        template <typename $TemplateParameter_def[[T]]>
+        template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
         $TemplateParameter[[T]] $Variable_def[[x]] = {};
         template <>
-        int $Variable_def[[x]]<int> = (int)sizeof($Class[[Base]]);
+        int $Variable_def[[x]]$Bracket[[<]]int$Bracket[[>]] = (int)sizeof($Class[[Base]]);
       )cpp",
       // operator calls in template
       R"cpp(
-        template<typename $TemplateParameter_def[[T]]> class $Class_def[[C]] {
+        template$Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]] class $Class_def[[C]] {
             bool $Method_def[[compare]]($TemplateParameter[[T]] $Parameter_def[[t1]], $TemplateParameter[[T]] $Parameter_def[[t2]]) { return $Parameter[[t1]] $Operator_userDefined[[==]] $Parameter[[t2]]; }
             $TemplateParameter[[T]] $Method_def[[deref]]($TemplateParameter[[T]] *$Parameter_def[[t]]) { return $Operator_userDefined[[*]]$Parameter[[t]]; }
         };
@@ -922,6 +922,109 @@ sizeof...($TemplateParameter[[Elements]]);
             $Class[[S]] $LocalVariable_def[[s2]] = $LocalVariable[[s]].operator$Operator_userDefined[[+]]($LocalVariable[[s]]);
         }
       )cpp",
+      R"cpp(
+        // Brackets support: C++ casts
+        void $Function_def[[f]]() {
+          struct $Class_def[[B]] { virtual ~$Class_decl_constrDestr[[B]](); };
+          struct $Class_def[[D]] : public $Class[[B]] {};
+          $Class[[B]] $LocalVariable_def[[b]];
+          int $LocalVariable_def[[i]] = static_cast$Bracket[[<]]int$Bracket[[>]](3.5);
+          void *$LocalVariable_def[[p]] = reinterpret_cast$Bracket[[<]]void *$Bracket[[>]](0);
+          $Class[[D]] &$LocalVariable_def[[d]] = dynamic_cast$Bracket[[<]]$Class[[D]] &$Bracket[[>]]($LocalVariable[[b]]);
+        }
+      )cpp",
+      // Brackets support: Nested template instantiations.
+      R"cpp(
+        template$Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]] struct $Class_def[[S]] {};
+        void $Function_def[[f]]() {
+            $Class[[S]]$Bracket[[<]]$Class[[S]]$Bracket[[<]]int$Bracket[[>]]$Bracket[[>]] $LocalVariable_def[[s1]];
+            $Class[[S]]$Bracket[[<]]$Class[[S]]$Bracket[[<]]int$Bracket[[>]]\
+$Bracket[[>]] $LocalVariable_def[[s2]];
+            $Class[[S]]$Bracket[[<]]$Class[[S]]$Bracket[[<]]$Class[[S]]$Bracket[[<]]int$Bracket[[>]]$Bracket[[>]]$Bracket[[>]] $LocalVariable_def[[s3]];
+            $Class[[S]]$Bracket[[<]]$Class[[S]]$Bracket[[<]]$Class[[S]]$Bracket[[<]]int$Bracket[[>]]\
+$Bracket[[>]]$Bracket[[>]] $LocalVariable_def[[s4]];
+            $Class[[S]]$Bracket[[<]]$Class[[S]]$Bracket[[<]]$Class[[S]]$Bracket[[<]]int$Bracket[[>]]\
+  $Bracket[[>]]$Bracket[[>]] $LocalVariable_def[[s5]];
+            $Class[[S]]$Bracket[[<]]$Class[[S]]$Bracket[[<]]$Class[[S]]$Bracket[[<]]int$Bracket[[>]]\
+$Bracket[[>]]$Bracket[[>]] $LocalVariable_def[[s6]];
+            $Class[[S]]$Bracket[[<]]$Class[[S]]$Bracket[[<]]$Class[[S]]$Bracket[[<]]int$Bracket[[>]]$Bracket[[>]]\
+  $Bracket[[>]] $LocalVariable_def[[s7]];
+      }
+      )cpp",
+      // Brackets support: One of the brackets is a macro.
+      R"cpp(
+        #define $Macro_decl[[LESS]] <
+        template $Macro[[LESS]] typename $TemplateParameter_def[[T]] > class $Class_def[[A]] {};
+      )cpp",
+      // Brackets support: Specializations
+      R"cpp(
+        template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]] class $Class_def[[S]] {
+        public:
+          template $Bracket[[<]]typename $TemplateParameter_def[[U]]$Bracket[[>]] class $Class_decl[[Nested]];
+        };
+        template $Bracket[[<]]$Bracket[[>]] class $Class_def[[S]]$Bracket[[<]]int$Bracket[[>]] {};
+        template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
+        class $Class_def[[S]]$Bracket[[<]]$TemplateParameter[[T]]*$Bracket[[>]] {};
+        template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
+        template $Bracket[[<]]typename $TemplateParameter_def[[U]]$Bracket[[>]]
+        class $Class[[S]]$Bracket[[<]]$TemplateParameter[[T]]$Bracket[[>]]::$Class_def[[Nested]] {};
+        template $Bracket[[<]]$Bracket[[>]]
+        template $Bracket[[<]]$Bracket[[>]]
+        class $Class[[S]]$Bracket[[<]]float$Bracket[[>]]::$Class_def[[Nested]]$Bracket[[<]]float$Bracket[[>]] {};
+        template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]] void $Function_decl[[foo]]();
+        void $Function_def[[bar]]() {
+          $Function[[foo]]$Bracket[[<]]int$Bracket[[>]]();
+        }
+        template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]] constexpr int $Variable_def_readonly[[V]] = 42;
+        constexpr int $Variable_def_readonly[[Y]] = $Variable_readonly[[V]]$Bracket[[<]]char$Bracket[[>]];
+        template <>
+        constexpr int $Variable_def_readonly[[V]]$Bracket[[<]]int$Bracket[[>]] = 5;
+        template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
+        constexpr int $Variable_def_readonly[[V]]$Bracket[[<]]$TemplateParameter[[T]]*$Bracket[[>]] = 6;
+        template $Bracket[[<]]typename$Bracket[[>]]
+        class $Class_def[[A]] {
+          enum class $Enum_decl[[E]];
+        };
+        template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
+        enum class $Class[[A]]$Bracket[[<]]$TemplateParameter[[T]]$Bracket[[>]]::$Enum_decl[[E]] {$EnumConstant_decl_readonly[[X]], $EnumConstant_decl_readonly[[Y]], $EnumConstant_decl_readonly[[Z]]};
+        template $Bracket[[<]]class $TemplateParameter_def[[T]]$Bracket[[>]]
+        class $Class_def[[B]] {
+          template $Bracket[[<]]class $TemplateParameter_def[[U]]$Bracket[[>]] void $Method_def[[foo]]($TemplateParameter[[U]]) { }
+          template$Bracket[[<]]$Bracket[[>]] void $Method_def[[foo]]$Bracket[[<]]int$Bracket[[>]](int) { } 
+          friend void $Function_decl[[foo]]$Bracket[[<]]$Bracket[[>]]($TemplateParameter[[T]]);
+        };
+      )cpp",
+      // Brackets support: Function calls
+      R"cpp(
+        template $Bracket[[<]]typename$Bracket[[>]] void $Function_decl[[free]]();
+        template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
+          struct $Class_def[[A]] {
+            template $Bracket[[<]]typename$Bracket[[>]] void $Method_decl[[mem]]();
+        };
+        void $Function_def[[foo]]() {
+          $Class[[A]]$Bracket[[<]]int$Bracket[[>]] $LocalVariable_def[[a]];
+          $LocalVariable[[a]].$Method[[mem]]$Bracket[[<]]int$Bracket[[>]]();
+        }
+        template$Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
+        void $Function_def[[bar]]() {
+          $Function[[free]]$Bracket[[<]]$TemplateParameter[[T]]$Bracket[[>]]();
+          $Class[[A]]$Bracket[[<]]int$Bracket[[>]] $LocalVariable_def[[a]];
+          $LocalVariable[[a]].$Method[[mem]]$Bracket[[<]]$TemplateParameter[[T]]$Bracket[[>]]();
+          $Class[[A]]$Bracket[[<]]$TemplateParameter[[T]]$Bracket[[>]] $LocalVariable_def[[b]];
+          $LocalVariable[[b]].template $Method_dependentName[[mem]]$Bracket[[<]]$TemplateParameter[[T]]$Bracket[[>]]();
+        }
+      )cpp",
+      // Brackets support: Concepts
+      R"cpp(
+        template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
+        concept $Concept_decl[[C]] = true;
+        template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]] requires $Concept[[C]]$Bracket[[<]]$TemplateParameter[[T]]$Bracket[[>]]
+        class $Class_def[[Z]] {};
+        template $Bracket[[<]]typename, typename$Bracket[[>]]
+        concept $Concept_decl[[C2]] = true;
+        template $Bracket[[<]]C2$Bracket[[<]]int$Bracket[[>]] $TemplateParameter_def[[A]]$Bracket[[>]]
+        class $Class_def[[B]] {};
+      )cpp",
       // no crash
       R"cpp(
         struct $Class_def[[Foo]] {
@@ -934,12 +1037,12 @@ sizeof...($TemplateParameter[[Elements]]);
         }
       )cpp",
       R"cpp(
-        template<typename>
+        template$Bracket[[<]]typename$Bracket[[>]]
         class $Class_def[[Foo]] {};
 
-        template<typename $TemplateParameter_def[[T]]>
+        template$Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
         void $Function_def[[k]]() {
-          auto $LocalVariable_def[[s]] = $Operator[[new]] $Class[[Foo]]<$TemplateParameter[[T]]>();
+          auto $LocalVariable_def[[s]] = $Operator[[new]] $Class[[Foo]]$Bracket[[<]]$TemplateParameter[[T]]$Bracket[[>]]();
           $Operator[[delete]] $LocalVariable[[s]];
         }
       )cpp"};
@@ -1023,13 +1126,13 @@ TEST(SemanticHighlighting, ScopeModifiers) {
         };
       )cpp",
       R"cpp(
-        template <int $TemplateParameter_classScope[[T]]>
+        template $Bracket[[<]]int $TemplateParameter_classScope[[T]]$Bracket[[>]]
         class $Class_globalScope[[X]] {
         };
       )cpp",
       R"cpp(
         // No useful scope for template parameters of variable templates.
-        template <typename $TemplateParameter[[A]]>
+        template $Bracket[[<]]typename $TemplateParameter[[A]]$Bracket[[>]]
         unsigned $Variable_globalScope[[X]] =
           $TemplateParameter[[A]]::$Unknown_classScope[[x]];
       )cpp",

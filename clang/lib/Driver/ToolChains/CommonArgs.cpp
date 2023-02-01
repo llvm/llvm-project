@@ -1418,10 +1418,6 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
     }
   }
 
-  // AMDGPU-specific defaults for PIC.
-  if (Triple.getArch() == llvm::Triple::amdgcn)
-    PIC = true;
-
   // The last argument relating to either PIC or PIE wins, and no
   // other argument is used. If the last argument is any flavor of the
   // '-fno-...' arguments, both PIC and PIE are disabled. Any PIE

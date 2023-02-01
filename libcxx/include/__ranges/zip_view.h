@@ -77,7 +77,9 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __tuple_transform(_Fun&& __f, _Tuple&& __tu
 template <class _Fun, class _Tuple>
 _LIBCPP_HIDE_FROM_ABI constexpr void __tuple_for_each(_Fun&& __f, _Tuple&& __tuple) {
   std::apply(
-      [&]<class... _Types>(_Types&&... __elements) { (std::invoke(__f, std::forward<_Types>(__elements)), ...); },
+      [&]<class... _Types>(_Types&&... __elements) {
+        (static_cast<void>(std::invoke(__f, std::forward<_Types>(__elements))), ...);
+      },
       std::forward<_Tuple>(__tuple));
 }
 
