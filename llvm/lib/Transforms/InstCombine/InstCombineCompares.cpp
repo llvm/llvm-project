@@ -4661,20 +4661,34 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
     if (match(Op0, m_And(m_Value(B), m_LowBitMask(MaskC))) &&
         MaskC->countTrailingOnes() == A->getType()->getScalarSizeInBits())
       return new ICmpInst(Pred, A, Builder.CreateTrunc(B, A->getType()));
+  }
 
-    // Test if 2 values have different or same signbits:
-    // (X u>> BitWidth - 1) == zext (Y s> -1) --> (X ^ Y) < 0
-    // (X u>> BitWidth - 1) != zext (Y s> -1) --> (X ^ Y) > -1
+  // Test if 2 values have different or same signbits:
+  // (X u>> BitWidth - 1) == zext (Y s> -1) --> (X ^ Y) < 0
+  // (X u>> BitWidth - 1) != zext (Y s> -1) --> (X ^ Y) > -1
+  // (X s>> BitWidth - 1) == sext (Y s> -1) --> (X ^ Y) < 0
+  // (X s>> BitWidth - 1) != sext (Y s> -1) --> (X ^ Y) > -1
+  Instruction *ExtI;
+  if (match(Op1, m_CombineAnd(m_Instruction(ExtI), m_ZExtOrSExt(m_Value(A)))) &&
+      (Op0->hasOneUse() || Op1->hasOneUse())) {
     unsigned OpWidth = Op0->getType()->getScalarSizeInBits();
+    Instruction *ShiftI;
     Value *X, *Y;
     ICmpInst::Predicate Pred2;
-    if (match(Op0, m_LShr(m_Value(X), m_SpecificIntAllowUndef(OpWidth - 1))) &&
+    if (match(Op0, m_CombineAnd(m_Instruction(ShiftI),
+                                m_Shr(m_Value(X),
+                                      m_SpecificIntAllowUndef(OpWidth - 1)))) &&
         match(A, m_ICmp(Pred2, m_Value(Y), m_AllOnes())) &&
         Pred2 == ICmpInst::ICMP_SGT && X->getType() == Y->getType()) {
-      Value *Xor = Builder.CreateXor(X, Y, "xor.signbits");
-      Value *R = (Pred == ICmpInst::ICMP_EQ) ? Builder.CreateIsNeg(Xor) :
-                                               Builder.CreateIsNotNeg(Xor);
-      return replaceInstUsesWith(I, R);
+      unsigned ExtOpc = ExtI->getOpcode();
+      unsigned ShiftOpc = ShiftI->getOpcode();
+      if ((ExtOpc == Instruction::ZExt && ShiftOpc == Instruction::LShr) ||
+          (ExtOpc == Instruction::SExt && ShiftOpc == Instruction::AShr)) {
+        Value *Xor = Builder.CreateXor(X, Y, "xor.signbits");
+        Value *R = (Pred == ICmpInst::ICMP_EQ) ? Builder.CreateIsNeg(Xor)
+                                               : Builder.CreateIsNotNeg(Xor);
+        return replaceInstUsesWith(I, R);
+      }
     }
   }
 

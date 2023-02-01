@@ -50,6 +50,9 @@ Update on required toolchains to build LLVM
 Changes to the LLVM IR
 ----------------------
 
+* Typed pointers are no longer supported. See the `opaque pointers
+  <OpaquePointers.html>`__ documentation for migration instructions.
+
 Changes to building LLVM
 ------------------------
 
@@ -97,6 +100,8 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
+* Assembler support for the Zcb extension was added.
+
 Changes to the WebAssembly Backend
 ----------------------------------
 
@@ -124,6 +129,9 @@ Changes to the OCaml bindings
 
 Changes to the C API
 --------------------
+
+* ``LLVMContextSetOpaquePointers``, a temporary API to pin to legacy typed
+  pointer, has been removed.
 
 Changes to the FastISel infrastructure
 --------------------------------------

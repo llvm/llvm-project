@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <__memory/aligned_alloc.h>
 #include <new>
 #include <stdlib.h>
 

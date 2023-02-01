@@ -33,6 +33,7 @@ add_header_library(
   HDRS
     architectures.h
     common.h
+    cpu_features.h
     endian.h
 )
 
@@ -88,6 +89,7 @@ add_header_library(
     libc.src.__support.CPP.span
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
+    libc.src.__support.common
 )
 
 
@@ -139,6 +141,8 @@ add_header_library(
   arg_list
   HDRS
     arg_list.h
+  DEPENDS
+    libc.src.__support.common
 )
 
 add_header_library(
@@ -153,6 +157,8 @@ add_header_library(
   char_vector
   HDRS
     char_vector.h
+  DEPENDS
+    libc.src.__support.common
 )
 
 add_header_library(
@@ -172,6 +178,7 @@ add_header_library(
     .builtin_wrappers
     .number_pair
     libc.src.__support.CPP.type_traits
+    libc.src.__support.common
 )
 
 add_header_library(

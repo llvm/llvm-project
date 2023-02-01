@@ -2671,9 +2671,7 @@ bool MipsAsmParser::expandJalWithRegs(MCInst &Inst, SMLoc IDLoc,
 
 /// Can the value be represented by a unsigned N-bit value and a shift left?
 template <unsigned N> static bool isShiftedUIntAtAnyPosition(uint64_t x) {
-  unsigned BitNum = findFirstSet(x);
-
-  return (x == x >> BitNum << BitNum) && isUInt<N>(x >> BitNum);
+  return x && isUInt<N>(x >> llvm::countr_zero(x));
 }
 
 /// Load (or add) an immediate into a register.
@@ -2798,11 +2796,14 @@ bool MipsAsmParser::loadImmediate(int64_t ImmValue, unsigned DstReg,
       return true;
     }
 
+    // We've processed ImmValue satisfying isUInt<16> above, so ImmValue must be
+    // at least 17-bit wide here.
+    unsigned BitWidth = llvm::bit_width((uint64_t)ImmValue);
+    assert(BitWidth >= 17 && "ImmValue must be at least 17-bit wide");
+
     // Traditionally, these immediates are shifted as little as possible and as
     // such we align the most significant bit to bit 15 of our temporary.
-    unsigned FirstSet = findFirstSet((uint64_t)ImmValue);
-    unsigned LastSet = findLastSet((uint64_t)ImmValue);
-    unsigned ShiftAmount = FirstSet - (15 - (LastSet - FirstSet));
+    unsigned ShiftAmount = BitWidth - 16;
     uint16_t Bits = (ImmValue >> ShiftAmount) & 0xffff;
     TOut.emitRRI(Mips::ORi, TmpReg, ZeroReg, Bits, IDLoc, STI);
     TOut.emitRRI(Mips::DSLL, TmpReg, TmpReg, ShiftAmount, IDLoc, STI);

@@ -2756,10 +2756,14 @@ void RewriteInstance::selectFunctionsToProcess() {
       LiteThresholdExecCount, static_cast<uint64_t>(opts::LiteThresholdCount));
 
   StringSet<> ReorderFunctionsUserSet;
+  StringSet<> ReorderFunctionsLTOCommonSet;
   if (opts::ReorderFunctions == ReorderFunctions::RT_USER) {
     for (const std::string &Function :
-         ReorderFunctions::readFunctionOrderFile())
+         ReorderFunctions::readFunctionOrderFile()) {
       ReorderFunctionsUserSet.insert(Function);
+      if (std::optional<StringRef> LTOCommonName = getLTOCommonName(Function))
+        ReorderFunctionsLTOCommonSet.insert(*LTOCommonName);
+    }
   }
 
   uint64_t NumFunctionsToProcess = 0;
@@ -2795,6 +2799,10 @@ void RewriteInstance::selectFunctionsToProcess() {
             });
         if (Match.has_value())
           return true;
+        for (const StringRef Name : Function.getNames())
+          if (std::optional<StringRef> LTOCommonName = getLTOCommonName(Name))
+            if (ReorderFunctionsLTOCommonSet.contains(*LTOCommonName))
+              return true;
       }
 
       if (ProfileReader && !ProfileReader->mayHaveProfileData(Function))

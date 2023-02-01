@@ -24,14 +24,6 @@
 
 namespace llvm {
 
-/// The behavior an operation has on an input of 0.
-enum ZeroBehavior {
-  /// The returned value is undefined.
-  ZB_Undefined,
-  /// The returned value is numeric_limits<T>::max()
-  ZB_Max
-};
-
 /// Mathematical constants.
 namespace numbers {
 // TODO: Track C++20 std::numbers.
@@ -92,19 +84,6 @@ template <typename T> unsigned countLeadingZeros(T Val) {
   return llvm::countl_zero(Val);
 }
 
-/// Get the index of the first set bit starting from the least
-///   significant bit.
-///
-/// Only unsigned integral types are allowed.
-///
-/// \param ZB the behavior on an input of 0.
-template <typename T> T findFirstSet(T Val, ZeroBehavior ZB = ZB_Max) {
-  if (ZB == ZB_Max && Val == 0)
-    return std::numeric_limits<T>::max();
-
-  return llvm::countr_zero(Val);
-}
-
 /// Create a bitmask with the N right-most bits set to 1, and all other
 /// bits set to 0.  Only unsigned types are allowed.
 template <typename T> T maskTrailingOnes(unsigned N) {
@@ -130,21 +109,6 @@ template <typename T> T maskTrailingZeros(unsigned N) {
 /// bits set to 1.  Only unsigned types are allowed.
 template <typename T> T maskLeadingZeros(unsigned N) {
   return maskTrailingOnes<T>(CHAR_BIT * sizeof(T) - N);
-}
-
-/// Get the index of the last set bit starting from the least
-///   significant bit.
-///
-/// Only unsigned integral types are allowed.
-///
-/// \param ZB the behavior on an input of 0.
-template <typename T> T findLastSet(T Val, ZeroBehavior ZB = ZB_Max) {
-  if (ZB == ZB_Max && Val == 0)
-    return std::numeric_limits<T>::max();
-
-  // Use ^ instead of - because both gcc and llvm can remove the associated ^
-  // in the __builtin_clz intrinsic on x86.
-  return llvm::countl_zero(Val) ^ (std::numeric_limits<T>::digits - 1);
 }
 
 /// Macro compressed bit reversal table for 256 bits.

@@ -1518,9 +1518,10 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     break;
   case DeclSpec::TST_half:    Result = Context.HalfTy; break;
   case DeclSpec::TST_BFloat16:
-    if (!S.Context.getTargetInfo().hasBFloat16Type())
-      S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
-        << "__bf16";
+    if (!S.Context.getTargetInfo().hasBFloat16Type() &&
+        !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsDevice) &&
+        !S.getLangOpts().SYCLIsDevice)
+      S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported) << "__bf16";
     Result = Context.BFloat16Ty;
     break;
   case DeclSpec::TST_float:   Result = Context.FloatTy; break;
@@ -1588,9 +1589,6 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
 
     // TypeQuals handled by caller.
     Result = Context.getTypeDeclType(D);
-    if (const auto *Using =
-            dyn_cast_or_null<UsingShadowDecl>(DS.getRepAsFoundDecl()))
-      Result = Context.getUsingType(Using, Result);
 
     // In both C and C++, make an ElaboratedType.
     ElaboratedTypeKeyword Keyword
@@ -6250,9 +6248,6 @@ namespace {
         TL.setArgLocInfo(I, TemplateArgsInfo.arguments()[I].getLocInfo());
     }
     void VisitTagTypeLoc(TagTypeLoc TL) {
-      TL.setNameLoc(DS.getTypeSpecTypeNameLoc());
-    }
-    void VisitUsingTypeLoc(UsingTypeLoc TL) {
       TL.setNameLoc(DS.getTypeSpecTypeNameLoc());
     }
     void VisitAtomicTypeLoc(AtomicTypeLoc TL) {

@@ -12,7 +12,7 @@ func.func @test_loops_do_not_get_coalesced() {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["affine.for"]} attributes {coalesce} in %arg1
+  %0 = transform.structured.match ops{["affine.for"]} attributes {coalesce} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = transform.cast %0 : !pdl.operation to !transform.op<"affine.for">
   // expected-error @below {{failed to coalesce}}
   %2 = transform.loop.coalesce %1: (!transform.op<"affine.for">) -> (!transform.op<"affine.for">)
@@ -29,7 +29,7 @@ func.func @test_loops_do_not_get_unrolled() {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["arith.addi"]} in %arg1
+  %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = transform.loop.get_parent_for %0 { affine = true } : (!pdl.operation) -> !transform.op<"affine.for">
   // expected-error @below {{failed to unroll}}
   transform.loop.unroll %1 { factor = 8 } : !transform.op<"affine.for">
@@ -55,7 +55,7 @@ func.func @loop_outline_op_multi_region() {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["scf.while"]} in %arg1
+  %0 = transform.structured.match ops{["scf.while"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   // expected-error @below {{failed to outline}}
   transform.loop.outline %0 {func_name = "foo"} : (!pdl.operation) -> !pdl.operation
 }

@@ -49,12 +49,4 @@
 #define LLVM_LIBC_ARCH_ANY_ARM
 #endif
 
-#if defined(LLVM_LIBC_ARCH_AARCH64)
-#define LIBC_TARGET_HAS_FMA
-#elif defined(LLVM_LIBC_ARCH_X86_64)
-#if (defined(__AVX2__) || defined(__FMA__))
-#define LIBC_TARGET_HAS_FMA
-#endif
-#endif
-
 #endif // LLVM_LIBC_SUPPORT_ARCHITECTURES_H

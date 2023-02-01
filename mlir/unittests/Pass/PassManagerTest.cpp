@@ -68,7 +68,7 @@ TEST(PassManagerTest, OpSpecificAnalysis) {
   }
 
   // Instantiate and run our pass.
-  PassManager pm(&context);
+  auto pm = PassManager::on<ModuleOp>(&context);
   pm.addNestedPass<func::FuncOp>(std::make_unique<AnnotateFunctionPass>());
   LogicalResult result = pm.run(module.get());
   EXPECT_TRUE(succeeded(result));
@@ -123,7 +123,7 @@ TEST(PassManagerTest, InvalidPass) {
   });
 
   // Instantiate and run our pass.
-  PassManager pm(&context);
+  auto pm = PassManager::on<ModuleOp>(&context);
   pm.nest("invalid_op").addPass(std::make_unique<InvalidPass>());
   LogicalResult result = pm.run(module.get());
   EXPECT_TRUE(failed(result));
@@ -138,7 +138,10 @@ TEST(PassManagerTest, InvalidPass) {
   EXPECT_TRUE(succeeded(result));
 
   // Check that adding the pass at the top-level triggers a fatal error.
-  ASSERT_DEATH(pm.addPass(std::make_unique<InvalidPass>()), "");
+  ASSERT_DEATH(pm.addPass(std::make_unique<InvalidPass>()),
+               "Can't add pass 'Invalid Pass' restricted to 'invalid_op' on a "
+               "PassManager intended to run on 'builtin.module', did you "
+               "intend to nest?");
 }
 
 } // namespace

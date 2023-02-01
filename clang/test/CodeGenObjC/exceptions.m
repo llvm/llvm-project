@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -fobjc-exceptions -mllvm -simplifycfg-sink-common=false -O2 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -fobjc-exceptions -mllvm -simplifycfg-sink-common=false -O2 -o - %s | FileCheck %s
 //
 // <rdar://problem/7471679> [irgen] [eh] Exception code built with clang (x86_64) crashes
 
@@ -20,7 +20,6 @@ void f1(void) {
 
   while (1) {
     // CHECK:      call void @objc_exception_try_enter
-    // CHECK-NEXT: getelementptr
     // CHECK-NEXT: call i32 @_setjmp(
     // CHECK-NEXT: icmp
     // CHECK-NEXT: br i1
@@ -45,7 +44,7 @@ int f2(void) {
   extern void foo(void);
 
   // CHECK:        [[X:%.*]] = alloca i32
-  // CHECK:        store i32 5, i32* [[X]]
+  // CHECK:        store i32 5, ptr [[X]]
   int x = 0;
   x += 5;
 
@@ -54,17 +53,17 @@ int f2(void) {
   // CHECK-NEXT:   br i1 [[CAUGHT]]
   @try {
     // Landing pad.  Note that we elide the re-enter.
-    // CHECK:      call void asm sideeffect "", "=*m,=*m"(i32* nonnull elementtype(i32) [[X]]
-    // CHECK-NEXT: call i8* @objc_exception_extract
-    // CHECK-NEXT: [[T1:%.*]] = load i32, i32* [[X]]
+    // CHECK:      call void asm sideeffect "", "=*m,=*m"(ptr nonnull elementtype(i32) [[X]]
+    // CHECK-NEXT: call ptr @objc_exception_extract
+    // CHECK-NEXT: [[T1:%.*]] = load i32, ptr [[X]]
     // CHECK-NEXT: [[T2:%.*]] = add nsw i32 [[T1]], -1
 
-    // CHECK: store i32 6, i32* [[X]]
+    // CHECK: store i32 6, ptr [[X]]
     x++;
-    // CHECK-NEXT: call void asm sideeffect "", "*m,*m"(i32* nonnull elementtype(i32) [[X]]
+    // CHECK-NEXT: call void asm sideeffect "", "*m,*m"(ptr nonnull elementtype(i32) [[X]]
     // CHECK-NEXT: call void @foo()
     // CHECK-NEXT: call void @objc_exception_try_exit
-    // CHECK-NEXT: [[T:%.*]] = load i32, i32* [[X]]
+    // CHECK-NEXT: [[T:%.*]] = load i32, ptr [[X]]
     foo();
   } @catch (id) {
     x--;
@@ -80,9 +79,8 @@ void f3(void) {
   extern void f3_helper(int, int*);
 
   // CHECK:      [[X:%.*]] = alloca i32
-  // CHECK:      [[XPTR:%.*]] = bitcast i32* [[X]] to i8*
-  // CHECK:      call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull [[XPTR]])
-  // CHECK:      store i32 0, i32* [[X]]
+  // CHECK:      call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[X]])
+  // CHECK:      store i32 0, ptr [[X]]
   int x = 0;
 
   // CHECK:      call void @objc_exception_try_enter(
@@ -91,7 +89,7 @@ void f3(void) {
   // CHECK-NEXT: br i1 [[DEST1]]
 
   @try {
-    // CHECK:    call void @f3_helper(i32 noundef 0, i32* noundef nonnull [[X]])
+    // CHECK:    call void @f3_helper(i32 noundef 0, ptr noundef nonnull [[X]])
     // CHECK:    call void @objc_exception_try_exit(
     f3_helper(0, &x);
   } @finally {
@@ -100,11 +98,11 @@ void f3(void) {
     // CHECK-NEXT: [[DEST2:%.*]] = icmp eq
     // CHECK-NEXT: br i1 [[DEST2]]
     @try {
-      // CHECK:  call void @f3_helper(i32 noundef 1, i32* noundef nonnull [[X]])
+      // CHECK:  call void @f3_helper(i32 noundef 1, ptr noundef nonnull [[X]])
       // CHECK:  call void @objc_exception_try_exit(
       f3_helper(1, &x);
     } @finally {
-      // CHECK:  call void @f3_helper(i32 noundef 2, i32* noundef nonnull [[X]])
+      // CHECK:  call void @f3_helper(i32 noundef 2, ptr noundef nonnull [[X]])
       f3_helper(2, &x);
 
       // This loop is large enough to dissuade the optimizer from just
@@ -121,8 +119,8 @@ void f3(void) {
     // CHECK:    [[DEST1]]
   }
 
-  // CHECK:      call void @f3_helper(i32 noundef 4, i32* noundef nonnull [[X]])
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull [[XPTR]])
+  // CHECK:      call void @f3_helper(i32 noundef 4, ptr noundef nonnull [[X]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[X]])
   // CHECK-NEXT: ret void
   f3_helper(4, &x);
 }
@@ -133,7 +131,7 @@ void f4(void) {
 
   // CHECK-LABEL: define{{.*}} void @f4()
   // CHECK:      [[EXNDATA:%.*]] = alloca [[EXNDATA_T:%.*]], align
-  // CHECK:      call void @objc_exception_try_enter([[EXNDATA_T]]* nonnull [[EXNDATA]])
+  // CHECK:      call void @objc_exception_try_enter(ptr nonnull [[EXNDATA]])
   // CHECK:      call i32 @_setjmp
   @try {
   // CHECK:      call void @f4_help(i32 noundef 0)
@@ -142,7 +140,7 @@ void f4(void) {
   // The finally cleanup has two threaded entrypoints after optimization:
 
   // finally.no-call-exit:  Predecessor is when the catch throws.
-  // CHECK:      call i8* @objc_exception_extract([[EXNDATA_T]]* nonnull [[EXNDATA]])
+  // CHECK:      call ptr @objc_exception_extract(ptr nonnull [[EXNDATA]])
   // CHECK-NEXT: call void @f4_help(i32 noundef 2)
   // CHECK-NEXT: br label
   //   -> rethrow
@@ -150,9 +148,9 @@ void f4(void) {
   // finally.call-exit:  Predecessors are the @try and @catch fallthroughs
   // as well as the no-match case in the catch mechanism.  The i1 is whether
   // to rethrow and should be true only in the last case.
-  // CHECK:      phi i8*
+  // CHECK:      phi ptr
   // CHECK-NEXT: phi i1
-  // CHECK-NEXT: call void @objc_exception_try_exit([[EXNDATA_T]]* nonnull [[EXNDATA]])
+  // CHECK-NEXT: call void @objc_exception_try_exit(ptr nonnull [[EXNDATA]])
   // CHECK-NEXT: call void @f4_help(i32 noundef 2)
   // CHECK-NEXT: br i1
   //   -> ret, rethrow
@@ -161,8 +159,8 @@ void f4(void) {
   // CHECK:      ret void
 
   // Catch mechanism:
-  // CHECK:      call i8* @objc_exception_extract([[EXNDATA_T]]* nonnull [[EXNDATA]])
-  // CHECK-NEXT: call void @objc_exception_try_enter([[EXNDATA_T]]* nonnull [[EXNDATA]])
+  // CHECK:      call ptr @objc_exception_extract(ptr nonnull [[EXNDATA]])
+  // CHECK-NEXT: call void @objc_exception_try_enter(ptr nonnull [[EXNDATA]])
   // CHECK:      call i32 @_setjmp
   //   -> next, finally.no-call-exit
   // CHECK:      call i32 @objc_exception_match
@@ -178,7 +176,7 @@ void f4(void) {
   }
 
   // rethrow:
-  // CHECK:      phi i8*
-  // CHECK-NEXT: call void @objc_exception_throw(i8*
+  // CHECK:      phi ptr
+  // CHECK-NEXT: call void @objc_exception_throw(ptr
   // CHECK-NEXT: unreachable
 }

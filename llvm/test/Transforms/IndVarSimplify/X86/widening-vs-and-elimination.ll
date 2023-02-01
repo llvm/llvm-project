@@ -11,12 +11,12 @@ define void @test_01(i32 %start, i32 %limit) {
 ; WIDENING_ON-NEXT:    [[TMP0:%.*]] = zext i32 [[START:%.*]] to i64
 ; WIDENING_ON-NEXT:    [[TMP1:%.*]] = add nsw i64 [[TMP0]], -1
 ; WIDENING_ON-NEXT:    [[TMP2:%.*]] = zext i32 [[LIMIT:%.*]] to i64
+; WIDENING_ON-NEXT:    [[RANGE_CHECK_WIDE_FIRST_ITER:%.*]] = icmp ult i64 [[TMP1]], [[TMP2]]
 ; WIDENING_ON-NEXT:    br label [[LOOP:%.*]]
 ; WIDENING_ON:       loop:
 ; WIDENING_ON-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ [[TMP0]], [[BB:%.*]] ]
 ; WIDENING_ON-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
 ; WIDENING_ON-NEXT:    [[NOT_ZERO:%.*]] = icmp ne i64 [[INDVARS_IV]], 0
-; WIDENING_ON-NEXT:    [[RANGE_CHECK_WIDE_FIRST_ITER:%.*]] = icmp ult i64 [[TMP1]], [[TMP2]]
 ; WIDENING_ON-NEXT:    [[AND:%.*]] = and i1 [[NOT_ZERO]], [[RANGE_CHECK_WIDE_FIRST_ITER]]
 ; WIDENING_ON-NEXT:    br i1 [[AND]], label [[BACKEDGE]], label [[EXIT:%.*]]
 ; WIDENING_ON:       backedge:
@@ -27,12 +27,12 @@ define void @test_01(i32 %start, i32 %limit) {
 ; WIDENING_OFF-LABEL: @test_01(
 ; WIDENING_OFF-NEXT:  bb:
 ; WIDENING_OFF-NEXT:    [[TMP0:%.*]] = add i32 [[START:%.*]], -1
+; WIDENING_OFF-NEXT:    [[RANGE_CHECK_FIRST_ITER:%.*]] = icmp ult i32 [[TMP0]], [[LIMIT:%.*]]
 ; WIDENING_OFF-NEXT:    br label [[LOOP:%.*]]
 ; WIDENING_OFF:       loop:
 ; WIDENING_OFF-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ [[START]], [[BB:%.*]] ]
 ; WIDENING_OFF-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
 ; WIDENING_OFF-NEXT:    [[NOT_ZERO:%.*]] = icmp ne i32 [[IV]], 0
-; WIDENING_OFF-NEXT:    [[RANGE_CHECK_FIRST_ITER:%.*]] = icmp ult i32 [[TMP0]], [[LIMIT:%.*]]
 ; WIDENING_OFF-NEXT:    [[AND:%.*]] = and i1 [[NOT_ZERO]], [[RANGE_CHECK_FIRST_ITER]]
 ; WIDENING_OFF-NEXT:    br i1 [[AND]], label [[BACKEDGE]], label [[EXIT:%.*]]
 ; WIDENING_OFF:       backedge:

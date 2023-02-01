@@ -167,6 +167,27 @@ namespace dr1959 { // dr1959: 3.9
 #endif
 }
 
+namespace dr1960 { // dr1960: no
+struct A {
+void f() {}
+protected:
+void g() {}
+};
+
+struct B: A {
+private:
+using A::f;
+using A::g;
+};
+
+struct C : B {
+// FIXME: both declarations are ill-formed, because A::f and A::g
+// are not accessible.
+using A::f;
+using A::g;
+};
+}
+
 namespace dr1966 { // dr1966: 11
 #if __cplusplus >= 201103L
   struct A {

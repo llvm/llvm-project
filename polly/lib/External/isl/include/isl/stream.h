@@ -44,6 +44,7 @@ enum isl_token_type { ISL_TOKEN_ERROR = -1,
 struct isl_token;
 
 __isl_give isl_val *isl_token_get_val(isl_ctx *ctx, struct isl_token *tok);
+isl_bool isl_token_has_str(struct isl_token *tok);
 __isl_give char *isl_token_get_str(isl_ctx *ctx, struct isl_token *tok);
 int isl_token_get_type(struct isl_token *tok);
 void isl_token_free(struct isl_token *tok);
@@ -75,21 +76,23 @@ enum isl_token_type isl_stream_register_keyword(__isl_keep isl_stream *s,
 	const char *name);
 
 struct isl_obj isl_stream_read_obj(__isl_keep isl_stream *s);
+__isl_give isl_id *isl_stream_read_id(__isl_keep isl_stream *s);
 __isl_give isl_val *isl_stream_read_val(__isl_keep isl_stream *s);
 __isl_give isl_multi_aff *isl_stream_read_multi_aff(__isl_keep isl_stream *s);
 __isl_give isl_map *isl_stream_read_map(__isl_keep isl_stream *s);
 __isl_give isl_set *isl_stream_read_set(__isl_keep isl_stream *s);
+__isl_give isl_basic_set *isl_stream_read_basic_set(__isl_keep isl_stream *s);
 __isl_give isl_pw_qpolynomial *isl_stream_read_pw_qpolynomial(
 	__isl_keep isl_stream *s);
 __isl_give isl_union_set *isl_stream_read_union_set(__isl_keep isl_stream *s);
 __isl_give isl_union_map *isl_stream_read_union_map(__isl_keep isl_stream *s);
 __isl_give isl_schedule *isl_stream_read_schedule(isl_stream *s);
 
-int isl_stream_yaml_read_start_mapping(__isl_keep isl_stream *s);
-int isl_stream_yaml_read_end_mapping(__isl_keep isl_stream *s);
-int isl_stream_yaml_read_start_sequence(__isl_keep isl_stream *s);
-int isl_stream_yaml_read_end_sequence(__isl_keep isl_stream *s);
-int isl_stream_yaml_next(__isl_keep isl_stream *s);
+isl_stat isl_stream_yaml_read_start_mapping(__isl_keep isl_stream *s);
+isl_stat isl_stream_yaml_read_end_mapping(__isl_keep isl_stream *s);
+isl_stat isl_stream_yaml_read_start_sequence(__isl_keep isl_stream *s);
+isl_stat isl_stream_yaml_read_end_sequence(__isl_keep isl_stream *s);
+isl_bool isl_stream_yaml_next(__isl_keep isl_stream *s);
 
 #if defined(__cplusplus)
 }

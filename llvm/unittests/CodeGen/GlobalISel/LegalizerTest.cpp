@@ -61,7 +61,7 @@ TEST_F(AArch64GISelMITest, BasicLegalizerTest) {
   )";
   setUp(MIRString.rtrim(' '));
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   ALegalizerInfo LI(MF->getSubtarget());
   LostDebugLocObserver LocObserver(DEBUG_TYPE);
@@ -98,7 +98,7 @@ TEST_F(AArch64GISelMITest, UnorderedArtifactCombiningTest) {
   )";
   setUp(MIRString.rtrim(' '));
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   ALegalizerInfo LI(MF->getSubtarget());
   LostDebugLocObserver LocObserver(DEBUG_TYPE);
@@ -191,7 +191,7 @@ TEST_F(AArch64GISelMITest, UnorderedArtifactCombiningManyCopiesTest) {
   )";
   setUp(MIRString.rtrim(' '));
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   ALegalizerInfo LI(MF->getSubtarget());
   LostDebugLocObserver LocObserver(DEBUG_TYPE);

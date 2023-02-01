@@ -102,17 +102,17 @@ class CppDataFormatterTestCase(TestBase):
 
         # check that rdar://problem/10011145 (Standard summary format for
         # char[] doesn't work as the result of "expr".) is solved
-        self.expect("p strarr",
+        self.expect("expression strarr",
                     substrs=['arr = "Hello world!'])
 
         self.expect("frame variable strptr",
                     substrs=['ptr = "Hello world!"'])
 
-        self.expect("p strptr",
+        self.expect("expression strptr",
                     substrs=['ptr = "Hello world!"'])
 
         self.expect(
-            "p (char*)\"1234567890123456789012345678901234567890123456789012345678901234ABC\"",
+            "expression (char*)\"1234567890123456789012345678901234567890123456789012345678901234ABC\"",
             substrs=[
                 '(char *) $',
                 ' = ptr = ',

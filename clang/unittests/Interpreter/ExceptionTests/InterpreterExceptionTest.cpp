@@ -57,7 +57,7 @@ TEST(InterpreterTest, CatchException) {
       // Using llvm::consumeError will require typeinfo for ErrorInfoBase, we
       // can avoid that by going via the C interface.
       LLVMConsumeError(llvm::wrap(J.takeError()));
-      return;
+      GTEST_SKIP();
     }
   }
 
@@ -102,16 +102,16 @@ extern "C" int throw_exception() {
 
   // AIX is unsupported.
   if (Triple.isOSAIX())
-    return;
+    GTEST_SKIP();
 
   // FIXME: ARM fails due to `Not implemented relocation type!`
   if (Triple.isARM())
-    return;
+    GTEST_SKIP();
 
   // FIXME: libunwind on darwin is broken, see PR49692.
   if (Triple.isOSDarwin() && (Triple.getArch() == llvm::Triple::aarch64 ||
                               Triple.getArch() == llvm::Triple::aarch64_32))
-    return;
+    GTEST_SKIP();
 
   llvm::cantFail(Interp->ParseAndExecute(ExceptionCode));
   testing::internal::CaptureStdout();

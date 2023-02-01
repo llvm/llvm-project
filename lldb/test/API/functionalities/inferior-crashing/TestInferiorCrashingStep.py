@@ -145,9 +145,9 @@ class CrashingInferiorStepTestCase(TestBase):
 
         # The lldb expression interpreter should be able to read from addresses
         # of the inferior after a crash.
-        self.expect("p argc", startstr='(int) $0 = 1')
+        self.expect("expression argc", startstr='(int) $0 = 1')
 
-        self.expect("p hello_world", substrs=['Hello'])
+        self.expect("expression hello_world", substrs=['Hello'])
 
     def inferior_crashing_step(self):
         """Test that lldb functions correctly after stepping through a crash."""
@@ -167,8 +167,8 @@ class CrashingInferiorStepTestCase(TestBase):
 
         # The lldb expression interpreter should be able to read from addresses
         # of the inferior after a crash.
-        self.expect("p argv[0]", substrs=['a.out'])
-        self.expect("p null_ptr", substrs=['= 0x0'])
+        self.expect("expression argv[0]", substrs=['a.out'])
+        self.expect("expression null_ptr", substrs=['= 0x0'])
 
         # lldb should be able to read from registers from the inferior after
         # crashing.
@@ -212,11 +212,11 @@ class CrashingInferiorStepTestCase(TestBase):
 
         # The lldb expression interpreter should be able to read from addresses
         # of the inferior after a crash.
-        self.expect("p argv[0]", substrs=['a.out'])
+        self.expect("expression argv[0]", substrs=['a.out'])
 
         self.runCmd("next")
         self.check_stop_reason()
 
         # The lldb expression interpreter should be able to read from addresses
         # of the inferior after a crash.
-        self.expect("p argv[0]", substrs=['a.out'])
+        self.expect("expression argv[0]", substrs=['a.out'])

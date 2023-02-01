@@ -390,7 +390,7 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
 
   // If this is CPU offloading we copy the input libraries.
   if (!Triple.isAMDGPU() && !Triple.isNVPTX()) {
-    CmdArgs.push_back("-Bsymbolic");
+    CmdArgs.push_back("-Wl,-Bsymbolic");
     CmdArgs.push_back("-shared");
     ArgStringList LinkerArgs;
     for (const opt::Arg *Arg :
@@ -515,8 +515,6 @@ std::unique_ptr<lto::LTO> createLTO(
   assert(CGOptLevelOrNone && "Invalid optimization level");
   Conf.CGOptLevel = *CGOptLevelOrNone;
   Conf.OptLevel = OptLevel[1] - '0';
-  if (Conf.OptLevel > 0)
-    Conf.UseDefaultPipeline = true;
   Conf.DefaultTriple = Triple.getTriple();
 
   LTOError = false;

@@ -1,0 +1,83 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a55  \
+# RUN:  -run-pass=machine-scheduler -debug-only=machine-scheduler -o - %s \
+# RUN:  -misched-topdown=true -sched-print-cycles=true \
+# RUN:  -misched-dump-schedule-trace=true -misched-dump-schedule-trace-col-header-width=21 \
+# RUN:  2>&1 | FileCheck %s --check-prefix=TOP --strict-whitespace
+
+# RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a55  \
+# RUN:  -run-pass=machine-scheduler -debug-only=machine-scheduler -o - %s \
+# RUN:  -misched-bottomup=true -sched-print-cycles=true \
+# RUN:  -misched-dump-schedule-trace=true -misched-dump-schedule-trace-col-width=4 \
+# RUN:  2>&1 | FileCheck %s --check-prefix=BOTTOM  --strict-whitespace
+
+# RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a55  \
+# RUN:  -run-pass=machine-scheduler -debug-only=machine-scheduler -o - %s \
+# RUN:  -sched-print-cycles=true -misched-dump-schedule-trace=true \
+# RUN:  2>&1 | FileCheck %s --check-prefix=BIDIRECTIONAL
+
+# REQUIRES: asserts, aarch64-registered-target
+---
+name: f
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $x2, $x6, $q0
+    %14:fpr128 = EXTv16i8 $q0, $q0, 8
+    $x3 = ADDXrr $x0, $x0
+    $x4 = ADDXrr $x1, $x1
+    $x5 = ADDXrr $x2, $x2
+    $x7 = ADDXrr $x6, $x6
+
+# TOP-LABEL: *** Final schedule for %bb.0 ***
+# TOP-NEXT:  * Schedule table (TopDown):
+# TOP-NEXT:   i: issue
+# TOP-NEXT:   x: resource booked
+# TOP-NEXT: Cycle                | 0  | 1  | 2  |
+# TOP-NEXT: SU(0)                | i  |    |    |
+# TOP-NEXT: CortexA55UnitFPALU   | x  | x  |    |
+# TOP-NEXT: SU(1)                | i  |    |    |
+# TOP-NEXT: CortexA55UnitALU     | x  |    |    |
+# TOP-NEXT: SU(2)                |    | i  |    |
+# TOP-NEXT: CortexA55UnitALU     |    | x  |    |
+# TOP-NEXT: SU(3)                |    | i  |    |
+# TOP-NEXT: CortexA55UnitALU     |    | x  |    |
+# TOP-NEXT: SU(4)                |    |    | i  |
+# TOP-NEXT: CortexA55UnitALU     |    |    | x  |
+# TOP-NEXT: SU(0) [TopReadyCycle = 0, BottomReadyCycle = 3]:   dead %0:fpr128 = EXTv16i8 $q0, $q0, 8
+# TOP-NEXT: SU(1) [TopReadyCycle = 0, BottomReadyCycle = 0]:   $x3 = ADDXrr $x0, $x0
+# TOP-NEXT: SU(2) [TopReadyCycle = 1, BottomReadyCycle = 0]:   $x4 = ADDXrr $x1, $x1
+# TOP-NEXT: SU(3) [TopReadyCycle = 1, BottomReadyCycle = 0]:   $x5 = ADDXrr $x2, $x2
+# TOP-NEXT: SU(4) [TopReadyCycle = 2, BottomReadyCycle = 0]:   $x7 = ADDXrr $x6, $x6
+
+# BOTTOM-LABEL: *** Final schedule for %bb.0 ***
+# BOTTOM-NEXT:  * Schedule table (BottomUp):
+# BOTTOM-NEXT:   i: issue
+# BOTTOM-NEXT:   x: resource booked
+# BOTTOM-NEXT: Cycle              | 3 | 2 | 1 | 0 |
+# BOTTOM-NEXT: SU(0)              | i |   |   |   |
+# BOTTOM-NEXT: CortexA55UnitFPALU | x | x |   |   |
+# BOTTOM-NEXT: SU(1)              |   |   | i |   |
+# BOTTOM-NEXT: CortexA55UnitALU   |   |   | x |   |
+# BOTTOM-NEXT: SU(2)              |   |   | i |   |
+# BOTTOM-NEXT: CortexA55UnitALU   |   |   | x |   |
+# BOTTOM-NEXT: SU(3)              |   |   |   | i |
+# BOTTOM-NEXT: CortexA55UnitALU   |   |   |   | x |
+# BOTTOM-NEXT: SU(4)              |   |   |   | i |
+# BOTTOM-NEXT: CortexA55UnitALU   |   |   |   | x |
+# BOTTOM-NEXT: SU(0) [TopReadyCycle = 0, BottomReadyCycle = 3]:   dead %0:fpr128 = EXTv16i8 $q0, $q0, 8
+# BOTTOM-NEXT: SU(1) [TopReadyCycle = 0, BottomReadyCycle = 1]:   $x3 = ADDXrr $x0, $x0
+# BOTTOM-NEXT: SU(2) [TopReadyCycle = 0, BottomReadyCycle = 1]:   $x4 = ADDXrr $x1, $x1
+# BOTTOM-NEXT: SU(3) [TopReadyCycle = 0, BottomReadyCycle = 0]:   $x5 = ADDXrr $x2, $x2
+# BOTTOM-NEXT: SU(4) [TopReadyCycle = 0, BottomReadyCycle = 0]:   $x7 = ADDXrr $x6, $x6
+
+# This test shows that at the moment we cannot generate the trace of
+# bidirectional scheduling as the values of TopReadyCycle and
+# BottomReadyCycle are inconsistent.
+
+# BIDIRECTIONAL-LABEL: *** Final schedule for %bb.0 ***
+# BIDIRECTIONAL-NEXT:  * Schedule table (Bidirectional): not implemented
+# BIDIRECTIONAL-NEXT: SU(0) [TopReadyCycle = 0, BottomReadyCycle = 3]:   dead %0:fpr128 = EXTv16i8 $q0, $q0, 8
+# BIDIRECTIONAL-NEXT: SU(1) [TopReadyCycle = 0, BottomReadyCycle = 1]:   $x3 = ADDXrr $x0, $x0
+# BIDIRECTIONAL-NEXT: SU(2) [TopReadyCycle = 0, BottomReadyCycle = 1]:   $x4 = ADDXrr $x1, $x1
+# BIDIRECTIONAL-NEXT: SU(3) [TopReadyCycle = 0, BottomReadyCycle = 0]:   $x5 = ADDXrr $x2, $x2
+# BIDIRECTIONAL-NEXT: SU(4) [TopReadyCycle = 0, BottomReadyCycle = 0]:   $x7 = ADDXrr $x6, $x6

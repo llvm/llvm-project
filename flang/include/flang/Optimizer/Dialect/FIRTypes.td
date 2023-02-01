@@ -561,6 +561,7 @@ def fir_VoidType : FIR_Type<"Void", "void"> {
 // Whether a type is a BaseBoxType
 def IsBaseBoxTypePred
         : CPred<"$_self.isa<::fir::BaseBoxType>()">;
+def fir_BaseBoxType : Type<IsBaseBoxTypePred, "fir.box or fir.class type">;
 
 // Generalized FIR and standard dialect types representing intrinsic types
 def AnyIntegerLike : TypeConstraint<Or<[SignlessIntegerLike.predicate,

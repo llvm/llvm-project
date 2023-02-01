@@ -26,7 +26,7 @@ func.func @conv_1d(%arg0: memref<?xf32>, %arg1: memref<?xf32>, %arg2: memref<?xf
 
 transform.sequence failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.conv_1d"]} in %arg1
+    %0 = transform.structured.match ops{["linalg.conv_1d"]} in %arg1 : (!pdl.operation) -> !pdl.operation
     %1, %loop = transform.structured.tile %0 [4] : (!pdl.operation) -> (!pdl.operation, !pdl.operation)
 }
 
