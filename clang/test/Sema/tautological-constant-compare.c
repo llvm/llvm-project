@@ -4,8 +4,8 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wtautological-type-limit-compare -DTEST -verify -x c++ %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wtype-limits -DTEST -verify %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wtype-limits -DTEST -verify -x c++ %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wextra -Wno-sign-compare -verify=silent %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wextra -Wno-sign-compare -verify=silent -x c++ %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wextra -Wno-sign-compare -DTEST -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wextra -Wno-sign-compare -DTEST -verify -x c++ %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wall -verify=silent %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wall -verify=silent -x c++ %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -verify=silent %s

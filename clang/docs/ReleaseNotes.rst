@@ -61,6 +61,9 @@ Bug Fixes
   templates. This fixes
   `Issue 60344 <https://github.com/llvm/llvm-project/issues/60344>`_.
 
+- ``-Wtype-limits`` was added to ``-Wextra`` for GCC compatibility. This fixes
+  `Issue 58375 <https://github.com/llvm/llvm-project/issues/58375>`_.
+
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - We now generate a diagnostic for signed integer overflow due to unary minus
