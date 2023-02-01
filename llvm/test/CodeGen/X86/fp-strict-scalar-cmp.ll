@@ -4141,38 +4141,30 @@ define void @foo(float %0, float %1) #0 {
 ; SSE-32:       # %bb.0:
 ; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
-; SSE-32-NEXT:    jbe .LBB56_1
-; SSE-32-NEXT:  # %bb.2:
-; SSE-32-NEXT:    jmp bar # TAILCALL
-; SSE-32-NEXT:  .LBB56_1:
+; SSE-32-NEXT:    ja bar # TAILCALL
+; SSE-32-NEXT:  # %bb.1:
 ; SSE-32-NEXT:    retl
 ;
 ; SSE-64-LABEL: foo:
 ; SSE-64:       # %bb.0:
 ; SSE-64-NEXT:    ucomiss %xmm1, %xmm0
-; SSE-64-NEXT:    jbe .LBB56_1
-; SSE-64-NEXT:  # %bb.2:
-; SSE-64-NEXT:    jmp bar # TAILCALL
-; SSE-64-NEXT:  .LBB56_1:
+; SSE-64-NEXT:    ja bar # TAILCALL
+; SSE-64-NEXT:  # %bb.1:
 ; SSE-64-NEXT:    retq
 ;
 ; AVX-32-LABEL: foo:
 ; AVX-32:       # %bb.0:
 ; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
-; AVX-32-NEXT:    jbe .LBB56_1
-; AVX-32-NEXT:  # %bb.2:
-; AVX-32-NEXT:    jmp bar # TAILCALL
-; AVX-32-NEXT:  .LBB56_1:
+; AVX-32-NEXT:    ja bar # TAILCALL
+; AVX-32-NEXT:  # %bb.1:
 ; AVX-32-NEXT:    retl
 ;
 ; AVX-64-LABEL: foo:
 ; AVX-64:       # %bb.0:
 ; AVX-64-NEXT:    vucomiss %xmm1, %xmm0
-; AVX-64-NEXT:    jbe .LBB56_1
-; AVX-64-NEXT:  # %bb.2:
-; AVX-64-NEXT:    jmp bar # TAILCALL
-; AVX-64-NEXT:  .LBB56_1:
+; AVX-64-NEXT:    ja bar # TAILCALL
+; AVX-64-NEXT:  # %bb.1:
 ; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: foo:
@@ -4184,10 +4176,8 @@ define void @foo(float %0, float %1) #0 {
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
-; X87-NEXT:    jbe .LBB56_1
-; X87-NEXT:  # %bb.2:
-; X87-NEXT:    jmp bar # TAILCALL
-; X87-NEXT:  .LBB56_1:
+; X87-NEXT:    ja bar # TAILCALL
+; X87-NEXT:  # %bb.1:
 ; X87-NEXT:    retl
 ;
 ; X87-CMOV-LABEL: foo:
@@ -4197,10 +4187,8 @@ define void @foo(float %0, float %1) #0 {
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    jbe .LBB56_1
-; X87-CMOV-NEXT:  # %bb.2:
-; X87-CMOV-NEXT:    jmp bar # TAILCALL
-; X87-CMOV-NEXT:  .LBB56_1:
+; X87-CMOV-NEXT:    ja bar # TAILCALL
+; X87-CMOV-NEXT:  # %bb.1:
 ; X87-CMOV-NEXT:    retl
   %3 = call i1 @llvm.experimental.constrained.fcmp.f32( float %0, float %1, metadata !"ogt", metadata !"fpexcept.strict") #0
   br i1 %3, label %4, label %5

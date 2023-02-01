@@ -1507,42 +1507,39 @@ ReoptimizeBlock:
     }
   }
 
-  bool OptForSize =
-      MF.getFunction().hasOptSize() ||
-      llvm::shouldOptimizeForSize(MBB, PSI, &MBBFreqInfo);
-  if (!IsEmptyBlock(MBB) && MBB->pred_size() == 1 && OptForSize) {
-    // Changing "Jcc foo; foo: jmp bar;" into "Jcc bar;" might change the branch
-    // direction, thereby defeating careful block placement and regressing
-    // performance. Therefore, only consider this for optsize functions.
+  if (!IsEmptyBlock(MBB)) {
     MachineInstr &TailCall = *MBB->getFirstNonDebugInstr();
     if (TII->isUnconditionalTailCall(TailCall)) {
-      MachineBasicBlock *Pred = *MBB->pred_begin();
-      MachineBasicBlock *PredTBB = nullptr, *PredFBB = nullptr;
-      SmallVector<MachineOperand, 4> PredCond;
-      bool PredAnalyzable =
-          !TII->analyzeBranch(*Pred, PredTBB, PredFBB, PredCond, true);
+      for (auto &Pred : MBB->predecessors()) {
+        MachineBasicBlock *PredTBB = nullptr, *PredFBB = nullptr;
+        SmallVector<MachineOperand, 4> PredCond;
+        bool PredAnalyzable =
+            !TII->analyzeBranch(*Pred, PredTBB, PredFBB, PredCond, true);
 
-      if (PredAnalyzable && !PredCond.empty() && PredTBB == MBB &&
-          PredTBB != PredFBB) {
-        // The predecessor has a conditional branch to this block which consists
-        // of only a tail call. Try to fold the tail call into the conditional
-        // branch.
-        if (TII->canMakeTailCallConditional(PredCond, TailCall)) {
-          // TODO: It would be nice if analyzeBranch() could provide a pointer
-          // to the branch instruction so replaceBranchWithTailCall() doesn't
-          // have to search for it.
-          TII->replaceBranchWithTailCall(*Pred, PredCond, TailCall);
-          ++NumTailCalls;
-          Pred->removeSuccessor(MBB);
-          MadeChange = true;
-          return MadeChange;
+        // Only eliminate if MBB == TBB (Taken Basic Block)
+        if (PredAnalyzable && !PredCond.empty() && PredTBB == MBB &&
+            PredTBB != PredFBB) {
+          // The predecessor has a conditional branch to this block which
+          // consists of only a tail call. Try to fold the tail call into the
+          // conditional branch.
+          if (TII->canMakeTailCallConditional(PredCond, TailCall)) {
+            // TODO: It would be nice if analyzeBranch() could provide a pointer
+            // to the branch instruction so replaceBranchWithTailCall() doesn't
+            // have to search for it.
+            TII->replaceBranchWithTailCall(*Pred, PredCond, TailCall);
+            ++NumTailCalls;
+            MadeChange = true;
+            Pred->removeSuccessor(MBB);
+          }
         }
+        // If the predecessor is falling through to this block, we could reverse
+        // the branch condition and fold the tail call into that. However, after
+        // that we might have to re-arrange the CFG to fall through to the other
+        // block and there is a high risk of regressing code size rather than
+        // improving it.
       }
-      // If the predecessor is falling through to this block, we could reverse
-      // the branch condition and fold the tail call into that. However, after
-      // that we might have to re-arrange the CFG to fall through to the other
-      // block and there is a high risk of regressing code size rather than
-      // improving it.
+      if (MadeChange)
+        return MadeChange;
     }
   }
 
