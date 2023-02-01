@@ -97,7 +97,12 @@ LLVM_LIBC_FUNCTION(float, tanf, (float x)) {
     // |x| = 0x1.143ec4p0
     float sign = x_sign ? -1.0f : 1.0f;
 
-    return fputil::multiply_add(sign, 0x1.ddf9f4p0f, sign * 0x1.1p-24f);
+    // volatile is used to prevent compiler (gcc) from optimizing the
+    // computation, making the results incorrect in different rounding modes.
+    volatile float tmp = 0x1.ddf9f4p0f;
+    tmp = fputil::multiply_add(sign, tmp, sign * 0x1.1p-24f);
+
+    return tmp;
   }
 
   // |x| > 0x1.ada6a8p+27f
