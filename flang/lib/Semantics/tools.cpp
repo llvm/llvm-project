@@ -1418,11 +1418,6 @@ bool HasAlternateReturns(const Symbol &subprogram) {
   return false;
 }
 
-bool InCommonBlock(const Symbol &symbol) {
-  const auto *details{symbol.detailsIf<ObjectEntityDetails>()};
-  return details && details->commonBlock();
-}
-
 const std::optional<parser::Name> &MaybeGetNodeName(
     const ConstructNode &construct) {
   return common::visit(
