@@ -513,6 +513,9 @@ def LLVM_LandingpadOp : LLVM_Op<"landingpad"> {
 // CallOp
 //===----------------------------------------------------------------------===//
 
+// FIXME: Add a type attribute that carries the LLVM function type to support
+// indirect calls to variadic functions. The type attribute is necessary to
+// distinguish normal and variadic arguments.
 def LLVM_CallOp : LLVM_Op<"call",
                           [DeclareOpInterfaceMethods<FastmathFlagsInterface>,
                            DeclareOpInterfaceMethods<CallOpInterface>,
@@ -527,9 +530,10 @@ def LLVM_CallOp : LLVM_Op<"call",
     The `call` instruction supports both direct and indirect calls. Direct calls
     start with a function name (`@`-prefixed) and indirect calls start with an
     SSA value (`%`-prefixed). The direct callee, if present, is stored as a
-    function attribute `callee`. The trailing type of the instruction is always
-    the MLIR function type, which may be different from the indirect callee that
-    has the wrapped LLVM IR function type.
+    function attribute `callee`. The trailing type list contains the optional
+    indirect callee type and the MLIR function type, which differs from the
+    LLVM function type that uses a explicit void type to model functions that do
+    not return a value.
 
     Examples:
 
@@ -541,7 +545,7 @@ def LLVM_CallOp : LLVM_Op<"call",
     llvm.call @bar(%0) : (f32) -> ()
 
     // Indirect call with an argument and without a result.
-    llvm.call %1(%0) : (f32) -> ()
+    llvm.call %1(%0) : !llvm.ptr, (f32) -> ()
     ```
   }];
 
@@ -1652,13 +1656,18 @@ def LLVM_AtomicRMWType : AnyTypeOf<[LLVM_AnyFloat, AnyInteger]>;
 
 // FIXME: Need to add alignment and syncscope attribute to MLIR atomicrmw
 // operation.
-def LLVM_AtomicRMWOp : LLVM_Op<"atomicrmw"> {
+def LLVM_AtomicRMWOp : LLVM_Op<"atomicrmw", [
+      TypesMatchWith<"result #0 and operand #1 have the same type",
+                     "val", "res", "$_self">]> {
   let arguments = (ins AtomicBinOp:$bin_op,
                    LLVM_PointerTo<LLVM_AtomicRMWType>:$ptr,
                    LLVM_AtomicRMWType:$val, AtomicOrdering:$ordering);
   let results = (outs LLVM_AtomicRMWType:$res);
-  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
+  let assemblyFormat = [{
+    $bin_op $ptr `,` $val $ordering
+    attr-dict `:` qualified(type($ptr)) `,` type($val)
+  }];
   string llvmInstName = "AtomicRMW";
   string llvmBuilder = [{
     $res = builder.CreateAtomicRMW(getLLVMAtomicBinOp($bin_op), $ptr, $val,
@@ -1676,27 +1685,24 @@ def LLVM_AtomicRMWOp : LLVM_Op<"atomicrmw"> {
 }
 
 def LLVM_AtomicCmpXchgType : AnyTypeOf<[AnyInteger, LLVM_AnyPointer]>;
-def LLVM_AtomicCmpXchgResultType : Type<And<[
-  LLVM_AnyStruct.predicate,
-  CPred<"$_self.cast<::mlir::LLVM::LLVMStructType>().getBody().size() == 2">,
-  SubstLeaves<"$_self",
-              "$_self.cast<::mlir::LLVM::LLVMStructType>().getBody()[0]",
-              LLVM_AtomicCmpXchgType.predicate>,
-  SubstLeaves<"$_self",
-              "$_self.cast<::mlir::LLVM::LLVMStructType>().getBody()[1]",
-              I1.predicate>]>,
- "an LLVM struct type with any integer or pointer followed by a single-bit "
- "integer">;
 
 // FIXME: Need to add alignment attribute to MLIR cmpxchg operation.
-def LLVM_AtomicCmpXchgOp : LLVM_Op<"cmpxchg"> {
+def LLVM_AtomicCmpXchgOp : LLVM_Op<"cmpxchg", [
+      TypesMatchWith<"operand #1 and operand #2 have the same type",
+                     "val", "cmp", "$_self">,
+      TypesMatchWith<"result #0 has an LLVM struct type consisting of "
+                     "the type of operand #2 and a bool",
+                     "val", "res", "getValAndBoolStructType($_self)">]> {
   let arguments = (ins LLVM_PointerTo<LLVM_AtomicCmpXchgType>:$ptr,
                    LLVM_AtomicCmpXchgType:$cmp, LLVM_AtomicCmpXchgType:$val,
                    AtomicOrdering:$success_ordering,
                    AtomicOrdering:$failure_ordering);
-  let results = (outs LLVM_AtomicCmpXchgResultType:$res);
-  let hasCustomAssemblyFormat = 1;
+  let results = (outs LLVM_AnyStruct:$res);
   let hasVerifier = 1;
+  let assemblyFormat = [{
+    $ptr `,` $cmp `,` $val $success_ordering $failure_ordering
+    attr-dict `:` qualified(type($ptr)) `,` type($val)
+  }];
   string llvmInstName = "AtomicCmpXchg";
   string llvmBuilder = [{
     $res = builder.CreateAtomicCmpXchg($ptr, $cmp, $val, llvm::MaybeAlign(),

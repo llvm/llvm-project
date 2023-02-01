@@ -65,14 +65,13 @@ func.func @ops(%arg0: i32, %arg1: f32,
 // CHECK: %[[STRUCT:.*]] = llvm.call @foo(%[[I32]]) : (i32) -> !llvm.struct<(i32, f64, i32)>
 // CHECK: %[[VALUE:.*]] = llvm.extractvalue %[[STRUCT]][0] : !llvm.struct<(i32, f64, i32)>
 // CHECK: %[[NEW_STRUCT:.*]] = llvm.insertvalue %[[VALUE]], %[[STRUCT]][2] : !llvm.struct<(i32, f64, i32)>
-// CHECK: %[[FUNC:.*]] = llvm.mlir.addressof @foo : !llvm.ptr<func<struct<(i32, f64, i32)> (i32)>>
-// CHECK: %{{.*}} = llvm.call %[[FUNC]](%[[I32]]) : (i32) -> !llvm.struct<(i32, f64, i32)>
+// CHECK: %[[FUNC:.*]] = llvm.mlir.addressof @foo : !llvm.ptr
+// CHECK: %{{.*}} = llvm.call %[[FUNC]](%[[I32]]) : !llvm.ptr, (i32) -> !llvm.struct<(i32, f64, i32)>
   %17 = llvm.call @foo(%arg0) : (i32) -> !llvm.struct<(i32, f64, i32)>
   %18 = llvm.extractvalue %17[0] : !llvm.struct<(i32, f64, i32)>
   %19 = llvm.insertvalue %18, %17[2] : !llvm.struct<(i32, f64, i32)>
-  %20 = llvm.mlir.addressof @foo : !llvm.ptr<func<struct<(i32, f64, i32)> (i32)>>
-  %21 = llvm.call %20(%arg0) : (i32) -> !llvm.struct<(i32, f64, i32)>
-
+  %20 = llvm.mlir.addressof @foo : !llvm.ptr
+  %21 = llvm.call %20(%arg0) : !llvm.ptr, (i32) -> !llvm.struct<(i32, f64, i32)>
 
 // Terminator operations and their successors.
 //
@@ -341,16 +340,16 @@ func.func @null() {
 }
 
 // CHECK-LABEL: @atomicrmw
-func.func @atomicrmw(%ptr : !llvm.ptr<f32>, %val : f32) {
-  // CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} monotonic : f32
-  %0 = llvm.atomicrmw fadd %ptr, %val monotonic : f32
+func.func @atomicrmw(%ptr : !llvm.ptr, %val : f32) {
+  // CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} monotonic : !llvm.ptr, f32
+  %0 = llvm.atomicrmw fadd %ptr, %val monotonic : !llvm.ptr, f32
   llvm.return
 }
 
 // CHECK-LABEL: @cmpxchg
-func.func @cmpxchg(%ptr : !llvm.ptr<i32>, %cmp : i32, %new : i32) {
-  // CHECK: llvm.cmpxchg %{{.*}}, %{{.*}}, %{{.*}} acq_rel monotonic : i32
-  %0 = llvm.cmpxchg %ptr, %cmp, %new acq_rel monotonic : i32
+func.func @cmpxchg(%ptr : !llvm.ptr, %cmp : i32, %new : i32) {
+  // CHECK: llvm.cmpxchg %{{.*}}, %{{.*}}, %{{.*}} acq_rel monotonic : !llvm.ptr, i32
+  %0 = llvm.cmpxchg %ptr, %cmp, %new acq_rel monotonic : !llvm.ptr, i32
   llvm.return
 }
 
@@ -401,8 +400,15 @@ llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personali
   llvm.invoke @bar(%8, %6, %4) to ^bb2 unwind ^bb1 : (!llvm.ptr<i8>, !llvm.ptr<i8>, !llvm.ptr<i8>) -> ()
 
 // CHECK: ^[[BB4:.*]]:
-// CHECK:   llvm.return %[[a0]] : i32
+// CHECK: %[[FUNC:.*]] = llvm.mlir.addressof @foo : !llvm.ptr
+// CHECK: %{{.*}} = llvm.invoke %[[FUNC]]{{.*}}: !llvm.ptr,
 ^bb4:
+  %12 = llvm.mlir.addressof @foo : !llvm.ptr
+  %13 = llvm.invoke %12(%7) to ^bb2 unwind ^bb1 : !llvm.ptr, (i32) -> !llvm.struct<(i32, f64, i32)>
+
+// CHECK: ^[[BB5:.*]]:
+// CHECK:   llvm.return %[[a0]] : i32
+^bb5:
   llvm.return %0 : i32
 }
 
