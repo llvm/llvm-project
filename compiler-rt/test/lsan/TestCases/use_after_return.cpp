@@ -5,9 +5,6 @@
 // RUN: env ASAN_OPTIONS=detect_stack_use_after_return=1 %env_lsan_opts="report_objects=1:use_registers=0:use_stacks=1" %run %t 2>&1
 // RUN: env ASAN_OPTIONS=detect_stack_use_after_return=1 %env_lsan_opts="" %run %t 2>&1
 
-// Fixme: remove once test passes with hwasan
-// UNSUPPORTED: hwasan
-
 // Investigate why it does not fail with use_stack=0
 // UNSUPPORTED: arm-linux || armhf-linux
 
