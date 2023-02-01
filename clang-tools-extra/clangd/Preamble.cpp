@@ -213,6 +213,9 @@ struct TextualPPDirective {
   // Full text that's representing the directive, including the `#`.
   std::string Text;
   unsigned Offset;
+  tok::PPKeywordKind Directive = tok::PPKeywordKind::pp_not_keyword;
+  // Name of the macro being defined in the case of a #define directive.
+  std::string MacroName;
 
   bool operator==(const TextualPPDirective &RHS) const {
     return std::tie(DirectiveLine, Offset, Text) ==
@@ -283,6 +286,8 @@ struct DirectiveCollector : public PPCallbacks {
       return;
     TextualDirectives.emplace_back();
     TextualPPDirective &TD = TextualDirectives.back();
+    TD.Directive = tok::pp_define;
+    TD.MacroName = MacroNameTok.getIdentifierInfo()->getName().str();
 
     const auto *MI = MD->getMacroInfo();
     TD.Text =
@@ -560,8 +565,8 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
 
   if (BuiltPreamble) {
     log("Built preamble of size {0} for file {1} version {2} in {3} seconds",
-         BuiltPreamble->getSize(), FileName, Inputs.Version,
-         PreambleTimer.getTime());
+        BuiltPreamble->getSize(), FileName, Inputs.Version,
+        PreambleTimer.getTime());
     std::vector<Diag> Diags = PreambleDiagnostics.take();
     auto Result = std::make_shared<PreambleData>(std::move(*BuiltPreamble));
     Result->Version = Inputs.Version;
@@ -724,6 +729,10 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
     // reduce complexity. The former might cause problems because scanning is
     // imprecise and might pick directives from disabled regions.
     for (const auto &TD : ModifiedScan->TextualDirectives) {
+      // Introduce an #undef directive before #defines to suppress any
+      // re-definition warnings.
+      if (TD.Directive == tok::pp_define)
+        Patch << "#undef " << TD.MacroName << '\n';
       Patch << "#line " << TD.DirectiveLine << '\n';
       Patch << TD.Text << '\n';
     }
