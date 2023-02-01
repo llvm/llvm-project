@@ -886,8 +886,8 @@ struct Waitcnt {
   }
 
   Waitcnt combined(const Waitcnt &Other) const {
-    // Does the right thing provided self and Other are either both pre-gfx12 or
-    // both gfx12+.
+    // Does the right thing provided self and Other are either both pre-gfx12
+    // or both gfx12+.
     return Waitcnt(
         std::min(LoadCnt, Other.LoadCnt), std::min(ExpCnt, Other.ExpCnt),
         std::min(DsCnt, Other.DsCnt), std::min(StoreCnt, Other.StoreCnt),
@@ -1058,6 +1058,33 @@ bool isSymbolicDepCtrEncoding(unsigned Code, bool &HasNonDefaultVal,
                               const MCSubtargetInfo &STI);
 bool decodeDepCtr(unsigned Code, int &Id, StringRef &Name, unsigned &Val,
                   bool &IsDefault, const MCSubtargetInfo &STI);
+
+/// \returns Decoded VaVdst from given immediate \p Encoded.
+unsigned decodeFieldVaVdst(unsigned Encoded);
+
+/// \returns Decoded VmVsrc from given immediate \p Encoded.
+unsigned decodeFieldVmVsrc(unsigned Encoded);
+
+/// \returns Decoded SaSdst from given immediate \p Encoded.
+unsigned decodeFieldSaSdst(unsigned Encoded);
+
+/// \returns \p VmVsrc as an encoded Depctr immediate.
+unsigned encodeFieldVmVsrc(unsigned VmVsrc);
+
+/// \returns \p Encoded combined with encoded \p VmVsrc.
+unsigned encodeFieldVmVsrc(unsigned Encoded, unsigned VmVsrc);
+
+/// \returns \p VaVdst as an encoded Depctr immediate.
+unsigned encodeFieldVaVdst(unsigned VaVdst);
+
+/// \returns \p Encoded combined with encoded \p VaVdst.
+unsigned encodeFieldVaVdst(unsigned Encoded, unsigned VaVdst);
+
+/// \returns \p SaSdst as an encoded Depctr immediate.
+unsigned encodeFieldSaSdst(unsigned SaSdst);
+
+/// \returns \p Encoded combined with encoded \p SaSdst.
+unsigned encodeFieldSaSdst(unsigned Encoded, unsigned SaSdst);
 
 } // namespace DepCtr
 
