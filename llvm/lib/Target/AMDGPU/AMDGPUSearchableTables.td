@@ -403,3 +403,6 @@ def : AlwaysUniform<int_amdgcn_ballot>;
 def : AlwaysUniform<int_amdgcn_s_mov_from_global>;
 def : AlwaysUniform<int_amdgcn_s_swap_to_global>;
 def : AlwaysUniform<int_amdgcn_if_break>;
+def : AlwaysUniform<int_amdgcn_waterfall_readfirstlane>;
+def : AlwaysUniform<int_amdgcn_waterfall_begin>;
+def : AlwaysUniform<int_amdgcn_waterfall_last_use>;
