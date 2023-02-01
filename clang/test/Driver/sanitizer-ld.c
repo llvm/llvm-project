@@ -25,6 +25,14 @@
 //
 // CHECK-ASAN-NO-LINK-RUNTIME-LINUX-NOT: libclang_rt.asan-x86_64
 
+// RUN: %clang -fsanitize=address -fno-sanitize-link-runtime -### %s 2>&1 \
+// RUN:     --target=arm64e-apple-macosx -fuse-ld=ld \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-ASAN-NO-LINK-RUNTIME-DARWIN %s
+//
+// CHECK-ASAN-NO-LINK-RUNTIME-DARWIN-NOT: libclang_rt.asan
+
 // RUN: %clang -fsanitize=address -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
@@ -288,6 +296,14 @@
 //
 // CHECK-TSAN-NO-LINK-RUNTIME-LINUX-NOT: libclang_rt.tsan
 
+// RUN: %clang -fsanitize=thread -fno-sanitize-link-runtime -### %s 2>&1 \
+// RUN:     --target=arm64e-apple-ios -fuse-ld=ld \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-TSAN-NO-LINK-RUNTIME-DARWIN %s
+//
+// CHECK-TSAN-NO-LINK-RUNTIME-DARWIN-NOT: libclang_rt.tsan
+
 // RUN: %clangxx -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld -stdlib=platform -lstdc++ \
 // RUN:     -fsanitize=memory \
@@ -352,6 +368,22 @@
 // RUN:   | FileCheck --check-prefix=CHECK-UBSAN-NO-LINK-RUNTIME-LINUX %s
 //
 // CHECK-UBSAN-NO-LINK-RUNTIME-LINUX-NOT: libclang_rt.undefined
+
+// RUN: %clang -fsanitize=undefined -fno-sanitize-link-runtime -### %s 2>&1 \
+// RUN:     --target=x86_64-apple-darwin -fuse-ld=ld \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-UBSAN-NO-LINK-RUNTIME-DARWIN %s
+//
+// CHECK-UBSAN-NO-LINK-RUNTIME-DARWIN-NOT: libclang_rt.ubsan
+
+// RUN: %clang -fsanitize=fuzzer -fno-sanitize-link-runtime -### %s 2>&1 \
+// RUN:     --target=arm64e-apple-watchos -fuse-ld=ld \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-FUZZER-NO-LINK-RUNTIME-DARWIN %s
+//
+// CHECK-FUZZER-NO-LINK-RUNTIME-DARWIN-NOT: libclang_rt.fuzzer
 
 // RUN: %clang -fsanitize=undefined -### %s 2>&1 \
 // RUN:     --target=i386-unknown-linux -fuse-ld=ld \
