@@ -29,7 +29,7 @@ if(NOT LLVM_LIBC_FULL_BUILD)
                       "GPU.")
 endif()
 
-# Identify any locally installed GPUs to use for testing.
+# Identify any locally installed AMD GPUs on the system to use for testing.
 find_program(LIBC_AMDGPU_ARCH
              NAMES amdgpu-arch
              PATHS ${LLVM_BINARY_DIR}/bin /opt/rocm/llvm/bin/)
@@ -46,4 +46,33 @@ if(LIBC_AMDGPU_ARCH)
     set(LIBC_GPU_TARGET_ARCHITECTURE "${arch_string}")
   endif()
 endif()
-# TODO: Check for Nvidia GPUs.
+
+if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
+  message(STATUS "Found an installed AMD GPU on the system with target "
+                 "architecture ${LIBC_GPU_TARGET_ARCHITECTURE} ")
+  return()
+endif()
+
+# Identify any locally installed NVIDIA GPUs on the system to use for testing.
+find_program(LIBC_NVPTX_ARCH
+             NAMES nvptx-arch
+             PATHS ${LLVM_BINARY_DIR}/bin)
+if(LIBC_NVPTX_ARCH)
+  execute_process(COMMAND ${LIBC_NVPTX_ARCH}
+                  OUTPUT_VARIABLE LIBC_NVPTX_ARCH_OUTPUT
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+  string(FIND "${LIBC_NVPTX_ARCH_OUTPUT}" "\n" first_arch_string)
+  string(SUBSTRING "${LIBC_NVPTX_ARCH_OUTPUT}" 0 ${first_arch_string}
+         arch_string)
+  if(arch_string)
+    set(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX TRUE)
+    set(LIBC_GPU_TARGET_TRIPLE "nvptx64-nvidia-cuda")
+    set(LIBC_GPU_TARGET_ARCHITECTURE "${arch_string}")
+  endif()
+endif()
+
+if(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
+  message(STATUS "Found an installed NVIDIA GPU on the system with target "
+                 "architecture ${LIBC_GPU_TARGET_ARCHITECTURE} ")
+  return()
+endif()

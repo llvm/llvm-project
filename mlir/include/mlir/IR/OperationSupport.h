@@ -926,24 +926,36 @@ struct OperationEquivalence {
   /// operands/result mapping.
   static llvm::hash_code directHashValue(Value v) { return hash_value(v); }
 
-  /// Compare two operations and return if they are equivalent.
-  /// `mapOperands` and `mapResults` are optional callbacks that allows the
-  /// caller to check the mapping of SSA value between the lhs and rhs
-  /// operations. It is expected to return success if the mapping is valid and
-  /// failure if it conflicts with a previous mapping.
+  /// Compare two operations (including their regions) and return if they are
+  /// equivalent.
+  ///
+  /// * `checkEquivalent` is a callback to check if two values are equivalent.
+  ///   For two operations to be equivalent, their operands must be the same SSA
+  ///   value or this callback must return `success`.
+  /// * `markEquivalent` is a callback to inform the caller that the analysis
+  ///   determined that two values are equivalent.
+  ///
+  /// Note: Additional information regarding value equivalence can be injected
+  /// into the analysis via `checkEquivalent`. Typically, callers may want
+  /// values that were determined to be equivalent as per `markEquivalent` to be
+  /// reflected in `checkEquivalent`, unless `exactValueMatch` or a different
+  /// equivalence relationship is desired.
   static bool
   isEquivalentTo(Operation *lhs, Operation *rhs,
-                 function_ref<LogicalResult(Value, Value)> mapOperands,
-                 function_ref<LogicalResult(Value, Value)> mapResults,
+                 function_ref<LogicalResult(Value, Value)> checkEquivalent,
+                 function_ref<void(Value, Value)> markEquivalent = nullptr,
                  Flags flags = Flags::None);
 
-  /// Helper that can be used with `isEquivalentTo` above to ignore operation
-  /// operands/result mapping.
+  /// Compare two operations and return if they are equivalent.
+  static bool isEquivalentTo(Operation *lhs, Operation *rhs, Flags flags);
+
+  /// Helper that can be used with `isEquivalentTo` above to consider ops
+  /// equivalent even if their operands are not equivalent.
   static LogicalResult ignoreValueEquivalence(Value lhs, Value rhs) {
     return success();
   }
-  /// Helper that can be used with `isEquivalentTo` above to ignore operation
-  /// operands/result mapping.
+  /// Helper that can be used with `isEquivalentTo` above to consider ops
+  /// equivalent only if their operands are the exact same SSA values.
   static LogicalResult exactValueMatch(Value lhs, Value rhs) {
     return success(lhs == rhs);
   }

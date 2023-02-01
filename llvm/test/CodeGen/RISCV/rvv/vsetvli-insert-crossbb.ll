@@ -954,16 +954,15 @@ if.end:
   ret <vscale x 2 x i32> %e
 }
 
-; This case demonstrates a PRE oppurtunity where the first instruction
-; in the block doesn't require a state transition.  Essentially, we need
-; to FRE the transition to the start of the block, and *then* PRE it.
+; This case demonstrates a PRE case where the first instruction in the block
+; doesn't require a state transition.
 define void @pre_over_vle(ptr %A) {
 ; CHECK-LABEL: pre_over_vle:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a1, 100
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:  .LBB22_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vsext.vf4 v9, v8
 ; CHECK-NEXT:    vse32.v v9, (a0)

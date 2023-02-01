@@ -1158,6 +1158,26 @@ TEST_P(ASTImporterOptionSpecificTestBase, NonTypeTemplateParmDeclDefaultArg) {
   ASSERT_EQ(cast<IntegerLiteral>(ToArg)->getValue().getLimitedValue(), 1U);
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, TemplateArgumentsDefaulted) {
+  Decl *FromTU = getTuDecl(R"(
+                           template<typename T> struct X {};
+                           template<typename TP = double,
+                                    int NTTP = 50,
+                                    template<typename> typename TT = X> struct S {};
+                           S<> s;
+                           )",
+                           Lang_CXX17);
+  auto *FromSpec = FirstDeclMatcher<ClassTemplateSpecializationDecl>().match(
+      FromTU, classTemplateSpecializationDecl(hasName("S")));
+  ASSERT_TRUE(FromSpec);
+  auto *ToSpec = Import(FromSpec, Lang_CXX03);
+  ASSERT_TRUE(ToSpec);
+  auto const &TList = ToSpec->getTemplateArgs();
+  for (auto const &Arg : TList.asArray()) {
+    ASSERT_TRUE(Arg.getIsDefaulted());
+  }
+}
+
 TEST_P(ASTImporterOptionSpecificTestBase,
        ImportOfTemplatedDeclOfClassTemplateDecl) {
   Decl *FromTU = getTuDecl("template<class X> struct S{};", Lang_CXX03);
@@ -5158,6 +5178,39 @@ TEST_P(ASTImporterLookupTableTest,
   DeclarationName Name = Alias->getDeclName();
   auto Res = LT.lookup(ToTU, Name);
   EXPECT_EQ(Res.count(Alias), 1u);
+}
+
+TEST_P(ASTImporterLookupTableTest,
+       LookupFindsFriendClassDeclWithUsingTypeDoesNotAssert) {
+  TranslationUnitDecl *ToTU = getToTuDecl(
+      R"(
+      namespace a {
+        namespace b { class InnerClass; }
+        using b::InnerClass;
+      }
+      class B {
+        friend a::InnerClass;
+      };
+      )",
+      Lang_CXX11);
+
+  // ASTImporterLookupTable constructor handles friend with using-type without
+  // asserts.
+  ASTImporterLookupTable LT(*ToTU);
+
+  auto *Using = FirstDeclMatcher<UsingDecl>().match(
+      ToTU, usingDecl(hasName("InnerClass")));
+  DeclarationName Name = Using->getDeclName();
+  auto Res = LT.lookup(ToTU, Name);
+  EXPECT_EQ(Res.size(), 0u);
+  auto *NsA = FirstDeclMatcher<NamespaceDecl>().match(
+      ToTU, namespaceDecl(hasName("a")));
+  auto *RecordB = FirstDeclMatcher<CXXRecordDecl>().match(
+      ToTU, cxxRecordDecl(hasName("B")));
+  auto Res1 = LT.lookup(NsA, Name);
+  EXPECT_EQ(Res1.count(Using), 1u);
+  auto Res2 = LT.lookup(RecordB, Name);
+  EXPECT_EQ(Res2.size(), 0u);
 }
 
 TEST_P(ASTImporterLookupTableTest, LookupFindsFwdFriendClassTemplateDecl) {

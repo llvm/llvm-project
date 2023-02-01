@@ -71,7 +71,7 @@ namespace {
       // is in the MCOperand format in which 1 means 'else' and 0 'then'.
       void setITState(char Firstcond, char Mask) {
         // (3 - the number of trailing zeros) is the number of then / else.
-        unsigned NumTZ = countTrailingZeros<uint8_t>(Mask);
+        unsigned NumTZ = llvm::countr_zero<uint8_t>(Mask);
         unsigned char CCBits = static_cast<unsigned char>(Firstcond & 0xf);
         assert(NumTZ <= 3 && "Invalid IT mask!");
         // push condition codes onto the stack the correct order for the pops
@@ -110,7 +110,7 @@ namespace {
 
       void setVPTState(char Mask) {
         // (3 - the number of trailing zeros) is the number of then / else.
-        unsigned NumTZ = countTrailingZeros<uint8_t>(Mask);
+        unsigned NumTZ = llvm::countr_zero<uint8_t>(Mask);
         assert(NumTZ <= 3 && "Invalid VPT mask!");
         // push predicates onto the stack the correct order for the pops
         for (unsigned Pos = NumTZ+1; Pos <= 3; ++Pos) {

@@ -293,7 +293,7 @@ void AllSources::EmitMessage(llvm::raw_ostream &o,
           [&](const Macro &mac) {
             EmitMessage(
                 o, origin.replaces, message, prefix, color, echoSourceLine);
-            EmitMessage(o, mac.definition, "in a macro defined here", prefix,
+            EmitMessage(o, mac.definition, "in a macro defined here", ""s,
                 color, echoSourceLine);
             if (echoSourceLine) {
               o << "that expanded to:\n  " << mac.expansion << "\n  ";

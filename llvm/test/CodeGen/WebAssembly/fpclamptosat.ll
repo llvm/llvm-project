@@ -592,6 +592,7 @@ entry:
   ret i64 %conv6
 }
 
+
 define i64 @ustest_f64i64(double %x) {
 ; CHECK-LABEL: ustest_f64i64:
 ; CHECK:         .functype ustest_f64i64 (f64) -> (i64)

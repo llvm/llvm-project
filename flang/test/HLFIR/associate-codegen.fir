@@ -79,6 +79,43 @@ func.func @associate_char(%arg0: !fir.boxchar<1> ) {
 // CHECK-NOT: fir.freemem
 
 
+func.func @test_end_associate_box(%var: !fir.box<!fir.array<?xf64>>) {
+  %true = arith.constant 1 : i1
+  hlfir.end_associate %var, %true : !fir.box<!fir.array<?xf64>>, i1
+  return
+}
+// CHECK-LABEL:   func.func @test_end_associate_box(
+// CHECK-SAME:    %[[VAL_0:.*]]: !fir.box<!fir.array<?xf64>>) {
+// CHECK:  %[[VAL_1:.*]] = arith.constant true
+// CHECK:  %[[VAL_2:.*]] = fir.box_addr %[[VAL_0]] : (!fir.box<!fir.array<?xf64>>) -> !fir.heap<!fir.array<?xf64>>
+// CHECK:  fir.freemem %[[VAL_2]] : !fir.heap<!fir.array<?xf64>>
+
+
+func.func @test_end_associate_boxchar(%var: !fir.boxchar<2>) {
+  %true = arith.constant 1 : i1
+  hlfir.end_associate %var, %true : !fir.boxchar<2>, i1
+  return
+}
+// CHECK-LABEL:   func.func @test_end_associate_boxchar(
+// CHECK-SAME:    %[[VAL_0:.*]]: !fir.boxchar<2>) {
+// CHECK:  %[[VAL_1:.*]] = arith.constant true
+// CHECK:  %[[VAL_2:.*]] = fir.box_addr %[[VAL_0]] : (!fir.boxchar<2>) -> !fir.heap<!fir.char<2,?>>
+// CHECK:  fir.freemem %[[VAL_2]] : !fir.heap<!fir.char<2,?>>
+
+
+func.func @test_end_associate_box_dynamic(%var: !fir.box<!fir.array<?xf64>>, %must_free: i1) {
+  hlfir.end_associate %var, %must_free : !fir.box<!fir.array<?xf64>>, i1
+  return
+}
+// CHECK-LABEL:   func.func @test_end_associate_box_dynamic(
+// CHECK-SAME:    %[[VAL_0:.*]]: !fir.box<!fir.array<?xf64>>,
+// CHECK-SAME:    %[[VAL_1:.*]]: i1) {
+// CHECK:  fir.if %[[VAL_1]] {
+// CHECK:    %[[VAL_2:.*]] = fir.box_addr %[[VAL_0]] : (!fir.box<!fir.array<?xf64>>) -> !fir.heap<!fir.array<?xf64>>
+// CHECK:    fir.freemem %[[VAL_2]] : !fir.heap<!fir.array<?xf64>>
+// CHECK:  }
+
+
 func.func private @take_i4(!fir.ref<i32>)
 func.func private @take_r4(!fir.ref<f32>)
 func.func private @take_l4(!fir.ref<!fir.logical<4>>)

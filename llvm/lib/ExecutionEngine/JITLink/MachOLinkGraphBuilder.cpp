@@ -267,7 +267,11 @@ Error MachOLinkGraphBuilder::createNormalizedSymbols() {
         Name = *NameOrErr;
       else
         return NameOrErr.takeError();
-    }
+    } else if (Type & MachO::N_EXT)
+      return make_error<JITLinkError>("Symbol at index " +
+                                      formatv("{0}", SymbolIndex) +
+                                      " has no name (string table index 0), "
+                                      "but N_EXT bit is set");
 
     LLVM_DEBUG({
       dbgs() << "  ";

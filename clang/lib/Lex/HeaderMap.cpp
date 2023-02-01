@@ -77,8 +77,8 @@ bool HeaderMapImpl::checkHeader(const llvm::MemoryBuffer &File,
   if (Header->Magic == HMAP_HeaderMagicNumber &&
       Header->Version == HMAP_HeaderVersion)
     NeedsByteSwap = false;
-  else if (Header->Magic == llvm::ByteSwap_32(HMAP_HeaderMagicNumber) &&
-           Header->Version == llvm::ByteSwap_16(HMAP_HeaderVersion))
+  else if (Header->Magic == llvm::byteswap<uint32_t>(HMAP_HeaderMagicNumber) &&
+           Header->Version == llvm::byteswap<uint16_t>(HMAP_HeaderVersion))
     NeedsByteSwap = true;  // Mixed endianness headermap.
   else
     return false;  // Not a header map.
@@ -113,7 +113,7 @@ StringRef HeaderMapImpl::getFileName() const {
 
 unsigned HeaderMapImpl::getEndianAdjustedWord(unsigned X) const {
   if (!NeedsBSwap) return X;
-  return llvm::ByteSwap_32(X);
+  return llvm::byteswap<uint32_t>(X);
 }
 
 /// getHeader - Return a reference to the file header, in unbyte-swapped form.

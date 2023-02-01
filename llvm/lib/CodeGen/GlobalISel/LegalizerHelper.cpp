@@ -3004,7 +3004,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
 
   if (!isPowerOf2_32(MemSizeInBits)) {
     // This load needs splitting into power of 2 sized loads.
-    LargeSplitSize = PowerOf2Floor(MemSizeInBits);
+    LargeSplitSize = llvm::bit_floor(MemSizeInBits);
     SmallSplitSize = MemSizeInBits - LargeSplitSize;
   } else {
     // This is already a power of 2, but we still need to split this in half.
@@ -3122,7 +3122,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerStore(GStore &StoreMI) {
   uint64_t LargeSplitSize, SmallSplitSize;
 
   if (!isPowerOf2_32(MemSizeInBits)) {
-    LargeSplitSize = PowerOf2Floor(MemTy.getSizeInBits());
+    LargeSplitSize = llvm::bit_floor<uint64_t>(MemTy.getSizeInBits());
     SmallSplitSize = MemTy.getSizeInBits() - LargeSplitSize;
   } else {
     auto &Ctx = MF.getFunction().getContext();
@@ -7638,7 +7638,7 @@ static bool findGISelOptimalMemOpLowering(std::vector<LLT> &MemOps,
       // SDAGisms map cleanly to GISel concepts.
       if (NewTy.isVector())
         NewTy = NewTy.getSizeInBits() > 64 ? LLT::scalar(64) : LLT::scalar(32);
-      NewTy = LLT::scalar(PowerOf2Floor(NewTy.getSizeInBits() - 1));
+      NewTy = LLT::scalar(llvm::bit_floor(NewTy.getSizeInBits() - 1));
       unsigned NewTySize = NewTy.getSizeInBytes();
       assert(NewTySize > 0 && "Could not find appropriate type");
 

@@ -162,12 +162,13 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
   // though as some functions have template parameter types and other things
   // that cause extra copies of types to be included, but we should find these
   // types in the .dwo file only as methods could have return types removed and
-  // we don't have to index incomplete types from the skeletone compile unit.
+  // we don't have to index incomplete types from the skeleton compile unit.
   if (unit.GetDWOId()) {
+    // Index the .dwo or dwp instead of the skeleton unit.
     if (SymbolFileDWARFDwo *dwo_symbol_file = unit.GetDwoSymbolFile()) {
       // Type units in a dwp file are indexed separately, so we just need to
-      // process the split unit here. However, if the split unit is in a dwo file,
-      // then we need to process type units here.
+      // process the split unit here. However, if the split unit is in a dwo
+      // file, then we need to process type units here.
       if (dwo_symbol_file == dwp) {
         IndexUnitImpl(unit.GetNonSkeletonUnit(), cu_language, set);
       } else {
@@ -175,11 +176,22 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
         for (size_t i = 0; i < dwo_info.GetNumUnits(); ++i)
           IndexUnitImpl(*dwo_info.GetUnitAtIndex(i), cu_language, set);
       }
+      return;
     }
-  } else {
-    // We either have a normal compile unit which we want to index.
-    IndexUnitImpl(unit, cu_language, set);
+    // This was a DWARF5 skeleton CU and the .dwo file couldn't be located.
+    if (unit.GetVersion() >= 5 && unit.IsSkeletonUnit())
+      return;
+
+    // Either this is a DWARF 4 + fission CU with the .dwo file
+    // missing, or it's a -gmodules pch or pcm. Try to detect the
+    // latter by checking whether the first DIE is a DW_TAG_module.
+    // If it's a pch/pcm, continue indexing it.
+    if (unit.GetDIE(unit.GetFirstDIEOffset()).GetFirstChild().Tag() !=
+        llvm::dwarf::DW_TAG_module)
+      return;
   }
+  // We have a normal compile unit which we want to index.
+  IndexUnitImpl(unit, cu_language, set);
 }
 
 void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,

@@ -53,7 +53,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11'
       - name: Install Ninja
         uses: llvm/actions/install-ninja@main
       # actions/checkout deletes any existing files in the new git directory,
@@ -90,6 +90,6 @@ jobs:
         run: |
           # Make sure all of LLVM libraries that llvm-config needs are built.
           ninja -C build
-          cmake -G Ninja -S libclc -B libclc-build -DLLVM_CONFIG=`pwd`/build/bin/llvm-config -DLIBCLC_TARGETS_TO_BUILD="amdgcn--;amdgcn--amdhsa;r600--;nvptx--;nvptx64--;nvptx--nvidiacl;nvptx64--nvidiacl"
+          cmake -G Ninja -S libclc -B libclc-build -DLLVM_DIR=`pwd`/build/lib/cmake/llvm -DLIBCLC_TARGETS_TO_BUILD="amdgcn--;amdgcn--amdhsa;r600--;nvptx--;nvptx64--;nvptx--nvidiacl;nvptx64--nvidiacl"
           ninja -C libclc-build
           ninja -C libclc-build test

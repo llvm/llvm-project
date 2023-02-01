@@ -607,3 +607,21 @@ func.func @transfer_read(
 //       CHECK: return %[[RES]] : vector<4xf32>
   return %0 : vector<4xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @main(
+func.func @main() {
+  // CHECK: %[[const:.*]] = memref.get_global
+  %t = arith.constant dense<[1.0, 2.0, 3.0]> : tensor<3xf32>
+  // CHECK: %[[alloc:.*]] = memref.alloc
+  // CHECK: memref.copy %[[const]], %[[alloc]]
+  // CHECK: %[[casted:.*]] = memref.cast %[[alloc]] : memref<3xf32> to memref<*xf32>
+  %unranked = tensor.cast %t : tensor<3xf32> to tensor<*xf32>
+  // CHECK: call @maybe_writing_func(%[[casted]])
+  func.call @maybe_writing_func(%unranked) : (tensor<*xf32>) -> ()
+  return
+}
+
+// This function may write to buffer(%ptr).
+func.func private @maybe_writing_func(%ptr : tensor<*xf32>)

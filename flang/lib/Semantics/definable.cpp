@@ -289,6 +289,10 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
       }
     }
   }
+  if (evaluate::IsNullPointer(expr)) {
+    return parser::Message{
+        at, "'%s' is a null pointer"_because_en_US, expr.AsFortran()};
+  }
   return parser::Message{
       at, "'%s' is not a variable or pointer"_because_en_US, expr.AsFortran()};
 }

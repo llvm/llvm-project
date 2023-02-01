@@ -33,6 +33,7 @@
 #include "../GPUCommon/GPUOpsLowering.h"
 #include "../GPUCommon/IndexIntrinsicsOpLowering.h"
 #include "../GPUCommon/OpToFuncCallLowering.h"
+#include <optional>
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTGPUOPSTONVVMOPS
@@ -58,7 +59,7 @@ static NVVM::ShflKind convertShflKind(gpu::ShuffleMode mode) {
   llvm_unreachable("unknown shuffle mode");
 }
 
-static Optional<NVVM::ReduxKind>
+static std::optional<NVVM::ReduxKind>
 convertReduxKind(gpu::AllReduceOperation mode) {
   switch (mode) {
   case gpu::AllReduceOperation::ADD:
@@ -95,7 +96,7 @@ struct GPUSubgroupReduceOpLowering
     if (!op.getValue().getType().isInteger(32))
       return rewriter.notifyMatchFailure(op, "unsupported data type");
 
-    Optional<NVVM::ReduxKind> mode = convertReduxKind(op.getOp());
+    std::optional<NVVM::ReduxKind> mode = convertReduxKind(op.getOp());
     if (!mode.has_value())
       return rewriter.notifyMatchFailure(
           op, "unsupported reduction mode for redux");
@@ -281,7 +282,7 @@ struct LowerGpuOpsToNVVMOpsPass
     arith::populateArithToLLVMConversionPatterns(converter, llvmPatterns);
     cf::populateControlFlowToLLVMConversionPatterns(converter, llvmPatterns);
     populateFuncToLLVMConversionPatterns(converter, llvmPatterns);
-    populateMemRefToLLVMConversionPatterns(converter, llvmPatterns);
+    populateFinalizeMemRefToLLVMConversionPatterns(converter, llvmPatterns);
     populateGpuToNVVMConversionPatterns(converter, llvmPatterns);
     populateGpuWMMAToNVVMConversionPatterns(converter, llvmPatterns);
     if (this->hasRedux)

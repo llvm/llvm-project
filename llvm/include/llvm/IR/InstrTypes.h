@@ -1803,7 +1803,10 @@ public:
   /// Extract the number of dereferenceable bytes for a call or
   /// parameter (0=unknown).
   uint64_t getRetDereferenceableBytes() const {
-    return Attrs.getRetDereferenceableBytes();
+    uint64_t Bytes = Attrs.getRetDereferenceableBytes();
+    if (const Function *F = getCalledFunction())
+      Bytes = std::max(Bytes, F->getAttributes().getRetDereferenceableBytes());
+    return Bytes;
   }
 
   /// Extract the number of dereferenceable bytes for a call or
@@ -1815,7 +1818,13 @@ public:
   /// Extract the number of dereferenceable_or_null bytes for a call
   /// (0=unknown).
   uint64_t getRetDereferenceableOrNullBytes() const {
-    return Attrs.getRetDereferenceableOrNullBytes();
+    uint64_t Bytes = Attrs.getRetDereferenceableOrNullBytes();
+    if (const Function *F = getCalledFunction()) {
+      Bytes = std::max(Bytes,
+                       F->getAttributes().getRetDereferenceableOrNullBytes());
+    }
+
+    return Bytes;
   }
 
   /// Extract the number of dereferenceable_or_null bytes for a
@@ -2131,7 +2140,7 @@ public:
   /// OperandBundleUse.
   OperandBundleUse
   operandBundleFromBundleOpInfo(const BundleOpInfo &BOI) const {
-    auto begin = op_begin();
+    const auto *begin = op_begin();
     ArrayRef<Use> Inputs(begin + BOI.Begin, begin + BOI.End);
     return OperandBundleUse(BOI.Tag, Inputs);
   }

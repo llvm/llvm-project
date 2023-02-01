@@ -9773,8 +9773,7 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     // movw+movk+fmov vs. adrp+ldr (it's one instruction longer, but the
     // movw+movk is fused). So we limit up to 2 instrdduction at most.
     SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
-    AArch64_IMM::expandMOVImm(ImmInt.getZExtValue(), VT.getSizeInBits(),
-			      Insn);
+    AArch64_IMM::expandMOVImm(ImmInt.getZExtValue(), VT.getSizeInBits(), Insn);
     unsigned Limit = (OptForSize ? 1 : (Subtarget->hasFuseLiterals() ? 5 : 2));
     IsLegal = Insn.size() <= Limit;
   }
@@ -13729,7 +13728,7 @@ bool AArch64TargetLowering::isExtFreeImpl(const Instruction *Ext) const {
       // Get the shift amount based on the scaling factor:
       // log2(sizeof(IdxTy)) - log2(8).
       uint64_t ShiftAmt =
-          countTrailingZeros(DL.getTypeStoreSizeInBits(IdxTy).getFixedValue()) -
+          llvm::countr_zero(DL.getTypeStoreSizeInBits(IdxTy).getFixedValue()) -
           3;
       // Is the constant foldable in the shift of the addressing mode?
       // I.e., shift amount is between 1 and 4 inclusive.
@@ -14819,7 +14818,9 @@ bool AArch64TargetLowering::isMulAddWithConstProfitable(
   if (!isLegalAddImmediate(C1) || isLegalAddImmediate(C1C2.getSExtValue()))
     return true;
   SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
-  AArch64_IMM::expandMOVImm(C1C2.getZExtValue(), VT.getSizeInBits(), Insn);
+  // Adapt to the width of a register.
+  unsigned BitSize = VT.getSizeInBits() <= 32 ? 32 : 64;
+  AArch64_IMM::expandMOVImm(C1C2.getZExtValue(), BitSize, Insn);
   if (Insn.size() > 1)
     return false;
 
@@ -15039,8 +15040,7 @@ bool AArch64TargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   if (BitSize == 32)
     Val &= (1LL << 32) - 1;
 
-  unsigned LZ = countLeadingZeros((uint64_t)Val);
-  unsigned Shift = (63 - LZ) / 16;
+  unsigned Shift = llvm::Log2_64((uint64_t)Val) / 16;
   // MOVZ is free so return true for one or fewer MOVK.
   return Shift < 3;
 }

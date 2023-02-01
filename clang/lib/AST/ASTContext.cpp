@@ -78,6 +78,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/Support/Capacity.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -2083,7 +2084,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     // If the alignment is not a power of 2, round up to the next power of 2.
     // This happens for non-power-of-2 length vectors.
     if (Align & (Align-1)) {
-      Align = llvm::NextPowerOf2(Align);
+      Align = llvm::bit_ceil(Align);
       Width = llvm::alignTo(Width, Align);
     }
     // Adjust the alignment based on the target max.
@@ -2392,10 +2393,8 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
   }
   case Type::BitInt: {
     const auto *EIT = cast<BitIntType>(T);
-    Align =
-        std::min(static_cast<unsigned>(std::max(
-                     getCharWidth(), llvm::PowerOf2Ceil(EIT->getNumBits()))),
-                 Target->getLongLongAlign());
+    Align = std::clamp<unsigned>(llvm::PowerOf2Ceil(EIT->getNumBits()),
+                                 getCharWidth(), Target->getLongLongAlign());
     Width = llvm::alignTo(EIT->getNumBits(), Align);
     break;
   }
@@ -2501,8 +2500,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       // favorable to atomic operations:
 
       // Round the size up to a power of 2.
-      if (!llvm::isPowerOf2_64(Width))
-        Width = llvm::NextPowerOf2(Width);
+      Width = llvm::bit_ceil(Width);
 
       // Set the alignment equal to the size.
       Align = static_cast<unsigned>(Width);
@@ -2542,7 +2540,8 @@ unsigned ASTContext::getTypeUnadjustedAlign(const Type *T) const {
 }
 
 unsigned ASTContext::getOpenMPDefaultSimdAlign(QualType T) const {
-  unsigned SimdAlign = getTargetInfo().getSimdDefaultAlign();
+  unsigned SimdAlign = llvm::OpenMPIRBuilder::getOpenMPDefaultSimdAlign(
+      getTargetInfo().getTriple(), Target->getTargetOpts().FeatureMap);
   return SimdAlign;
 }
 
@@ -6820,26 +6819,29 @@ ASTContext::getCanonicalTemplateArgument(const TemplateArgument &Arg) const {
 
     case TemplateArgument::Declaration: {
       auto *D = cast<ValueDecl>(Arg.getAsDecl()->getCanonicalDecl());
-      return TemplateArgument(D, getCanonicalType(Arg.getParamTypeForDecl()));
+      return TemplateArgument(D, getCanonicalType(Arg.getParamTypeForDecl()),
+                              Arg.getIsDefaulted());
     }
 
     case TemplateArgument::NullPtr:
       return TemplateArgument(getCanonicalType(Arg.getNullPtrType()),
-                              /*isNullPtr*/true);
+                              /*isNullPtr*/ true, Arg.getIsDefaulted());
 
     case TemplateArgument::Template:
-      return TemplateArgument(getCanonicalTemplateName(Arg.getAsTemplate()));
+      return TemplateArgument(getCanonicalTemplateName(Arg.getAsTemplate()),
+                              Arg.getIsDefaulted());
 
     case TemplateArgument::TemplateExpansion:
-      return TemplateArgument(getCanonicalTemplateName(
-                                         Arg.getAsTemplateOrTemplatePattern()),
-                              Arg.getNumTemplateExpansions());
+      return TemplateArgument(
+          getCanonicalTemplateName(Arg.getAsTemplateOrTemplatePattern()),
+          Arg.getNumTemplateExpansions(), Arg.getIsDefaulted());
 
     case TemplateArgument::Integral:
       return TemplateArgument(Arg, getCanonicalType(Arg.getIntegralType()));
 
     case TemplateArgument::Type:
-      return TemplateArgument(getCanonicalType(Arg.getAsType()));
+      return TemplateArgument(getCanonicalType(Arg.getAsType()),
+                              /*isNullPtr*/ false, Arg.getIsDefaulted());
 
     case TemplateArgument::Pack: {
       bool AnyNonCanonArgs = false;

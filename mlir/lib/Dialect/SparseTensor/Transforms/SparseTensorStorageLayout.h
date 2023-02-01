@@ -315,7 +315,7 @@ protected:
   ValueArrayRef fields;
 };
 
-/// Uses ValueRange for immuatable descriptors;
+/// Uses ValueRange for immutable descriptors.
 class SparseTensorDescriptor : public SparseTensorDescriptorImpl<ValueRange> {
 public:
   SparseTensorDescriptor(Type tp, ValueRange buffers)

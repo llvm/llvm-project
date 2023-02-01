@@ -626,7 +626,7 @@ unsigned APInt::countLeadingZerosSlowCase() const {
     if (V == 0)
       Count += APINT_BITS_PER_WORD;
     else {
-      Count += llvm::countLeadingZeros(V);
+      Count += llvm::countl_zero(V);
       break;
     }
   }
@@ -646,13 +646,13 @@ unsigned APInt::countLeadingOnesSlowCase() const {
     shift = APINT_BITS_PER_WORD - highWordBits;
   }
   int i = getNumWords() - 1;
-  unsigned Count = llvm::countLeadingOnes(U.pVal[i] << shift);
+  unsigned Count = llvm::countl_one(U.pVal[i] << shift);
   if (Count == highWordBits) {
     for (i--; i >= 0; --i) {
       if (U.pVal[i] == WORDTYPE_MAX)
         Count += APINT_BITS_PER_WORD;
       else {
-        Count += llvm::countLeadingOnes(U.pVal[i]);
+        Count += llvm::countl_one(U.pVal[i]);
         break;
       }
     }
@@ -666,7 +666,7 @@ unsigned APInt::countTrailingZerosSlowCase() const {
   for (; i < getNumWords() && U.pVal[i] == 0; ++i)
     Count += APINT_BITS_PER_WORD;
   if (i < getNumWords())
-    Count += llvm::countTrailingZeros(U.pVal[i]);
+    Count += llvm::countr_zero(U.pVal[i]);
   return std::min(Count, BitWidth);
 }
 
@@ -676,7 +676,7 @@ unsigned APInt::countTrailingOnesSlowCase() const {
   for (; i < getNumWords() && U.pVal[i] == WORDTYPE_MAX; ++i)
     Count += APINT_BITS_PER_WORD;
   if (i < getNumWords())
-    Count += llvm::countTrailingOnes(U.pVal[i]);
+    Count += llvm::countr_one(U.pVal[i]);
   assert(Count <= BitWidth);
   return Count;
 }
@@ -707,18 +707,18 @@ bool APInt::isSubsetOfSlowCase(const APInt &RHS) const {
 APInt APInt::byteSwap() const {
   assert(BitWidth >= 16 && BitWidth % 8 == 0 && "Cannot byteswap!");
   if (BitWidth == 16)
-    return APInt(BitWidth, ByteSwap_16(uint16_t(U.VAL)));
+    return APInt(BitWidth, llvm::byteswap<uint16_t>(U.VAL));
   if (BitWidth == 32)
-    return APInt(BitWidth, ByteSwap_32(unsigned(U.VAL)));
+    return APInt(BitWidth, llvm::byteswap<uint32_t>(U.VAL));
   if (BitWidth <= 64) {
-    uint64_t Tmp1 = ByteSwap_64(U.VAL);
+    uint64_t Tmp1 = llvm::byteswap<uint64_t>(U.VAL);
     Tmp1 >>= (64 - BitWidth);
     return APInt(BitWidth, Tmp1);
   }
 
   APInt Result(getNumWords() * APINT_BITS_PER_WORD, 0);
   for (unsigned I = 0, N = getNumWords(); I != N; ++I)
-    Result.U.pVal[I] = ByteSwap_64(U.pVal[N - I - 1]);
+    Result.U.pVal[I] = llvm::byteswap<uint64_t>(U.pVal[N - I - 1]);
   if (Result.BitWidth != BitWidth) {
     Result.lshrInPlace(Result.BitWidth - BitWidth);
     Result.BitWidth = BitWidth;
@@ -1318,7 +1318,7 @@ static void KnuthDiv(uint32_t *u, uint32_t *v, uint32_t *q, uint32_t* r,
   // and v so that its high bits are shifted to the top of v's range without
   // overflow. Note that this can require an extra word in u so that u must
   // be of length m+n+1.
-  unsigned shift = countLeadingZeros(v[n-1]);
+  unsigned shift = llvm::countl_zero(v[n - 1]);
   uint32_t v_carry = 0;
   uint32_t u_carry = 0;
   if (shift) {

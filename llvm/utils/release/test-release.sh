@@ -533,7 +533,7 @@ function package_release() {
     if [ "$use_gzip" = "yes" ]; then
       tar cf - $Package | gzip -9c > $BuildDir/$Package.tar.gz
     else
-      tar cf - $Package | xz -9ce > $BuildDir/$Package.tar.xz
+      tar cf - $Package | xz -9ce -T $NumJobs > $BuildDir/$Package.tar.xz
     fi
     mv $Package llvmCore-$Release-$RC.install/usr/local
     cd $cwd

@@ -3,6 +3,7 @@ add_mlir_library(MLIRIR
   AffineMap.cpp
   AsmPrinter.cpp
   Attributes.cpp
+  AttrTypeSubElements.cpp
   Block.cpp
   Builders.cpp
   BuiltinAttributeInterfaces.cpp
@@ -26,7 +27,6 @@ add_mlir_library(MLIRIR
   PatternMatch.cpp
   Region.cpp
   RegionKindInterface.cpp
-  SubElementInterfaces.cpp
   SymbolTable.cpp
   TensorEncoding.cpp
   Types.cpp
@@ -54,7 +54,6 @@ add_mlir_library(MLIRIR
   MLIROpAsmInterfaceIncGen
   MLIRRegionKindInterfaceIncGen
   MLIRSideEffectInterfacesIncGen
-  MLIRSubElementInterfacesIncGen
   MLIRSymbolInterfacesIncGen
   MLIRTensorEncodingIncGen
 

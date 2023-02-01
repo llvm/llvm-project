@@ -615,7 +615,7 @@ getFixIts(FixableGadgetSets &FixablesForUnsafeVars, const Strategy &S) {
     bool ImpossibleToFix = false;
     llvm::SmallVector<FixItHint, 16> FixItsForVD;
     for (const auto &F : Fixables) {
-      llvm::Optional<FixItList> Fixits = F->getFixits(S);
+      std::optional<FixItList> Fixits = F->getFixits(S);
       if (!Fixits) {
         ImpossibleToFix = true;
         break;

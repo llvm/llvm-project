@@ -791,6 +791,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::ATOMIC_LOAD_UMIN,
                        ISD::ATOMIC_LOAD_UMAX,
                        ISD::ATOMIC_LOAD_FADD,
+                       ISD::ATOMIC_LOAD_UINC_WRAP,
+                       ISD::ATOMIC_LOAD_UDEC_WRAP,
                        ISD::INTRINSIC_VOID,
                        ISD::INTRINSIC_W_CHAIN});
 
@@ -2451,7 +2453,7 @@ SDValue SITargetLowering::LowerFormalArguments(
       unsigned PsInputBits = Info->getPSInputAddr() & Info->getPSInputEnable();
       if ((PsInputBits & 0x7F) == 0 ||
           ((PsInputBits & 0xF) == 0 && (PsInputBits >> 11 & 1)))
-        Info->markPSInputEnabled(countTrailingZeros(Info->getPSInputAddr()));
+        Info->markPSInputEnabled(llvm::countr_zero(Info->getPSInputAddr()));
     }
   } else if (IsKernel) {
     assert(Info->hasWorkGroupIDX() && Info->hasWorkItemIDX());
@@ -7317,6 +7319,8 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                    M->getVTList(), Ops, M->getMemoryVT(),
                                    M->getMemOperand());
   }
+  case Intrinsic::amdgcn_atomic_inc:
+  case Intrinsic::amdgcn_atomic_dec:
   case Intrinsic::amdgcn_ds_fadd: {
     MemSDNode *M = cast<MemSDNode>(Op);
     unsigned Opc;
@@ -7324,24 +7328,28 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     case Intrinsic::amdgcn_ds_fadd:
       Opc = ISD::ATOMIC_LOAD_FADD;
       break;
+    case Intrinsic::amdgcn_atomic_inc:
+      Opc = ISD::ATOMIC_LOAD_UINC_WRAP;
+      break;
+    case Intrinsic::amdgcn_atomic_dec:
+      Opc = ISD::ATOMIC_LOAD_UDEC_WRAP;
+      break;
     }
 
     return DAG.getAtomic(Opc, SDLoc(Op), M->getMemoryVT(),
                          M->getOperand(0), M->getOperand(2), M->getOperand(3),
                          M->getMemOperand());
   }
-  case Intrinsic::amdgcn_atomic_inc:
-  case Intrinsic::amdgcn_atomic_dec:
   case Intrinsic::amdgcn_ds_fmin:
   case Intrinsic::amdgcn_ds_fmax: {
     MemSDNode *M = cast<MemSDNode>(Op);
     unsigned Opc;
     switch (IntrID) {
     case Intrinsic::amdgcn_atomic_inc:
-      Opc = AMDGPUISD::ATOMIC_INC;
+      Opc = ISD::ATOMIC_LOAD_UINC_WRAP;
       break;
     case Intrinsic::amdgcn_atomic_dec:
-      Opc = AMDGPUISD::ATOMIC_DEC;
+      Opc = ISD::ATOMIC_LOAD_UDEC_WRAP;
       break;
     case Intrinsic::amdgcn_ds_fmin:
       Opc = AMDGPUISD::ATOMIC_LOAD_FMIN;
@@ -11778,7 +11786,7 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
       // Set which texture component corresponds to the lane.
       unsigned Comp;
       for (unsigned i = 0, Dmask = OldDmask; (i <= Lane) && (Dmask != 0); i++) {
-        Comp = countTrailingZeros(Dmask);
+        Comp = llvm::countr_zero(Dmask);
         Dmask &= ~(1 << Comp);
       }
 
@@ -12605,7 +12613,7 @@ static void knownBitsForWorkitemID(const GCNSubtarget &ST, GISelKnownBits &KB,
                                    KnownBits &Known, unsigned Dim) {
   unsigned MaxValue =
       ST.getMaxWorkitemID(KB.getMachineFunction().getFunction(), Dim);
-  Known.Zero.setHighBits(countLeadingZeros(MaxValue));
+  Known.Zero.setHighBits(llvm::countl_zero(MaxValue));
 }
 
 void SITargetLowering::computeKnownBitsForTargetInstr(
@@ -12636,7 +12644,7 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
       // based on the actual size because we don't know if it's accurate or not
       // at any given point.
       Known.Zero.setHighBits(
-          countLeadingZeros(getSubtarget()->getAddressableLocalMemorySize()));
+          llvm::countl_zero(getSubtarget()->getAddressableLocalMemorySize()));
       break;
     }
     }
@@ -12794,8 +12802,6 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(
     return AMDGPU::isIntrinsicSourceOfDivergence(
         cast<ConstantSDNode>(N->getOperand(1))->getZExtValue());
   case AMDGPUISD::ATOMIC_CMP_SWAP:
-  case AMDGPUISD::ATOMIC_INC:
-  case AMDGPUISD::ATOMIC_DEC:
   case AMDGPUISD::ATOMIC_LOAD_FMIN:
   case AMDGPUISD::ATOMIC_LOAD_FMAX:
   case AMDGPUISD::BUFFER_ATOMIC_SWAP:

@@ -216,7 +216,7 @@ let Definition = "process" in {
   def DisableLangRuntimeUnwindPlans: Property<"disable-language-runtime-unwindplans", "Boolean">,
     Global,
     DefaultFalse,
-    Desc<"If true, LanguageRuntime plugins' UnwindPlans will not be used when backtracing.">;
+    Desc<"If true, language runtime augmented/overidden backtraces will not be used when printing a stack trace.">;
   def DetachKeepsStopped: Property<"detach-keeps-stopped", "Boolean">,
     Global,
     DefaultFalse,

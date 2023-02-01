@@ -1,5 +1,5 @@
-// RUN: mlir-opt -convert-memref-to-llvm %s -split-input-file | FileCheck %s
-// RUN: mlir-opt -convert-memref-to-llvm='index-bitwidth=32' %s -split-input-file | FileCheck --check-prefix=CHECK32 %s
+// RUN: mlir-opt -finalize-memref-to-llvm %s -split-input-file | FileCheck %s
+// RUN: mlir-opt -finalize-memref-to-llvm='index-bitwidth=32' %s -split-input-file | FileCheck --check-prefix=CHECK32 %s
 
 // CHECK-LABEL: func @view(
 // CHECK: %[[ARG0F:.*]]: index, %[[ARG1F:.*]]: index, %[[ARG2F:.*]]: index

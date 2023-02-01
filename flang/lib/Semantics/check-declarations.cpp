@@ -141,6 +141,7 @@ private:
   };
   void CheckAlreadySeenDefinedIo(const DerivedTypeSpec &,
       GenericKind::DefinedIo, const Symbol &, const Symbol &generic);
+  void CheckModuleProcedureDef(const Symbol &);
 
   SemanticsContext &context_;
   evaluate::FoldingContext &foldingContext_{context_.foldingContext()};
@@ -155,6 +156,9 @@ private:
       characterizeCache_;
   // Collection of symbols with BIND(C) names
   std::map<std::string, SymbolRef> bindC_;
+  // Collection of module procedure symbols with non-BIND(C)
+  // global names, qualified by their module.
+  std::map<std::pair<SourceName, const Symbol *>, SymbolRef> moduleProcs_;
   // Derived types that have defined input/output procedures
   std::vector<TypeWithDefinedIo> seenDefinedIoTypes_;
 };
@@ -1052,6 +1056,7 @@ void CheckHelper::CheckSubprogram(
     }
   }
   CheckLocalVsGlobal(symbol);
+  CheckModuleProcedureDef(symbol);
 }
 
 void CheckHelper::CheckLocalVsGlobal(const Symbol &symbol) {
@@ -1329,15 +1334,19 @@ void CheckHelper::CheckGeneric(
                     [](const auto &) {},
                 },
       details.kind().u);
+  // Ensure that shadowed symbols are checked
+  if (details.specific()) {
+    Check(*details.specific());
+  }
+  if (details.derivedType()) {
+    Check(*details.derivedType());
+  }
 }
 
 // Check that the specifics of this generic are distinguishable from each other
 void CheckHelper::CheckSpecificsAreDistinguishable(
     const Symbol &generic, const GenericDetails &details) {
   GenericKind kind{details.kind()};
-  if (!kind.IsName()) {
-    return;
-  }
   DistinguishabilityHelper helper{context_};
   for (const Symbol &specific : details.specificProcs()) {
     if (const Procedure *procedure{Characterize(specific)}) {
@@ -1439,9 +1448,12 @@ bool CheckHelper::CheckDefinedOperator(SourceName opName, GenericKind kind,
   } else {
     return true; // OK
   }
+  bool isFatal{msg->IsFatal()};
   SayWithDeclaration(
       specific, std::move(*msg), MakeOpName(opName), specific.name());
-  context_.SetError(specific);
+  if (isFatal) {
+    context_.SetError(specific);
+  }
   return false;
 }
 
@@ -1450,6 +1462,9 @@ bool CheckHelper::CheckDefinedOperator(SourceName opName, GenericKind kind,
 std::optional<parser::MessageFixedText> CheckHelper::CheckNumberOfArgs(
     const GenericKind &kind, std::size_t nargs) {
   if (!kind.IsIntrinsicOperator()) {
+    if (nargs < 1 || nargs > 2) {
+      return "%s function '%s' should have 1 or 2 dummy arguments"_warn_en_US;
+    }
     return std::nullopt;
   }
   std::size_t min{2}, max{2}; // allowed number of args; default is binary
@@ -1565,6 +1580,12 @@ bool CheckHelper::CheckDefinedAssignmentArg(
         msg =
             "In defined assignment subroutine '%s', second dummy"
             " argument '%s' must have INTENT(IN) or VALUE attribute"_err_en_US;
+      } else if (dataObject->attrs.test(DummyDataObject::Attr::Pointer)) {
+        msg =
+            "In defined assignment subroutine '%s', second dummy argument '%s' must not be a pointer"_err_en_US;
+      } else if (dataObject->attrs.test(DummyDataObject::Attr::Allocatable)) {
+        msg =
+            "In defined assignment subroutine '%s', second dummy argument '%s' must not be an allocatable"_err_en_US;
       }
     } else {
       DIE("pos must be 0 or 1");
@@ -2182,8 +2203,7 @@ void CheckHelper::CheckAlreadySeenDefinedIo(const DerivedTypeSpec &derivedType,
       SayWithDeclaration(proc, definedIoType.proc.name(),
           "Derived type '%s' already has defined input/output procedure"
           " '%s'"_err_en_US,
-          derivedType.name(),
-          parser::ToUpperCaseLetters(GenericKind::EnumToString(ioKind)));
+          derivedType.name(), GenericKind::AsFortran(ioKind));
       return;
     }
   }
@@ -2431,6 +2451,40 @@ void CheckHelper::CheckSymbolType(const Symbol &symbol) {
         messages_.Say(
             "'%s' has a type %s with a deferred type parameter but is neither an allocatable nor an object pointer"_err_en_US,
             symbol.name(), dyType->AsFortran());
+      }
+    }
+  }
+}
+
+void CheckHelper::CheckModuleProcedureDef(const Symbol &symbol) {
+  auto procClass{ClassifyProcedure(symbol)};
+  if (const auto *subprogram{symbol.detailsIf<SubprogramDetails>()};
+      subprogram &&
+      (procClass == ProcedureDefinitionClass::Module &&
+          symbol.attrs().test(Attr::MODULE)) &&
+      !subprogram->bindName() && !subprogram->isInterface()) {
+    const Symbol *module{nullptr};
+    if (const Scope * moduleScope{FindModuleContaining(symbol.owner())};
+        moduleScope && moduleScope->symbol()) {
+      if (const auto *details{
+              moduleScope->symbol()->detailsIf<ModuleDetails>()}) {
+        if (details->parent()) {
+          moduleScope = details->parent();
+        }
+        module = moduleScope->symbol();
+      }
+    }
+    if (module) {
+      std::pair<SourceName, const Symbol *> key{symbol.name(), module};
+      auto iter{moduleProcs_.find(key)};
+      if (iter == moduleProcs_.end()) {
+        moduleProcs_.emplace(std::move(key), symbol);
+      } else if (
+          auto *msg{messages_.Say(symbol.name(),
+              "Module procedure '%s' in module '%s' has multiple definitions"_err_en_US,
+              symbol.name(), module->name())}) {
+        msg->Attach(iter->second->name(), "Previous definition of '%s'"_en_US,
+            symbol.name());
       }
     }
   }

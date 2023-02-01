@@ -80,20 +80,15 @@ IntegerAttr wrapNumericMemorySpace(MLIRContext *ctx, unsigned space) {
 
 void mlir::gpu::populateMemorySpaceAttributeTypeConversions(
     TypeConverter &typeConverter, const MemorySpaceMapping &mapping) {
-  typeConverter.addConversion([mapping](Type type) -> std::optional<Type> {
-    auto subElementType = type.dyn_cast_or_null<SubElementTypeInterface>();
-    if (!subElementType)
-      return type;
-    Type newType = subElementType.replaceSubElements(
-        [mapping](Attribute attr) -> std::optional<Attribute> {
-          auto memorySpaceAttr = attr.dyn_cast_or_null<gpu::AddressSpaceAttr>();
-          if (!memorySpaceAttr)
-            return std::nullopt;
-          auto newValue = wrapNumericMemorySpace(
-              attr.getContext(), mapping(memorySpaceAttr.getValue()));
-          return newValue;
-        });
-    return newType;
+  typeConverter.addConversion([mapping](Type type) {
+    return type.replace([mapping](Attribute attr) -> std::optional<Attribute> {
+      auto memorySpaceAttr = attr.dyn_cast_or_null<gpu::AddressSpaceAttr>();
+      if (!memorySpaceAttr)
+        return std::nullopt;
+      auto newValue = wrapNumericMemorySpace(
+          attr.getContext(), mapping(memorySpaceAttr.getValue()));
+      return newValue;
+    });
   });
 }
 

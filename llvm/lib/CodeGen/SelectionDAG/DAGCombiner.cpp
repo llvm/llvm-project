@@ -5136,10 +5136,10 @@ static SDValue isSaturatingMinMax(SDValue N0, SDValue N1, SDValue N2,
   // the upper value.
   if (N0.getOpcode() == ISD::FP_TO_SINT && Opcode0 == ISD::SMAX) {
     if (isNullOrNullSplat(N3)) {
-      EVT IntVT = N0.getValueType();
-      EVT FPVT = N0.getOperand(0).getValueType();
+      EVT IntVT = N0.getValueType().getScalarType();
+      EVT FPVT = N0.getOperand(0).getValueType().getScalarType();
       if (FPVT.isSimple()) {
-        Type *InputTy = FPVT.getTypeForEVT(*DAG.getContext())->getScalarType();
+        Type *InputTy = FPVT.getTypeForEVT(*DAG.getContext());
         const fltSemantics &Semantics = InputTy->getFltSemantics();
         uint32_t MinBitWidth =
           APFloatBase::semanticsIntSizeInBits(Semantics, /*isSigned*/ true);
@@ -18145,14 +18145,14 @@ CheckForMaskedLoad(SDValue V, SDValue Ptr, SDValue Chain) {
   // 0 and the bits being kept are 1.  Use getSExtValue so that leading bits
   // follow the sign bit for uniformity.
   uint64_t NotMask = ~cast<ConstantSDNode>(V->getOperand(1))->getSExtValue();
-  unsigned NotMaskLZ = countLeadingZeros(NotMask);
+  unsigned NotMaskLZ = llvm::countl_zero(NotMask);
   if (NotMaskLZ & 7) return Result;  // Must be multiple of a byte.
-  unsigned NotMaskTZ = countTrailingZeros(NotMask);
+  unsigned NotMaskTZ = llvm::countr_zero(NotMask);
   if (NotMaskTZ & 7) return Result;  // Must be multiple of a byte.
   if (NotMaskLZ == 64) return Result;  // All zero mask.
 
   // See if we have a continuous run of bits.  If so, we have 0*1+0*
-  if (countTrailingOnes(NotMask >> NotMaskTZ) + NotMaskTZ + NotMaskLZ != 64)
+  if (llvm::countr_one(NotMask >> NotMaskTZ) + NotMaskTZ + NotMaskLZ != 64)
     return Result;
 
   // Adjust NotMaskLZ down to be from the actual size of the int instead of i64.

@@ -118,7 +118,7 @@ size_t EmulationStateARM::ReadPseudoMemory(
       return 0;
 
     if (endian::InlHostByteOrder() == lldb::eByteOrderBig)
-      value = llvm::ByteSwap_32(value);
+      value = llvm::byteswap<uint32_t>(value);
     *((uint32_t *)dst) = value;
   } else if (length == 8) {
     uint32_t value1 = pseudo_state->ReadFromPseudoAddress(addr, success);
@@ -130,8 +130,8 @@ size_t EmulationStateARM::ReadPseudoMemory(
       return 0;
 
     if (endian::InlHostByteOrder() == lldb::eByteOrderBig) {
-      value1 = llvm::ByteSwap_32(value1);
-      value2 = llvm::ByteSwap_32(value2);
+      value1 = llvm::byteswap<uint32_t>(value1);
+      value2 = llvm::byteswap<uint32_t>(value2);
     }
     ((uint32_t *)dst)[0] = value1;
     ((uint32_t *)dst)[1] = value2;
@@ -157,7 +157,7 @@ size_t EmulationStateARM::WritePseudoMemory(
     uint32_t value;
     memcpy (&value, dst, sizeof (uint32_t));
     if (endian::InlHostByteOrder() == lldb::eByteOrderBig)
-      value = llvm::ByteSwap_32(value);
+      value = llvm::byteswap<uint32_t>(value);
 
     pseudo_state->StoreToPseudoAddress(addr, value);
     return length;
@@ -168,8 +168,8 @@ size_t EmulationStateARM::WritePseudoMemory(
     memcpy(&value2, static_cast<const uint8_t *>(dst) + sizeof(uint32_t),
            sizeof(uint32_t));
     if (endian::InlHostByteOrder() == lldb::eByteOrderBig) {
-      value1 = llvm::ByteSwap_32(value1);
-      value2 = llvm::ByteSwap_32(value2);
+      value1 = llvm::byteswap<uint32_t>(value1);
+      value2 = llvm::byteswap<uint32_t>(value2);
     }
 
     pseudo_state->StoreToPseudoAddress(addr, value1);

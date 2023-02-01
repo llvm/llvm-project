@@ -155,15 +155,15 @@ static void generateInstSeqImpl(int64_t Val,
 
 static unsigned extractRotateInfo(int64_t Val) {
   // for case: 0b111..1..xxxxxx1..1..
-  unsigned LeadingOnes = countLeadingOnes((uint64_t)Val);
-  unsigned TrailingOnes = countTrailingOnes((uint64_t)Val);
+  unsigned LeadingOnes = llvm::countl_one((uint64_t)Val);
+  unsigned TrailingOnes = llvm::countr_one((uint64_t)Val);
   if (TrailingOnes > 0 && TrailingOnes < 64 &&
       (LeadingOnes + TrailingOnes) > (64 - 12))
     return 64 - TrailingOnes;
 
   // for case: 0bxxx1..1..1...xxx
-  unsigned UpperTrailingOnes = countTrailingOnes(Hi_32(Val));
-  unsigned LowerLeadingOnes = countLeadingOnes(Lo_32(Val));
+  unsigned UpperTrailingOnes = llvm::countr_one(Hi_32(Val));
+  unsigned LowerLeadingOnes = llvm::countl_one(Lo_32(Val));
   if (UpperTrailingOnes < 32 &&
       (UpperTrailingOnes + LowerLeadingOnes) > (64 - 12))
     return 32 - UpperTrailingOnes;
@@ -180,7 +180,7 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
   // or ADDIW. If there are trailing zeros, try generating a sign extended
   // constant with no trailing zeros and use a final SLLI to restore them.
   if ((Val & 0xfff) != 0 && (Val & 1) == 0 && Res.size() >= 2) {
-    unsigned TrailingZeros = countTrailingZeros((uint64_t)Val);
+    unsigned TrailingZeros = llvm::countr_zero((uint64_t)Val);
     int64_t ShiftedVal = Val >> TrailingZeros;
     // If we can use C.LI+C.SLLI instead of LUI+ADDI(W) prefer that since
     // its more compressible. But only if LUI+ADDI(W) isn't fusable.
@@ -202,7 +202,7 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
   if (Val > 0 && Res.size() > 2) {
     assert(ActiveFeatures[RISCV::Feature64Bit] &&
            "Expected RV32 to only need 2 instructions");
-    unsigned LeadingZeros = countLeadingZeros((uint64_t)Val);
+    unsigned LeadingZeros = llvm::countl_zero((uint64_t)Val);
     uint64_t ShiftedVal = (uint64_t)Val << LeadingZeros;
     // Fill in the bits that will be shifted out with 1s. An example where this
     // helps is trailing one masks with 32 or more ones. This will generate

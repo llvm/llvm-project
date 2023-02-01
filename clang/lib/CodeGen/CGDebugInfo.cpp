@@ -2010,14 +2010,9 @@ CGDebugInfo::CollectTemplateParams(std::optional<TemplateArgs> OArgs,
   for (unsigned i = 0, e = Args.Args.size(); i != e; ++i) {
     const TemplateArgument &TA = Args.Args[i];
     StringRef Name;
-    bool defaultParameter = false;
-    if (Args.TList) {
+    const bool defaultParameter = TA.getIsDefaulted();
+    if (Args.TList)
       Name = Args.TList->getParam(i)->getName();
-
-      NamedDecl const *ND = Args.TList->getParam(i);
-      defaultParameter = clang::isSubstitutedDefaultArgument(
-          CGM.getContext(), TA, ND, Args.Args, Args.TList->getDepth());
-    }
 
     switch (TA.getKind()) {
     case TemplateArgument::Type: {

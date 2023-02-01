@@ -268,8 +268,8 @@ static inline void expandMOVImmSimple(uint64_t Imm, unsigned BitSize,
   unsigned Shift = 0;     // LSL amount for high bits with MOVZ/MOVN
   unsigned LastShift = 0; // LSL amount for last MOVK
   if (Imm != 0) {
-    unsigned LZ = countLeadingZeros(Imm);
-    unsigned TZ = countTrailingZeros(Imm);
+    unsigned LZ = llvm::countl_zero(Imm);
+    unsigned TZ = llvm::countr_zero(Imm);
     Shift = (TZ / 16) * 16;
     LastShift = ((63 - LZ) / 16) * 16;
   }

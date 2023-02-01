@@ -1607,11 +1607,6 @@ def err_import_in_wrong_fragment : Error<
 def err_export_empty : Error<"export declaration cannot be empty">;
 }
 
-def ext_offsetof_member_designator : Extension<
-  "using %select{a member access expression|an array subscript expression}0 "
-  "within '%select{__builtin_offsetof|offsetof}1' is a Clang extension">,
-  InGroup<GNUOffsetofExtensions>;
-
 let CategoryName = "Generics Issue" in {
 
 def err_objc_expected_type_parameter : Error<

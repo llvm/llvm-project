@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIB_MLIR_TOOLS_LSPSERVERSUPPORT_TRANSPORT_H_
-#define LIB_MLIR_TOOLS_LSPSERVERSUPPORT_TRANSPORT_H_
+#ifndef MLIR_TOOLS_LSPSERVERSUPPORT_TRANSPORT_H
+#define MLIR_TOOLS_LSPSERVERSUPPORT_TRANSPORT_H
 
-#include "Protocol.h"
+#include "mlir/Tools/lsp-server-support/Protocol.h"
 #include "llvm/Support/SourceMgr.h"
 #include <optional>
 
@@ -27,7 +27,7 @@ namespace lsp {
 /// Returns the range of a lexical token given a SMLoc corresponding to the
 /// start of an token location. The range is computed heuristically, and
 /// supports identifier-like tokens, strings, etc.
-SMRange convertTokenLocToRange(SMLoc loc);
+SMRange convertTokenLocToRange(SMLoc loc, StringRef identifierChars = "");
 
 /// Extract a documentation comment for the given location within the source
 /// manager. Returns std::nullopt if no comment could be computed.

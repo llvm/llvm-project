@@ -7279,24 +7279,34 @@ private:
 
 private:
   // The current stack of constraint satisfactions, so we can exit-early.
-  llvm::SmallVector<llvm::FoldingSetNodeID, 10> SatisfactionStack;
+  using SatisfactionStackEntryTy =
+      std::pair<const NamedDecl *, llvm::FoldingSetNodeID>;
+  llvm::SmallVector<SatisfactionStackEntryTy, 10>
+      SatisfactionStack;
 
 public:
-  void PushSatisfactionStackEntry(const llvm::FoldingSetNodeID &ID) {
-    SatisfactionStack.push_back(ID);
+  void PushSatisfactionStackEntry(const NamedDecl *D,
+                                  const llvm::FoldingSetNodeID &ID) {
+    const NamedDecl *Can = cast<NamedDecl>(D->getCanonicalDecl());
+    SatisfactionStack.emplace_back(Can, ID);
   }
 
   void PopSatisfactionStackEntry() { SatisfactionStack.pop_back(); }
 
-  bool SatisfactionStackContains(const llvm::FoldingSetNodeID &ID) const {
-    return llvm::find(SatisfactionStack, ID) != SatisfactionStack.end();
+  bool SatisfactionStackContains(const NamedDecl *D,
+                                 const llvm::FoldingSetNodeID &ID) const {
+    const NamedDecl *Can = cast<NamedDecl>(D->getCanonicalDecl());
+    return llvm::find(SatisfactionStack,
+                      SatisfactionStackEntryTy{Can, ID}) !=
+           SatisfactionStack.end();
   }
 
   // Resets the current SatisfactionStack for cases where we are instantiating
   // constraints as a 'side effect' of normal instantiation in a way that is not
   // indicative of recursive definition.
   class SatisfactionStackResetRAII {
-    llvm::SmallVector<llvm::FoldingSetNodeID, 10> BackupSatisfactionStack;
+    llvm::SmallVector<SatisfactionStackEntryTy, 10>
+        BackupSatisfactionStack;
     Sema &SemaRef;
 
   public:
@@ -7309,8 +7319,8 @@ public:
     }
   };
 
-  void
-  SwapSatisfactionStack(llvm::SmallVectorImpl<llvm::FoldingSetNodeID> &NewSS) {
+  void SwapSatisfactionStack(
+      llvm::SmallVectorImpl<SatisfactionStackEntryTy> &NewSS) {
     SatisfactionStack.swap(NewSS);
   }
 

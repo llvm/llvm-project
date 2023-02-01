@@ -116,6 +116,7 @@ public:
   void switchContext(StringRef Name);
   void startObservation();
   void endObservation();
+  void flush() { OS->flush(); }
 
   const std::string &currentContext() const { return CurrentContext; }
 

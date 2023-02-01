@@ -667,6 +667,7 @@ protected:
   void AcquireIntrinsicProcedureFlags(Symbol &);
   const DeclTypeSpec *GetImplicitType(
       Symbol &, bool respectImplicitNoneType = true);
+  void CheckEntryDummyUse(SourceName, Symbol *);
   bool ConvertToObjectEntity(Symbol &);
   bool ConvertToProcEntity(Symbol &);
 
@@ -873,7 +874,8 @@ private:
   Symbol &PushSubprogramScope(const parser::Name &, Symbol::Flag,
       const parser::LanguageBindingSpec * = nullptr);
   Symbol *GetSpecificFromGeneric(const parser::Name &);
-  SubprogramDetails &PostSubprogramStmt();
+  Symbol &PostSubprogramStmt();
+  void CreateDummyArgument(SubprogramDetails &, const parser::Name &);
   void CreateEntry(const parser::EntryStmt &stmt, Symbol &subprogram);
   void PostEntryStmt(const parser::EntryStmt &stmt);
   void HandleLanguageBinding(Symbol *,
@@ -2153,19 +2155,21 @@ void ScopeHandler::SayAlreadyDeclared(
 
 void ScopeHandler::SayWithReason(const parser::Name &name, Symbol &symbol,
     MessageFixedText &&msg1, Message &&msg2) {
+  bool isFatal{msg1.IsFatal()};
   Say(name, std::move(msg1), symbol.name()).Attach(std::move(msg2));
-  context().SetError(symbol, msg1.isFatal());
+  context().SetError(symbol, isFatal);
 }
 
 void ScopeHandler::SayWithDecl(
     const parser::Name &name, Symbol &symbol, MessageFixedText &&msg) {
+  bool isFatal{msg.IsFatal()};
   Say(name, std::move(msg), symbol.name())
       .Attach(Message{name.source,
           symbol.test(Symbol::Flag::Implicit)
               ? "Implicit declaration of '%s'"_en_US
               : "Declaration of '%s'"_en_US,
           name.source});
-  context().SetError(symbol, msg.isFatal());
+  context().SetError(symbol, isFatal);
 }
 
 void ScopeHandler::SayLocalMustBeVariable(
@@ -2188,13 +2192,15 @@ void ScopeHandler::Say2(const SourceName &name1, MessageFixedText &&msg1,
 }
 void ScopeHandler::Say2(const SourceName &name, MessageFixedText &&msg1,
     Symbol &symbol, MessageFixedText &&msg2) {
+  bool isFatal{msg1.IsFatal()};
   Say2(name, std::move(msg1), symbol.name(), std::move(msg2));
-  context().SetError(symbol, msg1.isFatal());
+  context().SetError(symbol, isFatal);
 }
 void ScopeHandler::Say2(const parser::Name &name, MessageFixedText &&msg1,
     Symbol &symbol, MessageFixedText &&msg2) {
+  bool isFatal{msg1.IsFatal()};
   Say2(name.source, std::move(msg1), symbol.name(), std::move(msg2));
-  context().SetError(symbol, msg1.isFatal());
+  context().SetError(symbol, isFatal);
 }
 
 // This is essentially GetProgramUnitContaining(), but it can return
@@ -2489,13 +2495,31 @@ const DeclTypeSpec *ScopeHandler::GetImplicitType(
   return type;
 }
 
+void ScopeHandler::CheckEntryDummyUse(SourceName source, Symbol *symbol) {
+  if (!inSpecificationPart_ && symbol &&
+      symbol->test(Symbol::Flag::EntryDummyArgument)) {
+    Say(source,
+        "Dummy argument '%s' may not be used before its ENTRY statement"_err_en_US,
+        symbol->name());
+    symbol->set(Symbol::Flag::EntryDummyArgument, false);
+  }
+}
+
 // Convert symbol to be a ObjectEntity or return false if it can't be.
 bool ScopeHandler::ConvertToObjectEntity(Symbol &symbol) {
   if (symbol.has<ObjectEntityDetails>()) {
     // nothing to do
   } else if (symbol.has<UnknownDetails>()) {
+    // These are attributes that a name could have picked up from
+    // an attribute statement or type declaration statement.
+    if (symbol.attrs().HasAny({Attr::EXTERNAL, Attr::INTRINSIC})) {
+      return false;
+    }
     symbol.set_details(ObjectEntityDetails{});
   } else if (auto *details{symbol.detailsIf<EntityDetails>()}) {
+    if (symbol.attrs().HasAny({Attr::EXTERNAL, Attr::INTRINSIC})) {
+      return false;
+    }
     funcResultStack_.CompleteTypeIfFunctionResult(symbol);
     symbol.set_details(ObjectEntityDetails{std::move(*details)});
   } else if (auto *useDetails{symbol.detailsIf<UseDetails>()}) {
@@ -3423,11 +3447,11 @@ bool SubprogramVisitor::Pre(const parser::SubroutineStmt &stmt) {
   Walk(std::get<parser::Name>(stmt.t));
   Walk(std::get<std::list<parser::DummyArg>>(stmt.t));
   // Don't traverse the LanguageBindingSpec now; it's deferred to EndSubprogram.
-  auto &details{PostSubprogramStmt()};
+  Symbol &symbol{PostSubprogramStmt()};
+  SubprogramDetails &details{symbol.get<SubprogramDetails>()};
   for (const auto &dummyArg : std::get<std::list<parser::DummyArg>>(stmt.t)) {
     if (const auto *dummyName{std::get_if<parser::Name>(&dummyArg.u)}) {
-      Symbol &dummy{MakeSymbol(*dummyName, EntityDetails{true})};
-      details.add_dummyArg(dummy);
+      CreateDummyArgument(details, *dummyName);
     } else {
       details.add_alternateReturn();
     }
@@ -3444,10 +3468,10 @@ bool SubprogramVisitor::Pre(const parser::EntryStmt &) { return BeginAttrs(); }
 
 void SubprogramVisitor::Post(const parser::FunctionStmt &stmt) {
   const auto &name{std::get<parser::Name>(stmt.t)};
-  auto &details{PostSubprogramStmt()};
+  Symbol &symbol{PostSubprogramStmt()};
+  SubprogramDetails &details{symbol.get<SubprogramDetails>()};
   for (const auto &dummyName : std::get<std::list<parser::Name>>(stmt.t)) {
-    Symbol &dummy{MakeSymbol(dummyName, EntityDetails{true})};
-    details.add_dummyArg(dummy);
+    CreateDummyArgument(details, dummyName);
   }
   const parser::Name *funcResultName;
   FuncResultStack::FuncInfo &info{DEREF(funcResultStack().Top())};
@@ -3503,20 +3527,20 @@ void SubprogramVisitor::Post(const parser::FunctionStmt &stmt) {
     // should be resolved to avoid internal errors.
     Resolve(*info.resultName, info.resultSymbol);
   }
-  name.symbol = currScope().symbol(); // must not be function result symbol
+  name.symbol = &symbol; // must not be function result symbol
   // Clear the RESULT() name now in case an ENTRY statement in the implicit-part
   // has a RESULT() suffix.
   info.resultName = nullptr;
 }
 
-SubprogramDetails &SubprogramVisitor::PostSubprogramStmt() {
+Symbol &SubprogramVisitor::PostSubprogramStmt() {
   Symbol &symbol{*currScope().symbol()};
   SetExplicitAttrs(symbol, EndAttrs());
   if (symbol.attrs().test(Attr::MODULE)) {
     symbol.attrs().set(Attr::EXTERNAL, false);
     symbol.implicitAttrs().set(Attr::EXTERNAL, false);
   }
-  return symbol.get<SubprogramDetails>();
+  return symbol;
 }
 
 void SubprogramVisitor::Post(const parser::EntryStmt &stmt) {
@@ -3525,6 +3549,30 @@ void SubprogramVisitor::Post(const parser::EntryStmt &stmt) {
   }
   PostEntryStmt(stmt);
   EndAttrs();
+}
+
+void SubprogramVisitor::CreateDummyArgument(
+    SubprogramDetails &details, const parser::Name &name) {
+  Symbol *dummy{FindInScope(name)};
+  if (dummy) {
+    if (IsDummy(*dummy)) {
+      if (dummy->test(Symbol::Flag::EntryDummyArgument)) {
+        dummy->set(Symbol::Flag::EntryDummyArgument, false);
+      } else {
+        Say(name,
+            "'%s' appears more than once as a dummy argument name in this subprogram"_err_en_US,
+            name.source);
+        return;
+      }
+    } else {
+      SayWithDecl(name, *dummy,
+          "'%s' may not appear as a dummy argument name in this subprogram"_err_en_US);
+      return;
+    }
+  } else {
+    dummy = &MakeSymbol(name, EntityDetails{true});
+  }
+  details.add_dummyArg(DEREF(dummy));
 }
 
 void SubprogramVisitor::CreateEntry(
@@ -3636,7 +3684,39 @@ void SubprogramVisitor::CreateEntry(
     assoc.set(Symbol::Flag::Subroutine);
   }
   Resolve(entryName, *entrySymbol);
-  Details details{std::move(entryDetails)};
+  std::set<SourceName> dummies;
+  for (const auto &dummyArg : std::get<std::list<parser::DummyArg>>(stmt.t)) {
+    if (const auto *dummyName{std::get_if<parser::Name>(&dummyArg.u)}) {
+      auto pair{dummies.insert(dummyName->source)};
+      if (!pair.second) {
+        Say(*dummyName,
+            "'%s' appears more than once as a dummy argument name in this ENTRY statement"_err_en_US,
+            dummyName->source);
+        continue;
+      }
+      Symbol *dummy{FindInScope(*dummyName)};
+      if (dummy) {
+        if (!IsDummy(*dummy)) {
+          evaluate::AttachDeclaration(
+              Say(*dummyName,
+                  "'%s' may not appear as a dummy argument name in this ENTRY statement"_err_en_US,
+                  dummyName->source),
+              *dummy);
+          continue;
+        }
+      } else {
+        dummy = &MakeSymbol(*dummyName, EntityDetails{true});
+        dummy->set(Symbol::Flag::EntryDummyArgument);
+      }
+      entryDetails.add_dummyArg(DEREF(dummy));
+    } else if (subpFlag == Symbol::Flag::Function) { // C1573
+      Say(entryName,
+          "ENTRY in a function may not have an alternate return dummy argument"_err_en_US);
+      break;
+    } else {
+      entryDetails.add_alternateReturn();
+    }
+  }
   entrySymbol->set_details(std::move(entryDetails));
 }
 
@@ -3674,33 +3754,19 @@ void SubprogramVisitor::PostEntryStmt(const parser::EntryStmt &stmt) {
   SetBindNameOn(entrySymbol);
   for (const auto &dummyArg : std::get<std::list<parser::DummyArg>>(stmt.t)) {
     if (const auto *dummyName{std::get_if<parser::Name>(&dummyArg.u)}) {
-      Symbol *dummy{FindSymbol(*dummyName)};
-      if (dummy) {
-        common::visit(
-            common::visitors{[](EntityDetails &x) { x.set_isDummy(); },
-                [](ObjectEntityDetails &x) { x.set_isDummy(); },
-                [](ProcEntityDetails &x) { x.set_isDummy(); },
-                [](SubprogramDetails &x) { x.set_isDummy(); },
-                [&](const auto &) {
-                  Say2(dummyName->source,
-                      "ENTRY dummy argument '%s' is previously declared as an item that may not be used as a dummy argument"_err_en_US,
-                      dummy->name(), "Previous declaration of '%s'"_en_US);
-                }},
-            dummy->details());
-      } else {
-        dummy = &MakeSymbol(*dummyName, EntityDetails{true});
-        if (!inSpecificationPart_) {
-          ApplyImplicitRules(*dummy);
+      if (Symbol * dummy{FindInScope(*dummyName)}) {
+        if (dummy->test(Symbol::Flag::EntryDummyArgument)) {
+          const auto *subp{dummy->detailsIf<SubprogramDetails>()};
+          if (subp && subp->isInterface()) { // ok
+          } else if (!dummy->has<EntityDetails>() &&
+              !dummy->has<ObjectEntityDetails>() &&
+              !dummy->has<ProcEntityDetails>()) {
+            SayWithDecl(*dummyName, *dummy,
+                "ENTRY dummy argument '%s' was previously declared as an item that may not be used as a dummy argument"_err_en_US);
+          }
+          dummy->set(Symbol::Flag::EntryDummyArgument, false);
         }
       }
-      entryDetails.add_dummyArg(*dummy);
-    } else {
-      if (entrySymbol.test(Symbol::Flag::Function)) { // C1573
-        Say(name,
-            "ENTRY in a function may not have an alternate return dummy argument"_err_en_US);
-        break;
-      }
-      entryDetails.add_alternateReturn();
     }
   }
 }
@@ -3709,12 +3775,20 @@ Symbol *ScopeHandler::FindSeparateModuleProcedureInterface(
     const parser::Name &name) {
   auto *symbol{FindSymbol(name)};
   if (symbol && symbol->has<SubprogramNameDetails>()) {
-    symbol = FindSymbol(currScope().parent(), name);
+    const Scope *parent{nullptr};
+    if (currScope().IsSubmodule()) {
+      parent = currScope().symbol()->get<ModuleDetails>().parent();
+    }
+    symbol = parent ? FindSymbol(*parent, name) : nullptr;
   }
   if (symbol) {
     if (auto *generic{symbol->detailsIf<GenericDetails>()}) {
       symbol = generic->specific();
     }
+  }
+  if (const Symbol * defnIface{FindSeparateModuleSubprogramInterface(symbol)}) {
+    // Error recovery in case of multiple definitions
+    symbol = const_cast<Symbol *>(defnIface);
   }
   if (!IsSeparateModuleProcedureInterface(symbol)) {
     Say(name, "'%s' was not declared a separate module procedure"_err_en_US);
@@ -4055,6 +4129,8 @@ void DeclarationVisitor::Post(const parser::EntityDecl &x) {
   symbol.ReplaceName(name.source);
   if (const auto &init{std::get<std::optional<parser::Initialization>>(x.t)}) {
     ConvertToObjectEntity(symbol) || ConvertToProcEntity(symbol);
+    symbol.set(
+        Symbol::Flag::EntryDummyArgument, false); // forestall excessive errors
     Initialization(name, *init, false);
   } else if (attrs.test(Attr::PARAMETER)) { // C882, C883
     Say(name, "Missing initialization for parameter '%s'"_err_en_US);
@@ -4180,7 +4256,7 @@ bool DeclarationVisitor::Pre(const parser::NamedConstant &x) {
 
 bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
   const parser::Name &name{std::get<parser::NamedConstant>(enumerator.t).v};
-  Symbol *symbol{FindSymbol(name)};
+  Symbol *symbol{FindInScope(name)};
   if (symbol && !symbol->has<UnknownDetails>()) {
     // Contrary to named constants appearing in a PARAMETER statement,
     // enumerator names should not have their type, dimension or any other
@@ -6733,6 +6809,7 @@ const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
       MakeHostAssocSymbol(name, *symbol);
     } else if (IsDummy(*symbol) ||
         (!symbol->GetType() && FindCommonBlockContaining(*symbol))) {
+      CheckEntryDummyUse(name.source, symbol);
       ConvertToObjectEntity(*symbol);
       ApplyImplicitRules(*symbol);
     }
@@ -6836,6 +6913,7 @@ const parser::Name *DeclarationVisitor::FindComponent(
       }
     }
   }
+  CheckEntryDummyUse(base->source, base->symbol);
   auto &symbol{base->symbol->GetUltimate()};
   if (!symbol.has<AssocEntityDetails>() && !ConvertToObjectEntity(symbol)) {
     SayWithDecl(*base, symbol,
@@ -6900,10 +6978,6 @@ void DeclarationVisitor::Initialization(const parser::Name &name,
     return;
   }
   Symbol &ultimate{name.symbol->GetUltimate()};
-  if (IsAllocatable(ultimate)) {
-    Say(name, "Allocatable object '%s' cannot be initialized"_err_en_US);
-    return;
-  }
   // TODO: check C762 - all bounds and type parameters of component
   // are colons or constant expressions if component is initialized
   common::visit(
@@ -7004,6 +7078,10 @@ void DeclarationVisitor::NonPointerInitialization(
             "'%s' is a pointer but is not initialized like one"_err_en_US);
       } else if (auto *details{ultimate.detailsIf<ObjectEntityDetails>()}) {
         CHECK(!details->init());
+        if (IsAllocatable(ultimate)) {
+          Say(name, "Allocatable object '%s' cannot be initialized"_err_en_US);
+          return;
+        }
         Walk(expr);
         if (ultimate.owner().IsParameterizedDerivedType()) {
           // Save the expression for per-instantiation analysis.
@@ -7014,6 +7092,8 @@ void DeclarationVisitor::NonPointerInitialization(
             details->set_init(std::move(*folded));
           }
         }
+      } else {
+        Say(name, "'%s' is not an object that can be initialized"_err_en_US);
       }
     }
   }
@@ -7055,6 +7135,7 @@ void ResolveNamesVisitor::HandleProcedureName(
         MakeExternal(*symbol);
       }
     }
+    CheckEntryDummyUse(name.source, symbol);
     ConvertToProcEntity(*symbol);
     SetProcFlag(name, *symbol, flag);
   } else if (CheckUseError(name)) {
@@ -7062,6 +7143,7 @@ void ResolveNamesVisitor::HandleProcedureName(
   } else {
     auto &nonUltimateSymbol{*symbol};
     symbol = &Resolve(name, symbol)->GetUltimate();
+    CheckEntryDummyUse(name.source, symbol);
     bool convertedToProcEntity{ConvertToProcEntity(*symbol)};
     if (convertedToProcEntity && !symbol->attrs().test(Attr::EXTERNAL) &&
         IsIntrinsic(symbol->name(), flag) && !IsDummy(*symbol)) {
@@ -7578,11 +7660,13 @@ bool ResolveNamesVisitor::Pre(const parser::DefinedOpName &x) {
 
 void ResolveNamesVisitor::Post(const parser::AssignStmt &x) {
   if (auto *name{ResolveName(std::get<parser::Name>(x.t))}) {
+    CheckEntryDummyUse(name->source, name->symbol);
     ConvertToObjectEntity(DEREF(name->symbol));
   }
 }
 void ResolveNamesVisitor::Post(const parser::AssignedGotoStmt &x) {
   if (auto *name{ResolveName(std::get<parser::Name>(x.t))}) {
+    CheckEntryDummyUse(name->source, name->symbol);
     ConvertToObjectEntity(DEREF(name->symbol));
   }
 }

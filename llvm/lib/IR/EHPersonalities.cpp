@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/CFG.h"
@@ -46,22 +46,34 @@ EHPersonality llvm::classifyEHPersonality(const Value *Pers) {
 
 StringRef llvm::getEHPersonalityName(EHPersonality Pers) {
   switch (Pers) {
-  case EHPersonality::GNU_Ada:       return "__gnat_eh_personality";
-  case EHPersonality::GNU_CXX:       return "__gxx_personality_v0";
-  case EHPersonality::GNU_CXX_SjLj:  return "__gxx_personality_sj0";
-  case EHPersonality::GNU_C:         return "__gcc_personality_v0";
-  case EHPersonality::GNU_C_SjLj:    return "__gcc_personality_sj0";
-  case EHPersonality::GNU_ObjC:      return "__objc_personality_v0";
-  case EHPersonality::MSVC_X86SEH:   return "_except_handler3";
+  case EHPersonality::GNU_Ada:
+    return "__gnat_eh_personality";
+  case EHPersonality::GNU_CXX:
+    return "__gxx_personality_v0";
+  case EHPersonality::GNU_CXX_SjLj:
+    return "__gxx_personality_sj0";
+  case EHPersonality::GNU_C:
+    return "__gcc_personality_v0";
+  case EHPersonality::GNU_C_SjLj:
+    return "__gcc_personality_sj0";
+  case EHPersonality::GNU_ObjC:
+    return "__objc_personality_v0";
+  case EHPersonality::MSVC_X86SEH:
+    return "_except_handler3";
   case EHPersonality::MSVC_TableSEH:
     return "__C_specific_handler";
-  case EHPersonality::MSVC_CXX:      return "__CxxFrameHandler3";
-  case EHPersonality::CoreCLR:       return "ProcessCLRException";
-  case EHPersonality::Rust:          return "rust_eh_personality";
-  case EHPersonality::Wasm_CXX:      return "__gxx_wasm_personality_v0";
+  case EHPersonality::MSVC_CXX:
+    return "__CxxFrameHandler3";
+  case EHPersonality::CoreCLR:
+    return "ProcessCLRException";
+  case EHPersonality::Rust:
+    return "rust_eh_personality";
+  case EHPersonality::Wasm_CXX:
+    return "__gxx_wasm_personality_v0";
   case EHPersonality::XL_CXX:
     return "__xlcxx_personality_v1";
-  case EHPersonality::Unknown:       llvm_unreachable("Unknown EHPersonality!");
+  case EHPersonality::Unknown:
+    llvm_unreachable("Unknown EHPersonality!");
   }
 
   llvm_unreachable("Invalid EHPersonality!");
@@ -97,8 +109,8 @@ DenseMap<BasicBlock *, ColorVector> llvm::colorEHFunclets(Function &F) {
   // Note: Despite not being a funclet in the truest sense, a catchswitch is
   // considered to belong to its own funclet for the purposes of coloring.
 
-  DEBUG_WITH_TYPE("winehprepare-coloring", dbgs() << "\nColoring funclets for "
-                                                  << F.getName() << "\n");
+  DEBUG_WITH_TYPE("winehprepare-coloring",
+                  dbgs() << "\nColoring funclets for " << F.getName() << "\n");
 
   Worklist.push_back({EntryBlock, EntryBlock});
 

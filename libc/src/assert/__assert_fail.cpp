@@ -15,6 +15,7 @@ namespace __llvm_libc {
 LLVM_LIBC_FUNCTION(void, __assert_fail,
                    (const char *assertion, const char *file, unsigned line,
                     const char *function)) {
+  (void)line; // Suppress warning as long as line is unused.
   write_to_stderr(file);
   write_to_stderr(": Assertion failed: '");
   write_to_stderr(assertion);

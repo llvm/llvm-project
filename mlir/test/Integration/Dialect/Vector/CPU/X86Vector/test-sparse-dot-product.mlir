@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-scf-to-cf -convert-vector-to-llvm="enable-x86vector" -convert-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts  | \
+// RUN: mlir-opt %s -convert-scf-to-cf -convert-vector-to-llvm="enable-x86vector" -finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts  | \
 // RUN: mlir-translate  --mlir-to-llvmir | \
 // RUN: %lli --entry-function=entry --mattr="avx512bw,avx512vp2intersect" --dlopen=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
