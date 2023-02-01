@@ -559,8 +559,6 @@ private:
     genAllocateObjectInit(box);
     if (alloc.hasCoarraySpec())
       TODO(loc, "coarray allocation");
-    if (alloc.getShapeSpecs().size() > 0 && sourceExv.rank() == 0)
-      TODO(loc, "allocate array object with scalar SOURCE specifier");
     // Set length of the allocate object if it has. Otherwise, get the length
     // from source for the deferred length parameter.
     if (lenParams.empty() && box.isCharacter() &&
