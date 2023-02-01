@@ -111,6 +111,9 @@ ModuleDepCollector::makeInvocationForModuleBuildWithoutOutputs(
   CI.getDependencyOutputOpts().Targets.clear();
 
   CI.getFrontendOpts().ProgramAction = frontend::GenerateModule;
+  CI.getFrontendOpts().ARCMTAction = FrontendOptions::ARCMT_None;
+  CI.getFrontendOpts().ObjCMTAction = FrontendOptions::ObjCMT_None;
+  CI.getFrontendOpts().MTMigrateDir.clear();
   CI.getLangOpts()->ModuleName = Deps.ID.ModuleName;
   CI.getFrontendOpts().IsSystemModule = Deps.IsSystem;
 
