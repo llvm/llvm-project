@@ -631,7 +631,7 @@ public:
     if (Var.getInlinedAt())
       return false;
 
-    if (Expr->getNumElements() > 0)
+    if (Expr->getNumElements() > 0 && !Expr->isDeref())
       return false;
 
     return true;
