@@ -25,6 +25,7 @@ class LinalgOp;
 
 namespace tensor {
 class PackOp;
+class UnPackOp;
 } // namespace tensor
 
 namespace transform {
