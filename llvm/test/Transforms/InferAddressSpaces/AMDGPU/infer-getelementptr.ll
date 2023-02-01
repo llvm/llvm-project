@@ -94,7 +94,7 @@ define void @repeated_constexpr_gep_addrspacecast(i64 %idx0, i64 %idx1) {
 define void @unorder_constexpr_gep_bitcast() {
 ; CHECK-LABEL: @unorder_constexpr_gep_bitcast(
 ; CHECK-NEXT:    [[X0:%.*]] = load i32, ptr addrspace(3) @lds, align 4
-; CHECK-NEXT:    [[X1:%.*]] = load i32, ptr addrspace(3) getelementptr inbounds (i32, ptr addrspace(3) @lds, i32 1), align 4
+; CHECK-NEXT:    [[X1:%.*]] = load i32, ptr addrspace(3) getelementptr (i32, ptr addrspace(3) @lds, i32 1), align 4
 ; CHECK-NEXT:    call void @use(i32 [[X0]], i32 [[X1]])
 ; CHECK-NEXT:    ret void
 ;
