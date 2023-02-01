@@ -2956,8 +2956,7 @@ Deleting Instructions
     AllocaInst* instToReplace = ...;
     BasicBlock::iterator ii(instToReplace);
 
-    ReplaceInstWithValue(instToReplace->getParent(), ii,
-                         Constant::getNullValue(PointerType::getUnqual(Type::Int32Ty)));
+    ReplaceInstWithValue(ii, Constant::getNullValue(PointerType::getUnqual(Type::Int32Ty)));
 
 * ``ReplaceInstWithInst``
 

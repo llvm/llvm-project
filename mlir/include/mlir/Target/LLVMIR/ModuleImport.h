@@ -149,15 +149,25 @@ public:
   /// implement the fastmath interface.
   void setFastmathFlagsAttr(llvm::Instruction *inst, Operation *op) const;
 
-  /// Converts LLVM metadata to corresponding MLIR representation,
-  /// e.g. metadata nodes referenced via !tbaa are converted to
-  /// TBAA operations hosted inside a MetadataOp.
+  /// Converts all LLVM metadata nodes that translate to operations nested in a
+  /// global metadata operation, such as alias analysis or access group
+  /// metadata, and builds a map from the metadata nodes to the symbols pointing
+  /// to the converted operations. Returns success if all conversions succeed
+  /// and failure otherwise.
+  // Note: All metadata is nested inside a single global metadata operation to
+  // minimize the number of symbols that pollute the global namespace.
   LogicalResult convertMetadata();
 
-  /// Returns SymbolRefAttr representing TBAA metadata `node`
-  /// in `tbaaMapping`.
-  SymbolRefAttr lookupTBAAAttr(const llvm::MDNode *node) {
+  /// Returns the MLIR symbol reference mapped to the given LLVM TBAA
+  /// metadata `node`.
+  SymbolRefAttr lookupTBAAAttr(const llvm::MDNode *node) const {
     return tbaaMapping.lookup(node);
+  }
+
+  /// Returns the MLIR symbol reference mapped to the given LLVM access
+  /// group metadata `node`.
+  SymbolRefAttr lookupAccessGroupAttr(const llvm::MDNode *node) const {
+    return accessGroupMapping.lookup(node);
   }
 
 private:
@@ -237,25 +247,21 @@ private:
   /// them fails. All operations are inserted at the start of the current
   /// function entry block.
   FailureOr<Value> convertConstantExpr(llvm::Constant *constant);
-  /// Returns symbol name to be used for MetadataOp containing
-  /// TBAA metadata operations. It must not conflict with the user
-  /// name space.
-  StringRef getTBAAMetadataOpName() const { return "__tbaa"; }
-  /// Returns a terminated MetadataOp into which TBAA metadata
-  /// operations can be placed. The MetadataOp is created
-  /// on the first invocation of this function.
-  MetadataOp getTBAAMetadataOp();
+  /// Returns a global metadata operation that serves as a container for LLVM
+  /// metadata that converts to MLIR operations. Creates the global metadata
+  /// operation on the first invocation.
+  MetadataOp getGlobalMetadataOp();
   /// Performs conversion of LLVM TBAA metadata starting from
   /// `node`. On exit from this function all nodes reachable
   /// from `node` are converted, and tbaaMapping map is updated
   /// (unless all dependencies have been converted by a previous
   /// invocation of this function).
   LogicalResult processTBAAMetadata(const llvm::MDNode *node);
-  /// Returns unique string name of a symbol that may be used
-  /// for a TBAA metadata operation. The name will contain
-  /// the provided `basename` and will be uniqued via
-  /// tbaaNodeCounter (see below).
-  std::string getNewTBAANodeName(StringRef basename);
+  /// Converts all LLVM access groups starting from `node` to MLIR access group
+  /// operations and stores a mapping from every nested access group node to the
+  /// symbol pointing to the translated operation. Returns success if all
+  /// conversions succeed and failure otherwise.
+  LogicalResult processAccessGroupMetadata(const llvm::MDNode *node);
 
   /// Builder pointing at where the next instruction should be generated.
   OpBuilder builder;
@@ -265,6 +271,8 @@ private:
   Operation *constantInsertionOp = nullptr;
   /// Operation to insert the next global after.
   Operation *globalInsertionOp = nullptr;
+  /// Operation to insert metadata operations into.
+  MetadataOp globalMetadataOp = nullptr;
   /// The current context.
   MLIRContext *context;
   /// The MLIR module being created.
@@ -284,20 +292,17 @@ private:
   /// operations for all operations that return no result. All operations that
   /// return a result have a valueMapping entry instead.
   DenseMap<llvm::Instruction *, Operation *> noResultOpMapping;
-  /// The stateful type translator (contains named structs).
-  LLVM::TypeFromLLVMIRTranslator typeTranslator;
-  /// Stateful debug information importer.
-  std::unique_ptr<detail::DebugImporter> debugImporter;
-  /// A terminated MetadataOp where TBAA metadata operations
-  /// can be inserted.
-  MetadataOp tbaaMetadataOp{};
   /// Mapping between LLVM TBAA metadata nodes and symbol references
   /// to the LLVMIR dialect TBAA operations corresponding to these
   /// nodes.
   DenseMap<const llvm::MDNode *, SymbolRefAttr> tbaaMapping;
-  /// A counter to be used as a unique suffix for symbols
-  /// defined by TBAA operations.
-  unsigned tbaaNodeCounter = 0;
+  /// Mapping between original LLVM access group metadata nodes and the symbol
+  /// references pointing to the imported MLIR access group operations.
+  DenseMap<const llvm::MDNode *, SymbolRefAttr> accessGroupMapping;
+  /// The stateful type translator (contains named structs).
+  LLVM::TypeFromLLVMIRTranslator typeTranslator;
+  /// Stateful debug information importer.
+  std::unique_ptr<detail::DebugImporter> debugImporter;
 };
 
 } // namespace LLVM

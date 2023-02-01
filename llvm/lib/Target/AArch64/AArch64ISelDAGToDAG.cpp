@@ -4996,6 +4996,174 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
                AArch64::WHILELT_2PXX_S, AArch64::WHILELT_2PXX_D}))
         SelectWhilePair(Node, Op);
       return;
+    case Intrinsic::aarch64_sve_smax_single_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::SMAX_VG2_2ZZ_B, AArch64::SMAX_VG2_2ZZ_H,
+               AArch64::SMAX_VG2_2ZZ_S, AArch64::SMAX_VG2_2ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, false, Op);
+      return;
+    case Intrinsic::aarch64_sve_umax_single_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::UMAX_VG2_2ZZ_B, AArch64::UMAX_VG2_2ZZ_H,
+               AArch64::UMAX_VG2_2ZZ_S, AArch64::UMAX_VG2_2ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, false, Op);
+      return;
+    case Intrinsic::aarch64_sve_fmax_single_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {0, AArch64::FMAX_VG2_2ZZ_H, AArch64::FMAX_VG2_2ZZ_S,
+               AArch64::FMAX_VG2_2ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, false, Op);
+      return;
+    case Intrinsic::aarch64_sve_smax_single_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::SMAX_VG4_4ZZ_B, AArch64::SMAX_VG4_4ZZ_H,
+               AArch64::SMAX_VG4_4ZZ_S, AArch64::SMAX_VG4_4ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, false, Op);
+      return;
+    case Intrinsic::aarch64_sve_umax_single_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::UMAX_VG4_4ZZ_B, AArch64::UMAX_VG4_4ZZ_H,
+               AArch64::UMAX_VG4_4ZZ_S, AArch64::UMAX_VG4_4ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, false, Op);
+      return;
+    case Intrinsic::aarch64_sve_fmax_single_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {0, AArch64::FMAX_VG4_4ZZ_H, AArch64::FMAX_VG4_4ZZ_S,
+               AArch64::FMAX_VG4_4ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, false, Op);
+      return;
+    case Intrinsic::aarch64_sve_smin_single_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::SMIN_VG2_2ZZ_B, AArch64::SMIN_VG2_2ZZ_H,
+               AArch64::SMIN_VG2_2ZZ_S, AArch64::SMIN_VG2_2ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, false, Op);
+      return;
+    case Intrinsic::aarch64_sve_umin_single_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::UMIN_VG2_2ZZ_B, AArch64::UMIN_VG2_2ZZ_H,
+               AArch64::UMIN_VG2_2ZZ_S, AArch64::UMIN_VG2_2ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, false, Op);
+      return;
+    case Intrinsic::aarch64_sve_fmin_single_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {0, AArch64::FMIN_VG2_2ZZ_H, AArch64::FMIN_VG2_2ZZ_S,
+               AArch64::FMIN_VG2_2ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, false, Op);
+      return;
+    case Intrinsic::aarch64_sve_smin_single_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::SMIN_VG4_4ZZ_B, AArch64::SMIN_VG4_4ZZ_H,
+               AArch64::SMIN_VG4_4ZZ_S, AArch64::SMIN_VG4_4ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, false, Op);
+      return;
+    case Intrinsic::aarch64_sve_umin_single_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::UMIN_VG4_4ZZ_B, AArch64::UMIN_VG4_4ZZ_H,
+               AArch64::UMIN_VG4_4ZZ_S, AArch64::UMIN_VG4_4ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, false, Op);
+      return;
+    case Intrinsic::aarch64_sve_fmin_single_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {0, AArch64::FMIN_VG4_4ZZ_H, AArch64::FMIN_VG4_4ZZ_S,
+               AArch64::FMIN_VG4_4ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, false, Op);
+      return;
+    case Intrinsic::aarch64_sve_smax_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::SMAX_VG2_2Z2Z_B, AArch64::SMAX_VG2_2Z2Z_H,
+               AArch64::SMAX_VG2_2Z2Z_S, AArch64::SMAX_VG2_2Z2Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, true, Op);
+      return;
+    case Intrinsic::aarch64_sve_umax_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::UMAX_VG2_2Z2Z_B, AArch64::UMAX_VG2_2Z2Z_H,
+               AArch64::UMAX_VG2_2Z2Z_S, AArch64::UMAX_VG2_2Z2Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, true, Op);
+      return;
+    case Intrinsic::aarch64_sve_fmax_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {0, AArch64::FMAX_VG2_2Z2Z_H, AArch64::FMAX_VG2_2Z2Z_S,
+               AArch64::FMAX_VG2_2Z2Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, true, Op);
+      return;
+    case Intrinsic::aarch64_sve_smax_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::SMAX_VG4_4Z4Z_B, AArch64::SMAX_VG4_4Z4Z_H,
+               AArch64::SMAX_VG4_4Z4Z_S, AArch64::SMAX_VG4_4Z4Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, true, Op);
+      return;
+    case Intrinsic::aarch64_sve_umax_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::UMAX_VG4_4Z4Z_B, AArch64::UMAX_VG4_4Z4Z_H,
+               AArch64::UMAX_VG4_4Z4Z_S, AArch64::UMAX_VG4_4Z4Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, true, Op);
+      return;
+    case Intrinsic::aarch64_sve_fmax_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {0, AArch64::FMAX_VG4_4Z4Z_H, AArch64::FMAX_VG4_4Z4Z_S,
+               AArch64::FMAX_VG4_4Z4Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, true, Op);
+      return;
+    case Intrinsic::aarch64_sve_smin_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::SMIN_VG2_2Z2Z_B, AArch64::SMIN_VG2_2Z2Z_H,
+               AArch64::SMIN_VG2_2Z2Z_S, AArch64::SMIN_VG2_2Z2Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, true, Op);
+      return;
+    case Intrinsic::aarch64_sve_umin_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::UMIN_VG2_2Z2Z_B, AArch64::UMIN_VG2_2Z2Z_H,
+               AArch64::UMIN_VG2_2Z2Z_S, AArch64::UMIN_VG2_2Z2Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, true, Op);
+      return;
+    case Intrinsic::aarch64_sve_fmin_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {0, AArch64::FMIN_VG2_2Z2Z_H, AArch64::FMIN_VG2_2Z2Z_S,
+               AArch64::FMIN_VG2_2Z2Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, true, Op);
+      return;
+    case Intrinsic::aarch64_sve_smin_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::SMIN_VG4_4Z4Z_B, AArch64::SMIN_VG4_4Z4Z_H,
+               AArch64::SMIN_VG4_4Z4Z_S, AArch64::SMIN_VG4_4Z4Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, true, Op);
+      return;
+    case Intrinsic::aarch64_sve_umin_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::UMIN_VG4_4Z4Z_B, AArch64::UMIN_VG4_4Z4Z_H,
+               AArch64::UMIN_VG4_4Z4Z_S, AArch64::UMIN_VG4_4Z4Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, true, Op);
+      return;
+    case Intrinsic::aarch64_sve_fmin_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {0, AArch64::FMIN_VG4_4Z4Z_H, AArch64::FMIN_VG4_4Z4Z_S,
+               AArch64::FMIN_VG4_4Z4Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, true, Op);
+      return;
     case Intrinsic::aarch64_sve_fcvts_x2:
       SelectCVTIntrinsic(Node, 2, AArch64::FCVTZS_2Z2Z_StoS);
       return;

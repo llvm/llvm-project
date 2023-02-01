@@ -183,6 +183,14 @@ class SME2_Tile_VG4_Multi_Pat<string name, SDPatternOperator intrinsic, Operand 
           (!cast<Instruction>(name # _PSEUDO) $tile, $base, $offset, (REG_SEQUENCE ZPR4Mul4, vt:$Zn1, zsub0, vt:$Zn2, zsub1, vt:$Zn3, zsub2, vt:$Zn4, zsub3))>;
 
 //===----------------------------------------------------------------------===//
+// SME pattern match helpers.
+//===----------------------------------------------------------------------===//
+
+class SME_ZA_Tile_TwoPred_TwoVec_Pat<string name, SDPatternOperator intrinsic, Operand imm_ty, ValueType pg_ty, ValueType vt>
+    : Pat<(intrinsic imm_ty:$tile, (pg_ty PPR3bAny:$Pn), (pg_ty PPR3bAny:$Pm), vt:$Zn, vt:$Zm),
+          (!cast<Instruction>(name # _PSEUDO) $tile, $Pn, $Pm, $Zn, $Zm)>;
+
+//===----------------------------------------------------------------------===//
 // SME Outer Products
 //===----------------------------------------------------------------------===//
 
@@ -220,9 +228,7 @@ multiclass sme_outer_product_fp32<bit S, string mnemonic, SDPatternOperator op> 
 
   def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR32, SMEMatrixTileS>, SMEPseudo2Instr<NAME, 0>;
 
-  def : Pat<(op timm32_0_3:$tile, (nxv4i1 PPR3bAny:$pn), (nxv4i1 PPR3bAny:$pm),
-                (nxv4f32 ZPR32:$zn), (nxv4f32 ZPR32:$zm)),
-            (!cast<Instruction>(NAME # _PSEUDO) timm32_0_3:$tile, $pn, $pm, $zn, $zm)>;
+  def : SME_ZA_Tile_TwoPred_TwoVec_Pat<NAME, op, timm32_0_3, nxv4i1, nxv4f32>;
 }
 
 multiclass sme_outer_product_fp64<bit S, string mnemonic, SDPatternOperator op> {
@@ -233,9 +239,7 @@ multiclass sme_outer_product_fp64<bit S, string mnemonic, SDPatternOperator op> 
 
   def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR64, SMEMatrixTileD>, SMEPseudo2Instr<NAME, 0>;
 
-  def : Pat<(op timm32_0_7:$tile, (nxv2i1 PPR3bAny:$pn), (nxv2i1 PPR3bAny:$pm),
-                (nxv2f64 ZPR64:$zn), (nxv2f64 ZPR64:$zm)),
-            (!cast<Instruction>(NAME # _PSEUDO) timm32_0_7:$tile, $pn, $pm, $zn, $zm)>;
+  def : SME_ZA_Tile_TwoPred_TwoVec_Pat<NAME, op, timm32_0_7, nxv2i1, nxv2f64>;
 }
 
 multiclass sme2p1_fmop_tile_fp16<string mnemonic, bit bf, bit s>{
@@ -284,9 +288,7 @@ multiclass sme_int_outer_product_i32<bits<3> opc, string mnemonic,
 
   def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR8, SMEMatrixTileS>, SMEPseudo2Instr<NAME, 0>;
 
-  def : Pat<(op timm32_0_3:$tile, (nxv16i1 PPR3bAny:$pn), (nxv16i1 PPR3bAny:$pm),
-                (nxv16i8 ZPR8:$zn), (nxv16i8 ZPR8:$zm)),
-            (!cast<Instruction>(NAME # _PSEUDO) timm32_0_3:$tile, $pn, $pm, $zn, $zm)>;
+  def : SME_ZA_Tile_TwoPred_TwoVec_Pat<NAME, op, timm32_0_3, nxv16i1, nxv16i8>;
 }
 
 multiclass sme_int_outer_product_i64<bits<3> opc, string mnemonic,
@@ -299,9 +301,7 @@ multiclass sme_int_outer_product_i64<bits<3> opc, string mnemonic,
 
   def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR16, SMEMatrixTileD>, SMEPseudo2Instr<NAME, 0>;
 
-  def : Pat<(op timm32_0_7:$tile, (nxv8i1 PPR3bAny:$pn), (nxv8i1 PPR3bAny:$pm),
-                (nxv8i16 ZPR16:$zn), (nxv8i16 ZPR16:$zm)),
-            (!cast<Instruction>(NAME # _PSEUDO) timm32_0_7:$tile, $pn, $pm, $zn, $zm)>;
+  def : SME_ZA_Tile_TwoPred_TwoVec_Pat<NAME, op, timm32_0_7, nxv8i1, nxv8i16>;
 }
 
 class sme_outer_product_widening_inst<bits<3> opc, ZPRRegOp zpr_ty, string mnemonic>
@@ -336,9 +336,7 @@ multiclass sme_bf16_outer_product<bits<3> opc, string mnemonic, SDPatternOperato
 
   def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR16, SMEMatrixTileS>, SMEPseudo2Instr<NAME, 0>;
 
-  def : Pat<(op timm32_0_3:$tile, (nxv8i1 PPR3bAny:$pn), (nxv8i1 PPR3bAny:$pm),
-                (nxv8bf16 ZPR16:$zn), (nxv8bf16 ZPR16:$zm)),
-            (!cast<Instruction>(NAME # _PSEUDO) timm32_0_3:$tile, $pn, $pm, $zn, $zm)>;
+  def : SME_ZA_Tile_TwoPred_TwoVec_Pat<NAME, op, timm32_0_3, nxv8i1, nxv8bf16>;
 }
 
 multiclass sme_f16_outer_product<bits<3> opc, string mnemonic, SDPatternOperator op> {
@@ -346,9 +344,7 @@ multiclass sme_f16_outer_product<bits<3> opc, string mnemonic, SDPatternOperator
 
   def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR16, SMEMatrixTileS>, SMEPseudo2Instr<NAME, 0>;
 
-  def : Pat<(op timm32_0_3:$tile, (nxv8i1 PPR3bAny:$pn), (nxv8i1 PPR3bAny:$pm),
-                (nxv8f16 ZPR16:$zn), (nxv8f16 ZPR16:$zm)),
-            (!cast<Instruction>(NAME # _PSEUDO) timm32_0_3:$tile, $pn, $pm, $zn, $zm)>;
+  def : SME_ZA_Tile_TwoPred_TwoVec_Pat<NAME, op, timm32_0_3, nxv8i1, nxv8f16>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2839,16 +2835,24 @@ multiclass sme2_mla_ll_array_vg4_multi<string mnemonic, bits<4> op,
 //===----------------------------------------------------------------------===//
 // SME2 Outer Product and Accumulate
 
-multiclass sme2_int_mopx_tile<string mnemonic, bits<3> op> {
-  def NAME : sme_int_outer_product_inst<op, 0b0, 0b1, TileOp32, ZPR16, mnemonic> {
+multiclass sme2_int_mopx_tile<string mnemonic, bits<3> op, SDPatternOperator intrinsic> {
+  def NAME : sme_int_outer_product_inst<op, 0b0, 0b1, TileOp32, ZPR16, mnemonic>, SMEPseudo2Instr<NAME, 1> {
     bits<2> ZAda;
     let Inst{1-0} = ZAda;
     let Inst{2}   = 0b0;
   }
+
+  def _PSEUDO : sme_outer_product_pseudo<ZPR16, SMEMatrixTileS>, SMEPseudo2Instr<NAME, 0>;
+
+  def : SME_ZA_Tile_TwoPred_TwoVec_Pat<NAME, intrinsic, timm32_0_3, nxv8i1, nxv8i16>;
 }
 
-multiclass  sme2_bfp_mopx_tile<string mnemonic, bits<3> op> {
-  def NAME : sme_outer_product_widening_inst<op, ZPR32, mnemonic>;
+multiclass  sme2_int_bmopx_tile<string mnemonic, bits<3> op, SDPatternOperator intrinsic> {
+  def NAME : sme_outer_product_widening_inst<op, ZPR32, mnemonic>, SMEPseudo2Instr<NAME, 1>;
+
+  def _PSEUDO : sme_outer_product_pseudo<ZPR32, SMEMatrixTileS>, SMEPseudo2Instr<NAME, 0>;
+
+  def : SME_ZA_Tile_TwoPred_TwoVec_Pat<NAME, intrinsic, timm32_0_3, nxv4i1, nxv4i32>;
 }
 
 //===----------------------------------------------------------------------===///

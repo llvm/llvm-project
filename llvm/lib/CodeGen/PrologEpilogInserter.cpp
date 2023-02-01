@@ -1596,50 +1596,6 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
       if (!MI.getOperand(i).isFI())
         continue;
 
-#if 0//<<<<<<< HEAD
-      if (MI.isDebugDef()) {
-        MachineOperand &Op = MI.getOperand(i);
-        assert(MI.isDebugOperand(&Op) &&
-               "Frame indices can only appear as a debug operand in a DBG_DEF"
-               " machine instruction");
-        assert(&Op == &MI.getDebugReferrer() &&
-               "Frame indices can only appear as the referrer of DBG_DEF "
-               "machine instructions");
-        Register Reg;
-        unsigned FrameIdx = Op.getIndex();
-        StackOffset Offset = TFI->getFrameIndexReference(MF, FrameIdx, Reg);
-
-        if (Reg) {
-          Op.ChangeToRegister(Reg, false /*isDef*/);
-          Op.setIsDebug();
-        } else {
-          Op.ChangeToImmediate(0);
-        }
-
-        DILifetime *Lifetime = MI.getDebugLifetime();
-        DIExprBuilder Builder = Lifetime->getLocation()->builder();
-        for (auto &&I = Builder.begin(); I != Builder.end(); ++I) {
-          if (auto *Referrer = I->getIf<DIOp::Referrer>()) {
-            Type *ResultType = Referrer->getResultType();
-            unsigned PointerSizeInBits =
-                DL.getPointerSizeInBits(DL.getAllocaAddrSpace());
-            ConstantData *C =
-                ConstantInt::get(IntegerType::get(Context, PointerSizeInBits),
-                                 Offset.getFixed(), true);
-            std::initializer_list<DIOp::Variant> IL = {
-                DIOp::Constant(C), DIOp::ByteOffset(ResultType)};
-            I = TFI->insertFrameLocation(
-                MF, Builder, Builder.insert(Builder.erase(I), IL), ResultType);
-          }
-        }
-        Lifetime->setLocation(Builder.intoExpr());
-        continue;
-      }
-
-      // Frame indices in debug values are encoded in a target independent
-      // way with simply the frame index and offset rather than any
-      // target-specific addressing mode.
-#endif //>>>>>>> 81bd5e2ef733
       if (replaceFrameIndexDebugInstr(MF, MI, i, SPAdj))
         continue;
 

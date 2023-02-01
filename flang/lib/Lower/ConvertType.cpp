@@ -302,9 +302,6 @@ struct TypeBuilderImpl {
     if (mlir::Type ty = getTypeIfDerivedAlreadyInConstruction(typeSymbol))
       return ty;
 
-    if (Fortran::semantics::IsFinalizable(tySpec))
-      TODO(converter.genLocation(tySpec.name()), "derived type finalization");
-
     auto rec = fir::RecordType::get(context,
                                     Fortran::lower::mangle::mangleName(tySpec));
     // Maintain the stack of types for recursive references.

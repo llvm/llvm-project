@@ -18,7 +18,7 @@
 // RV64-NEXT:    ret i64 [[TMP0]]
 //
 unsigned long test_vlenb(void) {
-  return vlenb();
+  return __riscv_vlenb();
 }
 //.
 // RV32: attributes #0 = { mustprogress nofree noinline nosync nounwind willreturn memory(read) vscale_range(2,1024) "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+32bit,+d,+f,+v,+zve32f,+zve32x,+zve64d,+zve64f,+zve64x,+zvl128b,+zvl32b,+zvl64b" }

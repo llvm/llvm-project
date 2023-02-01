@@ -13,7 +13,7 @@
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vmulhu_vv_u64m1(vuint64m1_t op1, vuint64m1_t op2, size_t vl) {
-  return vmulhu_vv_u64m1(op1, op2, vl);
+  return __riscv_vmulhu_vv_u64m1(op1, op2, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vmulhu_vx_u64m1(
@@ -22,7 +22,7 @@ vuint64m1_t test_vmulhu_vv_u64m1(vuint64m1_t op1, vuint64m1_t op2, size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vmulhu_vx_u64m1(vuint64m1_t op1, uint64_t op2, size_t vl) {
-  return vmulhu_vx_u64m1(op1, op2, vl);
+  return __riscv_vmulhu_vx_u64m1(op1, op2, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vmulhu_vv_u64m2(
@@ -31,7 +31,7 @@ vuint64m1_t test_vmulhu_vx_u64m1(vuint64m1_t op1, uint64_t op2, size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 vuint64m2_t test_vmulhu_vv_u64m2(vuint64m2_t op1, vuint64m2_t op2, size_t vl) {
-  return vmulhu_vv_u64m2(op1, op2, vl);
+  return __riscv_vmulhu_vv_u64m2(op1, op2, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vmulhu_vx_u64m2(
@@ -40,7 +40,7 @@ vuint64m2_t test_vmulhu_vv_u64m2(vuint64m2_t op1, vuint64m2_t op2, size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 vuint64m2_t test_vmulhu_vx_u64m2(vuint64m2_t op1, uint64_t op2, size_t vl) {
-  return vmulhu_vx_u64m2(op1, op2, vl);
+  return __riscv_vmulhu_vx_u64m2(op1, op2, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vmulhu_vv_u64m4(
@@ -49,7 +49,7 @@ vuint64m2_t test_vmulhu_vx_u64m2(vuint64m2_t op1, uint64_t op2, size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP0]]
 //
 vuint64m4_t test_vmulhu_vv_u64m4(vuint64m4_t op1, vuint64m4_t op2, size_t vl) {
-  return vmulhu_vv_u64m4(op1, op2, vl);
+  return __riscv_vmulhu_vv_u64m4(op1, op2, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vmulhu_vx_u64m4(
@@ -58,7 +58,7 @@ vuint64m4_t test_vmulhu_vv_u64m4(vuint64m4_t op1, vuint64m4_t op2, size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP0]]
 //
 vuint64m4_t test_vmulhu_vx_u64m4(vuint64m4_t op1, uint64_t op2, size_t vl) {
-  return vmulhu_vx_u64m4(op1, op2, vl);
+  return __riscv_vmulhu_vx_u64m4(op1, op2, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vmulhu_vv_u64m8(
@@ -67,7 +67,7 @@ vuint64m4_t test_vmulhu_vx_u64m4(vuint64m4_t op1, uint64_t op2, size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP0]]
 //
 vuint64m8_t test_vmulhu_vv_u64m8(vuint64m8_t op1, vuint64m8_t op2, size_t vl) {
-  return vmulhu_vv_u64m8(op1, op2, vl);
+  return __riscv_vmulhu_vv_u64m8(op1, op2, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vmulhu_vx_u64m8(
@@ -76,7 +76,7 @@ vuint64m8_t test_vmulhu_vv_u64m8(vuint64m8_t op1, vuint64m8_t op2, size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP0]]
 //
 vuint64m8_t test_vmulhu_vx_u64m8(vuint64m8_t op1, uint64_t op2, size_t vl) {
-  return vmulhu_vx_u64m8(op1, op2, vl);
+  return __riscv_vmulhu_vx_u64m8(op1, op2, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vmulhu_vv_u64m1_m(
@@ -85,7 +85,7 @@ vuint64m8_t test_vmulhu_vx_u64m8(vuint64m8_t op1, uint64_t op2, size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vmulhu_vv_u64m1_m(vbool64_t mask, vuint64m1_t op1, vuint64m1_t op2, size_t vl) {
-  return vmulhu_vv_u64m1_m(mask, op1, op2, vl);
+  return __riscv_vmulhu_vv_u64m1_m(mask, op1, op2, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vmulhu_vx_u64m1_m(
@@ -94,7 +94,7 @@ vuint64m1_t test_vmulhu_vv_u64m1_m(vbool64_t mask, vuint64m1_t op1, vuint64m1_t 
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vmulhu_vx_u64m1_m(vbool64_t mask, vuint64m1_t op1, uint64_t op2, size_t vl) {
-  return vmulhu_vx_u64m1_m(mask, op1, op2, vl);
+  return __riscv_vmulhu_vx_u64m1_m(mask, op1, op2, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vmulhu_vv_u64m2_m(
@@ -103,7 +103,7 @@ vuint64m1_t test_vmulhu_vx_u64m1_m(vbool64_t mask, vuint64m1_t op1, uint64_t op2
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 vuint64m2_t test_vmulhu_vv_u64m2_m(vbool32_t mask, vuint64m2_t op1, vuint64m2_t op2, size_t vl) {
-  return vmulhu_vv_u64m2_m(mask, op1, op2, vl);
+  return __riscv_vmulhu_vv_u64m2_m(mask, op1, op2, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vmulhu_vx_u64m2_m(
@@ -112,7 +112,7 @@ vuint64m2_t test_vmulhu_vv_u64m2_m(vbool32_t mask, vuint64m2_t op1, vuint64m2_t 
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 vuint64m2_t test_vmulhu_vx_u64m2_m(vbool32_t mask, vuint64m2_t op1, uint64_t op2, size_t vl) {
-  return vmulhu_vx_u64m2_m(mask, op1, op2, vl);
+  return __riscv_vmulhu_vx_u64m2_m(mask, op1, op2, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vmulhu_vv_u64m4_m(
@@ -121,7 +121,7 @@ vuint64m2_t test_vmulhu_vx_u64m2_m(vbool32_t mask, vuint64m2_t op1, uint64_t op2
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP0]]
 //
 vuint64m4_t test_vmulhu_vv_u64m4_m(vbool16_t mask, vuint64m4_t op1, vuint64m4_t op2, size_t vl) {
-  return vmulhu_vv_u64m4_m(mask, op1, op2, vl);
+  return __riscv_vmulhu_vv_u64m4_m(mask, op1, op2, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vmulhu_vx_u64m4_m(
@@ -130,7 +130,7 @@ vuint64m4_t test_vmulhu_vv_u64m4_m(vbool16_t mask, vuint64m4_t op1, vuint64m4_t 
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP0]]
 //
 vuint64m4_t test_vmulhu_vx_u64m4_m(vbool16_t mask, vuint64m4_t op1, uint64_t op2, size_t vl) {
-  return vmulhu_vx_u64m4_m(mask, op1, op2, vl);
+  return __riscv_vmulhu_vx_u64m4_m(mask, op1, op2, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vmulhu_vv_u64m8_m(
@@ -139,7 +139,7 @@ vuint64m4_t test_vmulhu_vx_u64m4_m(vbool16_t mask, vuint64m4_t op1, uint64_t op2
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP0]]
 //
 vuint64m8_t test_vmulhu_vv_u64m8_m(vbool8_t mask, vuint64m8_t op1, vuint64m8_t op2, size_t vl) {
-  return vmulhu_vv_u64m8_m(mask, op1, op2, vl);
+  return __riscv_vmulhu_vv_u64m8_m(mask, op1, op2, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vmulhu_vx_u64m8_m(
@@ -148,5 +148,5 @@ vuint64m8_t test_vmulhu_vv_u64m8_m(vbool8_t mask, vuint64m8_t op1, vuint64m8_t o
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP0]]
 //
 vuint64m8_t test_vmulhu_vx_u64m8_m(vbool8_t mask, vuint64m8_t op1, uint64_t op2, size_t vl) {
-  return vmulhu_vx_u64m8_m(mask, op1, op2, vl);
+  return __riscv_vmulhu_vx_u64m8_m(mask, op1, op2, vl);
 }

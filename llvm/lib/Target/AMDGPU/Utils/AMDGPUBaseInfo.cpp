@@ -2634,7 +2634,13 @@ struct SourceOfDivergence {
 };
 const SourceOfDivergence *lookupSourceOfDivergence(unsigned Intr);
 
+struct AlwaysUniform {
+  unsigned Intr;
+};
+const AlwaysUniform *lookupAlwaysUniform(unsigned Intr);
+
 #define GET_SourcesOfDivergence_IMPL
+#define GET_UniformIntrinsics_IMPL
 #define GET_Gfx9BufferFormat_IMPL
 #define GET_Gfx10BufferFormat_IMPL
 #define GET_Gfx11PlusBufferFormat_IMPL
@@ -2644,6 +2650,10 @@ const SourceOfDivergence *lookupSourceOfDivergence(unsigned Intr);
 
 bool isIntrinsicSourceOfDivergence(unsigned IntrID) {
   return lookupSourceOfDivergence(IntrID);
+}
+
+bool isIntrinsicAlwaysUniform(unsigned IntrID) {
+  return lookupAlwaysUniform(IntrID);
 }
 
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,

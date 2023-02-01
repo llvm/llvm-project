@@ -112,10 +112,11 @@ function(create_libc_unittest fq_target_name)
     # capabilities and add entrypoints and tests accordingly. That approach is
     # much lower level approach and is independent of the kind of skipping that
     # is happening here at the entrypoint level.
-
-    set(msg "Skipping unittest ${fq_target_name} as it has missing deps: "
-            "${skipped_entrypoints_list}.")
-    message(STATUS ${msg})
+    if(LIBC_CMAKE_VERBOSE_LOGGING)
+      set(msg "Skipping unittest ${fq_target_name} as it has missing deps: "
+              "${skipped_entrypoints_list}.")
+      message(STATUS ${msg})
+    endif()
     return()
   endif()
 
@@ -336,9 +337,11 @@ function(add_libc_fuzzer target_name)
   get_object_files_for_test(
       link_object_files skipped_entrypoints_list ${fq_deps_list})
   if(skipped_entrypoints_list)
-    set(msg "Skipping fuzzer target ${fq_target_name} as it has missing deps: "
-            "${skipped_entrypoints_list}.")
-    message(STATUS ${msg})
+    if(LIBC_CMAKE_VERBOSE_LOGGING)
+      set(msg "Skipping fuzzer target ${fq_target_name} as it has missing deps: "
+              "${skipped_entrypoints_list}.")
+      message(STATUS ${msg})
+    endif()
     add_custom_target(${fq_target_name})
 
     # A post build custom command is used to avoid running the command always.

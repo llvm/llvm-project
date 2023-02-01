@@ -1170,3 +1170,167 @@ void testPossibleFalsePositives() {
   };
   v.emplace_back(std::make_pair<D, int>(Something(), 2));
 }
+
+struct InnerType {
+  InnerType();
+  InnerType(char const*);
+};
+
+struct NonTrivialNoCtor {
+  InnerType it;
+};
+
+struct NonTrivialWithVector {
+  std::vector<int> it;
+};
+
+struct NonTrivialWithCtor {
+  NonTrivialWithCtor();
+  NonTrivialWithCtor(std::vector<int> const&);
+};
+
+void testBracedInitTemporaries() {
+  std::vector<NonTrivialNoCtor> v1;
+
+  v1.push_back(NonTrivialNoCtor());
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back
+  // CHECK-FIXES: v1.emplace_back();
+  v1.push_back(NonTrivialNoCtor{});
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back
+  // CHECK-FIXES: v1.emplace_back();
+  v1.push_back({});
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back
+  // CHECK-FIXES: v1.emplace_back();
+  v1.push_back(NonTrivialNoCtor{InnerType{}});
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back
+  // CHECK-FIXES: v1.emplace_back();
+  v1.push_back({InnerType{}});
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back
+  // CHECK-FIXES: v1.emplace_back();
+  v1.push_back(NonTrivialNoCtor{InnerType()});
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back
+  // CHECK-FIXES: v1.emplace_back();
+  v1.push_back({InnerType()});
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back
+  // CHECK-FIXES: v1.emplace_back();
+  v1.push_back({{}});
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back
+  // CHECK-FIXES: v1.emplace_back();
+
+  v1.emplace_back(NonTrivialNoCtor());
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: v1.emplace_back();
+  v1.emplace_back(NonTrivialNoCtor{});
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: v1.emplace_back();
+  v1.emplace_back(NonTrivialNoCtor{InnerType{}});
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: v1.emplace_back();
+  v1.emplace_back(NonTrivialNoCtor{{}});
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: v1.emplace_back();
+
+  // These should not be noticed or fixed; after the correction, the code won't
+  // compile.
+  v1.push_back(NonTrivialNoCtor{""});
+  v1.push_back({""});
+  v1.push_back(NonTrivialNoCtor{InnerType{""}});
+  v1.push_back({InnerType{""}});
+  v1.emplace_back(NonTrivialNoCtor{""});
+
+  std::vector<NonTrivialWithVector> v2;
+
+  v2.push_back(NonTrivialWithVector());
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back
+  // CHECK-FIXES: v2.emplace_back();
+  v2.push_back(NonTrivialWithVector{});
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back
+  // CHECK-FIXES: v2.emplace_back();
+  v2.push_back({});
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back
+  // CHECK-FIXES: v2.emplace_back();
+  v2.push_back(NonTrivialWithVector{std::vector<int>{}});
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back
+  // CHECK-FIXES: v2.emplace_back();
+  v2.push_back({std::vector<int>{}});
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back
+  // CHECK-FIXES: v2.emplace_back();
+  v2.push_back(NonTrivialWithVector{std::vector<int>()});
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back
+  // CHECK-FIXES: v2.emplace_back();
+  v2.push_back({std::vector<int>()});
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back
+  // CHECK-FIXES: v2.emplace_back();
+  v2.push_back({{}});
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back
+  // CHECK-FIXES: v2.emplace_back();
+
+  v2.emplace_back(NonTrivialWithVector());
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: v2.emplace_back();
+  v2.emplace_back(NonTrivialWithVector{});
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: v2.emplace_back();
+  v2.emplace_back(NonTrivialWithVector{std::vector<int>{}});
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: v2.emplace_back();
+  v2.emplace_back(NonTrivialWithVector{{}});
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: v2.emplace_back();
+
+
+  // These should not be noticed or fixed; after the correction, the code won't
+  // compile.
+  v2.push_back(NonTrivialWithVector{{0}});
+  v2.push_back({{0}});
+  v2.push_back(NonTrivialWithVector{std::vector<int>{0}});
+  v2.push_back({std::vector<int>{0}});
+  v2.emplace_back(NonTrivialWithVector{std::vector<int>{0}});
+
+  std::vector<NonTrivialWithCtor> v3;
+
+  v3.push_back(NonTrivialWithCtor());
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back
+  // CHECK-FIXES: v3.emplace_back();
+  v3.push_back(NonTrivialWithCtor{});
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back
+  // CHECK-FIXES: v3.emplace_back();
+  v3.push_back({});
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back
+  // CHECK-FIXES: v3.emplace_back();
+  v3.push_back(NonTrivialWithCtor{std::vector<int>()});
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back
+  // CHECK-FIXES: v3.emplace_back(std::vector<int>());
+  v3.push_back(NonTrivialWithCtor{std::vector<int>{0}});
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back
+  // CHECK-FIXES: v3.emplace_back(std::vector<int>{0});
+  v3.push_back(NonTrivialWithCtor{std::vector<int>{}});
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back
+  // CHECK-FIXES: v3.emplace_back(std::vector<int>{});
+  v3.push_back({std::vector<int>{0}});
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back
+  // CHECK-FIXES: v3.emplace_back(std::vector<int>{0});
+  v3.push_back({std::vector<int>{}});
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back
+  // CHECK-FIXES: v3.emplace_back(std::vector<int>{});
+
+  v3.emplace_back(NonTrivialWithCtor());
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: v3.emplace_back();
+  v3.emplace_back(NonTrivialWithCtor{});
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: v3.emplace_back();
+  v3.emplace_back(NonTrivialWithCtor{std::vector<int>{}});
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: v3.emplace_back(std::vector<int>{});
+  v3.emplace_back(NonTrivialWithCtor{std::vector<int>{0}});
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: v3.emplace_back(std::vector<int>{0});
+
+  // These should not be noticed or fixed; after the correction, the code won't
+  // compile.
+  v3.push_back(NonTrivialWithCtor{{0}});
+  v3.push_back(NonTrivialWithCtor{{}});
+  v3.push_back({{0}});
+  v3.push_back({{}});
+}

@@ -297,6 +297,9 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
            "core bufferization passes.">,
     ListOption<"dialectFilter", "dialect-filter", "std::string",
                "Restrict bufferization to ops from these dialects.">,
+    ListOption<"noAnalysisFuncFilter", "no-analysis-func-filter", "std::string",
+               "Skip analysis of functions with these symbol names."
+               "Set copyBeforeWrite to true when bufferizing them.">,
     Option<"functionBoundaryTypeConversion",
            "function-boundary-type-conversion", "std::string",
            /*default=*/"\"infer-layout-map\"",

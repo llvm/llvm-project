@@ -29,7 +29,7 @@ foreach(arch ${LSAN_TEST_ARCH})
 
   # Fixme: make this generic 64 bit check once confirmed that at least
   # ARM64 works.
-  if (arch STREQUAL "x86_64")
+  if (arch STREQUAL "x86_64" AND NOT APPLE)
     set(CONFIG_NAME ${ARCH_UPPER_CASE}HWAsanConfig)
     set(LSAN_LIT_TEST_MODE "HWAddressSanitizer")
     configure_lit_site_cfg(

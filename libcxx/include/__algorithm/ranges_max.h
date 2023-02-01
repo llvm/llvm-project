@@ -40,7 +40,10 @@ struct __fn {
   template <class _Tp, class _Proj = identity,
             indirect_strict_weak_order<projected<const _Tp*, _Proj>> _Comp = ranges::less>
   _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr
-  const _Tp& operator()(const _Tp& __a, const _Tp& __b, _Comp __comp = {}, _Proj __proj = {}) const {
+  const _Tp& operator()(_LIBCPP_LIFETIMEBOUND const _Tp& __a,
+                        _LIBCPP_LIFETIMEBOUND const _Tp& __b,
+                        _Comp __comp = {},
+                        _Proj __proj = {}) const {
     return std::invoke(__comp, std::invoke(__proj, __a), std::invoke(__proj, __b)) ? __b : __a;
   }
 

@@ -803,10 +803,15 @@ static LogicalResult verifyOutputShape(
 }
 
 LogicalResult ContractionOp::verify() {
-  auto lhsType = getLhsType();
-  auto rhsType = getRhsType();
-  auto accType = getAccType();
-  auto resType = getResultType();
+  VectorType lhsType = getLhsType();
+  VectorType rhsType = getRhsType();
+  Type accType = getAccType();
+  Type resType = getResultType();
+
+  if (lhsType.getElementType().isa<IntegerType>()) {
+    if (!lhsType.getElementType().isSignlessInteger())
+      return emitOpError("only supports signless integer types");
+  }
 
   // Verify that an indexing map was specified for each vector operand.
   if (getIndexingMapsArray().size() != 3)
@@ -4941,6 +4946,27 @@ OpFoldResult BitCastOp::fold(FoldAdaptor adaptor) {
         APInt intBits(32, bits);
         APFloat floatBits(llvm::APFloat::IEEEsingle(), intBits);
         return DenseElementsAttr::get(getResultVectorType(), floatBits);
+      }
+    }
+  }
+
+  if (auto intPack = sourceConstant.dyn_cast<DenseIntElementsAttr>()) {
+    if (intPack.isSplat()) {
+      auto splat = intPack.getSplatValue<IntegerAttr>();
+
+      if (dstElemType.isa<IntegerType>()) {
+        uint64_t srcBitWidth = srcElemType.getIntOrFloatBitWidth();
+        uint64_t dstBitWidth = dstElemType.getIntOrFloatBitWidth();
+
+        // Casting to a larger integer bit width.
+        if (dstBitWidth > srcBitWidth && dstBitWidth % srcBitWidth == 0) {
+          APInt intBits = splat.getValue().zext(dstBitWidth);
+
+          // Duplicate the lower width element.
+          for (uint64_t i = 0; i < dstBitWidth / srcBitWidth - 1; i++)
+            intBits = (intBits << srcBitWidth) | intBits;
+          return DenseElementsAttr::get(getResultVectorType(), intBits);
+        }
       }
     }
   }

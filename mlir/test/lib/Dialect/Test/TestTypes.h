@@ -146,18 +146,6 @@ public:
 
   /// Name/key getter.
   ::llvm::StringRef getName() { return getImpl()->name; }
-
-  void walkImmediateSubElements(
-      ::llvm::function_ref<void(::mlir::Attribute)> walkAttrsFn,
-      ::llvm::function_ref<void(::mlir::Type)> walkTypesFn) const {
-    walkTypesFn(getBody());
-  }
-  Type replaceImmediateSubElements(llvm::ArrayRef<mlir::Attribute> replAttrs,
-                                   llvm::ArrayRef<mlir::Type> replTypes) const {
-    // TODO: It's not clear how we support replacing sub-elements of mutable
-    // types.
-    return nullptr;
-  }
 };
 
 } // namespace test

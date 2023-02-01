@@ -22,6 +22,19 @@
 
 using namespace fir;
 
+namespace fir::details {
+llvm::StringRef Attributes::getIntExtensionAttrName() const {
+  // The attribute names are available via LLVM dialect interfaces
+  // like getZExtAttrName(), getByValAttrName(), etc., so we'd better
+  // use them than literals.
+  if (isZeroExt())
+    return "llvm.zeroext";
+  else if (isSignExt())
+    return "llvm.signext";
+  return {};
+}
+} // namespace fir::details
+
 // Reduce a REAL/float type to the floating point semantics.
 static const llvm::fltSemantics &floatToSemantics(const KindMapping &kindMap,
                                                   mlir::Type type) {
@@ -41,8 +54,8 @@ struct GenericTarget : public CodeGenSpecifics {
     assert(fir::isa_real(eleTy));
     // Use a type that will be translated into LLVM as:
     // { t, t }   struct of 2 eleTy
-    mlir::TypeRange range = {eleTy, eleTy};
-    return mlir::TupleType::get(eleTy.getContext(), range);
+    return mlir::TupleType::get(eleTy.getContext(),
+                                mlir::TypeRange{eleTy, eleTy});
   }
 
   mlir::Type boxcharMemoryType(mlir::Type eleTy) const override {
@@ -50,8 +63,8 @@ struct GenericTarget : public CodeGenSpecifics {
     auto ptrTy = fir::ReferenceType::get(eleTy);
     // Use a type that will be translated into LLVM as:
     // { t*, index }
-    mlir::TypeRange range = {ptrTy, idxTy};
-    return mlir::TupleType::get(eleTy.getContext(), range);
+    return mlir::TupleType::get(eleTy.getContext(),
+                                mlir::TypeRange{ptrTy, idxTy});
   }
 
   Marshalling boxcharArgumentType(mlir::Type eleTy, bool sret) const override {
@@ -67,6 +80,46 @@ struct GenericTarget : public CodeGenSpecifics {
                                    /*sret=*/sret, /*append=*/!sret});
     return marshal;
   }
+
+  CodeGenSpecifics::Marshalling
+  integerArgumentType(mlir::Location loc,
+                      mlir::IntegerType argTy) const override {
+    CodeGenSpecifics::Marshalling marshal;
+    AT::IntegerExtension intExt = AT::IntegerExtension::None;
+    if (argTy.getWidth() < getCIntTypeWidth()) {
+      // isSigned() and isUnsigned() branches below are dead code currently.
+      // If needed, we can generate calls with signed/unsigned argument types
+      // to more precisely match C side (e.g. for Fortran runtime functions
+      // with 'unsigned short' arguments).
+      if (argTy.isSigned())
+        intExt = AT::IntegerExtension::Sign;
+      else if (argTy.isUnsigned())
+        intExt = AT::IntegerExtension::Zero;
+      else if (argTy.isSignless()) {
+        // Zero extend for 'i1' and sign extend for other types.
+        if (argTy.getWidth() == 1)
+          intExt = AT::IntegerExtension::Zero;
+        else
+          intExt = AT::IntegerExtension::Sign;
+      }
+    }
+
+    marshal.emplace_back(argTy, AT{/*alignment=*/0, /*byval=*/false,
+                                   /*sret=*/false, /*append=*/false,
+                                   /*intExt=*/intExt});
+    return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  integerReturnType(mlir::Location loc,
+                    mlir::IntegerType argTy) const override {
+    return integerArgumentType(loc, argTy);
+  }
+
+  // Width of 'int' type is 32-bits for almost all targets, except
+  // for AVR and MSP430 (see TargetInfo initializations
+  // in clang/lib/Basic/Targets).
+  unsigned char getCIntTypeWidth() const override { return 32; }
 };
 } // namespace
 
@@ -86,8 +139,8 @@ struct TargetI386 : public GenericTarget<TargetI386> {
     CodeGenSpecifics::Marshalling marshal;
     // Use a type that will be translated into LLVM as:
     // { t, t }   struct of 2 eleTy, byval, align 4
-    mlir::TypeRange range = {eleTy, eleTy};
-    auto structTy = mlir::TupleType::get(eleTy.getContext(), range);
+    auto structTy =
+        mlir::TupleType::get(eleTy.getContext(), mlir::TypeRange{eleTy, eleTy});
     marshal.emplace_back(fir::ReferenceType::get(structTy),
                          AT{/*alignment=*/4, /*byval=*/true});
     return marshal;
@@ -105,8 +158,8 @@ struct TargetI386 : public GenericTarget<TargetI386> {
     } else if (sem == &llvm::APFloat::IEEEdouble()) {
       // Use a type that will be translated into LLVM as:
       // { t, t }   struct of 2 eleTy, sret, align 4
-      mlir::TypeRange range = {eleTy, eleTy};
-      auto structTy = mlir::TupleType::get(eleTy.getContext(), range);
+      auto structTy = mlir::TupleType::get(eleTy.getContext(),
+                                           mlir::TypeRange{eleTy, eleTy});
       marshal.emplace_back(fir::ReferenceType::get(structTy),
                            AT{/*alignment=*/4, /*byval=*/false, /*sret=*/true});
     } else {
@@ -141,10 +194,10 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
     } else if (sem == &llvm::APFloat::IEEEquad()) {
       // Use a type that will be translated into LLVM as:
       // { fp128, fp128 }   struct of 2 fp128, byval, align 16
-      mlir::TypeRange range = {eleTy, eleTy};
-      marshal.emplace_back(fir::ReferenceType::get(
-                               mlir::TupleType::get(eleTy.getContext(), range)),
-                           AT{/*align=*/16, /*byval=*/true});
+      marshal.emplace_back(
+          fir::ReferenceType::get(mlir::TupleType::get(
+              eleTy.getContext(), mlir::TypeRange{eleTy, eleTy})),
+          AT{/*align=*/16, /*byval=*/true});
     } else {
       TODO(loc, "complex for this precision");
     }
@@ -161,16 +214,16 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
     } else if (sem == &llvm::APFloat::IEEEdouble()) {
       // Use a type that will be translated into LLVM as:
       // { double, double }   struct of 2 double
-      mlir::TypeRange range = {eleTy, eleTy};
-      marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(), range),
+      marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(),
+                                                mlir::TypeRange{eleTy, eleTy}),
                            AT{});
     } else if (sem == &llvm::APFloat::IEEEquad()) {
       // Use a type that will be translated into LLVM as:
       // { fp128, fp128 }   struct of 2 fp128, sret, align 16
-      mlir::TypeRange range = {eleTy, eleTy};
-      marshal.emplace_back(fir::ReferenceType::get(
-                               mlir::TupleType::get(eleTy.getContext(), range)),
-                           AT{/*align=*/16, /*byval=*/false, /*sret=*/true});
+      marshal.emplace_back(
+          fir::ReferenceType::get(mlir::TupleType::get(
+              eleTy.getContext(), mlir::TypeRange{eleTy, eleTy})),
+          AT{/*align=*/16, /*byval=*/false, /*sret=*/true});
     } else {
       TODO(loc, "complex for this precision");
     }
@@ -211,8 +264,8 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
         sem == &llvm::APFloat::IEEEdouble()) {
       // Use a type that will be translated into LLVM as:
       // { t, t }   struct of 2 eleTy
-      mlir::TypeRange range = {eleTy, eleTy};
-      marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(), range),
+      marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(),
+                                                mlir::TypeRange{eleTy, eleTy}),
                            AT{});
     } else {
       TODO(loc, "complex for this precision");
@@ -246,8 +299,9 @@ struct TargetPPC64 : public GenericTarget<TargetPPC64> {
     CodeGenSpecifics::Marshalling marshal;
     // Use a type that will be translated into LLVM as:
     // { t, t }   struct of 2 element type
-    mlir::TypeRange range = {eleTy, eleTy};
-    marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(), range), AT{});
+    marshal.emplace_back(
+        mlir::TupleType::get(eleTy.getContext(), mlir::TypeRange{eleTy, eleTy}),
+        AT{});
     return marshal;
   }
 };
@@ -277,8 +331,9 @@ struct TargetPPC64le : public GenericTarget<TargetPPC64le> {
     CodeGenSpecifics::Marshalling marshal;
     // Use a type that will be translated into LLVM as:
     // { t, t }   struct of 2 element type
-    mlir::TypeRange range = {eleTy, eleTy};
-    marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(), range), AT{});
+    marshal.emplace_back(
+        mlir::TupleType::get(eleTy.getContext(), mlir::TypeRange{eleTy, eleTy}),
+        AT{});
     return marshal;
   }
 };
@@ -300,8 +355,8 @@ struct TargetSparc : public GenericTarget<TargetSparc> {
     CodeGenSpecifics::Marshalling marshal;
     // Use a type that will be translated into LLVM as:
     // { t, t }   struct of 2 eleTy
-    mlir::TypeRange range = {eleTy, eleTy};
-    auto structTy = mlir::TupleType::get(eleTy.getContext(), range);
+    auto structTy =
+        mlir::TupleType::get(eleTy.getContext(), mlir::TypeRange{eleTy, eleTy});
     marshal.emplace_back(fir::ReferenceType::get(structTy), AT{});
     return marshal;
   }
@@ -312,8 +367,8 @@ struct TargetSparc : public GenericTarget<TargetSparc> {
     CodeGenSpecifics::Marshalling marshal;
     // Use a type that will be translated into LLVM as:
     // { t, t }   struct of 2 eleTy, byval
-    mlir::TypeRange range = {eleTy, eleTy};
-    auto structTy = mlir::TupleType::get(eleTy.getContext(), range);
+    auto structTy =
+        mlir::TupleType::get(eleTy.getContext(), mlir::TypeRange{eleTy, eleTy});
     marshal.emplace_back(fir::ReferenceType::get(structTy),
                          AT{/*alignment=*/0, /*byval=*/true});
     return marshal;
@@ -343,10 +398,10 @@ struct TargetSparcV9 : public GenericTarget<TargetSparcV9> {
     } else if (sem == &llvm::APFloat::IEEEquad()) {
       // Use a type that will be translated into LLVM as:
       // { fp128, fp128 }   struct of 2 fp128, byval, align 16
-      mlir::TypeRange range = {eleTy, eleTy};
-      marshal.emplace_back(fir::ReferenceType::get(
-                               mlir::TupleType::get(eleTy.getContext(), range)),
-                           AT{/*align=*/16, /*byval=*/true});
+      marshal.emplace_back(
+          fir::ReferenceType::get(mlir::TupleType::get(
+              eleTy.getContext(), mlir::TypeRange{eleTy, eleTy})),
+          AT{/*align=*/16, /*byval=*/true});
     } else {
       TODO(loc, "complex for this precision");
     }
@@ -358,8 +413,9 @@ struct TargetSparcV9 : public GenericTarget<TargetSparcV9> {
     CodeGenSpecifics::Marshalling marshal;
     // Use a type that will be translated into LLVM as:
     // { eleTy, eleTy }   struct of 2 eleTy
-    mlir::TypeRange range = {eleTy, eleTy};
-    marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(), range), AT{});
+    marshal.emplace_back(
+        mlir::TupleType::get(eleTy.getContext(), mlir::TypeRange{eleTy, eleTy}),
+        AT{});
     return marshal;
   }
 };
@@ -398,8 +454,8 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
         sem == &llvm::APFloat::IEEEdouble()) {
       // Use a type that will be translated into LLVM as:
       // { t, t }   struct of 2 eleTy, byVal
-      mlir::TypeRange range = {eleTy, eleTy};
-      marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(), range),
+      marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(),
+                                                mlir::TypeRange{eleTy, eleTy}),
                            AT{/*alignment=*/0, /*byval=*/true});
     } else {
       TODO(loc, "complex for this precision");

@@ -1546,7 +1546,7 @@ mlir::simplifyConstrainedMinMaxOp(Operation *op,
   unpackOptionalValues(constraints.getMaybeValues(), newOperands);
   // If dims/symbols have known constant values, use those in order to simplify
   // the affine map further.
-  for (int64_t i = 0, e = constraints.getNumVars(); i < e; ++i) {
+  for (int64_t i = 0, e = constraints.getNumDimAndSymbolVars(); i < e; ++i) {
     // Skip unused operands and operands that are already constants.
     if (!newOperands[i] || getConstantIntValue(newOperands[i]))
       continue;
