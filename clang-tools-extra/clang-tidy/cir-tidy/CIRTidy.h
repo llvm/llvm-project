@@ -9,9 +9,11 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CIRTIDY_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CIRTIDY_H
 
+#include "CIRChecks.h"
 #include "ClangTidyDiagnosticConsumer.h"
 #include "ClangTidyModule.h"
 #include "clang/AST/ASTConsumer.h"
+#include "clang/CIR/Dialect/Passes.h"
 #include <vector>
 
 namespace clang {
@@ -42,7 +44,8 @@ public:
 private:
   ClangTidyContext &Context;
   IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS;
-  const std::vector<llvm::StringRef> CIRChecks = {"cir-lifetime-check"};
+  const std::vector<llvm::StringRef> CIRChecks = {
+      cir::checks::LifetimeCheckName};
 };
 
 std::vector<ClangTidyError>

@@ -40,6 +40,19 @@ CIRTidyASTConsumerFactory::CIRTidyASTConsumerFactory(
 std::unique_ptr<clang::ASTConsumer>
 CIRTidyASTConsumerFactory::createASTConsumer(clang::CompilerInstance &Compiler,
                                              StringRef File) {
+  // FIXME(clang-tidy): Move this to a separate method, so that
+  // CreateASTConsumer doesn't modify Compiler.
+  SourceManager *SM = &Compiler.getSourceManager();
+  Context.setSourceManager(SM);
+  Context.setCurrentFile(File);
+  Context.setASTContext(&Compiler.getASTContext());
+
+  auto WorkingDir = Compiler.getSourceManager()
+                        .getFileManager()
+                        .getVirtualFileSystem()
+                        .getCurrentWorkingDirectory();
+  if (WorkingDir)
+    Context.setCurrentBuildDirectory(WorkingDir.get());
   return std::make_unique<CIRASTConsumer>(Compiler, File, Context);
 }
 
