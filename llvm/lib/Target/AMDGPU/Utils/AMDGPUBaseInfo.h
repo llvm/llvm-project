@@ -1294,6 +1294,9 @@ inline bool isLegal64BitDPPControl(unsigned DC) {
 /// \returns true if the intrinsic is divergent
 bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 
+/// \returns true if the intrinsic is uniform
+bool isIntrinsicAlwaysUniform(unsigned IntrID);
+
 // Track defaults for fields in the MODE register.
 struct SIModeRegisterDefaults {
   /// Floating point opcodes that support exception flag gathering quiet and
