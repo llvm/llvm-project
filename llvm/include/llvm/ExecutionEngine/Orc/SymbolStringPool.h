@@ -26,6 +26,7 @@ namespace orc {
 
 class SymbolStringPtrBase;
 class SymbolStringPtr;
+class NonOwningSymbolStringPtr;
 
 /// String pool for symbol names used by the JIT.
 class SymbolStringPool {
@@ -47,12 +48,6 @@ public:
 
   /// Returns true if the pool is empty.
   bool empty() const;
-
-#ifndef NDEBUG
-  // Useful for debugging and testing: This method can be used to identify
-  // non-owning pointers pointing to unowned pool entries.
-  bool isValid(const SymbolStringPtrBase &S) const { return getRefCount(S); }
-#endif
 
 private:
   size_t getRefCount(const SymbolStringPtrBase &S) const;
@@ -94,6 +89,16 @@ public:
     return LHS.S < RHS.S;
   }
 
+#ifndef NDEBUG
+  // Returns true if the pool entry's ref count is above zero (or if the entry
+  // is an empty or tombstone value). Useful for debugging and testing -- this
+  // method can be used to identify SymbolStringPtrs and
+  // NonOwningSymbolStringPtrs that are pointing to abandoned pool entries.
+  bool poolEntryIsAlive() const {
+    return isRealPoolEntry(S) ? S->getValue() != 0 : true;
+  }
+#endif
+
 protected:
   using PoolEntry = SymbolStringPool::PoolMapEntry;
   using PoolEntryPtr = PoolEntry *;
@@ -112,6 +117,16 @@ protected:
       (std::numeric_limits<uintptr_t>::max() - 3)
       << PointerLikeTypeTraits<PoolEntryPtr>::NumLowBitsAvailable;
 
+  // Returns false for null, empty, and tombstone values, true otherwise.
+  static bool isRealPoolEntry(PoolEntryPtr P) {
+    return ((reinterpret_cast<uintptr_t>(P) - 1) & InvalidPtrMask) !=
+           InvalidPtrMask;
+  }
+
+  size_t getRefCount() const {
+    return isRealPoolEntry(S) ? size_t(S->getValue()) : size_t(0);
+  }
+
   PoolEntryPtr S = nullptr;
 };
 
@@ -125,50 +140,42 @@ public:
   SymbolStringPtr() = default;
   SymbolStringPtr(std::nullptr_t) {}
   SymbolStringPtr(const SymbolStringPtr &Other) : SymbolStringPtrBase(Other.S) {
-    if (isRealPoolEntry(S))
-      ++S->getValue();
+    incRef();
   }
 
+  explicit SymbolStringPtr(NonOwningSymbolStringPtr Other);
+
   SymbolStringPtr& operator=(const SymbolStringPtr &Other) {
-    if (isRealPoolEntry(S)) {
-      assert(S->getValue() && "Releasing SymbolStringPtr with zero ref count");
-      --S->getValue();
-    }
+    decRef();
     S = Other.S;
-    if (isRealPoolEntry(S))
-      ++S->getValue();
+    incRef();
     return *this;
   }
 
   SymbolStringPtr(SymbolStringPtr &&Other) { std::swap(S, Other.S); }
 
   SymbolStringPtr& operator=(SymbolStringPtr &&Other) {
-    if (isRealPoolEntry(S)) {
-      assert(S->getValue() && "Releasing SymbolStringPtr with zero ref count");
-      --S->getValue();
-    }
+    decRef();
     S = nullptr;
     std::swap(S, Other.S);
     return *this;
   }
 
-  ~SymbolStringPtr() {
-    if (isRealPoolEntry(S)) {
-      assert(S->getValue() && "Releasing SymbolStringPtr with zero ref count");
-      --S->getValue();
-    }
-  }
+  ~SymbolStringPtr() { decRef(); }
 
 private:
-  SymbolStringPtr(PoolEntryPtr S) : SymbolStringPtrBase(S) {
+  SymbolStringPtr(PoolEntryPtr S) : SymbolStringPtrBase(S) { incRef(); }
+
+  void incRef() {
     if (isRealPoolEntry(S))
       ++S->getValue();
   }
 
-  // Returns false for null, empty, and tombstone values, true otherwise.
-  bool isRealPoolEntry(PoolEntryPtr P) {
-    return ((reinterpret_cast<uintptr_t>(P) - 1) & InvalidPtrMask) !=
-           InvalidPtrMask;
+  void decRef() {
+    if (isRealPoolEntry(S)) {
+      assert(S->getValue() && "Releasing SymbolStringPtr with zero ref count");
+      --S->getValue();
+    }
   }
 
   static SymbolStringPtr getEmptyVal() {
@@ -216,6 +223,15 @@ private:
   }
 };
 
+inline SymbolStringPtr::SymbolStringPtr(NonOwningSymbolStringPtr Other)
+    : SymbolStringPtrBase(Other) {
+  assert(poolEntryIsAlive() &&
+         "SymbolStringPtr constructed from invalid non-owning pointer.");
+
+  if (isRealPoolEntry(S))
+    ++S->getValue();
+}
+
 inline SymbolStringPool::~SymbolStringPool() {
 #ifndef NDEBUG
   clearDeadEntries();
@@ -247,7 +263,7 @@ inline bool SymbolStringPool::empty() const {
 
 inline size_t
 SymbolStringPool::getRefCount(const SymbolStringPtrBase &S) const {
-  return S.S->second;
+  return S.getRefCount();
 }
 
 } // end namespace orc
