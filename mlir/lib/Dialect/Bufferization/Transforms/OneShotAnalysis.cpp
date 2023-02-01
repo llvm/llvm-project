@@ -147,7 +147,7 @@ void BufferizationAliasInfo::bufferizeInPlace(OpOperand &operand,
   if (inplaceBufferized.contains(&operand))
     return;
   markInPlace(operand);
-  for (OpResult result : state.getAliasingOpResult(operand))
+  for (OpResult result : state.getAliasingOpResults(operand))
     aliasInfo.unionSets(result, operand.get());
   ++statNumTensorInPlace;
 }
@@ -636,9 +636,9 @@ static bool hasReadAfterWriteInterference(
 
         // No conflict if the conflicting write and the definition are the same
         // use.
-        SmallVector<OpResult> aliasingOpResult =
-            state.getAliasingOpResult(*uConflictingWrite);
-        if (aliasingOpResult.size() == 1 && aliasingOpResult[0] == definition) {
+        AliasingOpResultList aliases =
+            state.getAliasingOpResults(*uConflictingWrite);
+        if (aliases.size() == 1 && aliases[0] == definition) {
           LLVM_DEBUG(llvm::dbgs()
                      << "    no conflict: definition and write are same\n");
           continue;
@@ -697,7 +697,7 @@ static void getAliasingReads(DenseSet<OpOperand *> &res, Value root,
       // there would then be no flow of data from the extract_slice operand to
       // its result's uses.)
       if (!state.bufferizesToMemoryWrite(use)) {
-        SmallVector<OpResult> opResults = state.getAliasingOpResult(use);
+        AliasingOpResultList opResults = state.getAliasingOpResults(use);
         if (llvm::any_of(opResults,
                          [&](OpResult r) { return state.isValueRead(r); }))
           res.insert(&use);
@@ -743,7 +743,7 @@ static bool wouldCreateReadAfterWriteInterference(
   DenseSet<OpOperand *> usesRead, usesWrite;
   getAliasingReads(usesRead, operand.get(), aliasInfo, state);
   getAliasingInplaceWrites(usesWrite, operand.get(), aliasInfo, state);
-  for (OpResult result : state.getAliasingOpResult(operand)) {
+  for (OpResult result : state.getAliasingOpResults(operand)) {
     getAliasingReads(usesRead, result, aliasInfo, state);
     getAliasingInplaceWrites(usesWrite, result, aliasInfo, state);
   }
@@ -796,8 +796,8 @@ hasPrecedingAliasingNonWritableTensor(Value value, OpOperand *currentOpOperand,
       continue;
 
     // Follow reverse SSA use-def chain.
-    SmallVector<OpOperand *> aliasingOpOperands =
-        state.getAliasingOpOperand(opResult);
+    AliasingOpOperandList aliasingOpOperands =
+        state.getAliasingOpOperands(opResult);
     for (OpOperand *opOperand : aliasingOpOperands)
       if (aliasInfo.isInPlace(*opOperand) || currentOpOperand == opOperand)
         worklist.push_back(opOperand->get());
@@ -813,7 +813,7 @@ static bool wouldCreateWriteToNonWritableBuffer(
   // Collect writes of all aliases of OpOperand and OpResult.
   DenseSet<OpOperand *> usesWrite;
   getAliasingInplaceWrites(usesWrite, operand.get(), aliasInfo, state);
-  for (OpResult result : state.getAliasingOpResult(operand)) {
+  for (OpResult result : state.getAliasingOpResults(operand)) {
     getAliasingInplaceWrites(usesWrite, result, aliasInfo, state);
   }
   if (!checkConsistencyOnly && state.bufferizesToMemoryWrite(operand))
@@ -954,7 +954,7 @@ static void equivalenceAnalysis(SmallVector<Operation *> &ops,
       for (OpResult opResult : op->getOpResults())
         if (opResult.getType().isa<TensorType>())
           for (OpOperand *opOperand :
-               bufferizableOp.getAliasingOpOperand(opResult, state))
+               bufferizableOp.getAliasingOpOperands(opResult, state))
             if (state.isInPlace(*opOperand))
               if (bufferizableOp.bufferRelation(opResult, state) ==
                   BufferRelation::Equivalent)

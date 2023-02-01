@@ -74,7 +74,7 @@ struct IndexCastOpInterface
     return false;
   }
 
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     return {op->getResult(0)};
   }
@@ -126,14 +126,14 @@ struct SelectOpInterface
     return false;
   }
 
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     return {op->getOpResult(0) /*result*/};
   }
 
-  SmallVector<OpOperand *>
-  getAliasingOpOperand(Operation *op, OpResult opResult,
-                       const AnalysisState &state) const {
+  AliasingOpOperandList
+  getAliasingOpOperands(Operation *op, OpResult opResult,
+                        const AnalysisState &state) const {
     return {&op->getOpOperand(1) /*true_value*/,
             &op->getOpOperand(2) /*false_value*/};
   }

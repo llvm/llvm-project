@@ -42,7 +42,7 @@ struct TransferReadOpInterface
     return false;
   }
 
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     return {};
   }
@@ -111,7 +111,7 @@ struct GatherOpInterface
     return false;
   }
 
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     return {};
   }
@@ -137,9 +137,9 @@ struct GatherOpInterface
 struct MaskOpInterface
     : public BufferizableOpInterface::ExternalModel<MaskOpInterface,
                                                     vector::MaskOp> {
-  SmallVector<OpOperand *>
-  getAliasingOpOperand(Operation *op, OpResult opResult,
-                       const AnalysisState &state) const {
+  AliasingOpOperandList
+  getAliasingOpOperands(Operation *op, OpResult opResult,
+                        const AnalysisState &state) const {
     // MaskOps do not have tensor OpOperands. The yielded values are the result
     // of the wrapped op.
     auto maskOp = cast<vector::MaskOp>(op);
@@ -239,7 +239,7 @@ struct YieldOpInterface
     return false;
   }
 
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     return {op->getParentOp()->getResult(opOperand.getOperandNumber())};
   }

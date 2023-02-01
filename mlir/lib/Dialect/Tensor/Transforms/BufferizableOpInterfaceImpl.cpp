@@ -41,7 +41,7 @@ struct CastOpInterface
     return false;
   }
 
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     return {op->getResult(0)};
   }
@@ -98,11 +98,10 @@ struct CollapseShapeOpInterface
     return false;
   }
 
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
-    if (&opOperand == &op->getOpOperand(0) /*src*/)
-      return {op->getOpResult(0)};
-    return {};
+    // TODO: CollapseShapeOp may allocate at runtime.
+    return {op->getOpResult(0)};
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
@@ -214,7 +213,7 @@ struct DimOpInterface
     return false;
   }
 
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     return {};
   }
@@ -263,11 +262,9 @@ struct ExpandShapeOpInterface
     return false;
   }
 
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
-    if (&opOperand == &op->getOpOperand(0) /*src*/)
-      return {op->getOpResult(0)};
-    return {};
+    return {op->getOpResult(0)};
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
@@ -324,7 +321,7 @@ struct ExtractSliceOpInterface
     return false;
   }
 
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     if (&opOperand == &op->getOpOperand(0) /*source*/)
       return {op->getOpResult(0)};
@@ -397,7 +394,7 @@ struct ExtractOpInterface
     return false;
   }
 
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     return {};
   }
@@ -837,7 +834,7 @@ struct PadOpInterface
     return false;
   }
 
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     return {};
   }
@@ -935,7 +932,7 @@ struct RankOpInterface
     return false;
   }
 
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     return {};
   }
@@ -968,7 +965,7 @@ struct ReshapeOpInterface
     return false;
   }
 
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     return {op->getOpResult(0)};
   }
@@ -1000,9 +997,9 @@ struct ReshapeOpInterface
 struct ParallelInsertSliceOpInterface
     : public BufferizableOpInterface::ExternalModel<
           ParallelInsertSliceOpInterface, ParallelInsertSliceOp> {
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
-      return {};
+    return {};
   }
 
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
