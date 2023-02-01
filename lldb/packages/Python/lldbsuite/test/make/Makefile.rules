@@ -304,6 +304,12 @@ SWIFT_BRIDGING_PCH :=
 SWIFT_HFLAGS :=
 endif
 
+ifeq "$(OS)" "Linux"
+SWIFT_HOSTDIR = $(shell dirname $(SWIFTC))/../lib/swift/linux
+else
+SWIFT_HOSTDIR = $(shell dirname $(SWIFTC))/../lib/swift/host
+endif
+
 # Use this one if you want to build one part of the result without debug information:
 ifeq "$(OS)" "Darwin"
 	CFLAGS_NO_DEBUG = -O0 $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS) -isysroot "$(SDKROOT)"
