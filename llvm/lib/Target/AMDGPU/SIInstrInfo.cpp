@@ -8368,9 +8368,26 @@ SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
   unsigned opcode = MI.getOpcode();
   if (opcode == AMDGPU::G_INTRINSIC ||
       opcode == AMDGPU::G_INTRINSIC_W_SIDE_EFFECTS) {
-    return AMDGPU::isIntrinsicSourceOfDivergence(MI.getIntrinsicID())
-               ? InstructionUniformity::NeverUniform
-               : InstructionUniformity::AlwaysUniform;
+    auto IID = static_cast<Intrinsic::ID>(MI.getIntrinsicID());
+    if (AMDGPU::isIntrinsicSourceOfDivergence(IID))
+      return InstructionUniformity::NeverUniform;
+
+    // FIXME: Get a tablegen table for this.
+    switch (IID) {
+    case Intrinsic::amdgcn_readfirstlane:
+    case Intrinsic::amdgcn_readlane:
+    case Intrinsic::amdgcn_icmp:
+    case Intrinsic::amdgcn_fcmp:
+    case Intrinsic::amdgcn_ballot:
+    case Intrinsic::amdgcn_if_break:
+      return InstructionUniformity::AlwaysUniform;
+    case Intrinsic::amdgcn_if:
+    case Intrinsic::amdgcn_else:
+      // FIXME: Uniform if second result
+      break;
+    }
+
+    return InstructionUniformity::Default;
   }
 
   // Loads from the private and flat address spaces are divergent, because
