@@ -185,6 +185,7 @@ TEST(InteractiveModelRunner, Evaluation) {
   auto Header = json::parse(ReadLn());
   EXPECT_FALSE(Header.takeError());
   EXPECT_NE(Header->getAsObject()->getArray("features"), nullptr);
+  EXPECT_NE(Header->getAsObject()->getObject("advice"), nullptr);
   // Then comes the context
   EXPECT_FALSE(json::parse(ReadLn()).takeError());
 
