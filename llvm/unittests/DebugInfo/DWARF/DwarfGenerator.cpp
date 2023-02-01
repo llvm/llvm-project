@@ -53,6 +53,16 @@ unsigned dwarfgen::DIE::computeSizeAndOffsets(unsigned Offset) {
 
 void dwarfgen::DIE::addAttribute(uint16_t A, dwarf::Form Form, uint64_t U) {
   auto &DG = CU->getGenerator();
+  switch (Form) {
+  case DW_FORM_addrx:
+  case DW_FORM_addrx1:
+  case DW_FORM_addrx2:
+  case DW_FORM_addrx3:
+  case DW_FORM_addrx4:
+    U = DG.getAddressPool().getIndex(U);
+  default:
+    break;
+  }
   Die->addValue(DG.getAllocator(), static_cast<dwarf::Attribute>(A), Form,
                 DIEInteger(U));
 }
@@ -140,6 +150,24 @@ void dwarfgen::DIE::addStrOffsetsBaseAttribute() {
         Expr, MCSymbolRefExpr::create(SectionStart, MC), MC);
 
   addAttribute(dwarf::DW_AT_str_offsets_base, DW_FORM_sec_offset, *Expr);
+}
+
+// This is currently fixed to be the first address entry after the header.
+void dwarfgen::DIE::addAddrBaseAttribute() {
+  auto &DG = CU->getGenerator();
+  auto &MC = *DG.getMCContext();
+  AsmPrinter *Asm = DG.getAsmPrinter();
+
+  const MCSymbol *SectionStart =
+      Asm->getObjFileLowering().getDwarfAddrSection()->getBeginSymbol();
+
+  const MCExpr *Expr = MCSymbolRefExpr::create(DG.getAddrTableStartSym(), MC);
+
+  if (!Asm->MAI->doesDwarfUseRelocationsAcrossSections())
+    Expr = MCBinaryExpr::createSub(
+        Expr, MCSymbolRefExpr::create(SectionStart, MC), MC);
+
+  addAttribute(dwarf::DW_AT_addr_base, DW_FORM_sec_offset, *Expr);
 }
 
 dwarfgen::DIE dwarfgen::DIE::addChild(dwarf::Tag Tag) {
@@ -495,7 +523,39 @@ llvm::Error dwarfgen::Generator::init(Triple TheTriple, uint16_t V) {
   StringPool = std::make_unique<DwarfStringPool>(Allocator, *Asm, StringRef());
   StringOffsetsStartSym = Asm->createTempSymbol("str_offsets_base");
 
+  AddrTableStartSym = Asm->createTempSymbol("addr_table_base");
+
   return Error::success();
+}
+
+unsigned dwarfgen::Generator::DummyAddressPool::getIndex(uint64_t Address) {
+  AddressValues.push_back(Address);
+  return static_cast<unsigned>(AddressValues.size() - 1);
+}
+
+void dwarfgen::Generator::DummyAddressPool::emit(AsmPrinter &Asm,
+                                                 MCSection *AddrSection,
+                                                 MCSymbol *StartSym) {
+  const uint8_t AddrSize = Asm.getPointerSize();
+
+  // Switch to .debug_addr section
+  Asm.OutStreamer->switchSection(AddrSection);
+
+  if (Asm.getDwarfVersion() >= 5) {
+    // Emit header
+    Asm.emitDwarfUnitLength(AddrSize * AddressValues.size() + 4,
+                            "Length of contribution");
+    Asm.emitInt16(Asm.getDwarfVersion());
+    Asm.emitInt8(AddrSize);
+    Asm.emitInt8(0);
+  }
+
+  if (StartSym)
+    Asm.OutStreamer->emitLabel(StartSym);
+
+  // Emit addresses
+  for (uint64_t Addr : AddressValues)
+    Asm.OutStreamer->emitIntValue(Addr, AddrSize);
 }
 
 StringRef dwarfgen::Generator::generate() {
@@ -520,6 +580,8 @@ StringRef dwarfgen::Generator::generate() {
                                            StringOffsetsStartSym);
   StringPool->emit(*Asm, TLOF->getDwarfStrSection(),
                    TLOF->getDwarfStrOffSection());
+
+  AddressPool.emit(*Asm, TLOF->getDwarfAddrSection(), AddrTableStartSym);
 
   MS->switchSection(TLOF->getDwarfInfoSection());
   for (auto &CU : CompileUnits) {
