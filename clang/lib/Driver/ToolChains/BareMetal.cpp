@@ -103,9 +103,12 @@ BareMetal::BareMetal(const Driver &D, const llvm::Triple &Triple,
   findMultilibs(D, Triple, Args);
   SmallString<128> SysRoot(computeSysRoot());
   if (!SysRoot.empty()) {
-    llvm::sys::path::append(SysRoot, "lib");
-    getFilePaths().push_back(std::string(SysRoot));
-    getLibraryPaths().push_back(std::string(SysRoot));
+    for (const Multilib &M : getOrderedMultilibs()) {
+      SmallString<128> Dir(SysRoot);
+      llvm::sys::path::append(Dir, M.osSuffix(), "lib");
+      getFilePaths().push_back(std::string(Dir));
+      getLibraryPaths().push_back(std::string(Dir));
+    }
   }
 }
 
@@ -222,10 +225,17 @@ Tool *BareMetal::buildLinker() const {
 }
 
 std::string BareMetal::computeSysRoot() const {
-  std::string Result = computeBaseSysRoot(getDriver(), getTriple());
+  return computeBaseSysRoot(getDriver(), getTriple());
+}
+
+BareMetal::OrderedMultilibs BareMetal::getOrderedMultilibs() const {
+  // Get multilibs in reverse order because they're ordered most-specific last.
   if (!SelectedMultilibs.empty())
-    Result += SelectedMultilibs.back().osSuffix();
-  return Result;
+    return llvm::reverse(SelectedMultilibs);
+
+  // No multilibs selected so return a single default multilib.
+  static const llvm::SmallVector<Multilib> Default = {Multilib()};
+  return llvm::reverse(Default);
 }
 
 void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
@@ -240,10 +250,14 @@ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   }
 
   if (!DriverArgs.hasArg(options::OPT_nostdlibinc)) {
-    SmallString<128> Dir(computeSysRoot());
-    if (!Dir.empty()) {
-      llvm::sys::path::append(Dir, "include");
-      addSystemInclude(DriverArgs, CC1Args, Dir.str());
+    const SmallString<128> SysRoot(computeSysRoot());
+    if (!SysRoot.empty()) {
+      for (const Multilib &M : getOrderedMultilibs()) {
+        SmallString<128> Dir(SysRoot);
+        llvm::sys::path::append(Dir, M.includeSuffix());
+        llvm::sys::path::append(Dir, "include");
+        addSystemInclude(DriverArgs, CC1Args, Dir.str());
+      }
     }
   }
 }
@@ -266,44 +280,47 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   if (SysRoot.empty())
     return;
 
-  switch (GetCXXStdlibType(DriverArgs)) {
-  case ToolChain::CST_Libcxx: {
-    // First check sysroot/usr/include/c++/v1 if it exists.
-    SmallString<128> TargetDir(SysRoot);
-    llvm::sys::path::append(TargetDir, "usr", "include", "c++", "v1");
-    if (D.getVFS().exists(TargetDir)) {
-      addSystemInclude(DriverArgs, CC1Args, TargetDir.str());
+  for (const Multilib &M : getOrderedMultilibs()) {
+    SmallString<128> Dir(SysRoot);
+    llvm::sys::path::append(Dir, M.gccSuffix());
+    switch (GetCXXStdlibType(DriverArgs)) {
+    case ToolChain::CST_Libcxx: {
+      // First check sysroot/usr/include/c++/v1 if it exists.
+      SmallString<128> TargetDir(Dir);
+      llvm::sys::path::append(TargetDir, "usr", "include", "c++", "v1");
+      if (D.getVFS().exists(TargetDir)) {
+        addSystemInclude(DriverArgs, CC1Args, TargetDir.str());
+        break;
+      }
+      // Add generic path if nothing else succeeded so far.
+      llvm::sys::path::append(Dir, "include", "c++", "v1");
+      addSystemInclude(DriverArgs, CC1Args, Dir.str());
       break;
     }
-    // Add generic path if nothing else succeeded so far.
-    SmallString<128> Dir(SysRoot);
-    llvm::sys::path::append(Dir, "include", "c++", "v1");
-    addSystemInclude(DriverArgs, CC1Args, Dir.str());
-    break;
-  }
-  case ToolChain::CST_Libstdcxx: {
-    SmallString<128> Dir(SysRoot);
-    llvm::sys::path::append(Dir, "include", "c++");
-    std::error_code EC;
-    Generic_GCC::GCCVersion Version = {"", -1, -1, -1, "", "", ""};
-    // Walk the subdirs, and find the one with the newest gcc version:
-    for (llvm::vfs::directory_iterator LI = D.getVFS().dir_begin(Dir.str(), EC),
-                                       LE;
-         !EC && LI != LE; LI = LI.increment(EC)) {
-      StringRef VersionText = llvm::sys::path::filename(LI->path());
-      auto CandidateVersion = Generic_GCC::GCCVersion::Parse(VersionText);
-      if (CandidateVersion.Major == -1)
-        continue;
-      if (CandidateVersion <= Version)
-        continue;
-      Version = CandidateVersion;
+    case ToolChain::CST_Libstdcxx: {
+      llvm::sys::path::append(Dir, "include", "c++");
+      std::error_code EC;
+      Generic_GCC::GCCVersion Version = {"", -1, -1, -1, "", "", ""};
+      // Walk the subdirs, and find the one with the newest gcc version:
+      for (llvm::vfs::directory_iterator
+               LI = D.getVFS().dir_begin(Dir.str(), EC),
+               LE;
+           !EC && LI != LE; LI = LI.increment(EC)) {
+        StringRef VersionText = llvm::sys::path::filename(LI->path());
+        auto CandidateVersion = Generic_GCC::GCCVersion::Parse(VersionText);
+        if (CandidateVersion.Major == -1)
+          continue;
+        if (CandidateVersion <= Version)
+          continue;
+        Version = CandidateVersion;
+      }
+      if (Version.Major != -1) {
+        llvm::sys::path::append(Dir, Version.Text);
+        addSystemInclude(DriverArgs, CC1Args, Dir.str());
+      }
+      break;
     }
-    if (Version.Major == -1)
-      return;
-    llvm::sys::path::append(Dir, Version.Text);
-    addSystemInclude(DriverArgs, CC1Args, Dir.str());
-    break;
-  }
+    }
   }
 }
 
