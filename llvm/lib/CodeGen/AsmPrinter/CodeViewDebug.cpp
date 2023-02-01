@@ -488,10 +488,10 @@ void CodeViewDebug::recordLocalVariable(LocalVariable &&Var,
     // This variable was inlined. Associate it with the InlineSite.
     const DISubprogram *Inlinee = Var.DIVar->getScope()->getSubprogram();
     InlineSite &Site = getInlineSite(InlinedAt, Inlinee);
-    Site.InlinedLocals.emplace_back(Var);
+    Site.InlinedLocals.emplace_back(std::move(Var));
   } else {
     // This variable goes into the corresponding lexical scope.
-    ScopeVariables[LS].emplace_back(Var);
+    ScopeVariables[LS].emplace_back(std::move(Var));
   }
 }
 

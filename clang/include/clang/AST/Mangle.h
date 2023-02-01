@@ -140,7 +140,8 @@ public:
                                         unsigned ManglingNumber,
                                         raw_ostream &) = 0;
   virtual void mangleCXXRTTI(QualType T, raw_ostream &) = 0;
-  virtual void mangleCXXRTTIName(QualType T, raw_ostream &) = 0;
+  virtual void mangleCXXRTTIName(QualType T, raw_ostream &,
+                                 bool NormalizeIntegers = false) = 0;
   virtual void mangleStringLiteral(const StringLiteral *SL, raw_ostream &) = 0;
   virtual void mangleMSGuidDecl(const MSGuidDecl *GD, raw_ostream&);
 
@@ -177,7 +178,8 @@ public:
   /// or type uniquing.
   /// TODO: Extend this to internal types by generating names that are unique
   /// across translation units so it can be used with LTO.
-  virtual void mangleTypeName(QualType T, raw_ostream &) = 0;
+  virtual void mangleTypeName(QualType T, raw_ostream &,
+                              bool NormalizeIntegers = false) = 0;
 
   /// @}
 };

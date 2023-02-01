@@ -115,7 +115,7 @@ struct __unique_ptr_deleter_sfinae<_Deleter&> {
 };
 
 #if defined(_LIBCPP_ABI_ENABLE_UNIQUE_PTR_TRIVIAL_ABI)
-#  define _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI __attribute__((trivial_abi))
+#  define _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI __attribute__((__trivial_abi__))
 #else
 #  define _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI
 #endif

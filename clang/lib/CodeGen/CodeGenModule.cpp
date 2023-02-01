@@ -107,11 +107,11 @@ CodeGenModule::CodeGenModule(ASTContext &C,
                              const CodeGenOptions &CGO, llvm::Module &M,
                              DiagnosticsEngine &diags,
                              CoverageSourceInfo *CoverageInfo)
-    : Context(C), LangOpts(C.getLangOpts()), FS(std::move(FS)),
-      HeaderSearchOpts(HSO), PreprocessorOpts(PPO), CodeGenOpts(CGO),
-      TheModule(M), Diags(diags), Target(C.getTargetInfo()),
-      ABI(createCXXABI(*this)), VMContext(M.getContext()), Types(*this),
-      VTables(*this), SanitizerMD(new SanitizerMetadata(*this)) {
+    : Context(C), LangOpts(C.getLangOpts()), FS(FS), HeaderSearchOpts(HSO),
+      PreprocessorOpts(PPO), CodeGenOpts(CGO), TheModule(M), Diags(diags),
+      Target(C.getTargetInfo()), ABI(createCXXABI(*this)),
+      VMContext(M.getContext()), Types(*this), VTables(*this),
+      SanitizerMD(new SanitizerMetadata(*this)) {
 
   // Initialize the type cache.
   llvm::LLVMContext &LLVMContext = M.getContext();
@@ -185,7 +185,8 @@ CodeGenModule::CodeGenModule(ASTContext &C,
 
   if (CodeGenOpts.hasProfileClangUse()) {
     auto ReaderOrErr = llvm::IndexedInstrProfReader::create(
-        CodeGenOpts.ProfileInstrumentUsePath, CodeGenOpts.ProfileRemappingFile);
+        CodeGenOpts.ProfileInstrumentUsePath, *FS,
+        CodeGenOpts.ProfileRemappingFile);
     // We're checking for profile read errors in CompilerInvocation, so if
     // there was an error it should've already been caught. If it hasn't been
     // somehow, trip an assertion.
@@ -1726,7 +1727,11 @@ llvm::ConstantInt *CodeGenModule::CreateKCFITypeId(QualType T) {
 
   std::string OutName;
   llvm::raw_string_ostream Out(OutName);
-  getCXXABI().getMangleContext().mangleTypeName(T, Out);
+  getCXXABI().getMangleContext().mangleTypeName(
+      T, Out, getCodeGenOpts().SanitizeCfiICallNormalizeIntegers);
+
+  if (getCodeGenOpts().SanitizeCfiICallNormalizeIntegers)
+    Out << ".normalized";
 
   return llvm::ConstantInt::get(Int32Ty,
                                 static_cast<uint32_t>(llvm::xxHash64(OutName)));
@@ -6944,7 +6949,12 @@ CodeGenModule::CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
   if (isExternallyVisible(T->getLinkage())) {
     std::string OutName;
     llvm::raw_string_ostream Out(OutName);
-    getCXXABI().getMangleContext().mangleTypeName(T, Out);
+    getCXXABI().getMangleContext().mangleTypeName(
+        T, Out, getCodeGenOpts().SanitizeCfiICallNormalizeIntegers);
+
+    if (getCodeGenOpts().SanitizeCfiICallNormalizeIntegers)
+      Out << ".normalized";
+
     Out << Suffix;
 
     InternalId = llvm::MDString::get(getLLVMContext(), Out.str());

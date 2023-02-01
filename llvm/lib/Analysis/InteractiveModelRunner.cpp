@@ -37,7 +37,7 @@ InteractiveModelRunner::InteractiveModelRunner(
       InputSpecs(Inputs), OutputSpec(Advice), Inbound(InboundName, InEC),
       OutputBuffer(OutputSpec.getTotalTensorBufferSize()),
       Log(std::make_unique<raw_fd_ostream>(OutboundName, OutEC), InputSpecs,
-          Advice, /*IncludeReward=*/false) {
+          Advice, /*IncludeReward=*/false, Advice) {
   if (InEC) {
     Ctx.emitError("Cannot open inbound file: " + InEC.message());
     return;
