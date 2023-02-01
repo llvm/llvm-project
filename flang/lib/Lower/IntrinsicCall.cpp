@@ -15,7 +15,6 @@
 
 #include "flang/Lower/IntrinsicCall.h"
 #include "flang/Common/static-multimap-view.h"
-#include "flang/Lower/Mangler.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/Complex.h"
@@ -1814,12 +1813,66 @@ IntrinsicLibrary::invokeGenerator(SubroutineGenerator generator,
   return {};
 }
 
+//===----------------------------------------------------------------------===//
+// Intrinsic Procedure Mangling
+//===----------------------------------------------------------------------===//
+
+/// Helper to encode type into string for intrinsic procedure names.
+/// Note: mlir has Type::dump(ostream) methods but it may add "!" that is not
+/// suitable for function names.
+static std::string typeToString(mlir::Type t) {
+  if (auto refT{t.dyn_cast<fir::ReferenceType>()})
+    return "ref_" + typeToString(refT.getEleTy());
+  if (auto i{t.dyn_cast<mlir::IntegerType>()}) {
+    return "i" + std::to_string(i.getWidth());
+  }
+  if (auto cplx{t.dyn_cast<fir::ComplexType>()}) {
+    return "z" + std::to_string(cplx.getFKind());
+  }
+  if (auto real{t.dyn_cast<fir::RealType>()}) {
+    return "r" + std::to_string(real.getFKind());
+  }
+  if (auto f{t.dyn_cast<mlir::FloatType>()}) {
+    return "f" + std::to_string(f.getWidth());
+  }
+  if (auto logical{t.dyn_cast<fir::LogicalType>()}) {
+    return "l" + std::to_string(logical.getFKind());
+  }
+  if (auto character{t.dyn_cast<fir::CharacterType>()}) {
+    return "c" + std::to_string(character.getFKind());
+  }
+  if (auto boxCharacter{t.dyn_cast<fir::BoxCharType>()}) {
+    return "bc" + std::to_string(boxCharacter.getEleTy().getFKind());
+  }
+  llvm_unreachable("no mangling for type");
+}
+
+/// Returns a name suitable to define mlir functions for Fortran intrinsic
+/// Procedure. These names are guaranteed to not conflict with user defined
+/// procedures. This is needed to implement Fortran generic intrinsics as
+/// several mlir functions specialized for the argument types.
+/// The result is guaranteed to be distinct for different mlir::FunctionType
+/// arguments. The mangling pattern is:
+///    fir.<generic name>.<result type>.<arg type>...
+/// e.g ACOS(COMPLEX(4)) is mangled as fir.acos.z4.z4
+static std::string mangleIntrinsicProcedure(llvm::StringRef intrinsic,
+                                            mlir::FunctionType funTy) {
+  std::string name = "fir.";
+  name.append(intrinsic.str()).append(".");
+  assert(funTy.getNumResults() == 1 && "only function mangling supported");
+  name.append(typeToString(funTy.getResult(0)));
+  unsigned e = funTy.getNumInputs();
+  for (decltype(e) i = 0; i < e; ++i)
+    name.append(".").append(typeToString(funTy.getInput(i)));
+  return name;
+}
+
 template <typename GeneratorType>
 mlir::func::FuncOp IntrinsicLibrary::getWrapper(GeneratorType generator,
                                                 llvm::StringRef name,
                                                 mlir::FunctionType funcType,
                                                 bool loadRefArguments) {
-  std::string wrapperName = fir::mangleIntrinsicProcedure(name, funcType);
+  std::string wrapperName = mangleIntrinsicProcedure(name, funcType);
   mlir::func::FuncOp function = builder.getNamedFunction(wrapperName);
   if (!function) {
     // First time this wrapper is needed, build it.

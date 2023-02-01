@@ -231,52 +231,6 @@ std::string Fortran::lower::mangle::mangleArrayLiteral(
   return name += hashString.c_str();
 }
 
-//===----------------------------------------------------------------------===//
-// Intrinsic Procedure Mangling
-//===----------------------------------------------------------------------===//
-
-/// Helper to encode type into string for intrinsic procedure names.
-/// Note: mlir has Type::dump(ostream) methods but it may add "!" that is not
-/// suitable for function names.
-static std::string typeToString(mlir::Type t) {
-  if (auto refT{t.dyn_cast<fir::ReferenceType>()})
-    return "ref_" + typeToString(refT.getEleTy());
-  if (auto i{t.dyn_cast<mlir::IntegerType>()}) {
-    return "i" + std::to_string(i.getWidth());
-  }
-  if (auto cplx{t.dyn_cast<fir::ComplexType>()}) {
-    return "z" + std::to_string(cplx.getFKind());
-  }
-  if (auto real{t.dyn_cast<fir::RealType>()}) {
-    return "r" + std::to_string(real.getFKind());
-  }
-  if (auto f{t.dyn_cast<mlir::FloatType>()}) {
-    return "f" + std::to_string(f.getWidth());
-  }
-  if (auto logical{t.dyn_cast<fir::LogicalType>()}) {
-    return "l" + std::to_string(logical.getFKind());
-  }
-  if (auto character{t.dyn_cast<fir::CharacterType>()}) {
-    return "c" + std::to_string(character.getFKind());
-  }
-  if (auto boxCharacter{t.dyn_cast<fir::BoxCharType>()}) {
-    return "bc" + std::to_string(boxCharacter.getEleTy().getFKind());
-  }
-  llvm_unreachable("no mangling for type");
-}
-
-std::string fir::mangleIntrinsicProcedure(llvm::StringRef intrinsic,
-                                          mlir::FunctionType funTy) {
-  std::string name = "fir.";
-  name.append(intrinsic.str()).append(".");
-  assert(funTy.getNumResults() == 1 && "only function mangling supported");
-  name.append(typeToString(funTy.getResult(0)));
-  unsigned e = funTy.getNumInputs();
-  for (decltype(e) i = 0; i < e; ++i)
-    name.append(".").append(typeToString(funTy.getInput(i)));
-  return name;
-}
-
 std::string Fortran::lower::mangle::globalNamelistDescriptorName(
     const Fortran::semantics::Symbol &sym) {
   std::string name = mangleName(sym);
