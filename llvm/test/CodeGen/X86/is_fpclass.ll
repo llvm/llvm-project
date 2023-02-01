@@ -837,24 +837,24 @@ entry:
 define i1 @issubnormal_or_zero_f_daz(float %x) #0 {
 ; CHECK-32-LABEL: issubnormal_or_zero_f_daz:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
-; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    sete %cl
-; CHECK-32-NEXT:    decl %eax
-; CHECK-32-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
-; CHECK-32-NEXT:    setb %al
-; CHECK-32-NEXT:    orb %cl, %al
+; CHECK-32-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-32-NEXT:    fldz
+; CHECK-32-NEXT:    fucompp
+; CHECK-32-NEXT:    fnstsw %ax
+; CHECK-32-NEXT:    # kill: def $ah killed $ah killed $ax
+; CHECK-32-NEXT:    sahf
+; CHECK-32-NEXT:    setnp %cl
+; CHECK-32-NEXT:    sete %al
+; CHECK-32-NEXT:    andb %cl, %al
 ; CHECK-32-NEXT:    retl
 ;
 ; CHECK-64-LABEL: issubnormal_or_zero_f_daz:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    movd %xmm0, %eax
-; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; CHECK-64-NEXT:    sete %cl
-; CHECK-64-NEXT:    decl %eax
-; CHECK-64-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
-; CHECK-64-NEXT:    setb %al
-; CHECK-64-NEXT:    orb %cl, %al
+; CHECK-64-NEXT:    xorps %xmm1, %xmm1
+; CHECK-64-NEXT:    cmpeqss %xmm0, %xmm1
+; CHECK-64-NEXT:    movd %xmm1, %eax
+; CHECK-64-NEXT:    andl $1, %eax
+; CHECK-64-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-64-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 240)  ; 0xf0 = "subnormal|zero"
