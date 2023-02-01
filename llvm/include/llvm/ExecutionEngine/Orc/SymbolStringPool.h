@@ -68,6 +68,8 @@ private:
 /// from nullptr to enable comparison with these values.
 class SymbolStringPtrBase {
   friend class SymbolStringPool;
+  friend struct DenseMapInfo<SymbolStringPtr>;
+  friend struct DenseMapInfo<NonOwningSymbolStringPtr>;
 
 public:
   SymbolStringPtrBase() = default;
@@ -279,12 +281,12 @@ struct DenseMapInfo<orc::SymbolStringPtr> {
     return orc::SymbolStringPtr::getTombstoneVal();
   }
 
-  static unsigned getHashValue(const orc::SymbolStringPtr &V) {
+  static unsigned getHashValue(const orc::SymbolStringPtrBase &V) {
     return DenseMapInfo<orc::SymbolStringPtr::PoolEntryPtr>::getHashValue(V.S);
   }
 
-  static bool isEqual(const orc::SymbolStringPtr &LHS,
-                      const orc::SymbolStringPtr &RHS) {
+  static bool isEqual(const orc::SymbolStringPtrBase &LHS,
+                      const orc::SymbolStringPtrBase &RHS) {
     return LHS.S == RHS.S;
   }
 };
@@ -299,13 +301,13 @@ template <> struct DenseMapInfo<orc::NonOwningSymbolStringPtr> {
     return orc::NonOwningSymbolStringPtr::getTombstoneVal();
   }
 
-  static unsigned getHashValue(const orc::NonOwningSymbolStringPtr &V) {
+  static unsigned getHashValue(const orc::SymbolStringPtrBase &V) {
     return DenseMapInfo<
         orc::NonOwningSymbolStringPtr::PoolEntryPtr>::getHashValue(V.S);
   }
 
-  static bool isEqual(const orc::NonOwningSymbolStringPtr &LHS,
-                      const orc::NonOwningSymbolStringPtr &RHS) {
+  static bool isEqual(const orc::SymbolStringPtrBase &LHS,
+                      const orc::SymbolStringPtrBase &RHS) {
     return LHS.S == RHS.S;
   }
 };
