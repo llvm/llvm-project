@@ -2976,6 +2976,18 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_fmla_lane_vg1x4 : SME2_Matrix_ArrayVector_VG4_Multi_Index_Intrinsic;
   def int_aarch64_sme_fmls_lane_vg1x4 : SME2_Matrix_ArrayVector_VG4_Multi_Index_Intrinsic;
 
+  //
+  // Outer product and accumulate/subtract intrinsics
+  //
+
+  def int_aarch64_sme_smopa_za32 : SME_OuterProduct_Intrinsic;
+  def int_aarch64_sme_umopa_za32 : SME_OuterProduct_Intrinsic;
+  def int_aarch64_sme_smops_za32 : SME_OuterProduct_Intrinsic;
+  def int_aarch64_sme_umops_za32 : SME_OuterProduct_Intrinsic;
+
+  def int_aarch64_sme_bmopa_za32 : SME_OuterProduct_Intrinsic;
+  def int_aarch64_sme_bmops_za32 : SME_OuterProduct_Intrinsic;
+
   // Multi-vector saturating rounding shift right intrinsics
 
   def int_aarch64_sve_sqrshr_x2 : SME2_VG2_Multi_Imm_Intrinsic;
