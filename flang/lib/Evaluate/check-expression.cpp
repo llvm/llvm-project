@@ -494,20 +494,23 @@ static bool IsPermissibleInquiry(const semantics::Symbol &firstSymbol,
     return true;
   }
   // Inquiries on local objects may not access a deferred bound or length.
-  const auto *object{lastSymbol.detailsIf<semantics::ObjectEntityDetails>()};
-  switch (field) {
-  case DescriptorInquiry::Field::LowerBound:
-  case DescriptorInquiry::Field::Extent:
-  case DescriptorInquiry::Field::Stride:
-    return object && !object->shape().CanBeDeferredShape();
-  case DescriptorInquiry::Field::Rank:
+  // (This code used to be a switch, but it proved impossible to write it
+  // thus without running afoul of bogus warnings from different C++
+  // compilers.)
+  if (field == DescriptorInquiry::Field::Rank) {
     return true; // always known
-  case DescriptorInquiry::Field::Len:
+  }
+  const auto *object{lastSymbol.detailsIf<semantics::ObjectEntityDetails>()};
+  if (field == DescriptorInquiry::Field::LowerBound ||
+      field == DescriptorInquiry::Field::Extent ||
+      field == DescriptorInquiry::Field::Stride) {
+    return object && !object->shape().CanBeDeferredShape();
+  }
+  if (field == DescriptorInquiry::Field::Len) {
     return object && object->type() &&
         object->type()->category() == semantics::DeclTypeSpec::Character &&
         !object->type()->characterTypeSpec().length().isDeferred();
   }
-  // TODO: Handle non-deferred LEN type parameters of PDTs
   return false;
 }
 
