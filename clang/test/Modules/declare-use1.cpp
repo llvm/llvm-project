@@ -6,7 +6,7 @@
 
 #include "g.h"
 #include "e.h"
-#include "f.h" // expected-error {{module XG does not depend on a module exporting 'f.h'}}
+#include "f.h" // expected-error {{module XG does not directly depend on a module exporting 'f.h', which is part of indirectly-used module XF}}
 #include "i.h"
 #include "sub.h"
 const int g2 = g1 + e + f + aux_i + sub;
