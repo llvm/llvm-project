@@ -239,7 +239,7 @@ function(llvm_ExternalProject_Add name source_dir)
     set(sysroot_arg -DCMAKE_SYSROOT=${CMAKE_SYSROOT})
   endif()
 
-  if(CMAKE_CROSSCOMPILING)
+  if(CMAKE_CROSSCOMPILING OR _cmake_system_name STREQUAL AIX)
     set(compiler_args -DCMAKE_ASM_COMPILER=${CMAKE_ASM_COMPILER}
                       -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
                       -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
@@ -251,6 +251,8 @@ function(llvm_ExternalProject_Add name source_dir)
                       -DCMAKE_OBJDUMP=${CMAKE_OBJDUMP}
                       -DCMAKE_STRIP=${CMAKE_STRIP}
                       -DCMAKE_READELF=${CMAKE_READELF})
+  endif()
+  if(CMAKE_CROSSCOMPILING)
     set(llvm_config_path ${LLVM_CONFIG_PATH})
 
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
