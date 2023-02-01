@@ -95,6 +95,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CodeGenInstAlias.h"
 #include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
 #include "SubtargetFeatureInfo.h"
