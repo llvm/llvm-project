@@ -14946,6 +14946,11 @@ AArch64TargetLowering::getScratchRegisters(CallingConv::ID) const {
   return ScratchRegs;
 }
 
+const MCPhysReg *AArch64TargetLowering::getRoundingControlRegisters() const {
+  static const MCPhysReg RCRegs[] = {AArch64::FPCR, 0};
+  return RCRegs;
+}
+
 bool
 AArch64TargetLowering::isDesirableToCommuteWithShift(const SDNode *N,
                                                      CombineLevel Level) const {

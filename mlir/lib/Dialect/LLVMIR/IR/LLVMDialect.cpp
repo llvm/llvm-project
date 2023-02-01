@@ -891,6 +891,250 @@ ParseResult StoreOp::parse(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// CallOp
+//===----------------------------------------------------------------------===//
+
+void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
+                   StringRef callee, ValueRange args) {
+  build(builder, state, results, builder.getStringAttr(callee), args);
+}
+
+void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
+                   StringAttr callee, ValueRange args) {
+  build(builder, state, results, SymbolRefAttr::get(callee), args, nullptr,
+        nullptr);
+}
+
+void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
+                   FlatSymbolRefAttr callee, ValueRange args) {
+  build(builder, state, results, callee, args, nullptr, nullptr);
+}
+
+void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
+                   ValueRange args) {
+  SmallVector<Type> results;
+  Type resultType = func.getFunctionType().getReturnType();
+  if (!resultType.isa<LLVM::LLVMVoidType>())
+    results.push_back(resultType);
+  build(builder, state, results, SymbolRefAttr::get(func), args, nullptr,
+        nullptr);
+}
+
+CallInterfaceCallable CallOp::getCallableForCallee() {
+  // Direct call.
+  if (FlatSymbolRefAttr calleeAttr = getCalleeAttr())
+    return calleeAttr;
+  // Indirect call, callee Value is the first operand.
+  return getOperand(0);
+}
+
+Operation::operand_range CallOp::getArgOperands() {
+  return getOperands().drop_front(getCallee().has_value() ? 0 : 1);
+}
+
+LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  if (getNumResults() > 1)
+    return emitOpError("must have 0 or 1 result");
+
+  // Type for the callee, we'll get it differently depending if it is a direct
+  // or indirect call.
+  Type fnType;
+
+  bool isIndirect = false;
+
+  // If this is an indirect call, the callee attribute is missing.
+  FlatSymbolRefAttr calleeName = getCalleeAttr();
+  if (!calleeName) {
+    isIndirect = true;
+    if (!getNumOperands())
+      return emitOpError(
+          "must have either a `callee` attribute or at least an operand");
+    auto ptrType = getOperand(0).getType().dyn_cast<LLVMPointerType>();
+    if (!ptrType)
+      return emitOpError("indirect call expects a pointer as callee: ")
+             << getOperand(0).getType();
+
+    if (ptrType.isOpaque())
+      return success();
+
+    fnType = ptrType.getElementType();
+  } else {
+    Operation *callee =
+        symbolTable.lookupNearestSymbolFrom(*this, calleeName.getAttr());
+    if (!callee)
+      return emitOpError()
+             << "'" << calleeName.getValue()
+             << "' does not reference a symbol in the current scope";
+    auto fn = dyn_cast<LLVMFuncOp>(callee);
+    if (!fn)
+      return emitOpError() << "'" << calleeName.getValue()
+                           << "' does not reference a valid LLVM function";
+
+    fnType = fn.getFunctionType();
+  }
+
+  LLVMFunctionType funcType = fnType.dyn_cast<LLVMFunctionType>();
+  if (!funcType)
+    return emitOpError("callee does not have a functional type: ") << fnType;
+
+  // Indirect variadic function calls are not supported since the translation to
+  // LLVM IR reconstructs the LLVM function type from the argument and result
+  // types. An additional type attribute that stores the LLVM function type
+  // would be needed to distinguish normal and variadic function arguments.
+  // TODO: Support indirect calls to variadic function pointers.
+  if (isIndirect && funcType.isVarArg())
+    return emitOpError()
+           << "indirect calls to variadic functions are not supported";
+
+  // Verify that the operand and result types match the callee.
+
+  if (!funcType.isVarArg() &&
+      funcType.getNumParams() != (getNumOperands() - isIndirect))
+    return emitOpError() << "incorrect number of operands ("
+                         << (getNumOperands() - isIndirect)
+                         << ") for callee (expecting: "
+                         << funcType.getNumParams() << ")";
+
+  if (funcType.getNumParams() > (getNumOperands() - isIndirect))
+    return emitOpError() << "incorrect number of operands ("
+                         << (getNumOperands() - isIndirect)
+                         << ") for varargs callee (expecting at least: "
+                         << funcType.getNumParams() << ")";
+
+  for (unsigned i = 0, e = funcType.getNumParams(); i != e; ++i)
+    if (getOperand(i + isIndirect).getType() != funcType.getParamType(i))
+      return emitOpError() << "operand type mismatch for operand " << i << ": "
+                           << getOperand(i + isIndirect).getType()
+                           << " != " << funcType.getParamType(i);
+
+  if (getNumResults() == 0 &&
+      !funcType.getReturnType().isa<LLVM::LLVMVoidType>())
+    return emitOpError() << "expected function call to produce a value";
+
+  if (getNumResults() != 0 &&
+      funcType.getReturnType().isa<LLVM::LLVMVoidType>())
+    return emitOpError()
+           << "calling function with void result must not produce values";
+
+  if (getNumResults() > 1)
+    return emitOpError()
+           << "expected LLVM function call to produce 0 or 1 result";
+
+  if (getNumResults() && getResult().getType() != funcType.getReturnType())
+    return emitOpError() << "result type mismatch: " << getResult().getType()
+                         << " != " << funcType.getReturnType();
+
+  return success();
+}
+
+void CallOp::print(OpAsmPrinter &p) {
+  auto callee = getCallee();
+  bool isDirect = callee.has_value();
+
+  // Print the direct callee if present as a function attribute, or an indirect
+  // callee (first operand) otherwise.
+  p << ' ';
+  if (isDirect)
+    p.printSymbolName(callee.value());
+  else
+    p << getOperand(0);
+
+  auto args = getOperands().drop_front(isDirect ? 0 : 1);
+  p << '(' << args << ')';
+  p.printOptionalAttrDict(processFMFAttr((*this)->getAttrs()), {"callee"});
+
+  p << " : ";
+  if (!isDirect)
+    p << getOperand(0).getType() << ", ";
+
+  // Reconstruct the function MLIR function type from operand and result types.
+  p.printFunctionalType(args.getTypes(), getResultTypes());
+}
+
+/// Parses the type of a call operation and resolves the operands if the parsing
+/// succeeds. Returns failure otherwise.
+static ParseResult parseCallTypeAndResolveOperands(
+    OpAsmParser &parser, OperationState &result, bool isDirect,
+    ArrayRef<OpAsmParser::UnresolvedOperand> operands) {
+  SMLoc trailingTypesLoc = parser.getCurrentLocation();
+  SmallVector<Type> types;
+  if (parser.parseColonTypeList(types))
+    return failure();
+
+  if (isDirect && types.size() != 1)
+    return parser.emitError(trailingTypesLoc,
+                            "expected direct call to have 1 trailing type");
+  if (!isDirect && types.size() != 2)
+    return parser.emitError(trailingTypesLoc,
+                            "expected indirect call to have 2 trailing types");
+
+  auto funcType = types.pop_back_val().dyn_cast<FunctionType>();
+  if (!funcType)
+    return parser.emitError(trailingTypesLoc,
+                            "expected trailing function type");
+  if (funcType.getNumResults() > 1)
+    return parser.emitError(trailingTypesLoc,
+                            "expected function with 0 or 1 result");
+  if (funcType.getNumResults() == 1 &&
+      funcType.getResult(0).isa<LLVM::LLVMVoidType>())
+    return parser.emitError(trailingTypesLoc,
+                            "expected a non-void result type");
+
+  // The head element of the types list matches the callee type for
+  // indirect calls, while the types list is emtpy for direct calls.
+  // Append the function input types to resolve the call operation
+  // operands.
+  llvm::append_range(types, funcType.getInputs());
+  if (parser.resolveOperands(operands, types, parser.getNameLoc(),
+                             result.operands))
+    return failure();
+  if (funcType.getNumResults() != 0)
+    result.addTypes(funcType.getResults());
+
+  return success();
+}
+
+/// Parses an optional function pointer operand before the call argument list
+/// for indirect calls, or stops parsing at the function identifier otherwise.
+static ParseResult parseOptionalCallFuncPtr(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operands) {
+  OpAsmParser::UnresolvedOperand funcPtrOperand;
+  OptionalParseResult parseResult = parser.parseOptionalOperand(funcPtrOperand);
+  if (parseResult.has_value()) {
+    if (failed(*parseResult))
+      return *parseResult;
+    operands.push_back(funcPtrOperand);
+  }
+  return success();
+}
+
+// <operation> ::= `llvm.call` (function-id | ssa-use)`(` ssa-use-list `)`
+//                             attribute-dict? `:` (type `,`)? function-type
+ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
+  SymbolRefAttr funcAttr;
+  SmallVector<OpAsmParser::UnresolvedOperand> operands;
+
+  // Parse a function pointer for indirect calls.
+  if (parseOptionalCallFuncPtr(parser, operands))
+    return failure();
+  bool isDirect = operands.empty();
+
+  // Parse a function identifier for direct calls.
+  if (isDirect)
+    if (parser.parseAttribute(funcAttr, "callee", result.attributes))
+      return failure();
+
+  // Parse the function arguments.
+  if (parser.parseOperandList(operands, OpAsmParser::Delimiter::Paren) ||
+      parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  // Parse the trailing type list and resolve the operands.
+  return parseCallTypeAndResolveOperands(parser, result, isDirect, operands);
+}
+
 ///===---------------------------------------------------------------------===//
 /// LLVM::InvokeOp
 ///===---------------------------------------------------------------------===//
@@ -949,93 +1193,48 @@ void InvokeOp::print(OpAsmPrinter &p) {
 
   p.printOptionalAttrDict((*this)->getAttrs(),
                           {InvokeOp::getOperandSegmentSizeAttr(), "callee"});
+
   p << " : ";
+  if (!isDirect)
+    p << getOperand(0).getType() << ", ";
   p.printFunctionalType(llvm::drop_begin(getOperandTypes(), isDirect ? 0 : 1),
                         getResultTypes());
 }
 
-/// <operation> ::= `llvm.invoke` (function-id | ssa-use) `(` ssa-use-list `)`
-///                  `to` bb-id (`[` ssa-use-and-type-list `]`)?
-///                  `unwind` bb-id (`[` ssa-use-and-type-list `]`)?
-///                  attribute-dict? `:` function-type
+// <operation> ::= `llvm.invoke` (function-id | ssa-use)
+//                  `(` ssa-use-list `)`
+//                  `to` bb-id (`[` ssa-use-and-type-list `]`)?
+//                  `unwind` bb-id (`[` ssa-use-and-type-list `]`)?
+//                  attribute-dict? `:` (type `,`)? function-type
 ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::UnresolvedOperand, 8> operands;
-  FunctionType funcType;
   SymbolRefAttr funcAttr;
-  SMLoc trailingTypeLoc;
   Block *normalDest, *unwindDest;
   SmallVector<Value, 4> normalOperands, unwindOperands;
   Builder &builder = parser.getBuilder();
 
-  // Parse an operand list that will, in practice, contain 0 or 1 operand.  In
-  // case of an indirect call, there will be 1 operand before `(`.  In case of a
-  // direct call, there will be no operands and the parser will stop at the
-  // function identifier without complaining.
-  if (parser.parseOperandList(operands))
+  // Parse a function pointer for indirect calls.
+  if (parseOptionalCallFuncPtr(parser, operands))
     return failure();
   bool isDirect = operands.empty();
 
-  // Optionally parse a function identifier.
+  // Parse a function identifier for direct calls.
   if (isDirect && parser.parseAttribute(funcAttr, "callee", result.attributes))
     return failure();
 
+  // Parse the function arguments.
   if (parser.parseOperandList(operands, OpAsmParser::Delimiter::Paren) ||
       parser.parseKeyword("to") ||
       parser.parseSuccessorAndUseList(normalDest, normalOperands) ||
       parser.parseKeyword("unwind") ||
       parser.parseSuccessorAndUseList(unwindDest, unwindOperands) ||
-      parser.parseOptionalAttrDict(result.attributes) || parser.parseColon() ||
-      parser.getCurrentLocation(&trailingTypeLoc) || parser.parseType(funcType))
+      parser.parseOptionalAttrDict(result.attributes))
     return failure();
 
-  if (isDirect) {
-    // Make sure types match.
-    if (parser.resolveOperands(operands, funcType.getInputs(),
-                               parser.getNameLoc(), result.operands))
-      return failure();
-    result.addTypes(funcType.getResults());
-  } else {
-    // Construct the LLVM IR Dialect function type that the first operand
-    // should match.
-    if (funcType.getNumResults() > 1)
-      return parser.emitError(trailingTypeLoc,
-                              "expected function with 0 or 1 result");
+  // Parse the trailing type list and resolve the function operands.
+  if (parseCallTypeAndResolveOperands(parser, result, isDirect, operands))
+    return failure();
 
-    Type llvmResultType;
-    if (funcType.getNumResults() == 0) {
-      llvmResultType = LLVM::LLVMVoidType::get(builder.getContext());
-    } else {
-      llvmResultType = funcType.getResult(0);
-      if (!isCompatibleType(llvmResultType))
-        return parser.emitError(trailingTypeLoc,
-                                "expected result to have LLVM type");
-    }
-
-    SmallVector<Type, 8> argTypes;
-    argTypes.reserve(funcType.getNumInputs());
-    for (Type ty : funcType.getInputs()) {
-      if (isCompatibleType(ty))
-        argTypes.push_back(ty);
-      else
-        return parser.emitError(trailingTypeLoc,
-                                "expected LLVM types as inputs");
-    }
-
-    auto llvmFuncType = LLVM::LLVMFunctionType::get(llvmResultType, argTypes);
-    auto wrappedFuncType = LLVM::LLVMPointerType::get(llvmFuncType);
-
-    auto funcArguments = llvm::ArrayRef(operands).drop_front();
-
-    // Make sure that the first operand (indirect callee) matches the wrapped
-    // LLVM IR function type, and that the types of the other call operands
-    // match the types of the function arguments.
-    if (parser.resolveOperand(operands[0], wrappedFuncType, result.operands) ||
-        parser.resolveOperands(funcArguments, funcType.getInputs(),
-                               parser.getNameLoc(), result.operands))
-      return failure();
-
-    result.addTypes(llvmResultType);
-  }
   result.addSuccessors({normalDest, unwindDest});
   result.addOperands(normalOperands);
   result.addOperands(unwindOperands);
@@ -1108,8 +1307,8 @@ void LandingpadOp::print(OpAsmPrinter &p) {
   p << ": " << getType();
 }
 
-/// <operation> ::= `llvm.landingpad` `cleanup`?
-///                 ((`catch` | `filter`) operand-type ssa-use)* attribute-dict?
+// <operation> ::= `llvm.landingpad` `cleanup`?
+//                 ((`catch` | `filter`) operand-type ssa-use)* attribute-dict?
 ParseResult LandingpadOp::parse(OpAsmParser &parser, OperationState &result) {
   // Check for cleanup
   if (succeeded(parser.parseOptionalKeyword("cleanup")))
@@ -1133,237 +1332,6 @@ ParseResult LandingpadOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   result.addTypes(type);
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// CallOp
-//===----------------------------------------------------------------------===//
-
-void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
-                   StringRef callee, ValueRange args) {
-  build(builder, state, results, builder.getStringAttr(callee), args);
-}
-
-void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
-                   StringAttr callee, ValueRange args) {
-  build(builder, state, results, SymbolRefAttr::get(callee), args, nullptr,
-        nullptr);
-}
-
-void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
-                   FlatSymbolRefAttr callee, ValueRange args) {
-  build(builder, state, results, callee, args, nullptr, nullptr);
-}
-
-void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
-                   ValueRange args) {
-  SmallVector<Type> results;
-  Type resultType = func.getFunctionType().getReturnType();
-  if (!resultType.isa<LLVM::LLVMVoidType>())
-    results.push_back(resultType);
-  build(builder, state, results, SymbolRefAttr::get(func), args, nullptr,
-        nullptr);
-}
-
-CallInterfaceCallable CallOp::getCallableForCallee() {
-  // Direct call.
-  if (FlatSymbolRefAttr calleeAttr = getCalleeAttr())
-    return calleeAttr;
-  // Indirect call, callee Value is the first operand.
-  return getOperand(0);
-}
-
-Operation::operand_range CallOp::getArgOperands() {
-  return getOperands().drop_front(getCallee().has_value() ? 0 : 1);
-}
-
-LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
-  if (getNumResults() > 1)
-    return emitOpError("must have 0 or 1 result");
-
-  // Type for the callee, we'll get it differently depending if it is a direct
-  // or indirect call.
-  Type fnType;
-
-  bool isIndirect = false;
-
-  // If this is an indirect call, the callee attribute is missing.
-  FlatSymbolRefAttr calleeName = getCalleeAttr();
-  if (!calleeName) {
-    isIndirect = true;
-    if (!getNumOperands())
-      return emitOpError(
-          "must have either a `callee` attribute or at least an operand");
-    auto ptrType = getOperand(0).getType().dyn_cast<LLVMPointerType>();
-    if (!ptrType)
-      return emitOpError("indirect call expects a pointer as callee: ")
-             << ptrType;
-
-    if (ptrType.isOpaque())
-      return success();
-
-    fnType = ptrType.getElementType();
-  } else {
-    Operation *callee =
-        symbolTable.lookupNearestSymbolFrom(*this, calleeName.getAttr());
-    if (!callee)
-      return emitOpError()
-             << "'" << calleeName.getValue()
-             << "' does not reference a symbol in the current scope";
-    auto fn = dyn_cast<LLVMFuncOp>(callee);
-    if (!fn)
-      return emitOpError() << "'" << calleeName.getValue()
-                           << "' does not reference a valid LLVM function";
-
-    fnType = fn.getFunctionType();
-  }
-
-  LLVMFunctionType funcType = fnType.dyn_cast<LLVMFunctionType>();
-  if (!funcType)
-    return emitOpError("callee does not have a functional type: ") << fnType;
-
-  // Verify that the operand and result types match the callee.
-
-  if (!funcType.isVarArg() &&
-      funcType.getNumParams() != (getNumOperands() - isIndirect))
-    return emitOpError() << "incorrect number of operands ("
-                         << (getNumOperands() - isIndirect)
-                         << ") for callee (expecting: "
-                         << funcType.getNumParams() << ")";
-
-  if (funcType.getNumParams() > (getNumOperands() - isIndirect))
-    return emitOpError() << "incorrect number of operands ("
-                         << (getNumOperands() - isIndirect)
-                         << ") for varargs callee (expecting at least: "
-                         << funcType.getNumParams() << ")";
-
-  for (unsigned i = 0, e = funcType.getNumParams(); i != e; ++i)
-    if (getOperand(i + isIndirect).getType() != funcType.getParamType(i))
-      return emitOpError() << "operand type mismatch for operand " << i << ": "
-                           << getOperand(i + isIndirect).getType()
-                           << " != " << funcType.getParamType(i);
-
-  if (getNumResults() == 0 &&
-      !funcType.getReturnType().isa<LLVM::LLVMVoidType>())
-    return emitOpError() << "expected function call to produce a value";
-
-  if (getNumResults() != 0 &&
-      funcType.getReturnType().isa<LLVM::LLVMVoidType>())
-    return emitOpError()
-           << "calling function with void result must not produce values";
-
-  if (getNumResults() > 1)
-    return emitOpError()
-           << "expected LLVM function call to produce 0 or 1 result";
-
-  if (getNumResults() && getResult().getType() != funcType.getReturnType())
-    return emitOpError() << "result type mismatch: " << getResult().getType()
-                         << " != " << funcType.getReturnType();
-
-  return success();
-}
-
-void CallOp::print(OpAsmPrinter &p) {
-  auto callee = getCallee();
-  bool isDirect = callee.has_value();
-
-  // Print the direct callee if present as a function attribute, or an indirect
-  // callee (first operand) otherwise.
-  p << ' ';
-  if (isDirect)
-    p.printSymbolName(callee.value());
-  else
-    p << getOperand(0);
-
-  auto args = getOperands().drop_front(isDirect ? 0 : 1);
-  p << '(' << args << ')';
-  p.printOptionalAttrDict(processFMFAttr((*this)->getAttrs()), {"callee"});
-
-  // Reconstruct the function MLIR function type from operand and result types.
-  p << " : ";
-  p.printFunctionalType(args.getTypes(), getResultTypes());
-}
-
-// <operation> ::= `llvm.call` (function-id | ssa-use) `(` ssa-use-list `)`
-//                 attribute-dict? `:` function-type
-ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::UnresolvedOperand, 8> operands;
-  Type type;
-  SymbolRefAttr funcAttr;
-  SMLoc trailingTypeLoc;
-
-  // Parse an operand list that will, in practice, contain 0 or 1 operand.  In
-  // case of an indirect call, there will be 1 operand before `(`.  In case of a
-  // direct call, there will be no operands and the parser will stop at the
-  // function identifier without complaining.
-  if (parser.parseOperandList(operands))
-    return failure();
-  bool isDirect = operands.empty();
-
-  // Optionally parse a function identifier.
-  if (isDirect)
-    if (parser.parseAttribute(funcAttr, "callee", result.attributes))
-      return failure();
-
-  if (parser.parseOperandList(operands, OpAsmParser::Delimiter::Paren) ||
-      parser.parseOptionalAttrDict(result.attributes) || parser.parseColon() ||
-      parser.getCurrentLocation(&trailingTypeLoc) || parser.parseType(type))
-    return failure();
-
-  auto funcType = type.dyn_cast<FunctionType>();
-  if (!funcType)
-    return parser.emitError(trailingTypeLoc, "expected function type");
-  if (funcType.getNumResults() > 1)
-    return parser.emitError(trailingTypeLoc,
-                            "expected function with 0 or 1 result");
-  if (isDirect) {
-    // Make sure types match.
-    if (parser.resolveOperands(operands, funcType.getInputs(),
-                               parser.getNameLoc(), result.operands))
-      return failure();
-    if (funcType.getNumResults() != 0 &&
-        !funcType.getResult(0).isa<LLVM::LLVMVoidType>())
-      result.addTypes(funcType.getResults());
-  } else {
-    Builder &builder = parser.getBuilder();
-    Type llvmResultType;
-    if (funcType.getNumResults() == 0) {
-      llvmResultType = LLVM::LLVMVoidType::get(builder.getContext());
-    } else {
-      llvmResultType = funcType.getResult(0);
-      if (!isCompatibleType(llvmResultType))
-        return parser.emitError(trailingTypeLoc,
-                                "expected result to have LLVM type");
-    }
-
-    SmallVector<Type, 8> argTypes;
-    argTypes.reserve(funcType.getNumInputs());
-    for (int i = 0, e = funcType.getNumInputs(); i < e; ++i) {
-      auto argType = funcType.getInput(i);
-      if (!isCompatibleType(argType))
-        return parser.emitError(trailingTypeLoc,
-                                "expected LLVM types as inputs");
-      argTypes.push_back(argType);
-    }
-    auto llvmFuncType = LLVM::LLVMFunctionType::get(llvmResultType, argTypes);
-    auto wrappedFuncType = LLVM::LLVMPointerType::get(llvmFuncType);
-
-    auto funcArguments =
-        ArrayRef<OpAsmParser::UnresolvedOperand>(operands).drop_front();
-
-    // Make sure that the first operand (indirect callee) matches the wrapped
-    // LLVM IR function type, and that the types of the other call operands
-    // match the types of the function arguments.
-    if (parser.resolveOperand(operands[0], wrappedFuncType, result.operands) ||
-        parser.resolveOperands(funcArguments, funcType.getInputs(),
-                               parser.getNameLoc(), result.operands))
-      return failure();
-
-    if (!llvmResultType.isa<LLVM::LLVMVoidType>())
-      result.addTypes(llvmResultType);
-  }
-
   return success();
 }
 
@@ -2264,32 +2232,6 @@ OpFoldResult LLVM::ConstantOp::fold(FoldAdaptor) { return getValue(); }
 
 // Helper function to parse a keyword into the specified attribute named by
 // `attrName`. The keyword must match one of the string values defined by the
-// AtomicBinOp enum. The resulting I64 attribute is added to the `result`
-// state.
-static ParseResult parseAtomicBinOp(OpAsmParser &parser, OperationState &result,
-                                    StringRef attrName) {
-  SMLoc loc;
-  StringRef keyword;
-  if (parser.getCurrentLocation(&loc) || parser.parseKeyword(&keyword))
-    return failure();
-
-  // Replace the keyword `keyword` with an integer attribute.
-  auto kind = symbolizeAtomicBinOp(keyword);
-  if (!kind) {
-    return parser.emitError(loc)
-           << "'" << keyword << "' is an incorrect value of the '" << attrName
-           << "' attribute";
-  }
-
-  auto value = static_cast<int64_t>(*kind);
-  auto attr = parser.getBuilder().getI64IntegerAttr(value);
-  result.addAttribute(attrName, attr);
-
-  return success();
-}
-
-// Helper function to parse a keyword into the specified attribute named by
-// `attrName`. The keyword must match one of the string values defined by the
 // AtomicOrdering enum. The resulting I64 attribute is added to the `result`
 // state.
 static ParseResult parseAtomicOrdering(OpAsmParser &parser,
@@ -2316,34 +2258,8 @@ static ParseResult parseAtomicOrdering(OpAsmParser &parser,
 }
 
 //===----------------------------------------------------------------------===//
-// Printer, parser and verifier for LLVM::AtomicRMWOp.
+// Verifier for LLVM::AtomicRMWOp.
 //===----------------------------------------------------------------------===//
-
-void AtomicRMWOp::print(OpAsmPrinter &p) {
-  p << ' ' << stringifyAtomicBinOp(getBinOp()) << ' ' << getPtr() << ", "
-    << getVal() << ' ' << stringifyAtomicOrdering(getOrdering()) << ' ';
-  p.printOptionalAttrDict((*this)->getAttrs(), {"bin_op", "ordering"});
-  p << " : " << getRes().getType();
-}
-
-// <operation> ::= `llvm.atomicrmw` keyword ssa-use `,` ssa-use keyword
-//                 attribute-dict? `:` type
-ParseResult AtomicRMWOp::parse(OpAsmParser &parser, OperationState &result) {
-  Type type;
-  OpAsmParser::UnresolvedOperand ptr, val;
-  if (parseAtomicBinOp(parser, result, "bin_op") || parser.parseOperand(ptr) ||
-      parser.parseComma() || parser.parseOperand(val) ||
-      parseAtomicOrdering(parser, result, "ordering") ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(type) ||
-      parser.resolveOperand(ptr, LLVM::LLVMPointerType::get(type),
-                            result.operands) ||
-      parser.resolveOperand(val, type, result.operands))
-    return failure();
-
-  result.addTypes(type);
-  return success();
-}
 
 LogicalResult AtomicRMWOp::verify() {
   auto ptrType = getPtr().getType().cast<LLVM::LLVMPointerType>();
@@ -2351,10 +2267,6 @@ LogicalResult AtomicRMWOp::verify() {
   if (!ptrType.isOpaque() && valType != ptrType.getElementType())
     return emitOpError("expected LLVM IR element type for operand #0 to "
                        "match type for operand #1");
-  auto resType = getRes().getType();
-  if (resType != valType)
-    return emitOpError(
-        "expected LLVM IR result type to match type for operand #1");
   if (getBinOp() == AtomicBinOp::fadd || getBinOp() == AtomicBinOp::fsub) {
     if (!mlir::LLVM::isCompatibleFloatingPointType(valType))
       return emitOpError("expected LLVM IR floating point type");
@@ -2384,55 +2296,21 @@ LogicalResult AtomicRMWOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// Printer, parser and verifier for LLVM::AtomicCmpXchgOp.
+// Verifier for LLVM::AtomicCmpXchgOp.
 //===----------------------------------------------------------------------===//
 
-void AtomicCmpXchgOp::print(OpAsmPrinter &p) {
-  p << ' ' << getPtr() << ", " << getCmp() << ", " << getVal() << ' '
-    << stringifyAtomicOrdering(getSuccessOrdering()) << ' '
-    << stringifyAtomicOrdering(getFailureOrdering());
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          {"success_ordering", "failure_ordering"});
-  p << " : " << getVal().getType();
-}
-
-// <operation> ::= `llvm.cmpxchg` ssa-use `,` ssa-use `,` ssa-use
-//                 keyword keyword attribute-dict? `:` type
-ParseResult AtomicCmpXchgOp::parse(OpAsmParser &parser,
-                                   OperationState &result) {
-  auto &builder = parser.getBuilder();
-  Type type;
-  OpAsmParser::UnresolvedOperand ptr, cmp, val;
-  if (parser.parseOperand(ptr) || parser.parseComma() ||
-      parser.parseOperand(cmp) || parser.parseComma() ||
-      parser.parseOperand(val) ||
-      parseAtomicOrdering(parser, result, "success_ordering") ||
-      parseAtomicOrdering(parser, result, "failure_ordering") ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(type) ||
-      parser.resolveOperand(ptr, LLVM::LLVMPointerType::get(type),
-                            result.operands) ||
-      parser.resolveOperand(cmp, type, result.operands) ||
-      parser.resolveOperand(val, type, result.operands))
-    return failure();
-
-  auto boolType = IntegerType::get(builder.getContext(), 1);
-  auto resultType =
-      LLVMStructType::getLiteral(builder.getContext(), {type, boolType});
-  result.addTypes(resultType);
-
-  return success();
+/// Returns an LLVM struct type that contains a value type and a boolean type.
+static LLVMStructType getValAndBoolStructType(Type valType) {
+  auto boolType = IntegerType::get(valType.getContext(), 1);
+  return LLVMStructType::getLiteral(valType.getContext(), {valType, boolType});
 }
 
 LogicalResult AtomicCmpXchgOp::verify() {
   auto ptrType = getPtr().getType().cast<LLVM::LLVMPointerType>();
   if (!ptrType)
     return emitOpError("expected LLVM IR pointer type for operand #0");
-  auto cmpType = getCmp().getType();
   auto valType = getVal().getType();
-  if (cmpType != valType)
-    return emitOpError("expected both value operands to have the same type");
-  if (!ptrType.isOpaque() && cmpType != ptrType.getElementType())
+  if (!ptrType.isOpaque() && valType != ptrType.getElementType())
     return emitOpError("expected LLVM IR element type for operand #0 to "
                        "match type for all other operands");
   auto intType = valType.dyn_cast<IntegerType>();

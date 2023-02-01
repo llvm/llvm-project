@@ -685,11 +685,15 @@ void AArch64TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
       llvm::AArch64::ArchInfo::findBySubArch(Name);
 
   if (!ArchInfo)
-    return; // Not an architecure, nothing more to do.
+    return; // Not an architecture, nothing more to do.
+
+  // Disabling an architecture feature does not affect dependent features
+  if (!Enabled)
+    return;
 
   for (const auto *OtherArch : llvm::AArch64::ArchInfos)
     if (ArchInfo->implies(*OtherArch))
-      Features[OtherArch->getSubArch()] = Enabled;
+      Features[OtherArch->getSubArch()] = true;
 
   // Set any features implied by the architecture
   std::vector<StringRef> CPUFeats;

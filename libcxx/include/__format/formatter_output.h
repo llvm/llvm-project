@@ -503,7 +503,7 @@ __escape(basic_string<_CharT>& __str, basic_string_view<_CharT> __values, __esca
   __unicode::__code_point_view<_CharT> __view{__values.begin(), __values.end()};
 
   while (!__view.__at_end()) {
-    const _CharT* __first                               = __view.__position();
+    auto __first                                        = __view.__position();
     typename __unicode::__consume_p2286_result __result = __view.__consume_p2286();
     if (__result.__ill_formed_size == 0) {
       if (!__formatter::__is_escaped_sequence_written(__str, __result.__value, __mark))

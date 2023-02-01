@@ -42,6 +42,9 @@ private:
   bool expensiveChecksEnabled = true;
 };
 
+using Param = Attribute;
+using MappedValue = llvm::PointerUnion<Operation *, Param>;
+
 /// Entry point to the Transform dialect infrastructure. Applies the
 /// transformation specified by `transform` to payload IR contained in
 /// `payloadRoot`. The `transform` operation may contain other operations that
@@ -50,6 +53,7 @@ private:
 /// This function internally keeps track of the transformation state.
 LogicalResult
 applyTransforms(Operation *payloadRoot, TransformOpInterface transform,
+                ArrayRef<ArrayRef<MappedValue>> extraMapping = {},
                 const TransformOptions &options = TransformOptions());
 
 /// The state maintained across applications of various ops implementing the
@@ -85,7 +89,7 @@ applyTransforms(Operation *payloadRoot, TransformOpInterface transform,
 /// using `mapBlockArguments`.
 class TransformState {
 public:
-  using Param = Attribute;
+  using Param = transform::Param;
 
 private:
   /// Mapping between a Value in the transform IR and the corresponding set of
@@ -109,14 +113,22 @@ private:
     ParamMapping params;
   };
 
-  friend LogicalResult applyTransforms(Operation *payloadRoot,
-                                       TransformOpInterface transform,
-                                       const TransformOptions &options);
+  friend LogicalResult applyTransforms(Operation *, TransformOpInterface,
+                                       ArrayRef<ArrayRef<MappedValue>>,
+                                       const TransformOptions &);
 
 public:
   /// Returns the op at which the transformation state is rooted. This is
   /// typically helpful for transformations that apply globally.
   Operation *getTopLevel() const;
+
+  /// Returns the number of extra mappings for the top-level operation.
+  size_t getNumTopLevelMappings() const { return topLevelMappedValues.size(); }
+
+  /// Returns the position-th extra mapping for the top-level operation.
+  ArrayRef<MappedValue> getTopLevelMapping(size_t position) const {
+    return topLevelMappedValues[position];
+  }
 
   /// Returns the list of ops that the given transform IR value corresponds to.
   /// This is helpful for transformations that apply to a particular handle.
@@ -150,6 +162,8 @@ public:
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
     return setPayloadOps(argument, operations);
   }
+  LogicalResult mapBlockArgument(BlockArgument argument,
+                                 ArrayRef<MappedValue> values);
 
   // Forward declarations to support limited visibility.
   class RegionScope;
@@ -302,6 +316,7 @@ private:
   /// which may or may not contain the region with transform ops. Additional
   /// options can be provided through the trailing configuration object.
   TransformState(Region *region, Operation *payloadRoot,
+                 ArrayRef<ArrayRef<MappedValue>> extraMappings = {},
                  const TransformOptions &options = TransformOptions());
 
   /// Returns the mappings frame for the reigon in which the value is defined.
@@ -402,6 +417,15 @@ private:
 
   /// The top-level operation that contains all payload IR, typically a module.
   Operation *topLevel;
+
+  /// Storage for extra mapped values (payload operations or parameters) to be
+  /// associated with additional entry block arguments of the top-level
+  /// transform operation. Each entry in `topLevelMappedValues` is a reference
+  /// to a contiguous block in `topLevelMappedValueStorage`.
+  // TODO: turn this into a proper named data structure, there are several more
+  // below.
+  SmallVector<ArrayRef<MappedValue>> topLevelMappedValues;
+  SmallVector<MappedValue> topLevelMappedValueStorage;
 
   /// Additional options controlling the transformation state behavior.
   TransformOptions options;

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AsmWriterInst.h"
+#include "CodeGenInstAlias.h"
 #include "CodeGenInstruction.h"
 #include "CodeGenRegisters.h"
 #include "CodeGenTarget.h"

@@ -1630,3 +1630,30 @@ loop:
 exit:
   ret i32 0
 }
+
+define i32 @ptr_induction_ult(ptr %a, ptr %b) {
+; CHECK-LABEL: 'ptr_induction_ult'
+; CHECK-NEXT:  Classifying expressions for: @ptr_induction_ult
+; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
+; CHECK-NEXT:    --> {%a,+,4}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %ptr.iv.next = getelementptr i32, ptr %ptr.iv, i64 1
+; CHECK-NEXT:    --> {(4 + %a),+,4}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_ult
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
+;
+entry:
+  %cmp.6 = icmp ult ptr %a, %b
+  br i1 %cmp.6, label %loop, label %exit
+
+loop:
+  %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
+  %ptr.iv.next = getelementptr i32, ptr %ptr.iv, i64 1
+  %exitcond = icmp eq ptr %ptr.iv, %b
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret i32 0
+}

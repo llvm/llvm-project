@@ -319,25 +319,25 @@ void ExpressionAnalyzer::CheckConstantSubscripts(ArrayRef &ref) {
       auto expr{Fold(triplet->stride())};
       auto stride{ToInt64(expr)};
       triplet->set_stride(std::move(expr));
+      std::optional<ConstantSubscript> lower, upper;
+      if (auto expr{triplet->lower()}) {
+        *expr = Fold(std::move(*expr));
+        lower = ToInt64(*expr);
+        triplet->set_lower(std::move(*expr));
+      } else {
+        lower = ToInt64(lb[dim]);
+      }
+      if (auto expr{triplet->upper()}) {
+        *expr = Fold(std::move(*expr));
+        upper = ToInt64(*expr);
+        triplet->set_upper(std::move(*expr));
+      } else {
+        upper = ToInt64(ub[dim]);
+      }
       if (stride) {
         if (*stride == 0) {
           Say("Stride of triplet must not be zero"_err_en_US);
           return;
-        }
-        std::optional<ConstantSubscript> lower, upper;
-        if (auto expr{triplet->lower()}) {
-          *expr = Fold(std::move(*expr));
-          lower = ToInt64(*expr);
-          triplet->set_lower(std::move(*expr));
-        } else {
-          lower = ToInt64(lb[dim]);
-        }
-        if (auto expr{triplet->upper()}) {
-          *expr = Fold(std::move(*expr));
-          upper = ToInt64(*expr);
-          triplet->set_upper(std::move(*expr));
-        } else {
-          upper = ToInt64(ub[dim]);
         }
         if (lower && upper) {
           if (*stride > 0) {
@@ -348,8 +348,12 @@ void ExpressionAnalyzer::CheckConstantSubscripts(ArrayRef &ref) {
         } else {
           anyPossiblyEmptyDim = true;
         }
-      } else {
-        anyPossiblyEmptyDim = true;
+      } else { // non-constant stride
+        if (lower && upper && *lower == *upper) {
+          // stride is not relevant
+        } else {
+          anyPossiblyEmptyDim = true;
+        }
       }
     } else { // not triplet
       auto &expr{std::get<IndirectSubscriptIntegerExpr>(ss.u).value()};
@@ -380,12 +384,13 @@ void ExpressionAnalyzer::CheckConstantSubscripts(ArrayRef &ref) {
       } else if (ub[dim]) {
         upper = ToInt64(*ub[dim]);
       }
-      if (stride && *stride != 0 && lower && upper) {
-        // Normalize upper bound for non-unit stride
-        // 1:10:2 -> 1:9:2, 10:1:-2 -> 10:2:-2
-        *upper = *lower + *stride * ((*upper - *lower) / *stride);
-        val[vals++] = lower;
-        val[vals++] = upper;
+      if (lower) {
+        val[vals++] = *lower;
+        if (upper && *upper != lower && (stride && *stride != 0)) {
+          // Normalize upper bound for non-unit stride
+          // 1:10:2 -> 1:9:2, 10:1:-2 -> 10:2:-2
+          val[vals++] = *lower + *stride * ((*upper - *lower) / *stride);
+        }
       }
     } else {
       val[vals++] =

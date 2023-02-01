@@ -169,7 +169,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
         if (__year < 1000 || __year > 9999)
           __formatter::__format_century(__year, __sstr);
         else
-          __facet.put({__sstr}, __sstr, _CharT(' '), std::addressof(__t), __s, __it + 1);
+          __facet.put({__sstr}, __sstr, _CharT(' '), std::addressof(__t), std::to_address(__s), std::to_address(__it + 1));
       } break;
 
       case _CharT('j'):
@@ -180,7 +180,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
           // an intemediate step.
           __sstr << chrono::duration_cast<chrono::days>(chrono::duration_cast<chrono::seconds>(__value)).count();
         else
-          __facet.put({__sstr}, __sstr, _CharT(' '), std::addressof(__t), __s, __it + 1);
+          __facet.put({__sstr}, __sstr, _CharT(' '), std::addressof(__t), std::to_address(__s), std::to_address(__it + 1));
         break;
 
       case _CharT('q'):
@@ -208,7 +208,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
 
       case _CharT('S'):
       case _CharT('T'):
-        __facet.put({__sstr}, __sstr, _CharT(' '), std::addressof(__t), __s, __it + 1);
+        __facet.put({__sstr}, __sstr, _CharT(' '), std::addressof(__t), std::to_address(__s), std::to_address(__it + 1));
         if constexpr (__use_fraction<_Tp>())
           __formatter::__format_sub_seconds(__value, __sstr);
         break;
@@ -252,7 +252,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
         if (__year < 1000)
           __formatter::__format_year(__year, __sstr);
         else
-          __facet.put({__sstr}, __sstr, _CharT(' '), std::addressof(__t), __s, __it + 1);
+          __facet.put({__sstr}, __sstr, _CharT(' '), std::addressof(__t), std::to_address(__s), std::to_address(__it + 1));
       } break;
 
       case _CharT('F'): {
@@ -261,7 +261,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
           __formatter::__format_year(__year, __sstr);
           __sstr << std::format(_LIBCPP_STATICALLY_WIDEN(_CharT, "-{:02}-{:02}"), __t.tm_mon + 1, __t.tm_mday);
         } else
-          __facet.put({__sstr}, __sstr, _CharT(' '), std::addressof(__t), __s, __it + 1);
+          __facet.put({__sstr}, __sstr, _CharT(' '), std::addressof(__t), std::to_address(__s), std::to_address(__it + 1));
       } break;
 
       case _CharT('O'):
@@ -271,7 +271,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
           // fractional part should be formatted.
           if (*(__it + 1) == 'S') {
             ++__it;
-            __facet.put({__sstr}, __sstr, _CharT(' '), std::addressof(__t), __s, __it + 1);
+            __facet.put({__sstr}, __sstr, _CharT(' '), std::addressof(__t), std::to_address(__s), std::to_address(__it + 1));
             __formatter::__format_sub_seconds(__value, __sstr);
             break;
           }
@@ -281,7 +281,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
         ++__it;
         [[fallthrough]];
       default:
-        __facet.put({__sstr}, __sstr, _CharT(' '), std::addressof(__t), __s, __it + 1);
+        __facet.put({__sstr}, __sstr, _CharT(' '), std::addressof(__t), std::to_address(__s), std::to_address(__it + 1));
         break;
       }
     } else {

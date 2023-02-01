@@ -29,14 +29,14 @@ env:
 jobs:
   backport-commits:
     name: Backport Commits
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     if: >-
       (github.repository == 'llvm/llvm-project') &&
       !startswith(github.event.comment.body, '<!--IGNORE-->') &&
       contains(github.event.action == 'opened' && github.event.issue.body || github.event.comment.body, '/cherry-pick')
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: llvm/llvm-project
           # GitHub stores the token used for checkout and uses it for pushes
@@ -63,7 +63,7 @@ jobs:
 
   create-pull-request:
     name: Create Pull Request
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     if: >-
       (github.repository == 'llvm/llvm-project') &&
       !startswith(github.event.comment.body, '<!--IGNORE-->') &&
@@ -71,7 +71,7 @@ jobs:
 
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
 

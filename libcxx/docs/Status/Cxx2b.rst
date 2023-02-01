@@ -52,3 +52,7 @@ Library Working Group Issues Status
    :file: Cxx2bIssues.csv
    :header-rows: 1
    :widths: auto
+
+.. note::
+
+   .. [#note-LWG3798] LWG3798: ``join_with_view``, ``zip_transform_view``, and ``adjacent_transform_view`` haven't been done yet since these types aren't implemented yet.

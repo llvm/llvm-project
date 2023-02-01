@@ -1077,7 +1077,7 @@ std::optional<Attribute> getNeutralElement(Operation *op) {
     if (isa<arith::MinFOp>(op))
       return b.getFloatAttr(
           resultType, llvm::APFloat::getInf(semantic, /*Negative=*/false));
-    return Attribute();
+    return std::nullopt;
   }
   if (isa<arith::AddIOp, arith::OrIOp, arith::XOrIOp>(op))
     return b.getIntegerAttr(resultType, 0);

@@ -25,7 +25,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
-
 jobs:
   check_all:
     if: github.repository_owner == 'llvm'
@@ -77,11 +76,11 @@ jobs:
         id: vars
         run: |
           if [ ${{ steps.version.outputs.LLVM_VERSION_MINOR }} -ne 0 -o ${{ steps.version.outputs.LLVM_VERSION_PATCH }} -eq 0 ]; then
-            echo ::set-output name=BASELINE_VERSION_MAJOR::$(( ${{ steps.version.outputs.LLVM_VERSION_MAJOR }} - 1))
-            echo ::set-output name=ABI_HEADERS::llvm-c
+            echo "BASELINE_VERSION_MAJOR=$(( ${{ steps.version.outputs.LLVM_VERSION_MAJOR }} - 1))" >> $GITHUB_OUTPUT
+            echo "ABI_HEADERS=llvm-c" >> $GITHUB_OUTPUT
           else
-            echo ::set-output name=BASELINE_VERSION_MAJOR::${{ steps.version.outputs.LLVM_VERSION_MAJOR }}
-            echo ::set-output name=ABI_HEADERS::.
+            echo "BASELINE_VERSION_MAJOR=${{ steps.version.outputs.LLVM_VERSION_MAJOR }}" >> $GITHUB_OUTPUT
+            echo "ABI_HEADERS=." >> $GITHUB_OUTPUT
           fi
 
   abi-dump:
@@ -103,57 +102,57 @@ jobs:
             ref: ${{ github.sha }}
             repo: ${{ github.repository }}
     steps:
-    - name: Install Ninja
-      uses: llvm/actions/install-ninja@main
-    - name: Install abi-compliance-checker
-      run: |
-        sudo apt-get install abi-dumper autoconf pkg-config
-    - name: Install universal-ctags
-      run: |
-        git clone https://github.com/universal-ctags/ctags.git
-        cd ctags
-        ./autogen.sh
-        ./configure
-        sudo make install
-    - name: Download source code
-      uses: llvm/actions/get-llvm-project-src@main
-      with:
-        ref: ${{ matrix.ref }}
-        repo: ${{ matrix.repo }}
-    - name: Configure
-      run: |
-        mkdir install
-        cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DLLVM_TARGETS_TO_BUILD="" -DLLVM_BUILD_LLVM_DYLIB=ON -DCMAKE_C_FLAGS_DEBUG="-g1 -Og" -DCMAKE_CXX_FLAGS_DEBUG="-g1 -Og" -DCMAKE_INSTALL_PREFIX=`pwd`/install llvm
-    - name: Build
-      # Need to run install-LLVM twice to ensure the symlink is installed (this is a bug).
-      run: |
-        ninja -C build install-LLVM
-        ninja -C build install-LLVM
-        ninja -C build install-llvm-headers
-    - name: Dump ABI
-      run: |
-        if [ "${{ needs.abi-dump-setup.outputs.ABI_HEADERS }}" = "llvm-c" ]; then
-          nm ./install/lib/libLLVM.so | awk "/T _LLVM/ || /T LLVM/ { print $3 }" | sort -u | sed -e "s/^_//g" | cut -d ' ' -f 3 > llvm.symbols
-          # Even though the -symbols-list option doesn't seem to filter out the symbols, I believe it speeds up processing, so I'm leaving it in.
-          export EXTRA_ARGS="-symbols-list llvm.symbols"
-        else
-          touch llvm.symbols
-        fi
-        abi-dumper $EXTRA_ARGS -lver ${{ matrix.ref }} -skip-cxx -public-headers ./install/include/${{ needs.abi-dump-setup.outputs.ABI_HEADERS }} -o ${{ matrix.ref }}.abi ./install/lib/libLLVM.so
-        # Remove symbol versioning from dumps, so we can compare across major versions.
-        sed -i 's/LLVM_${{ matrix.llvm_version_major }}/LLVM_NOVERSION/' ${{ matrix.ref }}.abi
-    - name: Upload ABI file
-      uses: actions/upload-artifact@v1
-      with:
-        name: ${{ matrix.name }}
-        path: ${{ matrix.ref }}.abi
+      - name: Install Ninja
+        uses: llvm/actions/install-ninja@main
+      - name: Install abi-compliance-checker
+        run: |
+          sudo apt-get install abi-dumper autoconf pkg-config
+      - name: Install universal-ctags
+        run: |
+          git clone https://github.com/universal-ctags/ctags.git
+          cd ctags
+          ./autogen.sh
+          ./configure
+          sudo make install
+      - name: Download source code
+        uses: llvm/actions/get-llvm-project-src@main
+        with:
+          ref: ${{ matrix.ref }}
+          repo: ${{ matrix.repo }}
+      - name: Configure
+        run: |
+          mkdir install
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DLLVM_TARGETS_TO_BUILD="" -DLLVM_BUILD_LLVM_DYLIB=ON -DCMAKE_C_FLAGS_DEBUG="-g1 -Og" -DCMAKE_CXX_FLAGS_DEBUG="-g1 -Og" -DCMAKE_INSTALL_PREFIX=$(pwd)/install llvm
+      - name: Build
+        # Need to run install-LLVM twice to ensure the symlink is installed (this is a bug).
+        run: |
+          ninja -C build install-LLVM
+          ninja -C build install-LLVM
+          ninja -C build install-llvm-headers
+      - name: Dump ABI
+        run: |
+          if [ "${{ needs.abi-dump-setup.outputs.ABI_HEADERS }}" = "llvm-c" ]; then
+            nm ./install/lib/libLLVM.so | awk "/T _LLVM/ || /T LLVM/ { print $3 }" | sort -u | sed -e "s/^_//g" | cut -d ' ' -f 3 > llvm.symbols
+            # Even though the -symbols-list option doesn't seem to filter out the symbols, I believe it speeds up processing, so I'm leaving it in.
+            export EXTRA_ARGS="-symbols-list llvm.symbols"
+          else
+            touch llvm.symbols
+          fi
+          abi-dumper $EXTRA_ARGS -lver ${{ matrix.ref }} -skip-cxx -public-headers ./install/include/${{ needs.abi-dump-setup.outputs.ABI_HEADERS }} -o ${{ matrix.ref }}.abi ./install/lib/libLLVM.so
+          # Remove symbol versioning from dumps, so we can compare across major versions.
+          sed -i 's/LLVM_${{ matrix.llvm_version_major }}/LLVM_NOVERSION/' ${{ matrix.ref }}.abi
+      - name: Upload ABI file
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.name }}
+          path: ${{ matrix.ref }}.abi
 
-    - name: Upload symbol list file
-      if: matrix.name == 'build-baseline'
-      uses: actions/upload-artifact@v1
-      with:
-        name: symbol-list
-        path: llvm.symbols
+      - name: Upload symbol list file
+        if: matrix.name == 'build-baseline'
+        uses: actions/upload-artifact@v3
+        with:
+          name: symbol-list
+          path: llvm.symbols
 
   abi-compare:
     if: github.repository_owner == 'llvm'
@@ -163,15 +162,15 @@ jobs:
       - abi-dump
     steps:
       - name: Download baseline
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v3
         with:
           name: build-baseline
       - name: Download latest
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v3
         with:
           name: build-latest
       - name: Download symbol list
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v3
         with:
           name: symbol-list
 
@@ -189,7 +188,7 @@ jobs:
           abi-compliance-checker $EXTRA_ARGS -l libLLVM.so -old build-baseline/*.abi -new build-latest/*.abi || test "${{ needs.abi-dump-setup.outputs.ABI_HEADERS }}" = "llvm-c"
       - name: Upload ABI Comparison
         if: always()
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v3
         with:
           name: compat-report-${{ github.sha }}
           path: compat_reports/

@@ -12,7 +12,7 @@ add_clang_tool(nvptx-arch NVPTXArch.cpp)
 find_package(CUDAToolkit QUIET)
 
 # If we found the CUDA library directly we just dynamically link against it.
-if (CUDAToolkit_FOUND)
+if (CUDAToolkit_FOUND AND NOT LLVM_BUILD_32_BITS)
   target_link_libraries(nvptx-arch PRIVATE CUDA::cuda_driver)
 else()
   target_compile_definitions(nvptx-arch PRIVATE "DYNAMIC_CUDA")

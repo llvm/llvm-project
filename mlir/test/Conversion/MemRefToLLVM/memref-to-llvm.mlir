@@ -370,7 +370,7 @@ func.func @generic_atomic_rmw(%I : memref<10xi32>, %i : index) {
   // CHECK-NEXT: llvm.br ^bb1([[init]] : i32)
   // CHECK-NEXT: ^bb1([[loaded:%.*]]: i32):
   // CHECK-NEXT: [[pair:%.*]] = llvm.cmpxchg %{{.*}}, [[loaded]], [[loaded]]
-  // CHECK-SAME:                    acq_rel monotonic : i32
+  // CHECK-SAME:                    acq_rel monotonic : !llvm.ptr<i32>, i32
   // CHECK-NEXT: [[new:%.*]] = llvm.extractvalue [[pair]][0]
   // CHECK-NEXT: [[ok:%.*]] = llvm.extractvalue [[pair]][1]
   // CHECK-NEXT: llvm.cond_br [[ok]], ^bb2, ^bb1([[new]] : i32)

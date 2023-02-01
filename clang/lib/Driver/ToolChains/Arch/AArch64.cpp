@@ -407,7 +407,7 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     else if (*I == "+crypto") {
       HasCrypto = true;
       HasNoCrypto = false;
-    } else if (*I == "-crypto") {
+    } else if (*I == "-crypto" || *I == "-neon") {
       HasCrypto = false;
       HasNoCrypto = true;
       HasSM4 = HasSHA2 = HasSHA3 = HasAES = false;

@@ -575,19 +575,15 @@ define void @add_i32_128_flag(i32 %x) {
 ; X64-LINUX-LABEL: add_i32_128_flag:
 ; X64-LINUX:       # %bb.0: # %entry
 ; X64-LINUX-NEXT:    subl $-128, %edi
-; X64-LINUX-NEXT:    je .LBB19_1
-; X64-LINUX-NEXT:  # %bb.2: # %if.then
-; X64-LINUX-NEXT:    jmp bar_i32 # TAILCALL
-; X64-LINUX-NEXT:  .LBB19_1: # %if.end
+; X64-LINUX-NEXT:    jne bar_i32 # TAILCALL
+; X64-LINUX-NEXT:  # %bb.1: # %if.end
 ; X64-LINUX-NEXT:    retq
 ;
 ; X64-WIN32-LABEL: add_i32_128_flag:
 ; X64-WIN32:       # %bb.0: # %entry
 ; X64-WIN32-NEXT:    subl $-128, %ecx
-; X64-WIN32-NEXT:    je .LBB19_1
-; X64-WIN32-NEXT:  # %bb.2: # %if.then
-; X64-WIN32-NEXT:    jmp bar_i32 # TAILCALL
-; X64-WIN32-NEXT:  .LBB19_1: # %if.end
+; X64-WIN32-NEXT:    jne bar_i32 # TAILCALL
+; X64-WIN32-NEXT:  # %bb.1: # %if.end
 ; X64-WIN32-NEXT:    retq
 entry:
   %add = add i32 %x, 128
@@ -627,19 +623,15 @@ define void @add_i64_128_flag(i64 %x) {
 ; X64-LINUX-LABEL: add_i64_128_flag:
 ; X64-LINUX:       # %bb.0: # %entry
 ; X64-LINUX-NEXT:    subq $-128, %rdi
-; X64-LINUX-NEXT:    je .LBB20_1
-; X64-LINUX-NEXT:  # %bb.2: # %if.then
-; X64-LINUX-NEXT:    jmp bar_i64 # TAILCALL
-; X64-LINUX-NEXT:  .LBB20_1: # %if.end
+; X64-LINUX-NEXT:    jne bar_i64 # TAILCALL
+; X64-LINUX-NEXT:  # %bb.1: # %if.end
 ; X64-LINUX-NEXT:    retq
 ;
 ; X64-WIN32-LABEL: add_i64_128_flag:
 ; X64-WIN32:       # %bb.0: # %entry
 ; X64-WIN32-NEXT:    subq $-128, %rcx
-; X64-WIN32-NEXT:    je .LBB20_1
-; X64-WIN32-NEXT:  # %bb.2: # %if.then
-; X64-WIN32-NEXT:    jmp bar_i64 # TAILCALL
-; X64-WIN32-NEXT:  .LBB20_1: # %if.end
+; X64-WIN32-NEXT:    jne bar_i64 # TAILCALL
+; X64-WIN32-NEXT:  # %bb.1: # %if.end
 ; X64-WIN32-NEXT:    retq
 entry:
   %add = add i64 %x, 128
@@ -679,19 +671,15 @@ define void @add_i64_2147483648_flag(i64 %x) {
 ; X64-LINUX-LABEL: add_i64_2147483648_flag:
 ; X64-LINUX:       # %bb.0: # %entry
 ; X64-LINUX-NEXT:    subq $-2147483648, %rdi # imm = 0x80000000
-; X64-LINUX-NEXT:    je .LBB21_1
-; X64-LINUX-NEXT:  # %bb.2: # %if.then
-; X64-LINUX-NEXT:    jmp bar_i64 # TAILCALL
-; X64-LINUX-NEXT:  .LBB21_1: # %if.end
+; X64-LINUX-NEXT:    jne bar_i64 # TAILCALL
+; X64-LINUX-NEXT:  # %bb.1: # %if.end
 ; X64-LINUX-NEXT:    retq
 ;
 ; X64-WIN32-LABEL: add_i64_2147483648_flag:
 ; X64-WIN32:       # %bb.0: # %entry
 ; X64-WIN32-NEXT:    subq $-2147483648, %rcx # imm = 0x80000000
-; X64-WIN32-NEXT:    je .LBB21_1
-; X64-WIN32-NEXT:  # %bb.2: # %if.then
-; X64-WIN32-NEXT:    jmp bar_i64 # TAILCALL
-; X64-WIN32-NEXT:  .LBB21_1: # %if.end
+; X64-WIN32-NEXT:    jne bar_i64 # TAILCALL
+; X64-WIN32-NEXT:  # %bb.1: # %if.end
 ; X64-WIN32-NEXT:    retq
 entry:
   %add = add i64 %x, 2147483648

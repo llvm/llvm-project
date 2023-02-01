@@ -41,6 +41,8 @@ int llvm_test_dibuilder(void);
 // metadata.c
 int llvm_add_named_metadata_operand(void);
 int llvm_set_metadata(void);
+int llvm_replace_md_operand(void);
+int llvm_is_a_value_as_metadata(void);
 
 // object.c
 int llvm_object_list_sections(void);

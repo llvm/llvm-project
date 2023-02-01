@@ -36,7 +36,7 @@ struct DstBufferizableOpInterfaceExternalModel
     return dstOp.isDpsInit(&opOperand);
   }
 
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     // Output operands alias with their respective tied OpResults.
     auto dstOp = cast<DestinationStyleOpInterface>(op);

@@ -455,7 +455,7 @@
 // RUN: %clang -target aarch64 -mcpu=cortex-a53+noSIMD -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-MCPU-3 %s
 // CHECK-MCPU-1: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-feature" "+v8a" "-target-feature" "+fp-armv8" "-target-feature" "+neon" "-target-feature" "-crypto" "-target-feature" "+zcm" "-target-feature" "+zcz" "-target-feature" "-sha2" "-target-feature" "-aes"
 // CHECK-MCPU-2: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-feature" "+neon" "-target-feature" "+crc"
-// CHECK-MCPU-3: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-feature" "+v8a" "-target-feature" "+aes" "-target-feature" "+crc" "-target-feature" "+fp-armv8" "-target-feature" "+sha2" "-target-feature" "-neon"
+// CHECK-MCPU-3: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-feature" "+v8a" "-target-feature" "+crc" "-target-feature" "+fp-armv8" "-target-feature" "-neon" "-target-feature" "-sha2" "-target-feature" "-aes"
 
 // RUN: %clang -target aarch64 -mcpu=cyclone+nocrc+nocrypto -march=armv8-a -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-MCPU-MARCH %s
 // RUN: %clang -target aarch64 -march=armv8-a -mcpu=cyclone+nocrc+nocrypto  -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-MCPU-MARCH %s
@@ -569,6 +569,8 @@
 // RUN: %clang -target aarch64-arm-none-eabi -march=armv9.3-a             -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
 // RUN: %clang -target aarch64-arm-none-eabi -march=armv9.3-a+nomops      -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s
 // RUN: %clang -target aarch64-arm-none-eabi -march=armv9.3-a+mops        -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
+// Check that -target-feature -v9.3a doesn't enable dependant features
+// RUN: %clang -target aarch64-arm-none-eabi -Xclang -target-feature -Xclang -v9.3a  -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS   %s
 // CHECK-MOPS: __ARM_FEATURE_MOPS 1
 // CHECK-NOMOPS-NOT: __ARM_FEATURE_MOPS 1
 
