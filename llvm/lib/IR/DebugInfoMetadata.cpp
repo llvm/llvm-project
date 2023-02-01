@@ -1283,6 +1283,9 @@ bool DIExpression::isEntryValue() const {
 bool DIExpression::startsWithDeref() const {
   return getNumElements() > 0 && getElement(0) == dwarf::DW_OP_deref;
 }
+bool DIExpression::isDeref() const {
+  return getNumElements() == 1 && startsWithDeref();
+}
 
 DIAssignID *DIAssignID::getImpl(LLVMContext &Context, StorageType Storage,
                                 bool ShouldCreate) {
