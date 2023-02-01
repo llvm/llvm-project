@@ -1312,8 +1312,8 @@ std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
   return mapWindowsError(ERROR_LOCK_VIOLATION);
 }
 
-std::error_code lockFile(int FD) {
-  DWORD Flags = LOCKFILE_EXCLUSIVE_LOCK;
+std::error_code lockFile(int FD, bool Exclusive) {
+  DWORD Flags = Exclusive ? LOCKFILE_EXCLUSIVE_LOCK : 0;
   OVERLAPPED OV = {};
   file_t File = convertFDToNativeFile(FD);
   if (::LockFileEx(File, Flags, 0, MAXDWORD, MAXDWORD, &OV))

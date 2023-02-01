@@ -70,8 +70,6 @@ public:
   /// and/or update callers not to rely on this.
   StringRef getPath() const { return Path; }
 
-  char *data() const { return Map.data(); }
-
   /// Resize to at least \p MinSize.
   ///
   /// Errors if \p MinSize is bigger than \a capacity() or if the operation
@@ -86,10 +84,18 @@ public:
   /// Size allocated on disk.
   size_t size() const { return CachedSize; }
 
+#ifdef _WIN32
+  char *data() const { return VM; }
+  /// Size of the underlying \a mapped_file_region. This cannot be extended.
+  size_t capacity() const { return MaxSize; }
+  explicit operator bool() const { return VM; }
+#else
+  char *data() const { return Map.data(); }
   /// Size of the underlying \a mapped_file_region. This cannot be extended.
   size_t capacity() const { return Map.size(); }
-
   explicit operator bool() const { return bool(Map); }
+#endif
+
 
   ~LazyMappedFileRegion() { destroyImpl(); }
 
@@ -106,27 +112,34 @@ public:
 
 private:
   Error extendSizeImpl(uint64_t MinSize);
-  void destroyImpl() {
-    if (FD) {
-      sys::fs::closeFile(*FD);
-      FD = None;
-    }
-  }
+  void destroyImpl();
   void moveImpl(LazyMappedFileRegion &RHS) {
     Path = std::move(RHS.Path);
     FD = std::move(RHS.FD);
-    RHS.FD = None;
+    RHS.FD = std::nullopt;
+#ifdef _WIN32
+    VM = RHS.VM;
+    MaxSize = RHS.MaxSize;
+    MappedRegions = RHS.MappedRegions;
+#else
     Map = std::move(RHS.Map);
+    assert(!RHS.Map &&
+           "Expected std::optional(std::optional&&) to clear RHS.Map");
+#endif
     CachedSize = RHS.CachedSize.load();
     RHS.CachedSize = 0;
     MaxSizeIncrement = RHS.MaxSizeIncrement;
-
-    assert(!RHS.Map && "Expected Optional(Optional&&) to clear RHS.Map");
   }
 
   std::string Path;
-  Optional<sys::fs::file_t> FD;
+  std::optional<int> FD;
+#ifdef _WIN32
+  char *VM = nullptr;
+  uint64_t MaxSize = 0;
+  std::vector<void*> MappedRegions;
+#else
   sys::fs::mapped_file_region Map;
+#endif
   std::atomic<uint64_t> CachedSize;
   std::mutex Mutex;
   uint64_t MaxSizeIncrement = 0;

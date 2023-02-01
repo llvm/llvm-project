@@ -1200,7 +1200,10 @@ std::error_code getRealPathFromHandle(file_t Handle,
 /// Lock the file.
 ///
 /// This function acts as @ref tryLockFile but it waits infinitely.
-std::error_code lockFile(int FD);
+/// \param FD file descriptor to use for locking.
+/// \param Exclusive if \p true use exclusive/writer lock, otherwise use
+/// shared/reader lock.
+std::error_code lockFile(int FD, bool Exclusive = true);
 
 /// Unlock the file.
 ///
