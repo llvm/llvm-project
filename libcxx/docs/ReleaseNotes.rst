@@ -42,11 +42,22 @@ The C++20 format library has improved but it not yet considered stable. The
 main improvements are additional formatters for the chrono calendar types. Work
 on formatting ranges has started.
 
-The C++20 ranges library has been completed and is no longer experimental. Some
-``views`` have not been implemented yet. Work on C++23 ranges has started.
+The C++20 ranges library has been completed and is no longer experimental (with
+the exception of `ranges::join_view` which is still marked as experimental
+because it is about to undergo an ABI-breaking change in the Standard due to
+`D2770 <https://isocpp.org/files/papers/D2770R0.html>`_). Work on C++23 ranges
+has started.
 
 The C++20 spaceship operator has been added to more types, the work is still
 ongoing.
+
+`D139235 <https://reviews.llvm.org/D139235>`_ made ``copy`` and ``move``
+algorithms and their variations (``copy_backward``, etc.) apply optimizations
+for trivial types more often. This has the potential to expose bugs in code
+using these algorithms that currently relies on undefined behavior (this
+includes indirect usage -- for example, these algorithms are used in the
+implementation of some standard containers). This change also made the
+algorithms check the given iterator types for conformance more strictly.
 
 Implemented Papers
 ------------------
