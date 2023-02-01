@@ -66,8 +66,10 @@ define i64 @func2(i1 zeroext %i, i32 %j) {
 ; CHECK-LABEL: func2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    jne bar # TAILCALL
-; CHECK-NEXT:  # %bb.1: # %if.end
+; CHECK-NEXT:    je .LBB1_1
+; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    jmp bar # TAILCALL
+; CHECK-NEXT:  .LBB1_1: # %if.end
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    orq $-2, %rax
 ; CHECK-NEXT:    retq
