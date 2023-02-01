@@ -115,19 +115,28 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
     currOpOperand = linalgOp.getDpsInitOperand(result.getResultNumber());
   }
 
-  // Fail if `currOpOperand` is not defined by an ExtractSliceOp.
+  // Fail if `currOpOperand` is not defined by an ExtractSliceOp or EmptyOp.
   auto sliceOp = currOpOperand->get().getDefiningOp<tensor::ExtractSliceOp>();
-  if (!sliceOp)
+  auto emptyOp = currOpOperand->get().getDefiningOp<tensor::EmptyOp>();
+  if (!sliceOp && !emptyOp)
     return failure();
 
-  // Compute the dropped dimensions if `sliceOp` is ranke-reducing.
-  llvm::SmallBitVector droppedDims = sliceOp.getDroppedDims();
-  OffsetSizeAndStrideOpInterface shapedOp = sliceOp;
+  llvm::SmallBitVector droppedDims;
+  SmallVector<OpFoldResult> mixedSizes;
+  if (sliceOp) {
+    // Compute the dropped dimensions if `sliceOp` is ranke-reducing.
+    droppedDims = sliceOp.getDroppedDims();
+    mixedSizes = sliceOp.getMixedSizes();
+  }
+  if (emptyOp) {
+    mixedSizes = emptyOp.getMixedSizes();
+    droppedDims.resize(mixedSizes.size());
+  }
 
-  // Upper bound the `sliceOp` sizes to obtain a static bounding box.
+  // Upper bound the sizes to obtain a static bounding box.
   SmallVector<int64_t> paddedShape(shape.begin(), shape.end());
   int64_t shapeIdx = 0;
-  for (const auto &en : enumerate(shapedOp.getMixedSizes())) {
+  for (const auto &en : enumerate(mixedSizes)) {
     // Skip dropped dimensions.
     if (droppedDims.test(en.index()))
       continue;
