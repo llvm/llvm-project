@@ -333,6 +333,10 @@ inline bool isReservedName(llvm::StringRef Name) {
          (isUppercase(Name[1]) || Name[1] == '_');
 }
 
+/// Translates locations inside preamble patch to their main-file equivalent
+/// using presumed locations. Returns \p Loc if it isn't inside preamble patch.
+SourceLocation translatePreamblePatchLocation(SourceLocation Loc,
+                                              const SourceManager &SM);
 } // namespace clangd
 } // namespace clang
 #endif

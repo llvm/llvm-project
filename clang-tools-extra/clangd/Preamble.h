@@ -157,6 +157,8 @@ public:
   /// Whether diagnostics generated using this patch are trustable.
   bool preserveDiagnostics() const;
 
+  static constexpr llvm::StringLiteral HeaderName = "__preamble_patch__.h";
+
 private:
   static PreamblePatch create(llvm::StringRef FileName,
                               const ParseInputs &Modified,
@@ -171,11 +173,6 @@ private:
   std::vector<Inclusion> PreambleIncludes;
   PreambleBounds ModifiedBounds = {0, false};
 };
-
-/// Translates locations inside preamble patch to their main-file equivalent
-/// using presumed locations. Returns \p Loc if it isn't inside preamble patch.
-SourceLocation translatePreamblePatchLocation(SourceLocation Loc,
-                                              const SourceManager &SM);
 
 } // namespace clangd
 } // namespace clang
