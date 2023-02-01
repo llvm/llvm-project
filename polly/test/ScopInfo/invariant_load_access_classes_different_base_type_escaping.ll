@@ -44,7 +44,7 @@
 ; CODEGEN: polly.preload.begin:
 ; CODEGEN:   %S.load = load i32, ptr @S
 ; CODEGEN:   store i32 %S.load, ptr %S.a.preload.s2a
-; CODEGEN:   %.load = load float, ptr getelementptr inbounds (i32, ptr @S, i64 1)
+; CODEGEN:   %.load = load float, ptr getelementptr (i32, ptr @S, i64 1)
 ; CODEGEN:   store float %.load, ptr %S.b.preload.s2a
 ;
 ; CODEGEN:     polly.merge_new_and_old:
