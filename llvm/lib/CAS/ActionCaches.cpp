@@ -52,7 +52,6 @@ private:
   InMemoryCacheT Cache;
 };
 
-#if LLVM_ENABLE_ONDISK_CAS
 class OnDiskActionCache final : public ActionCache {
 public:
   Error putImpl(ArrayRef<uint8_t> ActionKey, const CASID &Result) final;
@@ -77,7 +76,6 @@ private:
   OnDiskHashMappedTrie Cache;
   using DataT = CacheEntry<sizeof(HashType)>;
 };
-#endif /* LLVM_ENABLE_ONDISK_CAS */
 } // end namespace
 
 static std::string hashToString(ArrayRef<uint8_t> Hash) {
@@ -139,7 +137,6 @@ std::unique_ptr<ActionCache> createInMemoryActionCache() {
 } // namespace cas
 } // namespace llvm
 
-#if LLVM_ENABLE_ONDISK_CAS
 constexpr StringLiteral OnDiskActionCache::ActionCacheFile;
 constexpr StringLiteral OnDiskActionCache::FilePrefix;
 
@@ -198,6 +195,7 @@ Error OnDiskActionCache::putImpl(ArrayRef<uint8_t> Key, const CASID &Result) {
                                         Observed->getValue());
 }
 
+#if LLVM_ENABLE_ONDISK_CAS
 namespace llvm {
 namespace cas {
 

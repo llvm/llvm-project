@@ -55,8 +55,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 
-#if LLVM_ENABLE_ONDISK_CAS
-
 #define DEBUG_TYPE "on-disk-cas"
 
 using namespace llvm;
@@ -1312,5 +1310,3 @@ OnDiskGraphDB::OnDiskGraphDB(StringRef RootPath, OnDiskHashMappedTrie Index,
 OnDiskGraphDB::~OnDiskGraphDB() {
   delete static_cast<StandaloneDataMapTy *>(StandaloneData);
 }
-
-#endif // LLVM_ENABLE_ONDISK_CAS
