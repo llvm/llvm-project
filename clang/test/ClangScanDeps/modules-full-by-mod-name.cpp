@@ -75,3 +75,5 @@
 // CHECK-NEXT:       "name": "header2"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],
+// CHECK-NEXT:   "translation-units": []
+// CHECK-NEXT: }
