@@ -3164,4 +3164,21 @@ let TargetPrefix = "aarch64" in {
   //
   def int_aarch64_sve_add_single_x2 : SME2_VG2_Multi_Single_Intrinsic;
   def int_aarch64_sve_add_single_x4 : SME2_VG4_Multi_Single_Intrinsic;
+
+  // 2-way and 4-way multi-vector signed/unsigned integer dot-product
+  foreach ty = ["s", "u"] in {
+    foreach sz = ["za32", "za64"] in {
+      def int_aarch64_sme_ # ty # dot_single_ # sz # _vg1x2 : SME2_Matrix_ArrayVector_VG2_Multi_Single_Intrinsic;
+      def int_aarch64_sme_ # ty # dot_single_ # sz # _vg1x4 : SME2_Matrix_ArrayVector_VG4_Multi_Single_Intrinsic;
+    }
+  }
+
+  foreach ty = ["su", "us"] in {
+    def int_aarch64_sme_ # ty # dot_single_za32_vg1x2 : SME2_Matrix_ArrayVector_VG2_Multi_Single_Intrinsic;
+    def int_aarch64_sme_ # ty # dot_single_za32_vg1x4 : SME2_Matrix_ArrayVector_VG4_Multi_Single_Intrinsic;
+  }
+
+  // Multi-vector half-precision or bfloat floating-point dot-product
+  def int_aarch64_sme_fdot_single_za32_vg1x2 : SME2_Matrix_ArrayVector_VG2_Multi_Single_Intrinsic;
+  def int_aarch64_sme_fdot_single_za32_vg1x4 : SME2_Matrix_ArrayVector_VG4_Multi_Single_Intrinsic;
 }
