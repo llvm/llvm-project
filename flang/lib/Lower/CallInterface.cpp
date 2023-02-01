@@ -1121,12 +1121,7 @@ bool Fortran::lower::CallInterface<T>::PassedEntity::mayBeModifiedByCall()
     return true;
   if (characteristics->GetIntent() == Fortran::common::Intent::In)
     return false;
-  const auto *dummy =
-      std::get_if<Fortran::evaluate::characteristics::DummyDataObject>(
-          &characteristics->u);
-  return !dummy ||
-         !dummy->attrs.test(
-             Fortran::evaluate::characteristics::DummyDataObject::Attr::Value);
+  return !hasValueAttribute();
 }
 template <typename T>
 bool Fortran::lower::CallInterface<T>::PassedEntity::mayBeReadByCall() const {
@@ -1160,6 +1155,18 @@ bool Fortran::lower::CallInterface<T>::PassedEntity::mustBeMadeContiguous()
     return false;
   // Explicit shape arrays are contiguous.
   return dummy->type.Rank() > 0;
+}
+
+template <typename T>
+bool Fortran::lower::CallInterface<T>::PassedEntity::hasValueAttribute() const {
+  if (!characteristics)
+    return false;
+  const auto *dummy =
+      std::get_if<Fortran::evaluate::characteristics::DummyDataObject>(
+          &characteristics->u);
+  return dummy &&
+         dummy->attrs.test(
+             Fortran::evaluate::characteristics::DummyDataObject::Attr::Value);
 }
 
 template <typename T>
