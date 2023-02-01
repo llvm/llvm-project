@@ -506,8 +506,6 @@ static bool IsPermissibleInquiry(const semantics::Symbol &firstSymbol,
     return object && object->type() &&
         object->type()->category() == semantics::DeclTypeSpec::Character &&
         !object->type()->characterTypeSpec().length().isDeferred();
-  default:
-    break;
   }
   // TODO: Handle non-deferred LEN type parameters of PDTs
   return false;
