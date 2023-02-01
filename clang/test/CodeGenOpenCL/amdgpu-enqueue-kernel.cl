@@ -182,7 +182,7 @@ kernel void test(global char *a, char b, global long *c, long d) {
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: nounwind
+// CHECK: Function Attrs: convergent nounwind
 // CHECK-LABEL: define {{[^@]+}}@__test_block_invoke_kernel
 // CHECK-SAME: (<{ i32, i32, ptr, ptr addrspace(1), i8 }> [[TMP0:%.*]]) #[[ATTR4:[0-9]+]] !kernel_arg_addr_space !7 !kernel_arg_access_qual !8 !kernel_arg_type !9 !kernel_arg_base_type !9 !kernel_arg_type_qual !10 {
 // CHECK-NEXT:  entry:
@@ -216,7 +216,7 @@ kernel void test(global char *a, char b, global long *c, long d) {
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: nounwind
+// CHECK: Function Attrs: convergent nounwind
 // CHECK-LABEL: define {{[^@]+}}@__test_block_invoke_2_kernel
 // CHECK-SAME: (<{ i32, i32, ptr, ptr addrspace(1), ptr addrspace(1), i64, i8 }> [[TMP0:%.*]]) #[[ATTR4]] !kernel_arg_addr_space !7 !kernel_arg_access_qual !8 !kernel_arg_type !9 !kernel_arg_base_type !9 !kernel_arg_type_qual !10 {
 // CHECK-NEXT:  entry:
@@ -255,7 +255,7 @@ kernel void test(global char *a, char b, global long *c, long d) {
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: nounwind
+// CHECK: Function Attrs: convergent nounwind
 // CHECK-LABEL: define {{[^@]+}}@__test_block_invoke_3_kernel
 // CHECK-SAME: (<{ i32, i32, ptr, ptr addrspace(1), ptr addrspace(1), i64, i8 }> [[TMP0:%.*]], ptr addrspace(3) [[TMP1:%.*]]) #[[ATTR4]] !kernel_arg_addr_space !11 !kernel_arg_access_qual !12 !kernel_arg_type !13 !kernel_arg_base_type !13 !kernel_arg_type_qual !14 {
 // CHECK-NEXT:  entry:
@@ -282,7 +282,7 @@ kernel void test(global char *a, char b, global long *c, long d) {
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: nounwind
+// CHECK: Function Attrs: convergent nounwind
 // CHECK-LABEL: define {{[^@]+}}@__test_block_invoke_4_kernel
 // CHECK-SAME: (<{ i32, i32, ptr, i64, ptr addrspace(1) }> [[TMP0:%.*]]) #[[ATTR4]] !kernel_arg_addr_space !7 !kernel_arg_access_qual !8 !kernel_arg_type !9 !kernel_arg_base_type !9 !kernel_arg_type_qual !10 {
 // CHECK-NEXT:  entry:
@@ -297,7 +297,7 @@ kernel void test(global char *a, char b, global long *c, long d) {
 // CHECK: attributes #1 = { convergent noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,256" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" "target-features"="+16-bit-insts,+ci-insts,+dpp,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize64" "uniform-work-group-size"="false" }
 // CHECK: attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 // CHECK: attributes #3 = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" "target-features"="+16-bit-insts,+ci-insts,+dpp,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize64" }
-// CHECK: attributes #4 = { nounwind "enqueued-block" }
+// CHECK: attributes #4 = { convergent nounwind "enqueued-block" }
 // CHECK: attributes #5 = { convergent nounwind }
 //.
 // CHECK: !0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
