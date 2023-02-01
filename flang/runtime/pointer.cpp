@@ -142,8 +142,7 @@ int RTNAME(PointerAllocateSource)(Descriptor &pointer, const Descriptor &source,
       pointer, hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
     Terminator terminator{sourceFile, sourceLine};
-    // 9.7.1.2(7)
-    Assign(pointer, source, terminator, /*skipRealloc=*/true);
+    DoFromSourceAssign(pointer, source, terminator);
   }
   return stat;
 }
