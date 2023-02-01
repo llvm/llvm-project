@@ -12,7 +12,7 @@
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vuint8mf8_t test_vnsrl_wv_u8mf8_tu(vuint8mf8_t maskedoff, vuint16mf4_t op1, vuint8mf8_t shift, size_t vl) {
-  return vnsrl_wv_u8mf8_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u8mf8_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u8mf8_tu(
@@ -21,7 +21,7 @@ vuint8mf8_t test_vnsrl_wv_u8mf8_tu(vuint8mf8_t maskedoff, vuint16mf4_t op1, vuin
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vuint8mf8_t test_vnsrl_wx_u8mf8_tu(vuint8mf8_t maskedoff, vuint16mf4_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u8mf8_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u8mf8_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u8mf4_tu(
@@ -30,7 +30,7 @@ vuint8mf8_t test_vnsrl_wx_u8mf8_tu(vuint8mf8_t maskedoff, vuint16mf4_t op1, size
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vuint8mf4_t test_vnsrl_wv_u8mf4_tu(vuint8mf4_t maskedoff, vuint16mf2_t op1, vuint8mf4_t shift, size_t vl) {
-  return vnsrl_wv_u8mf4_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u8mf4_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u8mf4_tu(
@@ -39,7 +39,7 @@ vuint8mf4_t test_vnsrl_wv_u8mf4_tu(vuint8mf4_t maskedoff, vuint16mf2_t op1, vuin
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vuint8mf4_t test_vnsrl_wx_u8mf4_tu(vuint8mf4_t maskedoff, vuint16mf2_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u8mf4_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u8mf4_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u8mf2_tu(
@@ -48,7 +48,7 @@ vuint8mf4_t test_vnsrl_wx_u8mf4_tu(vuint8mf4_t maskedoff, vuint16mf2_t op1, size
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vuint8mf2_t test_vnsrl_wv_u8mf2_tu(vuint8mf2_t maskedoff, vuint16m1_t op1, vuint8mf2_t shift, size_t vl) {
-  return vnsrl_wv_u8mf2_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u8mf2_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u8mf2_tu(
@@ -57,7 +57,7 @@ vuint8mf2_t test_vnsrl_wv_u8mf2_tu(vuint8mf2_t maskedoff, vuint16m1_t op1, vuint
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vuint8mf2_t test_vnsrl_wx_u8mf2_tu(vuint8mf2_t maskedoff, vuint16m1_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u8mf2_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u8mf2_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u8m1_tu(
@@ -66,7 +66,7 @@ vuint8mf2_t test_vnsrl_wx_u8mf2_tu(vuint8mf2_t maskedoff, vuint16m1_t op1, size_
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vuint8m1_t test_vnsrl_wv_u8m1_tu(vuint8m1_t maskedoff, vuint16m2_t op1, vuint8m1_t shift, size_t vl) {
-  return vnsrl_wv_u8m1_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u8m1_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u8m1_tu(
@@ -75,7 +75,7 @@ vuint8m1_t test_vnsrl_wv_u8m1_tu(vuint8m1_t maskedoff, vuint16m2_t op1, vuint8m1
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vuint8m1_t test_vnsrl_wx_u8m1_tu(vuint8m1_t maskedoff, vuint16m2_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u8m1_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u8m1_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u8m2_tu(
@@ -84,7 +84,7 @@ vuint8m1_t test_vnsrl_wx_u8m1_tu(vuint8m1_t maskedoff, vuint16m2_t op1, size_t s
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 vuint8m2_t test_vnsrl_wv_u8m2_tu(vuint8m2_t maskedoff, vuint16m4_t op1, vuint8m2_t shift, size_t vl) {
-  return vnsrl_wv_u8m2_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u8m2_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u8m2_tu(
@@ -93,7 +93,7 @@ vuint8m2_t test_vnsrl_wv_u8m2_tu(vuint8m2_t maskedoff, vuint16m4_t op1, vuint8m2
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 vuint8m2_t test_vnsrl_wx_u8m2_tu(vuint8m2_t maskedoff, vuint16m4_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u8m2_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u8m2_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u8m4_tu(
@@ -102,7 +102,7 @@ vuint8m2_t test_vnsrl_wx_u8m2_tu(vuint8m2_t maskedoff, vuint16m4_t op1, size_t s
 // CHECK-RV64-NEXT:    ret <vscale x 32 x i8> [[TMP0]]
 //
 vuint8m4_t test_vnsrl_wv_u8m4_tu(vuint8m4_t maskedoff, vuint16m8_t op1, vuint8m4_t shift, size_t vl) {
-  return vnsrl_wv_u8m4_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u8m4_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u8m4_tu(
@@ -111,7 +111,7 @@ vuint8m4_t test_vnsrl_wv_u8m4_tu(vuint8m4_t maskedoff, vuint16m8_t op1, vuint8m4
 // CHECK-RV64-NEXT:    ret <vscale x 32 x i8> [[TMP0]]
 //
 vuint8m4_t test_vnsrl_wx_u8m4_tu(vuint8m4_t maskedoff, vuint16m8_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u8m4_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u8m4_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u16mf4_tu(
@@ -120,7 +120,7 @@ vuint8m4_t test_vnsrl_wx_u8m4_tu(vuint8m4_t maskedoff, vuint16m8_t op1, size_t s
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vuint16mf4_t test_vnsrl_wv_u16mf4_tu(vuint16mf4_t maskedoff, vuint32mf2_t op1, vuint16mf4_t shift, size_t vl) {
-  return vnsrl_wv_u16mf4_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u16mf4_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u16mf4_tu(
@@ -129,7 +129,7 @@ vuint16mf4_t test_vnsrl_wv_u16mf4_tu(vuint16mf4_t maskedoff, vuint32mf2_t op1, v
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vuint16mf4_t test_vnsrl_wx_u16mf4_tu(vuint16mf4_t maskedoff, vuint32mf2_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u16mf4_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u16mf4_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u16mf2_tu(
@@ -138,7 +138,7 @@ vuint16mf4_t test_vnsrl_wx_u16mf4_tu(vuint16mf4_t maskedoff, vuint32mf2_t op1, s
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vuint16mf2_t test_vnsrl_wv_u16mf2_tu(vuint16mf2_t maskedoff, vuint32m1_t op1, vuint16mf2_t shift, size_t vl) {
-  return vnsrl_wv_u16mf2_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u16mf2_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u16mf2_tu(
@@ -147,7 +147,7 @@ vuint16mf2_t test_vnsrl_wv_u16mf2_tu(vuint16mf2_t maskedoff, vuint32m1_t op1, vu
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vuint16mf2_t test_vnsrl_wx_u16mf2_tu(vuint16mf2_t maskedoff, vuint32m1_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u16mf2_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u16mf2_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u16m1_tu(
@@ -156,7 +156,7 @@ vuint16mf2_t test_vnsrl_wx_u16mf2_tu(vuint16mf2_t maskedoff, vuint32m1_t op1, si
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vnsrl_wv_u16m1_tu(vuint16m1_t maskedoff, vuint32m2_t op1, vuint16m1_t shift, size_t vl) {
-  return vnsrl_wv_u16m1_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u16m1_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u16m1_tu(
@@ -165,7 +165,7 @@ vuint16m1_t test_vnsrl_wv_u16m1_tu(vuint16m1_t maskedoff, vuint32m2_t op1, vuint
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vnsrl_wx_u16m1_tu(vuint16m1_t maskedoff, vuint32m2_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u16m1_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u16m1_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u16m2_tu(
@@ -174,7 +174,7 @@ vuint16m1_t test_vnsrl_wx_u16m1_tu(vuint16m1_t maskedoff, vuint32m2_t op1, size_
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 vuint16m2_t test_vnsrl_wv_u16m2_tu(vuint16m2_t maskedoff, vuint32m4_t op1, vuint16m2_t shift, size_t vl) {
-  return vnsrl_wv_u16m2_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u16m2_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u16m2_tu(
@@ -183,7 +183,7 @@ vuint16m2_t test_vnsrl_wv_u16m2_tu(vuint16m2_t maskedoff, vuint32m4_t op1, vuint
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 vuint16m2_t test_vnsrl_wx_u16m2_tu(vuint16m2_t maskedoff, vuint32m4_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u16m2_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u16m2_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u16m4_tu(
@@ -192,7 +192,7 @@ vuint16m2_t test_vnsrl_wx_u16m2_tu(vuint16m2_t maskedoff, vuint32m4_t op1, size_
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i16> [[TMP0]]
 //
 vuint16m4_t test_vnsrl_wv_u16m4_tu(vuint16m4_t maskedoff, vuint32m8_t op1, vuint16m4_t shift, size_t vl) {
-  return vnsrl_wv_u16m4_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u16m4_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u16m4_tu(
@@ -201,7 +201,7 @@ vuint16m4_t test_vnsrl_wv_u16m4_tu(vuint16m4_t maskedoff, vuint32m8_t op1, vuint
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i16> [[TMP0]]
 //
 vuint16m4_t test_vnsrl_wx_u16m4_tu(vuint16m4_t maskedoff, vuint32m8_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u16m4_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u16m4_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u32mf2_tu(
@@ -210,7 +210,7 @@ vuint16m4_t test_vnsrl_wx_u16m4_tu(vuint16m4_t maskedoff, vuint32m8_t op1, size_
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vuint32mf2_t test_vnsrl_wv_u32mf2_tu(vuint32mf2_t maskedoff, vuint64m1_t op1, vuint32mf2_t shift, size_t vl) {
-  return vnsrl_wv_u32mf2_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u32mf2_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u32mf2_tu(
@@ -219,7 +219,7 @@ vuint32mf2_t test_vnsrl_wv_u32mf2_tu(vuint32mf2_t maskedoff, vuint64m1_t op1, vu
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vuint32mf2_t test_vnsrl_wx_u32mf2_tu(vuint32mf2_t maskedoff, vuint64m1_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u32mf2_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u32mf2_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u32m1_tu(
@@ -228,7 +228,7 @@ vuint32mf2_t test_vnsrl_wx_u32mf2_tu(vuint32mf2_t maskedoff, vuint64m1_t op1, si
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vnsrl_wv_u32m1_tu(vuint32m1_t maskedoff, vuint64m2_t op1, vuint32m1_t shift, size_t vl) {
-  return vnsrl_wv_u32m1_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u32m1_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u32m1_tu(
@@ -237,7 +237,7 @@ vuint32m1_t test_vnsrl_wv_u32m1_tu(vuint32m1_t maskedoff, vuint64m2_t op1, vuint
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vnsrl_wx_u32m1_tu(vuint32m1_t maskedoff, vuint64m2_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u32m1_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u32m1_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u32m2_tu(
@@ -246,7 +246,7 @@ vuint32m1_t test_vnsrl_wx_u32m1_tu(vuint32m1_t maskedoff, vuint64m2_t op1, size_
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 vuint32m2_t test_vnsrl_wv_u32m2_tu(vuint32m2_t maskedoff, vuint64m4_t op1, vuint32m2_t shift, size_t vl) {
-  return vnsrl_wv_u32m2_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u32m2_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u32m2_tu(
@@ -255,7 +255,7 @@ vuint32m2_t test_vnsrl_wv_u32m2_tu(vuint32m2_t maskedoff, vuint64m4_t op1, vuint
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 vuint32m2_t test_vnsrl_wx_u32m2_tu(vuint32m2_t maskedoff, vuint64m4_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u32m2_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u32m2_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u32m4_tu(
@@ -264,7 +264,7 @@ vuint32m2_t test_vnsrl_wx_u32m2_tu(vuint32m2_t maskedoff, vuint64m4_t op1, size_
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP0]]
 //
 vuint32m4_t test_vnsrl_wv_u32m4_tu(vuint32m4_t maskedoff, vuint64m8_t op1, vuint32m4_t shift, size_t vl) {
-  return vnsrl_wv_u32m4_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u32m4_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u32m4_tu(
@@ -273,7 +273,7 @@ vuint32m4_t test_vnsrl_wv_u32m4_tu(vuint32m4_t maskedoff, vuint64m8_t op1, vuint
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP0]]
 //
 vuint32m4_t test_vnsrl_wx_u32m4_tu(vuint32m4_t maskedoff, vuint64m8_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u32m4_tu(maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u32m4_tu(maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u8mf8_tum(
@@ -282,7 +282,7 @@ vuint32m4_t test_vnsrl_wx_u32m4_tu(vuint32m4_t maskedoff, vuint64m8_t op1, size_
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vuint8mf8_t test_vnsrl_wv_u8mf8_tum(vbool64_t mask, vuint8mf8_t maskedoff, vuint16mf4_t op1, vuint8mf8_t shift, size_t vl) {
-  return vnsrl_wv_u8mf8_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u8mf8_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u8mf8_tum(
@@ -291,7 +291,7 @@ vuint8mf8_t test_vnsrl_wv_u8mf8_tum(vbool64_t mask, vuint8mf8_t maskedoff, vuint
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vuint8mf8_t test_vnsrl_wx_u8mf8_tum(vbool64_t mask, vuint8mf8_t maskedoff, vuint16mf4_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u8mf8_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u8mf8_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u8mf4_tum(
@@ -300,7 +300,7 @@ vuint8mf8_t test_vnsrl_wx_u8mf8_tum(vbool64_t mask, vuint8mf8_t maskedoff, vuint
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vuint8mf4_t test_vnsrl_wv_u8mf4_tum(vbool32_t mask, vuint8mf4_t maskedoff, vuint16mf2_t op1, vuint8mf4_t shift, size_t vl) {
-  return vnsrl_wv_u8mf4_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u8mf4_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u8mf4_tum(
@@ -309,7 +309,7 @@ vuint8mf4_t test_vnsrl_wv_u8mf4_tum(vbool32_t mask, vuint8mf4_t maskedoff, vuint
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vuint8mf4_t test_vnsrl_wx_u8mf4_tum(vbool32_t mask, vuint8mf4_t maskedoff, vuint16mf2_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u8mf4_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u8mf4_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u8mf2_tum(
@@ -318,7 +318,7 @@ vuint8mf4_t test_vnsrl_wx_u8mf4_tum(vbool32_t mask, vuint8mf4_t maskedoff, vuint
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vuint8mf2_t test_vnsrl_wv_u8mf2_tum(vbool16_t mask, vuint8mf2_t maskedoff, vuint16m1_t op1, vuint8mf2_t shift, size_t vl) {
-  return vnsrl_wv_u8mf2_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u8mf2_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u8mf2_tum(
@@ -327,7 +327,7 @@ vuint8mf2_t test_vnsrl_wv_u8mf2_tum(vbool16_t mask, vuint8mf2_t maskedoff, vuint
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vuint8mf2_t test_vnsrl_wx_u8mf2_tum(vbool16_t mask, vuint8mf2_t maskedoff, vuint16m1_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u8mf2_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u8mf2_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u8m1_tum(
@@ -336,7 +336,7 @@ vuint8mf2_t test_vnsrl_wx_u8mf2_tum(vbool16_t mask, vuint8mf2_t maskedoff, vuint
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vuint8m1_t test_vnsrl_wv_u8m1_tum(vbool8_t mask, vuint8m1_t maskedoff, vuint16m2_t op1, vuint8m1_t shift, size_t vl) {
-  return vnsrl_wv_u8m1_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u8m1_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u8m1_tum(
@@ -345,7 +345,7 @@ vuint8m1_t test_vnsrl_wv_u8m1_tum(vbool8_t mask, vuint8m1_t maskedoff, vuint16m2
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vuint8m1_t test_vnsrl_wx_u8m1_tum(vbool8_t mask, vuint8m1_t maskedoff, vuint16m2_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u8m1_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u8m1_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u8m2_tum(
@@ -354,7 +354,7 @@ vuint8m1_t test_vnsrl_wx_u8m1_tum(vbool8_t mask, vuint8m1_t maskedoff, vuint16m2
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 vuint8m2_t test_vnsrl_wv_u8m2_tum(vbool4_t mask, vuint8m2_t maskedoff, vuint16m4_t op1, vuint8m2_t shift, size_t vl) {
-  return vnsrl_wv_u8m2_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u8m2_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u8m2_tum(
@@ -363,7 +363,7 @@ vuint8m2_t test_vnsrl_wv_u8m2_tum(vbool4_t mask, vuint8m2_t maskedoff, vuint16m4
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 vuint8m2_t test_vnsrl_wx_u8m2_tum(vbool4_t mask, vuint8m2_t maskedoff, vuint16m4_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u8m2_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u8m2_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u8m4_tum(
@@ -372,7 +372,7 @@ vuint8m2_t test_vnsrl_wx_u8m2_tum(vbool4_t mask, vuint8m2_t maskedoff, vuint16m4
 // CHECK-RV64-NEXT:    ret <vscale x 32 x i8> [[TMP0]]
 //
 vuint8m4_t test_vnsrl_wv_u8m4_tum(vbool2_t mask, vuint8m4_t maskedoff, vuint16m8_t op1, vuint8m4_t shift, size_t vl) {
-  return vnsrl_wv_u8m4_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u8m4_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u8m4_tum(
@@ -381,7 +381,7 @@ vuint8m4_t test_vnsrl_wv_u8m4_tum(vbool2_t mask, vuint8m4_t maskedoff, vuint16m8
 // CHECK-RV64-NEXT:    ret <vscale x 32 x i8> [[TMP0]]
 //
 vuint8m4_t test_vnsrl_wx_u8m4_tum(vbool2_t mask, vuint8m4_t maskedoff, vuint16m8_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u8m4_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u8m4_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u16mf4_tum(
@@ -390,7 +390,7 @@ vuint8m4_t test_vnsrl_wx_u8m4_tum(vbool2_t mask, vuint8m4_t maskedoff, vuint16m8
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vuint16mf4_t test_vnsrl_wv_u16mf4_tum(vbool64_t mask, vuint16mf4_t maskedoff, vuint32mf2_t op1, vuint16mf4_t shift, size_t vl) {
-  return vnsrl_wv_u16mf4_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u16mf4_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u16mf4_tum(
@@ -399,7 +399,7 @@ vuint16mf4_t test_vnsrl_wv_u16mf4_tum(vbool64_t mask, vuint16mf4_t maskedoff, vu
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vuint16mf4_t test_vnsrl_wx_u16mf4_tum(vbool64_t mask, vuint16mf4_t maskedoff, vuint32mf2_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u16mf4_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u16mf4_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u16mf2_tum(
@@ -408,7 +408,7 @@ vuint16mf4_t test_vnsrl_wx_u16mf4_tum(vbool64_t mask, vuint16mf4_t maskedoff, vu
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vuint16mf2_t test_vnsrl_wv_u16mf2_tum(vbool32_t mask, vuint16mf2_t maskedoff, vuint32m1_t op1, vuint16mf2_t shift, size_t vl) {
-  return vnsrl_wv_u16mf2_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u16mf2_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u16mf2_tum(
@@ -417,7 +417,7 @@ vuint16mf2_t test_vnsrl_wv_u16mf2_tum(vbool32_t mask, vuint16mf2_t maskedoff, vu
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vuint16mf2_t test_vnsrl_wx_u16mf2_tum(vbool32_t mask, vuint16mf2_t maskedoff, vuint32m1_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u16mf2_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u16mf2_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u16m1_tum(
@@ -426,7 +426,7 @@ vuint16mf2_t test_vnsrl_wx_u16mf2_tum(vbool32_t mask, vuint16mf2_t maskedoff, vu
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vnsrl_wv_u16m1_tum(vbool16_t mask, vuint16m1_t maskedoff, vuint32m2_t op1, vuint16m1_t shift, size_t vl) {
-  return vnsrl_wv_u16m1_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u16m1_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u16m1_tum(
@@ -435,7 +435,7 @@ vuint16m1_t test_vnsrl_wv_u16m1_tum(vbool16_t mask, vuint16m1_t maskedoff, vuint
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vnsrl_wx_u16m1_tum(vbool16_t mask, vuint16m1_t maskedoff, vuint32m2_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u16m1_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u16m1_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u16m2_tum(
@@ -444,7 +444,7 @@ vuint16m1_t test_vnsrl_wx_u16m1_tum(vbool16_t mask, vuint16m1_t maskedoff, vuint
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 vuint16m2_t test_vnsrl_wv_u16m2_tum(vbool8_t mask, vuint16m2_t maskedoff, vuint32m4_t op1, vuint16m2_t shift, size_t vl) {
-  return vnsrl_wv_u16m2_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u16m2_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u16m2_tum(
@@ -453,7 +453,7 @@ vuint16m2_t test_vnsrl_wv_u16m2_tum(vbool8_t mask, vuint16m2_t maskedoff, vuint3
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 vuint16m2_t test_vnsrl_wx_u16m2_tum(vbool8_t mask, vuint16m2_t maskedoff, vuint32m4_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u16m2_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u16m2_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u16m4_tum(
@@ -462,7 +462,7 @@ vuint16m2_t test_vnsrl_wx_u16m2_tum(vbool8_t mask, vuint16m2_t maskedoff, vuint3
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i16> [[TMP0]]
 //
 vuint16m4_t test_vnsrl_wv_u16m4_tum(vbool4_t mask, vuint16m4_t maskedoff, vuint32m8_t op1, vuint16m4_t shift, size_t vl) {
-  return vnsrl_wv_u16m4_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u16m4_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u16m4_tum(
@@ -471,7 +471,7 @@ vuint16m4_t test_vnsrl_wv_u16m4_tum(vbool4_t mask, vuint16m4_t maskedoff, vuint3
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i16> [[TMP0]]
 //
 vuint16m4_t test_vnsrl_wx_u16m4_tum(vbool4_t mask, vuint16m4_t maskedoff, vuint32m8_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u16m4_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u16m4_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u32mf2_tum(
@@ -480,7 +480,7 @@ vuint16m4_t test_vnsrl_wx_u16m4_tum(vbool4_t mask, vuint16m4_t maskedoff, vuint3
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vuint32mf2_t test_vnsrl_wv_u32mf2_tum(vbool64_t mask, vuint32mf2_t maskedoff, vuint64m1_t op1, vuint32mf2_t shift, size_t vl) {
-  return vnsrl_wv_u32mf2_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u32mf2_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u32mf2_tum(
@@ -489,7 +489,7 @@ vuint32mf2_t test_vnsrl_wv_u32mf2_tum(vbool64_t mask, vuint32mf2_t maskedoff, vu
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vuint32mf2_t test_vnsrl_wx_u32mf2_tum(vbool64_t mask, vuint32mf2_t maskedoff, vuint64m1_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u32mf2_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u32mf2_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u32m1_tum(
@@ -498,7 +498,7 @@ vuint32mf2_t test_vnsrl_wx_u32mf2_tum(vbool64_t mask, vuint32mf2_t maskedoff, vu
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vnsrl_wv_u32m1_tum(vbool32_t mask, vuint32m1_t maskedoff, vuint64m2_t op1, vuint32m1_t shift, size_t vl) {
-  return vnsrl_wv_u32m1_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u32m1_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u32m1_tum(
@@ -507,7 +507,7 @@ vuint32m1_t test_vnsrl_wv_u32m1_tum(vbool32_t mask, vuint32m1_t maskedoff, vuint
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vnsrl_wx_u32m1_tum(vbool32_t mask, vuint32m1_t maskedoff, vuint64m2_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u32m1_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u32m1_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u32m2_tum(
@@ -516,7 +516,7 @@ vuint32m1_t test_vnsrl_wx_u32m1_tum(vbool32_t mask, vuint32m1_t maskedoff, vuint
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 vuint32m2_t test_vnsrl_wv_u32m2_tum(vbool16_t mask, vuint32m2_t maskedoff, vuint64m4_t op1, vuint32m2_t shift, size_t vl) {
-  return vnsrl_wv_u32m2_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u32m2_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u32m2_tum(
@@ -525,7 +525,7 @@ vuint32m2_t test_vnsrl_wv_u32m2_tum(vbool16_t mask, vuint32m2_t maskedoff, vuint
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 vuint32m2_t test_vnsrl_wx_u32m2_tum(vbool16_t mask, vuint32m2_t maskedoff, vuint64m4_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u32m2_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u32m2_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u32m4_tum(
@@ -534,7 +534,7 @@ vuint32m2_t test_vnsrl_wx_u32m2_tum(vbool16_t mask, vuint32m2_t maskedoff, vuint
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP0]]
 //
 vuint32m4_t test_vnsrl_wv_u32m4_tum(vbool8_t mask, vuint32m4_t maskedoff, vuint64m8_t op1, vuint32m4_t shift, size_t vl) {
-  return vnsrl_wv_u32m4_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u32m4_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u32m4_tum(
@@ -543,7 +543,7 @@ vuint32m4_t test_vnsrl_wv_u32m4_tum(vbool8_t mask, vuint32m4_t maskedoff, vuint6
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP0]]
 //
 vuint32m4_t test_vnsrl_wx_u32m4_tum(vbool8_t mask, vuint32m4_t maskedoff, vuint64m8_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u32m4_tum(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u32m4_tum(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u8mf8_tumu(
@@ -552,7 +552,7 @@ vuint32m4_t test_vnsrl_wx_u32m4_tum(vbool8_t mask, vuint32m4_t maskedoff, vuint6
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vuint8mf8_t test_vnsrl_wv_u8mf8_tumu(vbool64_t mask, vuint8mf8_t maskedoff, vuint16mf4_t op1, vuint8mf8_t shift, size_t vl) {
-  return vnsrl_wv_u8mf8_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u8mf8_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u8mf8_tumu(
@@ -561,7 +561,7 @@ vuint8mf8_t test_vnsrl_wv_u8mf8_tumu(vbool64_t mask, vuint8mf8_t maskedoff, vuin
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vuint8mf8_t test_vnsrl_wx_u8mf8_tumu(vbool64_t mask, vuint8mf8_t maskedoff, vuint16mf4_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u8mf8_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u8mf8_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u8mf4_tumu(
@@ -570,7 +570,7 @@ vuint8mf8_t test_vnsrl_wx_u8mf8_tumu(vbool64_t mask, vuint8mf8_t maskedoff, vuin
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vuint8mf4_t test_vnsrl_wv_u8mf4_tumu(vbool32_t mask, vuint8mf4_t maskedoff, vuint16mf2_t op1, vuint8mf4_t shift, size_t vl) {
-  return vnsrl_wv_u8mf4_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u8mf4_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u8mf4_tumu(
@@ -579,7 +579,7 @@ vuint8mf4_t test_vnsrl_wv_u8mf4_tumu(vbool32_t mask, vuint8mf4_t maskedoff, vuin
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vuint8mf4_t test_vnsrl_wx_u8mf4_tumu(vbool32_t mask, vuint8mf4_t maskedoff, vuint16mf2_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u8mf4_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u8mf4_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u8mf2_tumu(
@@ -588,7 +588,7 @@ vuint8mf4_t test_vnsrl_wx_u8mf4_tumu(vbool32_t mask, vuint8mf4_t maskedoff, vuin
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vuint8mf2_t test_vnsrl_wv_u8mf2_tumu(vbool16_t mask, vuint8mf2_t maskedoff, vuint16m1_t op1, vuint8mf2_t shift, size_t vl) {
-  return vnsrl_wv_u8mf2_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u8mf2_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u8mf2_tumu(
@@ -597,7 +597,7 @@ vuint8mf2_t test_vnsrl_wv_u8mf2_tumu(vbool16_t mask, vuint8mf2_t maskedoff, vuin
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vuint8mf2_t test_vnsrl_wx_u8mf2_tumu(vbool16_t mask, vuint8mf2_t maskedoff, vuint16m1_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u8mf2_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u8mf2_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u8m1_tumu(
@@ -606,7 +606,7 @@ vuint8mf2_t test_vnsrl_wx_u8mf2_tumu(vbool16_t mask, vuint8mf2_t maskedoff, vuin
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vuint8m1_t test_vnsrl_wv_u8m1_tumu(vbool8_t mask, vuint8m1_t maskedoff, vuint16m2_t op1, vuint8m1_t shift, size_t vl) {
-  return vnsrl_wv_u8m1_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u8m1_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u8m1_tumu(
@@ -615,7 +615,7 @@ vuint8m1_t test_vnsrl_wv_u8m1_tumu(vbool8_t mask, vuint8m1_t maskedoff, vuint16m
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vuint8m1_t test_vnsrl_wx_u8m1_tumu(vbool8_t mask, vuint8m1_t maskedoff, vuint16m2_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u8m1_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u8m1_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u8m2_tumu(
@@ -624,7 +624,7 @@ vuint8m1_t test_vnsrl_wx_u8m1_tumu(vbool8_t mask, vuint8m1_t maskedoff, vuint16m
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 vuint8m2_t test_vnsrl_wv_u8m2_tumu(vbool4_t mask, vuint8m2_t maskedoff, vuint16m4_t op1, vuint8m2_t shift, size_t vl) {
-  return vnsrl_wv_u8m2_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u8m2_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u8m2_tumu(
@@ -633,7 +633,7 @@ vuint8m2_t test_vnsrl_wv_u8m2_tumu(vbool4_t mask, vuint8m2_t maskedoff, vuint16m
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 vuint8m2_t test_vnsrl_wx_u8m2_tumu(vbool4_t mask, vuint8m2_t maskedoff, vuint16m4_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u8m2_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u8m2_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u8m4_tumu(
@@ -642,7 +642,7 @@ vuint8m2_t test_vnsrl_wx_u8m2_tumu(vbool4_t mask, vuint8m2_t maskedoff, vuint16m
 // CHECK-RV64-NEXT:    ret <vscale x 32 x i8> [[TMP0]]
 //
 vuint8m4_t test_vnsrl_wv_u8m4_tumu(vbool2_t mask, vuint8m4_t maskedoff, vuint16m8_t op1, vuint8m4_t shift, size_t vl) {
-  return vnsrl_wv_u8m4_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u8m4_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u8m4_tumu(
@@ -651,7 +651,7 @@ vuint8m4_t test_vnsrl_wv_u8m4_tumu(vbool2_t mask, vuint8m4_t maskedoff, vuint16m
 // CHECK-RV64-NEXT:    ret <vscale x 32 x i8> [[TMP0]]
 //
 vuint8m4_t test_vnsrl_wx_u8m4_tumu(vbool2_t mask, vuint8m4_t maskedoff, vuint16m8_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u8m4_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u8m4_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u16mf4_tumu(
@@ -660,7 +660,7 @@ vuint8m4_t test_vnsrl_wx_u8m4_tumu(vbool2_t mask, vuint8m4_t maskedoff, vuint16m
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vuint16mf4_t test_vnsrl_wv_u16mf4_tumu(vbool64_t mask, vuint16mf4_t maskedoff, vuint32mf2_t op1, vuint16mf4_t shift, size_t vl) {
-  return vnsrl_wv_u16mf4_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u16mf4_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u16mf4_tumu(
@@ -669,7 +669,7 @@ vuint16mf4_t test_vnsrl_wv_u16mf4_tumu(vbool64_t mask, vuint16mf4_t maskedoff, v
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vuint16mf4_t test_vnsrl_wx_u16mf4_tumu(vbool64_t mask, vuint16mf4_t maskedoff, vuint32mf2_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u16mf4_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u16mf4_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u16mf2_tumu(
@@ -678,7 +678,7 @@ vuint16mf4_t test_vnsrl_wx_u16mf4_tumu(vbool64_t mask, vuint16mf4_t maskedoff, v
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vuint16mf2_t test_vnsrl_wv_u16mf2_tumu(vbool32_t mask, vuint16mf2_t maskedoff, vuint32m1_t op1, vuint16mf2_t shift, size_t vl) {
-  return vnsrl_wv_u16mf2_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u16mf2_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u16mf2_tumu(
@@ -687,7 +687,7 @@ vuint16mf2_t test_vnsrl_wv_u16mf2_tumu(vbool32_t mask, vuint16mf2_t maskedoff, v
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vuint16mf2_t test_vnsrl_wx_u16mf2_tumu(vbool32_t mask, vuint16mf2_t maskedoff, vuint32m1_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u16mf2_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u16mf2_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u16m1_tumu(
@@ -696,7 +696,7 @@ vuint16mf2_t test_vnsrl_wx_u16mf2_tumu(vbool32_t mask, vuint16mf2_t maskedoff, v
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vnsrl_wv_u16m1_tumu(vbool16_t mask, vuint16m1_t maskedoff, vuint32m2_t op1, vuint16m1_t shift, size_t vl) {
-  return vnsrl_wv_u16m1_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u16m1_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u16m1_tumu(
@@ -705,7 +705,7 @@ vuint16m1_t test_vnsrl_wv_u16m1_tumu(vbool16_t mask, vuint16m1_t maskedoff, vuin
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vnsrl_wx_u16m1_tumu(vbool16_t mask, vuint16m1_t maskedoff, vuint32m2_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u16m1_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u16m1_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u16m2_tumu(
@@ -714,7 +714,7 @@ vuint16m1_t test_vnsrl_wx_u16m1_tumu(vbool16_t mask, vuint16m1_t maskedoff, vuin
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 vuint16m2_t test_vnsrl_wv_u16m2_tumu(vbool8_t mask, vuint16m2_t maskedoff, vuint32m4_t op1, vuint16m2_t shift, size_t vl) {
-  return vnsrl_wv_u16m2_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u16m2_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u16m2_tumu(
@@ -723,7 +723,7 @@ vuint16m2_t test_vnsrl_wv_u16m2_tumu(vbool8_t mask, vuint16m2_t maskedoff, vuint
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 vuint16m2_t test_vnsrl_wx_u16m2_tumu(vbool8_t mask, vuint16m2_t maskedoff, vuint32m4_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u16m2_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u16m2_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u16m4_tumu(
@@ -732,7 +732,7 @@ vuint16m2_t test_vnsrl_wx_u16m2_tumu(vbool8_t mask, vuint16m2_t maskedoff, vuint
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i16> [[TMP0]]
 //
 vuint16m4_t test_vnsrl_wv_u16m4_tumu(vbool4_t mask, vuint16m4_t maskedoff, vuint32m8_t op1, vuint16m4_t shift, size_t vl) {
-  return vnsrl_wv_u16m4_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u16m4_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u16m4_tumu(
@@ -741,7 +741,7 @@ vuint16m4_t test_vnsrl_wv_u16m4_tumu(vbool4_t mask, vuint16m4_t maskedoff, vuint
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i16> [[TMP0]]
 //
 vuint16m4_t test_vnsrl_wx_u16m4_tumu(vbool4_t mask, vuint16m4_t maskedoff, vuint32m8_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u16m4_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u16m4_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u32mf2_tumu(
@@ -750,7 +750,7 @@ vuint16m4_t test_vnsrl_wx_u16m4_tumu(vbool4_t mask, vuint16m4_t maskedoff, vuint
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vuint32mf2_t test_vnsrl_wv_u32mf2_tumu(vbool64_t mask, vuint32mf2_t maskedoff, vuint64m1_t op1, vuint32mf2_t shift, size_t vl) {
-  return vnsrl_wv_u32mf2_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u32mf2_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u32mf2_tumu(
@@ -759,7 +759,7 @@ vuint32mf2_t test_vnsrl_wv_u32mf2_tumu(vbool64_t mask, vuint32mf2_t maskedoff, v
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vuint32mf2_t test_vnsrl_wx_u32mf2_tumu(vbool64_t mask, vuint32mf2_t maskedoff, vuint64m1_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u32mf2_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u32mf2_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u32m1_tumu(
@@ -768,7 +768,7 @@ vuint32mf2_t test_vnsrl_wx_u32mf2_tumu(vbool64_t mask, vuint32mf2_t maskedoff, v
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vnsrl_wv_u32m1_tumu(vbool32_t mask, vuint32m1_t maskedoff, vuint64m2_t op1, vuint32m1_t shift, size_t vl) {
-  return vnsrl_wv_u32m1_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u32m1_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u32m1_tumu(
@@ -777,7 +777,7 @@ vuint32m1_t test_vnsrl_wv_u32m1_tumu(vbool32_t mask, vuint32m1_t maskedoff, vuin
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vnsrl_wx_u32m1_tumu(vbool32_t mask, vuint32m1_t maskedoff, vuint64m2_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u32m1_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u32m1_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u32m2_tumu(
@@ -786,7 +786,7 @@ vuint32m1_t test_vnsrl_wx_u32m1_tumu(vbool32_t mask, vuint32m1_t maskedoff, vuin
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 vuint32m2_t test_vnsrl_wv_u32m2_tumu(vbool16_t mask, vuint32m2_t maskedoff, vuint64m4_t op1, vuint32m2_t shift, size_t vl) {
-  return vnsrl_wv_u32m2_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u32m2_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u32m2_tumu(
@@ -795,7 +795,7 @@ vuint32m2_t test_vnsrl_wv_u32m2_tumu(vbool16_t mask, vuint32m2_t maskedoff, vuin
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 vuint32m2_t test_vnsrl_wx_u32m2_tumu(vbool16_t mask, vuint32m2_t maskedoff, vuint64m4_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u32m2_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u32m2_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u32m4_tumu(
@@ -804,7 +804,7 @@ vuint32m2_t test_vnsrl_wx_u32m2_tumu(vbool16_t mask, vuint32m2_t maskedoff, vuin
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP0]]
 //
 vuint32m4_t test_vnsrl_wv_u32m4_tumu(vbool8_t mask, vuint32m4_t maskedoff, vuint64m8_t op1, vuint32m4_t shift, size_t vl) {
-  return vnsrl_wv_u32m4_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u32m4_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u32m4_tumu(
@@ -813,7 +813,7 @@ vuint32m4_t test_vnsrl_wv_u32m4_tumu(vbool8_t mask, vuint32m4_t maskedoff, vuint
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP0]]
 //
 vuint32m4_t test_vnsrl_wx_u32m4_tumu(vbool8_t mask, vuint32m4_t maskedoff, vuint64m8_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u32m4_tumu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u32m4_tumu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u8mf8_mu(
@@ -822,7 +822,7 @@ vuint32m4_t test_vnsrl_wx_u32m4_tumu(vbool8_t mask, vuint32m4_t maskedoff, vuint
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vuint8mf8_t test_vnsrl_wv_u8mf8_mu(vbool64_t mask, vuint8mf8_t maskedoff, vuint16mf4_t op1, vuint8mf8_t shift, size_t vl) {
-  return vnsrl_wv_u8mf8_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u8mf8_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u8mf8_mu(
@@ -831,7 +831,7 @@ vuint8mf8_t test_vnsrl_wv_u8mf8_mu(vbool64_t mask, vuint8mf8_t maskedoff, vuint1
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vuint8mf8_t test_vnsrl_wx_u8mf8_mu(vbool64_t mask, vuint8mf8_t maskedoff, vuint16mf4_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u8mf8_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u8mf8_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u8mf4_mu(
@@ -840,7 +840,7 @@ vuint8mf8_t test_vnsrl_wx_u8mf8_mu(vbool64_t mask, vuint8mf8_t maskedoff, vuint1
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vuint8mf4_t test_vnsrl_wv_u8mf4_mu(vbool32_t mask, vuint8mf4_t maskedoff, vuint16mf2_t op1, vuint8mf4_t shift, size_t vl) {
-  return vnsrl_wv_u8mf4_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u8mf4_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u8mf4_mu(
@@ -849,7 +849,7 @@ vuint8mf4_t test_vnsrl_wv_u8mf4_mu(vbool32_t mask, vuint8mf4_t maskedoff, vuint1
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vuint8mf4_t test_vnsrl_wx_u8mf4_mu(vbool32_t mask, vuint8mf4_t maskedoff, vuint16mf2_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u8mf4_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u8mf4_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u8mf2_mu(
@@ -858,7 +858,7 @@ vuint8mf4_t test_vnsrl_wx_u8mf4_mu(vbool32_t mask, vuint8mf4_t maskedoff, vuint1
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vuint8mf2_t test_vnsrl_wv_u8mf2_mu(vbool16_t mask, vuint8mf2_t maskedoff, vuint16m1_t op1, vuint8mf2_t shift, size_t vl) {
-  return vnsrl_wv_u8mf2_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u8mf2_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u8mf2_mu(
@@ -867,7 +867,7 @@ vuint8mf2_t test_vnsrl_wv_u8mf2_mu(vbool16_t mask, vuint8mf2_t maskedoff, vuint1
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vuint8mf2_t test_vnsrl_wx_u8mf2_mu(vbool16_t mask, vuint8mf2_t maskedoff, vuint16m1_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u8mf2_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u8mf2_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u8m1_mu(
@@ -876,7 +876,7 @@ vuint8mf2_t test_vnsrl_wx_u8mf2_mu(vbool16_t mask, vuint8mf2_t maskedoff, vuint1
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vuint8m1_t test_vnsrl_wv_u8m1_mu(vbool8_t mask, vuint8m1_t maskedoff, vuint16m2_t op1, vuint8m1_t shift, size_t vl) {
-  return vnsrl_wv_u8m1_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u8m1_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u8m1_mu(
@@ -885,7 +885,7 @@ vuint8m1_t test_vnsrl_wv_u8m1_mu(vbool8_t mask, vuint8m1_t maskedoff, vuint16m2_
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vuint8m1_t test_vnsrl_wx_u8m1_mu(vbool8_t mask, vuint8m1_t maskedoff, vuint16m2_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u8m1_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u8m1_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u8m2_mu(
@@ -894,7 +894,7 @@ vuint8m1_t test_vnsrl_wx_u8m1_mu(vbool8_t mask, vuint8m1_t maskedoff, vuint16m2_
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 vuint8m2_t test_vnsrl_wv_u8m2_mu(vbool4_t mask, vuint8m2_t maskedoff, vuint16m4_t op1, vuint8m2_t shift, size_t vl) {
-  return vnsrl_wv_u8m2_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u8m2_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u8m2_mu(
@@ -903,7 +903,7 @@ vuint8m2_t test_vnsrl_wv_u8m2_mu(vbool4_t mask, vuint8m2_t maskedoff, vuint16m4_
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 vuint8m2_t test_vnsrl_wx_u8m2_mu(vbool4_t mask, vuint8m2_t maskedoff, vuint16m4_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u8m2_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u8m2_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u8m4_mu(
@@ -912,7 +912,7 @@ vuint8m2_t test_vnsrl_wx_u8m2_mu(vbool4_t mask, vuint8m2_t maskedoff, vuint16m4_
 // CHECK-RV64-NEXT:    ret <vscale x 32 x i8> [[TMP0]]
 //
 vuint8m4_t test_vnsrl_wv_u8m4_mu(vbool2_t mask, vuint8m4_t maskedoff, vuint16m8_t op1, vuint8m4_t shift, size_t vl) {
-  return vnsrl_wv_u8m4_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u8m4_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u8m4_mu(
@@ -921,7 +921,7 @@ vuint8m4_t test_vnsrl_wv_u8m4_mu(vbool2_t mask, vuint8m4_t maskedoff, vuint16m8_
 // CHECK-RV64-NEXT:    ret <vscale x 32 x i8> [[TMP0]]
 //
 vuint8m4_t test_vnsrl_wx_u8m4_mu(vbool2_t mask, vuint8m4_t maskedoff, vuint16m8_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u8m4_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u8m4_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u16mf4_mu(
@@ -930,7 +930,7 @@ vuint8m4_t test_vnsrl_wx_u8m4_mu(vbool2_t mask, vuint8m4_t maskedoff, vuint16m8_
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vuint16mf4_t test_vnsrl_wv_u16mf4_mu(vbool64_t mask, vuint16mf4_t maskedoff, vuint32mf2_t op1, vuint16mf4_t shift, size_t vl) {
-  return vnsrl_wv_u16mf4_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u16mf4_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u16mf4_mu(
@@ -939,7 +939,7 @@ vuint16mf4_t test_vnsrl_wv_u16mf4_mu(vbool64_t mask, vuint16mf4_t maskedoff, vui
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vuint16mf4_t test_vnsrl_wx_u16mf4_mu(vbool64_t mask, vuint16mf4_t maskedoff, vuint32mf2_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u16mf4_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u16mf4_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u16mf2_mu(
@@ -948,7 +948,7 @@ vuint16mf4_t test_vnsrl_wx_u16mf4_mu(vbool64_t mask, vuint16mf4_t maskedoff, vui
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vuint16mf2_t test_vnsrl_wv_u16mf2_mu(vbool32_t mask, vuint16mf2_t maskedoff, vuint32m1_t op1, vuint16mf2_t shift, size_t vl) {
-  return vnsrl_wv_u16mf2_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u16mf2_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u16mf2_mu(
@@ -957,7 +957,7 @@ vuint16mf2_t test_vnsrl_wv_u16mf2_mu(vbool32_t mask, vuint16mf2_t maskedoff, vui
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vuint16mf2_t test_vnsrl_wx_u16mf2_mu(vbool32_t mask, vuint16mf2_t maskedoff, vuint32m1_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u16mf2_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u16mf2_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u16m1_mu(
@@ -966,7 +966,7 @@ vuint16mf2_t test_vnsrl_wx_u16mf2_mu(vbool32_t mask, vuint16mf2_t maskedoff, vui
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vnsrl_wv_u16m1_mu(vbool16_t mask, vuint16m1_t maskedoff, vuint32m2_t op1, vuint16m1_t shift, size_t vl) {
-  return vnsrl_wv_u16m1_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u16m1_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u16m1_mu(
@@ -975,7 +975,7 @@ vuint16m1_t test_vnsrl_wv_u16m1_mu(vbool16_t mask, vuint16m1_t maskedoff, vuint3
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vnsrl_wx_u16m1_mu(vbool16_t mask, vuint16m1_t maskedoff, vuint32m2_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u16m1_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u16m1_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u16m2_mu(
@@ -984,7 +984,7 @@ vuint16m1_t test_vnsrl_wx_u16m1_mu(vbool16_t mask, vuint16m1_t maskedoff, vuint3
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 vuint16m2_t test_vnsrl_wv_u16m2_mu(vbool8_t mask, vuint16m2_t maskedoff, vuint32m4_t op1, vuint16m2_t shift, size_t vl) {
-  return vnsrl_wv_u16m2_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u16m2_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u16m2_mu(
@@ -993,7 +993,7 @@ vuint16m2_t test_vnsrl_wv_u16m2_mu(vbool8_t mask, vuint16m2_t maskedoff, vuint32
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 vuint16m2_t test_vnsrl_wx_u16m2_mu(vbool8_t mask, vuint16m2_t maskedoff, vuint32m4_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u16m2_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u16m2_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u16m4_mu(
@@ -1002,7 +1002,7 @@ vuint16m2_t test_vnsrl_wx_u16m2_mu(vbool8_t mask, vuint16m2_t maskedoff, vuint32
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i16> [[TMP0]]
 //
 vuint16m4_t test_vnsrl_wv_u16m4_mu(vbool4_t mask, vuint16m4_t maskedoff, vuint32m8_t op1, vuint16m4_t shift, size_t vl) {
-  return vnsrl_wv_u16m4_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u16m4_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u16m4_mu(
@@ -1011,7 +1011,7 @@ vuint16m4_t test_vnsrl_wv_u16m4_mu(vbool4_t mask, vuint16m4_t maskedoff, vuint32
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i16> [[TMP0]]
 //
 vuint16m4_t test_vnsrl_wx_u16m4_mu(vbool4_t mask, vuint16m4_t maskedoff, vuint32m8_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u16m4_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u16m4_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u32mf2_mu(
@@ -1020,7 +1020,7 @@ vuint16m4_t test_vnsrl_wx_u16m4_mu(vbool4_t mask, vuint16m4_t maskedoff, vuint32
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vuint32mf2_t test_vnsrl_wv_u32mf2_mu(vbool64_t mask, vuint32mf2_t maskedoff, vuint64m1_t op1, vuint32mf2_t shift, size_t vl) {
-  return vnsrl_wv_u32mf2_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u32mf2_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u32mf2_mu(
@@ -1029,7 +1029,7 @@ vuint32mf2_t test_vnsrl_wv_u32mf2_mu(vbool64_t mask, vuint32mf2_t maskedoff, vui
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vuint32mf2_t test_vnsrl_wx_u32mf2_mu(vbool64_t mask, vuint32mf2_t maskedoff, vuint64m1_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u32mf2_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u32mf2_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u32m1_mu(
@@ -1038,7 +1038,7 @@ vuint32mf2_t test_vnsrl_wx_u32mf2_mu(vbool64_t mask, vuint32mf2_t maskedoff, vui
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vnsrl_wv_u32m1_mu(vbool32_t mask, vuint32m1_t maskedoff, vuint64m2_t op1, vuint32m1_t shift, size_t vl) {
-  return vnsrl_wv_u32m1_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u32m1_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u32m1_mu(
@@ -1047,7 +1047,7 @@ vuint32m1_t test_vnsrl_wv_u32m1_mu(vbool32_t mask, vuint32m1_t maskedoff, vuint6
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vnsrl_wx_u32m1_mu(vbool32_t mask, vuint32m1_t maskedoff, vuint64m2_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u32m1_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u32m1_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u32m2_mu(
@@ -1056,7 +1056,7 @@ vuint32m1_t test_vnsrl_wx_u32m1_mu(vbool32_t mask, vuint32m1_t maskedoff, vuint6
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 vuint32m2_t test_vnsrl_wv_u32m2_mu(vbool16_t mask, vuint32m2_t maskedoff, vuint64m4_t op1, vuint32m2_t shift, size_t vl) {
-  return vnsrl_wv_u32m2_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u32m2_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u32m2_mu(
@@ -1065,7 +1065,7 @@ vuint32m2_t test_vnsrl_wv_u32m2_mu(vbool16_t mask, vuint32m2_t maskedoff, vuint6
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 vuint32m2_t test_vnsrl_wx_u32m2_mu(vbool16_t mask, vuint32m2_t maskedoff, vuint64m4_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u32m2_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u32m2_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wv_u32m4_mu(
@@ -1074,7 +1074,7 @@ vuint32m2_t test_vnsrl_wx_u32m2_mu(vbool16_t mask, vuint32m2_t maskedoff, vuint6
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP0]]
 //
 vuint32m4_t test_vnsrl_wv_u32m4_mu(vbool8_t mask, vuint32m4_t maskedoff, vuint64m8_t op1, vuint32m4_t shift, size_t vl) {
-  return vnsrl_wv_u32m4_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wv_u32m4_mu(mask, maskedoff, op1, shift, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vnsrl_wx_u32m4_mu(
@@ -1083,6 +1083,6 @@ vuint32m4_t test_vnsrl_wv_u32m4_mu(vbool8_t mask, vuint32m4_t maskedoff, vuint64
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP0]]
 //
 vuint32m4_t test_vnsrl_wx_u32m4_mu(vbool8_t mask, vuint32m4_t maskedoff, vuint64m8_t op1, size_t shift, size_t vl) {
-  return vnsrl_wx_u32m4_mu(mask, maskedoff, op1, shift, vl);
+  return __riscv_vnsrl_wx_u32m4_mu(mask, maskedoff, op1, shift, vl);
 }
 
