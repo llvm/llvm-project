@@ -25,6 +25,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -383,10 +384,10 @@ Error CoverageMapping::loadFromFile(
 
 Expected<std::unique_ptr<CoverageMapping>>
 CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames,
-                      StringRef ProfileFilename, ArrayRef<StringRef> Arches,
-                      StringRef CompilationDir,
+                      StringRef ProfileFilename, vfs::FileSystem &FS,
+                      ArrayRef<StringRef> Arches, StringRef CompilationDir,
                       const object::BuildIDFetcher *BIDFetcher) {
-  auto ProfileReaderOrErr = IndexedInstrProfReader::create(ProfileFilename);
+  auto ProfileReaderOrErr = IndexedInstrProfReader::create(ProfileFilename, FS);
   if (Error E = ProfileReaderOrErr.takeError())
     return createFileError(ProfileFilename, std::move(E));
   auto ProfileReader = std::move(ProfileReaderOrErr.get());

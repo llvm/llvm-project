@@ -439,8 +439,9 @@ std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
     if (modifiedTimeGT(ObjectFilename, PGOFilename))
       warning("profile data may be out of date - object is newer",
               ObjectFilename);
+  auto FS = vfs::getRealFileSystem();
   auto CoverageOrErr =
-      CoverageMapping::load(ObjectFilenames, PGOFilename, CoverageArches,
+      CoverageMapping::load(ObjectFilenames, PGOFilename, *FS, CoverageArches,
                             ViewOpts.CompilationDirectory, BIDFetcher.get());
   if (Error E = CoverageOrErr.takeError()) {
     error("Failed to load coverage: " + toString(std::move(E)));

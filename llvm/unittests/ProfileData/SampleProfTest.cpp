@@ -19,6 +19,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
@@ -57,8 +58,9 @@ struct SampleProfTest : ::testing::Test {
 
   void readProfile(const Module &M, StringRef Profile,
                    StringRef RemapFile = "") {
+    auto FS = vfs::getRealFileSystem();
     auto ReaderOrErr = SampleProfileReader::create(
-        std::string(Profile), Context, FSDiscriminatorPass::Base,
+        std::string(Profile), Context, *FS, FSDiscriminatorPass::Base,
         std::string(RemapFile));
     ASSERT_TRUE(NoError(ReaderOrErr.getError()));
     Reader = std::move(ReaderOrErr.get());
