@@ -41,6 +41,9 @@ Implemented Papers
 Improvements and New Features
 -----------------------------
 
+- ``std::string_view`` now provides iterators that check for out-of-bounds accesses when the safe
+  libc++ mode is enabled.
+
 Deprecations and Removals
 -------------------------
 

@@ -899,6 +899,11 @@ public:
         Fn->addFnAttr("no-prototype");
     }
   }
+
+  /// Return the WebAssembly externref reference type.
+  virtual llvm::Type *getWasmExternrefReferenceType() const override {
+    return llvm::Type::getWasm_ExternrefTy(getABIInfo().getVMContext());
+  }
 };
 
 /// Classify argument of given type \p Ty.

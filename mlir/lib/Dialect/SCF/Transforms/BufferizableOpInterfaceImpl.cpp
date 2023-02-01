@@ -57,7 +57,7 @@ struct ConditionOpInterface
     return false;
   }
 
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     return {};
   }
@@ -104,9 +104,9 @@ struct ConditionOpInterface
 struct ExecuteRegionOpInterface
     : public BufferizableOpInterface::ExternalModel<ExecuteRegionOpInterface,
                                                     scf::ExecuteRegionOp> {
-  SmallVector<OpOperand *>
-  getAliasingOpOperand(Operation *op, OpResult opResult,
-                       const AnalysisState &state) const {
+  AliasingOpOperandList
+  getAliasingOpOperands(Operation *op, OpResult opResult,
+                        const AnalysisState &state) const {
     // ExecuteRegionOps do not have tensor OpOperands. The yielded value can be
     // any SSA value that is in scope. To allow for use-def chain traversal
     // through ExecuteRegionOps in the analysis, the corresponding yield value
@@ -164,9 +164,9 @@ struct ExecuteRegionOpInterface
 /// Bufferization of scf.if. Replace with a new scf.if that yields memrefs.
 struct IfOpInterface
     : public BufferizableOpInterface::ExternalModel<IfOpInterface, scf::IfOp> {
-  SmallVector<OpOperand *>
-  getAliasingOpOperand(Operation *op, OpResult opResult,
-                       const AnalysisState &state) const {
+  AliasingOpOperandList
+  getAliasingOpOperands(Operation *op, OpResult opResult,
+                        const AnalysisState &state) const {
     // IfOps do not have tensor OpOperands. The yielded value can be any SSA
     // value that is in scope. To allow for use-def chain traversal through
     // IfOps in the analysis, both corresponding yield values from the then/else
@@ -265,7 +265,7 @@ struct IfOpInterface
     // yield values are equivalent to each other.
     auto bufferizableOp = cast<BufferizableOpInterface>(op);
     SmallVector<OpOperand *> yieldValues =
-        bufferizableOp.getAliasingOpOperand(opResult, state);
+        bufferizableOp.getAliasingOpOperands(opResult, state);
     assert(yieldValues.size() == 2 && "expected 2 yield values");
     bool equivalentYields = state.areEquivalentBufferizedValues(
         yieldValues[0]->get(), yieldValues[1]->get());
@@ -443,7 +443,7 @@ struct ForOpInterface
     return true;
   }
 
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     auto forOp = cast<scf::ForOp>(op);
     return {forOp.getResultForOpOperand(opOperand)};
@@ -657,7 +657,7 @@ struct WhileOpInterface
     return true;
   }
 
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     auto whileOp = cast<scf::WhileOp>(op);
     unsigned int idx = opOperand.getOperandNumber();
@@ -952,7 +952,7 @@ struct YieldOpInterface
     return false;
   }
 
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     if (isa<scf::IfOp>(op->getParentOp()))
       return {op->getParentOp()->getResult(opOperand.getOperandNumber())};
@@ -1051,7 +1051,7 @@ struct ForeachThreadOpInterface
     return true;
   }
 
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     auto foreachThreadOp = cast<ForeachThreadOp>(op);
     return {foreachThreadOp.getTiedOpResult(&opOperand)};

@@ -162,8 +162,12 @@ bool areElementwiseOpsFusable(OpOperand *fusedOperand);
 /// Fuse two `linalg.generic` operations that have a producer-consumer
 /// relationship captured through `fusedOperand`. The method expects
 /// that `areElementwiseOpsFusable` returns true for the given `fusedOperand`.
-FailureOr<Operation *> fuseElementwiseOps(RewriterBase &rewriter,
-                                          OpOperand *fusedOperand);
+struct ElementwiseOpFusionResult {
+  Operation *fusedOp;
+  llvm::DenseMap<Value, Value> replacements;
+};
+FailureOr<ElementwiseOpFusionResult>
+fuseElementwiseOps(RewriterBase &rewriter, OpOperand *fusedOperand);
 
 /// Split the given `op` into two parts along the given iteration space
 /// `dimension` at the specified `splitPoint`, and return the two parts.
@@ -1142,12 +1146,17 @@ FailureOr<SmallVector<Value>> collapseGenericOpIterationDims(
     GenericOp genericOp, ArrayRef<ReassociationIndices> foldedIterationDims,
     RewriterBase &rewriter);
 
+/// Struct to hold the result of a `pack` call.
+struct PackResult {
+  SmallVector<tensor::PackOp> packOps;
+  linalg::LinalgOp packedLinalgOp;
+  SmallVector<tensor::UnPackOp> unPackOps;
+};
 /// Implement packing of a single LinalgOp by `packedSizes`.
 /// There must be one packedSizes entry per `linalgOp` iterator.
 /// Return the packed Linalg op on success, failure otherwise.
-FailureOr<linalg::LinalgOp> pack(RewriterBase &rewriter,
-                                 linalg::LinalgOp linalgOp,
-                                 ArrayRef<OpFoldResult> packedSizes);
+FailureOr<PackResult> pack(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
+                           ArrayRef<OpFoldResult> packedSizes);
 
 /// Struct to hold the result of a `packTranspose` call.
 struct PackTransposeResult {

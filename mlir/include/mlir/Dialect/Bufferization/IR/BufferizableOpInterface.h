@@ -25,6 +25,22 @@ namespace bufferization {
 class AnalysisState;
 class BufferizableOpInterface;
 
+/// Specify fine-grain relationship between buffers to enable more analysis.
+enum class BufferRelation {
+  Unknown,
+  // TODO: ResultContainsOperand,
+  // TODO: OperandContainsResult,
+  Equivalent
+};
+
+/// A list of possible aliasing OpOperands. This list models the runtime
+/// aliasing relationship for an OpResult.
+using AliasingOpOperandList = SmallVector<OpOperand *>;
+
+/// A list of possible aliasing OpResults. This list models the runtime
+/// aliasing relationship for an OpOperand.
+using AliasingOpResultList = SmallVector<OpResult>;
+
 class OpFilter {
 public:
   /// An op filter entry. Filters can be used to specify which ops should be
@@ -300,14 +316,6 @@ struct BufferizationOptions {
   SmallVector<AnalysisStateInitFn> stateInitializers;
 };
 
-/// Specify fine-grain relationship between buffers to enable more analysis.
-enum class BufferRelation {
-  Unknown,
-  // TODO: ResultContainsOperand,
-  // TODO: OperandContainsResult,
-  Equivalent
-};
-
 /// Return `true` if the given value is a BlockArgument of a func::FuncOp.
 bool isFunctionArgument(Value value);
 
@@ -315,15 +323,15 @@ bool isFunctionArgument(Value value);
 /// tensor values.
 class AnalysisState {
 public:
-  /// Determine which OpOperand* will alias with `opResult` if the op is
+  /// Determine which OpOperand* will alias with `result` if the op is
   /// bufferized in place. Return all tensor OpOperand* if the op is not
   /// bufferizable.
-  SmallVector<OpOperand *> getAliasingOpOperand(OpResult opResult) const;
+  AliasingOpOperandList getAliasingOpOperands(OpResult result) const;
 
   /// Determine which OpResult will alias with `opOperand` if the op is
   /// bufferized in place. Return all tensor OpResults if the op is not
   /// bufferizable.
-  SmallVector<OpResult> getAliasingOpResult(OpOperand &opOperand) const;
+  AliasingOpResultList getAliasingOpResults(OpOperand &opOperand) const;
 
   /// Return true if `opOperand` bufferizes to a memory read. Return `true` if
   /// the op is not bufferizable.
@@ -567,6 +575,12 @@ Region *getEnclosingRepetitiveRegion(Block *block,
 
 namespace detail {
 /// This is the default implementation of
+/// BufferizableOpInterface::getAliasingOpOperands. Should not be called from
+/// other places.
+AliasingOpOperandList defaultGetAliasingOpOperands(OpResult opResult,
+                                                   const AnalysisState &state);
+
+/// This is the default implementation of
 /// BufferizableOpInterface::getBufferType. Should not be called from other
 /// places.
 FailureOr<BaseMemRefType>
@@ -585,13 +599,13 @@ bool defaultResultBufferizesToMemoryWrite(OpResult opResult,
 bool defaultIsRepetitiveRegion(BufferizableOpInterface bufferizableOp,
                                unsigned index);
 
-/// This is the default implementation of getAliasingOpOperand in case the
+/// This is the default implementation of getAliasingOpOperands in case the
 /// defining op does not implement the BufferizableOpInterface.
-SmallVector<OpOperand *> unknownGetAliasingOpOperand(OpResult opResult);
+AliasingOpOperandList unknownGetAliasingOpOperands(OpResult opResult);
 
-/// This is the default implementation of getAliasingOpResult in case the
-/// defining op does not implement the BufferizableOpInterface.
-SmallVector<OpResult> unknownGetAliasingOpResult(OpOperand &opOperand);
+/// This is the default implementation of getAliasingOpResults in case the
+/// owner op does not implement the BufferizableOpInterface.
+AliasingOpResultList unknownGetAliasingOpResults(OpOperand &opOperand);
 } // namespace detail
 
 } // namespace bufferization

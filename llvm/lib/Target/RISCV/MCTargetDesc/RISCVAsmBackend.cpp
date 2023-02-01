@@ -210,7 +210,7 @@ bool RISCVAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
   }
 
   unsigned Offset;
-  std::pair<unsigned, unsigned> Fixup;
+  std::pair<MCFixupKind, MCFixupKind> Fixup;
 
   // According to the DWARF specification, the `DW_LNS_fixed_advance_pc` opcode
   // takes a single unsigned half (unencoded) operand. The maximum encodable
@@ -223,23 +223,19 @@ bool RISCVAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
 
     OS << uint8_t(dwarf::DW_LNE_set_address);
     Offset = OS.tell();
-    Fixup = PtrSize == 4 ? std::make_pair(RISCV::fixup_riscv_add_32,
-                                          RISCV::fixup_riscv_sub_32)
-                         : std::make_pair(RISCV::fixup_riscv_add_64,
-                                          RISCV::fixup_riscv_sub_64);
+    assert((PtrSize == 4 || PtrSize == 8) && "Unexpected pointer size");
+    Fixup = RISCV::getRelocPairForSize(PtrSize);
     OS.write_zeros(PtrSize);
   } else {
     OS << uint8_t(dwarf::DW_LNS_fixed_advance_pc);
     Offset = OS.tell();
-    Fixup = {RISCV::fixup_riscv_add_16, RISCV::fixup_riscv_sub_16};
+    Fixup = RISCV::getRelocPairForSize(2);
     support::endian::write<uint16_t>(OS, 0, support::little);
   }
 
   const MCBinaryExpr &MBE = cast<MCBinaryExpr>(AddrDelta);
-  Fixups.push_back(MCFixup::create(
-      Offset, MBE.getLHS(), static_cast<MCFixupKind>(std::get<0>(Fixup))));
-  Fixups.push_back(MCFixup::create(
-      Offset, MBE.getRHS(), static_cast<MCFixupKind>(std::get<1>(Fixup))));
+  Fixups.push_back(MCFixup::create(Offset, MBE.getLHS(), std::get<0>(Fixup)));
+  Fixups.push_back(MCFixup::create(Offset, MBE.getRHS(), std::get<1>(Fixup)));
 
   if (LineDelta == INT64_MAX) {
     OS << uint8_t(dwarf::DW_LNS_extended_op);

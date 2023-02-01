@@ -528,8 +528,9 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
 
   // We have found a module, but we don't use it.
   if (NotUsed) {
-    Diags.Report(FilenameLoc, diag::err_undeclared_use_of_module)
-        << RequestingModule->getTopLevelModule()->Name << Filename;
+    Diags.Report(FilenameLoc, diag::err_undeclared_use_of_module_indirect)
+        << RequestingModule->getTopLevelModule()->Name << Filename
+        << NotUsed->Name;
     return;
   }
 

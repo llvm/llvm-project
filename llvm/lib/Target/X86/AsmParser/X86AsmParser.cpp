@@ -3923,6 +3923,15 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
     }
   }
 
+  if ((Opcode == X86::PREFETCHIT0 || Opcode == X86::PREFETCHIT1)) {
+    const MCOperand &MO = Inst.getOperand(X86::AddrBaseReg);
+    if (!MO.isReg() || MO.getReg() != X86::RIP)
+      return Warning(
+          Ops[0]->getStartLoc(),
+          Twine((Inst.getOpcode() == X86::PREFETCHIT0 ? "'prefetchit0'"
+                                                      : "'prefetchit1'")) +
+              " only supports RIP-relative address");
+  }
   return false;
 }
 

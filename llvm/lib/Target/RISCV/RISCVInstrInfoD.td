@@ -108,11 +108,6 @@ defm FNMSUB_D : FPFMA_rrr_frm_m<OPC_NMSUB, 0b01, "fnmsub.d", DINX>;
 defm FNMADD_D : FPFMA_rrr_frm_m<OPC_NMADD, 0b01, "fnmadd.d", DINX>;
 }
 
-defm : FPFMADynFrmAlias_m<FMADD_D,  "fmadd.d",  DINX>;
-defm : FPFMADynFrmAlias_m<FMSUB_D,  "fmsub.d",  DINX>;
-defm : FPFMADynFrmAlias_m<FNMSUB_D, "fnmsub.d", DINX>;
-defm : FPFMADynFrmAlias_m<FNMADD_D, "fnmadd.d", DINX>;
-
 let SchedRW = [WriteFAdd64, ReadFAdd64, ReadFAdd64] in {
 defm FADD_D : FPALU_rr_frm_m<0b0000001, "fadd.d", DINX, /*Commutable*/1>;
 defm FSUB_D : FPALU_rr_frm_m<0b0000101, "fsub.d", DINX>;
@@ -123,14 +118,8 @@ defm FMUL_D : FPALU_rr_frm_m<0b0001001, "fmul.d", DINX, /*Commutable*/1>;
 let SchedRW = [WriteFDiv64, ReadFDiv64, ReadFDiv64] in
 defm FDIV_D : FPALU_rr_frm_m<0b0001101, "fdiv.d", DINX>;
 
-defm : FPALUDynFrmAlias_m<FADD_D, "fadd.d", DINX>;
-defm : FPALUDynFrmAlias_m<FSUB_D, "fsub.d", DINX>;
-defm : FPALUDynFrmAlias_m<FMUL_D, "fmul.d", DINX>;
-defm : FPALUDynFrmAlias_m<FDIV_D, "fdiv.d", DINX>;
-
 defm FSQRT_D : FPUnaryOp_r_frm_m<0b0101101, 0b00000, DDINX, "fsqrt.d">,
                Sched<[WriteFSqrt64, ReadFSqrt64]>;
-defm         : FPUnaryOpDynFrmAlias_m<FSQRT_D, "fsqrt.d", DDINX>;
 
 let SchedRW = [WriteFSGNJ64, ReadFSGNJ64, ReadFSGNJ64],
     mayRaiseFPException = 0 in {
@@ -146,7 +135,6 @@ defm FMAX_D   : FPALU_rr_m<0b0010101, 0b001, "fmax.d", DINX, /*Commutable*/1>;
 
 defm FCVT_S_D : FPUnaryOp_r_frm_m<0b0100000, 0b00001, FDINX, "fcvt.s.d">,
                 Sched<[WriteFCvtF64ToF32, ReadFCvtF64ToF32]>;
-defm          : FPUnaryOpDynFrmAlias_m<FCVT_S_D, "fcvt.s.d", FDINX>;
 
 defm FCVT_D_S : FPUnaryOp_r_m<0b0100001, 0b00000, 0b000, DFINX, "fcvt.d.s">,
                 Sched<[WriteFCvtF32ToF64, ReadFCvtF32ToF64]>;
@@ -163,12 +151,10 @@ defm FCLASS_D : FPUnaryOp_r_m<0b1110001, 0b00000, 0b001, XDINX, "fclass.d">,
 let IsSignExtendingOpW = 1 in
 defm FCVT_W_D : FPUnaryOp_r_frm_m<0b1100001, 0b00000, XDINX, "fcvt.w.d">,
                Sched<[WriteFCvtF64ToI32, ReadFCvtF64ToI32]>;
-defm          : FPUnaryOpDynFrmAlias_m<FCVT_W_D, "fcvt.w.d", XDINX>;
 
 let IsSignExtendingOpW = 1 in
 defm FCVT_WU_D : FPUnaryOp_r_frm_m<0b1100001, 0b00001, XDINX, "fcvt.wu.d">,
                  Sched<[WriteFCvtF64ToI32, ReadFCvtF64ToI32]>;
-defm           : FPUnaryOpDynFrmAlias_m<FCVT_WU_D, "fcvt.wu.d", XDINX>;
 
 defm FCVT_D_W : FPUnaryOp_r_m<0b1101001, 0b00000, 0b000, DXINX, "fcvt.d.w">,
                 Sched<[WriteFCvtI32ToF64, ReadFCvtI32ToF64]>;
@@ -178,11 +164,9 @@ defm FCVT_D_WU : FPUnaryOp_r_m<0b1101001, 0b00001, 0b000, DXINX, "fcvt.d.wu">,
 
 defm FCVT_L_D : FPUnaryOp_r_frm_m<0b1100001, 0b00010, XDIN64X, "fcvt.l.d">,
                 Sched<[WriteFCvtF64ToI64, ReadFCvtF64ToI64]>;
-defm          : FPUnaryOpDynFrmAlias_m<FCVT_L_D, "fcvt.l.d", XDIN64X>;
 
 defm FCVT_LU_D : FPUnaryOp_r_frm_m<0b1100001, 0b00011, XDIN64X, "fcvt.lu.d">,
                  Sched<[WriteFCvtF64ToI64, ReadFCvtF64ToI64]>;
-defm           : FPUnaryOpDynFrmAlias_m<FCVT_LU_D, "fcvt.lu.d", XDIN64X>;
 
 let Predicates = [HasStdExtD, IsRV64], mayRaiseFPException = 0 in
 def FMV_X_D : FPUnaryOp_r<0b1110001, 0b00000, 0b000, GPR, FPR64, "fmv.x.d">,
@@ -190,11 +174,9 @@ def FMV_X_D : FPUnaryOp_r<0b1110001, 0b00000, 0b000, GPR, FPR64, "fmv.x.d">,
 
 defm FCVT_D_L : FPUnaryOp_r_frm_m<0b1101001, 0b00010, DXIN64X, "fcvt.d.l">,
                 Sched<[WriteFCvtI64ToF64, ReadFCvtI64ToF64]>;
-defm          : FPUnaryOpDynFrmAlias_m<FCVT_D_L, "fcvt.d.l", DXIN64X>;
 
 defm FCVT_D_LU : FPUnaryOp_r_frm_m<0b1101001, 0b00011, DXIN64X, "fcvt.d.lu">,
                  Sched<[WriteFCvtI64ToF64, ReadFCvtI64ToF64]>;
-defm           : FPUnaryOpDynFrmAlias_m<FCVT_D_LU, "fcvt.d.lu", DXIN64X>;
 
 let Predicates = [HasStdExtD, IsRV64], mayRaiseFPException = 0 in
 def FMV_D_X : FPUnaryOp_r<0b1111001, 0b00000, 0b000, FPR64, GPR, "fmv.d.x">,

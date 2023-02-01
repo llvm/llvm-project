@@ -26,6 +26,9 @@ class FailurePropagationModeAttr;
 /// A builder function that populates the body of a SequenceOp.
 using SequenceBodyBuilderFn = ::llvm::function_ref<void(
     ::mlir::OpBuilder &, ::mlir::Location, ::mlir::BlockArgument)>;
+using SequenceBodyBuilderArgsFn =
+    ::llvm::function_ref<void(::mlir::OpBuilder &, ::mlir::Location,
+                              ::mlir::BlockArgument, ::mlir::ValueRange)>;
 } // namespace transform
 } // namespace mlir
 

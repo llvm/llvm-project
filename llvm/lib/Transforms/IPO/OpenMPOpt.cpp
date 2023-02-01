@@ -3300,7 +3300,7 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
       MaybeAlign Alignment = CB->getRetAlign();
       assert(Alignment &&
              "HeapToShared on allocation without alignment attribute");
-      SharedMem->setAlignment(MaybeAlign(Alignment));
+      SharedMem->setAlignment(*Alignment);
 
       A.changeAfterManifest(IRPosition::callsite_returned(*CB), *NewBuffer);
       A.deleteAfterManifest(*CB);

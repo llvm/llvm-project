@@ -43,20 +43,22 @@ public:
 
     // construct/copy/destroy
     template<class U>
-      reference_wrapper(U&&);
-    reference_wrapper(const reference_wrapper<T>& x) noexcept;
+      constexpr reference_wrapper(U&&);                                   // constexpr since C++20
+    constexpr reference_wrapper(const reference_wrapper<T>& x) noexcept;  // constexpr since C++20
 
     // assignment
-    reference_wrapper& operator=(const reference_wrapper<T>& x) noexcept;
+    constexpr reference_wrapper&
+    operator=(const reference_wrapper<T>& x) noexcept;                    // constexpr since C++20
 
     // access
-    operator T& () const noexcept;
-    T& get() const noexcept;
+    constexpr operator T& () const noexcept;                              // constexpr since C++20
+    constexpr T& get() const noexcept;                                    // constexpr since C++20
 
     // invoke
     template <class... ArgTypes>
-      typename result_of<T&(ArgTypes&&...)>::type
-          operator() (ArgTypes&&...) const;
+      constexpr typename result_of<T&(ArgTypes&&...)>::type               // constexpr since C++20
+          operator() (ArgTypes&&...) const
+              noexcept(is_nothrow_invocable_v<T&, ArgTypes...>);          // noexcept since C++17
 };
 
 template <class T>

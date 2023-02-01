@@ -961,6 +961,13 @@ bool IsPolymorphic(const Symbol &symbol) {
   return false;
 }
 
+bool IsUnlimitedPolymorphic(const Symbol &symbol) {
+  if (const DeclTypeSpec * type{symbol.GetType()}) {
+    return type->IsUnlimitedPolymorphic();
+  }
+  return false;
+}
+
 bool IsPolymorphicAllocatable(const Symbol &symbol) {
   return IsAllocatable(symbol) && IsPolymorphic(symbol);
 }

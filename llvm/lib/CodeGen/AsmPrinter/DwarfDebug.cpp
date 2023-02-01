@@ -2260,6 +2260,9 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
   if (!TheCU.getCUNode()->getDebugInfoForProfiling() &&
       TheCU.getCUNode()->getEmissionKind() == DICompileUnit::LineTablesOnly &&
       LScopes.getAbstractScopesList().empty() && !IsDarwin) {
+    for (const auto &R : Asm->MBBSectionRanges)
+      addArangeLabel(SymbolCU(&TheCU, R.second.BeginLabel));
+
     assert(InfoHolder.getScopeVariables().empty());
     PrevLabel = nullptr;
     CurFn = nullptr;

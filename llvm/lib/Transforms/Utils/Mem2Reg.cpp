@@ -74,15 +74,19 @@ namespace {
 struct PromoteLegacyPass : public FunctionPass {
   // Pass identification, replacement for typeid
   static char ID;
+  bool ForcePass; /// If true, forces pass to execute, instead of skipping.
 
-  PromoteLegacyPass() : FunctionPass(ID) {
+  PromoteLegacyPass() : FunctionPass(ID), ForcePass(false) {
+    initializePromoteLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
+  PromoteLegacyPass(bool IsForced) : FunctionPass(ID), ForcePass(IsForced) {
     initializePromoteLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
   // runOnFunction - To run this pass, first we calculate the alloca
   // instructions that are safe for promotion, then we promote each one.
   bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
+    if (!ForcePass && skipFunction(F))
       return false;
 
     DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
@@ -96,6 +100,7 @@ struct PromoteLegacyPass : public FunctionPass {
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.setPreservesCFG();
   }
+
 };
 
 } // end anonymous namespace
@@ -111,6 +116,6 @@ INITIALIZE_PASS_END(PromoteLegacyPass, "mem2reg", "Promote Memory to Register",
                     false, false)
 
 // createPromoteMemoryToRegister - Provide an entry point to create this pass.
-FunctionPass *llvm::createPromoteMemoryToRegisterPass() {
-  return new PromoteLegacyPass();
+FunctionPass *llvm::createPromoteMemoryToRegisterPass(bool IsForced) {
+  return new PromoteLegacyPass(IsForced);
 }

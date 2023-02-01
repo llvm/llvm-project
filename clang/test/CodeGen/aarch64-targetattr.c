@@ -89,6 +89,11 @@ void noneon() {}
 __attribute__((target("no-simd")))
 void nosimd() {}
 
+// This isn't part of the standard interface, but test that -arch features should not apply anything else.
+// CHECK-LABEL: @minusarch() #18
+__attribute__((target("no-v9.3a")))
+void minusarch() {}
+
 // CHECK: attributes #0 = { {{.*}} "target-features"="+crc,+fp-armv8,+lse,+neon,+ras,+rdm,+v8.1a,+v8.2a,+v8a" }
 // CHECK: attributes #1 = { {{.*}} "target-features"="+crc,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rdm,+sve,+v8.1a,+v8.2a,+v8a" }
 // CHECK: attributes #2 = { {{.*}} "target-features"="+crc,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rdm,+sve,+sve2,+v8.1a,+v8.2a,+v8a" }
@@ -107,3 +112,4 @@ void nosimd() {}
 // CHECK: attributes #15 = { {{.*}} "target-cpu"="neoverse-n1" "target-features"="+aes,+bf16,+crc,+dotprod,+fp-armv8,+fullfp16,+i8mm,+lse,+neon,+ras,+rcpc,+rdm,+sha2,+spe,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a" "tune-cpu"="cortex-a710" }
 // CHECK: attributes #16 = { {{.*}} "branch-target-enforcement"="true" {{.*}} "target-features"="+aes,+bf16,+crc,+dotprod,+fp-armv8,+fullfp16,+i8mm,+lse,+neon,+ras,+rcpc,+rdm,+sha2,+spe,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a" "tune-cpu"="cortex-a710" }
 // CHECK: attributes #17 = { {{.*}} "target-features"="-neon" }
+// CHECK: attributes #18 = { {{.*}} "target-features"="-v9.3a" }

@@ -27,9 +27,9 @@ namespace {
 struct AssumingOpInterface
     : public BufferizableOpInterface::ExternalModel<AssumingOpInterface,
                                                     shape::AssumingOp> {
-  SmallVector<OpOperand *>
-  getAliasingOpOperand(Operation *op, OpResult opResult,
-                       const AnalysisState &state) const {
+  AliasingOpOperandList
+  getAliasingOpOperands(Operation *op, OpResult opResult,
+                        const AnalysisState &state) const {
     // AssumingOps do not have tensor OpOperands. The yielded value can be any
     // SSA value that is in scope. To allow for use-def chain traversal through
     // AssumingOps in the analysis, the corresponding yield value is considered
@@ -99,11 +99,13 @@ struct AssumingYieldOpInterface
     return false;
   }
 
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     assert(isa<shape::AssumingOp>(op->getParentOp()) &&
            "expected that parent is an AssumingOp");
-    return {op->getParentOp()->getResult(opOperand.getOperandNumber())};
+    OpResult opResult =
+        op->getParentOp()->getResult(opOperand.getOperandNumber());
+    return {opResult};
   }
 
   bool mustBufferizeInPlace(Operation *op, OpOperand &opOperand,
