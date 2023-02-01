@@ -14,11 +14,6 @@
 // RUN:     -o FoE.o -x objective-c %s >> %t_savetemps.result
 // RUN: cat %t_savetemps.result | sed 's/\\/\//g' | FileCheck %s -DOUTPUTS=%/t --check-prefixes=CHECK,SAVETEMPS
 
-// RUN: c-index-test core --scan-deps %S -output-dir=%t -deprecated-driver-command -- %clang -c -I %S/Inputs/module \
-// RUN:     -fmodules -fmodules-cache-path=%t.mcp -save-temps=obj \
-// RUN:     -o FoE.o -x objective-c %s >> %t_v3.result
-// RUN: cat %t_v3.result | sed 's/\\/\//g' | FileCheck %s -DOUTPUTS=%/t --check-prefixes=CHECK,DRIVER
-
 @import ModA;
 
 // CHECK: [[PREFIX:.*]]
@@ -43,7 +38,6 @@
 // CHECK-NEXT:     file-deps:
 // CHECK-NEXT:       [[PREFIX]]/scan-deps.m
 // CC1-NEXT:       build-args: -cc1 {{.*}} -fmodule-file={{(ModA=)?}}{{.*}}ModA_{{.*}}.pcm
-// DRIVER-NEXT:    build-args: -c {{.*}} -save-temps=obj {{.*}} -fno-implicit-modules -fno-implicit-module-maps {{.*}} -fmodule-file={{(ModA=)?}}{{.*}}ModA_{{.*}}.pcm
 // SAVETEMPS-NEXT: build-args: -cc1 {{.*}} -E {{.*}} -fmodule-file={{(ModA=)?}}{{.*}}ModA_{{.*}}.pcm
 
 // SAVETEMPS-NEXT: command 1:
