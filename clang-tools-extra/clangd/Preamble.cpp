@@ -53,7 +53,6 @@
 namespace clang {
 namespace clangd {
 namespace {
-constexpr llvm::StringLiteral PreamblePatchHeaderName = "__preamble_patch__.h";
 
 bool compileCommandsAreEqual(const tooling::CompileCommand &LHS,
                              const tooling::CompileCommand &RHS) {
@@ -381,12 +380,6 @@ const char *spellingForIncDirective(tok::PPKeywordKind IncludeDirective) {
   llvm_unreachable("not an include directive");
 }
 
-// Checks whether \p FileName is a valid spelling of main file.
-bool isMainFile(llvm::StringRef FileName, const SourceManager &SM) {
-  auto FE = SM.getFileManager().getFile(FileName);
-  return FE && *FE == SM.getFileEntryForID(SM.getMainFileID());
-}
-
 // Accumulating wall time timer. Similar to llvm::Timer, but much cheaper,
 // it only tracks wall time.
 // Since this is a generic timer, We may want to move this to support/ if we
@@ -660,7 +653,7 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
   // This shouldn't coincide with any real file name.
   llvm::SmallString<128> PatchName;
   llvm::sys::path::append(PatchName, llvm::sys::path::parent_path(FileName),
-                          PreamblePatchHeaderName);
+                          PreamblePatch::HeaderName);
   PP.PatchFileName = PatchName.str().str();
   PP.ModifiedBounds = ModifiedScan->Bounds;
 
@@ -779,26 +772,6 @@ PreamblePatch PreamblePatch::unmodified(const PreambleData &Preamble) {
   PP.PreambleIncludes = Preamble.Includes.MainFileIncludes;
   PP.ModifiedBounds = Preamble.Preamble.getBounds();
   return PP;
-}
-
-SourceLocation translatePreamblePatchLocation(SourceLocation Loc,
-                                              const SourceManager &SM) {
-  auto DefFile = SM.getFileID(Loc);
-  if (auto FE = SM.getFileEntryRefForID(DefFile)) {
-    auto IncludeLoc = SM.getIncludeLoc(DefFile);
-    // Preamble patch is included inside the builtin file.
-    if (IncludeLoc.isValid() && SM.isWrittenInBuiltinFile(IncludeLoc) &&
-        FE->getName().endswith(PreamblePatchHeaderName)) {
-      auto Presumed = SM.getPresumedLoc(Loc);
-      // Check that line directive is pointing at main file.
-      if (Presumed.isValid() && Presumed.getFileID().isInvalid() &&
-          isMainFile(Presumed.getFilename(), SM)) {
-        Loc = SM.translateLineCol(SM.getMainFileID(), Presumed.getLine(),
-                                  Presumed.getColumn());
-      }
-    }
-  }
-  return Loc;
 }
 
 bool PreamblePatch::preserveDiagnostics() const {
