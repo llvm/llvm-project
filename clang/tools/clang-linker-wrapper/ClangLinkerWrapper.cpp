@@ -396,9 +396,11 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
     CmdArgs.push_back("-Wl,-Bsymbolic");
     CmdArgs.push_back("-shared");
     ArgStringList LinkerArgs;
-    for (const opt::Arg *Arg :
-         Args.filtered(OPT_library, OPT_rpath, OPT_library_path))
+    for (const opt::Arg *Arg : Args.filtered(OPT_library, OPT_library_path))
       Arg->render(Args, LinkerArgs);
+    for (const opt::Arg *Arg : Args.filtered(OPT_rpath))
+      LinkerArgs.push_back(
+          Args.MakeArgString("-Wl,-rpath," + StringRef(Arg->getValue())));
     llvm::copy(LinkerArgs, std::back_inserter(CmdArgs));
   }
 
