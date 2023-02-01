@@ -115,7 +115,7 @@ FailureOr<int64_t> getConstantUpperBoundForIndex(Value value);
 Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
                             Value source, Value pad, bool nofold);
 
-/// Returns a GenericOp that tansposes `inputTensor` into `outputTensor` using
+/// Returns a GenericOp that transposes `inputTensor` into `outputTensor` using
 /// `transposeVector` to permute the `inputTensor` dimensions.
 GenericOp makeTransposeOp(OpBuilder &b, Location loc, Value inputTensor,
                           Value outputTensor,

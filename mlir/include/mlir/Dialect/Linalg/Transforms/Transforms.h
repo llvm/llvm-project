@@ -1142,12 +1142,17 @@ FailureOr<SmallVector<Value>> collapseGenericOpIterationDims(
     GenericOp genericOp, ArrayRef<ReassociationIndices> foldedIterationDims,
     RewriterBase &rewriter);
 
+/// Struct to hold the result of a `pack` call.
+struct PackResult {
+  SmallVector<tensor::PackOp> packOps;
+  linalg::LinalgOp packedLinalgOp;
+  SmallVector<tensor::UnPackOp> unPackOps;
+};
 /// Implement packing of a single LinalgOp by `packedSizes`.
 /// There must be one packedSizes entry per `linalgOp` iterator.
 /// Return the packed Linalg op on success, failure otherwise.
-FailureOr<linalg::LinalgOp> pack(RewriterBase &rewriter,
-                                 linalg::LinalgOp linalgOp,
-                                 ArrayRef<OpFoldResult> packedSizes);
+FailureOr<PackResult> pack(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
+                           ArrayRef<OpFoldResult> packedSizes);
 
 /// Struct to hold the result of a `packTranspose` call.
 struct PackTransposeResult {

@@ -17,10 +17,15 @@
 namespace mlir {
 class TilingInterface;
 class RewriterBase;
+
 namespace linalg {
 class GenericOp;
 class LinalgOp;
 } // namespace linalg
+
+namespace tensor {
+class PackOp;
+} // namespace tensor
 
 namespace transform {
 class TransformHandleTypeInterface;

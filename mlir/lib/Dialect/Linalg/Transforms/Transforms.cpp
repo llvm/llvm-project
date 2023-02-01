@@ -1052,9 +1052,9 @@ PackedOperandsDimList::extractPackSizesForOperand(int64_t operandPos) {
 /// Implement packing of a single LinalgOp by performing packing by
 /// `packedSizes`. There must be one packedSizes entry per `linalgOp` iterator.
 /// Return the packed Linalg op on success, failure otherwise.
-FailureOr<linalg::LinalgOp> linalg::pack(RewriterBase &rewriter,
-                                         linalg::LinalgOp linalgOp,
-                                         ArrayRef<OpFoldResult> packedSizes) {
+FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
+                                   linalg::LinalgOp linalgOp,
+                                   ArrayRef<OpFoldResult> packedSizes) {
   if (packedSizes.size() != linalgOp.getNumLoops()) {
     return rewriter.notifyMatchFailure(linalgOp,
                                        "incorrect number of pack sizes");
@@ -1069,6 +1069,8 @@ FailureOr<linalg::LinalgOp> linalg::pack(RewriterBase &rewriter,
              llvm::interleaveComma(iteratorTypes, DBGS() << "iterators: ");
              DBGSNL(););
 
+  SmallVector<tensor::PackOp> packOps;
+  SmallVector<tensor::UnPackOp> unPackOps;
   // Step 1. Pack each dim of the LinalgOp metadata by packedSizes[i].
   PackedOperandsDimList listOfPackedOperandsDim;
   for (int64_t i = 0, e = packedSizes.size(); i < e; ++i) {
@@ -1124,8 +1126,9 @@ FailureOr<linalg::LinalgOp> linalg::pack(RewriterBase &rewriter,
       Attribute zeroAttr =
           rewriter.getZeroAttr(getElementTypeOrSelf(dest.getType()));
       Value zero = rewriter.create<arith::ConstantOp>(loc, zeroAttr);
-      inputsAndInits.push_back(rewriter.create<tensor::PackOp>(
+      packOps.push_back(rewriter.create<tensor::PackOp>(
           loc, operand, dest, innerPos, innerPackSizes, zero));
+      inputsAndInits.push_back(packOps.back());
     }
   }
 
@@ -1149,16 +1152,19 @@ FailureOr<linalg::LinalgOp> linalg::pack(RewriterBase &rewriter,
       continue;
     }
     // Build the symmetrical UnPackOp to the existing PackOp.
-    results.push_back(rewriter.create<tensor::UnPackOp>(
+    unPackOps.push_back(rewriter.create<tensor::UnPackOp>(
         packedLinalgOp->getLoc(), result, maybePackedInit.getSource(),
         maybePackedInit.getInnerDimsPos(), maybePackedInit.getMixedTiles()));
+    results.push_back(unPackOps.back());
   }
 
   // Step 5. Replace `linalgOp`.
   rewriter.replaceOp(linalgOp, results);
 
   // Return packedLinalgOp.
-  return cast<linalg::LinalgOp>(packedLinalgOp.getOperation());
+  return PackResult{packOps,
+                    cast<linalg::LinalgOp>(packedLinalgOp.getOperation()),
+                    unPackOps};
 }
 
 //===----------------------------------------------------------------------===//
