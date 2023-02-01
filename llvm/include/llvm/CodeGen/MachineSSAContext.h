@@ -26,10 +26,6 @@ class Register;
 template <typename _FunctionT> class GenericSSAContext;
 template <typename, bool> class DominatorTreeBase;
 
-inline auto successors(const MachineBasicBlock *BB) { return BB->successors(); }
-inline auto predecessors(const MachineBasicBlock *BB) {
-  return BB->predecessors();
-}
 inline unsigned succ_size(const MachineBasicBlock *BB) {
   return BB->succ_size();
 }
