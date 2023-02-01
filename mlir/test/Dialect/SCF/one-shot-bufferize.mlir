@@ -925,3 +925,26 @@ func.func @non_block_argument_yield() {
   }
   return
 }
+
+// -----
+
+// This is a regression test. Make sure that bufferization succeeds.
+
+// CHECK-LABEL: func @regression_cast_in_loop(
+func.func @regression_cast_in_loop() -> tensor<2xindex> {
+  %false = arith.constant false
+  %c0 = arith.constant 0 : index
+  %0 = bufferization.alloc_tensor() : tensor<2xindex>
+  // CHECK: scf.while (%{{.*}} = %{{.*}}) : (memref<2xindex>) -> memref<2xindex>
+  %1 = scf.while (%arg0 = %0) : (tensor<2xindex>) -> tensor<2xindex> {
+    scf.condition(%false) %arg0 : tensor<2xindex>
+  } do {
+  // CHECK: ^bb0(%{{.*}}: memref<2xindex>):
+  ^bb0(%arg0: tensor<2xindex>):
+    %cast = tensor.cast %0 : tensor<2xindex> to tensor<?xindex>
+    %inserted = tensor.insert %c0 into %cast[%c0] : tensor<?xindex>
+    %cast_0 = tensor.cast %inserted : tensor<?xindex> to tensor<2xindex>
+    scf.yield %cast_0 : tensor<2xindex>
+  }
+  return %1 : tensor<2xindex>
+}

@@ -51,6 +51,39 @@ struct CastOpInterface
     return BufferRelation::Equivalent;
   }
 
+  FailureOr<BaseMemRefType>
+  getBufferType(Operation *op, Value value, const BufferizationOptions &options,
+                const DenseMap<Value, BaseMemRefType> &fixedTypes) const {
+    auto castOp = cast<tensor::CastOp>(op);
+    auto maybeSrcBufferType =
+        bufferization::getBufferType(castOp.getSource(), options, fixedTypes);
+    if (failed(maybeSrcBufferType))
+      return failure();
+    Attribute memorySpace = maybeSrcBufferType->getMemorySpace();
+
+    // Note: `getMemRefTypeWithFullyDynamicLayout` returns an unranked memref
+    // type in case the input is an unranked tensor type.
+
+    // Case 1: Casting an unranked tensor
+    if (castOp.getSource().getType().isa<UnrankedTensorType>()) {
+      // When casting to a ranked tensor, we cannot infer any static offset or
+      // strides from the source. Assume fully dynamic.
+      return getMemRefTypeWithFullyDynamicLayout(castOp.getType(), memorySpace);
+    }
+
+    // Case 2: Casting to an unranked tensor type
+    if (castOp.getType().isa<UnrankedTensorType>()) {
+      return getMemRefTypeWithFullyDynamicLayout(castOp.getType(), memorySpace);
+    }
+
+    // Case 3: Ranked tensor -> ranked tensor. The offsets and strides do not
+    // change.
+    auto rankedResultType = castOp.getType().cast<RankedTensorType>();
+    return MemRefType::get(
+        rankedResultType.getShape(), rankedResultType.getElementType(),
+        maybeSrcBufferType->cast<MemRefType>().getLayout(), memorySpace);
+  }
+
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     auto castOp = cast<tensor::CastOp>(op);
@@ -60,25 +93,19 @@ struct CastOpInterface
         getBuffer(rewriter, castOp.getSource(), options);
     if (failed(resultBuffer))
       return failure();
-    auto sourceMemRefType = resultBuffer->getType().cast<BaseMemRefType>();
-    TensorType resultTensorType =
-        castOp.getResult().getType().cast<TensorType>();
-    MemRefLayoutAttrInterface layout;
 
-    if (auto rankedMemRefType = sourceMemRefType.dyn_cast<MemRefType>())
-      if (resultTensorType.isa<RankedTensorType>())
-        layout = rankedMemRefType.getLayout();
-
-    // Compute the new memref type.
-    Type resultMemRefType = getMemRefType(castOp.getResult(), options, layout,
-                                          sourceMemRefType.getMemorySpace());
+    // Compute the new type.
+    auto resultMemRefType =
+        bufferization::getBufferType(castOp.getResult(), options);
+    if (failed(resultMemRefType))
+      return failure();
 
     // Replace the op with a memref.cast.
     assert(memref::CastOp::areCastCompatible(resultBuffer->getType(),
-                                             resultMemRefType) &&
+                                             *resultMemRefType) &&
            "CallOp::bufferize: cast incompatible");
-    replaceOpWithNewBufferizedOp<memref::CastOp>(rewriter, op, resultMemRefType,
-                                                 *resultBuffer);
+    replaceOpWithNewBufferizedOp<memref::CastOp>(
+        rewriter, op, *resultMemRefType, *resultBuffer);
 
     return success();
   }
