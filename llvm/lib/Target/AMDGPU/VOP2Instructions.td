@@ -660,7 +660,7 @@ def VOP2e_I16_I16_I16_I1 : VOP2e_SGPR<[i16, i16, i16, i1]>;
 def VOP_READLANE : VOPProfile<[i32, i32, i32, untyped]> {
   let Outs32 = (outs SReg_32:$vdst);
   let Outs64 = Outs32;
-  let Ins32 = (ins VRegOrLds_32:$src0, SCSrc_b32:$src1);
+  let Ins32 = (ins VRegOrLdsSrc_32:$src0, SCSrc_b32:$src1);
   let Ins64 = Ins32;
   let Asm32 = " $vdst, $src0, $src1";
   let Asm64 = Asm32;

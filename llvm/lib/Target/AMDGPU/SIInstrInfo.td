@@ -1707,7 +1707,7 @@ class getVOP3SrcForVT<ValueType VT> {
   bit isFP = isFloatType<VT>.ret;
   RegisterOperand ret =
   !if(!eq(VT.Size, 128),
-     VSrc_128,
+     VRegSrc_128,
      !if(!eq(VT.Size, 64),
         !if(isFP,
            !if(!eq(VT.Value, v2f32.Value),
@@ -2435,7 +2435,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field RegisterClass Src1DPP = getVregSrcForVT<Src1VT>.ret;
   field RegisterClass Src2DPP = getVregSrcForVT<Src2VT>.ret;
   field RegisterOperand Src0VOP3DPP = VGPRSrc_32;
-  field RegisterOperand Src1VOP3DPP = VGPRSrc_32;
+  field RegisterOperand Src1VOP3DPP = VRegSrc_32;
   field RegisterOperand Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT>.ret;
   field RegisterOperand Src0SDWA = getSDWASrcForVT<Src0VT>.ret;
   field RegisterOperand Src1SDWA = getSDWASrcForVT<Src0VT>.ret;
