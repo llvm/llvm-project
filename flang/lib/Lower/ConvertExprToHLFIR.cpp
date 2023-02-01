@@ -521,6 +521,8 @@ private:
     // Lower the information about the component (type, length parameters and
     // shape).
     const Fortran::semantics::Symbol &componentSym = component.GetLastSymbol();
+    if (componentSym.test(Fortran::semantics::Symbol::Flag::ParentComp))
+      TODO(getLoc(), "Parent component reference in HLFIR");
     partInfo.componentName = componentSym.name().ToString();
     auto recordType =
         hlfir::getFortranElementType(baseType).cast<fir::RecordType>();
