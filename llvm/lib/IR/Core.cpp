@@ -1009,6 +1009,13 @@ LLVMValueRef LLVMIsAMDNode(LLVMValueRef Val) {
   return nullptr;
 }
 
+LLVMValueRef LLVMIsAValueAsMetadata(LLVMValueRef Val) {
+  if (auto *MD = dyn_cast_or_null<MetadataAsValue>(unwrap(Val)))
+    if (isa<ValueAsMetadata>(MD->getMetadata()))
+      return Val;
+  return nullptr;
+}
+
 LLVMValueRef LLVMIsAMDString(LLVMValueRef Val) {
   if (auto *MD = dyn_cast_or_null<MetadataAsValue>(unwrap(Val)))
     if (isa<MDString>(MD->getMetadata()))
@@ -1266,6 +1273,13 @@ void LLVMGetMDNodeOperands(LLVMValueRef V, LLVMValueRef *Dest) {
   LLVMContext &Context = unwrap(V)->getContext();
   for (unsigned i = 0; i < numOperands; i++)
     Dest[i] = getMDNodeOperandImpl(Context, N, i);
+}
+
+void LLVMReplaceMDNodeOperandWith(LLVMValueRef V, unsigned Index,
+                                  LLVMMetadataRef Replacement) {
+  auto *MD = cast<MetadataAsValue>(unwrap(V));
+  auto *N = cast<MDNode>(MD->getMetadata());
+  N->replaceOperandWith(Index, unwrap<Metadata>(Replacement));
 }
 
 unsigned LLVMGetNamedMetadataNumOperands(LLVMModuleRef M, const char *Name) {
