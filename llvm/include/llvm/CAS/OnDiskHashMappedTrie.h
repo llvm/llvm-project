@@ -19,8 +19,6 @@
 #include <atomic>
 #include <mutex>
 
-#if LLVM_ENABLE_ONDISK_CAS
-
 namespace llvm {
 
 class MemoryBuffer;
@@ -378,5 +376,4 @@ private:
 } // namespace cas
 } // namespace llvm
 
-#endif // LLVM_ENABLE_ONDISK_CAS
 #endif // LLVM_CAS_ONDISKHASHMAPPEDTRIE_H

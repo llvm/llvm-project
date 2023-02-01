@@ -14,7 +14,6 @@ using namespace llvm;
 using namespace llvm::cas;
 using namespace llvm::cas::builtin;
 
-#if LLVM_ENABLE_ONDISK_CAS
 namespace {
 
 class OnDiskCAS : public BuiltinCAS {
@@ -132,6 +131,8 @@ Expected<std::unique_ptr<OnDiskCAS>> OnDiskCAS::open(StringRef AbsPath) {
     return DB.takeError();
   return std::unique_ptr<OnDiskCAS>(new OnDiskCAS(std::move(*DB)));
 }
+
+#if LLVM_ENABLE_ONDISK_CAS
 
 Expected<std::unique_ptr<ObjectStore>> cas::createOnDiskCAS(const Twine &Path) {
   // FIXME: An absolute path isn't really good enough. Should open a directory

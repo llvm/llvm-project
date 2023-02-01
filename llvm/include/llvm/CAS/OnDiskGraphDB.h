@@ -12,8 +12,6 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/CAS/OnDiskHashMappedTrie.h"
 
-#if LLVM_ENABLE_ONDISK_CAS
-
 namespace llvm::cas::ondisk {
 
 /// 8B reference.
@@ -350,5 +348,4 @@ private:
 
 } // namespace llvm::cas::ondisk
 
-#endif // LLVM_ENABLE_ONDISK_CAS
 #endif // LLVM_CAS_ONDISKGRAPHDB_H
