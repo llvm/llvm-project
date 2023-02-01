@@ -108,12 +108,6 @@ public:
                       LookupModuleOutputCallback LookupModuleOutput,
                       std::optional<StringRef> ModuleName = std::nullopt);
 
-  llvm::Expected<FullDependenciesResult> getFullDependenciesLegacyDriverCommand(
-      const std::vector<std::string> &CommandLine, StringRef CWD,
-      const llvm::StringSet<> &AlreadySeen,
-      LookupModuleOutputCallback LookupModuleOutput,
-      std::optional<StringRef> ModuleName = std::nullopt);
-
 private:
   DependencyScanningWorker Worker;
 };
@@ -121,10 +115,8 @@ private:
 class FullDependencyConsumer : public DependencyConsumer {
 public:
   FullDependencyConsumer(const llvm::StringSet<> &AlreadySeen,
-                         LookupModuleOutputCallback LookupModuleOutput,
-                         bool EagerLoadModules)
-      : AlreadySeen(AlreadySeen), LookupModuleOutput(LookupModuleOutput),
-        EagerLoadModules(EagerLoadModules) {}
+                         LookupModuleOutputCallback LookupModuleOutput)
+      : AlreadySeen(AlreadySeen), LookupModuleOutput(LookupModuleOutput) {}
 
   void handleBuildCommand(Command Cmd) override {
     Commands.push_back(std::move(Cmd));
@@ -153,9 +145,6 @@ public:
     return LookupModuleOutput(ID, Kind);
   }
 
-  FullDependenciesResult getFullDependenciesLegacyDriverCommand(
-      const std::vector<std::string> &OriginalCommandLine) const;
-
   FullDependenciesResult takeFullDependencies();
 
 private:
@@ -168,7 +157,6 @@ private:
   std::vector<std::string> OutputPaths;
   const llvm::StringSet<> &AlreadySeen;
   LookupModuleOutputCallback LookupModuleOutput;
-  bool EagerLoadModules;
 };
 
 } // end namespace dependencies
