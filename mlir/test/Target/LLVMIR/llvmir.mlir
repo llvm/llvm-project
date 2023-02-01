@@ -944,6 +944,11 @@ llvm.func @vector_splat_nonzero_scalable() -> vector<[4]xf32> {
   llvm.return %0 : vector<[4]xf32>
 }
 
+// CHECK-LABEL: @f8_ptrs(ptr {{%.*}}, ptr {{%.*}})
+llvm.func @f8_ptrs(%arg0: !llvm.ptr<f8E5M2>, %arg1: !llvm.ptr<f8E4M3FN>) {
+  llvm.return
+}
+
 // CHECK-LABEL: @ops
 llvm.func @ops(%arg0: f32, %arg1: f32, %arg2: i32, %arg3: i32) -> !llvm.struct<(f32, i32)> {
 // CHECK-NEXT: fsub float %0, %1
