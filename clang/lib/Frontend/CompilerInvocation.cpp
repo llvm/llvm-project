@@ -1304,8 +1304,9 @@ static std::string serializeXRayInstrumentationBundle(const XRayInstrSet &S) {
 // Set the profile kind using fprofile-instrument-use-path.
 static void setPGOUseInstrumentor(CodeGenOptions &Opts,
                                   const Twine &ProfileName,
+                                  llvm::vfs::FileSystem &FS,
                                   DiagnosticsEngine &Diags) {
-  auto ReaderOrErr = llvm::IndexedInstrProfReader::create(ProfileName);
+  auto ReaderOrErr = llvm::IndexedInstrProfReader::create(ProfileName, FS);
   if (auto E = ReaderOrErr.takeError()) {
     unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
                                             "Error in reading profile %0: %1");
@@ -1724,9 +1725,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
             : codegenoptions::DebugTemplateNamesKind::Mangled);
   }
 
-  if (!Opts.ProfileInstrumentUsePath.empty())
-    setPGOUseInstrumentor(Opts, Opts.ProfileInstrumentUsePath, Diags);
-
   if (const Arg *A = Args.getLastArg(OPT_ftime_report, OPT_ftime_report_EQ)) {
     Opts.TimePasses = true;
 
@@ -1962,8 +1960,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
                      Opts.OptimizationRemarkAnalysis.hasValidPattern();
 
   bool UsingSampleProfile = !Opts.SampleProfileFile.empty();
-  bool UsingProfile = UsingSampleProfile ||
-      (Opts.getProfileUse() != CodeGenOptions::ProfileNone);
+  bool UsingProfile =
+      UsingSampleProfile || !Opts.ProfileInstrumentUsePath.empty();
 
   if (Opts.DiagnosticsWithHotness && !UsingProfile &&
       // An IR file will contain PGO as metadata
@@ -4561,6 +4559,17 @@ bool CompilerInvocation::CreateFromArgsImpl(
   if (Res.getCodeGenOpts().CodeViewCommandLine) {
     Res.getCodeGenOpts().Argv0 = Argv0;
     append_range(Res.getCodeGenOpts().CommandLineArgs, CommandLineArgs);
+  }
+
+  // Set PGOOptions. Need to create a temporary VFS to read the profile
+  // to determine the PGO type.
+  if (!Res.getCodeGenOpts().ProfileInstrumentUsePath.empty()) {
+    auto FS =
+        createVFSFromOverlayFiles(Res.getHeaderSearchOpts().VFSOverlayFiles,
+                                  Diags, llvm::vfs::getRealFileSystem());
+    setPGOUseInstrumentor(Res.getCodeGenOpts(),
+                          Res.getCodeGenOpts().ProfileInstrumentUsePath, *FS,
+                          Diags);
   }
 
   FixupInvocation(Res, Diags, Args, DashX);
