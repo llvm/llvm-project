@@ -560,8 +560,37 @@ struct CallContext {
 /// was lowered regardless of the interface, and it holds whether or not it
 /// may be absent at runtime and the dummy is optional.
 struct PreparedActualArgument {
+
+  PreparedActualArgument(hlfir::Entity actual,
+                         std::optional<mlir::Value> isPresent)
+      : actual{actual}, isPresent{isPresent} {}
+  void setElementalIndices(mlir::ValueRange &indices) {
+    oneBasedElementalIndices = &indices;
+  }
+  hlfir::Entity getActual(mlir::Location loc,
+                          fir::FirOpBuilder &builder) const {
+    if (oneBasedElementalIndices)
+      return hlfir::getElementAt(loc, builder, actual,
+                                 *oneBasedElementalIndices);
+    return actual;
+  }
+  hlfir::Entity getOriginalActual() const { return actual; }
+  void setOriginalActual(hlfir::Entity newActual) { actual = newActual; }
+  bool handleDynamicOptional() const { return isPresent.has_value(); }
+  mlir::Value getIsPresent() const {
+    assert(handleDynamicOptional() && "not a dynamic optional");
+    return *isPresent;
+  }
+
+  void resetOptionalAspect() { isPresent = std::nullopt; }
+
+private:
   hlfir::Entity actual;
-  bool handleDynamicOptional;
+  mlir::ValueRange *oneBasedElementalIndices{nullptr};
+  // When the actual may be dynamically optional, "isPresent"
+  // holds a boolean value indicating the presence of the
+  // actual argument at runtime.
+  std::optional<mlir::Value> isPresent;
 };
 } // namespace
 
@@ -581,6 +610,335 @@ extendedValueToHlfirEntity(mlir::Location loc, fir::FirOpBuilder &builder,
   return hlfir::genDeclare(loc, builder, exv, name,
                            fir::FortranVariableFlagsAttr{});
 }
+namespace {
+/// Structure to hold the clean-up related to a dummy argument preparation
+/// that may have to be done after a call (copy-out or temporary deallocation).
+struct CallCleanUp {
+  struct CopyIn {
+    void genCleanUp(mlir::Location loc, fir::FirOpBuilder &builder) {
+      builder.create<hlfir::CopyOutOp>(loc, copiedIn, wasCopied, copyBackVar);
+    }
+    mlir::Value copiedIn;
+    mlir::Value wasCopied;
+    // copyBackVar may be null if copy back is not needed.
+    mlir::Value copyBackVar;
+  };
+  struct ExprAssociate {
+    void genCleanUp(mlir::Location loc, fir::FirOpBuilder &builder) {
+      builder.create<hlfir::EndAssociateOp>(loc, tempVar, mustFree);
+    }
+    mlir::Value tempVar;
+    mlir::Value mustFree;
+  };
+  void genCleanUp(mlir::Location loc, fir::FirOpBuilder &builder) {
+    std::visit([&](auto &c) { c.genCleanUp(loc, builder); }, cleanUp);
+  }
+  std::variant<CopyIn, ExprAssociate> cleanUp;
+};
+
+/// Structure representing a prepared dummy argument.
+/// It holds the value to be passed in the call and any related
+/// clean-ups to be done after the call.
+struct PreparedDummyArgument {
+  void setCopyInCleanUp(mlir::Value copiedIn, mlir::Value wasCopied,
+                        mlir::Value copyBackVar) {
+    assert(!maybeCleanUp.has_value() && "clean-up already set");
+    maybeCleanUp =
+        CallCleanUp{CallCleanUp::CopyIn{copiedIn, wasCopied, copyBackVar}};
+  }
+  void setExprAssociateCleanUp(mlir::Value tempVar, mlir::Value wasCopied) {
+    assert(!maybeCleanUp.has_value() && "clean-up already set");
+    maybeCleanUp = CallCleanUp{CallCleanUp::ExprAssociate{tempVar, wasCopied}};
+  }
+
+  mlir::Value dummy;
+  std::optional<CallCleanUp> maybeCleanUp;
+};
+
+/// Structure to help conditionally preparing a dummy argument based
+/// on the actual argument presence.
+/// It helps "wrapping" the dummy and the clean-up information in
+/// an if (present) {...}:
+///
+///  %conditionallyPrepared = fir.if (%present) {
+///    fir.result %preparedDummy
+///  } else {
+///    fir.result %absent
+///  }
+///
+struct ConditionallyPreparedDummy {
+  /// Create ConditionallyPreparedDummy from a preparedDummy that must
+  /// be wrapped in a fir.if.
+  ConditionallyPreparedDummy(PreparedDummyArgument &preparedDummy) {
+    thenResultValues.push_back(preparedDummy.dummy);
+    if (preparedDummy.maybeCleanUp) {
+      if (const auto *copyInCleanUp = std::get_if<CallCleanUp::CopyIn>(
+              &preparedDummy.maybeCleanUp->cleanUp)) {
+        thenResultValues.push_back(copyInCleanUp->copiedIn);
+        thenResultValues.push_back(copyInCleanUp->wasCopied);
+        if (copyInCleanUp->copyBackVar)
+          thenResultValues.push_back(copyInCleanUp->copyBackVar);
+      } else {
+        const auto &exprAssociate = std::get<CallCleanUp::ExprAssociate>(
+            preparedDummy.maybeCleanUp->cleanUp);
+        thenResultValues.push_back(exprAssociate.tempVar);
+        thenResultValues.push_back(exprAssociate.mustFree);
+      }
+    }
+  }
+
+  /// Get the result types of the wrapping fir.if that must be created.
+  llvm::SmallVector<mlir::Type> getIfResulTypes() const {
+    llvm::SmallVector<mlir::Type> types;
+    for (mlir::Value res : thenResultValues)
+      types.push_back(res.getType());
+    return types;
+  }
+
+  /// Generate the "fir.result %preparedDummy" in the then branch of the
+  /// wrapping fir.if.
+  void genThenResult(mlir::Location loc, fir::FirOpBuilder &builder) const {
+    builder.create<fir::ResultOp>(loc, thenResultValues);
+  }
+
+  /// Generate the "fir.result %absent" in the else branch of the
+  /// wrapping fir.if.
+  void genElseResult(mlir::Location loc, fir::FirOpBuilder &builder) const {
+    llvm::SmallVector<mlir::Value> elseResultValues;
+    mlir::Type i1Type = builder.getI1Type();
+    for (mlir::Value res : thenResultValues) {
+      mlir::Type type = res.getType();
+      if (type == i1Type)
+        elseResultValues.push_back(builder.createBool(loc, false));
+      else
+        elseResultValues.push_back(builder.create<fir::AbsentOp>(loc, type));
+    }
+    builder.create<fir::ResultOp>(loc, elseResultValues);
+  }
+
+  /// Once the fir.if has been created, get the resulting %conditionallyPrepared
+  /// dummy argument.
+  PreparedDummyArgument
+  getPreparedDummy(fir::IfOp ifOp,
+                   const PreparedDummyArgument &unconditionalDummy) {
+    PreparedDummyArgument preparedDummy;
+    preparedDummy.dummy = ifOp.getResults()[0];
+    if (unconditionalDummy.maybeCleanUp) {
+      if (const auto *copyInCleanUp = std::get_if<CallCleanUp::CopyIn>(
+              &unconditionalDummy.maybeCleanUp->cleanUp)) {
+        mlir::Value copyBackVar;
+        if (copyInCleanUp->copyBackVar)
+          copyBackVar = ifOp.getResults().back();
+        preparedDummy.setCopyInCleanUp(ifOp.getResults()[1],
+                                       ifOp.getResults()[2], copyBackVar);
+      } else {
+        preparedDummy.setExprAssociateCleanUp(ifOp.getResults()[1],
+                                              ifOp.getResults()[2]);
+      }
+    }
+    return preparedDummy;
+  }
+
+  llvm::SmallVector<mlir::Value> thenResultValues;
+};
+} // namespace
+
+/// When dummy is not ALLOCATABLE, POINTER and is not passed in register,
+/// prepare the actual argument according to the interface. Do as needed:
+/// - address element if this is an array argument in an elemental call.
+/// - set dynamic type to the dummy type if the dummy is not polymorphic.
+/// - copy-in into contiguous variable if the dummy must be contiguous
+/// - copy into a temporary if the dummy has the VALUE attribute.
+/// - package the prepared dummy as required (fir.box, fir.class,
+///   fir.box_char...).
+/// This function should only be called with an actual that is present.
+/// The optional aspects must be handled by this function user.
+static PreparedDummyArgument preparePresentUserCallActualArgument(
+    mlir::Location loc, fir::FirOpBuilder &builder,
+    const PreparedActualArgument &preparedActual, mlir::Type dummyType,
+    const Fortran::lower::CallerInterface::PassedEntity &arg,
+    const Fortran::lower::SomeExpr &expr,
+    Fortran::evaluate::FoldingContext &foldingContext) {
+
+  // Step 1: get the actual argument, which includes addressing the
+  // element if this is an array in an elemental call.
+  hlfir::Entity actual = preparedActual.getActual(loc, builder);
+
+  const bool passingPolymorphicToNonPolymorphic =
+      actual.isPolymorphic() && !fir::isPolymorphicType(dummyType);
+
+  // When passing a CLASS(T) to TYPE(T), only the "T" part must be
+  // passed. Unless the entity is a scalar passed by raw address, a
+  // new descriptor must be made using the dummy argument type as
+  // dynamic type. This must be done before any copy/copy-in because the
+  // dynamic type matters to determine the contiguity.
+  const bool mustSetDynamicTypeToDummyType =
+      passingPolymorphicToNonPolymorphic &&
+      (actual.isArray() || dummyType.isa<fir::BaseBoxType>());
+
+  // The simple contiguity of the actual is "lost" when passing a polymorphic
+  // to a non polymorphic entity because the dummy dynamic type matters for
+  // the contiguity.
+  const bool mustDoCopyInOut =
+      actual.isArray() && arg.mustBeMadeContiguous() &&
+      (passingPolymorphicToNonPolymorphic ||
+       !Fortran::evaluate::IsSimplyContiguous(expr, foldingContext));
+
+  // Step 2: prepare the storage for the dummy arguments, ensuring that it
+  // matches the dummy requirements (e.g., must be contiguous or must be
+  // a temporary).
+  PreparedDummyArgument preparedDummy;
+  hlfir::Entity entity =
+      hlfir::derefPointersAndAllocatables(loc, builder, actual);
+  if (entity.isVariable()) {
+    if (mustSetDynamicTypeToDummyType) {
+      // Note: this is important to do this before any copy-in or copy so
+      // that the dummy is contiguous according to the dummy type.
+      mlir::Type boxType =
+          fir::BoxType::get(hlfir::getFortranElementOrSequenceType(dummyType));
+      entity = hlfir::Entity{builder.create<fir::ReboxOp>(
+          loc, boxType, entity, /*shape=*/mlir::Value{},
+          /*slice=*/mlir::Value{})};
+    }
+    if (arg.hasValueAttribute()) {
+      // Make a copy in a temporary.
+      auto copy = builder.create<hlfir::AsExprOp>(loc, entity);
+      hlfir::AssociateOp associate = hlfir::genAssociateExpr(
+          loc, builder, hlfir::Entity{copy}, dummyType, "adapt.valuebyref");
+      entity = hlfir::Entity{associate.getBase()};
+      // Register the temporary destruction after the call.
+      preparedDummy.setExprAssociateCleanUp(
+          associate.getFirBase(), associate.getMustFreeStrorageFlag());
+    } else if (mustDoCopyInOut) {
+      // Copy-in non contiguous variables.
+      assert(entity.getType().isa<fir::BaseBoxType>() &&
+             "expect non simply contiguous variables to be boxes");
+      auto copyIn = builder.create<hlfir::CopyInOp>(
+          loc, entity, /*var_is_present=*/mlir::Value{});
+      entity = hlfir::Entity{copyIn.getCopiedIn()};
+      // Register the copy-out after the call.
+      preparedDummy.setCopyInCleanUp(
+          copyIn.getCopiedIn(), copyIn.getWasCopied(),
+          arg.mayBeModifiedByCall() ? copyIn.getVar() : mlir::Value{});
+    }
+  } else {
+    // The actual is an expression value, place it into a temporary
+    // and register the temporary destruction after the call.
+    if (mustSetDynamicTypeToDummyType)
+      TODO(loc, "passing polymorphic array expression to non polymorphic "
+                "contiguous dummy");
+    hlfir::AssociateOp associate = hlfir::genAssociateExpr(
+        loc, builder, entity, dummyType, "adapt.valuebyref");
+    entity = hlfir::Entity{associate.getBase()};
+    preparedDummy.setExprAssociateCleanUp(associate.getFirBase(),
+                                          associate.getMustFreeStrorageFlag());
+  }
+
+  // Step 3: now that the dummy argument storage has been prepared, package
+  // it according to the interface.
+  mlir::Value addr;
+  if (dummyType.isa<fir::BoxCharType>()) {
+    addr = hlfir::genVariableBoxChar(loc, builder, entity);
+  } else if (dummyType.isa<fir::BaseBoxType>()) {
+    entity = hlfir::genVariableBox(loc, builder, entity);
+    // Ensures the box has the right attributes and that it holds an
+    // addendum if needed.
+    mlir::Type boxEleType =
+        entity.getType().cast<fir::BaseBoxType>().getEleTy();
+    // For now, assume it is not OK to pass the allocatable/pointer
+    // descriptor to a non pointer/allocatable dummy. That is a strict
+    // interpretation of 18.3.6 point 4 that stipulates the descriptor
+    // has the dummy attributes in BIND(C) contexts.
+    const bool actualBoxHasAllocatableOrPointerFlag =
+        fir::isa_ref_type(boxEleType);
+    // On the callee side, the current code generated for unlimited
+    // polymorphic might unconditionally read the addendum. Intrinsic type
+    // descriptors may not have an addendum, the rebox below will create a
+    // descriptor with an addendum in such case.
+    const bool actualBoxHasAddendum =
+        fir::unwrapRefType(boxEleType).isa<fir::RecordType, mlir::NoneType>();
+    const bool needToAddAddendum =
+        fir::isUnlimitedPolymorphicType(dummyType) && !actualBoxHasAddendum;
+    if (needToAddAddendum || actualBoxHasAllocatableOrPointerFlag)
+      entity = hlfir::Entity{builder.create<fir::ReboxOp>(
+          loc, dummyType, entity, /*shape=*/mlir::Value{},
+          /*slice=*/mlir::Value{})};
+    addr = entity;
+  } else {
+    addr = hlfir::genVariableRawAddress(loc, builder, entity);
+  }
+  preparedDummy.dummy = builder.createConvert(loc, dummyType, addr);
+  return preparedDummy;
+}
+
+/// When dummy is not ALLOCATABLE, POINTER and is not passed in register,
+/// prepare the actual argument according to the interface, taking care
+/// of any optional aspect.
+static PreparedDummyArgument prepareUserCallActualArgument(
+    mlir::Location loc, fir::FirOpBuilder &builder,
+    const PreparedActualArgument &preparedActual, mlir::Type dummyType,
+    const Fortran::lower::CallerInterface::PassedEntity &arg,
+    const Fortran::lower::SomeExpr &expr,
+    Fortran::evaluate::FoldingContext &foldingContext) {
+  if (!preparedActual.handleDynamicOptional())
+    return preparePresentUserCallActualArgument(
+        loc, builder, preparedActual, dummyType, arg, expr, foldingContext);
+
+  // Conditional dummy argument preparation. The actual may be absent
+  // at runtime, causing any addressing, copy, and packaging to have
+  // undefined behavior.
+  // To simplify the handling of this case, the "normal" dummy preparation
+  // helper is used, except its generated code is wrapped inside a
+  // fir.if(present).
+  mlir::Value isPresent = preparedActual.getIsPresent();
+  mlir::OpBuilder::InsertPoint insertPt = builder.saveInsertionPoint();
+
+  // Code generated in a preparation block that will become the
+  // "then" block in "if (present) then {} else {}". The reason
+  // for this unusual if/then/else generation is that the number
+  // and types of the if results will depend on how the argument
+  // is prepared, and forecasting that here would be brittle.
+  auto badIfOp = builder.create<fir::IfOp>(loc, dummyType, isPresent,
+                                           /*withElseRegion=*/false);
+  mlir::Block *preparationBlock = &badIfOp.getThenRegion().front();
+  builder.setInsertionPointToStart(preparationBlock);
+  PreparedDummyArgument unconditionalDummy =
+      preparePresentUserCallActualArgument(
+          loc, builder, preparedActual, dummyType, arg, expr, foldingContext);
+  builder.restoreInsertionPoint(insertPt);
+
+  // TODO: when forwarding an optional to an optional of the same kind
+  // (i.e, unconditionalDummy.dummy was not created in preparationBlock),
+  // the if/then/else generation could be skipped to improve the generated
+  // code.
+
+  // Now that the result types of the ifOp can be deduced, generate
+  // the "real" ifOp (operation result types cannot be changed, so
+  // badIfOp cannot be modified and used here).
+  llvm::SmallVector<mlir::Type> ifOpResultTypes;
+  ConditionallyPreparedDummy conditionalDummy(unconditionalDummy);
+  auto ifOp = builder.create<fir::IfOp>(loc, conditionalDummy.getIfResulTypes(),
+                                        isPresent,
+                                        /*withElseRegion=*/true);
+  // Move "preparationBlock" into the "then" of the new
+  // fir.if operation and create fir.result propagating
+  // unconditionalDummy.
+  preparationBlock->moveBefore(&ifOp.getThenRegion().back());
+  ifOp.getThenRegion().back().erase();
+  builder.setInsertionPointToEnd(&ifOp.getThenRegion().front());
+  conditionalDummy.genThenResult(loc, builder);
+
+  // Generate "else" branch with returning absent values.
+  builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+  conditionalDummy.genElseResult(loc, builder);
+
+  // Build dummy from IfOpResults.
+  builder.setInsertionPointAfter(ifOp);
+  PreparedDummyArgument result =
+      conditionalDummy.getPreparedDummy(ifOp, unconditionalDummy);
+  badIfOp->erase();
+  return result;
+}
 
 /// Lower calls to user procedures with actual arguments that have been
 /// pre-lowered but not yet prepared according to the interface.
@@ -595,7 +953,7 @@ genUserCall(PreparedActualArguments &loweredActuals,
   using PassBy = Fortran::lower::CallerInterface::PassEntityBy;
   mlir::Location loc = callContext.loc;
   fir::FirOpBuilder &builder = callContext.getBuilder();
-  llvm::SmallVector<hlfir::AssociateOp> exprAssociations;
+  llvm::SmallVector<CallCleanUp> callCleanUps;
   for (auto [preparedActual, arg] :
        llvm::zip(loweredActuals, caller.getPassedArguments())) {
     mlir::Type argTy = callSiteType.getInput(arg.firArgument);
@@ -604,53 +962,31 @@ genUserCall(PreparedActualArguments &loweredActuals,
       caller.placeInput(arg, builder.create<fir::AbsentOp>(loc, argTy));
       continue;
     }
-    hlfir::Entity actual = preparedActual->actual;
     const auto *expr = arg.entity->UnwrapExpr();
     if (!expr)
       TODO(loc, "assumed type actual argument");
 
-    if (preparedActual->handleDynamicOptional)
-      TODO(loc, "passing optional arguments in HLFIR");
-
-    const bool isSimplyContiguous =
-        actual.isScalar() ||
-        Fortran::evaluate::IsSimplyContiguous(
-            *expr, callContext.converter.getFoldingContext());
-
     switch (arg.passBy) {
     case PassBy::Value: {
       // True pass-by-value semantics.
+      assert(!preparedActual->handleDynamicOptional() && "cannot be optional");
+      hlfir::Entity actual = preparedActual->getActual(loc, builder);
       auto value = hlfir::loadTrivialScalar(loc, builder, actual);
       if (!value.isValue())
         TODO(loc, "Passing CPTR an CFUNCTPTR VALUE in HLFIR");
       caller.placeInput(arg, builder.createConvert(loc, argTy, value));
     } break;
-    case PassBy::BaseAddressValueAttribute: {
-      // VALUE attribute or pass-by-reference to a copy semantics. (byval*)
-      TODO(loc, "HLFIR PassBy::BaseAddressValueAttribute");
-    } break;
+    case PassBy::BaseAddressValueAttribute:
+    case PassBy::CharBoxValueAttribute:
+    case PassBy::Box:
     case PassBy::BaseAddress:
     case PassBy::BoxChar: {
-      hlfir::Entity entity = actual;
-      if (entity.isVariable()) {
-        entity = hlfir::derefPointersAndAllocatables(loc, builder, entity);
-        // Copy-in non contiguous variable
-        if (!isSimplyContiguous)
-          TODO(loc, "HLFIR copy-in/copy-out");
-      } else {
-        hlfir::AssociateOp associate = hlfir::genAssociateExpr(
-            loc, builder, entity, argTy, "adapt.valuebyref");
-        exprAssociations.push_back(associate);
-        entity = hlfir::Entity{associate.getBase()};
-      }
-      mlir::Value addr =
-          arg.passBy == PassBy::BaseAddress
-              ? hlfir::genVariableRawAddress(loc, builder, entity)
-              : hlfir::genVariableBoxChar(loc, builder, entity);
-      caller.placeInput(arg, builder.createConvert(loc, argTy, addr));
-    } break;
-    case PassBy::CharBoxValueAttribute: {
-      TODO(loc, "HLFIR PassBy::CharBoxValueAttribute");
+      PreparedDummyArgument preparedDummy = prepareUserCallActualArgument(
+          loc, builder, *preparedActual, argTy, arg, *expr,
+          callContext.converter.getFoldingContext());
+      if (preparedDummy.maybeCleanUp.has_value())
+        callCleanUps.emplace_back(std::move(*preparedDummy.maybeCleanUp));
+      caller.placeInput(arg, preparedDummy.dummy);
     } break;
     case PassBy::AddressAndLength:
       // PassBy::AddressAndLength is only used for character results. Results
@@ -661,10 +997,8 @@ genUserCall(PreparedActualArguments &loweredActuals,
     case PassBy::CharProcTuple: {
       TODO(loc, "HLFIR PassBy::CharProcTuple");
     } break;
-    case PassBy::Box: {
-      TODO(loc, "HLFIR PassBy::Box");
-    } break;
     case PassBy::MutableBox: {
+      hlfir::Entity actual = preparedActual->getActual(loc, builder);
       if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
               *expr)) {
         // If expr is NULL(), the mutableBox created must be a deallocated
@@ -711,8 +1045,9 @@ genUserCall(PreparedActualArguments &loweredActuals,
       caller, callSiteType, callContext.resultType);
 
   /// Clean-up associations and copy-in.
-  for (auto associate : exprAssociations)
-    builder.create<hlfir::EndAssociateOp>(loc, associate);
+  for (auto cleanUp : callCleanUps)
+    cleanUp.genCleanUp(loc, builder);
+
   if (!fir::getBase(result))
     return std::nullopt; // subroutine call.
   // TODO: "move" non pointer results into hlfir.expr.
@@ -729,15 +1064,16 @@ static hlfir::EntityWithAttributes genIntrinsicRefCore(
   llvm::SmallVector<fir::ExtendedValue> operands;
   auto &stmtCtx = callContext.stmtCtx;
   auto &converter = callContext.converter;
+  fir::FirOpBuilder &builder = callContext.getBuilder();
   mlir::Location loc = callContext.loc;
   for (auto arg : llvm::enumerate(loweredActuals)) {
     if (!arg.value()) {
       operands.emplace_back(Fortran::lower::getAbsentIntrinsicArgument());
       continue;
     }
-    hlfir::Entity actual = arg.value()->actual;
-    if (arg.value()->handleDynamicOptional)
+    if (arg.value()->handleDynamicOptional())
       TODO(loc, "intrinsic dynamically optional arguments");
+    hlfir::Entity actual = arg.value()->getActual(loc, builder);
     if (!argLowering) {
       // No argument lowering instruction, lower by value.
       operands.emplace_back(
@@ -766,7 +1102,6 @@ static hlfir::EntityWithAttributes genIntrinsicRefCore(
     }
     llvm_unreachable("bad switch");
   }
-  fir::FirOpBuilder &builder = callContext.getBuilder();
   // genIntrinsicCall needs the scalar type, even if this is a transformational
   // procedure returning an array.
   std::optional<mlir::Type> scalarResultType;
@@ -808,32 +1143,47 @@ public:
     unsigned numArgs = loweredActuals.size();
     // Step 1: dereference pointers/allocatables and compute elemental shape.
     mlir::Value shape;
+    PreparedActualArgument *optionalWithShape;
     // 10.1.4 p5. Impure elemental procedures must be called in element order.
     bool mustBeOrdered = isImpure;
     for (unsigned i = 0; i < numArgs; ++i) {
       auto &preparedActual = loweredActuals[i];
       if (preparedActual) {
-        hlfir::Entity &actual = preparedActual->actual;
+        hlfir::Entity actual = preparedActual->getOriginalActual();
         // Elemental procedure dummy arguments cannot be pointer/allocatables
         // (C15100), so it is safe to dereference any pointer or allocatable
         // actual argument now instead of doing this inside the elemental
         // region.
         actual = hlfir::derefPointersAndAllocatables(loc, builder, actual);
         // Better to load scalars outside of the loop when possible.
-        if (!preparedActual->handleDynamicOptional &&
+        if (!preparedActual->handleDynamicOptional() &&
             impl().canLoadActualArgumentBeforeLoop(i))
           actual = hlfir::loadTrivialScalar(loc, builder, actual);
         // TODO: merge shape instead of using the first one.
         if (!shape && actual.isArray()) {
-          if (preparedActual->handleDynamicOptional)
-            TODO(loc, "deal with optional with shapes in HLFIR elemental call");
-          shape = hlfir::genShape(loc, builder, actual);
+          if (preparedActual->handleDynamicOptional())
+            optionalWithShape = &*preparedActual;
+          else
+            shape = hlfir::genShape(loc, builder, actual);
         }
         // 15.8.3 p1. Elemental procedure with intent(out)/intent(inout)
         // arguments must be called in element order.
         if (impl().argMayBeModifiedByCall(i))
           mustBeOrdered = true;
+        // Propagates pointer dereferences and scalar loads.
+        preparedActual->setOriginalActual(actual);
       }
+    }
+    if (!shape && optionalWithShape) {
+      // If all array operands appear in optional positions, then none of them
+      // is allowed to be absent as per 15.5.2.12 point 3. (6). Just pick the
+      // first operand.
+      shape =
+          hlfir::genShape(loc, builder, optionalWithShape->getOriginalActual());
+      // TODO: There is an opportunity to add a runtime check here that
+      // this array is present as required. Also, the optionality of all actual
+      // could be checked and reset given the Fortran requirement.
+      optionalWithShape->resetOptionalAspect();
     }
     assert(shape &&
            "elemental array calls must have at least one array arguments");
@@ -843,15 +1193,15 @@ public:
     // iterations are cleaned up inside the iterations.
     if (!callContext.resultType) {
       // Subroutine case. Generate call inside loop nest.
-      auto [innerLoop, oneBasedIndices] =
+      auto [innerLoop, oneBasedIndicesVector] =
           hlfir::genLoopNest(loc, builder, shape);
+      mlir::ValueRange oneBasedIndices = oneBasedIndicesVector;
       auto insPt = builder.saveInsertionPoint();
       builder.setInsertionPointToStart(innerLoop.getBody());
       callContext.stmtCtx.pushScope();
       for (auto &preparedActual : loweredActuals)
         if (preparedActual)
-          preparedActual->actual = hlfir::getElementAt(
-              loc, builder, preparedActual->actual, oneBasedIndices);
+          preparedActual->setElementalIndices(oneBasedIndices);
       impl().genElementalKernel(loweredActuals, callContext);
       callContext.stmtCtx.finalizeAndPop();
       builder.restoreInsertionPoint(insPt);
@@ -881,8 +1231,7 @@ public:
       callContext.stmtCtx.pushScope();
       for (auto &preparedActual : loweredActuals)
         if (preparedActual)
-          preparedActual->actual = hlfir::getElementAt(
-              l, b, preparedActual->actual, oneBasedIndices);
+          preparedActual->setElementalIndices(oneBasedIndices);
       auto res = *impl().genElementalKernel(loweredActuals, callContext);
       callContext.stmtCtx.finalizeAndPop();
       // Note that an hlfir.destroy is not emitted for the result since it
@@ -972,8 +1321,9 @@ public:
                                       CallContext &callContext) {
     if (intrinsic.name == "adjustr" || intrinsic.name == "adjustl" ||
         intrinsic.name == "merge")
-      return hlfir::genCharLength(callContext.loc, callContext.getBuilder(),
-                                  loweredActuals[0].value().actual);
+      return hlfir::genCharLength(
+          callContext.loc, callContext.getBuilder(),
+          loweredActuals[0].value().getOriginalActual());
     // Character MIN/MAX is the min/max of the arguments length that are
     // present.
     TODO(callContext.loc,
@@ -986,6 +1336,38 @@ private:
   const bool isFunction;
 };
 } // namespace
+
+static std::optional<mlir::Value>
+genIsPresentIfArgMaybeAbsent(mlir::Location loc, hlfir::Entity actual,
+                             const Fortran::lower::SomeExpr &expr,
+                             CallContext &callContext,
+                             bool passAsAllocatableOrPointer) {
+  if (!Fortran::evaluate::MayBePassedAsAbsentOptional(
+          expr, callContext.converter.getFoldingContext()))
+    return std::nullopt;
+  fir::FirOpBuilder &builder = callContext.getBuilder();
+  if (!passAsAllocatableOrPointer &&
+      Fortran::evaluate::IsAllocatableOrPointerObject(
+          expr, callContext.converter.getFoldingContext())) {
+    // Passing Allocatable/Pointer to non-pointer/non-allocatable OPTIONAL.
+    // Fortran 2018 15.5.2.12 point 1: If unallocated/disassociated, it is
+    // as if the argument was absent. The main care here is to not do a
+    // copy-in/copy-out because the temp address, even though pointing to a
+    // null size storage, would not be a nullptr and therefore the argument
+    // would not be considered absent on the callee side. Note: if the
+    // allocatable/pointer is also optional, it cannot be absent as per
+    // 15.5.2.12 point 7. and 8. We rely on this to un-conditionally read
+    // the allocatable/pointer descriptor here.
+    mlir::Value addr = genVariableRawAddress(loc, builder, actual);
+    return builder.genIsNotNullAddr(loc, addr);
+  }
+  // TODO: what if passing allocatable target to optional intent(in) pointer?
+  // May fall into the category above if the allocatable is not optional.
+
+  // Passing an optional to an optional.
+  return builder.create<fir::IsPresentOp>(loc, builder.getI1Type(), actual)
+      .getResult();
+}
 
 /// Lower an intrinsic procedure reference.
 static hlfir::EntityWithAttributes
@@ -1011,16 +1393,16 @@ genIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic &intrinsic,
     auto loweredActual = Fortran::lower::convertExprToHLFIR(
         loc, callContext.converter, *expr, callContext.symMap,
         callContext.stmtCtx);
-    bool handleDynamicOptional = false;
+    std::optional<mlir::Value> isPresent;
     if (argLowering) {
       Fortran::lower::ArgLoweringRule argRules =
           Fortran::lower::lowerIntrinsicArgumentAs(*argLowering, arg.index());
-      handleDynamicOptional = argRules.handleDynamicOptional &&
-                              Fortran::evaluate::MayBePassedAsAbsentOptional(
-                                  *expr, converter.getFoldingContext());
+      if (argRules.handleDynamicOptional)
+        isPresent =
+            genIsPresentIfArgMaybeAbsent(loc, loweredActual, *expr, callContext,
+                                         /*passAsAllocatableOrPointer=*/false);
     }
-    loweredActuals.push_back(
-        PreparedActualArgument{loweredActual, handleDynamicOptional});
+    loweredActuals.push_back(PreparedActualArgument{loweredActual, isPresent});
   }
 
   if (callContext.isElementalProcWithArrayArgs()) {
@@ -1064,16 +1446,33 @@ genProcedureRef(CallContext &callContext) {
       const auto *expr = actual->UnwrapExpr();
       if (!expr)
         TODO(loc, "assumed type actual argument");
+      if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
+              *expr)) {
+        if (arg.passBy !=
+            Fortran::lower::CallerInterface::PassEntityBy::MutableBox) {
+          assert(
+              arg.isOptional() &&
+              "NULL must be passed only to pointer, allocatable, or OPTIONAL");
+          // Trying to lower NULL() outside of any context would lead to
+          // trouble. NULL() here is equivalent to not providing the
+          // actual argument.
+          loweredActuals.emplace_back(std::nullopt);
+          continue;
+        }
+      }
 
-      const bool handleDynamicOptional =
-          arg.isOptional() &&
-          Fortran::evaluate::MayBePassedAsAbsentOptional(
-              *expr, callContext.converter.getFoldingContext());
       auto loweredActual = Fortran::lower::convertExprToHLFIR(
           loc, callContext.converter, *expr, callContext.symMap,
           callContext.stmtCtx);
+      std::optional<mlir::Value> isPresent;
+      if (arg.isOptional())
+        isPresent = genIsPresentIfArgMaybeAbsent(
+            loc, loweredActual, *expr, callContext,
+            arg.passBy ==
+                Fortran::lower::CallerInterface::PassEntityBy::MutableBox);
+
       loweredActuals.emplace_back(
-          PreparedActualArgument{loweredActual, handleDynamicOptional});
+          PreparedActualArgument{loweredActual, isPresent});
     } else {
       // Optional dummy argument for which there is no actual argument.
       loweredActuals.emplace_back(std::nullopt);
