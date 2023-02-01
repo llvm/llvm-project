@@ -1888,6 +1888,25 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
     return new ICmpInst(NewPred, X, SubOne(cast<Constant>(Cmp.getOperand(1))));
   }
 
+  // If we are testing the intersection of 2 select-of-nonzero-constants with no
+  // common bits set, it's the same as checking if exactly one select condition
+  // is set:
+  // ((A ? TC : FC) & (B ? TC : FC)) == 0 --> xor A, B
+  // TODO: Generalize for non-constant values.
+  // TODO: Invert with a "ne" predicate.
+  // TODO: Handle signed/unsigned predicates.
+  // TODO: Handle other bitwise logic connectors.
+  // TODO: Extend to handle a non-zero compare constant.
+  if (Pred == CmpInst::ICMP_EQ && C.isZero()) {
+    Value *A, *B;
+    const APInt *TC, *FC;
+    if (match(X, m_Select(m_Value(A), m_APInt(TC), m_APInt(FC))) &&
+        match(Y,
+              m_Select(m_Value(B), m_SpecificInt(*TC), m_SpecificInt(*FC))) &&
+        !TC->isZero() && !FC->isZero() && !TC->intersects(*FC))
+      return BinaryOperator::CreateXor(A, B);
+  }
+
   // ((zext i1 X) & Y) == 0 --> !((trunc Y) & X)
   // ((zext i1 X) & Y) != 0 -->  ((trunc Y) & X)
   // ((zext i1 X) & Y) == 1 -->  ((trunc Y) & X)
