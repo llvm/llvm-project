@@ -146,10 +146,11 @@
 // PCH:            ]
 // PCH:            "context-hash": "[[B_CONTEXT_HASH]]"
 // PCH:            "file-deps": [
-// PCH:              "{{.*}}/include/stdarg.h"
-// PCH:              "[[PREFIX]]/b.h"
-// PCH:              "[[PREFIX]]/module.modulemap"
-// PCH:              "[[SDK_PREFIX]]/usr/include/stdlib.h"
+// Note: PREFIX, SDK_PREFIX and toolchain path are unordered
+// PCH-DAG:          "{{.*}}/include/stdarg.h"
+// PCH-DAG:          "[[PREFIX]]/b.h"
+// PCH-DAG:          "[[PREFIX]]/module.modulemap"
+// PCH-DAG:          "[[SDK_PREFIX]]/usr/include/stdlib.h"
 // PCH:            ]
 // PCH:            "name": "B"
 // PCH:          }

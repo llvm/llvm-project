@@ -116,10 +116,11 @@
 // CHECK:            ]
 // CHECK:            "context-hash": "[[B_CONTEXT_HASH]]"
 // CHECK:            "file-deps": [
-// CHECK:              "{{.*}}/include/stdarg.h"
-// CHECK:              "[[PREFIX]]/b.h"
-// CHECK:              "[[PREFIX]]/module.modulemap"
-// CHECK:              "[[SDK_PREFIX]]/usr/include/stdlib.h"
+// Note: PREFIX, SDK_PREFIX and toolchain path are unordered
+// CHECK-DAG:          "{{.*}}/include/stdarg.h"
+// CHECK-DAG:          "[[PREFIX]]/b.h"
+// CHECK-DAG:          "[[PREFIX]]/module.modulemap"
+// CHECK-DAG:          "[[SDK_PREFIX]]/usr/include/stdlib.h"
 // CHECK:            ]
 // CHECK:            "name": "B"
 // CHECK:          }
