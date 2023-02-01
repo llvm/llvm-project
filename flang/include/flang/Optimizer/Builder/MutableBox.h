@@ -161,6 +161,12 @@ mlir::Value genIsAllocatedOrAssociatedTest(fir::FirOpBuilder &builder,
                                            mlir::Location loc,
                                            const fir::MutableBoxValue &box);
 
+/// Generate allocation or association status test and returns the resulting
+/// i1. This is testing this for a valid/non-null base address value.
+mlir::Value genIsNotAllocatedOrAssociatedTest(fir::FirOpBuilder &builder,
+                                              mlir::Location loc,
+                                              const fir::MutableBoxValue &box);
+
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_MUTABLEBOX_H
