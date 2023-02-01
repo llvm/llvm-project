@@ -200,7 +200,7 @@ struct CallOpInterface
     if (getFuncOpAnalysisState(state, funcOp) !=
         FuncOpAnalysisState::Analyzed) {
       // Function not analyzed yet. The conservative answer is "None".
-      return BufferRelation::None;
+      return BufferRelation::Unknown;
     }
 
     const FuncAnalysisState &funcState = getFuncAnalysisState(state);
@@ -217,7 +217,7 @@ struct CallOpInterface
 #endif
       return BufferRelation::Equivalent;
     }
-    return BufferRelation::None;
+    return BufferRelation::Unknown;
   }
 
   /// All function arguments are writable. It is the responsibility of the

@@ -269,7 +269,8 @@ struct IfOpInterface
     assert(yieldValues.size() == 2 && "expected 2 yield values");
     bool equivalentYields = state.areEquivalentBufferizedValues(
         yieldValues[0]->get(), yieldValues[1]->get());
-    return equivalentYields ? BufferRelation::Equivalent : BufferRelation::None;
+    return equivalentYields ? BufferRelation::Equivalent
+                            : BufferRelation::Unknown;
   }
 };
 
@@ -459,7 +460,8 @@ struct ForOpInterface
         cast<scf::YieldOp>(forOp.getLoopBody().front().getTerminator());
     bool equivalentYield = state.areEquivalentBufferizedValues(
         bbArg, yieldOp->getOperand(opResult.getResultNumber()));
-    return equivalentYield ? BufferRelation::Equivalent : BufferRelation::None;
+    return equivalentYield ? BufferRelation::Equivalent
+                           : BufferRelation::Unknown;
   }
 
   bool isWritable(Operation *op, Value value,
@@ -680,10 +682,10 @@ struct WhileOpInterface
 
     // The "before" region bbArgs and the OpResults may not match.
     if (resultNumber >= whileOp.getBeforeArguments().size())
-      return BufferRelation::None;
+      return BufferRelation::Unknown;
     if (opResult.getType() !=
         whileOp.getBeforeArguments()[resultNumber].getType())
-      return BufferRelation::None;
+      return BufferRelation::Unknown;
 
     auto conditionOp = whileOp.getConditionOp();
     BlockArgument conditionBbArg = whileOp.getBeforeArguments()[resultNumber];
@@ -698,7 +700,7 @@ struct WhileOpInterface
         state.areEquivalentBufferizedValues(bodyBbArg, yieldOperand);
 
     return equivCondition && equivYield ? BufferRelation::Equivalent
-                                        : BufferRelation::None;
+                                        : BufferRelation::Unknown;
   }
 
   bool isWritable(Operation *op, Value value,

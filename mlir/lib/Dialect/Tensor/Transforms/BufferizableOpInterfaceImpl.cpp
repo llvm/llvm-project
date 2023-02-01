@@ -333,7 +333,7 @@ struct ExtractSliceOpInterface
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
                                 const AnalysisState &state) const {
-    return BufferRelation::None;
+    return BufferRelation::Unknown;
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
