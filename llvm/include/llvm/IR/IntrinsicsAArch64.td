@@ -3219,4 +3219,12 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_uzpq_x2 : SVE2_VG2_ZipUzp_Intrinsic;
   def int_aarch64_sve_uzp_x4  : SVE2_VG4_ZipUzp_Intrinsic;
   def int_aarch64_sve_uzpq_x4 : SVE2_VG4_ZipUzp_Intrinsic;
+
+  // Vector dot-products (2-way)
+  def int_aarch64_sve_sdot_x2 : SVE2_3VectorArg_Long_Intrinsic;
+  def int_aarch64_sve_udot_x2 : SVE2_3VectorArg_Long_Intrinsic;
+  def int_aarch64_sve_fdot_x2 : SVE2_3VectorArg_Long_Intrinsic;
+  def int_aarch64_sve_sdot_lane_x2 : SVE2_3VectorArgIndexed_Long_Intrinsic;
+  def int_aarch64_sve_udot_lane_x2 : SVE2_3VectorArgIndexed_Long_Intrinsic;
+  def int_aarch64_sve_fdot_lane_x2 : SVE2_3VectorArgIndexed_Long_Intrinsic;
 }

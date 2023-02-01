@@ -3690,17 +3690,17 @@ defm PSEL_PPPRI : sve2_int_perm_sel_p<"psel", int_aarch64_sve_psel>;
 
 let Predicates = [HasSVE2p1_or_HasSME2] in {
 defm FCLAMP_ZZZ : sve2p1_fclamp<"fclamp", int_aarch64_sve_fclamp>;
-def FDOT_ZZZ_S  : sve_float_dot<0b0, "fdot">;
-def FDOT_ZZZI_S : sve_float_dot_indexed<0b0, "fdot">;
+defm FDOT_ZZZ_S  : sve_float_dot<0b0, "fdot", nxv8f16, int_aarch64_sve_fdot_x2>;
+defm FDOT_ZZZI_S : sve_float_dot_indexed<0b0, "fdot", nxv8f16, int_aarch64_sve_fdot_lane_x2>;
 def BFMLSLB_ZZZ_S : sve2_fp_mla_long<0b110, "bfmlslb">;
 def BFMLSLT_ZZZ_S : sve2_fp_mla_long<0b111, "bfmlslt">;
 def BFMLSLB_ZZZI_S : sve2_fp_mla_long_by_indexed_elem<0b110, "bfmlslb">;
 def BFMLSLT_ZZZI_S : sve2_fp_mla_long_by_indexed_elem<0b111, "bfmlslt">;
 
-def SDOT_ZZZ_HtoS  : sve2p1_two_way_dot_vv<"sdot", 0b0>;
-def UDOT_ZZZ_HtoS  : sve2p1_two_way_dot_vv<"udot", 0b1>;
-def SDOT_ZZZI_HtoS : sve2p1_two_way_dot_vvi<"sdot", 0b0>;
-def UDOT_ZZZI_HtoS : sve2p1_two_way_dot_vvi<"udot", 0b1>;
+defm SDOT_ZZZ_HtoS  : sve2p1_two_way_dot_vv<"sdot", 0b0, int_aarch64_sve_sdot_x2>;
+defm UDOT_ZZZ_HtoS  : sve2p1_two_way_dot_vv<"udot", 0b1, int_aarch64_sve_udot_x2>;
+defm SDOT_ZZZI_HtoS : sve2p1_two_way_dot_vvi<"sdot", 0b0, int_aarch64_sve_sdot_lane_x2>;
+defm UDOT_ZZZI_HtoS : sve2p1_two_way_dot_vvi<"udot", 0b1, int_aarch64_sve_udot_lane_x2>;
 
 defm CNTP_XCI : sve2p1_pcount_pn<"cntp", 0b000>;
 defm PEXT_PCI : sve2p1_pred_as_ctr_to_mask<"pext">;
