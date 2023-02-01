@@ -22,7 +22,7 @@ concurrency:
   # Cancel intermediate builds: only if it is a pull request build.
   # If the group name here is the same as the group name in the workflow that includes
   # this one, then the action will try to wait on itself and get stuck.
-  group: llvm-project-${{ github.workflow }}-${{ inputs.projects}}${{ github.ref }}
+  group: llvm-project-${{ github.workflow }}-${{ inputs.projects }}${{ github.ref }}
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
@@ -83,13 +83,13 @@ jobs:
           PKG_CONFIG_PATH: /usr/local/Homebrew/Library/Homebrew/os/mac/pkgconfig//12
         with:
           cmake_args: '-GNinja -DLLVM_ENABLE_PROJECTS="${{ inputs.projects }}" -DCMAKE_BUILD_TYPE=Release -DLLDB_INCLUDE_TESTS=OFF -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache'
-          build_target:  '${{ inputs.build_target }}'
+          build_target: '${{ inputs.build_target }}'
 
       - name: Build and Test libclc
         if: "!startsWith(matrix.os, 'windows') && contains(inputs.projects, 'libclc')"
         run: |
           # Make sure all of LLVM libraries that llvm-config needs are built.
           ninja -C build
-          cmake -G Ninja -S libclc -B libclc-build -DLLVM_DIR=`pwd`/build/lib/cmake/llvm -DLIBCLC_TARGETS_TO_BUILD="amdgcn--;amdgcn--amdhsa;r600--;nvptx--;nvptx64--;nvptx--nvidiacl;nvptx64--nvidiacl"
+          cmake -G Ninja -S libclc -B libclc-build -DLLVM_DIR=$(pwd)/build/lib/cmake/llvm -DLIBCLC_TARGETS_TO_BUILD="amdgcn--;amdgcn--amdhsa;r600--;nvptx--;nvptx64--;nvptx--nvidiacl;nvptx64--nvidiacl"
           ninja -C libclc-build
           ninja -C libclc-build test
