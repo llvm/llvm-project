@@ -166,40 +166,7 @@ public:
 
   /// Provide a path to a directory where to store the cached files for
   /// incremental build.
-  Error setCacheDir(std::string Path) {
-    // CacheDir can only be set once.
-    if (!CacheOptions.Path.empty())
-      return Error::success();
-
-    StringRef PathStr = Path;
-    // The environment overwrites the option parameter.
-    if (PathStr.consume_front("cas:")) {
-      CacheOptions.Type = CachingOptions::CacheType::CAS;
-      // Create ObjectStore and ActionCache.
-      auto MaybeCAS = cas::createOnDiskCAS(PathStr);
-      if (!MaybeCAS)
-        return MaybeCAS.takeError();
-      CacheOptions.CAS = std::move(*MaybeCAS);
-      auto MaybeCache = cas::createOnDiskActionCache(PathStr);
-      if (!MaybeCache)
-        return MaybeCache.takeError();
-      CacheOptions.Cache = std::move(*MaybeCache);
-      CacheOptions.Path = PathStr.str();
-    } else if (PathStr.consume_front("grpc:")) {
-      CacheOptions.Type = CachingOptions::CacheType::RemoteService;
-      auto MaybeService =
-          cas::remote::createCompilationCachingRemoteClient(PathStr);
-      if (!MaybeService)
-        return MaybeService.takeError();
-      CacheOptions.Service = std::move(*MaybeService);
-      CacheOptions.Path = PathStr.str();
-    } else {
-      CacheOptions.Type = CachingOptions::CacheType::CacheDirectory;
-      CacheOptions.Path = std::move(Path);
-    }
-
-    return Error::success();
-  }
+  Error setCacheDir(std::string Path);
 
   /// Create a cache entry for the module
   std::unique_ptr<ModuleCacheEntry> createModuleCacheEntry(
