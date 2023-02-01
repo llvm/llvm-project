@@ -534,6 +534,13 @@ uptr GetUserBegin(uptr chunk) {
   return reinterpret_cast<uptr>(block);
 }
 
+uptr GetUserAddr(uptr chunk) {
+  tag_t mem_tag = *(tag_t *)__hwasan::MemToShadow(chunk);
+  if (!__hwasan::InTaggableRegion(chunk))
+    return chunk;
+  return AddTagToPointer(chunk, mem_tag);
+}
+
 LsanMetadata::LsanMetadata(uptr chunk) {
   if (__hwasan::InTaggableRegion(chunk))
     CHECK_EQ(UntagAddr(chunk), chunk);
