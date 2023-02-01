@@ -178,10 +178,6 @@ void HexagonMCChecker::init(MCInst const &MCI) {
         // TODO: relies on the impossibility of a current and a temporary loads
         // in the same packet.
         TmpDefs.insert(*SRI);
-      else if (i <= 1 && HexagonMCInstrInfo::hasNewValue2(MCII, MCI))
-        // vshuff(Vx, Vy, Rx) <- Vx(0) and Vy(1) are both source and
-        // destination registers with this instruction. same for vdeal(Vx,Vy,Rx)
-        Uses.insert(*SRI);
       else if (!IgnoreTmpDst)
         Defs[*SRI].insert(PredSense(PredReg, isTrue));
     }
