@@ -16,6 +16,7 @@
 #include <tuple>
 #include <utility>
 #include <variant>
+#include <vector>
 
 /// Parse tree visitor
 /// Call Walk(x, visitor) to visit x and, by default, each node under x.
@@ -483,20 +484,76 @@ template <typename M> void Walk(CommonStmt &x, M &mutator) {
     mutator.Post(x);
   }
 }
+
+// Expr traversal uses iteration rather than recursion to avoid
+// blowing out the stack on very deep expression parse trees.
+// It replaces implementations that looked like:
+//   template <typename V> void Walk(const Expr &x, V visitor) {
+//     if (visitor.Pre(x)) {      // Pre on the Expr
+//       Walk(x.source, visitor);
+//       // Pre on the operator, walk the operands, Post on operator
+//       Walk(x.u, visitor);
+//       visitor.Post(x);         // Post on the Expr
+//     }
+//   }
+template <typename A, typename V, typename UNARY, typename BINARY>
+static void IterativeWalk(A &start, V &visitor) {
+  struct ExprWorkList {
+    ExprWorkList(A &x) : expr(&x) {}
+    bool doPostExpr{false}, doPostOpr{false};
+    A *expr;
+  };
+  std::vector<ExprWorkList> stack;
+  stack.emplace_back(start);
+  do {
+    A &expr{*stack.back().expr};
+    if (stack.back().doPostOpr) {
+      stack.back().doPostOpr = false;
+      common::visit([&visitor](auto &y) { visitor.Post(y); }, expr.u);
+    } else if (stack.back().doPostExpr) {
+      visitor.Post(expr);
+      stack.pop_back();
+    } else if (!visitor.Pre(expr)) {
+      stack.pop_back();
+    } else {
+      stack.back().doPostExpr = true;
+      Walk(expr.source, visitor);
+      UNARY *unary{nullptr};
+      BINARY *binary{nullptr};
+      common::visit(
+          [&unary, &binary](auto &y) {
+            if constexpr (std::is_convertible_v<decltype(&y), UNARY *>) {
+              unary = &y;
+            } else if constexpr (std::is_convertible_v<decltype(&y),
+                                     BINARY *>) {
+              binary = &y;
+            }
+          },
+          expr.u);
+      if (!unary && !binary) {
+        Walk(expr.u, visitor);
+      } else if (common::visit(
+                     [&visitor](auto &y) { return visitor.Pre(y); }, expr.u)) {
+        stack.back().doPostOpr = true;
+        if (unary) {
+          stack.emplace_back(unary->v.value());
+        } else {
+          stack.emplace_back(std::get<1>(binary->t).value());
+          stack.emplace_back(std::get<0>(binary->t).value());
+        }
+      }
+    }
+  } while (!stack.empty());
+}
 template <typename V> void Walk(const Expr &x, V &visitor) {
-  if (visitor.Pre(x)) {
-    Walk(x.source, visitor);
-    Walk(x.u, visitor);
-    visitor.Post(x);
-  }
+  IterativeWalk<const Expr, V, const Expr::IntrinsicUnary,
+      const Expr::IntrinsicBinary>(x, visitor);
 }
 template <typename M> void Walk(Expr &x, M &mutator) {
-  if (mutator.Pre(x)) {
-    Walk(x.source, mutator);
-    Walk(x.u, mutator);
-    mutator.Post(x);
-  }
+  IterativeWalk<Expr, M, Expr::IntrinsicUnary, Expr::IntrinsicBinary>(
+      x, mutator);
 }
+
 template <typename V> void Walk(const Designator &x, V &visitor) {
   if (visitor.Pre(x)) {
     Walk(x.source, visitor);

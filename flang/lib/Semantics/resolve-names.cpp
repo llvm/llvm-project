@@ -2541,7 +2541,7 @@ bool ScopeHandler::ConvertToProcEntity(Symbol &symbol) {
     if (IsFunctionResult(symbol) &&
         !(IsPointer(symbol) && symbol.attrs().test(Attr::EXTERNAL))) {
       // Don't turn function result into a procedure pointer unless both
-      // POUNTER and EXTERNAL
+      // POINTER and EXTERNAL
       return false;
     }
     funcResultStack_.CompleteTypeIfFunctionResult(symbol);
@@ -3242,6 +3242,8 @@ void InterfaceVisitor::ResolveSpecificsInGeneric(Symbol &generic) {
       case ProcedureDefinitionClass::Intrinsic:
       case ProcedureDefinitionClass::External:
       case ProcedureDefinitionClass::Internal:
+      case ProcedureDefinitionClass::Dummy:
+      case ProcedureDefinitionClass::Pointer:
         break;
       case ProcedureDefinitionClass::None:
         Say(*name, "'%s' is not a procedure"_err_en_US);

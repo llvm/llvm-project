@@ -113,8 +113,10 @@ Disabling Formatting on a Piece of Code
 Clang-format understands also special comments that switch formatting in a
 delimited range. The code between a comment ``// clang-format off`` or
 ``/* clang-format off */`` up to a comment ``// clang-format on`` or
-``/* clang-format on */`` will not be formatted. The comments themselves
-will be formatted (aligned) normally.
+``/* clang-format on */`` will not be formatted. The comments themselves will be
+formatted (aligned) normally. Also, a colon (``:``) and additional text may
+follow ``// clang-format off`` or `` clang-format on`` to explain why
+clang-format is turned off or back on.
 
 .. code-block:: c++
 
