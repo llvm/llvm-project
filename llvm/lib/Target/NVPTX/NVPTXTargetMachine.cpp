@@ -12,6 +12,7 @@
 
 #include "NVPTXTargetMachine.h"
 #include "NVPTX.h"
+#include "NVPTXAliasAnalysis.h"
 #include "NVPTXAllocaHoisting.h"
 #include "NVPTXAtomicLower.h"
 #include "NVPTXLowerAggrCopies.h"
@@ -74,6 +75,8 @@ void initializeNVPTXLowerArgsPass(PassRegistry &);
 void initializeNVPTXProxyRegErasurePass(PassRegistry &);
 void initializeNVVMIntrRangePass(PassRegistry &);
 void initializeNVVMReflectPass(PassRegistry &);
+void initializeNVPTXAAWrapperPassPass(PassRegistry &);
+void initializeNVPTXExternalAAWrapperPass(PassRegistry &);
 
 } // end namespace llvm
 
@@ -96,6 +99,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXLowerAggrCopiesPass(PR);
   initializeNVPTXProxyRegErasurePass(PR);
   initializeNVPTXDAGToDAGISelPass(PR);
+  initializeNVPTXAAWrapperPassPass(PR);
+  initializeNVPTXExternalAAWrapperPass(PR);
 }
 
 static std::string computeDataLayout(bool is64Bit, bool UseShortPointers) {
@@ -211,6 +216,10 @@ MachineFunctionInfo *NVPTXTargetMachine::createMachineFunctionInfo(
                                                                     F, STI);
 }
 
+void NVPTXTargetMachine::registerDefaultAliasAnalyses(AAManager &AAM) {
+  AAM.registerFunctionAnalysis<NVPTXAA>();
+}
+
 void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
   PB.registerPipelineParsingCallback(
       [](StringRef PassName, FunctionPassManager &PM,
@@ -225,6 +234,18 @@ void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         }
         return false;
       });
+
+  PB.registerAnalysisRegistrationCallback([](FunctionAnalysisManager &FAM) {
+    FAM.registerPass([&] { return NVPTXAA(); });
+  });
+
+  PB.registerParseAACallback([](StringRef AAName, AAManager &AAM) {
+    if (AAName == "nvptx-aa") {
+      AAM.registerFunctionAnalysis<NVPTXAA>();
+      return true;
+    }
+    return false;
+  });
 
   PB.registerPipelineStartEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
@@ -311,6 +332,12 @@ void NVPTXPassConfig::addIRPasses() {
   disablePass(&FuncletLayoutID);
   disablePass(&PatchableFunctionID);
   disablePass(&ShrinkWrapID);
+
+  addPass(createNVPTXAAWrapperPass());
+  addPass(createExternalAAWrapperPass([](Pass &P, Function &, AAResults &AAR) {
+    if (auto *WrapperPass = P.getAnalysisIfAvailable<NVPTXAAWrapperPass>())
+      AAR.addAAResult(WrapperPass->getResult());
+  }));
 
   // NVVMReflectPass is added in addEarlyAsPossiblePasses, so hopefully running
   // it here does nothing.  But since we need it for correctness when lowering
