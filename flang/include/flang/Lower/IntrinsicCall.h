@@ -19,15 +19,6 @@ class StatementContext;
 // TODO: Error handling interface ?
 // TODO: Implementation is incomplete. Many intrinsics to tbd.
 
-/// Generate the FIR+MLIR operations for the generic intrinsic \p name
-/// with arguments \p args and expected result type \p resultType.
-/// Returned mlir::Value is the returned Fortran intrinsic value.
-fir::ExtendedValue genIntrinsicCall(fir::FirOpBuilder &, mlir::Location,
-                                    llvm::StringRef name,
-                                    std::optional<mlir::Type> resultType,
-                                    llvm::ArrayRef<fir::ExtendedValue> args,
-                                    StatementContext &);
-
 /// Same as the other genIntrinsicCall version above, except that the result
 /// deallocation, if required, is not added to a StatementContext. Instead, an
 /// extra boolean result indicates if the result must be freed after use.
