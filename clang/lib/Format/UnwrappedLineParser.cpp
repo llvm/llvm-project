@@ -14,6 +14,7 @@
 
 #include "UnwrappedLineParser.h"
 #include "FormatToken.h"
+#include "FormatTokenSource.h"
 #include "TokenAnnotator.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/STLExtras.h"
@@ -27,34 +28,6 @@
 
 namespace clang {
 namespace format {
-
-class FormatTokenSource {
-public:
-  virtual ~FormatTokenSource() {}
-
-  // Returns the next token in the token stream.
-  virtual FormatToken *getNextToken() = 0;
-
-  // Returns the token preceding the token returned by the last call to
-  // getNextToken() in the token stream, or nullptr if no such token exists.
-  virtual FormatToken *getPreviousToken() = 0;
-
-  // Returns the token that would be returned by the next call to
-  // getNextToken().
-  virtual FormatToken *peekNextToken(bool SkipComment = false) = 0;
-
-  // Returns whether we are at the end of the file.
-  // This can be different from whether getNextToken() returned an eof token
-  // when the FormatTokenSource is a view on a part of the token stream.
-  virtual bool isEOF() = 0;
-
-  // Gets the current position in the token stream, to be used by setPosition().
-  virtual unsigned getPosition() = 0;
-
-  // Resets the token stream to the state it was in when getPosition() returned
-  // Position, and return the token at that position in the stream.
-  virtual FormatToken *setPosition(unsigned Position) = 0;
-};
 
 namespace {
 
@@ -110,97 +83,6 @@ public:
 private:
   UnwrappedLine &Line;
   llvm::BitVector &Stack;
-};
-
-static bool isLineComment(const FormatToken &FormatTok) {
-  return FormatTok.is(tok::comment) && !FormatTok.TokenText.startswith("/*");
-}
-
-// Checks if \p FormatTok is a line comment that continues the line comment
-// \p Previous. The original column of \p MinColumnToken is used to determine
-// whether \p FormatTok is indented enough to the right to continue \p Previous.
-static bool continuesLineComment(const FormatToken &FormatTok,
-                                 const FormatToken *Previous,
-                                 const FormatToken *MinColumnToken) {
-  if (!Previous || !MinColumnToken)
-    return false;
-  unsigned MinContinueColumn =
-      MinColumnToken->OriginalColumn + (isLineComment(*MinColumnToken) ? 0 : 1);
-  return isLineComment(FormatTok) && FormatTok.NewlinesBefore == 1 &&
-         isLineComment(*Previous) &&
-         FormatTok.OriginalColumn >= MinContinueColumn;
-}
-
-class ScopedMacroState : public FormatTokenSource {
-public:
-  ScopedMacroState(UnwrappedLine &Line, FormatTokenSource *&TokenSource,
-                   FormatToken *&ResetToken)
-      : Line(Line), TokenSource(TokenSource), ResetToken(ResetToken),
-        PreviousLineLevel(Line.Level), PreviousTokenSource(TokenSource),
-        Token(nullptr), PreviousToken(nullptr) {
-    FakeEOF.Tok.startToken();
-    FakeEOF.Tok.setKind(tok::eof);
-    TokenSource = this;
-    Line.Level = 0;
-    Line.InPPDirective = true;
-    // InMacroBody gets set after the `#define x` part.
-  }
-
-  ~ScopedMacroState() override {
-    TokenSource = PreviousTokenSource;
-    ResetToken = Token;
-    Line.InPPDirective = false;
-    Line.InMacroBody = false;
-    Line.Level = PreviousLineLevel;
-  }
-
-  FormatToken *getNextToken() override {
-    // The \c UnwrappedLineParser guards against this by never calling
-    // \c getNextToken() after it has encountered the first eof token.
-    assert(!eof());
-    PreviousToken = Token;
-    Token = PreviousTokenSource->getNextToken();
-    if (eof())
-      return &FakeEOF;
-    return Token;
-  }
-
-  FormatToken *getPreviousToken() override {
-    return PreviousTokenSource->getPreviousToken();
-  }
-
-  FormatToken *peekNextToken(bool SkipComment) override {
-    if (eof())
-      return &FakeEOF;
-    return PreviousTokenSource->peekNextToken(SkipComment);
-  }
-
-  bool isEOF() override { return PreviousTokenSource->isEOF(); }
-
-  unsigned getPosition() override { return PreviousTokenSource->getPosition(); }
-
-  FormatToken *setPosition(unsigned Position) override {
-    PreviousToken = nullptr;
-    Token = PreviousTokenSource->setPosition(Position);
-    return Token;
-  }
-
-private:
-  bool eof() {
-    return Token && Token->HasUnescapedNewline &&
-           !continuesLineComment(*Token, PreviousToken,
-                                 /*MinColumnToken=*/PreviousToken);
-  }
-
-  FormatToken FakeEOF;
-  UnwrappedLine &Line;
-  FormatTokenSource *&TokenSource;
-  FormatToken *&ResetToken;
-  unsigned PreviousLineLevel;
-  FormatTokenSource *PreviousTokenSource;
-
-  FormatToken *Token;
-  FormatToken *PreviousToken;
 };
 
 } // end anonymous namespace
