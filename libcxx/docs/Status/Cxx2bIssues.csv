@@ -234,7 +234,7 @@
 "`3792 <https://wg21.link/LWG3792>`__","``__cpp_lib_constexpr_algorithms`` should also be defined in ``<utility>``", "November 2022","|Complete|","16.0",""
 "`3795 <https://wg21.link/LWG3795>`__","Self-move-assignment of ``std::future`` and ``std::shared_future`` have unimplementable postconditions", "November 2022","","",""
 "`3796 <https://wg21.link/LWG3796>`__","``movable-box`` as member should use ``default-initialization`` instead of ``copy-initialization``", "November 2022","","","|ranges|"
-"`3798 <https://wg21.link/LWG3798>`__","Rvalue reference and ``iterator_category``", "November 2022","","",""
+"`3798 <https://wg21.link/LWG3798>`__","Rvalue reference and ``iterator_category``", "November 2022","|Partial| [#note-LWG3798]_","","|ranges|"
 "`3801 <https://wg21.link/LWG3801>`__","``cartesian_product_view::iterator::distance-from`` ignores the size of last underlying range", "November 2022","","","|ranges|"
 "`3814 <https://wg21.link/LWG3814>`__","Add freestanding items requested by NB comments", "November 2022","","",""
 "`3816 <https://wg21.link/LWG3816>`__","``flat_map`` and ``flat_multimap`` should impose sequence container requirements", "November 2022","","","|flat_containers|"
