@@ -675,8 +675,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     Diags = CompilerInvocationDiags;
     // Add diagnostics from the preamble, if any.
     if (Preamble)
-      Diags->insert(Diags->end(), Preamble->Diags.begin(),
-                    Preamble->Diags.end());
+      llvm::append_range(*Diags, Patch->patchedDiags());
     // Finally, add diagnostics coming from the AST.
     {
       std::vector<Diag> D = ASTDiags.take(&*CTContext);

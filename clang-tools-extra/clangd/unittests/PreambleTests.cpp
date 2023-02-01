@@ -723,9 +723,8 @@ TEST(PreamblePatch, TranslatesDiagnosticsInPreamble) {
 #define BAR
 #include [[<foo>]])");
     auto AST = createPatchedAST(Code.code(), NewCode.code());
-    // FIXME: We should point at the correct coordinates in NewCode.
     EXPECT_THAT(*AST->getDiagnostics(),
-                ElementsAre(Diag(Code.range(), "pp_file_not_found")));
+                ElementsAre(Diag(NewCode.range(), "pp_file_not_found")));
   }
   {
     // Check with removals from preamble.
@@ -734,18 +733,15 @@ TEST(PreamblePatch, TranslatesDiagnosticsInPreamble) {
 #include [[<foo>]])");
     Annotations NewCode("#include [[<foo>]]");
     auto AST = createPatchedAST(Code.code(), NewCode.code());
-    // FIXME: We should point at the correct coordinates in NewCode.
     EXPECT_THAT(*AST->getDiagnostics(),
-                ElementsAre(Diag(Code.range(), "pp_file_not_found")));
+                ElementsAre(Diag(NewCode.range(), "pp_file_not_found")));
   }
   {
     // Drop line with diags.
     Annotations Code("#include [[<foo>]]");
     Annotations NewCode("#define BAR\n#define BAZ\n");
     auto AST = createPatchedAST(Code.code(), NewCode.code());
-    // FIXME: No diagnostics.
-    EXPECT_THAT(*AST->getDiagnostics(),
-                ElementsAre(Diag(Code.range(), "pp_file_not_found")));
+    EXPECT_THAT(*AST->getDiagnostics(), IsEmpty());
   }
   {
     // Picks closest line in case of multiple alternatives.
@@ -756,18 +752,79 @@ TEST(PreamblePatch, TranslatesDiagnosticsInPreamble) {
 #define BAR
 #include <foo>)");
     auto AST = createPatchedAST(Code.code(), NewCode.code());
-    // FIXME: We should point at the correct coordinates in NewCode.
     EXPECT_THAT(*AST->getDiagnostics(),
-                ElementsAre(Diag(Code.range(), "pp_file_not_found")));
+                ElementsAre(Diag(NewCode.range(), "pp_file_not_found")));
   }
   {
     // Drop diag if line spelling has changed.
     Annotations Code("#include [[<foo>]]");
     Annotations NewCode(" # include <foo>");
     auto AST = createPatchedAST(Code.code(), NewCode.code());
-    // FIXME: No diags.
+    EXPECT_THAT(*AST->getDiagnostics(), IsEmpty());
+  }
+  {
+    // Multiple lines.
+    Annotations Code(R"(
+#define BAR
+#include [[<fo\
+o>]])");
+    Annotations NewCode(R"(#include [[<fo\
+o>]])");
+    auto AST = createPatchedAST(Code.code(), NewCode.code());
     EXPECT_THAT(*AST->getDiagnostics(),
-                ElementsAre(Diag(Code.range(), "pp_file_not_found")));
+                ElementsAre(Diag(NewCode.range(), "pp_file_not_found")));
+  }
+  {
+    // Multiple lines with change.
+    Annotations Code(R"(
+#define BAR
+#include <fox>
+#include [[<fo\
+o>]])");
+    Annotations NewCode(R"(#include <fo\
+x>)");
+    auto AST = createPatchedAST(Code.code(), NewCode.code());
+    EXPECT_THAT(*AST->getDiagnostics(), IsEmpty());
+  }
+  {
+    // Preserves notes.
+    Annotations Code(R"(
+#define $note[[BAR]] 1
+#define $main[[BAR]] 2)");
+    Annotations NewCode(R"(
+#define BAZ 0
+#define $note[[BAR]] 1
+#define BAZ 0
+#define $main[[BAR]] 2)");
+    auto AST = createPatchedAST(Code.code(), NewCode.code());
+    EXPECT_THAT(
+        *AST->getDiagnostics(),
+        ElementsAre(AllOf(Diag(NewCode.range("main"), "-Wmacro-redefined"),
+                          withNote(Diag(NewCode.range("note"))))));
+  }
+  {
+    // Preserves diag without note.
+    Annotations Code(R"(
+#define $note[[BAR]] 1
+#define $main[[BAR]] 2)");
+    Annotations NewCode(R"(
+#define $main[[BAR]] 2)");
+    auto AST = createPatchedAST(Code.code(), NewCode.code());
+    EXPECT_THAT(
+        *AST->getDiagnostics(),
+        ElementsAre(AllOf(Diag(NewCode.range("main"), "-Wmacro-redefined"),
+                          Field(&Diag::Notes, IsEmpty()))));
+  }
+  {
+    // Make sure orphaned notes are not promoted to diags.
+    Annotations Code(R"(
+#define $note[[BAR]] 1
+#define $main[[BAR]] 2)");
+    Annotations NewCode(R"(
+#define BAZ 0
+#define BAR 1)");
+    auto AST = createPatchedAST(Code.code(), NewCode.code());
+    EXPECT_THAT(*AST->getDiagnostics(), IsEmpty());
   }
 }
 } // namespace
