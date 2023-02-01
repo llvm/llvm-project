@@ -1631,14 +1631,44 @@ exit:
   ret i32 0
 }
 
-define i32 @ptr_induction_ult(ptr %a, ptr %b) {
-; CHECK-LABEL: 'ptr_induction_ult'
-; CHECK-NEXT:  Classifying expressions for: @ptr_induction_ult
+define i32 @ptr_induction_ult_1(ptr %a, ptr %b) {
+; CHECK-LABEL: 'ptr_induction_ult_1'
+; CHECK-NEXT:  Classifying expressions for: @ptr_induction_ult_1
+; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
+; CHECK-NEXT:    --> {%a,+,4}<%loop> U: full-set S: full-set Exits: %a LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %ptr.iv.next = getelementptr i32, ptr %ptr.iv, i64 1
+; CHECK-NEXT:    --> {(4 + %a),+,4}<%loop> U: full-set S: full-set Exits: (4 + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_ult_1
+; CHECK-NEXT:  Loop %loop: backedge-taken count is 0
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 0
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 0
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 0
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %cmp.6 = icmp ult ptr %a, %b
+  br i1 %cmp.6, label %loop, label %exit
+
+loop:
+  %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
+  %ptr.iv.next = getelementptr i32, ptr %ptr.iv, i64 1
+  %exitcond = icmp eq ptr %ptr.iv, %a
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret i32 0
+}
+
+
+define i32 @ptr_induction_ult_2(ptr %a, ptr %b) {
+; CHECK-LABEL: 'ptr_induction_ult_2'
+; CHECK-NEXT:  Classifying expressions for: @ptr_induction_ult_2
 ; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
 ; CHECK-NEXT:    --> {%a,+,4}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %ptr.iv.next = getelementptr i32, ptr %ptr.iv, i64 1
 ; CHECK-NEXT:    --> {(4 + %a),+,4}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_ult
+; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_ult_2
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
