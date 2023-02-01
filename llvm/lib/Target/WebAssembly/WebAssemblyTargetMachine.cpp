@@ -16,6 +16,7 @@
 #include "TargetInfo/WebAssemblyTargetInfo.h"
 #include "Utils/WebAssemblyUtilities.h"
 #include "WebAssembly.h"
+#include "WebAssemblyISelLowering.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyTargetObjectFile.h"
 #include "WebAssemblyTargetTransformInfo.h"
@@ -464,6 +465,14 @@ void WebAssemblyPassConfig::addIRPasses() {
 }
 
 void WebAssemblyPassConfig::addISelPrepare() {
+  WebAssemblyTargetMachine *WasmTM = static_cast<WebAssemblyTargetMachine*>(TM);
+  const WebAssemblySubtarget *Subtarget = WasmTM
+            ->getSubtargetImpl(std::string(WasmTM->getTargetCPU()),
+                               std::string(WasmTM->getTargetFeatureString()));
+  if(Subtarget->hasReferenceTypes()) {
+    // We need to remove allocas for reference types
+    addPass(createPromoteMemoryToRegisterPass(true));
+  }
   // Lower atomics and TLS if necessary
   addPass(new CoalesceFeaturesAndStripAtomics(&getWebAssemblyTargetMachine()));
 
