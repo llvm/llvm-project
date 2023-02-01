@@ -20,8 +20,7 @@ DependencyScanningTool::DependencyScanningTool(
     : Worker(Service, std::move(FS)) {}
 
 llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
-    const std::vector<std::string> &CommandLine, StringRef CWD,
-    std::optional<StringRef> ModuleName) {
+    const std::vector<std::string> &CommandLine, StringRef CWD) {
   /// Prints out all of the gathered dependencies into a string.
   class MakeDependencyPrinterConsumer : public DependencyConsumer {
   public:
@@ -81,8 +80,7 @@ llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
   };
 
   MakeDependencyPrinterConsumer Consumer;
-  auto Result =
-      Worker.computeDependencies(CWD, CommandLine, Consumer, ModuleName);
+  auto Result = Worker.computeDependencies(CWD, CommandLine, Consumer);
   if (Result)
     return std::move(Result);
   std::string Output;
@@ -90,39 +88,63 @@ llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
   return Output;
 }
 
-llvm::Expected<FullDependenciesResult>
-DependencyScanningTool::getFullDependencies(
+llvm::Expected<TranslationUnitDeps>
+DependencyScanningTool::getTranslationUnitDependencies(
     const std::vector<std::string> &CommandLine, StringRef CWD,
     const llvm::StringSet<> &AlreadySeen,
-    LookupModuleOutputCallback LookupModuleOutput,
-    std::optional<StringRef> ModuleName) {
+    LookupModuleOutputCallback LookupModuleOutput) {
+  FullDependencyConsumer Consumer(AlreadySeen, LookupModuleOutput);
+  llvm::Error Result = Worker.computeDependencies(CWD, CommandLine, Consumer);
+  if (Result)
+    return std::move(Result);
+  return Consumer.takeTranslationUnitDeps();
+}
+
+llvm::Expected<ModuleDepsGraph> DependencyScanningTool::getModuleDependencies(
+    StringRef ModuleName, const std::vector<std::string> &CommandLine,
+    StringRef CWD, const llvm::StringSet<> &AlreadySeen,
+    LookupModuleOutputCallback LookupModuleOutput) {
   FullDependencyConsumer Consumer(AlreadySeen, LookupModuleOutput);
   llvm::Error Result =
       Worker.computeDependencies(CWD, CommandLine, Consumer, ModuleName);
   if (Result)
     return std::move(Result);
-  return Consumer.takeFullDependencies();
+  return Consumer.takeModuleGraphDeps();
 }
 
-FullDependenciesResult FullDependencyConsumer::takeFullDependencies() {
-  FullDependenciesResult FDR;
-  FullDependencies &FD = FDR.FullDeps;
+TranslationUnitDeps FullDependencyConsumer::takeTranslationUnitDeps() {
+  TranslationUnitDeps TU;
 
-  FD.ID.ContextHash = std::move(ContextHash);
-  FD.FileDeps = std::move(Dependencies);
-  FD.PrebuiltModuleDeps = std::move(PrebuiltModuleDeps);
-  FD.Commands = std::move(Commands);
+  TU.ID.ContextHash = std::move(ContextHash);
+  TU.FileDeps = std::move(Dependencies);
+  TU.PrebuiltModuleDeps = std::move(PrebuiltModuleDeps);
+  TU.Commands = std::move(Commands);
 
   for (auto &&M : ClangModuleDeps) {
     auto &MD = M.second;
     if (MD.ImportedByMainFile)
-      FD.ClangModuleDeps.push_back(MD.ID);
+      TU.ClangModuleDeps.push_back(MD.ID);
     // TODO: Avoid handleModuleDependency even being called for modules
     //   we've already seen.
     if (AlreadySeen.count(M.first))
       continue;
-    FDR.DiscoveredModules.push_back(std::move(MD));
+    TU.ModuleGraph.push_back(std::move(MD));
   }
 
-  return FDR;
+  return TU;
+}
+
+ModuleDepsGraph FullDependencyConsumer::takeModuleGraphDeps() {
+  ModuleDepsGraph ModuleGraph;
+
+  for (auto &&M : ClangModuleDeps) {
+    auto &MD = M.second;
+    // TODO: Avoid handleModuleDependency even being called for modules
+    //   we've already seen.
+    if (AlreadySeen.count(M.first))
+      continue;
+    ModuleGraph.push_back(std::move(MD));
+  }
+
+  return ModuleGraph;
 }
