@@ -33,6 +33,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Instrumentation.h"
@@ -169,6 +170,9 @@ private:
 
   // Returns the section end marker name.
   Twine getSectionEnd(StringRef SectionSuffix);
+
+  // Returns true if the access to the address should be considered "atomic".
+  bool pretendAtomicAccess(Value *Addr);
 
   Module &Mod;
   const SanitizerBinaryMetadataOptions Options;
@@ -338,6 +342,29 @@ bool useAfterReturnUnsafe(Instruction &I) {
   return false;
 }
 
+bool SanitizerBinaryMetadata::pretendAtomicAccess(Value *Addr) {
+  assert(Addr && "Expected non-null Addr");
+
+  Addr = Addr->stripInBoundsOffsets();
+  auto *GV = dyn_cast<GlobalVariable>(Addr);
+  if (!GV)
+    return false;
+
+  if (GV->hasSection()) {
+    const auto OF = Triple(Mod.getTargetTriple()).getObjectFormat();
+    const auto ProfSec =
+        getInstrProfSectionName(IPSK_cnts, OF, /*AddSegmentInfo=*/false);
+    if (GV->getSection().endswith(ProfSec))
+      return true;
+  }
+
+  if (GV->getName().startswith("__llvm_gcov") ||
+      GV->getName().startswith("__llvm_gcda"))
+    return true;
+
+  return false;
+}
+
 bool SanitizerBinaryMetadata::runOn(Instruction &I, MetadataInfoSet &MIS,
                                     MDBuilder &MDB, uint32_t &FeatureMask) {
   SmallVector<const MetadataInfo *, 1> InstMetadata;
@@ -350,7 +377,21 @@ bool SanitizerBinaryMetadata::runOn(Instruction &I, MetadataInfoSet &MIS,
 
   if (Options.Atomics && I.mayReadOrWriteMemory()) {
     auto SSID = getAtomicSyncScopeID(&I);
-    if (SSID.has_value() && *SSID != SyncScope::SingleThread) {
+    bool IsAtomic = SSID.has_value() && *SSID != SyncScope::SingleThread;
+
+    if (!IsAtomic) {
+      // Check to pretend some compiler-generated accesses are atomic, to avoid
+      // false positives in data-race analysis.
+      Value *Addr = nullptr;
+      if (auto *SI = dyn_cast<StoreInst>(&I))
+        Addr = SI->getPointerOperand();
+      else if (auto *LI = dyn_cast<LoadInst>(&I))
+        Addr = LI->getPointerOperand();
+      if (Addr)
+        IsAtomic = pretendAtomicAccess(Addr);
+    }
+
+    if (IsAtomic) {
       NumMetadataAtomics++;
       InstMetadata.push_back(&MetadataInfo::Atomics);
     }

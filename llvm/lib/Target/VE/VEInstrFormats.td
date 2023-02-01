@@ -117,7 +117,7 @@ class CF<bits<8>opVal, dag outs, dag ins, string asmstr, list<dag> pattern = []>
   bits<1>  cx = 0;
   bits<1>  cx2 = 0;
   bits<2>  bpf = 0;
-  bits<4>  cf;
+  bits<4>  cond;
   bits<1>  cy = 1;
   bits<7>  sy;
   bits<1>  cz = 1;
@@ -127,7 +127,7 @@ class CF<bits<8>opVal, dag outs, dag ins, string asmstr, list<dag> pattern = []>
   let Inst{55} = cx;
   let Inst{54} = cx2;
   let Inst{53-52} = bpf;
-  let Inst{51-48} = cf;
+  let Inst{51-48} = cond;
   let Inst{47} = cy;
   let Inst{46-40} = sy;
   let Inst{39} = cz;

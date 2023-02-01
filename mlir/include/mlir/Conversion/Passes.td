@@ -946,7 +946,8 @@ def ConvertVectorToSCF : Pass<"convert-vector-to-scf"> {
   let dependentDialects = [
     "AffineDialect",
     "memref::MemRefDialect",
-    "scf::SCFDialect"
+    "scf::SCFDialect",
+    "tensor::TensorDialect"
   ];
   let options = [
     Option<"fullUnroll", "full-unroll", "bool", /*default=*/"false",

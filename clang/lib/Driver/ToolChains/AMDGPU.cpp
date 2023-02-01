@@ -611,10 +611,8 @@ AMDGPUToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
   if (!DAL)
     DAL = new DerivedArgList(Args.getBaseArgs());
 
-  for (Arg *A : Args) {
-    if (!shouldSkipArgument(A))
-      DAL->append(A);
-  }
+  for (Arg *A : Args)
+    DAL->append(A);
 
   checkTargetID(*DAL);
 
@@ -868,13 +866,6 @@ RocmInstallationDetector::getCommonBitcodeLibs(
     AddBCLib(ABIVerPath);
 
   return BCLibs;
-}
-
-bool AMDGPUToolChain::shouldSkipArgument(const llvm::opt::Arg *A) const {
-  Option O = A->getOption();
-  if (O.matches(options::OPT_fPIE) || O.matches(options::OPT_fpie))
-    return true;
-  return false;
 }
 
 llvm::SmallVector<std::string, 12>

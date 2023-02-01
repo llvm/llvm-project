@@ -2280,7 +2280,8 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
   // check for the "inbounds" property.
   if (!Unknown && !InBounds)
     if (auto *GV = dyn_cast<GlobalVariable>(C))
-      if (!GV->hasExternalWeakLinkage() && isInBoundsIndices(Idxs))
+      if (!GV->hasExternalWeakLinkage() && GV->getValueType() == PointeeTy &&
+          isInBoundsIndices(Idxs))
         return ConstantExpr::getGetElementPtr(PointeeTy, C, Idxs,
                                               /*InBounds=*/true, InRangeIndex);
 

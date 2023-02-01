@@ -598,9 +598,9 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genGetEnvironmentVariable,
      {{{"name", asBox},
        {"value", asBox, handleDynamicOptional},
-       {"length", asAddr},
-       {"status", asAddr},
-       {"trim_name", asAddr},
+       {"length", asBox, handleDynamicOptional},
+       {"status", asAddr, handleDynamicOptional},
+       {"trim_name", asAddr, handleDynamicOptional},
        {"errmsg", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"iachar", &I::genIchar},
@@ -3203,6 +3203,14 @@ void IntrinsicLibrary::genGetEnvironmentVariable(
   const fir::ExtendedValue &trimName = args[4];
   const fir::ExtendedValue &errmsg = args[5];
 
+  if (!name)
+    fir::emitFatalError(loc, "expected NAME parameter");
+
+  // If none of the optional parameters are present, do nothing.
+  if (!isStaticallyPresent(value) && !isStaticallyPresent(length) &&
+      !isStaticallyPresent(status) && !isStaticallyPresent(errmsg))
+    return;
+
   // Handle optional TRIM_NAME argument
   mlir::Value trim;
   if (isStaticallyAbsent(trimName)) {
@@ -3227,39 +3235,27 @@ void IntrinsicLibrary::genGetEnvironmentVariable(
                .getResults()[0];
   }
 
-  if (isStaticallyPresent(value) || isStaticallyPresent(status) ||
-      isStaticallyPresent(errmsg)) {
-    mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
-    mlir::Value valBox =
-        isStaticallyPresent(value)
-            ? fir::getBase(value)
-            : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
-    mlir::Value errBox =
-        isStaticallyPresent(errmsg)
-            ? fir::getBase(errmsg)
-            : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
-    mlir::Value stat = fir::runtime::genEnvVariableValue(builder, loc, name,
-                                                         valBox, trim, errBox);
-    if (isStaticallyPresent(status)) {
-      mlir::Value statAddr = fir::getBase(status);
-      mlir::Value statIsPresentAtRuntime =
-          builder.genIsNotNullAddr(loc, statAddr);
-      builder.genIfThen(loc, statIsPresentAtRuntime)
-          .genThen(
-              [&]() { builder.createStoreWithConvert(loc, stat, statAddr); })
-          .end();
-    }
-  }
-
-  if (isStaticallyPresent(length)) {
-    mlir::Value lenAddr = fir::getBase(length);
-    mlir::Value lenIsPresentAtRuntime = builder.genIsNotNullAddr(loc, lenAddr);
-    builder.genIfThen(loc, lenIsPresentAtRuntime)
-        .genThen([&]() {
-          mlir::Value len =
-              fir::runtime::genEnvVariableLength(builder, loc, name, trim);
-          builder.createStoreWithConvert(loc, len, lenAddr);
-        })
+  mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
+  mlir::Value valBox =
+      isStaticallyPresent(value)
+          ? fir::getBase(value)
+          : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
+  mlir::Value lenBox =
+      isStaticallyPresent(length)
+          ? fir::getBase(length)
+          : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
+  mlir::Value errBox =
+      isStaticallyPresent(errmsg)
+          ? fir::getBase(errmsg)
+          : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
+  mlir::Value stat = fir::runtime::genGetEnvVariable(builder, loc, name, valBox,
+                                                     lenBox, trim, errBox);
+  if (isStaticallyPresent(status)) {
+    mlir::Value statAddr = fir::getBase(status);
+    mlir::Value statIsPresentAtRuntime =
+        builder.genIsNotNullAddr(loc, statAddr);
+    builder.genIfThen(loc, statIsPresentAtRuntime)
+        .genThen([&]() { builder.createStoreWithConvert(loc, stat, statAddr); })
         .end();
   }
 }

@@ -1272,11 +1272,18 @@ SmallVector<ReassociationExprs, 4> ExpandShapeOp::getReassociationExprs() {
                                             getReassociationIndices());
 }
 
+RankedTensorType CollapseShapeOp::inferCollapsedType(
+    RankedTensorType type, SmallVector<ReassociationIndices> reassociation) {
+  return inferCollapsedType(
+      type, getSymbolLessAffineMaps(convertReassociationIndicesToExprs(
+                type.getContext(), reassociation)));
+}
+
 /// Compute the RankedTensorType obtained by applying `reassociation` to
 /// `type`.
-static RankedTensorType
-computeTensorReshapeCollapsedType(RankedTensorType type,
-                                  ArrayRef<AffineMap> reassociation) {
+RankedTensorType
+CollapseShapeOp::inferCollapsedType(RankedTensorType type,
+                                    ArrayRef<AffineMap> reassociation) {
   auto shape = type.getShape();
   SmallVector<int64_t, 4> newShape;
   newShape.reserve(reassociation.size());
@@ -1304,7 +1311,7 @@ computeTensorReshapeCollapsedType(RankedTensorType type,
 void CollapseShapeOp::build(OpBuilder &b, OperationState &result, Value src,
                             ArrayRef<ReassociationIndices> reassociation,
                             ArrayRef<NamedAttribute> attrs) {
-  auto resultType = computeTensorReshapeCollapsedType(
+  auto resultType = inferCollapsedType(
       src.getType().cast<RankedTensorType>(),
       getSymbolLessAffineMaps(
           convertReassociationIndicesToExprs(b.getContext(), reassociation)));
@@ -1336,7 +1343,7 @@ static LogicalResult verifyTensorReshapeOp(TensorReshapeOp op,
 
   auto maps = op.getReassociationMaps();
   RankedTensorType expectedType =
-      computeTensorReshapeCollapsedType(expandedType, maps);
+      CollapseShapeOp::inferCollapsedType(expandedType, maps);
   if (!isSameTypesWithoutEncoding(collapsedType, expectedType))
     return op.emitOpError("expected collapsed type to be ")
            << expectedType << ", but got " << collapsedType;
@@ -1436,7 +1443,7 @@ struct FoldCollapseOfCastOp : public OpRewritePattern<CollapseShapeOp> {
 
     RankedTensorType srcType =
         castOp.getSource().getType().cast<RankedTensorType>();
-    RankedTensorType newResultType = computeTensorReshapeCollapsedType(
+    RankedTensorType newResultType = CollapseShapeOp::inferCollapsedType(
         srcType, collapseShapeOp.getReassociationMaps());
 
     if (newResultType == collapseShapeOp.getResultType()) {

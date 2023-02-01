@@ -216,6 +216,82 @@ def InterchangeOp : Op<Transform_Dialect, "structured.interchange",
 }
 
 //===----------------------------------------------------------------------===//
+// LowerPackOp
+//===----------------------------------------------------------------------===//
+def LowerPackOp : Op<Transform_Dialect, "structured.lower_pack", [
+                         FunctionalStyleTransformOpTrait,
+                         MemoryEffectsOpInterface,
+                         TransformEachOpTrait,
+                         TransformOpInterface]> {
+  let description = [{
+    Rewrite a tensor.pack into tensor.pad + tensor.expand_shape + linalg.transpose.
+
+    #### Return modes
+
+    This operation ignores non-pack ops and drops them in the return.
+    This operation produces a silenceableFailure if the rewrite fails for any
+    reason.
+    If all the operations referred to by the `target` are rewritten, the
+    transform succeeds.
+    Return handles to the newly produced pad, expand_shape and transpose ops.
+  }];
+
+  let arguments = (ins Transform_ConcreteOpType<"tensor.pack">:$target);
+  let results = (outs Transform_ConcreteOpType<"tensor.pad">:$pad_op,
+                      Transform_ConcreteOpType<"tensor.expand_shape">:$expand_shape_op,
+                      Transform_ConcreteOpType<"linalg.transpose">:$transpose_op);
+  let assemblyFormat = [{
+    $target attr-dict `:` functional-type(operands, results)
+  }];
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::tensor::PackOp target,
+        ::mlir::transform::ApplyToEachResultList &transformResults,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// LowerUnPackOp
+//===----------------------------------------------------------------------===//
+def LowerUnPackOp : Op<Transform_Dialect, "structured.lower_unpack", [
+                         FunctionalStyleTransformOpTrait,
+                         MemoryEffectsOpInterface,
+                         TransformEachOpTrait,
+                         TransformOpInterface]> {
+  let description = [{
+    Lower a tensor.unpack into empty + linalg.transpose + tensor.collapse_shape + 
+    tensor.extract_slice.
+
+    #### Return modes
+
+    This operation ignores non-unpack ops and drops them in the return.
+    This operation produces a silenceableFailure if the rewrite fails for any
+    reason.
+    If all the operations referred to by the `target` are rewritten, the
+    transform succeeds.
+    Return handles to the newly produced empty, transpose, collapse_shape and extract_slice ops.
+  }];
+
+  let arguments = (ins Transform_ConcreteOpType<"tensor.unpack">:$target);
+  let results = (outs Transform_ConcreteOpType<"tensor.empty">:$empty_op,
+                      Transform_ConcreteOpType<"linalg.transpose">:$transpose_op,
+                      Transform_ConcreteOpType<"tensor.collapse_shape">:$collapse_shape_op,
+                      Transform_ConcreteOpType<"tensor.extract_slice">:$extract_slice_op);
+  let assemblyFormat = [{ 
+    $target attr-dict `:` functional-type(operands, results)
+  }];
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::tensor::UnPackOp target,
+        ::mlir::transform::ApplyToEachResultList &transformResults,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // MatchOp
 //===----------------------------------------------------------------------===//
 

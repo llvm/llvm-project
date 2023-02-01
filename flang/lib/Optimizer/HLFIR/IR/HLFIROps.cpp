@@ -522,7 +522,8 @@ void hlfir::NullOp::build(mlir::OpBuilder &builder,
 void hlfir::CopyInOp::build(mlir::OpBuilder &builder,
                             mlir::OperationState &odsState, mlir::Value var,
                             mlir::Value var_is_present) {
-  return build(builder, odsState, var.getType(), var, var_is_present);
+  return build(builder, odsState, {var.getType(), builder.getI1Type()}, var,
+               var_is_present);
 }
 
 #define GET_OP_CLASSES

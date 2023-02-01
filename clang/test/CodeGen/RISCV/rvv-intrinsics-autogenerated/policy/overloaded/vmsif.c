@@ -12,7 +12,7 @@
 // CHECK-RV64-NEXT:    ret <vscale x 64 x i1> [[TMP0]]
 //
 vbool1_t test_vmsif_m_b1_mu(vbool1_t mask, vbool1_t maskedoff, vbool1_t op1, size_t vl) {
-  return vmsif_mu(mask, maskedoff, op1, vl);
+  return __riscv_vmsif_mu(mask, maskedoff, op1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vmsif_m_b2_mu(
@@ -21,7 +21,7 @@ vbool1_t test_vmsif_m_b1_mu(vbool1_t mask, vbool1_t maskedoff, vbool1_t op1, siz
 // CHECK-RV64-NEXT:    ret <vscale x 32 x i1> [[TMP0]]
 //
 vbool2_t test_vmsif_m_b2_mu(vbool2_t mask, vbool2_t maskedoff, vbool2_t op1, size_t vl) {
-  return vmsif_mu(mask, maskedoff, op1, vl);
+  return __riscv_vmsif_mu(mask, maskedoff, op1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vmsif_m_b4_mu(
@@ -30,7 +30,7 @@ vbool2_t test_vmsif_m_b2_mu(vbool2_t mask, vbool2_t maskedoff, vbool2_t op1, siz
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
 vbool4_t test_vmsif_m_b4_mu(vbool4_t mask, vbool4_t maskedoff, vbool4_t op1, size_t vl) {
-  return vmsif_mu(mask, maskedoff, op1, vl);
+  return __riscv_vmsif_mu(mask, maskedoff, op1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vmsif_m_b8_mu(
@@ -39,7 +39,7 @@ vbool4_t test_vmsif_m_b4_mu(vbool4_t mask, vbool4_t maskedoff, vbool4_t op1, siz
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i1> [[TMP0]]
 //
 vbool8_t test_vmsif_m_b8_mu(vbool8_t mask, vbool8_t maskedoff, vbool8_t op1, size_t vl) {
-  return vmsif_mu(mask, maskedoff, op1, vl);
+  return __riscv_vmsif_mu(mask, maskedoff, op1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vmsif_m_b16_mu(
@@ -48,7 +48,7 @@ vbool8_t test_vmsif_m_b8_mu(vbool8_t mask, vbool8_t maskedoff, vbool8_t op1, siz
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i1> [[TMP0]]
 //
 vbool16_t test_vmsif_m_b16_mu(vbool16_t mask, vbool16_t maskedoff, vbool16_t op1, size_t vl) {
-  return vmsif_mu(mask, maskedoff, op1, vl);
+  return __riscv_vmsif_mu(mask, maskedoff, op1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vmsif_m_b32_mu(
@@ -57,7 +57,7 @@ vbool16_t test_vmsif_m_b16_mu(vbool16_t mask, vbool16_t maskedoff, vbool16_t op1
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i1> [[TMP0]]
 //
 vbool32_t test_vmsif_m_b32_mu(vbool32_t mask, vbool32_t maskedoff, vbool32_t op1, size_t vl) {
-  return vmsif_mu(mask, maskedoff, op1, vl);
+  return __riscv_vmsif_mu(mask, maskedoff, op1, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vmsif_m_b64_mu(
@@ -66,6 +66,6 @@ vbool32_t test_vmsif_m_b32_mu(vbool32_t mask, vbool32_t maskedoff, vbool32_t op1
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i1> [[TMP0]]
 //
 vbool64_t test_vmsif_m_b64_mu(vbool64_t mask, vbool64_t maskedoff, vbool64_t op1, size_t vl) {
-  return vmsif_mu(mask, maskedoff, op1, vl);
+  return __riscv_vmsif_mu(mask, maskedoff, op1, vl);
 }
 

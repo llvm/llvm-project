@@ -64,10 +64,10 @@ TEST(AllocatableTest, MoveAlloc) {
 
   // move_alloc with the same allocated array should fail
   stat = RTNAME(MoveAlloc)(*a, *a, true, errMsg.get(), __FILE__, __LINE__);
-  EXPECT_EQ(stat, 18);
+  EXPECT_EQ(stat, 109);
   std::string_view errStr{errMsg->OffsetElement(), errMsg->ElementBytes()};
   auto trim_pos = errStr.find_last_not_of(' ');
   if (trim_pos != errStr.npos)
     errStr.remove_suffix(errStr.size() - trim_pos - 1);
-  EXPECT_EQ(errStr, "Invalid descriptor");
+  EXPECT_EQ(errStr, "MOVE_ALLOC passed the same address as to and from");
 }

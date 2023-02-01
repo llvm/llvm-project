@@ -519,3 +519,12 @@ StackOffset LoongArchFrameLowering::getFrameIndexReference(
 
   return Offset;
 }
+
+bool LoongArchFrameLowering::enableShrinkWrapping(
+    const MachineFunction &MF) const {
+  // Keep the conventional code flow when not optimizing.
+  if (MF.getFunction().hasOptNone())
+    return false;
+
+  return true;
+}
