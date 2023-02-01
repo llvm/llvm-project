@@ -265,7 +265,7 @@
 // RUN: | FileCheck --check-prefix=CHECK-ZVE64D-EXT %s
 // CHECK-ZVE64D-EXT: __riscv_v_elen 64
 // CHECK-ZVE64D-EXT: __riscv_v_elen_fp 64
-// CHECK-ZVE64D-EXT: __riscv_v_intrinsic 10000{{$}}
+// CHECK-ZVE64D-EXT: __riscv_v_intrinsic 11000{{$}}
 // CHECK-ZVE64D-EXT: __riscv_v_min_vlen 64
 // CHECK-ZVE64D-EXT: __riscv_vector 1
 // CHECK-ZVE64D-EXT: __riscv_zve32f 1000000{{$}}
@@ -279,7 +279,7 @@
 // RUN: | FileCheck --check-prefix=CHECK-ZVE64F-EXT %s
 // CHECK-ZVE64F-EXT: __riscv_v_elen 64
 // CHECK-ZVE64F-EXT: __riscv_v_elen_fp 32
-// CHECK-ZVE64F-EXT: __riscv_v_intrinsic 10000{{$}}
+// CHECK-ZVE64F-EXT: __riscv_v_intrinsic 11000{{$}}
 // CHECK-ZVE64F-EXT: __riscv_v_min_vlen 64
 // CHECK-ZVE64F-EXT: __riscv_vector 1
 // CHECK-ZVE64F-EXT: __riscv_zve32f 1000000{{$}}
@@ -292,7 +292,7 @@
 // RUN: | FileCheck --check-prefix=CHECK-ZVE64X-EXT %s
 // CHECK-ZVE64X-EXT: __riscv_v_elen 64
 // CHECK-ZVE64X-EXT: __riscv_v_elen_fp 0
-// CHECK-ZVE64X-EXT: __riscv_v_intrinsic 10000{{$}}
+// CHECK-ZVE64X-EXT: __riscv_v_intrinsic 11000{{$}}
 // CHECK-ZVE64X-EXT: __riscv_v_min_vlen 64
 // CHECK-ZVE64X-EXT: __riscv_vector 1
 // CHECK-ZVE64X-EXT: __riscv_zve32x 1000000{{$}}
@@ -303,7 +303,7 @@
 // RUN: | FileCheck --check-prefix=CHECK-ZVE32F-EXT %s
 // CHECK-ZVE32F-EXT: __riscv_v_elen 32
 // CHECK-ZVE32F-EXT: __riscv_v_elen_fp 32
-// CHECK-ZVE32F-EXT: __riscv_v_intrinsic 10000{{$}}
+// CHECK-ZVE32F-EXT: __riscv_v_intrinsic 11000{{$}}
 // CHECK-ZVE32F-EXT: __riscv_v_min_vlen 32
 // CHECK-ZVE32F-EXT: __riscv_vector 1
 // CHECK-ZVE32F-EXT: __riscv_zve32f 1000000{{$}}
@@ -314,7 +314,7 @@
 // RUN: | FileCheck --check-prefix=CHECK-ZVE32X-EXT %s
 // CHECK-ZVE32X-EXT: __riscv_v_elen 32
 // CHECK-ZVE32X-EXT: __riscv_v_elen_fp 0
-// CHECK-ZVE32X-EXT: __riscv_v_intrinsic 10000{{$}}
+// CHECK-ZVE32X-EXT: __riscv_v_intrinsic 11000{{$}}
 // CHECK-ZVE32X-EXT: __riscv_v_min_vlen 32
 // CHECK-ZVE32X-EXT: __riscv_vector 1
 // CHECK-ZVE32X-EXT: __riscv_zve32x 1000000{{$}}
