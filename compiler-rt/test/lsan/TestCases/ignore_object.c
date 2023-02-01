@@ -2,9 +2,6 @@
 // RUN: %clang_lsan %s -o %t
 // RUN: %env_lsan_opts=report_objects=1:use_registers=0:use_stacks=0:use_tls=0 not %run %t 2>&1 | FileCheck %s
 
-// Fixme: remove once test passes with hwasan
-// UNSUPPORTED: hwasan
-
 // Investigate why it does not fail with use_stack=0
 // UNSUPPORTED: arm-linux || armhf-linux
 
@@ -25,4 +22,4 @@ int main() {
   return 0;
 }
 // CHECK: Test alloc: [[ADDR:.*]].
-// CHECK: SUMMARY: {{(Leak|Address)}}Sanitizer: 1337 byte(s) leaked in 1 allocation(s)
+// CHECK: SUMMARY: {{.*}}Sanitizer: 1337 byte(s) leaked in 1 allocation(s)
