@@ -3444,6 +3444,13 @@ TEST_F(FormatTest, UnderstandsAccessSpecifiers) {
                "\n"
                "private:\n"
                "  int c;\n"
+               "};\n"
+               "class B {\n"
+               "public:\n"
+               "  std::unique_ptr<int *[] /* okay */> b() { return nullptr; }\n"
+               "\n"
+               "private:\n"
+               "  int c;\n"
                "};");
 }
 
@@ -9637,6 +9644,19 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "  return a;\n"
                "}",
                Style);
+  verifyFormat("byte *\n"
+               "f(a)\n"
+               "byte /* K&R C */ a[];\n"
+               "{\n"
+               "  return a;\n"
+               "}\n"
+               "byte *\n"
+               "g(p)\n"
+               "byte /* K&R C */ *p;\n"
+               "{\n"
+               "  return p;\n"
+               "}",
+               Style);
   verifyFormat("bool f(int a, int) override;\n"
                "Bar g(int a, Bar) final;\n"
                "Bar h(a, Bar) final;",
@@ -12810,6 +12830,7 @@ TEST_F(FormatTest, HandlesIncludeDirectives) {
   // But 'import' might also be a regular C++ namespace.
   verifyFormat("import::SomeFunction(aaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
                "                     aaaaaaaaaaaaaaaaaaaaaaaaaaaaa);");
+  verifyFormat("import::Bar foo(val ? 2 : 1);");
 }
 
 //===----------------------------------------------------------------------===//
@@ -24628,6 +24649,7 @@ TEST_F(FormatTest, Cpp20ModulesSupport) {
   verifyFormat("import foo.bar;", Style);
   verifyFormat("import foo:bar;", Style);
   verifyFormat("import :bar;", Style);
+  verifyFormat("import /* module partition */ :bar;", Style);
   verifyFormat("import <ctime>;", Style);
   verifyFormat("import \"header\";", Style);
 
@@ -24654,6 +24676,8 @@ TEST_F(FormatTest, Cpp20ModulesSupport) {
   verifyFormat("import", Style);
   verifyFormat("module", Style);
   verifyFormat("export", Style);
+
+  verifyFormat("import /* not keyword */ = val ? 2 : 1;");
 }
 
 TEST_F(FormatTest, CoroutineForCoawait) {

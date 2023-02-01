@@ -58,8 +58,7 @@ struct Variable {
 // registers and the registers reachable from them (aliasing registers).
 // - Info: a shortcut for MCInstrDesc::operands()[Index].
 // - TiedToIndex: the index of the Operand holding the value or -1.
-// - ImplicitReg: a pointer to the register value when Operand is Implicit,
-// nullptr otherwise.
+// - ImplicitReg: the register value when Operand is Implicit, 0 otherwise.
 // - VariableIndex: the index of the Variable holding the value for this Operand
 // or -1 if this operand is implicit.
 struct Operand {
@@ -86,7 +85,7 @@ struct Operand {
   const RegisterAliasingTracker *Tracker = nullptr; // Set for Register Op.
   const MCOperandInfo *Info = nullptr;              // Set for Explicit Op.
   std::optional<uint8_t> TiedToIndex;               // Set for Reg&Explicit Op.
-  const MCPhysReg *ImplicitReg = nullptr;           // Set for Implicit Op.
+  MCPhysReg ImplicitReg = 0;                        // Non-0 for Implicit Op.
   std::optional<uint8_t> VariableIndex;             // Set for Explicit Op.
 };
 

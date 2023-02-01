@@ -268,6 +268,8 @@ struct SparseVectorizationPass
   }
 
   void runOnOperation() override {
+    if (vectorLength == 0)
+      return signalPassFailure();
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
     populateSparseVectorizationPatterns(

@@ -54,14 +54,11 @@ getOptLevel(const std::vector<const char *> &ExtraArgs) {
   CodeGenOpt::Level OLvl = CodeGenOpt::Default;
   for (auto &A : ExtraArgs) {
     if (A[0] == '-' && A[1] == 'O') {
-      switch(A[2]) {
-        case '0': OLvl = CodeGenOpt::None; break;
-        case '1': OLvl = CodeGenOpt::Less; break;
-        case '2': OLvl = CodeGenOpt::Default; break;
-        case '3': OLvl = CodeGenOpt::Aggressive; break;
-        default:
-          errs() << "error: opt level must be between 0 and 3.\n";
-          std::exit(1);
+      if (auto Level = CodeGenOpt::parseLevel(A[2])) {
+        OLvl = *Level;
+      } else {
+        errs() << "error: opt level must be between 0 and 3.\n";
+        std::exit(1);
       }
     }
   }

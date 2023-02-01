@@ -200,21 +200,10 @@ void LTOCodeGenerator::setOptLevel(unsigned Level) {
   Config.OptLevel = Level;
   Config.PTO.LoopVectorization = Config.OptLevel > 1;
   Config.PTO.SLPVectorization = Config.OptLevel > 1;
-  switch (Config.OptLevel) {
-  case 0:
-    Config.CGOptLevel = CodeGenOpt::None;
-    return;
-  case 1:
-    Config.CGOptLevel = CodeGenOpt::Less;
-    return;
-  case 2:
-    Config.CGOptLevel = CodeGenOpt::Default;
-    return;
-  case 3:
-    Config.CGOptLevel = CodeGenOpt::Aggressive;
-    return;
-  }
-  llvm_unreachable("Unknown optimization level!");
+  std::optional<CodeGenOpt::Level> CGOptLevelOrNone =
+      CodeGenOpt::getLevel(Config.OptLevel);
+  assert(CGOptLevelOrNone && "Unknown optimization level!");
+  Config.CGOptLevel = *CGOptLevelOrNone;
 }
 
 bool LTOCodeGenerator::writeMergedModules(StringRef Path) {
@@ -629,7 +618,7 @@ bool LTOCodeGenerator::optimize() {
   this->applyScopeRestrictions();
 
   // Write LTOPostLink flag for passes that require all the modules.
-  MergedModule->setModuleFlag(Module::Error, "LTOPostLink", 1);
+  MergedModule->addModuleFlag(Module::Error, "LTOPostLink", 1);
 
   // Add an appropriate DataLayout instance for this module...
   MergedModule->setDataLayout(TargetMach->createDataLayout());

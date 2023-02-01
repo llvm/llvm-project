@@ -331,7 +331,7 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
     const auto &II = MII.get(RegOpc);
     // First pop all the uses off the stack and check them.
     for (unsigned I = II.getNumOperands(); I > II.getNumDefs(); I--) {
-      const auto &Op = II.OpInfo[I - 1];
+      const auto &Op = II.operands()[I - 1];
       if (Op.OperandType == MCOI::OPERAND_REGISTER) {
         auto VT = WebAssembly::regClassToValType(Op.RegClass);
         if (popType(ErrorLoc, VT))
@@ -340,7 +340,7 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
     }
     // Now push all the defs onto the stack.
     for (unsigned I = 0; I < II.getNumDefs(); I++) {
-      const auto &Op = II.OpInfo[I];
+      const auto &Op = II.operands()[I];
       assert(Op.OperandType == MCOI::OPERAND_REGISTER && "Register expected");
       auto VT = WebAssembly::regClassToValType(Op.RegClass);
       Stack.push_back(VT);

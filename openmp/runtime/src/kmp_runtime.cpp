@@ -24,6 +24,7 @@
 #include "kmp_wait_release.h"
 #include "kmp_wrapper_getpid.h"
 #include "kmp_dispatch.h"
+#include <cstdio>
 #if KMP_USE_HIER_SCHED
 #include "kmp_dispatch_hier.h"
 #endif
@@ -6739,6 +6740,11 @@ static inline char *__kmp_reg_status_name() {
 #endif
 } // __kmp_reg_status_get
 
+#if defined(KMP_USE_SHM)
+// If /dev/shm is not accessible, we will create a temporary file under /tmp.
+char *temp_reg_status_file_name = nullptr;
+#endif
+
 void __kmp_register_library_startup(void) {
 
   char *name = __kmp_reg_status_name(); // Name of the environment variable.
@@ -6780,11 +6786,19 @@ void __kmp_register_library_startup(void) {
         // able to open existing file
         shm_preexist = 1;
       }
-    } else if (fd1 == -1) { // SHM didn't open; it was due to error other than
-      // already exists.
-      // error out here.
-      __kmp_fatal(KMP_MSG(FunctionError, "Can't open SHM2"), KMP_ERR(errno),
-                  __kmp_msg_null);
+    } else if (fd1 == -1) {
+      // SHM didn't open; it was due to error other than already exists. Try to
+      // create a temp file under /tmp.
+      // TODO: /tmp might not always be the temporary directory. For now we will
+      // not consider TMPDIR. If /tmp is not accessible, we simply error out.
+      char *temp_file_name = __kmp_str_format("/tmp/%sXXXXXX", name);
+      fd1 = mkstemp(temp_file_name);
+      if (fd1 == -1) {
+        // error out here.
+        __kmp_fatal(KMP_MSG(FunctionError, "Can't open TEMP"), KMP_ERR(errno),
+                    __kmp_msg_null);
+      }
+      temp_reg_status_file_name = temp_file_name;
     }
     if (shm_preexist == 0) {
       // we created SHM now set size
@@ -6896,11 +6910,19 @@ void __kmp_unregister_library(void) {
   char *value = NULL;
 
 #if defined(KMP_USE_SHM)
+  bool use_shm = true;
   char *shm_name = __kmp_str_format("/%s", name);
   int fd1 = shm_open(shm_name, O_RDONLY, 0666);
   if (fd1 == -1) {
-    // file did not open. return.
-    return;
+    // File did not open. Try the temporary file.
+    use_shm = false;
+    KMP_DEBUG_ASSERT(temp_reg_status_file_name);
+    FILE *tf = fopen(temp_reg_status_file_name, O_RDONLY);
+    if (!tf) {
+      // give it up now.
+      return;
+    }
+    fd1 = fileno(tf);
   }
   char *data1 = (char *)mmap(0, SHM_SIZE, PROT_READ, MAP_SHARED, fd1, 0);
   if (data1 != MAP_FAILED) {
@@ -6917,7 +6939,12 @@ void __kmp_unregister_library(void) {
   if (value != NULL && strcmp(value, __kmp_registration_str) == 0) {
 //  Ok, this is our variable. Delete it.
 #if defined(KMP_USE_SHM)
-    shm_unlink(shm_name); // this removes file in /dev/shm
+    if (use_shm) {
+      shm_unlink(shm_name); // this removes file in /dev/shm
+    } else {
+      KMP_DEBUG_ASSERT(temp_reg_status_file_name);
+      unlink(temp_reg_status_file_name); // this removes the temp file
+    }
 #else
     __kmp_env_unset(name);
 #endif
@@ -6925,6 +6952,10 @@ void __kmp_unregister_library(void) {
 
 #if defined(KMP_USE_SHM)
   KMP_INTERNAL_FREE(shm_name);
+  if (!use_shm) {
+    KMP_DEBUG_ASSERT(temp_reg_status_file_name);
+    KMP_INTERNAL_FREE(temp_reg_status_file_name);
+  }
 #endif
 
   KMP_INTERNAL_FREE(__kmp_registration_str);

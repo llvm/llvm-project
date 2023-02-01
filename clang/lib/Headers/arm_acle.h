@@ -712,17 +712,13 @@ __arm_st64bv0(void *__addr, data512_t __value) {
 /* 10.1 Special register intrinsics */
 #define __arm_rsr(sysreg) __builtin_arm_rsr(sysreg)
 #define __arm_rsr64(sysreg) __builtin_arm_rsr64(sysreg)
-#if __ARM_FEATURE_SYSREG128
 #define __arm_rsr128(sysreg) __builtin_arm_rsr128(sysreg)
-#endif
 #define __arm_rsrp(sysreg) __builtin_arm_rsrp(sysreg)
 #define __arm_rsrf(sysreg) __builtin_bit_cast(float, __arm_rsr(sysreg))
 #define __arm_rsrf64(sysreg) __builtin_bit_cast(double, __arm_rsr64(sysreg))
 #define __arm_wsr(sysreg, v) __builtin_arm_wsr(sysreg, v)
 #define __arm_wsr64(sysreg, v) __builtin_arm_wsr64(sysreg, v)
-#if __ARM_FEATURE_SYSREG128
 #define __arm_wsr128(sysreg, v) __builtin_arm_wsr128(sysreg, v)
-#endif
 #define __arm_wsrp(sysreg, v) __builtin_arm_wsrp(sysreg, v)
 #define __arm_wsrf(sysreg, v) __arm_wsr(sysreg, __builtin_bit_cast(uint32_t, v))
 #define __arm_wsrf64(sysreg, v) __arm_wsr64(sysreg, __builtin_bit_cast(uint64_t, v))

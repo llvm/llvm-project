@@ -1698,8 +1698,8 @@ def : RWSysReg<"CNTSCALE_EL2",     0b11, 0b100, 0b1110, 0b0000, 0b100>;
 def : RWSysReg<"CNTISCALE_EL2",    0b11, 0b100, 0b1110, 0b0000, 0b101>;
 def : RWSysReg<"CNTPOFF_EL2",      0b11, 0b100, 0b1110, 0b0000, 0b110>;
 def : RWSysReg<"CNTVFRQ_EL2",      0b11, 0b100, 0b1110, 0b0000, 0b111>;
-def : RWSysReg<"CNTPCTSS_EL0",     0b11, 0b011, 0b1110, 0b0000, 0b101>;
-def : RWSysReg<"CNTVCTSS_EL0",     0b11, 0b011, 0b1110, 0b0000, 0b110>;
+def : ROSysReg<"CNTPCTSS_EL0",     0b11, 0b011, 0b1110, 0b0000, 0b101>;
+def : ROSysReg<"CNTVCTSS_EL0",     0b11, 0b011, 0b1110, 0b0000, 0b110>;
 }
 
 // v8.7a LD64B/ST64B Accelerator Extension system register
@@ -1775,6 +1775,7 @@ def : RWSysReg<"MAIR2_EL3",   0b11, 0b110, 0b1010, 0b0001, 0b001>;
 // v8.9a/9.4a Stage 1 Permission Indirection Extension (FEAT_S1PIE)
 //                            Op0   Op1    CRn     CRm     Op2
 def : RWSysReg<"PIRE0_EL1",   0b11, 0b000, 0b1010, 0b0010, 0b010>;
+def : RWSysReg<"PIRE0_EL12",  0b11, 0b101, 0b1010, 0b0010, 0b010>;
 def : RWSysReg<"PIRE0_EL2",   0b11, 0b100, 0b1010, 0b0010, 0b010>;
 def : RWSysReg<"PIR_EL1",     0b11, 0b000, 0b1010, 0b0010, 0b011>;
 def : RWSysReg<"PIR_EL12",    0b11, 0b101, 0b1010, 0b0010, 0b011>;

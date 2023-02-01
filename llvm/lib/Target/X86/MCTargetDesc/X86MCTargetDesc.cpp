@@ -522,7 +522,7 @@ bool X86MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
                                               APInt &Mask) const {
   const MCInstrDesc &Desc = Info->get(Inst.getOpcode());
   unsigned NumDefs = Desc.getNumDefs();
-  unsigned NumImplicitDefs = Desc.getNumImplicitDefs();
+  unsigned NumImplicitDefs = Desc.implicit_defs().size();
   assert(Mask.getBitWidth() == NumDefs + NumImplicitDefs &&
          "Unexpected number of bits in the mask!");
 
@@ -561,7 +561,7 @@ bool X86MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
   }
 
   for (unsigned I = 0, E = NumImplicitDefs; I < E; ++I) {
-    const MCPhysReg Reg = Desc.getImplicitDefs()[I];
+    const MCPhysReg Reg = Desc.implicit_defs()[I];
     if (ClearsSuperReg(Reg))
       Mask.setBit(NumDefs + I);
   }
@@ -630,7 +630,8 @@ std::vector<std::pair<uint64_t, uint64_t>> X86MCInstrAnalysis::findPltEntries(
 bool X86MCInstrAnalysis::evaluateBranch(const MCInst &Inst, uint64_t Addr,
                                         uint64_t Size, uint64_t &Target) const {
   if (Inst.getNumOperands() == 0 ||
-      Info->get(Inst.getOpcode()).OpInfo[0].OperandType != MCOI::OPERAND_PCREL)
+      Info->get(Inst.getOpcode()).operands()[0].OperandType !=
+          MCOI::OPERAND_PCREL)
     return false;
   Target = Addr + Size + Inst.getOperand(0).getImm();
   return true;

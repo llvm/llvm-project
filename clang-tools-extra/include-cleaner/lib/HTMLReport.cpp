@@ -187,8 +187,7 @@ class Reporter {
     // Duplicates logic from walkUsed(), which doesn't expose SymbolLocations.
     for (auto &Loc : locateSymbol(R.Sym))
       R.Locations.push_back(Loc);
-    for (const auto &Loc : R.Locations)
-      R.Headers.append(findHeaders(Loc, SM, PI));
+    R.Headers = headersForSymbol(R.Sym, SM, PI);
 
     for (const auto &H : R.Headers) {
       R.Includes.append(Includes.match(H));
@@ -205,7 +204,6 @@ class Reporter {
                      R.Includes.end());
 
     if (!R.Headers.empty())
-      // FIXME: library should tell us which header to use.
       R.Insert = spellHeader(R.Headers.front());
   }
 

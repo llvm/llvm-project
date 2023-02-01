@@ -1431,6 +1431,24 @@ static TemplateParameterList *CreateTemplateParameterList(
   return template_param_list;
 }
 
+std::string TypeSystemClang::PrintTemplateParams(
+    const TemplateParameterInfos &template_param_infos) {
+  llvm::SmallVector<NamedDecl *, 8> ignore;
+  clang::TemplateParameterList *template_param_list =
+      CreateTemplateParameterList(getASTContext(), template_param_infos,
+                                  ignore);
+  llvm::SmallVector<clang::TemplateArgument, 2> args =
+      template_param_infos.args;
+  if (template_param_infos.hasParameterPack()) {
+    args.append(template_param_infos.packed_args->args);
+  }
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  clang::printTemplateArgumentList(os, args, GetTypePrintingPolicy(),
+                                   template_param_list);
+  return str;
+}
+
 clang::FunctionTemplateDecl *TypeSystemClang::CreateFunctionTemplateDecl(
     clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
     clang::FunctionDecl *func_decl,

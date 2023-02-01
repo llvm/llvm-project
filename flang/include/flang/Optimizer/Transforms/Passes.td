@@ -117,6 +117,12 @@ def ArrayValueCopy : Pass<"array-value-copy", "::mlir::func::FuncOp"> {
   }];
   let constructor = "::fir::createArrayValueCopyPass()";
   let dependentDialects = [ "fir::FIROpsDialect" ];
+  let options = [
+    Option<"optimizeConflicts", "optimize-conflicts", "bool",
+           /*default=*/"false",
+           "do more detailed conflict analysis to reduce the number "
+           "of temporaries">
+  ];
 }
 
 def CharacterConversion : Pass<"character-conversion"> {

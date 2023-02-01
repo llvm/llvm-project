@@ -37,7 +37,7 @@ extern const double ATAN_K[5];
 // atan(u) + atan(v) = atan((u+v)/(1-uv))
 
 // x should be positive, normal finite value
-static inline double atan_eval(double x) {
+LIBC_INLINE double atan_eval(double x) {
   using FPB = fputil::FPBits<double>;
   // Added some small value to umin and umax mantissa to avoid possible rounding
   // errors.
@@ -99,7 +99,7 @@ constexpr double ASIN_COEFFS[10] = {0x1.5555555540fa1p-3, 0x1.333333512edc2p-4,
                                     -0x1.df946fa875ddp-8, 0x1.02311ecf99c28p-5};
 
 // Evaluate P(x^2) - 1, where P(x^2) ~ asin(x)/x
-static inline double asin_eval(double xsq) {
+LIBC_INLINE double asin_eval(double xsq) {
   double x4 = xsq * xsq;
   double r1 = fputil::polyeval(x4, ASIN_COEFFS[0], ASIN_COEFFS[2],
                                ASIN_COEFFS[4], ASIN_COEFFS[6], ASIN_COEFFS[8]);

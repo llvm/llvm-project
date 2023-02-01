@@ -3676,6 +3676,9 @@ static const struct Extension {
     {"the", {AArch64::FeatureTHE}},
     {"d128", {AArch64::FeatureD128}},
     {"lse128", {AArch64::FeatureLSE128}},
+    {"ite", {AArch64::FeatureITE}},
+    {"cssc", {AArch64::FeatureCSSC}},
+    {"rcpc3", {AArch64::FeatureRCPC3}},
     // FIXME: Unsupported extensions
     {"lor", {}},
     {"rdma", {}},

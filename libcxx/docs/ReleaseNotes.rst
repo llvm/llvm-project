@@ -69,6 +69,9 @@ Implemented Papers
 - P1035R7 - Input Range Adaptors
 - P2325R3 - Views should not be required to be default constructible
 - P2446R2 - ``views::as_rvalue``
+- P1020R1 - Smart pointer creation with default initialization
+- P2210R2 - Superior String Splitting
+- P2286R8 - Formatting Ranges
 
 Improvements and New Features
 -----------------------------
@@ -136,6 +139,10 @@ Upcoming Deprecations and Removals
   working when we remove the base template. The Standard does not mandate that a base template is provided,
   and such a base template is bound to be incorrect for some types, which could currently cause unexpected
   behavior while going undetected.
+
+- The ``_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED`` macro will not be honored anymore in LLVM 18.
+  Please see the updated documentation about the safe libc++ mode and in particular the ``_LIBCPP_VERBOSE_ABORT``
+  macro for details.
 
 API Changes
 -----------

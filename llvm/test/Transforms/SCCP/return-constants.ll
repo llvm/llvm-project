@@ -47,11 +47,11 @@ F:                                                ; preds = %0
 define %0 @caller(i1 %Q) {
 ; CHECK-LABEL: @caller(
 ; CHECK-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 [[Q:%.*]])
-; CHECK-NEXT:    [[B:%.*]] = extractvalue [[TMP0]] %X, 1
+; CHECK-NEXT:    [[B:%.*]] = extractvalue [[TMP0]] [[X]], 1
 ; CHECK-NEXT:    [[Y:%.*]] = call [[TMP0]] @bar(i1 [[Q]])
-; CHECK-NEXT:    [[D:%.*]] = extractvalue [[TMP0]] %Y, 1
+; CHECK-NEXT:    [[D:%.*]] = extractvalue [[TMP0]] [[Y]], 1
 ; CHECK-NEXT:    [[N:%.*]] = add i32 [[B]], [[D]]
-; CHECK-NEXT:    ret [[TMP0]] %X
+; CHECK-NEXT:    ret [[TMP0]] [[X]]
 ;
   %X = call %0 @foo(i1 %Q)
   %A = extractvalue %0 %X, 0

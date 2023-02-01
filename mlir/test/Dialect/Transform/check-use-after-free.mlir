@@ -167,3 +167,13 @@ func.func @use_after_free_cycle() {
   return
 }
 
+// -----
+
+// This should not crash.
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !pdl.operation):
+  alternatives %arg0 : !pdl.operation {
+  ^bb0(%arg1: !pdl.operation):
+  }
+}

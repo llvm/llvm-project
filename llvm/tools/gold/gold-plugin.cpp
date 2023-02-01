@@ -846,20 +846,6 @@ static int getOutputFileName(StringRef InFilename, bool TempOutFile,
   return FD;
 }
 
-static CodeGenOpt::Level getCGOptLevel() {
-  switch (options::OptLevel) {
-  case 0:
-    return CodeGenOpt::None;
-  case 1:
-    return CodeGenOpt::Less;
-  case 2:
-    return CodeGenOpt::Default;
-  case 3:
-    return CodeGenOpt::Aggressive;
-  }
-  llvm_unreachable("Invalid optimization level");
-}
-
 /// Parse the thinlto_prefix_replace option into the \p OldPrefix and
 /// \p NewPrefix strings, if it was specified.
 static void getThinLTOOldAndNewPrefix(std::string &OldPrefix,
@@ -896,7 +882,10 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   Conf.MAttrs = codegen::getMAttrs();
   Conf.RelocModel = RelocationModel;
   Conf.CodeModel = codegen::getExplicitCodeModel();
-  Conf.CGOptLevel = getCGOptLevel();
+  std::optional<CodeGenOpt::Level> CGOptLevelOrNone =
+      CodeGenOpt::getLevel(options::OptLevel);
+  assert(CGOptLevelOrNone && "Invalid optimization level");
+  Conf.CGOptLevel = *CGOptLevelOrNone;
   Conf.DisableVerify = options::DisableVerify;
   Conf.OptLevel = options::OptLevel;
   Conf.PTO.LoopVectorization = options::OptLevel > 1;

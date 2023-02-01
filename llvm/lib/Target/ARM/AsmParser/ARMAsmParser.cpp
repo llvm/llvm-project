@@ -2503,7 +2503,8 @@ public:
       RegNum = 0;
     } else {
       unsigned NextOpIndex = Inst.getNumOperands();
-      const MCInstrDesc &MCID = ARMInsts[Inst.getOpcode()];
+      const MCInstrDesc &MCID =
+          ARMInsts[ARM::INSTRUCTION_LIST_END - 1 - Inst.getOpcode()];
       int TiedOp = MCID.getOperandConstraint(NextOpIndex, MCOI::TIED_TO);
       assert(TiedOp >= 0 &&
              "Inactive register in vpred_r is not tied to an output!");
@@ -7626,7 +7627,7 @@ bool ARMAsmParser::validateLDRDSTRD(MCInst &Inst,
 
 static int findFirstVectorPredOperandIdx(const MCInstrDesc &MCID) {
   for (unsigned i = 0; i < MCID.NumOperands; ++i) {
-    if (ARM::isVpred(MCID.OpInfo[i].OperandType))
+    if (ARM::isVpred(MCID.operands()[i].OperandType))
       return i;
   }
   return -1;
@@ -7679,7 +7680,7 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     // to keep instructions the same shape even though one cannot
     // legally be predicated, e.g. vmul.f16 vs vmul.f32.
     for (unsigned i = 0, e = MCID.getNumOperands(); i != e; ++i) {
-      if (MCID.OpInfo[i].isPredicate()) {
+      if (MCID.operands()[i].isPredicate()) {
         if (Inst.getOperand(i).getImm() != ARMCC::AL)
           return Error(Loc, "instruction is not predicable");
         break;
@@ -10755,7 +10756,7 @@ unsigned ARMAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
     // Find the optional-def operand (cc_out).
     unsigned OpNo;
     for (OpNo = 0;
-         !MCID.OpInfo[OpNo].isOptionalDef() && OpNo < MCID.NumOperands;
+         !MCID.operands()[OpNo].isOptionalDef() && OpNo < MCID.NumOperands;
          ++OpNo)
       ;
     // If we're parsing Thumb1, reject it completely.
@@ -10833,7 +10834,7 @@ unsigned ARMAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   }
 
   for (unsigned I = 0; I < MCID.NumOperands; ++I)
-    if (MCID.OpInfo[I].RegClass == ARM::rGPRRegClassID) {
+    if (MCID.operands()[I].RegClass == ARM::rGPRRegClassID) {
       // rGPRRegClass excludes PC, and also excluded SP before ARMv8
       const auto &Op = Inst.getOperand(I);
       if (!Op.isReg()) {

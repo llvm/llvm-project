@@ -482,7 +482,7 @@ inline bool operator!=(const ParamInfo &LHS, const ParamInfo &RHS) {
 /// API notes for a function or method.
 class FunctionInfo : public CommonEntityInfo {
 private:
-  static constexpr const unsigned NullabilityKindMask = 0x3;
+  static constexpr const uint64_t NullabilityKindMask = 0x3;
   static constexpr const unsigned NullabilityKindSize = 2;
 
   static constexpr const unsigned ReturnInfoIndex = 0;

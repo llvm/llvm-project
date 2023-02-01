@@ -1830,7 +1830,7 @@ public:
       return builder.create<fir::EmboxProcOp>(loc, boxProcTy,
                                               fir::getBase(exv));
     }
-    mlir::Value box = builder.createBox(loc, exv);
+    mlir::Value box = builder.createBox(loc, exv, exv.isPolymorphic());
     return fir::BoxValue(
         box, fir::factory::getNonDefaultLowerBounds(builder, loc, exv),
         fir::factory::getNonDeferredLenParams(exv));
@@ -2558,7 +2558,7 @@ public:
           // callee side, and it is illegal to use NULL without a MOLD if any
           // dummy length parameters are assumed.
           mlir::Type boxTy = fir::dyn_cast_ptrEleTy(argTy);
-          assert(boxTy && boxTy.isa<fir::BoxType>() &&
+          assert(boxTy && boxTy.isa<fir::BaseBoxType>() &&
                  "must be a fir.box type");
           mlir::Value boxStorage = builder.createTemporary(loc, boxTy);
           mlir::Value nullBox = fir::factory::createUnallocatedBox(
@@ -2704,6 +2704,22 @@ public:
           /// has the dummy attributes in BIND(C) contexts.
           mlir::Value box = builder.createBox(
               loc, fir::factory::genMutableBoxRead(builder, loc, mutableBox));
+
+          // NULL() passed as argument is passed as a !fir.box<none>. Since
+          // select op requires the same type for its two argument, convert
+          // !fir.box<none> to !fir.class<none> when the argument is
+          // polymorphic.
+          if (fir::isBoxNone(box.getType()) && fir::isPolymorphicType(argTy)) {
+            box = builder.createConvert(
+                loc,
+                fir::ClassType::get(mlir::NoneType::get(builder.getContext())),
+                box);
+          } else if (box.getType().isa<fir::BoxType>() &&
+                     fir::isPolymorphicType(argTy)) {
+            box = builder.create<fir::ReboxOp>(loc, argTy, box, mlir::Value{},
+                                               /*slice=*/mlir::Value{});
+          }
+
           // Need the box types to be exactly similar for the selectOp.
           mlir::Value convertedBox = builder.createConvert(loc, argTy, box);
           caller.placeInput(arg, builder.create<mlir::arith::SelectOp>(
@@ -2717,6 +2733,34 @@ public:
                                       fir::isPolymorphicType(argTy))
                   : builder.createBox(getLoc(), genTempExtAddr(*expr),
                                       fir::isPolymorphicType(argTy));
+
+          if (box.getType().isa<fir::BoxType>() &&
+              fir::isPolymorphicType(argTy)) {
+            // Rebox can only be performed on a present argument.
+            if (arg.isOptional()) {
+              mlir::Value isPresent = genActualIsPresentTest(builder, loc, box);
+              box =
+                  builder
+                      .genIfOp(loc, {argTy}, isPresent, /*withElseRegion=*/true)
+                      .genThen([&]() {
+                        auto rebox = builder
+                                         .create<fir::ReboxOp>(
+                                             loc, argTy, box, mlir::Value{},
+                                             /*slice=*/mlir::Value{})
+                                         .getResult();
+                        builder.create<fir::ResultOp>(loc, rebox);
+                      })
+                      .genElse([&]() {
+                        auto absent = builder.create<fir::AbsentOp>(loc, argTy)
+                                          .getResult();
+                        builder.create<fir::ResultOp>(loc, absent);
+                      })
+                      .getResults()[0];
+            } else {
+              box = builder.create<fir::ReboxOp>(loc, argTy, box, mlir::Value{},
+                                                 /*slice=*/mlir::Value{});
+            }
+          }
           caller.placeInput(arg, box);
         }
       } else if (arg.passBy == PassBy::AddressAndLength) {
@@ -5536,7 +5580,7 @@ private:
       // value. The value of the box is forwarded in the continuation.
       mlir::Type reduceTy = reduceRank(arrTy, slice);
       mlir::Type boxTy = fir::BoxType::get(reduceTy);
-      if (memref.getType().isa<fir::ClassType>())
+      if (memref.getType().isa<fir::ClassType>() && !components.hasComponents())
         boxTy = fir::ClassType::get(reduceTy);
       if (components.substring) {
         // Adjust char length to substring size.

@@ -308,10 +308,10 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #include <__split_buffer>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/noexcept_move_assign_container.h>
+#include <__utility/exception_guard.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
-#include <__utility/transaction.h>
 #include <climits>
 #include <cstdlib>
 #include <cstring>
@@ -1073,7 +1073,7 @@ template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 vector<_Tp, _Allocator>::vector(size_type __n)
 {
-    auto __guard = std::__make_transaction(__destroy_vector(*this));
+    auto __guard = std::__make_exception_guard(__destroy_vector(*this));
     std::__debug_db_insert_c(this);
     if (__n > 0)
     {
@@ -1089,7 +1089,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20
 vector<_Tp, _Allocator>::vector(size_type __n, const allocator_type& __a)
     : __end_cap_(nullptr, __a)
 {
-    auto __guard = std::__make_transaction(__destroy_vector(*this));
+    auto __guard = std::__make_exception_guard(__destroy_vector(*this));
     std::__debug_db_insert_c(this);
     if (__n > 0)
     {
@@ -1104,7 +1104,7 @@ template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 vector<_Tp, _Allocator>::vector(size_type __n, const value_type& __x)
 {
-    auto __guard = std::__make_transaction(__destroy_vector(*this));
+    auto __guard = std::__make_exception_guard(__destroy_vector(*this));
     std::__debug_db_insert_c(this);
     if (__n > 0)
     {
@@ -1121,7 +1121,7 @@ template <class _InputIterator, __enable_if_t<__is_exactly_cpp17_input_iterator<
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 vector<_Tp, _Allocator>::vector(_InputIterator __first, _InputIterator __last)
 {
-    auto __guard = std::__make_transaction(__destroy_vector(*this));
+    auto __guard = std::__make_exception_guard(__destroy_vector(*this));
     std::__debug_db_insert_c(this);
     for (; __first != __last; ++__first)
         emplace_back(*__first);
@@ -1136,7 +1136,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20
 vector<_Tp, _Allocator>::vector(_InputIterator __first, _InputIterator __last, const allocator_type& __a)
     : __end_cap_(nullptr, __a)
 {
-    auto __guard = std::__make_transaction(__destroy_vector(*this));
+    auto __guard = std::__make_exception_guard(__destroy_vector(*this));
     std::__debug_db_insert_c(this);
     for (; __first != __last; ++__first)
         emplace_back(*__first);
@@ -1150,7 +1150,7 @@ template <class _ForwardIterator, __enable_if_t<__is_cpp17_forward_iterator<_For
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 vector<_Tp, _Allocator>::vector(_ForwardIterator __first, _ForwardIterator __last)
 {
-    auto __guard = std::__make_transaction(__destroy_vector(*this));
+    auto __guard = std::__make_exception_guard(__destroy_vector(*this));
     std::__debug_db_insert_c(this);
     size_type __n = static_cast<size_type>(std::distance(__first, __last));
     if (__n > 0)
@@ -1169,7 +1169,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20
 vector<_Tp, _Allocator>::vector(_ForwardIterator __first, _ForwardIterator __last, const allocator_type& __a)
     : __end_cap_(nullptr, __a)
 {
-    auto __guard = std::__make_transaction(__destroy_vector(*this));
+    auto __guard = std::__make_exception_guard(__destroy_vector(*this));
     std::__debug_db_insert_c(this);
     size_type __n = static_cast<size_type>(std::distance(__first, __last));
     if (__n > 0)
@@ -1185,7 +1185,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20
 vector<_Tp, _Allocator>::vector(const vector& __x)
     : __end_cap_(nullptr, __alloc_traits::select_on_container_copy_construction(__x.__alloc()))
 {
-    auto __guard = std::__make_transaction(__destroy_vector(*this));
+    auto __guard = std::__make_exception_guard(__destroy_vector(*this));
     std::__debug_db_insert_c(this);
     size_type __n = __x.size();
     if (__n > 0)
@@ -1201,7 +1201,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20
 vector<_Tp, _Allocator>::vector(const vector& __x, const __type_identity_t<allocator_type>& __a)
     : __end_cap_(nullptr, __a)
 {
-    auto __guard = std::__make_transaction(__destroy_vector(*this));
+    auto __guard = std::__make_exception_guard(__destroy_vector(*this));
     std::__debug_db_insert_c(this);
     size_type __n = __x.size();
     if (__n > 0)
@@ -1249,7 +1249,7 @@ vector<_Tp, _Allocator>::vector(vector&& __x, const __type_identity_t<allocator_
     else
     {
         typedef move_iterator<iterator> _Ip;
-        auto __guard = std::__make_transaction(__destroy_vector(*this));
+        auto __guard = std::__make_exception_guard(__destroy_vector(*this));
         assign(_Ip(__x.begin()), _Ip(__x.end()));
         __guard.__complete();
     }
@@ -1262,7 +1262,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20
 inline _LIBCPP_HIDE_FROM_ABI
 vector<_Tp, _Allocator>::vector(initializer_list<value_type> __il)
 {
-    auto __guard = std::__make_transaction(__destroy_vector(*this));
+    auto __guard = std::__make_exception_guard(__destroy_vector(*this));
     std::__debug_db_insert_c(this);
     if (__il.size() > 0)
     {
@@ -1278,7 +1278,7 @@ inline _LIBCPP_HIDE_FROM_ABI
 vector<_Tp, _Allocator>::vector(initializer_list<value_type> __il, const allocator_type& __a)
     : __end_cap_(nullptr, __a)
 {
-    auto __guard = std::__make_transaction(__destroy_vector(*this));
+    auto __guard = std::__make_exception_guard(__destroy_vector(*this));
     std::__debug_db_insert_c(this);
     if (__il.size() > 0)
     {
@@ -2657,7 +2657,7 @@ vector<bool, _Allocator>::vector(_ForwardIterator __first, _ForwardIterator __la
       __size_(0),
       __cap_alloc_(0, __default_init_tag())
 {
-    auto __guard = std::__make_transaction(__destroy_vector(*this));
+    auto __guard = std::__make_exception_guard(__destroy_vector(*this));
     size_type __n = static_cast<size_type>(std::distance(__first, __last));
     if (__n > 0)
     {
@@ -2676,7 +2676,7 @@ vector<bool, _Allocator>::vector(_ForwardIterator __first, _ForwardIterator __la
       __size_(0),
       __cap_alloc_(0, static_cast<__storage_allocator>(__a))
 {
-    auto __guard = std::__make_transaction(__destroy_vector(*this));
+    auto __guard = std::__make_exception_guard(__destroy_vector(*this));
     size_type __n = static_cast<size_type>(std::distance(__first, __last));
     if (__n > 0)
     {

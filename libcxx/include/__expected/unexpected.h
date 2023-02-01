@@ -38,28 +38,24 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Err>
 class unexpected;
 
-namespace __unexpected {
-
 template <class _Tp>
-struct __is_unexpected : false_type {};
+struct __is_std_unexpected : false_type {};
 
 template <class _Err>
-struct __is_unexpected<unexpected<_Err>> : true_type {};
+struct __is_std_unexpected<unexpected<_Err>> : true_type {};
 
 template <class _Tp>
-using __valid_unexpected = _BoolConstant< //
-    is_object_v<_Tp> &&                   //
-    !is_array_v<_Tp> &&                   //
-    !__is_unexpected<_Tp>::value &&       //
-    !is_const_v<_Tp> &&                   //
-    !is_volatile_v<_Tp>                   //
+using __valid_std_unexpected = _BoolConstant< //
+    is_object_v<_Tp> &&                       //
+    !is_array_v<_Tp> &&                       //
+    !__is_std_unexpected<_Tp>::value &&       //
+    !is_const_v<_Tp> &&                       //
+    !is_volatile_v<_Tp>                       //
     >;
-
-} // namespace __unexpected
 
 template <class _Err>
 class unexpected {
-  static_assert(__unexpected::__valid_unexpected<_Err>::value,
+  static_assert(__valid_std_unexpected<_Err>::value,
                 "[expected.un.general] states a program that instantiates std::unexpected for a non-object type, an "
                 "array type, a specialization of unexpected, or a cv-qualified type is ill-formed.");
 

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AnalysisInternal.h"
-#include "clang-include-cleaner/Analysis.h"
+#include "TypesInternal.h"
 #include "clang-include-cleaner/Record.h"
 #include "clang-include-cleaner/Types.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -16,15 +16,14 @@
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Testing/TestAST.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Testing/Annotations/Annotations.h"
+#include "llvm/ADT/SmallVector.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <memory>
 
 namespace clang::include_cleaner {
 namespace {
+using testing::ElementsAre;
 using testing::UnorderedElementsAre;
 
 std::string guard(llvm::StringRef Code) {
@@ -53,7 +52,7 @@ protected:
   }
   void buildAST() { AST = std::make_unique<TestAST>(Inputs); }
 
-  llvm::SmallVector<Header> findHeaders(llvm::StringRef FileName) {
+  llvm::SmallVector<Hinted<Header>> findHeaders(llvm::StringRef FileName) {
     return include_cleaner::findHeaders(
         AST->sourceManager().translateFileLineCol(
             AST->fileManager().getFile(FileName).get(),
@@ -225,12 +224,211 @@ TEST_F(FindHeadersTest, TargetIsExpandedFromMacroInHeader) {
     CustomVisitor Visitor;
     Visitor.TraverseDecl(AST->context().getTranslationUnitDecl());
 
-    llvm::SmallVector<Header> Headers = clang::include_cleaner::findHeaders(
+    auto Headers = clang::include_cleaner::findHeaders(
         Visitor.Out->getLocation(), AST->sourceManager(),
         /*PragmaIncludes=*/nullptr);
     EXPECT_THAT(Headers, UnorderedElementsAre(physicalHeader("declare.h")));
   }
 }
 
+MATCHER_P2(HintedHeader, Header, Hint, "") {
+  return std::tie(arg.Hint, arg) == std::tie(Hint, Header);
+}
+
+TEST_F(FindHeadersTest, PublicHeaderHint) {
+  Inputs.Code = R"cpp(
+    #include "public.h"
+  )cpp";
+  Inputs.ExtraFiles["public.h"] = guard(R"cpp(
+    #include "private.h"
+    #include "private.inc"
+  )cpp");
+  Inputs.ExtraFiles["private.h"] = guard(R"cpp(
+    // IWYU pragma: private
+  )cpp");
+  Inputs.ExtraFiles["private.inc"] = "";
+  buildAST();
+  // Non self-contained files and headers marked with IWYU private pragma
+  // shouldn't have PublicHeader hint.
+  EXPECT_THAT(
+      findHeaders("private.inc"),
+      UnorderedElementsAre(
+          HintedHeader(physicalHeader("private.inc"), Hints::None),
+          HintedHeader(physicalHeader("public.h"), Hints::PublicHeader)));
+  EXPECT_THAT(findHeaders("private.h"),
+              UnorderedElementsAre(
+                  HintedHeader(physicalHeader("private.h"), Hints::None)));
+}
+
+TEST_F(FindHeadersTest, PreferredHeaderHint) {
+  Inputs.Code = R"cpp(
+    #include "private.h"
+  )cpp";
+  Inputs.ExtraFiles["private.h"] = guard(R"cpp(
+    // IWYU pragma: private, include "public.h"
+  )cpp");
+  buildAST();
+  // Headers explicitly marked should've preferred signal.
+  EXPECT_THAT(findHeaders("private.h"),
+              UnorderedElementsAre(
+                  HintedHeader(physicalHeader("private.h"), Hints::None),
+                  HintedHeader(Header("\"public.h\""),
+                               Hints::PreferredHeader | Hints::PublicHeader)));
+}
+
+class HeadersForSymbolTest : public FindHeadersTest {
+protected:
+  llvm::SmallVector<Header> headersForFoo() {
+    struct Visitor : public RecursiveASTVisitor<Visitor> {
+      const NamedDecl *Out = nullptr;
+      bool VisitNamedDecl(const NamedDecl *ND) {
+        if (ND->getName() == "foo") {
+          EXPECT_TRUE(Out == nullptr || Out == ND->getCanonicalDecl())
+              << "Found multiple matches for foo.";
+          Out = cast<NamedDecl>(ND->getCanonicalDecl());
+        }
+        return true;
+      }
+    };
+    Visitor V;
+    V.TraverseDecl(AST->context().getTranslationUnitDecl());
+    if (!V.Out)
+      ADD_FAILURE() << "Couldn't find any decls named foo.";
+    assert(V.Out);
+    return headersForSymbol(*V.Out, AST->sourceManager(), &PI);
+  }
+};
+
+TEST_F(HeadersForSymbolTest, Deduplicates) {
+  Inputs.Code = R"cpp(
+    #include "foo.h"
+  )cpp";
+  Inputs.ExtraFiles["foo.h"] = guard(R"cpp(
+    // IWYU pragma: private, include "foo.h"
+    void foo();
+    void foo();
+  )cpp");
+  buildAST();
+  EXPECT_THAT(
+      headersForFoo(),
+      UnorderedElementsAre(physicalHeader("foo.h"),
+                           // FIXME: de-duplicate across different kinds.
+                           Header("\"foo.h\"")));
+}
+
+TEST_F(HeadersForSymbolTest, RankByName) {
+  Inputs.Code = R"cpp(
+    #include "fox.h"
+    #include "bar.h"
+  )cpp";
+  Inputs.ExtraFiles["fox.h"] = guard(R"cpp(
+    void foo();
+  )cpp");
+  Inputs.ExtraFiles["bar.h"] = guard(R"cpp(
+    void foo();
+  )cpp");
+  buildAST();
+  EXPECT_THAT(headersForFoo(),
+              ElementsAre(physicalHeader("bar.h"), physicalHeader("fox.h")));
+}
+
+TEST_F(HeadersForSymbolTest, Ranking) {
+  // Sorting is done over (canonical, public, complete) triplet.
+  Inputs.Code = R"cpp(
+    #include "private.h"
+    #include "public.h"
+    #include "public_complete.h"
+  )cpp";
+  Inputs.ExtraFiles["public.h"] = guard(R"cpp(
+    struct foo;
+  )cpp");
+  Inputs.ExtraFiles["private.h"] = guard(R"cpp(
+    // IWYU pragma: private, include "canonical.h"
+    struct foo;
+  )cpp");
+  Inputs.ExtraFiles["public_complete.h"] = guard("struct foo {};");
+  buildAST();
+  EXPECT_THAT(headersForFoo(), ElementsAre(Header("\"canonical.h\""),
+                                           physicalHeader("public_complete.h"),
+                                           physicalHeader("public.h"),
+                                           physicalHeader("private.h")));
+}
+
+TEST_F(HeadersForSymbolTest, PreferPublicOverComplete) {
+  Inputs.Code = R"cpp(
+    #include "complete_private.h"
+    #include "public.h"
+  )cpp";
+  Inputs.ExtraFiles["complete_private.h"] = guard(R"cpp(
+    // IWYU pragma: private
+    struct foo {};
+  )cpp");
+  Inputs.ExtraFiles["public.h"] = guard("struct foo;");
+  buildAST();
+  EXPECT_THAT(headersForFoo(),
+              ElementsAre(physicalHeader("public.h"),
+                          physicalHeader("complete_private.h")));
+}
+
+TEST_F(HeadersForSymbolTest, PreferNameMatch) {
+  Inputs.Code = R"cpp(
+    #include "public_complete.h"
+    #include "test/foo.fwd.h"
+  )cpp";
+  Inputs.ExtraFiles["public_complete.h"] = guard(R"cpp(
+    struct foo {};
+  )cpp");
+  Inputs.ExtraFiles["test/foo.fwd.h"] = guard("struct foo;");
+  buildAST();
+  EXPECT_THAT(headersForFoo(),
+              ElementsAre(physicalHeader("test/foo.fwd.h"),
+                          physicalHeader("public_complete.h")));
+}
+
+TEST_F(HeadersForSymbolTest, MainFile) {
+  Inputs.Code = R"cpp(
+    #include "public_complete.h"
+    struct foo;
+  )cpp";
+  Inputs.ExtraFiles["public_complete.h"] = guard(R"cpp(
+    struct foo {};
+  )cpp");
+  buildAST();
+  auto &SM = AST->sourceManager();
+  // FIXME: Symbols provided by main file should be treated specially.
+  EXPECT_THAT(headersForFoo(),
+              ElementsAre(physicalHeader("public_complete.h"),
+                          Header(SM.getFileEntryForID(SM.getMainFileID()))));
+}
+
+TEST_F(HeadersForSymbolTest, PreferExporterOfPrivate) {
+  Inputs.Code = R"cpp(
+    #include "private.h"
+    #include "exporter.h"
+  )cpp";
+  Inputs.ExtraFiles["private.h"] = guard(R"cpp(
+    // IWYU pragma: private
+    struct foo {};
+  )cpp");
+  Inputs.ExtraFiles["exporter.h"] = guard(R"cpp(
+    #include "private.h" // IWYU pragma: export
+  )cpp");
+  buildAST();
+  EXPECT_THAT(headersForFoo(), ElementsAre(physicalHeader("exporter.h"),
+                                           physicalHeader("private.h")));
+}
+
+TEST_F(HeadersForSymbolTest, PreferPublicOverNameMatchOnPrivate) {
+  Inputs.Code = R"cpp(
+    #include "foo.h"
+  )cpp";
+  Inputs.ExtraFiles["foo.h"] = guard(R"cpp(
+    // IWYU pragma: private, include "public.h"
+    struct foo {};
+  )cpp");
+  buildAST();
+  EXPECT_THAT(headersForFoo(), ElementsAre(Header(StringRef("\"public.h\"")),
+                                           physicalHeader("foo.h")));
+}
 } // namespace
 } // namespace clang::include_cleaner

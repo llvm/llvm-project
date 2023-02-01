@@ -102,7 +102,7 @@ public:
         !isCall(Inst))
       return false;
 
-    if (Info->get(Inst.getOpcode()).OpInfo[0].OperandType ==
+    if (Info->get(Inst.getOpcode()).operands()[0].OperandType ==
         MCOI::OPERAND_PCREL) {
       int64_t Imm = Inst.getOperand(0).getImm();
       Target = Addr + Size + Imm;

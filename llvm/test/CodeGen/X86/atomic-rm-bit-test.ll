@@ -6873,3 +6873,140 @@ entry:
   %and1 = and i32 %and, %shl
   ret i32 %and1
 }
+
+define i32 @atomic_xor_with_not_arg(ptr %v, i32 %c) nounwind {
+; X86-LABEL: atomic_xor_with_not_arg:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    notl %edx
+; X86-NEXT:    movl (%ecx), %eax
+; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:  .LBB123_1: # %atomicrmw.start
+; X86-NEXT:    # =>This Inner Loop Header: Depth=1
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    xorl %edx, %esi
+; X86-NEXT:    lock cmpxchgl %esi, (%ecx)
+; X86-NEXT:    jne .LBB123_1
+; X86-NEXT:  # %bb.2: # %atomicrmw.end
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: atomic_xor_with_not_arg:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    notl %esi
+; X64-NEXT:    movl (%rdi), %eax
+; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:  .LBB123_1: # %atomicrmw.start
+; X64-NEXT:    # =>This Inner Loop Header: Depth=1
+; X64-NEXT:    movl %eax, %ecx
+; X64-NEXT:    xorl %esi, %ecx
+; X64-NEXT:    lock cmpxchgl %ecx, (%rdi)
+; X64-NEXT:    jne .LBB123_1
+; X64-NEXT:  # %bb.2: # %atomicrmw.end
+; X64-NEXT:    retq
+entry:
+  %0 = xor i32 %c, -1
+  %1 = atomicrmw xor ptr %v, i32 %0 monotonic, align 4
+  ret i32 %1
+}
+
+define i16 @atomic_or_with_not_arg(ptr %v, i16 %c) nounwind {
+; X86-LABEL: atomic_or_with_not_arg:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    notl %edx
+; X86-NEXT:    movzwl (%ecx), %eax
+; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:  .LBB124_1: # %atomicrmw.start
+; X86-NEXT:    # =>This Inner Loop Header: Depth=1
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    orl %edx, %esi
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    lock cmpxchgw %si, (%ecx)
+; X86-NEXT:    # kill: def $ax killed $ax def $eax
+; X86-NEXT:    jne .LBB124_1
+; X86-NEXT:  # %bb.2: # %atomicrmw.end
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: atomic_or_with_not_arg:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    notl %esi
+; X64-NEXT:    movzwl (%rdi), %eax
+; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:  .LBB124_1: # %atomicrmw.start
+; X64-NEXT:    # =>This Inner Loop Header: Depth=1
+; X64-NEXT:    movl %eax, %ecx
+; X64-NEXT:    orl %esi, %ecx
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    lock cmpxchgw %cx, (%rdi)
+; X64-NEXT:    # kill: def $ax killed $ax def $eax
+; X64-NEXT:    jne .LBB124_1
+; X64-NEXT:  # %bb.2: # %atomicrmw.end
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    retq
+entry:
+  %0 = xor i16 %c, -1
+  %1 = atomicrmw or ptr %v, i16 %0 monotonic, align 2
+  ret i16 %1
+}
+
+define i8 @atomic_and_with_not_arg(ptr %v, i8 %c) nounwind {
+; X86-LABEL: atomic_and_with_not_arg:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    notb %dl
+; X86-NEXT:    movzbl (%ecx), %eax
+; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:  .LBB125_1: # %atomicrmw.start
+; X86-NEXT:    # =>This Inner Loop Header: Depth=1
+; X86-NEXT:    movb %al, %ah
+; X86-NEXT:    orb %dl, %ah
+; X86-NEXT:    lock cmpxchgb %ah, (%ecx)
+; X86-NEXT:    jne .LBB125_1
+; X86-NEXT:  # %bb.2: # %atomicrmw.end
+; X86-NEXT:    retl
+;
+; X64-LABEL: atomic_and_with_not_arg:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    notb %sil
+; X64-NEXT:    movzbl (%rdi), %eax
+; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:  .LBB125_1: # %atomicrmw.start
+; X64-NEXT:    # =>This Inner Loop Header: Depth=1
+; X64-NEXT:    movl %eax, %ecx
+; X64-NEXT:    orb %sil, %cl
+; X64-NEXT:    lock cmpxchgb %cl, (%rdi)
+; X64-NEXT:    jne .LBB125_1
+; X64-NEXT:  # %bb.2: # %atomicrmw.end
+; X64-NEXT:    retq
+entry:
+  %0 = xor i8 %c, -1
+  %1 = atomicrmw or ptr %v, i8 %0 monotonic, align 1
+  ret i8 %1
+}
+
+define weak_odr void @atomic_and_with_not_const() nounwind {
+; X86-LABEL: atomic_and_with_not_const:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    retl
+;
+; X64-LABEL: atomic_and_with_not_const:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    retq
+  entry:
+  br label %if.end19
+cont11:  ; No predecessors!
+  %not = xor i32 0, -1
+  %0 = atomicrmw and ptr null, i32 %not monotonic, align 4
+  %and13 = and i32 %0, 0
+  br label %if.end19
+if.end19:  ; preds = %cont11, %entry
+  ret void
+}

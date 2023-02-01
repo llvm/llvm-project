@@ -3,6 +3,7 @@
 // https://github.com/llvm/llvm-project/issues/59342.
 
 // RUN: fir-opt --array-value-copy %s | FileCheck %s
+// RUN: fir-opt --array-value-copy="optimize-conflicts=true" %s | FileCheck %s
 
 func.func @_QMmodPsub1(%arg0: !fir.box<!fir.array<?x!fir.type<_QMmodTrec1{dat:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>> {fir.bindc_name = "x"}) {
   %0 = fir.alloca !fir.box<!fir.type<_QMmodTrec1{dat:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>

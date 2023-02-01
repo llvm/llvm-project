@@ -136,7 +136,7 @@ protected:
   bool GFX10_AEncoding = false;
   bool GFX10_BEncoding = false;
   bool HasDLInsts = false;
-  bool HasVFmacF64Inst = false;
+  bool HasFmacF64Inst = false;
   bool HasDot1Insts = false;
   bool HasDot2Insts = false;
   bool HasDot3Insts = false;
@@ -145,6 +145,7 @@ protected:
   bool HasDot6Insts = false;
   bool HasDot7Insts = false;
   bool HasDot8Insts = false;
+  bool HasDot9Insts = false;
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasPkFmacF16Inst = false;
@@ -699,7 +700,7 @@ public:
     return HasDLInsts;
   }
 
-  bool hasVFmacF64Inst() const { return HasVFmacF64Inst; }
+  bool hasFmacF64Inst() const { return HasFmacF64Inst; }
 
   bool hasDot1Insts() const {
     return HasDot1Insts;
@@ -731,6 +732,10 @@ public:
 
   bool hasDot8Insts() const {
     return HasDot8Insts;
+  }
+
+  bool hasDot9Insts() const {
+    return HasDot9Insts;
   }
 
   bool hasMAIInsts() const {

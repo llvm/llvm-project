@@ -69,6 +69,7 @@ add_object_library(
     libc.src.__support.CPP.string_view
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.common
     libc.src.__support.uint
     libc.src.__support.uint128
     libc.src.__support.integer_to_string

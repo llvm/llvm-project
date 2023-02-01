@@ -755,14 +755,14 @@ define <16 x i32> @v_ssubsat_v16i32(<16 x i32> %lhs, <16 x i32> %rhs) {
 ; GFX6-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
 ; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
 ; GFX6-NEXT:    v_cndmask_b32_e32 v3, v16, v3, vcc
-; GFX6-NEXT:    v_sub_i32_e64 v16, s[4:5], v4, v20
+; GFX6-NEXT:    buffer_load_dword v16, off, s[0:3], s32
+; GFX6-NEXT:    v_sub_i32_e64 v17, s[4:5], v4, v20
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v20
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v16, v4
-; GFX6-NEXT:    v_ashrrev_i32_e32 v4, 31, v16
+; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v17, v4
+; GFX6-NEXT:    v_ashrrev_i32_e32 v4, 31, v17
 ; GFX6-NEXT:    v_xor_b32_e32 v4, 0x80000000, v4
 ; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v4, v16, v4, vcc
-; GFX6-NEXT:    buffer_load_dword v16, off, s[0:3], s32
+; GFX6-NEXT:    v_cndmask_b32_e32 v4, v17, v4, vcc
 ; GFX6-NEXT:    v_sub_i32_e64 v17, s[4:5], v5, v21
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v21
 ; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v17, v5
@@ -874,14 +874,14 @@ define <16 x i32> @v_ssubsat_v16i32(<16 x i32> %lhs, <16 x i32> %rhs) {
 ; GFX8-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
 ; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
 ; GFX8-NEXT:    v_cndmask_b32_e32 v3, v16, v3, vcc
-; GFX8-NEXT:    v_sub_u32_e64 v16, s[4:5], v4, v20
+; GFX8-NEXT:    buffer_load_dword v16, off, s[0:3], s32
+; GFX8-NEXT:    v_sub_u32_e64 v17, s[4:5], v4, v20
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v20
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v16, v4
-; GFX8-NEXT:    v_ashrrev_i32_e32 v4, 31, v16
+; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v17, v4
+; GFX8-NEXT:    v_ashrrev_i32_e32 v4, 31, v17
 ; GFX8-NEXT:    v_xor_b32_e32 v4, 0x80000000, v4
 ; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v4, v16, v4, vcc
-; GFX8-NEXT:    buffer_load_dword v16, off, s[0:3], s32
+; GFX8-NEXT:    v_cndmask_b32_e32 v4, v17, v4, vcc
 ; GFX8-NEXT:    v_sub_u32_e64 v17, s[4:5], v5, v21
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v21
 ; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v17, v5

@@ -98,8 +98,7 @@ Additional tools
 The libc++ test suite uses a few optional tools to improve the code quality.
 
 These tools are:
-- clang-query
-- clang-tidy
+- clang-tidy (you might need additional dev packages to compile libc++-specific clang-tidy checks)
 
 Writing Tests
 -------------

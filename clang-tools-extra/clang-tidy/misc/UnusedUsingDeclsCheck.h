@@ -14,9 +14,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include <vector>
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 
 /// Finds unused using declarations.
 ///
@@ -53,8 +51,6 @@ private:
   utils::FileExtensionsSet HeaderFileExtensions;
 };
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_UNUSED_USING_DECLS_H

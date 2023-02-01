@@ -104,9 +104,12 @@ inline void addCfgConversionPass(mlir::PassManager &pm) {
       pm, disableCfgConversion, fir::createFirToCfgPass);
 }
 
-inline void addAVC(mlir::PassManager &pm) {
+inline void addAVC(
+    mlir::PassManager &pm, const llvm::OptimizationLevel &optLevel) {
+  ArrayValueCopyOptions options;
+  options.optimizeConflicts = optLevel.isOptimizingForSpeed();
   addNestedPassConditionally<mlir::func::FuncOp>(
-      pm, disableFirAvc, fir::createArrayValueCopyPass);
+      pm, disableFirAvc, [&]() { return createArrayValueCopyPass(options); });
 }
 
 inline void addMemoryAllocationOpt(mlir::PassManager &pm) {
@@ -169,7 +172,7 @@ inline void createDefaultFIROptimizerPassPipeline(
   mlir::GreedyRewriteConfig config;
   config.enableRegionSimplification = false;
   pm.addPass(mlir::createCSEPass());
-  fir::addAVC(pm);
+  fir::addAVC(pm, optLevel);
   pm.addNestedPass<mlir::func::FuncOp>(fir::createCharacterConversionPass());
   pm.addPass(mlir::createCanonicalizerPass(config));
   pm.addPass(fir::createSimplifyRegionLitePass());

@@ -12,9 +12,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 
 /// Finds symbol which have confusable identifiers, i.e. identifiers that look
 /// the same visually but have a different Unicode representation.
@@ -33,8 +31,6 @@ private:
   llvm::StringMap<llvm::SmallVector<const NamedDecl *>> Mapper;
 };
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_CONFUSABLE_IDENTIFIER_CHECK_H

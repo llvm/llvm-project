@@ -5447,7 +5447,7 @@ static void prepareDescriptorIndirectCall(SelectionDAG &DAG, SDValue &Callee,
   const unsigned EnvPtrOffset = Subtarget.descriptorEnvironmentPointerOffset();
 
   const MVT RegVT = Subtarget.isPPC64() ? MVT::i64 : MVT::i32;
-  const unsigned Alignment = Subtarget.isPPC64() ? 8 : 4;
+  const Align Alignment = Subtarget.isPPC64() ? Align(8) : Align(4);
 
   // One load for the functions entry point address.
   SDValue LoadFuncPtr = DAG.getLoad(RegVT, dl, LDChain, Callee, MPI,
@@ -18343,7 +18343,16 @@ PPCTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   unsigned Size = AI->getType()->getPrimitiveSizeInBits();
   if (shouldInlineQuadwordAtomics() && Size == 128)
     return AtomicExpansionKind::MaskedIntrinsic;
-  return TargetLowering::shouldExpandAtomicRMWInIR(AI);
+
+  switch (AI->getOperation()) {
+  case AtomicRMWInst::UIncWrap:
+  case AtomicRMWInst::UDecWrap:
+    return AtomicExpansionKind::CmpXChg;
+  default:
+    return TargetLowering::shouldExpandAtomicRMWInIR(AI);
+  }
+
+  llvm_unreachable("unreachable atomicrmw operation");
 }
 
 TargetLowering::AtomicExpansionKind

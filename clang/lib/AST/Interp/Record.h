@@ -13,8 +13,9 @@
 #ifndef LLVM_CLANG_AST_INTERP_RECORD_H
 #define LLVM_CLANG_AST_INTERP_RECORD_H
 
-#include "clang/AST/Decl.h"
 #include "Descriptor.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 
 namespace clang {
 namespace interp {
@@ -62,6 +63,12 @@ public:
   const Base *getBase(const RecordDecl *FD) const;
   /// Returns a virtual base descriptor.
   const Base *getVirtualBase(const RecordDecl *RD) const;
+  // Returns the destructor of the record, if any.
+  const CXXDestructorDecl *getDestructor() const {
+    if (const auto *CXXDecl = dyn_cast<CXXRecordDecl>(Decl))
+      return CXXDecl->getDestructor();
+    return nullptr;
+  }
 
   using const_field_iter = FieldList::const_iterator;
   llvm::iterator_range<const_field_iter> fields() const {

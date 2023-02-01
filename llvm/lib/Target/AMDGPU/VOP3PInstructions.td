@@ -363,12 +363,12 @@ def DOT2_BF16_Profile
   let HasSrc1Mods = 1;
 }
 
-let SubtargetPredicate = HasDot8Insts  in {
+let SubtargetPredicate = HasDot9Insts  in {
 
 defm V_DOT2_F32_BF16 : VOP3PInst<"v_dot2_f32_bf16", DOT2_BF16_Profile,
   int_amdgcn_fdot2_f32_bf16, 1>;
 
-} // End SubtargetPredicate = HasDot8Insts
+} // End SubtargetPredicate = HasDot9Insts
 
 } // End let IsDOT = 1
 

@@ -817,6 +817,158 @@ def FlushOp : OpenMP_Op<"flush"> {
     }
   }];
 }
+
+//===---------------------------------------------------------------------===//
+// 2.14.2 target data Construct
+//===---------------------------------------------------------------------===//
+
+def Target_DataOp: OpenMP_Op<"target_data", [AttrSizedOperandSegments]>{
+  let summary = "target data construct";
+  let description = [{
+    Map variables to a device data environment for the extent of the region.
+
+    The omp target data directive maps variables to a device data
+    environment, and defines the lexical scope of the data environment
+    that is created. The omp target data directive can reduce data copies
+    to and from the offloading device when multiple target regions are using
+    the same data.
+
+    The optional $if_expr parameter specifies a boolean result of a
+    conditional check. If this value is 1 or is not provided then the target
+    region runs on a device, if it is 0 then the target region is executed
+    on the host device.
+
+    The optional $device parameter specifies the device number for the target
+    region.
+
+    The optional $use_device_ptr specifies the device pointers to the
+    corresponding list items in the device data environment.
+
+    The optional $use_device_addr specifies the address of the objects in the
+    device data enviornment.
+
+    The $map_operands specifies the locator-list operands of the map clause.
+
+    The $map_types specifies the types and modifiers for the map clause.
+
+    TODO:  depend clause and map_type_modifier values iterator and mapper.
+  }];
+
+  let arguments = (ins Optional<I1>:$if_expr,
+                       Optional<AnyInteger>:$device,
+                       Variadic<AnyType>:$use_device_ptr,
+                       Variadic<AnyType>:$use_device_addr,
+                       Variadic<AnyType>:$map_operands,
+                       I64ArrayAttr:$map_types);
+
+  let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = [{
+    oilist(`if` `(` $if_expr `:` type($if_expr) `)`
+    | `device` `(` $device `:` type($device) `)`
+    | `use_device_ptr` `(` $use_device_ptr `:` type($use_device_ptr) `)`
+    | `use_device_addr` `(` $use_device_addr `:` type($use_device_addr) `)`)
+    `map` `(` custom<MapClause>($map_operands, type($map_operands), $map_types) `)`
+    $region attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===---------------------------------------------------------------------===//
+// 2.14.3 target enter data Construct
+//===---------------------------------------------------------------------===//
+
+def Target_EnterDataOp: OpenMP_Op<"target_enter_data",
+                                                 [AttrSizedOperandSegments]>{
+  let  summary = "target enter data construct";
+  let description = [{
+    The target enter data directive specifies that variables are mapped to
+    a device data environment. The target enter data directive is a
+    stand-alone directive.
+
+    The optional $if_expr parameter specifies a boolean result of a
+    conditional check. If this value is 1 or is not provided then the target
+    region runs on a device, if it is 0 then the target region is executed on
+    the host device.
+
+    The optional $device parameter specifies the device number for the
+    target region.
+
+    The optional $nowait eliminates the implicit barrier so the parent task
+    can make progress even if the target task is not yet completed.
+
+    The $map_operands specifies the locator-list operands of the map clause.
+
+    The $map_types specifies the types and modifiers for the map clause.
+
+    TODO:  depend clause and map_type_modifier values iterator and mapper.
+  }];
+
+  let arguments = (ins Optional<I1>:$if_expr,
+                       Optional<AnyInteger>:$device,
+                       UnitAttr:$nowait,
+                       Variadic<AnyType>:$map_operands,
+                       I64ArrayAttr:$map_types);
+
+  let assemblyFormat = [{
+    oilist(`if` `(` $if_expr `:` type($if_expr) `)`
+    | `device` `(` $device `:` type($device) `)`
+    | `nowait` $nowait)
+    `map` `(` custom<MapClause>($map_operands, type($map_operands), $map_types) `)`
+    attr-dict
+   }];
+
+  let hasVerifier = 1;
+}
+
+//===---------------------------------------------------------------------===//
+// 2.14.4 target exit data Construct
+//===---------------------------------------------------------------------===//
+
+def Target_ExitDataOp: OpenMP_Op<"target_exit_data",
+                                                 [AttrSizedOperandSegments]>{
+  let  summary = "target exit data construct";
+  let description = [{
+    The target exit data directive specifies that variables are mapped to a
+    device data environment. The target exit data directive is
+    a stand-alone directive.
+
+    The optional $if_expr parameter specifies a boolean result of a
+    conditional check. If this value is 1 or is not provided then the target
+    region runs on a device, if it is 0 then the target region is executed
+    on the host device.
+
+    The optional $device parameter specifies the device number for the
+    target region.
+
+    The optional $nowait eliminates the implicit barrier so the parent
+    task can make progress even if the target task is not yet completed.
+
+    The $map_operands specifies the locator-list operands of the map clause.
+
+    The $map_types specifies the types and modifiers for the map clause.
+
+    TODO:  depend clause and map_type_modifier values iterator and mapper.
+  }];
+
+  let arguments = (ins Optional<I1>:$if_expr,
+                       Optional<AnyInteger>:$device,
+                       UnitAttr:$nowait,
+                       Variadic<AnyType>:$map_operands,
+                       I64ArrayAttr:$map_types);
+
+  let assemblyFormat = [{
+    oilist(`if` `(` $if_expr `:` type($if_expr) `)`
+    | `device` `(` $device `:` type($device) `)`
+    | `nowait` $nowait)
+    `map` `(` custom<MapClause>($map_operands, type($map_operands), $map_types) `)`
+    attr-dict
+   }];
+
+  let hasVerifier = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // 2.14.5 target construct
 //===----------------------------------------------------------------------===//

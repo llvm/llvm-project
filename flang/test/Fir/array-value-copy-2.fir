@@ -1,4 +1,5 @@
 // RUN: fir-opt --array-value-copy --cfg-conversion %s | FileCheck %s
+// RUN: fir-opt --array-value-copy="optimize-conflicts=true" --cfg-conversion %s | FileCheck %s
 
 // CHECK-LABEL: func @_QPslice1(
 // CHECK-NOT: fir.allocmem

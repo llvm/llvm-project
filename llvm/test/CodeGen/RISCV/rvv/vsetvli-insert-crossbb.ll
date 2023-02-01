@@ -592,22 +592,20 @@ define void @vlmax(i64 %N, double* %c, double* %a, double* %b) {
 ; CHECK-NEXT:    vsetvli a6, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    blez a0, .LBB11_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    li a4, 0
-; CHECK-NEXT:    li t1, 0
-; CHECK-NEXT:    slli a7, a6, 3
+; CHECK-NEXT:    li a5, 0
+; CHECK-NEXT:    slli a4, a6, 3
 ; CHECK-NEXT:  .LBB11_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add t0, a2, a4
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vle64.v v8, (t0)
-; CHECK-NEXT:    add a5, a3, a4
-; CHECK-NEXT:    vle64.v v9, (a5)
+; CHECK-NEXT:    vle64.v v8, (a2)
+; CHECK-NEXT:    vle64.v v9, (a3)
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
-; CHECK-NEXT:    add a5, a1, a4
-; CHECK-NEXT:    vse64.v v8, (a5)
-; CHECK-NEXT:    add t1, t1, a6
-; CHECK-NEXT:    add a4, a4, a7
-; CHECK-NEXT:    blt t1, a0, .LBB11_2
+; CHECK-NEXT:    vse64.v v8, (a1)
+; CHECK-NEXT:    add a5, a5, a6
+; CHECK-NEXT:    add a1, a1, a4
+; CHECK-NEXT:    add a3, a3, a4
+; CHECK-NEXT:    add a2, a2, a4
+; CHECK-NEXT:    blt a5, a0, .LBB11_2
 ; CHECK-NEXT:  .LBB11_3: # %for.end
 ; CHECK-NEXT:    ret
 entry:
@@ -956,6 +954,39 @@ if.end:
   ret <vscale x 2 x i32> %e
 }
 
+; This case demonstrates a PRE oppurtunity where the first instruction
+; in the block doesn't require a state transition.  Essentially, we need
+; to FRE the transition to the start of the block, and *then* PRE it.
+define void @pre_over_vle(ptr %A) {
+; CHECK-LABEL: pre_over_vle:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a1, 100
+; CHECK-NEXT:  .LBB22_1: # %vector.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vsext.vf4 v9, v8
+; CHECK-NEXT:    vse32.v v9, (a0)
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    addi a0, a0, 8
+; CHECK-NEXT:    bnez a1, .LBB22_1
+; CHECK-NEXT:  # %bb.2: # %exit
+; CHECK-NEXT:    ret
+entry:
+  br label %vector.body
+
+vector.body:
+  %iv = phi i64 [ 0, %entry], [%iv.next, %vector.body]
+  %addr = getelementptr inbounds <2 x i32>, ptr %A, i64 %iv
+  %v = load <2 x i8>, ptr %addr
+  %v2 = sext <2 x i8> %v to <2 x i32>
+  store <2 x i32> %v2, ptr %addr
+  %iv.next = add i64 %iv, 1
+  %cmp = icmp ne i64 %iv.next, 100
+  br i1 %cmp, label %vector.body, label %exit
+exit:
+  ret void
+}
 
 declare i64 @llvm.riscv.vsetvlimax.i64(i64, i64)
 declare <vscale x 1 x double> @llvm.riscv.vle.nxv1f64.i64(<vscale x 1 x double>, <vscale x 1 x double>* nocapture, i64)

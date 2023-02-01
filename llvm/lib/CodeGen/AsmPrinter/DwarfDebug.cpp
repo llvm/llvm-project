@@ -597,6 +597,9 @@ struct FwdRegParamInfo {
 
 /// Register worklist for finding call site values.
 using FwdRegWorklist = MapVector<unsigned, SmallVector<FwdRegParamInfo, 2>>;
+/// Container for the set of registers known to be clobbered on the path to a
+/// call site.
+using ClobberedRegSet = SmallSet<Register, 16>;
 
 /// Append the expression \p Addition to \p Original and return the result.
 static const DIExpression *combineDIExpressions(const DIExpression *Original,
@@ -668,7 +671,8 @@ static void addToFwdRegWorklist(FwdRegWorklist &Worklist, unsigned Reg,
 /// Interpret values loaded into registers by \p CurMI.
 static void interpretValues(const MachineInstr *CurMI,
                             FwdRegWorklist &ForwardedRegWorklist,
-                            ParamSet &Params) {
+                            ParamSet &Params,
+                            ClobberedRegSet &ClobberedRegUnits) {
 
   const MachineFunction *MF = CurMI->getMF();
   const DIExpression *EmptyExpr =
@@ -700,6 +704,7 @@ static void interpretValues(const MachineInstr *CurMI,
 
   // If the MI is an instruction defining one or more parameters' forwarding
   // registers, add those defines.
+  ClobberedRegSet NewClobberedRegUnits;
   auto getForwardingRegsDefinedByMI = [&](const MachineInstr &MI,
                                           SmallSetVector<unsigned, 4> &Defs) {
     if (MI.isDebugInstr())
@@ -710,6 +715,8 @@ static void interpretValues(const MachineInstr *CurMI,
         for (auto &FwdReg : ForwardedRegWorklist)
           if (TRI.regsOverlap(FwdReg.first, MO.getReg()))
             Defs.insert(FwdReg.first);
+        for (MCRegUnitIterator Units(MO.getReg(), &TRI); Units.isValid(); ++Units)
+          NewClobberedRegUnits.insert(*Units);
       }
     }
   };
@@ -718,8 +725,22 @@ static void interpretValues(const MachineInstr *CurMI,
   SmallSetVector<unsigned, 4> FwdRegDefs;
 
   getForwardingRegsDefinedByMI(*CurMI, FwdRegDefs);
-  if (FwdRegDefs.empty())
+  if (FwdRegDefs.empty()) {
+    // Any definitions by this instruction will clobber earlier reg movements.
+    ClobberedRegUnits.insert(NewClobberedRegUnits.begin(),
+                             NewClobberedRegUnits.end());
     return;
+  }
+
+  // It's possible that we find a copy from a non-volatile register to the param
+  // register, which is clobbered in the meantime. Test for clobbered reg unit
+  // overlaps before completing.
+  auto IsRegClobberedInMeantime = [&](Register Reg) -> bool {
+    for (auto &RegUnit : ClobberedRegUnits)
+      if (TRI.hasRegUnit(Reg, RegUnit))
+        return true;
+    return false;
+  };
 
   for (auto ParamFwdReg : FwdRegDefs) {
     if (auto ParamValue = TII.describeLoadedValue(*CurMI, ParamFwdReg)) {
@@ -732,7 +753,8 @@ static void interpretValues(const MachineInstr *CurMI,
         Register SP = TLI.getStackPointerRegisterToSaveRestore();
         Register FP = TRI.getFrameRegister(*MF);
         bool IsSPorFP = (RegLoc == SP) || (RegLoc == FP);
-        if (TRI.isCalleeSavedPhysReg(RegLoc, *MF) || IsSPorFP) {
+        if (!IsRegClobberedInMeantime(RegLoc) &&
+            (TRI.isCalleeSavedPhysReg(RegLoc, *MF) || IsSPorFP)) {
           MachineLocation MLoc(RegLoc, /*Indirect=*/IsSPorFP);
           finishCallSiteParams(MLoc, ParamValue->second,
                                ForwardedRegWorklist[ParamFwdReg], Params);
@@ -754,6 +776,10 @@ static void interpretValues(const MachineInstr *CurMI,
   for (auto ParamFwdReg : FwdRegDefs)
     ForwardedRegWorklist.erase(ParamFwdReg);
 
+  // Any definitions by this instruction will clobber earlier reg movements.
+  ClobberedRegUnits.insert(NewClobberedRegUnits.begin(),
+                           NewClobberedRegUnits.end());
+
   // Now that we are done handling this instruction, add items from the
   // temporary worklist to the real one.
   for (auto &New : TmpWorklistItems)
@@ -763,7 +789,8 @@ static void interpretValues(const MachineInstr *CurMI,
 
 static bool interpretNextInstr(const MachineInstr *CurMI,
                                FwdRegWorklist &ForwardedRegWorklist,
-                               ParamSet &Params) {
+                               ParamSet &Params,
+                               ClobberedRegSet &ClobberedRegUnits) {
   // Skip bundle headers.
   if (CurMI->isBundle())
     return true;
@@ -781,7 +808,7 @@ static bool interpretNextInstr(const MachineInstr *CurMI,
   if (CurMI->getNumOperands() == 0)
     return true;
 
-  interpretValues(CurMI, ForwardedRegWorklist, Params);
+  interpretValues(CurMI, ForwardedRegWorklist, Params, ClobberedRegUnits);
 
   return true;
 }
@@ -833,6 +860,7 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
   bool ShouldTryEmitEntryVals = MBB->getIterator() == MF->begin();
 
   // Search for a loading value in forwarding registers inside call delay slot.
+  ClobberedRegSet ClobberedRegUnits;
   if (CallMI->hasDelaySlot()) {
     auto Suc = std::next(CallMI->getIterator());
     // Only one-instruction delay slot is supported.
@@ -841,14 +869,14 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
     assert(std::next(Suc) == BundleEnd &&
            "More than one instruction in call delay slot");
     // Try to interpret value loaded by instruction.
-    if (!interpretNextInstr(&*Suc, ForwardedRegWorklist, Params))
+    if (!interpretNextInstr(&*Suc, ForwardedRegWorklist, Params, ClobberedRegUnits))
       return;
   }
 
   // Search for a loading value in forwarding registers.
   for (; I != MBB->rend(); ++I) {
     // Try to interpret values loaded by instruction.
-    if (!interpretNextInstr(&*I, ForwardedRegWorklist, Params))
+    if (!interpretNextInstr(&*I, ForwardedRegWorklist, Params, ClobberedRegUnits))
       return;
   }
 

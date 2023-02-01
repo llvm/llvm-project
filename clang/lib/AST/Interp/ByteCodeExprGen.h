@@ -44,9 +44,6 @@ protected:
   using LabelTy = typename Emitter::LabelTy;
   using AddrTy = typename Emitter::AddrTy;
 
-  // Reference to a function generating the pointer of an initialized object.s
-  using InitFnRef = std::function<bool()>;
-
   /// Current compilation context.
   Context &Ctx;
   /// Program to link to.
@@ -221,12 +218,6 @@ private:
   /// Emits an integer constant.
   template <typename T> bool emitConst(T Value, const Expr *E);
 
-  /// Emits the initialized pointer.
-  bool emitInitFn() {
-    assert(InitFn && "missing initializer");
-    return (*InitFn)();
-  }
-
   /// Returns the CXXRecordDecl for the type of the given expression,
   /// or nullptr if no such decl exists.
   const CXXRecordDecl *getRecordDecl(const Expr *E) const {
@@ -257,9 +248,6 @@ protected:
 
   /// Flag indicating if return value is to be discarded.
   bool DiscardResult = false;
-
-  /// Expression being initialized.
-  std::optional<InitFnRef> InitFn = {};
 };
 
 extern template class ByteCodeExprGen<ByteCodeEmitter>;

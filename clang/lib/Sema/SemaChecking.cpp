@@ -3292,7 +3292,9 @@ bool Sema::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
   }
 
   if (BuiltinID == AArch64::BI__builtin_arm_rsr64 ||
-      BuiltinID == AArch64::BI__builtin_arm_wsr64)
+      BuiltinID == AArch64::BI__builtin_arm_wsr64 ||
+      BuiltinID == AArch64::BI__builtin_arm_rsr128 ||
+      BuiltinID == AArch64::BI__builtin_arm_wsr128)
     return SemaBuiltinARMSpecialReg(BuiltinID, TheCall, 0, 5, true);
 
   // Memory Tagging Extensions (MTE) Intrinsics
@@ -8314,6 +8316,8 @@ bool Sema::SemaBuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall,
                       BuiltinID == ARM::BI__builtin_arm_wsrp;
   bool IsAArch64Builtin = BuiltinID == AArch64::BI__builtin_arm_rsr64 ||
                           BuiltinID == AArch64::BI__builtin_arm_wsr64 ||
+                          BuiltinID == AArch64::BI__builtin_arm_rsr128 ||
+                          BuiltinID == AArch64::BI__builtin_arm_wsr128 ||
                           BuiltinID == AArch64::BI__builtin_arm_rsr ||
                           BuiltinID == AArch64::BI__builtin_arm_rsrp ||
                           BuiltinID == AArch64::BI__builtin_arm_wsr ||
@@ -8381,21 +8385,51 @@ bool Sema::SemaBuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall,
       return Diag(TheCall->getBeginLoc(), diag::err_arm_invalid_specialreg)
              << Arg->getSourceRange();
   } else if (IsAArch64Builtin && Fields.size() == 1) {
-    // If the register name is one of those that appear in the condition below
-    // and the special register builtin being used is one of the write builtins,
-    // then we require that the argument provided for writing to the register
-    // is an integer constant expression. This is because it will be lowered to
-    // an MSR (immediate) instruction, so we need to know the immediate at
-    // compile time.
+    // This code validates writes to PSTATE registers.
+
+    // Not a write.
     if (TheCall->getNumArgs() != 2)
       return false;
 
-    std::string RegLower = Reg.lower();
-    if (RegLower != "spsel" && RegLower != "daifset" && RegLower != "daifclr" &&
-        RegLower != "pan" && RegLower != "uao")
+    // The 128-bit system register accesses do not touch PSTATE.
+    if (BuiltinID == AArch64::BI__builtin_arm_rsr128 ||
+        BuiltinID == AArch64::BI__builtin_arm_wsr128)
       return false;
 
-    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 15);
+    // These are the named PSTATE accesses using "MSR (immediate)" instructions,
+    // along with the upper limit on the immediates allowed.
+    auto MaxLimit = llvm::StringSwitch<std::optional<unsigned>>(Reg)
+      .CaseLower("spsel", 15)
+      .CaseLower("daifclr", 15)
+      .CaseLower("daifset", 15)
+      .CaseLower("pan", 15)
+      .CaseLower("uao", 15)
+      .CaseLower("dit", 15)
+      .CaseLower("ssbs", 15)
+      .CaseLower("tco", 15)
+      .CaseLower("allint", 1)
+      .CaseLower("pm", 1)
+      .Default(std::nullopt);
+
+    // If this is not a named PSTATE, just continue without validating, as this
+    // will be lowered to an "MSR (register)" instruction directly
+    if (!MaxLimit)
+      return false;
+
+    // Here we only allow constants in the range for that pstate, as required by
+    // the ACLE.
+    //
+    // While clang also accepts the names of system registers in its ACLE
+    // intrinsics, we prevent this with the PSTATE names used in MSR (immediate)
+    // as the value written via a register is different to the value used as an
+    // immediate to have the same effect. e.g., for the instruction `msr tco,
+    // x0`, it is bit 25 of register x0 that is written into PSTATE.TCO, but
+    // with `msr tco, #imm`, it is bit 0 of xN that is written into PSTATE.TCO.
+    //
+    // If a programmer wants to codegen the MSR (register) form of `msr tco,
+    // xN`, they can still do so by specifying the register using five
+    // colon-separated numbers in a string.
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, *MaxLimit);
   }
 
   return false;

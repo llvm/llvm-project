@@ -8,6 +8,7 @@
 
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/DataFormatters/FormatManager.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
@@ -157,6 +158,10 @@ lldb::addr_t OptionArgParser::ToAddress(const ExecutionContext *exe_ctx,
   if (!s.getAsInteger(0, addr)) {
     if (error_ptr)
       error_ptr->Clear();
+    Process *process = exe_ctx->GetProcessPtr();
+    if (process)
+      if (ABISP abi_sp = process->GetABI())
+        addr = abi_sp->FixCodeAddress(addr);
     return addr;
   }
 

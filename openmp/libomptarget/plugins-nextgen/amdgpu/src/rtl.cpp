@@ -14,8 +14,6 @@
 #include <cassert>
 #include <cstddef>
 #include <deque>
-#include <hsa.h>
-#include <hsa_ext_amd.h>
 #include <mutex>
 #include <string>
 #include <system_error>
@@ -40,6 +38,19 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
+
+#if defined(__has_include)
+#if __has_include("hsa/hsa.h")
+#include "hsa/hsa.h"
+#include "hsa/hsa_ext_amd.h"
+#elif __has_include("hsa.h")
+#include "hsa.h"
+#include "hsa_ext_amd.h"
+#endif
+#else
+#include "hsa/hsa.h"
+#include "hsa_ext_amd.h"
+#endif
 
 namespace llvm {
 namespace omp {
@@ -1817,14 +1828,33 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
 
+  /// Pin the host buffer and return the device pointer that should be used for
+  /// device transfers.
+  Expected<void *> dataLockImpl(void *HstPtr, int64_t Size) override {
+    void *PinnedPtr = nullptr;
+
+    hsa_status_t Status =
+        hsa_amd_memory_lock(HstPtr, Size, nullptr, 0, &PinnedPtr);
+    if (auto Err = Plugin::check(Status, "Error in hsa_amd_memory_lock: %s\n"))
+      return Err;
+
+    return PinnedPtr;
+  }
+
+  /// Unpin the host buffer.
+  Error dataUnlockImpl(void *HstPtr) override {
+    hsa_status_t Status = hsa_amd_memory_unlock(HstPtr);
+    return Plugin::check(Status, "Error in hsa_amd_memory_unlock: %s\n");
+  }
+
   /// Submit data to the device (host to device transfer).
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
                        AsyncInfoWrapperTy &AsyncInfoWrapper) override {
-
     // Use one-step asynchronous operation when host memory is already pinned.
-    if (isHostPinnedMemoryBuffer(HstPtr)) {
+    if (void *PinnedPtr =
+            PinnedAllocs.getDeviceAccessiblePtrFromPinnedBuffer(HstPtr)) {
       AMDGPUStreamTy &Stream = getStream(AsyncInfoWrapper);
-      return Stream.pushPinnedMemoryCopyAsync(TgtPtr, HstPtr, Size);
+      return Stream.pushPinnedMemoryCopyAsync(TgtPtr, PinnedPtr, Size);
     }
 
     void *PinnedHstPtr = nullptr;
@@ -1878,10 +1908,10 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override {
 
     // Use one-step asynchronous operation when host memory is already pinned.
-    if (isHostPinnedMemoryBuffer(HstPtr)) {
-      // Use one-step asynchronous operation when host memory is already pinned.
+    if (void *PinnedPtr =
+            PinnedAllocs.getDeviceAccessiblePtrFromPinnedBuffer(HstPtr)) {
       AMDGPUStreamTy &Stream = getStream(AsyncInfoWrapper);
-      return Stream.pushPinnedMemoryCopyAsync(HstPtr, TgtPtr, Size);
+      return Stream.pushPinnedMemoryCopyAsync(PinnedPtr, TgtPtr, Size);
     }
 
     void *PinnedHstPtr = nullptr;

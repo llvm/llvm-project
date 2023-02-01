@@ -1358,29 +1358,29 @@ define <16 x i32> @v_usubsat_v16i32(<16 x i32> %lhs, <16 x i32> %rhs) {
 ; GFX6-NEXT:    v_sub_i32_e32 v2, vcc, v2, v16
 ; GFX6-NEXT:    v_min_u32_e32 v16, v3, v19
 ; GFX6-NEXT:    v_sub_i32_e32 v3, vcc, v3, v16
+; GFX6-NEXT:    v_min_u32_e32 v16, v4, v20
+; GFX6-NEXT:    v_sub_i32_e32 v4, vcc, v4, v16
+; GFX6-NEXT:    v_min_u32_e32 v16, v5, v21
+; GFX6-NEXT:    v_sub_i32_e32 v5, vcc, v5, v16
+; GFX6-NEXT:    v_min_u32_e32 v16, v6, v22
+; GFX6-NEXT:    v_sub_i32_e32 v6, vcc, v6, v16
+; GFX6-NEXT:    v_min_u32_e32 v16, v7, v23
+; GFX6-NEXT:    v_sub_i32_e32 v7, vcc, v7, v16
+; GFX6-NEXT:    v_min_u32_e32 v16, v8, v24
+; GFX6-NEXT:    v_sub_i32_e32 v8, vcc, v8, v16
+; GFX6-NEXT:    v_min_u32_e32 v16, v9, v25
+; GFX6-NEXT:    v_sub_i32_e32 v9, vcc, v9, v16
+; GFX6-NEXT:    v_min_u32_e32 v16, v10, v26
+; GFX6-NEXT:    v_sub_i32_e32 v10, vcc, v10, v16
 ; GFX6-NEXT:    buffer_load_dword v16, off, s[0:3], s32
-; GFX6-NEXT:    v_min_u32_e32 v17, v4, v20
-; GFX6-NEXT:    v_min_u32_e32 v18, v5, v21
-; GFX6-NEXT:    v_min_u32_e32 v19, v6, v22
-; GFX6-NEXT:    v_min_u32_e32 v20, v7, v23
-; GFX6-NEXT:    v_min_u32_e32 v21, v8, v24
-; GFX6-NEXT:    v_min_u32_e32 v22, v9, v25
-; GFX6-NEXT:    v_min_u32_e32 v23, v10, v26
-; GFX6-NEXT:    v_min_u32_e32 v24, v11, v27
-; GFX6-NEXT:    v_min_u32_e32 v25, v12, v28
-; GFX6-NEXT:    v_min_u32_e32 v26, v13, v29
-; GFX6-NEXT:    v_min_u32_e32 v27, v14, v30
-; GFX6-NEXT:    v_sub_i32_e32 v4, vcc, v4, v17
-; GFX6-NEXT:    v_sub_i32_e32 v5, vcc, v5, v18
-; GFX6-NEXT:    v_sub_i32_e32 v6, vcc, v6, v19
-; GFX6-NEXT:    v_sub_i32_e32 v7, vcc, v7, v20
-; GFX6-NEXT:    v_sub_i32_e32 v8, vcc, v8, v21
-; GFX6-NEXT:    v_sub_i32_e32 v9, vcc, v9, v22
-; GFX6-NEXT:    v_sub_i32_e32 v10, vcc, v10, v23
-; GFX6-NEXT:    v_sub_i32_e32 v11, vcc, v11, v24
-; GFX6-NEXT:    v_sub_i32_e32 v12, vcc, v12, v25
-; GFX6-NEXT:    v_sub_i32_e32 v13, vcc, v13, v26
-; GFX6-NEXT:    v_sub_i32_e32 v14, vcc, v14, v27
+; GFX6-NEXT:    v_min_u32_e32 v17, v11, v27
+; GFX6-NEXT:    v_min_u32_e32 v18, v12, v28
+; GFX6-NEXT:    v_min_u32_e32 v19, v13, v29
+; GFX6-NEXT:    v_min_u32_e32 v20, v14, v30
+; GFX6-NEXT:    v_sub_i32_e32 v11, vcc, v11, v17
+; GFX6-NEXT:    v_sub_i32_e32 v12, vcc, v12, v18
+; GFX6-NEXT:    v_sub_i32_e32 v13, vcc, v13, v19
+; GFX6-NEXT:    v_sub_i32_e32 v14, vcc, v14, v20
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    v_min_u32_e32 v16, v15, v16
 ; GFX6-NEXT:    v_sub_i32_e32 v15, vcc, v15, v16

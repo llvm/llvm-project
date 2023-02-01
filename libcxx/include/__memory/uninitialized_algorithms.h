@@ -31,9 +31,9 @@
 #include <__type_traits/negation.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_extent.h>
+#include <__utility/exception_guard.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
-#include <__utility/transaction.h>
 #include <new>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -421,7 +421,10 @@ constexpr void __allocator_construct_at(_Alloc& __alloc, _Tp* __loc) {
         _Tp& __array = *__loc;
 
         // If an exception is thrown, destroy what we have constructed so far in reverse order.
-        __transaction __guard([&]() { std::__allocator_destroy_multidimensional(__elem_alloc, __array, __array + __i); });
+        __exception_guard __guard([&]() {
+          std::__allocator_destroy_multidimensional(__elem_alloc, __array, __array + __i);
+        });
+
         for (; __i != extent_v<_Tp>; ++__i) {
             std::__allocator_construct_at(__elem_alloc, std::addressof(__array[__i]));
         }
@@ -458,7 +461,9 @@ constexpr void __allocator_construct_at(_Alloc& __alloc, _Tp* __loc, _Arg const&
         _Tp& __array = *__loc;
 
         // If an exception is thrown, destroy what we have constructed so far in reverse order.
-        __transaction __guard([&]() { std::__allocator_destroy_multidimensional(__elem_alloc, __array, __array + __i); });
+        __exception_guard __guard([&]() {
+          std::__allocator_destroy_multidimensional(__elem_alloc, __array, __array + __i);
+        });
         for (; __i != extent_v<_Tp>; ++__i) {
             std::__allocator_construct_at(__elem_alloc, std::addressof(__array[__i]), __arg[__i]);
         }
@@ -483,7 +488,7 @@ constexpr void __uninitialized_allocator_fill_n(_Alloc& __alloc, _BidirIter __it
     _BidirIter __begin = __it;
 
     // If an exception is thrown, destroy what we have constructed so far in reverse order.
-    __transaction __guard([&]() { std::__allocator_destroy_multidimensional(__value_alloc, __begin, __it); });
+    __exception_guard __guard([&]() { std::__allocator_destroy_multidimensional(__value_alloc, __begin, __it); });
     for (; __n != 0; --__n, ++__it) {
         std::__allocator_construct_at(__value_alloc, std::addressof(*__it), __value);
     }
@@ -500,7 +505,7 @@ constexpr void __uninitialized_allocator_value_construct_n(_Alloc& __alloc, _Bid
     _BidirIter __begin = __it;
 
     // If an exception is thrown, destroy what we have constructed so far in reverse order.
-    __transaction __guard([&]() { std::__allocator_destroy_multidimensional(__value_alloc, __begin, __it); });
+    __exception_guard __guard([&]() { std::__allocator_destroy_multidimensional(__value_alloc, __begin, __it); });
     for (; __n != 0; --__n, ++__it) {
         std::__allocator_construct_at(__value_alloc, std::addressof(*__it));
     }
@@ -541,21 +546,15 @@ private:
 template <class _Alloc, class _Iter1, class _Sent1, class _Iter2>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter2
 __uninitialized_allocator_copy(_Alloc& __alloc, _Iter1 __first1, _Sent1 __last1, _Iter2 __first2) {
-#ifndef _LIBCPP_NO_EXCEPTIONS
   auto __destruct_first = __first2;
-  try {
-#endif
+  auto __guard =
+      std::__make_exception_guard(_AllocatorDestroyRangeReverse<_Alloc, _Iter2>(__alloc, __destruct_first, __first2));
   while (__first1 != __last1) {
     allocator_traits<_Alloc>::construct(__alloc, std::__to_address(__first2), *__first1);
     ++__first1;
     ++__first2;
   }
-#ifndef _LIBCPP_NO_EXCEPTIONS
-  } catch (...) {
-    _AllocatorDestroyRangeReverse<_Alloc, _Iter2>(__alloc, __destruct_first, __first2)();
-    throw;
-  }
-#endif
+  __guard.__complete();
   return __first2;
 }
 
@@ -597,10 +596,9 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter2 __uninitialized_alloc
     _Alloc& __alloc, _Iter1 __first1, _Sent1 __last1, _Iter2 __first2) {
   static_assert(__is_cpp17_move_insertable<_Alloc>::value,
                 "The specified type does not meet the requirements of Cpp17MoveInsertable");
-#ifndef _LIBCPP_NO_EXCEPTIONS
   auto __destruct_first = __first2;
-  try {
-#endif
+  auto __guard =
+      std::__make_exception_guard(_AllocatorDestroyRangeReverse<_Alloc, _Iter2>(__alloc, __destruct_first, __first2));
   while (__first1 != __last1) {
 #ifndef _LIBCPP_NO_EXCEPTIONS
     allocator_traits<_Alloc>::construct(__alloc, std::__to_address(__first2), std::move_if_noexcept(*__first1));
@@ -610,12 +608,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter2 __uninitialized_alloc
     ++__first1;
     ++__first2;
   }
-#ifndef _LIBCPP_NO_EXCEPTIONS
-  } catch (...) {
-    _AllocatorDestroyRangeReverse<_Alloc, _Iter2>(__alloc, __destruct_first, __first2)();
-    throw;
-  }
-#endif
+  __guard.__complete();
   return __first2;
 }
 

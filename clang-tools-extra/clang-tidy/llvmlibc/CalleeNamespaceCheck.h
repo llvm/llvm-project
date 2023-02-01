@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace llvm_libc {
+namespace clang::tidy::llvm_libc {
 
 /// Checks all calls resolve to functions within __llvm_libc namespace.
 ///
@@ -31,8 +29,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace llvm_libc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::llvm_libc
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVMLIBC_CALLEENAMESPACECHECK_H

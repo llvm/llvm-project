@@ -49,8 +49,8 @@ TargetInstrInfo::getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
   if (OpNum >= MCID.getNumOperands())
     return nullptr;
 
-  short RegClass = MCID.OpInfo[OpNum].RegClass;
-  if (MCID.OpInfo[OpNum].isLookupPtrRegClass())
+  short RegClass = MCID.operands()[OpNum].RegClass;
+  if (MCID.operands()[OpNum].isLookupPtrRegClass())
     return TRI->getPointerRegClass(MF, RegClass);
 
   // Instructions like INSERT_SUBREG do not have fixed register classes.
@@ -337,7 +337,7 @@ bool TargetInstrInfo::PredicateInstruction(
     return false;
 
   for (unsigned j = 0, i = 0, e = MI.getNumOperands(); i != e; ++i) {
-    if (MCID.OpInfo[i].isPredicate()) {
+    if (MCID.operands()[i].isPredicate()) {
       MachineOperand &MO = MI.getOperand(i);
       if (MO.isReg()) {
         MO.setReg(Pred[j].getReg());

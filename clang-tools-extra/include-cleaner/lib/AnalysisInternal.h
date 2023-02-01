@@ -21,12 +21,10 @@
 #ifndef CLANG_INCLUDE_CLEANER_ANALYSISINTERNAL_H
 #define CLANG_INCLUDE_CLEANER_ANALYSISINTERNAL_H
 
+#include "TypesInternal.h"
 #include "clang-include-cleaner/Record.h"
 #include "clang-include-cleaner/Types.h"
-#include "clang/Basic/SourceLocation.h"
-#include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
-#include <variant>
 #include <vector>
 
 namespace clang {
@@ -34,6 +32,7 @@ class ASTContext;
 class Decl;
 class HeaderSearch;
 class NamedDecl;
+class SourceLocation;
 namespace include_cleaner {
 
 /// Traverses part of the AST from \p Root, finding uses of symbols.
@@ -51,40 +50,20 @@ namespace include_cleaner {
 void walkAST(Decl &Root,
              llvm::function_ref<void(SourceLocation, NamedDecl &, RefType)>);
 
-/// A place where a symbol can be provided.
-/// It is either a physical file of the TU (SourceLocation) or a logical
-/// location in the standard library (stdlib::Symbol).
-struct SymbolLocation {
-  enum Kind {
-    /// A position within a source file (or macro expansion) parsed by clang.
-    Physical,
-    /// A recognized standard library symbol, like std::string.
-    Standard,
-  };
-
-  SymbolLocation(SourceLocation S) : Storage(S) {}
-  SymbolLocation(tooling::stdlib::Symbol S) : Storage(S) {}
-
-  Kind kind() const { return static_cast<Kind>(Storage.index()); }
-  bool operator==(const SymbolLocation &RHS) const {
-    return Storage == RHS.Storage;
-  }
-  SourceLocation physical() const { return std::get<Physical>(Storage); }
-  tooling::stdlib::Symbol standard() const {
-    return std::get<Standard>(Storage);
-  }
-
-private:
-  // Order must match Kind enum!
-  std::variant<SourceLocation, tooling::stdlib::Symbol> Storage;
-};
-llvm::raw_ostream &operator<<(llvm::raw_ostream &, const SymbolLocation &);
-
 /// Finds the headers that provide the symbol location.
-// FIXME: expose signals
-llvm::SmallVector<Header> findHeaders(const SymbolLocation &Loc,
-                                      const SourceManager &SM,
-                                      const PragmaIncludes *PI);
+llvm::SmallVector<Hinted<Header>> findHeaders(const SymbolLocation &Loc,
+                                              const SourceManager &SM,
+                                              const PragmaIncludes *PI);
+
+/// A set of locations that provides the declaration.
+std::vector<Hinted<SymbolLocation>> locateSymbol(const Symbol &S);
+
+/// Gets all the providers for a symbol by traversing each location.
+/// Returned headers are sorted by relevance, first element is the most
+/// likely provider for the symbol.
+llvm::SmallVector<Header> headersForSymbol(const Symbol &S,
+                                           const SourceManager &SM,
+                                           const PragmaIncludes *PI);
 
 /// Write an HTML summary of the analysis to the given stream.
 void writeHTMLReport(FileID File, const Includes &,
@@ -92,9 +71,6 @@ void writeHTMLReport(FileID File, const Includes &,
                      llvm::ArrayRef<SymbolReference> MacroRefs, ASTContext &Ctx,
                      HeaderSearch &HS, PragmaIncludes *PI,
                      llvm::raw_ostream &OS);
-
-/// A set of locations that provides the declaration.
-std::vector<SymbolLocation> locateSymbol(const Symbol &S);
 
 } // namespace include_cleaner
 } // namespace clang

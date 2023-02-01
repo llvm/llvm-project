@@ -38,7 +38,7 @@ bool isIndifferentToSP(const MCInst &Inst, const BinaryContext &BC) {
   if (BC.MIB->isCFI(Inst))
     return true;
 
-  const MCInstrDesc II = BC.MII->get(Inst.getOpcode());
+  const MCInstrDesc &II = BC.MII->get(Inst.getOpcode());
   if (BC.MIB->isTerminator(Inst) ||
       II.hasImplicitDefOfPhysReg(BC.MIB->getStackPointer(), BC.MRI.get()) ||
       II.hasImplicitUseOfPhysReg(BC.MIB->getStackPointer()))

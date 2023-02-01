@@ -73,10 +73,10 @@ TEST_F(X86SerialSnippetGeneratorTest, ImplicitSelfDependencyThroughImplicitReg) 
   // - hasAliasingImplicitRegisters (execution is always serial)
   // - hasAliasingRegisters
   const unsigned Opcode = X86::ADC16i16;
-  EXPECT_THAT(InstrInfo.get(Opcode).getImplicitDefs()[0], X86::AX);
-  EXPECT_THAT(InstrInfo.get(Opcode).getImplicitDefs()[1], X86::EFLAGS);
-  EXPECT_THAT(InstrInfo.get(Opcode).getImplicitUses()[0], X86::AX);
-  EXPECT_THAT(InstrInfo.get(Opcode).getImplicitUses()[1], X86::EFLAGS);
+  EXPECT_THAT(InstrInfo.get(Opcode).implicit_defs()[0], X86::AX);
+  EXPECT_THAT(InstrInfo.get(Opcode).implicit_defs()[1], X86::EFLAGS);
+  EXPECT_THAT(InstrInfo.get(Opcode).implicit_uses()[0], X86::AX);
+  EXPECT_THAT(InstrInfo.get(Opcode).implicit_uses()[1], X86::EFLAGS);
   const auto CodeTemplates = checkAndGetCodeTemplates(Opcode);
   ASSERT_THAT(CodeTemplates, SizeIs(1));
   const auto &CT = CodeTemplates[0];
@@ -99,7 +99,7 @@ TEST_F(X86SerialSnippetGeneratorTest, ImplicitSelfDependencyThroughTiedRegs) {
   // - hasTiedRegisters (execution is always serial)
   // - hasAliasingRegisters
   const unsigned Opcode = X86::ADD16ri;
-  EXPECT_THAT(InstrInfo.get(Opcode).getImplicitDefs()[0], X86::EFLAGS);
+  EXPECT_THAT(InstrInfo.get(Opcode).implicit_defs()[0], X86::EFLAGS);
   const auto CodeTemplates = checkAndGetCodeTemplates(Opcode);
   ASSERT_THAT(CodeTemplates, SizeIs(1));
   const auto &CT = CodeTemplates[0];

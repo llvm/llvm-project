@@ -13,9 +13,7 @@
 
 #include "llvm/ADT/DenseSet.h"
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 /// Checks for declarations of functions which differ in parameter names.
 ///
@@ -45,8 +43,6 @@ private:
   const bool Strict;
 };
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_INCONSISTENT_DECLARATION_PARAMETER_NAME_H

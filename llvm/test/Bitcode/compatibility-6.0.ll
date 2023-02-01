@@ -3,7 +3,6 @@
 ; N.b: This is 6.0-compatible IR. The CHECK lines occasionally differ from
 ;      the IR used to generate the bitcode, and may need to be updated.
 
-; RUN: opt -passes=verify -disable-output < %s.bc
 ; RUN: llvm-dis < %s.bc | FileCheck %s
 
 target datalayout = "E"

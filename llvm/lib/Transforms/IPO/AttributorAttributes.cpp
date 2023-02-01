@@ -830,7 +830,7 @@ protected:
       bool IsExact = Range == ItRange && !Range.offsetOrSizeAreUnknown();
       for (auto Index : It.getSecond()) {
         auto &Access = AccessList[Index];
-        if (!CB(Access, IsExact && Access.hasUniqueRange()))
+        if (!CB(Access, IsExact))
           return false;
       }
     }
@@ -1350,10 +1350,41 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
 
     // Make a strictly ascending list of offsets as required by addAccess()
     llvm::sort(Offsets);
-    auto Last = std::unique(Offsets.begin(), Offsets.end());
+    auto *Last = std::unique(Offsets.begin(), Offsets.end());
     Offsets.erase(Last, Offsets.end());
 
-    Changed = Changed | addAccess(A, {Offsets, Size}, I, Content, Kind, &Ty);
+    VectorType *VT = dyn_cast<VectorType>(&Ty);
+    if (!VT || VT->getElementCount().isScalable() ||
+        !Content.value_or(nullptr) || !isa<Constant>(*Content) ||
+        (*Content)->getType() != VT ||
+        DL.getTypeStoreSize(VT->getElementType()).isScalable()) {
+      Changed = Changed | addAccess(A, {Offsets, Size}, I, Content, Kind, &Ty);
+    } else {
+      // Handle vector stores with constant content element-wise.
+      // TODO: We could look for the elements or create instructions
+      //       representing them.
+      // TODO: We need to push the Content into the range abstraction
+      //       (AA::RangeTy) to allow different content values for different
+      //       ranges. ranges. Hence, support vectors storing different values.
+      Type *ElementType = VT->getElementType();
+      int64_t ElementSize = DL.getTypeStoreSize(ElementType).getFixedValue();
+      auto *ConstContent = cast<Constant>(*Content);
+      Type *Int32Ty = Type::getInt32Ty(ElementType->getContext());
+      SmallVector<int64_t> ElementOffsets(Offsets.begin(), Offsets.end());
+
+      for (int i = 0, e = VT->getElementCount().getFixedValue(); i != e; ++i) {
+        Value *ElementContent = ConstantExpr::getExtractElement(
+            ConstContent, ConstantInt::get(Int32Ty, i));
+
+        // Add the element access.
+        Changed = Changed | addAccess(A, {ElementOffsets, ElementSize}, I,
+                                      ElementContent, Kind, ElementType);
+
+        // Advance the offsets for the next element.
+        for (auto &ElementOffset : ElementOffsets)
+          ElementOffset += ElementSize;
+      }
+    }
     return true;
   };
 
@@ -4073,14 +4104,19 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
     if (SI.isVolatile())
       return false;
 
+    // If we are collecting assumes to be deleted we are in the manifest stage.
+    // It's problematic to collect the potential copies again now so we use the
+    // cached ones.
     bool UsedAssumedInformation = false;
-    SmallSetVector<Value *, 4> PotentialCopies;
-    if (!AA::getPotentialCopiesOfStoredValue(A, SI, PotentialCopies, *this,
-                                             UsedAssumedInformation)) {
-      LLVM_DEBUG(
-          dbgs()
-          << "[AAIsDead] Could not determine potential copies of store!\n");
-      return false;
+    if (!AssumeOnlyInst) {
+      PotentialCopies.clear();
+      if (!AA::getPotentialCopiesOfStoredValue(A, SI, PotentialCopies, *this,
+                                               UsedAssumedInformation)) {
+        LLVM_DEBUG(
+            dbgs()
+            << "[AAIsDead] Could not determine potential copies of store!\n");
+        return false;
+      }
     }
     LLVM_DEBUG(dbgs() << "[AAIsDead] Store has " << PotentialCopies.size()
                       << " potential copies.\n");
@@ -4169,6 +4205,10 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
   void trackStatistics() const override {
     STATS_DECLTRACK_FLOATING_ATTR(IsDead)
   }
+
+private:
+  // The potential copies of a dead store, used for deletion during manifest.
+  SmallSetVector<Value *, 4> PotentialCopies;
 };
 
 struct AAIsDeadArgument : public AAIsDeadFloating {
@@ -11276,7 +11316,7 @@ private:
   DenseSet<StringRef> getInitialAssumptions(const IRPosition &IRP) {
     const CallBase &CB = cast<CallBase>(IRP.getAssociatedValue());
     auto Assumptions = getAssumptions(CB);
-    if (Function *F = IRP.getAssociatedFunction())
+    if (const Function *F = CB.getCaller())
       set_union(Assumptions, getAssumptions(*F));
     if (Function *F = IRP.getAssociatedFunction())
       set_union(Assumptions, getAssumptions(*F));

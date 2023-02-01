@@ -272,6 +272,12 @@ bool isAllocatableType(mlir::Type ty) {
   return false;
 }
 
+bool isBoxNone(mlir::Type ty) {
+  if (auto box = ty.dyn_cast<fir::BoxType>())
+    return box.getEleTy().isa<mlir::NoneType>();
+  return false;
+}
+
 bool isBoxedRecordType(mlir::Type ty) {
   if (auto refTy = fir::dyn_cast_ptrEleTy(ty))
     ty = refTy;

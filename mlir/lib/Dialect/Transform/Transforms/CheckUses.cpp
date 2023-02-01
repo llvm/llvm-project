@@ -140,7 +140,13 @@ public:
       return live();
 
 #ifndef NDEBUG
-    // Check that the definition point actually allcoates the value.
+    // Check that the definition point actually allocates the value. If the
+    // definition is a block argument, it may be just forwarding the operand of
+    // the parent op without doing a new allocation, allow that. We currently
+    // don't have the capability to analyze region-based control flow here.
+    //
+    // TODO: when this ported to the dataflow analysis infra, we should have
+    // proper support for region-based control flow.
     Operation *valueSource =
         operand.get().isa<OpResult>()
             ? operand.get().getDefiningOp()
@@ -149,7 +155,8 @@ public:
     SmallVector<MemoryEffects::EffectInstance> instances;
     iface.getEffectsOnResource(transform::TransformMappingResource::get(),
                                instances);
-    assert(hasEffect<MemoryEffects::Allocate>(instances, operand.get()) &&
+    assert((operand.get().isa<BlockArgument>() ||
+            hasEffect<MemoryEffects::Allocate>(instances, operand.get())) &&
            "expected the op defining the value to have an allocation effect "
            "on it");
 #endif

@@ -3,6 +3,11 @@
 template<typename T>
 struct foo {
 };
+
+template<typename T, typename T2 = int>
+struct baz {
+};
+
 namespace x {
 // splitting these over multiple lines to make sure the right token is used for
 // the location
@@ -18,6 +23,9 @@ x::bar<int> bi;
 // CHECK: !DIGlobalVariable(name: "bf",{{.*}} type: [[BFLOAT:![0-9]+]]
 // CHECK: [[BFLOAT]] = !DIDerivedType(tag: DW_TAG_typedef, name: "bar<float>"
 x::bar<float> bf;
+// CHECK: !DIGlobalVariable(name: "bz",{{.*}} type: [[BBAZ:![0-9]+]]
+// CHECK: [[BBAZ]] = !DIDerivedType(tag: DW_TAG_typedef, name: "bar<baz<int> >"
+x::bar<baz<int>> bz;
 
 using
 // CHECK: !DIGlobalVariable(name: "n",{{.*}} type: [[NARF:![0-9]+]]

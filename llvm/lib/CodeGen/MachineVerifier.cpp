@@ -978,11 +978,11 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   SmallVector<LLT, 4> Types;
   for (unsigned I = 0, E = std::min(MCID.getNumOperands(), NumOps);
        I != E; ++I) {
-    if (!MCID.OpInfo[I].isGenericType())
+    if (!MCID.operands()[I].isGenericType())
       continue;
     // Generic instructions specify type equality constraints between some of
     // their operands. Make sure these are consistent.
-    size_t TypeIdx = MCID.OpInfo[I].getGenericTypeIndex();
+    size_t TypeIdx = MCID.operands()[I].getGenericTypeIndex();
     Types.resize(std::max(TypeIdx + 1, Types.size()));
 
     const MachineOperand *MO = &MI->getOperand(I);
@@ -1987,7 +1987,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
 
   // The first MCID.NumDefs operands must be explicit register defines
   if (MONum < NumDefs) {
-    const MCOperandInfo &MCOI = MCID.OpInfo[MONum];
+    const MCOperandInfo &MCOI = MCID.operands()[MONum];
     if (!MO->isReg())
       report("Explicit definition must be a register", MO, MONum);
     else if (!MO->isDef() && !MCOI.isOptionalDef())
@@ -1995,7 +1995,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
     else if (MO->isImplicit())
       report("Explicit definition marked as implicit", MO, MONum);
   } else if (MONum < MCID.getNumOperands()) {
-    const MCOperandInfo &MCOI = MCID.OpInfo[MONum];
+    const MCOperandInfo &MCOI = MCID.operands()[MONum];
     // Don't check if it's the last operand in a variadic instruction. See,
     // e.g., LDM_RET in the arm back end. Check non-variadic operands only.
     bool IsOptional = MI->isVariadic() && MONum == MCID.getNumOperands() - 1;

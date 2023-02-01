@@ -17,9 +17,7 @@ namespace clang {
 
 class IdentifierTable;
 
-namespace tidy {
-namespace google {
-namespace runtime {
+namespace tidy::google::runtime {
 
 /// Finds uses of `short`, `long` and `long long` and suggest replacing them
 /// with `u?intXX(_t)?`.
@@ -46,9 +44,7 @@ private:
   std::unique_ptr<IdentifierTable> IdentTable;
 };
 
-} // namespace runtime
-} // namespace google
-} // namespace tidy
+} // namespace tidy::google::runtime
 } // namespace clang
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_GOOGLE_INTEGERTYPESCHECK_H

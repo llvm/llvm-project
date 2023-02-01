@@ -61,7 +61,7 @@ Scope::Local EvalEmitter::createLocal(Descriptor *D) {
   Desc.Offset = sizeof(InlineDescriptor);
   Desc.IsActive = true;
   Desc.IsBase = false;
-  Desc.IsMutable = false;
+  Desc.IsFieldMutable = false;
   Desc.IsConst = false;
   Desc.IsInitialized = false;
 

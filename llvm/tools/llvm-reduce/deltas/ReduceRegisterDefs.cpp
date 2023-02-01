@@ -40,8 +40,8 @@ static void removeDefsFromFunction(Oracle &O, MachineFunction &MF) {
 
       int NumOperands = MI.getNumOperands();
       int NumRequiredOps = MI.getNumExplicitOperands() +
-                           MI.getDesc().getNumImplicitDefs() +
-                           MI.getDesc().getNumImplicitUses();
+                           MI.getDesc().implicit_defs().size() +
+                           MI.getDesc().implicit_uses().size();
 
       bool HaveDelete = false;
       // Do an initial scan in case the instruction defines the same register

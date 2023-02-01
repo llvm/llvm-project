@@ -539,7 +539,7 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc) {
   auto OperandsNum = OpDesc.getNumOperands();
   unsigned CompOprIdx;
   for (CompOprIdx = Component::SRC1; CompOprIdx < OperandsNum; ++CompOprIdx) {
-    if (OpDesc.OpInfo[CompOprIdx].OperandType == AMDGPU::OPERAND_KIMM32) {
+    if (OpDesc.operands()[CompOprIdx].OperandType == AMDGPU::OPERAND_KIMM32) {
       MandatoryLiteralIdx = CompOprIdx;
       break;
     }
@@ -828,11 +828,26 @@ unsigned getWavefrontSize(const MCSubtargetInfo *STI) {
 }
 
 unsigned getLocalMemorySize(const MCSubtargetInfo *STI) {
+  unsigned BytesPerCU = 0;
+  if (STI->getFeatureBits().test(FeatureLocalMemorySize32768))
+    BytesPerCU = 32768;
+  if (STI->getFeatureBits().test(FeatureLocalMemorySize65536))
+    BytesPerCU = 65536;
+
+  // "Per CU" really means "per whatever functional block the waves of a
+  // workgroup must share". So the effective local memory size is doubled in
+  // WGP mode on gfx10.
+  if (isGFX10Plus(*STI) && !STI->getFeatureBits().test(FeatureCuMode))
+    BytesPerCU *= 2;
+
+  return BytesPerCU;
+}
+
+unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
   if (STI->getFeatureBits().test(FeatureLocalMemorySize32768))
     return 32768;
   if (STI->getFeatureBits().test(FeatureLocalMemorySize65536))
     return 65536;
-
   return 0;
 }
 
@@ -852,11 +867,18 @@ unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo *STI,
   assert(FlatWorkGroupSize != 0);
   if (STI->getTargetTriple().getArch() != Triple::amdgcn)
     return 8;
+  unsigned MaxWaves = getMaxWavesPerEU(STI) * getEUsPerCU(STI);
   unsigned N = getWavesPerWorkGroup(STI, FlatWorkGroupSize);
-  if (N == 1)
-    return 40;
-  N = 40 / N;
-  return std::min(N, 16u);
+  if (N == 1) {
+    // Single-wave workgroups don't consume barrier resources.
+    return MaxWaves;
+  }
+
+  unsigned MaxBarriers = 16;
+  if (isGFX10Plus(*STI) && !STI->getFeatureBits().test(FeatureCuMode))
+    MaxBarriers = 32;
+
+  return std::min(MaxWaves / N, MaxBarriers);
 }
 
 unsigned getMinWavesPerEU(const MCSubtargetInfo *STI) {
@@ -2133,21 +2155,21 @@ bool isInlineValue(unsigned Reg) {
 
 bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
-  unsigned OpType = Desc.OpInfo[OpNo].OperandType;
+  unsigned OpType = Desc.operands()[OpNo].OperandType;
   return OpType >= AMDGPU::OPERAND_SRC_FIRST &&
          OpType <= AMDGPU::OPERAND_SRC_LAST;
 }
 
 bool isKImmOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
-  unsigned OpType = Desc.OpInfo[OpNo].OperandType;
+  unsigned OpType = Desc.operands()[OpNo].OperandType;
   return OpType >= AMDGPU::OPERAND_KIMM_FIRST &&
          OpType <= AMDGPU::OPERAND_KIMM_LAST;
 }
 
 bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
-  unsigned OpType = Desc.OpInfo[OpNo].OperandType;
+  unsigned OpType = Desc.operands()[OpNo].OperandType;
   switch (OpType) {
   case AMDGPU::OPERAND_REG_IMM_FP32:
   case AMDGPU::OPERAND_REG_IMM_FP32_DEFERRED:
@@ -2176,7 +2198,7 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
 
 bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
-  unsigned OpType = Desc.OpInfo[OpNo].OperandType;
+  unsigned OpType = Desc.operands()[OpNo].OperandType;
   return OpType >= AMDGPU::OPERAND_REG_INLINE_C_FIRST &&
          OpType <= AMDGPU::OPERAND_REG_INLINE_C_LAST;
 }
@@ -2331,7 +2353,7 @@ unsigned getRegBitWidth(const MCRegisterClass &RC) {
 unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
                            unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
-  unsigned RCID = Desc.OpInfo[OpNo].RegClass;
+  unsigned RCID = Desc.operands()[OpNo].RegClass;
   return getRegBitWidth(MRI->getRegClass(RCID)) / 8;
 }
 

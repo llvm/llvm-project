@@ -6252,6 +6252,9 @@ namespace {
     void VisitTagTypeLoc(TagTypeLoc TL) {
       TL.setNameLoc(DS.getTypeSpecTypeNameLoc());
     }
+    void VisitUsingTypeLoc(UsingTypeLoc TL) {
+      TL.setNameLoc(DS.getTypeSpecTypeNameLoc());
+    }
     void VisitAtomicTypeLoc(AtomicTypeLoc TL) {
       // An AtomicTypeLoc can come from either an _Atomic(...) type specifier
       // or an _Atomic qualifier.
@@ -7956,7 +7959,7 @@ void Sema::adjustMemberFunctionCC(QualType &T, bool IsStatic, bool IsCtorOrDtor,
     CallingConv DefaultCC =
         Context.getDefaultCallingConvention(IsVariadic, IsStatic);
 
-    if (CurCC != DefaultCC || DefaultCC == ToCC)
+    if (CurCC != DefaultCC)
       return;
 
     if (hasExplicitCallingConv(T))

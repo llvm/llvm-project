@@ -203,8 +203,9 @@ void SIShrinkInstructions::copyExtraImplicitOps(MachineInstr &NewMI,
                                                 MachineInstr &MI) const {
   MachineFunction &MF = *MI.getMF();
   for (unsigned i = MI.getDesc().getNumOperands() +
-         MI.getDesc().getNumImplicitUses() +
-         MI.getDesc().getNumImplicitDefs(), e = MI.getNumOperands();
+                    MI.getDesc().implicit_uses().size() +
+                    MI.getDesc().implicit_defs().size(),
+                e = MI.getNumOperands();
        i != e; ++i) {
     const MachineOperand &MO = MI.getOperand(i);
     if ((MO.isReg() && MO.isImplicit()) || MO.isRegMask())
@@ -595,8 +596,9 @@ SIShrinkInstructions::getSubRegForIndex(Register Reg, unsigned Sub,
 void SIShrinkInstructions::dropInstructionKeepingImpDefs(
     MachineInstr &MI) const {
   for (unsigned i = MI.getDesc().getNumOperands() +
-         MI.getDesc().getNumImplicitUses() +
-         MI.getDesc().getNumImplicitDefs(), e = MI.getNumOperands();
+                    MI.getDesc().implicit_uses().size() +
+                    MI.getDesc().implicit_defs().size(),
+                e = MI.getNumOperands();
        i != e; ++i) {
     const MachineOperand &Op = MI.getOperand(i);
     if (!Op.isDef())

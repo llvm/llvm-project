@@ -58,8 +58,8 @@ public:
   // Some meaningless instructions -- the first is fully meaningless,
   // while the second is supposed to impersonate DBG_VALUEs through its
   // opcode.
-  MCInstrDesc BeanInst;
-  MCInstrDesc DbgValueInst;
+  MCInstrDesc BeanInst{};
+  MCInstrDesc DbgValueInst{};
 
   LexicalScopesTest() : Ctx(), Mod("beehives", Ctx) {
     memset(&BeanInst, 0, sizeof(BeanInst));

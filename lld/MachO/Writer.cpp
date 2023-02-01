@@ -328,7 +328,8 @@ public:
   }
 
   uint32_t getSize() const override {
-    return alignTo(sizeof(dylib_command) + path.size() + 1, 8);
+    return alignToPowerOf2(sizeof(dylib_command) + path.size() + 1,
+                           target->wordSize);
   }
 
   void writeTo(uint8_t *buf) const override {
@@ -362,7 +363,8 @@ uint32_t LCDylib::instanceCount = 0;
 class LCLoadDylinker final : public LoadCommand {
 public:
   uint32_t getSize() const override {
-    return alignTo(sizeof(dylinker_command) + path.size() + 1, 8);
+    return alignToPowerOf2(sizeof(dylinker_command) + path.size() + 1,
+                           target->wordSize);
   }
 
   void writeTo(uint8_t *buf) const override {

@@ -91,9 +91,6 @@ RUN apt-get update && apt-get install -y llvm-$(($LLVM_HEAD_VERSION - 1))-dev   
 # TODO LLVM16 Don't install llvm-16-dev explicitly
 RUN apt-get update && apt-get install -y llvm-16-dev libclang-16-dev
 
-# Install clang-tools
-RUN apt-get update && apt-get install -y clang-tools-$(($LLVM_HEAD_VERSION - 1)) clang-tools-$LLVM_HEAD_VERSION
-
 # Install the most recent GCC, like clang install the previous version as a transition.
 ENV GCC_LATEST_VERSION=12
 RUN apt-get update && apt install -y gcc-$((GCC_LATEST_VERSION - 1)) g++-$((GCC_LATEST_VERSION - 1))

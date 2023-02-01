@@ -124,7 +124,7 @@ define void @test_func() !dbg !6 {
 ; STDERR-NEXT: remark: foo.cl:8:0:     VGPRs: 0
 ; STDERR-NEXT: remark: foo.cl:8:0:     AGPRs: 0
 ; STDERR-NEXT: remark: foo.cl:8:0:     ScratchSize [bytes/lane]: 0
-; STDERR-NEXT: remark: foo.cl:8:0:     Occupancy [waves/SIMD]: 10
+; STDERR-NEXT: remark: foo.cl:8:0:     Occupancy [waves/SIMD]: 8
 ; STDERR-NEXT: remark: foo.cl:8:0:     SGPRs Spill: 0
 ; STDERR-NEXT: remark: foo.cl:8:0:     VGPRs Spill: 0
 ; STDERR-NEXT: remark: foo.cl:8:0:     LDS Size [bytes/block]: 0

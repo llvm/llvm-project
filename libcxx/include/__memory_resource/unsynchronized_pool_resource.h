@@ -85,7 +85,7 @@ protected:
 
   void do_deallocate(void* __p, size_t __bytes, size_t __align) override;
 
-  _LIBCPP_HIDE_FROM_ABI bool do_is_equal(const memory_resource& __other) const _NOEXCEPT override {
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL bool do_is_equal(const memory_resource& __other) const _NOEXCEPT override {
     return &__other == this;
   }
 

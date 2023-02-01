@@ -578,6 +578,11 @@ Modified Compiler Flags
 - Clang now permits specifying ``--config=`` multiple times, to load multiple
   configuration files.
 
+- The option ``-rtlib=platform`` can now be used for all targets to override
+  a different option value (either one set earlier on the command line, or a
+  built-in hardcoded default). (Previously the MSVC and Darwin targets didn't
+  allow this parameter combination.)
+
 Removed Compiler Flags
 -------------------------
 - Clang now no longer supports ``-cc1 -fconcepts-ts``.  This flag has been deprecated
@@ -614,6 +619,15 @@ Attribute Changes in Clang
   memory placement. It emits a warning if something in the code provably prevents
   an instance from a read-only memory placement.
 
+- Introduced new attribute ``__attribute__((target_version("cpu_features")))``
+  and expanded the functionality of the existing attribute
+  ``__attribute__((target_clones("cpu_features1","cpu_features2",...)))`` to
+  support Function Multi Versioning on AArch64 target. It detects at runtime
+  which function versions are supported by CPU and calls the one with highest
+  priority. Refer to `clang attributes
+  <https://clang.llvm.org/docs/AttributeReference.html#target-version>`_ for
+  more details.
+
 Windows Support
 ---------------
 - For the MinGW driver, added the options ``-mguard=none``, ``-mguard=cf`` and
@@ -622,6 +636,16 @@ Windows Support
   and generation of address-taken function table.
 
 - Switched from SHA1 to BLAKE3 for PDB type hashing / ``-gcodeview-ghash``
+
+- Fixed code generation with emulated TLS, when the emulated TLS is enabled
+  by default (with downstream patches; no upstream configurations default
+  to this configuration, but some mingw downstreams change the default
+  in this way).
+
+- Improved detection of MinGW cross sysroots for finding sysroots provided
+  by Linux distributions such as Fedora. Also improved such setups by
+  avoiding to include ``/usr/include`` among the include paths when cross
+  compiling with a cross sysroot based in ``/usr``.
 
 AIX Support
 -----------
@@ -814,13 +838,14 @@ ABI Changes in Clang
 
 - GCC doesn't pack non-POD members in packed structs unless the packed
   attribute is also specified on the member. Clang historically did perform
-  such packing. Clang now matches the gcc behavior (except on Darwin and PS4).
+  such packing. Clang now matches the gcc behavior
+  (except on Darwin, PS4 and AIX).
   You can switch back to the old ABI behavior with the flag:
   ``-fclang-abi-compat=15.0``.
 - GCC allows POD types to have defaulted special members. Clang historically
   classified such types as non-POD (for the purposes of Itanium ABI). Clang now
-  matches the gcc behavior (except on Darwin and PS4). You can switch back to
-  the old ABI behavior with the flag: ``-fclang-abi-compat=15.0``.
+  matches the gcc behavior (except on Darwin, PS4, AIX and z/OS). You can switch
+  back to the old ABI behavior with the flag: ``-fclang-abi-compat=15.0``.
 
 OpenMP Support in Clang
 -----------------------
@@ -854,6 +879,8 @@ RISC-V Support in Clang
 - Fix interaction of ``-mcpu`` and ``-march``, RISC-V backend will take the
   architecture extension union of ``-mcpu`` and ``-march`` before, and now will
   take architecture extensions from ``-march`` if both are given.
+- An ABI mismatch between GCC and Clang that related to the
+  sign/zero-extension of integer scalars was fixed.
 
 X86 Support in Clang
 --------------------

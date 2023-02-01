@@ -243,6 +243,7 @@ template <class T>
 #include <__utility/auto_cast.h>
 #include <__utility/cmp.h>
 #include <__utility/declval.h>
+#include <__utility/exception_guard.h>
 #include <__utility/exchange.h>
 #include <__utility/forward.h>
 #include <__utility/forward_like.h>
@@ -255,7 +256,6 @@ template <class T>
 #include <__utility/rel_ops.h>
 #include <__utility/swap.h>
 #include <__utility/to_underlying.h>
-#include <__utility/transaction.h>
 #include <__utility/unreachable.h>
 #include <version>
 

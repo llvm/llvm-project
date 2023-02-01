@@ -77,7 +77,7 @@ static void findReturnsToZap(Function &F,
                if (U->getType()->isStructTy()) {
                  return all_of(Solver.getStructLatticeValueFor(U),
                                [](const ValueLatticeElement &LV) {
-                                 return !isOverdefined(LV);
+                                 return !SCCPSolver::isOverdefined(LV);
                                });
                }
 
@@ -88,7 +88,7 @@ static void findReturnsToZap(Function &F,
                    return true;
                }
 
-               return !isOverdefined(Solver.getLatticeValueFor(U));
+               return !SCCPSolver::isOverdefined(Solver.getLatticeValueFor(U));
              }) &&
       "We can only zap functions where all live users have a concrete value");
 
@@ -173,7 +173,7 @@ static bool runIPSCCP(
     if (Solver.isBlockExecutable(&F.front())) {
       bool ReplacedPointerArg = false;
       for (Argument &Arg : F.args()) {
-        if (!Arg.use_empty() && tryToReplaceWithConstant(Solver, &Arg)) {
+        if (!Arg.use_empty() && Solver.tryToReplaceWithConstant(&Arg)) {
           ReplacedPointerArg |= Arg.getType()->isPointerTy();
           ++NumArgsElimed;
         }
@@ -219,8 +219,8 @@ static bool runIPSCCP(
         continue;
       }
 
-      MadeChanges |= simplifyInstsInBlock(Solver, BB, InsertedValues,
-                                          NumInstRemoved, NumInstReplaced);
+      MadeChanges |= Solver.simplifyInstsInBlock(
+          BB, InsertedValues, NumInstRemoved, NumInstReplaced);
     }
 
     DomTreeUpdater DTU = IsFuncSpecEnabled && Specializer.isClonedFunction(&F)
@@ -241,7 +241,7 @@ static bool runIPSCCP(
 
     BasicBlock *NewUnreachableBB = nullptr;
     for (BasicBlock &BB : F)
-      MadeChanges |= removeNonFeasibleEdges(Solver, &BB, DTU, NewUnreachableBB);
+      MadeChanges |= Solver.removeNonFeasibleEdges(&BB, DTU, NewUnreachableBB);
 
     for (BasicBlock *DeadBB : BlocksToErase)
       if (!DeadBB->hasAddressTaken())
@@ -315,7 +315,7 @@ static bool runIPSCCP(
     }
     if (F->getReturnType()->isVoidTy())
       continue;
-    if (isConstant(ReturnValue) || ReturnValue.isUnknownOrUndef())
+    if (SCCPSolver::isConstant(ReturnValue) || ReturnValue.isUnknownOrUndef())
       findReturnsToZap(*F, ReturnsToZap, Solver);
   }
 
@@ -361,7 +361,7 @@ static bool runIPSCCP(
   // delete the global and any stores that remain to it.
   for (const auto &I : make_early_inc_range(Solver.getTrackedGlobals())) {
     GlobalVariable *GV = I.first;
-    if (isOverdefined(I.second))
+    if (SCCPSolver::isOverdefined(I.second))
       continue;
     LLVM_DEBUG(dbgs() << "Found that GV '" << GV->getName()
                       << "' is constant!\n");

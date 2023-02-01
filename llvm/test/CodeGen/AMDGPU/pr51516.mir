@@ -5,7 +5,7 @@
 
 # GCN-LABEL: name: global_sextload_v32i32_to_v32i64
 # GCN: renamable $vgpr0 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
-# GCN: GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr20, killed renamable $vgpr24_vgpr25_vgpr26_vgpr27, killed renamable $sgpr0_sgpr1, 16, 0, implicit $exec, implicit killed renamable $vgpr0
+# GCN: GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr20, killed renamable $vgpr27_vgpr28_vgpr29_vgpr30, killed renamable $sgpr0_sgpr1, 16, 0, implicit $exec, implicit killed renamable $vgpr0
 
 ---
 name:            global_sextload_v32i32_to_v32i64

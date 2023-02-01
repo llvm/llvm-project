@@ -1,6 +1,6 @@
 // RUN: not llvm-mc -triple aarch64 \
 // RUN: -mattr=+crc,+sm4,+sha3,+sha2,+aes,+fp,+neon,+ras,+lse,+predres,+ccdp,+mte,+tlb-rmi,+pan-rwv,+ccpp,+rcpc,+ls64,+flagm,+hbc,+mops \
-// RUN: -mattr=+rcpc3,+lse128,+d128,+the,+rasv2 \
+// RUN: -mattr=+rcpc3,+lse128,+d128,+the,+rasv2,+ite,+cssc,+specres2 \
 // RUN: -filetype asm -o - %s 2>&1 | FileCheck %s
 
 .arch_extension axp64
@@ -70,12 +70,26 @@ casa w5, w7, [x20]
 // CHECK: [[@LINE-1]]:1: error: instruction requires: lse
 // CHECK-NEXT: casa w5, w7, [x20]
 
+swpp x0, x2, [x3]
+// CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: lse128
+.arch_extension nolse128
+swpp x0, x2, [x3]
+// CHECK: [[@LINE-1]]:1: error: instruction requires: lse128
+// CHECK-NEXT: swpp x0, x2, [x3]
+
 cfp rctx, x0
 // CHECK-NOT: [[@LINE-1]]:5: error: CFPRCTX requires: predres
 .arch_extension nopredres
 cfp rctx, x0
 // CHECK: [[@LINE-1]]:5: error: CFPRCTX requires: predres
 // CHECK-NEXT: cfp rctx, x0
+
+cosp rctx, x0
+// CHECK-NOT: [[@LINE-1]]:6: error: COSP requires: predres2
+.arch_extension nopredres2
+cosp rctx, x0
+// CHECK: [[@LINE-1]]:6: error: COSP requires: predres2
+// CHECK-NEXT: cosp rctx, x0
 
 dc cvadp, x7
 // CHECK-NOT: [[@LINE-1]]:4: error: DC CVADP requires: ccdp
@@ -118,6 +132,13 @@ ldapr x0, [x1]
 ldapr x0, [x1]
 // CHECK: [[@LINE-1]]:1: error: instruction requires: rcpc
 // CHECK-NEXT: ldapr x0, [x1]
+
+stilp w24, w0, [x16, #-8]!
+// CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: rcpc3
+.arch_extension norcpc3
+stilp w24, w0, [x16, #-8]!
+// CHECK: [[@LINE-1]]:1: error: instruction requires: rcpc3
+// CHECK-NEXT: stilp w24, w0, [x16, #-8]!
 
 ld64b x0, [x13]
 // CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: ls64
@@ -168,6 +189,20 @@ rcwswp x0, x1, [x2]
 rcwswp x0, x1, [x2]
 // CHECK: [[@LINE-1]]:1: error: instruction requires: the
 // CHECK-NEXT: rcwswp x0, x1, [x2]
+
+trcit x0
+// CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: ite
+.arch_extension noite
+trcit x0
+// CHECK: [[@LINE-1]]:1: error: instruction requires: ite
+// CHECK-NEXT: trcit x0
+
+umax x0, x1, x2
+// CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: cssc
+.arch_extension nocssc
+umax x0, x1, x2
+// CHECK: [[@LINE-1]]:1: error: instruction requires: cssc
+// CHECK-NEXT: umax x0, x1, x2
 
 mrs x0, ERXGSR_EL1
 // CHECK-NOT: [[@LINE-1]]:9: error: expected readable system register

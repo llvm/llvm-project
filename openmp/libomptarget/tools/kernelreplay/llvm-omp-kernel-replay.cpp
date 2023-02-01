@@ -100,8 +100,8 @@ int main(int argc, char **argv) {
     report_fatal_error("Error reading the kernel image.");
 
   __tgt_device_image DeviceImage;
-  DeviceImage.ImageStart = (void *)ImageMB.get()->getBufferStart();
-  DeviceImage.ImageEnd = (void *)ImageMB.get()->getBufferEnd();
+  DeviceImage.ImageStart = const_cast<char *>(ImageMB.get()->getBufferStart());
+  DeviceImage.ImageEnd = const_cast<char *>(ImageMB.get()->getBufferEnd());
   DeviceImage.EntriesBegin = &KernelEntry;
   DeviceImage.EntriesEnd = &KernelEntry + 1;
 
@@ -143,7 +143,7 @@ int main(int argc, char **argv) {
 
   __tgt_target_kernel_replay(
       /* Loc */ nullptr, DeviceId, KernelEntry.addr,
-      (void *)DeviceMemoryMB.get()->getBuffer().data(),
+      const_cast<char *>(DeviceMemoryMB.get()->getBuffer().data()),
       DeviceMemoryMB.get()->getBufferSize(), TgtArgs.data(),
       TgtArgOffsets.data(), NumArgs.value(), NumTeams, NumThreads,
       LoopTripCount.value());

@@ -698,6 +698,13 @@ enabled sub-projects. Nearly all of these variable names begin with
   %PATH%, then you can set this variable to the GnuWin32 directory so that
   lit can find tools needed for tests in that directory.
 
+**LLVM_NATIVE_TOOL_DIR**:STRING
+  Full path to a directory containing executables for the build host
+  (containing binaries such as ``llvm-tblgen`` and ``clang-tblgen``). This is
+  intended for cross-compiling: if the user sets this variable and the
+  directory contains executables with the expected names, no separate
+  native versions of those executables will be built.
+
 **LLVM_OPTIMIZED_TABLEGEN**:BOOL
   If enabled and building a debug or asserts build the CMake build system will
   generate a Release build tree to build a fully optimized tablegen for use

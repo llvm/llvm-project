@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 
 /// This checker finds classes that not only contain the data
 /// (non-static member variables), but also have logic (non-static member
@@ -42,8 +40,6 @@ private:
   const bool IgnorePublicMemberVariables;
 };
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_NONPRIVATEMEMBERVARIABLESINCLASSESCHECK_H

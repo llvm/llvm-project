@@ -320,9 +320,9 @@ define i64 @dyn_extract_v8i64_const_s_v(i32 %sel) {
 ; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
 ; GCN-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v0
+; GCN-NEXT:    s_mov_b64 s[12:13], 5
 ; GCN-NEXT:    v_mov_b32_e32 v7, s10
 ; GCN-NEXT:    v_mov_b32_e32 v8, s11
-; GCN-NEXT:    s_mov_b64 s[12:13], 5
 ; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v5, vcc
 ; GCN-NEXT:    v_cndmask_b32_e32 v2, v2, v6, vcc
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v0

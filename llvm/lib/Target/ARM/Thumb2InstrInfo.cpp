@@ -776,11 +776,8 @@ ARMCC::CondCodes llvm::getITInstrPredicate(const MachineInstr &MI,
 int llvm::findFirstVPTPredOperandIdx(const MachineInstr &MI) {
   const MCInstrDesc &MCID = MI.getDesc();
 
-  if (!MCID.OpInfo)
-    return -1;
-
   for (unsigned i = 0, e = MCID.getNumOperands(); i != e; ++i)
-    if (ARM::isVpred(MCID.OpInfo[i].OperandType))
+    if (ARM::isVpred(MCID.operands()[i].OperandType))
       return i;
 
   return -1;

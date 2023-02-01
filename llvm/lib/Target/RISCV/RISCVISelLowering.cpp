@@ -9580,9 +9580,12 @@ static SDValue performFP_TO_INTCombine(SDNode *N,
     MVT ContainerVT = VT.getSimpleVT();
     SDValue XVal = Src.getOperand(0);
 
-    // TODO: Support combining with widening and narrowing instructions
-    // For now only support conversions of the same bit size
-    if (VT.getScalarSizeInBits() != SrcVT.getScalarSizeInBits())
+    // For widening and narrowing conversions we just combine it into a
+    // VFCVT_..._VL node, as there are no specific VFWCVT/VFNCVT VL nodes. They
+    // end up getting lowered to their appropriate pseudo instructions based on
+    // their operand types
+    if (VT.getScalarSizeInBits() > SrcVT.getScalarSizeInBits() * 2 ||
+        VT.getScalarSizeInBits() * 2 < SrcVT.getScalarSizeInBits())
       return SDValue();
 
     // Make fixed-length vectors scalable first
@@ -10557,6 +10560,25 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       if (SimplifyDemandedLowBitsHelper(1, EltWidth))
         return SDValue(N, 0);
 
+    break;
+  }
+  case RISCVISD::VFMV_S_F_VL: {
+    SDValue Src = N->getOperand(1);
+    // Try to remove vector->scalar->vector if the scalar->vector is inserting
+    // into an undef vector.
+    // TODO: Could use a vslide or vmv.v.v for non-undef.
+    if (N->getOperand(0).isUndef() &&
+        Src.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        isNullConstant(Src.getOperand(1)) &&
+        Src.getOperand(0).getValueType().isScalableVector()) {
+      EVT VT = N->getValueType(0);
+      EVT SrcVT = Src.getOperand(0).getValueType();
+      assert(SrcVT.getVectorElementType() == VT.getVectorElementType());
+      // Widths match, just return the original vector.
+      if (SrcVT == VT)
+        return Src.getOperand(0);
+      // TODO: Use insert_subvector/extract_subvector to change widen/narrow?
+    }
     break;
   }
   case ISD::INTRINSIC_WO_CHAIN: {
@@ -11638,6 +11660,11 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return emitQuietFCMP(MI, BB, RISCV::FLE_D, RISCV::FEQ_D, Subtarget);
   case RISCV::PseudoQuietFLT_D:
     return emitQuietFCMP(MI, BB, RISCV::FLT_D, RISCV::FEQ_D, Subtarget);
+
+    // =========================================================================
+    // VFCVT
+    // =========================================================================
+
   case RISCV::PseudoVFCVT_RM_X_F_V_M1_MASK:
     return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_M1_MASK);
   case RISCV::PseudoVFCVT_RM_X_F_V_M2_MASK:
@@ -11650,6 +11677,7 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_MF2_MASK);
   case RISCV::PseudoVFCVT_RM_X_F_V_MF4_MASK:
     return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_MF4_MASK);
+
   case RISCV::PseudoVFCVT_RM_XU_F_V_M1_MASK:
     return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_XU_F_V_M1_MASK);
   case RISCV::PseudoVFCVT_RM_XU_F_V_M2_MASK:
@@ -11662,6 +11690,7 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_XU_F_V_MF2_MASK);
   case RISCV::PseudoVFCVT_RM_XU_F_V_MF4_MASK:
     return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_XU_F_V_MF4_MASK);
+
   case RISCV::PseudoVFCVT_RM_F_XU_V_M1_MASK:
     return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_F_XU_V_M1_MASK);
   case RISCV::PseudoVFCVT_RM_F_XU_V_M2_MASK:
@@ -11674,6 +11703,102 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_F_XU_V_MF2_MASK);
   case RISCV::PseudoVFCVT_RM_F_XU_V_MF4_MASK:
     return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_F_XU_V_MF4_MASK);
+
+  case RISCV::PseudoVFCVT_RM_F_X_V_M1_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_F_X_V_M1_MASK);
+  case RISCV::PseudoVFCVT_RM_F_X_V_M2_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_F_X_V_M2_MASK);
+  case RISCV::PseudoVFCVT_RM_F_X_V_M4_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_F_X_V_M4_MASK);
+  case RISCV::PseudoVFCVT_RM_F_X_V_M8_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_F_X_V_M8_MASK);
+  case RISCV::PseudoVFCVT_RM_F_X_V_MF2_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_F_X_V_MF2_MASK);
+  case RISCV::PseudoVFCVT_RM_F_X_V_MF4_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_F_X_V_MF4_MASK);
+
+    // =========================================================================
+    // VFWCVT
+    // =========================================================================
+
+  case RISCV::PseudoVFWCVT_RM_XU_F_V_M1_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_X_F_V_M1_MASK);
+  case RISCV::PseudoVFWCVT_RM_XU_F_V_M2_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_X_F_V_M2_MASK);
+  case RISCV::PseudoVFWCVT_RM_XU_F_V_M4_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_X_F_V_M4_MASK);
+  case RISCV::PseudoVFWCVT_RM_XU_F_V_MF2_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_X_F_V_MF2_MASK);
+  case RISCV::PseudoVFWCVT_RM_XU_F_V_MF4_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_X_F_V_MF4_MASK);
+
+  case RISCV::PseudoVFWCVT_RM_X_F_V_M1_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_X_F_V_M1_MASK);
+  case RISCV::PseudoVFWCVT_RM_X_F_V_M2_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_X_F_V_M2_MASK);
+  case RISCV::PseudoVFWCVT_RM_X_F_V_M4_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_X_F_V_M4_MASK);
+  case RISCV::PseudoVFWCVT_RM_X_F_V_MF2_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_X_F_V_MF2_MASK);
+  case RISCV::PseudoVFWCVT_RM_X_F_V_MF4_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_X_F_V_MF4_MASK);
+
+  case RISCV::PseudoVFWCVT_RM_F_XU_V_M1_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_F_XU_V_M1_MASK);
+  case RISCV::PseudoVFWCVT_RM_F_XU_V_M2_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_F_XU_V_M2_MASK);
+  case RISCV::PseudoVFWCVT_RM_F_XU_V_M4_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_F_XU_V_M4_MASK);
+  case RISCV::PseudoVFWCVT_RM_F_XU_V_MF2_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_F_XU_V_MF2_MASK);
+  case RISCV::PseudoVFWCVT_RM_F_XU_V_MF4_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_F_XU_V_MF4_MASK);
+  case RISCV::PseudoVFWCVT_RM_F_XU_V_MF8_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_F_XU_V_MF8_MASK);
+
+  case RISCV::PseudoVFWCVT_RM_F_X_V_M1_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_F_XU_V_M1_MASK);
+  case RISCV::PseudoVFWCVT_RM_F_X_V_M2_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_F_XU_V_M2_MASK);
+  case RISCV::PseudoVFWCVT_RM_F_X_V_M4_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_F_XU_V_M4_MASK);
+  case RISCV::PseudoVFWCVT_RM_F_X_V_MF2_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_F_XU_V_MF2_MASK);
+  case RISCV::PseudoVFWCVT_RM_F_X_V_MF4_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_F_XU_V_MF4_MASK);
+  case RISCV::PseudoVFWCVT_RM_F_X_V_MF8_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_F_XU_V_MF8_MASK);
+
+    // =========================================================================
+    // VFNCVT
+    // =========================================================================
+
+  case RISCV::PseudoVFNCVT_RM_XU_F_W_M1_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_X_F_W_M1_MASK);
+  case RISCV::PseudoVFNCVT_RM_XU_F_W_M2_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_X_F_W_M2_MASK);
+  case RISCV::PseudoVFNCVT_RM_XU_F_W_M4_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_X_F_W_M4_MASK);
+  case RISCV::PseudoVFNCVT_RM_XU_F_W_MF2_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_X_F_W_MF2_MASK);
+  case RISCV::PseudoVFNCVT_RM_XU_F_W_MF4_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_X_F_W_MF4_MASK);
+  case RISCV::PseudoVFNCVT_RM_XU_F_W_MF8_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_XU_F_W_MF8_MASK);
+
+  case RISCV::PseudoVFNCVT_RM_X_F_W_M1_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_X_F_W_M1_MASK);
+  case RISCV::PseudoVFNCVT_RM_X_F_W_M2_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_X_F_W_M2_MASK);
+  case RISCV::PseudoVFNCVT_RM_X_F_W_M4_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_X_F_W_M4_MASK);
+  case RISCV::PseudoVFNCVT_RM_X_F_W_MF2_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_X_F_W_MF2_MASK);
+  case RISCV::PseudoVFNCVT_RM_X_F_W_MF4_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_X_F_W_MF4_MASK);
+  case RISCV::PseudoVFNCVT_RM_X_F_W_MF8_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_X_F_W_MF8_MASK);
+
   case RISCV::PseudoVFNCVT_RM_F_XU_W_M1_MASK:
     return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_F_XU_W_M1_MASK);
   case RISCV::PseudoVFNCVT_RM_F_XU_W_M2_MASK:
@@ -11684,6 +11809,18 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_F_XU_W_MF2_MASK);
   case RISCV::PseudoVFNCVT_RM_F_XU_W_MF4_MASK:
     return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_F_XU_W_MF4_MASK);
+
+  case RISCV::PseudoVFNCVT_RM_F_X_W_M1_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_F_XU_W_M1_MASK);
+  case RISCV::PseudoVFNCVT_RM_F_X_W_M2_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_F_XU_W_M2_MASK);
+  case RISCV::PseudoVFNCVT_RM_F_X_W_M4_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_F_XU_W_M4_MASK);
+  case RISCV::PseudoVFNCVT_RM_F_X_W_MF2_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_F_XU_W_MF2_MASK);
+  case RISCV::PseudoVFNCVT_RM_F_X_W_MF4_MASK:
+    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_F_XU_W_MF4_MASK);
+
   case RISCV::PseudoVFROUND_NOEXCEPT_V_M1_MASK:
     return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_M1_MASK,
                                      RISCV::PseudoVFCVT_F_X_V_M1_MASK);
@@ -13283,6 +13420,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(SINT_TO_FP_VL)
   NODE_NAME_CASE(UINT_TO_FP_VL)
   NODE_NAME_CASE(VFCVT_RM_F_XU_VL)
+  NODE_NAME_CASE(VFCVT_RM_F_X_VL)
   NODE_NAME_CASE(FP_EXTEND_VL)
   NODE_NAME_CASE(FP_ROUND_VL)
   NODE_NAME_CASE(VWMUL_VL)
@@ -13631,7 +13769,9 @@ RISCVTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   // atomicrmw {fadd,fsub} must be expanded to use compare-exchange, as floating
   // point operations can't be used in an lr/sc sequence without breaking the
   // forward-progress guarantee.
-  if (AI->isFloatingPointOperation())
+  if (AI->isFloatingPointOperation() ||
+      AI->getOperation() == AtomicRMWInst::UIncWrap ||
+      AI->getOperation() == AtomicRMWInst::UDecWrap)
     return AtomicExpansionKind::CmpXChg;
 
   // Don't expand forced atomics, we want to have __sync libcalls instead.
