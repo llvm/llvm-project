@@ -11,7 +11,7 @@
 // CHECK-NEXT:    ret void
 //
 void vwrite_csr_vstart(unsigned long value) {
-  vwrite_csr(RVV_VSTART, value);
+  __riscv_vwrite_csr(RVV_VSTART, value);
 }
 
 // CHECK-LABEL: @vwrite_csr_vxsat(
@@ -20,7 +20,7 @@ void vwrite_csr_vstart(unsigned long value) {
 // CHECK-NEXT:    ret void
 //
 void vwrite_csr_vxsat(unsigned long value) {
-  vwrite_csr(RVV_VXSAT, value);
+  __riscv_vwrite_csr(RVV_VXSAT, value);
 }
 
 // CHECK-LABEL: @vwrite_csr_vxrm(
@@ -29,7 +29,7 @@ void vwrite_csr_vxsat(unsigned long value) {
 // CHECK-NEXT:    ret void
 //
 void vwrite_csr_vxrm(unsigned long value) {
-  vwrite_csr(RVV_VXRM, value);
+  __riscv_vwrite_csr(RVV_VXRM, value);
 }
 
 // CHECK-LABEL: @vwrite_csr_vcsr(
@@ -38,5 +38,5 @@ void vwrite_csr_vxrm(unsigned long value) {
 // CHECK-NEXT:    ret void
 //
 void vwrite_csr_vcsr(unsigned long value) {
-  vwrite_csr(RVV_VCSR, value);
+  __riscv_vwrite_csr(RVV_VCSR, value);
 }
