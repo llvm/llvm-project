@@ -17,7 +17,6 @@
 #include "flang/Common/static-multimap-view.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/Runtime.h"
-#include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
@@ -5307,24 +5306,6 @@ Fortran::lower::ArgLoweringRule Fortran::lower::lowerIntrinsicArgumentAs(
 // Public intrinsic call helpers
 //===----------------------------------------------------------------------===//
 
-fir::ExtendedValue
-Fortran::lower::genIntrinsicCall(fir::FirOpBuilder &builder, mlir::Location loc,
-                                 llvm::StringRef name,
-                                 std::optional<mlir::Type> resultType,
-                                 llvm::ArrayRef<fir::ExtendedValue> args,
-                                 Fortran::lower::StatementContext &stmtCtx) {
-  auto [result, mustBeFreed] =
-      IntrinsicLibrary{builder, loc}.genIntrinsicCall(name, resultType, args);
-  if (mustBeFreed) {
-    mlir::Value addr = fir::getBase(result);
-    if (auto *box = result.getBoxOf<fir::BoxValue>())
-      addr =
-          builder.create<fir::BoxAddrOp>(loc, box->getMemTy(), box->getAddr());
-    fir::FirOpBuilder *bldr = &builder;
-    stmtCtx.attachCleanup([=]() { bldr->create<fir::FreeMemOp>(loc, addr); });
-  }
-  return result;
-}
 std::pair<fir::ExtendedValue, bool>
 Fortran::lower::genIntrinsicCall(fir::FirOpBuilder &builder, mlir::Location loc,
                                  llvm::StringRef name,

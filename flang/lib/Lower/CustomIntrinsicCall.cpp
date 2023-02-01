@@ -15,6 +15,7 @@
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Lower/IntrinsicCall.h"
+#include "flang/Lower/StatementContext.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include <optional>
 
@@ -63,6 +64,28 @@ bool Fortran::lower::intrinsicRequiresCustomOptionalHandling(
          isIshftcWithDynamicallyOptionalArg(name, procRef, fldCtx);
 }
 
+/// Generate the FIR+MLIR operations for the generic intrinsic \p name
+/// with arguments \p args and the expected result type \p resultType.
+/// Returned fir::ExtendedValue is the returned Fortran intrinsic value.
+fir::ExtendedValue
+Fortran::lower::genIntrinsicCall(fir::FirOpBuilder &builder, mlir::Location loc,
+                                 llvm::StringRef name,
+                                 std::optional<mlir::Type> resultType,
+                                 llvm::ArrayRef<fir::ExtendedValue> args,
+                                 Fortran::lower::StatementContext &stmtCtx) {
+  auto [result, mustBeFreed] =
+      Fortran::lower::genIntrinsicCall(builder, loc, name, resultType, args);
+  if (mustBeFreed) {
+    mlir::Value addr = fir::getBase(result);
+    if (auto *box = result.getBoxOf<fir::BoxValue>())
+      addr =
+          builder.create<fir::BoxAddrOp>(loc, box->getMemTy(), box->getAddr());
+    fir::FirOpBuilder *bldr = &builder;
+    stmtCtx.attachCleanup([=]() { bldr->create<fir::FreeMemOp>(loc, addr); });
+  }
+  return result;
+}
+
 static void prepareMinOrMaxArguments(
     const Fortran::evaluate::ProcedureRef &procRef,
     const Fortran::evaluate::SpecificIntrinsic &intrinsic,
@@ -108,8 +131,8 @@ lowerMinOrMax(fir::FirOpBuilder &builder, mlir::Location loc,
   llvm::SmallVector<fir::ExtendedValue> args;
   args.push_back(getOperand(0));
   args.push_back(getOperand(1));
-  mlir::Value extremum = fir::getBase(Fortran::lower::genIntrinsicCall(
-      builder, loc, name, resultType, args, stmtCtx));
+  mlir::Value extremum = fir::getBase(
+      genIntrinsicCall(builder, loc, name, resultType, args, stmtCtx));
 
   for (std::size_t opIndex = 2; opIndex < numOperands; ++opIndex) {
     if (std::optional<mlir::Value> isPresentRuntimeCheck =
@@ -123,9 +146,8 @@ lowerMinOrMax(fir::FirOpBuilder &builder, mlir::Location loc,
                 llvm::SmallVector<fir::ExtendedValue> args;
                 args.emplace_back(extremum);
                 args.emplace_back(getOperand(opIndex));
-                fir::ExtendedValue newExtremum =
-                    Fortran::lower::genIntrinsicCall(builder, loc, name,
-                                                     resultType, args, stmtCtx);
+                fir::ExtendedValue newExtremum = genIntrinsicCall(
+                    builder, loc, name, resultType, args, stmtCtx);
                 builder.create<fir::ResultOp>(loc, fir::getBase(newExtremum));
               })
               .genElse([&]() { builder.create<fir::ResultOp>(loc, extremum); })
@@ -135,8 +157,8 @@ lowerMinOrMax(fir::FirOpBuilder &builder, mlir::Location loc,
       llvm::SmallVector<fir::ExtendedValue> args;
       args.emplace_back(extremum);
       args.emplace_back(getOperand(opIndex));
-      extremum = fir::getBase(Fortran::lower::genIntrinsicCall(
-          builder, loc, name, resultType, args, stmtCtx));
+      extremum = fir::getBase(
+          genIntrinsicCall(builder, loc, name, resultType, args, stmtCtx));
     }
   }
   return extremum;
@@ -198,8 +220,7 @@ lowerIshftc(fir::FirOpBuilder &builder, mlir::Location loc,
                        builder.create<fir::ResultOp>(loc, bitSize);
                      })
                      .getResults()[0]);
-  return Fortran::lower::genIntrinsicCall(builder, loc, name, resultType, args,
-                                          stmtCtx);
+  return genIntrinsicCall(builder, loc, name, resultType, args, stmtCtx);
 }
 
 void Fortran::lower::prepareCustomIntrinsicArgument(
