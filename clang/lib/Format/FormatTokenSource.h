@@ -52,6 +52,71 @@ public:
   virtual FormatToken *setPosition(unsigned Position) = 0;
 };
 
+class IndexedTokenSource : public FormatTokenSource {
+public:
+  IndexedTokenSource(ArrayRef<FormatToken *> Tokens)
+      : Tokens(Tokens), Position(-1) {}
+
+  FormatToken *getNextToken() override {
+    if (Position >= 0 && isEOF()) {
+      LLVM_DEBUG({
+        llvm::dbgs() << "Next ";
+        dbgToken(Position);
+      });
+      return Tokens[Position];
+    }
+    ++Position;
+    LLVM_DEBUG({
+      llvm::dbgs() << "Next ";
+      dbgToken(Position);
+    });
+    return Tokens[Position];
+  }
+
+  FormatToken *getPreviousToken() override {
+    return Position > 0 ? Tokens[Position - 1] : nullptr;
+  }
+
+  FormatToken *peekNextToken(bool SkipComment) override {
+    int Next = Position + 1;
+    if (SkipComment)
+      while (Tokens[Next]->is(tok::comment))
+        ++Next;
+    LLVM_DEBUG({
+      llvm::dbgs() << "Peeking ";
+      dbgToken(Next);
+    });
+    return Tokens[Next];
+  }
+
+  bool isEOF() override { return Tokens[Position]->is(tok::eof); }
+
+  unsigned getPosition() override {
+    LLVM_DEBUG(llvm::dbgs() << "Getting Position: " << Position << "\n");
+    assert(Position >= 0);
+    return Position;
+  }
+
+  FormatToken *setPosition(unsigned P) override {
+    LLVM_DEBUG(llvm::dbgs() << "Setting Position: " << P << "\n");
+    Position = P;
+    return Tokens[Position];
+  }
+
+  void reset() { Position = -1; }
+
+private:
+  void dbgToken(int Position, llvm::StringRef Indent = "") {
+    FormatToken *Tok = Tokens[Position];
+    llvm::dbgs() << Indent << "[" << Position
+                 << "] Token: " << Tok->Tok.getName() << " / " << Tok->TokenText
+                 << ", Macro: " << !!Tok->MacroCtx << "\n";
+  }
+
+  ArrayRef<FormatToken *> Tokens;
+  int Position;
+};
+
 class ScopedMacroState : public FormatTokenSource {
 public:
   ScopedMacroState(UnwrappedLine &Line, FormatTokenSource *&TokenSource,
