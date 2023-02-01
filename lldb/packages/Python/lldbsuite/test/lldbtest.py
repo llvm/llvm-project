@@ -247,7 +247,7 @@ def which(program):
 
 class ValueCheck:
     def __init__(self, name=None, value=None, type=None, summary=None,
-                 children=None):
+                 children=None, dereference=None):
         """
         :param name: The name that the SBValue should have. None if the summary
                      should not be checked.
@@ -262,12 +262,15 @@ class ValueCheck:
                          The order of checks is the order of the checks in the
                          list. The number of checks has to match the number of
                          children.
+        :param dereference: A ValueCheck for the SBValue returned by the
+                            `Dereference` function.
         """
         self.expect_name = name
         self.expect_value = value
         self.expect_type = type
         self.expect_summary = summary
         self.children = children
+        self.dereference = dereference
 
     def check_value(self, test_base, val, error_msg=None):
         """
@@ -308,6 +311,9 @@ class ValueCheck:
                                       this_error_msg)
         if self.children is not None:
             self.check_value_children(test_base, val, error_msg)
+
+        if self.dereference is not None:
+            self.dereference.check_value(test_base, val.Dereference(), error_msg)
 
     def check_value_children(self, test_base, val, error_msg=None):
         """
