@@ -1307,4 +1307,78 @@ define ptr @gep_of_gep_multiuse_var_and_var(ptr %p, i64 %idx, i64 %idx2) {
   ret ptr %gep2
 }
 
+@g_i32_di = global i32 0
+@g_i32_e = external global i32
+@g_i32_ew = extern_weak global i32
+
+define ptr @const_gep_global_di_i8_smaller() {
+; CHECK-LABEL: @const_gep_global_di_i8_smaller(
+; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @g_i32_di, i64 3)
+;
+  ret ptr getelementptr (i8, ptr @g_i32_di, i64 3)
+}
+
+define ptr @const_gep_global_di_i8_exact() {
+; CHECK-LABEL: @const_gep_global_di_i8_exact(
+; CHECK-NEXT:    ret ptr getelementptr inbounds (i32, ptr @g_i32_di, i64 1)
+;
+  ret ptr getelementptr (i8, ptr @g_i32_di, i64 4)
+}
+
+define ptr @const_gep_global_di_i8_larger() {
+; CHECK-LABEL: @const_gep_global_di_i8_larger(
+; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @g_i32_di, i64 5)
+;
+  ret ptr getelementptr (i8, ptr @g_i32_di, i64 5)
+}
+
+define ptr @const_gep_global_di_i64_larger() {
+; CHECK-LABEL: @const_gep_global_di_i64_larger(
+; CHECK-NEXT:    ret ptr getelementptr inbounds (i32, ptr @g_i32_di, i64 2)
+;
+  ret ptr getelementptr (i64, ptr @g_i32_di, i64 1)
+}
+
+define ptr @const_gep_global_e_smaller() {
+; CHECK-LABEL: @const_gep_global_e_smaller(
+; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @g_i32_e, i64 3)
+;
+  ret ptr getelementptr (i8, ptr @g_i32_e, i64 3)
+}
+
+define ptr @const_gep_global_e_exact() {
+; CHECK-LABEL: @const_gep_global_e_exact(
+; CHECK-NEXT:    ret ptr getelementptr inbounds (i32, ptr @g_i32_e, i64 1)
+;
+  ret ptr getelementptr (i8, ptr @g_i32_e, i64 4)
+}
+
+define ptr @const_gep_global_e_larger() {
+; CHECK-LABEL: @const_gep_global_e_larger(
+; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @g_i32_e, i64 5)
+;
+  ret ptr getelementptr (i8, ptr @g_i32_e, i64 5)
+}
+
+define ptr @const_gep_global_ew_smaller() {
+; CHECK-LABEL: @const_gep_global_ew_smaller(
+; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @g_i32_ew, i64 3)
+;
+  ret ptr getelementptr (i8, ptr @g_i32_ew, i64 3)
+}
+
+define ptr @const_gep_global_ew_exact() {
+; CHECK-LABEL: @const_gep_global_ew_exact(
+; CHECK-NEXT:    ret ptr getelementptr (i32, ptr @g_i32_ew, i64 1)
+;
+  ret ptr getelementptr (i8, ptr @g_i32_ew, i64 4)
+}
+
+define ptr @const_gep_global_ew_larger() {
+; CHECK-LABEL: @const_gep_global_ew_larger(
+; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @g_i32_ew, i64 5)
+;
+  ret ptr getelementptr (i8, ptr @g_i32_ew, i64 5)
+}
+
 !0 = !{!"branch_weights", i32 2, i32 10}

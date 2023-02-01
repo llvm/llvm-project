@@ -578,6 +578,27 @@ ToolChain::path_list ToolChain::getRuntimePaths() const {
 
   addPathForTriple(getTriple());
 
+  // When building with per target runtime directories, various ways of naming
+  // the Arm architecture may have been normalised to simply "arm".
+  // For example "armv8l" (Armv8 AArch32 little endian) is replaced with "arm".
+  // Since an armv8l system can use libraries built for earlier architecture
+  // versions assuming endian and float ABI match.
+  //
+  // Original triple: armv8l-unknown-linux-gnueabihf
+  //  Runtime triple: arm-unknown-linux-gnueabihf
+  //
+  // We do not do this for armeb (big endian) because doing so could make us
+  // select little endian libraries. In addition, all known armeb triples only
+  // use the "armeb" architecture name.
+  //
+  // M profile Arm is bare metal and we know they will not be using the per
+  // target runtime directory layout.
+  if (getTriple().getArch() == Triple::arm && !getTriple().isArmMClass()) {
+    llvm::Triple ArmTriple = getTriple();
+    ArmTriple.setArch(Triple::arm);
+    addPathForTriple(ArmTriple);
+  }
+
   // Android targets may include an API level at the end. We still want to fall
   // back on a path without the API level.
   if (getTriple().isAndroid() &&
