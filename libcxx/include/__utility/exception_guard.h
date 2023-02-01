@@ -89,7 +89,7 @@ private:
 };
 #else  // _LIBCPP_NO_EXCEPTIONS
 template <class _Rollback>
-struct __exception_guard {
+struct [[gnu::abi_tag("-fno-exceptions")]] __exception_guard {
   __exception_guard() = delete;
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NODEBUG explicit __exception_guard(_Rollback) {}
 
