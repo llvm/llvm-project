@@ -16,7 +16,7 @@
 // CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP1]]
 //
 vfloat64m1_t test_vle64ff_v_f64m1(const double *base, size_t *new_vl, size_t vl) {
-  return __riscv_vle64ff_v_f64m1(base, new_vl, vl);
+  return vle64ff_v_f64m1(base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64ff_v_f64m2(
@@ -28,7 +28,7 @@ vfloat64m1_t test_vle64ff_v_f64m1(const double *base, size_t *new_vl, size_t vl)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 vfloat64m2_t test_vle64ff_v_f64m2(const double *base, size_t *new_vl, size_t vl) {
-  return __riscv_vle64ff_v_f64m2(base, new_vl, vl);
+  return vle64ff_v_f64m2(base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64ff_v_f64m4(
@@ -40,7 +40,7 @@ vfloat64m2_t test_vle64ff_v_f64m2(const double *base, size_t *new_vl, size_t vl)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x double> [[TMP1]]
 //
 vfloat64m4_t test_vle64ff_v_f64m4(const double *base, size_t *new_vl, size_t vl) {
-  return __riscv_vle64ff_v_f64m4(base, new_vl, vl);
+  return vle64ff_v_f64m4(base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64ff_v_f64m8(
@@ -52,7 +52,7 @@ vfloat64m4_t test_vle64ff_v_f64m4(const double *base, size_t *new_vl, size_t vl)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x double> [[TMP1]]
 //
 vfloat64m8_t test_vle64ff_v_f64m8(const double *base, size_t *new_vl, size_t vl) {
-  return __riscv_vle64ff_v_f64m8(base, new_vl, vl);
+  return vle64ff_v_f64m8(base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64ff_v_i64m1(
@@ -64,7 +64,7 @@ vfloat64m8_t test_vle64ff_v_f64m8(const double *base, size_t *new_vl, size_t vl)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 vint64m1_t test_vle64ff_v_i64m1(const int64_t *base, size_t *new_vl, size_t vl) {
-  return __riscv_vle64ff_v_i64m1(base, new_vl, vl);
+  return vle64ff_v_i64m1(base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64ff_v_i64m2(
@@ -76,7 +76,7 @@ vint64m1_t test_vle64ff_v_i64m1(const int64_t *base, size_t *new_vl, size_t vl) 
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 vint64m2_t test_vle64ff_v_i64m2(const int64_t *base, size_t *new_vl, size_t vl) {
-  return __riscv_vle64ff_v_i64m2(base, new_vl, vl);
+  return vle64ff_v_i64m2(base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64ff_v_i64m4(
@@ -88,7 +88,7 @@ vint64m2_t test_vle64ff_v_i64m2(const int64_t *base, size_t *new_vl, size_t vl) 
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 vint64m4_t test_vle64ff_v_i64m4(const int64_t *base, size_t *new_vl, size_t vl) {
-  return __riscv_vle64ff_v_i64m4(base, new_vl, vl);
+  return vle64ff_v_i64m4(base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64ff_v_i64m8(
@@ -100,7 +100,7 @@ vint64m4_t test_vle64ff_v_i64m4(const int64_t *base, size_t *new_vl, size_t vl) 
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 vint64m8_t test_vle64ff_v_i64m8(const int64_t *base, size_t *new_vl, size_t vl) {
-  return __riscv_vle64ff_v_i64m8(base, new_vl, vl);
+  return vle64ff_v_i64m8(base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64ff_v_u64m1(
@@ -112,7 +112,7 @@ vint64m8_t test_vle64ff_v_i64m8(const int64_t *base, size_t *new_vl, size_t vl) 
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 vuint64m1_t test_vle64ff_v_u64m1(const uint64_t *base, size_t *new_vl, size_t vl) {
-  return __riscv_vle64ff_v_u64m1(base, new_vl, vl);
+  return vle64ff_v_u64m1(base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64ff_v_u64m2(
@@ -124,7 +124,7 @@ vuint64m1_t test_vle64ff_v_u64m1(const uint64_t *base, size_t *new_vl, size_t vl
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 vuint64m2_t test_vle64ff_v_u64m2(const uint64_t *base, size_t *new_vl, size_t vl) {
-  return __riscv_vle64ff_v_u64m2(base, new_vl, vl);
+  return vle64ff_v_u64m2(base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64ff_v_u64m4(
@@ -136,7 +136,7 @@ vuint64m2_t test_vle64ff_v_u64m2(const uint64_t *base, size_t *new_vl, size_t vl
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 vuint64m4_t test_vle64ff_v_u64m4(const uint64_t *base, size_t *new_vl, size_t vl) {
-  return __riscv_vle64ff_v_u64m4(base, new_vl, vl);
+  return vle64ff_v_u64m4(base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64ff_v_u64m8(
@@ -148,7 +148,7 @@ vuint64m4_t test_vle64ff_v_u64m4(const uint64_t *base, size_t *new_vl, size_t vl
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 vuint64m8_t test_vle64ff_v_u64m8(const uint64_t *base, size_t *new_vl, size_t vl) {
-  return __riscv_vle64ff_v_u64m8(base, new_vl, vl);
+  return vle64ff_v_u64m8(base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64ff_v_f64m1_m(
@@ -160,7 +160,7 @@ vuint64m8_t test_vle64ff_v_u64m8(const uint64_t *base, size_t *new_vl, size_t vl
 // CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP1]]
 //
 vfloat64m1_t test_vle64ff_v_f64m1_m(vbool64_t mask, const double *base, size_t *new_vl, size_t vl) {
-  return __riscv_vle64ff_v_f64m1_m(mask, base, new_vl, vl);
+  return vle64ff_v_f64m1_m(mask, base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64ff_v_f64m2_m(
@@ -172,7 +172,7 @@ vfloat64m1_t test_vle64ff_v_f64m1_m(vbool64_t mask, const double *base, size_t *
 // CHECK-RV64-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 vfloat64m2_t test_vle64ff_v_f64m2_m(vbool32_t mask, const double *base, size_t *new_vl, size_t vl) {
-  return __riscv_vle64ff_v_f64m2_m(mask, base, new_vl, vl);
+  return vle64ff_v_f64m2_m(mask, base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64ff_v_f64m4_m(
@@ -184,7 +184,7 @@ vfloat64m2_t test_vle64ff_v_f64m2_m(vbool32_t mask, const double *base, size_t *
 // CHECK-RV64-NEXT:    ret <vscale x 4 x double> [[TMP1]]
 //
 vfloat64m4_t test_vle64ff_v_f64m4_m(vbool16_t mask, const double *base, size_t *new_vl, size_t vl) {
-  return __riscv_vle64ff_v_f64m4_m(mask, base, new_vl, vl);
+  return vle64ff_v_f64m4_m(mask, base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64ff_v_f64m8_m(
@@ -196,7 +196,7 @@ vfloat64m4_t test_vle64ff_v_f64m4_m(vbool16_t mask, const double *base, size_t *
 // CHECK-RV64-NEXT:    ret <vscale x 8 x double> [[TMP1]]
 //
 vfloat64m8_t test_vle64ff_v_f64m8_m(vbool8_t mask, const double *base, size_t *new_vl, size_t vl) {
-  return __riscv_vle64ff_v_f64m8_m(mask, base, new_vl, vl);
+  return vle64ff_v_f64m8_m(mask, base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64ff_v_i64m1_m(
@@ -208,7 +208,7 @@ vfloat64m8_t test_vle64ff_v_f64m8_m(vbool8_t mask, const double *base, size_t *n
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 vint64m1_t test_vle64ff_v_i64m1_m(vbool64_t mask, const int64_t *base, size_t *new_vl, size_t vl) {
-  return __riscv_vle64ff_v_i64m1_m(mask, base, new_vl, vl);
+  return vle64ff_v_i64m1_m(mask, base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64ff_v_i64m2_m(
@@ -220,7 +220,7 @@ vint64m1_t test_vle64ff_v_i64m1_m(vbool64_t mask, const int64_t *base, size_t *n
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 vint64m2_t test_vle64ff_v_i64m2_m(vbool32_t mask, const int64_t *base, size_t *new_vl, size_t vl) {
-  return __riscv_vle64ff_v_i64m2_m(mask, base, new_vl, vl);
+  return vle64ff_v_i64m2_m(mask, base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64ff_v_i64m4_m(
@@ -232,7 +232,7 @@ vint64m2_t test_vle64ff_v_i64m2_m(vbool32_t mask, const int64_t *base, size_t *n
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 vint64m4_t test_vle64ff_v_i64m4_m(vbool16_t mask, const int64_t *base, size_t *new_vl, size_t vl) {
-  return __riscv_vle64ff_v_i64m4_m(mask, base, new_vl, vl);
+  return vle64ff_v_i64m4_m(mask, base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64ff_v_i64m8_m(
@@ -244,7 +244,7 @@ vint64m4_t test_vle64ff_v_i64m4_m(vbool16_t mask, const int64_t *base, size_t *n
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 vint64m8_t test_vle64ff_v_i64m8_m(vbool8_t mask, const int64_t *base, size_t *new_vl, size_t vl) {
-  return __riscv_vle64ff_v_i64m8_m(mask, base, new_vl, vl);
+  return vle64ff_v_i64m8_m(mask, base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64ff_v_u64m1_m(
@@ -256,7 +256,7 @@ vint64m8_t test_vle64ff_v_i64m8_m(vbool8_t mask, const int64_t *base, size_t *ne
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 vuint64m1_t test_vle64ff_v_u64m1_m(vbool64_t mask, const uint64_t *base, size_t *new_vl, size_t vl) {
-  return __riscv_vle64ff_v_u64m1_m(mask, base, new_vl, vl);
+  return vle64ff_v_u64m1_m(mask, base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64ff_v_u64m2_m(
@@ -268,7 +268,7 @@ vuint64m1_t test_vle64ff_v_u64m1_m(vbool64_t mask, const uint64_t *base, size_t 
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 vuint64m2_t test_vle64ff_v_u64m2_m(vbool32_t mask, const uint64_t *base, size_t *new_vl, size_t vl) {
-  return __riscv_vle64ff_v_u64m2_m(mask, base, new_vl, vl);
+  return vle64ff_v_u64m2_m(mask, base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64ff_v_u64m4_m(
@@ -280,7 +280,7 @@ vuint64m2_t test_vle64ff_v_u64m2_m(vbool32_t mask, const uint64_t *base, size_t 
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 vuint64m4_t test_vle64ff_v_u64m4_m(vbool16_t mask, const uint64_t *base, size_t *new_vl, size_t vl) {
-  return __riscv_vle64ff_v_u64m4_m(mask, base, new_vl, vl);
+  return vle64ff_v_u64m4_m(mask, base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64ff_v_u64m8_m(
@@ -292,6 +292,6 @@ vuint64m4_t test_vle64ff_v_u64m4_m(vbool16_t mask, const uint64_t *base, size_t 
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 vuint64m8_t test_vle64ff_v_u64m8_m(vbool8_t mask, const uint64_t *base, size_t *new_vl, size_t vl) {
-  return __riscv_vle64ff_v_u64m8_m(mask, base, new_vl, vl);
+  return vle64ff_v_u64m8_m(mask, base, new_vl, vl);
 }
 
