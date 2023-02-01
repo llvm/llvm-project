@@ -157,7 +157,7 @@ graph, omitting the function bodies.  This graph can then be processed with the
 :program:`dot` tool to convert it to postscript or some other suitable format.
 
 ``-dot-post-dom``: Print postdominance tree of function to "dot" file
---------------------------------------------------------------------
+---------------------------------------------------------------------
 
 This pass, only available in ``opt``, prints the post dominator tree into a
 ``.dot`` graph.  This graph can then be processed with the :program:`dot` tool
