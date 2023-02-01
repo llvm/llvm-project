@@ -396,7 +396,7 @@ private:
     assert(!evaluationListStack.empty() && "empty evaluation list stack");
     if (!constructAndDirectiveStack.empty())
       eval.parentConstruct = constructAndDirectiveStack.back();
-    auto &entryPointList = eval.getOwningProcedure()->entryPointList;
+    lower::pft::FunctionLikeUnit *owningProcedure = eval.getOwningProcedure();
     evaluationListStack.back()->emplace_back(std::move(eval));
     lower::pft::Evaluation *p = &evaluationListStack.back()->back();
     if (p->isActionStmt() || p->isConstructStmt() || p->isEndStmt() ||
@@ -408,11 +408,14 @@ private:
         p->printIndex = 1;
       }
       lastLexicalEvaluation = p;
-      for (std::size_t entryIndex = entryPointList.size() - 1;
-           entryIndex && !entryPointList[entryIndex].second->lexicalSuccessor;
-           --entryIndex)
-        // Link to the entry's first executable statement.
-        entryPointList[entryIndex].second->lexicalSuccessor = p;
+      if (owningProcedure) {
+        auto &entryPointList = owningProcedure->entryPointList;
+        for (std::size_t entryIndex = entryPointList.size() - 1;
+             entryIndex && !entryPointList[entryIndex].second->lexicalSuccessor;
+             --entryIndex)
+          // Link to the entry's first executable statement.
+          entryPointList[entryIndex].second->lexicalSuccessor = p;
+      }
     } else if (const auto *entryStmt = p->getIf<parser::EntryStmt>()) {
       const semantics::Symbol *sym =
           std::get<parser::Name>(entryStmt->t).symbol;
@@ -420,7 +423,7 @@ private:
         sym = details->specific();
       assert(sym->has<semantics::SubprogramDetails>() &&
              "entry must be a subprogram");
-      entryPointList.push_back(std::pair{sym, p});
+      owningProcedure->entryPointList.push_back(std::pair{sym, p});
     }
     if (p->label.has_value())
       labelEvaluationMap->try_emplace(*p->label, p);
