@@ -131,7 +131,7 @@ define i32 @function_address_before_def() {
   store ptr @callee, ptr %1
   ; CHECK:  %[[INDIR:.*]] = llvm.load %[[PTR]] : !llvm.ptr -> !llvm.ptr
   %2 = load ptr, ptr %1
-  ; CHECK:  llvm.call %[[INDIR]]()
+  ; CHECK:  llvm.call %[[INDIR]]() : !llvm.ptr, () -> i32
   %3 = call i32 %2()
   ret i32 %3
 }
@@ -149,7 +149,7 @@ define i32 @function_address_after_def() {
   store ptr @callee, ptr %1
   ; CHECK:  %[[INDIR:.*]] = llvm.load %[[PTR]] : !llvm.ptr -> !llvm.ptr
   %2 = load ptr, ptr %1
-  ; CHECK:  llvm.call %[[INDIR]]()
+  ; CHECK:  llvm.call %[[INDIR]]() : !llvm.ptr, () -> i32
   %3 = call i32 %2()
   ret i32 %3
 }
