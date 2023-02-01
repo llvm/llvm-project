@@ -71,17 +71,17 @@ static LogicalResult convertIntrinsicImpl(OpBuilder &odsBuilder,
 /// dialect attributes.
 static ArrayRef<unsigned> getSupportedMetadataImpl() {
   static const SmallVector<unsigned> convertibleMetadata = {
-      llvm::LLVMContext::MD_prof, // profiling metadata
-      llvm::LLVMContext::MD_tbaa};
+      llvm::LLVMContext::MD_prof, llvm::LLVMContext::MD_tbaa,
+      llvm::LLVMContext::MD_access_group};
   return convertibleMetadata;
 }
 
-/// Attaches the given profiling metadata to the imported operation if a
-/// conversion to an MLIR profiling attribute exists and succeeds. Returns
-/// failure otherwise.
-static LogicalResult setProfilingAttrs(OpBuilder &builder, llvm::MDNode *node,
-                                       Operation *op,
-                                       LLVM::ModuleImport &moduleImport) {
+/// Converts the given profiling metadata `node` to an MLIR profiling attribute
+/// and attaches it to the imported operation if the translation succeeds.
+/// Returns failure otherwise.
+static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
+                                      Operation *op,
+                                      LLVM::ModuleImport &moduleImport) {
   // Return success for empty metadata nodes since there is nothing to import.
   if (!node->getNumOperands())
     return success();
@@ -127,11 +127,11 @@ static LogicalResult setProfilingAttrs(OpBuilder &builder, llvm::MDNode *node,
       .Default([](auto) { return failure(); });
 }
 
-/// Attaches the given TBAA metadata `node` to the imported operation.
-/// Returns success, if the metadata has been converted and the attachment
-/// succeeds, failure - otherwise.
-static LogicalResult setTBAAAttrs(const llvm::MDNode *node, Operation *op,
-                                  LLVM::ModuleImport &moduleImport) {
+/// Searches the symbol reference pointing to the metadata operation that
+/// maps to the given TBAA metadata `node` and attaches it to the imported
+/// operation if the lookup succeeds. Returns failure otherwise.
+static LogicalResult setTBAAAttr(const llvm::MDNode *node, Operation *op,
+                                 LLVM::ModuleImport &moduleImport) {
   SymbolRefAttr tbaaTagSym = moduleImport.lookupTBAAAttr(node);
   if (!tbaaTagSym)
     return failure();
@@ -141,6 +141,28 @@ static LogicalResult setTBAAAttrs(const llvm::MDNode *node, Operation *op,
   return success();
 }
 
+/// Searches the symbol references pointing to the access group operations that
+/// map to the access group nodes starting from the access group metadata
+/// `node`, and attaches all of them to the imported operation if the lookups
+/// succeed. Returns failure otherwise.
+static LogicalResult setAccessGroupAttr(const llvm::MDNode *node, Operation *op,
+                                        LLVM::ModuleImport &moduleImport) {
+  // An access group node is either access group or an access group list.
+  SmallVector<Attribute> accessGroups;
+  if (!node->getNumOperands())
+    accessGroups.push_back(moduleImport.lookupAccessGroupAttr(node));
+  for (const llvm::MDOperand &operand : node->operands()) {
+    auto *node = cast<llvm::MDNode>(operand.get());
+    accessGroups.push_back(moduleImport.lookupAccessGroupAttr(node));
+  }
+  // Exit if one of the access group node lookups failed.
+  if (llvm::is_contained(accessGroups, nullptr))
+    return failure();
+
+  op->setAttr(LLVMDialect::getAccessGroupsAttrName(),
+              ArrayAttr::get(op->getContext(), accessGroups));
+  return success();
+}
 namespace {
 
 /// Implementation of the dialect interface that converts operations belonging
@@ -164,9 +186,11 @@ public:
                                  LLVM::ModuleImport &moduleImport) const final {
     // Call metadata specific handlers.
     if (kind == llvm::LLVMContext::MD_prof)
-      return setProfilingAttrs(builder, node, op, moduleImport);
+      return setProfilingAttr(builder, node, op, moduleImport);
     if (kind == llvm::LLVMContext::MD_tbaa)
-      return setTBAAAttrs(node, op, moduleImport);
+      return setTBAAAttr(node, op, moduleImport);
+    if (kind == llvm::LLVMContext::MD_access_group)
+      return setAccessGroupAttr(node, op, moduleImport);
 
     // A handler for a supported metadata kind is missing.
     llvm_unreachable("unknown metadata type");
