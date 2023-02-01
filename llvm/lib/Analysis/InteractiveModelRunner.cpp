@@ -13,6 +13,7 @@
 #include "llvm/Analysis/TensorSpec.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -34,42 +35,51 @@ InteractiveModelRunner::InteractiveModelRunner(
     LLVMContext &Ctx, const std::vector<TensorSpec> &Inputs,
     const TensorSpec &Advice, StringRef OutboundName, StringRef InboundName)
     : MLModelRunner(Ctx, MLModelRunner::Kind::Interactive, Inputs.size()),
-      InputSpecs(Inputs), OutputSpec(Advice), Inbound(InboundName, InEC),
-      OutputBuffer(OutputSpec.getTotalTensorBufferSize()),
-      Log(std::make_unique<raw_fd_ostream>(OutboundName, OutEC), InputSpecs,
-          Advice, /*IncludeReward=*/false, Advice) {
+      InputSpecs(Inputs), OutputSpec(Advice),
+      InEC(sys::fs::openFileForRead(InboundName, Inbound)),
+      OutputBuffer(OutputSpec.getTotalTensorBufferSize()) {
   if (InEC) {
     Ctx.emitError("Cannot open inbound file: " + InEC.message());
     return;
   }
-  if (OutEC) {
-    Ctx.emitError("Cannot open outbound file: " + OutEC.message());
-    return;
+  {
+    auto OutStream = std::make_unique<raw_fd_ostream>(OutboundName, OutEC);
+    if (OutEC) {
+      Ctx.emitError("Cannot open outbound file: " + OutEC.message());
+      return;
+    }
+    Log = std::make_unique<Logger>(std::move(OutStream), InputSpecs, Advice,
+                                   /*IncludeReward=*/false, Advice);
   }
   // Just like in the no inference case, this will allocate an appropriately
   // sized buffer.
   for (size_t I = 0; I < InputSpecs.size(); ++I)
     setUpBufferForTensor(I, InputSpecs[I], nullptr);
-  Log.flush();
+  Log->flush();
+}
+
+InteractiveModelRunner::~InteractiveModelRunner() {
+  sys::fs::closeFile(Inbound);
 }
 
 void *InteractiveModelRunner::evaluateUntyped() {
-  Log.startObservation();
+  Log->startObservation();
   for (size_t I = 0; I < InputSpecs.size(); ++I)
-    Log.logTensorValue(I, reinterpret_cast<const char *>(getTensorUntyped(I)));
-  Log.endObservation();
-  Log.flush();
+    Log->logTensorValue(I, reinterpret_cast<const char *>(getTensorUntyped(I)));
+  Log->endObservation();
+  Log->flush();
 
   size_t InsPoint = 0;
   char *Buff = OutputBuffer.data();
   const size_t Limit = OutputBuffer.size();
   while (InsPoint < Limit) {
-    auto Read = Inbound.read(Buff + InsPoint, OutputBuffer.size() - InsPoint);
-    if (Read < 0) {
+    auto ReadOrErr = ::sys::fs::readNativeFile(
+        Inbound, {Buff + InsPoint, OutputBuffer.size() - InsPoint});
+    if (ReadOrErr.takeError()) {
       Ctx.emitError("Failed reading from inbound file");
       break;
     }
-    InsPoint += Read;
+    InsPoint += *ReadOrErr;
   }
   if (DebugReply != TensorType::Invalid)
     dbgs() << tensorValueToString(OutputBuffer.data(), OutputSpec);

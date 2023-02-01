@@ -14,6 +14,7 @@
 #include "llvm/Analysis/TensorSpec.h"
 #include "llvm/Analysis/Utils/TrainingLogger.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <system_error>
 
@@ -32,6 +33,11 @@ namespace llvm {
 /// Note that the correctness of the received data is the responsibility of the
 /// host. In particular, if insufficient data were sent, the compiler will block
 /// when waiting for an advice.
+///
+/// Note that the host can either open the pipes RW, or open first the pipe to
+/// the compiler - i.e. the "Inbound" - and then the "Outbound", to avoid
+/// deadlock. This is because the compiler first tries to open the inbound
+/// (which will hang until there's a writer on the other end).
 class InteractiveModelRunner : public MLModelRunner {
 public:
   InteractiveModelRunner(LLVMContext &Ctx,
@@ -43,9 +49,11 @@ public:
     return R->getKind() == MLModelRunner::Kind::Interactive;
   }
   void switchContext(StringRef Name) {
-    Log.switchContext(Name);
-    Log.flush();
+    Log->switchContext(Name);
+    Log->flush();
   }
+
+  virtual ~InteractiveModelRunner();
 
 private:
   void *evaluateUntyped() override;
@@ -53,9 +61,9 @@ private:
   const TensorSpec OutputSpec;
   std::error_code OutEC;
   std::error_code InEC;
-  raw_fd_stream Inbound;
+  sys::fs::file_t Inbound;
   std::vector<char> OutputBuffer;
-  Logger Log;
+  std::unique_ptr<Logger> Log;
 };
 } // namespace llvm
 #endif // LLVM_ANALYSIS_INTERACTIVEMODELRUNNER_H
