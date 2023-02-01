@@ -1232,17 +1232,17 @@ mlir::LogicalResult fir::EmboxProcOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// GenTypeDescOp
+// TypeDescOp
 //===----------------------------------------------------------------------===//
 
-void fir::GenTypeDescOp::build(mlir::OpBuilder &, mlir::OperationState &result,
-                               mlir::TypeAttr inty) {
+void fir::TypeDescOp::build(mlir::OpBuilder &, mlir::OperationState &result,
+                            mlir::TypeAttr inty) {
   result.addAttribute("in_type", inty);
   result.addTypes(TypeDescType::get(inty.getValue()));
 }
 
-mlir::ParseResult fir::GenTypeDescOp::parse(mlir::OpAsmParser &parser,
-                                            mlir::OperationState &result) {
+mlir::ParseResult fir::TypeDescOp::parse(mlir::OpAsmParser &parser,
+                                         mlir::OperationState &result) {
   mlir::Type intype;
   if (parser.parseType(intype))
     return mlir::failure();
@@ -1253,12 +1253,12 @@ mlir::ParseResult fir::GenTypeDescOp::parse(mlir::OpAsmParser &parser,
   return mlir::success();
 }
 
-void fir::GenTypeDescOp::print(mlir::OpAsmPrinter &p) {
+void fir::TypeDescOp::print(mlir::OpAsmPrinter &p) {
   p << ' ' << getOperation()->getAttr("in_type");
   p.printOptionalAttrDict(getOperation()->getAttrs(), {"in_type"});
 }
 
-mlir::LogicalResult fir::GenTypeDescOp::verify() {
+mlir::LogicalResult fir::TypeDescOp::verify() {
   mlir::Type resultTy = getType();
   if (auto tdesc = resultTy.dyn_cast<fir::TypeDescType>()) {
     if (tdesc.getOfTy() != getInType())

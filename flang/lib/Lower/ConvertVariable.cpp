@@ -745,7 +745,7 @@ static void deallocateIntentOut(Fortran::lower::AbstractConverter &converter,
                     if (const Fortran::semantics::DerivedTypeSpec
                             *derivedTypeSpec = sym.GetType()->AsDerived()) {
                       declaredTypeDesc = Fortran::lower::getTypeDescAddr(
-                          builder, loc, *derivedTypeSpec);
+                          converter, loc, *derivedTypeSpec);
                     }
                     genDeallocateBox(converter, *mutBox, loc, declaredTypeDesc);
                   } else {
