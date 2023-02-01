@@ -14,14 +14,18 @@
 #ifndef LLVM_TRANSFORMS_IPO_SAMPLEPROFILE_H
 #define LLVM_TRANSFORMS_IPO_SAMPLEPROFILE_H
 
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include <string>
 
 namespace llvm {
 
 class Module;
+
+namespace vfs {
+class FileSystem;
+} // namespace vfs
 
 /// The sample profiler data loader pass.
 class SampleProfileLoaderPass : public PassInfoMixin<SampleProfileLoaderPass> {
@@ -29,9 +33,7 @@ public:
   SampleProfileLoaderPass(
       std::string File = "", std::string RemappingFile = "",
       ThinOrFullLTOPhase LTOPhase = ThinOrFullLTOPhase::None,
-      IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr)
-      : ProfileFileName(File), ProfileRemappingFileName(RemappingFile),
-        LTOPhase(LTOPhase) {}
+      IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr);
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 

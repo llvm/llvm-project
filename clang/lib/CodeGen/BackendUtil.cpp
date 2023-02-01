@@ -192,7 +192,7 @@ public:
                      const LangOptions &LOpts, Module *M,
                      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS)
       : Diags(_Diags), HSOpts(HeaderSearchOpts), CodeGenOpts(CGOpts),
-        TargetOpts(TOpts), LangOpts(LOpts), TheModule(M), VFS(VFS),
+        TargetOpts(TOpts), LangOpts(LOpts), TheModule(M), VFS(std::move(VFS)),
         CodeGenerationTime("codegen", "Code Generation Time"),
         TargetTriple(TheModule->getTargetTriple()) {}
 
@@ -1201,9 +1201,8 @@ void clang::EmitBackendOutput(DiagnosticsEngine &Diags,
                               const HeaderSearchOptions &HeaderOpts,
                               const CodeGenOptions &CGOpts,
                               const clang::TargetOptions &TOpts,
-                              const LangOptions &LOpts,
-                              StringRef TDesc, Module *M,
-                              BackendAction Action,
+                              const LangOptions &LOpts, StringRef TDesc,
+                              Module *M, BackendAction Action,
                               IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                               std::unique_ptr<raw_pwrite_stream> OS) {
 

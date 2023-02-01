@@ -2153,8 +2153,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
                      Opts.OptimizationRemarkAnalysis.hasValidPattern();
 
   bool UsingSampleProfile = !Opts.SampleProfileFile.empty();
-  bool UsingProfile = UsingSampleProfile ||
-      (Opts.getProfileUse() != CodeGenOptions::ProfileNone);
+  bool UsingProfile =
+      UsingSampleProfile || !Opts.ProfileInstrumentUsePath.empty();
 
   if (Opts.DiagnosticsWithHotness && !UsingProfile &&
       // An IR file will contain PGO as metadata

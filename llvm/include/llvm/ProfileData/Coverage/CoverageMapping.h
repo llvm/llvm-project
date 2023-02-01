@@ -44,6 +44,10 @@ namespace llvm {
 
 class IndexedInstrProfReader;
 
+namespace vfs {
+class FileSystem;
+} // namespace vfs
+
 namespace coverage {
 
 class CoverageMappingReader;

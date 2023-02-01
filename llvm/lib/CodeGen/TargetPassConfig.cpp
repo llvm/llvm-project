@@ -1178,9 +1178,9 @@ void TargetPassConfig::addMachinePasses() {
         sampleprof::FSDiscriminatorPass::Pass1));
     const std::string ProfileFile = getFSProfileFile(TM);
     if (!ProfileFile.empty() && !DisableRAFSProfileLoader)
-      addPass(
-          createMIRProfileLoaderPass(ProfileFile, getFSRemappingFile(TM),
-                                     sampleprof::FSDiscriminatorPass::Pass1, nullptr));
+      addPass(createMIRProfileLoaderPass(ProfileFile, getFSRemappingFile(TM),
+                                         sampleprof::FSDiscriminatorPass::Pass1,
+                                         nullptr));
   }
 
   // Run register allocation and passes that are tightly coupled with it,
@@ -1548,9 +1548,9 @@ void TargetPassConfig::addBlockPlacement() {
         sampleprof::FSDiscriminatorPass::Pass2));
     const std::string ProfileFile = getFSProfileFile(TM);
     if (!ProfileFile.empty() && !DisableLayoutFSProfileLoader)
-      addPass(
-          createMIRProfileLoaderPass(ProfileFile, getFSRemappingFile(TM),
-                                     sampleprof::FSDiscriminatorPass::Pass2, nullptr));
+      addPass(createMIRProfileLoaderPass(ProfileFile, getFSRemappingFile(TM),
+                                         sampleprof::FSDiscriminatorPass::Pass2,
+                                         nullptr));
   }
   if (addPass(&MachineBlockPlacementID)) {
     // Run a separate pass to collect block placement statistics.
