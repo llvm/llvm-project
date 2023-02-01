@@ -9,36 +9,17 @@
 ; RUN:   | FileCheck %s -check-prefixes=RV32D-RV64D,RV64D
 
 define void @int32_float_pair(i32 %tmp1, float %tmp2, ptr %ref.tmp) {
-; RV32-LABEL: int32_float_pair:
-; RV32:       # %bb.0:
-; RV32-NEXT:    sw a1, 4(a2)
-; RV32-NEXT:    sw a0, 0(a2)
-; RV32-NEXT:    ret
+; RV32-RV64-LABEL: int32_float_pair:
+; RV32-RV64:       # %bb.0:
+; RV32-RV64-NEXT:    sw a0, 0(a2)
+; RV32-RV64-NEXT:    sw a1, 4(a2)
+; RV32-RV64-NEXT:    ret
 ;
-; RV32D-LABEL: int32_float_pair:
-; RV32D:       # %bb.0:
-; RV32D-NEXT:    fsw fa0, 4(a1)
-; RV32D-NEXT:    sw a0, 0(a1)
-; RV32D-NEXT:    ret
-;
-; RV64-LABEL: int32_float_pair:
-; RV64:       # %bb.0:
-; RV64-NEXT:    slli a1, a1, 32
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    srli a0, a0, 32
-; RV64-NEXT:    or a0, a1, a0
-; RV64-NEXT:    sd a0, 0(a2)
-; RV64-NEXT:    ret
-;
-; RV64D-LABEL: int32_float_pair:
-; RV64D:       # %bb.0:
-; RV64D-NEXT:    fmv.x.w a2, fa0
-; RV64D-NEXT:    slli a2, a2, 32
-; RV64D-NEXT:    slli a0, a0, 32
-; RV64D-NEXT:    srli a0, a0, 32
-; RV64D-NEXT:    or a0, a2, a0
-; RV64D-NEXT:    sd a0, 0(a1)
-; RV64D-NEXT:    ret
+; RV32D-RV64D-LABEL: int32_float_pair:
+; RV32D-RV64D:       # %bb.0:
+; RV32D-RV64D-NEXT:    sw a0, 0(a1)
+; RV32D-RV64D-NEXT:    fsw fa0, 4(a1)
+; RV32D-RV64D-NEXT:    ret
   %t0 = bitcast float %tmp2 to i32
   %t1 = zext i32 %t0 to i64
   %t2 = shl nuw i64 %t1, 32
@@ -49,36 +30,17 @@ define void @int32_float_pair(i32 %tmp1, float %tmp2, ptr %ref.tmp) {
 }
 
 define void @float_int32_pair(float %tmp1, i32 %tmp2, ptr %ref.tmp) {
-; RV32-LABEL: float_int32_pair:
-; RV32:       # %bb.0:
-; RV32-NEXT:    sw a1, 4(a2)
-; RV32-NEXT:    sw a0, 0(a2)
-; RV32-NEXT:    ret
+; RV32-RV64-LABEL: float_int32_pair:
+; RV32-RV64:       # %bb.0:
+; RV32-RV64-NEXT:    sw a0, 0(a2)
+; RV32-RV64-NEXT:    sw a1, 4(a2)
+; RV32-RV64-NEXT:    ret
 ;
-; RV32D-LABEL: float_int32_pair:
-; RV32D:       # %bb.0:
-; RV32D-NEXT:    sw a0, 4(a1)
-; RV32D-NEXT:    fsw fa0, 0(a1)
-; RV32D-NEXT:    ret
-;
-; RV64-LABEL: float_int32_pair:
-; RV64:       # %bb.0:
-; RV64-NEXT:    slli a1, a1, 32
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    srli a0, a0, 32
-; RV64-NEXT:    or a0, a1, a0
-; RV64-NEXT:    sd a0, 0(a2)
-; RV64-NEXT:    ret
-;
-; RV64D-LABEL: float_int32_pair:
-; RV64D:       # %bb.0:
-; RV64D-NEXT:    fmv.x.w a2, fa0
-; RV64D-NEXT:    slli a0, a0, 32
-; RV64D-NEXT:    slli a2, a2, 32
-; RV64D-NEXT:    srli a2, a2, 32
-; RV64D-NEXT:    or a0, a0, a2
-; RV64D-NEXT:    sd a0, 0(a1)
-; RV64D-NEXT:    ret
+; RV32D-RV64D-LABEL: float_int32_pair:
+; RV32D-RV64D:       # %bb.0:
+; RV32D-RV64D-NEXT:    fsw fa0, 0(a1)
+; RV32D-RV64D-NEXT:    sw a0, 4(a1)
+; RV32D-RV64D-NEXT:    ret
   %t0 = bitcast float %tmp1 to i32
   %t1 = zext i32 %tmp2 to i64
   %t2 = shl nuw i64 %t1, 32
@@ -93,35 +55,32 @@ define void @int16_float_pair(i16 signext %tmp1, float %tmp2, ptr %ref.tmp) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    slli a0, a0, 16
 ; RV32-NEXT:    srli a0, a0, 16
-; RV32-NEXT:    sw a1, 4(a2)
 ; RV32-NEXT:    sw a0, 0(a2)
+; RV32-NEXT:    sw a1, 4(a2)
 ; RV32-NEXT:    ret
 ;
 ; RV32D-LABEL: int16_float_pair:
 ; RV32D:       # %bb.0:
 ; RV32D-NEXT:    slli a0, a0, 16
 ; RV32D-NEXT:    srli a0, a0, 16
-; RV32D-NEXT:    fsw fa0, 4(a1)
 ; RV32D-NEXT:    sw a0, 0(a1)
+; RV32D-NEXT:    fsw fa0, 4(a1)
 ; RV32D-NEXT:    ret
 ;
 ; RV64-LABEL: int16_float_pair:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    slli a1, a1, 32
 ; RV64-NEXT:    slli a0, a0, 48
 ; RV64-NEXT:    srli a0, a0, 48
-; RV64-NEXT:    or a0, a1, a0
-; RV64-NEXT:    sd a0, 0(a2)
+; RV64-NEXT:    sw a0, 0(a2)
+; RV64-NEXT:    sw a1, 4(a2)
 ; RV64-NEXT:    ret
 ;
 ; RV64D-LABEL: int16_float_pair:
 ; RV64D:       # %bb.0:
-; RV64D-NEXT:    fmv.x.w a2, fa0
-; RV64D-NEXT:    slli a2, a2, 32
 ; RV64D-NEXT:    slli a0, a0, 48
 ; RV64D-NEXT:    srli a0, a0, 48
-; RV64D-NEXT:    or a0, a2, a0
-; RV64D-NEXT:    sd a0, 0(a1)
+; RV64D-NEXT:    sw a0, 0(a1)
+; RV64D-NEXT:    fsw fa0, 4(a1)
 ; RV64D-NEXT:    ret
   %t0 = bitcast float %tmp2 to i32
   %t1 = zext i32 %t0 to i64
@@ -133,36 +92,19 @@ define void @int16_float_pair(i16 signext %tmp1, float %tmp2, ptr %ref.tmp) {
 }
 
 define void @int8_float_pair(i8 signext %tmp1, float %tmp2, ptr %ref.tmp) {
-; RV32-LABEL: int8_float_pair:
-; RV32:       # %bb.0:
-; RV32-NEXT:    andi a0, a0, 255
-; RV32-NEXT:    sw a1, 4(a2)
-; RV32-NEXT:    sw a0, 0(a2)
-; RV32-NEXT:    ret
+; RV32-RV64-LABEL: int8_float_pair:
+; RV32-RV64:       # %bb.0:
+; RV32-RV64-NEXT:    andi a0, a0, 255
+; RV32-RV64-NEXT:    sw a0, 0(a2)
+; RV32-RV64-NEXT:    sw a1, 4(a2)
+; RV32-RV64-NEXT:    ret
 ;
-; RV32D-LABEL: int8_float_pair:
-; RV32D:       # %bb.0:
-; RV32D-NEXT:    andi a0, a0, 255
-; RV32D-NEXT:    fsw fa0, 4(a1)
-; RV32D-NEXT:    sw a0, 0(a1)
-; RV32D-NEXT:    ret
-;
-; RV64-LABEL: int8_float_pair:
-; RV64:       # %bb.0:
-; RV64-NEXT:    slli a1, a1, 32
-; RV64-NEXT:    andi a0, a0, 255
-; RV64-NEXT:    or a0, a1, a0
-; RV64-NEXT:    sd a0, 0(a2)
-; RV64-NEXT:    ret
-;
-; RV64D-LABEL: int8_float_pair:
-; RV64D:       # %bb.0:
-; RV64D-NEXT:    fmv.x.w a2, fa0
-; RV64D-NEXT:    slli a2, a2, 32
-; RV64D-NEXT:    andi a0, a0, 255
-; RV64D-NEXT:    or a0, a2, a0
-; RV64D-NEXT:    sd a0, 0(a1)
-; RV64D-NEXT:    ret
+; RV32D-RV64D-LABEL: int8_float_pair:
+; RV32D-RV64D:       # %bb.0:
+; RV32D-RV64D-NEXT:    andi a0, a0, 255
+; RV32D-RV64D-NEXT:    sw a0, 0(a1)
+; RV32D-RV64D-NEXT:    fsw fa0, 4(a1)
+; RV32D-RV64D-NEXT:    ret
   %t0 = bitcast float %tmp2 to i32
   %t1 = zext i32 %t0 to i64
   %t2 = shl nuw i64 %t1, 32
@@ -211,37 +153,17 @@ define void @int32_int32_pair(i32 %tmp1, i32 %tmp2, ptr %ref.tmp) {
 }
 
 define void @mbb_int32_float_pair(i32 %tmp1, float %tmp2, ptr %ref.tmp) {
-; RV32-LABEL: mbb_int32_float_pair:
-; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    sw a1, 4(a2)
-; RV32-NEXT:    sw a0, 0(a2)
-; RV32-NEXT:    ret
+; RV32-RV64-LABEL: mbb_int32_float_pair:
+; RV32-RV64:       # %bb.0: # %entry
+; RV32-RV64-NEXT:    sw a0, 0(a2)
+; RV32-RV64-NEXT:    sw a1, 4(a2)
+; RV32-RV64-NEXT:    ret
 ;
-; RV32D-LABEL: mbb_int32_float_pair:
-; RV32D:       # %bb.0: # %entry
-; RV32D-NEXT:    fmv.x.w a2, fa0
-; RV32D-NEXT:    sw a2, 4(a1)
-; RV32D-NEXT:    sw a0, 0(a1)
-; RV32D-NEXT:    ret
-;
-; RV64-LABEL: mbb_int32_float_pair:
-; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    slli a1, a1, 32
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    srli a0, a0, 32
-; RV64-NEXT:    or a0, a1, a0
-; RV64-NEXT:    sd a0, 0(a2)
-; RV64-NEXT:    ret
-;
-; RV64D-LABEL: mbb_int32_float_pair:
-; RV64D:       # %bb.0: # %entry
-; RV64D-NEXT:    fmv.x.w a2, fa0
-; RV64D-NEXT:    slli a2, a2, 32
-; RV64D-NEXT:    slli a0, a0, 32
-; RV64D-NEXT:    srli a0, a0, 32
-; RV64D-NEXT:    or a0, a2, a0
-; RV64D-NEXT:    sd a0, 0(a1)
-; RV64D-NEXT:    ret
+; RV32D-RV64D-LABEL: mbb_int32_float_pair:
+; RV32D-RV64D:       # %bb.0: # %entry
+; RV32D-RV64D-NEXT:    sw a0, 0(a1)
+; RV32D-RV64D-NEXT:    fsw fa0, 4(a1)
+; RV32D-RV64D-NEXT:    ret
 entry:
   %t0 = bitcast float %tmp2 to i32
   br label %next
@@ -255,59 +177,29 @@ next:
 }
 
 define void @mbb_int32_float_multi_stores(i32 %tmp1, float %tmp2, ptr %ref.tmp, ptr %ref.tmp1, i1 %cmp) {
-; RV32-LABEL: mbb_int32_float_multi_stores:
-; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    sw a1, 4(a2)
-; RV32-NEXT:    andi a4, a4, 1
-; RV32-NEXT:    sw a0, 0(a2)
-; RV32-NEXT:    beqz a4, .LBB6_2
-; RV32-NEXT:  # %bb.1: # %bb2
-; RV32-NEXT:    sw a0, 0(a3)
-; RV32-NEXT:    sw a1, 4(a3)
-; RV32-NEXT:  .LBB6_2: # %exitbb
-; RV32-NEXT:    ret
+; RV32-RV64-LABEL: mbb_int32_float_multi_stores:
+; RV32-RV64:       # %bb.0: # %entry
+; RV32-RV64-NEXT:    andi a4, a4, 1
+; RV32-RV64-NEXT:    sw a0, 0(a2)
+; RV32-RV64-NEXT:    sw a1, 4(a2)
+; RV32-RV64-NEXT:    beqz a4, .LBB6_2
+; RV32-RV64-NEXT:  # %bb.1: # %bb2
+; RV32-RV64-NEXT:    sw a0, 0(a3)
+; RV32-RV64-NEXT:    sw a1, 4(a3)
+; RV32-RV64-NEXT:  .LBB6_2: # %exitbb
+; RV32-RV64-NEXT:    ret
 ;
-; RV32D-LABEL: mbb_int32_float_multi_stores:
-; RV32D:       # %bb.0: # %entry
-; RV32D-NEXT:    fmv.x.w a4, fa0
-; RV32D-NEXT:    sw a4, 4(a1)
-; RV32D-NEXT:    andi a3, a3, 1
-; RV32D-NEXT:    sw a0, 0(a1)
-; RV32D-NEXT:    beqz a3, .LBB6_2
-; RV32D-NEXT:  # %bb.1: # %bb2
-; RV32D-NEXT:    sw a0, 0(a2)
-; RV32D-NEXT:    sw a4, 4(a2)
-; RV32D-NEXT:  .LBB6_2: # %exitbb
-; RV32D-NEXT:    ret
-;
-; RV64-LABEL: mbb_int32_float_multi_stores:
-; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    slli a1, a1, 32
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    srli a0, a0, 32
-; RV64-NEXT:    or a0, a1, a0
-; RV64-NEXT:    andi a4, a4, 1
-; RV64-NEXT:    sd a0, 0(a2)
-; RV64-NEXT:    beqz a4, .LBB6_2
-; RV64-NEXT:  # %bb.1: # %bb2
-; RV64-NEXT:    sd a0, 0(a3)
-; RV64-NEXT:  .LBB6_2: # %exitbb
-; RV64-NEXT:    ret
-;
-; RV64D-LABEL: mbb_int32_float_multi_stores:
-; RV64D:       # %bb.0: # %entry
-; RV64D-NEXT:    fmv.x.w a4, fa0
-; RV64D-NEXT:    slli a4, a4, 32
-; RV64D-NEXT:    slli a0, a0, 32
-; RV64D-NEXT:    srli a0, a0, 32
-; RV64D-NEXT:    or a0, a4, a0
-; RV64D-NEXT:    andi a3, a3, 1
-; RV64D-NEXT:    sd a0, 0(a1)
-; RV64D-NEXT:    beqz a3, .LBB6_2
-; RV64D-NEXT:  # %bb.1: # %bb2
-; RV64D-NEXT:    sd a0, 0(a2)
-; RV64D-NEXT:  .LBB6_2: # %exitbb
-; RV64D-NEXT:    ret
+; RV32D-RV64D-LABEL: mbb_int32_float_multi_stores:
+; RV32D-RV64D:       # %bb.0: # %entry
+; RV32D-RV64D-NEXT:    andi a3, a3, 1
+; RV32D-RV64D-NEXT:    sw a0, 0(a1)
+; RV32D-RV64D-NEXT:    fsw fa0, 4(a1)
+; RV32D-RV64D-NEXT:    beqz a3, .LBB6_2
+; RV32D-RV64D-NEXT:  # %bb.1: # %bb2
+; RV32D-RV64D-NEXT:    sw a0, 0(a2)
+; RV32D-RV64D-NEXT:    fsw fa0, 4(a2)
+; RV32D-RV64D-NEXT:  .LBB6_2: # %exitbb
+; RV32D-RV64D-NEXT:    ret
 entry:
   %t0 = bitcast float %tmp2 to i32
   br label %bb1
@@ -324,6 +216,3 @@ bb2:
 exitbb:
   ret void
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; RV32-RV64: {{.*}}
-; RV32D-RV64D: {{.*}}
