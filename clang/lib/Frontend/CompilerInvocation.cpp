@@ -877,14 +877,20 @@ static void GenerateAnalyzerArgs(AnalyzerOptions &Opts,
   AnalyzerOptions ConfigOpts;
   parseAnalyzerConfigs(ConfigOpts, nullptr);
 
-  for (const auto &C : Opts.Config) {
+  // Sort options by key to avoid relying on StringMap iteration order.
+  SmallVector<std::pair<StringRef, StringRef>, 4> SortedConfigOpts;
+  for (const auto &C : Opts.Config)
+    SortedConfigOpts.emplace_back(C.getKey(), C.getValue());
+  llvm::sort(SortedConfigOpts, llvm::less_first());
+
+  for (const auto &[Key, Value] : SortedConfigOpts) {
     // Don't generate anything that came from parseAnalyzerConfigs. It would be
     // redundant and may not be valid on the command line.
-    auto Entry = ConfigOpts.Config.find(C.getKey());
-    if (Entry != ConfigOpts.Config.end() && Entry->getValue() == C.getValue())
+    auto Entry = ConfigOpts.Config.find(Key);
+    if (Entry != ConfigOpts.Config.end() && Entry->getValue() == Value)
       continue;
 
-    GenerateArg(Args, OPT_analyzer_config, C.getKey() + "=" + C.getValue(), SA);
+    GenerateArg(Args, OPT_analyzer_config, Key + "=" + Value, SA);
   }
 
   // Nothing to generate for FullCompilerInvocation.
