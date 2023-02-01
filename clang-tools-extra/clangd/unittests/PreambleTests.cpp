@@ -288,6 +288,7 @@ TEST(PreamblePatchTest, Define) {
         #define BAR
         [[BAR]])cpp",
           R"cpp(#line 0 ".*main.cpp"
+#undef BAR
 #line 2
 #define         BAR
 )cpp",
@@ -299,6 +300,7 @@ TEST(PreamblePatchTest, Define) {
 
         [[BAR]])cpp",
           R"cpp(#line 0 ".*main.cpp"
+#undef BAR
 #line 2
 #define         BAR
 )cpp",
@@ -310,6 +312,7 @@ TEST(PreamblePatchTest, Define) {
                 BAR
         [[BAR]])cpp",
           R"cpp(#line 0 ".*main.cpp"
+#undef BAR
 #line 3
 #define         BAR
 )cpp",
@@ -342,8 +345,10 @@ TEST(PreamblePatchTest, OrderingPreserved) {
   )cpp");
 
   llvm::StringLiteral ExpectedPatch(R"cpp(#line 0 ".*main.cpp"
+#undef BAR
 #line 2
 #define     BAR\(X, Y\) X Y
+#undef BAR
 #line 3
 #define     BAR\(X\) X
 )cpp");
@@ -693,23 +698,17 @@ $foo[[#include "foo.h"]])");
   {
     Annotations Code("#define [[FOO]] 1\n");
     // Check ranges for notes.
-    Annotations NewCode(R"(#define $barxyz[[BARXYZ]] 1
+    Annotations NewCode(R"(#define BARXYZ 1
 #define $foo1[[FOO]] 1
 void foo();
 #define $foo2[[FOO]] 2)");
     auto AST = createPatchedAST(Code.code(), NewCode.code(), AdditionalFiles);
     EXPECT_THAT(
         *AST->getDiagnostics(),
-        ElementsAre(
-            // FIXME: This diagnostics shouldn't exist. It's emitted from the
-            // preamble patch to the stale location inside preamble.
-            AllOf(Field(&Diag::Name, Eq("-Wmacro-redefined")),
-                  Field(&Diag::File, HasSubstr("_preamble_patch_")),
-                  withNote(Diag(NewCode.range("barxyz")))),
-            AllOf(
-                Diag(NewCode.range("foo2"), "-Wmacro-redefined"),
-                // FIXME: This should be translated into main file.
-                withNote(Field(&Note::File, HasSubstr("_preamble_patch_"))))));
+        ElementsAre(AllOf(
+            Diag(NewCode.range("foo2"), "-Wmacro-redefined"),
+            // FIXME: This should be translated into main file.
+            withNote(Field(&Note::File, HasSubstr("_preamble_patch_"))))));
   }
 }
 
