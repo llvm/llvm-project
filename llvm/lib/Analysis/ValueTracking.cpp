@@ -16,6 +16,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -4122,6 +4123,153 @@ bool llvm::isKnownNeverNaN(const Value *V, const TargetLibraryInfo *TLI,
 
   // Was not able to prove that V never contains NaN
   return false;
+}
+
+// TODO: Merge implementations of isKnownNeverNaN, isKnownNeverInfinity,
+// CannotBeNegativeZero, cannotBeOrderedLessThanZero into here.
+void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
+                         FPClassTest InterestedClasses, KnownFPClass &Known,
+                         unsigned Depth, const Query &Q,
+                         const TargetLibraryInfo *TLI) {
+  if (!DemandedElts) {
+    // No demanded elts, better to assume we don't know anything.
+    Known.resetAll();
+    return;
+  }
+
+  assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
+
+  const APFloat *C;
+  if (match(V, m_APFloat(C))) {
+    // We know all of the classes for a scalar constant or a splat vector
+    // constant!
+    Known.KnownFPClasses = C->classify();
+    Known.SignBit = C->isNegative();
+    return;
+  }
+
+  const Operator *Op = dyn_cast<Operator>(V);
+  if (!Op)
+    return;
+
+  FPClassTest KnownNotFromFlags = fcNone;
+  if (const FPMathOperator *FPOp = dyn_cast<FPMathOperator>(Op)) {
+    if (FPOp->hasNoNaNs())
+      KnownNotFromFlags |= fcNan;
+    if (FPOp->hasNoInfs())
+      KnownNotFromFlags |= fcInf;
+
+    // We no longer need to find out about these bits from inputs if we can
+    // assume this from flags.
+    InterestedClasses &= ~KnownNotFromFlags;
+  }
+
+  auto ClearClassesFromFlags = make_scope_exit([=, &Known] {
+    Known.knownNot(KnownNotFromFlags);
+  });
+
+  // All recursive calls that increase depth must come after this.
+  if (Depth == MaxAnalysisRecursionDepth)
+    return;
+
+  switch (Op->getOpcode()) {
+  case Instruction::FNeg: {
+    computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedClasses,
+                        Known, Depth + 1, Q, TLI);
+    Known.fneg();
+    break;
+  }
+  case Instruction::Select: {
+    KnownFPClass Known2;
+    computeKnownFPClass(Op->getOperand(1), DemandedElts, InterestedClasses,
+                        Known, Depth + 1, Q, TLI);
+    computeKnownFPClass(Op->getOperand(2), DemandedElts, InterestedClasses,
+                        Known2, Depth + 1, Q, TLI);
+    Known |= Known2;
+    break;
+  }
+  case Instruction::Call: {
+    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Op)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::fabs:
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts,
+                            InterestedClasses, Known, Depth + 1, Q, TLI);
+        Known.fabs();
+        break;
+      case Intrinsic::copysign: {
+        KnownFPClass KnownSign;
+
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts,
+                            InterestedClasses, Known, Depth + 1, Q, TLI);
+        computeKnownFPClass(II->getArgOperand(1), DemandedElts,
+                            InterestedClasses, KnownSign, Depth + 1, Q, TLI);
+        Known.copysign(KnownSign);
+        break;
+      }
+      default:
+        break;
+      }
+    }
+
+    break;
+  }
+  case Instruction::SIToFP:
+  case Instruction::UIToFP: {
+    // Cannot produce nan
+    Known.knownNot(fcNan);
+    if (Op->getOpcode() == Instruction::UIToFP)
+      Known.signBitIsZero();
+
+    if (InterestedClasses & fcInf) {
+      // Get width of largest magnitude integer (remove a bit if signed).
+      // This still works for a signed minimum value because the largest FP
+      // value is scaled by some fraction close to 2.0 (1.0 + 0.xxxx).
+      int IntSize = Op->getOperand(0)->getType()->getScalarSizeInBits();
+      if (Op->getOpcode() == Instruction::SIToFP)
+        --IntSize;
+
+      // If the exponent of the largest finite FP value can hold the largest
+      // integer, the result of the cast must be finite.
+      Type *FPTy = Op->getType()->getScalarType();
+      if (ilogb(APFloat::getLargest(FPTy->getFltSemantics())) >= IntSize)
+        Known.knownNot(fcInf);
+    }
+
+    break;
+  }
+  default:
+    break;
+  }
+
+  // TODO: Handle assumes
+}
+
+KnownFPClass llvm::computeKnownFPClass(
+    const Value *V, const APInt &DemandedElts, const DataLayout &DL,
+    FPClassTest InterestedClasses, unsigned Depth, const TargetLibraryInfo *TLI,
+    AssumptionCache *AC, const Instruction *CxtI, const DominatorTree *DT,
+    OptimizationRemarkEmitter *ORE, bool UseInstrInfo) {
+  KnownFPClass KnownClasses;
+  ::computeKnownFPClass(V, DemandedElts, InterestedClasses, KnownClasses, Depth,
+                        Query(DL, AC, safeCxtI(V, CxtI), DT, UseInstrInfo, ORE),
+                        TLI);
+  return KnownClasses;
+}
+
+KnownFPClass
+llvm::computeKnownFPClass(const Value *V, const DataLayout &DL,
+                          FPClassTest InterestedClasses, unsigned Depth,
+                          const TargetLibraryInfo *TLI, AssumptionCache *AC,
+                          const Instruction *CxtI, const DominatorTree *DT,
+                          OptimizationRemarkEmitter *ORE, bool UseInstrInfo) {
+  KnownFPClass Known;
+  auto *FVTy = dyn_cast<FixedVectorType>(V->getType());
+  APInt DemandedElts =
+      FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
+  ::computeKnownFPClass(V, DemandedElts, InterestedClasses, Known, Depth,
+                        Query(DL, AC, safeCxtI(V, CxtI), DT, UseInstrInfo, ORE),
+                        TLI);
+  return Known;
 }
 
 Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
