@@ -72,7 +72,7 @@ declare ptr @bar(ptr) uwtable optsize noinline ssp
 define hidden ptr @thingWithValue(ptr %self) uwtable ssp {
 entry:
 ; CHECK-LABEL: thingWithValue:
-; CHECK: je _bar
+; CHECK: jmp _bar
   br i1 undef, label %if.then.i, label %if.else.i
 
 if.then.i:                                        ; preds = %entry
@@ -92,7 +92,7 @@ someThingWithValue.exit:                          ; preds = %if.else.i, %if.then
 declare zeroext i1 @foo_i1()
 
 ; CHECK-LABEL: zext_i1
-; CHECK: je _foo_i1
+; CHECK: jmp _foo_i1
 define zeroext i1 @zext_i1(i1 %k) {
 entry:
   br i1 %k, label %land.end, label %land.rhs
@@ -123,8 +123,10 @@ define ptr @f_ret8(ptr %obj) nounwind {
 ; CHECK-LABEL: f_ret8:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    testq %rdi, %rdi
-; CHECK-NEXT:    jne _g_ret32 ## TAILCALL
-; CHECK-NEXT:  ## %bb.1: ## %return
+; CHECK-NEXT:    je LBB3_1
+; CHECK-NEXT:  ## %bb.2: ## %if.then
+; CHECK-NEXT:    jmp _g_ret32 ## TAILCALL
+; CHECK-NEXT:  LBB3_1: ## %return
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    retq
 entry:
