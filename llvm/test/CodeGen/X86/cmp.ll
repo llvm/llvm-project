@@ -729,13 +729,16 @@ define i32 @pr42189(i16 signext %c) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpl $32767, %edi # encoding: [0x81,0xff,0xff,0x7f,0x00,0x00]
 ; CHECK-NEXT:    # imm = 0x7FFF
-; CHECK-NEXT:    jne f@PLT # TAILCALL
-; CHECK-NEXT:    # encoding: [0x75,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: f@PLT-1, kind: FK_PCRel_1
+; CHECK-NEXT:    jne .LBB45_2 # encoding: [0x75,A]
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB45_2-1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: g@PLT-1, kind: FK_PCRel_1
+; CHECK-NEXT:  .LBB45_2: # %if.end
+; CHECK-NEXT:    jmp f@PLT # TAILCALL
+; CHECK-NEXT:    # encoding: [0xeb,A]
+; CHECK-NEXT:    # fixup A - offset: 1, value: f@PLT-1, kind: FK_PCRel_1
 entry:
   %cmp = icmp eq i16 %c, 32767
   br i1 %cmp, label %if.then, label %if.end
