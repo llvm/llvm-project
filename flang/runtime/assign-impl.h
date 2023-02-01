@@ -1,4 +1,4 @@
-//===-- runtime/assign.h-----------------------------------------*- C++ -*-===//
+//===-- runtime/assign-impl.h -----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_RUNTIME_ASSIGN_INTERNAL_H_
-#define FORTRAN_RUNTIME_ASSIGN_INTERNAL_H_
+#ifndef FORTRAN_RUNTIME_ASSIGN_IMPL_H_
+#define FORTRAN_RUNTIME_ASSIGN_IMPL_H_
 
 namespace Fortran::runtime {
 class Descriptor;
@@ -20,4 +20,4 @@ class Terminator;
 void DoFromSourceAssign(Descriptor &, const Descriptor &, Terminator &);
 
 } // namespace Fortran::runtime
-#endif // FORTRAN_RUNTIME_ASSIGN_INTERNAL_H_
+#endif // FORTRAN_RUNTIME_ASSIGN_IMPL_H_
