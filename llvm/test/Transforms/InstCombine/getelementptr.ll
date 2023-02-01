@@ -1310,6 +1310,7 @@ define ptr @gep_of_gep_multiuse_var_and_var(ptr %p, i64 %idx, i64 %idx2) {
 @g_i32_di = global i32 0
 @g_i32_e = external global i32
 @g_i32_ew = extern_weak global i32
+@g_0xi8_e = external global [0 x i8]
 
 define ptr @const_gep_global_di_i8_smaller() {
 ; CHECK-LABEL: @const_gep_global_di_i8_smaller(
@@ -1379,6 +1380,13 @@ define ptr @const_gep_global_ew_larger() {
 ; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @g_i32_ew, i64 5)
 ;
   ret ptr getelementptr (i8, ptr @g_i32_ew, i64 5)
+}
+
+define ptr @const_gep_0xi8_global() {
+; CHECK-LABEL: @const_gep_0xi8_global(
+; CHECK-NEXT:    ret ptr getelementptr inbounds ([0 x i8], ptr @g_0xi8_e, i64 0, i64 10)
+;
+  ret ptr getelementptr ([0 x i8], ptr @g_0xi8_e, i64 0, i64 10)
 }
 
 !0 = !{!"branch_weights", i32 2, i32 10}
