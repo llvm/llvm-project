@@ -28,8 +28,14 @@ namespace dependencies {
 using LookupModuleOutputCallback =
     llvm::function_ref<std::string(const ModuleID &, ModuleOutputKind)>;
 
+/// Graph of modular dependencies.
+using ModuleDepsGraph = std::vector<ModuleDeps>;
+
 /// The full dependencies and module graph for a specific input.
-struct FullDependencies {
+struct TranslationUnitDeps {
+  /// The graph of direct and transitive modular dependencies.
+  ModuleDepsGraph ModuleGraph;
+
   /// The identifier of the C++20 module this translation unit exports.
   ///
   /// If the translation unit is not a module then \c ID.ModuleName is empty.
@@ -62,11 +68,6 @@ struct FullDependencies {
   std::vector<std::string> DriverCommandLine;
 };
 
-struct FullDependenciesResult {
-  FullDependencies FullDeps;
-  std::vector<ModuleDeps> DiscoveredModules;
-};
-
 /// The high-level implementation of the dependency discovery tool that runs on
 /// an individual worker thread.
 class DependencyScanningTool {
@@ -78,18 +79,15 @@ public:
 
   /// Print out the dependency information into a string using the dependency
   /// file format that is specified in the options (-MD is the default) and
-  /// return it. If \p ModuleName isn't empty, this function returns the
-  /// dependency information of module \p ModuleName.
+  /// return it.
   ///
   /// \returns A \c StringError with the diagnostic output if clang errors
   /// occurred, dependency file contents otherwise.
   llvm::Expected<std::string>
-  getDependencyFile(const std::vector<std::string> &CommandLine, StringRef CWD,
-                    std::optional<StringRef> ModuleName = std::nullopt);
+  getDependencyFile(const std::vector<std::string> &CommandLine, StringRef CWD);
 
-  /// Collect the full module dependency graph for the input, ignoring any
-  /// modules which have already been seen. If \p ModuleName isn't empty, this
-  /// function returns the full dependency information of module \p ModuleName.
+  /// Given a Clang driver command-line for a translation unit, gather the
+  /// modular dependencies and return the information needed for explicit build.
   ///
   /// \param AlreadySeen This stores modules which have previously been
   ///                    reported. Use the same instance for all calls to this
@@ -101,12 +99,21 @@ public:
   ///                           arguments for dependencies.
   ///
   /// \returns a \c StringError with the diagnostic output if clang errors
-  /// occurred, \c FullDependencies otherwise.
-  llvm::Expected<FullDependenciesResult>
-  getFullDependencies(const std::vector<std::string> &CommandLine,
-                      StringRef CWD, const llvm::StringSet<> &AlreadySeen,
-                      LookupModuleOutputCallback LookupModuleOutput,
-                      std::optional<StringRef> ModuleName = std::nullopt);
+  /// occurred, \c TranslationUnitDeps otherwise.
+  llvm::Expected<TranslationUnitDeps>
+  getTranslationUnitDependencies(const std::vector<std::string> &CommandLine,
+                                 StringRef CWD,
+                                 const llvm::StringSet<> &AlreadySeen,
+                                 LookupModuleOutputCallback LookupModuleOutput);
+
+  /// Given a compilation context specified via the Clang driver command-line,
+  /// gather modular dependencies of module with the given name, and return the
+  /// information needed for explicit build.
+  llvm::Expected<ModuleDepsGraph>
+  getModuleDependencies(StringRef ModuleName,
+                        const std::vector<std::string> &CommandLine,
+                        StringRef CWD, const llvm::StringSet<> &AlreadySeen,
+                        LookupModuleOutputCallback LookupModuleOutput);
 
 private:
   DependencyScanningWorker Worker;
@@ -145,7 +152,8 @@ public:
     return LookupModuleOutput(ID, Kind);
   }
 
-  FullDependenciesResult takeFullDependencies();
+  TranslationUnitDeps takeTranslationUnitDeps();
+  ModuleDepsGraph takeModuleGraphDeps();
 
 private:
   std::vector<std::string> Dependencies;
