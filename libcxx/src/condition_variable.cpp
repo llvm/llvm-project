@@ -44,7 +44,7 @@ void condition_variable::__do_timed_wait(unique_lock<mutex>& lk,
   seconds s = duration_cast<seconds>(d);
   typedef decltype(ts.tv_sec) ts_sec;
   constexpr ts_sec ts_sec_max = numeric_limits<ts_sec>::max();
-  if (s.count() < ts_sec_max) {
+  if ((unsigned long long)s.count() < ts_sec_max) {
     ts.tv_sec  = static_cast<ts_sec>(s.count());
     ts.tv_nsec = static_cast<decltype(ts.tv_nsec)>((d - s).count());
   } else {
