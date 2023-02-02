@@ -7987,28 +7987,22 @@ bool Sema::anyAltivecTypes(QualType SrcTy, QualType DestTy) {
          "expected at least one type to be a vector here");
 
   bool IsSrcTyAltivec =
-      SrcTy->isVectorType() && (SrcTy->castAs<VectorType>()->getVectorKind() ==
-                                VectorType::AltiVecVector);
+      SrcTy->isVectorType() && ((SrcTy->castAs<VectorType>()->getVectorKind() ==
+                                 VectorType::AltiVecVector) ||
+                                (SrcTy->castAs<VectorType>()->getVectorKind() ==
+                                 VectorType::AltiVecBool) ||
+                                (SrcTy->castAs<VectorType>()->getVectorKind() ==
+                                 VectorType::AltiVecPixel));
+
   bool IsDestTyAltivec = DestTy->isVectorType() &&
-                         (DestTy->castAs<VectorType>()->getVectorKind() ==
-                          VectorType::AltiVecVector);
+                         ((DestTy->castAs<VectorType>()->getVectorKind() ==
+                           VectorType::AltiVecVector) ||
+                          (DestTy->castAs<VectorType>()->getVectorKind() ==
+                           VectorType::AltiVecBool) ||
+                          (DestTy->castAs<VectorType>()->getVectorKind() ==
+                           VectorType::AltiVecPixel));
 
   return (IsSrcTyAltivec || IsDestTyAltivec);
-}
-
-// This returns true if both vectors have the same element type.
-bool Sema::areSameVectorElemTypes(QualType SrcTy, QualType DestTy) {
-  assert((DestTy->isVectorType() || SrcTy->isVectorType()) &&
-         "expected at least one type to be a vector here");
-
-  uint64_t SrcLen, DestLen;
-  QualType SrcEltTy, DestEltTy;
-  if (!breakDownVectorType(SrcTy, SrcLen, SrcEltTy))
-    return false;
-  if (!breakDownVectorType(DestTy, DestLen, DestEltTy))
-    return false;
-
-  return (SrcEltTy == DestEltTy);
 }
 
 /// Are the two types lax-compatible vector types?  That is, given
@@ -9848,7 +9842,7 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
         // change, so if we are converting between vector types where
         // at least one is an Altivec vector, emit a warning.
         if (anyAltivecTypes(RHSType, LHSType) &&
-            !areSameVectorElemTypes(RHSType, LHSType))
+            !Context.areCompatibleVectorTypes(RHSType, LHSType))
           Diag(RHS.get()->getExprLoc(), diag::warn_deprecated_lax_vec_conv_all)
               << RHSType << LHSType;
         Kind = CK_BitCast;
@@ -9864,7 +9858,9 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
       const VectorType *VecType = RHSType->getAs<VectorType>();
       if (VecType && VecType->getNumElements() == 1 &&
           isLaxVectorConversion(RHSType, LHSType)) {
-        if (VecType->getVectorKind() == VectorType::AltiVecVector)
+        if (VecType->getVectorKind() == VectorType::AltiVecVector ||
+            VecType->getVectorKind() == VectorType::AltiVecBool ||
+            VecType->getVectorKind() == VectorType::AltiVecPixel)
           Diag(RHS.get()->getExprLoc(), diag::warn_deprecated_lax_vec_conv_all)
               << RHSType << LHSType;
         ExprResult *VecExpr = &RHS;
@@ -10813,7 +10809,7 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
   ExprResult *OtherExpr = LHSVecType ? &RHS : &LHS;
   if (isLaxVectorConversion(OtherType, VecType)) {
     if (anyAltivecTypes(RHSType, LHSType) &&
-        !areSameVectorElemTypes(RHSType, LHSType))
+        !Context.areCompatibleVectorTypes(RHSType, LHSType))
       Diag(Loc, diag::warn_deprecated_lax_vec_conv_all) << RHSType << LHSType;
     // If we're allowing lax vector conversions, only the total (data) size
     // needs to be the same. For non compound assignment, if one of the types is

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple s390x-linux-gnu -target-cpu z14 -fzvector \
-// RUN:  -O -emit-llvm -o - -W -Wall -Werror %s | FileCheck %s
+// RUN:  -O -emit-llvm -o - -W -Wall -Werror -Wno-error=deprecate-lax-vec-conv-all %s | FileCheck %s
 
 volatile vector float ff, ff2;
 volatile vector bool int bi;
