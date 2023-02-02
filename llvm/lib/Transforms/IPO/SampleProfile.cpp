@@ -462,7 +462,8 @@ public:
       std::function<AssumptionCache &(Function &)> GetAssumptionCache,
       std::function<TargetTransformInfo &(Function &)> GetTargetTransformInfo,
       std::function<const TargetLibraryInfo &(Function &)> GetTLI)
-      : SampleProfileLoaderBaseImpl(std::string(Name), std::string(RemapName), FS),
+      : SampleProfileLoaderBaseImpl(std::string(Name), std::string(RemapName),
+                                    std::move(FS)),
         GetAC(std::move(GetAssumptionCache)),
         GetTTI(std::move(GetTargetTransformInfo)), GetTLI(std::move(GetTLI)),
         LTOPhase(LTOPhase),
@@ -2329,6 +2330,11 @@ bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) 
     return emitAnnotations(F);
   return false;
 }
+SampleProfileLoaderPass::SampleProfileLoaderPass(
+    std::string File, std::string RemappingFile, ThinOrFullLTOPhase LTOPhase,
+    IntrusiveRefCntPtr<vfs::FileSystem> FS)
+    : ProfileFileName(File), ProfileRemappingFileName(RemappingFile),
+      LTOPhase(LTOPhase), FS(std::move(FS)) {}
 
 PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
                                                ModuleAnalysisManager &AM) {

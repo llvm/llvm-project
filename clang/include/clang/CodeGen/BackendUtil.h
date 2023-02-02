@@ -17,8 +17,12 @@
 namespace llvm {
   class BitcodeModule;
   template <typename T> class Expected;
+  template <typename T> class IntrusiveRefCntPtr;
   class Module;
   class MemoryBufferRef;
+  namespace vfs {
+  class FileSystem;
+  } // namespace vfs
 }
 
 namespace clang {
