@@ -1,8 +1,5 @@
 // RUN: %clangxx_lsan %s -o %t
 
-// Fixme: remove once test passes with hwasan
-// UNSUPPORTED: hwasan
-
 // RUN: rm -f %t.supp
 // RUN: touch %t.supp
 // RUN: %push_to_device %t.supp %device_rundir/%t.supp
@@ -39,6 +36,6 @@ int main() {
 }
 // CHECK: Suppressions used:
 // CHECK: 1 666 *LSanTestLeakingFunc*
-// CHECK: SUMMARY: {{(Leak|Address)}}Sanitizer: 1337 byte(s) leaked in 1 allocation(s)
+// CHECK: SUMMARY: {{.*}}Sanitizer: 1337 byte(s) leaked in 1 allocation(s)
 
-// NOSUPP: SUMMARY: {{(Leak|Address)}}Sanitizer: 2780 byte(s) leaked in 3 allocation(s).
+// NOSUPP: SUMMARY: {{.*}}Sanitizer: 2780 byte(s) leaked in 3 allocation(s).
