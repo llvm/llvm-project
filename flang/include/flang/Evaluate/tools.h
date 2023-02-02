@@ -1218,8 +1218,10 @@ bool IsEventTypeOrLockType(const DerivedTypeSpec *);
 // of the construct entity.
 // (E.g., for ASSOCIATE(x => y%z), ResolveAssociations(x) returns x,
 // while GetAssociationRoot(x) returns y.)
+// ResolveAssociationsExceptSelectRank() stops at a RANK case symbol.
 const Symbol &ResolveAssociations(const Symbol &);
 const Symbol &GetAssociationRoot(const Symbol &);
+const Symbol &ResolveAssociationsExceptSelectRank(const Symbol &);
 
 const Symbol *FindCommonBlockContaining(const Symbol &);
 int CountLenParameters(const DerivedTypeSpec &);
