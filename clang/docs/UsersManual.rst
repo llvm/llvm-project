@@ -1992,14 +1992,6 @@ are listed below.
    checked by Control Flow Integrity indirect call checking. See
    :doc:`ControlFlowIntegrity` for more details.
 
-.. option:: -fsanitize-cfi-icall-experimental-normalize-integers
-
-   Normalize integers in return and argument types in function type signatures
-   checked by Control Flow Integrity indirect call checking. See
-   :doc:`ControlFlowIntegrity` for more details.
-
-   This option is currently experimental.
-
 .. option:: -fstrict-vtable-pointers
 
    Enable optimizations based on the strict rules for overwriting polymorphic
