@@ -1349,7 +1349,10 @@ struct AAPointerInfoImpl
           O << "     -->                         " << *Acc.getRemoteInst()
             << "\n";
         if (!Acc.isWrittenValueYetUndetermined()) {
-          if (Acc.getWrittenValue())
+          if (isa_and_nonnull<Function>(Acc.getWrittenValue()))
+            O << "       - c: func " << Acc.getWrittenValue()->getName()
+              << "\n";
+          else if (Acc.getWrittenValue())
             O << "       - c: " << *Acc.getWrittenValue() << "\n";
           else
             O << "       - c: <unknown>\n";
