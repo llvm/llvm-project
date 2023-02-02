@@ -2466,6 +2466,7 @@ defm S_WAIT_EVENT                 : SOPP_Real_32_gfx11_gfx12<0x00b>;
 defm S_TRAP                       : SOPP_Real_32_gfx11_gfx12<0x010>;
 defm S_ROUND_MODE                 : SOPP_Real_32_gfx11_gfx12<0x011>;
 defm S_DENORM_MODE                : SOPP_Real_32_gfx11_gfx12<0x012>;
+defm S_SINGLEUSE_VDST             : SOPP_Real_32_gfx11_gfx12<0x013>;
 defm S_BRANCH                     : SOPP_Real_With_Relaxation_gfx11_gfx12<0x020>;
 defm S_CBRANCH_SCC0               : SOPP_Real_With_Relaxation_gfx11_gfx12<0x021>;
 defm S_CBRANCH_SCC1               : SOPP_Real_With_Relaxation_gfx11_gfx12<0x022>;
@@ -2489,12 +2490,6 @@ defm S_TTRACEDATA                 : SOPP_Real_32_gfx11_gfx12<0x03a>;
 defm S_TTRACEDATA_IMM             : SOPP_Real_32_gfx11_gfx12<0x03b>;
 defm S_ICACHE_INV                 : SOPP_Real_32_gfx11_gfx12<0x03c>;
 defm S_BARRIER                    : SOPP_Real_32_gfx11_gfx12<0x03d>;
-
-//===----------------------------------------------------------------------===//
-// SOPP - GFX1150
-//===----------------------------------------------------------------------===//
-
-defm S_SINGLEUSE_VDST             : SOPP_Real_32_gfx11<0x013>;
 
 //===----------------------------------------------------------------------===//
 // SOPP - GFX6, GFX7, GFX8, GFX9, GFX10
