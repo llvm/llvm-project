@@ -275,6 +275,10 @@ uptr GetUserBegin(uptr chunk) {
   return chunk;
 }
 
+uptr GetUserAddr(uptr chunk) {
+  return chunk;
+}
+
 LsanMetadata::LsanMetadata(uptr chunk) {
   metadata_ = Metadata(reinterpret_cast<void *>(chunk));
   CHECK(metadata_);

@@ -1608,6 +1608,7 @@ void X86AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
     if (auto Op = MCIL.LowerMachineOperand(&MI, MI.getOperand(I))) {
       assert(Op->isReg() && "Only support arguments in registers");
       SrcRegs[I] = getX86SubSuperRegister(Op->getReg(), 64);
+      assert(SrcRegs[I].isValid() && "Invalid operand");
       if (SrcRegs[I] != DestRegs[I]) {
         UsedMask[I] = true;
         EmitAndCountInstruction(
@@ -1706,6 +1707,7 @@ void X86AsmPrinter::LowerPATCHABLE_TYPED_EVENT_CALL(const MachineInstr &MI,
       // TODO: Is register only support adequate?
       assert(Op->isReg() && "Only supports arguments in registers");
       SrcRegs[I] = getX86SubSuperRegister(Op->getReg(), 64);
+      assert(SrcRegs[I].isValid() && "Invalid operand");
       if (SrcRegs[I] != DestRegs[I]) {
         UsedMask[I] = true;
         EmitAndCountInstruction(

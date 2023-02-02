@@ -73,6 +73,24 @@ dumpDXContainer(MemoryBufferRef Source) {
         NewPart.Hash = DXContainerYAML::ShaderHash(*Hash);
       break;
     }
+    case dxbc::PartType::PSV0: {
+      const auto &PSVInfo = Container.getPSVInfo();
+      if (!PSVInfo)
+        break;
+      if (const auto *P =
+              std::get_if<dxbc::PSV::v0::RuntimeInfo>(&PSVInfo->getInfo())) {
+        if (!Container.getDXIL())
+          break;
+        NewPart.Info =
+            DXContainerYAML::PSVInfo(P, Container.getDXIL()->first.ShaderKind);
+      } else if (const auto *P = std::get_if<dxbc::PSV::v1::RuntimeInfo>(
+                     &PSVInfo->getInfo()))
+        NewPart.Info = DXContainerYAML::PSVInfo(P);
+      else if (const auto *P =
+                   std::get_if<dxbc::PSV::v2::RuntimeInfo>(&PSVInfo->getInfo()))
+        NewPart.Info = DXContainerYAML::PSVInfo(P);
+      break;
+    }
     case dxbc::PartType::Unknown:
       break;
     }

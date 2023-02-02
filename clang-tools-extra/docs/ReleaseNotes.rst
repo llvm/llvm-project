@@ -97,6 +97,11 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`cppcoreguidelines-avoid-capture-default-when-capturing-this
+  <clang-tidy/checks/cppcoreguidelines/avoid-capture-default-when-capturing-this>` check.
+
+  Warns when lambda specify a capture default and capture ``this``.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
