@@ -13,6 +13,7 @@ static_library("MC") {
   ]
   sources = [
     "ConstantPools.cpp",
+    "DXContainerPSVInfo.cpp",
     "ELFObjectWriter.cpp",
     "MCAsmBackend.cpp",
     "MCAsmInfo.cpp",
