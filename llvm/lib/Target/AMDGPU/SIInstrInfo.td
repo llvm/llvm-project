@@ -1220,7 +1220,7 @@ class NamedOperandU32Default1<string Name, AsmOperandClass MatchClass> :
 let OperandType = "OPERAND_IMMEDIATE" in {
 
 def flat_offset : CustomOperand<i32, 1, "FlatOffset">;
-def offset : NamedIntOperand<i16, "offset", "Offset">;
+def offset : NamedIntOperand<i32, "offset", "Offset">;
 def offset0 : NamedIntOperand<i8, "offset0", "Offset0">;
 def offset1 : NamedIntOperand<i8, "offset1", "Offset1">;
 

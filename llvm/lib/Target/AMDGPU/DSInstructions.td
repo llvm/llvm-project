@@ -436,7 +436,7 @@ class DS_1A1D_PERMUTE <string opName, SDPatternOperator node = null_frag,
   (ins VGPR_32:$addr, data_op:$data0, offset:$offset),
   " $vdst, $addr, $data0$offset",
   [(set i32:$vdst,
-   (node (DS1Addr1Offset i32:$addr, i16:$offset), i32:$data0))] > {
+   (node (DS1Addr1Offset i32:$addr, i32:$offset), i32:$data0))] > {
 
   let mayLoad = 0;
   let mayStore = 0;
@@ -740,7 +740,7 @@ def : GCNPat <
 >;
 
 class DSReadPat <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
-  (vt (frag (DS1Addr1Offset i32:$ptr, i16:$offset))),
+  (vt (frag (DS1Addr1Offset i32:$ptr, i32:$offset))),
   (inst $ptr, offset:$offset, (i1 gds))
 >;
 
@@ -756,7 +756,7 @@ multiclass DSReadPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
 }
 
 class DSReadPat_D16 <DS_Pseudo inst, PatFrag frag, ValueType vt> : GCNPat <
-  (frag (DS1Addr1Offset i32:$ptr, i16:$offset), vt:$in),
+  (frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$in),
   (inst $ptr, offset:$offset, (i1 0), $in)
 >;
 
@@ -800,7 +800,7 @@ def : DSReadPat_D16<DS_READ_I8_D16, sextloadi8_d16_lo_local, v2f16>;
 }
 
 class DSWritePat <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
-  (frag vt:$value, (DS1Addr1Offset i32:$ptr, i16:$offset)),
+  (frag vt:$value, (DS1Addr1Offset i32:$ptr, i32:$offset)),
   (inst $ptr, getVregSrcForVT<vt>.ret:$value, offset:$offset, (i1 gds))
 >;
 
@@ -817,7 +817,7 @@ multiclass DSWritePat_mc <DS_Pseudo inst, ValueType vt, string frag> {
 // Irritatingly, atomic_store reverses the order of operands from a
 // normal store.
 class DSAtomicWritePat <DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat <
-  (frag (DS1Addr1Offset i32:$ptr, i16:$offset), vt:$value),
+  (frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$value),
   (inst $ptr, getVregSrcForVT<vt>.ret:$value, offset:$offset, (i1 0))
 >;
 
@@ -965,7 +965,7 @@ defm : DSWritePat_mc <DS_WRITE_B128, vt, "store_align_less_than_4_local">;
 } // End AddedComplexity = 100
 
 class DSAtomicRetPat<DS_Pseudo inst, ValueType vt, PatFrag frag, int complexity = 0,
-  bit gds=0> : GCNPat <(frag (DS1Addr1Offset i32:$ptr, i16:$offset), vt:$value),
+  bit gds=0> : GCNPat <(frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$value),
   (inst $ptr, getVregSrcForVT<vt>.ret:$value, offset:$offset, (i1 gds))> {
   let AddedComplexity = complexity;
 }
@@ -1014,7 +1014,7 @@ let SubtargetPredicate = isGFX6GFX7GFX8GFX9GFX10 in {
 // Caution, the order of src and cmp is the *opposite* of the BUFFER_ATOMIC_CMPSWAP opcode.
 class DSAtomicCmpXChgSwapped<DS_Pseudo inst, ValueType vt, PatFrag frag,
   int complexity = 0, bit gds=0> : GCNPat<
-  (frag (DS1Addr1Offset i32:$ptr, i16:$offset), vt:$cmp, vt:$swap),
+  (frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$cmp, vt:$swap),
   (inst $ptr, getVregSrcForVT<vt>.ret:$cmp, getVregSrcForVT<vt>.ret:$swap, offset:$offset, (i1 gds))> {
   let AddedComplexity = complexity;
 }
@@ -1046,7 +1046,7 @@ let SubtargetPredicate = isGFX11Plus in {
 // The order of src and cmp agrees with the BUFFER_ATOMIC_CMPSWAP opcode.
 class DSAtomicCmpXChg<DS_Pseudo inst, ValueType vt, PatFrag frag,
   int complexity = 0, bit gds=0> : GCNPat<
-  (frag (DS1Addr1Offset i32:$ptr, i16:$offset), vt:$cmp, vt:$swap),
+  (frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$cmp, vt:$swap),
   (inst $ptr, getVregSrcForVT<vt>.ret:$swap, getVregSrcForVT<vt>.ret:$cmp, offset:$offset, (i1 gds))> {
   let AddedComplexity = complexity;
 }
@@ -1124,7 +1124,7 @@ def : DSAtomicRetPat<DS_ADD_F64, f64, atomic_load_fadd_local_noret_64>;
 
 class DSAtomicRetPatIntrinsic<DS_Pseudo inst, ValueType vt, PatFrag frag,
   bit gds=0> : GCNPat <
-  (vt (frag (DS1Addr1Offset i32:$ptr, i16:$offset), vt:$value)),
+  (vt (frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$value)),
   (inst $ptr, getVregSrcForVT<vt>.ret:$value, offset:$offset, (i1 gds))> {
 }
 
