@@ -243,7 +243,9 @@ mlir::LogicalResult StructConstantOp::verify() {
 
 /// Infer the output shape of the ConstantOp, this is required by the shape
 /// inference interface.
-void ConstantOp::inferShapes() { getResult().setType(getValue().getType()); }
+void ConstantOp::inferShapes() {
+  getResult().setType(cast<TensorType>(getValue().getType()));
+}
 
 //===----------------------------------------------------------------------===//
 // AddOp
@@ -264,7 +266,7 @@ void AddOp::print(mlir::OpAsmPrinter &p) { printBinaryOp(p, *this); }
 
 /// Infer the output shape of the AddOp, this is required by the shape inference
 /// interface.
-void AddOp::inferShapes() { getResult().setType(getOperand(0).getType()); }
+void AddOp::inferShapes() { getResult().setType(getLhs().getType()); }
 
 //===----------------------------------------------------------------------===//
 // CastOp
@@ -272,7 +274,7 @@ void AddOp::inferShapes() { getResult().setType(getOperand(0).getType()); }
 
 /// Infer the output shape of the CastOp, this is required by the shape
 /// inference interface.
-void CastOp::inferShapes() { getResult().setType(getOperand().getType()); }
+void CastOp::inferShapes() { getResult().setType(getInput().getType()); }
 
 /// Returns true if the given set of input and result types are compatible with
 /// this cast operation. This is required by the `CastOpInterface` to verify
@@ -376,7 +378,7 @@ void MulOp::print(mlir::OpAsmPrinter &p) { printBinaryOp(p, *this); }
 
 /// Infer the output shape of the MulOp, this is required by the shape inference
 /// interface.
-void MulOp::inferShapes() { getResult().setType(getOperand(0).getType()); }
+void MulOp::inferShapes() { getResult().setType(getLhs().getType()); }
 
 //===----------------------------------------------------------------------===//
 // ReturnOp

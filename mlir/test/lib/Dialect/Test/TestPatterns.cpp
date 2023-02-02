@@ -579,7 +579,7 @@ struct TestUndoBlockArgReplace : public ConversionPattern {
     auto illegalOp =
         rewriter.create<ILLegalOpF>(op->getLoc(), rewriter.getF32Type());
     rewriter.replaceUsesOfBlockArgument(op->getRegion(0).getArgument(0),
-                                        illegalOp);
+                                        illegalOp->getResult(0));
     rewriter.updateRootInPlace(op, [] {});
     return success();
   }
