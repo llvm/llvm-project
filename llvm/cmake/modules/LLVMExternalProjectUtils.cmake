@@ -302,6 +302,7 @@ function(llvm_ExternalProject_Add name source_dir)
     BINARY_DIR ${BINARY_DIR}
     ${exclude}
     CMAKE_ARGS ${${nameCanon}_CMAKE_ARGS}
+               --no-warn-unused-cli
                ${compiler_args}
                -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
                ${sysroot_arg}
