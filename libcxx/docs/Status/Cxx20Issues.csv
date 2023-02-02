@@ -76,7 +76,7 @@
 "`3075 <https://wg21.link/LWG3075>`__","``basic_string``\  needs deduction guides from ``basic_string_view``\ ","Jacksonville","|Complete|",""
 "","","","","",""
 "`2139 <https://wg21.link/LWG2139>`__","What is a user-defined type?","Rapperswil","",""
-"`2970 <https://wg21.link/LWG2970>`__","Return type of std::visit misspecified","Rapperswil","",""
+"`2970 <https://wg21.link/LWG2970>`__","Return type of std::visit misspecified","Rapperswil","|Complete|","11.0"
 "`3058 <https://wg21.link/LWG3058>`__","Parallel adjacent_difference shouldn't require creating temporaries","Rapperswil","",""
 "`3062 <https://wg21.link/LWG3062>`__","Unnecessary decay_t in is_execution_policy_v should be remove_cvref_t","Rapperswil","",""
 "`3067 <https://wg21.link/LWG3067>`__","recursive_directory_iterator::pop must invalidate","Rapperswil","|Nothing To Do|",""

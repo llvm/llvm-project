@@ -15,7 +15,6 @@
 using namespace llvm;
 
 class RISCVELFStreamer : public MCELFStreamer {
-  static std::pair<unsigned, unsigned> getRelocPairForSize(unsigned Size);
   static bool requiresFixups(MCContext &C, const MCExpr *Value,
                              const MCExpr *&LHS, const MCExpr *&RHS);
   void reset() override;

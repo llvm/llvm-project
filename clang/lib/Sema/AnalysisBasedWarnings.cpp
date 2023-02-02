@@ -2188,6 +2188,9 @@ public:
         MsgParam = 1;
       }
     } else {
+      if (const auto *FC = dyn_cast<CallExpr>(Operation)) {
+        MsgParam = 3;
+      }
       Loc = Operation->getBeginLoc();
       Range = Operation->getSourceRange();
     }

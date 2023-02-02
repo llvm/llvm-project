@@ -526,15 +526,12 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         }
       }
       // 15.5.2.5(4)
-      if (const auto *derived{
-              evaluate::GetDerivedTypeSpec(actualType.type())}) {
-        if (!DefersSameTypeParameters(
-                *derived, *evaluate::GetDerivedTypeSpec(dummy.type.type()))) {
-          messages.Say(
-              "Dummy and actual arguments must defer the same type parameters when POINTER or ALLOCATABLE"_err_en_US);
-        }
-      } else if (dummy.type.type().HasDeferredTypeParameter() !=
-          actualType.type().HasDeferredTypeParameter()) {
+      const auto *derived{evaluate::GetDerivedTypeSpec(actualType.type())};
+      if ((derived &&
+              !DefersSameTypeParameters(*derived,
+                  *evaluate::GetDerivedTypeSpec(dummy.type.type()))) ||
+          dummy.type.type().HasDeferredTypeParameter() !=
+              actualType.type().HasDeferredTypeParameter()) {
         messages.Say(
             "Dummy and actual arguments must defer the same type parameters when POINTER or ALLOCATABLE"_err_en_US);
       }

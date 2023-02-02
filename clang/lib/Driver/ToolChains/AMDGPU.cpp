@@ -624,10 +624,8 @@ AMDGPUToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
   if (!DAL)
     DAL = new DerivedArgList(Args.getBaseArgs());
 
-  for (Arg *A : Args) {
-    if (!shouldSkipArgument(A))
-      DAL->append(A);
-  }
+  for (Arg *A : Args)
+    DAL->append(A);
 
   checkTargetID(*DAL);
 

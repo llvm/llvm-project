@@ -258,7 +258,20 @@ static std::optional<Expr<SubscriptInteger>> SymbolLEN(const Symbol &symbol) {
     }
   }
   if (auto dyType{DynamicType::From(ultimate)}) {
-    if (auto len{dyType->GetCharLength()}) {
+    auto len{dyType->GetCharLength()};
+    if (!len && ultimate.attrs().test(semantics::Attr::PARAMETER)) {
+      // Its initializer determines the length of an implied-length named
+      // constant.
+      if (const auto *object{
+              ultimate.detailsIf<semantics::ObjectEntityDetails>()}) {
+        if (object->init()) {
+          if (auto dyType2{DynamicType::From(*object->init())}) {
+            len = dyType2->GetCharLength();
+          }
+        }
+      }
+    }
+    if (len) {
       if (auto constLen{ToInt64(*len)}) {
         return Expr<SubscriptInteger>{std::max<std::int64_t>(*constLen, 0)};
       } else if (ultimate.owner().IsDerivedType() ||
@@ -589,14 +602,19 @@ template <typename T>
 std::optional<DynamicType> Designator<T>::GetType() const {
   if constexpr (IsLengthlessIntrinsicType<Result>) {
     return Result::GetType();
-  } else if (const Symbol * symbol{GetLastSymbol()}) {
-    return DynamicType::From(*symbol);
-  } else if constexpr (Result::category == TypeCategory::Character) {
-    if (const Substring * substring{std::get_if<Substring>(&u)}) {
-      const auto *parent{substring->GetParentIf<StaticDataObject::Pointer>()};
-      CHECK(parent);
-      return DynamicType{TypeCategory::Character, (*parent)->itemBytes()};
+  }
+  if constexpr (Result::category == TypeCategory::Character) {
+    if (std::holds_alternative<Substring>(u)) {
+      if (auto len{LEN()}) {
+        if (auto n{ToInt64(*len)}) {
+          return DynamicType{T::kind, *n};
+        }
+      }
+      return DynamicType{TypeCategory::Character, T::kind};
     }
+  }
+  if (const Symbol * symbol{GetLastSymbol()}) {
+    return DynamicType::From(*symbol);
   }
   return std::nullopt;
 }

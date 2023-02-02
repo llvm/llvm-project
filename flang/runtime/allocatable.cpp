@@ -51,7 +51,8 @@ std::int32_t RTNAME(MoveAlloc)(Descriptor &to, Descriptor &from, bool hasStat,
   // If to and from are the same allocatable they must not be allocated
   // and nothing should be done.
   if (from.raw().base_addr == to.raw().base_addr && from.IsAllocated()) {
-    return ReturnError(terminator, StatInvalidDescriptor, errMsg, hasStat);
+    return ReturnError(
+        terminator, StatMoveAllocSameAllocatable, errMsg, hasStat);
   }
 
   if (to.IsAllocated()) {
@@ -126,8 +127,7 @@ int RTNAME(AllocatableAllocateSource)(Descriptor &alloc,
       alloc, hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
     Terminator terminator{sourceFile, sourceLine};
-    // 9.7.1.2(7)
-    Assign(alloc, source, terminator, /*skipRealloc=*/true);
+    DoFromSourceAssign(alloc, source, terminator);
   }
   return stat;
 }

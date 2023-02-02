@@ -103,11 +103,6 @@ defm FNMSUB_H : FPFMA_rrr_frm_m<OPC_NMSUB, 0b10, "fnmsub.h", HINX>;
 defm FNMADD_H : FPFMA_rrr_frm_m<OPC_NMADD, 0b10, "fnmadd.h", HINX>;
 }
 
-defm : FPFMADynFrmAlias_m<FMADD_H,  "fmadd.h",  HINX>;
-defm : FPFMADynFrmAlias_m<FMSUB_H,  "fmsub.h",  HINX>;
-defm : FPFMADynFrmAlias_m<FNMSUB_H, "fnmsub.h", HINX>;
-defm : FPFMADynFrmAlias_m<FNMADD_H, "fnmadd.h", HINX>;
-
 let SchedRW = [WriteFAdd16, ReadFAdd16, ReadFAdd16] in {
 defm FADD_H : FPALU_rr_frm_m<0b0000010, "fadd.h", HINX, /*Commutable*/1>;
 defm FSUB_H : FPALU_rr_frm_m<0b0000110, "fsub.h", HINX>;
@@ -118,14 +113,8 @@ defm FMUL_H : FPALU_rr_frm_m<0b0001010, "fmul.h", HINX, /*Commutable*/1>;
 let SchedRW = [WriteFDiv16, ReadFDiv16, ReadFDiv16] in
 defm FDIV_H : FPALU_rr_frm_m<0b0001110, "fdiv.h", HINX>;
 
-defm : FPALUDynFrmAlias_m<FADD_H, "fadd.h", HINX>;
-defm : FPALUDynFrmAlias_m<FSUB_H, "fsub.h", HINX>;
-defm : FPALUDynFrmAlias_m<FMUL_H, "fmul.h", HINX>;
-defm : FPALUDynFrmAlias_m<FDIV_H, "fdiv.h", HINX>;
-
 defm FSQRT_H : FPUnaryOp_r_frm_m<0b0101110, 0b00000, HHINX, "fsqrt.h">,
                Sched<[WriteFSqrt16, ReadFSqrt16]>;
-defm         : FPUnaryOpDynFrmAlias_m<FSQRT_H, "fsqrt.h", HHINX>;
 
 let SchedRW = [WriteFSGNJ16, ReadFSGNJ16, ReadFSGNJ16],
     mayRaiseFPException = 0 in {
@@ -142,24 +131,19 @@ defm FMAX_H   : FPALU_rr_m<0b0010110, 0b001, "fmax.h", HINX, /*Commutable*/1>;
 let IsSignExtendingOpW = 1 in
 defm FCVT_W_H : FPUnaryOp_r_frm_m<0b1100010, 0b00000, XHINX, "fcvt.w.h">,
                 Sched<[WriteFCvtF16ToI32, ReadFCvtF16ToI32]>;
-defm          : FPUnaryOpDynFrmAlias_m<FCVT_W_H, "fcvt.w.h", XHINX>;
 
 let IsSignExtendingOpW = 1 in
 defm FCVT_WU_H : FPUnaryOp_r_frm_m<0b1100010, 0b00001, XHINX, "fcvt.wu.h">,
                  Sched<[WriteFCvtF16ToI32, ReadFCvtF16ToI32]>;
-defm           : FPUnaryOpDynFrmAlias_m<FCVT_WU_H, "fcvt.wu.h", XHINX>;
 
 defm FCVT_H_W : FPUnaryOp_r_frm_m<0b1101010, 0b00000, HXINX, "fcvt.h.w">,
                 Sched<[WriteFCvtI32ToF16, ReadFCvtI32ToF16]>;
-defm          : FPUnaryOpDynFrmAlias_m<FCVT_H_W, "fcvt.h.w", HXINX>;
 
 defm FCVT_H_WU : FPUnaryOp_r_frm_m<0b1101010, 0b00001, HXINX, "fcvt.h.wu">,
                  Sched<[WriteFCvtI32ToF16, ReadFCvtI32ToF16]>;
-defm           : FPUnaryOpDynFrmAlias_m<FCVT_H_WU, "fcvt.h.wu", HXINX>;
 
 defm FCVT_H_S : FPUnaryOp_r_frm_m<0b0100010, 0b00000, HFINXmin, "fcvt.h.s">,
                 Sched<[WriteFCvtF32ToF16, ReadFCvtF32ToF16]>;
-defm          : FPUnaryOpDynFrmAlias_m<FCVT_H_S, "fcvt.h.s", HFINXmin>;
 
 defm FCVT_S_H : FPUnaryOp_r_m<0b0100000, 0b00010, 0b000, FHINXmin, "fcvt.s.h">,
                Sched<[WriteFCvtF16ToF32, ReadFCvtF16ToF32]>;
@@ -186,23 +170,18 @@ defm FCLASS_H : FPUnaryOp_r_m<0b1110010, 0b00000, 0b001, XHINX, "fclass.h">,
 
 defm FCVT_L_H  : FPUnaryOp_r_frm_m<0b1100010, 0b00010, XHIN64X, "fcvt.l.h">,
                  Sched<[WriteFCvtF16ToI64, ReadFCvtF16ToI64]>;
-defm           : FPUnaryOpDynFrmAlias_m<FCVT_L_H, "fcvt.l.h", XHIN64X>;
 
 defm FCVT_LU_H  : FPUnaryOp_r_frm_m<0b1100010, 0b00011, XHIN64X, "fcvt.lu.h">,
                   Sched<[WriteFCvtF16ToI64, ReadFCvtF16ToI64]>;
-defm            : FPUnaryOpDynFrmAlias_m<FCVT_LU_H, "fcvt.lu.h", XHIN64X>;
 
 defm FCVT_H_L : FPUnaryOp_r_frm_m<0b1101010, 0b00010, HXIN64X, "fcvt.h.l">,
                 Sched<[WriteFCvtI64ToF16, ReadFCvtI64ToF16]>;
-defm          : FPUnaryOpDynFrmAlias_m<FCVT_H_L, "fcvt.h.l", HXIN64X>;
 
 defm FCVT_H_LU : FPUnaryOp_r_frm_m<0b1101010, 0b00011, HXIN64X, "fcvt.h.lu">,
                  Sched<[WriteFCvtI64ToF16, ReadFCvtI64ToF16]>;
-defm           : FPUnaryOpDynFrmAlias_m<FCVT_H_LU, "fcvt.h.lu", HXIN64X>;
 
 defm FCVT_H_D : FPUnaryOp_r_frm_m<0b0100010, 0b00001, HDINXmin, "fcvt.h.d">,
                 Sched<[WriteFCvtF64ToF16, ReadFCvtF64ToF16]>;
-defm          : FPUnaryOpDynFrmAlias_m<FCVT_H_D, "fcvt.h.d", HDINXmin>;
 
 defm FCVT_D_H : FPUnaryOp_r_m<0b0100001, 0b00010, 0b000, DHINXmin, "fcvt.d.h">,
                 Sched<[WriteFCvtF16ToF64, ReadFCvtF16ToF64]>;

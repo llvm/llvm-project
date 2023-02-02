@@ -71,6 +71,10 @@ Changes to the AMDGPU Backend
 Changes to the ARM Backend
 --------------------------
 
+- The hard-float ABI is now available in Armv8.1-M configurations that
+  have integer MVE instructions (and therefore have FP registers) but
+  no scalar or vector floating point computation.
+
 Changes to the AVR Backend
 --------------------------
 

@@ -83,6 +83,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
         ->mayReadFromMemory();
   case VPBranchOnMaskSC:
   case VPScalarIVStepsSC:
+  case VPPredInstPHISC:
     return false;
   case VPWidenIntOrFpInductionSC:
   case VPWidenCanonicalIVSC:

@@ -3352,7 +3352,7 @@ Status Process::Signal(int signal) {
 
 void Process::SetUnixSignals(UnixSignalsSP &&signals_sp) {
   assert(signals_sp && "null signals_sp");
-  m_unix_signals_sp = signals_sp;
+  m_unix_signals_sp = std::move(signals_sp);
 }
 
 const lldb::UnixSignalsSP &Process::GetUnixSignals() {

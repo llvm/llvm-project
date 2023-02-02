@@ -288,8 +288,7 @@ HIPAMDToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   const OptTable &Opts = getDriver().getOpts();
 
   for (Arg *A : Args) {
-    if (!shouldSkipArgument(A) &&
-        !shouldSkipSanitizeOption(*this, Args, BoundArch, A))
+    if (!shouldSkipSanitizeOption(*this, Args, BoundArch, A))
       DAL->append(A);
   }
 

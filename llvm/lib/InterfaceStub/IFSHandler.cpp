@@ -301,6 +301,9 @@ IFSTarget ifs::parseTriple(StringRef TripleStr) {
   case Triple::ArchType::x86_64:
     RetTarget.Arch = (IFSArch)ELF::EM_X86_64;
     break;
+  case Triple::ArchType::riscv64:
+    RetTarget.Arch = (IFSArch)ELF::EM_RISCV;
+    break;
   default:
     RetTarget.Arch = (IFSArch)ELF::EM_NONE;
   }

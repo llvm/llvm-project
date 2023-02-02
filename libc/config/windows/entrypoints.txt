@@ -111,6 +111,7 @@ set(TARGET_LIBM_ENTRYPOINTS
 
     # math.h entrypoints
     libc.src.math.acosf
+    libc.src.math.acoshf
     libc.src.math.asin
     libc.src.math.asinf
     libc.src.math.asinhf

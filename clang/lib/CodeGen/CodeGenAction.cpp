@@ -116,6 +116,7 @@ namespace clang {
     const LangOptions &LangOpts;
     std::unique_ptr<raw_pwrite_stream> AsmOutStream;
     ASTContext *Context;
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
 
     Timer LLVMIRGeneration;
     unsigned LLVMIRGenerationRefCount;
@@ -148,7 +149,7 @@ namespace clang {
 
   public:
     BackendConsumer(BackendAction Action, DiagnosticsEngine &Diags,
-                    IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+                    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                     const HeaderSearchOptions &HeaderSearchOpts,
                     const PreprocessorOptions &PPOpts,
                     const CodeGenOptions &CodeGenOpts,
@@ -159,10 +160,10 @@ namespace clang {
                     CoverageSourceInfo *CoverageInfo = nullptr)
         : Diags(Diags), Action(Action), HeaderSearchOpts(HeaderSearchOpts),
           CodeGenOpts(CodeGenOpts), TargetOpts(TargetOpts), LangOpts(LangOpts),
-          AsmOutStream(std::move(OS)), Context(nullptr),
+          AsmOutStream(std::move(OS)), Context(nullptr), FS(VFS),
           LLVMIRGeneration("irgen", "LLVM IR Generation Time"),
           LLVMIRGenerationRefCount(0),
-          Gen(CreateLLVMCodeGen(Diags, InFile, std::move(FS), HeaderSearchOpts,
+          Gen(CreateLLVMCodeGen(Diags, InFile, std::move(VFS), HeaderSearchOpts,
                                 PPOpts, CodeGenOpts, C, CoverageInfo)),
           LinkModules(std::move(LinkModules)) {
       TimerIsEnabled = CodeGenOpts.TimePasses;
@@ -174,7 +175,7 @@ namespace clang {
     // to use the clang diagnostic handler for IR input files. It avoids
     // initializing the OS field.
     BackendConsumer(BackendAction Action, DiagnosticsEngine &Diags,
-                    IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+                    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                     const HeaderSearchOptions &HeaderSearchOpts,
                     const PreprocessorOptions &PPOpts,
                     const CodeGenOptions &CodeGenOpts,
@@ -184,10 +185,10 @@ namespace clang {
                     CoverageSourceInfo *CoverageInfo = nullptr)
         : Diags(Diags), Action(Action), HeaderSearchOpts(HeaderSearchOpts),
           CodeGenOpts(CodeGenOpts), TargetOpts(TargetOpts), LangOpts(LangOpts),
-          Context(nullptr),
+          Context(nullptr), FS(VFS),
           LLVMIRGeneration("irgen", "LLVM IR Generation Time"),
           LLVMIRGenerationRefCount(0),
-          Gen(CreateLLVMCodeGen(Diags, "", std::move(FS), HeaderSearchOpts,
+          Gen(CreateLLVMCodeGen(Diags, "", std::move(VFS), HeaderSearchOpts,
                                 PPOpts, CodeGenOpts, C, CoverageInfo)),
           LinkModules(std::move(LinkModules)), CurLinkModule(Module) {
       TimerIsEnabled = CodeGenOpts.TimePasses;
@@ -382,7 +383,7 @@ namespace clang {
 
       EmitBackendOutput(Diags, HeaderSearchOpts, CodeGenOpts, TargetOpts,
                         LangOpts, C.getTargetInfo().getDataLayoutString(),
-                        getModule(), Action, std::move(AsmOutStream));
+                        getModule(), Action, FS, std::move(AsmOutStream));
 
       Ctx.setDiagnosticHandler(std::move(OldDiagnosticHandler));
 
@@ -1286,10 +1287,10 @@ void CodeGenAction::ExecuteAction() {
   std::unique_ptr<llvm::ToolOutputFile> OptRecordFile =
       std::move(*OptRecordFileOrErr);
 
-  EmitBackendOutput(Diagnostics, CI.getHeaderSearchOpts(), CodeGenOpts,
-                    TargetOpts, CI.getLangOpts(),
-                    CI.getTarget().getDataLayoutString(), TheModule.get(), BA,
-                    std::move(OS));
+  EmitBackendOutput(
+      Diagnostics, CI.getHeaderSearchOpts(), CodeGenOpts, TargetOpts,
+      CI.getLangOpts(), CI.getTarget().getDataLayoutString(), TheModule.get(),
+      BA, CI.getFileManager().getVirtualFileSystemPtr(), std::move(OS));
   if (OptRecordFile)
     OptRecordFile->keep();
 }

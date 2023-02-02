@@ -64,10 +64,30 @@ TEST(AllocatableTest, MoveAlloc) {
 
   // move_alloc with the same allocated array should fail
   stat = RTNAME(MoveAlloc)(*a, *a, true, errMsg.get(), __FILE__, __LINE__);
-  EXPECT_EQ(stat, 18);
+  EXPECT_EQ(stat, 109);
   std::string_view errStr{errMsg->OffsetElement(), errMsg->ElementBytes()};
   auto trim_pos = errStr.find_last_not_of(' ');
   if (trim_pos != errStr.npos)
     errStr.remove_suffix(errStr.size() - trim_pos - 1);
-  EXPECT_EQ(errStr, "Invalid descriptor");
+  EXPECT_EQ(errStr, "MOVE_ALLOC passed the same address as to and from");
+}
+
+TEST(AllocatableTest, AllocateFromScalarSource) {
+  using Fortran::common::TypeCategory;
+  // REAL(4), ALLOCATABLE :: a(:)
+  auto a{createAllocatable(TypeCategory::Real, 4)};
+  // ALLOCATE(a(2:11), SOURCE=3.4)
+  float sourecStorage{3.4F};
+  auto s{Descriptor::Create(TypeCategory::Real, 4,
+      reinterpret_cast<void *>(&sourecStorage), 0, nullptr,
+      CFI_attribute_pointer)};
+  RTNAME(AllocatableSetBounds)(*a, 0, 2, 11);
+  RTNAME(AllocatableAllocateSource)
+  (*a, *s, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
+  EXPECT_TRUE(a->IsAllocated());
+  EXPECT_EQ(a->Elements(), 10u);
+  EXPECT_EQ(a->GetDimension(0).LowerBound(), 2);
+  EXPECT_EQ(a->GetDimension(0).UpperBound(), 11);
+  EXPECT_EQ(*a->OffsetElement<float>(), 3.4F);
+  a->Destroy();
 }

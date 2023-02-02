@@ -127,6 +127,16 @@ void GlobalObject::setAlignment(MaybeAlign Align) {
   assert(getAlign() == Align && "Alignment representation error!");
 }
 
+void GlobalObject::setAlignment(Align Align) {
+  assert(Align <= MaximumAlignment &&
+         "Alignment is greater than MaximumAlignment!");
+  unsigned AlignmentData = encode(Align);
+  unsigned OldData = getGlobalValueSubClassData();
+  setGlobalValueSubClassData((OldData & ~AlignmentMask) | AlignmentData);
+  assert(getAlign() && *getAlign() == Align &&
+         "Alignment representation error!");
+}
+
 void GlobalObject::copyAttributesFrom(const GlobalObject *Src) {
   GlobalValue::copyAttributesFrom(Src);
   setAlignment(Src->getAlign());

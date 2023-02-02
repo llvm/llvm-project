@@ -817,6 +817,17 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
       return DBuilder.createVectorType(/*Size=*/0, Align, ElemTy,
                                        SubscriptArray);
     }
+
+#define WASM_REF_TYPE(Name, MangledName, Id, SingletonId, AS)                  \
+  case BuiltinType::Id: {                                                      \
+    if (!SingletonId)                                                          \
+      SingletonId =                                                            \
+          DBuilder.createForwardDecl(llvm::dwarf::DW_TAG_structure_type,       \
+                                     MangledName, TheCU, TheCU->getFile(), 0); \
+    return SingletonId;                                                        \
+  }
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
+
   case BuiltinType::UChar:
   case BuiltinType::Char_U:
     Encoding = llvm::dwarf::DW_ATE_unsigned_char;
@@ -5024,9 +5035,10 @@ void CGDebugInfo::EmitDeclareOfBlockDeclRefVariable(
 
 llvm::DILocalVariable *
 CGDebugInfo::EmitDeclareOfArgVariable(const VarDecl *VD, llvm::Value *AI,
-                                      unsigned ArgNo, CGBuilderTy &Builder) {
+                                      unsigned ArgNo, CGBuilderTy &Builder,
+                                      bool UsePointerValue) {
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
-  return EmitDeclare(VD, AI, ArgNo, Builder);
+  return EmitDeclare(VD, AI, ArgNo, Builder, UsePointerValue);
 }
 
 namespace {

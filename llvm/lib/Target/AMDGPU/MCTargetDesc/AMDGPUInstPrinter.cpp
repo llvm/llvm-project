@@ -737,9 +737,10 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
       O << formatDec(Op.getImm());
       break;
     case MCOI::OPERAND_REGISTER:
-      // FIXME: This should be removed and handled somewhere else. Seems to come
-      // from a disassembler bug.
-      O << "/*invalid immediate*/";
+      // Disassembler does not fail when operand should not allow immediate
+      // operands but decodes them into 32bit immediate operand.
+      printImmediate32(Op.getImm(), STI, O);
+      O << "/*Invalid immediate*/";
       break;
     default:
       // We hit this for the immediate instruction bits that don't yet have a

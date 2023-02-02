@@ -70,6 +70,38 @@ def testNestedSequenceOp():
 
 
 @run
+def testSequenceOpWithExtras():
+  sequence = transform.SequenceOp(
+      transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get(),
+      [transform.AnyOpType.get(),
+       transform.OperationType.get("foo.bar")])
+  with InsertionPoint(sequence.body):
+    transform.YieldOp()
+  # CHECK-LABEL: TEST: testSequenceOpWithExtras
+  # CHECK: transform.sequence failures(propagate)
+  # CHECK: ^{{.*}}(%{{.*}}: !transform.any_op, %{{.*}}: !transform.any_op, %{{.*}}: !transform.op<"foo.bar">):
+
+
+@run
+def testNestedSequenceOpWithExtras():
+  sequence = transform.SequenceOp(
+      transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get(),
+      [transform.AnyOpType.get(),
+       transform.OperationType.get("foo.bar")])
+  with InsertionPoint(sequence.body):
+    nested = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE,
+                                  [], sequence.bodyTarget,
+                                  sequence.bodyExtraArgs)
+    with InsertionPoint(nested.body):
+      transform.YieldOp()
+    transform.YieldOp()
+  # CHECK-LABEL: TEST: testNestedSequenceOpWithExtras
+  # CHECK: transform.sequence failures(propagate)
+  # CHECK: ^{{.*}}(%[[ARG0:.*]]: !transform.any_op, %[[ARG1:.*]]: !transform.any_op, %[[ARG2:.*]]: !transform.op<"foo.bar">):
+  # CHECK:   sequence %[[ARG0]], %[[ARG1]], %[[ARG2]] : (!transform.any_op, !transform.any_op, !transform.op<"foo.bar">)
+
+
+@run
 def testTransformPDLOps():
   withPdl = transform.WithPDLPatternsOp(pdl.OperationType.get())
   with InsertionPoint(withPdl.body):

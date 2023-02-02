@@ -132,8 +132,8 @@ public:
   static auto getWalkImmediateSubElementsFn() {
     return [](auto instance, function_ref<void(Attribute)> walkAttrsFn,
               function_ref<void(Type)> walkTypesFn) {
-      ::mlir::detail::walkImmediateSubElementsImpl(cast<ConcreteT>(instance),
-                                                   walkAttrsFn, walkTypesFn);
+      ::mlir::detail::walkImmediateSubElementsImpl(
+          llvm::cast<ConcreteT>(instance), walkAttrsFn, walkTypesFn);
     };
   }
 
@@ -143,7 +143,7 @@ public:
     return [](auto instance, ArrayRef<Attribute> replAttrs,
               ArrayRef<Type> replTypes) {
       return ::mlir::detail::replaceImmediateSubElementsImpl(
-          cast<ConcreteT>(instance), replAttrs, replTypes);
+          llvm::cast<ConcreteT>(instance), replAttrs, replTypes);
     };
   }
 

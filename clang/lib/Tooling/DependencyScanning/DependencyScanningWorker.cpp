@@ -393,30 +393,40 @@ bool DependencyScanningWorker::computeDependencies(
 
   std::optional<std::vector<std::string>> ModifiedCommandLine;
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> ModifiedFS;
-  if (ModuleName) {
-    ModifiedCommandLine = CommandLine;
-    ModifiedCommandLine->emplace_back(*ModuleName);
 
+  // If we're scanning based on a module name alone, we don't expect the client
+  // to provide us with an input file. However, the driver really wants to have
+  // one. Let's just make it up to make the driver happy.
+  if (ModuleName) {
     auto OverlayFS =
         llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(BaseFS);
     auto InMemoryFS =
         llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
     InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
-    InMemoryFS->addFile(*ModuleName, 0, llvm::MemoryBuffer::getMemBuffer(""));
     OverlayFS->pushOverlay(InMemoryFS);
     ModifiedFS = OverlayFS;
+
+    SmallString<128> FakeInputPath;
+    // TODO: We should retry the creation if the path already exists.
+    llvm::sys::fs::createUniquePath(*ModuleName + "-%%%%%%%%.input",
+                                    FakeInputPath,
+                                    /*MakeAbsolute=*/false);
+    InMemoryFS->addFile(FakeInputPath, 0, llvm::MemoryBuffer::getMemBuffer(""));
+
+    ModifiedCommandLine = CommandLine;
+    ModifiedCommandLine->emplace_back(FakeInputPath);
   }
 
   const std::vector<std::string> &FinalCommandLine =
       ModifiedCommandLine ? *ModifiedCommandLine : CommandLine;
+  auto &FinalFS = ModifiedFS ? ModifiedFS : BaseFS;
 
   FileSystemOptions FSOpts;
   FSOpts.WorkingDir = WorkingDirectory.str();
-  auto FileMgr = llvm::makeIntrusiveRefCnt<FileManager>(
-      FSOpts, ModifiedFS ? ModifiedFS : BaseFS);
+  auto FileMgr = llvm::makeIntrusiveRefCnt<FileManager>(FSOpts, FinalFS);
 
-  std::vector<const char *> FinalCCommandLine(CommandLine.size(), nullptr);
-  llvm::transform(CommandLine, FinalCCommandLine.begin(),
+  std::vector<const char *> FinalCCommandLine(FinalCommandLine.size(), nullptr);
+  llvm::transform(FinalCommandLine, FinalCCommandLine.begin(),
                   [](const std::string &Str) { return Str.c_str(); });
 
   auto DiagOpts = CreateAndPopulateDiagOpts(FinalCCommandLine);

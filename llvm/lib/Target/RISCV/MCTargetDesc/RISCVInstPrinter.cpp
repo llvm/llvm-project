@@ -149,7 +149,9 @@ void RISCVInstPrinter::printFRMArg(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo &STI, raw_ostream &O) {
   auto FRMArg =
       static_cast<RISCVFPRndMode::RoundingMode>(MI->getOperand(OpNo).getImm());
-  O << RISCVFPRndMode::roundingModeToString(FRMArg);
+  if (PrintAliases && !NoAliases && FRMArg == RISCVFPRndMode::RoundingMode::DYN)
+    return;
+  O << ", " << RISCVFPRndMode::roundingModeToString(FRMArg);
 }
 
 void RISCVInstPrinter::printZeroOffsetMemOp(const MCInst *MI, unsigned OpNo,
