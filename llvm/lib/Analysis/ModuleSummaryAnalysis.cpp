@@ -192,6 +192,7 @@ static void addIntrinsicToSummary(
     break;
   }
 
+  case Intrinsic::type_checked_load_relative:
   case Intrinsic::type_checked_load: {
     auto *TypeMDVal = cast<MetadataAsValue>(CI->getArgOperand(2));
     auto *TypeId = dyn_cast<MDString>(TypeMDVal->getMetadata());
