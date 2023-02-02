@@ -371,6 +371,12 @@ generic-modules)
     check-runtimes
     check-abi-list
 ;;
+generic-modules-lsv)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-modules-lsv.cmake"
+    check-runtimes
+    check-abi-list
+;;
 #
 # Parts removed
 #
