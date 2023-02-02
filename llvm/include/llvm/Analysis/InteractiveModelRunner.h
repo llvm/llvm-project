@@ -57,11 +57,13 @@ public:
 
 private:
   void *evaluateUntyped() override;
+  // This must be declared before InEC if we want to initialize it in the
+  // ctor initializer list.
+  int Inbound = -1;
   const std::vector<TensorSpec> InputSpecs;
   const TensorSpec OutputSpec;
   std::error_code OutEC;
   std::error_code InEC;
-  int Inbound;
   std::vector<char> OutputBuffer;
   std::unique_ptr<Logger> Log;
 };
