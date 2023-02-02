@@ -8,6 +8,14 @@ func.func @dim(%arg : tensor<1x?xf32>) {
 
 // -----
 
+// Asking the dimension of a 0-D shape doesn't make sense.
+func.func @dim_0_ranked(%arg : tensor<f32>, %arg1 : index) {
+  tensor.dim %arg, %arg1 : tensor<f32> // expected-error {{'tensor.dim' op operand #0 must be unranked.tensor of any type values or non-0-ranked.tensor of any type values, but got 'tensor<f32>'}}
+  return
+}
+
+// -----
+
 func.func @tensor.cast_mismatching_constants(%arg0: tensor<1xf32>) {
   // expected-error@+1 {{operand type 'tensor<1xf32>' and result type 'tensor<2xf32>' are cast incompatible}}
   %0 = tensor.cast %arg0 : tensor<1xf32> to tensor<2xf32>
