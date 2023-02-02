@@ -54,6 +54,10 @@
 // CHECK-NOT: crtend.o
 // CHECK-NOT: crtn.o
 
+// RUN: %clang -### %s --target=x86_64-unknown-fuchsia \
+// RUN:     --emit-static-lib 2>&1 | FileCheck -check-prefixes=CHECK-STATIC-LIB %s
+// CHECK-STATIC-LIB: {{.*}}llvm-ar{{.*}}" "rcsD"
+
 // RUN: %clang -### %s --target=x86_64-unknown-fuchsia 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-FP-ALL
 // RUN: %clang -### %s --target=aarch64-unknown-fuchsia 2>&1 \

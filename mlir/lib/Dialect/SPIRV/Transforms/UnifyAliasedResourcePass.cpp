@@ -485,11 +485,28 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
       // bitwidth element type. For spirv.bitcast, the lower-numbered components
       // of the vector map to lower-ordered bits of the larger bitwidth element
       // type.
+
       Type vectorType = srcElemType;
       if (!srcElemType.isa<VectorType>())
         vectorType = VectorType::get({ratio}, dstElemType);
+
+      // If both the source and destination are vector types, we need to make
+      // sure the scalar type is the same for composite construction later.
+      if (auto srcElemVecType = srcElemType.dyn_cast<VectorType>())
+        if (auto dstElemVecType = dstElemType.dyn_cast<VectorType>()) {
+          if (srcElemVecType.getElementType() !=
+              dstElemVecType.getElementType()) {
+            int64_t count =
+                dstNumBytes / (srcElemVecType.getElementTypeBitWidth() / 8);
+            auto castType =
+                VectorType::get({count}, srcElemVecType.getElementType());
+            for (auto &c : components)
+              c = rewriter.create<spirv::BitcastOp>(loc, castType, c);
+          }
+        }
       Value vectorValue = rewriter.create<spirv::CompositeConstructOp>(
           loc, vectorType, components);
+
       if (!srcElemType.isa<VectorType>())
         vectorValue =
             rewriter.create<spirv::BitcastOp>(loc, srcElemType, vectorValue);

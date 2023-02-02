@@ -391,14 +391,19 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
       "-Wl,--no-undefined",
   };
 
+  for (StringRef InputFile : InputFiles)
+    CmdArgs.push_back(InputFile);
+
   // If this is CPU offloading we copy the input libraries.
   if (!Triple.isAMDGPU() && !Triple.isNVPTX()) {
     CmdArgs.push_back("-Wl,-Bsymbolic");
     CmdArgs.push_back("-shared");
     ArgStringList LinkerArgs;
-    for (const opt::Arg *Arg :
-         Args.filtered(OPT_library, OPT_rpath, OPT_library_path))
+    for (const opt::Arg *Arg : Args.filtered(OPT_library, OPT_library_path))
       Arg->render(Args, LinkerArgs);
+    for (const opt::Arg *Arg : Args.filtered(OPT_rpath))
+      LinkerArgs.push_back(
+          Args.MakeArgString("-Wl,-rpath," + StringRef(Arg->getValue())));
     llvm::copy(LinkerArgs, std::back_inserter(CmdArgs));
   }
 
@@ -420,9 +425,6 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
 
   for (StringRef Arg : Args.getAllArgValues(OPT_linker_arg_EQ))
     CmdArgs.push_back(Args.MakeArgString("-Wl," + Arg));
-
-  for (StringRef InputFile : InputFiles)
-    CmdArgs.push_back(InputFile);
 
   if (Error Err = executeCommands(*ClangPath, CmdArgs))
     return std::move(Err);

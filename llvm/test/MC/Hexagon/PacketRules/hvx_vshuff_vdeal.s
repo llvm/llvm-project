@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -arch=hexagon -mv65 -mhvx -filetype=obj -o 1.o %s 2>&1 | FileCheck --implicit-check-not=error %s
+# RUN: not llvm-mc -arch=hexagon -mv65 -mhvx -filetype=obj -o %t %s 2>&1 | FileCheck --implicit-check-not=error %s
 
 { v1 = v2; vshuff(v1,v3,r0) }
 # CHECK: error: register `V1' modified more than once

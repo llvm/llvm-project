@@ -172,12 +172,6 @@ public:
     return Worker.getOrCreateFileManager();
   }
 
-  llvm::Expected<FullDependenciesResult> getFullDependenciesLegacyDriverCommand(
-      const std::vector<std::string> &CommandLine, StringRef CWD,
-      const llvm::StringSet<> &AlreadySeen,
-      LookupModuleOutputCallback LookupModuleOutput,
-      std::optional<StringRef> ModuleName = std::nullopt);
-
 private:
   DependencyScanningWorker Worker;
 };
@@ -186,12 +180,10 @@ class FullDependencyConsumer : public DependencyConsumer {
 public:
   FullDependencyConsumer(const llvm::StringSet<> &AlreadySeen,
                          LookupModuleOutputCallback LookupModuleOutput,
-                         bool EagerLoadModules,
                          CachingOnDiskFileSystemPtr CacheFS = nullptr,
                          DepscanPrefixMapping PrefixMapping = {})
       : CacheFS(std::move(CacheFS)), PrefixMapping(std::move(PrefixMapping)),
-        AlreadySeen(AlreadySeen), LookupModuleOutput(LookupModuleOutput),
-        EagerLoadModules(EagerLoadModules) {}
+        AlreadySeen(AlreadySeen), LookupModuleOutput(LookupModuleOutput) {}
 
   llvm::Error initialize(CompilerInstance &ScanInstance,
                          CompilerInvocation &NewInvocation) override;
@@ -239,9 +231,6 @@ public:
     return LookupModuleOutput(ID, Kind);
   }
 
-  FullDependenciesResult getFullDependenciesLegacyDriverCommand(
-      const std::vector<std::string> &OriginalCommandLine) const;
-
   FullDependenciesResult takeFullDependencies();
 
 private:
@@ -259,7 +248,6 @@ private:
   std::vector<std::string> OutputPaths;
   const llvm::StringSet<> &AlreadySeen;
   LookupModuleOutputCallback LookupModuleOutput;
-  bool EagerLoadModules;
 };
 
 } // end namespace dependencies

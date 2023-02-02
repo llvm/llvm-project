@@ -3002,13 +3002,10 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
     if (Trimmed.contains(RawStringTermination))
       FormattingOff = false;
 
-    if (Trimmed == "// clang-format off" ||
-        Trimmed == "/* clang-format off */") {
+    if (isClangFormatOff(Trimmed))
       FormattingOff = true;
-    } else if (Trimmed == "// clang-format on" ||
-               Trimmed == "/* clang-format on */") {
+    else if (isClangFormatOn(Trimmed))
       FormattingOff = false;
-    }
 
     const bool EmptyLineSkipped =
         Trimmed.empty() &&
@@ -3185,9 +3182,9 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
         Code.substr(Prev, (Pos != StringRef::npos ? Pos : Code.size()) - Prev);
 
     StringRef Trimmed = Line.trim();
-    if (Trimmed == "// clang-format off")
+    if (isClangFormatOff(Trimmed))
       FormattingOff = true;
-    else if (Trimmed == "// clang-format on")
+    else if (isClangFormatOn(Trimmed))
       FormattingOff = false;
 
     if (ImportRegex.match(Line, &Matches)) {
@@ -3891,6 +3888,26 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
   }
 
   return FallbackStyle;
+}
+
+static bool isClangFormatOnOff(StringRef Comment, bool On) {
+  if (Comment == (On ? "/* clang-format on */" : "/* clang-format off */"))
+    return true;
+
+  static const char ClangFormatOn[] = "// clang-format on";
+  static const char ClangFormatOff[] = "// clang-format off";
+  const unsigned Size = (On ? sizeof ClangFormatOn : sizeof ClangFormatOff) - 1;
+
+  return Comment.startswith(On ? ClangFormatOn : ClangFormatOff) &&
+         (Comment.size() == Size || Comment[Size] == ':');
+}
+
+bool isClangFormatOn(StringRef Comment) {
+  return isClangFormatOnOff(Comment, /*On=*/true);
+}
+
+bool isClangFormatOff(StringRef Comment) {
+  return isClangFormatOnOff(Comment, /*On=*/false);
 }
 
 } // namespace format

@@ -23,27 +23,6 @@ using namespace tooling;
 using namespace dependencies;
 using llvm::Error;
 
-static std::vector<std::string>
-makeTUCommandLineWithoutPaths(ArrayRef<std::string> OriginalCommandLine) {
-  std::vector<std::string> Args = OriginalCommandLine;
-
-  Args.push_back("-fno-implicit-modules");
-  Args.push_back("-fno-implicit-module-maps");
-
-  // These arguments are unused in explicit compiles.
-  llvm::erase_if(Args, [](StringRef Arg) {
-    if (Arg.consume_front("-fmodules-")) {
-      return Arg.startswith("cache-path=") ||
-             Arg.startswith("prune-interval=") ||
-             Arg.startswith("prune-after=") ||
-             Arg == "validate-once-per-build-session";
-    }
-    return Arg.startswith("-fbuild-session-file=");
-  });
-
-  return Args;
-}
-
 DependencyScanningTool::DependencyScanningTool(
     DependencyScanningService &Service,
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
@@ -145,8 +124,8 @@ public:
 
   GetDependencyTree(llvm::cas::CachingOnDiskFileSystem &FS,
                     DepscanPrefixMapping PrefixMapping)
-      : FullDependencyConsumer(AlreadySeen, nullptr, /*EagerModules=*/false,
-                               &FS, std::move(PrefixMapping)),
+      : FullDependencyConsumer(AlreadySeen, nullptr, &FS,
+                               std::move(PrefixMapping)),
         FS(FS) {}
 
 private:
@@ -569,29 +548,12 @@ DependencyScanningTool::getFullDependencies(
     LookupModuleOutputCallback LookupModuleOutput,
     std::optional<StringRef> ModuleName, DepscanPrefixMapping PrefixMapping) {
   FullDependencyConsumer Consumer(AlreadySeen, LookupModuleOutput,
-                                  Worker.shouldEagerLoadModules(),
                                   Worker.getCASFS(), std::move(PrefixMapping));
   llvm::Error Result =
       Worker.computeDependencies(CWD, CommandLine, Consumer, ModuleName);
   if (Result)
     return std::move(Result);
   return Consumer.takeFullDependencies();
-}
-
-llvm::Expected<FullDependenciesResult>
-DependencyScanningTool::getFullDependenciesLegacyDriverCommand(
-    const std::vector<std::string> &CommandLine, StringRef CWD,
-    const llvm::StringSet<> &AlreadySeen,
-    LookupModuleOutputCallback LookupModuleOutput,
-    std::optional<StringRef> ModuleName) {
-  FullDependencyConsumer Consumer(AlreadySeen, LookupModuleOutput,
-                                  Worker.shouldEagerLoadModules(),
-                                  Worker.getCASFS());
-  llvm::Error Result =
-      Worker.computeDependencies(CWD, CommandLine, Consumer, ModuleName);
-  if (Result)
-    return std::move(Result);
-  return Consumer.getFullDependenciesLegacyDriverCommand(CommandLine);
 }
 
 Error FullDependencyConsumer::initialize(CompilerInstance &ScanInstance,
@@ -756,54 +718,5 @@ FullDependenciesResult FullDependencyConsumer::takeFullDependencies() {
     FDR.DiscoveredModules.push_back(std::move(MD));
   }
 
-  return FDR;
-}
-
-FullDependenciesResult
-FullDependencyConsumer::getFullDependenciesLegacyDriverCommand(
-    const std::vector<std::string> &OriginalCommandLine) const {
-  FullDependencies FD;
-
-  FD.DriverCommandLine = makeTUCommandLineWithoutPaths(
-      ArrayRef<std::string>(OriginalCommandLine).slice(1));
-
-  FD.ID.ContextHash = std::move(ContextHash);
-
-  FD.FileDeps.assign(Dependencies.begin(), Dependencies.end());
-
-  for (const PrebuiltModuleDep &PMD : PrebuiltModuleDeps)
-    FD.DriverCommandLine.push_back("-fmodule-file=" + PMD.PCMFile);
-
-  for (auto &&M : ClangModuleDeps) {
-    auto &MD = M.second;
-    if (MD.ImportedByMainFile) {
-      FD.ClangModuleDeps.push_back(MD.ID);
-      auto PCMPath = LookupModuleOutput(MD.ID, ModuleOutputKind::ModuleFile);
-      if (EagerLoadModules) {
-        FD.DriverCommandLine.push_back("-fmodule-file=" + PCMPath);
-      } else {
-        FD.DriverCommandLine.push_back("-fmodule-map-file=" +
-                                       MD.ClangModuleMapFile);
-        FD.DriverCommandLine.push_back("-fmodule-file=" + MD.ID.ModuleName +
-                                       "=" + PCMPath);
-      }
-    }
-  }
-
-  FD.PrebuiltModuleDeps = std::move(PrebuiltModuleDeps);
-
-  FD.CASFileSystemRootID = CASFileSystemRootID;
-
-  FullDependenciesResult FDR;
-
-  for (auto &&M : ClangModuleDeps) {
-    // TODO: Avoid handleModuleDependency even being called for modules
-    //   we've already seen.
-    if (AlreadySeen.count(M.first))
-      continue;
-    FDR.DiscoveredModules.push_back(std::move(M.second));
-  }
-
-  FDR.FullDeps = std::move(FD);
   return FDR;
 }

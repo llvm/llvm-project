@@ -176,16 +176,17 @@ void clang_experimental_DependencyScannerWorker_dispose_v0(
 
 using HandleFullDepsCallback = llvm::function_ref<void(FullDependencies)>;
 
-static CXErrorCode getFullDependencies(
-    DependencyScanningWorker *Worker, ArrayRef<std::string> Compilation,
-    const char *WorkingDirectory, CXModuleDiscoveredCallback *MDC,
-    void *Context, CXString *Error, DiagnosticConsumer *DiagConsumer,
-    LookupModuleOutputCallback LookupOutput, bool DeprecatedDriverCommand,
-    std::optional<StringRef> ModuleName,
-    HandleFullDepsCallback HandleFullDeps) {
+static CXErrorCode getFullDependencies(DependencyScanningWorker *Worker,
+                                       ArrayRef<std::string> Compilation,
+                                       const char *WorkingDirectory,
+                                       CXModuleDiscoveredCallback *MDC,
+                                       void *Context, CXString *Error,
+                                       DiagnosticConsumer *DiagConsumer,
+                                       LookupModuleOutputCallback LookupOutput,
+                                       std::optional<StringRef> ModuleName,
+                                       HandleFullDepsCallback HandleFullDeps) {
   llvm::StringSet<> AlreadySeen;
   FullDependencyConsumer DepConsumer(AlreadySeen, LookupOutput,
-                                     Worker->shouldEagerLoadModules(),
                                      Worker->getCASFS());
 
   bool HasDiagConsumer = DiagConsumer;
@@ -206,11 +207,7 @@ static CXErrorCode getFullDependencies(
     }
   }
 
-  FullDependenciesResult FDR;
-  if (DeprecatedDriverCommand)
-    FDR = DepConsumer.getFullDependenciesLegacyDriverCommand(Compilation);
-  else
-    FDR = DepConsumer.takeFullDependencies();
+  FullDependenciesResult FDR = DepConsumer.takeFullDependencies();
 
   if (!FDR.DiscoveredModules.empty()) {
     CXModuleDependencySet *MDS = new CXModuleDependencySet;
@@ -236,13 +233,15 @@ static CXErrorCode getFullDependencies(
   return CXError_Success;
 }
 
-static CXErrorCode getFileDependencies(
-    CXDependencyScannerWorker W, int argc, const char *const *argv,
-    const char *WorkingDirectory, CXModuleDiscoveredCallback *MDC,
-    void *Context, CXString *Error, DiagnosticConsumer *DiagConsumer,
-    LookupModuleOutputCallback LookupOutput, bool DeprecatedDriverCommand,
-    std::optional<StringRef> ModuleName,
-    HandleFullDepsCallback HandleFullDeps) {
+static CXErrorCode getFileDependencies(CXDependencyScannerWorker W, int argc,
+                                       const char *const *argv,
+                                       const char *WorkingDirectory,
+                                       CXModuleDiscoveredCallback *MDC,
+                                       void *Context, CXString *Error,
+                                       DiagnosticConsumer *DiagConsumer,
+                                       LookupModuleOutputCallback LookupOutput,
+                                       std::optional<StringRef> ModuleName,
+                                       HandleFullDepsCallback HandleFullDeps) {
   if (!W || argc < 2 || !argv)
     return CXError_InvalidArguments;
 
@@ -253,9 +252,9 @@ static CXErrorCode getFileDependencies(
 
   std::vector<std::string> Compilation{argv, argv + argc};
 
-  return getFullDependencies(
-      Worker, Compilation, WorkingDirectory, MDC, Context, Error, DiagConsumer,
-      LookupOutput, DeprecatedDriverCommand, ModuleName, HandleFullDeps);
+  return getFullDependencies(Worker, Compilation, WorkingDirectory, MDC,
+                             Context, Error, DiagConsumer, LookupOutput,
+                             ModuleName, HandleFullDeps);
 }
 
 namespace {
@@ -286,7 +285,6 @@ clang_experimental_DependencyScannerWorker_getFileDependencies_v3(
   CXErrorCode Result = getFileDependencies(
       W, argc, argv, WorkingDirectory, MDC, MDCContext, Error, nullptr,
       LookupOutputs,
-      /*DeprecatedDriverCommand=*/true,
       ModuleName ? std::optional<StringRef>(ModuleName) : std::nullopt,
       [&](FullDependencies FD) {
         assert(!FD.DriverCommandLine.empty());
@@ -322,7 +320,6 @@ CXErrorCode clang_experimental_DependencyScannerWorker_getFileDependencies_v4(
   CXErrorCode Result = getFileDependencies(
       W, argc, argv, WorkingDirectory, MDC, MDCContext, Error, nullptr,
       LookupOutputs,
-      /*DeprecatedDriverCommand=*/false,
       ModuleName ? std::optional<StringRef>(ModuleName) : std::nullopt,
       [&](FullDependencies FD) {
         assert(FD.DriverCommandLine.empty());
@@ -365,7 +362,6 @@ CXErrorCode clang_experimental_DependencyScannerWorker_getFileDependencies_v5(
   CXErrorCode Result = getFileDependencies(
       W, argc, argv, WorkingDirectory, MDC, MDCContext, nullptr, &DiagConsumer,
       LookupOutputs,
-      /*DeprecatedDriverCommand=*/false,
       ModuleName ? std::optional<StringRef>(ModuleName) : std::nullopt,
       [&](FullDependencies FD) {
         assert(FD.DriverCommandLine.empty());
