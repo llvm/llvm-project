@@ -1922,6 +1922,9 @@ entry:
 define i1 @not_iszero_or_qnan_f(float %x) {
 ; CHECK-32-LABEL: not_iszero_or_qnan_f:
 ; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    pushl %esi
+; CHECK-32-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-32-NEXT:    .cfi_offset %esi, -8
 ; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
 ; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
 ; CHECK-32-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
@@ -1931,15 +1934,17 @@ define i1 @not_iszero_or_qnan_f(float %x) {
 ; CHECK-32-NEXT:    andb %cl, %dl
 ; CHECK-32-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; CHECK-32-NEXT:    sete %cl
-; CHECK-32-NEXT:    orb %dl, %cl
-; CHECK-32-NEXT:    leal -1(%eax), %edx
-; CHECK-32-NEXT:    cmpl $8388607, %edx # imm = 0x7FFFFF
-; CHECK-32-NEXT:    setb %dl
+; CHECK-32-NEXT:    leal -1(%eax), %esi
+; CHECK-32-NEXT:    cmpl $8388607, %esi # imm = 0x7FFFFF
+; CHECK-32-NEXT:    setb %ch
+; CHECK-32-NEXT:    orb %cl, %ch
 ; CHECK-32-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
 ; CHECK-32-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
 ; CHECK-32-NEXT:    setb %al
 ; CHECK-32-NEXT:    orb %dl, %al
-; CHECK-32-NEXT:    orb %cl, %al
+; CHECK-32-NEXT:    orb %ch, %al
+; CHECK-32-NEXT:    popl %esi
+; CHECK-32-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-32-NEXT:    retl
 ;
 ; CHECK-64-LABEL: not_iszero_or_qnan_f:
@@ -1953,15 +1958,15 @@ define i1 @not_iszero_or_qnan_f(float %x) {
 ; CHECK-64-NEXT:    andb %cl, %dl
 ; CHECK-64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; CHECK-64-NEXT:    sete %cl
-; CHECK-64-NEXT:    orb %dl, %cl
-; CHECK-64-NEXT:    leal -1(%rax), %edx
-; CHECK-64-NEXT:    cmpl $8388607, %edx # imm = 0x7FFFFF
-; CHECK-64-NEXT:    setb %dl
+; CHECK-64-NEXT:    leal -1(%rax), %esi
+; CHECK-64-NEXT:    cmpl $8388607, %esi # imm = 0x7FFFFF
+; CHECK-64-NEXT:    setb %sil
+; CHECK-64-NEXT:    orb %cl, %sil
 ; CHECK-64-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
 ; CHECK-64-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
 ; CHECK-64-NEXT:    setb %al
 ; CHECK-64-NEXT:    orb %dl, %al
-; CHECK-64-NEXT:    orb %cl, %al
+; CHECK-64-NEXT:    orb %sil, %al
 ; CHECK-64-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 925)  ; ~(0x60|0x2) = "~(zero|qnan)"
@@ -1973,38 +1978,38 @@ define i1 @not_iszero_or_snan_f(float %x) {
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
 ; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
-; CHECK-32-NEXT:    setge %cl
 ; CHECK-32-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; CHECK-32-NEXT:    sete %dl
-; CHECK-32-NEXT:    orb %cl, %dl
-; CHECK-32-NEXT:    leal -1(%eax), %ecx
-; CHECK-32-NEXT:    cmpl $8388607, %ecx # imm = 0x7FFFFF
-; CHECK-32-NEXT:    setb %cl
-; CHECK-32-NEXT:    orb %dl, %cl
+; CHECK-32-NEXT:    sete %cl
+; CHECK-32-NEXT:    leal -1(%eax), %edx
+; CHECK-32-NEXT:    cmpl $8388607, %edx # imm = 0x7FFFFF
+; CHECK-32-NEXT:    setb %dl
+; CHECK-32-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; CHECK-32-NEXT:    setge %ch
+; CHECK-32-NEXT:    orb %cl, %ch
+; CHECK-32-NEXT:    orb %dl, %ch
 ; CHECK-32-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
 ; CHECK-32-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
 ; CHECK-32-NEXT:    setb %al
-; CHECK-32-NEXT:    orb %cl, %al
+; CHECK-32-NEXT:    orb %ch, %al
 ; CHECK-32-NEXT:    retl
 ;
 ; CHECK-64-LABEL: not_iszero_or_snan_f:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    movd %xmm0, %eax
 ; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; CHECK-64-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
-; CHECK-64-NEXT:    setge %cl
 ; CHECK-64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; CHECK-64-NEXT:    sete %dl
-; CHECK-64-NEXT:    orb %cl, %dl
-; CHECK-64-NEXT:    leal -1(%rax), %ecx
-; CHECK-64-NEXT:    cmpl $8388607, %ecx # imm = 0x7FFFFF
-; CHECK-64-NEXT:    setb %cl
-; CHECK-64-NEXT:    orb %dl, %cl
+; CHECK-64-NEXT:    sete %cl
+; CHECK-64-NEXT:    leal -1(%rax), %edx
+; CHECK-64-NEXT:    cmpl $8388607, %edx # imm = 0x7FFFFF
+; CHECK-64-NEXT:    setb %dl
+; CHECK-64-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; CHECK-64-NEXT:    setge %sil
+; CHECK-64-NEXT:    orb %cl, %sil
+; CHECK-64-NEXT:    orb %dl, %sil
 ; CHECK-64-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
 ; CHECK-64-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
 ; CHECK-64-NEXT:    setb %al
-; CHECK-64-NEXT:    orb %cl, %al
+; CHECK-64-NEXT:    orb %sil, %al
 ; CHECK-64-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 926)  ; ~(0x60|0x1) = "~(zero|snan)"

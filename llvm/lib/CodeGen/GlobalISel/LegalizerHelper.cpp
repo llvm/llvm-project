@@ -7438,6 +7438,20 @@ LegalizerHelper::lowerISFPCLASS(MachineInstr &MI) {
                                        AsInt, SignBitC));
   }
 
+  if (FPClassTest PartialCheck = Mask & fcSubnormal) {
+    // issubnormal(V) ==> unsigned(abs(V) - 1) u< (all mantissa bits set)
+    // issubnormal(V) && V>0 ==> unsigned(V - 1) u< (all mantissa bits set)
+    auto V = (PartialCheck == fcPosSubnormal) ? AsInt : Abs;
+    auto OneC = MIRBuilder.buildConstant(IntTy, 1);
+    auto VMinusOne = MIRBuilder.buildSub(IntTy, V, OneC);
+    auto SubnormalRes =
+        MIRBuilder.buildICmp(CmpInst::Predicate::ICMP_ULT, DstTy, VMinusOne,
+                             MIRBuilder.buildConstant(IntTy, AllOneMantissa));
+    if (PartialCheck == fcNegSubnormal)
+      SubnormalRes = MIRBuilder.buildAnd(DstTy, SubnormalRes, Sign);
+    appendToRes(SubnormalRes);
+  }
+
   if (FPClassTest PartialCheck = Mask & fcInf) {
     if (PartialCheck == fcPosInf)
       appendToRes(MIRBuilder.buildICmp(CmpInst::Predicate::ICMP_EQ, DstTy,
@@ -7472,20 +7486,6 @@ LegalizerHelper::lowerISFPCLASS(MachineInstr &MI) {
                                             Abs, InfWithQnanBitC);
       appendToRes(MIRBuilder.buildAnd(DstTy, IsNan, IsNotQnan));
     }
-  }
-
-  if (FPClassTest PartialCheck = Mask & fcSubnormal) {
-    // issubnormal(V) ==> unsigned(abs(V) - 1) u< (all mantissa bits set)
-    // issubnormal(V) && V>0 ==> unsigned(V - 1) u< (all mantissa bits set)
-    auto V = (PartialCheck == fcPosSubnormal) ? AsInt : Abs;
-    auto OneC = MIRBuilder.buildConstant(IntTy, 1);
-    auto VMinusOne = MIRBuilder.buildSub(IntTy, V, OneC);
-    auto SubnormalRes =
-        MIRBuilder.buildICmp(CmpInst::Predicate::ICMP_ULT, DstTy, VMinusOne,
-                             MIRBuilder.buildConstant(IntTy, AllOneMantissa));
-    if (PartialCheck == fcNegSubnormal)
-      SubnormalRes = MIRBuilder.buildAnd(DstTy, SubnormalRes, Sign);
-    appendToRes(SubnormalRes);
   }
 
   if (FPClassTest PartialCheck = Mask & fcNormal) {
