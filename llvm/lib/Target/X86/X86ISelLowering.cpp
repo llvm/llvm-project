@@ -57565,15 +57565,16 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   if (isGRClass(*Class)) {
     unsigned Size = VT.getSizeInBits();
     if (Size == 1) Size = 8;
-    Register DestReg = getX86SubSuperRegisterOrZero(Res.first, Size);
-    if (DestReg > 0) {
+    if (Size != 8 && Size != 16 && Size != 32 && Size != 64)
+      return std::make_pair(0, nullptr);
+    Register DestReg = getX86SubSuperRegister(Res.first, Size);
+    if (DestReg.isValid()) {
       bool is64Bit = Subtarget.is64Bit();
       const TargetRegisterClass *RC =
           Size == 8 ? (is64Bit ? &X86::GR8RegClass : &X86::GR8_NOREXRegClass)
         : Size == 16 ? (is64Bit ? &X86::GR16RegClass : &X86::GR16_NOREXRegClass)
         : Size == 32 ? (is64Bit ? &X86::GR32RegClass : &X86::GR32_NOREXRegClass)
-        : Size == 64 ? (is64Bit ? &X86::GR64RegClass : nullptr)
-        : nullptr;
+        : /*Size == 64*/ (is64Bit ? &X86::GR64RegClass : nullptr);
       if (Size == 64 && !is64Bit) {
         // Model GCC's behavior here and select a fixed pair of 32-bit
         // registers.
