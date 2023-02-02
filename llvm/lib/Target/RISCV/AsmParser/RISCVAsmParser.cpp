@@ -2108,34 +2108,28 @@ bool RISCVAsmParser::parseDirectiveOption() {
   MCAsmParser &Parser = getParser();
   // Get the option token.
   AsmToken Tok = Parser.getTok();
+
   // At the moment only identifiers are supported.
-  if (Tok.isNot(AsmToken::Identifier))
-    return Error(Parser.getTok().getLoc(),
-                 "unexpected token, expected identifier");
+  if (parseToken(AsmToken::Identifier, "expected identifier"))
+    return true;
 
   StringRef Option = Tok.getIdentifier();
 
   if (Option == "push") {
+    if (Parser.parseEOL())
+      return true;
+
     getTargetStreamer().emitDirectiveOptionPush();
-
-    Parser.Lex();
-    if (Parser.getTok().isNot(AsmToken::EndOfStatement))
-      return Error(Parser.getTok().getLoc(),
-                   "unexpected token, expected end of statement");
-
     pushFeatureBits();
     return false;
   }
 
   if (Option == "pop") {
     SMLoc StartLoc = Parser.getTok().getLoc();
+    if (Parser.parseEOL())
+      return true;
+
     getTargetStreamer().emitDirectiveOptionPop();
-
-    Parser.Lex();
-    if (Parser.getTok().isNot(AsmToken::EndOfStatement))
-      return Error(Parser.getTok().getLoc(),
-                   "unexpected token, expected end of statement");
-
     if (popFeatureBits())
       return Error(StartLoc, ".option pop with no .option push");
 
@@ -2143,74 +2137,56 @@ bool RISCVAsmParser::parseDirectiveOption() {
   }
 
   if (Option == "rvc") {
+    if (Parser.parseEOL())
+      return true;
+
     getTargetStreamer().emitDirectiveOptionRVC();
-
-    Parser.Lex();
-    if (Parser.getTok().isNot(AsmToken::EndOfStatement))
-      return Error(Parser.getTok().getLoc(),
-                   "unexpected token, expected end of statement");
-
     setFeatureBits(RISCV::FeatureStdExtC, "c");
     return false;
   }
 
   if (Option == "norvc") {
+    if (Parser.parseEOL())
+      return true;
+
     getTargetStreamer().emitDirectiveOptionNoRVC();
-
-    Parser.Lex();
-    if (Parser.getTok().isNot(AsmToken::EndOfStatement))
-      return Error(Parser.getTok().getLoc(),
-                   "unexpected token, expected end of statement");
-
     clearFeatureBits(RISCV::FeatureStdExtC, "c");
     clearFeatureBits(RISCV::FeatureExtZca, "+experimental-zca");
     return false;
   }
 
   if (Option == "pic") {
+    if (Parser.parseEOL())
+      return true;
+
     getTargetStreamer().emitDirectiveOptionPIC();
-
-    Parser.Lex();
-    if (Parser.getTok().isNot(AsmToken::EndOfStatement))
-      return Error(Parser.getTok().getLoc(),
-                   "unexpected token, expected end of statement");
-
     ParserOptions.IsPicEnabled = true;
     return false;
   }
 
   if (Option == "nopic") {
+    if (Parser.parseEOL())
+      return true;
+
     getTargetStreamer().emitDirectiveOptionNoPIC();
-
-    Parser.Lex();
-    if (Parser.getTok().isNot(AsmToken::EndOfStatement))
-      return Error(Parser.getTok().getLoc(),
-                   "unexpected token, expected end of statement");
-
     ParserOptions.IsPicEnabled = false;
     return false;
   }
 
   if (Option == "relax") {
+    if (Parser.parseEOL())
+      return true;
+
     getTargetStreamer().emitDirectiveOptionRelax();
-
-    Parser.Lex();
-    if (Parser.getTok().isNot(AsmToken::EndOfStatement))
-      return Error(Parser.getTok().getLoc(),
-                   "unexpected token, expected end of statement");
-
     setFeatureBits(RISCV::FeatureRelax, "relax");
     return false;
   }
 
   if (Option == "norelax") {
+    if (Parser.parseEOL())
+      return true;
+
     getTargetStreamer().emitDirectiveOptionNoRelax();
-
-    Parser.Lex();
-    if (Parser.getTok().isNot(AsmToken::EndOfStatement))
-      return Error(Parser.getTok().getLoc(),
-                   "unexpected token, expected end of statement");
-
     clearFeatureBits(RISCV::FeatureRelax, "relax");
     return false;
   }
