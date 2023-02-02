@@ -15,6 +15,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -440,6 +441,44 @@ unsigned mlir::sparse_tensor::getCOOStart(SparseTensorEncodingAttr enc) {
   return rank;
 }
 
+// Helpers to setup a COO type.
+RankedTensorType sparse_tensor::getCOOFromTypeWithOrdering(RankedTensorType src,
+                                                           AffineMap ordering,
+                                                           bool ordered) {
+  auto *ctx = src.getContext();
+  auto rank = src.getRank();
+  SmallVector<DimLevelType> dims;
+
+  // An unordered and non-unique compressed dim at beginning.
+  // If this is also the last dimension, then it is unique.
+  dims.push_back(*getDimLevelType(LevelFormat::Compressed, ordered, rank == 1));
+  if (rank > 1) {
+    // TODO: it is actually ordered at the level for ordered input.
+    // Followed by unordered non-unique n-2 singleton levels.
+    std::fill_n(std::back_inserter(dims), rank - 2,
+                *getDimLevelType(LevelFormat::Singleton, ordered, false));
+    // Ends by a unique singleton level unless the tensor rank is 1.
+    dims.push_back(*getDimLevelType(LevelFormat::Singleton, ordered, true));
+  }
+
+  SparseTensorEncodingAttr encSrc = getSparseTensorEncoding(src);
+  // TODO: Maybe pick the bitwidth based on input/output tensors (probably the
+  // largest one among them) in the original operation instead of using the
+  // default value.
+  unsigned pointerBitWidth = encSrc ? encSrc.getPointerBitWidth() : 0;
+  unsigned indexBitWidth = encSrc ? encSrc.getIndexBitWidth() : 0;
+  auto enc = SparseTensorEncodingAttr::get(ctx, dims, ordering, AffineMap(),
+                                           pointerBitWidth, indexBitWidth);
+  return RankedTensorType::get(src.getShape(), src.getElementType(), enc);
+}
+
+RankedTensorType sparse_tensor::getCOOFromType(RankedTensorType src,
+                                               bool ordered) {
+  return getCOOFromTypeWithOrdering(
+      src, AffineMap::getMultiDimIdentityMap(src.getRank(), src.getContext()),
+      ordered);
+}
+
 uint64_t mlir::sparse_tensor::toOrigDim(SparseTensorEncodingAttr enc,
                                         uint64_t d) {
   if (enc) {
@@ -572,6 +611,42 @@ static LogicalResult verifySparsifierGetterSetter(
 LogicalResult NewOp::verify() {
   if (getExpandSymmetry() && getTypeRank(getResult()) != 2)
     return emitOpError("expand_symmetry can only be used for 2D tensors");
+  return success();
+}
+
+LogicalResult PackOp::verify() {
+  TensorType dataTp = getData().getType(), idxTp = getIndices().getType();
+  TensorType retTp = getResult().getType();
+
+  if (!isUniqueCOOType(retTp.cast<RankedTensorType>()))
+    return emitError("must be packed into a COO tensor");
+
+  if (!retTp.hasStaticShape() || !dataTp.hasStaticShape() ||
+      !idxTp.hasStaticShape())
+    return emitError("all input types must be statically shaped");
+
+  if (dataTp.getRank() != 1 || idxTp.getRank() != 2) {
+    return emitError(
+        "requires rank 1 tensor for value and rank 2 tensor for indices");
+  }
+
+  auto enc = getSparseTensorEncoding(retTp);
+  if (idxTp.getElementType() != enc.getIndexType() ||
+      dataTp.getElementType() != retTp.getElementType())
+    return emitError("unmatched type between input and output");
+
+  auto dNOE = dataTp.getShape()[0];
+  auto iNOE = idxTp.getShape()[0];
+  if (!ShapedType::isDynamic(dNOE) && !ShapedType::isDynamic(iNOE) &&
+      dNOE != iNOE)
+    return emitError("unmatched number of elements in data and indices");
+
+  // A tensor<?xNxi32> for indices means the input COO is rank N
+  auto inRank = idxTp.getShape()[1];
+  auto ouRank = retTp.getRank();
+  if (!ShapedType::isDynamic(inRank) && inRank != ouRank)
+    return emitError("unmatched rank between input and output");
+
   return success();
 }
 
