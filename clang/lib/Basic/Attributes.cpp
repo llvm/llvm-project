@@ -4,6 +4,15 @@
 #include "clang/Basic/IdentifierTable.h"
 using namespace clang;
 
+static int hasAttributeImpl(AttributeCommonInfo::Syntax Syntax, StringRef Name,
+                            StringRef ScopeName, const TargetInfo &Target,
+                            const LangOptions &LangOpts) {
+
+#include "clang/Basic/AttrHasAttributeImpl.inc"
+
+  return 0;
+}
+
 int clang::hasAttribute(AttributeCommonInfo::Syntax Syntax,
                         const IdentifierInfo *Scope, const IdentifierInfo *Attr,
                         const TargetInfo &Target, const LangOptions &LangOpts) {
@@ -27,7 +36,9 @@ int clang::hasAttribute(AttributeCommonInfo::Syntax Syntax,
       ScopeName == "omp")
     return (Name == "directive" || Name == "sequence") ? 1 : 0;
 
-#include "clang/Basic/AttrHasAttributeImpl.inc"
+  int res = hasAttributeImpl(Syntax, Name, ScopeName, Target, LangOpts);
+  if (res)
+    return res;
 
   return 0;
 }
