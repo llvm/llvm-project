@@ -49,6 +49,8 @@ const char *Action::getClassName(ActionClass AC) {
     return "clang-linker-wrapper";
   case StaticLibJobClass:
     return "static-lib-linker";
+  case BinaryAnalyzeJobClass:
+    return "binary-analyzer";
   }
 
   llvm_unreachable("invalid class");
@@ -457,3 +459,8 @@ void StaticLibJobAction::anchor() {}
 
 StaticLibJobAction::StaticLibJobAction(ActionList &Inputs, types::ID Type)
     : JobAction(StaticLibJobClass, Inputs, Type) {}
+
+void BinaryAnalyzeJobAction::anchor() {}
+
+BinaryAnalyzeJobAction::BinaryAnalyzeJobAction(Action *Input, types::ID Type)
+    : JobAction(BinaryAnalyzeJobClass, Input, Type) {}
