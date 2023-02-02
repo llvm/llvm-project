@@ -15,8 +15,8 @@ size_t wcslen(const wchar_t *S);
 
 void f1(char *S) {
   gets(S);
-  // CHECK-MESSAGES-WITH-ANNEX-K:           :[[@LINE-1]]:3: warning: function 'gets' is insecure, was deprecated and removed in C11 and C++14; 'gets_s' should be used instead
-  // CHECK-MESSAGES-WITH-ANNEX-K-CERT-ONLY: :[[@LINE-2]]:3: warning: function 'gets' is insecure, was deprecated and removed in C11 and C++14; 'gets_s' should be used instea
+  // CHECK-MESSAGES-WITH-ANNEX-K:           :[[@LINE-1]]:3: warning: function 'gets' is insecure, was deprecated and removed in C11 and C++14; 'gets_s' should be used instead [bugprone-unsafe-functions]
+  // CHECK-MESSAGES-WITH-ANNEX-K-CERT-ONLY: :[[@LINE-2]]:3: warning: function 'gets' is insecure, was deprecated and removed in C11 and C++14; 'gets_s' should be used instead
   // CHECK-MESSAGES-WITHOUT-ANNEX-K:        :[[@LINE-3]]:3: warning: function 'gets' is insecure, was deprecated and removed in C11 and C++14; 'fgets' should be used instead
 
   strlen(S);
