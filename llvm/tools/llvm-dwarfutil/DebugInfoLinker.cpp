@@ -41,7 +41,7 @@ class ObjFileAddressMap : public AddressesMap {
 public:
   ObjFileAddressMap(DWARFContext &Context, const Options &Options,
                     object::ObjectFile &ObjFile)
-      : Opts(Options), Context(Context) {
+      : Opts(Options) {
     // Remember addresses of existing text sections.
     for (const object::SectionRef &Sect : ObjFile.sections()) {
       if (!Sect.isText())
@@ -138,30 +138,6 @@ public:
 
   void clear() override { DWARFAddressRanges.clear(); }
 
-  llvm::Expected<uint64_t> relocateIndexedAddr(uint64_t StartOffset,
-                                               uint64_t EndOffset) override {
-    // No relocations in linked binary. Return just address value.
-
-    const char *AddrPtr =
-        Context.getDWARFObj().getAddrSection().Data.data() + StartOffset;
-    support::endianness Endianess =
-        Context.getDWARFObj().isLittleEndian() ? support::little : support::big;
-
-    assert(EndOffset > StartOffset);
-    switch (EndOffset - StartOffset) {
-    case 1:
-      return *AddrPtr;
-    case 2:
-      return support::endian::read16(AddrPtr, Endianess);
-    case 4:
-      return support::endian::read32(AddrPtr, Endianess);
-    case 8:
-      return support::endian::read64(AddrPtr, Endianess);
-    }
-
-    llvm_unreachable("relocateIndexedAddr unhandled case!");
-  }
-
 protected:
   // returns true if specified address range is inside address ranges
   // of executable sections.
@@ -231,7 +207,6 @@ private:
   RangesTy DWARFAddressRanges;
   AddressRanges TextAddressRanges;
   const Options &Opts;
-  DWARFContext &Context;
 };
 
 static bool knownByDWARFUtil(StringRef SecName) {
