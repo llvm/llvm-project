@@ -242,3 +242,9 @@ CallStack<MDNode, MDNode::op_iterator>::CallStackIterator::operator*() {
   assert(StackIdCInt);
   return StackIdCInt->getZExtValue();
 }
+
+template <> uint64_t CallStack<MDNode, MDNode::op_iterator>::back() const {
+  assert(N);
+  return mdconst::dyn_extract<ConstantInt>(N->operands().back())
+      ->getZExtValue();
+}
