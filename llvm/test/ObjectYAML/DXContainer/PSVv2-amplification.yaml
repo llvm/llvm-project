@@ -1,0 +1,57 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:       2
+Parts:
+  - Name:            PSV0
+    Size:            144
+    PSVInfo:
+      Version:         2
+      ShaderStage:     14
+      PayloadSizeInBytes: 4092
+      MinimumWaveLaneCount: 0
+      MaximumWaveLaneCount: 4294967295
+      UsesViewID:      128
+      SigInputElements: 8
+      SigOutputElements: 16
+      SigPatchConstOrPrimElements: 32
+      SigInputVectors: 64
+      SigOutputVectors: [ 8, 16, 32, 64 ]
+      NumThreadsX:     512
+      NumThreadsY:     1024
+      NumThreadsZ:     2048
+  - Name:            DXIL
+    Size:            24
+    Program:
+      MajorVersion:    6
+      MinorVersion:    0
+      ShaderKind:      14
+      Size:            6
+      DXILMajorVersion: 0
+      DXILMinorVersion: 1
+      DXILSize:        0
+...
+
+# CHECK: Name:            PSV0
+# CHECK: PSVInfo:
+# CHECK-NEXT: Version:         2
+# CHECK-NEXT: ShaderStage:     14
+# CHECK-NEXT: PayloadSizeInBytes: 4092
+# CHECK-NEXT: MinimumWaveLaneCount: 0
+# CHECK-NEXT: MaximumWaveLaneCount: 4294967295
+# CHECK-NEXT: UsesViewID:      128
+# CHECK-NEXT: SigInputElements: 8
+# CHECK-NEXT: SigOutputElements: 16
+# CHECK-NEXT: SigPatchConstOrPrimElements: 32
+# CHECK-NEXT: SigInputVectors: 64
+# CHECK-NEXT: SigOutputVectors: [ 8, 16, 32, 64 ]
+# CHECK-NEXT: NumThreadsX:     512
+# CHECK-NEXT: NumThreadsY:     1024
+# CHECK-NEXT: NumThreadsZ:     2048
+# CHECK-NEXT: Name

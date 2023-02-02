@@ -43,6 +43,35 @@ DXContainerYAML::ShaderHash::ShaderHash(const dxbc::ShaderHash &Data)
   memcpy(Digest.data(), &Data.Digest[0], 16);
 }
 
+DXContainerYAML::PSVInfo::PSVInfo() : Version(0) {
+  memset(&Info, 0, sizeof(Info));
+}
+
+DXContainerYAML::PSVInfo::PSVInfo(const dxbc::PSV::v0::RuntimeInfo *P,
+                                  uint16_t Stage)
+    : Version(0) {
+  memset(&Info, 0, sizeof(Info));
+  memcpy(&Info, P, sizeof(dxbc::PSV::v0::RuntimeInfo));
+
+  assert(Stage < std::numeric_limits<uint8_t>::max() &&
+         "Stage should be a very small number");
+  // We need to bring the stage in separately since it isn't part of the v1 data
+  // structure.
+  Info.ShaderStage = static_cast<uint8_t>(Stage);
+}
+
+DXContainerYAML::PSVInfo::PSVInfo(const dxbc::PSV::v1::RuntimeInfo *P)
+    : Version(1) {
+  memset(&Info, 0, sizeof(Info));
+  memcpy(&Info, P, sizeof(dxbc::PSV::v1::RuntimeInfo));
+}
+
+DXContainerYAML::PSVInfo::PSVInfo(const dxbc::PSV::v2::RuntimeInfo *P)
+    : Version(2) {
+  memset(&Info, 0, sizeof(Info));
+  memcpy(&Info, P, sizeof(dxbc::PSV::v2::RuntimeInfo));
+}
+
 namespace yaml {
 
 void MappingTraits<DXContainerYAML::VersionTuple>::mapping(
@@ -84,6 +113,16 @@ void MappingTraits<DXContainerYAML::ShaderHash>::mapping(
   IO.mapRequired("Digest", Hash.Digest);
 }
 
+void MappingTraits<DXContainerYAML::PSVInfo>::mapping(
+    IO &IO, DXContainerYAML::PSVInfo &PSV) {
+  IO.mapRequired("Version", PSV.Version);
+
+  // Shader stage is only included in binaries for v1 and later, but we always
+  // include it since it simplifies parsing and file construction.
+  IO.mapRequired("ShaderStage", PSV.Info.ShaderStage);
+  PSV.mapInfoForVersion(IO);
+}
+
 void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
                                                    DXContainerYAML::Part &P) {
   IO.mapRequired("Name", P.Name);
@@ -91,6 +130,7 @@ void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
   IO.mapOptional("Program", P.Program);
   IO.mapOptional("Flags", P.Flags);
   IO.mapOptional("Hash", P.Hash);
+  IO.mapOptional("PSVInfo", P.Info);
 }
 
 void MappingTraits<DXContainerYAML::Object>::mapping(
@@ -101,4 +141,95 @@ void MappingTraits<DXContainerYAML::Object>::mapping(
 }
 
 } // namespace yaml
+
+void DXContainerYAML::PSVInfo::mapInfoForVersion(yaml::IO &IO) {
+  dxbc::PipelinePSVInfo &StageInfo = Info.StageInfo;
+  Triple::EnvironmentType Stage = dxbc::getShaderStage(Info.ShaderStage);
+
+  switch (Stage) {
+  case Triple::EnvironmentType::Pixel:
+    IO.mapRequired("DepthOutput", StageInfo.PS.DepthOutput);
+    IO.mapRequired("SampleFrequency", StageInfo.PS.SampleFrequency);
+    break;
+  case Triple::EnvironmentType::Vertex:
+    IO.mapRequired("OutputPositionPresent", StageInfo.VS.OutputPositionPresent);
+    break;
+  case Triple::EnvironmentType::Geometry:
+    IO.mapRequired("InputPrimitive", StageInfo.GS.InputPrimitive);
+    IO.mapRequired("OutputTopology", StageInfo.GS.OutputTopology);
+    IO.mapRequired("OutputStreamMask", StageInfo.GS.OutputStreamMask);
+    IO.mapRequired("OutputPositionPresent", StageInfo.GS.OutputPositionPresent);
+    break;
+  case Triple::EnvironmentType::Hull:
+    IO.mapRequired("InputControlPointCount",
+                   StageInfo.HS.InputControlPointCount);
+    IO.mapRequired("OutputControlPointCount",
+                   StageInfo.HS.OutputControlPointCount);
+    IO.mapRequired("TessellatorDomain", StageInfo.HS.TessellatorDomain);
+    IO.mapRequired("TessellatorOutputPrimitive",
+                   StageInfo.HS.TessellatorOutputPrimitive);
+    break;
+  case Triple::EnvironmentType::Domain:
+    IO.mapRequired("InputControlPointCount",
+                   StageInfo.DS.InputControlPointCount);
+    IO.mapRequired("OutputPositionPresent", StageInfo.DS.OutputPositionPresent);
+    IO.mapRequired("TessellatorDomain", StageInfo.DS.TessellatorDomain);
+    break;
+  case Triple::EnvironmentType::Mesh:
+    IO.mapRequired("GroupSharedBytesUsed", StageInfo.MS.GroupSharedBytesUsed);
+    IO.mapRequired("GroupSharedBytesDependentOnViewID",
+                   StageInfo.MS.GroupSharedBytesDependentOnViewID);
+    IO.mapRequired("PayloadSizeInBytes", StageInfo.MS.PayloadSizeInBytes);
+    IO.mapRequired("MaxOutputVertices", StageInfo.MS.MaxOutputVertices);
+    IO.mapRequired("MaxOutputPrimitives", StageInfo.MS.MaxOutputPrimitives);
+    break;
+  case Triple::EnvironmentType::Amplification:
+    IO.mapRequired("PayloadSizeInBytes", StageInfo.AS.PayloadSizeInBytes);
+    break;
+  default:
+    break;
+  }
+
+  IO.mapRequired("MinimumWaveLaneCount", Info.MinimumWaveLaneCount);
+  IO.mapRequired("MaximumWaveLaneCount", Info.MaximumWaveLaneCount);
+
+  if (Version == 0)
+    return;
+
+  IO.mapRequired("UsesViewID", Info.UsesViewID);
+
+  switch (Stage) {
+  case Triple::EnvironmentType::Geometry:
+    IO.mapRequired("MaxVertexCount", Info.GeomData.MaxVertexCount);
+    break;
+  case Triple::EnvironmentType::Hull:
+  case Triple::EnvironmentType::Domain:
+    IO.mapRequired("SigPatchConstOrPrimVectors",
+                   Info.GeomData.SigPatchConstOrPrimVectors);
+    break;
+  case Triple::EnvironmentType::Mesh:
+    IO.mapRequired("SigPrimVectors", Info.GeomData.MeshInfo.SigPrimVectors);
+    IO.mapRequired("MeshOutputTopology",
+                   Info.GeomData.MeshInfo.MeshOutputTopology);
+    break;
+  default:
+    break;
+  }
+
+  IO.mapRequired("SigInputElements", Info.SigInputElements);
+  IO.mapRequired("SigOutputElements", Info.SigOutputElements);
+  IO.mapRequired("SigPatchConstOrPrimElements",
+                 Info.SigPatchConstOrPrimElements);
+  IO.mapRequired("SigInputVectors", Info.SigInputVectors);
+  MutableArrayRef<uint8_t> Vec(Info.SigOutputVectors);
+  IO.mapRequired("SigOutputVectors", Vec);
+
+  if (Version == 1)
+    return;
+
+  IO.mapRequired("NumThreadsX", Info.NumThreadsX);
+  IO.mapRequired("NumThreadsY", Info.NumThreadsY);
+  IO.mapRequired("NumThreadsZ", Info.NumThreadsZ);
+}
+
 } // namespace llvm
