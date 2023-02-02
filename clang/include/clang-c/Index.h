@@ -34,7 +34,7 @@
  * compatible, thus CINDEX_VERSION_MAJOR is expected to remain stable.
  */
 #define CINDEX_VERSION_MAJOR 0
-#define CINDEX_VERSION_MINOR 62
+#define CINDEX_VERSION_MINOR 63
 
 #define CINDEX_VERSION_ENCODE(major, minor) (((major)*10000) + ((minor)*1))
 
