@@ -7508,7 +7508,8 @@ void ResolveNamesVisitor::FinishSpecificationPart(
 // expressions, so it's safe to defer processing their definitions.)
 void ResolveNamesVisitor::AnalyzeStmtFunctionStmt(
     const parser::StmtFunctionStmt &stmtFunc) {
-  Symbol *symbol{std::get<parser::Name>(stmtFunc.t).symbol};
+  const auto &name{std::get<parser::Name>(stmtFunc.t)};
+  Symbol *symbol{name.symbol};
   auto *details{symbol ? symbol->detailsIf<SubprogramDetails>() : nullptr};
   if (!details || !symbol->scope()) {
     return;
@@ -7520,8 +7521,12 @@ void ResolveNamesVisitor::AnalyzeStmtFunctionStmt(
   PopScope();
   if (auto expr{AnalyzeExpr(context(), stmtFunc)}) {
     if (auto type{evaluate::DynamicType::From(*symbol)}) {
-      if (auto converted{ConvertToType(*type, std::move(*expr))}) {
+      if (auto converted{evaluate::ConvertToType(*type, std::move(*expr))}) {
         details->set_stmtFunction(std::move(*converted));
+      } else {
+        Say(name.source,
+            "Defining expression of statement function '%s' cannot be converted to its result type %s"_err_en_US,
+            name.source, type->AsFortran());
       }
     } else {
       details->set_stmtFunction(std::move(*expr));
