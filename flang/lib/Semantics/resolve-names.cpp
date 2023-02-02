@@ -5768,7 +5768,14 @@ void DeclarationVisitor::CheckCommonBlockDerivedType(
       if (details) {
         if (const auto *type{details->type()}) {
           if (const auto *derived{type->AsDerived()}) {
-            CheckCommonBlockDerivedType(name, derived->typeSymbol());
+            const Symbol &derivedTypeSymbol{derived->typeSymbol()};
+            // Don't call this member function recursively if the derived type
+            // symbol is the same symbol that is already being processed.
+            // This can happen when a component is a pointer of the same type
+            // as its parent component, for instance.
+            if (derivedTypeSymbol != typeSymbol) {
+              CheckCommonBlockDerivedType(name, derivedTypeSymbol);
+            }
           }
         }
       }
