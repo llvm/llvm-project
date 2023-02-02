@@ -113,6 +113,7 @@ private:
     return msg;
   }
   bool IsResultOkToDiffer(const FunctionResult &);
+  void CheckGlobalName(const Symbol &);
   void CheckBindC(const Symbol &);
   void CheckBindCFunctionResult(const Symbol &);
   // Check functions for defined I/O procedures
@@ -154,11 +155,11 @@ private:
   // Cache of calls to Procedure::Characterize(Symbol)
   std::map<SymbolRef, std::optional<Procedure>, SymbolAddressCompare>
       characterizeCache_;
-  // Collection of symbols with BIND(C) names
-  std::map<std::string, SymbolRef> bindC_;
   // Collection of module procedure symbols with non-BIND(C)
   // global names, qualified by their module.
   std::map<std::pair<SourceName, const Symbol *>, SymbolRef> moduleProcs_;
+  // Collection of symbols with global names, BIND(C) or otherwise
+  std::map<std::string, SymbolRef> globalNames_;
   // Derived types that have defined input/output procedures
   std::vector<TypeWithDefinedIo> seenDefinedIoTypes_;
 };
@@ -253,6 +254,7 @@ void CheckHelper::Check(const Symbol &symbol) {
     CheckVolatile(symbol, derived);
   }
   CheckBindC(symbol);
+  CheckGlobalName(symbol);
   if (isDone) {
     return; // following checks do not apply
   }
@@ -316,7 +318,9 @@ void CheckHelper::Check(const Symbol &symbol) {
   if (type) { // Section 7.2, paragraph 7
     bool canHaveAssumedParameter{IsNamedConstant(symbol) ||
         (IsAssumedLengthCharacter(symbol) && // C722
-            IsExternal(symbol)) ||
+            (IsExternal(symbol) ||
+                ClassifyProcedure(symbol) ==
+                    ProcedureDefinitionClass::Dummy)) ||
         symbol.test(Symbol::Flag::ParentComp)};
     if (!IsStmtFunctionDummy(symbol)) { // C726
       if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
@@ -351,7 +355,7 @@ void CheckHelper::Check(const Symbol &symbol) {
       }
     }
   }
-  if (IsAssumedLengthCharacter(symbol) && IsExternal(symbol)) { // C723
+  if (IsAssumedLengthCharacter(symbol) && IsFunction(symbol)) { // C723
     if (symbol.attrs().test(Attr::RECURSIVE)) {
       messages_.Say(
           "An assumed-length CHARACTER(*) function cannot be RECURSIVE"_err_en_US);
@@ -360,21 +364,24 @@ void CheckHelper::Check(const Symbol &symbol) {
       messages_.Say(
           "An assumed-length CHARACTER(*) function cannot return an array"_err_en_US);
     }
-    if (IsElementalProcedure(symbol)) {
-      messages_.Say(
-          "An assumed-length CHARACTER(*) function cannot be ELEMENTAL"_err_en_US);
-    } else if (IsPureProcedure(symbol)) {
-      messages_.Say(
-          "An assumed-length CHARACTER(*) function cannot be PURE"_err_en_US);
+    if (!IsStmtFunction(symbol)) {
+      if (IsElementalProcedure(symbol)) {
+        messages_.Say(
+            "An assumed-length CHARACTER(*) function cannot be ELEMENTAL"_err_en_US);
+      } else if (IsPureProcedure(symbol)) {
+        messages_.Say(
+            "An assumed-length CHARACTER(*) function cannot be PURE"_err_en_US);
+      }
     }
     if (const Symbol *result{FindFunctionResult(symbol)}) {
       if (IsPointer(*result)) {
         messages_.Say(
             "An assumed-length CHARACTER(*) function cannot return a POINTER"_err_en_US);
       }
-    } else if (IsPointer(symbol)) {
+    } else if (IsProcedurePointer(symbol) && IsDummy(symbol)) {
       messages_.Say(
-          "A procedure pointer should not have assumed-length CHARACTER(*) result type"_port_en_US);
+          "A dummy procedure pointer should not have assumed-length CHARACTER(*) result type"_port_en_US);
+      // The non-dummy case is a hard error that's caught elsewhere.
     }
   }
   if (symbol.attrs().test(Attr::VALUE)) {
@@ -420,7 +427,10 @@ void CheckHelper::Check(const Symbol &symbol) {
   }
 }
 
-void CheckHelper::CheckCommonBlock(const Symbol &symbol) { CheckBindC(symbol); }
+void CheckHelper::CheckCommonBlock(const Symbol &symbol) {
+  CheckGlobalName(symbol);
+  CheckBindC(symbol);
+}
 
 void CheckHelper::CheckBindCFunctionResult(const Symbol &symbol) { // C1553
   if (!innermostSymbol_ || !IsBindCProcedure(*innermostSymbol_)) {
@@ -1060,7 +1070,7 @@ void CheckHelper::CheckSubprogram(
 }
 
 void CheckHelper::CheckLocalVsGlobal(const Symbol &symbol) {
-  if (IsProcedure(symbol) && IsExternal(symbol)) {
+  if (IsExternal(symbol)) {
     if (const Symbol *global{FindGlobal(symbol)}; global && global != &symbol) {
       std::string interfaceName{symbol.name().ToString()};
       if (const auto *bind{symbol.GetBindName()}) {
@@ -1095,8 +1105,13 @@ void CheckHelper::CheckLocalVsGlobal(const Symbol &symbol) {
             }
           }
         }
-        evaluate::AttachDeclaration(msg, *global);
-        evaluate::AttachDeclaration(msg, symbol);
+        if (msg) {
+          if (msg->IsFatal()) {
+            context_.SetError(symbol);
+          }
+          evaluate::AttachDeclaration(msg, *global);
+          evaluate::AttachDeclaration(msg, symbol);
+        }
       }
     }
   }
@@ -2080,14 +2095,75 @@ void CheckHelper::CheckGenericOps(const Scope &scope) {
   helper.Check(scope);
 }
 
-static const std::string *DefinesBindCName(const Symbol &symbol) {
+static bool IsSubprogramDefinition(const Symbol &symbol) {
   const auto *subp{symbol.detailsIf<SubprogramDetails>()};
-  if ((subp && !subp->isInterface()) || symbol.has<ObjectEntityDetails>() ||
-      symbol.has<CommonBlockDetails>()) {
-    // Symbol defines data or entry point
-    return symbol.GetBindName();
+  return subp && !subp->isInterface() && symbol.scope() &&
+      symbol.scope()->kind() == Scope::Kind::Subprogram;
+}
+
+static bool IsBlockData(const Symbol &symbol) {
+  return symbol.scope() && symbol.scope()->kind() == Scope::Kind::BlockData;
+}
+
+static bool IsExternalProcedureDefinition(const Symbol &symbol) {
+  return IsBlockData(symbol) ||
+      (IsSubprogramDefinition(symbol) &&
+          (IsExternal(symbol) || symbol.GetBindName()));
+}
+
+static std::optional<std::string> DefinesGlobalName(const Symbol &symbol) {
+  if (const auto *module{symbol.detailsIf<ModuleDetails>()}) {
+    if (!module->isSubmodule() && !symbol.owner().IsIntrinsicModules()) {
+      return symbol.name().ToString();
+    }
+  } else if (IsBlockData(symbol)) {
+    return symbol.name().ToString();
   } else {
-    return nullptr;
+    const std::string *bindC{symbol.GetBindName()};
+    if (symbol.has<CommonBlockDetails>() ||
+        IsExternalProcedureDefinition(symbol)) {
+      return bindC ? *bindC : symbol.name().ToString();
+    } else if (bindC &&
+        (symbol.has<ObjectEntityDetails>() || IsModuleProcedure(symbol))) {
+      return *bindC;
+    }
+  }
+  return std::nullopt;
+}
+
+// 19.2 p2
+void CheckHelper::CheckGlobalName(const Symbol &symbol) {
+  if (auto global{DefinesGlobalName(symbol)}) {
+    auto pair{globalNames_.emplace(std::move(*global), symbol)};
+    if (!pair.second) {
+      const Symbol &other{*pair.first->second};
+      if (context_.HasError(symbol) || context_.HasError(other)) {
+        // don't pile on
+      } else if (symbol.has<CommonBlockDetails>() &&
+          other.has<CommonBlockDetails>() && symbol.name() == other.name()) {
+        // Two common blocks can have the same global name so long as
+        // they're not in the same scope.
+      } else if ((IsProcedure(symbol) || IsBlockData(symbol)) &&
+          (IsProcedure(other) || IsBlockData(other)) &&
+          (!IsExternalProcedureDefinition(symbol) ||
+              !IsExternalProcedureDefinition(other))) {
+        // both are procedures/BLOCK DATA, not both definitions
+      } else if (symbol.has<ModuleDetails>()) {
+        messages_.Say(symbol.name(),
+            "Module '%s' conflicts with a global name"_port_en_US,
+            pair.first->first);
+      } else if (other.has<ModuleDetails>()) {
+        messages_.Say(symbol.name(),
+            "Global name '%s' conflicts with a module"_port_en_US,
+            pair.first->first);
+      } else if (auto *msg{messages_.Say(symbol.name(),
+                     "Two entities have the same global name '%s'"_err_en_US,
+                     pair.first->first)}) {
+        msg->Attach(other.name(), "Conflicting declaration"_en_US);
+        context_.SetError(symbol);
+        context_.SetError(other);
+      }
+    }
   }
 }
 
@@ -2101,25 +2177,6 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
     messages_.Say(symbol.name(),
         "A variable with BIND(C) attribute may only appear in the specification part of a module"_err_en_US);
     context_.SetError(symbol);
-  }
-  if (const std::string *name{DefinesBindCName(symbol)}) {
-    auto pair{bindC_.emplace(*name, symbol)};
-    if (!pair.second) {
-      const Symbol &other{*pair.first->second};
-      if (symbol.has<CommonBlockDetails>() && other.has<CommonBlockDetails>() &&
-          symbol.name() == other.name()) {
-        // Two common blocks can have the same BIND(C) name so long as
-        // they're not in the same scope.
-      } else if (!context_.HasError(other)) {
-        if (auto *msg{messages_.Say(symbol.name(),
-                "Two entities have the same BIND(C) name '%s'"_err_en_US,
-                *name)}) {
-          msg->Attach(other.name(), "Conflicting declaration"_en_US);
-        }
-        context_.SetError(symbol);
-        context_.SetError(other);
-      }
-    }
   }
   if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
     if (!proc->procInterface() ||
