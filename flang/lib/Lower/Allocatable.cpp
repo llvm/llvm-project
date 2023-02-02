@@ -211,14 +211,17 @@ static mlir::Value genRuntimeAllocateSource(fir::FirOpBuilder &builder,
 static void genRuntimeAllocateApplyMold(fir::FirOpBuilder &builder,
                                         mlir::Location loc,
                                         const fir::MutableBoxValue &box,
-                                        fir::ExtendedValue mold) {
+                                        fir::ExtendedValue mold, int rank) {
   mlir::func::FuncOp callee =
       box.isPointer()
           ? fir::runtime::getRuntimeFunc<mkRTKey(PointerApplyMold)>(loc,
                                                                     builder)
           : fir::runtime::getRuntimeFunc<mkRTKey(AllocatableApplyMold)>(
                 loc, builder);
-  llvm::SmallVector<mlir::Value> args{box.getAddr(), fir::getBase(mold)};
+  llvm::SmallVector<mlir::Value> args{
+      box.getAddr(), fir::getBase(mold),
+      builder.createIntegerConstant(
+          loc, callee.getFunctionType().getInputs()[2], rank)};
   llvm::SmallVector<mlir::Value> operands;
   for (auto [fst, snd] : llvm::zip(args, callee.getFunctionType().getInputs()))
     operands.emplace_back(builder.createConvert(loc, snd, fst));
@@ -565,7 +568,8 @@ private:
         !box.hasNonDeferredLenParams())
       lenParams.push_back(fir::factory::readCharLen(builder, loc, sourceExv));
     if (alloc.type.IsPolymorphic())
-      genRuntimeAllocateApplyMold(builder, loc, box, sourceExv);
+      genRuntimeAllocateApplyMold(builder, loc, box, sourceExv,
+                                  alloc.getSymbol().Rank());
     genSetDeferredLengthParameters(alloc, box);
     genAllocateObjectBounds(alloc, box);
     mlir::Value stat =
@@ -576,7 +580,8 @@ private:
 
   void genMoldAllocation(const Allocation &alloc,
                          const fir::MutableBoxValue &box) {
-    genRuntimeAllocateApplyMold(builder, loc, box, moldExv);
+    genRuntimeAllocateApplyMold(builder, loc, box, moldExv,
+                                alloc.getSymbol().Rank());
     errorManager.genStatCheck(builder, loc);
     mlir::Value stat = genRuntimeAllocate(builder, loc, box, errorManager);
     fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
