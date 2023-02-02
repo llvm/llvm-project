@@ -199,6 +199,7 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
         continue;
       mcdxbc::PSVRuntimeInfo PSV;
       memcpy(&PSV.BaseData, &P.Info->Info, sizeof(dxbc::PSV::v2::RuntimeInfo));
+      PSV.Resources = P.Info->Resources;
 
       if (sys::IsBigEndianHost)
         PSV.swapBytes(static_cast<Triple::EnvironmentType>(
