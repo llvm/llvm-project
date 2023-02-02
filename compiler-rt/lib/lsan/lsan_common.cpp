@@ -859,7 +859,7 @@ void LeakReport::AddLeakedChunks(const LeakedChunks &chunks) {
       leaks_.push_back(leak);
     }
     if (flags()->report_objects) {
-      LeakedObject obj = {leaks_[i].id, chunk, leaked_size};
+      LeakedObject obj = {leaks_[i].id, GetUserAddr(chunk), leaked_size};
       leaked_objects_.push_back(obj);
     }
   }

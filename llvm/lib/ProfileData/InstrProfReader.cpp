@@ -174,10 +174,6 @@ InstrProfReader::create(const Twine &Path, vfs::FileSystem &FS,
 Expected<std::unique_ptr<InstrProfReader>>
 InstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer,
                         const InstrProfCorrelator *Correlator) {
-  // Sanity check the buffer.
-  if (uint64_t(Buffer->getBufferSize()) > std::numeric_limits<uint64_t>::max())
-    return make_error<InstrProfError>(instrprof_error::too_large);
-
   if (Buffer->getBufferSize() == 0)
     return make_error<InstrProfError>(instrprof_error::empty_raw_profile);
 
@@ -226,9 +222,6 @@ IndexedInstrProfReader::create(const Twine &Path, vfs::FileSystem &FS,
 Expected<std::unique_ptr<IndexedInstrProfReader>>
 IndexedInstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer,
                                std::unique_ptr<MemoryBuffer> RemappingBuffer) {
-  if (uint64_t(Buffer->getBufferSize()) > std::numeric_limits<uint64_t>::max())
-    return make_error<InstrProfError>(instrprof_error::too_large);
-
   // Create the reader.
   if (!IndexedInstrProfReader::hasFormat(*Buffer))
     return make_error<InstrProfError>(instrprof_error::bad_magic);

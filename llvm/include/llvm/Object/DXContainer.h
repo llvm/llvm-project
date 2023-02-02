@@ -20,9 +20,38 @@
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 namespace object {
+
+namespace DirectX {
+class PSVRuntimeInfo {
+  StringRef Data;
+  uint32_t Size;
+  using InfoStruct =
+      std::variant<std::monostate, dxbc::PSV::v0::RuntimeInfo,
+                   dxbc::PSV::v1::RuntimeInfo, dxbc::PSV::v2::RuntimeInfo>;
+  InfoStruct BasicInfo;
+
+public:
+  PSVRuntimeInfo(StringRef D) : Data(D), Size(0) {}
+
+  // Parsing depends on the shader kind
+  Error parse(uint16_t ShaderKind);
+
+  uint32_t getSize() const { return Size; }
+  uint32_t getVersion() const {
+    return Size >= sizeof(dxbc::PSV::v2::RuntimeInfo)
+               ? 2
+               : (Size >= sizeof(dxbc::PSV::v1::RuntimeInfo) ? 1 : 0);
+  }
+
+  const InfoStruct &getInfo() const { return BasicInfo; }
+};
+
+} // namespace DirectX
+
 class DXContainer {
 public:
   using DXILData = std::pair<dxbc::ProgramHeader, const char *>;
@@ -36,12 +65,14 @@ private:
   std::optional<DXILData> DXIL;
   std::optional<uint64_t> ShaderFlags;
   std::optional<dxbc::ShaderHash> Hash;
+  std::optional<DirectX::PSVRuntimeInfo> PSVInfo;
 
   Error parseHeader();
   Error parsePartOffsets();
   Error parseDXILHeader(StringRef Part);
   Error parseShaderFlags(StringRef Part);
   Error parseHash(StringRef Part);
+  Error parsePSVInfo(StringRef Part);
   friend class PartIterator;
 
 public:
@@ -118,11 +149,15 @@ public:
 
   const dxbc::Header &getHeader() const { return Header; }
 
-  std::optional<DXILData> getDXIL() const { return DXIL; }
+  const std::optional<DXILData> &getDXIL() const { return DXIL; }
 
   std::optional<uint64_t> getShaderFlags() const { return ShaderFlags; }
 
   std::optional<dxbc::ShaderHash> getShaderHash() const { return Hash; }
+
+  const std::optional<DirectX::PSVRuntimeInfo> &getPSVInfo() const {
+    return PSVInfo;
+  };
 };
 
 } // namespace object

@@ -993,7 +993,6 @@ def Extra : DiagGroup<"extra", [
     EmptyInitStatement,
     StringConcatation,
     FUseLdPath,
-    TypeLimits,
   ]>;
 
 def Most : DiagGroup<"most", [
@@ -1420,6 +1419,9 @@ def BranchProtection : DiagGroup<"branch-protection">;
 // HLSL diagnostic groups
 // Warnings for HLSL Clang extensions
 def HLSLExtension : DiagGroup<"hlsl-extensions">;
+
+// Warnings for DXIL validation
+def DXILValidation : DiagGroup<"dxil-validation">;
 
 // Warnings and notes related to const_var_decl_type attribute checks
 def ReadOnlyPlacementChecks : DiagGroup<"read-only-types">;

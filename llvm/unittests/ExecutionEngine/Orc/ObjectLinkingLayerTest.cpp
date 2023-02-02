@@ -48,10 +48,75 @@ TEST_F(ObjectLinkingLayerTest, AddLinkGraph) {
                                    orc::ExecutorAddr(0x1000), 8, 0);
   G->addDefinedSymbol(B1, 4, "_X", 4, Linkage::Strong, Scope::Default, false,
                       false);
+  G->addDefinedSymbol(B1, 4, "_Y", 4, Linkage::Weak, Scope::Default, false,
+                      false);
+  G->addDefinedSymbol(B1, 4, "_Z", 4, Linkage::Strong, Scope::Hidden, false,
+                      false);
+  G->addDefinedSymbol(B1, 4, "_W", 4, Linkage::Strong, Scope::Default, true,
+                      false);
 
   EXPECT_THAT_ERROR(ObjLinkingLayer.add(JD, std::move(G)), Succeeded());
 
   EXPECT_THAT_EXPECTED(ES.lookup(&JD, "_X"), Succeeded());
+}
+
+TEST_F(ObjectLinkingLayerTest, ClaimLateDefinedWeakSymbols) {
+  // Check that claiming weak symbols works as expected.
+  //
+  // To do this we'll need a custom plugin to inject some new symbols during
+  // the link.
+  class TestPlugin : public ObjectLinkingLayer::Plugin {
+  public:
+    void modifyPassConfig(MaterializationResponsibility &MR,
+                          jitlink::LinkGraph &G,
+                          jitlink::PassConfiguration &Config) override {
+      Config.PrePrunePasses.insert(
+          Config.PrePrunePasses.begin(), [](LinkGraph &G) {
+            auto *DataSec = G.findSectionByName("__data");
+            auto &DataBlock = G.createContentBlock(
+                *DataSec, BlockContent, orc::ExecutorAddr(0x2000), 8, 0);
+            G.addDefinedSymbol(DataBlock, 4, "_x", 4, Linkage::Weak,
+                               Scope::Default, false, false);
+
+            auto &TextSec =
+                G.createSection("__text", MemProt::Read | MemProt::Write);
+            auto &FuncBlock = G.createContentBlock(
+                TextSec, BlockContent, orc::ExecutorAddr(0x3000), 8, 0);
+            G.addDefinedSymbol(FuncBlock, 4, "_f", 4, Linkage::Weak,
+                               Scope::Default, true, false);
+
+            return Error::success();
+          });
+    }
+
+    Error notifyFailed(MaterializationResponsibility &MR) override {
+      llvm_unreachable("unexpected error");
+    }
+
+    Error notifyRemovingResources(JITDylib &JD, ResourceKey K) override {
+      return Error::success();
+    }
+    void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
+                                     ResourceKey SrcKey) override {
+      llvm_unreachable("unexpected resource transfer");
+    }
+  };
+
+  ObjLinkingLayer.addPlugin(std::make_unique<TestPlugin>());
+
+  auto G =
+      std::make_unique<LinkGraph>("foo", Triple("x86_64-apple-darwin"), 8,
+                                  support::little, x86_64::getEdgeKindName);
+
+  auto &DataSec = G->createSection("__data", MemProt::Read | MemProt::Write);
+  auto &DataBlock = G->createContentBlock(DataSec, BlockContent,
+                                          orc::ExecutorAddr(0x1000), 8, 0);
+  G->addDefinedSymbol(DataBlock, 4, "_anchor", 4, Linkage::Weak, Scope::Default,
+                      false, true);
+
+  EXPECT_THAT_ERROR(ObjLinkingLayer.add(JD, std::move(G)), Succeeded());
+
+  EXPECT_THAT_EXPECTED(ES.lookup(&JD, "_anchor"), Succeeded());
 }
 
 } // end anonymous namespace
