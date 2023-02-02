@@ -67,42 +67,16 @@ define void @widen_fdiv_v2f32_v8f32(ptr %a0, ptr %b0, ptr %c0) {
 ;
 ; AVX1OR2-LABEL: widen_fdiv_v2f32_v8f32:
 ; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm5 = mem[0],zero
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm6 = mem[0],zero
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm7 = mem[0],zero
-; AVX1OR2-NEXT:    vinsertf128 $1, %xmm7, %ymm5, %ymm5
-; AVX1OR2-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
-; AVX1OR2-NEXT:    vdivps %ymm5, %ymm1, %ymm1
-; AVX1OR2-NEXT:    vinsertf128 $1, %xmm6, %ymm4, %ymm3
-; AVX1OR2-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX1OR2-NEXT:    vdivps %ymm3, %ymm0, %ymm0
-; AVX1OR2-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; AVX1OR2-NEXT:    vmovups (%rdi), %ymm0
+; AVX1OR2-NEXT:    vdivps (%rsi), %ymm0, %ymm0
 ; AVX1OR2-NEXT:    vmovups %ymm0, (%rdx)
 ; AVX1OR2-NEXT:    vzeroupper
 ; AVX1OR2-NEXT:    retq
 ;
 ; AVX512F-LABEL: widen_fdiv_v2f32_v8f32:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm5 = mem[0],zero
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm6 = mem[0],zero
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm7 = mem[0],zero
-; AVX512F-NEXT:    vinsertf128 $1, %xmm7, %ymm5, %ymm5
-; AVX512F-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
-; AVX512F-NEXT:    vdivps %ymm5, %ymm1, %ymm1
-; AVX512F-NEXT:    vinsertf128 $1, %xmm6, %ymm4, %ymm3
-; AVX512F-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX512F-NEXT:    vdivps %ymm3, %ymm0, %ymm0
-; AVX512F-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; AVX512F-NEXT:    vmovups (%rdi), %ymm0
+; AVX512F-NEXT:    vdivps (%rsi), %ymm0, %ymm0
 ; AVX512F-NEXT:    vmovups %ymm0, (%rdx)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -196,38 +170,12 @@ define void @widen_fdiv_v2f32_v16f32(ptr %a0, ptr %b0, ptr %c0) {
 ;
 ; AVX1OR2-LABEL: widen_fdiv_v2f32_v16f32:
 ; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm5 = mem[0],zero
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm6 = mem[0],zero
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm7 = mem[0],zero
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm8 = mem[0],zero
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm9 = mem[0],zero
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm10 = mem[0],zero
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm11 = mem[0],zero
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm12 = mem[0],zero
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm13 = mem[0],zero
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm14 = mem[0],zero
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm15 = mem[0],zero
-; AVX1OR2-NEXT:    vinsertf128 $1, %xmm7, %ymm5, %ymm5
-; AVX1OR2-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
-; AVX1OR2-NEXT:    vdivps %ymm5, %ymm1, %ymm1
-; AVX1OR2-NEXT:    vinsertf128 $1, %xmm6, %ymm4, %ymm3
-; AVX1OR2-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX1OR2-NEXT:    vdivps %ymm3, %ymm0, %ymm0
-; AVX1OR2-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; AVX1OR2-NEXT:    vmovups (%rdi), %ymm0
+; AVX1OR2-NEXT:    vmovups 32(%rdi), %ymm1
+; AVX1OR2-NEXT:    vdivps (%rsi), %ymm0, %ymm0
+; AVX1OR2-NEXT:    vdivps 32(%rsi), %ymm1, %ymm1
 ; AVX1OR2-NEXT:    vmovups %ymm0, (%rdx)
-; AVX1OR2-NEXT:    vinsertf128 $1, %xmm15, %ymm11, %ymm0
-; AVX1OR2-NEXT:    vinsertf128 $1, %xmm14, %ymm10, %ymm1
-; AVX1OR2-NEXT:    vdivps %ymm0, %ymm1, %ymm0
-; AVX1OR2-NEXT:    vinsertf128 $1, %xmm13, %ymm9, %ymm1
-; AVX1OR2-NEXT:    vinsertf128 $1, %xmm12, %ymm8, %ymm2
-; AVX1OR2-NEXT:    vdivps %ymm1, %ymm2, %ymm1
-; AVX1OR2-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[2],ymm0[2]
-; AVX1OR2-NEXT:    vmovups %ymm0, 32(%rdx)
+; AVX1OR2-NEXT:    vmovups %ymm1, 32(%rdx)
 ; AVX1OR2-NEXT:    vzeroupper
 ; AVX1OR2-NEXT:    retq
 ;
