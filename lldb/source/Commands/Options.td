@@ -389,7 +389,7 @@ let Command = "expression" in {
     "not supported by the interpreter (defaults to true).">;
   // BEGIN SWIFT
   def bind_generic_types : Option<"bind-generic-types", "\\x01">,
-    EnumArg<"Value", "BindGenTypeParamValue()">, Desc<"Controls whether any "
+    EnumArg<"BindGenTypeParamValue">, Desc<"Controls whether any "
     "generic types in the current context should be bound to their dynamic "
     "type before evaluating. Defaults to auto.">;
   // END SWIFT

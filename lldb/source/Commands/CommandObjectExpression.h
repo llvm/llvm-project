@@ -19,24 +19,6 @@
 
 namespace lldb_private {
 
-// BEGIN SWIFT
-static constexpr OptionEnumValueElement g_bind_gen_type_params[] = {
-    {
-        lldb::eBindAuto,
-        "auto",
-        "Attempt to run the expression with bound generic parameters first, "
-        "fallback to unbound generic parameters if binding the type parameters "
-        "fails",
-    },
-    {lldb::eBind, "true", "Bind generic type parameters."},
-    {lldb::eDontBind, "false", "Don't bind generic type parameters."},
-};
-
-static constexpr OptionEnumValues BindGenTypeParamValue() {
-  return OptionEnumValues(g_bind_gen_type_params);
-}
-// END SWIFT
-
 class CommandObjectExpression : public CommandObjectRaw,
                                 public IOHandlerDelegate {
 public:
