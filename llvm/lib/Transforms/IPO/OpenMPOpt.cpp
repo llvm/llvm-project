@@ -2678,6 +2678,8 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
 
   bool isExecutedInAlignedRegion(Attributor &A,
                                  const Instruction &I) const override {
+    assert(I.getFunction() == getAnchorScope() &&
+           "Instruction is out of scope!");
     if (!isValidState() || isa<CallBase>(I))
       return false;
 
