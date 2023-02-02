@@ -862,7 +862,10 @@ module std [system] {
         export locale
       }
       module format_error                    { private header "__format/format_error.h" }
-      module format_functions                { private header "__format/format_functions.h" }
+      module format_functions                {
+        private header "__format/format_functions.h"
+        export string
+      }
       module format_fwd                      { private header "__format/format_fwd.h" }
       module format_parse_context            { private header "__format/format_parse_context.h" }
       module format_string                   { private header "__format/format_string.h" }
