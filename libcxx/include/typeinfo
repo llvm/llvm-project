@@ -406,7 +406,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
 void __throw_bad_cast()
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw bad_cast();
 #else
     _VSTD::abort();

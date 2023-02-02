@@ -1597,10 +1597,10 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__move_assign(
         if (bucket_count() != 0)
         {
             __next_pointer __cache = __detach();
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
             try
             {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
                 const_iterator __i = __u.begin();
                 while (__cache != nullptr && __u.size() != 0)
                 {
@@ -1610,14 +1610,14 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__move_assign(
                     __node_insert_multi(__cache->__upcast());
                     __cache = __next;
                 }
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
             }
             catch (...)
             {
                 __deallocate_node(__cache);
                 throw;
             }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
             __deallocate_node(__cache);
         }
         const_iterator __i = __u.begin();
@@ -1659,10 +1659,10 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_unique(_InputIterator __first
     if (bucket_count() != 0)
     {
         __next_pointer __cache = __detach();
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
             for (; __cache != nullptr && __first != __last; ++__first)
             {
                 __cache->__upcast()->__value_ = *__first;
@@ -1670,14 +1670,14 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_unique(_InputIterator __first
                 __node_insert_unique(__cache->__upcast());
                 __cache = __next;
             }
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
         {
             __deallocate_node(__cache);
             throw;
         }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
         __deallocate_node(__cache);
     }
     for (; __first != __last; ++__first)
@@ -1699,10 +1699,10 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_multi(_InputIterator __first,
     if (bucket_count() != 0)
     {
         __next_pointer __cache = __detach();
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
             for (; __cache != nullptr && __first != __last; ++__first)
             {
                 __cache->__upcast()->__value_ = *__first;
@@ -1710,14 +1710,14 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_multi(_InputIterator __first,
                 __node_insert_multi(__cache->__upcast());
                 __cache = __next;
             }
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
         {
             __deallocate_node(__cache);
             throw;
         }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
         __deallocate_node(__cache);
     }
     for (; __first != __last; ++__first)
