@@ -4,9 +4,6 @@
 // RUN: %env_lsan_opts="report_objects=1:use_stacks=0:use_registers=1" %run %t 2>&1
 // RUN: %env_lsan_opts="" %run %t 2>&1
 
-// Fixme: remove once test passes with hwasan
-// UNSUPPORTED: hwasan
-
 // FIXME: Support more platforms.
 // REQUIRES: x86-target-arch && linux
 
@@ -60,4 +57,4 @@ int main() {
 // CHECK: Test alloc: [[ADDR:0x[0-9,a-f]+]]
 // CHECK: LeakSanitizer: detected memory leaks
 // CHECK: [[ADDR]] (1337 bytes)
-// CHECK: SUMMARY: {{(Leak|Address)}}Sanitizer:
+// CHECK: SUMMARY: {{.*}}Sanitizer:
