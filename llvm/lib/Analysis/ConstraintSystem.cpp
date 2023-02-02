@@ -32,15 +32,13 @@ bool ConstraintSystem::eliminateUsingFM() {
 
   unsigned NumConstraints = Constraints.size();
   uint32_t NewGCD = 1;
-  // FIXME do not use copy
+  unsigned LastIdx = NumVariables - 1;
+
   for (unsigned R1 = 0; R1 < NumConstraints; R1++) {
-    if (Constraints[R1][1] == 0) {
-      SmallVector<int64_t, 8> NR;
-      NR.push_back(Constraints[R1][0]);
-      for (unsigned i = 2; i < NumVariables; i++) {
-        NR.push_back(Constraints[R1][i]);
-      }
-      NewSystem.push_back(std::move(NR));
+    SmallVector<int64_t, 8> &Row1 = Constraints[R1];
+    if (Row1[LastIdx] == 0) {
+      Row1.pop_back();
+      NewSystem.push_back(std::move(Row1));
       continue;
     }
 
@@ -50,29 +48,26 @@ bool ConstraintSystem::eliminateUsingFM() {
         continue;
 
       // FIXME: can we do better than just dropping things here?
-      if (Constraints[R2][1] == 0)
+      if (Constraints[R2][LastIdx] == 0)
         continue;
 
-      if ((Constraints[R1][1] < 0 && Constraints[R2][1] < 0) ||
-          (Constraints[R1][1] > 0 && Constraints[R2][1] > 0))
+      if ((Constraints[R1][LastIdx] < 0 && Constraints[R2][LastIdx] < 0) ||
+          (Constraints[R1][LastIdx] > 0 && Constraints[R2][LastIdx] > 0))
         continue;
 
       unsigned LowerR = R1;
       unsigned UpperR = R2;
-      if (Constraints[UpperR][1] < 0)
+      if (Constraints[UpperR][LastIdx] < 0)
         std::swap(LowerR, UpperR);
 
       SmallVector<int64_t, 8> NR;
-      for (unsigned I = 0; I < NumVariables; I++) {
-        if (I == 1)
-          continue;
-
+      for (unsigned I = 0; I < LastIdx; I++) {
         int64_t M1, M2, N;
         if (MulOverflow(Constraints[UpperR][I],
-                                   ((-1) * Constraints[LowerR][1] / GCD), M1))
+                        ((-1) * Constraints[LowerR][LastIdx] / GCD), M1))
           return false;
         if (MulOverflow(Constraints[LowerR][I],
-                                   (Constraints[UpperR][1] / GCD), M2))
+                        (Constraints[UpperR][LastIdx] / GCD), M2))
           return false;
         if (AddOverflow(M1, M2, N))
           return false;
