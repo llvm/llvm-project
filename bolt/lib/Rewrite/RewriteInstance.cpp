@@ -4450,8 +4450,7 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
   }
 
   std::vector<ELFShdrTy> SectionsOnly(OutputSections.size());
-  llvm::transform(OutputSections, SectionsOnly.begin(),
-                  [](auto &SectionInfo) { return SectionInfo.second; });
+  llvm::copy(llvm::make_second_range(OutputSections), SectionsOnly.begin());
 
   return SectionsOnly;
 }

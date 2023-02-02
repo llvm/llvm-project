@@ -14,7 +14,9 @@
 #include "bolt/Passes/BinaryFunctionCallGraph.h"
 #include "bolt/Passes/DataflowInfoManager.h"
 #include "bolt/Passes/Inliner.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
+#include <iterator>
 
 #define DEBUG_TYPE "ICP"
 #define DEBUG_VERBOSE(Level, X)                                                \
@@ -497,11 +499,8 @@ IndirectCallPromotion::maybeGetHotJumpTableTargets(BinaryBasicBlock &BB,
     HotTarget.second = Index;
   }
 
-  llvm::transform(
-      HotTargetMap, std::back_inserter(HotTargets),
-      [](const std::pair<MCSymbol *, std::pair<uint64_t, uint64_t>> &A) {
-        return A.second;
-      });
+  llvm::copy(llvm::make_second_range(HotTargetMap),
+             std::back_inserter(HotTargets));
 
   // Sort with highest counts first.
   llvm::sort(reverse(HotTargets));
