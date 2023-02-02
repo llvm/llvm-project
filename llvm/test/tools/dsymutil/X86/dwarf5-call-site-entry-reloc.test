@@ -1,0 +1,37 @@
+## Test binaries created with the following commands:
+
+## $ cat call-dwarf5.c
+## __attribute__((noinline, noreturn)) void foo() {
+##     asm volatile("" ::: "memory");
+##       __builtin_unreachable();
+## }
+## __attribute__((noinline)) void bar() {
+##     asm volatile("nop" :::);
+##      foo();
+## }
+
+## int main() { bar(); }
+
+## $ clang -gdwarf-5 call-dwarf5.c -fomit-frame-pointer -c -Os -o call-dwarf5.o
+## $ clang -gdwarf-5 call-dwarf5.o -o call-dwarf5
+
+## The test requires the return PC to match a relocation (in this case the
+## DW_AT_high_pc of main). Without this change the value would get relocated
+## twice.
+
+#RUN: dsymutil -oso-prepend-path %p/../Inputs -y %s -o %t.dSYM
+#RUN: llvm-dwarfdump %t.dSYM | FileCheck %s -implicit-check-not=DW_AT_call_return_pc
+
+#CHECK: DW_AT_call_return_pc  (0x0000000100000f72)
+#CHECK: DW_AT_call_return_pc  (0x0000000100000f78)
+
+---
+triple:          'x86_64-apple-darwin'
+objects:
+  - filename:        'call-dwarf5.o'
+    timestamp:       1675373912
+    symbols:
+      - { sym: _foo, objAddr: 0x0, binAddr: 0x100000F69, size: 0x2 }
+      - { sym: _bar, objAddr: 0x2, binAddr: 0x100000F6B, size: 0x7 }
+      - { sym: _main, objAddr: 0x9, binAddr: 0x100000F72, size: 0x6 }
+...
