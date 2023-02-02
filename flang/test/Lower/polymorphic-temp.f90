@@ -75,9 +75,10 @@ contains
 ! CHECK: %[[I_BOX_NONE:.*]] = fir.convert %[[I]] : (!fir.class<!fir.array<20x20xnone>>) -> !fir.box<none>
 ! CHECK: %{{.*}} = fir.call @_FortranAReshape(%[[RES_BOX_NONE]], %[[I_BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
 ! CHECK: %[[LOAD_RES:.*]] = fir.load %[[TMP_RES]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>
+! CHECK: %[[RANK:.*]] = arith.constant 2 : i32
 ! CHECK: %[[A_BOX_NONE:.*]] = fir.convert %[[A]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %[[RES_BOX_NONE:.*]] = fir.convert %[[LOAD_RES]] : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>) -> !fir.box<none>
-! CHECK: %{{.*}} = fir.call @_FortranAAllocatableApplyMold(%[[A_BOX_NONE]], %[[RES_BOX_NONE]]) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>) -> none
+! CHECK: %{{.*}} = fir.call @_FortranAAllocatableApplyMold(%[[A_BOX_NONE]], %[[RES_BOX_NONE]], %[[RANK]]) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32) -> none
 
   subroutine check_pack(r)
     class(p1) :: r(:)
