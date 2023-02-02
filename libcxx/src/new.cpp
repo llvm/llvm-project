@@ -39,7 +39,7 @@ const nothrow_t nothrow{};
 void
 __throw_bad_alloc()
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw bad_alloc();
 #else
     _VSTD::abort();
@@ -73,7 +73,7 @@ operator new(std::size_t size) _THROW_BAD_ALLOC
         if (nh)
             nh();
         else
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
             throw std::bad_alloc();
 #else
             break;
@@ -87,17 +87,17 @@ void*
 operator new(size_t size, const std::nothrow_t&) noexcept
 {
     void* p = nullptr;
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     try
     {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
         p = ::operator new(size);
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     }
     catch (...)
     {
     }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
     return p;
 }
 
@@ -113,17 +113,17 @@ void*
 operator new[](size_t size, const std::nothrow_t&) noexcept
 {
     void* p = nullptr;
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     try
     {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
         p = ::operator new[](size);
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     }
     catch (...)
     {
     }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
     return p;
 }
 
@@ -193,7 +193,7 @@ operator new(std::size_t size, std::align_val_t alignment) _THROW_BAD_ALLOC
         if (nh)
             nh();
         else {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
             throw std::bad_alloc();
 #else
             break;
@@ -208,17 +208,17 @@ void*
 operator new(size_t size, std::align_val_t alignment, const std::nothrow_t&) noexcept
 {
     void* p = nullptr;
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     try
     {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
         p = ::operator new(size, alignment);
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     }
     catch (...)
     {
     }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
     return p;
 }
 
@@ -234,17 +234,17 @@ void*
 operator new[](size_t size, std::align_val_t alignment, const std::nothrow_t&) noexcept
 {
     void* p = nullptr;
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     try
     {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
         p = ::operator new[](size, alignment);
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     }
     catch (...)
     {
     }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
     return p;
 }
 
