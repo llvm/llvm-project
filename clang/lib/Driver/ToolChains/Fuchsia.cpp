@@ -282,33 +282,8 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
                           .flag("+fsanitize=hwaddress")
                           .flag("-fexceptions")
                           .flag("+fno-exceptions"));
-  // Use the relative vtables ABI.
-  // TODO: Remove these multilibs once relative vtables are enabled by default
-  // for Fuchsia.
-  Multilibs.push_back(Multilib("relative-vtables", {}, {}, 6)
-                          .flag("+fexperimental-relative-c++-abi-vtables"));
-  Multilibs.push_back(Multilib("relative-vtables+noexcept", {}, {}, 7)
-                          .flag("+fexperimental-relative-c++-abi-vtables")
-                          .flag("-fexceptions")
-                          .flag("+fno-exceptions"));
-  Multilibs.push_back(Multilib("relative-vtables+asan", {}, {}, 8)
-                          .flag("+fexperimental-relative-c++-abi-vtables")
-                          .flag("+fsanitize=address"));
-  Multilibs.push_back(Multilib("relative-vtables+asan+noexcept", {}, {}, 9)
-                          .flag("+fexperimental-relative-c++-abi-vtables")
-                          .flag("+fsanitize=address")
-                          .flag("-fexceptions")
-                          .flag("+fno-exceptions"));
-  Multilibs.push_back(Multilib("relative-vtables+hwasan", {}, {}, 10)
-                          .flag("+fexperimental-relative-c++-abi-vtables")
-                          .flag("+fsanitize=hwaddress"));
-  Multilibs.push_back(Multilib("relative-vtables+hwasan+noexcept", {}, {}, 11)
-                          .flag("+fexperimental-relative-c++-abi-vtables")
-                          .flag("+fsanitize=hwaddress")
-                          .flag("-fexceptions")
-                          .flag("+fno-exceptions"));
   // Use Itanium C++ ABI for the compat multilib.
-  Multilibs.push_back(Multilib("compat", {}, {}, 12).flag("+fc++-abi=itanium"));
+  Multilibs.push_back(Multilib("compat", {}, {}, 6).flag("+fc++-abi=itanium"));
 
   Multilibs.FilterOut([&](const Multilib &M) {
     std::vector<std::string> RD = FilePaths(M);
@@ -324,11 +299,6 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
   addMultilibFlag(getSanitizerArgs(Args).needsHwasanRt(), "fsanitize=hwaddress",
                   Flags);
 
-  addMultilibFlag(
-      Args.hasFlag(options::OPT_fexperimental_relative_cxx_abi_vtables,
-                   options::OPT_fno_experimental_relative_cxx_abi_vtables,
-                   /*default=*/false),
-      "fexperimental-relative-c++-abi-vtables", Flags);
   addMultilibFlag(Args.getLastArgValue(options::OPT_fcxx_abi_EQ) == "itanium",
                   "fc++-abi=itanium", Flags);
 
