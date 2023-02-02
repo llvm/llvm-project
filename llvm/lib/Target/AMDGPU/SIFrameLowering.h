@@ -91,6 +91,11 @@ private:
                             MachineBasicBlock::iterator MBBI,
                             const DebugLoc &DL) const;
 
+  void emitDefCFA(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                  DebugLoc const &DL, Register StackPtrReg,
+                  bool AspaceAlreadyDefined,
+                  MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const;
+
 public:
   bool hasFP(const MachineFunction &MF) const override;
 

@@ -72,7 +72,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_v2_partial_agpr
     ; FLATSCR-V2A: liveins: $agpr0
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x08, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe1
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1_lo16
@@ -119,7 +119,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_v3_partial_agpr
     ; FLATSCR-V2A: liveins: $agpr0
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x08, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe1
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1_lo16
@@ -170,7 +170,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_v4_partial_agpr
     ; FLATSCR-V2A: liveins: $agpr0, $agpr1, $agpr2
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x08, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe1
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1_lo16
@@ -229,7 +229,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_v5_partial_agpr
     ; FLATSCR-V2A: liveins: $agpr0, $agpr1, $agpr2
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x08, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe1
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1_lo16
@@ -292,7 +292,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_v6_partial_agpr
     ; FLATSCR-V2A: liveins: $agpr0, $agpr1, $agpr2, $agpr3, $agpr4
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x08, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe1
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1_lo16
@@ -366,7 +366,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_v8_partial_agpr
     ; FLATSCR-V2A: liveins: $agpr0, $agpr1, $agpr2, $agpr3
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x08, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe1
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1_lo16
@@ -464,7 +464,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_v16_partial_agpr
     ; FLATSCR-V2A: liveins: $agpr0, $agpr1, $agpr2, $agpr3, $agpr4
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x08, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe1
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1_lo16
