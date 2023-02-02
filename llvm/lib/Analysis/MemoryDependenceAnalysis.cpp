@@ -1298,8 +1298,8 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
       // Get the PHI translated pointer in this predecessor.  This can fail if
       // not translatable, in which case the getAddr() returns null.
       PHITransAddr &PredPointer = PredList.back().second;
-      PredPointer.translateValue(BB, Pred, &DT, /*MustDominate=*/false);
-      Value *PredPtrVal = PredPointer.getAddr();
+      Value *PredPtrVal =
+          PredPointer.translateValue(BB, Pred, &DT, /*MustDominate=*/false);
 
       // Check to see if we have already visited this pred block with another
       // pointer.  If so, we can't do this lookup.  This failure can occur
