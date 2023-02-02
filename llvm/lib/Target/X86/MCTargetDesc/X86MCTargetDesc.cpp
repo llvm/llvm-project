@@ -742,22 +742,14 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86TargetMC() {
                                        createX86_64AsmBackend);
 }
 
-MCRegister llvm::getX86SubSuperRegisterOrZero(MCRegister Reg, unsigned Size,
-                                              bool High) {
+MCRegister llvm::getX86SubSuperRegister(MCRegister Reg, unsigned Size,
+                                        bool High) {
   switch (Size) {
-  default: return X86::NoRegister;
+  default: llvm_unreachable("illegal register size");
   case 8:
     if (High) {
       switch (Reg.id()) {
-      default: return getX86SubSuperRegisterOrZero(Reg, 64);
-      case X86::SIL: case X86::SI: case X86::ESI: case X86::RSI:
-        return X86::SI;
-      case X86::DIL: case X86::DI: case X86::EDI: case X86::RDI:
-        return X86::DI;
-      case X86::BPL: case X86::BP: case X86::EBP: case X86::RBP:
-        return X86::BP;
-      case X86::SPL: case X86::SP: case X86::ESP: case X86::RSP:
-        return X86::SP;
+      default: return X86::NoRegister;
       case X86::AH: case X86::AL: case X86::AX: case X86::EAX: case X86::RAX:
         return X86::AH;
       case X86::DH: case X86::DL: case X86::DX: case X86::EDX: case X86::RDX:
@@ -878,7 +870,7 @@ MCRegister llvm::getX86SubSuperRegisterOrZero(MCRegister Reg, unsigned Size,
     }
   case 64:
     switch (Reg.id()) {
-    default: return 0;
+    default: return X86::NoRegister;
     case X86::AH: case X86::AL: case X86::AX: case X86::EAX: case X86::RAX:
       return X86::RAX;
     case X86::DH: case X86::DL: case X86::DX: case X86::EDX: case X86::RDX:
@@ -914,11 +906,3 @@ MCRegister llvm::getX86SubSuperRegisterOrZero(MCRegister Reg, unsigned Size,
     }
   }
 }
-
-MCRegister llvm::getX86SubSuperRegister(MCRegister Reg, unsigned Size, bool High) {
-  MCRegister Res = getX86SubSuperRegisterOrZero(Reg, Size, High);
-  assert(Res != X86::NoRegister && "Unexpected register or VT");
-  return Res;
-}
-
-

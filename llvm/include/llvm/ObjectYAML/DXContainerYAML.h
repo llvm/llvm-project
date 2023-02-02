@@ -71,6 +71,22 @@ struct ShaderHash {
   std::vector<llvm::yaml::Hex8> Digest;
 };
 
+struct PSVInfo {
+  // The version field isn't actually encoded in the file, but it is inferred by
+  // the size of data regions. We include it in the yaml because it simplifies
+  // the format.
+  uint32_t Version;
+
+  dxbc::PSV::v2::RuntimeInfo Info;
+
+  void mapInfoForVersion(yaml::IO &IO);
+
+  PSVInfo();
+  PSVInfo(const dxbc::PSV::v0::RuntimeInfo *P, uint16_t Stage);
+  PSVInfo(const dxbc::PSV::v1::RuntimeInfo *P);
+  PSVInfo(const dxbc::PSV::v2::RuntimeInfo *P);
+};
+
 struct Part {
   Part() = default;
   Part(std::string N, uint32_t S) : Name(N), Size(S) {}
@@ -79,6 +95,7 @@ struct Part {
   std::optional<DXILProgram> Program;
   std::optional<ShaderFlags> Flags;
   std::optional<ShaderHash> Hash;
+  std::optional<PSVInfo> Info;
 };
 
 struct Object {
@@ -114,6 +131,10 @@ template <> struct MappingTraits<DXContainerYAML::ShaderFlags> {
 
 template <> struct MappingTraits<DXContainerYAML::ShaderHash> {
   static void mapping(IO &IO, DXContainerYAML::ShaderHash &Hash);
+};
+
+template <> struct MappingTraits<DXContainerYAML::PSVInfo> {
+  static void mapping(IO &IO, DXContainerYAML::PSVInfo &PSV);
 };
 
 template <> struct MappingTraits<DXContainerYAML::Part> {

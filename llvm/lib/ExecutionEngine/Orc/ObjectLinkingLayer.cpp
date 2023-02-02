@@ -22,6 +22,21 @@ using namespace llvm::orc;
 
 namespace {
 
+JITSymbolFlags getJITSymbolFlagsForSymbol(Symbol &Sym) {
+  JITSymbolFlags Flags;
+
+  if (Sym.getLinkage() == Linkage::Weak)
+    Flags |= JITSymbolFlags::Weak;
+
+  if (Sym.getScope() == Scope::Default)
+    Flags |= JITSymbolFlags::Exported;
+
+  if (Sym.isCallable())
+    Flags |= JITSymbolFlags::Callable;
+
+  return Flags;
+}
+
 class LinkGraphMaterializationUnit : public MaterializationUnit {
 public:
   static std::unique_ptr<LinkGraphMaterializationUnit>
@@ -48,14 +63,8 @@ private:
         continue;
       assert(Sym->hasName() && "Anonymous non-local symbol?");
 
-      JITSymbolFlags Flags;
-      if (Sym->getScope() == Scope::Default)
-        Flags |= JITSymbolFlags::Exported;
-
-      if (Sym->isCallable())
-        Flags |= JITSymbolFlags::Callable;
-
-      LGI.SymbolFlags[ES.intern(Sym->getName())] = Flags;
+      LGI.SymbolFlags[ES.intern(Sym->getName())] =
+          getJITSymbolFlagsForSymbol(*Sym);
     }
 
     if (hasInitializerSection(G))
@@ -189,14 +198,7 @@ public:
     for (auto *Sym : G.defined_symbols())
       if (Sym->hasName() && Sym->getScope() != Scope::Local) {
         auto InternedName = ES.intern(Sym->getName());
-        JITSymbolFlags Flags;
-
-        if (Sym->isCallable())
-          Flags |= JITSymbolFlags::Callable;
-        if (Sym->getScope() == Scope::Default)
-          Flags |= JITSymbolFlags::Exported;
-        if (Sym->getLinkage() == Linkage::Weak)
-          Flags |= JITSymbolFlags::Weak;
+        auto Flags = getJITSymbolFlagsForSymbol(*Sym);
 
         InternedResult[InternedName] =
             JITEvaluatedSymbol(Sym->getAddress().getValue(), Flags);
@@ -210,13 +212,7 @@ public:
     for (auto *Sym : G.absolute_symbols())
       if (Sym->hasName() && Sym->getScope() != Scope::Local) {
         auto InternedName = ES.intern(Sym->getName());
-        JITSymbolFlags Flags;
-        if (Sym->isCallable())
-          Flags |= JITSymbolFlags::Callable;
-        if (Sym->getScope() == Scope::Default)
-          Flags |= JITSymbolFlags::Exported;
-        if (Sym->getLinkage() == Linkage::Weak)
-          Flags |= JITSymbolFlags::Weak;
+        auto Flags = getJITSymbolFlagsForSymbol(*Sym);
         InternedResult[InternedName] =
             JITEvaluatedSymbol(Sym->getAddress().getValue(), Flags);
         if (AutoClaim && !MR->getSymbols().count(InternedName)) {
@@ -407,10 +403,8 @@ private:
           Sym->getScope() != Scope::Local) {
         auto Name = ES.intern(Sym->getName());
         if (!MR->getSymbols().count(ES.intern(Sym->getName()))) {
-          JITSymbolFlags SF = JITSymbolFlags::Weak;
-          if (Sym->getScope() == Scope::Default)
-            SF |= JITSymbolFlags::Exported;
-          NewSymbolsToClaim[Name] = SF;
+          NewSymbolsToClaim[Name] =
+              getJITSymbolFlagsForSymbol(*Sym) | JITSymbolFlags::Weak;
           NameToSym.push_back(std::make_pair(std::move(Name), Sym));
         }
       }

@@ -5,9 +5,6 @@
 // RUN: env ASAN_OPTIONS=detect_stack_use_after_return=1 %env_lsan_opts="report_objects=1:use_registers=0:use_stacks=1" %run %t 2>&1
 // RUN: env ASAN_OPTIONS=detect_stack_use_after_return=1 %env_lsan_opts="" %run %t 2>&1
 
-// Fixme: remove once test passes with hwasan
-// UNSUPPORTED: hwasan
-
 // Investigate why it does not fail with use_stack=0
 // UNSUPPORTED: arm-linux || armhf-linux
 
@@ -26,4 +23,4 @@ int main() {
 // CHECK: Test alloc: [[ADDR:0x[0-9,a-f]+]]
 // CHECK: LeakSanitizer: detected memory leaks
 // CHECK: [[ADDR]] (1337 bytes)
-// CHECK: SUMMARY: {{(Leak|Address)}}Sanitizer:
+// CHECK: SUMMARY: {{.*}}Sanitizer:
