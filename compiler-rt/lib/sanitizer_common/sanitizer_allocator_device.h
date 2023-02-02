@@ -206,7 +206,7 @@ class DeviceAllocatorT {
 
   // This function does the same as GetBlockBegin, but is much faster.
   // Must be called with the allocator locked.
-  void *GetBlockBeginFastLocked(void *ptr) {
+  void *GetBlockBeginFastLocked(const void *ptr) {
     if (!mem_funcs_inited_) return nullptr;
     mutex_.CheckLocked();
     uptr p = reinterpret_cast<uptr>(ptr);
