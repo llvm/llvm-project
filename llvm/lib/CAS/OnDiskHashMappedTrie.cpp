@@ -1270,29 +1270,29 @@ Expected<OnDiskHashMappedTrie> OnDiskHashMappedTrie::create(
     uint64_t DataSize, uint64_t MaxFileSize,
     Optional<uint64_t> NewFileInitialSize, Optional<size_t> NewTableNumRootBits,
     Optional<size_t> NewTableNumSubtrieBits) {
-  llvm_unreachable("not supported");
+  report_fatal_error("not supported");
 }
 
 OnDiskHashMappedTrie::pointer
 OnDiskHashMappedTrie::insertLazy(const_pointer Hint, ArrayRef<uint8_t> Hash,
                                  LazyInsertOnConstructCB OnConstruct,
                                  LazyInsertOnLeakCB OnLeak) {
-  llvm_unreachable("not supported");
+  report_fatal_error("not supported");
 }
 
 OnDiskHashMappedTrie::const_pointer
 OnDiskHashMappedTrie::recoverFromFileOffset(FileOffset Offset) const {
-  llvm_unreachable("not supported");
+  report_fatal_error("not supported");
 }
 
 OnDiskHashMappedTrie::const_pointer
 OnDiskHashMappedTrie::find(ArrayRef<uint8_t> Hash) const {
-  llvm_unreachable("not supported");
+  report_fatal_error("not supported");
 }
 
 void OnDiskHashMappedTrie::print(
     raw_ostream &OS, function_ref<void(ArrayRef<char>)> PrintRecordData) const {
-  llvm_unreachable("not supported");
+  report_fatal_error("not supported");
 }
 
 struct OnDiskDataAllocator::ImplType {};
@@ -1301,15 +1301,15 @@ Expected<OnDiskDataAllocator>
 OnDiskDataAllocator::create(const Twine &PathTwine, const Twine &TableNameTwine,
                             uint64_t MaxFileSize,
                             Optional<uint64_t> NewFileInitialSize) {
-  llvm_unreachable("not supported");
+  report_fatal_error("not supported");
 }
 
 OnDiskDataAllocator::pointer OnDiskDataAllocator::allocate(size_t Size) {
-  llvm_unreachable("not supported");
+  report_fatal_error("not supported");
 }
 
 const char *OnDiskDataAllocator::beginData(FileOffset Offset) const {
-  llvm_unreachable("not supported");
+  report_fatal_error("not supported");
 }
 
 #endif // LLVM_ENABLE_ONDISK_CAS
