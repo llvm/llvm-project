@@ -376,15 +376,16 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
   }
 
   if (allocatedResult) {
-    // 7.5.6.3 point 5. Derived-type finalization.
+    // 7.5.6.3 point 5. Derived-type finalization for nonpointer function.
     // Check if the derived-type is finalizable if it is a monorphic
     // derived-type.
     // For polymorphic and unlimited polymorphic enities call the runtime
     // in any cases.
     std::optional<Fortran::evaluate::DynamicType> retTy =
         caller.getCallDescription().proc().GetType();
-    if (retTy && (retTy->category() == Fortran::common::TypeCategory::Derived ||
-                  retTy->IsPolymorphic() || retTy->IsUnlimitedPolymorphic())) {
+    if (!fir::isPointerType(funcType.getResults()[0]) && retTy &&
+        (retTy->category() == Fortran::common::TypeCategory::Derived ||
+         retTy->IsPolymorphic() || retTy->IsUnlimitedPolymorphic())) {
       if (retTy->IsPolymorphic() || retTy->IsUnlimitedPolymorphic()) {
         auto *bldr = &converter.getFirOpBuilder();
         stmtCtx.attachCleanup([bldr, loc, allocatedResult]() {
