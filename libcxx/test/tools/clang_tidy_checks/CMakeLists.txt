@@ -3,7 +3,7 @@
 set(CMAKE_FIND_PACKAGE_SORT_ORDER NATURAL)
 set(CMAKE_FIND_PACKAGE_SORT_DIRECTION DEC)
 
-find_package(Clang 16)
+find_package(Clang 16...17)
 
 set(SOURCES
     abi_tag_on_virtual.cpp
