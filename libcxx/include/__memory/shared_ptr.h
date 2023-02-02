@@ -404,7 +404,7 @@ struct __shared_ptr_deleter_ctor_reqs
 };
 
 #if defined(_LIBCPP_ABI_ENABLE_SHARED_PTR_TRIVIAL_ABI)
-#  define _LIBCPP_SHARED_PTR_TRIVIAL_ABI __attribute__((trivial_abi))
+#  define _LIBCPP_SHARED_PTR_TRIVIAL_ABI __attribute__((__trivial_abi__))
 #else
 #  define _LIBCPP_SHARED_PTR_TRIVIAL_ABI
 #endif
