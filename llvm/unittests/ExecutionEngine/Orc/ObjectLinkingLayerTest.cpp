@@ -119,4 +119,58 @@ TEST_F(ObjectLinkingLayerTest, ClaimLateDefinedWeakSymbols) {
   EXPECT_THAT_EXPECTED(ES.lookup(&JD, "_anchor"), Succeeded());
 }
 
+TEST_F(ObjectLinkingLayerTest, HandleErrorDuringPostAllocationPass) {
+  // We want to confirm that Errors in post allocation passes correctly
+  // abandon the in-flight allocation and report an error.
+  class TestPlugin : public ObjectLinkingLayer::Plugin {
+  public:
+    ~TestPlugin() { EXPECT_TRUE(ErrorReported); }
+
+    void modifyPassConfig(MaterializationResponsibility &MR,
+                          jitlink::LinkGraph &G,
+                          jitlink::PassConfiguration &Config) override {
+      Config.PostAllocationPasses.insert(
+          Config.PostAllocationPasses.begin(), [](LinkGraph &G) {
+            return make_error<StringError>("Kaboom", inconvertibleErrorCode());
+          });
+    }
+
+    Error notifyFailed(MaterializationResponsibility &MR) override {
+      ErrorReported = true;
+      return Error::success();
+    }
+
+    Error notifyRemovingResources(JITDylib &JD, ResourceKey K) override {
+      return Error::success();
+    }
+    void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
+                                     ResourceKey SrcKey) override {
+      llvm_unreachable("unexpected resource transfer");
+    }
+
+  private:
+    bool ErrorReported = false;
+  };
+
+  // We expect this test to generate errors. Consume them so that we don't
+  // add noise to the test logs.
+  ES.setErrorReporter(consumeError);
+
+  ObjLinkingLayer.addPlugin(std::make_unique<TestPlugin>());
+
+  auto G =
+      std::make_unique<LinkGraph>("foo", Triple("x86_64-apple-darwin"), 8,
+                                  support::little, x86_64::getEdgeKindName);
+
+  auto &DataSec = G->createSection("__data", MemProt::Read | MemProt::Write);
+  auto &DataBlock = G->createContentBlock(DataSec, BlockContent,
+                                          orc::ExecutorAddr(0x1000), 8, 0);
+  G->addDefinedSymbol(DataBlock, 4, "_anchor", 4, Linkage::Weak, Scope::Default,
+                      false, true);
+
+  EXPECT_THAT_ERROR(ObjLinkingLayer.add(JD, std::move(G)), Succeeded());
+
+  EXPECT_THAT_EXPECTED(ES.lookup(&JD, "_anchor"), Failed());
+}
+
 } // end anonymous namespace
