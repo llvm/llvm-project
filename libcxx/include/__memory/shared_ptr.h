@@ -219,7 +219,7 @@ public:
     __shared_ptr_pointer(_Tp __p, _Dp __d, _Alloc __a)
         :  __data_(__compressed_pair<_Tp, _Dp>(__p, _VSTD::move(__d)), _VSTD::move(__a)) {}
 
-#ifndef _LIBCPP_NO_RTTI
+#ifndef _LIBCPP_HAS_NO_RTTI
     const void* __get_deleter(const type_info&) const _NOEXCEPT override;
 #endif
 
@@ -228,7 +228,7 @@ private:
     void __on_zero_shared_weak() _NOEXCEPT override;
 };
 
-#ifndef _LIBCPP_NO_RTTI
+#ifndef _LIBCPP_HAS_NO_RTTI
 
 template <class _Tp, class _Dp, class _Alloc>
 const void*
@@ -237,7 +237,7 @@ __shared_ptr_pointer<_Tp, _Dp, _Alloc>::__get_deleter(const type_info& __t) cons
     return __t == typeid(_Dp) ? _VSTD::addressof(__data_.first().second()) : nullptr;
 }
 
-#endif // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_HAS_NO_RTTI
 
 template <class _Tp, class _Dp, class _Alloc>
 void
@@ -903,7 +903,7 @@ public:
     }
 #endif
 
-#ifndef _LIBCPP_NO_RTTI
+#ifndef _LIBCPP_HAS_NO_RTTI
     template <class _Dp>
     _LIBCPP_HIDE_FROM_ABI
     _Dp* __get_deleter() const _NOEXCEPT
@@ -912,7 +912,7 @@ public:
                     ? const_cast<void *>(__cntrl_->__get_deleter(typeid(_Dp)))
                       : nullptr);
     }
-#endif // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_HAS_NO_RTTI
 
     template<class _Yp, class _CntrlBlk>
     _LIBCPP_HIDE_FROM_ABI
@@ -1510,7 +1510,7 @@ reinterpret_pointer_cast(const shared_ptr<_Up>& __r) _NOEXCEPT
                                typename shared_ptr<_Tp>::element_type*>(__r.get()));
 }
 
-#ifndef _LIBCPP_NO_RTTI
+#ifndef _LIBCPP_HAS_NO_RTTI
 
 template<class _Dp, class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -1520,7 +1520,7 @@ get_deleter(const shared_ptr<_Tp>& __p) _NOEXCEPT
     return __p.template __get_deleter<_Dp>();
 }
 
-#endif // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_HAS_NO_RTTI
 
 template<class _Tp>
 class _LIBCPP_SHARED_PTR_TRIVIAL_ABI _LIBCPP_TEMPLATE_VIS weak_ptr
