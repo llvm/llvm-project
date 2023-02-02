@@ -167,8 +167,11 @@ TEST(InteractiveModelRunner, Evaluation) {
     // host to open the pipes RW.
     raw_fd_ostream ToCompiler(ToCompilerName, EC);
     EXPECT_FALSE(EC);
-    sys::fs::file_t FromCompiler = {};
-    EXPECT_FALSE(sys::fs::openFileForRead(FromCompilerName, FromCompiler));
+    int FromCompilerHandle = 0;
+    EXPECT_FALSE(
+        sys::fs::openFileForRead(FromCompilerName, FromCompilerHandle));
+    sys::fs::file_t FromCompiler =
+        sys::fs::convertFDToNativeFile(FromCompilerHandle);
     EXPECT_EQ(SeenObservations, 0);
     // Helper to read headers and other json lines.
     SmallVector<char, 1024> Buffer;
