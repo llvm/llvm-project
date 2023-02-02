@@ -265,17 +265,11 @@ void StackLayoutModifier::checkStackPointerRestore(MCInst &Point) {
   // value may need to be updated depending on our stack layout changes
   const MCInstrDesc &InstInfo = BC.MII->get(Point.getOpcode());
   unsigned NumDefs = InstInfo.getNumDefs();
-  bool UsesFP = false;
-  for (unsigned I = NumDefs, E = MCPlus::getNumPrimeOperands(Point); I < E;
-       ++I) {
-    MCOperand &Operand = Point.getOperand(I);
-    if (!Operand.isReg())
-      continue;
-    if (Operand.getReg() == BC.MIB->getFramePointer()) {
-      UsesFP = true;
-      break;
-    }
-  }
+  bool UsesFP = llvm::any_of(
+      llvm::drop_begin(MCPlus::primeOperands(Point), NumDefs),
+      [&](MCOperand &Op) {
+        return Op.isReg() && Op.getReg() == BC.MIB->getFramePointer();
+      });
   if (!UsesFP)
     return;
 
