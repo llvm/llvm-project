@@ -192,8 +192,11 @@ struct GenericKernelTy {
     case OMP_TGT_EXEC_MODE_GENERIC:
     case OMP_TGT_EXEC_MODE_GENERIC_SPMD:
       return true;
+    default:
+      //TODO: Add NOLOOP/XTEAM modes
+      llvm_unreachable("ExecutionMode not supported yet.");
+      return false;
     }
-    return false;
   }
 
 private:

@@ -161,7 +161,7 @@ int32_t __kmpc_target_init_v1(int64_t *, int8_t Mode,
                               int8_t RequiresFullRuntime) {
   FunctionTracingRAII();
   int32_t res = __kmpc_target_init(nullptr, Mode, UseGenericStateMachine);
-  if (Mode & OMP_TGT_EXEC_MODE_SPMD) {
+  if (Mode & llvm::omp::OMP_TGT_EXEC_MODE_SPMD) {
 
     uint32_t TId = mapping::getThreadIdInBlock();
 

@@ -243,11 +243,6 @@ typedef struct {
   uintptr_t value;
 } omp_alloctrait_t;
 
-enum OMPTgtExecModeFlags : int8_t {
-  OMP_TGT_EXEC_MODE_GENERIC = 1 << 0,
-  OMP_TGT_EXEC_MODE_SPMD = 1 << 1,
-};
-
 #define __PRAGMA(STR) _Pragma(#STR)
 #define OMP_PRAGMA(STR) __PRAGMA(omp STR)
 
