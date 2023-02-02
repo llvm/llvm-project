@@ -16,6 +16,7 @@
 // template<class Visitor, class Context>
 //   see below visit_format_arg(Visitor&& vis, basic_format_arg<Context> arg);
 
+#include <algorithm>
 #include <format>
 #include <cassert>
 #include <type_traits>
