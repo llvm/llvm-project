@@ -29,6 +29,7 @@ namespace mcdxbc {
 // RuntimeInfo.
 struct PSVRuntimeInfo {
   dxbc::PSV::v2::RuntimeInfo BaseData;
+  std::vector<dxbc::PSV::v2::ResourceBindInfo> Resources;
 
   // Serialize PSVInfo into the provided raw_ostream. The version field
   // specifies the data version to encode, the default value specifies encoding
@@ -39,6 +40,8 @@ struct PSVRuntimeInfo {
   void swapBytes(Triple::EnvironmentType Stage) {
     BaseData.swapBytes();
     BaseData.swapBytes(Stage);
+    for (auto Res : Resources)
+      Res.swapBytes();
   }
 };
 

@@ -12,6 +12,7 @@
 
 using namespace llvm;
 using namespace llvm::mcdxbc;
+using namespace llvm::dxbc::PSV;
 
 void PSVRuntimeInfo::write(raw_ostream &OS, uint32_t Version) const {
   uint32_t InfoSize;
@@ -33,4 +34,14 @@ void PSVRuntimeInfo::write(raw_ostream &OS, uint32_t Version) const {
   OS.write(reinterpret_cast<const char *>(&InfoSizeSwapped), sizeof(uint32_t));
   // Write the info itself.
   OS.write(reinterpret_cast<const char *>(&BaseData), InfoSize);
+
+  uint32_t ResourceCount = static_cast<uint32_t>(Resources.size());
+  if (sys::IsBigEndianHost)
+    sys::swapByteOrder(ResourceCount);
+  OS.write(reinterpret_cast<const char *>(&ResourceCount), sizeof(uint32_t));
+
+  size_t BindingSize = (Version < 2) ? sizeof(v0::ResourceBindInfo)
+                                     : sizeof(v2::ResourceBindInfo);
+  for (const auto &Res : Resources)
+    OS.write(reinterpret_cast<const char *>(&Res), BindingSize);
 }

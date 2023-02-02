@@ -288,6 +288,20 @@ struct RuntimeInfo {
   void swapBytes(Triple::EnvironmentType Stage) { StageInfo.swapBytes(Stage); }
 };
 
+struct ResourceBindInfo {
+  uint32_t Type;
+  uint32_t Space;
+  uint32_t LowerBound;
+  uint32_t UpperBound;
+
+  void swapBytes() {
+    sys::swapByteOrder(Type);
+    sys::swapByteOrder(Space);
+    sys::swapByteOrder(LowerBound);
+    sys::swapByteOrder(UpperBound);
+  }
+};
+
 } // namespace v0
 
 namespace v1 {
@@ -345,6 +359,16 @@ struct RuntimeInfo : public v1::RuntimeInfo {
 
   void swapBytes(Triple::EnvironmentType Stage) {
     v1::RuntimeInfo::swapBytes(Stage);
+  }
+};
+
+struct ResourceBindInfo : public v0::ResourceBindInfo {
+  uint32_t Kind;
+  uint32_t Flags;
+
+  void swapBytes() {
+    sys::swapByteOrder(Kind);
+    sys::swapByteOrder(Flags);
   }
 };
 
