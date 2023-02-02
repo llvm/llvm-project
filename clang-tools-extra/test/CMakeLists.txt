@@ -10,6 +10,7 @@ set(CLANG_TOOLS_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/..")
 llvm_canonicalize_cmake_booleans(
   CLANG_TIDY_ENABLE_STATIC_ANALYZER
   CLANG_PLUGIN_SUPPORT
+  CLANG_ENABLE_CIR
   LLVM_INSTALL_TOOLCHAIN_ONLY
   )
 
@@ -56,6 +57,12 @@ set(CLANG_TOOLS_TEST_DEPS
   # Clang-tidy tests need clang for building modules.
   clang
 )
+
+if(CLANG_ENABLE_CIR)
+  list(APPEND CLANG_TOOLS_TEST_DEPS
+    cir-tidy
+  )
+endif()
 
 # Add lit test dependencies.
 set(LLVM_UTILS_DEPS
