@@ -553,6 +553,7 @@ public:
   // Search for name in a derived type scope and its parents.
   Symbol *FindInTypeOrParents(const Scope &, const parser::Name &);
   Symbol *FindInTypeOrParents(const parser::Name &);
+  Symbol *FindInScopeOrBlockConstructs(const Scope &, SourceName);
   Symbol *FindSeparateModuleProcedureInterface(const parser::Name &);
   void EraseSymbol(const parser::Name &);
   void EraseSymbol(const Symbol &symbol) { currScope().erase(symbol.name()); }
@@ -2368,6 +2369,20 @@ Symbol *ScopeHandler::FindInTypeOrParents(
 }
 Symbol *ScopeHandler::FindInTypeOrParents(const parser::Name &name) {
   return FindInTypeOrParents(currScope(), name);
+}
+Symbol *ScopeHandler::FindInScopeOrBlockConstructs(
+    const Scope &scope, SourceName name) {
+  if (Symbol * symbol{FindInScope(scope, name)}) {
+    return symbol;
+  }
+  for (const Scope &child : scope.children()) {
+    if (child.kind() == Scope::Kind::BlockConstruct) {
+      if (Symbol * symbol{FindInScopeOrBlockConstructs(child, name)}) {
+        return symbol;
+      }
+    }
+  }
+  return nullptr;
 }
 
 void ScopeHandler::EraseSymbol(const parser::Name &name) {
@@ -6556,8 +6571,19 @@ void ConstructVisitor::Post(const parser::SelectRankConstruct &) {
 }
 
 bool ConstructVisitor::CheckDef(const std::optional<parser::Name> &x) {
-  if (x) {
-    MakeSymbol(*x, MiscDetails{MiscDetails::Kind::ConstructName});
+  if (x && !x->symbol) {
+    // Construct names are not scoped by BLOCK in the standard, but many,
+    // but not all, compilers do treat them as if they were so scoped.
+    if (Symbol * inner{FindInScope(currScope(), *x)}) {
+      SayAlreadyDeclared(*x, *inner);
+    } else {
+      if (Symbol *
+          other{FindInScopeOrBlockConstructs(InclusiveScope(), x->source)}) {
+        SayWithDecl(*x, *other,
+            "The construct name '%s' should be distinct at the subprogram level"_port_en_US);
+      }
+      MakeSymbol(*x, MiscDetails{MiscDetails::Kind::ConstructName});
+    }
   }
   return true;
 }
