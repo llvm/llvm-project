@@ -621,6 +621,9 @@ enum CommandArgumentType {
   eArgTypeConnectURL,
   eArgTypeTargetID,
   eArgTypeStopHookID,
+  // BEGIN SWIFT
+  eArgTypeBindGenTypeParamValue,
+  // END SWIFT
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
