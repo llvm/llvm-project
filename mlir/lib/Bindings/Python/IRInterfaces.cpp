@@ -12,6 +12,7 @@
 #include "IRModule.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/Interfaces.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace py = pybind11;
 
@@ -183,9 +184,9 @@ public:
   }
 
   /// Given the arguments required to build an operation, attempts to infer its
-  /// return types. Throws value_error on faliure.
+  /// return types. Throws value_error on failure.
   std::vector<PyType>
-  inferReturnTypes(std::optional<std::vector<PyValue>> operands,
+  inferReturnTypes(std::optional<py::list> operandList,
                    std::optional<PyAttribute> attributes,
                    std::optional<std::vector<PyRegion>> regions,
                    DefaultingPyMlirContext context,
@@ -193,10 +194,45 @@ public:
     llvm::SmallVector<MlirValue> mlirOperands;
     llvm::SmallVector<MlirRegion> mlirRegions;
 
-    if (operands) {
-      mlirOperands.reserve(operands->size());
-      for (PyValue &value : *operands) {
-        mlirOperands.push_back(value);
+    if (operandList && !operandList->empty()) {
+      // Note: as the list may contain other lists this may not be final size.
+      mlirOperands.reserve(operandList->size());
+      for (const auto& it : llvm::enumerate(*operandList)) {
+        PyValue* val;
+        try {
+          val = py::cast<PyValue *>(it.value());
+          if (!val)
+            throw py::cast_error();
+          mlirOperands.push_back(val->get());
+          continue;
+        } catch (py::cast_error &err) {
+        }
+
+        try {
+          auto vals = py::cast<py::sequence>(it.value());
+          for (py::object v : vals) {
+            try {
+              val = py::cast<PyValue *>(v);
+              if (!val)
+                throw py::cast_error();
+              mlirOperands.push_back(val->get());
+            } catch (py::cast_error &err) {
+              throw py::value_error(
+                  (llvm::Twine("Operand ") + llvm::Twine(it.index()) +
+                   " must be a Value or Sequence of Values (" + err.what() +
+                   ")")
+                      .str());
+            }
+          }
+          continue;
+        } catch (py::cast_error &err) {
+          throw py::value_error(
+              (llvm::Twine("Operand ") + llvm::Twine(it.index()) +
+               " must be a Value or Sequence of Values (" + err.what() + ")")
+                  .str());
+        }
+
+        throw py::cast_error();
       }
     }
 
