@@ -226,6 +226,10 @@ void UnsafeFunctionsCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP,
     Preprocessor * /*ModuleExpanderPP*/) {
   this->PP = PP;
+}
+
+void UnsafeFunctionsCheck::onEndOfTranslationUnit() {
+  this->PP = nullptr;
   IsAnnexKAvailable.reset();
 }
 
