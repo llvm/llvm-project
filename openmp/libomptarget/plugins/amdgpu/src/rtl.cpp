@@ -158,20 +158,42 @@ struct FuncOrGblEntryTy {
   std::vector<__tgt_offload_entry> Entries;
 };
 
-typedef enum { INIT = 1, FINI } initORfini;
+typedef enum { INIT = 1, FINI } InitFiniTy;
 
 typedef struct DeviceImageTy {
-  int size;
-  bool initfini;
-  DeviceImageTy() {
-    size = 0;
-    initfini = false;
+public:
+  explicit DeviceImageTy(int dev_id = -1, size_t s = 0)
+      : device_id(dev_id), size(s) {
+    InitFini.first = InitFini.second = false;
   }
-  DeviceImageTy(int s, bool init_fini) {
-    size = s;
-    initfini = init_fini;
+  int getDeviceID() const { return device_id; }
+  size_t getSize() const { return size; }
+  void setInitOrFini(const std::pair<InitFiniTy, bool> &&initORfini) {
+    switch (initORfini.first) {
+    case INIT:
+      InitFini.first = initORfini.second;
+      break;
+    case FINI:
+      InitFini.second = initORfini.second;
+      break;
+    }
+  }
+  bool hasInitOrFini(InitFiniTy val) {
+    if (device_id > -1 && size != 0)
+      return (val == INIT   ? InitFini.first
+              : val == FINI ? InitFini.second
+                            : false);
+    return false;
   }
   ~DeviceImageTy() {}
+
+private:
+  int device_id;
+  size_t size;
+  // This field will store the Init/Fini kernel boolean status
+  // The first element will store Init status and second element will store Fini
+  // status.
+  std::pair<bool, bool> InitFini;
 } Image_t;
 
 struct KernelArgPool {
@@ -352,7 +374,7 @@ static void callbackQueue(hsa_status_t Status, hsa_queue_t *Source,
 
 namespace core {
 
-void launchInitFiniKernel(int32_t, void *, const size_t &, const initORfini);
+void launchInitFiniKernel(int32_t, void *, const size_t &, const InitFiniTy);
 
 namespace {
 
@@ -604,7 +626,7 @@ public:
 
   std::vector<hsa_executable_t> HSAExecutables;
 
-  std::map<void *, Image_t> ImageList;
+  std::map<void *, Image_t> InitFiniTable;
   std::vector<std::map<std::string, atl_kernel_info_t>> KernelInfoTable;
   std::vector<std::map<std::string, atl_symbol_info_t>> SymbolInfoTable;
 
@@ -1339,15 +1361,9 @@ public:
            get_error_string(err));
     }
 
-    for (int i = 0; i < NumberOfDevices; i++) {
-      std::map<void *, Image_t>::iterator itr = ImageList.begin();
-      if (itr != ImageList.end()) {
-        void *img = itr->first;
-        Image_t img_attr = (itr->second);
-        core::launchInitFiniKernel(i, img, img_attr.size, FINI);
-        itr++;
-      }
-    }
+    for (const auto &[img, img_t] : InitFiniTable)
+      core::launchInitFiniKernel(img_t.getDeviceID(), img, img_t.getSize(),
+                                 FINI);
 
     // Run destructors on types that use HSA before
     // impl_finalize removes access to it
@@ -2823,7 +2839,7 @@ int32_t runInitFiniKernel(int DeviceId, uint16_t header,
 }
 
 void launchInitFiniKernel(int32_t DeviceId, void *img, const size_t &size,
-                          const initORfini status) {
+                          const InitFiniTy status) {
   std::string kernelName, kernelTag;
   bool symbolExist = false;
   auto &KernelInfoTable = DeviceInfo().KernelInfoTable;
@@ -2837,9 +2853,11 @@ void launchInitFiniKernel(int32_t DeviceId, void *img, const size_t &size,
         imageContainsSymbol(img, size, (kernelName + ".kd").c_str());
     if (symbolExist && KernelInfoTable[DeviceId].find(kernelName) !=
                            KernelInfoTable[DeviceId].end()) {
-      assert(DeviceInfo().ImageList[img].initfini != 0);
+      assert(DeviceInfo().InitFiniTable[img].hasInitOrFini(INIT) != 0);
       kernelInfoEntry = KernelInfoTable[DeviceId][kernelName];
+#ifdef OMPTARGET_DEBUG
       assert(kernelInfoEntry.kind == "init");
+#endif
       runInitFini =
           runInitFiniKernel(DeviceId, createHeader(), kernelInfoEntry);
     }
@@ -2852,9 +2870,11 @@ void launchInitFiniKernel(int32_t DeviceId, void *img, const size_t &size,
         imageContainsSymbol(img, size, (kernelName + ".kd").c_str());
     if (symbolExist && KernelInfoTable[DeviceId].find(kernelName) !=
                            KernelInfoTable[DeviceId].end()) {
-      assert(DeviceInfo().ImageList[img].initfini != 0);
+      assert(DeviceInfo().InitFiniTable[img].hasInitOrFini(FINI) != 0);
       kernelInfoEntry = KernelInfoTable[DeviceId][kernelName];
+#ifdef OMPTARGET_DEBUG
       assert(kernelInfoEntry.kind == "fini");
+#endif
       runInitFini =
           runInitFiniKernel(DeviceId, createHeader(), kernelInfoEntry);
     }
@@ -3208,8 +3228,9 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
   }
 
   {
-    auto Env = DeviceEnvironment(DeviceId, DeviceInfo().NumberOfDevices,
-                                 DeviceInfo().Env.DynamicMemSize, Image, ImgSize);
+    auto Env =
+        DeviceEnvironment(DeviceId, DeviceInfo().NumberOfDevices,
+                          DeviceInfo().Env.DynamicMemSize, Image, ImgSize);
 
     auto &KernelInfo = DeviceInfo().KernelInfoTable[DeviceId];
     auto &SymbolInfo = DeviceInfo().SymbolInfoTable[DeviceId];
@@ -3220,15 +3241,12 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
             __atomic_store_n(&DeviceInfo().HostcallRequired, true,
                              __ATOMIC_RELEASE);
           }
-          if (imageContainsSymbol(Data, Size, "amdgcn.device.init") &&
-              imageContainsSymbol(Data, Size, "amdgcn.device.fini")) {
-            DeviceInfo().ImageList.insert(
-                {Image->ImageStart, Image_t(Size, true)});
-          } else {
-            DeviceInfo().ImageList.insert(
-                {Image->ImageStart, Image_t(Size, false)});
-          }
-
+          auto InitFiniInfo = Image_t(DeviceId, Size);
+          if (imageContainsSymbol(Data, Size, "amdgcn.device.init"))
+            InitFiniInfo.setInitOrFini({INIT, true});
+          if (imageContainsSymbol(Data, Size, "amdgcn.device.fini"))
+            InitFiniInfo.setInitOrFini({FINI, true});
+          DeviceInfo().InitFiniTable[Image->ImageStart] = InitFiniInfo;
           return Env.beforeLoading(Data, Size);
         },
         DeviceInfo().HSAExecutables);
@@ -3581,7 +3599,7 @@ void *__tgt_rtl_data_alloc(int DeviceId, int64_t Size, void *, int32_t Kind) {
 
   OmptTimestampRAII AllocTimestamp;
   hsa_status_t Err = hsa_amd_memory_pool_allocate(MemoryPool, Size, 0, &Ptr);
- 
+
   if (Kind == TARGET_ALLOC_SHARED) {
     __tgt_rtl_set_coarse_grain_mem_region(Ptr, Size);
   }
