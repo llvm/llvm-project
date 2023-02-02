@@ -114,6 +114,11 @@ void MethodBody::writeTo(raw_indented_ostream &os) const {
 //===----------------------------------------------------------------------===//
 
 void Method::writeDeclTo(raw_indented_ostream &os) const {
+  if (deprecationMessage) {
+    os << "[[deprecated(\"";
+    os.write_escaped(*deprecationMessage);
+    os << "\")]]\n";
+  }
   if (isStatic())
     os << "static ";
   if (properties & ConstexprValue)
