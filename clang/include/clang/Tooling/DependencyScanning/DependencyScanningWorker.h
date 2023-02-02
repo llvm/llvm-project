@@ -36,7 +36,7 @@ struct DepscanPrefixMapping;
 
 /// A command-line tool invocation that is part of building a TU.
 ///
-/// \see FullDependencies::Commands.
+/// \see TranslationUnitDeps::Commands.
 struct Command {
   std::string Executable;
   std::vector<std::string> Arguments;
