@@ -61,7 +61,7 @@ private:
   const TensorSpec OutputSpec;
   std::error_code OutEC;
   std::error_code InEC;
-  sys::fs::file_t Inbound;
+  int Inbound = 0;
   std::vector<char> OutputBuffer;
   std::unique_ptr<Logger> Log;
 };

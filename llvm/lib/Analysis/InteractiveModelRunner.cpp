@@ -59,7 +59,8 @@ InteractiveModelRunner::InteractiveModelRunner(
 }
 
 InteractiveModelRunner::~InteractiveModelRunner() {
-  sys::fs::closeFile(Inbound);
+  sys::fs::file_t FDAsOSHandle = sys::fs::convertFDToNativeFile(Inbound);
+  sys::fs::closeFile(FDAsOSHandle);
 }
 
 void *InteractiveModelRunner::evaluateUntyped() {
@@ -74,7 +75,8 @@ void *InteractiveModelRunner::evaluateUntyped() {
   const size_t Limit = OutputBuffer.size();
   while (InsPoint < Limit) {
     auto ReadOrErr = ::sys::fs::readNativeFile(
-        Inbound, {Buff + InsPoint, OutputBuffer.size() - InsPoint});
+        sys::fs::convertFDToNativeFile(Inbound),
+        {Buff + InsPoint, OutputBuffer.size() - InsPoint});
     if (ReadOrErr.takeError()) {
       Ctx.emitError("Failed reading from inbound file");
       break;
