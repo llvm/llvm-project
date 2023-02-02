@@ -295,12 +295,6 @@ Expected<LazyMappedFileRegion> LazyMappedFileRegion::create(
   // do the initialization) or we have the size for the completely initialized
   // file.
 
-  if (Status.getSize() > 0)
-    // The file was already constructed.
-    LMFR.CachedSize = Status.getSize();
-  else
-    LMFR.IsConstructingNewFile = true;
-
   {
     std::error_code EC;
     sys::fs::mapped_file_region Map(
@@ -310,10 +304,14 @@ Expected<LazyMappedFileRegion> LazyMappedFileRegion::create(
     LMFR.Map = std::move(Map);
   }
 
-  if (!LMFR.IsConstructingNewFile)
+  if (Status.getSize() > 0) {
+    // The file was already constructed.
+    LMFR.CachedSize = Status.getSize();
     return std::move(LMFR);
+  }
 
   // This is a new file. Resize to NewFileSize and run the constructor.
+  LMFR.IsConstructingNewFile = true;
   if (Error E = NewFileConstructor(LMFR))
     return std::move(E);
   assert(LMFR.size() > 0 && "Constructor must set a non-zero size");
