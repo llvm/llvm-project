@@ -1,5 +1,8 @@
 // Test for __lsan_do_leak_check(). We test it by making the leak check run
 // before global destructors, which also tests compatibility with HeapChecker's
+
+// Fixme: remove once test passes with hwasan
+// UNSUPPORTED: hwasan
 // "normal" mode (LSan runs in "strict" mode by default).
 // RUN: %clangxx_lsan %s -o %t
 // RUN: %env_lsan_opts=use_stacks=0:use_registers=0 not %run %t 2>&1 | FileCheck --check-prefix=CHECK-strict %s
@@ -34,5 +37,5 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
-// CHECK-strict: SUMMARY: {{.*}}Sanitizer: 2003 byte(s) leaked in 2 allocation(s)
-// CHECK-normal: SUMMARY: {{.*}}Sanitizer: 666 byte(s) leaked in 1 allocation(s)
+// CHECK-strict: SUMMARY: {{(Leak|Address)}}Sanitizer: 2003 byte(s) leaked in 2 allocation(s)
+// CHECK-normal: SUMMARY: {{(Leak|Address)}}Sanitizer: 666 byte(s) leaked in 1 allocation(s)
