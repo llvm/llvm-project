@@ -2,9 +2,6 @@
 // where lsan would call dl_iterate_phdr while holding the allocator lock.
 // RUN: %clangxx_lsan %s -o %t && %run %t
 
-// Fixme: remove once test passes with hwasan
-// UNSUPPORTED: hwasan
-
 #include <link.h>
 #include <mutex>
 #include <stdlib.h>
