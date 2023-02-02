@@ -16,6 +16,7 @@ static_library("cppcoreguidelines") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "AvoidCaptureDefaultWhenCapturingThisCheck.cpp",
     "AvoidConstOrRefDataMembersCheck.cpp",
     "AvoidDoWhileCheck.cpp",
     "AvoidGotoCheck.cpp",

@@ -2171,12 +2171,16 @@ class FLAT_Real_gfx11 <bits<7> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> 
   let Inst{55}    = ps.sve;
 }
 
-multiclass FLAT_Real_Base_gfx11<bits<7> op, string ps, string opName, int renamed = false> {
+multiclass FLAT_Aliases_gfx11<string ps, string opName, int renamed> {
+  if renamed then
+    def _renamed_gfx11 : MnemonicAlias<!cast<FLAT_Pseudo>(ps).Mnemonic, opName>, Requires<[isGFX11Plus]>;
+}
+
+multiclass FLAT_Real_Base_gfx11<bits<7> op, string ps, string opName, int renamed = false> :
+  FLAT_Aliases_gfx11<ps, opName, renamed> {
   def _gfx11 : FLAT_Real_gfx11<op, !cast<FLAT_Pseudo>(ps), opName> {
     let Inst{54-48} = !cast<int>(SGPR_NULL_gfx11plus.HWEncoding);
   }
-  if renamed then
-    def _renamed_gfx11 : MnemonicAlias<!cast<FLAT_Pseudo>(ps).Mnemonic, opName>, Requires<[isGFX11Plus]>;
 }
 
 multiclass FLAT_Real_RTN_gfx11<bits<7> op, string ps, string opName> {
@@ -2219,7 +2223,8 @@ multiclass FLAT_Real_GlblAtomics_gfx11<bits<7> op, string ps, string opName, int
   FLAT_Real_RTN_gfx11<op, ps, opName>,
   FLAT_Real_SADDR_RTN_gfx11<op, ps, opName>;
 
-multiclass FLAT_Real_GlblAtomics_RTN_gfx11<bits<7> op, string ps, string opName> :
+multiclass FLAT_Real_GlblAtomics_RTN_gfx11<bits<7> op, string ps, string opName, int renamed = false> :
+  FLAT_Aliases_gfx11<ps#"_RTN", opName, renamed>,
   FLAT_Real_RTN_gfx11<op, ps, opName>,
   FLAT_Real_SADDR_RTN_gfx11<op, ps, opName>;
 
@@ -2312,7 +2317,7 @@ defm GLOBAL_ATOMIC_SWAP_B32     : FLAT_Real_GlblAtomics_gfx11<0x033, "GLOBAL_ATO
 defm GLOBAL_ATOMIC_CMPSWAP_B32  : FLAT_Real_GlblAtomics_gfx11<0x034, "GLOBAL_ATOMIC_CMPSWAP", "global_atomic_cmpswap_b32", true>;
 defm GLOBAL_ATOMIC_ADD_U32      : FLAT_Real_GlblAtomics_gfx11<0x035, "GLOBAL_ATOMIC_ADD", "global_atomic_add_u32", true>;
 defm GLOBAL_ATOMIC_SUB_U32      : FLAT_Real_GlblAtomics_gfx11<0x036, "GLOBAL_ATOMIC_SUB", "global_atomic_sub_u32", true>;
-defm GLOBAL_ATOMIC_CSUB_U32     : FLAT_Real_GlblAtomics_RTN_gfx11<0x037, "GLOBAL_ATOMIC_CSUB", "global_atomic_csub_u32">;
+defm GLOBAL_ATOMIC_CSUB_U32     : FLAT_Real_GlblAtomics_RTN_gfx11<0x037, "GLOBAL_ATOMIC_CSUB", "global_atomic_csub_u32", true>;
 defm GLOBAL_ATOMIC_MIN_I32      : FLAT_Real_GlblAtomics_gfx11<0x038, "GLOBAL_ATOMIC_SMIN", "global_atomic_min_i32", true>;
 defm GLOBAL_ATOMIC_MIN_U32      : FLAT_Real_GlblAtomics_gfx11<0x039, "GLOBAL_ATOMIC_UMIN", "global_atomic_min_u32", true>;
 defm GLOBAL_ATOMIC_MAX_I32      : FLAT_Real_GlblAtomics_gfx11<0x03a, "GLOBAL_ATOMIC_SMAX", "global_atomic_max_i32", true>;

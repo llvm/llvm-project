@@ -68,7 +68,8 @@ static void DoElementalDefinedAssignment(const Descriptor &to,
 // Do not perform allocatable reallocation if \p skipRealloc is true, which is
 // used for allocate statement with source specifier.
 static void Assign(Descriptor &to, const Descriptor &from,
-    Terminator &terminator, bool skipRealloc = false) {
+    Terminator &terminator, bool skipRealloc = false,
+    bool skipFinalization = false) {
   DescriptorAddendum *toAddendum{to.Addendum()};
   const typeInfo::DerivedType *toDerived{
       toAddendum ? toAddendum->derivedType() : nullptr};
@@ -184,7 +185,8 @@ static void Assign(Descriptor &to, const Descriptor &from,
     // Derived type intrinsic assignment, which is componentwise and elementwise
     // for all components, including parent components (10.2.1.2-3).
     // The target is first finalized if still necessary (7.5.6.3(1))
-    if (!wasJustAllocated && !toDerived->noFinalizationNeeded()) {
+    if (!wasJustAllocated && !toDerived->noFinalizationNeeded() &&
+        !skipFinalization) {
       Finalize(to, *toDerived);
     }
     // Copy the data components (incl. the parent) first.
@@ -205,7 +207,8 @@ static void Assign(Descriptor &to, const Descriptor &from,
             comp.CreatePointerDescriptor(toCompDesc, to, terminator, toAt);
             comp.CreatePointerDescriptor(
                 fromCompDesc, from, terminator, fromAt);
-            Assign(toCompDesc, fromCompDesc, terminator, /*skipRealloc=*/false);
+            Assign(toCompDesc, fromCompDesc, terminator, /*skipRealloc=*/false,
+                /*skipFinalization=*/true);
           }
         } else { // Component has intrinsic type; simply copy raw bytes
           std::size_t componentByteSize{comp.SizeInBytes(to)};

@@ -13,7 +13,7 @@ define <2 x double> @test2elt(i16 %a.coerce) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: test2elt:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r4, r2, .LCPI0_0@toc@ha
-; CHECK-P8-NEXT:    mtvsrwz v2, r3
+; CHECK-P8-NEXT:    mtvsrd v2, r3
 ; CHECK-P8-NEXT:    addi r4, r4, .LCPI0_0@toc@l
 ; CHECK-P8-NEXT:    xxlxor v4, v4, v4
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r4
@@ -24,7 +24,7 @@ define <2 x double> @test2elt(i16 %a.coerce) local_unnamed_addr #0 {
 ;
 ; CHECK-P9-LABEL: test2elt:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    mtfprwz f0, r3
+; CHECK-P9-NEXT:    mtfprd f0, r3
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI0_0@toc@ha
 ; CHECK-P9-NEXT:    xxlxor vs2, vs2, vs2
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI0_0@toc@l
@@ -415,7 +415,7 @@ define <2 x double> @test2elt_signed(i16 %a.coerce) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: test2elt_signed:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r4, r2, .LCPI4_0@toc@ha
-; CHECK-P8-NEXT:    mtvsrwz v3, r3
+; CHECK-P8-NEXT:    mtvsrd v3, r3
 ; CHECK-P8-NEXT:    addis r3, r2, .LCPI4_1@toc@ha
 ; CHECK-P8-NEXT:    addi r4, r4, .LCPI4_0@toc@l
 ; CHECK-P8-NEXT:    addi r3, r3, .LCPI4_1@toc@l
@@ -431,7 +431,7 @@ define <2 x double> @test2elt_signed(i16 %a.coerce) local_unnamed_addr #0 {
 ;
 ; CHECK-P9-LABEL: test2elt_signed:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    mtvsrwz v2, r3
+; CHECK-P9-NEXT:    mtvsrd v2, r3
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI4_0@toc@ha
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI4_0@toc@l
 ; CHECK-P9-NEXT:    lxv vs0, 0(r3)

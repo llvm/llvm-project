@@ -14,8 +14,13 @@ class TestCase(TestBase):
                                           "// Set break point at this line.",
                                           lldb.SBFileSpec("main.cpp"))
 
+        if self.expectedCompilerVersion(['>', '16.0']):
+            vec_type = "std::vector<int>"
+        else:
+            vec_type = "std::vector<int, std::allocator<int> >"
+
         # Test printing the vector before enabling any C++ module setting.
-        self.expect_expr("a", result_type="std::vector<int>")
+        self.expect_expr("a", result_type=vec_type)
 
         # Set loading the import-std-module to 'fallback' which loads the module
         # and retries when an expression fails to parse.
@@ -23,7 +28,7 @@ class TestCase(TestBase):
 
         # Printing the vector still works. This should return the same type
         # as before as this shouldn't use a C++ module type.
-        self.expect_expr("a", result_type="std::vector<int>")
+        self.expect_expr("a", result_type=vec_type)
 
         # This expression can only parse with a C++ module. LLDB should
         # automatically fall back to import the C++ module to get this working.

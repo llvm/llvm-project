@@ -548,6 +548,7 @@ def PPCU1ImmAsmOperand : AsmOperandClass {
 def u1imm   : Operand<i32> {
   let PrintMethod = "printU1ImmOperand";
   let ParserMatchClass = PPCU1ImmAsmOperand;
+  let DecoderMethod = "decodeUImmOperand<1>";
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
@@ -558,6 +559,7 @@ def PPCU2ImmAsmOperand : AsmOperandClass {
 def u2imm   : Operand<i32> {
   let PrintMethod = "printU2ImmOperand";
   let ParserMatchClass = PPCU2ImmAsmOperand;
+  let DecoderMethod = "decodeUImmOperand<2>";
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
@@ -578,6 +580,7 @@ def PPCU3ImmAsmOperand : AsmOperandClass {
 def u3imm   : Operand<i32> {
   let PrintMethod = "printU3ImmOperand";
   let ParserMatchClass = PPCU3ImmAsmOperand;
+  let DecoderMethod = "decodeUImmOperand<3>";
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
@@ -588,6 +591,7 @@ def PPCU4ImmAsmOperand : AsmOperandClass {
 def u4imm   : Operand<i32> {
   let PrintMethod = "printU4ImmOperand";
   let ParserMatchClass = PPCU4ImmAsmOperand;
+  let DecoderMethod = "decodeUImmOperand<4>";
   let OperandType = "OPERAND_IMMEDIATE";
 }
 def PPCS5ImmAsmOperand : AsmOperandClass {

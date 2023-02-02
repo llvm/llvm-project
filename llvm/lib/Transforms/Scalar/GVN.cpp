@@ -1556,8 +1556,8 @@ bool GVNPass::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
     BasicBlock *Cur = Load->getParent();
     while (Cur != LoadBB) {
       PHITransAddr Address(LoadPtr, DL, AC);
-      LoadPtr = Address.PHITranslateWithInsertion(
-          Cur, Cur->getSinglePredecessor(), *DT, NewInsts);
+      LoadPtr = Address.translateWithInsertion(Cur, Cur->getSinglePredecessor(),
+                                               *DT, NewInsts);
       if (!LoadPtr) {
         CanDoPRE = false;
         break;
@@ -1567,8 +1567,8 @@ bool GVNPass::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
 
     if (LoadPtr) {
       PHITransAddr Address(LoadPtr, DL, AC);
-      LoadPtr = Address.PHITranslateWithInsertion(LoadBB, UnavailablePred, *DT,
-                                                  NewInsts);
+      LoadPtr = Address.translateWithInsertion(LoadBB, UnavailablePred, *DT,
+                                               NewInsts);
     }
     // If we couldn't find or insert a computation of this phi translated value,
     // we fail PRE.
