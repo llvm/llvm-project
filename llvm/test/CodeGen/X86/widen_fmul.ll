@@ -72,15 +72,15 @@ define void @widen_fmul_v2f32_v8f32(ptr %a0, ptr %b0, ptr %c0) {
 ; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
 ; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
 ; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX1OR2-NEXT:    vmulps %xmm4, %xmm0, %xmm0
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX1OR2-NEXT:    vmulps %xmm4, %xmm1, %xmm1
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX1OR2-NEXT:    vmulps %xmm4, %xmm2, %xmm2
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX1OR2-NEXT:    vmulps %xmm4, %xmm3, %xmm3
+; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm5 = mem[0],zero
+; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm6 = mem[0],zero
+; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm7 = mem[0],zero
+; AVX1OR2-NEXT:    vinsertf128 $1, %xmm7, %ymm5, %ymm5
 ; AVX1OR2-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
+; AVX1OR2-NEXT:    vmulps %ymm5, %ymm1, %ymm1
+; AVX1OR2-NEXT:    vinsertf128 $1, %xmm6, %ymm4, %ymm3
 ; AVX1OR2-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1OR2-NEXT:    vmulps %ymm3, %ymm0, %ymm0
 ; AVX1OR2-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
 ; AVX1OR2-NEXT:    vmovups %ymm0, (%rdx)
 ; AVX1OR2-NEXT:    vzeroupper
@@ -93,15 +93,15 @@ define void @widen_fmul_v2f32_v8f32(ptr %a0, ptr %b0, ptr %c0) {
 ; AVX512F-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
 ; AVX512F-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
 ; AVX512F-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX512F-NEXT:    vmulps %xmm4, %xmm0, %xmm0
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX512F-NEXT:    vmulps %xmm4, %xmm1, %xmm1
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX512F-NEXT:    vmulps %xmm4, %xmm2, %xmm2
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX512F-NEXT:    vmulps %xmm4, %xmm3, %xmm3
+; AVX512F-NEXT:    vmovsd {{.*#+}} xmm5 = mem[0],zero
+; AVX512F-NEXT:    vmovsd {{.*#+}} xmm6 = mem[0],zero
+; AVX512F-NEXT:    vmovsd {{.*#+}} xmm7 = mem[0],zero
+; AVX512F-NEXT:    vinsertf128 $1, %xmm7, %ymm5, %ymm5
 ; AVX512F-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
+; AVX512F-NEXT:    vmulps %ymm5, %ymm1, %ymm1
+; AVX512F-NEXT:    vinsertf128 $1, %xmm6, %ymm4, %ymm3
 ; AVX512F-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX512F-NEXT:    vmulps %ymm3, %ymm0, %ymm0
 ; AVX512F-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
 ; AVX512F-NEXT:    vmovups %ymm0, (%rdx)
 ; AVX512F-NEXT:    vzeroupper
@@ -114,17 +114,17 @@ define void @widen_fmul_v2f32_v8f32(ptr %a0, ptr %b0, ptr %c0) {
 ; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
 ; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
 ; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX512VL-NEXT:    vmulps %xmm4, %xmm0, %xmm0
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX512VL-NEXT:    vmulps %xmm4, %xmm1, %xmm1
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX512VL-NEXT:    vmulps %xmm4, %xmm2, %xmm2
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX512VL-NEXT:    vmulps %xmm4, %xmm3, %xmm3
+; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm5 = mem[0],zero
+; AVX512VL-NEXT:    vmulps %xmm5, %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm5 = mem[0],zero
+; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm6 = mem[0],zero
+; AVX512VL-NEXT:    vmulps %xmm6, %xmm3, %xmm3
 ; AVX512VL-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm3
 ; AVX512VL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
 ; AVX512VL-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm1[2,3],ymm3[2,3]
+; AVX512VL-NEXT:    vinsertf128 $1, %xmm5, %ymm4, %ymm3
 ; AVX512VL-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX512VL-NEXT:    vmulps %ymm3, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
 ; AVX512VL-NEXT:    vmovups %ymm0, (%rdx)
 ; AVX512VL-NEXT:    vzeroupper
@@ -201,31 +201,31 @@ define void @widen_fmul_v2f32_v16f32(ptr %a0, ptr %b0, ptr %c0) {
 ; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
 ; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
 ; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX1OR2-NEXT:    vmulps %xmm4, %xmm0, %xmm0
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX1OR2-NEXT:    vmulps %xmm4, %xmm1, %xmm1
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX1OR2-NEXT:    vmulps %xmm4, %xmm2, %xmm2
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX1OR2-NEXT:    vmulps %xmm4, %xmm3, %xmm3
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm5 = mem[0],zero
-; AVX1OR2-NEXT:    vmulps %xmm5, %xmm4, %xmm4
 ; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm5 = mem[0],zero
 ; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm6 = mem[0],zero
-; AVX1OR2-NEXT:    vmulps %xmm6, %xmm5, %xmm5
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm6 = mem[0],zero
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm7 = mem[0],zero
-; AVX1OR2-NEXT:    vmulps %xmm7, %xmm6, %xmm6
 ; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm7 = mem[0],zero
 ; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm8 = mem[0],zero
-; AVX1OR2-NEXT:    vmulps %xmm7, %xmm8, %xmm7
+; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm9 = mem[0],zero
+; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm10 = mem[0],zero
+; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm11 = mem[0],zero
+; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm12 = mem[0],zero
+; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm13 = mem[0],zero
+; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm14 = mem[0],zero
+; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm15 = mem[0],zero
+; AVX1OR2-NEXT:    vinsertf128 $1, %xmm7, %ymm5, %ymm5
 ; AVX1OR2-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
+; AVX1OR2-NEXT:    vmulps %ymm5, %ymm1, %ymm1
+; AVX1OR2-NEXT:    vinsertf128 $1, %xmm6, %ymm4, %ymm3
 ; AVX1OR2-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1OR2-NEXT:    vmulps %ymm3, %ymm0, %ymm0
 ; AVX1OR2-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
 ; AVX1OR2-NEXT:    vmovups %ymm0, (%rdx)
-; AVX1OR2-NEXT:    vinsertf128 $1, %xmm7, %ymm5, %ymm0
-; AVX1OR2-NEXT:    vinsertf128 $1, %xmm6, %ymm4, %ymm1
+; AVX1OR2-NEXT:    vinsertf128 $1, %xmm15, %ymm11, %ymm0
+; AVX1OR2-NEXT:    vinsertf128 $1, %xmm14, %ymm10, %ymm1
+; AVX1OR2-NEXT:    vmulps %ymm0, %ymm1, %ymm0
+; AVX1OR2-NEXT:    vinsertf128 $1, %xmm13, %ymm9, %ymm1
+; AVX1OR2-NEXT:    vinsertf128 $1, %xmm12, %ymm8, %ymm2
+; AVX1OR2-NEXT:    vmulps %ymm1, %ymm2, %ymm1
 ; AVX1OR2-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[2],ymm0[2]
 ; AVX1OR2-NEXT:    vmovups %ymm0, 32(%rdx)
 ; AVX1OR2-NEXT:    vzeroupper
