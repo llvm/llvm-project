@@ -45,12 +45,6 @@ lto_codegen_compile_optimized
 lto_codegen_set_should_internalize
 lto_codegen_set_should_embed_uselists
 lto_set_debug_options
-LLVMCreateDisasm
-LLVMCreateDisasmCPU
-LLVMDisasmDispose
-LLVMDisasmInstruction
-LLVMSetDisasmOptions
-LLVMCreateDisasmCPUFeatures
 thinlto_create_codegen
 thinlto_codegen_dispose
 thinlto_codegen_add_module
