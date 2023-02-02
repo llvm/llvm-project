@@ -195,11 +195,6 @@ llvm::cl::list<std::string> ModuleDepTargets(
     llvm::cl::desc("The names of dependency targets for the dependency file"),
     llvm::cl::cat(DependencyScannerCategory));
 
-llvm::cl::opt<bool> DeprecatedDriverCommand(
-    "deprecated-driver-command", llvm::cl::Optional,
-    llvm::cl::desc("use a single driver command to build the tu (deprecated)"),
-    llvm::cl::cat(DependencyScannerCategory));
-
 enum ResourceDirRecipeKind {
   RDRK_ModifyCompilerPath,
   RDRK_InvokeCompiler,
@@ -946,14 +941,6 @@ int main(int argc, const char **argv) {
           std::unique_lock<std::mutex> LockGuard(Lock);
           TreeResults.emplace_back(LocalIndex, std::move(Filename),
                                    std::move(MaybeTree));
-        } else if (DeprecatedDriverCommand) {
-          auto MaybeFullDeps =
-              WorkerTools[I]->getFullDependenciesLegacyDriverCommand(
-                  Input->CommandLine, CWD, AlreadySeenModules, LookupOutput,
-                  MaybeModuleName);
-          if (handleFullDependencyToolResult(Filename, MaybeFullDeps, FD,
-                                             LocalIndex, DependencyOS, Errs))
-            HadErrors = true;
         } else {
           auto MaybeFullDeps = WorkerTools[I]->getFullDependencies(
               Input->CommandLine, CWD, AlreadySeenModules, LookupOutput,
