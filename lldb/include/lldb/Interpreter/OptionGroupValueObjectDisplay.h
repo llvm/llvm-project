@@ -33,7 +33,8 @@ public:
     return show_types || no_summary_depth != 0 || show_location ||
            flat_output || use_objc || max_depth != UINT32_MAX ||
            ptr_depth != 0 || !use_synth || be_raw || ignore_cap ||
-           run_validator;
+           run_validator ||
+           bind_generic_types != lldb::eBindAuto;
   }
 
   DumpValueObjectOptions GetAsDumpOptions(
@@ -51,6 +52,7 @@ public:
   uint32_t ptr_depth;
   uint32_t elem_count;
   lldb::DynamicValueType use_dynamic;
+  lldb::BindGenericTypes bind_generic_types;
 };
 
 } // namespace lldb_private
