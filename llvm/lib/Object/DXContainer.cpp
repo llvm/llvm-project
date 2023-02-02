@@ -229,5 +229,17 @@ Error DirectX::PSVRuntimeInfo::parse(uint16_t ShaderKind) {
   }
   Current += Size;
 
+  uint32_t ResourceCount = 0;
+  if (Error Err = readInteger(Data, Current, ResourceCount))
+    return Err;
+  Current += sizeof(uint32_t);
+
+  Resources.Stride = (PSVVersion < 2) ? sizeof(v0::ResourceBindInfo)
+                                      : sizeof(v2::ResourceBindInfo);
+  size_t BindingDataSize = Resources.Stride * ResourceCount;
+  Resources.Data = Data.substr(Current - Data.begin(), BindingDataSize);
+
+  Current += BindingDataSize;
+
   return Error::success();
 }
