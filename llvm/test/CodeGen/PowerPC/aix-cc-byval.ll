@@ -958,33 +958,33 @@ declare i32 @test_byval_homogeneous_float_struct(ptr byval(%struct.F) align 4)
 ; CHECK-LABEL: name: call_test_byval_homogeneous_float_struct{{.*}}
 
 ; 32BIT:       ADJCALLSTACKDOWN 56, 0, implicit-def dead $r1, implicit $r1
-; 32BIT-DAG:   renamable $r3 = LWZ 0, %stack.0.s :: (load (s32) from %stack.0.s, align 8)
 ; 32BIT-DAG:   renamable $r4 = LWZ 4, %stack.0.s :: (load (s32) from %stack.0.s + 4)
 ; 32BIT-DAG:   renamable $r5 = LWZ 8, %stack.0.s :: (load (s32) from %stack.0.s + 8, align 8)
+; 32BIT-DAG:   $r3 = LI 0
 ; 32BIT-NEXT:  BL_NOP <mcsymbol .test_byval_homogeneous_float_struct[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r2, implicit-def $r1, implicit-def $r3
 ; 32BIT-NEXT:  ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
 
 ; CHECKASM-LABEL: .call_test_byval_homogeneous_float_struct:
 
 ; ASM32:       stwu 1, -80(1)
-; ASM32-DAG:   lwz 3, 64(1)
 ; ASM32-DAG:   lwz 4, 68(1)
 ; ASM32-DAG:   lwz 5, 72(1)
+; ASM32-DAG:   stw 3, 64(1)
 ; ASM32-NEXT:  bl .test_byval_homogeneous_float_struct[PR]
 ; ASM32-NEXT:  nop
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
 ; 64BIT:       ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
-; 64BIT-DAG:   renamable $x3 = LD 0, %stack.0.s :: (load (s64) from %stack.0.s)
-; 64BIT-DAG:   renamable $x4 = LWZ8 8, %stack.0.s :: (load (s32) from %stack.0.s + 8, align 8)
-; 64BIT-DAG:   renamable $x4 = RLDICR killed renamable $x4, 32, 31
+; 64BIT:       renamable $x3 = LWZ8 8, %stack.0.s :: (load (s32) from %stack.0.s + 8, align 8)
+; 64BIT-NEXT:  renamable $x4 = RLDICR killed renamable $x3, 32, 31
+; 64BIT-NEXT:  $x3 = LI8 0
 ; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_byval_homogeneous_float_struct[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x2, implicit-def $r1, implicit-def $x3
 ; 64BIT-NEXT:  ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
 ; ASM64:       stdu 1, -128(1)
-; ASM64-DAG:   ld 3, 112(1)
-; ASM64-DAG:   lwz 4, 120(1)
-; ASM64-DAG:   sldi 4, 4, 32
+; ASM64:       lwz 3, 120(1)
+; ASM64-NEXT:  sldi 4, 3, 32
+; ASM64-NEXT:  li 3, 0
 ; ASM64-NEXT:  bl .test_byval_homogeneous_float_struct[PR]
 ; ASM64-NEXT:  nop
