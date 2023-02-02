@@ -1056,7 +1056,7 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
     //   %t = sparse_tensor.ConvertOp %tmp
     RankedTensorType cooTp =
         getUnorderedCOOFromTypeWithOrdering(dstTp, encDst.getDimOrdering());
-    auto cooBuffer =
+    Value cooBuffer =
         rewriter.create<AllocTensorOp>(loc, cooTp, dynSizesArray).getResult();
 
     Value c0 = constantIndex(rewriter, loc, 0);

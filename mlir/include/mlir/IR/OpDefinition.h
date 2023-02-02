@@ -632,7 +632,7 @@ public:
       : public TraitBase<ConcreteType, OneTypedResult<ResultType>::Impl> {
   public:
     TypedValue<ResultType> getResult() {
-      return this->getOperation()->getResult(0);
+      return cast<TypedValue<ResultType>>(this->getOperation()->getResult(0));
     }
 
     /// If the operation returns a single value, then the Op can be implicitly
