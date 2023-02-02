@@ -3080,6 +3080,32 @@ Query for this feature with ``__has_builtin(__builtin_debugtrap)``.
 
 Query for this feature with ``__has_builtin(__builtin_trap)``.
 
+``__builtin_nondeterministic_value``
+------------------------------------
+
+``__builtin_nondeterministic_value`` returns a valid nondeterministic value of the same type as the provided argument.
+
+**Syntax**:
+
+.. code-block:: c++
+
+    type __builtin_nondeterministic_value(type x)
+
+**Examples**:
+
+.. code-block:: c++
+
+    int x = __builtin_nondeterministic_value(x);
+    float y = __builtin_nondeterministic_value(y);
+    __m256i a = __builtin_nondeterministic_value(a);
+
+**Description**
+
+Each call to ``__builtin_nondeterministic_value`` returns a valid value of the type given by the argument.
+
+The types currently supported are: integer types, floating-point types, vector types.
+
+Query for this feature with ``__has_builtin(__builtin_nondeterministic_value)``.
 
 ``__builtin_sycl_unique_stable_name``
 -------------------------------------
