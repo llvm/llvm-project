@@ -1043,12 +1043,14 @@ struct AAPointerInfoImpl
     const auto &NoSyncAA = A.getAAFor<AANoSync>(
         QueryingAA, IRPosition::function(Scope), DepClassTy::OPTIONAL);
     const auto *ExecDomainAA = A.lookupAAFor<AAExecutionDomain>(
-        IRPosition::function(Scope), &QueryingAA, DepClassTy::OPTIONAL);
+        IRPosition::function(Scope), &QueryingAA, DepClassTy::NONE);
     bool AllInSameNoSyncFn = NoSyncAA.isAssumedNoSync();
     bool InstIsExecutedByInitialThreadOnly =
         ExecDomainAA && ExecDomainAA->isExecutedByInitialThreadOnly(I);
     bool InstIsExecutedInAlignedRegion =
         ExecDomainAA && ExecDomainAA->isExecutedInAlignedRegion(A, I);
+    if (InstIsExecutedInAlignedRegion || InstIsExecutedByInitialThreadOnly)
+      A.recordDependence(*ExecDomainAA, QueryingAA, DepClassTy::OPTIONAL);
 
     InformationCache &InfoCache = A.getInfoCache();
     bool IsThreadLocalObj =
@@ -1063,14 +1065,24 @@ struct AAPointerInfoImpl
     auto CanIgnoreThreadingForInst = [&](const Instruction &I) -> bool {
       if (IsThreadLocalObj || AllInSameNoSyncFn)
         return true;
-      if (!ExecDomainAA)
+      const auto *FnExecDomainAA =
+          I.getFunction() == &Scope
+              ? ExecDomainAA
+              : A.lookupAAFor<AAExecutionDomain>(
+                    IRPosition::function(*I.getFunction()), &QueryingAA,
+                    DepClassTy::NONE);
+      if (!FnExecDomainAA)
         return false;
       if (InstIsExecutedInAlignedRegion ||
-          ExecDomainAA->isExecutedInAlignedRegion(A, I))
+          FnExecDomainAA->isExecutedInAlignedRegion(A, I)) {
+        A.recordDependence(*FnExecDomainAA, QueryingAA, DepClassTy::OPTIONAL);
         return true;
+      }
       if (InstIsExecutedByInitialThreadOnly &&
-          ExecDomainAA->isExecutedByInitialThreadOnly(I))
+          FnExecDomainAA->isExecutedByInitialThreadOnly(I)) {
+        A.recordDependence(*FnExecDomainAA, QueryingAA, DepClassTy::OPTIONAL);
         return true;
+      }
       return false;
     };
 
