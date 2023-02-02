@@ -539,13 +539,13 @@ def GPRF64  : RegisterClass<"RISCV", [f64], 64, (add GPR)>;
 } // RegInfos = XLenRI
 
 let RegAltNameIndices = [ABIRegAltName] in {
-  foreach Index = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22,
-                   24, 26, 28, 30] in {
+  foreach I = 0-15 in {
+    defvar Index = !shl(I, 1);
     defvar Reg = !cast<Register>("X"#Index);
+    defvar RegP1 = !cast<Register>("X"#!add(Index,1));
     def X#Index#_PD : RISCVRegWithSubRegs<Index, Reg.AsmName,
-                                          [!cast<Register>("X"#Index),
-                                           !cast<Register>("X"#!add(Index, 1))],
-                                           Reg.AltNames> {
+                                          [Reg, RegP1],
+                                          Reg.AltNames> {
       let SubRegIndices = [sub_32, sub_32_hi];
     }
   }
