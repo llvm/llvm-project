@@ -26,8 +26,8 @@
 // CHECK: "static HasProperty *extracted(HasProperty *object) {\nreturn object.implicitProp;\n}\n\n"
 }
 
-// RUN: clang-refactor-test perform -action extract -selected=property -selected=implicit %s -fobjc-arc | FileCheck %s
-// RUN: clang-refactor-test perform -action extract -selected=property-name -selected=implicit-name %s -fobjc-arc | FileCheck %s
+// RUN: clang-refactor-test perform -action extract -selected=property -selected=implicit %s -fobjc-arc -fobjc-runtime=macosx | FileCheck %s
+// RUN: clang-refactor-test perform -action extract -selected=property-name -selected=implicit-name %s -fobjc-arc -fobjc-runtime=macosx | FileCheck %s
 
 - (void)prohibitSetterExtraction {
 // setter-pref-begin: +2:8
@@ -42,7 +42,7 @@
 // implicit-setter-pref-end: -2:22
 }
 // CHECK-SETTER: Failed to initiate the refactoring action (property setter can't be extracted)!
-// RUN: not clang-refactor-test initiate -action extract -selected=setter -selected=setter-pref -selected=implicit-setter -selected=implicit-setter-pref %s -fobjc-arc 2>&1 | FileCheck --check-prefix=CHECK-SETTER %s
+// RUN: not clang-refactor-test initiate -action extract -selected=setter -selected=setter-pref -selected=implicit-setter -selected=implicit-setter-pref %s -fobjc-arc -fobjc-runtime=macosx 2>&1 | FileCheck --check-prefix=CHECK-SETTER %s
 
 @end
 
@@ -57,4 +57,4 @@ void avoidExtractionCrash(HasIntProp *f) {
 // avoid-extraction-crash-end: -1:5
 }
 
-// RUN: clang-refactor-test perform -action extract -selected=avoid-extraction-crash %s -fobjc-arc | FileCheck --check-prefix=AVOID-CRASH %s
+// RUN: clang-refactor-test perform -action extract -selected=avoid-extraction-crash %s -fobjc-arc -fobjc-runtime=macosx | FileCheck --check-prefix=AVOID-CRASH %s
