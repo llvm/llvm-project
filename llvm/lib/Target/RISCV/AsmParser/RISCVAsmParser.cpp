@@ -78,6 +78,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
 
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
+  unsigned checkTargetMatchPredicate(MCInst &Inst) override;
 
   bool generateImmOutOfRangeError(OperandVector &Operands, uint64_t ErrorInfo,
                                   int64_t Lower, int64_t Upper, Twine Msg);
@@ -229,6 +230,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
 public:
   enum RISCVMatchResultTy {
     Match_Dummy = FIRST_TARGET_MATCH_RESULT_TY,
+    Match_RequiresEvenGPRs,
 #define GET_OPERAND_DIAGNOSTIC_TYPES
 #include "RISCVGenAsmMatcher.inc"
 #undef GET_OPERAND_DIAGNOSTIC_TYPES
@@ -285,7 +287,6 @@ struct RISCVOperand final : public MCParsedAsmOperand {
 
   struct RegOp {
     MCRegister RegNum;
-    bool IsRV64;
     bool IsGPRAsFPR;
   };
 
@@ -373,12 +374,9 @@ public:
 
   bool isGPRAsFPR() const { return isGPR() && Reg.IsGPRAsFPR; }
 
-  bool isGPRF64AsFPR() const { return isGPR() && Reg.IsGPRAsFPR && Reg.IsRV64; }
+  bool isGPRF64AsFPR() const { return isGPR() && Reg.IsGPRAsFPR; }
 
-  bool isGPRPF64AsFPR() const {
-    return isGPR() && Reg.IsGPRAsFPR && !Reg.IsRV64 &&
-           !((Reg.RegNum - RISCV::X0) & 1);
-  }
+  bool isGPRPF64AsFPR() const { return isGPR() && Reg.IsGPRAsFPR; }
 
   static bool evaluateConstantImm(const MCExpr *Expr, int64_t &Imm,
                                   RISCVMCExpr::VariantKind &VK) {
@@ -854,12 +852,10 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<RISCVOperand> createReg(unsigned RegNo, SMLoc S,
-                                                 SMLoc E, bool IsRV64,
-                                                 bool IsGPRAsFPR = false) {
+  static std::unique_ptr<RISCVOperand>
+  createReg(unsigned RegNo, SMLoc S, SMLoc E, bool IsGPRAsFPR = false) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::Register);
     Op->Reg.RegNum = RegNo;
-    Op->Reg.IsRV64 = IsRV64;
     Op->Reg.IsGPRAsFPR = IsGPRAsFPR;
     Op->StartLoc = S;
     Op->EndLoc = E;
@@ -1037,6 +1033,23 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   return Match_InvalidOperand;
 }
 
+unsigned RISCVAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
+  const MCInstrDesc &MCID = MII.get(Inst.getOpcode());
+
+  for (unsigned I = 0; I < MCID.NumOperands; ++I) {
+    if (MCID.operands()[I].RegClass == RISCV::GPRPF64RegClassID) {
+      const auto &Op = Inst.getOperand(I);
+      assert(Op.isReg());
+
+      MCRegister Reg = Op.getReg();
+      if (((Reg.id() - RISCV::X0) & 1) != 0)
+        return Match_RequiresEvenGPRs;
+    }
+  }
+
+  return Match_Success;
+}
+
 bool RISCVAsmParser::generateImmOutOfRangeError(
     OperandVector &Operands, uint64_t ErrorInfo, int64_t Lower, int64_t Upper,
     Twine Msg = "immediate must be an integer in the range") {
@@ -1106,6 +1119,10 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   switch (Result) {
   default:
     break;
+  case Match_RequiresEvenGPRs:
+    return Error(IDLoc,
+                 "double precision floating point operands must use even "
+                 "numbered X register");
   case Match_InvalidImmXLenLI:
     if (isRV64()) {
       SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
@@ -1342,7 +1359,7 @@ OperandMatchResultTy RISCVAsmParser::parseRegister(OperandVector &Operands,
     SMLoc S = getLoc();
     SMLoc E = SMLoc::getFromPointer(S.getPointer() + Name.size());
     getLexer().Lex();
-    Operands.push_back(RISCVOperand::createReg(RegNo, S, E, isRV64()));
+    Operands.push_back(RISCVOperand::createReg(RegNo, S, E));
   }
 
   if (HadParens) {
@@ -1775,7 +1792,7 @@ OperandMatchResultTy RISCVAsmParser::parseMaskReg(OperandVector &Operands) {
   SMLoc S = getLoc();
   SMLoc E = SMLoc::getFromPointer(S.getPointer() + Name.size());
   getLexer().Lex();
-  Operands.push_back(RISCVOperand::createReg(RegNo, S, E, isRV64()));
+  Operands.push_back(RISCVOperand::createReg(RegNo, S, E));
   return MatchOperand_Success;
 }
 
@@ -1793,7 +1810,7 @@ OperandMatchResultTy RISCVAsmParser::parseGPRAsFPR(OperandVector &Operands) {
   SMLoc E = SMLoc::getFromPointer(S.getPointer() + Name.size());
   getLexer().Lex();
   Operands.push_back(RISCVOperand::createReg(
-      RegNo, S, E, isRV64(), !getSTI().hasFeature(RISCV::FeatureStdExtF)));
+      RegNo, S, E, !getSTI().hasFeature(RISCV::FeatureStdExtF)));
   return MatchOperand_Success;
 }
 
@@ -2637,7 +2654,7 @@ bool RISCVAsmParser::checkPseudoAddTPRel(MCInst &Inst,
 
 std::unique_ptr<RISCVOperand> RISCVAsmParser::defaultMaskRegOp() const {
   return RISCVOperand::createReg(RISCV::NoRegister, llvm::SMLoc(),
-                                 llvm::SMLoc(), isRV64());
+                                 llvm::SMLoc());
 }
 
 std::unique_ptr<RISCVOperand> RISCVAsmParser::defaultFRMArgOp() const {
