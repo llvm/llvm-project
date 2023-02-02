@@ -431,8 +431,7 @@ struct AMDGPUKernelTy : public GenericKernelTy {
 
   /// Launch the AMDGPU kernel function.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
-                   uint64_t NumBlocks, 
-                   KernelArgsTy &KernelArgs, void *Args,
+                   uint64_t NumBlocks, KernelArgsTy &KernelArgs, void *Args,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
 
   /// The default number of blocks is common to the whole device.
@@ -2431,38 +2430,40 @@ private:
     if (Event->event_type != HSA_AMD_GPU_MEMORY_FAULT_EVENT)
       return HSA_STATUS_SUCCESS;
 
-    std::string Reasons;
+    SmallVector<std::string> Reasons;
     uint32_t ReasonsMask = Event->memory_fault.fault_reason_mask;
     if (ReasonsMask & HSA_AMD_MEMORY_FAULT_PAGE_NOT_PRESENT)
-      Reasons += "HSA_AMD_MEMORY_FAULT_PAGE_NOT_PRESENT, ";
+      Reasons.emplace_back("Page not present or supervisor privilege");
     if (ReasonsMask & HSA_AMD_MEMORY_FAULT_READ_ONLY)
-      Reasons += " HSA_AMD_MEMORY_FAULT_READ_ONLY, ";
+      Reasons.emplace_back("Write access to a read-only page");
     if (ReasonsMask & HSA_AMD_MEMORY_FAULT_NX)
-      Reasons += " HSA_AMD_MEMORY_FAULT_NX, ";
+      Reasons.emplace_back("Execute access to a page marked NX");
     if (ReasonsMask & HSA_AMD_MEMORY_FAULT_HOST_ONLY)
-      Reasons += " HSA_AMD_MEMORY_FAULT_HOST_ONLY, ";
+      Reasons.emplace_back("GPU attempted access to a host only page");
     if (ReasonsMask & HSA_AMD_MEMORY_FAULT_DRAMECC)
-      Reasons += " HSA_AMD_MEMORY_FAULT_DRAMECC, ";
+      Reasons.emplace_back("DRAM ECC failure");
     if (ReasonsMask & HSA_AMD_MEMORY_FAULT_IMPRECISE)
-      Reasons += " HSA_AMD_MEMORY_FAULT_IMPRECISE, ";
+      Reasons.emplace_back("Can't determine the exact fault address");
     if (ReasonsMask & HSA_AMD_MEMORY_FAULT_SRAMECC)
-      Reasons += " HSA_AMD_MEMORY_FAULT_SRAMECC, ";
+      Reasons.emplace_back("SRAM ECC failure (ie registers, no fault address)");
     if (ReasonsMask & HSA_AMD_MEMORY_FAULT_HANG)
-      Reasons += " HSA_AMD_MEMORY_FAULT_HANG, ";
+      Reasons.emplace_back("GPU reset following unspecified hang");
 
     // If we do not know the reason, say so, otherwise remove the trailing comma
     // and space.
     if (Reasons.empty())
-      Reasons = "Unknown (Mask: " + std::to_string(ReasonsMask) + ")";
-    else
-      Reasons.resize(Reasons.size() - /* ', ' */ 2);
+      Reasons.emplace_back("Unknown (" + std::to_string(ReasonsMask) + ")");
+
+    uint32_t Node = -1;
+    hsa_agent_get_info(Event->memory_fault.agent, HSA_AGENT_INFO_NODE, &Node);
 
     // Abort the execution since we do not recover from this error.
     FATAL_MESSAGE(1,
-                  "Found HSA_AMD_GPU_MEMORY_FAULT_EVENT in agent %" PRIu64
-                  " at virtual address %p and reasons: %s",
-                  Event->memory_fault.agent.handle,
-                  (void *)Event->memory_fault.virtual_address, Reasons.data());
+                  "Memory access fault by GPU %" PRIu32 " (agent 0x%" PRIx64
+                  ") at virtual address %p. Reasons: %s",
+                  Node, Event->memory_fault.agent.handle,
+                  (void *)Event->memory_fault.virtual_address,
+                  llvm::join(Reasons, ", ").c_str());
 
     return HSA_STATUS_ERROR;
   }
