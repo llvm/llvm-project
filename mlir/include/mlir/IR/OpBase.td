@@ -2235,6 +2235,12 @@ class OpBuilder<dag p, code b = ""> {
   code body = b;
 }
 
+// OpBuilder like the above, but the emitted 'build' method is marked as
+// deprecated in C++. Use of it will emit a warning by the C++ compiler
+// with the given reason.
+class DeprecatedOpBuilder<string reason, dag p, code b = "">
+  : OpBuilder<p, b>, CppDeprecated<reason>;
+
 // A base decorator class that may optionally be added to OpVariables.
 class OpVariableDecorator;
 
