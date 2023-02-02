@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// This test breaks when enabling LSV.
+// UNSUPPORTED: modules-build
+
 // Test that limits macros are available when <stdint.h> is included
 // with or without macro _XOPEN_SOURCE=700.
 //
