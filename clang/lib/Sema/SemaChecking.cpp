@@ -2584,12 +2584,6 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     break;
   }
 
-  case Builtin::BI__builtin_nondeterministic_value: {
-    if (SemaBuiltinNonDeterministicValue(TheCall))
-      return ExprError();
-    break;
-  }
-
   // __builtin_elementwise_abs restricts the element type to signed integers or
   // floating point types only.
   case Builtin::BI__builtin_elementwise_abs: {
@@ -17860,21 +17854,6 @@ bool Sema::PrepareBuiltinReduceMathOneArgCall(CallExpr *TheCall) {
     return true;
 
   TheCall->setArg(0, A.get());
-  return false;
-}
-
-bool Sema::SemaBuiltinNonDeterministicValue(CallExpr *TheCall) {
-  if (checkArgCount(*this, TheCall, 1))
-    return true;
-
-  ExprResult Arg = TheCall->getArg(0);
-  QualType TyArg = Arg.get()->getType();
-
-  if (!TyArg->isBuiltinType() && !TyArg->isVectorType())
-    return Diag(TheCall->getArg(0)->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-           << 1 << /*vector, integer or floating point ty*/ 0 << TyArg;
-
-  TheCall->setType(TyArg);
   return false;
 }
 
