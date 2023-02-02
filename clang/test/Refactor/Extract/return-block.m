@@ -1,4 +1,4 @@
-// RUN: clang-refactor-test perform -action extract -selected=%s:16:27-18:4 %s -fobjc-arc | FileCheck %s
+// RUN: clang-refactor-test perform -action extract -selected=%s:16:27-18:4 %s -fobjc-arc -fobjc-runtime=macosx | FileCheck %s
 // RUN: clang-refactor-test perform -action extract -selected=%s:16:27-18:4 %s | FileCheck --check-prefix=NOARC %s
 @interface I
 
@@ -7,7 +7,7 @@
 @implementation I
 
 - (void) doStuff: (int)x block: (void (^)(int))block {
-  
+
 }
 
 - (void)foo {}
