@@ -8,7 +8,6 @@
 #include "asan_util.h"
 #include "shadow_mapping.h"
 
-OPT_NONE
 NO_SANITIZE_ADDR
 static void
 check_memory_range_accessible(void* dest, const void* src,
@@ -28,7 +27,8 @@ check_memory_range_accessible(void* dest, const void* src,
     }
 }
 
-OPT_NONE
+USED
+NO_INLINE
 NO_SANITIZE_ADDR
 void*
 __asan_memcpy(void* to, const void* from, uptr size) {
@@ -37,7 +37,8 @@ __asan_memcpy(void* to, const void* from, uptr size) {
     return __builtin_memcpy(to, from, size);
 }
 
-OPT_NONE
+USED
+NO_INLINE
 NO_SANITIZE_ADDR
 void*
 __asan_memmove(void* to, const void* from, uptr size) {
@@ -46,7 +47,8 @@ __asan_memmove(void* to, const void* from, uptr size) {
     return __builtin_memmove(to, from, size);
 }
 
-OPT_NONE
+USED
+NO_INLINE
 NO_SANITIZE_ADDR
 void*
 __asan_memset(void* s, int c, uptr n) {

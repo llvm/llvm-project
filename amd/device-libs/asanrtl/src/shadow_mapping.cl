@@ -30,7 +30,7 @@ range_check(uptr beg, uptr end) {
 }
 
 //check all application bytes in [beg,beg+size) range are accessible
-OPT_NONE NO_SANITIZE_ADDR
+USED NO_INLINE NO_SANITIZE_ADDR
 uptr
 __asan_region_is_poisoned(uptr beg, uptr size)
 {

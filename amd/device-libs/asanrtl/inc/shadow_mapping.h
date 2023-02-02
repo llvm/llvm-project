@@ -29,6 +29,7 @@ is_address_poisoned(uptr addr)
     return false;
 }
 
+USED
 NO_SANITIZE_ADDR
 uptr
 __asan_region_is_poisoned(uptr beg, uptr size);

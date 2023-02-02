@@ -45,7 +45,7 @@ poison_redzones(__global const struct device_global *g) {
 }
 
 // This function is called by one-workitem constructor kernel.
-OPT_NONE NO_SANITIZE_ADDR
+USED NO_INLINE NO_SANITIZE_ADDR
 void
 __asan_register_globals(uptr globals, uptr n) {
     __global struct device_global *dglobals = (__global struct device_global*) globals;
@@ -65,7 +65,7 @@ unpoison_global(__global const struct device_global *g) {
 }
 
 // This function is called by one-workitem destructor kernel.
-OPT_NONE NO_SANITIZE_ADDR
+USED NO_INLINE NO_SANITIZE_ADDR
 void
 __asan_unregister_globals(uptr globals, uptr n) {
     __global struct device_global* dglobals = (__global struct device_global*) globals;

@@ -23,7 +23,9 @@ typedef unsigned long u64;
 
 #define WORKGROUP_ID(dim) __builtin_amdgcn_workgroup_id_##dim()
 
-#define OPT_NONE __attribute__((optnone))
+#define USED __attribute__((used))
+
+#define NO_INLINE __attribute__((noinline))
 
 #define NO_SANITIZE_ADDR __attribute__((no_sanitize("address")))
 
