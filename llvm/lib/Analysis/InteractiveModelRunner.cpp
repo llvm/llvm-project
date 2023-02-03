@@ -18,10 +18,18 @@
 
 using namespace llvm;
 
-static cl::opt<bool> DebugReply(
-    "interactive-model-runner-echo-reply", cl::init(false), cl::Hidden,
+#define _IMR_CL_VALS(T, N) clEnumValN(TensorType::N, #T, #T),
+
+static cl::opt<TensorType> DebugReply(
+    "interactive-model-runner-echo-type", cl::init(TensorType::Invalid),
+    cl::Hidden,
     cl::desc("The InteractiveModelRunner will echo back to stderr "
-             "the data received from the host (for debugging purposes)."));
+             "the data received "
+             "from the host as the specified type (for debugging purposes)."),
+    cl::values(SUPPORTED_TENSOR_TYPES(_IMR_CL_VALS)
+                   clEnumValN(TensorType::Invalid, "disable", "Don't echo")));
+
+#undef _IMR_CL_VALS
 
 InteractiveModelRunner::InteractiveModelRunner(
     LLVMContext &Ctx, const std::vector<TensorSpec> &Inputs,
@@ -67,15 +75,15 @@ void *InteractiveModelRunner::evaluateUntyped() {
   const size_t Limit = OutputBuffer.size();
   while (InsPoint < Limit) {
     auto ReadOrErr = ::sys::fs::readNativeFile(
-        Inbound, {Buff + InsPoint, OutputBuffer.size() - InsPoint});
+        sys::fs::convertFDToNativeFile(Inbound),
+        {Buff + InsPoint, OutputBuffer.size() - InsPoint});
     if (ReadOrErr.takeError()) {
       Ctx.emitError("Failed reading from inbound file");
       break;
     }
     InsPoint += *ReadOrErr;
   }
-  if (DebugReply)
-    dbgs() << OutputSpec.name() << ": "
-           << tensorValueToString(OutputBuffer.data(), OutputSpec) << "\n";
+  if (DebugReply != TensorType::Invalid)
+    dbgs() << tensorValueToString(OutputBuffer.data(), OutputSpec);
   return OutputBuffer.data();
 }
