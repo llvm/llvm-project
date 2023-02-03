@@ -43,11 +43,15 @@ The CMake options you need to add are:
  * ``-DCMAKE_SYSTEM_NAME=<target-system>``
  * ``-DCMAKE_INSTALL_PREFIX=<install-dir>``
  * ``-DLLVM_NATIVE_TOOL_DIR=<path-to-host-bin>``
- * ``-DLLVM_DEFAULT_TARGET_TRIPLE=arm-linux-gnueabihf``
- * ``-DLLVM_TARGET_ARCH=ARM``
+ * ``-DLLVM_HOST_TRIPLE=arm-linux-gnueabihf``
  * ``-DLLVM_TARGETS_TO_BUILD=ARM``
 
 Note: ``CMAKE_CROSSCOMPILING`` is always set automatically when ``CMAKE_SYSTEM_NAME`` is set. Don't put ``-DCMAKE_CROSSCOMPILING=TRUE`` in your options.
+
+Also note that ``LLVM_HOST_TRIPLE`` specifies the triple of the system
+that the cross built LLVM is going to run on - the flag is named based
+on the autoconf build/host/target nomenclature. (This flag implicitly sets
+other defaults, such as ``LLVM_DEFAULT_TARGET_TRIPLE``.)
 
 If you're compiling with GCC, you can use architecture options for your target,
 and the compiler driver will detect everything that it needs:
