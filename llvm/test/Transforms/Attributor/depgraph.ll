@@ -148,7 +148,7 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAInterFnReachability] for CtxI ' %2 = load i32, ptr %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state #queries(1)
 ; GRAPH-EMPTY:
-; GRAPH-NEXT: [AAIntraFnReachability] for CtxI ' %2 = load i32, ptr %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state #queries(1)
+; GRAPH-NEXT: [AAIntraFnReachability] for CtxI ' %2 = load i32, ptr %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state #queries(0)
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AACallEdges] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs: [@-1]} with state CallEdges[0,1]
 ; GRAPH-EMPTY:
