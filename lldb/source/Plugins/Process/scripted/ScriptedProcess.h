@@ -74,6 +74,8 @@ public:
 
   void UpdateQueueListIfNeeded() override;
 
+  void *GetImplementation() override;
+
 protected:
   ScriptedProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
                   const ScriptedMetadata &scripted_metadata, Status &error);
