@@ -16,7 +16,6 @@
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/common.h"
-#include <src/__support/FPUtil/NearestIntegerOperations.h>
 
 #include <errno.h>
 
