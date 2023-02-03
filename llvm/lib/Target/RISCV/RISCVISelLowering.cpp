@@ -12745,7 +12745,6 @@ bool RISCVTargetLowering::isEligibleForTailCallOptimization(
     CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,
     const SmallVector<CCValAssign, 16> &ArgLocs) const {
 
-  auto &Callee = CLI.Callee;
   auto CalleeCC = CLI.CallConv;
   auto &Outs = CLI.Outs;
   auto &Caller = MF.getFunction();
@@ -12781,16 +12780,6 @@ bool RISCVTargetLowering::isEligibleForTailCallOptimization(
   auto IsCalleeStructRet = Outs.empty() ? false : Outs[0].Flags.isSRet();
   if (IsCallerStructRet || IsCalleeStructRet)
     return false;
-
-  // Externally-defined functions with weak linkage should not be
-  // tail-called. The behaviour of branch instructions in this situation (as
-  // used for tail calls) is implementation-defined, so we cannot rely on the
-  // linker replacing the tail call with a return.
-  if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
-    const GlobalValue *GV = G->getGlobal();
-    if (GV->hasExternalWeakLinkage())
-      return false;
-  }
 
   // The callee has to preserve all registers the caller needs to preserve.
   const RISCVRegisterInfo *TRI = Subtarget.getRegisterInfo();

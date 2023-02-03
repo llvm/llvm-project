@@ -291,12 +291,10 @@ define amdgpu_ps float @fneg_fadd_0_f32(float inreg %tmp2, float inreg %tmp6, <4
 define amdgpu_ps float @fneg_fadd_0_nsz_f32(float inreg %tmp2, float inreg %tmp6, <4 x i32> %arg) #2 {
 ; SI-SAFE-LABEL: fneg_fadd_0_nsz_f32:
 ; SI-SAFE:       ; %bb.0: ; %.entry
-; SI-SAFE-NEXT:    v_bfrev_b32_e32 v0, 1
-; SI-SAFE-NEXT:    v_mov_b32_e32 v1, s0
-; SI-SAFE-NEXT:    v_cmp_ngt_f32_e64 vcc, s0, 0
-; SI-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; SI-SAFE-NEXT:    v_min_legacy_f32_e64 v0, 0, s0
+; SI-SAFE-NEXT:    s_brev_b32 s0, 1
 ; SI-SAFE-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
-; SI-SAFE-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
+; SI-SAFE-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v0
 ; SI-SAFE-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
 ; SI-SAFE-NEXT:    ; return to shader part epilog
 ;

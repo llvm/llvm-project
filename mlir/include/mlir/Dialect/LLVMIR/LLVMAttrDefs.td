@@ -49,38 +49,147 @@ def LinkageAttr : LLVM_Attr<"Linkage", "linkage"> {
 }
 
 //===----------------------------------------------------------------------===//
-// LoopOptionsAttr
+// Loop Attributes
 //===----------------------------------------------------------------------===//
 
-def LoopOptionsAttr : LLVM_Attr<"LoopOptions", "loopopts"> {
+def LoopVectorizeAttr : LLVM_Attr<"LoopVectorize", "loop_vectorize"> {
   let description = [{
-    This attributes encapsulates "loop options". It is means to decorate
-    branches that are "latches" (loop backedges) and maps to the `!llvm.loop`
-    metadatas: https://llvm.org/docs/LangRef.html#llvm-loop
-    It store the options as a pair <enum,int64_t> in a sorted array and expose
-    APIs to retrieve the value for each option with a stronger type (bool for
-    example).
+    This attribute defines vectorization specific loop annotations that map to
+    the "!llvm.loop.vectorize" metadata.
   }];
 
   let parameters = (ins
-    ArrayRefParameter<"std::pair<LoopOptionCase, int64_t>", "">:$options
+    OptionalParameter<"BoolAttr">:$disable,
+    OptionalParameter<"BoolAttr">:$predicateEnable,
+    OptionalParameter<"BoolAttr">:$scalableEnable,
+    OptionalParameter<"IntegerAttr">:$width,
+    OptionalParameter<"LoopAnnotationAttr">:$followupVectorized,
+    OptionalParameter<"LoopAnnotationAttr">:$followupEpilogue,
+    OptionalParameter<"LoopAnnotationAttr">:$followupAll
   );
 
-  let extraClassDeclaration = [{
-    using OptionValuePair = std::pair<LoopOptionCase, int64_t>;
-    using OptionsArray = ArrayRef<std::pair<LoopOptionCase, int64_t>>;
-    std::optional<bool> disableUnroll();
-    std::optional<bool> disableLICM();
-    std::optional<int64_t> interleaveCount();
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def LoopInterleaveAttr : LLVM_Attr<"LoopInterleave", "loop_interleave"> {
+  let description = [{
+    This attribute defines interleaving specific loop annotations that map to
+    the "!llvm.loop.interleave" metadata.
   }];
 
-  let builders = [
-    /// Build the LoopOptions Attribute from a sorted array of individual options.
-    AttrBuilder<(ins "ArrayRef<std::pair<LoopOptionCase, int64_t>>":$sortedOptions)>,
-    AttrBuilder<(ins "LoopOptionsAttrBuilder &":$optionBuilders)>
-  ];
-  let hasCustomAssemblyFormat = 1;
-  let skipDefaultBuilders = 1;
+  let parameters = (ins
+    "IntegerAttr":$count
+  );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def LoopUnrollAttr : LLVM_Attr<"LoopUnroll", "loop_unroll"> {
+  let description = [{
+    This attribute defines unrolling specific loop annotations that map to
+    the "!llvm.loop.unroll" metadata.
+  }];
+
+  let parameters = (ins
+    OptionalParameter<"BoolAttr">:$disable,
+    OptionalParameter<"IntegerAttr">:$count,
+    OptionalParameter<"BoolAttr">:$runtimeDisable,
+    OptionalParameter<"BoolAttr">:$full,
+    OptionalParameter<"LoopAnnotationAttr">:$followup,
+    OptionalParameter<"LoopAnnotationAttr">:$followupRemainder
+  );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def LoopUnrollAndJamAttr : LLVM_Attr<"LoopUnrollAndJam", "loop_unroll_and_jam"> {
+  let description = [{
+    This attribute defines "unroll and jam" specific loop annotations that map to
+    the "!llvm.loop.unroll_and_jam" metadata.
+  }];
+
+  let parameters = (ins
+    OptionalParameter<"BoolAttr">:$disable,
+    OptionalParameter<"IntegerAttr">:$count,
+    OptionalParameter<"LoopAnnotationAttr">:$followupOuter,
+    OptionalParameter<"LoopAnnotationAttr">:$followupInner,
+    OptionalParameter<"LoopAnnotationAttr">:$followupRemainderOuter,
+    OptionalParameter<"LoopAnnotationAttr">:$followupRemainderInner,
+    OptionalParameter<"LoopAnnotationAttr">:$followupAll
+  );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def LoopLICMAttr : LLVM_Attr<"LoopLICM", "loop_licm"> {
+  let description = [{
+    This attribute encapsulates loop invariant code motion (licm) specific loop
+    annotations. The fields correspond to the "!llvm.licm.disable" and the
+    "!llvm.loop.licm_versioning.disable" metadata.
+  }];
+
+  let parameters = (ins
+    OptionalParameter<"BoolAttr">:$disable,
+    OptionalParameter<"BoolAttr">:$versioningDisable
+  );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def LoopDistributeAttr : LLVM_Attr<"LoopDistribute", "loop_distribute"> {
+  let description = [{
+    This attribute defines distribution specific loop annotations that map to
+    the "!llvm.loop.distribute" metadata.
+  }];
+
+  let parameters = (ins
+    OptionalParameter<"BoolAttr">:$disable,
+    OptionalParameter<"LoopAnnotationAttr">:$followupCoincident,
+    OptionalParameter<"LoopAnnotationAttr">:$followupSequential,
+    OptionalParameter<"LoopAnnotationAttr">:$followupFallback,
+    OptionalParameter<"LoopAnnotationAttr">:$followupAll
+  );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def LoopPipelineAttr : LLVM_Attr<"LoopPipeline", "loop_pipeline"> {
+  let description = [{
+    This attribute defines pipelining specific loop annotations that map to
+    the "!llvm.loop.pipeline" metadata.
+  }];
+
+  let parameters = (ins
+    OptionalParameter<"BoolAttr">:$disable,
+    OptionalParameter<"IntegerAttr">:$initiationinterval
+  );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def LoopAnnotationAttr : LLVM_Attr<"LoopAnnotation", "loop_annotation"> {
+  let description = [{
+    This attributes encapsulates "loop metadata". It is meant to decorate
+    branches that are "latches" (loop backedges) and maps to the `!llvm.loop`
+    metadatas: https://llvm.org/docs/LangRef.html#llvm-loop
+    It stores annotations in attribute parameters and groups related options in
+    nested attributes to provide structured access.
+  }];
+
+  let parameters = (ins
+    OptionalParameter<"BoolAttr">:$disableNonforced,
+    OptionalParameter<"LoopVectorizeAttr">:$vectorize,
+    OptionalParameter<"LoopInterleaveAttr">:$interleave,
+    OptionalParameter<"LoopUnrollAttr">:$unroll,
+    OptionalParameter<"LoopUnrollAndJamAttr">:$unrollAndJam,
+    OptionalParameter<"LoopLICMAttr">:$licm,
+    OptionalParameter<"LoopDistributeAttr">:$distribute,
+    OptionalParameter<"LoopPipelineAttr">:$pipeline,
+    OptionalParameter<"BoolAttr">:$mustProgress,
+    OptionalArrayRefParameter<"SymbolRefAttr">:$parallelAccesses
+  );
+
+  let assemblyFormat = "`<` struct(params) `>`";
 }
 
 //===----------------------------------------------------------------------===//

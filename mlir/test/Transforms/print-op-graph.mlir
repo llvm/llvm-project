@@ -20,8 +20,8 @@
 //       DFG:         v[[TEST_RET:.*]] [label = "test.return
 //       DFG:   v[[ARG0]] -> v[[TEST_BR]]
 //       DFG:   v[[CONST10]] -> v[[TEST_BR]]
-//       DFG:   v[[ANCHOR]] -> v[[TEST_RET]] [{{.*}}, ltail = [[CLUSTER_MERGE_BLOCKS]]]
-//       DFG:   v[[ANCHOR]] -> v[[TEST_RET]] [{{.*}}, ltail = [[CLUSTER_MERGE_BLOCKS]]]
+//       DFG:   v[[ANCHOR]] -> v[[TEST_RET]] [ltail = [[CLUSTER_MERGE_BLOCKS]], style = solid];
+//       DFG:   v[[ANCHOR]] -> v[[TEST_RET]] [ltail = [[CLUSTER_MERGE_BLOCKS]], style = solid];
 
 // CFG-LABEL: digraph G {
 //       CFG:   subgraph {{.*}} {
@@ -47,8 +47,8 @@
 //       CFG:   v[[C2]] -> v[[C3]]
 //       CFG:   v[[C3]] -> v[[C4]]
 //       CFG:   v[[C4]] -> v[[TEST_FUNC]]
-//       CFG:   v[[TEST_FUNC]] -> v[[ANCHOR]] [{{.*}}, lhead = [[CLUSTER_MERGE_BLOCKS]]]
-//       CFG:   v[[ANCHOR]] -> v[[TEST_RET]] [{{.*}}, ltail = [[CLUSTER_MERGE_BLOCKS]]]
+//       CFG:   v[[TEST_FUNC]] -> v[[ANCHOR]] [lhead = [[CLUSTER_MERGE_BLOCKS]], style = dashed];
+//       CFG:   v[[ANCHOR]] -> v[[TEST_RET]] [ltail = [[CLUSTER_MERGE_BLOCKS]], style = dashed];
 
 func.func @merge_blocks(%arg0: i32, %arg1 : i32) -> () {
   %0 = arith.constant dense<[[0, 1], [2, 3]]> : tensor<2x2xi32>
