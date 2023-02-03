@@ -1,4 +1,4 @@
-; RUN: llc -global-isel -mtriple=amdgcn--amdhsa -mcpu=kaveri --amdhsa-code-object-version=2 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; FIXME: Error on non-hsa target
 
@@ -15,3 +15,6 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out) {
 declare noalias ptr addrspace(4) @llvm.amdgcn.queue.ptr() #0
 
 attributes #0 = { nounwind readnone }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 200}

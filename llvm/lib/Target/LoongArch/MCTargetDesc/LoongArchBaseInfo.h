@@ -54,6 +54,7 @@ enum ABI {
   ABI_Unknown
 };
 
+ABI computeTargetABI(const Triple &TT, StringRef ABIName);
 ABI getTargetABI(StringRef ABIName);
 
 // Returns the register used to hold the stack pointer after realignment.

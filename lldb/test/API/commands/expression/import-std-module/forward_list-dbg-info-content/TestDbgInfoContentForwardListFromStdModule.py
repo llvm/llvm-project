@@ -20,7 +20,11 @@ class TestDbgInfoContentForwardList(TestBase):
 
         self.runCmd("settings set target.import-std-module true")
 
-        list_type = "std::forward_list<Foo>"
+        if self.expectedCompilerVersion(['>', '16.0']):
+            list_type = "std::forward_list<Foo>"
+        else:
+            list_type = "std::forward_list<Foo, std::allocator<Foo> >"
+
         value_type = "value_type"
 
         # FIXME: This has three elements in it but the formatter seems to

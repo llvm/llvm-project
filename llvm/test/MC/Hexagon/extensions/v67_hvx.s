@@ -1241,8 +1241,8 @@
 
 //  V6_vdeal
 //  vdeal(Vy32,Vx32,Rt32)
-    vdeal(v0,v0,r0)
-# CHECK-NEXT: 19e0e040 { vdeal(v0,v0,r0) }
+    vdeal(v0,v1,r0)
+# CHECK-NEXT: 19e0e041 { vdeal(v0,v1,r0) }
 
 //  V6_vdealb
 //  Vd32.b=vdeal(Vu32.b)
@@ -2461,8 +2461,8 @@
 
 //  V6_vshuff
 //  vshuff(Vy32,Vx32,Rt32)
-    vshuff(v0,v0,r0)
-# CHECK-NEXT: 19e0e020 { vshuff(v0,v0,r0) }
+    vshuff(v0,v1,r0)
+# CHECK-NEXT: 19e0e021 { vshuff(v0,v1,r0) }
 
 //  V6_vshuffb
 //  Vd32.b=vshuff(Vu32.b)

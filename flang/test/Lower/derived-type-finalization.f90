@@ -148,17 +148,45 @@ contains
 ! CHECK: %{{.*}} = fir.call @_FortranADestroy(%[[BOX_NONE]]) {{.*}}: (!fir.box<none>) -> none
 ! CHECK: return
 
+  function get_t1(i)
+    type(t1), pointer :: get_t1
+    allocate(get_t1)
+    get_t1%a = i
+  end function
+
+  subroutine test_nonpointer_function()
+    print*, get_t1(20)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMderived_type_finalizationPtest_nonpointer_function() {
+! CHECK: %[[TMP:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>> {bindc_name = ".result"}
+! CHECK: %{{.*}} = fir.call @_FortranAioBeginExternalListOutput
+! CHECK: %[[RES:.*]] = fir.call @_QMderived_type_finalizationPget_t1(%{{.*}}) {{.*}} : (!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>
+! CHECK: fir.save_result %[[RES]] to %[[TMP]] : !fir.box<!fir.ptr<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>, !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>>
+! CHECK: %{{.*}} = fir.call @_FortranAioOutputDescriptor
+! CHECK-NOT: %{{.*}} = fir.call @_FortranADestroy
+! CHECK: %{{.*}} = fir.call @_FortranAioEndIoStatement
+! CHECK: return
+
 end module
 
 program p
   use derived_type_finalization
   type(t1) :: t
+  if (t%a == 10) return
   print *, 'end of program'
 end program
 
 ! CHECK-LABEL: func.func @_QQmain() {
 ! CHECK: %[[T:.*]] = fir.alloca !fir.type<_QMderived_type_finalizationTt1{a:i32}> {bindc_name = "t", uniq_name = "_QFEt"}
-! CHECK: %[[EMBOX:.*]] = fir.embox %[[T]] : (!fir.ref<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>) -> !fir.box<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>
-! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[EMBOX]] : (!fir.box<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>) -> !fir.box<none>
-! CHECK: %{{.*}} = fir.call @_FortranADestroy(%[[BOX_NONE]]) {{.*}} : (!fir.box<none>) -> none
-! CHECK: return
+! CHECK: cf.cond_br %{{.*}}, ^bb1, ^bb2
+! CHECK: ^bb1:
+! CHECK:  %[[EMBOX:.*]] = fir.embox %[[T]] : (!fir.ref<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>) -> !fir.box<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>
+! CHECK:  %[[BOX_NONE:.*]] = fir.convert %[[EMBOX]] : (!fir.box<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>) -> !fir.box<none>
+! CHECK:  %{{.*}} = fir.call @_FortranADestroy(%[[BOX_NONE]]) {{.*}} : (!fir.box<none>) -> none
+! CHECK:  return
+! CHECK: ^bb2:
+! CHECK:  %[[EMBOX:.*]] = fir.embox %[[T]] : (!fir.ref<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>) -> !fir.box<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>
+! CHECK:  %[[BOX_NONE:.*]] = fir.convert %[[EMBOX]] : (!fir.box<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>) -> !fir.box<none>
+! CHECK:  %{{.*}} = fir.call @_FortranADestroy(%[[BOX_NONE]]) {{.*}} : (!fir.box<none>) -> none
+! CHECK:  return

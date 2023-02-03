@@ -236,9 +236,13 @@ public:
   IPInFlightAlloc(InProcessMemoryManager &MemMgr, LinkGraph &G, BasicLayout BL,
                   sys::MemoryBlock StandardSegments,
                   sys::MemoryBlock FinalizationSegments)
-      : MemMgr(MemMgr), G(G), BL(std::move(BL)),
+      : MemMgr(MemMgr), G(&G), BL(std::move(BL)),
         StandardSegments(std::move(StandardSegments)),
         FinalizationSegments(std::move(FinalizationSegments)) {}
+
+  ~IPInFlightAlloc() {
+    assert(!G && "InFlight alloc neither abandoned nor finalized");
+  }
 
   void finalize(OnFinalizedFunction OnFinalized) override {
 
@@ -249,7 +253,7 @@ public:
     }
 
     // Run finalization actions.
-    auto DeallocActions = runFinalizeActions(G.allocActions());
+    auto DeallocActions = runFinalizeActions(G->allocActions());
     if (!DeallocActions) {
       OnFinalized(DeallocActions.takeError());
       return;
@@ -260,6 +264,13 @@ public:
       OnFinalized(errorCodeToError(EC));
       return;
     }
+
+#ifndef NDEBUG
+    // Set 'G' to null to flag that we've been successfully finalized.
+    // This allows us to assert at destruction time that a call has been made
+    // to either finalize or abandon.
+    G = nullptr;
+#endif
 
     // Continue with finalized allocation.
     OnFinalized(MemMgr.createFinalizedAlloc(std::move(StandardSegments),
@@ -272,6 +283,14 @@ public:
       Err = joinErrors(std::move(Err), errorCodeToError(EC));
     if (auto EC = sys::Memory::releaseMappedMemory(StandardSegments))
       Err = joinErrors(std::move(Err), errorCodeToError(EC));
+
+#ifndef NDEBUG
+    // Set 'G' to null to flag that we've been successfully finalized.
+    // This allows us to assert at destruction time that a call has been made
+    // to either finalize or abandon.
+    G = nullptr;
+#endif
+
     OnAbandoned(std::move(Err));
   }
 
@@ -295,7 +314,7 @@ private:
   }
 
   InProcessMemoryManager &MemMgr;
-  LinkGraph &G;
+  LinkGraph *G;
   BasicLayout BL;
   sys::MemoryBlock StandardSegments;
   sys::MemoryBlock FinalizationSegments;

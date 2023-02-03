@@ -173,7 +173,8 @@ private:
 
 class SparseTensorSpecifier {
 public:
-  explicit SparseTensorSpecifier(Value specifier) : specifier(specifier) {}
+  explicit SparseTensorSpecifier(Value specifier)
+      : specifier(cast<TypedValue<StorageSpecifierType>>(specifier)) {}
 
   // Undef value for dimension sizes, all zero value for memory sizes.
   static Value getInitValue(OpBuilder &builder, Location loc,

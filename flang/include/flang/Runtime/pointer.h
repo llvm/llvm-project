@@ -42,7 +42,8 @@ void RTNAME(PointerSetDerivedLength)(Descriptor &, int which, SubscriptValue);
 
 // For MOLD= allocation: acquires information from another descriptor
 // to initialize a null data pointer.
-void RTNAME(PointerApplyMold)(Descriptor &, const Descriptor &mold);
+void RTNAME(PointerApplyMold)(
+    Descriptor &, const Descriptor &mold, int rank = 0);
 
 // Data pointer association for "p=>TARGET"
 

@@ -1,8 +1,5 @@
 // Regression test for thread lifetime tracking. Thread data should be
 // considered live during the thread's termination, at least until the
-
-// Fixme: remove once test passes with hwasan
-// UNSUPPORTED: hwasan
 // user-installed TSD destructors have finished running (since they may contain
 // additional cleanup tasks). LSan doesn't actually meet that goal 100%, but it
 // makes its best effort.

@@ -18,7 +18,7 @@ if.end:
 
 ; DARWIN-LABEL: _bar:
 ; DARWIN: cmpl $0, L_foo$non_lazy_ptr
-; DARWIN: jne _foo ## TAILCALL
+; DARWIN: jmp _foo ## TAILCALL
 
 ; WIN32-LABEL: _bar:
 ; WIN32: cmpl $0, .refptr._foo

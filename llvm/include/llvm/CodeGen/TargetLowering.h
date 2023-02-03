@@ -4490,8 +4490,8 @@ public:
 
   /// Returns a 0 terminated array of rounding control registers that can be
   /// attached into strict FP call.
-  virtual const MCPhysReg *getRoundingControlRegisters() const {
-    return nullptr;
+  virtual ArrayRef<MCPhysReg> getRoundingControlRegisters() const {
+    return ArrayRef<MCPhysReg>();
   }
 
   /// This callback is used to prepare for a volatile or atomic load.

@@ -8,17 +8,20 @@ target triple = "amdgcn-amd-amdhsa"
 
 @G = internal addrspace(3) global i32 undef, align 4
 @H = internal addrspace(3) global i32 undef, align 4
+@X = internal addrspace(3) global i32 undef, align 4
 @str = private unnamed_addr addrspace(4) constant [1 x i8] c"\00", align 1
 
 ; Make sure we do not delete the stores to @G without also replacing the load with `1`.
 ;.
 ; TUNIT: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
 ; TUNIT: @[[H:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; TUNIT: @[[X:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
 ; TUNIT: @[[STR:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr addrspace(4) constant [1 x i8] zeroinitializer, align 1
 ; TUNIT: @[[KERNEL_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
 ;.
 ; CGSCC: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
 ; CGSCC: @[[H:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; CGSCC: @[[X:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
 ; CGSCC: @[[STR:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr addrspace(4) constant [1 x i8] zeroinitializer, align 1
 ;.
 define void @kernel() "kernel" {
@@ -30,20 +33,17 @@ define void @kernel() "kernel" {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], -1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    store i32 1, ptr addrspace(3) @G, align 4
 ; CHECK-NEXT:    br label [[IF_MERGE:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    call void @barrier() #[[ATTR5:[0-9]+]]
-; CHECK-NEXT:    [[L:%.*]] = load i32, ptr addrspace(3) @G, align 4
-; CHECK-NEXT:    call void @use1(i32 [[L]]) #[[ATTR5]]
-; CHECK-NEXT:    call void @barrier() #[[ATTR5]]
+; CHECK-NEXT:    call void @barrier() #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    call void @use1(i32 undef) #[[ATTR6]]
+; CHECK-NEXT:    call void @barrier() #[[ATTR6]]
 ; CHECK-NEXT:    br label [[IF_MERGE]]
 ; CHECK:       if.merge:
-; CHECK-NEXT:    call void @use1(i32 2) #[[ATTR5]]
+; CHECK-NEXT:    call void @use1(i32 2) #[[ATTR6]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN2:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then2:
-; CHECK-NEXT:    store i32 2, ptr addrspace(3) @G, align 4
-; CHECK-NEXT:    call void @barrier() #[[ATTR5]]
+; CHECK-NEXT:    call void @barrier() #[[ATTR6]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr undef, i8 1)
@@ -87,6 +87,63 @@ define void @test_assume() {
   ret void
 }
 
+; We can't ignore the sync, hence this might store 2 into %p
+define void @kernel2(ptr %p) "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@kernel2
+; CHECK-SAME: (ptr [[P:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:    store i32 1, ptr addrspace(3) @X, align 4
+; CHECK-NEXT:    call void @sync()
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(3) @X, align 4
+; CHECK-NEXT:    store i32 2, ptr addrspace(3) @X, align 4
+; CHECK-NEXT:    store i32 [[V]], ptr [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  store i32 1, ptr addrspace(3) @X
+  call void @sync()
+  %v = load i32, ptr addrspace(3) @X
+  store i32 2, ptr addrspace(3) @X
+  store i32 %v, ptr %p
+  ret void
+}
+
+; We can't ignore the sync, hence this might store 2 into %p
+define void @kernel3(ptr %p) "kernel" {
+; TUNIT-LABEL: define {{[^@]+}}@kernel3
+; TUNIT-SAME: (ptr [[P:%.*]]) #[[ATTR1]] {
+; TUNIT-NEXT:    store i32 1, ptr addrspace(3) @X, align 4
+; TUNIT-NEXT:    call void @sync_def.internalized()
+; TUNIT-NEXT:    [[V:%.*]] = load i32, ptr addrspace(3) @X, align 4
+; TUNIT-NEXT:    store i32 2, ptr addrspace(3) @X, align 4
+; TUNIT-NEXT:    store i32 [[V]], ptr [[P]], align 4
+; TUNIT-NEXT:    ret void
+;
+; CGSCC-LABEL: define {{[^@]+}}@kernel3
+; CGSCC-SAME: (ptr [[P:%.*]]) #[[ATTR1]] {
+; CGSCC-NEXT:    store i32 1, ptr addrspace(3) @X, align 4
+; CGSCC-NEXT:    call void @sync_def()
+; CGSCC-NEXT:    [[V:%.*]] = load i32, ptr addrspace(3) @X, align 4
+; CGSCC-NEXT:    store i32 2, ptr addrspace(3) @X, align 4
+; CGSCC-NEXT:    store i32 [[V]], ptr [[P]], align 4
+; CGSCC-NEXT:    ret void
+;
+  store i32 1, ptr addrspace(3) @X
+  call void @sync_def()
+  %v = load i32, ptr addrspace(3) @X
+  store i32 2, ptr addrspace(3) @X
+  store i32 %v, ptr %p
+  ret void
+}
+
+define void @sync_def() {
+; CHECK-LABEL: define {{[^@]+}}@sync_def() {
+; CHECK-NEXT:    call void @sync()
+; CHECK-NEXT:    ret void
+;
+  call void @sync()
+  ret void
+}
+
+declare void @sync()
 declare void @barrier() norecurse nounwind nocallback "llvm.assume"="ompx_aligned_barrier"
 declare void @use1(i32) nosync norecurse nounwind nocallback
 declare i32 @__kmpc_target_init(ptr, i8, i1) nocallback
@@ -94,24 +151,26 @@ declare void @__kmpc_target_deinit(ptr, i8) nocallback
 declare void @llvm.assume(i1)
 
 !llvm.module.flags = !{!0, !1}
-!nvvm.annotations = !{!2}
+!nvvm.annotations = !{!2, !3, !4}
 
 !0 = !{i32 7, !"openmp", i32 50}
 !1 = !{i32 7, !"openmp-device", i32 50}
 !2 = !{ptr @kernel, !"kernel", i32 1}
+!3 = !{ptr @kernel2, !"kernel", i32 1}
+!4 = !{ptr @kernel3, !"kernel", i32 1}
 
 ;.
 ; CHECK: attributes #[[ATTR0]] = { norecurse "kernel" }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback norecurse nounwind "llvm.assume"="ompx_aligned_barrier" }
-; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback norecurse nosync nounwind }
-; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback }
-; CHECK: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
-; CHECK: attributes #[[ATTR5]] = { nounwind }
+; CHECK: attributes #[[ATTR1]] = { "kernel" }
+; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback norecurse nounwind "llvm.assume"="ompx_aligned_barrier" }
+; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback norecurse nosync nounwind }
+; CHECK: attributes #[[ATTR4:[0-9]+]] = { nocallback }
+; CHECK: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
+; CHECK: attributes #[[ATTR6]] = { nounwind }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; CHECK: [[META1:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
 ; CHECK: [[META2:![0-9]+]] = !{ptr @kernel, !"kernel", i32 1}
+; CHECK: [[META3:![0-9]+]] = !{ptr @kernel2, !"kernel", i32 1}
+; CHECK: [[META4:![0-9]+]] = !{ptr @kernel3, !"kernel", i32 1}
 ;.
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CGSCC: {{.*}}
-; TUNIT: {{.*}}

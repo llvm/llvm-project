@@ -11422,7 +11422,7 @@ bool ARMAsmParser::parseDirectiveEabiAttr(SMLoc L) {
     Tag = CE->getValue();
   }
 
-  if (Parser.parseToken(AsmToken::Comma, "comma expected"))
+  if (Parser.parseComma())
     return true;
 
   StringRef StringValue = "";
@@ -11456,7 +11456,7 @@ bool ARMAsmParser::parseDirectiveEabiAttr(SMLoc L) {
   }
 
   if (Tag == ARMBuildAttrs::compatibility) {
-    if (Parser.parseToken(AsmToken::Comma, "comma expected"))
+    if (Parser.parseComma())
       return true;
   }
 
@@ -11668,7 +11668,7 @@ bool ARMAsmParser::parseDirectiveSetFP(SMLoc L) {
   int FPReg = tryParseRegister();
 
   if (check(FPReg == -1, FPRegLoc, "frame pointer register expected") ||
-      Parser.parseToken(AsmToken::Comma, "comma expected"))
+      Parser.parseComma())
     return true;
 
   // Parse spreg
@@ -11927,7 +11927,7 @@ bool ARMAsmParser::parseDirectiveUnwindRaw(SMLoc L) {
 
   StackOffset = CE->getValue();
 
-  if (Parser.parseToken(AsmToken::Comma, "expected comma"))
+  if (Parser.parseComma())
     return true;
 
   SmallVector<uint8_t, 16> Opcodes;
@@ -12071,7 +12071,7 @@ bool ARMAsmParser::parseDirectiveThumbSet(SMLoc L) {
   StringRef Name;
   if (check(Parser.parseIdentifier(Name),
             "expected identifier after '.thumb_set'") ||
-      parseToken(AsmToken::Comma, "expected comma after name '" + Name + "'"))
+      Parser.parseComma())
     return true;
 
   MCSymbol *Sym;

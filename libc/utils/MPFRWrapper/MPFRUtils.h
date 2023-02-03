@@ -26,6 +26,7 @@ enum class Operation : int {
   BeginUnaryOperationsSingleOutput,
   Abs,
   Acos,
+  Acosh,
   Asin,
   Asinh,
   Atan,
