@@ -108,8 +108,8 @@ protected:
   uint16_t PrefetchDistance = 0;
   uint16_t MinPrefetchStride = 1;
   unsigned MaxPrefetchIterationsAhead = UINT_MAX;
-  unsigned PrefFunctionLogAlignment = 0;
-  unsigned PrefLoopLogAlignment = 0;
+  Align PrefFunctionAlignment;
+  Align PrefLoopAlignment;
   unsigned MaxBytesForLoopAlignment = 0;
   unsigned MaxJumpTableSize = 0;
 
@@ -241,10 +241,10 @@ public:
   unsigned getMaxPrefetchIterationsAhead() const override {
     return MaxPrefetchIterationsAhead;
   }
-  unsigned getPrefFunctionLogAlignment() const {
-    return PrefFunctionLogAlignment;
+  Align getPrefFunctionAlignment() const {
+    return PrefFunctionAlignment;
   }
-  unsigned getPrefLoopLogAlignment() const { return PrefLoopLogAlignment; }
+  Align getPrefLoopAlignment() const { return PrefLoopAlignment; }
 
   unsigned getMaxBytesForLoopAlignment() const {
     return MaxBytesForLoopAlignment;
