@@ -15,23 +15,34 @@ namespace clang {
 namespace tooling {
 namespace stdlib {
 
+// Header::ID => header name
 static llvm::StringRef *HeaderNames;
-static std::pair<llvm::StringRef, llvm::StringRef> *SymbolNames;
-static unsigned *SymbolHeaderIDs;
+// Header name => Header::ID
 static llvm::DenseMap<llvm::StringRef, unsigned> *HeaderIDs;
-// Maps symbol name -> Symbol::ID, within a namespace.
+
+static unsigned SymbolCount = 0;
+// Symbol::ID => symbol qualified_name/name/scope
+static struct SymbolName {
+  const char *Data;  // std::vector
+  unsigned ScopeLen; // ~~~~~
+  unsigned NameLen;  //      ~~~~~~
+} *SymbolNames;
+// Symbol name -> Symbol::ID, within a namespace.
 using NSSymbolMap = llvm::DenseMap<llvm::StringRef, unsigned>;
 static llvm::DenseMap<llvm::StringRef, NSSymbolMap *> *NamespaceSymbols;
+// Symbol::ID => Header::ID
+static unsigned *SymbolHeaderIDs;
 
 static int initialize() {
-  unsigned SymCount = 0;
-#define SYMBOL(Name, NS, Header) ++SymCount;
+  SymbolCount = 0;
+#define SYMBOL(Name, NS, Header) ++SymbolCount;
 #include "clang/Tooling/Inclusions/CSymbolMap.inc"
 #include "clang/Tooling/Inclusions/StdSymbolMap.inc"
 #undef SYMBOL
-  SymbolNames = new std::remove_reference_t<decltype(*SymbolNames)>[SymCount];
+  SymbolNames =
+      new std::remove_reference_t<decltype(*SymbolNames)>[SymbolCount];
   SymbolHeaderIDs =
-      new std::remove_reference_t<decltype(*SymbolHeaderIDs)>[SymCount];
+      new std::remove_reference_t<decltype(*SymbolHeaderIDs)>[SymbolCount];
   NamespaceSymbols = new std::remove_reference_t<decltype(*NamespaceSymbols)>;
   HeaderIDs = new std::remove_reference_t<decltype(*HeaderIDs)>;
 
@@ -46,20 +57,25 @@ static int initialize() {
     return HeaderIDs->try_emplace(Header, HeaderIDs->size()).first->second;
   };
 
-  auto Add = [&, SymIndex(0)](llvm::StringRef Name, llvm::StringRef NS,
+  auto Add = [&, SymIndex(0)](llvm::StringRef QName, unsigned NSLen,
                               llvm::StringRef HeaderName) mutable {
-    if (NS == "None")
-      NS = "";
+    // Correct "Nonefoo" => foo.
+    // FIXME: get rid of "None" from the generated mapping files.
+    if (QName.take_front(NSLen) == "None") {
+      QName = QName.drop_front(NSLen);
+      NSLen = 0;
+    }
 
-    SymbolNames[SymIndex] = {NS, Name};
+    SymbolNames[SymIndex] = {QName.data(), NSLen,
+                             static_cast<unsigned int>(QName.size() - NSLen)};
     SymbolHeaderIDs[SymIndex] = AddHeader(HeaderName);
 
-    NSSymbolMap &NSSymbols = AddNS(NS);
-    NSSymbols.try_emplace(Name, SymIndex);
+    NSSymbolMap &NSSymbols = AddNS(QName.take_front(NSLen));
+    NSSymbols.try_emplace(QName.drop_front(NSLen), SymIndex);
 
     ++SymIndex;
   };
-#define SYMBOL(Name, NS, Header) Add(#Name, #NS, #Header);
+#define SYMBOL(Name, NS, Header) Add(#NS #Name, strlen(#NS), #Header);
 #include "clang/Tooling/Inclusions/CSymbolMap.inc"
 #include "clang/Tooling/Inclusions/StdSymbolMap.inc"
 #undef SYMBOL
@@ -76,6 +92,13 @@ static void ensureInitialized() {
   (void)Dummy;
 }
 
+std::vector<Header> Header::all() {
+  std::vector<Header> Result;
+  Result.reserve(HeaderIDs->size());
+  for (unsigned I = 0, E = HeaderIDs->size(); I < E; ++I)
+    Result.push_back(Header(I));
+  return Result;
+}
 std::optional<Header> Header::named(llvm::StringRef Name) {
   ensureInitialized();
   auto It = HeaderIDs->find(Name);
@@ -84,8 +107,26 @@ std::optional<Header> Header::named(llvm::StringRef Name) {
   return Header(It->second);
 }
 llvm::StringRef Header::name() const { return HeaderNames[ID]; }
-llvm::StringRef Symbol::scope() const { return SymbolNames[ID].first; }
-llvm::StringRef Symbol::name() const { return SymbolNames[ID].second; }
+
+std::vector<Symbol> Symbol::all() {
+  std::vector<Symbol> Result;
+  Result.reserve(SymbolCount);
+  for (unsigned I = 0, E = SymbolCount; I < E; ++I)
+    Result.push_back(Symbol(I));
+  return Result;
+}
+llvm::StringRef Symbol::scope() const {
+  SymbolName &S = SymbolNames[ID];
+  return StringRef(S.Data, S.ScopeLen);
+}
+llvm::StringRef Symbol::name() const {
+  SymbolName &S = SymbolNames[ID];
+  return StringRef(S.Data + S.ScopeLen, S.NameLen);
+}
+llvm::StringRef Symbol::qualified_name() const {
+  SymbolName &S = SymbolNames[ID];
+  return StringRef(S.Data, S.ScopeLen + S.NameLen);
+}
 std::optional<Symbol> Symbol::named(llvm::StringRef Scope,
                                      llvm::StringRef Name) {
   ensureInitialized();
