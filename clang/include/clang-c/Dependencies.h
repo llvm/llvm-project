@@ -74,11 +74,6 @@ typedef struct {
 
   /**
    * The canonical command line to build this module.
-   *
-   * If getFileDependencies_v3 or later was used to get this dependency, it is
-   * a complete command line. When using getFileDependencies_v2, it excludes
-   * arguments containing modules-related paths:
-   * "-fmodule-file=", "-o", "-fmodule-map-file=".
    */
   CXStringSet *BuildArguments;
 } CXModuleDependency;
@@ -299,16 +294,6 @@ typedef size_t CXModuleLookupOutputCallback(void *Context,
                                             const char *ContextHash,
                                             CXOutputKind OutputKind,
                                             char *Output, size_t MaxLen);
-
-/**
- * See \c clang_experimental_DependencyScannerWorker_getFileDependencies_v5.
- */
-CINDEX_LINKAGE CXFileDependencies *
-clang_experimental_DependencyScannerWorker_getFileDependencies_v3(
-    CXDependencyScannerWorker Worker, int argc, const char *const *argv,
-    const char *ModuleName, const char *WorkingDirectory, void *MDCContext,
-    CXModuleDiscoveredCallback *MDC, void *MLOContext,
-    CXModuleLookupOutputCallback *MLO, unsigned Options, CXString *error);
 
 /**
  * See \c clang_experimental_DependencyScannerWorker_getFileDependencies_v5.

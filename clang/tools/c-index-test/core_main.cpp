@@ -137,9 +137,6 @@ static cl::opt<bool>
 static cl::list<std::string> DependencyTargets(
     "dependency-target",
     cl::desc("module builds should use the given dependency target(s)"));
-static cl::opt<bool> DeprecatedDriverCommand(
-    "deprecated-driver-command",
-    cl::desc("use a single driver command to build the tu (deprecated)"));
 static llvm::cl::opt<std::string>
     CASPath("cas-path", llvm::cl::desc("Path for on-disk CAS."));
 static llvm::cl::opt<std::string>
@@ -816,28 +813,6 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
       llvm::outs() << " " << clang_getCString(Arg);
     llvm::outs() << "\n";
   };
-
-  if (options::DeprecatedDriverCommand) {
-    CXString Error;
-    CXFileDependencies *Result =
-        clang_experimental_DependencyScannerWorker_getFileDependencies_v3(
-            Worker, Args.size(), Args.data(),
-            ModuleName ? ModuleName->c_str() : nullptr,
-            WorkingDirectory.c_str(), CB.Context, CB.Callback,
-            LookupOutputCB.Context, LookupOutputCB.Callback,
-            /*Options=*/0, &Error);
-    if (Result) {
-      llvm::outs() << "dependencies:\n";
-      HandleCommand(Result->ContextHash, Result->ModuleDeps, Result->FileDeps,
-                    Result->BuildArguments);
-      clang_experimental_FileDependencies_dispose(Result);
-      return 0;
-    }
-    llvm::errs() << "error: failed to get dependencies\n";
-    llvm::errs() << clang_getCString(Error) << "\n";
-    clang_disposeString(Error);
-    return 1;
-  }
 
   CXFileDependenciesList *Result = nullptr;
   CXDiagnosticSet Diags;
