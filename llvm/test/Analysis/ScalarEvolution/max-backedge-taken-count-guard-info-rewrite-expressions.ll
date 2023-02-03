@@ -138,6 +138,102 @@ exit:
   ret i32 0
 }
 
+; TODO: same as rewrite_zext_min_max, but everything is signed.
+; It should be able to prove the same exit count.
+define i32 @rewrite_sext_min_max(i32 %N, ptr %arr) {
+; CHECK-LABEL: 'rewrite_sext_min_max'
+; CHECK-NEXT:  Classifying expressions for: @rewrite_sext_min_max
+; CHECK-NEXT:    %smin = call i32 @llvm.smin.i32(i32 %N, i32 16)
+; CHECK-NEXT:    --> (16 smin %N) U: [-2147483648,17) S: [-2147483648,17)
+; CHECK-NEXT:    %ext = sext i32 %smin to i64
+; CHECK-NEXT:    --> (sext i32 (16 smin %N) to i64) U: [-2147483648,17) S: [-2147483648,17)
+; CHECK-NEXT:    %n.vec = and i64 %ext, 28
+; CHECK-NEXT:    --> (4 * (zext i3 (trunc i64 ((sext i32 (16 smin %N) to i64) /u 4) to i3) to i64))<nuw><nsw> U: [0,29) S: [0,29)
+; CHECK-NEXT:    %index = phi i64 [ 0, %loop.ph ], [ %index.next, %loop ]
+; CHECK-NEXT:    --> {0,+,4}<nuw><nsw><%loop> U: [0,-9223372036854775808) S: [0,9223372036854775805) Exits: (4 * ((-4 + (4 * (zext i3 (trunc i64 ((sext i32 (16 smin %N) to i64) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4))<nuw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %gep = getelementptr inbounds i32, ptr %arr, i64 %index
+; CHECK-NEXT:    --> {%arr,+,16}<nuw><%loop> U: full-set S: full-set Exits: ((16 * ((-4 + (4 * (zext i3 (trunc i64 ((sext i32 (16 smin %N) to i64) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)) + %arr) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %index.next = add nsw i64 %index, 4
+; CHECK-NEXT:    --> {4,+,4}<nuw><nsw><%loop> U: [4,-9223372036854775808) S: [4,9223372036854775805) Exits: (4 + (4 * ((-4 + (4 * (zext i3 (trunc i64 ((sext i32 (16 smin %N) to i64) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4))<nuw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @rewrite_sext_min_max
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((sext i32 (16 smin %N) to i64) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 4611686018427387903
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((sext i32 (16 smin %N) to i64) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((sext i32 (16 smin %N) to i64) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %smin = call i32 @llvm.smin.i32(i32 %N, i32 16)
+  %ext = sext i32 %smin to i64
+  %min.iters.check = icmp slt i64 %ext, 4
+  br i1 %min.iters.check, label %exit, label %loop.ph
+
+loop.ph:
+  %n.vec = and i64 %ext, 28
+  br label %loop
+
+; %n.vec is [4, 16) and a multiple of 4.
+loop:
+  %index = phi i64 [ 0, %loop.ph ], [ %index.next, %loop ]
+  %gep = getelementptr inbounds i32, ptr %arr, i64 %index
+  store i32 0, ptr %gep
+  %index.next = add nsw i64 %index, 4
+  %ec = icmp eq i64 %index.next, %n.vec
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 0
+}
+
+; TODO: This is a signed version of rewrite_min_max_zext.
+; It should be able to prove the same exit count.
+define i32 @rewrite_min_max_sext(i32 %N, ptr %arr) {
+; CHECK-LABEL: 'rewrite_min_max_sext'
+; CHECK-NEXT:  Classifying expressions for: @rewrite_min_max_sext
+; CHECK-NEXT:    %N.wide = sext i32 %N to i64
+; CHECK-NEXT:    --> (sext i32 %N to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648)
+; CHECK-NEXT:    %smin = call i64 @llvm.smin.i64(i64 %N.wide, i64 16)
+; CHECK-NEXT:    --> (16 smin (sext i32 %N to i64)) U: [-2147483648,17) S: [-2147483648,17)
+; CHECK-NEXT:    %n.vec = and i64 %smin, 28
+; CHECK-NEXT:    --> (4 * (zext i3 (trunc i64 ((16 smin (sext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw> U: [0,29) S: [0,29)
+; CHECK-NEXT:    %index = phi i64 [ 0, %loop.ph ], [ %index.next, %loop ]
+; CHECK-NEXT:    --> {0,+,4}<nuw><nsw><%loop> U: [0,-9223372036854775808) S: [0,9223372036854775805) Exits: (4 * ((-4 + (4 * (zext i3 (trunc i64 ((16 smin (sext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4))<nuw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %gep = getelementptr inbounds i32, ptr %arr, i64 %index
+; CHECK-NEXT:    --> {%arr,+,16}<nuw><%loop> U: full-set S: full-set Exits: ((16 * ((-4 + (4 * (zext i3 (trunc i64 ((16 smin (sext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)) + %arr) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %index.next = add nsw i64 %index, 4
+; CHECK-NEXT:    --> {4,+,4}<nuw><nsw><%loop> U: [4,-9223372036854775808) S: [4,9223372036854775805) Exits: (4 + (4 * ((-4 + (4 * (zext i3 (trunc i64 ((16 smin (sext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4))<nuw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @rewrite_min_max_sext
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((16 smin (sext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 4611686018427387903
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((16 smin (sext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((16 smin (sext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %N.wide = sext i32 %N to i64
+  %smin = call i64 @llvm.smin.i64(i64 %N.wide, i64 16)
+  %min.iters.check = icmp slt i64 %smin, 4
+  br i1 %min.iters.check, label %exit, label %loop.ph
+
+loop.ph:
+  %n.vec = and i64 %smin, 28
+  br label %loop
+
+; %n.vec is [4, 16) and a multiple of 4.
+loop:
+  %index = phi i64 [ 0, %loop.ph ], [ %index.next, %loop ]
+  %gep = getelementptr inbounds i32, ptr %arr, i64 %index
+  store i32 0, ptr %gep
+  %index.next = add nsw i64 %index, 4
+  %ec = icmp eq i64 %index.next, %n.vec
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 0
+}
+
 ; Test case from PR52464. applyLoopGuards needs to apply information about %and
 ; to %ext, which requires rewriting the zext.
 define i32 @rewrite_zext_with_info_from_icmp_ne(i32 %N) {
@@ -373,3 +469,5 @@ declare void @use(i64)
 
 declare i32 @llvm.umin.i32(i32, i32)
 declare i64 @llvm.umin.i64(i64, i64)
+declare i32 @llvm.smin.i32(i32, i32)
+declare i64 @llvm.smin.i64(i64, i64)
