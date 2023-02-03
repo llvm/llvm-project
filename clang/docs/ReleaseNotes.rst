@@ -186,7 +186,7 @@ Arm and AArch64 Support in Clang
 
 Floating Point Support in Clang
 -------------------------------
-- Add ``__builtin_elementwise_log``builtin for floating point types only.
+- Add ``__builtin_elementwise_log`` builtin for floating point types only.
 
 Internal API Changes
 --------------------
