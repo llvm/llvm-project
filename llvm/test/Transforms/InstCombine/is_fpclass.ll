@@ -1322,9 +1322,7 @@ define i1 @test_fold_xor_class_f32_0(float %a) {
 
 define i1 @test_fold_xor3_class_f32_0(float %a) {
 ; CHECK-LABEL: @test_fold_xor3_class_f32_0(
-; CHECK-NEXT:    [[CLASS0:%.*]] = fcmp uno float [[A:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[CLASS2:%.*]] = fcmp oeq float [[A]], 0xFFF0000000000000
-; CHECK-NEXT:    [[XOR_1:%.*]] = xor i1 [[CLASS0]], [[CLASS2]]
+; CHECK-NEXT:    [[XOR_1:%.*]] = fcmp ueq float [[A:%.*]], 0xFFF0000000000000
 ; CHECK-NEXT:    ret i1 [[XOR_1]]
 ;
   %class0 = call i1 @llvm.is.fpclass.f32(float %a, i32 1)
@@ -1337,24 +1335,7 @@ define i1 @test_fold_xor3_class_f32_0(float %a) {
 
 define i1 @test_fold_xor_all_tests_class_f32_0(float %a) {
 ; CHECK-LABEL: @test_fold_xor_all_tests_class_f32_0(
-; CHECK-NEXT:    [[CLASS0:%.*]] = fcmp uno float [[A:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[CLASS2:%.*]] = fcmp oeq float [[A]], 0xFFF0000000000000
-; CHECK-NEXT:    [[CLASS3:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 8)
-; CHECK-NEXT:    [[CLASS4:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 16)
-; CHECK-NEXT:    [[CLASS5:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 32)
-; CHECK-NEXT:    [[CLASS6:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 64)
-; CHECK-NEXT:    [[CLASS7:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 128)
-; CHECK-NEXT:    [[CLASS8:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 256)
-; CHECK-NEXT:    [[CLASS9:%.*]] = fcmp oeq float [[A]], 0x7FF0000000000000
-; CHECK-NEXT:    [[XOR_1:%.*]] = xor i1 [[CLASS0]], [[CLASS2]]
-; CHECK-NEXT:    [[XOR_2:%.*]] = xor i1 [[XOR_1]], [[CLASS3]]
-; CHECK-NEXT:    [[XOR_3:%.*]] = xor i1 [[XOR_2]], [[CLASS4]]
-; CHECK-NEXT:    [[XOR_4:%.*]] = xor i1 [[XOR_3]], [[CLASS5]]
-; CHECK-NEXT:    [[XOR_5:%.*]] = xor i1 [[XOR_4]], [[CLASS6]]
-; CHECK-NEXT:    [[XOR_6:%.*]] = xor i1 [[XOR_5]], [[CLASS7]]
-; CHECK-NEXT:    [[XOR_7:%.*]] = xor i1 [[XOR_6]], [[CLASS8]]
-; CHECK-NEXT:    [[XOR_8:%.*]] = xor i1 [[XOR_7]], [[CLASS9]]
-; CHECK-NEXT:    ret i1 [[XOR_8]]
+; CHECK-NEXT:    ret i1 true
 ;
   %class0 = call i1 @llvm.is.fpclass.f32(float %a, i32 1)
   %class1 = call i1 @llvm.is.fpclass.f32(float %a, i32 2)
@@ -1421,10 +1402,7 @@ define i1 @test_no_fold_xor_class_f32_multi_use1(float %a, ptr %ptr) {
 
 define i1 @test_fold_xor_class_f32_2(float %a) {
 ; CHECK-LABEL: @test_fold_xor_class_f32_2(
-; CHECK-NEXT:    [[CLASS0:%.*]] = fcmp ueq float [[A:%.*]], 0xFFF0000000000000
-; CHECK-NEXT:    [[CLASS1:%.*]] = fcmp ueq float [[A]], 0xFFF0000000000000
-; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[CLASS0]], [[CLASS1]]
-; CHECK-NEXT:    ret i1 [[XOR]]
+; CHECK-NEXT:    ret i1 false
 ;
   %class0 = call i1 @llvm.is.fpclass.f32(float %a, i32 7)
   %class1 = call i1 @llvm.is.fpclass.f32(float %a, i32 7)
