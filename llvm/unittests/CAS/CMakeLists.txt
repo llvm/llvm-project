@@ -28,6 +28,7 @@ add_llvm_unittest(CASTests
   ObjectStoreTest.cpp
   OnDiskGraphDBTest.cpp
   OnDiskHashMappedTrieTest.cpp
+  OnDiskKeyValueDBTest.cpp
   ThreadSafeAllocatorTest.cpp
   TreeSchemaTest.cpp
   )
