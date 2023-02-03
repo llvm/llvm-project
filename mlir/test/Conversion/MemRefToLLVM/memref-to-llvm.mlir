@@ -537,3 +537,24 @@ func.func @extract_strided_metadata(
 
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @load_non_temporal(
+func.func @load_non_temporal(%arg0 : memref<32xf32, affine_map<(d0) -> (d0)>>) {  
+  %1 = arith.constant 7 : index
+  // CHECK: llvm.load %{{.*}} {nontemporal} : !llvm.ptr<f32>
+  %2 = memref.load %arg0[%1] {nontemporal = true} : memref<32xf32, affine_map<(d0) -> (d0)>>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @store_non_temporal(
+func.func @store_non_temporal(%input : memref<32xf32, affine_map<(d0) -> (d0)>>, %output : memref<32xf32, affine_map<(d0) -> (d0)>>) {
+  %1 = arith.constant 7 : index
+  %2 = memref.load %input[%1] {nontemporal = true} : memref<32xf32, affine_map<(d0) -> (d0)>>
+  // CHECK: llvm.store %{{.*}}, %{{.*}}  {nontemporal} : !llvm.ptr<f32>
+  memref.store %2, %output[%1] {nontemporal = true} : memref<32xf32, affine_map<(d0) -> (d0)>>
+  func.return
+}
