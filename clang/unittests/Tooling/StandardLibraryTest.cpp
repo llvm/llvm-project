@@ -40,6 +40,9 @@ TEST(StdlibTest, All) {
   EXPECT_EQ(llvm::to_string(*VectorH), "<vector>");
   EXPECT_FALSE(stdlib::Header::named("HeadersTests.cpp"));
 
+  EXPECT_TRUE(stdlib::Header::named("<vector>", stdlib::Lang::CXX));
+  EXPECT_FALSE(stdlib::Header::named("<vector>", stdlib::Lang::C));
+
   auto Vector = stdlib::Symbol::named("std::", "vector");
   EXPECT_TRUE(Vector);
   EXPECT_EQ(Vector->scope(), "std::");
@@ -49,11 +52,21 @@ TEST(StdlibTest, All) {
   EXPECT_FALSE(stdlib::Symbol::named("std::", "dongle"));
   EXPECT_FALSE(stdlib::Symbol::named("clang::", "ASTContext"));
 
+  EXPECT_TRUE(stdlib::Symbol::named("std::", "vector", stdlib::Lang::CXX));
+  EXPECT_FALSE(stdlib::Symbol::named("std::", "vector", stdlib::Lang::C));
+
   EXPECT_EQ(Vector->header(), *VectorH);
   EXPECT_THAT(Vector->headers(), ElementsAre(*VectorH));
 
   EXPECT_THAT(stdlib::Header::all(), Contains(*VectorH));
   EXPECT_THAT(stdlib::Symbol::all(), Contains(*Vector));
+  EXPECT_FALSE(stdlib::Header::named("<stdint.h>"));
+  EXPECT_FALSE(stdlib::Header::named("<stdint.h>", stdlib::Lang::CXX));
+  EXPECT_TRUE(stdlib::Header::named("<stdint.h>", stdlib::Lang::C));
+
+  EXPECT_FALSE(stdlib::Symbol::named("", "int16_t"));
+  EXPECT_FALSE(stdlib::Symbol::named("", "int16_t", stdlib::Lang::CXX));
+  EXPECT_TRUE(stdlib::Symbol::named("", "int16_t", stdlib::Lang::C));
 }
 
 TEST(StdlibTest, Recognizer) {
@@ -104,10 +117,14 @@ TEST(StdlibTest, Recognizer) {
 
   EXPECT_EQ(Recognizer(&VectorNonstd), std::nullopt);
   EXPECT_EQ(Recognizer(Vec), stdlib::Symbol::named("std::", "vector"));
+  EXPECT_EQ(Recognizer(Vec),
+            stdlib::Symbol::named("std::", "vector", stdlib::Lang::CXX));
   EXPECT_EQ(Recognizer(Nest), stdlib::Symbol::named("std::", "vector"));
   EXPECT_EQ(Recognizer(Clock),
             stdlib::Symbol::named("std::chrono::", "system_clock"));
   EXPECT_EQ(Recognizer(CDivT), stdlib::Symbol::named("", "div_t"));
+  EXPECT_EQ(Recognizer(CDivT),
+            stdlib::Symbol::named("", "div_t", stdlib::Lang::C));
   EXPECT_EQ(Recognizer(Sec), std::nullopt);
 }
 
