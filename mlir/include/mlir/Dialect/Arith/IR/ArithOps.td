@@ -82,7 +82,8 @@ class Arith_FloatBinaryOp<string mnemonic, list<Trait> traits = []> :
       !listconcat([Pure, DeclareOpInterfaceMethods<ArithFastMathInterface>],
                   traits)>,
     Arguments<(ins FloatLike:$lhs, FloatLike:$rhs,
-      DefaultValuedAttr<Arith_FastMathAttr, "FastMathFlags::none">:$fastmath)>,
+      DefaultValuedAttr<
+        Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath)>,
     Results<(outs FloatLike:$result)> {
   let assemblyFormat = [{ $lhs `,` $rhs (`fastmath` `` $fastmath^)?
                           attr-dict `:` type($result) }];

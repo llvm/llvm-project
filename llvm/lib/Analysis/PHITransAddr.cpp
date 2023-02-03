@@ -26,12 +26,7 @@ static cl::opt<bool> EnableAddPhiTranslation(
     cl::desc("Enable phi-translation of add instructions"));
 
 static bool canPHITrans(Instruction *Inst) {
-  if (isa<PHINode>(Inst) ||
-      isa<GetElementPtrInst>(Inst))
-    return true;
-
-  if (isa<CastInst>(Inst) &&
-      isSafeToSpeculativelyExecute(Inst))
+  if (isa<PHINode>(Inst) || isa<GetElementPtrInst>(Inst) || isa<CastInst>(Inst))
     return true;
 
   if (Inst->getOpcode() == Instruction::Add &&
@@ -182,7 +177,6 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
   // operands need to be phi translated, and if so, reconstruct it.
 
   if (CastInst *Cast = dyn_cast<CastInst>(Inst)) {
-    if (!isSafeToSpeculativelyExecute(Cast)) return nullptr;
     Value *PHIIn = translateSubExpr(Cast->getOperand(0), CurBB, PredBB, DT);
     if (!PHIIn) return nullptr;
     if (PHIIn == Cast->getOperand(0))
@@ -305,10 +299,10 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
 
 /// PHITranslateValue - PHI translate the current address up the CFG from
 /// CurBB to Pred, updating our state to reflect any needed changes.  If
-/// 'MustDominate' is true, the translated value must dominate
-/// PredBB.  This returns true on failure and sets Addr to null.
-bool PHITransAddr::translateValue(BasicBlock *CurBB, BasicBlock *PredBB,
-                                  const DominatorTree *DT, bool MustDominate) {
+/// 'MustDominate' is true, the translated value must dominate PredBB.
+Value *PHITransAddr::translateValue(BasicBlock *CurBB, BasicBlock *PredBB,
+                                    const DominatorTree *DT,
+                                    bool MustDominate) {
   assert(DT || !MustDominate);
   assert(verify() && "Invalid PHITransAddr!");
   if (DT && DT->isReachableFromEntry(PredBB))
@@ -323,7 +317,7 @@ bool PHITransAddr::translateValue(BasicBlock *CurBB, BasicBlock *PredBB,
       if (!DT->dominates(Inst->getParent(), PredBB))
         Addr = nullptr;
 
-  return Addr == nullptr;
+  return Addr;
 }
 
 /// PHITranslateWithInsertion - PHI translate this value into the specified
@@ -362,8 +356,9 @@ Value *PHITransAddr::insertTranslatedSubExpr(
   // See if we have a version of this value already available and dominating
   // PredBB.  If so, there is no need to insert a new instance of it.
   PHITransAddr Tmp(InVal, DL, AC);
-  if (!Tmp.translateValue(CurBB, PredBB, &DT, /*MustDominate=*/true))
-    return Tmp.getAddr();
+  if (Value *Addr =
+          Tmp.translateValue(CurBB, PredBB, &DT, /*MustDominate=*/true))
+    return Addr;
 
   // We don't need to PHI translate values which aren't instructions.
   auto *Inst = dyn_cast<Instruction>(InVal);
@@ -372,7 +367,6 @@ Value *PHITransAddr::insertTranslatedSubExpr(
 
   // Handle cast of PHI translatable value.
   if (CastInst *Cast = dyn_cast<CastInst>(Inst)) {
-    if (!isSafeToSpeculativelyExecute(Cast)) return nullptr;
     Value *OpVal = insertTranslatedSubExpr(Cast->getOperand(0), CurBB, PredBB,
                                            DT, NewInsts);
     if (!OpVal) return nullptr;

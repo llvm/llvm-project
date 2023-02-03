@@ -565,7 +565,7 @@ def lto_cs_profile_generate: FF<"lto-cs-profile-generate">,
 def lto_cs_profile_file: JJ<"lto-cs-profile-file=">,
   HelpText<"Context sensitive profile file path">;
 defm lto_pgo_warn_mismatch: BB<"lto-pgo-warn-mismatch",
-  "turn on warnings about profile cfg mismatch (default)>",
+  "turn on warnings about profile cfg mismatch (default)",
   "turn off warnings about profile cfg mismatch">;
 def lto_obj_path_eq: JJ<"lto-obj-path=">;
 def lto_sample_profile: JJ<"lto-sample-profile=">,

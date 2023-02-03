@@ -39,6 +39,16 @@ module call_dispatch
     procedure(nopass_defferred), deferred, nopass :: nopassd
   end type
 
+  type :: node
+    type(node_ptr), pointer :: n(:)
+  end type
+  type :: use_node
+    type(node) :: n
+  end type
+  type :: node_ptr
+    type(node_ptr), pointer :: n
+  end type
+
   contains
 
 ! ------------------------------------------------------------------------------
@@ -340,5 +350,9 @@ module call_dispatch
 ! CHECK: fir.call @_QMcall_dispatchPtbp_pass
 ! CHECK: fir.call @_QMcall_dispatchPtbp_pass_arg0
 ! CHECK: fir.call @_QMcall_dispatchPtbp_pass_arg1
+
+  subroutine use_node_test(n)
+    type(use_node) :: n
+  end subroutine
 
 end module

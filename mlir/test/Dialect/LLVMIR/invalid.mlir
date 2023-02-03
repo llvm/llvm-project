@@ -842,7 +842,7 @@ llvm.mlir.global appending @non_array_type_global_appending_linkage() : i32
 
 module {
   llvm.func @loopOptions() {
-      // expected-error@below {{expected 'llvm.loop' to be a dictionary attribute}}
+      // expected-error@below {{expected 'llvm.loop' to be a loop annotation attribute}}
       llvm.br ^bb4 {llvm.loop = "test"}
     ^bb4:
       llvm.return
@@ -853,30 +853,8 @@ module {
 
 module {
   llvm.func @loopOptions() {
-      // expected-error@below {{expected 'parallel_access' to be an array attribute}}
-      llvm.br ^bb4 {llvm.loop = {parallel_access = "loop"}}
-    ^bb4:
-      llvm.return
-  }
-}
-
-// -----
-
-module {
-  llvm.func @loopOptions() {
-      // expected-error@below {{expected '"loop"' to be a symbol reference}}
-      llvm.br ^bb4 {llvm.loop = {parallel_access = ["loop"]}}
-    ^bb4:
-      llvm.return
-  }
-}
-
-// -----
-
-module {
-  llvm.func @loopOptions() {
       // expected-error@below {{expected '@func1' to reference a metadata op}}
-      llvm.br ^bb4 {llvm.loop = {parallel_access = [@func1]}}
+      llvm.br ^bb4 {llvm.loop = #llvm.loop_annotation<parallelAccesses = @func1>}
     ^bb4:
       llvm.return
   }
@@ -890,54 +868,11 @@ module {
 module {
   llvm.func @loopOptions() {
       // expected-error@below {{expected '@metadata' to reference an access_group op}}
-      llvm.br ^bb4 {llvm.loop = {parallel_access = [@metadata]}}
+      llvm.br ^bb4 {llvm.loop = #llvm.loop_annotation<parallelAccesses = @metadata>}
     ^bb4:
       llvm.return
   }
   llvm.metadata @metadata {
-  }
-}
-
-// -----
-
-module {
-  llvm.func @loopOptions() {
-      // expected-error@below {{expected 'options' to be a `loopopts` attribute}}
-      llvm.br ^bb4 {llvm.loop = {options = "name"}}
-    ^bb4:
-      llvm.return
-  }
-}
-
-// -----
-
-module {
-  llvm.func @loopOptions() {
-      // expected-error@below {{unknown loop option: name}}
-      llvm.br ^bb4 {llvm.loop = {options = #llvm.loopopts<name>}}
-    ^bb4:
-      llvm.return
-  }
-}
-
-// -----
-
-module {
-  llvm.func @loopOptions() {
-      // expected-error@below {{loop option present twice}}
-      llvm.br ^bb4 {llvm.loop = {options = #llvm.loopopts<disable_licm = true, disable_licm = true>}}
-    ^bb4:
-      llvm.return
-  }
-}
-
-// -----
-
-module {
-  llvm.func @accessGroups(%arg0 : !llvm.ptr<i32>) {
-      // expected-error@below {{attribute 'access_groups' failed to satisfy constraint: symbol ref array attribute}}
-      %0 = llvm.load %arg0 { "access_groups" = "test" } : !llvm.ptr<i32>
-      llvm.return
   }
 }
 
