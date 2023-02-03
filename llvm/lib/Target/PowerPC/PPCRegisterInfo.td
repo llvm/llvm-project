@@ -877,6 +877,10 @@ def dispSPE2 : Operand<iPTR> {
   let ParserMatchClass = PPCDispSPE2Operand;
 }
 
+// FIXME: Remove the functions like getMemRIEncoding and decodeMemRIOperands,
+// and adjust the instruction definitions. There's no need to artificially merge
+// the values into a single field anymore, now that sub-operands can be named in
+// instruction definitions.
 def memri : Operand<iPTR> {
   let PrintMethod = "printMemRegImm";
   let MIOperandInfo = (ops dispRI:$imm, ptr_rc_nor0:$reg);
