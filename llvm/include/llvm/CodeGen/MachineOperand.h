@@ -253,6 +253,9 @@ public:
   ///
   void clearParent() { ParentMI = nullptr; }
 
+  /// Returns the index of this operand in the instruction that it belongs to.
+  unsigned getOperandNo() const;
+
   /// Print a subreg index operand.
   /// MO_Immediate operands can also be subreg idices. If it's the case, the
   /// subreg index name will be printed. MachineInstr::isOperandSubregIdx can be
