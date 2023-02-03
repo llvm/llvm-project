@@ -1,10 +1,14 @@
 ; RUN: lli -extra-module %p/Inputs/weak-comdat-def.ll %s
+; XFAIL: target={{.*}}-darwin{{.*}}
 
-$c = comdat any
+declare i32 @g()
 
-define weak i32 @f() comdat($c) {
+$f = comdat nodeduplicate
+
+define weak i32 @f() comdat {
 entry:
-  ret i32 0
+  %0 = call i32 @g()
+  ret i32 %0
 }
 
 define i32 @main() {

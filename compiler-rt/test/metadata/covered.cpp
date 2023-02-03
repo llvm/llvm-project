@@ -7,6 +7,8 @@
 // RUN: %clangxx %s -o %t -fexperimental-sanitize-metadata=atomics,uar && %t | FileCheck -check-prefix=CHECK-AU %s
 // RUN: %clangxx %s -o %t -fexperimental-sanitize-metadata=covered,atomics,uar && %t | FileCheck -check-prefix=CHECK-CAU %s
 
+const int const_global = 42;
+
 __attribute__((noinline, not_tail_called)) void escape(const volatile void *p) {
   static const volatile void *sink;
   sink = p;
@@ -19,10 +21,10 @@ __attribute__((noinline, not_tail_called)) void escape(const volatile void *p) {
 // CHECK-C:      empty: features=0
 // CHECK-A-NOT:  empty:
 // CHECK-U-NOT:  empty:
-// CHECK-CA:     empty: features=1
+// CHECK-CA:     empty: features=0
 // CHECK-CU:     empty: features=0
 // CHECK-AU-NOT: empty:
-// CHECK-CAU:    empty: features=1
+// CHECK-CAU:    empty: features=0
 void empty() {}
 
 // CHECK-C:  normal: features=0
@@ -36,6 +38,15 @@ void normal() {
   int x;
   escape(&x);
 }
+
+// CHECK-C:      with_const_global: features=0
+// CHECK-A-NOT:  with_const_global:
+// CHECK-U-NOT:  with_const_global:
+// CHECK-CA:     with_const_global: features=0
+// CHECK-CU:     with_const_global: features=0
+// CHECK-AU-NOT: with_const_global:
+// CHECK-CAU:    with_const_global: features=0
+int with_const_global() { return *((const volatile int *)&const_global); }
 
 // CHECK-C:     with_atomic: features=0
 // CHECK-A:     with_atomic: features=1
@@ -86,6 +97,7 @@ int ellipsis_with_atomic(int *p, ...) {
 #define FUNCTIONS                                                              \
   FN(empty);                                                                   \
   FN(normal);                                                                  \
+  FN(with_const_global);                                                       \
   FN(with_atomic);                                                             \
   FN(with_atomic_escape);                                                      \
   FN(ellipsis);                                                                \

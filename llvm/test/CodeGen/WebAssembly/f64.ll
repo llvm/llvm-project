@@ -163,27 +163,37 @@ define double @nearest64_via_rint(double %x) {
   ret double %a
 }
 
+; This is not "minimum" because a -0.0 input returns +0.0.
+
 define double @fmin64(double %x) {
 ; CHECK-LABEL: fmin64:
 ; CHECK:         .functype fmin64 (f64) -> (f64)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    local.get $push2=, 0
 ; CHECK-NEXT:    f64.const $push0=, 0x0p0
-; CHECK-NEXT:    f64.min $push1=, $pop2, $pop0
-; CHECK-NEXT:    return $pop1
+; CHECK-NEXT:    local.get $push5=, 0
+; CHECK-NEXT:    local.get $push4=, 0
+; CHECK-NEXT:    f64.const $push3=, 0x0p0
+; CHECK-NEXT:    f64.ge $push1=, $pop4, $pop3
+; CHECK-NEXT:    f64.select $push2=, $pop0, $pop5, $pop1
+; CHECK-NEXT:    return $pop2
   %a = fcmp ult double %x, 0.0
   %b = select i1 %a, double %x, double 0.0
   ret double %b
 }
 
+; This is not "maximum" because a -0.0 input returns +0.0.
+
 define double @fmax64(double %x) {
 ; CHECK-LABEL: fmax64:
 ; CHECK:         .functype fmax64 (f64) -> (f64)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    local.get $push2=, 0
 ; CHECK-NEXT:    f64.const $push0=, 0x0p0
-; CHECK-NEXT:    f64.max $push1=, $pop2, $pop0
-; CHECK-NEXT:    return $pop1
+; CHECK-NEXT:    local.get $push5=, 0
+; CHECK-NEXT:    local.get $push4=, 0
+; CHECK-NEXT:    f64.const $push3=, 0x0p0
+; CHECK-NEXT:    f64.le $push1=, $pop4, $pop3
+; CHECK-NEXT:    f64.select $push2=, $pop0, $pop5, $pop1
+; CHECK-NEXT:    return $pop2
   %a = fcmp ugt double %x, 0.0
   %b = select i1 %a, double %x, double 0.0
   ret double %b

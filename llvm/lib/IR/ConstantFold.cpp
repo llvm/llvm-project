@@ -1053,7 +1053,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
             isa<GlobalValue>(CE1->getOperand(0))) {
           GlobalValue *GV = cast<GlobalValue>(CE1->getOperand(0));
 
-          MaybeAlign GVAlign;
+          Align GVAlign; // defaults to 1
 
           if (Module *TheModule = GV->getParent()) {
             const DataLayout &DL = TheModule->getDataLayout();
@@ -1073,14 +1073,14 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
           } else if (isa<Function>(GV)) {
             // Without a datalayout we have to assume the worst case: that the
             // function pointer isn't aligned at all.
-            GVAlign = std::nullopt;
+            GVAlign = Align(1);
           } else if (isa<GlobalVariable>(GV)) {
-            GVAlign = cast<GlobalVariable>(GV)->getAlign();
+            GVAlign = cast<GlobalVariable>(GV)->getAlign().valueOrOne();
           }
 
-          if (GVAlign && *GVAlign > 1) {
+          if (GVAlign > 1) {
             unsigned DstWidth = CI2->getType()->getBitWidth();
-            unsigned SrcWidth = std::min(DstWidth, Log2(*GVAlign));
+            unsigned SrcWidth = std::min(DstWidth, Log2(GVAlign));
             APInt BitsNotSet(APInt::getLowBitsSet(DstWidth, SrcWidth));
 
             // If checking bits we know are clear, return zero.

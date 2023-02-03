@@ -12,6 +12,7 @@
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/Runtime/Assign.h"
+#include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
@@ -1205,7 +1206,8 @@ static bool recordTypeCanBeMemCopied(fir::RecordType recordType) {
 void fir::factory::genRecordAssignment(fir::FirOpBuilder &builder,
                                        mlir::Location loc,
                                        const fir::ExtendedValue &lhs,
-                                       const fir::ExtendedValue &rhs) {
+                                       const fir::ExtendedValue &rhs,
+                                       bool needFinalization) {
   assert(lhs.rank() == 0 && rhs.rank() == 0 && "assume scalar assignment");
   auto baseTy = fir::dyn_cast_ptrOrBoxEleTy(fir::getBase(lhs).getType());
   assert(baseTy && "must be a memory type");
@@ -1229,6 +1231,13 @@ void fir::factory::genRecordAssignment(fir::FirOpBuilder &builder,
     fir::runtime::genAssign(builder, loc, toMutableBox, from);
     return;
   }
+
+  // Finalize LHS on intrinsic assignment.
+  if (needFinalization) {
+    mlir::Value box = builder.createBox(loc, lhs);
+    fir::runtime::genDerivedTypeDestroy(builder, loc, box);
+  }
+
   // Otherwise, the derived type has compile time constant size and for which
   // the component by component assignment can be replaced by a memory copy.
   // Since we do not know the size of the derived type in lowering, do a

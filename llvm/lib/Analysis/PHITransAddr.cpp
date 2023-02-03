@@ -26,12 +26,7 @@ static cl::opt<bool> EnableAddPhiTranslation(
     cl::desc("Enable phi-translation of add instructions"));
 
 static bool canPHITrans(Instruction *Inst) {
-  if (isa<PHINode>(Inst) ||
-      isa<GetElementPtrInst>(Inst))
-    return true;
-
-  if (isa<CastInst>(Inst) &&
-      isSafeToSpeculativelyExecute(Inst))
+  if (isa<PHINode>(Inst) || isa<GetElementPtrInst>(Inst) || isa<CastInst>(Inst))
     return true;
 
   if (Inst->getOpcode() == Instruction::Add &&
@@ -61,8 +56,7 @@ static bool verifySubExpr(Value *Expr,
 
   // If it's an instruction, it is either in Tmp or its operands recursively
   // are.
-  SmallVectorImpl<Instruction *>::iterator Entry = find(InstInputs, I);
-  if (Entry != InstInputs.end()) {
+  if (auto Entry = find(InstInputs, I); Entry != InstInputs.end()) {
     InstInputs.erase(Entry);
     return true;
   }
@@ -77,11 +71,8 @@ static bool verifySubExpr(Value *Expr,
   }
 
   // Validate the operands of the instruction.
-  for (unsigned i = 0, e = I->getNumOperands(); i != e; ++i)
-    if (!verifySubExpr(I->getOperand(i), InstInputs))
-      return false;
-
-  return true;
+  return all_of(I->operands(),
+                [&](Value *Op) { return verifySubExpr(Op, InstInputs); });
 }
 
 /// verify - Check internal consistency of this data structure.  If the
@@ -122,8 +113,7 @@ static void RemoveInstInputs(Value *V,
   if (!I) return;
 
   // If the instruction is in the InstInputs list, remove it.
-  SmallVectorImpl<Instruction *>::iterator Entry = find(InstInputs, I);
-  if (Entry != InstInputs.end()) {
+  if (auto Entry = find(InstInputs, I); Entry != InstInputs.end()) {
     InstInputs.erase(Entry);
     return;
   }
@@ -131,10 +121,9 @@ static void RemoveInstInputs(Value *V,
   assert(!isa<PHINode>(I) && "Error, removing something that isn't an input");
 
   // Otherwise, it must have instruction inputs itself.  Zap them recursively.
-  for (unsigned i = 0, e = I->getNumOperands(); i != e; ++i) {
-    if (Instruction *Op = dyn_cast<Instruction>(I->getOperand(i)))
-      RemoveInstInputs(Op, InstInputs);
-  }
+  for (Value *Op : I->operands())
+    if (Instruction *OpInst = dyn_cast<Instruction>(Op))
+      RemoveInstInputs(OpInst, InstInputs);
 }
 
 Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
@@ -172,9 +161,8 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
 
     // All instruction operands are now inputs (and of course, they may also be
     // defined in this block, so they may need to be phi translated themselves.
-    for (unsigned i = 0, e = Inst->getNumOperands(); i != e; ++i)
-      if (Instruction *Op = dyn_cast<Instruction>(Inst->getOperand(i)))
-        InstInputs.push_back(Op);
+    for (Value *Op : Inst->operands())
+      addAsInput(Op);
   }
 
   // Ok, it must be an intermediate result (either because it started that way
@@ -182,7 +170,6 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
   // operands need to be phi translated, and if so, reconstruct it.
 
   if (CastInst *Cast = dyn_cast<CastInst>(Inst)) {
-    if (!isSafeToSpeculativelyExecute(Cast)) return nullptr;
     Value *PHIIn = translateSubExpr(Cast->getOperand(0), CurBB, PredBB, DT);
     if (!PHIIn) return nullptr;
     if (PHIIn == Cast->getOperand(0))
@@ -211,11 +198,11 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
   if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
     SmallVector<Value*, 8> GEPOps;
     bool AnyChanged = false;
-    for (unsigned i = 0, e = GEP->getNumOperands(); i != e; ++i) {
-      Value *GEPOp = translateSubExpr(GEP->getOperand(i), CurBB, PredBB, DT);
+    for (Value *Op : GEP->operands()) {
+      Value *GEPOp = translateSubExpr(Op, CurBB, PredBB, DT);
       if (!GEPOp) return nullptr;
 
-      AnyChanged |= GEPOp != GEP->getOperand(i);
+      AnyChanged |= GEPOp != Op;
       GEPOps.push_back(GEPOp);
     }
 
@@ -305,10 +292,10 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
 
 /// PHITranslateValue - PHI translate the current address up the CFG from
 /// CurBB to Pred, updating our state to reflect any needed changes.  If
-/// 'MustDominate' is true, the translated value must dominate
-/// PredBB.  This returns true on failure and sets Addr to null.
-bool PHITransAddr::translateValue(BasicBlock *CurBB, BasicBlock *PredBB,
-                                  const DominatorTree *DT, bool MustDominate) {
+/// 'MustDominate' is true, the translated value must dominate PredBB.
+Value *PHITransAddr::translateValue(BasicBlock *CurBB, BasicBlock *PredBB,
+                                    const DominatorTree *DT,
+                                    bool MustDominate) {
   assert(DT || !MustDominate);
   assert(verify() && "Invalid PHITransAddr!");
   if (DT && DT->isReachableFromEntry(PredBB))
@@ -323,7 +310,7 @@ bool PHITransAddr::translateValue(BasicBlock *CurBB, BasicBlock *PredBB,
       if (!DT->dominates(Inst->getParent(), PredBB))
         Addr = nullptr;
 
-  return Addr == nullptr;
+  return Addr;
 }
 
 /// PHITranslateWithInsertion - PHI translate this value into the specified
@@ -362,8 +349,9 @@ Value *PHITransAddr::insertTranslatedSubExpr(
   // See if we have a version of this value already available and dominating
   // PredBB.  If so, there is no need to insert a new instance of it.
   PHITransAddr Tmp(InVal, DL, AC);
-  if (!Tmp.translateValue(CurBB, PredBB, &DT, /*MustDominate=*/true))
-    return Tmp.getAddr();
+  if (Value *Addr =
+          Tmp.translateValue(CurBB, PredBB, &DT, /*MustDominate=*/true))
+    return Addr;
 
   // We don't need to PHI translate values which aren't instructions.
   auto *Inst = dyn_cast<Instruction>(InVal);
@@ -372,7 +360,6 @@ Value *PHITransAddr::insertTranslatedSubExpr(
 
   // Handle cast of PHI translatable value.
   if (CastInst *Cast = dyn_cast<CastInst>(Inst)) {
-    if (!isSafeToSpeculativelyExecute(Cast)) return nullptr;
     Value *OpVal = insertTranslatedSubExpr(Cast->getOperand(0), CurBB, PredBB,
                                            DT, NewInsts);
     if (!OpVal) return nullptr;
@@ -390,9 +377,8 @@ Value *PHITransAddr::insertTranslatedSubExpr(
   if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
     SmallVector<Value*, 8> GEPOps;
     BasicBlock *CurBB = GEP->getParent();
-    for (unsigned i = 0, e = GEP->getNumOperands(); i != e; ++i) {
-      Value *OpVal = insertTranslatedSubExpr(GEP->getOperand(i), CurBB, PredBB,
-                                             DT, NewInsts);
+    for (Value *Op : GEP->operands()) {
+      Value *OpVal = insertTranslatedSubExpr(Op, CurBB, PredBB, DT, NewInsts);
       if (!OpVal) return nullptr;
       GEPOps.push_back(OpVal);
     }

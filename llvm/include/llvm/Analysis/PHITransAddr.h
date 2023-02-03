@@ -52,8 +52,7 @@ public:
   PHITransAddr(Value *Addr, const DataLayout &DL, AssumptionCache *AC)
       : Addr(Addr), DL(DL), AC(AC) {
     // If the address is an instruction, the whole thing is considered an input.
-    if (Instruction *I = dyn_cast<Instruction>(Addr))
-      InstInputs.push_back(I);
+    addAsInput(Addr);
   }
 
   Value *getAddr() const { return Addr; }
@@ -63,10 +62,9 @@ public:
   bool needsPHITranslationFromBlock(BasicBlock *BB) const {
     // We do need translation if one of our input instructions is defined in
     // this block.
-    for (unsigned i = 0, e = InstInputs.size(); i != e; ++i)
-      if (InstInputs[i]->getParent() == BB)
-        return true;
-    return false;
+    return any_of(InstInputs, [BB](const auto &InstInput) {
+      return InstInput->getParent() == BB;
+    });
   }
 
   /// isPotentiallyPHITranslatable - If this needs PHI translation, return true
@@ -76,10 +74,9 @@ public:
 
   /// translateValue - PHI translate the current address up the CFG from
   /// CurBB to Pred, updating our state to reflect any needed changes.  If
-  /// 'MustDominate' is true, the translated value must dominate
-  /// PredBB.  This returns true on failure and sets Addr to null.
-  bool translateValue(BasicBlock *CurBB, BasicBlock *PredBB,
-                      const DominatorTree *DT, bool MustDominate);
+  /// 'MustDominate' is true, the translated value must dominate PredBB.
+  Value *translateValue(BasicBlock *CurBB, BasicBlock *PredBB,
+                        const DominatorTree *DT, bool MustDominate);
 
   /// translateWithInsertion - PHI translate this value into the specified
   /// predecessor block, inserting a computation of the value if it is
