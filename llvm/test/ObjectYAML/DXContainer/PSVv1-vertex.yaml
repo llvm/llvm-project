@@ -23,6 +23,15 @@ Parts:
       SigPatchConstOrPrimElements: 32
       SigInputVectors: 64
       SigOutputVectors: [ 8, 16, 32, 64 ]
+      Resources:
+        - Type:            1
+          Space:           2
+          LowerBound:      3
+          UpperBound:      4
+        - Type:            128
+          Space:           32768
+          LowerBound:      8388608
+          UpperBound:      2147483648
   - Name:            DXIL
     Size:            24
     Program:
@@ -48,4 +57,13 @@ Parts:
 # CHECK-NEXT: SigPatchConstOrPrimElements: 32
 # CHECK-NEXT: SigInputVectors: 64
 # CHECK-NEXT: SigOutputVectors: [ 8, 16, 32, 64 ]
+# CHECK-NEXT: Resources:
+# CHECK-NEXT: - Type:            1
+# CHECK-NEXT: Space:           2
+# CHECK-NEXT: LowerBound:      3
+# CHECK-NEXT: UpperBound:      4
+# CHECK-NEXT: - Type:            128
+# CHECK-NEXT: Space:           32768
+# CHECK-NEXT: LowerBound:      8388608
+# CHECK-NEXT: UpperBound:      2147483648
 # CHECK-NEXT: Name

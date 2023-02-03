@@ -117,10 +117,20 @@ void MappingTraits<DXContainerYAML::PSVInfo>::mapping(
     IO &IO, DXContainerYAML::PSVInfo &PSV) {
   IO.mapRequired("Version", PSV.Version);
 
+  // Store the PSV version in the YAML context.
+  void *OldContext = IO.getContext();
+  uint32_t Version = PSV.Version;
+  IO.setContext(&Version);
+
   // Shader stage is only included in binaries for v1 and later, but we always
   // include it since it simplifies parsing and file construction.
   IO.mapRequired("ShaderStage", PSV.Info.ShaderStage);
   PSV.mapInfoForVersion(IO);
+
+  IO.mapRequired("Resources", PSV.Resources);
+
+  // Restore the YAML context.
+  IO.setContext(OldContext);
 }
 
 void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
@@ -138,6 +148,21 @@ void MappingTraits<DXContainerYAML::Object>::mapping(
   IO.mapTag("!dxcontainer", true);
   IO.mapRequired("Header", Obj.Header);
   IO.mapRequired("Parts", Obj.Parts);
+}
+
+void MappingTraits<DXContainerYAML::ResourceBindInfo>::mapping(
+    IO &IO, DXContainerYAML::ResourceBindInfo &Res) {
+  IO.mapRequired("Type", Res.Type);
+  IO.mapRequired("Space", Res.Space);
+  IO.mapRequired("LowerBound", Res.LowerBound);
+  IO.mapRequired("UpperBound", Res.UpperBound);
+
+  const uint32_t *PSVVersion = static_cast<uint32_t *>(IO.getContext());
+  if (*PSVVersion < 2)
+    return;
+
+  IO.mapRequired("Kind", Res.Kind);
+  IO.mapRequired("Flags", Res.Flags);
 }
 
 } // namespace yaml
