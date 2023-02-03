@@ -512,3 +512,10 @@ void ScriptedProcess::UpdateQueueListIfNeeded() {
 ScriptedProcessInterface &ScriptedProcess::GetInterface() const {
   return m_interpreter->GetScriptedProcessInterface();
 }
+
+void *ScriptedProcess::GetImplementation() {
+  if (m_script_object_sp &&
+      m_script_object_sp->GetType() == eStructuredDataTypeGeneric)
+    return m_script_object_sp->GetAsGeneric()->GetValue();
+  return nullptr;
+}
