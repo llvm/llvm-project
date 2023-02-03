@@ -841,7 +841,7 @@ public:
                         const MachineOperand &UseMO,
                         const MachineOperand &DefMO) const {
     assert(UseMO.getParent() == &MI);
-    int OpIdx = MI.getOperandNo(&UseMO);
+    int OpIdx = UseMO.getOperandNo();
     if (OpIdx >= MI.getDesc().NumOperands)
       return false;
 
@@ -873,8 +873,7 @@ public:
   }
 
   bool isInlineConstant(const MachineOperand &MO) const {
-    const MachineInstr *Parent = MO.getParent();
-    return isInlineConstant(*Parent, Parent->getOperandNo(&MO));
+    return isInlineConstant(*MO.getParent(), MO.getOperandNo());
   }
 
   bool isImmOperandLegal(const MachineInstr &MI, unsigned OpNo,

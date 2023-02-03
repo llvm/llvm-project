@@ -352,7 +352,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
           unsigned LocalId = getLocalId(Reg2Local, MFI, CurLocal, OldReg);
           // If this register operand is tied to another operand, we can't
           // change it to an immediate. Untie it first.
-          MI.untieRegOperand(MI.getOperandNo(&MO));
+          MI.untieRegOperand(MO.getOperandNo());
           MO.ChangeToImmediate(LocalId);
           continue;
         }
@@ -369,7 +369,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
         if (MI.isInlineAsm()) {
           unsigned LocalId = getLocalId(Reg2Local, MFI, CurLocal, OldReg);
           // Untie it first if this reg operand is tied to another operand.
-          MI.untieRegOperand(MI.getOperandNo(&MO));
+          MI.untieRegOperand(MO.getOperandNo());
           MO.ChangeToImmediate(LocalId);
           continue;
         }

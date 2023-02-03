@@ -161,14 +161,12 @@ bool SIShrinkInstructions::shouldShrinkTrue16(MachineInstr &MI) const {
 
 bool SIShrinkInstructions::isKImmOperand(const MachineOperand &Src) const {
   return isInt<16>(Src.getImm()) &&
-    !TII->isInlineConstant(*Src.getParent(),
-                           Src.getParent()->getOperandNo(&Src));
+         !TII->isInlineConstant(*Src.getParent(), Src.getOperandNo());
 }
 
 bool SIShrinkInstructions::isKUImmOperand(const MachineOperand &Src) const {
   return isUInt<16>(Src.getImm()) &&
-    !TII->isInlineConstant(*Src.getParent(),
-                           Src.getParent()->getOperandNo(&Src));
+         !TII->isInlineConstant(*Src.getParent(), Src.getOperandNo());
 }
 
 bool SIShrinkInstructions::isKImmOrKUImmOperand(const MachineOperand &Src,
