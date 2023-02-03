@@ -76,10 +76,9 @@ public:
 
   /// translateValue - PHI translate the current address up the CFG from
   /// CurBB to Pred, updating our state to reflect any needed changes.  If
-  /// 'MustDominate' is true, the translated value must dominate
-  /// PredBB.  This returns true on failure and sets Addr to null.
-  bool translateValue(BasicBlock *CurBB, BasicBlock *PredBB,
-                      const DominatorTree *DT, bool MustDominate);
+  /// 'MustDominate' is true, the translated value must dominate PredBB.
+  Value *translateValue(BasicBlock *CurBB, BasicBlock *PredBB,
+                        const DominatorTree *DT, bool MustDominate);
 
   /// translateWithInsertion - PHI translate this value into the specified
   /// predecessor block, inserting a computation of the value if it is
