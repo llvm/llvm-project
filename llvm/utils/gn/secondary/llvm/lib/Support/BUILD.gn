@@ -41,7 +41,6 @@ static_library("Support") {
     "ARMAttributeParser.cpp",
     "ARMBuildAttrs.cpp",
     "ARMWinEH.cpp",
-    "AddressRanges.cpp",
     "Allocator.cpp",
     "AutoConvert.cpp",
     "Base64.cpp",

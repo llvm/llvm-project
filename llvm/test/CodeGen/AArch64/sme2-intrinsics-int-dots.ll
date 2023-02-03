@@ -565,6 +565,285 @@ define void @sudot_single_za32_u8_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, 
   ret void
 }
 
+; == Multi, indexed (unsigned) ==
+
+define void @udot_lane_za32_u16_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2) #0 {
+; CHECK-LABEL: udot_lane_za32_u16_vg1x2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    udot za.s[w8, 0, vgx2], { z4.h, z5.h }, z3.h[3]
+; CHECK-NEXT:    udot za.s[w8, 7, vgx2], { z4.h, z5.h }, z3.h[3]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.udot.lane.za32.vg1x2.nxv8i16(i32 %slice, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, i32 3)
+  %slice2 = add i32 %slice, 7
+  call void @llvm.aarch64.sme.udot.lane.za32.vg1x2.nxv8i16(i32 %slice2, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, i32 3)
+  ret void
+}
+
+define void @udot_lane_za32_u16_vg1x4(i32 %slice, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3, <vscale x 8 x i16> %zn4) #0 {
+; CHECK-LABEL: udot_lane_za32_u16_vg1x4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    udot za.s[w8, 0, vgx4], { z0.h - z3.h }, z4.h[3]
+; CHECK-NEXT:    udot za.s[w8, 7, vgx4], { z0.h - z3.h }, z4.h[3]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.udot.lane.za32.vg1x4.nxv8i16(i32 %slice, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3,
+                                                           <vscale x 8 x i16> %zn4, i32 3)
+  %slice2 = add i32 %slice, 7
+  call void @llvm.aarch64.sme.udot.lane.za32.vg1x4.nxv8i16(i32 %slice2, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3,
+                                                           <vscale x 8 x i16> %zn4, i32 3)
+  ret void
+}
+
+define void @udot_lane_za32_u8_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2) #0 {
+; CHECK-LABEL: udot_lane_za32_u8_vg1x2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    udot za.s[w8, 0, vgx2], { z4.b, z5.b }, z3.b[3]
+; CHECK-NEXT:    udot za.s[w8, 7, vgx2], { z4.b, z5.b }, z3.b[3]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.udot.lane.za32.vg1x2.nxv16i8(i32 %slice, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, i32 3)
+  %slice2 = add i32 %slice, 7
+  call void @llvm.aarch64.sme.udot.lane.za32.vg1x2.nxv16i8(i32 %slice2, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, i32 3)
+  ret void
+}
+
+define void @udot_lane_za32_u8_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3, <vscale x 16 x i8> %zn4) #0 {
+; CHECK-LABEL: udot_lane_za32_u8_vg1x4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z27.d, z4.d
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov z26.d, z3.d
+; CHECK-NEXT:    mov z25.d, z2.d
+; CHECK-NEXT:    mov z24.d, z1.d
+; CHECK-NEXT:    udot za.s[w8, 0, vgx4], { z24.b - z27.b }, z5.b[3]
+; CHECK-NEXT:    udot za.s[w8, 7, vgx4], { z24.b - z27.b }, z5.b[3]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.udot.lane.za32.vg1x4.nxv16i8(i32 %slice, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3,
+                                                           <vscale x 16 x i8> %zn4, i32 3)
+  %slice2 = add i32 %slice, 7
+  call void @llvm.aarch64.sme.udot.lane.za32.vg1x4.nxv16i8(i32 %slice2, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3,
+                                                           <vscale x 16 x i8> %zn4, i32 3)
+  ret void
+}
+
+define void @udot_lane_za64_u16_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2) #1 {
+; CHECK-LABEL: udot_lane_za64_u16_vg1x2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    udot za.d[w8, 0, vgx2], { z4.h, z5.h }, z3.h[1]
+; CHECK-NEXT:    udot za.d[w8, 7, vgx2], { z4.h, z5.h }, z3.h[1]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.udot.lane.za64.vg1x2.nxv8i16(i32 %slice, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, i32 1)
+  %slice2 = add i32 %slice, 7
+  call void @llvm.aarch64.sme.udot.lane.za64.vg1x2.nxv8i16(i32 %slice2, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, i32 1)
+  ret void
+}
+
+define void @udot_lane_za64_u16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3, <vscale x 8 x i16> %zn4) #1 {
+; CHECK-LABEL: udot_lane_za64_u16_vg1x4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z27.d, z4.d
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov z26.d, z3.d
+; CHECK-NEXT:    mov z25.d, z2.d
+; CHECK-NEXT:    mov z24.d, z1.d
+; CHECK-NEXT:    udot za.d[w8, 0, vgx4], { z24.h - z27.h }, z5.h[1]
+; CHECK-NEXT:    udot za.d[w8, 7, vgx4], { z24.h - z27.h }, z5.h[1]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.udot.lane.za64.vg1x4.nxv8i16(i32 %slice, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3,
+                                                           <vscale x 8 x i16> %zn4, i32 1)
+  %slice2 = add i32 %slice, 7
+  call void @llvm.aarch64.sme.udot.lane.za64.vg1x4.nxv8i16(i32 %slice2, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3,
+                                                           <vscale x 8 x i16> %zn4, i32 1)
+  ret void
+}
+
+define void @usdot_lane_za32_u8_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2) #0 {
+; CHECK-LABEL: usdot_lane_za32_u8_vg1x2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    usdot za.s[w8, 0, vgx2], { z4.b, z5.b }, z3.b[3]
+; CHECK-NEXT:    usdot za.s[w8, 7, vgx2], { z4.b, z5.b }, z3.b[3]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.usdot.lane.za32.vg1x2.nxv16i8(i32 %slice, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, i32 3)
+  %slice2 = add i32 %slice, 7
+  call void @llvm.aarch64.sme.usdot.lane.za32.vg1x2.nxv16i8(i32 %slice2, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, i32 3)
+  ret void
+}
+
+define void @usdot_lane_za32_u8_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3, <vscale x 16 x i8> %zn4) #0 {
+; CHECK-LABEL: usdot_lane_za32_u8_vg1x4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z27.d, z4.d
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov z26.d, z3.d
+; CHECK-NEXT:    mov z25.d, z2.d
+; CHECK-NEXT:    mov z24.d, z1.d
+; CHECK-NEXT:    usdot za.s[w8, 0, vgx4], { z24.b - z27.b }, z5.b[3]
+; CHECK-NEXT:    usdot za.s[w8, 7, vgx4], { z24.b - z27.b }, z5.b[3]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.usdot.lane.za32.vg1x4.nxv16i8(i32 %slice, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3,
+                                                            <vscale x 16 x i8> %zn4, i32 3)
+  %slice2 = add i32 %slice, 7
+  call void @llvm.aarch64.sme.usdot.lane.za32.vg1x4.nxv16i8(i32 %slice2, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3,
+                                                            <vscale x 16 x i8> %zn4, i32 3)
+  ret void
+}
+
+
+; == Multi, indexed (signed) ==
+
+define void @sdot_lane_za32_u16_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2) #0 {
+; CHECK-LABEL: sdot_lane_za32_u16_vg1x2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    sdot za.s[w8, 0, vgx2], { z4.h, z5.h }, z3.h[3]
+; CHECK-NEXT:    sdot za.s[w8, 7, vgx2], { z4.h, z5.h }, z3.h[3]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.sdot.lane.za32.vg1x2.nxv8i16(i32 %slice, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, i32 3)
+  %slice2 = add i32 %slice, 7
+  call void @llvm.aarch64.sme.sdot.lane.za32.vg1x2.nxv8i16(i32 %slice2, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, i32 3)
+  ret void
+}
+
+define void @sdot_lane_za32_u16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3, <vscale x 8 x i16> %zn4) #0 {
+; CHECK-LABEL: sdot_lane_za32_u16_vg1x4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z27.d, z4.d
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov z26.d, z3.d
+; CHECK-NEXT:    mov z25.d, z2.d
+; CHECK-NEXT:    mov z24.d, z1.d
+; CHECK-NEXT:    sdot za.s[w8, 0, vgx4], { z24.h - z27.h }, z5.h[3]
+; CHECK-NEXT:    sdot za.s[w8, 7, vgx4], { z24.h - z27.h }, z5.h[3]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.sdot.lane.za32.vg1x4.nxv8i16(i32 %slice, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3,
+                                                           <vscale x 8 x i16> %zn4, i32 3)
+  %slice2 = add i32 %slice, 7
+  call void @llvm.aarch64.sme.sdot.lane.za32.vg1x4.nxv8i16(i32 %slice2, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3,
+                                                           <vscale x 8 x i16> %zn4, i32 3)
+  ret void
+}
+
+define void @sdot_lane_za32_u8_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2) #0 {
+; CHECK-LABEL: sdot_lane_za32_u8_vg1x2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    sdot za.s[w8, 0, vgx2], { z4.b, z5.b }, z3.b[3]
+; CHECK-NEXT:    sdot za.s[w8, 7, vgx2], { z4.b, z5.b }, z3.b[3]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.sdot.lane.za32.vg1x2.nxv16i8(i32 %slice, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, i32 3)
+  %slice2 = add i32 %slice, 7
+  call void @llvm.aarch64.sme.sdot.lane.za32.vg1x2.nxv16i8(i32 %slice2, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, i32 3)
+  ret void
+}
+
+define void @sdot_lane_za32_u8_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3, <vscale x 16 x i8> %zn4) #0 {
+; CHECK-LABEL: sdot_lane_za32_u8_vg1x4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z27.d, z4.d
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov z26.d, z3.d
+; CHECK-NEXT:    mov z25.d, z2.d
+; CHECK-NEXT:    mov z24.d, z1.d
+; CHECK-NEXT:    sdot za.s[w8, 0, vgx4], { z24.b - z27.b }, z5.b[3]
+; CHECK-NEXT:    sdot za.s[w8, 7, vgx4], { z24.b - z27.b }, z5.b[3]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.sdot.lane.za32.vg1x4.nxv16i8(i32 %slice, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3,
+                                                           <vscale x 16 x i8> %zn4, i32 3)
+  %slice2 = add i32 %slice, 7
+  call void @llvm.aarch64.sme.sdot.lane.za32.vg1x4.nxv16i8(i32 %slice2, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3,
+                                                           <vscale x 16 x i8> %zn4, i32 3)
+  ret void
+}
+
+define void @sdot_lane_za64_u16_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2) #1 {
+; CHECK-LABEL: sdot_lane_za64_u16_vg1x2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    sdot za.d[w8, 0, vgx2], { z4.h, z5.h }, z3.h[1]
+; CHECK-NEXT:    sdot za.d[w8, 7, vgx2], { z4.h, z5.h }, z3.h[1]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.sdot.lane.za64.vg1x2.nxv8i16(i32 %slice, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, i32 1)
+  %slice2 = add i32 %slice, 7
+  call void @llvm.aarch64.sme.sdot.lane.za64.vg1x2.nxv8i16(i32 %slice2, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, i32 1)
+  ret void
+}
+
+define void @sdot_lane_za64_u16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3, <vscale x 8 x i16> %zn4) #1 {
+; CHECK-LABEL: sdot_lane_za64_u16_vg1x4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z27.d, z4.d
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov z26.d, z3.d
+; CHECK-NEXT:    mov z25.d, z2.d
+; CHECK-NEXT:    mov z24.d, z1.d
+; CHECK-NEXT:    sdot za.d[w8, 0, vgx4], { z24.h - z27.h }, z5.h[1]
+; CHECK-NEXT:    sdot za.d[w8, 7, vgx4], { z24.h - z27.h }, z5.h[1]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.sdot.lane.za64.vg1x4.nxv8i16(i32 %slice, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3,
+                                                           <vscale x 8 x i16> %zn4, i32 1)
+  %slice2 = add i32 %slice, 7
+  call void @llvm.aarch64.sme.sdot.lane.za64.vg1x4.nxv8i16(i32 %slice2, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3,
+                                                           <vscale x 8 x i16> %zn4, i32 1)
+  ret void
+}
+
+
+
+define void @sudot_lane_za32_u8_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2) #0 {
+; CHECK-LABEL: sudot_lane_za32_u8_vg1x2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    sudot za.s[w8, 0, vgx2], { z4.b, z5.b }, z3.b[3]
+; CHECK-NEXT:    sudot za.s[w8, 7, vgx2], { z4.b, z5.b }, z3.b[3]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.sudot.lane.za32.vg1x2.nxv16i8(i32 %slice, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, i32 3)
+  %slice2 = add i32 %slice, 7
+  call void @llvm.aarch64.sme.sudot.lane.za32.vg1x2.nxv16i8(i32 %slice2, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, i32 3)
+  ret void
+}
+
+define void @sudot_lane_za32_u8_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3, <vscale x 16 x i8> %zn4) #0 {
+; CHECK-LABEL: sudot_lane_za32_u8_vg1x4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z27.d, z4.d
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov z26.d, z3.d
+; CHECK-NEXT:    mov z25.d, z2.d
+; CHECK-NEXT:    mov z24.d, z1.d
+; CHECK-NEXT:    sudot za.s[w8, 0, vgx4], { z24.b - z27.b }, z5.b[3]
+; CHECK-NEXT:    sudot za.s[w8, 7, vgx4], { z24.b - z27.b }, z5.b[3]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.sudot.lane.za32.vg1x4.nxv16i8(i32 %slice, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3,
+                                                            <vscale x 16 x i8> %zn4, i32 3)
+  %slice2 = add i32 %slice, 7
+  call void @llvm.aarch64.sme.sudot.lane.za32.vg1x4.nxv16i8(i32 %slice2, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3,
+                                                            <vscale x 16 x i8> %zn4, i32 3)
+  ret void
+}
+
 
 attributes #0 = { nounwind "target-features"="+sme2" }
 attributes #1 = { nounwind "target-features"="+sme2,+sme-i16i64" }
@@ -618,3 +897,25 @@ declare void @llvm.aarch64.sme.sdot.single.za64.vg1x2.nxv8i16(i32, <vscale x 8 x
 declare void @llvm.aarch64.sme.sdot.single.za64.vg1x4.nxv8i16(i32, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>)
 declare void @llvm.aarch64.sme.sudot.single.za32.vg1x2.nxv16i8(i32, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>)
 declare void @llvm.aarch64.sme.sudot.single.za32.vg1x4.nxv16i8(i32, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>)
+
+; == Multi, indexed (unsigned)
+
+declare void @llvm.aarch64.sme.udot.lane.za32.vg1x2.nxv8i16(i32, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, i32)
+declare void @llvm.aarch64.sme.udot.lane.za32.vg1x4.nxv8i16(i32, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, i32)
+declare void @llvm.aarch64.sme.udot.lane.za32.vg1x2.nxv16i8(i32, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, i32)
+declare void @llvm.aarch64.sme.udot.lane.za32.vg1x4.nxv16i8(i32, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, i32)
+declare void @llvm.aarch64.sme.udot.lane.za64.vg1x2.nxv8i16(i32, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, i32)
+declare void @llvm.aarch64.sme.udot.lane.za64.vg1x4.nxv8i16(i32, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, i32)
+declare void @llvm.aarch64.sme.usdot.lane.za32.vg1x2.nxv16i8(i32, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, i32)
+declare void @llvm.aarch64.sme.usdot.lane.za32.vg1x4.nxv16i8(i32, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, i32)
+
+; == Multi, indexed (signed)
+
+declare void @llvm.aarch64.sme.sdot.lane.za32.vg1x2.nxv8i16(i32, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, i32)
+declare void @llvm.aarch64.sme.sdot.lane.za32.vg1x4.nxv8i16(i32, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, i32)
+declare void @llvm.aarch64.sme.sdot.lane.za32.vg1x2.nxv16i8(i32, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, i32)
+declare void @llvm.aarch64.sme.sdot.lane.za32.vg1x4.nxv16i8(i32, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, i32)
+declare void @llvm.aarch64.sme.sdot.lane.za64.vg1x2.nxv8i16(i32, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, i32)
+declare void @llvm.aarch64.sme.sdot.lane.za64.vg1x4.nxv8i16(i32, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, i32)
+declare void @llvm.aarch64.sme.sudot.lane.za32.vg1x2.nxv16i8(i32, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, i32)
+declare void @llvm.aarch64.sme.sudot.lane.za32.vg1x4.nxv16i8(i32, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, i32)
