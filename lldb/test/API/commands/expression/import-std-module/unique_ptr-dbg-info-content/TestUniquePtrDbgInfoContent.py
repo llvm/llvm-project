@@ -22,9 +22,14 @@ class TestUniquePtrDbgInfoContent(TestBase):
 
         self.runCmd("settings set target.import-std-module true")
 
+        if self.expectedCompilerVersion(['>', '16.0']):
+            ptr_type = "std::unique_ptr<Foo>"
+        else:
+            ptr_type = "std::unique_ptr<Foo, std::default_delete<Foo> >"
+
         self.expect_expr(
             "s",
-            result_type="std::unique_ptr<Foo>",
+            result_type=ptr_type,
             result_children=[ValueCheck(children=[ValueCheck(value="3")])])
         self.expect_expr("s->a", result_type="int", result_value="3")
         self.expect_expr("s->a = 5", result_type="int", result_value="5")

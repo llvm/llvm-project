@@ -21,7 +21,11 @@ class TestDbgInfoContentDeque(TestBase):
 
         self.runCmd("settings set target.import-std-module true")
 
-        deque_type = "std::deque<Foo>"
+        if self.expectedCompilerVersion(['>', '16.0']):
+            deque_type = "std::deque<Foo>"
+        else:
+            deque_type = "std::deque<Foo, std::allocator<Foo> >"
+
         size_type = "size_type"
         value_type = "value_type"
 
