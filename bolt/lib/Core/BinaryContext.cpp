@@ -16,6 +16,7 @@
 #include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/NameResolver.h"
 #include "bolt/Utils/Utils.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
@@ -1500,10 +1501,9 @@ unsigned BinaryContext::addDebugFilenameToUnit(const uint32_t DestCUID,
 
 std::vector<BinaryFunction *> BinaryContext::getSortedFunctions() {
   std::vector<BinaryFunction *> SortedFunctions(BinaryFunctions.size());
-  llvm::transform(BinaryFunctions, SortedFunctions.begin(),
-                  [](std::pair<const uint64_t, BinaryFunction> &BFI) {
-                    return &BFI.second;
-                  });
+  llvm::transform(llvm::make_second_range(BinaryFunctions),
+                  SortedFunctions.begin(),
+                  [](BinaryFunction &BF) { return &BF; });
 
   llvm::stable_sort(SortedFunctions,
                     [](const BinaryFunction *A, const BinaryFunction *B) {
@@ -1518,10 +1518,9 @@ std::vector<BinaryFunction *> BinaryContext::getSortedFunctions() {
 std::vector<BinaryFunction *> BinaryContext::getAllBinaryFunctions() {
   std::vector<BinaryFunction *> AllFunctions;
   AllFunctions.reserve(BinaryFunctions.size() + InjectedBinaryFunctions.size());
-  llvm::transform(BinaryFunctions, std::back_inserter(AllFunctions),
-                  [](std::pair<const uint64_t, BinaryFunction> &BFI) {
-                    return &BFI.second;
-                  });
+  llvm::transform(llvm::make_second_range(BinaryFunctions),
+                  std::back_inserter(AllFunctions),
+                  [](BinaryFunction &BF) { return &BF; });
   llvm::copy(InjectedBinaryFunctions, std::back_inserter(AllFunctions));
 
   return AllFunctions;

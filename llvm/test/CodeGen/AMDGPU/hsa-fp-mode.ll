@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}test_default_ci:
 ; GCN: float_mode = 240
@@ -99,3 +99,6 @@ attributes #5 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
 attributes #6 = { nounwind "amdgpu-dx10-clamp"="false" "target-cpu"="fiji" }
 attributes #7 = { nounwind "amdgpu-ieee"="false" "target-cpu"="fiji" }
 attributes #8 = { nounwind "amdgpu-dx10-clamp"="false" "amdgpu-ieee"="false" "target-cpu"="fiji" }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 200}

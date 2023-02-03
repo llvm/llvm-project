@@ -503,6 +503,7 @@ if(runtimes)
         sanstats
         llvm_gtest_main
         llvm_gtest
+        split-file
       )
     foreach(target ${test_targets} ${SUB_CHECK_TARGETS})
       add_dependencies(${target} ${RUNTIMES_TEST_DEPENDS})

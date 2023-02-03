@@ -91,6 +91,8 @@ bool AMDGPUPostLegalizerCombinerHelper::matchFMinFMaxLegacy(
   Info.True = MI.getOperand(2).getReg();
   Info.False = MI.getOperand(3).getReg();
 
+  // TODO: Handle case where the the selected value is an fneg and the compared
+  // constant is the negation of the selected value.
   if (!(Info.LHS == Info.True && Info.RHS == Info.False) &&
       !(Info.LHS == Info.False && Info.RHS == Info.True))
     return false;

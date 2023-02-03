@@ -1032,6 +1032,7 @@ struct AAPointerInfoImpl
 
   bool forallInterferingAccesses(
       Attributor &A, const AbstractAttribute &QueryingAA, Instruction &I,
+      bool FindInterferingWrites, bool FindInterferingReads,
       function_ref<bool(const Access &, bool)> UserCB, bool &HasBeenWrittenTo,
       AA::RangeTy &Range) const override {
     HasBeenWrittenTo = false;
@@ -1099,8 +1100,6 @@ struct AAPointerInfoImpl
     const auto &NoRecurseAA = A.getAAFor<AANoRecurse>(
         QueryingAA, IRPosition::function(Scope), DepClassTy::OPTIONAL);
 
-    const bool FindInterferingWrites = I.mayReadFromMemory();
-    const bool FindInterferingReads = I.mayWriteToMemory();
     const bool UseDominanceReasoning =
         FindInterferingWrites && NoRecurseAA.isKnownNoRecurse();
     const DominatorTree *DT =

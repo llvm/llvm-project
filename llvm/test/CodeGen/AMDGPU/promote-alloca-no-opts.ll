@@ -1,5 +1,5 @@
-; RUN: llc -O0 -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri --amdhsa-code-object-version=2 -mattr=+promote-alloca < %s | FileCheck -check-prefix=NOOPTS -check-prefix=ALL %s
-; RUN: llc -O1 -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri --amdhsa-code-object-version=2 -mattr=+promote-alloca < %s | FileCheck -check-prefix=OPTS -check-prefix=ALL %s
+; RUN: llc -O0 -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -mattr=+promote-alloca < %s | FileCheck -check-prefix=NOOPTS -check-prefix=ALL %s
+; RUN: llc -O1 -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -mattr=+promote-alloca < %s | FileCheck -check-prefix=OPTS -check-prefix=ALL %s
 
 ; ALL-LABEL: {{^}}promote_alloca_i32_array_array:
 ; NOOPTS: workgroup_group_segment_byte_size = 0{{$}}
@@ -34,3 +34,6 @@ entry:
 
 attributes #0 = { nounwind "amdgpu-flat-work-group-size"="64,64" }
 attributes #1 = { nounwind optnone noinline "amdgpu-flat-work-group-size"="64,64" }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 200}

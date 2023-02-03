@@ -27,6 +27,19 @@ Parts:
       NumThreadsX:     512
       NumThreadsY:     1024
       NumThreadsZ:     2048
+      Resources:
+        - Type:            1
+          Space:           2
+          LowerBound:      3
+          UpperBound:      4
+          Kind:            5
+          Flags:           6
+        - Type:            128
+          Space:           32768
+          LowerBound:      8388608
+          UpperBound:      2147483648
+          Kind:            65535
+          Flags:           16776960
   - Name:            DXIL
     Size:            24
     Program:
@@ -56,4 +69,17 @@ Parts:
 # CHECK-NEXT: NumThreadsX:     512
 # CHECK-NEXT: NumThreadsY:     1024
 # CHECK-NEXT: NumThreadsZ:     2048
+# CHECK-NEXT: Resources:
+# CHECK-NEXT: - Type:            1
+# CHECK-NEXT: Space:           2
+# CHECK-NEXT: LowerBound:      3
+# CHECK-NEXT: UpperBound:      4
+# CHECK-NEXT: Kind:            5
+# CHECK-NEXT: Flags:           6
+# CHECK-NEXT: - Type:            128
+# CHECK-NEXT: Space:           32768
+# CHECK-NEXT: LowerBound:      8388608
+# CHECK-NEXT: UpperBound:      2147483648
+# CHECK-NEXT: Kind:            65535
+# CHECK-NEXT: Flags:           16776960
 # CHECK-NEXT: Name

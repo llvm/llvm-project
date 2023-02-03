@@ -109,10 +109,8 @@ public:
   void mangleCXXCtorVTable(const CXXRecordDecl *RD, int64_t Offset,
                            const CXXRecordDecl *Type, raw_ostream &) override;
   void mangleCXXRTTI(QualType T, raw_ostream &) override;
-  void mangleCXXRTTIName(QualType T, raw_ostream &,
-                         bool NormalizeIntegers) override;
-  void mangleTypeName(QualType T, raw_ostream &,
-                      bool NormalizeIntegers) override;
+  void mangleCXXRTTIName(QualType T, raw_ostream &) override;
+  void mangleTypeName(QualType T, raw_ostream &) override;
 
   void mangleCXXCtorComdat(const CXXConstructorDecl *D, raw_ostream &) override;
   void mangleCXXDtorComdat(const CXXDestructorDecl *D, raw_ostream &) override;
@@ -217,10 +215,6 @@ public:
 class CXXNameMangler {
   ItaniumMangleContextImpl &Context;
   raw_ostream &Out;
-  /// Normalize integer types for cross-language CFI support with other
-  /// languages that can't represent and encode C/C++ integer types.
-  bool NormalizeIntegers = false;
-
   bool NullOut = false;
   /// In the "DisableDerivedAbiTags" mode derived ABI tags are not calculated.
   /// This mode is used when mangler creates another mangler recursively to
@@ -419,10 +413,6 @@ public:
       : Context(C), Out(Out_), Structor(getStructor(D)), StructorType(Type),
         AbiTagsRoot(AbiTags) {}
 
-  CXXNameMangler(ItaniumMangleContextImpl &C, raw_ostream &Out_,
-                 bool NormalizeIntegers_)
-      : Context(C), Out(Out_), NormalizeIntegers(NormalizeIntegers_),
-        NullOut(false), AbiTagsRoot(AbiTags) {}
   CXXNameMangler(CXXNameMangler &Outer, raw_ostream &Out_)
       : Context(Outer.Context), Out(Out_), Structor(Outer.Structor),
         StructorType(Outer.StructorType), SeqID(Outer.SeqID),
@@ -2947,85 +2937,6 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
   //                 ::= Dn # std::nullptr_t (i.e., decltype(nullptr))
   //                 ::= u <source-name>    # vendor extended type
   std::string type_name;
-  // Normalize integer types as vendor extended types:
-  // u<length>i<type size>
-  // u<length>u<type size>
-  if (NormalizeIntegers && T->isInteger()) {
-    if (T->isSignedInteger()) {
-      switch (getASTContext().getTypeSize(T)) {
-      case 8:
-        // Pick a representative for each integer size in the substitution
-        // dictionary. (Its actual defined size is not relevant.)
-        if (mangleSubstitution(BuiltinType::SChar))
-          break;
-        Out << "u2i8";
-        addSubstitution(BuiltinType::SChar);
-        break;
-      case 16:
-        if (mangleSubstitution(BuiltinType::Short))
-          break;
-        Out << "u3i16";
-        addSubstitution(BuiltinType::Short);
-        break;
-      case 32:
-        if (mangleSubstitution(BuiltinType::Int))
-          break;
-        Out << "u3i32";
-        addSubstitution(BuiltinType::Int);
-        break;
-      case 64:
-        if (mangleSubstitution(BuiltinType::Long))
-          break;
-        Out << "u3i64";
-        addSubstitution(BuiltinType::Long);
-        break;
-      case 128:
-        if (mangleSubstitution(BuiltinType::Int128))
-          break;
-        Out << "u4i128";
-        addSubstitution(BuiltinType::Int128);
-        break;
-      default:
-        llvm_unreachable("Unknown integer size for normalization");
-      }
-    } else {
-      switch (getASTContext().getTypeSize(T)) {
-      case 8:
-        if (mangleSubstitution(BuiltinType::UChar))
-          break;
-        Out << "u2u8";
-        addSubstitution(BuiltinType::UChar);
-        break;
-      case 16:
-        if (mangleSubstitution(BuiltinType::UShort))
-          break;
-        Out << "u3u16";
-        addSubstitution(BuiltinType::UShort);
-        break;
-      case 32:
-        if (mangleSubstitution(BuiltinType::UInt))
-          break;
-        Out << "u3u32";
-        addSubstitution(BuiltinType::UInt);
-        break;
-      case 64:
-        if (mangleSubstitution(BuiltinType::ULong))
-          break;
-        Out << "u3u64";
-        addSubstitution(BuiltinType::ULong);
-        break;
-      case 128:
-        if (mangleSubstitution(BuiltinType::UInt128))
-          break;
-        Out << "u4u128";
-        addSubstitution(BuiltinType::UInt128);
-        break;
-      default:
-        llvm_unreachable("Unknown integer size for normalization");
-      }
-    }
-    return;
-  }
   switch (T->getKind()) {
   case BuiltinType::Void:
     Out << 'v';
@@ -6618,17 +6529,16 @@ void ItaniumMangleContextImpl::mangleCXXRTTI(QualType Ty, raw_ostream &Out) {
   Mangler.mangleType(Ty);
 }
 
-void ItaniumMangleContextImpl::mangleCXXRTTIName(
-    QualType Ty, raw_ostream &Out, bool NormalizeIntegers = false) {
+void ItaniumMangleContextImpl::mangleCXXRTTIName(QualType Ty,
+                                                 raw_ostream &Out) {
   // <special-name> ::= TS <type>  # typeinfo name (null terminated byte string)
-  CXXNameMangler Mangler(*this, Out, NormalizeIntegers);
+  CXXNameMangler Mangler(*this, Out);
   Mangler.getStream() << "_ZTS";
   Mangler.mangleType(Ty);
 }
 
-void ItaniumMangleContextImpl::mangleTypeName(QualType Ty, raw_ostream &Out,
-                                              bool NormalizeIntegers = false) {
-  mangleCXXRTTIName(Ty, Out, NormalizeIntegers);
+void ItaniumMangleContextImpl::mangleTypeName(QualType Ty, raw_ostream &Out) {
+  mangleCXXRTTIName(Ty, Out);
 }
 
 void ItaniumMangleContextImpl::mangleStringLiteral(const StringLiteral *, raw_ostream &) {

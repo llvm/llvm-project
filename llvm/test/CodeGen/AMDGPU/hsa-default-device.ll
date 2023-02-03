@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=2 < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck %s
 
 ; Make sure that with an HSA triple, we don't default to an
 ; unsupported device.
@@ -9,3 +9,5 @@ define amdgpu_kernel void @test_kernel(ptr addrspace(1) %out0, ptr addrspace(1) 
   ret void
 }
 
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 200}
