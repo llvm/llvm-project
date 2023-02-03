@@ -45,6 +45,6 @@ class TestVSCode_optimized(lldbvscode_testcase.VSCodeTestCaseBase):
         self.assertEqual(len(breakpoint_ids), len(lines),
                         "expect correct number of breakpoints")
         self.continue_to_breakpoints(breakpoint_ids)
-        optimized_variable = self.vscode.get_local_variable('optimized')
+        optimized_variable = self.vscode.get_local_variable('argc')
 
         self.assertTrue(optimized_variable['value'].startswith('<error:'))
