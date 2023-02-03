@@ -157,6 +157,10 @@ LoongArch Support in Clang
 
 RISC-V Support in Clang
 -----------------------
+- Added ``-mrvv-vector-bits=`` option to give an upper and lower bound on vector
+  length. Valid values are powers of 2 between 64 and 65536. A value of 32
+  should eventually be supported. We also accept "zvl" to use the Zvl*b
+  extension from ``-march`` or ``-mcpu`` to the be the upper and lower bound.
 
 X86 Support in Clang
 --------------------
