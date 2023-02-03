@@ -10321,44 +10321,25 @@ struct AAInterFnReachabilityFunction
     if (!Visited)
       Visited = &LocalVisited;
 
-    const auto &IntraFnReachability = A.getAAFor<AAIntraFnReachability>(
-        *this, IRPosition::function(*RQI.From->getFunction()),
-        DepClassTy::OPTIONAL);
-
-    // Determine call like instructions that we can reach from the inst.
-    SmallVector<CallBase *> ReachableCallBases;
-    auto CheckCallBase = [&](Instruction &CBInst) {
-      if (IntraFnReachability.isAssumedReachable(A, *RQI.From, CBInst,
-                                                 RQI.ExclusionSet))
-        ReachableCallBases.push_back(cast<CallBase>(&CBInst));
-      return true;
-    };
-
-    bool UsedAssumedInformation = false;
-    if (!A.checkForAllCallLikeInstructions(CheckCallBase, *this,
-                                           UsedAssumedInformation,
-                                           /* CheckBBLivenessOnly */ true))
-      return rememberResult(A, RQITy::Reachable::Yes, RQI);
-
-    for (CallBase *CB : ReachableCallBases) {
+    auto CheckReachableCallBase = [&](CallBase *CB) {
       auto &CBEdges = A.getAAFor<AACallEdges>(
           *this, IRPosition::callsite_function(*CB), DepClassTy::OPTIONAL);
       if (!CBEdges.getState().isValidState())
-        return rememberResult(A, RQITy::Reachable::Yes, RQI);
+        return false;
       // TODO Check To backwards in this case.
       if (CBEdges.hasUnknownCallee())
-        return rememberResult(A, RQITy::Reachable::Yes, RQI);
+        return false;
 
       for (Function *Fn : CBEdges.getOptimisticEdges()) {
         if (Fn == RQI.To)
-          return rememberResult(A, RQITy::Reachable::Yes, RQI);
+          return false;
         if (!Visited->insert(Fn).second)
           continue;
         if (Fn->isDeclaration()) {
           if (Fn->hasFnAttribute(Attribute::NoCallback))
             continue;
           // TODO Check To backwards in this case.
-          return rememberResult(A, RQITy::Reachable::Yes, RQI);
+          return false;
         }
 
         const AAInterFnReachability *InterFnReachability = this;
@@ -10369,9 +10350,29 @@ struct AAInterFnReachabilityFunction
         const Instruction &FnFirstInst = Fn->getEntryBlock().front();
         if (InterFnReachability->instructionCanReach(A, FnFirstInst, *RQI.To,
                                                      RQI.ExclusionSet, Visited))
-          return rememberResult(A, RQITy::Reachable::Yes, RQI);
+          return false;
       }
-    }
+      return true;
+    };
+
+    const auto &IntraFnReachability = A.getAAFor<AAIntraFnReachability>(
+        *this, IRPosition::function(*RQI.From->getFunction()),
+        DepClassTy::OPTIONAL);
+
+    // Determine call like instructions that we can reach from the inst.
+    auto CheckCallBase = [&](Instruction &CBInst) {
+      if (!IntraFnReachability.isAssumedReachable(A, *RQI.From, CBInst,
+                                                  RQI.ExclusionSet))
+        return true;
+      return CheckReachableCallBase(cast<CallBase>(&CBInst));
+    };
+
+    bool UsedExclusionSet = /* conservative */ true;
+    bool UsedAssumedInformation = false;
+    if (!A.checkForAllCallLikeInstructions(CheckCallBase, *this,
+                                           UsedAssumedInformation,
+                                           /* CheckBBLivenessOnly */ true))
+      return rememberResult(A, RQITy::Reachable::Yes, RQI);
 
     return rememberResult(A, RQITy::Reachable::No, RQI);
   }
