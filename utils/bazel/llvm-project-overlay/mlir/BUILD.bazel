@@ -9204,8 +9204,10 @@ cc_library(
     deps = [
         ":Analysis",
         ":IR",
+        ":Parser",
         ":Pass",
         ":SideEffectInterfaces",
+        ":Support",
         ":TransformDialect",
         ":TransformDialectTransformsIncGen",
         "//llvm:Support",
