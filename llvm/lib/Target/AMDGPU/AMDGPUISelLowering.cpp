@@ -1421,15 +1421,16 @@ SDValue AMDGPUTargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
   return DAG.getBuildVector(Op.getValueType(), SDLoc(Op), Args);
 }
 
-/// Generate Min/Max node
-SDValue AMDGPUTargetLowering::combineFMinMaxLegacy(const SDLoc &DL, EVT VT,
-                                                   SDValue LHS, SDValue RHS,
-                                                   SDValue True, SDValue False,
-                                                   SDValue CC,
-                                                   DAGCombinerInfo &DCI) const {
-  if (!(LHS == True && RHS == False) && !(LHS == False && RHS == True))
-    return SDValue();
+// TODO: Handle fabs too
+static SDValue peekFNeg(SDValue Val) {
+  if (Val.getOpcode() == ISD::FNEG)
+    return Val.getOperand(0);
 
+  return Val;
+}
+SDValue AMDGPUTargetLowering::combineFMinMaxLegacyImpl(
+    const SDLoc &DL, EVT VT, SDValue LHS, SDValue RHS, SDValue True,
+    SDValue False, SDValue CC, DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
   ISD::CondCode CCOpcode = cast<CondCodeSDNode>(CC)->get();
   switch (CCOpcode) {
@@ -1492,6 +1493,45 @@ SDValue AMDGPUTargetLowering::combineFMinMaxLegacy(const SDLoc &DL, EVT VT,
   case ISD::SETCC_INVALID:
     llvm_unreachable("Invalid setcc condcode!");
   }
+  return SDValue();
+}
+
+/// Generate Min/Max node
+SDValue AMDGPUTargetLowering::combineFMinMaxLegacy(const SDLoc &DL, EVT VT,
+                                                   SDValue LHS, SDValue RHS,
+                                                   SDValue True, SDValue False,
+                                                   SDValue CC,
+                                                   DAGCombinerInfo &DCI) const {
+  if ((LHS == True && RHS == False) || (LHS == False && RHS == True))
+    return combineFMinMaxLegacyImpl(DL, VT, LHS, RHS, True, False, CC, DCI);
+
+  SelectionDAG &DAG = DCI.DAG;
+
+  // If we can't directly match this, try to see if we can fold an fneg to
+  // match.
+
+  ConstantFPSDNode *CRHS = dyn_cast<ConstantFPSDNode>(RHS);
+  ConstantFPSDNode *CFalse = dyn_cast<ConstantFPSDNode>(False);
+  SDValue NegTrue = peekFNeg(True);
+
+  // Undo the combine foldFreeOpFromSelect does if it helps us match the
+  // fmin/fmax.
+  //
+  // select (fcmp olt (lhs, K)), (fneg lhs), -K
+  // -> fneg (fmin_legacy lhs, K)
+  //
+  // TODO: Use getNegatedExpression
+  if (LHS == NegTrue && CFalse && CRHS) {
+    APFloat NegRHS = neg(CRHS->getValueAPF());
+    if (NegRHS == CFalse->getValueAPF()) {
+      SDValue Combined =
+          combineFMinMaxLegacyImpl(DL, VT, LHS, RHS, NegTrue, False, CC, DCI);
+      if (Combined)
+        return DAG.getNode(ISD::FNEG, DL, VT, Combined);
+      return SDValue();
+    }
+  }
+
   return SDValue();
 }
 
@@ -3837,12 +3877,9 @@ static unsigned inverseMinMax(unsigned Opc) {
   }
 }
 
-SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
-                                                 DAGCombinerInfo &DCI) const {
-  SelectionDAG &DAG = DCI.DAG;
-  SDValue N0 = N->getOperand(0);
-  EVT VT = N->getValueType(0);
-
+/// \return true if it's profitable to try to push an fneg into its source
+/// instruction.
+bool AMDGPUTargetLowering::shouldFoldFNegIntoSrc(SDNode *N, SDValue N0) {
   unsigned Opc = N0.getOpcode();
 
   // If the input has multiple uses and we can either fold the negate down, or
@@ -3853,12 +3890,26 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
     // This may be able to fold into the source, but at a code size cost. Don't
     // fold if the fold into the user is free.
     if (allUsesHaveSourceMods(N, 0))
-      return SDValue();
+      return false;
   } else {
     if (fnegFoldsIntoOp(Opc) &&
         (allUsesHaveSourceMods(N) || !allUsesHaveSourceMods(N0.getNode())))
-      return SDValue();
+      return false;
   }
+
+  return true;
+}
+
+SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
+                                                 DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+
+  unsigned Opc = N0.getOpcode();
+
+  if (!shouldFoldFNegIntoSrc(N, N0))
+    return SDValue();
 
   SDLoc SL(N);
   switch (Opc) {
