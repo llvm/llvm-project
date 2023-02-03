@@ -208,6 +208,7 @@ SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord) {
   case AtomicOrdering::NotAtomic:
     return SPIRV::MemorySemantics::None;
   }
+  llvm_unreachable(nullptr);
 }
 
 MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
