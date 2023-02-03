@@ -26,12 +26,7 @@ static cl::opt<bool> EnableAddPhiTranslation(
     cl::desc("Enable phi-translation of add instructions"));
 
 static bool canPHITrans(Instruction *Inst) {
-  if (isa<PHINode>(Inst) ||
-      isa<GetElementPtrInst>(Inst))
-    return true;
-
-  if (isa<CastInst>(Inst) &&
-      isSafeToSpeculativelyExecute(Inst))
+  if (isa<PHINode>(Inst) || isa<GetElementPtrInst>(Inst) || isa<CastInst>(Inst))
     return true;
 
   if (Inst->getOpcode() == Instruction::Add &&
@@ -182,7 +177,6 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
   // operands need to be phi translated, and if so, reconstruct it.
 
   if (CastInst *Cast = dyn_cast<CastInst>(Inst)) {
-    if (!isSafeToSpeculativelyExecute(Cast)) return nullptr;
     Value *PHIIn = translateSubExpr(Cast->getOperand(0), CurBB, PredBB, DT);
     if (!PHIIn) return nullptr;
     if (PHIIn == Cast->getOperand(0))
@@ -373,7 +367,6 @@ Value *PHITransAddr::insertTranslatedSubExpr(
 
   // Handle cast of PHI translatable value.
   if (CastInst *Cast = dyn_cast<CastInst>(Inst)) {
-    if (!isSafeToSpeculativelyExecute(Cast)) return nullptr;
     Value *OpVal = insertTranslatedSubExpr(Cast->getOperand(0), CurBB, PredBB,
                                            DT, NewInsts);
     if (!OpVal) return nullptr;
