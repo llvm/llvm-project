@@ -72,8 +72,6 @@ Non-comprehensive list of changes in this release
 - Clang now saves the address of ABI-indirect function parameters on the stack,
   improving the debug information available in programs compiled without
   optimizations.
-- Clang now supports ``__builtin_nondeterministic_value`` that returns a
-  nondeterministic value of the same type as the provided argument.
 
 New Compiler Flags
 ------------------
