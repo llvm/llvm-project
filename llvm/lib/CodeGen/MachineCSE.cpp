@@ -265,10 +265,8 @@ bool MachineCSE::isPhysDefTriviallyDead(
 }
 
 static bool isCallerPreservedOrConstPhysReg(MCRegister Reg,
-                                            const MachineOperand &MO,
                                             const MachineFunction &MF,
-                                            const TargetRegisterInfo &TRI,
-                                            const TargetInstrInfo &TII) {
+                                            const TargetRegisterInfo &TRI) {
   // MachineRegisterInfo::isConstantPhysReg directly called by
   // MachineRegisterInfo::isCallerPreservedOrConstPhysReg expects the
   // reserved registers to be frozen. That doesn't cause a problem  post-ISel as
@@ -277,7 +275,7 @@ static bool isCallerPreservedOrConstPhysReg(MCRegister Reg,
   // It does cause issues mid-GlobalISel, however, hence the additional
   // reservedRegsFrozen check.
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  return TRI.isCallerPreservedPhysReg(Reg, MF) || TII.isIgnorableUse(MO) ||
+  return TRI.isCallerPreservedPhysReg(Reg, MF) ||
          (MRI.reservedRegsFrozen() && MRI.isConstantPhysReg(Reg));
 }
 
@@ -300,8 +298,7 @@ bool MachineCSE::hasLivePhysRegDefUses(const MachineInstr *MI,
     if (Reg.isVirtual())
       continue;
     // Reading either caller preserved or constant physregs is ok.
-    if (!isCallerPreservedOrConstPhysReg(Reg.asMCReg(), MO, *MI->getMF(), *TRI,
-                                         *TII))
+    if (!isCallerPreservedOrConstPhysReg(Reg.asMCReg(), *MI->getMF(), *TRI))
       for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
         PhysRefs.insert(*AI);
   }
