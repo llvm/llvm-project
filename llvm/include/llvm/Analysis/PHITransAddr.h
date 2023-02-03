@@ -52,8 +52,7 @@ public:
   PHITransAddr(Value *Addr, const DataLayout &DL, AssumptionCache *AC)
       : Addr(Addr), DL(DL), AC(AC) {
     // If the address is an instruction, the whole thing is considered an input.
-    if (Instruction *I = dyn_cast<Instruction>(Addr))
-      InstInputs.push_back(I);
+    addAsInput(Addr);
   }
 
   Value *getAddr() const { return Addr; }
@@ -63,10 +62,9 @@ public:
   bool needsPHITranslationFromBlock(BasicBlock *BB) const {
     // We do need translation if one of our input instructions is defined in
     // this block.
-    for (unsigned i = 0, e = InstInputs.size(); i != e; ++i)
-      if (InstInputs[i]->getParent() == BB)
-        return true;
-    return false;
+    return any_of(InstInputs, [BB](const auto &InstInput) {
+      return InstInput->getParent() == BB;
+    });
   }
 
   /// isPotentiallyPHITranslatable - If this needs PHI translation, return true
