@@ -81,12 +81,10 @@ entry:
 define i64 @ldptr_d(ptr %p) nounwind {
 ; LA32-LABEL: ldptr_d:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    ori $a1, $zero, 2052
+; LA32-NEXT:    ori $a1, $zero, 2048
 ; LA32-NEXT:    add.w $a1, $a0, $a1
-; LA32-NEXT:    ori $a2, $zero, 2048
-; LA32-NEXT:    add.w $a0, $a0, $a2
-; LA32-NEXT:    ld.w $a0, $a0, 0
-; LA32-NEXT:    ld.w $a1, $a1, 0
+; LA32-NEXT:    ld.w $a0, $a1, 0
+; LA32-NEXT:    ld.w $a1, $a1, 4
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: ldptr_d:
@@ -104,11 +102,9 @@ define i64 @ldptr_d_too_big_offset(ptr %p) nounwind {
 ; LA32-LABEL: ldptr_d_too_big_offset:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    lu12i.w $a1, 8
-; LA32-NEXT:    ori $a2, $a1, 4
-; LA32-NEXT:    add.w $a2, $a0, $a2
-; LA32-NEXT:    add.w $a0, $a0, $a1
-; LA32-NEXT:    ld.w $a0, $a0, 0
-; LA32-NEXT:    ld.w $a1, $a2, 0
+; LA32-NEXT:    add.w $a1, $a0, $a1
+; LA32-NEXT:    ld.w $a0, $a1, 0
+; LA32-NEXT:    ld.w $a1, $a1, 4
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: ldptr_d_too_big_offset:

@@ -950,7 +950,6 @@ private:
     if (blockIsUnterminated())
       builder->create<mlir::func::ReturnOp>(toLocation());
   }
-  void genFIR(const Fortran::parser::EndProgramStmt &) { genExitRoutine(); }
 
   /// END of procedure-like constructs
   ///
@@ -3059,6 +3058,7 @@ private:
         getEval().getOwningProcedure();
     assert(funit && "not inside main program, function or subroutine");
     if (funit->isMainProgram()) {
+      bridge.fctCtx().finalizeAndKeep();
       genExitRoutine();
       return;
     }
@@ -3114,6 +3114,7 @@ private:
   void genFIR(const Fortran::parser::EndFunctionStmt &) {}     // nop
   void genFIR(const Fortran::parser::EndIfStmt &) {}           // nop
   void genFIR(const Fortran::parser::EndMpSubprogramStmt &) {} // nop
+  void genFIR(const Fortran::parser::EndProgramStmt &) {}      // nop
   void genFIR(const Fortran::parser::EndSelectStmt &) {}       // nop
   void genFIR(const Fortran::parser::EndSubroutineStmt &) {}   // nop
   void genFIR(const Fortran::parser::EntryStmt &) {}           // nop
@@ -3438,16 +3439,8 @@ private:
   void endNewFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
     setCurrentPosition(Fortran::lower::pft::stmtSourceLoc(funit.endStmt));
     if (funit.isMainProgram()) {
-      if (!blockIsUnterminated()) {
-        auto insertPt = builder->saveInsertionPoint();
-        mlir::Block *currentBlock = builder->getBlock();
-        builder->setInsertionPoint(&currentBlock->back());
-        bridge.fctCtx().finalizeAndPop();
-        builder->restoreInsertionPoint(insertPt);
-      } else {
-        bridge.fctCtx().finalizeAndPop();
-        genExitRoutine();
-      }
+      bridge.fctCtx().finalizeAndPop();
+      genExitRoutine();
     } else {
       genFIRProcedureExit(funit, funit.getSubprogramSymbol());
     }

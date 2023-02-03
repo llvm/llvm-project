@@ -1,4 +1,4 @@
-numpy
-pybind11>=2.8.0
-PyYAML
-dataclasses
+numpy>=1.19.5, <=1.23.5
+pybind11>=2.8.0, <=2.10.3
+PyYAML==6.0
+dataclasses>=0.6, <=0.8

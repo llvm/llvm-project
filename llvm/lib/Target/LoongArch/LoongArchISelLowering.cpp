@@ -2330,6 +2330,39 @@ bool LoongArchTargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
   return CI->isTailCall();
 }
 
+// Check if the return value is used as only a return value, as otherwise
+// we can't perform a tail-call.
+bool LoongArchTargetLowering::isUsedByReturnOnly(SDNode *N,
+                                                 SDValue &Chain) const {
+  if (N->getNumValues() != 1)
+    return false;
+  if (!N->hasNUsesOfValue(1, 0))
+    return false;
+
+  SDNode *Copy = *N->use_begin();
+  if (Copy->getOpcode() != ISD::CopyToReg)
+    return false;
+
+  // If the ISD::CopyToReg has a glue operand, we conservatively assume it
+  // isn't safe to perform a tail call.
+  if (Copy->getGluedNode())
+    return false;
+
+  // The copy must be used by a LoongArchISD::RET, and nothing else.
+  bool HasRet = false;
+  for (SDNode *Node : Copy->uses()) {
+    if (Node->getOpcode() != LoongArchISD::RET)
+      return false;
+    HasRet = true;
+  }
+
+  if (!HasRet)
+    return false;
+
+  Chain = Copy->getOperand(0);
+  return true;
+}
+
 // Check whether the call is eligible for tail call optimization.
 bool LoongArchTargetLowering::isEligibleForTailCallOptimization(
     CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,
@@ -3108,4 +3141,49 @@ bool LoongArchTargetLowering::decomposeMulByConstant(LLVMContext &Context,
   }
 
   return false;
+}
+
+bool LoongArchTargetLowering::isLegalAddressingMode(const DataLayout &DL,
+                                                    const AddrMode &AM,
+                                                    Type *Ty, unsigned AS,
+                                                    Instruction *I) const {
+  // LoongArch has four basic addressing modes:
+  //  1. reg
+  //  2. reg + 12-bit signed offset
+  //  3. reg + 14-bit signed offset left-shifted by 2
+  //  4. reg1 + reg2
+  // TODO: Add more checks after support vector extension.
+
+  // No global is ever allowed as a base.
+  if (AM.BaseGV)
+    return false;
+
+  // Require a 12 or 14 bit signed offset.
+  if (!isInt<12>(AM.BaseOffs) || !isShiftedInt<14, 2>(AM.BaseOffs))
+    return false;
+
+  switch (AM.Scale) {
+  case 0:
+    // "i" is not allowed.
+    if (!AM.HasBaseReg)
+      return false;
+    // Otherwise we have "r+i".
+    break;
+  case 1:
+    // "r+r+i" is not allowed.
+    if (AM.HasBaseReg && AM.BaseOffs != 0)
+      return false;
+    // Otherwise we have "r+r" or "r+i".
+    break;
+  case 2:
+    // "2*r+r" or "2*r+i" is not allowed.
+    if (AM.HasBaseReg || AM.BaseOffs)
+      return false;
+    // Otherwise we have "r+r".
+    break;
+  default:
+    return false;
+  }
+
+  return true;
 }

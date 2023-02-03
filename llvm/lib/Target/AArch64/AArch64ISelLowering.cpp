@@ -14946,8 +14946,8 @@ AArch64TargetLowering::getScratchRegisters(CallingConv::ID) const {
   return ScratchRegs;
 }
 
-const MCPhysReg *AArch64TargetLowering::getRoundingControlRegisters() const {
-  static const MCPhysReg RCRegs[] = {AArch64::FPCR, 0};
+ArrayRef<MCPhysReg> AArch64TargetLowering::getRoundingControlRegisters() const {
+  static const MCPhysReg RCRegs[] = {AArch64::FPCR};
   return RCRegs;
 }
 

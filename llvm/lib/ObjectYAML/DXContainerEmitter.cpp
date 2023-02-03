@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/Errc.h"
@@ -191,6 +192,19 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       if (sys::IsBigEndianHost)
         Hash.swapBytes();
       OS.write(reinterpret_cast<char *>(&Hash), sizeof(dxbc::ShaderHash));
+      break;
+    }
+    case dxbc::PartType::PSV0: {
+      if (!P.Info.has_value())
+        continue;
+      mcdxbc::PSVRuntimeInfo PSV;
+      memcpy(&PSV.BaseData, &P.Info->Info, sizeof(dxbc::PSV::v2::RuntimeInfo));
+      PSV.Resources = P.Info->Resources;
+
+      if (sys::IsBigEndianHost)
+        PSV.swapBytes(static_cast<Triple::EnvironmentType>(
+            Triple::Pixel + P.Info->Info.ShaderStage));
+      PSV.write(OS, P.Info->Version);
       break;
     }
     case dxbc::PartType::Unknown:

@@ -1,11 +1,11 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri -verify-machineinstrs < %s | FileCheck --check-prefixes=ALL,CO-V2,UNPACKED  %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=2 -mcpu=carrizo -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=ALL,CO-V2,UNPACKED  %s
-; RUN: llc -march=amdgcn -mcpu=hawaii -verify-machineinstrs < %s | FileCheck --check-prefixes=ALL,MESA,UNPACKED %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=ALL,MESA,UNPACKED %s
-; RUN: llc -mtriple=amdgcn-unknown-mesa3d -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,CO-V2,UNPACKED %s
-; RUN: llc -mtriple=amdgcn-unknown-mesa3d -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,CO-V2,UNPACKED %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,PACKED-TID %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1100 -verify-machineinstrs -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=ALL,PACKED-TID %s
+; RUN: sed 's/CODE_OBJECT_VERSION/200/g' %s | llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -verify-machineinstrs | FileCheck --check-prefixes=ALL,CO-V2,UNPACKED  %s
+; RUN: sed 's/CODE_OBJECT_VERSION/200/g' %s | llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=carrizo -mattr=-flat-for-global -verify-machineinstrs | FileCheck --check-prefixes=ALL,CO-V2,UNPACKED  %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -march=amdgcn -mcpu=hawaii -verify-machineinstrs | FileCheck --check-prefixes=ALL,MESA,UNPACKED %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck --check-prefixes=ALL,MESA,UNPACKED %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-unknown-mesa3d -mcpu=hawaii -verify-machineinstrs | FileCheck -check-prefixes=ALL,CO-V2,UNPACKED %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-unknown-mesa3d -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck -check-prefixes=ALL,CO-V2,UNPACKED %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx90a -verify-machineinstrs | FileCheck -check-prefixes=ALL,PACKED-TID %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1100 -verify-machineinstrs -amdgpu-enable-vopd=0 | FileCheck -check-prefixes=ALL,PACKED-TID %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare i32 @llvm.amdgcn.workitem.id.y() #0
@@ -132,6 +132,9 @@ define amdgpu_kernel void @test_reqd_workgroup_size_z_only(ptr %out) !reqd_work_
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }
 
+!llvm.module.flags = !{!3}
+
 !0 = !{i32 64, i32 1, i32 1}
 !1 = !{i32 1, i32 64, i32 1}
 !2 = !{i32 1, i32 1, i32 64}
+!3 = !{i32 1, !"amdgpu_code_object_version", i32 CODE_OBJECT_VERSION}

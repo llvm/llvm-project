@@ -7906,7 +7906,7 @@ let CategoryName = "Lambda Issue" in {
     "is a C++20 extension">, InGroup<CXX20>;
   def warn_deprecated_this_capture : Warning<
     "implicit capture of 'this' with a capture default of '=' is deprecated">,
-    InGroup<DeprecatedThisCapture>, DefaultIgnore;
+    InGroup<DeprecatedThisCapture>;
   def note_deprecated_this_capture : Note<
     "add an explicit capture of 'this' to capture '*this' by reference">;
 

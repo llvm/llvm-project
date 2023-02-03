@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SwapByteOrder.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include <stdint.h>
 
@@ -35,6 +36,12 @@ namespace llvm {
 // └────────────────────────────────┘
 
 namespace dxbc {
+
+inline Triple::EnvironmentType getShaderStage(uint32_t Kind) {
+  assert(Kind <= Triple::Amplification - Triple::Pixel &&
+         "Shader kind out of expected range.");
+  return static_cast<Triple::EnvironmentType>(Triple::Pixel + Kind);
+}
 
 struct Hash {
   uint8_t Digest[16];
@@ -141,6 +148,233 @@ static_assert((uint64_t)FeatureFlags::NextUnusedBit <= 1ull << 63,
               "Shader flag bits exceed enum size.");
 
 PartType parsePartType(StringRef S);
+
+struct VertexPSVInfo {
+  uint8_t OutputPositionPresent;
+  uint8_t Unused[3];
+
+  void swapBytes() {
+    // nothing to swap
+  }
+};
+
+struct HullPSVInfo {
+  uint32_t InputControlPointCount;
+  uint32_t OutputControlPointCount;
+  uint32_t TessellatorDomain;
+  uint32_t TessellatorOutputPrimitive;
+
+  void swapBytes() {
+    sys::swapByteOrder(InputControlPointCount);
+    sys::swapByteOrder(OutputControlPointCount);
+    sys::swapByteOrder(TessellatorDomain);
+    sys::swapByteOrder(TessellatorOutputPrimitive);
+  }
+};
+
+struct DomainPSVInfo {
+  uint32_t InputControlPointCount;
+  uint8_t OutputPositionPresent;
+  uint8_t Unused[3];
+  uint32_t TessellatorDomain;
+
+  void swapBytes() {
+    sys::swapByteOrder(InputControlPointCount);
+    sys::swapByteOrder(TessellatorDomain);
+  }
+};
+
+struct GeometryPSVInfo {
+  uint32_t InputPrimitive;
+  uint32_t OutputTopology;
+  uint32_t OutputStreamMask;
+  uint8_t OutputPositionPresent;
+  uint8_t Unused[3];
+
+  void swapBytes() {
+    sys::swapByteOrder(InputPrimitive);
+    sys::swapByteOrder(OutputTopology);
+    sys::swapByteOrder(OutputStreamMask);
+  }
+};
+
+struct PixelPSVInfo {
+  uint8_t DepthOutput;
+  uint8_t SampleFrequency;
+  uint8_t Unused[2];
+
+  void swapBytes() {
+    // nothing to swap
+  }
+};
+
+struct MeshPSVInfo {
+  uint32_t GroupSharedBytesUsed;
+  uint32_t GroupSharedBytesDependentOnViewID;
+  uint32_t PayloadSizeInBytes;
+  uint16_t MaxOutputVertices;
+  uint16_t MaxOutputPrimitives;
+
+  void swapBytes() {
+    sys::swapByteOrder(GroupSharedBytesUsed);
+    sys::swapByteOrder(GroupSharedBytesDependentOnViewID);
+    sys::swapByteOrder(PayloadSizeInBytes);
+    sys::swapByteOrder(MaxOutputVertices);
+    sys::swapByteOrder(MaxOutputPrimitives);
+  }
+};
+
+struct AmplificationPSVInfo {
+  uint32_t PayloadSizeInBytes;
+
+  void swapBytes() { sys::swapByteOrder(PayloadSizeInBytes); }
+};
+
+union PipelinePSVInfo {
+  VertexPSVInfo VS;
+  HullPSVInfo HS;
+  DomainPSVInfo DS;
+  GeometryPSVInfo GS;
+  PixelPSVInfo PS;
+  MeshPSVInfo MS;
+  AmplificationPSVInfo AS;
+
+  void swapBytes(Triple::EnvironmentType Stage) {
+    switch (Stage) {
+    case Triple::EnvironmentType::Pixel:
+      PS.swapBytes();
+      break;
+    case Triple::EnvironmentType::Vertex:
+      VS.swapBytes();
+      break;
+    case Triple::EnvironmentType::Geometry:
+      GS.swapBytes();
+      break;
+    case Triple::EnvironmentType::Hull:
+      HS.swapBytes();
+      break;
+    case Triple::EnvironmentType::Domain:
+      DS.swapBytes();
+      break;
+    case Triple::EnvironmentType::Mesh:
+      MS.swapBytes();
+      break;
+    case Triple::EnvironmentType::Amplification:
+      AS.swapBytes();
+      break;
+    default:
+      break;
+    }
+  }
+};
+
+static_assert(sizeof(PipelinePSVInfo) == 4 * sizeof(uint32_t),
+              "Pipeline-specific PSV info must fit in 16 bytes.");
+
+namespace PSV {
+
+namespace v0 {
+struct RuntimeInfo {
+  PipelinePSVInfo StageInfo;
+  uint32_t MinimumWaveLaneCount; // minimum lane count required, 0 if unused
+  uint32_t MaximumWaveLaneCount; // maximum lane count required,
+                                 // 0xffffffff if unused
+  void swapBytes() {
+    // Skip the union because we don't know which field it has
+    sys::swapByteOrder(MinimumWaveLaneCount);
+    sys::swapByteOrder(MaximumWaveLaneCount);
+  }
+
+  void swapBytes(Triple::EnvironmentType Stage) { StageInfo.swapBytes(Stage); }
+};
+
+struct ResourceBindInfo {
+  uint32_t Type;
+  uint32_t Space;
+  uint32_t LowerBound;
+  uint32_t UpperBound;
+
+  void swapBytes() {
+    sys::swapByteOrder(Type);
+    sys::swapByteOrder(Space);
+    sys::swapByteOrder(LowerBound);
+    sys::swapByteOrder(UpperBound);
+  }
+};
+
+} // namespace v0
+
+namespace v1 {
+
+struct MeshRuntimeInfo {
+  uint8_t SigPrimVectors; // Primitive output for MS
+  uint8_t MeshOutputTopology;
+};
+
+union GeometryExtraInfo {
+  uint16_t MaxVertexCount;            // MaxVertexCount for GS only (max 1024)
+  uint8_t SigPatchConstOrPrimVectors; // Output for HS; Input for DS;
+                                      // Primitive output for MS (overlaps
+                                      // MeshInfo::SigPrimVectors)
+  MeshRuntimeInfo MeshInfo;
+};
+struct RuntimeInfo : public v0::RuntimeInfo {
+  uint8_t ShaderStage; // PSVShaderKind
+  uint8_t UsesViewID;
+  GeometryExtraInfo GeomData;
+
+  // PSVSignatureElement counts
+  uint8_t SigInputElements;
+  uint8_t SigOutputElements;
+  uint8_t SigPatchConstOrPrimElements;
+
+  // Number of packed vectors per signature
+  uint8_t SigInputVectors;
+  uint8_t SigOutputVectors[4];
+
+  void swapBytes() {
+    // nothing to swap since everything is single-byte or a union field
+  }
+
+  void swapBytes(Triple::EnvironmentType Stage) {
+    v0::RuntimeInfo::swapBytes(Stage);
+    if (Stage == Triple::EnvironmentType::Geometry)
+      sys::swapByteOrder(GeomData.MaxVertexCount);
+  }
+};
+
+} // namespace v1
+
+namespace v2 {
+struct RuntimeInfo : public v1::RuntimeInfo {
+  uint32_t NumThreadsX;
+  uint32_t NumThreadsY;
+  uint32_t NumThreadsZ;
+
+  void swapBytes() {
+    sys::swapByteOrder(NumThreadsX);
+    sys::swapByteOrder(NumThreadsY);
+    sys::swapByteOrder(NumThreadsZ);
+  }
+
+  void swapBytes(Triple::EnvironmentType Stage) {
+    v1::RuntimeInfo::swapBytes(Stage);
+  }
+};
+
+struct ResourceBindInfo : public v0::ResourceBindInfo {
+  uint32_t Kind;
+  uint32_t Flags;
+
+  void swapBytes() {
+    v0::ResourceBindInfo::swapBytes();
+    sys::swapByteOrder(Kind);
+    sys::swapByteOrder(Flags);
+  }
+};
+
+} // namespace v2
+} // namespace PSV
 
 } // namespace dxbc
 } // namespace llvm
