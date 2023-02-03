@@ -6492,6 +6492,7 @@ cc_library(
     srcs = [
         "lib/Target/LLVMIR/DebugTranslation.cpp",
         "lib/Target/LLVMIR/DebugTranslation.h",
+        "lib/Target/LLVMIR/LoopAnnotationTranslation.cpp",
         "lib/Target/LLVMIR/ModuleTranslation.cpp",
         "lib/Target/LLVMIR/TypeToLLVM.cpp",
     ],
@@ -6501,6 +6502,7 @@ cc_library(
         "include/mlir/Target/LLVMIR/ModuleTranslation.h",
         "include/mlir/Target/LLVMIR/TypeToLLVM.h",
         "lib/Target/LLVMIR/AttrKindDetail.h",
+        "lib/Target/LLVMIR/LoopAnnotationTranslation.h",
     ],
     includes = ["include"],
     deps = [
