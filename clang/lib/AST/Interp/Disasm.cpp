@@ -34,6 +34,7 @@ template <typename T> inline T ReadArg(Program &P, CodePtr &OpPC) {
 LLVM_DUMP_METHOD void Function::dump() const { dump(llvm::errs()); }
 
 LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS) const {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   if (F) {
     if (const auto *MD = dyn_cast<CXXMethodDecl>(F))
       OS << MD->getParent()->getDeclName() << "::";
@@ -64,6 +65,7 @@ LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS) const {
 #undef GET_DISASM
     }
   }
+#endif
 }
 
 LLVM_DUMP_METHOD void Program::dump() const { dump(llvm::errs()); }
