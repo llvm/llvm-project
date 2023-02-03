@@ -367,6 +367,7 @@ struct ResourceBindInfo : public v0::ResourceBindInfo {
   uint32_t Flags;
 
   void swapBytes() {
+    v0::ResourceBindInfo::swapBytes();
     sys::swapByteOrder(Kind);
     sys::swapByteOrder(Flags);
   }
