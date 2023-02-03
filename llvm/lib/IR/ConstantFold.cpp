@@ -1070,10 +1070,6 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
             // appropriate defaults
             if (isa<Function>(GV) && !DL.getFunctionPtrAlign())
               GVAlign = Align(4);
-          } else if (isa<Function>(GV)) {
-            // Without a datalayout we have to assume the worst case: that the
-            // function pointer isn't aligned at all.
-            GVAlign = Align(1);
           } else if (isa<GlobalVariable>(GV)) {
             GVAlign = cast<GlobalVariable>(GV)->getAlign().valueOrOne();
           }
