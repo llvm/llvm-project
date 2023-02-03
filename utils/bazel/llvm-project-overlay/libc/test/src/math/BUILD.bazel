@@ -572,3 +572,129 @@ math_test(
         "//libc/utils/MPFRWrapper:mpfr_wrapper",
     ],
 )
+
+math_test(
+    name = "tanf",
+    deps = [
+        ":sdcomp26094",
+        "//libc:__support_cpp_array",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "expf",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ]
+)
+
+math_test(
+    name = "exp2f",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ]
+)
+math_test(
+    name = "exp10f",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ]
+)
+math_test(
+    name = "expm1f",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ]
+)
+
+math_test(
+    name = "logf",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ]
+)
+
+math_test(
+    name = "log2f",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ]
+)
+
+math_test(
+    name = "log10f",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ]
+)
+
+math_test(
+    name = "log1pf",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ]
+)
+
+math_test(
+    name = "sinhf",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ]
+)
+
+math_test(
+    name = "coshf",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ]
+)
+
+math_test(
+    name = "tanhf",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ]
+)
+
+math_test(
+    name = "asinhf",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ]
+)
+
+math_test(
+    name = "acoshf",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ]
+)
+
+math_test(
+    name = "atanhf",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ]
+)
+
+math_test(
+    name = "asinf",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ]
+)
+
+math_test(
+    name = "acosf",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ]
+)
+
+math_test(
+    name = "atanf",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ]
+)
