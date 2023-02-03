@@ -320,7 +320,7 @@ bool AMDGPUTargetAsmStreamer::EmitCodeEnd(const MCSubtargetInfo &STI) {
 void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     const MCSubtargetInfo &STI, StringRef KernelName,
     const amdhsa::kernel_descriptor_t &KD, uint64_t NextVGPR, uint64_t NextSGPR,
-    bool ReserveVCC, bool ReserveFlatScr) {
+    bool ReserveVCC, bool ReserveFlatScr, unsigned CodeObjectVersion) {
   IsaVersion IVersion = getIsaVersion(STI.getCPU());
 
   OS << "\t.amdhsa_kernel " << KernelName << '\n';
@@ -367,7 +367,7 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     PRINT_FIELD(OS, ".amdhsa_wavefront_size32", KD,
                 kernel_code_properties,
                 amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32);
-  if (AMDGPU::getAmdhsaCodeObjectVersion() >= 5)
+  if (CodeObjectVersion >= 5)
     PRINT_FIELD(OS, ".amdhsa_uses_dynamic_stack", KD, kernel_code_properties,
                 amdhsa::KERNEL_CODE_PROPERTY_USES_DYNAMIC_STACK);
   PRINT_FIELD(OS,
@@ -407,19 +407,17 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
   if (IVersion.Major >= 7 && !ReserveFlatScr && !hasArchitectedFlatScratch(STI))
     OS << "\t\t.amdhsa_reserve_flat_scratch " << ReserveFlatScr << '\n';
 
-  if (std::optional<uint8_t> HsaAbiVer = getHsaAbiVersion(&STI)) {
-    switch (*HsaAbiVer) {
-    default:
-      break;
-    case ELF::ELFABIVERSION_AMDGPU_HSA_V2:
-      break;
-    case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
-    case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
-    case ELF::ELFABIVERSION_AMDGPU_HSA_V5:
-      if (getTargetID()->isXnackSupported())
-        OS << "\t\t.amdhsa_reserve_xnack_mask " << getTargetID()->isXnackOnOrAny() << '\n';
-      break;
-    }
+  switch (CodeObjectVersion) {
+  default:
+    break;
+  case 2:
+    break;
+  case 3:
+  case 4:
+  case 5:
+    if (getTargetID()->isXnackSupported())
+      OS << "\t\t.amdhsa_reserve_xnack_mask " << getTargetID()->isXnackOnOrAny() << '\n';
+    break;
   }
 
   PRINT_FIELD(OS, ".amdhsa_float_round_mode_32", KD,
@@ -850,7 +848,8 @@ bool AMDGPUTargetELFStreamer::EmitCodeEnd(const MCSubtargetInfo &STI) {
 void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
     const MCSubtargetInfo &STI, StringRef KernelName,
     const amdhsa::kernel_descriptor_t &KernelDescriptor, uint64_t NextVGPR,
-    uint64_t NextSGPR, bool ReserveVCC, bool ReserveFlatScr) {
+    uint64_t NextSGPR, bool ReserveVCC, bool ReserveFlatScr,
+    unsigned CodeObjectVersion) {
   auto &Streamer = getStreamer();
   auto &Context = Streamer.getContext();
 
