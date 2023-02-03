@@ -60,14 +60,22 @@ ${error} Set RUNTIMES_BUILD_ALLOW_DARWIN to allow a single darwin triple.")
   endforeach()
 endfunction()
 
+macro(set_enable_per_target_runtime_dir)
+  # May have been set by llvm/CMakeLists.txt.
+  if (NOT DEFINED LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+    # AIX should fold 32-bit & 64-bit arch libraries into a single archive.
+    if (LLVM_TARGET_TRIPLE MATCHES "aix")
+      set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR OFF)
+    else()
+      set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR ON)
+    endif()
+  endif()
+endmacro()
+
 function(builtin_default_target compiler_rt_path)
   cmake_parse_arguments(ARG "" "" "DEPENDS" ${ARGN})
 
-  set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default ON)
-  # AIX should fold 32-bit & 64-bit arch libraries into a single archive.
-  if (LLVM_TARGET_TRIPLE MATCHES "aix")
-    set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default OFF)
-  endif()
+  set_enable_per_target_runtime_dir()
 
   llvm_ExternalProject_Add(builtins
                            ${compiler_rt_path}/lib/builtins
@@ -75,7 +83,7 @@ function(builtin_default_target compiler_rt_path)
                            CMAKE_ARGS -DLLVM_LIBRARY_OUTPUT_INTDIR=${LLVM_LIBRARY_DIR}
                                       -DLLVM_RUNTIME_OUTPUT_INTDIR=${LLVM_TOOLS_BINARY_DIR}
                                       -DLLVM_DEFAULT_TARGET_TRIPLE=${LLVM_TARGET_TRIPLE}
-                                      -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default}
+                                      -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR}
                                       -DCMAKE_C_COMPILER_WORKS=ON
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
                                       ${COMMON_CMAKE_ARGS}
@@ -211,11 +219,7 @@ function(runtime_default_target)
     list(APPEND test_targets runtimes-test-depends check-runtimes)
   endif()
 
-  set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default ON)
-  # AIX should fold 32-bit & 64-bit arch libraries into a single archive.
-  if (LLVM_TARGET_TRIPLE MATCHES "aix")
-    set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default OFF)
-  endif()
+  set_enable_per_target_runtime_dir()
 
   llvm_ExternalProject_Add(runtimes
                            ${CMAKE_CURRENT_SOURCE_DIR}/../../runtimes
@@ -225,7 +229,7 @@ function(runtime_default_target)
                                       -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
                                       -DLLVM_DEFAULT_TARGET_TRIPLE=${LLVM_TARGET_TRIPLE}
                                       -DLLVM_ENABLE_PROJECTS_USED=${LLVM_ENABLE_PROJECTS_USED}
-                                      -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default}
+                                      -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR}
                                       -DLLVM_BUILD_TOOLS=${LLVM_BUILD_TOOLS}
                                       -DCMAKE_C_COMPILER_WORKS=ON
                                       -DCMAKE_CXX_COMPILER_WORKS=ON
@@ -342,6 +346,8 @@ function(runtime_register_target name target)
     list(APPEND ${name}_extra_args -DLLVM_USE_LINKER=${LLVM_USE_LINKER})
   endif()
 
+  set_enable_per_target_runtime_dir()
+
   llvm_ExternalProject_Add(runtimes-${name}
                            ${CMAKE_CURRENT_SOURCE_DIR}/../../runtimes
                            DEPENDS ${${name}_deps}
@@ -350,7 +356,7 @@ function(runtime_register_target name target)
                                       -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
                                       -DLLVM_DEFAULT_TARGET_TRIPLE=${target}
                                       -DLLVM_ENABLE_PROJECTS_USED=${LLVM_ENABLE_PROJECTS_USED}
-                                      -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
+                                      -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR}
                                       -DCMAKE_C_COMPILER_WORKS=ON
                                       -DCMAKE_CXX_COMPILER_WORKS=ON
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
