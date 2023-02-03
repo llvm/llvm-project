@@ -269,6 +269,7 @@ static void performOptionalDebugActions(
     llvm::dbgs() << "\nEOF\n";
     llvm::dbgs() << "===================================\n";
   });
+  (void)root;
   DEBUG_WITH_TYPE(DEBUG_TYPE_DUMP_FILE, {
     saveReproToTempFile(llvm::dbgs(), target, transform, passName,
                         debugPayloadRootTag, debugTransformRootTag, binaryName);
