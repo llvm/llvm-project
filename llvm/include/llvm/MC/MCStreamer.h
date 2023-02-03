@@ -22,11 +22,11 @@
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCWinEH.h"
-#include "llvm/Support/ARMTargetParser.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
 #include <cassert>
 #include <cstdint>
 #include <memory>

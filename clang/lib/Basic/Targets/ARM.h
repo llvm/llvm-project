@@ -17,9 +17,9 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/Support/ARMTargetParser.h"
 #include "llvm/Support/ARMTargetParserCommon.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
 
 namespace clang {
 namespace targets {

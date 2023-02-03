@@ -12,9 +12,9 @@
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/Support/ARMTargetParser.h"
-#include "llvm/Support/TargetParser.h"
 #include "llvm/Support/Host.h"
+#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
