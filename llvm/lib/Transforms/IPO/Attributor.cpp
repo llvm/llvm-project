@@ -586,6 +586,19 @@ isPotentiallyReachable(Attributor &A, const Instruction &FromI,
         dbgs() << *ES << "\n";
   });
 
+  // We know kernels (generally) cannot be called from within the module. Thus,
+  // for reachability we would need to step back from a kernel which would allow
+  // us to reach anything anyway. Even if a kernel is invoked from another
+  // kernel, values like allocas and shared memory are not accessible. We
+  // implicitly check for this situation to avoid costly lookups.
+  if (GoBackwardsCB && &ToFn != FromI.getFunction() &&
+      !GoBackwardsCB(*FromI.getFunction()) && ToFn.hasFnAttribute("kernel") &&
+      FromI.getFunction()->hasFnAttribute("kernel")) {
+    LLVM_DEBUG(dbgs() << "[AA] assume kernel cannot be reached from within the "
+                         "module; success\n";);
+    return false;
+  }
+
   // If we can go arbitrarily backwards we will eventually reach an entry point
   // that can reach ToI. Only if a set of blocks through which we cannot go is
   // provided, or once we track internal functions not accessible from the
