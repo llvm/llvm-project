@@ -465,7 +465,7 @@ memoryIsNotModifiedBetween(Instruction *FirstI, Instruction *SecondI,
         if (PredAddr.needsPHITranslationFromBlock(B)) {
           if (!PredAddr.isPotentiallyPHITranslatable())
             return false;
-          if (PredAddr.translateValue(B, Pred, DT, false))
+          if (!PredAddr.translateValue(B, Pred, DT, false))
             return false;
         }
         Value *TranslatedPtr = PredAddr.getAddr();
