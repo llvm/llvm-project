@@ -22,15 +22,13 @@ Caveats and FIXMEs:
 Usage:
   1. Install BeautifulSoup dependency, see instruction:
        https://www.crummy.com/software/BeautifulSoup/bs4/doc/#installing-beautiful-soup
-  2. Download cppreference offline HTML files (e.g. html_book_20181028.zip) at
+  2. Download cppreference offline HTML files (html_book_20220730.zip in Unofficial Release) at
        https://en.cppreference.com/w/Cppreference:Archives
   3. Unzip the zip file from step 2 (e.g., to a "cppreference" directory). You should
      get a "cppreference/reference" directory.
   4. Run the command:
        // Generate C++ symbols
        python3 gen_std.py -cppreference cppreference/reference -symbols=cpp > StdSymbolMap.inc
-       // Generate C++ removed symbols
-       python3 gen_std.py -cppreference cppreference/reference -symbols=cpp_removed > RemovedSymbolMap.inc
        // Generate C symbols
        python3 gen_std.py -cppreference cppreference/reference -symbols=c > CSymbolMap.inc
 """
@@ -191,11 +189,10 @@ def main():
       (symbol_index_root, "pmr.html", "std::pmr::"),
       (symbol_index_root, "regex_constants.html", "std::regex_constants::"),
       (symbol_index_root, "this_thread.html", "std::this_thread::"),
+      # Zombie symbols that were available from the Standard Library, but are
+      # removed in the following standards.
+      (symbol_index_root, "zombie_names.html", "std::"),
     ]
-  elif args.symbols == 'cpp_removed':
-    page_root = os.path.join(args.cppreference, "en", "cpp")
-    symbol_index_root = os.path.join(page_root, "symbol_index")
-    parse_pages = [(symbol_index_root, "zombie_names.html", "std::")]
   elif args.symbols == 'c':
     page_root = os.path.join(args.cppreference, "en", "c")
     symbol_index_root = page_root
