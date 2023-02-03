@@ -3,13 +3,14 @@
 set(CMAKE_FIND_PACKAGE_SORT_ORDER NATURAL)
 set(CMAKE_FIND_PACKAGE_SORT_DIRECTION DEC)
 
-find_package(Clang 16)
+find_package(Clang 16...17)
 
 set(SOURCES
     abi_tag_on_virtual.cpp
     hide_from_abi.cpp
-    robust_against_adl.cpp
     qualify_declval.cpp
+    robust_against_adl.cpp
+    uglify_attributes.cpp
 
     libcpp_module.cpp
    )

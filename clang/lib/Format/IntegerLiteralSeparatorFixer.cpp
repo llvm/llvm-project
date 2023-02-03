@@ -87,9 +87,9 @@ IntegerLiteralSeparatorFixer::process(const Environment &Env,
     auto Location = Tok.getLocation();
     auto Text = StringRef(SourceMgr.getCharacterData(Location), Length);
     if (Tok.is(tok::comment)) {
-      if (Text == "// clang-format off" || Text == "/* clang-format off */")
+      if (isClangFormatOff(Text))
         Skip = true;
-      else if (Text == "// clang-format on" || Text == "/* clang-format on */")
+      else if (isClangFormatOn(Text))
         Skip = false;
       continue;
     }

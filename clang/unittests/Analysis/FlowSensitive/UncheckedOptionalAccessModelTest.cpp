@@ -11,7 +11,6 @@
 #include "TestingSupport.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
-#include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/DenseSet.h"
@@ -2120,6 +2119,139 @@ TEST_P(UncheckedOptionalAccessTest, StdSwap) {
       opt1.value();
 
       opt2.value(); // [[unsafe]]
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, SwapUnmodeledLocLeft) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct L { $ns::$optional<int> hd; L* tl; };
+
+    void target() {
+      $ns::$optional<int> foo = 3;
+      L bar;
+
+      // Any `tl` beyond the first is not modeled.
+      bar.tl->tl->hd.swap(foo);
+
+      bar.tl->tl->hd.value(); // [[unsafe]]
+      foo.value(); // [[unsafe]]
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, SwapUnmodeledLocRight) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct L { $ns::$optional<int> hd; L* tl; };
+
+    void target() {
+      $ns::$optional<int> foo = 3;
+      L bar;
+
+      // Any `tl` beyond the first is not modeled.
+      foo.swap(bar.tl->tl->hd);
+
+      bar.tl->tl->hd.value(); // [[unsafe]]
+      foo.value(); // [[unsafe]]
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, SwapUnmodeledValueLeftSet) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct S { int x; };
+    struct A { $ns::$optional<S> late; };
+    struct B { A f3; };
+    struct C { B f2; };
+    struct D { C f1; };
+
+    void target() {
+      $ns::$optional<S> foo = S{3};
+      D bar;
+
+      bar.f1.f2.f3.late.swap(foo);
+
+      bar.f1.f2.f3.late.value();
+      foo.value(); // [[unsafe]]
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, SwapUnmodeledValueLeftUnset) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct S { int x; };
+    struct A { $ns::$optional<S> late; };
+    struct B { A f3; };
+    struct C { B f2; };
+    struct D { C f1; };
+
+    void target() {
+      $ns::$optional<S> foo;
+      D bar;
+
+      bar.f1.f2.f3.late.swap(foo);
+
+      bar.f1.f2.f3.late.value(); // [[unsafe]]
+      foo.value(); // [[unsafe]]
+    }
+  )");
+}
+
+// fixme: use recursion instead of depth.
+TEST_P(UncheckedOptionalAccessTest, SwapUnmodeledValueRightSet) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct S { int x; };
+    struct A { $ns::$optional<S> late; };
+    struct B { A f3; };
+    struct C { B f2; };
+    struct D { C f1; };
+
+    void target() {
+      $ns::$optional<S> foo = S{3};
+      D bar;
+
+      foo.swap(bar.f1.f2.f3.late);
+
+      bar.f1.f2.f3.late.value();
+      foo.value(); // [[unsafe]]
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, SwapUnmodeledValueRightUnset) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct S { int x; };
+    struct A { $ns::$optional<S> late; };
+    struct B { A f3; };
+    struct C { B f2; };
+    struct D { C f1; };
+
+    void target() {
+      $ns::$optional<S> foo;
+      D bar;
+
+      foo.swap(bar.f1.f2.f3.late);
+
+      bar.f1.f2.f3.late.value(); // [[unsafe]]
+      foo.value(); // [[unsafe]]
     }
   )");
 }

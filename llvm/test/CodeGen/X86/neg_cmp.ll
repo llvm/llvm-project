@@ -10,8 +10,10 @@ define void @neg_cmp(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: neg_cmp:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addl %esi, %edi
-; CHECK-NEXT:    je g # TAILCALL
-; CHECK-NEXT:  # %bb.1: # %if.end
+; CHECK-NEXT:    jne .LBB0_1
+; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    jmp g # TAILCALL
+; CHECK-NEXT:  .LBB0_1: # %if.end
 ; CHECK-NEXT:    retq
   %sub = sub i32 0, %y
   %cmp = icmp eq i32 %x, %sub
@@ -29,8 +31,10 @@ define void @neg_cmp_commuted(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: neg_cmp_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addl %esi, %edi
-; CHECK-NEXT:    je g # TAILCALL
-; CHECK-NEXT:  # %bb.1: # %if.end
+; CHECK-NEXT:    jne .LBB1_1
+; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    jmp g # TAILCALL
+; CHECK-NEXT:  .LBB1_1: # %if.end
 ; CHECK-NEXT:    retq
   %sub = sub i32 0, %y
   %cmp = icmp eq i32 %sub, %x

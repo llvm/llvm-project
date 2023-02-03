@@ -8,6 +8,7 @@
 
 #include "PS4CPU.h"
 #include "CommonArgs.h"
+#include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -253,15 +254,14 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
   // SDK include or lib directories. This behavior could be changed if
   // -Weverything or -Winvalid-or-nonexistent-directory options are passed.
   // If -isysroot was passed, use that as the SDK base path.
-  std::string PrefixDir;
   if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
-    PrefixDir = A->getValue();
-    if (!llvm::sys::fs::exists(PrefixDir))
-      D.Diag(clang::diag::warn_missing_sysroot) << PrefixDir;
+    SDKRootDir = A->getValue();
+    if (!llvm::sys::fs::exists(SDKRootDir))
+      D.Diag(clang::diag::warn_missing_sysroot) << SDKRootDir;
   } else
-    PrefixDir = std::string(SDKDir.str());
+    SDKRootDir = std::string(SDKDir.str());
 
-  SmallString<512> SDKIncludeDir(PrefixDir);
+  SmallString<512> SDKIncludeDir(SDKRootDir);
   llvm::sys::path::append(SDKIncludeDir, "target/include");
   if (!Args.hasArg(options::OPT_nostdinc) &&
       !Args.hasArg(options::OPT_nostdlibinc) &&
@@ -272,7 +272,7 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
         << Twine(Platform, " system headers").str() << SDKIncludeDir;
   }
 
-  SmallString<512> SDKLibDir(SDKDir);
+  SmallString<512> SDKLibDir(SDKRootDir);
   llvm::sys::path::append(SDKLibDir, "target/lib");
   if (!Args.hasArg(options::OPT_nostdlib) &&
       !Args.hasArg(options::OPT_nodefaultlibs) &&
@@ -285,6 +285,42 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
     return;
   }
   getFilePaths().push_back(std::string(SDKLibDir.str()));
+}
+
+void toolchains::PS4PS5Base::AddClangSystemIncludeArgs(
+    const ArgList &DriverArgs,
+    ArgStringList &CC1Args) const {
+  const Driver &D = getDriver();
+
+  if (DriverArgs.hasArg(options::OPT_nostdinc))
+    return;
+
+  if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
+    SmallString<128> Dir(D.ResourceDir);
+    llvm::sys::path::append(Dir, "include");
+    addSystemInclude(DriverArgs, CC1Args, Dir.str());
+  }
+
+  if (DriverArgs.hasArg(options::OPT_nostdlibinc))
+    return;
+
+  // Add dirs specified via 'configure --with-c-include-dirs'.
+  StringRef CIncludeDirs(C_INCLUDE_DIRS);
+  if (!CIncludeDirs.empty()) {
+    SmallVector<StringRef, 5> dirs;
+    CIncludeDirs.split(dirs, ":");
+    for (StringRef dir : dirs) {
+      StringRef Prefix =
+        llvm::sys::path::is_absolute(dir) ? StringRef(D.SysRoot) : "";
+      addExternCSystemInclude(DriverArgs, CC1Args, Prefix + dir);
+    }
+    return;
+  }
+
+  addExternCSystemInclude(DriverArgs, CC1Args,
+                          SDKRootDir + "/target/include");
+  addExternCSystemInclude(DriverArgs, CC1Args,
+                          SDKRootDir + "/target/include_common");
 }
 
 Tool *toolchains::PS4CPU::buildAssembler() const {

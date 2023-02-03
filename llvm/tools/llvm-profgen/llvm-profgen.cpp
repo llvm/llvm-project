@@ -19,6 +19,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 static cl::OptionCategory ProfGenCategory("ProfGen Options");
 
@@ -157,7 +158,9 @@ int main(int argc, const char *argv[]) {
 
   if (SampleProfFilename.getNumOccurrences()) {
     LLVMContext Context;
-    auto ReaderOrErr = SampleProfileReader::create(SampleProfFilename, Context);
+    auto FS = vfs::getRealFileSystem();
+    auto ReaderOrErr =
+        SampleProfileReader::create(SampleProfFilename, Context, *FS);
     std::unique_ptr<sampleprof::SampleProfileReader> Reader =
         std::move(ReaderOrErr.get());
     Reader->read();

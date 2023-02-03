@@ -850,27 +850,28 @@ define dso_local void @bfi_new_block_pgso(i32 %c) nounwind {
 ; CHECK-LABEL: bfi_new_block_pgso:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    je .LBB14_6
+; CHECK-NEXT:    je .LBB14_4
 ; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    cmpl $16, %edi
-; CHECK-NEXT:    je .LBB14_3
+; CHECK-NEXT:    je .LBB14_6
 ; CHECK-NEXT:  # %bb.2: # %bb1
 ; CHECK-NEXT:    cmpl $17, %edi
-; CHECK-NEXT:    je .LBB14_4
-; CHECK-NEXT:  # %bb.5: # %bb4
+; CHECK-NEXT:    je .LBB14_7
+; CHECK-NEXT:  # %bb.3: # %bb4
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    jmp tail_call_me # TAILCALL
-; CHECK-NEXT:  .LBB14_6: # %bb5
+; CHECK-NEXT:  .LBB14_4: # %bb5
 ; CHECK-NEXT:    cmpl $128, %edi
-; CHECK-NEXT:    jne tail_call_me # TAILCALL
-; CHECK-NEXT:  # %bb.7: # %return
+; CHECK-NEXT:    jne .LBB14_8
+; CHECK-NEXT:  # %bb.5: # %return
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB14_3: # %bb3
+; CHECK-NEXT:  .LBB14_6: # %bb3
 ; CHECK-NEXT:    movl $0, GV(%rip)
-; CHECK-NEXT:  .LBB14_4: # %bb4
+; CHECK-NEXT:  .LBB14_7: # %bb4
 ; CHECK-NEXT:    callq func
 ; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:  .LBB14_8: # %bb6
 ; CHECK-NEXT:    jmp tail_call_me # TAILCALL
 entry:
   %0 = icmp eq i32 %c, 0

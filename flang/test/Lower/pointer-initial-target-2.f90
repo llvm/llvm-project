@@ -36,7 +36,7 @@ block data tied
 end block data
 
 ! Test pointer in a common with initial target in the same common.
-block data snake
+block data bdsnake
   integer, target :: b = 42
   integer, pointer :: p => b
   common /snake/ p, b

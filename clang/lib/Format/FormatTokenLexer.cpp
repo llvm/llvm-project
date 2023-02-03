@@ -1286,17 +1286,13 @@ void FormatTokenLexer::readRawToken(FormatToken &Tok) {
     Tok.Tok.setKind(tok::string_literal);
   }
 
-  if (Tok.is(tok::comment) && (Tok.TokenText == "// clang-format on" ||
-                               Tok.TokenText == "/* clang-format on */")) {
+  if (Tok.is(tok::comment) && isClangFormatOn(Tok.TokenText))
     FormattingDisabled = false;
-  }
 
   Tok.Finalized = FormattingDisabled;
 
-  if (Tok.is(tok::comment) && (Tok.TokenText == "// clang-format off" ||
-                               Tok.TokenText == "/* clang-format off */")) {
+  if (Tok.is(tok::comment) && isClangFormatOff(Tok.TokenText))
     FormattingDisabled = true;
-  }
 }
 
 void FormatTokenLexer::resetLexer(unsigned Offset) {

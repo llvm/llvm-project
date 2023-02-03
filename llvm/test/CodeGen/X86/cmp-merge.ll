@@ -15,19 +15,27 @@ define void @eq_first(i32 %0, i32 %1) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cmpl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    jl on_less@PLT # TAILCALL
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    je on_equal@PLT # TAILCALL
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jge .LBB0_1
+; X86-NEXT:  # %bb.3:
+; X86-NEXT:    jmp on_less@PLT # TAILCALL
+; X86-NEXT:  .LBB0_1:
+; X86-NEXT:    jne .LBB0_2
+; X86-NEXT:  # %bb.4:
+; X86-NEXT:    jmp on_equal@PLT # TAILCALL
+; X86-NEXT:  .LBB0_2:
 ; X86-NEXT:    jmp on_greater@PLT # TAILCALL
 ;
 ; X64-LABEL: eq_first:
 ; X64:       # %bb.0:
 ; X64-NEXT:    cmpl %esi, %edi
-; X64-NEXT:    jl on_less@PLT # TAILCALL
-; X64-NEXT:  # %bb.1:
-; X64-NEXT:    je on_equal@PLT # TAILCALL
-; X64-NEXT:  # %bb.2:
+; X64-NEXT:    jge .LBB0_1
+; X64-NEXT:  # %bb.3:
+; X64-NEXT:    jmp on_less@PLT # TAILCALL
+; X64-NEXT:  .LBB0_1:
+; X64-NEXT:    jne .LBB0_2
+; X64-NEXT:  # %bb.4:
+; X64-NEXT:    jmp on_equal@PLT # TAILCALL
+; X64-NEXT:  .LBB0_2:
 ; X64-NEXT:    jmp on_greater@PLT # TAILCALL
   %3 = icmp slt i32 %0, %1
   br i1 %3, label %4, label %5
@@ -53,19 +61,27 @@ define void @gt_first(i32 %0, i32 %1) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    cmpl %eax, %ecx
-; X86-NEXT:    jl on_less@PLT # TAILCALL
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    jg on_greater@PLT # TAILCALL
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jge .LBB1_1
+; X86-NEXT:  # %bb.3:
+; X86-NEXT:    jmp on_less@PLT # TAILCALL
+; X86-NEXT:  .LBB1_1:
+; X86-NEXT:    jle .LBB1_2
+; X86-NEXT:  # %bb.4:
+; X86-NEXT:    jmp on_greater@PLT # TAILCALL
+; X86-NEXT:  .LBB1_2:
 ; X86-NEXT:    jmp on_equal@PLT # TAILCALL
 ;
 ; X64-LABEL: gt_first:
 ; X64:       # %bb.0:
 ; X64-NEXT:    cmpl %esi, %edi
-; X64-NEXT:    jl on_less@PLT # TAILCALL
-; X64-NEXT:  # %bb.1:
-; X64-NEXT:    jg on_greater@PLT # TAILCALL
-; X64-NEXT:  # %bb.2:
+; X64-NEXT:    jge .LBB1_1
+; X64-NEXT:  # %bb.3:
+; X64-NEXT:    jmp on_less@PLT # TAILCALL
+; X64-NEXT:  .LBB1_1:
+; X64-NEXT:    jle .LBB1_2
+; X64-NEXT:  # %bb.4:
+; X64-NEXT:    jmp on_greater@PLT # TAILCALL
+; X64-NEXT:  .LBB1_2:
 ; X64-NEXT:    jmp on_equal@PLT # TAILCALL
   %3 = icmp slt i32 %0, %1
   br i1 %3, label %4, label %5

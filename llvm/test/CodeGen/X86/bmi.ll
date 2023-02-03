@@ -1223,16 +1223,20 @@ define void @pr40060(i32, i32) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    bextrl %eax, {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    jns bar # TAILCALL
-; X86-NEXT:  # %bb.1:
+; X86-NEXT:    js .LBB52_1
+; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jmp bar # TAILCALL
+; X86-NEXT:  .LBB52_1:
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pr40060:
 ; X64:       # %bb.0:
 ; X64-NEXT:    bextrl %esi, %edi, %eax
 ; X64-NEXT:    testl %eax, %eax
-; X64-NEXT:    jns bar # TAILCALL
-; X64-NEXT:  # %bb.1:
+; X64-NEXT:    js .LBB52_1
+; X64-NEXT:  # %bb.2:
+; X64-NEXT:    jmp bar # TAILCALL
+; X64-NEXT:  .LBB52_1:
 ; X64-NEXT:    retq
   %3 = tail call i32 @llvm.x86.bmi.bextr.32(i32 %0, i32 %1)
   %4 = icmp sgt i32 %3, -1
@@ -1440,15 +1444,19 @@ define void @pr42118_i32(i32 %x) {
 ; X86-LABEL: pr42118_i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    blsrl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    je bar # TAILCALL
-; X86-NEXT:  # %bb.1:
+; X86-NEXT:    jne .LBB57_1
+; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jmp bar # TAILCALL
+; X86-NEXT:  .LBB57_1:
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pr42118_i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    blsrl %edi, %eax
-; X64-NEXT:    je bar # TAILCALL
-; X64-NEXT:  # %bb.1:
+; X64-NEXT:    jne .LBB57_1
+; X64-NEXT:  # %bb.2:
+; X64-NEXT:    jmp bar # TAILCALL
+; X64-NEXT:  .LBB57_1:
 ; X64-NEXT:    retq
   %tmp = sub i32 0, %x
   %tmp1 = and i32 %tmp, %x
@@ -1490,8 +1498,10 @@ define void @pr42118_i64(i64 %x) {
 ; X64-LABEL: pr42118_i64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    blsrq %rdi, %rax
-; X64-NEXT:    je bar # TAILCALL
-; X64-NEXT:  # %bb.1:
+; X64-NEXT:    jne .LBB58_1
+; X64-NEXT:  # %bb.2:
+; X64-NEXT:    jmp bar # TAILCALL
+; X64-NEXT:  .LBB58_1:
 ; X64-NEXT:    retq
   %tmp = sub i64 0, %x
   %tmp1 = and i64 %tmp, %x

@@ -15052,10 +15052,14 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
 
     const SCEV *RewrittenRHS = nullptr;
     switch (Predicate) {
-    case CmpInst::ICMP_ULT:
+    case CmpInst::ICMP_ULT: {
+      if (RHS->getType()->isPointerTy())
+        break;
+      const SCEV *One = getOne(RHS->getType());
       RewrittenRHS =
-          getUMinExpr(RewrittenLHS, getMinusSCEV(RHS, getOne(RHS->getType())));
+          getUMinExpr(RewrittenLHS, getMinusSCEV(getUMaxExpr(RHS, One), One));
       break;
+    }
     case CmpInst::ICMP_SLT:
       RewrittenRHS =
           getSMinExpr(RewrittenLHS, getMinusSCEV(RHS, getOne(RHS->getType())));

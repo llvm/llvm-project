@@ -18,8 +18,13 @@ class TestVectorOfVectors(TestBase):
                                           "// Set break point at this line.",
                                           lldb.SBFileSpec("main.cpp"))
 
-        vector_type = "std::vector<int>"
-        vector_of_vector_type = "std::vector<" + vector_type + " >"
+        if self.expectedCompilerVersion(['>', '16.0']):
+            vector_type = "std::vector<int>"
+            vector_of_vector_type = "std::vector<std::vector<int> >"
+        else:
+            vector_type = "std::vector<int>"
+            vector_of_vector_type = "std::vector<std::vector<int>, std::allocator<std::vector<int> > >"
+
         size_type = "size_type"
         value_type = "value_type"
 
@@ -29,13 +34,13 @@ class TestVectorOfVectors(TestBase):
             "a",
             result_type=vector_of_vector_type,
             result_children=[
-                ValueCheck(type="std::vector<int>",
+                ValueCheck(type=vector_type,
                            children=[
                                ValueCheck(value='1'),
                                ValueCheck(value='2'),
                                ValueCheck(value='3'),
                            ]),
-                ValueCheck(type="std::vector<int>",
+                ValueCheck(type=vector_type,
                            children=[
                                ValueCheck(value='3'),
                                ValueCheck(value='2'),

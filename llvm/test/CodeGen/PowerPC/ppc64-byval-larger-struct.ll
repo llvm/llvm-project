@@ -184,7 +184,6 @@ define signext i8 @caller_9_callee_9(ptr nocapture readonly byval([9 x i8]) %dat
 ; P8LE-NEXT:    stdx r3, 0, r5
 ; P8LE-NEXT:    stb r4, 79(r1)
 ; P8LE-NEXT:    lbz r4, 56(r1)
-; P8LE-NEXT:    ld r3, 48(r1)
 ; P8LE-NEXT:    bl callee_9
 ; P8LE-NEXT:    nop
 ; P8LE-NEXT:    li r3, 0
@@ -204,7 +203,6 @@ define signext i8 @caller_9_callee_9(ptr nocapture readonly byval([9 x i8]) %dat
 ; P9LE-NEXT:    std r3, 48(r1)
 ; P9LE-NEXT:    stdx r3, 0, r4
 ; P9LE-NEXT:    lbz r4, 56(r1)
-; P9LE-NEXT:    ld r3, 48(r1)
 ; P9LE-NEXT:    stb r5, 79(r1)
 ; P9LE-NEXT:    bl callee_9
 ; P9LE-NEXT:    nop
@@ -225,7 +223,6 @@ define signext i8 @caller_9_callee_9(ptr nocapture readonly byval([9 x i8]) %dat
 ; P10LE-NEXT:    lbz r5, 56(r1)
 ; P10LE-NEXT:    stdx r3, 0, r4
 ; P10LE-NEXT:    lbz r4, 56(r1)
-; P10LE-NEXT:    ld r3, 48(r1)
 ; P10LE-NEXT:    stb r5, 79(r1)
 ; P10LE-NEXT:    bl callee_9@notoc
 ; P10LE-NEXT:    li r3, 0
@@ -246,7 +243,6 @@ define signext i8 @caller_9_callee_9(ptr nocapture readonly byval([9 x i8]) %dat
 ; P8BE-NEXT:    stdx r3, 0, r5
 ; P8BE-NEXT:    stb r4, 143(r1)
 ; P8BE-NEXT:    lbz r4, 200(r1)
-; P8BE-NEXT:    ld r3, 192(r1)
 ; P8BE-NEXT:    bl callee_9
 ; P8BE-NEXT:    nop
 ; P8BE-NEXT:    li r3, 0
@@ -266,7 +262,6 @@ define signext i8 @caller_9_callee_9(ptr nocapture readonly byval([9 x i8]) %dat
 ; P9BE-NEXT:    std r3, 192(r1)
 ; P9BE-NEXT:    stdx r3, 0, r4
 ; P9BE-NEXT:    lbz r4, 200(r1)
-; P9BE-NEXT:    ld r3, 192(r1)
 ; P9BE-NEXT:    stb r5, 143(r1)
 ; P9BE-NEXT:    bl callee_9
 ; P9BE-NEXT:    nop
@@ -287,7 +282,6 @@ define signext i8 @caller_9_callee_9(ptr nocapture readonly byval([9 x i8]) %dat
 ; P10BE-NEXT:    lbz r5, 200(r1)
 ; P10BE-NEXT:    stdx r3, 0, r4
 ; P10BE-NEXT:    lbz r4, 200(r1)
-; P10BE-NEXT:    ld r3, 192(r1)
 ; P10BE-NEXT:    stb r5, 143(r1)
 ; P10BE-NEXT:    bl callee_9
 ; P10BE-NEXT:    nop

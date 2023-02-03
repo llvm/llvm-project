@@ -107,9 +107,6 @@ public:
   template <typename U>
   U cast() const;
 
-  // Support type casting Type to itself.
-  static bool classof(Type) { return true; }
-
   /// Return a unique identifier for the concrete type. This is used to support
   /// dynamic type casting.
   TypeID getTypeID() { return impl->getAbstractType().getTypeID(); }
@@ -387,8 +384,11 @@ struct CastInfo<
   static inline bool isPossible(mlir::Type ty) {
     /// Return a constant true instead of a dynamic true when casting to self or
     /// up the hierarchy.
-    return std::is_same_v<To, std::remove_const_t<From>> ||
-           std::is_base_of_v<To, From> || To::classof(ty);
+    if constexpr (std::is_base_of_v<To, From>) {
+      return true;
+    } else {
+      return To::classof(ty);
+    };
   }
   static inline To doCast(mlir::Type ty) { return To(ty.getImpl()); }
 };

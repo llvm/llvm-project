@@ -91,6 +91,15 @@ Error DXContainer::parseHash(StringRef Part) {
   return Error::success();
 }
 
+Error DXContainer::parsePSVInfo(StringRef Part) {
+  if (PSVInfo)
+    return parseFailed("More than one PSV0 part is present in the file");
+  PSVInfo = DirectX::PSVRuntimeInfo(Part);
+  // Parsing the PSVRuntime info occurs late because we need to read data from
+  // other parts first.
+  return Error::success();
+}
+
 Error DXContainer::parsePartOffsets() {
   uint32_t LastOffset =
       sizeof(dxbc::Header) + (Header.PartCount * sizeof(uint32_t));
@@ -140,9 +149,23 @@ Error DXContainer::parsePartOffsets() {
       if (Error Err = parseHash(PartData))
         return Err;
       break;
+    case dxbc::PartType::PSV0:
+      if (Error Err = parsePSVInfo(PartData))
+        return Err;
+      break;
     case dxbc::PartType::Unknown:
       break;
     }
+  }
+
+  // Fully parsing the PSVInfo requires knowing the shader kind which we read
+  // out of the program header in the DXIL part.
+  if (PSVInfo) {
+    if (!DXIL)
+      return parseFailed("Cannot fully parse pipeline state validation "
+                         "information without DXIL part.");
+    if (Error Err = PSVInfo->parse(DXIL->first.ShaderKind))
+      return Err;
   }
   return Error::success();
 }
@@ -165,4 +188,46 @@ void DXContainer::PartIterator::updateIteratorImpl(const uint32_t Offset) {
   IteratorState.Data =
       StringRef(Current + sizeof(dxbc::PartHeader), IteratorState.Part.Size);
   IteratorState.Offset = Offset;
+}
+
+Error DirectX::PSVRuntimeInfo::parse(uint16_t ShaderKind) {
+  Triple::EnvironmentType ShaderStage = dxbc::getShaderStage(ShaderKind);
+
+  const char *Current = Data.begin();
+  if (Error Err = readInteger(Data, Current, Size))
+    return Err;
+  Current += sizeof(uint32_t);
+
+  StringRef PSVInfoData = Data.substr(sizeof(uint32_t), Size);
+
+  using namespace dxbc::PSV;
+
+  const uint32_t PSVVersion = getVersion();
+
+  // Detect the PSVVersion by looking at the size field.
+  if (PSVVersion == 2) {
+    v2::RuntimeInfo Info;
+    if (Error Err = readStruct(PSVInfoData, Current, Info))
+      return Err;
+    if (sys::IsBigEndianHost)
+      Info.swapBytes(ShaderStage);
+    BasicInfo = Info;
+  } else if (PSVVersion == 1) {
+    v1::RuntimeInfo Info;
+    if (Error Err = readStruct(PSVInfoData, Current, Info))
+      return Err;
+    if (sys::IsBigEndianHost)
+      Info.swapBytes(ShaderStage);
+    BasicInfo = Info;
+  } else {
+    v0::RuntimeInfo Info;
+    if (Error Err = readStruct(PSVInfoData, Current, Info))
+      return Err;
+    if (sys::IsBigEndianHost)
+      Info.swapBytes(ShaderStage);
+    BasicInfo = Info;
+  }
+  Current += Size;
+
+  return Error::success();
 }

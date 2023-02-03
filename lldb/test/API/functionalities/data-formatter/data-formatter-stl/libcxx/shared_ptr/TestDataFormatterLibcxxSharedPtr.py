@@ -58,9 +58,14 @@ class TestCase(TestBase):
         self.assertRegex(valobj.summary, r"^10( strong=1)? weak=1$")
         self.assertNotEqual(valobj.child[0].unsigned, 0)
 
+        if self.expectedCompilerVersion(['>', '16.0']):
+            string_type = "std::basic_string<char>"
+        else:
+            string_type = "std::basic_string<char, std::char_traits<char>, std::allocator<char> >"
+
         valobj = self.expect_var_path(
             "sp_str",
-            type="std::shared_ptr<std::basic_string<char> >",
+            type="std::shared_ptr<" + string_type + " >",
             children=[ValueCheck(name="__ptr_", summary='"hello"')],
         )
         self.assertRegex(valobj.summary, r'^"hello"( strong=1)? weak=1$')

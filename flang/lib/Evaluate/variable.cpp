@@ -602,14 +602,19 @@ template <typename T>
 std::optional<DynamicType> Designator<T>::GetType() const {
   if constexpr (IsLengthlessIntrinsicType<Result>) {
     return Result::GetType();
-  } else if (const Symbol * symbol{GetLastSymbol()}) {
-    return DynamicType::From(*symbol);
-  } else if constexpr (Result::category == TypeCategory::Character) {
-    if (const Substring * substring{std::get_if<Substring>(&u)}) {
-      const auto *parent{substring->GetParentIf<StaticDataObject::Pointer>()};
-      CHECK(parent);
-      return DynamicType{TypeCategory::Character, (*parent)->itemBytes()};
+  }
+  if constexpr (Result::category == TypeCategory::Character) {
+    if (std::holds_alternative<Substring>(u)) {
+      if (auto len{LEN()}) {
+        if (auto n{ToInt64(*len)}) {
+          return DynamicType{T::kind, *n};
+        }
+      }
+      return DynamicType{TypeCategory::Character, T::kind};
     }
+  }
+  if (const Symbol * symbol{GetLastSymbol()}) {
+    return DynamicType::From(*symbol);
   }
   return std::nullopt;
 }
