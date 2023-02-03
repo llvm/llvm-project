@@ -6,11 +6,6 @@
 // RUN: %clang_cc1 -triple i686-pc-linux-gnu -fsyntax-only -Wno-private-extern -verify=expected,thread-local -pedantic -x c++ %s -DC11 -D__thread=_Thread_local -std=c++11 -Wno-deprecated
 // RUN: %clang_cc1 -triple i686-pc-linux-gnu -fsyntax-only -Wno-private-extern -verify=expected,thread-local -pedantic %s -std=c99 -D__thread=_Thread_local -DC99
 
-#ifdef __cplusplus
-// In C++, we define __private_extern__ to extern.
-#undef __private_extern__
-#endif
-
 __thread int t1; // thread-local-warning {{'_Thread_local' is a C11 extension}}
 __thread extern int t2; // thread-local-warning {{'_Thread_local' is a C11 extension}}
 __thread static int t3; // thread-local-warning {{'_Thread_local' is a C11 extension}}
@@ -19,7 +14,7 @@ __thread static int t3; // thread-local-warning {{'_Thread_local' is a C11 exten
 // expected-warning@-3 {{'__thread' before 'static'}}
 #endif
 
-__thread __private_extern__ int t4; // thread-local-warning {{'_Thread_local' is a C11 extension}}
+__private_extern__ __thread int t4; // thread-local-warning {{'_Thread_local' is a C11 extension}}
 struct t5 { __thread int x; }; // thread-local-warning {{'_Thread_local' is a C11 extension}}
 #ifdef __cplusplus
 // expected-error-re@-2 {{'{{__thread|_Thread_local|thread_local}}' is only allowed on variable declarations}}
@@ -47,7 +42,7 @@ int f(__thread int t7) { // expected-error {{' is only allowed on variable decla
 #endif
   extern __thread int t9; // thread-local-warning {{'_Thread_local' is a C11 extension}}
   static __thread int t10; // thread-local-warning {{'_Thread_local' is a C11 extension}}
-  __thread __private_extern__ int t11; // thread-local-warning {{'_Thread_local' is a C11 extension}}
+  __private_extern__ __thread int t11; // thread-local-warning {{'_Thread_local' is a C11 extension}}
 #if __cplusplus < 201103L
   __thread auto int t12a; // expected-error-re {{cannot combine with previous '{{__thread|_Thread_local}}' declaration specifier}} \
                           // thread-local-warning {{'_Thread_local' is a C11 extension}}
