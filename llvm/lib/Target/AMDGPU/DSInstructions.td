@@ -750,6 +750,9 @@ def DS_BVH_STACK_PUSH8_POP1_RTN_B32 : DS_BVH_STACK<
 def DS_BVH_STACK_PUSH8_POP2_RTN_B64 : DS_BVH_STACK<
   "ds_bvh_stack_push8_pop2_rtn_b64", VReg_64, VReg_256>;
 
+defm DS_SUB_CLAMP_U32     : DS_1A1D_NORET_mc<"ds_sub_clamp_u32">;
+defm DS_SUB_CLAMP_RTN_U32 : DS_1A1D_RET_mc<"ds_sub_clamp_rtn_u32", VGPR_32, "ds_sub_clamp_u32">;
+
 } // let SubtargetPredicate = isGFX12Plus
 
 //===----------------------------------------------------------------------===//
@@ -1247,14 +1250,16 @@ let AssemblerPredicate = isGFX12Plus, DecoderNamespace = "GFX12" in {
   }
 } // End AssemblerPredicate = isGFX12Plus, DecoderNamespace = "GFX12"
 
-defm DS_MIN_NUM_F32     : DS_Real_Renamed_gfx12<0x012, DS_MIN_F32, "ds_min_num_f32">;
-defm DS_MAX_NUM_F32     : DS_Real_Renamed_gfx12<0x013, DS_MAX_F32, "ds_max_num_f32">;
-defm DS_MIN_NUM_RTN_F32 : DS_Real_Renamed_gfx12<0x032, DS_MIN_RTN_F32, "ds_min_num_rtn_f32">;
-defm DS_MAX_NUM_RTN_F32 : DS_Real_Renamed_gfx12<0x033, DS_MAX_RTN_F32, "ds_max_num_rtn_f32">;
-defm DS_MIN_NUM_F64     : DS_Real_Renamed_gfx12<0x052, DS_MIN_F64, "ds_min_num_f64">;
-defm DS_MAX_NUM_F64     : DS_Real_Renamed_gfx12<0x053, DS_MAX_F64, "ds_max_num_f64">;
-defm DS_MIN_NUM_RTN_F64 : DS_Real_Renamed_gfx12<0x072, DS_MIN_RTN_F64, "ds_min_num_rtn_f64">;
-defm DS_MAX_NUM_RTN_F64 : DS_Real_Renamed_gfx12<0x073, DS_MAX_RTN_F64, "ds_max_num_rtn_f64">;
+defm DS_MIN_NUM_F32       : DS_Real_Renamed_gfx12<0x012, DS_MIN_F32, "ds_min_num_f32">;
+defm DS_MAX_NUM_F32       : DS_Real_Renamed_gfx12<0x013, DS_MAX_F32, "ds_max_num_f32">;
+defm DS_MIN_NUM_RTN_F32   : DS_Real_Renamed_gfx12<0x032, DS_MIN_RTN_F32, "ds_min_num_rtn_f32">;
+defm DS_MAX_NUM_RTN_F32   : DS_Real_Renamed_gfx12<0x033, DS_MAX_RTN_F32, "ds_max_num_rtn_f32">;
+defm DS_MIN_NUM_F64       : DS_Real_Renamed_gfx12<0x052, DS_MIN_F64, "ds_min_num_f64">;
+defm DS_MAX_NUM_F64       : DS_Real_Renamed_gfx12<0x053, DS_MAX_F64, "ds_max_num_f64">;
+defm DS_MIN_NUM_RTN_F64   : DS_Real_Renamed_gfx12<0x072, DS_MIN_RTN_F64, "ds_min_num_rtn_f64">;
+defm DS_MAX_NUM_RTN_F64   : DS_Real_Renamed_gfx12<0x073, DS_MAX_RTN_F64, "ds_max_num_rtn_f64">;
+defm DS_SUB_CLAMP_U32     : DS_Real_gfx12<0x099>;
+defm DS_SUB_CLAMP_RTN_U32 : DS_Real_gfx12<0x0a9>;
 
 defm DS_BVH_STACK_PUSH4_POP1_RTN_B32     : DS_Real_Renamed_gfx12<0x0e0,
   DS_BVH_STACK_RTN_B32, "ds_bvh_stack_push4_pop1_rtn_b32">;
