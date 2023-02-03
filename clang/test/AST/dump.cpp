@@ -30,7 +30,7 @@ int ga, gb;
 // CHECK-NEXT: | `-VarDecl {{.+}} <col:40> col:40 implicit used omp_out 'char'
 // CHECK-NEXT: |-OMPDeclareReductionDecl {{.+}} <line:[[@LINE-17]]:37> col:37 fun 'float' combiner 0x{{.+}} initializer 0x{{.+}}
 // CHECK-NEXT: | |-CompoundAssignOperator {{.+}} <col:45, col:56> 'float' lvalue '+=' ComputeLHSTy='float' ComputeResultTy='float'
-// CHECK-NEXT: | | |-BOOM{{.+}} <col:45> 'float' lvalue Var {{.+}} 'omp_out' 'float'
+// CHECK-NEXT: | | |-DeclRefExpr {{.+}} <col:45> 'float' lvalue Var {{.+}} 'omp_out' 'float'
 // CHECK-NEXT: | | `-ImplicitCastExpr {{.+}} <col:56> 'float' <LValueToRValue>
 // CHECK-NEXT: | |   `-DeclRefExpr {{.+}} <col:56> 'float' lvalue Var {{.+}} 'omp_in' 'float'
 // CHECK-NEXT: | |-BinaryOperator {{.+}} <col:87, col:98> 'float' '+'
