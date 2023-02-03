@@ -838,11 +838,6 @@ public:
   /// The lambda's compiler-generated \c operator().
   CXXMethodDecl *CallOperator = nullptr;
 
-  /// Indicate that we parsed the parameter list
-  /// at which point the mutability of the lambda
-  /// is known.
-  bool AfterParameterList = true;
-
   /// Source range covering the lambda introducer [...].
   SourceRange IntroducerRange;
 
@@ -854,9 +849,8 @@ public:
   /// explicit captures.
   unsigned NumExplicitCaptures = 0;
 
-  /// Whether this is a mutable lambda. Until the mutable keyword is parsed,
-  /// we assume the lambda is mutable.
-  bool Mutable = true;
+  /// Whether this is a mutable lambda.
+  bool Mutable = false;
 
   /// Whether the (empty) parameter list is explicit.
   bool ExplicitParams = false;

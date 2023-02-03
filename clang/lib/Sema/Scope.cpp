@@ -70,10 +70,8 @@ void Scope::setFlags(Scope *parent, unsigned flags) {
   if (flags & BlockScope)         BlockParent = this;
   if (flags & TemplateParamScope) TemplateParamParent = this;
 
-  // If this is a prototype scope, record that. Lambdas have an extra prototype
-  // scope that doesn't add any depth.
-  if (flags & FunctionPrototypeScope && !(flags & LambdaScope))
-    PrototypeDepth++;
+  // If this is a prototype scope, record that.
+  if (flags & FunctionPrototypeScope) PrototypeDepth++;
 
   if (flags & DeclScope) {
     if (flags & FunctionPrototypeScope)
