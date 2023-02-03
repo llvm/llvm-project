@@ -2731,8 +2731,9 @@ let TargetPrefix = "aarch64" in {
 
   def int_aarch64_sve_psel
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                              [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                               LLVMMatchType<0>, llvm_i32_ty]>;
+                              [LLVMMatchType<0>,
+                               LLVMMatchType<0>, llvm_i32_ty],
+                              [IntrNoMem]>;
 
   //
   // Predicate-pair intrinsics
