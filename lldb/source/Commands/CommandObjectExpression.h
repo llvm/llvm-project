@@ -47,6 +47,9 @@ public:
     lldb::LanguageType language;
     LanguageRuntimeDescriptionDisplayVerbosity m_verbosity;
     LazyBool auto_apply_fixits;
+// BEGIN SWIFT
+    lldb::BindGenericTypes bind_generic_types;
+// END SWIFT
   };
 
   CommandObjectExpression(CommandInterpreter &interpreter);

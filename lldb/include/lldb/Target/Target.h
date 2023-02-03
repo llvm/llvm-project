@@ -54,8 +54,6 @@ class SwiftASTContextForExpressions;
 
 OptionEnumValues GetDynamicValueTypes();
 
-OptionEnumValues GetBindGenericTypesOptions();
-
 enum InlineStrategy {
   eInlineBreakpointsNever = 0,
   eInlineBreakpointsHeaders,

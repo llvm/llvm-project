@@ -149,6 +149,25 @@ static constexpr OptionEnumValueElement g_running_mode[] = {
      "Run only this thread while stepping"},
 };
 
+
+// BEGIN SWIFT
+static constexpr OptionEnumValueElement g_bind_gen_type_params[] = {
+    {
+        lldb::eBindAuto,
+        "auto",
+        "Attempt to run the expression with bound generic parameters first, "
+        "fallback to unbound generic parameters if binding the type parameters "
+        "fails",
+    },
+    {lldb::eBind, "true", "Bind generic type parameters."},
+    {lldb::eDontBind, "false", "Don't bind generic type parameters."},
+};
+
+static constexpr OptionEnumValues BindGenTypeParamValue() {
+  return OptionEnumValues(g_bind_gen_type_params);
+}
+// END SWIFT
+
 llvm::StringRef RegisterNameHelpTextCallback();
 llvm::StringRef BreakpointIDHelpTextCallback();
 llvm::StringRef BreakpointIDRangeHelpTextCallback();
@@ -257,6 +276,9 @@ static constexpr CommandObject::ArgumentTableEntry g_argument_table[] = {
     { lldb::eArgTypeConnectURL, "process-connect-url", CommandCompletions::eNoCompletion, {}, { nullptr, false }, "A URL-style specification for a remote connection." },
     { lldb::eArgTypeTargetID, "target-id", CommandCompletions::eNoCompletion, {}, { nullptr, false }, "The index ID for an lldb Target." },
     { lldb::eArgTypeStopHookID, "stop-hook-id", CommandCompletions::eNoCompletion, {}, { nullptr, false }, "The ID you receive when you create a stop-hook." },
+    // BEGIN SWIFT
+    { lldb::eArgTypeBindGenTypeParamValue, "bind-generic-types", CommandCompletions::eNoCompletion, g_bind_gen_type_params, { nullptr, false }, "Controls whether any generic types in the current context should be bound to their dynamic type before evaluating. Defaults to auto." },
+    // END SWIFT
     // clang-format on
 };
 
