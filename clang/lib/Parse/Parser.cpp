@@ -14,6 +14,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
@@ -1404,6 +1405,17 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     if (BodyKind == Sema::FnBodyKind::Other)
       SkipFunctionBody();
 
+    // ExpressionEvaluationContext is pushed in ActOnStartOfFunctionDef
+    // and it would be popped in ActOnFinishFunctionBody.
+    // We pop it explcitly here since ActOnFinishFunctionBody won't get called.
+    //
+    // Do not call PopExpressionEvaluationContext() if it is a lambda because
+    // one is already popped when finishing the lambda in BuildLambdaExpr().
+    //
+    // FIXME: It looks not easy to balance PushExpressionEvaluationContext()
+    // and PopExpressionEvaluationContext().
+    if (!isLambdaCallOperator(dyn_cast_if_present<FunctionDecl>(Res)))
+      Actions.PopExpressionEvaluationContext();
     return Res;
   }
 
