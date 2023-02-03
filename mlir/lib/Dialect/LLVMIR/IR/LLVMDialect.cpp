@@ -2267,7 +2267,8 @@ LogicalResult AtomicRMWOp::verify() {
   if (!ptrType.isOpaque() && valType != ptrType.getElementType())
     return emitOpError("expected LLVM IR element type for operand #0 to "
                        "match type for operand #1");
-  if (getBinOp() == AtomicBinOp::fadd || getBinOp() == AtomicBinOp::fsub) {
+  if (getBinOp() == AtomicBinOp::fadd || getBinOp() == AtomicBinOp::fsub ||
+      getBinOp() == AtomicBinOp::fmin || getBinOp() == AtomicBinOp::fmax) {
     if (!mlir::LLVM::isCompatibleFloatingPointType(valType))
       return emitOpError("expected LLVM IR floating point type");
   } else if (getBinOp() == AtomicBinOp::xchg) {

@@ -145,11 +145,6 @@ public:
     /// This is a scope of some OpenMP directive with
     /// order clause which specifies concurrent
     OpenMPOrderClauseScope = 0x4000000,
-    /// This is the scope for a lambda, after the lambda introducer.
-    /// Lambdas need two FunctionPrototypeScope scopes (because there is a
-    /// template scope in between), the outer scope does not increase the
-    /// depth of recursion.
-    LambdaScope = 0x8000000,
   };
 
 private:

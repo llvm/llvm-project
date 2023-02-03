@@ -1406,28 +1406,36 @@ llvm.func @atomicrmw(
   %0 = llvm.atomicrmw fadd %f32_ptr, %f32 monotonic : !llvm.ptr<f32>, f32
   // CHECK: atomicrmw fsub ptr %{{.*}}, float %{{.*}} monotonic
   %1 = llvm.atomicrmw fsub %f32_ptr, %f32 monotonic : !llvm.ptr<f32>, f32
+  // CHECK: atomicrmw fmax ptr %{{.*}}, float %{{.*}} monotonic
+  %2 = llvm.atomicrmw fmax %f32_ptr, %f32 monotonic : !llvm.ptr<f32>, f32
+  // CHECK: atomicrmw fmin ptr %{{.*}}, float %{{.*}} monotonic
+  %3 = llvm.atomicrmw fmin %f32_ptr, %f32 monotonic : !llvm.ptr<f32>, f32
   // CHECK: atomicrmw xchg ptr %{{.*}}, float %{{.*}} monotonic
-  %2 = llvm.atomicrmw xchg %f32_ptr, %f32 monotonic : !llvm.ptr<f32>, f32
+  %4 = llvm.atomicrmw xchg %f32_ptr, %f32 monotonic : !llvm.ptr<f32>, f32
   // CHECK: atomicrmw add ptr %{{.*}}, i32 %{{.*}} acquire
-  %3 = llvm.atomicrmw add %i32_ptr, %i32 acquire : !llvm.ptr<i32>, i32
+  %5 = llvm.atomicrmw add %i32_ptr, %i32 acquire : !llvm.ptr<i32>, i32
   // CHECK: atomicrmw sub ptr %{{.*}}, i32 %{{.*}} release
-  %4 = llvm.atomicrmw sub %i32_ptr, %i32 release : !llvm.ptr<i32>, i32
+  %6 = llvm.atomicrmw sub %i32_ptr, %i32 release : !llvm.ptr<i32>, i32
   // CHECK: atomicrmw and ptr %{{.*}}, i32 %{{.*}} acq_rel
-  %5 = llvm.atomicrmw _and %i32_ptr, %i32 acq_rel : !llvm.ptr<i32>, i32
+  %7 = llvm.atomicrmw _and %i32_ptr, %i32 acq_rel : !llvm.ptr<i32>, i32
   // CHECK: atomicrmw nand ptr %{{.*}}, i32 %{{.*}} seq_cst
-  %6 = llvm.atomicrmw nand %i32_ptr, %i32 seq_cst : !llvm.ptr<i32>, i32
+  %8 = llvm.atomicrmw nand %i32_ptr, %i32 seq_cst : !llvm.ptr<i32>, i32
   // CHECK: atomicrmw or ptr %{{.*}}, i32 %{{.*}} monotonic
-  %7 = llvm.atomicrmw _or %i32_ptr, %i32 monotonic : !llvm.ptr<i32>, i32
+  %9 = llvm.atomicrmw _or %i32_ptr, %i32 monotonic : !llvm.ptr<i32>, i32
   // CHECK: atomicrmw xor ptr %{{.*}}, i32 %{{.*}} monotonic
-  %8 = llvm.atomicrmw _xor %i32_ptr, %i32 monotonic : !llvm.ptr<i32>, i32
+  %10 = llvm.atomicrmw _xor %i32_ptr, %i32 monotonic : !llvm.ptr<i32>, i32
   // CHECK: atomicrmw max ptr %{{.*}}, i32 %{{.*}} monotonic
-  %9 = llvm.atomicrmw max %i32_ptr, %i32 monotonic : !llvm.ptr<i32>, i32
+  %11 = llvm.atomicrmw max %i32_ptr, %i32 monotonic : !llvm.ptr<i32>, i32
   // CHECK: atomicrmw min ptr %{{.*}}, i32 %{{.*}} monotonic
-  %10 = llvm.atomicrmw min %i32_ptr, %i32 monotonic : !llvm.ptr<i32>, i32
+  %12 = llvm.atomicrmw min %i32_ptr, %i32 monotonic : !llvm.ptr<i32>, i32
   // CHECK: atomicrmw umax ptr %{{.*}}, i32 %{{.*}} monotonic
-  %11 = llvm.atomicrmw umax %i32_ptr, %i32 monotonic : !llvm.ptr<i32>, i32
+  %13 = llvm.atomicrmw umax %i32_ptr, %i32 monotonic : !llvm.ptr<i32>, i32
   // CHECK: atomicrmw umin ptr %{{.*}}, i32 %{{.*}} monotonic
-  %12 = llvm.atomicrmw umin %i32_ptr, %i32 monotonic : !llvm.ptr<i32>, i32
+  %14 = llvm.atomicrmw umin %i32_ptr, %i32 monotonic : !llvm.ptr<i32>, i32
+  // CHECK: atomicrmw uinc_wrap ptr %{{.*}}, i32 %{{.*}} monotonic
+  %15 = llvm.atomicrmw uinc_wrap %i32_ptr, %i32 monotonic : !llvm.ptr<i32>, i32
+  // CHECK: atomicrmw udec_wrap ptr %{{.*}}, i32 %{{.*}} monotonic
+  %16 = llvm.atomicrmw udec_wrap %i32_ptr, %i32 monotonic : !llvm.ptr<i32>, i32
   llvm.return
 }
 
