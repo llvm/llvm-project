@@ -1869,10 +1869,6 @@ def fsanitize_cfi_icall_generalize_pointers : Flag<["-"], "fsanitize-cfi-icall-g
                                               Group<f_clang_Group>,
                                               HelpText<"Generalize pointers in CFI indirect call type signature checks">,
                                               MarshallingInfoFlag<CodeGenOpts<"SanitizeCfiICallGeneralizePointers">>;
-def fsanitize_cfi_icall_normalize_integers : Flag<["-"], "fsanitize-cfi-icall-experimental-normalize-integers">,
-                                             Group<f_clang_Group>,
-                                             HelpText<"Normalize integers in CFI indirect call type signature checks">,
-                                             MarshallingInfoFlag<CodeGenOpts<"SanitizeCfiICallNormalizeIntegers">>;
 defm sanitize_cfi_canonical_jump_tables : BoolOption<"f", "sanitize-cfi-canonical-jump-tables",
   CodeGenOpts<"SanitizeCfiCanonicalJumpTables">, DefaultFalse,
   PosFlag<SetTrue, [], "Make">, NegFlag<SetFalse, [CoreOption, NoXarchOption], "Do not make">,

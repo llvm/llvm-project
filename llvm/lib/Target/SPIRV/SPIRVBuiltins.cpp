@@ -1733,7 +1733,8 @@ static bool generateConvertInst(const StringRef DemangledCall,
                     SPIRV::Decoration::SaturatedConversion, {});
   if (Builtin->IsRounded)
     buildOpDecorate(Call->ReturnRegister, MIRBuilder,
-                    SPIRV::Decoration::FPRoundingMode, {Builtin->RoundingMode});
+                    SPIRV::Decoration::FPRoundingMode,
+                    {(unsigned)Builtin->RoundingMode});
 
   unsigned Opcode = SPIRV::OpNop;
   if (GR->isScalarOrVectorOfType(Call->Arguments[0], SPIRV::OpTypeInt)) {
