@@ -122,12 +122,13 @@ def LLVM_ICmpOp : LLVM_ArithmeticCmpOp<"icmp", [Pure]> {
   let hasCustomAssemblyFormat = 1;
   string llvmInstName = "ICmp";
   string llvmBuilder = [{
-    $res = builder.CreateICmp(getLLVMCmpPredicate($predicate), $lhs, $rhs);
+    $res = builder.CreateICmp(
+            convertICmpPredicateToLLVM($predicate), $lhs, $rhs);
   }];
   string mlirBuilder = [{
     auto *iCmpInst = cast<llvm::ICmpInst>(inst);
-    $res = $_builder.create<$_qualCppClassName>(
-      $_location, getICmpPredicate(iCmpInst->getPredicate()), $lhs, $rhs);
+    $res = $_builder.create<$_qualCppClassName>($_location,
+            convertICmpPredicateFromLLVM(iCmpInst->getPredicate()), $lhs, $rhs);
   }];
   // Set the $predicate index to -1 to indicate there is no matching operand
   // and decrement the following indices.
@@ -145,12 +146,12 @@ def LLVM_FCmpOp : LLVM_ArithmeticCmpOp<"fcmp", [
   let hasCustomAssemblyFormat = 1;
   string llvmInstName = "FCmp";
   string llvmBuilder = [{
-    $res = builder.CreateFCmp(getLLVMCmpPredicate($predicate), $lhs, $rhs);
+    $res = builder.CreateFCmp(convertFCmpPredicateToLLVM($predicate), $lhs, $rhs);
   }];
   string mlirBuilder = [{
     auto *fCmpInst = cast<llvm::FCmpInst>(inst);
     auto op = $_builder.create<$_qualCppClassName>(
-      $_location, getFCmpPredicate(fCmpInst->getPredicate()), $lhs, $rhs);
+      $_location, convertFCmpPredicateFromLLVM(fCmpInst->getPredicate()), $lhs, $rhs);
     moduleImport.setFastmathFlagsAttr(inst, op);
     $res = op;
   }];
@@ -1670,15 +1671,15 @@ def LLVM_AtomicRMWOp : LLVM_Op<"atomicrmw", [
   }];
   string llvmInstName = "AtomicRMW";
   string llvmBuilder = [{
-    $res = builder.CreateAtomicRMW(getLLVMAtomicBinOp($bin_op), $ptr, $val,
-                                   llvm::MaybeAlign(),
-                                   getLLVMAtomicOrdering($ordering));
+    $res = builder.CreateAtomicRMW(
+        convertAtomicBinOpToLLVM($bin_op), $ptr, $val, llvm::MaybeAlign(),
+        convertAtomicOrderingToLLVM($ordering));
   }];
   string mlirBuilder = [{
     auto *atomicInst = cast<llvm::AtomicRMWInst>(inst);
     $res = $_builder.create<LLVM::AtomicRMWOp>($_location, $_resultType,
-        getLLVMAtomicBinOp(atomicInst->getOperation()), $ptr, $val,
-        getLLVMAtomicOrdering(atomicInst->getOrdering()));
+        convertAtomicBinOpFromLLVM(atomicInst->getOperation()), $ptr, $val,
+        convertAtomicOrderingFromLLVM(atomicInst->getOrdering()));
   }];
   // Only $ptr and $val are llvm instruction operands.
   list<int> llvmArgIndices = [-1, 0, 1, -1];
@@ -1706,15 +1707,15 @@ def LLVM_AtomicCmpXchgOp : LLVM_Op<"cmpxchg", [
   string llvmInstName = "AtomicCmpXchg";
   string llvmBuilder = [{
     $res = builder.CreateAtomicCmpXchg($ptr, $cmp, $val, llvm::MaybeAlign(),
-                   getLLVMAtomicOrdering($success_ordering),
-                   getLLVMAtomicOrdering($failure_ordering));
+                   convertAtomicOrderingToLLVM($success_ordering),
+                   convertAtomicOrderingToLLVM($failure_ordering));
   }];
   string mlirBuilder = [{
     auto *cmpXchgInst = cast<llvm::AtomicCmpXchgInst>(inst);
     $res = $_builder.create<LLVM::AtomicCmpXchgOp>(
       $_location, $_resultType, $ptr, $cmp, $val,
-      getLLVMAtomicOrdering(cmpXchgInst->getSuccessOrdering()),
-      getLLVMAtomicOrdering(cmpXchgInst->getFailureOrdering()));
+      convertAtomicOrderingFromLLVM(cmpXchgInst->getSuccessOrdering()),
+      convertAtomicOrderingFromLLVM(cmpXchgInst->getFailureOrdering()));
   }];
 }
 
@@ -1724,14 +1725,14 @@ def LLVM_FenceOp : LLVM_Op<"fence"> {
   string llvmInstName = "Fence";
   let llvmBuilder = [{
     llvm::LLVMContext &llvmContext = builder.getContext();
-    builder.CreateFence(getLLVMAtomicOrdering($ordering),
+    builder.CreateFence(convertAtomicOrderingToLLVM($ordering),
       llvmContext.getOrInsertSyncScopeID($syncscope));
   }];
   string mlirBuilder = [{
     llvm::FenceInst *fenceInst = cast<llvm::FenceInst>(inst);
     $_op = $_builder.create<LLVM::FenceOp>(
       $_location,
-      getLLVMAtomicOrdering(fenceInst->getOrdering()),
+      convertAtomicOrderingFromLLVM(fenceInst->getOrdering()),
       getLLVMSyncScope(fenceInst));
   }];
   let hasCustomAssemblyFormat = 1;
