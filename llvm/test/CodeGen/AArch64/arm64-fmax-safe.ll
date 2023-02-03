@@ -7,7 +7,8 @@ define double @test_direct(float %in) {
   %longer = fpext float %val to double
   ret double %longer
 
-; CHECK: fmax s
+; CHECK: fcmp
+; CHECK: fcsel
 }
 
 define double @test_cross(float %in) {
@@ -17,7 +18,8 @@ define double @test_cross(float %in) {
   %longer = fpext float %val to double
   ret double %longer
 
-; CHECK: fmin s
+; CHECK: fcmp
+; CHECK: fcsel
 }
 
 ; Same as previous, but with ordered comparison;
