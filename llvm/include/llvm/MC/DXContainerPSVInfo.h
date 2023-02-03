@@ -40,7 +40,7 @@ struct PSVRuntimeInfo {
   void swapBytes(Triple::EnvironmentType Stage) {
     BaseData.swapBytes();
     BaseData.swapBytes(Stage);
-    for (auto Res : Resources)
+    for (auto &Res : Resources)
       Res.swapBytes();
   }
 };
