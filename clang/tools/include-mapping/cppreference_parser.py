@@ -28,6 +28,11 @@ class Symbol:
     # a list of corresponding headers
     self.headers = headers
 
+  def __lt__(self, other):
+    if self.namespace != other.namespace:
+      return self.namespace < other.namespace
+    return self.name < other.name
+
 
 def _HasClass(tag, *classes):
   for c in tag.get('class', []):
@@ -147,7 +152,7 @@ def _GetSymbols(pool, root_dir, index_page_name, namespace, variants_to_accept):
                       pool.apply_async(_ReadSymbolPage, (path, symbol_name))))
       else:
         sys.stderr.write("Discarding information for symbol: %s. Page %s does not exist.\n" 
-          % (symbol_name, path))                
+          % (symbol_name, path))
 
     # Build map from symbol name to a set of headers.
     symbol_headers = collections.defaultdict(set)
@@ -185,4 +190,4 @@ def GetSymbols(parse_pages):
   finally:
     pool.terminate()
     pool.join()
-  return symbols
+  return sorted(symbols)
