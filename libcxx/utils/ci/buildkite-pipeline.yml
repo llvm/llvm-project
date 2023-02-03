@@ -459,6 +459,23 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
+  - label: "Modular build with Local Submodule Visibility"
+    command: "libcxx/utils/ci/run-buildbot generic-modules-lsv"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    env:
+        CC: "clang-${LLVM_HEAD_VERSION}"
+        CXX: "clang++-${LLVM_HEAD_VERSION}"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
   - group: "Parts disabled"
     steps:
     - label: "No threads"

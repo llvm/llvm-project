@@ -1111,6 +1111,29 @@ func.func @pad_same_static_shape(%arg0: tensor<5x6xf32>, %a: index)
 
 // -----
 
+// CHECK-LABEL:   func @pad_fold_static(
+// CHECK-SAME:      %[[INPUT:.*]]: tensor<?x64x?x?xf32>) -> tensor<?xf32> {
+// CHECK:           %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[PADDING:.*]] = arith.constant 4 : index
+// CHECK:           %[[PADDED:.*]] = tensor.pad %[[INPUT]]
+// CHECK-SAME:        low[0, 4, 1, 1] high[0, 4, 1, 1]  {
+// CHECK:           ^bb0(%[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index, %[[ARG4:.*]]: index):
+// CHECK:             tensor.yield %[[CST]] : f32
+// CHECK:           } : tensor<?x64x?x?xf32> to tensor<?x72x?x?xf32>
+func.func @pad_fold_static(%arg0: tensor<?x64x?x?xf32>)
+    -> tensor<?xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %padding = arith.constant 4 : index
+  %padded = tensor.pad %arg0 low[0, %padding, 1, 1] high[0, %padding, 1, 1]  {
+    ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index):
+    tensor.yield %cst: f32
+  } : tensor<?x64x?x?xf32> to tensor<?x?x?x?xf32>
+  %result = tensor.collapse_shape %padded [[0, 1, 2, 3]] : tensor<?x?x?x?xf32> into tensor<?xf32>
+  return %result : tensor<?xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @pad_nofold_same_static_shape(
 //  CHECK-SAME:   %[[ARG0:.*]]: tensor<5x6xf32>
 //       CHECK:   %[[PAD:.*]] = tensor.pad
