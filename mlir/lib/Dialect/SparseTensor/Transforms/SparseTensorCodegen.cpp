@@ -198,8 +198,10 @@ static Value createAllocation(OpBuilder &builder, Location loc,
 ///
 static void createAllocFields(OpBuilder &builder, Location loc, Type type,
                               ValueRange dynSizes, bool enableInit,
-                              SmallVectorImpl<Value> &fields) {
+                              SmallVectorImpl<Value> &fields, Value sizeHint) {
   RankedTensorType rtp = type.cast<RankedTensorType>();
+  SparseTensorEncodingAttr enc = getSparseTensorEncoding(rtp);
+
   // Build original sizes.
   SmallVector<Value> sizes;
   auto shape = rtp.getShape();
@@ -211,19 +213,34 @@ static void createAllocFields(OpBuilder &builder, Location loc, Type type,
       sizes.push_back(constantIndex(builder, loc, shape[r]));
   }
 
-  Value heuristic = constantIndex(builder, loc, 16);
-  Value valHeuristic = heuristic;
-  SparseTensorEncodingAttr enc = getSparseTensorEncoding(rtp);
+  // Set up some heuristic sizes. We try to set the initial
+  // size based on available information. Otherwise we just
+  // initialize a few elements to start the reallocation chain.
+  // TODO: refine this
+  Value ptrHeuristic, idxHeuristic, valHeuristic;
   if (enc.isAllDense()) {
     Value linear = sizes[0];
     for (unsigned r = 1; r < rank; r++) {
       linear = builder.create<arith::MulIOp>(loc, linear, sizes[r]);
     }
     valHeuristic = linear;
+  } else if (sizeHint) {
+    if (getCOOStart(enc) == 0) {
+      ptrHeuristic = constantIndex(builder, loc, 2);
+      idxHeuristic = builder.create<arith::MulIOp>(
+          loc, constantIndex(builder, loc, rank), sizeHint); // AOS
+    } else {
+      ptrHeuristic = idxHeuristic = constantIndex(builder, loc, 16);
+    }
+    valHeuristic = sizeHint;
+  } else {
+    ptrHeuristic = idxHeuristic = valHeuristic =
+        constantIndex(builder, loc, 16);
   }
+
   foreachFieldAndTypeInSparseTensor(
       rtp,
-      [&builder, &fields, rtp, loc, heuristic, valHeuristic,
+      [&builder, &fields, rtp, loc, ptrHeuristic, idxHeuristic, valHeuristic,
        enableInit](Type fType, unsigned fIdx, SparseTensorFieldKind fKind,
                    unsigned /*dim*/, DimLevelType /*dlt*/) -> bool {
         assert(fields.size() == fIdx);
@@ -235,11 +252,12 @@ static void createAllocFields(OpBuilder &builder, Location loc, Type type,
         case SparseTensorFieldKind::PtrMemRef:
         case SparseTensorFieldKind::IdxMemRef:
         case SparseTensorFieldKind::ValMemRef:
-          field = createAllocation(builder, loc, fType.cast<MemRefType>(),
-                                   fKind == SparseTensorFieldKind::ValMemRef
-                                       ? valHeuristic
-                                       : heuristic,
-                                   enableInit);
+          field = createAllocation(
+              builder, loc, fType.cast<MemRefType>(),
+              (fKind == SparseTensorFieldKind::PtrMemRef)   ? ptrHeuristic
+              : (fKind == SparseTensorFieldKind::IdxMemRef) ? idxHeuristic
+                                                            : valHeuristic,
+              enableInit);
           break;
         }
         assert(field);
@@ -691,9 +709,10 @@ public:
 
     // Construct allocation for each field.
     Location loc = op.getLoc();
+    Value sizeHint = op.getSizeHint();
     SmallVector<Value> fields;
     createAllocFields(rewriter, loc, resType, adaptor.getOperands(),
-                      enableBufferInitialization, fields);
+                      enableBufferInitialization, fields, sizeHint);
     // Replace operation with resulting memrefs.
     rewriter.replaceOp(op, genTuple(rewriter, loc, resType, fields));
     return success();
