@@ -30,6 +30,7 @@ namespace tooling {
 namespace stdlib {
 
 class Symbol;
+enum class Lang { C = 0, CXX, LastValue = CXX };
 
 // A standard library header, such as <iostream>
 // Lightweight class, in fact just an index into a table.
@@ -37,9 +38,10 @@ class Symbol;
 // "<cstdio>" and "<stdio.h>" (and their symbols) are treated differently.
 class Header {
 public:
-  static std::vector<Header> all();
+  static std::vector<Header> all(Lang L = Lang::CXX);
   // Name should contain the angle brackets, e.g. "<vector>".
-  static std::optional<Header> named(llvm::StringRef Name);
+  static std::optional<Header> named(llvm::StringRef Name,
+                                     Lang Language = Lang::CXX);
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Header &H) {
     return OS << H.name();
@@ -47,8 +49,10 @@ public:
   llvm::StringRef name() const;
 
 private:
-  Header(unsigned ID) : ID(ID) {}
+  Header(unsigned ID, Lang Language) : ID(ID), Language(Language) {}
   unsigned ID;
+  Lang Language;
+
   friend Symbol;
   friend llvm::DenseMapInfo<Header>;
   friend bool operator==(const Header &L, const Header &R) {
@@ -64,11 +68,11 @@ private:
 // for them.
 class Symbol {
 public:
-  static std::vector<Symbol> all();
+  static std::vector<Symbol> all(Lang L = Lang::CXX);
   /// \p Scope should have the trailing "::", for example:
   /// named("std::chrono::", "system_clock")
-  static std::optional<Symbol> named(llvm::StringRef Scope,
-                                      llvm::StringRef Name);
+  static std::optional<Symbol>
+  named(llvm::StringRef Scope, llvm::StringRef Name, Lang Language = Lang::CXX);
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Symbol &S) {
     return OS << S.qualified_name();
@@ -82,8 +86,10 @@ public:
   llvm::SmallVector<Header> headers() const;
 
 private:
-  Symbol(unsigned ID) : ID(ID) {}
+  Symbol(unsigned ID, Lang Language) : ID(ID), Language(Language) {}
   unsigned ID;
+  Lang Language;
+
   friend class Recognizer;
   friend llvm::DenseMapInfo<Symbol>;
   friend bool operator==(const Symbol &L, const Symbol &R) {
@@ -114,10 +120,12 @@ namespace llvm {
 
 template <> struct DenseMapInfo<clang::tooling::stdlib::Header> {
   static inline clang::tooling::stdlib::Header getEmptyKey() {
-    return clang::tooling::stdlib::Header(-1);
+    return clang::tooling::stdlib::Header(-1,
+                                          clang::tooling::stdlib::Lang::CXX);
   }
   static inline clang::tooling::stdlib::Header getTombstoneKey() {
-    return clang::tooling::stdlib::Header(-2);
+    return clang::tooling::stdlib::Header(-2,
+                                          clang::tooling::stdlib::Lang::CXX);
   }
   static unsigned getHashValue(const clang::tooling::stdlib::Header &H) {
     return hash_value(H.ID);
@@ -130,10 +138,12 @@ template <> struct DenseMapInfo<clang::tooling::stdlib::Header> {
 
 template <> struct DenseMapInfo<clang::tooling::stdlib::Symbol> {
   static inline clang::tooling::stdlib::Symbol getEmptyKey() {
-    return clang::tooling::stdlib::Symbol(-1);
+    return clang::tooling::stdlib::Symbol(-1,
+                                          clang::tooling::stdlib::Lang::CXX);
   }
   static inline clang::tooling::stdlib::Symbol getTombstoneKey() {
-    return clang::tooling::stdlib::Symbol(-2);
+    return clang::tooling::stdlib::Symbol(-2,
+                                          clang::tooling::stdlib::Lang::CXX);
   }
   static unsigned getHashValue(const clang::tooling::stdlib::Symbol &S) {
     return hash_value(S.ID);
