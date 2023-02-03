@@ -731,7 +731,8 @@ struct LoadOpLowering : public LoadStoreOpLowering<memref::LoadOp> {
     Value dataPtr =
         getStridedElementPtr(loadOp.getLoc(), type, adaptor.getMemref(),
                              adaptor.getIndices(), rewriter);
-    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(loadOp, dataPtr);
+    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(loadOp, dataPtr, 0, false,
+                                              loadOp.getNontemporal());
     return success();
   }
 };
@@ -748,7 +749,8 @@ struct StoreOpLowering : public LoadStoreOpLowering<memref::StoreOp> {
 
     Value dataPtr = getStridedElementPtr(op.getLoc(), type, adaptor.getMemref(),
                                          adaptor.getIndices(), rewriter);
-    rewriter.replaceOpWithNewOp<LLVM::StoreOp>(op, adaptor.getValue(), dataPtr);
+    rewriter.replaceOpWithNewOp<LLVM::StoreOp>(op, adaptor.getValue(), dataPtr,
+                                               0, false, op.getNontemporal());
     return success();
   }
 };
