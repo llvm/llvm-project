@@ -286,7 +286,7 @@ Loop *cloneLoopWithPreheader(BasicBlock *Before, BasicBlock *LoopDomBB,
                              SmallVectorImpl<BasicBlock *> &Blocks);
 
 /// Remaps instructions in \p Blocks using the mapping in \p VMap.
-void remapInstructionsInBlocks(const SmallVectorImpl<BasicBlock *> &Blocks,
+void remapInstructionsInBlocks(ArrayRef<BasicBlock *> Blocks,
                                ValueToValueMapTy &VMap);
 
 /// Split edge between BB and PredBB and duplicate all non-Phi instructions
