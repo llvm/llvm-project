@@ -104,24 +104,24 @@ void AArch64Subtarget::initializeProperties() {
   case CortexA35:
   case CortexA53:
   case CortexA55:
-    PrefFunctionLogAlignment = 4;
-    PrefLoopLogAlignment = 4;
+    PrefFunctionAlignment = Align(16);
+    PrefLoopAlignment = Align(16);
     MaxBytesForLoopAlignment = 8;
     break;
   case CortexA57:
     MaxInterleaveFactor = 4;
-    PrefFunctionLogAlignment = 4;
-    PrefLoopLogAlignment = 4;
+    PrefFunctionAlignment = Align(16);
+    PrefLoopAlignment = Align(16);
     MaxBytesForLoopAlignment = 8;
     break;
   case CortexA65:
-    PrefFunctionLogAlignment = 3;
+    PrefFunctionAlignment = Align(8);
     break;
   case CortexA72:
   case CortexA73:
   case CortexA75:
-    PrefFunctionLogAlignment = 4;
-    PrefLoopLogAlignment = 4;
+    PrefFunctionAlignment = Align(16);
+    PrefLoopAlignment = Align(16);
     MaxBytesForLoopAlignment = 8;
     break;
   case CortexA76:
@@ -131,29 +131,29 @@ void AArch64Subtarget::initializeProperties() {
   case CortexR82:
   case CortexX1:
   case CortexX1C:
-    PrefFunctionLogAlignment = 4;
-    PrefLoopLogAlignment = 5;
+    PrefFunctionAlignment = Align(16);
+    PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
     break;
   case CortexA510:
-    PrefFunctionLogAlignment = 4;
+    PrefFunctionAlignment = Align(16);
     VScaleForTuning = 1;
-    PrefLoopLogAlignment = 4;
+    PrefLoopAlignment = Align(16);
     MaxBytesForLoopAlignment = 8;
     break;
   case CortexA710:
   case CortexA715:
   case CortexX2:
   case CortexX3:
-    PrefFunctionLogAlignment = 4;
+    PrefFunctionAlignment = Align(16);
     VScaleForTuning = 1;
-    PrefLoopLogAlignment = 5;
+    PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
     break;
   case A64FX:
     CacheLineSize = 256;
-    PrefFunctionLogAlignment = 3;
-    PrefLoopLogAlignment = 2;
+    PrefFunctionAlignment = Align(8);
+    PrefLoopAlignment = Align(4);
     MaxInterleaveFactor = 4;
     PrefetchDistance = 128;
     MinPrefetchStride = 1024;
@@ -185,8 +185,8 @@ void AArch64Subtarget::initializeProperties() {
   case ExynosM3:
     MaxInterleaveFactor = 4;
     MaxJumpTableSize = 20;
-    PrefFunctionLogAlignment = 5;
-    PrefLoopLogAlignment = 4;
+    PrefFunctionAlignment = Align(32);
+    PrefLoopAlignment = Align(16);
     break;
   case Falkor:
     MaxInterleaveFactor = 4;
@@ -208,28 +208,28 @@ void AArch64Subtarget::initializeProperties() {
     MinVectorRegisterBitWidth = 128;
     break;
   case NeoverseE1:
-    PrefFunctionLogAlignment = 3;
+    PrefFunctionAlignment = Align(8);
     break;
   case NeoverseN1:
-    PrefFunctionLogAlignment = 4;
-    PrefLoopLogAlignment = 5;
+    PrefFunctionAlignment = Align(16);
+    PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
     break;
   case NeoverseN2:
   case NeoverseV2:
-    PrefFunctionLogAlignment = 4;
-    PrefLoopLogAlignment = 5;
+    PrefFunctionAlignment = Align(16);
+    PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
     VScaleForTuning = 1;
     break;
   case NeoverseV1:
-    PrefFunctionLogAlignment = 4;
-    PrefLoopLogAlignment = 5;
+    PrefFunctionAlignment = Align(16);
+    PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
     VScaleForTuning = 2;
     break;
   case Neoverse512TVB:
-    PrefFunctionLogAlignment = 4;
+    PrefFunctionAlignment = Align(16);
     VScaleForTuning = 1;
     MaxInterleaveFactor = 4;
     break;
@@ -240,8 +240,8 @@ void AArch64Subtarget::initializeProperties() {
     break;
   case ThunderX2T99:
     CacheLineSize = 64;
-    PrefFunctionLogAlignment = 3;
-    PrefLoopLogAlignment = 2;
+    PrefFunctionAlignment = Align(8);
+    PrefLoopAlignment = Align(4);
     MaxInterleaveFactor = 4;
     PrefetchDistance = 128;
     MinPrefetchStride = 1024;
@@ -254,20 +254,20 @@ void AArch64Subtarget::initializeProperties() {
   case ThunderXT81:
   case ThunderXT83:
     CacheLineSize = 128;
-    PrefFunctionLogAlignment = 3;
-    PrefLoopLogAlignment = 2;
+    PrefFunctionAlignment = Align(8);
+    PrefLoopAlignment = Align(4);
     // FIXME: remove this to enable 64-bit SLP if performance looks good.
     MinVectorRegisterBitWidth = 128;
     break;
   case TSV110:
     CacheLineSize = 64;
-    PrefFunctionLogAlignment = 4;
-    PrefLoopLogAlignment = 2;
+    PrefFunctionAlignment = Align(16);
+    PrefLoopAlignment = Align(4);
     break;
   case ThunderX3T110:
     CacheLineSize = 64;
-    PrefFunctionLogAlignment = 4;
-    PrefLoopLogAlignment = 2;
+    PrefFunctionAlignment = Align(16);
+    PrefLoopAlignment = Align(4);
     MaxInterleaveFactor = 4;
     PrefetchDistance = 128;
     MinPrefetchStride = 1024;
@@ -278,8 +278,8 @@ void AArch64Subtarget::initializeProperties() {
   case Ampere1:
   case Ampere1A:
     CacheLineSize = 64;
-    PrefFunctionLogAlignment = 6;
-    PrefLoopLogAlignment = 6;
+    PrefFunctionAlignment = Align(64);
+    PrefLoopAlignment = Align(64);
     MaxInterleaveFactor = 4;
     break;
   }
