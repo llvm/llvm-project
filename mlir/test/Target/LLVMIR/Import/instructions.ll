@@ -393,6 +393,14 @@ define void @atomic_rmw(ptr %ptr1, i32 %val1, ptr %ptr2, float %val2) {
   %12 = atomicrmw fadd ptr %ptr2, float %val2 acquire
   ; CHECK:  llvm.atomicrmw fsub %[[PTR2]], %[[VAL2]] acquire
   %13 = atomicrmw fsub ptr %ptr2, float %val2 acquire
+  ; CHECK:  llvm.atomicrmw fmax %[[PTR2]], %[[VAL2]] acquire
+  %14 = atomicrmw fmax ptr %ptr2, float %val2 acquire
+  ; CHECK:  llvm.atomicrmw fmin %[[PTR2]], %[[VAL2]] acquire
+  %15 = atomicrmw fmin ptr %ptr2, float %val2 acquire
+  ; CHECK:  llvm.atomicrmw uinc_wrap %[[PTR1]], %[[VAL1]] acquire
+  %16 = atomicrmw uinc_wrap ptr %ptr1, i32 %val1 acquire
+  ; CHECK:  llvm.atomicrmw udec_wrap %[[PTR1]], %[[VAL1]] acquire
+  %17 = atomicrmw udec_wrap ptr %ptr1, i32 %val1 acquire
   ret void
 }
 

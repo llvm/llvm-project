@@ -12,7 +12,6 @@
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/Dialect/Transform/IR/TransformUtils.h"
-#include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
@@ -89,9 +88,11 @@ LogicalResult PatternApplicatorExtension::findAllMatches(
     if (!patternOp)
       return failure();
 
+    // Copy the pattern operation into a new module that is compiled and
+    // consumed by the PDL interpreter.
     OwningOpRef<ModuleOp> pdlModuleOp = ModuleOp::create(patternOp.getLoc());
-    patternOp->moveBefore(pdlModuleOp->getBody(),
-                          pdlModuleOp->getBody()->end());
+    auto builder = OpBuilder::atBlockEnd(pdlModuleOp->getBody());
+    builder.clone(*patternOp);
     PDLPatternModule patternModule(std::move(pdlModuleOp));
 
     // Merge in the hooks owned by the dialect. Make a copy as they may be
@@ -964,8 +965,6 @@ void transform::SequenceOp::build(OpBuilder &builder, OperationState &state,
 DiagnosedSilenceableFailure
 transform::WithPDLPatternsOp::apply(transform::TransformResults &results,
                                     transform::TransformState &state) {
-  OwningOpRef<ModuleOp> pdlModuleOp =
-      ModuleOp::create(getOperation()->getLoc());
   TransformOpInterface transformOp = nullptr;
   for (Operation &nested : getBody().front()) {
     if (!isa<pdl::PatternOp>(nested)) {

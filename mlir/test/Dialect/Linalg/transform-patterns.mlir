@@ -1,7 +1,5 @@
 // RUN: mlir-opt %s -test-transform-dialect-interpreter -test-linalg-transform-patterns=test-patterns -split-input-file | FileCheck %s
 
-// -----
-
 func.func @dot(%x: memref<?xf32, strided<[1], offset: ?>>,
           %y: memref<?xf32, strided<[1], offset: ?>>,
           %v: memref<f32>) {

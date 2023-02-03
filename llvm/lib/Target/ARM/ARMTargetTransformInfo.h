@@ -312,7 +312,7 @@ public:
                                TTI::UnrollingPreferences &UP,
                                OptimizationRemarkEmitter *ORE);
 
-  PredicationStyle emitGetActiveLaneMask() const;
+  TailFoldingStyle getPreferredTailFoldingStyle() const;
 
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              TTI::PeelingPreferences &PP);

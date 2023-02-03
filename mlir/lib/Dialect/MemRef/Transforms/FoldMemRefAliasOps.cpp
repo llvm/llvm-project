@@ -384,9 +384,13 @@ LogicalResult LoadOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
     return failure();
 
   llvm::TypeSwitch<Operation *, void>(loadOp)
-      .Case<AffineLoadOp, memref::LoadOp>([&](auto op) {
-        rewriter.replaceOpWithNewOp<decltype(op)>(loadOp, subViewOp.getSource(),
+      .Case([&](AffineLoadOp op) {
+        rewriter.replaceOpWithNewOp<AffineLoadOp>(loadOp, subViewOp.getSource(),
                                                   sourceIndices);
+      })
+      .Case([&](memref::LoadOp op) {
+        rewriter.replaceOpWithNewOp<memref::LoadOp>(
+            loadOp, subViewOp.getSource(), sourceIndices, op.getNontemporal());
       })
       .Case([&](vector::TransferReadOp transferReadOp) {
         rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
@@ -490,9 +494,14 @@ LogicalResult StoreOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
     return failure();
 
   llvm::TypeSwitch<Operation *, void>(storeOp)
-      .Case<AffineStoreOp, memref::StoreOp>([&](auto op) {
-        rewriter.replaceOpWithNewOp<decltype(op)>(
+      .Case([&](AffineStoreOp op) {
+        rewriter.replaceOpWithNewOp<AffineStoreOp>(
             storeOp, storeOp.getValue(), subViewOp.getSource(), sourceIndices);
+      })
+      .Case([&](memref::StoreOp op) {
+        rewriter.replaceOpWithNewOp<memref::StoreOp>(
+            storeOp, storeOp.getValue(), subViewOp.getSource(), sourceIndices,
+            op.getNontemporal());
       })
       .Case([&](vector::TransferWriteOp op) {
         rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
