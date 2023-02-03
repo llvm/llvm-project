@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Profile/ProfileYAMLMapping.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -398,9 +399,8 @@ int main(int argc, char **argv) {
     BinaryProfile MergedProfile;
     MergedProfile.Header = MergedHeader;
     MergedProfile.Functions.resize(MergedBFs.size());
-    llvm::transform(
-        MergedBFs, MergedProfile.Functions.begin(),
-        [](StringMapEntry<BinaryFunctionProfile> &V) { return V.second; });
+    llvm::copy(llvm::make_second_range(MergedBFs),
+               MergedProfile.Functions.begin());
 
     // For consistency, sort functions by their IDs.
     llvm::sort(MergedProfile.Functions,

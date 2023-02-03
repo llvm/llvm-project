@@ -60,12 +60,19 @@ Bug Fixes
 - Fix crash when diagnosing incorrect usage of ``_Nullable`` involving alias
   templates. This fixes
   `Issue 60344 <https://github.com/llvm/llvm-project/issues/60344>`_.
+- Fix confusing warning message when ``/clang:-x`` is passed in ``clang-cl``
+  driver mode and emit an error which suggests using ``/TC`` or ``/TP``
+  ``clang-cl`` options instead. This fixes
+  `Issue 59307 <https://github.com/llvm/llvm-project/issues/59307>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - We now generate a diagnostic for signed integer overflow due to unary minus
   in a non-constant expression context. This fixes
   `Issue 31643 <https://github.com/llvm/llvm-project/issues/31643>`_
+- Clang now warns by default for C++20 and later about deprecated capture of
+  ``this`` with a capture default of ``=``. This warning can be disabled with
+  ``-Wno-deprecated-this-capture``.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -153,6 +160,10 @@ LoongArch Support in Clang
 
 RISC-V Support in Clang
 -----------------------
+- Added ``-mrvv-vector-bits=`` option to give an upper and lower bound on vector
+  length. Valid values are powers of 2 between 64 and 65536. A value of 32
+  should eventually be supported. We also accept "zvl" to use the Zvl*b
+  extension from ``-march`` or ``-mcpu`` to the be the upper and lower bound.
 
 X86 Support in Clang
 --------------------
@@ -175,6 +186,7 @@ Arm and AArch64 Support in Clang
 
 Floating Point Support in Clang
 -------------------------------
+- Add ``__builtin_elementwise_log`` builtin for floating point types only.
 
 Internal API Changes
 --------------------

@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=2 < %s | FileCheck -check-prefix=HSA %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck -check-prefix=HSA %s
 
 @lds.align16.0 = internal unnamed_addr addrspace(3) global [38 x i8] undef, align 16
 @lds.align16.1 = internal unnamed_addr addrspace(3) global [38 x i8] undef, align 16
@@ -227,3 +227,6 @@ define amdgpu_kernel void @test_round_size_3_order5(ptr addrspace(1) %out, ptr a
 attributes #0 = { argmemonly nounwind }
 attributes #1 = { nounwind }
 attributes #2 = { convergent nounwind }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 200}

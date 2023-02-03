@@ -7,3 +7,6 @@
 ; GFX90C-ERROR: LLVM ERROR: AMD GPU code object V2 does not support processor gfx90c with XNACK being ON or ANY
 
 ; GFX940-ERROR: LLVM ERROR: AMD GPU code object V2 does not support processor gfx940
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 200}

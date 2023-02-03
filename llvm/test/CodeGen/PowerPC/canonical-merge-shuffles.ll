@@ -1196,8 +1196,7 @@ define dso_local void @testByteSplat() #0 {
 ; CHECK-P7-NEXT:    lvx v3, 0, r3
 ; CHECK-P7-NEXT:    vperm v2, v3, v3, v2
 ; CHECK-P7-NEXT:    vspltb v2, v2, 15
-; CHECK-P7-NEXT:    xxswapd vs0, v2
-; CHECK-P7-NEXT:    stxvd2x vs0, 0, r3
+; CHECK-P7-NEXT:    stxvd2x v2, 0, r3
 ; CHECK-P7-NEXT:    blr
 ;
 ; P8-AIX-LABEL: testByteSplat:
