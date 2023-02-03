@@ -415,7 +415,8 @@ public:
             def __getitem__(self, key):
                 count = len(self)
                 if type(key) is int:
-                    if key < count:
+                    if -count <= key < count:
+                        key %= count
                         return self.sbmodule.GetSymbolAtIndex(key)
                 elif type(key) is str:
                     matches = []
@@ -476,7 +477,8 @@ public:
             def __getitem__(self, key):
                 count = len(self)
                 if type(key) is int:
-                    if key < count:
+                    if -count <= key < count:
+                        key %= count
                         return self.sbmodule.GetSectionAtIndex(key)
                 elif type(key) is str:
                     for idx in range(count):
@@ -511,7 +513,8 @@ public:
             def __getitem__(self, key):
                 count = len(self)
                 if type(key) is int:
-                    if key < count:
+                    if -count <= key < count:
+                        key %= count
                         return self.sbmodule.GetCompileUnitAtIndex(key)
                 elif type(key) is str:
                     is_full_path = key[0] == '/'
