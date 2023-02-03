@@ -93,6 +93,7 @@ static void ensureInitialized() {
 }
 
 std::vector<Header> Header::all() {
+  ensureInitialized();
   std::vector<Header> Result;
   Result.reserve(HeaderIDs->size());
   for (unsigned I = 0, E = HeaderIDs->size(); I < E; ++I)
@@ -109,6 +110,7 @@ std::optional<Header> Header::named(llvm::StringRef Name) {
 llvm::StringRef Header::name() const { return HeaderNames[ID]; }
 
 std::vector<Symbol> Symbol::all() {
+  ensureInitialized();
   std::vector<Symbol> Result;
   Result.reserve(SymbolCount);
   for (unsigned I = 0, E = SymbolCount; I < E; ++I)
