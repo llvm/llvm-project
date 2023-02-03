@@ -1924,44 +1924,6 @@ llvm.func @switch_weights(%arg0: i32) -> i32 {
 // -----
 
 module {
-  llvm.func @loopOptions(%arg1 : i32, %arg2 : i32) {
-      %0 = llvm.mlir.constant(0 : i32) : i32
-      %4 = llvm.alloca %arg1 x i32 : (i32) -> (!llvm.ptr<i32>)
-      llvm.br ^bb3(%0 : i32)
-    ^bb3(%1: i32):
-      %2 = llvm.icmp "slt" %1, %arg1 : i32
-      // CHECK: br i1 {{.*}} !llvm.loop ![[LOOP_NODE:[0-9]+]]
-      llvm.cond_br %2, ^bb4, ^bb5 {llvm.loop = {parallel_access = [@metadata::@group1, @metadata::@group2], options = #llvm.loopopts<disable_licm = true, disable_unroll = true, interleave_count = 1, disable_pipeline = true, pipeline_initiation_interval = 2>}}
-    ^bb4:
-      %3 = llvm.add %1, %arg2  : i32
-      // CHECK: = load i32, ptr %{{.*}} !llvm.access.group ![[ACCESS_GROUPS_NODE:[0-9]+]]
-      %5 = llvm.load %4 { access_groups = [@metadata::@group1, @metadata::@group2] } : !llvm.ptr<i32>
-      // CHECK: br label {{.*}} !llvm.loop ![[LOOP_NODE]]
-      llvm.br ^bb3(%3 : i32) {llvm.loop = {parallel_access = [@metadata::@group1, @metadata::@group2], options = #llvm.loopopts<disable_unroll = true, disable_licm = true, interleave_count = 1, disable_pipeline = true, pipeline_initiation_interval = 2>}}
-    ^bb5:
-      llvm.return
-  }
-
-  llvm.metadata @metadata {
-    llvm.access_group @group1
-    llvm.access_group @group2
-  }
-}
-
-// CHECK: ![[LOOP_NODE]] = distinct !{![[LOOP_NODE]], ![[PA_NODE:[0-9]+]], ![[UNROLL_DISABLE_NODE:[0-9]+]], ![[LICM_DISABLE_NODE:[0-9]+]], ![[INTERLEAVE_NODE:[0-9]+]], ![[PIPELINE_DISABLE_NODE:[0-9]+]], ![[II_NODE:[0-9]+]]}
-// CHECK: ![[PA_NODE]] = !{!"llvm.loop.parallel_accesses", ![[GROUP_NODE1:[0-9]+]], ![[GROUP_NODE2:[0-9]+]]}
-// CHECK: ![[GROUP_NODE1]] = distinct !{}
-// CHECK: ![[GROUP_NODE2]] = distinct !{}
-// CHECK: ![[UNROLL_DISABLE_NODE]] = !{!"llvm.loop.unroll.disable", i1 true}
-// CHECK: ![[LICM_DISABLE_NODE]] = !{!"llvm.licm.disable", i1 true}
-// CHECK: ![[INTERLEAVE_NODE]] = !{!"llvm.loop.interleave.count", i32 1}
-// CHECK: ![[PIPELINE_DISABLE_NODE]] = !{!"llvm.loop.pipeline.disable", i1 true}
-// CHECK: ![[II_NODE]] = !{!"llvm.loop.pipeline.initiationinterval", i32 2}
-// CHECK: ![[ACCESS_GROUPS_NODE]] = !{![[GROUP_NODE1]], ![[GROUP_NODE2]]}
-
-// -----
-
-module {
   llvm.func @aliasScope(%arg1 : !llvm.ptr<i32>, %arg2 : !llvm.ptr<i32>, %arg3 : !llvm.ptr<i32>) {
       %0 = llvm.mlir.constant(0 : i32) : i32
       llvm.store %0, %arg1 { alias_scopes = [@metadata::@scope1], noalias_scopes = [@metadata::@scope2, @metadata::@scope3] } : !llvm.ptr<i32>

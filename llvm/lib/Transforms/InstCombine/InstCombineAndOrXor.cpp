@@ -4280,6 +4280,23 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     }
   }
 
+  // (A & B) ^ (A | C) --> A ? ~B : C -- There are 4 commuted variants.
+  if (I.getType()->isIntOrIntVectorTy(1) &&
+      match(Op0, m_OneUse(m_LogicalAnd(m_Value(A), m_Value(B)))) &&
+      match(Op1, m_OneUse(m_LogicalOr(m_Value(C), m_Value(D))))) {
+    bool NeedFreeze = isa<SelectInst>(Op0) && isa<SelectInst>(Op1) && B == D;
+    if (B == C || B == D)
+      std::swap(A, B);
+    if (A == C)
+      std::swap(C, D);
+    if (A == D) {
+      if (NeedFreeze)
+        A = Builder.CreateFreeze(A);
+      Value *NotB = Builder.CreateNot(B);
+      return SelectInst::Create(A, NotB, C);
+    }
+  }
+
   if (auto *LHS = dyn_cast<ICmpInst>(I.getOperand(0)))
     if (auto *RHS = dyn_cast<ICmpInst>(I.getOperand(1)))
       if (Value *V = foldXorOfICmps(LHS, RHS, I))
