@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 --amdhsa-code-object-version=3 -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 --amdhsa-code-object-version=3 -verify-machineinstrs -amdgpu-verify-hsa-metadata -filetype=obj -o /dev/null < %s 2>&1 | FileCheck --check-prefix=PARSER %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -verify-machineinstrs -amdgpu-verify-hsa-metadata -filetype=obj -o /dev/null < %s 2>&1 | FileCheck --check-prefix=PARSER %s
 
 ; CHECK-LABEL: {{^}}min_64_max_64:
 ; CHECK: SGPRBlocks: 0
@@ -128,6 +128,9 @@ define amdgpu_kernel void @min_1024_max_1024() #3 {
   ret void
 }
 attributes #3 = {"amdgpu-flat-work-group-size"="1024,1024"}
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 300}
 
 ; CHECK: amdhsa.kernels:
 ; CHECK:   .max_flat_workgroup_size: 64

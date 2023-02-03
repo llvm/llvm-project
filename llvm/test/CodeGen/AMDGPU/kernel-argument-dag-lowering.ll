@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 --amdhsa-code-object-version=2 -amdgpu-ir-lower-kernel-arguments=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,HSA-VI,FUNC %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -amdgpu-ir-lower-kernel-arguments=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,HSA-VI,FUNC %s
 
 ; Repeat of some problematic tests in kernel-args.ll, with the IR
 ; argument lowering pass disabled. Struct padding needs to be
@@ -274,3 +274,6 @@ define amdgpu_kernel void @byref_constant_i32_arg_offset0(ptr addrspace(4) byref
   store i32 %in, ptr addrspace(1) undef, align 4
   ret void
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 200}
