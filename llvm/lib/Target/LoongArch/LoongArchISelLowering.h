@@ -187,6 +187,8 @@ public:
                              unsigned AS,
                              Instruction *I = nullptr) const override;
 
+  bool hasAndNotCompare(SDValue Y) const override;
+
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
   typedef bool LoongArchCCAssignFn(const DataLayout &DL, LoongArchABI::ABI ABI,
