@@ -27,12 +27,84 @@ namespace object {
 
 namespace DirectX {
 class PSVRuntimeInfo {
+
+  // This class provides a view into the underlying resource array. The Resource
+  // data is little-endian encoded and may not be properly aligned to read
+  // directly from. The dereference operator creates a copy of the data and byte
+  // swaps it as appropriate.
+  struct ResourceArray {
+    StringRef Data;
+    size_t Stride; // size of each element in the list.
+
+    ResourceArray() = default;
+    ResourceArray(StringRef D, size_t S) : Data(D), Stride(S) {}
+
+    using value_type = dxbc::PSV::v2::ResourceBindInfo;
+
+    struct iterator {
+      StringRef Data;
+      size_t Stride; // size of each element in the list.
+      const char *Current;
+
+      iterator(const ResourceArray &A, const char *C)
+          : Data(A.Data), Stride(A.Stride), Current(C) {}
+      iterator(const iterator &) = default;
+
+      value_type operator*() {
+        // Explicitly zero the structure so that unused fields are zeroed. It is
+        // up to the user to know if the fields are used by verifying the PSV
+        // version.
+        value_type Val = {{0, 0, 0, 0}, 0, 0};
+        if (Current >= Data.end())
+          return Val;
+        memcpy(static_cast<void *>(&Val), Current, Stride);
+        if (sys::IsBigEndianHost)
+          Val.swapBytes();
+        return Val;
+      }
+
+      iterator operator++() {
+        if (Current < Data.end())
+          Current += Stride;
+        return *this;
+      }
+
+      iterator operator++(int) {
+        iterator Tmp = *this;
+        ++*this;
+        return Tmp;
+      }
+
+      iterator operator--() {
+        if (Current > Data.begin())
+          Current -= Stride;
+        return *this;
+      }
+
+      iterator operator--(int) {
+        iterator Tmp = *this;
+        --*this;
+        return Tmp;
+      }
+
+      bool operator==(const iterator I) { return I.Current == Current; }
+      bool operator!=(const iterator I) { return !(*this == I); }
+    };
+
+    iterator begin() const { return iterator(*this, Data.begin()); }
+
+    iterator end() const { return iterator(*this, Data.end()); }
+
+    size_t size() const { return Data.size() / Stride; }
+  };
+
   StringRef Data;
   uint32_t Size;
   using InfoStruct =
       std::variant<std::monostate, dxbc::PSV::v0::RuntimeInfo,
                    dxbc::PSV::v1::RuntimeInfo, dxbc::PSV::v2::RuntimeInfo>;
   InfoStruct BasicInfo;
+  ResourceArray Resources;
 
 public:
   PSVRuntimeInfo(StringRef D) : Data(D), Size(0) {}
@@ -41,6 +113,9 @@ public:
   Error parse(uint16_t ShaderKind);
 
   uint32_t getSize() const { return Size; }
+  uint32_t getResourceCount() const { return Resources.size(); }
+  ResourceArray getResources() const { return Resources; }
+
   uint32_t getVersion() const {
     return Size >= sizeof(dxbc::PSV::v2::RuntimeInfo)
                ? 2

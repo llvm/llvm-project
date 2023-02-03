@@ -71,6 +71,8 @@ struct ShaderHash {
   std::vector<llvm::yaml::Hex8> Digest;
 };
 
+using ResourceBindInfo = dxbc::PSV::v2::ResourceBindInfo;
+
 struct PSVInfo {
   // The version field isn't actually encoded in the file, but it is inferred by
   // the size of data regions. We include it in the yaml because it simplifies
@@ -78,6 +80,7 @@ struct PSVInfo {
   uint32_t Version;
 
   dxbc::PSV::v2::RuntimeInfo Info;
+  std::vector<ResourceBindInfo> Resources;
 
   void mapInfoForVersion(yaml::IO &IO);
 
@@ -107,6 +110,7 @@ struct Object {
 } // namespace llvm
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::Part)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::ResourceBindInfo)
 namespace llvm {
 
 class raw_ostream;
@@ -143,6 +147,10 @@ template <> struct MappingTraits<DXContainerYAML::Part> {
 
 template <> struct MappingTraits<DXContainerYAML::Object> {
   static void mapping(IO &IO, DXContainerYAML::Object &Obj);
+};
+
+template <> struct MappingTraits<DXContainerYAML::ResourceBindInfo> {
+  static void mapping(IO &IO, DXContainerYAML::ResourceBindInfo &Res);
 };
 
 } // namespace yaml
