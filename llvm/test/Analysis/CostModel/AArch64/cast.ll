@@ -858,8 +858,8 @@ define i32 @load_extends() #0 {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v13 = zext <4 x i32> %loadv4i32 to <4 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v14 = sext <vscale x 2 x i32> %loadnxv2i32 to <vscale x 2 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v15 = zext <vscale x 2 x i32> %loadnxv2i32 to <vscale x 2 x i64>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16 = sext <vscale x 4 x i32> %loadnxv4i32 to <vscale x 4 x i64>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v17 = zext <vscale x 4 x i32> %loadnxv4i32 to <vscale x 4 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16 = sext <vscale x 4 x i32> %loadnxv4i32 to <vscale x 4 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v17 = zext <vscale x 4 x i32> %loadnxv4i32 to <vscale x 4 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %loadi8 = load i8, ptr undef

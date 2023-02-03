@@ -75,8 +75,8 @@ int32_t AsyncInfoTy::runPostProcessing() {
 
 bool AsyncInfoTy::isQueueEmpty() const { return AsyncInfo.Queue == nullptr; }
 
-/* All begin addresses for partially mapped structs must be 8-aligned in order
- * to ensure proper alignment of members. E.g.
+/* All begin addresses for partially mapped structs must be aligned, up to 16,
+ * in order to ensure proper alignment of members. E.g.
  *
  * struct S {
  *   int a;   // 4-aligned
@@ -105,7 +105,14 @@ bool AsyncInfoTy::isQueueEmpty() const { return AsyncInfo.Queue == nullptr; }
  * device will start at 0x200 with the padding (4 bytes), then &s1.b=0x204 and
  * &s1.p=0x208, as they should be to satisfy the alignment requirements.
  */
-static const int64_t Alignment = 8;
+static const int64_t MaxAlignment = 16;
+
+/// Return the alignment requirement of partially mapped structs, see
+/// MaxAlignment above.
+static int64_t getPartialStructRequiredAlignment(void *HstPtrBase) {
+  auto BaseAlignment = reinterpret_cast<uintptr_t>(HstPtrBase) % MaxAlignment;
+  return BaseAlignment == 0 ? MaxAlignment : BaseAlignment;
+}
 
 /// Map global data and execute pending ctors
 static int initLibrary(DeviceTy &Device) {
@@ -585,6 +592,7 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     const int NextI = I + 1;
     if (getParentIndex(ArgTypes[I]) < 0 && NextI < ArgNum &&
         getParentIndex(ArgTypes[NextI]) == I) {
+      int64_t Alignment = getPartialStructRequiredAlignment(HstPtrBase);
       Padding = (int64_t)HstPtrBegin % Alignment;
       if (Padding) {
         DP("Using a padding of %" PRId64 " bytes for begin address " DPxMOD
@@ -932,6 +940,7 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     }
 
     void *HstPtrBegin = Args[I];
+    void *HstPtrBase = ArgBases[I];
     int64_t DataSize = ArgSizes[I];
     // Adjust for proper alignment if this is a combined entry (for structs).
     // Look at the next argument - if that is MEMBER_OF this one, then this one
@@ -939,6 +948,7 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     const int NextI = I + 1;
     if (getParentIndex(ArgTypes[I]) < 0 && NextI < ArgNum &&
         getParentIndex(ArgTypes[NextI]) == I) {
+      int64_t Alignment = getPartialStructRequiredAlignment(HstPtrBase);
       int64_t Padding = (int64_t)HstPtrBegin % Alignment;
       if (Padding) {
         DP("Using a Padding of %" PRId64 " bytes for begin address " DPxMOD
@@ -1293,8 +1303,8 @@ class PrivateArgumentManagerTy {
     FirstPrivateArgInfoTy(int Index, void *HstPtr, int64_t Size,
                           const map_var_info_t HstPtrName = nullptr)
         : Index(Index), HstPtrBegin(reinterpret_cast<char *>(HstPtr)),
-          HstPtrEnd(HstPtrBegin + Size), AlignedSize(Size + Size % Alignment),
-          HstPtrName(HstPtrName) {}
+          HstPtrEnd(HstPtrBegin + Size),
+          AlignedSize(Size + Size % MaxAlignment), HstPtrName(HstPtrName) {}
   };
 
   /// A vector of target pointers for all private arguments
