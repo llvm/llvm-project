@@ -61,7 +61,8 @@ public:
   static constexpr int64_t kNoLimit = -1;
 
   /// Only ops within the scope are added to the worklist. If no scope is
-  /// specified, the closest enclosing region is used as a scope.
+  /// specified, the closest enclosing region around the initial list of ops
+  /// is used as a scope.
   Region *scope = nullptr;
 
   /// Strict mode can restrict the ops that are added to the worklist during
