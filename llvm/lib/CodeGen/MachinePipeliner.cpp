@@ -865,13 +865,11 @@ void SwingSchedulerDAG::updatePhiDependences() {
     unsigned HasPhiDef = 0;
     MachineInstr *MI = I.getInstr();
     // Iterate over each operand, and we process the definitions.
-    for (MachineInstr::mop_iterator MOI = MI->operands_begin(),
-                                    MOE = MI->operands_end();
-         MOI != MOE; ++MOI) {
-      if (!MOI->isReg())
+    for (const MachineOperand &MO : MI->operands()) {
+      if (!MO.isReg())
         continue;
-      Register Reg = MOI->getReg();
-      if (MOI->isDef()) {
+      Register Reg = MO.getReg();
+      if (MO.isDef()) {
         // If the register is used by a Phi, then create an anti dependence.
         for (MachineRegisterInfo::use_instr_iterator
                  UI = MRI.use_instr_begin(Reg),
@@ -893,7 +891,7 @@ void SwingSchedulerDAG::updatePhiDependences() {
             }
           }
         }
-      } else if (MOI->isUse()) {
+      } else if (MO.isUse()) {
         // If the register is defined by a Phi, then create a true dependence.
         MachineInstr *DefMI = MRI.getUniqueVRegDef(Reg);
         if (DefMI == nullptr)
@@ -903,7 +901,7 @@ void SwingSchedulerDAG::updatePhiDependences() {
           if (!MI->isPHI()) {
             SDep Dep(SU, SDep::Data, Reg);
             Dep.setLatency(0);
-            ST.adjustSchedDependency(SU, 0, &I, MI->getOperandNo(MOI), Dep);
+            ST.adjustSchedDependency(SU, 0, &I, MO.getOperandNo(), Dep);
             I.addPred(Dep);
           } else {
             HasPhiUse = Reg;
