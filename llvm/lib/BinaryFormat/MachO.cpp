@@ -8,7 +8,7 @@
 
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/Support/ARMTargetParser.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
 
 using namespace llvm;
 
