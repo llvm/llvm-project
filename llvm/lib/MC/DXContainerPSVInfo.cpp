@@ -26,10 +26,11 @@ void PSVRuntimeInfo::write(raw_ostream &OS, uint32_t Version) const {
   default:
     InfoSize = sizeof(dxbc::PSV::v2::RuntimeInfo);
   }
+  uint32_t InfoSizeSwapped = InfoSize;
   if (sys::IsBigEndianHost)
-    sys::swapByteOrder(InfoSize);
+    sys::swapByteOrder(InfoSizeSwapped);
   // Write the size of the info.
-  OS.write(reinterpret_cast<const char *>(&InfoSize), sizeof(uint32_t));
+  OS.write(reinterpret_cast<const char *>(&InfoSizeSwapped), sizeof(uint32_t));
   // Write the info itself.
   OS.write(reinterpret_cast<const char *>(&BaseData), InfoSize);
 }
