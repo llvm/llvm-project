@@ -161,7 +161,6 @@ void ClangOpcodesEmitter::EmitInterp(raw_ostream &OS, StringRef N, Record *R) {
 }
 
 void ClangOpcodesEmitter::EmitDisasm(raw_ostream &OS, StringRef N, Record *R) {
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   OS << "#ifdef GET_DISASM\n";
   Enumerate(R, N, [R, &OS](ArrayRef<Record *>, const Twine &ID) {
     OS << "case OP_" << ID << ":\n";
@@ -177,7 +176,6 @@ void ClangOpcodesEmitter::EmitDisasm(raw_ostream &OS, StringRef N, Record *R) {
     OS << "  continue;\n";
   });
   OS << "#endif\n";
-#endif
 }
 
 void ClangOpcodesEmitter::EmitEmitter(raw_ostream &OS, StringRef N, Record *R) {
