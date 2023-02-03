@@ -566,10 +566,10 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Designator &d) {
     std::optional<DataRef> dataRef{ExtractDataRef(std::move(result))};
     if (!dataRef) {
       dataRef = ExtractDataRef(std::move(result), /*intoSubstring=*/true);
-      if (!dataRef) {
-        dataRef = ExtractDataRef(std::move(result),
-            /*intoSubstring=*/false, /*intoComplexPart=*/true);
-      }
+    }
+    if (!dataRef) {
+      dataRef = ExtractDataRef(std::move(result),
+          /*intoSubstring=*/false, /*intoComplexPart=*/true);
     }
     if (dataRef && !CheckDataRef(*dataRef)) {
       result.reset();
