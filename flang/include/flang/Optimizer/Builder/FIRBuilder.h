@@ -29,6 +29,7 @@
 namespace fir {
 class AbstractArrayBox;
 class ExtendedValue;
+class MutableBoxValue;
 class BoxValue;
 
 //===----------------------------------------------------------------------===//
@@ -573,7 +574,8 @@ void genScalarAssignment(fir::FirOpBuilder &builder, mlir::Location loc,
 /// derived types (10.2.1.3 point 13).
 void genRecordAssignment(fir::FirOpBuilder &builder, mlir::Location loc,
                          const fir::ExtendedValue &lhs,
-                         const fir::ExtendedValue &rhs);
+                         const fir::ExtendedValue &rhs,
+                         bool needFinalization = false);
 
 /// Builds and returns the type of a ragged array header used to cache mask
 /// evaluations. RaggedArrayHeader is defined in

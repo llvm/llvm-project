@@ -1992,3 +1992,6 @@ buffer_atomic_max_num_f32 v5, off, s[8:11], s3 offset:4095
 
 buffer_atomic_min_num_f32 v5, off, s[8:11], s3 offset:4095
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_atomic_sub_clamp_u32 v5, v[1:2], v2, off glc
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
