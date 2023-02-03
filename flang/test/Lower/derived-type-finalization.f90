@@ -148,6 +148,26 @@ contains
 ! CHECK: %{{.*}} = fir.call @_FortranADestroy(%[[BOX_NONE]]) {{.*}}: (!fir.box<none>) -> none
 ! CHECK: return
 
+  function get_t1(i)
+    type(t1), pointer :: get_t1
+    allocate(get_t1)
+    get_t1%a = i
+  end function
+
+  subroutine test_nonpointer_function()
+    print*, get_t1(20)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMderived_type_finalizationPtest_nonpointer_function() {
+! CHECK: %[[TMP:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>> {bindc_name = ".result"}
+! CHECK: %{{.*}} = fir.call @_FortranAioBeginExternalListOutput
+! CHECK: %[[RES:.*]] = fir.call @_QMderived_type_finalizationPget_t1(%{{.*}}) {{.*}} : (!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>
+! CHECK: fir.save_result %[[RES]] to %[[TMP]] : !fir.box<!fir.ptr<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>, !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>>
+! CHECK: %{{.*}} = fir.call @_FortranAioOutputDescriptor
+! CHECK-NOT: %{{.*}} = fir.call @_FortranADestroy
+! CHECK: %{{.*}} = fir.call @_FortranAioEndIoStatement
+! CHECK: return
+
 end module
 
 program p
