@@ -423,8 +423,7 @@ generic-no-experimental)
 ;;
 generic-noexceptions)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-noexceptions.cmake" \
-                   -DLIBCXX_ENABLE_CLANG_TIDY=ON
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-noexceptions.cmake"
     check-runtimes
     check-abi-list
 ;;
