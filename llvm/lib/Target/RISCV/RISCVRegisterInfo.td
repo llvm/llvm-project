@@ -547,6 +547,7 @@ let RegAltNameIndices = [ABIRegAltName] in {
                                           [Reg, RegP1],
                                           Reg.AltNames> {
       let SubRegIndices = [sub_32, sub_32_hi];
+      let CoveredBySubRegs = 1;
     }
   }
 }

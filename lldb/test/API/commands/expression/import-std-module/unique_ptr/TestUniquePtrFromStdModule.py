@@ -22,9 +22,14 @@ class TestUniquePtr(TestBase):
 
         self.runCmd("settings set target.import-std-module true")
 
+        if self.expectedCompilerVersion(['>', '16.0']):
+            ptr_type = "std::unique_ptr<int>"
+        else:
+            ptr_type = "std::unique_ptr<int, std::default_delete<int> >"
+
         self.expect_expr(
             "s",
-            result_type="std::unique_ptr<int>",
+            result_type=ptr_type,
             result_summary="3",
             result_children=[ValueCheck(name="__value_")])
         self.expect_expr("*s", result_type="int", result_value="3")

@@ -42,7 +42,9 @@ if (FLANG_RUNTIME_HAS_FNO_LTO_FLAG)
   append("-fno-lto" CMAKE_CXX_FLAGS)
 endif()
 
-
+# Disable libstdc++ assertions, even in an LLVM_ENABLE_ASSERTIONS build, to
+# avoid an unwanted dependency on libstdc++.so.
+add_definitions(-U_GLIBCXX_ASSERTIONS)
 
 add_flang_library(FortranDecimal INSTALL_WITH_TOOLCHAIN
   binary-to-decimal.cpp
