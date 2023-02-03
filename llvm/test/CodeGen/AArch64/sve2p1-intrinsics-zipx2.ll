@@ -3,31 +3,40 @@
 
 ; == 8 to 64-bit elements ==
 
-define { <vscale x 16 x i8>, <vscale x 16 x i8> } @zip_x2_i8(<vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm) nounwind {
+define <vscale x 16 x i8> @zip_x2_i8(<vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm) nounwind {
 ; CHECK-LABEL: zip_x2_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip { z0.b, z1.b }, z0.b, z1.b
+; CHECK-NEXT:    zip { z2.b, z3.b }, z0.b, z1.b
+; CHECK-NEXT:    add z0.b, z2.b, z0.b
 ; CHECK-NEXT:    ret
-  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.zip.x2.nxv16i8(<vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm)
-  ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %res
+  %zip = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.zip.x2.nxv16i8(<vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm)
+  %zip0 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %zip, 0
+  %add = add <vscale x 16 x i8> %zip0, %zn
+  ret <vscale x 16 x i8> %add
 }
 
-define { <vscale x 8 x i16>, <vscale x 8 x i16> } @zip_x2_i16(<vscale x 8 x i16> %zn, <vscale x 8 x i16> %zm) nounwind {
+define <vscale x 8 x i16> @zip_x2_i16(<vscale x 8 x i16> %zn, <vscale x 8 x i16> %zm) nounwind {
 ; CHECK-LABEL: zip_x2_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip { z0.h, z1.h }, z0.h, z1.h
+; CHECK-NEXT:    zip { z2.h, z3.h }, z0.h, z1.h
+; CHECK-NEXT:    add z0.h, z2.h, z0.h
 ; CHECK-NEXT:    ret
-  %res = call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.zip.x2.nxv8i16(<vscale x 8 x i16> %zn, <vscale x 8 x i16> %zm)
-  ret { <vscale x 8 x i16>, <vscale x 8 x i16> } %res
+  %zip = call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.zip.x2.nxv8i16(<vscale x 8 x i16> %zn, <vscale x 8 x i16> %zm)
+  %zip0 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } %zip, 0
+  %add = add <vscale x 8 x i16> %zip0, %zn
+  ret <vscale x 8 x i16> %add
 }
 
-define { <vscale x 8 x half>, <vscale x 8 x half> } @zip_x2_f16(<vscale x 8 x half> %zn, <vscale x 8 x half> %zm) nounwind {
+define <vscale x 8 x half> @zip_x2_f16(<vscale x 8 x half> %zn, <vscale x 8 x half> %zm) nounwind {
 ; CHECK-LABEL: zip_x2_f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip { z0.h, z1.h }, z0.h, z1.h
+; CHECK-NEXT:    zip { z2.h, z3.h }, z0.h, z1.h
+; CHECK-NEXT:    fadd z0.h, z2.h, z0.h
 ; CHECK-NEXT:    ret
-  %res = call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.zip.x2.nxv8f16(<vscale x 8 x half> %zn, <vscale x 8 x half> %zm)
-  ret { <vscale x 8 x half>, <vscale x 8 x half> } %res
+  %zip = call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.zip.x2.nxv8f16(<vscale x 8 x half> %zn, <vscale x 8 x half> %zm)
+  %zip0 = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } %zip, 0
+  %add = fadd <vscale x 8 x half> %zip0, %zn
+  ret <vscale x 8 x half> %add
 }
 
 define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @zip_x2_bf16(<vscale x 8 x bfloat> %zn, <vscale x 8 x bfloat> %zm) nounwind {
@@ -35,65 +44,74 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @zip_x2_bf16(<vscale x 8
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    zip { z0.h, z1.h }, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.zip.x2.nxv8bf16(<vscale x 8 x bfloat> %zn, <vscale x 8 x bfloat> %zm)
-  ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %res
+  %zip = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.zip.x2.nxv8bf16(<vscale x 8 x bfloat> %zn, <vscale x 8 x bfloat> %zm)
+  ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %zip
 }
 
-define { <vscale x 4 x i32>, <vscale x 4 x i32> } @zip_x2_i32(<vscale x 4 x i32> %zn, <vscale x 4 x i32> %zm) nounwind {
+define <vscale x 4 x i32> @zip_x2_i32(<vscale x 4 x i32> %zn, <vscale x 4 x i32> %zm) nounwind {
 ; CHECK-LABEL: zip_x2_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip { z0.s, z1.s }, z0.s, z1.s
+; CHECK-NEXT:    zip { z2.s, z3.s }, z0.s, z1.s
+; CHECK-NEXT:    add z0.s, z2.s, z0.s
 ; CHECK-NEXT:    ret
-  %res = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.zip.x2.nxv4i32(<vscale x 4 x i32> %zn, <vscale x 4 x i32> %zm)
-  ret { <vscale x 4 x i32>, <vscale x 4 x i32> } %res
+  %zip = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.zip.x2.nxv4i32(<vscale x 4 x i32> %zn, <vscale x 4 x i32> %zm)
+  %zip0 = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } %zip, 0
+  %add = add <vscale x 4 x i32> %zip0, %zn
+  ret <vscale x 4 x i32> %add
 }
 
-define { <vscale x 4 x float>, <vscale x 4 x float> } @zip_x2_f32(<vscale x 4 x float> %zn, <vscale x 4 x float> %zm) nounwind {
+define <vscale x 4 x float> @zip_x2_f32(<vscale x 4 x float> %zn, <vscale x 4 x float> %zm) nounwind {
 ; CHECK-LABEL: zip_x2_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip { z0.s, z1.s }, z0.s, z1.s
+; CHECK-NEXT:    zip { z2.s, z3.s }, z0.s, z1.s
+; CHECK-NEXT:    fadd z0.s, z2.s, z0.s
 ; CHECK-NEXT:    ret
-  %res = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.zip.x2.nxv4f32(<vscale x 4 x float> %zn, <vscale x 4 x float> %zm)
-  ret { <vscale x 4 x float>, <vscale x 4 x float> } %res
+  %zip = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.zip.x2.nxv4f32(<vscale x 4 x float> %zn, <vscale x 4 x float> %zm)
+  %zip0 = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } %zip, 0
+  %add = fadd <vscale x 4 x float> %zip0, %zn
+  ret <vscale x 4 x float> %add
 }
 
-define { <vscale x 2 x i64>, <vscale x 2 x i64> } @zip_x2_i64(<vscale x 2 x i64> %zn, <vscale x 2 x i64> %zm) nounwind {
+define <vscale x 2 x i64> @zip_x2_i64(<vscale x 2 x i64> %zn, <vscale x 2 x i64> %zm) nounwind {
 ; CHECK-LABEL: zip_x2_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip { z0.d, z1.d }, z0.d, z1.d
+; CHECK-NEXT:    zip { z2.d, z3.d }, z0.d, z1.d
+; CHECK-NEXT:    add z0.d, z2.d, z0.d
 ; CHECK-NEXT:    ret
-  %res = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.zip.x2.nxv2i64(<vscale x 2 x i64> %zn, <vscale x 2 x i64> %zm)
-  ret { <vscale x 2 x i64>, <vscale x 2 x i64> } %res
+  %zip = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.zip.x2.nxv2i64(<vscale x 2 x i64> %zn, <vscale x 2 x i64> %zm)
+  %zip0 = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } %zip, 0
+  %add = add <vscale x 2 x i64> %zip0, %zn
+  ret <vscale x 2 x i64> %add
 }
 
-define { <vscale x 2 x double>, <vscale x 2 x double> } @zip_x2_f64(<vscale x 2 x double> %zn, <vscale x 2 x double> %zm) nounwind {
+define <vscale x 2 x double> @zip_x2_f64(<vscale x 2 x double> %zn, <vscale x 2 x double> %zm) nounwind {
 ; CHECK-LABEL: zip_x2_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip { z0.d, z1.d }, z0.d, z1.d
+; CHECK-NEXT:    zip { z2.d, z3.d }, z0.d, z1.d
+; CHECK-NEXT:    fadd z0.d, z2.d, z0.d
 ; CHECK-NEXT:    ret
-  %res = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.zip.x2.nxv2f64(<vscale x 2 x double> %zn, <vscale x 2 x double> %zm)
-  ret { <vscale x 2 x double>, <vscale x 2 x double> } %res
-}
-
-define { <vscale x 16 x i8>, <vscale x 16 x i8> } @zip_x2_i8_not_tied(<vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm) nounwind {
-; CHECK-LABEL: zip_x2_i8_not_tied:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip { z0.b, z1.b }, z1.b, z2.b
-; CHECK-NEXT:    ret
-  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.zip.x2.nxv16i8(<vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm)
-  ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %res
+  %zip = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.zip.x2.nxv2f64(<vscale x 2 x double> %zn, <vscale x 2 x double> %zm)
+  %zip0 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %zip, 0
+  %add = fadd <vscale x 2 x double> %zip0, %zn
+  ret <vscale x 2 x double> %add
 }
 
 
 ; == 128-bit elements ==
 
-define { <vscale x 16 x i8>, <vscale x 16 x i8> } @zipq_x2_i8(<vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm) nounwind {
+; NOTE: For the 128-bit case we only need to check the <vscale x 16 x i8> to
+; ensure the tuple result starts at the correct register multiple. The other
+; variants all test the same code path.
+define <vscale x 16 x i8> @zipq_x2_i8(<vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm) nounwind {
 ; CHECK-LABEL: zipq_x2_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip { z0.q, z1.q }, z0.q, z1.q
+; CHECK-NEXT:    zip { z2.q, z3.q }, z0.q, z1.q
+; CHECK-NEXT:    add z0.b, z2.b, z0.b
 ; CHECK-NEXT:    ret
-  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.zipq.x2.nxv16i8(<vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm)
-  ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %res
+  %zip = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.zipq.x2.nxv16i8(<vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm)
+  %zip0 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %zip, 0
+  %add = add <vscale x 16 x i8> %zip0, %zn
+  ret <vscale x 16 x i8> %add
 }
 
 define { <vscale x 8 x i16>, <vscale x 8 x i16> } @zipq_x2_i16(<vscale x 8 x i16> %zn, <vscale x 8 x i16> %zm) nounwind {
