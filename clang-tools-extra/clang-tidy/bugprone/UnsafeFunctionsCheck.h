@@ -32,7 +32,6 @@ public:
 
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override;
-  void onEndOfTranslationUnit() override;
 
 private:
   /// If true, additional functions from widely used API-s (such as POSIX) are
