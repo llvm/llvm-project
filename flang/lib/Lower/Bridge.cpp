@@ -2813,33 +2813,32 @@ private:
               std::optional<fir::factory::MutableBoxReallocation> lhsRealloc;
               std::optional<fir::MutableBoxValue> lhsMutableBox;
 
-              // Finalize LHS on intrinsic assignment.
-              if (lhsType->IsPolymorphic() ||
-                  lhsType->IsUnlimitedPolymorphic() ||
-                  (isDerivedCategory(lhsType->category()) &&
-                   Fortran::semantics::IsFinalizable(
-                       lhsType->GetDerivedTypeSpec()))) {
-                if (lhsIsWholeAllocatable) {
-                  lhsMutableBox = genExprMutableBox(loc, assign.lhs);
-                  mlir::Value isAllocated =
-                      fir::factory::genIsAllocatedOrAssociatedTest(
-                          *builder, loc, *lhsMutableBox);
-                  builder->genIfThen(loc, isAllocated)
-                      .genThen([&]() {
-                        fir::runtime::genDerivedTypeDestroy(
-                            *builder, loc, fir::getBase(*lhsMutableBox));
-                      })
-                      .end();
-                } else {
-                  fir::ExtendedValue exv = genExprBox(loc, assign.lhs, stmtCtx);
-                  fir::runtime::genDerivedTypeDestroy(*builder, loc,
-                                                      fir::getBase(exv));
-                }
-              }
+              // Set flag to know if the LHS needs finalization. Polymorphic,
+              // unlimited polymorphic assignment will be done with genAssign.
+              // Assign runtime function performs the finalization.
+              bool needFinalization = !lhsType->IsPolymorphic() &&
+                                      !lhsType->IsUnlimitedPolymorphic() &&
+                                      (isDerivedCategory(lhsType->category()) &&
+                                       Fortran::semantics::IsFinalizable(
+                                           lhsType->GetDerivedTypeSpec()));
 
               auto lhs = [&]() -> fir::ExtendedValue {
                 if (lhsIsWholeAllocatable) {
                   lhsMutableBox = genExprMutableBox(loc, assign.lhs);
+                  // Finalize if needed.
+                  if (needFinalization) {
+                    mlir::Value isAllocated =
+                        fir::factory::genIsAllocatedOrAssociatedTest(
+                            *builder, loc, *lhsMutableBox);
+                    builder->genIfThen(loc, isAllocated)
+                        .genThen([&]() {
+                          fir::runtime::genDerivedTypeDestroy(
+                              *builder, loc, fir::getBase(*lhsMutableBox));
+                        })
+                        .end();
+                    needFinalization = false;
+                  }
+
                   llvm::SmallVector<mlir::Value> lengthParams;
                   if (const fir::CharBoxValue *charBox = rhs.getCharBox())
                     lengthParams.push_back(charBox->getLen());
@@ -2882,7 +2881,8 @@ private:
               } else if (isDerivedCategory(lhsType->category())) {
                 // Fortran 2018 10.2.1.3 p13 and p14
                 // Recursively gen an assignment on each element pair.
-                fir::factory::genRecordAssignment(*builder, loc, lhs, rhs);
+                fir::factory::genRecordAssignment(*builder, loc, lhs, rhs,
+                                                  needFinalization);
               } else {
                 llvm_unreachable("unknown category");
               }
