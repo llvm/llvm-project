@@ -1245,26 +1245,17 @@ static const size_t kPageSize_ = 4096;
 hsa_status_t asan_hsa_amd_memory_pool_allocate(
   hsa_amd_memory_pool_t memory_pool, size_t size, uint32_t flags, void **ptr,
   BufferedStackTrace *stack) {
-  // Device memory manager will allocate 2MB slabs which have to be 2MB
-  // aligned. This is hard to achieve with added redzone but not wasting big
-  // chunks of device memory. The current workaround is to bypass the
-  // allocation call to HSA if the allocation size is 2MB
-  static const size_t kSlabSize_ = 2 * 1024 * 1024;
-  if (size != kSlabSize_) {
-    AmdgpuAllocationInfo aa_info;
-    aa_info.alloc_func =
-      reinterpret_cast<void *>(asan_hsa_amd_memory_pool_allocate);
-    aa_info.remap_first_device_page = true;
-    aa_info.memory_pool = memory_pool;
-    aa_info.size = size;
-    aa_info.flags = flags;
-    aa_info.ptr = nullptr;
-    SetErrnoOnNull(*ptr = instance.Allocate(size, kPageSize_, stack,
-                                            FROM_MALLOC, false, &aa_info));
-    return aa_info.status;
-  } else {
-    return REAL(hsa_amd_memory_pool_allocate)(memory_pool, size, flags, ptr);
-  }
+  AmdgpuAllocationInfo aa_info;
+  aa_info.alloc_func =
+    reinterpret_cast<void *>(asan_hsa_amd_memory_pool_allocate);
+  aa_info.remap_first_device_page = true;
+  aa_info.memory_pool = memory_pool;
+  aa_info.size = size;
+  aa_info.flags = flags;
+  aa_info.ptr = nullptr;
+  SetErrnoOnNull(*ptr = instance.Allocate(size, kPageSize_, stack,
+                                          FROM_MALLOC, false, &aa_info));
+  return aa_info.status;
 }
 
 hsa_status_t asan_hsa_amd_memory_pool_free(

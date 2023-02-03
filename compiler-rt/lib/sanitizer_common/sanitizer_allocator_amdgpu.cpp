@@ -19,11 +19,13 @@ struct HsaMemoryFunctions {
   hsa_status_t (*memory_pool_allocate)(hsa_amd_memory_pool_t memory_pool,
                                        size_t size, uint32_t flags, void **ptr);
   hsa_status_t (*memory_pool_free)(void *ptr);
+  hsa_status_t (*memory_pool_get_info)(hsa_amd_memory_pool_t memory_pool,
+                                       hsa_amd_memory_pool_info_t attribute,
+                                       void *value);
   hsa_status_t (*pointer_info)(void *ptr, hsa_amd_pointer_info_t *info,
                                void *(*alloc)(size_t),
                                uint32_t *num_agents_accessible,
                                hsa_agent_t **accessible);
-  hsa_status_t (*pointer_info_set_userdata)(void *ptr, void *userdata);
 };
 
 static HsaMemoryFunctions hsa_amd;
@@ -37,13 +39,12 @@ bool AmdgpuMemFuncs::Init() {
           RTLD_NEXT, "hsa_amd_memory_pool_allocate");
   hsa_amd.memory_pool_free = (decltype(hsa_amd.memory_pool_free))dlsym(
       RTLD_NEXT, "hsa_amd_memory_pool_free");
+  hsa_amd.memory_pool_get_info = (decltype(hsa_amd.memory_pool_get_info))dlsym(
+      RTLD_NEXT, "hsa_amd_memory_pool_get_info");
   hsa_amd.pointer_info = (decltype(hsa_amd.pointer_info))dlsym(
       RTLD_NEXT, "hsa_amd_pointer_info");
-  hsa_amd.pointer_info_set_userdata =
-      (decltype(hsa_amd.pointer_info_set_userdata))dlsym(
-          RTLD_NEXT, "hsa_amd_pointer_info_set_userdata");
   if (!hsa_amd.memory_pool_allocate || !hsa_amd.memory_pool_free ||
-      !hsa_amd.pointer_info || !hsa_amd.pointer_info_set_userdata)
+      !hsa_amd.pointer_info || !hsa_amd.memory_pool_get_info)
     return false;
   else
     return true;
@@ -63,32 +64,29 @@ void *AmdgpuMemFuncs::Allocate(uptr size, uptr alignment,
   if (!aa_info->remap_first_device_page)
     return aa_info->ptr;
 
-  hsa_amd_pointer_info_t info;
-  info.size = sizeof(hsa_amd_pointer_info_t);
-  status = hsa_amd.pointer_info(aa_info->ptr, &info, 0, 0, 0);
-  if (status != HSA_STATUS_SUCCESS)
-    goto Fail;
-
   // Device memory is mapped as MTRR type WC (write-combined) which will cause
   // failure for atomic_compare_exchange_strong on some platforms. As ASAN
   // logic requires atomic_compare_exchange_strong to work, we will remap the
   // first device memory page to regular host page so that ASAN logic can work
   // as expected. We will remap the original device memory page back when the
-  // allocation is freed, because that page might be reused by AMDGPU language
-  // runtimes.
+  // allocation is freed, because that page might be reused by HSA runtimes.
   //
-  // Currently hsa_amd_memory_pool_get_info cannot be used to check if the
-  // allocated memory is device memory or host memory. We will check coarse-
-  // grained flag instead. If host memory is allocated as coarse-grained,
-  // the first page will be patched even though it is not required. This could
-  // be changed later when hsa_amd_memory_pool_get_info is enhanced to return
-  // the memory origin (device or host)
-  //
-  if (info.global_flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_COARSE_GRAINED) {
+  hsa_amd_memory_pool_location_t loc;
+  status = hsa_amd.memory_pool_get_info(
+    aa_info->memory_pool, HSA_AMD_MEMORY_POOL_INFO_LOCATION, &loc);
+
+  if (loc == HSA_AMD_MEMORY_POOL_LOCATION_GPU) {
     void *remapped_device_page, *p;
+    // Map a normal page and its vitual address will be used as the target of
+    // device memory remap
     remapped_device_page = reinterpret_cast<void *>(
       internal_mmap(nullptr, kPageSize_, PROT_WRITE | PROT_READ,
                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0));
+    if (internal_iserror(reinterpret_cast<uptr>(remapped_device_page))) {
+      status = HSA_STATUS_ERROR;
+      goto Fail;
+    }
+    // Remap device memory
     p = reinterpret_cast<void *>(
       internal_mremap(aa_info->ptr, kPageSize_, kPageSize_,
                       MREMAP_FIXED | MREMAP_MAYMOVE, remapped_device_page));
@@ -96,6 +94,7 @@ void *AmdgpuMemFuncs::Allocate(uptr size, uptr alignment,
       status = HSA_STATUS_ERROR;
       goto Fail;
     }
+    // Map a normal page in place of the original device memory
     p = reinterpret_cast<void *>(
       internal_mmap(aa_info->ptr, kPageSize_, PROT_WRITE | PROT_READ,
                     MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED, -1, 0));
