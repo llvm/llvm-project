@@ -11,7 +11,7 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
-#include "llvm/Support/LoongArchTargetParser.h"
+#include "llvm/TargetParser/LoongArchTargetParser.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
