@@ -156,6 +156,7 @@ public:
     return Val.getOpcode() == ISD::BITCAST ? Val.getOperand(0) : Val;
   }
 
+  static bool shouldFoldFNegIntoSrc(SDNode *FNeg, SDValue FNegSrc);
   static bool allUsesHaveSourceMods(const SDNode *N,
                                     unsigned CostThreshold = 4);
   bool isFAbsFree(EVT VT) const override;
