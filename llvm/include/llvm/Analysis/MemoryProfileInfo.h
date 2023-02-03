@@ -128,6 +128,7 @@ public:
   CallStackIterator begin() const;
   CallStackIterator end() const { return CallStackIterator(N, /*End*/ true); }
   CallStackIterator beginAfterSharedPrefix(CallStack &Other);
+  uint64_t back() const;
 
 private:
   const NodeT *N = nullptr;
@@ -137,8 +138,10 @@ template <class NodeT, class IteratorT>
 CallStack<NodeT, IteratorT>::CallStackIterator::CallStackIterator(
     const NodeT *N, bool End)
     : N(N) {
-  if (!N)
+  if (!N) {
+    Iter = nullptr;
     return;
+  }
   Iter = End ? N->StackIdIndices.end() : N->StackIdIndices.begin();
 }
 
@@ -146,6 +149,12 @@ template <class NodeT, class IteratorT>
 uint64_t CallStack<NodeT, IteratorT>::CallStackIterator::operator*() {
   assert(Iter != N->StackIdIndices.end());
   return *Iter;
+}
+
+template <class NodeT, class IteratorT>
+uint64_t CallStack<NodeT, IteratorT>::back() const {
+  assert(N);
+  return N->StackIdIndices.back();
 }
 
 template <class NodeT, class IteratorT>
@@ -170,6 +179,7 @@ CallStack<MDNode, MDNode::op_iterator>::CallStackIterator::CallStackIterator(
     const MDNode *N, bool End);
 template <>
 uint64_t CallStack<MDNode, MDNode::op_iterator>::CallStackIterator::operator*();
+template <> uint64_t CallStack<MDNode, MDNode::op_iterator>::back() const;
 
 } // end namespace memprof
 } // end namespace llvm

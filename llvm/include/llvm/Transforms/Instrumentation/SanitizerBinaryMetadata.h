@@ -29,7 +29,6 @@ struct SanitizerBinaryMetadataOptions {
 inline constexpr int kSanitizerBinaryMetadataAtomicsBit = 0;
 inline constexpr int kSanitizerBinaryMetadataUARBit = 1;
 
-inline constexpr uint32_t kSanitizerBinaryMetadataNone = 0;
 inline constexpr uint32_t kSanitizerBinaryMetadataAtomics =
     1 << kSanitizerBinaryMetadataAtomicsBit;
 inline constexpr uint32_t kSanitizerBinaryMetadataUAR =
