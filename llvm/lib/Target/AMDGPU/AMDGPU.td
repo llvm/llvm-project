@@ -1448,7 +1448,8 @@ def FeatureISAVersion12 : FeatureSet<
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
    FeatureSALUFloatInsts,
-   FeaturePseudoScalarTrans]>;
+   FeaturePseudoScalarTrans,
+   FeatureVGPRSingleUseHintInsts]>;
 
 def FeatureISAVersion12_10 : FeatureSet<
   [FeatureGFX12,

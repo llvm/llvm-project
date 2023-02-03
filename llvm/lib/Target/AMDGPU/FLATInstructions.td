@@ -2462,14 +2462,18 @@ class VFLAT_Real_gfx12 <bits<8> op, FLAT_Pseudo ps,
                         !if(ps.is_flat_global, 0b10, 0b00));
 }
 
-multiclass VFLAT_Real_Base_gfx12<bits<8> op, string ps, string opName, int renamed = false, string alias = ""> {
-  def _gfx12 : VFLAT_Real_gfx12<op, !cast<FLAT_Pseudo>(ps), opName> {
-    let Inst{6-0} = !cast<int>(SGPR_NULL_gfx11plus.HWEncoding);
-  }
+multiclass VFLAT_Aliases_gfx12<string ps, string opName, int renamed, string alias = ""> {
   if renamed then
     def _renamed_gfx12 : MnemonicAlias<!cast<FLAT_Pseudo>(ps).Mnemonic, opName>, Requires<[isGFX12Plus]>;
   if !not(!empty(alias)) then
     def _alias_gfx12 : MnemonicAlias<alias, opName>, Requires<[isGFX12Plus]>;
+}
+
+multiclass VFLAT_Real_Base_gfx12<bits<8> op, string ps, string opName, int renamed = false, string alias = ""> :
+  VFLAT_Aliases_gfx12<ps, opName, renamed, alias> {
+  def _gfx12 : VFLAT_Real_gfx12<op, !cast<FLAT_Pseudo>(ps), opName> {
+    let Inst{6-0} = !cast<int>(SGPR_NULL_gfx11plus.HWEncoding);
+  }
 }
 
 multiclass VFLAT_Real_RTN_gfx12<bits<8> op, string ps, string opName> {
@@ -2512,7 +2516,8 @@ multiclass VGLOBAL_Real_Atomics_gfx12<bits<8> op, string ps, string opName, int 
   VFLAT_Real_RTN_gfx12<op, ps, opName>,
   VFLAT_Real_SADDR_RTN_gfx12<op, ps, opName>;
 
-multiclass VGLOBAL_Real_Atomics_RTN_gfx12<bits<8> op, string ps, string opName> :
+multiclass VGLOBAL_Real_Atomics_RTN_gfx12<bits<8> op, string ps, string opName, int renamed = false> :
+  VFLAT_Aliases_gfx12<ps#"_RTN", opName, renamed>,
   VFLAT_Real_RTN_gfx12<op, ps, opName>,
   VFLAT_Real_SADDR_RTN_gfx12<op, ps, opName>;
 
@@ -2608,7 +2613,7 @@ defm GLOBAL_ATOMIC_SWAP_B32     : VGLOBAL_Real_Atomics_gfx12<0x033, "GLOBAL_ATOM
 defm GLOBAL_ATOMIC_CMPSWAP_B32  : VGLOBAL_Real_Atomics_gfx12<0x034, "GLOBAL_ATOMIC_CMPSWAP", "global_atomic_cmpswap_b32", true>;
 defm GLOBAL_ATOMIC_ADD_U32      : VGLOBAL_Real_Atomics_gfx12<0x035, "GLOBAL_ATOMIC_ADD", "global_atomic_add_u32", true>;
 defm GLOBAL_ATOMIC_SUB_U32      : VGLOBAL_Real_Atomics_gfx12<0x036, "GLOBAL_ATOMIC_SUB", "global_atomic_sub_u32", true>;
-defm GLOBAL_ATOMIC_CSUB_U32     : VGLOBAL_Real_Atomics_RTN_gfx12<0x037, "GLOBAL_ATOMIC_CSUB", "global_atomic_csub_u32">;
+defm GLOBAL_ATOMIC_CSUB_U32     : VGLOBAL_Real_Atomics_RTN_gfx12<0x037, "GLOBAL_ATOMIC_CSUB", "global_atomic_csub_u32", true>;
 defm GLOBAL_ATOMIC_MIN_I32      : VGLOBAL_Real_Atomics_gfx12<0x038, "GLOBAL_ATOMIC_SMIN", "global_atomic_min_i32", true>;
 defm GLOBAL_ATOMIC_MIN_U32      : VGLOBAL_Real_Atomics_gfx12<0x039, "GLOBAL_ATOMIC_UMIN", "global_atomic_min_u32", true>;
 defm GLOBAL_ATOMIC_MAX_I32      : VGLOBAL_Real_Atomics_gfx12<0x03a, "GLOBAL_ATOMIC_SMAX", "global_atomic_max_i32", true>;
