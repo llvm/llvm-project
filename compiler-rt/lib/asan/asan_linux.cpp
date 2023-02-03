@@ -34,6 +34,7 @@
 #  include "asan_thread.h"
 #  include "sanitizer_common/sanitizer_flags.h"
 #  include "sanitizer_common/sanitizer_freebsd.h"
+#  include "sanitizer_common/sanitizer_hash.h"
 #  include "sanitizer_common/sanitizer_libc.h"
 #  include "sanitizer_common/sanitizer_procmaps.h"
 
@@ -211,16 +212,29 @@ void AsanCheckIncompatibleRT() {
 #  endif  // SANITIZER_ANDROID
 
 #  if ASAN_INTERCEPT_SWAPCONTEXT
-void ReadContextStack(void *context, uptr *stack, uptr *ssize) {
-  ucontext_t *ucp = (ucontext_t *)context;
-  *stack = (uptr)ucp->uc_stack.ss_sp;
-  *ssize = ucp->uc_stack.ss_size;
+constexpr u32 kAsanContextStackFlagsMagic = 0x51260eea;
+
+static int HashContextStack(const ucontext_t &ucp) {
+  MurMur2Hash64Builder hash(kAsanContextStackFlagsMagic);
+  hash.add(reinterpret_cast<uptr>(ucp.uc_stack.ss_sp));
+  hash.add(ucp.uc_stack.ss_size);
+  return static_cast<int>(hash.get());
 }
 
-void ResetContextStack(void *context) {
-  ucontext_t *ucp = (ucontext_t *)context;
-  ucp->uc_stack.ss_sp = nullptr;
-  ucp->uc_stack.ss_size = 0;
+void SignContextStack(void *context) {
+  ucontext_t *ucp = reinterpret_cast<ucontext_t *>(context);
+  ucp->uc_stack.ss_flags = HashContextStack(*ucp);
+}
+
+void ReadContextStack(void *context, uptr *stack, uptr *ssize) {
+  const ucontext_t *ucp = reinterpret_cast<const ucontext_t *>(context);
+  if (HashContextStack(*ucp) == ucp->uc_stack.ss_flags) {
+    *stack = reinterpret_cast<uptr>(ucp->uc_stack.ss_sp);
+    *ssize = ucp->uc_stack.ss_size;
+    return;
+  }
+  *stack = 0;
+  *ssize = 0;
 }
 #  endif  // ASAN_INTERCEPT_SWAPCONTEXT
 
