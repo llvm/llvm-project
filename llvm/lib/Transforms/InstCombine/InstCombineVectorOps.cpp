@@ -2407,37 +2407,51 @@ static Instruction *narrowVectorSelect(ShuffleVectorInst &Shuf,
   return SelectInst::Create(NarrowCond, NarrowX, NarrowY);
 }
 
-/// Canonicalize FP negate after shuffle.
-static Instruction *foldFNegShuffle(ShuffleVectorInst &Shuf,
-                                    InstCombiner::BuilderTy &Builder) {
-  Instruction *FNeg0;
+/// Canonicalize FP negate/abs after shuffle.
+static Instruction *foldShuffleOfUnaryOps(ShuffleVectorInst &Shuf,
+                                          InstCombiner::BuilderTy &Builder) {
+  auto *S0 = dyn_cast<Instruction>(Shuf.getOperand(0));
   Value *X;
-  if (!match(Shuf.getOperand(0), m_CombineAnd(m_Instruction(FNeg0),
-                                              m_FNeg(m_Value(X)))))
+  if (!S0 || !match(S0, m_CombineOr(m_FNeg(m_Value(X)), m_FAbs(m_Value(X)))))
     return nullptr;
 
-  // shuffle (fneg X), Mask --> fneg (shuffle X, Mask)
-  if (FNeg0->hasOneUse() && match(Shuf.getOperand(1), m_Undef())) {
+  bool IsFNeg = S0->getOpcode() == Instruction::FNeg;
+
+  // Match 1-input (unary) shuffle.
+  // shuffle (fneg/fabs X), Mask --> fneg/fabs (shuffle X, Mask)
+  if (S0->hasOneUse() && match(Shuf.getOperand(1), m_Undef())) {
     Value *NewShuf = Builder.CreateShuffleVector(X, Shuf.getShuffleMask());
-    return UnaryOperator::CreateFNegFMF(NewShuf, FNeg0);
+    if (IsFNeg)
+      return UnaryOperator::CreateFNegFMF(NewShuf, S0);
+
+    Function *FAbs = Intrinsic::getDeclaration(Shuf.getModule(),
+                                               Intrinsic::fabs, Shuf.getType());
+    CallInst *NewF = CallInst::Create(FAbs, {NewShuf});
+    NewF->setFastMathFlags(S0->getFastMathFlags());
+    return NewF;
   }
 
-  Instruction *FNeg1;
+  // Match 2-input (binary) shuffle.
+  auto *S1 = dyn_cast<Instruction>(Shuf.getOperand(1));
   Value *Y;
-  if (!match(Shuf.getOperand(1), m_CombineAnd(m_Instruction(FNeg1),
-                                              m_FNeg(m_Value(Y)))))
+  if (!S1 || !match(S1, m_CombineOr(m_FNeg(m_Value(Y)), m_FAbs(m_Value(Y)))) ||
+      S0->getOpcode() != S1->getOpcode() ||
+      (!S0->hasOneUse() && !S1->hasOneUse()))
     return nullptr;
 
-  // shuffle (fneg X), (fneg Y), Mask --> fneg (shuffle X, Y, Mask)
-  if (FNeg0->hasOneUse() || FNeg1->hasOneUse()) {
-    Value *NewShuf = Builder.CreateShuffleVector(X, Y, Shuf.getShuffleMask());
-    Instruction *NewFNeg = UnaryOperator::CreateFNeg(NewShuf);
-    NewFNeg->copyIRFlags(FNeg0);
-    NewFNeg->andIRFlags(FNeg1);
-    return NewFNeg;
+  // shuf (fneg/fabs X), (fneg/fabs Y), Mask --> fneg/fabs (shuf X, Y, Mask)
+  Value *NewShuf = Builder.CreateShuffleVector(X, Y, Shuf.getShuffleMask());
+  Instruction *NewF;
+  if (IsFNeg) {
+    NewF = UnaryOperator::CreateFNeg(NewShuf);
+  } else {
+    Function *FAbs = Intrinsic::getDeclaration(Shuf.getModule(),
+                                               Intrinsic::fabs, Shuf.getType());
+    NewF = CallInst::Create(FAbs, {NewShuf});
   }
-
-  return nullptr;
+  NewF->copyIRFlags(S0);
+  NewF->andIRFlags(S1);
+  return NewF;
 }
 
 /// Canonicalize casts after shuffle.
@@ -2815,7 +2829,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   if (Instruction *I = narrowVectorSelect(SVI, Builder))
     return I;
 
-  if (Instruction *I = foldFNegShuffle(SVI, Builder))
+  if (Instruction *I = foldShuffleOfUnaryOps(SVI, Builder))
     return I;
 
   if (Instruction *I = foldCastShuffle(SVI, Builder))
