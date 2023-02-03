@@ -58,9 +58,13 @@ def MapNestedForeachToThreads :
       If any scf.foreach_thread with tensors is found, the transform definitely
       fails.
 
-      If all the scf.foreach_thread operations contained within the LaunchOp
-      referred to by the `target` PDLOperation lower to GPU properly, the
-      transform succeeds. Otherwise the transform definitely fails.
+      If all the scf.foreach_thread operations with gpu.thread mapping contained
+      within the LaunchOp referred to by the `target` PDLOperation lower to GPU
+      properly, the transform succeeds. Otherwise the transform definitely
+      fails.
+
+      scf.foreach_thread operations with mappings other than gpu.thread are
+      ignored.
 
       The returned handle points to the same LaunchOp operand, consuming it and
       producing a new SSA value to satisfy chaining and linearity of the IR
