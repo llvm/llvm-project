@@ -1272,11 +1272,11 @@ private:
           const_cast<Value *>(Location.Ptr),
           OriginalAccess->getBlock()->getModule()->getDataLayout(), nullptr);
 
-      if (!Translator.translateValue(OriginalAccess->getBlock(),
-                                     DefIterator.getPhiArgBlock(), DT, true))
-        if (Translator.getAddr() != CurrentPair.second.Ptr)
-          CurrentPair.second =
-              CurrentPair.second.getWithNewPtr(Translator.getAddr());
+      if (Value *Addr =
+              Translator.translateValue(OriginalAccess->getBlock(),
+                                        DefIterator.getPhiArgBlock(), DT, true))
+        if (Addr != CurrentPair.second.Ptr)
+          CurrentPair.second = CurrentPair.second.getWithNewPtr(Addr);
 
       // Mark size as unknown, if the location is not guaranteed to be
       // loop-invariant for any possible loop in the function. Setting the size

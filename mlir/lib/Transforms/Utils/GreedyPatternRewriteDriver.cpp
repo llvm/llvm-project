@@ -124,7 +124,6 @@ GreedyPatternRewriteDriver::GreedyPatternRewriteDriver(
     MLIRContext *ctx, const FrozenRewritePatternSet &patterns,
     const GreedyRewriteConfig &config)
     : PatternRewriter(ctx), folder(ctx), config(config), matcher(patterns) {
-  assert(config.scope && "scope is not specified");
   worklist.reserve(64);
 
   // Apply a simple cost model based solely on pattern benefit.
@@ -266,19 +265,19 @@ bool GreedyPatternRewriteDriver::processWorklist() {
 void GreedyPatternRewriteDriver::addToWorklist(Operation *op) {
   // Gather potential ancestors while looking for a "scope" parent region.
   SmallVector<Operation *, 8> ancestors;
-  ancestors.push_back(op);
-  while (Region *region = op->getParentRegion()) {
-      if (config.scope == region) {
-        // All gathered ops are in fact ancestors.
-        for (Operation *op : ancestors)
-          addSingleOpToWorklist(op);
-        break;
-      }
-    op = region->getParentOp();
-    if (!op)
-      break;
+  Region *region = nullptr;
+  do {
     ancestors.push_back(op);
-  }
+    region = op->getParentRegion();
+    if (config.scope == region) {
+      // Scope (can be `nullptr`) was reached. Stop traveral and enqueue ops.
+      for (Operation *op : ancestors)
+        addSingleOpToWorklist(op);
+      return;
+    }
+    if (region == nullptr)
+      return;
+  } while ((op = region->getParentOp()));
 }
 
 void GreedyPatternRewriteDriver::addSingleOpToWorklist(Operation *op) {
@@ -556,6 +555,9 @@ LogicalResult MultiOpPatternRewriteDriver::simplify(ArrayRef<Operation *> ops,
 }
 
 /// Find the region that is the closest common ancestor of all given ops.
+///
+/// Note: This function returns `nullptr` if there is a top-level op among the
+/// given list of ops.
 static Region *findCommonAncestor(ArrayRef<Operation *> ops) {
   assert(!ops.empty() && "expected at least one op");
   // Fast path in case there is only one op.
@@ -566,7 +568,7 @@ static Region *findCommonAncestor(ArrayRef<Operation *> ops) {
   ops = ops.drop_front();
   int sz = ops.size();
   llvm::BitVector remainingOps(sz, true);
-  do {
+  while (region) {
     int pos = -1;
     // Iterate over all remaining ops.
     while ((pos = remainingOps.find_first_in(pos + 1, sz)) != -1) {
@@ -576,8 +578,8 @@ static Region *findCommonAncestor(ArrayRef<Operation *> ops) {
     }
     if (remainingOps.none())
       break;
-  } while ((region = region->getParentRegion()));
-  assert(region && "could not find common parent region");
+    region = region->getParentRegion();
+  }
   return region;
 }
 
@@ -594,7 +596,8 @@ LogicalResult mlir::applyOpPatternsAndFold(
 
   // Determine scope of rewrite.
   if (!config.scope) {
-    // Compute scope if none was provided.
+    // Compute scope if none was provided. The scope will remain `nullptr` if
+    // there is a top-level op among `ops`.
     config.scope = findCommonAncestor(ops);
   } else {
     // If a scope was provided, make sure that all ops are in scope.

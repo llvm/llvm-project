@@ -367,6 +367,8 @@ public:
   void SelectWhilePair(SDNode *N, unsigned Opc);
   void SelectCVTIntrinsic(SDNode *N, unsigned NumVecs, unsigned Opcode);
   void SelectClamp(SDNode *N, unsigned NumVecs, unsigned Opcode);
+  void SelectUnaryMultiIntrinsic(SDNode *N, unsigned NumOutVecs,
+                                 bool IsTupleInput, unsigned Opc);
 
   template <unsigned MaxIdx, unsigned Scale>
   void SelectMultiVectorMove(SDNode *N, unsigned NumVecs, unsigned BaseReg,
@@ -1849,6 +1851,7 @@ enum class SelectTypeKind {
   Int1 = 0,
   Int = 1,
   FP = 2,
+  AnyType = 3,
 };
 
 /// This function selects an opcode from a list of opcodes, which is
@@ -1862,6 +1865,8 @@ static unsigned SelectOpcodeFromVT(EVT VT, ArrayRef<unsigned> Opcodes) {
 
   EVT EltVT = VT.getVectorElementType();
   switch (Kind) {
+  case SelectTypeKind::AnyType:
+    break;
   case SelectTypeKind::Int:
     if (EltVT != MVT::i8 && EltVT != MVT::i16 && EltVT != MVT::i32 &&
         EltVT != MVT::i64)
@@ -2078,6 +2083,36 @@ void AArch64DAGToDAGISel::SelectMultiVectorMove(SDNode *N, unsigned NumVecs,
   // Copy chain
   unsigned ChainIdx = NumVecs;
   ReplaceUses(SDValue(N, ChainIdx), SDValue(Mov, 1));
+  CurDAG->RemoveDeadNode(N);
+}
+
+void AArch64DAGToDAGISel::SelectUnaryMultiIntrinsic(SDNode *N,
+                                                    unsigned NumOutVecs,
+                                                    bool IsTupleInput,
+                                                    unsigned Opc) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  unsigned NumInVecs = N->getNumOperands() - 1;
+
+  SmallVector<SDValue, 6> Ops;
+  if (IsTupleInput) {
+    assert((NumInVecs == 2 || NumInVecs == 4) &&
+           "Don't know how to handle multi-register input!");
+    SmallVector<SDValue, 4> Regs(N->op_begin() + 1,
+                                 N->op_begin() + 1 + NumInVecs);
+    Ops.push_back(createZMulTuple(Regs));
+  } else {
+    // All intrinsic nodes have the ID as the first operand, hence the "1 + I".
+    for (unsigned I = 0; I < NumInVecs; I++)
+      Ops.push_back(N->getOperand(1 + I));
+  }
+
+  SDNode *Res = CurDAG->getMachineNode(Opc, DL, MVT::Untyped, Ops);
+  SDValue SuperReg = SDValue(Res, 0);
+
+  for (unsigned I = 0; I < NumOutVecs; I++)
+    ReplaceUses(SDValue(N, I), CurDAG->getTargetExtractSubreg(
+                                   AArch64::zsub0 + I, DL, VT, SuperReg));
   CurDAG->RemoveDeadNode(N);
 }
 
@@ -5041,6 +5076,68 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       if (tryMULLV64LaneV128(IntNo, Node))
         return;
       break;
+
+    case Intrinsic::ptrauth_resign: {
+      SDLoc DL(Node);
+      // IntrinsicID is operand #0
+      SDValue Val = Node->getOperand(1);
+      SDValue AUTKey = Node->getOperand(2);
+      SDValue AUTDisc = Node->getOperand(3);
+      SDValue PACKey = Node->getOperand(4);
+      SDValue PACDisc = Node->getOperand(5);
+
+      unsigned AUTKeyC = cast<ConstantSDNode>(AUTKey)->getZExtValue();
+      unsigned PACKeyC = cast<ConstantSDNode>(PACKey)->getZExtValue();
+
+      AUTKey = CurDAG->getTargetConstant(AUTKeyC, DL, MVT::i64);
+      PACKey = CurDAG->getTargetConstant(PACKeyC, DL, MVT::i64);
+
+      SDValue ImpDef = SDValue(
+        CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, MVT::i64), 0);
+      SDValue X16Copy = CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL,
+                                             AArch64::X16, Val, SDValue());
+      SDValue X17Copy =
+        CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL, AArch64::X17,
+                             ImpDef, X16Copy.getValue(1));
+
+      SDValue Ops[] = {AUTKey, AUTDisc, PACKey, PACDisc, X17Copy.getValue(1)};
+      SDVTList VTs = CurDAG->getVTList(MVT::Other, MVT::Glue);
+      SDNode *N = CurDAG->getMachineNode(AArch64::AUTPAC, DL, VTs, Ops);
+      N = CurDAG->getCopyFromReg(SDValue(N, 0), DL, AArch64::X16, MVT::i64,
+                                 SDValue(N, 1)).getNode();
+      ReplaceNode(Node, N);
+      return;
+    }
+
+
+    case Intrinsic::ptrauth_auth: {
+      SDLoc DL(Node);
+      // IntrinsicID is operand #0
+      SDValue Val = Node->getOperand(1);
+      SDValue AUTKey = Node->getOperand(2);
+      SDValue AUTDisc = Node->getOperand(3);
+
+      unsigned AUTKeyC = cast<ConstantSDNode>(AUTKey)->getZExtValue();
+      AUTKey = CurDAG->getTargetConstant(AUTKeyC, DL, MVT::i64);
+
+      SDValue ImpDef = SDValue(
+        CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, MVT::i64), 0);
+      SDValue X16Copy = CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL,
+                                             AArch64::X16, Val, SDValue());
+      SDValue X17Copy =
+        CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL, AArch64::X17,
+                             ImpDef, X16Copy.getValue(1));
+
+      SDValue Ops[] = {AUTKey, AUTDisc, X17Copy.getValue(1)};
+
+      SDVTList VTs = CurDAG->getVTList(MVT::Other, MVT::Glue);
+      SDNode *N = CurDAG->getMachineNode(AArch64::AUT, DL, VTs, Ops);
+      N = CurDAG->getCopyFromReg(SDValue(N, 0), DL, AArch64::X16, MVT::i64,
+                                 SDValue(N, 1)).getNode();
+      ReplaceNode(Node, N);
+      return;
+    }
+
     case Intrinsic::aarch64_sve_sqdmulh_single_vgx2:
       if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
               Node->getValueType(0),
@@ -5373,66 +5470,50 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
                AArch64::ADD_VG4_4ZZ_S, AArch64::ADD_VG4_4ZZ_D}))
         SelectDestructiveMultiIntrinsic(Node, 4, false, Op);
       return;
-    case Intrinsic::ptrauth_resign: {
-      SDLoc DL(Node);
-      // IntrinsicID is operand #0
-      SDValue Val = Node->getOperand(1);
-      SDValue AUTKey = Node->getOperand(2);
-      SDValue AUTDisc = Node->getOperand(3);
-      SDValue PACKey = Node->getOperand(4);
-      SDValue PACDisc = Node->getOperand(5);
-
-      unsigned AUTKeyC = cast<ConstantSDNode>(AUTKey)->getZExtValue();
-      unsigned PACKeyC = cast<ConstantSDNode>(PACKey)->getZExtValue();
-
-      AUTKey = CurDAG->getTargetConstant(AUTKeyC, DL, MVT::i64);
-      PACKey = CurDAG->getTargetConstant(PACKeyC, DL, MVT::i64);
-
-      SDValue ImpDef = SDValue(
-        CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, MVT::i64), 0);
-      SDValue X16Copy = CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL,
-                                             AArch64::X16, Val, SDValue());
-      SDValue X17Copy =
-        CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL, AArch64::X17,
-                             ImpDef, X16Copy.getValue(1));
-
-      SDValue Ops[] = {AUTKey, AUTDisc, PACKey, PACDisc, X17Copy.getValue(1)};
-      SDVTList VTs = CurDAG->getVTList(MVT::Other, MVT::Glue);
-      SDNode *N = CurDAG->getMachineNode(AArch64::AUTPAC, DL, VTs, Ops);
-      N = CurDAG->getCopyFromReg(SDValue(N, 0), DL, AArch64::X16, MVT::i64,
-                                 SDValue(N, 1)).getNode();
-      ReplaceNode(Node, N);
+    case Intrinsic::aarch64_sve_zip_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::AnyType>(
+              Node->getValueType(0),
+              {AArch64::ZIP_VG2_2ZZZ_B, AArch64::ZIP_VG2_2ZZZ_H,
+               AArch64::ZIP_VG2_2ZZZ_S, AArch64::ZIP_VG2_2ZZZ_D}))
+        SelectUnaryMultiIntrinsic(Node, 2, /*IsTupleInput=*/false, Op);
       return;
-    }
-
-
-    case Intrinsic::ptrauth_auth: {
-      SDLoc DL(Node);
-      // IntrinsicID is operand #0
-      SDValue Val = Node->getOperand(1);
-      SDValue AUTKey = Node->getOperand(2);
-      SDValue AUTDisc = Node->getOperand(3);
-
-      unsigned AUTKeyC = cast<ConstantSDNode>(AUTKey)->getZExtValue();
-      AUTKey = CurDAG->getTargetConstant(AUTKeyC, DL, MVT::i64);
-
-      SDValue ImpDef = SDValue(
-        CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, MVT::i64), 0);
-      SDValue X16Copy = CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL,
-                                             AArch64::X16, Val, SDValue());
-      SDValue X17Copy =
-        CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL, AArch64::X17,
-                             ImpDef, X16Copy.getValue(1));
-
-      SDValue Ops[] = {AUTKey, AUTDisc, X17Copy.getValue(1)};
-
-      SDVTList VTs = CurDAG->getVTList(MVT::Other, MVT::Glue);
-      SDNode *N = CurDAG->getMachineNode(AArch64::AUT, DL, VTs, Ops);
-      N = CurDAG->getCopyFromReg(SDValue(N, 0), DL, AArch64::X16, MVT::i64,
-                                 SDValue(N, 1)).getNode();
-      ReplaceNode(Node, N);
+    case Intrinsic::aarch64_sve_zipq_x2:
+      SelectUnaryMultiIntrinsic(Node, 2, /*IsTupleInput=*/false,
+                                AArch64::ZIP_VG2_2ZZZ_Q);
       return;
-    }
+    case Intrinsic::aarch64_sve_zip_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::AnyType>(
+              Node->getValueType(0),
+              {AArch64::ZIP_VG4_4Z4Z_B, AArch64::ZIP_VG4_4Z4Z_H,
+               AArch64::ZIP_VG4_4Z4Z_S, AArch64::ZIP_VG4_4Z4Z_D}))
+        SelectUnaryMultiIntrinsic(Node, 4, /*IsTupleInput=*/true, Op);
+      return;
+    case Intrinsic::aarch64_sve_zipq_x4:
+      SelectUnaryMultiIntrinsic(Node, 4, /*IsTupleInput=*/true,
+                                AArch64::ZIP_VG4_4Z4Z_Q);
+      return;
+    case Intrinsic::aarch64_sve_uzp_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::AnyType>(
+              Node->getValueType(0),
+              {AArch64::UZP_VG2_2ZZZ_B, AArch64::UZP_VG2_2ZZZ_H,
+               AArch64::UZP_VG2_2ZZZ_S, AArch64::UZP_VG2_2ZZZ_D}))
+        SelectUnaryMultiIntrinsic(Node, 2, /*IsTupleInput=*/false, Op);
+      return;
+    case Intrinsic::aarch64_sve_uzpq_x2:
+      SelectUnaryMultiIntrinsic(Node, 2, /*IsTupleInput=*/false,
+                                AArch64::UZP_VG2_2ZZZ_Q);
+      return;
+    case Intrinsic::aarch64_sve_uzp_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::AnyType>(
+              Node->getValueType(0),
+              {AArch64::UZP_VG4_4Z4Z_B, AArch64::UZP_VG4_4Z4Z_H,
+               AArch64::UZP_VG4_4Z4Z_S, AArch64::UZP_VG4_4Z4Z_D}))
+        SelectUnaryMultiIntrinsic(Node, 4, /*IsTupleInput=*/true, Op);
+      return;
+    case Intrinsic::aarch64_sve_uzpq_x4:
+      SelectUnaryMultiIntrinsic(Node, 4, /*IsTupleInput=*/true,
+                                AArch64::UZP_VG4_4Z4Z_Q);
+      return;
     }
     break;
   }
