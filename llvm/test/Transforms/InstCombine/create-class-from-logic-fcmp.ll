@@ -224,7 +224,7 @@ define i1 @not_isfinite_or_zero_f16_multi_use_cmp1(half %x, ptr %ptr) {
 ; Negative test
 define i1 @not_isfinite_or_zero_f16_neg_inf(half %x) {
 ; CHECK-LABEL: @not_isfinite_or_zero_f16_neg_inf(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 99)
+; CHECK-NEXT:    [[CLASS:%.*]] = fcmp ueq half [[X:%.*]], 0xH0000
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call half @llvm.fabs.f16(half %x)
