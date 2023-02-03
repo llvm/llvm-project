@@ -249,16 +249,7 @@ class DForm_base<bits<6> opcode, dag OOL, dag IOL, string asmstr,
 
 class DForm_1<bits<6> opcode, dag OOL, dag IOL, string asmstr,
               InstrItinClass itin, list<dag> pattern>
-  : I<opcode, OOL, IOL, asmstr, itin> {
-  bits<5>  RST;
-  // FIXME: bogus names, to force positional matching for the moment.
-  bits<21> addr_foo;
-
-  let Pattern = pattern;
-
-  let Inst{6-10}  = RST;
-  let Inst{11-15} = addr_foo{20-16}; // Base Reg
-  let Inst{16-31} = addr_foo{15-0};  // Displacement
+  : DForm_base<opcode, OOL, IOL, asmstr, itin, pattern> {
 }
 
 class DForm_2<bits<6> opcode, dag OOL, dag IOL, string asmstr,
@@ -301,7 +292,8 @@ class DForm_4_zero<bits<6> opcode, dag OOL, dag IOL, string asmstr,
                    InstrItinClass itin, list<dag> pattern>
   : DForm_1<opcode, OOL, IOL, asmstr, itin, pattern> {
   let RST = 0;
-  let addr_foo = 0;
+  let RA = 0;
+  let D = 0;
 }
 
 class DForm_4_fixedreg_zero<bits<6> opcode, bits<5> R, dag OOL, dag IOL,
@@ -318,7 +310,8 @@ class IForm_and_DForm_1<bits<6> opcode1, bit aa, bit lk, bits<6> opcode2,
             InstrItinClass itin, list<dag> pattern>
          : I2<opcode1, opcode2, OOL, IOL, asmstr, itin> {
   bits<5>  RST;
-  bits<21> addr;
+  bits<5>  RA;
+  bits<16> D;
 
   let Pattern = pattern;
   bits<24> LI;
@@ -328,8 +321,8 @@ class IForm_and_DForm_1<bits<6> opcode1, bit aa, bit lk, bits<6> opcode2,
   let Inst{31}    = lk;
 
   let Inst{38-42}  = RST;
-  let Inst{43-47} = addr{20-16}; // Base Reg
-  let Inst{48-63} = addr{15-0};  // Displacement
+  let Inst{43-47} = RA;
+  let Inst{48-63} = D;
 }
 
 // This is used to emit BL8+NOP.
@@ -339,7 +332,8 @@ class IForm_and_DForm_4_zero<bits<6> opcode1, bit aa, bit lk, bits<6> opcode2,
          :  IForm_and_DForm_1<opcode1, aa, lk, opcode2,
                               OOL, IOL, asmstr, itin, pattern> {
   let RST = 0;
-  let addr = 0;
+  let RA = 0;
+  let D = 0;
 }
 
 class DForm_5<bits<6> opcode, dag OOL, dag IOL, string asmstr,
@@ -379,19 +373,14 @@ class DSForm_1<bits<6> opcode, bits<2> xo, dag OOL, dag IOL, string asmstr,
                InstrItinClass itin, list<dag> pattern>
          : I<opcode, OOL, IOL, asmstr, itin> {
   bits<5>  RST;
-  // FIXME: bogus names, to force positional matching for the moment.rr
-  bits<19> addr_foo;
-  bits<14> DS;
-  bits<5> RA;
-
-  let DS = addr_foo{13-0};
-  let RA = addr_foo{18-14};
+  bits<5>  RA;
+  bits<14> D;
 
   let Pattern = pattern;
 
   let Inst{6-10}  = RST;
   let Inst{11-15} = RA;
-  let Inst{16-29} = DS;
+  let Inst{16-29} = D;
   let Inst{30-31} = xo;
 }
 
@@ -416,11 +405,8 @@ class DQ_RD6_RS5_DQ12<bits<6> opcode, bits<3> xo, dag OOL, dag IOL,
                       string asmstr, InstrItinClass itin, list<dag> pattern>
   : I<opcode, OOL, IOL, asmstr, itin> {
   bits<6>  XT;
-  bits<17> addr;
   bits<5> RA;
   bits<12> DQ;
-  let RA = addr{16-12};
-  let DQ = addr{11-0};
 
   let Pattern = pattern;
 
@@ -436,11 +422,8 @@ class DQForm_RTp5_RA17_MEM<bits<6> opcode, bits<4> xo, dag OOL, dag IOL,
                            list<dag> pattern>
   : I<opcode, OOL, IOL, asmstr, itin> {
   bits<5> RTp;
-  bits<17> addr;
   bits<5> RA;
   bits<12> DQ;
-  let RA = addr{16-12};
-  let DQ = addr{11-0};
   let Pattern = pattern;
 
   let Inst{6-10} =  RTp{4-0};
@@ -1225,16 +1208,17 @@ class XX2_RD6_DCMX7_RS6<bits<6> opcode, bits<4> xo1, bits<3> xo2,
 class XForm_XD6_RA5_RB5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
                         string asmstr, InstrItinClass itin, list<dag> pattern>
   : I<opcode, OOL, IOL, asmstr, itin> {
-  bits<11> D_RA_XD;
+  bits<5> RA;
+  bits<6> D;
   bits<5> RB;
 
   let Pattern = pattern;
 
-  let Inst{6-10}  = D_RA_XD{4-0};  // D
-  let Inst{11-15} = D_RA_XD{10-6}; // RA
+  let Inst{6-10}  = D{4-0};  // D
+  let Inst{11-15} = RA;
   let Inst{16-20} = RB;
   let Inst{21-30} = xo;
-  let Inst{31}    = D_RA_XD{5};    // DX
+  let Inst{31}    = D{5};    // DX
 }
 
 class XX3Form<bits<6> opcode, bits<8> xo, dag OOL, dag IOL, string asmstr, 
@@ -1553,7 +1537,8 @@ class XLForm_2_and_DSForm_1<bits<6> opcode1, bits<10> xo1, bit lk,
   bits<2> BH;
 
   bits<5>  RST;
-  bits<19> DS_RA;
+  bits<5>  RA;
+  bits<14> D;
 
   let Pattern = pattern;
 
@@ -1565,8 +1550,8 @@ class XLForm_2_and_DSForm_1<bits<6> opcode1, bits<10> xo1, bit lk,
   let Inst{31}    = lk;
 
   let Inst{38-42} = RST;
-  let Inst{43-47} = DS_RA{18-14};  // Register #
-  let Inst{48-61} = DS_RA{13-0};   // Displacement.
+  let Inst{43-47} = RA;
+  let Inst{48-61} = D;
   let Inst{62-63} = xo2;
 }
 
@@ -1589,7 +1574,8 @@ class XLForm_2_ext_and_DForm_1<bits<6> opcode1, bits<10> xo1, bits<5> bo,
   : I2<opcode1, opcode2, OOL, IOL, asmstr, itin> {
 
   bits<5>  RST;
-  bits<21> addr;
+  bits<5>  RA;
+  bits<16> D;
 
   let Pattern = pattern;
 
@@ -1601,8 +1587,8 @@ class XLForm_2_ext_and_DForm_1<bits<6> opcode1, bits<10> xo1, bits<5> bo,
   let Inst{31} = lk;
 
   let Inst{38-42} = RST;
-  let Inst{43-47} = addr{20-16};  // Base Register
-  let Inst{48-63} = addr{15-0};   // Displacement
+  let Inst{43-47} = RA;
+  let Inst{48-63} = D;
 }
 
 // 1.7.8 XFX-Form

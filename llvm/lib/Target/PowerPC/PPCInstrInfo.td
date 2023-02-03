@@ -1483,7 +1483,7 @@ let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
     Defs = [LR, R2], Uses = [CTR, RM], RST = 2 in {
   def BCTRL_LWZinto_toc:
     XLForm_2_ext_and_DForm_1<19, 528, 20, 0, 1, 32, (outs),
-     (ins memri:$addr), "bctrl\n\tlwz 2, $addr", IIC_BrB,
+     (ins (memri $D, $RA):$addr), "bctrl\n\tlwz 2, $addr", IIC_BrB,
      [(PPCbctrl_load_toc iaddr:$addr)]>, Requires<[In32BitMode]>;
 
 }
@@ -1492,7 +1492,7 @@ let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
     Defs = [LR, R2, RM], Uses = [CTR, RM], RST = 2 in {
   def BCTRL_LWZinto_toc_RM:
     XLForm_2_ext_and_DForm_1<19, 528, 20, 0, 1, 32, (outs),
-     (ins memri:$addr), "bctrl\n\tlwz 2, $addr", IIC_BrB,
+     (ins (memri $D, $RA):$addr), "bctrl\n\tlwz 2, $addr", IIC_BrB,
      [(PPCbctrl_load_toc_rm iaddr:$addr)]>, Requires<[In32BitMode]>;
 
 }
@@ -1828,27 +1828,27 @@ def POPCNTB : XForm_11<31, 122, (outs gprc:$RA), (ins gprc:$RST),
 
 // Unindexed (r+i) Loads.
 let PPC970_Unit = 2 in {
-def LBZ : DForm_1<34, (outs gprc:$RST), (ins memri:$addr),
+def LBZ : DForm_1<34, (outs gprc:$RST), (ins (memri $D, $RA):$addr),
                   "lbz $RST, $addr", IIC_LdStLoad,
                   [(set i32:$RST, (zextloadi8 DForm:$addr))]>, ZExt32To64,
                   SExt32To64;
-def LHA : DForm_1<42, (outs gprc:$RST), (ins memri:$addr),
+def LHA : DForm_1<42, (outs gprc:$RST), (ins (memri $D, $RA):$addr),
                   "lha $RST, $addr", IIC_LdStLHA,
                   [(set i32:$RST, (sextloadi16 DForm:$addr))]>,
                   PPC970_DGroup_Cracked, SExt32To64;
-def LHZ : DForm_1<40, (outs gprc:$RST), (ins memri:$addr),
+def LHZ : DForm_1<40, (outs gprc:$RST), (ins (memri $D, $RA):$addr),
                   "lhz $RST, $addr", IIC_LdStLoad,
                   [(set i32:$RST, (zextloadi16 DForm:$addr))]>, ZExt32To64,
                   SExt32To64;
-def LWZ : DForm_1<32, (outs gprc:$RST), (ins memri:$addr),
+def LWZ : DForm_1<32, (outs gprc:$RST), (ins (memri $D, $RA):$addr),
                   "lwz $RST, $addr", IIC_LdStLoad,
                   [(set i32:$RST, (load DForm:$addr))]>, ZExt32To64;
 
 let Predicates = [HasFPU] in {
-def LFS : DForm_1<48, (outs f4rc:$RST), (ins memri:$addr),
+def LFS : DForm_1<48, (outs f4rc:$RST), (ins (memri $D, $RA):$addr),
                   "lfs $RST, $addr", IIC_LdStLFD,
                   [(set f32:$RST, (load DForm:$addr))]>;
-def LFD : DForm_1<50, (outs f8rc:$RST), (ins memri:$addr),
+def LFD : DForm_1<50, (outs f8rc:$RST), (ins (memri $D, $RA):$addr),
                   "lfd $RST, $addr", IIC_LdStLFD,
                   [(set f64:$RST, (load DForm:$addr))]>;
 }
@@ -1856,33 +1856,32 @@ def LFD : DForm_1<50, (outs f8rc:$RST), (ins memri:$addr),
 
 // Unindexed (r+i) Loads with Update (preinc).
 let mayLoad = 1, mayStore = 0, hasSideEffects = 0 in {
-def LBZU : DForm_1<35, (outs gprc:$RST, ptr_rc_nor0:$ea_result), (ins memri:$addr),
+def LBZU : DForm_1<35, (outs gprc:$RST, ptr_rc_nor0:$ea_result), (ins (memri $D, $RA):$addr),
                    "lbzu $RST, $addr", IIC_LdStLoadUpd,
-                   []>, RegConstraint<"$addr.reg = $ea_result">,
-                   NoEncode<"$ea_result">;
+                   []>, RegConstraint<"$RA = $ea_result">;
 
-def LHAU : DForm_1<43, (outs gprc:$RST, ptr_rc_nor0:$ea_result), (ins memri:$addr),
+def LHAU : DForm_1<43, (outs gprc:$RST, ptr_rc_nor0:$ea_result), (ins (memri $D, $RA):$addr),
                    "lhau $RST, $addr", IIC_LdStLHAU,
                    []>, RegConstraint<"$addr.reg = $ea_result">,
                    NoEncode<"$ea_result">;
 
-def LHZU : DForm_1<41, (outs gprc:$RST, ptr_rc_nor0:$ea_result), (ins memri:$addr),
+def LHZU : DForm_1<41, (outs gprc:$RST, ptr_rc_nor0:$ea_result), (ins (memri $D, $RA):$addr),
                    "lhzu $RST, $addr", IIC_LdStLoadUpd,
                    []>, RegConstraint<"$addr.reg = $ea_result">,
                    NoEncode<"$ea_result">;
 
-def LWZU : DForm_1<33, (outs gprc:$RST, ptr_rc_nor0:$ea_result), (ins memri:$addr),
+def LWZU : DForm_1<33, (outs gprc:$RST, ptr_rc_nor0:$ea_result), (ins (memri $D, $RA):$addr),
                    "lwzu $RST, $addr", IIC_LdStLoadUpd,
                    []>, RegConstraint<"$addr.reg = $ea_result">,
                    NoEncode<"$ea_result">;
 
 let Predicates = [HasFPU] in {
-def LFSU : DForm_1<49, (outs f4rc:$RST, ptr_rc_nor0:$ea_result), (ins memri:$addr),
+def LFSU : DForm_1<49, (outs f4rc:$RST, ptr_rc_nor0:$ea_result), (ins (memri $D, $RA):$addr),
                   "lfsu $RST, $addr", IIC_LdStLFDU,
                   []>, RegConstraint<"$addr.reg = $ea_result">,
                    NoEncode<"$ea_result">;
 
-def LFDU : DForm_1<51, (outs f8rc:$RST, ptr_rc_nor0:$ea_result), (ins memri:$addr),
+def LFDU : DForm_1<51, (outs f8rc:$RST, ptr_rc_nor0:$ea_result), (ins (memri $D, $RA):$addr),
                   "lfdu $RST, $addr", IIC_LdStLFDU,
                   []>, RegConstraint<"$addr.reg = $ea_result">,
                    NoEncode<"$ea_result">;
@@ -1974,7 +1973,7 @@ def LFIWZX : XForm_25_memOp<31, 887, (outs f8rc:$RST), (ins (memrr $RA, $RB):$ad
 
 // Load Multiple
 let mayLoad = 1, mayStore = 0, hasSideEffects = 0 in
-def LMW : DForm_1<46, (outs gprc:$RST), (ins memri:$src),
+def LMW : DForm_1<46, (outs gprc:$RST), (ins (memri $D, $RA):$src),
                   "lmw $RST, $src", IIC_LdStLMW, []>;
 
 //===----------------------------------------------------------------------===//
@@ -1983,20 +1982,20 @@ def LMW : DForm_1<46, (outs gprc:$RST), (ins memri:$src),
 
 // Unindexed (r+i) Stores.
 let PPC970_Unit = 2, mayStore = 1, mayLoad = 0 in {
-def STB  : DForm_1<38, (outs), (ins gprc:$RST, memri:$dst),
+def STB  : DForm_1<38, (outs), (ins gprc:$RST, (memri $D, $RA):$dst),
                    "stb $RST, $dst", IIC_LdStStore,
                    [(truncstorei8 i32:$RST, DForm:$dst)]>;
-def STH  : DForm_1<44, (outs), (ins gprc:$RST, memri:$dst),
+def STH  : DForm_1<44, (outs), (ins gprc:$RST, (memri $D, $RA):$dst),
                    "sth $RST, $dst", IIC_LdStStore,
                    [(truncstorei16 i32:$RST, DForm:$dst)]>;
-def STW  : DForm_1<36, (outs), (ins gprc:$RST, memri:$dst),
+def STW  : DForm_1<36, (outs), (ins gprc:$RST, (memri $D, $RA):$dst),
                    "stw $RST, $dst", IIC_LdStStore,
                    [(store i32:$RST, DForm:$dst)]>;
 let Predicates = [HasFPU] in {
-def STFS : DForm_1<52, (outs), (ins f4rc:$RST, memri:$dst),
+def STFS : DForm_1<52, (outs), (ins f4rc:$RST, (memri $D, $RA):$dst),
                    "stfs $RST, $dst", IIC_LdStSTFD,
                    [(store f32:$RST, DForm:$dst)]>;
-def STFD : DForm_1<54, (outs), (ins f8rc:$RST, memri:$dst),
+def STFD : DForm_1<54, (outs), (ins f8rc:$RST, (memri $D, $RA):$dst),
                    "stfd $RST, $dst", IIC_LdStSTFD,
                    [(store f64:$RST, DForm:$dst)]>;
 }
@@ -2004,20 +2003,20 @@ def STFD : DForm_1<54, (outs), (ins f8rc:$RST, memri:$dst),
 
 // Unindexed (r+i) Stores with Update (preinc).
 let PPC970_Unit = 2, mayStore = 1, mayLoad = 0 in {
-def STBU  : DForm_1<39, (outs ptr_rc_nor0:$ea_res), (ins gprc:$RST, memri:$dst),
+def STBU  : DForm_1<39, (outs ptr_rc_nor0:$ea_res), (ins gprc:$RST, (memri $D, $RA):$dst),
                     "stbu $RST, $dst", IIC_LdStSTU, []>,
                     RegConstraint<"$dst.reg = $ea_res">, NoEncode<"$ea_res">;
-def STHU  : DForm_1<45, (outs ptr_rc_nor0:$ea_res), (ins gprc:$RST, memri:$dst),
+def STHU  : DForm_1<45, (outs ptr_rc_nor0:$ea_res), (ins gprc:$RST, (memri $D, $RA):$dst),
                     "sthu $RST, $dst", IIC_LdStSTU, []>,
                     RegConstraint<"$dst.reg = $ea_res">, NoEncode<"$ea_res">;
-def STWU  : DForm_1<37, (outs ptr_rc_nor0:$ea_res), (ins gprc:$RST, memri:$dst),
+def STWU  : DForm_1<37, (outs ptr_rc_nor0:$ea_res), (ins gprc:$RST, (memri $D, $RA):$dst),
                     "stwu $RST, $dst", IIC_LdStSTU, []>,
                     RegConstraint<"$dst.reg = $ea_res">, NoEncode<"$ea_res">;
 let Predicates = [HasFPU] in {
-def STFSU : DForm_1<53, (outs ptr_rc_nor0:$ea_res), (ins f4rc:$RST, memri:$dst),
+def STFSU : DForm_1<53, (outs ptr_rc_nor0:$ea_res), (ins f4rc:$RST, (memri $D, $RA):$dst),
                     "stfsu $RST, $dst", IIC_LdStSTFDU, []>,
                     RegConstraint<"$dst.reg = $ea_res">, NoEncode<"$ea_res">;
-def STFDU : DForm_1<55, (outs ptr_rc_nor0:$ea_res), (ins f8rc:$RST, memri:$dst),
+def STFDU : DForm_1<55, (outs ptr_rc_nor0:$ea_res), (ins f8rc:$RST, (memri $D, $RA):$dst),
                     "stfdu $RST, $dst", IIC_LdStSTFDU, []>,
                     RegConstraint<"$dst.reg = $ea_res">, NoEncode<"$ea_res">;
 }
@@ -2129,7 +2128,7 @@ def : Pat<(pre_store f64:$rS, iPTR:$ptrreg, iPTR:$ptroff),
 
 // Store Multiple
 let mayStore = 1, mayLoad = 0, hasSideEffects = 0 in
-def STMW : DForm_1<47, (outs), (ins gprc:$RST, memri:$dst),
+def STMW : DForm_1<47, (outs), (ins gprc:$RST, (memri $D, $RA):$dst),
                    "stmw $RST, $dst", IIC_LdStLMW, []>;
 
 def SYNC : XForm_24_sync<31, 598, (outs), (ins u2imm:$L),
@@ -5101,11 +5100,11 @@ def DWBytes3210 {
 // and the value of the stack pointer.
 let mayStore = 1 in {
 def HASHST : XForm_XD6_RA5_RB5<31, 722, (outs),
-                               (ins gprc:$RB, memrihash:$D_RA_XD),
-                               "hashst $RB, $D_RA_XD", IIC_IntGeneral, []>;
+                               (ins gprc:$RB, (memrihash $D, $RA):$addr),
+                               "hashst $RB, $addr", IIC_IntGeneral, []>;
 def HASHSTP : XForm_XD6_RA5_RB5<31, 658, (outs),
-                                (ins gprc:$RB, memrihash:$D_RA_XD),
-                                "hashstp $RB, $D_RA_XD", IIC_IntGeneral, []>;
+                                (ins gprc:$RB, (memrihash $D, $RA):$addr),
+                                "hashstp $RB, $addr", IIC_IntGeneral, []>;
 }
 
 // These instructions check a hash computed from the value of the link register
@@ -5114,11 +5113,11 @@ def HASHSTP : XForm_XD6_RA5_RB5<31, 658, (outs),
 // specified address.
 let mayLoad = 1, hasSideEffects = 1 in {
 def HASHCHK : XForm_XD6_RA5_RB5<31, 754, (outs),
-                                (ins gprc:$RB, memrihash:$D_RA_XD),
-                                "hashchk $RB, $D_RA_XD", IIC_IntGeneral, []>;
+                                (ins gprc:$RB, (memrihash $D, $RA):$addr),
+                                "hashchk $RB, $addr", IIC_IntGeneral, []>;
 def HASHCHKP : XForm_XD6_RA5_RB5<31, 690, (outs),
-                                 (ins gprc:$RB, memrihash:$D_RA_XD),
-                                 "hashchkp $RB, $D_RA_XD", IIC_IntGeneral, []>;
+                                 (ins gprc:$RB, (memrihash $D, $RA):$addr),
+                                 "hashchkp $RB, $addr", IIC_IntGeneral, []>;
 }
 
 // Now both high word and low word are reversed, next
