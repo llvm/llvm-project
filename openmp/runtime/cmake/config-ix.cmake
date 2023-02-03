@@ -246,7 +246,11 @@ endif()
 
 # Checking features
 # Check if version symbol assembler directives are supported
-libomp_check_version_symbols(LIBOMP_HAVE_VERSION_SYMBOLS)
+if (LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
+  libomp_check_version_symbols(LIBOMP_HAVE_VERSION_SYMBOLS)
+else()
+  set(LIBOMP_HAVE_VERSION_SYMBOLS FALSE)
+endif()
 
 # Check if quad precision types are available
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
