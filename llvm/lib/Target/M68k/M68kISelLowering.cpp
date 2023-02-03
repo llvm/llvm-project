@@ -181,9 +181,7 @@ M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
       },
       {MVT::i8, MVT::i16, MVT::i32}, LibCall);
 
-  // 2^2 bytes
-  // FIXME can it be just 2^1?
-  setMinFunctionAlignment(Align::Constant<2>());
+  setMinFunctionAlignment(Align(2));
 }
 
 TargetLoweringBase::AtomicExpansionKind
