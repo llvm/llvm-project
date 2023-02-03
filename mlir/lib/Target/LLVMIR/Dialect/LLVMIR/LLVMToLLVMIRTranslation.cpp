@@ -167,90 +167,6 @@ static llvm::FastMathFlags getFastmathFlags(FastmathFlagsInterface &op) {
   return ret;
 }
 
-/// Returns an LLVM metadata node corresponding to a loop option. This metadata
-/// is attached to an llvm.loop node.
-static llvm::MDNode *getLoopOptionMetadata(llvm::LLVMContext &ctx,
-                                           LoopOptionCase option,
-                                           int64_t value) {
-  StringRef name;
-  llvm::Constant *cstValue = nullptr;
-  switch (option) {
-  case LoopOptionCase::disable_licm:
-    name = "llvm.licm.disable";
-    cstValue = llvm::ConstantInt::getBool(ctx, value);
-    break;
-  case LoopOptionCase::disable_unroll:
-    name = "llvm.loop.unroll.disable";
-    cstValue = llvm::ConstantInt::getBool(ctx, value);
-    break;
-  case LoopOptionCase::interleave_count:
-    name = "llvm.loop.interleave.count";
-    cstValue = llvm::ConstantInt::get(
-        llvm::IntegerType::get(ctx, /*NumBits=*/32), value);
-    break;
-  case LoopOptionCase::disable_pipeline:
-    name = "llvm.loop.pipeline.disable";
-    cstValue = llvm::ConstantInt::getBool(ctx, value);
-    break;
-  case LoopOptionCase::pipeline_initiation_interval:
-    name = "llvm.loop.pipeline.initiationinterval";
-    cstValue = llvm::ConstantInt::get(
-        llvm::IntegerType::get(ctx, /*NumBits=*/32), value);
-    break;
-  }
-  return llvm::MDNode::get(ctx, {llvm::MDString::get(ctx, name),
-                                 llvm::ConstantAsMetadata::get(cstValue)});
-}
-
-static void setLoopMetadata(Operation &opInst, llvm::Instruction &llvmInst,
-                            llvm::IRBuilderBase &builder,
-                            LLVM::ModuleTranslation &moduleTranslation) {
-  if (Attribute attr = opInst.getAttr(LLVMDialect::getLoopAttrName())) {
-    llvm::Module *module = builder.GetInsertBlock()->getModule();
-    llvm::MDNode *loopMD = moduleTranslation.lookupLoopOptionsMetadata(attr);
-    if (!loopMD) {
-      llvm::LLVMContext &ctx = module->getContext();
-
-      SmallVector<llvm::Metadata *> loopOptions;
-      // Reserve operand 0 for loop id self reference.
-      auto dummy = llvm::MDNode::getTemporary(ctx, std::nullopt);
-      loopOptions.push_back(dummy.get());
-
-      auto loopAttr = attr.cast<DictionaryAttr>();
-      auto parallelAccessGroup =
-          loopAttr.getNamed(LLVMDialect::getParallelAccessAttrName());
-      if (parallelAccessGroup) {
-        SmallVector<llvm::Metadata *> parallelAccess;
-        parallelAccess.push_back(
-            llvm::MDString::get(ctx, "llvm.loop.parallel_accesses"));
-        for (SymbolRefAttr accessGroupRef : parallelAccessGroup->getValue()
-                                                .cast<ArrayAttr>()
-                                                .getAsRange<SymbolRefAttr>())
-          parallelAccess.push_back(
-              moduleTranslation.getAccessGroup(opInst, accessGroupRef));
-        loopOptions.push_back(llvm::MDNode::get(ctx, parallelAccess));
-      }
-
-      if (auto loopOptionsAttr = loopAttr.getAs<LoopOptionsAttr>(
-              LLVMDialect::getLoopOptionsAttrName())) {
-        for (auto option : loopOptionsAttr.getOptions())
-          loopOptions.push_back(
-              getLoopOptionMetadata(ctx, option.first, option.second));
-      }
-
-      // Create loop options and set the first operand to itself.
-      loopMD = llvm::MDNode::get(ctx, loopOptions);
-      loopMD->replaceOperandWith(0, loopMD);
-
-      // Store a map from this Attribute to the LLVM metadata in case we
-      // encounter it again.
-      moduleTranslation.mapLoopOptionsMetadata(attr, loopMD);
-    }
-
-    llvmInst.setMetadata(module->getMDKindID("llvm.loop"), loopMD);
-  }
-}
-
 /// Convert the value of a DenseI64ArrayAttr to a vector of unsigned indices.
 static SmallVector<unsigned> extractPosition(ArrayRef<int64_t> indices) {
   SmallVector<unsigned> position;
@@ -505,7 +421,7 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     llvm::BranchInst *branch =
         builder.CreateBr(moduleTranslation.lookupBlock(brOp.getSuccessor()));
     moduleTranslation.mapBranch(&opInst, branch);
-    setLoopMetadata(opInst, *branch, builder, moduleTranslation);
+    moduleTranslation.setLoopMetadata(&opInst, branch);
     return success();
   }
   if (auto condbrOp = dyn_cast<LLVM::CondBrOp>(opInst)) {
@@ -516,7 +432,7 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
         moduleTranslation.lookupBlock(condbrOp.getSuccessor(0)),
         moduleTranslation.lookupBlock(condbrOp.getSuccessor(1)), branchWeights);
     moduleTranslation.mapBranch(&opInst, branch);
-    setLoopMetadata(opInst, *branch, builder, moduleTranslation);
+    moduleTranslation.setLoopMetadata(&opInst, branch);
     return success();
   }
   if (auto switchOp = dyn_cast<LLVM::SwitchOp>(opInst)) {
