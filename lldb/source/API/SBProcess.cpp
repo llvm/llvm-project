@@ -1262,3 +1262,9 @@ lldb::SBError SBProcess::DeallocateMemory(lldb::addr_t ptr) {
   }
   return sb_error;
 }
+
+ScriptedObject SBProcess::GetScriptedImplementation() {
+  LLDB_INSTRUMENT_VA(this);
+  ProcessSP process_sp(GetSP());
+  return (process_sp) ? process_sp->GetImplementation() : nullptr;
+}

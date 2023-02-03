@@ -18,6 +18,18 @@ class ProcessAPITestCase(TestBase):
             "main.cpp",
             "// Set break point at this line and check variable 'my_char'.")
 
+    def test_scripted_implementation(self):
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+
+        (target, process, _, _) = \
+            lldbutil.run_to_source_breakpoint(self, "Set break point",
+                                              lldb.SBFileSpec("main.cpp"))
+
+        self.assertTrue(process, PROCESS_IS_VALID)
+        self.assertEqual(process.GetScriptedImplementation(), None)
+
+
     def test_read_memory(self):
         """Test Python SBProcess.ReadMemory() API."""
         self.build()

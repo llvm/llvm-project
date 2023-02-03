@@ -43,6 +43,12 @@ class DummyScriptedProcess(ScriptedProcess):
     def get_scripted_thread_plugin(self):
         return DummyScriptedThread.__module__ + "." + DummyScriptedThread.__name__
 
+    def my_super_secret_method(self):
+        if hasattr(self, 'my_super_secret_member'):
+            return self.my_super_secret_member
+        else:
+            return None
+
 
 class DummyScriptedThread(ScriptedThread):
     def __init__(self, process, args):
