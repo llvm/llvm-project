@@ -219,3 +219,12 @@ buffer_gl1_inv
 
 buffer_wbinvl1
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_atomic_csub v1, v[0:1], v2 offset:64 th:TH_ATOMIC_RETURN
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid instruction
+
+flat_atomic_csub_u32 v[0:1], v2 offset:64
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand
+
+flat_atomic_sub_clamp_u32 v[0:1], v2 offset:64
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand
