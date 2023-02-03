@@ -11,6 +11,7 @@
 // Contains the common part of the formatter tests for different papers.
 
 #include <algorithm>
+#include <cctype>
 #include <charconv>
 #include <format>
 #include <ranges>
