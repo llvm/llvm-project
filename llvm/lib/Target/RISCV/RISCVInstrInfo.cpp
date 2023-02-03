@@ -2563,7 +2563,7 @@ bool RISCVInstrInfo::hasAllNBitUsers(const MachineInstr &OrigMI,
 
     for (auto &UserOp : MRI.use_operands(MI->getOperand(0).getReg())) {
       const MachineInstr *UserMI = UserOp.getParent();
-      unsigned OpIdx = UserMI->getOperandNo(&UserOp);
+      unsigned OpIdx = UserOp.getOperandNo();
 
       switch (UserMI->getOpcode()) {
       default:
