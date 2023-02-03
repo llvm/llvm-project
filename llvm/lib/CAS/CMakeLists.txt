@@ -21,6 +21,7 @@ add_llvm_component_library(LLVMCAS
   OnDiskCAS.cpp
   OnDiskGraphDB.cpp
   OnDiskHashMappedTrie.cpp
+  OnDiskKeyValueDB.cpp
   TreeSchema.cpp
   Utils.cpp
 

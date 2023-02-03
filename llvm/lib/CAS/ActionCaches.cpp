@@ -11,6 +11,7 @@
 #include "llvm/CAS/HashMappedTrie.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/CAS/OnDiskHashMappedTrie.h"
+#include "llvm/CAS/OnDiskKeyValueDB.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/BLAKE3.h"
@@ -61,19 +62,10 @@ public:
 
 private:
   static StringRef getHashName() { return "BLAKE3"; }
-  static StringRef getActionCacheTableName() {
-    static const std::string Name =
-        ("llvm.actioncache[" + getHashName() + "->" + getHashName() + "]")
-            .str();
-    return Name;
-  }
-  static constexpr StringLiteral ActionCacheFile = "actions";
-  static constexpr StringLiteral FilePrefix = "v1.";
 
-  OnDiskActionCache(StringRef RootPath, OnDiskHashMappedTrie ActionCache);
+  OnDiskActionCache(std::unique_ptr<ondisk::OnDiskKeyValueDB> DB);
 
-  std::string Path;
-  OnDiskHashMappedTrie Cache;
+  std::unique_ptr<ondisk::OnDiskKeyValueDB> DB;
   using DataT = CacheEntry<sizeof(HashType)>;
 };
 } // end namespace
@@ -137,62 +129,46 @@ std::unique_ptr<ActionCache> createInMemoryActionCache() {
 } // namespace cas
 } // namespace llvm
 
-constexpr StringLiteral OnDiskActionCache::ActionCacheFile;
-constexpr StringLiteral OnDiskActionCache::FilePrefix;
-
-OnDiskActionCache::OnDiskActionCache(StringRef Path, OnDiskHashMappedTrie Cache)
+OnDiskActionCache::OnDiskActionCache(
+    std::unique_ptr<ondisk::OnDiskKeyValueDB> DB)
     : ActionCache(builtin::BuiltinCASContext::getDefaultContext()),
-      Path(Path.str()), Cache(std::move(Cache)) {}
+      DB(std::move(DB)) {}
 
 Expected<std::unique_ptr<OnDiskActionCache>>
 OnDiskActionCache::create(StringRef AbsPath) {
-  if (std::error_code EC = sys::fs::create_directories(AbsPath))
-    return createFileError(AbsPath, EC);
-
-  SmallString<256> CachePath(AbsPath);
-  sys::path::append(CachePath, FilePrefix + ActionCacheFile);
-  constexpr uint64_t MB = 1024ull * 1024ull;
-  constexpr uint64_t GB = 1024ull * 1024ull * 1024ull;
-
-  Optional<OnDiskHashMappedTrie> ActionCache;
-  if (Error E = OnDiskHashMappedTrie::create(
-                    CachePath, getActionCacheTableName(), sizeof(HashType) * 8,
-                    /*DataSize=*/sizeof(DataT), /*MaxFileSize=*/GB,
-                    /*MinFileSize=*/MB)
-                    .moveInto(ActionCache))
+  std::unique_ptr<ondisk::OnDiskKeyValueDB> DB;
+  if (Error E = ondisk::OnDiskKeyValueDB::open(AbsPath, getHashName(),
+                                               sizeof(HashType), getHashName(),
+                                               sizeof(DataT))
+                    .moveInto(DB))
     return std::move(E);
-
   return std::unique_ptr<OnDiskActionCache>(
-      new OnDiskActionCache(AbsPath, std::move(*ActionCache)));
+      new OnDiskActionCache(std::move(DB)));
 }
 
 Expected<Optional<CASID>>
 OnDiskActionCache::getImpl(ArrayRef<uint8_t> Key) const {
-  // Check the result cache.
-  OnDiskHashMappedTrie::const_pointer ActionP = Cache.find(Key);
-  if (!ActionP)
-    return None;
-
-  const DataT *Output = reinterpret_cast<const DataT *>(ActionP->Data.data());
-  return CASID::create(&getContext(), toStringRef(Output->getValue()));
+  std::optional<ArrayRef<char>> Val;
+  if (Error E = DB->get(Key).moveInto(Val))
+    return std::move(E);
+  if (!Val)
+    return std::nullopt;
+  return CASID::create(&getContext(), toStringRef(*Val));
 }
 
 Error OnDiskActionCache::putImpl(ArrayRef<uint8_t> Key, const CASID &Result) {
-  DataT Expected(Result.getHash());
-  OnDiskHashMappedTrie::pointer ActionP = Cache.insertLazy(
-      Key, [&](FileOffset TentativeOffset,
-               OnDiskHashMappedTrie::ValueProxy TentativeValue) {
-        assert(TentativeValue.Data.size() == sizeof(DataT));
-        assert(isAddrAligned(Align::Of<DataT>(), TentativeValue.Data.data()));
-        new (TentativeValue.Data.data()) DataT{Expected};
-      });
-  const DataT *Observed = reinterpret_cast<const DataT *>(ActionP->Data.data());
+  auto ResultHash = Result.getHash();
+  ArrayRef Expected((const char *)ResultHash.data(), ResultHash.size());
+  ArrayRef<char> Observed;
+  if (Error E = DB->put(Key, Expected).moveInto(Observed))
+    return E;
 
-  if (Expected.getValue() == Observed->getValue())
+  if (Expected == Observed)
     return Error::success();
 
-  return createResultCachePoisonedError(hashToString(Key), getContext(), Result,
-                                        Observed->getValue());
+  return createResultCachePoisonedError(
+      hashToString(Key), getContext(), Result,
+      ArrayRef((const uint8_t *)Observed.data(), Observed.size()));
 }
 
 #if LLVM_ENABLE_ONDISK_CAS
