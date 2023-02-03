@@ -13090,9 +13090,10 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   // C++ [module.import/6] external definitions are not permitted in header
   // units.
   if (getLangOpts().CPlusPlusModules && currentModuleIsHeaderUnit() &&
-      VDecl->isThisDeclarationADefinition() &&
+      !VDecl->isInvalidDecl() && VDecl->isThisDeclarationADefinition() &&
       VDecl->getFormalLinkage() == Linkage::ExternalLinkage &&
-      !VDecl->isInline()) {
+      !VDecl->isInline() && !VDecl->isTemplated() &&
+      !isa<VarTemplateSpecializationDecl>(VDecl)) {
     Diag(VDecl->getLocation(), diag::err_extern_def_in_header_unit);
     VDecl->setInvalidDecl();
   }
@@ -15261,9 +15262,10 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
   // FIXME: Consider an alternate location for the test where the inlined()
   // state is complete.
   if (getLangOpts().CPlusPlusModules && currentModuleIsHeaderUnit() &&
+      !FD->isInvalidDecl() && !FD->isInlined() &&
+      BodyKind != FnBodyKind::Delete && BodyKind != FnBodyKind::Default &&
       FD->getFormalLinkage() == Linkage::ExternalLinkage &&
-      !FD->isInvalidDecl() && BodyKind != FnBodyKind::Delete &&
-      BodyKind != FnBodyKind::Default && !FD->isInlined()) {
+      !FD->isTemplated() && !FD->isTemplateInstantiation()) {
     assert(FD->isThisDeclarationADefinition());
     Diag(FD->getLocation(), diag::err_extern_def_in_header_unit);
     FD->setInvalidDecl();

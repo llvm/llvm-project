@@ -97,6 +97,14 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-unsafe-functions
+  <clang-tidy/checks/bugprone/unsafe-functions>` check.
+
+  Checks for functions that have safer, more secure replacements available, or
+  are considered deprecated due to design flaws.
+  This check relies heavily on, but is not exclusive to, the functions from
+  the *Annex K. "Bounds-checking interfaces"* of C11.
+
 - New :doc:`cppcoreguidelines-avoid-capture-default-when-capturing-this
   <clang-tidy/checks/cppcoreguidelines/avoid-capture-default-when-capturing-this>` check.
 
@@ -104,6 +112,14 @@ New checks
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
+
+- New alias :doc:`cert-msc24-c
+  <clang-tidy/checks/cert/msc24-c>` to :doc:`bugprone-unsafe-functions
+  <clang-tidy/checks/bugprone/unsafe-functions>` was added.
+
+- New alias :doc:`cert-msc33-c
+  <clang-tidy/checks/cert/msc33-c>` to :doc:`bugprone-unsafe-functions
+  <clang-tidy/checks/bugprone/unsafe-functions>` was added.
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^

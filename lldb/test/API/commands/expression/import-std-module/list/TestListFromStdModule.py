@@ -20,7 +20,11 @@ class TestBasicList(TestBase):
 
         self.runCmd("settings set target.import-std-module true")
 
-        list_type = "std::list<int>"
+        if self.expectedCompilerVersion(['>', '16.0']):
+            list_type = "std::list<int>"
+        else:
+            list_type = "std::list<int, std::allocator<int> >"
+
         size_type = "size_type"
         value_type = "value_type"
 

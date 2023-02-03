@@ -115,7 +115,7 @@ def Tensor_DimOp : Tensor_Op<"dim", [
     ```
   }];
 
-  let arguments = (ins AnyTensor:$source,
+  let arguments = (ins AnyNon0RankedOrUnrankedTensor:$source,
                        Index:$index);
   let results = (outs Index:$result);
 

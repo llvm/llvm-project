@@ -462,10 +462,10 @@ memoryIsNotModifiedBetween(Instruction *FirstI, Instruction *SecondI,
           "Should not hit the entry block because SI must be dominated by LI");
       for (BasicBlock *Pred : predecessors(B)) {
         PHITransAddr PredAddr = Addr;
-        if (PredAddr.NeedsPHITranslationFromBlock(B)) {
-          if (!PredAddr.IsPotentiallyPHITranslatable())
+        if (PredAddr.needsPHITranslationFromBlock(B)) {
+          if (!PredAddr.isPotentiallyPHITranslatable())
             return false;
-          if (PredAddr.PHITranslateValue(B, Pred, DT, false))
+          if (PredAddr.translateValue(B, Pred, DT, false))
             return false;
         }
         Value *TranslatedPtr = PredAddr.getAddr();

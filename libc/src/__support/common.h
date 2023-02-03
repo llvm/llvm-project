@@ -29,17 +29,15 @@
 #define LIBC_INLINE inline
 #endif
 
-// We use OpenMP to declare these functions on the device.
-#define STR(X) #X
-#define LLVM_LIBC_DECLARE_DEVICE(name)                                         \
-  _Pragma(STR(omp declare target to(name) device_type(nohost)))
+#if defined(__AMDGPU__) || defined(__NVPTX__)
+#define PACKAGE_FOR_GPU
+#endif
 
-// GPU targets do not support aliasing and must be declared on the device.
-#if defined(LLVM_LIBC_PUBLIC_PACKAGING) && defined(_OPENMP)
+// GPU targets do not support aliasing.
+#if defined(LLVM_LIBC_PUBLIC_PACKAGING) && defined(PACKAGE_FOR_GPU)
 #define LLVM_LIBC_FUNCTION(type, name, arglist)                                \
   LLVM_LIBC_FUNCTION_ATTR decltype(__llvm_libc::name)                          \
       __##name##_impl__ __asm__(#name);                                        \
-  LLVM_LIBC_DECLARE_DEVICE(__##name##_impl__)                                  \
   type __##name##_impl__ arglist
 // MacOS needs to be excluded because it does not support aliasing.
 #elif defined(LLVM_LIBC_PUBLIC_PACKAGING) && (!defined(__APPLE__))

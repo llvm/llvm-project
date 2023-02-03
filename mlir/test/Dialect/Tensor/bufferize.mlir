@@ -1,13 +1,13 @@
 // RUN: mlir-opt %s -tensor-bufferize -cse -split-input-file -verify-diagnostics | FileCheck %s
 
 // CHECK-LABEL:   func @dim(
-// CHECK-SAME:              %[[TENSOR:.*]]: tensor<f32>,
+// CHECK-SAME:              %[[TENSOR:.*]]: tensor<*xf32>,
 // CHECK-SAME:              %[[INDEX:.*]]: index) -> index {
-// CHECK:           %[[MEMREF:.*]] = bufferization.to_memref %[[TENSOR]] : memref<f32>
-// CHECK:           %[[EXTENT:.*]] = memref.dim %[[MEMREF]], %[[INDEX]] : memref<f32>
+// CHECK:           %[[MEMREF:.*]] = bufferization.to_memref %[[TENSOR]] : memref<*xf32>
+// CHECK:           %[[EXTENT:.*]] = memref.dim %[[MEMREF]], %[[INDEX]] : memref<*xf32>
 // CHECK:           return %[[EXTENT]] : index
-func.func @dim(%arg0: tensor<f32>, %arg1: index) -> index {
-  %0 = tensor.dim %arg0, %arg1 : tensor<f32>
+func.func @dim(%arg0: tensor<*xf32>, %arg1: index) -> index {
+  %0 = tensor.dim %arg0, %arg1 : tensor<*xf32>
   return %0 : index
 }
 

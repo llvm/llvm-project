@@ -56,6 +56,13 @@ class LibcxxStringViewDataFormatterTestCase(TestBase):
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
+        if self.expectedCompilerVersion(['>', '16.0']):
+            expected_basic_string = 'std::basic_string<unsigned char>'
+            expected_basic_string_view = 'std::basic_string_view<unsigned char>'
+        else:
+            expected_basic_string = 'std::basic_string<unsigned char, std::char_traits<unsigned char>, std::allocator<unsigned char> >'
+            expected_basic_string_view = 'std::basic_string_view<unsigned char, std::char_traits<unsigned char> >'
+
         self.expect_var_path('wempty',
                              type='std::wstring_view',
                              summary='L""')
@@ -96,10 +103,10 @@ class LibcxxStringViewDataFormatterTestCase(TestBase):
                              type='std::u32string_view',
                              summary='""')
         self.expect_var_path('uchar_source',
-                             type='std::basic_string<unsigned char>',
+                             type=expected_basic_string,
                              summary='"aaaaaaaaaa"')
         self.expect_var_path('uchar',
-                             type='std::basic_string_view<unsigned char>',
+                             type=expected_basic_string_view,
                              summary='"aaaaa"')
         self.expect_var_path('oops',
                              type='std::string_view',
@@ -172,10 +179,10 @@ class LibcxxStringViewDataFormatterTestCase(TestBase):
                              type='std::u32string_view',
                              summary='""')
         self.expect_var_path('uchar_source',
-                             type='std::basic_string<unsigned char>',
+                             type=expected_basic_string,
                              summary='"aaaaaaaaaa"')
         self.expect_var_path('uchar',
-                             type='std::basic_string_view<unsigned char>',
+                             type=expected_basic_string_view,
                              summary='"aaaaa"')
  
         self.runCmd('cont')
