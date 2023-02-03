@@ -307,7 +307,7 @@ define i1 @class_normal_or_fcmp_ueq_zero(half %x) {
 
 define i1 @fcmp_one_zero_or_class_normal(half %x) {
 ; CHECK-LABEL: @fcmp_one_zero_or_class_normal(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 924)
+; CHECK-NEXT:    [[CLASS:%.*]] = fcmp one half [[X:%.*]], 0xH0000
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %one.inf = fcmp one half %x, 0.0
@@ -344,7 +344,7 @@ define i1 @fcmp_one_zero_or_class_normal_dynamic(half %x) #2 {
 
 define i1 @class_normal_or_fcmp_one_zero(half %x) {
 ; CHECK-LABEL: @class_normal_or_fcmp_one_zero(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 924)
+; CHECK-NEXT:    [[CLASS:%.*]] = fcmp one half [[X:%.*]], 0xH0000
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %one.inf = fcmp one half %x, 0.0
