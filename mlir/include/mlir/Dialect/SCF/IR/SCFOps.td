@@ -630,8 +630,8 @@ def IfOp : SCF_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
     }
     ```
 
-    `scf.if` may also return results that are defined in its regions. The
-    values defined are determined by which execution path is taken.
+    `scf.if` may also produce results. Which values are returned depends on
+    which execution path is taken.
 
     Example:
 
@@ -647,11 +647,13 @@ def IfOp : SCF_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
     }
     ```
 
-    `scf.if` regions are always terminated with "scf.yield". If "scf.if"
-    defines no values, the "scf.yield" can be left out, and will be inserted
-    implicitly. Otherwise, it must be explicit.
-    Also, if "scf.if" defines one or more values, the 'else' block cannot be
-    omitted.
+    The "then" region has exactly 1 block. The "else" region may have 0 or 1
+    block. In case the `scf.if` produces results, the "else" region must also
+    have exactly 1 block.
+
+    The blocks are always terminated with `scf.yield`. If `scf.if` defines no
+    values, the `scf.yield` can be left out, and will be inserted implicitly.
+    Otherwise, it must be explicit.
 
     Example:
 
@@ -660,10 +662,14 @@ def IfOp : SCF_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
       ...
     }
     ```
+
+    The types of the yielded values must match the result types of the
+    `scf.if`.
   }];
   let arguments = (ins I1:$condition);
   let results = (outs Variadic<AnyType>:$results);
-  let regions = (region SizedRegion<1>:$thenRegion, AnyRegion:$elseRegion);
+  let regions = (region SizedRegion<1>:$thenRegion,
+                        MaxSizedRegion<1>:$elseRegion);
 
   let skipDefaultBuilders = 1;
   let builders = [
