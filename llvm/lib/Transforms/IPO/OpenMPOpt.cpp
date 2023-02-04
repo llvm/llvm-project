@@ -110,7 +110,7 @@ static cl::opt<bool> DisableOpenMPOptStateMachineRewrite(
 static cl::opt<bool> DisableOpenMPOptBarrierElimination(
     "openmp-opt-disable-barrier-elimination",
     cl::desc("Disable OpenMP optimizations that eliminate barriers."),
-    cl::Hidden, cl::init(false));
+    cl::Hidden, cl::init(true));
 
 static cl::opt<bool> PrintModuleAfterOptimizations(
     "openmp-opt-print-module-after",
@@ -2680,6 +2680,7 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
 
   bool isExecutedInAlignedRegion(Attributor &A,
                                  const Instruction &I) const override {
+    return false;
     assert(I.getFunction() == getAnchorScope() &&
            "Instruction is out of scope!");
     if (!isValidState())
