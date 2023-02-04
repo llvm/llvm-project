@@ -33,42 +33,64 @@ def AsmATTOrIntel : LLVM_EnumAttr<
 // Atomic Operations
 //===----------------------------------------------------------------------===//
 
-def AtomicBinOpXchg : I64EnumAttrCase<"xchg", 0>;
-def AtomicBinOpAdd  : I64EnumAttrCase<"add", 1>;
-def AtomicBinOpSub  : I64EnumAttrCase<"sub", 2>;
-def AtomicBinOpAnd  : I64EnumAttrCase<"_and", 3>;
-def AtomicBinOpNand : I64EnumAttrCase<"nand", 4>;
-def AtomicBinOpOr   : I64EnumAttrCase<"_or", 5>;
-def AtomicBinOpXor  : I64EnumAttrCase<"_xor", 6>;
-def AtomicBinOpMax  : I64EnumAttrCase<"max", 7>;
-def AtomicBinOpMin  : I64EnumAttrCase<"min", 8>;
-def AtomicBinOpUMax : I64EnumAttrCase<"umax", 9>;
-def AtomicBinOpUMin : I64EnumAttrCase<"umin", 10>;
-def AtomicBinOpFAdd : I64EnumAttrCase<"fadd", 11>;
-def AtomicBinOpFSub : I64EnumAttrCase<"fsub", 12>;
-def AtomicBinOp : I64EnumAttr<
+def AtomicBinOpXchg : LLVM_EnumAttrCase<"xchg", "xchg", "Xchg", 0>;
+def AtomicBinOpAdd  : LLVM_EnumAttrCase<"add", "add", "Add", 1>;
+def AtomicBinOpSub  : LLVM_EnumAttrCase<"sub", "sub", "Sub", 2>;
+def AtomicBinOpAnd  : LLVM_EnumAttrCase<"_and", "_and", "And", 3>;
+def AtomicBinOpNand : LLVM_EnumAttrCase<"nand", "nand", "Nand", 4>;
+def AtomicBinOpOr   : LLVM_EnumAttrCase<"_or", "_or", "Or", 5>;
+def AtomicBinOpXor  : LLVM_EnumAttrCase<"_xor", "_xor", "Xor", 6>;
+def AtomicBinOpMax  : LLVM_EnumAttrCase<"max", "max", "Max", 7>;
+def AtomicBinOpMin  : LLVM_EnumAttrCase<"min", "min", "Min", 8>;
+def AtomicBinOpUMax : LLVM_EnumAttrCase<"umax", "umax", "UMax", 9>;
+def AtomicBinOpUMin : LLVM_EnumAttrCase<"umin", "umin", "UMin", 10>;
+def AtomicBinOpFAdd : LLVM_EnumAttrCase<"fadd", "fadd", "FAdd", 11>;
+def AtomicBinOpFSub : LLVM_EnumAttrCase<"fsub", "fsub", "FSub", 12>;
+def AtomicBinOpFMax : LLVM_EnumAttrCase<"fmax", "fmax", "FMax", 13>;
+def AtomicBinOpFMin : LLVM_EnumAttrCase<"fmin", "fmin", "FMin", 14>;
+def AtomicBinOpUIncWrap : LLVM_EnumAttrCase<"uinc_wrap",
+                                            "uinc_wrap", "UIncWrap", 15>;
+def AtomicBinOpUDecWrap : LLVM_EnumAttrCase<"udec_wrap",
+                                            "udec_wrap", "UDecWrap", 16>;
+
+// A sentinel value that has no MLIR counterpart.
+def AtomicBadBinOp : LLVM_EnumAttrCase<"", "", "BAD_BINOP", 0>;
+
+def AtomicBinOp : LLVM_EnumAttr<
     "AtomicBinOp",
+    "::llvm::AtomicRMWInst::BinOp",
     "llvm.atomicrmw binary operations",
     [AtomicBinOpXchg, AtomicBinOpAdd, AtomicBinOpSub, AtomicBinOpAnd,
      AtomicBinOpNand, AtomicBinOpOr, AtomicBinOpXor, AtomicBinOpMax,
      AtomicBinOpMin, AtomicBinOpUMax, AtomicBinOpUMin, AtomicBinOpFAdd,
-     AtomicBinOpFSub]> {
+     AtomicBinOpFSub, AtomicBinOpFMax, AtomicBinOpFMin, AtomicBinOpUIncWrap,
+     AtomicBinOpUDecWrap],
+    [AtomicBadBinOp]> {
   let cppNamespace = "::mlir::LLVM";
 }
 
-def AtomicOrderingNotAtomic              : I64EnumAttrCase<"not_atomic", 0>;
-def AtomicOrderingUnordered              : I64EnumAttrCase<"unordered", 1>;
-def AtomicOrderingMonotonic              : I64EnumAttrCase<"monotonic", 2>;
-def AtomicOrderingAcquire                : I64EnumAttrCase<"acquire", 4>;
-def AtomicOrderingRelease                : I64EnumAttrCase<"release", 5>;
-def AtomicOrderingAcquireRelease         : I64EnumAttrCase<"acq_rel", 6>;
-def AtomicOrderingSequentiallyConsistent : I64EnumAttrCase<"seq_cst", 7>;
-def AtomicOrdering : I64EnumAttr<
+def AtomicOrderingNotAtomic : LLVM_EnumAttrCase<"not_atomic",
+                                                "not_atomic", "NotAtomic", 0>;
+def AtomicOrderingUnordered : LLVM_EnumAttrCase<"unordered",
+                                                "unordered", "Unordered", 1>;
+def AtomicOrderingMonotonic : LLVM_EnumAttrCase<"monotonic",
+                                                "monotonic", "Monotonic", 2>;
+def AtomicOrderingAcquire   : LLVM_EnumAttrCase<"acquire",
+                                                "acquire", "Acquire", 4>;
+def AtomicOrderingRelease   : LLVM_EnumAttrCase<"release",
+                                                "release", "Release", 5>;
+def AtomicOrderingAcquireRelease :
+      LLVM_EnumAttrCase<"acq_rel", "acq_rel", "AcquireRelease", 6>;
+def AtomicOrderingSequentiallyConsistent :
+      LLVM_EnumAttrCase<"seq_cst", "seq_cst", "SequentiallyConsistent", 7>;
+def AtomicOrdering : LLVM_EnumAttr<
     "AtomicOrdering",
+    "::llvm::AtomicOrdering",
     "Atomic ordering for LLVM's memory model",
     [AtomicOrderingNotAtomic, AtomicOrderingUnordered, AtomicOrderingMonotonic,
      AtomicOrderingAcquire, AtomicOrderingRelease, AtomicOrderingAcquireRelease,
-     AtomicOrderingSequentiallyConsistent]> {
+     AtomicOrderingSequentiallyConsistent
+    ]> {
   let cppNamespace = "::mlir::LLVM";
 }
 
@@ -380,59 +402,77 @@ def FastmathFlags : I32BitEnumAttr<
 }
 
 //===----------------------------------------------------------------------===//
-// FCmp Predicates
+// FCmp and ICmp Predicates
 //===----------------------------------------------------------------------===//
 
-// Predicate for float comparisons
-def FCmpPredicateFALSE  : I64EnumAttrCase<"_false", 0>;
-def FCmpPredicateOEQ    : I64EnumAttrCase<"oeq", 1>;
-def FCmpPredicateOGT    : I64EnumAttrCase<"ogt", 2>;
-def FCmpPredicateOGE    : I64EnumAttrCase<"oge", 3>;
-def FCmpPredicateOLT    : I64EnumAttrCase<"olt", 4>;
-def FCmpPredicateOLE    : I64EnumAttrCase<"ole", 5>;
-def FCmpPredicateONE    : I64EnumAttrCase<"one", 6>;
-def FCmpPredicateORD    : I64EnumAttrCase<"ord", 7>;
-def FCmpPredicateUEQ    : I64EnumAttrCase<"ueq", 8>;
-def FCmpPredicateUGT    : I64EnumAttrCase<"ugt", 9>;
-def FCmpPredicateUGE    : I64EnumAttrCase<"uge", 10>;
-def FCmpPredicateULT    : I64EnumAttrCase<"ult", 11>;
-def FCmpPredicateULE    : I64EnumAttrCase<"ule", 12>;
-def FCmpPredicateUNE    : I64EnumAttrCase<"une", 13>;
-def FCmpPredicateUNO    : I64EnumAttrCase<"uno", 14>;
-def FCmpPredicateTRUE   : I64EnumAttrCase<"_true", 15>;
+// Predicates for float comparisons
+def FCmpPredicateFALSE : LLVM_EnumAttrCase<"_false", "_false", "FCMP_FALSE", 0>;
+def FCmpPredicateOEQ   : LLVM_EnumAttrCase<"oeq", "oeq", "FCMP_OEQ", 1>;
+def FCmpPredicateOGT   : LLVM_EnumAttrCase<"ogt", "ogt", "FCMP_OGT", 2>;
+def FCmpPredicateOGE   : LLVM_EnumAttrCase<"oge", "oge", "FCMP_OGE", 3>;
+def FCmpPredicateOLT   : LLVM_EnumAttrCase<"olt", "olt", "FCMP_OLT", 4>;
+def FCmpPredicateOLE   : LLVM_EnumAttrCase<"ole", "ole", "FCMP_OLE", 5>;
+def FCmpPredicateONE   : LLVM_EnumAttrCase<"one", "one", "FCMP_ONE", 6>;
+def FCmpPredicateORD   : LLVM_EnumAttrCase<"ord", "ord", "FCMP_ORD", 7>;
+def FCmpPredicateUEQ   : LLVM_EnumAttrCase<"ueq", "ueq", "FCMP_UEQ", 8>;
+def FCmpPredicateUGT   : LLVM_EnumAttrCase<"ugt", "ugt", "FCMP_UGT", 9>;
+def FCmpPredicateUGE   : LLVM_EnumAttrCase<"uge", "uge", "FCMP_UGE", 10>;
+def FCmpPredicateULT   : LLVM_EnumAttrCase<"ult", "ult", "FCMP_ULT", 11>;
+def FCmpPredicateULE   : LLVM_EnumAttrCase<"ule", "ule", "FCMP_ULE", 12>;
+def FCmpPredicateUNE   : LLVM_EnumAttrCase<"une", "une", "FCMP_UNE", 13>;
+def FCmpPredicateUNO   : LLVM_EnumAttrCase<"uno", "uno", "FCMP_UNO", 14>;
+def FCmpPredicateTRUE  : LLVM_EnumAttrCase<"_true", "_true", "FCMP_TRUE", 15>;
 
-def FCmpPredicate : I64EnumAttr<
+// A sentinel value that has no MLIR counterpart.
+def ICmpPredicateBad : LLVM_EnumAttrCase<"", "", "BAD_ICMP_PREDICATE", 0>;
+
+// Predicates for integer comparisons.
+def ICmpPredicateEQ  : LLVM_EnumAttrCase<"eq", "eq", "ICMP_EQ", 0>;
+def ICmpPredicateNE  : LLVM_EnumAttrCase<"ne", "ne", "ICMP_NE", 1>;
+def ICmpPredicateSLT : LLVM_EnumAttrCase<"slt", "slt", "ICMP_SLT", 2>;
+def ICmpPredicateSLE : LLVM_EnumAttrCase<"sle", "sle", "ICMP_SLE", 3>;
+def ICmpPredicateSGT : LLVM_EnumAttrCase<"sgt", "sgt", "ICMP_SGT", 4>;
+def ICmpPredicateSGE : LLVM_EnumAttrCase<"sge", "sge", "ICMP_SGE", 5>;
+def ICmpPredicateULT : LLVM_EnumAttrCase<"ult", "ult", "ICMP_ULT", 6>;
+def ICmpPredicateULE : LLVM_EnumAttrCase<"ule", "ule", "ICMP_ULE", 7>;
+def ICmpPredicateUGT : LLVM_EnumAttrCase<"ugt", "ugt", "ICMP_UGT", 8>;
+def ICmpPredicateUGE : LLVM_EnumAttrCase<"uge", "uge", "ICMP_UGE", 9>;
+
+// A sentinel value that has no MLIR counterpart.
+def FCmpPredicateBad : LLVM_EnumAttrCase<"", "", "BAD_FCMP_PREDICATE", 0>;
+
+// LLVM's predicate enum contains the floating-point and integer comparison
+// cases, while the LLVM dialect uses two separate enums. The floating-point
+// predicate enum thus defines all integer predicates as unsupported and
+// vice versa.
+def FCmpPredicate : LLVM_EnumAttr<
     "FCmpPredicate",
+    "::llvm::CmpInst::Predicate",
     "llvm.fcmp comparison predicate",
     [FCmpPredicateFALSE, FCmpPredicateOEQ, FCmpPredicateOGT, FCmpPredicateOGE,
      FCmpPredicateOLT, FCmpPredicateOLE, FCmpPredicateONE, FCmpPredicateORD,
      FCmpPredicateUEQ, FCmpPredicateUGT, FCmpPredicateUGE, FCmpPredicateULT,
-     FCmpPredicateULE, FCmpPredicateUNE, FCmpPredicateUNO, FCmpPredicateTRUE
+     FCmpPredicateULE, FCmpPredicateUNE, FCmpPredicateUNO, FCmpPredicateTRUE],
+    [ICmpPredicateEQ, ICmpPredicateNE, ICmpPredicateSLT, ICmpPredicateSLE,
+     ICmpPredicateSGT, ICmpPredicateSGE, ICmpPredicateULT, ICmpPredicateULE,
+     ICmpPredicateUGT, ICmpPredicateUGE, FCmpPredicateBad, ICmpPredicateBad
     ]> {
   let cppNamespace = "::mlir::LLVM";
 }
 
-//===----------------------------------------------------------------------===//
-// ICmp Predicates
-//===----------------------------------------------------------------------===//
-
-// Predicate for integer comparisons.
-def ICmpPredicateEQ  : I64EnumAttrCase<"eq", 0>;
-def ICmpPredicateNE  : I64EnumAttrCase<"ne", 1>;
-def ICmpPredicateSLT : I64EnumAttrCase<"slt", 2>;
-def ICmpPredicateSLE : I64EnumAttrCase<"sle", 3>;
-def ICmpPredicateSGT : I64EnumAttrCase<"sgt", 4>;
-def ICmpPredicateSGE : I64EnumAttrCase<"sge", 5>;
-def ICmpPredicateULT : I64EnumAttrCase<"ult", 6>;
-def ICmpPredicateULE : I64EnumAttrCase<"ule", 7>;
-def ICmpPredicateUGT : I64EnumAttrCase<"ugt", 8>;
-def ICmpPredicateUGE : I64EnumAttrCase<"uge", 9>;
-def ICmpPredicate : I64EnumAttr<
+def ICmpPredicate : LLVM_EnumAttr<
     "ICmpPredicate",
-    "llvm.icmp comparison predicate",
+    "::llvm::CmpInst::Predicate",
+    "lvm.icmp comparison predicate",
     [ICmpPredicateEQ, ICmpPredicateNE, ICmpPredicateSLT, ICmpPredicateSLE,
      ICmpPredicateSGT, ICmpPredicateSGE, ICmpPredicateULT, ICmpPredicateULE,
-     ICmpPredicateUGT, ICmpPredicateUGE]> {
+     ICmpPredicateUGT, ICmpPredicateUGE],
+    [FCmpPredicateFALSE, FCmpPredicateOEQ, FCmpPredicateOGT, FCmpPredicateOGE,
+     FCmpPredicateOLT, FCmpPredicateOLE, FCmpPredicateONE, FCmpPredicateORD,
+     FCmpPredicateUEQ, FCmpPredicateUGT, FCmpPredicateUGE, FCmpPredicateULT,
+     FCmpPredicateULE, FCmpPredicateUNE, FCmpPredicateUNO, FCmpPredicateTRUE,
+     FCmpPredicateBad, ICmpPredicateBad
+    ]> {
   let cppNamespace = "::mlir::LLVM";
 }
 

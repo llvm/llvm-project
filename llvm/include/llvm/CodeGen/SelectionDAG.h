@@ -2263,8 +2263,7 @@ public:
   }
   /// Set PCSections to be associated with Node.
   void addPCSections(const SDNode *Node, MDNode *MD) {
-    SmallPtrSet<const llvm::SDNode *, 32> Visited;
-    addPCSections(Node, MD, Visited);
+    SDEI[Node].PCSections = MD;
   }
   /// Return PCSections associated with Node, or nullptr if none exists.
   MDNode *getPCSections(const SDNode *Node) const {
@@ -2341,10 +2340,6 @@ private:
   /// additional processing for constant nodes.
   SDNode *FindNodeOrInsertPos(const FoldingSetNodeID &ID, const SDLoc &DL,
                               void *&InsertPos);
-
-  /// Recursively set PCSections to be associated with Node and all its values.
-  void addPCSections(const SDNode *Node, MDNode *MD,
-                     SmallPtrSet<const llvm::SDNode *, 32> &Visited);
 
   /// Maps to auto-CSE operations.
   std::vector<CondCodeSDNode*> CondCodeNodes;

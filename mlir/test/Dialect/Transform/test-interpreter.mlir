@@ -1091,3 +1091,22 @@ transform.sequence failures(propagate) {
   // expected-error @below {{attempting to assign a null parameter to this transform value}}
   %0 = transform.test_produce_null_param : !transform.param<i64>
 }
+
+// -----
+
+// expected-error @below {{could not find a nested top-level transform op}}
+// expected-note @below {{use the 'transform-file-name' option to provide transform as external file}}
+module {
+}
+
+// -----
+
+// expected-note @below {{previous top-level transform op}}
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+}
+
+// expected-error @below {{ore than one top-level transform op}}
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+}

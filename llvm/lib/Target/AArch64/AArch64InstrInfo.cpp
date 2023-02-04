@@ -7269,41 +7269,6 @@ outliner::OutlinedFunction AArch64InstrInfo::getOutliningCandidateInfo(
   for (outliner::Candidate &C : RepeatedSequenceLocs)
     FlagsSetInAll &= C.Flags;
 
-  // According to the AArch64 Procedure Call Standard, the following are
-  // undefined on entry/exit from a function call:
-  //
-  // * Registers x16, x17, (and thus w16, w17)
-  // * Condition codes (and thus the NZCV register)
-  //
-  // Because if this, we can't outline any sequence of instructions where
-  // one
-  // of these registers is live into/across it. Thus, we need to delete
-  // those
-  // candidates.
-  auto CantGuaranteeValueAcrossCall = [&TRI](outliner::Candidate &C) {
-    // If the unsafe registers in this block are all dead, then we don't need
-    // to compute liveness here.
-    if (C.Flags & UnsafeRegsDead)
-      return false;
-    return C.isAnyUnavailableAcrossOrOutOfSeq(
-        {AArch64::W16, AArch64::W17, AArch64::NZCV}, TRI);
-  };
-
-  // Are there any candidates where those registers are live?
-  if (!(FlagsSetInAll & UnsafeRegsDead)) {
-    // Erase every candidate that violates the restrictions above. (It could be
-    // true that we have viable candidates, so it's not worth bailing out in
-    // the case that, say, 1 out of 20 candidates violate the restructions.)
-    llvm::erase_if(RepeatedSequenceLocs, CantGuaranteeValueAcrossCall);
-
-    // If the sequence doesn't have enough candidates left, then we're done.
-    if (RepeatedSequenceLocs.size() < 2)
-      return outliner::OutlinedFunction();
-  }
-
-  // At this point, we have only "safe" candidates to outline. Figure out
-  // frame + call instruction information.
-
   unsigned LastInstrOpcode = RepeatedSequenceLocs[0].back()->getOpcode();
 
   // Helper lambda which sets call information for every candidate.
@@ -7429,6 +7394,10 @@ outliner::OutlinedFunction AArch64InstrInfo::getOutliningCandidateInfo(
 
     // Check if we have to save LR.
     for (outliner::Candidate &C : RepeatedSequenceLocs) {
+      bool LRAvailable =
+          (C.Flags & MachineOutlinerMBBFlags::LRUnavailableSomewhere)
+              ? C.isAvailableAcrossAndOutOfSeq(AArch64::LR, TRI)
+              : true;
       // If we have a noreturn caller, then we're going to be conservative and
       // say that we have to save LR. If we don't have a ret at the end of the
       // block, then we can't reason about liveness accurately.
@@ -7439,7 +7408,7 @@ outliner::OutlinedFunction AArch64InstrInfo::getOutliningCandidateInfo(
           C.getMF()->getFunction().hasFnAttribute(Attribute::NoReturn);
 
       // Is LR available? If so, we don't need a save.
-      if (C.isAvailableAcrossAndOutOfSeq(AArch64::LR, TRI) && !IsNoReturn) {
+      if (LRAvailable && !IsNoReturn) {
         NumBytesNoStackCalls += 4;
         C.setCallInfo(MachineOutlinerNoLRSave, 4);
         CandidatesWithoutStackFixups.push_back(C);
@@ -7611,72 +7580,118 @@ bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(
   return true;
 }
 
-bool AArch64InstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
-                                              unsigned &Flags) const {
-  if (!TargetInstrInfo::isMBBSafeToOutlineFrom(MBB, Flags))
-    return false;
-  // Check if LR is available through all of the MBB. If it's not, then set
-  // a flag.
+SmallVector<std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
+AArch64InstrInfo::getOutlinableRanges(MachineBasicBlock &MBB,
+                                      unsigned &Flags) const {
   assert(MBB.getParent()->getRegInfo().tracksLiveness() &&
-         "Suitable Machine Function for outlining must track liveness");
+         "Must track liveness!");
+  SmallVector<
+      std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
+      Ranges;
+  // According to the AArch64 Procedure Call Standard, the following are
+  // undefined on entry/exit from a function call:
+  //
+  // * Registers x16, x17, (and thus w16, w17)
+  // * Condition codes (and thus the NZCV register)
+  //
+  // If any of these registers are used inside or live across an outlined
+  // function, then they may be modified later, either by the compiler or
+  // some other tool (like the linker).
+  //
+  // To avoid outlining in these situations, partition each block into ranges
+  // where these registers are dead. We will only outline from those ranges.
   LiveRegUnits LRU(getRegisterInfo());
+  auto AreAllUnsafeRegsDead = [&LRU]() {
+    return LRU.available(AArch64::W16) && LRU.available(AArch64::W17) &&
+           LRU.available(AArch64::NZCV);
+  };
 
-  for (MachineInstr &MI : llvm::reverse(MBB))
-    LRU.accumulate(MI);
-
-  // Check if each of the unsafe registers are available...
-  bool W16AvailableInBlock = LRU.available(AArch64::W16);
-  bool W17AvailableInBlock = LRU.available(AArch64::W17);
-  bool NZCVAvailableInBlock = LRU.available(AArch64::NZCV);
-
-  // If all of these are dead (and not live out), we know we don't have to check
-  // them later.
-  if (W16AvailableInBlock && W17AvailableInBlock && NZCVAvailableInBlock)
-    Flags |= MachineOutlinerMBBFlags::UnsafeRegsDead;
-
-  // Now, add the live outs to the set.
+  // We need to know if LR is live across an outlining boundary later on in
+  // order to decide how we'll create the outlined call, frame, etc.
+  //
+  // It's pretty expensive to check this for *every candidate* within a block.
+  // That's some potentially n^2 behaviour, since in the worst case, we'd need
+  // to compute liveness from the end of the block for O(n) candidates within
+  // the block.
+  //
+  // So, to improve the average case, let's keep track of liveness from the end
+  // of the block to the beginning of *every outlinable range*. If we know that
+  // LR is available in every range we could outline from, then we know that
+  // we don't need to check liveness for any candidate within that range.
+  bool LRAvailableEverywhere = true;
+  // Compute liveness bottom-up.
   LRU.addLiveOuts(MBB);
-
-  // If any of these registers is available in the MBB, but also a live out of
-  // the block, then we know outlining is unsafe.
-  if (W16AvailableInBlock && !LRU.available(AArch64::W16))
-    return false;
-  if (W17AvailableInBlock && !LRU.available(AArch64::W17))
-    return false;
-  if (NZCVAvailableInBlock && !LRU.available(AArch64::NZCV))
-    return false;
-
-  // Check if there's a call inside this MachineBasicBlock. If there is, then
-  // set a flag.
-  if (any_of(MBB, [](MachineInstr &MI) { return MI.isCall(); }))
-    Flags |= MachineOutlinerMBBFlags::HasCalls;
-
-  MachineFunction *MF = MBB.getParent();
-
-  // In the event that we outline, we may have to save LR. If there is an
-  // available register in the MBB, then we'll always save LR there. Check if
-  // this is true.
-  bool CanSaveLR = false;
-  const AArch64RegisterInfo *ARI = static_cast<const AArch64RegisterInfo *>(
-      MF->getSubtarget().getRegisterInfo());
-
-  // Check if there is an available register across the sequence that we can
-  // use.
-  for (unsigned Reg : AArch64::GPR64RegClass) {
-    if (!ARI->isReservedReg(*MF, Reg) && Reg != AArch64::LR &&
-        Reg != AArch64::X16 && Reg != AArch64::X17 && LRU.available(Reg)) {
-      CanSaveLR = true;
+  // Update flags that require info about the entire MBB.
+  auto UpdateWholeMBBFlags = [&Flags](const MachineInstr &MI) {
+    if (MI.isCall() && !MI.isTerminator())
+      Flags |= MachineOutlinerMBBFlags::HasCalls;
+  };
+  // Range: [RangeBegin, RangeEnd)
+  MachineBasicBlock::instr_iterator RangeBegin, RangeEnd;
+  unsigned RangeLen;
+  auto CreateNewRangeStartingAt =
+      [&RangeBegin, &RangeEnd,
+       &RangeLen](MachineBasicBlock::instr_iterator NewBegin) {
+        RangeBegin = NewBegin;
+        RangeEnd = std::next(RangeBegin);
+        RangeLen = 0;
+      };
+  auto SaveRangeIfNonEmpty = [&RangeLen, &Ranges, &RangeBegin, &RangeEnd]() {
+    // At least one unsafe register is not dead. We do not want to outline at
+    // this point. If it is long enough to outline from, save the range
+    // [RangeBegin, RangeEnd).
+    if (RangeLen > 1)
+      Ranges.push_back(std::make_pair(RangeBegin, RangeEnd));
+  };
+  // Find the first point where all unsafe registers are dead.
+  // FIND: <safe instr> <-- end of first potential range
+  // SKIP: <unsafe def>
+  // SKIP: ... everything between ...
+  // SKIP: <unsafe use>
+  auto FirstPossibleEndPt = MBB.instr_rbegin();
+  for (; FirstPossibleEndPt != MBB.instr_rend(); ++FirstPossibleEndPt) {
+    LRU.stepBackward(*FirstPossibleEndPt);
+    // Update flags that impact how we outline across the entire block,
+    // regardless of safety.
+    UpdateWholeMBBFlags(*FirstPossibleEndPt);
+    if (AreAllUnsafeRegsDead())
       break;
-    }
   }
-
-  // Check if we have a register we can save LR to, and if LR was used
-  // somewhere. If both of those things are true, then we need to evaluate the
-  // safety of outlining stack instructions later.
-  if (!CanSaveLR && !LRU.available(AArch64::LR))
+  // If we exhausted the entire block, we have no safe ranges to outline.
+  if (FirstPossibleEndPt == MBB.instr_rend())
+    return Ranges;
+  // Current range.
+  CreateNewRangeStartingAt(FirstPossibleEndPt->getIterator());
+  // StartPt points to the first place where all unsafe registers
+  // are dead (if there is any such point). Begin partitioning the MBB into
+  // ranges.
+  for (auto &MI : make_range(FirstPossibleEndPt, MBB.instr_rend())) {
+    LRU.stepBackward(MI);
+    UpdateWholeMBBFlags(MI);
+    if (!AreAllUnsafeRegsDead()) {
+      SaveRangeIfNonEmpty();
+      CreateNewRangeStartingAt(MI.getIterator());
+      continue;
+    }
+    LRAvailableEverywhere &= LRU.available(AArch64::LR);
+    RangeBegin = MI.getIterator();
+    ++RangeLen;
+    continue;
+  }
+  // Above loop misses the last (or only) range. If we are still safe, then
+  // let's save the range.
+  if (AreAllUnsafeRegsDead())
+    SaveRangeIfNonEmpty();
+  if (Ranges.empty())
+    return Ranges;
+  // We found the ranges bottom-up. Mapping expects the top-down. Reverse
+  // the order.
+  std::reverse(Ranges.begin(), Ranges.end());
+  // If there is at least one outlinable range where LR is unavailable
+  // somewhere, remember that.
+  if (!LRAvailableEverywhere)
     Flags |= MachineOutlinerMBBFlags::LRUnavailableSomewhere;
-
-  return true;
+  return Ranges;
 }
 
 outliner::InstrType

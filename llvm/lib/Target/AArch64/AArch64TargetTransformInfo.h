@@ -347,10 +347,10 @@ public:
     return ST->hasSVE() ? 5 : 0;
   }
 
-  PredicationStyle emitGetActiveLaneMask() const {
+  TailFoldingStyle getPreferredTailFoldingStyle() const {
     if (ST->hasSVE())
-      return PredicationStyle::DataAndControlFlow;
-    return PredicationStyle::None;
+      return TailFoldingStyle::DataAndControlFlow;
+    return TailFoldingStyle::DataWithoutLaneMask;
   }
 
   bool preferPredicateOverEpilogue(Loop *L, LoopInfo *LI, ScalarEvolution &SE,

@@ -25,7 +25,9 @@ class TransformOpInterface;
 /// TransformState.
 class TransformOptions {
 public:
-  TransformOptions() {}
+  TransformOptions() = default;
+  TransformOptions(const TransformOptions &) = default;
+  TransformOptions &operator=(const TransformOptions &) = default;
 
   /// Requests computationally expensive checks of the transform and payload IR
   /// well-formedness to be performed before each transformation. In particular,
@@ -200,7 +202,8 @@ public:
       assert(res.second && "the region scope is already present");
       (void)res;
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-      assert(state.regionStack.back()->isProperAncestor(&region) &&
+      assert(((state.regionStack.size() == 1 && !state.regionStack.back()) ||
+              state.regionStack.back()->isProperAncestor(&region)) &&
              "scope started at a non-nested region");
       state.regionStack.push_back(&region);
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS

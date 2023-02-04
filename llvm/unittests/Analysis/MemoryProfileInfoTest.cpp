@@ -401,6 +401,8 @@ declare noundef nonnull ptr @_Znam(i64 noundef)
     auto *MIBMD = cast<const MDNode>(MIBOp);
     MDNode *StackNode = getMIBStackNode(MIBMD);
     CallStack<MDNode, MDNode::op_iterator> StackContext(StackNode);
+    uint64_t ExpectedBack = First ? 4 : 5;
+    EXPECT_EQ(StackContext.back(), ExpectedBack);
     std::vector<uint64_t> StackIds;
     for (auto ContextIter = StackContext.beginAfterSharedPrefix(InstCallsite);
          ContextIter != StackContext.end(); ++ContextIter)
@@ -450,6 +452,8 @@ TEST_F(MemoryProfileInfoTest, CallStackTestSummary) {
     for (auto &MIB : AI.MIBs) {
       CallStack<MIBInfo, SmallVector<unsigned>::const_iterator> StackContext(
           &MIB);
+      uint64_t ExpectedBack = First ? 4 : 5;
+      EXPECT_EQ(Index->getStackIdAtIndex(StackContext.back()), ExpectedBack);
       std::vector<uint64_t> StackIds;
       for (auto StackIdIndex : StackContext)
         StackIds.push_back(Index->getStackIdAtIndex(StackIdIndex));
