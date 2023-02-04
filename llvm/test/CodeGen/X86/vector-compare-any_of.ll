@@ -1050,50 +1050,36 @@ define i1 @bool_reduction_v8f32(<8 x float> %x, <8 x float> %y) {
 define i1 @bool_reduction_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; SSE2-LABEL: bool_reduction_v2i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259456,9223372039002259456]
-; SSE2-NEXT:    pxor %xmm2, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:    pcmpeqd %xmm1, %xmm2
-; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,2,2]
-; SSE2-NEXT:    pand %xmm2, %xmm1
-; SSE2-NEXT:    por %xmm0, %xmm1
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,0,3,2]
+; SSE2-NEXT:    pand %xmm0, %xmm1
 ; SSE2-NEXT:    movmskpd %xmm1, %eax
-; SSE2-NEXT:    testl %eax, %eax
+; SSE2-NEXT:    cmpl $3, %eax
 ; SSE2-NEXT:    setne %al
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: bool_reduction_v2i64:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    movdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
-; SSE42-NEXT:    pxor %xmm2, %xmm1
-; SSE42-NEXT:    pxor %xmm2, %xmm0
-; SSE42-NEXT:    pcmpgtq %xmm1, %xmm0
-; SSE42-NEXT:    movmskpd %xmm0, %eax
-; SSE42-NEXT:    testl %eax, %eax
+; SSE42-NEXT:    psubq %xmm1, %xmm0
+; SSE42-NEXT:    ptest %xmm0, %xmm0
 ; SSE42-NEXT:    setne %al
 ; SSE42-NEXT:    retq
 ;
 ; AVX-LABEL: bool_reduction_v2i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
-; AVX-NEXT:    vpxor %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpxor %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovmskpd %xmm0, %eax
-; AVX-NEXT:    testl %eax, %eax
+; AVX-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vptest %xmm0, %xmm0
 ; AVX-NEXT:    setne %al
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: bool_reduction_v2i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpnleuq %xmm1, %xmm0, %k0
+; AVX512-NEXT:    vpcmpneqq %xmm1, %xmm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    testb %al, %al
 ; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    retq
-  %a = icmp ugt <2 x i64> %x, %y
+  %a = icmp ne <2 x i64> %x, %y
   %b = shufflevector <2 x i1> %a, <2 x i1> undef, <2 x i32> <i32 1, i32 undef>
   %c = or <2 x i1> %a, %b
   %d = extractelement <2 x i1> %c, i32 0
@@ -1103,14 +1089,18 @@ define i1 @bool_reduction_v2i64(<2 x i64> %x, <2 x i64> %y) {
 define i1 @bool_reduction_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; SSE2-LABEL: bool_reduction_v4i32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    pxor %xmm2, %xmm1
+; SSE2-NEXT:    pxor %xmm2, %xmm0
+; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
 ; SSE2-NEXT:    movmskps %xmm0, %eax
-; SSE2-NEXT:    cmpl $15, %eax
+; SSE2-NEXT:    testl %eax, %eax
 ; SSE2-NEXT:    setne %al
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: bool_reduction_v4i32:
 ; SSE42:       # %bb.0:
+; SSE42-NEXT:    pminud %xmm0, %xmm1
 ; SSE42-NEXT:    psubd %xmm1, %xmm0
 ; SSE42-NEXT:    ptest %xmm0, %xmm0
 ; SSE42-NEXT:    setne %al
@@ -1118,6 +1108,7 @@ define i1 @bool_reduction_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ;
 ; AVX-LABEL: bool_reduction_v4i32:
 ; AVX:       # %bb.0:
+; AVX-NEXT:    vpminud %xmm1, %xmm0, %xmm1
 ; AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vptest %xmm0, %xmm0
 ; AVX-NEXT:    setne %al
@@ -1125,12 +1116,12 @@ define i1 @bool_reduction_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ;
 ; AVX512-LABEL: bool_reduction_v4i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpneqd %xmm1, %xmm0, %k0
+; AVX512-NEXT:    vpcmpnleud %xmm1, %xmm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    testb %al, %al
 ; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    retq
-  %a = icmp ne <4 x i32> %x, %y
+  %a = icmp ugt <4 x i32> %x, %y
   %s1 = shufflevector <4 x i1> %a, <4 x i1> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
   %b = or <4 x i1> %s1, %a
   %s2 = shufflevector <4 x i1> %b, <4 x i1> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
