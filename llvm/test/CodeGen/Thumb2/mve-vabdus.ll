@@ -613,3 +613,53 @@ vector.body:                                      ; preds = %vector.body, %entry
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
+
+define arm_aapcs_vfpcc <4 x i32> @vabd_v4u32_commutative(<4 x i32> %src1, <4 x i32> %src2) {
+; CHECK-LABEL: vabd_v4u32_commutative:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vabd.u32 q2, q1, q0
+; CHECK-NEXT:    vabd.u32 q0, q0, q1
+; CHECK-NEXT:    vadd.i32 q0, q0, q2
+; CHECK-NEXT:    bx lr
+  %azextsrc1 = zext <4 x i32> %src1 to <4 x i64>
+  %azextsrc2 = zext <4 x i32> %src2 to <4 x i64>
+  %aadd1 = sub <4 x i64> %azextsrc1, %azextsrc2
+  %aadd2 = sub <4 x i64> zeroinitializer, %aadd1
+  %ac = icmp sge <4 x i64> %aadd1, zeroinitializer
+  %as = select <4 x i1> %ac, <4 x i64> %aadd1, <4 x i64> %aadd2
+  %aresult = trunc <4 x i64> %as to <4 x i32>
+  %bzextsrc1 = zext <4 x i32> %src2 to <4 x i64>
+  %bzextsrc2 = zext <4 x i32> %src1 to <4 x i64>
+  %badd1 = sub <4 x i64> %bzextsrc1, %bzextsrc2
+  %badd2 = sub <4 x i64> zeroinitializer, %badd1
+  %bc = icmp sge <4 x i64> %badd1, zeroinitializer
+  %bs = select <4 x i1> %bc, <4 x i64> %badd1, <4 x i64> %badd2
+  %bresult = trunc <4 x i64> %bs to <4 x i32>
+  %r = add <4 x i32> %aresult, %bresult
+  ret <4 x i32> %r
+}
+
+define arm_aapcs_vfpcc <4 x i32> @vabd_v4u32_shuffle(<4 x i32> %src1, <4 x i32> %src2) {
+; CHECK-LABEL: vabd_v4u32_shuffle:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vmov.f32 s8, s7
+; CHECK-NEXT:    vmov.f32 s9, s6
+; CHECK-NEXT:    vmov.f32 s10, s5
+; CHECK-NEXT:    vmov.f32 s11, s4
+; CHECK-NEXT:    vmov.f32 s4, s3
+; CHECK-NEXT:    vmov.f32 s5, s2
+; CHECK-NEXT:    vmov.f32 s6, s1
+; CHECK-NEXT:    vmov.f32 s7, s0
+; CHECK-NEXT:    vabd.u32 q0, q1, q2
+; CHECK-NEXT:    bx lr
+  %s1 = shufflevector <4 x i32> %src1, <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %s2 = shufflevector <4 x i32> %src2, <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %azextsrc1 = zext <4 x i32> %s1 to <4 x i64>
+  %azextsrc2 = zext <4 x i32> %s2 to <4 x i64>
+  %aadd1 = sub <4 x i64> %azextsrc1, %azextsrc2
+  %aadd2 = sub <4 x i64> zeroinitializer, %aadd1
+  %ac = icmp sge <4 x i64> %aadd1, zeroinitializer
+  %as = select <4 x i1> %ac, <4 x i64> %aadd1, <4 x i64> %aadd2
+  %aresult = trunc <4 x i64> %as to <4 x i32>
+  ret <4 x i32> %aresult
+}
