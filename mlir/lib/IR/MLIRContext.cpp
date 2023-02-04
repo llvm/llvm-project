@@ -31,6 +31,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/RWMutex.h"
@@ -123,8 +124,10 @@ public:
   // Debugging
   //===--------------------------------------------------------------------===//
 
-  /// An action manager for use within the context.
-  tracing::ActionManager actionManager;
+  /// An action handler for handling actions that are dispatched through this
+  /// context.
+  std::function<void(function_ref<void()>, const tracing::Action &)>
+      actionHandler;
 
   //===--------------------------------------------------------------------===//
   // Diagnostics
@@ -345,12 +348,21 @@ static ArrayRef<T> copyArrayRefInto(llvm::BumpPtrAllocator &allocator,
 }
 
 //===----------------------------------------------------------------------===//
-// Debugging
+// Action Handling
 //===----------------------------------------------------------------------===//
 
-tracing::ActionManager &MLIRContext::getActionManager() {
-  return getImpl().actionManager;
+void MLIRContext::registerActionHandler(HandlerTy handler) {
+  getImpl().actionHandler = std::move(handler);
 }
+
+/// Dispatch the provided action to the handler if any, or just execute it.
+void MLIRContext::executeActionInternal(function_ref<void()> actionFn,
+                                        const tracing::Action &action) {
+  assert(getImpl().actionHandler);
+  getImpl().actionHandler(actionFn, action);
+}
+
+bool MLIRContext::hasActionHandler() { return (bool)getImpl().actionHandler; }
 
 //===----------------------------------------------------------------------===//
 // Diagnostic Handlers
