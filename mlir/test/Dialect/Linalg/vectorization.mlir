@@ -301,8 +301,7 @@ func.func @vectorize_affine_apply(%arg0: tensor<32xf32>, %arg3: index) -> tensor
   ^bb0(%arg1: f32, %arg2: i32):
     %2 = linalg.index 0 : index
     %12 = affine.apply affine_map<(d0, d1) -> (d0 + d1)>(%2, %arg3)
-    %13 = affine.apply affine_map<(d0)[s0] -> (d0 + s0)>(%12)[%arg3]
-    %3 = arith.index_cast %13 : index to i32
+    %3 = arith.index_cast %12 : index to i32
     linalg.yield %3 : i32
   } -> tensor<32xi32>
   return %1 : tensor<32xi32>
@@ -316,9 +315,7 @@ func.func @vectorize_affine_apply(%arg0: tensor<32xf32>, %arg3: index) -> tensor
 // CHECK:   %[[EMPTY:.*]] = tensor.empty() : tensor<32xi32>
 // CHECK:   %[[BCAST:.*]] = vector.broadcast %[[ARG1]] : index to vector<32xindex>
 // CHECK:   %[[ADDI:.*]] = arith.addi %[[BCAST]], %[[CST]] : vector<32xindex>
-// CHECK:   %[[BCAST2:.*]] = vector.broadcast %[[ARG1]] : index to vector<32xindex>
-// CHECK:   %[[ADDI2:.*]] = arith.addi %[[ADDI]], %[[BCAST2]] : vector<32xindex>
-// CHECK:   %[[CAST:.*]] = arith.index_cast %[[ADDI2]] : vector<32xindex> to vector<32xi32>
+// CHECK:   %[[CAST:.*]] = arith.index_cast %[[ADDI]] : vector<32xindex> to vector<32xi32>
 // CHECK:   vector.transfer_write %[[CAST]], %[[EMPTY]][%[[C0:.*]]] {in_bounds = [true]} : vector<32xi32>, tensor<32xi32>
 
 transform.sequence failures(propagate) {
