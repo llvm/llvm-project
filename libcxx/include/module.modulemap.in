@@ -1380,6 +1380,7 @@ module std [system] {
     export string_view
     module __string {
       module char_traits           { private header "__string/char_traits.h" }
+      module constexpr_c_functions { private header "__string/constexpr_c_functions.h" }
       module extern_template_lists { private header "__string/extern_template_lists.h" }
       module string_fwd            { private header "__fwd/string.h" }
     }
