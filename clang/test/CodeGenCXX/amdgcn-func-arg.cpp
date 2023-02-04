@@ -19,10 +19,14 @@ void func_with_ref_arg(A &a);
 void func_with_ref_arg(B &b);
 
 // CHECK-LABEL: @_Z22func_with_indirect_arg1A(
+// CHECK-SAME:  [[INDIRECT_ADDR_TY:.*]] addrspace(5)* noundef [[ARG:%.*]])
 // CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[INDIRECT_ADDR:%.*]] = alloca [[INDIRECT_ADDR_TY]]*, align 8, addrspace(5)
 // CHECK-NEXT:    [[P:%.*]] = alloca %class.A*, align 8, addrspace(5)
+// CHECK-NEXT:    [[INDIRECT_ADDR_ASCAST:%.*]] = addrspacecast [[INDIRECT_ADDR_TY]]* addrspace(5)* [[INDIRECT_ADDR]] to [[INDIRECT_ADDR_TY]]*
 // CHECK-NEXT:    [[P_ASCAST:%.*]] = addrspacecast %class.A* addrspace(5)* [[P]] to %class.A**
 // CHECK-NEXT:    [[A_ASCAST:%.*]] = addrspacecast [[CLASS_A:%.*]] addrspace(5)* [[A:%.*]] to %class.A*
+// CHECK-NEXT:    store [[INDIRECT_ADDR_TY]]* [[A_ASCAST]], [[INDIRECT_ADDR_TY]]** [[INDIRECT_ADDR_ASCAST]]
 // CHECK-NEXT:    store %class.A* [[A_ASCAST]], %class.A** [[P_ASCAST]], align 8
 // CHECK-NEXT:    ret void
 //
