@@ -710,31 +710,30 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case ISD::ConstantFP: {
-    unsigned BitSize = VT.getSizeInBits().getFixedValue();
     const APFloat &APF = cast<ConstantFPSDNode>(Node)->getValueAPF();
     // td can handle +0.0 already.
     if (APF.isPosZero())
       break;
     // Special case: a 64 bit -0.0 uses more instructions than fmv + fneg.
-    if (APF.isNegZero() && BitSize == 64)
+    if (APF.isNegZero() && VT == MVT::f64)
       break;
-    assert((BitSize <= Subtarget->getXLen()) &&
+    assert(VT.bitsLE(Subtarget->getXLenVT()) &&
            "Cannot create a 64 bit floating-point immediate value for rv32");
     SDValue Imm =
         SDValue(selectImm(CurDAG, DL, XLenVT,
                           APF.bitcastToAPInt().getSExtValue(), *Subtarget),
                 0);
     unsigned Opc;
-    switch (BitSize) {
+    switch (VT.SimpleTy) {
     default:
       llvm_unreachable("Unexpected size");
-    case 16:
+    case MVT::f16:
       Opc = RISCV::FMV_H_X;
       break;
-    case 32:
+    case MVT::f32:
       Opc = RISCV::FMV_W_X;
       break;
-    case 64:
+    case MVT::f64:
       Opc = RISCV::FMV_D_X;
       break;
     }
