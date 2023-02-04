@@ -25,7 +25,6 @@ define weak_odr ptr @h(ptr %0) {
 ; CHECK: Function Attrs: norecurse nounwind memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@f
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    ret void
 ;
 ;
