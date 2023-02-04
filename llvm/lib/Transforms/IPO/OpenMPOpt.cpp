@@ -2682,7 +2682,7 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
                                  const Instruction &I) const override {
     assert(I.getFunction() == getAnchorScope() &&
            "Instruction is out of scope!");
-    if (!isValidState() || isa<CallBase>(I))
+    if (!isValidState())
       return false;
 
     const Instruction *CurI;
@@ -2693,14 +2693,18 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
       auto *CB = dyn_cast<CallBase>(CurI);
       if (!CB)
         continue;
+      if (CB != &I && AlignedBarriers.contains(const_cast<CallBase *>(CB))) {
+        break;
+      }
       const auto &It = CEDMap.find(CB);
       if (It == CEDMap.end())
         continue;
-      if (!It->getSecond().IsReachedFromAlignedBarrierOnly)
+      if (!It->getSecond().IsReachingAlignedBarrierOnly)
         return false;
+      break;
     } while ((CurI = CurI->getNextNonDebugInstruction()));
 
-    if (!CurI && !BEDMap.lookup(I.getParent()).IsReachedFromAlignedBarrierOnly)
+    if (!CurI && !BEDMap.lookup(I.getParent()).IsReachingAlignedBarrierOnly)
       return false;
 
     // Check backward until a call or the block beginning is reached.
@@ -2709,12 +2713,16 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
       auto *CB = dyn_cast<CallBase>(CurI);
       if (!CB)
         continue;
+      if (CB != &I && AlignedBarriers.contains(const_cast<CallBase *>(CB))) {
+        break;
+      }
       const auto &It = CEDMap.find(CB);
       if (It == CEDMap.end())
         continue;
       if (!AA::isNoSyncInst(A, *CB, *this)) {
-        if (It->getSecond().IsReachedFromAlignedBarrierOnly)
+        if (It->getSecond().IsReachedFromAlignedBarrierOnly) {
           break;
+        }
         return false;
       }
 
@@ -3009,7 +3017,8 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
           if (EDAA.getState().isValidState()) {
             const auto &CalleeED = EDAA.getFunctionExecutionDomain();
             ED.IsReachedFromAlignedBarrierOnly =
-                CalleeED.IsReachedFromAlignedBarrierOnly;
+                CallED.IsReachedFromAlignedBarrierOnly =
+                    CalleeED.IsReachedFromAlignedBarrierOnly;
             AlignedBarrierLastInBlock = ED.IsReachedFromAlignedBarrierOnly;
             if (IsNoSync || !CalleeED.IsReachedFromAlignedBarrierOnly)
               ED.EncounteredNonLocalSideEffect |=
@@ -3024,8 +3033,9 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
             continue;
           }
         }
-        ED.IsReachedFromAlignedBarrierOnly =
-            IsNoSync && ED.IsReachedFromAlignedBarrierOnly;
+        if (!IsNoSync)
+          ED.IsReachedFromAlignedBarrierOnly =
+              CallED.IsReachedFromAlignedBarrierOnly = false;
         AlignedBarrierLastInBlock &= ED.IsReachedFromAlignedBarrierOnly;
         ED.EncounteredNonLocalSideEffect |= true;
         if (!IsNoSync)
