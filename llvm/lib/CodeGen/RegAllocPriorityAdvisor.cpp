@@ -81,7 +81,9 @@ template <> Pass *llvm::callDefaultCtor<RegAllocPriorityAdvisorAnalysis>() {
 #endif
     break;
   case RegAllocPriorityAdvisorAnalysis::AdvisorMode::Release:
+#if defined(LLVM_HAVE_TF_AOT_REGALLOCPRIORITYMODEL)
     Ret = createReleaseModePriorityAdvisor();
+#endif
     break;
   }
   if (Ret)
