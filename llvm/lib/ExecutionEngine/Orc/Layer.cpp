@@ -125,10 +125,6 @@ void IRMaterializationUnit::discard(const JITDylib &JD,
   assert(!I->second->isDeclaration() &&
          "Discard should only apply to definitions");
   I->second->setLinkage(GlobalValue::AvailableExternallyLinkage);
-  // According to the IR verifier, "Declaration[s] may not be in a Comdat!"
-  // Remove it, if this is a GlobalObject.
-  if (auto *GO = dyn_cast<GlobalObject>(I->second))
-    GO->setComdat(nullptr);
   SymbolToDefinition.erase(I);
 }
 
