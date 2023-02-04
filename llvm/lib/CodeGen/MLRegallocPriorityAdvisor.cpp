@@ -14,6 +14,7 @@
 #include "RegAllocGreedy.h"
 #include "RegAllocPriorityAdvisor.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/InteractiveModelRunner.h"
 #include "llvm/Analysis/MLModelRunner.h"
 #include "llvm/Analysis/ReleaseModeModelRunner.h"
 #include "llvm/Analysis/TensorSpec.h"
@@ -40,6 +41,16 @@
 
 using namespace llvm;
 
+static cl::opt<std::string> InteractiveChannelBaseName(
+    "regalloc-priority-interactive-channel-base", cl::Hidden,
+    cl::desc(
+        "Base file path for the interactive mode. The incoming filename should "
+        "have the name <regalloc-priority-interactive-channel-base>.in, while "
+        "the outgoing name should be "
+        "<regalloc-priority-interactive-channel-base>.out"));
+
+using CompiledModelType = NoopSavedModelImpl;
+
 // Options that only make sense in development mode
 #ifdef LLVM_HAVE_TFLITE
 #include "RegAllocScore.h"
@@ -65,6 +76,9 @@ static const std::vector<int64_t> PerLiveRangeShape{1};
   M(float, weight, PerLiveRangeShape, "weight")
 
 #define DecisionName "priority"
+static const TensorSpec DecisionSpec =
+    TensorSpec::createSpec<float>(DecisionName, {1});
+
 
 // Named features index.
 enum FeatureIDs {
@@ -125,13 +139,20 @@ private:
 
   std::unique_ptr<RegAllocPriorityAdvisor>
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
-    if (!Runner)
-      Runner = std::make_unique<ReleaseModeModelRunner<NoopSavedModelImpl>>(
-          MF.getFunction().getContext(), InputFeatures, DecisionName);
+    if (!Runner) {
+      if (InteractiveChannelBaseName.empty())
+        Runner = std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
+            MF.getFunction().getContext(), InputFeatures, DecisionName);
+      else
+        Runner = std::make_unique<InteractiveModelRunner>(
+            MF.getFunction().getContext(), InputFeatures, DecisionSpec,
+            InteractiveChannelBaseName + ".out",
+            InteractiveChannelBaseName + ".in");
+    }
     return std::make_unique<MLPriorityAdvisor>(
         MF, RA, &getAnalysis<SlotIndexes>(), Runner.get());
   }
-  std::unique_ptr<ReleaseModeModelRunner<NoopSavedModelImpl>> Runner;
+  std::unique_ptr<MLModelRunner> Runner;
 };
 
 // ===================================
@@ -140,9 +161,6 @@ private:
 //
 // Features we log
 #ifdef LLVM_HAVE_TFLITE
-
-static const TensorSpec Output =
-    TensorSpec::createSpec<float>(DecisionName, {1});
 static const TensorSpec Reward = TensorSpec::createSpec<float>("reward", {1});
 
 #define _DECL_TRAIN_FEATURES(type, name, shape, _)                             \
@@ -231,7 +249,7 @@ private:
     // We always log the output; in particular, if we're not evaluating, we
     // don't have an output spec json file. That's why we handle the
     // 'normal' output separately.
-    LFS.push_back(Output);
+    LFS.push_back(DecisionSpec);
 
     Log = std::make_unique<Logger>(std::move(OS), LFS, Reward,
                                    /*IncludeReward*/ true);
@@ -258,7 +276,10 @@ private:
 } // namespace llvm
 
 RegAllocPriorityAdvisorAnalysis *llvm::createReleaseModePriorityAdvisor() {
-  return new ReleaseModePriorityAdvisorAnalysis();
+  return llvm::isEmbeddedModelEvaluatorValid<CompiledModelType>() ||
+                 !InteractiveChannelBaseName.empty()
+             ? new ReleaseModePriorityAdvisorAnalysis()
+             : nullptr;
 }
 
 MLPriorityAdvisor::MLPriorityAdvisor(const MachineFunction &MF,
@@ -268,6 +289,7 @@ MLPriorityAdvisor::MLPriorityAdvisor(const MachineFunction &MF,
     : RegAllocPriorityAdvisor(MF, RA, Indexes), DefaultAdvisor(MF, RA, Indexes),
       Runner(std::move(Runner)) {
   assert(this->Runner);
+  Runner->switchContext(MF.getName());
 }
 
 float MLPriorityAdvisor::getPriorityImpl(const LiveInterval &LI) const {
