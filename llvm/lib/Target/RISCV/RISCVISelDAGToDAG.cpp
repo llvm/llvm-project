@@ -2592,8 +2592,12 @@ bool RISCVDAGToDAGISel::selectFPImm(SDValue N, SDValue &Imm) {
   // td can handle +0.0 already.
   if (APF.isPosZero())
     return false;
-  SDLoc DL(N);
   MVT XLenVT = Subtarget->getXLenVT();
+  if (CFP->getValueType(0) == MVT::f64 && !Subtarget->is64Bit()) {
+    assert(APF.isNegZero() && "Unexpected constant.");
+    return false;
+  }
+  SDLoc DL(N);
   Imm = selectImm(CurDAG, DL, XLenVT, APF.bitcastToAPInt().getSExtValue(),
                   *Subtarget);
   return true;
