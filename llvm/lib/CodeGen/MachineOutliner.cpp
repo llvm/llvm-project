@@ -941,13 +941,12 @@ void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M,
                                      MachineModuleInfo &MMI) {
   // Build instruction mappings for each function in the module. Start by
   // iterating over each Function in M.
+  LLVM_DEBUG(dbgs() << "*** Populating mapper ***\n");
   for (Function &F : M) {
+    LLVM_DEBUG(dbgs() << "MAPPING FUNCTION: " << F.getName() << "\n");
 
     if (F.hasFnAttribute("nooutline")) {
-      LLVM_DEBUG({
-        dbgs() << "... Skipping function with nooutline attribute: "
-               << F.getName() << "\n";
-      });
+      LLVM_DEBUG(dbgs() << "SKIP: Function has nooutline attribute\n");
       continue;
     }
 
@@ -957,36 +956,51 @@ void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M,
 
     // If it doesn't, then there's nothing to outline from. Move to the next
     // Function.
-    if (!MF)
+    if (!MF) {
+      LLVM_DEBUG(dbgs() << "SKIP: Function does not have a MachineFunction\n");
       continue;
+    }
 
     const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
-
-    if (!RunOnAllFunctions && !TII->shouldOutlineFromFunctionByDefault(*MF))
+    if (!RunOnAllFunctions && !TII->shouldOutlineFromFunctionByDefault(*MF)) {
+      LLVM_DEBUG(dbgs() << "SKIP: Target does not want to outline from "
+                           "function by default\n");
       continue;
+    }
 
     // We have a MachineFunction. Ask the target if it's suitable for outlining.
     // If it isn't, then move on to the next Function in the module.
-    if (!TII->isFunctionSafeToOutlineFrom(*MF, OutlineFromLinkOnceODRs))
+    if (!TII->isFunctionSafeToOutlineFrom(*MF, OutlineFromLinkOnceODRs)) {
+      LLVM_DEBUG(dbgs() << "SKIP: " << MF->getName()
+                        << ": unsafe to outline from\n");
       continue;
+    }
 
     // We have a function suitable for outlining. Iterate over every
     // MachineBasicBlock in MF and try to map its instructions to a list of
     // unsigned integers.
+    const unsigned MinMBBSize = 2;
+
     for (MachineBasicBlock &MBB : *MF) {
+      LLVM_DEBUG(dbgs() << "  MAPPING MBB: '" << MBB.getName() << "'\n");
       // If there isn't anything in MBB, then there's no point in outlining from
       // it.
       // If there are fewer than 2 instructions in the MBB, then it can't ever
       // contain something worth outlining.
       // FIXME: This should be based off of the maximum size in B of an outlined
       // call versus the size in B of the MBB.
-      if (MBB.size() < 2)
+      if (MBB.size() < MinMBBSize) {
+        LLVM_DEBUG(dbgs() << "    SKIP: MBB size less than minimum size of "
+                          << MinMBBSize << "\n");
         continue;
+      }
 
       // Check if MBB could be the target of an indirect branch. If it is, then
       // we don't want to outline from it.
-      if (MBB.hasAddressTaken())
+      if (MBB.hasAddressTaken()) {
+        LLVM_DEBUG(dbgs() << "    SKIP: MBB's address is taken\n");
         continue;
+      }
 
       // MBB is suitable for outlining. Map it to a list of unsigneds.
       Mapper.convertToUnsignedVec(MBB, *TII);
