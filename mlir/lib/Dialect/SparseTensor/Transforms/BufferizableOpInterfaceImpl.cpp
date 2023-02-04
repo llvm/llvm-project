@@ -122,6 +122,34 @@ struct NewOpInterface
   }
 };
 
+struct PackOpInterface
+    : public BufferizableOpInterface::ExternalModel<PackOpInterface,
+                                                    sparse_tensor::PackOp> {
+  bool bufferizesToAllocation(Operation *op, OpResult opResult) const {
+    // PackOp reuses all the buffers instead of allocating new ones
+    return false;
+  }
+
+  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
+                              const AnalysisState &state) const {
+    return true;
+  }
+
+  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
+                               const AnalysisState &state) const {
+    return false;
+  }
+
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
+                                            const AnalysisState &state) const {
+    assert(op->getNumResults() == 1);
+    assert(isUniqueCOOType(op->getResultTypes()[0].cast<RankedTensorType>()));
+    // PackOp reuses the input tensors as data/indices instead of creating new
+    // ones when packing into a COO format.
+    return op->getResults();
+  }
+};
+
 struct InsertOpInterface
     : public BufferizableOpInterface::ExternalModel<InsertOpInterface,
                                                     sparse_tensor::InsertOp> {
