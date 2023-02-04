@@ -424,7 +424,7 @@ define <16 x i8> @f32to16uc(<16 x float> %f) {
 define <16 x i16> @f32to16us(<16 x float> %f) {
 ; ALL-LABEL: f32to16us:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vcvttps2dq %zmm0, %zmm0
+; ALL-NEXT:    vcvttps2udq %zmm0, %zmm0
 ; ALL-NEXT:    vpmovdw %zmm0, %ymm0
 ; ALL-NEXT:    retq
   %res = fptoui <16 x float> %f to <16 x i16>

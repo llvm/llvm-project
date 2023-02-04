@@ -1680,16 +1680,20 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FCOPYSIGN, VT, Custom);
     }
 
-    for (MVT VT : { MVT::v16i1, MVT::v16i8, MVT::v16i16 }) {
+    for (MVT VT : { MVT::v16i1, MVT::v16i8 }) {
       setOperationPromotedToType(ISD::FP_TO_SINT       , VT, MVT::v16i32);
       setOperationPromotedToType(ISD::FP_TO_UINT       , VT, MVT::v16i32);
       setOperationPromotedToType(ISD::STRICT_FP_TO_SINT, VT, MVT::v16i32);
       setOperationPromotedToType(ISD::STRICT_FP_TO_UINT, VT, MVT::v16i32);
     }
-    setOperationAction(ISD::FP_TO_SINT,        MVT::v16i32, Custom);
-    setOperationAction(ISD::FP_TO_UINT,        MVT::v16i32, Custom);
-    setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::v16i32, Custom);
-    setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::v16i32, Custom);
+
+    for (MVT VT : { MVT::v16i16, MVT::v16i32 }) {
+      setOperationAction(ISD::FP_TO_SINT,        VT, Custom);
+      setOperationAction(ISD::FP_TO_UINT,        VT, Custom);
+      setOperationAction(ISD::STRICT_FP_TO_SINT, VT, Custom);
+      setOperationAction(ISD::STRICT_FP_TO_UINT, VT, Custom);
+    }
+
     setOperationAction(ISD::SINT_TO_FP,        MVT::v16i32, Custom);
     setOperationAction(ISD::UINT_TO_FP,        MVT::v16i32, Custom);
     setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::v16i32, Custom);
@@ -22830,19 +22834,24 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
       return Res;
     }
 
-    if (VT == MVT::v8i16 && (SrcVT == MVT::v8f32 || SrcVT == MVT::v8f64)) {
+    // v8f32/v16f32/v8f64->v8i16/v16i16 need to widen first.
+    if (VT.getVectorElementType() == MVT::i16) {
+      assert((SrcVT.getVectorElementType() == MVT::f32 ||
+              SrcVT.getVectorElementType() == MVT::f64) &&
+             "Expected f32/f64 vector!");
+      MVT NVT = VT.changeVectorElementType(MVT::i32);
       if (IsStrict) {
         Res = DAG.getNode(IsSigned ? ISD::STRICT_FP_TO_SINT
                                    : ISD::STRICT_FP_TO_UINT,
-                          dl, {MVT::v8i32, MVT::Other}, {Chain, Src});
+                          dl, {NVT, MVT::Other}, {Chain, Src});
         Chain = Res.getValue(1);
       } else {
         Res = DAG.getNode(IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT, dl,
-                          MVT::v8i32, Src);
+                          NVT, Src);
       }
 
       // TODO: Need to add exception check code for strict FP.
-      Res = DAG.getNode(ISD::TRUNCATE, dl, MVT::v8i16, Res);
+      Res = DAG.getNode(ISD::TRUNCATE, dl, VT, Res);
 
       if (IsStrict)
         return DAG.getMergeValues({Res, Chain}, dl);
