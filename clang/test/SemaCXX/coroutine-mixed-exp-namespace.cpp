@@ -26,5 +26,5 @@ void test() {
   co_return; // expected-error {{mixed use of std and std::experimental namespaces for coroutine components}}
   // expected-warning@-1{{support for 'std::experimental::coroutine_traits' will be removed}}
   // expected-note@Inputs/std-coroutine-exp-namespace.h:8 {{'coroutine_traits' declared here}}
-  // expected-note@Inputs/std-coroutine.h:8 {{'coroutine_traits' declared here}}
+  // expected-note@Inputs/std-coroutine.h:18 {{'coroutine_traits' declared here}}
 }
