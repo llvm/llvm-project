@@ -361,8 +361,8 @@ struct InstructionMapper {
       // repeated substring.
       mapToIllegalUnsigned(It, CanOutlineWithPrevInstr, UnsignedVecForMBB,
                            InstrListForMBB);
-      llvm::append_range(InstrList, InstrListForMBB);
-      llvm::append_range(UnsignedVec, UnsignedVecForMBB);
+      append_range(InstrList, InstrListForMBB);
+      append_range(UnsignedVec, UnsignedVecForMBB);
     }
   }
 
@@ -598,8 +598,8 @@ void MachineOutliner::findCandidates(
       // That is, one must either
       // * End before the other starts
       // * Start after the other ends
-      if (llvm::all_of(CandidatesForRepeatedSeq, [&StartIdx,
-                                                  &EndIdx](const Candidate &C) {
+      if (all_of(CandidatesForRepeatedSeq, [&StartIdx,
+                                            &EndIdx](const Candidate &C) {
             return (EndIdx < C.getStartIdx() || StartIdx > C.getEndIdx());
           })) {
         // It doesn't overlap with anything, so we can outline it.
@@ -759,7 +759,7 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
     Mangler Mg;
     // Get the mangled name of the function for the linkage name.
     std::string Dummy;
-    llvm::raw_string_ostream MangledNameStream(Dummy);
+    raw_string_ostream MangledNameStream(Dummy);
     Mg.getNameWithPrefix(MangledNameStream, F, false);
 
     DISubprogram *OutlinedSP = DB.createFunction(
@@ -793,10 +793,10 @@ bool MachineOutliner::outline(Module &M,
   bool OutlinedSomething = false;
 
   // Sort by benefit. The most beneficial functions should be outlined first.
-  llvm::stable_sort(FunctionList, [](const OutlinedFunction &LHS,
-                                     const OutlinedFunction &RHS) {
-    return LHS.getBenefit() > RHS.getBenefit();
-  });
+  stable_sort(FunctionList,
+              [](const OutlinedFunction &LHS, const OutlinedFunction &RHS) {
+                return LHS.getBenefit() > RHS.getBenefit();
+              });
 
   // Walk over each function, outlining them as we go along. Functions are
   // outlined greedily, based off the sort above.
@@ -899,8 +899,8 @@ bool MachineOutliner::outline(Module &M,
 
       // Keep track of what we removed by marking them all as -1.
       for (unsigned &I :
-           llvm::make_range(Mapper.UnsignedVec.begin() + C.getStartIdx(),
-                            Mapper.UnsignedVec.begin() + C.getEndIdx() + 1))
+           make_range(Mapper.UnsignedVec.begin() + C.getStartIdx(),
+                      Mapper.UnsignedVec.begin() + C.getEndIdx() + 1))
         I = static_cast<unsigned>(-1);
       OutlinedSomething = true;
 
