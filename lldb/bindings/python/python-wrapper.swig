@@ -1062,4 +1062,16 @@ static void LLDBSwigPythonCallPythonLogOutputCallback(const char *str,
     SWIG_PYTHON_THREAD_END_BLOCK;
   }
 }
+
+// For DebuggerTerminateCallback functions
+static void LLDBSwigPythonCallPythonSBDebuggerTerminateCallback(lldb::user_id_t debugger_id,
+                                                      void *baton) {
+  if (baton != Py_None) {
+    SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+    PyObject *result = PyObject_CallFunction(
+        reinterpret_cast<PyObject *>(baton), const_cast<char *>("l"), debugger_id);
+    Py_XDECREF(result);
+    SWIG_PYTHON_THREAD_END_BLOCK;
+  }
+}
 %}

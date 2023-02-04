@@ -450,6 +450,10 @@ public:
 
   static void ReportSymbolChange(const ModuleSpec &module_spec);
 
+  void
+  SetDestroyCallback(lldb_private::DebuggerDestroyCallback destroy_callback,
+                     void *baton);
+
 protected:
   friend class CommandInterpreter;
   friend class REPL;
@@ -493,6 +497,8 @@ protected:
                                    std::string message,
                                    std::optional<lldb::user_id_t> debugger_id,
                                    std::once_flag *once);
+
+  void HandleDestroyCallback();
 
   void PrintProgress(const ProgressEventData &data);
 
@@ -590,6 +596,9 @@ protected:
   lldb::ListenerSP m_forward_listener_sp;
   llvm::once_flag m_clear_once;
   lldb::TargetSP m_dummy_target_sp;
+
+  lldb_private::DebuggerDestroyCallback m_destroy_callback = nullptr;
+  void *m_destroy_callback_baton = nullptr;
 
   // Events for m_sync_broadcaster
   enum {
