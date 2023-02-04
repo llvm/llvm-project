@@ -572,11 +572,19 @@ void MachineOutliner::findCandidates(
   // First, find all of the repeated substrings in the tree of minimum length
   // 2.
   std::vector<Candidate> CandidatesForRepeatedSeq;
+  LLVM_DEBUG(dbgs() << "*** Discarding overlapping candidates *** \n");
+  LLVM_DEBUG(
+      dbgs() << "Searching for overlaps in all repeated sequences...\n");
   for (const SuffixTree::RepeatedSubstring &RS : ST) {
     CandidatesForRepeatedSeq.clear();
     unsigned StringLen = RS.Length;
+    LLVM_DEBUG(dbgs() << "  Sequence length: " << StringLen << "\n");
+    // Debug code to keep track of how many candidates we removed.
+#ifndef NDEBUG
+    unsigned NumDiscarded = 0;
+    unsigned NumKept = 0;
+#endif
     for (const unsigned &StartIdx : RS.StartIndices) {
-      unsigned EndIdx = StartIdx + StringLen - 1;
       // Trick: Discard some candidates that would be incompatible with the
       // ones we've already found for this sequence. This will save us some
       // work in candidate selection.
@@ -598,23 +606,39 @@ void MachineOutliner::findCandidates(
       // That is, one must either
       // * End before the other starts
       // * Start after the other ends
-      if (all_of(CandidatesForRepeatedSeq, [&StartIdx,
-                                            &EndIdx](const Candidate &C) {
-            return (EndIdx < C.getStartIdx() || StartIdx > C.getEndIdx());
-          })) {
-        // It doesn't overlap with anything, so we can outline it.
-        // Each sequence is over [StartIt, EndIt].
-        // Save the candidate and its location.
-
-        MachineBasicBlock::iterator StartIt = Mapper.InstrList[StartIdx];
-        MachineBasicBlock::iterator EndIt = Mapper.InstrList[EndIdx];
-        MachineBasicBlock *MBB = StartIt->getParent();
-
-        CandidatesForRepeatedSeq.emplace_back(StartIdx, StringLen, StartIt,
-                                              EndIt, MBB, FunctionList.size(),
-                                              Mapper.MBBFlagsMap[MBB]);
+      unsigned EndIdx = StartIdx + StringLen - 1;
+      auto FirstOverlap = find_if(
+          CandidatesForRepeatedSeq, [StartIdx, EndIdx](const Candidate &C) {
+            return EndIdx >= C.getStartIdx() && StartIdx <= C.getEndIdx();
+          });
+      if (FirstOverlap != CandidatesForRepeatedSeq.end()) {
+#ifndef NDEBUG
+        ++NumDiscarded;
+        LLVM_DEBUG(dbgs() << "    .. DISCARD candidate @ [" << StartIdx
+                          << ", " << EndIdx << "]; overlaps with candidate @ ["
+                          << FirstOverlap->getStartIdx() << ", "
+                          << FirstOverlap->getEndIdx() << "]\n");
+#endif
+        continue;
       }
+      // It doesn't overlap with anything, so we can outline it.
+      // Each sequence is over [StartIt, EndIt].
+      // Save the candidate and its location.
+#ifndef NDEBUG
+      ++NumKept;
+#endif
+      MachineBasicBlock::iterator StartIt = Mapper.InstrList[StartIdx];
+      MachineBasicBlock::iterator EndIt = Mapper.InstrList[EndIdx];
+      MachineBasicBlock *MBB = StartIt->getParent();
+      CandidatesForRepeatedSeq.emplace_back(StartIdx, StringLen, StartIt, EndIt,
+                                            MBB, FunctionList.size(),
+                                            Mapper.MBBFlagsMap[MBB]);
     }
+#ifndef NDEBUG
+    LLVM_DEBUG(dbgs() << "    Candidates discarded: " << NumDiscarded
+                      << "\n");
+    LLVM_DEBUG(dbgs() << "    Candidates kept: " << NumKept << "\n\n");
+#endif
 
     // We've found something we might want to outline.
     // Create an OutlinedFunction to store it and check if it'd be beneficial
