@@ -8,7 +8,7 @@ import io
 import json
 import math
 import sys
-from typing import Optional
+from typing import List, Optional
 
 _element_types = {
     'float': ctypes.c_float,
@@ -28,7 +28,7 @@ _element_types = {
 class TensorSpec:
   name: str
   port: int
-  shape: list[int]
+  shape: List[int]
   element_type: type
 
   @staticmethod
@@ -89,7 +89,7 @@ def read_header(f: io.BufferedReader):
 def read_one_observation(context: Optional[str],
                          event_str: str,
                          f: io.BufferedReader,
-                         tensor_specs: list[TensorSpec],
+                         tensor_specs: List[TensorSpec],
                          score_spec: Optional[TensorSpec]):
   event = json.loads(event_str)
   if 'context' in event:
