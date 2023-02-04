@@ -234,9 +234,6 @@ def : InstAlias<"fge.h $rd, $rs, $rt",
 
 let Predicates = [HasStdExtZfh] in {
 
-// Floating point constant -0.0
-def : Pat<(f16 (fpimmneg0)), (FSGNJN_H (FMV_H_X X0), (FMV_H_X X0))>;
-
 /// Float conversion operations
 
 // [u]int32<->float conversion patterns must be gated on IsRV32 or IsRV64, so
@@ -407,11 +404,6 @@ def : Pat<(fcopysign FPR16:$rs1, FPR64:$rs2),
           (FSGNJ_H $rs1, (FCVT_H_D $rs2, 0b111))>;
 def : Pat<(fcopysign FPR64:$rs1, FPR16:$rs2), (FSGNJ_D $rs1, (FCVT_D_H $rs2))>;
 } // Predicates = [HasStdExtZfhOrZfhmin, HasStdExtD]
-
-let Predicates = [HasStdExtZfhmin, NoStdExtZfh] in {
-// Floating point constant -0.0
-def : Pat<(f16 (fpimmneg0)), (FCVT_H_S (FSGNJN_S (FMV_W_X X0), (FMV_W_X X0)), 0b111)>;
-} // Predicates = [HasStdExtZfhmin, NoStdExtZfh]
 
 let Predicates = [HasStdExtZfhmin, NoStdExtZfh, IsRV32] in {
 // half->[u]int. Round-to-zero must be used.
