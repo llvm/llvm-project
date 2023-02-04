@@ -63,7 +63,10 @@ def run_interactive(temp_rootname: str,
       with io.BufferedReader(io.FileIO(from_compiler, 'rb')) as fc:
         tensor_specs, _, advice_spec = log_reader.read_header(fc)
         context = None
-        while compiler_proc.poll() is None and (next_event := fc.readline()):
+        while compiler_proc.poll() is None:
+          next_event = fc.readline()
+          if not next_event:
+            break
           last_context, observation_id, features, _ = log_reader.read_one_observation(
               context, next_event, fc, tensor_specs, None)
           if last_context != context:
