@@ -94,6 +94,12 @@ DEFAULT_PARAMETERS = [
               AddCompileFlag('-fcxx-modules'), # AppleClang disregards -fmodules entirely when compiling C++. This enables modules for C++.
             ] if modules else []),
 
+  Parameter(name='enable_modules_lsv', choices=[True, False], type=bool, default=False,
+          help="Whether to enable Local Submodule Visibility in the Modules build.",
+          actions=lambda lsv: [
+            AddCompileFlag('-Xclang -fmodules-local-submodule-visibility'),
+          ] if lsv else []),
+
   Parameter(name='enable_exceptions', choices=[True, False], type=bool, default=True,
             help="Whether to enable exceptions when compiling the test suite.",
             actions=lambda exceptions: [] if exceptions else [
