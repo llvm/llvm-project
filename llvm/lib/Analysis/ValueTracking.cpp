@@ -1735,9 +1735,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         Known.Zero.setBitsFrom(32);
         break;
       case Intrinsic::riscv_vsetvli:
-      case Intrinsic::riscv_vsetvli_opt:
       case Intrinsic::riscv_vsetvlimax:
-      case Intrinsic::riscv_vsetvlimax_opt:
         // Assume that VL output is >= 65536.
         // TODO: Take SEW and LMUL into account.
         if (BitWidth > 17)
