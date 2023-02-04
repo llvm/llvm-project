@@ -62,23 +62,21 @@ module std [system] {
     module stdbool_h {
       // <stdbool.h>'s __bool_true_false_are_defined macro requires textual inclusion.
       textual header "stdbool.h"
+      export *
     }
     module stddef_h {
       // <stddef.h>'s __need_* macros require textual inclusion.
       textual header "stddef.h"
+      export *
     }
     module stdint_h {
       header "stdint.h"
       export *
-      // FIXME: This module only exists on OS X and for some reason the
-      // wildcard above doesn't export it.
-      export Darwin.C.stdint
     }
     module stdio_h {
       // <stdio.h>'s __need_* macros require textual inclusion.
       textual header "stdio.h"
       export *
-      export Darwin.C.stdio
     }
     module stdlib_h {
       // <stdlib.h>'s __need_* macros require textual inclusion.
@@ -1087,7 +1085,10 @@ module std [system] {
       module auto_ptr                        { private header "__memory/auto_ptr.h" }
       module builtin_new_allocator           { private header "__memory/builtin_new_allocator.h" }
       module compressed_pair                 { private header "__memory/compressed_pair.h" }
-      module concepts                        { private header "__memory/concepts.h" }
+      module concepts                        {
+        private header "__memory/concepts.h"
+        export type_traits.remove_reference
+      }
       module construct_at                    { private header "__memory/construct_at.h" }
       module destruct_n                      { private header "__memory/destruct_n.h" }
       module pointer_traits                  { private header "__memory/pointer_traits.h" }

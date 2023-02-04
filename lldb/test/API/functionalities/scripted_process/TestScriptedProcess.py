@@ -10,6 +10,8 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 from lldbsuite.test import lldbtest
 
+import dummy_scripted_process
+
 class ScriptedProcesTestCase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
@@ -117,6 +119,14 @@ class ScriptedProcesTestCase(TestBase):
         self.assertTrue(process and process.IsValid(), PROCESS_IS_VALID)
         self.assertEqual(process.GetProcessID(), 42)
         self.assertEqual(process.GetNumThreads(), 1)
+
+        py_impl = process.GetScriptedImplementation()
+        self.assertTrue(py_impl)
+        self.assertTrue(isinstance(py_impl, dummy_scripted_process.DummyScriptedProcess))
+        self.assertFalse(hasattr(py_impl, 'my_super_secret_member'))
+        py_impl.my_super_secret_member = 42
+        self.assertTrue(hasattr(py_impl, 'my_super_secret_member'))
+        self.assertEqual(py_impl.my_super_secret_method(), 42)
 
         addr = 0x500000000
         message = "Hello, world!"

@@ -13,6 +13,11 @@
 #include "utils/UnitTest/Test.h"
 #include "utils/testutils/RoundingModeUtils.h"
 
+// #include <stdio.h>
+// namespace __llvm_libc {
+// using ::sprintf;
+// }
+
 class LlvmLibcSPrintfTest : public __llvm_libc::testing::Test {
 protected:
   char buff[1000];
@@ -1998,6 +2003,12 @@ TEST_F(LlvmLibcSPrintfTest, FloatExponentConv) {
   written = __llvm_libc::sprintf(buff, "%10.1e", 9.99);
   ASSERT_STREQ_LEN(written, buff, "   1.0e+01");
 
+  written = __llvm_libc::sprintf(buff, "%10.0e", 9.99);
+  ASSERT_STREQ_LEN(written, buff, "     1e+01");
+
+  written = __llvm_libc::sprintf(buff, "%10.0e", 0.0999);
+  ASSERT_STREQ_LEN(written, buff, "     1e-01");
+
   written = __llvm_libc::sprintf(buff, "%-10.2e", 9.99);
   ASSERT_STREQ_LEN(written, buff, "9.99e+00  ");
 
@@ -2019,11 +2030,636 @@ TEST_F(LlvmLibcSPrintfTest, FloatExponentConv) {
   written = __llvm_libc::sprintf(buff, "%25.13e", 9999999999999.99);
   ASSERT_STREQ_LEN(written, buff, "      1.0000000000000e+13");
 
+  written = __llvm_libc::sprintf(buff, "%25.12e", 9999999999999.99);
+  ASSERT_STREQ_LEN(written, buff, "       1.000000000000e+13");
+
   written = __llvm_libc::sprintf(buff, "%12.3e %-12.3e", 0.1, 256.0);
   ASSERT_STREQ_LEN(written, buff, "   1.000e-01 2.560e+02   ");
 
   written = __llvm_libc::sprintf(buff, "%+-#12.3e % 012.3e", 0.1256, 1256.0);
   ASSERT_STREQ_LEN(written, buff, "+1.256e-01    001.256e+03");
+}
+
+TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
+  __llvm_libc::testutils::ForceRoundingMode r(
+      __llvm_libc::testutils::RoundingMode::Nearest);
+  double inf = __llvm_libc::fputil::FPBits<double>::inf().get_val();
+  double nan = __llvm_libc::fputil::FPBits<double>::build_nan(1);
+
+  written = __llvm_libc::sprintf(buff, "%g", 1.0);
+  ASSERT_STREQ_LEN(written, buff, "1");
+
+  written = __llvm_libc::sprintf(buff, "%G", -1.0);
+  ASSERT_STREQ_LEN(written, buff, "-1");
+
+  written = __llvm_libc::sprintf(buff, "%g", -1.234567);
+  ASSERT_STREQ_LEN(written, buff, "-1.23457");
+
+  written = __llvm_libc::sprintf(buff, "%g", 0.0);
+  ASSERT_STREQ_LEN(written, buff, "0");
+
+  written = __llvm_libc::sprintf(buff, "%g", -0.0);
+  ASSERT_STREQ_LEN(written, buff, "-0");
+
+  written = __llvm_libc::sprintf(buff, "%g", 1.5);
+  ASSERT_STREQ_LEN(written, buff, "1.5");
+
+  written = __llvm_libc::sprintf(buff, "%g", 1e300);
+  ASSERT_STREQ_LEN(written, buff, "1e+300");
+
+  written = __llvm_libc::sprintf(buff, "%g", 0.1);
+  ASSERT_STREQ_LEN(written, buff, "0.1");
+
+  written = __llvm_libc::sprintf(buff, "%g", 0.001);
+  ASSERT_STREQ_LEN(written, buff, "0.001");
+
+  written = __llvm_libc::sprintf(buff, "%g", 0.00001);
+  ASSERT_STREQ_LEN(written, buff, "1e-05");
+
+  written = __llvm_libc::sprintf(buff, "%g", 0.0000001);
+  ASSERT_STREQ_LEN(written, buff, "1e-07");
+
+  written = __llvm_libc::sprintf(buff, "%g", 0.000000001);
+  ASSERT_STREQ_LEN(written, buff, "1e-09");
+
+  written = __llvm_libc::sprintf(buff, "%g", 1.0e-20);
+  ASSERT_STREQ_LEN(written, buff, "1e-20");
+
+  written = __llvm_libc::sprintf(buff, "%g", 1234567890123456789.0);
+  ASSERT_STREQ_LEN(written, buff, "1.23457e+18");
+
+  written = __llvm_libc::sprintf(buff, "%g", 9999990000000.00);
+  ASSERT_STREQ_LEN(written, buff, "9.99999e+12");
+
+  written = __llvm_libc::sprintf(buff, "%g", 9999999000000.00);
+  ASSERT_STREQ_LEN(written, buff, "1e+13");
+
+  // Simple Subnormal Tests.
+
+  written = __llvm_libc::sprintf(buff, "%g", 0x1.0p-1027);
+  ASSERT_STREQ_LEN(written, buff, "6.95336e-310");
+
+  written = __llvm_libc::sprintf(buff, "%g", 0x1.0p-1074);
+  ASSERT_STREQ_LEN(written, buff, "4.94066e-324");
+
+  // Inf/Nan Tests.
+
+  written = __llvm_libc::sprintf(buff, "%g", inf);
+  ASSERT_STREQ_LEN(written, buff, "inf");
+
+  written = __llvm_libc::sprintf(buff, "%G", -inf);
+  ASSERT_STREQ_LEN(written, buff, "-INF");
+
+  written = __llvm_libc::sprintf(buff, "%g", nan);
+  ASSERT_STREQ_LEN(written, buff, "nan");
+
+  written = __llvm_libc::sprintf(buff, "%G", -nan);
+  ASSERT_STREQ_LEN(written, buff, "-NAN");
+
+  // Length Modifier Tests.
+
+  // TODO: Uncomment the below tests after long double support is added
+  /*
+  written = __llvm_libc::sprintf(buff, "%Lf", 1e100L);
+  ASSERT_STREQ_LEN(written, buff,
+                   "99999999999999999996693535322073426194986990198284960792713"
+                   "91541752018669482644324418977840117055488.000000");
+
+  written = __llvm_libc::sprintf(buff, "%Lf", 1.0L);
+  ASSERT_STREQ_LEN(written, buff, "1.000000");
+
+  char big_buff[10000];
+  written = __llvm_libc::sprintf(big_buff, "%Lf", 1e1000L);
+  ASSERT_STREQ_LEN(
+      written, big_buff,
+      "999999999999999999973107317669562353428234857594552594925899449376328728"
+      "202461036775511405481186963193066642191664822065529414252060696836533522"
+      "387143501724276282079456797058697369889056407118642873669166717313763499"
+      "277025985141177344925615052465165938514140943010597323750202561187880136"
+      "174810574553749194614479541820148407958204853833697063267336294787191005"
+      "628217462261955103745349844675732989944229689277833828743730290177882029"
+      "042613704915899149603539993716885598351951895974316347947147507970269673"
+      "097709017164643598452451201499004104341931127294141495501309305995449742"
+      "273419524803597130450457553871345958049837885085168840317195672271085085"
+      "950520957945970913451088104971436093671776829538796532762184174216651692"
+      "640931965387852083906784898823494867055070322768919156031682291829761007"
+      "101483799978382119231551218582499361996919560548090784230386907125151658"
+      "086767207295524036170321059257942621398084478974000973622199163292708506"
+      "2431457550909271560663602154947063707982236377366647567795879936."
+      "000000");
+
+  written = __llvm_libc::sprintf(big_buff, "%Lf", 1e4900L);
+  ASSERT_STREQ_LEN(
+      written, big_buff,
+      "100000000000000000002708312230690349833224052504078834346502930111959028"
+      "517260692666637048230414374897655201843766090626319971729765251179632020"
+      "313912652522792711197087872698264530532442630109549129842736280196919130"
+      "242615101228133188193853826983121366159061148351354364472807590931218045"
+      "387490935930967150336231085015126034696883068553581691802388371635128003"
+      "615577299166097675723780877126495909902479233742826339471026068806070433"
+      "075629449530819183550315434973800271862658869400009022028602967197463980"
+      "126881829804282202449930132940824361207087494829502385835258094836304011"
+      "876250359661206802659650567866176246063987902366800491980400341950657151"
+      "370854446585517805253310195469184699955519312761482572080479702840420595"
+      "377369017651259376039167277822106875560385309101650382998482652792335482"
+      "865443482342801545877390859444282105890147577937366066315975231014810320"
+      "888482059656248277607763361589359794524314002443575149260630989130103550"
+      "443177966380769341050735632338583912575890190136462629316287947355057647"
+      "111088565611192544631519843618778618820046304429723908484879583579178075"
+      "456701368334212923379389029311286386996015804122917416008806233549005183"
+      "152461084266176543129004016414959261473645240454289630182591200574019087"
+      "358223489767381636349719510715487188747217311279465814538495924567014916"
+      "238565628036285599497236493491668884212847699052761266207598941300449276"
+      "447201387520841811835583254242213093566548778954711633721122784159793843"
+      "766802019309395771984693609426401362800013936338891483689127845928572536"
+      "790651156184721483511507878883282891696900630100211914227950790472211403"
+      "392549466062537498185758854079775888444518306635752468713312357556380082"
+      "275500658967283696421824354930077523691855699312544373220921962817907078"
+      "445538421941800259027487429330768616490865438859612697367766323925013940"
+      "918384858952407145253573823848733994146335416209309233074165707437420756"
+      "438833918763109580759409985573826485055208965115587885226774453455112406"
+      "581351429640282227888764449360534584421929291565334894907337572527922691"
+      "473242328379737396430908523008687037407295838014450772162091496534584696"
+      "605157436893236842602956298545594095307060870397506421786236892553632163"
+      "491468601982681381011940409602294892199042638682530687578982576819839451"
+      "907594697546439533559153604700750696252355362322662219852740143212566818"
+      "745528402265116534684566273868361460640280523251242059850044328669692159"
+      "629900374576027104298177006629276014371540945261309319363704125592775129"
+      "543526908667388673739382491147471395192495459318806593271282662311169392"
+      "196897003517840025298267505925987901751541005546610016067658227181318892"
+      "914686508281007582655667597441346214499847364272258631922040641860333431"
+      "409838623713258383681350233064164940590695888300919626215847587544298023"
+      "636416943680102708406086295669759876682046839368574433996997648445207805"
+      "615784339667691231286807666753972942872019850432610318031627872612657513"
+      "588188267160616660825719678199868371370527508463011236193719286066916786"
+      "169956541349011494927225747024994619057884118692213564790598702879596058"
+      "672338334720925179141906809470606964896245458600635183723159228561689808"
+      "246141482736625197373238197777325580142168245885279594913851700941789475"
+      "252421784152262567254611571822468808675893407728003047921107885664474662"
+      "930921581384003950729114103689170603748380178682003976896397305836815761"
+      "717676338115866650889936516794601457549097578905329423919798362140648664"
+      "569177147076571576101649257502509463877402424847669830852345415301684820"
+      "395813946416649808062227494112874521812750160935760825922220707178083076"
+      "380203450993589198835885505461509442443773367592842795410339065860781804"
+      "024975272228687688301824830333940416256885455008512598774611538878683158"
+      "183931461086893832255176926531299425504132104728730288984598001187854507"
+      "900417184206801359847651992484444933900133130832052346600926424167009902"
+      "829803553087005800387704758687923428053612864451456596148162238935900033"
+      "917094683141205188616000211702577553792389670853917118547527592495253773"
+      "028135298405566315903922235989614934474805789300370437580494193066066314"
+      "056627605207631392651010580925826419831250810981343093764403877594495896"
+      "516881097415880926429607388979497471571321217205535961262051641426436441"
+      "668989765107456413733909427384182109285933511623871034309722437967253289"
+      "084018145083721513211807496392673952789642893241520398827805325610653506"
+      "029060153153064455898648607959013571280930834475689835845791849456112104"
+      "462337569019001580859906425911782967213265389744605395555069797947978230"
+      "708108432086217134763779632408473684293543722127232658767439906910370146"
+      "716836295909075482355827087389127370874842532825987593970846704144140471"
+      "956027276735614286138656432085771988513977140957180090146798065497158947"
+      "229765733489703157617307078835099906185890777007500964162371428641176460"
+      "739074789794941408428328217107759915202650066155868439585510978709442590"
+      "231934194956788626761834746430104077432547436359522462253411168467463134"
+      "24896.000000");
+*/
+  /*
+    written = __llvm_libc::sprintf(buff, "%La", 0.1L);
+  #if defined(SPECIAL_X86_LONG_DOUBLE)
+    ASSERT_STREQ_LEN(written, buff, "0xc.ccccccccccccccdp-7");
+  #elif defined(LONG_DOUBLE_IS_DOUBLE)
+    ASSERT_STREQ_LEN(written, buff, "0x1.999999999999ap-4");
+  #else // 128 bit long double
+    ASSERT_STREQ_LEN(written, buff, "0x1.999999999999999999999999999ap-4");
+  #endif
+
+    written = __llvm_libc::sprintf(buff, "%La", 1.0e1000L);
+  #if defined(SPECIAL_X86_LONG_DOUBLE)
+    ASSERT_STREQ_LEN(written, buff, "0xf.38db1f9dd3dac05p+3318");
+  #elif defined(LONG_DOUBLE_IS_DOUBLE)
+    ASSERT_STREQ_LEN(written, buff, "inf");
+  #else // 128 bit long double
+    ASSERT_STREQ_LEN(written, buff, "0x1.e71b63f3ba7b580af1a52d2a7379p+3321");
+  #endif
+
+    written = __llvm_libc::sprintf(buff, "%La", 1.0e-1000L);
+  #if defined(SPECIAL_X86_LONG_DOUBLE)
+    ASSERT_STREQ_LEN(written, buff, "0x8.68a9188a89e1467p-3325");
+  #elif defined(LONG_DOUBLE_IS_DOUBLE)
+    ASSERT_STREQ_LEN(written, buff, "0x0p+0");
+  #else // 128 bit long double
+    ASSERT_STREQ_LEN(written, buff, "0x1.0d152311513c28ce202627c06ec2p-3322");
+  #endif
+  */
+
+  // Min Width Tests.
+
+  written = __llvm_libc::sprintf(buff, "%15g", 1.0);
+  ASSERT_STREQ_LEN(written, buff, "              1");
+
+  written = __llvm_libc::sprintf(buff, "%15g", -1.0);
+  ASSERT_STREQ_LEN(written, buff, "             -1");
+
+  written = __llvm_libc::sprintf(buff, "%15g", 1.0e5);
+  ASSERT_STREQ_LEN(written, buff, "         100000");
+
+  written = __llvm_libc::sprintf(buff, "%15g", -1.0e5);
+  ASSERT_STREQ_LEN(written, buff, "        -100000");
+
+  written = __llvm_libc::sprintf(buff, "%10g", 1.0e-5);
+  ASSERT_STREQ_LEN(written, buff, "     1e-05");
+
+  // Precision Tests.
+
+  written = __llvm_libc::sprintf(buff, "%.2g", 1.23456789);
+  ASSERT_STREQ_LEN(written, buff, "1.2");
+
+  // Trimming trailing zeroes causes the precision to be ignored here.
+  written = __llvm_libc::sprintf(buff, "%.1g", 0.0);
+  ASSERT_STREQ_LEN(written, buff, "0");
+
+  written = __llvm_libc::sprintf(buff, "%.0g", 0.0);
+  ASSERT_STREQ_LEN(written, buff, "0");
+
+  written = __llvm_libc::sprintf(buff, "%.2g", 0.1);
+  ASSERT_STREQ_LEN(written, buff, "0.1");
+
+  written = __llvm_libc::sprintf(buff, "%.2g", 1.09);
+  ASSERT_STREQ_LEN(written, buff, "1.1");
+
+  written = __llvm_libc::sprintf(buff, "%.2g", 1.04);
+  ASSERT_STREQ_LEN(written, buff, "1");
+
+  written = __llvm_libc::sprintf(buff, "%.2g", 1.19);
+  ASSERT_STREQ_LEN(written, buff, "1.2");
+
+  written = __llvm_libc::sprintf(buff, "%.2g", 1.99);
+  ASSERT_STREQ_LEN(written, buff, "2");
+
+  written = __llvm_libc::sprintf(buff, "%.2g", 9.99);
+  ASSERT_STREQ_LEN(written, buff, "10");
+
+  written = __llvm_libc::sprintf(buff, "%.3g", 99.9);
+  ASSERT_STREQ_LEN(written, buff, "99.9");
+
+  written = __llvm_libc::sprintf(buff, "%.2g", 99.9);
+  ASSERT_STREQ_LEN(written, buff, "1e+02");
+
+  written = __llvm_libc::sprintf(buff, "%.1g", 99.9);
+  ASSERT_STREQ_LEN(written, buff, "1e+02");
+
+  written = __llvm_libc::sprintf(buff, "%.5g", 1.25);
+  ASSERT_STREQ_LEN(written, buff, "1.25");
+
+  written = __llvm_libc::sprintf(buff, "%.0g", 1.25);
+  ASSERT_STREQ_LEN(written, buff, "1");
+
+  written = __llvm_libc::sprintf(buff, "%.0g", 1.75);
+  ASSERT_STREQ_LEN(written, buff, "2");
+
+  written = __llvm_libc::sprintf(buff, "%.20g", 1.234e-10);
+  ASSERT_STREQ_LEN(written, buff, "1.2340000000000000814e-10");
+
+  written = __llvm_libc::sprintf(buff, "%.3g", -9.99);
+  ASSERT_STREQ_LEN(written, buff, "-9.99");
+
+  written = __llvm_libc::sprintf(buff, "%.2g", -9.99);
+  ASSERT_STREQ_LEN(written, buff, "-10");
+
+  written = __llvm_libc::sprintf(buff, "%.1g", -9.99);
+  ASSERT_STREQ_LEN(written, buff, "-1e+01");
+
+  written = __llvm_libc::sprintf(buff, "%.5g", 1.008);
+  ASSERT_STREQ_LEN(written, buff, "1.008");
+
+  written = __llvm_libc::sprintf(buff, "%.5g", 1.008e3);
+  ASSERT_STREQ_LEN(written, buff, "1008");
+
+  written = __llvm_libc::sprintf(buff, "%.4g", 9999.0);
+  ASSERT_STREQ_LEN(written, buff, "9999");
+
+  written = __llvm_libc::sprintf(buff, "%.3g", 9999.0);
+  ASSERT_STREQ_LEN(written, buff, "1e+04");
+
+  written = __llvm_libc::sprintf(buff, "%.3g", 1256.0);
+  ASSERT_STREQ_LEN(written, buff, "1.26e+03");
+
+  // Subnormal Precision Tests
+
+  written = __llvm_libc::sprintf(buff, "%.310g", 0x1.0p-1022);
+  ASSERT_STREQ_LEN(
+      written, buff,
+      "2."
+      "225073858507201383090232717332404064219215980462331830553327416887204434"
+      "813918195854283159012511020564067339731035811005152434161553460108856012"
+      "385377718821130777993532002330479610147442583636071921565046942503734208"
+      "375250806650616658158948720491179968591639648500635908770118304874799780"
+      "887753749949451580452e-308");
+
+  written = __llvm_libc::sprintf(buff, "%.30g", 0x1.0p-1022);
+  ASSERT_STREQ_LEN(written, buff, "2.22507385850720138309023271733e-308");
+
+  written = __llvm_libc::sprintf(buff, "%.310g", 0x1.0p-1023);
+  ASSERT_STREQ_LEN(
+      written, buff,
+      "1."
+      "112536929253600691545116358666202032109607990231165915276663708443602217"
+      "406959097927141579506255510282033669865517905502576217080776730054428006"
+      "192688859410565388996766001165239805073721291818035960782523471251867104"
+      "187625403325308329079474360245589984295819824250317954385059152437399890"
+      "443876874974725790226e-308");
+
+  written = __llvm_libc::sprintf(buff, "%.7g", 9.99999e-310);
+  ASSERT_STREQ_LEN(written, buff, "9.99999e-310");
+
+  written = __llvm_libc::sprintf(buff, "%.6g", 9.99999e-310);
+  ASSERT_STREQ_LEN(written, buff, "9.99999e-310");
+
+  written = __llvm_libc::sprintf(buff, "%.5g", 9.99999e-310);
+  ASSERT_STREQ_LEN(written, buff, "1e-309");
+
+  written = __llvm_libc::sprintf(buff, "%.4g", 9.99999e-310);
+  ASSERT_STREQ_LEN(written, buff, "1e-309");
+
+  written = __llvm_libc::sprintf(buff, "%.3g", 9.99999e-310);
+  ASSERT_STREQ_LEN(written, buff, "1e-309");
+
+  written = __llvm_libc::sprintf(buff, "%.2g", 9.99999e-310);
+  ASSERT_STREQ_LEN(written, buff, "1e-309");
+
+  written = __llvm_libc::sprintf(buff, "%.1g", 9.99999e-310);
+  ASSERT_STREQ_LEN(written, buff, "1e-309");
+
+  written = __llvm_libc::sprintf(buff, "%.0g", 9.99999e-310);
+  ASSERT_STREQ_LEN(written, buff, "1e-309");
+
+  written = __llvm_libc::sprintf(buff, "%.10g", 0x1.0p-1074);
+  ASSERT_STREQ_LEN(written, buff, "4.940656458e-324");
+
+  // Long double precision tests.
+  // These are currently commented out because they require long double support
+  // that isn't ready yet.
+  /*
+    written = __llvm_libc::sprintf(buff, "%.1La", 0.1L);
+  #if defined(SPECIAL_X86_LONG_DOUBLE)
+    ASSERT_STREQ_LEN(written, buff, "0xc.dp-7");
+  #elif defined(LONG_DOUBLE_IS_DOUBLE)
+    ASSERT_STREQ_LEN(written, buff, "0x1.ap-4");
+  #else // 128 bit long double
+    ASSERT_STREQ_LEN(written, buff, "0x1.ap-4");
+  #endif
+
+    written = __llvm_libc::sprintf(buff, "%.1La", 0xf.fffffffffffffffp16380L);
+  #if defined(SPECIAL_X86_LONG_DOUBLE)
+    ASSERT_STREQ_LEN(written, buff, "0x1.0p+16384");
+  #elif defined(LONG_DOUBLE_IS_DOUBLE)
+    ASSERT_STREQ_LEN(written, buff, "inf");
+  #else // 128 bit long double
+    ASSERT_STREQ_LEN(written, buff, "0x2.0p+16383");
+  #endif
+  */
+
+  // Rounding Mode Tests.
+
+  {
+    __llvm_libc::testutils::ForceRoundingMode r(
+        __llvm_libc::testutils::RoundingMode::Nearest);
+
+    written = __llvm_libc::sprintf(buff, "%.2g", 1.75);
+    ASSERT_STREQ_LEN(written, buff, "1.8");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", 1.25);
+    ASSERT_STREQ_LEN(written, buff, "1.2");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", 1.125);
+    ASSERT_STREQ_LEN(written, buff, "1.1");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", 1.625);
+    ASSERT_STREQ_LEN(written, buff, "1.6");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", 1.375);
+    ASSERT_STREQ_LEN(written, buff, "1.4");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", 1.875);
+    ASSERT_STREQ_LEN(written, buff, "1.9");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", -1.75);
+    ASSERT_STREQ_LEN(written, buff, "-1.8");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", -1.25);
+    ASSERT_STREQ_LEN(written, buff, "-1.2");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", -1.125);
+    ASSERT_STREQ_LEN(written, buff, "-1.1");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", -1.625);
+    ASSERT_STREQ_LEN(written, buff, "-1.6");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", -1.375);
+    ASSERT_STREQ_LEN(written, buff, "-1.4");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", -1.875);
+    ASSERT_STREQ_LEN(written, buff, "-1.9");
+  }
+
+  {
+    __llvm_libc::testutils::ForceRoundingMode r(
+        __llvm_libc::testutils::RoundingMode::Upward);
+
+    written = __llvm_libc::sprintf(buff, "%.2g", 1.75);
+    ASSERT_STREQ_LEN(written, buff, "1.8");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", 1.25);
+    ASSERT_STREQ_LEN(written, buff, "1.3");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", 1.125);
+    ASSERT_STREQ_LEN(written, buff, "1.2");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", 1.625);
+    ASSERT_STREQ_LEN(written, buff, "1.7");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", 1.375);
+    ASSERT_STREQ_LEN(written, buff, "1.4");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", 1.875);
+    ASSERT_STREQ_LEN(written, buff, "1.9");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", -1.75);
+    ASSERT_STREQ_LEN(written, buff, "-1.7");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", -1.25);
+    ASSERT_STREQ_LEN(written, buff, "-1.2");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", -1.125);
+    ASSERT_STREQ_LEN(written, buff, "-1.1");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", -1.625);
+    ASSERT_STREQ_LEN(written, buff, "-1.6");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", -1.375);
+    ASSERT_STREQ_LEN(written, buff, "-1.3");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", -1.875);
+    ASSERT_STREQ_LEN(written, buff, "-1.8");
+  }
+
+  {
+    __llvm_libc::testutils::ForceRoundingMode r(
+        __llvm_libc::testutils::RoundingMode::Downward);
+
+    written = __llvm_libc::sprintf(buff, "%.2g", 1.75);
+    ASSERT_STREQ_LEN(written, buff, "1.7");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", 1.25);
+    ASSERT_STREQ_LEN(written, buff, "1.2");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", 1.125);
+    ASSERT_STREQ_LEN(written, buff, "1.1");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", 1.625);
+    ASSERT_STREQ_LEN(written, buff, "1.6");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", 1.375);
+    ASSERT_STREQ_LEN(written, buff, "1.3");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", 1.875);
+    ASSERT_STREQ_LEN(written, buff, "1.8");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", -1.75);
+    ASSERT_STREQ_LEN(written, buff, "-1.8");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", -1.25);
+    ASSERT_STREQ_LEN(written, buff, "-1.3");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", -1.125);
+    ASSERT_STREQ_LEN(written, buff, "-1.2");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", -1.625);
+    ASSERT_STREQ_LEN(written, buff, "-1.7");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", -1.375);
+    ASSERT_STREQ_LEN(written, buff, "-1.4");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", -1.875);
+    ASSERT_STREQ_LEN(written, buff, "-1.9");
+  }
+
+  {
+    __llvm_libc::testutils::ForceRoundingMode r(
+        __llvm_libc::testutils::RoundingMode::TowardZero);
+
+    written = __llvm_libc::sprintf(buff, "%.2g", 1.75);
+    ASSERT_STREQ_LEN(written, buff, "1.7");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", 1.25);
+    ASSERT_STREQ_LEN(written, buff, "1.2");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", 1.125);
+    ASSERT_STREQ_LEN(written, buff, "1.1");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", 1.625);
+    ASSERT_STREQ_LEN(written, buff, "1.6");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", 1.375);
+    ASSERT_STREQ_LEN(written, buff, "1.3");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", 1.875);
+    ASSERT_STREQ_LEN(written, buff, "1.8");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", -1.75);
+    ASSERT_STREQ_LEN(written, buff, "-1.7");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", -1.25);
+    ASSERT_STREQ_LEN(written, buff, "-1.2");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", -1.125);
+    ASSERT_STREQ_LEN(written, buff, "-1.1");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", -1.625);
+    ASSERT_STREQ_LEN(written, buff, "-1.6");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", -1.375);
+    ASSERT_STREQ_LEN(written, buff, "-1.3");
+
+    written = __llvm_libc::sprintf(buff, "%.2g", -1.875);
+    ASSERT_STREQ_LEN(written, buff, "-1.8");
+  }
+
+  // Flag Tests.
+  written = __llvm_libc::sprintf(buff, "%+g", 1.0);
+  ASSERT_STREQ_LEN(written, buff, "+1");
+
+  written = __llvm_libc::sprintf(buff, "%+g", -1.0);
+  ASSERT_STREQ_LEN(written, buff, "-1");
+
+  written = __llvm_libc::sprintf(buff, "% g", 1.0);
+  ASSERT_STREQ_LEN(written, buff, " 1");
+
+  written = __llvm_libc::sprintf(buff, "% g", -1.0);
+  ASSERT_STREQ_LEN(written, buff, "-1");
+
+  written = __llvm_libc::sprintf(buff, "%-15g", 1.5);
+  ASSERT_STREQ_LEN(written, buff, "1.5            ");
+
+  written = __llvm_libc::sprintf(buff, "%#.g", 1.0);
+  ASSERT_STREQ_LEN(written, buff, "1.");
+
+  written = __llvm_libc::sprintf(buff, "%#g", 1.0);
+  ASSERT_STREQ_LEN(written, buff, "1.00000");
+
+  written = __llvm_libc::sprintf(buff, "%#.0g", 1.5);
+  ASSERT_STREQ_LEN(written, buff, "2.");
+
+  written = __llvm_libc::sprintf(buff, "%015g", 1.5);
+  ASSERT_STREQ_LEN(written, buff, "0000000000001.5");
+
+  written = __llvm_libc::sprintf(buff, "%015g", -1.5);
+  ASSERT_STREQ_LEN(written, buff, "-000000000001.5");
+
+  written = __llvm_libc::sprintf(buff, "%+- #0g", 0.0);
+  ASSERT_STREQ_LEN(written, buff, "+0.00000");
+
+  // Combined Tests.
+
+  written = __llvm_libc::sprintf(buff, "%10.3g", 9.99);
+  ASSERT_STREQ_LEN(written, buff, "      9.99");
+
+  written = __llvm_libc::sprintf(buff, "%10.2g", 9.99);
+  ASSERT_STREQ_LEN(written, buff, "        10");
+
+  written = __llvm_libc::sprintf(buff, "%10.1g", 9.99);
+  ASSERT_STREQ_LEN(written, buff, "     1e+01");
+
+  written = __llvm_libc::sprintf(buff, "%-10.3g", 9.99);
+  ASSERT_STREQ_LEN(written, buff, "9.99      ");
+
+  written = __llvm_libc::sprintf(buff, "%-10.2g", 9.99);
+  ASSERT_STREQ_LEN(written, buff, "10        ");
+
+  written = __llvm_libc::sprintf(buff, "%-10.1g", 9.99);
+  ASSERT_STREQ_LEN(written, buff, "1e+01     ");
+
+  written = __llvm_libc::sprintf(buff, "%-10.1g", 1.0e-50);
+  ASSERT_STREQ_LEN(written, buff, "1e-50     ");
+
+  written = __llvm_libc::sprintf(buff, "%30g", 1234567890123456789.0);
+  ASSERT_STREQ_LEN(written, buff, "                   1.23457e+18");
+
+  written = __llvm_libc::sprintf(buff, "%-30g", 1234567890123456789.0);
+  ASSERT_STREQ_LEN(written, buff, "1.23457e+18                   ");
+
+  written = __llvm_libc::sprintf(buff, "%25.15g", 9999999999999.99);
+  ASSERT_STREQ_LEN(written, buff, "         9999999999999.99");
+
+  written = __llvm_libc::sprintf(buff, "%25.14g", 9999999999999.99);
+  ASSERT_STREQ_LEN(written, buff, "           10000000000000");
+
+  written = __llvm_libc::sprintf(buff, "%25.13g", 9999999999999.99);
+  ASSERT_STREQ_LEN(written, buff, "                    1e+13");
+
+  written = __llvm_libc::sprintf(buff, "%#12.3g %-12.3g", 0.1, 256.0);
+  ASSERT_STREQ_LEN(written, buff, "       0.100 256         ");
+
+  written = __llvm_libc::sprintf(buff, "%+-#12.3g % 012.3g", 0.1256, 1256.0);
+  ASSERT_STREQ_LEN(written, buff, "+0.126        0001.26e+03");
 }
 
 #endif // LLVM_LIBC_PRINTF_DISABLE_FLOAT

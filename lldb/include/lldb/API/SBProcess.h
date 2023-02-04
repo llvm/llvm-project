@@ -423,6 +423,8 @@ public:
   ///
   lldb::SBError DeallocateMemory(lldb::addr_t ptr);
 
+  lldb::ScriptedObject GetScriptedImplementation();
+
 protected:
   friend class SBAddress;
   friend class SBBreakpoint;

@@ -176,10 +176,8 @@ static void dfsPostorder(Operation *root, DFSState *state) {
   while (!queue.empty()) {
     Operation *current = queue.pop_back_val();
     ops.push_back(current);
-    for (Value result : current->getResults()) {
-      for (Operation *op : result.getUsers())
-        queue.push_back(op);
-    }
+    for (Operation *op : current->getUsers())
+      queue.push_back(op);
     for (Region &region : current->getRegions()) {
       for (Operation &op : region.getOps())
         queue.push_back(&op);
