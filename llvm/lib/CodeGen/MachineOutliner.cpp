@@ -800,14 +800,15 @@ bool MachineOutliner::outline(Module &M,
 
   // Walk over each function, outlining them as we go along. Functions are
   // outlined greedily, based off the sort above.
+  auto *UnsignedVecBegin = Mapper.UnsignedVec.begin();
   for (OutlinedFunction &OF : FunctionList) {
     // If we outlined something that overlapped with a candidate in a previous
     // step, then we can't outline from it.
-    erase_if(OF.Candidates, [&Mapper](Candidate &C) {
-      return std::any_of(
-          Mapper.UnsignedVec.begin() + C.getStartIdx(),
-          Mapper.UnsignedVec.begin() + C.getEndIdx() + 1,
-          [](unsigned I) { return (I == static_cast<unsigned>(-1)); });
+    erase_if(OF.Candidates, [&UnsignedVecBegin](Candidate &C) {
+      return std::any_of(UnsignedVecBegin + C.getStartIdx(),
+                         UnsignedVecBegin + C.getEndIdx() + 1, [](unsigned I) {
+                           return I == static_cast<unsigned>(-1);
+                         });
     });
 
     // If we made it unbeneficial to outline this function, skip it.
@@ -898,9 +899,8 @@ bool MachineOutliner::outline(Module &M,
       MBB.erase(std::next(StartIt), std::next(EndIt));
 
       // Keep track of what we removed by marking them all as -1.
-      for (unsigned &I :
-           make_range(Mapper.UnsignedVec.begin() + C.getStartIdx(),
-                      Mapper.UnsignedVec.begin() + C.getEndIdx() + 1))
+      for (unsigned &I : make_range(UnsignedVecBegin + C.getStartIdx(),
+                                    UnsignedVecBegin + C.getEndIdx() + 1))
         I = static_cast<unsigned>(-1);
       OutlinedSomething = true;
 
