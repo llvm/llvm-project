@@ -20,8 +20,8 @@
 // CHECK:         call @copySparseTensorReaderDimSizes(%[[R]], %[[DS]])
 // CHECK:         %[[D0:.*]] = memref.load %[[DS]]{{\[}}%[[C0]]]
 // CHECK:         %[[D1:.*]] = memref.load %[[DS]]{{\[}}%[[C1]]]
-// CHECK:         %[[T:.*]] = bufferization.alloc_tensor(%[[D0]], %[[D1]])
 // CHECK:         %[[N:.*]] = call @getSparseTensorReaderNNZ(%[[R]])
+// CHECK:         %[[T:.*]] = bufferization.alloc_tensor(%[[D0]], %[[D1]]) size_hint=%[[N]]
 // CHECK:         %[[S:.*]] = call @getSparseTensorReaderIsSymmetric(%[[R]])
 // CHECK:         %[[VB:.*]] = memref.alloca()
 // CHECK:         %[[T2:.*]] = scf.for %{{.*}} = %[[C0]] to %[[N]] step %[[C1]] iter_args(%[[A2:.*]] = %[[T]])
@@ -59,8 +59,8 @@ func.func @sparse_new_symmetry(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf32, #CSR> {
 // CHECK:         call @copySparseTensorReaderDimSizes(%[[R]], %[[DS]])
 // CHECK:         %[[D0:.*]] = memref.load %[[DS]]{{\[}}%[[C0]]]
 // CHECK:         %[[D1:.*]] = memref.load %[[DS]]{{\[}}%[[C1]]]
-// CHECK:         %[[T:.*]] = bufferization.alloc_tensor(%[[D0]], %[[D1]])
 // CHECK:         %[[N:.*]] = call @getSparseTensorReaderNNZ(%[[R]])
+// CHECK:         %[[T:.*]] = bufferization.alloc_tensor(%[[D0]], %[[D1]]) size_hint=%[[N]]
 // CHECK:         %[[VB:.*]] = memref.alloca()
 // CHECK:         %[[T2:.*]] = scf.for %{{.*}} = %[[C0]] to %[[N]] step %[[C1]] iter_args(%[[A2:.*]] = %[[T]])
 // CHECK:           func.call @getSparseTensorReaderNextF32(%[[R]], %[[DS]], %[[VB]])
@@ -90,8 +90,8 @@ func.func @sparse_new(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf32, #CSR> {
 // CHECK:         call @copySparseTensorReaderDimSizes(%[[R]], %[[DS]])
 // CHECK:         %[[D0:.*]] = memref.load %[[DS]]{{\[}}%[[C0]]]
 // CHECK:         %[[D1:.*]] = memref.load %[[DS]]{{\[}}%[[C1]]]
-// CHECK:         %[[T:.*]] = bufferization.alloc_tensor(%[[D0]], %[[D1]])
 // CHECK:         %[[N:.*]] = call @getSparseTensorReaderNNZ(%[[R]])
+// CHECK:         %[[T:.*]] = bufferization.alloc_tensor(%[[D0]], %[[D1]]) size_hint=%[[N]]
 // CHECK:         %[[VB:.*]] = memref.alloca()
 // CHECK:         %[[T2:.*]] = scf.for %{{.*}} = %[[C0]] to %[[N]] step %[[C1]] iter_args(%[[A2:.*]] = %[[T]])
 // CHECK:           func.call @getSparseTensorReaderNextF32(%[[R]], %[[DS]], %[[VB]])
