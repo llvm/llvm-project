@@ -63,6 +63,12 @@ bool isUniqueCOOType(RankedTensorType tp);
 /// of the tensor.
 unsigned getCOOStart(SparseTensorEncodingAttr enc);
 
+/// Helpers to setup a COO type.
+RankedTensorType getCOOFromTypeWithOrdering(RankedTensorType src,
+                                            AffineMap ordering, bool ordered);
+
+RankedTensorType getCOOFromType(RankedTensorType src, bool ordered);
+
 //
 // Dimension level types.
 //
