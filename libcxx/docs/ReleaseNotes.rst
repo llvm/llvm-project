@@ -57,7 +57,7 @@ Deprecations and Removals
   includes are removed based on the language version used. Incidental transitive
   inclusions of the following headers have been removed:
 
-  - C++2b: ``bit``, ``type_traits``
+  - C++2b: ``bit``, ``cstring``, ``type_traits``
 
 Upcoming Deprecations and Removals
 ----------------------------------

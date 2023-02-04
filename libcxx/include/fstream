@@ -189,7 +189,6 @@ typedef basic_fstream<wchar_t> wfstream;
 #include <__utility/unreachable.h>
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
 #include <istream>
 #include <ostream>
 #include <typeinfo>
