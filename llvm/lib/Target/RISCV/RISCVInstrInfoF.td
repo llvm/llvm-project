@@ -454,7 +454,6 @@ let Predicates = [HasStdExtF] in {
 
 /// Float constants
 def : Pat<(f32 (fpimm0)), (FMV_W_X X0)>;
-def : Pat<(f32 (fpimmneg0)), (FSGNJN_S (FMV_W_X X0), (FMV_W_X X0))>;
 
 /// Float conversion operations
 
