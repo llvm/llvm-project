@@ -1,3 +1,4 @@
+; REQUIRES: x86_64-linux
 ; RUN: rm -rf %t.rundir
 ; RUN: rm -rf %t.channel-basename.*
 ; RUN: mkdir %t.rundir
