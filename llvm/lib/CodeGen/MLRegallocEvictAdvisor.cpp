@@ -13,6 +13,7 @@
 #include "AllocationOrder.h"
 #include "RegAllocEvictionAdvisor.h"
 #include "RegAllocGreedy.h"
+#include "llvm/Analysis/InteractiveModelRunner.h"
 #include "llvm/Analysis/MLModelRunner.h"
 #include "llvm/Analysis/TensorSpec.h"
 #if defined(LLVM_HAVE_TF_AOT_REGALLOCEVICTMODEL) || defined(LLVM_HAVE_TFLITE)
@@ -51,6 +52,14 @@ using CompiledModelType = RegallocEvictModel;
 #else
 using CompiledModelType = NoopSavedModelImpl;
 #endif
+
+static cl::opt<std::string> InteractiveChannelBaseName(
+    "regalloc-evict-interactive-channel-base", cl::Hidden,
+    cl::desc(
+        "Base file path for the interactive mode. The incoming filename should "
+        "have the name <regalloc-evict-interactive-channel-base>.in, while the "
+        "outgoing name should be "
+        "<regalloc-evict-interactive-channel-base>.out"));
 
 // Options that only make sense in development mode
 #ifdef LLVM_HAVE_TFLITE
@@ -213,6 +222,8 @@ static const std::vector<int64_t> PerLiveRangeShape{1, NumberOfInterferences};
 // will be guaranteed to be to a mask == 1 position. Using a macro here to
 // avoid 'not used' warnings (and keep cond compilation to a minimum)
 #define DecisionName "index_to_evict"
+static const TensorSpec DecisionSpec =
+    TensorSpec::createSpec<int64_t>(DecisionName, {1});
 
 // Named features index.
 enum FeatureIDs {
@@ -382,14 +393,21 @@ private:
 
   std::unique_ptr<RegAllocEvictionAdvisor>
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
-    if (!Runner)
-      Runner = std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
-          MF.getFunction().getContext(), InputFeatures, DecisionName);
+    if (!Runner) {
+      if (InteractiveChannelBaseName.empty())
+        Runner = std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
+            MF.getFunction().getContext(), InputFeatures, DecisionName);
+      else
+        Runner = std::make_unique<InteractiveModelRunner>(
+            MF.getFunction().getContext(), InputFeatures, DecisionSpec,
+            InteractiveChannelBaseName + ".out",
+            InteractiveChannelBaseName + ".in");
+    }
     return std::make_unique<MLEvictAdvisor>(
         MF, RA, Runner.get(), getAnalysis<MachineBlockFrequencyInfo>(),
         getAnalysis<MachineLoopInfo>());
   }
-  std::unique_ptr<ReleaseModeModelRunner<CompiledModelType>> Runner;
+  std::unique_ptr<MLModelRunner> Runner;
 };
 
 // ===================================
@@ -398,8 +416,6 @@ private:
 //
 // Features we log
 #ifdef LLVM_HAVE_TFLITE
-static const TensorSpec Output =
-    TensorSpec::createSpec<int64_t>(DecisionName, {1});
 static const TensorSpec Reward = TensorSpec::createSpec<float>("reward", {1});
 
 // Features we bind on the model. The tensor names have a prefix, and we also
@@ -512,7 +528,7 @@ private:
     // We always log the output; in particular, if we're not evaluating, we
     // don't have an output spec json file. That's why we handle the
     // 'normal' output separately.
-    LFS.push_back(Output);
+    LFS.push_back(DecisionSpec);
 
     Log = std::make_unique<Logger>(std::move(OS), LFS, Reward,
                                    /*IncludeReward*/ true);
@@ -557,6 +573,7 @@ MLEvictAdvisor::MLEvictAdvisor(const MachineFunction &MF, const RAGreedy &RA,
       Runner(std::move(Runner)), MBFI(MBFI), Loops(Loops),
       InitialQSize(MLEvictAdvisor::getInitialQueueSize(MF)) {
   assert(this->Runner);
+  Runner->switchContext(MF.getName());
   DoNotNormalize.set(FeatureIDs::mask);
   DoNotNormalize.set(FeatureIDs::is_free);
   DoNotNormalize.set(FeatureIDs::is_hint);
@@ -1134,7 +1151,10 @@ bool RegAllocScoring::runOnMachineFunction(MachineFunction &MF) {
 #endif // #ifdef LLVM_HAVE_TFLITE
 
 RegAllocEvictionAdvisorAnalysis *llvm::createReleaseModeAdvisor() {
-  return new ReleaseModeEvictionAdvisorAnalysis();
+  return llvm::isEmbeddedModelEvaluatorValid<CompiledModelType>() ||
+                 !InteractiveChannelBaseName.empty()
+             ? new ReleaseModeEvictionAdvisorAnalysis()
+             : nullptr;
 }
 
 // In all cases except development mode, we don't need scoring.
