@@ -17,7 +17,7 @@ import io
 import math
 import os
 import subprocess
-from typing import BinaryIO, Callable, Union
+from typing import Callable, List, Union
 
 
 def send(f: io.BufferedWriter, value: Union[int, float],
@@ -33,9 +33,9 @@ def send(f: io.BufferedWriter, value: Union[int, float],
 
 
 def run_interactive(temp_rootname: str,
-                    make_response: Callable[[list[log_reader.TensorValue]],
+                    make_response: Callable[[List[log_reader.TensorValue]],
                                             Union[int, float]],
-                    process_and_args: list[str]):
+                    process_and_args: List[str]):
   """Host the compiler.
   Args:
     temp_rootname: the base file name from which to construct the 2 pipes for
