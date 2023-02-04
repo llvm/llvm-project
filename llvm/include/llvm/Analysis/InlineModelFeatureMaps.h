@@ -129,10 +129,9 @@ inlineCostFeatureToMlFeature(InlineCostFeatureIndex Feature) {
 constexpr size_t NumberOfFeatures =
     static_cast<size_t>(FeatureIndex::NumberOfFeatures);
 
-extern const std::vector<TensorSpec> FeatureMap;
+extern const std::array<TensorSpec, NumberOfFeatures> FeatureMap;
 
 extern const char *const DecisionName;
-extern const TensorSpec InlineDecisionSpec;
 extern const char *const DefaultDecisionName;
 extern const char *const RewardName;
 

@@ -283,7 +283,7 @@ TrainingLogger::TrainingLogger(StringRef LogFileName,
   FT.push_back(TensorSpec::createSpec<int64_t>(DefaultDecisionName, {1}));
 
   DecisionPos = FT.size();
-  FT.push_back(InlineDecisionSpec);
+  FT.push_back(TensorSpec::createSpec<int64_t>(DecisionName, {1}));
   std::error_code EC;
   auto OS = std::make_unique<raw_fd_ostream>(TrainingLog, EC);
   if (EC)

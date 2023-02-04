@@ -18,12 +18,10 @@
 #include "llvm/Analysis/FunctionPropertiesAnalysis.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/InlineModelFeatureMaps.h"
-#include "llvm/Analysis/InteractiveModelRunner.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MLModelRunner.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
-#include "llvm/Analysis/ReleaseModeModelRunner.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
@@ -32,37 +30,19 @@
 
 using namespace llvm;
 
-static cl::opt<std::string> InteractiveChannelBaseName(
-    "inliner-interactive-channel-base", cl::Hidden,
-    cl::desc(
-        "Base file path for the interactive mode. The incoming filename should "
-        "have the name <inliner-interactive-channel-base>.in, while the "
-        "outgoing name should be <inliner-interactive-channel-base>.out"));
-
 #if defined(LLVM_HAVE_TF_AOT_INLINERSIZEMODEL)
+#include "llvm/Analysis/ReleaseModeModelRunner.h"
 // codegen-ed file
 #include "InlinerSizeModel.h" // NOLINT
-using CompiledModelType = llvm::InlinerSizeModel;
-#else
-using CompiledModelType = NoopSavedModelImpl;
-#endif
 
 std::unique_ptr<InlineAdvisor>
 llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM) {
-  if (!llvm::isEmbeddedModelEvaluatorValid<CompiledModelType>() &&
-      InteractiveChannelBaseName.empty())
-    return nullptr;
-  std::unique_ptr<MLModelRunner> AOTRunner;
-  if (InteractiveChannelBaseName.empty())
-    AOTRunner = std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
-        M.getContext(), FeatureMap, DecisionName);
-  else
-    AOTRunner = std::make_unique<InteractiveModelRunner>(
-        M.getContext(), FeatureMap, InlineDecisionSpec,
-        InteractiveChannelBaseName + ".out",
-        InteractiveChannelBaseName + ".in");
+  auto AOTRunner =
+      std::make_unique<ReleaseModeModelRunner<llvm::InlinerSizeModel>>(
+          M.getContext(), FeatureMap, DecisionName);
   return std::make_unique<MLInlineAdvisor>(M, MAM, std::move(AOTRunner));
 }
+#endif
 
 #define DEBUG_TYPE "inline-ml"
 
@@ -79,7 +59,7 @@ static cl::opt<bool> KeepFPICache(
     cl::init(false));
 
 // clang-format off
-const std::vector<TensorSpec> llvm::FeatureMap{
+const std::array<TensorSpec, NumberOfFeatures> llvm::FeatureMap{
 #define POPULATE_NAMES(_, NAME) TensorSpec::createSpec<int64_t>(NAME, {1} ),
 // InlineCost features - these must come first
   INLINE_COST_FEATURE_ITERATOR(POPULATE_NAMES)
@@ -93,8 +73,6 @@ const std::vector<TensorSpec> llvm::FeatureMap{
 // clang-format on
 
 const char *const llvm::DecisionName = "inlining_decision";
-const TensorSpec llvm::InlineDecisionSpec =
-    TensorSpec::createSpec<int64_t>(DecisionName, {1});
 const char *const llvm::DefaultDecisionName = "inlining_default";
 const char *const llvm::RewardName = "delta_size";
 
@@ -116,7 +94,7 @@ MLInlineAdvisor::MLInlineAdvisor(Module &M, ModuleAnalysisManager &MAM,
       CG(MAM.getResult<LazyCallGraphAnalysis>(M)),
       InitialIRSize(getModuleIRSize()), CurrentIRSize(InitialIRSize) {
   assert(ModelRunner);
-  ModelRunner->switchContext("");
+
   // Extract the 'call site height' feature - the position of a call site
   // relative to the farthest statically reachable SCC node. We don't mutate
   // this value while inlining happens. Empirically, this feature proved
