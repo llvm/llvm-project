@@ -560,6 +560,12 @@ void Debugger::Terminate() {
   assert(g_debugger_list_ptr &&
          "Debugger::Terminate called without a matching Debugger::Initialize!");
 
+  if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
+    std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
+    for (const auto &debugger : *g_debugger_list_ptr)
+      debugger->HandleDestroyCallback();
+  }
+
   if (g_thread_pool) {
     // The destructor will wait for all the threads to complete.
     delete g_thread_pool;
@@ -679,10 +685,18 @@ DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
   return debugger_sp;
 }
 
+void Debugger::HandleDestroyCallback() {
+  if (m_destroy_callback) {
+    m_destroy_callback(GetID(), m_destroy_callback_baton);
+    m_destroy_callback = nullptr;
+  }
+}
+
 void Debugger::Destroy(DebuggerSP &debugger_sp) {
   if (!debugger_sp)
     return;
 
+  debugger_sp->HandleDestroyCallback();
   CommandInterpreter &cmd_interpreter = debugger_sp->GetCommandInterpreter();
 
   if (cmd_interpreter.GetSaveSessionOnQuit()) {
@@ -1283,6 +1297,12 @@ void Debugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
   // callback.
   m_callback_handler_sp =
       std::make_shared<CallbackLogHandler>(log_callback, baton);
+}
+
+void Debugger::SetDestroyCallback(
+    lldb_private::DebuggerDestroyCallback destroy_callback, void *baton) {
+  m_destroy_callback = destroy_callback;
+  m_destroy_callback_baton = baton;
 }
 
 static void PrivateReportProgress(Debugger &debugger, uint64_t progress_id,
