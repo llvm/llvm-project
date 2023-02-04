@@ -89,11 +89,14 @@ STATISTIC(NumOutlined, "Number of candidates outlined");
 STATISTIC(FunctionsCreated, "Number of functions created");
 
 // Statistics for instruction mapping.
-STATISTIC(NumLegalInUnsignedVec, "Number of legal instrs in unsigned vector");
+STATISTIC(NumLegalInUnsignedVec, "Outlinable instructions mapped");
 STATISTIC(NumIllegalInUnsignedVec,
-          "Number of illegal instrs in unsigned vector");
-STATISTIC(NumInvisible, "Number of invisible instrs in unsigned vector");
-STATISTIC(UnsignedVecSize, "Size of unsigned vector");
+          "Unoutlinable instructions mapped + number of sentinel values");
+STATISTIC(NumSentinels, "Sentinel values inserted during mapping");
+STATISTIC(NumInvisible,
+          "Invisible instructions skipped during mapping");
+STATISTIC(UnsignedVecSize,
+          "Total number of instructions mapped and saved to mapping vector");
 
 // Set to true if the user wants the outliner to run on linkonceodr linkage
 // functions. This is false by default because the linker can dedupe linkonceodr
@@ -361,6 +364,7 @@ struct InstructionMapper {
       // repeated substring.
       mapToIllegalUnsigned(It, CanOutlineWithPrevInstr, UnsignedVecForMBB,
                            InstrListForMBB);
+      ++NumSentinels;
       append_range(InstrList, InstrListForMBB);
       append_range(UnsignedVec, UnsignedVecForMBB);
     }
@@ -1005,10 +1009,9 @@ void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M,
       // MBB is suitable for outlining. Map it to a list of unsigneds.
       Mapper.convertToUnsignedVec(MBB, *TII);
     }
-
-    // Statistics.
-    UnsignedVecSize = Mapper.UnsignedVec.size();
   }
+  // Statistics.
+  UnsignedVecSize = Mapper.UnsignedVec.size();
 }
 
 void MachineOutliner::initSizeRemarkInfo(
