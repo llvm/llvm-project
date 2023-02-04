@@ -65,8 +65,6 @@ class MemoryMappedSegment {
   MemoryMappedSegmentData *data_;
 };
 
-struct ImageHeader;
-
 class MemoryMappingLayoutBase {
  public:
   virtual bool Next(MemoryMappedSegment *segment) { UNIMPLEMENTED(); }
@@ -77,10 +75,10 @@ class MemoryMappingLayoutBase {
   ~MemoryMappingLayoutBase() {}
 };
 
-class MemoryMappingLayout : public MemoryMappingLayoutBase {
+class MemoryMappingLayout final : public MemoryMappingLayoutBase {
  public:
   explicit MemoryMappingLayout(bool cache_enabled);
-  virtual ~MemoryMappingLayout();
+  ~MemoryMappingLayout();
   virtual bool Next(MemoryMappedSegment *segment) override;
   virtual bool Error() const override;
   virtual void Reset() override;
@@ -92,14 +90,10 @@ class MemoryMappingLayout : public MemoryMappingLayoutBase {
   // Adds all mapped objects into a vector.
   void DumpListOfModules(InternalMmapVectorNoCtor<LoadedModule> *modules);
 
- protected:
-#if SANITIZER_APPLE
-  virtual const ImageHeader *CurrentImageHeader();
-#endif
-  MemoryMappingLayoutData data_;
-
  private:
   void LoadFromCache();
+
+  MemoryMappingLayoutData data_;
 };
 
 // Returns code range for the specified module.
