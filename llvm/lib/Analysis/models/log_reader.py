@@ -76,6 +76,7 @@ def read_tensor(fs: io.BufferedReader, ts: TensorSpec) -> TensorValue:
 def pretty_print_tensor_value(tv: TensorValue):
   print(f'{tv.spec().name}: {",".join([str(v) for v in tv])}')
 
+
 def read_header(f: io.BufferedReader):
   header = json.loads(f.readline())
   tensor_specs = [TensorSpec.from_dict(ts) for ts in header['features']]
@@ -86,10 +87,8 @@ def read_header(f: io.BufferedReader):
   return tensor_specs, score_spec, advice_spec
 
 
-def read_one_observation(context: Optional[str],
-                         event_str: str,
-                         f: io.BufferedReader,
-                         tensor_specs: List[TensorSpec],
+def read_one_observation(context: Optional[str], event_str: str,
+                         f: io.BufferedReader, tensor_specs: List[TensorSpec],
                          score_spec: Optional[TensorSpec]):
   event = json.loads(event_str)
   if 'context' in event:
@@ -113,7 +112,10 @@ def read_stream(fname: str):
   with io.BufferedReader(io.FileIO(fname, 'rb')) as f:
     tensor_specs, score_spec, _ = read_header(f)
     context = None
-    while event_str := f.readline():
+    while True:
+      event_str = f.readline()
+      if not event_str:
+        break
       context, observation_id, features, score = read_one_observation(
           context, event_str, f, tensor_specs, score_spec)
       yield context, observation_id, features, score
