@@ -5515,7 +5515,7 @@ static SDValue lowerVectorIntrinsicScalars(SDValue Op, SelectionDAG &DAG,
         unsigned Sew = RISCVVType::encodeSEW(I32VT.getScalarSizeInBits());
         SDValue SEW = DAG.getConstant(Sew, DL, XLenVT);
         SDValue SETVLMAX = DAG.getTargetConstant(
-            Intrinsic::riscv_vsetvlimax_opt, DL, MVT::i32);
+            Intrinsic::riscv_vsetvlimax, DL, MVT::i32);
         I32VL = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, XLenVT, SETVLMAX, SEW,
                             LMUL);
       } else {
@@ -5530,7 +5530,7 @@ static SDValue lowerVectorIntrinsicScalars(SDValue Op, SelectionDAG &DAG,
       unsigned Sew = RISCVVType::encodeSEW(VT.getScalarSizeInBits());
       SDValue SEW = DAG.getConstant(Sew, DL, XLenVT);
       SDValue SETVL =
-          DAG.getTargetConstant(Intrinsic::riscv_vsetvli_opt, DL, MVT::i32);
+          DAG.getTargetConstant(Intrinsic::riscv_vsetvli, DL, MVT::i32);
       // Using vsetvli instruction to get actually used length which related to
       // the hardware implementation
       SDValue VL = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, XLenVT, SETVL, AVL,
@@ -10884,8 +10884,6 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       break;
     case Intrinsic::riscv_vsetvli:
     case Intrinsic::riscv_vsetvlimax:
-    case Intrinsic::riscv_vsetvli_opt:
-    case Intrinsic::riscv_vsetvlimax_opt:
       // Assume that VL output is >= 65536.
       // TODO: Take SEW and LMUL into account.
       if (BitWidth > 17)

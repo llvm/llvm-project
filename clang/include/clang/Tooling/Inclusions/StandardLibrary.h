@@ -75,11 +75,11 @@ public:
   named(llvm::StringRef Scope, llvm::StringRef Name, Lang Language = Lang::CXX);
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Symbol &S) {
-    return OS << S.qualified_name();
+    return OS << S.qualifiedName();
   }
   llvm::StringRef scope() const;
   llvm::StringRef name() const;
-  llvm::StringRef qualified_name() const;
+  llvm::StringRef qualifiedName() const;
   // The preferred header for this symbol (e.g. the suggested insertion).
   Header header() const;
   // Some symbols may be provided by multiple headers.

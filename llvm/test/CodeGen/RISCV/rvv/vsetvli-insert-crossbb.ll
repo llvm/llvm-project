@@ -838,15 +838,10 @@ fallthrough:
 define <vscale x 2 x i32> @pre_lmul(<vscale x 2 x i32> %x, <vscale x 2 x i32> %y, i1 %cond) nounwind {
 ; CHECK-LABEL: pre_lmul:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi a1, a0, 1
-; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
-; CHECK-NEXT:    beqz a1, .LBB18_2
-; CHECK-NEXT:  # %bb.1: # %if
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, mu
-; CHECK-NEXT:  .LBB18_2: # %if.end
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 entry:

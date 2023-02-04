@@ -54,6 +54,16 @@
   free((char *) $1);
 }
 
+%typemap(out) lldb::ScriptedObject {
+  $result = nullptr;
+  if (const void* impl = $1)
+    $result = (PyObject*) impl;
+  if (!$result) {
+    $result = Py_None;
+    Py_INCREF(Py_None);
+  }
+}
+
 %typemap(out) char** {
   int len;
   int i;

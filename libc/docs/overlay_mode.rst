@@ -48,7 +48,7 @@ Next, build the libc:
 
 .. code-block:: sh
 
-  $> ninja llvmlibc
+  $> ninja libc
 
 The build step will build the static archive the in the directory
 ``build/projects/libc/lib``. Notice that the above CMake configure step also
@@ -83,7 +83,7 @@ as ``clang`` will be built before building ``libllvmlibc.a``.
 
 .. code-block:: sh
 
-  $> ninja llvmlibc
+  $> ninja libc
   $> ninja install-llvmlibc
 
 Using the overlay static archive
