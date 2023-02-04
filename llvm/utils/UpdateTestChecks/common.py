@@ -1142,6 +1142,12 @@ def check_prefix(prefix):
     warn(("Supplied prefix '%s' is invalid. Prefix must contain only alphanumeric characters, hyphens and underscores." + hint) %
          (prefix))
 
+def get_check_prefixes(filecheck_cmd):
+  check_prefixes = [item for m in CHECK_PREFIX_RE.finditer(filecheck_cmd)
+                           for item in m.group(1).split(',')]
+  if not check_prefixes:
+    check_prefixes = ['CHECK']
+  return check_prefixes
 
 def verify_filecheck_prefixes(fc_cmd):
   fc_cmd_parts = fc_cmd.split()
