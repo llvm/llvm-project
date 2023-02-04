@@ -396,6 +396,19 @@ public:
     fields.back() = md;
   }
 
+  void setValMemSize(OpBuilder &builder, Location loc, Value v) {
+    setSpecifierField(builder, loc, StorageSpecifierKind::ValMemSize,
+                      std::nullopt, v);
+  }
+
+  void setIdxMemSize(OpBuilder &builder, Location loc, unsigned dim, Value v) {
+    setSpecifierField(builder, loc, StorageSpecifierKind::IdxMemSize, dim, v);
+  }
+
+  void setPtrMemSize(OpBuilder &builder, Location loc, unsigned dim, Value v) {
+    setSpecifierField(builder, loc, StorageSpecifierKind::PtrMemSize, dim, v);
+  }
+
   void setDimSize(OpBuilder &builder, Location loc, unsigned dim, Value v) {
     setSpecifierField(builder, loc, StorageSpecifierKind::DimSize, dim, v);
   }

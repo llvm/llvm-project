@@ -52,9 +52,9 @@ int convert(Writer *writer, const FormatSection &to_conv) {
   case 'a':
   case 'A':
     return convert_float_hex_exp(writer, to_conv);
-    // case 'g':
-    // case 'G':
-    // return convert_float_mixed(writer, to_conv);
+  case 'g':
+  case 'G':
+    return convert_float_dec_auto(writer, to_conv);
 #endif // LLVM_LIBC_PRINTF_DISABLE_FLOAT
 #ifndef LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
   case 'n':

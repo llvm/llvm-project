@@ -44,7 +44,7 @@ struct SuffixTreeNode {
   /// A child existing on an unsigned integer implies that from the mapping
   /// represented by the current node, there is a way to reach another
   /// mapping by tacking that character on the end of the current string.
-  llvm::DenseMap<unsigned, SuffixTreeNode *> Children;
+  DenseMap<unsigned, SuffixTreeNode *> Children;
 
   /// The start index of this node's substring in the main string.
   unsigned StartIdx = EmptyIdx;
@@ -137,7 +137,7 @@ struct SuffixTreeNode {
 class SuffixTree {
 public:
   /// Each element is an integer representing an instruction in the module.
-  llvm::ArrayRef<unsigned> Str;
+  ArrayRef<unsigned> Str;
 
   /// A repeated substring in the tree.
   struct RepeatedSubstring {
@@ -145,12 +145,12 @@ public:
     unsigned Length;
 
     /// The start indices of each occurrence.
-    std::vector<unsigned> StartIndices;
+    SmallVector<unsigned> StartIndices;
   };
 
 private:
   /// Maintains each node in the tree.
-  llvm::SpecificBumpPtrAllocator<SuffixTreeNode> NodeAllocator;
+  SpecificBumpPtrAllocator<SuffixTreeNode> NodeAllocator;
 
   /// The root of the suffix tree.
   ///
@@ -165,7 +165,7 @@ private:
   /// every step. Therefore, we need to store leaf end indices by reference
   /// to avoid updating O(N) leaves at every step of construction. Thus,
   /// every internal node must be allocated its own end index.
-  llvm::BumpPtrAllocator InternalEndIdxAllocator;
+  BumpPtrAllocator InternalEndIdxAllocator;
 
   /// The end index of each leaf in the tree.
   unsigned LeafEndIdx = -1;
@@ -232,7 +232,7 @@ public:
   /// Construct a suffix tree from a sequence of unsigned integers.
   ///
   /// \param Str The string to construct the suffix tree for.
-  SuffixTree(const std::vector<unsigned> &Str);
+  SuffixTree(const ArrayRef<unsigned> &Str);
 
   /// Iterator for finding all repeated substrings in the suffix tree.
   struct RepeatedSubstringIterator {
@@ -244,7 +244,7 @@ public:
     RepeatedSubstring RS;
 
     /// The nodes left to visit.
-    std::vector<SuffixTreeNode *> ToVisit;
+    SmallVector<SuffixTreeNode *> ToVisit;
 
     /// The minimum length of a repeated substring to find.
     /// Since we're outlining, we want at least two instructions in the range.
@@ -260,7 +260,7 @@ public:
       N = nullptr;
 
       // Each leaf node represents a repeat of a string.
-      std::vector<SuffixTreeNode *> LeafChildren;
+      SmallVector<SuffixTreeNode *> LeafChildren;
 
       // Continue visiting nodes until we find one which repeats more than once.
       while (!ToVisit.empty()) {

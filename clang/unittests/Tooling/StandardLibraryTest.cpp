@@ -47,7 +47,7 @@ TEST(StdlibTest, All) {
   EXPECT_TRUE(Vector);
   EXPECT_EQ(Vector->scope(), "std::");
   EXPECT_EQ(Vector->name(), "vector");
-  EXPECT_EQ(Vector->qualified_name(), "std::vector");
+  EXPECT_EQ(Vector->qualifiedName(), "std::vector");
   EXPECT_EQ(llvm::to_string(*Vector), "std::vector");
   EXPECT_FALSE(stdlib::Symbol::named("std::", "dongle"));
   EXPECT_FALSE(stdlib::Symbol::named("clang::", "ASTContext"));
