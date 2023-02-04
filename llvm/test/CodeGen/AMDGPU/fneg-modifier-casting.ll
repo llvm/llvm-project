@@ -858,3 +858,683 @@ define <2 x i16> @select_fneg_xor_select_v2i16(<2 x i1> %cond0, <2 x i1> %cond1,
   %select1 = select <2 x i1> %cond1, <2 x i16> %fneg1, <2 x i16> %select0
   ret <2 x i16> %select1
 }
+
+; pattern that appeared in rocm-device-libs to manually operate on the
+; sign bit of the high half of a double
+define double @cospiD_pattern0(i32 %arg, double %arg1, double %arg2) {
+; GCN-LABEL: cospiD_pattern0:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v5, 1, v0
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v5
+; GCN-NEXT:    v_cndmask_b32_e32 v3, v1, v3, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v2, v4, vcc
+; GCN-NEXT:    v_cmp_lt_i32_e32 vcc, 1, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GCN-NEXT:    v_lshlrev_b32_e32 v0, 31, v0
+; GCN-NEXT:    v_xor_b32_e32 v1, v1, v0
+; GCN-NEXT:    v_mov_b32_e32 v0, v3
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: cospiD_pattern0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_and_b32_e32 v5, 1, v0
+; GFX11-NEXT:    v_cmp_lt_i32_e64 s0, 1, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v5
+; GFX11-NEXT:    v_cndmask_b32_e64 v5, 0, 1, s0
+; GFX11-NEXT:    v_dual_cndmask_b32 v0, v1, v3 :: v_dual_cndmask_b32 v1, v2, v4
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 31, v5
+; GFX11-NEXT:    v_xor_b32_e32 v1, v1, v2
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %i = and i32 %arg, 1
+  %i3 = icmp eq i32 %i, 0
+  %i4 = select i1 %i3, double %arg2, double %arg1
+  %i5 = bitcast double %i4 to <2 x i32>
+  %i6 = icmp sgt i32 %arg, 1
+  %i7 = select i1 %i6, i32 -2147483648, i32 0
+  %i8 = extractelement <2 x i32> %i5, i64 1
+  %i9 = xor i32 %i8, %i7
+  %i10 = insertelement <2 x i32> %i5, i32 %i9, i64 1
+  %i11 = bitcast <2 x i32> %i10 to double
+  ret double %i11
+}
+
+define double @cospiD_pattern1(i32 %arg, double %arg1, double %arg2) {
+; GCN-LABEL: cospiD_pattern1:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v5, 1, v0
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v5
+; GCN-NEXT:    v_cndmask_b32_e32 v4, v2, v4, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v2, v1, v3, vcc
+; GCN-NEXT:    v_xor_b32_e32 v1, 0x80000000, v4
+; GCN-NEXT:    v_cmp_lt_i32_e32 vcc, 1, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v4, v1, vcc
+; GCN-NEXT:    v_mov_b32_e32 v0, v2
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: cospiD_pattern1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_and_b32_e32 v5, 1, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v5
+; GFX11-NEXT:    v_cndmask_b32_e32 v4, v2, v4, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, v1, v3, vcc_lo
+; GFX11-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 1, v0
+; GFX11-NEXT:    v_xor_b32_e32 v5, 0x80000000, v4
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, v2 :: v_dual_cndmask_b32 v1, v4, v5
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %i = and i32 %arg, 1
+  %i3 = icmp eq i32 %i, 0
+  %i4 = select i1 %i3, double %arg2, double %arg1
+  %i5 = icmp sgt i32 %arg, 1
+  %i6 = fneg double %i4
+  %i7 = select i1 %i5, double %i6, double %i4
+  ret double %i7
+}
+
+; artifical example, scaled to operation on 16-bit halves of a float.
+define float @cospiD_pattern0_half(i16 %arg, float %arg1, float %arg2) {
+; GFX7-LABEL: cospiD_pattern0_half:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_bfe_i32 v3, v0, 0, 16
+; GFX7-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GFX7-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
+; GFX7-NEXT:    v_cmp_lt_i32_e32 vcc, 1, v3
+; GFX7-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff, v0
+; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
+; GFX7-NEXT:    v_lshlrev_b32_e32 v2, 31, v2
+; GFX7-NEXT:    v_xor_b32_e32 v0, v2, v0
+; GFX7-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: cospiD_pattern0_half:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_and_b32_e32 v3, 1, v0
+; GFX9-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v3
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GFX9-NEXT:    v_cmp_lt_i16_e32 vcc, 1, v0
+; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX9-NEXT:    v_lshlrev_b16_e32 v0, 15, v0
+; GFX9-NEXT:    v_xor_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
+; GFX9-NEXT:    v_perm_b32 v0, v0, v1, s4
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: cospiD_pattern0_half:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_and_b32_e32 v3, 1, v0
+; GFX11-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 1, v0
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0, v3
+; GFX11-NEXT:    v_lshlrev_b16 v0, 15, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
+; GFX11-NEXT:    v_xor_b32_e32 v0, v2, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_perm_b32 v0, v0, v1, 0x5040100
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %i = and i16 %arg, 1
+  %i3 = icmp eq i16 %i, 0
+  %i4 = select i1 %i3, float %arg2, float %arg1
+  %i5 = bitcast float %i4 to <2 x i16>
+  %i6 = icmp sgt i16 %arg, 1
+  %i7 = select i1 %i6, i16 -32768, i16 0
+  %i8 = extractelement <2 x i16> %i5, i64 1
+  %i9 = xor i16 %i8, %i7
+  %i10 = insertelement <2 x i16> %i5, i16 %i9, i64 1
+  %i11 = bitcast <2 x i16> %i10 to float
+  ret float %i11
+}
+
+define float @cospiD_pattern1_half(i16 %arg, float %arg1, float %arg2) {
+; GFX7-LABEL: cospiD_pattern1_half:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_bfe_i32 v3, v0, 0, 16
+; GFX7-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GFX7-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
+; GFX7-NEXT:    v_cmp_lt_i32_e32 vcc, 1, v3
+; GFX7-NEXT:    v_cndmask_b32_e64 v0, v0, -v0, vcc
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: cospiD_pattern1_half:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_and_b32_e32 v3, 1, v0
+; GFX9-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v3
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GFX9-NEXT:    v_cmp_lt_i16_e32 vcc, 1, v0
+; GFX9-NEXT:    v_cndmask_b32_e64 v0, v1, -v1, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: cospiD_pattern1_half:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_and_b32_e32 v3, 1, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0, v3
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc_lo
+; GFX11-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 1, v0
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v1, -v1, vcc_lo
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %i = and i16 %arg, 1
+  %i3 = icmp eq i16 %i, 0
+  %i4 = select i1 %i3, float %arg2, float %arg1
+  %i5 = icmp sgt i16 %arg, 1
+  %i6 = fneg float %i4
+  %i7 = select i1 %i5, float %i6, float %i4
+  ret float %i7
+}
+
+define double @fneg_f64_bitcast_vector_i64_to_f64(i64 %arg) {
+; GCN-LABEL: fneg_f64_bitcast_vector_i64_to_f64:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: fneg_f64_bitcast_vector_i64_to_f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %bitcast = bitcast i64 %arg to double
+  %fneg = fneg double %bitcast
+  ret double %fneg
+}
+
+define double @fneg_f64_bitcast_vector_v2i32_to_f64(<2 x i32> %arg) {
+; GCN-LABEL: fneg_f64_bitcast_vector_v2i32_to_f64:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: fneg_f64_bitcast_vector_v2i32_to_f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %bitcast = bitcast <2 x i32> %arg to double
+  %fneg = fneg double %bitcast
+  ret double %fneg
+}
+
+define double @fneg_f64_bitcast_vector_v2f32_to_f64(<2 x float> %arg) {
+; GCN-LABEL: fneg_f64_bitcast_vector_v2f32_to_f64:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: fneg_f64_bitcast_vector_v2f32_to_f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %bitcast = bitcast <2 x float> %arg to double
+  %fneg = fneg double %bitcast
+  ret double %fneg
+}
+
+define double @fneg_f64_bitcast_vector_v4i16_to_f64(<4 x i16> %arg) {
+; GFX7-LABEL: fneg_f64_bitcast_vector_v4i16_to_f64:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; GFX7-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX7-NEXT:    v_or_b32_e32 v2, v2, v3
+; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX7-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX7-NEXT:    v_xor_b32_e32 v1, 0x80000000, v2
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: fneg_f64_bitcast_vector_v4i16_to_f64:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: fneg_f64_bitcast_vector_v4i16_to_f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %bitcast = bitcast <4 x i16> %arg to double
+  %fneg = fneg double %bitcast
+  ret double %fneg
+}
+
+define double @fneg_f64_bitcast_vector_v4f16_to_f64(<4 x half> %arg) {
+; GFX7-LABEL: fneg_f64_bitcast_vector_v4f16_to_f64:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; GFX7-NEXT:    v_or_b32_e32 v2, v2, v3
+; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX7-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX7-NEXT:    v_xor_b32_e32 v1, 0x80000000, v2
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: fneg_f64_bitcast_vector_v4f16_to_f64:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: fneg_f64_bitcast_vector_v4f16_to_f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %bitcast = bitcast <4 x half> %arg to double
+  %fneg = fneg double %bitcast
+  ret double %fneg
+}
+
+define double @fneg_f64_bitcast_build_vector_v2i32_to_f64(i32 %elt0, i32 %elt1) {
+; GCN-LABEL: fneg_f64_bitcast_build_vector_v2i32_to_f64:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: fneg_f64_bitcast_build_vector_v2i32_to_f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %insert.0 = insertelement <2 x i32> poison, i32 %elt0, i32 0
+  %insert.1 = insertelement <2 x i32> %insert.0, i32 %elt1, i32 1
+  %bitcast = bitcast <2 x i32> %insert.1 to double
+  %fneg = fneg double %bitcast
+  ret double %fneg
+}
+
+define double @fneg_f64_bitcast_build_vector_v2f32_to_f64(float %elt0, float %elt1) {
+; GCN-LABEL: fneg_f64_bitcast_build_vector_v2f32_to_f64:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: fneg_f64_bitcast_build_vector_v2f32_to_f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %insert.0 = insertelement <2 x float> poison, float %elt0, i32 0
+  %insert.1 = insertelement <2 x float> %insert.0, float %elt1, i32 1
+  %bitcast = bitcast <2 x float> %insert.1 to double
+  %fneg = fneg double %bitcast
+  ret double %fneg
+}
+
+define double @fneg_f64_bitcast_build_vector_v4i16_to_f64(i16 %elt0, i16 %elt1, i16 %elt2, i16 %elt3) {
+; GFX7-LABEL: fneg_f64_bitcast_build_vector_v4i16_to_f64:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; GFX7-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX7-NEXT:    v_or_b32_e32 v2, v2, v3
+; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX7-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX7-NEXT:    v_xor_b32_e32 v1, 0x80000000, v2
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: fneg_f64_bitcast_build_vector_v4i16_to_f64:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
+; GFX9-NEXT:    v_perm_b32 v2, v3, v2, s4
+; GFX9-NEXT:    v_perm_b32 v0, v1, v0, s4
+; GFX9-NEXT:    v_xor_b32_e32 v1, 0x80000000, v2
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: fneg_f64_bitcast_build_vector_v4i16_to_f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_perm_b32 v2, v3, v2, 0x5040100
+; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v2
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %insert.0 = insertelement <4 x i16> poison, i16 %elt0, i32 0
+  %insert.1 = insertelement <4 x i16> %insert.0, i16 %elt1, i32 1
+  %insert.2 = insertelement <4 x i16> %insert.1, i16 %elt2, i32 2
+  %insert.3 = insertelement <4 x i16> %insert.2, i16 %elt3, i32 3
+  %bitcast = bitcast <4 x i16> %insert.3 to double
+  %fneg = fneg double %bitcast
+  ret double %fneg
+}
+
+define double @fneg_f64_bitcast_build_vector_v4f16_to_f64(half %elt0, half %elt1, half %elt2, half %elt3) {
+; GFX7-LABEL: fneg_f64_bitcast_build_vector_v4f16_to_f64:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; GFX7-NEXT:    v_or_b32_e32 v2, v2, v3
+; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX7-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX7-NEXT:    v_xor_b32_e32 v1, 0x80000000, v2
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: fneg_f64_bitcast_build_vector_v4f16_to_f64:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
+; GFX9-NEXT:    v_perm_b32 v2, v3, v2, s4
+; GFX9-NEXT:    v_perm_b32 v0, v1, v0, s4
+; GFX9-NEXT:    v_xor_b32_e32 v1, 0x80000000, v2
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: fneg_f64_bitcast_build_vector_v4f16_to_f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_perm_b32 v2, v3, v2, 0x5040100
+; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v2
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %insert.0 = insertelement <4 x half> poison, half %elt0, i32 0
+  %insert.1 = insertelement <4 x half> %insert.0, half %elt1, i32 1
+  %insert.2 = insertelement <4 x half> %insert.1, half %elt2, i32 2
+  %insert.3 = insertelement <4 x half> %insert.2, half %elt3, i32 3
+  %bitcast = bitcast <4 x half> %insert.3 to double
+  %fneg = fneg double %bitcast
+  ret double %fneg
+}
+
+define double @fneg_f64_bitcast_build_vector_v4bf16_to_f64(bfloat %elt0, bfloat %elt1, bfloat %elt2, bfloat %elt3) {
+; GFX7-LABEL: fneg_f64_bitcast_build_vector_v4bf16_to_f64:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
+; GFX7-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX7-NEXT:    v_alignbit_b32 v2, v3, v2, 16
+; GFX7-NEXT:    v_alignbit_b32 v0, v1, v0, 16
+; GFX7-NEXT:    v_xor_b32_e32 v1, 0x80000000, v2
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: fneg_f64_bitcast_build_vector_v4bf16_to_f64:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_and_b32_e32 v3, 0xffff0000, v3
+; GFX9-NEXT:    v_or_b32_sdwa v2, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9-NEXT:    v_and_b32_e32 v1, 0xffff0000, v1
+; GFX9-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9-NEXT:    v_xor_b32_e32 v1, 0x80000000, v2
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: fneg_f64_bitcast_build_vector_v4bf16_to_f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
+; GFX11-NEXT:    v_and_b32_e32 v3, 0xffff0000, v3
+; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX11-NEXT:    v_and_b32_e32 v1, 0xffff0000, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_or_b32_e32 v2, v2, v3
+; GFX11-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v2
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %insert.0 = insertelement <4 x bfloat> poison, bfloat %elt0, i32 0
+  %insert.1 = insertelement <4 x bfloat> %insert.0, bfloat %elt1, i32 1
+  %insert.2 = insertelement <4 x bfloat> %insert.1, bfloat %elt2, i32 2
+  %insert.3 = insertelement <4 x bfloat> %insert.2, bfloat %elt3, i32 3
+  %bitcast = bitcast <4 x bfloat> %insert.3 to double
+  %fneg = fneg double %bitcast
+  ret double %fneg
+}
+
+define double @fneg_f64_bitcast_build_vector_v2i32_to_f64_modifier_user(i32 %elt0, i32 %elt1, double %fp.val) {
+; GCN-LABEL: fneg_f64_bitcast_build_vector_v2i32_to_f64_modifier_user:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f64 v[0:1], -v[0:1], v[2:3]
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: fneg_f64_bitcast_build_vector_v2i32_to_f64_modifier_user:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_mul_f64 v[0:1], -v[0:1], v[2:3]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %insert.0 = insertelement <2 x i32> poison, i32 %elt0, i32 0
+  %insert.1 = insertelement <2 x i32> %insert.0, i32 %elt1, i32 1
+  %bitcast = bitcast <2 x i32> %insert.1 to double
+  %fneg = fneg double %bitcast
+  %fmul = fmul double %fneg, %fp.val
+  ret double %fmul
+}
+
+define { double, double } @fneg_f64_bitcast_build_vector_v2i32_to_f64_multi_modifier_user(i32 %elt0, i32 %elt1, double %fp.val0, double %fp.val1) {
+; GCN-LABEL: fneg_f64_bitcast_build_vector_v2i32_to_f64_multi_modifier_user:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f64 v[6:7], -v[0:1], v[2:3]
+; GCN-NEXT:    v_mul_f64 v[2:3], v[4:5], -v[0:1]
+; GCN-NEXT:    v_mov_b32_e32 v0, v6
+; GCN-NEXT:    v_mov_b32_e32 v1, v7
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: fneg_f64_bitcast_build_vector_v2i32_to_f64_multi_modifier_user:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_mul_f64 v[6:7], -v[0:1], v[2:3]
+; GFX11-NEXT:    v_mul_f64 v[2:3], v[4:5], -v[0:1]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-NEXT:    v_dual_mov_b32 v0, v6 :: v_dual_mov_b32 v1, v7
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %insert.0 = insertelement <2 x i32> poison, i32 %elt0, i32 0
+  %insert.1 = insertelement <2 x i32> %insert.0, i32 %elt1, i32 1
+  %bitcast = bitcast <2 x i32> %insert.1 to double
+  %fneg = fneg double %bitcast
+  %fmul0 = fmul double %fneg, %fp.val0
+  %fmul1 = fmul double %fp.val1, %fneg
+  %ret.0 = insertvalue { double, double } poison, double %fmul0, 0
+  %ret.1 = insertvalue { double, double } %ret.0, double %fmul1, 1
+  ret { double, double } %ret.1
+}
+
+define double @fneg_f64_bitcast_build_vector_v2i32_to_f64_modifier_user_integer_neg_source(i32 %elt0, i32 %elt1, double %fp.val) {
+; GCN-LABEL: fneg_f64_bitcast_build_vector_v2i32_to_f64_modifier_user_integer_neg_source:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GCN-NEXT:    v_mul_f64 v[0:1], -v[0:1], v[2:3]
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: fneg_f64_bitcast_build_vector_v2i32_to_f64_modifier_user_integer_neg_source:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_mul_f64 v[0:1], -v[0:1], v[2:3]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %neg.elt1 = xor i32 %elt1, -2147483648
+  %insert.0 = insertelement <2 x i32> poison, i32 %elt0, i32 0
+  %insert.1 = insertelement <2 x i32> %insert.0, i32 %neg.elt1, i32 1
+  %bitcast = bitcast <2 x i32> %insert.1 to double
+  %fneg = fneg double %bitcast
+  %fmul = fmul double %fneg, %fp.val
+  ret double %fmul
+}
+
+define double @fneg_f64_bitcast_build_vector_v2f32_foldable_sources_to_f64(float %elt0, float %elt1) {
+; GCN-LABEL: fneg_f64_bitcast_build_vector_v2f32_foldable_sources_to_f64:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_add_f32_e32 v1, 2.0, v1
+; GCN-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: fneg_f64_bitcast_build_vector_v2f32_foldable_sources_to_f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_add_f32_e32 v1, 2.0, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %fadd = fadd nsz nnan float %elt1, 2.0
+  %insert.0 = insertelement <2 x float> poison, float %elt0, i32 0
+  %insert.1 = insertelement <2 x float> %insert.0, float %fadd, i32 1
+  %bitcast = bitcast <2 x float> %insert.1 to double
+  %fneg = fneg double %bitcast
+  ret double %fneg
+}
+
+define double @fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_source_user(float %elt0, float %elt1, ptr addrspace(1) %ptr) {
+; GFX7-LABEL: fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_source_user:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; GFX7-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_source_user:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
+; GFX9-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_source_user:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_xor_b32_e32 v4, 0x80000000, v1
+; GFX11-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GFX11-NEXT:    v_mov_b32_e32 v1, v4
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %insert.0 = insertelement <2 x float> poison, float %elt0, i32 0
+  %insert.1 = insertelement <2 x float> %insert.0, float %elt1, i32 1
+  store <2 x float> %insert.1, ptr addrspace(1) %ptr
+  %bitcast = bitcast <2 x float> %insert.1 to double
+  %fneg = fneg double %bitcast
+  ret double %fneg
+}
+
+define { double, <2 x float> } @fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_source_foldable_user(float %elt0, float %elt1, <2 x float> %arg.v2f32) {
+; GCN-LABEL: fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_source_foldable_user:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_add_f32_e32 v2, v0, v2
+; GCN-NEXT:    v_add_f32_e32 v3, v1, v3
+; GCN-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_source_foldable_user:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_xor_b32_e32 v4, 0x80000000, v1
+; GFX11-NEXT:    v_dual_add_f32 v2, v0, v2 :: v_dual_add_f32 v3, v1, v3
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-NEXT:    v_mov_b32_e32 v1, v4
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %insert.0 = insertelement <2 x float> poison, float %elt0, i32 0
+  %insert.1 = insertelement <2 x float> %insert.0, float %elt1, i32 1
+  %other.bitcast.source.user = fadd <2 x float> %insert.1, %arg.v2f32
+  %bitcast = bitcast <2 x float> %insert.1 to double
+  %fneg = fneg double %bitcast
+  %ret.0 = insertvalue { double, <2 x float> } poison, double %fneg, 0
+  %ret.1 = insertvalue { double, <2 x float> } %ret.0, <2 x float> %other.bitcast.source.user, 1
+  ret { double, <2 x float> } %ret.1
+}
+
+define { double, double } @fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_user(float %elt0, float %elt1) {
+; GCN-LABEL: fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_user:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v3, v1
+; GCN-NEXT:    v_xor_b32_e32 v1, 0x80000000, v3
+; GCN-NEXT:    v_mov_b32_e32 v2, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_user:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_dual_mov_b32 v3, v1 :: v_dual_mov_b32 v2, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v3
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %insert.0 = insertelement <2 x float> poison, float %elt0, i32 0
+  %insert.1 = insertelement <2 x float> %insert.0, float %elt1, i32 1
+  %bitcast = bitcast <2 x float> %insert.1 to double
+  %fneg = fneg double %bitcast
+  %ret.0 = insertvalue { double, double } poison, double %fneg, 0
+  %ret.1 = insertvalue { double, double } %ret.0, double %bitcast, 1
+  ret { double, double } %ret.1
+}
+
+define { double, double } @fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_foldable_user(float %elt0, float %elt1, double %arg.f64) {
+; GCN-LABEL: fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_foldable_user:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_add_f64 v[2:3], v[0:1], v[2:3]
+; GCN-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_foldable_user:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_add_f64 v[2:3], v[0:1], v[2:3]
+; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %insert.0 = insertelement <2 x float> poison, float %elt0, i32 0
+  %insert.1 = insertelement <2 x float> %insert.0, float %elt1, i32 1
+  %bitcast = bitcast <2 x float> %insert.1 to double
+  %other.bitcast.user = fadd double %bitcast, %arg.f64
+  %fneg = fneg double %bitcast
+  %ret.0 = insertvalue { double, double } poison, double %fneg, 0
+  %ret.1 = insertvalue { double, double } %ret.0, double %other.bitcast.user, 1
+  ret { double, double } %ret.1
+}

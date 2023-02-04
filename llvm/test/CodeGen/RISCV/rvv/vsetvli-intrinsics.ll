@@ -6,141 +6,94 @@
 
 declare iXLen @llvm.riscv.vsetvli.iXLen(iXLen, iXLen, iXLen)
 declare iXLen @llvm.riscv.vsetvlimax.iXLen(iXLen, iXLen)
-declare iXLen @llvm.riscv.vsetvli.opt.iXLen(iXLen, iXLen, iXLen)
-declare iXLen @llvm.riscv.vsetvlimax.opt.iXLen(iXLen, iXLen)
 
-define void @test_vsetvli_e8m1(iXLen %avl) nounwind {
+define iXLen @test_vsetvli_e8m1(iXLen %avl) nounwind {
 ; CHECK-LABEL: test_vsetvli_e8m1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, a0, e8, m1, ta, mu
+; CHECK-NEXT:    ret
+  %vl = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %avl, iXLen 0, iXLen 0)
+  ret iXLen %vl
+}
+
+define iXLen @test_vsetvli_e16mf4(iXLen %avl) nounwind {
+; CHECK-LABEL: test_vsetvli_e16mf4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, a0, e16, mf4, ta, mu
+; CHECK-NEXT:    ret
+  %vl = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %avl, iXLen 1, iXLen 6)
+  ret iXLen %vl
+}
+
+define iXLen @test_vsetvli_e64mf8(iXLen %avl) nounwind {
+; CHECK-LABEL: test_vsetvli_e64mf8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, a0, e64, mf8, ta, mu
+; CHECK-NEXT:    ret
+  %vl = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %avl, iXLen 3, iXLen 5)
+  ret iXLen %vl
+}
+
+define iXLen @test_vsetvli_e8mf2_zero_avl() nounwind {
+; CHECK-LABEL: test_vsetvli_e8mf2_zero_avl:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli a0, 0, e8, mf2, ta, mu
+; CHECK-NEXT:    ret
+  %vl = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen 0, iXLen 0, iXLen 7)
+  ret iXLen %vl
+}
+
+define iXLen @test_vsetvli_e32mf8_zero_avl() nounwind {
+; CHECK-LABEL: test_vsetvli_e32mf8_zero_avl:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli a0, 0, e16, mf4, ta, mu
+; CHECK-NEXT:    ret
+  %vl = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen 0, iXLen 1, iXLen 6)
+  ret iXLen %vl
+}
+
+define iXLen @test_vsetvlimax_e32m2() nounwind {
+; CHECK-LABEL: test_vsetvlimax_e32m2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
+; CHECK-NEXT:    ret
+  %vl = call iXLen @llvm.riscv.vsetvlimax.iXLen(iXLen 2, iXLen 1)
+  ret iXLen %vl
+}
+
+define iXLen @test_vsetvlimax_e64m4() nounwind {
+; CHECK-LABEL: test_vsetvlimax_e64m4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
+; CHECK-NEXT:    ret
+  %vl = call iXLen @llvm.riscv.vsetvlimax.iXLen(iXLen 3, iXLen 2)
+  ret iXLen %vl
+}
+
+define iXLen @test_vsetvlimax_e64m8() nounwind {
+; CHECK-LABEL: test_vsetvlimax_e64m8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
+; CHECK-NEXT:    ret
+  %vl = call iXLen @llvm.riscv.vsetvlimax.iXLen(iXLen 3, iXLen 3)
+  ret iXLen %vl
+}
+
+; Check that we remove the intrinsic if it's unused.
+define void @test_vsetvli_e8m1_nouse(iXLen %avl) nounwind {
+; CHECK-LABEL: test_vsetvli_e8m1_nouse:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
   call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %avl, iXLen 0, iXLen 0)
   ret void
 }
 
-define void @test_vsetvli_e16mf4(iXLen %avl) nounwind {
-; CHECK-LABEL: test_vsetvli_e16mf4:
+define void @test_vsetvlimax_e32m2_nouse() nounwind {
+; CHECK-LABEL: test_vsetvlimax_e32m2_nouse:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
-; CHECK-NEXT:    ret
-  call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %avl, iXLen 1, iXLen 6)
-  ret void
-}
-
-define void @test_vsetvli_e64mf8(iXLen %avl) nounwind {
-; CHECK-LABEL: test_vsetvli_e64mf8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, mf8, ta, mu
-; CHECK-NEXT:    ret
-  call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %avl, iXLen 3, iXLen 5)
-  ret void
-}
-
-define void @test_vsetvli_e8mf2_zero_avl() nounwind {
-; CHECK-LABEL: test_vsetvli_e8mf2_zero_avl:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e8, mf2, ta, mu
-; CHECK-NEXT:    ret
-  call iXLen @llvm.riscv.vsetvli.iXLen(iXLen 0, iXLen 0, iXLen 7)
-  ret void
-}
-
-define void @test_vsetvli_e32mf8_zero_avl() nounwind {
-; CHECK-LABEL: test_vsetvli_e32mf8_zero_avl:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e16, mf4, ta, mu
-; CHECK-NEXT:    ret
-  call iXLen @llvm.riscv.vsetvli.iXLen(iXLen 0, iXLen 1, iXLen 6)
-  ret void
-}
-
-define void @test_vsetvlimax_e32m2() nounwind {
-; CHECK-LABEL: test_vsetvlimax_e32m2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
 ; CHECK-NEXT:    ret
   call iXLen @llvm.riscv.vsetvlimax.iXLen(iXLen 2, iXLen 1)
   ret void
-}
-
-define void @test_vsetvlimax_e64m4() nounwind {
-; CHECK-LABEL: test_vsetvlimax_e64m4:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
-; CHECK-NEXT:    ret
-  call iXLen @llvm.riscv.vsetvlimax.iXLen(iXLen 3, iXLen 2)
-  ret void
-}
-
-define void @test_vsetvlimax_e64m8() nounwind {
-; CHECK-LABEL: test_vsetvlimax_e64m8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
-; CHECK-NEXT:    ret
-  call iXLen @llvm.riscv.vsetvlimax.iXLen(iXLen 3, iXLen 3)
-  ret void
-}
-
-define iXLen @test_vsetvli_opt_e8m1(iXLen %avl) nounwind {
-; CHECK-LABEL: test_vsetvli_opt_e8m1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e8, m1, ta, mu
-; CHECK-NEXT:    ret
-  %vl = call iXLen @llvm.riscv.vsetvli.opt.iXLen(iXLen %avl, iXLen 0, iXLen 0)
-  ret iXLen %vl
-}
-
-; Check that we remove the intrinsic if it's unused.
-define void @test_vsetvli_opt_e8m1_nouse(iXLen %avl) nounwind {
-; CHECK-LABEL: test_vsetvli_opt_e8m1_nouse:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    ret
-  call iXLen @llvm.riscv.vsetvli.opt.iXLen(iXLen %avl, iXLen 0, iXLen 0)
-  ret void
-}
-
-define iXLen @test_vsetvli_opt_e16mf4(iXLen %avl) nounwind {
-; CHECK-LABEL: test_vsetvli_opt_e16mf4:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e16, mf4, ta, mu
-; CHECK-NEXT:    ret
-  %vl = call iXLen @llvm.riscv.vsetvli.opt.iXLen(iXLen %avl, iXLen 1, iXLen 6)
-  ret iXLen %vl
-}
-
-define iXLen @test_vsetvli_opt_e32mf8_zero_avl() nounwind {
-; CHECK-LABEL: test_vsetvli_opt_e32mf8_zero_avl:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 0, e16, mf4, ta, mu
-; CHECK-NEXT:    ret
-  %vl = call iXLen @llvm.riscv.vsetvli.opt.iXLen(iXLen 0, iXLen 1, iXLen 6)
-  ret iXLen %vl
-}
-
-define iXLen @test_vsetvlimax_opt_e32m2() nounwind {
-; CHECK-LABEL: test_vsetvlimax_opt_e32m2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
-; CHECK-NEXT:    ret
-  %vl = call iXLen @llvm.riscv.vsetvlimax.opt.iXLen(iXLen 2, iXLen 1)
-  ret iXLen %vl
-}
-
-define void @test_vsetvlimax_opt_e32m2_nouse() nounwind {
-; CHECK-LABEL: test_vsetvlimax_opt_e32m2_nouse:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    ret
-  call iXLen @llvm.riscv.vsetvlimax.opt.iXLen(iXLen 2, iXLen 1)
-  ret void
-}
-
-define iXLen @test_vsetvlimax_opt_e64m4() nounwind {
-; CHECK-LABEL: test_vsetvlimax_opt_e64m4:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
-; CHECK-NEXT:    ret
-  %vl = call iXLen @llvm.riscv.vsetvlimax.opt.iXLen(iXLen 3, iXLen 2)
-  ret iXLen %vl
 }
 
 declare <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32.iXLen(<vscale x 4 x i32>, <vscale x 4 x i32>*, iXLen)

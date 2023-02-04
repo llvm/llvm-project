@@ -4,11 +4,11 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
 endif()
 
 # Set up the target architectures to build the GPU libc for.
-set(all_amdgpu_architectures "gfx700;gfx701;gfx801;gfx803;gfx900;gfx902;gfx906;"
-                             "gfx908;gfx90a;gfx90c;gfx940;gfx1010;gfx1030;"
-                             "gfx1031;gfx1032;gfx1033;gfx1034;gfx1035;gfx1036;"
+set(all_amdgpu_architectures "gfx700;gfx701;gfx801;gfx803;gfx900;gfx902;gfx906"
+                             "gfx908;gfx90a;gfx90c;gfx940;gfx1010;gfx1030"
+                             "gfx1031;gfx1032;gfx1033;gfx1034;gfx1035;gfx1036"
                              "gfx1100;gfx1101;gfx1102;gfx1103")
-set(all_nvptx_architectures "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62;"
+set(all_nvptx_architectures "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62"
                             "sm_70;sm_72;sm_75;sm_80;sm_86")
 set(all_gpu_architectures
     "${all_amdgpu_architectures};${all_nvptx_architectures}")
@@ -17,6 +17,8 @@ set(LIBC_GPU_ARCHITECTURES ${all_gpu_architectures} CACHE STRING
 if(LIBC_GPU_ARCHITECTURES STREQUAL "all")
   set(LIBC_GPU_ARCHITECTURES ${all_gpu_architectures} FORCE)
 endif()
+message(STATUS "Building libc for the following GPU architectures: "
+               "${all_gpu_architectures}")
 
 # Ensure the compiler is a valid clang when building the GPU target.
 set(req_ver "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")

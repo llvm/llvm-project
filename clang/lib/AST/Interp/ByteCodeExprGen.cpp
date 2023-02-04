@@ -686,6 +686,41 @@ bool ByteCodeExprGen<Emitter>::VisitFloatCompoundAssignOperator(
 }
 
 template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitPointerCompoundAssignOperator(
+    const CompoundAssignOperator *E) {
+  BinaryOperatorKind Op = E->getOpcode();
+  const Expr *LHS = E->getLHS();
+  const Expr *RHS = E->getRHS();
+  std::optional<PrimType> LT = classify(LHS->getType());
+  std::optional<PrimType> RT = classify(RHS->getType());
+
+  if (Op != BO_AddAssign && Op != BO_SubAssign)
+    return false;
+
+  if (!LT || !RT)
+    return false;
+  assert(*LT == PT_Ptr);
+
+  if (!visit(LHS))
+    return false;
+
+  if (!this->emitLoadPtr(LHS))
+    return false;
+
+  if (!visit(RHS))
+    return false;
+
+  if (Op == BO_AddAssign)
+    this->emitAddOffset(*RT, E);
+  else
+    this->emitSubOffset(*RT, E);
+
+  if (DiscardResult)
+    return this->emitStorePopPtr(E);
+  return this->emitStorePtr(E);
+}
+
+template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
     const CompoundAssignOperator *E) {
 
@@ -693,6 +728,9 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
   // require special care.
   if (E->getType()->isFloatingType())
     return VisitFloatCompoundAssignOperator(E);
+
+  if (E->getType()->isPointerType())
+    return VisitPointerCompoundAssignOperator(E);
 
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
@@ -705,9 +743,7 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
   if (!LT || !RT || !ResultT || !LHSComputationT)
     return false;
 
-  assert(!E->getType()->isPointerType() &&
-         "Support pointer arithmethic in compound assignment operators");
-
+  assert(!E->getType()->isPointerType() && "Handled above");
   assert(!E->getType()->isFloatingType() && "Handled above");
 
   // Get LHS pointer, load its value and get RHS value.
@@ -780,6 +816,62 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
   if (DiscardResult)
     return this->emitStorePop(*ResultT, E);
   return this->emitStore(*ResultT, E);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitExprWithCleanups(
+    const ExprWithCleanups *E) {
+  const Expr *SubExpr = E->getSubExpr();
+
+  assert(E->getNumObjects() == 0 && "TODO: Implement cleanups");
+  if (!this->visit(SubExpr))
+    return false;
+
+  if (DiscardResult)
+    return this->emitPopPtr(E);
+  return true;
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitMaterializeTemporaryExpr(
+    const MaterializeTemporaryExpr *E) {
+  StorageDuration SD = E->getStorageDuration();
+
+  // We conservatively only support these for now.
+  if (SD != SD_Static && SD != SD_Automatic)
+    return false;
+
+  const Expr *SubExpr = E->getSubExpr();
+  std::optional<PrimType> SubExprT = classify(SubExpr);
+  // FIXME: Implement this for records and arrays as well.
+  if (!SubExprT)
+    return false;
+
+  if (SD == SD_Static) {
+    if (std::optional<unsigned> GlobalIndex = P.createGlobal(E)) {
+      const LifetimeExtendedTemporaryDecl *TempDecl =
+          E->getLifetimeExtendedTemporaryDecl();
+
+      if (!this->visitInitializer(SubExpr))
+        return false;
+
+      if (!this->emitInitGlobalTemp(*SubExprT, *GlobalIndex, TempDecl, E))
+        return false;
+      return this->emitGetPtrGlobal(*GlobalIndex, E);
+    }
+  } else if (SD == SD_Automatic) {
+    if (std::optional<unsigned> LocalIndex =
+            allocateLocalPrimitive(SubExpr, *SubExprT, true, true)) {
+      if (!this->visitInitializer(SubExpr))
+        return false;
+
+      if (!this->emitSetLocal(*SubExprT, *LocalIndex, E))
+        return false;
+      return this->emitGetPtrLocal(*LocalIndex, E);
+    }
+  }
+
+  return false;
 }
 
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {

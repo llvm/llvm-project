@@ -365,6 +365,18 @@ public:
 
     return cases;
   }
+
+  std::vector<LLVMEnumAttrCase> getAllUnsupportedCases() const {
+    const auto *inits = def->getValueAsListInit("unsupported");
+
+    std::vector<LLVMEnumAttrCase> cases;
+    cases.reserve(inits->size());
+
+    for (const llvm::Init *init : *inits)
+      cases.emplace_back(cast<llvm::DefInit>(init));
+
+    return cases;
+  }
 };
 
 // Wraper class around a Tablegen definition of a C-style LLVM enum attribute.
@@ -472,6 +484,12 @@ static void emitOneEnumFromConversion(const llvm::Record *record,
     os << formatv("  case {0}::{1}:\n", llvmClass, llvmEnumerant);
     os << formatv("    return {0}::{1}::{2};\n", cppNamespace, cppClassName,
                   cppEnumerant);
+  }
+  for (const auto &enumerant : enumAttr.getAllUnsupportedCases()) {
+    StringRef llvmEnumerant = enumerant.getLLVMEnumerant();
+    os << formatv("  case {0}::{1}:\n", llvmClass, llvmEnumerant);
+    os << formatv("    llvm_unreachable(\"unsupported case {0}::{1}\");\n",
+                  enumAttr.getLLVMClassName(), llvmEnumerant);
   }
 
   os << "  }\n";

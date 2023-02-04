@@ -163,27 +163,37 @@ define float @nearest32_via_rint(float %x) {
   ret float %a
 }
 
+; This is not "minimum" because a -0.0 input returns +0.0.
+
 define float @fmin32(float %x) {
 ; CHECK-LABEL: fmin32:
 ; CHECK:         .functype fmin32 (f32) -> (f32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    local.get $push2=, 0
 ; CHECK-NEXT:    f32.const $push0=, 0x0p0
-; CHECK-NEXT:    f32.min $push1=, $pop2, $pop0
-; CHECK-NEXT:    return $pop1
+; CHECK-NEXT:    local.get $push5=, 0
+; CHECK-NEXT:    local.get $push4=, 0
+; CHECK-NEXT:    f32.const $push3=, 0x0p0
+; CHECK-NEXT:    f32.ge $push1=, $pop4, $pop3
+; CHECK-NEXT:    f32.select $push2=, $pop0, $pop5, $pop1
+; CHECK-NEXT:    return $pop2
   %a = fcmp ult float %x, 0.0
   %b = select i1 %a, float %x, float 0.0
   ret float %b
 }
 
+; This is not "maximum" because a -0.0 input returns +0.0.
+
 define float @fmax32(float %x) {
 ; CHECK-LABEL: fmax32:
 ; CHECK:         .functype fmax32 (f32) -> (f32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    local.get $push2=, 0
 ; CHECK-NEXT:    f32.const $push0=, 0x0p0
-; CHECK-NEXT:    f32.max $push1=, $pop2, $pop0
-; CHECK-NEXT:    return $pop1
+; CHECK-NEXT:    local.get $push5=, 0
+; CHECK-NEXT:    local.get $push4=, 0
+; CHECK-NEXT:    f32.const $push3=, 0x0p0
+; CHECK-NEXT:    f32.le $push1=, $pop4, $pop3
+; CHECK-NEXT:    f32.select $push2=, $pop0, $pop5, $pop1
+; CHECK-NEXT:    return $pop2
   %a = fcmp ugt float %x, 0.0
   %b = select i1 %a, float %x, float 0.0
   ret float %b

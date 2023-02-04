@@ -1477,19 +1477,19 @@ defm V_FMAMK_F16_t16       : VOP2Only_Real_MADK_gfx11_with_name<0x037, "v_fmamk_
 defm V_FMAAK_F16_t16       : VOP2Only_Real_MADK_gfx11_with_name<0x038, "v_fmaak_f16">;
 
 // VOP3 only.
-defm V_CNDMASK_B16        : VOP3Only_Realtriple_gfx11<0x25d>;
-defm V_LDEXP_F32          : VOP3Only_Realtriple_gfx11<0x31c>;
-defm V_BFM_B32            : VOP3Only_Realtriple_gfx11<0x31d>;
-defm V_BCNT_U32_B32       : VOP3Only_Realtriple_gfx11<0x31e>;
-defm V_MBCNT_LO_U32_B32   : VOP3Only_Realtriple_gfx11<0x31f>;
-defm V_MBCNT_HI_U32_B32   : VOP3Only_Realtriple_gfx11<0x320>;
-defm V_CVT_PKNORM_I16_F32 : VOP3Only_Realtriple_gfx11<0x321>;
-defm V_CVT_PKNORM_U16_F32 : VOP3Only_Realtriple_gfx11<0x322>;
-defm V_CVT_PK_U16_U32     : VOP3Only_Realtriple_gfx11<0x323>;
-defm V_CVT_PK_I16_I32     : VOP3Only_Realtriple_gfx11<0x324>;
-defm V_ADD_CO_U32         : VOP3beOnly_Realtriple_gfx11<0x300>;
-defm V_SUB_CO_U32         : VOP3beOnly_Realtriple_gfx11<0x301>;
-defm V_SUBREV_CO_U32      : VOP3beOnly_Realtriple_gfx11<0x302>;
+defm V_CNDMASK_B16         : VOP3Only_Realtriple_gfx11<0x25d>;
+defm V_LDEXP_F32           : VOP3Only_Realtriple_gfx11<0x31c>;
+defm V_BFM_B32             : VOP3Only_Realtriple_gfx11<0x31d>;
+defm V_BCNT_U32_B32        : VOP3Only_Realtriple_gfx11<0x31e>;
+defm V_MBCNT_LO_U32_B32    : VOP3Only_Realtriple_gfx11<0x31f>;
+defm V_MBCNT_HI_U32_B32    : VOP3Only_Realtriple_gfx11<0x320>;
+defm V_CVT_PK_NORM_I16_F32 : VOP3Only_Realtriple_with_name_gfx11<0x321, "V_CVT_PKNORM_I16_F32", "v_cvt_pk_norm_i16_f32">;
+defm V_CVT_PK_NORM_U16_F32 : VOP3Only_Realtriple_with_name_gfx11<0x322, "V_CVT_PKNORM_U16_F32", "v_cvt_pk_norm_u16_f32">;
+defm V_CVT_PK_U16_U32      : VOP3Only_Realtriple_gfx11<0x323>;
+defm V_CVT_PK_I16_I32      : VOP3Only_Realtriple_gfx11<0x324>;
+defm V_ADD_CO_U32          : VOP3beOnly_Realtriple_gfx11<0x300>;
+defm V_SUB_CO_U32          : VOP3beOnly_Realtriple_gfx11<0x301>;
+defm V_SUBREV_CO_U32       : VOP3beOnly_Realtriple_gfx11<0x302>;
 
 let SubtargetPredicate = isGFX11Plus in {
   defm : VOP2eInstAliases<V_CNDMASK_B32_e32, V_CNDMASK_B32_e32_gfx11>;

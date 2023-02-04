@@ -56,8 +56,7 @@ static bool verifySubExpr(Value *Expr,
 
   // If it's an instruction, it is either in Tmp or its operands recursively
   // are.
-  SmallVectorImpl<Instruction *>::iterator Entry = find(InstInputs, I);
-  if (Entry != InstInputs.end()) {
+  if (auto Entry = find(InstInputs, I); Entry != InstInputs.end()) {
     InstInputs.erase(Entry);
     return true;
   }
@@ -72,11 +71,8 @@ static bool verifySubExpr(Value *Expr,
   }
 
   // Validate the operands of the instruction.
-  for (unsigned i = 0, e = I->getNumOperands(); i != e; ++i)
-    if (!verifySubExpr(I->getOperand(i), InstInputs))
-      return false;
-
-  return true;
+  return all_of(I->operands(),
+                [&](Value *Op) { return verifySubExpr(Op, InstInputs); });
 }
 
 /// verify - Check internal consistency of this data structure.  If the
@@ -117,8 +113,7 @@ static void RemoveInstInputs(Value *V,
   if (!I) return;
 
   // If the instruction is in the InstInputs list, remove it.
-  SmallVectorImpl<Instruction *>::iterator Entry = find(InstInputs, I);
-  if (Entry != InstInputs.end()) {
+  if (auto Entry = find(InstInputs, I); Entry != InstInputs.end()) {
     InstInputs.erase(Entry);
     return;
   }
@@ -126,10 +121,9 @@ static void RemoveInstInputs(Value *V,
   assert(!isa<PHINode>(I) && "Error, removing something that isn't an input");
 
   // Otherwise, it must have instruction inputs itself.  Zap them recursively.
-  for (unsigned i = 0, e = I->getNumOperands(); i != e; ++i) {
-    if (Instruction *Op = dyn_cast<Instruction>(I->getOperand(i)))
-      RemoveInstInputs(Op, InstInputs);
-  }
+  for (Value *Op : I->operands())
+    if (Instruction *OpInst = dyn_cast<Instruction>(Op))
+      RemoveInstInputs(OpInst, InstInputs);
 }
 
 Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
@@ -167,9 +161,8 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
 
     // All instruction operands are now inputs (and of course, they may also be
     // defined in this block, so they may need to be phi translated themselves.
-    for (unsigned i = 0, e = Inst->getNumOperands(); i != e; ++i)
-      if (Instruction *Op = dyn_cast<Instruction>(Inst->getOperand(i)))
-        InstInputs.push_back(Op);
+    for (Value *Op : Inst->operands())
+      addAsInput(Op);
   }
 
   // Ok, it must be an intermediate result (either because it started that way
@@ -205,11 +198,11 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
   if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
     SmallVector<Value*, 8> GEPOps;
     bool AnyChanged = false;
-    for (unsigned i = 0, e = GEP->getNumOperands(); i != e; ++i) {
-      Value *GEPOp = translateSubExpr(GEP->getOperand(i), CurBB, PredBB, DT);
+    for (Value *Op : GEP->operands()) {
+      Value *GEPOp = translateSubExpr(Op, CurBB, PredBB, DT);
       if (!GEPOp) return nullptr;
 
-      AnyChanged |= GEPOp != GEP->getOperand(i);
+      AnyChanged |= GEPOp != Op;
       GEPOps.push_back(GEPOp);
     }
 
@@ -384,9 +377,8 @@ Value *PHITransAddr::insertTranslatedSubExpr(
   if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
     SmallVector<Value*, 8> GEPOps;
     BasicBlock *CurBB = GEP->getParent();
-    for (unsigned i = 0, e = GEP->getNumOperands(); i != e; ++i) {
-      Value *OpVal = insertTranslatedSubExpr(GEP->getOperand(i), CurBB, PredBB,
-                                             DT, NewInsts);
+    for (Value *Op : GEP->operands()) {
+      Value *OpVal = insertTranslatedSubExpr(Op, CurBB, PredBB, DT, NewInsts);
       if (!OpVal) return nullptr;
       GEPOps.push_back(OpVal);
     }

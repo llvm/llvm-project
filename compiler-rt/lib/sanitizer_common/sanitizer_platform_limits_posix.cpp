@@ -18,6 +18,7 @@
 // depends on _FILE_OFFSET_BITS setting.
 // To get this "true" dirent definition, we undefine _FILE_OFFSET_BITS below.
 #undef _FILE_OFFSET_BITS
+#undef _TIME_BITS
 #endif
 
 // Must go after undef _FILE_OFFSET_BITS.

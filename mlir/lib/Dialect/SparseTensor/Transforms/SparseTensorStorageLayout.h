@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This header file defines utilities for lowering and accessing sparse tensor
-// types.
+// This header file defines utilities for the sparse memory layout.
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,13 +22,15 @@ namespace mlir {
 namespace sparse_tensor {
 
 //===----------------------------------------------------------------------===//
-// SparseTensorDescriptor and helpers, manage the sparse tensor memory layout
-// scheme.
+// SparseTensorDescriptor and helpers that manage the sparse tensor memory
+// layout scheme during "direct code generation" (i.e. when sparsification
+// generates the buffers as part of actual IR, in constrast with the library
+// approach where data structures are hidden behind opaque pointers).
 //
-// Sparse tensor storage scheme for rank-dimensional tensor is organized
-// as a single compound type with the following fields. Note that every
-// memref with ? size actually behaves as a "vector", i.e. the stored
-// size is the capacity and the used size resides in the memSizes array.
+// The sparse tensor storage scheme for a rank-dimensional tensor is organized
+// as a single compound type with the following fields. Note that every memref
+// with ? size actually behaves as a "vector", i.e. the stored size is the
+// capacity and the used size resides in the storage_specifier struct.
 //
 // struct {
 //   ; per-dimension d:
@@ -40,14 +41,36 @@ namespace sparse_tensor {
 //        memref<? x idx>  indices-d   ; indices for sparse dim d
 //   ;  if singleton:
 //        memref<? x idx>  indices-d   ; indices for singleton dim d
+//
 //   memref<? x eltType> values        ; values
 //
-//   ; sparse tensor metadata
-//   struct {
+//   struct sparse_tensor.storage_specifier {
 //     array<rank x int> dimSizes    ; sizes for each dimension
 //     array<n x int> memSizes;      ; sizes for each data memref
 //   }
 // };
+//
+// In addition, for a "trailing COO region", defined as a compressed
+// dimension followed by one ore more singleton dimensions, the default
+// SOA storage that is inherent to the TACO format is optimized into an
+// AOS storage where all indices of a stored element appear consecutively.
+// In such cases, a special operation (sparse_tensor.indices_buffer) must
+// be used to access the AOS index array. In the code below, the method
+// `getCOOStart` is used to find the start of the "trailing COO region".
+//
+// Examples.
+//
+// #CSR storage of 2-dim matrix yields
+//   memref<?xindex>                           ; pointers-1
+//   memref<?xindex>                           ; indices-1
+//   memref<?xf64>                             ; values
+//   struct<(array<2 x i64>, array<3 x i64>)>) ; dim0, dim1, 3xsizes
+//
+// #COO storage of 2-dim matrix yields
+//   memref<?xindex>,                          ; pointers-0, essentially [0,sz]
+//   memref<?xindex>                           ; AOS index storage
+//   memref<?xf64>                             ; values
+//   struct<(array<2 x i64>, array<3 x i64>)>) ; dim0, dim1, 3xsizes
 //
 //===----------------------------------------------------------------------===//
 
@@ -198,11 +221,11 @@ private:
   TypedValue<StorageSpecifierType> specifier;
 };
 
-/// A helper class around an array of values that corresponding to a sparse
-/// tensor, provides a set of meaningful APIs to query and update a particular
-/// field in a consistent way.
-/// Users should not make assumption on how a sparse tensor is laid out but
-/// instead relies on this class to access the right value for the right field.
+/// A helper class around an array of values that corresponds to a sparse
+/// tensor. This class provides a set of meaningful APIs to query and update
+/// a particular field in a consistent way. Users should not make assumptions
+/// on how a sparse tensor is laid out but instead rely on this class to access
+/// the right value for the right field.
 template <typename ValueArrayRef>
 class SparseTensorDescriptorImpl {
 protected:
