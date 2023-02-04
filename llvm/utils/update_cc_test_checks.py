@@ -287,10 +287,7 @@ def main():
         run_list.append((None, exe, None, None))
         continue
 
-      check_prefixes = [item for m in common.CHECK_PREFIX_RE.finditer(filecheck_cmd)
-                               for item in m.group(1).split(',')]
-      if not check_prefixes:
-        check_prefixes = ['CHECK']
+      check_prefixes = common.get_check_prefixes(filecheck_cmd)
       run_list.append((check_prefixes, clang_args, commands[1:-1], triple_in_cmd))
 
     # Execute clang, generate LLVM IR, and extract functions.
