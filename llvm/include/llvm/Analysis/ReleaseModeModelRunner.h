@@ -85,12 +85,6 @@ public:
   void *arg_data(int) { llvm_unreachable(NOOP_MODEL_ERRMSG); }
 #undef NOOP_MODEL_ERRMSG
 };
-
-template <class T> bool isEmbeddedModelEvaluatorValid() { return true; }
-
-template <> inline bool isEmbeddedModelEvaluatorValid<NoopSavedModelImpl>() {
-  return false;
-}
 } // namespace llvm
 
 #endif // LLVM_ANALYSIS_RELEASEMODEMODELRUNNER_H
