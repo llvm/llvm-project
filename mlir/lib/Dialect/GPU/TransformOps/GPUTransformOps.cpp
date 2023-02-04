@@ -509,6 +509,12 @@ DiagnosedSilenceableFailure mlir::transform::gpu::mapNestedForeachToThreadsImpl(
     const ArrayRef<DeviceMappingAttrInterface> &threadMappingAttributes) {
   DiagnosedSilenceableFailure diag = DiagnosedSilenceableFailure::success();
   target->walk([&](scf::ForeachThreadOp foreachThreadOp) {
+    // Ignore cases with different attributes.
+    for (Attribute map : foreachThreadOp.getMapping()->getValue()) {
+      if (!llvm::is_contained(threadMappingAttributes, map)) {
+        return WalkResult::skip();
+      }
+    }
     diag = checkAttributeType(threadMappingAttributes,
                               foreachThreadOp.getMapping(), transformOp);
     if (diag.succeeded()) {

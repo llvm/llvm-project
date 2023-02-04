@@ -230,3 +230,42 @@ transform.sequence failures(propagate) {
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
   transform.gpu.map_nested_foreach_to_threads %funcop { blockDim = [12, 9, 1], syncAfterDistribute = false }
 }
+
+// -----
+
+!type = memref<2 x 32 x f32>
+!type1d = memref<32 x f32>
+
+// CHECK-LABEL: func.func @map_multi_level(
+func.func @map_multi_level(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %stream : !gpu.async.token) -> !type {
+  %one = arith.constant 1 : index
+  %c12 = arith.constant 12 : index
+  %c9 = arith.constant 9 : index
+  %c7 = arith.constant 7 : index
+// check that the thread level got distributed but not the warp level.
+//  CHECK-NOT:  {mapping = #gpu.thread
+//      CHECK:  {mapping = [#gpu.warp<x>]}
+  %name = gpu.launch async[%stream] blocks(%arg3, %arg4, %arg5) in (%arg9 = %one, %arg10 = %one, %arg11 = %one)
+            threads(%arg6, %arg7, %arg8) in (%arg12 = %one, %arg13 = %one, %arg14 = %one)
+  {
+    scf.foreach_thread (%i, %j) in (%c7, %c9) {
+        %4 = memref.load %x[%i, %j] : !type
+        %5 = memref.load %y[%i, %j] : !type
+        %6 = math.fma %alpha, %4, %5 : f32
+        memref.store %6, %y[%i, %j] : !type
+     }  { mapping = [#gpu.thread<y>, #gpu.thread<x>]}
+     scf.foreach_thread (%i) in (%c12) {
+        %7 = memref.load %t[%i] : !type1d
+        %8 = arith.addf %alpha, %7 : f32
+        memref.store %8, %t[%i] : !type1d
+     }  {mapping = [#gpu.warp<x>] }
+    gpu.terminator
+  }
+  return %y : !type
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg0: !pdl.operation):
+  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
+  transform.gpu.map_nested_foreach_to_threads %funcop { blockDim = [12, 9] }
+}
