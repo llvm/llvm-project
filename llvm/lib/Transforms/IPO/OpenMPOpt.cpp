@@ -2850,17 +2850,23 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
 
   Function *F = getAnchorScope();
   BasicBlock &EntryBB = F->getEntryBlock();
+  bool IsKernel = OMPInfoCache.Kernels.count(F);
 
   SmallVector<Instruction *> SyncInstWorklist;
   for (auto &RIt : *RPOT) {
     BasicBlock &BB = *RIt;
 
+    bool IsEntryBB = &BB == &EntryBB;
+    // TODO: We use local reasoning since we don't have a divergence analysis
+    // 	     running as well. We could basically allow uniform branches here.
+    bool AlignedBarrierLastInBlock = IsEntryBB && IsKernel;
     ExecutionDomainTy ED;
     // Propagate "incoming edges" into information about this block.
-    if (&BB == &EntryBB) {
+    if (IsEntryBB) {
       handleEntryBB(A, ED);
     } else {
-      // For live non-entry blocks we only propagate information via live edges.
+      // For live non-entry blocks we only propagate
+      // information via live edges.
       if (LivenessAA.isAssumedDead(&BB))
         continue;
 
@@ -2897,7 +2903,10 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
       auto *CB = dyn_cast<CallBase>(&I);
       bool IsNoSync = AA::isNoSyncInst(A, I, *this);
       bool IsAlignedBarrier =
-          !IsNoSync && CB && AANoSync::isAlignedBarrier(*CB);
+          !IsNoSync && CB &&
+          AANoSync::isAlignedBarrier(*CB, AlignedBarrierLastInBlock);
+
+      AlignedBarrierLastInBlock &= IsNoSync;
 
       // Next we check for calls. Aligned barriers are handled
       // explicitly, everything else is kept for the backward traversal and will
@@ -2905,6 +2914,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
       if (CB) {
         if (IsAlignedBarrier) {
           HandleAlignedBarrier(CB, ED);
+          AlignedBarrierLastInBlock = true;
           continue;
         }
 
@@ -2936,6 +2946,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
             const auto &CalleeED = EDAA.getFunctionExecutionDomain();
             ED.IsReachedFromAlignedBarrierOnly =
                 CalleeED.IsReachedFromAlignedBarrierOnly;
+            AlignedBarrierLastInBlock = ED.IsReachedFromAlignedBarrierOnly;
             if (IsNoSync || !CalleeED.IsReachedFromAlignedBarrierOnly)
               ED.EncounteredNonLocalSideEffect |=
                   CalleeED.EncounteredNonLocalSideEffect;
@@ -2951,6 +2962,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
         }
         ED.IsReachedFromAlignedBarrierOnly =
             IsNoSync && ED.IsReachedFromAlignedBarrierOnly;
+        AlignedBarrierLastInBlock &= ED.IsReachedFromAlignedBarrierOnly;
         ED.EncounteredNonLocalSideEffect |= true;
         if (!IsNoSync)
           SyncInstWorklist.push_back(&I);
@@ -2994,7 +3006,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
       auto &FnED = BEDMap[nullptr];
       mergeInPredecessor(A, FnED, ED);
 
-      if (OMPInfoCache.Kernels.count(F))
+      if (IsKernel)
         HandleAlignedBarrier(nullptr, ED);
     }
 
