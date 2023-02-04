@@ -726,6 +726,39 @@ libc_support_library(
     ],
 )
 
+libc_support_library(
+    name = "explogxf",
+    hdrs = ["src/math/generic/explogxf.h"],
+    srcs = ["src/math/generic/explogxf.cpp"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_fma",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":common_constants",
+        ":math_utils",
+        ":libc_root",
+    ],
+)
+
+libc_support_library(
+    name = "inv_trigf_utils",
+    hdrs = ["src/math/generic/inv_trigf_utils.h"],
+    srcs = ["src/math/generic/inv_trigf_utils.cpp"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_fma",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":math_utils",
+        ":libc_root",
+    ],
+)
+
 libc_math_function(
     name = "expm1f",
     additional_deps = [
@@ -734,6 +767,193 @@ libc_math_function(
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
         ":common_constants",
+    ],
+)
+
+libc_math_function(
+    name = "expf",
+    additional_deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":common_constants",
+    ],
+)
+
+libc_math_function(
+    name = "exp10f",
+    additional_deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":common_constants",
+        ":explogxf",
+    ],
+)
+
+libc_math_function(
+    name = "exp2f",
+    additional_deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":explogxf",
+    ],
+)
+
+libc_math_function(
+    name = "logf",
+    additional_deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":common_constants",
+    ],
+)
+
+libc_math_function(
+    name = "log2f",
+    additional_deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":common_constants",
+    ],
+)
+
+libc_math_function(
+    name = "log10f",
+    additional_deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":common_constants",
+    ],
+)
+
+libc_math_function(
+    name = "log1pf",
+    additional_deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":common_constants",
+    ],
+)
+
+libc_math_function(
+    name = "sinhf",
+    additional_deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":common_constants",
+        ":explogxf",
+    ],
+)
+
+libc_math_function(
+    name = "coshf",
+    additional_deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":common_constants",
+        ":explogxf",
+    ],
+)
+
+libc_math_function(
+    name = "tanhf",
+    additional_deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":common_constants",
+        ":explogxf",
+    ],
+)
+
+libc_math_function(
+    name = "asinhf",
+    additional_deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_sqrt",
+        ":common_constants",
+        ":explogxf",
+    ],
+)
+
+libc_math_function(
+    name = "acoshf",
+    additional_deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_sqrt",
+        ":common_constants",
+        ":explogxf",
+    ],
+)
+
+libc_math_function(
+    name = "atanhf",
+    additional_deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":common_constants",
+        ":explogxf",
+    ],
+)
+
+libc_math_function(
+    name = "asinf",
+    additional_deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_sqrt",
+        ":inv_trigf_utils",
+    ],
+)
+
+libc_math_function(
+    name = "acosf",
+    additional_deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_sqrt",
+        ":inv_trigf_utils",
+    ],
+)
+
+libc_math_function(
+    name = "atanf",
+    additional_deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":inv_trigf_utils",
     ],
 )
 
@@ -903,6 +1123,17 @@ libc_math_function(
 
 libc_math_function(
     name = "sinf",
+    additional_deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":range_reduction",
+        ":sincosf_utils",
+    ],
+)
+
+libc_math_function(
+    name = "tanf",
     additional_deps = [
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",

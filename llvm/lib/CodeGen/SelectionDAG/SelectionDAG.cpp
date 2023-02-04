@@ -1363,19 +1363,6 @@ SDNode *SelectionDAG::FindNodeOrInsertPos(const FoldingSetNodeID &ID,
   return N;
 }
 
-void SelectionDAG::addPCSections(
-    const SDNode *Node, MDNode *MD,
-    SmallPtrSet<const llvm::SDNode *, 32> &Visited) {
-  // If we've been here before, return now.
-  if (!Visited.insert(Node).second)
-    return;
-
-  SDEI[Node].PCSections = MD;
-
-  for (const SDValue &Op : Node->op_values())
-    addPCSections(Op.getNode(), MD, Visited);
-}
-
 void SelectionDAG::clear() {
   allnodes_clear();
   OperandRecycler.clear(OperandAllocator);

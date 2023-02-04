@@ -48,47 +48,25 @@ define i64 @multiple() !pcsections !0 {
 ; CHECK-LABEL: multiple:
 ; CHECK-NEXT:  .Lfunc_begin2
 ; CHECK:       # %bb.0: # %entry
-; --
-; DEFCM:       .Lpcsection0:
-; DEFCM-NEXT:    movq
-; --
-; LARGE:       .Lpcsection0:
-; LARGE-NEXT:    movabsq
-; LARGE-NEXT:  .Lpcsection1:
-; LARGE-NEXT:    movq
-; --
+; CHECK:       .Lpcsection0:
+; CHECK-NEXT:    movq
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .Lfunc_end2:
-; CHECK:       .section section_no_aux,"awo",@progbits,.text
-; --
-; DEFCM-NEXT:  .Lpcsection_base2:
-; DEFCM-NEXT:  .long .Lfunc_begin2-.Lpcsection_base2
-; DEFCM-NEXT:  .long .Lfunc_end2-.Lfunc_begin2
-; DEFCM-NEXT:  .section section_aux_42,"awo",@progbits,.text
-; DEFCM-NEXT:  .Lpcsection_base3:
-; DEFCM-NEXT:  .long .Lpcsection0-.Lpcsection_base3
-; DEFCM-NEXT:  .long 42
-; DEFCM-NEXT:  .section section_aux_21264,"awo",@progbits,.text
-; DEFCM-NEXT:  .Lpcsection_base4:
-; DEFCM-NEXT:  .long .Lpcsection0-.Lpcsection_base4
-; DEFCM-NEXT:  .long 21264
-; --
-; LARGE:       .Lpcsection_base2:
-; LARGE-NEXT:  .quad .Lfunc_begin2-.Lpcsection_base2
-; LARGE-NEXT:  .long .Lfunc_end2-.Lfunc_begin2
-; LARGE-NEXT:  .section section_aux_42,"awo",@progbits,.text
-; LARGE-NEXT:  .Lpcsection_base3:
-; LARGE-NEXT:  .quad .Lpcsection0-.Lpcsection_base3
-; LARGE-NEXT:  .Lpcsection_base4:
-; LARGE-NEXT:  .quad .Lpcsection1-.Lpcsection_base4
-; LARGE-NEXT:  .long 42
-; LARGE-NEXT:  .section section_aux_21264,"awo",@progbits,.text
-; LARGE-NEXT:  .Lpcsection_base5:
-; LARGE-NEXT:  .quad .Lpcsection0-.Lpcsection_base5
-; LARGE-NEXT:  .Lpcsection_base6:
-; LARGE-NEXT:  .quad .Lpcsection1-.Lpcsection_base6
-; LARGE-NEXT:  .long 21264
-; --
+; CHECK:       .section	section_no_aux,"awo",@progbits,.text
+; CHECK-NEXT:  .Lpcsection_base2:
+; DEFCM-NEXT:  .long	.Lfunc_begin2-.Lpcsection_base2
+; LARGE-NEXT:  .quad	.Lfunc_begin2-.Lpcsection_base2
+; CHECK-NEXT:  .long	.Lfunc_end2-.Lfunc_begin2
+; CHECK-NEXT:  .section	section_aux_42,"awo",@progbits,.text
+; CHECK-NEXT:  .Lpcsection_base3:
+; DEFCM-NEXT:  .long	.Lpcsection0-.Lpcsection_base3
+; LARGE-NEXT:  .quad	.Lpcsection0-.Lpcsection_base3
+; CHECK-NEXT:  .long	42
+; CHECK-NEXT:  .section	section_aux_21264,"awo",@progbits,.text
+; CHECK-NEXT:  .Lpcsection_base4:
+; DEFCM-NEXT:  .long	.Lpcsection0-.Lpcsection_base4
+; LARGE-NEXT:  .quad	.Lpcsection0-.Lpcsection_base4
+; CHECK-NEXT:  .long	21264
 ; CHECK-NEXT:  .text
 entry:
   %0 = load i64, ptr @bar, align 8, !pcsections !2
@@ -97,29 +75,16 @@ entry:
 
 define i64 @test_simple_atomic() {
 ; CHECK-LABEL: test_simple_atomic:
-; --
-; DEFCM:       .Lpcsection1:
-; DEFCM-NEXT:    movq
-; --
-; LARGE:       .Lpcsection2:
-; LARGE-NEXT:    movabsq
-; LARGE-NEXT:  .Lpcsection3:
-; LARGE-NEXT:    movq
-; --
+; CHECK:       .Lpcsection1:
+; CHECK-NEXT:    movq
 ; CHECK-NOT:   .Lpcsection
 ; CHECK:         addq
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .Lfunc_end3:
-; CHECK:       .section section_no_aux,"awo",@progbits,.text
-; --
-; DEFCM-NEXT:  .Lpcsection_base5:
-; DEFCM-NEXT:  .long .Lpcsection1-.Lpcsection_base5
-; --
-; LARGE-NEXT:  .Lpcsection_base7:
-; LARGE-NEXT:  .quad .Lpcsection2-.Lpcsection_base7
-; LARGE-NEXT:  .Lpcsection_base8:
-; LARGE-NEXT:  .quad .Lpcsection3-.Lpcsection_base8
-; --
+; CHECK:       .section	section_no_aux,"awo",@progbits,.text
+; CHECK-NEXT:  .Lpcsection_base5:
+; DEFCM-NEXT:  .long	.Lpcsection1-.Lpcsection_base5
+; LARGE-NEXT:  .quad	.Lpcsection1-.Lpcsection_base5
 ; CHECK-NEXT:  .text
 entry:
   %0 = load atomic i64, ptr @foo monotonic, align 8, !pcsections !0
@@ -130,38 +95,18 @@ entry:
 
 define i64 @test_complex_atomic() {
 ; CHECK-LABEL: test_complex_atomic:
-; --
-; DEFCM:      .Lpcsection2:
-; DEFCM-NEXT:   movl
-; DEFCM-NEXT: .Lpcsection3:
-; DEFCM-NEXT:   lock
-; --
-; LARGE:       .Lpcsection4:
-; LARGE-NEXT:    movabsq
-; LARGE-NEXT:  .Lpcsection5:
-; LARGE-NEXT:    movl
-; LARGE-NEXT:  .Lpcsection6:
-; LARGE-NEXT:    lock
-; --
+; CHECK:         movl $1
+; CHECK-NEXT:  .Lpcsection2:
+; CHECK-NEXT:    lock xaddq
 ; CHECK-NOT:   .Lpcsection
 ; CHECK:         movq
 ; CHECK:         addq
 ; CHECK:         retq
 ; CHECK-NEXT:  .Lfunc_end4:
-; CHECK:       .section section_no_aux,"awo",@progbits,.text
-; --
-; DEFCM-NEXT:  .Lpcsection_base6:
-; DEFCM-NEXT:  .long .Lpcsection2-.Lpcsection_base6
-; DEFCM-NEXT:  .Lpcsection_base7:
-; DEFCM-NEXT:  .long .Lpcsection3-.Lpcsection_base7
-; --
-; LARGE-NEXT:  .Lpcsection_base9:
-; LARGE-NEXT:  .quad .Lpcsection4-.Lpcsection_base9
-; LARGE-NEXT:  .Lpcsection_base10:
-; LARGE-NEXT:  .quad .Lpcsection5-.Lpcsection_base10
-; LARGE-NEXT:  .Lpcsection_base11:
-; LARGE-NEXT:  .quad .Lpcsection6-.Lpcsection_base11
-; --
+; CHECK:       .section	section_no_aux,"awo",@progbits,.text
+; CHECK-NEXT:  .Lpcsection_base6:
+; DEFCM-NEXT:  .long	.Lpcsection2-.Lpcsection_base6
+; LARGE-NEXT:  .quad	.Lpcsection2-.Lpcsection_base6
 ; CHECK-NEXT:  .text
 entry:
   %0 = atomicrmw add ptr @foo, i64 1 monotonic, align 8, !pcsections !0
@@ -170,6 +115,26 @@ entry:
   store i64 %inc, ptr @bar, align 8
   %add = add nsw i64 %1, %0
   ret i64 %add
+}
+
+define void @mixed_atomic_non_atomic() {
+; CHECK-LABEL: mixed_atomic_non_atomic:
+; CHECK:      .Lpcsection
+; CHECK-NEXT:   movl $1
+; CHECK:      .section        section_no_aux,"awo",@progbits,.text
+; CHECK-NEXT: .Lpcsection_base7:
+; DEFCM-NEXT: .long   .Lpcsection3-.Lpcsection_base7
+; LARGE-NEXT: .quad   .Lpcsection3-.Lpcsection_base7
+; CHECK-NEXT: .text
+entry:
+  %0 = load volatile i32, ptr @foo, align 4
+  %inc = add nsw i32 %0, 1
+  store volatile i32 %inc, ptr @foo, align 4
+  store atomic volatile i32 1, ptr @foo monotonic, align 4, !pcsections !0
+  %1 = load volatile i32, ptr @foo, align 4
+  %dec = add nsw i32 %1, -1
+  store volatile i32 %dec, ptr @foo, align 4
+  ret void
 }
 
 !0 = !{!"section_no_aux"}

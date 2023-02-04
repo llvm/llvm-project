@@ -136,11 +136,11 @@ struct InstructionMapper {
   DenseMap<MachineBasicBlock *, unsigned> MBBFlagsMap;
 
   /// The vector of unsigned integers that the module is mapped to.
-  std::vector<unsigned> UnsignedVec;
+  SmallVector<unsigned> UnsignedVec;
 
   /// Stores the location of the instruction associated with the integer
   /// at index i in \p UnsignedVec for each index i.
-  std::vector<MachineBasicBlock::iterator> InstrList;
+  SmallVector<MachineBasicBlock::iterator> InstrList;
 
   // Set if we added an illegal number in the previous step.
   // Since each illegal number is unique, we only need one of them between
@@ -157,8 +157,8 @@ struct InstructionMapper {
   unsigned mapToLegalUnsigned(
       MachineBasicBlock::iterator &It, bool &CanOutlineWithPrevInstr,
       bool &HaveLegalRange, unsigned &NumLegalInBlock,
-      std::vector<unsigned> &UnsignedVecForMBB,
-      std::vector<MachineBasicBlock::iterator> &InstrListForMBB) {
+      SmallVector<unsigned> &UnsignedVecForMBB,
+      SmallVector<MachineBasicBlock::iterator> &InstrListForMBB) {
     // We added something legal, so we should unset the AddedLegalLastTime
     // flag.
     AddedIllegalLastTime = false;
@@ -211,8 +211,8 @@ struct InstructionMapper {
   /// \returns The integer that \p *It was mapped to.
   unsigned mapToIllegalUnsigned(
       MachineBasicBlock::iterator &It, bool &CanOutlineWithPrevInstr,
-      std::vector<unsigned> &UnsignedVecForMBB,
-      std::vector<MachineBasicBlock::iterator> &InstrListForMBB) {
+      SmallVector<unsigned> &UnsignedVecForMBB,
+      SmallVector<MachineBasicBlock::iterator> &InstrListForMBB) {
     // Can't outline an illegal instruction. Set the flag.
     CanOutlineWithPrevInstr = false;
 
@@ -254,10 +254,18 @@ struct InstructionMapper {
   /// \param TII \p TargetInstrInfo for the function.
   void convertToUnsignedVec(MachineBasicBlock &MBB,
                             const TargetInstrInfo &TII) {
+    LLVM_DEBUG(dbgs() << "*** Converting MBB '" << MBB.getName()
+                      << "' to unsigned vector ***\n");
     unsigned Flags = 0;
 
     // Don't even map in this case.
     if (!TII.isMBBSafeToOutlineFrom(MBB, Flags))
+      return;
+
+    auto OutlinableRanges = TII.getOutlinableRanges(MBB, Flags);
+    LLVM_DEBUG(dbgs() << MBB.getName() << ": " << OutlinableRanges.size()
+                      << " outlinable range(s)\n");
+    if (OutlinableRanges.empty())
       return;
 
     // Store info for the MBB for later outlining.
@@ -279,39 +287,70 @@ struct InstructionMapper {
 
     // FIXME: Should this all just be handled in the target, rather than using
     // repeated calls to getOutliningType?
-    std::vector<unsigned> UnsignedVecForMBB;
-    std::vector<MachineBasicBlock::iterator> InstrListForMBB;
+    SmallVector<unsigned> UnsignedVecForMBB;
+    SmallVector<MachineBasicBlock::iterator> InstrListForMBB;
 
-    for (MachineBasicBlock::iterator Et = MBB.end(); It != Et; ++It) {
-      // Keep track of where this instruction is in the module.
-      switch (TII.getOutliningType(It, Flags)) {
-      case InstrType::Illegal:
+    LLVM_DEBUG(dbgs() << "*** Mapping outlinable ranges ***\n");
+    for (auto &OutlinableRange : OutlinableRanges) {
+      auto OutlinableRangeBegin = OutlinableRange.first;
+      auto OutlinableRangeEnd = OutlinableRange.second;
+#ifndef NDEBUG
+      LLVM_DEBUG(
+          dbgs() << "Mapping "
+                 << std::distance(OutlinableRangeBegin, OutlinableRangeEnd)
+                 << " instruction range\n");
+      // Everything outside of an outlinable range is illegal.
+      unsigned NumSkippedInRange = 0;
+#endif
+      for (; It != OutlinableRangeBegin; ++It) {
+#ifndef NDEBUG
+        ++NumSkippedInRange;
+#endif
         mapToIllegalUnsigned(It, CanOutlineWithPrevInstr, UnsignedVecForMBB,
                              InstrListForMBB);
-        break;
+      }
+#ifndef NDEBUG
+      LLVM_DEBUG(dbgs() << "Skipped " << NumSkippedInRange
+                        << " instructions outside outlinable range\n");
+#endif
+      assert(It != MBB.end() && "Should still have instructions?");
+      // `It` is now positioned at the beginning of a range of instructions
+      // which may be outlinable. Check if each instruction is known to be safe.
+      for (; It != OutlinableRangeEnd; ++It) {
+        // Keep track of where this instruction is in the module.
+        switch (TII.getOutliningType(It, Flags)) {
+        case InstrType::Illegal:
+          mapToIllegalUnsigned(It, CanOutlineWithPrevInstr, UnsignedVecForMBB,
+                               InstrListForMBB);
+          break;
 
-      case InstrType::Legal:
-        mapToLegalUnsigned(It, CanOutlineWithPrevInstr, HaveLegalRange,
-                           NumLegalInBlock, UnsignedVecForMBB, InstrListForMBB);
-        break;
-
-      case InstrType::LegalTerminator:
-        mapToLegalUnsigned(It, CanOutlineWithPrevInstr, HaveLegalRange,
-                           NumLegalInBlock, UnsignedVecForMBB, InstrListForMBB);
-        // The instruction also acts as a terminator, so we have to record that
-        // in the string.
-        mapToIllegalUnsigned(It, CanOutlineWithPrevInstr, UnsignedVecForMBB,
+        case InstrType::Legal:
+          mapToLegalUnsigned(It, CanOutlineWithPrevInstr, HaveLegalRange,
+                             NumLegalInBlock, UnsignedVecForMBB,
                              InstrListForMBB);
-        break;
+          break;
 
-      case InstrType::Invisible:
-        // Normally this is set by mapTo(Blah)Unsigned, but we just want to
-        // skip this instruction. So, unset the flag here.
-        ++NumInvisible;
-        AddedIllegalLastTime = false;
-        break;
+        case InstrType::LegalTerminator:
+          mapToLegalUnsigned(It, CanOutlineWithPrevInstr, HaveLegalRange,
+                             NumLegalInBlock, UnsignedVecForMBB,
+                             InstrListForMBB);
+          // The instruction also acts as a terminator, so we have to record
+          // that in the string.
+          mapToIllegalUnsigned(It, CanOutlineWithPrevInstr, UnsignedVecForMBB,
+                               InstrListForMBB);
+          break;
+
+        case InstrType::Invisible:
+          // Normally this is set by mapTo(Blah)Unsigned, but we just want to
+          // skip this instruction. So, unset the flag here.
+          ++NumInvisible;
+          AddedIllegalLastTime = false;
+          break;
+        }
       }
     }
+
+    LLVM_DEBUG(dbgs() << "HaveLegalRange = " << HaveLegalRange << "\n");
 
     // Are there enough legal instructions in the block for outlining to be
     // possible?
@@ -322,8 +361,8 @@ struct InstructionMapper {
       // repeated substring.
       mapToIllegalUnsigned(It, CanOutlineWithPrevInstr, UnsignedVecForMBB,
                            InstrListForMBB);
-      llvm::append_range(InstrList, InstrListForMBB);
-      llvm::append_range(UnsignedVec, UnsignedVecForMBB);
+      append_range(InstrList, InstrListForMBB);
+      append_range(UnsignedVec, UnsignedVecForMBB);
     }
   }
 
@@ -559,8 +598,8 @@ void MachineOutliner::findCandidates(
       // That is, one must either
       // * End before the other starts
       // * Start after the other ends
-      if (llvm::all_of(CandidatesForRepeatedSeq, [&StartIdx,
-                                                  &EndIdx](const Candidate &C) {
+      if (all_of(CandidatesForRepeatedSeq, [&StartIdx,
+                                            &EndIdx](const Candidate &C) {
             return (EndIdx < C.getStartIdx() || StartIdx > C.getEndIdx());
           })) {
         // It doesn't overlap with anything, so we can outline it.
@@ -720,7 +759,7 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
     Mangler Mg;
     // Get the mangled name of the function for the linkage name.
     std::string Dummy;
-    llvm::raw_string_ostream MangledNameStream(Dummy);
+    raw_string_ostream MangledNameStream(Dummy);
     Mg.getNameWithPrefix(MangledNameStream, F, false);
 
     DISubprogram *OutlinedSP = DB.createFunction(
@@ -754,21 +793,22 @@ bool MachineOutliner::outline(Module &M,
   bool OutlinedSomething = false;
 
   // Sort by benefit. The most beneficial functions should be outlined first.
-  llvm::stable_sort(FunctionList, [](const OutlinedFunction &LHS,
-                                     const OutlinedFunction &RHS) {
-    return LHS.getBenefit() > RHS.getBenefit();
-  });
+  stable_sort(FunctionList,
+              [](const OutlinedFunction &LHS, const OutlinedFunction &RHS) {
+                return LHS.getBenefit() > RHS.getBenefit();
+              });
 
   // Walk over each function, outlining them as we go along. Functions are
   // outlined greedily, based off the sort above.
+  auto *UnsignedVecBegin = Mapper.UnsignedVec.begin();
   for (OutlinedFunction &OF : FunctionList) {
     // If we outlined something that overlapped with a candidate in a previous
     // step, then we can't outline from it.
-    erase_if(OF.Candidates, [&Mapper](Candidate &C) {
-      return std::any_of(
-          Mapper.UnsignedVec.begin() + C.getStartIdx(),
-          Mapper.UnsignedVec.begin() + C.getEndIdx() + 1,
-          [](unsigned I) { return (I == static_cast<unsigned>(-1)); });
+    erase_if(OF.Candidates, [&UnsignedVecBegin](Candidate &C) {
+      return std::any_of(UnsignedVecBegin + C.getStartIdx(),
+                         UnsignedVecBegin + C.getEndIdx() + 1, [](unsigned I) {
+                           return I == static_cast<unsigned>(-1);
+                         });
     });
 
     // If we made it unbeneficial to outline this function, skip it.
@@ -859,9 +899,8 @@ bool MachineOutliner::outline(Module &M,
       MBB.erase(std::next(StartIt), std::next(EndIt));
 
       // Keep track of what we removed by marking them all as -1.
-      for (unsigned &I :
-           llvm::make_range(Mapper.UnsignedVec.begin() + C.getStartIdx(),
-                            Mapper.UnsignedVec.begin() + C.getEndIdx() + 1))
+      for (unsigned &I : make_range(UnsignedVecBegin + C.getStartIdx(),
+                                    UnsignedVecBegin + C.getEndIdx() + 1))
         I = static_cast<unsigned>(-1);
       OutlinedSomething = true;
 
@@ -917,7 +956,7 @@ void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M,
       // contain something worth outlining.
       // FIXME: This should be based off of the maximum size in B of an outlined
       // call versus the size in B of the MBB.
-      if (MBB.empty() || MBB.size() < 2)
+      if (MBB.size() < 2)
         continue;
 
       // Check if MBB could be the target of an indirect branch. If it is, then

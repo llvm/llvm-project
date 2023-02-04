@@ -58,6 +58,47 @@ def SparseTensor_NewOp : SparseTensor_Op<"new", [Pure]>,
   let hasVerifier = 1;
 }
 
+def SparseTensor_PackOp : SparseTensor_Op<"pack">,
+    Arguments<(ins AnyRankedTensor:$data,
+                   AnyRankedTensor:$indices)>,
+    Results<(outs AnySparseTensor: $result)> {
+  let summary = "Returns a sparse tensor from the given (data, indices) pair";
+
+  let description = [{
+    Packs the data/indices into a COO sparse tensor. The coordinates in `indices`
+    shall not exceed the dimension sizes of the returned sparse tensor.
+    Note that the returned tensor must be statically
+    shaped because it is impossible to infer the shape from sparse coordinates.
+
+    `$indices`: stored via a 2-D tensor of integer elements with shape [N, ndims],
+    which specifies the indices of the elements in the sparse tensor that contains
+    non-zero values.
+
+    `$data`: stored via a 1-D tensor with shape [N], that supplies the corresponding
+    values for the indices.
+
+    The operation can be used to materialize a sparse tensor from external sources. E.g.,
+    when passing from Python as two numpy arrays for data and indices.
+
+    Example:
+    ```mlir
+    %data    = arith.constant dense<[ 1     , 5     ]> : tensor<3xf64>
+    %indices = arith.constant dense<[[0,  0],[1,  2]]> : tensor<3x2xindex>
+
+    %st = sparse_tensor.pack %data, %indices : tensor<6xf64>, tensor<6x2xi32
+                                            to tensor<100x100xf64, #COO>
+    // %st = [[1, 0, 0, 0],
+    //        [0, 0, 5, 0],
+    //        [0, 0, 0, 0]]
+    ```
+  }];
+
+  let assemblyFormat = "$data `,` $indices attr-dict `:` type($data) `,` type($indices)"
+                                                   "`to` type($result)";
+
+  let hasVerifier = 1;
+}
+
 def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
   [Pure, SameOperandsAndResultElementType]>,
     Arguments<(ins AnyTensor:$source)>,
