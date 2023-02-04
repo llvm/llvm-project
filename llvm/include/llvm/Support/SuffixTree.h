@@ -145,7 +145,7 @@ public:
     unsigned Length;
 
     /// The start indices of each occurrence.
-    std::vector<unsigned> StartIndices;
+    SmallVector<unsigned> StartIndices;
   };
 
 private:
@@ -232,7 +232,7 @@ public:
   /// Construct a suffix tree from a sequence of unsigned integers.
   ///
   /// \param Str The string to construct the suffix tree for.
-  SuffixTree(const std::vector<unsigned> &Str);
+  SuffixTree(const ArrayRef<unsigned> &Str);
 
   /// Iterator for finding all repeated substrings in the suffix tree.
   struct RepeatedSubstringIterator {
@@ -244,7 +244,7 @@ public:
     RepeatedSubstring RS;
 
     /// The nodes left to visit.
-    std::vector<SuffixTreeNode *> ToVisit;
+    SmallVector<SuffixTreeNode *> ToVisit;
 
     /// The minimum length of a repeated substring to find.
     /// Since we're outlining, we want at least two instructions in the range.
@@ -260,7 +260,7 @@ public:
       N = nullptr;
 
       // Each leaf node represents a repeat of a string.
-      std::vector<SuffixTreeNode *> LeafChildren;
+      SmallVector<SuffixTreeNode *> LeafChildren;
 
       // Continue visiting nodes until we find one which repeats more than once.
       while (!ToVisit.empty()) {

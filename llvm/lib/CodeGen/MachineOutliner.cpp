@@ -136,11 +136,11 @@ struct InstructionMapper {
   DenseMap<MachineBasicBlock *, unsigned> MBBFlagsMap;
 
   /// The vector of unsigned integers that the module is mapped to.
-  std::vector<unsigned> UnsignedVec;
+  SmallVector<unsigned> UnsignedVec;
 
   /// Stores the location of the instruction associated with the integer
   /// at index i in \p UnsignedVec for each index i.
-  std::vector<MachineBasicBlock::iterator> InstrList;
+  SmallVector<MachineBasicBlock::iterator> InstrList;
 
   // Set if we added an illegal number in the previous step.
   // Since each illegal number is unique, we only need one of them between
@@ -157,8 +157,8 @@ struct InstructionMapper {
   unsigned mapToLegalUnsigned(
       MachineBasicBlock::iterator &It, bool &CanOutlineWithPrevInstr,
       bool &HaveLegalRange, unsigned &NumLegalInBlock,
-      std::vector<unsigned> &UnsignedVecForMBB,
-      std::vector<MachineBasicBlock::iterator> &InstrListForMBB) {
+      SmallVector<unsigned> &UnsignedVecForMBB,
+      SmallVector<MachineBasicBlock::iterator> &InstrListForMBB) {
     // We added something legal, so we should unset the AddedLegalLastTime
     // flag.
     AddedIllegalLastTime = false;
@@ -211,8 +211,8 @@ struct InstructionMapper {
   /// \returns The integer that \p *It was mapped to.
   unsigned mapToIllegalUnsigned(
       MachineBasicBlock::iterator &It, bool &CanOutlineWithPrevInstr,
-      std::vector<unsigned> &UnsignedVecForMBB,
-      std::vector<MachineBasicBlock::iterator> &InstrListForMBB) {
+      SmallVector<unsigned> &UnsignedVecForMBB,
+      SmallVector<MachineBasicBlock::iterator> &InstrListForMBB) {
     // Can't outline an illegal instruction. Set the flag.
     CanOutlineWithPrevInstr = false;
 
@@ -287,8 +287,8 @@ struct InstructionMapper {
 
     // FIXME: Should this all just be handled in the target, rather than using
     // repeated calls to getOutliningType?
-    std::vector<unsigned> UnsignedVecForMBB;
-    std::vector<MachineBasicBlock::iterator> InstrListForMBB;
+    SmallVector<unsigned> UnsignedVecForMBB;
+    SmallVector<MachineBasicBlock::iterator> InstrListForMBB;
 
     LLVM_DEBUG(dbgs() << "*** Mapping outlinable ranges ***\n");
     for (auto &OutlinableRange : OutlinableRanges) {
