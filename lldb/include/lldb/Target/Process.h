@@ -2526,6 +2526,8 @@ void PruneThreadPlans();
   lldb::StructuredDataPluginSP
   GetStructuredDataPlugin(ConstString type_name) const;
 
+  virtual void *GetImplementation() { return nullptr; }
+
 protected:
   friend class Trace;
 

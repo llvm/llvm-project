@@ -254,10 +254,18 @@ struct InstructionMapper {
   /// \param TII \p TargetInstrInfo for the function.
   void convertToUnsignedVec(MachineBasicBlock &MBB,
                             const TargetInstrInfo &TII) {
+    LLVM_DEBUG(dbgs() << "*** Converting MBB '" << MBB.getName()
+                      << "' to unsigned vector ***\n");
     unsigned Flags = 0;
 
     // Don't even map in this case.
     if (!TII.isMBBSafeToOutlineFrom(MBB, Flags))
+      return;
+
+    auto OutlinableRanges = TII.getOutlinableRanges(MBB, Flags);
+    LLVM_DEBUG(dbgs() << MBB.getName() << ": " << OutlinableRanges.size()
+                      << " outlinable range(s)\n");
+    if (OutlinableRanges.empty())
       return;
 
     // Store info for the MBB for later outlining.
@@ -282,36 +290,67 @@ struct InstructionMapper {
     std::vector<unsigned> UnsignedVecForMBB;
     std::vector<MachineBasicBlock::iterator> InstrListForMBB;
 
-    for (MachineBasicBlock::iterator Et = MBB.end(); It != Et; ++It) {
-      // Keep track of where this instruction is in the module.
-      switch (TII.getOutliningType(It, Flags)) {
-      case InstrType::Illegal:
+    LLVM_DEBUG(dbgs() << "*** Mapping outlinable ranges ***\n");
+    for (auto &OutlinableRange : OutlinableRanges) {
+      auto OutlinableRangeBegin = OutlinableRange.first;
+      auto OutlinableRangeEnd = OutlinableRange.second;
+#ifndef NDEBUG
+      LLVM_DEBUG(
+          dbgs() << "Mapping "
+                 << std::distance(OutlinableRangeBegin, OutlinableRangeEnd)
+                 << " instruction range\n");
+      // Everything outside of an outlinable range is illegal.
+      unsigned NumSkippedInRange = 0;
+#endif
+      for (; It != OutlinableRangeBegin; ++It) {
+#ifndef NDEBUG
+        ++NumSkippedInRange;
+#endif
         mapToIllegalUnsigned(It, CanOutlineWithPrevInstr, UnsignedVecForMBB,
                              InstrListForMBB);
-        break;
+      }
+#ifndef NDEBUG
+      LLVM_DEBUG(dbgs() << "Skipped " << NumSkippedInRange
+                        << " instructions outside outlinable range\n");
+#endif
+      assert(It != MBB.end() && "Should still have instructions?");
+      // `It` is now positioned at the beginning of a range of instructions
+      // which may be outlinable. Check if each instruction is known to be safe.
+      for (; It != OutlinableRangeEnd; ++It) {
+        // Keep track of where this instruction is in the module.
+        switch (TII.getOutliningType(It, Flags)) {
+        case InstrType::Illegal:
+          mapToIllegalUnsigned(It, CanOutlineWithPrevInstr, UnsignedVecForMBB,
+                               InstrListForMBB);
+          break;
 
-      case InstrType::Legal:
-        mapToLegalUnsigned(It, CanOutlineWithPrevInstr, HaveLegalRange,
-                           NumLegalInBlock, UnsignedVecForMBB, InstrListForMBB);
-        break;
-
-      case InstrType::LegalTerminator:
-        mapToLegalUnsigned(It, CanOutlineWithPrevInstr, HaveLegalRange,
-                           NumLegalInBlock, UnsignedVecForMBB, InstrListForMBB);
-        // The instruction also acts as a terminator, so we have to record that
-        // in the string.
-        mapToIllegalUnsigned(It, CanOutlineWithPrevInstr, UnsignedVecForMBB,
+        case InstrType::Legal:
+          mapToLegalUnsigned(It, CanOutlineWithPrevInstr, HaveLegalRange,
+                             NumLegalInBlock, UnsignedVecForMBB,
                              InstrListForMBB);
-        break;
+          break;
 
-      case InstrType::Invisible:
-        // Normally this is set by mapTo(Blah)Unsigned, but we just want to
-        // skip this instruction. So, unset the flag here.
-        ++NumInvisible;
-        AddedIllegalLastTime = false;
-        break;
+        case InstrType::LegalTerminator:
+          mapToLegalUnsigned(It, CanOutlineWithPrevInstr, HaveLegalRange,
+                             NumLegalInBlock, UnsignedVecForMBB,
+                             InstrListForMBB);
+          // The instruction also acts as a terminator, so we have to record
+          // that in the string.
+          mapToIllegalUnsigned(It, CanOutlineWithPrevInstr, UnsignedVecForMBB,
+                               InstrListForMBB);
+          break;
+
+        case InstrType::Invisible:
+          // Normally this is set by mapTo(Blah)Unsigned, but we just want to
+          // skip this instruction. So, unset the flag here.
+          ++NumInvisible;
+          AddedIllegalLastTime = false;
+          break;
+        }
       }
     }
+
+    LLVM_DEBUG(dbgs() << "HaveLegalRange = " << HaveLegalRange << "\n");
 
     // Are there enough legal instructions in the block for outlining to be
     // possible?

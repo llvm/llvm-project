@@ -32,6 +32,11 @@ struct SymbolHeaderMapping {
     const char *Data;  // std::vector
     unsigned ScopeLen; // ~~~~~
     unsigned NameLen;  //      ~~~~~~
+    StringRef scope() const { return StringRef(Data, ScopeLen); }
+    StringRef name() const { return StringRef(Data + ScopeLen, NameLen); }
+    StringRef qualifiedName() const {
+      return StringRef(Data, ScopeLen + NameLen);
+    }
   } *SymbolNames = nullptr;
   // Symbol name -> Symbol::ID, within a namespace.
   llvm::DenseMap<llvm::StringRef, NSSymbolMap *> *NamespaceSymbols = nullptr;
@@ -162,16 +167,13 @@ std::vector<Symbol> Symbol::all(Lang L) {
   return Result;
 }
 llvm::StringRef Symbol::scope() const {
-  auto &S = getMappingPerLang(Language)->SymbolNames[ID];
-  return StringRef(S.Data, S.ScopeLen);
+  return getMappingPerLang(Language)->SymbolNames[ID].scope();
 }
 llvm::StringRef Symbol::name() const {
-  auto &S = getMappingPerLang(Language)->SymbolNames[ID];
-  return StringRef(S.Data + S.ScopeLen, S.NameLen);
+  return getMappingPerLang(Language)->SymbolNames[ID].name();
 }
-llvm::StringRef Symbol::qualified_name() const {
-  auto &S = getMappingPerLang(Language)->SymbolNames[ID];
-  return StringRef(S.Data, S.ScopeLen + S.NameLen);
+llvm::StringRef Symbol::qualifiedName() const {
+  return getMappingPerLang(Language)->SymbolNames[ID].qualifiedName();
 }
 std::optional<Symbol> Symbol::named(llvm::StringRef Scope, llvm::StringRef Name,
                                     Lang L) {
