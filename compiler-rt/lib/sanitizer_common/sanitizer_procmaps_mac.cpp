@@ -250,9 +250,7 @@ static bool NextSegmentLoad(MemoryMappedSegment *segment,
                             MemoryMappedSegmentData *seg_data,
                             MemoryMappingLayoutData *layout_data) {
   const char *lc = layout_data->current_load_cmd_addr;
-
   layout_data->current_load_cmd_addr += ((const load_command *)lc)->cmdsize;
-  layout_data->current_load_cmd_count--;
   if (((const load_command *)lc)->cmd == kLCSegment) {
     const SegmentCommand* sc = (const SegmentCommand *)lc;
     uptr base_virt_addr, addr_mask;
@@ -360,16 +358,11 @@ static bool IsModuleInstrumented(const load_command *first_lc) {
   return false;
 }
 
-const ImageHeader *MemoryMappingLayout::CurrentImageHeader() {
-  const mach_header *hdr = (data_.current_image == kDyldImageIdx)
-                                ? get_dyld_hdr()
-                                : _dyld_get_image_header(data_.current_image);
-  return (const ImageHeader *)hdr;
-}
-
 bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
   for (; data_.current_image >= kDyldImageIdx; data_.current_image--) {
-    const mach_header *hdr = (const mach_header *)CurrentImageHeader();
+    const mach_header *hdr = (data_.current_image == kDyldImageIdx)
+                                 ? get_dyld_hdr()
+                                 : _dyld_get_image_header(data_.current_image);
     if (!hdr) continue;
     if (data_.current_load_cmd_count < 0) {
       // Set up for this image;
@@ -399,7 +392,7 @@ bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
           (const load_command *)data_.current_load_cmd_addr);
     }
 
-    while (data_.current_load_cmd_count > 0) {
+    for (; data_.current_load_cmd_count >= 0; data_.current_load_cmd_count--) {
       switch (data_.current_magic) {
         // data_.current_magic may be only one of MH_MAGIC, MH_MAGIC_64.
 #ifdef MH_MAGIC_64
@@ -420,7 +413,6 @@ bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
     }
     // If we get here, no more load_cmd's in this image talk about
     // segments.  Go on to the next image.
-    data_.current_load_cmd_count = -1; // This will trigger loading next image
   }
   return false;
 }
