@@ -410,9 +410,14 @@ public:
     //   foreach srcCoords %srcTensor
     //     insert translateIndicesArray(srcCoords), %tmp
     //   %t = sparse_tensor.cast %tmp
+    Value nnz = rewriter.create<NumberOfEntriesOp>(loc, srcTensor);
     RankedTensorType cooTp = getUnorderedCOOFromType(dstTp);
-    auto cooBuffer =
-        rewriter.create<AllocTensorOp>(loc, cooTp, dstDynSizes).getResult();
+    Value cooBuffer =
+        rewriter
+            .create<AllocTensorOp>(loc, cooTp, dstDynSizes, Value(),
+                                   /*sizeHint=*/nnz, Attribute())
+            .getResult();
+
     ForeachOp foreachOp = rewriter.create<ForeachOp>(
         loc, srcTensor, cooBuffer,
         [&](OpBuilder &builder, Location loc, ValueRange args, Value v,
@@ -787,6 +792,7 @@ private:
     SmallVector<Value> srcSizes;
     sizesForTensor(rewriter, srcSizes, loc, srcTp, src);
     Value tmpCoo = Value();
+    Value nnz = rewriter.create<NumberOfEntriesOp>(loc, src);
     // We need a tmp COO buffer if and only if
     // 1. the src tensor is not a COO and
     // 2. the src tensor is not ordered in the same way as the target
@@ -802,8 +808,10 @@ private:
       getDynamicSizes(srcTp, srcSizes, dynSrcSizes);
       srcTp =
           getUnorderedCOOFromTypeWithOrdering(srcTp, encDst.getDimOrdering());
-      tmpCoo =
-          rewriter.create<AllocTensorOp>(loc, srcTp, dynSrcSizes).getResult();
+      tmpCoo = rewriter
+                   .create<AllocTensorOp>(loc, srcTp, dynSrcSizes, Value(),
+                                          /*sizeHint=*/nnz, Attribute())
+                   .getResult();
       auto foreachOp = rewriter.create<ForeachOp>(
           loc, src, tmpCoo,
           [&](OpBuilder &builder, Location loc, ValueRange args, Value v,
@@ -823,11 +831,6 @@ private:
     // Only need to sort if the srcTp is not already sorted (we faithfully take
     // the guarantee from the sparse tensor encoding).
     if (!isAllDimOrdered(srcTp)) {
-      // Retrieve NNZ.
-      Value nnz = rewriter.create<NumberOfEntriesOp>(loc, src);
-      nnz = rewriter.create<arith::IndexCastOp>(loc, rewriter.getIndexType(),
-                                                nnz);
-
       // Retrieve the values-array.
       Value y = genToValues(rewriter, loc, src);
       SparseTensorEncodingAttr encSrc = getSparseTensorEncoding(srcTp);
@@ -858,8 +861,10 @@ private:
     // For each element in the COO tensor, insert the element to the dst tensor.
     SmallVector<Value> dynDstSizes;
     getDynamicSizes(dstTp, srcSizes, dynDstSizes);
-    Value dst =
-        rewriter.create<AllocTensorOp>(loc, dstTp, dynDstSizes).getResult();
+    Value dst = rewriter
+                    .create<AllocTensorOp>(loc, dstTp, dynDstSizes, Value(),
+                                           /*sizeHint=*/nnz, Attribute())
+                    .getResult();
     SmallVector<Value> indices(srcTp.getRank(), Value());
     auto foreachOp = rewriter.create<ForeachOp>(
         loc, src, dst,
@@ -1027,18 +1032,21 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
     //     get the next element from the input file
     //     insert the element to %tmp
     //   %t = sparse_tensor.ConvertOp %tmp
-    RankedTensorType cooTp =
-        getUnorderedCOOFromTypeWithOrdering(dstTp, encDst.getDimOrdering());
-    Value cooBuffer =
-        rewriter.create<AllocTensorOp>(loc, cooTp, dynSizesArray).getResult();
-
     Value c0 = constantIndex(rewriter, loc, 0);
     Value c1 = constantIndex(rewriter, loc, 1);
     Value nnz = createFuncCall(rewriter, loc, "getSparseTensorReaderNNZ",
                                {indexTp}, {reader}, EmitCInterface::Off)
                     .getResult(0);
-    Value symmetric;
+    RankedTensorType cooTp =
+        getUnorderedCOOFromTypeWithOrdering(dstTp, encDst.getDimOrdering());
+    Value cooBuffer =
+        rewriter
+            .create<AllocTensorOp>(loc, cooTp, dynSizesArray, Value(),
+                                   /*sizeHint=*/nnz, Attribute())
+            .getResult();
+
     // The verifier ensures only 2D tensors can have the expandSymmetry flag.
+    Value symmetric;
     if (rank == 2 && op.getExpandSymmetry()) {
       symmetric =
           createFuncCall(rewriter, loc, "getSparseTensorReaderIsSymmetric",
