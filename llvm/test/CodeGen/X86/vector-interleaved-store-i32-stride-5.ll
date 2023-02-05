@@ -95,7 +95,7 @@ define void @store_i32_stride5_vf2(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX512-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-NEXT:    vinsertf32x4 $2, %xmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vmovaps {{.*#+}} zmm1 = <0,2,4,6,8,1,3,5,7,9,u,u,u,u,u,u>
 ; AVX512-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    vextractf32x4 $2, %zmm0, %xmm1
