@@ -15,11 +15,5 @@ fada90286008 [CUDA][HIP] Support '--offload-arch=native' for the new driver
 #break nekbone, cxx20 offsetof
 e327b52766ed [C2x] reject type definitions in offsetof
 
-16a385ba21a9 [OpenMP] Modernize the kernel launching interface and APIs
-366fc10f065d [OpenMP][FIX] Remove version check lines in clang test
-40f9bf082ff0 [OpenMP] Introduce the `ompx_dyn_cgroup_mem(<N>)` clause
-
-e484ea6053f3 Revert "[Attributor][FIX] Ensure we use the right AAExecutionDomain"
-9baf01e25951 Revert "[OpenMP][FIX] Ensure to determine aligned regions properly"
-b811616d850a Revert "[Attributor][NFC] Improve debug messages"
+Workaround failures around new upstream changes in attributor.
 

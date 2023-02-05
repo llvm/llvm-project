@@ -19,8 +19,10 @@ target triple = "nvptx64"
 ; Make it a weak definition so we will apply custom state machine rewriting but can't use the body in the reasoning.
 ;.
 ; CHECK: @[[S:[a-zA-Z0-9_$"\\.-]+]] = external local_unnamed_addr global ptr
+; CHECK: @[[KERNEL_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
 ;.
 ; CHECK-DISABLED: @[[S:[a-zA-Z0-9_$"\\.-]+]] = external local_unnamed_addr global ptr
+; CHECK-DISABLED: @[[KERNEL_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
 ;.
 define weak i32 @__kmpc_target_init(ptr, i8, i1) {
 ; CHECK-LABEL: define {{[^@]+}}@__kmpc_target_init
@@ -70,17 +72,17 @@ define internal void @foo() {
 ; CHECK-LABEL: define {{[^@]+}}@foo
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 1
+; CHECK-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 4
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-DISABLED-LABEL: define {{[^@]+}}@foo
 ; CHECK-DISABLED-SAME: () #[[ATTR0]] {
 ; CHECK-DISABLED-NEXT:  entry:
-; CHECK-DISABLED-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 1
+; CHECK-DISABLED-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 4
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 entry:
-  %0 = call ptr @__kmpc_alloc_shared(i64 4), !dbg !12
+  %0 = call align 4 ptr @__kmpc_alloc_shared(i64 4), !dbg !12
   call void @use(ptr %0)
   call void @__kmpc_free_shared(ptr %0, i64 4)
   ret void
@@ -88,52 +90,42 @@ entry:
 
 define internal void @bar() {
 ; CHECK-LABEL: define {{[^@]+}}@bar
-; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__kmpc_alloc_shared(i64 4) #[[ATTR0]], !dbg [[DBG8:![0-9]+]]
-; CHECK-NEXT:    call void @share(ptr nofree [[TMP0]]) #[[ATTR1]], !dbg [[DBG8]]
-; CHECK-NEXT:    call void @__kmpc_free_shared(ptr [[TMP0]], i64 4) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call align 4 ptr @__kmpc_alloc_shared(i64 4) #[[ATTR4:[0-9]+]], !dbg [[DBG8:![0-9]+]]
+; CHECK-NEXT:    call void @share(ptr nofree [[TMP0]]) #[[ATTR0]], !dbg [[DBG8]]
+; CHECK-NEXT:    call void @__kmpc_free_shared(ptr [[TMP0]], i64 4) #[[ATTR4]]
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-DISABLED-LABEL: define {{[^@]+}}@bar
-; CHECK-DISABLED-SAME: () #[[ATTR1:[0-9]+]] {
+; CHECK-DISABLED-SAME: () #[[ATTR0]] {
 ; CHECK-DISABLED-NEXT:  entry:
-; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call ptr @__kmpc_alloc_shared(i64 4) #[[ATTR0]], !dbg [[DBG8:![0-9]+]]
-; CHECK-DISABLED-NEXT:    call void @share(ptr nofree [[TMP0]]) #[[ATTR1]], !dbg [[DBG8]]
-; CHECK-DISABLED-NEXT:    call void @__kmpc_free_shared(ptr [[TMP0]], i64 4) #[[ATTR0]]
+; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call align 4 ptr @__kmpc_alloc_shared(i64 4) #[[ATTR4:[0-9]+]], !dbg [[DBG8:![0-9]+]]
+; CHECK-DISABLED-NEXT:    call void @share(ptr nofree [[TMP0]]) #[[ATTR0]], !dbg [[DBG8]]
+; CHECK-DISABLED-NEXT:    call void @__kmpc_free_shared(ptr [[TMP0]], i64 4) #[[ATTR4]]
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 entry:
-  %0 = call ptr @__kmpc_alloc_shared(i64 4), !dbg !13
+  %0 = call align 4 ptr @__kmpc_alloc_shared(i64 4), !dbg !13
   call void @share(ptr %0), !dbg !13
   call void @__kmpc_free_shared(ptr %0, i64 4)
   ret void
 }
 
 define internal void @use(ptr %x) {
-; CHECK-LABEL: define {{[^@]+}}@use
-; CHECK-SAME: (ptr [[X:%.*]]) #[[ATTR2:[0-9]+]] {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret void
-;
-; CHECK-DISABLED-LABEL: define {{[^@]+}}@use
-; CHECK-DISABLED-SAME: (ptr [[X:%.*]]) #[[ATTR2:[0-9]+]] {
-; CHECK-DISABLED-NEXT:  entry:
-; CHECK-DISABLED-NEXT:    ret void
-;
 entry:
   ret void
 }
 
 define internal void @share(ptr %x) {
 ; CHECK-LABEL: define {{[^@]+}}@share
-; CHECK-SAME: (ptr nofree [[X:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: (ptr nofree [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store ptr [[X]], ptr @S, align 8
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-DISABLED-LABEL: define {{[^@]+}}@share
-; CHECK-DISABLED-SAME: (ptr nofree [[X:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-DISABLED-SAME: (ptr nofree [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-DISABLED-NEXT:  entry:
 ; CHECK-DISABLED-NEXT:    store ptr [[X]], ptr @S, align 8
 ; CHECK-DISABLED-NEXT:    ret void
@@ -146,19 +138,17 @@ entry:
 define void @unused() {
 ; CHECK-LABEL: define {{[^@]+}}@unused() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 1
-; CHECK-NEXT:    call void @use(ptr undef)
+; CHECK-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 4
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-DISABLED-LABEL: define {{[^@]+}}@unused() {
 ; CHECK-DISABLED-NEXT:  entry:
-; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call ptr @__kmpc_alloc_shared(i64 4), !dbg [[DBG11:![0-9]+]]
-; CHECK-DISABLED-NEXT:    call void @use(ptr [[TMP0]])
-; CHECK-DISABLED-NEXT:    call void @__kmpc_free_shared(ptr [[TMP0]], i64 4)
+; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call align 4 ptr @__kmpc_alloc_shared(i64 4) #[[ATTR4]], !dbg [[DBG11:![0-9]+]]
+; CHECK-DISABLED-NEXT:    call void @__kmpc_free_shared(ptr [[TMP0]], i64 4) #[[ATTR4]]
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 entry:
-  %0 = call ptr @__kmpc_alloc_shared(i64 4), !dbg !14
+  %0 = call align 4 ptr @__kmpc_alloc_shared(i64 4), !dbg !14
   call void @use(ptr %0)
   call void @__kmpc_free_shared(ptr %0, i64 4)
   ret void
@@ -166,9 +156,9 @@ entry:
 
 define internal void @convert_and_move_alloca() {
 ; CHECK-LABEL: define {{[^@]+}}@convert_and_move_alloca
-; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 1
+; CHECK-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 4
 ; CHECK-NEXT:    [[IV_PTR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    br label [[INITLOOP:%.*]]
 ; CHECK:       initloop:
@@ -186,9 +176,9 @@ define internal void @convert_and_move_alloca() {
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-DISABLED-LABEL: define {{[^@]+}}@convert_and_move_alloca
-; CHECK-DISABLED-SAME: () #[[ATTR1]] {
+; CHECK-DISABLED-SAME: () #[[ATTR0]] {
 ; CHECK-DISABLED-NEXT:  entry:
-; CHECK-DISABLED-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 1
+; CHECK-DISABLED-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 4
 ; CHECK-DISABLED-NEXT:    [[IV_PTR:%.*]] = alloca i32, align 4
 ; CHECK-DISABLED-NEXT:    br label [[INITLOOP:%.*]]
 ; CHECK-DISABLED:       initloop:
@@ -217,7 +207,7 @@ initloop:
   br label %loopbody
 
 loopbody:
-  %0 = call ptr @__kmpc_alloc_shared(i64 4), !dbg !16
+  %0 = call align 4 ptr @__kmpc_alloc_shared(i64 4), !dbg !16
   call void @use(ptr %0)
   call void @__kmpc_free_shared(ptr %0, i64 4)
   %iv = load i32, ptr %iv_ptr
@@ -263,19 +253,17 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 !15 = !DILocation(line: 8, column: 2, scope: !9)
 !16 = !DILocation(line: 10, column: 2, scope: !9)
 ;.
-; CHECK: attributes #[[ATTR0]] = { nounwind }
-; CHECK: attributes #[[ATTR1]] = { nosync nounwind }
-; CHECK: attributes #[[ATTR2]] = { nounwind memory(none) }
-; CHECK: attributes #[[ATTR3]] = { nofree norecurse nosync nounwind memory(write) }
-; CHECK: attributes #[[ATTR4:[0-9]+]] = { nosync nounwind allocsize(0) }
-; CHECK: attributes #[[ATTR5:[0-9]+]] = { "llvm.assume"="omp_no_openmp" }
+; CHECK: attributes #[[ATTR0]] = { nosync nounwind }
+; CHECK: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind memory(write) }
+; CHECK: attributes #[[ATTR2:[0-9]+]] = { nosync nounwind allocsize(0) }
+; CHECK: attributes #[[ATTR3:[0-9]+]] = { "llvm.assume"="omp_no_openmp" }
+; CHECK: attributes #[[ATTR4]] = { nounwind }
 ;.
-; CHECK-DISABLED: attributes #[[ATTR0]] = { nounwind }
-; CHECK-DISABLED: attributes #[[ATTR1]] = { nosync nounwind }
-; CHECK-DISABLED: attributes #[[ATTR2]] = { nounwind memory(none) }
-; CHECK-DISABLED: attributes #[[ATTR3]] = { nofree norecurse nosync nounwind memory(write) }
-; CHECK-DISABLED: attributes #[[ATTR4:[0-9]+]] = { nosync nounwind allocsize(0) }
-; CHECK-DISABLED: attributes #[[ATTR5:[0-9]+]] = { "llvm.assume"="omp_no_openmp" }
+; CHECK-DISABLED: attributes #[[ATTR0]] = { nosync nounwind }
+; CHECK-DISABLED: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind memory(write) }
+; CHECK-DISABLED: attributes #[[ATTR2:[0-9]+]] = { nosync nounwind allocsize(0) }
+; CHECK-DISABLED: attributes #[[ATTR3:[0-9]+]] = { "llvm.assume"="omp_no_openmp" }
+; CHECK-DISABLED: attributes #[[ATTR4]] = { nounwind }
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 13.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
 ; CHECK: [[META1:![0-9]+]] = !DIFile(filename: "remove_globalization.c", directory: "/tmp/remove_globalization.c")

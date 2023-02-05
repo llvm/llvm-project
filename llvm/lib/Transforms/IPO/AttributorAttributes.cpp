@@ -50,6 +50,8 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
@@ -1042,8 +1044,14 @@ struct AAPointerInfoImpl
     const auto &NoSyncAA = A.getAAFor<AANoSync>(
         QueryingAA, IRPosition::function(Scope), DepClassTy::OPTIONAL);
     const auto *ExecDomainAA = A.lookupAAFor<AAExecutionDomain>(
-        IRPosition::function(Scope), &QueryingAA, DepClassTy::OPTIONAL);
+        IRPosition::function(Scope), &QueryingAA, DepClassTy::NONE);
     bool AllInSameNoSyncFn = NoSyncAA.isAssumedNoSync();
+    bool InstIsExecutedByInitialThreadOnly =
+        ExecDomainAA && ExecDomainAA->isExecutedByInitialThreadOnly(I);
+    bool InstIsExecutedInAlignedRegion =
+        ExecDomainAA && ExecDomainAA->isExecutedInAlignedRegion(A, I);
+    if (InstIsExecutedInAlignedRegion || InstIsExecutedByInitialThreadOnly)
+      A.recordDependence(*ExecDomainAA, QueryingAA, DepClassTy::OPTIONAL);
 
     InformationCache &InfoCache = A.getInfoCache();
     bool IsThreadLocalObj =
@@ -1053,19 +1061,39 @@ struct AAPointerInfoImpl
     // right now. However, if the function is (assumed) nosync or the thread
     // executing all instructions is the main thread only we can ignore
     // threading. Also, thread-local objects do not require threading reasoning.
-    auto CanIgnoreThreading = [&](const Instruction &I) -> bool {
-      if (IsThreadLocalObj)
+    // Finally, we can ignore threading if either access is executed in an
+    // aligned region.
+    auto CanIgnoreThreadingForInst = [&](const Instruction &I) -> bool {
+      if (IsThreadLocalObj || AllInSameNoSyncFn)
         return true;
-      if (ExecDomainAA && ExecDomainAA->isExecutedByInitialThreadOnly(I))
+      const auto *FnExecDomainAA =
+          I.getFunction() == &Scope
+              ? ExecDomainAA
+              : A.lookupAAFor<AAExecutionDomain>(
+                    IRPosition::function(*I.getFunction()), &QueryingAA,
+                    DepClassTy::NONE);
+      if (!FnExecDomainAA)
+        return false;
+      if (InstIsExecutedInAlignedRegion ||
+          FnExecDomainAA->isExecutedInAlignedRegion(A, I)) {
+        A.recordDependence(*FnExecDomainAA, QueryingAA, DepClassTy::OPTIONAL);
         return true;
+      }
+      if (InstIsExecutedByInitialThreadOnly &&
+          FnExecDomainAA->isExecutedByInitialThreadOnly(I)) {
+        A.recordDependence(*FnExecDomainAA, QueryingAA, DepClassTy::OPTIONAL);
+        return true;
+      }
       return false;
     };
 
     // Helper to determine if the access is executed by the same thread as the
     // given instruction, for now it is sufficient to avoid any potential
     // threading effects as we cannot deal with them anyway.
-    auto IsSameThreadAsInst = [&](const Access &Acc) -> bool {
-      return AllInSameNoSyncFn || CanIgnoreThreading(*Acc.getLocalInst());
+    auto CanIgnoreThreading = [&](const Access &Acc) -> bool {
+      return CanIgnoreThreadingForInst(*Acc.getRemoteInst()) ||
+             (Acc.getRemoteInst() != Acc.getLocalInst() &&
+              CanIgnoreThreadingForInst(*Acc.getLocalInst()));
     };
 
     // TODO: Use inter-procedural reachability and dominance.
@@ -1165,7 +1193,7 @@ struct AAPointerInfoImpl
 
     // Helper to determine if we can skip a specific write access.
     auto CanSkipAccess = [&](const Access &Acc, bool Exact) {
-      if (!IsSameThreadAsInst(Acc))
+      if (!CanIgnoreThreading(Acc))
         return false;
 
       // Check read (RAW) dependences and write (WAR) dependences as necessary.
@@ -1233,7 +1261,7 @@ struct AAPointerInfoImpl
     // Run the user callback on all accesses we cannot skip and return if
     // that succeeded for all or not.
     for (auto &It : InterferingAccesses) {
-      if ((!AllInSameNoSyncFn && !IsThreadLocalObj) ||
+      if ((!AllInSameNoSyncFn && !IsThreadLocalObj && !ExecDomainAA) ||
           !CanSkipAccess(*It.first, It.second)) {
         if (!UserCB(*It.first, It.second))
           return false;
@@ -1320,7 +1348,10 @@ struct AAPointerInfoImpl
           O << "     -->                         " << *Acc.getRemoteInst()
             << "\n";
         if (!Acc.isWrittenValueYetUndetermined()) {
-          if (Acc.getWrittenValue())
+          if (isa_and_nonnull<Function>(Acc.getWrittenValue()))
+            O << "       - c: func " << Acc.getWrittenValue()->getName()
+              << "\n";
+          else if (Acc.getWrittenValue())
             O << "       - c: " << *Acc.getWrittenValue() << "\n";
           else
             O << "       - c: <unknown>\n";
@@ -2253,6 +2284,21 @@ struct AAReturnedValuesCallSite final : AAReturnedValuesImpl {
 } // namespace
 
 /// ------------------------ NoSync Function Attribute -------------------------
+
+bool AANoSync::isAlignedBarrier(const CallBase &CB, bool ExecutedAligned) {
+  switch (CB.getIntrinsicID()) {
+  case Intrinsic::nvvm_barrier0:
+  case Intrinsic::nvvm_barrier0_and:
+  case Intrinsic::nvvm_barrier0_or:
+  case Intrinsic::nvvm_barrier0_popc:
+    return true;
+  case Intrinsic::amdgcn_s_barrier:
+    return ExecutedAligned;
+  default:
+    break;
+  }
+  return hasAssumption(CB, KnownAssumptionString("ompx_aligned_barrier"));
+}
 
 bool AANoSync::isNonRelaxedAtomic(const Instruction *I) {
   if (!I->isAtomic())

@@ -27,7 +27,6 @@ define internal void @foo() {
 
 define internal void @bar() {
 ; CHECK-LABEL: @bar(
-; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    ret void
 ;
   call void @foo()
