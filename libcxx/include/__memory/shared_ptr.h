@@ -367,13 +367,57 @@ public:
 
 template<class _Tp> class _LIBCPP_TEMPLATE_VIS enable_shared_from_this;
 
-template<class _Tp, class _Up>
+// http://eel.is/c++draft/util.sharedptr#util.smartptr.shared.general-6
+// A pointer type Y* is said to be compatible with a pointer type T*
+// when either Y* is convertible to T* or Y is U[N] and T is cv U[].
+#if _LIBCPP_STD_VER >= 17
+template <class _Yp, class _Tp>
+struct __bounded_convertible_to_unbounded : false_type {};
+
+template <class _Up, std::size_t _Np, class _Tp>
+struct __bounded_convertible_to_unbounded<_Up[_Np], _Tp>
+        : is_same<__remove_cv_t<_Tp>, _Up[]> {};
+
+template <class _Yp, class _Tp>
 struct __compatible_with
-#if _LIBCPP_STD_VER > 14
-    : is_convertible<remove_extent_t<_Tp>*, remove_extent_t<_Up>*> {};
+    : _Or<
+        is_convertible<_Yp*, _Tp*>,
+        __bounded_convertible_to_unbounded<_Yp, _Tp>
+    > {};
 #else
-    : is_convertible<_Tp*, _Up*> {};
-#endif // _LIBCPP_STD_VER > 14
+template <class _Yp, class _Tp>
+struct __compatible_with
+    : is_convertible<_Yp*, _Tp*> {};
+#endif // _LIBCPP_STD_VER >= 17
+
+// Constructors that take raw pointers have a different set of "compatible" constraints
+// http://eel.is/c++draft/util.sharedptr#util.smartptr.shared.const-9.1
+// - If T is an array type, then either T is U[N] and Y(*)[N] is convertible to T*,
+//   or T is U[] and Y(*)[] is convertible to T*.
+// - If T is not an array type, then Y* is convertible to T*.
+#if _LIBCPP_STD_VER >= 17
+template <class _Yp, class _Tp, class = void>
+struct __raw_pointer_compatible_with : _And<
+        _Not<is_array<_Tp>>,
+        is_convertible<_Yp*, _Tp*>
+        > {};
+
+template <class _Yp, class _Up, std::size_t _Np>
+struct __raw_pointer_compatible_with<_Yp, _Up[_Np], __enable_if_t<
+            is_convertible<_Yp(*)[_Np], _Up(*)[_Np]>::value> >
+        : true_type {};
+
+template <class _Yp, class _Up>
+struct __raw_pointer_compatible_with<_Yp, _Up[], __enable_if_t<
+            is_convertible<_Yp(*)[], _Up(*)[]>::value> >
+        : true_type {};
+
+#else
+template <class _Yp, class _Tp>
+struct __raw_pointer_compatible_with
+    : is_convertible<_Yp*, _Tp*> {};
+#endif // _LIBCPP_STD_VER >= 17
+
 
 template <class _Ptr, class = void>
 struct __is_deletable : false_type { };
@@ -395,12 +439,12 @@ static false_type __well_formed_deleter_test(...);
 template <class _Dp, class _Pt>
 struct __well_formed_deleter : decltype(std::__well_formed_deleter_test<_Dp, _Pt>(0)) {};
 
-template<class _Dp, class _Tp, class _Yp>
+template<class _Dp, class _Yp, class _Tp>
 struct __shared_ptr_deleter_ctor_reqs
 {
-    static const bool value = __compatible_with<_Tp, _Yp>::value &&
+    static const bool value = __raw_pointer_compatible_with<_Yp, _Tp>::value &&
                               is_move_constructible<_Dp>::value &&
-                              __well_formed_deleter<_Dp, _Tp*>::value;
+                              __well_formed_deleter<_Dp, _Yp*>::value;
 };
 
 #if defined(_LIBCPP_ABI_ENABLE_SHARED_PTR_TRIVIAL_ABI)
@@ -439,7 +483,7 @@ public:
 
     template<class _Yp, class = __enable_if_t<
         _And<
-            __compatible_with<_Yp, _Tp>
+            __raw_pointer_compatible_with<_Yp, _Tp>
             // In C++03 we get errors when trying to do SFINAE with the
             // delete operator, so we always pretend that it's deletable.
             // The same happens on GCC.
@@ -457,7 +501,7 @@ public:
         __enable_weak_this(__p, __p);
     }
 
-    template<class _Yp, class _Dp, class = __enable_if_t<__shared_ptr_deleter_ctor_reqs<_Dp, _Yp, element_type>::value> >
+    template<class _Yp, class _Dp, class = __enable_if_t<__shared_ptr_deleter_ctor_reqs<_Dp, _Yp, _Tp>::value> >
     _LIBCPP_HIDE_FROM_ABI
     shared_ptr(_Yp* __p, _Dp __d)
         : __ptr_(__p)
@@ -484,7 +528,7 @@ public:
 #endif // _LIBCPP_NO_EXCEPTIONS
     }
 
-    template<class _Yp, class _Dp, class _Alloc, class = __enable_if_t<__shared_ptr_deleter_ctor_reqs<_Dp, _Yp, element_type>::value> >
+    template<class _Yp, class _Dp, class _Alloc, class = __enable_if_t<__shared_ptr_deleter_ctor_reqs<_Dp, _Yp, _Tp>::value> >
     _LIBCPP_HIDE_FROM_ABI
     shared_ptr(_Yp* __p, _Dp __d, _Alloc __a)
         : __ptr_(__p)
@@ -646,6 +690,7 @@ public:
 
     template <class _Yp, class _Dp, class = __enable_if_t<
         !is_lvalue_reference<_Dp>::value &&
+         __compatible_with<_Yp, _Tp>::value &&
          is_convertible<typename unique_ptr<_Yp, _Dp>::pointer, element_type*>::value
     > >
     _LIBCPP_HIDE_FROM_ABI
@@ -668,6 +713,7 @@ public:
 
     template <class _Yp, class _Dp, class = void, class = __enable_if_t<
         is_lvalue_reference<_Dp>::value &&
+         __compatible_with<_Yp, _Tp>::value &&
         is_convertible<typename unique_ptr<_Yp, _Dp>::pointer, element_type*>::value
     > >
     _LIBCPP_HIDE_FROM_ABI
@@ -740,9 +786,10 @@ public:
     }
 #endif
 
-    template <class _Yp, class _Dp, class = __enable_if_t<
-        is_convertible<typename unique_ptr<_Yp, _Dp>::pointer, element_type*>::value
-    > >
+    template <class _Yp, class _Dp, class = __enable_if_t<_And<
+        __compatible_with<_Yp, _Tp>,
+        is_convertible<typename unique_ptr<_Yp, _Dp>::pointer, element_type*>
+    >::value> >
     _LIBCPP_HIDE_FROM_ABI
     shared_ptr<_Tp>& operator=(unique_ptr<_Yp, _Dp>&& __r)
     {
@@ -764,7 +811,7 @@ public:
     }
 
     template<class _Yp, class = __enable_if_t<
-        __compatible_with<_Yp, _Tp>::value
+        __raw_pointer_compatible_with<_Yp, _Tp>::value
     > >
     _LIBCPP_HIDE_FROM_ABI
     void reset(_Yp* __p)
@@ -773,8 +820,7 @@ public:
     }
 
     template<class _Yp, class _Dp, class = __enable_if_t<
-        __compatible_with<_Yp, _Tp>::value
-    > >
+        __shared_ptr_deleter_ctor_reqs<_Dp, _Yp, _Tp>::value> >
     _LIBCPP_HIDE_FROM_ABI
     void reset(_Yp* __p, _Dp __d)
     {
@@ -782,8 +828,7 @@ public:
     }
 
     template<class _Yp, class _Dp, class _Alloc, class = __enable_if_t<
-        __compatible_with<_Yp, _Tp>::value
-    > >
+        __shared_ptr_deleter_ctor_reqs<_Dp, _Yp, _Tp>::value> >
     _LIBCPP_HIDE_FROM_ABI
     void reset(_Yp* __p, _Dp __d, _Alloc __a)
     {
