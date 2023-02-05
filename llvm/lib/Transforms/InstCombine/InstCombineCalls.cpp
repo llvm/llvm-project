@@ -837,6 +837,31 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
   uint32_t Mask = CMask->getZExtValue();
   const bool IsStrict = II.isStrictFP();
 
+  Value *FNegSrc;
+  if (match(Src0, m_FNeg(m_Value(FNegSrc)))) {
+    // is.fpclass (fneg x), mask -> is.fpclass x, (fneg mask)
+    unsigned NewMask = Mask & fcNan;
+    if (Mask & fcNegInf)
+      NewMask |= fcPosInf;
+    if (Mask & fcNegNormal)
+      NewMask |= fcPosNormal;
+    if (Mask & fcNegSubnormal)
+      NewMask |= fcPosSubnormal;
+    if (Mask & fcNegZero)
+      NewMask |= fcPosZero;
+    if (Mask & fcPosZero)
+      NewMask |= fcNegZero;
+    if (Mask & fcPosSubnormal)
+      NewMask |= fcNegSubnormal;
+    if (Mask & fcPosNormal)
+      NewMask |= fcNegNormal;
+    if (Mask & fcPosInf)
+      NewMask |= fcNegInf;
+
+    II.setArgOperand(1, ConstantInt::get(Src1->getType(), NewMask));
+    return replaceOperand(II, 0, FNegSrc);
+  }
+
   if (Mask == fcNan && !IsStrict) {
     // Equivalent of isnan. Replace with standard fcmp if we don't care about FP
     // exceptions.
