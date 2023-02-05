@@ -1013,6 +1013,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::UMIN, VT, VT == MVT::v16i8 ? Legal : Custom);
     }
 
+    setOperationAction(ISD::ABDU,               MVT::v16i8, Custom);
+    setOperationAction(ISD::ABDS,               MVT::v8i16, Custom);
+
     setOperationAction(ISD::UADDSAT,            MVT::v16i8, Legal);
     setOperationAction(ISD::SADDSAT,            MVT::v16i8, Legal);
     setOperationAction(ISD::USUBSAT,            MVT::v16i8, Legal);
@@ -1202,6 +1205,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SMIN,               MVT::v4i32, Legal);
     setOperationAction(ISD::UMIN,               MVT::v8i16, Legal);
     setOperationAction(ISD::UMIN,               MVT::v4i32, Legal);
+
+    for (auto VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32}) {
+      setOperationAction(ISD::ABDS,             VT, Custom);
+      setOperationAction(ISD::ABDU,             VT, Custom);
+    }
 
     setOperationAction(ISD::UADDSAT,            MVT::v4i32, Custom);
     setOperationAction(ISD::SADDSAT,            MVT::v2i64, Custom);
@@ -1435,6 +1443,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::UMAX, VT, HasInt256 ? Legal : Custom);
       setOperationAction(ISD::SMIN, VT, HasInt256 ? Legal : Custom);
       setOperationAction(ISD::UMIN, VT, HasInt256 ? Legal : Custom);
+      setOperationAction(ISD::ABDS, VT, Custom);
+      setOperationAction(ISD::ABDU, VT, Custom);
     }
 
     for (auto VT : {MVT::v16i16, MVT::v8i32, MVT::v4i64}) {
@@ -1732,6 +1742,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SMIN,             VT, Legal);
       setOperationAction(ISD::UMIN,             VT, Legal);
       setOperationAction(ISD::ABS,              VT, Legal);
+      setOperationAction(ISD::ABDS,             VT, Custom);
+      setOperationAction(ISD::ABDU,             VT, Custom);
       setOperationAction(ISD::CTPOP,            VT, Custom);
       setOperationAction(ISD::STRICT_FSETCC,    VT, Custom);
       setOperationAction(ISD::STRICT_FSETCCS,   VT, Custom);
@@ -1739,6 +1751,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     for (auto VT : { MVT::v64i8, MVT::v32i16 }) {
       setOperationAction(ISD::ABS,     VT, HasBWI ? Legal : Custom);
+      setOperationAction(ISD::ABDS,    VT, Custom);
+      setOperationAction(ISD::ABDU,    VT, Custom);
       setOperationAction(ISD::CTPOP,   VT, Subtarget.hasBITALG() ? Legal : Custom);
       setOperationAction(ISD::CTLZ,    VT, Custom);
       setOperationAction(ISD::SMAX,    VT, HasBWI ? Legal : Custom);
@@ -1878,6 +1892,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SMIN, VT, Legal);
       setOperationAction(ISD::UMIN, VT, Legal);
       setOperationAction(ISD::ABS,  VT, Legal);
+      setOperationAction(ISD::ABDS, VT, Custom);
+      setOperationAction(ISD::ABDU, VT, Custom);
     }
 
     for (auto VT : { MVT::v4i32, MVT::v8i32, MVT::v2i64, MVT::v4i64 }) {
@@ -29420,6 +29436,28 @@ static SDValue LowerMINMAX(SDValue Op, const X86Subtarget &Subtarget,
   return SDValue();
 }
 
+static SDValue LowerABD(SDValue Op, const X86Subtarget &Subtarget,
+                        SelectionDAG &DAG) {
+  MVT VT = Op.getSimpleValueType();
+
+  // For AVX1 cases, split to use legal ops.
+  if (VT.is256BitVector() && !Subtarget.hasInt256())
+    return splitVectorIntBinary(Op, DAG);
+
+  if ((VT == MVT::v32i16 || VT == MVT::v64i8) && !Subtarget.useBWIRegs())
+    return splitVectorIntBinary(Op, DAG);
+
+  // Default to expand: sub(smax(lhs,rhs),smin(lhs,rhs))
+  // TODO: Add TargetLowering expandABD() support.
+  SDLoc dl(Op);
+  bool IsSigned = Op.getOpcode() == ISD::ABDS;
+  SDValue LHS = DAG.getFreeze(Op.getOperand(0));
+  SDValue RHS = DAG.getFreeze(Op.getOperand(1));
+  SDValue Max = DAG.getNode(IsSigned ? ISD::SMAX : ISD::UMAX, dl, VT, LHS, RHS);
+  SDValue Min = DAG.getNode(IsSigned ? ISD::SMIN : ISD::UMIN, dl, VT, LHS, RHS);
+  return DAG.getNode(ISD::SUB, dl, VT, Max, Min);
+}
+
 static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
                         SelectionDAG &DAG) {
   SDLoc dl(Op);
@@ -33123,6 +33161,8 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::UMAX:
   case ISD::UMIN:               return LowerMINMAX(Op, Subtarget, DAG);
   case ISD::ABS:                return LowerABS(Op, Subtarget, DAG);
+  case ISD::ABDS:
+  case ISD::ABDU:               return LowerABD(Op, Subtarget, DAG);
   case ISD::AVGCEILU:           return LowerAVG(Op, Subtarget, DAG);
   case ISD::FSINCOS:            return LowerFSINCOS(Op, Subtarget, DAG);
   case ISD::MLOAD:              return LowerMLOAD(Op, Subtarget, DAG);
@@ -44025,6 +44065,7 @@ static SDValue combinePredicateReduction(SDNode *Extract, SelectionDAG &DAG,
   unsigned NumElts = MatchVT.getVectorNumElements();
   unsigned MaxElts = Subtarget.hasInt256() ? 32 : 16;
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  LLVMContext &Ctx = *DAG.getContext();
 
   if (ExtractVT == MVT::i1) {
     // Special case for (pre-legalization) vXi1 reductions.
@@ -44032,24 +44073,24 @@ static SDValue combinePredicateReduction(SDNode *Extract, SelectionDAG &DAG,
       return SDValue();
     if (TLI.isTypeLegal(MatchVT)) {
       // If this is a legal AVX512 predicate type then we can just bitcast.
-      EVT MovmskVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
+      EVT MovmskVT = EVT::getIntegerVT(Ctx, NumElts);
       Movmsk = DAG.getBitcast(MovmskVT, Match);
     } else {
       // For all_of(setcc(x,y,eq)) - use PMOVMSKB(PCMPEQB()).
-      // TODO: any_of(setcc(x,y,ne)) - use PMOVMSKB(NOT(PCMPEQB())).
+      // For any_of(setcc(x,y,ne)) - use PMOVMSKB(NOT(PCMPEQB())).
       if (Match.getOpcode() == ISD::SETCC) {
         ISD::CondCode CC = cast<CondCodeSDNode>(Match.getOperand(2))->get();
-        if (BinOp == ISD::AND && CC == ISD::CondCode::SETEQ) {
+        if ((BinOp == ISD::AND && CC == ISD::CondCode::SETEQ) ||
+            (BinOp == ISD::OR && CC == ISD::CondCode::SETNE)) {
           EVT VecVT = Match.getOperand(0).getValueType();
           EVT VecSVT = VecVT.getScalarType();
           if (VecSVT != MVT::i8 && (VecSVT.getSizeInBits() % 8) == 0) {
             NumElts *= VecSVT.getSizeInBits() / 8;
-            EVT CmpVT = EVT::getVectorVT(*DAG.getContext(), MVT::i8, NumElts);
-            MatchVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1, NumElts);
-            Match = DAG.getSetCC(DL, MatchVT,
-                                 DAG.getBitcast(CmpVT, Match.getOperand(0)),
-                                 DAG.getBitcast(CmpVT, Match.getOperand(1)),
-                                 ISD::CondCode::SETEQ);
+            EVT CmpVT = EVT::getVectorVT(Ctx, MVT::i8, NumElts);
+            MatchVT = EVT::getVectorVT(Ctx, MVT::i1, NumElts);
+            Match = DAG.getSetCC(
+                DL, MatchVT, DAG.getBitcast(CmpVT, Match.getOperand(0)),
+                DAG.getBitcast(CmpVT, Match.getOperand(1)), CC);
           }
         }
       }
@@ -44061,7 +44102,7 @@ static SDValue combinePredicateReduction(SDNode *Extract, SelectionDAG &DAG,
         Match = DAG.getNode(BinOp, DL, Lo.getValueType(), Lo, Hi);
         NumElts /= 2;
       }
-      EVT MovmskVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
+      EVT MovmskVT = EVT::getIntegerVT(Ctx, NumElts);
       Movmsk = combineBitcastvxi1(DAG, MovmskVT, Match, DL, Subtarget);
     }
     if (!Movmsk)
@@ -44129,8 +44170,7 @@ static SDValue combinePredicateReduction(SDNode *Extract, SelectionDAG &DAG,
 
   // The setcc produces an i8 of 0/1, so extend that to the result width and
   // negate to get the final 0/-1 mask value.
-  EVT SetccVT =
-      TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), CmpVT);
+  EVT SetccVT = TLI.getSetCCResultType(DAG.getDataLayout(), Ctx, CmpVT);
   SDValue Setcc = DAG.getSetCC(DL, SetccVT, Movmsk, CmpC, CondCode);
   SDValue Zext = DAG.getZExtOrTrunc(Setcc, DL, ExtractVT);
   SDValue Zero = DAG.getConstant(0, DL, ExtractVT);

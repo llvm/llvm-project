@@ -138,8 +138,8 @@ define void @test4(i32 %n) uwtable personality ptr @__FrameHandler {
 ; CHECK-LABEL: test4:
 ; CHECK:       .Lfunc_begin0:
 ; CHECK-NEXT:    .cfi_startproc
-; CHECK-NEXT:    .cfi_personality 156, DW.ref.__FrameHandler
-; CHECK-NEXT:    .cfi_lsda 28, .Lexception0
+; CHECK-NEXT:    .cfi_personality 0, __FrameHandler
+; CHECK-NEXT:    .cfi_lsda 0, .Lexception0
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    stp x30, x21, [sp, #-32]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
