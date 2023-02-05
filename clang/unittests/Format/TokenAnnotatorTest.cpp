@@ -175,6 +175,73 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   ASSERT_EQ(Tokens.size(), 17u) << Tokens;
   EXPECT_TOKEN(Tokens[9], tok::ampamp, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[12], tok::ampamp, TT_PointerOrReference);
+
+  Tokens = annotate("Type1 &val1 = val2;");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::amp, TT_PointerOrReference);
+
+  Tokens = annotate("Type1 *val1 = &val2;");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::star, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[4], tok::amp, TT_UnaryOperator);
+
+  Tokens = annotate("val1 & val2;");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::amp, TT_BinaryOperator);
+
+  Tokens = annotate("val1 & val2.member;");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::amp, TT_BinaryOperator);
+
+  Tokens = annotate("val1 & val2.*member;");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::amp, TT_BinaryOperator);
+
+  Tokens = annotate("val1.*member & val2;");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::amp, TT_BinaryOperator);
+
+  Tokens = annotate("val1 & val2->*member;");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::amp, TT_BinaryOperator);
+
+  Tokens = annotate("val1->member & val2;");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::amp, TT_BinaryOperator);
+
+  Tokens = annotate("val1 & val2 & val3;");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::amp, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[3], tok::amp, TT_BinaryOperator);
+
+  Tokens = annotate("val1 & val2 // comment\n"
+                    "     & val3;");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::amp, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[4], tok::amp, TT_BinaryOperator);
+
+  Tokens =
+      annotate("val1 & val2.member & val3.member() & val4 & val5->member;");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::amp, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[5], tok::amp, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[11], tok::amp, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[13], tok::amp, TT_BinaryOperator);
+
+  Tokens = annotate("class c {\n"
+                    "  void func(type &a) { a & member; }\n"
+                    "  anotherType &member;\n"
+                    "}");
+  ASSERT_EQ(Tokens.size(), 22u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::amp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[12], tok::amp, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[17], tok::amp, TT_PointerOrReference);
+
+  Tokens = annotate("struct S {\n"
+                    "  auto Mem = C & D;\n"
+                    "}");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::amp, TT_BinaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
