@@ -405,9 +405,9 @@ define void @store_i16_stride6_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512F-SLOW-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX512F-SLOW-NEXT:    vpshufb {{.*#+}} xmm1 = xmm2[4,5,12,13,u,u,u,u,u,u,u,u,6,7,14,15]
 ; AVX512F-SLOW-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0],xmm0[1,2],xmm1[3]
-; AVX512F-SLOW-NEXT:    vinserti64x4 $1, %ymm0, %zmm3, %zmm0
-; AVX512F-SLOW-NEXT:    vmovdqa %ymm3, (%rax)
-; AVX512F-SLOW-NEXT:    vextracti32x4 $2, %zmm0, 32(%rax)
+; AVX512F-SLOW-NEXT:    vinserti32x4 $2, %xmm0, %zmm3, %zmm1
+; AVX512F-SLOW-NEXT:    vmovdqa %xmm0, 32(%rax)
+; AVX512F-SLOW-NEXT:    vmovdqa %ymm1, (%rax)
 ; AVX512F-SLOW-NEXT:    vzeroupper
 ; AVX512F-SLOW-NEXT:    retq
 ;
@@ -438,9 +438,9 @@ define void @store_i16_stride6_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512F-FAST-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX512F-FAST-NEXT:    vpshufb {{.*#+}} xmm1 = xmm4[4,5,12,13,u,u,u,u,u,u,u,u,6,7,14,15]
 ; AVX512F-FAST-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0],xmm0[1,2],xmm1[3]
-; AVX512F-FAST-NEXT:    vinserti64x4 $1, %ymm0, %zmm3, %zmm0
-; AVX512F-FAST-NEXT:    vmovdqa %ymm3, (%rax)
-; AVX512F-FAST-NEXT:    vextracti32x4 $2, %zmm0, 32(%rax)
+; AVX512F-FAST-NEXT:    vinserti32x4 $2, %xmm0, %zmm3, %zmm1
+; AVX512F-FAST-NEXT:    vmovdqa %xmm0, 32(%rax)
+; AVX512F-FAST-NEXT:    vmovdqa %ymm1, (%rax)
 ; AVX512F-FAST-NEXT:    vzeroupper
 ; AVX512F-FAST-NEXT:    retq
 ;
@@ -457,7 +457,7 @@ define void @store_i16_stride6_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512BW-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
 ; AVX512BW-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
 ; AVX512BW-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512BW-NEXT:    vinserti32x4 $2, %xmm2, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm1 = <0,4,8,12,16,20,1,5,9,13,17,21,2,6,10,14,18,22,3,7,11,15,19,23,u,u,u,u,u,u,u,u>
 ; AVX512BW-NEXT:    vpermw %zmm0, %zmm1, %zmm0
 ; AVX512BW-NEXT:    vextracti32x4 $2, %zmm0, 32(%rax)

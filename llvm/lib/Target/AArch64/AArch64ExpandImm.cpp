@@ -252,12 +252,14 @@ static uint64_t GetRunOfOnesStartingAt(uint64_t V, uint64_t StartPosition) {
 }
 
 static uint64_t rotl(uint64_t n, uint64_t d) {
+  d %= 64;
   if (d == 0)
     return n;
   return (n << d) | (n >> (64 - d));
 }
 
 static uint64_t rotr(uint64_t n, uint64_t d) {
+  d %= 64;
   if (d == 0)
     return n;
   return (n >> d) | (n << (64 - d));
@@ -268,7 +270,7 @@ static uint64_t MaximallyReplicateSubImmediate(uint64_t V, uint64_t Subset) {
 
   // 64, 32, 16, 8, 4, 2
   for (uint64_t i = 0; i < 6; ++i) {
-    uint64_t Rotation = 1 << (6 - i);
+    uint64_t Rotation = 1ULL << (6 - i);
     uint64_t Closure = Result | rotl(Result, Rotation);
     if (Closure != (Closure & V)) {
       break;
