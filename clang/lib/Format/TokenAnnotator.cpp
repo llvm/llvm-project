@@ -111,14 +111,29 @@ static bool isCppAttribute(bool IsCpp, const FormatToken &Tok) {
 class AnnotatingParser {
 public:
   AnnotatingParser(const FormatStyle &Style, AnnotatedLine &Line,
-                   const AdditionalKeywords &Keywords)
+                   const AdditionalKeywords &Keywords,
+                   SmallVector<ScopeType> &Scopes)
       : Style(Style), Line(Line), CurrentToken(Line.First), AutoFound(false),
-        Keywords(Keywords) {
+        Keywords(Keywords), Scopes(Scopes) {
     Contexts.push_back(Context(tok::unknown, 1, /*IsExpression=*/false));
     resetTokenMetadata();
   }
 
 private:
+  ScopeType getScopeType(const FormatToken &Token) const {
+    switch (Token.getType()) {
+    case TT_FunctionLBrace:
+    case TT_LambdaLBrace:
+      return ST_Function;
+    case TT_ClassLBrace:
+    case TT_StructLBrace:
+    case TT_UnionLBrace:
+      return ST_Class;
+    default:
+      return ST_Other;
+    }
+  }
+
   bool parseAngle() {
     if (!CurrentToken || !CurrentToken->Previous)
       return false;
@@ -849,6 +864,9 @@ private:
     unsigned CommaCount = 0;
     while (CurrentToken) {
       if (CurrentToken->is(tok::r_brace)) {
+        assert(!Scopes.empty());
+        assert(Scopes.back() == getScopeType(OpeningBrace));
+        Scopes.pop_back();
         assert(OpeningBrace.Optional == CurrentToken->Optional);
         OpeningBrace.MatchingParen = CurrentToken;
         CurrentToken->MatchingParen = &OpeningBrace;
@@ -1148,6 +1166,7 @@ private:
         if (Previous && Previous->getType() != TT_DictLiteral)
           Previous->setType(TT_SelectorName);
       }
+      Scopes.push_back(getScopeType(*Tok));
       if (!parseBrace())
         return false;
       break;
@@ -1178,6 +1197,9 @@ private:
     case tok::r_square:
       return false;
     case tok::r_brace:
+      // Don't pop scope when encountering unbalanced r_brace.
+      if (!Scopes.empty())
+        Scopes.pop_back();
       // Lines can start with '}'.
       if (Tok->Previous)
         return false;
@@ -2448,6 +2470,28 @@ private:
     if (IsExpression && !Contexts.back().CaretFound)
       return TT_BinaryOperator;
 
+    // Opeartors at class scope are likely pointer or reference members.
+    if (!Scopes.empty() && Scopes.back() == ST_Class)
+      return TT_PointerOrReference;
+
+    // Tokens that indicate member access or chained operator& use.
+    auto IsChainedOperatorAmpOrMember = [](const FormatToken *token) {
+      return !token || token->isOneOf(tok::amp, tok::period, tok::arrow,
+                                      tok::arrowstar, tok::periodstar);
+    };
+
+    // It's more likely that & represents operator& than an uninitialized
+    // reference.
+    if (Tok.is(tok::amp) && PrevToken && PrevToken->Tok.isAnyIdentifier() &&
+        IsChainedOperatorAmpOrMember(PrevToken->getPreviousNonComment()) &&
+        NextToken && NextToken->Tok.isAnyIdentifier()) {
+      if (auto NextNext = NextToken->getNextNonComment();
+          NextNext &&
+          (IsChainedOperatorAmpOrMember(NextNext) || NextNext->is(tok::semi))) {
+        return TT_BinaryOperator;
+      }
+    }
+
     return TT_PointerOrReference;
   }
 
@@ -2484,6 +2528,8 @@ private:
   FormatToken *CurrentToken;
   bool AutoFound;
   const AdditionalKeywords &Keywords;
+
+  SmallVector<ScopeType> &Scopes;
 
   // Set of "<" tokens that do not open a template parameter list. If parseAngle
   // determines that a specific token can't be a template opener, it will make
@@ -2765,11 +2811,11 @@ static unsigned maxNestingDepth(const AnnotatedLine &Line) {
   return Result;
 }
 
-void TokenAnnotator::annotate(AnnotatedLine &Line) const {
+void TokenAnnotator::annotate(AnnotatedLine &Line) {
   for (auto &Child : Line.Children)
     annotate(*Child);
 
-  AnnotatingParser Parser(Style, Line, Keywords);
+  AnnotatingParser Parser(Style, Line, Keywords, Scopes);
   Line.Type = Parser.parseLine();
 
   // With very deep nesting, ExpressionParser uses lots of stack and the
