@@ -36,7 +36,8 @@ bool ConstraintSystem::eliminateUsingFM() {
 
   for (unsigned R1 = 0; R1 < NumConstraints; R1++) {
     SmallVector<int64_t, 8> &Row1 = Constraints[R1];
-    if (Row1[LastIdx] == 0) {
+    int64_t LowerLast = Row1[LastIdx];
+    if (LowerLast == 0) {
       Row1.pop_back();
       NewSystem.push_back(std::move(Row1));
       continue;
@@ -47,35 +48,38 @@ bool ConstraintSystem::eliminateUsingFM() {
       if (R1 == R2)
         continue;
 
+      int64_t UpperLast = Constraints[R2][LastIdx];
       // FIXME: can we do better than just dropping things here?
-      if (Constraints[R2][LastIdx] == 0)
+      if (UpperLast == 0)
         continue;
 
-      if ((Constraints[R1][LastIdx] < 0 && Constraints[R2][LastIdx] < 0) ||
-          (Constraints[R1][LastIdx] > 0 && Constraints[R2][LastIdx] > 0))
+      int64_t LowerLast = Constraints[R1][LastIdx];
+      if ((LowerLast < 0 && UpperLast < 0) || (LowerLast > 0 && UpperLast > 0))
         continue;
 
       unsigned LowerR = R1;
       unsigned UpperR = R2;
-      if (Constraints[UpperR][LastIdx] < 0)
+      if (UpperLast < 0) {
         std::swap(LowerR, UpperR);
+        std::swap(LowerLast, UpperLast);
+      }
 
       SmallVector<int64_t, 8> NR;
       for (unsigned I = 0; I < LastIdx; I++) {
         int64_t M1, M2, N;
-        if (MulOverflow(Constraints[UpperR][I],
-                        ((-1) * Constraints[LowerR][LastIdx] / GCD), M1))
+        int64_t UpperV = Constraints[UpperR][I];
+        if (MulOverflow(UpperV, ((-1) * LowerLast / GCD), M1))
           return false;
-        if (MulOverflow(Constraints[LowerR][I],
-                        (Constraints[UpperR][LastIdx] / GCD), M2))
+        int64_t LowerV = Constraints[LowerR][I];
+        if (MulOverflow(LowerV, (UpperLast / GCD), M2))
           return false;
         if (AddOverflow(M1, M2, N))
           return false;
         NR.push_back(N);
 
-        NewGCD = APIntOps::GreatestCommonDivisor({32, (uint32_t)NR.back()},
-                                                 {32, NewGCD})
-                     .getZExtValue();
+        NewGCD =
+            APIntOps::GreatestCommonDivisor({32, (uint32_t)N}, {32, NewGCD})
+                .getZExtValue();
       }
       NewSystem.push_back(std::move(NR));
       // Give up if the new system gets too big.
