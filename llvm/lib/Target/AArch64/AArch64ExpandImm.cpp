@@ -270,7 +270,7 @@ static uint64_t MaximallyReplicateSubImmediate(uint64_t V, uint64_t Subset) {
 
   // 64, 32, 16, 8, 4, 2
   for (uint64_t i = 0; i < 6; ++i) {
-    uint64_t Rotation = 1 << (6 - i);
+    uint64_t Rotation = 1ULL << (6 - i);
     uint64_t Closure = Result | rotl(Result, Rotation);
     if (Closure != (Closure & V)) {
       break;
