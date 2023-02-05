@@ -326,9 +326,6 @@ defm : LdPat<load, FLH, f16>;
 
 defm : StPat<store, FSH, FPR16, f16>;
 
-/// Floating point constant +0.0
-def : Pat<(f16 (fpimm0)), (FMV_H_X X0)>;
-
 /// Float conversion operations
 
 // f32 -> f16, f16 -> f32

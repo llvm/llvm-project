@@ -436,7 +436,6 @@ def : InstAlias<"fge.s $rd, $rs, $rt",
 
 /// Floating point constants
 def fpimm0    : PatLeaf<(fpimm), [{ return N->isExactlyValue(+0.0); }]>;
-def fpimmneg0 : PatLeaf<(fpimm), [{ return N->isExactlyValue(-0.0); }]>;
 
 /// Generic pattern classes
 class PatSetCC<RegisterClass Ty, SDPatternOperator OpNode, CondCode Cond, RVInst Inst>
@@ -451,9 +450,6 @@ class PatFprFprDynFrm<SDPatternOperator OpNode, RVInstRFrm Inst,
     : Pat<(OpNode RegTy:$rs1, RegTy:$rs2), (Inst $rs1, $rs2, 0b111)>;
 
 let Predicates = [HasStdExtF] in {
-
-/// Float constants
-def : Pat<(f32 (fpimm0)), (FMV_W_X X0)>;
 
 /// Float conversion operations
 
