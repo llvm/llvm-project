@@ -712,16 +712,16 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   }
   case ISD::ConstantFP: {
     const APFloat &APF = cast<ConstantFPSDNode>(Node)->getValueAPF();
-    // td can handle +0.0 already.
-    if (APF.isPosZero())
-      break;
-    // Special case: a 64 bit -0.0 uses more instructions than fmv + fneg.
-    if (APF.isNegZero() && VT == MVT::f64)
-      break;
-    assert(VT.bitsLE(Subtarget->getXLenVT()) &&
-           "Cannot create a 64 bit floating-point immediate value for rv32");
-    SDValue Imm = selectImm(CurDAG, DL, XLenVT,
-                            APF.bitcastToAPInt().getSExtValue(), *Subtarget);
+    bool NegZeroF64 = APF.isNegZero() && VT == MVT::f64;
+    SDValue Imm;
+    // For +0.0 or f64 -0.0 we need to start from X0. For all others, we will
+    // create an integer immediate.
+    if (APF.isPosZero() || NegZeroF64)
+      Imm = CurDAG->getRegister(RISCV::X0, XLenVT);
+    else
+      Imm = selectImm(CurDAG, DL, XLenVT, APF.bitcastToAPInt().getSExtValue(),
+                      *Subtarget);
+
     unsigned Opc;
     switch (VT.SimpleTy) {
     default:
@@ -733,10 +733,21 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       Opc = RISCV::FMV_W_X;
       break;
     case MVT::f64:
-      Opc = RISCV::FMV_D_X;
+      // For RV32, we can't move from a GPR, we need to convert instead. This
+      // should only happen for +0.0 and -0.0.
+      assert((Subtarget->is64Bit() || APF.isZero()) && "Unexpected constant");
+      Opc = Subtarget->is64Bit() ? RISCV::FMV_D_X : RISCV::FCVT_D_W;
       break;
     }
-    ReplaceNode(Node, CurDAG->getMachineNode(Opc, DL, VT, Imm));
+
+    SDNode *Res = CurDAG->getMachineNode(Opc, DL, VT, Imm);
+
+    // For f64 -0.0, we need to insert a fneg.d idiom.
+    if (NegZeroF64)
+      Res = CurDAG->getMachineNode(RISCV::FSGNJN_D, DL, VT, SDValue(Res, 0),
+                                   SDValue(Res, 0));
+
+    ReplaceNode(Node, Res);
     return;
   }
   case ISD::SHL: {
