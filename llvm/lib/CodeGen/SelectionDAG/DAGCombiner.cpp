@@ -435,6 +435,7 @@ namespace {
     SDValue visitMULHU(SDNode *N);
     SDValue visitMULHS(SDNode *N);
     SDValue visitAVG(SDNode *N);
+    SDValue visitABD(SDNode *N);
     SDValue visitSMUL_LOHI(SDNode *N);
     SDValue visitUMUL_LOHI(SDNode *N);
     SDValue visitMULO(SDNode *N);
@@ -1721,6 +1722,8 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::AVGFLOORU:
   case ISD::AVGCEILS:
   case ISD::AVGCEILU:           return visitAVG(N);
+  case ISD::ABDS:
+  case ISD::ABDU:               return visitABD(N);
   case ISD::SMUL_LOHI:          return visitSMUL_LOHI(N);
   case ISD::UMUL_LOHI:          return visitUMUL_LOHI(N);
   case ISD::SMULO:
@@ -4888,6 +4891,46 @@ SDValue DAGCombiner::visitAVG(SDNode *N) {
     return N0;
 
   // TODO If we use avg for scalars anywhere, we can add (avgfl x, 0) -> x >> 1
+
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitABD(SDNode *N) {
+  unsigned Opcode = N->getOpcode();
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  // fold (abd c1, c2)
+  if (SDValue C = DAG.FoldConstantArithmetic(Opcode, DL, VT, {N0, N1}))
+    return C;
+  // reassociate if possible
+  if (SDValue C = reassociateOps(Opcode, DL, N0, N1, N->getFlags()))
+    return C;
+
+  // canonicalize constant to RHS.
+  if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
+      !DAG.isConstantIntBuildVectorOrConstantInt(N1))
+    return DAG.getNode(Opcode, DL, N->getVTList(), N1, N0);
+
+  if (VT.isVector()) {
+    if (SDValue FoldedVOp = SimplifyVBinOp(N, DL))
+      return FoldedVOp;
+
+    // fold (abds x, 0) -> abs x
+    // fold (abdu x, 0) -> x
+    if (ISD::isConstantSplatVectorAllZeros(N1.getNode())) {
+      if (Opcode == ISD::ABDS)
+        return DAG.getNode(ISD::ABS, DL, VT, N0);
+      if (Opcode == ISD::ABDU)
+        return N0;
+    }
+  }
+
+  // fold (abd x, undef) -> 0
+  if (N0.isUndef() || N1.isUndef())
+    return DAG.getConstant(0, DL, VT);
 
   return SDValue();
 }
