@@ -386,7 +386,7 @@ static bool CheckArrayInitialized(InterpState &S, CodePtr OpPC,
   size_t NumElems = CAT->getSize().getZExtValue();
   QualType ElemType = CAT->getElementType();
 
-  if (isa<RecordType>(ElemType.getTypePtr())) {
+  if (ElemType->isRecordType()) {
     const Record *R = BasePtr.getElemRecord();
     for (size_t I = 0; I != NumElems; ++I) {
       Pointer ElemPtr = BasePtr.atIndex(I).narrow();
