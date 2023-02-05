@@ -8042,10 +8042,19 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
   // exceptions are ignored.
   if (Flags.hasNoFPExcept() &&
       isOperationLegalOrCustom(ISD::SETCC, OperandVT.getScalarType())) {
-    if (Test == fcZero)
-      return DAG.getSetCC(DL, ResultVT, Op,
-                          DAG.getConstantFP(0.0, DL, OperandVT),
-                          IsInverted ? ISD::SETUNE : ISD::SETOEQ);
+    if (Test == fcZero) {
+      DenormalMode Mode = DAG.getMachineFunction().getDenormalMode(Semantics);
+      if (Mode.Input == DenormalMode::IEEE) {
+        // If denormals could be implicitly treated as 0, this is not equivalent
+        // to a compare with 0 since it will also be true for denormals.
+        //
+        // TODO: With DAZ, check == fcZero | fcSubnormal
+        return DAG.getSetCC(DL, ResultVT, Op,
+                            DAG.getConstantFP(0.0, DL, OperandVT),
+                            IsInverted ? ISD::SETUNE : ISD::SETOEQ);
+      }
+    }
+
     if (Test == fcNan)
       return DAG.getSetCC(DL, ResultVT, Op, Op,
                           IsInverted ? ISD::SETO : ISD::SETUO);
