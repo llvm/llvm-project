@@ -1739,6 +1739,24 @@ class IntArrayNthElemMinValue<int index, int min> : AttrConstraint<
         ]>,
     "whose " # index # "-th element must be at least " # min>;
 
+class IntArrayNthElemMaxValue<int index, int max> : AttrConstraint<
+    And<[
+      CPred<"$_self.cast<::mlir::ArrayAttr>().size() > " # index>,
+      CPred<"$_self.cast<::mlir::ArrayAttr>()[" # index # "]"
+        ".cast<::mlir::IntegerAttr>().getInt() <= " # max>
+        ]>,
+    "whose " # index # "-th element must be at most " # max>;
+
+class IntArrayNthElemInRange<int index, int min, int max> : AttrConstraint<
+    And<[
+      CPred<"$_self.cast<::mlir::ArrayAttr>().size() > " # index>,
+      CPred<"$_self.cast<::mlir::ArrayAttr>()[" # index # "]"
+        ".cast<::mlir::IntegerAttr>().getInt() >= " # min>,
+      CPred<"$_self.cast<::mlir::ArrayAttr>()[" # index # "]"
+        ".cast<::mlir::IntegerAttr>().getInt() <= " # max>
+        ]>,
+    "whose " # index # "-th element must be at least " # min # " and at most " # max>;
+
 def IsNullAttr : AttrConstraint<
     CPred<"!$_self">, "empty attribute (for optional attributes)">;
 
