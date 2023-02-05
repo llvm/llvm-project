@@ -895,7 +895,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 
 // Try to find out if RTTI is disabled.
 #  if !defined(__cpp_rtti) || __cpp_rtti < 199711L
-#    define _LIBCPP_NO_RTTI
+#    define _LIBCPP_HAS_NO_RTTI
 #  endif
 
 #  ifndef _LIBCPP_WEAK
