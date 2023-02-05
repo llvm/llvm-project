@@ -46,3 +46,5 @@ target_link_libraries(OrcJITTests PRIVATE
                         ${ORC_JIT_TEST_LIBS})
 
 set_property(TARGET OrcJITTests PROPERTY FOLDER "Tests/UnitTests/ExecutionTests")
+
+export_executable_symbols(OrcJITTests)
