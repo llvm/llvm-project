@@ -617,9 +617,8 @@ for.cond.cleanup:                                 ; preds = %vector.body
 define arm_aapcs_vfpcc <4 x i32> @vabd_v4u32_commutative(<4 x i32> %src1, <4 x i32> %src2) {
 ; CHECK-LABEL: vabd_v4u32_commutative:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vabd.u32 q2, q1, q0
-; CHECK-NEXT:    vabd.u32 q0, q0, q1
-; CHECK-NEXT:    vadd.i32 q0, q0, q2
+; CHECK-NEXT:    vabd.u32 q0, q1, q0
+; CHECK-NEXT:    vadd.i32 q0, q0, q0
 ; CHECK-NEXT:    bx lr
   %azextsrc1 = zext <4 x i32> %src1 to <4 x i64>
   %azextsrc2 = zext <4 x i32> %src2 to <4 x i64>
@@ -642,15 +641,11 @@ define arm_aapcs_vfpcc <4 x i32> @vabd_v4u32_commutative(<4 x i32> %src1, <4 x i
 define arm_aapcs_vfpcc <4 x i32> @vabd_v4u32_shuffle(<4 x i32> %src1, <4 x i32> %src2) {
 ; CHECK-LABEL: vabd_v4u32_shuffle:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.f32 s8, s7
-; CHECK-NEXT:    vmov.f32 s9, s6
-; CHECK-NEXT:    vmov.f32 s10, s5
-; CHECK-NEXT:    vmov.f32 s11, s4
-; CHECK-NEXT:    vmov.f32 s4, s3
-; CHECK-NEXT:    vmov.f32 s5, s2
-; CHECK-NEXT:    vmov.f32 s6, s1
-; CHECK-NEXT:    vmov.f32 s7, s0
-; CHECK-NEXT:    vabd.u32 q0, q1, q2
+; CHECK-NEXT:    vabd.u32 q1, q0, q1
+; CHECK-NEXT:    vmov.f32 s0, s7
+; CHECK-NEXT:    vmov.f32 s1, s6
+; CHECK-NEXT:    vmov.f32 s2, s5
+; CHECK-NEXT:    vmov.f32 s3, s4
 ; CHECK-NEXT:    bx lr
   %s1 = shufflevector <4 x i32> %src1, <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %s2 = shufflevector <4 x i32> %src2, <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
