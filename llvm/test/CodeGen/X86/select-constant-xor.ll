@@ -47,20 +47,18 @@ define i64 @selecti64i64(i64 %a) {
 define i32 @selecti64i32(i64 %a) {
 ; X86-LABEL: selecti64i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    setns %cl
-; X86-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
-; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    sets %al
+; X86-NEXT:    addl $2147483647, %eax # imm = 0x7FFFFFFF
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: selecti64i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    testq %rdi, %rdi
-; X64-NEXT:    setns %cl
-; X64-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
-; X64-NEXT:    subl %ecx, %eax
+; X64-NEXT:    sets %al
+; X64-NEXT:    addl $2147483647, %eax # imm = 0x7FFFFFFF
 ; X64-NEXT:    retq
   %c = icmp sgt i64 %a, -1
   %s = select i1 %c, i32 2147483647, i32 -2147483648
