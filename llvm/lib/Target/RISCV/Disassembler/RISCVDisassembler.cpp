@@ -349,6 +349,10 @@ static DecodeStatus decodeFRMArg(MCInst &Inst, uint64_t Imm, int64_t Address,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeRVCInstrRdRs1ImmZero(MCInst &Inst, unsigned Insn,
+                                               uint64_t Address,
+                                               const MCDisassembler *Decoder);
+
 static DecodeStatus decodeRVCInstrSImm(MCInst &Inst, unsigned Insn,
                                        uint64_t Address,
                                        const MCDisassembler *Decoder);
@@ -370,6 +374,18 @@ static DecodeStatus decodeRVCInstrRdRs1Rs2(MCInst &Inst, unsigned Insn,
                                            const MCDisassembler *Decoder);
 
 #include "RISCVGenDisassemblerTables.inc"
+
+static DecodeStatus decodeRVCInstrRdRs1ImmZero(MCInst &Inst, unsigned Insn,
+                                               uint64_t Address,
+                                               const MCDisassembler *Decoder) {
+  unsigned Rd = fieldFromInstruction(Insn, 7, 5);
+  DecodeStatus Result = DecodeGPRNoX0RegisterClass(Inst, Rd, Address, Decoder);
+  (void)Result;
+  assert(Result == MCDisassembler::Success && "Invalid register");
+  Inst.addOperand(Inst.getOperand(0));
+  Inst.addOperand(MCOperand::createImm(0));
+  return MCDisassembler::Success;
+}
 
 static DecodeStatus decodeRVCInstrSImm(MCInst &Inst, unsigned Insn,
                                        uint64_t Address,
