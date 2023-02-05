@@ -830,10 +830,48 @@ InstCombinerImpl::foldIntrinsicWithOverflowCommon(IntrinsicInst *II) {
   return nullptr;
 }
 
+Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
+  Value *Src0 = II.getArgOperand(0);
+  Value *Src1 = II.getArgOperand(1);
+  const ConstantInt *CMask = cast<ConstantInt>(Src1);
+  uint32_t Mask = CMask->getZExtValue();
+  const bool IsStrict = II.isStrictFP();
+
+  if (Mask == fcNan && !IsStrict) {
+    // Equivalent of isnan. Replace with standard fcmp if we don't care about FP
+    // exceptions.
+    Value *IsNan =
+        Builder.CreateFCmpUNO(Src0, ConstantFP::getZero(Src0->getType()));
+    IsNan->takeName(&II);
+    return replaceInstUsesWith(II, IsNan);
+  }
+
+  if (Mask == (~fcNan & fcAllFlags) && !IsStrict) {
+    // Equivalent of !isnan. Replace with standard fcmp.
+    Value *FCmp =
+        Builder.CreateFCmpORD(Src0, ConstantFP::getZero(Src0->getType()));
+    FCmp->takeName(&II);
+    return replaceInstUsesWith(II, FCmp);
+  }
+
+  // fp_class (nnan x), qnan|snan|other -> fp_class (nnan x), other
+  if ((Mask & fcNan) && isKnownNeverNaN(Src0, &getTargetLibraryInfo())) {
+    II.setArgOperand(1, ConstantInt::get(Src1->getType(), Mask & ~fcNan));
+    return &II;
+  }
+
+  // fp_class (nnan x), ~(qnan|snan) -> true
+  if (Mask == (~fcNan & fcAllFlags) &&
+      isKnownNeverNaN(Src0, &getTargetLibraryInfo())) {
+    return replaceInstUsesWith(II, ConstantInt::get(II.getType(), true));
+  }
+
+  return nullptr;
+}
+
 static std::optional<bool> getKnownSign(Value *Op, Instruction *CxtI,
-                                        const DataLayout &DL,
-                                        AssumptionCache *AC,
-                                        DominatorTree *DT) {
+                                   const DataLayout &DL, AssumptionCache *AC,
+                                   DominatorTree *DT) {
   KnownBits Known = computeKnownBits(Op, DL, 0, AC, CxtI, DT);
   if (Known.isNonNegative())
     return false;
@@ -2850,6 +2888,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       replaceUse(II->getOperandUse(ArgIdx), V);
       return nullptr;
     }
+    break;
+  }
+  case Intrinsic::is_fpclass: {
+    if (Instruction *I = foldIntrinsicIsFPClass(*II))
+      return I;
     break;
   }
   default: {

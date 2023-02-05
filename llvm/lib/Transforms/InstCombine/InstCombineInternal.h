@@ -379,6 +379,7 @@ private:
   Instruction *foldLShrOverflowBit(BinaryOperator &I);
   Instruction *foldExtractOfOverflowIntrinsic(ExtractValueInst &EV);
   Instruction *foldIntrinsicWithOverflowCommon(IntrinsicInst *II);
+  Instruction *foldIntrinsicIsFPClass(IntrinsicInst &II);
   Instruction *foldFPSignBitOps(BinaryOperator &I);
   Instruction *foldFDivConstantDivisor(BinaryOperator &I);
 
