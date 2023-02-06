@@ -608,6 +608,23 @@ extendedValueToHlfirEntity(mlir::Location loc, fir::FirOpBuilder &builder,
   mlir::Value firBase = fir::getBase(exv);
   if (fir::isa_trivial(firBase.getType()))
     return hlfir::EntityWithAttributes{firBase};
+  if (auto charTy = firBase.getType().dyn_cast<fir::CharacterType>()) {
+    // CHAR() intrinsic and BIND(C) procedures returning CHARACTER(1)
+    // are lowered to a fir.char<kind,1> that is not in memory.
+    // This tends to cause a lot of bugs because the rest of the
+    // infrastructure is mostly tested with characters that are
+    // in memory.
+    // To avoid having to deal with this special case here and there,
+    // place it in memory here. If this turns out to be suboptimal,
+    // this could be fixed, but for now llvm opt -O1 is able to get
+    // rid of the memory indirection in a = char(b), so there is
+    // little incentive to increase the compiler complexity.
+    hlfir::Entity storage{builder.createTemporary(loc, charTy)};
+    builder.create<fir::StoreOp>(loc, firBase, storage);
+    auto asExpr = builder.create<hlfir::AsExprOp>(
+        loc, storage, /*mustFree=*/builder.createBool(loc, false));
+    return hlfir::EntityWithAttributes{asExpr.getResult()};
+  }
   return hlfir::genDeclare(loc, builder, exv, name,
                            fir::FortranVariableFlagsAttr{});
 }
@@ -1118,7 +1135,7 @@ static std::optional<hlfir::EntityWithAttributes> genIntrinsicRefCore(
       loc, builder, resultExv, ".tmp.intrinsic_result");
   // Move result into memory into an hlfir.expr since they are immutable from
   // that point, and the result storage is some temp.
-  if (!fir::isa_trivial(resultEntity.getType())) {
+  if (resultEntity.isVariable()) {
     hlfir::AsExprOp asExpr;
     // Character/Derived MERGE lowering returns one of its argument address
     // (this is the only intrinsic implemented in that way so far). The
