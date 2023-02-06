@@ -1115,7 +1115,15 @@ static std::optional<hlfir::EntityWithAttributes> genIntrinsicRefCore(
           Fortran::lower::convertToBox(loc, converter, actual, stmtCtx));
       continue;
     case Fortran::lower::LowerIntrinsicArgAs::Inquired:
-      TODO(loc, "as inquired arguments in HLFIR");
+      // Place hlfir.expr in memory, and unbox fir.boxchar. Other entities
+      // are translated to fir::ExtendedValue without transformation (notably,
+      // pointers/allocatable are not dereferenced).
+      // TODO: once lowering to FIR retires, UBOUND and LBOUND can be simplified
+      // since the fir.box lowered here are now guaranteed to contain the local
+      // lower bounds thanks to the hlfir.declare (the extra rebox can be
+      // removed).
+      operands.emplace_back(Fortran::lower::translateToExtendedValue(
+          loc, builder, actual, stmtCtx));
       continue;
     }
     llvm_unreachable("bad switch");
