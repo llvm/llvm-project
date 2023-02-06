@@ -343,13 +343,13 @@ define i128 @f25(i1 %a) {
 define i128 @f26(ptr %ptr) {
 ; CHECK-LABEL: f26:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vgbm %v1, 0
-; CHECK-NEXT:    vleb %v1, 0(%r3), 15
-; CHECK-NEXT:    larl %r1, .LCPI25_0
-; CHECK-NEXT:    vl %v2, 0(%r1), 3
 ; CHECK-NEXT:    vgbm %v0, 0
-; CHECK-NEXT:    vn %v1, %v1, %v2
-; CHECK-NEXT:    vsq %v0, %v0, %v1
+; CHECK-NEXT:    vleb %v0, 0(%r3), 15
+; CHECK-NEXT:    larl %r1, .LCPI25_0
+; CHECK-NEXT:    vl %v1, 0(%r1), 3
+; CHECK-NEXT:    vgbm %v2, 0
+; CHECK-NEXT:    vn %v0, %v0, %v1
+; CHECK-NEXT:    vsq %v0, %v2, %v0
 ; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
   %a = load i1, ptr %ptr

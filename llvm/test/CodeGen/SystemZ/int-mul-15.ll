@@ -43,10 +43,10 @@ define i64 @f3(i64 %dummy, i64 %a, i64 %b) {
 ; CHECK-NEXT:    vgbm %v1, 0
 ; CHECK-NEXT:    vlvgg %v1, %r3, 1
 ; CHECK-NEXT:    vlvgg %v0, %r4, 1
+; CHECK-NEXT:    vrepib %v2, 67
 ; CHECK-NEXT:    vmlq %v0, %v1, %v0
-; CHECK-NEXT:    vrepib %v1, 67
-; CHECK-NEXT:    vsrlb %v0, %v0, %v1
-; CHECK-NEXT:    vsrl %v0, %v0, %v1
+; CHECK-NEXT:    vsrlb %v0, %v0, %v2
+; CHECK-NEXT:    vsrl %v0, %v0, %v2
 ; CHECK-NEXT:    vlgvg %r2, %v0, 1
 ; CHECK-NEXT:    br %r14
   %ax = zext i64 %a to i128
@@ -66,9 +66,9 @@ define i64 @f4(i64 %dummy, i64 %a, i64 %b) {
 ; CHECK-NEXT:    vgbm %v1, 0
 ; CHECK-NEXT:    vlvgg %v1, %r3, 1
 ; CHECK-NEXT:    vlvgg %v0, %r4, 1
+; CHECK-NEXT:    vrepib %v2, 64
 ; CHECK-NEXT:    vmlq %v0, %v1, %v0
-; CHECK-NEXT:    vrepib %v1, 64
-; CHECK-NEXT:    vsrlb %v1, %v0, %v1
+; CHECK-NEXT:    vsrlb %v1, %v0, %v2
 ; CHECK-NEXT:    vo %v0, %v1, %v0
 ; CHECK-NEXT:    vlgvg %r2, %v0, 1
 ; CHECK-NEXT:    br %r14
