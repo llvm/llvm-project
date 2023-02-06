@@ -314,7 +314,7 @@ void HIPAMDToolChain::AddIAMCUIncludeArgs(const ArgList &Args,
 
 void HIPAMDToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
                                         ArgStringList &CC1Args) const {
-  RocmInstallation->AddHIPIncludeArgs(DriverArgs, CC1Args);
+  RocmInstallation.AddHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
 SanitizerMask HIPAMDToolChain::getSupportedSanitizers() const {
@@ -343,7 +343,7 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
   ArgStringList LibraryPaths;
 
   // Find in --hip-device-lib-path and HIP_LIBRARY_PATH.
-  for (StringRef Path : RocmInstallation->getRocmDeviceLibPathArg())
+  for (StringRef Path : RocmInstallation.getRocmDeviceLibPathArg())
     LibraryPaths.push_back(DriverArgs.MakeArgString(Path));
 
   addDirectoryList(DriverArgs, LibraryPaths, "", "HIP_DEVICE_LIB_PATH");
@@ -365,7 +365,7 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
       getDriver().Diag(diag::err_drv_no_such_file) << BCName;
     });
   } else {
-    if (!RocmInstallation->hasDeviceLibrary()) {
+    if (!RocmInstallation.hasDeviceLibrary()) {
       getDriver().Diag(diag::err_drv_no_rocm_device_lib) << 0;
       return {};
     }
@@ -376,7 +376,7 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
     if (DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
                            options::OPT_fno_gpu_sanitize, true) &&
         getSanitizerArgs(DriverArgs).needsAsanRt()) {
-      auto AsanRTL = RocmInstallation->getAsanRTLPath();
+      auto AsanRTL = RocmInstallation.getAsanRTLPath();
       if (AsanRTL.empty()) {
         unsigned DiagID = getDriver().getDiags().getCustomDiagID(
             DiagnosticsEngine::Error,
@@ -390,7 +390,7 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
     }
 
     // Add the HIP specific bitcode library.
-    BCLibs.push_back(RocmInstallation->getHIPPath());
+    BCLibs.push_back(RocmInstallation.getHIPPath());
 
     // Add common device libraries like ocml etc.
     for (StringRef N : getCommonDeviceLibNames(DriverArgs, GpuArch.str()))
