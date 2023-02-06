@@ -63,7 +63,7 @@ define <16 x i16> @fun3(<16 x i8> %val1, <16 x i8> %val2, <16 x i16> %val3, <16 
 ; CHECK-DAG:     vceqh [[REG4:%v[0-9]+]], %v30, %v27
 ; CHECK-DAG:     vl [[REG5:%v[0-9]+]], 176(%r15)
 ; CHECK-DAG:     vl [[REG6:%v[0-9]+]], 160(%r15)
-; CHECK-DAG:     vo [[REG7:%v[0-9]+]], %v2, [[REG4]]
+; CHECK-DAG:     vo [[REG7:%v[0-9]+]], {{%v[012]+}}, [[REG4]]
 ; CHECK-DAG:     vo [[REG8:%v[0-9]+]], [[REG2]], [[REG3]]
 ; CHECK-DAG:     vsel %v24, %v29, [[REG6]], [[REG8]]
 ; CHECK-DAG:     vsel %v26, %v31, [[REG5]], [[REG7]]
@@ -117,10 +117,10 @@ define <2 x i8> @fun5(<2 x i16> %val1, <2 x i16> %val2, <2 x i8> %val3, <2 x i8>
 define <2 x i16> @fun6(<2 x i16> %val1, <2 x i16> %val2, <2 x i8> %val3, <2 x i8> %val4, <2 x i16> %val5, <2 x i16> %val6) {
 ; CHECK-LABEL: fun6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vceqb %v1, %v28, %v30
-; CHECK-NEXT:    vceqh %v0, %v24, %v26
-; CHECK-NEXT:    vuphb %v1, %v1
-; CHECK-NEXT:    vo %v0, %v0, %v1
+; CHECK-NEXT:    vceqb [[REG0:%v[0-9]+]], %v28, %v30
+; CHECK-NEXT:    vceqh [[REG1:%v[0-9]+]], %v24, %v26
+; CHECK-NEXT:    vuphb [[REG0]], [[REG0]]
+; CHECK-NEXT:    vo %v0, [[REG1]], [[REG0]]
 ; CHECK-NEXT:    vsel %v24, %v25, %v27, %v0
 ; CHECK-NEXT:    br %r14
   %cmp0 = icmp eq <2 x i16> %val1, %val2
@@ -133,10 +133,10 @@ define <2 x i16> @fun6(<2 x i16> %val1, <2 x i16> %val2, <2 x i8> %val3, <2 x i8
 define <2 x i32> @fun7(<2 x i16> %val1, <2 x i16> %val2, <2 x i8> %val3, <2 x i8> %val4, <2 x i32> %val5, <2 x i32> %val6) {
 ; CHECK-LABEL: fun7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vceqb %v1, %v28, %v30
-; CHECK-NEXT:    vceqh %v0, %v24, %v26
-; CHECK-NEXT:    vuphb %v1, %v1
-; CHECK-NEXT:    vo %v0, %v0, %v1
+; CHECK-NEXT:    vceqb [[REG0:%v[0-9]+]], %v28, %v30
+; CHECK-NEXT:    vceqh [[REG1:%v[0-9]+]], %v24, %v26
+; CHECK-NEXT:    vuphb [[REG0]], [[REG0]]
+; CHECK-NEXT:    vo %v0, [[REG1]], [[REG0]]
 ; CHECK-NEXT:    vuphh %v0, %v0
 ; CHECK-NEXT:    vsel %v24, %v25, %v27, %v0
 ; CHECK-NEXT:    br %r14
@@ -259,10 +259,10 @@ define <16 x i16> @fun12(<16 x i16> %val1, <16 x i16> %val2, <16 x i32> %val3, <
 define <2 x i16> @fun13(<2 x i32> %val1, <2 x i32> %val2, <2 x i64> %val3, <2 x i64> %val4, <2 x i16> %val5, <2 x i16> %val6) {
 ; CHECK-LABEL: fun13:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vceqg %v1, %v28, %v30
-; CHECK-NEXT:    vceqf %v0, %v24, %v26
-; CHECK-NEXT:    vpkg %v1, %v1, %v1
-; CHECK-NEXT:    vx %v0, %v0, %v1
+; CHECK-NEXT:    vceqg [[REG0:%v[0-9]+]], %v28, %v30
+; CHECK-NEXT:    vceqf [[REG1:%v[0-9]+]], %v24, %v26
+; CHECK-NEXT:    vpkg [[REG0]], [[REG0]], [[REG0]]
+; CHECK-NEXT:    vx %v0, [[REG1]], [[REG0]]
 ; CHECK-NEXT:    vpkf %v0, %v0, %v0
 ; CHECK-NEXT:    vsel %v24, %v25, %v27, %v0
 ; CHECK-NEXT:    br %r14
@@ -276,10 +276,10 @@ define <2 x i16> @fun13(<2 x i32> %val1, <2 x i32> %val2, <2 x i64> %val3, <2 x 
 define <2 x i32> @fun14(<2 x i32> %val1, <2 x i32> %val2, <2 x i64> %val3, <2 x i64> %val4, <2 x i32> %val5, <2 x i32> %val6) {
 ; CHECK-LABEL: fun14:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vceqg %v1, %v28, %v30
-; CHECK-NEXT:    vceqf %v0, %v24, %v26
-; CHECK-NEXT:    vpkg %v1, %v1, %v1
-; CHECK-NEXT:    vx %v0, %v0, %v1
+; CHECK-NEXT:    vceqg [[REG0:%v[0-9]+]], %v28, %v30
+; CHECK-NEXT:    vceqf [[REG1:%v[0-9]+]], %v24, %v26
+; CHECK-NEXT:    vpkg [[REG0]], [[REG0]], [[REG0]]
+; CHECK-NEXT:    vx %v0, [[REG1]], [[REG0]]
 ; CHECK-NEXT:    vsel %v24, %v25, %v27, %v0
 ; CHECK-NEXT:    br %r14
   %cmp0 = icmp eq <2 x i32> %val1, %val2
@@ -324,10 +324,10 @@ define <4 x i16> @fun16(<4 x i32> %val1, <4 x i32> %val2, <4 x i16> %val3, <4 x 
 define <4 x i32> @fun17(<4 x i32> %val1, <4 x i32> %val2, <4 x i16> %val3, <4 x i16> %val4, <4 x i32> %val5, <4 x i32> %val6) {
 ; CHECK-LABEL: fun17:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vceqh %v1, %v28, %v30
-; CHECK-NEXT:    vceqf %v0, %v24, %v26
-; CHECK-NEXT:    vuphh %v1, %v1
-; CHECK-NEXT:    vn %v0, %v0, %v1
+; CHECK-NEXT:    vceqh [[REG0:%v[0-9]+]], %v28, %v30
+; CHECK-NEXT:    vceqf [[REG1:%v[0-9]+]], %v24, %v26
+; CHECK-NEXT:    vuphh [[REG0]], [[REG0]]
+; CHECK-NEXT:    vn %v0, [[REG1]], [[REG0]]
 ; CHECK-NEXT:    vsel %v24, %v25, %v27, %v0
 ; CHECK-NEXT:    br %r14
   %cmp0 = icmp eq <4 x i32> %val1, %val2
@@ -340,13 +340,13 @@ define <4 x i32> @fun17(<4 x i32> %val1, <4 x i32> %val2, <4 x i16> %val3, <4 x 
 define <4 x i64> @fun18(<4 x i32> %val1, <4 x i32> %val2, <4 x i16> %val3, <4 x i16> %val4, <4 x i64> %val5, <4 x i64> %val6) {
 ; CHECK-LABEL: fun18:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vceqh %v1, %v28, %v30
-; CHECK-NEXT:    vceqf %v0, %v24, %v26
-; CHECK-NEXT:    vuphh %v1, %v1
-; CHECK-NEXT:    vn %v0, %v0, %v1
-; CHECK-DAG:     vuphf [[REG0:%v[0-9]+]], %v0
+; CHECK-NEXT:    vceqh [[REG0:%v[0-9]+]], %v28, %v30
+; CHECK-NEXT:    vceqf [[REG1:%v[0-9]+]], %v24, %v26
+; CHECK-NEXT:    vuphh [[REG0]], [[REG0]]
+; CHECK-NEXT:    vn %v0, [[REG1]], [[REG0]]
+; CHECK-DAG:     vuphf [[REG2:%v[0-9]+]], %v0
 ; CHECK-DAG:     vuplf [[REG1:%v[0-9]+]], %v0
-; CHECK-NEXT:    vsel %v24, %v25, %v29, [[REG0]]
+; CHECK-NEXT:    vsel %v24, %v25, %v29, [[REG2]]
 ; CHECK-NEXT:    vsel %v26, %v27, %v31, [[REG1]]
 ; CHECK-NEXT:    br %r14
   %cmp0 = icmp eq <4 x i32> %val1, %val2
@@ -474,28 +474,28 @@ define <2 x float> @fun25(<2 x float> %val1, <2 x float> %val2, <2 x double> %va
 ; CHECK-LABEL: fun25:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmrlf %v0, %v26, %v26
-; CHECK-NEXT:    vmrlf %v1, %v24, %v24
-; CHECK-NEXT:    vldeb %v0, %v0
-; CHECK-NEXT:    vldeb %v1, %v1
-; CHECK-NEXT:    vfchdb %v0, %v1, %v0
 ; CHECK-NEXT:    vmrhf %v1, %v26, %v26
-; CHECK-NEXT:    vmrhf %v2, %v24, %v24
-; CHECK-NEXT:    vldeb %v1, %v1
+; CHECK-NEXT:    vmrlf %v2, %v24, %v24
+; CHECK-NEXT:    vmrhf %v3, %v24, %v24
+; CHECK-NEXT:    vldeb %v0, %v0
 ; CHECK-NEXT:    vldeb %v2, %v2
-; CHECK-NEXT:    vfchdb %v1, %v2, %v1
+; CHECK-NEXT:    vldeb %v1, %v1
+; CHECK-NEXT:    vldeb %v3, %v3
+; CHECK-NEXT:    vfchdb %v0, %v2, %v0
+; CHECK-NEXT:    vfchdb %v1, %v3, %v1
+; CHECK-NEXT:    vfchdb %v2, %v28, %v30
 ; CHECK-NEXT:    vpkg %v0, %v1, %v0
-; CHECK-NEXT:    vfchdb %v1, %v28, %v30
-; CHECK-NEXT:    vpkg %v1, %v1, %v1
+; CHECK-NEXT:    vpkg %v1, %v2, %v2
 ; CHECK-NEXT:    vo %v0, %v0, %v1
 ; CHECK-NEXT:    vsel %v24, %v25, %v27, %v0
 ; CHECK-NEXT:    br %r14
 ;
 ; CHECK-Z14-LABEL: fun25:
 ; CHECK-Z14:       # %bb.0:
-; CHECK-Z14-NEXT:    vfchdb %v1, %v28, %v30
-; CHECK-Z14-NEXT:    vfchsb %v0, %v24, %v26
-; CHECK-Z14-NEXT:    vpkg %v1, %v1, %v1
-; CHECK-Z14-NEXT:    vo %v0, %v0, %v1
+; CHECK-Z14-NEXT:    vfchdb [[REG0:%v[0-9]+]], %v28, %v30
+; CHECK-Z14-NEXT:    vfchsb [[REG1:%v[0-9]+]], %v24, %v26
+; CHECK-Z14-NEXT:    vpkg [[REG0]], [[REG0]], [[REG0]]
+; CHECK-Z14-NEXT:    vo %v0, [[REG1]], [[REG0]]
 ; CHECK-Z14-NEXT:    vsel %v24, %v25, %v27, %v0
 ; CHECK-Z14-NEXT:    br %r14
   %cmp0 = fcmp ogt <2 x float> %val1, %val2
@@ -509,15 +509,15 @@ define <2 x double> @fun26(<2 x float> %val1, <2 x float> %val2, <2 x double> %v
 ; CHECK-LABEL: fun26:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmrlf %v0, %v26, %v26
-; CHECK-NEXT:    vmrlf %v1, %v24, %v24
-; CHECK-NEXT:    vldeb %v0, %v0
-; CHECK-NEXT:    vldeb %v1, %v1
-; CHECK-NEXT:    vfchdb %v0, %v1, %v0
 ; CHECK-NEXT:    vmrhf %v1, %v26, %v26
-; CHECK-NEXT:    vmrhf %v2, %v24, %v24
-; CHECK-NEXT:    vldeb %v1, %v1
+; CHECK-NEXT:    vmrlf %v2, %v24, %v24
+; CHECK-NEXT:    vmrhf %v3, %v24, %v24
+; CHECK-NEXT:    vldeb %v0, %v0
 ; CHECK-NEXT:    vldeb %v2, %v2
-; CHECK-NEXT:    vfchdb %v1, %v2, %v1
+; CHECK-NEXT:    vldeb %v1, %v1
+; CHECK-NEXT:    vldeb %v3, %v3
+; CHECK-NEXT:    vfchdb %v0, %v2, %v0
+; CHECK-NEXT:    vfchdb %v1, %v3, %v1
 ; CHECK-NEXT:    vpkg %v0, %v1, %v0
 ; CHECK-NEXT:    vuphf %v0, %v0
 ; CHECK-NEXT:    vfchdb %v1, %v28, %v30
@@ -581,8 +581,8 @@ define <4 x float> @fun28(<4 x float> %val1, <4 x float> %val2, <4 x float> %val
 ; CHECK-DAG:     vmrhf [[REG17:%v[0-9]+]], %v30, %v30
 ; CHECK-DAG:     vldeb [[REG19:%v[0-9]+]], [[REG17]]
 ; CHECK-DAG:     vldeb [[REG20:%v[0-9]+]], [[REG8]]
-; CHECK-NEXT:    vfchdb %v2, [[REG20]], [[REG19]]
-; CHECK-NEXT:    vpkg [[REG21:%v[0-9]+]], %v2, [[REG16]]
+; CHECK-NEXT:    vfchdb %v3, [[REG20]], [[REG19]]
+; CHECK-NEXT:    vpkg [[REG21:%v[0-9]+]], %v3, [[REG16]]
 ; CHECK-NEXT:    vx %v0, [[REG11]], [[REG21]]
 ; CHECK-NEXT:    vsel %v24, %v25, %v27, %v0
 ; CHECK-NEXT:    br %r14
@@ -605,27 +605,27 @@ define <4 x double> @fun29(<4 x float> %val1, <4 x float> %val2, <4 x float> %va
 ; CHECK-LABEL: fun29:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmrlf %v0, %v26, %v26
-; CHECK-NEXT:    vmrlf %v1, %v24, %v24
-; CHECK-NEXT:    vldeb %v0, %v0
-; CHECK-NEXT:    vldeb %v1, %v1
-; CHECK-NEXT:    vfchdb %v0, %v1, %v0
 ; CHECK-NEXT:    vmrhf %v1, %v26, %v26
-; CHECK-NEXT:    vmrhf %v2, %v24, %v24
+; CHECK-NEXT:    vmrlf %v2, %v24, %v24
+; CHECK-NEXT:    vmrhf %v3, %v24, %v24
+; CHECK-NEXT:    vmrlf %v4, %v30, %v30
+; CHECK-NEXT:    vmrhf %v5, %v30, %v30
+; CHECK-NEXT:    vmrlf %v6, %v28, %v28
+; CHECK-NEXT:    vmrhf %v7, %v28, %v28
+; CHECK-NEXT:    vldeb %v0, %v0
+; CHECK-NEXT:    vldeb %v2, %v2
+; CHECK-NEXT:    vfchdb %v0, %v2, %v0
 ; CHECK-NEXT:    vldeb %v1, %v1
-; CHECK-NEXT:    vmrhf %v3, %v28, %v28
-; CHECK-NEXT:    vldeb %v2, %v2
-; CHECK-NEXT:    vfchdb %v1, %v2, %v1
-; CHECK-NEXT:    vpkg %v0, %v1, %v0
-; CHECK-NEXT:    vmrlf %v1, %v30, %v30
-; CHECK-NEXT:    vmrlf %v2, %v28, %v28
-; CHECK-NEXT:    vldeb %v1, %v1
-; CHECK-NEXT:    vldeb %v2, %v2
-; CHECK-NEXT:    vfchdb %v1, %v2, %v1
-; CHECK-NEXT:    vmrhf %v2, %v30, %v30
-; CHECK-NEXT:    vldeb %v2, %v2
 ; CHECK-NEXT:    vldeb %v3, %v3
-; CHECK-NEXT:    vfchdb %v2, %v3, %v2
-; CHECK-NEXT:    vpkg %v1, %v2, %v1
+; CHECK-NEXT:    vfchdb %v1, %v3, %v1
+; CHECK-NEXT:    vpkg %v0, %v1, %v0
+; CHECK-NEXT:    vldeb %v4, %v4
+; CHECK-NEXT:    vldeb %v6, %v6
+; CHECK-NEXT:    vfchdb %v2, %v6, %v4
+; CHECK-NEXT:    vldeb %v5, %v5
+; CHECK-NEXT:    vldeb %v7, %v7
+; CHECK-NEXT:    vfchdb %v3, %v7, %v5
+; CHECK-NEXT:    vpkg %v1, %v3, %v2
 ; CHECK-NEXT:    vx %v0, %v0, %v1
 ; CHECK-NEXT:    vuplf %v1, %v0
 ; CHECK-NEXT:    vuphf %v0, %v0
@@ -653,70 +653,70 @@ define <4 x double> @fun29(<4 x float> %val1, <4 x float> %val2, <4 x float> %va
 define <8 x float> @fun30(<8 x float> %val1, <8 x float> %val2, <8 x double> %val3, <8 x double> %val4, <8 x float> %val5, <8 x float> %val6) {
 ; CHECK-LABEL: fun30:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmrlf %v16, %v28, %v28
-; CHECK-NEXT:    vmrlf %v17, %v24, %v24
-; CHECK-NEXT:    vldeb %v16, %v16
-; CHECK-NEXT:    vldeb %v17, %v17
-; CHECK-NEXT:    vfchdb %v16, %v17, %v16
-; CHECK-NEXT:    vmrhf %v17, %v28, %v28
-; CHECK-NEXT:    vmrhf %v18, %v24, %v24
-; CHECK-NEXT:    vldeb %v17, %v17
-; CHECK-NEXT:    vl %v4, 192(%r15)
-; CHECK-NEXT:    vldeb %v18, %v18
-; CHECK-NEXT:    vl %v5, 208(%r15)
-; CHECK-NEXT:    vl %v6, 160(%r15)
-; CHECK-NEXT:    vl %v7, 176(%r15)
-; CHECK-NEXT:    vl %v0, 272(%r15)
-; CHECK-NEXT:    vl %v1, 240(%r15)
-; CHECK-NEXT:    vfchdb %v17, %v18, %v17
-; CHECK-NEXT:    vl %v2, 256(%r15)
+; CHECK-NEXT:    vmrlf %v0, %v28, %v28
+; CHECK-NEXT:    vmrhf %v1, %v28, %v28
+; CHECK-NEXT:    vmrlf %v2, %v24, %v24
+; CHECK-NEXT:    vmrhf %v3, %v24, %v24
+; CHECK-NEXT:    vmrlf %v4, %v30, %v30
+; CHECK-NEXT:    vmrhf %v5, %v30, %v30
+; CHECK-NEXT:    vmrlf %v6, %v26, %v26
+; CHECK-NEXT:    vmrhf %v7, %v26, %v26
+; CHECK-NEXT:    vldeb %v0, %v0
+; CHECK-NEXT:    vldeb %v2, %v2
+; CHECK-NEXT:    vfchdb %v0, %v2, %v0
+; CHECK-NEXT:    vldeb %v1, %v1
+; CHECK-NEXT:    vldeb %v3, %v3
+; CHECK-NEXT:    vfchdb %v1, %v3, %v1
+; CHECK-NEXT:    vpkg %v0, %v1, %v0
+; CHECK-NEXT:    vldeb %v4, %v4
+; CHECK-NEXT:    vldeb %v6, %v6
+; CHECK-NEXT:    vfchdb %v2, %v6, %v4
+; CHECK-NEXT:    vl %v4, 176(%r15)
+; CHECK-NEXT:    vl %v6, 208(%r15)
+; CHECK-NEXT:    vfchdb %v4, %v27, %v4
+; CHECK-NEXT:    vfchdb %v6, %v31, %v6
+; CHECK-DAG:     vldeb %v5, %v5
+; CHECK-NEXT:    vldeb %v7, %v7
+; CHECK-NEXT:    vfchdb %v3, %v7, %v5
+; CHECK-NEXT:    vl %v5, 160(%r15)
+; CHECK-NEXT:    vl %v7, 192(%r15)
+; CHECK-NEXT:    vfchdb %v5, %v25, %v5
+; CHECK-NEXT:    vfchdb %v7, %v29, %v7
+; CHECK-NEXT:    vpkg %v1, %v3, %v2
+; CHECK-NEXT:    vpkg %v2, %v5, %v4
+; CHECK-NEXT:    vpkg %v3, %v7, %v6
+; CHECK-NEXT:    vn %v1, %v1, %v3
 ; CHECK-NEXT:    vl %v3, 224(%r15)
-; CHECK-NEXT:    vpkg %v16, %v17, %v16
-; CHECK-NEXT:    vmrlf %v17, %v30, %v30
-; CHECK-NEXT:    vmrlf %v18, %v26, %v26
-; CHECK-NEXT:    vmrhf %v19, %v26, %v26
-; CHECK-NEXT:    vfchdb %v7, %v27, %v7
-; CHECK-NEXT:    vfchdb %v6, %v25, %v6
-; CHECK-NEXT:    vfchdb %v5, %v31, %v5
-; CHECK-NEXT:    vfchdb %v4, %v29, %v4
-; CHECK-NEXT:    vpkg %v6, %v6, %v7
-; CHECK-NEXT:    vpkg %v4, %v4, %v5
-; CHECK-NEXT:    vn %v5, %v16, %v6
-; CHECK-DAG:     vsel %v24, %v3, %v2, %v5
-; CHECK-DAG:     vldeb %v17, %v17
-; CHECK-NEXT:    vldeb %v18, %v18
-; CHECK-NEXT:    vfchdb %v17, %v18, %v17
-; CHECK-NEXT:    vmrhf %v18, %v30, %v30
-; CHECK-NEXT:    vldeb %v18, %v18
-; CHECK-NEXT:    vldeb %v19, %v19
-; CHECK-NEXT:    vfchdb %v18, %v19, %v18
-; CHECK-NEXT:    vpkg %v17, %v18, %v17
-; CHECK-NEXT:    vn %v4, %v17, %v4
-; CHECK-NEXT:    vsel %v26, %v1, %v0, %v4
+; CHECK-NEXT:    vn %v0, %v0, %v2
+; CHECK-NEXT:    vl %v2, 256(%r15)
+; CHECK-DAG:     vsel %v24, %v3, %v2, %v0
+; CHECK-NEXT:    vl %v0, 272(%r15)
+; CHECK-NEXT:    vl %v2, 240(%r15)
+; CHECK-NEXT:    vsel %v26, %v2, %v0, %v1
 ; CHECK-NEXT:    br %r14
 ;
 ; CHECK-Z14-LABEL: fun30:
 ; CHECK-Z14:       # %bb.0:
-; CHECK-Z14-NEXT:    vl %v4, 192(%r15)
-; CHECK-Z14-NEXT:    vl %v5, 208(%r15)
-; CHECK-Z14-NEXT:    vl %v6, 160(%r15)
-; CHECK-Z14-NEXT:    vl %v7, 176(%r15)
-; CHECK-Z14-NEXT:    vfchdb %v7, %v27, %v7
-; CHECK-Z14-NEXT:    vfchdb %v6, %v25, %v6
-; CHECK-Z14-NEXT:    vfchdb %v5, %v31, %v5
-; CHECK-Z14-NEXT:    vfchdb %v4, %v29, %v4
-; CHECK-Z14-DAG:     vfchsb %v16, %v24, %v28
-; CHECK-Z14-DAG:     vfchsb %v17, %v26, %v30
-; CHECK-Z14-DAG:     vpkg %v6, %v6, %v7
-; CHECK-Z14-DAG:     vpkg %v4, %v4, %v5
-; CHECK-Z14-DAG:     vl %v0, 272(%r15)
-; CHECK-Z14-DAG:     vl %v1, 240(%r15)
-; CHECK-Z14-DAG:     vl %v2, 256(%r15)
-; CHECK-Z14-DAG:     vl %v3, 224(%r15)
-; CHECK-Z14-NEXT:    vn %v4, %v17, %v4
-; CHECK-Z14-NEXT:    vn %v5, %v16, %v6
-; CHECK-Z14-NEXT:    vsel %v24, %v3, %v2, %v5
-; CHECK-Z14-NEXT:    vsel %v26, %v1, %v0, %v4
+; CHECK-Z14-NEXT:    vl %v0, 192(%r15)
+; CHECK-Z14-NEXT:    vl %v1, 208(%r15)
+; CHECK-Z14-NEXT:    vl %v2, 160(%r15)
+; CHECK-Z14-NEXT:    vl %v3, 176(%r15)
+; CHECK-Z14-NEXT:    vfchdb %v3, %v27, %v3
+; CHECK-Z14-NEXT:    vfchdb %v2, %v25, %v2
+; CHECK-Z14-NEXT:    vfchdb %v1, %v31, %v1
+; CHECK-Z14-NEXT:    vfchdb %v0, %v29, %v0
+; CHECK-Z14-DAG:     vfchsb %v4, %v24, %v28
+; CHECK-Z14-DAG:     vfchsb %v5, %v26, %v30
+; CHECK-Z14-DAG:     vpkg %v2, %v2, %v3
+; CHECK-Z14-DAG:     vpkg %v0, %v0, %v1
+; CHECK-Z14-DAG:     vl %v3, 272(%r15)
+; CHECK-Z14-DAG:     vl %v6, 240(%r15)
+; CHECK-Z14-DAG:     vl %v7, 256(%r15)
+; CHECK-Z14-DAG:     vl %v16, 224(%r15)
+; CHECK-Z14-NEXT:    vn %v0, %v5, %v0
+; CHECK-Z14-NEXT:    vn %v1, %v4, %v2
+; CHECK-Z14-NEXT:    vsel %v24, %v16, %v7, %v1
+; CHECK-Z14-NEXT:    vsel %v26, %v6, %v3, %v0
 ; CHECK-Z14-NEXT:    br %r14
   %cmp0 = fcmp ogt <8 x float> %val1, %val2
   %cmp1 = fcmp ogt <8 x double> %val3, %val4
@@ -759,21 +759,21 @@ define <2 x double> @fun32(<2 x double> %val1, <2 x double> %val2, <2 x double> 
 define <4 x float> @fun33(<4 x double> %val1, <4 x double> %val2, <4 x float> %val3, <4 x float> %val4, <4 x float> %val5, <4 x float> %val6) {
 ; CHECK-LABEL: fun33:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfchdb %v0, %v26, %v30
-; CHECK-NEXT:    vfchdb %v1, %v24, %v28
-; CHECK-NEXT:    vpkg %v0, %v1, %v0
-; CHECK-NEXT:    vmrlf %v1, %v27, %v27
+; CHECK-NEXT:    vmrlf %v0, %v27, %v27
+; CHECK-NEXT:    vmrhf %v1, %v27, %v27
 ; CHECK-NEXT:    vmrlf %v2, %v25, %v25
-; CHECK-NEXT:    vldeb %v1, %v1
-; CHECK-NEXT:    vldeb %v2, %v2
-; CHECK-NEXT:    vfchdb %v1, %v2, %v1
-; CHECK-NEXT:    vmrhf %v2, %v27, %v27
 ; CHECK-NEXT:    vmrhf %v3, %v25, %v25
+; CHECK-NEXT:    vldeb %v0, %v0
 ; CHECK-NEXT:    vldeb %v2, %v2
+; CHECK-NEXT:    vldeb %v1, %v1
 ; CHECK-NEXT:    vldeb %v3, %v3
-; CHECK-NEXT:    vfchdb %v2, %v3, %v2
-; CHECK-NEXT:    vpkg %v1, %v2, %v1
-; CHECK-NEXT:    vn %v0, %v0, %v1
+; CHECK-NEXT:    vfchdb %v4, %v26, %v30
+; CHECK-NEXT:    vfchdb %v5, %v24, %v28
+; CHECK-NEXT:    vfchdb %v0, %v2, %v0
+; CHECK-NEXT:    vfchdb %v1, %v3, %v1
+; CHECK-NEXT:    vpkg %v2, %v5, %v4
+; CHECK-NEXT:    vpkg %v0, %v1, %v0
+; CHECK-NEXT:    vn %v0, %v2, %v0
 ; CHECK-NEXT:    vsel %v24, %v29, %v31, %v0
 ; CHECK-NEXT:    br %r14
 ;
@@ -797,16 +797,16 @@ define <4 x double> @fun34(<4 x double> %val1, <4 x double> %val2, <4 x float> %
 ; CHECK-LABEL: fun34:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmrlf [[REG0:%v[0-9]+]], %v27, %v27
+; CHECK-NEXT:    vmrhf [[REG5:%v[0-9]+]], %v27, %v27
 ; CHECK-NEXT:    vmrlf [[REG1:%v[0-9]+]], %v25, %v25
+; CHECK-NEXT:    vmrhf [[REG6:%v[0-9]+]], %v25, %v25
 ; CHECK-NEXT:    vldeb [[REG2:%v[0-9]+]], [[REG0]]
 ; CHECK-NEXT:    vldeb [[REG3:%v[0-9]+]], [[REG1]]
-; CHECK-NEXT:    vfchdb [[REG4:%v[0-9]+]], [[REG3]], [[REG2]]
-; CHECK-NEXT:    vmrhf [[REG5:%v[0-9]+]], %v27, %v27
-; CHECK-NEXT:    vmrhf [[REG6:%v[0-9]+]], %v25, %v25
 ; CHECK-DAG:     vldeb [[REG7:%v[0-9]+]], [[REG5]]
-; CHECK-DAG:     vl [[REG8:%v[0-9]+]], 176(%r15)
 ; CHECK-DAG:     vldeb [[REG9:%v[0-9]+]], [[REG6]]
+; CHECK-DAG:     vl [[REG8:%v[0-9]+]], 176(%r15)
 ; CHECK-DAG:     vl [[REG10:%v[0-9]+]], 160(%r15)
+; CHECK-DAG:     vfchdb [[REG4:%v[0-9]+]], [[REG3]], [[REG2]]
 ; CHECK-DAG:     vfchdb [[REG11:%v[0-9]+]], [[REG9]], [[REG7]]
 ; CHECK-DAG:     vpkg [[REG12:%v[0-9]+]], [[REG11]], [[REG4]]
 ; CHECK-DAG:     vuphf [[REG13:%v[0-9]+]], [[REG12]]
@@ -821,17 +821,17 @@ define <4 x double> @fun34(<4 x double> %val1, <4 x double> %val2, <4 x float> %
 ;
 ; CHECK-Z14-LABEL: fun34:
 ; CHECK-Z14:       # %bb.0:
-; CHECK-Z14-NEXT:    vfchsb %v4, %v25, %v27
-; CHECK-Z14-NEXT:    vl %v0, 176(%r15)
-; CHECK-Z14-NEXT:    vl %v1, 160(%r15)
-; CHECK-Z14-NEXT:    vfchdb %v2, %v24, %v28
-; CHECK-Z14-NEXT:    vfchdb %v3, %v26, %v30
-; CHECK-Z14-NEXT:    vuphf %v5, %v4
-; CHECK-Z14-NEXT:    vuplf %v4, %v4
-; CHECK-Z14-NEXT:    vn %v3, %v3, %v4
-; CHECK-Z14-NEXT:    vn %v2, %v2, %v5
-; CHECK-Z14-NEXT:    vsel %v24, %v29, %v1, %v2
-; CHECK-Z14-NEXT:    vsel %v26, %v31, %v0, %v3
+; CHECK-Z14-NEXT:    vfchsb %v0, %v25, %v27
+; CHECK-Z14-NEXT:    vfchdb %v1, %v24, %v28
+; CHECK-Z14-NEXT:    vfchdb %v2, %v26, %v30
+; CHECK-Z14-NEXT:    vl %v3, 176(%r15)
+; CHECK-Z14-NEXT:    vl %v4, 160(%r15)
+; CHECK-Z14-DAG:     vuphf %v5, %v0
+; CHECK-Z14-DAG:     vuplf %v0, %v0
+; CHECK-Z14-NEXT:    vn %v0, %v2, %v0
+; CHECK-Z14-NEXT:    vn %v1, %v1, %v5
+; CHECK-Z14-NEXT:    vsel %v24, %v29, %v4, %v1
+; CHECK-Z14-NEXT:    vsel %v26, %v31, %v3, %v0
 ; CHECK-Z14-NEXT:    br %r14
   %cmp0 = fcmp ogt <4 x double> %val1, %val2
   %cmp1 = fcmp ogt <4 x float> %val3, %val4

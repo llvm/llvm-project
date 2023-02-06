@@ -2156,6 +2156,34 @@ unsigned SystemZInstrInfo::getFusedCompare(unsigned Opcode,
   return 0;
 }
 
+bool SystemZInstrInfo::isLoadAndTestAsCmp(const MachineInstr &MI) const {
+  // If we during isel used a load-and-test as a compare with 0, the
+  // def operand is dead.
+  return (MI.getOpcode() == SystemZ::LTEBR ||
+          MI.getOpcode() == SystemZ::LTDBR ||
+          MI.getOpcode() == SystemZ::LTXBR) &&
+    MI.getOperand(0).isDead();
+}
+
+bool SystemZInstrInfo::isCompareZero(const MachineInstr &Compare) const {
+  if (isLoadAndTestAsCmp(Compare))
+    return true;
+  return Compare.isCompare() && Compare.getNumExplicitOperands() == 2 &&
+    Compare.getOperand(1).isImm() && Compare.getOperand(1).getImm() == 0;
+}
+
+unsigned SystemZInstrInfo::
+getCompareSourceReg(const MachineInstr &Compare) const {
+  unsigned reg = 0;
+  if (Compare.isCompare())
+    reg = Compare.getOperand(0).getReg();
+  else if (isLoadAndTestAsCmp(Compare))
+    reg = Compare.getOperand(1).getReg();
+  assert(reg);
+
+  return reg;
+}
+
 bool SystemZInstrInfo::
 prepareCompareSwapOperands(MachineBasicBlock::iterator const MBBI) const {
   assert(MBBI->isCompare() && MBBI->getOperand(0).isReg() &&

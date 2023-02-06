@@ -5,14 +5,24 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
+// -------------------------- Pre RA scheduling ----------------------------- //
+//
+// SystemZPreRASchedStrategy keeps track of currently live registers and first
+// tries to reduce live ranges by scheduling e.g. a load of a live register
+// immediately (bottom-up). It also aims to preserve the scheduled latency.
+// Small regions (up to 10 instructions) are mostly left alone as the input
+// order is usually then preferred.
 //
 // -------------------------- Post RA scheduling ---------------------------- //
+//
 // SystemZPostRASchedStrategy is a scheduling strategy which is plugged into
 // the MachineScheduler. It has a sorted Available set of SUs and a pickNode()
 // implementation that looks to optimize decoder grouping and balance the
 // usage of processor resources. Scheduler states are saved for the end
 // region of each MBB, so that a successor block can learn from it.
-//===----------------------------------------------------------------------===//
+//
+//----------------------------------------------------------------------------//
 
 #ifndef LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZMACHINESCHEDULER_H
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZMACHINESCHEDULER_H
@@ -23,6 +33,69 @@
 #include <set>
 
 namespace llvm {
+
+/// A MachineSchedStrategy implementation for SystemZ pre RA  scheduling.
+class SystemZPreRASchedStrategy : public GenericScheduler {
+  // The FP/Vector registers are prioritized during scheduling.
+  std::set<unsigned> PrioRegClasses;
+  void initializePrioRegClasses(const TargetRegisterInfo *TRI);
+  bool isPrioVirtReg(Register Reg, const MachineRegisterInfo *MRI) const {
+    return (Reg.isVirtual() &&
+            PrioRegClasses.count(MRI->getRegClass(Reg)->getID()));
+  }
+
+  // A TinyRegion has up to 10 instructions and is scheduled differently.
+  bool TinyRegion;
+
+  // Num instructions left to schedule.
+  unsigned NumLeft;
+
+  // Tru if latency scheduling is enabled.
+  bool ShouldReduceLatency;
+
+  // Keep track of currently live registers.
+  struct VRegSet : std::set<Register> {
+    void dump(std::string Msg);
+    size_type count(Register Reg) const {
+      assert(Reg.isVirtual());
+      return std::set<Register>::count(Reg);
+    }
+  } LiveRegs;
+
+  // True if MI is also using the register it defines.
+  std::vector<bool> IsRedefining;
+
+  // Only call computeRemLatency() once per scheduled node.
+  mutable unsigned RemLat;
+  unsigned getRemLat(SchedBoundary *Zone) const;
+
+  // A large group of stores at the bottom is spread upwards.
+  std::set<const SUnit*> StoresGroup;
+  bool FirstStoreInGroupScheduled;
+  void initializeStoresGroup();
+
+  // Compute the effect on register liveness by scheduling C next. An
+  // instruction that defines a live register without causing any other
+  // register to become live reduces liveness, while a store of a non-live
+  // register would increase it.
+  int computeSULivenessScore(SchedCandidate &C, ScheduleDAGMILive *DAG,
+                             SchedBoundary *Zone) const;
+
+protected:
+  bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
+                    SchedBoundary *Zone) const override;
+
+public:
+  SystemZPreRASchedStrategy(const MachineSchedContext *C) : GenericScheduler(C) {
+    initializePrioRegClasses(C->MF->getRegInfo().getTargetRegisterInfo());
+  }
+
+  void initPolicy(MachineBasicBlock::iterator Begin,
+                  MachineBasicBlock::iterator End,
+                  unsigned NumRegionInstrs) override;
+  void initialize(ScheduleDAGMI *dag) override;
+  void schedNode(SUnit *SU, bool IsTopNode) override;
+};
 
 /// A MachineSchedStrategy implementation for SystemZ post RA scheduling.
 class SystemZPostRASchedStrategy : public MachineSchedStrategy {
