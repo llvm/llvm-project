@@ -31,7 +31,7 @@ define i64 @bar() #1 {
   ret i64 %1
 }
 
-attributes #1 = { sanitize_memory }
+attributes #1 = { sanitize_memory "target-features"="+soft-float" "use-soft-float"="true" }
 
 ; In kernel the floating point values are passed in GPRs:
 ; - r2@16              == i64 1            - skipped, because it's fixed
