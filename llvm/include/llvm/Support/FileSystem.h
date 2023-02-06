@@ -1187,7 +1187,8 @@ openNativeFileForRead(const Twine &Name, OpenFlags Flags = OF_None,
 /// descriptor.
 std::error_code
 tryLockFile(int FD,
-            std::chrono::milliseconds Timeout = std::chrono::milliseconds(0));
+            std::chrono::milliseconds Timeout = std::chrono::milliseconds(0),
+            bool Exclusive = true);
 
 /// Get RealPath from file handle.
 ///

@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/OnDiskKeyValueDB.h"
-#include "llvm/CAS/BuiltinObjectHasher.h"
-#include "llvm/Support/BLAKE3.h"
+#include "OnDiskCommonUtils.h"
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
@@ -18,20 +17,7 @@
 using namespace llvm;
 using namespace llvm::cas;
 using namespace llvm::cas::ondisk;
-
-using HasherT = BLAKE3;
-using HashType = decltype(HasherT::hash(std::declval<ArrayRef<uint8_t> &>()));
-using ValueType = std::array<char, 20>;
-
-static HashType digest(StringRef Data) {
-  return HasherT::hash(arrayRefFromStringRef(Data));
-}
-
-static ValueType valueFromString(StringRef S) {
-  ValueType Val;
-  llvm::copy(S.substr(0, sizeof(Val)), Val.data());
-  return Val;
-}
+using namespace llvm::unittest::cas;
 
 TEST(OnDiskKeyValueDBTest, Basic) {
   unittest::TempDir Temp("ondiskkv", /*Unique=*/true);
