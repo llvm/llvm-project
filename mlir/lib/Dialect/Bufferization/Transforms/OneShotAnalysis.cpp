@@ -346,25 +346,27 @@ static bool happensBefore(Operation *a, Operation *b,
   return false;
 }
 
-/// Return `true` if op dominance can be used to rule out read-after-write
-/// conflicts wrt. the given reads and writes.
+/// Return `true` if op dominance can be used to rule out a read-after-write
+/// conflicts based on the ordering of ops.
 ///
-/// Op dominance can often be used to rule out potential conflicts such as
-/// "read" happens before "write". E.g., the following IR is not a RaW conflict
-/// because the the read happens *before* the write.
+/// Generalized op dominance can often be used to rule out potential conflicts
+/// due to "read happens before write". E.g., the following IR is not a RaW
+/// conflict because the read happens *before* the write.
 ///
-/// %0 = ... : tensor<?xf32>
-/// "reading_op"(%0) : tensor<?xf32>
-/// %1 = "writing_op"(%0) : tensor<?xf32> -> tensor<?xf32>
+/// Example 1:
+/// %0 = ... : tensor<?xf32>                                // DEF
+/// "reading_op"(%0) : tensor<?xf32>                        // READ
+/// %1 = "writing_op"(%0) : tensor<?xf32> -> tensor<?xf32>  // WRITE
 ///
 /// This is no longer true inside loops (or repetitive regions). In such cases,
 /// there may not be a meaningful `happensBefore` relationship because ops
 /// could be executed multiple times. E.g.:
 ///
-/// %0 = ... : tensor<?xf32>
+/// Example 2:
+/// %0 = ... : tensor<?xf32>                                  // DEF
 /// scf.for ... {
-///   "reading_op"(%0) : tensor<?xf32>
-///   %1 = "writing_op"(%0) : tensor<?xf32> -> tensor<?xf32>
+///   "reading_op"(%0) : tensor<?xf32>                        // READ
+///   %1 = "writing_op"(%0) : tensor<?xf32> -> tensor<?xf32>  // WRITE
 ///   ...
 /// }
 ///
@@ -374,92 +376,78 @@ static bool happensBefore(Operation *a, Operation *b,
 /// execution of writing_op. This is problematic because the tensor %0 they
 /// operate on (i.e., the "definition") is defined outside of the loop.
 ///
-/// Counter example:
+/// On a high-level, there is a potential RaW in a program if there exists a
+/// possible program execution such that there is a sequence of DEF, followed
+/// by WRITE, followed by READ. Each additional DEF resets the sequence.
 ///
+/// E.g.:
+/// No conflict:        DEF, WRITE, DEF, READ
+/// Potential conflict: DEF, READ, WRITE, READ, WRITE
+///
+/// Example 1 has no conflict:          DEF, READ, WRITE
+/// Example 2 has a potential conflict: DEF, (READ, WRITE)*
+//
+/// Example 3:
 /// scf.for ... {
 ///   %0 = ... : tensor<?xf32>
 ///   "reading_op"(%0) : tensor<?xf32>
 ///   %1 = "writing_op"(%0) : tensor<?xf32> -> tensor<?xf32>
 ///   ...
 /// }
+/// This has no conflict: (DEF, READ, WRITE)*
 ///
-/// In this example, the definition %0 is in the same repetitive region as
-/// "writing_op", so op dominance can be used to compute the `happensBefore`
-/// relationship.
-///
-/// Whether op dominance can be used or not is decided as follows: Find the
-/// closest enclosing repetitive region of all buffer writes wrt. the given
-/// tensor reads and writes. (The given sets of reads and writes contain the
-/// entire alias set.) In case of a read, we look at the op that defines the
-/// read value. In case of a write, we look at the op that is writing. If all of
-/// those ops are in the same closest enclosing repetitive region (nullptr in
-/// case of "no repetitive region" found at all), then op dominance can be used.
-/// Otherwise, it cannot be used.
-///
-/// Example: The common enclosing repetitive region is the scf.for loop.
-///          Op dominance can be used.
+/// Example 4:
+/// %0 = ... : tensor<?xf32>
 /// scf.for ... {
-///   %0 = tensor.generate
-///   "read"(%0)
+///   scf.for ... { "reading_op"(%0) }
+///   %1 = "writing_op"(%0)
 /// }
+/// This has a potential conflict: DEF, ((READ)*, WRITE)*
 ///
-/// Example: The common enclosing repetitive region is nullptr: There is no
-///          repetitive region around the tensor.generate. Op dominance can be
-///          used.
-/// %0 = tensor.generate
-/// scf.for ... { "read"(%0) }
+/// Example 5:
+/// %0 = ... : tensor<?xf32>
+/// scf.for ... { %1 = "writing_op"(%0) }
+/// scf.for ... { "reading_op"(%0) }
+/// This has a potential conflict: DEF, WRITE*, READ*
 ///
-/// Example: The common enclosing repetitive regions of tensor.generate and
-///          "write" differ. Op dominance cannot be used.
-/// %0 = tensor.generate
-/// scf.for ... {
-///   "read"(%0)
-///   "write"(%0)
-/// }
+/// The following rules are used to rule out RaW conflicts via ordering of ops:
 ///
-/// Example: The common enclosing repetitive regions of tensor.generate and
-///          "write" differ, but there is no read of %0, so op dominance can be
-///          used.
-/// %0 = tensor.generate
-/// scf.for ... {
-///   "write"(%0)
-/// }
+/// 1. If the closest enclosing repetitive region of DEF is a proper ancestor of
+///    a repetitive region that enclosing both READ and WRITE, we cannot rule
+///    out RaW conflict due to the ordering of ops.
+/// 2. Otherwise: There are no loops that interfere with our analysis; for
+///    analysis purposes, we can assume that there are no loops/repetitive
+///    regions. I.e., we can rule out a RaW conflict if READ happensBefore WRITE
+///    or WRITE happensBefore DEF. (Checked in `hasReadAfterWriteInterference`.)
 ///
-/// Note: iter_args of loops are not aliases of their respective block
-/// arguments, so op domanice can be used when analyzing ops that operate
-/// on them.
-bool canUseOpDominance(const DenseSet<OpOperand *> &usesRead,
-                       const DenseSet<OpOperand *> &usesWrite,
+bool canUseOpDominance(OpOperand *uRead, OpOperand *uWrite,
+                       const SetVector<Value> &definitions,
                        const AnalysisState &state) {
   const BufferizationOptions &options = state.getOptions();
-  std::optional<Region *> commonEnclosingRegion;
+  for (Value def : definitions) {
+    Region *rRead = getEnclosingRepetitiveRegion(uRead->getOwner(), options);
+    Region *rDef = getEnclosingRepetitiveRegion(def, options);
 
-  // In case of a write, take the region in which the write takes place.
-  for (OpOperand *uWrite : usesWrite) {
-    Region *r = getEnclosingRepetitiveRegion(uWrite->getOwner(), options);
-    if (!commonEnclosingRegion.has_value()) {
-      commonEnclosingRegion = r;
+    // READ and DEF are in the same repetitive region. `happensBefore` can be
+    // used to rule out RaW conflicts due to op ordering.
+    if (rRead == rDef)
       continue;
+
+    // Find the enclosing repetitive region of READ that is closest to DEF but
+    // not the repetitive region of DEF itself.
+    while (true) {
+      Region *nextRegion = getNextEnclosingRepetitiveRegion(rRead, options);
+      if (nextRegion == rDef)
+        break;
+      assert(nextRegion && "expected to find another repetitive region");
+      rRead = nextRegion;
     }
-    if (*commonEnclosingRegion != r)
+
+    // We cannot use op dominance if WRITE is inside the same repetitive region.
+    if (rRead->getParentOp()->isAncestor(uWrite->getOwner()))
       return false;
   }
-
-  // In case of a read, take the region which the read value is defined.
-  for (OpOperand *uRead : usesRead) {
-    // Optimization: Skip reads of values that have no defined contents.
-    if (!state.bufferizesToMemoryWrite(uRead->get()))
-      continue;
-    Region *r = getEnclosingRepetitiveRegion(uRead->get(), options);
-    if (!commonEnclosingRegion.has_value()) {
-      commonEnclosingRegion = r;
-      continue;
-    }
-    if (*commonEnclosingRegion != r)
-      return false;
-  }
-
-  return commonEnclosingRegion.has_value();
+  return true;
 }
 
 /// Annotate IR with details about the detected RaW conflict.
@@ -507,10 +495,6 @@ static bool hasReadAfterWriteInterference(
     AnalysisState &state, const BufferizationAliasInfo &aliasInfo) {
   const BufferizationOptions &options = state.getOptions();
 
-  // Check if op dominance can be used to rule out read-after-write conflicts.
-  bool useDominance = canUseOpDominance(usesRead, usesWrite, state);
-  LLVM_DEBUG(llvm::dbgs() << "\n- useDominance = " << useDominance << "\n");
-
   for (OpOperand *uRead : usesRead) {
     Operation *readingOp = uRead->getOwner();
     LLVM_DEBUG(llvm::dbgs() << "\n- check conflict:\n");
@@ -541,6 +525,12 @@ static bool hasReadAfterWriteInterference(
       LLVM_DEBUG(llvm::dbgs() << "  unConflictingWrite = operand "
                               << uConflictingWrite->getOperandNumber() << " of "
                               << *uConflictingWrite->getOwner() << "\n");
+
+      // Check if op dominance can be used to rule out read-after-write
+      // conflicts.
+      bool useDominance =
+          canUseOpDominance(uRead, uConflictingWrite, definitions, state);
+      LLVM_DEBUG(llvm::dbgs() << "\n- useDominance = " << useDominance << "\n");
 
       // Throughout this loop, check for multiple requirements that have to be
       // met for uConflictingWrite to be an actual conflict.

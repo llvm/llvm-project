@@ -697,3 +697,104 @@ func.func @no_raw_conflict_after_repetitive_use(%arg0: tensor<4xf32>,
 
   return %2, %7 : tensor<4xf32>, tensor<4xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @read_of_bbarg_in_repetitive_region(
+func.func @read_of_bbarg_in_repetitive_region(
+    %t: tensor<10xf32>, %a: index, %b: index, %c: index, %cst: f32) {
+  // CHECK: scf.for
+  scf.for %iv = %a to %b step %c {
+    // Must bufferize out-of-place because definition of read is in a different
+    // repetitive region.
+    // CHECK: tensor.extract_slice {{.*}} {__inplace_operands_attr__ = ["false"]}
+    %2 = tensor.extract_slice %t[0][4][1] : tensor<10xf32> to tensor<4xf32>
+    %3 = tensor.extract %2[%a] : tensor<4xf32>
+    vector.print %3 : f32
+    // CHECK: tensor.insert {{.*}} {__inplace_operands_attr__ = ["none", "true", "none"]}
+    %4 = tensor.insert %cst into %2[%a] : tensor<4xf32>
+    %5 = tensor.extract %4[%a] : tensor<4xf32>
+    vector.print %5 : f32
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @read_definition_in_same_repetitive_region_as_write(
+func.func @read_definition_in_same_repetitive_region_as_write(
+    %t: tensor<10xf32>, %a: index, %b: index, %c: index, %cst: f32) {
+  // CHECK: tensor.insert {{.*}} {__inplace_operands_attr__ = ["none", "true", "none"]}
+  %1 = tensor.insert %cst into %t[%a] : tensor<10xf32>
+  // CHECK: scf.for
+  scf.for %iv = %a to %b step %c {
+    // Can bufferize in-place.
+    // CHECK: tensor.extract_slice {{.*}} {__inplace_operands_attr__ = ["true"]}
+    %2 = tensor.extract_slice %1[0][4][1] : tensor<10xf32> to tensor<4xf32>
+    %3 = tensor.extract %2[%a] : tensor<4xf32>
+    vector.print %3 : f32
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @read_definition_in_same_repetitive_region_as_conflicting_write(
+func.func @read_definition_in_same_repetitive_region_as_conflicting_write(
+    %t: tensor<10xf32>, %a: index, %b: index, %c: index, %cst: f32) {
+  // Cannot bufferize in-place according to normal op dominance rules.
+  // CHECK: tensor.insert {{.*}} {__inplace_operands_attr__ = ["none", "false", "none"]}
+  %1 = tensor.insert %cst into %t[%a] : tensor<10xf32>
+  // CHECK: scf.for
+  scf.for %iv = %a to %b step %c {
+    // CHECK: tensor.extract_slice {{.*}} {__inplace_operands_attr__ = ["true"]}
+    %2 = tensor.extract_slice %t[0][4][1] : tensor<10xf32> to tensor<4xf32>
+    %3 = tensor.extract %2[%a] : tensor<4xf32>
+    vector.print %3 : f32
+  }
+  return
+}
+
+// -----
+
+// CHECK: func @write_value_in_repetitive_region(
+func.func @write_value_in_repetitive_region(
+    %t: tensor<10xf32>, %a: index, %b: index, %c: index, %cst: f32) {
+  %0 = tensor.extract %t[%a] : tensor<10xf32>
+  vector.print %0 : f32
+
+  scf.for %iv = %a to %b step %c {
+    // No further read of %0, so this can bufferize in-place.
+    // CHECK: tensor.extract_slice {{.*}} {__inplace_operands_attr__ = ["true"]}
+    %2 = tensor.extract_slice %t[0][4][1] : tensor<10xf32> to tensor<4xf32>
+    // CHECK: linalg.fill {__inplace_operands_attr__ = ["none", "true"]}
+    %filled = linalg.fill ins(%cst : f32) outs(%2 : tensor<4xf32>) -> tensor<4xf32>
+    %3 = tensor.extract %filled[%a] : tensor<4xf32>
+    vector.print %3 : f32
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @nesting_op_repetitive_regions(
+func.func @nesting_op_repetitive_regions(
+    %t: tensor<10xf32>, %a: index, %b: index, %c: index, %cst: f32) {
+  // Cannot bufferize in-place according to normal op dominance rules.
+  // CHECK: tensor.insert {{.*}} {__inplace_operands_attr__ = ["none", "false", "none"]}
+  %1 = tensor.insert %cst into %t[%a] : tensor<10xf32>
+  // CHECK: scf.for
+  scf.for %iv1 = %a to %b step %c {
+    // CHECK: scf.for
+    scf.for %iv2 = %a to %b step %c {
+      // CHECK: scf.for
+      scf.for %iv3 = %a to %b step %c {
+        // CHECK: tensor.extract_slice {{.*}} {__inplace_operands_attr__ = ["true"]}
+        %2 = tensor.extract_slice %t[0][4][1] : tensor<10xf32> to tensor<4xf32>
+        %3 = tensor.extract %2[%a] : tensor<4xf32>
+        vector.print %3 : f32
+      }
+    }
+  }
+  return
+}

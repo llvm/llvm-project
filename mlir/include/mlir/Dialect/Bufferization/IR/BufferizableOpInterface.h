@@ -575,6 +575,11 @@ Region *getEnclosingRepetitiveRegion(Value value,
 Region *getEnclosingRepetitiveRegion(Block *block,
                                      const BufferizationOptions &options);
 
+/// Assuming that the given region is repetitive, find the next enclosing
+/// repetitive region.
+Region *getNextEnclosingRepetitiveRegion(Region *region,
+                                         const BufferizationOptions &options);
+
 namespace detail {
 /// This is the default implementation of
 /// BufferizableOpInterface::getAliasingOpOperands. Should not be called from
