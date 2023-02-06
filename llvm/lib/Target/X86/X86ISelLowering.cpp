@@ -52265,6 +52265,63 @@ static SDValue foldXor1SetCC(SDNode *N, SelectionDAG &DAG) {
   return getSETCC(NewCC, LHS->getOperand(1), DL, DAG);
 }
 
+static SDValue combineXorSubCTLZ(SDNode *N, SelectionDAG &DAG,
+                                 const X86Subtarget &Subtarget) {
+  assert((N->getOpcode() == ISD::XOR || N->getOpcode() == ISD::SUB) &&
+         "Invalid opcode for combing with CTLZ");
+  if (Subtarget.hasFastLZCNT())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i8 && VT != MVT::i16 && VT != MVT::i32 &&
+      (VT != MVT::i64 || !Subtarget.is64Bit()))
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  if (N0.getOpcode() != ISD::CTLZ_ZERO_UNDEF &&
+      N1.getOpcode() != ISD::CTLZ_ZERO_UNDEF)
+    return SDValue();
+
+  SDValue OpCTLZ;
+  SDValue OpSizeTM1;
+
+  if (N1.getOpcode() == ISD::CTLZ_ZERO_UNDEF) {
+    OpCTLZ = N1;
+    OpSizeTM1 = N0;
+  } else if (N->getOpcode() == ISD::SUB) {
+    return SDValue();
+  } else {
+    OpCTLZ = N0;
+    OpSizeTM1 = N1;
+  }
+
+  if (!OpCTLZ.hasOneUse())
+    return SDValue();
+  auto *C = dyn_cast<ConstantSDNode>(OpSizeTM1);
+  if (!C)
+    return SDValue();
+
+  if (C->getZExtValue() != uint64_t(OpCTLZ.getValueSizeInBits() - 1))
+    return SDValue();
+  SDLoc DL(N);
+  EVT OpVT = VT;
+  SDValue Op = OpCTLZ.getOperand(0);
+  if (VT == MVT::i8) {
+    // Zero extend to i32 since there is not an i8 bsr.
+    OpVT = MVT::i32;
+    Op = DAG.getNode(ISD::ZERO_EXTEND, DL, OpVT, Op);
+  }
+
+  SDVTList VTs = DAG.getVTList(OpVT, MVT::i32);
+  Op = DAG.getNode(X86ISD::BSR, DL, VTs, Op);
+  if (VT == MVT::i8)
+    Op = DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, Op);
+
+  return Op;
+}
+
 static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
@@ -52291,6 +52348,9 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue FPLogic = convertIntLogicToFPLogic(N, DAG, DCI, Subtarget))
     return FPLogic;
+
+  if (SDValue R = combineXorSubCTLZ(N, DAG, Subtarget))
+    return R;
 
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
@@ -55176,6 +55236,9 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(ISD::SUB, SDLoc(N), Op0.getValueType(), ADC.getValue(0),
                        Op1.getOperand(0));
   }
+
+  if (SDValue V = combineXorSubCTLZ(N, DAG, Subtarget))
+    return V;
 
   return combineAddOrSubToADCOrSBB(N, DAG);
 }
