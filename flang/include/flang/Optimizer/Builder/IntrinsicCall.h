@@ -1,4 +1,4 @@
-//===-- Lower/IntrinsicCall.h -- lowering of intrinsics ---------*- C++ -*-===//
+//===-- Builder/IntrinsicCall.h -- lowering of intrinsics -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,21 +12,12 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include <optional>
 
-namespace Fortran::lower {
+namespace fir {
 
 class StatementContext;
 
 // TODO: Error handling interface ?
 // TODO: Implementation is incomplete. Many intrinsics to tbd.
-
-/// Generate the FIR+MLIR operations for the generic intrinsic \p name
-/// with arguments \p args and expected result type \p resultType.
-/// Returned mlir::Value is the returned Fortran intrinsic value.
-fir::ExtendedValue genIntrinsicCall(fir::FirOpBuilder &, mlir::Location,
-                                    llvm::StringRef name,
-                                    std::optional<mlir::Type> resultType,
-                                    llvm::ArrayRef<fir::ExtendedValue> args,
-                                    StatementContext &);
 
 /// Same as the other genIntrinsicCall version above, except that the result
 /// deallocation, if required, is not added to a StatementContext. Instead, an
@@ -112,6 +103,6 @@ mlir::Value genMin(fir::FirOpBuilder &, mlir::Location,
 mlir::Value genPow(fir::FirOpBuilder &, mlir::Location, mlir::Type resultType,
                    mlir::Value x, mlir::Value y);
 
-} // namespace Fortran::lower
+} // namespace fir
 
 #endif // FORTRAN_LOWER_INTRINSICCALL_H
