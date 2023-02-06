@@ -2178,6 +2178,10 @@ void Clang::AddRISCVTargetArgs(const ArgList &Args,
       CmdArgs.push_back("-riscv-ccmov=0");
     }
   }
+  if (Args.getLastArg(options::OPT_mremove_back_to_back_branches)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-riscv-remove-back-to-back-branches=1");
+  }
   // Handle -mrvv-vector-bits=<bits>
   if (Arg *A = Args.getLastArg(options::OPT_mrvv_vector_bits_EQ)) {
     StringRef Val = A->getValue();

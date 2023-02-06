@@ -96,6 +96,9 @@ createRISCVInstructionSelector(const RISCVTargetMachine &,
                                const RISCVRegisterBankInfo &);
 void initializeRISCVDAGToDAGISelLegacyPass(PassRegistry &);
 
+FunctionPass *createRISCVRemoveBackToBackBranches();
+void initializeRISCVRemoveBackToBackBranchesPass(PassRegistry &);
+
 FunctionPass *createRISCVPostLegalizerCombiner();
 void initializeRISCVPostLegalizerCombinerPass(PassRegistry &);
 

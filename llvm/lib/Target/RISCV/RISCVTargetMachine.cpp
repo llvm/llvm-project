@@ -579,13 +579,14 @@ void RISCVPassConfig::addPreEmitPass() {
   if (TM->getOptLevel() >= CodeGenOptLevel::Default &&
       EnableRISCVCopyPropagation)
     addPass(createMachineCopyPropagationPass(true));
-  addPass(&BranchRelaxationPassID);
   addPass(createRISCVMakeCompressibleOptPass());
 
   // LoadStoreOptimizer creates bundles for load-store bonding.
   addPass(createUnpackMachineBundles([](const MachineFunction &MF) {
     return MF.getSubtarget<RISCVSubtarget>().useLoadStorePairs();
   }));
+  addPass(&BranchRelaxationPassID);
+  addPass(createRISCVRemoveBackToBackBranches());
 }
 
 void RISCVPassConfig::addPreEmitPass2() {

@@ -1,0 +1,108 @@
+# RUN: llc -mtriple=riscv64 -mattr=-c -riscv-remove-back-to-back-branches=1 -o - %s | FileCheck %s
+
+# CHECK: %bb.0:
+# CHECK: blez
+# CHECK: .p2align 3
+# CHECK: %bb.1:
+# CHECK: blez
+
+--- |
+  ; ModuleID = 'hazaard.c'
+  source_filename = "hazaard.c"
+  target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n64-S128"
+  target triple = "riscv64-unknown-linux-gnu"
+  
+  ; Function Attrs: nounwind optsize
+  define dso_local void @test(i32 noundef signext %a, i32 noundef signext %b) local_unnamed_addr #0 {
+  entry:
+    %cmp = icmp sgt i32 %a, 0
+    br i1 %cmp, label %if.then, label %if.end3
+  
+  if.then:                                          ; preds = %entry
+    %cmp1 = icmp slt i32 %b, 1
+    br i1 %cmp1, label %if.then2, label %if.end3
+  
+  if.then2:                                         ; preds = %if.then
+    tail call void asm sideeffect "nop", ""() #1, !srcloc !4
+    ret void
+  
+  if.end3:                                          ; preds = %if.then, %entry
+    ret void
+  }
+  
+  attributes #0 = { nounwind optsize "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="mips-p8700" "target-features"="+64bit,+a,+c,+d,+f,+m" }
+  attributes #1 = { nounwind }
+  
+  !llvm.module.flags = !{!0, !1, !2}
+  !llvm.ident = !{!3}
+  
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !1 = !{i32 1, !"target-abi", !"lp64d"}
+  !2 = !{i32 1, !"SmallDataLimit", i32 8}
+  !3 = !{!"clang version 14.0.0 (git@github.com:MIPS/llvm.git ae54cf4034587fab977092097c9772c7a275ddc8)"}
+  !4 = !{i64 88}
+
+...
+---
+name:            test
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+failsVerification: false
+tracksDebugUserValues: true
+registers:       []
+liveins:
+  - { reg: '$x10', virtual-reg: '' }
+  - { reg: '$x11', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x50000000), %bb.2(0x30000000)
+    liveins: $x10, $x11
+  
+    BGE $x0, killed renamable $x10, %bb.2
+  
+  bb.1.if.then:
+    successors: %bb.3(0x30000000), %bb.2(0x50000000)
+    liveins: $x11
+  
+    BGE $x0, killed renamable $x11, %bb.3
+  
+  bb.2.if.end3:
+    PseudoRET
+  
+  bb.3.if.then2:
+    INLINEASM &nop, 1 /* sideeffect attdialect */, !4
+    PseudoRET
+
+...

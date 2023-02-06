@@ -71,6 +71,11 @@ static cl::opt<bool> UseCCMovInsn("riscv-ccmov",
                                   cl::desc("RISCV: Use 'ccmov' instruction"),
                                   cl::init(true), cl::Hidden);
 
+static cl::opt<bool> RISCVRemoveBackToBackBranches(
+    "riscv-remove-back-to-back-branches",
+    cl::desc("RISCV: Insert nops to clear pipeline hazards."), cl::init(false),
+    cl::Hidden);
+
 void RISCVSubtarget::anchor() {}
 
 RISCVSubtarget &
@@ -232,4 +237,8 @@ bool RISCVSubtarget::useLoadStorePairs() const {
 
 bool RISCVSubtarget::useCCMovInsn() const {
   return UseCCMovInsn && HasMIPSCMov;
+}
+
+bool RISCVSubtarget::shouldRemoveBackToBackBranches() const {
+  return RISCVRemoveBackToBackBranches && hasFeature(RISCV::TuneMIPSP8700);
 }

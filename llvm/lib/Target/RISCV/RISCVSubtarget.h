@@ -169,9 +169,8 @@ public:
   MVT getXLenVT() const {
     return is64Bit() ? MVT::i64 : MVT::i32;
   }
-  unsigned getXLen() const {
-    return is64Bit() ? 64 : 32;
-  }
+  unsigned getXLen() const { return is64Bit() ? 64 : 32; }
+  bool shouldRemoveBackToBackBranches() const;
   bool useLoadStorePairs() const;
   bool useCCMovInsn() const;
   unsigned getFLen() const {
