@@ -56,12 +56,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_SYMBOLREMAPPINGREADER_H
-#define LLVM_SUPPORT_SYMBOLREMAPPINGREADER_H
+#ifndef LLVM_PROFILEDATA_SYMBOLREMAPPINGREADER_H
+#define LLVM_PROFILEDATA_SYMBOLREMAPPINGREADER_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ProfileData/ItaniumManglingCanonicalizer.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/ItaniumManglingCanonicalizer.h"
 
 namespace llvm {
 
@@ -130,4 +130,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_SUPPORT_SYMBOLREMAPPINGREADER_H
+#endif // LLVM_PROFILEDATA_SYMBOLREMAPPINGREADER_H
