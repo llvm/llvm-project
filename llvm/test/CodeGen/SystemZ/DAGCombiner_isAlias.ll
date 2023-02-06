@@ -10,10 +10,10 @@
 ; %.b = load i1, ptr @g_2, align 4
 
 ; CHECK: # %bb.6: # %crc32_gentab.exit
-; CHECK:        larl    %r2, g_2
-; CHECK-NEXT:   llc     %r3, 0(%r2)
-; CHECK-NOT:    %r2
-; CHECK:        llc     %r1, 0(%r2)
+; CHECK:        larl    [[REG:%r[1-9]+]], g_2
+; CHECK-NEXT:   llc     {{%r[1-9]}}, 0([[REG]])
+; CHECK-NOT:    [[REG]],
+; CHECK:        llc     %r1, 0([[REG]])
 
 @g_2 = external hidden unnamed_addr global i1, align 4
 @.str.1 = external hidden unnamed_addr constant [4 x i8], align 2

@@ -86,11 +86,11 @@ define void @f2_fpuse(ptr %dst, ptr %src) {
 ; CHECK-NEXT:	.cfi_def_cfa_offset 336
 ; CHECK-NEXT:	ld	%f0, 0(%r3)
 ; CHECK-NEXT:	ld	%f2, 8(%r3)
-; CHECK-DAG:	lgr	%r3, %r2
+; CHECK-DAG:    lgr     %r3, %r2
 ; CHECK-DAG:	axbr	%f0, %f0
-; CHECK-NEXT:	la	%r4, 160(%r15)
-; CHECK-NEXT:	lghi	%r2, 16
-; CHECK-NEXT:	lhi	%r5, 5
+; CHECK-DAG:	la	%r4, 160(%r15)
+; CHECK-DAG:	lghi	%r2, 16
+; CHECK-DAG:	lhi	%r5, 5
 ; CHECK-NEXT:	std	%f0, 160(%r15)
 ; CHECK-NEXT:	std	%f2, 168(%r15)
 ; CHECK-NEXT: brasl %r14, __atomic_store@PLT

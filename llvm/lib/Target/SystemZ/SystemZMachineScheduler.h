@@ -5,14 +5,21 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
+// -------------------------- Pre RA scheduling ----------------------------- //
+//
+// SystemZPreRASchedStrategy tries to reduce register pressure by applying
+// OOO heuristics and then also in certain regions reduces scheduled latency.
 //
 // -------------------------- Post RA scheduling ---------------------------- //
+//
 // SystemZPostRASchedStrategy is a scheduling strategy which is plugged into
 // the MachineScheduler. It has a sorted Available set of SUs and a pickNode()
 // implementation that looks to optimize decoder grouping and balance the
 // usage of processor resources. Scheduler states are saved for the end
 // region of each MBB, so that a successor block can learn from it.
-//===----------------------------------------------------------------------===//
+//
+//----------------------------------------------------------------------------//
 
 #ifndef LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZMACHINESCHEDULER_H
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZMACHINESCHEDULER_H
@@ -23,6 +30,64 @@
 #include <set>
 
 namespace llvm {
+
+/// A MachineSchedStrategy implementation for SystemZ pre RA scheduling.
+class SystemZPreRASchedStrategy : public GenericScheduler {
+  // Number of instructions left to schedule (above).
+  unsigned NumLeft;
+
+  void initializeLivenessReduction();
+  void initializeStoresGroup();
+  void initializeLatencyReduction();
+
+  Register Cmp0SrcReg;
+  // Return true if MI defines the Cmp0SrcReg that is used by a scheduled
+  // compare with 0. If CCDef is true MI must also have an implicit def of CC.
+  bool definesCmp0Src(const MachineInstr *MI, bool CCDef = true) const;
+
+  // The highest SUs that are not to be scheduled "low" to reduce liveness.
+  struct : SmallPtrSet<const SUnit *, 12> {
+    bool count(const SUnit *SU) const {
+      return empty() || SmallPtrSet::count(SU);
+    }
+  } HighSUs;
+
+  // Make sure a large group of stores do not all end up at the bottom.
+  std::set<const SUnit *> StoresGroup;
+  bool FirstStoreInGroupScheduled;
+
+  // True if there are many more SUs than the overall height of the DAG.
+  bool IsWideDAG;
+
+  // True if the region has many instructions in def-use sequences and would
+  // likely benefit from latency reduction.
+  bool HasDataSequences;
+
+  // Return true if the instruction defines a register while all use operands
+  // are already live.
+  bool isSchedLowCand(const SUnit *SU, ScheduleDAGMILive *DAG) const;
+
+  // Return true if the scheduled latency should be minimized.
+  bool shouldReduceLatency(SchedBoundary *Zone) const;
+
+  // Only call computeRemLatency() once before each scheduled node.
+  mutable unsigned RemLat;
+  unsigned getRemLat(SchedBoundary *Zone) const;
+
+protected:
+  bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
+                    SchedBoundary *Zone) const override;
+
+public:
+  SystemZPreRASchedStrategy(const MachineSchedContext *C)
+      : GenericScheduler(C) {}
+
+  void initPolicy(MachineBasicBlock::iterator Begin,
+                  MachineBasicBlock::iterator End,
+                  unsigned NumRegionInstrs) override;
+  void initialize(ScheduleDAGMI *dag) override;
+  void schedNode(SUnit *SU, bool IsTopNode) override;
+};
 
 /// A MachineSchedStrategy implementation for SystemZ post RA scheduling.
 class SystemZPostRASchedStrategy : public MachineSchedStrategy {

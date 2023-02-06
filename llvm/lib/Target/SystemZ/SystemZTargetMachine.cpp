@@ -36,6 +36,11 @@ static cl::opt<bool> EnableMachineCombinerPass(
     cl::desc("Enable the machine combiner pass"),
     cl::init(true), cl::Hidden);
 
+static cl::opt<bool> GenericSched(
+    "generic-sched", cl::Hidden, cl::init(false),
+    cl::desc("Run the generic pre-ra scheduler instead of the SystemZ "
+             "scheduler."));
+
 // NOLINTNEXTLINE(readability-identifier-naming)
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeSystemZTarget() {
@@ -166,6 +171,17 @@ SystemZTargetMachine::getSubtargetImpl(const Function &F) const {
   }
 
   return I.get();
+}
+
+ScheduleDAGInstrs *
+SystemZTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  // Use GenericScheduler if requested on CL or for Z10, which has no sched
+  // model.
+  if (GenericSched ||
+      !C->MF->getSubtarget().getSchedModel().hasInstrSchedModel())
+    return nullptr;
+
+  return createSchedLive<SystemZPreRASchedStrategy>(C);
 }
 
 ScheduleDAGInstrs *

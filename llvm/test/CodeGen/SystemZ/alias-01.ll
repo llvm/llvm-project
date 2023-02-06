@@ -1,6 +1,6 @@
-; Test 32-bit ANDs in which the second operand is variable.
+; Test 32-bit ADDs in which the second operand is variable.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z196 | FileCheck %s
 
 ; Check that there are no spills.
 define void @f1(ptr %src1, ptr %dest) {

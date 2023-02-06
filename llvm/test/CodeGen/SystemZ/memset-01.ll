@@ -192,8 +192,8 @@ define void @f17(ptr %dest, i8 %val) {
 ; CHECK-NEXT: mvc 3584(255,%r2), 3583(%r2)
 ; CHECK-NEXT: stc %r3, 3839(%r2)
 ; CHECK-NEXT: mvc 3840(255,%r2), 3839(%r2)
-; CHECK-NEXT: lay %r1, 4096(%r2)
-; CHECK-NEXT: stc %r3, 4095(%r2)
+; CHECK-DAG: lay %r1, 4096(%r2)
+; CHECK-DAG: stc %r3, 4095(%r2)
 ; CHECK-NEXT: mvc 0(1,%r1), 4095(%r2)
 ; CHECK-NEXT: br %r14
   %addr = getelementptr i8, ptr %dest, i64 3583

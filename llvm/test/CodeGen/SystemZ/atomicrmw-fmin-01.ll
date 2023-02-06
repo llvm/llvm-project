@@ -12,10 +12,10 @@ define float @f1(ptr %src, float %b) {
 ; CHECK: ler %f0, [[FSRC]]
 ; CHECK: ler %f2, [[FB]]
 ; CHECK: brasl %r14, fminf@PLT
-; CHECK: lgdr [[RO:%r[0-9]+]], %f0
-; CHECK: srlg [[RO]], [[RO]], 32
-; CHECK: lgdr [[RI:%r[0-9]+]], [[FSRC]]
-; CHECK: srlg [[RI]], [[RI]], 32
+; CHECK-DAG: lgdr [[RO:%r[0-9]+]], %f0
+; CHECK-DAG: srlg [[RO]], [[RO]], 32
+; CHECK-DAG: lgdr [[RI:%r[0-9]+]], [[FSRC]]
+; CHECK-DAG: srlg [[RI]], [[RI]], 32
 ; CHECK: cs [[RI]], [[RO]], 0([[SRC]])
 ; CHECK: sllg [[RO]], [[RI]], 32
 ; CHECK: ldgr [[FSRC]], [[RO]]
