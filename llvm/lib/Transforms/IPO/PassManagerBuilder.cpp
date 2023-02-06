@@ -56,7 +56,6 @@ PassManagerBuilder::PassManagerBuilder() {
     ForgetAllSCEVInLoopUnroll = ForgetSCEVInLoopUnroll;
     VerifyInput = false;
     VerifyOutput = false;
-    MergeFunctions = false;
     DivergentTarget = false;
     CallGraphProfile = true;
 }
@@ -302,13 +301,6 @@ void PassManagerBuilder::populateModulePassManager(
       Inliner = nullptr;
     }
 
-    // FIXME: The BarrierNoopPass is a HACK! The inliner pass above implicitly
-    // creates a CGSCC pass manager, but we don't want to add extensions into
-    // that pass manager. To prevent this we insert a no-op module pass to reset
-    // the pass manager to get the same behavior as EP_OptimizerLast in non-O0
-    // builds. The function merging pass is
-    if (MergeFunctions)
-      MPM.add(createMergeFunctionsPass());
     return;
   }
 
@@ -427,9 +419,6 @@ void PassManagerBuilder::populateModulePassManager(
     MPM.add(createGlobalDCEPass());         // Remove dead fns and globals.
     MPM.add(createConstantMergePass());     // Merge dup global constants
   }
-
-  if (MergeFunctions)
-    MPM.add(createMergeFunctionsPass());
 
   // LoopSink pass sinks instructions hoisted by LICM, which serves as a
   // canonicalization pass that enables other optimizations. As a result,

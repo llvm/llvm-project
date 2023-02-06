@@ -170,12 +170,6 @@ ModulePass *createStripDeadPrototypesPass();
 Pass *createReversePostOrderFunctionAttrsPass();
 
 //===----------------------------------------------------------------------===//
-/// createMergeFunctionsPass - This pass discovers identical functions and
-/// collapses them.
-///
-ModulePass *createMergeFunctionsPass();
-
-//===----------------------------------------------------------------------===//
 /// createHotColdSplittingPass - This pass outlines cold blocks into a separate
 /// function(s).
 ModulePass *createHotColdSplittingPass();
