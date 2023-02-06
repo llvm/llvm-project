@@ -923,6 +923,8 @@ public:
   unsigned getOverrideStackAlignment() const;
   void setOverrideStackAlignment(unsigned Align);
 
+  unsigned getMaxTLSAlignment() const;
+
   /// @name Utility functions for querying and setting the build SDK version
   /// @{
 
