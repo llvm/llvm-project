@@ -11,6 +11,7 @@
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "llvm/ADT/EquivalenceClasses.h"
+#include <string>
 
 namespace mlir {
 namespace bufferization {
@@ -33,6 +34,10 @@ struct OneShotBufferizationOptions : public BufferizationOptions {
   /// The heuristic controls the order in which ops are traversed during the
   /// analysis.
   AnalysisHeuristic analysisHeuristic = AnalysisHeuristic::BottomUp;
+
+  /// Specify the functions that should not be analyzed. copyBeforeWrite will be
+  /// set to true when bufferizing them.
+  llvm::ArrayRef<std::string> noAnalysisFuncFilter;
 };
 
 /// The BufferizationAliasInfo class maintains a list of buffer aliases and
