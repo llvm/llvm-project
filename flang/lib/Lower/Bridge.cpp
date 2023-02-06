@@ -2625,6 +2625,42 @@ private:
     Fortran::lower::associateMutableBox(*this, loc, lhs, assign.rhs, lbounds,
                                         stmtCtx);
   }
+
+  // Create the 2 x newRank array with the bounds to be passed to the runtime as
+  // a descriptor.
+  mlir::Value createBoundArray(llvm::ArrayRef<mlir::Value> lbounds,
+                               llvm::ArrayRef<mlir::Value> ubounds,
+                               mlir::Location loc) {
+    assert(lbounds.size() && ubounds.size());
+    mlir::Type indexTy = builder->getIndexType();
+    mlir::Type boundArrayTy = fir::SequenceType::get(
+        {2, static_cast<int64_t>(lbounds.size())}, builder->getI64Type());
+    mlir::Value boundArray = builder->create<fir::AllocaOp>(loc, boundArrayTy);
+    mlir::Value array = builder->create<fir::UndefOp>(loc, boundArrayTy);
+    for (unsigned i = 0; i < lbounds.size(); ++i) {
+      array = builder->create<fir::InsertValueOp>(
+          loc, boundArrayTy, array, lbounds[i],
+          builder->getArrayAttr(
+              {builder->getIntegerAttr(builder->getIndexType(), 0),
+               builder->getIntegerAttr(builder->getIndexType(),
+                                       static_cast<int>(i))}));
+      array = builder->create<fir::InsertValueOp>(
+          loc, boundArrayTy, array, ubounds[i],
+          builder->getArrayAttr(
+              {builder->getIntegerAttr(builder->getIndexType(), 1),
+               builder->getIntegerAttr(builder->getIndexType(),
+                                       static_cast<int>(i))}));
+    }
+    builder->create<fir::StoreOp>(loc, array, boundArray);
+    mlir::Type boxTy = fir::BoxType::get(boundArrayTy);
+    mlir::Value ext =
+        builder->createIntegerConstant(loc, indexTy, lbounds.size());
+    mlir::Value c2 = builder->createIntegerConstant(loc, indexTy, 2);
+    llvm::SmallVector<mlir::Value> shapes = {c2, ext};
+    mlir::Value shapeOp = builder->genShape(loc, shapes);
+    return builder->create<fir::EmboxOp>(loc, boxTy, boundArray, shapeOp);
+  }
+
   // Pointer assignment with bounds-remapping. R1036: a bounds-remapping is a
   // pair, lower bound and upper bound.
   void genPointerAssignment(
@@ -2653,39 +2689,7 @@ private:
 
       mlir::Value lhs = genExprMutableBox(loc, assign.lhs).getAddr();
       mlir::Value rhs = fir::getBase(genExprBox(loc, assign.rhs, stmtCtx));
-
-      // Create the newRank x 2 array with the bounds to be passed to
-      // the runtime as a descriptor.
-      assert(lbounds.size() && ubounds.size());
-      mlir::Type indexTy = builder->getIndexType();
-      mlir::Type boundArrayTy = fir::SequenceType::get(
-          {static_cast<int64_t>(lbounds.size()), 2}, builder->getI64Type());
-      mlir::Value boundArray =
-          builder->create<fir::AllocaOp>(loc, boundArrayTy);
-      mlir::Value array = builder->create<fir::UndefOp>(loc, boundArrayTy);
-      for (unsigned i = 0; i < lbounds.size(); ++i) {
-        array = builder->create<fir::InsertValueOp>(
-            loc, boundArrayTy, array, lbounds[i],
-            builder->getArrayAttr(
-                {builder->getIntegerAttr(builder->getIndexType(),
-                                         static_cast<int>(i)),
-                 builder->getIntegerAttr(builder->getIndexType(), 0)}));
-        array = builder->create<fir::InsertValueOp>(
-            loc, boundArrayTy, array, ubounds[i],
-            builder->getArrayAttr(
-                {builder->getIntegerAttr(builder->getIndexType(),
-                                         static_cast<int>(i)),
-                 builder->getIntegerAttr(builder->getIndexType(), 1)}));
-      }
-      builder->create<fir::StoreOp>(loc, array, boundArray);
-      mlir::Type boxTy = fir::BoxType::get(boundArrayTy);
-      mlir::Value ext =
-          builder->createIntegerConstant(loc, indexTy, lbounds.size());
-      mlir::Value c2 = builder->createIntegerConstant(loc, indexTy, 2);
-      llvm::SmallVector<mlir::Value> shapes = {ext, c2};
-      mlir::Value shapeOp = builder->genShape(loc, shapes);
-      mlir::Value boundsDesc =
-          builder->create<fir::EmboxOp>(loc, boxTy, boundArray, shapeOp);
+      mlir::Value boundsDesc = createBoundArray(lbounds, ubounds, loc);
       Fortran::lower::genPointerAssociateRemapping(*builder, loc, lhs, rhs,
                                                    boundsDesc);
       return;
