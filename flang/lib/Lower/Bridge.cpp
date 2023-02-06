@@ -2731,12 +2731,15 @@ private:
                 Fortran::lower::StatementContext stmtCtx;
                 if (Fortran::lower::isWholeAllocatable(assign.lhs))
                   TODO(loc, "HLFIR assignment to whole allocatable");
-                hlfir::EntityWithAttributes rhs =
-                    Fortran::lower::convertExprToHLFIR(loc, *this, assign.rhs,
-                                                       localSymbols, stmtCtx);
-                hlfir::EntityWithAttributes lhs =
-                    Fortran::lower::convertExprToHLFIR(loc, *this, assign.lhs,
-                                                       localSymbols, stmtCtx);
+                hlfir::Entity rhs = Fortran::lower::convertExprToHLFIR(
+                    loc, *this, assign.rhs, localSymbols, stmtCtx);
+                // Dereference pointers and allocatables RHS: the target is
+                // being assigned from.
+                rhs = hlfir::derefPointersAndAllocatables(loc, builder, rhs);
+                hlfir::Entity lhs = Fortran::lower::convertExprToHLFIR(
+                    loc, *this, assign.lhs, localSymbols, stmtCtx);
+                // Dereference pointers LHS: the target is being assigned to.
+                lhs = hlfir::derefPointersAndAllocatables(loc, builder, lhs);
                 builder.create<hlfir::AssignOp>(loc, rhs, lhs);
               },
               // [2] User defined assignment. If the context is a scalar

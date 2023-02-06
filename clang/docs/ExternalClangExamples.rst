@@ -33,7 +33,7 @@ List of projects and tools
    a persistent in-memory database of references, symbolnames, completions
    etc."
 
-`<https://rprichard.github.com/sourceweb/>`_
+`<https://rprichard.github.io/CxxCodeBrowser/>`_
    "A C/C++ source code indexer and navigator"
 
 `<https://github.com/etaoins/qconnectlint>`_
