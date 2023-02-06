@@ -1099,6 +1099,7 @@ public:
     NoCand,
     Only1,
     PhysReg,
+    LivenessReduce,
     RegExcess,
     RegCritical,
     Stall,
@@ -1227,12 +1228,13 @@ protected:
   void traceCandidate(const SchedCandidate &Cand);
 #endif
 
-private:
+protected:
   bool shouldReduceLatency(const CandPolicy &Policy, SchedBoundary &CurrZone,
                            bool ComputeRemLatency, unsigned &RemLatency) const;
 };
 
 // Utility functions used by heuristics in tryCandidate().
+LLVM_ABI unsigned computeRemLatency(SchedBoundary &CurrZone);
 LLVM_ABI bool tryLess(int TryVal, int CandVal,
                       GenericSchedulerBase::SchedCandidate &TryCand,
                       GenericSchedulerBase::SchedCandidate &Cand,
