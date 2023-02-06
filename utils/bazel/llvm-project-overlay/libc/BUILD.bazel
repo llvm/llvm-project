@@ -733,6 +733,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_fputil_fp_bits",
+        ":__support_fputil_fenv_impl",
         ":__support_fputil_fma",
         ":__support_fputil_nearest_integer",
         ":__support_fputil_multiply_add",
@@ -750,6 +751,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_fputil_fp_bits",
+        ":__support_fputil_fenv_impl",
         ":__support_fputil_fma",
         ":__support_fputil_nearest_integer",
         ":__support_fputil_multiply_add",
@@ -954,6 +956,7 @@ libc_math_function(
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
         ":inv_trigf_utils",
+        ":math_utils",
     ],
 )
 
@@ -1137,6 +1140,7 @@ libc_math_function(
     additional_deps = [
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
         ":__support_fputil_polyeval",
         ":range_reduction",
         ":sincosf_utils",
