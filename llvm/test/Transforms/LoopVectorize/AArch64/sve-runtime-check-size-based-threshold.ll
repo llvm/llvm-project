@@ -62,15 +62,15 @@ define void @min_trip_count_due_to_runtime_checks_1(ptr %dst.1, ptr %dst.2, ptr 
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i64, ptr [[SRC_2]], i64 [[TMP22]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i64, ptr [[TMP23]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP27]], align 4
-; CHECK-NEXT:    [[TMP28:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP29:%.*]] = mul i32 [[TMP28]], 2
-; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr i64, ptr [[TMP23]], i32 [[TMP29]]
+; CHECK-NEXT:    [[TMP28:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP29:%.*]] = mul i64 [[TMP28]], 2
+; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr i64, ptr [[TMP23]], i64 [[TMP29]]
 ; CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <vscale x 2 x i64>, ptr [[TMP30]], align 4
 ; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr i64, ptr [[TMP25]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD13:%.*]] = load <vscale x 2 x i64>, ptr [[TMP31]], align 4
-; CHECK-NEXT:    [[TMP32:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP33:%.*]] = mul i32 [[TMP32]], 2
-; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr i64, ptr [[TMP25]], i32 [[TMP33]]
+; CHECK-NEXT:    [[TMP32:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP33:%.*]] = mul i64 [[TMP32]], 2
+; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr i64, ptr [[TMP25]], i64 [[TMP33]]
 ; CHECK-NEXT:    [[WIDE_LOAD14:%.*]] = load <vscale x 2 x i64>, ptr [[TMP34]], align 4
 ; CHECK-NEXT:    [[TMP35:%.*]] = add <vscale x 2 x i64> [[WIDE_LOAD]], [[WIDE_LOAD13]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = add <vscale x 2 x i64> [[WIDE_LOAD12]], [[WIDE_LOAD14]]
@@ -80,15 +80,15 @@ define void @min_trip_count_due_to_runtime_checks_1(ptr %dst.1, ptr %dst.2, ptr 
 ; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr i64, ptr [[DST_2]], i64 [[TMP22]]
 ; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr i64, ptr [[TMP37]], i32 0
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP35]], ptr [[TMP41]], align 4
-; CHECK-NEXT:    [[TMP42:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP43:%.*]] = mul i32 [[TMP42]], 2
-; CHECK-NEXT:    [[TMP44:%.*]] = getelementptr i64, ptr [[TMP37]], i32 [[TMP43]]
+; CHECK-NEXT:    [[TMP42:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP43:%.*]] = mul i64 [[TMP42]], 2
+; CHECK-NEXT:    [[TMP44:%.*]] = getelementptr i64, ptr [[TMP37]], i64 [[TMP43]]
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP36]], ptr [[TMP44]], align 4
 ; CHECK-NEXT:    [[TMP45:%.*]] = getelementptr i64, ptr [[TMP39]], i32 0
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP35]], ptr [[TMP45]], align 4
-; CHECK-NEXT:    [[TMP46:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP47:%.*]] = mul i32 [[TMP46]], 2
-; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr i64, ptr [[TMP39]], i32 [[TMP47]]
+; CHECK-NEXT:    [[TMP46:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP47:%.*]] = mul i64 [[TMP46]], 2
+; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr i64, ptr [[TMP39]], i64 [[TMP47]]
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP36]], ptr [[TMP48]], align 4
 ; CHECK-NEXT:    [[TMP49:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP50:%.*]] = mul i64 [[TMP49]], 4
@@ -114,7 +114,7 @@ define void @min_trip_count_due_to_runtime_checks_1(ptr %dst.1, ptr %dst.2, ptr 
 ; CHECK-NEXT:    store i64 [[ADD]], ptr [[GEP_DST_2]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[CMP10:%.*]] = icmp ult i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP10]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP10]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
