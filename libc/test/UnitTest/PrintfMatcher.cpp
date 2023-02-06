@@ -11,7 +11,7 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/stdio/printf_core/core_structs.h"
 
-#include "utils/UnitTest/StringUtils.h"
+#include "test/UnitTest/StringUtils.h"
 
 #include <stdint.h>
 

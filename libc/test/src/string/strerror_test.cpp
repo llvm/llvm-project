@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strerror.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcStrErrorTest, KnownErrors) {
   ASSERT_STREQ(__llvm_libc::strerror(0), "Success");

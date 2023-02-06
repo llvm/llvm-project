@@ -17,7 +17,7 @@
 #include "src/pthread/pthread_attr_setstack.h"
 #include "src/pthread/pthread_attr_setstacksize.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include <errno.h>
 #include <linux/param.h> // For EXEC_PAGESIZE.

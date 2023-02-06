@@ -10,7 +10,7 @@
 #include "src/__support/macros/architectures.h"
 #include "src/sys/utsname/uname.h"
 #include "test/ErrnoSetterMatcher.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include <errno.h>
 #include <sys/utsname.h>

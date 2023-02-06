@@ -57,7 +57,9 @@ struct MatcherBase {
   virtual bool is_silent() const { return false; }
 };
 
-template <typename T> struct Matcher : public MatcherBase { bool match(T &t); };
+template <typename T> struct Matcher : public MatcherBase {
+  bool match(T &t);
+};
 
 // NOTE: One should not create instances and call methods on them directly. One
 // should use the macros TEST or TEST_F to write test cases.

@@ -8,7 +8,7 @@
 
 #include "src/stdlib/rand.h"
 #include "src/stdlib/srand.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include <stddef.h>
 #include <stdlib.h>

@@ -8,7 +8,7 @@
 
 #include "src/__support/CPP/array.h"
 #include "src/string/memory_utils/utils.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 namespace __llvm_libc {
 

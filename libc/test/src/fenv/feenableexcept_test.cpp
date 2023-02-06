@@ -11,7 +11,7 @@
 #include "src/fenv/feenableexcept.h"
 #include "src/fenv/fegetexcept.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include <fenv.h>
 
