@@ -353,10 +353,6 @@ static DecodeStatus decodeRVCInstrRdRs1ImmZero(MCInst &Inst, uint32_t Insn,
                                                uint64_t Address,
                                                const MCDisassembler *Decoder);
 
-static DecodeStatus decodeRVCInstrSImm(MCInst &Inst, uint32_t Insn,
-                                       uint64_t Address,
-                                       const MCDisassembler *Decoder);
-
 static DecodeStatus decodeRVCInstrRdSImm(MCInst &Inst, uint32_t Insn,
                                          uint64_t Address,
                                          const MCDisassembler *Decoder);
@@ -384,17 +380,6 @@ static DecodeStatus decodeRVCInstrRdRs1ImmZero(MCInst &Inst, uint32_t Insn,
   assert(Result == MCDisassembler::Success && "Invalid register");
   Inst.addOperand(Inst.getOperand(0));
   Inst.addOperand(MCOperand::createImm(0));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus decodeRVCInstrSImm(MCInst &Inst, uint32_t Insn,
-                                       uint64_t Address,
-                                       const MCDisassembler *Decoder) {
-  uint32_t SImm6 =
-      fieldFromInstruction(Insn, 12, 1) << 5 | fieldFromInstruction(Insn, 2, 5);
-  DecodeStatus Result = decodeSImmOperand<6>(Inst, SImm6, Address, Decoder);
-  (void)Result;
-  assert(Result == MCDisassembler::Success && "Invalid immediate");
   return MCDisassembler::Success;
 }
 
