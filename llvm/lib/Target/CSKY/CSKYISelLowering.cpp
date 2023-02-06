@@ -153,8 +153,7 @@ CSKYTargetLowering::CSKYTargetLowering(const TargetMachine &TM,
   setMaxAtomicSizeInBitsSupported(0);
 
   setStackPointerRegisterToSaveRestore(CSKY::R14);
-  const Align FunctionAlignment(2);
-  setMinFunctionAlignment(FunctionAlignment);
+  setMinFunctionAlignment(Align(2));
   setSchedulingPreference(Sched::Source);
 }
 

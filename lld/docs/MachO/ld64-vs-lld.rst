@@ -51,6 +51,6 @@ the aliased symbols turn out to be weak definitions, but ld64 will.
 ***********************************
 ld64 has a special mode where it sets some stabs modification times to 0 for
 hermetic builds, enabled by setting any value for the ``ZERO_AR_DATE``
-environment variable. LLD flips this default to perfer hermetic builds, but
+environment variable. LLD flips this default to prefer hermetic builds, but
 allows disabling this behavior by setting ``ZERO_AR_DATE=0``. Any other value
 of ``ZERO_AR_DATE`` will be ignored.

@@ -296,7 +296,7 @@ static std::optional<std::string> findFromSearchPaths(StringRef path) {
 // search paths.
 static std::optional<std::string> searchLibraryBaseName(StringRef name) {
   for (StringRef dir : config->searchPaths) {
-    // Currently we don't enable dyanmic linking at all unless -shared or -pie
+    // Currently we don't enable dynamic linking at all unless -shared or -pie
     // are used, so don't even look for .so files in that case..
     if (config->isPic && !config->isStatic)
       if (std::optional<std::string> s = findFile(dir, "lib" + name + ".so"))

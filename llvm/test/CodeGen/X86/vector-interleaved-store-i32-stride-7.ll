@@ -58,25 +58,24 @@ define void @store_i32_stride7_vf2(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX1-ONLY-NEXT:    vmovq {{.*#+}} xmm4 = mem[0],zero
 ; AVX1-ONLY-NEXT:    vmovq {{.*#+}} xmm5 = mem[0],zero
 ; AVX1-ONLY-NEXT:    vpunpcklqdq {{.*#+}} xmm4 = xmm5[0],xmm4[0]
-; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm4, %ymm2, %ymm6
-; AVX1-ONLY-NEXT:    vmovsd {{.*#+}} xmm7 = mem[0],zero
-; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm7, %ymm0, %ymm0
+; AVX1-ONLY-NEXT:    vmovsd {{.*#+}} xmm5 = mem[0],zero
+; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm5, %ymm0, %ymm0
 ; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
 ; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3,0,1]
-; AVX1-ONLY-NEXT:    vshufps {{.*#+}} ymm7 = ymm1[3,0],ymm0[1,0],ymm1[7,4],ymm0[5,4]
-; AVX1-ONLY-NEXT:    vshufps {{.*#+}} ymm7 = ymm7[0,2],ymm0[2,1],ymm7[4,6],ymm0[6,5]
-; AVX1-ONLY-NEXT:    vpalignr {{.*#+}} xmm2 = xmm2[12,13,14,15],xmm5[0,1,2,3,4,5,6,7,8,9,10,11]
-; AVX1-ONLY-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[0,2],xmm4[3,3]
-; AVX1-ONLY-NEXT:    vblendps {{.*#+}} xmm2 = xmm2[0,1,2],xmm7[3]
+; AVX1-ONLY-NEXT:    vshufps {{.*#+}} ymm5 = ymm1[3,0],ymm0[1,0],ymm1[7,4],ymm0[5,4]
+; AVX1-ONLY-NEXT:    vshufps {{.*#+}} ymm5 = ymm5[0,2],ymm0[2,1],ymm5[4,6],ymm0[6,5]
+; AVX1-ONLY-NEXT:    vpalignr {{.*#+}} xmm6 = xmm2[12,13,14,15],xmm4[0,1,2,3,4,5,6,7,8,9,10,11]
+; AVX1-ONLY-NEXT:    vshufps {{.*#+}} xmm6 = xmm6[0,2],xmm4[3,3]
+; AVX1-ONLY-NEXT:    vblendps {{.*#+}} xmm6 = xmm6[0,1,2],xmm5[3]
 ; AVX1-ONLY-NEXT:    vshufps {{.*#+}} ymm0 = ymm1[0,2],ymm0[0,3],ymm1[4,6],ymm0[4,7]
 ; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm1
 ; AVX1-ONLY-NEXT:    vpermilps {{.*#+}} ymm1 = ymm1[u,u,0,2,u,u,u,5]
-; AVX1-ONLY-NEXT:    vshufps {{.*#+}} ymm1 = ymm6[0,2],ymm1[2,3],ymm6[4,6],ymm1[6,7]
+; AVX1-ONLY-NEXT:    vshufps {{.*#+}} ymm1 = ymm2[0,2],ymm1[2,3],ymm2[4,6],ymm1[6,7]
 ; AVX1-ONLY-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6],ymm1[7]
 ; AVX1-ONLY-NEXT:    vmovaps %ymm0, (%rax)
-; AVX1-ONLY-NEXT:    vextractf128 $1, %ymm7, %xmm0
+; AVX1-ONLY-NEXT:    vextractf128 $1, %ymm5, %xmm0
 ; AVX1-ONLY-NEXT:    vmovlps %xmm0, 48(%rax)
-; AVX1-ONLY-NEXT:    vmovaps %xmm2, 32(%rax)
+; AVX1-ONLY-NEXT:    vmovaps %xmm6, 32(%rax)
 ; AVX1-ONLY-NEXT:    vzeroupper
 ; AVX1-ONLY-NEXT:    retq
 ;
@@ -577,12 +576,11 @@ define void @store_i32_stride7_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512-NEXT:    vmovdqa (%rdx), %xmm1
 ; AVX512-NEXT:    vmovdqa (%r8), %xmm2
-; AVX512-NEXT:    vmovdqa (%r10), %xmm3
 ; AVX512-NEXT:    vinserti128 $1, (%rcx), %ymm1, %ymm1
 ; AVX512-NEXT:    vinserti128 $1, (%rsi), %ymm0, %ymm0
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vinserti128 $1, (%r9), %ymm2, %ymm1
-; AVX512-NEXT:    vinserti64x4 $1, %ymm3, %zmm1, %zmm1
+; AVX512-NEXT:    vinserti32x4 $2, (%r10), %zmm1, %zmm1
 ; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,4,8,12,16,20,24,1,5,9,13,17,21,25,2,6]
 ; AVX512-NEXT:    vpermi2d %zmm1, %zmm0, %zmm2
 ; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm3 = <10,14,18,22,26,3,7,11,15,19,23,27,u,u,u,u>

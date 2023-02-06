@@ -190,9 +190,5 @@ TARGET_BUILTIN(__builtin_wasm_relaxed_dot_i8x16_i7x16_s_i16x8, "V8sV16ScV16Sc", 
 TARGET_BUILTIN(__builtin_wasm_relaxed_dot_i8x16_i7x16_add_s_i32x4, "V4iV16ScV16ScV4i", "nc", "relaxed-simd")
 TARGET_BUILTIN(__builtin_wasm_relaxed_dot_bf16x8_add_f32_f32x4, "V4fV8UsV8UsV4f", "nc", "relaxed-simd")
 
-// Reference Types builtins
-
-TARGET_BUILTIN(__builtin_wasm_ref_null_extern, "i", "nct", "reference-types")
-
 #undef BUILTIN
 #undef TARGET_BUILTIN
