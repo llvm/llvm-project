@@ -1314,6 +1314,21 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   EXPECT_TOKEN(Tokens[5], tok::question, TT_ConditionalExpr);
   EXPECT_TOKEN(Tokens[7], tok::colon, TT_ConditionalExpr);
   EXPECT_TOKEN(Tokens[9], tok::colon, TT_GotoLabelColon);
+  // Non-blocking assignments.
+  Tokens = Annotate("a <= b;");
+  ASSERT_EQ(Tokens.size(), 5u);
+  EXPECT_TOKEN(Tokens[1], tok::lessequal, TT_BinaryOperator);
+  EXPECT_TOKEN_PRECEDENCE(Tokens[1], prec::Assignment);
+  Tokens = Annotate("if (a <= b) break;");
+  ASSERT_EQ(Tokens.size(), 9u);
+  EXPECT_TOKEN(Tokens[3], tok::lessequal, TT_BinaryOperator);
+  EXPECT_TOKEN_PRECEDENCE(Tokens[3], prec::Relational);
+  Tokens = Annotate("a <= b <= a;");
+  ASSERT_EQ(Tokens.size(), 7u);
+  EXPECT_TOKEN(Tokens[1], tok::lessequal, TT_BinaryOperator);
+  EXPECT_TOKEN_PRECEDENCE(Tokens[1], prec::Assignment);
+  EXPECT_TOKEN(Tokens[3], tok::lessequal, TT_BinaryOperator);
+  EXPECT_TOKEN_PRECEDENCE(Tokens[3], prec::Relational);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandConstructors) {
