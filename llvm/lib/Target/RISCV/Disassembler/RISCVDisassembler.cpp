@@ -401,7 +401,7 @@ static DecodeStatus decodeRVCInstrSImm(MCInst &Inst, unsigned Insn,
 static DecodeStatus decodeRVCInstrRdSImm(MCInst &Inst, unsigned Insn,
                                          uint64_t Address,
                                          const MCDisassembler *Decoder) {
-  DecodeGPRRegisterClass(Inst, 0, Address, Decoder);
+  Inst.addOperand(MCOperand::createReg(RISCV::X0));
   uint64_t SImm6 =
       fieldFromInstruction(Insn, 12, 1) << 5 | fieldFromInstruction(Insn, 2, 5);
   DecodeStatus Result = decodeSImmOperand<6>(Inst, SImm6, Address, Decoder);
@@ -413,7 +413,7 @@ static DecodeStatus decodeRVCInstrRdSImm(MCInst &Inst, unsigned Insn,
 static DecodeStatus decodeRVCInstrRdRs1UImm(MCInst &Inst, unsigned Insn,
                                             uint64_t Address,
                                             const MCDisassembler *Decoder) {
-  DecodeGPRRegisterClass(Inst, 0, Address, Decoder);
+  Inst.addOperand(MCOperand::createReg(RISCV::X0));
   Inst.addOperand(Inst.getOperand(0));
   uint64_t UImm6 =
       fieldFromInstruction(Insn, 12, 1) << 5 | fieldFromInstruction(Insn, 2, 5);
