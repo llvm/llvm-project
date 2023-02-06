@@ -20,7 +20,7 @@ namespace clang {
 
 template <class T> class LazyDetector {
   const driver::Driver &D;
-  const llvm::Triple &Triple;
+  llvm::Triple Triple;
   const llvm::opt::ArgList &Args;
 
   std::optional<T> Detector;
