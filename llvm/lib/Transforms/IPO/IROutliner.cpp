@@ -3024,46 +3024,6 @@ bool IROutliner::run(Module &M) {
   return doOutline(M) > 0;
 }
 
-// Pass Manager Boilerplate
-namespace {
-class IROutlinerLegacyPass : public ModulePass {
-public:
-  static char ID;
-  IROutlinerLegacyPass() : ModulePass(ID) {
-    initializeIROutlinerLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.addRequired<IRSimilarityIdentifierWrapperPass>();
-  }
-
-  bool runOnModule(Module &M) override;
-};
-} // namespace
-
-bool IROutlinerLegacyPass::runOnModule(Module &M) {
-  if (skipModule(M))
-    return false;
-
-  std::unique_ptr<OptimizationRemarkEmitter> ORE;
-  auto GORE = [&ORE](Function &F) -> OptimizationRemarkEmitter & {
-    ORE.reset(new OptimizationRemarkEmitter(&F));
-    return *ORE;
-  };
-
-  auto GTTI = [this](Function &F) -> TargetTransformInfo & {
-    return this->getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  };
-
-  auto GIRSI = [this](Module &) -> IRSimilarityIdentifier & {
-    return this->getAnalysis<IRSimilarityIdentifierWrapperPass>().getIRSI();
-  };
-
-  return IROutliner(GTTI, GIRSI, GORE).run(M);
-}
-
 PreservedAnalyses IROutlinerPass::run(Module &M, ModuleAnalysisManager &AM) {
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
@@ -3088,14 +3048,3 @@ PreservedAnalyses IROutlinerPass::run(Module &M, ModuleAnalysisManager &AM) {
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
 }
-
-char IROutlinerLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(IROutlinerLegacyPass, "iroutliner", "IR Outliner", false,
-                      false)
-INITIALIZE_PASS_DEPENDENCY(IRSimilarityIdentifierWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_END(IROutlinerLegacyPass, "iroutliner", "IR Outliner", false,
-                    false)
-
-ModulePass *llvm::createIROutlinerPass() { return new IROutlinerLegacyPass(); }

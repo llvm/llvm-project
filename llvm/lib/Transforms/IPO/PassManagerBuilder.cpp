@@ -317,7 +317,6 @@ void PassManagerBuilder::populateModulePassManager(
     MPM.add(createCallSiteSplittingPass());
 
   MPM.add(createIPSCCPPass());          // IP SCCP
-  MPM.add(createCalledValuePropagationPass());
 
   MPM.add(createGlobalOptimizerPass()); // Optimize out global vars
   // Promote any localized global vars.

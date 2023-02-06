@@ -30,9 +30,6 @@ LLVM_C_EXTERN_C_BEGIN
 /** See llvm::createConstantMergePass function. */
 void LLVMAddConstantMergePass(LLVMPassManagerRef PM);
 
-/** See llvm::createCalledValuePropagationPass function. */
-void LLVMAddCalledValuePropagationPass(LLVMPassManagerRef PM);
-
 /** See llvm::createDeadArgEliminationPass function. */
 void LLVMAddDeadArgEliminationPass(LLVMPassManagerRef PM);
 
