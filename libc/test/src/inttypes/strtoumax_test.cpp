@@ -8,7 +8,7 @@
 
 #include "src/inttypes/strtoumax.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include "test/src/stdlib/StrtolTest.h"
 

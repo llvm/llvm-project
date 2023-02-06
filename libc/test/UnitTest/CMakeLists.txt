@@ -37,7 +37,7 @@ target_link_libraries(LibcFPTestHelpers LibcUnitTest libc_test_utils)
 add_dependencies(
   LibcFPTestHelpers
   LibcUnitTest
-  libc.utils.UnitTest.string_utils
+  libc.test.UnitTest.string_utils
   libc.src.__support.FPUtil.fp_bits
   libc.src.__support.FPUtil.fenv_impl
 )
@@ -67,7 +67,7 @@ add_dependencies(
   LibcUnitTest
   libc.src.__support.FPUtil.fp_bits
   libc.src.stdio.printf_core.core_structs
-  libc.utils.UnitTest.string_utils
+  libc.test.UnitTest.string_utils
 )
 
 add_library(
@@ -82,5 +82,5 @@ add_dependencies(
   LibcUnitTest
   libc.src.__support.FPUtil.fp_bits
   libc.src.stdio.scanf_core.core_structs
-  libc.utils.UnitTest.string_utils
+  libc.test.UnitTest.string_utils
 )

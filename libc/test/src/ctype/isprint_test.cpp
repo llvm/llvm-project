@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/ctype/isprint.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcIsPrint, DefaultLocale) {
   for (int ch = 0; ch < 255; ++ch) {

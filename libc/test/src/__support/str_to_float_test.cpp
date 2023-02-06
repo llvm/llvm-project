@@ -10,7 +10,7 @@
 #include "src/__support/UInt128.h"
 #include "src/__support/str_to_float.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 class LlvmLibcStrToFloatTest : public __llvm_libc::testing::Test {
 public:

@@ -12,7 +12,7 @@
 #include "src/time/gettimeofday.h"
 #include "src/time/nanosleep.h"
 #include "test/ErrnoSetterMatcher.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 namespace cpp = __llvm_libc::cpp;
 

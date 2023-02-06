@@ -10,7 +10,7 @@
 #include "src/__support/UInt128.h"
 #include "src/stdlib/strtold.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include <errno.h>
 #include <limits.h>

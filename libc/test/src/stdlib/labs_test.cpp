@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/labs.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcLabsTest, Zero) { EXPECT_EQ(__llvm_libc::labs(0l), 0l); }
 

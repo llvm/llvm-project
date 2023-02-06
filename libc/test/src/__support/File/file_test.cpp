@@ -9,8 +9,8 @@
 #include "src/__support/CPP/new.h"
 #include "src/__support/File/file.h"
 #include "src/__support/error_or.h"
-#include "utils/UnitTest/MemoryMatcher.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/MemoryMatcher.h"
+#include "test/UnitTest/Test.h"
 
 #include <stdio.h>
 #include <stdlib.h>

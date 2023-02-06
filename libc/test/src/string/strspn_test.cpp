@@ -8,7 +8,7 @@
 
 #include "src/string/strspn.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcStrSpnTest, EmptyStringShouldReturnZeroLengthSpan) {
   // The search should not include the null terminator.

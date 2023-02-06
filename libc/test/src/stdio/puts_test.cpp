@@ -8,7 +8,7 @@
 
 #include "src/stdio/puts.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcPutsTest, PrintOut) {
   int result;

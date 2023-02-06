@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/memrchr.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 #include <stddef.h>
 
 // A helper function that calls memrchr and abstracts away the explicit cast for

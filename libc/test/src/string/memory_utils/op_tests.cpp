@@ -11,7 +11,7 @@
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/op_generic.h"
 #include "src/string/memory_utils/op_x86.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include <assert.h>
 
