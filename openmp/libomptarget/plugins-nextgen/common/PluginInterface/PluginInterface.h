@@ -391,7 +391,8 @@ public:
     //              Failure to lock the buffers are silent.
     //   mandatory: Mapped host buffers are always locked and failures to lock
     //              a buffer results in a fatal error.
-    StringEnvar OMPX_LockMappedBuffers("LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS", "off");
+    StringEnvar OMPX_LockMappedBuffers("LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS",
+                                       "off");
 
     bool Enabled;
     if (StringParser::parse(OMPX_LockMappedBuffers.get().data(), Enabled)) {
