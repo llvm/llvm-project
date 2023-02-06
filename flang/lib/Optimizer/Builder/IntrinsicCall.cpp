@@ -13,13 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Lower/IntrinsicCall.h"
+#include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Common/static-multimap-view.h"
-#include "flang/Lower/Mangler.h"
-#include "flang/Lower/Runtime.h"
-#include "flang/Lower/StatementContext.h"
-#include "flang/Lower/Support/Utils.h"
-#include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/Complex.h"
@@ -30,6 +25,7 @@
 #include "flang/Optimizer/Builder/Runtime/Command.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/Inquiry.h"
+#include "flang/Optimizer/Builder/Runtime/Intrinsics.h"
 #include "flang/Optimizer/Builder/Runtime/Numeric.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Reduction.h"
@@ -38,6 +34,7 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "flang/Runtime/entry-names.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -104,7 +101,7 @@ enum class ExtremumBehavior {
   // possible to implement it without some target dependent runtime.
 };
 
-fir::ExtendedValue Fortran::lower::getAbsentIntrinsicArgument() {
+fir::ExtendedValue fir::getAbsentIntrinsicArgument() {
   return fir::UnboxedValue{};
 }
 
@@ -414,13 +411,12 @@ struct IntrinsicLibrary {
 
 struct IntrinsicDummyArgument {
   const char *name = nullptr;
-  Fortran::lower::LowerIntrinsicArgAs lowerAs =
-      Fortran::lower::LowerIntrinsicArgAs::Value;
+  fir::LowerIntrinsicArgAs lowerAs = fir::LowerIntrinsicArgAs::Value;
   bool handleDynamicOptional = false;
 };
 
 /// This is shared by intrinsics and intrinsic module procedures.
-struct Fortran::lower::IntrinsicArgumentLoweringRules {
+struct fir::IntrinsicArgumentLoweringRules {
   /// There is no more than 7 non repeated arguments in Fortran intrinsics.
   IntrinsicDummyArgument args[7];
   constexpr bool hasDefaultRules() const { return args[0].name == nullptr; }
@@ -432,17 +428,17 @@ struct IntrinsicHandler {
   const char *name;
   IntrinsicLibrary::Generator generator;
   // The following may be omitted in the table below.
-  Fortran::lower::IntrinsicArgumentLoweringRules argLoweringRules = {};
+  fir::IntrinsicArgumentLoweringRules argLoweringRules = {};
   bool isElemental = true;
   /// Code heavy intrinsic can be outlined to make FIR
   /// more readable.
   bool outline = false;
 };
 
-constexpr auto asValue = Fortran::lower::LowerIntrinsicArgAs::Value;
-constexpr auto asAddr = Fortran::lower::LowerIntrinsicArgAs::Addr;
-constexpr auto asBox = Fortran::lower::LowerIntrinsicArgAs::Box;
-constexpr auto asInquired = Fortran::lower::LowerIntrinsicArgAs::Inquired;
+constexpr auto asValue = fir::LowerIntrinsicArgAs::Value;
+constexpr auto asAddr = fir::LowerIntrinsicArgAs::Addr;
+constexpr auto asBox = fir::LowerIntrinsicArgAs::Box;
+constexpr auto asInquired = fir::LowerIntrinsicArgAs::Inquired;
 using I = IntrinsicLibrary;
 
 /// Flag to indicate that an intrinsic argument has to be handled as
@@ -1816,12 +1812,66 @@ IntrinsicLibrary::invokeGenerator(SubroutineGenerator generator,
   return {};
 }
 
+//===----------------------------------------------------------------------===//
+// Intrinsic Procedure Mangling
+//===----------------------------------------------------------------------===//
+
+/// Helper to encode type into string for intrinsic procedure names.
+/// Note: mlir has Type::dump(ostream) methods but it may add "!" that is not
+/// suitable for function names.
+static std::string typeToString(mlir::Type t) {
+  if (auto refT{t.dyn_cast<fir::ReferenceType>()})
+    return "ref_" + typeToString(refT.getEleTy());
+  if (auto i{t.dyn_cast<mlir::IntegerType>()}) {
+    return "i" + std::to_string(i.getWidth());
+  }
+  if (auto cplx{t.dyn_cast<fir::ComplexType>()}) {
+    return "z" + std::to_string(cplx.getFKind());
+  }
+  if (auto real{t.dyn_cast<fir::RealType>()}) {
+    return "r" + std::to_string(real.getFKind());
+  }
+  if (auto f{t.dyn_cast<mlir::FloatType>()}) {
+    return "f" + std::to_string(f.getWidth());
+  }
+  if (auto logical{t.dyn_cast<fir::LogicalType>()}) {
+    return "l" + std::to_string(logical.getFKind());
+  }
+  if (auto character{t.dyn_cast<fir::CharacterType>()}) {
+    return "c" + std::to_string(character.getFKind());
+  }
+  if (auto boxCharacter{t.dyn_cast<fir::BoxCharType>()}) {
+    return "bc" + std::to_string(boxCharacter.getEleTy().getFKind());
+  }
+  llvm_unreachable("no mangling for type");
+}
+
+/// Returns a name suitable to define mlir functions for Fortran intrinsic
+/// Procedure. These names are guaranteed to not conflict with user defined
+/// procedures. This is needed to implement Fortran generic intrinsics as
+/// several mlir functions specialized for the argument types.
+/// The result is guaranteed to be distinct for different mlir::FunctionType
+/// arguments. The mangling pattern is:
+///    fir.<generic name>.<result type>.<arg type>...
+/// e.g ACOS(COMPLEX(4)) is mangled as fir.acos.z4.z4
+static std::string mangleIntrinsicProcedure(llvm::StringRef intrinsic,
+                                            mlir::FunctionType funTy) {
+  std::string name = "fir.";
+  name.append(intrinsic.str()).append(".");
+  assert(funTy.getNumResults() == 1 && "only function mangling supported");
+  name.append(typeToString(funTy.getResult(0)));
+  unsigned e = funTy.getNumInputs();
+  for (decltype(e) i = 0; i < e; ++i)
+    name.append(".").append(typeToString(funTy.getInput(i)));
+  return name;
+}
+
 template <typename GeneratorType>
 mlir::func::FuncOp IntrinsicLibrary::getWrapper(GeneratorType generator,
                                                 llvm::StringRef name,
                                                 mlir::FunctionType funcType,
                                                 bool loadRefArguments) {
-  std::string wrapperName = fir::mangleIntrinsicProcedure(name, funcType);
+  std::string wrapperName = mangleIntrinsicProcedure(name, funcType);
   mlir::func::FuncOp function = builder.getNamedFunction(wrapperName);
   if (!function) {
     // First time this wrapper is needed, build it.
@@ -2274,7 +2324,7 @@ IntrinsicLibrary::genAssociated(mlir::Type resultType,
   mlir::Value pointerBoxRef =
       fir::factory::getMutableIRBox(builder, loc, *pointer);
   auto pointerBox = builder.create<fir::LoadOp>(loc, pointerBoxRef);
-  return Fortran::lower::genAssociated(builder, loc, pointerBox, targetBox);
+  return fir::runtime::genAssociated(builder, loc, pointerBox, targetBox);
 }
 
 // BESSEL_JN
@@ -2765,7 +2815,7 @@ void IntrinsicLibrary::genCpuTime(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1);
   const mlir::Value *arg = args[0].getUnboxed();
   assert(arg && "nonscalar cpu_time argument");
-  mlir::Value res1 = Fortran::lower::genCpuTime(builder, loc);
+  mlir::Value res1 = fir::runtime::genCpuTime(builder, loc);
   mlir::Value res2 =
       builder.createConvert(loc, fir::dyn_cast_ptrEleTy(arg->getType()), res1);
   builder.create<fir::StoreOp>(loc, res2, *arg);
@@ -2825,8 +2875,8 @@ void IntrinsicLibrary::genDateAndTime(llvm::ArrayRef<fir::ExtendedValue> args) {
     values = builder.create<fir::AbsentOp>(
         loc, fir::BoxType::get(builder.getNoneType()));
 
-  Fortran::lower::genDateAndTime(builder, loc, charArgs[0], charArgs[1],
-                                 charArgs[2], values);
+  fir::runtime::genDateAndTime(builder, loc, charArgs[0], charArgs[1],
+                               charArgs[2], values);
 }
 
 // DIM
@@ -4191,15 +4241,15 @@ IntrinsicLibrary::genProduct(mlir::Type resultType,
 // RANDOM_INIT
 void IntrinsicLibrary::genRandomInit(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 2);
-  Fortran::lower::genRandomInit(builder, loc, fir::getBase(args[0]),
-                                fir::getBase(args[1]));
+  fir::runtime::genRandomInit(builder, loc, fir::getBase(args[0]),
+                              fir::getBase(args[1]));
 }
 
 // RANDOM_NUMBER
 void IntrinsicLibrary::genRandomNumber(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1);
-  Fortran::lower::genRandomNumber(builder, loc, fir::getBase(args[0]));
+  fir::runtime::genRandomNumber(builder, loc, fir::getBase(args[0]));
 }
 
 // RANDOM_SEED
@@ -4214,7 +4264,7 @@ void IntrinsicLibrary::genRandomSeed(llvm::ArrayRef<fir::ExtendedValue> args) {
   mlir::Value size = getDesc(0);
   mlir::Value put = getDesc(1);
   mlir::Value get = getDesc(2);
-  Fortran::lower::genRandomSeed(builder, loc, size, put, get);
+  fir::runtime::genRandomSeed(builder, loc, size, put, get);
 }
 
 // REDUCE
@@ -4852,8 +4902,8 @@ IntrinsicLibrary::genSum(mlir::Type resultType,
 // SYSTEM_CLOCK
 void IntrinsicLibrary::genSystemClock(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 3);
-  Fortran::lower::genSystemClock(builder, loc, fir::getBase(args[0]),
-                                 fir::getBase(args[1]), fir::getBase(args[2]));
+  fir::runtime::genSystemClock(builder, loc, fir::getBase(args[0]),
+                               fir::getBase(args[1]), fir::getBase(args[2]));
 }
 
 // TRANSFER
@@ -4885,18 +4935,18 @@ IntrinsicLibrary::genTransfer(mlir::Type resultType,
     mlir::Value resultIrBox =
         fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
 
-    Fortran::lower::genTransfer(builder, loc, resultIrBox, source, mold);
+    fir::runtime::genTransfer(builder, loc, resultIrBox, source, mold);
   } else {
     // The result is a rank one array in this case.
     mlir::Value resultIrBox =
         fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
 
     if (absentSize) {
-      Fortran::lower::genTransfer(builder, loc, resultIrBox, source, mold);
+      fir::runtime::genTransfer(builder, loc, resultIrBox, source, mold);
     } else {
       mlir::Value sizeArg = fir::getBase(args[2]);
-      Fortran::lower::genTransferSize(builder, loc, resultIrBox, source, mold,
-                                      sizeArg);
+      fir::runtime::genTransferSize(builder, loc, resultIrBox, source, mold,
+                                    sizeArg);
     }
   }
   return readAndAddCleanUp(resultMutableBox, resultType, "TRANSFER");
@@ -5284,8 +5334,8 @@ mlir::Value IntrinsicLibrary::genExtremum(mlir::Type,
 // procedure.
 //===----------------------------------------------------------------------===//
 
-const Fortran::lower::IntrinsicArgumentLoweringRules *
-Fortran::lower::getIntrinsicArgumentLowering(llvm::StringRef specificName) {
+const fir::IntrinsicArgumentLoweringRules *
+fir::getIntrinsicArgumentLowering(llvm::StringRef specificName) {
   llvm::StringRef name = genericName(specificName);
   if (const IntrinsicHandler *handler = findIntrinsicHandler(name))
     if (!handler->argLoweringRules.hasDefaultRules())
@@ -5295,8 +5345,9 @@ Fortran::lower::getIntrinsicArgumentLowering(llvm::StringRef specificName) {
 
 /// Return how argument \p argName should be lowered given the rules for the
 /// intrinsic function.
-Fortran::lower::ArgLoweringRule Fortran::lower::lowerIntrinsicArgumentAs(
-    const IntrinsicArgumentLoweringRules &rules, unsigned position) {
+fir::ArgLoweringRule
+fir::lowerIntrinsicArgumentAs(const IntrinsicArgumentLoweringRules &rules,
+                              unsigned position) {
   assert(position < sizeof(rules.args) / (sizeof(decltype(*rules.args))) &&
          "invalid argument");
   return {rules.args[position].lowerAs,
@@ -5307,54 +5358,33 @@ Fortran::lower::ArgLoweringRule Fortran::lower::lowerIntrinsicArgumentAs(
 // Public intrinsic call helpers
 //===----------------------------------------------------------------------===//
 
-fir::ExtendedValue
-Fortran::lower::genIntrinsicCall(fir::FirOpBuilder &builder, mlir::Location loc,
-                                 llvm::StringRef name,
-                                 std::optional<mlir::Type> resultType,
-                                 llvm::ArrayRef<fir::ExtendedValue> args,
-                                 Fortran::lower::StatementContext &stmtCtx) {
-  auto [result, mustBeFreed] =
-      IntrinsicLibrary{builder, loc}.genIntrinsicCall(name, resultType, args);
-  if (mustBeFreed) {
-    mlir::Value addr = fir::getBase(result);
-    if (auto *box = result.getBoxOf<fir::BoxValue>())
-      addr =
-          builder.create<fir::BoxAddrOp>(loc, box->getMemTy(), box->getAddr());
-    fir::FirOpBuilder *bldr = &builder;
-    stmtCtx.attachCleanup([=]() { bldr->create<fir::FreeMemOp>(loc, addr); });
-  }
-  return result;
-}
 std::pair<fir::ExtendedValue, bool>
-Fortran::lower::genIntrinsicCall(fir::FirOpBuilder &builder, mlir::Location loc,
-                                 llvm::StringRef name,
-                                 std::optional<mlir::Type> resultType,
-                                 llvm::ArrayRef<fir::ExtendedValue> args) {
+fir::genIntrinsicCall(fir::FirOpBuilder &builder, mlir::Location loc,
+                      llvm::StringRef name,
+                      std::optional<mlir::Type> resultType,
+                      llvm::ArrayRef<fir::ExtendedValue> args) {
   return IntrinsicLibrary{builder, loc}.genIntrinsicCall(name, resultType,
                                                          args);
 }
 
-mlir::Value Fortran::lower::genMax(fir::FirOpBuilder &builder,
-                                   mlir::Location loc,
-                                   llvm::ArrayRef<mlir::Value> args) {
+mlir::Value fir::genMax(fir::FirOpBuilder &builder, mlir::Location loc,
+                        llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() > 0 && "max requires at least one argument");
   return IntrinsicLibrary{builder, loc}
       .genExtremum<Extremum::Max, ExtremumBehavior::MinMaxss>(args[0].getType(),
                                                               args);
 }
 
-mlir::Value Fortran::lower::genMin(fir::FirOpBuilder &builder,
-                                   mlir::Location loc,
-                                   llvm::ArrayRef<mlir::Value> args) {
+mlir::Value fir::genMin(fir::FirOpBuilder &builder, mlir::Location loc,
+                        llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() > 0 && "min requires at least one argument");
   return IntrinsicLibrary{builder, loc}
       .genExtremum<Extremum::Min, ExtremumBehavior::MinMaxss>(args[0].getType(),
                                                               args);
 }
 
-mlir::Value Fortran::lower::genPow(fir::FirOpBuilder &builder,
-                                   mlir::Location loc, mlir::Type type,
-                                   mlir::Value x, mlir::Value y) {
+mlir::Value fir::genPow(fir::FirOpBuilder &builder, mlir::Location loc,
+                        mlir::Type type, mlir::Value x, mlir::Value y) {
   // TODO: since there is no libm version of pow with integer exponent,
   //       we have to provide an alternative implementation for
   //       "precise/strict" FP mode.
@@ -5365,7 +5395,7 @@ mlir::Value Fortran::lower::genPow(fir::FirOpBuilder &builder,
   return IntrinsicLibrary{builder, loc}.genRuntimeCall("pow", type, {x, y});
 }
 
-mlir::SymbolRefAttr Fortran::lower::getUnrestrictedIntrinsicSymbolRefAttr(
+mlir::SymbolRefAttr fir::getUnrestrictedIntrinsicSymbolRefAttr(
     fir::FirOpBuilder &builder, mlir::Location loc, llvm::StringRef name,
     mlir::FunctionType signature) {
   return IntrinsicLibrary{builder, loc}.getUnrestrictedIntrinsicSymbolRefAttr(

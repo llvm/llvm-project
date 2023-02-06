@@ -1,4 +1,5 @@
-; RUN: opt -passes=loop-vectorize -force-vector-width=4 -S %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=2 -S %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=1 -force-vector-interleave=2 -S %s | FileCheck %s
 
 ; Test cases for selecting the index with the minimum value.
 

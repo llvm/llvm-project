@@ -528,7 +528,7 @@ private:
 
   AllocationDetails *FindAllocByID(Stream &strm, const uint32_t alloc_id);
 
-  std::shared_ptr<uint8_t> GetAllocationData(AllocationDetails *alloc,
+  std::shared_ptr<uint8_t []> GetAllocationData(AllocationDetails *alloc,
                                              StackFrame *frame_ptr);
 
   void SetElementSize(Element &elem);
@@ -538,7 +538,7 @@ private:
 
   void FindStructTypeName(Element &elem, StackFrame *frame_ptr);
 
-  size_t PopulateElementHeaders(const std::shared_ptr<uint8_t> header_buffer,
+  size_t PopulateElementHeaders(const std::shared_ptr<uint8_t []> header_buffer,
                                 size_t offset, const Element &elem);
 
   size_t CalculateElementHeaderSize(const Element &elem);

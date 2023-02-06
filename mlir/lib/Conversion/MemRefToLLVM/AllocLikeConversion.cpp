@@ -50,6 +50,23 @@ Value AllocationOpLLVMLowering::createAligned(
   return rewriter.create<LLVM::SubOp>(loc, bumped, mod);
 }
 
+static Value castAllocFuncResult(ConversionPatternRewriter &rewriter,
+                                 Location loc, Value allocatedPtr,
+                                 MemRefType memRefType, Type elementPtrType,
+                                 LLVMTypeConverter &typeConverter) {
+  auto allocatedPtrTy = allocatedPtr.getType().cast<LLVM::LLVMPointerType>();
+  if (allocatedPtrTy.getAddressSpace() != memRefType.getMemorySpaceAsInt())
+    allocatedPtr = rewriter.create<LLVM::AddrSpaceCastOp>(
+        loc,
+        LLVM::LLVMPointerType::get(allocatedPtrTy.getElementType(),
+                                   memRefType.getMemorySpaceAsInt()),
+        allocatedPtr);
+
+  allocatedPtr =
+      rewriter.create<LLVM::BitcastOp>(loc, elementPtrType, allocatedPtr);
+  return allocatedPtr;
+}
+
 std::tuple<Value, Value> AllocationOpLLVMLowering::allocateBufferManuallyAlign(
     ConversionPatternRewriter &rewriter, Location loc, Value sizeBytes,
     Operation *op, Value alignment) const {
@@ -64,8 +81,10 @@ std::tuple<Value, Value> AllocationOpLLVMLowering::allocateBufferManuallyAlign(
   LLVM::LLVMFuncOp allocFuncOp = getNotalignedAllocFn(
       getTypeConverter(), op->getParentOfType<ModuleOp>(), getIndexType());
   auto results = rewriter.create<LLVM::CallOp>(loc, allocFuncOp, sizeBytes);
-  Value allocatedPtr = rewriter.create<LLVM::BitcastOp>(loc, elementPtrType,
-                                                        results.getResult());
+
+  Value allocatedPtr =
+      castAllocFuncResult(rewriter, loc, results.getResult(), memRefType,
+                          elementPtrType, *getTypeConverter());
 
   Value alignedPtr = allocatedPtr;
   if (alignment) {
@@ -126,10 +145,9 @@ Value AllocationOpLLVMLowering::allocateBufferAutoAlign(
       getTypeConverter(), op->getParentOfType<ModuleOp>(), getIndexType());
   auto results = rewriter.create<LLVM::CallOp>(
       loc, allocFuncOp, ValueRange({allocAlignment, sizeBytes}));
-  Value allocatedPtr = rewriter.create<LLVM::BitcastOp>(loc, elementPtrType,
-                                                        results.getResult());
 
-  return allocatedPtr;
+  return castAllocFuncResult(rewriter, loc, results.getResult(), memRefType,
+                             elementPtrType, *getTypeConverter());
 }
 
 LogicalResult AllocLikeOpLLVMLowering::matchAndRewrite(

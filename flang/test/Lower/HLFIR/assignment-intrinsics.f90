@@ -135,6 +135,17 @@ end subroutine
 ! CHECK:  %[[VAL_11:.*]]:2 = hlfir.declare {{.*}}  {uniq_name = "_QFarray_characterEy"} : (!fir.ref<!fir.array<10x!fir.char<1,?>>>, !fir.shape<1>, index) -> (!fir.box<!fir.array<10x!fir.char<1,?>>>, !fir.ref<!fir.array<10x!fir.char<1,?>>>)
 ! CHECK:  hlfir.assign %[[VAL_11]]#0 to %[[VAL_6]]#0 : !fir.box<!fir.array<10x!fir.char<1,?>>>, !fir.box<!fir.array<10x!fir.char<1,?>>>
 
+subroutine array_pointer(x, y)
+  real, pointer :: x(:), y(:)
+  x = y
+end subroutine
+! CHECK-LABEL: func.func @_QParray_pointer(
+! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %{{.*}}Ex
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %{{.*}}Ey
+! CHECK:  %[[VAL_3:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK:  hlfir.assign %[[VAL_3]] to %[[VAL_4]] : !fir.box<!fir.ptr<!fir.array<?xf32>>>, !fir.box<!fir.ptr<!fir.array<?xf32>>>
+
 ! -----------------------------------------------------------------------------
 !     Test assignments with array LHS and scalar RHS
 ! -----------------------------------------------------------------------------

@@ -46,7 +46,6 @@ add_llvm_unittest(SupportTests
   HashBuilderTest.cpp
   IndexedAccessorTest.cpp
   InstructionCostTest.cpp
-  ItaniumManglingCanonicalizerTest.cpp
   JSONTest.cpp
   KnownBitsTest.cpp
   LEB128Test.cpp
@@ -77,7 +76,6 @@ add_llvm_unittest(SupportTests
   SpecialCaseListTest.cpp
   SuffixTreeTest.cpp
   SwapByteOrderTest.cpp
-  SymbolRemappingReaderTest.cpp
   TarWriterTest.cpp
   TaskQueueTest.cpp
   ThreadPool.cpp

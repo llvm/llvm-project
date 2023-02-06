@@ -1263,19 +1263,27 @@ def extloadi64i32  : PatFrag<(ops node:$ptr), (i64 (unindexedload node:$ptr)), [
   return LD->getAlign() >= 4 && LD->isSimple();
 }]>;
 
+// binary op with only one user
+class binop_oneuse<SDPatternOperator operator>
+    : PatFrag<(ops node:$A, node:$B),
+              (operator node:$A, node:$B), [{
+  return N->hasOneUse();
+}]>;
 
-// An 'and' node with a single use.
-def and_su : PatFrag<(ops node:$lhs, node:$rhs), (and node:$lhs, node:$rhs), [{
+def add_su : binop_oneuse<add>;
+def and_su : binop_oneuse<and>;
+def srl_su : binop_oneuse<srl>;
+
+// unary op with only one user
+class unop_oneuse<SDPatternOperator operator>
+    : PatFrag<(ops node:$A),
+              (operator node:$A), [{
   return N->hasOneUse();
 }]>;
-// An 'srl' node with a single use.
-def srl_su : PatFrag<(ops node:$lhs, node:$rhs), (srl node:$lhs, node:$rhs), [{
-  return N->hasOneUse();
-}]>;
-// An 'trunc' node with a single use.
-def trunc_su : PatFrag<(ops node:$src), (trunc node:$src), [{
-  return N->hasOneUse();
-}]>;
+
+
+def ineg_su : unop_oneuse<ineg>;
+def trunc_su : unop_oneuse<trunc>;
 
 //===----------------------------------------------------------------------===//
 // Instruction list.
@@ -2546,37 +2554,41 @@ def and_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
   return hasNoCarryFlagUses(SDValue(N, 1));
 }]>;
 
+
 let Predicates = [HasBMI] in {
-  // FIXME: patterns for the load versions are not implemented
-  def : Pat<(and GR32:$src, (add GR32:$src, -1)),
+  // FIXME(1): patterns for the load versions are not implemented
+  // FIXME(2): By only matching `add_su` and `ineg_su` we may emit
+  // extra `mov` instructions if `src` has future uses. It may be better
+  // to always match if `src` has more users.
+  def : Pat<(and GR32:$src, (add_su GR32:$src, -1)),
             (BLSR32rr GR32:$src)>;
-  def : Pat<(and GR64:$src, (add GR64:$src, -1)),
+  def : Pat<(and GR64:$src, (add_su GR64:$src, -1)),
             (BLSR64rr GR64:$src)>;
 
-  def : Pat<(xor GR32:$src, (add GR32:$src, -1)),
+  def : Pat<(xor GR32:$src, (add_su GR32:$src, -1)),
             (BLSMSK32rr GR32:$src)>;
-  def : Pat<(xor GR64:$src, (add GR64:$src, -1)),
+  def : Pat<(xor GR64:$src, (add_su GR64:$src, -1)),
             (BLSMSK64rr GR64:$src)>;
 
-  def : Pat<(and GR32:$src, (ineg GR32:$src)),
+  def : Pat<(and GR32:$src, (ineg_su GR32:$src)),
             (BLSI32rr GR32:$src)>;
-  def : Pat<(and GR64:$src, (ineg GR64:$src)),
+  def : Pat<(and GR64:$src, (ineg_su GR64:$src)),
             (BLSI64rr GR64:$src)>;
 
   // Versions to match flag producing ops.
-  def : Pat<(and_flag_nocf GR32:$src, (add GR32:$src, -1)),
+  def : Pat<(and_flag_nocf GR32:$src, (add_su GR32:$src, -1)),
             (BLSR32rr GR32:$src)>;
-  def : Pat<(and_flag_nocf GR64:$src, (add GR64:$src, -1)),
+  def : Pat<(and_flag_nocf GR64:$src, (add_su GR64:$src, -1)),
             (BLSR64rr GR64:$src)>;
 
-  def : Pat<(xor_flag_nocf GR32:$src, (add GR32:$src, -1)),
+  def : Pat<(xor_flag_nocf GR32:$src, (add_su GR32:$src, -1)),
             (BLSMSK32rr GR32:$src)>;
-  def : Pat<(xor_flag_nocf GR64:$src, (add GR64:$src, -1)),
+  def : Pat<(xor_flag_nocf GR64:$src, (add_su GR64:$src, -1)),
             (BLSMSK64rr GR64:$src)>;
 
-  def : Pat<(and_flag_nocf GR32:$src, (ineg GR32:$src)),
+  def : Pat<(and_flag_nocf GR32:$src, (ineg_su GR32:$src)),
             (BLSI32rr GR32:$src)>;
-  def : Pat<(and_flag_nocf GR64:$src, (ineg GR64:$src)),
+  def : Pat<(and_flag_nocf GR64:$src, (ineg_su GR64:$src)),
             (BLSI64rr GR64:$src)>;
 }
 
