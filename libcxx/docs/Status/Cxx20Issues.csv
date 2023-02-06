@@ -183,7 +183,7 @@
 "`3266 <https://wg21.link/LWG3266>`__","``to_chars(bool)``\  should be deleted","Belfast","|Complete|","14.0"
 "`3272 <https://wg21.link/LWG3272>`__","``%I%p``\  should parse/format ``duration``\  since midnight","Belfast","","","|chrono| |format|"
 "`3259 <https://wg21.link/LWG3259>`__","The definition of *constexpr iterators* should be adjusted","Belfast","|Nothing To Do|",""
-"`3103 <https://wg21.link/LWG3103>`__","Errors in taking subview of ``span``\  should be ill-formed where possible","Belfast","",""
+"`3103 <https://wg21.link/LWG3103>`__","Errors in taking subview of ``span``\  should be ill-formed where possible","Belfast","11.0","|Complete|"
 "`3274 <https://wg21.link/LWG3274>`__","Missing feature test macro for ``<span>``\ ","Belfast","|Complete|","11.0"
 "`3276 <https://wg21.link/LWG3276>`__","Class ``split_view::outer_iterator::value_type``\  should inherit from ``view_interface``\ ","Belfast","|Complete|","15.0","|ranges|"
 "`3277 <https://wg21.link/LWG3277>`__","Pre-increment on prvalues is not a requirement of ``weakly_incrementable``\ ","Belfast","|Nothing To Do|","","|ranges|"
