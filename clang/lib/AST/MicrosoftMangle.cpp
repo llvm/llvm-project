@@ -2477,13 +2477,6 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     mangleArtificialTagType(TTK_Struct, "__bf16", {"__clang"});
     break;
 
-#define WASM_REF_TYPE(InternalName, MangledName, Id, SingletonId, AS)          \
-  case BuiltinType::Id:                                                        \
-    mangleArtificialTagType(TTK_Struct, MangledName);                          \
-    mangleArtificialTagType(TTK_Struct, MangledName, {"__clang"});             \
-    break;
-
-#include "clang/Basic/WebAssemblyReferenceTypes.def"
 #define SVE_TYPE(Name, Id, SingletonId) \
   case BuiltinType::Id:
 #include "clang/Basic/AArch64SVEACLETypes.def"

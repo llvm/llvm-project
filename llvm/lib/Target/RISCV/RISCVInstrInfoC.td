@@ -25,7 +25,7 @@ def uimmlog2xlennonzero : Operand<XLenVT>, ImmLeaf<XLenVT, [{
 }]> {
   let ParserMatchClass = UImmLog2XLenNonZeroAsmOperand;
   // TODO: should ensure invalid shamt is rejected when decoding.
-  let DecoderMethod = "decodeUImmOperand<6>";
+  let DecoderMethod = "decodeUImmNonZeroOperand<6>";
   let OperandType = "OPERAND_UIMMLOG2XLEN_NONZERO";
   let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
@@ -56,7 +56,7 @@ def simm6nonzero : Operand<XLenVT>,
                    ImmLeaf<XLenVT, [{return (Imm != 0) && isInt<6>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<6, "NonZero">;
   let EncoderMethod = "getImmOpValue";
-  let DecoderMethod = "decodeSImmOperand<6>";
+  let DecoderMethod = "decodeSImmNonZeroOperand<6>";
   let OperandType = "OPERAND_SIMM6_NONZERO";
   let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
