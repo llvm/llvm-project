@@ -72,7 +72,8 @@ static void createPrintMsg(OpBuilder &builder, Location loc, ModuleOp moduleOp,
   SmallVector<LLVM::GEPArg> indices(1, 0);
   Value gep = builder.create<LLVM::GEPOp>(
       loc, LLVM::LLVMPointerType::get(builder.getI8Type()), msgAddr, indices);
-  Operation *printer = LLVM::lookupOrCreatePrintStrFn(moduleOp);
+  Operation *printer =
+      LLVM::lookupOrCreatePrintStrFn(moduleOp, /*TODO: opaquePointers=*/false);
   builder.create<LLVM::CallOp>(loc, TypeRange(), SymbolRefAttr::get(printer),
                                gep);
 }

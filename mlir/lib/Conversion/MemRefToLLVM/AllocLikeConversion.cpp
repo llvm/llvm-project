@@ -23,9 +23,11 @@ LLVM::LLVMFuncOp getNotalignedAllocFn(LLVMTypeConverter *typeConverter,
   bool useGenericFn = typeConverter->getOptions().useGenericFunctions;
 
   if (useGenericFn)
-    return LLVM::lookupOrCreateGenericAllocFn(module, indexType);
+    return LLVM::lookupOrCreateGenericAllocFn(
+        module, indexType, typeConverter->useOpaquePointers());
 
-  return LLVM::lookupOrCreateMallocFn(module, indexType);
+  return LLVM::lookupOrCreateMallocFn(module, indexType,
+                                      typeConverter->useOpaquePointers());
 }
 
 LLVM::LLVMFuncOp getAlignedAllocFn(LLVMTypeConverter *typeConverter,
@@ -33,9 +35,11 @@ LLVM::LLVMFuncOp getAlignedAllocFn(LLVMTypeConverter *typeConverter,
   bool useGenericFn = typeConverter->getOptions().useGenericFunctions;
 
   if (useGenericFn)
-    return LLVM::lookupOrCreateGenericAlignedAllocFn(module, indexType);
+    return LLVM::lookupOrCreateGenericAlignedAllocFn(
+        module, indexType, typeConverter->useOpaquePointers());
 
-  return LLVM::lookupOrCreateAlignedAllocFn(module, indexType);
+  return LLVM::lookupOrCreateAlignedAllocFn(module, indexType,
+                                            typeConverter->useOpaquePointers());
 }
 
 } // end namespace
@@ -58,12 +62,13 @@ static Value castAllocFuncResult(ConversionPatternRewriter &rewriter,
   if (allocatedPtrTy.getAddressSpace() != memRefType.getMemorySpaceAsInt())
     allocatedPtr = rewriter.create<LLVM::AddrSpaceCastOp>(
         loc,
-        LLVM::LLVMPointerType::get(allocatedPtrTy.getElementType(),
-                                   memRefType.getMemorySpaceAsInt()),
+        typeConverter.getPointerType(allocatedPtrTy.getElementType(),
+                                     memRefType.getMemorySpaceAsInt()),
         allocatedPtr);
 
-  allocatedPtr =
-      rewriter.create<LLVM::BitcastOp>(loc, elementPtrType, allocatedPtr);
+  if (!typeConverter.useOpaquePointers())
+    allocatedPtr =
+        rewriter.create<LLVM::BitcastOp>(loc, elementPtrType, allocatedPtr);
   return allocatedPtr;
 }
 
