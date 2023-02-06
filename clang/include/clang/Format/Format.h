@@ -2929,6 +2929,21 @@ struct FormatStyle {
     ///          cccccccccccccccccccc()
     /// \endcode
     PCIS_NextLine,
+    /// Put all constructor initializers on the next line if they fit.
+    /// Otherwise, put each one on its own line.
+    /// \code
+    ///    Constructor()
+    ///        : a(), b()
+    ///
+    ///    Constructor()
+    ///        : aaaaaaaaaaaaaaaaaaaa(), bbbbbbbbbbbbbbbbbbbb(), ddddddddddddd()
+    ///
+    ///    Constructor()
+    ///        : aaaaaaaaaaaaaaaaaaaa(),
+    ///          bbbbbbbbbbbbbbbbbbbb(),
+    ///          cccccccccccccccccccc()
+    /// \endcode
+    PCIS_NextLineOnly,
   };
 
   /// The pack constructor initializers style to use.

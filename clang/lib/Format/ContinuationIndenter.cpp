@@ -1053,13 +1053,16 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
     bool PreviousIsBreakingCtorInitializerColon =
         PreviousNonComment && PreviousNonComment->is(TT_CtorInitializerColon) &&
         Style.BreakConstructorInitializers == FormatStyle::BCIS_AfterColon;
+    bool AllowAllConstructorInitializersOnNextLine =
+        Style.PackConstructorInitializers == FormatStyle::PCIS_NextLine ||
+        Style.PackConstructorInitializers == FormatStyle::PCIS_NextLineOnly;
     if (!(Previous.isOneOf(tok::l_paren, tok::l_brace, TT_BinaryOperator) ||
           PreviousIsBreakingCtorInitializerColon) ||
         (!Style.AllowAllParametersOfDeclarationOnNextLine &&
          State.Line->MustBeDeclaration) ||
         (!Style.AllowAllArgumentsOnNextLine &&
          !State.Line->MustBeDeclaration) ||
-        (Style.PackConstructorInitializers != FormatStyle::PCIS_NextLine &&
+        (!AllowAllConstructorInitializersOnNextLine &&
          PreviousIsBreakingCtorInitializerColon) ||
         Previous.is(TT_DictLiteral)) {
       CurrentState.BreakBeforeParameter = true;
@@ -1069,7 +1072,7 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
     // and we allow all arguments on the next line, we should not break
     // before the next parameter.
     if (PreviousIsBreakingCtorInitializerColon &&
-        Style.PackConstructorInitializers == FormatStyle::PCIS_NextLine) {
+        AllowAllConstructorInitializersOnNextLine) {
       CurrentState.BreakBeforeParameter = false;
     }
   }
@@ -1401,7 +1404,8 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
     if (Style.PackConstructorInitializers > FormatStyle::PCIS_BinPack) {
       CurrentState.AvoidBinPacking = true;
       CurrentState.BreakBeforeParameter =
-          Style.PackConstructorInitializers != FormatStyle::PCIS_NextLine;
+          Style.PackConstructorInitializers != FormatStyle::PCIS_NextLine &&
+          Style.PackConstructorInitializers != FormatStyle::PCIS_NextLineOnly;
     } else {
       CurrentState.BreakBeforeParameter = false;
     }
