@@ -611,7 +611,6 @@ let rd = 0 in
 def C_NOP_HINT : RVInst16CI<0b000, 0b01, (outs), (ins simm6nonzero:$imm),
                             "c.nop", "$imm">, Sched<[WriteNop]> {
   let Inst{6-2} = imm{4-0};
-  let DecoderMethod = "decodeRVCInstrSImm";
 }
 
 def C_ADDI_HINT_IMM_ZERO : RVInst16CI<0b000, 0b01, (outs GPRNoX0:$rd_wb),
