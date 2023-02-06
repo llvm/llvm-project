@@ -2035,23 +2035,34 @@ Instruction *InstCombinerImpl::foldICmpMulConstant(ICmpInst &Cmp,
     return new ICmpInst(Pred, X, ConstantInt::getNullValue(MulTy));
   }
 
-  if (MulC->isZero() || (!Mul->hasNoSignedWrap() && !Mul->hasNoUnsignedWrap()))
+  if (MulC->isZero())
     return nullptr;
 
-  // If the multiply does not wrap, try to divide the compare constant by the
-  // multiplication factor.
+  // If the multiply does not wrap or the constant is odd, try to divide the
+  // compare constant by the multiplication factor.
   if (Cmp.isEquality()) {
-    // (mul nsw X, MulC) == C --> X == C /s MulC
+    // (mul nsw X, MulC) eq/ne C --> X eq/ne C /s MulC
     if (Mul->hasNoSignedWrap() && C.srem(*MulC).isZero()) {
       Constant *NewC = ConstantInt::get(MulTy, C.sdiv(*MulC));
       return new ICmpInst(Pred, X, NewC);
     }
-    // (mul nuw X, MulC) == C --> X == C /u MulC
-    if (Mul->hasNoUnsignedWrap() && C.urem(*MulC).isZero()) {
-      Constant *NewC = ConstantInt::get(MulTy, C.udiv(*MulC));
-      return new ICmpInst(Pred, X, NewC);
+
+    // C % MulC == 0 is weaker than we could use if MulC is odd because it
+    // correct to transform if MulC * N == C including overflow. I.e with i8
+    // (icmp eq (mul X, 5), 101) -> (icmp eq X, 225) but since 101 % 5 != 0, we
+    // miss that case.
+    if (C.urem(*MulC).isZero()) {
+      // (mul nuw X, MulC) eq/ne C --> X eq/ne C /u MulC
+      // (mul X, OddC) eq/ne N * C --> X eq/ne N
+      if ((*MulC & 1).isOne() || Mul->hasNoUnsignedWrap()) {
+        Constant *NewC = ConstantInt::get(MulTy, C.udiv(*MulC));
+        return new ICmpInst(Pred, X, NewC);
+      }
     }
   }
+
+  if (!Mul->hasNoSignedWrap() && !Mul->hasNoUnsignedWrap())
+    return nullptr;
 
   // With a matching no-overflow guarantee, fold the constants:
   // (X * MulC) < C --> X < (C / MulC)
