@@ -57,6 +57,12 @@ static NVVM::MMATypes getElementType(gpu::MMAMatrixType type) {
   if (type.getElementType().isF32())
     return type.getOperand().equals("COp") ? NVVM::MMATypes::f32
                                            : NVVM::MMATypes::tf32;
+
+  if (type.getElementType().isSignedInteger(8))
+    return NVVM::MMATypes::s8;
+  // Accumulator type is signless and implies signed.
+  if (type.getElementType().isInteger(32))
+    return NVVM::MMATypes::s32;
   llvm_unreachable("Unsupported type");
 }
 
@@ -106,8 +112,11 @@ struct WmmaLoadOpToNVVMLowering
     }
     NVVM::MMAFrag frag = convertOperand(retType.getOperand());
     // Check that there is an exisiting instruction for the combination we need.
-    if (NVVM::WMMALoadOp::getIntrinsicID(m, n, k, layout, eltype, frag) == 0)
+    if (NVVM::WMMALoadOp::getIntrinsicID(m, n, k, layout, eltype, frag) == 0) {
+      llvm::errs() << "No matching intrinsic " << m << " " << n << " " << k
+                   << "\n";
       return rewriter.notifyMatchFailure(op, kInvalidCaseStr);
+    }
 
     Type resType = convertMMAToLLVMType(retType);
     Location loc = op->getLoc();
@@ -366,8 +375,10 @@ struct WmmaElementwiseOpToNVVMLowering
 LLVM::LLVMStructType mlir::convertMMAToLLVMType(gpu::MMAMatrixType type) {
   NVVM::MMAFrag frag = convertOperand(type.getOperand());
   NVVM::MMATypes eltType = getElementType(type);
+  auto nRow = type.getShape()[0];
+  auto nCol = type.getShape()[1];
   std::pair<Type, unsigned> typeInfo =
-      NVVM::inferMMAType(eltType, frag, type.getContext());
+      NVVM::inferMMAType(eltType, frag, nRow, nCol, type.getContext());
   return LLVM::LLVMStructType::getLiteral(
       type.getContext(), SmallVector<Type, 8>(typeInfo.second, typeInfo.first));
 }
