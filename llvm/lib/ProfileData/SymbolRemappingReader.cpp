@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/SymbolRemappingReader.h"
+#include "llvm/ProfileData/SymbolRemappingReader.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/LineIterator.h"

@@ -51,9 +51,10 @@ entry:
 define <vscale x 2 x i32> @haddu_v2i32(<vscale x 2 x i32> %s0, <vscale x 2 x i32> %s1) {
 ; CHECK-LABEL: haddu_v2i32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    and z0.d, z0.d, #0xffffffff
-; CHECK-NEXT:    adr z0.d, [z0.d, z1.d, uxtw]
-; CHECK-NEXT:    lsr z0.d, z0.d, #1
+; CHECK-NEXT:    and z1.d, z1.d, #0xffffffff
+; CHECK-NEXT:    uhadd z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %s0s = zext <vscale x 2 x i32> %s0 to <vscale x 2 x i64>
@@ -116,10 +117,10 @@ entry:
 define <vscale x 2 x i16> @haddu_v2i16(<vscale x 2 x i16> %s0, <vscale x 2 x i16> %s1) {
 ; CHECK-LABEL: haddu_v2i16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    and z0.d, z0.d, #0xffff
 ; CHECK-NEXT:    and z1.d, z1.d, #0xffff
-; CHECK-NEXT:    add z0.d, z0.d, z1.d
-; CHECK-NEXT:    lsr z0.d, z0.d, #1
+; CHECK-NEXT:    uhadd z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %s0s = zext <vscale x 2 x i16> %s0 to <vscale x 2 x i32>
@@ -151,10 +152,10 @@ entry:
 define <vscale x 4 x i16> @haddu_v4i16(<vscale x 4 x i16> %s0, <vscale x 4 x i16> %s1) {
 ; CHECK-LABEL: haddu_v4i16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    and z0.s, z0.s, #0xffff
 ; CHECK-NEXT:    and z1.s, z1.s, #0xffff
-; CHECK-NEXT:    add z0.s, z0.s, z1.s
-; CHECK-NEXT:    lsr z0.s, z0.s, #1
+; CHECK-NEXT:    uhadd z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
 entry:
   %s0s = zext <vscale x 4 x i16> %s0 to <vscale x 4 x i32>
@@ -217,10 +218,10 @@ entry:
 define <vscale x 4 x i8> @haddu_v4i8(<vscale x 4 x i8> %s0, <vscale x 4 x i8> %s1) {
 ; CHECK-LABEL: haddu_v4i8:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    and z0.s, z0.s, #0xff
 ; CHECK-NEXT:    and z1.s, z1.s, #0xff
-; CHECK-NEXT:    add z0.s, z0.s, z1.s
-; CHECK-NEXT:    lsr z0.s, z0.s, #1
+; CHECK-NEXT:    uhadd z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
 entry:
   %s0s = zext <vscale x 4 x i8> %s0 to <vscale x 4 x i16>
@@ -252,10 +253,10 @@ entry:
 define <vscale x 8 x i8> @haddu_v8i8(<vscale x 8 x i8> %s0, <vscale x 8 x i8> %s1) {
 ; CHECK-LABEL: haddu_v8i8:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    and z0.h, z0.h, #0xff
 ; CHECK-NEXT:    and z1.h, z1.h, #0xff
-; CHECK-NEXT:    add z0.h, z0.h, z1.h
-; CHECK-NEXT:    lsr z0.h, z0.h, #1
+; CHECK-NEXT:    uhadd z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
 entry:
   %s0s = zext <vscale x 8 x i8> %s0 to <vscale x 8 x i16>
@@ -352,12 +353,10 @@ entry:
 define <vscale x 2 x i32> @rhaddu_v2i32(<vscale x 2 x i32> %s0, <vscale x 2 x i32> %s1) {
 ; CHECK-LABEL: rhaddu_v2i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z2.d, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    and z0.d, z0.d, #0xffffffff
 ; CHECK-NEXT:    and z1.d, z1.d, #0xffffffff
-; CHECK-NEXT:    eor z0.d, z0.d, z2.d
-; CHECK-NEXT:    sub z0.d, z1.d, z0.d
-; CHECK-NEXT:    lsr z0.d, z0.d, #1
+; CHECK-NEXT:    urhadd z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %s0s = zext <vscale x 2 x i32> %s0 to <vscale x 2 x i64>
@@ -467,12 +466,10 @@ entry:
 define <vscale x 4 x i16> @rhaddu_v4i16(<vscale x 4 x i16> %s0, <vscale x 4 x i16> %s1) {
 ; CHECK-LABEL: rhaddu_v4i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z2.s, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    and z0.s, z0.s, #0xffff
 ; CHECK-NEXT:    and z1.s, z1.s, #0xffff
-; CHECK-NEXT:    eor z0.d, z0.d, z2.d
-; CHECK-NEXT:    sub z0.s, z1.s, z0.s
-; CHECK-NEXT:    lsr z0.s, z0.s, #1
+; CHECK-NEXT:    urhadd z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
 entry:
   %s0s = zext <vscale x 4 x i16> %s0 to <vscale x 4 x i32>
@@ -582,12 +579,10 @@ entry:
 define <vscale x 8 x i8> @rhaddu_v8i8(<vscale x 8 x i8> %s0, <vscale x 8 x i8> %s1) {
 ; CHECK-LABEL: rhaddu_v8i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z2.h, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    and z0.h, z0.h, #0xff
 ; CHECK-NEXT:    and z1.h, z1.h, #0xff
-; CHECK-NEXT:    eor z0.d, z0.d, z2.d
-; CHECK-NEXT:    sub z0.h, z1.h, z0.h
-; CHECK-NEXT:    lsr z0.h, z0.h, #1
+; CHECK-NEXT:    urhadd z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
 entry:
   %s0s = zext <vscale x 8 x i8> %s0 to <vscale x 8 x i16>

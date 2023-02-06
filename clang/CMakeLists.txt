@@ -595,6 +595,14 @@ if (CLANG_ENABLE_BOOTSTRAP)
     add_dependencies(clang-bootstrap-deps lld)
   endif()
 
+  if (WIN32)
+    # Build llvm-rc and llvm-mt which are needed by the Windows build.
+    add_dependencies(clang-bootstrap-deps llvm-rc)
+    if(LLVM_ENABLE_LIBXML2)
+      add_dependencies(clang-bootstrap-deps llvm-mt)
+    endif()
+  endif()
+
   # If the next stage is LTO we need to depend on LTO and possibly lld or LLVMgold
   if(BOOTSTRAP_LLVM_ENABLE_LTO OR LLVM_ENABLE_LTO AND NOT LLVM_BUILD_INSTRUMENTED)
     if(APPLE)
