@@ -947,6 +947,10 @@ void CodeGenModule::Release() {
   if (getCodeGenOpts().SkipRaxSetup)
     getModule().addModuleFlag(llvm::Module::Override, "SkipRaxSetup", 1);
 
+  if (getContext().getTargetInfo().getMaxTLSAlign())
+    getModule().addModuleFlag(llvm::Module::Error, "MaxTLSAlign",
+                              getContext().getTargetInfo().getMaxTLSAlign());
+
   getTargetCodeGenInfo().emitTargetMetadata(*this, MangledDeclNames);
 
   EmitBackendOptionsMetadata(getCodeGenOpts());
