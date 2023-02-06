@@ -419,6 +419,8 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands, int NumOperands)
       printf("\t\tAFId %d #Components: %d\n",
              (*AFItemWRTOperands[I])->ItemId,
              (*AFItemWRTOperands[I])->NumAFComponents);
+    else
+      printf("\t\tAFId %d #Components: 0\n", -1);
   }
 
   printf("\n");
@@ -520,7 +522,9 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands, int NumOperands)
       NewAFItem->Components[NewAFItem->NumAFComponents] = NewAFComponent;
       NewAFItem->NumAFComponents++;
 #endif
-    } else if(strlen((*AC)->OperandNames[I]) != 0) {
+    } else
+//        if(strlen((*AC)->OperandNames[I]) != 0)
+    {
       // Create a new AFProduct and copy the ACItem and set the AF.
       AFProduct *NewAFComponent = NULL;
       fAFCreateAFComponent(&NewAFComponent);
@@ -554,6 +558,16 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands, int NumOperands)
   return &AFs->AFItems[AFs->ListLength-1];
 }
 
+// This function prints the ItemId and LineNumber corresponding to the ACItems
+// in the flattenedProductTail of an AFProduct
+void fAFPrintAFProductSources(AFProduct *AFProduct) {
+  printf("(%d, %d)", AFProduct->Factor->ItemId, AFProduct->Factor->LineNumber);
+  if(AFProduct->ProductTail != NULL) {
+    printf(", ");
+    fAFPrintAFProductSources(AFProduct->ProductTail);
+  }
+}
+
 
 void fAFPrintTopAmplificationPaths() {
   printf("Printing Top Amplification Paths from Last AFItem\n");
@@ -565,15 +579,12 @@ void fAFPrintTopAmplificationPaths() {
   printf("\n");
   printf("The top Amplification Paths are:\n");
   for (int I = 0; I < min(5, AFs->AFItems[AFs->ListLength-1]->NumAFComponents); ++I) {
-    AFProduct **ProductPath= fAFFlattenAFComponentsPath(AFs->AFItems[AFs->ListLength-1]->Components[I]);
     printf("AF: %0.15lf of Node:%d WRT Input:%s through path: [",
            AFs->AFItems[AFs->ListLength-1]->Components[I]->AF,
            AFs->AFItems[AFs->ListLength-1]->Components[I]->ItemId,
            AFs->AFItems[AFs->ListLength-1]->Components[I]->Input);
 
-    printf("%d", ProductPath[0]->ItemId);
-    for (int K = 1; K < AFs->AFItems[AFs->ListLength-1]->Components[I]->Height; ++K)
-      printf(", %d", ProductPath[K]->ItemId);
+    fAFPrintAFProductSources(AFs->AFItems[AFs->ListLength-1]->Components[I]);
     printf("]\n");
   }
   printf("\n");
@@ -590,15 +601,12 @@ void fAFPrintTopFromAllAmplificationPaths() {
   printf("\n");
   printf("The top Amplification Paths are:\n");
   for (int I = 0; I < min(10, AFComponentCounter); ++I) {
-    AFProduct **ProductPath= fAFFlattenAFComponentsPath(Paths[I]);
     printf("AF: %0.15lf of Node:%d WRT Input:%s through path: [",
            Paths[I]->AF,
            Paths[I]->ItemId,
            Paths[I]->Input);
 
-    printf("%d", ProductPath[0]->ItemId);
-    for (int K = 1; K < Paths[I]->Height; ++K)
-      printf(", %d", ProductPath[K]->ItemId);
+    fAFPrintAFProductSources(Paths[I]);
     printf("]\n");
   }
   printf("\n");
@@ -618,6 +626,7 @@ void fAFPrintTopFromAllAmplificationPaths() {
 
   printf("Ranked AF Paths written to file: %s\n", File);
 }
+
 
 void fAFStoreAFs() {
 #if NO_DATA_DUMP

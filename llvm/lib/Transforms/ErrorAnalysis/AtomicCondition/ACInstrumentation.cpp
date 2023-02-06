@@ -104,10 +104,12 @@ void ACInstrumentation::instrumentCallsForACComputation(
   IRBuilder<> InstructionBuilder((*InstructionIterator)->getNextNode());
   std::vector<Value *> ACArgs;
   int NumOperands = (int)BaseInstruction->getNumOperands();
-  if (BaseInstruction->getOpcode() == Instruction::Call &&
-      static_cast<CallInst *>(BaseInstruction)
-          ->getCalledFunction()
-          ->isIntrinsic())
+//  if (BaseInstruction->getOpcode() == Instruction::Call &&
+//      static_cast<CallInst *>(BaseInstruction)
+//          ->getCalledFunction()
+//          ->isIntrinsic())
+//    NumOperands--;
+  if (BaseInstruction->getOpcode() == Instruction::Call)
     NumOperands--;
 
   // Creating a Global string for the Register the Result of this instruction is
