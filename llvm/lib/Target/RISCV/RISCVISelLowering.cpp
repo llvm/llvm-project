@@ -14211,6 +14211,25 @@ bool RISCVTargetLowering::preferScalarizeSplat(unsigned Opc) const {
   return true;
 }
 
+static Value *useTpOffset(IRBuilderBase &IRB, unsigned Offset) {
+  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+  Function *ThreadPointerFunc =
+      Intrinsic::getDeclaration(M, Intrinsic::thread_pointer);
+  return IRB.CreatePointerCast(
+      IRB.CreateConstGEP1_32(IRB.getInt8Ty(),
+                             IRB.CreateCall(ThreadPointerFunc), Offset),
+      IRB.getInt8PtrTy()->getPointerTo(0));
+}
+
+Value *RISCVTargetLowering::getIRStackGuard(IRBuilderBase &IRB) const {
+  // Fuchsia provides a fixed TLS slot for the stack cookie.
+  // <zircon/tls.h> defines ZX_TLS_STACK_GUARD_OFFSET with this value.
+  if (Subtarget.isTargetFuchsia())
+    return useTpOffset(IRB, -0x10);
+
+  return TargetLowering::getIRStackGuard(IRB);
+}
+
 #define GET_REGISTER_MATCHER
 #include "RISCVGenAsmMatcher.inc"
 
