@@ -4634,6 +4634,18 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       Right.isOneOf(TT_CtorInitializerComma, TT_CtorInitializerColon)) {
     return true;
   }
+  if (Style.PackConstructorInitializers == FormatStyle::PCIS_NextLineOnly) {
+    if ((Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeColon ||
+         Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeComma) &&
+        Right.is(TT_CtorInitializerColon)) {
+      return true;
+    }
+
+    if (Style.BreakConstructorInitializers == FormatStyle::BCIS_AfterColon &&
+        Left.is(TT_CtorInitializerColon)) {
+      return true;
+    }
+  }
   // Break only if we have multiple inheritance.
   if (Style.BreakInheritanceList == FormatStyle::BILS_BeforeComma &&
       Right.is(TT_InheritanceComma)) {
