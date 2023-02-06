@@ -55,10 +55,10 @@ static int countSymbols(Lang Language) {
 #define SYMBOL(Name, NS, Header) ++SymCount;
   switch (Language) {
   case Lang::C:
-#include "clang/Tooling/Inclusions/CSymbolMap.inc"
+#include "CSymbolMap.inc"
     break;
   case Lang::CXX:
-#include "clang/Tooling/Inclusions/StdSymbolMap.inc"
+#include "StdSymbolMap.inc"
     break;
   }
 #undef SYMBOL
@@ -112,10 +112,10 @@ static int initialize(Lang Language) {
 #define SYMBOL(Name, NS, Header) Add(#NS #Name, strlen(#NS), #Header);
   switch (Language) {
   case Lang::C:
-#include "clang/Tooling/Inclusions/CSymbolMap.inc"
+#include "CSymbolMap.inc"
     break;
   case Lang::CXX:
-#include "clang/Tooling/Inclusions/StdSymbolMap.inc"
+#include "StdSymbolMap.inc"
     break;
   }
 #undef SYMBOL

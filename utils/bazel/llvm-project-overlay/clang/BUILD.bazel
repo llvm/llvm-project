@@ -1078,10 +1078,10 @@ cc_library(
     name = "tooling_inclusions",
     srcs = glob([
         "lib/Tooling/Inclusions/**/*.cpp",
+        "lib/Tooling/Inclusions/**/*.inc",
     ]),
     hdrs = glob([
         "include/clang/Tooling/Inclusions/**/*.h",
-        "include/clang/Tooling/Inclusions/**/*.inc",
     ]),
     deps = [
         ":ast",
