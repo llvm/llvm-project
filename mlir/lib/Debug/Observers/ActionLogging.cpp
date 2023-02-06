@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Debug/Observers/ActionLogging.h"
+#include "mlir/Debug/BreakpointManager.h"
 #include "mlir/IR/Action.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
@@ -18,8 +19,20 @@ using namespace mlir::tracing;
 // ActionLogger
 //===----------------------------------------------------------------------===//
 
+bool ActionLogger::shouldLog(const ActionActiveStack *action) {
+  // If some condition was set, we ensured it is met before logging.
+  if (breakpointManagers.empty())
+    return true;
+  return llvm::any_of(breakpointManagers,
+                      [&](const BreakpointManager *manager) {
+                        return manager->match(action->getAction());
+                      });
+}
+
 void ActionLogger::beforeExecute(const ActionActiveStack *action,
                                  Breakpoint *breakpoint, bool willExecute) {
+  if (!shouldLog(action))
+    return;
   SmallVector<char> name;
   llvm::get_thread_name(name);
   if (name.empty()) {
@@ -51,6 +64,8 @@ void ActionLogger::beforeExecute(const ActionActiveStack *action,
 }
 
 void ActionLogger::afterExecute(const ActionActiveStack *action) {
+  if (!shouldLog(action))
+    return;
   SmallVector<char> name;
   llvm::get_thread_name(name);
   if (name.empty()) {
