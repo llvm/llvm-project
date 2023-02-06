@@ -447,13 +447,13 @@ SanitizerMask Fuchsia::getDefaultSanitizers() const {
   SanitizerMask Res;
   switch (getTriple().getArch()) {
   case llvm::Triple::aarch64:
+  case llvm::Triple::riscv64:
     Res |= SanitizerKind::ShadowCallStack;
     break;
   case llvm::Triple::x86_64:
     Res |= SanitizerKind::SafeStack;
     break;
   default:
-    // TODO: Enable SafeStack on RISC-V once tested.
     break;
   }
   return Res;
