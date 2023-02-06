@@ -4404,16 +4404,37 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
   }
 
   {
-    // Try to remove shared constant multiplier from equality comparison:
-    // X * C == Y * C (with no overflowing/aliasing) --> X == Y
-    Value *X, *Y;
-    const APInt *C;
-    if (match(Op0, m_Mul(m_Value(X), m_APInt(C))) && *C != 0 &&
-        match(Op1, m_Mul(m_Value(Y), m_SpecificInt(*C))) && I.isEquality())
-      if (!C->countTrailingZeros() ||
-          (BO0 && BO1 && BO0->hasNoSignedWrap() && BO1->hasNoSignedWrap()) ||
-          (BO0 && BO1 && BO0->hasNoUnsignedWrap() && BO1->hasNoUnsignedWrap()))
-      return new ICmpInst(Pred, X, Y);
+    // Try to remove shared multiplier from comparison:
+    // X * Z u{lt/le/gt/ge}/eq/ne Y * Z
+    Value *X, *Y, *Z;
+    if (Pred == ICmpInst::getUnsignedPredicate(Pred) &&
+        ((match(Op0, m_Mul(m_Value(X), m_Value(Z))) &&
+          match(Op1, m_c_Mul(m_Specific(Z), m_Value(Y)))) ||
+         (match(Op0, m_Mul(m_Value(Z), m_Value(X))) &&
+          match(Op1, m_c_Mul(m_Specific(Z), m_Value(Y)))))) {
+      bool NonZero;
+      if (ICmpInst::isEquality(Pred)) {
+        KnownBits ZKnown = computeKnownBits(Z, 0, &I);
+        // if Z % 2 != 0
+        //    X * Z eq/ne Y * Z -> X eq/ne Y
+        if (ZKnown.countMaxTrailingZeros() == 0)
+          return new ICmpInst(Pred, X, Y);
+        NonZero = !ZKnown.One.isZero() ||
+                  isKnownNonZero(Z, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT);
+        // if Z != 0 and nsw(X * Z) and nsw(Y * Z)
+        //    X * Z eq/ne Y * Z -> X eq/ne Y
+        if (NonZero && BO0 && BO1 && BO0->hasNoSignedWrap() &&
+            BO1->hasNoSignedWrap())
+          return new ICmpInst(Pred, X, Y);
+      } else
+        NonZero = isKnownNonZero(Z, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT);
+
+      // If Z != 0 and nuw(X * Z) and nuw(Y * Z)
+      //    X * Z u{lt/le/gt/ge}/eq/ne Y * Z -> X u{lt/le/gt/ge}/eq/ne Y
+      if (NonZero && BO0 && BO1 && BO0->hasNoUnsignedWrap() &&
+          BO1->hasNoUnsignedWrap())
+        return new ICmpInst(Pred, X, Y);
+    }
   }
 
   BinaryOperator *SRem = nullptr;
