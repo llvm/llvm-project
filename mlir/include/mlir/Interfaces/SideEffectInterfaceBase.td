@@ -61,35 +61,38 @@ class EffectOpInterfaceBase<string name, string baseEffect>
     /// Collect all of the effect instances that correspond to the given
     /// `Effect` and place them in 'effects'.
     template <typename Effect> void getEffects(
-      SmallVectorImpl<::mlir::SideEffects::EffectInstance<
+      ::llvm::SmallVectorImpl<::mlir::SideEffects::EffectInstance<
                                               }] # baseEffect # [{>> &effects) {
       getEffects(effects);
-      llvm::erase_if(effects, [&](auto &it) {
-        return !llvm::isa<Effect>(it.getEffect());
+      ::llvm::erase_if(effects, [&](auto &it) {
+        return !::llvm::isa<Effect>(it.getEffect());
       });
     }
 
     /// Returns true if this operation exhibits the given effect.
     template <typename Effect> bool hasEffect() {
-      SmallVector<SideEffects::EffectInstance<}] # baseEffect # [{>, 4> effects;
+      ::llvm::SmallVector<::mlir::SideEffects::EffectInstance<
+                                            }] # baseEffect # [{>, 4> effects;
       getEffects(effects);
-      return llvm::any_of(effects, [](const auto &it) {
-        return llvm::isa<Effect>(it.getEffect());
+      return ::llvm::any_of(effects, [](const auto &it) {
+        return ::llvm::isa<Effect>(it.getEffect());
       });
     }
 
     /// Returns true if this operation only has the given effect.
     template <typename Effect> bool onlyHasEffect() {
-      SmallVector<SideEffects::EffectInstance<}] # baseEffect # [{>, 4> effects;
+      ::llvm::SmallVector<::mlir::SideEffects::EffectInstance<
+                                            }] # baseEffect # [{>, 4> effects;
       getEffects(effects);
-      return !effects.empty() && llvm::all_of(effects, [](const auto &it) {
+      return !effects.empty() && ::llvm::all_of(effects, [](const auto &it) {
         return isa<Effect>(it.getEffect());
       });
     }
 
     /// Returns true if this operation has no effects.
     bool hasNoEffect() {
-      SmallVector<::mlir::SideEffects::EffectInstance<}] # baseEffect # [{>, 4> effects;
+      ::llvm::SmallVector<::mlir::SideEffects::EffectInstance<
+                                            }] # baseEffect # [{>, 4> effects;
       getEffects(effects);
       return effects.empty();
     }
@@ -97,10 +100,10 @@ class EffectOpInterfaceBase<string name, string baseEffect>
     /// Collect all of the effect instances that operate on the provided value
     /// and place them in 'effects'.
     void getEffectsOnValue(::mlir::Value value,
-              llvm::SmallVectorImpl<::mlir::SideEffects::EffectInstance<
+              ::llvm::SmallVectorImpl<::mlir::SideEffects::EffectInstance<
               }] # baseEffect # [{>> & effects) {
       getEffects(effects);
-      llvm::erase_if(effects, [&](auto &it) { return it.getValue() != value; });
+      ::llvm::erase_if(effects, [&](auto &it) { return it.getValue() != value; });
     }
 
     /// Return the effect of the given type `Effect` that is applied to the
@@ -108,10 +111,10 @@ class EffectOpInterfaceBase<string name, string baseEffect>
     template <typename Effect>
     ::std::optional<::mlir::SideEffects::EffectInstance<}] # baseEffect # [{>>
     getEffectOnValue(::mlir::Value value) {
-      llvm::SmallVector<::mlir::SideEffects::EffectInstance<
+      ::llvm::SmallVector<::mlir::SideEffects::EffectInstance<
               }] # baseEffect # [{>, 4> effects;
       getEffects(effects);
-      auto it = llvm::find_if(effects, [&](auto &it) {
+      auto it = ::llvm::find_if(effects, [&](auto &it) {
         return isa<Effect>(it.getEffect()) && it.getValue() == value;
       });
       if (it == effects.end())
@@ -122,10 +125,10 @@ class EffectOpInterfaceBase<string name, string baseEffect>
     /// Collect all of the effect instances that operate on the provided symbol
     /// reference and place them in 'effects'.
     void getEffectsOnSymbol(::mlir::SymbolRefAttr value,
-              llvm::SmallVectorImpl<::mlir::SideEffects::EffectInstance<
+              ::llvm::SmallVectorImpl<::mlir::SideEffects::EffectInstance<
               }] # baseEffect # [{>> & effects) {
       getEffects(effects);
-      llvm::erase_if(effects, [&](auto &it) {
+      ::llvm::erase_if(effects, [&](auto &it) {
         return it.getSymbolRef() != value;
       });
     }
@@ -133,10 +136,10 @@ class EffectOpInterfaceBase<string name, string baseEffect>
     /// Collect all of the effect instances that operate on the provided
     /// resource and place them in 'effects'.
     void getEffectsOnResource(::mlir::SideEffects::Resource *resource,
-              llvm::SmallVectorImpl<::mlir::SideEffects::EffectInstance<
+              ::llvm::SmallVectorImpl<::mlir::SideEffects::EffectInstance<
               }] # baseEffect # [{>> & effects) {
       getEffects(effects);
-      llvm::erase_if(effects, [&](auto &it) {
+      ::llvm::erase_if(effects, [&](auto &it) {
         return it.getResource() != resource;
       });
     }
