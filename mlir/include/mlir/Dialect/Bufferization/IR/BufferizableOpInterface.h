@@ -412,14 +412,16 @@ public:
   /// in the operands) because their defining ops do not define the contents of
   /// the tensor.
   ///
+  /// Example:
+  /// %a = tensor.empty() : tensor<10xf32>
+  /// %b = arith.constant ... : tensor<10xf32>
+  /// %r = arith.select %cond, %a, %b : tensor<10xf32>
+  /// findDefinitions(%r) = {%b}. %a is excluded because it does not define the
+  /// contents of the tensor.
+  ///
   /// Note: OpResults of unknown ops are handled conservatively and assumed to
   /// be definitions.
-  ///
-  /// Note: When reaching an end of the reverse SSA use-def chain, that value
-  /// is included regardless of whether it is a definition or not unless
-  /// `alwaysIncludeLeaves` is unset.
-  SetVector<Value> findDefinitions(Value value,
-                                   bool alwaysIncludeLeaves = true) const;
+  SetVector<Value> findDefinitions(Value value) const;
 
   /// Return `true` if the given OpResult has been decided to bufferize inplace.
   virtual bool isInPlace(OpOperand &opOperand) const;

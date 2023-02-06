@@ -494,11 +494,10 @@ llvm::SetVector<Value> AnalysisState::findValueInReverseUseDefChain(
 }
 
 // Find the values that define the contents of the given value.
-llvm::SetVector<Value>
-AnalysisState::findDefinitions(Value value, bool alwaysIncludeLeaves) const {
+llvm::SetVector<Value> AnalysisState::findDefinitions(Value value) const {
   return findValueInReverseUseDefChain(
       value, [&](Value v) { return this->bufferizesToMemoryWrite(v); },
-      /*followEquivalentOnly=*/false, alwaysIncludeLeaves);
+      /*followEquivalentOnly=*/false, /*alwaysIncludeLeaves=*/false);
 }
 
 AnalysisState::AnalysisState(const BufferizationOptions &options)
