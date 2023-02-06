@@ -1562,7 +1562,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   const auto *OpDeleteType =
       OpDeleteQualType.getTypePtr()->castAs<FunctionProtoType>();
   if (OpDeleteType->getNumParams() > DeleteArgs.size() &&
-      S.getASTContext().hasSameType(
+      S.getASTContext().hasSameUnqualifiedType(
           OpDeleteType->getParamType(DeleteArgs.size()), FrameSize->getType()))
     DeleteArgs.push_back(FrameSize);
 
@@ -1579,7 +1579,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   // So we are not forced to pass alignment to the deallocation function.
   if (S.getLangOpts().CoroAlignedAllocation &&
       OpDeleteType->getNumParams() > DeleteArgs.size() &&
-      S.getASTContext().hasSameType(
+      S.getASTContext().hasSameUnqualifiedType(
           OpDeleteType->getParamType(DeleteArgs.size()),
           FrameAlignment->getType()))
     DeleteArgs.push_back(FrameAlignment);
