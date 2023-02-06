@@ -37,6 +37,8 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/VASPrintf.h"
 #include "lldb/lldb-private.h"
+
+#include <cassert>
 #include <memory>
 
 using namespace lldb;
@@ -288,6 +290,13 @@ void RegisterContextUnwind::InitializeZerothFrame() {
     }
   } else
     ReadFrameAddress(row_register_kind, active_row->GetAFAValue(), m_afa);
+
+  if (m_cfa == LLDB_INVALID_ADDRESS && m_afa == LLDB_INVALID_ADDRESS) {
+    UnwindLogMsg(
+        "could not read CFA or AFA values for first frame, not valid.");
+    m_frame_type = eNotAValidFrame;
+    return;
+  }
 
   UnwindLogMsg("initialized frame current pc is 0x%" PRIx64 " cfa is 0x%" PRIx64
                " afa is 0x%" PRIx64 " using %s UnwindPlan",
@@ -2116,6 +2125,14 @@ bool RegisterContextUnwind::ReadGPRValue(lldb::RegisterKind register_kind,
   }
 
   const RegisterInfo *reg_info = GetRegisterInfoAtIndex(lldb_regnum);
+  assert(reg_info);
+  if (!reg_info) {
+    UnwindLogMsg(
+        "Could not find RegisterInfo definition for lldb register number %d",
+        lldb_regnum);
+    return false;
+  }
+
   RegisterValue reg_value;
   // if this is frame 0 (currently executing frame), get the requested reg
   // contents from the actual thread registers
