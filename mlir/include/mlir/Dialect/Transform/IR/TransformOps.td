@@ -12,11 +12,11 @@
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformAttrs.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
-include "mlir/Dialect/Transform/IR/TransformEffects.td"
 include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
 
 def AlternativesOp : TransformDialectOp<"alternatives",
@@ -466,7 +466,8 @@ def SequenceOp : TransformDialectOp<"sequence",
 
 def WithPDLPatternsOp : TransformDialectOp<"with_pdl_patterns",
     [DeclareOpInterfaceMethods<TransformOpInterface>, NoTerminator,
-     OpAsmOpInterface, PossibleTopLevelTransformOpTrait, RecursiveMemoryEffects,
+     OpAsmOpInterface, PossibleTopLevelTransformOpTrait,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      SymbolTable]> {
   let summary = "Contains PDL patterns available for use in transforms";
   let description = [{
@@ -505,8 +506,8 @@ def WithPDLPatternsOp : TransformDialectOp<"with_pdl_patterns",
   }];
 
   let arguments = (ins
-    Arg<Optional<TransformHandleTypeInterface>, "Root operation of the Payload IR",
-        [TransformMappingRead]>:$root);
+    Arg<Optional<TransformHandleTypeInterface>, "Root operation of the Payload IR"
+        >:$root);
   let regions = (region SizedRegion<1>:$body);
   let assemblyFormat = "($root^ `:` type($root))? attr-dict-with-keyword regions";
 
@@ -518,7 +519,8 @@ def WithPDLPatternsOp : TransformDialectOp<"with_pdl_patterns",
   }];
 }
 
-def YieldOp : TransformDialectOp<"yield", [Terminator]> {
+def YieldOp : TransformDialectOp<"yield",
+    [Terminator, DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "Yields operation handles from a transform IR region";
   let description = [{
     This terminator operation yields operation handles from regions of the
@@ -527,8 +529,8 @@ def YieldOp : TransformDialectOp<"yield", [Terminator]> {
   }];
 
   let arguments = (ins
-    Arg<Variadic<TransformHandleTypeInterface>, "Operation handles yielded back to the parent",
-        [TransformMappingRead]>:$operands);
+    Arg<Variadic<TransformHandleTypeInterface>, "Operation handles yielded back to the parent"
+        >:$operands);
   let assemblyFormat = "operands attr-dict (`:` type($operands)^)?";
 
   let builders = [

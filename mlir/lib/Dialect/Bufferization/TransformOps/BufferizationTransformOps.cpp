@@ -60,13 +60,14 @@ transform::OneShotBufferizeOp::apply(TransformResults &transformResults,
 
 void transform::OneShotBufferizeOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  effects.emplace_back(MemoryEffects::Read::get(), getTarget(),
-                       TransformMappingResource::get());
-
   // Handles that are not modules are not longer usable.
-  if (!getTargetIsModule())
-    effects.emplace_back(MemoryEffects::Free::get(), getTarget(),
-                         TransformMappingResource::get());
+  if (!getTargetIsModule()) {
+    consumesHandle(getTarget(), effects);
+  } else {
+    onlyReadsHandle(getTarget(), effects);
+  }
+
+  modifiesPayload(effects);
 }
 
 //===----------------------------------------------------------------------===//
