@@ -629,8 +629,9 @@ def C_ADDI_HINT_IMM_ZERO : RVInst16CI<0b000, 0b01, (outs GPRNoX0:$rd_wb),
                                       "c.addi", "$rd, $imm">,
                            Sched<[WriteIALU, ReadIALU]> {
   let Constraints = "$rd = $rd_wb";
+  let Inst{12} = 0;
   let Inst{6-2} = 0;
-  let isAsmParserOnly = 1;
+  let DecoderMethod = "decodeRVCInstrRdRs1ImmZero";
 }
 
 def C_LI_HINT : RVInst16CI<0b010, 0b01, (outs GPRX0:$rd), (ins simm6:$imm),

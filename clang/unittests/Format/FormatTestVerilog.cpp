@@ -45,6 +45,58 @@ protected:
   }
 };
 
+TEST_F(FormatTestVerilog, Align) {
+  FormatStyle Style = getLLVMStyle(FormatStyle::LK_Verilog);
+  Style.AlignConsecutiveAssignments.Enabled = true;
+  verifyFormat("x            <= x;\n"
+               "sfdbddfbdfbb <= x;\n"
+               "x             = x;",
+               Style);
+  verifyFormat("x            = x;\n"
+               "sfdbddfbdfbb = x;\n"
+               "x            = x;",
+               Style);
+  // Compound assignments are not aligned by default. '<=' is not a compound
+  // assignment.
+  verifyFormat("x            <= x;\n"
+               "sfdbddfbdfbb <= x;",
+               Style);
+  verifyFormat("x += x;\n"
+               "sfdbddfbdfbb <= x;",
+               Style);
+  verifyFormat("x <<= x;\n"
+               "sfdbddfbdfbb <= x;",
+               Style);
+  verifyFormat("x <<<= x;\n"
+               "sfdbddfbdfbb <= x;",
+               Style);
+  verifyFormat("x >>= x;\n"
+               "sfdbddfbdfbb <= x;",
+               Style);
+  verifyFormat("x >>>= x;\n"
+               "sfdbddfbdfbb <= x;",
+               Style);
+  Style.AlignConsecutiveAssignments.AlignCompound = true;
+  verifyFormat("x            <= x;\n"
+               "sfdbddfbdfbb <= x;",
+               Style);
+  verifyFormat("x            += x;\n"
+               "sfdbddfbdfbb <= x;",
+               Style);
+  verifyFormat("x            <<= x;\n"
+               "sfdbddfbdfbb  <= x;",
+               Style);
+  verifyFormat("x            <<<= x;\n"
+               "sfdbddfbdfbb   <= x;",
+               Style);
+  verifyFormat("x            >>= x;\n"
+               "sfdbddfbdfbb  <= x;",
+               Style);
+  verifyFormat("x            >>>= x;\n"
+               "sfdbddfbdfbb   <= x;",
+               Style);
+}
+
 TEST_F(FormatTestVerilog, BasedLiteral) {
   verifyFormat("x = '0;");
   verifyFormat("x = '1;");
