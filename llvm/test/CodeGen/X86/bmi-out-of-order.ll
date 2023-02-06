@@ -6,17 +6,17 @@ define i32 @blsmsk_used2(i32 %a) nounwind {
 ; X86-LABEL: blsmsk_used2:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    blsmskl %eax, %ecx
-; X86-NEXT:    decl %eax
+; X86-NEXT:    leal -1(%eax), %ecx
+; X86-NEXT:    xorl %ecx, %eax
 ; X86-NEXT:    imull %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: blsmsk_used2:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    blsmskl %edi, %ecx
 ; X64-NEXT:    leal -1(%rdi), %eax
-; X64-NEXT:    imull %ecx, %eax
+; X64-NEXT:    xorl %eax, %edi
+; X64-NEXT:    imull %edi, %eax
 ; X64-NEXT:    retq
 entry:
   %sub = add i32 %a, -1
@@ -196,15 +196,17 @@ define i32 @blsi_used2(i32 %a) nounwind {
 ; X86-LABEL: blsi_used2:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    blsil %eax, %ecx
-; X86-NEXT:    negl %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    negl %ecx
+; X86-NEXT:    andl %ecx, %eax
 ; X86-NEXT:    imull %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: blsi_used2:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    blsil %edi, %eax
-; X64-NEXT:    negl %edi
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    andl %eax, %edi
 ; X64-NEXT:    imull %edi, %eax
 ; X64-NEXT:    retq
 entry:
@@ -380,17 +382,17 @@ define i32 @blsr_used2(i32 %a) nounwind {
 ; X86-LABEL: blsr_used2:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    blsrl %eax, %ecx
-; X86-NEXT:    decl %eax
+; X86-NEXT:    leal -1(%eax), %ecx
+; X86-NEXT:    andl %ecx, %eax
 ; X86-NEXT:    imull %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: blsr_used2:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    blsrl %edi, %ecx
 ; X64-NEXT:    leal -1(%rdi), %eax
-; X64-NEXT:    imull %ecx, %eax
+; X64-NEXT:    andl %eax, %edi
+; X64-NEXT:    imull %edi, %eax
 ; X64-NEXT:    retq
 entry:
   %sub = add i32 %a, -1
