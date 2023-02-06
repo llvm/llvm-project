@@ -212,13 +212,13 @@ define <4 x i32> @vec128_and_f(<4 x i32> %cc_dep1) {
 ; CHECK-NEXT:    aghi %r15, -176
 ; CHECK-NEXT:    .cfi_def_cfa_offset 336
 ; CHECK-NEXT:    # kill: def $r4l killed $r4l def $r4d
+; CHECK-NEXT:    # kill: def $r2l killed $r2l def $r2d
 ; CHECK-NEXT:    sllg %r0, %r4, 32
 ; CHECK-NEXT:    lr %r0, %r5
-; CHECK-NEXT:    # kill: def $r2l killed $r2l def $r2d
+; CHECK-NEXT:    sllg %r1, %r2, 32
+; CHECK-NEXT:    lr %r1, %r3
 ; CHECK-NEXT:    stg %r0, 168(%r15)
-; CHECK-NEXT:    sllg %r0, %r2, 32
-; CHECK-NEXT:    lr %r0, %r3
-; CHECK-NEXT:    stg %r0, 160(%r15)
+; CHECK-NEXT:    stg %r1, 160(%r15)
 ; CHECK-NEXT:    ld %f0, 160(%r15)
 ; CHECK-NEXT:    ld %f2, 168(%r15)
 ; CHECK-NEXT:    #APP
