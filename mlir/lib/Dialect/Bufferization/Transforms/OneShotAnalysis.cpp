@@ -272,7 +272,7 @@ void OneShotAnalysisState::gatherUndefinedTensorUses(Operation *op) {
 
       // If there is no preceding definition, the tensor contents are
       // undefined.
-      if (findDefinitions(opResult, /*alwaysIncludeLeaves=*/false).empty())
+      if (findDefinitions(opResult).empty())
         for (OpOperand &use : opResult.getUses())
           undefinedTensorUses.insert(&use);
     }
@@ -513,8 +513,11 @@ static bool hasReadAfterWriteInterference(
 
   for (OpOperand *uRead : usesRead) {
     Operation *readingOp = uRead->getOwner();
+    LLVM_DEBUG(llvm::dbgs() << "\n- check conflict:\n");
+    LLVM_DEBUG(llvm::dbgs() << "  uRead = operand " << uRead->getOperandNumber()
+                            << " of " << *readingOp << "\n");
 
-    // Find most recent writes of uRead by following the SSA use-def chain.
+    // Find the definition of uRead by following the SSA use-def chain.
     // E.g.:
     //
     // %0 = "writing_op"(%t) : tensor<?x32> -> tensor<?xf32>
@@ -525,14 +528,16 @@ static bool hasReadAfterWriteInterference(
     // definition is %0. Note that operations that create an alias but do not
     // bufferize to a memory write (such as ExtractSliceOp) are skipped.
     SetVector<Value> definitions = state.findDefinitions(uRead->get());
+    if (definitions.empty()) {
+      // Fast path: No conflict if there are no definitions.
+      LLVM_DEBUG(llvm::dbgs()
+                 << "  no conflict: read value has no definitions\n");
+      continue;
+    }
 
     // Look for conflicting memory writes. Potential conflicts are writes to an
     // alias that have been decided to bufferize inplace.
     for (OpOperand *uConflictingWrite : usesWrite) {
-      LLVM_DEBUG(llvm::dbgs() << "\n- check conflict:\n");
-      LLVM_DEBUG(llvm::dbgs()
-                 << "  uRead = operand " << uRead->getOperandNumber() << " of "
-                 << *uRead->getOwner() << "\n");
       LLVM_DEBUG(llvm::dbgs() << "  unConflictingWrite = operand "
                               << uConflictingWrite->getOperandNumber() << " of "
                               << *uConflictingWrite->getOwner() << "\n");
@@ -608,15 +613,15 @@ static bool hasReadAfterWriteInterference(
         LLVM_DEBUG(llvm::dbgs() << "  * definition = " << definition << "\n");
 
         // No conflict if the conflicting write happens before the definition.
-        if (Operation *writingOp = definition.getDefiningOp()) {
-          if (happensBefore(conflictingWritingOp, writingOp, domInfo)) {
-            // conflictingWritingOp happens before writingOp. No conflict.
+        if (Operation *defOp = definition.getDefiningOp()) {
+          if (happensBefore(conflictingWritingOp, defOp, domInfo)) {
+            // conflictingWritingOp happens before defOp. No conflict.
             LLVM_DEBUG(llvm::dbgs()
                        << "    no conflict: write happens before definition\n");
             continue;
           }
-          // No conflict if conflictingWritingOp is contained in writingOp.
-          if (writingOp->isProperAncestor(conflictingWritingOp)) {
+          // No conflict if conflictingWritingOp is contained in defOp.
+          if (defOp->isProperAncestor(conflictingWritingOp)) {
             LLVM_DEBUG(
                 llvm::dbgs()
                 << "    no conflict: write is contained in definition\n");
