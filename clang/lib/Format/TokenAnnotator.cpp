@@ -1647,6 +1647,7 @@ private:
     bool CaretFound = false;
     bool InCpp11AttributeSpecifier = false;
     bool InCSharpAttributeSpecifier = false;
+    bool VerilogAssignmentFound = false;
     enum {
       Unknown,
       // Like the part after `:` in a constructor.
@@ -1944,6 +1945,17 @@ private:
                (!Current.Previous || Current.Previous->isNot(tok::l_square)) &&
                (!Current.is(tok::greater) &&
                 Style.Language != FormatStyle::LK_TextProto)) {
+      if (Style.isVerilog()) {
+        if (Current.is(tok::lessequal) && Contexts.size() == 1 &&
+            !Contexts.back().VerilogAssignmentFound) {
+          // In Verilog `<=` is assignment if in its own statement. It is a
+          // statement instead of an expression, that is it can not be chained.
+          Current.ForcedPrecedence = prec::Assignment;
+          Current.setFinalizedType(TT_BinaryOperator);
+        }
+        if (Current.getPrecedence() == prec::Assignment)
+          Contexts.back().VerilogAssignmentFound = true;
+      }
       Current.setType(TT_BinaryOperator);
     } else if (Current.is(tok::comment)) {
       if (Current.TokenText.startswith("/*")) {
