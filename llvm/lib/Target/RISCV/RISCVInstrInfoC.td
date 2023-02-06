@@ -614,16 +614,6 @@ def C_NOP_HINT : RVInst16CI<0b000, 0b01, (outs), (ins simm6nonzero:$imm),
   let DecoderMethod = "decodeRVCInstrSImm";
 }
 
-// Just a different syntax for the c.nop hint: c.addi x0, simm6 vs c.nop simm6.
-def C_ADDI_HINT_X0 : RVInst16CI<0b000, 0b01, (outs GPRX0:$rd_wb),
-                                (ins GPRX0:$rd, simm6nonzero:$imm),
-                                "c.addi", "$rd, $imm">,
-                     Sched<[WriteIALU, ReadIALU]> {
-  let Constraints = "$rd = $rd_wb";
-  let Inst{6-2} = imm{4-0};
-  let isAsmParserOnly = 1;
-}
-
 def C_ADDI_HINT_IMM_ZERO : RVInst16CI<0b000, 0b01, (outs GPRNoX0:$rd_wb),
                                       (ins GPRNoX0:$rd, immzero:$imm),
                                       "c.addi", "$rd, $imm">,
@@ -711,6 +701,11 @@ def C_SRAI64_HINT : RVInst16CI<0b100, 0b01, (outs GPRC:$rd_wb),
 //===----------------------------------------------------------------------===//
 // Assembler Pseudo Instructions
 //===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtCOrZca, HasRVCHints] in {
+// Just a different syntax for the c.nop hint: c.addi x0, simm6 vs c.nop simm6.
+def : InstAlias<"c.addi x0, $imm", (C_NOP_HINT simm6nonzero:$imm), 0>;
+}
 
 let Predicates = [HasStdExtC, HasRVCHints, HasStdExtZihintntl] in {
 def : InstAlias<"c.ntl.p1", (C_ADD_HINT X0, X2)>;
