@@ -491,7 +491,7 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       }
     }
     if (STI.getFeatureBits()[RISCV::FeatureVendorXTHeadVdot]) {
-      LLVM_DEBUG(dbgs() << "Trying T-Head custom opcode table:\n");
+      LLVM_DEBUG(dbgs() << "Trying XTHeadVdot custom opcode table:\n");
       Result =
           decodeInstruction(DecoderTableTHeadV32, MI, Insn, Address, this, STI);
       if (Result != MCDisassembler::Fail) {
