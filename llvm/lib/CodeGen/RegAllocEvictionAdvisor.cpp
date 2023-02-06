@@ -100,9 +100,7 @@ template <> Pass *llvm::callDefaultCtor<RegAllocEvictionAdvisorAnalysis>() {
 #endif
     break;
   case RegAllocEvictionAdvisorAnalysis::AdvisorMode::Release:
-#if defined(LLVM_HAVE_TF_AOT)
     Ret = createReleaseModeAdvisor();
-#endif
     break;
   }
   if (Ret)

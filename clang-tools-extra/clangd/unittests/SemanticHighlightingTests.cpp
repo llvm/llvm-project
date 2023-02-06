@@ -1022,7 +1022,7 @@ $Bracket[[>]]$Bracket[[>]] $LocalVariable_def[[s6]];
         class $Class_def[[Z]] {};
         template $Bracket[[<]]typename, typename$Bracket[[>]]
         concept $Concept_decl[[C2]] = true;
-        template $Bracket[[<]]C2$Bracket[[<]]int$Bracket[[>]] $TemplateParameter_def[[A]]$Bracket[[>]]
+        template $Bracket[[<]]$Concept[[C2]]$Bracket[[<]]int$Bracket[[>]] $TemplateParameter_def[[A]]$Bracket[[>]]
         class $Class_def[[B]] {};
       )cpp",
       // no crash

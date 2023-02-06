@@ -859,37 +859,57 @@ ModuleImport::convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar) {
 
 SetVector<llvm::Constant *>
 ModuleImport::getConstantsToConvert(llvm::Constant *constant) {
-  // Traverse the constant dependencies in post order.
-  SmallVector<llvm::Constant *> workList;
-  SmallVector<llvm::Constant *> orderedList;
-  workList.push_back(constant);
+  // Return the empty set if the constant has been translated before.
+  if (valueMapping.count(constant))
+    return {};
+
+  // Traverse the constants in post-order and stop the traversal if a constant
+  // already has a `valueMapping` from an earlier constant translation or if the
+  // constant is traversed a second time.
+  SetVector<llvm::Constant *> orderedSet;
+  SetVector<llvm::Constant *> workList;
+  DenseMap<llvm::Constant *, SmallVector<llvm::Constant *>> adjacencyLists;
+  workList.insert(constant);
   while (!workList.empty()) {
-    llvm::Constant *current = workList.pop_back_val();
-    // Skip constants that have been converted before and store all other ones.
-    if (valueMapping.count(current))
-      continue;
-    orderedList.push_back(current);
-    // Add the current constant's dependencies to the work list. Only add
-    // constant dependencies and skip any other values such as basic block
-    // addresses.
-    for (llvm::Value *operand : current->operands())
-      if (auto *constDependency = dyn_cast<llvm::Constant>(operand))
-        workList.push_back(constDependency);
-    // Use the `getElementValue` method to add the dependencies of zero
-    // initialized aggregate constants since they do not take any operands.
-    if (auto *constAgg = dyn_cast<llvm::ConstantAggregateZero>(current)) {
-      unsigned numElements = constAgg->getElementCount().getFixedValue();
-      for (unsigned i = 0, e = numElements; i != e; ++i)
-        workList.push_back(constAgg->getElementValue(i));
+    llvm::Constant *current = workList.back();
+    // Collect all dependencies of the current constant and add them to the
+    // adjacency list if none has been computed before.
+    auto adjacencyIt = adjacencyLists.find(current);
+    if (adjacencyIt == adjacencyLists.end()) {
+      adjacencyIt = adjacencyLists.try_emplace(current).first;
+      // Add all constant operands to the adjacency list and skip any other
+      // values such as basic block addresses.
+      for (llvm::Value *operand : current->operands())
+        if (auto *constDependency = dyn_cast<llvm::Constant>(operand))
+          adjacencyIt->getSecond().push_back(constDependency);
+      // Use the getElementValue method to add the dependencies of zero
+      // initialized aggregate constants since they do not take any operands.
+      if (auto *constAgg = dyn_cast<llvm::ConstantAggregateZero>(current)) {
+        unsigned numElements = constAgg->getElementCount().getFixedValue();
+        for (unsigned i = 0, e = numElements; i != e; ++i)
+          adjacencyIt->getSecond().push_back(constAgg->getElementValue(i));
+      }
     }
+    // Add the current constant to the `orderedSet` of the traversed nodes if
+    // all its dependencies have been traversed before. Additionally, remove the
+    // constant from the `workList` and continue the traversal.
+    if (adjacencyIt->getSecond().empty()) {
+      orderedSet.insert(current);
+      workList.pop_back();
+      continue;
+    }
+    // Add the next dependency from the adjacency list to the `workList` and
+    // continue the traversal. Remove the dependency from the adjacency list to
+    // mark that it has been processed. Only enqueue the dependency if it has no
+    // `valueMapping` from an earlier translation and if it has not been
+    // enqueued before.
+    llvm::Constant *dependency = adjacencyIt->getSecond().pop_back_val();
+    if (valueMapping.count(dependency) || workList.count(dependency) ||
+        orderedSet.count(dependency))
+      continue;
+    workList.insert(dependency);
   }
 
-  // Add the constants in reverse post order to the result set to ensure all
-  // dependencies are satisfied. Avoid storing duplicates since LLVM constants
-  // are uniqued and only one `valueMapping` entry per constant is possible.
-  SetVector<llvm::Constant *> orderedSet;
-  for (llvm::Constant *orderedConst : llvm::reverse(orderedList))
-    orderedSet.insert(orderedConst);
   return orderedSet;
 }
 

@@ -500,6 +500,13 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
   Error dataUnlockImpl(void *HstPtr) override { return Plugin::success(); }
 
+  Expected<bool> isPinnedPtrImpl(void *HstPtr, void *&BaseHstPtr,
+                                 void *&BaseDevAccessiblePtr,
+                                 size_t &BaseSize) const override {
+    // TODO: Implement pinning feature for CUDA.
+    return false;
+  }
+
   /// Submit data to the device (host to device transfer).
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
                        AsyncInfoWrapperTy &AsyncInfoWrapper) override {

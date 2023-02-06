@@ -105,16 +105,15 @@ define void @smulh_v64i8(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    sunpklo z1.h, z1.b
 ; VBITS_GE_256-NEXT:    sunpklo z2.h, z2.b
 ; VBITS_GE_256-NEXT:    sunpklo z3.h, z3.b
+; VBITS_GE_256-NEXT:    mul z4.h, p1/m, z4.h, z6.h
 ; VBITS_GE_256-NEXT:    mul z0.h, p1/m, z0.h, z2.h
 ; VBITS_GE_256-NEXT:    movprfx z2, z5
 ; VBITS_GE_256-NEXT:    mul z2.h, p1/m, z2.h, z7.h
 ; VBITS_GE_256-NEXT:    mul z1.h, p1/m, z1.h, z3.h
-; VBITS_GE_256-NEXT:    mul z4.h, p1/m, z4.h, z6.h
-; VBITS_GE_256-NEXT:    lsr z0.h, p1/m, z0.h, #8
-; VBITS_GE_256-NEXT:    movprfx z3, z4
-; VBITS_GE_256-NEXT:    lsr z3.h, p1/m, z3.h, #8
-; VBITS_GE_256-NEXT:    lsr z1.h, p1/m, z1.h, #8
-; VBITS_GE_256-NEXT:    lsr z2.h, p1/m, z2.h, #8
+; VBITS_GE_256-NEXT:    lsr z0.h, z0.h, #8
+; VBITS_GE_256-NEXT:    lsr z3.h, z4.h, #8
+; VBITS_GE_256-NEXT:    lsr z1.h, z1.h, #8
+; VBITS_GE_256-NEXT:    lsr z2.h, z2.h, #8
 ; VBITS_GE_256-NEXT:    uzp1 z3.b, z3.b, z3.b
 ; VBITS_GE_256-NEXT:    uzp1 z0.b, z0.b, z0.b
 ; VBITS_GE_256-NEXT:    ptrue p1.b, vl16
@@ -755,16 +754,15 @@ define void @umulh_v64i8(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    uunpklo z1.h, z1.b
 ; VBITS_GE_256-NEXT:    uunpklo z2.h, z2.b
 ; VBITS_GE_256-NEXT:    uunpklo z3.h, z3.b
+; VBITS_GE_256-NEXT:    mul z4.h, p1/m, z4.h, z6.h
 ; VBITS_GE_256-NEXT:    mul z0.h, p1/m, z0.h, z2.h
 ; VBITS_GE_256-NEXT:    movprfx z2, z5
 ; VBITS_GE_256-NEXT:    mul z2.h, p1/m, z2.h, z7.h
 ; VBITS_GE_256-NEXT:    mul z1.h, p1/m, z1.h, z3.h
-; VBITS_GE_256-NEXT:    mul z4.h, p1/m, z4.h, z6.h
-; VBITS_GE_256-NEXT:    lsr z0.h, p1/m, z0.h, #8
-; VBITS_GE_256-NEXT:    movprfx z3, z4
-; VBITS_GE_256-NEXT:    lsr z3.h, p1/m, z3.h, #8
-; VBITS_GE_256-NEXT:    lsr z1.h, p1/m, z1.h, #8
-; VBITS_GE_256-NEXT:    lsr z2.h, p1/m, z2.h, #8
+; VBITS_GE_256-NEXT:    lsr z0.h, z0.h, #8
+; VBITS_GE_256-NEXT:    lsr z3.h, z4.h, #8
+; VBITS_GE_256-NEXT:    lsr z1.h, z1.h, #8
+; VBITS_GE_256-NEXT:    lsr z2.h, z2.h, #8
 ; VBITS_GE_256-NEXT:    uzp1 z3.b, z3.b, z3.b
 ; VBITS_GE_256-NEXT:    uzp1 z0.b, z0.b, z0.b
 ; VBITS_GE_256-NEXT:    ptrue p1.b, vl16

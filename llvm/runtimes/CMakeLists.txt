@@ -193,7 +193,7 @@ foreach(entry ${runtimes})
 endforeach()
 
 function(runtime_default_target)
-  cmake_parse_arguments(ARG "" "" "DEPENDS;PREFIXES" ${ARGN})
+  cmake_parse_arguments(ARG "" "" "DEPENDS;CMAKE_ARGS;PREFIXES" ${ARGN})
 
   include(${LLVM_BINARY_DIR}/runtimes/Components.cmake OPTIONAL)
   set(SUB_CHECK_TARGETS ${SUB_CHECK_TARGETS} PARENT_SCOPE)
@@ -236,6 +236,7 @@ function(runtime_default_target)
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
                                       ${COMMON_CMAKE_ARGS}
                                       ${RUNTIMES_CMAKE_ARGS}
+                                      ${ARG_CMAKE_ARGS}
                            PASSTHROUGH_PREFIXES LLVM_ENABLE_RUNTIMES
                                                 LLVM_USE_LINKER
                                                 ${ARG_PREFIXES}
@@ -384,15 +385,31 @@ if(runtimes)
       list(APPEND extra_deps llvm-link)
     endif()
   endif()
+  if("libc" IN_LIST LLVM_ENABLE_RUNTIMES AND LLVM_LIBC_FULL_BUILD)
+    if(TARGET libc-hdrgen)
+      set(libc_tools libc-hdrgen)
+      set(libc_cmake_args "-DLIBC_HDRGEN_EXE=$<TARGET_FILE:libc-hdrgen>"
+                          "-DLLVM_LIBC_FULL_BUILD=ON")
+      list(APPEND extra_deps ${libc_tools})
+    else()
+      # We want to build the libc build tools before we can build the libc
+      # itself. So, the libc project should be included in LLVM_ENABLE_PROJECTS.
+      # This should have been done in llvm/CMakeLists.txt automatically when
+      # "libc" is detected in LLVM_ENABLE_RUNTIMES.
+      message(FATAL_ERROR "libc-hdrgen target missing unexpectedly")
+    endif()
+  endif()
   if(NOT LLVM_RUNTIME_TARGETS)
     runtime_default_target(
       DEPENDS ${builtins_dep} ${extra_deps}
+      CMAKE_ARGS ${libc_cmake_args}
       PREFIXES ${prefixes})
     set(test_targets check-runtimes)
   else()
     if("default" IN_LIST LLVM_RUNTIME_TARGETS)
       runtime_default_target(
         DEPENDS ${builtins_dep} ${extra_deps}
+        CMAKE_ARGS ${libc_cmake_args}
         PREFIXES ${prefixes})
       list(REMOVE_ITEM LLVM_RUNTIME_TARGETS "default")
     else()
@@ -428,7 +445,8 @@ if(runtimes)
         endif()
       endif()
       runtime_register_target(${name} ${name}
-        DEPENDS ${builtins_dep_name})
+        DEPENDS ${builtins_dep_name} ${libc_tools}
+        CMAKE_ARGS ${libc_cmake_args})
 
       add_dependencies(runtimes runtimes-${name})
       add_dependencies(runtimes-configure runtimes-${name}-configure)

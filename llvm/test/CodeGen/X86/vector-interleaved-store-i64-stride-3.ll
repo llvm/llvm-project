@@ -62,9 +62,8 @@ define void @store_i64_stride3_vf2(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512-LABEL: store_i64_stride3_vf2:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512-NEXT:    vmovaps (%rdx), %xmm1
 ; AVX512-NEXT:    vinsertf128 $1, (%rsi), %ymm0, %ymm0
-; AVX512-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-NEXT:    vinsertf32x4 $2, (%rdx), %zmm0, %zmm0
 ; AVX512-NEXT:    vmovaps {{.*#+}} zmm1 = <0,2,4,1,3,5,u,u>
 ; AVX512-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    vextractf32x4 $2, %zmm0, 32(%rcx)

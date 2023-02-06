@@ -49,6 +49,7 @@ public:
 
   enum class Kind : int { Unknown, Release, Development, NoOp, Interactive };
   Kind getKind() const { return Type; }
+  virtual void switchContext(StringRef Name) {}
 
 protected:
   MLModelRunner(LLVMContext &Ctx, Kind Type, size_t NrInputs)

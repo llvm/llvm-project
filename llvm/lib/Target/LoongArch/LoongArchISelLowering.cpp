@@ -195,8 +195,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setMinCmpXchgSizeInBits(32);
 
   // Function alignments.
-  const Align FunctionAlignment(4);
-  setMinFunctionAlignment(FunctionAlignment);
+  setMinFunctionAlignment(Align(4));
 
   setTargetDAGCombine(ISD::AND);
   setTargetDAGCombine(ISD::OR);
