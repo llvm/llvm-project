@@ -16,7 +16,6 @@
 #include "flang/Lower/IntrinsicCall.h"
 #include "flang/Common/static-multimap-view.h"
 #include "flang/Lower/Mangler.h"
-#include "flang/Lower/Runtime.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Character.h"
@@ -28,6 +27,7 @@
 #include "flang/Optimizer/Builder/Runtime/Command.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/Inquiry.h"
+#include "flang/Optimizer/Builder/Runtime/Intrinsics.h"
 #include "flang/Optimizer/Builder/Runtime/Numeric.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Reduction.h"
@@ -2272,7 +2272,7 @@ IntrinsicLibrary::genAssociated(mlir::Type resultType,
   mlir::Value pointerBoxRef =
       fir::factory::getMutableIRBox(builder, loc, *pointer);
   auto pointerBox = builder.create<fir::LoadOp>(loc, pointerBoxRef);
-  return Fortran::lower::genAssociated(builder, loc, pointerBox, targetBox);
+  return fir::runtime::genAssociated(builder, loc, pointerBox, targetBox);
 }
 
 // BESSEL_JN
@@ -2763,7 +2763,7 @@ void IntrinsicLibrary::genCpuTime(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1);
   const mlir::Value *arg = args[0].getUnboxed();
   assert(arg && "nonscalar cpu_time argument");
-  mlir::Value res1 = Fortran::lower::genCpuTime(builder, loc);
+  mlir::Value res1 = fir::runtime::genCpuTime(builder, loc);
   mlir::Value res2 =
       builder.createConvert(loc, fir::dyn_cast_ptrEleTy(arg->getType()), res1);
   builder.create<fir::StoreOp>(loc, res2, *arg);
@@ -2823,8 +2823,8 @@ void IntrinsicLibrary::genDateAndTime(llvm::ArrayRef<fir::ExtendedValue> args) {
     values = builder.create<fir::AbsentOp>(
         loc, fir::BoxType::get(builder.getNoneType()));
 
-  Fortran::lower::genDateAndTime(builder, loc, charArgs[0], charArgs[1],
-                                 charArgs[2], values);
+  fir::runtime::genDateAndTime(builder, loc, charArgs[0], charArgs[1],
+                               charArgs[2], values);
 }
 
 // DIM
@@ -4189,15 +4189,15 @@ IntrinsicLibrary::genProduct(mlir::Type resultType,
 // RANDOM_INIT
 void IntrinsicLibrary::genRandomInit(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 2);
-  Fortran::lower::genRandomInit(builder, loc, fir::getBase(args[0]),
-                                fir::getBase(args[1]));
+  fir::runtime::genRandomInit(builder, loc, fir::getBase(args[0]),
+                              fir::getBase(args[1]));
 }
 
 // RANDOM_NUMBER
 void IntrinsicLibrary::genRandomNumber(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1);
-  Fortran::lower::genRandomNumber(builder, loc, fir::getBase(args[0]));
+  fir::runtime::genRandomNumber(builder, loc, fir::getBase(args[0]));
 }
 
 // RANDOM_SEED
@@ -4212,7 +4212,7 @@ void IntrinsicLibrary::genRandomSeed(llvm::ArrayRef<fir::ExtendedValue> args) {
   mlir::Value size = getDesc(0);
   mlir::Value put = getDesc(1);
   mlir::Value get = getDesc(2);
-  Fortran::lower::genRandomSeed(builder, loc, size, put, get);
+  fir::runtime::genRandomSeed(builder, loc, size, put, get);
 }
 
 // REDUCE
@@ -4850,8 +4850,8 @@ IntrinsicLibrary::genSum(mlir::Type resultType,
 // SYSTEM_CLOCK
 void IntrinsicLibrary::genSystemClock(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 3);
-  Fortran::lower::genSystemClock(builder, loc, fir::getBase(args[0]),
-                                 fir::getBase(args[1]), fir::getBase(args[2]));
+  fir::runtime::genSystemClock(builder, loc, fir::getBase(args[0]),
+                               fir::getBase(args[1]), fir::getBase(args[2]));
 }
 
 // TRANSFER
@@ -4883,18 +4883,18 @@ IntrinsicLibrary::genTransfer(mlir::Type resultType,
     mlir::Value resultIrBox =
         fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
 
-    Fortran::lower::genTransfer(builder, loc, resultIrBox, source, mold);
+    fir::runtime::genTransfer(builder, loc, resultIrBox, source, mold);
   } else {
     // The result is a rank one array in this case.
     mlir::Value resultIrBox =
         fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
 
     if (absentSize) {
-      Fortran::lower::genTransfer(builder, loc, resultIrBox, source, mold);
+      fir::runtime::genTransfer(builder, loc, resultIrBox, source, mold);
     } else {
       mlir::Value sizeArg = fir::getBase(args[2]);
-      Fortran::lower::genTransferSize(builder, loc, resultIrBox, source, mold,
-                                      sizeArg);
+      fir::runtime::genTransferSize(builder, loc, resultIrBox, source, mold,
+                                    sizeArg);
     }
   }
   return readAndAddCleanUp(resultMutableBox, resultType, "TRANSFER");
