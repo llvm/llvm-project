@@ -106,11 +106,11 @@ define i128 @atomicrmw_nand(ptr %src, i128 %b) {
 ; CHECK-NEXT:    vl %v1, 0(%r3), 4
 ; CHECK-NEXT:  .LBB4_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vnn %v2, %v1, %v0
 ; CHECK-NEXT:    vlgvg %r1, %v1, 1
 ; CHECK-NEXT:    vlgvg %r0, %v1, 0
-; CHECK-NEXT:    vnn %v1, %v1, %v0
-; CHECK-NEXT:    vlgvg %r5, %v1, 1
-; CHECK-NEXT:    vlgvg %r4, %v1, 0
+; CHECK-NEXT:    vlgvg %r5, %v2, 1
+; CHECK-NEXT:    vlgvg %r4, %v2, 0
 ; CHECK-NEXT:    cdsg %r0, %r4, 0(%r3)
 ; CHECK-NEXT:    vlvgp %v1, %r0, %r1
 ; CHECK-NEXT:    jl .LBB4_1
