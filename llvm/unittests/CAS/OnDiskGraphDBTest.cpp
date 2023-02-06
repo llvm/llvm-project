@@ -6,9 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CAS/OnDiskGraphDB.h"
-#include "llvm/CAS/BuiltinObjectHasher.h"
-#include "llvm/Support/BLAKE3.h"
+#include "OnDiskCommonUtils.h"
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
@@ -18,46 +16,7 @@
 using namespace llvm;
 using namespace llvm::cas;
 using namespace llvm::cas::ondisk;
-
-using HasherT = BLAKE3;
-using HashType = decltype(HasherT::hash(std::declval<ArrayRef<uint8_t> &>()));
-
-static HashType digest(StringRef Data, ArrayRef<ArrayRef<uint8_t>> RefHashes) {
-  return BuiltinObjectHasher<HasherT>::hashObject(
-      RefHashes, arrayRefFromStringRef<char>(Data));
-}
-
-static ObjectID digest(OnDiskGraphDB &DB, StringRef Data,
-                       ArrayRef<ObjectID> Refs) {
-  SmallVector<ArrayRef<uint8_t>, 8> RefHashes;
-  for (ObjectID Ref : Refs)
-    RefHashes.push_back(DB.getDigest(Ref));
-  HashType Digest = digest(Data, RefHashes);
-  return DB.getReference(Digest);
-}
-
-static Expected<ObjectID> store(OnDiskGraphDB &DB, StringRef Data,
-                                ArrayRef<ObjectID> Refs) {
-  ObjectID ID = digest(DB, Data, Refs);
-  if (Error E = DB.store(ID, Refs, arrayRefFromStringRef<char>(Data)))
-    return std::move(E);
-  return ID;
-}
-
-static Error printTree(OnDiskGraphDB &DB, ObjectID ID, raw_ostream &OS,
-                       unsigned Indent = 0) {
-  std::optional<ondisk::ObjectHandle> Obj;
-  if (Error E = DB.load(ID).moveInto(Obj))
-    return E;
-  if (!Obj)
-    return Error::success();
-  OS.indent(Indent) << toStringRef(DB.getObjectData(*Obj)) << '\n';
-  for (ObjectID Ref : DB.getObjectRefs(*Obj)) {
-    if (Error E = printTree(DB, Ref, OS, Indent + 2))
-      return E;
-  }
-  return Error::success();
-}
+using namespace llvm::unittest::cas;
 
 TEST(OnDiskGraphDBTest, Basic) {
   unittest::TempDir Temp("ondiskcas", /*Unique=*/true);

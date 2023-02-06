@@ -23,6 +23,7 @@ add_llvm_component_library(LLVMCAS
   OnDiskHashMappedTrie.cpp
   OnDiskKeyValueDB.cpp
   TreeSchema.cpp
+  UnifiedOnDiskCache.cpp
   Utils.cpp
 
   ADDITIONAL_HEADER_DIRS
