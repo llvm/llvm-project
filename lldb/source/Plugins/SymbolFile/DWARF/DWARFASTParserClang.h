@@ -132,6 +132,17 @@ protected:
 
   clang::NamespaceDecl *ResolveNamespaceDIE(const DWARFDIE &die);
 
+  /// Returns the namespace decl that a DW_TAG_imported_declaration imports.
+  ///
+  /// \param[in] die The import declaration to resolve. If the DIE is not a
+  ///                DW_TAG_imported_declaration the behaviour is undefined.
+  ///
+  /// \returns The decl corresponding to the namespace that the specified
+  ///          'die' imports. If the imported entity is not a namespace
+  ///          or another import declaration, returns nullptr. If an error
+  ///          occurs, returns nullptr.
+  clang::NamespaceDecl *ResolveImportedDeclarationDIE(const DWARFDIE &die);
+
   bool ParseTemplateDIE(const DWARFDIE &die,
                         lldb_private::TypeSystemClang::TemplateParameterInfos
                             &template_param_infos);
