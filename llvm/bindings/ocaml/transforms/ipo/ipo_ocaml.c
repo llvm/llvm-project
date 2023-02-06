@@ -38,12 +38,6 @@ value llvm_add_function_attrs(LLVMPassManagerRef PM) {
 }
 
 /* [`Module] Llvm.PassManager.t -> unit */
-value llvm_add_function_inlining(LLVMPassManagerRef PM) {
-  LLVMAddFunctionInliningPass(PM);
-  return Val_unit;
-}
-
-/* [`Module] Llvm.PassManager.t -> unit */
 value llvm_add_always_inliner(LLVMPassManagerRef PM) {
   LLVMAddAlwaysInlinerPass(PM);
   return Val_unit;
