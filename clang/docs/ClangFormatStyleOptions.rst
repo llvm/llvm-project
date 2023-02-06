@@ -3888,6 +3888,23 @@ the configuration (without a prefix: ``Auto``).
              bbbbbbbbbbbbbbbbbbbb(),
              cccccccccccccccccccc()
 
+  * ``PCIS_NextLineOnly`` (in configuration: ``NextLineOnly``)
+    Put all constructor initializers on the next line if they fit.
+    Otherwise, put each one on its own line.
+
+    .. code-block:: c++
+
+       Constructor()
+           : a(), b()
+
+       Constructor()
+           : aaaaaaaaaaaaaaaaaaaa(), bbbbbbbbbbbbbbbbbbbb(), ddddddddddddd()
+
+       Constructor()
+           : aaaaaaaaaaaaaaaaaaaa(),
+             bbbbbbbbbbbbbbbbbbbb(),
+             cccccccccccccccccccc()
+
 
 
 .. _PenaltyBreakAssignment:

@@ -23,11 +23,11 @@ import subprocess
 import multiprocessing
 import argparse
 
-# Define functions which extract a list of symbols from a library using several
-# different tools. We use subprocess.Popen and yield a symbol at a time instead
-# of using subprocess.check_output and returning a list as, especially on
-# Windows, waiting for the entire output to be ready can take a significant
-# amount of time.
+# Define functions which extract a list of pairs of (symbols, is_def) from a
+# library using several different tools. We use subprocess.Popen and yield a
+# symbol at a time instead of using subprocess.check_output and returning a list
+# as, especially on Windows, waiting for the entire output to be ready can take
+# a significant amount of time.
 
 def dumpbin_get_symbols(lib):
     process = subprocess.Popen(['dumpbin','/symbols',lib], bufsize=1,
@@ -35,10 +35,10 @@ def dumpbin_get_symbols(lib):
                                universal_newlines=True)
     process.stdin.close()
     for line in process.stdout:
-        # Look for external symbols that are defined in some section
-        match = re.match("^.+SECT.+External\s+\|\s+(\S+).*$", line)
+        # Look for external symbols
+        match = re.match("^.+(SECT|UNDEF).+External\s+\|\s+(\S+).*$", line)
         if match:
-            yield match.group(1)
+            yield (match.group(2), match.group(1) != "UNDEF")
     process.wait()
 
 def nm_get_symbols(lib):
@@ -60,7 +60,11 @@ def nm_get_symbols(lib):
         # but \s+ match newline also, so \s+\S* will match the optional size field.
         match = re.match("^(\S+)\s+[BDGRSTVW]\s+\S+\s+\S*$", line)
         if match:
-            yield match.group(1)
+            yield (match.group(1), True)
+        # Look for undefined symbols, which have only name and type (which is U).
+        match = re.match("^(\S+)\s+U\s+$", line)
+        if match:
+            yield (match.group(1), False)
     process.wait()
 
 def readobj_get_symbols(lib):
@@ -71,7 +75,7 @@ def readobj_get_symbols(lib):
     for line in process.stdout:
         # When looking through the output of llvm-readobj we expect to see Name,
         # Section, then StorageClass, so record Name and Section when we see
-        # them and decide if this is a defined external symbol when we see
+        # them and decide if this is an external symbol when we see
         # StorageClass.
         match = re.search('Name: (\S+)', line)
         if match:
@@ -83,9 +87,8 @@ def readobj_get_symbols(lib):
         if match:
             storageclass = match.group(1)
             if section != 'IMAGE_SYM_ABSOLUTE' and \
-               section != 'IMAGE_SYM_UNDEFINED' and \
                storageclass == 'External':
-                yield name
+                yield (name, section != 'IMAGE_SYM_UNDEFINED')
     process.wait()
 
 # Define functions which determine if the target is 32-bit Windows (as that's
@@ -146,22 +149,10 @@ def should_keep_microsoft_symbol(symbol, calling_convention_decoration):
         if symbol.startswith(("__xmm@", "__ymm@", "__real@")):
             return None
         return symbol
-    # Function template instantiations start with ?$; keep the instantiations of
-    # clang::Type::getAs, as some of them are explipict specializations that are
-    # defined in clang's lib/AST/Type.cpp; discard the rest as it's assumed that
-    # the definition is public
-    elif re.match('\?\?\$getAs@.+@Type@clang@@', symbol):
-        return symbol
-    elif symbol.startswith('??$'):
-        return None
     # Deleting destructors start with ?_G or ?_E and can be discarded because
     # link.exe gives you a warning telling you they can't be exported if you
     # don't
     elif symbol.startswith('??_G') or symbol.startswith('??_E'):
-        return None
-    # Constructors (?0) and destructors (?1) of templates (?$) are assumed to be
-    # defined in headers and not required to be kept
-    elif symbol.startswith('??0?$') or symbol.startswith('??1?$'):
         return None
     # An anonymous namespace is mangled as ?A(maybe hex number)@. Any symbol
     # that mentions an anonymous namespace can be discarded, as the anonymous
@@ -216,18 +207,6 @@ def should_keep_itanium_symbol(symbol, calling_convention_decoration):
         return None
     if not names:
         return symbol
-    # Constructors and destructors of templates classes are assumed to be
-    # defined in headers and not required to be kept
-    if re.match('[CD][123]', names[-1][0]) and names[-2][1]:
-        return None
-    # Keep the instantiations of clang::Type::getAs, as some of them are
-    # explipict specializations that are defined in clang's lib/AST/Type.cpp;
-    # discard any other function template instantiations as it's assumed that
-    # the definition is public
-    elif symbol.startswith('_ZNK5clang4Type5getAs'):
-        return symbol
-    elif names[-1][1]:
-        return None
     # Keep llvm:: and clang:: names
     elif names[0][0] == '4llvm' or names[0][0] == '5clang':
         return symbol
@@ -338,14 +317,79 @@ def parse_itanium_nested_name(arg):
     # If we get here then something went wrong
     return None, None
 
+# Parse a microsoft mangled symbol and return a list of pairs of
+# (name, is_template). This is very rudimentary and does just enough
+# in order to determine if the first or second component is a template.
+def parse_microsoft_mangling(arg):
+    # If the name doesn't start with ? this isn't a mangled name
+    if not arg.startswith('?'):
+        return [(arg, False)]
+    arg = arg[1:]
+    components = []
+    while len(arg) > 0:
+        # If we see an empty component we've reached the end
+        if arg.startswith('@'):
+            return components
+        # Check for a simple name
+        match = re.match('(\w+)@(.+)', arg)
+        if match:
+            components.append((match.group(1), False))
+            arg = match.group(2)
+            continue
+        # Check for a special function name
+        match = re.match('(\?_?\w)(.+)', arg)
+        if match:
+            components.append((match.group(1), False))
+            arg = match.group(2)
+            continue
+        # Check for a template name
+        match = re.match('\?\$(\w+)@[^@]+@(.+)', arg)
+        if match:
+            components.append((match.group(1), True))
+            arg = match.group(2)
+            continue
+        # Some other kind of name that we can't handle
+        components.append((arg, False))
+        return components
+    return components
+
 def extract_symbols(arg):
     get_symbols, should_keep_symbol, calling_convention_decoration, lib = arg
-    symbols = dict()
-    for symbol in get_symbols(lib):
+    symbol_defs = dict()
+    symbol_refs = set()
+    for (symbol, is_def) in get_symbols(lib):
         symbol = should_keep_symbol(symbol, calling_convention_decoration)
         if symbol:
-            symbols[symbol] = 1 + symbols.setdefault(symbol,0)
-    return symbols
+            if is_def:
+                symbol_defs[symbol] = 1 + symbol_defs.setdefault(symbol,0)
+            else:
+                symbol_refs.add(symbol)
+    return (symbol_defs, symbol_refs)
+
+def get_template_name(sym, mangling):
+    # Parse the mangling into a list of (name, is_template)
+    try:
+        if mangling == 'microsoft':
+            names = parse_microsoft_mangling(sym)
+        else:
+            match = re.match('_Z(T[VTIS])?(N.+)', sym)
+            if match:
+                names, _ = parse_itanium_nested_name(match.group(2))
+            else:
+                names = None
+    except TooComplexName:
+        return None
+
+    if not names:
+        return None
+
+    # If any component is a template then return it
+    for name, is_template in names:
+        if is_template:
+            return name
+
+    # Not a template
+    return None
 
 if __name__ == '__main__':
     tool_exes = ['dumpbin','nm','objdump','llvm-readobj']
@@ -458,68 +502,32 @@ if __name__ == '__main__':
         exit(1)
 
     # Merge everything into a single dict
-    symbols = dict()
-    for this_lib_symbols in libs_symbols:
-        for k,v in list(this_lib_symbols.items()):
-            symbols[k] = v + symbols.setdefault(k,0)
+    symbol_defs = dict()
+    symbol_refs = set()
+    for (this_lib_defs, this_lib_refs) in libs_symbols:
+        for k,v in list(this_lib_defs.items()):
+            symbol_defs[k] = v + symbol_defs.setdefault(k,0)
+        for sym in list(this_lib_refs):
+            symbol_refs.add(sym)
 
-    # Count instances of member functions of template classes, and map the
-    # symbol name to the function+class. We do this under the assumption that if
-    # a member function of a template class is instantiated many times it's
-    # probably declared in a public header file.
-    template_function_count = dict()
-    template_function_mapping = dict()
-    template_function_count[""] = 0
-    for k in symbols:
-        name = None
-        if args.mangling == 'microsoft':
-            # Member functions of templates start with
-            # ?<fn_name>@?$<class_name>@, so we map to <fn_name>@?$<class_name>.
-            # As manglings go from the innermost scope to the outermost scope
-            # this means:
-            #  * When we have a function member of a subclass of a template
-            #    class then <fn_name> will actually contain the mangling of
-            #    both the subclass and the function member. This is fine.
-            #  * When we have a function member of a template subclass of a
-            #    (possibly template) class then it's the innermost template
-            #    subclass that becomes <class_name>. This should be OK so long
-            #    as we don't have multiple classes with a template subclass of
-            #    the same name.
-            match = re.search("^\?(\??\w+\@\?\$\w+)\@", k)
-            if match:
-                name = match.group(1)
-        else:
-            # Find member functions of templates by demangling the name and
-            # checking if the second-to-last name in the list is a template.
-            match = re.match('_Z(T[VTIS])?(N.+)', k)
-            if match:
-                try:
-                    names, _ = parse_itanium_nested_name(match.group(2))
-                    if names and names[-2][1]:
-                        name = ''.join([x for x,_ in names])
-                except TooComplexName:
-                    # Manglings that are too complex should already have been
-                    # filtered out, but if we happen to somehow see one here
-                    # just leave it as-is.
-                    pass
-        if name:
-            old_count = template_function_count.setdefault(name,0)
-            template_function_count[name] = old_count + 1
-            template_function_mapping[k] = name
-        else:
-            template_function_mapping[k] = ""
+    # Find which template instantiations are referenced at least once.
+    template_instantiation_refs = set()
+    for sym in list(symbol_refs):
+        template = get_template_name(sym, args.mangling)
+        if template:
+            template_instantiation_refs.add(template)
 
     # Print symbols which both:
     #  * Appear in exactly one input, as symbols defined in multiple
     #    objects/libraries are assumed to have public definitions.
-    #  * Aren't instances of member functions of templates which have been
-    #    instantiated 100 times or more, which are assumed to have public
-    #    definitions. (100 is an arbitrary guess here.)
+    #  * Are not a template instantiation that isn't referenced anywhere. This
+    #    is because we need to export any explicitly instantiated templates,
+    #    and we expect those to be referenced in some object.
     if args.o:
         outfile = open(args.o,'w')
     else:
         outfile = sys.stdout
-    for k,v in list(symbols.items()):
-        template_count = template_function_count[template_function_mapping[k]]
-        if v == 1 and template_count < 100:
+    for k,v in list(symbol_defs.items()):
+        template = get_template_name(k, args.mangling)
+        if v == 1 and (not template or template in template_instantiation_refs):
             print(k, file=outfile)

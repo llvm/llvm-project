@@ -463,7 +463,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*args=*/(ins "unsigned":$index),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
-          return mlir::bufferization::detail::defaultIsRepetitiveRegion(
+          return ::mlir::bufferization::detail::defaultIsRepetitiveRegion(
               cast<BufferizableOpInterface>($_op.getOperation()), index);
         }]
       >
@@ -472,8 +472,9 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
   let extraClassDeclaration = [{
     /// Resolve out-of-place tensor OpOperands with explicit allocations in the
     /// form of `bufferization.alloc_tensor` ops.
-    LogicalResult resolveTensorOpOperandConflicts(
-        RewriterBase &rewriter, const AnalysisState &state);
+    ::mlir::LogicalResult resolveTensorOpOperandConflicts(
+        ::mlir::RewriterBase &rewriter,
+        const ::mlir::bufferization::AnalysisState &state);
 
     /// Return `true` if the given OpOperand creates an alias but does neither
     /// read nor write. This implies that `bufferizesToMemoryRead` and
@@ -481,10 +482,11 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
     /// be called on OpOperands that do not have a tensor type.
     ///
     /// Examples of such ops are `tensor.extract_slice` and `tensor.cast`.
-    bool bufferizesToAliasOnly(OpOperand &opOperand,
-                               const AnalysisState &state) {
+    bool bufferizesToAliasOnly(
+        ::mlir::OpOperand &opOperand,
+        const ::mlir::bufferization::AnalysisState &state) {
       auto bufferizableOp =
-          cast<BufferizableOpInterface>(getOperation());
+          cast<::mlir::bufferization::BufferizableOpInterface>(getOperation());
       return !bufferizableOp.bufferizesToMemoryRead(opOperand, state)
           && !bufferizableOp.bufferizesToMemoryWrite(opOperand, state)
           && !bufferizableOp.getAliasingOpResults(opOperand, state).empty();

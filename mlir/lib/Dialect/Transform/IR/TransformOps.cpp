@@ -292,7 +292,7 @@ transform::CastOp::applyToOne(Operation *target, ApplyToEachResultList &results,
 void transform::CastOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   onlyReadsPayload(effects);
-  consumesHandle(getInput(), effects);
+  onlyReadsHandle(getInput(), effects);
   producesHandle(getOutput(), effects);
 }
 
@@ -501,7 +501,7 @@ bool transform::MergeHandlesOp::allowsRepeatedHandleOperands() {
 
 void transform::MergeHandlesOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getHandles(), effects);
+  onlyReadsHandle(getHandles(), effects);
   producesHandle(getResult(), effects);
 
   // There are no effects on the Payload IR as this is only a handle
@@ -557,7 +557,7 @@ transform::SplitHandlesOp::apply(transform::TransformResults &results,
 
 void transform::SplitHandlesOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getHandle(), effects);
+  onlyReadsHandle(getHandle(), effects);
   producesHandle(getResults(), effects);
   // There are no effects on the Payload IR as this is only a handle
   // manipulation.
@@ -626,7 +626,7 @@ transform::ReplicateOp::apply(transform::TransformResults &results,
 void transform::ReplicateOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   onlyReadsHandle(getPattern(), effects);
-  consumesHandle(getHandles(), effects);
+  onlyReadsHandle(getHandles(), effects);
   producesHandle(getReplicated(), effects);
 }
 
@@ -832,32 +832,60 @@ remapEffects(MemoryEffectOpInterface iface, BlockArgument source, Value target,
     effects.emplace_back(effect.getEffect(), target, effect.getResource());
 }
 
-void transform::SequenceOp::getEffects(
-    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getRoot(), effects);
-  onlyReadsHandle(getExtraBindings(), effects);
-  producesHandle(getResults(), effects);
+namespace {
+template <typename T>
+using has_get_extra_bindings = decltype(std::declval<T &>().getExtraBindings());
+} // namespace
 
-  if (!getRoot()) {
-    for (Operation &op : *getBodyBlock()) {
-      auto iface = cast<MemoryEffectOpInterface>(&op);
+/// Populate `effects` with transform dialect memory effects for the potential
+/// top-level operation. Such operations have recursive effects from nested
+/// operations. When they have an operand, we can additionally remap effects on
+/// the block argument to be effects on the operand.
+template <typename OpTy>
+static void getPotentialTopLevelEffects(
+    OpTy operation, SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(operation->getOperands(), effects);
+  transform::producesHandle(operation->getResults(), effects);
+
+  if (!operation.getRoot()) {
+    for (Operation &op : *operation.getBodyBlock()) {
+      auto iface = dyn_cast<MemoryEffectOpInterface>(&op);
+      if (!iface)
+        continue;
+
       SmallVector<MemoryEffects::EffectInstance, 2> nestedEffects;
       iface.getEffects(effects);
     }
     return;
   }
 
-  // Carry over all effects on the argument of the entry block as those on the
-  // operand, this is the same value just remapped.
-  for (Operation &op : *getBodyBlock()) {
-    auto iface = cast<MemoryEffectOpInterface>(&op);
+  // Carry over all effects on arguments of the entry block as those on the
+  // operands, this is the same value just remapped.
+  for (Operation &op : *operation.getBodyBlock()) {
+    auto iface = dyn_cast<MemoryEffectOpInterface>(&op);
+    if (!iface)
+      continue;
 
-    remapEffects(iface, getBodyBlock()->getArgument(0), getRoot(), effects);
-    for (auto [source, target] : llvm::zip(
-             getBodyBlock()->getArguments().drop_front(), getExtraBindings())) {
-      remapEffects(iface, source, target, effects);
+    remapEffects(iface, operation.getBodyBlock()->getArgument(0),
+                 operation.getRoot(), effects);
+    if constexpr (llvm::is_detected<has_get_extra_bindings, OpTy>::value) {
+      for (auto [source, target] :
+           llvm::zip(operation.getBodyBlock()->getArguments().drop_front(),
+                     operation.getExtraBindings())) {
+        remapEffects(iface, source, target, effects);
+      }
     }
+
+    SmallVector<MemoryEffects::EffectInstance> nestedEffects;
+    iface.getEffectsOnResource(transform::PayloadIRResource::get(),
+                               nestedEffects);
+    llvm::append_range(effects, nestedEffects);
   }
+}
+
+void transform::SequenceOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  getPotentialTopLevelEffects(*this, effects);
 }
 
 OperandRange transform::SequenceOp::getSuccessorEntryOperands(
@@ -983,6 +1011,11 @@ transform::WithPDLPatternsOp::apply(transform::TransformResults &results,
   return state.applyTransform(transformOp);
 }
 
+void transform::WithPDLPatternsOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  getPotentialTopLevelEffects(*this, effects);
+}
+
 LogicalResult transform::WithPDLPatternsOp::verify() {
   Block *body = getBodyBlock();
   Operation *topLevelOp = nullptr;
@@ -1064,4 +1097,13 @@ void transform::PrintOp::getEffects(
   // There is no resource for stderr file descriptor, so just declare print
   // writes into the default resource.
   effects.emplace_back(MemoryEffects::Write::get());
+}
+
+//===----------------------------------------------------------------------===//
+// YieldOp
+//===----------------------------------------------------------------------===//
+
+void transform::YieldOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  onlyReadsHandle(getOperands(), effects);
 }

@@ -32,6 +32,14 @@
 // RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
 // RUN:   -DHIP_VERSION_MAJOR=4 -DHIP_VERSION_MINOR=5 \
 // RUN:   -D__HIPCC_RTC__ | FileCheck -check-prefixes=CHECK,MALLOC %s
+// RUN: %clang_cc1 -no-opaque-pointers -include __clang_hip_runtime_wrapper.h \
+// RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
+// RUN:   -internal-isystem %S/Inputs/include \
+// RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
+// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
+// RUN:   -DHIP_VERSION_MAJOR=4 -DHIP_VERSION_MINOR=5 \
+// RUN:   -fsanitize=address -disable-llvm-passes -D__HIPCC_RTC__ \
+// RUN:   | FileCheck -check-prefixes=MALLOC-ASAN %s
 
 // expected-no-diagnostics
 
@@ -130,6 +138,9 @@ __device__ double test_isnan() {
 // CHECK-LABEL: define weak {{.*}}i8* @malloc(i64
 // MALLOC:  call i64 @__ockl_dm_alloc
 // NOMALLOC:  call void @llvm.trap
+// MALLOC-ASAN-LABEL: define weak {{.*}}i8* @malloc(i64
+// MALLOC-ASAN:  call i8* @llvm.returnaddress(i32 0)
+// MALLOC-ASAN:  call i64 @__asan_malloc_impl(i64 {{.*}}, i64 {{.*}})
 __device__ void test_malloc(void *a) {
   a = malloc(42);
 }
@@ -139,6 +150,9 @@ __device__ void test_malloc(void *a) {
 // CHECK-LABEL: define weak {{.*}}void @free(i8*
 // MALLOC:  call void @__ockl_dm_dealloc
 // NOMALLOC: call void @llvm.trap
+// MALLOC-ASAN-LABEL: define weak {{.*}}void @free(i8*
+// MALLOC-ASAN:  call i8* @llvm.returnaddress(i32 0)
+// MALLOC-ASAN:  call void @__asan_free_impl(i64 {{.*}}, i64 {{.*}})
 __device__ void test_free(void *a) {
   free(a);
 }
