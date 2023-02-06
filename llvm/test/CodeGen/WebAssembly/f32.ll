@@ -217,10 +217,13 @@ define float @fminnum32_intrinsic(float %x, float %y) {
 ; CHECK-LABEL: fminnum32_intrinsic:
 ; CHECK:         .functype fminnum32_intrinsic (f32, f32) -> (f32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    local.get $push2=, 0
-; CHECK-NEXT:    local.get $push1=, 1
-; CHECK-NEXT:    f32.min $push0=, $pop2, $pop1
-; CHECK-NEXT:    return $pop0
+; CHECK-NEXT:    local.get $push5=, 0
+; CHECK-NEXT:    local.get $push4=, 1
+; CHECK-NEXT:    local.get $push3=, 0
+; CHECK-NEXT:    local.get $push2=, 1
+; CHECK-NEXT:    f32.lt $push0=, $pop3, $pop2
+; CHECK-NEXT:    f32.select $push1=, $pop5, $pop4, $pop0
+; CHECK-NEXT:    return $pop1
   %a = call nnan float @llvm.minnum.f32(float %x, float %y)
   ret float %a
 }
@@ -267,10 +270,13 @@ define float @fmaxnum32_intrinsic(float %x, float %y) {
 ; CHECK-LABEL: fmaxnum32_intrinsic:
 ; CHECK:         .functype fmaxnum32_intrinsic (f32, f32) -> (f32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    local.get $push2=, 0
-; CHECK-NEXT:    local.get $push1=, 1
-; CHECK-NEXT:    f32.max $push0=, $pop2, $pop1
-; CHECK-NEXT:    return $pop0
+; CHECK-NEXT:    local.get $push5=, 0
+; CHECK-NEXT:    local.get $push4=, 1
+; CHECK-NEXT:    local.get $push3=, 0
+; CHECK-NEXT:    local.get $push2=, 1
+; CHECK-NEXT:    f32.gt $push0=, $pop3, $pop2
+; CHECK-NEXT:    f32.select $push1=, $pop5, $pop4, $pop0
+; CHECK-NEXT:    return $pop1
   %a = call nnan float @llvm.maxnum.f32(float %x, float %y)
   ret float %a
 }
@@ -291,10 +297,13 @@ define float @fmaxnum32_zero_intrinsic(float %x) {
 ; CHECK-LABEL: fmaxnum32_zero_intrinsic:
 ; CHECK:         .functype fmaxnum32_zero_intrinsic (f32) -> (f32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    local.get $push2=, 0
+; CHECK-NEXT:    local.get $push5=, 0
 ; CHECK-NEXT:    f32.const $push0=, 0x0p0
-; CHECK-NEXT:    f32.max $push1=, $pop2, $pop0
-; CHECK-NEXT:    return $pop1
+; CHECK-NEXT:    local.get $push4=, 0
+; CHECK-NEXT:    f32.const $push3=, 0x0p0
+; CHECK-NEXT:    f32.gt $push1=, $pop4, $pop3
+; CHECK-NEXT:    f32.select $push2=, $pop5, $pop0, $pop1
+; CHECK-NEXT:    return $pop2
   %a = call nnan float @llvm.maxnum.f32(float %x, float 0.0)
   ret float %a
 }
