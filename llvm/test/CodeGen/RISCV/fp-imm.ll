@@ -34,26 +34,26 @@ define float @f32_positive_zero(ptr %pf) nounwind {
 define float @f32_negative_zero(ptr %pf) nounwind {
 ; RV32F-LABEL: f32_negative_zero:
 ; RV32F:       # %bb.0:
-; RV32F-NEXT:    fmv.w.x ft0, zero
-; RV32F-NEXT:    fneg.s fa0, ft0
+; RV32F-NEXT:    lui a0, 524288
+; RV32F-NEXT:    fmv.w.x fa0, a0
 ; RV32F-NEXT:    ret
 ;
 ; RV32D-LABEL: f32_negative_zero:
 ; RV32D:       # %bb.0:
-; RV32D-NEXT:    fmv.w.x ft0, zero
-; RV32D-NEXT:    fneg.s fa0, ft0
+; RV32D-NEXT:    lui a0, 524288
+; RV32D-NEXT:    fmv.w.x fa0, a0
 ; RV32D-NEXT:    ret
 ;
 ; RV64F-LABEL: f32_negative_zero:
 ; RV64F:       # %bb.0:
-; RV64F-NEXT:    fmv.w.x ft0, zero
-; RV64F-NEXT:    fneg.s fa0, ft0
+; RV64F-NEXT:    lui a0, 524288
+; RV64F-NEXT:    fmv.w.x fa0, a0
 ; RV64F-NEXT:    ret
 ;
 ; RV64D-LABEL: f32_negative_zero:
 ; RV64D:       # %bb.0:
-; RV64D-NEXT:    fmv.w.x ft0, zero
-; RV64D-NEXT:    fneg.s fa0, ft0
+; RV64D-NEXT:    lui a0, 524288
+; RV64D-NEXT:    fmv.w.x fa0, a0
 ; RV64D-NEXT:    ret
   ret float -0.0
 }

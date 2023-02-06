@@ -53,6 +53,7 @@
 ! HELP-NEXT: -fxor-operator         Enable .XOR. as a synonym of .NEQV.
 ! HELP-NEXT: -help                  Display available options
 ! HELP-NEXT: -I <dir>               Add directory to the end of the list of include search paths
+! HELP-NEXT: -mllvm=<arg>           Alias for -mllvm
 ! HELP-NEXT: -mllvm <value>         Additional arguments to forward to LLVM's option processing
 ! HELP-NEXT: -mmlir <value>         Additional arguments to forward to MLIR's option processing
 ! HELP-NEXT: -module-dir <dir>      Put MODULE files in <dir>

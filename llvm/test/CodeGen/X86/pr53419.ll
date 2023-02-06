@@ -6,10 +6,76 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx512vl,+avx512bw,+avx512dq | FileCheck %s --check-prefixes=X64,AVX512
 ; RUN: llc < %s -mtriple=i686-unknown   -mattr=+avx2     | FileCheck %s --check-prefixes=X86
 
+declare i1 @llvm.vector.reduce.and.v2i1(<2 x i1>)
 declare i1 @llvm.vector.reduce.and.v4i1(<4 x i1>)
 declare i1 @llvm.vector.reduce.and.v8i1(<8 x i1>)
 
 ; FIXME: All four versions are semantically equivalent and should produce same asm as scalar version.
+
+define i1 @intrinsic_v2i8(ptr align 1 %arg, ptr align 1 %arg1) {
+; SSE2-LABEL: intrinsic_v2i8:
+; SSE2:       # %bb.0: # %bb
+; SSE2-NEXT:    movzwl (%rsi), %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    movzwl (%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,2,1,4,5,6,7]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; SSE2-NEXT:    movmskpd %xmm0, %eax
+; SSE2-NEXT:    cmpb $3, %al
+; SSE2-NEXT:    sete %al
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: intrinsic_v2i8:
+; SSE42:       # %bb.0: # %bb
+; SSE42-NEXT:    pmovzxbq {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; SSE42-NEXT:    pmovzxbq {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; SSE42-NEXT:    psubq %xmm1, %xmm0
+; SSE42-NEXT:    ptest %xmm0, %xmm0
+; SSE42-NEXT:    sete %al
+; SSE42-NEXT:    retq
+;
+; AVX-LABEL: intrinsic_v2i8:
+; AVX:       # %bb.0: # %bb
+; AVX-NEXT:    vpmovzxbq {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; AVX-NEXT:    vpmovzxbq {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; AVX-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vptest %xmm0, %xmm0
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: intrinsic_v2i8:
+; AVX512:       # %bb.0: # %bb
+; AVX512-NEXT:    movzwl (%rsi), %eax
+; AVX512-NEXT:    vmovd %eax, %xmm0
+; AVX512-NEXT:    movzwl (%rdi), %eax
+; AVX512-NEXT:    vmovd %eax, %xmm1
+; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %k0
+; AVX512-NEXT:    knotw %k0, %k0
+; AVX512-NEXT:    kmovd %k0, %eax
+; AVX512-NEXT:    testb $3, %al
+; AVX512-NEXT:    sete %al
+; AVX512-NEXT:    retq
+;
+; X86-LABEL: intrinsic_v2i8:
+; X86:       # %bb.0: # %bb
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    vpmovzxbq {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vpmovzxbq {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vptest %xmm0, %xmm0
+; X86-NEXT:    sete %al
+; X86-NEXT:    retl
+bb:
+  %lhs = load <2 x i8>, ptr %arg1, align 1
+  %rhs = load <2 x i8>, ptr %arg, align 1
+  %cmp = icmp eq <2 x i8> %lhs, %rhs
+  %all_eq = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> %cmp)
+  ret i1 %all_eq
+}
 
 define i1 @intrinsic_v4i8(ptr align 1 %arg, ptr align 1 %arg1) {
 ; SSE2-LABEL: intrinsic_v4i8:
@@ -120,8 +186,75 @@ bb:
   ret i1 %all_eq
 }
 
-define i1 @vector_version(ptr align 1 %arg, ptr align 1 %arg1) {
-; SSE2-LABEL: vector_version:
+define i1 @vector_version_v2i8(ptr align 1 %arg, ptr align 1 %arg1) {
+; SSE2-LABEL: vector_version_v2i8:
+; SSE2:       # %bb.0: # %bb
+; SSE2-NEXT:    movzwl (%rsi), %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    movzwl (%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm0
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,2,1,4,5,6,7]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; SSE2-NEXT:    movmskpd %xmm0, %eax
+; SSE2-NEXT:    testl %eax, %eax
+; SSE2-NEXT:    sete %al
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: vector_version_v2i8:
+; SSE42:       # %bb.0: # %bb
+; SSE42-NEXT:    pmovzxbq {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; SSE42-NEXT:    pmovzxbq {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; SSE42-NEXT:    psubq %xmm1, %xmm0
+; SSE42-NEXT:    ptest %xmm0, %xmm0
+; SSE42-NEXT:    sete %al
+; SSE42-NEXT:    retq
+;
+; AVX-LABEL: vector_version_v2i8:
+; AVX:       # %bb.0: # %bb
+; AVX-NEXT:    vpmovzxbq {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; AVX-NEXT:    vpmovzxbq {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; AVX-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vptest %xmm0, %xmm0
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: vector_version_v2i8:
+; AVX512:       # %bb.0: # %bb
+; AVX512-NEXT:    movzwl (%rsi), %eax
+; AVX512-NEXT:    vmovd %eax, %xmm0
+; AVX512-NEXT:    movzwl (%rdi), %eax
+; AVX512-NEXT:    vmovd %eax, %xmm1
+; AVX512-NEXT:    vpcmpneqb %xmm1, %xmm0, %k0
+; AVX512-NEXT:    kmovd %k0, %eax
+; AVX512-NEXT:    testb $3, %al
+; AVX512-NEXT:    sete %al
+; AVX512-NEXT:    retq
+;
+; X86-LABEL: vector_version_v2i8:
+; X86:       # %bb.0: # %bb
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    vpmovzxbq {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vpmovzxbq {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vptest %xmm0, %xmm0
+; X86-NEXT:    sete %al
+; X86-NEXT:    retl
+bb:
+  %lhs = load <2 x i8>, ptr %arg1, align 1
+  %rhs = load <2 x i8>, ptr %arg, align 1
+  %any_ne = icmp ne <2 x i8> %lhs, %rhs
+  %any_ne_scalar = bitcast <2 x i1> %any_ne to i2
+  %all_eq = icmp eq i2 %any_ne_scalar, 0
+  ret i1 %all_eq
+}
+
+define i1 @vector_version_v4i8(ptr align 1 %arg, ptr align 1 %arg1) {
+; SSE2-LABEL: vector_version_v4i8:
 ; SSE2:       # %bb.0: # %bb
 ; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -135,7 +268,7 @@ define i1 @vector_version(ptr align 1 %arg, ptr align 1 %arg1) {
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
 ;
-; SSE42-LABEL: vector_version:
+; SSE42-LABEL: vector_version_v4i8:
 ; SSE42:       # %bb.0: # %bb
 ; SSE42-NEXT:    pmovzxbd {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
 ; SSE42-NEXT:    pmovzxbd {{.*#+}} xmm1 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
@@ -144,7 +277,7 @@ define i1 @vector_version(ptr align 1 %arg, ptr align 1 %arg1) {
 ; SSE42-NEXT:    sete %al
 ; SSE42-NEXT:    retq
 ;
-; AVX-LABEL: vector_version:
+; AVX-LABEL: vector_version_v4i8:
 ; AVX:       # %bb.0: # %bb
 ; AVX-NEXT:    vpmovzxbd {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
 ; AVX-NEXT:    vpmovzxbd {{.*#+}} xmm1 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
@@ -153,7 +286,7 @@ define i1 @vector_version(ptr align 1 %arg, ptr align 1 %arg1) {
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
 ;
-; AVX512-LABEL: vector_version:
+; AVX512-LABEL: vector_version_v4i8:
 ; AVX512:       # %bb.0: # %bb
 ; AVX512-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX512-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -163,7 +296,7 @@ define i1 @vector_version(ptr align 1 %arg, ptr align 1 %arg1) {
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    retq
 ;
-; X86-LABEL: vector_version:
+; X86-LABEL: vector_version_v4i8:
 ; X86:       # %bb.0: # %bb
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -179,6 +312,81 @@ bb:
   %any_ne = icmp ne <4 x i8> %lhs, %rhs
   %any_ne_scalar = bitcast <4 x i1> %any_ne to i4
   %all_eq = icmp eq i4 %any_ne_scalar, 0
+  ret i1 %all_eq
+}
+
+define i1 @vector_version_v8i8(ptr align 1 %arg, ptr align 1 %arg1) {
+; SSE-LABEL: vector_version_v8i8:
+; SSE:       # %bb.0: # %bb
+; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE-NEXT:    pcmpeqb %xmm0, %xmm1
+; SSE-NEXT:    pmovmskb %xmm1, %eax
+; SSE-NEXT:    xorb $-1, %al
+; SSE-NEXT:    sete %al
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: vector_version_v8i8:
+; AVX:       # %bb.0: # %bb
+; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpmovmskb %xmm0, %eax
+; AVX-NEXT:    xorb $-1, %al
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: vector_version_v8i8:
+; AVX512:       # %bb.0: # %bb
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX512-NEXT:    vpcmpneqb %xmm1, %xmm0, %k0
+; AVX512-NEXT:    kortestb %k0, %k0
+; AVX512-NEXT:    sete %al
+; AVX512-NEXT:    retq
+;
+; X86-LABEL: vector_version_v8i8:
+; X86:       # %bb.0: # %bb
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; X86-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vpmovmskb %xmm0, %eax
+; X86-NEXT:    xorb $-1, %al
+; X86-NEXT:    sete %al
+; X86-NEXT:    retl
+bb:
+  %lhs = load <8 x i8>, ptr %arg1, align 1
+  %rhs = load <8 x i8>, ptr %arg, align 1
+  %any_ne = icmp ne <8 x i8> %lhs, %rhs
+  %any_ne_scalar = bitcast <8 x i1> %any_ne to i8
+  %all_eq = icmp eq i8 %any_ne_scalar, 0
+  ret i1 %all_eq
+}
+
+define i1 @mixed_version_v2i8(ptr align 1 %arg, ptr align 1 %arg1) {
+; X64-LABEL: mixed_version_v2i8:
+; X64:       # %bb.0: # %bb
+; X64-NEXT:    movzwl (%rsi), %eax
+; X64-NEXT:    cmpw (%rdi), %ax
+; X64-NEXT:    sete %al
+; X64-NEXT:    retq
+;
+; X86-LABEL: mixed_version_v2i8:
+; X86:       # %bb.0: # %bb
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzwl (%ecx), %ecx
+; X86-NEXT:    cmpw (%eax), %cx
+; X86-NEXT:    sete %al
+; X86-NEXT:    retl
+bb:
+  %lhs = load <2 x i8>, ptr %arg1, align 1
+  %rhs = load <2 x i8>, ptr %arg, align 1
+  %lhs_s = bitcast <2 x i8> %lhs to i16
+  %rhs_s = bitcast <2 x i8> %rhs to i16
+  %all_eq = icmp eq i16 %lhs_s, %rhs_s
   ret i1 %all_eq
 }
 
@@ -235,15 +443,38 @@ bb:
   ret i1 %all_eq
 }
 
-define i1 @scalar_version(ptr align 1 %arg, ptr align 1 %arg1) {
-; X64-LABEL: scalar_version:
+define i1 @scalar_version_i16(ptr align 1 %arg, ptr align 1 %arg1) {
+; X64-LABEL: scalar_version_i16:
+; X64:       # %bb.0: # %bb
+; X64-NEXT:    movzwl (%rsi), %eax
+; X64-NEXT:    cmpw (%rdi), %ax
+; X64-NEXT:    sete %al
+; X64-NEXT:    retq
+;
+; X86-LABEL: scalar_version_i16:
+; X86:       # %bb.0: # %bb
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzwl (%ecx), %ecx
+; X86-NEXT:    cmpw (%eax), %cx
+; X86-NEXT:    sete %al
+; X86-NEXT:    retl
+bb:
+  %lhs = load i16, ptr %arg1, align 1
+  %rhs = load i16, ptr %arg, align 1
+  %all_eq = icmp eq i16 %lhs, %rhs
+  ret i1 %all_eq
+}
+
+define i1 @scalar_version_i32(ptr align 1 %arg, ptr align 1 %arg1) {
+; X64-LABEL: scalar_version_i32:
 ; X64:       # %bb.0: # %bb
 ; X64-NEXT:    movl (%rsi), %eax
 ; X64-NEXT:    cmpl (%rdi), %eax
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
 ;
-; X86-LABEL: scalar_version:
+; X86-LABEL: scalar_version_i32:
 ; X86:       # %bb.0: # %bb
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -255,5 +486,31 @@ bb:
   %lhs = load i32, ptr %arg1, align 1
   %rhs = load i32, ptr %arg, align 1
   %all_eq = icmp eq i32 %lhs, %rhs
+  ret i1 %all_eq
+}
+
+define i1 @scalar_version_i64(ptr align 1 %arg, ptr align 1 %arg1) {
+; X64-LABEL: scalar_version_i64:
+; X64:       # %bb.0: # %bb
+; X64-NEXT:    movq (%rsi), %rax
+; X64-NEXT:    cmpq (%rdi), %rax
+; X64-NEXT:    sete %al
+; X64-NEXT:    retq
+;
+; X86-LABEL: scalar_version_i64:
+; X86:       # %bb.0: # %bb
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl (%ecx), %edx
+; X86-NEXT:    movl 4(%ecx), %ecx
+; X86-NEXT:    xorl 4(%eax), %ecx
+; X86-NEXT:    xorl (%eax), %edx
+; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    sete %al
+; X86-NEXT:    retl
+bb:
+  %lhs = load i64, ptr %arg1, align 1
+  %rhs = load i64, ptr %arg, align 1
+  %all_eq = icmp eq i64 %lhs, %rhs
   ret i1 %all_eq
 }

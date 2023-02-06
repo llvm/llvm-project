@@ -744,8 +744,6 @@ void USRGenerator::VisitType(QualType T) {
         case BuiltinType::Id: \
           Out << "@BT@" << Name; break;
 #include "clang/Basic/RISCVVTypes.def"
-#define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/WebAssemblyReferenceTypes.def"
         case BuiltinType::ShortAccum:
           Out << "@BT@ShortAccum"; break;
         case BuiltinType::Accum:

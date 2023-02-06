@@ -168,6 +168,16 @@ foreach(proj IN LISTS LLVM_ENABLE_RUNTIMES)
   endif()
 endforeach()
 
+if ("libc" IN_LIST LLVM_ENABLE_RUNTIMES)
+  # To build the libc runtime, we need to be able to build few libc build
+  # tools from the "libc" project. So, we add it to the list of enabled
+  # projects.
+  if (NOT "libc" IN_LIST LLVM_ENABLE_PROJECTS)
+    message(STATUS "Enabling libc project to build libc build tools")
+    list(APPEND LLVM_ENABLE_PROJECTS "libc")
+  endif()
+endif()
+
 # LLVM_ENABLE_PROJECTS_USED is `ON` if the user has ever used the
 # `LLVM_ENABLE_PROJECTS` CMake cache variable.  This exists for
 # several reasons:

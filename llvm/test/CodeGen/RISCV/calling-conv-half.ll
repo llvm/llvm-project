@@ -163,8 +163,8 @@ define i32 @caller_half_in_regs() nounwind {
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    addi sp, sp, -16
 ; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IF-NEXT:    lui a0, %hi(.LCPI1_0)
-; RV64IF-NEXT:    flw ft0, %lo(.LCPI1_0)(a0)
+; RV64IF-NEXT:    lui a0, 1048564
+; RV64IF-NEXT:    fmv.w.x ft0, a0
 ; RV64IF-NEXT:    fmv.x.w a1, ft0
 ; RV64IF-NEXT:    li a0, 1
 ; RV64IF-NEXT:    call callee_half_in_regs@plt
@@ -176,8 +176,8 @@ define i32 @caller_half_in_regs() nounwind {
 ; RV32-ILP32F:       # %bb.0:
 ; RV32-ILP32F-NEXT:    addi sp, sp, -16
 ; RV32-ILP32F-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-ILP32F-NEXT:    lui a0, %hi(.LCPI1_0)
-; RV32-ILP32F-NEXT:    flw fa0, %lo(.LCPI1_0)(a0)
+; RV32-ILP32F-NEXT:    lui a0, 1048564
+; RV32-ILP32F-NEXT:    fmv.w.x fa0, a0
 ; RV32-ILP32F-NEXT:    li a0, 1
 ; RV32-ILP32F-NEXT:    call callee_half_in_regs@plt
 ; RV32-ILP32F-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -188,8 +188,8 @@ define i32 @caller_half_in_regs() nounwind {
 ; RV64-LP64F:       # %bb.0:
 ; RV64-LP64F-NEXT:    addi sp, sp, -16
 ; RV64-LP64F-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-LP64F-NEXT:    lui a0, %hi(.LCPI1_0)
-; RV64-LP64F-NEXT:    flw fa0, %lo(.LCPI1_0)(a0)
+; RV64-LP64F-NEXT:    lui a0, 1048564
+; RV64-LP64F-NEXT:    fmv.w.x fa0, a0
 ; RV64-LP64F-NEXT:    li a0, 1
 ; RV64-LP64F-NEXT:    call callee_half_in_regs@plt
 ; RV64-LP64F-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -200,8 +200,8 @@ define i32 @caller_half_in_regs() nounwind {
 ; RV32-ILP32ZFHMIN:       # %bb.0:
 ; RV32-ILP32ZFHMIN-NEXT:    addi sp, sp, -16
 ; RV32-ILP32ZFHMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-ILP32ZFHMIN-NEXT:    lui a0, %hi(.LCPI1_0)
-; RV32-ILP32ZFHMIN-NEXT:    flh fa0, %lo(.LCPI1_0)(a0)
+; RV32-ILP32ZFHMIN-NEXT:    lui a0, 4
+; RV32-ILP32ZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV32-ILP32ZFHMIN-NEXT:    li a0, 1
 ; RV32-ILP32ZFHMIN-NEXT:    call callee_half_in_regs@plt
 ; RV32-ILP32ZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -212,8 +212,8 @@ define i32 @caller_half_in_regs() nounwind {
 ; RV64-LP64ZFHMIN:       # %bb.0:
 ; RV64-LP64ZFHMIN-NEXT:    addi sp, sp, -16
 ; RV64-LP64ZFHMIN-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-LP64ZFHMIN-NEXT:    lui a0, %hi(.LCPI1_0)
-; RV64-LP64ZFHMIN-NEXT:    flh fa0, %lo(.LCPI1_0)(a0)
+; RV64-LP64ZFHMIN-NEXT:    lui a0, 4
+; RV64-LP64ZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV64-LP64ZFHMIN-NEXT:    li a0, 1
 ; RV64-LP64ZFHMIN-NEXT:    call callee_half_in_regs@plt
 ; RV64-LP64ZFHMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload

@@ -106,12 +106,7 @@ def main():
 
       tool_cmd_args = tool_cmd[len(tool_basename):].strip()
       tool_cmd_args = tool_cmd_args.replace('< %s', '').replace('%s', '').strip()
-
-      check_prefixes = [item for m in
-                        common.CHECK_PREFIX_RE.finditer(filecheck_cmd)
-                        for item in m.group(1).split(',')]
-      if not check_prefixes:
-        check_prefixes = ['CHECK']
+      check_prefixes = common.get_check_prefixes(filecheck_cmd)
 
       # FIXME: We should use multiple check prefixes to common check lines. For
       # now, we just ignore all but the last.
