@@ -474,7 +474,7 @@ public:
 
   void logRewardIfNeeded(const MachineFunction &MF,
                          llvm::function_ref<float()> GetReward) override {
-    if (!Log)
+    if (!Log || !Log->hasAnyObservationForContext(MF.getName()))
       return;
     // The function pass manager would run all the function passes for a
     // function, so we assume the last context belongs to this function. If
