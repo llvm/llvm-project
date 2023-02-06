@@ -128,21 +128,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampScalar(0, s32, s64)
       .clampNumElements(0, v2s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
-      .minScalarOrEltIf(
-          [=](const LegalityQuery &Query) {
-            return Query.Types[0].getNumElements() <= 2;
-          },
-          0, s32)
-      .minScalarOrEltIf(
-          [=](const LegalityQuery &Query) {
-            return Query.Types[0].getNumElements() <= 4;
-          },
-          0, s16)
-      .minScalarOrEltIf(
-          [=](const LegalityQuery &Query) {
-            return Query.Types[0].getNumElements() <= 16;
-          },
-          0, s8)
       .moreElementsToNextPow2(0);
 
   getActionDefinitionsBuilder({G_SHL, G_ASHR, G_LSHR})
