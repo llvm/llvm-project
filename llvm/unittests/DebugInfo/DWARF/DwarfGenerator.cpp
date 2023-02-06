@@ -60,6 +60,7 @@ void dwarfgen::DIE::addAttribute(uint16_t A, dwarf::Form Form, uint64_t U) {
   case DW_FORM_addrx3:
   case DW_FORM_addrx4:
     U = DG.getAddressPool().getIndex(U);
+    break;
   default:
     break;
   }
