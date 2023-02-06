@@ -26,7 +26,8 @@ end subroutine
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %{{.*}} {{.*}}Ex
 ! CHECK:  %[[VAL_2:.*]] = hlfir.designate %[[VAL_1]]#0{"p"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QMmTt2{p:!fir.box<!fir.ptr<!fir.type<_QMmTt1{x:f32}>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt1{x:f32}>>>>
 ! CHECK:  %[[VAL_3:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt1{x:f32}>>>>
-! CHECK:  %[[VAL_4:.*]] = hlfir.designate %[[VAL_3]]{"x"}   : (!fir.box<!fir.ptr<!fir.type<_QMmTt1{x:f32}>>>) -> !fir.ref<f32>
+! CHECK:  %[[VAL_4:.*]] = fir.box_addr %[[VAL_3:.*]] : (!fir.box<!fir.ptr<!fir.type<_QMmTt1{x:f32}>>>) -> !fir.ptr<!fir.type<_QMmTt1{x:f32}>>
+! CHECK:  hlfir.designate %[[VAL_4]]{"x"}   : (!fir.ptr<!fir.type<_QMmTt1{x:f32}>>) -> !fir.ref<f32>
 
 subroutine test_symbol_followed_by_ref(x)
   character(:), allocatable :: x(:)
