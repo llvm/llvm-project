@@ -8,6 +8,9 @@
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c < %s \
 # RUN:     | llvm-objdump -M no-aliases -d -r - \
 # RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
+# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c < %s \
+# RUN:     | llvm-objdump -d -r - \
+# RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: c.nop 8
 # CHECK-ASM: encoding: [0x21,0x00]

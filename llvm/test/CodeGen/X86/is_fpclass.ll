@@ -416,24 +416,15 @@ entry:
 define i1 @iszero_f_daz(float %x) #0 {
 ; CHECK-32-LABEL: iszero_f_daz:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-32-NEXT:    fldz
-; CHECK-32-NEXT:    fucompp
-; CHECK-32-NEXT:    fnstsw %ax
-; CHECK-32-NEXT:    # kill: def $ah killed $ah killed $ax
-; CHECK-32-NEXT:    sahf
-; CHECK-32-NEXT:    setnp %cl
+; CHECK-32-NEXT:    testl $2147483647, {{[0-9]+}}(%esp) # imm = 0x7FFFFFFF
 ; CHECK-32-NEXT:    sete %al
-; CHECK-32-NEXT:    andb %cl, %al
 ; CHECK-32-NEXT:    retl
 ;
 ; CHECK-64-LABEL: iszero_f_daz:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    xorps %xmm1, %xmm1
-; CHECK-64-NEXT:    cmpeqss %xmm0, %xmm1
-; CHECK-64-NEXT:    movd %xmm1, %eax
-; CHECK-64-NEXT:    andl $1, %eax
-; CHECK-64-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    testl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    sete %al
 ; CHECK-64-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 96)  ; 0x60 = "zero"
@@ -443,24 +434,15 @@ entry:
 define i1 @iszero_f_maybe_daz(float %x) #1 {
 ; CHECK-32-LABEL: iszero_f_maybe_daz:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-32-NEXT:    fldz
-; CHECK-32-NEXT:    fucompp
-; CHECK-32-NEXT:    fnstsw %ax
-; CHECK-32-NEXT:    # kill: def $ah killed $ah killed $ax
-; CHECK-32-NEXT:    sahf
-; CHECK-32-NEXT:    setnp %cl
+; CHECK-32-NEXT:    testl $2147483647, {{[0-9]+}}(%esp) # imm = 0x7FFFFFFF
 ; CHECK-32-NEXT:    sete %al
-; CHECK-32-NEXT:    andb %cl, %al
 ; CHECK-32-NEXT:    retl
 ;
 ; CHECK-64-LABEL: iszero_f_maybe_daz:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    xorps %xmm1, %xmm1
-; CHECK-64-NEXT:    cmpeqss %xmm0, %xmm1
-; CHECK-64-NEXT:    movd %xmm1, %eax
-; CHECK-64-NEXT:    andl $1, %eax
-; CHECK-64-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    testl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    sete %al
 ; CHECK-64-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 96)  ; 0x60 = "zero"

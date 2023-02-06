@@ -5710,6 +5710,10 @@ static std::optional<APInt> FoldValue(unsigned Opcode, const APInt &C1,
     APInt C2Ext = C2.zext(FullWidth);
     return (C1Ext + C2Ext + 1).extractBits(C1.getBitWidth(), 1);
   }
+  case ISD::ABDS:
+    return APIntOps::smax(C1, C2) - APIntOps::smin(C1, C2);
+  case ISD::ABDU:
+    return APIntOps::umax(C1, C2) - APIntOps::umin(C1, C2);
   }
   return std::nullopt;
 }

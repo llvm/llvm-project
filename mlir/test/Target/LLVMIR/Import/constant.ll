@@ -60,10 +60,10 @@ define ptr @null_constant() {
 
 ; CHECK-LABEL: @gep_const_expr
 define ptr @gep_const_expr() {
-  ; CHECK:  %[[ADDR:[0-9]+]] = llvm.mlir.addressof @global : !llvm.ptr
-  ; CHECK:  %[[IDX:[0-9]+]] = llvm.mlir.constant(2 : i32) : i32
-  ; CHECK:  %[[GEP:[0-9]+]] = llvm.getelementptr %[[ADDR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr
-  ; CHECK:  llvm.return %[[GEP]] : !llvm.ptr
+  ; CHECK-DAG:  %[[ADDR:[0-9]+]] = llvm.mlir.addressof @global : !llvm.ptr
+  ; CHECK-DAG:  %[[IDX:[0-9]+]] = llvm.mlir.constant(2 : i32) : i32
+  ; CHECK-DAG:  %[[GEP:[0-9]+]] = llvm.getelementptr %[[ADDR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr
+  ; CHECK-DAG:  llvm.return %[[GEP]] : !llvm.ptr
   ret ptr getelementptr (i32, ptr @global, i32 2)
 }
 
@@ -73,14 +73,14 @@ define ptr @gep_const_expr() {
 
 ; CHECK-LABEL: @const_expr_with_duplicate
 define i64 @const_expr_with_duplicate() {
-  ; CHECK:  %[[ADDR:[0-9]+]] = llvm.mlir.addressof @global : !llvm.ptr
-  ; CHECK:  %[[IDX:[0-9]+]] = llvm.mlir.constant(7 : i32) : i32
-  ; CHECK:  %[[GEP:[0-9]+]] = llvm.getelementptr %[[ADDR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr
-  ; CHECK:  %[[DUP:[0-9]+]] = llvm.ptrtoint %[[GEP]] : !llvm.ptr to i64
+  ; CHECK-DAG:  %[[ADDR:[0-9]+]] = llvm.mlir.addressof @global : !llvm.ptr
+  ; CHECK-DAG:  %[[IDX:[0-9]+]] = llvm.mlir.constant(7 : i32) : i32
+  ; CHECK-DAG:  %[[GEP:[0-9]+]] = llvm.getelementptr %[[ADDR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr
+  ; CHECK-DAG:  %[[DUP:[0-9]+]] = llvm.ptrtoint %[[GEP]] : !llvm.ptr to i64
 
   ; Verify the duplicate sub expression is converted only once.
-  ; CHECK:  %[[SUM:[0-9]+]] = llvm.add %[[DUP]], %[[DUP]] : i64
-  ; CHECK:  llvm.return %[[SUM]] : i64
+  ; CHECK-DAG:  %[[SUM:[0-9]+]] = llvm.add %[[DUP]], %[[DUP]] : i64
+  ; CHECK-DAG:  llvm.return %[[SUM]] : i64
   ret i64 add (i64 ptrtoint (ptr getelementptr (i32, ptr @global, i32 7) to i64),
                i64 ptrtoint (ptr getelementptr (i32, ptr @global, i32 7) to i64))
 }
@@ -92,27 +92,27 @@ define i64 @const_expr_with_duplicate() {
 ; CHECK-LABEL: @const_expr_with_aggregate()
 define i64 @const_expr_with_aggregate() {
   ; Compute the vector elements.
-  ; CHECK:  %[[VAL1:[0-9]+]] = llvm.mlir.constant(33 : i64) : i64
-  ; CHECK:  %[[ADDR:[0-9]+]] = llvm.mlir.addressof @global : !llvm.ptr
-  ; CHECK:  %[[IDX1:[0-9]+]] = llvm.mlir.constant(7 : i32) : i32
-  ; CHECK:  %[[GEP1:[0-9]+]] = llvm.getelementptr %[[ADDR]][%[[IDX1]]] : (!llvm.ptr, i32) -> !llvm.ptr
-  ; CHECK:  %[[VAL2:[0-9]+]] = llvm.ptrtoint %[[GEP1]] : !llvm.ptr to i64
+  ; CHECK-DAG:  %[[VAL1:[0-9]+]] = llvm.mlir.constant(33 : i64) : i64
+  ; CHECK-DAG:  %[[ADDR:[0-9]+]] = llvm.mlir.addressof @global : !llvm.ptr
+  ; CHECK-DAG:  %[[IDX1:[0-9]+]] = llvm.mlir.constant(7 : i32) : i32
+  ; CHECK-DAG:  %[[GEP1:[0-9]+]] = llvm.getelementptr %[[ADDR]][%[[IDX1]]] : (!llvm.ptr, i32) -> !llvm.ptr
+  ; CHECK-DAG:  %[[VAL2:[0-9]+]] = llvm.ptrtoint %[[GEP1]] : !llvm.ptr to i64
 
   ; Fill the vector.
-  ; CHECK:  %[[VEC1:[0-9]+]] = llvm.mlir.undef : vector<2xi64>
-  ; CHECK:  %[[IDX2:[0-9]+]] = llvm.mlir.constant(0 : i32) : i32
-  ; CHECK:  %[[VEC2:[0-9]+]] = llvm.insertelement %[[VAL1]], %[[VEC1]][%[[IDX2]] : i32] : vector<2xi64>
-  ; CHECK:  %[[IDX3:[0-9]+]] = llvm.mlir.constant(1 : i32) : i32
-  ; CHECK:  %[[VEC3:[0-9]+]] = llvm.insertelement %[[VAL2]], %[[VEC2]][%[[IDX3]] : i32] : vector<2xi64>
-  ; CHECK:  %[[IDX4:[0-9]+]] = llvm.mlir.constant(42 : i32) : i32
+  ; CHECK-DAG:  %[[VEC1:[0-9]+]] = llvm.mlir.undef : vector<2xi64>
+  ; CHECK-DAG:  %[[IDX2:[0-9]+]] = llvm.mlir.constant(0 : i32) : i32
+  ; CHECK-DAG:  %[[VEC2:[0-9]+]] = llvm.insertelement %[[VAL1]], %[[VEC1]][%[[IDX2]] : i32] : vector<2xi64>
+  ; CHECK-DAG:  %[[IDX3:[0-9]+]] = llvm.mlir.constant(1 : i32) : i32
+  ; CHECK-DAG:  %[[VEC3:[0-9]+]] = llvm.insertelement %[[VAL2]], %[[VEC2]][%[[IDX3]] : i32] : vector<2xi64>
+  ; CHECK-DAG:  %[[IDX4:[0-9]+]] = llvm.mlir.constant(42 : i32) : i32
 
   ; Compute the extract index.
-  ; CHECK:  %[[GEP2:[0-9]+]] = llvm.getelementptr %[[ADDR]][%[[IDX4]]] : (!llvm.ptr, i32) -> !llvm.ptr
-  ; CHECK:  %[[IDX5:[0-9]+]] = llvm.ptrtoint %[[GEP2]] : !llvm.ptr to i64
+  ; CHECK-DAG:  %[[GEP2:[0-9]+]] = llvm.getelementptr %[[ADDR]][%[[IDX4]]] : (!llvm.ptr, i32) -> !llvm.ptr
+  ; CHECK-DAG:  %[[IDX5:[0-9]+]] = llvm.ptrtoint %[[GEP2]] : !llvm.ptr to i64
 
   ; Extract the vector element.
-  ; CHECK:  %[[ELEM:[0-9]+]] = llvm.extractelement %[[VEC3]][%[[IDX5]] : i64] : vector<2xi64>
-  ; CHECK:  llvm.return %[[ELEM]] : i64
+  ; CHECK-DAG:  %[[ELEM:[0-9]+]] = llvm.extractelement %[[VEC3]][%[[IDX5]] : i64] : vector<2xi64>
+  ; CHECK-DAG:  llvm.return %[[ELEM]] : i64
   ret i64 extractelement (
     <2 x i64> <i64 33, i64 ptrtoint (ptr getelementptr (i32, ptr @global, i32 7) to i64)>,
     i64 ptrtoint (ptr getelementptr (i32, ptr @global, i32 42) to i64))
@@ -158,43 +158,43 @@ define i32 @function_address_after_def() {
 
 ; Verify the aggregate constant import.
 
-; CHECK:  %[[C0:.+]] = llvm.mlir.constant(9 : i32) : i32
-; CHECK:  %[[C1:.+]] = llvm.mlir.constant(4 : i8) : i8
-; CHECK:  %[[C2:.+]] = llvm.mlir.constant(8 : i16) : i16
-; CHECK:  %[[C3:.+]] = llvm.mlir.constant(7 : i32) : i32
-; CHECK:  %[[ROOT:.+]] = llvm.mlir.undef : !llvm.struct<"simple_agg_type", (i32, i8, i16, i32)>
-; CHECK:  %[[CHAIN0:.+]] = llvm.insertvalue %[[C0]], %[[ROOT]][0]
-; CHECK:  %[[CHAIN1:.+]] = llvm.insertvalue %[[C1]], %[[CHAIN0]][1]
-; CHECK:  %[[CHAIN2:.+]] = llvm.insertvalue %[[C2]], %[[CHAIN1]][2]
-; CHECK:  %[[CHAIN3:.+]] = llvm.insertvalue %[[C3]], %[[CHAIN2]][3]
-; CHECK:  llvm.return %[[CHAIN3]]
+; CHECK-DAG:  %[[C0:.+]] = llvm.mlir.constant(9 : i32) : i32
+; CHECK-DAG:  %[[C1:.+]] = llvm.mlir.constant(4 : i8) : i8
+; CHECK-DAG:  %[[C2:.+]] = llvm.mlir.constant(8 : i16) : i16
+; CHECK-DAG:  %[[C3:.+]] = llvm.mlir.constant(7 : i32) : i32
+; CHECK-DAG:  %[[ROOT:.+]] = llvm.mlir.undef : !llvm.struct<"simple_agg_type", (i32, i8, i16, i32)>
+; CHECK-DAG:  %[[CHAIN0:.+]] = llvm.insertvalue %[[C0]], %[[ROOT]][0]
+; CHECK-DAG:  %[[CHAIN1:.+]] = llvm.insertvalue %[[C1]], %[[CHAIN0]][1]
+; CHECK-DAG:  %[[CHAIN2:.+]] = llvm.insertvalue %[[C2]], %[[CHAIN1]][2]
+; CHECK-DAG:  %[[CHAIN3:.+]] = llvm.insertvalue %[[C3]], %[[CHAIN2]][3]
+; CHECK-DAG:  llvm.return %[[CHAIN3]]
 %simple_agg_type = type {i32, i8, i16, i32}
 @simple_agg = global %simple_agg_type {i32 9, i8 4, i16 8, i32 7}
 
-; CHECK:  %[[C1:.+]] = llvm.mlir.constant(1 : i32) : i32
-; CHECK:  %[[C2:.+]] = llvm.mlir.constant(2 : i8) : i8
-; CHECK:  %[[C3:.+]] = llvm.mlir.constant(3 : i16) : i16
-; CHECK:  %[[C4:.+]] = llvm.mlir.constant(4 : i32) : i32
-; CHECK:  %[[NESTED:.+]] = llvm.mlir.undef : !llvm.struct<"simple_agg_type", (i32, i8, i16, i32)>
-; CHECK:  %[[CHAIN0:.+]] = llvm.insertvalue %[[C1]], %[[NESTED]][0]
-; CHECK:  %[[CHAIN1:.+]] = llvm.insertvalue %[[C2]], %[[CHAIN0]][1]
-; CHECK:  %[[CHAIN2:.+]] = llvm.insertvalue %[[C3]], %[[CHAIN1]][2]
-; CHECK:  %[[CHAIN3:.+]] = llvm.insertvalue %[[C4]], %[[CHAIN2]][3]
-; CHECK:  %[[NULL:.+]] = llvm.mlir.null : !llvm.ptr
-; CHECK:  %[[ROOT:.+]] = llvm.mlir.undef : !llvm.struct<"nested_agg_type", (struct<"simple_agg_type", (i32, i8, i16, i32)>, ptr)>
-; CHECK:  %[[CHAIN4:.+]] = llvm.insertvalue %[[CHAIN3]], %[[ROOT]][0]
-; CHECK:  %[[CHAIN5:.+]] = llvm.insertvalue %[[NULL]], %[[CHAIN4]][1]
-; CHECK:  llvm.return %[[CHAIN5]]
+; CHECK-DAG:  %[[C1:.+]] = llvm.mlir.constant(1 : i32) : i32
+; CHECK-DAG:  %[[C2:.+]] = llvm.mlir.constant(2 : i8) : i8
+; CHECK-DAG:  %[[C3:.+]] = llvm.mlir.constant(3 : i16) : i16
+; CHECK-DAG:  %[[C4:.+]] = llvm.mlir.constant(4 : i32) : i32
+; CHECK-DAG:  %[[NESTED:.+]] = llvm.mlir.undef : !llvm.struct<"simple_agg_type", (i32, i8, i16, i32)>
+; CHECK-DAG:  %[[CHAIN0:.+]] = llvm.insertvalue %[[C1]], %[[NESTED]][0]
+; CHECK-DAG:  %[[CHAIN1:.+]] = llvm.insertvalue %[[C2]], %[[CHAIN0]][1]
+; CHECK-DAG:  %[[CHAIN2:.+]] = llvm.insertvalue %[[C3]], %[[CHAIN1]][2]
+; CHECK-DAG:  %[[CHAIN3:.+]] = llvm.insertvalue %[[C4]], %[[CHAIN2]][3]
+; CHECK-DAG:  %[[NULL:.+]] = llvm.mlir.null : !llvm.ptr
+; CHECK-DAG:  %[[ROOT:.+]] = llvm.mlir.undef : !llvm.struct<"nested_agg_type", (struct<"simple_agg_type", (i32, i8, i16, i32)>, ptr)>
+; CHECK-DAG:  %[[CHAIN4:.+]] = llvm.insertvalue %[[CHAIN3]], %[[ROOT]][0]
+; CHECK-DAG:  %[[CHAIN5:.+]] = llvm.insertvalue %[[NULL]], %[[CHAIN4]][1]
+; CHECK-DAG:  llvm.return %[[CHAIN5]]
 %nested_agg_type = type {%simple_agg_type, ptr}
 @nested_agg = global %nested_agg_type { %simple_agg_type{i32 1, i8 2, i16 3, i32 4}, ptr null }
 
-; CHECK:  %[[NULL:.+]] = llvm.mlir.null : !llvm.ptr
-; CHECK:  %[[ROOT:.+]] = llvm.mlir.undef : !llvm.vec<2 x ptr>
-; CHECK:  %[[P0:.+]] = llvm.mlir.constant(0 : i32) : i32
-; CHECK:  %[[CHAIN0:.+]] = llvm.insertelement %[[NULL]], %[[ROOT]][%[[P0]] : i32] : !llvm.vec<2 x ptr>
-; CHECK:  %[[P1:.+]] = llvm.mlir.constant(1 : i32) : i32
-; CHECK:  %[[CHAIN1:.+]] = llvm.insertelement %[[NULL]], %[[CHAIN0]][%[[P1]] : i32] : !llvm.vec<2 x ptr>
-; CHECK:  llvm.return %[[CHAIN1]] : !llvm.vec<2 x ptr>
+; CHECK-DAG:  %[[NULL:.+]] = llvm.mlir.null : !llvm.ptr
+; CHECK-DAG:  %[[ROOT:.+]] = llvm.mlir.undef : !llvm.vec<2 x ptr>
+; CHECK-DAG:  %[[P0:.+]] = llvm.mlir.constant(0 : i32) : i32
+; CHECK-DAG:  %[[CHAIN0:.+]] = llvm.insertelement %[[NULL]], %[[ROOT]][%[[P0]] : i32] : !llvm.vec<2 x ptr>
+; CHECK-DAG:  %[[P1:.+]] = llvm.mlir.constant(1 : i32) : i32
+; CHECK-DAG:  %[[CHAIN1:.+]] = llvm.insertelement %[[NULL]], %[[CHAIN0]][%[[P1]] : i32] : !llvm.vec<2 x ptr>
+; CHECK-DAG:  llvm.return %[[CHAIN1]] : !llvm.vec<2 x ptr>
 @vector_agg = global <2 x ptr> <ptr null, ptr null>
 
 ; // -----
@@ -214,3 +214,15 @@ define i64 @const_exprs_with_duplicate() {
   %2 = add i64 %1, ptrtoint (ptr getelementptr (i32, ptr @global, i32 42) to i64)
   ret i64 %2
 }
+
+; // -----
+
+; Verify the import of constant expressions with cyclic dependencies.
+
+@cyclic = internal constant i64 mul (i64 ptrtoint (ptr @cyclic to i64), i64 ptrtoint (ptr @cyclic to i64))
+
+; CHECK-LABEL: @cyclic
+; CHECK:  %[[ADDR:.+]] = llvm.mlir.addressof @cyclic
+; CHECK:  %[[VAL0:.+]] = llvm.ptrtoint %[[ADDR]]
+; CHECK:  %[[VAL1:.+]] = llvm.mul %[[VAL0]], %[[VAL0]]
+; CHECK:  llvm.return %[[VAL1]]

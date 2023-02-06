@@ -185,7 +185,8 @@ Expected<OffloadFile> getInputBitcodeLibrary(StringRef Input) {
   OffloadingImage Image{};
   Image.TheImageKind = IMG_Bitcode;
   Image.TheOffloadKind = getOffloadKind(Kind);
-  Image.StringData = {{"triple", Triple}, {"arch", Arch}};
+  Image.StringData["triple"] = Triple;
+  Image.StringData["arch"] = Arch;
   Image.Image = std::move(*ImageOrError);
 
   std::unique_ptr<MemoryBuffer> Binary = OffloadBinary::write(Image);
@@ -1058,11 +1059,8 @@ linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles,
       TheImage.TheImageKind =
           Args.hasArg(OPT_embed_bitcode) ? IMG_Bitcode : IMG_Object;
       TheImage.TheOffloadKind = Kind;
-      TheImage.StringData = {
-          {"triple",
-           Args.MakeArgString(LinkerArgs.getLastArgValue(OPT_triple_EQ))},
-          {"arch",
-           Args.MakeArgString(LinkerArgs.getLastArgValue(OPT_arch_EQ))}};
+      TheImage.StringData["triple"] = Args.MakeArgString(LinkerArgs.getLastArgValue(OPT_triple_EQ));
+      TheImage.StringData["arch"] = Args.MakeArgString(LinkerArgs.getLastArgValue(OPT_arch_EQ));
       TheImage.Image = std::move(*FileOrErr);
 
       Images[Kind].emplace_back(std::move(TheImage));

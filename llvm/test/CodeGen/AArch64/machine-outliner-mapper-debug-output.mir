@@ -1,0 +1,58 @@
+# RUN: llc -mtriple=aarch64 -debug-only=machine-outliner -run-pass=machine-outliner -verify-machineinstrs %s -o /dev/null 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# CHECK-LABEL: *** Populating mapper ***
+# CHECK-NEXT: MAPPING FUNCTION: block_too_small
+# CHECK-NEXT:   MAPPING MBB: ''
+# CHECK-NEXT:     SKIP: MBB size less than minimum size of 2
+# CHECK-NEXT: MAPPING FUNCTION: no_outline
+# CHECK-NEXT: SKIP: Function has nooutline attribute
+# CHECK-NEXT: MAPPING FUNCTION: redzone
+# CHECK-NEXT: SKIP: redzone: unsafe to outline from
+# CHECK-NEXT: MAPPING FUNCTION: no_mf
+# CHECK-NEXT: SKIP: Function does not have a MachineFunction
+# CHECK-NEXT: MAPPING FUNCTION: block_addr_fn
+# CHECK-NEXT:   MAPPING MBB: 'label'
+# CHECK-NEXT:     SKIP: MBB's address is taken
+
+--- |
+  define void @block_too_small() noredzone { unreachable }
+  define void @no_outline() noredzone "nooutline" { unreachable }
+  define void @redzone() { unreachable }
+  declare void @no_mf()
+  define void @block_addr_fn() noredzone {
+  entry:
+    br label %label
+  label:
+    call void @block_addr_fn(ptr blockaddress(@block_addr_fn, %label))
+    ret void
+  }
+...
+---
+name:            no_outline
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $lr, $w8
+    RET undef $lr
+...
+---
+name:            block_too_small
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $lr, $w8
+    RET undef $lr
+...
+---
+name:            block_addr_fn
+tracksRegLiveness: true
+body:             |
+  bb.0.label (ir-block-address-taken %ir-block.label):
+    liveins: $w0, $lr, $w8
+    $w0 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 4
+    RET undef $lr
+...
+---

@@ -48,7 +48,7 @@ public:
   static bool classof(const MLModelRunner *R) {
     return R->getKind() == MLModelRunner::Kind::Interactive;
   }
-  void switchContext(StringRef Name) {
+  void switchContext(StringRef Name) override {
     Log->switchContext(Name);
     Log->flush();
   }

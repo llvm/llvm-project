@@ -1844,6 +1844,38 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::check(Status, "Error in hsa_amd_memory_unlock: %s\n");
   }
 
+  /// Check through the HSA runtime whether the \p HstPtr buffer is pinned.
+  Expected<bool> isPinnedPtrImpl(void *HstPtr, void *&BaseHstPtr,
+                                 void *&BaseDevAccessiblePtr,
+                                 size_t &BaseSize) const override {
+    hsa_amd_pointer_info_t Info;
+    Info.size = sizeof(hsa_amd_pointer_info_t);
+
+    hsa_status_t Status =
+        hsa_amd_pointer_info(HstPtr, &Info, /* Allocator */ nullptr,
+                             /* Number of accessible agents (out) */ nullptr,
+                             /* Accessible agents */ nullptr);
+    if (auto Err = Plugin::check(Status, "Error in hsa_amd_pointer_info: %s"))
+      return Err;
+
+    // The buffer may be locked or allocated through HSA allocators. Assume that
+    // the buffer is host pinned if the runtime reports a HSA type.
+    if (Info.type != HSA_EXT_POINTER_TYPE_LOCKED &&
+        Info.type != HSA_EXT_POINTER_TYPE_HSA)
+      return false;
+
+    assert(Info.hostBaseAddress && "Invalid host pinned address");
+    assert(Info.agentBaseAddress && "Invalid agent pinned address");
+    assert(Info.sizeInBytes > 0 && "Invalid pinned allocation size");
+
+    // Save the allocation info in the output parameters.
+    BaseHstPtr = Info.hostBaseAddress;
+    BaseDevAccessiblePtr = Info.agentBaseAddress;
+    BaseSize = Info.sizeInBytes;
+
+    return true;
+  }
+
   /// Submit data to the device (host to device transfer).
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
                        AsyncInfoWrapperTy &AsyncInfoWrapper) override {

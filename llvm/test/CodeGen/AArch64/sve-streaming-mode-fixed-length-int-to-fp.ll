@@ -642,8 +642,8 @@ define <2 x float> @scvtf_v2i16_v2f32(<2 x i16> %op1) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, #16
-; CHECK-NEXT:    asr z0.s, p0/m, z0.s, #16
+; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    asr z0.s, z0.s, #16
 ; CHECK-NEXT:    scvtf z0.s, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -715,10 +715,9 @@ define <2 x double> @scvtf_v2i16_v2f64(<2 x i16> %op1) #0 {
 ; CHECK-LABEL: scvtf_v2i16_v2f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, #16
-; CHECK-NEXT:    asr z0.s, p0/m, z0.s, #16
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    asr z0.s, z0.s, #16
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
 ; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
