@@ -8056,18 +8056,28 @@ SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
   return SDValue();
 }
 
-/// If this FPClassTest can be performed with a fcmp to 0, return the test mask
-/// for the floating-point mode.
-static bool isFCmpEqualZero(FPClassTest Test, const fltSemantics &Semantics,
-                            const MachineFunction &MF) {
-  // TODO: Handle unordered compares
-  if (Test == fcZero &&
+/// Returns a true value if if this FPClassTest can be performed with an ordered
+/// fcmp to 0, and a false value if it's an unordered fcmp to 0. Returns
+/// std::nullopt if it cannot be performed as a compare with 0.
+static std::optional<bool> isFCmpEqualZero(FPClassTest Test,
+                                           const fltSemantics &Semantics,
+                                           const MachineFunction &MF) {
+  FPClassTest OrderedMask = Test & ~fcNan;
+  FPClassTest NanTest = Test & fcNan;
+  bool IsOrdered = NanTest == fcNone;
+  bool IsUnordered = NanTest == fcNan;
+
+  // Skip cases that are testing for only a qnan or snan.
+  if (!IsOrdered && !IsUnordered)
+    return std::nullopt;
+
+  if (OrderedMask == fcZero &&
       MF.getDenormalMode(Semantics).Input == DenormalMode::IEEE)
-    return true;
-  if (Test == (fcZero | fcSubnormal) &&
+    return IsOrdered;
+  if (OrderedMask == (fcZero | fcSubnormal) &&
       MF.getDenormalMode(Semantics).inputsAreZero())
-    return true;
-  return false;
+    return IsOrdered;
+  return std::nullopt;
 }
 
 SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
@@ -8109,14 +8119,20 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
   // exceptions are ignored.
   if (Flags.hasNoFPExcept() &&
       isOperationLegalOrCustom(ISD::SETCC, OperandVT.getScalarType())) {
-    if (isFCmpEqualZero(Test, Semantics, DAG.getMachineFunction()) &&
-        (isCondCodeLegalOrCustom(IsInverted ? ISD::SETUNE : ISD::SETOEQ,
-                                 OperandVT.getScalarType().getSimpleVT()))) {
+    ISD::CondCode OrderedCmpOpcode = IsInverted ? ISD::SETUNE : ISD::SETOEQ;
+    ISD::CondCode UnorderedCmpOpcode = IsInverted ? ISD::SETONE : ISD::SETUEQ;
+
+    if (std::optional<bool> IsCmp0 =
+            isFCmpEqualZero(Test, Semantics, DAG.getMachineFunction());
+        IsCmp0 && (isCondCodeLegalOrCustom(
+                      *IsCmp0 ? OrderedCmpOpcode : UnorderedCmpOpcode,
+                      OperandVT.getScalarType().getSimpleVT()))) {
+
       // If denormals could be implicitly treated as 0, this is not equivalent
       // to a compare with 0 since it will also be true for denormals.
       return DAG.getSetCC(DL, ResultVT, Op,
                           DAG.getConstantFP(0.0, DL, OperandVT),
-                          IsInverted ? ISD::SETUNE : ISD::SETOEQ);
+                          *IsCmp0 ? OrderedCmpOpcode : UnorderedCmpOpcode);
     }
 
     if (Test == fcNan &&
