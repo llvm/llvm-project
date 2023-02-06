@@ -426,7 +426,7 @@ function configure_llvmCore() {
         -DCMAKE_BUILD_TYPE=$BuildType -DLLVM_ENABLE_ASSERTIONS=$Assertions \
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
         -DLLVM_ENABLE_PROJECTS="$project_list" \
-        -DLLVM_LIT_ARGS="-j $NumJobs" \
+        -DLLVM_LIT_ARGS="-j $NumJobs $LitVerbose" \
         -DLLVM_ENABLE_RUNTIMES="$runtime_list" \
         $ExtraConfigureFlags $BuildDir/llvm-project/llvm \
         2>&1 | tee $LogDir/llvm.configure-Phase$Phase-$Flavor.log
@@ -435,7 +435,7 @@ function configure_llvmCore() {
         -DCMAKE_BUILD_TYPE=$BuildType -DLLVM_ENABLE_ASSERTIONS=$Assertions \
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
         -DLLVM_ENABLE_PROJECTS="$project_list" \
-        -DLLVM_LIT_ARGS="-j $NumJobs" \
+        -DLLVM_LIT_ARGS="-j $NumJobs $LitVerbose" \
         -DLLVM_ENABLE_RUNTIMES="$runtime_list" \
         $ExtraConfigureFlags $BuildDir/llvm-project/llvm \
         2>&1 | tee $LogDir/llvm.configure-Phase$Phase-$Flavor.log
@@ -453,6 +453,7 @@ function build_llvmCore() {
     if [ ${MAKE} = 'ninja' ]; then
       Verbose="-v"
     fi
+    LitVerbose="-v"
 
     redir="/dev/stdout"
     if [ $do_silent_log == "yes" ]; then
@@ -486,7 +487,7 @@ function test_llvmCore() {
     fi
 
     cd $ObjDir
-    if ! ( ${MAKE} -j $NumJobs $KeepGoing check-all \
+    if ! ( ${MAKE} -j $NumJobs $KeepGoing $Verbose check-all \
         2>&1 | tee $LogDir/llvm.check-Phase$Phase-$Flavor.log ) ; then
       deferred_error $Phase $Flavor "check-all failed"
     fi
@@ -497,7 +498,7 @@ function test_llvmCore() {
           cmake $TestSuiteSrcDir -G "$generator" -DTEST_SUITE_LIT=$Lit \
                 -DTEST_SUITE_HOST_CC=$build_compiler
 
-      if ! ( ${MAKE} -j $NumJobs $KeepGoing check \
+      if ! ( ${MAKE} -j $NumJobs $KeepGoing $Verbose check \
           2>&1 | tee $LogDir/llvm.check-Phase$Phase-$Flavor.log ) ; then
         deferred_error $Phase $Flavor "test suite failed"
       fi

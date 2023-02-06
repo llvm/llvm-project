@@ -239,7 +239,7 @@ static LegalityPredicate isWideScalarExtLoadTruncStore(unsigned TypeIdx) {
 // handle some operations by just promoting the register during
 // selection. There are also d16 loads on GFX9+ which preserve the high bits.
 static unsigned maxSizeForAddrSpace(const GCNSubtarget &ST, unsigned AS,
-                                    bool IsLoad) {
+                                    bool IsLoad, bool IsAtomic) {
   switch (AS) {
   case AMDGPUAS::PRIVATE_ADDRESS:
     // FIXME: Private element size.
@@ -257,9 +257,10 @@ static unsigned maxSizeForAddrSpace(const GCNSubtarget &ST, unsigned AS,
     // kernel.
     return IsLoad ? 512 : 128;
   default:
-    // Flat addresses may contextually need to be split to 32-bit parts if they
-    // may alias scratch depending on the subtarget.
-    return 128;
+    // FIXME: Flat addresses may contextually need to be split to 32-bit parts
+    // if they may alias scratch depending on the subtarget.  This needs to be
+    // moved to custom handling to use addressMayBeAccessedAsPrivate
+    return ST.hasMultiDwordFlatScratchAddressing() || IsAtomic ? 128 : 32;
   }
 }
 
@@ -295,7 +296,9 @@ static bool isLoadStoreSizeLegal(const GCNSubtarget &ST,
   if (MemSize != RegSize && RegSize != 32)
     return false;
 
-  if (MemSize > maxSizeForAddrSpace(ST, AS, IsLoad))
+  if (MemSize > maxSizeForAddrSpace(ST, AS, IsLoad,
+                                    Query.MMODescrs[0].Ordering !=
+                                        AtomicOrdering::NotAtomic))
     return false;
 
   switch (MemSize) {
@@ -392,7 +395,7 @@ static bool shouldWidenLoad(const GCNSubtarget &ST, LLT MemoryTy,
   if (SizeInBits == 96 && ST.hasDwordx3LoadStores())
     return false;
 
-  if (SizeInBits >= maxSizeForAddrSpace(ST, AddrSpace, Opcode))
+  if (SizeInBits >= maxSizeForAddrSpace(ST, AddrSpace, Opcode, false))
     return false;
 
   // A load is known dereferenceable up to the alignment, so it's legal to widen
@@ -1115,7 +1118,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     const LLT PtrTy = Query.Types[1];
     unsigned AS = PtrTy.getAddressSpace();
-    if (MemSize > maxSizeForAddrSpace(ST, AS, IsLoad))
+    if (MemSize > maxSizeForAddrSpace(ST, AS, IsLoad,
+                                      Query.MMODescrs[0].Ordering !=
+                                          AtomicOrdering::NotAtomic))
       return true;
 
     // Catch weird sized loads that don't evenly divide into the access sizes
@@ -1223,9 +1228,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
               if (DstSize > MemSize)
                 return std::pair(0, LLT::scalar(MemSize));
 
-              unsigned MaxSize = maxSizeForAddrSpace(ST,
-                                                     PtrTy.getAddressSpace(),
-                                                     Op == G_LOAD);
+              unsigned MaxSize = maxSizeForAddrSpace(
+                  ST, PtrTy.getAddressSpace(), Op == G_LOAD,
+                  Query.MMODescrs[0].Ordering != AtomicOrdering::NotAtomic);
               if (MemSize > MaxSize)
                 return std::pair(0, LLT::scalar(MaxSize));
 
@@ -1242,9 +1247,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
               const LLT PtrTy = Query.Types[1];
 
               LLT EltTy = DstTy.getElementType();
-              unsigned MaxSize = maxSizeForAddrSpace(ST,
-                                                     PtrTy.getAddressSpace(),
-                                                     Op == G_LOAD);
+              unsigned MaxSize = maxSizeForAddrSpace(
+                  ST, PtrTy.getAddressSpace(), Op == G_LOAD,
+                  Query.MMODescrs[0].Ordering != AtomicOrdering::NotAtomic);
 
               // FIXME: Handle widened to power of 2 results better. This ends
               // up scalarizing.

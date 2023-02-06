@@ -12,14 +12,13 @@ define <4 x i8> @sdiv_v4i8(<4 x i8> %op1, <4 x i8> %op2) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    lsl z1.h, p0/m, z1.h, #8
-; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, #8
-; CHECK-NEXT:    asr z1.h, p0/m, z1.h, #8
-; CHECK-NEXT:    asr z0.h, p0/m, z0.h, #8
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    lsl z0.h, z0.h, #8
+; CHECK-NEXT:    lsl z1.h, z1.h, #8
+; CHECK-NEXT:    asr z0.h, z0.h, #8
+; CHECK-NEXT:    asr z1.h, z1.h, #8
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -190,10 +189,10 @@ define <2 x i16> @sdiv_v2i16(<2 x i16> %op1, <2 x i16> %op2) #0 {
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    lsl z1.s, p0/m, z1.s, #16
-; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, #16
-; CHECK-NEXT:    asr z1.s, p0/m, z1.s, #16
-; CHECK-NEXT:    asr z0.s, p0/m, z0.s, #16
+; CHECK-NEXT:    lsl z1.s, z1.s, #16
+; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    asr z1.s, z1.s, #16
+; CHECK-NEXT:    asr z0.s, z0.s, #16
 ; CHECK-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -741,12 +740,12 @@ define void @udiv_constantsplat_v8i32(ptr %a)  #0 {
 ; CHECK-NEXT:    umulh z2.s, p0/m, z2.s, z1.s
 ; CHECK-NEXT:    sub z0.s, z0.s, z3.s
 ; CHECK-NEXT:    sub z1.s, z1.s, z2.s
-; CHECK-NEXT:    lsr z0.s, p0/m, z0.s, #1
-; CHECK-NEXT:    lsr z1.s, p0/m, z1.s, #1
+; CHECK-NEXT:    lsr z0.s, z0.s, #1
+; CHECK-NEXT:    lsr z1.s, z1.s, #1
 ; CHECK-NEXT:    add z0.s, z0.s, z3.s
 ; CHECK-NEXT:    add z1.s, z1.s, z2.s
-; CHECK-NEXT:    lsr z0.s, p0/m, z0.s, #6
-; CHECK-NEXT:    lsr z1.s, p0/m, z1.s, #6
+; CHECK-NEXT:    lsr z0.s, z0.s, #6
+; CHECK-NEXT:    lsr z1.s, z1.s, #6
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a

@@ -324,40 +324,40 @@ define void @store_i16_stride3_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512F-SLOW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,u,u,10,11,8,9,u,u,14,15,12,13,u,u]
 ; AVX512F-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm2[2,2,3,3]
 ; AVX512F-SLOW-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3],xmm1[4],xmm0[5,6],xmm1[7]
-; AVX512F-SLOW-NEXT:    vinserti64x4 $1, %ymm0, %zmm4, %zmm0
-; AVX512F-SLOW-NEXT:    vmovdqa %ymm4, (%rcx)
-; AVX512F-SLOW-NEXT:    vextracti32x4 $2, %zmm0, 32(%rcx)
+; AVX512F-SLOW-NEXT:    vinserti32x4 $2, %xmm0, %zmm4, %zmm1
+; AVX512F-SLOW-NEXT:    vmovdqa %xmm0, 32(%rcx)
+; AVX512F-SLOW-NEXT:    vmovdqa %ymm1, (%rcx)
 ; AVX512F-SLOW-NEXT:    vzeroupper
 ; AVX512F-SLOW-NEXT:    retq
 ;
 ; AVX512F-FAST-LABEL: store_i16_stride3_vf8:
 ; AVX512F-FAST:       # %bb.0:
 ; AVX512F-FAST-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512F-FAST-NEXT:    vmovdqa (%rsi), %xmm1
-; AVX512F-FAST-NEXT:    vmovdqa (%rdx), %xmm2
-; AVX512F-FAST-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm3
-; AVX512F-FAST-NEXT:    vmovdqa {{.*#+}} ymm4 = <u,0,0,u,1,1,u,2>
-; AVX512F-FAST-NEXT:    vpermd %ymm2, %ymm4, %ymm4
-; AVX512F-FAST-NEXT:    vmovdqa {{.*#+}} ymm5 = [0,4,1,5,1,5,2,6]
-; AVX512F-FAST-NEXT:    vpermd %ymm3, %ymm5, %ymm3
-; AVX512F-FAST-NEXT:    vpshufb {{.*#+}} ymm3 = ymm3[0,1,4,5],zero,zero,ymm3[2,3,6,7],zero,zero,ymm3[8,9,12,13],zero,zero,ymm3[18,19,22,23],zero,zero,ymm3[24,25,28,29],zero,zero,ymm3[26,27]
-; AVX512F-FAST-NEXT:    vpternlogq $244, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm4, %ymm3
-; AVX512F-FAST-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
-; AVX512F-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,u,u,10,11,8,9,u,u,14,15,12,13,u,u]
-; AVX512F-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm2[2,2,3,3]
-; AVX512F-FAST-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3],xmm1[4],xmm0[5,6],xmm1[7]
-; AVX512F-FAST-NEXT:    vinserti64x4 $1, %ymm0, %zmm3, %zmm0
-; AVX512F-FAST-NEXT:    vmovdqa %ymm3, (%rcx)
-; AVX512F-FAST-NEXT:    vextracti32x4 $2, %zmm0, 32(%rcx)
+; AVX512F-FAST-NEXT:    vinserti128 $1, (%rsi), %ymm0, %ymm0
+; AVX512F-FAST-NEXT:    vinserti32x4 $2, (%rdx), %zmm0, %zmm0
+; AVX512F-FAST-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512F-FAST-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; AVX512F-FAST-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[4,5,u,u,10,11,8,9,u,u,14,15,12,13,u,u]
+; AVX512F-FAST-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
+; AVX512F-FAST-NEXT:    vpshufd {{.*#+}} xmm3 = xmm2[2,2,3,3]
+; AVX512F-FAST-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm3[1],xmm1[2,3],xmm3[4],xmm1[5,6],xmm3[7]
+; AVX512F-FAST-NEXT:    vmovdqa {{.*#+}} ymm3 = <u,0,0,u,1,1,u,2>
+; AVX512F-FAST-NEXT:    vpermd %ymm2, %ymm3, %ymm2
+; AVX512F-FAST-NEXT:    vmovdqa {{.*#+}} ymm3 = [0,4,1,5,1,5,2,6]
+; AVX512F-FAST-NEXT:    vpermd %ymm0, %ymm3, %ymm0
+; AVX512F-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5],zero,zero,ymm0[2,3,6,7],zero,zero,ymm0[8,9,12,13],zero,zero,ymm0[18,19,22,23],zero,zero,ymm0[24,25,28,29],zero,zero,ymm0[26,27]
+; AVX512F-FAST-NEXT:    vpternlogq $244, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm0
+; AVX512F-FAST-NEXT:    vinserti32x4 $2, %xmm1, %zmm0, %zmm0
+; AVX512F-FAST-NEXT:    vmovdqa %xmm1, 32(%rcx)
+; AVX512F-FAST-NEXT:    vmovdqa %ymm0, (%rcx)
 ; AVX512F-FAST-NEXT:    vzeroupper
 ; AVX512F-FAST-NEXT:    retq
 ;
 ; AVX512BW-LABEL: store_i16_stride3_vf8:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512BW-NEXT:    vmovdqa (%rdx), %xmm1
 ; AVX512BW-NEXT:    vinserti128 $1, (%rsi), %ymm0, %ymm0
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vinserti32x4 $2, (%rdx), %zmm0, %zmm0
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm1 = <0,8,16,1,9,17,2,10,18,3,11,19,4,12,20,5,13,21,6,14,22,7,15,23,u,u,u,u,u,u,u,u>
 ; AVX512BW-NEXT:    vpermw %zmm0, %zmm1, %zmm0
 ; AVX512BW-NEXT:    vextracti32x4 $2, %zmm0, 32(%rcx)

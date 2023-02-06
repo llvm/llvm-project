@@ -176,6 +176,8 @@ public:
   const LegalizerInfo *getLegalizerInfo() const override;
   const RegisterBankInfo *getRegBankInfo() const override;
 
+  bool isTargetFuchsia() const { return getTargetTriple().isOSFuchsia(); }
+
   bool useConstantPoolForLargeInts() const;
 
   // Maximum cost used for building integers, integers will be put into constant

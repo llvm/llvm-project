@@ -732,6 +732,11 @@
 // CHECK-SHADOWCALLSTACK-LINUX-RISCV64: '-fsanitize=shadow-call-stack' only allowed with '-ffixed-x18'
 
 // RUN: %clang -fsanitize=shadow-call-stack -### %s 2>&1 \
+// RUN:     --target=riscv64-unknown-fuchsia -fuse-ld=ld \
+// RUN:   | FileCheck --check-prefix=CHECK-SHADOWCALLSTACK-FUCHSIA-RISCV64 %s
+// CHECK-SHADOWCALLSTACK-FUCHSIA-RISCV64-NOT: error:
+
+// RUN: %clang -fsanitize=shadow-call-stack -### %s 2>&1 \
 // RUN:     --target=aarch64-unknown-linux -fuse-ld=ld -ffixed-x18 \
 // RUN:   | FileCheck --check-prefix=CHECK-SHADOWCALLSTACK-LINUX-AARCH64-X18 %s
 // RUN: %clang -fsanitize=shadow-call-stack -### %s 2>&1 \

@@ -9491,8 +9491,10 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
 
     if (TypeFlags.isReverseCompare())
       std::swap(Ops[1], Ops[2]);
-
-    if (TypeFlags.isReverseUSDOT())
+    else if (TypeFlags.isReverseUSDOT())
+      std::swap(Ops[1], Ops[2]);
+    else if (TypeFlags.isReverseMergeAnyBinOp() &&
+             TypeFlags.getMergeType() == SVETypeFlags::MergeAny)
       std::swap(Ops[1], Ops[2]);
 
     // Predicated intrinsics with _z suffix need a select w/ zeroinitializer.
@@ -18838,10 +18840,6 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *Value = EmitScalarExpr(E->getArg(0));
     Function *Callee = CGM.getIntrinsic(IntNo, ConvertType(E->getType()));
     return Builder.CreateCall(Callee, Value);
-  }
-  case WebAssembly::BI__builtin_wasm_ref_null_extern: {
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_ref_null_extern);
-    return Builder.CreateCall(Callee);
   }
   case WebAssembly::BI__builtin_wasm_swizzle_i8x16: {
     Value *Src = EmitScalarExpr(E->getArg(0));

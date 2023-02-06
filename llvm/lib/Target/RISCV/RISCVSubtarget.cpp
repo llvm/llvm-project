@@ -11,13 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVSubtarget.h"
+#include "GISel/RISCVCallLowering.h"
+#include "GISel/RISCVLegalizerInfo.h"
+#include "GISel/RISCVRegisterBankInfo.h"
 #include "RISCV.h"
 #include "RISCVFrameLowering.h"
 #include "RISCVMacroFusion.h"
 #include "RISCVTargetMachine.h"
-#include "GISel/RISCVCallLowering.h"
-#include "GISel/RISCVLegalizerInfo.h"
-#include "GISel/RISCVRegisterBankInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -83,6 +83,9 @@ RISCVSubtarget::RISCVSubtarget(const Triple &TT, StringRef CPU,
       FrameLowering(
           initializeSubtargetDependencies(TT, CPU, TuneCPU, FS, ABIName)),
       InstrInfo(*this), RegInfo(getHwMode()), TLInfo(TM, *this) {
+  if (RISCV::isX18ReservedByDefault(TT))
+    UserReservedRegister.set(RISCV::X18);
+
   CallLoweringInfo.reset(new RISCVCallLowering(*getTargetLowering()));
   Legalizer.reset(new RISCVLegalizerInfo(*this));
 

@@ -137,13 +137,11 @@ define <vscale x 1 x double> @test4(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK-NEXT:    vse64.v v10, (a1)
 ; CHECK-NEXT:    j .LBB3_3
 ; CHECK-NEXT:  .LBB3_2: # %if.else
-; CHECK-NEXT:    lui a1, %hi(.LCPI3_2)
-; CHECK-NEXT:    addi a1, a1, %lo(.LCPI3_2)
+; CHECK-NEXT:    lui a1, 260096
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vlse32.v v10, (a1), zero
-; CHECK-NEXT:    lui a1, %hi(.LCPI3_3)
-; CHECK-NEXT:    addi a1, a1, %lo(.LCPI3_3)
-; CHECK-NEXT:    vlse32.v v11, (a1), zero
+; CHECK-NEXT:    vmv.v.x v10, a1
+; CHECK-NEXT:    lui a1, 262144
+; CHECK-NEXT:    vmv.v.x v11, a1
 ; CHECK-NEXT:    vfadd.vv v10, v10, v11
 ; CHECK-NEXT:    lui a1, %hi(scratch)
 ; CHECK-NEXT:    addi a1, a1, %lo(scratch)
@@ -263,12 +261,10 @@ define <vscale x 1 x double> @test6(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK-NEXT:    bnez a1, .LBB5_2
 ; CHECK-NEXT:  .LBB5_4: # %if.else5
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
-; CHECK-NEXT:    lui a0, %hi(.LCPI5_2)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI5_2)
-; CHECK-NEXT:    vlse32.v v9, (a0), zero
-; CHECK-NEXT:    lui a0, %hi(.LCPI5_3)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI5_3)
-; CHECK-NEXT:    vlse32.v v10, (a0), zero
+; CHECK-NEXT:    lui a0, 260096
+; CHECK-NEXT:    vmv.v.x v9, a0
+; CHECK-NEXT:    lui a0, 262144
+; CHECK-NEXT:    vmv.v.x v10, a0
 ; CHECK-NEXT:    vfadd.vv v9, v9, v10
 ; CHECK-NEXT:    lui a0, %hi(scratch)
 ; CHECK-NEXT:    addi a0, a0, %lo(scratch)

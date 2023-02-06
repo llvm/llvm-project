@@ -3305,8 +3305,8 @@ to the target, for example:
 
    .. code-block:: console
 
-     $ clang -target nvptx64-unknown-unknown test.cl
-     $ clang -target amdgcn-amd-amdhsa -mcpu=gfx900 test.cl
+     $ clang --target=nvptx64-unknown-unknown test.cl
+     $ clang --target=amdgcn-amd-amdhsa -mcpu=gfx900 test.cl
 
 Compiling to bitcode can be done as follows:
 
@@ -3390,13 +3390,13 @@ Some extra options are available to support special OpenCL features.
 
    .. code-block:: console
 
-     $ clang -c -target spirv64 -cl-ext=-cl_khr_fp64 test.cl
+     $ clang -c --target=spirv64 -cl-ext=-cl_khr_fp64 test.cl
 
    Enabling all extensions except double support in R600 AMD GPU can be done using:
 
    .. code-block:: console
 
-     $ clang -target r600 -cl-ext=-all,+cl_khr_fp16 test.cl
+     $ clang --target=r600 -cl-ext=-all,+cl_khr_fp16 test.cl
 
    Note that some generic targets e.g. SPIR/SPIR-V enable all extensions/features in
    clang by default.
@@ -3417,13 +3417,13 @@ There is a set of concrete HW architectures that OpenCL can be compiled for.
 
    .. code-block:: console
 
-     $ clang -target amdgcn-amd-amdhsa -mcpu=gfx900 test.cl
+     $ clang --target=amdgcn-amd-amdhsa -mcpu=gfx900 test.cl
 
 - For Nvidia architectures:
 
    .. code-block:: console
 
-     $ clang -target nvptx64-unknown-unknown test.cl
+     $ clang --target=nvptx64-unknown-unknown test.cl
 
 
 Generic Targets
@@ -3433,8 +3433,8 @@ Generic Targets
 
    .. code-block:: console
 
-    $ clang -target spirv32 -c test.cl
-    $ clang -target spirv64 -c test.cl
+    $ clang --target=spirv32 -c test.cl
+    $ clang --target=spirv64 -c test.cl
 
   More details can be found in :ref:`the SPIR-V support section <spir-v>`.
 
@@ -3445,8 +3445,8 @@ Generic Targets
 
    .. code-block:: console
 
-    $ clang -target spir test.cl -emit-llvm -c
-    $ clang -target spir64 test.cl -emit-llvm -c
+    $ clang --target=spir test.cl -emit-llvm -c
+    $ clang --target=spir64 test.cl -emit-llvm -c
 
   Clang will generate SPIR v1.2 compatible IR for OpenCL versions up to 2.0 and
   SPIR v2.0 for OpenCL v2.0 or C++ for OpenCL.
@@ -3678,7 +3678,7 @@ Example of use:
    .. code-block:: console
 
      clang -cl-std=clc++1.0 test.clcpp
-     clang -cl-std=clc++ -c -target spirv64 test.cl
+     clang -cl-std=clc++ -c --target=spirv64 test.cl
 
 
 By default, files with ``.clcpp`` extension are compiled with the C++ for
@@ -3926,8 +3926,8 @@ Example usage for OpenCL kernel compilation:
 
    .. code-block:: console
 
-     $ clang -target spirv32 -c test.cl
-     $ clang -target spirv64 -c test.cl
+     $ clang --target=spirv32 -c test.cl
+     $ clang --target=spirv64 -c test.cl
 
 Both invocations of Clang will result in the generation of a SPIR-V binary file
 `test.o` for 32 bit and 64 bit respectively. This file can be imported
@@ -3944,7 +3944,7 @@ the command line.
 
    .. code-block:: console
 
-     $ clang -target spirv32 -fintegrated-objemitter -c test.cl
+     $ clang --target=spirv32 -fintegrated-objemitter -c test.cl
 
 Note that only very basic functionality is supported at this point and therefore
 it is not suitable for arbitrary use cases. This feature is only enabled when clang
@@ -3959,7 +3959,7 @@ installation instructions
 
    .. code-block:: console
 
-     $ clang -target spirv64 test1.cl test2.cl
+     $ clang --target=spirv64 test1.cl test2.cl
 
 More information about the SPIR-V target settings and supported versions of SPIR-V
 format can be found in `the SPIR-V target guide

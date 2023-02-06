@@ -3640,10 +3640,9 @@ private:
   createInstructionRenderer(action_iterator InsertPt, RuleMatcher &M,
                             const TreePatternNode *Dst);
 
-  Expected<action_iterator>
-  importExplicitDefRenderers(action_iterator InsertPt, RuleMatcher &M,
-                             BuildMIAction &DstMIBuilder,
-                             const TreePatternNode *Dst);
+  Expected<action_iterator> importExplicitDefRenderers(
+      action_iterator InsertPt, RuleMatcher &M, BuildMIAction &DstMIBuilder,
+      const TreePatternNode *Src, const TreePatternNode *Dst);
 
   Expected<action_iterator>
   importExplicitUseRenderers(action_iterator InsertPt, RuleMatcher &M,
@@ -3989,9 +3988,6 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
   const CodeGenInstruction *SrcGIOrNull = nullptr;
 
   // Start with the defined operands (i.e., the results of the root operator).
-  if (Src->getExtTypes().size() > 1)
-    return failedImport("Src pattern has multiple results");
-
   if (Src->isLeaf()) {
     Init *SrcInit = Src->getLeafValue();
     if (isa<IntInit>(SrcInit)) {
@@ -4618,8 +4614,9 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
     CopyToPhysRegMIBuilder.addRenderer<CopyPhysRegRenderer>(PhysInput.first);
   }
 
-  if (auto Error = importExplicitDefRenderers(InsertPt, M, DstMIBuilder, Dst)
-                       .takeError())
+  if (auto Error =
+          importExplicitDefRenderers(InsertPt, M, DstMIBuilder, Src, Dst)
+              .takeError())
     return std::move(Error);
 
   if (auto Error = importExplicitUseRenderers(InsertPt, M, DstMIBuilder, Dst)
@@ -4774,22 +4771,22 @@ Expected<action_iterator> GlobalISelEmitter::createInstructionRenderer(
 
 Expected<action_iterator> GlobalISelEmitter::importExplicitDefRenderers(
     action_iterator InsertPt, RuleMatcher &M, BuildMIAction &DstMIBuilder,
-    const TreePatternNode *Dst) {
+    const TreePatternNode *Src, const TreePatternNode *Dst) {
   const CodeGenInstruction *DstI = DstMIBuilder.getCGI();
-  const unsigned NumDefs = DstI->Operands.NumDefs;
-  if (NumDefs == 0)
+  const unsigned SrcNumDefs = Src->getExtTypes().size();
+  const unsigned DstNumDefs = DstI->Operands.NumDefs;
+  if (DstNumDefs == 0)
     return InsertPt;
 
-  DstMIBuilder.addRenderer<CopyRenderer>(DstI->Operands[0].Name);
+  for (unsigned I = 0; I < SrcNumDefs; ++I)
+    DstMIBuilder.addRenderer<CopyRenderer>(DstI->Operands[I].Name);
 
   // Some instructions have multiple defs, but are missing a type entry
   // (e.g. s_cc_out operands).
-  if (Dst->getExtTypes().size() < NumDefs)
+  if (Dst->getExtTypes().size() < DstNumDefs)
     return failedImport("unhandled discarded def");
 
-  // Patterns only handle a single result, so any result after the first is an
-  // implicitly dead def.
-  for (unsigned I = 1; I < NumDefs; ++I) {
+  for (unsigned I = SrcNumDefs; I < DstNumDefs; ++I) {
     const TypeSetByHwMode &ExtTy = Dst->getExtType(I);
     if (!ExtTy.isMachineValueType())
       return failedImport("unsupported typeset");

@@ -715,11 +715,22 @@ Error LLJITBuilderState::prepareForConstruction() {
   // JIT linker.
   if (!CreateObjectLinkingLayer) {
     auto &TT = JTMB->getTargetTriple();
-    if (TT.getArch() == Triple::riscv64 ||
-        TT.getArch() == Triple::loongarch64 ||
-        (TT.isOSBinFormatMachO() &&
-         (TT.getArch() == Triple::aarch64 || TT.getArch() == Triple::x86_64))) {
-
+    bool UseJITLink = false;
+    switch (TT.getArch()) {
+    case Triple::riscv64:
+    case Triple::loongarch64:
+      UseJITLink = true;
+      break;
+    case Triple::aarch64:
+      UseJITLink = !TT.isOSBinFormatCOFF();
+      break;
+    case Triple::x86_64:
+      UseJITLink = TT.isOSBinFormatMachO();
+      break;
+    default:
+      break;
+    }
+    if (UseJITLink) {
       JTMB->setRelocationModel(Reloc::PIC_);
       JTMB->setCodeModel(CodeModel::Small);
       CreateObjectLinkingLayer =
