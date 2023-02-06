@@ -3176,6 +3176,11 @@ bool InterfaceVisitor::Pre(const parser::GenericSpec &x) {
   if (auto *symbol{FindInScope(GenericSpecInfo{x}.symbolName())}) {
     SetGenericSymbol(*symbol);
   }
+  if (const auto *opr{std::get_if<parser::DefinedOperator>(&x.u)}; opr &&
+      std::holds_alternative<parser::DefinedOperator::IntrinsicOperator>(
+          opr->u)) {
+    context().set_anyDefinedIntrinsicOperator(true);
+  }
   return false;
 }
 
