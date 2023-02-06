@@ -10,7 +10,7 @@ define <vscale x 2 x i64> @hadds_v2i64(<vscale x 2 x i64> %s0, <vscale x 2 x i64
 entry:
   %s0s = sext <vscale x 2 x i64> %s0 to <vscale x 2 x i128>
   %s1s = sext <vscale x 2 x i64> %s1 to <vscale x 2 x i128>
-  %m = add <vscale x 2 x i128> %s0s, %s1s
+  %m = add nsw <vscale x 2 x i128> %s0s, %s1s
   %s = lshr <vscale x 2 x i128> %m, shufflevector (<vscale x 2 x i128> insertelement (<vscale x 2 x i128> poison, i128 1, i32 0), <vscale x 2 x i128> poison, <vscale x 2 x i32> zeroinitializer)
   %s2 = trunc <vscale x 2 x i128> %s to <vscale x 2 x i64>
   ret <vscale x 2 x i64> %s2
@@ -25,7 +25,7 @@ define <vscale x 2 x i64> @haddu_v2i64(<vscale x 2 x i64> %s0, <vscale x 2 x i64
 entry:
   %s0s = zext <vscale x 2 x i64> %s0 to <vscale x 2 x i128>
   %s1s = zext <vscale x 2 x i64> %s1 to <vscale x 2 x i128>
-  %m = add <vscale x 2 x i128> %s0s, %s1s
+  %m = add nuw nsw <vscale x 2 x i128> %s0s, %s1s
   %s = lshr <vscale x 2 x i128> %m, shufflevector (<vscale x 2 x i128> insertelement (<vscale x 2 x i128> poison, i128 1, i32 0), <vscale x 2 x i128> poison, <vscale x 2 x i32> zeroinitializer)
   %s2 = trunc <vscale x 2 x i128> %s to <vscale x 2 x i64>
   ret <vscale x 2 x i64> %s2
@@ -42,7 +42,7 @@ define <vscale x 2 x i32> @hadds_v2i32(<vscale x 2 x i32> %s0, <vscale x 2 x i32
 entry:
   %s0s = sext <vscale x 2 x i32> %s0 to <vscale x 2 x i64>
   %s1s = sext <vscale x 2 x i32> %s1 to <vscale x 2 x i64>
-  %m = add <vscale x 2 x i64> %s0s, %s1s
+  %m = add nsw <vscale x 2 x i64> %s0s, %s1s
   %s = lshr <vscale x 2 x i64> %m, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
   %s2 = trunc <vscale x 2 x i64> %s to <vscale x 2 x i32>
   ret <vscale x 2 x i32> %s2
@@ -58,7 +58,7 @@ define <vscale x 2 x i32> @haddu_v2i32(<vscale x 2 x i32> %s0, <vscale x 2 x i32
 entry:
   %s0s = zext <vscale x 2 x i32> %s0 to <vscale x 2 x i64>
   %s1s = zext <vscale x 2 x i32> %s1 to <vscale x 2 x i64>
-  %m = add <vscale x 2 x i64> %s0s, %s1s
+  %m = add nuw nsw <vscale x 2 x i64> %s0s, %s1s
   %s = lshr <vscale x 2 x i64> %m, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
   %s2 = trunc <vscale x 2 x i64> %s to <vscale x 2 x i32>
   ret <vscale x 2 x i32> %s2
@@ -73,7 +73,7 @@ define <vscale x 4 x i32> @hadds_v4i32(<vscale x 4 x i32> %s0, <vscale x 4 x i32
 entry:
   %s0s = sext <vscale x 4 x i32> %s0 to <vscale x 4 x i64>
   %s1s = sext <vscale x 4 x i32> %s1 to <vscale x 4 x i64>
-  %m = add <vscale x 4 x i64> %s0s, %s1s
+  %m = add nsw <vscale x 4 x i64> %s0s, %s1s
   %s = lshr <vscale x 4 x i64> %m, shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i32 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
   %s2 = trunc <vscale x 4 x i64> %s to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %s2
@@ -88,7 +88,7 @@ define <vscale x 4 x i32> @haddu_v4i32(<vscale x 4 x i32> %s0, <vscale x 4 x i32
 entry:
   %s0s = zext <vscale x 4 x i32> %s0 to <vscale x 4 x i64>
   %s1s = zext <vscale x 4 x i32> %s1 to <vscale x 4 x i64>
-  %m = add <vscale x 4 x i64> %s0s, %s1s
+  %m = add nuw nsw <vscale x 4 x i64> %s0s, %s1s
   %s = lshr <vscale x 4 x i64> %m, shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i32 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
   %s2 = trunc <vscale x 4 x i64> %s to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %s2
@@ -107,7 +107,7 @@ define <vscale x 2 x i16> @hadds_v2i16(<vscale x 2 x i16> %s0, <vscale x 2 x i16
 entry:
   %s0s = sext <vscale x 2 x i16> %s0 to <vscale x 2 x i32>
   %s1s = sext <vscale x 2 x i16> %s1 to <vscale x 2 x i32>
-  %m = add <vscale x 2 x i32> %s0s, %s1s
+  %m = add nsw <vscale x 2 x i32> %s0s, %s1s
   %s = lshr <vscale x 2 x i32> %m, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
   %s2 = trunc <vscale x 2 x i32> %s to <vscale x 2 x i16>
   ret <vscale x 2 x i16> %s2
@@ -124,7 +124,7 @@ define <vscale x 2 x i16> @haddu_v2i16(<vscale x 2 x i16> %s0, <vscale x 2 x i16
 entry:
   %s0s = zext <vscale x 2 x i16> %s0 to <vscale x 2 x i32>
   %s1s = zext <vscale x 2 x i16> %s1 to <vscale x 2 x i32>
-  %m = add <vscale x 2 x i32> %s0s, %s1s
+  %m = add nuw nsw <vscale x 2 x i32> %s0s, %s1s
   %s = lshr <vscale x 2 x i32> %m, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
   %s2 = trunc <vscale x 2 x i32> %s to <vscale x 2 x i16>
   ret <vscale x 2 x i16> %s2
@@ -142,7 +142,7 @@ define <vscale x 4 x i16> @hadds_v4i16(<vscale x 4 x i16> %s0, <vscale x 4 x i16
 entry:
   %s0s = sext <vscale x 4 x i16> %s0 to <vscale x 4 x i32>
   %s1s = sext <vscale x 4 x i16> %s1 to <vscale x 4 x i32>
-  %m = add <vscale x 4 x i32> %s0s, %s1s
+  %m = add nsw <vscale x 4 x i32> %s0s, %s1s
   %s = lshr <vscale x 4 x i32> %m, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
   %s2 = trunc <vscale x 4 x i32> %s to <vscale x 4 x i16>
   ret <vscale x 4 x i16> %s2
@@ -159,7 +159,7 @@ define <vscale x 4 x i16> @haddu_v4i16(<vscale x 4 x i16> %s0, <vscale x 4 x i16
 entry:
   %s0s = zext <vscale x 4 x i16> %s0 to <vscale x 4 x i32>
   %s1s = zext <vscale x 4 x i16> %s1 to <vscale x 4 x i32>
-  %m = add <vscale x 4 x i32> %s0s, %s1s
+  %m = add nuw nsw <vscale x 4 x i32> %s0s, %s1s
   %s = lshr <vscale x 4 x i32> %m, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
   %s2 = trunc <vscale x 4 x i32> %s to <vscale x 4 x i16>
   ret <vscale x 4 x i16> %s2
@@ -174,7 +174,7 @@ define <vscale x 8 x i16> @hadds_v8i16(<vscale x 8 x i16> %s0, <vscale x 8 x i16
 entry:
   %s0s = sext <vscale x 8 x i16> %s0 to <vscale x 8 x i32>
   %s1s = sext <vscale x 8 x i16> %s1 to <vscale x 8 x i32>
-  %m = add <vscale x 8 x i32> %s0s, %s1s
+  %m = add nsw <vscale x 8 x i32> %s0s, %s1s
   %s = lshr <vscale x 8 x i32> %m, shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 1, i32 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
   %s2 = trunc <vscale x 8 x i32> %s to <vscale x 8 x i16>
   ret <vscale x 8 x i16> %s2
@@ -189,7 +189,7 @@ define <vscale x 8 x i16> @haddu_v8i16(<vscale x 8 x i16> %s0, <vscale x 8 x i16
 entry:
   %s0s = zext <vscale x 8 x i16> %s0 to <vscale x 8 x i32>
   %s1s = zext <vscale x 8 x i16> %s1 to <vscale x 8 x i32>
-  %m = add <vscale x 8 x i32> %s0s, %s1s
+  %m = add nuw nsw <vscale x 8 x i32> %s0s, %s1s
   %s = lshr <vscale x 8 x i32> %m, shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 1, i32 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
   %s2 = trunc <vscale x 8 x i32> %s to <vscale x 8 x i16>
   ret <vscale x 8 x i16> %s2
@@ -208,7 +208,7 @@ define <vscale x 4 x i8> @hadds_v4i8(<vscale x 4 x i8> %s0, <vscale x 4 x i8> %s
 entry:
   %s0s = sext <vscale x 4 x i8> %s0 to <vscale x 4 x i16>
   %s1s = sext <vscale x 4 x i8> %s1 to <vscale x 4 x i16>
-  %m = add <vscale x 4 x i16> %s0s, %s1s
+  %m = add nsw <vscale x 4 x i16> %s0s, %s1s
   %s = lshr <vscale x 4 x i16> %m, shufflevector (<vscale x 4 x i16> insertelement (<vscale x 4 x i16> poison, i16 1, i32 0), <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer)
   %s2 = trunc <vscale x 4 x i16> %s to <vscale x 4 x i8>
   ret <vscale x 4 x i8> %s2
@@ -225,7 +225,7 @@ define <vscale x 4 x i8> @haddu_v4i8(<vscale x 4 x i8> %s0, <vscale x 4 x i8> %s
 entry:
   %s0s = zext <vscale x 4 x i8> %s0 to <vscale x 4 x i16>
   %s1s = zext <vscale x 4 x i8> %s1 to <vscale x 4 x i16>
-  %m = add <vscale x 4 x i16> %s0s, %s1s
+  %m = add nuw nsw <vscale x 4 x i16> %s0s, %s1s
   %s = lshr <vscale x 4 x i16> %m, shufflevector (<vscale x 4 x i16> insertelement (<vscale x 4 x i16> poison, i16 1, i32 0), <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer)
   %s2 = trunc <vscale x 4 x i16> %s to <vscale x 4 x i8>
   ret <vscale x 4 x i8> %s2
@@ -243,7 +243,7 @@ define <vscale x 8 x i8> @hadds_v8i8(<vscale x 8 x i8> %s0, <vscale x 8 x i8> %s
 entry:
   %s0s = sext <vscale x 8 x i8> %s0 to <vscale x 8 x i16>
   %s1s = sext <vscale x 8 x i8> %s1 to <vscale x 8 x i16>
-  %m = add <vscale x 8 x i16> %s0s, %s1s
+  %m = add nsw <vscale x 8 x i16> %s0s, %s1s
   %s = lshr <vscale x 8 x i16> %m, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 1, i32 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
   %s2 = trunc <vscale x 8 x i16> %s to <vscale x 8 x i8>
   ret <vscale x 8 x i8> %s2
@@ -260,7 +260,7 @@ define <vscale x 8 x i8> @haddu_v8i8(<vscale x 8 x i8> %s0, <vscale x 8 x i8> %s
 entry:
   %s0s = zext <vscale x 8 x i8> %s0 to <vscale x 8 x i16>
   %s1s = zext <vscale x 8 x i8> %s1 to <vscale x 8 x i16>
-  %m = add <vscale x 8 x i16> %s0s, %s1s
+  %m = add nuw nsw <vscale x 8 x i16> %s0s, %s1s
   %s = lshr <vscale x 8 x i16> %m, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 1, i32 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
   %s2 = trunc <vscale x 8 x i16> %s to <vscale x 8 x i8>
   ret <vscale x 8 x i8> %s2
@@ -275,7 +275,7 @@ define <vscale x 16 x i8> @hadds_v16i8(<vscale x 16 x i8> %s0, <vscale x 16 x i8
 entry:
   %s0s = sext <vscale x 16 x i8> %s0 to <vscale x 16 x i16>
   %s1s = sext <vscale x 16 x i8> %s1 to <vscale x 16 x i16>
-  %m = add <vscale x 16 x i16> %s0s, %s1s
+  %m = add nsw <vscale x 16 x i16> %s0s, %s1s
   %s = lshr <vscale x 16 x i16> %m, shufflevector (<vscale x 16 x i16> insertelement (<vscale x 16 x i16> poison, i16 1, i32 0), <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer)
   %s2 = trunc <vscale x 16 x i16> %s to <vscale x 16 x i8>
   ret <vscale x 16 x i8> %s2
@@ -290,7 +290,7 @@ define <vscale x 16 x i8> @haddu_v16i8(<vscale x 16 x i8> %s0, <vscale x 16 x i8
 entry:
   %s0s = zext <vscale x 16 x i8> %s0 to <vscale x 16 x i16>
   %s1s = zext <vscale x 16 x i8> %s1 to <vscale x 16 x i16>
-  %m = add <vscale x 16 x i16> %s0s, %s1s
+  %m = add nuw nsw <vscale x 16 x i16> %s0s, %s1s
   %s = lshr <vscale x 16 x i16> %m, shufflevector (<vscale x 16 x i16> insertelement (<vscale x 16 x i16> poison, i16 1, i32 0), <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer)
   %s2 = trunc <vscale x 16 x i16> %s to <vscale x 16 x i8>
   ret <vscale x 16 x i8> %s2
@@ -305,8 +305,8 @@ define <vscale x 2 x i64> @rhadds_v2i64(<vscale x 2 x i64> %s0, <vscale x 2 x i6
 entry:
   %s0s = sext <vscale x 2 x i64> %s0 to <vscale x 2 x i128>
   %s1s = sext <vscale x 2 x i64> %s1 to <vscale x 2 x i128>
-  %add = add <vscale x 2 x i128> %s0s, %s1s
-  %add2 = add <vscale x 2 x i128> %add, shufflevector (<vscale x 2 x i128> insertelement (<vscale x 2 x i128> poison, i128 1, i32 0), <vscale x 2 x i128> poison, <vscale x 2 x i32> zeroinitializer)
+  %add = add <vscale x 2 x i128> %s0s, shufflevector (<vscale x 2 x i128> insertelement (<vscale x 2 x i128> poison, i128 1, i32 0), <vscale x 2 x i128> poison, <vscale x 2 x i32> zeroinitializer)
+  %add2 = add <vscale x 2 x i128> %add, %s1s
   %s = lshr <vscale x 2 x i128> %add2, shufflevector (<vscale x 2 x i128> insertelement (<vscale x 2 x i128> poison, i128 1, i32 0), <vscale x 2 x i128> poison, <vscale x 2 x i32> zeroinitializer)
   %result = trunc <vscale x 2 x i128> %s to <vscale x 2 x i64>
   ret <vscale x 2 x i64> %result
@@ -321,8 +321,8 @@ define <vscale x 2 x i64> @rhaddu_v2i64(<vscale x 2 x i64> %s0, <vscale x 2 x i6
 entry:
   %s0s = zext <vscale x 2 x i64> %s0 to <vscale x 2 x i128>
   %s1s = zext <vscale x 2 x i64> %s1 to <vscale x 2 x i128>
-  %add = add <vscale x 2 x i128> %s0s, %s1s
-  %add2 = add <vscale x 2 x i128> %add, shufflevector (<vscale x 2 x i128> insertelement (<vscale x 2 x i128> poison, i128 1, i32 0), <vscale x 2 x i128> poison, <vscale x 2 x i32> zeroinitializer)
+  %add = add nuw nsw <vscale x 2 x i128> %s0s, shufflevector (<vscale x 2 x i128> insertelement (<vscale x 2 x i128> poison, i128 1, i32 0), <vscale x 2 x i128> poison, <vscale x 2 x i32> zeroinitializer)
+  %add2 = add nuw nsw <vscale x 2 x i128> %add, %s1s
   %s = lshr <vscale x 2 x i128> %add2, shufflevector (<vscale x 2 x i128> insertelement (<vscale x 2 x i128> poison, i128 1, i32 0), <vscale x 2 x i128> poison, <vscale x 2 x i32> zeroinitializer)
   %result = trunc <vscale x 2 x i128> %s to <vscale x 2 x i64>
   ret <vscale x 2 x i64> %result
@@ -342,8 +342,8 @@ define <vscale x 2 x i32> @rhadds_v2i32(<vscale x 2 x i32> %s0, <vscale x 2 x i3
 entry:
   %s0s = sext <vscale x 2 x i32> %s0 to <vscale x 2 x i64>
   %s1s = sext <vscale x 2 x i32> %s1 to <vscale x 2 x i64>
-  %add = add <vscale x 2 x i64> %s0s, %s1s
-  %add2 = add <vscale x 2 x i64> %add, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  %add = add <vscale x 2 x i64> %s0s, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  %add2 = add <vscale x 2 x i64> %add, %s1s
   %s = lshr <vscale x 2 x i64> %add2, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
   %result = trunc <vscale x 2 x i64> %s to <vscale x 2 x i32>
   ret <vscale x 2 x i32> %result
@@ -362,8 +362,8 @@ define <vscale x 2 x i32> @rhaddu_v2i32(<vscale x 2 x i32> %s0, <vscale x 2 x i3
 entry:
   %s0s = zext <vscale x 2 x i32> %s0 to <vscale x 2 x i64>
   %s1s = zext <vscale x 2 x i32> %s1 to <vscale x 2 x i64>
-  %add = add <vscale x 2 x i64> %s0s, %s1s
-  %add2 = add <vscale x 2 x i64> %add, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  %add = add nuw nsw <vscale x 2 x i64> %s0s, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  %add2 = add nuw nsw <vscale x 2 x i64> %add, %s1s
   %s = lshr <vscale x 2 x i64> %add2, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
   %result = trunc <vscale x 2 x i64> %s to <vscale x 2 x i32>
   ret <vscale x 2 x i32> %result
@@ -378,8 +378,8 @@ define <vscale x 4 x i32> @rhadds_v4i32(<vscale x 4 x i32> %s0, <vscale x 4 x i3
 entry:
   %s0s = sext <vscale x 4 x i32> %s0 to <vscale x 4 x i64>
   %s1s = sext <vscale x 4 x i32> %s1 to <vscale x 4 x i64>
-  %add = add <vscale x 4 x i64> %s0s, %s1s
-  %add2 = add <vscale x 4 x i64> %add, shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i32 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
+  %add = add <vscale x 4 x i64> %s0s, shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i32 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
+  %add2 = add <vscale x 4 x i64> %add, %s1s
   %s = lshr <vscale x 4 x i64> %add2, shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i32 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
   %result = trunc <vscale x 4 x i64> %s to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %result
@@ -394,8 +394,8 @@ define <vscale x 4 x i32> @rhaddu_v4i32(<vscale x 4 x i32> %s0, <vscale x 4 x i3
 entry:
   %s0s = zext <vscale x 4 x i32> %s0 to <vscale x 4 x i64>
   %s1s = zext <vscale x 4 x i32> %s1 to <vscale x 4 x i64>
-  %add = add <vscale x 4 x i64> %s0s, %s1s
-  %add2 = add <vscale x 4 x i64> %add, shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i32 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
+  %add = add nuw nsw <vscale x 4 x i64> %s0s, shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i32 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
+  %add2 = add nuw nsw <vscale x 4 x i64> %add, %s1s
   %s = lshr <vscale x 4 x i64> %add2, shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i32 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
   %result = trunc <vscale x 4 x i64> %s to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %result
@@ -416,8 +416,8 @@ define <vscale x 2 x i16> @rhadds_v2i16(<vscale x 2 x i16> %s0, <vscale x 2 x i1
 entry:
   %s0s = sext <vscale x 2 x i16> %s0 to <vscale x 2 x i32>
   %s1s = sext <vscale x 2 x i16> %s1 to <vscale x 2 x i32>
-  %add = add <vscale x 2 x i32> %s0s, %s1s
-  %add2 = add <vscale x 2 x i32> %add, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+  %add = add <vscale x 2 x i32> %s0s, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+  %add2 = add <vscale x 2 x i32> %add, %s1s
   %s = lshr <vscale x 2 x i32> %add2, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
   %result = trunc <vscale x 2 x i32> %s to <vscale x 2 x i16>
   ret <vscale x 2 x i16> %result
@@ -436,8 +436,8 @@ define <vscale x 2 x i16> @rhaddu_v2i16(<vscale x 2 x i16> %s0, <vscale x 2 x i1
 entry:
   %s0s = zext <vscale x 2 x i16> %s0 to <vscale x 2 x i32>
   %s1s = zext <vscale x 2 x i16> %s1 to <vscale x 2 x i32>
-  %add = add <vscale x 2 x i32> %s0s, %s1s
-  %add2 = add <vscale x 2 x i32> %add, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+  %add = add nuw nsw <vscale x 2 x i32> %s0s, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+  %add2 = add nuw nsw <vscale x 2 x i32> %add, %s1s
   %s = lshr <vscale x 2 x i32> %add2, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
   %result = trunc <vscale x 2 x i32> %s to <vscale x 2 x i16>
   ret <vscale x 2 x i16> %result
@@ -457,8 +457,8 @@ define <vscale x 4 x i16> @rhadds_v4i16(<vscale x 4 x i16> %s0, <vscale x 4 x i1
 entry:
   %s0s = sext <vscale x 4 x i16> %s0 to <vscale x 4 x i32>
   %s1s = sext <vscale x 4 x i16> %s1 to <vscale x 4 x i32>
-  %add = add <vscale x 4 x i32> %s0s, %s1s
-  %add2 = add <vscale x 4 x i32> %add, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %add = add <vscale x 4 x i32> %s0s, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %add2 = add <vscale x 4 x i32> %add, %s1s
   %s = lshr <vscale x 4 x i32> %add2, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
   %result = trunc <vscale x 4 x i32> %s to <vscale x 4 x i16>
   ret <vscale x 4 x i16> %result
@@ -477,8 +477,8 @@ define <vscale x 4 x i16> @rhaddu_v4i16(<vscale x 4 x i16> %s0, <vscale x 4 x i1
 entry:
   %s0s = zext <vscale x 4 x i16> %s0 to <vscale x 4 x i32>
   %s1s = zext <vscale x 4 x i16> %s1 to <vscale x 4 x i32>
-  %add = add <vscale x 4 x i32> %s0s, %s1s
-  %add2 = add <vscale x 4 x i32> %add, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %add = add nuw nsw <vscale x 4 x i32> %s0s, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %add2 = add nuw nsw <vscale x 4 x i32> %add, %s1s
   %s = lshr <vscale x 4 x i32> %add2, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
   %result = trunc <vscale x 4 x i32> %s to <vscale x 4 x i16>
   ret <vscale x 4 x i16> %result
@@ -493,8 +493,8 @@ define <vscale x 8 x i16> @rhadds_v8i16(<vscale x 8 x i16> %s0, <vscale x 8 x i1
 entry:
   %s0s = sext <vscale x 8 x i16> %s0 to <vscale x 8 x i32>
   %s1s = sext <vscale x 8 x i16> %s1 to <vscale x 8 x i32>
-  %add = add <vscale x 8 x i32> %s0s, %s1s
-  %add2 = add <vscale x 8 x i32> %add, shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 1, i32 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
+  %add = add <vscale x 8 x i32> %s0s, shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 1, i32 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
+  %add2 = add <vscale x 8 x i32> %add, %s1s
   %s = lshr <vscale x 8 x i32> %add2, shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 1, i32 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
   %result = trunc <vscale x 8 x i32> %s to <vscale x 8 x i16>
   ret <vscale x 8 x i16> %result
@@ -509,8 +509,8 @@ define <vscale x 8 x i16> @rhaddu_v8i16(<vscale x 8 x i16> %s0, <vscale x 8 x i1
 entry:
   %s0s = zext <vscale x 8 x i16> %s0 to <vscale x 8 x i32>
   %s1s = zext <vscale x 8 x i16> %s1 to <vscale x 8 x i32>
-  %add = add <vscale x 8 x i32> %s0s, %s1s
-  %add2 = add <vscale x 8 x i32> %add, shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 1, i32 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
+  %add = add nuw nsw <vscale x 8 x i32> %s0s, shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 1, i32 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
+  %add2 = add nuw nsw <vscale x 8 x i32> %add, %s1s
   %s = lshr <vscale x 8 x i32> %add2, shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 1, i32 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
   %result = trunc <vscale x 8 x i32> %s to <vscale x 8 x i16>
   ret <vscale x 8 x i16> %result
@@ -531,8 +531,8 @@ define <vscale x 4 x i8> @rhadds_v4i8(<vscale x 4 x i8> %s0, <vscale x 4 x i8> %
 entry:
   %s0s = sext <vscale x 4 x i8> %s0 to <vscale x 4 x i16>
   %s1s = sext <vscale x 4 x i8> %s1 to <vscale x 4 x i16>
-  %add = add <vscale x 4 x i16> %s0s, %s1s
-  %add2 = add <vscale x 4 x i16> %add, shufflevector (<vscale x 4 x i16> insertelement (<vscale x 4 x i16> poison, i16 1, i32 0), <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer)
+  %add = add <vscale x 4 x i16> %s0s, shufflevector (<vscale x 4 x i16> insertelement (<vscale x 4 x i16> poison, i16 1, i32 0), <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer)
+  %add2 = add <vscale x 4 x i16> %add, %s1s
   %s = lshr <vscale x 4 x i16> %add2, shufflevector (<vscale x 4 x i16> insertelement (<vscale x 4 x i16> poison, i16 1, i32 0), <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer)
   %result = trunc <vscale x 4 x i16> %s to <vscale x 4 x i8>
   ret <vscale x 4 x i8> %result
@@ -551,8 +551,8 @@ define <vscale x 4 x i8> @rhaddu_v4i8(<vscale x 4 x i8> %s0, <vscale x 4 x i8> %
 entry:
   %s0s = zext <vscale x 4 x i8> %s0 to <vscale x 4 x i16>
   %s1s = zext <vscale x 4 x i8> %s1 to <vscale x 4 x i16>
-  %add = add <vscale x 4 x i16> %s0s, %s1s
-  %add2 = add <vscale x 4 x i16> %add, shufflevector (<vscale x 4 x i16> insertelement (<vscale x 4 x i16> poison, i16 1, i32 0), <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer)
+  %add = add nuw nsw <vscale x 4 x i16> %s0s, shufflevector (<vscale x 4 x i16> insertelement (<vscale x 4 x i16> poison, i16 1, i32 0), <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer)
+  %add2 = add nuw nsw <vscale x 4 x i16> %add, %s1s
   %s = lshr <vscale x 4 x i16> %add2, shufflevector (<vscale x 4 x i16> insertelement (<vscale x 4 x i16> poison, i16 1, i32 0), <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer)
   %result = trunc <vscale x 4 x i16> %s to <vscale x 4 x i8>
   ret <vscale x 4 x i8> %result
@@ -572,8 +572,8 @@ define <vscale x 8 x i8> @rhadds_v8i8(<vscale x 8 x i8> %s0, <vscale x 8 x i8> %
 entry:
   %s0s = sext <vscale x 8 x i8> %s0 to <vscale x 8 x i16>
   %s1s = sext <vscale x 8 x i8> %s1 to <vscale x 8 x i16>
-  %add = add <vscale x 8 x i16> %s0s, %s1s
-  %add2 = add <vscale x 8 x i16> %add, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 1, i32 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+  %add = add <vscale x 8 x i16> %s0s, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 1, i32 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+  %add2 = add <vscale x 8 x i16> %add, %s1s
   %s = lshr <vscale x 8 x i16> %add2, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 1, i32 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
   %result = trunc <vscale x 8 x i16> %s to <vscale x 8 x i8>
   ret <vscale x 8 x i8> %result
@@ -592,8 +592,8 @@ define <vscale x 8 x i8> @rhaddu_v8i8(<vscale x 8 x i8> %s0, <vscale x 8 x i8> %
 entry:
   %s0s = zext <vscale x 8 x i8> %s0 to <vscale x 8 x i16>
   %s1s = zext <vscale x 8 x i8> %s1 to <vscale x 8 x i16>
-  %add = add <vscale x 8 x i16> %s0s, %s1s
-  %add2 = add <vscale x 8 x i16> %add, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 1, i32 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+  %add = add nuw nsw <vscale x 8 x i16> %s0s, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 1, i32 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+  %add2 = add nuw nsw <vscale x 8 x i16> %add, %s1s
   %s = lshr <vscale x 8 x i16> %add2, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 1, i32 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
   %result = trunc <vscale x 8 x i16> %s to <vscale x 8 x i8>
   ret <vscale x 8 x i8> %result
@@ -608,8 +608,8 @@ define <vscale x 16 x i8> @rhadds_v16i8(<vscale x 16 x i8> %s0, <vscale x 16 x i
 entry:
   %s0s = sext <vscale x 16 x i8> %s0 to <vscale x 16 x i16>
   %s1s = sext <vscale x 16 x i8> %s1 to <vscale x 16 x i16>
-  %add = add <vscale x 16 x i16> %s0s, %s1s
-  %add2 = add <vscale x 16 x i16> %add, shufflevector (<vscale x 16 x i16> insertelement (<vscale x 16 x i16> poison, i16 1, i32 0), <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer)
+  %add = add <vscale x 16 x i16> %s0s, shufflevector (<vscale x 16 x i16> insertelement (<vscale x 16 x i16> poison, i16 1, i32 0), <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer)
+  %add2 = add <vscale x 16 x i16> %add, %s1s
   %s = lshr <vscale x 16 x i16> %add2, shufflevector (<vscale x 16 x i16> insertelement (<vscale x 16 x i16> poison, i16 1, i32 0), <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer)
   %result = trunc <vscale x 16 x i16> %s to <vscale x 16 x i8>
   ret <vscale x 16 x i8> %result
@@ -624,8 +624,8 @@ define <vscale x 16 x i8> @rhaddu_v16i8(<vscale x 16 x i8> %s0, <vscale x 16 x i
 entry:
   %s0s = zext <vscale x 16 x i8> %s0 to <vscale x 16 x i16>
   %s1s = zext <vscale x 16 x i8> %s1 to <vscale x 16 x i16>
-  %add = add <vscale x 16 x i16> %s0s, %s1s
-  %add2 = add <vscale x 16 x i16> %add, shufflevector (<vscale x 16 x i16> insertelement (<vscale x 16 x i16> poison, i16 1, i32 0), <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer)
+  %add = add nuw nsw <vscale x 16 x i16> %s0s, shufflevector (<vscale x 16 x i16> insertelement (<vscale x 16 x i16> poison, i16 1, i32 0), <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer)
+  %add2 = add nuw nsw <vscale x 16 x i16> %add, %s1s
   %s = lshr <vscale x 16 x i16> %add2, shufflevector (<vscale x 16 x i16> insertelement (<vscale x 16 x i16> poison, i16 1, i32 0), <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer)
   %result = trunc <vscale x 16 x i16> %s to <vscale x 16 x i8>
   ret <vscale x 16 x i8> %result
