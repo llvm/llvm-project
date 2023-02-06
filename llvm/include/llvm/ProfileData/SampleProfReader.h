@@ -232,11 +232,11 @@
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/GCOV.h"
 #include "llvm/ProfileData/SampleProf.h"
+#include "llvm/ProfileData/SymbolRemappingReader.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Discriminator.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SymbolRemappingReader.h"
 #include <cstdint>
 #include <list>
 #include <memory>

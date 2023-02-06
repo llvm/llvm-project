@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/ItaniumManglingCanonicalizer.h"
+#include "llvm/ProfileData/ItaniumManglingCanonicalizer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "gtest/gtest.h"
