@@ -74,8 +74,6 @@ module Clang_Basic {
   textual header "Basic/Sanitizers.def"
   textual header "Basic/TargetCXXABI.def"
   textual header "Basic/TransformTypeTraits.def"
-  textual header "Basic/TokenKinds.def"
-  textual header "Basic/WebAssemblyReferenceTypes.def"
 
   module * { export * }
 }
