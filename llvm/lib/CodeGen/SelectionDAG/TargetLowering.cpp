@@ -855,15 +855,6 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     // If we don't demand the inserted subvector, return the base vector.
     if (DemandedSubElts == 0)
       return Vec;
-    // If this simply widens the lowest subvector, see if we can do it earlier.
-    // TODO: REMOVE ME - SimplifyMultipleUseDemandedBits shouldn't be creating
-    // general nodes like this.
-    if (Idx == 0 && Vec.isUndef()) {
-      if (SDValue NewSub = SimplifyMultipleUseDemandedBits(
-              Sub, DemandedBits, DemandedSubElts, DAG, Depth + 1))
-        return DAG.getNode(Op.getOpcode(), SDLoc(Op), Op.getValueType(),
-                           Op.getOperand(0), NewSub, Op.getOperand(2));
-    }
     break;
   }
   case ISD::VECTOR_SHUFFLE: {
