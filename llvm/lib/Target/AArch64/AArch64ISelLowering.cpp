@@ -14626,6 +14626,10 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
   if (llvm::all_of(Mask, [](int Idx) { return Idx == UndefMaskElem; })) {
     return false;
   }
+  // A 64bit st2 which does not start at element 0 will involved adding extra
+  // ext elements, making the st2 unprofitable.
+  if (Factor == 2 && SubVecTy->getPrimitiveSizeInBits() == 64 && Mask[0] != 0)
+    return false;
 
   Type *PtrTy =
       UseScalable
