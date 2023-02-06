@@ -28,13 +28,13 @@
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/CustomIntrinsicCall.h"
 #include "flang/Lower/DumpEvaluateExpr.h"
-#include "flang/Lower/IntrinsicCall.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/Factory.h"
+#include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/Runtime/Assign.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
@@ -897,8 +897,8 @@ public:
           converter.getFoldingContext().intrinsics().GetGenericIntrinsicName(
               intrinsic->name);
       mlir::SymbolRefAttr symbolRefAttr =
-          Fortran::lower::getUnrestrictedIntrinsicSymbolRefAttr(
-              builder, loc, genericName, signature);
+          fir::getUnrestrictedIntrinsicSymbolRefAttr(builder, loc, genericName,
+                                                     signature);
       mlir::Value funcPtr =
           builder.create<fir::AddrOfOp>(loc, signature, symbolRefAttr);
       return funcPtr;
@@ -1150,7 +1150,7 @@ public:
     mlir::Type ty = converter.genType(TC, KIND);
     mlir::Value lhs = genunbox(op.left());
     mlir::Value rhs = genunbox(op.right());
-    return Fortran::lower::genPow(builder, getLoc(), ty, lhs, rhs);
+    return fir::genPow(builder, getLoc(), ty, lhs, rhs);
   }
 
   template <Fortran::common::TypeCategory TC, int KIND>
@@ -1160,7 +1160,7 @@ public:
     mlir::Type ty = converter.genType(TC, KIND);
     mlir::Value lhs = genunbox(op.left());
     mlir::Value rhs = genunbox(op.right());
-    return Fortran::lower::genPow(builder, getLoc(), ty, lhs, rhs);
+    return fir::genPow(builder, getLoc(), ty, lhs, rhs);
   }
 
   template <int KIND>
@@ -1191,11 +1191,11 @@ public:
     mlir::Value rhs = genunbox(op.right());
     switch (op.ordering) {
     case Fortran::evaluate::Ordering::Greater:
-      return Fortran::lower::genMax(builder, getLoc(),
-                                    llvm::ArrayRef<mlir::Value>{lhs, rhs});
+      return fir::genMax(builder, getLoc(),
+                         llvm::ArrayRef<mlir::Value>{lhs, rhs});
     case Fortran::evaluate::Ordering::Less:
-      return Fortran::lower::genMin(builder, getLoc(),
-                                    llvm::ArrayRef<mlir::Value>{lhs, rhs});
+      return fir::genMin(builder, getLoc(),
+                         llvm::ArrayRef<mlir::Value>{lhs, rhs});
     case Fortran::evaluate::Ordering::Equal:
       llvm_unreachable("Equal is not a valid ordering in this context");
     }
@@ -1879,14 +1879,14 @@ public:
           operands.size(), stmtCtx);
     }
 
-    const Fortran::lower::IntrinsicArgumentLoweringRules *argLowering =
-        Fortran::lower::getIntrinsicArgumentLowering(name);
+    const fir::IntrinsicArgumentLoweringRules *argLowering =
+        fir::getIntrinsicArgumentLowering(name);
     for (const auto &arg : llvm::enumerate(procRef.arguments())) {
       auto *expr =
           Fortran::evaluate::UnwrapExpr<Fortran::lower::SomeExpr>(arg.value());
       if (!expr) {
         // Absent optional.
-        operands.emplace_back(Fortran::lower::getAbsentIntrinsicArgument());
+        operands.emplace_back(fir::getAbsentIntrinsicArgument());
         continue;
       }
       if (!argLowering) {
@@ -1895,43 +1895,43 @@ public:
         continue;
       }
       // Ad-hoc argument lowering handling.
-      Fortran::lower::ArgLoweringRule argRules =
-          Fortran::lower::lowerIntrinsicArgumentAs(*argLowering, arg.index());
+      fir::ArgLoweringRule argRules =
+          fir::lowerIntrinsicArgumentAs(*argLowering, arg.index());
       if (argRules.handleDynamicOptional &&
           Fortran::evaluate::MayBePassedAsAbsentOptional(
               *expr, converter.getFoldingContext())) {
         ExtValue optional = lowerIntrinsicArgumentAsInquired(*expr);
         mlir::Value isPresent = genActualIsPresentTest(builder, loc, optional);
         switch (argRules.lowerAs) {
-        case Fortran::lower::LowerIntrinsicArgAs::Value:
+        case fir::LowerIntrinsicArgAs::Value:
           operands.emplace_back(
               genOptionalValue(builder, loc, optional, isPresent));
           continue;
-        case Fortran::lower::LowerIntrinsicArgAs::Addr:
+        case fir::LowerIntrinsicArgAs::Addr:
           operands.emplace_back(
               genOptionalAddr(builder, loc, optional, isPresent));
           continue;
-        case Fortran::lower::LowerIntrinsicArgAs::Box:
+        case fir::LowerIntrinsicArgAs::Box:
           operands.emplace_back(
               genOptionalBox(builder, loc, optional, isPresent));
           continue;
-        case Fortran::lower::LowerIntrinsicArgAs::Inquired:
+        case fir::LowerIntrinsicArgAs::Inquired:
           operands.emplace_back(optional);
           continue;
         }
         llvm_unreachable("bad switch");
       }
       switch (argRules.lowerAs) {
-      case Fortran::lower::LowerIntrinsicArgAs::Value:
+      case fir::LowerIntrinsicArgAs::Value:
         operands.emplace_back(genval(*expr));
         continue;
-      case Fortran::lower::LowerIntrinsicArgAs::Addr:
+      case fir::LowerIntrinsicArgAs::Addr:
         operands.emplace_back(gen(*expr));
         continue;
-      case Fortran::lower::LowerIntrinsicArgAs::Box:
+      case fir::LowerIntrinsicArgAs::Box:
         operands.emplace_back(lowerIntrinsicArgumentAsBox(*expr));
         continue;
-      case Fortran::lower::LowerIntrinsicArgAs::Inquired:
+      case fir::LowerIntrinsicArgAs::Inquired:
         operands.emplace_back(lowerIntrinsicArgumentAsInquired(*expr));
         continue;
       }
@@ -4477,8 +4477,8 @@ private:
     std::string name =
         intrinsic ? intrinsic->name
                   : procRef.proc().GetSymbol()->GetUltimate().name().ToString();
-    const Fortran::lower::IntrinsicArgumentLoweringRules *argLowering =
-        Fortran::lower::getIntrinsicArgumentLowering(name);
+    const fir::IntrinsicArgumentLoweringRules *argLowering =
+        fir::getIntrinsicArgumentLowering(name);
     mlir::Location loc = getLoc();
     if (intrinsic && Fortran::lower::intrinsicRequiresCustomOptionalHandling(
                          procRef, *intrinsic, converter)) {
@@ -4533,15 +4533,15 @@ private:
         operands.emplace_back(genElementalArgument(*expr));
       } else {
         // Ad-hoc argument lowering handling.
-        Fortran::lower::ArgLoweringRule argRules =
-            Fortran::lower::lowerIntrinsicArgumentAs(*argLowering, arg.index());
+        fir::ArgLoweringRule argRules =
+            fir::lowerIntrinsicArgumentAs(*argLowering, arg.index());
         if (argRules.handleDynamicOptional &&
             Fortran::evaluate::MayBePassedAsAbsentOptional(
                 *expr, converter.getFoldingContext())) {
           // Currently, there is not elemental intrinsic that requires lowering
           // a potentially absent argument to something else than a value (apart
           // from character MAX/MIN that are handled elsewhere.)
-          if (argRules.lowerAs != Fortran::lower::LowerIntrinsicArgAs::Value)
+          if (argRules.lowerAs != fir::LowerIntrinsicArgAs::Value)
             TODO(loc, "non trivial optional elemental intrinsic array "
                       "argument");
           PushSemantics(ConstituentSemantics::RefTransparent);
@@ -4549,23 +4549,23 @@ private:
           continue;
         }
         switch (argRules.lowerAs) {
-        case Fortran::lower::LowerIntrinsicArgAs::Value: {
+        case fir::LowerIntrinsicArgAs::Value: {
           PushSemantics(ConstituentSemantics::RefTransparent);
           operands.emplace_back(genElementalArgument(*expr));
         } break;
-        case Fortran::lower::LowerIntrinsicArgAs::Addr: {
+        case fir::LowerIntrinsicArgAs::Addr: {
           // Note: assume does not have Fortran VALUE attribute semantics.
           PushSemantics(ConstituentSemantics::RefOpaque);
           operands.emplace_back(genElementalArgument(*expr));
         } break;
-        case Fortran::lower::LowerIntrinsicArgAs::Box: {
+        case fir::LowerIntrinsicArgAs::Box: {
           PushSemantics(ConstituentSemantics::RefOpaque);
           auto lambda = genElementalArgument(*expr);
           operands.emplace_back([=](IterSpace iters) {
             return builder.createBox(loc, lambda(iters));
           });
         } break;
-        case Fortran::lower::LowerIntrinsicArgAs::Inquired:
+        case fir::LowerIntrinsicArgAs::Inquired:
           TODO(loc, "intrinsic function with inquired argument");
           break;
         }
@@ -5045,7 +5045,7 @@ private:
     return [=](IterSpace iters) -> ExtValue {
       mlir::Value lhs = fir::getBase(lf(iters));
       mlir::Value rhs = fir::getBase(rf(iters));
-      return Fortran::lower::genPow(builder, loc, ty, lhs, rhs);
+      return fir::genPow(builder, loc, ty, lhs, rhs);
     };
   }
   template <Fortran::common::TypeCategory TC, int KIND>
@@ -5059,15 +5059,13 @@ private:
       return [=](IterSpace iters) -> ExtValue {
         mlir::Value lhs = fir::getBase(lf(iters));
         mlir::Value rhs = fir::getBase(rf(iters));
-        return Fortran::lower::genMax(builder, loc,
-                                      llvm::ArrayRef<mlir::Value>{lhs, rhs});
+        return fir::genMax(builder, loc, llvm::ArrayRef<mlir::Value>{lhs, rhs});
       };
     case Fortran::evaluate::Ordering::Less:
       return [=](IterSpace iters) -> ExtValue {
         mlir::Value lhs = fir::getBase(lf(iters));
         mlir::Value rhs = fir::getBase(rf(iters));
-        return Fortran::lower::genMin(builder, loc,
-                                      llvm::ArrayRef<mlir::Value>{lhs, rhs});
+        return fir::genMin(builder, loc, llvm::ArrayRef<mlir::Value>{lhs, rhs});
       };
     case Fortran::evaluate::Ordering::Equal:
       llvm_unreachable("Equal is not a valid ordering in this context");
@@ -5085,7 +5083,7 @@ private:
     return [=](IterSpace iters) {
       mlir::Value lhs = fir::getBase(lf(iters));
       mlir::Value rhs = fir::getBase(rf(iters));
-      return Fortran::lower::genPow(builder, loc, ty, lhs, rhs);
+      return fir::genPow(builder, loc, ty, lhs, rhs);
     };
   }
   template <int KIND>

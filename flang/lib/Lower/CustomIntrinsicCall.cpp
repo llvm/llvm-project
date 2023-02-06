@@ -14,8 +14,8 @@
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
-#include "flang/Lower/IntrinsicCall.h"
 #include "flang/Lower/StatementContext.h"
+#include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include <optional>
 
@@ -74,7 +74,7 @@ Fortran::lower::genIntrinsicCall(fir::FirOpBuilder &builder, mlir::Location loc,
                                  llvm::ArrayRef<fir::ExtendedValue> args,
                                  Fortran::lower::StatementContext &stmtCtx) {
   auto [result, mustBeFreed] =
-      Fortran::lower::genIntrinsicCall(builder, loc, name, resultType, args);
+      fir::genIntrinsicCall(builder, loc, name, resultType, args);
   if (mustBeFreed) {
     mlir::Value addr = fir::getBase(result);
     if (auto *box = result.getBoxOf<fir::BoxValue>())
