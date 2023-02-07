@@ -126,6 +126,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor({v2s64})
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, s64)
+      .clampMaxNumElements(0, s8, 16)
+      .clampMaxNumElements(0, s16, 8)
       .clampNumElements(0, v2s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
       .minScalarOrEltIf(
