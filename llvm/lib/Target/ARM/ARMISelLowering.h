@@ -244,8 +244,7 @@ class VectorType;
     VADDLVAps, // Same as VADDLVp[su] but with a v4i1 predicate mask
     VADDLVApu,
     VMLAVs, // sign- or zero-extend the elements of two vectors to i32, multiply
-            // them
-    VMLAVu, //   and add the results together, returning an i32 of their sum
+    VMLAVu, //   them and add the results together, returning an i32 of their sum
     VMLAVps, // Same as VMLAV[su] with a v4i1 predicate mask
     VMLAVpu,
     VMLALVs,  // Same as VMLAV but with i64, returning the low and
