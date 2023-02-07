@@ -118,8 +118,9 @@ attributes #14 = { noreturn nounwind }
 
 ; CHECK: define{{.*}}@_Z5Outerv.resume(
 ; CHECK: entry.resume:
-; CHECK: %switch = icmp ult i2 %index, 1
-; CHECK-NEXT:  br i1 %switch, label %await2.suspend, label %final.suspend
+; CHECK: switch i2 %index
+; CHECK-NEXT:    i2 0, label %await2.suspend
+; CHECK-NEXT:    i2 1, label %final.suspend
 ;
 ; CHECK: await2.suspend:
 ; CHECK: musttail call

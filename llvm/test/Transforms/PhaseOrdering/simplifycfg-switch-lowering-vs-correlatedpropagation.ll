@@ -11,11 +11,9 @@
 define i64 @test1(i64 %x) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SWITCH:%.*]] = icmp eq i64 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[X]], 100
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[TMP0]], i64 200, i64 10
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = select i1 [[SWITCH]], i64 0, i64 [[DOT]]
-; CHECK-NEXT:    ret i64 [[COMMON_RET_OP]]
+; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = icmp eq i64 [[X:%.*]], 0
+; CHECK-NEXT:    [[SWITCH_SELECT:%.*]] = select i1 [[SWITCH_SELECTCMP]], i64 0, i64 10
+; CHECK-NEXT:    ret i64 [[SWITCH_SELECT]]
 ;
 entry:
   switch i64 %x, label %bb3 [
@@ -39,11 +37,9 @@ bb5:
 define i64 @test2(i64 %x) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = icmp eq i64 [[X:%.*]], 101
-; CHECK-NEXT:    [[SWITCH_SELECT:%.*]] = select i1 [[SWITCH_SELECTCMP]], i64 200, i64 10
-; CHECK-NEXT:    [[SWITCH_SELECTCMP1:%.*]] = icmp eq i64 [[X]], 1
-; CHECK-NEXT:    [[SWITCH_SELECT2:%.*]] = select i1 [[SWITCH_SELECTCMP1]], i64 0, i64 [[SWITCH_SELECT]]
-; CHECK-NEXT:    ret i64 [[SWITCH_SELECT2]]
+; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = icmp eq i64 [[X:%.*]], 1
+; CHECK-NEXT:    [[SWITCH_SELECT:%.*]] = select i1 [[SWITCH_SELECTCMP]], i64 0, i64 10
+; CHECK-NEXT:    ret i64 [[SWITCH_SELECT]]
 ;
 entry:
   switch i64 %x, label %bb3 [
@@ -93,10 +89,8 @@ define i64 @test_fail1(i64 %x) {
 ; CHECK-LABEL: @test_fail1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SWITCH:%.*]] = icmp eq i64 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[X]], 100
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[TMP0]], i64 200, i64 10
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = select i1 [[SWITCH]], i64 0, i64 [[DOT]]
-; CHECK-NEXT:    ret i64 [[COMMON_RET_OP]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[SWITCH]], i64 0, i64 10
+; CHECK-NEXT:    ret i64 [[SPEC_SELECT]]
 ;
 entry:
   switch i64 %x, label %bb3 [
@@ -121,9 +115,9 @@ bb5:
 define i64 @test_fail2(i64 %x) {
 ; CHECK-LABEL: @test_fail2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SWITCH:%.*]] = icmp eq i64 [[X:%.*]], 0
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[SWITCH]], i64 2, i64 [[X]]
-; CHECK-NEXT:    ret i64 [[SPEC_SELECT]]
+; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = icmp eq i64 [[X:%.*]], 0
+; CHECK-NEXT:    [[SWITCH_SELECT:%.*]] = select i1 [[SWITCH_SELECTCMP]], i64 2, i64 1
+; CHECK-NEXT:    ret i64 [[SWITCH_SELECT]]
 ;
 entry:
   switch i64 %x, label %bb2 [
