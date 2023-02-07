@@ -944,33 +944,37 @@ static SDValue combineShiftToAVG(SDValue Op, SelectionDAG &DAG,
 
   SDValue ExtOpA = Add.getOperand(0);
   SDValue ExtOpB = Add.getOperand(1);
-  auto MatchOperands = [&](SDValue Op1, SDValue Op2, SDValue Op3) {
+  SDValue Add2;
+  auto MatchOperands = [&](SDValue Op1, SDValue Op2, SDValue Op3, SDValue A) {
     ConstantSDNode *ConstOp;
     if ((ConstOp = isConstOrConstSplat(Op1, DemandedElts)) &&
         ConstOp->isOne()) {
       ExtOpA = Op2;
       ExtOpB = Op3;
+      Add2 = A;
       return true;
     }
     if ((ConstOp = isConstOrConstSplat(Op2, DemandedElts)) &&
         ConstOp->isOne()) {
       ExtOpA = Op1;
       ExtOpB = Op3;
+      Add2 = A;
       return true;
     }
     if ((ConstOp = isConstOrConstSplat(Op3, DemandedElts)) &&
         ConstOp->isOne()) {
       ExtOpA = Op1;
       ExtOpB = Op2;
+      Add2 = A;
       return true;
     }
     return false;
   };
   bool IsCeil =
       (ExtOpA.getOpcode() == ISD::ADD &&
-       MatchOperands(ExtOpA.getOperand(0), ExtOpA.getOperand(1), ExtOpB)) ||
+       MatchOperands(ExtOpA.getOperand(0), ExtOpA.getOperand(1), ExtOpB, ExtOpA)) ||
       (ExtOpB.getOpcode() == ISD::ADD &&
-       MatchOperands(ExtOpB.getOperand(0), ExtOpB.getOperand(1), ExtOpA));
+       MatchOperands(ExtOpB.getOperand(0), ExtOpB.getOperand(1), ExtOpA, ExtOpB));
 
   // If the shift is signed (sra):
   //  - Needs >= 2 sign bit for both operands.
@@ -1033,8 +1037,18 @@ static SDValue combineShiftToAVG(SDValue Op, SelectionDAG &DAG,
   EVT NVT = EVT::getIntegerVT(*DAG.getContext(), llvm::bit_ceil(MinWidth));
   if (VT.isVector())
     NVT = EVT::getVectorVT(*DAG.getContext(), NVT, VT.getVectorElementCount());
-  if (!TLI.isOperationLegalOrCustom(AVGOpc, NVT))
-    return SDValue();
+  if (!TLI.isOperationLegalOrCustom(AVGOpc, NVT)) {
+    // If we could not transform, and (both) adds are nuw/nsw, we can use the
+    // larger type size to do the transform.
+    if (((!IsSigned && Add->getFlags().hasNoUnsignedWrap() &&
+          (!Add2 || Add2->getFlags().hasNoUnsignedWrap())) ||
+         (IsSigned && Add->getFlags().hasNoSignedWrap() &&
+          (!Add2 || Add2->getFlags().hasNoSignedWrap()))) &&
+        TLI.isOperationLegalOrCustom(AVGOpc, VT)) {
+      NVT = VT;
+    } else
+      return SDValue();
+  }
 
   SDLoc DL(Op);
   SDValue ResultAVG =
