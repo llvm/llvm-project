@@ -30,6 +30,5 @@ def Math_Dialect : Dialect {
     ```
   }];
   let hasConstantMaterializer = 1;
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 #endif // MATH_BASE

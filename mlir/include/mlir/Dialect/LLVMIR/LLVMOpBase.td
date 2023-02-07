@@ -31,7 +31,6 @@ def LLVM_Dialect : Dialect {
   let hasRegionArgAttrVerify = 1;
   let hasRegionResultAttrVerify = 1;
   let hasOperationAttrVerify = 1;
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 
   let extraClassDeclaration = [{
     /// Name of the data layout attributes.
