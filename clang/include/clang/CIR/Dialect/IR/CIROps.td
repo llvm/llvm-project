@@ -588,6 +588,7 @@ def UnaryOpKind_Inc   : I32EnumAttrCase<"Inc",   1, "inc">;
 def UnaryOpKind_Dec   : I32EnumAttrCase<"Dec",   2, "dec">;
 def UnaryOpKind_Plus  : I32EnumAttrCase<"Plus",  3, "plus">;
 def UnaryOpKind_Minus : I32EnumAttrCase<"Minus", 4, "minus">;
+def UnaryOpKind_Not   : I32EnumAttrCase<"Not",   5, "not">;
 
 def UnaryOpKind : I32EnumAttr<
     "UnaryOpKind",
@@ -595,7 +596,9 @@ def UnaryOpKind : I32EnumAttr<
     [UnaryOpKind_Inc,
      UnaryOpKind_Dec,
      UnaryOpKind_Plus,
-     UnaryOpKind_Minus]> {
+     UnaryOpKind_Minus,
+     UnaryOpKind_Not,
+     ]> {
   let cppNamespace = "::mlir::cir";
 }
 
@@ -604,7 +607,7 @@ def UnaryOp : CIR_Op<"unary", [Pure, SameOperandsAndResultType]> {
   let summary = "Unary operations";
   let description = [{
     `cir.unary` performs the unary operation according to
-    the specified opcode kind: [inc, dec, plus, minus].
+    the specified opcode kind: [inc, dec, plus, minus, not].
 
     Note for inc and dec: the operation corresponds only to the
     addition/subtraction, its input is expect to come from a load

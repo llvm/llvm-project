@@ -248,6 +248,13 @@ public:
                                                        op.getInput());
       break;
     }
+    case mlir::cir::UnaryOpKind::Not: {
+      auto MinusOne = rewriter.create<mlir::arith::ConstantOp>(
+          op.getLoc(), type, mlir::IntegerAttr::get(type, -1));
+      rewriter.replaceOpWithNewOp<mlir::arith::XOrIOp>(op, op.getType(),
+                                  MinusOne, op.getInput());
+      break;
+    }
     }
 
     return mlir::LogicalResult::success();
