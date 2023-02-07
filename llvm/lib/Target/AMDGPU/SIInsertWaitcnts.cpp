@@ -35,7 +35,7 @@
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/DebugCounter.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "si-insert-waitcnts"

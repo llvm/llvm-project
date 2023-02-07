@@ -9,8 +9,8 @@
 #include "clang/Basic/TargetID.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/Support/TargetParser.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include <map>
 #include <optional>
 
