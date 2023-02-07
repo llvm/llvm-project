@@ -30,7 +30,7 @@ LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
   uint32_t x_abs = x_u & 0x7fff'ffffU;
 
   // Exceptional value
-  if (unlikely(x_u == 0x3e35'bec5U)) { // x = 0x1.6b7d8ap-3f
+  if (LIBC_UNLIKELY(x_u == 0x3e35'bec5U)) { // x = 0x1.6b7d8ap-3f
     int round_mode = fputil::get_round();
     if (round_mode == FE_TONEAREST || round_mode == FE_UPWARD)
       return 0x1.8dbe64p-3f;
@@ -38,7 +38,7 @@ LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
   }
 
 #if !defined(LIBC_TARGET_HAS_FMA)
-  if (unlikely(x_u == 0xbdc1'c6cbU)) { // x = -0x1.838d96p-4f
+  if (LIBC_UNLIKELY(x_u == 0xbdc1'c6cbU)) { // x = -0x1.838d96p-4f
     int round_mode = fputil::get_round();
     if (round_mode == FE_TONEAREST || round_mode == FE_DOWNWARD)
       return -0x1.71c884p-4f;
@@ -47,7 +47,7 @@ LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
 #endif // LIBC_TARGET_HAS_FMA
 
   // When |x| > 25*log(2), or nan
-  if (unlikely(x_abs >= 0x418a'a123U)) {
+  if (LIBC_UNLIKELY(x_abs >= 0x418a'a123U)) {
     // x < log(2^-25)
     if (xbits.get_sign()) {
       // exp(-Inf) = 0
@@ -80,7 +80,7 @@ LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
     // |x| < 2^-25
     if (x_abs < 0x3300'0000U) {
       // x = -0.0f
-      if (unlikely(xbits.uintval() == 0x8000'0000U))
+      if (LIBC_UNLIKELY(xbits.uintval() == 0x8000'0000U))
         return x;
         // When |x| < 2^-25, the relative error of the approximation e^x - 1 ~ x
         // is:

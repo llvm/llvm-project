@@ -32,12 +32,12 @@ LLVM_LIBC_FUNCTION(float, exp2f, (float x)) {
   uint32_t x_abs = x_u & 0x7fff'ffffU;
 
   // |x| < 2^-25
-  if (unlikely(x_abs <= 0x3280'0000U)) {
+  if (LIBC_UNLIKELY(x_abs <= 0x3280'0000U)) {
     return 1.0f + x;
   }
 
   // // When |x| >= 128, or x is nan
-  if (unlikely(x_abs >= 0x4300'0000U)) {
+  if (LIBC_UNLIKELY(x_abs >= 0x4300'0000U)) {
 
     // x >= 128
     if (!xbits.get_sign()) {
@@ -69,11 +69,11 @@ LLVM_LIBC_FUNCTION(float, exp2f, (float x)) {
   }
 
   // Check exceptional values.
-  if (unlikely(x_u & exval_mask) == exval_mask) {
-    if (unlikely(x_u == exval1)) { // x = 0x1.853a6ep-9f
+  if (LIBC_UNLIKELY(x_u & exval_mask) == exval_mask) {
+    if (LIBC_UNLIKELY(x_u == exval1)) { // x = 0x1.853a6ep-9f
       if (fputil::get_round() == FE_TONEAREST)
         return 0x1.00870ap+0f;
-    } else if (unlikely(x_u == exval2)) { // x = -0x1.e7526ep-6f
+    } else if (LIBC_UNLIKELY(x_u == exval2)) { // x = -0x1.e7526ep-6f
       if (fputil::get_round() == FE_TONEAREST)
         return 0x1.f58d62p-1f;
     }

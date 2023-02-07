@@ -195,7 +195,7 @@ template <typename T> struct FPBits {
     number <<= lz;
     ep -= lz;
 
-    if (likely(ep >= 0)) {
+    if (LIBC_LIKELY(ep >= 0)) {
       // Implicit number bit will be removed by mask
       result.set_mantissa(number);
       result.set_unbiased_exponent(ep + 1);

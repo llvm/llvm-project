@@ -47,12 +47,12 @@ LLVM_LIBC_FUNCTION(float, tanf, (float x)) {
   uint32_t x_abs = xbits.uintval() & 0x7fff'ffffU;
 
   // |x| < pi/32
-  if (unlikely(x_abs <= 0x3dc9'0fdbU)) {
+  if (LIBC_UNLIKELY(x_abs <= 0x3dc9'0fdbU)) {
     double xd = static_cast<double>(x);
 
     // |x| < 0x1.0p-12f
-    if (unlikely(x_abs < 0x3980'0000U)) {
-      if (unlikely(x_abs == 0U)) {
+    if (LIBC_UNLIKELY(x_abs < 0x3980'0000U)) {
+      if (LIBC_UNLIKELY(x_abs == 0U)) {
         // For signed zeros.
         return x;
       }
@@ -93,7 +93,7 @@ LLVM_LIBC_FUNCTION(float, tanf, (float x)) {
   }
 
   // Check for exceptional values
-  if (unlikely(x_abs == 0x3f8a1f62U)) {
+  if (LIBC_UNLIKELY(x_abs == 0x3f8a1f62U)) {
     // |x| = 0x1.143ec4p0
     float sign = x_sign ? -1.0f : 1.0f;
 
@@ -106,9 +106,9 @@ LLVM_LIBC_FUNCTION(float, tanf, (float x)) {
   }
 
   // |x| > 0x1.ada6a8p+27f
-  if (unlikely(x_abs > 0x4d56'd354U)) {
+  if (LIBC_UNLIKELY(x_abs > 0x4d56'd354U)) {
     // Inf or NaN
-    if (unlikely(x_abs >= 0x7f80'0000U)) {
+    if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
       if (x_abs == 0x7f80'0000U) {
         errno = EDOM;
         fputil::set_except(FE_INVALID);
@@ -118,7 +118,7 @@ LLVM_LIBC_FUNCTION(float, tanf, (float x)) {
     }
     // Other large exceptional values
     if (auto r = TANF_EXCEPTS.lookup_odd(x_abs, x_sign);
-        unlikely(r.has_value()))
+        LIBC_UNLIKELY(r.has_value()))
       return r.value();
   }
 

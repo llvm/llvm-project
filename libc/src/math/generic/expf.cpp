@@ -28,12 +28,12 @@ LLVM_LIBC_FUNCTION(float, expf, (float x)) {
   uint32_t x_abs = x_u & 0x7fff'ffffU;
 
   // Exceptional values
-  if (unlikely(x_u == 0xc236'bd8cU)) { // x = -0x1.6d7b18p+5f
+  if (LIBC_UNLIKELY(x_u == 0xc236'bd8cU)) { // x = -0x1.6d7b18p+5f
     return 0x1.108a58p-66f - x * 0x1.0p-95f;
   }
 
   // When |x| >= 89, |x| < 2^-25, or x is nan
-  if (unlikely(x_abs >= 0x42b2'0000U || x_abs <= 0x3280'0000U)) {
+  if (LIBC_UNLIKELY(x_abs >= 0x42b2'0000U || x_abs <= 0x3280'0000U)) {
     // |x| < 2^-25
     if (xbits.get_unbiased_exponent() <= 101) {
       return 1.0f + x;

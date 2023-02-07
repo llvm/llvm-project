@@ -85,7 +85,7 @@ LLVM_LIBC_FUNCTION(float, cosf, (float x)) {
   // Sollya respectively.
 
   // |x| < 0x1.0p-12f
-  if (unlikely(x_abs < 0x3980'0000U)) {
+  if (LIBC_UNLIKELY(x_abs < 0x3980'0000U)) {
     // When |x| < 2^-12, the relative error of the approximation cos(x) ~ 1
     // is:
     //   |cos(x) - 1| < |x^2 / 2| = 2^-25 < epsilon(1)/2.
@@ -107,11 +107,11 @@ LLVM_LIBC_FUNCTION(float, cosf, (float x)) {
 #endif // LIBC_TARGET_HAS_FMA
   }
 
-  if (auto r = COSF_EXCEPTS.lookup(x_abs); unlikely(r.has_value()))
+  if (auto r = COSF_EXCEPTS.lookup(x_abs); LIBC_UNLIKELY(r.has_value()))
     return r.value();
 
   // x is inf or nan.
-  if (unlikely(x_abs >= 0x7f80'0000U)) {
+  if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
     if (x_abs == 0x7f80'0000U) {
       errno = EDOM;
       fputil::set_except(FE_INVALID);

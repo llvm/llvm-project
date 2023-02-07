@@ -134,9 +134,9 @@ template <size_t Bits> struct DyadicFloat {
 template <size_t Bits>
 constexpr DyadicFloat<Bits> quick_add(DyadicFloat<Bits> a,
                                       DyadicFloat<Bits> b) {
-  if (unlikely(a.mantissa.is_zero()))
+  if (LIBC_UNLIKELY(a.mantissa.is_zero()))
     return b;
-  if (unlikely(b.mantissa.is_zero()))
+  if (LIBC_UNLIKELY(b.mantissa.is_zero()))
     return a;
 
   // Align exponents
