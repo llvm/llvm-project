@@ -56,3 +56,30 @@ PreservedAnalyses StripDeadPrototypesPass::run(Module &M,
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
 }
+
+namespace {
+
+class StripDeadPrototypesLegacyPass : public ModulePass {
+public:
+  static char ID; // Pass identification, replacement for typeid
+  StripDeadPrototypesLegacyPass() : ModulePass(ID) {
+    initializeStripDeadPrototypesLegacyPassPass(
+        *PassRegistry::getPassRegistry());
+  }
+  bool runOnModule(Module &M) override {
+    if (skipModule(M))
+      return false;
+
+    return stripDeadPrototypes(M);
+  }
+};
+
+} // end anonymous namespace
+
+char StripDeadPrototypesLegacyPass::ID = 0;
+INITIALIZE_PASS(StripDeadPrototypesLegacyPass, "strip-dead-prototypes",
+                "Strip Unused Function Prototypes", false, false)
+
+ModulePass *llvm::createStripDeadPrototypesPass() {
+  return new StripDeadPrototypesLegacyPass();
+}
