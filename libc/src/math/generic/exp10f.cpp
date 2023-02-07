@@ -28,7 +28,7 @@ LLVM_LIBC_FUNCTION(float, exp10f, (float x)) {
   uint32_t x_abs = x_u & 0x7fff'ffffU;
 
   // When |x| >= log10(2^128), or x is nan
-  if (unlikely(x_abs >= 0x421a'209bU)) {
+  if (LIBC_UNLIKELY(x_abs >= 0x421a'209bU)) {
     // When x < log10(2^-150) or nan
     if (x_u > 0xc234'9e35U) {
       // exp(-Inf) = 0
@@ -58,14 +58,14 @@ LLVM_LIBC_FUNCTION(float, exp10f, (float x)) {
   }
 
   // When |x| <= log10(2)*2^-6
-  if (unlikely(x_abs <= 0x3b9a'209bU)) {
-    if (unlikely(x_u == 0xb25e'5bd9U)) { // x = -0x1.bcb7b2p-27f
+  if (LIBC_UNLIKELY(x_abs <= 0x3b9a'209bU)) {
+    if (LIBC_UNLIKELY(x_u == 0xb25e'5bd9U)) { // x = -0x1.bcb7b2p-27f
       if (fputil::get_round() == FE_TONEAREST)
         return 0x1.fffffep-1f;
     }
     // |x| < 2^-25
     // 10^x ~ 1 + log(10) * x
-    if (unlikely(x_abs <= 0x3280'0000U)) {
+    if (LIBC_UNLIKELY(x_abs <= 0x3280'0000U)) {
       return fputil::multiply_add(x, 0x1.26bb1cp+1f, 1.0f);
     }
 
@@ -73,14 +73,14 @@ LLVM_LIBC_FUNCTION(float, exp10f, (float x)) {
   }
 
   // Exceptional value.
-  if (unlikely(x_u == 0x3d14'd956U)) { // x = 0x1.29b2acp-5f
+  if (LIBC_UNLIKELY(x_u == 0x3d14'd956U)) { // x = 0x1.29b2acp-5f
     if (fputil::get_round() == FE_UPWARD)
       return 0x1.1657c4p+0f;
   }
 
   // Exact outputs when x = 1, 2, ..., 10.
   // Quick check mask: 0x800f'ffffU = ~(bits of 1.0f | ... | bits of 10.0f)
-  if (unlikely((x_u & 0x800f'ffffU) == 0)) {
+  if (LIBC_UNLIKELY((x_u & 0x800f'ffffU) == 0)) {
     switch (x_u) {
     case 0x3f800000U: // x = 1.0f
       return 10.0f;

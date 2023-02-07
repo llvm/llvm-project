@@ -34,6 +34,7 @@ add_header_library(
     common.h
     endian.h
     macros/architectures.h
+    macros/attributes.h
     macros/cpu_features.h
 )
 

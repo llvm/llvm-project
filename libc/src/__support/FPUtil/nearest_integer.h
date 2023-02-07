@@ -33,9 +33,9 @@ LIBC_INLINE float nearest_integer(float x) {
     // The expression above is correct for the default rounding mode, round-to-
     // nearest, tie-to-even.  For other rounding modes, it might be off by 1,
     // which is corrected below.
-    if (unlikely(diff > 0.5f))
+    if (LIBC_UNLIKELY(diff > 0.5f))
       return r + 1.0f;
-    if (unlikely(diff < -0.5f))
+    if (LIBC_UNLIKELY(diff < -0.5f))
       return r - 1.0f;
     return r;
   }
@@ -49,9 +49,9 @@ LIBC_INLINE double nearest_integer(double x) {
     // The expression above is correct for the default rounding mode, round-to-
     // nearest, tie-to-even.  For other rounding modes, it might be off by 1,
     // which is corrected below.
-    if (unlikely(diff > 0.5))
+    if (LIBC_UNLIKELY(diff > 0.5))
       return r + 1.0;
-    if (unlikely(diff < -0.5))
+    if (LIBC_UNLIKELY(diff < -0.5))
       return r - 1.0;
     return r;
   }

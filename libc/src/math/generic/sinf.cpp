@@ -72,11 +72,11 @@ LLVM_LIBC_FUNCTION(float, sinf, (float x)) {
   // Sollya respectively.
 
   // |x| <= pi/16
-  if (unlikely(x_abs <= 0x3e49'0fdbU)) {
+  if (LIBC_UNLIKELY(x_abs <= 0x3e49'0fdbU)) {
 
     // |x| < 0x1.d12ed2p-12f
-    if (unlikely(x_abs < 0x39e8'9769U)) {
-      if (unlikely(x_abs == 0U)) {
+    if (LIBC_UNLIKELY(x_abs < 0x39e8'9769U)) {
+      if (LIBC_UNLIKELY(x_abs == 0U)) {
         // For signed zeros.
         return x;
       }
@@ -123,7 +123,7 @@ LLVM_LIBC_FUNCTION(float, sinf, (float x)) {
     return xd * result;
   }
 
-  if (unlikely(x_abs == 0x4619'9998U)) { // x = 0x1.33333p13
+  if (LIBC_UNLIKELY(x_abs == 0x4619'9998U)) { // x = 0x1.33333p13
     float r = -0x1.63f4bap-2f;
     int rounding = fputil::get_round();
     bool sign = xbits.get_sign();
@@ -132,7 +132,7 @@ LLVM_LIBC_FUNCTION(float, sinf, (float x)) {
     return xbits.get_sign() ? -r : r;
   }
 
-  if (unlikely(x_abs >= 0x7f80'0000U)) {
+  if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
     if (x_abs == 0x7f80'0000U) {
       errno = EDOM;
       fputil::set_except(FE_INVALID);

@@ -32,7 +32,7 @@ inline_memcmp_embedded_tiny(CPtr p1, CPtr p2, size_t count) {
 #if defined(LIBC_TARGET_IS_X86) || defined(LIBC_TARGET_IS_AARCH64)
 [[maybe_unused]] LIBC_INLINE MemcmpReturnType
 inline_memcmp_generic_gt16(CPtr p1, CPtr p2, size_t count) {
-  if (unlikely(count >= 384)) {
+  if (LIBC_UNLIKELY(count >= 384)) {
     if (auto value = generic::Memcmp<16>::block(p1, p2))
       return value;
     align_to_next_boundary<16, Arg::P1>(p1, p2, count);
@@ -44,7 +44,7 @@ inline_memcmp_generic_gt16(CPtr p1, CPtr p2, size_t count) {
 #if defined(LIBC_TARGET_IS_X86)
 [[maybe_unused]] LIBC_INLINE MemcmpReturnType
 inline_memcmp_x86_sse2_gt16(CPtr p1, CPtr p2, size_t count) {
-  if (unlikely(count >= 384)) {
+  if (LIBC_UNLIKELY(count >= 384)) {
     if (auto value = x86::sse2::Memcmp<16>::block(p1, p2))
       return value;
     align_to_next_boundary<16, Arg::P1>(p1, p2, count);
@@ -60,7 +60,7 @@ inline_memcmp_x86_avx2_gt16(CPtr p1, CPtr p2, size_t count) {
     return x86::avx2::Memcmp<32>::head_tail(p1, p2, count);
   if (count <= 128)
     return x86::avx2::Memcmp<64>::head_tail(p1, p2, count);
-  if (unlikely(count >= 384)) {
+  if (LIBC_UNLIKELY(count >= 384)) {
     if (auto value = x86::avx2::Memcmp<32>::block(p1, p2))
       return value;
     align_to_next_boundary<32, Arg::P1>(p1, p2, count);
@@ -76,7 +76,7 @@ inline_memcmp_x86_avx512bw_gt16(CPtr p1, CPtr p2, size_t count) {
     return x86::avx2::Memcmp<32>::head_tail(p1, p2, count);
   if (count <= 128)
     return x86::avx512bw::Memcmp<64>::head_tail(p1, p2, count);
-  if (unlikely(count >= 384)) {
+  if (LIBC_UNLIKELY(count >= 384)) {
     if (auto value = x86::avx512bw::Memcmp<64>::block(p1, p2))
       return value;
     align_to_next_boundary<64, Arg::P1>(p1, p2, count);
@@ -89,7 +89,7 @@ inline_memcmp_x86_avx512bw_gt16(CPtr p1, CPtr p2, size_t count) {
 #if defined(LIBC_TARGET_IS_AARCH64)
 [[maybe_unused]] LIBC_INLINE MemcmpReturnType
 inline_memcmp_aarch64_neon_gt16(CPtr p1, CPtr p2, size_t count) {
-  if (unlikely(count >= 128)) { // [128, ∞]
+  if (LIBC_UNLIKELY(count >= 128)) { // [128, ∞]
     if (auto value = generic::Memcmp<16>::block(p1, p2))
       return value;
     align_to_next_boundary<16, Arg::P1>(p1, p2, count);
