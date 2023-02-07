@@ -18,8 +18,8 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/RISCVISAInfo.h"
-#include "llvm/Support/TargetParser.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/TargetParser.h"
 
 namespace llvm {
 

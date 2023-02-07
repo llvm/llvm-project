@@ -35,9 +35,9 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/TargetParser.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
 
 using namespace llvm;
 

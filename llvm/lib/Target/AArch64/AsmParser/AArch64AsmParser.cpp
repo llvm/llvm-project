@@ -48,9 +48,9 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
-#include "llvm/Support/TargetParser.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include <cassert>
 #include <cctype>
 #include <cstdint>
