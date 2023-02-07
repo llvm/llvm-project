@@ -47,14 +47,14 @@
 // Functions to unpoison memory
 //-----------------------------------------------------------------------------
 
-#if LIBC_HAVE_MEMORY_SANITIZER
+#ifdef LIBC_HAVE_MEMORY_SANITIZER
 #include <sanitizer/msan_interface.h>
 #define MSAN_UNPOISON(addr, size) __msan_unpoison(addr, size)
 #else
 #define MSAN_UNPOISON(ptr, size)
 #endif
 
-#if LIBC_HAVE_ADDRESS_SANITIZER
+#ifdef LIBC_HAVE_ADDRESS_SANITIZER
 #include <sanitizer/asan_interface.h>
 #define ASAN_POISON_MEMORY_REGION(addr, size)                                  \
   __asan_poison_memory_region((addr), (size))
