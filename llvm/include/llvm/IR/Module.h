@@ -572,6 +572,15 @@ public:
   // Use alias_size() to get the size of AliasList.
   // Use aliases() to get a range of all Alias objects in AliasList.
 
+  /// Detach \p IFunc from the list but don't delete it.
+  void removeIFunc(GlobalIFunc *IFunc) { IFuncList.remove(IFunc); }
+  /// Remove \p IFunc from the list and delete it.
+  void eraseIFunc(GlobalIFunc *IFunc) { IFuncList.erase(IFunc); }
+  /// Insert \p IFunc at the end of the alias list and take ownership.
+  void insertIFunc(GlobalIFunc *IFunc) { IFuncList.push_back(IFunc); }
+  // Use ifunc_size() to get the number of functions in IFuncList.
+  // Use ifuncs() to get the range of all IFuncs.
+
 private: // Please use functions like insertAlias(), removeAlias() etc.
   /// Get the Module's list of aliases (constant).
   const AliasListType    &getAliasList() const        { return AliasList; }
@@ -592,7 +601,9 @@ public:
   static IFuncListType Module::*getSublistAccess(GlobalIFunc*) {
     return &Module::IFuncList;
   }
+  friend class llvm::SymbolTableListTraits<llvm::GlobalIFunc>;
 
+public:
   /// Get the Module's list of named metadata (constant).
   const NamedMDListType  &getNamedMDList() const      { return NamedMDList; }
   /// Get the Module's list of named metadata.
