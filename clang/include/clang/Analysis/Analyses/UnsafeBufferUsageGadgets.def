@@ -30,7 +30,6 @@ WARNING_GADGET(Decrement)
 WARNING_GADGET(ArraySubscript)
 WARNING_GADGET(PointerArithmetic)
 WARNING_GADGET(UnsafeBufferUsageAttr)
-FIXABLE_GADGET(ULCArraySubscript)
 
 #undef FIXABLE_GADGET
 #undef WARNING_GADGET
