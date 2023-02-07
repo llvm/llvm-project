@@ -24,6 +24,7 @@
 #include "clang/Config/config.h"
 #include "clang/Frontend/CASDependencyCollector.h"
 #include "clang/Frontend/ChainedDiagnosticConsumer.h"
+#include "clang/Frontend/CompileJobCacheKey.h"
 #include "clang/Frontend/CompileJobCacheResult.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -2369,10 +2370,16 @@ static bool addCachedModuleFileToInMemoryCache(
   if (!Value || !*Value) {
     auto Diag = Diags.Report(diag::err_cas_cannot_get_module_cache_key)
                 << CacheKey << Provider;
-    if (!Value)
+    if (!Value) {
       Diag << Value.takeError();
-    else
-      Diag << "no such entry in action cache";
+    } else {
+      std::string ErrStr("no such entry in action cache; expected compile:\n");
+      llvm::raw_string_ostream Err(ErrStr);
+      if (auto E = printCompileJobCacheKey(CAS, *ID, Err))
+        Diag << std::move(E);
+      else
+        Diag << Err.str();
+    }
     return true;
   }
   auto ValueRef = CAS.getReference(**Value);
