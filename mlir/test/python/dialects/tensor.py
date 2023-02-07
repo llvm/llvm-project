@@ -74,3 +74,30 @@ def testEmptyOp():
         return tensor.EmptyOp([], f32)
 
   print(module)
+
+
+# CHECK-LABEL: TEST: testInferTypesInsertSlice
+@run
+def testInferTypesInsertSlice():
+  with Context() as ctx, Location.unknown():
+    module = Module.create()
+    f32Type = F32Type.get()
+    indexType = IndexType.get()
+    with InsertionPoint(module.body):
+
+      @func.FuncOp.from_py_func(
+          RankedTensorType.get((1, 1), f32Type),
+          RankedTensorType.get((1, 1), f32Type))
+      # CHECK: func @f
+      # CHECK:      tensor.insert_slice %arg0 into %arg1[0, 0] [1, 1] [0, 0] :
+      # CHECK-SAME:   tensor<1x1xf32> into tensor<1x1xf32>
+      def f(source, dest):
+        c0 = arith.ConstantOp(indexType, 0)
+        c1 = arith.ConstantOp(indexType, 1)
+        d0 = tensor.InsertSliceOp(source, dest, [], [], [],
+                                  DenseI64ArrayAttr.get([0, 0]),
+                                  DenseI64ArrayAttr.get([1, 1]),
+                                  DenseI64ArrayAttr.get([0, 0]))
+        return [d0.result]
+
+  print(module)
