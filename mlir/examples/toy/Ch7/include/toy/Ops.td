@@ -34,7 +34,6 @@ def Toy_Dialect : Dialect {
   // and printing hooks.
   let useDefaultTypePrinterParser = 1;
 
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 // Base class for toy dialect operations. This operation inherits from the base

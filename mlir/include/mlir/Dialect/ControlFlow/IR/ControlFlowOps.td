@@ -29,7 +29,6 @@ def ControlFlow_Dialect : Dialect {
     on SSA blocks of a control flow graph.
   }];
 
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 class CF_Op<string mnemonic, list<Trait> traits = []> :
