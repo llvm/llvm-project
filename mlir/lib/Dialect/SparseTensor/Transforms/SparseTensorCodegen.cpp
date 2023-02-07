@@ -1060,8 +1060,11 @@ struct SparsePackOpConverter : public OpConversionPattern<PackOp> {
                 loc, tensorType,
                 DenseElementsAttr::get(
                     tensorType,
-                    {APInt(64, 0),
-                     APInt(64, op.getData().getType().getShape()[0])}));
+                    ArrayRef<Attribute>{
+                        IntegerAttr::get(enc.getPointerType(), 0),
+                        IntegerAttr::get(
+                            enc.getPointerType(),
+                            op.getData().getType().getShape()[0])}));
             field = rewriter.create<bufferization::ToMemrefOp>(loc, memrefType,
                                                                cstPtr);
             break;
