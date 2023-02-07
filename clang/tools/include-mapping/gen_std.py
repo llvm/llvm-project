@@ -42,6 +42,7 @@ import datetime
 import os
 import sys
 
+
 CODE_PREFIX = """\
 //===-- gen_std.py generated file -------------------------------*- C++ -*-===//
 //
@@ -67,6 +68,108 @@ def ParseArg():
                       help='Generate c or cpp (removed) symbols. One of {cpp, c, cpp_removed}.',
                       required=True) 
   return parser.parse_args()
+
+def AdditionalHeadersForIOSymbols(symbol):
+  # IO-related symbols declared in the <iosfwd> header, per C++
+  # [iosfwd.syn 31.3.1]:
+  iosfwd_symbols = [
+      'basic_ios',
+      'basic_streambuf',
+      'basic_istream',
+      'basic_ostream',
+      'basic_iostream',
+
+      'basic_stringbuf',
+      'basic_istringstream',
+      'basic_ostringstream',
+      'basic_stringstream',
+
+      'basic_spanbuf',
+      'basic_ispanstream',
+      'basic_ospanstream',
+      'basic_spanstream',
+
+      'basic_filebuf',
+      'basic_ifstream',
+      'basic_ofstream',
+      'basic_fstream',
+
+      'basic_syncbuf',
+      'basic_osyncstream',
+
+      'istreambuf_iterator',
+      'ostreambuf_iterator',
+
+      'ios',
+      'wios',
+
+      'streambuf',
+      'istream',
+      'ostream',
+      'iostream',
+
+      'stringbuf',
+      'istringstream',
+      'ostringstream',
+      'stringstream',
+
+      'spanbuf',
+      'ispanstream',
+      'ospanstream',
+      'spanstream',
+
+      'filebuf',
+      'ifstream',
+      'ofstream',
+      'fstream',
+
+      'syncbuf',
+      'osyncstream',
+
+      'wstreambuf',
+      'wistream',
+      'wostream',
+      'wiostream',
+
+      'wstringbuf',
+      'wistringstream',
+      'wostringstream',
+      'wstringstream',
+
+      'wspanbuf',
+      'wispanstream',
+      'wospanstream',
+      'wspanstream',
+
+      'wfilebuf',
+      'wifstream',
+      'wofstream',
+      'wfstream',
+
+      'wsyncbuf',
+      'wosyncstream',
+
+      'fpos',
+      'streampos',
+      'wstreampos',
+      'u8streampos',
+      'u16streampos',
+      'u32streampos',
+  ]
+  assert(len(symbol.headers) == 1)
+  sym_header = symbol.headers[0]
+  headers = []
+  # <iostream> is preferred than <iosfwd>
+
+  # <iostream> is an alternative of <streambuf>, <istream>, <ostream>, <ios>.
+  # per C++ [iostream.syn 31.4.1]
+  if sym_header in ["<ios>", "<istream>", "<ostream>", "<streambuf>"]:
+    headers.append("<iostream>")
+
+  if symbol.name in iosfwd_symbols:
+    headers.append("<iosfwd>")
+
+  return headers
 
 
 def main():
@@ -112,8 +215,10 @@ def main():
   for symbol in symbols:
     if len(symbol.headers) == 1:
       # SYMBOL(unqualified_name, namespace, header)
-      print("SYMBOL(%s, %s, %s)" % (symbol.name, symbol.namespace,
-                                    symbol.headers[0]))
+      symbol.headers.extend(AdditionalHeadersForIOSymbols(symbol))
+      for header in symbol.headers:
+        print("SYMBOL(%s, %s, %s)" % (symbol.name, symbol.namespace,
+                                      header))
     elif len(symbol.headers) == 0:
       sys.stderr.write("No header found for symbol %s\n" % symbol.name)
     else:
