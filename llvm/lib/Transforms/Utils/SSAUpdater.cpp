@@ -216,7 +216,7 @@ void SSAUpdater::UpdateDebugValues(Instruction *I,
 void SSAUpdater::UpdateDebugValue(Instruction *I, DbgValueInst *DbgValue) {
   BasicBlock *UserBB = DbgValue->getParent();
   if (HasValueForBlock(UserBB)) {
-    Value *NewVal = GetValueInMiddleOfBlock(UserBB);
+    Value *NewVal = GetValueAtEndOfBlock(UserBB);
     DbgValue->replaceVariableLocationOp(I, NewVal);
   }
   else
