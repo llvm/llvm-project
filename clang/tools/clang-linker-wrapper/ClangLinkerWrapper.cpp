@@ -867,6 +867,19 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
 
   if (Args.hasArg(OPT_print_wrapped_module))
     errs() << M;
+  if (Args.hasArg(OPT_save_temps)) {
+    int FD = -1;
+    auto TempFileOrErr =
+        createOutputFile(sys::path::filename(ExecutableName) + "." +
+                             getOffloadKindName(Kind) + ".image.wrapper",
+                         "bc");
+    if (!TempFileOrErr)
+      return TempFileOrErr.takeError();
+    if (std::error_code EC = sys::fs::openFileForWrite(*TempFileOrErr, FD))
+      return errorCodeToError(EC);
+    llvm::raw_fd_ostream OS(FD, true);
+    WriteBitcodeToFile(M, OS);
+  }
 
   auto FileOrErr = compileModule(M);
   if (!FileOrErr)
@@ -1059,8 +1072,10 @@ linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles,
       TheImage.TheImageKind =
           Args.hasArg(OPT_embed_bitcode) ? IMG_Bitcode : IMG_Object;
       TheImage.TheOffloadKind = Kind;
-      TheImage.StringData["triple"] = Args.MakeArgString(LinkerArgs.getLastArgValue(OPT_triple_EQ));
-      TheImage.StringData["arch"] = Args.MakeArgString(LinkerArgs.getLastArgValue(OPT_arch_EQ));
+      TheImage.StringData["triple"] =
+          Args.MakeArgString(LinkerArgs.getLastArgValue(OPT_triple_EQ));
+      TheImage.StringData["arch"] =
+          Args.MakeArgString(LinkerArgs.getLastArgValue(OPT_arch_EQ));
       TheImage.Image = std::move(*FileOrErr);
 
       Images[Kind].emplace_back(std::move(TheImage));
