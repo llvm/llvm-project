@@ -17,11 +17,6 @@
 #  pragma GCC system_header
 #endif
 
-// TODO: Remove in LLVM 17.
-#if defined(_LIBCPP_DEBUG)
-#  error "Defining _LIBCPP_DEBUG is not supported anymore. Please use _LIBCPP_ENABLE_DEBUG_MODE instead."
-#endif
-
 // Automatically enable assertions when the debug mode is enabled.
 #if defined(_LIBCPP_ENABLE_DEBUG_MODE)
 #  ifndef _LIBCPP_ENABLE_ASSERTIONS
