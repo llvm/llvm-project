@@ -581,6 +581,17 @@ public:
   // Use ifunc_size() to get the number of functions in IFuncList.
   // Use ifuncs() to get the range of all IFuncs.
 
+  /// Detach \p MDNode from the list but don't delete it.
+  void removeNamedMDNode(NamedMDNode *MDNode) { NamedMDList.remove(MDNode); }
+  /// Remove \p MDNode from the list and delete it.
+  void eraseNamedMDNode(NamedMDNode *MDNode) { NamedMDList.erase(MDNode); }
+  /// Insert \p MDNode at the end of the alias list and take ownership.
+  void insertNamedMDNode(NamedMDNode *MDNode) {
+    NamedMDList.push_back(MDNode);
+  }
+  // Use named_metadata_size() to get the size of the named meatadata list.
+  // Use named_metadata() to get the range of all named metadata.
+
 private: // Please use functions like insertAlias(), removeAlias() etc.
   /// Get the Module's list of aliases (constant).
   const AliasListType    &getAliasList() const        { return AliasList; }
@@ -603,7 +614,6 @@ public:
   }
   friend class llvm::SymbolTableListTraits<llvm::GlobalIFunc>;
 
-public:
   /// Get the Module's list of named metadata (constant).
   const NamedMDListType  &getNamedMDList() const      { return NamedMDList; }
   /// Get the Module's list of named metadata.
@@ -613,6 +623,7 @@ public:
     return &Module::NamedMDList;
   }
 
+public:
   /// Get the symbol table of global variable and function identifiers
   const ValueSymbolTable &getValueSymbolTable() const { return *ValSymTab; }
   /// Get the Module's symbol table of global variable and function identifiers.
