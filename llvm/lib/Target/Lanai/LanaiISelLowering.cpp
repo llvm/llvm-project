@@ -478,7 +478,7 @@ SDValue LanaiTargetLowering::LowerCCCArguments(
       }
       default:
         LLVM_DEBUG(dbgs() << "LowerFormalArguments Unhandled argument type: "
-                          << RegVT.getEVTString() << "\n");
+                          << RegVT << "\n");
         llvm_unreachable("unhandled argument type");
       }
     } else {
