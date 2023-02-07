@@ -203,18 +203,32 @@ clang_experimental_DependencyScannerServiceOptions_setDependencyMode(
     CXDependencyScannerServiceOptions Opts, CXDependencyMode Mode);
 
 /**
- * Specify a \c CXCASObjectStore in the given options. If an object store and
- * action cache are available, the scanner will produce cached commands.
+ * Specify the object store and action cache databases in the given options.
+ * With this set, the scanner will produce cached commands.
  */
 CINDEX_LINKAGE void
+clang_experimental_DependencyScannerServiceOptions_setCASDatabases(
+    CXDependencyScannerServiceOptions Opts, CXCASDatabases);
+
+/**
+ * Specify a \c CXCASObjectStore in the given options. If an object store and
+ * action cache are available, the scanner will produce cached commands.
+ * Deprecated, use
+ * \p clang_experimental_DependencyScannerServiceOptions_setCASDatabases()
+ * instead.
+ */
+CINDEX_DEPRECATED CINDEX_LINKAGE void
 clang_experimental_DependencyScannerServiceOptions_setObjectStore(
     CXDependencyScannerServiceOptions Opts, CXCASObjectStore CAS);
 
 /**
  * Specify a \c CXCASActionCache in the given options. If an object store and
  * action cache are available, the scanner will produce cached commands.
+ * Deprecated, use
+ * \p clang_experimental_DependencyScannerServiceOptions_setCASDatabases()
+ * instead.
  */
-CINDEX_LINKAGE void
+CINDEX_DEPRECATED CINDEX_LINKAGE void
 clang_experimental_DependencyScannerServiceOptions_setActionCache(
     CXDependencyScannerServiceOptions Opts, CXCASActionCache Cache);
 

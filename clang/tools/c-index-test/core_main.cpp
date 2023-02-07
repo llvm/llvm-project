@@ -138,10 +138,7 @@ static cl::list<std::string> DependencyTargets(
     "dependency-target",
     cl::desc("module builds should use the given dependency target(s)"));
 static llvm::cl::opt<std::string>
-    CASPath("cas-path", llvm::cl::desc("Path for on-disk CAS."));
-static llvm::cl::opt<std::string>
-    CachePath("action-cache-path",
-              llvm::cl::desc("Path for on-disk action cache."));
+    CASPath("cas-path", llvm::cl::desc("Path for on-disk CAS/cache."));
 }
 } // anonymous namespace
 
@@ -684,7 +681,6 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
                     bool SerializeDiags, bool DependencyFile,
                     ArrayRef<std::string> DepTargets, std::string OutputPath,
                     Optional<std::string> CASPath,
-                    Optional<std::string> CachePath,
                     Optional<std::string> ModuleName = std::nullopt) {
   CXDependencyScannerServiceOptions Opts =
       clang_experimental_DependencyScannerServiceOptions_create();
@@ -696,32 +692,22 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
 
   CXString Error;
   if (CASPath) {
-    CXCASObjectStore CAS = clang_experimental_cas_OnDiskObjectStore_create(
-        CASPath->c_str(), &Error);
-    auto CleanupCache = llvm::make_scope_exit(
-        [&] { clang_experimental_cas_ObjectStore_dispose(CAS); });
-    if (!CAS) {
-      llvm::errs() << "error: failed to create ObjectStore\n";
+    CXCASOptions CASOpts = clang_experimental_cas_Options_create();
+    auto CleanupCASOpts = llvm::make_scope_exit(
+        [&] { clang_experimental_cas_Options_dispose(CASOpts); });
+    clang_experimental_cas_Options_setOnDiskPath(CASOpts, CASPath->c_str());
+    CXCASDatabases DBs =
+        clang_experimental_cas_Databases_create(CASOpts, &Error);
+    auto CleanupCaches = llvm::make_scope_exit(
+        [&] { clang_experimental_cas_Databases_dispose(DBs); });
+    if (!DBs) {
+      llvm::errs() << "error: failed to create cache instances\n";
       llvm::errs() << clang_getCString(Error) << "\n";
       clang_disposeString(Error);
       return 1;
     }
-    clang_experimental_DependencyScannerServiceOptions_setObjectStore(Opts,
-                                                                      CAS);
-    if (CachePath) {
-      CXCASActionCache Cache = clang_experimental_cas_OnDiskActionCache_create(
-          CachePath->c_str(), &Error);
-      auto CleanupCache = llvm::make_scope_exit(
-          [&] { clang_experimental_cas_ActionCache_dispose(Cache); });
-      if (!Cache) {
-        llvm::errs() << "error: failed to create ActionCache\n";
-        llvm::errs() << clang_getCString(Error) << "\n";
-        clang_disposeString(Error);
-        return 1;
-      }
-      clang_experimental_DependencyScannerServiceOptions_setActionCache(Opts,
-                                                                        Cache);
-    }
+    clang_experimental_DependencyScannerServiceOptions_setCASDatabases(Opts,
+                                                                       DBs);
   }
 
   CXDependencyScannerService Service =
@@ -1149,9 +1135,6 @@ int indextest_core_main(int argc, const char **argv) {
   Optional<std::string> CASPath = options::CASPath.empty()
                                       ? std::nullopt
                                       : Optional<std::string>(options::CASPath);
-  Optional<std::string> CachePath =
-      options::CachePath.empty() ? std::nullopt
-                                 : Optional<std::string>(options::CachePath);
 
   if (options::Action == ActionType::ScanDeps) {
     if (options::InputFiles.empty()) {
@@ -1160,7 +1143,7 @@ int indextest_core_main(int argc, const char **argv) {
     }
     return scanDeps(CompArgs, options::InputFiles[0], options::SerializeDiags,
                     options::DependencyFile, options::DependencyTargets,
-                    options::OutputDir, CASPath, CachePath);
+                    options::OutputDir, CASPath);
   }
 
   if (options::Action == ActionType::ScanDepsByModuleName) {
@@ -1175,8 +1158,7 @@ int indextest_core_main(int argc, const char **argv) {
     }
     return scanDeps(CompArgs, options::InputFiles[0], options::SerializeDiags,
                     options::DependencyFile, options::DependencyTargets,
-                    options::OutputDir, CASPath, CachePath,
-                    options::ModuleName);
+                    options::OutputDir, CASPath, options::ModuleName);
   }
 
   if (options::Action == ActionType::WatchDir) {

@@ -33,6 +33,17 @@ extern "C" {
  */
 
 /**
+ * Configuration options for ObjectStore and ActionCache.
+ */
+typedef struct CXOpaqueCASOptions *CXCASOptions;
+
+/**
+ * Encapsulates instances of ObjectStore and ActionCache, created from a
+ * particular configuration of \p CXCASOptions.
+ */
+typedef struct CXOpaqueCASDatabases *CXCASDatabases;
+
+/**
  * Content-addressable storage for objects.
  */
 typedef struct CXOpaqueCASObjectStore *CXCASObjectStore;
@@ -41,6 +52,39 @@ typedef struct CXOpaqueCASObjectStore *CXCASObjectStore;
  * A cache from a key describing an action to the result of doing it.
  */
 typedef struct CXOpaqueCASActionCache *CXCASActionCache;
+
+/**
+ * Create a \c CXCASOptions object.
+ */
+CINDEX_LINKAGE CXCASOptions clang_experimental_cas_Options_create(void);
+
+/**
+ * Dispose of a \c CXCASOptions object.
+ */
+CINDEX_LINKAGE void clang_experimental_cas_Options_dispose(CXCASOptions);
+
+/**
+ * Configure the file path to use for on-disk CAS/cache instances.
+ */
+CINDEX_LINKAGE void
+clang_experimental_cas_Options_setOnDiskPath(CXCASOptions, const char *Path);
+
+/**
+ * Creates instances for a CAS object store and action cache based on the
+ * configuration of a \p CXCASOptions.
+ *
+ * \param Opts configuration options.
+ * \param[out] Error The error string to pass back to client (if any).
+ *
+ * \returns The resulting instances object, or null if there was an error.
+ */
+CINDEX_LINKAGE CXCASDatabases
+clang_experimental_cas_Databases_create(CXCASOptions Opts, CXString *Error);
+
+/**
+ * Dispose of a \c CXCASDatabases object.
+ */
+CINDEX_LINKAGE void clang_experimental_cas_Databases_dispose(CXCASDatabases);
 
 /**
  * Dispose of a \c CXCASObjectStore object.
@@ -56,27 +100,29 @@ clang_experimental_cas_ActionCache_dispose(CXCASActionCache Cache);
 
 /**
  * Gets or creates a persistent on-disk CAS object store at \p Path.
+ * Deprecated, use \p clang_experimental_cas_Databases_create() instead.
  *
  * \param Path The path to locate the object store.
  * \param[out] Error The error string to pass back to client (if any).
  *
  * \returns The resulting object store, or null if there was an error.
  */
-CINDEX_LINKAGE CXCASObjectStore
-clang_experimental_cas_OnDiskObjectStore_create(
-    const char *Path, CXString *Error);
+CINDEX_DEPRECATED CINDEX_LINKAGE CXCASObjectStore
+clang_experimental_cas_OnDiskObjectStore_create(const char *Path,
+                                                CXString *Error);
 
 /**
  * Gets or creates a persistent on-disk action cache at \p Path.
+ * Deprecated, use \p clang_experimental_cas_Databases_create() instead.
  *
  * \param Path The path to locate the object store.
  * \param[out] Error The error string to pass back to client (if any).
  *
  * \returns The resulting object store, or null if there was an error.
  */
-CINDEX_LINKAGE CXCASActionCache
-clang_experimental_cas_OnDiskActionCache_create(
-    const char *Path, CXString *Error);
+CINDEX_DEPRECATED CINDEX_LINKAGE CXCASActionCache
+clang_experimental_cas_OnDiskActionCache_create(const char *Path,
+                                                CXString *Error);
 
 /**
  * @}

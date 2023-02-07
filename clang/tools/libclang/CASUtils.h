@@ -11,6 +11,7 @@
 
 #include "clang-c/CAS.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/CAS/CASOptions.h"
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/CBindingWrapping.h"
@@ -18,6 +19,12 @@
 
 namespace clang {
 namespace cas {
+
+struct WrappedCASDatabases {
+  CASOptions CASOpts;
+  std::shared_ptr<cas::ObjectStore> CAS;
+  std::shared_ptr<cas::ActionCache> Cache;
+};
 
 struct WrappedObjectStore {
   std::shared_ptr<ObjectStore> CAS;
@@ -29,6 +36,8 @@ struct WrappedActionCache {
   std::string CachePath;
 };
 
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(CASOptions, CXCASOptions)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(WrappedCASDatabases, CXCASDatabases)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(WrappedObjectStore, CXCASObjectStore)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(WrappedActionCache, CXCASActionCache)
 
