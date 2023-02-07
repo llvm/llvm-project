@@ -350,6 +350,12 @@ namespace llvm {
     bool operator>=(const MVT& S) const { return SimpleTy >= S.SimpleTy; }
     bool operator<=(const MVT& S) const { return SimpleTy <= S.SimpleTy; }
 
+    /// Support for debugging, callable in GDB: VT.dump()
+    void dump() const;
+
+    /// Implement operator<<.
+    void print(raw_ostream &OS) const;
+
     /// Return true if this is a valid simple valuetype.
     bool isValid() const {
       return (SimpleTy >= MVT::FIRST_VALUETYPE &&
@@ -1570,6 +1576,11 @@ namespace llvm {
     }
     /// @}
   };
+
+  inline raw_ostream &operator<<(raw_ostream &OS, const MVT &VT) {
+    VT.print(OS);
+    return OS;
+  }
 
 } // end namespace llvm
 

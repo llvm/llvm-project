@@ -615,3 +615,15 @@ EVT EVT::getEVT(Type *Ty, bool HandleUnknown){
   }
   }
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void MVT::dump() const {
+  print(dbgs());
+  dbgs() << "\n";
+}
+#endif
+
+void MVT::print(raw_ostream &OS) const {
+  OS << EVT(*this).getEVTString();
+}
+
