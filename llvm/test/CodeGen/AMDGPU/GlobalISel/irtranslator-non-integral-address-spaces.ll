@@ -6,8 +6,8 @@ define ptr addrspace(7) @no_auto_constfold_gep() {
   ; CHECK-LABEL: name: no_auto_constfold_gep
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(p7) = G_CONSTANT i160 0
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s160) = G_CONSTANT i160 123
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p7) = G_PTR_ADD [[C]], [[C1]](s160)
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 123
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p7) = G_PTR_ADD [[C]], [[C1]](s32)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[PTR_ADD]](p7)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
