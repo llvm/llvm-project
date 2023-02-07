@@ -59,6 +59,30 @@
 // should be added to handle it, and `walkCaptureCategories` should be updated
 // to dispatch this new kind of variable to this new class.
 
+/// Is \p sym a derived type entity with length parameters ?
+static bool isDerivedWithLenParameters(const Fortran::semantics::Symbol &sym) {
+  if (const auto *declTy = sym.GetType())
+    if (const auto *derived = declTy->AsDerived())
+      return Fortran::semantics::CountLenParameters(*derived) != 0;
+  return false;
+}
+
+/// Map the extracted fir::ExtendedValue for a host associated variable inside
+/// and internal procedure to its symbol. Generates an hlfir.declare in HLFIR.
+static void bindCapturedSymbol(const Fortran::semantics::Symbol &sym,
+                               fir::ExtendedValue val,
+                               Fortran::lower::AbstractConverter &converter,
+                               Fortran::lower::SymMap &symMap) {
+  if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
+    // TODO: add an indication that this is a host variable in the declare to
+    // allow alias analysis to detect this case.
+    Fortran::lower::genDeclareSymbol(converter, symMap, sym, val);
+  } else {
+    symMap.addSymbol(sym, val);
+  }
+}
+
+namespace {
 /// Struct to be used as argument in walkCaptureCategories when building the
 /// tuple element type for a host associated variable.
 struct GetTypeInTuple {
@@ -146,10 +170,10 @@ public:
   }
 
   static void getFromTuple(const GetFromTuple &args,
-                           Fortran::lower::AbstractConverter &,
+                           Fortran::lower::AbstractConverter &converter,
                            const Fortran::semantics::Symbol &sym,
                            const Fortran::lower::BoxAnalyzer &) {
-    args.symMap.addSymbol(sym, args.valueInTuple);
+    bindCapturedSymbol(sym, args.valueInTuple, converter, args.symMap);
   }
 };
 
@@ -177,10 +201,10 @@ public:
   }
 
   static void getFromTuple(const GetFromTuple &args,
-                           Fortran::lower::AbstractConverter &,
+                           Fortran::lower::AbstractConverter &converter,
                            const Fortran::semantics::Symbol &sym,
                            const Fortran::lower::BoxAnalyzer &) {
-    args.symMap.addSymbol(sym, args.valueInTuple);
+    bindCapturedSymbol(sym, args.valueInTuple, converter, args.symMap);
   }
 };
 
@@ -223,14 +247,6 @@ public:
   }
 };
 
-/// Is \p sym a derived type entity with length parameters ?
-static bool isDerivedWithLenParameters(const Fortran::semantics::Symbol &sym) {
-  if (const auto *declTy = sym.GetType())
-    if (const auto *derived = declTy->AsDerived())
-      return Fortran::semantics::CountLenParameters(*derived) != 0;
-  return false;
-}
-
 /// Class defining how polymorphic entities are captured in internal procedures.
 /// Polymorphic entities are always boxed as a fir.class box.
 class CapturedPolymorphic : public CapturedSymbols<CapturedPolymorphic> {
@@ -253,7 +269,7 @@ public:
                            Fortran::lower::AbstractConverter &converter,
                            const Fortran::semantics::Symbol &sym,
                            const Fortran::lower::BoxAnalyzer &ba) {
-    args.symMap.addSymbol(sym, args.valueInTuple);
+    bindCapturedSymbol(sym, args.valueInTuple, converter, args.symMap);
   }
 };
 
@@ -306,8 +322,9 @@ public:
       TODO(loc, "host associated derived type allocatable or pointer with "
                 "length parameters");
     }
-    args.symMap.addSymbol(
-        sym, fir::MutableBoxValue(args.valueInTuple, nonDeferredLenParams, {}));
+    bindCapturedSymbol(
+        sym, fir::MutableBoxValue(args.valueInTuple, nonDeferredLenParams, {}),
+        converter, args.symMap);
   }
 };
 
@@ -389,8 +406,9 @@ public:
 
     if (canReadCapturedBoxValue(converter, sym)) {
       fir::BoxValue boxValue(box, lbounds, /*explicitParams=*/std::nullopt);
-      args.symMap.addSymbol(sym,
-                            fir::factory::readBoxValue(builder, loc, boxValue));
+      bindCapturedSymbol(sym,
+                         fir::factory::readBoxValue(builder, loc, boxValue),
+                         converter, args.symMap);
     } else {
       // Keep variable as a fir.box.
       // If this is an optional that is absent, the fir.box needs to be an
@@ -409,7 +427,7 @@ public:
                                                     absentBox);
       }
       fir::BoxValue boxValue(box, lbounds, /*explicitParams=*/std::nullopt);
-      args.symMap.addSymbol(sym, boxValue);
+      bindCapturedSymbol(sym, boxValue, converter, args.symMap);
     }
   }
 
@@ -430,13 +448,14 @@ private:
            !isDerivedWithLenParameters(sym);
   }
 };
+} // namespace
 
 /// Dispatch \p visitor to the CapturedSymbols which is handling how host
 /// association is implemented for this kind of symbols. This ensures the same
 /// dispatch decision is taken when building the tuple type, when creating the
 /// tuple, and when instantiating host associated variables from it.
 template <typename T>
-typename T::Result
+static typename T::Result
 walkCaptureCategories(T visitor, Fortran::lower::AbstractConverter &converter,
                       const Fortran::semantics::Symbol &sym) {
   if (isDerivedWithLenParameters(sym))
