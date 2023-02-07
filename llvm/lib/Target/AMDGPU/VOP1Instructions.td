@@ -528,13 +528,10 @@ def : GCNPat<
 >;
 }
 
-def VOP_SWAP_I32 : VOPProfile<[i32, i32, i32, untyped]> {
+def VOP_SWAP_I32 : VOPProfile<[i32, i32, untyped, untyped]> {
   let Outs32 = (outs VGPR_32:$vdst, VRegSrc_32:$vdst1);
   let Ins32 = (ins VRegSrc_32:$src0, VGPR_32:$src1);
-  let Outs64 = Outs32;
   let Asm32 = " $vdst, $src0";
-  let Asm64 = "";
-  let Ins64 = (ins);
 }
 
 let SubtargetPredicate = isGFX9Plus in {
