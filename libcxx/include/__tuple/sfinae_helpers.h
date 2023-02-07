@@ -108,19 +108,6 @@ struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, tuple<_Tp...> >
     typedef _LIBCPP_NODEBUG typename tuple_element<_Ip, __tuple_types<_Tp...> >::type type;
 };
 
-template <bool _IsTuple, class _SizeTrait, size_t _Expected>
-struct __tuple_like_with_size_imp : false_type {};
-
-template <class _SizeTrait, size_t _Expected>
-struct __tuple_like_with_size_imp<true, _SizeTrait, _Expected>
-    : integral_constant<bool, _SizeTrait::value == _Expected> {};
-
-template <class _Tuple, size_t _ExpectedSize, class _RawTuple = __libcpp_remove_reference_t<_Tuple> >
-using __tuple_like_with_size _LIBCPP_NODEBUG = __tuple_like_with_size_imp<
-                                   __tuple_like_ext<_RawTuple>::value,
-                                   tuple_size<_RawTuple>, _ExpectedSize
-                              >;
-
 struct _LIBCPP_TYPE_VIS __check_tuple_constructor_fail {
 
     static _LIBCPP_HIDE_FROM_ABI constexpr bool __enable_explicit_default() { return false; }
