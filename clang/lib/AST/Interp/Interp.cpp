@@ -434,7 +434,7 @@ static bool CheckFieldsInitialized(InterpState &S, CodePtr OpPC,
 
   // Check Fields in all bases
   for (const Record::Base &B : R->bases()) {
-    Pointer P = Pointer(BasePtr.block(), B.Offset);
+    Pointer P = BasePtr.atField(B.Offset);
     Result &= CheckFieldsInitialized(S, OpPC, P, B.R);
   }
 
