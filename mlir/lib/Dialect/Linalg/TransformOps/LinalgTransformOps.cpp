@@ -713,6 +713,14 @@ transform::FuseIntoContainingOp::apply(transform::TransformResults &results,
   return DiagnosedSilenceableFailure::success();
 }
 
+void transform::FuseIntoContainingOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  consumesHandle(getProducerOp(), effects);
+  onlyReadsHandle(getContainingOp(), effects);
+  producesHandle(getFusedOp(), effects);
+  modifiesPayload(effects);
+}
+
 //===----------------------------------------------------------------------===//
 // GeneralizeOp
 //===----------------------------------------------------------------------===//
@@ -2668,6 +2676,7 @@ void transform::TileToForeachThreadOp::getEffects(
   onlyReadsHandle(getPackedNumThreads(), effects);
   onlyReadsHandle(getPackedTileSizes(), effects);
   producesHandle(getResults(), effects);
+  modifiesPayload(effects);
 }
 
 SmallVector<OpFoldResult> TileToForeachThreadOp::getMixedNumThreads() {
@@ -2997,6 +3006,7 @@ void transform::MaskedVectorizeOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   consumesHandle(getTarget(), effects);
   onlyReadsHandle(getVectorSizes(), effects);
+  modifiesPayload(effects);
 }
 
 SmallVector<OpFoldResult> MaskedVectorizeOp::getMixedVectorSizes() {

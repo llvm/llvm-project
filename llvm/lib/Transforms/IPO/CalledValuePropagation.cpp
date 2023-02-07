@@ -405,33 +405,3 @@ PreservedAnalyses CalledValuePropagationPass::run(Module &M,
   runCVP(M);
   return PreservedAnalyses::all();
 }
-
-namespace {
-class CalledValuePropagationLegacyPass : public ModulePass {
-public:
-  static char ID;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-  }
-
-  CalledValuePropagationLegacyPass() : ModulePass(ID) {
-    initializeCalledValuePropagationLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-
-  bool runOnModule(Module &M) override {
-    if (skipModule(M))
-      return false;
-    return runCVP(M);
-  }
-};
-} // namespace
-
-char CalledValuePropagationLegacyPass::ID = 0;
-INITIALIZE_PASS(CalledValuePropagationLegacyPass, "called-value-propagation",
-                "Called Value Propagation", false, false)
-
-ModulePass *llvm::createCalledValuePropagationPass() {
-  return new CalledValuePropagationLegacyPass();
-}

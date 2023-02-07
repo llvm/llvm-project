@@ -182,6 +182,11 @@ func.func @dim_of_unranked(%unranked: memref<*xi32>) -> index {
 
 // CHECK-LABEL: func @address_space(
 func.func @address_space(%arg0 : memref<32xf32, affine_map<(d0) -> (d0)>, 7>) {
+  // CHECK: %[[MEMORY:.*]] = llvm.call @malloc(%{{.*}})
+  // CHECK: %[[CAST:.*]] = llvm.addrspacecast %[[MEMORY]] : !llvm.ptr<i8> to !llvm.ptr<i8, 5>
+  // CHECK: %[[BCAST:.*]] = llvm.bitcast %[[CAST]]
+  // CHECK: llvm.insertvalue %[[BCAST]], %{{[[:alnum:]]+}}[0]
+  // CHECK: llvm.insertvalue %[[BCAST]], %{{[[:alnum:]]+}}[1]
   %0 = memref.alloc() : memref<32xf32, affine_map<(d0) -> (d0)>, 5>
   %1 = arith.constant 7 : index
   // CHECK: llvm.load %{{.*}} : !llvm.ptr<f32, 5>

@@ -36,7 +36,7 @@
 #define LIBC_TARGET_HAS_AVX512BW
 #endif
 
-#if defined(__ARM_FEATURE_FMA) || defined(__AVX2__)
+#if defined(__ARM_FEATURE_FMA) || defined(__AVX2__) || defined(__FMA__)
 #define LIBC_TARGET_HAS_FMA
 #endif
 

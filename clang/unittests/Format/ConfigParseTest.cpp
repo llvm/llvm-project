@@ -400,6 +400,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               PackConstructorInitializers, FormatStyle::PCIS_CurrentLine);
   CHECK_PARSE("PackConstructorInitializers: NextLine",
               PackConstructorInitializers, FormatStyle::PCIS_NextLine);
+  CHECK_PARSE("PackConstructorInitializers: NextLineOnly",
+              PackConstructorInitializers, FormatStyle::PCIS_NextLineOnly);
   // For backward compatibility:
   CHECK_PARSE("BasedOnStyle: Google\n"
               "ConstructorInitializerAllOnOneLineOrOnePerLine: true\n"

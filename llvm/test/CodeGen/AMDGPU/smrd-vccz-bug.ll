@@ -2,7 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VCCZ-BUG %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
-; GCN-FUNC: {{^}}vccz_workaround:
+; GCN-LABEL: {{^}}vccz_workaround:
 ; GCN: s_load_dword [[REG:s[0-9]+]], s[{{[0-9]+:[0-9]+}}],
 ; GCN: v_cmp_neq_f32_e64 {{[^,]*}}, [[REG]], 0{{$}}
 ; VCCZ-BUG: s_waitcnt lgkmcnt(0)
@@ -26,7 +26,7 @@ endif:
   ret void
 }
 
-; GCN-FUNC: {{^}}vccz_noworkaround:
+; GCN-LABEL: {{^}}vccz_noworkaround:
 ; GCN: v_cmp_neq_f32_e32 vcc, 0, v{{[0-9]+}}
 ; GCN-NOT: s_waitcnt lgkmcnt(0)
 ; GCN-NOT: s_mov_b64 vcc, vcc
