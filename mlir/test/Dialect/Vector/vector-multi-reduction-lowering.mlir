@@ -189,6 +189,26 @@ func.func @vectorize_dynamic_reduction(%arg0: tensor<?x?xf32>, %arg1: tensor<?xf
 
 // -----
 
+func.func @vectorize_1d_dynamic_reduction(%arg0: tensor<?xf32>) -> f32 {
+  %c0 = arith.constant 0 : index
+  %dim = tensor.dim %arg0, %c0 : tensor<?xf32>
+  %c0_1 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %0 = vector.create_mask %dim : vector<8xi1>
+  %1 = vector.mask %0 { vector.transfer_read %arg0[%c0_1], %cst {in_bounds = [true]} : tensor<?xf32>, vector<8xf32> } : vector<8xi1> -> vector<8xf32>
+  %4 = vector.mask %0 { vector.multi_reduction <add>, %1, %cst [0] : vector<8xf32> to f32 } : vector<8xi1> -> f32
+  return %4 : f32
+}
+
+// Verify that a 1-D vector.multi_reduction is transformed into a vector.reduction.
+// This transform expands 1-D vectors into 2-D.
+
+// CHECK-LABEL:   func.func @vectorize_1d_dynamic_reduction(
+// CHECK:           %[[VAL_5:.*]] = vector.create_mask {{.*}} : vector<8xi1>
+// CHECK:           %[[VAL_7:.*]] = vector.mask %[[VAL_5]] { vector.reduction <add>, %{{.*}} : vector<8xf32> into f32 } : vector<8xi1> -> f32
+
+// -----
+
 func.func @vectorize_dynamic_transpose_reduction(%arg0: tensor<?x?x?xf32>, %arg1: tensor<?x?xf32>) -> tensor<?x?xf32> {
   %c0 = arith.constant 0 : index
   %dim = tensor.dim %arg0, %c0 : tensor<?x?x?xf32>

@@ -385,16 +385,24 @@ struct OneDimMultiReductionToTwoDim
 
   LogicalResult matchAndRewrite(vector::MultiDimReductionOp multiReductionOp,
                                 PatternRewriter &rewriter) const override {
-    auto maskableOp =
-        cast<vector::MaskableOpInterface>(multiReductionOp.getOperation());
-    if (maskableOp.isMasked())
-      // TODO: Support masking.
-      return failure();
-
     auto srcRank = multiReductionOp.getSourceVectorType().getRank();
     // Rank-1 or bail.
     if (srcRank != 1)
       return failure();
+
+    // Vector mask setup.
+    OpBuilder::InsertionGuard guard(rewriter);
+    auto maskableOp =
+        cast<vector::MaskableOpInterface>(multiReductionOp.getOperation());
+    Operation *rootOp;
+    Value mask;
+    if (maskableOp.isMasked()) {
+      rewriter.setInsertionPoint(maskableOp.getMaskingOp());
+      rootOp = maskableOp.getMaskingOp();
+      mask = maskableOp.getMaskingOp().getMask();
+    } else {
+      rootOp = multiReductionOp;
+    }
 
     auto loc = multiReductionOp.getLoc();
     auto srcVectorType = multiReductionOp.getSourceVectorType();
@@ -408,16 +416,27 @@ struct OneDimMultiReductionToTwoDim
 
     // If the unique dim is reduced and we insert a parallel in front, we need a
     // {false, true} mask.
-    SmallVector<bool, 2> mask{false, true};
+    SmallVector<bool, 2> reductionMask{false, true};
 
     /// vector.extract(vector.multi_reduce(vector.shape_cast(v, 1xk)), 0)
     Value cast = rewriter.create<vector::ShapeCastOp>(
         loc, castedType, multiReductionOp.getSource());
     Value castAcc = rewriter.create<vector::BroadcastOp>(
         loc, accType, multiReductionOp.getAcc());
-    Value reduced = rewriter.create<vector::MultiDimReductionOp>(
-        loc, cast, castAcc, mask, multiReductionOp.getKind());
-    rewriter.replaceOpWithNewOp<vector::ExtractOp>(multiReductionOp, reduced,
+    Value castMask;
+    if (maskableOp.isMasked()) {
+      auto maskType = mask.getType().cast<ShapedType>();
+      auto castMaskType =
+          VectorType::get(ArrayRef<int64_t>{1, maskType.getShape().back()},
+                          maskType.getElementType());
+      castMask = rewriter.create<vector::BroadcastOp>(loc, castMaskType, mask);
+    }
+
+    Operation *newOp = rewriter.create<vector::MultiDimReductionOp>(
+        loc, cast, castAcc, reductionMask, multiReductionOp.getKind());
+    newOp = vector::maskOperation(rewriter, newOp, castMask);
+
+    rewriter.replaceOpWithNewOp<vector::ExtractOp>(rootOp, newOp->getResult(0),
                                                    ArrayRef<int64_t>{0});
     return success();
   }
