@@ -10,7 +10,7 @@
 
 #include "src/__support/FPUtil/FPBits.h"
 
-#include "utils/UnitTest/StringUtils.h"
+#include "test/UnitTest/StringUtils.h"
 
 #include <sstream>
 #include <string>

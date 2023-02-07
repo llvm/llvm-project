@@ -37,8 +37,8 @@ cc_library(
         "//libc:__support_fputil_platform_defs",
         "//libc:libc_root",
         "//libc/utils/MPFRWrapper:mpfr_impl",
-        "//libc/utils/UnitTest:LibcUnitTest",
-        "//libc/utils/UnitTest:fp_test_helpers",
+        "//libc/test/UnitTest:LibcUnitTest",
+        "//libc/test/UnitTest:fp_test_helpers",
         "//libc/utils/testutils:libc_test_utils",
     ],
 )

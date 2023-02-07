@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/threads/thread.h"
-#include "utils/IntegrationTest/test.h"
+#include "test/IntegrationTest/test.h"
 
 static constexpr int INIT_VAL = 100;
 static constexpr int UPDATE_VAL = 123;

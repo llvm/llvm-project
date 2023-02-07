@@ -10,7 +10,7 @@
 #include "src/unistd/execv.h"
 #include "src/unistd/fork.h"
 
-#include "utils/IntegrationTest/test.h"
+#include "test/IntegrationTest/test.h"
 
 #include <signal.h>
 #include <sys/wait.h>

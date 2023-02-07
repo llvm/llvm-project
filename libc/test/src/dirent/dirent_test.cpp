@@ -12,7 +12,7 @@
 #include "src/dirent/opendir.h"
 #include "src/dirent/readdir.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include <dirent.h>
 #include <errno.h>

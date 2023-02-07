@@ -443,7 +443,7 @@ function(add_integration_test test_name)
       libc.src.stdlib.atexit
       libc.src.stdlib.exit
       libc.src.unistd.environ
-      libc.utils.IntegrationTest.test)
+      libc.test.IntegrationTest.test)
   list(REMOVE_DUPLICATES fq_deps_list)
 
   # TODO: Instead of gathering internal object files from entrypoints,
@@ -526,7 +526,7 @@ function(add_integration_test test_name)
   add_dependencies(${fq_target_name}
                    ${fq_target_name}.__copy_startup__
                    ${fq_libc_target_name}
-                   libc.utils.IntegrationTest.test
+                   libc.test.IntegrationTest.test
                    ${INTEGRATION_TEST_DEPENDS})
 
   add_custom_command(

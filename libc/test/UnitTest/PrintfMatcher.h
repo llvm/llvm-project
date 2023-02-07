@@ -10,7 +10,7 @@
 #define LLVM_LIBC_UTILS_UNITTEST_PRINTF_MATCHER_H
 
 #include "src/stdio/printf_core/core_structs.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include <errno.h>
 

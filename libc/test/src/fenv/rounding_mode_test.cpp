@@ -9,7 +9,7 @@
 #include "src/fenv/fegetround.h"
 #include "src/fenv/fesetround.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include <fenv.h>
 

@@ -13,7 +13,7 @@
 #include "src/pthread/pthread_key_create.h"
 #include "src/pthread/pthread_key_delete.h"
 #include "src/pthread/pthread_setspecific.h"
-#include "utils/IntegrationTest/test.h"
+#include "test/IntegrationTest/test.h"
 
 #include <pthread.h>
 

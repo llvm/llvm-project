@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/ctype/ispunct.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 // Helper function to mark the sections of the ASCII table that are
 // punctuation characters. These are listed below:

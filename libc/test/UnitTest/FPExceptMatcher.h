@@ -11,7 +11,7 @@
 
 #ifndef LLVM_LIBC_TEST_USE_FUCHSIA
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 namespace __llvm_libc {
 namespace fputil {

@@ -15,7 +15,7 @@
 #include "src/signal/sigprocmask.h"
 
 #include "test/ErrnoSetterMatcher.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 class LlvmLibcSignalTest : public __llvm_libc::testing::Test {
   sigset_t oldSet;

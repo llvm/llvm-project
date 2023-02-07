@@ -33,7 +33,7 @@ def math_test(name, hdrs = [], deps = [], **kwargs):
             "//libc:__support_uint128",
             "//libc:__support_fputil_manipulation_functions",
             "//libc:__support_fputil_nearest_integer_operations",
-            "//libc/utils/UnitTest:fp_test_helpers",
+            "//libc/test/UnitTest:fp_test_helpers",
         ] + deps,
         **kwargs
     )

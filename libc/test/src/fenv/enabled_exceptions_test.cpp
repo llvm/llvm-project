@@ -12,8 +12,8 @@
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/macros/architectures.h"
-#include "utils/UnitTest/FPExceptMatcher.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/FPExceptMatcher.h"
+#include "test/UnitTest/Test.h"
 
 #include <fenv.h>
 #include <signal.h>

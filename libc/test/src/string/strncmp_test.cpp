@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strncmp.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 // This group is just copies of the strcmp tests, since all the same cases still
 // need to be tested.

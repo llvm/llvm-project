@@ -176,8 +176,8 @@ cc_library(
         "//libc:__support_fputil_basic_operations",
         "//libc:__support_fputil_fp_bits",
         "//libc/utils/MPFRWrapper:mpfr_wrapper",
-        "//libc/utils/UnitTest:LibcUnitTest",
-        "//libc/utils/UnitTest:fp_test_helpers",
+        "//libc/test/UnitTest:LibcUnitTest",
+        "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
 
@@ -292,7 +292,7 @@ cc_library(
     deps = [
         "//libc:__support_fputil_fp_bits",
         "//libc:__support_fputil_manipulation_functions",
-        "//libc/utils/UnitTest:LibcUnitTest",
+        "//libc/test/UnitTest:LibcUnitTest",
     ],
 )
 
@@ -318,8 +318,8 @@ cc_library(
         "//libc:__support_fputil_basic_operations",
         "//libc:__support_fputil_fenv_impl",
         "//libc:__support_fputil_fp_bits",
-        "//libc/utils/UnitTest:LibcUnitTest",
-        "//libc/utils/UnitTest:fp_test_helpers",
+        "//libc/test/UnitTest:LibcUnitTest",
+        "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
 
@@ -344,8 +344,8 @@ cc_library(
     deps = [
         "//libc:__support_fputil_fp_bits",
         "//libc:__support_fputil_normal_float",
-        "//libc/utils/UnitTest:LibcUnitTest",
-        "//libc/utils/UnitTest:fp_test_helpers",
+        "//libc/test/UnitTest:LibcUnitTest",
+        "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
 
@@ -371,8 +371,8 @@ cc_library(
         "//libc:__support_fputil_fenv_impl",
         "//libc:__support_fputil_fp_bits",
         "//libc/utils/MPFRWrapper:mpfr_wrapper",
-        "//libc/utils/UnitTest:LibcUnitTest",
-        "//libc/utils/UnitTest:fp_test_helpers",
+        "//libc/test/UnitTest:LibcUnitTest",
+        "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
 
@@ -407,8 +407,8 @@ cc_library(
         "//libc:__support_fputil_fenv_impl",
         "//libc:__support_fputil_fp_bits",
         "//libc/utils/MPFRWrapper:mpfr_wrapper",
-        "//libc/utils/UnitTest:LibcUnitTest",
-        "//libc/utils/UnitTest:fp_test_helpers",
+        "//libc/test/UnitTest:LibcUnitTest",
+        "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
 
@@ -517,8 +517,8 @@ cc_library(
         "//libc:__support_cpp_type_traits",
         "//libc:__support_fputil_basic_operations",
         "//libc:__support_fputil_fp_bits",
-        "//libc/utils/UnitTest:LibcUnitTest",
-        "//libc/utils/UnitTest:fp_test_helpers",
+        "//libc/test/UnitTest:LibcUnitTest",
+        "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
 

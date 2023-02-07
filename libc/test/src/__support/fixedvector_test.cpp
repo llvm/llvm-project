@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/fixedvector.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcFixedVectorTest, PushAndPop) {
   __llvm_libc::FixedVector<int, 20> fixed_vector;

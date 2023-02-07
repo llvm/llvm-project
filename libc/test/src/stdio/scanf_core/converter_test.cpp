@@ -12,7 +12,7 @@
 #include "src/stdio/scanf_core/reader.h"
 #include "src/stdio/scanf_core/string_reader.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcScanfConverterTest, RawMatchBasic) {
   const char *str = "abcdef";
