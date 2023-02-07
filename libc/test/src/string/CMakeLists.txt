@@ -367,6 +367,7 @@ function(add_libc_multi_impl_test name)
         ${ARGN}
         DEPENDS
           ${fq_config_name}
+          libc.src.__support.sanitizer
       )
       get_fq_target_name(${fq_config_name}_test fq_target_name)
     else()
