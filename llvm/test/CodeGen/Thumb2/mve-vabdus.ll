@@ -658,3 +658,40 @@ define arm_aapcs_vfpcc <4 x i32> @vabd_v4u32_shuffle(<4 x i32> %src1, <4 x i32> 
   %aresult = trunc <4 x i64> %as to <4 x i32>
   ret <4 x i32> %aresult
 }
+
+
+define arm_aapcs_vfpcc i16 @vabds_reduce_v16i8(<16 x i8> %s0, <16 x i8> %s1) {
+; CHECK-LABEL: vabds_reduce_v16i8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vabd.s8 q0, q0, q1
+; CHECK-NEXT:    vaddv.u8 r0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %sextsrc1 = sext <16 x i8> %s0 to <16 x i16>
+  %sextsrc2 = sext <16 x i8> %s1 to <16 x i16>
+  %add1 = sub <16 x i16> %sextsrc1, %sextsrc2
+  %add2 = sub <16 x i16> zeroinitializer, %add1
+  %c = icmp sge <16 x i16> %add1, zeroinitializer
+  %s = select <16 x i1> %c, <16 x i16> %add1, <16 x i16> %add2
+  %result = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %s)
+  ret i16 %result
+}
+
+define arm_aapcs_vfpcc i16 @vabdu_reduce_v16i8(<16 x i8> %s0, <16 x i8> %s1) {
+; CHECK-LABEL: vabdu_reduce_v16i8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vabd.u8 q0, q0, q1
+; CHECK-NEXT:    vaddv.u8 r0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %sextsrc1 = zext <16 x i8> %s0 to <16 x i16>
+  %sextsrc2 = zext <16 x i8> %s1 to <16 x i16>
+  %add1 = sub <16 x i16> %sextsrc1, %sextsrc2
+  %add2 = sub <16 x i16> zeroinitializer, %add1
+  %c = icmp sge <16 x i16> %add1, zeroinitializer
+  %s = select <16 x i1> %c, <16 x i16> %add1, <16 x i16> %add2
+  %result = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %s)
+  ret i16 %result
+}
+
+declare i16 @llvm.vector.reduce.add.v16i16(<16 x i16>)
