@@ -2253,8 +2253,7 @@ define <16 x i32> @splat_v3i32(ptr %ptr) {
 ;
 ; AVX2-FAST-LABEL: splat_v3i32:
 ; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX2-FAST-NEXT:    vpinsrd $2, 8(%rdi), %xmm0, %xmm1
+; AVX2-FAST-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX2-FAST-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX2-FAST-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2,3,4,5,6,7]
 ; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm1 = zero,zero,zero,zero,zero,zero,zero,zero,ymm1[0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
