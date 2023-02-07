@@ -206,6 +206,8 @@ public:
           mlirOperands.push_back(val->get());
           continue;
         } catch (py::cast_error &err) {
+          // Intentionally unhandled to try sequence below first.
+          (void)err;
         }
 
         try {
