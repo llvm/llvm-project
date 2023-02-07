@@ -1,38 +1,38 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -no-opaque-pointers -include __clang_hip_runtime_wrapper.h \
+// RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
 // RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
 // RUN:   -D__HIPCC_RTC__ | FileCheck -check-prefixes=CHECK,NOMALLOC %s
-// RUN: %clang_cc1 -no-opaque-pointers -include __clang_hip_runtime_wrapper.h \
+// RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -include cmath \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
 // RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
 // RUN:   -D__HIPCC_RTC__ | FileCheck %s  -check-prefixes=AMD_BOOL_RETURN
-// RUN: %clang_cc1 -no-opaque-pointers -include __clang_hip_runtime_wrapper.h \
+// RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -include cmath \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
 // RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
 // RUN:   -D__HIPCC_RTC__ -DUSE_ISNAN_WITH_INT_RETURN | FileCheck %s -check-prefixes=AMD_INT_RETURN
-// RUN: %clang_cc1 -no-opaque-pointers -include __clang_hip_runtime_wrapper.h \
+// RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
 // RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
 // RUN:   -D__HIPCC_RTC__ -std=c++14 | FileCheck -check-prefixes=CHECK,CXX14 %s
-// RUN: %clang_cc1 -no-opaque-pointers -include __clang_hip_runtime_wrapper.h \
+// RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
 // RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
 // RUN:   -DHIP_VERSION_MAJOR=4 -DHIP_VERSION_MINOR=5 \
 // RUN:   -D__HIPCC_RTC__ | FileCheck -check-prefixes=CHECK,MALLOC %s
-// RUN: %clang_cc1 -no-opaque-pointers -include __clang_hip_runtime_wrapper.h \
+// RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
@@ -60,8 +60,8 @@ struct derived:base {
 __device__ void test_vf() {
     derived d;
 }
-// CHECK: @_ZTV7derived = linkonce_odr unnamed_addr addrspace(1) constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* null, i8* bitcast (void (%struct.derived*)* @_ZN7derived2pvEv to i8*), i8* bitcast (void ()* @__cxa_deleted_virtual to i8*)] }, comdat, align 8
-// CHECK: @_ZTV4base = linkonce_odr unnamed_addr addrspace(1) constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* null, i8* bitcast (void ()* @__cxa_pure_virtual to i8*), i8* bitcast (void ()* @__cxa_deleted_virtual to i8*)] }, comdat, align 8
+// CHECK: @_ZTV7derived = linkonce_odr unnamed_addr addrspace(1) constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr null, ptr @_ZN7derived2pvEv, ptr @__cxa_deleted_virtual] }, comdat, align 8
+// CHECK: @_ZTV4base = linkonce_odr unnamed_addr addrspace(1) constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr null, ptr @__cxa_pure_virtual, ptr @__cxa_deleted_virtual] }, comdat, align 8
 
 // CHECK: define{{.*}}void @__cxa_pure_virtual()
 // CHECK: define{{.*}}void @__cxa_deleted_virtual()
@@ -134,24 +134,24 @@ __device__ double test_isnan() {
 // Check that device malloc and free do not conflict with std headers.
 #include <cstdlib>
 // CHECK-LABEL: define{{.*}}@_Z11test_malloc
-// CHECK: call {{.*}}i8* @malloc(i64
-// CHECK-LABEL: define weak {{.*}}i8* @malloc(i64
+// CHECK: call {{.*}}ptr @malloc(i64
+// CHECK-LABEL: define weak {{.*}}ptr @malloc(i64
 // MALLOC:  call i64 @__ockl_dm_alloc
 // NOMALLOC:  call void @llvm.trap
-// MALLOC-ASAN-LABEL: define weak {{.*}}i8* @malloc(i64
-// MALLOC-ASAN:  call i8* @llvm.returnaddress(i32 0)
+// MALLOC-ASAN-LABEL: define weak {{.*}}ptr @malloc(i64
+// MALLOC-ASAN:  call ptr @llvm.returnaddress(i32 0)
 // MALLOC-ASAN:  call i64 @__asan_malloc_impl(i64 {{.*}}, i64 {{.*}})
 __device__ void test_malloc(void *a) {
   a = malloc(42);
 }
 
 // CHECK-LABEL: define{{.*}}@_Z9test_free
-// CHECK: call {{.*}}void @free(i8*
-// CHECK-LABEL: define weak {{.*}}void @free(i8*
+// CHECK: call {{.*}}void @free(ptr
+// CHECK-LABEL: define weak {{.*}}void @free(ptr
 // MALLOC:  call void @__ockl_dm_dealloc
 // NOMALLOC: call void @llvm.trap
-// MALLOC-ASAN-LABEL: define weak {{.*}}void @free(i8*
-// MALLOC-ASAN:  call i8* @llvm.returnaddress(i32 0)
+// MALLOC-ASAN-LABEL: define weak {{.*}}void @free(ptr
+// MALLOC-ASAN:  call ptr @llvm.returnaddress(i32 0)
 // MALLOC-ASAN:  call void @__asan_free_impl(i64 {{.*}}, i64 {{.*}})
 __device__ void test_free(void *a) {
   free(a);
