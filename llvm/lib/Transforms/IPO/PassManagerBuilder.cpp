@@ -357,8 +357,6 @@ void PassManagerBuilder::populateModulePassManager(
     // and saves running remaining passes on the eliminated functions.
     MPM.add(createEliminateAvailableExternallyPass());
 
-  MPM.add(createReversePostOrderFunctionAttrsPass());
-
   // The inliner performs some kind of dead code elimination as it goes,
   // but there are cases that are not really caught by it. We might
   // at some point consider teaching the inliner about them, but it
