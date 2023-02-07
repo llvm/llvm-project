@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SUPPORT_CPP_BIT_H
 #define LLVM_LIBC_SUPPORT_CPP_BIT_H
 
-#include "src/__support/compiler_features.h"
+#include "src/__support/macros/compiler_features.h"
 
 namespace __llvm_libc::cpp {
 

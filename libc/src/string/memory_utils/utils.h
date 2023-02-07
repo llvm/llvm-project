@@ -13,7 +13,7 @@
 #include "src/__support/CPP/cstddef.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
-#include "src/__support/compiler_features.h"
+#include "src/__support/macros/compiler_features.h"
 
 #include <stddef.h> // size_t
 #include <stdint.h> // intptr_t / uintptr_t

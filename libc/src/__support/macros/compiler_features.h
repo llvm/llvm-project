@@ -6,25 +6,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SUPPORT_COMPILER_FEATURES_H
-#define LLVM_LIBC_SUPPORT_COMPILER_FEATURES_H
+#ifndef LLVM_LIBC_SUPPORT_MACROS_COMPILER_FEATURES_H
+#define LLVM_LIBC_SUPPORT_MACROS_COMPILER_FEATURES_H
 
 #if defined(__clang__)
-#define LLVM_LIBC_COMPILER_CLANG
+#define LIBC_COMPILER_IS_CLANG
 #endif
 
 #if defined(__GNUC__) && !defined(__clang__)
-#define LLVM_LIBC_COMPILER_GCC
+#define LIBC_COMPILER_IS_GCC
 #endif
 
 #if defined(_MSC_VER)
-#define LLVM_LIBC_COMPILER_MSC
+#define LIBC_COMPILER_IS_MSC
 #endif
 
 // Compiler builtin-detection.
 // clang.llvm.org/docs/LanguageExtensions.html#has-builtin
-#if defined(LLVM_LIBC_COMPILER_CLANG) ||                                       \
-    (defined(LLVM_LIBC_COMPILER_GCC) && (__GNUC__ >= 10))
+#if defined(LIBC_COMPILER_IS_CLANG) ||                                       \
+    (defined(LIBC_COMPILER_IS_GCC) && (__GNUC__ >= 10))
 #define LLVM_LIBC_HAS_BUILTIN(BUILTIN) __has_builtin(BUILTIN)
 #else
 #define LLVM_LIBC_HAS_BUILTIN(BUILTIN) 0
@@ -32,18 +32,18 @@
 
 // Compiler feature-detection.
 // clang.llvm.org/docs/LanguageExtensions.html#has-feature-and-has-extension
-#if defined(LLVM_LIBC_COMPILER_CLANG)
+#if defined(LIBC_COMPILER_IS_CLANG)
 #define LLVM_LIBC_HAS_FEATURE(FEATURE) __has_feature(FEATURE)
 #else
 #define LLVM_LIBC_HAS_FEATURE(FEATURE) 0
 #endif
 
-#if defined(LLVM_LIBC_COMPILER_CLANG)
+#if defined(LIBC_COMPILER_IS_CLANG)
 #define LLVM_LIBC_LOOP_NOUNROLL _Pragma("nounroll")
-#elif defined(LLVM_LIBC_COMPILER_GCC)
+#elif defined(LIBC_COMPILER_IS_GCC)
 #define LLVM_LIBC_LOOP_NOUNROLL _Pragma("GCC unroll 0")
 #else
 #define LLVM_LIBC_LOOP_NOUNROLL
 #endif
 
-#endif // LLVM_LIBC_SUPPORT_COMPILER_FEATURES_H
+#endif // LLVM_LIBC_SUPPORT_MACROS_COMPILER_FEATURES_H
