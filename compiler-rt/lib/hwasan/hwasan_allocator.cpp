@@ -162,6 +162,9 @@ static uptr TaggedSize(uptr size) {
 
 static void *HwasanAllocate(StackTrace *stack, uptr orig_size, uptr alignment,
                             bool zeroise) {
+  // Keep this consistent with LSAN and ASAN behavior.
+  if (orig_size == 0)
+    orig_size = 1;
   if (orig_size > kMaxAllowedMallocSize) {
     if (AllocatorMayReturnNull()) {
       Report("WARNING: HWAddressSanitizer failed to allocate 0x%zx bytes\n",
