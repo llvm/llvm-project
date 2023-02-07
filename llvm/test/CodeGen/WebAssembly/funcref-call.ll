@@ -21,3 +21,25 @@ define void @call_funcref(%funcref %ref) {
   call addrspace(20) void %ref()
   ret void
 }
+
+define float @call_funcref_with_args(%funcref %ref) {
+; CHECK-LABEL: call_funcref_with_args:
+; CHECK:         .functype call_funcref_with_args (funcref) -> (f32)
+; CHECK-NEXT:    .local f32
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    table.set __funcref_call_table
+; CHECK-NEXT:    f64.const 0x1p0
+; CHECK-NEXT:    i32.const 2
+; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    call_indirect __funcref_call_table, (f64, i32) -> (f32)
+; CHECK-NEXT:    local.set 1
+; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    ref.null_func
+; CHECK-NEXT:    table.set __funcref_call_table
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    # fallthrough-return
+  %ret = call addrspace(20) float %ref(double 1.0, i32 2)
+  ret float %ret
+}
