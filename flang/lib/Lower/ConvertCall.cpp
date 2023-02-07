@@ -1098,6 +1098,16 @@ genIntrinsicRefCore(PreparedActualArguments &loweredActuals,
           Fortran::lower::convertToValue(loc, converter, actual, stmtCtx));
       continue;
     }
+    // Helper to get the type of the Fortran expression in case it is a
+    // computed value that must be placed in memory (logicals are computed as
+    // i1, but must be placed in memory as fir.logical).
+    auto getActualFortranElementType = [&]() {
+      const Fortran::lower::SomeExpr *expr =
+          callContext.procRef.UnwrapArgExpr(arg.index());
+      assert(expr && "must be an expr");
+      mlir::Type type = converter.genType(*expr);
+      return hlfir::getFortranElementType(type);
+    };
     // Ad-hoc argument lowering handling.
     fir::ArgLoweringRule argRules =
         fir::lowerIntrinsicArgumentAs(*argLowering, arg.index());
@@ -1107,12 +1117,12 @@ genIntrinsicRefCore(PreparedActualArguments &loweredActuals,
           Fortran::lower::convertToValue(loc, converter, actual, stmtCtx));
       continue;
     case fir::LowerIntrinsicArgAs::Addr:
-      operands.emplace_back(
-          Fortran::lower::convertToAddress(loc, converter, actual, stmtCtx));
+      operands.emplace_back(Fortran::lower::convertToAddress(
+          loc, converter, actual, stmtCtx, getActualFortranElementType()));
       continue;
     case fir::LowerIntrinsicArgAs::Box:
-      operands.emplace_back(
-          Fortran::lower::convertToBox(loc, converter, actual, stmtCtx));
+      operands.emplace_back(Fortran::lower::convertToBox(
+          loc, converter, actual, stmtCtx, getActualFortranElementType()));
       continue;
     case fir::LowerIntrinsicArgAs::Inquired:
       // Place hlfir.expr in memory, and unbox fir.boxchar. Other entities
