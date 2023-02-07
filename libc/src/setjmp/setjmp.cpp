@@ -15,7 +15,7 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, setjmp, (__jmp_buf * buf)) {
-#ifdef LIBC_TARGET_IS_X86_64
+#ifdef LIBC_TARGET_ARCH_IS_X86_64
   register __UINT64_TYPE__ rbx __asm__("rbx");
   register __UINT64_TYPE__ r12 __asm__("r12");
   register __UINT64_TYPE__ r13 __asm__("r13");
@@ -50,7 +50,7 @@ LLVM_LIBC_FUNCTION(int, setjmp, (__jmp_buf * buf)) {
   buf->rsp = reinterpret_cast<__UINTPTR_TYPE__>(__builtin_frame_address(0)) +
              sizeof(__UINTPTR_TYPE__) * 2;
   buf->rip = reinterpret_cast<__UINTPTR_TYPE__>(__builtin_return_address(0));
-#else // LIBC_TARGET_IS_X86_64
+#else // LIBC_TARGET_ARCH_IS_X86_64
 #error "setjmp implementation not available for the target architecture."
 #endif
 

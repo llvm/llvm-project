@@ -129,14 +129,14 @@ LLVM_LIBC_FUNCTION(void, sincosf, (float x, float *sinp, float *cosp)) {
     // |x| < 2^-125. For targets without FMA instructions, we simply use
     // double for intermediate results as it is more efficient than using an
     // emulated version of FMA.
-#if defined(LIBC_TARGET_HAS_FMA)
+#if defined(LIBC_TARGET_CPU_HAS_FMA)
     *sinp = fputil::multiply_add(x, -0x1.0p-25f, x);
     *cosp = fputil::multiply_add(FPBits(x_abs).get_val(), -0x1.0p-25f, 1.0f);
 #else
     *sinp = static_cast<float>(fputil::multiply_add(xd, -0x1.0p-25, xd));
     *cosp = static_cast<float>(fputil::multiply_add(
         static_cast<double>(FPBits(x_abs).get_val()), -0x1.0p-25, 1.0));
-#endif // LIBC_TARGET_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA
     return;
   }
 

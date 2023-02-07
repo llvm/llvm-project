@@ -29,7 +29,7 @@ inline_memcpy_embedded_tiny(Ptr __restrict dst, CPtr __restrict src,
     builtin::Memcpy<1>::block(dst + offset, src + offset);
 }
 
-#if defined(LIBC_TARGET_IS_X86)
+#if defined(LIBC_TARGET_ARCH_IS_X86)
 [[maybe_unused]] LIBC_INLINE void
 inline_memcpy_x86(Ptr __restrict dst, CPtr __restrict src, size_t count) {
   if (count == 0)
@@ -86,9 +86,9 @@ inline_memcpy_x86_maybe_interpose_repmovsb(Ptr __restrict dst,
       return inline_memcpy_x86(dst, src, count);
   }
 }
-#endif // defined(LIBC_TARGET_IS_X86)
+#endif // defined(LIBC_TARGET_ARCH_IS_X86)
 
-#if defined(LIBC_TARGET_IS_AARCH64)
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64)
 [[maybe_unused]] LIBC_INLINE void
 inline_memcpy_aarch64(Ptr __restrict dst, CPtr __restrict src, size_t count) {
   if (count == 0)
@@ -115,18 +115,18 @@ inline_memcpy_aarch64(Ptr __restrict dst, CPtr __restrict src, size_t count) {
   align_to_next_boundary<16, Arg::Src>(dst, src, count);
   return builtin::Memcpy<64>::loop_and_tail(dst, src, count);
 }
-#endif // defined(LIBC_TARGET_IS_AARCH64)
+#endif // defined(LIBC_TARGET_ARCH_IS_AARCH64)
 
 LIBC_INLINE void inline_memcpy(Ptr __restrict dst, CPtr __restrict src,
                                size_t count) {
   using namespace __llvm_libc::builtin;
-#if defined(LIBC_TARGET_IS_X86)
+#if defined(LIBC_TARGET_ARCH_IS_X86)
   return inline_memcpy_x86_maybe_interpose_repmovsb(dst, src, count);
-#elif defined(LIBC_TARGET_IS_AARCH64)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
   return inline_memcpy_aarch64(dst, src, count);
-#elif defined(LIBC_TARGET_IS_ARM)
+#elif defined(LIBC_TARGET_ARCH_IS_ARM)
   return inline_memcpy_embedded_tiny(dst, src, count);
-#elif defined(LIBC_TARGET_IS_GPU)
+#elif defined(LIBC_TARGET_ARCH_IS_GPU)
   return inline_memcpy_embedded_tiny(dst, src, count);
 #else
 #error "Unsupported platform"

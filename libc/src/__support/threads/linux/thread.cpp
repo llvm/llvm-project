@@ -16,7 +16,7 @@
 #include "src/__support/error_or.h"
 #include "src/__support/threads/linux/futex_word.h" // For FutexWordType
 
-#ifdef LIBC_TARGET_IS_AARCH64
+#ifdef LIBC_TARGET_ARCH_IS_AARCH64
 #include <arm_acle.h>
 #endif
 
@@ -99,14 +99,14 @@ __attribute__((always_inline)) inline uintptr_t get_start_args_addr() {
 // NOTE: For __builtin_frame_address to work reliably across compilers,
 // architectures and various optimization levels, the TU including this file
 // should be compiled with -fno-omit-frame-pointer.
-#ifdef LIBC_TARGET_IS_X86_64
+#ifdef LIBC_TARGET_ARCH_IS_X86_64
   return reinterpret_cast<uintptr_t>(__builtin_frame_address(0))
          // The x86_64 call instruction pushes resume address on to the stack.
          // Next, The x86_64 SysV ABI requires that the frame pointer be pushed
          // on to the stack. So, we have to step past two 64-bit values to get
          // to the start args.
          + sizeof(uintptr_t) * 2;
-#elif defined(LIBC_TARGET_IS_AARCH64)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
   // The frame pointer after cloning the new thread in the Thread::run method
   // is set to the stack pointer where start args are stored. So, we fetch
   // from there.
@@ -190,7 +190,7 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
   // Also, we want the result of the syscall to be in a register as the child
   // thread gets a completely different stack after it is created. The stack
   // variables from this function will not be availalbe to the child thread.
-#ifdef LIBC_TARGET_IS_X86_64
+#ifdef LIBC_TARGET_ARCH_IS_X86_64
   long register clone_result asm("rax");
   clone_result = __llvm_libc::syscall_impl(
       SYS_clone, CLONE_SYSCALL_FLAGS, adjusted_stack,
@@ -198,7 +198,7 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
       &clear_tid->val, // The futex where the child thread status is signalled
       tls.tp           // The thread pointer value for the new thread.
   );
-#elif defined(LIBC_TARGET_IS_AARCH64)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
   long register clone_result asm("x0");
   clone_result = __llvm_libc::syscall_impl(
       SYS_clone, CLONE_SYSCALL_FLAGS, adjusted_stack,
@@ -211,7 +211,7 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
 #endif
 
   if (clone_result == 0) {
-#ifdef LIBC_TARGET_IS_AARCH64
+#ifdef LIBC_TARGET_ARCH_IS_AARCH64
     // We set the frame pointer to be the same as the "sp" so that start args
     // can be sniffed out from start_thread.
     __arm_wsr64("x29", __arm_rsr64("sp"));

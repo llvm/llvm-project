@@ -66,13 +66,13 @@ template <size_t MaxSize>
 }
 
 LIBC_INLINE void inline_memmove(Ptr dst, CPtr src, size_t count) {
-#if defined(LIBC_TARGET_IS_X86) || defined(LIBC_TARGET_IS_AARCH64)
-#if defined(LIBC_TARGET_IS_X86)
+#if defined(LIBC_TARGET_ARCH_IS_X86) || defined(LIBC_TARGET_ARCH_IS_AARCH64)
+#if defined(LIBC_TARGET_ARCH_IS_X86)
   static constexpr size_t kMaxSize = x86::kAvx512F ? 64
                                      : x86::kAvx   ? 32
                                      : x86::kSse2  ? 16
                                                    : 8;
-#elif defined(LIBC_TARGET_IS_AARCH64)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
   static constexpr size_t kMaxSize = aarch64::kNeon ? 16 : 8;
 #endif
   // return inline_memmove_generic<kMaxSize>(dst, src, count);
@@ -101,9 +101,9 @@ LIBC_INLINE void inline_memmove(Ptr dst, CPtr src, size_t count) {
     return generic::Memmove<64, kMaxSize>::loop_and_tail_backward(dst, src,
                                                                   count);
   }
-#elif defined(LIBC_TARGET_IS_ARM)
+#elif defined(LIBC_TARGET_ARCH_IS_ARM)
   return inline_memmove_embedded_tiny(dst, src, count);
-#elif defined(LIBC_TARGET_IS_GPU)
+#elif defined(LIBC_TARGET_ARCH_IS_GPU)
   return inline_memmove_embedded_tiny(dst, src, count);
 #else
 #error "Unsupported platform"

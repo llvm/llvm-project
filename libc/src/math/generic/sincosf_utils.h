@@ -14,7 +14,7 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/cpu_features.h"
 
-#if defined(LIBC_TARGET_HAS_FMA)
+#if defined(LIBC_TARGET_CPU_HAS_FMA)
 #include "range_reduction_fma.h"
 // using namespace __llvm_libc::fma;
 using __llvm_libc::fma::FAST_PASS_BOUND;
@@ -26,7 +26,7 @@ using __llvm_libc::fma::small_range_reduction;
 using __llvm_libc::generic::FAST_PASS_BOUND;
 using __llvm_libc::generic::large_range_reduction;
 using __llvm_libc::generic::small_range_reduction;
-#endif // LIBC_TARGET_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA
 
 namespace __llvm_libc {
 
