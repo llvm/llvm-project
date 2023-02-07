@@ -142,7 +142,7 @@ libc_test(
     ],
     deps = [
         "//libc:__support_cpp_span",
-        "//libc/utils/UnitTest:memory_matcher",
+        "//libc/test/UnitTest:memory_matcher",
     ],
 )
 
@@ -154,7 +154,7 @@ libc_test(
     ],
     deps = [
         "//libc:__support_cpp_span",
-        "//libc/utils/UnitTest:memory_matcher",
+        "//libc/test/UnitTest:memory_matcher",
     ],
 )
 

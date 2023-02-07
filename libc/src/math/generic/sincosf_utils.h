@@ -12,7 +12,7 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/common.h"
-#include "src/__support/cpu_features.h"
+#include "src/__support/macros/cpu_features.h"
 
 #if defined(LIBC_TARGET_HAS_FMA)
 #include "range_reduction_fma.h"
@@ -64,7 +64,7 @@ LIBC_INLINE void sincosf_eval(double xd, uint32_t x_abs, double &sin_k,
   int64_t k;
   double y;
 
-  if (likely(x_abs < FAST_PASS_BOUND)) {
+  if (LIBC_LIKELY(x_abs < FAST_PASS_BOUND)) {
     k = small_range_reduction(xd, y);
   } else {
     fputil::FPBits<float> x_bits(x_abs);

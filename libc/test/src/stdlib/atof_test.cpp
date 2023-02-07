@@ -9,7 +9,7 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/stdlib/atof.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include <errno.h>
 #include <limits.h>

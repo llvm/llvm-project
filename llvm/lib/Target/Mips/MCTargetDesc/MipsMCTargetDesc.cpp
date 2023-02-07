@@ -19,7 +19,6 @@
 #include "MipsMCNaCl.h"
 #include "MipsTargetStreamer.h"
 #include "TargetInfo/MipsTargetInfo.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstrAnalysis.h"
@@ -32,6 +31,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 

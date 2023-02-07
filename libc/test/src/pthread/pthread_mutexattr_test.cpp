@@ -14,7 +14,7 @@
 #include "src/pthread/pthread_mutexattr_setpshared.h"
 #include "src/pthread/pthread_mutexattr_setrobust.h"
 #include "src/pthread/pthread_mutexattr_settype.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include <errno.h>
 #include <pthread.h>

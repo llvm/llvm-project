@@ -53,6 +53,11 @@ static MachineFunction *getMFIfAvailable(MachineOperand &MO) {
       getMFIfAvailable(const_cast<const MachineOperand &>(MO)));
 }
 
+unsigned MachineOperand::getOperandNo() const {
+  assert(getParent() && "Operand does not belong to any instruction!");
+  return getParent()->getOperandNo(this);
+}
+
 void MachineOperand::setReg(Register Reg) {
   if (getReg() == Reg)
     return; // No change.

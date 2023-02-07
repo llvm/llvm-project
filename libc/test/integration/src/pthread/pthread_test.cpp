@@ -8,7 +8,7 @@
 
 #include "src/pthread/pthread_create.h"
 #include "src/pthread/pthread_join.h"
-#include "utils/IntegrationTest/test.h"
+#include "test/IntegrationTest/test.h"
 
 #include <pthread.h>
 

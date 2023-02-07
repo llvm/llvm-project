@@ -17,13 +17,13 @@ add_header_library(
 add_header_library(
   compiler_features
   HDRS
-    compiler_features.h
+    macros/compiler_features.h
 )
 
 add_header_library(
   sanitizer
   HDRS
-    sanitizer.h
+    macros/sanitizer.h
   DEPENDS
     libc.src.__support.compiler_features
 )
@@ -31,10 +31,11 @@ add_header_library(
 add_header_library(
   common
   HDRS
-    architectures.h
     common.h
-    cpu_features.h
     endian.h
+    macros/architectures.h
+    macros/attributes.h
+    macros/cpu_features.h
 )
 
 add_header_library(

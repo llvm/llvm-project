@@ -3034,8 +3034,12 @@ define <2 x i64> @utest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testq %rdx, %rdx
 ; CHECK-NEXT:    cmovneq %rcx, %rax
+; CHECK-NEXT:    cmpq $1, %rdx
+; CHECK-NEXT:    cmoveq %rcx, %rax
 ; CHECK-NEXT:    testq %r14, %r14
 ; CHECK-NEXT:    cmovneq %rcx, %rbx
+; CHECK-NEXT:    cmpq $1, %r14
+; CHECK-NEXT:    cmoveq %rcx, %rbx
 ; CHECK-NEXT:    movq %rbx, %xmm0
 ; CHECK-NEXT:    movq %rax, %xmm1
 ; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -3073,15 +3077,20 @@ define <2 x i64> @ustest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    callq __fixdfti@PLT
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testq %rdx, %rdx
-; CHECK-NEXT:    cmovgq %rcx, %rax
 ; CHECK-NEXT:    movl $1, %esi
-; CHECK-NEXT:    cmovgq %rsi, %rdx
+; CHECK-NEXT:    movl $1, %edi
+; CHECK-NEXT:    cmovleq %rdx, %rdi
+; CHECK-NEXT:    cmovgq %rcx, %rax
+; CHECK-NEXT:    cmpq $1, %rdx
+; CHECK-NEXT:    cmoveq %rcx, %rax
 ; CHECK-NEXT:    testq %r14, %r14
-; CHECK-NEXT:    cmovgq %rcx, %rbx
 ; CHECK-NEXT:    cmovleq %r14, %rsi
+; CHECK-NEXT:    cmovgq %rcx, %rbx
+; CHECK-NEXT:    cmpq $1, %r14
+; CHECK-NEXT:    cmoveq %rcx, %rbx
 ; CHECK-NEXT:    testq %rsi, %rsi
 ; CHECK-NEXT:    cmovsq %rcx, %rbx
-; CHECK-NEXT:    testq %rdx, %rdx
+; CHECK-NEXT:    testq %rdi, %rdi
 ; CHECK-NEXT:    cmovsq %rcx, %rax
 ; CHECK-NEXT:    movq %rax, %xmm0
 ; CHECK-NEXT:    movq %rbx, %xmm1
@@ -3189,8 +3198,12 @@ define <2 x i64> @utest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testq %rdx, %rdx
 ; CHECK-NEXT:    cmovneq %rcx, %rax
+; CHECK-NEXT:    cmpq $1, %rdx
+; CHECK-NEXT:    cmoveq %rcx, %rax
 ; CHECK-NEXT:    testq %r14, %r14
 ; CHECK-NEXT:    cmovneq %rcx, %rbx
+; CHECK-NEXT:    cmpq $1, %r14
+; CHECK-NEXT:    cmoveq %rcx, %rbx
 ; CHECK-NEXT:    movq %rbx, %xmm0
 ; CHECK-NEXT:    movq %rax, %xmm1
 ; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -3228,15 +3241,20 @@ define <2 x i64> @ustest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NEXT:    callq __fixsfti@PLT
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testq %rdx, %rdx
-; CHECK-NEXT:    cmovgq %rcx, %rax
 ; CHECK-NEXT:    movl $1, %esi
-; CHECK-NEXT:    cmovgq %rsi, %rdx
+; CHECK-NEXT:    movl $1, %edi
+; CHECK-NEXT:    cmovleq %rdx, %rdi
+; CHECK-NEXT:    cmovgq %rcx, %rax
+; CHECK-NEXT:    cmpq $1, %rdx
+; CHECK-NEXT:    cmoveq %rcx, %rax
 ; CHECK-NEXT:    testq %r14, %r14
-; CHECK-NEXT:    cmovgq %rcx, %rbx
 ; CHECK-NEXT:    cmovleq %r14, %rsi
+; CHECK-NEXT:    cmovgq %rcx, %rbx
+; CHECK-NEXT:    cmpq $1, %r14
+; CHECK-NEXT:    cmoveq %rcx, %rbx
 ; CHECK-NEXT:    testq %rsi, %rsi
 ; CHECK-NEXT:    cmovsq %rcx, %rbx
-; CHECK-NEXT:    testq %rdx, %rdx
+; CHECK-NEXT:    testq %rdi, %rdi
 ; CHECK-NEXT:    cmovsq %rcx, %rax
 ; CHECK-NEXT:    movq %rax, %xmm0
 ; CHECK-NEXT:    movq %rbx, %xmm1
@@ -3350,8 +3368,12 @@ define <2 x i64> @utesth_f16i64_mm(<2 x half> %x) {
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testq %rdx, %rdx
 ; CHECK-NEXT:    cmovneq %rcx, %rax
+; CHECK-NEXT:    cmpq $1, %rdx
+; CHECK-NEXT:    cmoveq %rcx, %rax
 ; CHECK-NEXT:    testq %r15, %r15
 ; CHECK-NEXT:    cmovneq %rcx, %r14
+; CHECK-NEXT:    cmpq $1, %r15
+; CHECK-NEXT:    cmoveq %rcx, %r14
 ; CHECK-NEXT:    movq %r14, %xmm1
 ; CHECK-NEXT:    movq %rax, %xmm0
 ; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -3392,15 +3414,20 @@ define <2 x i64> @ustest_f16i64_mm(<2 x half> %x) {
 ; CHECK-NEXT:    callq __fixsfti@PLT
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testq %rdx, %rdx
-; CHECK-NEXT:    cmovgq %rcx, %rax
 ; CHECK-NEXT:    movl $1, %esi
-; CHECK-NEXT:    cmovgq %rsi, %rdx
+; CHECK-NEXT:    movl $1, %edi
+; CHECK-NEXT:    cmovleq %rdx, %rdi
+; CHECK-NEXT:    cmovgq %rcx, %rax
+; CHECK-NEXT:    cmpq $1, %rdx
+; CHECK-NEXT:    cmoveq %rcx, %rax
 ; CHECK-NEXT:    testq %r14, %r14
-; CHECK-NEXT:    cmovgq %rcx, %rbx
 ; CHECK-NEXT:    cmovleq %r14, %rsi
+; CHECK-NEXT:    cmovgq %rcx, %rbx
+; CHECK-NEXT:    cmpq $1, %r14
+; CHECK-NEXT:    cmoveq %rcx, %rbx
 ; CHECK-NEXT:    testq %rsi, %rsi
 ; CHECK-NEXT:    cmovsq %rcx, %rbx
-; CHECK-NEXT:    testq %rdx, %rdx
+; CHECK-NEXT:    testq %rdi, %rdi
 ; CHECK-NEXT:    cmovsq %rcx, %rax
 ; CHECK-NEXT:    movq %rax, %xmm1
 ; CHECK-NEXT:    movq %rbx, %xmm0

@@ -9,8 +9,8 @@
 #include "clang/Basic/LangStandard.h"
 #include "clang/Config/config.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TargetParser/Triple.h"
 using namespace clang;
 
 #define LANGSTANDARD(id, name, lang, desc, features)                           \

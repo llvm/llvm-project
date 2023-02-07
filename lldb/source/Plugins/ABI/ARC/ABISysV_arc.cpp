@@ -15,9 +15,9 @@
 #include <type_traits>
 
 // Other libraries and framework includes
-#include "llvm/ADT/Triple.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"

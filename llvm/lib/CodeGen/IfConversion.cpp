@@ -2244,6 +2244,15 @@ void IfConverter::MergeBlocks(BBInfo &ToBBI, BBInfo &FromBBI, bool AddEdges) {
   assert(!FromMBB.hasAddressTaken() &&
          "Removing a BB whose address is taken!");
 
+  // If we're about to splice an INLINEASM_BR from FromBBI, we need to update
+  // ToBBI's successor list accordingly.
+  if (FromMBB.mayHaveInlineAsmBr())
+    for (MachineInstr &MI : FromMBB)
+      if (MI.getOpcode() == TargetOpcode::INLINEASM_BR)
+        for (MachineOperand &MO : MI.operands())
+          if (MO.isMBB() && !ToBBI.BB->isSuccessor(MO.getMBB()))
+            ToBBI.BB->addSuccessor(MO.getMBB(), BranchProbability::getZero());
+
   // In case FromMBB contains terminators (e.g. return instruction),
   // first move the non-terminator instructions, then the terminators.
   MachineBasicBlock::iterator FromTI = FromMBB.getFirstTerminator();

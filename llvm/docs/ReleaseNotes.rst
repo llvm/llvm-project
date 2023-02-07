@@ -86,7 +86,7 @@ Changes to the DirectX Backend
 Changes to the Hexagon Backend
 ------------------------------
 
-* ...
+* The Hexagon backend now support V71 and V73 ISA.
 
 Changes to the LoongArch Backend
 --------------------------------

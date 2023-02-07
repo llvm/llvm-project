@@ -62,12 +62,12 @@ cc_library(
 
 libc_support_library(
     name = "__support_compiler_features",
-    hdrs = ["src/__support/compiler_features.h"],
+    hdrs = ["src/__support/macros/compiler_features.h"],
 )
 
 libc_support_library(
     name = "__support_sanitizer",
-    hdrs = ["src/__support/sanitizer.h"],
+    hdrs = ["src/__support/macros/sanitizer.h"],
     deps = [
         ":__support_compiler_features",
         ":libc_root",
@@ -77,10 +77,11 @@ libc_support_library(
 libc_support_library(
     name = "__support_common",
     hdrs = [
-        "src/__support/architectures.h",
         "src/__support/common.h",
-        "src/__support/cpu_features.h",
         "src/__support/endian.h",
+        "src/__support/macros/architectures.h",
+        "src/__support/macros/attributes.h",
+        "src/__support/macros/cpu_features.h",
     ],
 )
 
@@ -733,6 +734,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_fputil_fp_bits",
+        ":__support_fputil_fenv_impl",
         ":__support_fputil_fma",
         ":__support_fputil_nearest_integer",
         ":__support_fputil_multiply_add",
@@ -750,6 +752,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_fputil_fp_bits",
+        ":__support_fputil_fenv_impl",
         ":__support_fputil_fma",
         ":__support_fputil_nearest_integer",
         ":__support_fputil_multiply_add",
@@ -954,6 +957,7 @@ libc_math_function(
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
         ":inv_trigf_utils",
+        ":math_utils",
     ],
 )
 
@@ -1137,6 +1141,7 @@ libc_math_function(
     additional_deps = [
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
         ":__support_fputil_polyeval",
         ":range_reduction",
         ":sincosf_utils",

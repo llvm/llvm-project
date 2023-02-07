@@ -30,6 +30,10 @@ public:
                      StructuredData::DictionarySP args_sp,
                      StructuredData::Generic *script_obj = nullptr) = 0;
 
+  StructuredData::GenericSP GetScriptObjectInstance() {
+    return m_object_instance_sp;
+  }
+
   template <typename Ret>
   static Ret ErrorWithMessage(llvm::StringRef caller_name,
                               llvm::StringRef error_msg, Status &error,

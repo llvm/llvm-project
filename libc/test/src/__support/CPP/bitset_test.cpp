@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/bitset.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcBitsetTest, SetBitForSizeEqualToOne) {
   __llvm_libc::cpp::bitset<1> bitset;

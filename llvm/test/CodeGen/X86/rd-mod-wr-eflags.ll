@@ -7,11 +7,9 @@ define dso_local void @_Z7releaseP3obj(%struct.obj* nocapture %o) nounwind uwtab
 ; CHECK-LABEL: _Z7releaseP3obj:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    decq (%rdi)
-; CHECK-NEXT:    je .LBB0_2
+; CHECK-NEXT:    je free # TAILCALL
 ; CHECK-NEXT:  # %bb.1: # %return
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_2: # %if.end
-; CHECK-NEXT:    jmp free # TAILCALL
 entry:
   %refcnt = getelementptr inbounds %struct.obj, %struct.obj* %o, i64 0, i32 0
   %0 = load i64, i64* %refcnt, align 8
@@ -114,11 +112,9 @@ define dso_local void @example_dec(%struct.obj2* %o) nounwind uwtable ssp {
 ; CHECK-NEXT:    jne .LBB3_4
 ; CHECK-NEXT:  # %bb.3: # %if.end2
 ; CHECK-NEXT:    decb 14(%rdi)
-; CHECK-NEXT:    je .LBB3_5
+; CHECK-NEXT:    je other # TAILCALL
 ; CHECK-NEXT:  .LBB3_4: # %return
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB3_5: # %if.end4
-; CHECK-NEXT:    jmp other # TAILCALL
 entry:
   %s64 = getelementptr inbounds %struct.obj2, %struct.obj2* %o, i64 0, i32 0
   %0 = load i64, i64* %s64, align 8
@@ -176,9 +172,7 @@ define dso_local void @example_inc(%struct.obj2* %o) nounwind uwtable ssp {
 ; CHECK-NEXT:    jne .LBB4_4
 ; CHECK-NEXT:  # %bb.3: # %if.end2
 ; CHECK-NEXT:    incb 14(%rdi)
-; CHECK-NEXT:    jne .LBB4_4
-; CHECK-NEXT:  # %bb.5: # %if.end4
-; CHECK-NEXT:    jmp other # TAILCALL
+; CHECK-NEXT:    je other # TAILCALL
 ; CHECK-NEXT:  .LBB4_4: # %return
 ; CHECK-NEXT:    retq
 entry:
@@ -233,11 +227,9 @@ define dso_local void @test3() nounwind ssp {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq foo(%rip), %rax
 ; CHECK-NEXT:    decq 16(%rax)
-; CHECK-NEXT:    je .LBB5_2
+; CHECK-NEXT:    je baz # TAILCALL
 ; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB5_2: # %if.then
-; CHECK-NEXT:    jmp baz # TAILCALL
 entry:
   %0 = load i64*, i64** @foo, align 8
   %arrayidx = getelementptr inbounds i64, i64* %0, i64 2

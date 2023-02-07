@@ -28,7 +28,6 @@ def OpenMP_Dialect : Dialect {
   let cppNamespace = "::mlir::omp";
   let dependentDialects = ["::mlir::LLVM::LLVMDialect"];
   let useDefaultAttributePrinterParser = 1;
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 // OmpCommon requires definition of OpenACC_Dialect.

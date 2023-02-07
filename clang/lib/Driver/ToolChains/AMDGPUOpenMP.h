@@ -131,8 +131,8 @@ public:
 
   SanitizerMask getSupportedSanitizers() const override;
 
-  RocmInstallationDetector getRocmInstallationLoc() const {
-    return RocmInstallation;
+  StringRef getAsanRTLPath() const {
+    return RocmInstallation->getAsanRTLPath();
   }
 
   VersionTuple

@@ -22,17 +22,17 @@ LLVM_LIBC_FUNCTION(float, coshf, (float x)) {
   uint32_t x_u = xbits.uintval();
 
   // |x| <= 2^-26
-  if (unlikely(x_u <= 0x3280'0000U)) {
+  if (LIBC_UNLIKELY(x_u <= 0x3280'0000U)) {
     return 1.0f + x;
   }
 
   // When |x| >= 90, or x is inf or nan
-  if (unlikely(x_u >= 0x42b4'0000U)) {
+  if (LIBC_UNLIKELY(x_u >= 0x42b4'0000U)) {
     if (xbits.is_inf_or_nan())
       return x + FPBits::inf().get_val();
 
     int rounding = fputil::get_round();
-    if (unlikely(rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO))
+    if (LIBC_UNLIKELY(rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO))
       return FPBits(FPBits::MAX_NORMAL).get_val();
 
     errno = ERANGE;

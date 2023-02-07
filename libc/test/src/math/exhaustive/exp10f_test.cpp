@@ -9,8 +9,8 @@
 #include "exhaustive_test.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/exp10f.h"
+#include "test/UnitTest/FPMatcher.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/FPMatcher.h"
 
 #include <thread>
 

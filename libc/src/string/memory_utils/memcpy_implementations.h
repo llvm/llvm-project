@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY_IMPLEMENTATIONS_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY_IMPLEMENTATIONS_H
 
-#include "src/__support/architectures.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/architectures.h"
 #include "src/string/memory_utils/op_aarch64.h"
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/op_generic.h"
@@ -24,12 +24,12 @@ namespace __llvm_libc {
 [[maybe_unused]] LIBC_INLINE void
 inline_memcpy_embedded_tiny(Ptr __restrict dst, CPtr __restrict src,
                             size_t count) {
-  LLVM_LIBC_LOOP_NOUNROLL
+  LIBC_LOOP_NOUNROLL
   for (size_t offset = 0; offset < count; ++offset)
     builtin::Memcpy<1>::block(dst + offset, src + offset);
 }
 
-#if defined(LLVM_LIBC_ARCH_X86)
+#if defined(LIBC_TARGET_IS_X86)
 [[maybe_unused]] LIBC_INLINE void
 inline_memcpy_x86(Ptr __restrict dst, CPtr __restrict src, size_t count) {
   if (count == 0)
@@ -80,15 +80,15 @@ inline_memcpy_x86_maybe_interpose_repmovsb(Ptr __restrict dst,
   } else if constexpr (kRepMovsbThreshold == size_t(-1)) {
     return inline_memcpy_x86(dst, src, count);
   } else {
-    if (unlikely(count >= kRepMovsbThreshold))
+    if (LIBC_UNLIKELY(count >= kRepMovsbThreshold))
       return x86::Memcpy::repmovsb(dst, src, count);
     else
       return inline_memcpy_x86(dst, src, count);
   }
 }
-#endif // defined(LLVM_LIBC_ARCH_X86)
+#endif // defined(LIBC_TARGET_IS_X86)
 
-#if defined(LLVM_LIBC_ARCH_AARCH64)
+#if defined(LIBC_TARGET_IS_AARCH64)
 [[maybe_unused]] LIBC_INLINE void
 inline_memcpy_aarch64(Ptr __restrict dst, CPtr __restrict src, size_t count) {
   if (count == 0)
@@ -115,18 +115,18 @@ inline_memcpy_aarch64(Ptr __restrict dst, CPtr __restrict src, size_t count) {
   align_to_next_boundary<16, Arg::Src>(dst, src, count);
   return builtin::Memcpy<64>::loop_and_tail(dst, src, count);
 }
-#endif // defined(LLVM_LIBC_ARCH_AARCH64)
+#endif // defined(LIBC_TARGET_IS_AARCH64)
 
 LIBC_INLINE void inline_memcpy(Ptr __restrict dst, CPtr __restrict src,
                                size_t count) {
   using namespace __llvm_libc::builtin;
-#if defined(LLVM_LIBC_ARCH_X86)
+#if defined(LIBC_TARGET_IS_X86)
   return inline_memcpy_x86_maybe_interpose_repmovsb(dst, src, count);
-#elif defined(LLVM_LIBC_ARCH_AARCH64)
+#elif defined(LIBC_TARGET_IS_AARCH64)
   return inline_memcpy_aarch64(dst, src, count);
-#elif defined(LLVM_LIBC_ARCH_ARM)
+#elif defined(LIBC_TARGET_IS_ARM)
   return inline_memcpy_embedded_tiny(dst, src, count);
-#elif defined(LLVM_LIBC_ARCH_GPU)
+#elif defined(LIBC_TARGET_IS_GPU)
   return inline_memcpy_embedded_tiny(dst, src, count);
 #else
 #error "Unsupported platform"

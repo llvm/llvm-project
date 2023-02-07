@@ -248,10 +248,8 @@ mlir::Value Fortran::lower::genInitialDataTarget(
       assert(argExpr);
       const Fortran::semantics::Symbol *sym =
           Fortran::evaluate::GetFirstSymbol(*argExpr);
-      fir::ExtendedValue exv =
-          globalOpSymMap.lookupSymbol(sym).toExtendedValue();
-      const auto *mold = exv.getBoxOf<fir::MutableBoxValue>();
-      fir::BaseBoxType boxType = mold->getBoxTy();
+      assert(sym && "MOLD must be a pointer or allocatable symbol");
+      mlir::Type boxType = converter.genType(*sym);
       mlir::Value box =
           fir::factory::createUnallocatedBox(builder, loc, boxType, {});
       return box;
@@ -617,7 +615,7 @@ defaultInitializeAtRuntime(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Location loc = converter.getCurrentLocation();
   const Fortran::semantics::Symbol &sym = var.getSymbol();
-  fir::ExtendedValue exv = symMap.lookupSymbol(sym).toExtendedValue();
+  fir::ExtendedValue exv = converter.getSymbolExtendedValue(sym, &symMap);
   if (Fortran::semantics::IsOptional(sym)) {
     // 15.5.2.12 point 3, absent optional dummies are not initialized.
     // Creating descriptor/passing null descriptor to the runtime would
@@ -683,7 +681,7 @@ static void finalizeAtRuntime(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Location loc = converter.getCurrentLocation();
   const Fortran::semantics::Symbol &sym = var.getSymbol();
-  fir::ExtendedValue exv = symMap.lookupSymbol(sym).toExtendedValue();
+  fir::ExtendedValue exv = converter.getSymbolExtendedValue(sym, &symMap);
   if (Fortran::semantics::IsOptional(sym)) {
     // Only finalize if present.
     auto isPresent = builder.create<fir::IsPresentOp>(loc, builder.getI1Type(),
@@ -716,46 +714,44 @@ static void deallocateIntentOut(Fortran::lower::AbstractConverter &converter,
   if (Fortran::semantics::IsDummy(sym) &&
       Fortran::semantics::IsIntentOut(sym) &&
       Fortran::semantics::IsAllocatable(sym)) {
-    if (auto symbox = symMap.lookupSymbol(sym)) {
-      fir::ExtendedValue extVal = symbox.toExtendedValue();
-      if (auto mutBox = extVal.getBoxOf<fir::MutableBoxValue>()) {
-        // The dummy argument is not passed in the ENTRY so it should not be
-        // deallocated.
-        if (mlir::Operation *op = mutBox->getAddr().getDefiningOp())
-          if (mlir::isa<fir::AllocaOp>(op))
-            return;
-        mlir::Location loc = converter.getCurrentLocation();
-        fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-        if (Fortran::semantics::IsOptional(sym)) {
-          auto isPresent = builder.create<fir::IsPresentOp>(
-              loc, builder.getI1Type(), fir::getBase(extVal));
-          builder.genIfThen(loc, isPresent)
-              .genThen([&]() { genDeallocateBox(converter, *mutBox, loc); })
+    fir::ExtendedValue extVal = converter.getSymbolExtendedValue(sym, &symMap);
+    if (auto mutBox = extVal.getBoxOf<fir::MutableBoxValue>()) {
+      // The dummy argument is not passed in the ENTRY so it should not be
+      // deallocated.
+      if (mlir::Operation *op = mutBox->getAddr().getDefiningOp())
+        if (mlir::isa<fir::AllocaOp>(op))
+          return;
+      mlir::Location loc = converter.getCurrentLocation();
+      fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+      if (Fortran::semantics::IsOptional(sym)) {
+        auto isPresent = builder.create<fir::IsPresentOp>(
+            loc, builder.getI1Type(), fir::getBase(extVal));
+        builder.genIfThen(loc, isPresent)
+            .genThen([&]() { genDeallocateBox(converter, *mutBox, loc); })
+            .end();
+      } else {
+        if (mutBox->isDerived() || mutBox->isPolymorphic() ||
+            mutBox->isUnlimitedPolymorphic()) {
+          mlir::Value isAlloc = fir::factory::genIsAllocatedOrAssociatedTest(
+              builder, loc, *mutBox);
+          builder.genIfThen(loc, isAlloc)
+              .genThen([&]() {
+                if (mutBox->isPolymorphic()) {
+                  mlir::Value declaredTypeDesc;
+                  assert(sym.GetType());
+                  if (const Fortran::semantics::DerivedTypeSpec
+                          *derivedTypeSpec = sym.GetType()->AsDerived()) {
+                    declaredTypeDesc = Fortran::lower::getTypeDescAddr(
+                        converter, loc, *derivedTypeSpec);
+                  }
+                  genDeallocateBox(converter, *mutBox, loc, declaredTypeDesc);
+                } else {
+                  genDeallocateBox(converter, *mutBox, loc);
+                }
+              })
               .end();
         } else {
-          if (mutBox->isDerived() || mutBox->isPolymorphic() ||
-              mutBox->isUnlimitedPolymorphic()) {
-            mlir::Value isAlloc = fir::factory::genIsAllocatedOrAssociatedTest(
-                builder, loc, *mutBox);
-            builder.genIfThen(loc, isAlloc)
-                .genThen([&]() {
-                  if (mutBox->isPolymorphic()) {
-                    mlir::Value declaredTypeDesc;
-                    assert(sym.GetType());
-                    if (const Fortran::semantics::DerivedTypeSpec
-                            *derivedTypeSpec = sym.GetType()->AsDerived()) {
-                      declaredTypeDesc = Fortran::lower::getTypeDescAddr(
-                          converter, loc, *derivedTypeSpec);
-                    }
-                    genDeallocateBox(converter, *mutBox, loc, declaredTypeDesc);
-                  } else {
-                    genDeallocateBox(converter, *mutBox, loc);
-                  }
-                })
-                .end();
-          } else {
-            genDeallocateBox(converter, *mutBox, loc);
-          }
+          genDeallocateBox(converter, *mutBox, loc);
         }
       }
     }
@@ -780,7 +776,7 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
     auto *builder = &converter.getFirOpBuilder();
     mlir::Location loc = converter.getCurrentLocation();
     fir::ExtendedValue exv =
-        symMap.lookupSymbol(var.getSymbol()).toExtendedValue();
+        converter.getSymbolExtendedValue(var.getSymbol(), &symMap);
     converter.getFctCtx().attachCleanup([builder, loc, exv]() {
       mlir::Value box = builder->createBox(loc, exv);
       fir::runtime::genDerivedTypeDestroy(*builder, loc, box);
@@ -1488,11 +1484,10 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
 
 /// Map a symbol to its FIR address and evaluated specification expressions
 /// provided as a fir::ExtendedValue. Will optionally create fir.declare.
-static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
-                             Fortran::lower::SymMap &symMap,
-                             const Fortran::semantics::Symbol &sym,
-                             const fir::ExtendedValue &exv,
-                             bool force = false) {
+void Fortran::lower::genDeclareSymbol(
+    Fortran::lower::AbstractConverter &converter,
+    Fortran::lower::SymMap &symMap, const Fortran::semantics::Symbol &sym,
+    const fir::ExtendedValue &exv, bool force) {
   if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     const mlir::Location loc = genLocation(converter, sym);
@@ -1544,7 +1539,8 @@ static void genBoxDeclare(Fortran::lower::AbstractConverter &converter,
                           bool replace = false) {
   if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
     fir::BoxValue boxValue{box, lbounds, explicitParams, explicitExtents};
-    genDeclareSymbol(converter, symMap, sym, std::move(boxValue), replace);
+    Fortran::lower::genDeclareSymbol(converter, symMap, sym,
+                                     std::move(boxValue), replace);
     return;
   }
   symMap.addBoxSymbol(sym, box, lbounds, explicitParams, explicitExtents,
@@ -1580,7 +1576,7 @@ void Fortran::lower::mapSymbolAttributes(
           Fortran::lower::getDummyProcedureType(sym, converter);
       mlir::Value undefOp = builder.create<fir::UndefOp>(loc, dummyProcType);
 
-      genDeclareSymbol(converter, symMap, sym, undefOp);
+      Fortran::lower::genDeclareSymbol(converter, symMap, sym, undefOp);
     }
     if (Fortran::semantics::IsPointer(sym))
       TODO(loc, "procedure pointers");
@@ -1678,11 +1674,12 @@ void Fortran::lower::mapSymbolAttributes(
              "handled above");
       // The box is read right away because lowering code does not expect
       // a non pointer/allocatable symbol to be mapped to a MutableBox.
-      genDeclareSymbol(converter, symMap, sym,
-                       fir::factory::genMutableBoxRead(
-                           builder, loc,
-                           fir::factory::createTempMutableBox(
-                               builder, loc, converter.genType(var))));
+      Fortran::lower::genDeclareSymbol(
+          converter, symMap, sym,
+          fir::factory::genMutableBoxRead(
+              builder, loc,
+              fir::factory::createTempMutableBox(builder, loc,
+                                                 converter.genType(var))));
       return true;
     }
     return false;
@@ -1853,15 +1850,28 @@ void Fortran::lower::mapSymbolAttributes(
   // Allocate or extract raw address for the entity
   if (!addr) {
     if (arg) {
-      if (fir::isa_trivial(arg.getType())) {
-        // FIXME: Argument passed in registers (like scalar VALUE in BIND(C)
-        // procedures) Should allocate local + store. Nothing done for now to
-        // keep the NFC aspect.
-        addr = arg;
+      mlir::Type argType = arg.getType();
+      const bool isCptrByVal = Fortran::semantics::IsBuiltinCPtr(sym) &&
+                               Fortran::lower::isCPtrArgByValueType(argType);
+      if (isCptrByVal || !fir::conformsWithPassByRef(argType)) {
+        // Dummy argument passed in register. Place the value in memory at that
+        // point since lowering expect symbols to be mapped to memory addresses.
+        if (argType.isa<fir::RecordType>())
+          TODO(loc, "derived type argument passed by value");
+        mlir::Type symType = converter.genType(sym);
+        addr = builder.create<fir::AllocaOp>(loc, symType);
+        if (isCptrByVal) {
+          // Place the void* address into the CPTR address component.
+          mlir::Value addrComponent =
+              fir::factory::genCPtrOrCFunptrAddr(builder, loc, addr, symType);
+          builder.createStoreWithConvert(loc, arg, addrComponent);
+        } else {
+          builder.createStoreWithConvert(loc, arg, addr);
+        }
       } else {
         // Dummy address, or address of result whose storage is passed by the
         // caller.
-        assert(fir::isa_ref_type(arg.getType()) && "must be a memory address");
+        assert(fir::isa_ref_type(argType) && "must be a memory address");
         addr = arg;
       }
     } else {
@@ -1873,8 +1883,8 @@ void Fortran::lower::mapSymbolAttributes(
     }
   }
 
-  genDeclareSymbol(converter, symMap, sym, addr, len, extents, lbounds,
-                   replace);
+  ::genDeclareSymbol(converter, symMap, sym, addr, len, extents, lbounds,
+                     replace);
   return;
 }
 
@@ -1964,10 +1974,7 @@ void Fortran::lower::mapCallInterfaceSymbols(
       // variables, whether or not the host symbol is actually referred to in
       // `B`. Hence it is possible to simply lookup the variable associated to
       // the host symbol without having to go back to the tuple argument.
-      Fortran::lower::SymbolBox hostValue =
-          symMap.lookupSymbol(hostDetails->symbol());
-      assert(hostValue && "callee host symbol must be mapped on caller side");
-      symMap.addSymbol(sym, hostValue.toExtendedValue());
+      symMap.copySymbolBinding(hostDetails->symbol(), sym);
       // The SymbolBox associated to the host symbols is complete, skip
       // instantiateVariable that would try to allocate a new storage.
       continue;

@@ -21,7 +21,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
@@ -67,6 +66,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
 #include <algorithm>
 #include <cassert>
@@ -4918,9 +4918,21 @@ bool SelectionDAG::isKnownNeverZeroFloat(SDValue Op) const {
          "Floating point type expected");
 
   // If the value is a constant, we can obviously see if it is a zero or not.
-  // TODO: Add BuildVector support.
   if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Op))
     return !C->isZero();
+
+  // Return false if we find any zero in a vector.
+  if (Op->getOpcode() == ISD::BUILD_VECTOR ||
+      Op->getOpcode() == ISD::SPLAT_VECTOR) {
+    for (const SDValue &OpVal : Op->op_values()) {
+      if (OpVal.isUndef())
+        return false;
+      if (auto *C = dyn_cast<ConstantFPSDNode>(OpVal))
+        if (C->isZero())
+          return false;
+    }
+    return true;
+  }
   return false;
 }
 

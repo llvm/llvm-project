@@ -1739,6 +1739,24 @@ class IntArrayNthElemMinValue<int index, int min> : AttrConstraint<
         ]>,
     "whose " # index # "-th element must be at least " # min>;
 
+class IntArrayNthElemMaxValue<int index, int max> : AttrConstraint<
+    And<[
+      CPred<"$_self.cast<::mlir::ArrayAttr>().size() > " # index>,
+      CPred<"$_self.cast<::mlir::ArrayAttr>()[" # index # "]"
+        ".cast<::mlir::IntegerAttr>().getInt() <= " # max>
+        ]>,
+    "whose " # index # "-th element must be at most " # max>;
+
+class IntArrayNthElemInRange<int index, int min, int max> : AttrConstraint<
+    And<[
+      CPred<"$_self.cast<::mlir::ArrayAttr>().size() > " # index>,
+      CPred<"$_self.cast<::mlir::ArrayAttr>()[" # index # "]"
+        ".cast<::mlir::IntegerAttr>().getInt() >= " # min>,
+      CPred<"$_self.cast<::mlir::ArrayAttr>()[" # index # "]"
+        ".cast<::mlir::IntegerAttr>().getInt() <= " # max>
+        ]>,
+    "whose " # index # "-th element must be at least " # min # " and at most " # max>;
+
 def IsNullAttr : AttrConstraint<
     CPred<"!$_self">, "empty attribute (for optional attributes)">;
 
@@ -2216,6 +2234,12 @@ class OpBuilder<dag p, code b = ""> {
   dag dagParams = p;
   code body = b;
 }
+
+// OpBuilder like the above, but the emitted 'build' method is marked as
+// deprecated in C++. Use of it will emit a warning by the C++ compiler
+// with the given reason.
+class DeprecatedOpBuilder<string reason, dag p, code b = "">
+  : OpBuilder<p, b>, CppDeprecated<reason>;
 
 // A base decorator class that may optionally be added to OpVariables.
 class OpVariableDecorator;

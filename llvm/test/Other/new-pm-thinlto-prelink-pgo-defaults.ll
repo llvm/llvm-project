@@ -131,6 +131,7 @@
 ; CHECK-O-DAG: Running analysis: BranchProbabilityAnalysis on foo
 ; CHECK-O-DAG: Running analysis: PostDominatorTreeAnalysis on foo
 ; CHECK-O3-NEXT: Running pass: AggressiveInstCombinePass
+; CHECK-O23SZ-NEXT: Running pass: ConstraintEliminationPass
 ; CHECK-O1-NEXT: Running pass: LibCallsShrinkWrapPass
 ; CHECK-O2-NEXT: Running pass: LibCallsShrinkWrapPass
 ; CHECK-O3-NEXT: Running pass: LibCallsShrinkWrapPass

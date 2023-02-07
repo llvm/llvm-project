@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/ctype/isspace.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcIsSpace, DefaultLocale) {
   // Loops through all characters, verifying that space characters

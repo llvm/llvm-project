@@ -280,6 +280,16 @@ genBounds(mlir::Location loc, fir::FirOpBuilder &builder, mlir::Value shape);
 mlir::Value genShape(mlir::Location loc, fir::FirOpBuilder &builder,
                      Entity entity);
 
+/// Compute the extent of \p entity in dimension \p dim. Crashes
+/// if dim is bigger than the entity's rank.
+mlir::Value genExtent(mlir::Location loc, fir::FirOpBuilder &builder,
+                      hlfir::Entity entity, unsigned dim);
+
+/// Compute the lower bound of \p entity in dimension \p dim. Crashes
+/// if dim is bigger than the entity's rank.
+mlir::Value genLBound(mlir::Location loc, fir::FirOpBuilder &builder,
+                      hlfir::Entity entity, unsigned dim);
+
 /// Generate a vector of extents with index type from a fir.shape
 /// of fir.shape_shift value.
 llvm::SmallVector<mlir::Value> getIndexExtents(mlir::Location loc,

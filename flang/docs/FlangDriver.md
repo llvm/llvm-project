@@ -546,8 +546,7 @@ See the
 documentation for more details.
 
 ## Ofast and Fast Math
-`-Ofast` in Flang means `-O3 -ffast-math`. `-fstack-arrays` will be added to
-`-Ofast` in the future (https://github.com/llvm/llvm-project/issues/59231).
+`-Ofast` in Flang means `-O3 -ffast-math -fstack-arrays`.
 
 `-ffast-math` means the following:
  - `-fno-honor-infinities`
@@ -570,9 +569,8 @@ to zero.
 
 ### Comparison with GCC/GFortran
 GCC/GFortran translate `-Ofast` to
-`-O3 -ffast-math -fstack-arrays -fno-semantic-interposition`. `-fstack-arrays`
-is TODO for Flang.
-`-fno-semantic-interposition` is not used because clang does not enable this as
+`-O3 -ffast-math -fstack-arrays -fno-semantic-interposition`.
+`-fno-semantic-interposition` is not used because Clang does not enable this as
 part of `-Ofast` as the default behaviour is similar.
 
 GCC/GFortran has a wider definition of `-ffast-math`: also including

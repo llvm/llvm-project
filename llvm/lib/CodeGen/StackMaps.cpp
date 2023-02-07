@@ -149,7 +149,7 @@ unsigned StatepointOpers::getGCPointerMap(
 bool StatepointOpers::isFoldableReg(Register Reg) const {
   unsigned FoldableAreaStart = getVarIdx();
   for (const MachineOperand &MO : MI->uses()) {
-    if (MI->getOperandNo(&MO) >= FoldableAreaStart)
+    if (MO.getOperandNo() >= FoldableAreaStart)
       break;
     if (MO.isReg() && MO.getReg() == Reg)
       return false;

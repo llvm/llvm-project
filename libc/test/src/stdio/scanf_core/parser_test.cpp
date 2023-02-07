@@ -14,8 +14,8 @@
 
 #include <stdarg.h>
 
-#include "utils/UnitTest/ScanfMatcher.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/ScanfMatcher.h"
+#include "test/UnitTest/Test.h"
 
 using __llvm_libc::cpp::string_view;
 

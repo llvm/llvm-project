@@ -17,7 +17,7 @@
 #include "src/pthread/pthread_self.h"
 #include "src/pthread/pthread_setname_np.h"
 
-#include "utils/IntegrationTest/test.h"
+#include "test/IntegrationTest/test.h"
 
 #include <errno.h>
 #include <pthread.h>

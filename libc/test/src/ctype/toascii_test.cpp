@@ -8,7 +8,7 @@
 
 #include "src/ctype/toascii.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcToAscii, DefaultLocale) {
   // Loops through all characters, verifying that ascii characters

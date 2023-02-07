@@ -26,9 +26,9 @@
 #include "clang/ExtractAPI/DeclarationFragments.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/TargetParser/Triple.h"
 #include <memory>
 #include <type_traits>
 

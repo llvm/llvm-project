@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/FPMatcher.h"
-#include "utils/UnitTest/Test.h"
 
 #include <math.h>
 

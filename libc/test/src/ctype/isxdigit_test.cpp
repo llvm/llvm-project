@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/ctype/isxdigit.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcIsXDigit, DefaultLocale) {
   for (int ch = 0; ch < 255; ++ch) {

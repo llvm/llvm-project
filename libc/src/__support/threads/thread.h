@@ -9,11 +9,11 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_THREADS_THREAD_H
 #define LLVM_LIBC_SRC_SUPPORT_THREADS_THREAD_H
 
-#include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/optional.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/stringstream.h"
-#include "src/__support/architectures.h"
+#include "src/__support/macros/architectures.h"
 
 #include <stddef.h> // For size_t
 #include <stdint.h>
@@ -36,7 +36,7 @@ union ThreadReturnValue {
   constexpr ThreadReturnValue(void *r) : posix_retval(r) {}
 };
 
-#if (defined(LLVM_LIBC_ARCH_AARCH64) || defined(LLVM_LIBC_ARCH_X86_64))
+#if (defined(LIBC_TARGET_IS_AARCH64) || defined(LIBC_TARGET_IS_X86_64))
 constexpr unsigned int STACK_ALIGNMENT = 16;
 #endif
 // TODO: Provide stack alignment requirements for other architectures.

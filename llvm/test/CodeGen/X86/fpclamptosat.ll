@@ -1083,6 +1083,8 @@ define i64 @utest_f64i64_mm(double %x) {
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testq %rdx, %rdx
 ; CHECK-NEXT:    cmovneq %rcx, %rax
+; CHECK-NEXT:    cmpq $1, %rdx
+; CHECK-NEXT:    cmoveq %rcx, %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -1101,9 +1103,11 @@ define i64 @ustest_f64i64_mm(double %x) {
 ; CHECK-NEXT:    callq __fixdfti@PLT
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testq %rdx, %rdx
-; CHECK-NEXT:    cmovgq %rcx, %rax
 ; CHECK-NEXT:    movl $1, %esi
 ; CHECK-NEXT:    cmovleq %rdx, %rsi
+; CHECK-NEXT:    cmovgq %rcx, %rax
+; CHECK-NEXT:    cmpq $1, %rdx
+; CHECK-NEXT:    cmoveq %rcx, %rax
 ; CHECK-NEXT:    testq %rsi, %rsi
 ; CHECK-NEXT:    cmovsq %rcx, %rax
 ; CHECK-NEXT:    popq %rcx
@@ -1145,6 +1149,8 @@ define i64 @utest_f32i64_mm(float %x) {
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testq %rdx, %rdx
 ; CHECK-NEXT:    cmovneq %rcx, %rax
+; CHECK-NEXT:    cmpq $1, %rdx
+; CHECK-NEXT:    cmoveq %rcx, %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -1163,9 +1169,11 @@ define i64 @ustest_f32i64_mm(float %x) {
 ; CHECK-NEXT:    callq __fixsfti@PLT
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testq %rdx, %rdx
-; CHECK-NEXT:    cmovgq %rcx, %rax
 ; CHECK-NEXT:    movl $1, %esi
 ; CHECK-NEXT:    cmovleq %rdx, %rsi
+; CHECK-NEXT:    cmovgq %rcx, %rax
+; CHECK-NEXT:    cmpq $1, %rdx
+; CHECK-NEXT:    cmoveq %rcx, %rax
 ; CHECK-NEXT:    testq %rsi, %rsi
 ; CHECK-NEXT:    cmovsq %rcx, %rax
 ; CHECK-NEXT:    popq %rcx
@@ -1215,6 +1223,8 @@ define i64 @utesth_f16i64_mm(half %x) {
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testq %rdx, %rdx
 ; CHECK-NEXT:    cmovneq %rcx, %rax
+; CHECK-NEXT:    cmpq $1, %rdx
+; CHECK-NEXT:    cmoveq %rcx, %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -1235,9 +1245,11 @@ define i64 @ustest_f16i64_mm(half %x) {
 ; CHECK-NEXT:    callq __fixsfti@PLT
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testq %rdx, %rdx
-; CHECK-NEXT:    cmovgq %rcx, %rax
 ; CHECK-NEXT:    movl $1, %esi
 ; CHECK-NEXT:    cmovleq %rdx, %rsi
+; CHECK-NEXT:    cmovgq %rcx, %rax
+; CHECK-NEXT:    cmpq $1, %rdx
+; CHECK-NEXT:    cmoveq %rcx, %rax
 ; CHECK-NEXT:    testq %rsi, %rsi
 ; CHECK-NEXT:    cmovsq %rcx, %rax
 ; CHECK-NEXT:    popq %rcx

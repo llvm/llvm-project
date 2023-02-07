@@ -8,7 +8,7 @@
 
 #include "src/sys/wait/wait4.h"
 #include "test/ErrnoSetterMatcher.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include <errno.h>
 #include <sys/wait.h>

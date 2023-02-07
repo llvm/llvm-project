@@ -8,8 +8,8 @@
 
 #include "llvm/ExecutionEngine/Orc/LazyReexports.h"
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
+#include "llvm/TargetParser/Triple.h"
 
 #define DEBUG_TYPE "orc"
 

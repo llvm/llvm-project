@@ -16,7 +16,6 @@
 #include "PPCFrameLowering.h"
 #include "PPCISelLowering.h"
 #include "PPCInstrInfo.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
@@ -24,6 +23,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCInstrItineraries.h"
+#include "llvm/TargetParser/Triple.h"
 #include <string>
 
 #define GET_SUBTARGETINFO_HEADER

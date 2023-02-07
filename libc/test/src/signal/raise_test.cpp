@@ -9,7 +9,7 @@
 #include "include/signal.h"
 #include "src/signal/raise.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcSignalTest, Raise) {
   // SIGCONT is ingored unless stopped, so we can use it to check the return

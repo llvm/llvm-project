@@ -114,7 +114,7 @@ define hidden %0* @thingWithValue(i8* %self) uwtable ssp {
 ;
 entry:
 ; CHECK-LABEL: thingWithValue:
-; CHECK: jmp _bar
+; CHECK: je _bar
   br i1 undef, label %if.then.i, label %if.else.i
 
 if.then.i:                                        ; preds = %entry
@@ -135,7 +135,7 @@ someThingWithValue.exit:                          ; preds = %if.else.i, %if.then
 declare zeroext i1 @foo_i1()
 
 ; CHECK-LABEL: zext_i1
-; CHECK: jmp _foo_i1
+; CHECK: je _foo_i1
 define zeroext i1 @zext_i1(i1 %k) {
 ; OPT-LABEL: @zext_i1(
 ; OPT-NEXT:  entry:
@@ -176,10 +176,8 @@ define i8* @f_ret8(i8* %obj) nounwind {
 ; CHECK-LABEL: f_ret8:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    testq %rdi, %rdi
-; CHECK-NEXT:    je LBB3_1
-; CHECK-NEXT:  ## %bb.2: ## %if.then
-; CHECK-NEXT:    jmp _g_ret32 ## TAILCALL
-; CHECK-NEXT:  LBB3_1: ## %return
+; CHECK-NEXT:    jne _g_ret32 ## TAILCALL
+; CHECK-NEXT:  ## %bb.1: ## %return
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    retq
 entry:

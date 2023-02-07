@@ -8,7 +8,7 @@
 
 #include "src/__support/CPP/span.h"
 #include "src/string/memccpy.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 #include <stddef.h> // For size_t.
 
 class LlvmLibcMemccpyTest : public __llvm_libc::testing::Test {

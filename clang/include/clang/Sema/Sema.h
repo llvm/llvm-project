@@ -483,6 +483,12 @@ public:
     PSK_Pop_Set   = PSK_Pop | PSK_Set,  // #pragma (pop[, id], value)
   };
 
+  struct PragmaPackInfo {
+    PragmaMsStackAction Action;
+    StringRef SlotLabel;
+    Token Alignment;
+  };
+
   // #pragma pack and align.
   class AlignPackInfo {
   public:

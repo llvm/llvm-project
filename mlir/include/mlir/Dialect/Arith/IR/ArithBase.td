@@ -24,7 +24,6 @@ def Arith_Dialect : Dialect {
 
   let hasConstantMaterializer = 1;
   let useDefaultAttributePrinterParser = 1;
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 // The predicate indicates the type of the comparison to perform:

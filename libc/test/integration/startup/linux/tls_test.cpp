@@ -11,7 +11,7 @@
 
 #include "src/errno/llvmlibc_errno.h"
 #include "src/sys/mman/mmap.h"
-#include "utils/IntegrationTest/test.h"
+#include "test/IntegrationTest/test.h"
 
 constexpr int threadLocalDataSize = 101;
 _Thread_local int a[threadLocalDataSize] = {123};

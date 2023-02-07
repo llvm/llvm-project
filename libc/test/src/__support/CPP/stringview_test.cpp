@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/string_view.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 using __llvm_libc::cpp::string_view;
 

@@ -30,7 +30,6 @@ def Vector_Dialect : Dialect {
   let useDefaultAttributePrinterParser = 1;
   let hasConstantMaterializer = 1;
   let dependentDialects = ["arith::ArithDialect"];
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 // Base class for Vector dialect ops.
@@ -2440,7 +2439,11 @@ def Vector_TransposeOp :
 }
 
 def Vector_PrintOp :
-  Vector_Op<"print", []>, Arguments<(ins AnyType:$source)> {
+  Vector_Op<"print", []>,
+  Arguments<(ins Type<Or<[
+    AnyVectorOfAnyRank.predicate,
+    AnyInteger.predicate, Index.predicate, AnyFloat.predicate
+  ]>>:$source)> {
   let summary = "print operation (for testing and debugging)";
   let description = [{
     Prints the source vector (or scalar) to stdout in human readable

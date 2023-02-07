@@ -1,9 +1,6 @@
 // RUN: %clang_lsan %s -o %t
 // RUN: %env_lsan_opts=use_stacks=0 not %run %t 2>&1 | FileCheck %s
 
-// Fixme: remove once test passes with hwasan
-// UNSUPPORTED: hwasan
-
 /// Fails when only leak sanitizer is enabled
 // UNSUPPORTED: arm-linux, armhf-linux
 

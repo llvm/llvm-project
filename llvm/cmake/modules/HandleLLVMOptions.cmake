@@ -81,6 +81,8 @@ if( LLVM_ENABLE_ASSERTIONS )
       endforeach()
     endif()
   endif()
+  # Enable assertions in libstdc++.
+  add_compile_definitions(_GLIBCXX_ASSERTIONS)
 endif()
 
 if(LLVM_ENABLE_EXPENSIVE_CHECKS)

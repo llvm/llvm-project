@@ -94,8 +94,7 @@ inline void Metadata::SetUnallocated() {
 }
 
 inline bool Metadata::IsAllocated() const {
-  return atomic_load(&chunk_state, memory_order_relaxed) == CHUNK_ALLOCATED &&
-         GetRequestedSize();
+  return atomic_load(&chunk_state, memory_order_relaxed) == CHUNK_ALLOCATED;
 }
 
 inline u64 Metadata::GetRequestedSize() const {
@@ -162,7 +161,10 @@ static uptr TaggedSize(uptr size) {
 
 static void *HwasanAllocate(StackTrace *stack, uptr orig_size, uptr alignment,
                             bool zeroise) {
-  if (orig_size > kMaxAllowedMallocSize) {
+  // Keep this consistent with LSAN and ASAN behavior.
+  if (UNLIKELY(orig_size == 0))
+    orig_size = 1;
+  if (UNLIKELY(orig_size > kMaxAllowedMallocSize)) {
     if (AllocatorMayReturnNull()) {
       Report("WARNING: HWAddressSanitizer failed to allocate 0x%zx bytes\n",
              orig_size);

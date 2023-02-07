@@ -19,7 +19,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -58,11 +58,6 @@ void AMDGPUInstPrinter::printU4ImmOperand(const MCInst *MI, unsigned OpNo,
                                           const MCSubtargetInfo &STI,
                                           raw_ostream &O) {
   O << formatHex(MI->getOperand(OpNo).getImm() & 0xf);
-}
-
-void AMDGPUInstPrinter::printU8ImmOperand(const MCInst *MI, unsigned OpNo,
-                                          raw_ostream &O) {
-  O << formatHex(MI->getOperand(OpNo).getImm() & 0xff);
 }
 
 void AMDGPUInstPrinter::printU16ImmOperand(const MCInst *MI, unsigned OpNo,

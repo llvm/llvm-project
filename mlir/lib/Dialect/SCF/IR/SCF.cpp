@@ -2764,19 +2764,24 @@ void WhileOp::build(::mlir::OpBuilder &odsBuilder,
 
   OpBuilder::InsertionGuard guard(odsBuilder);
 
-  SmallVector<Location, 4> blockArgLocs;
+  // Build before region.
+  SmallVector<Location, 4> beforeArgLocs;
+  beforeArgLocs.reserve(operands.size());
   for (Value operand : operands) {
-    blockArgLocs.push_back(operand.getLoc());
+    beforeArgLocs.push_back(operand.getLoc());
   }
 
   Region *beforeRegion = odsState.addRegion();
-  Block *beforeBlock = odsBuilder.createBlock(beforeRegion, /*insertPt=*/{},
-                                              resultTypes, blockArgLocs);
+  Block *beforeBlock = odsBuilder.createBlock(
+      beforeRegion, /*insertPt=*/{}, operands.getTypes(), beforeArgLocs);
   beforeBuilder(odsBuilder, odsState.location, beforeBlock->getArguments());
+
+  // Build after region.
+  SmallVector<Location, 4> afterArgLocs(resultTypes.size(), odsState.location);
 
   Region *afterRegion = odsState.addRegion();
   Block *afterBlock = odsBuilder.createBlock(afterRegion, /*insertPt=*/{},
-                                             resultTypes, blockArgLocs);
+                                             resultTypes, afterArgLocs);
   afterBuilder(odsBuilder, odsState.location, afterBlock->getArguments());
 }
 

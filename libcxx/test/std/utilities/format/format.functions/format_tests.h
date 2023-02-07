@@ -2617,6 +2617,10 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
 
   check(SV("{"), SV("{{"));
   check(SV("}"), SV("}}"));
+  check(SV("{:^}"), SV("{{:^}}"));
+  check(SV("{: ^}"), SV("{{:{}^}}"), CharT(' '));
+  check(SV("{:{}^}"), SV("{{:{{}}^}}"));
+  check(SV("{:{ }^}"), SV("{{:{{{}}}^}}"), CharT(' '));
 
   // *** Test argument ID ***
   check(SV("hello false true"), SV("hello {0:} {1:}"), false, true);

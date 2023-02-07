@@ -39,18 +39,18 @@ define void @fneg(ptr nocapture noundef writeonly %d, ptr nocapture noundef read
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds half, ptr [[S]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds half, ptr [[TMP9]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x half>, ptr [[TMP10]], align 2
-; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP12:%.*]] = mul i32 [[TMP11]], 8
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds half, ptr [[TMP9]], i32 [[TMP12]]
+; CHECK-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP12:%.*]] = mul i64 [[TMP11]], 8
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds half, ptr [[TMP9]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 8 x half>, ptr [[TMP13]], align 2
 ; CHECK-NEXT:    [[TMP14:%.*]] = fneg <vscale x 8 x half> [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = fneg <vscale x 8 x half> [[WIDE_LOAD3]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds half, ptr [[D]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds half, ptr [[TMP16]], i32 0
 ; CHECK-NEXT:    store <vscale x 8 x half> [[TMP14]], ptr [[TMP17]], align 2
-; CHECK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP19:%.*]] = mul i32 [[TMP18]], 8
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds half, ptr [[TMP16]], i32 [[TMP19]]
+; CHECK-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP19:%.*]] = mul i64 [[TMP18]], 8
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds half, ptr [[TMP16]], i64 [[TMP19]]
 ; CHECK-NEXT:    store <vscale x 8 x half> [[TMP15]], ptr [[TMP20]], align 2
 ; CHECK-NEXT:    [[TMP21:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP22:%.*]] = mul i64 [[TMP21]], 16
@@ -76,7 +76,7 @@ define void @fneg(ptr nocapture noundef writeonly %d, ptr nocapture noundef read
 ; CHECK-NEXT:    store half [[FNEG]], ptr [[ARRAYIDX2]], align 2
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ;
 entry:
   %cmp6 = icmp sgt i32 %n, 0
