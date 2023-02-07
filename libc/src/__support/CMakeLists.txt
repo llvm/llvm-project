@@ -23,7 +23,7 @@ add_header_library(
 add_header_library(
   sanitizer
   HDRS
-    sanitizer.h
+    macros/sanitizer.h
   DEPENDS
     libc.src.__support.compiler_features
 )
