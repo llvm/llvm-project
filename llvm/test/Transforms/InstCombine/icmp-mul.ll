@@ -424,8 +424,7 @@ define i1 @sgt_mulzero(i8 %x) {
 
 define i1 @eq_rem_zero_nonuw(i8 %x) {
 ; CHECK-LABEL: @eq_rem_zero_nonuw(
-; CHECK-NEXT:    [[A:%.*]] = mul i8 [[X:%.*]], 5
-; CHECK-NEXT:    [[B:%.*]] = icmp eq i8 [[A]], 20
+; CHECK-NEXT:    [[B:%.*]] = icmp eq i8 [[X:%.*]], 4
 ; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = mul i8 %x, 5
@@ -435,8 +434,7 @@ define i1 @eq_rem_zero_nonuw(i8 %x) {
 
 define i1 @ne_rem_zero_nonuw(i8 %x) {
 ; CHECK-LABEL: @ne_rem_zero_nonuw(
-; CHECK-NEXT:    [[A:%.*]] = mul i8 [[X:%.*]], 5
-; CHECK-NEXT:    [[B:%.*]] = icmp ne i8 [[A]], 30
+; CHECK-NEXT:    [[B:%.*]] = icmp ne i8 [[X:%.*]], 6
 ; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = mul i8 %x, 5
@@ -995,8 +993,7 @@ define i1 @mul_evenC_ne(i8 %v) {
 
 define <2 x i1> @mul_oddC_ne_vec(<2 x i8> %v) {
 ; CHECK-LABEL: @mul_oddC_ne_vec(
-; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i8> [[V:%.*]], <i8 3, i8 3>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[MUL]], <i8 12, i8 12>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[V:%.*]], <i8 4, i8 4>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %mul = mul <2 x i8> %v, <i8 3, i8 3>
