@@ -225,6 +225,30 @@ define float @fminnum32_intrinsic(float %x, float %y) {
   ret float %a
 }
 
+define float @fminnum32_non_zero_intrinsic(float %x) {
+; CHECK-LABEL: fminnum32_non_zero_intrinsic:
+; CHECK:         .functype fminnum32_non_zero_intrinsic (f32) -> (f32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get $push2=, 0
+; CHECK-NEXT:    f32.const $push0=, -0x1p0
+; CHECK-NEXT:    f32.min $push1=, $pop2, $pop0
+; CHECK-NEXT:    return $pop1
+  %a = call nnan float @llvm.minnum.f32(float %x, float -1.0)
+  ret float %a
+}
+
+define float @fminnum32_nsz_intrinsic(float %x, float %y) {
+; CHECK-LABEL: fminnum32_nsz_intrinsic:
+; CHECK:         .functype fminnum32_nsz_intrinsic (f32, f32) -> (f32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get $push2=, 0
+; CHECK-NEXT:    local.get $push1=, 1
+; CHECK-NEXT:    f32.min $push0=, $pop2, $pop1
+; CHECK-NEXT:    return $pop0
+  %a = call nnan nsz float @llvm.minnum.f32(float %x, float %y)
+  ret float %a
+}
+
 declare float @llvm.maximum.f32(float, float)
 define float @fmax32_intrinsic(float %x, float %y) {
 ; CHECK-LABEL: fmax32_intrinsic:
@@ -248,6 +272,42 @@ define float @fmaxnum32_intrinsic(float %x, float %y) {
 ; CHECK-NEXT:    f32.max $push0=, $pop2, $pop1
 ; CHECK-NEXT:    return $pop0
   %a = call nnan float @llvm.maxnum.f32(float %x, float %y)
+  ret float %a
+}
+
+define float @fmaxnum32_nsz_intrinsic(float %x, float %y) {
+; CHECK-LABEL: fmaxnum32_nsz_intrinsic:
+; CHECK:         .functype fmaxnum32_nsz_intrinsic (f32, f32) -> (f32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get $push2=, 0
+; CHECK-NEXT:    local.get $push1=, 1
+; CHECK-NEXT:    f32.max $push0=, $pop2, $pop1
+; CHECK-NEXT:    return $pop0
+  %a = call nnan nsz float @llvm.maxnum.f32(float %x, float %y)
+  ret float %a
+}
+
+define float @fmaxnum32_zero_intrinsic(float %x) {
+; CHECK-LABEL: fmaxnum32_zero_intrinsic:
+; CHECK:         .functype fmaxnum32_zero_intrinsic (f32) -> (f32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get $push2=, 0
+; CHECK-NEXT:    f32.const $push0=, 0x0p0
+; CHECK-NEXT:    f32.max $push1=, $pop2, $pop0
+; CHECK-NEXT:    return $pop1
+  %a = call nnan float @llvm.maxnum.f32(float %x, float 0.0)
+  ret float %a
+}
+
+define float @fmaxnum32_non_zero_intrinsic(float %x) {
+; CHECK-LABEL: fmaxnum32_non_zero_intrinsic:
+; CHECK:         .functype fmaxnum32_non_zero_intrinsic (f32) -> (f32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get $push2=, 0
+; CHECK-NEXT:    f32.const $push0=, 0x1p0
+; CHECK-NEXT:    f32.max $push1=, $pop2, $pop0
+; CHECK-NEXT:    return $pop1
+  %a = call nnan float @llvm.maxnum.f32(float %x, float 1.0)
   ret float %a
 }
 
