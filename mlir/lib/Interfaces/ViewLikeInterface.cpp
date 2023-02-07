@@ -24,8 +24,8 @@ LogicalResult mlir::verifyListOfOperandsOrIntegers(Operation *op,
                                                    ValueRange values) {
   // Check static and dynamic offsets/sizes/strides does not overflow type.
   if (staticVals.size() != numElements)
-    return op->emitError("expected ")
-           << numElements << " " << name << " values";
+    return op->emitError("expected ") << numElements << " " << name
+                                      << " values, got " << staticVals.size();
   unsigned expectedNumDynamicEntries =
       llvm::count_if(staticVals, [&](int64_t staticVal) {
         return ShapedType::isDynamic(staticVal);

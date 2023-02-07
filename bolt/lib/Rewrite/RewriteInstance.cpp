@@ -82,6 +82,10 @@ extern cl::list<std::string> ReorderData;
 extern cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions;
 extern cl::opt<bool> TimeBuild;
 
+cl::opt<bool> AllowStripped("allow-stripped",
+                            cl::desc("allow processing of stripped binaries"),
+                            cl::Hidden, cl::cat(BoltCategory));
+
 static cl::opt<bool> ForceToDataRelocations(
     "force-data-relocations",
     cl::desc("force relocations to data sections to always be processed"),
@@ -1662,6 +1666,12 @@ Error RewriteInstance::readSpecialSections() {
 
   BC->IsStripped = !HasSymbolTable;
 
+  if (BC->IsStripped && !opts::AllowStripped) {
+    errs() << "BOLT-ERROR: stripped binaries are not supported. If you know "
+              "what you're doing, use --allow-stripped to proceed";
+    exit(1);
+  }
+
   // Force non-relocation mode for heatmap generation
   if (opts::HeatmapMode)
     BC->HasRelocations = false;
@@ -1669,10 +1679,6 @@ Error RewriteInstance::readSpecialSections() {
   if (BC->HasRelocations)
     outs() << "BOLT-INFO: enabling " << (opts::StrictMode ? "strict " : "")
            << "relocation mode\n";
-
-  if (BC->IsStripped)
-    outs() << "BOLT-INFO: input binary is stripped. The support is limited and "
-           << "is considered experimental.\n";
 
   // Read EH frame for function boundaries info.
   Expected<const DWARFDebugFrame *> EHFrameOrError = BC->DwCtx->getEHFrame();

@@ -15,7 +15,7 @@ int main() {
   size_t volatile n = 0;
   char *a1 = new char[n];
   assert(a1 != nullptr);
-  assert(__sanitizer_get_allocated_size(a1) == 0);
+  assert(__sanitizer_get_allocated_size(a1) == 1);
   delete[] a1;
 
 #if defined(__cpp_aligned_new) &&                                              \
