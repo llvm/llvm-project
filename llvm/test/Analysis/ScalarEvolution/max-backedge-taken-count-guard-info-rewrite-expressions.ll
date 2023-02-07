@@ -185,7 +185,7 @@ exit:
   ret i32 0
 }
 
-; TODO: same as rewrite_zext_min_max, but everything is signed.
+; same as rewrite_zext_min_max, but everything is signed.
 ; It should be able to prove the same exit count.
 define i32 @rewrite_sext_min_max(i32 %N, ptr %arr) {
 ; CHECK-LABEL: 'rewrite_sext_min_max'
@@ -197,14 +197,14 @@ define i32 @rewrite_sext_min_max(i32 %N, ptr %arr) {
 ; CHECK-NEXT:    %n.vec = and i64 %ext, 28
 ; CHECK-NEXT:    --> (4 * (zext i3 (trunc i64 ((sext i32 (16 smin %N) to i64) /u 4) to i3) to i64))<nuw><nsw> U: [0,29) S: [0,29)
 ; CHECK-NEXT:    %index = phi i64 [ 0, %loop.ph ], [ %index.next, %loop ]
-; CHECK-NEXT:    --> {0,+,4}<nuw><nsw><%loop> U: [0,-9223372036854775808) S: [0,9223372036854775805) Exits: (4 * ((-4 + (4 * (zext i3 (trunc i64 ((sext i32 (16 smin %N) to i64) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4))<nuw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,4}<nuw><nsw><%loop> U: [0,13) S: [0,13) Exits: (4 * ((-4 + (4 * (zext i3 (trunc i64 ((sext i32 (16 smin %N) to i64) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4))<nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %gep = getelementptr inbounds i32, ptr %arr, i64 %index
 ; CHECK-NEXT:    --> {%arr,+,16}<nuw><%loop> U: full-set S: full-set Exits: ((16 * ((-4 + (4 * (zext i3 (trunc i64 ((sext i32 (16 smin %N) to i64) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)) + %arr) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %index.next = add nsw i64 %index, 4
-; CHECK-NEXT:    --> {4,+,4}<nuw><nsw><%loop> U: [4,-9223372036854775808) S: [4,9223372036854775805) Exits: (4 + (4 * ((-4 + (4 * (zext i3 (trunc i64 ((sext i32 (16 smin %N) to i64) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4))<nuw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {4,+,4}<nuw><nsw><%loop> U: [4,17) S: [4,17) Exits: (4 + (4 * ((-4 + (4 * (zext i3 (trunc i64 ((sext i32 (16 smin %N) to i64) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4))<nuw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @rewrite_sext_min_max
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((sext i32 (16 smin %N) to i64) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 4611686018427387903
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 3
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((sext i32 (16 smin %N) to i64) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((sext i32 (16 smin %N) to i64) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
 ; CHECK-NEXT:   Predicates:
