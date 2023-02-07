@@ -3883,10 +3883,46 @@ void Sema::ArgumentDependentLookup(DeclarationName Name, SourceLocation Loc,
           if (isVisible(D)) {
             Visible = true;
             break;
-          } else if (getLangOpts().CPlusPlusModules &&
-                     D->isInExportDeclContext()) {
+          }
+
+          if (!getLangOpts().CPlusPlusModules)
+            continue;
+
+          // A partial mock implementation for instantiation context for
+          // modules. [module.context]p1:
+          //    The instantiation context is a set of points within the program
+          //    that determines which declarations are found by
+          //    argument-dependent name lookup...
+          //
+          // FIXME: This didn't implement [module.context] well. For example,
+          // [module.context]p3 says:
+          //    During the implicit instantiation of a template whose point of
+          //    instantiation is specified as that of an enclosing
+          //    specialization if the template is defined in a module interface
+          //    unit of a module M and the point of instantiation is not in a
+          //    module interface unit of M, the point at the end of the
+          //    declaration-seq of the primary module interface unit of M.
+          //
+          // But we didn't check if the template is defined in a module
+          // interface unit nor we check the context for the primary module
+          // interface.
+          Module *FM = D->getOwningModule();
+          if (FM && !FM->isHeaderLikeModule()) {
+            // LookupModules will contain all the modules we visited during the
+            // template instantiation (if any). And if LookupModules contains
+            // FM, the declarations in FM should be visible for the
+            // instantiation.
+            const auto &LookupModules = getLookupModules();
+            // Note: We can't use 'Module::isModuleVisible()' since that is for
+            // clang modules.
+            if (LookupModules.count(FM->getTopLevelModule())) {
+              Visible = true;
+              break;
+            }
+          }
+
+          if (D->isInExportDeclContext()) {
             // C++20 [basic.lookup.argdep] p4.3 .. are exported ...
-            Module *FM = D->getOwningModule();
             // exports are only valid in module purview and outside of any
             // PMF (although a PMF should not even be present in a module
             // with an import).
