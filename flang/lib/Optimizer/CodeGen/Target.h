@@ -15,7 +15,7 @@
 
 #include "flang/Optimizer/Support/KindMapping.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 #include <memory>
 #include <tuple>
 #include <vector>

@@ -16,7 +16,6 @@
 #include "ARMInstPrinter.h"
 #include "ARMMCAsmInfo.h"
 #include "TargetInfo/ARMTargetInfo.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -30,6 +29,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 

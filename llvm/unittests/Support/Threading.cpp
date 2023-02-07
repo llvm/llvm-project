@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Threading.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/thread.h"
+#include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
 
 #include <atomic>

@@ -10,12 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PPCMCCodeEmitter.h"
 #include "MCTargetDesc/PPCFixupKinds.h"
 #include "PPCInstrInfo.h"
-#include "PPCMCCodeEmitter.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -24,6 +23,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cassert>
 #include <cstdint>
 

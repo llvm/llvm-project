@@ -21,7 +21,6 @@
 #include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
@@ -32,6 +31,7 @@
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO.h"
 using namespace llvm;
 
