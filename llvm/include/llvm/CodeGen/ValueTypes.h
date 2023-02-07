@@ -456,6 +456,14 @@ namespace llvm {
     /// This function returns value type as a string, e.g. "i32".
     std::string getEVTString() const;
 
+    /// Support for debugging, callable in GDB: VT.dump()
+    void dump() const;
+
+    /// Implement operator<<.
+    void print(raw_ostream &OS) const {
+      OS << getEVTString();
+    }
+
     /// This method returns an LLVM type corresponding to the specified EVT.
     /// For integer types, this returns an unsigned type. Note that this will
     /// abort for types that cannot be represented.
@@ -516,6 +524,10 @@ namespace llvm {
     TypeSize getExtendedSizeInBits() const LLVM_READONLY;
   };
 
+  inline raw_ostream &operator<<(raw_ostream &OS, const EVT &V) {
+    V.print(OS);
+    return OS;
+  }
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_VALUETYPES_H

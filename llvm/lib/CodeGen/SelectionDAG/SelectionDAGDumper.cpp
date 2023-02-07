@@ -699,7 +699,7 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
     else
       OS << "<null>";
   } else if (const VTSDNode *N = dyn_cast<VTSDNode>(this)) {
-    OS << ":" << N->getVT().getEVTString();
+    OS << ":" << N->getVT();
   }
   else if (const LoadSDNode *LD = dyn_cast<LoadSDNode>(this)) {
     OS << "<";
@@ -714,7 +714,7 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
     case ISD::ZEXTLOAD: OS << ", zext"; break;
     }
     if (doExt)
-      OS << " from " << LD->getMemoryVT().getEVTString();
+      OS << " from " << LD->getMemoryVT();
 
     const char *AM = getIndexedModeName(LD->getAddressingMode());
     if (*AM)
@@ -726,7 +726,7 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
     printMemOperand(OS, *ST->getMemOperand(), G);
 
     if (ST->isTruncatingStore())
-      OS << ", trunc to " << ST->getMemoryVT().getEVTString();
+      OS << ", trunc to " << ST->getMemoryVT();
 
     const char *AM = getIndexedModeName(ST->getAddressingMode());
     if (*AM)
@@ -746,7 +746,7 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
     case ISD::ZEXTLOAD: OS << ", zext"; break;
     }
     if (doExt)
-      OS << " from " << MLd->getMemoryVT().getEVTString();
+      OS << " from " << MLd->getMemoryVT();
 
     const char *AM = getIndexedModeName(MLd->getAddressingMode());
     if (*AM)
@@ -761,7 +761,7 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
     printMemOperand(OS, *MSt->getMemOperand(), G);
 
     if (MSt->isTruncatingStore())
-      OS << ", trunc to " << MSt->getMemoryVT().getEVTString();
+      OS << ", trunc to " << MSt->getMemoryVT();
 
     const char *AM = getIndexedModeName(MSt->getAddressingMode());
     if (*AM)
@@ -783,7 +783,7 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
     case ISD::ZEXTLOAD: OS << ", zext"; break;
     }
     if (doExt)
-      OS << " from " << MGather->getMemoryVT().getEVTString();
+      OS << " from " << MGather->getMemoryVT();
 
     auto Signed = MGather->isIndexSigned() ? "signed" : "unsigned";
     auto Scaled = MGather->isIndexScaled() ? "scaled" : "unscaled";
@@ -795,7 +795,7 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
     printMemOperand(OS, *MScatter->getMemOperand(), G);
 
     if (MScatter->isTruncatingStore())
-      OS << ", trunc to " << MScatter->getMemoryVT().getEVTString();
+      OS << ", trunc to " << MScatter->getMemoryVT();
 
     auto Signed = MScatter->isIndexSigned() ? "signed" : "unsigned";
     auto Scaled = MScatter->isIndexScaled() ? "scaled" : "unscaled";
