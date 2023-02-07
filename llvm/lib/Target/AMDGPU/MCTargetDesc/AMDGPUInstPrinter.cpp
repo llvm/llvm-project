@@ -60,11 +60,6 @@ void AMDGPUInstPrinter::printU4ImmOperand(const MCInst *MI, unsigned OpNo,
   O << formatHex(MI->getOperand(OpNo).getImm() & 0xf);
 }
 
-void AMDGPUInstPrinter::printU8ImmOperand(const MCInst *MI, unsigned OpNo,
-                                          raw_ostream &O) {
-  O << formatHex(MI->getOperand(OpNo).getImm() & 0xff);
-}
-
 void AMDGPUInstPrinter::printU16ImmOperand(const MCInst *MI, unsigned OpNo,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
