@@ -10,3 +10,15 @@ svfloat32_t test_log_vv_i8mf8(svfloat32_t v) {
   return __builtin_elementwise_log(v);
   // expected-error@-1 {{1st argument must be a vector, integer or floating point type}}
 }
+
+svfloat32_t test_log10_vv_i8mf8(svfloat32_t v) {
+
+  return __builtin_elementwise_log10(v);
+  // expected-error@-1 {{1st argument must be a vector, integer or floating point type}}
+}
+
+svfloat32_t test_log2_vv_i8mf8(svfloat32_t v) {
+
+  return __builtin_elementwise_log2(v);
+  // expected-error@-1 {{1st argument must be a vector, integer or floating point type}}
+}
