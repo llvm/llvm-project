@@ -1189,9 +1189,11 @@ private:
     case Fortran::evaluate::DescriptorInquiry::Field::Len:
       return castResult(hlfir::genCharLength(loc, builder, entity));
     case Fortran::evaluate::DescriptorInquiry::Field::LowerBound:
-      TODO(loc, "lower bound inquiry in HLFIR");
+      return castResult(
+          hlfir::genLBound(loc, builder, entity, desc.dimension()));
     case Fortran::evaluate::DescriptorInquiry::Field::Extent:
-      TODO(loc, "extent inquiry in HLFIR");
+      return castResult(
+          hlfir::genExtent(loc, builder, entity, desc.dimension()));
     case Fortran::evaluate::DescriptorInquiry::Field::Rank:
       TODO(loc, "rank inquiry on assumed rank");
     case Fortran::evaluate::DescriptorInquiry::Field::Stride:
