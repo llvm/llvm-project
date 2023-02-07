@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/SymbolRemappingReader.h"
+#include "llvm/ProfileData/SymbolRemappingReader.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "gtest/gtest.h"
 
