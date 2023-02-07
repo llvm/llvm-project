@@ -57,7 +57,8 @@ fir::BoxValue convertExprToBox(mlir::Location loc,
 fir::BoxValue convertToBox(mlir::Location loc,
                            Fortran::lower::AbstractConverter &,
                            hlfir::Entity entity,
-                           Fortran::lower::StatementContext &);
+                           Fortran::lower::StatementContext &,
+                           mlir::Type fortranType);
 
 /// Lower an evaluate::Expr to fir::ExtendedValue address.
 /// The address may be a raw fir.ref<T>, or a fir.box<T>/fir.class<T>, (pointer
@@ -90,7 +91,8 @@ fir::ExtendedValue convertExprToAddress(mlir::Location loc,
 fir::ExtendedValue convertToAddress(mlir::Location loc,
                                     Fortran::lower::AbstractConverter &,
                                     hlfir::Entity entity,
-                                    Fortran::lower::StatementContext &);
+                                    Fortran::lower::StatementContext &,
+                                    mlir::Type fortranType);
 
 /// Lower an evaluate::Expr to a fir::ExtendedValue value.
 fir::ExtendedValue convertExprToValue(mlir::Location loc,
