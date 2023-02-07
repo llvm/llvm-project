@@ -67,7 +67,7 @@ llvm::ARM::FPUKind getARMTargetFeatures(const Driver &D,
                                         const llvm::Triple &Triple,
                                         const llvm::opt::ArgList &Args,
                                         std::vector<llvm::StringRef> &Features,
-                                        bool ForAS);
+                                        bool ForAS, bool ForMultilib = false);
 int getARMSubArchVersionNumber(const llvm::Triple &Triple);
 bool isARMMProfile(const llvm::Triple &Triple);
 bool isARMAProfile(const llvm::Triple &Triple);
