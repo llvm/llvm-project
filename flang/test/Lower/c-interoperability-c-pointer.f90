@@ -33,12 +33,12 @@ end
 
 ! CHECK-LABEL: func.func @test_callee_c_ptr(
 ! CHECK-SAME:                               %[[VAL_0:.*]]: !fir.ref<i64> {fir.bindc_name = "ptr1"}) attributes {fir.bindc_name = "test_callee_c_ptr"} {
+! CHECK:         %[[VAL_5:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}> {bindc_name = "local", uniq_name = "_QFtest_callee_c_ptrElocal"}
 ! CHECK:         %[[VAL_1:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
 ! CHECK:         %[[VAL_2:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
 ! CHECK:         %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
 ! CHECK:         %[[VAL_4:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<i64>) -> i64
 ! CHECK:         fir.store %[[VAL_4]] to %[[VAL_3]] : !fir.ref<i64>
-! CHECK:         %[[VAL_5:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}> {bindc_name = "local", uniq_name = "_QFtest_callee_c_ptrElocal"}
 ! CHECK:         %[[VAL_6:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
 ! CHECK:         %[[VAL_7:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_6]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
 ! CHECK:         %[[VAL_8:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
@@ -57,12 +57,13 @@ end subroutine
 
 ! CHECK-LABEL: func.func @test_callee_c_funptr(
 ! CHECK-SAME:                                  %[[VAL_0:.*]]: !fir.ref<i64> {fir.bindc_name = "ptr1"}) attributes {fir.bindc_name = "test_callee_c_funptr"} {
+! CHECK:         %[[VAL_5:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}> {bindc_name = "local", uniq_name = "_QFtest_callee_c_funptrElocal"}
 ! CHECK:         %[[VAL_1:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>
 ! CHECK:         %[[VAL_2:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>
 ! CHECK:         %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
 ! CHECK:         %[[VAL_4:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<i64>) -> i64
 ! CHECK:         fir.store %[[VAL_4]] to %[[VAL_3]] : !fir.ref<i64>
-! CHECK:         %[[VAL_5:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}> {bindc_name = "local", uniq_name = "_QFtest_callee_c_funptrElocal"}
+
 ! CHECK:         %[[VAL_6:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>
 ! CHECK:         %[[VAL_7:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_6]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
 ! CHECK:         %[[VAL_8:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>

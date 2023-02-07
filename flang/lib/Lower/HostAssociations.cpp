@@ -517,7 +517,7 @@ void Fortran::lower::HostAssociations::hostProcedureBindings(
     mlir::Type varTy = tupTy.getType(indexInTuple);
     mlir::Value eleOff = genTupleCoor(builder, loc, varTy, hostTuple, off);
     InstantiateHostTuple instantiateHostTuple{
-        symMap.lookupSymbol(s.value()).toExtendedValue(), eleOff, loc};
+        converter.getSymbolExtendedValue(*s.value(), &symMap), eleOff, loc};
     walkCaptureCategories(instantiateHostTuple, converter, *s.value());
   }
 
