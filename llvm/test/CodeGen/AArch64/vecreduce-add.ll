@@ -2039,17 +2039,11 @@ entry:
 define i32 @add_pair_v8i16_v4i32_double_sext_zext_shuffle(<8 x i16> %ax, <8 x i16> %ay, <8 x i16> %bx, <8 x i16> %by) {
 ; CHECK-LABEL: add_pair_v8i16_v4i32_double_sext_zext_shuffle:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v5.4s, v0.4h, #0
-; CHECK-NEXT:    ushll v4.4s, v2.4h, #0
-; CHECK-NEXT:    ushll v6.4s, v1.4h, #0
-; CHECK-NEXT:    uaddw2 v0.4s, v5.4s, v0.8h
-; CHECK-NEXT:    ushll v5.4s, v3.4h, #0
-; CHECK-NEXT:    uaddw2 v1.4s, v6.4s, v1.8h
-; CHECK-NEXT:    uaddw2 v2.4s, v4.4s, v2.8h
-; CHECK-NEXT:    uaddw2 v3.4s, v5.4s, v3.8h
-; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    add v1.4s, v2.4s, v3.4s
-; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    uaddlp v3.4s, v3.8h
+; CHECK-NEXT:    uaddlp v1.4s, v1.8h
+; CHECK-NEXT:    uadalp v3.4s, v2.8h
+; CHECK-NEXT:    uadalp v1.4s, v0.8h
+; CHECK-NEXT:    add v0.4s, v3.4s, v1.4s
 ; CHECK-NEXT:    addv s0, v0.4s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
