@@ -36,7 +36,7 @@ steps:
     artifact_paths:
       - "**/clang-format.patch"
     env:
-        GIT_CLANG_FORMAT: "/usr/bin/git-clang-format-${LLVM_STABLE_VERSION}"
+        GIT_CLANG_FORMAT: "/usr/bin/git-clang-format-${LLVM_STABLE_VERSION} --binary clang-format-${LLVM_STABLE_VERSION}"
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
     agents:
