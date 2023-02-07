@@ -192,6 +192,12 @@ bool M68kTargetInfo::validateAsmConstraint(
       break;
     }
     break;
+  case 'Q': // address register indirect addressing
+  case 'U': // address register indirect w/ constant offset addressing
+    // TODO: Handle 'S' (basically 'm' when pc-rel is enforced) when
+    // '-mpcrel' flag is properly handled by the driver.
+    info.setAllowsMemory();
+    return true;
   default:
     break;
   }
