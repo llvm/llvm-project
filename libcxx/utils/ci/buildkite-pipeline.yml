@@ -37,6 +37,8 @@ steps:
       - "**/clang-format.patch"
     env:
         GIT_CLANG_FORMAT: "/usr/bin/git-clang-format-${LLVM_STABLE_VERSION}"
+        CC: "clang-${LLVM_HEAD_VERSION}"
+        CXX: "clang++-${LLVM_HEAD_VERSION}"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -53,6 +55,9 @@ steps:
     artifact_paths:
       - "**/generated_output.patch"
       - "**/generated_output.status"
+    env:
+        CC: "clang-${LLVM_HEAD_VERSION}"
+        CXX: "clang++-${LLVM_HEAD_VERSION}"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -66,6 +71,9 @@ steps:
     command: "libcxx/utils/ci/run-buildbot documentation"
     artifact_paths:
       - "**/test-results.xml"
+    env:
+        CC: "clang-${LLVM_HEAD_VERSION}"
+        CXX: "clang++-${LLVM_HEAD_VERSION}"
     agents:
       queue: "libcxx-builders"
       os: "linux"
