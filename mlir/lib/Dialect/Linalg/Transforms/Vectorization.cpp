@@ -977,6 +977,10 @@ LogicalResult
 mlir::linalg::vectorizeLinalgOpPrecondition(LinalgOp linalgOp,
                                             ArrayRef<int64_t> inputVectorSizes,
                                             bool vectorizeNDExtract) {
+  // tensor with dimension of 0 cannot be vectorized.
+  if (llvm::any_of(linalgOp.getStaticShape(),
+                   [](int64_t dim) { return dim == 0; }))
+    return failure();
   // Check API contract for input vector sizes.
   if (!inputVectorSizes.empty()) {
     assert(inputVectorSizes.size() == linalgOp.getNumLoops() &&
