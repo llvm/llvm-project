@@ -5416,6 +5416,7 @@ struct VarArgSystemZHelper : public VarArgHelper {
   Function &F;
   MemorySanitizer &MS;
   MemorySanitizerVisitor &MSV;
+  bool IsSoftFloatABI;
   Value *VAArgTLSCopy = nullptr;
   Value *VAArgTLSOriginCopy = nullptr;
   Value *VAArgOverflowSize = nullptr;
@@ -5434,9 +5435,10 @@ struct VarArgSystemZHelper : public VarArgHelper {
 
   VarArgSystemZHelper(Function &F, MemorySanitizer &MS,
                       MemorySanitizerVisitor &MSV)
-      : F(F), MS(MS), MSV(MSV) {}
+      : F(F), MS(MS), MSV(MSV),
+        IsSoftFloatABI(F.getFnAttribute("use-soft-float").getValueAsBool()) {}
 
-  ArgKind classifyArgument(Type *T, bool IsSoftFloatABI) {
+  ArgKind classifyArgument(Type *T) {
     // T is a SystemZABIInfo::classifyArgumentType() output, and there are
     // only a few possibilities of what it can be. In particular, enums, single
     // element structs and large types have already been taken care of.
@@ -5474,9 +5476,6 @@ struct VarArgSystemZHelper : public VarArgHelper {
   }
 
   void visitCallBase(CallBase &CB, IRBuilder<> &IRB) override {
-    bool IsSoftFloatABI = CB.getCalledFunction()
-                              ->getFnAttribute("use-soft-float")
-                              .getValueAsBool();
     unsigned GpOffset = SystemZGpOffset;
     unsigned FpOffset = SystemZFpOffset;
     unsigned VrIndex = 0;
@@ -5487,7 +5486,7 @@ struct VarArgSystemZHelper : public VarArgHelper {
       // SystemZABIInfo does not produce ByVal parameters.
       assert(!CB.paramHasAttr(ArgNo, Attribute::ByVal));
       Type *T = A->getType();
-      ArgKind AK = classifyArgument(T, IsSoftFloatABI);
+      ArgKind AK = classifyArgument(T);
       if (AK == ArgKind::Indirect) {
         T = PointerType::get(T, 0);
         AK = ArgKind::GeneralPurpose;

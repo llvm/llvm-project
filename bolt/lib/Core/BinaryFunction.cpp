@@ -166,9 +166,7 @@ namespace bolt {
 
 constexpr unsigned BinaryFunction::MinAlign;
 
-namespace {
-
-template <typename R> bool emptyRange(const R &Range) {
+template <typename R> static bool emptyRange(const R &Range) {
   return Range.begin() == Range.end();
 }
 
@@ -177,7 +175,7 @@ template <typename R> bool emptyRange(const R &Range) {
 /// to point to this information, which is represented by a
 /// DebugLineTableRowRef. The returned pointer is null if no debug line
 /// information for this instruction was found.
-SMLoc findDebugLineInformationForInstructionAt(
+static SMLoc findDebugLineInformationForInstructionAt(
     uint64_t Address, DWARFUnit *Unit,
     const DWARFDebugLine::LineTable *LineTable) {
   // We use the pointer in SMLoc to store an instance of DebugLineTableRowRef,
@@ -206,15 +204,16 @@ SMLoc findDebugLineInformationForInstructionAt(
   return SMLoc::getFromPointer(Ptr);
 }
 
-std::string buildSectionName(StringRef Prefix, StringRef Name,
-                             const BinaryContext &BC) {
+static std::string buildSectionName(StringRef Prefix, StringRef Name,
+                                    const BinaryContext &BC) {
   if (BC.isELF())
     return (Prefix + Name).str();
   static NameShortener NS;
   return (Prefix + Twine(NS.getID(Name))).str();
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const BinaryFunction::State State) {
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const BinaryFunction::State State) {
   switch (State) {
   case BinaryFunction::State::Empty:         OS << "empty"; break;
   case BinaryFunction::State::Disassembled:  OS << "disassembled"; break;
@@ -226,8 +225,6 @@ raw_ostream &operator<<(raw_ostream &OS, const BinaryFunction::State State) {
 
   return OS;
 }
-
-} // namespace
 
 std::string BinaryFunction::buildCodeSectionName(StringRef Name,
                                                  const BinaryContext &BC) {
@@ -669,9 +666,8 @@ void BinaryFunction::printRelocations(raw_ostream &OS, uint64_t Offset,
   }
 }
 
-namespace {
-std::string mutateDWARFExpressionTargetReg(const MCCFIInstruction &Instr,
-                                           MCPhysReg NewReg) {
+static std::string mutateDWARFExpressionTargetReg(const MCCFIInstruction &Instr,
+                                                  MCPhysReg NewReg) {
   StringRef ExprBytes = Instr.getValues();
   assert(ExprBytes.size() > 1 && "DWARF expression CFI is too short");
   uint8_t Opcode = ExprBytes[0];
@@ -694,7 +690,6 @@ std::string mutateDWARFExpressionTargetReg(const MCCFIInstruction &Instr,
       .concat(ExprBytes.drop_front(1 + Size))
       .str();
 }
-} // namespace
 
 void BinaryFunction::mutateCFIRegisterFor(const MCInst &Instr,
                                           MCPhysReg NewReg) {
@@ -2999,14 +2994,13 @@ void BinaryFunction::duplicateConstantIslands() {
   }
 }
 
-namespace {
-
 #ifndef MAX_PATH
 #define MAX_PATH 255
 #endif
 
-std::string constructFilename(std::string Filename, std::string Annotation,
-                              std::string Suffix) {
+static std::string constructFilename(std::string Filename,
+                                     std::string Annotation,
+                                     std::string Suffix) {
   std::replace(Filename.begin(), Filename.end(), '/', '-');
   if (!Annotation.empty())
     Annotation.insert(0, "-");
@@ -3023,7 +3017,7 @@ std::string constructFilename(std::string Filename, std::string Annotation,
   return Filename;
 }
 
-std::string formatEscapes(const std::string &Str) {
+static std::string formatEscapes(const std::string &Str) {
   std::string Result;
   for (unsigned I = 0; I < Str.size(); ++I) {
     char C = Str[I];
@@ -3040,8 +3034,6 @@ std::string formatEscapes(const std::string &Str) {
   }
   return Result;
 }
-
-} // namespace
 
 void BinaryFunction::dumpGraph(raw_ostream &OS) const {
   OS << "digraph \"" << getPrintName() << "\" {\n"

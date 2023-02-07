@@ -47,11 +47,6 @@ bool ScriptedProcess::IsScriptLanguageSupported(lldb::ScriptLanguage language) {
   return llvm::is_contained(supported_languages, language);
 }
 
-void ScriptedProcess::CheckInterpreterAndScriptObject() const {
-  lldbassert(m_interpreter && "Invalid Script Interpreter.");
-  lldbassert(m_script_object_sp && "Invalid Script Object.");
-}
-
 lldb::ProcessSP ScriptedProcess::CreateInstance(lldb::TargetSP target_sp,
                                                 lldb::ListenerSP listener_sp,
                                                 const FileSpec *file,
@@ -66,8 +61,7 @@ lldb::ProcessSP ScriptedProcess::CreateInstance(lldb::TargetSP target_sp,
   auto process_sp = std::shared_ptr<ScriptedProcess>(
       new ScriptedProcess(target_sp, listener_sp, scripted_metadata, error));
 
-  if (error.Fail() || !process_sp || !process_sp->m_script_object_sp ||
-      !process_sp->m_script_object_sp->IsValid()) {
+  if (error.Fail() || !process_sp || !process_sp->m_interface_up) {
     LLDB_LOGF(GetLog(LLDBLog::Process), "%s", error.AsCString());
     return nullptr;
   }
@@ -92,17 +86,28 @@ ScriptedProcess::ScriptedProcess(lldb::TargetSP target_sp,
     return;
   }
 
-  m_interpreter = target_sp->GetDebugger().GetScriptInterpreter();
+  ScriptInterpreter *interpreter =
+      target_sp->GetDebugger().GetScriptInterpreter();
 
-  if (!m_interpreter) {
+  if (!interpreter) {
     error.SetErrorStringWithFormat("ScriptedProcess::%s () - ERROR: %s",
                                    __FUNCTION__,
                                    "Debugger has no Script Interpreter");
     return;
   }
 
+  // Create process instance interface
+  m_interface_up = interpreter->CreateScriptedProcessInterface();
+  if (!m_interface_up) {
+    error.SetErrorStringWithFormat(
+        "ScriptedProcess::%s () - ERROR: %s", __FUNCTION__,
+        "Script interpreter couldn't create Scripted Process Interface");
+    return;
+  }
+
   ExecutionContext exe_ctx(target_sp, /*get_process=*/false);
 
+  // Create process script object
   StructuredData::GenericSP object_sp = GetInterface().CreatePluginObject(
       m_scripted_metadata.GetClassName(), exe_ctx,
       m_scripted_metadata.GetArgsSP());
@@ -113,8 +118,6 @@ ScriptedProcess::ScriptedProcess(lldb::TargetSP target_sp,
                                    "Failed to create valid script object");
     return;
   }
-
-  m_script_object_sp = object_sp;
 }
 
 ScriptedProcess::~ScriptedProcess() {
@@ -147,8 +150,6 @@ Status ScriptedProcess::DoLoadCore() {
 
 Status ScriptedProcess::DoLaunch(Module *exe_module,
                                  ProcessLaunchInfo &launch_info) {
-  CheckInterpreterAndScriptObject();
-
   /* FIXME: This doesn't reflect how lldb actually launches a process.
            In reality, it attaches to debugserver, then resume the process. */
   Status error = GetInterface().Launch();
@@ -168,14 +169,11 @@ Status ScriptedProcess::DoLaunch(Module *exe_module,
 }
 
 void ScriptedProcess::DidLaunch() {
-  CheckInterpreterAndScriptObject();
   m_pid = GetInterface().GetProcessID();
   GetLoadedDynamicLibrariesInfos();
 }
 
 Status ScriptedProcess::DoResume() {
-  CheckInterpreterAndScriptObject();
-
   Log *log = GetLog(LLDBLog::Process);
   // FIXME: Fetch data from thread.
   const StateType thread_resume_state = eStateRunning;
@@ -198,8 +196,6 @@ Status ScriptedProcess::DoResume() {
 }
 
 Status ScriptedProcess::DoStop() {
-  CheckInterpreterAndScriptObject();
-
   Log *log = GetLog(LLDBLog::Process);
 
   if (GetInterface().ShouldStop()) {
@@ -214,18 +210,10 @@ Status ScriptedProcess::DoStop() {
 
 Status ScriptedProcess::DoDestroy() { return Status(); }
 
-bool ScriptedProcess::IsAlive() {
-  if (m_interpreter && m_script_object_sp)
-    return GetInterface().IsAlive();
-  return false;
-}
+bool ScriptedProcess::IsAlive() { return GetInterface().IsAlive(); }
 
 size_t ScriptedProcess::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
                                      Status &error) {
-  if (!m_interpreter)
-    return ScriptedInterface::ErrorWithMessage<size_t>(
-        LLVM_PRETTY_FUNCTION, "No interpreter.", error);
-
   lldb::DataExtractorSP data_extractor_sp =
       GetInterface().ReadMemoryAtAddress(addr, size, error);
 
@@ -248,8 +236,6 @@ ArchSpec ScriptedProcess::GetArchitecture() {
 
 Status ScriptedProcess::DoGetMemoryRegionInfo(lldb::addr_t load_addr,
                                               MemoryRegionInfo &region) {
-  CheckInterpreterAndScriptObject();
-
   Status error;
   if (auto region_or_err =
           GetInterface().GetMemoryRegionContainingAddress(load_addr, error))
@@ -259,8 +245,6 @@ Status ScriptedProcess::DoGetMemoryRegionInfo(lldb::addr_t load_addr,
 }
 
 Status ScriptedProcess::GetMemoryRegions(MemoryRegionInfos &region_list) {
-  CheckInterpreterAndScriptObject();
-
   Status error;
   lldb::addr_t address = 0;
 
@@ -286,22 +270,9 @@ bool ScriptedProcess::DoUpdateThreadList(ThreadList &old_thread_list,
   // This is supposed to get the current set of threads, if any of them are in
   // old_thread_list then they get copied to new_thread_list, and then any
   // actually new threads will get added to new_thread_list.
-
-  CheckInterpreterAndScriptObject();
   m_thread_plans.ClearThreadCache();
 
   Status error;
-  ScriptLanguage language = m_interpreter->GetLanguage();
-
-  if (language != eScriptLanguagePython)
-    return ScriptedInterface::ErrorWithMessage<bool>(
-        LLVM_PRETTY_FUNCTION,
-        llvm::Twine("ScriptInterpreter language (" +
-                    llvm::Twine(m_interpreter->LanguageToString(language)) +
-                    llvm::Twine(") not supported."))
-            .str(),
-        error);
-
   StructuredData::DictionarySP thread_info_sp = GetInterface().GetThreadsInfo();
 
   if (!thread_info_sp)
@@ -400,8 +371,6 @@ bool ScriptedProcess::GetProcessInfo(ProcessInstanceInfo &info) {
 
 lldb_private::StructuredData::ObjectSP
 ScriptedProcess::GetLoadedDynamicLibrariesInfos() {
-  CheckInterpreterAndScriptObject();
-
   Status error;
   auto error_with_message = [&error](llvm::StringRef message) {
     return ScriptedInterface::ErrorWithMessage<bool>(LLVM_PRETTY_FUNCTION,
@@ -486,8 +455,6 @@ ScriptedProcess::GetLoadedDynamicLibrariesInfos() {
 }
 
 lldb_private::StructuredData::DictionarySP ScriptedProcess::GetMetadata() {
-  CheckInterpreterAndScriptObject();
-
   StructuredData::DictionarySP metadata_sp = GetInterface().GetMetadata();
 
   Status error;
@@ -499,7 +466,7 @@ lldb_private::StructuredData::DictionarySP ScriptedProcess::GetMetadata() {
 }
 
 void ScriptedProcess::UpdateQueueListIfNeeded() {
-  CheckInterpreterAndScriptObject();
+  CheckScriptedInterface();
   for (ThreadSP thread_sp : Threads()) {
     if (const char *queue_name = thread_sp->GetQueueName()) {
       QueueSP queue_sp = std::make_shared<Queue>(
@@ -510,12 +477,15 @@ void ScriptedProcess::UpdateQueueListIfNeeded() {
 }
 
 ScriptedProcessInterface &ScriptedProcess::GetInterface() const {
-  return m_interpreter->GetScriptedProcessInterface();
+  CheckScriptedInterface();
+  return *m_interface_up;
 }
 
 void *ScriptedProcess::GetImplementation() {
-  if (m_script_object_sp &&
-      m_script_object_sp->GetType() == eStructuredDataTypeGeneric)
-    return m_script_object_sp->GetAsGeneric()->GetValue();
+  StructuredData::GenericSP object_instance_sp =
+      GetInterface().GetScriptObjectInstance();
+  if (object_instance_sp &&
+      object_instance_sp->GetType() == eStructuredDataTypeGeneric)
+    return object_instance_sp->GetAsGeneric()->GetValue();
   return nullptr;
 }

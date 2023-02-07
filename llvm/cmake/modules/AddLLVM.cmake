@@ -1315,6 +1315,10 @@ if(NOT LLVM_TOOLCHAIN_TOOLS)
     strings
     strip
     )
+  # Build llvm-mt if libxml2 is enabled. Can be used by runtimes.
+  if (LLVM_ENABLE_LIBXML2)
+    list(APPEND LLVM_TOOLCHAIN_TOOLS llvm-mt)
+  endif()
 endif()
 
 macro(llvm_add_tool project name)
