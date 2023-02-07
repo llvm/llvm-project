@@ -199,4 +199,44 @@ declare void @Foo()
   EXPECT_EQ(M->alias_size(), 1u);
 }
 
+TEST(ModuleTest, IFuncList) {
+  // This tests all Module's functions that interact with Module::IFuncList.
+  LLVMContext C;
+  SMDiagnostic Err;
+  LLVMContext Context;
+  std::unique_ptr<Module> M = parseAssemblyString(R"(
+declare void @Foo()
+@GIF = ifunc void (), ptr @Foo
+)",
+                                                  Err, Context);
+  Function *Foo = M->getFunction("Foo");
+  auto *GIF = M->getNamedIFunc("GIF");
+  EXPECT_EQ(M->ifunc_size(), 1u);
+  auto *NewGIF =
+      GlobalIFunc::create(Foo->getType(), 0, GlobalValue::ExternalLinkage,
+                          "NewGIF", Foo, /*Parent=*/nullptr);
+  EXPECT_EQ(M->ifunc_size(), 1u);
+
+  M->insertIFunc(NewGIF);
+  EXPECT_EQ(&*std::prev(M->ifuncs().end()), NewGIF);
+
+  M->removeIFunc(NewGIF);
+  EXPECT_EQ(M->ifunc_size(), 1u);
+  M->insertIFunc(NewGIF);
+  EXPECT_EQ(M->ifunc_size(), 2u);
+  EXPECT_EQ(&*std::prev(M->ifuncs().end()), NewGIF);
+
+  auto Range = M->ifuncs();
+  EXPECT_EQ(&*Range.begin(), GIF);
+  EXPECT_EQ(&*std::next(Range.begin()), NewGIF);
+  EXPECT_EQ(std::next(Range.begin(), 2), Range.end());
+
+  M->removeIFunc(NewGIF);
+  EXPECT_EQ(M->ifunc_size(), 1u);
+
+  M->insertIFunc(NewGIF);
+  M->eraseIFunc(NewGIF);
+  EXPECT_EQ(M->ifunc_size(), 1u);
+}
+
 } // end namespace
