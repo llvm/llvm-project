@@ -746,7 +746,7 @@ public:
     return std::visit(
         Fortran::common::visitors{
             [&](const Fortran::evaluate::SymbolRef &sym) -> ExtValue {
-              return symMap.lookupSymbol(*sym).toExtendedValue();
+              return converter.getSymbolExtendedValue(*sym, &symMap);
             },
             [&](const Fortran::evaluate::Component &comp) -> ExtValue {
               return genComponent(comp);
@@ -841,15 +841,10 @@ public:
   /// Returns a reference to a symbol or its box/boxChar descriptor if it has
   /// one.
   ExtValue gen(Fortran::semantics::SymbolRef sym) {
-    if (Fortran::lower::SymbolBox val = symMap.lookupSymbol(sym))
-      return val.match(
-          [&](const Fortran::lower::SymbolBox::PointerOrAllocatable &boxAddr) {
-            return fir::factory::genMutableBoxRead(builder, getLoc(), boxAddr);
-          },
-          [&val](auto &) { return val.toExtendedValue(); });
-    LLVM_DEBUG(llvm::dbgs()
-               << "unknown symbol: " << sym << "\nmap: " << symMap << '\n');
-    fir::emitFatalError(getLoc(), "symbol is not mapped to any IR value");
+    fir::ExtendedValue exv = converter.getSymbolExtendedValue(sym, &symMap);
+    if (const auto *box = exv.getBoxOf<fir::MutableBoxValue>())
+      return fir::factory::genMutableBoxRead(builder, getLoc(), *box);
+    return exv;
   }
 
   ExtValue genLoad(const ExtValue &exv) {
