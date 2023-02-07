@@ -40,7 +40,6 @@ void llvm::initializeIPO(PassRegistry &Registry) {
   initializeAttributorLegacyPassPass(Registry);
   initializeAttributorCGSCCLegacyPassPass(Registry);
   initializePostOrderFunctionAttrsLegacyPassPass(Registry);
-  initializeReversePostOrderFunctionAttrsLegacyPassPass(Registry);
   initializeIPSCCPLegacyPassPass(Registry);
   initializeBarrierNoopPass(Registry);
   initializeEliminateAvailableExternallyLegacyPassPass(Registry);
