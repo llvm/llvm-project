@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_AARCH64_FENV_DARWIN_IMPL_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_AARCH64_FENV_DARWIN_IMPL_H
 
-#include "src/__support/architectures.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/architectures.h"
 
-#if !defined(LLVM_LIBC_ARCH_AARCH64) || !defined(__APPLE__)
+#if !defined(LIBC_TARGET_IS_AARCH64) || !defined(__APPLE__)
 #error "Invalid include"
 #endif
 

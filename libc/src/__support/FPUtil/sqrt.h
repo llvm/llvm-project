@@ -9,11 +9,11 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_SQRT_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_SQRT_H
 
-#include "src/__support/architectures.h"
+#include "src/__support/macros/architectures.h"
 
-#if defined(LLVM_LIBC_ARCH_X86_64)
+#if defined(LIBC_TARGET_IS_X86_64)
 #include "x86_64/sqrt.h"
-#elif defined(LLVM_LIBC_ARCH_AARCH64)
+#elif defined(LIBC_TARGET_IS_AARCH64)
 #include "aarch64/sqrt.h"
 #else
 #include "generic/sqrt.h"

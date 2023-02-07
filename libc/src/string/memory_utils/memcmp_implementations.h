@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMCMP_IMPLEMENTATIONS_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMCMP_IMPLEMENTATIONS_H
 
-#include "src/__support/architectures.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/architectures.h"
 #include "src/string/memory_utils/op_aarch64.h"
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/op_generic.h"
@@ -29,7 +29,7 @@ inline_memcmp_embedded_tiny(CPtr p1, CPtr p2, size_t count) {
   return MemcmpReturnType::ZERO();
 }
 
-#if defined(LLVM_LIBC_ARCH_X86) || defined(LLVM_LIBC_ARCH_AARCH64)
+#if defined(LIBC_TARGET_IS_X86) || defined(LIBC_TARGET_IS_AARCH64)
 [[maybe_unused]] LIBC_INLINE MemcmpReturnType
 inline_memcmp_generic_gt16(CPtr p1, CPtr p2, size_t count) {
   if (unlikely(count >= 384)) {
@@ -39,9 +39,9 @@ inline_memcmp_generic_gt16(CPtr p1, CPtr p2, size_t count) {
   }
   return generic::Memcmp<16>::loop_and_tail(p1, p2, count);
 }
-#endif // defined(LLVM_LIBC_ARCH_X86) || defined(LLVM_LIBC_ARCH_AARCH64)
+#endif // defined(LIBC_TARGET_IS_X86) || defined(LIBC_TARGET_IS_AARCH64)
 
-#if defined(LLVM_LIBC_ARCH_X86)
+#if defined(LIBC_TARGET_IS_X86)
 [[maybe_unused]] LIBC_INLINE MemcmpReturnType
 inline_memcmp_x86_sse2_gt16(CPtr p1, CPtr p2, size_t count) {
   if (unlikely(count >= 384)) {
@@ -84,9 +84,9 @@ inline_memcmp_x86_avx512bw_gt16(CPtr p1, CPtr p2, size_t count) {
   return x86::avx512bw::Memcmp<64>::loop_and_tail(p1, p2, count);
 }
 
-#endif // defined(LLVM_LIBC_ARCH_X86)
+#endif // defined(LIBC_TARGET_IS_X86)
 
-#if defined(LLVM_LIBC_ARCH_AARCH64)
+#if defined(LIBC_TARGET_IS_AARCH64)
 [[maybe_unused]] LIBC_INLINE MemcmpReturnType
 inline_memcmp_aarch64_neon_gt16(CPtr p1, CPtr p2, size_t count) {
   if (unlikely(count >= 128)) { // [128, ∞]
@@ -106,10 +106,10 @@ inline_memcmp_aarch64_neon_gt16(CPtr p1, CPtr p2, size_t count) {
   // [64, 127]
   return generic::Memcmp<16>::loop_and_tail(p1 + 32, p2 + 32, count - 32);
 }
-#endif // defined(LLVM_LIBC_ARCH_AARCH64)
+#endif // defined(LIBC_TARGET_IS_AARCH64)
 
 LIBC_INLINE MemcmpReturnType inline_memcmp(CPtr p1, CPtr p2, size_t count) {
-#if defined(LLVM_LIBC_ARCH_X86) || defined(LLVM_LIBC_ARCH_AARCH64)
+#if defined(LIBC_TARGET_IS_X86) || defined(LIBC_TARGET_IS_AARCH64)
   if (count == 0)
     return MemcmpReturnType::ZERO();
   if (count == 1)
@@ -122,7 +122,7 @@ LIBC_INLINE MemcmpReturnType inline_memcmp(CPtr p1, CPtr p2, size_t count) {
     return generic::Memcmp<4>::head_tail(p1, p2, count);
   if (count <= 16)
     return generic::Memcmp<8>::head_tail(p1, p2, count);
-#if defined(LLVM_LIBC_ARCH_X86)
+#if defined(LIBC_TARGET_IS_X86)
   if constexpr (x86::kAvx512BW)
     return inline_memcmp_x86_avx512bw_gt16(p1, p2, count);
   else if constexpr (x86::kAvx2)
@@ -131,15 +131,15 @@ LIBC_INLINE MemcmpReturnType inline_memcmp(CPtr p1, CPtr p2, size_t count) {
     return inline_memcmp_x86_sse2_gt16(p1, p2, count);
   else
     return inline_memcmp_generic_gt16(p1, p2, count);
-#elif defined(LLVM_LIBC_ARCH_AARCH64)
+#elif defined(LIBC_TARGET_IS_AARCH64)
   if constexpr (aarch64::kNeon)
     return inline_memcmp_aarch64_neon_gt16(p1, p2, count);
   else
     return inline_memcmp_generic_gt16(p1, p2, count);
 #endif
-#elif defined(LLVM_LIBC_ARCH_ARM)
+#elif defined(LIBC_TARGET_IS_ARM)
   return inline_memcmp_embedded_tiny(p1, p2, count);
-#elif defined(LLVM_LIBC_ARCH_GPU)
+#elif defined(LIBC_TARGET_IS_GPU)
   return inline_memcmp_embedded_tiny(p1, p2, count);
 #else
 #error "Unsupported platform"

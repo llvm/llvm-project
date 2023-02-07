@@ -11,10 +11,10 @@
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/UInt128.h"
-#include "src/__support/architectures.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/architectures.h"
 
-#if !defined(LLVM_LIBC_ARCH_X86)
+#if !defined(LIBC_TARGET_IS_X86)
 #error "Invalid include"
 #endif
 
