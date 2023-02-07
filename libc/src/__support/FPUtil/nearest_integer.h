@@ -9,12 +9,12 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_NEAREST_INTEGER_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_NEAREST_INTEGER_H
 
-#include "src/__support/architectures.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/architectures.h"
 
-#if (defined(LLVM_LIBC_ARCH_X86_64) && defined(__SSE4_2__))
+#if (defined(LIBC_TARGET_IS_X86_64) && defined(__SSE4_2__))
 #include "x86_64/nearest_integer.h"
-#elif defined(LLVM_LIBC_ARCH_AARCH64)
+#elif defined(LIBC_TARGET_IS_AARCH64)
 #include "aarch64/nearest_integer.h"
 #else
 

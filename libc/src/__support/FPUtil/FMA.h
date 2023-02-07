@@ -9,15 +9,15 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_FMA_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_FMA_H
 
-#include "src/__support/architectures.h"
 #include "src/__support/common.h"
 #include "src/__support/cpu_features.h"
+#include "src/__support/macros/architectures.h"
 
 #if defined(LIBC_TARGET_HAS_FMA)
 
-#if defined(LLVM_LIBC_ARCH_X86_64)
+#if defined(LIBC_TARGET_IS_X86_64)
 #include "x86_64/FMA.h"
-#elif defined(LLVM_LIBC_ARCH_AARCH64)
+#elif defined(LIBC_TARGET_IS_AARCH64)
 #include "aarch64/FMA.h"
 #endif
 

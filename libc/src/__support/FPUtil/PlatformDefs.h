@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_PLATFORM_DEFS_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_PLATFORM_DEFS_H
 
-#include "src/__support/architectures.h"
+#include "src/__support/macros/architectures.h"
 
-#if defined(LLVM_LIBC_ARCH_X86)
+#if defined(LIBC_TARGET_IS_X86)
 #define X87_FPU
 #endif
 

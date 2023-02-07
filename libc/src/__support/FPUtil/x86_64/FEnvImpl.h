@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_FENVIMPL_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_FENVIMPL_H
 
-#include "src/__support/architectures.h"
+#include "src/__support/macros/architectures.h"
 
-#if !defined(LLVM_LIBC_ARCH_X86)
+#if !defined(LIBC_TARGET_IS_X86)
 #error "Invalid include"
 #endif
 

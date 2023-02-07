@@ -12,9 +12,9 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_X86_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_X86_H
 
-#include "src/__support/architectures.h"
+#include "src/__support/macros/architectures.h"
 
-#if defined(LLVM_LIBC_ARCH_X86_64)
+#if defined(LIBC_TARGET_IS_X86_64)
 
 #include "src/__support/common.h"
 #include "src/string/memory_utils/op_builtin.h"
@@ -269,6 +269,6 @@ template <size_t Size> using Memcmp = MemcmpImpl<Size, 64, memcmp64, bcmp64>;
 
 } // namespace __llvm_libc::x86
 
-#endif // LLVM_LIBC_ARCH_X86_64
+#endif // LIBC_TARGET_IS_X86_64
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_X86_H
