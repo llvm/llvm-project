@@ -35,6 +35,7 @@ void llvm::initializeIPO(PassRegistry &Registry) {
   initializeAlwaysInlinerLegacyPassPass(Registry);
   initializeSimpleInlinerPass(Registry);
   initializeInferFunctionAttrsLegacyPassPass(Registry);
+  initializeInternalizeLegacyPassPass(Registry);
   initializeLoopExtractorLegacyPassPass(Registry);
   initializeSingleLoopExtractorPass(Registry);
   initializeAttributorLegacyPassPass(Registry);
@@ -42,6 +43,11 @@ void llvm::initializeIPO(PassRegistry &Registry) {
   initializePostOrderFunctionAttrsLegacyPassPass(Registry);
   initializeReversePostOrderFunctionAttrsLegacyPassPass(Registry);
   initializeIPSCCPLegacyPassPass(Registry);
+  initializeStripDeadPrototypesLegacyPassPass(Registry);
+  initializeStripSymbolsPass(Registry);
+  initializeStripDebugDeclarePass(Registry);
+  initializeStripDeadDebugInfoPass(Registry);
+  initializeStripNonDebugSymbolsPass(Registry);
   initializeBarrierNoopPass(Registry);
   initializeEliminateAvailableExternallyLegacyPassPass(Registry);
 }
@@ -80,4 +86,28 @@ void LLVMAddGlobalOptimizerPass(LLVMPassManagerRef PM) {
 
 void LLVMAddIPSCCPPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createIPSCCPPass());
+}
+
+void LLVMAddInternalizePass(LLVMPassManagerRef PM, unsigned AllButMain) {
+  auto PreserveMain = [=](const GlobalValue &GV) {
+    return AllButMain && GV.getName() == "main";
+  };
+  unwrap(PM)->add(createInternalizePass(PreserveMain));
+}
+
+void LLVMAddInternalizePassWithMustPreservePredicate(
+    LLVMPassManagerRef PM,
+    void *Context,
+    LLVMBool (*Pred)(LLVMValueRef, void *)) {
+  unwrap(PM)->add(createInternalizePass([=](const GlobalValue &GV) {
+    return Pred(wrap(&GV), Context) == 0 ? false : true;
+  }));
+}
+
+void LLVMAddStripDeadPrototypesPass(LLVMPassManagerRef PM) {
+  unwrap(PM)->add(createStripDeadPrototypesPass());
+}
+
+void LLVMAddStripSymbolsPass(LLVMPassManagerRef PM) {
+  unwrap(PM)->add(createStripSymbolsPass());
 }
