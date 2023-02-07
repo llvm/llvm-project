@@ -58,6 +58,11 @@ TEST(StdlibTest, All) {
   EXPECT_EQ(Vector->header(), *VectorH);
   EXPECT_THAT(Vector->headers(), ElementsAre(*VectorH));
 
+  EXPECT_THAT(stdlib::Symbol::named("std::", "basic_iostream")->headers(),
+              ElementsAre(stdlib::Header::named("<istream>"),
+                          stdlib::Header::named("<iostream>"),
+                          stdlib::Header::named("<iosfwd>")));
+
   EXPECT_THAT(stdlib::Header::all(), Contains(*VectorH));
   EXPECT_THAT(stdlib::Symbol::all(), Contains(*Vector));
   EXPECT_FALSE(stdlib::Header::named("<stdint.h>"));
