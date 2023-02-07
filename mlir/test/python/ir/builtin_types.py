@@ -26,16 +26,17 @@ def testParsePrint():
 
 
 # CHECK-LABEL: TEST: testParseError
-# TODO: Hook the diagnostic manager to capture a more meaningful error
-# message.
 @run
 def testParseError():
   ctx = Context()
   try:
     t = Type.parse("BAD_TYPE_DOES_NOT_EXIST", ctx)
-  except ValueError as e:
-    # CHECK: Unable to parse type: 'BAD_TYPE_DOES_NOT_EXIST'
-    print("testParseError:", e)
+  except MLIRError as e:
+    # CHECK: testParseError: <
+    # CHECK:   Unable to parse type:
+    # CHECK:   error: "BAD_TYPE_DOES_NOT_EXIST":1:1: expected non-function type
+    # CHECK: >
+    print(f"testParseError: <{e}>")
   else:
     print("Exception not produced")
 
@@ -292,8 +293,9 @@ def testVectorType():
     none = NoneType.get()
     try:
       vector_invalid = VectorType.get(shape, none)
-    except ValueError as e:
-      # CHECK: invalid 'Type(none)' and expected floating point or integer type.
+    except MLIRError as e:
+      # CHECK: Invalid type:
+      # CHECK: error: unknown: vector elements must be int/index/float type but got 'none'
       print(e)
     else:
       print("Exception not produced")
@@ -313,9 +315,9 @@ def testRankedTensorType():
     none = NoneType.get()
     try:
       tensor_invalid = RankedTensorType.get(shape, none)
-    except ValueError as e:
-      # CHECK: invalid 'Type(none)' and expected floating point, integer, vector
-      # CHECK: or complex type.
+    except MLIRError as e:
+      # CHECK: Invalid type:
+      # CHECK: error: unknown: invalid tensor element type: 'none'
       print(e)
     else:
       print("Exception not produced")
@@ -361,9 +363,9 @@ def testUnrankedTensorType():
     none = NoneType.get()
     try:
       tensor_invalid = UnrankedTensorType.get(none)
-    except ValueError as e:
-      # CHECK: invalid 'Type(none)' and expected floating point, integer, vector
-      # CHECK: or complex type.
+    except MLIRError as e:
+      # CHECK: Invalid type:
+      # CHECK: error: unknown: invalid tensor element type: 'none'
       print(e)
     else:
       print("Exception not produced")
@@ -400,9 +402,9 @@ def testMemRefType():
     none = NoneType.get()
     try:
       memref_invalid = MemRefType.get(shape, none)
-    except ValueError as e:
-      # CHECK: invalid 'Type(none)' and expected floating point, integer, vector
-      # CHECK: or complex type.
+    except MLIRError as e:
+      # CHECK: Invalid type:
+      # CHECK: error: unknown: invalid memref element type
       print(e)
     else:
       print("Exception not produced")
@@ -444,9 +446,9 @@ def testUnrankedMemRefType():
     none = NoneType.get()
     try:
       memref_invalid = UnrankedMemRefType.get(none, Attribute.parse("2"))
-    except ValueError as e:
-      # CHECK: invalid 'Type(none)' and expected floating point, integer, vector
-      # CHECK: or complex type.
+    except MLIRError as e:
+      # CHECK: Invalid type:
+      # CHECK: error: unknown: invalid memref element type
       print(e)
     else:
       print("Exception not produced")
