@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/BinaryFormat/MachO.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 

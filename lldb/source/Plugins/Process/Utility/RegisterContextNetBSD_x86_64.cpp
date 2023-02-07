@@ -9,8 +9,8 @@
 #include "RegisterContextNetBSD_x86_64.h"
 #include "RegisterContextNetBSD_i386.h"
 #include "RegisterContextPOSIX_x86.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cassert>
 #include <cstddef>
 

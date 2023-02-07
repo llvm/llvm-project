@@ -14,11 +14,11 @@
 #define LLVM_OBJECT_BINARY_H
 
 #include "llvm-c/Types.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/TargetParser/Triple.h"
 #include <memory>
 #include <utility>
 

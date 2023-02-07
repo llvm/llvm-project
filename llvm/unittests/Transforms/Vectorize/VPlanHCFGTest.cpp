@@ -9,8 +9,8 @@
 #include "../lib/Transforms/Vectorize/VPlan.h"
 #include "../lib/Transforms/Vectorize/VPlanTransforms.h"
 #include "VPlanTestBase.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
 #include <string>
 

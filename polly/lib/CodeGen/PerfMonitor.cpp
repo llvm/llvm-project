@@ -11,9 +11,9 @@
 #include "polly/CodeGen/PerfMonitor.h"
 #include "polly/CodeGen/RuntimeDebugBuilder.h"
 #include "polly/ScopInfo.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/IntrinsicsX86.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 using namespace polly;
