@@ -1,5 +1,10 @@
 ! RUN: %flang_fc1 -emit-fir %s -o - | fir-opt --array-value-copy | fir-opt --stack-arrays | FileCheck %s
 
+! In order to verify the whole MLIR pipeline, make the driver generate LLVM IR.
+! This is only to check that -fstack-arrays enables the stack-arrays pass so
+! only check the first example
+! RUN: %flang_fc1 -emit-llvm -o - -fstack-arrays %s | FileCheck --check-prefix=LLVM-IR %s
+
 ! check simple array value copy case
 subroutine array_value_copy_simple(arr)
   integer, intent(inout) :: arr(4)
@@ -13,6 +18,15 @@ end subroutine
 ! CHECK-NOT: fir.freemem
 ! CHECK: return
 ! CHECK-NEXT: }
+
+! LLVM-IR: array_value_copy_simple
+! LLVM-IR-NOT: malloc
+! LLVM-IR-NOT: free
+! LLVM-IR: alloca [4 x i32]
+! LLVM-IR-NOT: malloc
+! LLVM-IR-NOT: free
+! LLVM-IR: ret void
+! LLVM-IR-NEXT: }
 
 ! check complex array value copy case
 module stuff

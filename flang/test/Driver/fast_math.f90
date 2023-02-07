@@ -1,24 +1,34 @@
 ! Test for correct forwarding of fast-math flags from the compiler driver to the
 ! frontend driver
 
-! -Ofast => -ffast-math -O3
+! -Ofast => -ffast-math -O3 -fstack-arrays
 ! RUN: %flang -Ofast -fsyntax-only -### %s -o %t 2>&1 \
 ! RUN:     | FileCheck --check-prefix=CHECK-OFAST %s
 ! CHECK-OFAST: -fc1
 ! CHECK-OFAST-SAME: -ffast-math
+! CHECK-OFAST-SAME: -fstack-arrays
 ! CHECK-OFAST-SAME: -O3
 
-! TODO: update once -fstack-arays is added
-! RUN: %flang -fstack-arrays -fsyntax-only %s -o %t 2>&1 \
+! RUN: %flang -fstack-arrays -fsyntax-only -### %s -o %t 2>&1 \
 ! RUN:     | FileCheck --check-prefix=CHECK-STACK-ARRAYS %s
-! CHECK-STACK-ARRAYS: warning: argument unused during compilation: '-fstack-arrays'
+! CHECK-STACK-ARRAYS: -fc1
+! CHECK-STACK-ARRAYS-SAME: -fstack-arrays
 
-! -Ofast -fno-fast-math => -O3
+! -Ofast -fno-fast-math => -O3 -fstack-arrays
 ! RUN: %flang -Ofast -fno-fast-math -fsyntax-only -### %s -o %t 2>&1 \
 ! RUN:     | FileCheck --check-prefix=CHECK-OFAST-NO-FAST %s
 ! CHECK-OFAST-NO-FAST: -fc1
 ! CHECK-OFAST-NO-FAST-NOT: -ffast-math
+! CHECK-OFAST-NO-FAST-SAME: -fstack-arrays
 ! CHECK-OFAST-NO-FAST-SAME: -O3
+
+! -Ofast -fno-stack-arrays -> -O3 -ffast-math
+! RUN: %flang -Ofast -fno-stack-arrays -fsyntax-only -### %s -o %t 2>&1 \
+! RUN:     | FileCheck --check-prefix=CHECK-OFAST-NO-SA %s
+! CHECK-OFAST-NO-SA: -fc1
+! CHECK-OFAST-NO-SA-SAME: -ffast-math
+! CHECK-OFAST-NO-SA-NOT: -fstack-arrays
+! CHECK-OFAST-NO-SA-SAME: -O3
 
 ! -ffast-math => -ffast-math
 ! RUN: %flang -ffast-math -fsyntax-only -### %s -o %t 2>&1 \
