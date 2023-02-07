@@ -62,7 +62,7 @@ inline_bcmp_x86_avx2_gt16(CPtr p1, CPtr p2, size_t count) {
     return x86::avx2::Bcmp<32>::head_tail(p1, p2, count);
   if (count <= 128)
     return x86::avx2::Bcmp<64>::head_tail(p1, p2, count);
-  if (unlikely(count >= 256)) {
+  if (LIBC_UNLIKELY(count >= 256)) {
     if (auto value = x86::avx2::Bcmp<64>::block(p1, p2))
       return value;
     align_to_next_boundary<64, Arg::P1>(p1, p2, count);
@@ -78,7 +78,7 @@ inline_bcmp_x86_avx512bw_gt16(CPtr p1, CPtr p2, size_t count) {
     return x86::avx2::Bcmp<32>::head_tail(p1, p2, count);
   if (count <= 128)
     return x86::avx512bw::Bcmp<64>::head_tail(p1, p2, count);
-  if (unlikely(count >= 256)) {
+  if (LIBC_UNLIKELY(count >= 256)) {
     if (auto value = x86::avx512bw::Bcmp<64>::block(p1, p2))
       return value;
     align_to_next_boundary<64, Arg::P1>(p1, p2, count);
@@ -115,8 +115,8 @@ inline_bcmp_x86_avx512bw_gt16(CPtr p1, CPtr p2, size_t count) {
 [[maybe_unused]] LIBC_INLINE BcmpReturnType inline_bcmp_aarch64(CPtr p1,
                                                                 CPtr p2,
                                                                 size_t count) {
-  if (likely(count <= 32)) {
-    if (unlikely(count >= 16)) {
+  if (LIBC_LIKELY(count <= 32)) {
+    if (LIBC_UNLIKELY(count >= 16)) {
       return aarch64::Bcmp<16>::head_tail(p1, p2, count);
     }
     switch (count) {
@@ -151,7 +151,7 @@ inline_bcmp_x86_avx512bw_gt16(CPtr p1, CPtr p2, size_t count) {
     return aarch64::Bcmp<32>::head_tail(p1, p2, count);
 
   // Aligned loop if > 256, otherwise normal loop
-  if (unlikely(count > 256)) {
+  if (LIBC_UNLIKELY(count > 256)) {
     if (auto value = aarch64::Bcmp<32>::block(p1, p2))
       return value;
     align_to_next_boundary<16, Arg::P1>(p1, p2, count);

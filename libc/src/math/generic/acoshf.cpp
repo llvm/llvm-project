@@ -22,16 +22,16 @@ LLVM_LIBC_FUNCTION(float, acoshf, (float x)) {
   FPBits_t xbits(x);
   uint32_t x_u = xbits.uintval();
 
-  if (unlikely(x < 1.0f)) {
+  if (LIBC_UNLIKELY(x < 1.0f)) {
     // x < 1.
     fputil::set_except(FE_INVALID);
     return FPBits_t::build_quiet_nan(0);
   }
 
-  if (unlikely(x_u >= 0x4f8ffb03)) {
+  if (LIBC_UNLIKELY(x_u >= 0x4f8ffb03)) {
     // Check for exceptional values.
     uint32_t x_abs = x_u & FPBits_t::FloatProp::EXP_MANT_MASK;
-    if (unlikely(x_abs >= 0x7f80'0000U)) {
+    if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
       // x is +inf or NaN.
       return x;
     }

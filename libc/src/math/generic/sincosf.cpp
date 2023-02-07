@@ -97,8 +97,8 @@ LLVM_LIBC_FUNCTION(void, sincosf, (float x, float *sinp, float *cosp)) {
   // Sollya respectively.
 
   // |x| < 0x1.0p-12f
-  if (unlikely(x_abs < 0x3980'0000U)) {
-    if (unlikely(x_abs == 0U)) {
+  if (LIBC_UNLIKELY(x_abs < 0x3980'0000U)) {
+    if (LIBC_UNLIKELY(x_abs == 0U)) {
       // For signed zeros.
       *sinp = x;
       *cosp = 1.0f;
@@ -141,7 +141,7 @@ LLVM_LIBC_FUNCTION(void, sincosf, (float x, float *sinp, float *cosp)) {
   }
 
   // x is inf or nan.
-  if (unlikely(x_abs >= 0x7f80'0000U)) {
+  if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
     if (x_abs == 0x7f80'0000U) {
       errno = EDOM;
       fputil::set_except(FE_INVALID);
@@ -154,7 +154,7 @@ LLVM_LIBC_FUNCTION(void, sincosf, (float x, float *sinp, float *cosp)) {
 
   // Check exceptional values.
   for (int i = 0; i < N_EXCEPTS; ++i) {
-    if (unlikely(x_abs == EXCEPT_INPUTS[i])) {
+    if (LIBC_UNLIKELY(x_abs == EXCEPT_INPUTS[i])) {
       uint32_t s = EXCEPT_OUTPUTS_SIN[i][0]; // FE_TOWARDZERO
       uint32_t c = EXCEPT_OUTPUTS_COS[i][0]; // FE_TOWARDZERO
       bool x_sign = x < 0;

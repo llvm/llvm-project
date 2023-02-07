@@ -126,7 +126,8 @@ template <typename T> struct FModExceptionalInputHandler {
     using FPB = fputil::FPBits<T>;
     const T quiet_NaN = FPB::build_quiet_nan(0);
     FPB sx(x), sy(y);
-    if (likely(!sy.is_zero() && !sy.is_inf_or_nan() && !sx.is_inf_or_nan())) {
+    if (LIBC_LIKELY(!sy.is_zero() && !sy.is_inf_or_nan() &&
+                    !sx.is_inf_or_nan())) {
       return false;
     }
 
@@ -197,13 +198,13 @@ public:
             (m_x * inv_hy) >> (FPB::FloatProp::BIT_WIDTH - sides_zeroes_count);
         m_x <<= sides_zeroes_count;
         m_x -= hd * m_y;
-        while (unlikely(m_x > m_y))
+        while (LIBC_UNLIKELY(m_x > m_y))
           m_x -= m_y;
       }
       intU_t hd = (m_x * inv_hy) >> (FPB::FloatProp::BIT_WIDTH - exp_diff);
       m_x <<= exp_diff;
       m_x -= hd * m_y;
-      while (unlikely(m_x > m_y))
+      while (LIBC_UNLIKELY(m_x > m_y))
         m_x -= m_y;
     } else {
       m_x <<= exp_diff;
@@ -225,7 +226,7 @@ private:
 
   LIBC_INLINE static constexpr FPB eval_internal(FPB sx, FPB sy) {
 
-    if (likely(sx.uintval() <= sy.uintval())) {
+    if (LIBC_LIKELY(sx.uintval() <= sy.uintval())) {
       if (sx.uintval() < sy.uintval())
         return sx;        // |x|<|y| return x
       return FPB::zero(); // |x|=|y| return 0.0
@@ -235,8 +236,8 @@ private:
     int e_y = sy.get_unbiased_exponent();
 
     // Most common case where |y| is "very normal" and |x/y| < 2^EXPONENT_WIDTH
-    if (likely(e_y > int(FPB::FloatProp::MANTISSA_WIDTH) &&
-               e_x - e_y <= int(FPB::FloatProp::EXPONENT_WIDTH))) {
+    if (LIBC_LIKELY(e_y > int(FPB::FloatProp::MANTISSA_WIDTH) &&
+                    e_x - e_y <= int(FPB::FloatProp::EXPONENT_WIDTH))) {
       intU_t m_x = sx.get_explicit_mantissa();
       intU_t m_y = sy.get_explicit_mantissa();
       intU_t d = (e_x == e_y) ? (m_x - m_y) : (m_x << (e_x - e_y)) % m_y;
@@ -246,7 +247,7 @@ private:
       return FPB::make_value(d, e_y - 1);
     }
     /* Both subnormal special case. */
-    if (unlikely(e_x == 0 && e_y == 0)) {
+    if (LIBC_UNLIKELY(e_x == 0 && e_y == 0)) {
       FPB d;
       d.set_mantissa(sx.uintval() % sy.uintval());
       return d;
@@ -258,7 +259,7 @@ private:
 
     intU_t m_y = sy.get_explicit_mantissa();
     int lead_zeros_m_y = FPB::FloatProp::EXPONENT_WIDTH;
-    if (likely(e_y > 0)) {
+    if (LIBC_LIKELY(e_y > 0)) {
       e_y--;
     } else {
       m_y = sy.get_mantissa();
@@ -288,7 +289,7 @@ private:
     }
 
     m_x %= m_y;
-    if (unlikely(m_x == 0))
+    if (LIBC_UNLIKELY(m_x == 0))
       return FPB::zero();
 
     if (exp_diff == 0)

@@ -80,6 +80,7 @@ libc_support_library(
         "src/__support/common.h",
         "src/__support/endian.h",
         "src/__support/macros/architectures.h",
+        "src/__support/macros/attributes.h",
         "src/__support/macros/cpu_features.h",
     ],
 )

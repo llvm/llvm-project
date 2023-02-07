@@ -80,7 +80,7 @@ inline_memcpy_x86_maybe_interpose_repmovsb(Ptr __restrict dst,
   } else if constexpr (kRepMovsbThreshold == size_t(-1)) {
     return inline_memcpy_x86(dst, src, count);
   } else {
-    if (unlikely(count >= kRepMovsbThreshold))
+    if (LIBC_UNLIKELY(count >= kRepMovsbThreshold))
       return x86::Memcpy::repmovsb(dst, src, count);
     else
       return inline_memcpy_x86(dst, src, count);

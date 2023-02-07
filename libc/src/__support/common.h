@@ -10,25 +10,10 @@
 #define LLVM_LIBC_SUPPORT_COMMON_H
 
 #include "src/__support/macros/architectures.h"
-
-#define LIBC_INLINE_ASM __asm__ __volatile__
-
-#ifndef likely
-#define likely(x) __builtin_expect(!!(x), 1)
-#endif
-#ifndef unlikely
-#define unlikely(x) __builtin_expect(x, 0)
-#endif
-#ifndef UNUSED
-#define UNUSED __attribute__((unused))
-#endif
+#include "src/__support/macros/attributes.h"
 
 #ifndef LLVM_LIBC_FUNCTION_ATTR
 #define LLVM_LIBC_FUNCTION_ATTR
-#endif
-
-#ifndef LIBC_INLINE
-#define LIBC_INLINE inline
 #endif
 
 // GPU targets do not support aliasing.

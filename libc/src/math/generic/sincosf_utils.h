@@ -64,7 +64,7 @@ LIBC_INLINE void sincosf_eval(double xd, uint32_t x_abs, double &sin_k,
   int64_t k;
   double y;
 
-  if (likely(x_abs < FAST_PASS_BOUND)) {
+  if (LIBC_LIKELY(x_abs < FAST_PASS_BOUND)) {
     k = small_range_reduction(xd, y);
   } else {
     fputil::FPBits<float> x_bits(x_abs);

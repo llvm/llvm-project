@@ -20,12 +20,13 @@ LLVM_LIBC_FUNCTION(float, tanhf, (float x)) {
   uint32_t x_abs = xbits.uintval() & FPBits::FloatProp::EXP_MANT_MASK;
 
   // |x| <= 2^-26
-  if (unlikely(x_abs <= 0x3280'0000U)) {
-    return unlikely(x_abs == 0) ? x : (x - 0x1.5555555555555p-2 * x * x * x);
+  if (LIBC_UNLIKELY(x_abs <= 0x3280'0000U)) {
+    return LIBC_UNLIKELY(x_abs == 0) ? x
+                                     : (x - 0x1.5555555555555p-2 * x * x * x);
   }
 
   // When |x| >= 15, or x is inf or nan
-  if (unlikely(x_abs >= 0x4170'0000U)) {
+  if (LIBC_UNLIKELY(x_abs >= 0x4170'0000U)) {
     if (xbits.is_nan())
       return x + 1.0f; // sNaN to qNaN + signal
 
@@ -39,7 +40,7 @@ LLVM_LIBC_FUNCTION(float, tanhf, (float x)) {
   }
 
   // |x| <= 0.078125
-  if (unlikely(x_abs <= 0x3da0'0000U)) {
+  if (LIBC_UNLIKELY(x_abs <= 0x3da0'0000U)) {
     double xdbl = x;
     double x2 = xdbl * xdbl;
     // Pure Taylor series.
@@ -49,7 +50,7 @@ LLVM_LIBC_FUNCTION(float, tanhf, (float x)) {
     return fputil::multiply_add(xdbl, pe, xdbl);
   }
 
-  if (unlikely(xbits.bits == 0x4058'e0a3U)) {
+  if (LIBC_UNLIKELY(xbits.bits == 0x4058'e0a3U)) {
     if (fputil::get_round() == FE_DOWNWARD)
       return FPBits(0x3f7f'6ad9U).get_val();
   }
