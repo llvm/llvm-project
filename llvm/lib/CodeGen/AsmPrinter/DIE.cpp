@@ -385,6 +385,7 @@ void DIEInteger::emitValue(const AsmPrinter *Asm, dwarf::Form Form) const {
   case dwarf::DW_FORM_strx2:
   case dwarf::DW_FORM_addrx2:
   case dwarf::DW_FORM_strx3:
+  case dwarf::DW_FORM_addrx3:
   case dwarf::DW_FORM_strp:
   case dwarf::DW_FORM_ref4:
   case dwarf::DW_FORM_data4:
