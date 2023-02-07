@@ -1571,7 +1571,7 @@ mlir-tblgen --gen-op-interface-doc -I /path/to/mlir/include /path/to/input/td/fi
 
 ## Appendix
 
-### Reporting deprecation
+### Reporting deprecation in TableGen
 
 Classes/defs can be marked as deprecated by using the `Deprecate` helper class,
 e.g.,
@@ -1583,6 +1583,29 @@ def OpTraitA : NativeOpTrait<"OpTraitA">, Deprecated<"use `bar` instead">;
 would result in marking `OpTraitA` as deprecated and mlir-tblgen can emit a
 warning (default) or error (depending on `-on-deprecated` flag) to make
 deprecated state known.
+
+### Reporting deprecation in C++
+
+TableGen generated C++ entities, such as classes, functions or methods, can be
+marked as deprecated using the `CppDeprecated` mixin:
+
+```tablegen
+def MyOp : Op<MyDialect, "my.op">, CppDeprecated<"use 'your.op' instead">;
+```
+
+This differs to the deprecation mechanic for TableGen, in that no warning is
+emitted by mlir-tblgen. Rather, a warning with the given reason is emitted by
+the C++ compiler on use of the given entity.
+
+To allow more convenient syntax, helper classes exist for TableGen classes
+which are commonly used as anonymous definitions. These currently include:
+
+* `DeprecatedOpBuilder`: Can be used in place of `OpBuilder` with the same
+  arguments except taking the reason as first argument, e.g. 
+  `DeprecatedOpBuilder<"use 'build' with foo instead", (ins "int":$bar)>`
+
+Note: Support for the `CppDeprecated` mechanism has to be implemented by 
+every code generator separately. 
 
 ### Requirements and existing mechanisms analysis
 
