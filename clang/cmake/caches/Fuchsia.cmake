@@ -17,6 +17,34 @@ set(LLVM_ENABLE_ZLIB OFF CACHE BOOL "")
 set(LLVM_INCLUDE_DOCS OFF CACHE BOOL "")
 set(LLVM_INCLUDE_EXAMPLES OFF CACHE BOOL "")
 
+# Passthrough stage1 flags to stage1.
+set(_FUCHSIA_BOOTSTRAP_PASSTHROUGH
+  LLVM_ENABLE_ZLIB
+  ZLIB_INCLUDE_DIR
+  ZLIB_LIBRARY
+  LLVM_ENABLE_ZSTD
+  zstd_DIR
+  LLVM_ENABLE_LIBXML2
+  LibXml2_ROOT
+  LLVM_ENABLE_CURL
+  CURL_ROOT
+  OpenSSL_ROOT
+  CMAKE_FIND_PACKAGE_PREFER_CONFIG
+  CMAKE_SYSROOT
+  CMAKE_MODULE_LINKER_FLAGS
+  CMAKE_SHARED_LINKER_FLAGS
+  CMAKE_EXE_LINKER_FLAGS
+)
+
+foreach(variable ${_FUCHSIA_BOOTSTRAP_PASSTHROUGH})
+  get_property(is_value_set CACHE ${variable} PROPERTY VALUE SET)
+  if(${is_value_set})
+    get_property(value CACHE ${variable} PROPERTY VALUE)
+    get_property(type CACHE ${variable} PROPERTY TYPE)
+    set(BOOTSTRAP_${variable} "${value}" CACHE ${type} "")
+  endif()
+endforeach()
+
 if(WIN32)
   set(LLVM_USE_CRT_RELEASE "MT" CACHE STRING "")
 endif()
@@ -103,12 +131,6 @@ if(BOOTSTRAP_CMAKE_SYSTEM_NAME)
     set(RUNTIMES_${target}_SANITIZER_CXX_ABI "libc++" CACHE STRING "")
     set(RUNTIMES_${target}_SANITIZER_CXX_ABI_INTREE ON CACHE BOOL "")
   endif()
-endif()
-
-if(UNIX)
-  set(BOOTSTRAP_CMAKE_SHARED_LINKER_FLAGS "-ldl -lpthread" CACHE STRING "")
-  set(BOOTSTRAP_CMAKE_MODULE_LINKER_FLAGS "-ldl -lpthread" CACHE STRING "")
-  set(BOOTSTRAP_CMAKE_EXE_LINKER_FLAGS "-ldl -lpthread" CACHE STRING "")
 endif()
 
 set(BOOTSTRAP_LLVM_ENABLE_LLD ON CACHE BOOL "")
