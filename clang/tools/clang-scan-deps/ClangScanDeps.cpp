@@ -526,15 +526,18 @@ class FullDeps {
 public:
   void mergeDeps(StringRef Input, TranslationUnitDeps TUDeps,
                  size_t InputIndex) {
+    mergeDeps(std::move(TUDeps.ModuleGraph), InputIndex);
+
     InputDeps ID;
     ID.FileName = std::string(Input);
     ID.ContextHash = std::move(TUDeps.ID.ContextHash);
     ID.FileDeps = std::move(TUDeps.FileDeps);
     ID.ModuleDeps = std::move(TUDeps.ClangModuleDeps);
     ID.CASFileSystemRootID = TUDeps.CASFileSystemRootID;
-    mergeDeps(std::move(TUDeps.ModuleGraph), InputIndex);
     ID.DriverCommandLine = std::move(TUDeps.DriverCommandLine);
     ID.Commands = std::move(TUDeps.Commands);
+
+    std::unique_lock<std::mutex> ul(Lock);
     Inputs.push_back(std::move(ID));
   }
 
