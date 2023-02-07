@@ -9,6 +9,7 @@
 #include "clang/Analysis/Analyses/UnsafeBufferUsage.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Lex/Lexer.h"
 #include "llvm/ADT/SmallVector.h"
 #include <memory>
 #include <optional>
@@ -114,6 +115,19 @@ AST_MATCHER_P(Stmt, forEveryDescendant, internal::Matcher<Stmt>, innerMatcher) {
   
   MatchDescendantVisitor Visitor(&DTM, Finder, Builder, ASTMatchFinder::BK_All);  
   return Visitor.findMatch(DynTypedNode::create(Node));
+}
+
+AST_MATCHER_P(CastExpr, castSubExpr, internal::Matcher<Expr>, innerMatcher) {
+  return innerMatcher.matches(*Node.getSubExpr(), Finder, Builder);
+}
+
+// Returns a matcher that matches any expression 'e' such that `innerMatcher`
+// matches 'e' and 'e' is in an Unspecified Lvalue Context.
+static internal::Matcher<Stmt>
+isInUnspecifiedLvalueContext(internal::Matcher<Expr> innerMatcher) {
+  return implicitCastExpr(hasCastKind(CastKind::CK_LValueToRValue),
+                          castSubExpr(innerMatcher));
+  // FIXME: add assignmentTo context...
 }
 } // namespace clang::ast_matchers
 
@@ -282,7 +296,7 @@ public:
 /// Array subscript expressions on raw pointers as if they're arrays. Unsafe as
 /// it doesn't have any bounds checks for the array.
 class ArraySubscriptGadget : public WarningGadget {
-  static constexpr const char *const ArraySubscrTag = "arraySubscr";
+  static constexpr const char *const ArraySubscrTag = "ArraySubscript";
   const ArraySubscriptExpr *ASE;
 
 public:
@@ -390,6 +404,48 @@ public:
   const Stmt *getBaseStmt() const override { return Op; }
 
   DeclUseList getClaimedVarUseSites() const override {
+    return {};
+  }
+};
+  
+
+// Represents expressions of the form `DRE[*]` in the Unspecified Lvalue
+// Context (see `isInUnspecifiedLvalueContext`).
+// Note here `[]` is the built-in subscript operator.
+class ULCArraySubscriptGadget : public FixableGadget {
+private:
+  static constexpr const char *const ULCArraySubscriptTag = "ArraySubscriptUnderULC";
+  const ArraySubscriptExpr *Node;
+
+public:
+  ULCArraySubscriptGadget(const MatchFinder::MatchResult &Result)
+      : FixableGadget(Kind::ULCArraySubscript),
+        Node(Result.Nodes.getNodeAs<ArraySubscriptExpr>(ULCArraySubscriptTag)) {
+    assert(Node != nullptr && "Expecting a non-null matching result");
+  }
+
+  static bool classof(const Gadget *G) {
+    return G->getKind() == Kind::ULCArraySubscript;
+  }
+
+  static Matcher matcher() {
+    auto ArrayOrPtr = anyOf(hasPointerType(), hasArrayType());
+    auto BaseIsArrayOrPtrDRE =
+        hasBase(ignoringParenImpCasts(declRefExpr(ArrayOrPtr)));
+    auto Target =
+        arraySubscriptExpr(BaseIsArrayOrPtrDRE).bind(ULCArraySubscriptTag);
+
+    return expr(isInUnspecifiedLvalueContext(Target));
+  }
+
+  virtual std::optional<FixItList> getFixits(const Strategy &S) const override;
+
+  virtual const Stmt *getBaseStmt() const override { return Node; }
+
+  virtual DeclUseList getClaimedVarUseSites() const override {
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(Node->getBase()->IgnoreImpCasts())) {
+      return {DRE};
+    }
     return {};
   }
 };
@@ -546,26 +602,30 @@ static std::tuple<FixableGadgetList, WarningGadgetList, DeclUseTracker> findGadg
   // clang-format off
   M.addMatcher(
     stmt(forEveryDescendant(
+      eachOf(
+      // A `FixableGadget` matcher and a `WarningGadget` matcher should not disable
+      // each other (they could if they were put in the same `anyOf` group).
+      // We also should make sure no two `FixableGadget` (resp. `WarningGadget`) matchers
+      // match for the same node, so that we can group them
+      // in one `anyOf` group (for better performance via short-circuiting).
       stmt(anyOf(
-        // Add Gadget::matcher() for every gadget in the registry.
-#define GADGET(x)                                                              \
+#define FIXABLE_GADGET(x)                                                              \
         x ## Gadget::matcher().bind(#x),
 #include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
-        // In parallel, match all DeclRefExprs so that to find out
-        // whether there are any uncovered by gadgets.
-        declRefExpr(anyOf(hasPointerType(), hasArrayType()),
-                    to(varDecl())).bind("any_dre"),
         // Also match DeclStmts because we'll need them when fixing
         // their underlying VarDecls that otherwise don't have
         // any backreferences to DeclStmts.
         declStmt().bind("any_ds")
-      ))
-      // FIXME: Idiomatically there should be a forCallable(equalsNode(D))
-      // here, to make sure that the statement actually belongs to the
-      // function and not to a nested function. However, forCallable uses
-      // ParentMap which can't be used before the AST is fully constructed.
-      // The original problem doesn't sound like it needs ParentMap though,
-      // maybe there's a more direct solution?
+      )),
+      stmt(anyOf(
+        // Add Gadget::matcher() for every gadget in the registry.
+#define WARNING_GADGET(x)                                                              \
+        x ## Gadget::matcher().bind(#x),
+#include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
+        // In parallel, match all DeclRefExprs so that to find out
+        // whether there are any uncovered by gadgets.
+        declRefExpr(anyOf(hasPointerType(), hasArrayType()), to(varDecl())).bind("any_dre")
+      )))
     )),
     &CB
   );
@@ -634,11 +694,241 @@ groupFixablesByVar(FixableGadgetList &&AllFixableOperations) {
   return FixablesForUnsafeVars;
 }
 
+std::optional<FixItList>
+ULCArraySubscriptGadget::getFixits(const Strategy &S) const {
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(Node->getBase()->IgnoreImpCasts()))
+    if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+      switch (S.lookup(VD)) {
+      case Strategy::Kind::Span: {
+        // If the index has a negative constant value, we give up as no valid
+        // fix-it can be generated:
+        const ASTContext &Ctx = // FIXME: we need ASTContext to be passed in!
+            VD->getASTContext();
+        if (auto ConstVal = Node->getIdx()->getIntegerConstantExpr(Ctx)) {
+          if (ConstVal->isNegative())
+            return std::nullopt;
+        } else if (!Node->getIdx()->getType()->isUnsignedIntegerType())
+          return std::nullopt;
+        // no-op is a good fix-it, otherwise
+        return FixItList{};
+      }
+      case Strategy::Kind::Wontfix:
+      case Strategy::Kind::Iterator:
+      case Strategy::Kind::Array:
+      case Strategy::Kind::Vector:
+        llvm_unreachable("unsupported strategies for FixableGadgets");
+      }
+    }
+  return std::nullopt;
+}
+
+// Return the text representation of the given `APInt Val`:
+static std::string getAPIntText(APInt Val) {
+  SmallVector<char> Txt;
+  Val.toString(Txt, 10, true);
+  // APInt::toString does not add '\0' to the end of the string for us:
+  Txt.push_back('\0');
+  return Txt.data();
+}
+
+// Return the source location of the last character of the AST `Node`.
+template <typename NodeTy>
+static SourceLocation getEndCharLoc(const NodeTy *Node, const SourceManager &SM,
+                                    const LangOptions &LangOpts) {
+  return Lexer::getLocForEndOfToken(Node->getEndLoc(), 1, SM, LangOpts);
+}
+
+// Return the source location just past the last character of the AST `Node`.
+template <typename NodeTy>
+static SourceLocation getPastLoc(const NodeTy *Node, const SourceManager &SM,
+                                 const LangOptions &LangOpts) {
+  return Lexer::getLocForEndOfToken(Node->getEndLoc(), 0, SM, LangOpts);
+}
+
+// Return text representation of an `Expr`.
+static StringRef getExprText(const Expr *E, const SourceManager &SM,
+                               const LangOptions &LangOpts) {
+  SourceLocation LastCharLoc = getPastLoc(E, SM, LangOpts);
+
+  return Lexer::getSourceText(
+      CharSourceRange::getCharRange(E->getBeginLoc(), LastCharLoc), SM,
+      LangOpts);
+}
+
+// For a non-null initializer `Init` of `T *` type, this function returns
+// `FixItHint`s producing a list initializer `{Init,  S}` as a part of a fix-it
+// to output stream.
+// In many cases, this function cannot figure out the actual extent `S`.  It
+// then will use a place holder to replace `S` to ask users to fill `S` in.  The
+// initializer shall be used to initialize a variable of type `std::span<T>`.
+//
+// FIXME: Support multi-level pointers
+//
+// Parameters:
+//   `Init` a pointer to the initializer expression
+//   `Ctx` a reference to the ASTContext
+static FixItList
+populateInitializerFixItWithSpan(const Expr *Init, const ASTContext &Ctx,
+                                 const StringRef UserFillPlaceHolder) {
+  FixItList FixIts{};
+  const SourceManager &SM = Ctx.getSourceManager();
+  const LangOptions &LangOpts = Ctx.getLangOpts();
+  std::string ExtentText = UserFillPlaceHolder.data();
+  StringRef One = "1";
+
+  // Insert `{` before `Init`:
+  FixIts.push_back(FixItHint::CreateInsertion(Init->getBeginLoc(), "{"));
+  // Try to get the data extent. Break into different cases:
+  if (auto CxxNew = dyn_cast<CXXNewExpr>(Init->IgnoreImpCasts())) {
+    // In cases `Init` is `new T[n]` and there is no explicit cast over
+    // `Init`, we know that `Init` must evaluates to a pointer to `n` objects
+    // of `T`. So the extent is `n` unless `n` has side effects.  Similar but
+    // simpler for the case where `Init` is `new T`.
+    if (const Expr *Ext = CxxNew->getArraySize().value_or(nullptr)) {
+      if (!Ext->HasSideEffects(Ctx))
+        ExtentText = getExprText(Ext, SM, LangOpts);
+    } else if (!CxxNew->isArray())
+      // Although the initializer is not allocating a buffer, the pointer
+      // variable could still be used in buffer access operations.
+      ExtentText = One;
+  } else if (const auto *CArrTy = Ctx.getAsConstantArrayType(
+                 Init->IgnoreImpCasts()->getType())) {
+    // In cases `Init` is of an array type after stripping off implicit casts,
+    // the extent is the array size.  Note that if the array size is not a
+    // constant, we cannot use it as the extent.
+    ExtentText = getAPIntText(CArrTy->getSize());
+  } else {
+    // In cases `Init` is of the form `&Var` after stripping of implicit
+    // casts, where `&` is the built-in operator, the extent is 1.
+    if (auto AddrOfExpr = dyn_cast<UnaryOperator>(Init->IgnoreImpCasts()))
+      if (AddrOfExpr->getOpcode() == UnaryOperatorKind::UO_AddrOf &&
+          isa_and_present<DeclRefExpr>(AddrOfExpr->getSubExpr()))
+        ExtentText = One;
+    // TODO: we can handle more cases, e.g., `&a[0]`, `&a`, `std::addressof`, and explicit casting, etc.
+    // etc.
+  }
+
+  SmallString<32> StrBuffer{};
+  SourceLocation LocPassInit = getPastLoc(Init, SM, LangOpts);
+
+  StrBuffer.append(", ");
+  StrBuffer.append(ExtentText);
+  StrBuffer.append("}");
+  FixIts.push_back(FixItHint::CreateInsertion(LocPassInit, StrBuffer.str()));
+  return FixIts;
+}
+
+// For a `VarDecl` of the form `T  * var (= Init)?`, this
+// function generates a fix-it for the declaration, which re-declares `var` to
+// be of `span<T>` type and transforms the initializer, if present, to a span
+// constructor---`span<T> var {Init, Extent}`, where `Extent` may need the user
+// to fill in.
+//
+// FIXME: support Multi-level pointers
+//
+// Parameters:
+//   `D` a pointer the variable declaration node
+//   `Ctx` a reference to the ASTContext
+// Returns:
+//    the generated fix-it
+static FixItList fixVarDeclWithSpan(const VarDecl *D, const ASTContext &Ctx,
+                                    const StringRef UserFillPlaceHolder) {
+  const QualType &SpanEltT = D->getType()->getPointeeType();
+  assert(!SpanEltT.isNull() && "Trying to fix a non-pointer type variable!");
+
+  FixItList FixIts{};
+  SourceLocation
+      ReplacementLastLoc; // the inclusive end location of the replacement
+  const SourceManager &SM = Ctx.getSourceManager();
+
+  if (const Expr *Init = D->getInit()) {
+    FixItList InitFixIts =
+        populateInitializerFixItWithSpan(Init, Ctx, UserFillPlaceHolder);
+
+    if (InitFixIts.empty())
+      return {}; // Something wrong with fixing initializer, give up
+    // The loc right before the initializer:
+    ReplacementLastLoc = Init->getBeginLoc().getLocWithOffset(-1);
+    FixIts.insert(FixIts.end(), std::make_move_iterator(InitFixIts.begin()),
+                  std::make_move_iterator(InitFixIts.end()));
+  } else
+    ReplacementLastLoc = getEndCharLoc(D, SM, Ctx.getLangOpts());
+
+  // Producing fix-it for variable declaration---make `D` to be of span type:
+  SmallString<32> Replacement;
+  raw_svector_ostream OS(Replacement);
+
+  OS << "std::span<" << SpanEltT.getAsString() << "> " << D->getName();
+  FixIts.push_back(FixItHint::CreateReplacement(
+      SourceRange{D->getBeginLoc(), ReplacementLastLoc}, OS.str()));
+  return FixIts;
+}
+
+static FixItList fixVariableWithSpan(const VarDecl *VD,
+                                     const DeclUseTracker &Tracker,
+                                     const ASTContext &Ctx,
+                                     UnsafeBufferUsageHandler &Handler) {
+  const DeclStmt *DS = Tracker.lookupDecl(VD);
+  assert(DS && "Fixing non-local variables not implemented yet!");
+  if (!DS->isSingleDecl()) {
+    // FIXME: to support handling multiple `VarDecl`s in a single `DeclStmt`
+    return{};
+  }
+  // Currently DS is an unused variable but we'll need it when
+  // non-single decls are implemented, where the pointee type name
+  // and the '*' are spread around the place.
+  (void)DS;
+
+  // FIXME: handle cases where DS has multiple declarations
+  return fixVarDeclWithSpan(VD, Ctx, Handler.getUserFillPlaceHolder());
+}
+
+static FixItList fixVariable(const VarDecl *VD, Strategy::Kind K,
+                             const DeclUseTracker &Tracker,
+                             const ASTContext &Ctx,
+                             UnsafeBufferUsageHandler &Handler) {
+  switch (K) {
+  case Strategy::Kind::Span: {
+    if (VD->getType()->isPointerType() && VD->isLocalVarDecl())
+      return fixVariableWithSpan(VD, Tracker, Ctx, Handler);
+    return {};
+  }
+  case Strategy::Kind::Iterator:
+  case Strategy::Kind::Array:
+  case Strategy::Kind::Vector:
+    llvm_unreachable("Strategy not implemented yet!");
+  case Strategy::Kind::Wontfix:
+    llvm_unreachable("Invalid strategy!");
+  }
+}
+
+// Returns true iff there exists a `FixItHint` 'h' in `FixIts` such that the
+// `RemoveRange` of 'h' overlaps with a macro use.
+static bool overlapWithMacro(const FixItList &FixIts) {
+  // FIXME: For now we only check if the range (or the first token) is (part of)
+  // a macro expansion.  Ideally, we want to check for all tokens in the range.
+  return llvm::any_of(FixIts, [](const FixItHint &Hint) {
+    auto BeginLoc = Hint.RemoveRange.getBegin();
+    if (BeginLoc.isMacroID())
+      // If the range (or the first token) is (part of) a macro expansion:
+      return true;
+    return false;
+  });
+}
+
 static std::map<const VarDecl *, FixItList>
-getFixIts(FixableGadgetSets &FixablesForUnsafeVars, const Strategy &S) {
+getFixIts(FixableGadgetSets &FixablesForUnsafeVars, const Strategy &S,
+          const DeclUseTracker &Tracker, const ASTContext &Ctx,
+          UnsafeBufferUsageHandler &Handler) {
   std::map<const VarDecl *, FixItList> FixItsForVariable;
   for (const auto &[VD, Fixables] : FixablesForUnsafeVars.byVar) {
-    // TODO fixVariable - fixit for the variable itself
+    FixItsForVariable[VD] = fixVariable(VD, S.lookup(VD), Tracker, Ctx, Handler);
+    // If we fail to produce Fix-It for the declaration we have to skip the
+    // variable entirely.
+    if (FixItsForVariable[VD].empty()) {
+      FixItsForVariable.erase(VD);
+      continue;
+    }
     bool ImpossibleToFix = false;
     llvm::SmallVector<FixItHint, 16> FixItsForVD;
     for (const auto &F : Fixables) {
@@ -657,6 +947,10 @@ getFixIts(FixableGadgetSets &FixablesForUnsafeVars, const Strategy &S) {
     else
       FixItsForVariable[VD].insert(FixItsForVariable[VD].end(),
                                    FixItsForVD.begin(), FixItsForVD.end());
+    // Fix-it shall not overlap with macros or/and templates:
+    if (overlapWithMacro(FixItsForVariable[VD])) {
+      FixItsForVariable.erase(VD);
+    }
   }
   return FixItsForVariable;
 }
@@ -702,7 +996,8 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
 
   Strategy NaiveStrategy = getNaiveStrategy(UnsafeVars);
   std::map<const VarDecl *, FixItList> FixItsForVariable =
-      getFixIts(FixablesForUnsafeVars, NaiveStrategy);
+      getFixIts(FixablesForUnsafeVars, NaiveStrategy, Tracker,
+                D->getASTContext(), Handler);
 
   // FIXME Detect overlapping FixIts.
 
