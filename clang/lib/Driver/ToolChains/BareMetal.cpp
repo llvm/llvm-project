@@ -155,6 +155,46 @@ static bool isRISCVBareMetal(const llvm::Triple &Triple) {
   return Triple.getEnvironmentName() == "elf";
 }
 
+static bool findMultilibsFromYAML(const ToolChain &TC, const Driver &D,
+                                  StringRef MultilibPath, const ArgList &Args,
+                                  DetectedMultilibs &Result) {
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MB =
+      D.getVFS().getBufferForFile(MultilibPath);
+  if (!MB)
+    return false;
+  Multilib::flags_list Flags = TC.getMultilibFlags(Args);
+  llvm::ErrorOr<MultilibSet> ErrorOrMultilibSet =
+      MultilibSet::parseYaml(*MB.get());
+  if (ErrorOrMultilibSet.getError())
+    return false;
+  Result.Multilibs = ErrorOrMultilibSet.get();
+  return Result.Multilibs.select(Flags, Result.SelectedMultilib);
+}
+
+static constexpr llvm::StringLiteral MultilibFilename = "multilib.yaml";
+
+// Get the sysroot, before multilib takes effect.
+static std::string computeBaseSysRoot(const Driver &D,
+                                      const llvm::Triple &Triple) {
+  if (!D.SysRoot.empty())
+    return D.SysRoot;
+
+  SmallString<128> SysRootDir(D.Dir);
+  llvm::sys::path::append(SysRootDir, "..", "lib", "clang-runtimes");
+
+  SmallString<128> MultilibPath(SysRootDir);
+  llvm::sys::path::append(MultilibPath, MultilibFilename);
+
+  // New behaviour: if multilib.yaml is found then use clang-runtimes as the
+  // sysroot.
+  if (D.getVFS().exists(MultilibPath))
+    return std::string(SysRootDir);
+
+  // Otherwise fall back to the old behaviour of appending the target triple.
+  llvm::sys::path::append(SysRootDir, D.getTargetTriple());
+  return std::string(SysRootDir);
+}
+
 void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
                               const ArgList &Args) {
   DetectedMultilibs Result;
@@ -163,6 +203,12 @@ void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
       SelectedMultilib = Result.SelectedMultilib;
       Multilibs = Result.Multilibs;
     }
+  } else {
+    llvm::SmallString<128> MultilibPath(computeBaseSysRoot(D, Triple));
+    llvm::sys::path::append(MultilibPath, MultilibFilename);
+    findMultilibsFromYAML(*this, D, MultilibPath, Args, Result);
+    SelectedMultilib = Result.SelectedMultilib;
+    Multilibs = Result.Multilibs;
   }
 }
 
@@ -176,15 +222,8 @@ Tool *BareMetal::buildLinker() const {
 }
 
 std::string BareMetal::computeSysRoot() const {
-  if (!getDriver().SysRoot.empty())
-    return getDriver().SysRoot + SelectedMultilib.osSuffix();
-
-  SmallString<128> SysRootDir;
-  llvm::sys::path::append(SysRootDir, getDriver().Dir, "../lib/clang-runtimes",
-                          getDriver().getTargetTriple());
-
-  SysRootDir += SelectedMultilib.osSuffix();
-  return std::string(SysRootDir);
+  return computeBaseSysRoot(getDriver(), getTriple()) +
+         SelectedMultilib.osSuffix();
 }
 
 void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,

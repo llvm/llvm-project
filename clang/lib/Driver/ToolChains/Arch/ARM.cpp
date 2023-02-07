@@ -467,7 +467,7 @@ llvm::ARM::FPUKind arm::getARMTargetFeatures(const Driver &D,
                                              const llvm::Triple &Triple,
                                              const ArgList &Args,
                                              std::vector<StringRef> &Features,
-                                             bool ForAS) {
+                                             bool ForAS, bool ForMultilib) {
   bool KernelOrKext =
       Args.hasArg(options::OPT_mkernel, options::OPT_fapple_kext);
   arm::FloatABI ABI = arm::getARMFloatABI(D, Triple, Args);
@@ -807,7 +807,9 @@ fp16_fml_fallthrough:
 
   // Generate execute-only output (no data access to code sections).
   // This only makes sense for the compiler, not for the assembler.
-  if (!ForAS) {
+  // It's not needed for multilib selection and may hide an unused
+  // argument diagnostic if the code is always run.
+  if (!ForAS && !ForMultilib) {
     // Supported only on ARMv6T2 and ARMv7 and above.
     // Cannot be combined with -mno-movt.
     if (Arg *A = Args.getLastArg(options::OPT_mexecute_only, options::OPT_mno_execute_only)) {
