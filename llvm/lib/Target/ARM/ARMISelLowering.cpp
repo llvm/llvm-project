@@ -17124,6 +17124,42 @@ static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Looks for vaddv(shuffle) or vmlav(shuffle, shuffle), with a shuffle where all
+// the lanes are used. Due to the reduction being commutative the shuffle can be
+// removed.
+static SDValue PerformReduceShuffleCombine(SDNode *N, SelectionDAG &DAG) {
+  unsigned VecOp = N->getOperand(0).getValueType().isVector() ? 0 : 2;
+  auto *Shuf = dyn_cast<ShuffleVectorSDNode>(N->getOperand(VecOp));
+  if (!Shuf || !Shuf->getOperand(1).isUndef())
+    return SDValue();
+
+  // Check all elements are used once in the mask.
+  ArrayRef<int> Mask = Shuf->getMask();
+  APInt SetElts(Mask.size(), 0);
+  for (int E : Mask) {
+    if (E < 0 || E >= (int)Mask.size())
+      return SDValue();
+    SetElts |= 1 << E;
+  }
+  if (!SetElts.isAllOnes())
+    return SDValue();
+
+  if (N->getNumOperands() != VecOp + 1) {
+    auto *Shuf2 = dyn_cast<ShuffleVectorSDNode>(N->getOperand(VecOp + 1));
+    if (!Shuf2 || !Shuf2->getOperand(1).isUndef() || Shuf2->getMask() != Mask)
+      return SDValue();
+  }
+
+  SmallVector<SDValue> Ops;
+  for (SDValue Op : N->ops()) {
+    if (Op.getValueType().isVector())
+      Ops.push_back(Op.getOperand(0));
+    else
+      Ops.push_back(Op);
+  }
+  return DAG.getNode(N->getOpcode(), SDLoc(N), N->getVTList(), Ops);
+}
+
 static SDValue PerformVMOVNCombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI) {
   SDValue Op0 = N->getOperand(0);
@@ -18724,6 +18760,19 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
     return PerformVCMPCombine(N, DCI.DAG, Subtarget);
   case ISD::VECREDUCE_ADD:
     return PerformVECREDUCE_ADDCombine(N, DCI.DAG, Subtarget);
+  case ARMISD::VADDVs:
+  case ARMISD::VADDVu:
+  case ARMISD::VADDLVs:
+  case ARMISD::VADDLVu:
+  case ARMISD::VADDLVAs:
+  case ARMISD::VADDLVAu:
+  case ARMISD::VMLAVs:
+  case ARMISD::VMLAVu:
+  case ARMISD::VMLALVs:
+  case ARMISD::VMLALVu:
+  case ARMISD::VMLALVAs:
+  case ARMISD::VMLALVAu:
+    return PerformReduceShuffleCombine(N, DCI.DAG);
   case ARMISD::VMOVN:
     return PerformVMOVNCombine(N, DCI);
   case ARMISD::VQMOVNs:
