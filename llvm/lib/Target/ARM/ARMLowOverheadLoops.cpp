@@ -907,7 +907,7 @@ static bool producesFalseLanesZero(MachineInstr &MI,
       continue;
     // Skip the lr predicate reg
     int PIdx = llvm::findFirstVPTPredOperandIdx(MI);
-    if (PIdx != -1 && (int)MI.getOperandNo(&MO) == PIdx + 2)
+    if (PIdx != -1 && (int)MO.getOperandNo() == PIdx + 2)
       continue;
 
     // Check that this instruction will produce zeros in its false lanes:
