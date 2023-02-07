@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_SANITIZER_H
 #define LLVM_LIBC_SRC_SUPPORT_SANITIZER_H
 
-#include "src/__support/compiler_features.h"
+#include "src/__support/macros/compiler_features.h"
 
 // MemorySanitizer (MSan) is a detector of uninitialized reads. It consists of
 // a compiler instrumentation module and a run-time library.
