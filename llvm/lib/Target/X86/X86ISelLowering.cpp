@@ -55390,6 +55390,34 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                            ConcatSubOperand(VT, Ops, 1));
       }
       break;
+    case X86ISD::VPERMV:
+      if (!IsSplat && NumOps == 2 &&
+          (VT.is512BitVector() && Subtarget.useAVX512Regs())) {
+        MVT OpVT = Op0.getSimpleValueType();
+        int NumSrcElts = OpVT.getVectorNumElements();
+        SmallVector<int, 64> ConcatMask;
+        for (unsigned i = 0; i != NumOps; ++i) {
+          SmallVector<int, 64> SubMask;
+          SmallVector<SDValue, 2> SubOps;
+          if (!getTargetShuffleMask(Ops[i].getNode(), OpVT, false, SubOps,
+                                    SubMask))
+            break;
+          for (int M : SubMask) {
+            if (0 <= M)
+              M += i * NumSrcElts;
+            ConcatMask.push_back(M);
+          }
+        }
+        if (ConcatMask.size() == (NumOps * NumSrcElts)) {
+          SDValue Src = concatSubVectors(Ops[0].getOperand(1),
+                                         Ops[1].getOperand(1), DAG, DL);
+          MVT IntMaskSVT = MVT::getIntegerVT(VT.getScalarSizeInBits());
+          MVT IntMaskVT = MVT::getVectorVT(IntMaskSVT, NumOps * NumSrcElts);
+          SDValue Mask = getConstVector(ConcatMask, IntMaskVT, DAG, DL, true);
+          return DAG.getNode(X86ISD::VPERMV, DL, VT, Mask, Src);
+        }
+      }
+      break;
     case X86ISD::VPERMV3:
       if (!IsSplat && NumOps == 2 && VT.is512BitVector()) {
         MVT OpVT = Op0.getSimpleValueType();
