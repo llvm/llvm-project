@@ -15,7 +15,7 @@
 
 #include <assert.h>
 
-#if defined(LLVM_LIBC_ARCH_X86_64) || defined(LLVM_LIBC_ARCH_AARCH64)
+#if defined(LIBC_TARGET_IS_X86_64) || defined(LIBC_TARGET_IS_AARCH64)
 #define LLVM_LIBC_HAS_UINT64
 #endif
 
@@ -200,7 +200,7 @@ using BcmpImplementations = testing::TypeList<
     x86::avx512bw::Bcmp<64>,  //
     x86::avx512bw::Bcmp<128>, //
 #endif
-#ifdef LLVM_LIBC_ARCH_AARCH64
+#ifdef LIBC_TARGET_IS_AARCH64
     aarch64::Bcmp<16>, //
     aarch64::Bcmp<32>, //
 #endif
