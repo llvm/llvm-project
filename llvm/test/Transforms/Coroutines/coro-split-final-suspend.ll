@@ -54,8 +54,7 @@ eh.resume:
 ; Tests the use of final index in the destroy function.
 ; CHECK: define{{.*}}@unwind_coro_end.destroy
 ; CHECK: %[[INDEX:.+]] = load i1, ptr %index.addr
-; CHECK-NEXT: %switch = icmp ult i1 %index, true
-; CHECK-NEXT: br i1 %switch,
+; CHECK-NEXT: switch i1 %[[INDEX]],
 
 define ptr @nounwind_coro_end(i1 %val) presplitcoroutine personality i32 3 {
 entry:

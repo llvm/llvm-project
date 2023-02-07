@@ -107,7 +107,9 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
     MPM.add(createJumpThreadingPass());         // Thread jumps.
     MPM.add(createCorrelatedValuePropagationPass()); // Propagate conditionals
   }
-  MPM.add(createCFGSimplificationPass());     // Merge & remove BBs
+  MPM.add(
+      createCFGSimplificationPass(SimplifyCFGOptions().convertSwitchRangeToICmp(
+          true))); // Merge & remove BBs
   // Combine silly seq's
   MPM.add(createInstructionCombiningPass());
   if (SizeLevel == 0)
@@ -116,7 +118,9 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
   // TODO: Investigate the cost/benefit of tail call elimination on debugging.
   if (OptLevel > 1)
     MPM.add(createTailCallEliminationPass()); // Eliminate tail calls
-  MPM.add(createCFGSimplificationPass());      // Merge & remove BBs
+  MPM.add(
+      createCFGSimplificationPass(SimplifyCFGOptions().convertSwitchRangeToICmp(
+          true)));                            // Merge & remove BBs
   MPM.add(createReassociatePass());           // Reassociate expressions
 
   // Begin the loop pass pipeline.
@@ -144,7 +148,8 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
   // FIXME: We break the loop pass pipeline here in order to do full
   // simplifycfg. Eventually loop-simplifycfg should be enhanced to replace the
   // need for this.
-  MPM.add(createCFGSimplificationPass());
+  MPM.add(createCFGSimplificationPass(
+      SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
   MPM.add(createInstructionCombiningPass());
   // We resume loop passes creating a second loop pipeline here.
   MPM.add(createLoopIdiomPass());             // Recognize idioms like memset.
@@ -231,6 +236,7 @@ void PassManagerBuilder::addVectorPasses(legacy::PassManagerBase &PM,
   // before SLP vectorization.
   PM.add(createCFGSimplificationPass(SimplifyCFGOptions()
                                          .forwardSwitchCondToPhi(true)
+                                         .convertSwitchRangeToICmp(true)
                                          .convertSwitchToLookupTable(true)
                                          .needCanonicalLoops(false)
                                          .hoistCommonInsts(true)
@@ -319,7 +325,9 @@ void PassManagerBuilder::populateModulePassManager(
   MPM.add(createDeadArgEliminationPass()); // Dead argument elimination
 
   MPM.add(createInstructionCombiningPass()); // Clean up after IPCP & DAE
-  MPM.add(createCFGSimplificationPass()); // Clean up after IPCP & DAE
+  MPM.add(
+      createCFGSimplificationPass(SimplifyCFGOptions().convertSwitchRangeToICmp(
+          true))); // Clean up after IPCP & DAE
 
   // We add a module alias analysis pass here. In part due to bugs in the
   // analysis infrastructure this "works" in that the analysis stays alive
@@ -426,7 +434,8 @@ void PassManagerBuilder::populateModulePassManager(
 
   // LoopSink (and other loop passes since the last simplifyCFG) might have
   // resulted in single-entry-single-exit or empty blocks. Clean up the CFG.
-  MPM.add(createCFGSimplificationPass());
+  MPM.add(createCFGSimplificationPass(
+      SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
 }
 
 LLVMPassManagerBuilderRef LLVMPassManagerBuilderCreate() {
