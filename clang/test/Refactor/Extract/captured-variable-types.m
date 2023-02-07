@@ -53,4 +53,4 @@ void silenceStrongInARC() {
 // CHECK-ARC: "static int extracted(Interface *pointer) {\nreturn mutationOfObjCPointer(pointer);\n}\n\n"
 // CHECK-ARC: "static void extracted(Interface **pointer) {\n*pointer = 0;\n}\n\n"
 
-// RUN: clang-refactor-test perform -action extract -selected=silence-strong-in-arc -selected=silence-strong2-in-arc %s -fobjc-arc | FileCheck --check-prefix=CHECK-ARC %s
+// RUN: clang-refactor-test perform -action extract -selected=silence-strong-in-arc -selected=silence-strong2-in-arc %s -fobjc-arc -fobjc-runtime=macosx | FileCheck --check-prefix=CHECK-ARC %s
