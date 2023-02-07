@@ -22,7 +22,7 @@
 #ifdef LIBC_HAVE_MEMORY_SANITIZER
 #error "LIBC_HAVE_MEMORY_SANITIZER cannot be directly set."
 #elif defined(MEMORY_SANITIZER) || defined(__SANITIZE_MEMORY__) ||             \
-    (LLVM_LIBC_HAS_FEATURE(memory_sanitizer) && !defined(__native_client__))
+    (LIBC_HAS_FEATURE(memory_sanitizer) && !defined(__native_client__))
 #define LIBC_HAVE_MEMORY_SANITIZER
 #endif
 
@@ -32,14 +32,14 @@
 #ifdef LIBC_HAVE_ADDRESS_SANITIZER
 #error "LIBC_HAVE_ADDRESS_SANITIZER cannot be directly set."
 #elif defined(ADDRESS_SANITIZER) || defined(__SANITIZE_ADDRESS__) ||           \
-    LLVM_LIBC_HAS_FEATURE(address_sanitizer)
+    LIBC_HAS_FEATURE(address_sanitizer)
 #define LIBC_HAVE_ADDRESS_SANITIZER
 #endif
 
 // HWAddressSanitizer (HWASan) is a fast, low memory overhead error detector.
 #ifdef LIBC_HAVE_HWADDRESS_SANITIZER
 #error "LIBC_HAVE_HWADDRESS_SANITIZER cannot be directly set."
-#elif LLVM_LIBC_HAS_FEATURE(hwaddress_sanitizer)
+#elif LIBC_HAS_FEATURE(hwaddress_sanitizer)
 #define LIBC_HAVE_HWADDRESS_SANITIZER
 #endif
 

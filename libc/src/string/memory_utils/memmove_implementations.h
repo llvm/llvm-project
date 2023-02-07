@@ -23,11 +23,11 @@ inline_memmove_embedded_tiny(Ptr dst, CPtr src, size_t count) {
   if ((count == 0) || (dst == src))
     return;
   if (dst < src) {
-    LLVM_LIBC_LOOP_NOUNROLL
+    LIBC_LOOP_NOUNROLL
     for (size_t offset = 0; offset < count; ++offset)
       builtin::Memcpy<1>::block(dst + offset, src + offset);
   } else {
-    LLVM_LIBC_LOOP_NOUNROLL
+    LIBC_LOOP_NOUNROLL
     for (ptrdiff_t offset = count - 1; offset >= 0; --offset)
       builtin::Memcpy<1>::block(dst + offset, src + offset);
   }

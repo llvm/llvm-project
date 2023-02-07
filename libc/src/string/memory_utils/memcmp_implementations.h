@@ -22,7 +22,7 @@
 namespace __llvm_libc {
 [[maybe_unused]] LIBC_INLINE MemcmpReturnType
 inline_memcmp_embedded_tiny(CPtr p1, CPtr p2, size_t count) {
-  LLVM_LIBC_LOOP_NOUNROLL
+  LIBC_LOOP_NOUNROLL
   for (size_t offset = 0; offset < count; ++offset)
     if (auto value = generic::Memcmp<1>::block(p1 + offset, p2 + offset))
       return value;

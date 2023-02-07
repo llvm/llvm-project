@@ -25,25 +25,25 @@
 // clang.llvm.org/docs/LanguageExtensions.html#has-builtin
 #if defined(LIBC_COMPILER_IS_CLANG) ||                                       \
     (defined(LIBC_COMPILER_IS_GCC) && (__GNUC__ >= 10))
-#define LLVM_LIBC_HAS_BUILTIN(BUILTIN) __has_builtin(BUILTIN)
+#define LIBC_HAS_BUILTIN(BUILTIN) __has_builtin(BUILTIN)
 #else
-#define LLVM_LIBC_HAS_BUILTIN(BUILTIN) 0
+#define LIBC_HAS_BUILTIN(BUILTIN) 0
 #endif
 
 // Compiler feature-detection.
 // clang.llvm.org/docs/LanguageExtensions.html#has-feature-and-has-extension
 #if defined(LIBC_COMPILER_IS_CLANG)
-#define LLVM_LIBC_HAS_FEATURE(FEATURE) __has_feature(FEATURE)
+#define LIBC_HAS_FEATURE(FEATURE) __has_feature(FEATURE)
 #else
-#define LLVM_LIBC_HAS_FEATURE(FEATURE) 0
+#define LIBC_HAS_FEATURE(FEATURE) 0
 #endif
 
 #if defined(LIBC_COMPILER_IS_CLANG)
-#define LLVM_LIBC_LOOP_NOUNROLL _Pragma("nounroll")
+#define LIBC_LOOP_NOUNROLL _Pragma("nounroll")
 #elif defined(LIBC_COMPILER_IS_GCC)
-#define LLVM_LIBC_LOOP_NOUNROLL _Pragma("GCC unroll 0")
+#define LIBC_LOOP_NOUNROLL _Pragma("GCC unroll 0")
 #else
-#define LLVM_LIBC_LOOP_NOUNROLL
+#define LIBC_LOOP_NOUNROLL
 #endif
 
 #endif // LLVM_LIBC_SUPPORT_MACROS_COMPILER_FEATURES_H
