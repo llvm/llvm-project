@@ -284,3 +284,48 @@ PreservedAnalyses InternalizePass::run(Module &M, ModuleAnalysisManager &AM) {
   PA.preserve<CallGraphAnalysis>();
   return PA;
 }
+
+namespace {
+class InternalizeLegacyPass : public ModulePass {
+  // Client supplied callback to control wheter a symbol must be preserved.
+  std::function<bool(const GlobalValue &)> MustPreserveGV;
+
+public:
+  static char ID; // Pass identification, replacement for typeid
+
+  InternalizeLegacyPass() : ModulePass(ID), MustPreserveGV(PreserveAPIList()) {}
+
+  InternalizeLegacyPass(std::function<bool(const GlobalValue &)> MustPreserveGV)
+      : ModulePass(ID), MustPreserveGV(std::move(MustPreserveGV)) {
+    initializeInternalizeLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnModule(Module &M) override {
+    if (skipModule(M))
+      return false;
+
+    CallGraphWrapperPass *CGPass =
+        getAnalysisIfAvailable<CallGraphWrapperPass>();
+    CallGraph *CG = CGPass ? &CGPass->getCallGraph() : nullptr;
+    return internalizeModule(M, MustPreserveGV, CG);
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addPreserved<CallGraphWrapperPass>();
+  }
+};
+}
+
+char InternalizeLegacyPass::ID = 0;
+INITIALIZE_PASS(InternalizeLegacyPass, "internalize",
+                "Internalize Global Symbols", false, false)
+
+ModulePass *llvm::createInternalizePass() {
+  return new InternalizeLegacyPass();
+}
+
+ModulePass *llvm::createInternalizePass(
+    std::function<bool(const GlobalValue &)> MustPreserveGV) {
+  return new InternalizeLegacyPass(std::move(MustPreserveGV));
+}

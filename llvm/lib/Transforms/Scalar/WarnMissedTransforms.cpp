@@ -104,3 +104,47 @@ WarnMissedTransformationsPass::run(Function &F, FunctionAnalysisManager &AM) {
 
   return PreservedAnalyses::all();
 }
+
+// Legacy pass manager boilerplate
+namespace {
+class WarnMissedTransformationsLegacy : public FunctionPass {
+public:
+  static char ID;
+
+  explicit WarnMissedTransformationsLegacy() : FunctionPass(ID) {
+    initializeWarnMissedTransformationsLegacyPass(
+        *PassRegistry::getPassRegistry());
+  }
+
+  bool runOnFunction(Function &F) override {
+    if (skipFunction(F))
+      return false;
+
+    auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
+    auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+
+    warnAboutLeftoverTransformations(&F, &LI, &ORE);
+    return false;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
+    AU.addRequired<LoopInfoWrapperPass>();
+
+    AU.setPreservesAll();
+  }
+};
+} // end anonymous namespace
+
+char WarnMissedTransformationsLegacy::ID = 0;
+
+INITIALIZE_PASS_BEGIN(WarnMissedTransformationsLegacy, "transform-warning",
+                      "Warn about non-applied transformations", false, false)
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
+INITIALIZE_PASS_END(WarnMissedTransformationsLegacy, "transform-warning",
+                    "Warn about non-applied transformations", false, false)
+
+Pass *llvm::createWarnMissedTransformationsPass() {
+  return new WarnMissedTransformationsLegacy();
+}

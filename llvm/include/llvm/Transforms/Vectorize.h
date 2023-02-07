@@ -138,6 +138,12 @@ bool vectorizeBasicBlock(Pass *P, BasicBlock &BB,
 //
 Pass *createLoadStoreVectorizerPass();
 
+//===----------------------------------------------------------------------===//
+//
+// Optimize partial vector operations using target cost models.
+//
+Pass *createVectorCombinePass();
+
 } // End llvm namespace
 
 #endif
