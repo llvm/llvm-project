@@ -99,7 +99,6 @@ public:
   bool ForgetAllSCEVInLoopUnroll;
   bool VerifyInput;
   bool VerifyOutput;
-  bool MergeFunctions;
   bool SplitColdCode;
   bool DivergentTarget;
   unsigned LicmMssaOptCap;
