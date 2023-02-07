@@ -403,9 +403,6 @@ endfunction(add_libc_fuzzer)
 #     COMPILE_OPTIONS <list of special compile options for this target>
 #   )
 #
-# The startup target should provide a property named STARTUP_OBJECT which is
-# the full path to the object file produced when the startup system is built.
-#
 # The DEPENDS list can be empty. If not empty, it should be a list of
 # targets added with add_entrypoint_object or add_object_library.
 function(add_integration_test test_name)
@@ -464,22 +461,21 @@ function(add_integration_test test_name)
   file(MAKE_DIRECTORY ${sysroot}/include)
   set(sysroot_lib ${sysroot}/lib)
   file(MAKE_DIRECTORY ${sysroot_lib})
-  get_target_property(startup_object_file ${INTEGRATION_TEST_STARTUP} STARTUP_OBJECT)
-  get_target_property(crti_object_file libc.startup.linux.crti STARTUP_OBJECT)
-  get_target_property(crtn_object_file libc.startup.linux.crtn STARTUP_OBJECT)
+  set(startup_object_file $<TARGET_OBJECTS:${INTEGRATION_TEST_STARTUP}>)
+  set(crti_object_file $<TARGET_OBJECTS:libc.startup.linux.crti>)
+  set(crtn_object_file $<TARGET_OBJECTS:libc.startup.linux.crtn>)
   set(dummy_archive $<TARGET_PROPERTY:libc_integration_test_dummy,ARCHIVE_OUTPUT_DIRECTORY>/lib$<TARGET_PROPERTY:libc_integration_test_dummy,ARCHIVE_OUTPUT_NAME>.a)
-  if(NOT startup_object_file)
-    message(FATAL_ERROR "Missing STARTUP_OBJECT property of ${INTEGRATION_TEST_STARTUP}.")
-  endif()
-  set(startup_dst ${sysroot_lib}/${LIBC_TARGET_ARCHITECTURE}-linux-gnu/crt1.o)
+  # TODO: Copy the startup files to the correct target-triple directory instead
+  # of to a partly hard-coded directory.
+  set(startup_dst ${sysroot_lib}/${LIBC_TARGET_ARCHITECTURE}-linux-gnu)
   add_custom_command(
     OUTPUT ${startup_dst} ${sysroot}/lib/crti.o ${sysroot}/lib/crtn.o ${sysroot}/lib/libm.a ${sysroot}/lib/libc++.a
-    COMMAND cmake -E copy ${startup_object_file} ${startup_dst}
-    COMMAND cmake -E copy ${crti_object_file} ${sysroot}/lib
-    COMMAND cmake -E copy ${crtn_object_file} ${sysroot}/lib
+    COMMAND cmake -E copy ${startup_object_file} ${startup_dst}/$<TARGET_PROPERTY:${INTEGRATION_TEST_STARTUP},OUTPUT_NAME>
+    COMMAND cmake -E copy ${crti_object_file} ${sysroot_lib}/$<TARGET_PROPERTY:libc.startup.linux.crti,OUTPUT_NAME>
+    COMMAND cmake -E copy ${crtn_object_file} ${sysroot_lib}/$<TARGET_PROPERTY:libc.startup.linux.crtn,OUTPUT_NAME>
     # We copy the dummy archive as libm.a and libc++.a as the compiler drivers expect them.
-    COMMAND cmake -E copy ${dummy_archive} ${sysroot}/lib/libm.a
-    COMMAND cmake -E copy ${dummy_archive} ${sysroot}/lib/libc++.a
+    COMMAND cmake -E copy ${dummy_archive} ${sysroot_lib}/libm.a
+    COMMAND cmake -E copy ${dummy_archive} ${sysroot_lib}/libc++.a
     DEPENDS ${INTEGRATION_TEST_STARTUP} libc.startup.linux.crti libc.startup.linux.crtn libc_integration_test_dummy
   )
   add_custom_target(
