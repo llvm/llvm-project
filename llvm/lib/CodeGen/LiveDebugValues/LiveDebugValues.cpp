@@ -8,7 +8,6 @@
 
 #include "LiveDebugValues.h"
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -19,6 +18,7 @@
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Triple.h"
 
 /// \file LiveDebugValues.cpp
 ///

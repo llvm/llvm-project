@@ -9,8 +9,8 @@
 #ifndef LLVM_MC_MCOBJECTWRITER_H
 #define LLVM_MC_MCOBJECTWRITER_H
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstdint>
 
 namespace llvm {

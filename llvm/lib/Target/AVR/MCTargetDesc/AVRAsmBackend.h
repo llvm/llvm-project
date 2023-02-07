@@ -16,8 +16,8 @@
 
 #include "MCTargetDesc/AVRFixupKinds.h"
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 
