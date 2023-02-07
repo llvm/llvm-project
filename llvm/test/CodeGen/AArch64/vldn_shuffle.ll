@@ -301,21 +301,18 @@ define void @transpose_s16_8x8_simpler(ptr nocapture noundef %a) {
 ; CHECK-LABEL: transpose_s16_8x8_simpler:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    mov x8, x0
 ; CHECK-NEXT:    ldp q2, q3, [x0, #32]
 ; CHECK-NEXT:    trn1 v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    ldp q5, q6, [x0, #80]
+; CHECK-NEXT:    ldp q4, q5, [x0, #64]
 ; CHECK-NEXT:    trn1 v2.8h, v2.8h, v3.8h
-; CHECK-NEXT:    ldr q4, [x8, #64]!
-; CHECK-NEXT:    ldr q1, [x0, #112]
+; CHECK-NEXT:    ldp q6, q1, [x0, #96]
 ; CHECK-NEXT:    trn1 v3.8h, v4.8h, v5.8h
-; CHECK-NEXT:    trn1 v1.8h, v6.8h, v1.8h
 ; CHECK-NEXT:    trn1 v3.4s, v0.4s, v3.4s
+; CHECK-NEXT:    trn1 v1.8h, v6.8h, v1.8h
 ; CHECK-NEXT:    trn1 v4.4s, v2.4s, v1.4s
-; CHECK-NEXT:    ext v0.16b, v3.16b, v3.16b, #8
-; CHECK-NEXT:    ext v1.16b, v4.16b, v4.16b, #8
+; CHECK-NEXT:    zip2 v0.4s, v3.4s, v4.4s
 ; CHECK-NEXT:    st2 { v3.2s, v4.2s }, [x0]
-; CHECK-NEXT:    st2 { v0.2s, v1.2s }, [x8]
+; CHECK-NEXT:    str q0, [x0, #64]
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <8 x i16>, ptr %a, align 16
@@ -355,21 +352,18 @@ define void @transpose_s16_8x8_simpler2(ptr nocapture noundef %a) {
 ; CHECK-LABEL: transpose_s16_8x8_simpler2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldp q0, q2, [x0]
-; CHECK-NEXT:    mov x8, x0
 ; CHECK-NEXT:    ldp q3, q4, [x0, #32]
 ; CHECK-NEXT:    mov v0.h[5], v2.h[4]
-; CHECK-NEXT:    ldp q6, q7, [x0, #80]
+; CHECK-NEXT:    ldp q5, q6, [x0, #64]
 ; CHECK-NEXT:    zip1 v3.8h, v3.8h, v4.8h
-; CHECK-NEXT:    ldr q5, [x8, #64]!
-; CHECK-NEXT:    ldr q2, [x0, #112]
+; CHECK-NEXT:    ldp q7, q2, [x0, #96]
 ; CHECK-NEXT:    zip1 v4.8h, v5.8h, v6.8h
-; CHECK-NEXT:    mov v7.h[5], v2.h[4]
 ; CHECK-NEXT:    mov v0.s[1], v4.s[0]
+; CHECK-NEXT:    mov v7.h[5], v2.h[4]
 ; CHECK-NEXT:    uzp1 v1.4s, v3.4s, v7.4s
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    zip2 v2.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    st2 { v0.2s, v1.2s }, [x0]
-; CHECK-NEXT:    st2 { v2.2s, v3.2s }, [x8]
+; CHECK-NEXT:    str q2, [x0, #64]
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <8 x i16>, ptr %a, align 16
@@ -421,33 +415,29 @@ define void @transpose_s16_8x8(ptr nocapture noundef %0, ptr nocapture noundef %
 ; CHECK-NEXT:    trn1 v7.8h, v3.8h, v4.8h
 ; CHECK-NEXT:    trn2 v3.8h, v3.8h, v4.8h
 ; CHECK-NEXT:    trn1 v4.8h, v0.8h, v6.8h
-; CHECK-NEXT:    trn1 v17.8h, v2.8h, v16.8h
 ; CHECK-NEXT:    trn2 v0.8h, v0.8h, v6.8h
+; CHECK-NEXT:    trn1 v17.8h, v2.8h, v16.8h
 ; CHECK-NEXT:    trn2 v2.8h, v2.8h, v16.8h
 ; CHECK-NEXT:    trn1 v18.4s, v5.4s, v4.4s
-; CHECK-NEXT:    trn1 v19.4s, v7.4s, v17.4s
 ; CHECK-NEXT:    trn1 v20.4s, v1.4s, v0.4s
-; CHECK-NEXT:    trn2 v0.4s, v1.4s, v0.4s
-; CHECK-NEXT:    trn1 v21.4s, v3.4s, v2.4s
 ; CHECK-NEXT:    trn2 v4.4s, v5.4s, v4.4s
-; CHECK-NEXT:    st2 { v18.2s, v19.2s }, [x0]
-; CHECK-NEXT:    trn2 v1.4s, v3.4s, v2.4s
-; CHECK-NEXT:    ext v2.16b, v18.16b, v18.16b, #8
+; CHECK-NEXT:    trn2 v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    trn1 v19.4s, v7.4s, v17.4s
+; CHECK-NEXT:    trn1 v21.4s, v3.4s, v2.4s
 ; CHECK-NEXT:    trn2 v5.4s, v7.4s, v17.4s
+; CHECK-NEXT:    trn2 v1.4s, v3.4s, v2.4s
+; CHECK-NEXT:    st2 { v18.2s, v19.2s }, [x0]
+; CHECK-NEXT:    zip2 v2.4s, v18.4s, v19.4s
 ; CHECK-NEXT:    st2 { v20.2s, v21.2s }, [x1]
-; CHECK-NEXT:    ext v3.16b, v19.16b, v19.16b, #8
-; CHECK-NEXT:    ext v6.16b, v20.16b, v20.16b, #8
-; CHECK-NEXT:    ext v7.16b, v21.16b, v21.16b, #8
+; CHECK-NEXT:    zip2 v3.4s, v20.4s, v21.4s
 ; CHECK-NEXT:    st2 { v4.2s, v5.2s }, [x2]
+; CHECK-NEXT:    zip2 v4.4s, v4.4s, v5.4s
 ; CHECK-NEXT:    st2 { v0.2s, v1.2s }, [x3]
-; CHECK-NEXT:    st2 { v2.2s, v3.2s }, [x4]
-; CHECK-NEXT:    ext v2.16b, v4.16b, v4.16b, #8
-; CHECK-NEXT:    ext v3.16b, v5.16b, v5.16b, #8
-; CHECK-NEXT:    st2 { v6.2s, v7.2s }, [x5]
-; CHECK-NEXT:    ext v4.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v5.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    st2 { v2.2s, v3.2s }, [x6]
-; CHECK-NEXT:    st2 { v4.2s, v5.2s }, [x7]
+; CHECK-NEXT:    zip2 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    str q2, [x4]
+; CHECK-NEXT:    str q3, [x5]
+; CHECK-NEXT:    str q4, [x6]
+; CHECK-NEXT:    str q0, [x7]
 ; CHECK-NEXT:    ret
   %9 = load <8 x i16>, ptr %0, align 16
   %10 = load <8 x i16>, ptr %1, align 16
@@ -505,51 +495,39 @@ define void @transpose_s16_8x8_(ptr nocapture noundef %0) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, x0
 ; CHECK-NEXT:    mov x9, x0
+; CHECK-NEXT:    ldp q1, q2, [x0, #64]
 ; CHECK-NEXT:    mov x10, x0
-; CHECK-NEXT:    mov x11, x0
-; CHECK-NEXT:    mov x12, x0
-; CHECK-NEXT:    mov x13, x0
-; CHECK-NEXT:    mov x14, x0
+; CHECK-NEXT:    ldp q6, q7, [x0, #96]
+; CHECK-NEXT:    trn1 v16.8h, v1.8h, v2.8h
+; CHECK-NEXT:    trn2 v1.8h, v1.8h, v2.8h
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    ldr q1, [x8, #16]!
-; CHECK-NEXT:    ldr q2, [x9, #32]!
-; CHECK-NEXT:    ldr q3, [x10, #48]!
-; CHECK-NEXT:    ldr q4, [x11, #64]!
-; CHECK-NEXT:    ldr q6, [x12, #80]!
-; CHECK-NEXT:    ldr q7, [x13, #96]!
-; CHECK-NEXT:    ldr q16, [x14, #112]!
-; CHECK-NEXT:    trn1 v5.8h, v0.8h, v1.8h
-; CHECK-NEXT:    trn2 v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    trn1 v1.8h, v2.8h, v3.8h
-; CHECK-NEXT:    trn2 v2.8h, v2.8h, v3.8h
-; CHECK-NEXT:    trn1 v3.8h, v4.8h, v6.8h
-; CHECK-NEXT:    trn2 v4.8h, v4.8h, v6.8h
-; CHECK-NEXT:    trn1 v17.8h, v7.8h, v16.8h
-; CHECK-NEXT:    trn2 v6.8h, v7.8h, v16.8h
-; CHECK-NEXT:    trn1 v18.4s, v5.4s, v3.4s
-; CHECK-NEXT:    trn1 v20.4s, v0.4s, v4.4s
-; CHECK-NEXT:    trn1 v19.4s, v1.4s, v17.4s
-; CHECK-NEXT:    trn1 v21.4s, v2.4s, v6.4s
-; CHECK-NEXT:    trn2 v22.4s, v5.4s, v3.4s
-; CHECK-NEXT:    trn2 v23.4s, v1.4s, v17.4s
-; CHECK-NEXT:    trn2 v0.4s, v0.4s, v4.4s
-; CHECK-NEXT:    st2 { v18.2s, v19.2s }, [x0]
-; CHECK-NEXT:    trn2 v1.4s, v2.4s, v6.4s
-; CHECK-NEXT:    ext v2.16b, v18.16b, v18.16b, #8
-; CHECK-NEXT:    st2 { v20.2s, v21.2s }, [x8]
-; CHECK-NEXT:    ext v4.16b, v20.16b, v20.16b, #8
-; CHECK-NEXT:    ext v3.16b, v19.16b, v19.16b, #8
-; CHECK-NEXT:    st2 { v22.2s, v23.2s }, [x9]
-; CHECK-NEXT:    ext v5.16b, v21.16b, v21.16b, #8
+; CHECK-NEXT:    ldr q3, [x8, #16]!
+; CHECK-NEXT:    ldr q4, [x9, #32]!
+; CHECK-NEXT:    ldr q5, [x10, #48]!
+; CHECK-NEXT:    trn1 v2.8h, v6.8h, v7.8h
+; CHECK-NEXT:    trn2 v6.8h, v6.8h, v7.8h
+; CHECK-NEXT:    trn1 v7.8h, v0.8h, v3.8h
+; CHECK-NEXT:    trn2 v0.8h, v0.8h, v3.8h
+; CHECK-NEXT:    trn1 v17.8h, v4.8h, v5.8h
+; CHECK-NEXT:    trn2 v3.8h, v4.8h, v5.8h
+; CHECK-NEXT:    trn1 v4.4s, v7.4s, v16.4s
+; CHECK-NEXT:    trn1 v18.4s, v0.4s, v1.4s
+; CHECK-NEXT:    trn2 v20.4s, v7.4s, v16.4s
+; CHECK-NEXT:    trn2 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    trn1 v5.4s, v17.4s, v2.4s
+; CHECK-NEXT:    trn1 v19.4s, v3.4s, v6.4s
+; CHECK-NEXT:    trn2 v21.4s, v17.4s, v2.4s
+; CHECK-NEXT:    trn2 v1.4s, v3.4s, v6.4s
+; CHECK-NEXT:    st2 { v4.2s, v5.2s }, [x0]
+; CHECK-NEXT:    zip2 v2.4s, v4.4s, v5.4s
+; CHECK-NEXT:    zip2 v3.4s, v18.4s, v19.4s
+; CHECK-NEXT:    st2 { v18.2s, v19.2s }, [x8]
+; CHECK-NEXT:    zip2 v4.4s, v20.4s, v21.4s
 ; CHECK-NEXT:    st2 { v0.2s, v1.2s }, [x10]
-; CHECK-NEXT:    st2 { v2.2s, v3.2s }, [x11]
-; CHECK-NEXT:    ext v2.16b, v22.16b, v22.16b, #8
-; CHECK-NEXT:    st2 { v4.2s, v5.2s }, [x12]
-; CHECK-NEXT:    ext v4.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v3.16b, v23.16b, v23.16b, #8
-; CHECK-NEXT:    ext v5.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    st2 { v2.2s, v3.2s }, [x13]
-; CHECK-NEXT:    st2 { v4.2s, v5.2s }, [x14]
+; CHECK-NEXT:    zip2 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    st2 { v20.2s, v21.2s }, [x9]
+; CHECK-NEXT:    stp q2, q3, [x0, #64]
+; CHECK-NEXT:    stp q4, q0, [x0, #96]
 ; CHECK-NEXT:    ret
   %2 = load <8 x i16>, ptr %0, align 16
   %3 = getelementptr inbounds <8 x i16>, ptr %0, i64 1
@@ -629,11 +607,10 @@ define void @store_factor2_high(ptr %ptr, ptr %ptr2, <4 x i32> %a0, <4 x i32> %a
 ; CHECK-NEXT:    trn1 v2.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    trn1 v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    zip1 v1.4s, v2.4s, v0.4s
-; CHECK-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    trn1 v1.4s, v1.4s, v0.4s
+; CHECK-NEXT:    zip2 v0.4s, v2.4s, v0.4s
 ; CHECK-NEXT:    str q1, [x0]
-; CHECK-NEXT:    st2 { v2.2s, v3.2s }, [x1]
+; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
   %v0 = shufflevector <4 x i32> %a0, <4 x i32> %a1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
   %v1 = shufflevector <4 x i32> %a1, <4 x i32> %a0, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
@@ -648,11 +625,10 @@ define void @store_factor2_high2(ptr %ptr, ptr %ptr2, <4 x i32> %a0, <4 x i32> %
 ; CHECK-LABEL: store_factor2_high2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    zip1 v2.4s, v0.4s, v1.4s
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    trn1 v0.4s, v2.4s, v1.4s
-; CHECK-NEXT:    str q0, [x0]
-; CHECK-NEXT:    st2 { v3.2s, v4.2s }, [x1]
+; CHECK-NEXT:    zip2 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    trn1 v2.4s, v2.4s, v1.4s
+; CHECK-NEXT:    str q2, [x0]
+; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
   %interleaved.vec = shufflevector <4 x i32> %a0, <4 x i32> %a1, <4 x i32> <i32 0, i32 4, i32 1, i32 6>
   %interleaved.vec2 = shufflevector <4 x i32> %a0, <4 x i32> %a1, <4 x i32> <i32 2, i32 6, i32 3, i32 7>

@@ -665,8 +665,8 @@ public:
                        SideEffectsKind AllowSideEffects = SE_NoSideEffects,
                        bool InConstantContext = false) const;
 
-  /// EvaluateAsFloat - Return true if this is a constant which we can fold and
-  /// convert to a fixed point value.
+  /// EvaluateAsFixedPoint - Return true if this is a constant which we can fold
+  /// and convert to a fixed point value.
   bool EvaluateAsFixedPoint(EvalResult &Result, const ASTContext &Ctx,
                             SideEffectsKind AllowSideEffects = SE_NoSideEffects,
                             bool InConstantContext = false) const;

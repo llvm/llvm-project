@@ -41,6 +41,15 @@ MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::bufferization::AnalysisState)
 using namespace mlir;
 using namespace bufferization;
 
+static bool isRepetitiveRegion(Region *region,
+                               const BufferizationOptions &options) {
+  Operation *op = region->getParentOp();
+  if (auto bufferizableOp = options.dynCastBufferizableOp(op))
+    if (bufferizableOp.isRepetitiveRegion(region->getRegionNumber()))
+      return true;
+  return false;
+}
+
 Region *bufferization::getEnclosingRepetitiveRegion(
     Operation *op, const BufferizationOptions &options) {
   if (!op->getBlock())
@@ -52,11 +61,9 @@ Region *bufferization::getEnclosingRepetitiveRegion(
     Value value, const BufferizationOptions &options) {
   Region *region = value.getParentRegion();
   while (region) {
-    Operation *op = region->getParentOp();
-    if (auto bufferizableOp = options.dynCastBufferizableOp(op))
-      if (bufferizableOp.isRepetitiveRegion(region->getRegionNumber()))
-        return region;
-    region = op->getParentRegion();
+    if (isRepetitiveRegion(region, options))
+      return region;
+    region = region->getParentRegion();
   }
   return nullptr;
 }
@@ -67,11 +74,20 @@ Region *bufferization::getEnclosingRepetitiveRegion(
   Operation *op = nullptr;
   do {
     op = region->getParentOp();
-    if (auto bufferizableOp = options.dynCastBufferizableOp(op))
-      if (bufferizableOp.isRepetitiveRegion(region->getRegionNumber()))
-        return region;
+    if (isRepetitiveRegion(region, options))
+      return region;
   } while ((region = op->getParentRegion()));
   return nullptr;
+}
+
+Region *bufferization::getNextEnclosingRepetitiveRegion(
+    Region *region, const BufferizationOptions &options) {
+  assert(isRepetitiveRegion(region, options) && "expected repetitive region");
+  while ((region = region->getParentRegion())) {
+    if (isRepetitiveRegion(region, options))
+      break;
+  }
+  return region;
 }
 
 Operation *bufferization::getOwnerOfValue(Value value) {
@@ -494,11 +510,10 @@ llvm::SetVector<Value> AnalysisState::findValueInReverseUseDefChain(
 }
 
 // Find the values that define the contents of the given value.
-llvm::SetVector<Value>
-AnalysisState::findDefinitions(Value value, bool alwaysIncludeLeaves) const {
+llvm::SetVector<Value> AnalysisState::findDefinitions(Value value) const {
   return findValueInReverseUseDefChain(
       value, [&](Value v) { return this->bufferizesToMemoryWrite(v); },
-      /*followEquivalentOnly=*/false, alwaysIncludeLeaves);
+      /*followEquivalentOnly=*/false, /*alwaysIncludeLeaves=*/false);
 }
 
 AnalysisState::AnalysisState(const BufferizationOptions &options)

@@ -5444,8 +5444,10 @@ llvm/include/llvm/Passes/StandardInstrumentations.h
 llvm/include/llvm/ProfileData/GCOV.h
 llvm/include/llvm/ProfileData/InstrProfCorrelator.h
 llvm/include/llvm/ProfileData/InstrProfWriter.h
+llvm/include/llvm/ProfileData/ItaniumManglingCanonicalizer.h
 llvm/include/llvm/ProfileData/ProfileCommon.h
 llvm/include/llvm/ProfileData/RawMemProfReader.h
+llvm/include/llvm/ProfileData/SymbolRemappingReader.h
 llvm/include/llvm/ProfileData/Coverage/CoverageMappingReader.h
 llvm/include/llvm/ProfileData/Coverage/CoverageMappingWriter.h
 llvm/include/llvm/Remarks/BitstreamRemarkContainer.h
@@ -5496,7 +5498,6 @@ llvm/include/llvm/Support/GenericIteratedDominanceFrontier.h
 llvm/include/llvm/Support/HashBuilder.h
 llvm/include/llvm/Support/InitLLVM.h
 llvm/include/llvm/Support/InstructionCost.h
-llvm/include/llvm/Support/ItaniumManglingCanonicalizer.h
 llvm/include/llvm/Support/MD5.h
 llvm/include/llvm/Support/MemAlloc.h
 llvm/include/llvm/Support/MemoryBufferRef.h
@@ -5518,7 +5519,6 @@ llvm/include/llvm/Support/SMLoc.h
 llvm/include/llvm/Support/SMTAPI.h
 llvm/include/llvm/Support/SourceMgr.h
 llvm/include/llvm/Support/SuffixTree.h
-llvm/include/llvm/Support/SymbolRemappingReader.h
 llvm/include/llvm/Support/SystemUtils.h
 llvm/include/llvm/TargetParser/TargetParser.h
 llvm/include/llvm/Support/TrailingObjects.h
@@ -7325,6 +7325,7 @@ llvm/unittests/Passes/TestPlugin.cpp
 llvm/unittests/Passes/TestPlugin.h
 llvm/unittests/ProfileData/InstrProfDataTest.cpp
 llvm/unittests/ProfileData/MemProfTest.cpp
+llvm/unittests/ProfileData/SymbolRemappingReaderTest.cpp
 llvm/unittests/Remarks/BitstreamRemarksFormatTest.cpp
 llvm/unittests/Remarks/BitstreamRemarksParsingTest.cpp
 llvm/unittests/Remarks/RemarksLinkingTest.cpp
@@ -7357,7 +7358,6 @@ llvm/unittests/Support/ScaledNumberTest.cpp
 llvm/unittests/Support/ScopedPrinterTest.cpp
 llvm/unittests/Support/SHA256.cpp
 llvm/unittests/Support/SuffixTreeTest.cpp
-llvm/unittests/Support/SymbolRemappingReaderTest.cpp
 llvm/unittests/Support/TarWriterTest.cpp
 llvm/unittests/Support/ToolOutputFileTest.cpp
 llvm/unittests/Support/TypeTraitsTest.cpp

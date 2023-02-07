@@ -443,6 +443,7 @@ struct ScalarEnumerationTraits<FormatStyle::PackConstructorInitializersStyle> {
     IO.enumCase(Value, "BinPack", FormatStyle::PCIS_BinPack);
     IO.enumCase(Value, "CurrentLine", FormatStyle::PCIS_CurrentLine);
     IO.enumCase(Value, "NextLine", FormatStyle::PCIS_NextLine);
+    IO.enumCase(Value, "NextLineOnly", FormatStyle::PCIS_NextLineOnly);
   }
 };
 
