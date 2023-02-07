@@ -987,6 +987,14 @@ func.func @print_no_result(%arg0 : f32) -> i32 {
 
 // -----
 
+func.func private @print_needs_vector(%arg0: tensor<8xf32>) {
+  // expected-error@+1 {{op operand #0 must be , but got 'tensor<8xf32>'}}
+  vector.print %arg0 : tensor<8xf32>
+  return
+}
+
+// -----
+
 func.func @reshape_bad_input_shape(%arg0 : vector<3x2x4xf32>) {
   %c2 = arith.constant 2 : index
   %c3 = arith.constant 3 : index
