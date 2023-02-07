@@ -399,7 +399,7 @@ hlfir::genBounds(mlir::Location loc, fir::FirOpBuilder &builder,
   return result;
 }
 
-static hlfir::Entity followEntitySource(hlfir::Entity entity) {
+static hlfir::Entity followShapeInducingSource(hlfir::Entity entity) {
   while (true) {
     if (auto reassoc = entity.getDefiningOp<hlfir::NoReassocOp>()) {
       entity = hlfir::Entity{reassoc.getVal()};
@@ -414,6 +414,24 @@ static hlfir::Entity followEntitySource(hlfir::Entity entity) {
   return entity;
 }
 
+static mlir::Value computeVariableExtent(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         hlfir::Entity variable,
+                                         fir::SequenceType seqTy,
+                                         unsigned dim) {
+  mlir::Type idxTy = builder.getIndexType();
+  if (seqTy.getShape().size() > dim) {
+    fir::SequenceType::Extent typeExtent = seqTy.getShape()[dim];
+    if (typeExtent != fir::SequenceType::getUnknownExtent())
+      return builder.createIntegerConstant(loc, idxTy, typeExtent);
+  }
+  assert(variable.getType().isa<fir::BaseBoxType>() &&
+         "array variable with dynamic extent must be boxed");
+  mlir::Value dimVal = builder.createIntegerConstant(loc, idxTy, dim);
+  auto dimInfo = builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy,
+                                                variable, dimVal);
+  return dimInfo.getExtent();
+}
 llvm::SmallVector<mlir::Value> getVariableExtents(mlir::Location loc,
                                                   fir::FirOpBuilder &builder,
                                                   hlfir::Entity variable) {
@@ -432,42 +450,38 @@ llvm::SmallVector<mlir::Value> getVariableExtents(mlir::Location loc,
   fir::SequenceType seqTy =
       hlfir::getFortranElementOrSequenceType(variable.getType())
           .cast<fir::SequenceType>();
-  mlir::Type idxTy = builder.getIndexType();
-  for (auto typeExtent : seqTy.getShape())
-    if (typeExtent != fir::SequenceType::getUnknownExtent()) {
-      extents.push_back(builder.createIntegerConstant(loc, idxTy, typeExtent));
-    } else {
-      assert(variable.getType().isa<fir::BaseBoxType>() &&
-             "array variable with dynamic extent must be boxed");
-      mlir::Value dim =
-          builder.createIntegerConstant(loc, idxTy, extents.size());
-      auto dimInfo = builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy,
-                                                    variable, dim);
-      extents.push_back(dimInfo.getExtent());
-    }
+  unsigned rank = seqTy.getShape().size();
+  for (unsigned dim = 0; dim < rank; ++dim)
+    extents.push_back(
+        computeVariableExtent(loc, builder, variable, seqTy, dim));
   return extents;
+}
+
+static mlir::Value tryRetrievingShapeOrShift(hlfir::Entity entity) {
+  if (entity.getType().isa<hlfir::ExprType>()) {
+    if (auto elemental = entity.getDefiningOp<hlfir::ElementalOp>())
+      return elemental.getShape();
+    return mlir::Value{};
+  }
+  if (auto varIface = entity.getIfVariableInterface())
+    return varIface.getShape();
+  return {};
 }
 
 mlir::Value hlfir::genShape(mlir::Location loc, fir::FirOpBuilder &builder,
                             hlfir::Entity entity) {
   assert(entity.isArray() && "entity must be an array");
-  entity = followEntitySource(entity);
-
-  if (entity.getType().isa<hlfir::ExprType>()) {
-    if (auto elemental = entity.getDefiningOp<hlfir::ElementalOp>())
-      return elemental.getShape();
+  entity = followShapeInducingSource(entity);
+  assert(entity && "what?");
+  if (auto shape = tryRetrievingShapeOrShift(entity)) {
+    if (shape.getType().isa<fir::ShapeType>())
+      return shape;
+    if (shape.getType().isa<fir::ShapeShiftType>())
+      if (auto s = shape.getDefiningOp<fir::ShapeShiftOp>())
+        return builder.create<fir::ShapeOp>(loc, s.getExtents());
+  }
+  if (entity.getType().isa<hlfir::ExprType>())
     TODO(loc, "get shape from HLFIR expr without producer holding the shape");
-  }
-  // Entity is an array variable.
-  if (auto varIface = entity.getIfVariableInterface()) {
-    if (auto shape = varIface.getShape()) {
-      if (shape.getType().isa<fir::ShapeType>())
-        return shape;
-      if (shape.getType().isa<fir::ShapeShiftType>())
-        if (auto s = shape.getDefiningOp<fir::ShapeShiftOp>())
-          return builder.create<fir::ShapeOp>(loc, s.getExtents());
-    }
-  }
   // There is no shape lying around for this entity. Retrieve the extents and
   // build a new fir.shape.
   return builder.create<fir::ShapeOp>(loc,
@@ -482,6 +496,50 @@ hlfir::getIndexExtents(mlir::Location loc, fir::FirOpBuilder &builder,
   for (auto &extent : extents)
     extent = builder.createConvert(loc, indexType, extent);
   return extents;
+}
+
+mlir::Value hlfir::genExtent(mlir::Location loc, fir::FirOpBuilder &builder,
+                             hlfir::Entity entity, unsigned dim) {
+  entity = followShapeInducingSource(entity);
+  if (auto shape = tryRetrievingShapeOrShift(entity)) {
+    auto extents = getExplicitExtentsFromShape(shape);
+    if (!extents.empty()) {
+      assert(extents.size() > dim && "bad inquiry");
+      return extents[dim];
+    }
+  }
+  if (entity.isVariable()) {
+    if (entity.isMutableBox())
+      entity = hlfir::derefPointersAndAllocatables(loc, builder, entity);
+    // Use the type shape information, and/or the fir.box/fir.class shape
+    // information if any extents are not static.
+    fir::SequenceType seqTy =
+        hlfir::getFortranElementOrSequenceType(entity.getType())
+            .cast<fir::SequenceType>();
+    return computeVariableExtent(loc, builder, entity, seqTy, dim);
+  }
+  TODO(loc, "get extent from HLFIR expr without producer holding the shape");
+}
+
+mlir::Value hlfir::genLBound(mlir::Location loc, fir::FirOpBuilder &builder,
+                             hlfir::Entity entity, unsigned dim) {
+  if (!entity.hasNonDefaultLowerBounds())
+    return builder.createIntegerConstant(loc, builder.getIndexType(), 1);
+  if (auto shape = tryRetrievingShapeOrShift(entity)) {
+    auto lbounds = getExplicitLboundsFromShape(shape);
+    if (!lbounds.empty()) {
+      assert(lbounds.size() > dim && "bad inquiry");
+      return lbounds[dim];
+    }
+  }
+  if (entity.isMutableBox())
+    entity = hlfir::derefPointersAndAllocatables(loc, builder, entity);
+  assert(entity.getType().isa<fir::BaseBoxType>() && "must be a box");
+  mlir::Type idxTy = builder.getIndexType();
+  mlir::Value dimVal = builder.createIntegerConstant(loc, idxTy, dim);
+  auto dimInfo =
+      builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy, entity, dimVal);
+  return dimInfo.getLowerBound();
 }
 
 void hlfir::genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
