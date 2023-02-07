@@ -68,6 +68,9 @@ void genPointerAssociate(fir::FirOpBuilder &, mlir::Location,
 void genPointerAssociateRemapping(fir::FirOpBuilder &, mlir::Location,
                                   mlir::Value pointer, mlir::Value target,
                                   mlir::Value bounds);
+void genPointerAssociateLowerBounds(fir::FirOpBuilder &, mlir::Location,
+                                    mlir::Value pointer, mlir::Value target,
+                                    mlir::Value lbounds);
 } // namespace lower
 } // namespace Fortran
 
