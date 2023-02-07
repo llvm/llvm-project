@@ -43,7 +43,7 @@ subroutine ss(count)
   ! CHECK:   %[[V_6:[0-9]+]] = fir.alloca i64 {bindc_name = "count_rate_", fir.target, uniq_name = "_QFssEcount_rate_"}
   ! CHECK:   %[[V_7:[0-9]+]] = fir.convert %[[V_6]] : (!fir.ref<i64>) -> !fir.ptr<i64>
   ! CHECK:   fir.store %[[V_7]] to %[[V_4]] : !fir.ref<!fir.ptr<i64>>
-  ! CHECK:   %[[V_8:[0-9]+]] = fir.allocmem i64 {uniq_name = "_QFssEcount_max.alloc"}
+  ! CHECK:   %[[V_8:[0-9]+]] = fir.allocmem i64 {fir.must_be_heap = true, uniq_name = "_QFssEcount_max.alloc"}
   ! CHECK:   fir.store %[[V_8]] to %[[V_1]] : !fir.ref<!fir.heap<i64>>
   ! CHECK:   %[[V_9:[0-9]+]] = fir.load %[[V_4]] : !fir.ref<!fir.ptr<i64>>
   ! CHECK:   %[[V_10:[0-9]+]] = fir.load %[[V_1]] : !fir.ref<!fir.heap<i64>>

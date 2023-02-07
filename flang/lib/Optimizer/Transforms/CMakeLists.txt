@@ -8,6 +8,7 @@ add_flang_library(FIRTransforms
   ArrayValueCopy.cpp
   ExternalNameConversion.cpp
   MemoryAllocation.cpp
+  StackArrays.cpp
   MemRefDataFlowOpt.cpp
   SimplifyRegionLite.cpp
   AlgebraicSimplification.cpp

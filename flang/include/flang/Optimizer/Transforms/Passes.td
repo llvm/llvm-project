@@ -235,6 +235,16 @@ def MemoryAllocationOpt : Pass<"memory-allocation-opt", "mlir::func::FuncOp"> {
   let constructor = "::fir::createMemoryAllocationPass()";
 }
 
+def StackArrays : Pass<"stack-arrays", "mlir::ModuleOp"> {
+  let summary = "Move local array allocations from heap memory into stack memory";
+  let description = [{
+    Convert heap allocations for arrays, even those of unknown size, into stack
+    allocations.
+  }];
+  let dependentDialects = [ "fir::FIROpsDialect" ];
+  let constructor = "::fir::createStackArraysPass()";
+}
+
 def SimplifyRegionLite : Pass<"simplify-region-lite", "mlir::ModuleOp"> {
   let summary = "Region simplification";
   let description = [{
