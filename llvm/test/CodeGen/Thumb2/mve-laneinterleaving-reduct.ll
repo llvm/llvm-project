@@ -4,23 +4,12 @@
 define arm_aapcs_vfpcc i16 @reduce_v16i16_shift_mul(<16 x i8> %s0, <16 x i8> %s1) {
 ; CHECK-LABEL: reduce_v16i16_shift_mul:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .pad #32
-; CHECK-NEXT:    sub sp, #32
-; CHECK-NEXT:    add r0, sp, #16
-; CHECK-NEXT:    mov r1, sp
-; CHECK-NEXT:    vstrw.32 q1, [r0]
-; CHECK-NEXT:    vstrw.32 q0, [r1]
-; CHECK-NEXT:    vldrb.u16 q0, [r0, #8]
-; CHECK-NEXT:    vldrb.u16 q1, [r1, #8]
-; CHECK-NEXT:    vldrb.u16 q2, [r1]
-; CHECK-NEXT:    vmul.i16 q0, q1, q0
-; CHECK-NEXT:    vldrb.u16 q1, [r0]
+; CHECK-NEXT:    vmullt.u8 q2, q0, q1
+; CHECK-NEXT:    vmullb.u8 q0, q0, q1
+; CHECK-NEXT:    vshr.s16 q2, q2, #14
 ; CHECK-NEXT:    vshr.s16 q0, q0, #14
-; CHECK-NEXT:    vmul.i16 q1, q2, q1
-; CHECK-NEXT:    vaddv.u16 r0, q0
-; CHECK-NEXT:    vshr.s16 q1, q1, #14
-; CHECK-NEXT:    vaddva.u16 r0, q1
-; CHECK-NEXT:    add sp, #32
+; CHECK-NEXT:    vaddv.u16 r0, q2
+; CHECK-NEXT:    vaddva.u16 r0, q0
 ; CHECK-NEXT:    bx lr
 entry:
   %s0s = zext <16 x i8> %s0 to <16 x i16>
@@ -50,23 +39,16 @@ entry:
 define arm_aapcs_vfpcc i16 @reduce_v16i16_shift_sub(<16 x i8> %s0, <16 x i8> %s1) {
 ; CHECK-LABEL: reduce_v16i16_shift_sub:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .pad #32
-; CHECK-NEXT:    sub sp, #32
-; CHECK-NEXT:    add r0, sp, #16
-; CHECK-NEXT:    mov r1, sp
-; CHECK-NEXT:    vstrw.32 q1, [r0]
-; CHECK-NEXT:    vstrw.32 q0, [r1]
-; CHECK-NEXT:    vldrb.u16 q0, [r0, #8]
-; CHECK-NEXT:    vldrb.u16 q1, [r1, #8]
-; CHECK-NEXT:    vldrb.u16 q2, [r1]
-; CHECK-NEXT:    vsub.i16 q0, q1, q0
-; CHECK-NEXT:    vldrb.u16 q1, [r0]
+; CHECK-NEXT:    vmovlt.u8 q2, q1
+; CHECK-NEXT:    vmovlt.u8 q3, q0
+; CHECK-NEXT:    vsub.i16 q2, q3, q2
+; CHECK-NEXT:    vmovlb.u8 q1, q1
+; CHECK-NEXT:    vmovlb.u8 q0, q0
+; CHECK-NEXT:    vshr.s16 q2, q2, #14
+; CHECK-NEXT:    vsub.i16 q0, q0, q1
+; CHECK-NEXT:    vaddv.u16 r0, q2
 ; CHECK-NEXT:    vshr.s16 q0, q0, #14
-; CHECK-NEXT:    vsub.i16 q1, q2, q1
-; CHECK-NEXT:    vaddv.u16 r0, q0
-; CHECK-NEXT:    vshr.s16 q1, q1, #14
-; CHECK-NEXT:    vaddva.u16 r0, q1
-; CHECK-NEXT:    add sp, #32
+; CHECK-NEXT:    vaddva.u16 r0, q0
 ; CHECK-NEXT:    bx lr
 entry:
   %s0s = zext <16 x i8> %s0 to <16 x i16>
@@ -190,17 +172,15 @@ define void @correlate(ptr nocapture noundef readonly %ID, ptr nocapture noundef
 ; CHECK-NEXT:  .LBB4_8: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB4_4 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    vldrh.s32 q2, [r5], #16
-; CHECK-NEXT:    vldrh.s32 q1, [r4], #16
+; CHECK-NEXT:    vldrh.u16 q1, [r4], #16
+; CHECK-NEXT:    vldrh.u16 q2, [r5], #16
 ; CHECK-NEXT:    rsb.w r1, r12, #0
-; CHECK-NEXT:    vmul.i32 q1, q2, q1
-; CHECK-NEXT:    vldrh.s32 q2, [r4, #-8]
-; CHECK-NEXT:    vldrh.s32 q3, [r5, #-8]
+; CHECK-NEXT:    vmullb.s16 q3, q2, q1
+; CHECK-NEXT:    vmullt.s16 q1, q2, q1
+; CHECK-NEXT:    vshl.s32 q3, r1
 ; CHECK-NEXT:    vshl.s32 q1, r1
+; CHECK-NEXT:    vaddva.u32 r6, q3
 ; CHECK-NEXT:    vaddva.u32 r6, q1
-; CHECK-NEXT:    vmul.i32 q2, q3, q2
-; CHECK-NEXT:    vshl.s32 q2, r1
-; CHECK-NEXT:    vaddva.u32 r6, q2
 ; CHECK-NEXT:    le lr, .LBB4_8
 ; CHECK-NEXT:  @ %bb.9: @ %middle.block
 ; CHECK-NEXT:    @ in Loop: Header=BB4_4 Depth=1
