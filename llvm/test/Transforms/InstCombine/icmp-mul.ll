@@ -1047,9 +1047,7 @@ define i1 @mul_xy_z_assumeodd_eq(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[LB:%.*]] = and i8 [[Z:%.*]], 1
 ; CHECK-NEXT:    [[NZ:%.*]] = icmp ne i8 [[LB]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NZ]])
-; CHECK-NEXT:    [[MULX:%.*]] = mul i8 [[X:%.*]], [[Z]]
-; CHECK-NEXT:    [[MULY:%.*]] = mul i8 [[Z]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[MULX]], [[MULY]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %lb = and i8 %z, 1
@@ -1064,9 +1062,8 @@ define i1 @mul_xy_z_assumeodd_eq(i8 %x, i8 %y, i8 %z) {
 define <2 x i1> @reused_mul_nsw_xy_z_setnonzero_vec_ne(<2 x i8> %x, <2 x i8> %y, <2 x i8> %zi) {
 ; CHECK-LABEL: @reused_mul_nsw_xy_z_setnonzero_vec_ne(
 ; CHECK-NEXT:    [[Z:%.*]] = or <2 x i8> [[ZI:%.*]], <i8 4, i8 4>
-; CHECK-NEXT:    [[MULX:%.*]] = mul nsw <2 x i8> [[Z]], [[X:%.*]]
 ; CHECK-NEXT:    [[MULY:%.*]] = mul nsw <2 x i8> [[Z]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[MULY]], [[MULX]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[Y]], [[X:%.*]]
 ; CHECK-NEXT:    call void @usev2xi8(<2 x i8> [[MULY]])
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
@@ -1098,8 +1095,7 @@ define i1 @mul_nuw_xy_z_assumenonzero_uge(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[NZ:%.*]] = icmp ne i8 [[Z:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NZ]])
 ; CHECK-NEXT:    [[MULX:%.*]] = mul nuw i8 [[X:%.*]], [[Z]]
-; CHECK-NEXT:    [[MULY:%.*]] = mul nuw i8 [[Y:%.*]], [[Z]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[MULY]], [[MULX]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    call void @use(i8 [[MULX]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -1114,10 +1110,7 @@ define i1 @mul_nuw_xy_z_assumenonzero_uge(i8 %x, i8 %y, i8 %z) {
 
 define <2 x i1> @mul_nuw_xy_z_setnonzero_vec_eq(<2 x i8> %x, <2 x i8> %y, <2 x i8> %zi) {
 ; CHECK-LABEL: @mul_nuw_xy_z_setnonzero_vec_eq(
-; CHECK-NEXT:    [[Z:%.*]] = or <2 x i8> [[ZI:%.*]], <i8 41, i8 12>
-; CHECK-NEXT:    [[MULX:%.*]] = mul nuw <2 x i8> [[Z]], [[X:%.*]]
-; CHECK-NEXT:    [[MULY:%.*]] = mul nuw <2 x i8> [[Z]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[MULX]], [[MULY]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %z = or <2 x i8> %zi, <i8 41, i8 12>
@@ -1132,9 +1125,7 @@ define i1 @mul_nuw_xy_z_brnonzero_ult(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[NZ_NOT:%.*]] = icmp eq i8 [[Z:%.*]], 0
 ; CHECK-NEXT:    br i1 [[NZ_NOT]], label [[FALSE:%.*]], label [[TRUE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    [[MULX:%.*]] = mul nuw i8 [[X:%.*]], [[Z]]
-; CHECK-NEXT:    [[MULY:%.*]] = mul nuw i8 [[Y:%.*]], [[Z]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[MULY]], [[MULX]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ; CHECK:       false:
 ; CHECK-NEXT:    call void @use(i8 [[Z]])
