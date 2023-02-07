@@ -4445,11 +4445,11 @@ const typename basic_string<_CharT, _Traits, _Allocator>::size_type
                basic_string<_CharT, _Traits, _Allocator>::npos;
 
 template <class _CharT, class _Allocator>
-struct __string_hash : public __unary_function<basic_string<_CharT, char_traits<_CharT>, _Allocator>, size_t>
-{
-    size_t
-    operator()(const basic_string<_CharT, char_traits<_CharT>, _Allocator>& __val) const _NOEXCEPT
-    { return std::__do_string_hash(__val.data(), __val.data() + __val.size()); }
+struct __string_hash : public __unary_function<basic_string<_CharT, char_traits<_CharT>, _Allocator>, size_t> {
+    _LIBCPP_HIDE_FROM_ABI size_t
+    operator()(const basic_string<_CharT, char_traits<_CharT>, _Allocator>& __val) const _NOEXCEPT {
+        return std::__do_string_hash(__val.data(), __val.data() + __val.size());
+    }
 };
 
 template <class _Allocator>

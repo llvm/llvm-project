@@ -21,10 +21,12 @@ class DummyScriptedProcess(ScriptedProcess):
         return {}
 
     def read_memory_at_address(self, addr: int, size: int, error: lldb.SBError) -> lldb.SBData:
+        debugger = self.target.GetDebugger()
+        index = debugger.GetIndexOfTarget(self.target)
         data = lldb.SBData().CreateDataFromCString(
                                     self.target.GetByteOrder(),
                                     self.target.GetCodeByteSize(),
-                                    "Hello, world!")
+                                    "Hello, target " + str(index))
 
         return data
 
