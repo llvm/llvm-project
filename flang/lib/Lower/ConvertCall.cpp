@@ -121,7 +121,7 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
   mlir::Value charFuncPointerLength;
   if (const Fortran::semantics::Symbol *sym =
           caller.getIfIndirectCallSymbol()) {
-    funcPointer = symMap.lookupSymbol(*sym).getAddr();
+    funcPointer = fir::getBase(converter.getSymbolExtendedValue(*sym, &symMap));
     if (!funcPointer)
       fir::emitFatalError(loc, "failed to find indirect call symbol address");
     if (fir::isCharacterProcedureTuple(funcPointer.getType(),
@@ -347,8 +347,8 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
       const Fortran::evaluate::Component *component =
           caller.getCallDescription().proc().GetComponent();
       assert(component && "expect component for type-bound procedure call.");
-      fir::ExtendedValue pass =
-          symMap.lookupSymbol(component->GetFirstSymbol()).toExtendedValue();
+      fir::ExtendedValue pass = converter.getSymbolExtendedValue(
+          component->GetFirstSymbol(), &symMap);
       mlir::Value passObject = fir::getBase(pass);
       if (fir::isa_ref_type(passObject.getType()))
         passObject = builder.create<fir::ConvertOp>(
