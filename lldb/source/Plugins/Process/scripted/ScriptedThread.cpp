@@ -35,7 +35,7 @@ ScriptedThread::Create(ScriptedProcess &process,
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Invalid scripted process.");
 
-  process.CheckInterpreterAndScriptObject();
+  process.CheckScriptedInterface();
 
   auto scripted_thread_interface =
       process.GetInterface().CreateScriptedThreadInterface();

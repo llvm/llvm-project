@@ -98,8 +98,8 @@ class ScriptedProcesTestCase(TestBase):
         id, name stop reason and register context.
         """
         self.build()
-        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
-        self.assertTrue(target, VALID_TARGET)
+        target_0 = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target_0, VALID_TARGET)
 
         os.environ['SKIP_SCRIPTED_PROCESS_LAUNCH'] = '1'
         def cleanup():
@@ -115,12 +115,12 @@ class ScriptedProcesTestCase(TestBase):
         launch_info.SetScriptedProcessClassName("dummy_scripted_process.DummyScriptedProcess")
 
         error = lldb.SBError()
-        process = target.Launch(launch_info, error)
-        self.assertTrue(process and process.IsValid(), PROCESS_IS_VALID)
-        self.assertEqual(process.GetProcessID(), 42)
-        self.assertEqual(process.GetNumThreads(), 1)
+        process_0 = target_0.Launch(launch_info, error)
+        self.assertTrue(process_0 and process_0.IsValid(), PROCESS_IS_VALID)
+        self.assertEqual(process_0.GetProcessID(), 42)
+        self.assertEqual(process_0.GetNumThreads(), 1)
 
-        py_impl = process.GetScriptedImplementation()
+        py_impl = process_0.GetScriptedImplementation()
         self.assertTrue(py_impl)
         self.assertTrue(isinstance(py_impl, dummy_scripted_process.DummyScriptedProcess))
         self.assertFalse(hasattr(py_impl, 'my_super_secret_member'))
@@ -128,13 +128,37 @@ class ScriptedProcesTestCase(TestBase):
         self.assertTrue(hasattr(py_impl, 'my_super_secret_member'))
         self.assertEqual(py_impl.my_super_secret_method(), 42)
 
+        # Try reading from target #0 process ...
         addr = 0x500000000
-        message = "Hello, world!"
-        buff = process.ReadCStringFromMemory(addr, len(message) + 1, error)
+        message = "Hello, target 0"
+        buff = process_0.ReadCStringFromMemory(addr, len(message) + 1, error)
         self.assertSuccess(error)
         self.assertEqual(buff, message)
 
-        thread = process.GetSelectedThread()
+        target_1 = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target_1, VALID_TARGET)
+        error = lldb.SBError()
+        process_1 = target_1.Launch(launch_info, error)
+        self.assertTrue(process_1 and process_1.IsValid(), PROCESS_IS_VALID)
+        self.assertEqual(process_1.GetProcessID(), 42)
+        self.assertEqual(process_1.GetNumThreads(), 1)
+
+        # ... then try reading from target #1 process ...
+        addr = 0x500000000
+        message = "Hello, target 1"
+        buff = process_1.ReadCStringFromMemory(addr, len(message) + 1, error)
+        self.assertSuccess(error)
+        self.assertEqual(buff, message)
+
+        # ... now, reading again from target #0 process to make sure the call
+        # gets dispatched to the right target.
+        addr = 0x500000000
+        message = "Hello, target 0"
+        buff = process_0.ReadCStringFromMemory(addr, len(message) + 1, error)
+        self.assertSuccess(error)
+        self.assertEqual(buff, message)
+
+        thread = process_0.GetSelectedThread()
         self.assertTrue(thread, "Invalid thread.")
         self.assertEqual(thread.GetThreadID(), 0x19)
         self.assertEqual(thread.GetName(), "DummyScriptedThread.thread-1")
@@ -158,5 +182,5 @@ class ScriptedProcesTestCase(TestBase):
             self.assertEqual(idx, int(reg.value, 16))
 
         self.assertTrue(frame.IsArtificial(), "Frame is not artificial")
-        pc = frame.GetPCAddress().GetLoadAddress(target)
+        pc = frame.GetPCAddress().GetLoadAddress(target_0)
         self.assertEqual(pc, 0x0100001b00)

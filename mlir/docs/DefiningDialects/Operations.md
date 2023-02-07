@@ -296,6 +296,10 @@ Right now, the following primitive constraints are supported:
     element to be equal to `N`
 *   `IntArrayNthElemMinValue<I, N>`: Specifying an integer array attribute's
     `I`-th element to be greater than or equal to `N`
+*   `IntArrayNthElemMaxValue<I, N>`: Specifying an integer array attribute's
+    `I`-th element to be less than or equal to `N`
+*   `IntArrayNthElemInRange<I, M, N>`: Specifying an integer array attribute's
+    `I`-th element to be greater than or equal to `M` and less than or equal to `N`
 
 TODO: Design and implement more primitive constraints
 
