@@ -1341,7 +1341,7 @@ bool transform::containsMostMinorGemm(LinalgOp linalgOp) {
   if (failed(res))
     return false;
   int64_t numLoops = linalgOp.getNumLoops();
-  for (DenseSet<int64_t> &s : {res->mPos, res->nPos, res->kPos}) {
+  for (const DenseSet<int64_t> &s : {res->mPos, res->nPos, res->kPos}) {
     if (s.contains(numLoops - 3) || s.contains(numLoops - 2) ||
         s.contains(numLoops - 1))
       continue;
@@ -1441,10 +1441,10 @@ packGemmGreedily(RewriterBase &rewriter, LinalgOp linalgOp,
 
   // TODO: If we wanted to give the genericOp a name after packing, after
   // calling `pack` would be a good time.
-  auto res = linalg::pack(rewriter, genericOp, adjustedPackedSizes);
-  assert(containsMostMinorGemm(res->packedLinalgOp) &&
+  auto packingRes = linalg::pack(rewriter, genericOp, adjustedPackedSizes);
+  assert(containsMostMinorGemm(packingRes->packedLinalgOp) &&
          "failed to pack to a most minor gemm");
-  return res;
+  return packingRes;
 }
 
 DiagnosedSilenceableFailure
