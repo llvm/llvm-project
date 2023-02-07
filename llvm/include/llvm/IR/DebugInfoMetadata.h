@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Casting.h"
@@ -3769,6 +3770,10 @@ public:
       : Variable(Var),
         Fragment(DIExpr ? DIExpr->getFragmentInfo() : std::nullopt),
         InlinedAt(InlinedAt) {}
+
+  DebugVariable(const MachineInstr *MI)
+      : DebugVariable(MI->getDebugVariable(), MI->getDebugExpression(),
+                      MI->getDebugLoc()->getInlinedAt()) {}
 
   const DILocalVariable *getVariable() const { return Variable; }
   std::optional<FragmentInfo> getFragment() const { return Fragment; }
