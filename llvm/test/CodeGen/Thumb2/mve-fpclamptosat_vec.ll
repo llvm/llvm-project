@@ -1817,94 +1817,100 @@ define arm_aapcs_vfpcc <2 x i64> @stest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    bl __fixdfti
-; CHECK-NEXT:    mvn r11, #-2147483648
-; CHECK-NEXT:    cmp r1, r11
 ; CHECK-NEXT:    mov r10, r0
-; CHECK-NEXT:    csel r0, r1, r11, lo
-; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    mov r9, r1
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    csel r1, r1, r11, mi
-; CHECK-NEXT:    orrs r3, r2
-; CHECK-NEXT:    str r3, [sp, #16] @ 4-byte Spill
-; CHECK-NEXT:    csel r4, r0, r1, eq
 ; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    cmp r3, #0
+; CHECK-NEXT:    mov r6, r1
+; CHECK-NEXT:    csel r1, r3, r0, mi
+; CHECK-NEXT:    mov r0, r3
+; CHECK-NEXT:    it ne
+; CHECK-NEXT:    andne.w r0, r2, r0, asr #31
+; CHECK-NEXT:    mvn r11, #-2147483648
+; CHECK-NEXT:    ands r0, r1
+; CHECK-NEXT:    cmp r6, r11
+; CHECK-NEXT:    mov r5, r3
+; CHECK-NEXT:    add.w r3, r0, #1
+; CHECK-NEXT:    csel r0, r6, r11, lo
 ; CHECK-NEXT:    cmp r5, #0
-; CHECK-NEXT:    mov.w r1, #-2147483648
-; CHECK-NEXT:    csel r8, r5, r0, mi
-; CHECK-NEXT:    and.w r0, r2, r5, asr #31
-; CHECK-NEXT:    and.w r0, r0, r8
-; CHECK-NEXT:    cmp.w r8, #-1
-; CHECK-NEXT:    add.w r2, r0, #1
-; CHECK-NEXT:    csel r0, r4, r1, gt
-; CHECK-NEXT:    cmp.w r4, #-2147483648
+; CHECK-NEXT:    csel r7, r6, r11, mi
+; CHECK-NEXT:    orrs r2, r5
 ; CHECK-NEXT:    str r2, [sp, #12] @ 4-byte Spill
-; CHECK-NEXT:    csel r1, r4, r1, hi
-; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    csel r8, r0, r7, eq
+; CHECK-NEXT:    mov.w r2, #-2147483648
+; CHECK-NEXT:    cmp.w r1, #-1
+; CHECK-NEXT:    csel r0, r8, r2, gt
+; CHECK-NEXT:    cmp.w r8, #-2147483648
+; CHECK-NEXT:    str r1, [sp, #16] @ 4-byte Spill
+; CHECK-NEXT:    csel r1, r8, r2, hi
+; CHECK-NEXT:    cmp r3, #0
+; CHECK-NEXT:    mov.w r9, #0
 ; CHECK-NEXT:    csel r0, r1, r0, eq
+; CHECK-NEXT:    str r3, [sp, #8] @ 4-byte Spill
 ; CHECK-NEXT:    str r0, [sp, #20] @ 4-byte Spill
 ; CHECK-NEXT:    vmov r0, r1, d8
 ; CHECK-NEXT:    bl __fixdfti
 ; CHECK-NEXT:    cmp r1, r11
-; CHECK-NEXT:    mov r12, r0
+; CHECK-NEXT:    mov lr, r0
 ; CHECK-NEXT:    csel r7, r1, r11, lo
 ; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    csel r6, r1, r11, mi
-; CHECK-NEXT:    orrs.w r0, r2, r3
-; CHECK-NEXT:    str r0, [sp, #8] @ 4-byte Spill
-; CHECK-NEXT:    csel r6, r7, r6, eq
-; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    mov.w r0, #0
-; CHECK-NEXT:    csel r7, r3, r0, mi
-; CHECK-NEXT:    and.w r2, r2, r3, asr #31
-; CHECK-NEXT:    cmp.w r7, #-1
-; CHECK-NEXT:    mov.w r0, #-2147483648
-; CHECK-NEXT:    csel lr, r6, r0, gt
-; CHECK-NEXT:    cmp.w r6, #-2147483648
-; CHECK-NEXT:    and.w r2, r2, r7
-; CHECK-NEXT:    csel r0, r6, r0, hi
+; CHECK-NEXT:    mov r0, r3
+; CHECK-NEXT:    csel r4, r1, r11, mi
+; CHECK-NEXT:    orrs r3, r2
+; CHECK-NEXT:    str r3, [sp, #4] @ 4-byte Spill
+; CHECK-NEXT:    csel r7, r7, r4, eq
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csel r4, r0, r9, mi
+; CHECK-NEXT:    mov.w r3, #-2147483648
+; CHECK-NEXT:    cmp.w r4, #-1
+; CHECK-NEXT:    csel r9, r7, r3, gt
+; CHECK-NEXT:    cmp.w r7, #-2147483648
+; CHECK-NEXT:    csel r12, r7, r3, hi
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    it ne
+; CHECK-NEXT:    andne.w r3, r2, r3, asr #31
+; CHECK-NEXT:    and.w r2, r3, r4
+; CHECK-NEXT:    mov.w r3, #-1
 ; CHECK-NEXT:    adds r2, #1
 ; CHECK-NEXT:    str r2, [sp] @ 4-byte Spill
-; CHECK-NEXT:    csel r0, r0, lr, eq
-; CHECK-NEXT:    mov.w lr, #-1
-; CHECK-NEXT:    cmp r9, r11
-; CHECK-NEXT:    str r0, [sp, #4] @ 4-byte Spill
-; CHECK-NEXT:    csel r2, r10, lr, lo
-; CHECK-NEXT:    ldr r0, [sp, #16] @ 4-byte Reload
-; CHECK-NEXT:    csel r2, r10, r2, eq
+; CHECK-NEXT:    csel r12, r12, r9, eq
+; CHECK-NEXT:    cmp r6, r11
+; CHECK-NEXT:    csel r6, r10, r3, lo
+; CHECK-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    csel r6, r10, r6, eq
 ; CHECK-NEXT:    cmp r5, #0
-; CHECK-NEXT:    csel r5, r10, lr, mi
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csel r2, r2, r5, eq
-; CHECK-NEXT:    cmp.w r4, #-2147483648
-; CHECK-NEXT:    mov.w r5, #0
-; CHECK-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    csel r4, r2, r5, hi
-; CHECK-NEXT:    csel r4, r2, r4, eq
-; CHECK-NEXT:    cmp.w r8, #-1
-; CHECK-NEXT:    csel r2, r2, r5, gt
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csel r2, r4, r2, eq
+; CHECK-NEXT:    csel r5, r10, r3, mi
+; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    csel r5, r6, r5, eq
+; CHECK-NEXT:    cmp.w r8, #-2147483648
+; CHECK-NEXT:    mov.w r8, #0
+; CHECK-NEXT:    ldr r2, [sp, #16] @ 4-byte Reload
+; CHECK-NEXT:    csel r6, r5, r8, hi
+; CHECK-NEXT:    csel r6, r5, r6, eq
+; CHECK-NEXT:    cmp.w r2, #-1
+; CHECK-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
+; CHECK-NEXT:    csel r5, r5, r8, gt
+; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    csel r5, r6, r5, eq
 ; CHECK-NEXT:    cmp r1, r11
-; CHECK-NEXT:    csel r1, r12, lr, lo
-; CHECK-NEXT:    csel r1, r12, r1, eq
-; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    ldr r3, [sp, #8] @ 4-byte Reload
-; CHECK-NEXT:    csel r0, r12, lr, mi
-; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    ldr r3, [sp] @ 4-byte Reload
+; CHECK-NEXT:    csel r1, lr, r3, lo
+; CHECK-NEXT:    csel r1, lr, r1, eq
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csel r0, lr, r3, mi
+; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csel r0, r1, r0, eq
-; CHECK-NEXT:    cmp.w r6, #-2147483648
-; CHECK-NEXT:    csel r1, r0, r5, hi
+; CHECK-NEXT:    cmp.w r7, #-2147483648
+; CHECK-NEXT:    csel r1, r0, r8, hi
+; CHECK-NEXT:    ldr r2, [sp] @ 4-byte Reload
 ; CHECK-NEXT:    csel r1, r0, r1, eq
-; CHECK-NEXT:    cmp.w r7, #-1
-; CHECK-NEXT:    csel r0, r0, r5, gt
-; CHECK-NEXT:    cmp r3, #0
+; CHECK-NEXT:    cmp.w r4, #-1
+; CHECK-NEXT:    csel r0, r0, r8, gt
+; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csel r0, r1, r0, eq
-; CHECK-NEXT:    ldr r1, [sp, #4] @ 4-byte Reload
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r2
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r5
 ; CHECK-NEXT:    ldr r0, [sp, #20] @ 4-byte Reload
-; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
+; CHECK-NEXT:    vmov q0[3], q0[1], r12, r0
 ; CHECK-NEXT:    add sp, #24
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    add sp, #4
@@ -2068,96 +2074,105 @@ define arm_aapcs_vfpcc <2 x i64> @stest_f32i64_mm(<2 x float> %x) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
-; CHECK-NEXT:    .pad #20
-; CHECK-NEXT:    sub sp, #20
-; CHECK-NEXT:    vmov r7, r0, d0
+; CHECK-NEXT:    .pad #28
+; CHECK-NEXT:    sub sp, #28
+; CHECK-NEXT:    vmov r4, r0, d0
 ; CHECK-NEXT:    bl __fixsfti
-; CHECK-NEXT:    mvn r9, #-2147483648
-; CHECK-NEXT:    cmp r1, r9
 ; CHECK-NEXT:    mov r11, r0
-; CHECK-NEXT:    csel r0, r1, r9, lo
+; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    mov r6, r1
+; CHECK-NEXT:    csel r1, r3, r0, mi
+; CHECK-NEXT:    mov r0, r3
+; CHECK-NEXT:    it ne
+; CHECK-NEXT:    andne.w r0, r2, r0, asr #31
+; CHECK-NEXT:    mvn r10, #-2147483648
+; CHECK-NEXT:    ands r0, r1
+; CHECK-NEXT:    cmp r6, r10
 ; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    csel r1, r1, r9, mi
-; CHECK-NEXT:    orrs r3, r2
-; CHECK-NEXT:    mov.w r8, #-2147483648
-; CHECK-NEXT:    csel r4, r0, r1, eq
-; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    add.w r3, r0, #1
+; CHECK-NEXT:    csel r0, r6, r10, lo
 ; CHECK-NEXT:    cmp r5, #0
-; CHECK-NEXT:    str r3, [sp, #12] @ 4-byte Spill
-; CHECK-NEXT:    csel r10, r5, r0, mi
-; CHECK-NEXT:    and.w r0, r2, r5, asr #31
-; CHECK-NEXT:    and.w r0, r0, r10
-; CHECK-NEXT:    cmp.w r10, #-1
-; CHECK-NEXT:    add.w r2, r0, #1
-; CHECK-NEXT:    csel r0, r4, r8, gt
-; CHECK-NEXT:    cmp.w r4, #-2147483648
-; CHECK-NEXT:    str r2, [sp, #8] @ 4-byte Spill
-; CHECK-NEXT:    csel r1, r4, r8, hi
-; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    csel r7, r6, r10, mi
+; CHECK-NEXT:    orrs r2, r5
+; CHECK-NEXT:    str r2, [sp, #16] @ 4-byte Spill
+; CHECK-NEXT:    csel r8, r0, r7, eq
+; CHECK-NEXT:    mov.w r2, #-2147483648
+; CHECK-NEXT:    cmp.w r1, #-1
+; CHECK-NEXT:    csel r0, r8, r2, gt
+; CHECK-NEXT:    cmp.w r8, #-2147483648
+; CHECK-NEXT:    str r1, [sp, #20] @ 4-byte Spill
+; CHECK-NEXT:    csel r1, r8, r2, hi
+; CHECK-NEXT:    cmp r3, #0
+; CHECK-NEXT:    mov.w r9, #0
 ; CHECK-NEXT:    csel r0, r1, r0, eq
-; CHECK-NEXT:    str r0, [sp, #16] @ 4-byte Spill
-; CHECK-NEXT:    mov r0, r7
+; CHECK-NEXT:    str r3, [sp, #12] @ 4-byte Spill
+; CHECK-NEXT:    str r0, [sp, #24] @ 4-byte Spill
+; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl __fixsfti
-; CHECK-NEXT:    cmp r1, r9
+; CHECK-NEXT:    cmp r1, r10
 ; CHECK-NEXT:    mov lr, r0
-; CHECK-NEXT:    csel r12, r1, r9, lo
+; CHECK-NEXT:    csel r7, r1, r10, lo
 ; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    csel r7, r1, r9, mi
-; CHECK-NEXT:    orrs.w r0, r2, r3
-; CHECK-NEXT:    str r0, [sp, #4] @ 4-byte Spill
-; CHECK-NEXT:    csel r7, r12, r7, eq
-; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    mov.w r0, #0
-; CHECK-NEXT:    csel r12, r3, r0, mi
-; CHECK-NEXT:    and.w r2, r2, r3, asr #31
-; CHECK-NEXT:    cmp.w r12, #-1
-; CHECK-NEXT:    and.w r2, r2, r12
-; CHECK-NEXT:    csel r0, r7, r8, gt
+; CHECK-NEXT:    mov r0, r3
+; CHECK-NEXT:    csel r4, r1, r10, mi
+; CHECK-NEXT:    orrs.w r3, r2, r0
+; CHECK-NEXT:    str r3, [sp, #8] @ 4-byte Spill
+; CHECK-NEXT:    csel r7, r7, r4, eq
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csel r4, r0, r9, mi
+; CHECK-NEXT:    mov.w r3, #-2147483648
+; CHECK-NEXT:    cmp.w r4, #-1
+; CHECK-NEXT:    csel r9, r7, r3, gt
 ; CHECK-NEXT:    cmp.w r7, #-2147483648
-; CHECK-NEXT:    csel r8, r7, r8, hi
+; CHECK-NEXT:    csel r12, r7, r3, hi
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    it ne
+; CHECK-NEXT:    andne.w r3, r2, r3, asr #31
+; CHECK-NEXT:    and.w r2, r3, r4
+; CHECK-NEXT:    mov.w r3, #-1
 ; CHECK-NEXT:    adds r2, #1
-; CHECK-NEXT:    csel r8, r8, r0, eq
-; CHECK-NEXT:    mov.w r0, #-1
-; CHECK-NEXT:    cmp r6, r9
-; CHECK-NEXT:    str r2, [sp] @ 4-byte Spill
-; CHECK-NEXT:    csel r6, r11, r0, lo
-; CHECK-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    str r2, [sp, #4] @ 4-byte Spill
+; CHECK-NEXT:    csel r12, r12, r9, eq
+; CHECK-NEXT:    cmp r6, r10
+; CHECK-NEXT:    csel r6, r11, r3, lo
+; CHECK-NEXT:    ldr r2, [sp, #16] @ 4-byte Reload
 ; CHECK-NEXT:    csel r6, r11, r6, eq
 ; CHECK-NEXT:    cmp r5, #0
-; CHECK-NEXT:    csel r5, r11, r0, mi
+; CHECK-NEXT:    csel r5, r11, r3, mi
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csel r5, r6, r5, eq
-; CHECK-NEXT:    cmp.w r4, #-2147483648
-; CHECK-NEXT:    mov.w r6, #0
-; CHECK-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
-; CHECK-NEXT:    csel r4, r5, r6, hi
-; CHECK-NEXT:    csel r4, r5, r4, eq
-; CHECK-NEXT:    cmp.w r10, #-1
-; CHECK-NEXT:    csel r5, r5, r6, gt
+; CHECK-NEXT:    cmp.w r8, #-2147483648
+; CHECK-NEXT:    mov.w r8, #0
+; CHECK-NEXT:    ldr r2, [sp, #20] @ 4-byte Reload
+; CHECK-NEXT:    csel r6, r5, r8, hi
+; CHECK-NEXT:    csel r6, r5, r6, eq
+; CHECK-NEXT:    cmp.w r2, #-1
+; CHECK-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    csel r5, r5, r8, gt
 ; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csel r4, r4, r5, eq
-; CHECK-NEXT:    cmp r1, r9
-; CHECK-NEXT:    csel r1, lr, r0, lo
-; CHECK-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
+; CHECK-NEXT:    csel r5, r6, r5, eq
+; CHECK-NEXT:    cmp r1, r10
+; CHECK-NEXT:    csel r1, lr, r3, lo
 ; CHECK-NEXT:    csel r1, lr, r1, eq
-; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    csel r0, lr, r0, mi
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csel r0, lr, r3, mi
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csel r0, r1, r0, eq
 ; CHECK-NEXT:    cmp.w r7, #-2147483648
-; CHECK-NEXT:    csel r1, r0, r6, hi
-; CHECK-NEXT:    ldr r2, [sp] @ 4-byte Reload
+; CHECK-NEXT:    csel r1, r0, r8, hi
+; CHECK-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    csel r1, r0, r1, eq
-; CHECK-NEXT:    cmp.w r12, #-1
-; CHECK-NEXT:    csel r0, r0, r6, gt
+; CHECK-NEXT:    cmp.w r4, #-1
+; CHECK-NEXT:    csel r0, r0, r8, gt
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csel r0, r1, r0, eq
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r4
-; CHECK-NEXT:    ldr r0, [sp, #16] @ 4-byte Reload
-; CHECK-NEXT:    vmov q0[3], q0[1], r8, r0
-; CHECK-NEXT:    add sp, #20
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r5
+; CHECK-NEXT:    ldr r0, [sp, #24] @ 4-byte Reload
+; CHECK-NEXT:    vmov q0[3], q0[1], r12, r0
+; CHECK-NEXT:    add sp, #28
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
 entry:
   %conv = fptosi <2 x float> %x to <2 x i128>
@@ -2320,91 +2335,100 @@ define arm_aapcs_vfpcc <2 x i64> @stest_f16i64_mm(<2 x half> %x) {
 ; CHECK-NEXT:    vmov.u16 r0, q0[1]
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    bl __fixhfti
-; CHECK-NEXT:    mvn r11, #-2147483648
-; CHECK-NEXT:    cmp r1, r11
 ; CHECK-NEXT:    mov r10, r0
-; CHECK-NEXT:    csel r0, r1, r11, lo
+; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    mov r6, r1
+; CHECK-NEXT:    csel r1, r3, r0, mi
+; CHECK-NEXT:    mov r0, r3
+; CHECK-NEXT:    it ne
+; CHECK-NEXT:    andne.w r0, r2, r0, asr #31
+; CHECK-NEXT:    mvn r11, #-2147483648
+; CHECK-NEXT:    ands r0, r1
+; CHECK-NEXT:    cmp r6, r11
 ; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    csel r1, r1, r11, mi
-; CHECK-NEXT:    orrs r3, r2
-; CHECK-NEXT:    mov.w r9, #-2147483648
-; CHECK-NEXT:    csel r4, r0, r1, eq
-; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    add.w r3, r0, #1
+; CHECK-NEXT:    csel r0, r6, r11, lo
 ; CHECK-NEXT:    cmp r5, #0
-; CHECK-NEXT:    str r3, [sp, #16] @ 4-byte Spill
-; CHECK-NEXT:    csel r8, r5, r0, mi
-; CHECK-NEXT:    and.w r0, r2, r5, asr #31
-; CHECK-NEXT:    and.w r0, r0, r8
-; CHECK-NEXT:    cmp.w r8, #-1
-; CHECK-NEXT:    add.w r2, r0, #1
-; CHECK-NEXT:    csel r0, r4, r9, gt
-; CHECK-NEXT:    cmp.w r4, #-2147483648
+; CHECK-NEXT:    csel r7, r6, r11, mi
+; CHECK-NEXT:    orrs r2, r5
 ; CHECK-NEXT:    str r2, [sp, #12] @ 4-byte Spill
-; CHECK-NEXT:    csel r1, r4, r9, hi
-; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    csel r8, r0, r7, eq
+; CHECK-NEXT:    mov.w r2, #-2147483648
+; CHECK-NEXT:    cmp.w r1, #-1
+; CHECK-NEXT:    csel r0, r8, r2, gt
+; CHECK-NEXT:    cmp.w r8, #-2147483648
+; CHECK-NEXT:    str r1, [sp, #16] @ 4-byte Spill
+; CHECK-NEXT:    csel r1, r8, r2, hi
+; CHECK-NEXT:    cmp r3, #0
+; CHECK-NEXT:    mov.w r9, #0
 ; CHECK-NEXT:    csel r0, r1, r0, eq
+; CHECK-NEXT:    str r3, [sp, #8] @ 4-byte Spill
 ; CHECK-NEXT:    str r0, [sp, #20] @ 4-byte Spill
 ; CHECK-NEXT:    vmov.u16 r0, q4[0]
 ; CHECK-NEXT:    bl __fixhfti
 ; CHECK-NEXT:    cmp r1, r11
 ; CHECK-NEXT:    mov lr, r0
-; CHECK-NEXT:    csel r12, r1, r11, lo
+; CHECK-NEXT:    csel r7, r1, r11, lo
 ; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    csel r7, r1, r11, mi
-; CHECK-NEXT:    orrs.w r0, r2, r3
-; CHECK-NEXT:    str r0, [sp, #8] @ 4-byte Spill
-; CHECK-NEXT:    csel r7, r12, r7, eq
-; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    mov.w r0, #0
-; CHECK-NEXT:    csel r12, r3, r0, mi
-; CHECK-NEXT:    and.w r2, r2, r3, asr #31
-; CHECK-NEXT:    cmp.w r12, #-1
-; CHECK-NEXT:    and.w r2, r2, r12
-; CHECK-NEXT:    csel r0, r7, r9, gt
+; CHECK-NEXT:    mov r0, r3
+; CHECK-NEXT:    csel r4, r1, r11, mi
+; CHECK-NEXT:    orrs r3, r2
+; CHECK-NEXT:    str r3, [sp, #4] @ 4-byte Spill
+; CHECK-NEXT:    csel r7, r7, r4, eq
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csel r4, r0, r9, mi
+; CHECK-NEXT:    mov.w r3, #-2147483648
+; CHECK-NEXT:    cmp.w r4, #-1
+; CHECK-NEXT:    csel r9, r7, r3, gt
 ; CHECK-NEXT:    cmp.w r7, #-2147483648
-; CHECK-NEXT:    csel r9, r7, r9, hi
+; CHECK-NEXT:    csel r12, r7, r3, hi
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    it ne
+; CHECK-NEXT:    andne.w r3, r2, r3, asr #31
+; CHECK-NEXT:    and.w r2, r3, r4
+; CHECK-NEXT:    mov.w r3, #-1
 ; CHECK-NEXT:    adds r2, #1
-; CHECK-NEXT:    csel r9, r9, r0, eq
-; CHECK-NEXT:    mov.w r0, #-1
+; CHECK-NEXT:    str r2, [sp] @ 4-byte Spill
+; CHECK-NEXT:    csel r12, r12, r9, eq
 ; CHECK-NEXT:    cmp r6, r11
-; CHECK-NEXT:    str r2, [sp, #4] @ 4-byte Spill
-; CHECK-NEXT:    csel r6, r10, r0, lo
-; CHECK-NEXT:    ldr r2, [sp, #16] @ 4-byte Reload
+; CHECK-NEXT:    csel r6, r10, r3, lo
+; CHECK-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
 ; CHECK-NEXT:    csel r6, r10, r6, eq
 ; CHECK-NEXT:    cmp r5, #0
-; CHECK-NEXT:    csel r5, r10, r0, mi
+; CHECK-NEXT:    csel r5, r10, r3, mi
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csel r5, r6, r5, eq
-; CHECK-NEXT:    cmp.w r4, #-2147483648
-; CHECK-NEXT:    mov.w r6, #0
-; CHECK-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    csel r4, r5, r6, hi
-; CHECK-NEXT:    csel r4, r5, r4, eq
-; CHECK-NEXT:    cmp.w r8, #-1
-; CHECK-NEXT:    csel r5, r5, r6, gt
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csel r4, r4, r5, eq
-; CHECK-NEXT:    cmp r1, r11
-; CHECK-NEXT:    csel r1, lr, r0, lo
+; CHECK-NEXT:    cmp.w r8, #-2147483648
+; CHECK-NEXT:    mov.w r8, #0
+; CHECK-NEXT:    ldr r2, [sp, #16] @ 4-byte Reload
+; CHECK-NEXT:    csel r6, r5, r8, hi
+; CHECK-NEXT:    csel r6, r5, r6, eq
+; CHECK-NEXT:    cmp.w r2, #-1
 ; CHECK-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
+; CHECK-NEXT:    csel r5, r5, r8, gt
+; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    csel r5, r6, r5, eq
+; CHECK-NEXT:    cmp r1, r11
+; CHECK-NEXT:    csel r1, lr, r3, lo
 ; CHECK-NEXT:    csel r1, lr, r1, eq
-; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    csel r0, lr, r0, mi
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csel r0, lr, r3, mi
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csel r0, r1, r0, eq
 ; CHECK-NEXT:    cmp.w r7, #-2147483648
-; CHECK-NEXT:    csel r1, r0, r6, hi
-; CHECK-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    csel r1, r0, r8, hi
+; CHECK-NEXT:    ldr r2, [sp] @ 4-byte Reload
 ; CHECK-NEXT:    csel r1, r0, r1, eq
-; CHECK-NEXT:    cmp.w r12, #-1
-; CHECK-NEXT:    csel r0, r0, r6, gt
+; CHECK-NEXT:    cmp.w r4, #-1
+; CHECK-NEXT:    csel r0, r0, r8, gt
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csel r0, r1, r0, eq
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r4
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r5
 ; CHECK-NEXT:    ldr r0, [sp, #20] @ 4-byte Reload
-; CHECK-NEXT:    vmov q0[3], q0[1], r9, r0
+; CHECK-NEXT:    vmov q0[3], q0[1], r12, r0
 ; CHECK-NEXT:    add sp, #24
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    add sp, #4
