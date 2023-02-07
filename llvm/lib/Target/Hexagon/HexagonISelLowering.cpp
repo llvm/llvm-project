@@ -2573,7 +2573,7 @@ HexagonTargetLowering::buildVector32(ArrayRef<SDValue> Elem, const SDLoc &dl,
   }
 
 #ifndef NDEBUG
-  dbgs() << "VecTy: " << EVT(VecTy).getEVTString() << '\n';
+  dbgs() << "VecTy: " << VecTy << '\n';
 #endif
   llvm_unreachable("Unexpected vector element type");
 }

@@ -489,7 +489,7 @@ SDValue LanaiTargetLowering::LowerCCCArguments(
       // Check that the argument fits in stack slot
       if (ObjSize > 4) {
         errs() << "LowerFormalArguments Unhandled argument type: "
-               << EVT(VA.getLocVT()).getEVTString() << "\n";
+               << VA.getLocVT() << "\n";
       }
       // Create the frame index object for this incoming parameter...
       int FI = MFI.CreateFixedObject(ObjSize, VA.getLocMemOffset(), true);
