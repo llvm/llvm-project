@@ -1045,8 +1045,8 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   int OrigInstr = AArch64::getSVEPseudoMap(MI.getOpcode());
   if (OrigInstr != -1) {
     auto &Orig = TII->get(OrigInstr);
-    if ((Orig.TSFlags & AArch64::DestructiveInstTypeMask)
-           != AArch64::NotDestructive) {
+    if ((Orig.TSFlags & AArch64::DestructiveInstTypeMask) !=
+        AArch64::NotDestructive) {
       return expand_DestructiveOp(MI, MBB, MBBI);
     }
   }
