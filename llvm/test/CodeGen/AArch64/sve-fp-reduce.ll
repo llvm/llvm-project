@@ -354,6 +354,21 @@ define double @fminv_nxv2f64(<vscale x 2 x double> %a) {
   ret double %res
 }
 
+define float @fadd_reduct_reassoc_v4v8f32(<vscale x 4 x float> %a, <vscale x 8 x float> %b) {
+; CHECK-LABEL: fadd_reduct_reassoc_v4v8f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fadd z1.s, z1.s, z2.s
+; CHECK-NEXT:    faddv s0, p0, z0.s
+; CHECK-NEXT:    faddv s1, p0, z1.s
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    ret
+  %r1 = call fast float @llvm.vector.reduce.fadd.nxv4f32(float -0.0, <vscale x 4 x float> %a)
+  %r2 = call fast float @llvm.vector.reduce.fadd.nxv8f32(float -0.0, <vscale x 8 x float> %b)
+  %r = fadd fast float %r1, %r2
+  ret float %r
+}
+
 declare half @llvm.vector.reduce.fadd.nxv2f16(half, <vscale x 2 x half>)
 declare half @llvm.vector.reduce.fadd.nxv4f16(half, <vscale x 4 x half>)
 declare half @llvm.vector.reduce.fadd.nxv8f16(half, <vscale x 8 x half>)
@@ -362,6 +377,7 @@ declare half @llvm.vector.reduce.fadd.nxv10f16(half, <vscale x 10 x half>)
 declare half @llvm.vector.reduce.fadd.nxv12f16(half, <vscale x 12 x half>)
 declare float @llvm.vector.reduce.fadd.nxv2f32(float, <vscale x 2 x float>)
 declare float @llvm.vector.reduce.fadd.nxv4f32(float, <vscale x 4 x float>)
+declare float @llvm.vector.reduce.fadd.nxv8f32(float, <vscale x 8 x float>)
 declare double @llvm.vector.reduce.fadd.nxv2f64(double, <vscale x 2 x double>)
 
 declare half @llvm.vector.reduce.fmax.nxv2f16(<vscale x 2 x half>)
