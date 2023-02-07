@@ -1506,7 +1506,7 @@ void StmtProfiler::VisitInitListExpr(const InitListExpr *S) {
 void StmtProfiler::VisitDesignatedInitExpr(const DesignatedInitExpr *S) {
   VisitExpr(S);
   ID.AddBoolean(S->usesGNUSyntax());
-  for (const DesignatedInitExpr::Designator &D : S->designators()) {
+  for (const Designator &D : S->designators()) {
     if (D.isFieldDesignator()) {
       ID.AddInteger(0);
       VisitName(D.getFieldName());
