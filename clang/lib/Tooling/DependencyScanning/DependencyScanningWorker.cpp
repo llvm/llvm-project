@@ -402,12 +402,6 @@ public:
     }
     // CAS Implementation.
     if (DepCASFS) {
-      // Support for virtual file system overlays on top of the caching
-      // filesystem.
-      FileMgr->setVirtualFileSystem(createVFSFromCompilerInvocation(
-          ScanInstance.getInvocation(), ScanInstance.getDiagnostics(),
-          DepCASFS));
-
       llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> LocalDepCASFS =
           DepCASFS;
       ScanInstance.getPreprocessorOpts().DependencyDirectivesForFile =
