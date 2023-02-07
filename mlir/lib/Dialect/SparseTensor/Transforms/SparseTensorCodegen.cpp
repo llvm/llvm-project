@@ -229,6 +229,10 @@ static void createAllocFields(OpBuilder &builder, Location loc, Type type,
       ptrHeuristic = constantIndex(builder, loc, 2);
       idxHeuristic = builder.create<arith::MulIOp>(
           loc, constantIndex(builder, loc, rank), sizeHint); // AOS
+    } else if (rank == 2 && isDenseDim(rtp, 0) && isCompressedDim(rtp, 1)) {
+      ptrHeuristic = builder.create<arith::AddIOp>(
+          loc, sizeHint, constantIndex(builder, loc, 1));
+      idxHeuristic = sizeHint;
     } else {
       ptrHeuristic = idxHeuristic = constantIndex(builder, loc, 16);
     }
