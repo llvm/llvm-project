@@ -6,7 +6,6 @@ load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("//llvm:tblgen.bzl", "gentbl")
 load("//llvm:binary_alias.bzl", "binary_alias")
 load("//llvm:cc_plugin_library.bzl", "cc_plugin_library")
-
 load(
     "//:vars.bzl",
     "LLVM_VERSION",
@@ -375,10 +374,10 @@ genrule(
         "echo '#define CLANG_VERSION_PATCHLEVEL {patch}' >> $@\n" +
         "echo '#define CLANG_VERSION_STRING \"{vers}\"' >> $@\n"
     ).format(
-        vers=LLVM_VERSION,
-        major=LLVM_VERSION_MAJOR,
-        minor=LLVM_VERSION_MINOR,
-        patch=LLVM_VERSION_PATCH,
+        major = LLVM_VERSION_MAJOR,
+        minor = LLVM_VERSION_MINOR,
+        patch = LLVM_VERSION_PATCH,
+        vers = LLVM_VERSION,
     ),
 )
 
@@ -508,6 +507,7 @@ cc_library(
         ":basic",
         ":config",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -782,6 +782,7 @@ cc_library(
         "//llvm:Core",
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -911,6 +912,7 @@ cc_library(
         "//llvm:MC",
         "//llvm:MCParser",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -1071,6 +1073,7 @@ cc_library(
         ":tooling_core",
         "//llvm:Option",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -1201,6 +1204,7 @@ cc_library(
         ":index",
         "//llvm:Option",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -1572,6 +1576,7 @@ cc_library(
         "//llvm:Remarks",
         "//llvm:Support",
         "//llvm:Target",
+        "//llvm:TargetParser",
         "//llvm:config",
     ],
 )
@@ -1777,6 +1782,7 @@ cc_library(
         "//llvm:BitstreamWriter",
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -1825,6 +1831,7 @@ cc_library(
         ":static_analyzer_checkers",
         ":static_analyzer_core",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -2034,6 +2041,7 @@ cc_library(
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:Target",
+        "//llvm:TargetParser",
         "//llvm:config",
     ],
 )
@@ -2143,6 +2151,7 @@ cc_binary(
         "//llvm:Core",
         "//llvm:Object",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
