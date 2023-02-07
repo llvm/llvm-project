@@ -18,15 +18,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ArchiveWriter.h"
-#include "llvm/Object/COFFImportFile.h"
-#include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Object/IRObjectFile.h"
-#include "llvm/Object/MachO.h"
-#include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolicFile.h"
-#include "llvm/Object/TapiFile.h"
-#include "llvm/Object/Wasm.h"
-#include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -646,31 +638,12 @@ static bool shouldCreateArchive(ArchiveOperation Op) {
   llvm_unreachable("Missing entry in covered switch.");
 }
 
-static bool is64BitSymbolicFile(SymbolicFile &Obj) {
-  if (auto *IRObj = dyn_cast<IRObjectFile>(&Obj))
-    return Triple(IRObj->getTargetTriple()).isArch64Bit();
-  if (isa<COFFObjectFile>(Obj) || isa<COFFImportFile>(Obj))
-    return false;
-  if (XCOFFObjectFile *XCOFFObj = dyn_cast<XCOFFObjectFile>(&Obj))
-    return XCOFFObj->is64Bit();
-  if (isa<WasmObjectFile>(Obj))
-    return false;
-  if (TapiFile *Tapi = dyn_cast<TapiFile>(&Obj))
-    return Tapi->is64Bit();
-  if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(&Obj))
-    return MachO->is64Bit();
-  if (ELFObjectFileBase *ElfO = dyn_cast<ELFObjectFileBase>(&Obj))
-    return ElfO->getBytesInAddress() == 8;
-
-  fail("unsupported file format");
-}
-
 static bool isValidInBitMode(Binary &Bin) {
   if (BitMode == BitModeTy::Bit32_64 || BitMode == BitModeTy::Any)
     return true;
 
   if (SymbolicFile *SymFile = dyn_cast<SymbolicFile>(&Bin)) {
-    bool Is64Bit = is64BitSymbolicFile(*SymFile);
+    bool Is64Bit = SymFile->is64Bit();
     if ((Is64Bit && (BitMode == BitModeTy::Bit32)) ||
         (!Is64Bit && (BitMode == BitModeTy::Bit64)))
       return false;

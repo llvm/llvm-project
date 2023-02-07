@@ -420,36 +420,24 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   case DW_FORM_addrx2:
   case DW_FORM_addrx3:
   case DW_FORM_addrx4:
-  case DW_FORM_GNU_addr_index: {
-    if (U == nullptr) {
-      OS << "<invalid dwarf unit>";
-      break;
-    }
-    std::optional<object::SectionedAddress> A =
-        U->getAddrOffsetSectionItem(UValue);
-    if (!A || DumpOpts.Verbose)
-      AddrOS << format("indexed (%8.8x) address = ", (uint32_t)UValue);
-    if (A)
-      dumpSectionedAddress(AddrOS, DumpOpts, *A);
-    else
-      OS << "<unresolved>";
-    break;
-  }
+  case DW_FORM_GNU_addr_index:
   case DW_FORM_LLVM_addrx_offset: {
     if (U == nullptr) {
       OS << "<invalid dwarf unit>";
       break;
     }
-    uint32_t Index = UValue >> 32;
-    uint32_t Offset = UValue & 0xffffffff;
-    std::optional<object::SectionedAddress> A =
-        U->getAddrOffsetSectionItem(Index);
-    if (!A || DumpOpts.Verbose)
-      AddrOS << format("indexed (%8.8x) + 0x%x address = ", Index, Offset);
-    if (A) {
-      A->Address += Offset;
+    std::optional<object::SectionedAddress> A = getAsSectionedAddress();
+    if (!A || DumpOpts.Verbose) {
+      if (Form == DW_FORM_LLVM_addrx_offset) {
+        uint32_t Index = UValue >> 32;
+        uint32_t Offset = UValue & 0xffffffff;
+        AddrOS << format("indexed (%8.8x) + 0x%x address = ", Index, Offset);
+      } else
+        AddrOS << format("indexed (%8.8x) address = ", (uint32_t)UValue);
+    }
+    if (A)
       dumpSectionedAddress(AddrOS, DumpOpts, *A);
-    } else
+    else
       OS << "<unresolved>";
     break;
   }
@@ -677,7 +665,9 @@ DWARFFormValue::getAsSectionedAddress() const {
   if (!isFormClass(FC_Address))
     return std::nullopt;
   bool AddrOffset = Form == dwarf::DW_FORM_LLVM_addrx_offset;
-  if (Form == DW_FORM_GNU_addr_index || Form == DW_FORM_addrx || AddrOffset) {
+  if (Form == DW_FORM_GNU_addr_index || Form == DW_FORM_addrx ||
+      Form == DW_FORM_addrx1 || Form == DW_FORM_addrx2 ||
+      Form == DW_FORM_addrx3 || Form == DW_FORM_addrx4 || AddrOffset) {
 
     uint32_t Index = AddrOffset ? (Value.uval >> 32) : Value.uval;
     if (!U)

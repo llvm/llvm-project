@@ -570,9 +570,9 @@ hlfir::Entity hlfir::derefPointersAndAllocatables(mlir::Location loc,
   if (entity.isMutableBox()) {
     hlfir::Entity boxLoad{builder.create<fir::LoadOp>(loc, entity)};
     if (entity.isScalar()) {
-      mlir::Type elementType = boxLoad.getFortranElementType();
-      if (fir::isa_trivial(elementType))
+      if (!entity.isPolymorphic() && !entity.hasLengthParameters())
         return hlfir::Entity{builder.create<fir::BoxAddrOp>(loc, boxLoad)};
+      mlir::Type elementType = boxLoad.getFortranElementType();
       if (auto charType = elementType.dyn_cast<fir::CharacterType>()) {
         mlir::Value base = builder.create<fir::BoxAddrOp>(loc, boxLoad);
         if (charType.hasConstantLen())
@@ -585,7 +585,10 @@ hlfir::Entity hlfir::derefPointersAndAllocatables(mlir::Location loc,
                 .getResult()};
       }
     }
-    // Keep the entity boxed for now.
+    // Otherwise, the entity is either an array, a polymorphic entity, or a
+    // derived type with length parameters. All these entities require a fir.box
+    // or fir.class to hold bounds, dynamic type or length parameter
+    // information. Keep them boxed.
     return boxLoad;
   }
   return entity;

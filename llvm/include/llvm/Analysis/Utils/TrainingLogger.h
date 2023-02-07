@@ -121,8 +121,14 @@ public:
 
   const std::string &currentContext() const { return CurrentContext; }
 
+  /// Check if there is at least an observation for `currentContext()`.
   bool hasObservationInProgress() const {
-    return ObservationIDs.find(CurrentContext) != ObservationIDs.end();
+    return hasAnyObservationForContext(CurrentContext);
+  }
+
+  /// Check if there is at least an observation for the context `Ctx`.
+  bool hasAnyObservationForContext(StringRef Ctx) const {
+    return ObservationIDs.find(Ctx) != ObservationIDs.end();
   }
 
   template <typename T> void logReward(T Value) {

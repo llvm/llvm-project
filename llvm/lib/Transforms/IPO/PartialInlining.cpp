@@ -342,52 +342,6 @@ private:
                                   OptimizationRemarkEmitter &ORE) const;
 };
 
-struct PartialInlinerLegacyPass : public ModulePass {
-  static char ID; // Pass identification, replacement for typeid
-
-  PartialInlinerLegacyPass() : ModulePass(ID) {
-    initializePartialInlinerLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<ProfileSummaryInfoWrapperPass>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-  }
-
-  bool runOnModule(Module &M) override {
-    if (skipModule(M))
-      return false;
-
-    AssumptionCacheTracker *ACT = &getAnalysis<AssumptionCacheTracker>();
-    TargetTransformInfoWrapperPass *TTIWP =
-        &getAnalysis<TargetTransformInfoWrapperPass>();
-    ProfileSummaryInfo &PSI =
-        getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-
-    auto GetAssumptionCache = [&ACT](Function &F) -> AssumptionCache & {
-      return ACT->getAssumptionCache(F);
-    };
-
-    auto LookupAssumptionCache = [ACT](Function &F) -> AssumptionCache * {
-      return ACT->lookupAssumptionCache(F);
-    };
-
-    auto GetTTI = [&TTIWP](Function &F) -> TargetTransformInfo & {
-      return TTIWP->getTTI(F);
-    };
-
-    auto GetTLI = [this](Function &F) -> TargetLibraryInfo & {
-      return this->getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-    };
-
-    return PartialInlinerImpl(GetAssumptionCache, LookupAssumptionCache, GetTTI,
-                              GetTLI, PSI)
-        .run(M);
-  }
-};
-
 } // end anonymous namespace
 
 std::unique_ptr<FunctionOutliningMultiRegionInfo>
@@ -1495,21 +1449,6 @@ bool PartialInlinerImpl::run(Module &M) {
   }
 
   return Changed;
-}
-
-char PartialInlinerLegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(PartialInlinerLegacyPass, "partial-inliner",
-                      "Partial Inliner", false, false)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(PartialInlinerLegacyPass, "partial-inliner",
-                    "Partial Inliner", false, false)
-
-ModulePass *llvm::createPartialInliningPass() {
-  return new PartialInlinerLegacyPass();
 }
 
 PreservedAnalyses PartialInlinerPass::run(Module &M,

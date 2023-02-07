@@ -10,6 +10,7 @@
 #include "Headers.h"
 #include "clang/Basic/FileEntry.h"
 #include "clang/Tooling/Inclusions/HeaderAnalysis.h"
+#include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem/UniqueID.h"
 #include "llvm/Support/Path.h"
@@ -700,8 +701,26 @@ llvm::StringRef CanonicalIncludes::mapHeader(FileEntryRef Header) const {
   return "";
 }
 
-llvm::StringRef CanonicalIncludes::mapSymbol(llvm::StringRef QName) const {
-  return StdSymbolMapping ? StdSymbolMapping->lookup(QName) : "";
+llvm::StringRef CanonicalIncludes::mapSymbol(llvm::StringRef Scope,
+                                             llvm::StringRef Name,
+                                             const LangOptions &L) const {
+  tooling::stdlib::Lang Lang;
+  if (L.CPlusPlus)
+    Lang = tooling::stdlib::Lang::CXX;
+  else if (L.C11)
+    Lang = tooling::stdlib::Lang::C;
+  else
+    return "";
+  // FIXME: remove the following special cases when the tooling stdlib supports
+  // them.
+  // There are two std::move()s, this is by far the most common.
+  if (Scope == "std::" && Name == "move")
+    return "<utility>";
+  if (Scope == "std::" && Name == "size_t")
+    return "<cstddef>";
+  if (auto StdSym = tooling::stdlib::Symbol::named(Scope, Name, Lang))
+    return StdSym->header().name();
+  return "";
 }
 
 std::unique_ptr<CommentHandler>
@@ -732,28 +751,6 @@ collectIWYUHeaderMaps(CanonicalIncludes *Includes) {
 }
 
 void CanonicalIncludes::addSystemHeadersMapping(const LangOptions &Language) {
-  if (Language.CPlusPlus) {
-    static const auto *Symbols = new llvm::StringMap<llvm::StringRef>({
-#define SYMBOL(Name, NameSpace, Header) {#NameSpace #Name, #Header},
-#include "clang/Tooling/Inclusions/StdSymbolMap.inc"
-        // There are two std::move()s, this is by far the most common.
-        SYMBOL(move, std::, <utility>)
-        // There are multiple headers for size_t, pick one.
-        SYMBOL(size_t, std::, <cstddef>)
-#undef SYMBOL
-    });
-    StdSymbolMapping = Symbols;
-  } else if (Language.C11) {
-    static const auto *CSymbols = new llvm::StringMap<llvm::StringRef>({
-#define SYMBOL(Name, NameSpace, Header) {#Name, #Header},
-#include "clang/Tooling/Inclusions/CSymbolMap.inc"
-        // There are multiple headers for size_t, pick one.
-        SYMBOL(size_t, None, <stddef.h>)
-#undef SYMBOL
-    });
-    StdSymbolMapping = CSymbols;
-  }
-
   // FIXME: remove the std header mapping once we support ambiguous symbols, now
   // it serves as a fallback to disambiguate:
   //   - symbols with multiple headers (e.g. std::move)

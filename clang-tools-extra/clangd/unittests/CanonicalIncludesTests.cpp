@@ -36,8 +36,8 @@ TEST(CanonicalIncludesTest, CStandardLibrary) {
   Language.C11 = true;
   CI.addSystemHeadersMapping(Language);
   // Usual standard library symbols are mapped correctly.
-  EXPECT_EQ("<stdio.h>", CI.mapSymbol("printf"));
-  EXPECT_EQ("", CI.mapSymbol("unknown_symbol"));
+  EXPECT_EQ("<stdio.h>", CI.mapSymbol("", "printf", Language));
+  EXPECT_EQ("", CI.mapSymbol("", "unknown_symbol", Language));
 }
 
 TEST(CanonicalIncludesTest, CXXStandardLibrary) {
@@ -47,14 +47,14 @@ TEST(CanonicalIncludesTest, CXXStandardLibrary) {
   CI.addSystemHeadersMapping(Language);
 
   // Usual standard library symbols are mapped correctly.
-  EXPECT_EQ("<vector>", CI.mapSymbol("std::vector"));
-  EXPECT_EQ("<cstdio>", CI.mapSymbol("std::printf"));
+  EXPECT_EQ("<vector>", CI.mapSymbol("std::", "vector", Language));
+  EXPECT_EQ("<cstdio>", CI.mapSymbol("std::", "printf", Language));
   // std::move is ambiguous, currently always mapped to <utility>
-  EXPECT_EQ("<utility>", CI.mapSymbol("std::move"));
+  EXPECT_EQ("<utility>", CI.mapSymbol("std::", "move", Language));
   // Unknown std symbols aren't mapped.
-  EXPECT_EQ("", CI.mapSymbol("std::notathing"));
+  EXPECT_EQ("", CI.mapSymbol("std::", "notathing", Language));
   // iosfwd declares some symbols it doesn't own.
-  EXPECT_EQ("<ostream>", CI.mapSymbol("std::ostream"));
+  EXPECT_EQ("<ostream>", CI.mapSymbol("std::", "ostream", Language));
   // And (for now) we assume it owns the others.
   auto InMemFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   FileManager Files(FileSystemOptions(), InMemFS);

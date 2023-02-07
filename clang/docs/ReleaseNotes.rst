@@ -197,6 +197,11 @@ AST Matchers
 clang-format
 ------------
 
+- Add ``NextLineOnly`` style to option ``PackConstructorInitializers``.
+  Compared to ``NextLine`` style, ``NextLineOnly`` style will not try to
+  put the initializers on the current line first, instead, it will try to
+  put the initializers on the next line only.
+
 clang-extdef-mapping
 --------------------
 
