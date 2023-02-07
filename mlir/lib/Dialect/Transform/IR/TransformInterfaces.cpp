@@ -783,6 +783,7 @@ LogicalResult transform::detail::verifyTransformOpInterface(Operation *op) {
         });
   };
 
+  std::optional<unsigned> firstConsumedOperand = std::nullopt;
   for (OpOperand &operand : op->getOpOperands()) {
     auto range = effectsOn(operand.get());
     if (range.empty()) {
@@ -793,7 +794,30 @@ LogicalResult transform::detail::verifyTransformOpInterface(Operation *op) {
                         << operand.getOperandNumber();
       return diag;
     }
+    if (::hasEffect<MemoryEffects::Allocate, TransformMappingResource>(range)) {
+      InFlightDiagnostic diag = op->emitError()
+                                << "TransformOpInterface did not expect "
+                                   "'allocate' memory effect on an operand";
+      diag.attachNote() << "specified for operand #"
+                        << operand.getOperandNumber();
+      return diag;
+    }
+    if (!firstConsumedOperand &&
+        ::hasEffect<MemoryEffects::Free, TransformMappingResource>(range)) {
+      firstConsumedOperand = operand.getOperandNumber();
+    }
   }
+
+  if (firstConsumedOperand &&
+      !::hasEffect<MemoryEffects::Write, PayloadIRResource>(effects)) {
+    InFlightDiagnostic diag =
+        op->emitError()
+        << "TransformOpInterface expects ops consuming operands to have a "
+           "'write' effect on the payload resource";
+    diag.attachNote() << "consumes operand #" << *firstConsumedOperand;
+    return diag;
+  }
+
   for (OpResult result : op->getResults()) {
     auto range = effectsOn(result);
     if (!::hasEffect<MemoryEffects::Allocate, TransformMappingResource>(
@@ -806,6 +830,7 @@ LogicalResult transform::detail::verifyTransformOpInterface(Operation *op) {
       return diag;
     }
   }
+
   return success();
 }
 

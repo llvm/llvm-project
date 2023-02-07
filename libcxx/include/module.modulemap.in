@@ -2,12 +2,11 @@
 // since __config may be included from C headers which may create an
 // include cycle.
 module std_config [system] [extern_c] {
-  header "__config"
+  textual header "__config"
   export *
 }
 
 module std [system] {
-  export std_config
   // FIXME: The standard does not require that each of these submodules
   // re-exports its imported modules. We should provide an alternative form of
   // export that issues a warning if a name from the submodule is used, and

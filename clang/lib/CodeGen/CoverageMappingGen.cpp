@@ -37,6 +37,11 @@ static llvm::cl::opt<bool> EmptyLineCommentCoverage(
                    "disable it on test)"),
     llvm::cl::init(true), llvm::cl::Hidden);
 
+static llvm::cl::opt<bool> SystemHeadersCoverage(
+    "system-headers-coverage",
+    llvm::cl::desc("Enable collecting coverage from system headers"),
+    llvm::cl::init(false), llvm::cl::Hidden);
+
 using namespace clang;
 using namespace CodeGen;
 using namespace llvm::coverage;
@@ -301,8 +306,9 @@ public:
       if (!Visited.insert(File).second)
         continue;
 
-      // Do not map FileID's associated with system headers.
-      if (SM.isInSystemHeader(SM.getSpellingLoc(Loc)))
+      // Do not map FileID's associated with system headers unless collecting
+      // coverage from system headers is explicitly enabled.
+      if (!SystemHeadersCoverage && SM.isInSystemHeader(SM.getSpellingLoc(Loc)))
         continue;
 
       unsigned Depth = 0;
@@ -416,8 +422,10 @@ public:
       SourceLocation LocStart = Region.getBeginLoc();
       assert(SM.getFileID(LocStart).isValid() && "region in invalid file");
 
-      // Ignore regions from system headers.
-      if (SM.isInSystemHeader(SM.getSpellingLoc(LocStart)))
+      // Ignore regions from system headers unless collecting coverage from
+      // system headers is explicitly enabled.
+      if (!SystemHeadersCoverage &&
+          SM.isInSystemHeader(SM.getSpellingLoc(LocStart)))
         continue;
 
       auto CovFileID = getCoverageFileID(LocStart);
@@ -1000,8 +1008,10 @@ struct CounterCoverageMappingBuilder
   void VisitDecl(const Decl *D) {
     Stmt *Body = D->getBody();
 
-    // Do not propagate region counts into system headers.
-    if (Body && SM.isInSystemHeader(SM.getSpellingLoc(getStart(Body))))
+    // Do not propagate region counts into system headers unless collecting
+    // coverage from system headers is explicitly enabled.
+    if (!SystemHeadersCoverage && Body &&
+        SM.isInSystemHeader(SM.getSpellingLoc(getStart(Body))))
       return;
 
     // Do not visit the artificial children nodes of defaulted methods. The

@@ -16,11 +16,6 @@ external add_constant_merge
   : [ `Module ] Llvm.PassManager.t -> unit
   = "llvm_add_constant_merge"
 
-(** See the [llvm::createMergeFunctionsPass] function. *)
-external add_merge_functions
-  : [ `Module ] Llvm.PassManager.t -> unit
-  = "llvm_add_merge_functions"
-
 (** See the [llvm::createDeadArgEliminationPass] function. *)
 external add_dead_arg_elimination
   : [ `Module ] Llvm.PassManager.t -> unit

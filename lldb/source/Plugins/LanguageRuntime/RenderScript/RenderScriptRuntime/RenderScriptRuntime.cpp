@@ -2346,7 +2346,7 @@ void RenderScriptRuntime::SetElementSize(Element &elem) {
 // Given an allocation, this function copies the allocation contents from
 // device into a buffer on the heap. Returning a shared pointer to the buffer
 // containing the data.
-std::shared_ptr<uint8_t>
+std::shared_ptr<uint8_t []>
 RenderScriptRuntime::GetAllocationData(AllocationDetails *alloc,
                                        StackFrame *frame_ptr) {
   Log *log = GetLog(LLDBLog::Language);
@@ -2368,7 +2368,7 @@ RenderScriptRuntime::GetAllocationData(AllocationDetails *alloc,
 
   // Allocate a buffer to copy data into
   const uint32_t size = *alloc->size.get();
-  std::shared_ptr<uint8_t> buffer(new uint8_t[size]);
+  std::shared_ptr<uint8_t []> buffer(new uint8_t[size]);
   if (!buffer) {
     LLDB_LOGF(log, "%s - couldn't allocate a %" PRIu32 " byte buffer",
               __FUNCTION__, size);
@@ -2557,7 +2557,7 @@ bool RenderScriptRuntime::LoadAllocation(Stream &strm, const uint32_t alloc_id,
 // saved to the file as the ElementHeader struct followed by offsets to the
 // structs of all the element's children.
 size_t RenderScriptRuntime::PopulateElementHeaders(
-    const std::shared_ptr<uint8_t> header_buffer, size_t offset,
+    const std::shared_ptr<uint8_t []> header_buffer, size_t offset,
     const Element &elem) {
   // File struct for an element header with all the relevant details copied
   // from elem. We assume members are valid already.
@@ -2661,7 +2661,7 @@ bool RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id,
   }
 
   // Read allocation into buffer of heap memory
-  const std::shared_ptr<uint8_t> buffer = GetAllocationData(alloc, frame_ptr);
+  const std::shared_ptr<uint8_t []> buffer = GetAllocationData(alloc, frame_ptr);
   if (!buffer) {
     strm.Printf("Error: Couldn't read allocation data into buffer");
     strm.EOL();
@@ -2695,7 +2695,7 @@ bool RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id,
   }
 
   // Create the headers describing the element type of the allocation.
-  std::shared_ptr<uint8_t> element_header_buffer(
+  std::shared_ptr<uint8_t []> element_header_buffer(
       new uint8_t[element_header_size]);
   if (element_header_buffer == nullptr) {
     strm.Printf("Internal Error: Couldn't allocate %" PRIu64
@@ -3214,7 +3214,7 @@ bool RenderScriptRuntime::DumpAllocation(Stream &strm, StackFrame *frame_ptr,
             __FUNCTION__, data_size);
 
   // Allocate a buffer to copy data into
-  std::shared_ptr<uint8_t> buffer = GetAllocationData(alloc, frame_ptr);
+  std::shared_ptr<uint8_t []> buffer = GetAllocationData(alloc, frame_ptr);
   if (!buffer) {
     strm.Printf("Error: Couldn't read allocation data");
     strm.EOL();

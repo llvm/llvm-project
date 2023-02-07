@@ -1075,69 +1075,69 @@ class RegOrImmOperand <string RegisterClassName, string OperandTypeName,
     let DecoderMethod = "decodeOperand_" # RegisterClassName # decoderImmSize;
  }
 
-  class RegOrB16 <string RegisterClass, string OperandTypePrefix>
-    : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_INT16",
-                       !subst("_b16", "B16", NAME), "_Imm16">;
+class RegOrB16 <string RegisterClass, string OperandTypePrefix>
+  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_INT16",
+                     !subst("_b16", "B16", NAME), "_Imm16">;
 
-  class RegOrF16 <string RegisterClass, string OperandTypePrefix>
-    : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP16",
-                       !subst("_f16", "F16", NAME), "_Imm16">;
+class RegOrF16 <string RegisterClass, string OperandTypePrefix>
+  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP16",
+                     !subst("_f16", "F16", NAME), "_Imm16">;
 
-  class RegOrB32 <string RegisterClass, string OperandTypePrefix>
-    : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_INT32",
-                       !subst("_b32", "B32", NAME), "_Imm32">;
+class RegOrB32 <string RegisterClass, string OperandTypePrefix>
+  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_INT32",
+                     !subst("_b32", "B32", NAME), "_Imm32">;
 
-  class RegOrF32 <string RegisterClass, string OperandTypePrefix>
-    : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP32",
-                       !subst("_f32", "F32", NAME), "_Imm32">;
+class RegOrF32 <string RegisterClass, string OperandTypePrefix>
+  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP32",
+                     !subst("_f32", "F32", NAME), "_Imm32">;
 
-  class RegOrV2B16 <string RegisterClass, string OperandTypePrefix>
-    : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_V2INT16",
-                       !subst("_v2b16", "V2B16", NAME), "_Imm16">;
+class RegOrV2B16 <string RegisterClass, string OperandTypePrefix>
+  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_V2INT16",
+                     !subst("_v2b16", "V2B16", NAME), "_Imm16">;
 
-  class RegOrV2F16 <string RegisterClass, string OperandTypePrefix>
-    : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_V2FP16",
-                       !subst("_v2f16", "V2F16", NAME), "_Imm16">;
+class RegOrV2F16 <string RegisterClass, string OperandTypePrefix>
+  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_V2FP16",
+                     !subst("_v2f16", "V2F16", NAME), "_Imm16">;
 
-  class RegOrF64 <string RegisterClass, string OperandTypePrefix>
-    : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP64",
-                       !subst("_f64", "F64", NAME), "_Imm64">;
+class RegOrF64 <string RegisterClass, string OperandTypePrefix>
+  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP64",
+                     !subst("_f64", "F64", NAME), "_Imm64">;
 
-  class RegOrB64 <string RegisterClass, string OperandTypePrefix>
-    : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_INT64",
-                       !subst("_b64", "B64", NAME), "_Imm64">;
+class RegOrB64 <string RegisterClass, string OperandTypePrefix>
+  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_INT64",
+                     !subst("_b64", "B64", NAME), "_Imm64">;
 
-  class RegOrV2F32 <string RegisterClass, string OperandTypePrefix>
-    : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_V2FP32",
-                       !subst("_v2f32", "V2FP32", NAME), "_Imm64">;
+class RegOrV2F32 <string RegisterClass, string OperandTypePrefix>
+  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_V2FP32",
+                     !subst("_v2f32", "V2FP32", NAME), "_Imm64">;
 
-  class RegOrV2B32 <string RegisterClass, string OperandTypePrefix>
-    : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_V2INT32",
-                       !subst("_v2b32", "V2INT32", NAME), "_Imm64">;
+class RegOrV2B32 <string RegisterClass, string OperandTypePrefix>
+  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_V2INT32",
+                     !subst("_v2b32", "V2INT32", NAME), "_Imm64">;
 
-  // For VOP1,2,C True16 instructions. _Lo128 use first 128 32-bit VGPRs only.
-  class RegOrB16_Lo128 <string RegisterClass, string OperandTypePrefix>
-    : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_INT16",
-                       !subst("_b16_Lo128", "B16_Lo128", NAME), "_Imm16">;
+// For VOP1,2,C True16 instructions. _Lo128 use first 128 32-bit VGPRs only.
+class RegOrB16_Lo128 <string RegisterClass, string OperandTypePrefix>
+  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_INT16",
+                     !subst("_b16_Lo128", "B16_Lo128", NAME), "_Imm16">;
 
-  class RegOrF16_Lo128 <string RegisterClass, string OperandTypePrefix>
-    : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP16",
-                       !subst("_f16_Lo128", "F16_Lo128", NAME), "_Imm16">;
+class RegOrF16_Lo128 <string RegisterClass, string OperandTypePrefix>
+  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP16",
+                     !subst("_f16_Lo128", "F16_Lo128", NAME), "_Imm16">;
 
- // Deferred operands
-  class RegOrF16_Deferred <string RegisterClass, string OperandTypePrefix>
-    : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP16_DEFERRED",
-                       !subst("_f16_Deferred", "F16", NAME), "_Deferred_Imm16">;
+// Deferred operands
+class RegOrF16_Deferred <string RegisterClass, string OperandTypePrefix>
+  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP16_DEFERRED",
+                     !subst("_f16_Deferred", "F16", NAME), "_Deferred_Imm16">;
 
-  class RegOrF32_Deferred <string RegisterClass, string OperandTypePrefix>
-    : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP32_DEFERRED",
-                       !subst("_f32_Deferred", "F32", NAME), "_Deferred_Imm32">;
+class RegOrF32_Deferred <string RegisterClass, string OperandTypePrefix>
+  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP32_DEFERRED",
+                     !subst("_f32_Deferred", "F32", NAME), "_Deferred_Imm32">;
 
-  class RegOrF16_Lo128_Deferred <string RegisterClass,
-                                 string OperandTypePrefix>
-    : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP16_DEFERRED",
-                       !subst("_f16_Lo128_Deferred", "F16_Lo128", NAME),
-                       "_Deferred_Imm16">;
+class RegOrF16_Lo128_Deferred <string RegisterClass,
+                               string OperandTypePrefix>
+  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP16_DEFERRED",
+                     !subst("_f16_Lo128_Deferred", "F16_Lo128", NAME),
+                     "_Deferred_Imm16">;
 //===----------------------------------------------------------------------===//
 //  SSrc_* Operands with an SGPR or a 32-bit immediate
 //===----------------------------------------------------------------------===//

@@ -9,9 +9,6 @@
 external add_constant_merge
   : [ `Module ] Llvm.PassManager.t -> unit
   = "llvm_add_constant_merge"
-external add_merge_functions
-  : [ `Module ] Llvm.PassManager.t -> unit
-  = "llvm_add_merge_functions"
 external add_dead_arg_elimination
   : [ `Module ] Llvm.PassManager.t -> unit
   = "llvm_add_dead_arg_elimination"

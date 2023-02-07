@@ -28,62 +28,72 @@ bool ConstraintSystem::eliminateUsingFM() {
   assert(!Constraints.empty() &&
          "should only be called for non-empty constraint systems");
   unsigned NumVariables = Constraints[0].size();
-  SmallVector<SmallVector<int64_t, 8>, 4> NewSystem;
 
-  unsigned NumConstraints = Constraints.size();
   uint32_t NewGCD = 1;
   unsigned LastIdx = NumVariables - 1;
 
-  for (unsigned R1 = 0; R1 < NumConstraints; R1++) {
+  // First, either remove the variable in place if it is 0 or add the row to
+  // RemainingRows and remove it from the system.
+  SmallVector<SmallVector<int64_t, 8>, 4> RemainingRows;
+  for (unsigned R1 = 0; R1 < Constraints.size();) {
     SmallVector<int64_t, 8> &Row1 = Constraints[R1];
-    if (Row1[LastIdx] == 0) {
+    int64_t LowerLast = Row1[LastIdx];
+    if (LowerLast == 0) {
       Row1.pop_back();
-      NewSystem.push_back(std::move(Row1));
-      continue;
+      R1++;
+    } else {
+      std::swap(Constraints[R1], Constraints.back());
+      RemainingRows.push_back(std::move(Constraints.back()));
+      Constraints.pop_back();
     }
+  }
 
+  // Process rows where the variable is != 0.
+  unsigned NumRemainingConstraints = RemainingRows.size();
+  for (unsigned R1 = 0; R1 < NumRemainingConstraints; R1++) {
     // FIXME do not use copy
-    for (unsigned R2 = R1 + 1; R2 < NumConstraints; R2++) {
+    for (unsigned R2 = R1 + 1; R2 < NumRemainingConstraints; R2++) {
       if (R1 == R2)
         continue;
 
-      // FIXME: can we do better than just dropping things here?
-      if (Constraints[R2][LastIdx] == 0)
-        continue;
-
-      if ((Constraints[R1][LastIdx] < 0 && Constraints[R2][LastIdx] < 0) ||
-          (Constraints[R1][LastIdx] > 0 && Constraints[R2][LastIdx] > 0))
+      int64_t UpperLast = RemainingRows[R2][LastIdx];
+      int64_t LowerLast = RemainingRows[R1][LastIdx];
+      assert(
+          UpperLast != 0 && LowerLast != 0 &&
+          "RemainingRows should only contain rows where the variable is != 0");
+      if ((LowerLast < 0 && UpperLast < 0) || (LowerLast > 0 && UpperLast > 0))
         continue;
 
       unsigned LowerR = R1;
       unsigned UpperR = R2;
-      if (Constraints[UpperR][LastIdx] < 0)
+      if (UpperLast < 0) {
         std::swap(LowerR, UpperR);
+        std::swap(LowerLast, UpperLast);
+      }
 
       SmallVector<int64_t, 8> NR;
       for (unsigned I = 0; I < LastIdx; I++) {
         int64_t M1, M2, N;
-        if (MulOverflow(Constraints[UpperR][I],
-                        ((-1) * Constraints[LowerR][LastIdx] / GCD), M1))
+        int64_t UpperV = RemainingRows[UpperR][I];
+        if (MulOverflow(UpperV, ((-1) * LowerLast / GCD), M1))
           return false;
-        if (MulOverflow(Constraints[LowerR][I],
-                        (Constraints[UpperR][LastIdx] / GCD), M2))
+        int64_t LowerV = RemainingRows[LowerR][I];
+        if (MulOverflow(LowerV, (UpperLast / GCD), M2))
           return false;
         if (AddOverflow(M1, M2, N))
           return false;
         NR.push_back(N);
 
-        NewGCD = APIntOps::GreatestCommonDivisor({32, (uint32_t)NR.back()},
-                                                 {32, NewGCD})
-                     .getZExtValue();
+        NewGCD =
+            APIntOps::GreatestCommonDivisor({32, (uint32_t)N}, {32, NewGCD})
+                .getZExtValue();
       }
-      NewSystem.push_back(std::move(NR));
+      Constraints.push_back(std::move(NR));
       // Give up if the new system gets too big.
-      if (NewSystem.size() > 500)
+      if (Constraints.size() > 500)
         return false;
     }
   }
-  Constraints = std::move(NewSystem);
   GCD = NewGCD;
 
   return true;

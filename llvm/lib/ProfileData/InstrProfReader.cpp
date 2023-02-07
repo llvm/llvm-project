@@ -20,12 +20,12 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/ProfileCommon.h"
+#include "llvm/ProfileData/SymbolRemappingReader.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SwapByteOrder.h"
-#include "llvm/Support/SymbolRemappingReader.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <algorithm>
 #include <cstddef>

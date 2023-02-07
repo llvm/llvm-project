@@ -26,12 +26,6 @@ value llvm_add_constant_merge(LLVMPassManagerRef PM) {
 }
 
 /* [`Module] Llvm.PassManager.t -> unit */
-value llvm_add_merge_functions(LLVMPassManagerRef PM) {
-  LLVMAddMergeFunctionsPass(PM);
-  return Val_unit;
-}
-
-/* [`Module] Llvm.PassManager.t -> unit */
 value llvm_add_dead_arg_elimination(LLVMPassManagerRef PM) {
   LLVMAddDeadArgEliminationPass(PM);
   return Val_unit;

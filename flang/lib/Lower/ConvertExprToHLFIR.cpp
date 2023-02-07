@@ -18,10 +18,10 @@
 #include "flang/Lower/ConvertConstant.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/ConvertVariable.h"
-#include "flang/Lower/IntrinsicCall.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/Complex.h"
+#include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -614,8 +614,7 @@ struct BinaryOp<Fortran::evaluate::Power<Fortran::evaluate::Type<TC, KIND>>> {
                                          hlfir::Entity lhs, hlfir::Entity rhs) {
     mlir::Type ty = Fortran::lower::getFIRType(builder.getContext(), TC, KIND,
                                                /*params=*/std::nullopt);
-    return hlfir::EntityWithAttributes{
-        Fortran::lower::genPow(builder, loc, ty, lhs, rhs)};
+    return hlfir::EntityWithAttributes{fir::genPow(builder, loc, ty, lhs, rhs)};
   }
 };
 
@@ -629,8 +628,7 @@ struct BinaryOp<
                                          hlfir::Entity lhs, hlfir::Entity rhs) {
     mlir::Type ty = Fortran::lower::getFIRType(builder.getContext(), TC, KIND,
                                                /*params=*/std::nullopt);
-    return hlfir::EntityWithAttributes{
-        Fortran::lower::genPow(builder, loc, ty, lhs, rhs)};
+    return hlfir::EntityWithAttributes{fir::genPow(builder, loc, ty, lhs, rhs)};
   }
 };
 
@@ -644,8 +642,8 @@ struct BinaryOp<
                                          hlfir::Entity rhs) {
     llvm::SmallVector<mlir::Value, 2> args{lhs, rhs};
     fir::ExtendedValue res = op.ordering == Fortran::evaluate::Ordering::Greater
-                                 ? Fortran::lower::genMax(builder, loc, args)
-                                 : Fortran::lower::genMin(builder, loc, args);
+                                 ? fir::genMax(builder, loc, args)
+                                 : fir::genMin(builder, loc, args);
     return hlfir::EntityWithAttributes{fir::getBase(res)};
   }
 };
