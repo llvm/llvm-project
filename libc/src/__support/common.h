@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SUPPORT_COMMON_H
 #define LLVM_LIBC_SUPPORT_COMMON_H
 
+#include "src/__support/macros/architectures.h"
+
 #define LIBC_INLINE_ASM __asm__ __volatile__
 
 #ifndef likely
@@ -29,12 +31,8 @@
 #define LIBC_INLINE inline
 #endif
 
-#if defined(__AMDGPU__) || defined(__NVPTX__)
-#define PACKAGE_FOR_GPU
-#endif
-
 // GPU targets do not support aliasing.
-#if defined(LLVM_LIBC_PUBLIC_PACKAGING) && defined(PACKAGE_FOR_GPU)
+#if defined(LLVM_LIBC_PUBLIC_PACKAGING) && defined(LIBC_TARGET_IS_GPU)
 #define LLVM_LIBC_FUNCTION(type, name, arglist)                                \
   LLVM_LIBC_FUNCTION_ATTR decltype(__llvm_libc::name)                          \
       __##name##_impl__ __asm__(#name);                                        \
