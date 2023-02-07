@@ -3044,6 +3044,13 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_sqdmulh_vgx2 : SME2_VG2_Multi_Multi_Intrinsic;
   def int_aarch64_sve_sqdmulh_vgx4 : SME2_VG4_Multi_Multi_Intrinsic;
 
+  // Multi-vector floating-point round to integral value
+
+  foreach inst = ["a", "m", "n", "p"] in {
+    def int_aarch64_sve_frint # inst # _x2 : SVE2_VG2_ZipUzp_Intrinsic;
+    def int_aarch64_sve_frint # inst # _x4 : SVE2_VG4_ZipUzp_Intrinsic;
+  }
+
   //
   // Multi-vector min/max
   //

@@ -367,6 +367,7 @@ public:
   void SelectClamp(SDNode *N, unsigned NumVecs, unsigned Opcode);
   void SelectUnaryMultiIntrinsic(SDNode *N, unsigned NumOutVecs,
                                  bool IsTupleInput, unsigned Opc);
+  void SelectFrintFromVT(SDNode *N, unsigned NumVecs, unsigned Opcode);
 
   template <unsigned MaxIdx, unsigned Scale>
   void SelectMultiVectorMove(SDNode *N, unsigned NumVecs, unsigned BaseReg,
@@ -1872,6 +1873,13 @@ void AArch64DAGToDAGISel::SelectPredicatedLoad(SDNode *N, unsigned NumVecs,
   unsigned ChainIdx = NumVecs;
   ReplaceUses(SDValue(N, ChainIdx), SDValue(Load, 1));
   CurDAG->RemoveDeadNode(N);
+}
+
+void AArch64DAGToDAGISel::SelectFrintFromVT(SDNode *N, unsigned NumVecs,
+                                            unsigned Opcode) {
+  if (N->getValueType(0) != MVT::nxv4f32)
+    return;
+  SelectUnaryMultiIntrinsic(N, NumVecs, true, Opcode);
 }
 
 void AArch64DAGToDAGISel::SelectClamp(SDNode *N, unsigned NumVecs,
@@ -5379,6 +5387,30 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::aarch64_sve_uzpq_x4:
       SelectUnaryMultiIntrinsic(Node, 4, /*IsTupleInput=*/true,
                                 AArch64::UZP_VG4_4Z4Z_Q);
+      return;
+    case Intrinsic::aarch64_sve_frinta_x2:
+      SelectFrintFromVT(Node, 2, AArch64::FRINTA_2Z2Z_S);
+      return;
+    case Intrinsic::aarch64_sve_frinta_x4:
+      SelectFrintFromVT(Node, 4, AArch64::FRINTA_4Z4Z_S);
+      return;
+    case Intrinsic::aarch64_sve_frintm_x2:
+      SelectFrintFromVT(Node, 2, AArch64::FRINTM_2Z2Z_S);
+      return;
+    case Intrinsic::aarch64_sve_frintm_x4:
+      SelectFrintFromVT(Node, 4, AArch64::FRINTM_4Z4Z_S);
+      return;
+    case Intrinsic::aarch64_sve_frintn_x2:
+      SelectFrintFromVT(Node, 2, AArch64::FRINTN_2Z2Z_S);
+      return;
+    case Intrinsic::aarch64_sve_frintn_x4:
+      SelectFrintFromVT(Node, 4, AArch64::FRINTN_4Z4Z_S);
+      return;
+    case Intrinsic::aarch64_sve_frintp_x2:
+      SelectFrintFromVT(Node, 2, AArch64::FRINTP_2Z2Z_S);
+      return;
+    case Intrinsic::aarch64_sve_frintp_x4:
+      SelectFrintFromVT(Node, 4, AArch64::FRINTP_4Z4Z_S);
       return;
     }
     break;
