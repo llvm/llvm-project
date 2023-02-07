@@ -1687,6 +1687,16 @@ Token ASTReader::ReadToken(ModuleFile &F, const RecordDataImpl &Record,
       Tok.setAnnotationValue(static_cast<void *>(Info));
       break;
     }
+    case tok::annot_pragma_pack: {
+      auto *Info = new (PP.getPreprocessorAllocator()) Sema::PragmaPackInfo;
+      Info->Action = static_cast<Sema::PragmaMsStackAction>(Record[Idx++]);
+      auto SlotLabel = ReadString(Record, Idx);
+      Info->SlotLabel =
+          llvm::StringRef(SlotLabel).copy(PP.getPreprocessorAllocator());
+      Info->Alignment = ReadToken(F, Record, Idx);
+      Tok.setAnnotationValue(static_cast<void *>(Info));
+      break;
+    }
     // Some annotation tokens do not use the PtrData field.
     case tok::annot_pragma_openmp:
     case tok::annot_pragma_openmp_end:
@@ -9084,7 +9094,7 @@ llvm::APFloat ASTRecordReader::readAPFloat(const llvm::fltSemantics &Sem) {
 }
 
 // Read a string
-std::string ASTReader::ReadString(const RecordData &Record, unsigned &Idx) {
+std::string ASTReader::ReadString(const RecordDataImpl &Record, unsigned &Idx) {
   unsigned Len = Record[Idx++];
   std::string Result(Record.data() + Idx, Record.data() + Idx + Len);
   Idx += Len;
