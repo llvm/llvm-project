@@ -61,6 +61,8 @@ public:
   const Field *getField(const FieldDecl *FD) const;
   /// Returns a base descriptor.
   const Base *getBase(const RecordDecl *FD) const;
+  /// Returns a base descriptor.
+  const Base *getBase(QualType T) const;
   /// Returns a virtual base descriptor.
   const Base *getVirtualBase(const RecordDecl *RD) const;
   // Returns the destructor of the record, if any.
