@@ -2004,3 +2004,29 @@ transform.sequence failures(propagate) {
 // CHECK-LABEL: @wrong_reduction_detection
 // CHECK:         vector.broadcast
 // CHECK:         vector.transfer_write
+
+// -----
+
+// Don't vectorize tensor<0xf32>
+// CHECK-LABEL: @tensor_size0
+// CHECK:         linalg.generic
+func.func @tensor_size0(%arg0: tensor<0xf32>,
+                        %arg1: tensor<f32>) -> tensor<f32> {
+  %0 = linalg.generic
+  {indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> ()>],
+  iterator_types = ["reduction"]}
+  ins(%arg0 : tensor<0xf32>) outs(%arg1 : tensor<f32>) {
+    ^bb0(%in: f32, %out: f32):
+    %12 = arith.addf %out, %in : f32
+    linalg.yield %12 : f32
+  } -> tensor<f32>
+  return %0 : tensor<f32>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
+  %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
+  %2 = transform.structured.vectorize %1
+}
+
