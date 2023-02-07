@@ -818,3 +818,64 @@ hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
   }
   return {{static_cast<mlir::Value>(entity)}, {}};
 }
+
+std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
+hlfir::convertToValue(mlir::Location loc, fir::FirOpBuilder &builder,
+                      const hlfir::Entity &entity) {
+  auto [exv, cleanup] = translateToExtendedValue(loc, builder, entity);
+  // Load scalar references to integer, logical, real, or complex value
+  // to an mlir value, dereference allocatable and pointers, and get rid
+  // of fir.box that are not needed or create a copy into contiguous memory.
+  exv = exv.match(
+      [&](const fir::UnboxedValue &box) -> fir::ExtendedValue {
+        if (mlir::Type elementType = fir::dyn_cast_ptrEleTy(box.getType()))
+          if (fir::isa_trivial(elementType))
+            return builder.create<fir::LoadOp>(loc, box);
+        return box;
+      },
+      [&](const fir::CharBoxValue &box) -> fir::ExtendedValue { return box; },
+      [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue { return box; },
+      [&](const fir::CharArrayBoxValue &box) -> fir::ExtendedValue {
+        return box;
+      },
+      [&](const auto &) -> fir::ExtendedValue {
+        TODO(loc, "lower descriptor designator to HLFIR value");
+      });
+  return {exv, cleanup};
+}
+
+static fir::ExtendedValue placeTrivialInMemory(mlir::Location loc,
+                                               fir::FirOpBuilder &builder,
+                                               mlir::Value val,
+                                               mlir::Type targetType) {
+  auto temp = builder.createTemporary(loc, targetType);
+  if (targetType != val.getType())
+    builder.createStoreWithConvert(loc, val, temp);
+  else
+    builder.create<fir::StoreOp>(loc, val, temp);
+  return temp;
+}
+
+std::pair<fir::BoxValue, std::optional<hlfir::CleanupFunction>>
+hlfir::convertToBox(mlir::Location loc, fir::FirOpBuilder &builder,
+                    const hlfir::Entity &entity, mlir::Type targetType) {
+  auto [exv, cleanup] = translateToExtendedValue(loc, builder, entity);
+  mlir::Value base = fir::getBase(exv);
+  if (fir::isa_trivial(base.getType()))
+    exv = placeTrivialInMemory(loc, builder, base, targetType);
+  fir::BoxValue box = fir::factory::createBoxValue(builder, loc, exv);
+  return {box, cleanup};
+}
+
+std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
+hlfir::convertToAddress(mlir::Location loc, fir::FirOpBuilder &builder,
+                        const hlfir::Entity &entity, mlir::Type targetType) {
+  hlfir::Entity derefedEntity =
+      hlfir::derefPointersAndAllocatables(loc, builder, entity);
+  auto [exv, cleanup] =
+      hlfir::translateToExtendedValue(loc, builder, derefedEntity);
+  mlir::Value base = fir::getBase(exv);
+  if (fir::isa_trivial(base.getType()))
+    exv = placeTrivialInMemory(loc, builder, base, targetType);
+  return {exv, cleanup};
+}
