@@ -36,7 +36,8 @@ union ThreadReturnValue {
   constexpr ThreadReturnValue(void *r) : posix_retval(r) {}
 };
 
-#if (defined(LIBC_TARGET_IS_AARCH64) || defined(LIBC_TARGET_IS_X86_64))
+#if (defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                   \
+     defined(LIBC_TARGET_ARCH_IS_X86_64))
 constexpr unsigned int STACK_ALIGNMENT = 16;
 #endif
 // TODO: Provide stack alignment requirements for other architectures.

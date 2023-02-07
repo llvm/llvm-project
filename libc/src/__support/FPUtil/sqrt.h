@@ -11,9 +11,9 @@
 
 #include "src/__support/macros/architectures.h"
 
-#if defined(LIBC_TARGET_IS_X86_64)
+#if defined(LIBC_TARGET_ARCH_IS_X86_64)
 #include "x86_64/sqrt.h"
-#elif defined(LIBC_TARGET_IS_AARCH64)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #include "aarch64/sqrt.h"
 #else
 #include "generic/sqrt.h"
