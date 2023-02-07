@@ -360,6 +360,10 @@ ops rather than having the methods directly act on the payload IR.
 
 [include "Dialects/TransformOps.md"]
 
+## Affine Transform Operations
+
+[include "Dialects/AffineLoopTransformOps.md"]
+
 ## Bufferization Transform Operations
 
 [include "Dialects/BufferizationTransformOps.md"]
@@ -372,9 +376,17 @@ ops rather than having the methods directly act on the payload IR.
 
 [include "Dialects/SCFLoopTransformOps.md"]
 
+## MemRef Transform Operations
+
+[include "Dialects/MemRefTransformOps.md"]
+
 ## Structured (Linalg) Transform Operations
 
 [include "Dialects/LinalgStructuredTransformOps.md"]
+
+## Vector Transform Operations
+
+[include "Dialects/VectorTransformOps.md"]
 
 [include "Dialects/TransformTypeInterfaces.md"]
 
