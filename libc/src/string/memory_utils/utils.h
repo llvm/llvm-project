@@ -82,11 +82,11 @@ template <size_t alignment, typename T> static T *assume_aligned(T *ptr) {
   return reinterpret_cast<T *>(__builtin_assume_aligned(ptr, alignment));
 }
 
-#if LLVM_LIBC_HAS_BUILTIN(__builtin_memcpy_inline)
+#if LIBC_HAS_BUILTIN(__builtin_memcpy_inline)
 #define LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
 #endif
 
-#if LLVM_LIBC_HAS_BUILTIN(__builtin_memset_inline)
+#if LIBC_HAS_BUILTIN(__builtin_memset_inline)
 #define LLVM_LIBC_HAS_BUILTIN_MEMSET_INLINE
 #endif
 

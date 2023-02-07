@@ -13,11 +13,11 @@
 
 namespace __llvm_libc::cpp {
 
-#if LLVM_LIBC_HAS_BUILTIN(__builtin_bit_cast)
+#if LIBC_HAS_BUILTIN(__builtin_bit_cast)
 #define LLVM_LIBC_HAS_BUILTIN_BIT_CAST
 #endif
 
-#if LLVM_LIBC_HAS_BUILTIN(__builtin_memcpy_inline)
+#if LIBC_HAS_BUILTIN(__builtin_memcpy_inline)
 #define LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
 #endif
 
