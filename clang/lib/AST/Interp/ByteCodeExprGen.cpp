@@ -85,15 +85,8 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!this->visit(SubExpr))
       return false;
 
-    const CXXRecordDecl *FromDecl = getRecordDecl(SubExpr);
-    assert(FromDecl);
-    const CXXRecordDecl *ToDecl = getRecordDecl(CE);
-    assert(ToDecl);
-    const Record *R = getRecord(FromDecl);
-    const Record::Base *ToBase = R->getBase(ToDecl);
-    assert(ToBase);
-
-    return this->emitGetPtrBasePop(ToBase->Offset, CE);
+    return this->emitDerivedToBaseCasts(getRecordTy(SubExpr->getType()),
+                                        getRecordTy(CE->getType()), CE);
   }
 
   case CK_FloatingCast: {
@@ -1871,6 +1864,38 @@ template <class Emitter>
 void ByteCodeExprGen<Emitter>::emitCleanup() {
   for (VariableScope<Emitter> *C = VarScope; C; C = C->getParent())
     C->emitDestruction();
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::emitDerivedToBaseCasts(
+    const RecordType *DerivedType, const RecordType *BaseType, const Expr *E) {
+  // Pointer of derived type is already on the stack.
+  const auto *FinalDecl = cast<CXXRecordDecl>(BaseType->getDecl());
+  const RecordDecl *CurDecl = DerivedType->getDecl();
+  const Record *CurRecord = getRecord(CurDecl);
+  assert(CurDecl && FinalDecl);
+  for (;;) {
+    assert(CurRecord->getNumBases() > 0);
+    // One level up
+    for (const Record::Base &B : CurRecord->bases()) {
+      const auto *BaseDecl = cast<CXXRecordDecl>(B.Decl);
+
+      if (BaseDecl == FinalDecl || BaseDecl->isDerivedFrom(FinalDecl)) {
+        // This decl will lead us to the final decl, so emit a base cast.
+        if (!this->emitGetPtrBasePop(B.Offset, E))
+          return false;
+
+        CurRecord = B.R;
+        CurDecl = BaseDecl;
+        break;
+      }
+    }
+    if (CurDecl == FinalDecl)
+      return true;
+  }
+
+  llvm_unreachable("Couldn't find the base class?");
+  return false;
 }
 
 /// When calling this, we have a pointer of the local-to-destroy

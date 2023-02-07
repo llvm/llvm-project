@@ -250,6 +250,21 @@ struct S {
 constexpr S s;
 static_assert(s.m() == 1, "");
 
+#if __cplusplus >= 201703L
+namespace BaseInit {
+  class A {public: int a;};
+  class B : public A {};
+  class C : public A {};
+  class D : public B, public C {};
+
+  // FIXME: Enable this once we support the initialization.
+  // This initializes D::B::A::a and not D::C::A::a.
+  //constexpr D d{12};
+  //static_assert(d.B::a == 12);
+  //static_assert(d.C::a == 0);
+};
+#endif
+
 namespace MI {
   class A {
   public:
