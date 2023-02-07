@@ -27,7 +27,7 @@ template <typename T> LIBC_INLINE T multiply_add(T x, T y, T z) {
 } // namespace fputil
 } // namespace __llvm_libc
 
-#if defined(LIBC_TARGET_HAS_FMA)
+#if defined(LIBC_TARGET_CPU_HAS_FMA)
 
 // FMA instructions are available.
 #include "FMA.h"
@@ -47,6 +47,6 @@ LIBC_INLINE double multiply_add<double>(double x, double y, double z) {
 } // namespace fputil
 } // namespace __llvm_libc
 
-#endif // LIBC_TARGET_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA
 
 #endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_MULTIPLY_ADD_H

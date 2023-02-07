@@ -17,7 +17,7 @@
 #endif
 
 // GPU targets do not support aliasing.
-#if defined(LLVM_LIBC_PUBLIC_PACKAGING) && defined(LIBC_TARGET_IS_GPU)
+#if defined(LLVM_LIBC_PUBLIC_PACKAGING) && defined(LIBC_TARGET_ARCH_IS_GPU)
 #define LLVM_LIBC_FUNCTION(type, name, arglist)                                \
   LLVM_LIBC_FUNCTION_ATTR decltype(__llvm_libc::name)                          \
       __##name##_impl__ __asm__(#name);                                        \

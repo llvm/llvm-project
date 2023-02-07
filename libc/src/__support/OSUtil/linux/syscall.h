@@ -12,11 +12,11 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/architectures.h"
 
-#ifdef LIBC_TARGET_IS_X86_64
+#ifdef LIBC_TARGET_ARCH_IS_X86_64
 #include "x86_64/syscall.h"
-#elif defined(LIBC_TARGET_IS_AARCH64)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #include "aarch64/syscall.h"
-#elif defined(LIBC_TARGET_IS_ARM)
+#elif defined(LIBC_TARGET_ARCH_IS_ARM)
 #include "arm/syscall.h"
 #endif
 

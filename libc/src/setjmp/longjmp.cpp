@@ -15,7 +15,7 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
-#ifdef LIBC_TARGET_IS_X86_64
+#ifdef LIBC_TARGET_ARCH_IS_X86_64
   register __UINT64_TYPE__ rbx __asm__("rbx");
   register __UINT64_TYPE__ rbp __asm__("rbp");
   register __UINT64_TYPE__ r12 __asm__("r12");
@@ -38,7 +38,7 @@ LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
   LIBC_INLINE_ASM("mov %1, %0\n\t" : "=r"(r15) : "m"(buf->r15) :);
   LIBC_INLINE_ASM("mov %1, %0\n\t" : "=r"(rsp) : "m"(buf->rsp) :);
   LIBC_INLINE_ASM("jmp *%0\n\t" : : "m"(buf->rip));
-#else // LIBC_TARGET_IS_X86_64
+#else // LIBC_TARGET_ARCH_IS_X86_64
 #error "longjmp implementation not available for the target architecture."
 #endif
 }
