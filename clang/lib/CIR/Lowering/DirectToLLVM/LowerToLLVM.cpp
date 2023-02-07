@@ -25,6 +25,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
@@ -32,6 +33,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Passes.h"
 #include "llvm/ADT/Sequence.h"
 
@@ -494,6 +496,13 @@ public:
       auto Zero = rewriter.create<mlir::LLVM::ConstantOp>(
           op.getLoc(), type, mlir::IntegerAttr::get(type, 0));
       rewriter.replaceOpWithNewOp<mlir::LLVM::SubOp>(op, op.getType(), Zero,
+                                                     op.getInput());
+      break;
+    }
+    case mlir::cir::UnaryOpKind::Not: {
+      auto MinusOne = rewriter.create<mlir::LLVM::ConstantOp>(
+          op.getLoc(), type, mlir::IntegerAttr::get(type, -1));
+      rewriter.replaceOpWithNewOp<mlir::LLVM::XOrOp>(op, op.getType(), MinusOne,
                                                      op.getInput());
       break;
     }

@@ -410,7 +410,12 @@ public:
     return Visit(E->getSubExpr());
   }
 
-  mlir::Value VisitUnaryNot(const UnaryOperator *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitUnaryNot(const UnaryOperator *E) {
+    TestAndClearIgnoreResultAssign();
+    mlir::Value op = Visit(E->getSubExpr());
+    return buildUnaryOp(E, mlir::cir::UnaryOpKind::Not, op);
+  }
+
   mlir::Value VisitUnaryLNot(const UnaryOperator *E) {
     llvm_unreachable("NYI");
   }

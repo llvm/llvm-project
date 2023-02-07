@@ -24,3 +24,15 @@ unsigned um0() {
 // CHECK: %[[#INPUT:]] = cir.load %[[#A]]
 // CHECK: %[[#OUTPUT:]] = cir.unary(minus, %[[#INPUT]])
 // CHECK: cir.store %[[#OUTPUT]], %[[#RET]]
+
+unsigned un0() {
+  unsigned a = 1;
+  return ~a; // a ^ -1 , not
+}
+
+// CHECK: cir.func @_Z3un0v() -> i32 {
+// CHECK: %[[#RET:]] = cir.alloca i32, cir.ptr <i32>, ["__retval"]
+// CHECK: %[[#A:]] = cir.alloca i32, cir.ptr <i32>, ["a", init]
+// CHECK: %[[#INPUT:]] = cir.load %[[#A]]
+// CHECK: %[[#OUTPUT:]] = cir.unary(not, %[[#INPUT]])
+// CHECK: cir.store %[[#OUTPUT]], %[[#RET]]
