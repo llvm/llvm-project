@@ -18,7 +18,7 @@
 #include <fenv.h>
 #include <stdint.h>
 
-#include "src/__support/sanitizer.h"
+#include "src/__support/macros/sanitizer.h"
 
 namespace __llvm_libc {
 namespace fputil {

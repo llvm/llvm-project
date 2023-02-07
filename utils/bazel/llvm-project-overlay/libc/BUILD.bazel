@@ -67,7 +67,7 @@ libc_support_library(
 
 libc_support_library(
     name = "__support_sanitizer",
-    hdrs = ["src/__support/sanitizer.h"],
+    hdrs = ["src/__support/macros/sanitizer.h"],
     deps = [
         ":__support_compiler_features",
         ":libc_root",
