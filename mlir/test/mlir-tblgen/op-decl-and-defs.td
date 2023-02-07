@@ -12,6 +12,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 def Test_Dialect : Dialect {
   let name = "test";
   let cppNamespace = "NS";
+  let useFoldAPI = kEmitRawAttributesFolder;
 }
 class NS_Op<string mnemonic, list<Trait> traits> :
     Op<Test_Dialect, mnemonic, traits>;
@@ -320,7 +321,6 @@ def NS_LOp : NS_Op<"op_with_same_operands_and_result_types_unwrapped_attr", [Sam
 def TestWithNewFold_Dialect : Dialect {
   let name = "test";
   let cppNamespace = "::mlir::testWithFold";
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 def NS_MOp : Op<TestWithNewFold_Dialect, "op_with_single_result_and_fold_adaptor_fold", []> {

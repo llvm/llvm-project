@@ -106,7 +106,7 @@ class Dialect {
   bit isExtensible = 0;
 
   // Fold API to use for operations in this dialect.
-  EmitFolderBase useFoldAPI = kEmitRawAttributesFolder;
+  EmitFolderBase useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 #endif // DIALECTBASE_TD
