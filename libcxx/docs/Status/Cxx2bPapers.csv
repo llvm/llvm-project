@@ -20,7 +20,7 @@
 "`P1659R3 <https://wg21.link/P1659R3>`__","LWG","starts_with and ends_with","June 2021","","","|ranges|"
 "`P1951R1 <https://wg21.link/P1951R1>`__","LWG","Default Arguments for pair Forwarding Constructor","June 2021","|Complete|","14.0"
 "`P1989R2 <https://wg21.link/P1989R2>`__","LWG","Range constructor for std::string_view","June 2021","|Complete|","14.0","|ranges|"
-"`P2136R3 <https://wg21.link/P2136R3>`__","LWG","invoke_r","June 2021","",""
+"`P2136R3 <https://wg21.link/P2136R3>`__","LWG","invoke_r","June 2021","|Complete|","17.0"
 "`P2166R1 <https://wg21.link/P2166R1>`__","LWG","A Proposal to Prohibit std::basic_string and std::basic_string_view construction from nullptr","June 2021","|Complete|","13.0"
 "","","","","","",""
 "`P0288R9 <https://wg21.link/P0288R9>`__","LWG","``any_invocable``","October 2021","",""
