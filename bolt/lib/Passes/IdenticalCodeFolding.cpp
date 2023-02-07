@@ -43,14 +43,12 @@ TimeICF("time-icf",
   cl::cat(BoltOptCategory));
 } // namespace opts
 
-namespace {
-using JumpTable = bolt::JumpTable;
-
 /// Compare two jump tables in 2 functions. The function relies on consistent
 /// ordering of basic blocks in both binary functions (e.g. DFS).
-bool equalJumpTables(const JumpTable &JumpTableA, const JumpTable &JumpTableB,
-                     const BinaryFunction &FunctionA,
-                     const BinaryFunction &FunctionB) {
+static bool equalJumpTables(const JumpTable &JumpTableA,
+                            const JumpTable &JumpTableB,
+                            const BinaryFunction &FunctionA,
+                            const BinaryFunction &FunctionB) {
   if (JumpTableA.EntrySize != JumpTableB.EntrySize)
     return false;
 
@@ -92,9 +90,10 @@ bool equalJumpTables(const JumpTable &JumpTableA, const JumpTable &JumpTableB,
 /// given instruction of the given function. The functions should have
 /// identical CFG.
 template <class Compare>
-bool isInstrEquivalentWith(const MCInst &InstA, const BinaryBasicBlock &BBA,
-                           const MCInst &InstB, const BinaryBasicBlock &BBB,
-                           Compare Comp) {
+static bool isInstrEquivalentWith(const MCInst &InstA,
+                                  const BinaryBasicBlock &BBA,
+                                  const MCInst &InstB,
+                                  const BinaryBasicBlock &BBB, Compare Comp) {
   if (InstA.getOpcode() != InstB.getOpcode())
     return false;
 
@@ -148,8 +147,8 @@ bool isInstrEquivalentWith(const MCInst &InstA, const BinaryBasicBlock &BBA,
 /// If \p CongruentSymbols is set to true, then symbolic operands that reference
 /// potentially identical but different functions are ignored during the
 /// comparison.
-bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
-                     bool CongruentSymbols) {
+static bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
+                            bool CongruentSymbols) {
   assert(A.hasCFG() && B.hasCFG() && "both functions should have CFG");
 
   // Compare the two functions, one basic block at a time.
@@ -338,7 +337,7 @@ typedef std::unordered_map<BinaryFunction *, std::vector<BinaryFunction *>,
                            KeyHash, KeyEqual>
     IdenticalBucketsMap;
 
-std::string hashInteger(uint64_t Value) {
+static std::string hashInteger(uint64_t Value) {
   std::string HashString;
   if (Value == 0)
     HashString.push_back(0);
@@ -352,7 +351,7 @@ std::string hashInteger(uint64_t Value) {
   return HashString;
 }
 
-std::string hashSymbol(BinaryContext &BC, const MCSymbol &Symbol) {
+static std::string hashSymbol(BinaryContext &BC, const MCSymbol &Symbol) {
   std::string HashString;
 
   // Ignore function references.
@@ -370,7 +369,7 @@ std::string hashSymbol(BinaryContext &BC, const MCSymbol &Symbol) {
   return HashString.append(hashInteger(*ErrorOrValue));
 }
 
-std::string hashExpr(BinaryContext &BC, const MCExpr &Expr) {
+static std::string hashExpr(BinaryContext &BC, const MCExpr &Expr) {
   switch (Expr.getKind()) {
   case MCExpr::Constant:
     return hashInteger(cast<MCConstantExpr>(Expr).getValue());
@@ -394,7 +393,8 @@ std::string hashExpr(BinaryContext &BC, const MCExpr &Expr) {
   llvm_unreachable("invalid expression kind");
 }
 
-std::string hashInstOperand(BinaryContext &BC, const MCOperand &Operand) {
+static std::string hashInstOperand(BinaryContext &BC,
+                                   const MCOperand &Operand) {
   if (Operand.isImm())
     return hashInteger(Operand.getImm());
   if (Operand.isReg())
@@ -404,8 +404,6 @@ std::string hashInstOperand(BinaryContext &BC, const MCOperand &Operand) {
 
   return std::string();
 }
-
-} // namespace
 
 namespace llvm {
 namespace bolt {
