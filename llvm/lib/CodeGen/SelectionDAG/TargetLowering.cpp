@@ -7985,14 +7985,17 @@ SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
   }
 
   // If the target has FMINIMUM/FMAXIMUM but not FMINNUM/FMAXNUM use that
-  // instead if there are no NaNs.
-  if (Node->getFlags().hasNoNaNs()) {
+  // instead if there are no NaNs and there can't be an incompatiable zero
+  // compare: at least one operand isn't +/-0, or there are no signed-zeros.
+  if (Node->getFlags().hasNoNaNs() &&
+      (Node->getFlags().hasNoSignedZeros() ||
+       DAG.isKnownNeverZeroFloat(Node->getOperand(0)) ||
+       DAG.isKnownNeverZeroFloat(Node->getOperand(1)))) {
     unsigned IEEE2018Op =
         Node->getOpcode() == ISD::FMINNUM ? ISD::FMINIMUM : ISD::FMAXIMUM;
-    if (isOperationLegalOrCustom(IEEE2018Op, VT)) {
+    if (isOperationLegalOrCustom(IEEE2018Op, VT))
       return DAG.getNode(IEEE2018Op, dl, VT, Node->getOperand(0),
                          Node->getOperand(1), Node->getFlags());
-    }
   }
 
   if (SDValue SelCC = createSelectForFMINNUM_FMAXNUM(Node, DAG))
