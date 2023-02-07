@@ -14,7 +14,7 @@
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
-#include "src/__support/cpu_features.h"
+#include "src/__support/macros/cpu_features.h"
 
 #include <errno.h>
 

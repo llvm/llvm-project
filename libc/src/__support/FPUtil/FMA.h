@@ -10,8 +10,8 @@
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_FMA_H
 
 #include "src/__support/common.h"
-#include "src/__support/cpu_features.h"
 #include "src/__support/macros/architectures.h"
+#include "src/__support/macros/cpu_features.h"
 
 #if defined(LIBC_TARGET_HAS_FMA)
 
