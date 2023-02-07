@@ -37,15 +37,6 @@ public:
   /// Invoked when a fix is suggested against a variable.
   virtual void handleFixableVariable(const VarDecl *Variable,
                                      FixItList &&List) = 0;
-
-  /// Returns the text indicating that the user needs to provide input there:
-  virtual std::string
-  getUserFillPlaceHolder(StringRef HintTextToUser = "placeholder") {
-    std::string s = std::string("<# ");
-    s += HintTextToUser;
-    s += " #>";
-    return s;
-  }
 };
 
 // This function invokes the analysis and allows the caller to react to it
