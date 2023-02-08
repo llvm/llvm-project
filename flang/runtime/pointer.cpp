@@ -60,6 +60,13 @@ void RTNAME(PointerApplyMold)(
   pointer.set_base_addr(nullptr);
   pointer.raw().attribute = CFI_attribute_pointer;
   pointer.raw().rank = rank;
+  if (auto *pointerAddendum{pointer.Addendum()}) {
+    if (const auto *moldAddendum{mold.Addendum()}) {
+      if (const auto *derived{moldAddendum->derivedType()}) {
+        pointerAddendum->set_derivedType(derived);
+      }
+    }
+  }
 }
 
 void RTNAME(PointerAssociateScalar)(Descriptor &pointer, void *target) {
