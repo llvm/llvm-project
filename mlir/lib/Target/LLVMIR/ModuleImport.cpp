@@ -16,6 +16,7 @@
 
 #include "AttrKindDetail.h"
 #include "DebugImporter.h"
+#include "LoopAnnotationImporter.h"
 
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -241,7 +242,8 @@ ModuleImport::ModuleImport(ModuleOp mlirModule,
       mlirModule(mlirModule), llvmModule(std::move(llvmModule)),
       iface(mlirModule->getContext()),
       typeTranslator(*mlirModule->getContext()),
-      debugImporter(std::make_unique<DebugImporter>(mlirModule)) {
+      debugImporter(std::make_unique<DebugImporter>(mlirModule)),
+      loopAnnotationImporter(std::make_unique<LoopAnnotationImporter>(*this)) {
   builder.setInsertionPointToStart(mlirModule.getBody());
 }
 
@@ -1569,6 +1571,29 @@ LogicalResult ModuleImport::processBasicBlock(llvm::BasicBlock *bb,
     }
   }
   return success();
+}
+
+FailureOr<SmallVector<SymbolRefAttr>>
+ModuleImport::lookupAccessGroupAttrs(const llvm::MDNode *node) const {
+  // An access group node is either a single access group or an access group
+  // list.
+  SmallVector<SymbolRefAttr> accessGroups;
+  if (!node->getNumOperands())
+    accessGroups.push_back(accessGroupMapping.lookup(node));
+  for (const llvm::MDOperand &operand : node->operands()) {
+    auto *node = cast<llvm::MDNode>(operand.get());
+    accessGroups.push_back(accessGroupMapping.lookup(node));
+  }
+  // Exit if one of the access group node lookups failed.
+  if (llvm::is_contained(accessGroups, nullptr))
+    return failure();
+  return accessGroups;
+}
+
+LoopAnnotationAttr
+ModuleImport::translateLoopAnnotationAttr(const llvm::MDNode *node,
+                                          Location loc) const {
+  return loopAnnotationImporter->translate(node, loc);
 }
 
 OwningOpRef<ModuleOp>
