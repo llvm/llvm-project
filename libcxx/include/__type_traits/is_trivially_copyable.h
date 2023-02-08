@@ -11,6 +11,7 @@
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
+#include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -25,6 +26,11 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_trivially_copyable
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr bool is_trivially_copyable_v = __is_trivially_copyable(_Tp);
+#endif
+
+#if _LIBCPP_STD_VER >= 20
+template <class _Tp>
+inline constexpr bool __is_cheap_to_copy = is_trivially_copyable_v<_Tp> && sizeof(_Tp) <= sizeof(std::intmax_t);
 #endif
 
 _LIBCPP_END_NAMESPACE_STD
