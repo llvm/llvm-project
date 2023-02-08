@@ -84,18 +84,18 @@
 // CHECK-NEXT:    "isIncomplete": false,
 // CHECK-NEXT:    "items": [
 // CHECK-NEXT:      {
-// CHECK-NEXT:        "detail": "arg #0: i32",
-// CHECK-NEXT:        "insertText": "arg",
-// CHECK-NEXT:        "insertTextFormat": 1,
-// CHECK-NEXT:        "kind": 6,
-// CHECK-NEXT:        "label": "%arg"
-// CHECK-NEXT:      },
-// CHECK-NEXT:      {
 // CHECK-NEXT:        "detail": "builtin.unrealized_conversion_cast: !pdl.value",
 // CHECK-NEXT:        "insertText": "cast",
 // CHECK-NEXT:        "insertTextFormat": 1,
 // CHECK-NEXT:        "kind": 6,
 // CHECK-NEXT:        "label": "%cast"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "detail": "arg #0: i32",
+// CHECK-NEXT:        "insertText": "arg",
+// CHECK-NEXT:        "insertTextFormat": 1,
+// CHECK-NEXT:        "kind": 6,
+// CHECK-NEXT:        "label": "%arg"
 // CHECK-NEXT:      }
 // CHECK:         ]
 // CHECK-NEXT:  }
