@@ -2753,7 +2753,7 @@ static bool CheckAtomicDefineAndRef(FoldingContext &context,
 
 // Applies any semantic checks peculiar to an intrinsic.
 // TODO: Move the rest of these checks to Semantics/check-call.cpp, which is
-// where ASSOCIATED() is now validated.
+// where ASSOCIATED() and TRANSFER() are now validated.
 static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
   bool ok{true};
   const std::string &name{call.specificIntrinsic.name};
@@ -2925,44 +2925,6 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
             ok = false;
             context.messages().Say(at,
                 "If either argument of the OPERATION= procedure of REDUCE() has the ASYNCHRONOUS, VOLATILE, or TARGET attribute, both must have that attribute"_err_en_US);
-          }
-        }
-      }
-    }
-  } else if (name == "transfer") { // 16.9.193
-    if (call.arguments.size() >= 2) {
-      auto source{characteristics::TypeAndShape::Characterize(
-          call.arguments[0], context)};
-      auto mold{characteristics::TypeAndShape::Characterize(
-          call.arguments[1], context)};
-      if (source && mold && mold->Rank() > 0 &&
-          evaluate::ToInt64(
-              evaluate::Fold(
-                  context, mold->MeasureElementSizeInBytes(context, false)))
-                  .value_or(1) == 0) {
-        if (auto sourceSize{evaluate::ToInt64(evaluate::Fold(
-                context, source->MeasureSizeInBytes(context)))}) {
-          if (*sourceSize > 0) {
-            context.messages().Say(
-                "Element size of MOLD= array may not be zero when SOURCE= is not empty"_err_en_US);
-            ok = false;
-          }
-        } else {
-          context.messages().Say(
-              "Element size of MOLD= array may not be zero unless SOURCE= is empty"_warn_en_US);
-        }
-      }
-      if (call.arguments.size() > 2) {
-        if (const Symbol *whole{
-                UnwrapWholeSymbolOrComponentDataRef(call.arguments[2])}) {
-          if (IsOptional(*whole)) {
-            context.messages().Say(
-                "SIZE= argument may not be the optional dummy argument '%s'"_err_en_US,
-                whole->name());
-            ok = false;
-          } else if (IsAllocatableOrPointer(*whole)) {
-            context.messages().Say(
-                "SIZE= argument that is allocatable or pointer must be present at execution; parenthesize to silence this warning"_warn_en_US);
           }
         }
       }
