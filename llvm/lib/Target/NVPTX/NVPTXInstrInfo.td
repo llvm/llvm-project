@@ -3063,7 +3063,26 @@ let hasSideEffects = false in {
                              (ins Float64Regs:$s),
                              "mov.b64 \t{{$d1, $d2}}, $s;", []>;
 
+  def I32toI16H  : NVPTXInst<(outs Int16Regs:$high),
+                             (ins Int32Regs:$s),
+                             "{{ .reg .b16 tmp; mov.b32 {tmp, $high}, $s; }}",
+                             []>;
+  def I64toI32H  : NVPTXInst<(outs Int32Regs:$high),
+                             (ins Int64Regs:$s),
+                             "{{ .reg .b32 tmp; mov.b64 {tmp, $high}, $s; }}",
+                             []>;
 }
+
+// Using partial vectorized move produces better SASS code for extraction of
+// upper/lower parts of an integer.
+def : Pat<(i16 (trunc (srl Int32Regs:$s, (i32 16)))),
+          (I32toI16H Int32Regs:$s)>;
+def : Pat<(i16 (trunc (sra Int32Regs:$s, (i32 16)))),
+          (I32toI16H Int32Regs:$s)>;
+def : Pat<(i32 (trunc (srl Int64Regs:$s, (i32 32)))),
+          (I64toI32H Int64Regs:$s)>;
+def : Pat<(i32 (trunc (sra Int64Regs:$s, (i32 32)))),
+          (I64toI32H Int64Regs:$s)>;
 
 let hasSideEffects = false in {
   // Extract element of f16x2 register. PTX does not provide any way
