@@ -1,8 +1,7 @@
 // RUN: rm -rf %t.mcp %t
 // RUN: echo %S > %t.result
 //
-// RUN: c-index-test core --scan-deps %S -output-dir=%t \
-// RUN:     -cas-path %t/cas -action-cache-path %t/cache \
+// RUN: c-index-test core --scan-deps %S -output-dir=%t -cas-path %t/cas \
 // RUN:  -- %clang -c -I %S/Inputs/module \
 // RUN:     -fmodules -fmodules-cache-path=%t.mcp \
 // RUN:     -o FoE.o -x objective-c %s >> %t.result
