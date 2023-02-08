@@ -117,13 +117,6 @@ Pass *createLoopExtractorPass();
 Pass *createSingleLoopExtractorPass();
 
 //===----------------------------------------------------------------------===//
-/// createReversePostOrderFunctionAttrsPass - This pass walks SCCs of the call
-/// graph in RPO to deduce and propagate function attributes. Currently it
-/// only handles synthesizing norecurse attributes.
-///
-Pass *createReversePostOrderFunctionAttrsPass();
-
-//===----------------------------------------------------------------------===//
 /// createBarrierNoopPass - This pass is purely a module pass barrier in a pass
 /// manager.
 ModulePass *createBarrierNoopPass();
