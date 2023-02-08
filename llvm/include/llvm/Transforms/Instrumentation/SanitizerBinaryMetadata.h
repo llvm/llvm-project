@@ -30,11 +30,11 @@ inline constexpr int kSanitizerBinaryMetadataAtomicsBit = 0;
 inline constexpr int kSanitizerBinaryMetadataUARBit = 1;
 inline constexpr int kSanitizerBinaryMetadataUARHasSizeBit = 2;
 
-inline constexpr uint32_t kSanitizerBinaryMetadataAtomics =
+inline constexpr uint64_t kSanitizerBinaryMetadataAtomics =
     1 << kSanitizerBinaryMetadataAtomicsBit;
-inline constexpr uint32_t kSanitizerBinaryMetadataUAR =
+inline constexpr uint64_t kSanitizerBinaryMetadataUAR =
     1 << kSanitizerBinaryMetadataUARBit;
-inline constexpr uint32_t kSanitizerBinaryMetadataUARHasSize =
+inline constexpr uint64_t kSanitizerBinaryMetadataUARHasSize =
     1 << kSanitizerBinaryMetadataUARHasSizeBit;
 
 inline constexpr char kSanitizerBinaryMetadataCoveredSection[] =

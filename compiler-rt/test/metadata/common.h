@@ -25,6 +25,20 @@ template <typename T> T consume(const char *&pos, const char *end) {
   return v;
 }
 
+uint64_t consume_uleb128(const char *&pos, const char *end) {
+  uint64_t val = 0;
+  int shift = 0;
+  uint8_t cur;
+  do {
+    cur = *pos++;
+    val |= uint64_t{cur & 0x7fu} << shift;
+    shift += 7;
+  } while (cur & 0x80);
+  assert(shift < 64);
+  assert(pos <= end);
+  return val;
+}
+
 constexpr uint32_t kSanitizerBinaryMetadataUARHasSize = 1 << 2;
 
 uint32_t meta_version;
@@ -45,13 +59,13 @@ void __sanitizer_metadata_covered_add(uint32_t version, const char *start,
     const auto base = reinterpret_cast<uintptr_t>(pos);
     const intptr_t offset = offset_ptr_sized ? consume<intptr_t>(pos, end)
                                              : consume<int32_t>(pos, end);
-    [[maybe_unused]] const uint32_t size = consume<uint32_t>(pos, end);
-    const uint32_t features = consume<uint8_t>(pos, end);
-    uint32_t stack_args = 0;
+    [[maybe_unused]] const uint64_t size = consume_uleb128(pos, end);
+    const uint64_t features = consume_uleb128(pos, end);
+    uint64_t stack_args = 0;
     if (features & kSanitizerBinaryMetadataUARHasSize)
-      stack_args = consume<uint32_t>(pos, end);
+      stack_args = consume_uleb128(pos, end);
     if (const char *name = symbolize(base + offset))
-      printf("%s: features=%x stack_args=%u\n", name, features, stack_args);
+      printf("%s: features=%lx stack_args=%lu\n", name, features, stack_args);
   }
   meta_version = version;
   meta_start = start;

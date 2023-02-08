@@ -52,7 +52,7 @@ bool MachineSanitizerBinaryMetadata::runOnMachineFunction(MachineFunction &MF) {
   if (!MD)
     return false;
   const auto &Section = *cast<MDString>(MD->getOperand(0));
-  if (!Section.getString().equals(kSanitizerBinaryMetadataCoveredSection))
+  if (!Section.getString().startswith(kSanitizerBinaryMetadataCoveredSection))
     return false;
   auto &AuxMDs = *cast<MDTuple>(MD->getOperand(1));
   // Assume it currently only has features.

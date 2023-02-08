@@ -31,6 +31,6 @@ int atomics() {
 // CHECK-LABEL: __sanitizer_metadata_covered.module_dtor
 // CHECK: call void @__sanitizer_metadata_covered_del(i32 2, ptr @__start_sanmd_covered, ptr @__stop_sanmd_covered)
 
-// ATOMICS: ![[ATOMICS_COVERED]] = !{!"sanmd_covered", ![[ATOMICS_COVERED_AUX:[0-9]+]]}
-// ATOMICS: ![[ATOMICS_COVERED_AUX]] = !{i8 1}
-// ATOMICS: ![[ATOMIC_OP]] = !{!"sanmd_atomics"}
+// ATOMICS: ![[ATOMICS_COVERED]] = !{!"sanmd_covered!C", ![[ATOMICS_COVERED_AUX:[0-9]+]]}
+// ATOMICS: ![[ATOMICS_COVERED_AUX]] = !{i64 1}
+// ATOMICS: ![[ATOMIC_OP]] = !{!"sanmd_atomics!C"}
