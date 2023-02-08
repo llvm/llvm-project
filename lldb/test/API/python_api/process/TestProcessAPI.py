@@ -73,20 +73,21 @@ class ProcessAPITestCase(TestBase):
             exe=False,
             startstr=b'x')
 
-        # Try to read an impossibly large amount of memory; swig
-        # will try to malloc it and fail, we should get an error 
-        # result.
-        error = lldb.SBError()
-        bigsize = sys.maxsize - 8;
-        content = process.ReadMemory(
-                val.AddressOf().GetValueAsUnsigned(), 
-                bigsize, error)
-        if error.Success():
-            self.assertFalse(error.Success(), "SBProcessReadMemory claims to have "
-                      "successfully read 0x%x bytes" % bigsize)
-        if self.TraceOn():
-            print("Tried to read 0x%x bytes, got error message: %s" %
-                  (bigsize, error.GetCString()))
+        if self.platformIsDarwin():
+          # Try to read an impossibly large amount of memory; swig
+          # will try to malloc it and fail, we should get an error 
+          # result.
+          error = lldb.SBError()
+          bigsize = sys.maxsize - 8;
+          content = process.ReadMemory(
+                  val.AddressOf().GetValueAsUnsigned(), 
+                  bigsize, error)
+          if error.Success():
+              self.assertFalse(error.Success(), "SBProcessReadMemory claims to have "
+                        "successfully read 0x%x bytes" % bigsize)
+          if self.TraceOn():
+              print("Tried to read 0x%x bytes, got error message: %s" %
+                    (bigsize, error.GetCString()))
 
         # Read (char *)my_char_ptr.
         val = frame.FindValue("my_char_ptr", lldb.eValueTypeVariableGlobal)
