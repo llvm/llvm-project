@@ -1811,54 +1811,6 @@ bool VectorCombine::run() {
   return MadeChange;
 }
 
-// Pass manager boilerplate below here.
-
-namespace {
-class VectorCombineLegacyPass : public FunctionPass {
-public:
-  static char ID;
-  VectorCombineLegacyPass() : FunctionPass(ID) {
-    initializeVectorCombineLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.addRequired<AAResultsWrapperPass>();
-    AU.setPreservesCFG();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addPreserved<GlobalsAAWrapperPass>();
-    AU.addPreserved<AAResultsWrapperPass>();
-    AU.addPreserved<BasicAAWrapperPass>();
-    FunctionPass::getAnalysisUsage(AU);
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
-      return false;
-    auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-    auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
-    VectorCombine Combiner(F, TTI, DT, AA, AC, false);
-    return Combiner.run();
-  }
-};
-} // namespace
-
-char VectorCombineLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(VectorCombineLegacyPass, "vector-combine",
-                      "Optimize scalar/vector ops", false,
-                      false)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_END(VectorCombineLegacyPass, "vector-combine",
-                    "Optimize scalar/vector ops", false, false)
-Pass *llvm::createVectorCombinePass() {
-  return new VectorCombineLegacyPass();
-}
-
 PreservedAnalyses VectorCombinePass::run(Function &F,
                                          FunctionAnalysisManager &FAM) {
   auto &AC = FAM.getResult<AssumptionAnalysis>(F);

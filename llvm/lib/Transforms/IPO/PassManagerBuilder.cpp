@@ -215,7 +215,6 @@ void PassManagerBuilder::addVectorPasses(legacy::PassManagerBase &PM,
     // across the loop nests.
     PM.add(createLoopUnrollPass(OptLevel, DisableUnrollLoops,
                                 ForgetAllSCEVInLoopUnroll));
-    PM.add(createWarnMissedTransformationsPass());
   }
 
   if (!IsFullLTO) {
@@ -254,9 +253,6 @@ void PassManagerBuilder::addVectorPasses(legacy::PassManagerBase &PM,
     PM.add(createSLPVectorizerPass());
   }
 
-  // Enhance/cleanup vector code.
-  PM.add(createVectorCombinePass());
-
   if (!IsFullLTO) {
     PM.add(createInstructionCombiningPass());
 
@@ -275,8 +271,6 @@ void PassManagerBuilder::addVectorPasses(legacy::PassManagerBase &PM,
       PM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap,
                             /*AllowSpeculation=*/true));
     }
-
-    PM.add(createWarnMissedTransformationsPass());
   }
 
   // After vectorization and unrolling, assume intrinsics may tell us more
@@ -409,9 +403,6 @@ void PassManagerBuilder::populateModulePassManager(
   MPM.add(createLoopDistributePass());
 
   addVectorPasses(MPM, /* IsFullLTO */ false);
-
-  // FIXME: We shouldn't bother with this anymore.
-  MPM.add(createStripDeadPrototypesPass()); // Get rid of dead prototypes
 
   // GlobalOpt already deletes dead functions and globals, at -O2 try a
   // late pass of GlobalDCE.  It is capable of deleting dead cycles.

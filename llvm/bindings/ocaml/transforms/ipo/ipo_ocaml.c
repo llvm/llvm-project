@@ -67,20 +67,3 @@ value llvm_add_ipsccp(LLVMPassManagerRef PM) {
   return Val_unit;
 }
 
-/* [`Module] Llvm.PassManager.t -> all_but_main:bool -> unit */
-value llvm_add_internalize(LLVMPassManagerRef PM, value AllButMain) {
-  LLVMAddInternalizePass(PM, Bool_val(AllButMain));
-  return Val_unit;
-}
-
-/* [`Module] Llvm.PassManager.t -> unit */
-value llvm_add_strip_dead_prototypes(LLVMPassManagerRef PM) {
-  LLVMAddStripDeadPrototypesPass(PM);
-  return Val_unit;
-}
-
-/* [`Module] Llvm.PassManager.t -> unit */
-value llvm_add_strip_symbols(LLVMPassManagerRef PM) {
-  LLVMAddStripSymbolsPass(PM);
-  return Val_unit;
-}
