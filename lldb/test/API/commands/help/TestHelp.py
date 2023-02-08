@@ -268,7 +268,7 @@ class HelpCommandTestCase(TestBase):
         """Test that we put a break between the usage and the options help lines,
            and between the options themselves."""
         self.expect("help memory read", substrs=[
-                    "[<address-expression>]\n\n       --bind-generic-types <none>",
+                    "[<address-expression>]\n\n       -A ( --show-all-children )",
                     # Starts with the end of the show-all-children line
                     "to show.\n\n       -D"])
 
