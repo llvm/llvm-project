@@ -2249,5 +2249,6 @@ cc_library(
         ":lex",
         "//llvm:Option",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
