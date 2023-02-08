@@ -72,7 +72,7 @@ static LogicalResult convertIntrinsicImpl(OpBuilder &odsBuilder,
 static ArrayRef<unsigned> getSupportedMetadataImpl() {
   static const SmallVector<unsigned> convertibleMetadata = {
       llvm::LLVMContext::MD_prof, llvm::LLVMContext::MD_tbaa,
-      llvm::LLVMContext::MD_access_group};
+      llvm::LLVMContext::MD_access_group, llvm::LLVMContext::MD_loop};
   return convertibleMetadata;
 }
 
@@ -141,28 +141,38 @@ static LogicalResult setTBAAAttr(const llvm::MDNode *node, Operation *op,
   return success();
 }
 
-/// Searches the symbol references pointing to the access group operations that
-/// map to the access group nodes starting from the access group metadata
+/// Looks up all the symbol references pointing to the access group operations
+/// that map to the access group nodes starting from the access group metadata
 /// `node`, and attaches all of them to the imported operation if the lookups
 /// succeed. Returns failure otherwise.
 static LogicalResult setAccessGroupAttr(const llvm::MDNode *node, Operation *op,
                                         LLVM::ModuleImport &moduleImport) {
-  // An access group node is either access group or an access group list.
-  SmallVector<Attribute> accessGroups;
-  if (!node->getNumOperands())
-    accessGroups.push_back(moduleImport.lookupAccessGroupAttr(node));
-  for (const llvm::MDOperand &operand : node->operands()) {
-    auto *node = cast<llvm::MDNode>(operand.get());
-    accessGroups.push_back(moduleImport.lookupAccessGroupAttr(node));
-  }
-  // Exit if one of the access group node lookups failed.
-  if (llvm::is_contained(accessGroups, nullptr))
+  FailureOr<SmallVector<SymbolRefAttr>> accessGroups =
+      moduleImport.lookupAccessGroupAttrs(node);
+  if (failed(accessGroups))
     return failure();
 
+  SmallVector<Attribute> accessGroupAttrs(accessGroups->begin(),
+                                          accessGroups->end());
   op->setAttr(LLVMDialect::getAccessGroupsAttrName(),
-              ArrayAttr::get(op->getContext(), accessGroups));
+              ArrayAttr::get(op->getContext(), accessGroupAttrs));
   return success();
 }
+
+/// Converts the given loop metadata node to an MLIR loop annotation attribute
+/// and attaches it to the imported operation if the translation succeeds.
+/// Returns failure otherwise.
+static LogicalResult setLoopAttr(const llvm::MDNode *node, Operation *op,
+                                 LLVM::ModuleImport &moduleImport) {
+  LoopAnnotationAttr attr =
+      moduleImport.translateLoopAnnotationAttr(node, op->getLoc());
+  if (!attr)
+    return failure();
+
+  op->setAttr(LLVMDialect::getLoopAttrName(), attr);
+  return success();
+}
+
 namespace {
 
 /// Implementation of the dialect interface that converts operations belonging
@@ -191,6 +201,8 @@ public:
       return setTBAAAttr(node, op, moduleImport);
     if (kind == llvm::LLVMContext::MD_access_group)
       return setAccessGroupAttr(node, op, moduleImport);
+    if (kind == llvm::LLVMContext::MD_loop)
+      return setLoopAttr(node, op, moduleImport);
 
     // A handler for a supported metadata kind is missing.
     llvm_unreachable("unknown metadata type");
