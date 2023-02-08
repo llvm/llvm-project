@@ -14,6 +14,8 @@
 #include <string>
 
 namespace mlir {
+class DominanceInfo;
+
 namespace bufferization {
 
 struct OneShotBufferizationOptions;
@@ -62,6 +64,12 @@ public:
     return static_cast<const OneShotBufferizationOptions &>(
         AnalysisState::getOptions());
   }
+
+  /// Analyze the given op and its nested ops.
+  LogicalResult analyzeOp(Operation *op, const DominanceInfo &domInfo);
+
+  /// Analyze a single op (without nested ops).
+  LogicalResult analyzeSingleOp(Operation *op, const DominanceInfo &domInfo);
 
   /// Apply `fun` to all the members of the equivalence class of `v`.
   void applyOnEquivalenceClass(Value v, function_ref<void(Value)> fun) const;
