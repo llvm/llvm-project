@@ -694,6 +694,37 @@ groupFixablesByVar(FixableGadgetList &&AllFixableOperations) {
   return FixablesForUnsafeVars;
 }
 
+bool clang::internal::anyConflict(
+    const SmallVectorImpl<FixItHint> &FixIts, const SourceManager &SM) {
+  // A simple interval overlap detection algorithm.  Sorts all ranges by their
+  // begin location then finds the first overlap in one pass.
+  std::vector<const FixItHint *> All; // a copy of `FixIts`
+
+  for (const FixItHint &H : FixIts)
+    All.push_back(&H);
+  std::sort(All.begin(), All.end(),
+            [&SM](const FixItHint *H1, const FixItHint *H2) {
+              return SM.isBeforeInTranslationUnit(H1->RemoveRange.getBegin(),
+                                                  H2->RemoveRange.getBegin());
+            });
+
+  const FixItHint *CurrHint = nullptr;
+
+  for (const FixItHint *Hint : All) {
+    if (!CurrHint ||
+        SM.isBeforeInTranslationUnit(CurrHint->RemoveRange.getEnd(),
+                                     Hint->RemoveRange.getBegin())) {
+      // Either to initialize `CurrHint` or `CurrHint` does not
+      // overlap with `Hint`:
+      CurrHint = Hint;
+    } else
+      // In case `Hint` overlaps the `CurrHint`, we found at least one
+      // conflict:
+      return true;
+  }
+  return false;
+}
+
 std::optional<FixItList>
 ULCArraySubscriptGadget::getFixits(const Strategy &S) const {
   if (const auto *DRE = dyn_cast<DeclRefExpr>(Node->getBase()->IgnoreImpCasts()))
@@ -948,8 +979,12 @@ getFixIts(FixableGadgetSets &FixablesForUnsafeVars, const Strategy &S,
     else
       FixItsForVariable[VD].insert(FixItsForVariable[VD].end(),
                                    FixItsForVD.begin(), FixItsForVD.end());
-    // Fix-it shall not overlap with macros or/and templates:
-    if (overlapWithMacro(FixItsForVariable[VD])) {
+    // We conservatively discard fix-its of a variable if
+    // a fix-it overlaps with macros; or
+    // a fix-it conflicts with another one
+    if (overlapWithMacro(FixItsForVariable[VD]) ||
+        clang::internal::anyConflict(FixItsForVariable[VD],
+                                     Ctx.getSourceManager())) {      
       FixItsForVariable.erase(VD);
     }
   }
