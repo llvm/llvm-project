@@ -43,6 +43,17 @@ class THVdotALUrVX<bits<6> funct6, RISCVVFormat opv, string opcodestr>
                    opcodestr, "$vd, $rs1, $vs2$vm">;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
+let Predicates = [HasVendorXTHeadBa], DecoderNamespace = "THeadBa",
+  hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class THShiftALU_rri<bits<3> funct3, string opcodestr>
+    : RVInstR<0, funct3, OPC_CUSTOM_0, (outs GPR:$rd),
+              (ins GPR:$rs1, GPR:$rs2, uimm2:$uimm2),
+	      opcodestr, "$rd, $rs1, $rs2, $uimm2"> {
+  bits<2> uimm2;
+  let Inst{31-27} = 0;
+  let Inst{26-25} = uimm2;
+}
+
 //===----------------------------------------------------------------------===//
 // Combination of instruction classes.
 // Use these multiclasses to define instructions more easily.
@@ -59,6 +70,11 @@ multiclass THVdotVMAQA<string opcodestr, bits<6> funct6> {
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
+let Predicates = [HasVendorXTHeadBa] in {
+def TH_ADDSL : THShiftALU_rri<0b001, "th.addsl">,
+               Sched<[WriteSHXADD, ReadSHXADD, ReadSHXADD]>;
+} // Predicates = [HasVendorXTHeadBa]
+
 let Predicates = [HasVendorXTHeadVdot],
     Constraints = "@earlyclobber $vd",
     RVVConstraint = WidenV in {
@@ -134,6 +150,80 @@ multiclass VPatTernaryVMAQA_VV_VX<string intrinsic, string instruction,
 //===----------------------------------------------------------------------===//
 // Pseudo-instructions and codegen patterns
 //===----------------------------------------------------------------------===//
+let Predicates = [HasVendorXTHeadBa] in {
+def : Pat<(add GPR:$rs1, (shl GPR:$rs2, uimm2:$uimm2)),
+          (TH_ADDSL GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
+
+// Reuse complex patterns from StdExtZba
+def : Pat<(add sh1add_op:$rs1, non_imm12:$rs2),
+          (TH_ADDSL GPR:$rs2, sh1add_op:$rs1, 1)>;
+def : Pat<(add sh2add_op:$rs1, non_imm12:$rs2),
+          (TH_ADDSL GPR:$rs2, sh2add_op:$rs1, 2)>;
+def : Pat<(add sh3add_op:$rs1, non_imm12:$rs2),
+          (TH_ADDSL GPR:$rs2, sh3add_op:$rs1, 3)>;
+
+def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 6)), GPR:$rs2),
+          (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 1), 1)>;
+def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 10)), GPR:$rs2),
+          (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 2), 1)>;
+def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 18)), GPR:$rs2),
+          (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 3), 1)>;
+def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 12)), GPR:$rs2),
+          (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 1), 2)>;
+def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 20)), GPR:$rs2),
+          (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 2), 2)>;
+def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 36)), GPR:$rs2),
+          (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 3), 2)>;
+def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 24)), GPR:$rs2),
+          (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 1), 3)>;
+def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 40)), GPR:$rs2),
+          (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 2), 3)>;
+def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 72)), GPR:$rs2),
+          (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 3), 3)>;
+
+def : Pat<(add GPR:$r, CSImm12MulBy4:$i),
+          (TH_ADDSL GPR:$r, (ADDI X0, (SimmShiftRightBy2XForm CSImm12MulBy4:$i)), 2)>;
+def : Pat<(add GPR:$r, CSImm12MulBy8:$i),
+          (TH_ADDSL GPR:$r, (ADDI X0, (SimmShiftRightBy3XForm CSImm12MulBy8:$i)), 3)>;
+
+def : Pat<(mul GPR:$r, C3LeftShift:$i),
+          (SLLI (TH_ADDSL GPR:$r, GPR:$r, 1),
+                (TrailingZeros C3LeftShift:$i))>;
+def : Pat<(mul GPR:$r, C5LeftShift:$i),
+          (SLLI (TH_ADDSL GPR:$r, GPR:$r, 2),
+                (TrailingZeros C5LeftShift:$i))>;
+def : Pat<(mul GPR:$r, C9LeftShift:$i),
+          (SLLI (TH_ADDSL GPR:$r, GPR:$r, 3),
+                (TrailingZeros C9LeftShift:$i))>;
+
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 11)),
+	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 2), 1)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 19)),
+	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 3), 1)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 13)),
+	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 1), 2)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 21)),
+	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 2), 2)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 37)),
+	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 3), 2)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 25)),
+	  (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 2), (TH_ADDSL GPR:$r, GPR:$r, 2), 2)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 41)),
+	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 2), 3)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 73)),
+	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 3), 3)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 27)),
+	  (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 3), (TH_ADDSL GPR:$r, GPR:$r, 3), 1)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 45)),
+	  (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 3), (TH_ADDSL GPR:$r, GPR:$r, 3), 2)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 81)),
+	  (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 3), (TH_ADDSL GPR:$r, GPR:$r, 3), 3)>;
+
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 200)),
+	  (SLLI (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 2),
+		       (TH_ADDSL GPR:$r, GPR:$r, 2), 2), 3)>;
+} // Predicates = [HasVendorXTHeadBa]
+
 defm PseudoTHVdotVMAQA      : VPseudoVMAQA_VV_VX;
 defm PseudoTHVdotVMAQAU     : VPseudoVMAQA_VV_VX;
 defm PseudoTHVdotVMAQASU    : VPseudoVMAQA_VV_VX;
