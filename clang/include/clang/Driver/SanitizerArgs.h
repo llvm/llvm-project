@@ -37,6 +37,7 @@ class SanitizerArgs {
   bool MsanParamRetval = true;
   bool CfiCrossDso = false;
   bool CfiICallGeneralizePointers = false;
+  bool CfiICallNormalizeIntegers = false;
   bool CfiCanonicalJumpTables = false;
   int AsanFieldPadding = 0;
   bool SharedRuntime = false;
