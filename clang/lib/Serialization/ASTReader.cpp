@@ -252,6 +252,11 @@ bool ChainedASTReaderListener::visitInputFile(StringRef Filename,
                                        isExplicitModule);
   return Continue;
 }
+bool ChainedASTReaderListener::readCASFileSystemRootID(StringRef RootID,
+                                                       bool Complain) {
+  return First->readCASFileSystemRootID(RootID, Complain) ||
+         Second->readCASFileSystemRootID(RootID, Complain);
+}
 
 bool ChainedASTReaderListener::readModuleCacheKey(StringRef ModuleName,
                                                   StringRef Filename,
@@ -2972,6 +2977,12 @@ ASTReader::ReadControlBlock(ModuleFile &F,
 
     case CASFS_ROOT_ID:
       F.CASFileSystemRootID = Blob.str();
+      if (Listener) {
+        bool Complain =
+            !canRecoverFromOutOfDate(F.FileName, ClientLoadCapabilities);
+        if (Listener->readCASFileSystemRootID(F.CASFileSystemRootID, Complain))
+          return OutOfDate;
+      }
       break;
     }
   }
