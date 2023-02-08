@@ -802,8 +802,13 @@ size_t SBProcess::ReadMemory(addr_t addr, void *dst, size_t dst_len,
                              SBError &sb_error) {
   LLDB_INSTRUMENT_VA(this, addr, dst, dst_len, sb_error);
 
-  size_t bytes_read = 0;
+  if (!dst) {
+    sb_error.SetErrorStringWithFormat(
+        "no buffer provided to read %zu bytes into", dst_len);
+    return 0;
+  }
 
+  size_t bytes_read = 0;
   ProcessSP process_sp(GetSP());
 
 
