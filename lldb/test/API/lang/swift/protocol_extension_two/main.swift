@@ -10,8 +10,8 @@ extension Patatino where T == Winky {
   }
 
   func f() {
-    return //%self.expect('p self.baciotto', substrs=["(Int) $R0 = 0"])
-           //%self.expect('p self', substrs=["a.Patatino<a.Winky>"])
+    return //%self.expect('expression self.baciotto', substrs=["(Int) $R0 = 0"])
+           //%self.expect('expression self', substrs=["a.Patatino<a.Winky>"])
   }
 }
 

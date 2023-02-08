@@ -28,10 +28,10 @@ class TestSwiftPrivateDiscriminator(lldbtest.TestBase):
         self.expect("e --bind-generic-types true -- self", error=True, substrs=["Hint"])
         # This should work because expression evaluation automatically falls back
         # to not binding generic parameters.
-        self.expect("p self", substrs=['Generic', '<T>', 'n', '23'])
+        self.expect("expression self", substrs=['Generic', '<T>', 'n', '23'])
 
         process.Continue()
         # This should work.
         self.expect("frame var -d run -- visible",
                     substrs=['Generic.Visible', 'n', '42'])
-        self.expect("p visible", substrs=['Generic.Visible', 'n', '42'])
+        self.expect("expression visible", substrs=['Generic.Visible', 'n', '42'])

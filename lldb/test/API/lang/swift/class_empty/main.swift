@@ -17,7 +17,7 @@ class Empty : CustomStringConvertible {
 
 func main() {
   var e = Empty()
-  print(e) //% self.expect("p 1", substrs=['1'])
+  print(e) //% self.expect("expression 1", substrs=['1'])
 }
 
 main()

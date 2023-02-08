@@ -35,7 +35,7 @@ class TestSwiftXcodeSDK(lldbtest.TestBase):
 
         lldbutil.run_to_name_breakpoint(self, 'main')
 
-        self.expect("p 1")
+        self.expect("expression 1")
         self.check_log(log, "MacOSX")
 
     @swiftTest
@@ -54,7 +54,7 @@ class TestSwiftXcodeSDK(lldbtest.TestBase):
 
         lldbutil.run_to_name_breakpoint(self, 'main')
 
-        self.expect("p 1")
+        self.expect("expression 1")
         self.check_log(log, "iPhoneSimulator")
 
     @swiftTest
@@ -74,5 +74,5 @@ class TestSwiftXcodeSDK(lldbtest.TestBase):
 
         lldbutil.run_to_name_breakpoint(self, 'main')
 
-        self.expect("p 1")
+        self.expect("expression 1")
         self.check_log(log, ios_sdk)
