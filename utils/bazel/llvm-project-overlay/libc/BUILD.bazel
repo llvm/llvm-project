@@ -83,6 +83,7 @@ libc_support_library(
         "src/__support/macros/attributes.h",
         "src/__support/macros/cpu_features.h",
     ],
+    deps = [":libc_root"],
 )
 
 libc_support_library(
@@ -729,36 +730,36 @@ libc_support_library(
 
 libc_support_library(
     name = "explogxf",
-    hdrs = ["src/math/generic/explogxf.h"],
     srcs = ["src/math/generic/explogxf.cpp"],
+    hdrs = ["src/math/generic/explogxf.h"],
     deps = [
         ":__support_common",
-        ":__support_fputil_fp_bits",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fma",
-        ":__support_fputil_nearest_integer",
+        ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
         ":__support_fputil_polyeval",
         ":common_constants",
-        ":math_utils",
         ":libc_root",
+        ":math_utils",
     ],
 )
 
 libc_support_library(
     name = "inv_trigf_utils",
-    hdrs = ["src/math/generic/inv_trigf_utils.h"],
     srcs = ["src/math/generic/inv_trigf_utils.cpp"],
+    hdrs = ["src/math/generic/inv_trigf_utils.h"],
     deps = [
         ":__support_common",
-        ":__support_fputil_fp_bits",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fma",
-        ":__support_fputil_nearest_integer",
+        ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
         ":__support_fputil_polyeval",
-        ":math_utils",
         ":libc_root",
+        ":math_utils",
     ],
 )
 

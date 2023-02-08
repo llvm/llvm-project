@@ -12,7 +12,7 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/architectures.h"
 
-#if !defined(LIBC_TARGET_IS_X86_64)
+#if !defined(LIBC_TARGET_ARCH_IS_X86_64)
 #error "Invalid include"
 #endif
 

@@ -39,8 +39,8 @@ We define two kinds of macros: **code defined** and **build defined** macros.
 
    * **Properties** - Build related properties like used compiler, target
      architecture or enabled CPU features defined by introspecting compiler
-     defined preprocessor defininitions. e.g., ``LIBC_TARGET_IS_ARM``,
-     ``LIBC_TARGET_HAS_AVX2``, ``LIBC_COMPILER_IS_CLANG``, ...
+     defined preprocessor defininitions. e.g., ``LIBC_TARGET_ARCH_IS_ARM``,
+     ``LIBC_TARGET_CPU_HAS_AVX2``, ``LIBC_COMPILER_IS_CLANG``, ...
    * **Attributes** - Compiler agnostic attributes or functions to handle
      specific operations. e.g., ``LIBC_INLINE``, ``LIBC_NO_LOOP_UNROLL``,
      ``LIBC_LIKELY``, ``LIBC_INLINE_ASM``.

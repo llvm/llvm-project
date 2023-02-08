@@ -522,6 +522,7 @@ cc_library(
         ":MC",
         ":Object",
         ":Support",
+        ":TargetParser",
     ],
 )
 
@@ -1082,6 +1083,7 @@ cc_library(
         ":Core",
         ":MC",
         ":Support",
+        ":TargetParser",
         ":config",
     ],
 )
@@ -2511,6 +2513,7 @@ cc_library(
         ":OrcShared",
         ":OrcTargetProcess",
         ":Support",
+        ":TargetParser",
         ":config",
     ],
 )
@@ -3360,6 +3363,7 @@ cc_binary(
         ":Option",
         ":Support",
         ":Target",
+        ":TargetParser",
     ],
 )
 
@@ -3522,6 +3526,7 @@ cc_binary(
         ":OrcShared",
         ":OrcTargetProcess",
         ":Support",
+        ":TargetParser",
         ":config",
     ],
 )
@@ -4636,6 +4641,7 @@ cc_binary(
         ":Passes",
         ":Scalar",
         ":Support",
+        ":TargetParser",
         ":TransformUtils",
         ":common_transforms",
         ":config",

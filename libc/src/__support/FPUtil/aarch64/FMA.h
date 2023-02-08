@@ -12,11 +12,11 @@
 #include "src/__support/macros/architectures.h"
 #include "src/__support/macros/cpu_features.h"
 
-#if !defined(LIBC_TARGET_IS_AARCH64)
+#if !defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #error "Invalid include"
 #endif
 
-#if !defined(LIBC_TARGET_HAS_FMA)
+#if !defined(LIBC_TARGET_CPU_HAS_FMA)
 #error "FMA instructions are not supported"
 #endif
 

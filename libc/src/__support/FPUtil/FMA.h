@@ -13,11 +13,11 @@
 #include "src/__support/macros/architectures.h"
 #include "src/__support/macros/cpu_features.h"
 
-#if defined(LIBC_TARGET_HAS_FMA)
+#if defined(LIBC_TARGET_CPU_HAS_FMA)
 
-#if defined(LIBC_TARGET_IS_X86_64)
+#if defined(LIBC_TARGET_ARCH_IS_X86_64)
 #include "x86_64/FMA.h"
-#elif defined(LIBC_TARGET_IS_AARCH64)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #include "aarch64/FMA.h"
 #endif
 

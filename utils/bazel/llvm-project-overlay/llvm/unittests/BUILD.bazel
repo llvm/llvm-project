@@ -275,6 +275,7 @@ cc_test(
         "//llvm:Passes",
         "//llvm:Support",
         "//llvm:Target",
+        "//llvm:TargetParser",
         "//llvm:config",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",

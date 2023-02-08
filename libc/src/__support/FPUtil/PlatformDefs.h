@@ -11,7 +11,7 @@
 
 #include "src/__support/macros/architectures.h"
 
-#if defined(LIBC_TARGET_IS_X86)
+#if defined(LIBC_TARGET_ARCH_IS_X86)
 #define X87_FPU
 #endif
 

@@ -15,7 +15,7 @@
 
 #include "src/__support/macros/architectures.h"
 
-#if defined(LIBC_TARGET_IS_AARCH64)
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64)
 
 #include "src/__support/common.h"
 #include "src/string/memory_utils/op_generic.h"
@@ -174,6 +174,6 @@ template <size_t Size> struct Bcmp {
 
 } // namespace __llvm_libc::aarch64
 
-#endif // LIBC_TARGET_IS_AARCH64
+#endif // LIBC_TARGET_ARCH_IS_AARCH64
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_AARCH64_H

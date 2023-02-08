@@ -16,7 +16,7 @@
 #include <fenv.h>
 
 TEST(LlvmLibcFEnvTest, EnableTest) {
-#if defined(LIBC_TARGET_IS_AARCH64)
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64)
   // Few aarch64 HW implementations do not trap exceptions. We skip this test
   // completely on such HW.
   //
@@ -28,7 +28,7 @@ TEST(LlvmLibcFEnvTest, EnableTest) {
   __llvm_libc::feenableexcept(FE_DIVBYZERO);
   if (__llvm_libc::fegetexcept() == 0)
     return;
-#endif // defined(LIBC_TARGET_IS_AARCH64)
+#endif // defined(LIBC_TARGET_ARCH_IS_AARCH64)
 
   int excepts[] = {FE_DIVBYZERO, FE_INVALID, FE_INEXACT, FE_OVERFLOW,
                    FE_UNDERFLOW};

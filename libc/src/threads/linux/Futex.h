@@ -13,7 +13,8 @@
 
 namespace __llvm_libc {
 
-#if (defined(LIBC_TARGET_IS_AARCH64) || defined(LIBC_TARGET_IS_X86_64))
+#if (defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                   \
+     defined(LIBC_TARGET_ARCH_IS_X86_64))
 // The futex data has to be exactly 4 bytes long. However, we use a uint type
 // here as we do not want to use `uint32_t` type to match the public definitions
 // of types which include a field for a futex word. With public definitions, we

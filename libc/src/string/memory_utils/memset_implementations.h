@@ -28,7 +28,7 @@ inline_memset_embedded_tiny(Ptr dst, uint8_t value, size_t count) {
     generic::Memset<1, 1>::block(dst + offset, value);
 }
 
-#if defined(LIBC_TARGET_IS_X86)
+#if defined(LIBC_TARGET_ARCH_IS_X86)
 template <size_t MaxSize>
 [[maybe_unused]] LIBC_INLINE static void
 inline_memset_x86(Ptr dst, uint8_t value, size_t count) {
@@ -55,9 +55,9 @@ inline_memset_x86(Ptr dst, uint8_t value, size_t count) {
   align_to_next_boundary<32>(dst, count);
   return generic::Memset<32, MaxSize>::loop_and_tail(dst, value, count);
 }
-#endif // defined(LIBC_TARGET_IS_X86)
+#endif // defined(LIBC_TARGET_ARCH_IS_X86)
 
-#if defined(LIBC_TARGET_IS_AARCH64)
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64)
 template <size_t MaxSize>
 [[maybe_unused]] LIBC_INLINE static void
 inline_memset_aarch64(Ptr dst, uint8_t value, size_t count) {
@@ -93,21 +93,21 @@ inline_memset_aarch64(Ptr dst, uint8_t value, size_t count) {
     return generic::Memset<64, MaxSize>::loop_and_tail(dst, value, count);
   }
 }
-#endif // defined(LIBC_TARGET_IS_AARCH64)
+#endif // defined(LIBC_TARGET_ARCH_IS_AARCH64)
 
 LIBC_INLINE static void inline_memset(Ptr dst, uint8_t value, size_t count) {
-#if defined(LIBC_TARGET_IS_X86)
+#if defined(LIBC_TARGET_ARCH_IS_X86)
   static constexpr size_t kMaxSize = x86::kAvx512F ? 64
                                      : x86::kAvx   ? 32
                                      : x86::kSse2  ? 16
                                                    : 8;
   return inline_memset_x86<kMaxSize>(dst, value, count);
-#elif defined(LIBC_TARGET_IS_AARCH64)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
   static constexpr size_t kMaxSize = aarch64::kNeon ? 16 : 8;
   return inline_memset_aarch64<kMaxSize>(dst, value, count);
-#elif defined(LIBC_TARGET_IS_ARM)
+#elif defined(LIBC_TARGET_ARCH_IS_ARM)
   return inline_memset_embedded_tiny(dst, value, count);
-#elif defined(LIBC_TARGET_IS_GPU)
+#elif defined(LIBC_TARGET_ARCH_IS_GPU)
   return inline_memset_embedded_tiny(dst, value, count);
 #else
 #error "Unsupported platform"

@@ -18,9 +18,9 @@
 TEST(LlvmLibcUnameTest, GetMachineName) {
   struct utsname names;
   ASSERT_GE(__llvm_libc::uname(&names), 0);
-#ifdef LIBC_TARGET_IS_X86_64
+#ifdef LIBC_TARGET_ARCH_IS_X86_64
   ASSERT_STREQ(names.machine, "x86_64");
-#elif defined(LIBC_TARGET_IS_AARCH64)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
   ASSERT_STREQ(names.machine, "aarch64");
 #endif
 }

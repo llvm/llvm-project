@@ -12,7 +12,7 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/architectures.h"
 
-#if !defined(LIBC_TARGET_IS_AARCH64) || defined(__APPLE__)
+#if !defined(LIBC_TARGET_ARCH_IS_AARCH64) || defined(__APPLE__)
 #error "Invalid include"
 #endif
 

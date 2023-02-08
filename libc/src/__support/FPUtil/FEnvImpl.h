@@ -12,13 +12,13 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/architectures.h"
 
-#if defined(LIBC_TARGET_IS_AARCH64)
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #if defined(__APPLE__)
 #include "aarch64/fenv_darwin_impl.h"
 #else
 #include "aarch64/FEnvImpl.h"
 #endif
-#elif defined(LIBC_TARGET_IS_X86)
+#elif defined(LIBC_TARGET_ARCH_IS_X86)
 #include "x86_64/FEnvImpl.h"
 #else
 #include <fenv.h>

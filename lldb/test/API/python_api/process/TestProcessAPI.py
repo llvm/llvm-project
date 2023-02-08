@@ -72,6 +72,20 @@ class ProcessAPITestCase(TestBase):
             exe=False,
             startstr=b'x')
 
+        # Try to read an impossibly large amount of memory; swig
+        # will try to malloc it and fail, we should get an error 
+        # result.
+        error = lldb.SBError()
+        content = process.ReadMemory(
+                val.AddressOf().GetValueAsUnsigned(), 
+                0xffffffffffffffe8, error)
+        if error.Success():
+            self.assertFalse(error.Success(), "SBProcessReadMemory claims to have "
+                      "successfully read 0xffffffffffffffe8 bytes")
+        if self.TraceOn():
+            print("Tried to read 0xffffffffffffffe8 bytes, got error message: ",
+                  error.GetCString())
+
         # Read (char *)my_char_ptr.
         val = frame.FindValue("my_char_ptr", lldb.eValueTypeVariableGlobal)
         self.DebugSBValue(val)

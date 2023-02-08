@@ -385,16 +385,20 @@ class NVVM_MMA_OPS {
   list<list<WMMA_REGS>> fp_wmma_ops = MMA_OPS<
             [GEOM<16, 16, 16>, GEOM<32, 8, 16>, GEOM<8, 32, 16>],
             ["f16"], [], ["f16", "f32"], []>.ret;
+  list<list<WMMA_REGS>> i8_wmma_ops = MMA_OPS<
+            [GEOM<16, 16, 16>, GEOM<32, 8, 16>, GEOM<8, 32, 16>],
+            ["s8","u8"], [], ["s32"], []>.ret;
   list<list<WMMA_REGS>> all_wmma_ops = !listconcat(
             tf32_wmma_ops,
-            fp_wmma_ops);
+            fp_wmma_ops,
+            i8_wmma_ops);
 
   list<WMMA_REGS> ldst_ab_ops = MMA_LDST_OPS<
             [GEOM<16, 16, 16>, GEOM<32, 8, 16>, GEOM<8, 32, 16>],
-            ["a", "b"], ["f16"]>.ret;
+            ["a", "b"], ["f16","s8","u8"]>.ret;
   list<WMMA_REGS> ldst_cd_ops = MMA_LDST_OPS<
             [GEOM<16, 16, 16>, GEOM<32, 8, 16>, GEOM<8, 32, 16>],
-            ["c", "d"], ["f16", "f32"]>.ret;
+            ["c", "d"], ["f16", "f32","s32"]>.ret;
   list<WMMA_REGS> ldst_tf32_ab_ops = MMA_LDST_OPS<
             [GEOM<16, 16, 8>],
             ["a", "b"], ["tf32"]>.ret;
