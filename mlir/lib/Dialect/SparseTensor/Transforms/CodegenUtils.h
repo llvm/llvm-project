@@ -275,6 +275,11 @@ inline Value constantIndex(OpBuilder &builder, Location loc, int64_t i) {
   return builder.create<arith::ConstantIndexOp>(loc, i);
 }
 
+/// Generates a constant of `i64` type.
+inline Value constantI64(OpBuilder &builder, Location loc, int64_t i) {
+  return builder.create<arith::ConstantIntOp>(loc, i, 64);
+}
+
 /// Generates a constant of `i32` type.
 inline Value constantI32(OpBuilder &builder, Location loc, int32_t i) {
   return builder.create<arith::ConstantIntOp>(loc, i, 32);
