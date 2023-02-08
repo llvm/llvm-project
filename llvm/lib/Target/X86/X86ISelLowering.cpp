@@ -1256,7 +1256,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::UMIN,               MVT::v8i16, Legal);
     setOperationAction(ISD::UMIN,               MVT::v4i32, Legal);
 
-    for (auto VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32}) {
+    for (auto VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64}) {
       setOperationAction(ISD::ABDS,             VT, Custom);
       setOperationAction(ISD::ABDU,             VT, Custom);
     }
@@ -1396,14 +1396,16 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // In the customized shift lowering, the legal v8i32/v4i64 cases
     // in AVX2 will be recognized.
     for (auto VT : { MVT::v32i8, MVT::v16i16, MVT::v8i32, MVT::v4i64 }) {
-      setOperationAction(ISD::SRL, VT, Custom);
-      setOperationAction(ISD::SHL, VT, Custom);
-      setOperationAction(ISD::SRA, VT, Custom);
+      setOperationAction(ISD::SRL,             VT, Custom);
+      setOperationAction(ISD::SHL,             VT, Custom);
+      setOperationAction(ISD::SRA,             VT, Custom);
+      setOperationAction(ISD::ABDS,            VT, Custom);
+      setOperationAction(ISD::ABDU,            VT, Custom);
       if (VT == MVT::v4i64) continue;
-      setOperationAction(ISD::ROTL, VT, Custom);
-      setOperationAction(ISD::ROTR, VT, Custom);
-      setOperationAction(ISD::FSHL, VT, Custom);
-      setOperationAction(ISD::FSHR, VT, Custom);
+      setOperationAction(ISD::ROTL,            VT, Custom);
+      setOperationAction(ISD::ROTR,            VT, Custom);
+      setOperationAction(ISD::FSHL,            VT, Custom);
+      setOperationAction(ISD::FSHR,            VT, Custom);
     }
 
     // These types need custom splitting if their input is a 128-bit vector.
@@ -1499,8 +1501,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::UMAX, VT, HasInt256 ? Legal : Custom);
       setOperationAction(ISD::SMIN, VT, HasInt256 ? Legal : Custom);
       setOperationAction(ISD::UMIN, VT, HasInt256 ? Legal : Custom);
-      setOperationAction(ISD::ABDS, VT, Custom);
-      setOperationAction(ISD::ABDU, VT, Custom);
     }
 
     for (auto VT : {MVT::v16i16, MVT::v8i32, MVT::v4i64}) {
@@ -1968,8 +1968,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SMIN, VT, Legal);
       setOperationAction(ISD::UMIN, VT, Legal);
       setOperationAction(ISD::ABS,  VT, Legal);
-      setOperationAction(ISD::ABDS, VT, Custom);
-      setOperationAction(ISD::ABDU, VT, Custom);
     }
 
     for (auto VT : { MVT::v4i32, MVT::v8i32, MVT::v2i64, MVT::v4i64 }) {
@@ -29659,15 +29657,30 @@ static SDValue LowerABD(SDValue Op, const X86Subtarget &Subtarget,
   if ((VT == MVT::v32i16 || VT == MVT::v64i8) && !Subtarget.useBWIRegs())
     return splitVectorIntBinary(Op, DAG);
 
-  // Default to expand: sub(smax(lhs,rhs),smin(lhs,rhs))
   // TODO: Add TargetLowering expandABD() support.
   SDLoc dl(Op);
   bool IsSigned = Op.getOpcode() == ISD::ABDS;
   SDValue LHS = DAG.getFreeze(Op.getOperand(0));
   SDValue RHS = DAG.getFreeze(Op.getOperand(1));
-  SDValue Max = DAG.getNode(IsSigned ? ISD::SMAX : ISD::UMAX, dl, VT, LHS, RHS);
-  SDValue Min = DAG.getNode(IsSigned ? ISD::SMIN : ISD::UMIN, dl, VT, LHS, RHS);
-  return DAG.getNode(ISD::SUB, dl, VT, Max, Min);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  // abds(lhs, rhs) -> sub(smax(lhs,rhs), smin(lhs,rhs))
+  // abdu(lhs, rhs) -> sub(umax(lhs,rhs), umin(lhs,rhs))
+  unsigned MaxOpc = IsSigned ? ISD::SMAX : ISD::UMAX;
+  unsigned MinOpc = IsSigned ? ISD::SMIN : ISD::UMIN;
+  if (TLI.isOperationLegal(MaxOpc, VT) && TLI.isOperationLegal(MinOpc, VT)) {
+    SDValue Max = DAG.getNode(MaxOpc, dl, VT, LHS, RHS);
+    SDValue Min = DAG.getNode(MinOpc, dl, VT, LHS, RHS);
+    return DAG.getNode(ISD::SUB, dl, VT, Max, Min);
+  }
+
+  // abds(lhs, rhs) -> select(sgt(lhs,rhs), sub(lhs,rhs), sub(rhs,lhs))
+  // abdu(lhs, rhs) -> select(ugt(lhs,rhs), sub(lhs,rhs), sub(rhs,lhs))
+  EVT CCVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  ISD::CondCode CC = IsSigned ? ISD::CondCode::SETGT : ISD::CondCode::SETUGT;
+  SDValue Cmp = DAG.getSetCC(dl, CCVT, LHS, RHS, CC);
+  return DAG.getSelect(dl, VT, Cmp, DAG.getNode(ISD::SUB, dl, VT, LHS, RHS),
+                       DAG.getNode(ISD::SUB, dl, VT, RHS, LHS));
 }
 
 static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
