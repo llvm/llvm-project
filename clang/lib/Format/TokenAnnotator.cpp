@@ -3833,6 +3833,9 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return true;
 
   if (Style.isCpp()) {
+    // Space between UDL and dot: auto b = 4s .count();
+    if (Right.is(tok::period) && Left.is(tok::numeric_constant))
+      return true;
     // Space between import <iostream>.
     // or import .....;
     if (Left.is(Keywords.kw_import) && Right.isOneOf(tok::less, tok::ellipsis))

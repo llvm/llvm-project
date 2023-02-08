@@ -25282,6 +25282,11 @@ TEST_F(FormatTest, InsertNewlineAtEOF) {
   verifyFormat("int i;\n", "int i;", Style);
 }
 
+TEST_F(FormatTest, SpaceAfterUDL) {
+  verifyFormat("auto c = (4s).count();");
+  verifyFormat("auto x = 5s .count() == 5;");
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
