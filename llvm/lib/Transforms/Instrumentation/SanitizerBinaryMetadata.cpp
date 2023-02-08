@@ -215,9 +215,12 @@ bool SanitizerBinaryMetadata::run() {
     Constant *CtorData = nullptr;
     Constant *DtorData = nullptr;
     if (TargetTriple.supportsCOMDAT()) {
-      // Use COMDAT to deduplicate constructor/destructor function.
+      // Use COMDAT to deduplicate constructor/destructor function. The COMDAT
+      // key needs to be a non-local linkage.
       Ctor->setComdat(Mod.getOrInsertComdat(Ctor->getName()));
       Dtor->setComdat(Mod.getOrInsertComdat(Dtor->getName()));
+      Ctor->setLinkage(GlobalValue::ExternalLinkage);
+      Dtor->setLinkage(GlobalValue::ExternalLinkage);
       CtorData = Ctor;
       DtorData = Dtor;
     }
