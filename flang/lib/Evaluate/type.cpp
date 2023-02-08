@@ -574,4 +574,21 @@ std::optional<DynamicType> ComparisonType(
   }
 }
 
+bool IsInteroperableIntrinsicType(const DynamicType &type) {
+  switch (type.category()) {
+  case TypeCategory::Integer:
+    return true;
+  case TypeCategory::Real:
+  case TypeCategory::Complex:
+    return type.kind() >= 4; // no short or half floats
+  case TypeCategory::Logical:
+    return type.kind() == 1; // C_BOOL
+  case TypeCategory::Character:
+    return type.kind() == 1 /* C_CHAR */ && type.knownLength().value_or(0) == 1;
+  default:
+    // Derived types are tested in Semantics/check-declarations.cpp
+    return false;
+  }
+}
+
 } // namespace Fortran::evaluate
