@@ -9601,6 +9601,13 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
     // Calculate the pointer for the specific unroll-part.
     GetElementPtrInst *PartPtr = nullptr;
 
+    // Use i32 for the gep index type when the value is constant,
+    // or query DataLayout for a more suitable index type otherwise.
+    const DataLayout &DL =
+        Builder.GetInsertBlock()->getModule()->getDataLayout();
+    Type *IndexTy = State.VF.isScalable() && (Reverse || Part > 0)
+                        ? DL.getIndexType(ScalarDataTy->getPointerTo())
+                        : Builder.getInt32Ty();
     bool InBounds = false;
     if (auto *gep = dyn_cast<GetElementPtrInst>(Ptr->stripPointerCasts()))
       InBounds = gep->isInBounds();
@@ -9609,11 +9616,13 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
       // wide store needs to start at the last vector element.
       // RunTimeVF =  VScale * VF.getKnownMinValue()
       // For fixed-width VScale is 1, then RunTimeVF = VF.getKnownMinValue()
-      Value *RunTimeVF = getRuntimeVF(Builder, Builder.getInt32Ty(), State.VF);
+      Value *RunTimeVF = getRuntimeVF(Builder, IndexTy, State.VF);
       // NumElt = -Part * RunTimeVF
-      Value *NumElt = Builder.CreateMul(Builder.getInt32(-Part), RunTimeVF);
+      Value *NumElt =
+          Builder.CreateMul(ConstantInt::get(IndexTy, -(int64_t)Part), RunTimeVF);
       // LastLane = 1 - RunTimeVF
-      Value *LastLane = Builder.CreateSub(Builder.getInt32(1), RunTimeVF);
+      Value *LastLane =
+          Builder.CreateSub(ConstantInt::get(IndexTy, 1), RunTimeVF);
       PartPtr =
           cast<GetElementPtrInst>(Builder.CreateGEP(ScalarDataTy, Ptr, NumElt));
       PartPtr->setIsInBounds(InBounds);
@@ -9624,8 +9633,7 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
         BlockInMaskParts[Part] =
             Builder.CreateVectorReverse(BlockInMaskParts[Part], "reverse");
     } else {
-      Value *Increment =
-          createStepForVF(Builder, Builder.getInt32Ty(), State.VF, Part);
+      Value *Increment = createStepForVF(Builder, IndexTy, State.VF, Part);
       PartPtr = cast<GetElementPtrInst>(
           Builder.CreateGEP(ScalarDataTy, Ptr, Increment));
       PartPtr->setIsInBounds(InBounds);
