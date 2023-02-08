@@ -2213,6 +2213,10 @@ public:
         FD << F;
     }
   }
+
+  bool isSafeBufferOptOut(const SourceLocation &Loc) const override {
+    return S.PP.isSafeBufferOptOut(S.getSourceManager(), Loc);
+  }
 };
 } // namespace
 
