@@ -11,6 +11,7 @@
 #include "compute-offsets.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
+#include "flang/Evaluate/type.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Semantics/scope.h"
@@ -793,6 +794,11 @@ std::string DeclTypeSpec::AsFortran() const {
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const DeclTypeSpec &x) {
   return o << x.AsFortran();
+}
+
+bool IsInteroperableIntrinsicType(const DeclTypeSpec &type) {
+  auto dyType{evaluate::DynamicType::From(type)};
+  return dyType && IsInteroperableIntrinsicType(*dyType);
 }
 
 } // namespace Fortran::semantics
