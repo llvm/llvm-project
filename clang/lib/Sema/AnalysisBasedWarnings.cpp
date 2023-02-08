@@ -2200,18 +2200,13 @@ public:
   // FIXME: rename to handleUnsafeVariable
   void handleFixableVariable(const VarDecl *Variable,
                              FixItList &&Fixes) override {
-    S.Diag(Variable->getLocation(), diag::warn_unsafe_buffer_variable)
-        << Variable << (Variable->getType()->isPointerType() ? 0 : 1)
-        << Variable->getSourceRange();
-    if (!Fixes.empty()) {
-      unsigned FixItStrategy = 0; // For now we only has 'std::span' strategy
-      const auto &FD = S.Diag(Variable->getLocation(),
-                              diag::note_unsafe_buffer_variable_fixit);
-
-      FD << Variable->getName() << FixItStrategy;
-      for (const auto &F : Fixes)
-        FD << F;
-    }
+    const auto &D =
+        S.Diag(Variable->getLocation(), diag::warn_unsafe_buffer_variable);
+    D << Variable;
+    D << (Variable->getType()->isPointerType() ? 0 : 1);
+    D << Variable->getSourceRange();
+    for (const auto &F : Fixes)
+      D << F;
   }
 };
 } // namespace
