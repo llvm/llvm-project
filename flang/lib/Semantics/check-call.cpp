@@ -1083,11 +1083,73 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
   }
 }
 
+// TRANSFER (16.9.193)
+static void CheckTransferOperandType(parser::ContextualMessages &messages,
+    const evaluate::DynamicType &type, const char *which) {
+  if (type.IsPolymorphic()) {
+    messages.Say("%s of TRANSFER is polymorphic"_warn_en_US, which);
+  } else if (!type.IsUnlimitedPolymorphic() &&
+      type.category() == TypeCategory::Derived) {
+    DirectComponentIterator directs{type.GetDerivedTypeSpec()};
+    if (auto bad{std::find_if(directs.begin(), directs.end(), IsDescriptor)};
+        bad != directs.end()) {
+      evaluate::SayWithDeclaration(messages, *bad,
+          "%s of TRANSFER contains allocatable or pointer component %s"_warn_en_US,
+          which, bad.BuildResultDesignatorName());
+    }
+  }
+}
+
+static void CheckTransfer(evaluate::ActualArguments &arguments,
+    evaluate::FoldingContext &context, const Scope *scope) {
+  if (arguments.size() >= 2) {
+    if (auto source{characteristics::TypeAndShape::Characterize(
+            arguments[0], context)}) {
+      CheckTransferOperandType(context.messages(), source->type(), "Source");
+      if (auto mold{characteristics::TypeAndShape::Characterize(
+              arguments[1], context)}) {
+        CheckTransferOperandType(context.messages(), mold->type(), "Mold");
+        if (mold->Rank() > 0 &&
+            evaluate::ToInt64(
+                evaluate::Fold(
+                    context, mold->MeasureElementSizeInBytes(context, false)))
+                    .value_or(1) == 0) {
+          if (auto sourceSize{evaluate::ToInt64(evaluate::Fold(
+                  context, source->MeasureSizeInBytes(context)))}) {
+            if (*sourceSize > 0) {
+              context.messages().Say(
+                  "Element size of MOLD= array may not be zero when SOURCE= is not empty"_err_en_US);
+            }
+          } else {
+            context.messages().Say(
+                "Element size of MOLD= array may not be zero unless SOURCE= is empty"_warn_en_US);
+          }
+        }
+      }
+    }
+    if (arguments.size() > 2) { // SIZE=
+      if (const Symbol *
+          whole{UnwrapWholeSymbolOrComponentDataRef(arguments[2])}) {
+        if (IsOptional(*whole)) {
+          context.messages().Say(
+              "SIZE= argument may not be the optional dummy argument '%s'"_err_en_US,
+              whole->name());
+        } else if (IsAllocatableOrPointer(*whole)) {
+          context.messages().Say(
+              "SIZE= argument that is allocatable or pointer must be present at execution; parenthesize to silence this warning"_warn_en_US);
+        }
+      }
+    }
+  }
+}
+
 static void CheckSpecificIntrinsic(evaluate::ActualArguments &arguments,
     evaluate::FoldingContext &context, const Scope *scope,
     const evaluate::SpecificIntrinsic &intrinsic) {
   if (intrinsic.name == "associated") {
     CheckAssociated(arguments, context, scope);
+  } else if (intrinsic.name == "transfer") {
+    CheckTransfer(arguments, context, scope);
   }
 }
 
