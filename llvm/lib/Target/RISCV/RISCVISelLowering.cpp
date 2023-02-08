@@ -1223,7 +1223,7 @@ bool RISCVTargetLowering::isMaskAndCmp0FoldingBeneficial(
   // on the basis that it's possible the sinking+duplication of the AND in
   // CodeGenPrepare triggered by this hook wouldn't decrease the instruction
   // count and would increase code size (e.g. ANDI+BNEZ => BEXTI+BNEZ).
-  if (!Subtarget.hasStdExtZbs() && !Subtarget.hasVendorXTHeadBs())
+  if (!Subtarget.hasStdExtZbs())
     return false;
   ConstantInt *Mask = dyn_cast<ConstantInt>(AndI.getOperand(1));
   if (!Mask)
@@ -1246,11 +1246,8 @@ bool RISCVTargetLowering::hasBitTest(SDValue X, SDValue Y) const {
   // Zbs provides BEXT[_I], which can be used with SEQZ/SNEZ as a bit test.
   if (Subtarget.hasStdExtZbs())
     return X.getValueType().isScalarInteger();
-  auto *C = dyn_cast<ConstantSDNode>(Y);
-  // XTheadBs provides th.tst (similar to bexti), if Y is a constant
-  if (Subtarget.hasVendorXTHeadBs())
-    return C != nullptr;
   // We can use ANDI+SEQZ/SNEZ as a bit test. Y contains the bit position.
+  auto *C = dyn_cast<ConstantSDNode>(Y);
   return C && C->getAPIntValue().ule(10);
 }
 

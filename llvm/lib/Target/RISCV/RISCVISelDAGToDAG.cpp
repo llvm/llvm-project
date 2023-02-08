@@ -834,17 +834,14 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     if (!N0.hasOneUse())
       break;
 
-    // If C2 is (1 << ShAmt) use bexti or th.tst if possible.
-    bool HasBitTest =
-        Subtarget->hasStdExtZbs() || Subtarget->hasVendorXTHeadBs();
-    if (HasBitTest && ShAmt + 1 == TrailingOnes) {
-      SDNode *BEXTI = CurDAG->getMachineNode(
-          Subtarget->hasStdExtZbs() ? RISCV::BEXTI : RISCV::TH_TST, DL, VT,
-          N0->getOperand(0), CurDAG->getTargetConstant(ShAmt, DL, VT));
+    // If C2 is (1 << ShAmt) use bexti if possible.
+    if (Subtarget->hasStdExtZbs() && ShAmt + 1 == TrailingOnes) {
+      SDNode *BEXTI =
+          CurDAG->getMachineNode(RISCV::BEXTI, DL, VT, N0->getOperand(0),
+                                 CurDAG->getTargetConstant(ShAmt, DL, VT));
       ReplaceNode(Node, BEXTI);
       return;
     }
-
     unsigned LShAmt = Subtarget->getXLen() - TrailingOnes;
     SDNode *SLLI =
         CurDAG->getMachineNode(RISCV::SLLI, DL, VT, N0->getOperand(0),
@@ -966,9 +963,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
           bool Skip = Subtarget->hasStdExtZba() && Leading == 32 &&
                       X.getOpcode() == ISD::SIGN_EXTEND_INREG &&
                       cast<VTSDNode>(X.getOperand(1))->getVT() == MVT::i32;
-          // Also Skip if we can use bexti or th.tst.
+          // Also Skip if we can use bexti.
           Skip |= Subtarget->hasStdExtZbs() && Leading == XLen - 1;
-          Skip |= Subtarget->hasVendorXTHeadBs() && Leading == XLen - 1;
           if (OneUseOrZExtW && !Skip) {
             SDNode *SLLI = CurDAG->getMachineNode(
                 RISCV::SLLI, DL, VT, X,
