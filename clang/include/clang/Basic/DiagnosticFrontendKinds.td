@@ -309,6 +309,10 @@ def warn_atomic_op_oversized : Warning<
   "; the access size (%0 bytes) exceeds the max lock-free size (%1  bytes)">,
 InGroup<AtomicAlignment>;
 
+def warn_sync_op_misaligned : Warning<
+  "__sync builtin operation MUST have natural alignment (consider using __atomic).">,
+  InGroup<SyncAlignment>;
+
 def warn_alias_with_section : Warning<
   "%select{alias|ifunc}1 will not be in section '%0' but in the same section "
   "as the %select{aliasee|resolver}2">,
