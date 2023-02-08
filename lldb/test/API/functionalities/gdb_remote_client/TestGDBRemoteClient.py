@@ -338,11 +338,11 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
                       lldb.SBError())  # error
 
         self.assertPacketLogContains([
+          "QEnvironment:PLAIN=foo",
+          "QEnvironmentHexEncoded:4e45454453454e433d66726f6224",
+          "QEnvironmentHexEncoded:4e45454453454e43323d66722a6f62",
           "QEnvironmentHexEncoded:4e45454453454e43333d66726f7d62",
           "QEnvironmentHexEncoded:4e45454453454e43343d6623726f62",
-          "QEnvironment:PLAIN=foo",
-          "QEnvironmentHexEncoded:4e45454453454e43323d66722a6f62",
-          "QEnvironmentHexEncoded:4e45454453454e433d66726f6224",
           "QEnvironment:EQUALS=foo=bar",
         ])
 
@@ -386,11 +386,11 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
                       lldb.SBError())  # error
 
         self.assertPacketLogContains([
+          "QEnvironmentHexEncoded:504c41494e3d666f6f",
+          "QEnvironmentHexEncoded:4e45454453454e433d66726f6224",
+          "QEnvironmentHexEncoded:4e45454453454e43323d66722a6f62",
           "QEnvironmentHexEncoded:4e45454453454e43333d66726f7d62",
           "QEnvironmentHexEncoded:4e45454453454e43343d6623726f62",
-          "QEnvironmentHexEncoded:504c41494e3d666f6f",
-          "QEnvironmentHexEncoded:4e45454453454e43323d66722a6f62",
-          "QEnvironmentHexEncoded:4e45454453454e433d66726f6224",
           "QEnvironmentHexEncoded:455155414c533d666f6f3d626172",
         ])
 
