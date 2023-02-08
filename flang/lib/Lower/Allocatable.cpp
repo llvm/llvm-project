@@ -141,7 +141,7 @@ static void genRuntimeSetBounds(fir::FirOpBuilder &builder, mlir::Location loc,
 static void genRuntimeInitCharacter(fir::FirOpBuilder &builder,
                                     mlir::Location loc,
                                     const fir::MutableBoxValue &box,
-                                    mlir::Value len) {
+                                    mlir::Value len, int64_t kind = 0) {
   mlir::func::FuncOp callee =
       box.isPointer()
           ? fir::runtime::getRuntimeFunc<mkRTKey(PointerNullifyCharacter)>(
@@ -155,7 +155,8 @@ static void genRuntimeInitCharacter(fir::FirOpBuilder &builder,
   llvm::SmallVector<mlir::Value> args;
   args.push_back(builder.createConvert(loc, inputTypes[0], box.getAddr()));
   args.push_back(builder.createConvert(loc, inputTypes[1], len));
-  int kind = box.getEleTy().cast<fir::CharacterType>().getFKind();
+  if (kind == 0)
+    kind = box.getEleTy().cast<fir::CharacterType>().getFKind();
   args.push_back(builder.createIntegerConstant(loc, inputTypes[2], kind));
   int rank = box.rank();
   args.push_back(builder.createIntegerConstant(loc, inputTypes[3], rank));
@@ -663,10 +664,17 @@ private:
     // unlimited polymorphic entity.
     if (typeSpec->AsIntrinsic() &&
         fir::isUnlimitedPolymorphicType(fir::getBase(box).getType())) {
-      genInitIntrinsic(
-          box, typeSpec->AsIntrinsic()->category(),
-          Fortran::evaluate::ToInt64(typeSpec->AsIntrinsic()->kind()).value(),
-          alloc.getSymbol().Rank());
+      if (typeSpec->AsIntrinsic()->category() == TypeCategory::Character) {
+        genRuntimeInitCharacter(
+            builder, loc, box, lenParams[0],
+            Fortran::evaluate::ToInt64(typeSpec->AsIntrinsic()->kind())
+                .value());
+      } else {
+        genInitIntrinsic(
+            box, typeSpec->AsIntrinsic()->category(),
+            Fortran::evaluate::ToInt64(typeSpec->AsIntrinsic()->kind()).value(),
+            alloc.getSymbol().Rank());
+      }
       return;
     }
 
