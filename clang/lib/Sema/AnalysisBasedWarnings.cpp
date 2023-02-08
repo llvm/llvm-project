@@ -2213,10 +2213,6 @@ public:
         FD << F;
     }
   }
-
-  const clang::Preprocessor & getPP() const override {
-    return S.getPreprocessor();
-  }  
 };
 } // namespace
 
