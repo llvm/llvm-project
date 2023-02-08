@@ -6492,8 +6492,6 @@ cc_library(
     srcs = [
         "lib/Target/LLVMIR/DebugTranslation.cpp",
         "lib/Target/LLVMIR/DebugTranslation.h",
-        "lib/Target/LLVMIR/LoopAnnotationImporter.cpp",
-        "lib/Target/LLVMIR/LoopAnnotationImporter.h",
         "lib/Target/LLVMIR/LoopAnnotationTranslation.cpp",
         "lib/Target/LLVMIR/LoopAnnotationTranslation.h",
         "lib/Target/LLVMIR/ModuleTranslation.cpp",
@@ -6721,6 +6719,8 @@ cc_library(
     name = "FromLLVMIRTranslation",
     srcs = [
         "lib/Target/LLVMIR/DebugImporter.cpp",
+        "lib/Target/LLVMIR/LoopAnnotationImporter.cpp",
+        "lib/Target/LLVMIR/LoopAnnotationImporter.h",
         "lib/Target/LLVMIR/ModuleImport.cpp",
         "lib/Target/LLVMIR/TypeFromLLVM.cpp",
     ],
