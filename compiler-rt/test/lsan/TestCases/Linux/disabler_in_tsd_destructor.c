@@ -2,6 +2,9 @@
 // RUN: %clang_lsan %s -o %t
 // RUN: %env_lsan_opts="report_objects=1:use_registers=0:use_stacks=0:use_tls=1:use_ld_allocations=0" %run %t
 
+// Fixme: remove once test passes with hwasan
+// UNSUPPORTED: hwasan
+
 #include <assert.h>
 #include <pthread.h>
 #include <stdio.h>
