@@ -9,6 +9,7 @@
 #include "clang/Analysis/Analyses/UnsafeBufferUsage.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/SmallVector.h"
 #include <memory>
@@ -115,6 +116,12 @@ AST_MATCHER_P(Stmt, forEveryDescendant, internal::Matcher<Stmt>, innerMatcher) {
   
   MatchDescendantVisitor Visitor(&DTM, Finder, Builder, ASTMatchFinder::BK_All);  
   return Visitor.findMatch(DynTypedNode::create(Node));
+}
+
+// Matches a `Stmt` node iff the node is in a safe-buffer opt-out region
+AST_MATCHER_P(Stmt, notInSafeBufferOptOut, const Preprocessor *, PP) {
+  const SourceManager &SM = Finder->getASTContext().getSourceManager();
+  return !PP->isSafeBufferOptOut(SM, Node.getBeginLoc());
 }
 
 AST_MATCHER_P(CastExpr, castSubExpr, internal::Matcher<Expr>, innerMatcher) {
@@ -548,7 +555,8 @@ public:
 } // namespace
 
 /// Scan the function and return a list of gadgets found with provided kits.
-static std::tuple<FixableGadgetList, WarningGadgetList, DeclUseTracker> findGadgets(const Decl *D) {
+static std::tuple<FixableGadgetList, WarningGadgetList, DeclUseTracker>
+findGadgets(const Decl *D, const Preprocessor &PP) {
 
   struct GadgetFinderCallback : MatchFinder::MatchCallback {
     FixableGadgetList FixableGadgets;
@@ -620,7 +628,7 @@ static std::tuple<FixableGadgetList, WarningGadgetList, DeclUseTracker> findGadg
       stmt(anyOf(
         // Add Gadget::matcher() for every gadget in the registry.
 #define WARNING_GADGET(x)                                                              \
-        x ## Gadget::matcher().bind(#x),
+        allOf(x ## Gadget::matcher().bind(#x), notInSafeBufferOptOut(&PP)),
 #include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
         // In parallel, match all DeclRefExprs so that to find out
         // whether there are any uncovered by gadgets.
@@ -1009,7 +1017,7 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   DeclUseTracker Tracker;
 
   {
-    auto [FixableGadgets, WarningGadgets, TrackerRes] = findGadgets(D);
+    auto [FixableGadgets, WarningGadgets, TrackerRes] = findGadgets(D, Handler.getPP());
     UnsafeOps = groupWarningGadgetsByVar(std::move(WarningGadgets));
     FixablesForUnsafeVars = groupFixablesByVar(std::move(FixableGadgets));
     Tracker = std::move(TrackerRes);
