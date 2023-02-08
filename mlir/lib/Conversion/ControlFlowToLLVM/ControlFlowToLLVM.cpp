@@ -45,7 +45,7 @@ static std::string generateGlobalMsgSymbolName(ModuleOp moduleOp) {
 
 /// Generate IR that prints the given string to stderr.
 static void createPrintMsg(OpBuilder &builder, Location loc, ModuleOp moduleOp,
-                           StringRef msg) {
+                           StringRef msg, LLVMTypeConverter &typeConverter) {
   auto ip = builder.saveInsertionPoint();
   builder.setInsertionPointToStart(moduleOp.getBody());
   MLIRContext *ctx = builder.getContext();
@@ -68,12 +68,13 @@ static void createPrintMsg(OpBuilder &builder, Location loc, ModuleOp moduleOp,
   // Emit call to `printStr` in runtime library.
   builder.restoreInsertionPoint(ip);
   auto msgAddr = builder.create<LLVM::AddressOfOp>(
-      loc, LLVM::LLVMPointerType::get(arrayTy), globalOp.getName());
+      loc, typeConverter.getPointerType(arrayTy), globalOp.getName());
   SmallVector<LLVM::GEPArg> indices(1, 0);
   Value gep = builder.create<LLVM::GEPOp>(
-      loc, LLVM::LLVMPointerType::get(builder.getI8Type()), msgAddr, indices);
-  Operation *printer =
-      LLVM::lookupOrCreatePrintStrFn(moduleOp, /*TODO: opaquePointers=*/false);
+      loc, typeConverter.getPointerType(builder.getI8Type()), arrayTy, msgAddr,
+      indices);
+  Operation *printer = LLVM::lookupOrCreatePrintStrFn(
+      moduleOp, typeConverter.useOpaquePointers());
   builder.create<LLVM::CallOp>(loc, TypeRange(), SymbolRefAttr::get(printer),
                                gep);
 }
@@ -102,7 +103,7 @@ struct AssertOpLowering : public ConvertOpToLLVMPattern<cf::AssertOp> {
 
     // Failed block: Generate IR to print the message and call `abort`.
     Block *failureBlock = rewriter.createBlock(opBlock->getParent());
-    createPrintMsg(rewriter, loc, module, op.getMsg());
+    createPrintMsg(rewriter, loc, module, op.getMsg(), *getTypeConverter());
     if (abortOnFailedAssert) {
       // Insert the `abort` declaration if necessary.
       auto abortFunc = module.lookupSymbol<LLVM::LLVMFuncOp>("abort");
@@ -274,6 +275,7 @@ struct ConvertControlFlowToLLVM
     LowerToLLVMOptions options(&getContext());
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
+    options.useOpaquePointers = useOpaquePointers;
 
     LLVMTypeConverter converter(&getContext(), options);
     mlir::cf::populateControlFlowToLLVMConversionPatterns(converter, patterns);
