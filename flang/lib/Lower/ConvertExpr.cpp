@@ -24,6 +24,7 @@
 #include "flang/Lower/ComponentPath.h"
 #include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/ConvertConstant.h"
+#include "flang/Lower/ConvertProcedureDesignator.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/CustomIntrinsicCall.h"
@@ -401,16 +402,6 @@ static bool isParenthesizedVariable(const Fortran::evaluate::Expr<T> &expr) {
     return std::visit([&](const auto &x) { return isParenthesizedVariable(x); },
                       expr.u);
   }
-}
-
-/// Does \p expr only refer to symbols that are mapped to IR values in \p symMap
-/// ?
-static bool allSymbolsInExprPresentInMap(const Fortran::lower::SomeExpr &expr,
-                                         Fortran::lower::SymMap &symMap) {
-  for (const auto &sym : Fortran::evaluate::CollectSymbols(expr))
-    if (!symMap.lookupSymbol(sym))
-      return false;
-  return true;
 }
 
 /// Generate a load of a value from an address. Beware that this will lose
@@ -880,66 +871,8 @@ public:
   /// The type of the function indirection is not guaranteed to match the one
   /// of the ProcedureDesignator due to Fortran implicit typing rules.
   ExtValue genval(const Fortran::evaluate::ProcedureDesignator &proc) {
-    mlir::Location loc = getLoc();
-    if (const Fortran::evaluate::SpecificIntrinsic *intrinsic =
-            proc.GetSpecificIntrinsic()) {
-      mlir::FunctionType signature =
-          Fortran::lower::translateSignature(proc, converter);
-      // Intrinsic lowering is based on the generic name, so retrieve it here in
-      // case it is different from the specific name. The type of the specific
-      // intrinsic is retained in the signature.
-      std::string genericName =
-          converter.getFoldingContext().intrinsics().GetGenericIntrinsicName(
-              intrinsic->name);
-      mlir::SymbolRefAttr symbolRefAttr =
-          fir::getUnrestrictedIntrinsicSymbolRefAttr(builder, loc, genericName,
-                                                     signature);
-      mlir::Value funcPtr =
-          builder.create<fir::AddrOfOp>(loc, signature, symbolRefAttr);
-      return funcPtr;
-    }
-    const Fortran::semantics::Symbol *symbol = proc.GetSymbol();
-    assert(symbol && "expected symbol in ProcedureDesignator");
-    mlir::Value funcPtr;
-    mlir::Value funcPtrResultLength;
-    if (Fortran::semantics::IsDummy(*symbol)) {
-      Fortran::lower::SymbolBox val = symMap.lookupSymbol(*symbol);
-      assert(val && "Dummy procedure not in symbol map");
-      funcPtr = val.getAddr();
-      if (fir::isCharacterProcedureTuple(funcPtr.getType(),
-                                         /*acceptRawFunc=*/false))
-        std::tie(funcPtr, funcPtrResultLength) =
-            fir::factory::extractCharacterProcedureTuple(builder, loc, funcPtr);
-    } else {
-      std::string name = converter.mangleName(*symbol);
-      mlir::func::FuncOp func =
-          Fortran::lower::getOrDeclareFunction(name, proc, converter);
-      funcPtr = builder.create<fir::AddrOfOp>(loc, func.getFunctionType(),
-                                              builder.getSymbolRefAttr(name));
-    }
-    if (Fortran::lower::mustPassLengthWithDummyProcedure(proc, converter)) {
-      // The result length, if available here, must be propagated along the
-      // procedure address so that call sites where the result length is assumed
-      // can retrieve the length.
-      Fortran::evaluate::DynamicType resultType = proc.GetType().value();
-      if (const auto &lengthExpr = resultType.GetCharLength()) {
-        // The length expression may refer to dummy argument symbols that are
-        // meaningless without any actual arguments. Leave the length as
-        // unknown in that case, it be resolved on the call site
-        // with the actual arguments.
-        if (allSymbolsInExprPresentInMap(toEvExpr(*lengthExpr), symMap)) {
-          mlir::Value rawLen = fir::getBase(genval(*lengthExpr));
-          // F2018 7.4.4.2 point 5.
-          funcPtrResultLength =
-              fir::factory::genMaxWithZero(builder, getLoc(), rawLen);
-        }
-      }
-      if (!funcPtrResultLength)
-        funcPtrResultLength = builder.createIntegerConstant(
-            loc, builder.getCharacterLengthType(), -1);
-      return fir::CharBoxValue{funcPtr, funcPtrResultLength};
-    }
-    return funcPtr;
+    return Fortran::lower::convertProcedureDesignator(getLoc(), converter, proc,
+                                                      symMap, stmtCtx);
   }
   ExtValue genval(const Fortran::evaluate::NullPointer &) {
     return builder.createNullConstant(getLoc());
