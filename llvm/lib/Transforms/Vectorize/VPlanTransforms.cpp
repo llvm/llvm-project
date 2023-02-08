@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "VPlanTransforms.h"
+#include "VPlanDominatorTree.h"
+#include "VPRecipeBuilder.h"
 #include "VPlanCFG.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
@@ -532,4 +534,190 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   // TODO: Further simplifications are possible
   //      1. Replace inductions with constants.
   //      2. Replace vector loop region with VPBasicBlock.
+}
+
+static VPRegionBlock *GetReplicateRegion(VPRecipeBase *R) {
+  auto *Region = dyn_cast_or_null<VPRegionBlock>(R->getParent()->getParent());
+  if (Region && Region->isReplicator()) {
+    assert(Region->getNumSuccessors() == 1 &&
+           Region->getNumPredecessors() == 1 && "Expected SESE region!");
+    assert(R->getParent()->size() == 1 &&
+           "A recipe in an original replicator region must be the only "
+           "recipe in its block");
+    return Region;
+  }
+  return nullptr;
+}
+
+static bool dominates(const VPRecipeBase *A, const VPRecipeBase *B,
+                      VPDominatorTree &VPDT) {
+  auto LocalComesBefore = [](const VPRecipeBase *A, const VPRecipeBase *B) {
+    for (auto &R : *A->getParent()) {
+      if (&R == A)
+        return true;
+      if (&R == B)
+        return false;
+    }
+    llvm_unreachable("recipe not found");
+  };
+  const VPBlockBase *ParentA = A->getParent();
+  const VPBlockBase *ParentB = B->getParent();
+  if (ParentA == ParentB)
+    return LocalComesBefore(A, B);
+
+  const VPRegionBlock *RegionA =
+      GetReplicateRegion(const_cast<VPRecipeBase *>(A));
+  const VPRegionBlock *RegionB =
+      GetReplicateRegion(const_cast<VPRecipeBase *>(B));
+  if (RegionA)
+    ParentA = RegionA->getExiting();
+  if (RegionB)
+    ParentB = RegionB->getExiting();
+  return VPDT.dominates(ParentA, ParentB);
+}
+
+// Sink users of \p FOR after the recipe defining the previous value \p Previous
+// of the recurrence.
+static void
+sinkRecurrenceUsersAfterPrevious(VPFirstOrderRecurrencePHIRecipe *FOR,
+                                 VPRecipeBase *Previous,
+                                 VPDominatorTree &VPDT) {
+  // Collect recipes that need sinking.
+  SmallVector<VPRecipeBase *> WorkList;
+  SmallPtrSet<VPRecipeBase *, 8> Seen;
+  Seen.insert(Previous);
+  auto TryToPushSinkCandidate = [&](VPRecipeBase *SinkCandidate) {
+    assert(
+        SinkCandidate != Previous &&
+        "The previous value cannot depend on the users of the recurrence phi.");
+    if (isa<VPHeaderPHIRecipe>(SinkCandidate) ||
+        !Seen.insert(SinkCandidate).second ||
+        dominates(Previous, SinkCandidate, VPDT))
+      return;
+
+    WorkList.push_back(SinkCandidate);
+  };
+
+  // Recursively sink users of FOR after Previous.
+  WorkList.push_back(FOR);
+  for (unsigned I = 0; I != WorkList.size(); ++I) {
+    VPRecipeBase *Current = WorkList[I];
+    assert(Current->getNumDefinedValues() == 1 &&
+           "only recipes with a single defined value expected");
+    for (VPUser *User : Current->getVPSingleValue()->users()) {
+      if (auto *R = dyn_cast<VPRecipeBase>(User))
+        TryToPushSinkCandidate(R);
+    }
+  }
+
+  // Keep recipes to sink ordered by dominance so earlier instructions are
+  // processed first.
+  sort(WorkList, [&VPDT](const VPRecipeBase *A, const VPRecipeBase *B) {
+    return dominates(A, B, VPDT);
+  });
+
+  for (VPRecipeBase *SinkCandidate : WorkList) {
+    // VPPredInstPHIRecipes don't need sinking, because they will be sunk when
+    // sinking the containing replicate region.
+    if (isa<VPPredInstPHIRecipe>(SinkCandidate) || SinkCandidate == FOR)
+      continue;
+
+    VPRecipeBase *Target = Previous;
+    Previous = SinkCandidate;
+    auto *TargetRegion = GetReplicateRegion(Target);
+    auto *SinkRegion = GetReplicateRegion(SinkCandidate);
+    if (!SinkRegion) {
+      // If the sink source is not a replicate region, sink the recipe
+      // directly.
+      if (TargetRegion) {
+        // The target is in a replication region, make sure to move Sink to
+        // the block after it, not into the replication region itself.
+        VPBasicBlock *NextBlock =
+            cast<VPBasicBlock>(TargetRegion->getSuccessors().front());
+        SinkCandidate->moveBefore(*NextBlock, NextBlock->getFirstNonPhi());
+      } else
+        SinkCandidate->moveAfter(Target);
+      continue;
+    }
+    // The sink source is in a replicate region. Unhook the region from the
+    // CFG.
+    auto *SinkPred = SinkRegion->getSinglePredecessor();
+    auto *SinkSucc = SinkRegion->getSingleSuccessor();
+    VPBlockUtils::disconnectBlocks(SinkPred, SinkRegion);
+    VPBlockUtils::disconnectBlocks(SinkRegion, SinkSucc);
+    VPBlockUtils::connectBlocks(SinkPred, SinkSucc);
+
+    if (TargetRegion) {
+      // The target recipe is also in a replicate region, move the sink
+      // region after the target region.
+      auto *TargetSucc = TargetRegion->getSingleSuccessor();
+      VPBlockUtils::disconnectBlocks(TargetRegion, TargetSucc);
+      VPBlockUtils::connectBlocks(TargetRegion, SinkRegion);
+      VPBlockUtils::connectBlocks(SinkRegion, TargetSucc);
+    } else {
+      // The sink source is in a replicate region, we need to move the whole
+      // replicate region, which should only contain a single recipe in the
+      // main block.
+      auto *SplitBlock =
+          Target->getParent()->splitAt(std::next(Target->getIterator()));
+
+      auto *SplitPred = SplitBlock->getSinglePredecessor();
+
+      VPBlockUtils::disconnectBlocks(SplitPred, SplitBlock);
+      VPBlockUtils::connectBlocks(SplitPred, SinkRegion);
+      VPBlockUtils::connectBlocks(SinkRegion, SplitBlock);
+    }
+    // We modified the CFG, update dominator tree.
+    VPDT.recalculate(*SinkRegion->getPlan());
+  }
+}
+
+void VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
+                                                  VPBuilder &Builder) {
+  VPDominatorTree VPDT;
+  VPDT.recalculate(Plan);
+
+  for (VPRecipeBase &R :
+       Plan.getVectorLoopRegion()->getEntry()->getEntryBasicBlock()->phis()) {
+    auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R);
+    if (!FOR)
+      continue;
+
+    SmallPtrSet<VPFirstOrderRecurrencePHIRecipe *, 4> SeenPhis;
+    VPRecipeBase *Previous = FOR->getBackedgeValue()->getDefiningRecipe();
+    // Fixed-order recurrences do not contain cycles, so this loop is guaranteed
+    // to terminate.
+    while (auto *PrevPhi =
+               dyn_cast_or_null<VPFirstOrderRecurrencePHIRecipe>(Previous)) {
+      assert(PrevPhi->getParent() == FOR->getParent());
+      assert(SeenPhis.insert(PrevPhi).second);
+      Previous = PrevPhi->getBackedgeValue()->getDefiningRecipe();
+    }
+
+    sinkRecurrenceUsersAfterPrevious(FOR, Previous, VPDT);
+
+    // Introduce a recipe to combine the incoming and previous values of a
+    // fixed-order recurrence.
+    VPBasicBlock *InsertBlock = Previous->getParent();
+    auto *Region = GetReplicateRegion(Previous);
+    if (Region)
+      InsertBlock = dyn_cast<VPBasicBlock>(Region->getSingleSuccessor());
+    if (!InsertBlock) {
+      InsertBlock = new VPBasicBlock(Region->getName() + ".succ");
+      VPBlockUtils::insertBlockAfter(InsertBlock, Region);
+    }
+    if (Region || isa<VPHeaderPHIRecipe>(Previous))
+      Builder.setInsertPoint(InsertBlock, InsertBlock->getFirstNonPhi());
+    else
+      Builder.setInsertPoint(InsertBlock, std::next(Previous->getIterator()));
+
+    auto *RecurSplice = cast<VPInstruction>(
+        Builder.createNaryOp(VPInstruction::FirstOrderRecurrenceSplice,
+                             {FOR, FOR->getBackedgeValue()}));
+
+    FOR->replaceAllUsesWith(RecurSplice);
+    // Set the first operand of RecurSplice to FOR again, after replacing
+    // all users.
+    RecurSplice->setOperand(0, FOR);
+  }
 }
