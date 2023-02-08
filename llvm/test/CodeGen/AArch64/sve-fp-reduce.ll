@@ -357,11 +357,11 @@ define double @fminv_nxv2f64(<vscale x 2 x double> %a) {
 define float @fadd_reduct_reassoc_v4v8f32(<vscale x 4 x float> %a, <vscale x 8 x float> %b) {
 ; CHECK-LABEL: fadd_reduct_reassoc_v4v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fadd z1.s, z1.s, z2.s
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fadd z0.s, z0.s, z1.s
 ; CHECK-NEXT:    faddv s0, p0, z0.s
-; CHECK-NEXT:    faddv s1, p0, z1.s
-; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
 ; CHECK-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fadd.nxv4f32(float -0.0, <vscale x 4 x float> %a)
   %r2 = call fast float @llvm.vector.reduce.fadd.nxv8f32(float -0.0, <vscale x 8 x float> %b)

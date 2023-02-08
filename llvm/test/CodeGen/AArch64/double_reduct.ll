@@ -5,11 +5,9 @@ define float @add_f32(<8 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: add_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fadd v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    faddp v2.4s, v2.4s, v2.4s
+; CHECK-NEXT:    fadd v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    faddp v0.4s, v0.4s, v0.4s
-; CHECK-NEXT:    faddp s1, v2.2s
 ; CHECK-NEXT:    faddp s0, v0.2s
-; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fadd.f32.v8f32(float -0.0, <8 x float> %a)
   %r2 = call fast float @llvm.vector.reduce.fadd.f32.v4f32(float -0.0, <4 x float> %b)
@@ -20,14 +18,11 @@ define float @add_f32(<8 x float> %a, <4 x float> %b) {
 define float @fmul_f32(<8 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: fmul_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v3.16b, v2.16b, v2.16b, #8
 ; CHECK-NEXT:    fmul v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    fmul v1.2s, v2.2s, v3.2s
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    fmul s1, s1, v1.s[1]
-; CHECK-NEXT:    fmul v0.2s, v0.2s, v2.2s
+; CHECK-NEXT:    fmul v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    fmul v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    fmul s0, s0, v0.s[1]
-; CHECK-NEXT:    fmul s0, s0, s1
 ; CHECK-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fmul.f32.v8f32(float 1.0, <8 x float> %a)
   %r2 = call fast float @llvm.vector.reduce.fmul.f32.v4f32(float 1.0, <4 x float> %b)
@@ -81,11 +76,10 @@ define i32 @add_i32(<8 x i32> %a, <4 x i32> %b) {
 define i16 @add_ext_i16(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: add_ext_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uaddlv h0, v0.16b
-; CHECK-NEXT:    uaddlv h1, v1.16b
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    add w0, w8, w9
+; CHECK-NEXT:    uaddlp v1.8h, v1.16b
+; CHECK-NEXT:    uadalp v1.8h, v0.16b
+; CHECK-NEXT:    addv h0, v1.8h
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %ae = zext <16 x i8> %a to <16 x i16>
   %be = zext <16 x i8> %b to <16 x i16>
@@ -100,12 +94,10 @@ define i16 @add_ext_v32i16(<32 x i8> %a, <16 x i8> %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uaddl2 v3.8h, v0.16b, v1.16b
 ; CHECK-NEXT:    uaddl v0.8h, v0.8b, v1.8b
-; CHECK-NEXT:    uaddlv h2, v2.16b
 ; CHECK-NEXT:    add v0.8h, v0.8h, v3.8h
-; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    uadalp v0.8h, v2.16b
 ; CHECK-NEXT:    addv h0, v0.8h
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    add w0, w8, w9
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %ae = zext <32 x i8> %a to <32 x i16>
   %be = zext <16 x i8> %b to <16 x i16>
@@ -118,18 +110,13 @@ define i16 @add_ext_v32i16(<32 x i8> %a, <16 x i8> %b) {
 define i32 @mul_i32(<8 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: mul_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v3.16b, v2.16b, v2.16b, #8
 ; CHECK-NEXT:    mul v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    mul v1.2s, v2.2s, v3.2s
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    mov w9, v1.s[1]
-; CHECK-NEXT:    fmov w11, s1
-; CHECK-NEXT:    mul v0.2s, v0.2s, v2.2s
-; CHECK-NEXT:    mul w9, w11, w9
+; CHECK-NEXT:    mul v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mul v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    fmov w10, s0
-; CHECK-NEXT:    mul w8, w10, w8
-; CHECK-NEXT:    mul w0, w8, w9
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mul w0, w9, w8
 ; CHECK-NEXT:    ret
   %r1 = call i32 @llvm.vector.reduce.mul.i32.v8i32(<8 x i32> %a)
   %r2 = call i32 @llvm.vector.reduce.mul.i32.v4i32(<4 x i32> %b)
@@ -141,16 +128,11 @@ define i32 @and_i32(<8 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: and_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ext v3.16b, v2.16b, v2.16b, #8
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v2.8b, v2.8b, v3.8b
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    mov w8, v2.s[1]
-; CHECK-NEXT:    mov w9, v0.s[1]
-; CHECK-NEXT:    fmov w10, s0
-; CHECK-NEXT:    fmov w11, s2
-; CHECK-NEXT:    and w9, w10, w9
-; CHECK-NEXT:    and w8, w11, w8
+; CHECK-NEXT:    mov w8, v0.s[1]
+; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    and w0, w9, w8
 ; CHECK-NEXT:    ret
   %r1 = call i32 @llvm.vector.reduce.and.i32.v8i32(<8 x i32> %a)
@@ -163,16 +145,11 @@ define i32 @or_i32(<8 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: or_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ext v3.16b, v2.16b, v2.16b, #8
+; CHECK-NEXT:    orr v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v2.8b, v2.8b, v3.8b
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    mov w8, v2.s[1]
-; CHECK-NEXT:    mov w9, v0.s[1]
-; CHECK-NEXT:    fmov w10, s0
-; CHECK-NEXT:    fmov w11, s2
-; CHECK-NEXT:    orr w9, w10, w9
-; CHECK-NEXT:    orr w8, w11, w8
+; CHECK-NEXT:    mov w8, v0.s[1]
+; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    orr w0, w9, w8
 ; CHECK-NEXT:    ret
   %r1 = call i32 @llvm.vector.reduce.or.i32.v8i32(<8 x i32> %a)
@@ -185,16 +162,11 @@ define i32 @xor_i32(<8 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: xor_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    eor v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ext v3.16b, v2.16b, v2.16b, #8
+; CHECK-NEXT:    eor v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v2.8b, v2.8b, v3.8b
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    mov w8, v2.s[1]
-; CHECK-NEXT:    mov w9, v0.s[1]
-; CHECK-NEXT:    fmov w10, s0
-; CHECK-NEXT:    fmov w11, s2
-; CHECK-NEXT:    eor w9, w10, w9
-; CHECK-NEXT:    eor w8, w11, w8
+; CHECK-NEXT:    mov w8, v0.s[1]
+; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    eor w0, w9, w8
 ; CHECK-NEXT:    ret
   %r1 = call i32 @llvm.vector.reduce.xor.i32.v8i32(<8 x i32> %a)
@@ -207,12 +179,9 @@ define i32 @umin_i32(<8 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: umin_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umin v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    uminv s2, v2.4s
+; CHECK-NEXT:    umin v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    uminv s0, v0.4s
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    cmp w9, w8
-; CHECK-NEXT:    csel w0, w9, w8, lo
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %r1 = call i32 @llvm.vector.reduce.umin.i32.v8i32(<8 x i32> %a)
   %r2 = call i32 @llvm.vector.reduce.umin.i32.v4i32(<4 x i32> %b)
@@ -224,12 +193,9 @@ define i32 @umax_i32(<8 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: umax_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umax v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    umaxv s2, v2.4s
+; CHECK-NEXT:    umax v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    umaxv s0, v0.4s
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    cmp w9, w8
-; CHECK-NEXT:    csel w0, w9, w8, hi
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %r1 = call i32 @llvm.vector.reduce.umax.i32.v8i32(<8 x i32> %a)
   %r2 = call i32 @llvm.vector.reduce.umax.i32.v4i32(<4 x i32> %b)
@@ -241,12 +207,9 @@ define i32 @smin_i32(<8 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: smin_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    smin v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    sminv s2, v2.4s
+; CHECK-NEXT:    smin v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    sminv s0, v0.4s
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    cmp w9, w8
-; CHECK-NEXT:    csel w0, w9, w8, lt
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %r1 = call i32 @llvm.vector.reduce.smin.i32.v8i32(<8 x i32> %a)
   %r2 = call i32 @llvm.vector.reduce.smin.i32.v4i32(<4 x i32> %b)
@@ -258,12 +221,9 @@ define i32 @smax_i32(<8 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: smax_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    smax v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    smaxv s2, v2.4s
+; CHECK-NEXT:    smax v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    smaxv s0, v0.4s
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    cmp w9, w8
-; CHECK-NEXT:    csel w0, w9, w8, gt
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %r1 = call i32 @llvm.vector.reduce.smax.i32.v8i32(<8 x i32> %a)
   %r2 = call i32 @llvm.vector.reduce.smax.i32.v4i32(<4 x i32> %b)

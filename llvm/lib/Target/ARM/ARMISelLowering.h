@@ -617,6 +617,10 @@ class VectorType;
       return TargetLowering::shouldFormOverflowOp(Opcode, VT, true);
     }
 
+    bool shouldReassociateReduction(unsigned Opc, EVT VT) const override {
+      return Opc != ISD::VECREDUCE_ADD;
+    }
+
     /// Returns true if an argument of type Ty needs to be passed in a
     /// contiguous block of registers in calling convention CallConv.
     bool functionArgumentNeedsConsecutiveRegisters(
