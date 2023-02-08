@@ -43,6 +43,7 @@
 
 #include <array>
 #include <cstdint>
+#include <limits>
 
 using namespace llvm;
 
@@ -52,7 +53,7 @@ namespace {
 
 //===--- Constants --------------------------------------------------------===//
 
-constexpr uint32_t kVersionBase = 1;                // occupies lower 16 bits
+constexpr uint32_t kVersionBase = 2;                // occupies lower 16 bits
 constexpr uint32_t kVersionPtrSizeRel = (1u << 16); // offsets are pointer-sized
 constexpr int kCtorDtorPriority = 2;
 
@@ -269,9 +270,10 @@ void SanitizerBinaryMetadata::runOn(Function &F, MetadataInfoSet &MIS) {
     const auto *MI = &MetadataInfo::Covered;
     MIS.insert(MI);
     const StringRef Section = getSectionName(MI->SectionSuffix);
-    // The feature mask will be placed after the size (32 bit) of the function,
-    // so in total one covered entry will use `sizeof(void*) + 4 + 4`.
-    Constant *CFM = IRB.getInt32(FeatureMask);
+    // The feature mask will be placed after the size of the function.
+    assert(FeatureMask <= std::numeric_limits<uint8_t>::max() &&
+           "Increase feature mask bytes and bump version");
+    Constant *CFM = IRB.getInt8(FeatureMask);
     F.setMetadata(LLVMContext::MD_pcsections,
                   MDB.createPCSections({{Section, {CFM}}}));
   }
