@@ -337,20 +337,29 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   }
 
   case ModuleDeclKind::Implementation: {
-    std::pair<IdentifierInfo *, SourceLocation> ModuleNameLoc(
-        PP.getIdentifierInfo(ModuleName), Path[0].second);
     // C++20 A module-declaration that contains neither an export-
     // keyword nor a module-partition implicitly imports the primary
     // module interface unit of the module as if by a module-import-
     // declaration.
+    std::pair<IdentifierInfo *, SourceLocation> ModuleNameLoc(
+        PP.getIdentifierInfo(ModuleName), Path[0].second);
+
+    // The module loader will assume we're trying to import the module that
+    // we're building if `LangOpts.CurrentModule` equals to 'ModuleName'.
+    // Change the value for `LangOpts.CurrentModule` temporarily to make the
+    // module loader work properly.
+    const_cast<LangOptions&>(getLangOpts()).CurrentModule = "";
     Mod = getModuleLoader().loadModule(ModuleLoc, {ModuleNameLoc},
                                        Module::AllVisible,
                                        /*IsInclusionDirective=*/false);
+    const_cast<LangOptions&>(getLangOpts()).CurrentModule = ModuleName;
+
     if (!Mod) {
       Diag(ModuleLoc, diag::err_module_not_defined) << ModuleName;
       // Create an empty module interface unit for error recovery.
       Mod = Map.createModuleForInterfaceUnit(ModuleLoc, ModuleName);
     }
+
   } break;
 
   case ModuleDeclKind::PartitionImplementation:
