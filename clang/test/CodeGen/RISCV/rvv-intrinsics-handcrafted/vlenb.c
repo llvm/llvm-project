@@ -29,11 +29,11 @@ unsigned long test_vlenb(void) {
 //.
 // RV32: !0 = !{i32 1, !"wchar_size", i32 4}
 // RV32: !1 = !{i32 1, !"target-abi", !"ilp32d"}
-// RV32: !2 = !{i32 1, !"SmallDataLimit", i32 0}
+// RV32: !2 = !{i32 8, !"SmallDataLimit", i32 0}
 // RV32: !3 = !{!"vlenb"}
 //.
 // RV64: !0 = !{i32 1, !"wchar_size", i32 4}
 // RV64: !1 = !{i32 1, !"target-abi", !"lp64d"}
-// RV64: !2 = !{i32 1, !"SmallDataLimit", i32 0}
+// RV64: !2 = !{i32 8, !"SmallDataLimit", i32 0}
 // RV64: !3 = !{!"vlenb"}
 //.
