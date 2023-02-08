@@ -2071,6 +2071,6 @@ entry:
 ; CHECK-DAG: ret:
 ; CHECK-NEXT:  ret void
 
-; CHECK: !0 = !{!"sanmd_covered", !1}
-; CHECK: !1 = !{i8 1}
-; CHECK: !2 = !{!"sanmd_atomics"}
+; CHECK: !0 = !{!"sanmd_covered!C", !1}
+; CHECK: !1 = !{i64 1}
+; CHECK: !2 = !{!"sanmd_atomics!C"}
