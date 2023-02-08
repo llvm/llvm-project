@@ -448,10 +448,12 @@ struct DenseMapInfo<const AA::InstExclusionSetTy *>
     if (LHS == getEmptyKey() || RHS == getEmptyKey() ||
         LHS == getTombstoneKey() || RHS == getTombstoneKey())
       return false;
-    if (!LHS || !RHS)
-      return ((LHS && LHS->empty()) || (RHS && RHS->empty()));
-    if (LHS->size() != RHS->size())
+    auto SizeLHS = LHS ? LHS->size() : 0;
+    auto SizeRHS = RHS ? RHS->size() : 0;
+    if (SizeLHS != SizeRHS)
       return false;
+    if (SizeRHS == 0)
+      return true;
     return llvm::set_is_subset(*LHS, *RHS);
   }
 };
@@ -1297,15 +1299,16 @@ struct InformationCache {
   /// Return the map conaining all the knowledge we have from `llvm.assume`s.
   const RetainedKnowledgeMap &getKnowledgeMap() const { return KnowledgeMap; }
 
-  /// Given \p BES, return a uniqued version. \p BES is destroyed in the
-  /// process.
+  /// Given \p BES, return a uniqued version.
   const AA::InstExclusionSetTy *
   getOrCreateUniqueBlockExecutionSet(const AA::InstExclusionSetTy *BES) {
     auto It = BESets.find(BES);
     if (It != BESets.end())
       return *It;
     auto *UniqueBES = new (Allocator) AA::InstExclusionSetTy(*BES);
-    BESets.insert(UniqueBES);
+    bool Success = BESets.insert(UniqueBES).second;
+    (void)Success;
+    assert(Success && "Expected only new entries to be added");
     return UniqueBES;
   }
 
@@ -1376,7 +1379,7 @@ private:
   SetVector<const Instruction *> AssumeOnlyValues;
 
   /// Cache for block sets to allow reuse.
-  DenseSet<AA::InstExclusionSetTy *> BESets;
+  DenseSet<const AA::InstExclusionSetTy *> BESets;
 
   /// Getters for analysis.
   AnalysisGetter &AG;
