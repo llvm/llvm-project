@@ -16,6 +16,70 @@
 using namespace mlir;
 
 namespace {
+/// Creates a sequence of `test.get_tuple_element` ops for all elements of a
+/// given tuple value. If some tuple elements are, in turn, tuples, the elements
+/// of those are extracted recursively such that the returned values have the
+/// same types as `resultTypes.getFlattenedTypes()`.
+static LogicalResult buildDecomposeTuple(OpBuilder &builder, Location loc,
+                                         TupleType resultType, Value value,
+                                         SmallVectorImpl<Value> &values) {
+  for (unsigned i = 0, e = resultType.size(); i < e; ++i) {
+    Type elementType = resultType.getType(i);
+    Value element = builder.create<test::GetTupleElementOp>(
+        loc, elementType, value, builder.getI32IntegerAttr(i));
+    if (auto nestedTupleType = elementType.dyn_cast<TupleType>()) {
+      // Recurse if the current element is also a tuple.
+      if (failed(buildDecomposeTuple(builder, loc, nestedTupleType, element,
+                                     values)))
+        return failure();
+    } else {
+      values.push_back(element);
+    }
+  }
+  return success();
+}
+
+/// Creates a `test.make_tuple` op out of the given inputs building a tuple of
+/// type `resultType`. If that type is nested, each nested tuple is built
+/// recursively with another `test.make_tuple` op.
+static std::optional<Value> buildMakeTupleOp(OpBuilder &builder,
+                                             TupleType resultType,
+                                             ValueRange inputs, Location loc) {
+  // Build one value for each element at this nesting level.
+  SmallVector<Value> elements;
+  elements.reserve(resultType.getTypes().size());
+  ValueRange::iterator inputIt = inputs.begin();
+  for (Type elementType : resultType.getTypes()) {
+    if (auto nestedTupleType = elementType.dyn_cast<TupleType>()) {
+      // Determine how many input values are needed for the nested elements of
+      // the nested TupleType and advance inputIt by that number.
+      // TODO: We only need the *number* of nested types, not the types itself.
+      //       Maybe it's worth adding a more efficient overload?
+      SmallVector<Type> nestedFlattenedTypes;
+      nestedTupleType.getFlattenedTypes(nestedFlattenedTypes);
+      size_t numNestedFlattenedTypes = nestedFlattenedTypes.size();
+      ValueRange nestedFlattenedelements(inputIt,
+                                         inputIt + numNestedFlattenedTypes);
+      inputIt += numNestedFlattenedTypes;
+
+      // Recurse on the values for the nested TupleType.
+      std::optional<Value> res = buildMakeTupleOp(builder, nestedTupleType,
+                                                  nestedFlattenedelements, loc);
+      if (!res.has_value())
+        return {};
+
+      // The tuple constructed by the conversion is the element value.
+      elements.push_back(res.value());
+    } else {
+      // Base case: take one input as is.
+      elements.push_back(*inputIt++);
+    }
+  }
+
+  // Assemble the tuple from the elements.
+  return builder.create<test::MakeTupleOp>(loc, resultType, elements);
+}
+
 /// A pass for testing call graph type decomposition.
 ///
 /// This instantiates the patterns with a TypeConverter and ValueDecomposer
@@ -39,7 +103,6 @@ struct TestDecomposeCallGraphTypes
     auto *context = &getContext();
     TypeConverter typeConverter;
     ConversionTarget target(*context);
-    ValueDecomposer decomposer;
     RewritePatternSet patterns(context);
 
     target.addLegalDialect<test::TestDialect>();
@@ -59,27 +122,10 @@ struct TestDecomposeCallGraphTypes
           tupleType.getFlattenedTypes(types);
           return success();
         });
+    typeConverter.addArgumentMaterialization(buildMakeTupleOp);
 
-    decomposer.addDecomposeValueConversion([](OpBuilder &builder, Location loc,
-                                              TupleType resultType, Value value,
-                                              SmallVectorImpl<Value> &values) {
-      for (unsigned i = 0, e = resultType.size(); i < e; ++i) {
-        Value res = builder.create<test::GetTupleElementOp>(
-            loc, resultType.getType(i), value, builder.getI32IntegerAttr(i));
-        values.push_back(res);
-      }
-      return success();
-    });
-
-    typeConverter.addArgumentMaterialization(
-        [](OpBuilder &builder, TupleType resultType, ValueRange inputs,
-           Location loc) -> std::optional<Value> {
-          if (inputs.size() == 1)
-            return std::nullopt;
-          TupleType tuple = builder.getTupleType(inputs.getTypes());
-          Value value = builder.create<test::MakeTupleOp>(loc, tuple, inputs);
-          return value;
-        });
+    ValueDecomposer decomposer;
+    decomposer.addDecomposeValueConversion(buildDecomposeTuple);
 
     populateDecomposeCallGraphTypesPatterns(context, typeConverter, decomposer,
                                             patterns);
