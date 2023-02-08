@@ -5,6 +5,7 @@ set(LLVM_OPTIONAL_SOURCES
   ConvertToLLVMIR.cpp
   DebugTranslation.cpp
   DebugImporter.cpp
+  LoopAnnotationImporter.cpp
   LoopAnnotationTranslation.cpp
   ModuleTranslation.cpp
   ModuleImport.cpp
@@ -55,6 +56,7 @@ add_mlir_translation_library(MLIRToLLVMIRTranslationRegistration
 
 add_mlir_translation_library(MLIRTargetLLVMIRImport
   DebugImporter.cpp
+  LoopAnnotationImporter.cpp
   ModuleImport.cpp
   TypeFromLLVM.cpp
 

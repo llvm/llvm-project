@@ -262,3 +262,180 @@ define void @access_group(ptr %arg1) {
 
 !0 = !{!1}
 !1 = distinct !{!"unsupported access group"}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: expected all loop properties to be either debug locations or metadata nodes
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, i32 42}
+define void @invalid_loop_node(i64 %n, ptr %A) {
+entry:
+  br label %end, !llvm.loop !0
+end:
+  ret void
+}
+
+!0 = distinct !{!0, i32 42}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: cannot import empty loop property
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
+define void @invalid_loop_node(i64 %n, ptr %A) {
+entry:
+  br label %end, !llvm.loop !0
+end:
+  ret void
+}
+
+!0 = distinct !{!0, !1}
+!1 = distinct !{}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: cannot import loop property without a name
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
+define void @invalid_loop_node(i64 %n, ptr %A) {
+entry:
+  br label %end, !llvm.loop !0
+end:
+  ret void
+}
+
+!0 = distinct !{!0, !1}
+!1 = distinct !{i1 0}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: cannot import loop properties with duplicated names llvm.loop.disable_nonforced
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1, !1}
+define void @unsupported_loop_annotation(i64 %n, ptr %A) {
+entry:
+  br label %end, !llvm.loop !0
+end:
+  ret void
+}
+
+!0 = distinct !{!0, !1, !1}
+!1 = !{!"llvm.loop.disable_nonforced"}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: expected metadata node llvm.loop.disable_nonforced to hold no value
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
+define void @unsupported_loop_annotation(i64 %n, ptr %A) {
+entry:
+  br label %end, !llvm.loop !0
+end:
+  ret void
+}
+
+!0 = distinct !{!0, !1}
+!1 = !{!"llvm.loop.disable_nonforced", i1 0}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: expected metadata nodes llvm.loop.unroll.enable and llvm.loop.unroll.disable to be mutually exclusive
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1, !2}
+define void @unsupported_loop_annotation(i64 %n, ptr %A) {
+entry:
+  br label %end, !llvm.loop !0
+end:
+  ret void
+}
+
+!0 = distinct !{!0, !1, !2}
+!1 = !{!"llvm.loop.unroll.enable"}
+!2 = !{!"llvm.loop.unroll.disable"}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: expected metadata node llvm.loop.vectorize.enable to hold a boolean value
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
+define void @unsupported_loop_annotation(i64 %n, ptr %A) {
+entry:
+  br label %end, !llvm.loop !0
+end:
+  ret void
+}
+
+!0 = distinct !{!0, !1}
+!1 = !{!"llvm.loop.vectorize.enable"}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: expected metadata node llvm.loop.vectorize.width to hold an i32 value
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
+define void @unsupported_loop_annotation(i64 %n, ptr %A) {
+entry:
+  br label %end, !llvm.loop !0
+end:
+  ret void
+}
+
+!0 = distinct !{!0, !1}
+!1 = !{!"llvm.loop.vectorize.width", !0}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: expected metadata node llvm.loop.vectorize.followup_all to hold an MDNode
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
+define void @unsupported_loop_annotation(i64 %n, ptr %A) {
+entry:
+  br label %end, !llvm.loop !0
+end:
+  ret void
+}
+
+!0 = distinct !{!0, !1}
+!1 = !{!"llvm.loop.vectorize.followup_all", i32 42}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: expected metadata node llvm.loop.parallel_accesses to hold one or multiple MDNodes
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
+define void @unsupported_loop_annotation(i64 %n, ptr %A) {
+entry:
+  br label %end, !llvm.loop !0
+end:
+  ret void
+}
+
+!0 = distinct !{!0, !1}
+!1 = !{!"llvm.loop.parallel_accesses", i32 42}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: unknown loop annotation llvm.loop.typo
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1, !2}
+define void @unsupported_loop_annotation(i64 %n, ptr %A) {
+entry:
+  br label %end, !llvm.loop !0
+end:
+  ret void
+}
+
+!0 = distinct !{!0, !1, !2}
+!1 = !{!"llvm.loop.disable_nonforced"}
+!2 = !{!"llvm.loop.typo"}
