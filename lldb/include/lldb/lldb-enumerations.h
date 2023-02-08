@@ -504,11 +504,15 @@ enum DynamicValueType {
   eDynamicDontRunTarget = 2
 };
 
-enum BindGenericTypes {
-  eBindAuto = 0,
-  eBind = 1,
-  eDontBind = 2
+// BEGIN SWIFT
+//  Enumeration to control whether generic type parameters should be bound or
+//  not in expression evaluation.
+enum BindGenericTypes { 
+  eBindAuto = 0, 
+  eBind = 1, 
+  eDontBind = 2 
 };
+// END SWIFT
 
 enum StopShowColumn {
   eStopShowColumnAnsiOrCaret = 0,
@@ -621,6 +625,9 @@ enum CommandArgumentType {
   eArgTypeConnectURL,
   eArgTypeTargetID,
   eArgTypeStopHookID,
+  // BEGIN SWIFT
+  eArgTypeBindGenTypeParamValue,
+  // END SWIFT
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
