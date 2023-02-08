@@ -438,13 +438,10 @@ exit:
 define half @fadd_reduct_reassoc_v8f16(<8 x half> %a, <8 x half> %b) {
 ; FULLFP16-LABEL: fadd_reduct_reassoc_v8f16:
 ; FULLFP16:       // %bb.0:
-; FULLFP16-NEXT:    faddp v2.8h, v0.8h, v0.8h
-; FULLFP16-NEXT:    faddp v3.8h, v1.8h, v1.8h
-; FULLFP16-NEXT:    faddp v0.8h, v2.8h, v0.8h
-; FULLFP16-NEXT:    faddp v1.8h, v3.8h, v1.8h
+; FULLFP16-NEXT:    fadd v0.8h, v0.8h, v1.8h
+; FULLFP16-NEXT:    faddp v1.8h, v0.8h, v0.8h
+; FULLFP16-NEXT:    faddp v0.8h, v1.8h, v0.8h
 ; FULLFP16-NEXT:    faddp h0, v0.2h
-; FULLFP16-NEXT:    faddp h1, v1.2h
-; FULLFP16-NEXT:    fadd h0, h0, h1
 ; FULLFP16-NEXT:    ret
 ;
 ; CHECKNOFP16-LABEL: fadd_reduct_reassoc_v8f16:
@@ -535,11 +532,9 @@ define float @fadd_reduct_reassoc_v8f32(<8 x float> %a, <8 x float> %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fadd v2.4s, v2.4s, v3.4s
 ; CHECK-NEXT:    fadd v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    faddp v1.4s, v2.4s, v2.4s
+; CHECK-NEXT:    fadd v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    faddp v0.4s, v0.4s, v0.4s
-; CHECK-NEXT:    faddp s1, v1.2s
 ; CHECK-NEXT:    faddp s0, v0.2s
-; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fadd.f32.v8f32(float -0.0, <8 x float> %a)
   %r2 = call fast float @llvm.vector.reduce.fadd.f32.v8f32(float -0.0, <8 x float> %b)
@@ -550,11 +545,9 @@ define float @fadd_reduct_reassoc_v8f32(<8 x float> %a, <8 x float> %b) {
 define float @fadd_reduct_reassoc_v4f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: fadd_reduct_reassoc_v4f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    fadd v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    faddp v0.4s, v0.4s, v0.4s
-; CHECK-NEXT:    faddp v1.4s, v1.4s, v1.4s
 ; CHECK-NEXT:    faddp s0, v0.2s
-; CHECK-NEXT:    faddp s1, v1.2s
-; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fadd.f32.v4f32(float -0.0, <4 x float> %a)
   %r2 = call fast float @llvm.vector.reduce.fadd.f32.v4f32(float -0.0, <4 x float> %b)
@@ -582,11 +575,9 @@ define float @fadd_reduct_reassoc_v4v8f32(<4 x float> %a, <8 x float> %b) {
 ; CHECK-LABEL: fadd_reduct_reassoc_v4v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fadd v1.4s, v1.4s, v2.4s
+; CHECK-NEXT:    fadd v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    faddp v0.4s, v0.4s, v0.4s
-; CHECK-NEXT:    faddp v1.4s, v1.4s, v1.4s
 ; CHECK-NEXT:    faddp s0, v0.2s
-; CHECK-NEXT:    faddp s1, v1.2s
-; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fadd.f32.v4f32(float -0.0, <4 x float> %a)
   %r2 = call fast float @llvm.vector.reduce.fadd.f32.v8f32(float -0.0, <8 x float> %b)
@@ -599,9 +590,8 @@ define double @fadd_reduct_reassoc_v4f64(<4 x double> %a, <4 x double> %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fadd v2.2d, v2.2d, v3.2d
 ; CHECK-NEXT:    fadd v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    faddp d1, v2.2d
+; CHECK-NEXT:    fadd v0.2d, v0.2d, v2.2d
 ; CHECK-NEXT:    faddp d0, v0.2d
-; CHECK-NEXT:    fadd d0, d0, d1
 ; CHECK-NEXT:    ret
   %r1 = call fast double @llvm.vector.reduce.fadd.f64.v4f64(double -0.0, <4 x double> %a)
   %r2 = call fast double @llvm.vector.reduce.fadd.f64.v4f64(double -0.0, <4 x double> %b)
