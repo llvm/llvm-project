@@ -162,8 +162,9 @@ typedef struct heap_s {
     rtcsample_t salloc_time[NUM_KINDS];            // The time the most recent slab allocation was started
     rtcsample_t grow_time[NUM_KINDS];              // The time the most recent grow recordable was started
     sdata_t sdata[NUM_KINDS][NUM_SDATA];           // Information about all allocated slabs
-    atomic_ulong initial_slabs;                    // Slabs provided to delay first hostcall
-    ulong initial_slabs_end;                       // Limit of inititial slabs
+    atomic_ulong initial_slabs;                    // Next initial slab to deliver
+    ulong initial_slabs_end;                       // End of inititial slabs
+    ulong initial_slabs_start;                     // Start of initial slabs
 #if defined NON_SLAB_TRACKING
 #if ATOMIC_PAD > 1
     ulong pad[ATOMIC_PAD-1];
@@ -1001,6 +1002,7 @@ __ockl_dm_init_v1(ulong hp, ulong sp, uint hb, uint nis)
         __global heap_t *thp = (__global heap_t *)hp;
         AS(&thp->initial_slabs, sp, memory_order_relaxed);
         thp->initial_slabs_end = sp + ((ulong)nis << 21);
+        thp->initial_slabs_start = sp;
     }
 }
 
