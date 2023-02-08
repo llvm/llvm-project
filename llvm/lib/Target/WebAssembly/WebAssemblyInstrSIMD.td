@@ -1166,13 +1166,21 @@ defm MIN : SIMDBinaryFP<fminimum, "min", 232>;
 defm MAX : SIMDBinaryFP<fmaximum, "max", 233>;
 
 // Pseudo-minimum: pmin
-def pmin : PatFrag<(ops node:$lhs, node:$rhs),
-                   (vselect (setolt $rhs, $lhs), $rhs, $lhs)>;
+def pmin : PatFrags<(ops node:$lhs, node:$rhs), [
+                    (vselect (setolt $lhs, $rhs), $lhs, $rhs),
+                    (vselect (setole $lhs, $rhs), $lhs, $rhs),
+                    (vselect (setogt $rhs, $lhs), $lhs, $rhs),
+                    (vselect (setoge $rhs, $lhs), $lhs, $rhs)
+]>;
 defm PMIN : SIMDBinaryFP<pmin, "pmin", 234>;
 
 // Pseudo-maximum: pmax
-def pmax : PatFrag<(ops node:$lhs, node:$rhs),
-                   (vselect (setolt $lhs, $rhs), $rhs, $lhs)>;
+def pmax : PatFrags<(ops node:$lhs, node:$rhs), [
+                    (vselect (setogt $lhs, $rhs), $lhs, $rhs),
+                    (vselect (setoge $lhs, $rhs), $lhs, $rhs),
+                    (vselect (setolt $rhs, $lhs), $lhs, $rhs),
+                    (vselect (setole $rhs, $lhs), $lhs, $rhs)
+]>;
 defm PMAX : SIMDBinaryFP<pmax, "pmax", 235>;
 
 // Also match the pmin/pmax cases where the operands are int vectors (but the
