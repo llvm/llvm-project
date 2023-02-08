@@ -1497,7 +1497,7 @@ bool Preprocessor::enterOrExitSafeBufferOptOutRegion(
     // To set the start location of a new region:
 
     if (!SafeBufferOptOutMap.empty()) {
-      auto *PrevRegion = &SafeBufferOptOutMap.back();
+      [[maybe_unused]] auto *PrevRegion = &SafeBufferOptOutMap.back();
       assert(PrevRegion->first != PrevRegion->second &&
              "Shall not begin a safe buffer opt-out region before closing the "
              "previous one.");
