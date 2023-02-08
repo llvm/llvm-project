@@ -140,6 +140,12 @@ static bool transferReadSupportsMMAMatrixType(vector::TransferReadOp readOp,
     return false;
   if (!getMemrefConstantHorizontalStride(readOp.getShapedType()))
     return false;
+
+  // Only allow integer types if the signedness can be inferred.
+  if (!useNvGpu && readOp.getVectorType().getElementType().isInteger(8))
+    if (!readOp->hasOneUse() || !isa<arith::ExtSIOp>(*readOp->user_begin()))
+      return false;
+
   AffineMap map = readOp.getPermutationMap();
   OpBuilder b(readOp.getContext());
   AffineExpr innerDim = b.getAffineDimExpr(map.getNumDims() - 1);
@@ -185,8 +191,16 @@ static bool constantSupportsMMAMatrixType(arith::ConstantOp constantOp) {
 
 /// Return true if this is a broadcast from scalar to a 2D vector.
 static bool broadcastSupportsMMAMatrixType(vector::BroadcastOp broadcastOp) {
-  return broadcastOp.getVectorType().getRank() == 2 &&
-         broadcastOp.getSource().getType().isa<FloatType>();
+  return broadcastOp.getVectorType().getRank() == 2;
+}
+
+/// Return true if this signed extend op can be folded into a contract op.
+static bool signedExtendSupportsMMAMatrixType(arith::ExtSIOp extOp) {
+  if (!isa<vector::TransferReadOp>(extOp.getOperand().getDefiningOp()))
+    return false;
+  return llvm::all_of(extOp->getUsers(), [](Operation *user) {
+    return isa<vector::ContractionOp>(user);
+  });
 }
 
 /// Return the MMA elementwise enum associated with `op` if it is supported.
@@ -268,6 +282,8 @@ static bool supportsMMaMatrixType(Operation *op, bool useNvGpu) {
     return constantSupportsMMAMatrixType(constant);
   if (auto broadcast = dyn_cast<vector::BroadcastOp>(op))
     return broadcastSupportsMMAMatrixType(broadcast);
+  if (auto extend = dyn_cast<arith::ExtSIOp>(op))
+    return signedExtendSupportsMMAMatrixType(extend);
   return elementwiseSupportsMMAMatrixType(op);
 }
 
@@ -411,8 +427,18 @@ struct CombineTransferReadOpTranspose final
 
   LogicalResult matchAndRewrite(vector::TransposeOp op,
                                 PatternRewriter &rewriter) const override {
-    auto transferReadOp =
-        op.getVector().getDefiningOp<vector::TransferReadOp>();
+    // Look through integer extend ops.
+    Value source = op.getVector();
+    auto extOp = source.getDefiningOp<arith::ExtSIOp>();
+    auto resultType = op.getVectorType();
+    if (extOp) {
+      source = extOp.getOperand();
+      resultType =
+          VectorType::get(resultType.getShape(),
+                          source.getType().cast<VectorType>().getElementType());
+    }
+
+    auto transferReadOp = source.getDefiningOp<vector::TransferReadOp>();
     if (!transferReadOp)
       return failure();
 
@@ -431,11 +457,23 @@ struct CombineTransferReadOpTranspose final
         AffineMap::getPermutationMap(permU, op.getContext());
     AffineMap newMap =
         permutationMap.compose(transferReadOp.getPermutationMap());
-    rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
-        op, op.getType(), transferReadOp.getSource(),
-        transferReadOp.getIndices(), AffineMapAttr::get(newMap),
-        transferReadOp.getPadding(), transferReadOp.getMask(),
-        transferReadOp.getInBoundsAttr());
+
+    auto loc = op.getLoc();
+    Value result =
+        rewriter
+            .create<vector::TransferReadOp>(
+                loc, resultType, transferReadOp.getSource(),
+                transferReadOp.getIndices(), AffineMapAttr::get(newMap),
+                transferReadOp.getPadding(), transferReadOp.getMask(),
+                transferReadOp.getInBoundsAttr())
+            .getResult();
+
+    // Fuse through the integer extend op.
+    if (extOp)
+      result = rewriter.create<arith::ExtSIOp>(loc, op.getType(), result)
+                   .getResult();
+
+    rewriter.replaceOp(op, result);
     return success();
   }
 };
@@ -479,14 +517,26 @@ static void convertTransferReadOp(vector::TransferReadOp op,
     stride = 0;
   }
   assert(stride);
+  Value mappingResult = op.getResult();
+  auto elType = op.getVectorType().getElementType();
   const char *fragType = inferFragType(op);
+  if (op->hasOneUse()) {
+    auto extOp = dyn_cast<arith::ExtSIOp>(*op->user_begin());
+    // Infer the signedness of the mma type from the signed extend.
+    if (extOp) {
+      elType = IntegerType::get(op.getContext(),
+                                elType.cast<IntegerType>().getWidth(),
+                                IntegerType::Signed);
+      mappingResult = extOp.getResult();
+      fragType = inferFragType(extOp);
+    }
+  }
   gpu::MMAMatrixType type =
-      gpu::MMAMatrixType::get(op.getVectorType().getShape(),
-                              op.getVectorType().getElementType(), fragType);
+      gpu::MMAMatrixType::get(op.getVectorType().getShape(), elType, fragType);
   Value load = b.create<gpu::SubgroupMmaLoadMatrixOp>(
       op.getLoc(), type, op.getSource(), op.getIndices(),
       b.getIndexAttr(*stride), isTranspose ? b.getUnitAttr() : UnitAttr());
-  valueMapping[op.getResult()] = load;
+  valueMapping[mappingResult] = load;
 }
 
 static void convertTransferWriteOp(vector::TransferWriteOp op,
