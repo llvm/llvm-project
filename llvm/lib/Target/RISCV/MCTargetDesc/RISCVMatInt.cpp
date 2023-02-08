@@ -352,20 +352,15 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
     }
   }
 
-  // Perform optimization with rori in the Zbb and th.srri in the XTheadBb
-  // extension.
-  if (Res.size() > 2 && (ActiveFeatures[RISCV::FeatureStdExtZbb] ||
-                         ActiveFeatures[RISCV::FeatureVendorXTHeadBb])) {
+  // Perform optimization with rori in the Zbb extension.
+  if (Res.size() > 2 && ActiveFeatures[RISCV::FeatureStdExtZbb]) {
     if (unsigned Rotate = extractRotateInfo(Val)) {
       RISCVMatInt::InstSeq TmpSeq;
       uint64_t NegImm12 =
           ((uint64_t)Val >> (64 - Rotate)) | ((uint64_t)Val << Rotate);
       assert(isInt<12>(NegImm12));
       TmpSeq.emplace_back(RISCV::ADDI, NegImm12);
-      TmpSeq.emplace_back(ActiveFeatures[RISCV::FeatureStdExtZbb]
-                              ? RISCV::RORI
-                              : RISCV::TH_SRRI,
-                          Rotate);
+      TmpSeq.emplace_back(RISCV::RORI, Rotate);
       Res = TmpSeq;
     }
   }
@@ -410,7 +405,6 @@ OpndKind Inst::getOpndKind() const {
   case RISCV::RORI:
   case RISCV::BSETI:
   case RISCV::BCLRI:
-  case RISCV::TH_SRRI:
     return RISCVMatInt::RegImm;
   }
 }
