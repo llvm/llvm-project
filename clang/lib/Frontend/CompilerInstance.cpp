@@ -641,6 +641,7 @@ public:
                               DiagnosticsEngine &Diags)
       : CAS(CAS), Cache(Cache), ModuleCache(ModuleCache), Diags(Diags) {}
 
+  bool readCASFileSystemRootID(StringRef RootID, bool Complain) override;
   bool readModuleCacheKey(StringRef ModuleName, StringRef Filename,
                           StringRef CacheKey) override;
 
@@ -2423,4 +2424,23 @@ bool CompileCacheASTReaderHelper::readModuleCacheKey(StringRef ModuleName,
   // FIXME: add name/path of the importing module?
   return addCachedModuleFileToInMemoryCache(
       Filename, CacheKey, "imported module", CAS, Cache, ModuleCache, Diags);
+}
+
+bool CompileCacheASTReaderHelper::readCASFileSystemRootID(StringRef RootID,
+                                                          bool Complain) {
+  // Verify that RootID is in the CAS. Otherwise the module cache probably was
+  // created with a different CAS.
+  std::optional<cas::CASID> ID;
+  if (errorToBool(CAS.parseID(RootID).moveInto(ID))) {
+    if (Complain)
+      Diags.Report(diag::err_cas_cannot_parse_root_id) << RootID;
+    return true;
+  }
+  if (errorToBool(CAS.getProxy(*ID).takeError())) {
+    if (Complain) {
+      Diags.Report(diag::err_cas_missing_root_id) << RootID;
+    }
+    return true;
+  }
+  return false;
 }
