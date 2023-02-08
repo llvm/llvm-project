@@ -250,7 +250,6 @@ static func::FuncOp getCalledFunction(CallOpInterface callOp) {
 /// analyzed.
 // TODO: This does not handle cyclic function call graphs etc.
 static void equivalenceAnalysis(func::FuncOp funcOp,
-                                BufferizationAliasInfo &aliasInfo,
                                 OneShotAnalysisState &state,
                                 FuncAnalysisState &funcState) {
   funcOp->walk([&](func::CallOp callOp) {
@@ -268,7 +267,7 @@ static void equivalenceAnalysis(func::FuncOp funcOp,
         continue;
       Value returnVal = callOp.getResult(returnIdx);
       Value argVal = callOp->getOperand(bbargIdx);
-      aliasInfo.unionEquivalenceClasses(returnVal, argVal);
+      state.unionEquivalenceClasses(returnVal, argVal);
     }
 
     return WalkResult::advance();
@@ -365,7 +364,6 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
   assert(state.getOptions().bufferizeFunctionBoundaries &&
          "expected that function boundary bufferization is activated");
   FuncAnalysisState &funcState = getOrCreateFuncAnalysisState(state);
-  BufferizationAliasInfo &aliasInfo = state.getAliasInfo();
 
   // A list of functions in the order in which they are analyzed + bufferized.
   SmallVector<func::FuncOp> orderedFuncOps;
@@ -385,7 +383,7 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
     funcState.startFunctionAnalysis(funcOp);
 
     // Gather equivalence info for CallOps.
-    equivalenceAnalysis(funcOp, aliasInfo, state, funcState);
+    equivalenceAnalysis(funcOp, state, funcState);
 
     // Analyze funcOp.
     if (failed(analyzeOp(funcOp, state, statistics)))
