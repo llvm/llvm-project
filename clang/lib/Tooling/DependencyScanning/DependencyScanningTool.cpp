@@ -16,7 +16,6 @@
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/PrefixMapper.h"
 #include "llvm/Support/PrefixMappingFileSystem.h"
-#include <optional>
 
 using namespace clang;
 using namespace tooling;
@@ -553,6 +552,20 @@ DependencyScanningTool::getTranslationUnitDependencies(
   return Consumer.takeTranslationUnitDeps();
 }
 
+llvm::Expected<ModuleDepsGraph> DependencyScanningTool::getModuleDependencies(
+    StringRef ModuleName, const std::vector<std::string> &CommandLine,
+    StringRef CWD, const llvm::StringSet<> &AlreadySeen,
+    LookupModuleOutputCallback LookupModuleOutput,
+    DepscanPrefixMapping PrefixMapping) {
+  FullDependencyConsumer Consumer(AlreadySeen, LookupModuleOutput,
+                                  Worker.getCASFS(), std::move(PrefixMapping));
+  llvm::Error Result =
+      Worker.computeDependencies(CWD, CommandLine, Consumer, ModuleName);
+  if (Result)
+    return std::move(Result);
+  return Consumer.takeModuleGraphDeps();
+}
+
 Error FullDependencyConsumer::initialize(CompilerInstance &ScanInstance,
                                          CompilerInvocation &NewInvocation) {
   if (CacheFS) {
@@ -715,19 +728,6 @@ TranslationUnitDeps FullDependencyConsumer::takeTranslationUnitDeps() {
   }
 
   return TU;
-}
-
-llvm::Expected<ModuleDepsGraph> DependencyScanningTool::getModuleDependencies(
-    StringRef ModuleName, const std::vector<std::string> &CommandLine,
-    StringRef CWD, const llvm::StringSet<> &AlreadySeen,
-    LookupModuleOutputCallback LookupModuleOutput,
-    DepscanPrefixMapping PrefixMapping) {
-  FullDependencyConsumer Consumer(AlreadySeen, LookupModuleOutput);
-  llvm::Error Result =
-      Worker.computeDependencies(CWD, CommandLine, Consumer, ModuleName);
-  if (Result)
-    return std::move(Result);
-  return Consumer.takeModuleGraphDeps();
 }
 
 ModuleDepsGraph FullDependencyConsumer::takeModuleGraphDeps() {
