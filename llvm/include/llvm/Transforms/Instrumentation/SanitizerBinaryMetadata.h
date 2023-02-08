@@ -28,11 +28,14 @@ struct SanitizerBinaryMetadataOptions {
 
 inline constexpr int kSanitizerBinaryMetadataAtomicsBit = 0;
 inline constexpr int kSanitizerBinaryMetadataUARBit = 1;
+inline constexpr int kSanitizerBinaryMetadataUARHasSizeBit = 2;
 
 inline constexpr uint32_t kSanitizerBinaryMetadataAtomics =
     1 << kSanitizerBinaryMetadataAtomicsBit;
 inline constexpr uint32_t kSanitizerBinaryMetadataUAR =
     1 << kSanitizerBinaryMetadataUARBit;
+inline constexpr uint32_t kSanitizerBinaryMetadataUARHasSize =
+    1 << kSanitizerBinaryMetadataUARHasSizeBit;
 
 inline constexpr char kSanitizerBinaryMetadataCoveredSection[] =
     "sanmd_covered";
