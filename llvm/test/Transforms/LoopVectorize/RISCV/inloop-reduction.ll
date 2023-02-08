@@ -36,9 +36,9 @@ define i32 @add_i16_i32(ptr nocapture readonly %x, i32 %n) {
 ; OUTLOOP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i16, ptr [[X]], i32 [[TMP9]]
 ; OUTLOOP-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr [[TMP10]], i32 0
 ; OUTLOOP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i16>, ptr [[TMP12]], align 2
-; OUTLOOP-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
-; OUTLOOP-NEXT:    [[TMP14:%.*]] = mul i64 [[TMP13]], 2
-; OUTLOOP-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i16, ptr [[TMP10]], i64 [[TMP14]]
+; OUTLOOP-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vscale.i32()
+; OUTLOOP-NEXT:    [[TMP14:%.*]] = mul i32 [[TMP13]], 2
+; OUTLOOP-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i16, ptr [[TMP10]], i32 [[TMP14]]
 ; OUTLOOP-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 2 x i16>, ptr [[TMP15]], align 2
 ; OUTLOOP-NEXT:    [[TMP16:%.*]] = sext <vscale x 2 x i16> [[WIDE_LOAD]] to <vscale x 2 x i32>
 ; OUTLOOP-NEXT:    [[TMP17:%.*]] = sext <vscale x 2 x i16> [[WIDE_LOAD2]] to <vscale x 2 x i32>
@@ -67,7 +67,7 @@ define i32 @add_i16_i32(ptr nocapture readonly %x, i32 %n) {
 ; OUTLOOP-NEXT:    [[ADD]] = add nsw i32 [[R_07]], [[CONV]]
 ; OUTLOOP-NEXT:    [[INC]] = add nuw nsw i32 [[I_08]], 1
 ; OUTLOOP-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[N]]
-; OUTLOOP-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; OUTLOOP-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; OUTLOOP:       for.cond.cleanup.loopexit:
 ; OUTLOOP-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], [[FOR_BODY]] ], [ [[TMP23]], [[MIDDLE_BLOCK]] ]
 ; OUTLOOP-NEXT:    br label [[FOR_COND_CLEANUP]]
@@ -104,9 +104,9 @@ define i32 @add_i16_i32(ptr nocapture readonly %x, i32 %n) {
 ; INLOOP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i16, ptr [[X]], i32 [[TMP9]]
 ; INLOOP-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr [[TMP10]], i32 0
 ; INLOOP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i16>, ptr [[TMP12]], align 2
-; INLOOP-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
-; INLOOP-NEXT:    [[TMP14:%.*]] = mul i64 [[TMP13]], 4
-; INLOOP-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i16, ptr [[TMP10]], i64 [[TMP14]]
+; INLOOP-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vscale.i32()
+; INLOOP-NEXT:    [[TMP14:%.*]] = mul i32 [[TMP13]], 4
+; INLOOP-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i16, ptr [[TMP10]], i32 [[TMP14]]
 ; INLOOP-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 4 x i16>, ptr [[TMP15]], align 2
 ; INLOOP-NEXT:    [[TMP16:%.*]] = sext <vscale x 4 x i16> [[WIDE_LOAD]] to <vscale x 4 x i32>
 ; INLOOP-NEXT:    [[TMP17:%.*]] = sext <vscale x 4 x i16> [[WIDE_LOAD2]] to <vscale x 4 x i32>
@@ -136,7 +136,7 @@ define i32 @add_i16_i32(ptr nocapture readonly %x, i32 %n) {
 ; INLOOP-NEXT:    [[ADD]] = add nsw i32 [[R_07]], [[CONV]]
 ; INLOOP-NEXT:    [[INC]] = add nuw nsw i32 [[I_08]], 1
 ; INLOOP-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[N]]
-; INLOOP-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; INLOOP-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; INLOOP:       for.cond.cleanup.loopexit:
 ; INLOOP-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], [[FOR_BODY]] ], [ [[BIN_RDX]], [[MIDDLE_BLOCK]] ]
 ; INLOOP-NEXT:    br label [[FOR_COND_CLEANUP]]

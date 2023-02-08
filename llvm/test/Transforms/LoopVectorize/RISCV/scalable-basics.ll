@@ -51,7 +51,7 @@ define void @vector_add(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; VLENUNK-NEXT:    store i64 [[ADD]], ptr [[ARRAYIDX]], align 8
 ; VLENUNK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; VLENUNK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; VLENUNK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; VLENUNK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; VLENUNK:       for.end:
 ; VLENUNK-NEXT:    ret void
 ;
@@ -93,7 +93,7 @@ define void @vector_add(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; VLEN128-NEXT:    store i64 [[ADD]], ptr [[ARRAYIDX]], align 8
 ; VLEN128-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; VLEN128-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; VLEN128-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; VLEN128-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; VLEN128:       for.end:
 ; VLEN128-NEXT:    ret void
 ;
@@ -146,16 +146,16 @@ define void @vector_add_i32(ptr noalias nocapture %a, i32 %v, i64 %n) {
 ; VLENUNK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP9]]
 ; VLENUNK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP10]], i32 0
 ; VLENUNK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i32>, ptr [[TMP12]], align 4
-; VLENUNK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
-; VLENUNK-NEXT:    [[TMP14:%.*]] = mul i64 [[TMP13]], 2
-; VLENUNK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[TMP10]], i64 [[TMP14]]
+; VLENUNK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vscale.i32()
+; VLENUNK-NEXT:    [[TMP14:%.*]] = mul i32 [[TMP13]], 2
+; VLENUNK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[TMP10]], i32 [[TMP14]]
 ; VLENUNK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 2 x i32>, ptr [[TMP15]], align 4
 ; VLENUNK-NEXT:    [[TMP16:%.*]] = add <vscale x 2 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; VLENUNK-NEXT:    [[TMP17:%.*]] = add <vscale x 2 x i32> [[WIDE_LOAD1]], [[BROADCAST_SPLAT3]]
 ; VLENUNK-NEXT:    store <vscale x 2 x i32> [[TMP16]], ptr [[TMP12]], align 4
-; VLENUNK-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
-; VLENUNK-NEXT:    [[TMP19:%.*]] = mul i64 [[TMP18]], 2
-; VLENUNK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[TMP10]], i64 [[TMP19]]
+; VLENUNK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.vscale.i32()
+; VLENUNK-NEXT:    [[TMP19:%.*]] = mul i32 [[TMP18]], 2
+; VLENUNK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[TMP10]], i32 [[TMP19]]
 ; VLENUNK-NEXT:    store <vscale x 2 x i32> [[TMP17]], ptr [[TMP20]], align 4
 ; VLENUNK-NEXT:    [[TMP21:%.*]] = call i64 @llvm.vscale.i64()
 ; VLENUNK-NEXT:    [[TMP22:%.*]] = mul i64 [[TMP21]], 4
@@ -208,16 +208,16 @@ define void @vector_add_i32(ptr noalias nocapture %a, i32 %v, i64 %n) {
 ; VLEN128-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP9]]
 ; VLEN128-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP10]], i32 0
 ; VLEN128-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i32>, ptr [[TMP12]], align 4
-; VLEN128-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
-; VLEN128-NEXT:    [[TMP14:%.*]] = mul i64 [[TMP13]], 2
-; VLEN128-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[TMP10]], i64 [[TMP14]]
+; VLEN128-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vscale.i32()
+; VLEN128-NEXT:    [[TMP14:%.*]] = mul i32 [[TMP13]], 2
+; VLEN128-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[TMP10]], i32 [[TMP14]]
 ; VLEN128-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 2 x i32>, ptr [[TMP15]], align 4
 ; VLEN128-NEXT:    [[TMP16:%.*]] = add <vscale x 2 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; VLEN128-NEXT:    [[TMP17:%.*]] = add <vscale x 2 x i32> [[WIDE_LOAD1]], [[BROADCAST_SPLAT3]]
 ; VLEN128-NEXT:    store <vscale x 2 x i32> [[TMP16]], ptr [[TMP12]], align 4
-; VLEN128-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
-; VLEN128-NEXT:    [[TMP19:%.*]] = mul i64 [[TMP18]], 2
-; VLEN128-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[TMP10]], i64 [[TMP19]]
+; VLEN128-NEXT:    [[TMP18:%.*]] = call i32 @llvm.vscale.i32()
+; VLEN128-NEXT:    [[TMP19:%.*]] = mul i32 [[TMP18]], 2
+; VLEN128-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[TMP10]], i32 [[TMP19]]
 ; VLEN128-NEXT:    store <vscale x 2 x i32> [[TMP17]], ptr [[TMP20]], align 4
 ; VLEN128-NEXT:    [[TMP21:%.*]] = call i64 @llvm.vscale.i64()
 ; VLEN128-NEXT:    [[TMP22:%.*]] = mul i64 [[TMP21]], 4
