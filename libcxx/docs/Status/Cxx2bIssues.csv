@@ -155,7 +155,7 @@
 "`3649 <https://wg21.link/LWG3649>`__","[fund.ts.v2] Reinstate and bump ``__cpp_lib_experimental_memory_resource`` feature test macro","February 2022","",""
 "`3650 <https://wg21.link/LWG3650>`__","Are ``std::basic_string`` 's ``iterator`` and ``const_iterator`` constexpr iterators?","February 2022","|Nothing to do|",""
 "`3654 <https://wg21.link/LWG3654>`__","``basic_format_context::arg(size_t)`` should be ``noexcept`` ","February 2022","|Complete|","15.0","|format|"
-"`3657 <https://wg21.link/LWG3657>`__","``std::hash<std::filesystem::path>`` is not enabled","February 2022","",""
+"`3657 <https://wg21.link/LWG3657>`__","``std::hash<std::filesystem::path>`` is not enabled","February 2022","|Complete|","17.0"
 "`3660 <https://wg21.link/LWG3660>`__","``iterator_traits<common_iterator>::pointer`` should conform to §[iterator.traits]","February 2022","|Complete|","14.0","|ranges|"
 "`3661 <https://wg21.link/LWG3661>`__","``constinit atomic<shared_ptr<T>> a(nullptr);`` should work","February 2022","",""
 "","","","","",""

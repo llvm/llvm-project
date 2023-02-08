@@ -6,10 +6,5 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
-// The "hash_value" function is tested as part of [path.compare]
-// in class.path/path.members/path.compare.pass.cpp
-int main(int, char**) {
-  return 0;
-}
+// The `hash_value` function is tested as part of [path.compare]
+// in libcxx/test/std/input.output/filesystems/class.path/path.member/path.compare.pass.cpp
