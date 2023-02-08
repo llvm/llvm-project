@@ -14,7 +14,7 @@
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
 
 using namespace llvm;
 using namespace lld;
