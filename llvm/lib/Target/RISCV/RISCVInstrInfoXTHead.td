@@ -75,12 +75,6 @@ def TH_ADDSL : THShiftALU_rri<0b001, "th.addsl">,
                Sched<[WriteSHXADD, ReadSHXADD, ReadSHXADD]>;
 } // Predicates = [HasVendorXTHeadBa]
 
-let Predicates = [HasVendorXTHeadBs], DecoderNamespace = "THeadBs" in {
-let IsSignExtendingOpW = 1 in
-def TH_TST : RVBShift_ri<0b10001, 0b001, OPC_CUSTOM_0, "th.tst">,
-             Sched<[WriteSingleBitImm, ReadSingleBitImm]>;
-} // Predicates = [HasVendorXTHeadBs]
-
 let Predicates = [HasVendorXTHeadVdot],
     Constraints = "@earlyclobber $vd",
     RVVConstraint = WidenV in {
@@ -168,14 +162,6 @@ def : Pat<(add sh2add_op:$rs1, non_imm12:$rs2),
 def : Pat<(add sh3add_op:$rs1, non_imm12:$rs2),
           (TH_ADDSL GPR:$rs2, sh3add_op:$rs1, 3)>;
 } // Predicates = [HasVendorXTHeadBa]
-
-let Predicates = [HasVendorXTHeadBs] in {
-def : Pat<(and (srl GPR:$rs1, uimmlog2xlen:$shamt), 1),
-          (TH_TST GPR:$rs1, uimmlog2xlen:$shamt)>;
-def : Pat<(seteq (and GPR:$rs1, SingleBitSetMask:$mask), 0),
-          (TH_TST (XORI GPR:$rs1, -1), SingleBitSetMask:$mask)>;
-} // Predicates = [HasVendorXTHeadBs]
-
 
 defm PseudoTHVdotVMAQA      : VPseudoVMAQA_VV_VX;
 defm PseudoTHVdotVMAQAU     : VPseudoVMAQA_VV_VX;

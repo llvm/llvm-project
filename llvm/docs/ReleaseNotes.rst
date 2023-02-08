@@ -109,7 +109,6 @@ Changes to the RISC-V Backend
 * vsetvli intrinsics no longer have side effects. They may now be combined,
   moved, deleted, etc. by optimizations.
 * Adds support for the vendor-defined XTHeadBa (address-generation) extension.
-* Adds support for the vendor-defined XTHeadBs (single-bit) extension.
 
 Changes to the WebAssembly Backend
 ----------------------------------
