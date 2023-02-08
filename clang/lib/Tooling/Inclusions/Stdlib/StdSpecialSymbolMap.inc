@@ -30,6 +30,22 @@ SYMBOL(unwrap_ref_decay_t, std::, <type_traits>)
 SYMBOL(unwrap_ref_decay_t, std::, <functional>)
 SYMBOL(wint_t, std::, <cwctype>)
 SYMBOL(wint_t, std::, <cwchar>)
+SYMBOL(swap, std::, <utility>)
+SYMBOL(swap, std::, <algorithm>) // until C++11
+// C++ [string.view.synop 23.3.2]: The function templates defined in
+// [utility.swap] ... are available when <string_­view> is included.
+SYMBOL(swap, std::, <string_view>) // since C++17
+// C++ [tuple.helper 22.4.7]: In addition to being available via inclusion of
+// the <tuple> header, ... any of the headers <array>, <ranges>, or <utility>
+// are included.
+SYMBOL(tuple_size, std::, <tuple>)
+SYMBOL(tuple_size, std::, <array>)
+SYMBOL(tuple_size, std::, <ranges>)
+SYMBOL(tuple_size, std::, <utility>)
+SYMBOL(tuple_element, std::, <tuple>)
+SYMBOL(tuple_element, std::, <array>)
+SYMBOL(tuple_element, std::, <ranges>)
+SYMBOL(tuple_element, std::, <utility>)
 // C++ [iterator.range 25.7]: In addition to being available via inclusion of
 // the <iterator> header, the function templates in [iterator.range] are
 // available when any of the following headers are included: <array>, <deque>,
