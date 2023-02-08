@@ -2039,7 +2039,7 @@ entry:
 ; CHECK-DAG: entry:
 ; CHECK-NEXT:  br i1 icmp ne (ptr @__sanitizer_metadata_atomics_add, ptr null), label %callfunc, label %ret
 ; CHECK-DAG: callfunc:
-; CHECK-NEXT:  call void @__sanitizer_metadata_atomics_add(i32 1, ptr @__start_sanmd_atomics, ptr @__stop_sanmd_atomics)
+; CHECK-NEXT:  call void @__sanitizer_metadata_atomics_add(i32 2, ptr @__start_sanmd_atomics, ptr @__stop_sanmd_atomics)
 ; CHECK-NEXT:  br label %ret
 ; CHECK-DAG: ret:
 ; CHECK-NEXT:  ret void
@@ -2048,7 +2048,7 @@ entry:
 ; CHECK-DAG: entry:
 ; CHECK-NEXT:  br i1 icmp ne (ptr @__sanitizer_metadata_atomics_del, ptr null), label %callfunc, label %ret
 ; CHECK-DAG: callfunc:
-; CHECK-NEXT:  call void @__sanitizer_metadata_atomics_del(i32 1, ptr @__start_sanmd_atomics, ptr @__stop_sanmd_atomics)
+; CHECK-NEXT:  call void @__sanitizer_metadata_atomics_del(i32 2, ptr @__start_sanmd_atomics, ptr @__stop_sanmd_atomics)
 ; CHECK-NEXT:  br label %ret
 ; CHECK-DAG: ret:
 ; CHECK-NEXT:  ret void
@@ -2057,7 +2057,7 @@ entry:
 ; CHECK-DAG: entry:
 ; CHECK-NEXT:  br i1 icmp ne (ptr @__sanitizer_metadata_covered_add, ptr null), label %callfunc, label %ret
 ; CHECK-DAG: callfunc:
-; CHECK-NEXT:  call void @__sanitizer_metadata_covered_add(i32 1, ptr @__start_sanmd_covered, ptr @__stop_sanmd_covered)
+; CHECK-NEXT:  call void @__sanitizer_metadata_covered_add(i32 2, ptr @__start_sanmd_covered, ptr @__stop_sanmd_covered)
 ; CHECK-NEXT:  br label %ret
 ; CHECK-DAG: ret:
 ; CHECK-NEXT:  ret void
@@ -2066,11 +2066,11 @@ entry:
 ; CHECK-DAG: entry:
 ; CHECK-NEXT:  br i1 icmp ne (ptr @__sanitizer_metadata_covered_del, ptr null), label %callfunc, label %ret
 ; CHECK-DAG: callfunc:
-; CHECK-NEXT:  call void @__sanitizer_metadata_covered_del(i32 1, ptr @__start_sanmd_covered, ptr @__stop_sanmd_covered)
+; CHECK-NEXT:  call void @__sanitizer_metadata_covered_del(i32 2, ptr @__start_sanmd_covered, ptr @__stop_sanmd_covered)
 ; CHECK-NEXT:  br label %ret
 ; CHECK-DAG: ret:
 ; CHECK-NEXT:  ret void
 
 ; CHECK: !0 = !{!"sanmd_covered", !1}
-; CHECK: !1 = !{i32 1}
+; CHECK: !1 = !{i8 1}
 ; CHECK: !2 = !{!"sanmd_atomics"}
