@@ -1219,9 +1219,9 @@ entry:
 define i64 @add_pair_v4i32_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: add_pair_v4i32_v4i64_zext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    uadalp v0.2d, v1.4s
-; CHECK-NEXT:    addp d0, v0.2d
+; CHECK-NEXT:    uaddlp v1.2d, v1.4s
+; CHECK-NEXT:    uadalp v1.2d, v0.4s
+; CHECK-NEXT:    addp d0, v1.2d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
 entry:
@@ -1236,9 +1236,9 @@ entry:
 define i64 @add_pair_v4i32_v4i64_sext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: add_pair_v4i32_v4i64_sext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    saddlp v0.2d, v0.4s
-; CHECK-NEXT:    sadalp v0.2d, v1.4s
-; CHECK-NEXT:    addp d0, v0.2d
+; CHECK-NEXT:    saddlp v1.2d, v1.4s
+; CHECK-NEXT:    sadalp v1.2d, v0.4s
+; CHECK-NEXT:    addp d0, v1.2d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
 entry:
@@ -1285,9 +1285,9 @@ entry:
 define i32 @add_pair_v8i16_v8i32_zext(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-LABEL: add_pair_v8i16_v8i32_zext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    uadalp v0.4s, v1.8h
-; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    uaddlp v1.4s, v1.8h
+; CHECK-NEXT:    uadalp v1.4s, v0.8h
+; CHECK-NEXT:    addv s0, v1.4s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -1302,9 +1302,9 @@ entry:
 define i32 @add_pair_v8i16_v8i32_sext(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-LABEL: add_pair_v8i16_v8i32_sext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    saddlp v0.4s, v0.8h
-; CHECK-NEXT:    sadalp v0.4s, v1.8h
-; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    saddlp v1.4s, v1.8h
+; CHECK-NEXT:    sadalp v1.4s, v0.8h
+; CHECK-NEXT:    addv s0, v1.4s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -1351,12 +1351,9 @@ entry:
 define zeroext i16 @add_pair_v8i16_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-LABEL: add_pair_v8i16_v8i16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    addv h0, v0.8h
-; CHECK-NEXT:    addv h1, v1.8h
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    add w8, w8, w9
-; CHECK-NEXT:    and w0, w8, #0xffff
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
   %z1 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %x)
@@ -1420,11 +1417,11 @@ entry:
 define i64 @add_pair_v4i16_v4i64_zext(<4 x i16> %x, <4 x i16> %y) {
 ; CHECK-LABEL: add_pair_v4i16_v4i64_zext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    uadalp v0.2d, v1.4s
-; CHECK-NEXT:    addp d0, v0.2d
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    uaddlp v1.2d, v1.4s
+; CHECK-NEXT:    uadalp v1.2d, v0.4s
+; CHECK-NEXT:    addp d0, v1.2d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
 entry:
@@ -1439,11 +1436,11 @@ entry:
 define i64 @add_pair_v4i16_v4i64_sext(<4 x i16> %x, <4 x i16> %y) {
 ; CHECK-LABEL: add_pair_v4i16_v4i64_sext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
-; CHECK-NEXT:    saddlp v0.2d, v0.4s
-; CHECK-NEXT:    sadalp v0.2d, v1.4s
-; CHECK-NEXT:    addp d0, v0.2d
+; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-NEXT:    saddlp v1.2d, v1.4s
+; CHECK-NEXT:    sadalp v1.2d, v0.4s
+; CHECK-NEXT:    addp d0, v1.2d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
 entry:
@@ -1570,11 +1567,11 @@ entry:
 define i32 @add_pair_v8i8_v8i32_zext(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-BASE-LABEL: add_pair_v8i8_v8i32_zext:
 ; CHECK-BASE:       // %bb.0: // %entry
-; CHECK-BASE-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-BASE-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-BASE-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-BASE-NEXT:    uadalp v0.4s, v1.8h
-; CHECK-BASE-NEXT:    addv s0, v0.4s
+; CHECK-BASE-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-BASE-NEXT:    uaddlp v1.4s, v1.8h
+; CHECK-BASE-NEXT:    uadalp v1.4s, v0.8h
+; CHECK-BASE-NEXT:    addv s0, v1.4s
 ; CHECK-BASE-NEXT:    fmov w0, s0
 ; CHECK-BASE-NEXT:    ret
 ;
@@ -1599,11 +1596,11 @@ entry:
 define i32 @add_pair_v8i8_v8i32_sext(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-BASE-LABEL: add_pair_v8i8_v8i32_sext:
 ; CHECK-BASE:       // %bb.0: // %entry
-; CHECK-BASE-NEXT:    sshll v0.8h, v0.8b, #0
 ; CHECK-BASE-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-BASE-NEXT:    saddlp v0.4s, v0.8h
-; CHECK-BASE-NEXT:    sadalp v0.4s, v1.8h
-; CHECK-BASE-NEXT:    addv s0, v0.4s
+; CHECK-BASE-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-BASE-NEXT:    saddlp v1.4s, v1.8h
+; CHECK-BASE-NEXT:    sadalp v1.4s, v0.8h
+; CHECK-BASE-NEXT:    addv s0, v1.4s
 ; CHECK-BASE-NEXT:    fmov w0, s0
 ; CHECK-BASE-NEXT:    ret
 ;
@@ -1667,12 +1664,10 @@ entry:
 define zeroext i16 @add_pair_v16i8_v16i16_zext(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-LABEL: add_pair_v16i8_v16i16_zext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uaddlv h0, v0.16b
-; CHECK-NEXT:    uaddlv h1, v1.16b
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    add w8, w8, w9
-; CHECK-NEXT:    and w0, w8, #0xffff
+; CHECK-NEXT:    uaddlp v1.8h, v1.16b
+; CHECK-NEXT:    uadalp v1.8h, v0.16b
+; CHECK-NEXT:    addv h0, v1.8h
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
   %xx = zext <16 x i8> %x to <16 x i16>
@@ -1686,12 +1681,10 @@ entry:
 define signext i16 @add_pair_v16i8_v16i16_sext(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-LABEL: add_pair_v16i8_v16i16_sext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    saddlv h0, v0.16b
-; CHECK-NEXT:    saddlv h1, v1.16b
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    add w8, w8, w9
-; CHECK-NEXT:    sxth w0, w8
+; CHECK-NEXT:    saddlp v1.8h, v1.16b
+; CHECK-NEXT:    sadalp v1.8h, v0.16b
+; CHECK-NEXT:    addv h0, v1.8h
+; CHECK-NEXT:    smov w0, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
   %xx = sext <16 x i8> %x to <16 x i16>
@@ -1705,14 +1698,9 @@ entry:
 define zeroext i16 @add_pair_v8i8_v8i16_zext(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-LABEL: add_pair_v8i8_v8i16_zext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEXT:    uaddl v0.8h, v0.8b, v1.8b
 ; CHECK-NEXT:    addv h0, v0.8h
-; CHECK-NEXT:    addv h1, v1.8h
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    add w8, w8, w9
-; CHECK-NEXT:    and w0, w8, #0xffff
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
   %xx = zext <8 x i8> %x to <8 x i16>
@@ -1726,14 +1714,9 @@ entry:
 define signext i16 @add_pair_v8i8_v8i16_sext(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-LABEL: add_pair_v8i8_v8i16_sext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    sshll v1.8h, v1.8b, #0
+; CHECK-NEXT:    saddl v0.8h, v0.8b, v1.8b
 ; CHECK-NEXT:    addv h0, v0.8h
-; CHECK-NEXT:    addv h1, v1.8h
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    add w8, w8, w9
-; CHECK-NEXT:    sxth w0, w8
+; CHECK-NEXT:    smov w0, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
   %xx = sext <8 x i8> %x to <8 x i16>
@@ -1747,12 +1730,9 @@ entry:
 define zeroext i8 @add_pair_v16i8_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-LABEL: add_pair_v16i8_v16i8:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    add v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    addv b0, v0.16b
-; CHECK-NEXT:    addv b1, v1.16b
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    add w8, w8, w9
-; CHECK-NEXT:    and w0, w8, #0xff
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
   %z1 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %x)
@@ -1904,13 +1884,13 @@ entry:
 define i64 @add_pair_v4i8_v4i64_zext(<4 x i8> %x, <4 x i8> %y) {
 ; CHECK-LABEL: add_pair_v4i8_v4i64_zext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECK-NEXT:    bic v1.4h, #255, lsl #8
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    uadalp v0.2d, v1.4s
-; CHECK-NEXT:    addp d0, v0.2d
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    uaddlp v1.2d, v1.4s
+; CHECK-NEXT:    uadalp v1.2d, v0.4s
+; CHECK-NEXT:    addp d0, v1.2d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
 entry:
@@ -1995,15 +1975,15 @@ entry:
 define i32 @add_pair_v8i8_v8i32_double_sext_zext(<8 x i8> %ax, <8 x i8> %ay, <8 x i8> %bx, <8 x i8> %by) {
 ; CHECK-BASE-LABEL: add_pair_v8i8_v8i32_double_sext_zext:
 ; CHECK-BASE:       // %bb.0: // %entry
-; CHECK-BASE-NEXT:    sshll v2.8h, v2.8b, #0
-; CHECK-BASE-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-BASE-NEXT:    saddlp v2.4s, v2.8h
-; CHECK-BASE-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-BASE-NEXT:    ushll v1.8h, v1.8b, #0
 ; CHECK-BASE-NEXT:    sshll v3.8h, v3.8b, #0
-; CHECK-BASE-NEXT:    uadalp v0.4s, v1.8h
-; CHECK-BASE-NEXT:    sadalp v2.4s, v3.8h
-; CHECK-BASE-NEXT:    add v0.4s, v0.4s, v2.4s
+; CHECK-BASE-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-BASE-NEXT:    saddlp v3.4s, v3.8h
+; CHECK-BASE-NEXT:    uaddlp v1.4s, v1.8h
+; CHECK-BASE-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-BASE-NEXT:    sshll v2.8h, v2.8b, #0
+; CHECK-BASE-NEXT:    uadalp v1.4s, v0.8h
+; CHECK-BASE-NEXT:    sadalp v3.4s, v2.8h
+; CHECK-BASE-NEXT:    add v0.4s, v3.4s, v1.4s
 ; CHECK-BASE-NEXT:    addv s0, v0.4s
 ; CHECK-BASE-NEXT:    fmov w0, s0
 ; CHECK-BASE-NEXT:    ret
@@ -2091,48 +2071,48 @@ define i32 @full(ptr %p1, i32 noundef %s1, ptr %p2, i32 noundef %s2) {
 ; CHECK-BASE-NEXT:    // kill: def $w3 killed $w3 def $x3
 ; CHECK-BASE-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-BASE-NEXT:    sxtw x8, w1
-; CHECK-BASE-NEXT:    sxtw x9, w3
-; CHECK-BASE-NEXT:    add x10, x0, x8
-; CHECK-BASE-NEXT:    add x11, x2, x9
-; CHECK-BASE-NEXT:    ldr d2, [x0]
-; CHECK-BASE-NEXT:    ldr d3, [x2]
-; CHECK-BASE-NEXT:    ldr d0, [x10]
-; CHECK-BASE-NEXT:    add x10, x10, x8
-; CHECK-BASE-NEXT:    ldr d1, [x11]
-; CHECK-BASE-NEXT:    add x11, x11, x9
+; CHECK-BASE-NEXT:    sxtw x10, w3
+; CHECK-BASE-NEXT:    add x9, x0, x8
+; CHECK-BASE-NEXT:    ldr d0, [x0]
+; CHECK-BASE-NEXT:    ldr d1, [x2]
+; CHECK-BASE-NEXT:    add x11, x2, x10
+; CHECK-BASE-NEXT:    ldr d2, [x9]
+; CHECK-BASE-NEXT:    add x9, x9, x8
 ; CHECK-BASE-NEXT:    uabdl v0.8h, v0.8b, v1.8b
-; CHECK-BASE-NEXT:    uabdl v1.8h, v2.8b, v3.8b
-; CHECK-BASE-NEXT:    ldr d2, [x10]
-; CHECK-BASE-NEXT:    ldr d3, [x11]
-; CHECK-BASE-NEXT:    add x10, x10, x8
+; CHECK-BASE-NEXT:    ldr d1, [x11]
+; CHECK-BASE-NEXT:    add x11, x11, x10
 ; CHECK-BASE-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-BASE-NEXT:    add x11, x11, x9
+; CHECK-BASE-NEXT:    uabdl v1.8h, v2.8b, v1.8b
+; CHECK-BASE-NEXT:    ldr d2, [x9]
+; CHECK-BASE-NEXT:    ldr d3, [x11]
+; CHECK-BASE-NEXT:    add x9, x9, x8
+; CHECK-BASE-NEXT:    add x11, x11, x10
 ; CHECK-BASE-NEXT:    uadalp v0.4s, v1.8h
 ; CHECK-BASE-NEXT:    uabdl v1.8h, v2.8b, v3.8b
-; CHECK-BASE-NEXT:    ldr d2, [x10]
+; CHECK-BASE-NEXT:    ldr d2, [x9]
 ; CHECK-BASE-NEXT:    ldr d3, [x11]
-; CHECK-BASE-NEXT:    add x10, x10, x8
-; CHECK-BASE-NEXT:    add x11, x11, x9
+; CHECK-BASE-NEXT:    add x9, x9, x8
+; CHECK-BASE-NEXT:    add x11, x11, x10
 ; CHECK-BASE-NEXT:    uadalp v0.4s, v1.8h
 ; CHECK-BASE-NEXT:    uabdl v1.8h, v2.8b, v3.8b
-; CHECK-BASE-NEXT:    ldr d2, [x10]
+; CHECK-BASE-NEXT:    ldr d2, [x9]
 ; CHECK-BASE-NEXT:    ldr d3, [x11]
-; CHECK-BASE-NEXT:    add x10, x10, x8
-; CHECK-BASE-NEXT:    add x11, x11, x9
+; CHECK-BASE-NEXT:    add x9, x9, x8
+; CHECK-BASE-NEXT:    add x11, x11, x10
 ; CHECK-BASE-NEXT:    uadalp v0.4s, v1.8h
 ; CHECK-BASE-NEXT:    uabdl v1.8h, v2.8b, v3.8b
-; CHECK-BASE-NEXT:    ldr d2, [x10]
+; CHECK-BASE-NEXT:    ldr d2, [x9]
 ; CHECK-BASE-NEXT:    ldr d3, [x11]
-; CHECK-BASE-NEXT:    add x10, x10, x8
-; CHECK-BASE-NEXT:    add x11, x11, x9
+; CHECK-BASE-NEXT:    add x9, x9, x8
+; CHECK-BASE-NEXT:    add x11, x11, x10
 ; CHECK-BASE-NEXT:    uadalp v0.4s, v1.8h
 ; CHECK-BASE-NEXT:    uabdl v1.8h, v2.8b, v3.8b
-; CHECK-BASE-NEXT:    ldr d2, [x10]
+; CHECK-BASE-NEXT:    ldr d2, [x9]
 ; CHECK-BASE-NEXT:    ldr d3, [x11]
 ; CHECK-BASE-NEXT:    uadalp v0.4s, v1.8h
-; CHECK-BASE-NEXT:    ldr d1, [x10, x8]
+; CHECK-BASE-NEXT:    ldr d1, [x9, x8]
 ; CHECK-BASE-NEXT:    uabdl v2.8h, v2.8b, v3.8b
-; CHECK-BASE-NEXT:    ldr d3, [x11, x9]
+; CHECK-BASE-NEXT:    ldr d3, [x11, x10]
 ; CHECK-BASE-NEXT:    uadalp v0.4s, v2.8h
 ; CHECK-BASE-NEXT:    uabdl v1.8h, v1.8b, v3.8b
 ; CHECK-BASE-NEXT:    uadalp v0.4s, v1.8h
