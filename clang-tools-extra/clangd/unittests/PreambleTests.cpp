@@ -170,6 +170,9 @@ TEST(PreamblePatchTest, PatchesPreambleIncludes) {
   auto TU = TestTU::withCode(R"cpp(
     #include "a.h" // IWYU pragma: keep
     #include "c.h"
+    #ifdef FOO
+    #include "d.h"
+    #endif
   )cpp");
   TU.AdditionalFiles["a.h"] = "#include \"b.h\"";
   TU.AdditionalFiles["b.h"] = "";
@@ -178,10 +181,14 @@ TEST(PreamblePatchTest, PatchesPreambleIncludes) {
   auto BaselinePreamble = buildPreamble(
       TU.Filename, *buildCompilerInvocation(PI, Diags), PI, true, nullptr);
   // We drop c.h from modified and add a new header. Since the latter is patched
-  // we should only get a.h in preamble includes.
+  // we should only get a.h in preamble includes. d.h shouldn't be part of the
+  // preamble, as it's coming from a disabled region.
   TU.Code = R"cpp(
     #include "a.h"
     #include "b.h"
+    #ifdef FOO
+    #include "d.h"
+    #endif
   )cpp";
   auto PP = PreamblePatch::createFullPatch(testPath(TU.Filename), TU.inputs(FS),
                                            *BaselinePreamble);
