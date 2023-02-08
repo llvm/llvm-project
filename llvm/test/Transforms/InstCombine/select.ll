@@ -3399,8 +3399,7 @@ define <vscale x 2 x i1> @scalable_non_zero(<vscale x 2 x i32> %x) {
 
 define i32 @clamp_zero(i32 %x) {
 ; CHECK-LABEL: @clamp_zero(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 1, i32 [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.umax.i32(i32 [[X:%.*]], i32 1)
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %cmp = icmp eq i32 %x, 0
@@ -3412,7 +3411,7 @@ define i32 @clamp_zero_use(i32 %x) {
 ; CHECK-LABEL: @clamp_zero_use(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @use1(i1 [[CMP]])
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 1, i32 [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.umax.i32(i32 [[X]], i32 1)
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %cmp = icmp eq i32 %x, 0
@@ -3420,6 +3419,8 @@ define i32 @clamp_zero_use(i32 %x) {
   %sel = select i1 %cmp, i32 1, i32 %x
   ret i32 %sel
 }
+
+; negative test - wrong cmp constant
 
 define i32 @not_clamp_zero1(i32 %x) {
 ; CHECK-LABEL: @not_clamp_zero1(
@@ -3431,6 +3432,8 @@ define i32 @not_clamp_zero1(i32 %x) {
   %sel = select i1 %cmp, i32 1, i32 %x
   ret i32 %sel
 }
+
+; negative test - wrong select constant
 
 define i32 @not_clamp_zero2(i32 %x) {
 ; CHECK-LABEL: @not_clamp_zero2(
@@ -3445,14 +3448,15 @@ define i32 @not_clamp_zero2(i32 %x) {
 
 define <2 x i8> @clamp_umaxval(<2 x i8> %x) {
 ; CHECK-LABEL: @clamp_umaxval(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> <i8 -2, i8 -2>, <2 x i8> [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = call <2 x i8> @llvm.umin.v2i8(<2 x i8> [[X:%.*]], <2 x i8> <i8 -2, i8 -2>)
 ; CHECK-NEXT:    ret <2 x i8> [[SEL]]
 ;
   %cmp = icmp eq <2 x i8> %x, <i8 255, i8 255>
   %sel = select <2 x i1> %cmp, <2 x i8> <i8 254, i8 254>, <2 x i8> %x
   ret <2 x i8> %sel
 }
+
+; negative test - wrong cmp constant
 
 define i8 @not_clamp_umax1(i8 %x) {
 ; CHECK-LABEL: @not_clamp_umax1(
@@ -3464,6 +3468,8 @@ define i8 @not_clamp_umax1(i8 %x) {
   %sel = select i1 %cmp, i8 254, i8 %x
   ret i8 %sel
 }
+
+; negative test - wrong select constant
 
 define i8 @not_clamp_umax2(i8 %x) {
 ; CHECK-LABEL: @not_clamp_umax2(
