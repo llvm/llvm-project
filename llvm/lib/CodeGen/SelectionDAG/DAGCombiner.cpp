@@ -867,13 +867,12 @@ public:
 
 class VPMatchContext {
   SelectionDAG &DAG;
-  SDNode *Root;
   SDValue RootMaskOp;
   SDValue RootVectorLenOp;
 
 public:
   VPMatchContext(SelectionDAG &DAG, SDNode *Root)
-      : DAG(DAG), Root(Root), RootMaskOp(), RootVectorLenOp() {
+      : DAG(DAG), RootMaskOp(), RootVectorLenOp() {
     assert(Root->isVPOpcode());
     if (auto RootMaskPos = ISD::getVPMaskIdx(Root->getOpcode()))
       RootMaskOp = Root->getOperand(*RootMaskPos);
