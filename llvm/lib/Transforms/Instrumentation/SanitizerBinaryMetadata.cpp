@@ -216,8 +216,8 @@ bool SanitizerBinaryMetadata::run() {
             (MI->FunctionPrefix + "_del").str(), InitTypes, InitArgs,
             /*VersionCheckName=*/StringRef(), /*Weak=*/ClWeakCallbacks)
             .first;
-    Constant *CtorData = nullptr;
-    Constant *DtorData = nullptr;
+    Constant *CtorComdatKey = nullptr;
+    Constant *DtorComdatKey = nullptr;
     if (TargetTriple.supportsCOMDAT()) {
       // Use COMDAT to deduplicate constructor/destructor function. The COMDAT
       // key needs to be a non-local linkage.
@@ -225,11 +225,14 @@ bool SanitizerBinaryMetadata::run() {
       Dtor->setComdat(Mod.getOrInsertComdat(Dtor->getName()));
       Ctor->setLinkage(GlobalValue::ExternalLinkage);
       Dtor->setLinkage(GlobalValue::ExternalLinkage);
-      CtorData = Ctor;
-      DtorData = Dtor;
+      // DSOs should _not_ call another constructor/destructor!
+      Ctor->setVisibility(GlobalValue::HiddenVisibility);
+      Dtor->setVisibility(GlobalValue::HiddenVisibility);
+      CtorComdatKey = Ctor;
+      DtorComdatKey = Dtor;
     }
-    appendToGlobalCtors(Mod, Ctor, kCtorDtorPriority, CtorData);
-    appendToGlobalDtors(Mod, Dtor, kCtorDtorPriority, DtorData);
+    appendToGlobalCtors(Mod, Ctor, kCtorDtorPriority, CtorComdatKey);
+    appendToGlobalDtors(Mod, Dtor, kCtorDtorPriority, DtorComdatKey);
   }
 
   return true;
