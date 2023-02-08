@@ -46,6 +46,9 @@ public:
     s += " #>";
     return s;
   }
+
+  /// Returns a reference to the `Preprocessor`:
+  virtual const Preprocessor & getPP() const;
 };
 
 // This function invokes the analysis and allows the caller to react to it
