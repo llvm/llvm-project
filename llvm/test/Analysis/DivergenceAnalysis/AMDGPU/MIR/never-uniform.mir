@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-- -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
 # loads from flat non uniform
 ---
 name:            flatloads
