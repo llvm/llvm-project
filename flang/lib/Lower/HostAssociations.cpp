@@ -253,7 +253,7 @@ class CapturedPolymorphic : public CapturedSymbols<CapturedPolymorphic> {
 public:
   static mlir::Type getType(Fortran::lower::AbstractConverter &converter,
                             const Fortran::semantics::Symbol &sym) {
-    return fir::ClassType::get(converter.genType(sym));
+    return converter.genType(sym);
   }
   static void instantiateHostTuple(const InstantiateHostTuple &args,
                                    Fortran::lower::AbstractConverter &converter,
