@@ -8414,7 +8414,14 @@ SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
 
 InstructionUniformity
 SIInstrInfo::getInstructionUniformity(const MachineInstr &MI) const {
+
+  if (isNeverUniform(MI))
+    return InstructionUniformity::NeverUniform;
+
   unsigned opcode = MI.getOpcode();
+  if (opcode == AMDGPU::V_READLANE_B32 || opcode == AMDGPU::V_READFIRSTLANE_B32)
+    return InstructionUniformity::AlwaysUniform;
+
   if (MI.isCopy()) {
     const MachineOperand &srcOp = MI.getOperand(1);
     if (srcOp.isReg() && srcOp.getReg().isPhysical()) {
@@ -8455,12 +8462,6 @@ SIInstrInfo::getInstructionUniformity(const MachineInstr &MI) const {
 
     return InstructionUniformity::Default;
   }
-
-  if (opcode == AMDGPU::V_READLANE_B32 || opcode == AMDGPU::V_READFIRSTLANE_B32)
-    return InstructionUniformity::AlwaysUniform;
-
-  if (opcode == AMDGPU::V_WRITELANE_B32)
-    return InstructionUniformity::NeverUniform;
 
   const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
   const AMDGPURegisterBankInfo *RBI = ST.getRegBankInfo();
