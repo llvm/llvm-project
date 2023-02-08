@@ -233,7 +233,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::EH_DWARF_CFA, MVT::i32, Custom);
 
-  if (!Subtarget.hasStdExtZbb() && !Subtarget.hasVendorXTHeadBb())
+  if (!Subtarget.hasStdExtZbb())
     setOperationAction(ISD::SIGN_EXTEND_INREG, {MVT::i8, MVT::i16}, Expand);
 
   if (Subtarget.is64Bit()) {
@@ -280,8 +280,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setOperationAction({ISD::SHL_PARTS, ISD::SRL_PARTS, ISD::SRA_PARTS}, XLenVT,
                      Custom);
 
-  if (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbkb() ||
-      Subtarget.hasVendorXTHeadBb()) {
+  if (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbkb()) {
     if (Subtarget.is64Bit())
       setOperationAction({ISD::ROTL, ISD::ROTR}, MVT::i32, Custom);
   } else {
@@ -291,8 +290,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   // With Zbb we have an XLen rev8 instruction, but not GREVI. So we'll
   // pattern match it directly in isel.
   setOperationAction(ISD::BSWAP, XLenVT,
-                     (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbkb() ||
-                      Subtarget.hasVendorXTHeadBb())
+                     (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbkb())
                          ? Legal
                          : Expand);
   // Zbkb can use rev8+brev8 to implement bitreverse.
@@ -309,15 +307,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           MVT::i32, Custom);
   } else {
     setOperationAction({ISD::CTTZ, ISD::CTLZ, ISD::CTPOP}, XLenVT, Expand);
-  }
-
-  if (Subtarget.hasVendorXTHeadBb()) {
-    setOperationAction({ISD::CTLZ}, XLenVT, Legal);
-
-    // We need the custom lowering to make sure that the resulting sequence
-    // for the 32bit case is efficient on 64bit targets.
-    if (Subtarget.is64Bit())
-      setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, MVT::i32, Custom);
   }
 
   if (Subtarget.is64Bit())
@@ -1223,7 +1212,7 @@ bool RISCVTargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
 }
 
 bool RISCVTargetLowering::isCheapToSpeculateCtlz(Type *Ty) const {
-  return Subtarget.hasStdExtZbb() || Subtarget.hasVendorXTHeadBb();
+  return Subtarget.hasStdExtZbb();
 }
 
 bool RISCVTargetLowering::isMaskAndCmp0FoldingBeneficial(
