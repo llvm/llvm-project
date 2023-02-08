@@ -240,6 +240,8 @@ public:
 
   bool enableSubRegLiveness() const override;
 
+  bool enableSpillageCopyElimination() const override { return true; }
+
   /// True if the GV will be accessed via an indirect symbol.
   bool isGVIndirectSymbol(const GlobalValue *GV) const;
 
