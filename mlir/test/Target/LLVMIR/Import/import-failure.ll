@@ -56,8 +56,7 @@ define void @unhandled_intrinsic(ptr %arg1, ptr %arg2) {
 
 ; // -----
 
-; CHECK:      import-failure.ll
-; CHECK-SAME: warning: unhandled metadata: !0 = !{!"unknown metadata"} on br i1 %arg1, label %bb1, label %bb2, !prof !0
+; CHECK: warning: unhandled metadata: !0 = !{!"unknown metadata"} on br i1 %arg1, label %bb1, label %bb2, !prof !0
 define i64 @unhandled_metadata(i1 %arg1, i64 %arg2) {
 entry:
   br i1 %arg1, label %bb1, label %bb2, !prof !0
@@ -71,8 +70,7 @@ bb2:
 
 ; // -----
 
-; CHECK:      import-failure.ll
-; CHECK-SAME: warning: unhandled function metadata: !0 = !{!"unknown metadata"} on define void @unhandled_func_metadata(i1 %arg1, i64 %arg2) !prof !0
+; CHECK: warning: unhandled function metadata: !0 = !{!"unknown metadata"} on define void @unhandled_func_metadata(i1 %arg1, i64 %arg2) !prof !0
 define void @unhandled_func_metadata(i1 %arg1, i64 %arg2) !prof !0 {
   ret void
 }
@@ -439,3 +437,126 @@ end:
 !0 = distinct !{!0, !1, !2}
 !1 = !{!"llvm.loop.disable_nonforced"}
 !2 = !{!"llvm.loop.typo"}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: expected non-empty profiling metadata node
+; CHECK:      warning: unhandled metadata: !0 = !{}
+define void @cond_br(i1 %arg) {
+entry:
+  br i1 %arg, label %bb1, label %bb2, !prof !0
+bb1:
+  ret void
+bb2:
+  ret void
+}
+
+!0 = !{}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: expected profiling metadata node to have a string identifier
+; CHECK:      import-failure.ll:{{.*}} warning: unhandled metadata: !0 = !{i32 64}
+define void @cond_br(i1 %arg) {
+entry:
+  br i1 %arg, label %bb1, label %bb2, !prof !0
+bb1:
+  ret void
+bb2:
+  ret void
+}
+
+!0 = !{i32 64}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: expected function_entry_count to hold a single i64 value
+; CHECK:      warning: unhandled function metadata: !0 = !{!"function_entry_count"}
+define void @cond_br(i1 %arg) !prof !0 {
+entry:
+  br i1 %arg, label %bb1, label %bb2
+bb1:
+  ret void
+bb2:
+  ret void
+}
+
+!0 = !{!"function_entry_count"}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: expected function_entry_count to hold a single i64 value
+; CHECK:      warning: unhandled function metadata: !0 = !{!"function_entry_count", !"string"}
+define void @cond_br(i1 %arg) !prof !0 {
+entry:
+  br i1 %arg, label %bb1, label %bb2
+bb1:
+  ret void
+bb2:
+  ret void
+}
+
+!0 = !{!"function_entry_count", !"string"}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: expected function_entry_count to be attached to a function
+; CHECK:      warning: unhandled metadata: !0 = !{!"function_entry_count", i64 42}
+define void @cond_br(i1 %arg) {
+entry:
+  br i1 %arg, label %bb1, label %bb2, !prof !0
+bb1:
+  ret void
+bb2:
+  ret void
+}
+
+!0 = !{!"function_entry_count", i64 42}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: unknown profiling metadata node unknown_prof_type
+; CHECK:      warning: unhandled metadata: !0 = !{!"unknown_prof_type"}
+define void @cond_br(i1 %arg) {
+entry:
+  br i1 %arg, label %bb1, label %bb2, !prof !0
+bb1:
+  ret void
+bb2:
+  ret void
+}
+
+!0 = !{!"unknown_prof_type"}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: expected branch weights to be integers
+; CHECK:      warning: unhandled metadata: !0 = !{!"branch_weights", !"foo"}
+define void @cond_br(i1 %arg) {
+entry:
+  br i1 %arg, label %bb1, label %bb2, !prof !0
+bb1:
+  ret void
+bb2:
+  ret void
+}
+
+!0 = !{!"branch_weights", !"foo"}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: llvm.func does not support branch weights
+; CHECK:      import-failure.ll:{{.*}} warning: unhandled function metadata: !0 = !{!"branch_weights", i32 64}
+define void @cond_br(i1 %arg) !prof !0 {
+  ret void
+}
+
+!0 = !{!"branch_weights", i32 64}
