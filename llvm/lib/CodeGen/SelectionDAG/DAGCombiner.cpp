@@ -19923,22 +19923,32 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
 
       if (OptLevel != CodeGenOpt::None && ST1->hasOneUse() &&
           !ST1->getBasePtr().isUndef() &&
-          // BaseIndexOffset and the code below requires knowing the size
-          // of a vector, so bail out if MemoryVT is scalable.
-          !ST->getMemoryVT().isScalableVector() &&
-          !ST1->getMemoryVT().isScalableVector() &&
           ST->getAddressSpace() == ST1->getAddressSpace()) {
-        const BaseIndexOffset STBase = BaseIndexOffset::match(ST, DAG);
-        const BaseIndexOffset ChainBase = BaseIndexOffset::match(ST1, DAG);
-        unsigned STBitSize = ST->getMemoryVT().getFixedSizeInBits();
-        unsigned ChainBitSize = ST1->getMemoryVT().getFixedSizeInBits();
-        // If this is a store who's preceding store to a subset of the current
-        // location and no one other node is chained to that store we can
-        // effectively drop the store. Do not remove stores to undef as they may
-        // be used as data sinks.
-        if (STBase.contains(DAG, STBitSize, ChainBase, ChainBitSize)) {
-          CombineTo(ST1, ST1->getChain());
-          return SDValue();
+        // If we consider two stores and one smaller in size is a scalable
+        // vector type and another one a bigger size store with a fixed type,
+        // then we could not allow the scalable store removal because we don't
+        // know its final size in the end.
+        if (ST->getMemoryVT().isScalableVector() ||
+            ST1->getMemoryVT().isScalableVector()) {
+          if (ST1->getBasePtr() == Ptr &&
+              TypeSize::isKnownLE(ST1->getMemoryVT().getStoreSize(),
+                                  ST->getMemoryVT().getStoreSize())) {
+            CombineTo(ST1, ST1->getChain());
+            return SDValue();
+          }
+        } else {
+          const BaseIndexOffset STBase = BaseIndexOffset::match(ST, DAG);
+          const BaseIndexOffset ChainBase = BaseIndexOffset::match(ST1, DAG);
+          // If this is a store who's preceding store to a subset of the current
+          // location and no one other node is chained to that store we can
+          // effectively drop the store. Do not remove stores to undef as they
+          // may be used as data sinks.
+          if (STBase.contains(DAG, ST->getMemoryVT().getFixedSizeInBits(),
+                              ChainBase,
+                              ST1->getMemoryVT().getFixedSizeInBits())) {
+            CombineTo(ST1, ST1->getChain());
+            return SDValue();
+          }
         }
       }
     }
