@@ -9,65 +9,65 @@ define float @syncscope_system(ptr %addr, float %val) #0 {
 ; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr [[ADDR:%.*]], align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
-; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VAL:%.*]]
-; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[NEW]] to i32
-; GFX908-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[ADDR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
-; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX908-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX908-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[ADDR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; GFX908-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
 ; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GFX908:       atomicrmw.end:
-; GFX908-NEXT:    ret float [[TMP6]]
+; GFX908-NEXT:    ret float [[TMP5]]
 ;
 ; GFX90A-LABEL: @syncscope_system(
 ; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr [[ADDR:%.*]], align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
-; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
 ; GFX90A-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VAL:%.*]]
-; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast float [[NEW]] to i32
-; GFX90A-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX90A-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[ADDR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
-; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX90A-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
+; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
+; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[ADDR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4
+; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; GFX90A-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
 ; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GFX90A:       atomicrmw.end:
-; GFX90A-NEXT:    ret float [[TMP6]]
+; GFX90A-NEXT:    ret float [[TMP5]]
 ;
 ; GFX940-LABEL: @syncscope_system(
 ; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr [[ADDR:%.*]], align 4
 ; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX940:       atomicrmw.start:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
 ; GFX940-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VAL:%.*]]
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[NEW]] to i32
-; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[ADDR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX940-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
+; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
+; GFX940-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[ADDR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4
+; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; GFX940-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
 ; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    ret float [[TMP6]]
+; GFX940-NEXT:    ret float [[TMP5]]
 ;
 ; GFX1100-LABEL: @syncscope_system(
 ; GFX1100-NEXT:    [[TMP1:%.*]] = load float, ptr [[ADDR:%.*]], align 4
 ; GFX1100-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX1100:       atomicrmw.start:
-; GFX1100-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX1100-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
 ; GFX1100-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VAL:%.*]]
-; GFX1100-NEXT:    [[TMP3:%.*]] = bitcast float [[NEW]] to i32
-; GFX1100-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX1100-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[ADDR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
-; GFX1100-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX1100-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX1100-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX1100-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
+; GFX1100-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
+; GFX1100-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[ADDR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4
+; GFX1100-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; GFX1100-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; GFX1100-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
 ; GFX1100-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GFX1100:       atomicrmw.end:
-; GFX1100-NEXT:    ret float [[TMP6]]
+; GFX1100-NEXT:    ret float [[TMP5]]
 ;
 ; GFX11-LABEL: @syncscope_system(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr [[ADDR:%.*]], align 4
@@ -93,17 +93,17 @@ define float @syncscope_workgroup_rtn(ptr %addr, float %val) #0 {
 ; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr [[ADDR:%.*]], align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
-; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VAL:%.*]]
-; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[NEW]] to i32
-; GFX908-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[ADDR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("workgroup") seq_cst seq_cst, align 4
-; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX908-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX908-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[ADDR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("workgroup") seq_cst seq_cst, align 4
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; GFX908-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
 ; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GFX908:       atomicrmw.end:
-; GFX908-NEXT:    ret float [[TMP6]]
+; GFX908-NEXT:    ret float [[TMP5]]
 ;
 ; GFX90A-LABEL: @syncscope_workgroup_rtn(
 ; GFX90A-NEXT:    br label [[ATOMICRMW_CHECK_SHARED:%.*]]
@@ -111,24 +111,24 @@ define float @syncscope_workgroup_rtn(ptr %addr, float %val) #0 {
 ; GFX90A-NEXT:    [[IS_SHARED:%.*]] = call i1 @llvm.amdgcn.is.shared(ptr [[ADDR:%.*]])
 ; GFX90A-NEXT:    br i1 [[IS_SHARED]], label [[ATOMICRMW_SHARED:%.*]], label [[ATOMICRMW_CHECK_PRIVATE:%.*]]
 ; GFX90A:       atomicrmw.shared:
-; GFX90A-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(3)
-; GFX90A-NEXT:    [[TMP3:%.*]] = atomicrmw fadd ptr addrspace(3) [[TMP2]], float [[VAL:%.*]] syncscope("workgroup") seq_cst, align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(3)
+; GFX90A-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(3) [[TMP1]], float [[VAL:%.*]] syncscope("workgroup") seq_cst, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; GFX90A:       atomicrmw.check.private:
 ; GFX90A-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[ADDR]])
 ; GFX90A-NEXT:    br i1 [[IS_PRIVATE]], label [[ATOMICRMW_PRIVATE:%.*]], label [[ATOMICRMW_GLOBAL:%.*]]
 ; GFX90A:       atomicrmw.private:
-; GFX90A-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(5)
-; GFX90A-NEXT:    [[LOADED_PRIVATE:%.*]] = load float, ptr addrspace(5) [[TMP4]], align 4
+; GFX90A-NEXT:    [[TMP3:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(5)
+; GFX90A-NEXT:    [[LOADED_PRIVATE:%.*]] = load float, ptr addrspace(5) [[TMP3]], align 4
 ; GFX90A-NEXT:    [[VAL_NEW:%.*]] = fadd float [[LOADED_PRIVATE]], [[VAL]]
-; GFX90A-NEXT:    store float [[VAL_NEW]], ptr addrspace(5) [[TMP4]], align 4
+; GFX90A-NEXT:    store float [[VAL_NEW]], ptr addrspace(5) [[TMP3]], align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_PHI]]
 ; GFX90A:       atomicrmw.global:
-; GFX90A-NEXT:    [[TMP5:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(1)
-; GFX90A-NEXT:    [[TMP6:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP5]], float [[VAL]] syncscope("workgroup") seq_cst, align 4
+; GFX90A-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(1)
+; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP4]], float [[VAL]] syncscope("workgroup") seq_cst, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_PHI]]
 ; GFX90A:       atomicrmw.phi:
-; GFX90A-NEXT:    [[LOADED_PHI:%.*]] = phi float [ [[TMP3]], [[ATOMICRMW_SHARED]] ], [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[TMP6]], [[ATOMICRMW_GLOBAL]] ]
+; GFX90A-NEXT:    [[LOADED_PHI:%.*]] = phi float [ [[TMP2]], [[ATOMICRMW_SHARED]] ], [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[TMP5]], [[ATOMICRMW_GLOBAL]] ]
 ; GFX90A-NEXT:    br label [[ATOMICRMW_END:%.*]]
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[LOADED_PHI]]
@@ -167,24 +167,24 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) #0 {
 ; GFX908-NEXT:    [[IS_SHARED:%.*]] = call i1 @llvm.amdgcn.is.shared(ptr [[ADDR:%.*]])
 ; GFX908-NEXT:    br i1 [[IS_SHARED]], label [[ATOMICRMW_SHARED:%.*]], label [[ATOMICRMW_CHECK_PRIVATE:%.*]]
 ; GFX908:       atomicrmw.shared:
-; GFX908-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(3)
-; GFX908-NEXT:    [[TMP3:%.*]] = atomicrmw fadd ptr addrspace(3) [[TMP2]], float [[VAL:%.*]] syncscope("workgroup") seq_cst, align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(3)
+; GFX908-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(3) [[TMP1]], float [[VAL:%.*]] syncscope("workgroup") seq_cst, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; GFX908:       atomicrmw.check.private:
 ; GFX908-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[ADDR]])
 ; GFX908-NEXT:    br i1 [[IS_PRIVATE]], label [[ATOMICRMW_PRIVATE:%.*]], label [[ATOMICRMW_GLOBAL:%.*]]
 ; GFX908:       atomicrmw.private:
-; GFX908-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(5)
-; GFX908-NEXT:    [[LOADED_PRIVATE:%.*]] = load float, ptr addrspace(5) [[TMP4]], align 4
+; GFX908-NEXT:    [[TMP3:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(5)
+; GFX908-NEXT:    [[LOADED_PRIVATE:%.*]] = load float, ptr addrspace(5) [[TMP3]], align 4
 ; GFX908-NEXT:    [[VAL_NEW:%.*]] = fadd float [[LOADED_PRIVATE]], [[VAL]]
-; GFX908-NEXT:    store float [[VAL_NEW]], ptr addrspace(5) [[TMP4]], align 4
+; GFX908-NEXT:    store float [[VAL_NEW]], ptr addrspace(5) [[TMP3]], align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_PHI]]
 ; GFX908:       atomicrmw.global:
-; GFX908-NEXT:    [[TMP5:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(1)
-; GFX908-NEXT:    [[TMP6:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP5]], float [[VAL]] syncscope("workgroup") seq_cst, align 4
+; GFX908-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(1)
+; GFX908-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP4]], float [[VAL]] syncscope("workgroup") seq_cst, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_PHI]]
 ; GFX908:       atomicrmw.phi:
-; GFX908-NEXT:    [[LOADED_PHI:%.*]] = phi float [ [[TMP3]], [[ATOMICRMW_SHARED]] ], [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[TMP6]], [[ATOMICRMW_GLOBAL]] ]
+; GFX908-NEXT:    [[LOADED_PHI:%.*]] = phi float [ [[TMP2]], [[ATOMICRMW_SHARED]] ], [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[TMP5]], [[ATOMICRMW_GLOBAL]] ]
 ; GFX908-NEXT:    br label [[ATOMICRMW_END:%.*]]
 ; GFX908:       atomicrmw.end:
 ; GFX908-NEXT:    ret void
@@ -195,24 +195,24 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) #0 {
 ; GFX90A-NEXT:    [[IS_SHARED:%.*]] = call i1 @llvm.amdgcn.is.shared(ptr [[ADDR:%.*]])
 ; GFX90A-NEXT:    br i1 [[IS_SHARED]], label [[ATOMICRMW_SHARED:%.*]], label [[ATOMICRMW_CHECK_PRIVATE:%.*]]
 ; GFX90A:       atomicrmw.shared:
-; GFX90A-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(3)
-; GFX90A-NEXT:    [[TMP3:%.*]] = atomicrmw fadd ptr addrspace(3) [[TMP2]], float [[VAL:%.*]] syncscope("workgroup") seq_cst, align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(3)
+; GFX90A-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(3) [[TMP1]], float [[VAL:%.*]] syncscope("workgroup") seq_cst, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; GFX90A:       atomicrmw.check.private:
 ; GFX90A-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[ADDR]])
 ; GFX90A-NEXT:    br i1 [[IS_PRIVATE]], label [[ATOMICRMW_PRIVATE:%.*]], label [[ATOMICRMW_GLOBAL:%.*]]
 ; GFX90A:       atomicrmw.private:
-; GFX90A-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(5)
-; GFX90A-NEXT:    [[LOADED_PRIVATE:%.*]] = load float, ptr addrspace(5) [[TMP4]], align 4
+; GFX90A-NEXT:    [[TMP3:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(5)
+; GFX90A-NEXT:    [[LOADED_PRIVATE:%.*]] = load float, ptr addrspace(5) [[TMP3]], align 4
 ; GFX90A-NEXT:    [[VAL_NEW:%.*]] = fadd float [[LOADED_PRIVATE]], [[VAL]]
-; GFX90A-NEXT:    store float [[VAL_NEW]], ptr addrspace(5) [[TMP4]], align 4
+; GFX90A-NEXT:    store float [[VAL_NEW]], ptr addrspace(5) [[TMP3]], align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_PHI]]
 ; GFX90A:       atomicrmw.global:
-; GFX90A-NEXT:    [[TMP5:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(1)
-; GFX90A-NEXT:    [[TMP6:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP5]], float [[VAL]] syncscope("workgroup") seq_cst, align 4
+; GFX90A-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(1)
+; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP4]], float [[VAL]] syncscope("workgroup") seq_cst, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_PHI]]
 ; GFX90A:       atomicrmw.phi:
-; GFX90A-NEXT:    [[LOADED_PHI:%.*]] = phi float [ [[TMP3]], [[ATOMICRMW_SHARED]] ], [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[TMP6]], [[ATOMICRMW_GLOBAL]] ]
+; GFX90A-NEXT:    [[LOADED_PHI:%.*]] = phi float [ [[TMP2]], [[ATOMICRMW_SHARED]] ], [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[TMP5]], [[ATOMICRMW_GLOBAL]] ]
 ; GFX90A-NEXT:    br label [[ATOMICRMW_END:%.*]]
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
@@ -249,65 +249,65 @@ define float @no_unsafe(ptr %addr, float %val) {
 ; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr [[ADDR:%.*]], align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
-; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VAL:%.*]]
-; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[NEW]] to i32
-; GFX908-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[ADDR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("workgroup") seq_cst seq_cst, align 4
-; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX908-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX908-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[ADDR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("workgroup") seq_cst seq_cst, align 4
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; GFX908-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
 ; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GFX908:       atomicrmw.end:
-; GFX908-NEXT:    ret float [[TMP6]]
+; GFX908-NEXT:    ret float [[TMP5]]
 ;
 ; GFX90A-LABEL: @no_unsafe(
 ; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr [[ADDR:%.*]], align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
-; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
 ; GFX90A-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VAL:%.*]]
-; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast float [[NEW]] to i32
-; GFX90A-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX90A-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[ADDR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("workgroup") seq_cst seq_cst, align 4
-; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX90A-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
+; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
+; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[ADDR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("workgroup") seq_cst seq_cst, align 4
+; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; GFX90A-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
 ; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GFX90A:       atomicrmw.end:
-; GFX90A-NEXT:    ret float [[TMP6]]
+; GFX90A-NEXT:    ret float [[TMP5]]
 ;
 ; GFX940-LABEL: @no_unsafe(
 ; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr [[ADDR:%.*]], align 4
 ; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX940:       atomicrmw.start:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
 ; GFX940-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VAL:%.*]]
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[NEW]] to i32
-; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[ADDR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("workgroup") seq_cst seq_cst, align 4
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX940-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
+; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
+; GFX940-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[ADDR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("workgroup") seq_cst seq_cst, align 4
+; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; GFX940-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
 ; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    ret float [[TMP6]]
+; GFX940-NEXT:    ret float [[TMP5]]
 ;
 ; GFX1100-LABEL: @no_unsafe(
 ; GFX1100-NEXT:    [[TMP1:%.*]] = load float, ptr [[ADDR:%.*]], align 4
 ; GFX1100-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX1100:       atomicrmw.start:
-; GFX1100-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX1100-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
 ; GFX1100-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VAL:%.*]]
-; GFX1100-NEXT:    [[TMP3:%.*]] = bitcast float [[NEW]] to i32
-; GFX1100-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX1100-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[ADDR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("workgroup") seq_cst seq_cst, align 4
-; GFX1100-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX1100-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX1100-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX1100-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
+; GFX1100-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
+; GFX1100-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[ADDR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("workgroup") seq_cst seq_cst, align 4
+; GFX1100-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; GFX1100-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; GFX1100-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
 ; GFX1100-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GFX1100:       atomicrmw.end:
-; GFX1100-NEXT:    ret float [[TMP6]]
+; GFX1100-NEXT:    ret float [[TMP5]]
 ;
 ; GFX11-LABEL: @no_unsafe(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr [[ADDR:%.*]], align 4
