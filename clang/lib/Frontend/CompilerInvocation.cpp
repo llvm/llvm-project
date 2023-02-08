@@ -641,18 +641,31 @@ using GenerateFn = llvm::function_ref<void(
     CompilerInvocation &, SmallVectorImpl<const char *> &,
     CompilerInvocation::StringAllocator)>;
 
-// May perform round-trip of command line arguments. By default, the round-trip
-// is enabled in assert builds. This can be overwritten at run-time via the
-// "-round-trip-args" and "-no-round-trip-args" command line flags.
-// During round-trip, the command line arguments are parsed into a dummy
-// instance of CompilerInvocation which is used to generate the command line
-// arguments again. The real CompilerInvocation instance is then created by
-// parsing the generated arguments, not the original ones.
+/// May perform round-trip of command line arguments. By default, the round-trip
+/// is enabled in assert builds. This can be overwritten at run-time via the
+/// "-round-trip-args" and "-no-round-trip-args" command line flags, or via the
+/// ForceRoundTrip parameter.
+///
+/// During round-trip, the command line arguments are parsed into a dummy
+/// CompilerInvocation, which is used to generate the command line arguments
+/// again. The real CompilerInvocation is then created by parsing the generated
+/// arguments, not the original ones. This (in combination with tests covering
+/// argument behavior) ensures the generated command line is complete (doesn't
+/// drop/mangle any arguments).
+///
+/// Finally, we check the command line that was used to create the real
+/// CompilerInvocation instance. By default, we compare it to the command line
+/// the real CompilerInvocation generates. This checks whether the generator is
+/// deterministic. If \p CheckAgainstOriginalInvocation is enabled, we instead
+/// compare it to the original command line to verify the original command-line
+/// was canonical and can round-trip exactly.
 static bool RoundTrip(ParseFn Parse, GenerateFn Generate,
                       CompilerInvocation &RealInvocation,
                       CompilerInvocation &DummyInvocation,
                       ArrayRef<const char *> CommandLineArgs,
-                      DiagnosticsEngine &Diags, const char *Argv0) {
+                      DiagnosticsEngine &Diags, const char *Argv0,
+                      bool CheckAgainstOriginalInvocation = false,
+                      bool ForceRoundTrip = false) {
 #ifndef NDEBUG
   bool DoRoundTripDefault = true;
 #else
@@ -660,11 +673,15 @@ static bool RoundTrip(ParseFn Parse, GenerateFn Generate,
 #endif
 
   bool DoRoundTrip = DoRoundTripDefault;
-  for (const auto *Arg : CommandLineArgs) {
-    if (Arg == StringRef("-round-trip-args"))
-      DoRoundTrip = true;
-    if (Arg == StringRef("-no-round-trip-args"))
-      DoRoundTrip = false;
+  if (ForceRoundTrip) {
+    DoRoundTrip = true;
+  } else {
+    for (const auto *Arg : CommandLineArgs) {
+      if (Arg == StringRef("-round-trip-args"))
+        DoRoundTrip = true;
+      if (Arg == StringRef("-no-round-trip-args"))
+        DoRoundTrip = false;
+    }
   }
 
   // If round-trip was not requested, simply run the parser with the real
@@ -719,30 +736,34 @@ static bool RoundTrip(ParseFn Parse, GenerateFn Generate,
   // Generate arguments from the dummy invocation. If Generate is the
   // inverse of Parse, the newly generated arguments must have the same
   // semantics as the original.
-  SmallVector<const char *> GeneratedArgs1;
-  Generate(DummyInvocation, GeneratedArgs1, SA);
+  SmallVector<const char *> GeneratedArgs;
+  Generate(DummyInvocation, GeneratedArgs, SA);
 
   // Run the second parse, now on the generated arguments, and with the real
   // invocation and diagnostics. The result is what we will end up using for the
   // rest of compilation, so if Generate is not inverse of Parse, something down
   // the line will break.
-  bool Success2 = Parse(RealInvocation, GeneratedArgs1, Diags, Argv0);
+  bool Success2 = Parse(RealInvocation, GeneratedArgs, Diags, Argv0);
 
   // The first parse on original arguments succeeded, but second parse of
   // generated arguments failed. Something must be wrong with the generator.
   if (!Success2) {
     Diags.Report(diag::err_cc1_round_trip_ok_then_fail);
     Diags.Report(diag::note_cc1_round_trip_generated)
-        << 1 << SerializeArgs(GeneratedArgs1);
+        << 1 << SerializeArgs(GeneratedArgs);
     return false;
   }
 
-  // Generate arguments again, this time from the options we will end up using
-  // for the rest of the compilation.
-  SmallVector<const char *> GeneratedArgs2;
-  Generate(RealInvocation, GeneratedArgs2, SA);
+  SmallVector<const char *> ComparisonArgs;
+  if (CheckAgainstOriginalInvocation)
+    // Compare against original arguments.
+    ComparisonArgs.assign(CommandLineArgs.begin(), CommandLineArgs.end());
+  else
+    // Generate arguments again, this time from the options we will end up using
+    // for the rest of the compilation.
+    Generate(RealInvocation, ComparisonArgs, SA);
 
-  // Compares two lists of generated arguments.
+  // Compares two lists of arguments.
   auto Equal = [](const ArrayRef<const char *> A,
                   const ArrayRef<const char *> B) {
     return std::equal(A.begin(), A.end(), B.begin(), B.end(),
@@ -754,21 +775,39 @@ static bool RoundTrip(ParseFn Parse, GenerateFn Generate,
   // If we generated different arguments from what we assume are two
   // semantically equivalent CompilerInvocations, the Generate function may
   // be non-deterministic.
-  if (!Equal(GeneratedArgs1, GeneratedArgs2)) {
+  if (!Equal(GeneratedArgs, ComparisonArgs)) {
     Diags.Report(diag::err_cc1_round_trip_mismatch);
     Diags.Report(diag::note_cc1_round_trip_generated)
-        << 1 << SerializeArgs(GeneratedArgs1);
+        << 1 << SerializeArgs(GeneratedArgs);
     Diags.Report(diag::note_cc1_round_trip_generated)
-        << 2 << SerializeArgs(GeneratedArgs2);
+        << 2 << SerializeArgs(ComparisonArgs);
     return false;
   }
 
   Diags.Report(diag::remark_cc1_round_trip_generated)
-      << 1 << SerializeArgs(GeneratedArgs1);
+      << 1 << SerializeArgs(GeneratedArgs);
   Diags.Report(diag::remark_cc1_round_trip_generated)
-      << 2 << SerializeArgs(GeneratedArgs2);
+      << 2 << SerializeArgs(ComparisonArgs);
 
   return Success2;
+}
+
+bool CompilerInvocation::checkCC1RoundTrip(ArrayRef<const char *> Args,
+                                           DiagnosticsEngine &Diags,
+                                           const char *Argv0) {
+  CompilerInvocation DummyInvocation1, DummyInvocation2;
+  return RoundTrip(
+      [](CompilerInvocation &Invocation, ArrayRef<const char *> CommandLineArgs,
+         DiagnosticsEngine &Diags, const char *Argv0) {
+        return CreateFromArgsImpl(Invocation, CommandLineArgs, Diags, Argv0);
+      },
+      [](CompilerInvocation &Invocation, SmallVectorImpl<const char *> &Args,
+         StringAllocator SA) {
+        Args.push_back("-cc1");
+        Invocation.generateCC1CommandLine(Args, SA);
+      },
+      DummyInvocation1, DummyInvocation2, Args, Diags, Argv0,
+      /*CheckAgainstOriginalInvocation=*/true, /*ForceRoundTrip=*/true);
 }
 
 static void addDiagnosticArgs(ArgList &Args, OptSpecifier Group,
