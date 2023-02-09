@@ -108,12 +108,12 @@ define void @vectorInstrCost() {
 define <8 x i8> @LD1_B(<8 x i8> %vec, ptr noundef %i) {
 ; KRYO-LABEL: 'LD1_B'
 ; KRYO-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = load i8, ptr %i, align 1
-; KRYO-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2 = insertelement <8 x i8> %vec, i8 %v1, i32 1
+; KRYO-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2 = insertelement <8 x i8> %vec, i8 %v1, i32 1
 ; KRYO-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i8> %v2
 ;
 ; NEO-LABEL: 'LD1_B'
 ; NEO-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = load i8, ptr %i, align 1
-; NEO-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2 = insertelement <8 x i8> %vec, i8 %v1, i32 1
+; NEO-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2 = insertelement <8 x i8> %vec, i8 %v1, i32 1
 ; NEO-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i8> %v2
 ;
 entry:
@@ -125,12 +125,12 @@ entry:
 define <4 x i16> @LD1_H(<4 x i16> %vec, ptr noundef %i) {
 ; KRYO-LABEL: 'LD1_H'
 ; KRYO-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = load i16, ptr %i, align 2
-; KRYO-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2 = insertelement <4 x i16> %vec, i16 %v1, i32 2
+; KRYO-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2 = insertelement <4 x i16> %vec, i16 %v1, i32 2
 ; KRYO-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i16> %v2
 ;
 ; NEO-LABEL: 'LD1_H'
 ; NEO-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = load i16, ptr %i, align 2
-; NEO-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2 = insertelement <4 x i16> %vec, i16 %v1, i32 2
+; NEO-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2 = insertelement <4 x i16> %vec, i16 %v1, i32 2
 ; NEO-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i16> %v2
 ;
 entry:
@@ -142,12 +142,12 @@ entry:
 define <4 x i32> @LD1_W(<4 x i32> %vec, ptr noundef %i) {
 ; KRYO-LABEL: 'LD1_W'
 ; KRYO-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = load i32, ptr %i, align 4
-; KRYO-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2 = insertelement <4 x i32> %vec, i32 %v1, i32 3
+; KRYO-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2 = insertelement <4 x i32> %vec, i32 %v1, i32 3
 ; KRYO-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %v2
 ;
 ; NEO-LABEL: 'LD1_W'
 ; NEO-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = load i32, ptr %i, align 4
-; NEO-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2 = insertelement <4 x i32> %vec, i32 %v1, i32 3
+; NEO-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2 = insertelement <4 x i32> %vec, i32 %v1, i32 3
 ; NEO-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %v2
 ;
 entry:
@@ -159,12 +159,12 @@ entry:
 define <2 x i64> @LD1_X(<2 x i64> %vec, ptr noundef %i) {
 ; KRYO-LABEL: 'LD1_X'
 ; KRYO-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = load i64, ptr %i, align 8
-; KRYO-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2 = insertelement <2 x i64> %vec, i64 %v1, i32 0
+; KRYO-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2 = insertelement <2 x i64> %vec, i64 %v1, i32 0
 ; KRYO-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %v2
 ;
 ; NEO-LABEL: 'LD1_X'
 ; NEO-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = load i64, ptr %i, align 8
-; NEO-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2 = insertelement <2 x i64> %vec, i64 %v1, i32 0
+; NEO-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2 = insertelement <2 x i64> %vec, i64 %v1, i32 0
 ; NEO-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %v2
 ;
 entry:

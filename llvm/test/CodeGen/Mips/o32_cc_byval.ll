@@ -80,7 +80,7 @@ define void @f1() nounwind {
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 64
 entry:
-  %agg.tmp10 = alloca %struct.S3, align 4
+  %agg.tmp10 = alloca %struct.S3, align 8
   call void @callee1(float 2.000000e+01, ptr byval(%struct.S1) @f1.s1) nounwind
   call void @callee2(ptr byval(%struct.S2) @f1.s2) nounwind
   store i8 11, ptr %agg.tmp10, align 4
