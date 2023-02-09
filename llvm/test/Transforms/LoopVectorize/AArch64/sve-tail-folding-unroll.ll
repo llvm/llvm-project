@@ -72,19 +72,19 @@ define void @simple_memset(i32 %val, i32* %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr i32, i32* [[TMP31]], i32 0
 ; CHECK-NEXT:    [[TMP36:%.*]] = bitcast i32* [[TMP35]] to <vscale x 4 x i32>*
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0nxv4i32(<vscale x 4 x i32> [[BROADCAST_SPLAT]], <vscale x 4 x i32>* [[TMP36]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK7]])
-; CHECK-NEXT:    [[TMP37:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP38:%.*]] = mul i32 [[TMP37]], 4
-; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr i32, i32* [[TMP31]], i32 [[TMP38]]
+; CHECK-NEXT:    [[TMP37:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP38:%.*]] = mul i64 [[TMP37]], 4
+; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr i32, i32* [[TMP31]], i64 [[TMP38]]
 ; CHECK-NEXT:    [[TMP40:%.*]] = bitcast i32* [[TMP39]] to <vscale x 4 x i32>*
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0nxv4i32(<vscale x 4 x i32> [[BROADCAST_SPLAT12]], <vscale x 4 x i32>* [[TMP40]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK8]])
-; CHECK-NEXT:    [[TMP41:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP42:%.*]] = mul i32 [[TMP41]], 8
-; CHECK-NEXT:    [[TMP43:%.*]] = getelementptr i32, i32* [[TMP31]], i32 [[TMP42]]
+; CHECK-NEXT:    [[TMP41:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP42:%.*]] = mul i64 [[TMP41]], 8
+; CHECK-NEXT:    [[TMP43:%.*]] = getelementptr i32, i32* [[TMP31]], i64 [[TMP42]]
 ; CHECK-NEXT:    [[TMP44:%.*]] = bitcast i32* [[TMP43]] to <vscale x 4 x i32>*
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0nxv4i32(<vscale x 4 x i32> [[BROADCAST_SPLAT14]], <vscale x 4 x i32>* [[TMP44]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK9]])
-; CHECK-NEXT:    [[TMP45:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP46:%.*]] = mul i32 [[TMP45]], 12
-; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr i32, i32* [[TMP31]], i32 [[TMP46]]
+; CHECK-NEXT:    [[TMP45:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP46:%.*]] = mul i64 [[TMP45]], 12
+; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr i32, i32* [[TMP31]], i64 [[TMP46]]
 ; CHECK-NEXT:    [[TMP48:%.*]] = bitcast i32* [[TMP47]] to <vscale x 4 x i32>*
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0nxv4i32(<vscale x 4 x i32> [[BROADCAST_SPLAT16]], <vscale x 4 x i32>* [[TMP48]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK10]])
 ; CHECK-NEXT:    [[TMP49:%.*]] = call i64 @llvm.vscale.i64()
@@ -196,19 +196,19 @@ define void @cond_memset(i32 %val, i32* noalias readonly %cond_ptr, i32* noalias
 ; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr i32, i32* [[TMP31]], i32 0
 ; CHECK-NEXT:    [[TMP36:%.*]] = bitcast i32* [[TMP35]] to <vscale x 4 x i32>*
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0nxv4i32(<vscale x 4 x i32>* [[TMP36]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK7]], <vscale x 4 x i32> poison)
-; CHECK-NEXT:    [[TMP37:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP38:%.*]] = mul i32 [[TMP37]], 4
-; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr i32, i32* [[TMP31]], i32 [[TMP38]]
+; CHECK-NEXT:    [[TMP37:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP38:%.*]] = mul i64 [[TMP37]], 4
+; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr i32, i32* [[TMP31]], i64 [[TMP38]]
 ; CHECK-NEXT:    [[TMP40:%.*]] = bitcast i32* [[TMP39]] to <vscale x 4 x i32>*
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD11:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0nxv4i32(<vscale x 4 x i32>* [[TMP40]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK8]], <vscale x 4 x i32> poison)
-; CHECK-NEXT:    [[TMP41:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP42:%.*]] = mul i32 [[TMP41]], 8
-; CHECK-NEXT:    [[TMP43:%.*]] = getelementptr i32, i32* [[TMP31]], i32 [[TMP42]]
+; CHECK-NEXT:    [[TMP41:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP42:%.*]] = mul i64 [[TMP41]], 8
+; CHECK-NEXT:    [[TMP43:%.*]] = getelementptr i32, i32* [[TMP31]], i64 [[TMP42]]
 ; CHECK-NEXT:    [[TMP44:%.*]] = bitcast i32* [[TMP43]] to <vscale x 4 x i32>*
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD12:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0nxv4i32(<vscale x 4 x i32>* [[TMP44]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK9]], <vscale x 4 x i32> poison)
-; CHECK-NEXT:    [[TMP45:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP46:%.*]] = mul i32 [[TMP45]], 12
-; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr i32, i32* [[TMP31]], i32 [[TMP46]]
+; CHECK-NEXT:    [[TMP45:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP46:%.*]] = mul i64 [[TMP45]], 12
+; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr i32, i32* [[TMP31]], i64 [[TMP46]]
 ; CHECK-NEXT:    [[TMP48:%.*]] = bitcast i32* [[TMP47]] to <vscale x 4 x i32>*
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD13:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0nxv4i32(<vscale x 4 x i32>* [[TMP48]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK10]], <vscale x 4 x i32> poison)
 ; CHECK-NEXT:    [[TMP49:%.*]] = icmp ne <vscale x 4 x i32> [[WIDE_MASKED_LOAD]], zeroinitializer
@@ -226,19 +226,19 @@ define void @cond_memset(i32 %val, i32* noalias readonly %cond_ptr, i32* noalias
 ; CHECK-NEXT:    [[TMP61:%.*]] = getelementptr i32, i32* [[TMP53]], i32 0
 ; CHECK-NEXT:    [[TMP62:%.*]] = bitcast i32* [[TMP61]] to <vscale x 4 x i32>*
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0nxv4i32(<vscale x 4 x i32> [[BROADCAST_SPLAT]], <vscale x 4 x i32>* [[TMP62]], i32 4, <vscale x 4 x i1> [[TMP57]])
-; CHECK-NEXT:    [[TMP63:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP64:%.*]] = mul i32 [[TMP63]], 4
-; CHECK-NEXT:    [[TMP65:%.*]] = getelementptr i32, i32* [[TMP53]], i32 [[TMP64]]
+; CHECK-NEXT:    [[TMP63:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP64:%.*]] = mul i64 [[TMP63]], 4
+; CHECK-NEXT:    [[TMP65:%.*]] = getelementptr i32, i32* [[TMP53]], i64 [[TMP64]]
 ; CHECK-NEXT:    [[TMP66:%.*]] = bitcast i32* [[TMP65]] to <vscale x 4 x i32>*
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0nxv4i32(<vscale x 4 x i32> [[BROADCAST_SPLAT15]], <vscale x 4 x i32>* [[TMP66]], i32 4, <vscale x 4 x i1> [[TMP58]])
-; CHECK-NEXT:    [[TMP67:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP68:%.*]] = mul i32 [[TMP67]], 8
-; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i32, i32* [[TMP53]], i32 [[TMP68]]
+; CHECK-NEXT:    [[TMP67:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP68:%.*]] = mul i64 [[TMP67]], 8
+; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i32, i32* [[TMP53]], i64 [[TMP68]]
 ; CHECK-NEXT:    [[TMP70:%.*]] = bitcast i32* [[TMP69]] to <vscale x 4 x i32>*
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0nxv4i32(<vscale x 4 x i32> [[BROADCAST_SPLAT17]], <vscale x 4 x i32>* [[TMP70]], i32 4, <vscale x 4 x i1> [[TMP59]])
-; CHECK-NEXT:    [[TMP71:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP72:%.*]] = mul i32 [[TMP71]], 12
-; CHECK-NEXT:    [[TMP73:%.*]] = getelementptr i32, i32* [[TMP53]], i32 [[TMP72]]
+; CHECK-NEXT:    [[TMP71:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP72:%.*]] = mul i64 [[TMP71]], 12
+; CHECK-NEXT:    [[TMP73:%.*]] = getelementptr i32, i32* [[TMP53]], i64 [[TMP72]]
 ; CHECK-NEXT:    [[TMP74:%.*]] = bitcast i32* [[TMP73]] to <vscale x 4 x i32>*
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0nxv4i32(<vscale x 4 x i32> [[BROADCAST_SPLAT19]], <vscale x 4 x i32>* [[TMP74]], i32 4, <vscale x 4 x i1> [[TMP60]])
 ; CHECK-NEXT:    [[TMP75:%.*]] = call i64 @llvm.vscale.i64()
