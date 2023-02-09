@@ -43,7 +43,7 @@ struct AssumingOpInterface
     auto yieldOp = dyn_cast<shape::AssumingYieldOp>(
         assumingOp.getDoRegion().front().getTerminator());
     assert(yieldOp && "expected shape.assuming_yield terminator");
-    return {&yieldOp->getOpOperand(resultNum)};
+    return {{&yieldOp->getOpOperand(resultNum), BufferRelation::Equivalent}};
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
@@ -77,11 +77,6 @@ struct AssumingOpInterface
 
     return success();
   }
-
-  BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const AnalysisState &state) const {
-    return BufferRelation::Equivalent;
-  }
 };
 
 /// Bufferization of shape.assuming_yield. Bufferized as part of their enclosing
@@ -105,7 +100,7 @@ struct AssumingYieldOpInterface
            "expected that parent is an AssumingOp");
     OpResult opResult =
         op->getParentOp()->getResult(opOperand.getOperandNumber());
-    return {opResult};
+    return {{opResult, BufferRelation::Equivalent}};
   }
 
   bool mustBufferizeInPlace(Operation *op, OpOperand &opOperand,

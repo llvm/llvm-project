@@ -99,12 +99,7 @@ struct LoadOpInterface
 
   AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
-    return {op->getOpResult(0)};
-  }
-
-  BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const AnalysisState &state) const {
-    return BufferRelation::Equivalent;
+    return {{op->getOpResult(0), BufferRelation::Equivalent}};
   }
 };
 
@@ -146,7 +141,7 @@ struct PackOpInterface
     assert(isUniqueCOOType(op->getResultTypes()[0].cast<RankedTensorType>()));
     // PackOp reuses the input tensors as data/indices instead of creating new
     // ones when packing into a COO format.
-    return op->getResults();
+    return {{op->getOpResult(0), BufferRelation::Equivalent}};
   }
 };
 
@@ -168,14 +163,7 @@ struct InsertOpInterface
                                             const AnalysisState &state) const {
     // InsertOp returns an alias of its operand.
     assert(op->getNumResults() == 1);
-    return op->getResults();
-  }
-
-  BufferRelation bufferRelation(Operation *oo, OpResult opResult,
-                                const AnalysisState &state) const {
-    // InsertOp returns the same object (realloc should not invalidate
-    // aliases).
-    return BufferRelation::Equivalent;
+    return {{op->getOpResult(0), BufferRelation::Equivalent}};
   }
 };
 
