@@ -213,6 +213,10 @@ clang-extdef-mapping
 libclang
 --------
 
+- Introduced the new function ``clang_CXXMethod_isExplicit``,
+  which identifies whether a constructor or conversion function cursor
+  was marked with the explicit identifier.
+
 Static Analyzer
 ---------------
 

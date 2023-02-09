@@ -416,6 +416,9 @@ LLVM_16 {
     clang_disposeAPISet;
     clang_getSymbolGraphForCursor;
     clang_getSymbolGraphForUSR;
+};
+
+LLVM_17 {
     clang_CXXMethod_isExplicit;
 };
 
