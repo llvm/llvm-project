@@ -116,8 +116,10 @@ LIBC_INLINE T logb(T x) {
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T ldexp(T x, int exp) {
+  if (unlikely(exp == 0))
+    return x;
   FPBits<T> bits(x);
-  if (bits.is_zero() || bits.is_inf_or_nan() || exp == 0)
+  if (unlikely(bits.is_zero() || bits.is_inf_or_nan()))
     return x;
 
   // NormalFloat uses int32_t to store the true exponent value. We should ensure
