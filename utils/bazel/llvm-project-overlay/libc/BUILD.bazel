@@ -61,18 +61,33 @@ cc_library(
 ############################## Support libraries #############################
 
 libc_support_library(
-    name = "__support_compiler_features",
+    name = "__support_macros_properties_architectures",
+    hdrs = ["src/__support/macros/properties/architectures.h"],
+    deps = [":libc_root"],
+)
+
+libc_support_library(
+    name = "__support_macros_properties_compiler",
     hdrs = ["src/__support/macros/properties/compiler.h"],
     deps = [":libc_root"],
 )
 
 libc_support_library(
-    name = "__support_sanitizer",
+    name = "__support_macros_properties_cpu_features",
+    hdrs = ["src/__support/macros/properties/cpu_features.h"],
+    deps = [":libc_root"],
+)
+
+libc_support_library(
+    name = "__support_macros_attributes",
+    hdrs = ["src/__support/macros/attributes.h"],
+    deps = [":libc_root"],
+)
+
+libc_support_library(
+    name = "__support_macros_sanitizer",
     hdrs = ["src/__support/macros/sanitizer.h"],
-    deps = [
-        ":__support_compiler_features",
-        ":libc_root",
-    ],
+    deps = [":libc_root"],
 )
 
 libc_support_library(
@@ -80,11 +95,12 @@ libc_support_library(
     hdrs = [
         "src/__support/common.h",
         "src/__support/endian.h",
-        "src/__support/macros/attributes.h",
-        "src/__support/macros/properties/architectures.h",
-        "src/__support/macros/properties/cpu_features.h",
     ],
-    deps = [":libc_root"],
+    deps = [
+        ":__support_macros_attributes",
+        ":__support_macros_properties_architectures",
+        ":libc_root",
+    ],
 )
 
 libc_support_library(
@@ -97,7 +113,7 @@ libc_support_library(
     name = "__support_cpp_bit",
     hdrs = ["src/__support/CPP/bit.h"],
     deps = [
-        ":__support_compiler_features",
+        ":__support_macros_properties_compiler",
         ":libc_root",
     ],
 )
@@ -205,13 +221,12 @@ libc_support_library(
     hdrs = ["src/__support/UInt.h"],
     deps = [
         "__support_builtin_wrappers",
-        "__support_common",
-        "__support_compiler_features",
         "__support_cpp_array",
         "__support_cpp_limits",
         "__support_cpp_optional",
         "__support_cpp_type_traits",
         "__support_integer_utils",
+        "__support_macros_attributes",
         "__support_number_pair",
         ":libc_root",
     ],
@@ -277,9 +292,9 @@ libc_support_library(
     name = "__support_builtin_wrappers",
     hdrs = ["src/__support/builtin_wrappers.h"],
     deps = [
-        ":__support_common",
-        ":__support_compiler_features",
         ":__support_cpp_type_traits",
+        ":__support_macros_attributes",
+        ":__support_macros_properties_compiler",
         ":__support_named_pair",
         ":libc_root",
     ],
@@ -318,10 +333,10 @@ libc_support_library(
         "src/__support/FPUtil/aarch64/fenv_darwin_impl.h",
     ],
     deps = [
-        ":__support_common",
-        ":__support_compiler_features",
         ":__support_fputil_fp_bits",
-        ":__support_sanitizer",
+        ":__support_macros_attributes",
+        ":__support_macros_properties_architectures",
+        ":__support_macros_sanitizer",
         ":libc_root",
     ],
 )
@@ -473,6 +488,7 @@ libc_support_library(
         ":__support_fputil_fenv_impl",
         ":__support_fputil_float_properties",
         ":__support_fputil_fp_bits",
+        ":__support_macros_properties_cpu_features",
         ":__support_uint128",
         ":libc_root",
     ],
@@ -1345,11 +1361,12 @@ libc_support_library(
     ],
     deps = [
         ":__support_common",
-        ":__support_compiler_features",
         ":__support_cpp_array",
         ":__support_cpp_bit",
         ":__support_cpp_cstddef",
         ":__support_cpp_type_traits",
+        ":__support_macros_attributes",
+        ":__support_macros_properties_compiler",
         ":libc_root",
     ],
 )
