@@ -1574,9 +1574,57 @@ add_fp_unittest(
   SRCS
     pow_test.cpp
   DEPENDS
-  libc.include.errno
-  libc.src.errno.errno
-  libc.src.math.pow
+    libc.include.errno
+    libc.src.errno.errno
+    libc.src.math.pow
+)
+
+add_fp_unittest(
+  scalbn_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    scalbn_test.cpp
+  HDRS
+    ScalbnTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.scalbn
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.normal_float
+)
+
+add_fp_unittest(
+  scalbnf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    scalbnf_test.cpp
+  HDRS
+    ScalbnTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.scalbnf
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.normal_float
+)
+
+add_fp_unittest(
+  scalbnl_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    scalbnl_test.cpp
+  HDRS
+    ScalbnTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.scalbnl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.normal_float
 )
 
 add_subdirectory(generic)
