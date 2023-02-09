@@ -123,11 +123,6 @@ public:
     return StackRealignable;
   }
 
-  /// Return the skew that has to be applied to stack alignment under
-  /// certain conditions (e.g. stack was adjusted before function \p MF
-  /// was called).
-  virtual unsigned getStackAlignmentSkew(const MachineFunction &MF) const;
-
   /// This method returns whether or not it is safe for an object with the
   /// given stack id to be bundled into the local area.
   virtual bool isStackIdSafeForLocalArea(unsigned StackId) const {
