@@ -21,7 +21,7 @@ body:             |
 ...
 
 # Same as above but with multiple RegMask operands per instruction.
-# These regmasks have no real meaning and chosen to allow only single register to be assignable ($r12)
+# These regmasks have no real meaning and chosen to allow only single register to be assignable ($rbp)
 ---
 name:            test_relocate_multi_regmasks
 tracksRegLiveness: true
@@ -29,11 +29,11 @@ body:             |
   bb.0.entry:
     liveins: $rdi
 
-    ; CHECK: renamable $r12 = STATEPOINT 0, 0, 0, target-flags(x86-plt) 0, 2, 0, 2, 0, 2, 0, 2, 1, renamable $r12(tied-def 0)
+    ; CHECK: renamable $rbp = STATEPOINT 0, 0, 0, target-flags(x86-plt) 0, 2, 0, 2, 0, 2, 0, 2, 1, renamable $rbp(tied-def 0)
 
     %1:gr64 = COPY $rdi
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    %1:gr64 = STATEPOINT 0, 0, 0, target-flags(x86-plt) 0, 2, 0, 2, 0, 2, 0, 2, 1, %1(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64_rt_allregs, csr_64_hhvm, implicit-def $rsp, implicit-def $ssp
+    %1:gr64 = STATEPOINT 0, 0, 0, target-flags(x86-plt) 0, 2, 0, 2, 0, 2, 0, 2, 1, %1(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64_rt_allregs, csr_64_cxx_tls_darwin_pe, implicit-def $rsp, implicit-def $ssp
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     $rax = COPY %1
     RET 0, killed $rax
