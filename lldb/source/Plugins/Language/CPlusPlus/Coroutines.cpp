@@ -8,7 +8,6 @@
 
 #include "Coroutines.h"
 
-#include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/VariableList.h"
@@ -97,8 +96,7 @@ bool lldb_private::formatters::StdlibCoroutineHandleSummaryProvider(
 
 lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
     StdlibCoroutineHandleSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
-    : SyntheticChildrenFrontEnd(*valobj_sp),
-      m_ast_importer(std::make_unique<ClangASTImporter>()) {
+    : SyntheticChildrenFrontEnd(*valobj_sp) {
   if (valobj_sp)
     Update();
 }
@@ -174,8 +172,7 @@ bool lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
     if (Function *destroy_func =
             ExtractDestroyFunction(target_sp, frame_ptr_addr)) {
       if (CompilerType inferred_type = InferPromiseType(*destroy_func)) {
-        // Copy the type over to the correct `TypeSystemClang` instance
-        promise_type = m_ast_importer->CopyType(*ast_ctx, inferred_type);
+        promise_type = inferred_type;
       }
     }
   }

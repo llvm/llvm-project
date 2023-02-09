@@ -71,13 +71,9 @@ private:
   void assignWildcardVersion(SymbolVersion ver, uint16_t versionId,
                              bool includeNonDefault);
 
-  // The order the global symbols are in is not defined. We can use an arbitrary
-  // order, but it has to be reproducible. That is true even when cross linking.
-  // The default hashing of StringRef produces different results on 32 and 64
-  // bit systems so we use a map to a vector. That is arbitrary, deterministic
-  // but a bit inefficient.
-  // FIXME: Experiment with passing in a custom hashing or sorting the symbols
-  // once symbol resolution is finished.
+  // Global symbols and a map from symbol name to the index. The order is not
+  // defined. We can use an arbitrary order, but it has to be deterministic even
+  // when cross linking.
   llvm::DenseMap<llvm::CachedHashStringRef, int> symMap;
   SmallVector<Symbol *, 0> symVector;
 

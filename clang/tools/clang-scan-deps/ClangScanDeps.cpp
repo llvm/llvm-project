@@ -245,6 +245,19 @@ llvm::cl::opt<std::string>
                     llvm::cl::desc("Path for on-disk action cache."),
                     llvm::cl::cat(DependencyScannerCategory));
 
+#ifndef NDEBUG
+static constexpr bool DoRoundTripDefault = true;
+#else
+static constexpr bool DoRoundTripDefault = false;
+#endif
+
+llvm::cl::opt<bool>
+    RoundTripArgs("round-trip-args", llvm::cl::Optional,
+                  llvm::cl::desc("verify that command-line arguments are "
+                                 "canonical by parsing and re-serializing"),
+                  llvm::cl::init(DoRoundTripDefault),
+                  llvm::cl::cat(DependencyScannerCategory));
+
 llvm::cl::opt<bool> Verbose("v", llvm::cl::Optional,
                             llvm::cl::desc("Use verbose output."),
                             llvm::cl::init(false),
@@ -551,6 +564,37 @@ public:
       }
       Modules.insert(I, {{MD.ID, InputIndex}, std::move(MD)});
     }
+  }
+
+  bool roundTripCommand(ArrayRef<std::string> ArgStrs,
+                        DiagnosticsEngine &Diags) {
+    if (ArgStrs.empty() || ArgStrs[0] != "-cc1")
+      return false;
+    SmallVector<const char *> Args;
+    for (const std::string &Arg : ArgStrs)
+      Args.push_back(Arg.c_str());
+    return !CompilerInvocation::checkCC1RoundTrip(Args, Diags);
+  }
+
+  // Returns \c true if any command lines fail to round-trip. We expect
+  // commands already be canonical when output by the scanner.
+  bool roundTripCommands(raw_ostream &ErrOS) {
+    IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions{};
+    TextDiagnosticPrinter DiagConsumer(ErrOS, &*DiagOpts);
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+        CompilerInstance::createDiagnostics(&*DiagOpts, &DiagConsumer,
+                                            /*ShouldOwnClient=*/false);
+
+    for (auto &&M : Modules)
+      if (roundTripCommand(M.second.BuildArguments, *Diags))
+        return true;
+
+    for (auto &&I : Inputs)
+      for (const auto &Cmd : I.Commands)
+        if (roundTripCommand(Cmd.Arguments, *Diags))
+          return true;
+
+    return false;
   }
 
   void printFullOutput(raw_ostream &OS) {
@@ -980,6 +1024,10 @@ int main(int argc, const char **argv) {
     });
   }
   Pool.wait();
+
+  if (RoundTripArgs)
+    if (FD.roundTripCommands(llvm::errs()))
+      HadErrors = true;
 
   std::sort(TreeResults.begin(), TreeResults.end(),
             [](const DepTreeResult &LHS, const DepTreeResult &RHS) -> bool {

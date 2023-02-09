@@ -259,22 +259,25 @@ private:
   std::vector<std::vector<Value>> idxBuffer; // to_indices
   std::vector<Value> valBuffer;              // to_value
 
-  // Loop Stack, stores the information of all the nested loops that are
-  // alive.
+  /// Whether the sparse input is a slice.
+  std::vector<bool> isSparseSlices;
+
+  /// Loop Stack, stores the information of all the nested loops that are
+  /// alive.
   std::vector<LoopLevelInfo> loopStack;
 
-  // Loop Sequence Stack, stores the unversial index for the current loop
-  // sequence.
+  /// Loop Sequence Stack, stores the unversial index for the current loop
+  /// sequence.
   std::vector<Value> loopSeqStack;
 
-  // Maps AffineDimExpr to the index of the loop in loopStack.
-  // TODO: We should probably use a callback function here to make it more
-  // general.
+  /// Maps AffineDimExpr to the index of the loop in loopStack.
+  /// TODO: We should probably use a callback function here to make it more
+  /// general.
   std::vector<unsigned> sparsiferLoopLvlMap;
 
-  // TODO: not yet used, it should track the current level for each tensor
-  // to help eliminate `dim` paramters from above APIs.
-  // std::vector<size_t> curLv;
+  /// TODO: not yet used, it should track the current level for each tensor
+  /// to help eliminate `dim` paramters from above APIs.
+  /// std::vector<size_t> curLv;
 };
 
 } // namespace sparse_tensor
