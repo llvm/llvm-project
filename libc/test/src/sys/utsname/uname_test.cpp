@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/macros/architectures.h"
+#include "src/__support/macros/properties/architectures.h"
 #include "src/sys/utsname/uname.h"
 #include "test/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"

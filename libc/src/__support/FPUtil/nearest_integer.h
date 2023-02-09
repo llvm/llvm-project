@@ -10,8 +10,8 @@
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_NEAREST_INTEGER_H
 
 #include "src/__support/common.h"
-#include "src/__support/macros/architectures.h"
 #include "src/__support/macros/cpu_features.h"
+#include "src/__support/macros/properties/architectures.h"
 
 #if (defined(LIBC_TARGET_ARCH_IS_X86_64) && defined(LIBC_TARGET_CPU_HAS_SSE4_2))
 #include "x86_64/nearest_integer.h"
