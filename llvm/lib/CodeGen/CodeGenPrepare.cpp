@@ -2221,10 +2221,10 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
   }
 
   // Align the pointer arguments to this call if the target thinks it's a good
-  // idea
+  // idea (generally only useful for memcpy/memmove/memset).
   unsigned MinSize;
   Align PrefAlign;
-  if (TLI->shouldAlignPointerArgs(CI, MinSize, PrefAlign)) {
+  if (TLI->shouldUpdatePointerArgAlignment(CI, MinSize, PrefAlign, *TTI)) {
     for (auto &Arg : CI->args()) {
       // We want to align both objects whose address is used directly and
       // objects whose address is used in casts and GEPs, though it only makes
