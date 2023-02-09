@@ -601,6 +601,9 @@ public:
   /// Indicates if the binary is stripped
   bool IsStripped{false};
 
+  /// Indicates if the binary contains split functions.
+  bool HasSplitFunctions{false};
+
   /// Is the binary always loaded at a fixed address. Shared objects and
   /// position-independent executables (PIEs) are examples of binaries that
   /// will have HasFixedLoadAddress set to false.
