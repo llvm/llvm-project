@@ -33,7 +33,6 @@ void llvm::initializeIPO(PassRegistry &Registry) {
   initializeGlobalOptLegacyPassPass(Registry);
   initializeGlobalSplitPass(Registry);
   initializeAlwaysInlinerLegacyPassPass(Registry);
-  initializeSimpleInlinerPass(Registry);
   initializeInferFunctionAttrsLegacyPassPass(Registry);
   initializeLoopExtractorLegacyPassPass(Registry);
   initializeSingleLoopExtractorPass(Registry);
@@ -59,10 +58,6 @@ void LLVMAddDeadArgEliminationPass(LLVMPassManagerRef PM) {
 
 void LLVMAddFunctionAttrsPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createPostOrderFunctionAttrsLegacyPass());
-}
-
-void LLVMAddFunctionInliningPass(LLVMPassManagerRef PM) {
-  unwrap(PM)->add(createFunctionInliningPass());
 }
 
 void LLVMAddAlwaysInlinerPass(LLVMPassManagerRef PM) {
