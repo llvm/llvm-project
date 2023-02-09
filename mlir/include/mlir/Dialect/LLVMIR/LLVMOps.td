@@ -169,9 +169,8 @@ def LLVM_FRemOp : LLVM_FloatArithmeticOp<"frem", "FRem">;
 def LLVM_FNegOp : LLVM_UnaryFloatArithmeticOp<
   LLVM_ScalarOrVectorOf<LLVM_AnyFloat>, "fneg", "FNeg">;
 
-// Common code definition that is used to verify and set the alignment attribute
-// of LLVM ops that accept such an attribute.
-class MemoryOpWithAlignmentBase {
+// Common code definitions used to set memory operation attributes and flags.
+class MemoryOpBase {
   code setAlignmentCode = [{
     if ($alignment.has_value()) {
       auto align = *$alignment;
@@ -179,10 +178,15 @@ class MemoryOpWithAlignmentBase {
         inst->setAlignment(llvm::Align(align));
     }
   }];
-}
-
-// Code definition that is used for nontemporal metadata creation.
-class MemoryOpWithAlignmentAndAttributes : MemoryOpWithAlignmentBase {
+  code setVolatileCode = [{
+    inst->setVolatile($volatile_);
+  }];
+  code setSyncScopeCode = [{
+    if ($syncscope.has_value()) {
+      llvm::LLVMContext &llvmContext = builder.getContext();
+      inst->setSyncScopeID(llvmContext.getOrInsertSyncScopeID(*$syncscope));
+    }
+  }];
   code setNonTemporalMetadataCode = [{
     if ($nontemporal) {
       llvm::Module *module = builder.GetInsertBlock()->getModule();
@@ -192,22 +196,19 @@ class MemoryOpWithAlignmentAndAttributes : MemoryOpWithAlignmentBase {
       inst->setMetadata(module->getMDKindID("nontemporal"), metadata);
     }
   }];
-
   code setAccessGroupsMetadataCode = [{
     moduleTranslation.setAccessGroupsMetadata(op, inst);
   }];
-
   code setAliasScopeMetadataCode = [{
     moduleTranslation.setAliasScopeMetadata(op, inst);
   }];
-
   code setTBAAMetadataCode = [{
     moduleTranslation.setTBAAMetadata(op, inst);
   }];
 }
 
 // Memory-related operations.
-def LLVM_AllocaOp : LLVM_Op<"alloca">, MemoryOpWithAlignmentBase {
+def LLVM_AllocaOp : LLVM_Op<"alloca">, MemoryOpBase {
   let arguments = (ins AnyInteger:$arraySize,
                    OptionalAttr<I64Attr>:$alignment,
                    OptionalAttr<TypeAttr>:$elem_type);
@@ -344,7 +345,7 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure]> {
   let hasVerifier = 1;
 }
 
-def LLVM_LoadOp : LLVM_Op<"load">, MemoryOpWithAlignmentAndAttributes {
+def LLVM_LoadOp : LLVM_Op<"load">, MemoryOpBase {
   let arguments = (ins Arg<LLVM_PointerTo<LLVM_LoadableType>, "", [MemRead]>:$addr,
                    OptionalAttr<SymbolRefArrayAttr>:$access_groups,
                    OptionalAttr<SymbolRefArrayAttr>:$alias_scopes,
@@ -383,7 +384,7 @@ def LLVM_LoadOp : LLVM_Op<"load">, MemoryOpWithAlignmentAndAttributes {
   let hasVerifier = 1;
 }
 
-def LLVM_StoreOp : LLVM_Op<"store">, MemoryOpWithAlignmentAndAttributes {
+def LLVM_StoreOp : LLVM_Op<"store">, MemoryOpBase {
   let arguments = (ins LLVM_LoadableType:$value,
                    Arg<LLVM_PointerTo<LLVM_LoadableType>,"",[MemWrite]>:$addr,
                    OptionalAttr<SymbolRefArrayAttr>:$access_groups,
@@ -1655,79 +1656,111 @@ def LLVM_ConstantOp
 
 def LLVM_AtomicRMWType : AnyTypeOf<[LLVM_AnyFloat, AnyInteger]>;
 
-// FIXME: Need to add alignment and syncscope attribute to MLIR atomicrmw
-// operation.
 def LLVM_AtomicRMWOp : LLVM_Op<"atomicrmw", [
       TypesMatchWith<"result #0 and operand #1 have the same type",
-                     "val", "res", "$_self">]> {
+                     "val", "res", "$_self">]>, MemoryOpBase {
   let arguments = (ins AtomicBinOp:$bin_op,
                    LLVM_PointerTo<LLVM_AtomicRMWType>:$ptr,
-                   LLVM_AtomicRMWType:$val, AtomicOrdering:$ordering);
+                   LLVM_AtomicRMWType:$val, AtomicOrdering:$ordering,
+                   OptionalAttr<StrAttr>:$syncscope,
+                   OptionalAttr<I64Attr>:$alignment,
+                   UnitAttr:$volatile_);
   let results = (outs LLVM_AtomicRMWType:$res);
-  let hasVerifier = 1;
   let assemblyFormat = [{
-    $bin_op $ptr `,` $val $ordering
-    attr-dict `:` qualified(type($ptr)) `,` type($val)
+    (`volatile` $volatile_^)? $bin_op $ptr `,` $val
+    (`syncscope` `(` $syncscope^ `)`)? $ordering attr-dict `:`
+    qualified(type($ptr)) `,` type($val)
   }];
   string llvmInstName = "AtomicRMW";
   string llvmBuilder = [{
-    $res = builder.CreateAtomicRMW(
+    auto *inst = builder.CreateAtomicRMW(
         convertAtomicBinOpToLLVM($bin_op), $ptr, $val, llvm::MaybeAlign(),
         convertAtomicOrderingToLLVM($ordering));
-  }];
+    $res = inst;
+  }] # setVolatileCode
+     # setSyncScopeCode
+     # setAlignmentCode;
   string mlirBuilder = [{
     auto *atomicInst = cast<llvm::AtomicRMWInst>(inst);
-    $res = $_builder.create<LLVM::AtomicRMWOp>($_location, $_resultType,
+    unsigned alignment = atomicInst->getAlign().value();
+    $res = $_builder.create<LLVM::AtomicRMWOp>($_location,
         convertAtomicBinOpFromLLVM(atomicInst->getOperation()), $ptr, $val,
-        convertAtomicOrderingFromLLVM(atomicInst->getOrdering()));
+        convertAtomicOrderingFromLLVM(atomicInst->getOrdering()),
+        getLLVMSyncScope(atomicInst), alignment, atomicInst->isVolatile());
   }];
-  // Only $ptr and $val are llvm instruction operands.
-  list<int> llvmArgIndices = [-1, 0, 1, -1];
+  list<int> llvmArgIndices = [-1, 0, 1, -1, -1, -1, -1];
+  let builders = [
+    OpBuilder<(ins "LLVM::AtomicBinOp":$binOp, "Value":$ptr, "Value":$val,
+      "LLVM::AtomicOrdering":$ordering,
+      CArg<"StringRef", "StringRef()">:$syncscope,
+      CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile
+    )>
+  ];
+  let hasVerifier = 1;
 }
 
 def LLVM_AtomicCmpXchgType : AnyTypeOf<[AnyInteger, LLVM_AnyPointer]>;
 
-// FIXME: Need to add alignment attribute to MLIR cmpxchg operation.
 def LLVM_AtomicCmpXchgOp : LLVM_Op<"cmpxchg", [
       TypesMatchWith<"operand #1 and operand #2 have the same type",
                      "val", "cmp", "$_self">,
       TypesMatchWith<"result #0 has an LLVM struct type consisting of "
-                     "the type of operand #2 and a bool",
-                     "val", "res", "getValAndBoolStructType($_self)">]> {
+                     "the type of operand #2 and a bool", "val", "res",
+                     "getValAndBoolStructType($_self)">]>, MemoryOpBase {
   let arguments = (ins LLVM_PointerTo<LLVM_AtomicCmpXchgType>:$ptr,
                    LLVM_AtomicCmpXchgType:$cmp, LLVM_AtomicCmpXchgType:$val,
                    AtomicOrdering:$success_ordering,
-                   AtomicOrdering:$failure_ordering);
+                   AtomicOrdering:$failure_ordering,
+                   OptionalAttr<StrAttr>:$syncscope,
+                   OptionalAttr<I64Attr>:$alignment,
+                   UnitAttr:$weak,
+                   UnitAttr:$volatile_);
   let results = (outs LLVM_AnyStruct:$res);
-  let hasVerifier = 1;
   let assemblyFormat = [{
-    $ptr `,` $cmp `,` $val $success_ordering $failure_ordering
+    (`weak` $weak^)? (`volatile` $volatile_^)? $ptr `,` $cmp `,` $val
+    (`syncscope` `(` $syncscope^ `)`)? $success_ordering $failure_ordering
     attr-dict `:` qualified(type($ptr)) `,` type($val)
   }];
   string llvmInstName = "AtomicCmpXchg";
   string llvmBuilder = [{
-    $res = builder.CreateAtomicCmpXchg($ptr, $cmp, $val, llvm::MaybeAlign(),
-                   convertAtomicOrderingToLLVM($success_ordering),
-                   convertAtomicOrderingToLLVM($failure_ordering));
-  }];
+    auto *inst = builder.CreateAtomicCmpXchg($ptr, $cmp, $val,
+        llvm::MaybeAlign(), convertAtomicOrderingToLLVM($success_ordering),
+        convertAtomicOrderingToLLVM($failure_ordering));
+    $res = inst;
+    inst->setWeak($weak);
+  }] # setVolatileCode
+     # setSyncScopeCode
+     # setAlignmentCode;
   string mlirBuilder = [{
     auto *cmpXchgInst = cast<llvm::AtomicCmpXchgInst>(inst);
+    unsigned alignment = cmpXchgInst->getAlign().value();
     $res = $_builder.create<LLVM::AtomicCmpXchgOp>(
-      $_location, $_resultType, $ptr, $cmp, $val,
+      $_location, $ptr, $cmp, $val,
       convertAtomicOrderingFromLLVM(cmpXchgInst->getSuccessOrdering()),
-      convertAtomicOrderingFromLLVM(cmpXchgInst->getFailureOrdering()));
+      convertAtomicOrderingFromLLVM(cmpXchgInst->getFailureOrdering()),
+      getLLVMSyncScope(cmpXchgInst), alignment, cmpXchgInst->isWeak(),
+      cmpXchgInst->isVolatile());
   }];
+  let builders = [
+    OpBuilder<(ins "Value":$ptr, "Value":$cmp, "Value":$val,
+      "LLVM::AtomicOrdering":$successOrdering,
+      "LLVM::AtomicOrdering":$failureOrdering,
+      CArg<"StringRef", "StringRef()">:$syncscope,
+      CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isWeak,
+      CArg<"bool", "false">:$isVolatile
+    )>
+  ];
+  let hasVerifier = 1;
 }
 
-def LLVM_FenceOp : LLVM_Op<"fence"> {
-  let arguments = (ins AtomicOrdering:$ordering, StrAttr:$syncscope);
-  let builders = [LLVM_VoidResultTypeOpBuilder, LLVM_ZeroResultOpBuilder];
+def LLVM_FenceOp : LLVM_Op<"fence">, MemoryOpBase {
+  let arguments = (ins AtomicOrdering:$ordering,
+                   OptionalAttr<StrAttr>:$syncscope);
+  let assemblyFormat = "(`syncscope` `(` $syncscope^ `)`)? $ordering attr-dict";
   string llvmInstName = "Fence";
   let llvmBuilder = [{
-    llvm::LLVMContext &llvmContext = builder.getContext();
-    builder.CreateFence(convertAtomicOrderingToLLVM($ordering),
-      llvmContext.getOrInsertSyncScopeID($syncscope));
-  }];
+    auto *inst = builder.CreateFence(convertAtomicOrderingToLLVM($ordering));
+  }] # setSyncScopeCode;
   string mlirBuilder = [{
     llvm::FenceInst *fenceInst = cast<llvm::FenceInst>(inst);
     $_op = $_builder.create<LLVM::FenceOp>(
@@ -1735,7 +1768,12 @@ def LLVM_FenceOp : LLVM_Op<"fence"> {
       convertAtomicOrderingFromLLVM(fenceInst->getOrdering()),
       getLLVMSyncScope(fenceInst));
   }];
-  let hasCustomAssemblyFormat = 1;
+  let builders = [
+    LLVM_VoidResultTypeOpBuilder,
+    LLVM_ZeroResultOpBuilder,
+    OpBuilder<(ins "LLVM::AtomicOrdering":$ordering,
+      CArg<"StringRef", "StringRef()">:$syncscope)>
+  ];
   let hasVerifier = 1;
 }
 

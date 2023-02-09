@@ -229,7 +229,7 @@ static omp::ReductionDeclareOp addAtomicRMW(OpBuilder &builder,
   builder.setInsertionPointToEnd(atomicBlock);
   Value loaded = builder.create<LLVM::LoadOp>(reduce.getLoc(),
                                               atomicBlock->getArgument(1));
-  builder.create<LLVM::AtomicRMWOp>(reduce.getLoc(), type, atomicKind,
+  builder.create<LLVM::AtomicRMWOp>(reduce.getLoc(), atomicKind,
                                     atomicBlock->getArgument(0), loaded,
                                     LLVM::AtomicOrdering::monotonic);
   builder.create<omp::YieldOp>(reduce.getLoc(), ArrayRef<Value>());

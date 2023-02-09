@@ -588,12 +588,8 @@ struct GenericAtomicRMWOpLowering
     // Append the cmpxchg op to the end of the loop block.
     auto successOrdering = LLVM::AtomicOrdering::acq_rel;
     auto failureOrdering = LLVM::AtomicOrdering::monotonic;
-    auto boolType = IntegerType::get(rewriter.getContext(), 1);
-    auto pairType = LLVM::LLVMStructType::getLiteral(rewriter.getContext(),
-                                                     {valueType, boolType});
     auto cmpxchg = rewriter.create<LLVM::AtomicCmpXchgOp>(
-        loc, pairType, dataPtr, loopArgument, result, successOrdering,
-        failureOrdering);
+        loc, dataPtr, loopArgument, result, successOrdering, failureOrdering);
     // Extract the %new_loaded and %ok values from the pair.
     Value newLoaded = rewriter.create<LLVM::ExtractValueOp>(loc, cmpxchg, 0);
     Value ok = rewriter.create<LLVM::ExtractValueOp>(loc, cmpxchg, 1);
@@ -1671,13 +1667,12 @@ struct AtomicRMWOpLowering : public LoadStoreOpLowering<memref::AtomicRMWOp> {
     auto maybeKind = matchSimpleAtomicOp(atomicOp);
     if (!maybeKind)
       return failure();
-    auto resultType = adaptor.getValue().getType();
     auto memRefType = atomicOp.getMemRefType();
     auto dataPtr =
         getStridedElementPtr(atomicOp.getLoc(), memRefType, adaptor.getMemref(),
                              adaptor.getIndices(), rewriter);
     rewriter.replaceOpWithNewOp<LLVM::AtomicRMWOp>(
-        atomicOp, resultType, *maybeKind, dataPtr, adaptor.getValue(),
+        atomicOp, *maybeKind, dataPtr, adaptor.getValue(),
         LLVM::AtomicOrdering::acq_rel);
     return success();
   }
