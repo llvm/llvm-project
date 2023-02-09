@@ -1374,3 +1374,73 @@ define signext i32 @sextw_sh2add(i1 zeroext %0, ptr %1, i32 signext %2, i32 sign
   %10 = add i32 %7, %4
   ret i32 %10
 }
+
+; Negative test - an explicit sext.w *is* required
+; FIXME: This is currently demonstrating an active miscompile as the high
+; bits of s0 are *not* the sign extended zero of bit 32 on the untaken path.
+define signext i32 @test19(i64 %arg, i1 zeroext %c1, i1 zeroext %c2, ptr %p) nounwind {
+; CHECK-LABEL: test19:
+; CHECK:       # %bb.0: # %bb
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    neg a0, a1
+; CHECK-NEXT:    li a1, 1
+; CHECK-NEXT:    slli a1, a1, 32
+; CHECK-NEXT:    addi s0, a1, 35
+; CHECK-NEXT:    and s0, a0, s0
+; CHECK-NEXT:    sd s0, 0(a3)
+; CHECK-NEXT:    beqz a2, .LBB23_2
+; CHECK-NEXT:  # %bb.1: # %bb2
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    call bar@plt
+; CHECK-NEXT:    mv s0, a0
+; CHECK-NEXT:  .LBB23_2: # %bb7
+; CHECK-NEXT:    call side_effect@plt
+; CHECK-NEXT:    mv a0, s0
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+;
+; NOREMOVAL-LABEL: test19:
+; NOREMOVAL:       # %bb.0: # %bb
+; NOREMOVAL-NEXT:    addi sp, sp, -16
+; NOREMOVAL-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; NOREMOVAL-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; NOREMOVAL-NEXT:    neg a0, a1
+; NOREMOVAL-NEXT:    li a1, 1
+; NOREMOVAL-NEXT:    slli a1, a1, 32
+; NOREMOVAL-NEXT:    addi s0, a1, 35
+; NOREMOVAL-NEXT:    and s0, a0, s0
+; NOREMOVAL-NEXT:    sd s0, 0(a3)
+; NOREMOVAL-NEXT:    beqz a2, .LBB23_2
+; NOREMOVAL-NEXT:  # %bb.1: # %bb2
+; NOREMOVAL-NEXT:    li a0, 0
+; NOREMOVAL-NEXT:    call bar@plt
+; NOREMOVAL-NEXT:    mv s0, a0
+; NOREMOVAL-NEXT:  .LBB23_2: # %bb7
+; NOREMOVAL-NEXT:    call side_effect@plt
+; NOREMOVAL-NEXT:    sext.w a0, s0
+; NOREMOVAL-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; NOREMOVAL-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; NOREMOVAL-NEXT:    addi sp, sp, 16
+; NOREMOVAL-NEXT:    ret
+bb:
+  %sel = select i1 %c1, i64 4294967331, i64 0
+  store i64 %sel, ptr %p, align 8
+  br i1 %c2, label %bb2, label %bb7
+
+bb2:                                              ; preds = %bb2, %bb
+  %i4 = call signext i32 @bar(i32 0)
+  %i4.sext = sext i32 %i4 to i64
+  br label %bb7
+
+bb7:                                              ; preds = %bb2
+  %phi = phi i64 [ %sel, %bb ], [ %i4.sext, %bb2 ]
+  %trunc = trunc i64 %phi to i32
+  call void @side_effect()
+  ret i32 %trunc
+}
+
+ declare void @side_effect(i64)
