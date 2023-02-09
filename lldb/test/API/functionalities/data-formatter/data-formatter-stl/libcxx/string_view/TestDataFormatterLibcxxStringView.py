@@ -56,7 +56,7 @@ class LibcxxStringViewDataFormatterTestCase(TestBase):
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
-        if self.expectedCompilerVersion(['>', '16.0']):
+        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(['>', '16.0']):
             expected_basic_string = 'std::basic_string<unsigned char>'
             expected_basic_string_view = 'std::basic_string_view<unsigned char>'
         else:
