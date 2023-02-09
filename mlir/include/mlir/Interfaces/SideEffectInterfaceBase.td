@@ -85,7 +85,7 @@ class EffectOpInterfaceBase<string name, string baseEffect>
                                             }] # baseEffect # [{>, 4> effects;
       getEffects(effects);
       return !effects.empty() && ::llvm::all_of(effects, [](const auto &it) {
-        return isa<Effect>(it.getEffect());
+        return ::llvm::isa<Effect>(it.getEffect());
       });
     }
 
@@ -115,7 +115,7 @@ class EffectOpInterfaceBase<string name, string baseEffect>
               }] # baseEffect # [{>, 4> effects;
       getEffects(effects);
       auto it = ::llvm::find_if(effects, [&](auto &it) {
-        return isa<Effect>(it.getEffect()) && it.getValue() == value;
+        return ::llvm::isa<Effect>(it.getEffect()) && it.getValue() == value;
       });
       if (it == effects.end())
         return std::nullopt;

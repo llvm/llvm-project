@@ -9,8 +9,8 @@
 // preprocessor definitions.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_MACROS_CPU_FEATURES_H
-#define LLVM_LIBC_SRC_SUPPORT_MACROS_CPU_FEATURES_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_MACROS_PROPERTIES_CPU_FEATURES_H
+#define LLVM_LIBC_SRC_SUPPORT_MACROS_PROPERTIES_CPU_FEATURES_H
 
 #if defined(__SSE2__)
 #define LIBC_TARGET_CPU_HAS_SSE2
@@ -40,4 +40,4 @@
 #define LIBC_TARGET_CPU_HAS_FMA
 #endif
 
-#endif // LLVM_LIBC_SRC_SUPPORT_MACROS_CPU_FEATURES_H
+#endif // LLVM_LIBC_SRC_SUPPORT_MACROS_PROPERTIES_CPU_FEATURES_H

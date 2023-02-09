@@ -276,7 +276,8 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
             ? builder.create<LLVM::CallOp>(loc, mallocFunc, allocationSize)
                   .getResult()
             : builder.create<LLVM::AllocaOp>(loc, getVoidPtrType(),
-                                             getVoidType(), allocationSize,
+                                             IntegerType::get(getContext(), 8),
+                                             allocationSize,
                                              /*alignment=*/0);
     Value source = desc.memRefDescPtr(builder, loc);
     builder.create<LLVM::MemcpyOp>(loc, memory, source, allocationSize, zero);

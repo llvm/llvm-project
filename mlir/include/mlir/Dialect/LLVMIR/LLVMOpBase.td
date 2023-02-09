@@ -39,7 +39,6 @@ def LLVM_Dialect : Dialect {
     static StringRef getAliasScopesAttrName() { return "alias_scopes"; }
     static StringRef getLoopAttrName() { return "llvm.loop"; }
     static StringRef getAccessGroupsAttrName() { return "access_groups"; }
-    static StringRef getStructAttrsAttrName() { return "llvm.struct_attrs"; }
     static StringRef getTBAAAttrName() { return "llvm.tbaa"; }
 
     /// Names of llvm parameter attributes.
@@ -71,10 +70,6 @@ def LLVM_Dialect : Dialect {
     /// Name of the attribute that will cause the creation of a readnone memory
     /// effect when lowering to the LLVMDialect.
     static StringRef getReadnoneAttrName() { return "llvm.readnone"; }
-
-    /// Verifies if the attribute is a well-formed value for "llvm.struct_attrs"
-    static LogicalResult verifyStructAttr(
-        Operation *op, Attribute attr, Type annotatedType);
 
     /// Verifies if the given string is a well-formed data layout descriptor.
     /// Uses `reportError` to report errors.

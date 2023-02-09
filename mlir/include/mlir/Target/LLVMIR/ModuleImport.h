@@ -302,9 +302,6 @@ private:
   /// to the LLVMIR dialect TBAA operations corresponding to these
   /// nodes.
   DenseMap<const llvm::MDNode *, SymbolRefAttr> tbaaMapping;
-  /// Mapping between original LLVM access group metadata nodes and the symbol
-  /// references pointing to the imported MLIR access group operations.
-  DenseMap<const llvm::MDNode *, SymbolRefAttr> accessGroupMapping;
   /// The stateful type translator (contains named structs).
   LLVM::TypeFromLLVMIRTranslator typeTranslator;
   /// Stateful debug information importer.

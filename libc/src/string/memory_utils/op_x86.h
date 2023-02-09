@@ -12,7 +12,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_X86_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_X86_H
 
-#include "src/__support/macros/architectures.h"
+#include "src/__support/macros/properties/architectures.h"
 
 #if defined(LIBC_TARGET_ARCH_IS_X86_64)
 

@@ -105,7 +105,7 @@ findValidInsertionPoint(Operation *emptyTensorOp,
 /// chain, starting from the OpOperand and always following the aliasing
 /// OpOperand, that eventually ends at a single tensor::EmptyOp.
 LogicalResult mlir::bufferization::eliminateEmptyTensors(
-    RewriterBase &rewriter, Operation *op, AnalysisState &state,
+    RewriterBase &rewriter, Operation *op, OneShotAnalysisState &state,
     AnchorMatchFn anchorMatchFunc, RewriteFn rewriteFunc) {
   OpBuilder::InsertionGuard g(rewriter);
 
@@ -153,6 +153,7 @@ LogicalResult mlir::bufferization::eliminateEmptyTensors(
 
       // Replace the tensor::EmptyOp.
       rewriter.replaceOp(emptyTensor.getDefiningOp(), replacement);
+      state.resetCache();
     }
 
     // Advance to the next operation.
@@ -189,7 +190,7 @@ LogicalResult mlir::bufferization::eliminateEmptyTensors(
 ///   tensor::EmptyOp.
 template <typename OpTy>
 static LogicalResult insertSliceLikeAnchoredEmptyTensorEliminationStep(
-    RewriterBase &rewriter, Operation *op, AnalysisState &state) {
+    RewriterBase &rewriter, Operation *op, OneShotAnalysisState &state) {
   return eliminateEmptyTensors(
       rewriter, op, state,
       /*anchorMatchFunc=*/
@@ -224,7 +225,7 @@ static LogicalResult insertSliceLikeAnchoredEmptyTensorEliminationStep(
 
 LogicalResult
 mlir::bufferization::insertSliceAnchoredEmptyTensorEliminationStep(
-    RewriterBase &rewriter, Operation *op, AnalysisState &state) {
+    RewriterBase &rewriter, Operation *op, OneShotAnalysisState &state) {
   if (failed(insertSliceLikeAnchoredEmptyTensorEliminationStep<
              tensor::InsertSliceOp>(rewriter, op, state)))
     return failure();

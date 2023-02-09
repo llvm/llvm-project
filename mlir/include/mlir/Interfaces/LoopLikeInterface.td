@@ -97,6 +97,14 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       }]
     >,
   ];
+
+  let extraClassDeclaration = [{
+    /// Returns if a block is inside a loop (within the current function). This
+    /// can be either because the block is nested inside a LoopLikeInterface or
+    /// because the block is nested inside a LoopLikeInterface or because
+    /// the control flow graph is cyclic
+    static bool blockIsInLoop(Block *block);
+  }];
 }
 
 #endif // MLIR_INTERFACES_LOOPLIKEINTERFACE

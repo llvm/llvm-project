@@ -14,8 +14,8 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/builtin_wrappers.h"
-#include "src/__support/common.h"
 #include "src/__support/integer_utils.h"
+#include "src/__support/macros/attributes.h" // LIBC_UNLIKELY
 #include "src/__support/number_pair.h"
 
 #include <stddef.h> // For size_t
