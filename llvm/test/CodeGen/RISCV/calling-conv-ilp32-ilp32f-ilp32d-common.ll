@@ -594,7 +594,7 @@ define i32 @caller_large_struct() nounwind {
 ; RV32I-WITHFP-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    addi sp, sp, 48
 ; RV32I-WITHFP-NEXT:    ret
-  %ls = alloca %struct.large, align 4
+  %ls = alloca %struct.large, align 8
   store i32 1, ptr %ls
   %b = getelementptr inbounds %struct.large, ptr %ls, i32 0, i32 1
   store i32 2, ptr %b
