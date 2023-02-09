@@ -961,7 +961,7 @@ bool TargetLoweringBase::shouldUpdatePointerArgAlignment(
   // efficiently. If this is not the case for a given target it should override
   // this function.
   auto PrefSizeBits =
-      TTI.getRegisterBitWidth(TargetTransformInfo::RGK_Scalar).getFixedSize();
+      TTI.getRegisterBitWidth(TargetTransformInfo::RGK_Scalar).getFixedValue();
   PrefAlign = Align(PrefSizeBits / 8);
   // When building with -Oz, we only increase the alignment if the object is
   // at least 8 bytes in size to avoid increased stack/global padding.
