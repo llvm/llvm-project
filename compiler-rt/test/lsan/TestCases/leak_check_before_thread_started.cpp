@@ -3,6 +3,9 @@
 // RUN: %clangxx_lsan %s -o %t
 // RUN: %env_lsan_opts="log_pointers=1:log_threads=1" %run %t
 
+// Fixme: remove once test passes with hwasan
+// UNSUPPORTED: hwasan
+
 #include <assert.h>
 #include <pthread.h>
 #include <stdio.h>

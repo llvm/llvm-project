@@ -40,18 +40,11 @@ static void *HwasanThreadStartFunc(void *arg) {
 INTERCEPTOR(int, pthread_create, void *th, void *attr, void *(*callback)(void*),
             void * param) {
   EnsureMainThreadIDIsCorrect();
-  ScopedTaggingDisabler tagging_disabler;
+  ScopedTaggingDisabler disabler;
   ThreadStartArg *A = reinterpret_cast<ThreadStartArg *> (MmapOrDie(
       GetPageSizeCached(), "pthread_create"));
   *A = {callback, param};
-  int res;
-  {
-    // ASAN uses the same approach to disable leaks from pthread_create.
-#    if CAN_SANITIZE_LEAKS
-    __lsan::ScopedInterceptorDisabler lsan_disabler;
-#    endif
-    res = REAL(pthread_create)(th, attr, &HwasanThreadStartFunc, A);
-  }
+  int res = REAL(pthread_create)(th, attr, &HwasanThreadStartFunc, A);
   return res;
 }
 
