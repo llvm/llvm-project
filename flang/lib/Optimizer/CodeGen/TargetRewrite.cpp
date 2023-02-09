@@ -119,9 +119,13 @@ public:
   mlir::ModuleOp getModule() { return getOperation(); }
 
   template <typename A, typename B, typename C>
-  std::function<mlir::Value(mlir::Operation *)>
+  std::optional<std::function<mlir::Value(mlir::Operation *)>>
   rewriteCallComplexResultType(mlir::Location loc, A ty, B &newResTys,
                                B &newInTys, C &newOpers) {
+    if (noComplexConversion) {
+      newResTys.push_back(ty);
+      return std::nullopt;
+    }
     auto m = specifics->complexReturnType(loc, ty.getElementType());
     // Currently targets mandate COMPLEX is a single aggregate or packed
     // scalar, including the sret case.
@@ -153,6 +157,12 @@ public:
   template <typename A, typename B, typename C>
   void rewriteCallComplexInputType(A ty, mlir::Value oper, B &newInTys,
                                    C &newOpers) {
+    if (noComplexConversion) {
+      newInTys.push_back(ty);
+      newOpers.push_back(oper);
+      return;
+    }
+
     auto *ctx = ty.getContext();
     mlir::Location loc = mlir::UnknownLoc::get(ctx);
     if (auto *op = oper.getDefiningOp())
@@ -245,6 +255,11 @@ public:
           .template Case<fir::BoxCharType>([&](fir::BoxCharType boxTy) {
             bool sret;
             if constexpr (std::is_same_v<std::decay_t<A>, fir::CallOp>) {
+              if (noCharacterConversion) {
+                newInTys.push_back(boxTy);
+                newOpers.push_back(oper);
+                return;
+              }
               sret = callOp.getCallee() &&
                      functionArgIsSRet(
                          index, getModule().lookupSymbol<mlir::func::FuncOp>(
