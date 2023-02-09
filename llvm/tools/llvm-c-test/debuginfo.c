@@ -12,10 +12,10 @@
 \*===----------------------------------------------------------------------===*/
 
 #include "llvm-c-test.h"
-#include "llvm-c/Core.h"
 #include "llvm-c/DebugInfo.h"
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 
 static LLVMMetadataRef
 declare_objc_class(LLVMDIBuilderRef DIB, LLVMMetadataRef File) {
@@ -198,6 +198,32 @@ int llvm_test_dibuilder(void) {
 
   LLVMDisposeDIBuilder(DIB);
   LLVMDisposeModule(M);
+
+  return 0;
+}
+
+int llvm_get_di_tag(void) {
+  LLVMModuleRef m = LLVMModuleCreateWithName("Mod");
+  LLVMContextRef context = LLVMGetModuleContext(m);
+
+  LLVMMetadataRef metas[] = {LLVMMDStringInContext2(context, "foo", 3)};
+  LLVMMetadataRef md = LLVMMDNodeInContext2(context, metas, 1);
+  uint16_t tag0 = LLVMGetDINodeTag(md);
+
+  assert(tag0 == 0);
+
+  const char *filename = "metadata.c";
+  LLVMDIBuilderRef builder = LLVMCreateDIBuilder(m);
+  LLVMMetadataRef file =
+      LLVMDIBuilderCreateFile(builder, filename, strlen(filename), ".", 1);
+  LLVMMetadataRef decl = LLVMDIBuilderCreateStructType(
+      builder, file, "TestClass", 9, file, 42, 64, 0,
+      LLVMDIFlagObjcClassComplete, NULL, NULL, 0, 0, NULL, NULL, 0);
+  uint16_t tag1 = LLVMGetDINodeTag(decl);
+
+  assert(tag1 == 0x13);
+
+  LLVMDisposeModule(m);
 
   return 0;
 }
