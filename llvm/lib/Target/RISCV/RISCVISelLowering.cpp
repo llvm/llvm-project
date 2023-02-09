@@ -3721,10 +3721,24 @@ static SDValue lowerConstant(SDValue Op, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG) {
+static SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG,
+                                 const RISCVSubtarget &Subtarget) {
   SDLoc dl(Op);
+  AtomicOrdering FenceOrdering =
+      static_cast<AtomicOrdering>(Op.getConstantOperandVal(1));
   SyncScope::ID FenceSSID =
       static_cast<SyncScope::ID>(Op.getConstantOperandVal(2));
+
+  if (Subtarget.hasStdExtZtso()) {
+    // The only fence that needs an instruction is a sequentially-consistent
+    // cross-thread fence.
+    if (FenceOrdering == AtomicOrdering::SequentiallyConsistent &&
+        FenceSSID == SyncScope::System)
+      return Op;
+
+    // MEMBARRIER is a compiler barrier; it codegens to a no-op.
+    return DAG.getNode(ISD::MEMBARRIER, dl, MVT::Other, Op.getOperand(0));
+  }
 
   // singlethread fences only synchronize with signal handlers on the same
   // thread and thus only need to preserve instruction order, not actually
@@ -3742,7 +3756,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   default:
     report_fatal_error("unimplemented operand");
   case ISD::ATOMIC_FENCE:
-    return LowerATOMIC_FENCE(Op, DAG);
+    return LowerATOMIC_FENCE(Op, DAG, Subtarget);
   case ISD::GlobalAddress:
     return lowerGlobalAddress(Op, DAG);
   case ISD::BlockAddress:
@@ -13759,6 +13773,12 @@ void RISCVTargetLowering::LowerAsmOperandForConstraint(
 Instruction *RISCVTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
                                                    Instruction *Inst,
                                                    AtomicOrdering Ord) const {
+  if (Subtarget.hasStdExtZtso()) {
+    if (isa<LoadInst>(Inst) && Ord == AtomicOrdering::SequentiallyConsistent)
+      return Builder.CreateFence(Ord);
+    return nullptr;
+  }
+
   if (isa<LoadInst>(Inst) && Ord == AtomicOrdering::SequentiallyConsistent)
     return Builder.CreateFence(Ord);
   if (isa<StoreInst>(Inst) && isReleaseOrStronger(Ord))
@@ -13769,6 +13789,9 @@ Instruction *RISCVTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
 Instruction *RISCVTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
                                                     Instruction *Inst,
                                                     AtomicOrdering Ord) const {
+  if (Subtarget.hasStdExtZtso())
+    return nullptr;
+
   if (isa<LoadInst>(Inst) && isAcquireOrStronger(Ord))
     return Builder.CreateFence(AtomicOrdering::Acquire);
   return nullptr;
