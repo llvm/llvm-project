@@ -1376,8 +1376,6 @@ define signext i32 @sextw_sh2add(i1 zeroext %0, ptr %1, i32 signext %2, i32 sign
 }
 
 ; Negative test - an explicit sext.w *is* required
-; FIXME: This is currently demonstrating an active miscompile as the high
-; bits of s0 are *not* the sign extended zero of bit 32 on the untaken path.
 define signext i32 @test19(i64 %arg, i1 zeroext %c1, i1 zeroext %c2, ptr %p) nounwind {
 ; CHECK-LABEL: test19:
 ; CHECK:       # %bb.0: # %bb
@@ -1397,7 +1395,7 @@ define signext i32 @test19(i64 %arg, i1 zeroext %c1, i1 zeroext %c2, ptr %p) nou
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:  .LBB23_2: # %bb7
 ; CHECK-NEXT:    call side_effect@plt
-; CHECK-NEXT:    mv a0, s0
+; CHECK-NEXT:    sext.w a0, s0
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
