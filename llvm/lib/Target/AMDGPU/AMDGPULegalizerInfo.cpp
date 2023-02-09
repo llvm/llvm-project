@@ -4901,7 +4901,8 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
       MRI->getType(MI.getOperand(ArgOffset + Intr->GradientStart).getReg());
   LLT AddrTy =
       MRI->getType(MI.getOperand(ArgOffset + Intr->CoordStart).getReg());
-  const bool IsG16 = GradTy == S16;
+  const bool IsG16 =
+      ST.hasG16() ? (BaseOpcode->Gradients && GradTy == S16) : GradTy == S16;
   const bool IsA16 = AddrTy == S16;
   const bool IsD16 = Ty.getScalarType() == S16;
 
