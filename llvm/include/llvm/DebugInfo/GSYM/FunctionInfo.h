@@ -90,6 +90,10 @@ struct FunctionInfo {
   uint32_t Name; ///< String table offset in the string table.
   std::optional<LineTable> OptLineTable;
   std::optional<InlineInfo> Inline;
+  /// If we encode a FunctionInfo during segmenting so we know its size, we can
+  /// cache that encoding here so we don't need to re-encode it when saving the
+  /// GSYM file.
+  SmallString<32> EncodingCache;
 
   FunctionInfo(uint64_t Addr = 0, uint64_t Size = 0, uint32_t N = 0)
       : Range(Addr, Addr + Size), Name(N) {}
@@ -140,6 +144,17 @@ struct FunctionInfo {
   /// function info that was successfully written into the stream.
   llvm::Expected<uint64_t> encode(FileWriter &O) const;
 
+  /// Encode this function info into the internal byte cache and return the size
+  /// in bytes.
+  ///
+  /// When segmenting GSYM files we need to know how big each FunctionInfo will
+  /// encode into so we can generate segments of the right size. We don't want
+  /// to have to encode a FunctionInfo twice, so we can cache the encoded bytes
+  /// and re-use then when calling FunctionInfo::encode(...).
+  ///
+  /// \returns The size in bytes of the FunctionInfo if it were to be encoded
+  /// into a byte stream.
+  uint64_t cacheEncoding();
 
   /// Lookup an address within a FunctionInfo object's data stream.
   ///
