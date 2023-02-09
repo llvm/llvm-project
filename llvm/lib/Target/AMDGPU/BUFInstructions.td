@@ -153,24 +153,32 @@ class MTBUF_Real <MTBUF_Pseudo ps, string real_name = ps.Mnemonic> :
 }
 
 class getMTBUFInsDA<list<RegisterClass> vdataList,
-                    list<RegisterClass> vaddrList=[]> {
+                    list<RegisterClass> vaddrList=[], bit hasGFX12Enc> {
   RegisterClass vdataClass = !if(!empty(vdataList), ?, !head(vdataList));
   RegisterClass vaddrClass = !if(!empty(vaddrList), ?, !head(vaddrList));
   RegisterOperand vdata_op = getLdStRegisterOperand<vdataClass>.ret;
 
-  dag NonVaddrInputs = (ins SReg_128:$srsrc, SCSrc_b32:$soffset, offset:$offset, FORMAT:$format, CPol:$cpol, SWZ:$swz);
-  dag Inputs = !if(!empty(vaddrList), NonVaddrInputs, !con((ins vaddrClass:$vaddr), NonVaddrInputs));
-  dag ret = !if(!empty(vdataList), Inputs, !con((ins vdata_op:$vdata), Inputs));
+  dag SOffset = !if(hasGFX12Enc, (ins SReg_32:$soffset),
+                                 (ins SCSrc_b32:$soffset));
+
+dag NonVaddrInputs = !con((ins SReg_128:$srsrc), SOffset,
+                          (ins offset:$offset, FORMAT:$format, CPol_0:$cpol, SWZ_0:$swz));
+
+  dag Inputs = !if(!empty(vaddrList),
+                   NonVaddrInputs,
+                   !con((ins vaddrClass:$vaddr), NonVaddrInputs));
+  dag ret = !if(!empty(vdataList),
+                Inputs,
+                !con((ins vdata_op:$vdata), Inputs));
 }
 
-
-class getMTBUFIns<int addrKind, list<RegisterClass> vdataList=[]> {
+class getMTBUFIns<int addrKind, list<RegisterClass> vdataList=[], bit hasGFX12Enc> {
   dag ret =
-    !if(!eq(addrKind, BUFAddrKind.Offset), getMTBUFInsDA<vdataList>.ret,
-    !if(!eq(addrKind, BUFAddrKind.OffEn),  getMTBUFInsDA<vdataList, [VGPR_32]>.ret,
-    !if(!eq(addrKind, BUFAddrKind.IdxEn),  getMTBUFInsDA<vdataList, [VGPR_32]>.ret,
-    !if(!eq(addrKind, BUFAddrKind.BothEn), getMTBUFInsDA<vdataList, [VReg_64]>.ret,
-    !if(!eq(addrKind, BUFAddrKind.Addr64), getMTBUFInsDA<vdataList, [VReg_64]>.ret,
+    !if(!eq(addrKind, BUFAddrKind.Offset), getMTBUFInsDA<vdataList, [], hasGFX12Enc>.ret,
+    !if(!eq(addrKind, BUFAddrKind.OffEn),  getMTBUFInsDA<vdataList, [VGPR_32], hasGFX12Enc>.ret,
+    !if(!eq(addrKind, BUFAddrKind.IdxEn),  getMTBUFInsDA<vdataList, [VGPR_32], hasGFX12Enc>.ret,
+    !if(!eq(addrKind, BUFAddrKind.BothEn), getMTBUFInsDA<vdataList, [VReg_64], hasGFX12Enc>.ret,
+    !if(!eq(addrKind, BUFAddrKind.Addr64), getMTBUFInsDA<vdataList, [VReg_64], hasGFX12Enc>.ret,
     (ins))))));
 }
 
@@ -205,12 +213,13 @@ class MTBUF_Load_Pseudo <string opName,
                          int addrKind,
                          RegisterClass vdataClass,
                          int elems,
+                         bit hasGFX12Enc = 0,
                          list<dag> pattern=[],
                          // Workaround bug bz30254
                          int addrKindCopy = addrKind>
   : MTBUF_Pseudo<opName,
                  (outs getLdStRegisterOperand<vdataClass>.ret:$vdata),
-                 getMTBUFIns<addrKindCopy>.ret,
+                 getMTBUFIns<addrKindCopy, [], hasGFX12Enc>.ret,
                  getMTBUFAsmOps<addrKindCopy>.ret,
                  pattern>,
     MTBUF_SetupAddr<addrKindCopy> {
@@ -220,38 +229,45 @@ class MTBUF_Load_Pseudo <string opName,
   let elements = elems;
 }
 
-multiclass MTBUF_Pseudo_Loads<string opName, RegisterClass vdataClass,
-                              int elems> {
+multiclass MTBUF_Pseudo_Loads_Helper<string opName, RegisterClass vdataClass,
+                              int elems, bit hasGFX12Enc> {
 
-  def _OFFSET : MTBUF_Load_Pseudo <opName, BUFAddrKind.Offset, vdataClass, elems>,
+  def _OFFSET : MTBUF_Load_Pseudo <opName, BUFAddrKind.Offset, vdataClass, elems, hasGFX12Enc>,
                 MTBUFAddr64Table<0, NAME>;
 
-  def _ADDR64 : MTBUF_Load_Pseudo <opName, BUFAddrKind.Addr64, vdataClass, elems>,
+  def _ADDR64 : MTBUF_Load_Pseudo <opName, BUFAddrKind.Addr64, vdataClass, elems, hasGFX12Enc>,
                 MTBUFAddr64Table<1, NAME>;
 
-  def _OFFEN  : MTBUF_Load_Pseudo <opName, BUFAddrKind.OffEn, vdataClass, elems>;
-  def _IDXEN  : MTBUF_Load_Pseudo <opName, BUFAddrKind.IdxEn, vdataClass, elems>;
-  def _BOTHEN : MTBUF_Load_Pseudo <opName, BUFAddrKind.BothEn, vdataClass, elems>;
+  def _OFFEN  : MTBUF_Load_Pseudo <opName, BUFAddrKind.OffEn, vdataClass, elems, hasGFX12Enc>;
+  def _IDXEN  : MTBUF_Load_Pseudo <opName, BUFAddrKind.IdxEn, vdataClass, elems, hasGFX12Enc>;
+  def _BOTHEN : MTBUF_Load_Pseudo <opName, BUFAddrKind.BothEn, vdataClass, elems, hasGFX12Enc>;
 
   let DisableWQM = 1 in {
-    def _OFFSET_exact : MTBUF_Load_Pseudo <opName, BUFAddrKind.Offset, vdataClass, elems>;
-    def _OFFEN_exact  : MTBUF_Load_Pseudo <opName, BUFAddrKind.OffEn, vdataClass, elems>;
-    def _IDXEN_exact  : MTBUF_Load_Pseudo <opName, BUFAddrKind.IdxEn, vdataClass, elems>;
-    def _BOTHEN_exact : MTBUF_Load_Pseudo <opName, BUFAddrKind.BothEn, vdataClass, elems>;
+    def _OFFSET_exact : MTBUF_Load_Pseudo <opName, BUFAddrKind.Offset, vdataClass, elems, hasGFX12Enc>;
+    def _OFFEN_exact  : MTBUF_Load_Pseudo <opName, BUFAddrKind.OffEn, vdataClass, elems, hasGFX12Enc>;
+    def _IDXEN_exact  : MTBUF_Load_Pseudo <opName, BUFAddrKind.IdxEn, vdataClass, elems, hasGFX12Enc>;
+    def _BOTHEN_exact : MTBUF_Load_Pseudo <opName, BUFAddrKind.BothEn, vdataClass, elems, hasGFX12Enc>;
   }
+}
+
+multiclass MTBUF_Pseudo_Loads<string opName, RegisterClass vdataClass,
+                              int elems> {
+  defm NAME : MTBUF_Pseudo_Loads_Helper<opName, vdataClass, elems, 0>;
+  defm _VBUFFER : MTBUF_Pseudo_Loads_Helper<opName, vdataClass, elems, 1>;
 }
 
 class MTBUF_Store_Pseudo <string opName,
                           int addrKind,
                           RegisterClass vdataClass,
                           int elems,
+                          bit hasGFX12Enc = 0,
                           list<dag> pattern=[],
                           // Workaround bug bz30254
                           int addrKindCopy = addrKind,
                           RegisterClass vdataClassCopy = vdataClass>
   : MTBUF_Pseudo<opName,
                  (outs),
-                 getMTBUFIns<addrKindCopy, [vdataClassCopy]>.ret,
+                 getMTBUFIns<addrKindCopy, [vdataClassCopy], hasGFX12Enc>.ret,
                  getMTBUFAsmOps<addrKindCopy>.ret,
                  pattern>,
     MTBUF_SetupAddr<addrKindCopy> {
@@ -261,27 +277,32 @@ class MTBUF_Store_Pseudo <string opName,
   let elements = elems;
 }
 
-multiclass MTBUF_Pseudo_Stores<string opName, RegisterClass vdataClass,
-                               int elems> {
+multiclass MTBUF_Pseudo_Stores_Helper<string opName, RegisterClass vdataClass,
+                               int elems, bit hasGFX12Enc> {
 
-  def _OFFSET : MTBUF_Store_Pseudo <opName, BUFAddrKind.Offset, vdataClass, elems>,
+  def _OFFSET : MTBUF_Store_Pseudo <opName, BUFAddrKind.Offset, vdataClass, elems, hasGFX12Enc>,
     MTBUFAddr64Table<0, NAME>;
 
-  def _ADDR64 : MTBUF_Store_Pseudo <opName, BUFAddrKind.Addr64, vdataClass, elems>,
+  def _ADDR64 : MTBUF_Store_Pseudo <opName, BUFAddrKind.Addr64, vdataClass, elems, hasGFX12Enc>,
     MTBUFAddr64Table<1, NAME>;
 
-  def _OFFEN  : MTBUF_Store_Pseudo <opName, BUFAddrKind.OffEn, vdataClass, elems>;
-  def _IDXEN  : MTBUF_Store_Pseudo <opName, BUFAddrKind.IdxEn, vdataClass, elems>;
-  def _BOTHEN : MTBUF_Store_Pseudo <opName, BUFAddrKind.BothEn, vdataClass, elems>;
+  def _OFFEN  : MTBUF_Store_Pseudo <opName, BUFAddrKind.OffEn, vdataClass, elems, hasGFX12Enc>;
+  def _IDXEN  : MTBUF_Store_Pseudo <opName, BUFAddrKind.IdxEn, vdataClass, elems, hasGFX12Enc>;
+  def _BOTHEN : MTBUF_Store_Pseudo <opName, BUFAddrKind.BothEn, vdataClass, elems, hasGFX12Enc>;
 
   let DisableWQM = 1 in {
-    def _OFFSET_exact : MTBUF_Store_Pseudo <opName, BUFAddrKind.Offset, vdataClass, elems>;
-    def _OFFEN_exact  : MTBUF_Store_Pseudo <opName, BUFAddrKind.OffEn, vdataClass, elems>;
-    def _IDXEN_exact  : MTBUF_Store_Pseudo <opName, BUFAddrKind.IdxEn, vdataClass, elems>;
-    def _BOTHEN_exact : MTBUF_Store_Pseudo <opName, BUFAddrKind.BothEn, vdataClass, elems>;
+    def _OFFSET_exact : MTBUF_Store_Pseudo <opName, BUFAddrKind.Offset, vdataClass, elems, hasGFX12Enc>;
+    def _OFFEN_exact  : MTBUF_Store_Pseudo <opName, BUFAddrKind.OffEn, vdataClass, elems, hasGFX12Enc>;
+    def _IDXEN_exact  : MTBUF_Store_Pseudo <opName, BUFAddrKind.IdxEn, vdataClass, elems, hasGFX12Enc>;
+    def _BOTHEN_exact : MTBUF_Store_Pseudo <opName, BUFAddrKind.BothEn, vdataClass, elems, hasGFX12Enc>;
   }
 }
 
+multiclass MTBUF_Pseudo_Stores<string opName, RegisterClass vdataClass,
+                               int elems> {
+  defm NAME : MTBUF_Pseudo_Stores_Helper<opName, vdataClass, elems, 0>;
+  defm _VBUFFER : MTBUF_Pseudo_Stores_Helper<opName, vdataClass, elems, 1>;
+}
 
 //===----------------------------------------------------------------------===//
 // MUBUF classes
@@ -2183,7 +2204,7 @@ class VBUFFER_Real <BUF_Pseudo ps, string real_name = ps.Mnemonic> :
 }
 
 class VBUFFER_MUBUF_Real_gfx12<bits<8> op, MUBUF_Pseudo ps,
-                       string real_name = ps.Mnemonic> :
+                               string real_name = ps.Mnemonic> :
   VBUFFER_Real<ps, real_name>, SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX12> {
 
   let MUBUF = 1;
@@ -2192,6 +2213,19 @@ class VBUFFER_MUBUF_Real_gfx12<bits<8> op, MUBUF_Pseudo ps,
   // print BUF_FMT_INVALID for format 0.
   let Inst{55} = 0b1;
   let Inst{21-14} = op;
+}
+
+class VBUFFER_MTBUF_Real_gfx12<bits<4> op, MTBUF_Pseudo ps,
+                               string real_name = ps.Mnemonic> :
+  VBUFFER_Real<ps, real_name>, SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX12> {
+
+  let MTBUF = 1;
+
+  bits<7>  format;
+
+  let Inst{17-14} = op;
+  let Inst{21-18} = 0b1000;
+  let Inst{61-55} = format;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2721,47 +2755,59 @@ class Base_MTBUF_Real_gfx6_gfx7_gfx10<bits<3> op, MTBUF_Pseudo ps, int ef> :
 // MTBUF - GFX11.
 //===----------------------------------------------------------------------===//
 
-let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in
-multiclass MTBUF_Real_AllAddr_gfx11_Renamed_Impl<bits<4> op, string real_name> {
-  def _BOTHEN_gfx11 :
-    Base_MTBUF_Real_gfx11<op, !cast<MTBUF_Pseudo>(NAME#"_BOTHEN"), real_name>;
-  def _IDXEN_gfx11 :
-    Base_MTBUF_Real_gfx11<op, !cast<MTBUF_Pseudo>(NAME#"_IDXEN"), real_name>;
-  def _OFFEN_gfx11 :
-    Base_MTBUF_Real_gfx11<op, !cast<MTBUF_Pseudo>(NAME#"_OFFEN"), real_name>;
-  def _OFFSET_gfx11 :
-    Base_MTBUF_Real_gfx11<op, !cast<MTBUF_Pseudo>(NAME#"_OFFSET"), real_name>;
+multiclass MTBUF_Real_AllAddr_gfx11_gfx12_Renamed_Impl<bits<4> op, string real_name> {
+  let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in {
+    def _BOTHEN_gfx11 :
+      Base_MTBUF_Real_gfx11<op, !cast<MTBUF_Pseudo>(NAME#"_BOTHEN"), real_name>;
+    def _IDXEN_gfx11 :
+      Base_MTBUF_Real_gfx11<op, !cast<MTBUF_Pseudo>(NAME#"_IDXEN"), real_name>;
+    def _OFFEN_gfx11 :
+      Base_MTBUF_Real_gfx11<op, !cast<MTBUF_Pseudo>(NAME#"_OFFEN"), real_name>;
+    def _OFFSET_gfx11 :
+      Base_MTBUF_Real_gfx11<op, !cast<MTBUF_Pseudo>(NAME#"_OFFSET"), real_name>;
+  }
+
+  let AssemblerPredicate = isGFX12Plus, DecoderNamespace = "GFX12" in {
+    def _BOTHEN_gfx12 :
+      VBUFFER_MTBUF_Real_gfx12<op, !cast<MTBUF_Pseudo>(NAME#"_VBUFFER_BOTHEN"), real_name>;
+    def _IDXEN_gfx12 :
+      VBUFFER_MTBUF_Real_gfx12<op, !cast<MTBUF_Pseudo>(NAME#"_VBUFFER_IDXEN"), real_name>;
+    def _OFFEN_gfx12 :
+      VBUFFER_MTBUF_Real_gfx12<op, !cast<MTBUF_Pseudo>(NAME#"_VBUFFER_OFFEN"), real_name>;
+    def _OFFSET_gfx12 :
+      VBUFFER_MTBUF_Real_gfx12<op, !cast<MTBUF_Pseudo>(NAME#"_VBUFFER_OFFSET"), real_name>;
+  }
 }
 
-multiclass MTBUF_Real_AllAddr_gfx11_Impl<bits<4> op, MTBUF_Pseudo ps>
- : MTBUF_Real_AllAddr_gfx11_Renamed_Impl<op, ps.Mnemonic>;
-multiclass MTBUF_Real_AllAddr_gfx11<bits<4> op>
- : MTBUF_Real_AllAddr_gfx11_Impl<op, !cast<MTBUF_Pseudo>(NAME#"_BOTHEN")>;
+multiclass MTBUF_Real_AllAddr_gfx11_gfx12_Impl<bits<4> op, MTBUF_Pseudo ps>
+ : MTBUF_Real_AllAddr_gfx11_gfx12_Renamed_Impl<op, ps.Mnemonic>;
+multiclass MTBUF_Real_AllAddr_gfx11_gfx12<bits<4> op>
+ : MTBUF_Real_AllAddr_gfx11_gfx12_Impl<op, !cast<MTBUF_Pseudo>(NAME#"_BOTHEN")>;
 
 
 class Pre_gfx11_MTBUF_Name <MTBUF_Pseudo ps, string real_name>
   : MnemonicAlias<ps.Mnemonic, real_name>, Requires<[isGFX11Plus]>;
-multiclass MTBUF_Real_AllAddr_gfx11_Renamed<bits<4> op, string real_name>
-  : MTBUF_Real_AllAddr_gfx11_Renamed_Impl<op, real_name> {
+multiclass MTBUF_Real_AllAddr_gfx11_gfx12_Renamed<bits<4> op, string real_name>
+  : MTBUF_Real_AllAddr_gfx11_gfx12_Renamed_Impl<op, real_name> {
   def : Pre_gfx11_MTBUF_Name<!cast<MTBUF_Pseudo>(NAME#"_BOTHEN"), real_name>;
 }
 
-defm TBUFFER_LOAD_FORMAT_D16_X     : MTBUF_Real_AllAddr_gfx11_Renamed<0x008, "tbuffer_load_d16_format_x">;
-defm TBUFFER_LOAD_FORMAT_D16_XY    : MTBUF_Real_AllAddr_gfx11_Renamed<0x009, "tbuffer_load_d16_format_xy">;
-defm TBUFFER_LOAD_FORMAT_D16_XYZ   : MTBUF_Real_AllAddr_gfx11_Renamed<0x00a, "tbuffer_load_d16_format_xyz">;
-defm TBUFFER_LOAD_FORMAT_D16_XYZW  : MTBUF_Real_AllAddr_gfx11_Renamed<0x00b, "tbuffer_load_d16_format_xyzw">;
-defm TBUFFER_LOAD_FORMAT_X         : MTBUF_Real_AllAddr_gfx11<0x000>;
-defm TBUFFER_LOAD_FORMAT_XY        : MTBUF_Real_AllAddr_gfx11<0x001>;
-defm TBUFFER_LOAD_FORMAT_XYZ       : MTBUF_Real_AllAddr_gfx11<0x002>;
-defm TBUFFER_LOAD_FORMAT_XYZW      : MTBUF_Real_AllAddr_gfx11<0x003>;
-defm TBUFFER_STORE_FORMAT_D16_X    : MTBUF_Real_AllAddr_gfx11_Renamed<0x00c, "tbuffer_store_d16_format_x">;
-defm TBUFFER_STORE_FORMAT_D16_XY   : MTBUF_Real_AllAddr_gfx11_Renamed<0x00d, "tbuffer_store_d16_format_xy">;
-defm TBUFFER_STORE_FORMAT_D16_XYZ  : MTBUF_Real_AllAddr_gfx11_Renamed<0x00e, "tbuffer_store_d16_format_xyz">;
-defm TBUFFER_STORE_FORMAT_D16_XYZW : MTBUF_Real_AllAddr_gfx11_Renamed<0x00f, "tbuffer_store_d16_format_xyzw">;
-defm TBUFFER_STORE_FORMAT_X        : MTBUF_Real_AllAddr_gfx11<0x004>;
-defm TBUFFER_STORE_FORMAT_XY       : MTBUF_Real_AllAddr_gfx11<0x005>;
-defm TBUFFER_STORE_FORMAT_XYZ      : MTBUF_Real_AllAddr_gfx11<0x006>;
-defm TBUFFER_STORE_FORMAT_XYZW     : MTBUF_Real_AllAddr_gfx11<0x007>;
+defm TBUFFER_LOAD_FORMAT_D16_X     : MTBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x008, "tbuffer_load_d16_format_x">;
+defm TBUFFER_LOAD_FORMAT_D16_XY    : MTBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x009, "tbuffer_load_d16_format_xy">;
+defm TBUFFER_LOAD_FORMAT_D16_XYZ   : MTBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x00a, "tbuffer_load_d16_format_xyz">;
+defm TBUFFER_LOAD_FORMAT_D16_XYZW  : MTBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x00b, "tbuffer_load_d16_format_xyzw">;
+defm TBUFFER_LOAD_FORMAT_X         : MTBUF_Real_AllAddr_gfx11_gfx12<0x000>;
+defm TBUFFER_LOAD_FORMAT_XY        : MTBUF_Real_AllAddr_gfx11_gfx12<0x001>;
+defm TBUFFER_LOAD_FORMAT_XYZ       : MTBUF_Real_AllAddr_gfx11_gfx12<0x002>;
+defm TBUFFER_LOAD_FORMAT_XYZW      : MTBUF_Real_AllAddr_gfx11_gfx12<0x003>;
+defm TBUFFER_STORE_FORMAT_D16_X    : MTBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x00c, "tbuffer_store_d16_format_x">;
+defm TBUFFER_STORE_FORMAT_D16_XY   : MTBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x00d, "tbuffer_store_d16_format_xy">;
+defm TBUFFER_STORE_FORMAT_D16_XYZ  : MTBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x00e, "tbuffer_store_d16_format_xyz">;
+defm TBUFFER_STORE_FORMAT_D16_XYZW : MTBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x00f, "tbuffer_store_d16_format_xyzw">;
+defm TBUFFER_STORE_FORMAT_X        : MTBUF_Real_AllAddr_gfx11_gfx12<0x004>;
+defm TBUFFER_STORE_FORMAT_XY       : MTBUF_Real_AllAddr_gfx11_gfx12<0x005>;
+defm TBUFFER_STORE_FORMAT_XYZ      : MTBUF_Real_AllAddr_gfx11_gfx12<0x006>;
+defm TBUFFER_STORE_FORMAT_XYZW     : MTBUF_Real_AllAddr_gfx11_gfx12<0x007>;
 
 //===----------------------------------------------------------------------===//
 // MTBUF - GFX10.
