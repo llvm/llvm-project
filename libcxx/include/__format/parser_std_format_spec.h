@@ -16,6 +16,7 @@
 /// This header has some support for the chrono-format-spec since it doesn't
 /// affect the std-format-spec.
 
+#include <__algorithm/copy_n.h>
 #include <__algorithm/find_if.h>
 #include <__algorithm/min.h>
 #include <__assert>
@@ -31,6 +32,7 @@
 #include <__format/width_estimation_table.h>
 #include <__iterator/concepts.h>
 #include <__iterator/readable_traits.h> // iter_value_t
+#include <__memory/addressof.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/is_trivially_copyable.h>
 #include <__variant/monostate.h>
@@ -220,6 +222,25 @@ struct __chrono {
   bool __month_name_ : 1;
 };
 
+// The fill UCS scalar value.
+//
+// This is always an array, with 1, 2, or 4 elements.
+// The size of the data structure is always 32-bits.
+template <class _CharT>
+struct __code_point;
+
+template <>
+struct __code_point<char> {
+  char __data[4] = {' '};
+};
+
+#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+template <>
+struct __code_point<wchar_t> {
+  wchar_t __data[4 / sizeof(wchar_t)] = {L' '};
+};
+#  endif
+
 /// Contains the parsed formatting specifications.
 ///
 /// This contains information for both the std-format-spec and the
@@ -255,7 +276,7 @@ struct __parsed_specifications {
   /// replaced with the value of that arg-id.
   int32_t __precision_;
 
-  _CharT __fill_;
+  __code_point<_CharT> __fill_;
 
   _LIBCPP_HIDE_FROM_ABI constexpr bool __has_width() const { return __width_ > 0; }
 
@@ -385,11 +406,7 @@ public:
   /// The requested precision, either the value or the arg-id.
   int32_t __precision_{-1};
 
-  // LWG 3576 will probably change this to always accept a Unicode code point
-  // To avoid changing the size with that change align the field so when it
-  // becomes 32-bit its alignment will remain the same. That also means the
-  // size will remain the same. (D2572 addresses the solution for LWG 3576.)
-  _CharT __fill_{_CharT(' ')};
+  __code_point<_CharT> __fill_{};
 
 private:
   _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_alignment(_CharT __c) {
@@ -409,19 +426,90 @@ private:
     return false;
   }
 
+  _LIBCPP_HIDE_FROM_ABI constexpr void __validate_fill_character(_CharT __fill, bool __use_range_fill) {
+    // The forbidden fill characters all code points formed from a single code unit, thus the
+    // check can be omitted when more code units are used.
+    if (__use_range_fill && (__fill == _CharT('{') || __fill == _CharT('}') || __fill == _CharT(':')))
+      std::__throw_format_error("The format-spec range-fill field contains an invalid character");
+    else if (__fill == _CharT('{') || __fill == _CharT('}'))
+      std::__throw_format_error("The format-spec fill field contains an invalid character");
+  }
+
+#  ifndef _LIBCPP_HAS_NO_UNICODE
+  // range-fill and tuple-fill are identical
+  template <contiguous_iterator _Iterator>
+    requires same_as<_CharT, char>
+#    ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+          || (same_as<_CharT, wchar_t> && sizeof(wchar_t) == 2)
+#    endif
+  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end, bool __use_range_fill) {
+    _LIBCPP_ASSERT(__begin != __end,
+                   "when called with an empty input the function will cause "
+                   "undefined behavior by evaluating data not in the input");
+    __unicode::__code_point_view<_CharT> __view{__begin, __end};
+    __unicode::__consume_result __consumed = __view.__consume();
+    if (__consumed.__status != __unicode::__consume_result::__ok)
+      std::__throw_format_error("The format-spec contains malformed Unicode characters");
+
+    if (__view.__position() < __end && __parse_alignment(*__view.__position())) {
+      ptrdiff_t __code_units = __view.__position() - __begin;
+      if (__code_units == 1)
+        // The forbidden fill characters all are code points encoded
+        // in one code unit, thus the check can be omitted when more
+        // code units are used.
+        __validate_fill_character(*__begin, __use_range_fill);
+
+      std::copy_n(__begin, __code_units, std::addressof(__fill_.__data[0]));
+      __begin += __code_units + 1;
+      return true;
+    }
+
+    if (!__parse_alignment(*__begin))
+      return false;
+
+    ++__begin;
+    return true;
+  }
+
+#    ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+  template <contiguous_iterator _Iterator>
+    requires(same_as<_CharT, wchar_t> && sizeof(wchar_t) == 4)
+  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end, bool __use_range_fill) {
+    _LIBCPP_ASSERT(__begin != __end,
+                   "when called with an empty input the function will cause "
+                   "undefined behavior by evaluating data not in the input");
+    if (__begin + 1 != __end && __parse_alignment(*(__begin + 1))) {
+      if (!__unicode::__is_scalar_value(*__begin))
+        std::__throw_format_error("The fill character contains an invalid value");
+
+      __validate_fill_character(*__begin, __use_range_fill);
+
+      __fill_.__data[0] = *__begin;
+      __begin += 2;
+      return true;
+    }
+
+    if (!__parse_alignment(*__begin))
+      return false;
+
+    ++__begin;
+    return true;
+  }
+
+#    endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+
+#  else // _LIBCPP_HAS_NO_UNICODE
   // range-fill and tuple-fill are identical
   template <contiguous_iterator _Iterator>
   _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end, bool __use_range_fill) {
-    _LIBCPP_ASSERT(__begin != __end, "when called with an empty input the function will cause "
-                                     "undefined behavior by evaluating data not in the input");
+    _LIBCPP_ASSERT(__begin != __end,
+                   "when called with an empty input the function will cause "
+                   "undefined behavior by evaluating data not in the input");
     if (__begin + 1 != __end) {
       if (__parse_alignment(*(__begin + 1))) {
-        if (__use_range_fill && (*__begin == _CharT('{') || *__begin == _CharT('}') || *__begin == _CharT(':')))
-          std::__throw_format_error("The format-spec range-fill field contains an invalid character");
-        else if (*__begin == _CharT('{') || *__begin == _CharT('}'))
-          std::__throw_format_error("The format-spec fill field contains an invalid character");
+        __validate_fill_character(*__begin, __use_range_fill);
 
-        __fill_ = *__begin;
+        __fill_.__data[0] = *__begin;
         __begin += 2;
         return true;
       }
@@ -433,6 +521,8 @@ private:
     ++__begin;
     return true;
   }
+
+#  endif // _LIBCPP_HAS_NO_UNICODE
 
   template <contiguous_iterator _Iterator>
   _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_sign(_Iterator& __begin) {
