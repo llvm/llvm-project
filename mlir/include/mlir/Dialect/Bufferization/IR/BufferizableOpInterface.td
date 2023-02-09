@@ -146,7 +146,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*defaultImplementation=*/[{
           assert(opResult.getDefiningOp() == $_op.getOperation() &&
                  "invalid OpResult");
-          return bufferization::detail::defaultResultBufferizesToMemoryWrite(
+          return ::mlir::bufferization::detail::defaultResultBufferizesToMemoryWrite(
               opResult, state);
         }]
       >,
@@ -167,7 +167,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
                       "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
-          return opOperand.get().getType().isa<UnrankedTensorType>();
+          return opOperand.get().getType().isa<::mlir::UnrankedTensorType>();
         }]
       >,
       InterfaceMethod<
@@ -234,7 +234,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           // Does not have to be implemented for ops without tensor OpOperands.
-          assert(opOperand.get().getType().isa<TensorType>() &&
+          assert(opOperand.get().getType().isa<::mlir::TensorType>() &&
                  "expected OpOperand with tensor type");
           llvm_unreachable("getAliasingOpResults not implemented");
         }]
@@ -305,7 +305,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
                       "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
-          assert(opResult.getType().isa<TensorType>() &&
+          assert(opResult.getType().isa<::mlir::TensorType>() &&
                  "expected OpResult with tensor type");
           return ::mlir::bufferization::detail::defaultGetAliasingOpOperands(
               opResult, state);
@@ -332,7 +332,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           auto bufferizableOp =
-              cast<BufferizableOpInterface>($_op.getOperation());
+              ::llvm::cast<BufferizableOpInterface>($_op.getOperation());
           return bufferizableOp.resolveTensorOpOperandConflicts(
               rewriter, state);
         }]
@@ -370,7 +370,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           llvm_unreachable("bufferize not implemented");
-          return failure();
+          return ::mlir::failure();
         }]
       >,
       InterfaceMethod<
@@ -395,7 +395,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
                       "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
-          return value.isa<OpResult>();
+          return value.isa<::mlir::OpResult>();
         }]
       >,
       InterfaceMethod<
@@ -435,7 +435,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*args=*/(ins "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
-          return success();
+          return ::mlir::success();
         }]
       >,
       InterfaceMethod<
@@ -456,7 +456,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*defaultImplementation=*/[{
           assert(getOwnerOfValue(value) == $_op.getOperation() &&
                  "expected that value belongs to this op");
-          return bufferization::detail::defaultGetBufferType(
+          return ::mlir::bufferization::detail::defaultGetBufferType(
               value, options, fixedTypes);
         }]
       >,
@@ -480,7 +480,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return ::mlir::bufferization::detail::defaultIsRepetitiveRegion(
-              cast<BufferizableOpInterface>($_op.getOperation()), index);
+              ::llvm::cast<BufferizableOpInterface>($_op.getOperation()), index);
         }]
       >
   ];
@@ -502,7 +502,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         ::mlir::OpOperand &opOperand,
         const ::mlir::bufferization::AnalysisState &state) {
       auto bufferizableOp =
-          cast<::mlir::bufferization::BufferizableOpInterface>(getOperation());
+          ::llvm::cast<::mlir::bufferization::BufferizableOpInterface>(getOperation());
       return !bufferizableOp.bufferizesToMemoryRead(opOperand, state)
           && !bufferizableOp.bufferizesToMemoryWrite(opOperand, state)
           && bufferizableOp.getAliasingOpResults(opOperand, state)
