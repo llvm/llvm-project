@@ -258,6 +258,121 @@ func.func @mixed_store(%mixed : memref<42x?xf32>, %i : index, %j : index, %val :
 
 // -----
 
+// FIXME: the *ToLLVM passes don't use information from data layouts
+// to set address spaces, so the constants below don't reflect the layout
+// Update this test once that data layout attribute works how we'd expect it to.
+module attributes { dlti.dl_spec = #dlti.dl_spec<
+  #dlti.dl_entry<!llvm.ptr, dense<[64, 64, 64]> : vector<3xi32>>,
+  #dlti.dl_entry<!llvm.ptr<1>, dense<[32, 32, 32]> : vector<3xi32>>> }  {
+  // CHECK-LABEL: @memref_memory_space_cast
+  func.func @memref_memory_space_cast(%input : memref<*xf32>) -> memref<*xf32, 1> {
+    %cast = memref.memory_space_cast %input : memref<*xf32> to memref<*xf32, 1>
+    return %cast : memref<*xf32, 1>
+  }
+}
+// CHECK: [[INPUT:%.*]] = builtin.unrealized_conversion_cast %{{.*}} to !llvm.struct<(i64, ptr)>
+// CHECK: [[RANK:%.*]] = llvm.extractvalue [[INPUT]][0] : !llvm.struct<(i64, ptr)>
+// CHECK: [[SOURCE_DESC:%.*]] = llvm.extractvalue [[INPUT]][1]
+// CHECK: [[RESULT_0:%.*]] = llvm.mlir.undef : !llvm.struct<(i64, ptr)>
+// CHECK: [[RESULT_1:%.*]] = llvm.insertvalue [[RANK]], [[RESULT_0]][0] : !llvm.struct<(i64, ptr)>
+
+// Compute size in bytes to allocate result ranked descriptor
+// CHECK: [[C1:%.*]] = llvm.mlir.constant(1 : index) : i64
+// CHECK: [[C2:%.*]] = llvm.mlir.constant(2 : index) : i64
+// CHECK: [[INDEX_SIZE:%.*]] = llvm.mlir.constant(8 : index) : i64
+// CHECK: [[PTR_SIZE:%.*]] = llvm.mlir.constant(8 : index) : i64
+// CHECK: [[DOUBLE_PTR_SIZE:%.*]] = llvm.mul [[C2]], [[PTR_SIZE]]
+// CHECK: [[DOUBLE_RANK:%.*]] = llvm.mul [[C2]], %{{.*}}
+// CHECK: [[NUM_INDEX_VALS:%.*]] = llvm.add [[DOUBLE_RANK]], [[C1]]
+// CHECK: [[INDEX_VALS_SIZE:%.*]] = llvm.mul [[NUM_INDEX_VALS]], [[INDEX_SIZE]]
+// CHECK: [[DESC_ALLOC_SIZE:%.*]] = llvm.add [[DOUBLE_PTR_SIZE]], [[INDEX_VALS_SIZE]]
+// CHECK: [[RESULT_DESC:%.*]] = llvm.alloca [[DESC_ALLOC_SIZE]] x i8
+// CHECK: llvm.insertvalue [[RESULT_DESC]], [[RESULT_1]][1]
+
+// Cast pointers
+// CHECK: [[SOURCE_ALLOC:%.*]] = llvm.load [[SOURCE_DESC]]
+// CHECK: [[SOURCE_ALIGN_GEP:%.*]] = llvm.getelementptr [[SOURCE_DESC]][1]
+// CHECK: [[SOURCE_ALIGN:%.*]] = llvm.load [[SOURCE_ALIGN_GEP]] : !llvm.ptr
+// CHECK: [[RESULT_ALLOC:%.*]] = llvm.addrspacecast [[SOURCE_ALLOC]] : !llvm.ptr to !llvm.ptr<1>
+// CHECK: [[RESULT_ALIGN:%.*]] = llvm.addrspacecast [[SOURCE_ALIGN]] : !llvm.ptr to !llvm.ptr<1>
+// CHECK: llvm.store [[RESULT_ALLOC]], [[RESULT_DESC]] : !llvm.ptr
+// CHECK: [[RESULT_ALIGN_GEP:%.*]] = llvm.getelementptr [[RESULT_DESC]][1]
+// CHECK: llvm.store [[RESULT_ALIGN]], [[RESULT_ALIGN_GEP]] : !llvm.ptr
+
+// Memcpy remaniing values
+
+// CHECK: [[SOURCE_OFFSET_GEP:%.*]] = llvm.getelementptr [[SOURCE_DESC]][2]
+// CHECK: [[RESULT_OFFSET_GEP:%.*]] = llvm.getelementptr [[RESULT_DESC]][2]
+// CHECK: [[SIZEOF_TWO_RESULT_PTRS:%.*]] = llvm.mlir.constant(16 : index) : i64
+// CHECK: [[COPY_SIZE:%.*]] = llvm.sub [[DESC_ALLOC_SIZE]], [[SIZEOF_TWO_RESULT_PTRS]]
+// CHECK: [[FALSE:%.*]] = llvm.mlir.constant(false) : i1
+// CHECK: "llvm.intr.memcpy"([[RESULT_OFFSET_GEP]], [[SOURCE_OFFSET_GEP]], [[COPY_SIZE]], [[FALSE]])
+
+// -----
+
+// CHECK-LABEL: func @memref_cast_static_to_dynamic
+func.func @memref_cast_static_to_dynamic(%static : memref<10x42xf32>) {
+// CHECK-NOT: llvm.bitcast
+  %0 = memref.cast %static : memref<10x42xf32> to memref<?x?xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @memref_cast_static_to_mixed
+func.func @memref_cast_static_to_mixed(%static : memref<10x42xf32>) {
+// CHECK-NOT: llvm.bitcast
+  %0 = memref.cast %static : memref<10x42xf32> to memref<?x42xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @memref_cast_dynamic_to_static
+func.func @memref_cast_dynamic_to_static(%dynamic : memref<?x?xf32>) {
+// CHECK-NOT: llvm.bitcast
+  %0 = memref.cast %dynamic : memref<?x?xf32> to memref<10x12xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @memref_cast_dynamic_to_mixed
+func.func @memref_cast_dynamic_to_mixed(%dynamic : memref<?x?xf32>) {
+// CHECK-NOT: llvm.bitcast
+  %0 = memref.cast %dynamic : memref<?x?xf32> to memref<?x12xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @memref_cast_mixed_to_dynamic
+func.func @memref_cast_mixed_to_dynamic(%mixed : memref<42x?xf32>) {
+// CHECK-NOT: llvm.bitcast
+  %0 = memref.cast %mixed : memref<42x?xf32> to memref<?x?xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @memref_cast_mixed_to_static
+func.func @memref_cast_mixed_to_static(%mixed : memref<42x?xf32>) {
+// CHECK-NOT: llvm.bitcast
+  %0 = memref.cast %mixed : memref<42x?xf32> to memref<42x1xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @memref_cast_mixed_to_mixed
+func.func @memref_cast_mixed_to_mixed(%mixed : memref<42x?xf32>) {
+// CHECK-NOT: llvm.bitcast
+  %0 = memref.cast %mixed : memref<42x?xf32> to memref<?x1xf32>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @memref_cast_ranked_to_unranked
 // CHECK32-LABEL: func @memref_cast_ranked_to_unranked
 func.func @memref_cast_ranked_to_unranked(%arg : memref<42x2x?xf32>) {

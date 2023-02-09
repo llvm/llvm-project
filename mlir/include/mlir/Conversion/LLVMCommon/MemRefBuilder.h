@@ -218,6 +218,13 @@ public:
                             LLVM::LLVMPointerType elemPtrType,
                             Value alignedPtr);
 
+  /// Builds IR for getting the pointer to the offset's location.
+  /// Returns a pointer to a convertType(index), which points to the beggining
+  /// of a struct {index, index[rank], index[rank]}.
+  static Value offsetBasePtr(OpBuilder &builder, Location loc,
+                             LLVMTypeConverter &typeConverter,
+                             Value memRefDescPtr,
+                             LLVM::LLVMPointerType elemPtrType);
   /// Builds IR extracting the offset from the descriptor.
   static Value offset(OpBuilder &builder, Location loc,
                       LLVMTypeConverter &typeConverter, Value memRefDescPtr,
