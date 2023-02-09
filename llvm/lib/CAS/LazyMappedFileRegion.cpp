@@ -243,20 +243,21 @@ Expected<LazyMappedFileRegion> LazyMappedFileRegion::create(
   sys::fs::file_t File = sys::fs::convertFDToNativeFile(FD);
 
   struct FileLockRAII {
-    LazyMappedFileRegion &LMFR;
+    std::string Path;
+    int FD;
     bool IsLocked = false;
 
     enum LockKind { Shared, Exclusive };
 
-    FileLockRAII(LazyMappedFileRegion &LMFR) : LMFR(LMFR) {}
+    FileLockRAII(LazyMappedFileRegion &LMFR) : Path(LMFR.Path), FD(*LMFR.FD) {}
     ~FileLockRAII() { consumeError(unlock()); }
 
     Error lock(LockKind LK) {
       if (IsLocked)
         return createStringError(inconvertibleErrorCode(),
-                                 LMFR.Path + " already locked");
-      if (std::error_code EC = sys::fs::lockFile(*LMFR.FD, LK == Exclusive))
-        return createFileError(LMFR.Path, EC);
+                                 Path + " already locked");
+      if (std::error_code EC = sys::fs::lockFile(FD, LK == Exclusive))
+        return createFileError(Path, EC);
       IsLocked = true;
       return Error::success();
     }
@@ -264,8 +265,8 @@ Expected<LazyMappedFileRegion> LazyMappedFileRegion::create(
     Error unlock() {
       if (IsLocked) {
         IsLocked = false;
-        if (std::error_code EC = sys::fs::unlockFile(*LMFR.FD))
-          return createFileError(LMFR.Path, EC);
+        if (std::error_code EC = sys::fs::unlockFile(FD))
+          return createFileError(Path, EC);
       }
       return Error::success();
     }
