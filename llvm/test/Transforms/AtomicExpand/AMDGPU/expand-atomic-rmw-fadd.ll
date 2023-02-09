@@ -433,20 +433,8 @@ define float @test_atomicrmw_fadd_f32_flat(ptr %ptr, float %value) {
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
 ; GFX940-LABEL: @test_atomicrmw_fadd_f32_flat(
-; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr [[PTR:%.*]], align 4
-; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX940:       atomicrmw.start:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
-; GFX940-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX940-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX940-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    ret float [[TMP5]]
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], float [[VALUE:%.*]] seq_cst, align 4
+; GFX940-NEXT:    ret float [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_flat(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr [[PTR:%.*]], align 4
@@ -534,20 +522,8 @@ define float @test_atomicrmw_fadd_f32_global(ptr addrspace(1) %ptr, float %value
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
 ; GFX940-LABEL: @test_atomicrmw_fadd_f32_global(
-; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
-; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX940:       atomicrmw.start:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
-; GFX940-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX940-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX940-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    ret float [[TMP5]]
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]] seq_cst, align 4
+; GFX940-NEXT:    ret float [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_global(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
@@ -635,19 +611,7 @@ define void @test_atomicrmw_fadd_f32_global_no_use_ieee(ptr addrspace(1) %ptr, f
 ; GFX90A-NEXT:    ret void
 ;
 ; GFX940-LABEL: @test_atomicrmw_fadd_f32_global_no_use_ieee(
-; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
-; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX940:       atomicrmw.start:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
-; GFX940-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX940-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX940-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX940:       atomicrmw.end:
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]] seq_cst, align 4
 ; GFX940-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_global_no_use_ieee(
@@ -736,19 +700,7 @@ define void @test_atomicrmw_fadd_f32_global_no_use_denorm_flush(ptr addrspace(1)
 ; GFX90A-NEXT:    ret void
 ;
 ; GFX940-LABEL: @test_atomicrmw_fadd_f32_global_no_use_denorm_flush(
-; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
-; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX940:       atomicrmw.start:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
-; GFX940-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX940-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX940-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX940:       atomicrmw.end:
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]] seq_cst, align 4
 ; GFX940-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_global_no_use_denorm_flush(
@@ -1582,20 +1534,8 @@ define double @test_atomicrmw_fadd_f64_flat(ptr %ptr, double %value) {
 ; GFX90A-NEXT:    ret double [[TMP5]]
 ;
 ; GFX940-LABEL: @test_atomicrmw_fadd_f64_flat(
-; GFX940-NEXT:    [[TMP1:%.*]] = load double, ptr [[PTR:%.*]], align 8
-; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX940:       atomicrmw.start:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE:%.*]]
-; GFX940-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX940-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
-; GFX940-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
-; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    ret double [[TMP5]]
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], double [[VALUE:%.*]] seq_cst, align 8
+; GFX940-NEXT:    ret double [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f64_flat(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr [[PTR:%.*]], align 8
@@ -1683,20 +1623,8 @@ define double @test_atomicrmw_fadd_f64_global(ptr addrspace(1) %ptr, double %val
 ; GFX90A-NEXT:    ret double [[TMP5]]
 ;
 ; GFX940-LABEL: @test_atomicrmw_fadd_f64_global(
-; GFX940-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR:%.*]], align 8
-; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX940:       atomicrmw.start:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE:%.*]]
-; GFX940-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX940-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
-; GFX940-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
-; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    ret double [[TMP5]]
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]] seq_cst, align 8
+; GFX940-NEXT:    ret double [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f64_global(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR:%.*]], align 8
@@ -1861,20 +1789,8 @@ define float @test_atomicrmw_fadd_f32_global_agent(ptr addrspace(1) %ptr, float 
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
 ; GFX940-LABEL: @test_atomicrmw_fadd_f32_global_agent(
-; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
-; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX940:       atomicrmw.start:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
-; GFX940-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX940-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") monotonic monotonic, align 4
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX940-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    ret float [[TMP5]]
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("agent") monotonic, align 4
+; GFX940-NEXT:    ret float [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_global_agent(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
@@ -1962,20 +1878,8 @@ define float @test_atomicrmw_fadd_f32_global_one_as(ptr addrspace(1) %ptr, float
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
 ; GFX940-LABEL: @test_atomicrmw_fadd_f32_global_one_as(
-; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
-; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX940:       atomicrmw.start:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
-; GFX940-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX940-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("one-as") monotonic monotonic, align 4
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX940-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
-; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    ret float [[TMP5]]
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("one-as") monotonic, align 4
+; GFX940-NEXT:    ret float [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_global_one_as(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
