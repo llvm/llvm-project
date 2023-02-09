@@ -3396,3 +3396,82 @@ define <vscale x 2 x i1> @scalable_non_zero(<vscale x 2 x i32> %x) {
   %cmp = icmp ult <vscale x 2 x i32> %b, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 56, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
   ret <vscale x 2 x i1> %cmp
 }
+
+define i32 @clamp_zero(i32 %x) {
+; CHECK-LABEL: @clamp_zero(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 1, i32 [[X]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %cmp = icmp eq i32 %x, 0
+  %sel = select i1 %cmp, i32 1, i32 %x
+  ret i32 %sel
+}
+
+define i32 @clamp_zero_use(i32 %x) {
+; CHECK-LABEL: @clamp_zero_use(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    call void @use1(i1 [[CMP]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 1, i32 [[X]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %cmp = icmp eq i32 %x, 0
+  call void @use1(i1 %cmp)
+  %sel = select i1 %cmp, i32 1, i32 %x
+  ret i32 %sel
+}
+
+define i32 @not_clamp_zero1(i32 %x) {
+; CHECK-LABEL: @not_clamp_zero1(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 1, i32 [[X]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %cmp = icmp eq i32 %x, 2
+  %sel = select i1 %cmp, i32 1, i32 %x
+  ret i32 %sel
+}
+
+define i32 @not_clamp_zero2(i32 %x) {
+; CHECK-LABEL: @not_clamp_zero2(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 -1, i32 [[X]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %cmp = icmp eq i32 %x, 0
+  %sel = select i1 %cmp, i32 -1, i32 %x
+  ret i32 %sel
+}
+
+define <2 x i8> @clamp_umaxval(<2 x i8> %x) {
+; CHECK-LABEL: @clamp_umaxval(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> <i8 -2, i8 -2>, <2 x i8> [[X]]
+; CHECK-NEXT:    ret <2 x i8> [[SEL]]
+;
+  %cmp = icmp eq <2 x i8> %x, <i8 255, i8 255>
+  %sel = select <2 x i1> %cmp, <2 x i8> <i8 254, i8 254>, <2 x i8> %x
+  ret <2 x i8> %sel
+}
+
+define i8 @not_clamp_umax1(i8 %x) {
+; CHECK-LABEL: @not_clamp_umax1(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], -3
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 -2, i8 [[X]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %x, 253
+  %sel = select i1 %cmp, i8 254, i8 %x
+  ret i8 %sel
+}
+
+define i8 @not_clamp_umax2(i8 %x) {
+; CHECK-LABEL: @not_clamp_umax2(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 1, i8 [[X]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %x, 255
+  %sel = select i1 %cmp, i8 1, i8 %x
+  ret i8 %sel
+}
