@@ -21,6 +21,7 @@
 namespace mlir {
 
 // Forward declarations.
+class Attribute;
 class Block;
 class ConversionPatternRewriter;
 class MLIRContext;
@@ -85,6 +86,34 @@ public:
 
     /// The set of new argument types.
     SmallVector<Type, 4> argTypes;
+  };
+
+  /// The general result of a type attribute conversion callback, allowing
+  /// for early termination. The default constructor creates the na case.
+  class AttributeConversionResult {
+  public:
+    constexpr AttributeConversionResult() : impl() {}
+    AttributeConversionResult(Attribute attr) : impl(attr, resultTag) {}
+
+    static AttributeConversionResult result(Attribute attr);
+    static AttributeConversionResult na();
+    static AttributeConversionResult abort();
+
+    bool hasResult() const;
+    bool isNa() const;
+    bool isAbort() const;
+
+    Attribute getResult() const;
+
+  private:
+    AttributeConversionResult(Attribute attr, unsigned tag) : impl(attr, tag) {}
+
+    llvm::PointerIntPair<Attribute, 2> impl;
+    // Note that na is 0 so that we can use PointerIntPair's default
+    // constructor.
+    static constexpr unsigned naTag = 0;
+    static constexpr unsigned resultTag = 1;
+    static constexpr unsigned abortTag = 2;
   };
 
   /// Register a conversion function. A conversion function must be convertible
@@ -154,6 +183,34 @@ public:
   void addTargetMaterialization(FnT &&callback) {
     targetMaterializations.emplace_back(
         wrapMaterialization<T>(std::forward<FnT>(callback)));
+  }
+
+  /// Register a conversion function for attributes within types. Type
+  /// converters may call this function in order to allow hoking into the
+  /// translation of attributes that exist within types. For example, a type
+  /// converter for the `memref` type could use these conversions to convert
+  /// memory spaces or layouts in an extensible way.
+  ///
+  /// The conversion functions take a non-null Type or subclass of Type and a
+  /// non-null Attribute (or subclass of Attribute), and returns a
+  /// `AttributeConversionResult`. This result can either contan an `Attribute`,
+  /// which may be `nullptr`, representing the conversion's success,
+  /// `AttributeConversionResult::na()` (the default empty value), indicating
+  /// that the conversion function did not apply and that further conversion
+  /// functions should be checked, or `AttributeConversionResult::abort()`
+  /// indicating that the conversion process should be aborted.
+  ///
+  /// Registered conversion functions are callled in the reverse of the order in
+  /// which they were registered.
+  template <
+      typename FnT,
+      typename T =
+          typename llvm::function_traits<std::decay_t<FnT>>::template arg_t<0>,
+      typename A =
+          typename llvm::function_traits<std::decay_t<FnT>>::template arg_t<1>>
+  void addTypeAttributeConversion(FnT &&callback) {
+    registerTypeAttributeConversion(
+        wrapTypeAttributeConversion<T, A>(std::forward<FnT>(callback)));
   }
 
   /// Convert the given type. This function should return failure if no valid
@@ -226,6 +283,12 @@ public:
                                  resultType, inputs);
   }
 
+  /// Convert an attribute present `attr` from within the type `type` using
+  /// the registered conversion functions. If no applicable conversion has been
+  /// registered, return std::nullopt. Note that the empty attribute/`nullptr`
+  /// is a valid return value for this function.
+  std::optional<Attribute> convertTypeAttribute(Type type, Attribute attr);
+
 private:
   /// The signature of the callback used to convert a type. If the new set of
   /// types is empty, the type is removed and any usages of the existing value
@@ -236,6 +299,10 @@ private:
   /// The signature of the callback used to materialize a conversion.
   using MaterializationCallbackFn = std::function<std::optional<Value>(
       OpBuilder &, Type, ValueRange, Location)>;
+
+  /// The signature of the callback used to convert a type attribute.
+  using TypeAttributeConversionCallbackFn =
+      std::function<AttributeConversionResult(Type, Attribute)>;
 
   /// Attempt to materialize a conversion using one of the provided
   /// materialization functions.
@@ -311,6 +378,32 @@ private:
     };
   }
 
+  /// Generate a wrapper for the given memory space conversion callback. The
+  /// callback may take any subclass of `Attribute` and the wrapper will check
+  /// for the target attribute to be of the expected class before calling the
+  /// callback.
+  template <typename T, typename A, typename FnT>
+  TypeAttributeConversionCallbackFn
+  wrapTypeAttributeConversion(FnT &&callback) {
+    return [callback = std::forward<FnT>(callback)](
+               Type type, Attribute attr) -> AttributeConversionResult {
+      if (T derivedType = type.dyn_cast<T>()) {
+        if (A derivedAttr = attr.dyn_cast_or_null<A>())
+          return callback(derivedType, derivedAttr);
+      }
+      return AttributeConversionResult::na();
+    };
+  }
+
+  /// Register a memory space conversion, clearing caches.
+  void
+  registerTypeAttributeConversion(TypeAttributeConversionCallbackFn callback) {
+    typeAttributeConversions.emplace_back(std::move(callback));
+    // Clear type conversions in case a memory space is lingering inside.
+    cachedDirectConversions.clear();
+    cachedMultiConversions.clear();
+  }
+
   /// The set of registered conversion functions.
   SmallVector<ConversionCallbackFn, 4> conversions;
 
@@ -318,6 +411,9 @@ private:
   SmallVector<MaterializationCallbackFn, 2> argumentMaterializations;
   SmallVector<MaterializationCallbackFn, 2> sourceMaterializations;
   SmallVector<MaterializationCallbackFn, 2> targetMaterializations;
+
+  /// The list of registered type attribute conversion functions.
+  SmallVector<TypeAttributeConversionCallbackFn, 2> typeAttributeConversions;
 
   /// A set of cached conversions to avoid recomputing in the common case.
   /// Direct 1-1 conversions are the most common, so this cache stores the

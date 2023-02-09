@@ -147,6 +147,11 @@ public:
   unsigned getUnrankedMemRefDescriptorSize(UnrankedMemRefType type,
                                            const DataLayout &layout);
 
+  /// Return the LLVM address space corresponding to the memory space of the
+  /// memref type `type` or failure if the memory space cannot be converted to
+  /// an integer.
+  FailureOr<unsigned> getMemRefAddressSpace(BaseMemRefType type);
+
   /// Check if a memref type can be converted to a bare pointer.
   static bool canConvertToBarePtr(BaseMemRefType type);
 
