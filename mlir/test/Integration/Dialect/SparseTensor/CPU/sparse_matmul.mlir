@@ -1,27 +1,40 @@
 // DEFINE: %{option} = enable-runtime-library=true
-// DEFINE: %{command} = mlir-opt %s --sparse-compiler=%{option} | \
-// DEFINE: mlir-cpu-runner \
+// DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
+// DEFINE: %{run} = mlir-cpu-runner \
 // DEFINE:  -e entry -entry-point-result=void  \
 // DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext,%mlir_lib_dir/libmlir_runner_utils%shlibext | \
 // DEFINE: FileCheck %s
 //
-// RUN: %{command}
+// RUN: %{compile} | %{run}
 //
 // Do the same run, but now with direct IR generation.
 // REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true"
-// RUN: %{command}
+// RUN: %{compile} | %{run}
 //
 // Do the same run, but now with parallelization strategy.
 // REDEFINE: %{option} = "enable-runtime-library=true parallelization-strategy=any-storage-any-loop"
-// RUN: %{command}
+// RUN: %{compile} | %{run}
 //
 // Do the same run, but now with direct IR generation and parallelization strategy.
 // REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true parallelization-strategy=any-storage-any-loop"
-// RUN: %{command}
+// RUN: %{compile} | %{run}
 //
 // Do the same run, but now with direct IR generation and vectorization.
 // REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
-// RUN: %{command}
+// RUN: %{compile} | %{run}
+
+// Do the same run, but now with direct IR generation and, if available, VLA
+// vectorization.
+// REDEFINE: %{option} = "enable-runtime-library=false vl=4 enable-arm-sve=%ENABLE_VLA"
+// REDEFINE: %{run} = %lli \
+// REDEFINE:   --entry-function=entry_lli \
+// REDEFINE:   --extra-module=%S/Inputs/main_for_lli.ll \
+// REDEFINE:   %VLA_ARCH_ATTR_OPTIONS \
+// REDEFINE:   --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext --dlopen=%mlir_lib_dir/libmlir_runner_utils%shlibext | \
+// REDEFINE: FileCheck %s
+// RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
+
+// TODO: Investigate the output generated for SVE, see https://github.com/llvm/llvm-project/issues/60626
 
 #CSR = #sparse_tensor.encoding<{
   dimLevelType = [ "dense", "compressed" ],
@@ -273,8 +286,8 @@ module {
     //
     // Sanity check on nonzeros.
     //
-    // CHECK: [30.5,  4.2,  4.6,  7,  8
-    // CHECK: [30.5,  4.2,  4.6,  7,  8
+    // CHECK: [30.5,  4.2,  4.6,  7,  8{{.*}}]
+    // CHECK: [30.5,  4.2,  4.6,  7,  8{{.*}}]
     //
     %val7 = sparse_tensor.values %7 : tensor<4x4xf64, #CSR> to memref<?xf64>
     %val8 = sparse_tensor.values %8 : tensor<4x4xf64, #DCSR> to memref<?xf64>

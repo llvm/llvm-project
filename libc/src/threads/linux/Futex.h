@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_THREADS_LINUX_FUTEX_H
 #define LLVM_LIBC_SRC_THREADS_LINUX_FUTEX_H
 
-#include "src/__support/macros/architectures.h" // Architecture macros
+#include "src/__support/macros/properties/architectures.h" // Architecture macros
 
 namespace __llvm_libc {
 

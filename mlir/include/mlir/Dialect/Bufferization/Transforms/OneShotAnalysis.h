@@ -122,6 +122,13 @@ public:
   /// Return true if the buffer of the given tensor value is writable.
   bool isWritable(Value value) const;
 
+  /// Find the definitions of the given tensor value or retrieve them from the
+  /// cache.
+  const SetVector<Value> &findDefinitionsCached(Value value);
+
+  /// Reset cached data structures.
+  void resetCache();
+
   /// Union the alias sets of `v1` and `v2`.
   void unionAliasSets(Value v1, Value v2);
 
@@ -225,6 +232,9 @@ private:
       llvm::EquivalenceClasses<Value, ValueComparator>::member_iterator>;
   /// Check that aliasInfo for `v` exists and return a reference to it.
   EquivalenceClassRangeType getAliases(Value v) const;
+
+  /// Cache definitions of tensor values.
+  DenseMap<Value, SetVector<Value>> cachedDefinitions;
 
   /// Set of all OpResults that were decided to bufferize in-place.
   llvm::DenseSet<OpOperand *> inplaceBufferized;

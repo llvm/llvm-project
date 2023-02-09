@@ -41,15 +41,8 @@ struct DstBufferizableOpInterfaceExternalModel
     // Output operands alias with their respective tied OpResults.
     auto dstOp = cast<DestinationStyleOpInterface>(op);
     if (dstOp.isDpsInit(&opOperand))
-      return {dstOp.getTiedOpResult(&opOperand)};
+      return {{dstOp.getTiedOpResult(&opOperand), BufferRelation::Equivalent}};
     return {};
-  }
-
-  BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const AnalysisState &state) const {
-    assert(isa<DestinationStyleOpInterface>(op) &&
-           "expected that op implements DestinationStyleOpInterface");
-    return BufferRelation::Equivalent;
   }
 };
 

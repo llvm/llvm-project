@@ -16,6 +16,7 @@
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/ConvertConstant.h"
+#include "flang/Lower/ConvertProcedureDesignator.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/StatementContext.h"
@@ -1024,9 +1025,11 @@ private:
   }
 
   hlfir::EntityWithAttributes
-  gen(const Fortran::evaluate::ProcedureDesignator &expr) {
-    TODO(getLoc(), "lowering ProcDes to HLFIR");
+  gen(const Fortran::evaluate::ProcedureDesignator &proc) {
+    return Fortran::lower::convertProcedureDesignatorToHLFIR(
+        getLoc(), getConverter(), proc, getSymMap(), getStmtCtx());
   }
+
   hlfir::EntityWithAttributes gen(const Fortran::evaluate::ProcedureRef &expr) {
     TODO(getLoc(), "lowering ProcRef to HLFIR");
   }
@@ -1256,7 +1259,7 @@ hlfir::EntityWithAttributes Fortran::lower::convertExprToHLFIR(
   return HlfirBuilder(loc, converter, symMap, stmtCtx).gen(expr);
 }
 
-fir::BoxValue Fortran::lower::convertToBox(
+fir::ExtendedValue Fortran::lower::convertToBox(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     hlfir::Entity entity, Fortran::lower::StatementContext &stmtCtx,
     mlir::Type fortranType) {
@@ -1266,7 +1269,8 @@ fir::BoxValue Fortran::lower::convertToBox(
     stmtCtx.attachCleanup(*cleanup);
   return exv;
 }
-fir::BoxValue Fortran::lower::convertExprToBox(
+
+fir::ExtendedValue Fortran::lower::convertExprToBox(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     const Fortran::lower::SomeExpr &expr, Fortran::lower::SymMap &symMap,
     Fortran::lower::StatementContext &stmtCtx) {

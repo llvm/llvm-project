@@ -43,12 +43,7 @@ struct CastOpInterface
 
   AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
-    return {op->getResult(0)};
-  }
-
-  BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const AnalysisState &state) const {
-    return BufferRelation::Equivalent;
+    return {{op->getResult(0), BufferRelation::Equivalent}};
   }
 
   FailureOr<BaseMemRefType>
@@ -128,12 +123,7 @@ struct CollapseShapeOpInterface
   AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     // TODO: CollapseShapeOp may allocate at runtime.
-    return {op->getOpResult(0)};
-  }
-
-  BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const AnalysisState &state) const {
-    return BufferRelation::Equivalent;
+    return {{op->getOpResult(0), BufferRelation::Equivalent}};
   }
 
   FailureOr<BaseMemRefType>
@@ -297,12 +287,7 @@ struct ExpandShapeOpInterface
 
   AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
-    return {op->getOpResult(0)};
-  }
-
-  BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const AnalysisState &state) const {
-    return BufferRelation::Equivalent;
+    return {{op->getOpResult(0), BufferRelation::Equivalent}};
   }
 
   FailureOr<BaseMemRefType>
@@ -356,14 +341,7 @@ struct ExtractSliceOpInterface
 
   AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
-    if (&opOperand == &op->getOpOperand(0) /*source*/)
-      return {op->getOpResult(0)};
-    return {};
-  }
-
-  BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const AnalysisState &state) const {
-    return BufferRelation::Unknown;
+    return {{op->getOpResult(0), BufferRelation::Unknown}};
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
@@ -1000,12 +978,7 @@ struct ReshapeOpInterface
 
   AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
-    return {op->getOpResult(0)};
-  }
-
-  BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const AnalysisState &state) const {
-    return BufferRelation::Equivalent;
+    return {{op->getOpResult(0), BufferRelation::Equivalent}};
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,

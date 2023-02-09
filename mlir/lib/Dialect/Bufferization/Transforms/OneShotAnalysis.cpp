@@ -159,8 +159,8 @@ void OneShotAnalysisState::bufferizeInPlace(OpOperand &operand) {
   if (inplaceBufferized.contains(&operand))
     return;
   inplaceBufferized.insert(&operand);
-  for (OpResult result : getAliasingOpResults(operand))
-    aliasInfo.unionSets(result, operand.get());
+  for (AliasingOpResult alias : getAliasingOpResults(operand))
+    aliasInfo.unionSets(alias.opResult, operand.get());
   ++statNumTensorInPlace;
 }
 
@@ -222,7 +222,7 @@ void OneShotAnalysisState::gatherUndefinedTensorUses(Operation *op) {
 
       // If there is no preceding definition, the tensor contents are
       // undefined.
-      if (findDefinitions(opResult).empty())
+      if (findDefinitionsCached(opResult).empty())
         for (OpOperand &use : opResult.getUses())
           undefinedTensorUses.insert(&use);
     }
@@ -473,7 +473,8 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
     // In the above example, if uRead is the OpOperand of reading_op, the
     // definition is %0. Note that operations that create an alias but do not
     // bufferize to a memory write (such as ExtractSliceOp) are skipped.
-    SetVector<Value> definitions = state.findDefinitions(uRead->get());
+    const SetVector<Value> &definitions =
+        state.findDefinitionsCached(uRead->get());
     if (definitions.empty()) {
       // Fast path: No conflict if there are no definitions.
       LLVM_DEBUG(llvm::dbgs()
@@ -595,7 +596,8 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
         // use.
         AliasingOpResultList aliases =
             state.getAliasingOpResults(*uConflictingWrite);
-        if (aliases.size() == 1 && aliases[0] == definition) {
+        if (aliases.getNumAliases() == 1 &&
+            aliases.getAliases()[0].opResult == definition) {
           LLVM_DEBUG(llvm::dbgs()
                      << "    no conflict: definition and write are same\n");
           continue;
@@ -652,9 +654,10 @@ static void getAliasingReads(DenseSet<OpOperand *> &res, Value root,
       // there would then be no flow of data from the extract_slice operand to
       // its result's uses.)
       if (!state.bufferizesToMemoryWrite(use)) {
-        AliasingOpResultList opResults = state.getAliasingOpResults(use);
-        if (llvm::any_of(opResults,
-                         [&](OpResult r) { return state.isValueRead(r); }))
+        AliasingOpResultList aliases = state.getAliasingOpResults(use);
+        if (llvm::any_of(aliases, [&](AliasingOpResult a) {
+              return state.isValueRead(a.opResult);
+            }))
           res.insert(&use);
       }
     }
@@ -697,9 +700,9 @@ static bool wouldCreateReadAfterWriteInterference(
   DenseSet<OpOperand *> usesRead, usesWrite;
   getAliasingReads(usesRead, operand.get(), state);
   getAliasingInplaceWrites(usesWrite, operand.get(), state);
-  for (OpResult result : state.getAliasingOpResults(operand)) {
-    getAliasingReads(usesRead, result, state);
-    getAliasingInplaceWrites(usesWrite, result, state);
+  for (AliasingOpResult alias : state.getAliasingOpResults(operand)) {
+    getAliasingReads(usesRead, alias.opResult, state);
+    getAliasingInplaceWrites(usesWrite, alias.opResult, state);
   }
   if (!checkConsistencyOnly && state.bufferizesToMemoryWrite(operand))
     usesWrite.insert(&operand);
@@ -724,62 +727,42 @@ static void annotateNonWritableTensor(Value value) {
   }
 }
 
-/// Check the reverse SSA use-def chain (following aliasing OpOperands) for
-/// non-writable tensor values. Stop searching when an out-of-place bufferized
-/// OpOperand was found (or when the OpOperand was not bufferized yet).
-/// `currentOpOperand` is assumed to be in-place, even if that decision was not
-/// materialized in `aliasInfo` yet.
-static bool
-hasPrecedingAliasingNonWritableTensor(Value value, OpOperand *currentOpOperand,
-                                      const OneShotAnalysisState &state) {
-  SmallVector<Value> worklist;
-  worklist.push_back(value);
-  while (!worklist.empty()) {
-    Value nextVal = worklist.pop_back_val();
-    if (!state.isWritable(nextVal)) {
-      if (state.getOptions().printConflicts)
-        annotateNonWritableTensor(nextVal);
-      return true;
-    }
-
-    // If `nextVal` is not a BlockArgument: End of use-def chain reached.
-    auto opResult = nextVal.dyn_cast<OpResult>();
-    if (!opResult)
-      continue;
-
-    // Follow reverse SSA use-def chain.
-    AliasingOpOperandList aliasingOpOperands =
-        state.getAliasingOpOperands(opResult);
-    for (OpOperand *opOperand : aliasingOpOperands)
-      if (state.isInPlace(*opOperand) || currentOpOperand == opOperand)
-        worklist.push_back(opOperand->get());
-  }
-  return false;
-}
-
 /// Return true if bufferizing `operand` inplace would create a write to a
 /// non-writable buffer.
 static bool
 wouldCreateWriteToNonWritableBuffer(OpOperand &operand,
                                     OneShotAnalysisState &state,
                                     bool checkConsistencyOnly = false) {
-  // Collect writes of all aliases of OpOperand and OpResult.
-  DenseSet<OpOperand *> usesWrite;
-  getAliasingInplaceWrites(usesWrite, operand.get(), state);
-  for (OpResult result : state.getAliasingOpResults(operand)) {
-    getAliasingInplaceWrites(usesWrite, result, state);
-  }
-  if (!checkConsistencyOnly && state.bufferizesToMemoryWrite(operand))
-    usesWrite.insert(&operand);
+  bool foundWrite =
+      !checkConsistencyOnly && state.bufferizesToMemoryWrite(operand);
 
-  // Assuming that `operand` bufferizes in-place: For each write (to each
-  // alias), check if there is a non-writable tensor in the reverse SSA use-def
-  // chain.
-  for (OpOperand *uWrite : usesWrite) {
-    if (hasPrecedingAliasingNonWritableTensor(uWrite->get(), &operand, state)) {
-      LLVM_DEBUG(llvm::dbgs() << "=> NOT WRITABLE\n");
-      return true;
+  if (!foundWrite) {
+    // Collect writes of all aliases of OpOperand and OpResult.
+    DenseSet<OpOperand *> usesWrite;
+    getAliasingInplaceWrites(usesWrite, operand.get(), state);
+    for (AliasingOpResult alias : state.getAliasingOpResults(operand))
+      getAliasingInplaceWrites(usesWrite, alias.opResult, state);
+    foundWrite = !usesWrite.empty();
+  }
+
+  if (!foundWrite)
+    return false;
+
+  // Look for a read-only tensor among all aliases.
+  bool foundReadOnly = false;
+  auto checkReadOnly = [&](Value v) {
+    if (!state.isWritable(v)) {
+      foundReadOnly = true;
+      if (state.getOptions().printConflicts)
+        annotateNonWritableTensor(v);
     }
+  };
+  state.applyOnAliases(operand.get(), checkReadOnly);
+  for (AliasingOpResult alias : state.getAliasingOpResults(operand))
+    state.applyOnAliases(alias.opResult, checkReadOnly);
+  if (foundReadOnly) {
+    LLVM_DEBUG(llvm::dbgs() << "=> NOT WRITABLE\n");
+    return true;
   }
 
   return false;
@@ -788,6 +771,19 @@ wouldCreateWriteToNonWritableBuffer(OpOperand &operand,
 //===----------------------------------------------------------------------===//
 // Bufferization analyses.
 //===----------------------------------------------------------------------===//
+
+// Find the values that define the contents of the given value.
+const llvm::SetVector<Value> &
+OneShotAnalysisState::findDefinitionsCached(Value value) {
+  if (!cachedDefinitions.count(value)) {
+    cachedDefinitions[value] = findValueInReverseUseDefChain(
+        value, [&](Value v) { return this->bufferizesToMemoryWrite(v); },
+        /*followEquivalentOnly=*/false, /*alwaysIncludeLeaves=*/false);
+  }
+  return cachedDefinitions[value];
+}
+
+void OneShotAnalysisState::resetCache() { cachedDefinitions.clear(); }
 
 /// Determine if `operand` can be bufferized in-place.
 static LogicalResult
@@ -832,16 +828,50 @@ static bool hasTensorSemantics(Operation *op) {
 /// Analyze equivalence of tied OpResult/OpOperand pairs of the given ops.
 static void equivalenceAnalysis(SmallVector<Operation *> &ops,
                                 OneShotAnalysisState &state) {
-  for (Operation *op : ops)
-    if (auto bufferizableOp = state.getOptions().dynCastBufferizableOp(op))
-      for (OpResult opResult : op->getOpResults())
-        if (opResult.getType().isa<TensorType>())
-          for (OpOperand *opOperand :
-               bufferizableOp.getAliasingOpOperands(opResult, state))
-            if (state.isInPlace(*opOperand))
-              if (bufferizableOp.bufferRelation(opResult, state) ==
-                  BufferRelation::Equivalent)
-                state.unionEquivalenceClasses(opResult, opOperand->get());
+  for (Operation *op : ops) {
+    if (auto bufferizableOp = state.getOptions().dynCastBufferizableOp(op)) {
+      for (OpResult opResult : op->getOpResults()) {
+        if (!opResult.getType().isa<TensorType>())
+          continue;
+        AliasingOpOperandList aliases = state.getAliasingOpOperands(opResult);
+        if (aliases.getNumAliases() == 0)
+          // Nothing to do if there are no aliasing OpOperands.
+          continue;
+
+        Value firstOperand = aliases.begin()->opOperand->get();
+        bool allEquivalent = true;
+        for (AliasingOpOperand alias : aliases) {
+          bool isEquiv = alias.relation == BufferRelation::Equivalent;
+          bool isInPlace = state.isInPlace(*alias.opOperand);
+          Value operand = alias.opOperand->get();
+          if (isEquiv && isInPlace && alias.isDefinite) {
+            // Found a definite, equivalent alias. Merge equivalence sets.
+            // There can only be one definite alias, so we can stop here.
+            state.unionEquivalenceClasses(opResult, operand);
+            allEquivalent = false;
+            break;
+          }
+          if (!isEquiv || !isInPlace)
+            allEquivalent = false;
+          if (!state.areEquivalentBufferizedValues(operand, firstOperand))
+            allEquivalent = false;
+        }
+
+        // If all "maybe" aliases are equivalent and the OpResult is not a new
+        // allocation, it is a definite, equivalent alias. E.g.:
+        //
+        // aliasingOpOperands(%r) = {(%t0, EQUIV, MAYBE), (%t1, EQUIV, MAYBE)}
+        // aliasingOpResults(%t0) = {(%r, EQUIV, MAYBE)}
+        // aliasingOpResults(%t1) = {(%r, EQUIV, MAYBE)}
+        // %r = arith.select %c, %t0, %t1 : tensor<?xf32>
+        //
+        // If %t0 and %t1 are equivalent, it is safe to union the equivalence
+        // classes of %r, %t0 and %t1.
+        if (allEquivalent && !bufferizableOp.bufferizesToAllocation(opResult))
+          state.unionEquivalenceClasses(opResult, firstOperand);
+      }
+    }
+  }
 }
 
 /// Analyze equivalence of tied OpResult/OpOperand pairs of all ops contained

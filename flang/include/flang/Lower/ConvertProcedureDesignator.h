@@ -23,6 +23,9 @@ class Location;
 namespace fir {
 class ExtendedValue;
 }
+namespace hlfir {
+class EntityWithAttributes;
+}
 namespace Fortran::evaluate {
 struct ProcedureDesignator;
 }
@@ -36,6 +39,13 @@ class SymMap;
 /// fir::CharBoxValue for character procedure designator (the CharBoxValue
 /// length carries the result length if it is known).
 fir::ExtendedValue convertProcedureDesignator(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const Fortran::evaluate::ProcedureDesignator &proc,
+    Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx);
+
+/// Lower a procedure designator to a !fir.boxproc<()->() or
+/// tuple<!fir.boxproc<()->(), len>.
+hlfir::EntityWithAttributes convertProcedureDesignatorToHLFIR(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     const Fortran::evaluate::ProcedureDesignator &proc,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx);

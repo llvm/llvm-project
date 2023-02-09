@@ -93,3 +93,35 @@ fir::ExtendedValue Fortran::lower::convertProcedureDesignator(
   }
   return funcPtr;
 }
+
+hlfir::EntityWithAttributes Fortran::lower::convertProcedureDesignatorToHLFIR(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const Fortran::evaluate::ProcedureDesignator &proc,
+    Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
+  fir::ExtendedValue procExv =
+      convertProcedureDesignator(loc, converter, proc, symMap, stmtCtx);
+  // Directly package the procedure address as a fir.boxproc or
+  // tuple<fir.boxbroc, len> so that it can be returned as a single mlir::Value.
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  mlir::Value funcAddr = fir::getBase(procExv);
+  if (!funcAddr.getType().isa<fir::BoxProcType>()) {
+    mlir::Type boxTy =
+        Fortran::lower::getUntypedBoxProcType(&converter.getMLIRContext());
+    if (auto host = Fortran::lower::argumentHostAssocs(converter, funcAddr))
+      funcAddr = builder.create<fir::EmboxProcOp>(
+          loc, boxTy, llvm::ArrayRef<mlir::Value>{funcAddr, host});
+    else
+      funcAddr = builder.create<fir::EmboxProcOp>(loc, boxTy, funcAddr);
+  }
+
+  mlir::Value res = procExv.match(
+      [&](const fir::CharBoxValue &box) -> mlir::Value {
+        mlir::Type tupleTy =
+            fir::factory::getCharacterProcedureTupleType(funcAddr.getType());
+        return fir::factory::createCharacterProcedureTuple(
+            builder, loc, tupleTy, funcAddr, box.getLen());
+      },
+      [funcAddr](const auto &) { return funcAddr; });
+  return hlfir::EntityWithAttributes{res};
+}

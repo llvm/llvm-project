@@ -10,7 +10,7 @@
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_SQRT_H
 
 #include "src/__support/common.h"
-#include "src/__support/macros/architectures.h"
+#include "src/__support/macros/properties/architectures.h"
 
 #if !defined(LIBC_TARGET_ARCH_IS_X86)
 #error "Invalid include"
