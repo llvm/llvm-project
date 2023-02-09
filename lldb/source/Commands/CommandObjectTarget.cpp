@@ -1582,6 +1582,8 @@ static void DumpSymbolContextList(ExecutionContextScope *exe_scope,
       sc.GetAddressRange(eSymbolContextEverything, 0, true, range);
 
       DumpAddress(exe_scope, range.GetBaseAddress(), verbose, all_ranges, strm);
+      if (i != (num_matches - 1))
+        strm.EOL();
     }
   }
   strm.IndentLess();
