@@ -228,8 +228,8 @@ static bool canBeHoisted(Operation *op,
          isMemoryEffectFree(op) && op->getNumRegions() == 0;
 }
 
-/// Return a value yielded by `warpOp` which statifies the filter lamdba
-/// condition and is not dead.
+/// Return a value yielded by `warpOp` with no other uses which statifies the
+/// filter lamdba condition and is not dead.
 static OpOperand *getWarpResult(WarpExecuteOnLane0Op warpOp,
                                 const std::function<bool(Operation *)> &fn) {
   auto yield = cast<vector::YieldOp>(
@@ -237,7 +237,7 @@ static OpOperand *getWarpResult(WarpExecuteOnLane0Op warpOp,
   for (OpOperand &yieldOperand : yield->getOpOperands()) {
     Value yieldValues = yieldOperand.get();
     Operation *definedOp = yieldValues.getDefiningOp();
-    if (definedOp && fn(definedOp)) {
+    if (definedOp && definedOp->hasOneUse() && fn(definedOp)) {
       if (!warpOp.getResult(yieldOperand.getOperandNumber()).use_empty())
         return &yieldOperand;
     }
