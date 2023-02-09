@@ -113,16 +113,17 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
                                    func::FuncOp funcOp,
                                    LLVM::LLVMFuncOp newFuncOp) {
   auto type = funcOp.getFunctionType();
-  auto [wrapperFuncType, resultIsNowArg] =
+  auto [wrapperFuncType, resultStructType] =
       typeConverter.convertFunctionTypeCWrapper(type);
 
   SmallVector<NamedAttribute, 4> attributes;
   // Only modify the argument and result attributes when the result is now an
   // argument.
-  if (resultIsNowArg)
+  if (resultStructType)
     prependEmptyArgAttr(rewriter, attributes, funcOp);
-  filterFuncAttributes(funcOp, /*filterArgAndResAttrs=*/resultIsNowArg,
-                       attributes);
+  filterFuncAttributes(
+      funcOp, /*filterArgAndResAttrs=*/static_cast<bool>(resultStructType),
+      attributes);
   auto wrapperFuncOp = rewriter.create<LLVM::LLVMFuncOp>(
       loc, llvm::formatv("_mlir_ciface_{0}", funcOp.getName()).str(),
       wrapperFuncType, LLVM::Linkage::External, /*dsoLocal*/ false,
@@ -132,16 +133,18 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
   rewriter.setInsertionPointToStart(wrapperFuncOp.addEntryBlock());
 
   SmallVector<Value, 8> args;
-  size_t argOffset = resultIsNowArg ? 1 : 0;
-  for (auto &en : llvm::enumerate(type.getInputs())) {
-    Value arg = wrapperFuncOp.getArgument(en.index() + argOffset);
-    if (auto memrefType = en.value().dyn_cast<MemRefType>()) {
-      Value loaded = rewriter.create<LLVM::LoadOp>(loc, arg);
+  size_t argOffset = resultStructType ? 1 : 0;
+  for (auto &[index, argType] : llvm::enumerate(type.getInputs())) {
+    Value arg = wrapperFuncOp.getArgument(index + argOffset);
+    if (auto memrefType = argType.dyn_cast<MemRefType>()) {
+      Value loaded = rewriter.create<LLVM::LoadOp>(
+          loc, typeConverter.convertType(memrefType), arg);
       MemRefDescriptor::unpack(rewriter, loc, loaded, memrefType, args);
       continue;
     }
-    if (en.value().isa<UnrankedMemRefType>()) {
-      Value loaded = rewriter.create<LLVM::LoadOp>(loc, arg);
+    if (argType.isa<UnrankedMemRefType>()) {
+      Value loaded = rewriter.create<LLVM::LoadOp>(
+          loc, typeConverter.convertType(argType), arg);
       UnrankedMemRefDescriptor::unpack(rewriter, loc, loaded, args);
       continue;
     }
@@ -151,7 +154,7 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
 
   auto call = rewriter.create<LLVM::CallOp>(loc, newFuncOp, args);
 
-  if (resultIsNowArg) {
+  if (resultStructType) {
     rewriter.create<LLVM::StoreOp>(loc, call.getResult(),
                                    wrapperFuncOp.getArgument(0));
     rewriter.create<LLVM::ReturnOp>(loc, ValueRange{});
@@ -175,7 +178,7 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
                                  LLVM::LLVMFuncOp newFuncOp) {
   OpBuilder::InsertionGuard guard(builder);
 
-  auto [wrapperType, resultIsNowArg] =
+  auto [wrapperType, resultStructType] =
       typeConverter.convertFunctionTypeCWrapper(funcOp.getFunctionType());
   // This conversion can only fail if it could not convert one of the argument
   // types. But since it has been applied to a non-wrapper function before, it
@@ -185,10 +188,11 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
   SmallVector<NamedAttribute, 4> attributes;
   // Only modify the argument and result attributes when the result is now an
   // argument.
-  if (resultIsNowArg)
+  if (resultStructType)
     prependEmptyArgAttr(builder, attributes, funcOp);
-  filterFuncAttributes(funcOp, /*filterArgAndResAttrs=*/resultIsNowArg,
-                       attributes);
+  filterFuncAttributes(
+      funcOp, /*filterArgAndResAttrs=*/static_cast<bool>(resultStructType),
+      attributes);
 
   // Create the auxiliary function.
   auto wrapperFunc = builder.create<LLVM::LLVMFuncOp>(
@@ -204,14 +208,15 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
   args.reserve(type.getNumInputs());
   ValueRange wrapperArgsRange(newFuncOp.getArguments());
 
-  if (resultIsNowArg) {
+  if (resultStructType) {
     // Allocate the struct on the stack and pass the pointer.
     Type resultType =
         wrapperType.cast<LLVM::LLVMFunctionType>().getParamType(0);
     Value one = builder.create<LLVM::ConstantOp>(
         loc, typeConverter.convertType(builder.getIndexType()),
         builder.getIntegerAttr(builder.getIndexType(), 1));
-    Value result = builder.create<LLVM::AllocaOp>(loc, resultType, one);
+    Value result =
+        builder.create<LLVM::AllocaOp>(loc, resultType, resultStructType, one);
     args.push_back(result);
   }
 
@@ -234,12 +239,12 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
                     builder, loc, typeConverter, unrankedMemRefType,
                     wrapperArgsRange.take_front(numToDrop));
 
-      auto ptrTy = LLVM::LLVMPointerType::get(packed.getType());
+      auto ptrTy = typeConverter.getPointerType(packed.getType());
       Value one = builder.create<LLVM::ConstantOp>(
           loc, typeConverter.convertType(builder.getIndexType()),
           builder.getIntegerAttr(builder.getIndexType(), 1));
-      Value allocated =
-          builder.create<LLVM::AllocaOp>(loc, ptrTy, one, /*alignment=*/0);
+      Value allocated = builder.create<LLVM::AllocaOp>(
+          loc, ptrTy, packed.getType(), one, /*alignment=*/0);
       builder.create<LLVM::StoreOp>(loc, packed, allocated);
       arg = allocated;
     } else {
@@ -253,8 +258,9 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
 
   auto call = builder.create<LLVM::CallOp>(loc, wrapperFunc, args);
 
-  if (resultIsNowArg) {
-    Value result = builder.create<LLVM::LoadOp>(loc, args.front());
+  if (resultStructType) {
+    Value result =
+        builder.create<LLVM::LoadOp>(loc, resultStructType, args.front());
     builder.create<LLVM::ReturnOp>(loc, result);
   } else {
     builder.create<LLVM::ReturnOp>(loc, call.getResults());
@@ -734,6 +740,7 @@ struct ConvertFuncToLLVMPass
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
     options.dataLayout = llvm::DataLayout(this->dataLayout);
+    options.useOpaquePointers = useOpaquePointers;
 
     LLVMTypeConverter typeConverter(&getContext(), options,
                                     &dataLayoutAnalysis);

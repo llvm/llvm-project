@@ -245,10 +245,9 @@ Type LLVMTypeConverter::convertFunctionSignature(
 
 /// Converts the function type to a C-compatible format, in particular using
 /// pointers to memref descriptors for arguments.
-std::pair<Type, bool>
+std::pair<LLVM::LLVMFunctionType, LLVM::LLVMStructType>
 LLVMTypeConverter::convertFunctionTypeCWrapper(FunctionType type) {
   SmallVector<Type, 4> inputs;
-  bool resultIsNowArg = false;
 
   Type resultType = type.getNumResults() == 0
                         ? LLVM::LLVMVoidType::get(&getContext())
@@ -256,12 +255,12 @@ LLVMTypeConverter::convertFunctionTypeCWrapper(FunctionType type) {
   if (!resultType)
     return {};
 
-  if (auto structType = resultType.dyn_cast<LLVM::LLVMStructType>()) {
+  auto structType = resultType.dyn_cast<LLVM::LLVMStructType>();
+  if (structType) {
     // Struct types cannot be safely returned via C interface. Make this a
     // pointer argument, instead.
-    inputs.push_back(LLVM::LLVMPointerType::get(structType));
+    inputs.push_back(getPointerType(structType));
     resultType = LLVM::LLVMVoidType::get(&getContext());
-    resultIsNowArg = true;
   }
 
   for (Type t : type.getInputs()) {
@@ -269,11 +268,11 @@ LLVMTypeConverter::convertFunctionTypeCWrapper(FunctionType type) {
     if (!converted || !LLVM::isCompatibleType(converted))
       return {};
     if (t.isa<MemRefType, UnrankedMemRefType>())
-      converted = LLVM::LLVMPointerType::get(converted);
+      converted = getPointerType(converted);
     inputs.push_back(converted);
   }
 
-  return {LLVM::LLVMFunctionType::get(resultType, inputs), resultIsNowArg};
+  return {LLVM::LLVMFunctionType::get(resultType, inputs), structType};
 }
 
 /// Convert a memref type into a list of LLVM IR types that will form the
