@@ -24,7 +24,7 @@ transform.sequence failures(propagate) {
 
 // -----
 
-// expected-error @below {{'transform.sequence' op expects trailing entry block arguments to be of type implementing TransformHandleTypeInterface or TransformParamTypeInterface}}
+// expected-error @below {{'transform.sequence' op expects trailing entry block arguments to be of type implementing TransformHandleTypeInterface, TransformValueHandleTypeInterface or TransformParamTypeInterface}}
 // expected-note @below {{argument #1 does not}}
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op, %arg1: i64):
@@ -166,11 +166,11 @@ transform.sequence failures(propagate) {
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
   // expected-error @below {{result #0 has more than one potential consumer}}
-  %0 = test_produce_param_or_forward_operand 42
+  %0 = test_produce_self_handle_or_forward_operand
   // expected-note @below {{used here as operand #0}}
-  test_consume_operand_if_matches_param_or_fail %0[42]
+  test_consume_operand_of_op_kind_or_fail %0, "transform.test_produce_self_handle_or_forward_operand"
   // expected-note @below {{used here as operand #0}}
-  test_consume_operand_if_matches_param_or_fail %0[42]
+  test_consume_operand_of_op_kind_or_fail %0, "transform.test_produce_self_handle_or_forward_operand"
 }
 
 // -----
@@ -178,13 +178,13 @@ transform.sequence failures(propagate) {
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
   // expected-error @below {{result #0 has more than one potential consumer}}
-  %0 = test_produce_param_or_forward_operand 42
+  %0 = test_produce_self_handle_or_forward_operand
   // expected-note @below {{used here as operand #0}}
-  test_consume_operand_if_matches_param_or_fail %0[42]
+  test_consume_operand_of_op_kind_or_fail %0, "transform.test_produce_self_handle_or_forward_operand"
   // expected-note @below {{used here as operand #0}}
   transform.sequence %0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
-    test_consume_operand_if_matches_param_or_fail %arg1[42]
+    test_consume_operand_of_op_kind_or_fail %arg1, "transform.test_produce_self_handle_or_forward_operand"
   }
 }
 
@@ -193,13 +193,13 @@ transform.sequence failures(propagate) {
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
   // expected-error @below {{result #0 has more than one potential consumer}}
-  %0 = test_produce_param_or_forward_operand 42
+  %0 = test_produce_self_handle_or_forward_operand
   // expected-note @below {{used here as operand #0}}
-  test_consume_operand_if_matches_param_or_fail %0[42]
+  test_consume_operand_of_op_kind_or_fail %0, "transform.test_produce_self_handle_or_forward_operand"
   transform.sequence %0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     // expected-note @below {{used here as operand #0}}
-    test_consume_operand_if_matches_param_or_fail %0[42]
+    test_consume_operand_of_op_kind_or_fail %0, "transform.test_produce_self_handle_or_forward_operand"
   }
 }
 
@@ -208,15 +208,15 @@ transform.sequence failures(propagate) {
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
   // expected-error @below {{result #0 has more than one potential consumer}}
-  %0 = test_produce_param_or_forward_operand 42
+  %0 = test_produce_self_handle_or_forward_operand
   // expected-note @below {{used here as operand #0}}
-  test_consume_operand_if_matches_param_or_fail %0[42]
+  test_consume_operand_of_op_kind_or_fail %0, "transform.test_produce_self_handle_or_forward_operand"
   // expected-note @below {{used here as operand #0}}
   transform.sequence %0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     transform.sequence %arg1 : !pdl.operation failures(propagate) {
     ^bb2(%arg2: !pdl.operation):
-      test_consume_operand_if_matches_param_or_fail %arg2[42]
+      test_consume_operand_of_op_kind_or_fail %arg2, "transform.test_produce_self_handle_or_forward_operand"
     }
   }
 }
@@ -257,14 +257,14 @@ transform.alternatives {
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
   // expected-error @below {{result #0 has more than one potential consumer}}
-  %0 = test_produce_param_or_forward_operand 42
+  %0 = test_produce_self_handle_or_forward_operand
   // expected-note @below {{used here as operand #0}}
   transform.foreach %0 : !pdl.operation {
   ^bb1(%arg1: !pdl.operation):
-    transform.test_consume_operand %arg1
+    transform.test_consume_operand %arg1 : !pdl.operation
   }
   // expected-note @below {{used here as operand #0}}
-  transform.test_consume_operand %0
+  transform.test_consume_operand %0 : !pdl.operation
 }
 
 // -----

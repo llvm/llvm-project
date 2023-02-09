@@ -39,37 +39,79 @@ def TestTransformTestDialectParamType
   let assemblyFormat = "";
 }
 
-def TestProduceParamOrForwardOperandOp
-  : Op<Transform_Dialect, "test_produce_param_or_forward_operand",
+def TestProduceSelfHandleOrForwardOperandOp
+  : Op<Transform_Dialect, "test_produce_self_handle_or_forward_operand",
        [DeclareOpInterfaceMethods<TransformOpInterface>,
         DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
-  let arguments = (ins
-     Optional<PDL_Operation>:$operand,
-     OptionalAttr<I64Attr>:$parameter);
+  let arguments = (ins Optional<PDL_Operation>:$operand);
   let results = (outs PDL_Operation:$res);
-  let assemblyFormat = "(`from` $operand^)? ($parameter^)? attr-dict";
+  let assemblyFormat = "($operand^)? attr-dict";
   let cppNamespace = "::mlir::test";
-  let hasVerifier = 1;
+}
+
+def TestProduceValueHandleToSelfOperand
+  : Op<Transform_Dialect, "test_produce_value_handle_to_self_operand",
+       [DeclareOpInterfaceMethods<TransformOpInterface>,
+        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let arguments = (ins TransformHandleTypeInterface:$in);
+  let results = (outs TransformValueHandleTypeInterface:$out);
+  let assemblyFormat = "$in attr-dict `:` functional-type(operands, results)";
+  let cppNamespace = "::mlir::test";
+  
+}
+
+def TestProduceValueHandleToResult
+  : Op<Transform_Dialect, "test_produce_value_handle_to_result",
+       [TransformEachOpTrait, TransformOpInterface,
+        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let arguments = (ins TransformHandleTypeInterface:$in,
+                       I64Attr:$number);
+  let results = (outs TransformValueHandleTypeInterface:$out);
+  let assemblyFormat = "$in `,` $number attr-dict `:` functional-type(operands, results)";
+  let cppNamespace = "::mlir::test";
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::Operation *target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+    
+def TestProduceValueHandleToArgumentOfParentBlock
+  : Op<Transform_Dialect, "test_produce_value_handle_to_argument_of_parent_block",
+       [TransformEachOpTrait, TransformOpInterface,
+        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let arguments = (ins TransformHandleTypeInterface:$in,
+                       I64Attr:$number);
+  let results = (outs TransformValueHandleTypeInterface:$out);
+  let assemblyFormat = "$in `,` $number attr-dict `:` functional-type(operands, results)";
+  let cppNamespace = "::mlir::test";
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::Operation *target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
 }
 
 def TestConsumeOperand : Op<Transform_Dialect, "test_consume_operand",
      [DeclareOpInterfaceMethods<TransformOpInterface>,
       DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let arguments = (ins
-    PDL_Operation:$operand,
+    Transform_AnyHandleOrParamType:$operand,
     Optional<PDL_Operation>:$second_operand);
-  let assemblyFormat = "$operand (`,` $second_operand^)? attr-dict";
+  let assemblyFormat = "$operand (`,` $second_operand^)? attr-dict `:` type($operand)";
   let cppNamespace = "::mlir::test";
 }
 
-def TestConsumeOperandIfMatchesParamOrFail
-  : Op<Transform_Dialect, "test_consume_operand_if_matches_param_or_fail",
+def TestConsumeOperandOfOpKindOrFail
+  : Op<Transform_Dialect, "test_consume_operand_of_op_kind_or_fail",
        [DeclareOpInterfaceMethods<TransformOpInterface>,
         DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let arguments = (ins
     PDL_Operation:$operand,
-    I64Attr:$parameter);
-  let assemblyFormat = "$operand `[` $parameter `]` attr-dict";
+    StrAttr:$op_kind);
+  let assemblyFormat = "$operand `,` $op_kind attr-dict";
   let cppNamespace = "::mlir::test";
 }
 
@@ -82,6 +124,16 @@ def TestPrintRemarkAtOperandOp
     StrAttr:$message);
   let assemblyFormat =
     "$operand `,` $message attr-dict `:` type($operand)";
+  let cppNamespace = "::mlir::test";
+}
+
+def TestPrintRemarkAtOperandValue
+  : Op<Transform_Dialect, "test_print_remark_at_operand_value",
+       [DeclareOpInterfaceMethods<TransformOpInterface>,
+        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let arguments = (ins TransformValueHandleTypeInterface:$in,
+                       StrAttr:$message);
+  let assemblyFormat = "$in `,` $message attr-dict `:` type($in)";
   let cppNamespace = "::mlir::test";
 }
 
@@ -107,8 +159,9 @@ def TestRemapOperandPayloadToSelfOp
   : Op<Transform_Dialect, "test_remap_operand_to_self",
        [DeclareOpInterfaceMethods<TransformOpInterface>,
         DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
-  let arguments = (ins  PDL_Operation:$operand);
-  let assemblyFormat = "$operand attr-dict";
+  let arguments = (ins PDL_Operation:$operand);
+  let results = (outs Optional<TransformHandleTypeInterface>:$out);        
+  let assemblyFormat = "$operand attr-dict (`:` type($out)^)?";
   let cppNamespace = "::mlir::test";
 }
 
@@ -345,6 +398,15 @@ def TestProduceNullParamOp
       [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
        DeclareOpInterfaceMethods<TransformOpInterface>]> {
   let results = (outs TransformParamTypeInterface:$out);
+  let assemblyFormat = "attr-dict `:` type($out)";
+  let cppNamespace = "::mlir::test";
+}
+
+def TestProduceNullValueOp
+  : Op<Transform_Dialect, "test_produce_null_value",
+       [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+        DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let results = (outs TransformValueHandleTypeInterface:$out);
   let assemblyFormat = "attr-dict `:` type($out)";
   let cppNamespace = "::mlir::test";
 }

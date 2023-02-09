@@ -38,12 +38,14 @@ void transform::detail::checkImplementsTransformOpInterface(
 void transform::detail::checkImplementsTransformHandleTypeInterface(
     TypeID typeID, MLIRContext *context) {
   const auto &abstractType = AbstractType::lookup(typeID, context);
-  assert(
-      (abstractType.hasInterface(
-           TransformHandleTypeInterface::getInterfaceID()) ||
-       abstractType.hasInterface(
-           TransformParamTypeInterface::getInterfaceID())) &&
-      "expected Transform dialect type to implement one of the two interfaces");
+  assert((abstractType.hasInterface(
+              TransformHandleTypeInterface::getInterfaceID()) ||
+          abstractType.hasInterface(
+              TransformParamTypeInterface::getInterfaceID()) ||
+          abstractType.hasInterface(
+              TransformValueHandleTypeInterface::getInterfaceID())) &&
+         "expected Transform dialect type to implement one of the three "
+         "interfaces");
 }
 #endif // NDEBUG
 
