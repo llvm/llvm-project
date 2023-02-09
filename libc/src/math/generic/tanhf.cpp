@@ -8,7 +8,7 @@
 
 #include "src/math/tanhf.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/macros/cpu_features.h"
+#include "src/__support/macros/properties/cpu_features.h"
 #include "src/math/generic/explogxf.h"
 
 namespace __llvm_libc {

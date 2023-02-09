@@ -82,7 +82,7 @@ libc_support_library(
         "src/__support/endian.h",
         "src/__support/macros/properties/architectures.h",
         "src/__support/macros/attributes.h",
-        "src/__support/macros/cpu_features.h",
+        "src/__support/macros/properties/cpu_features.h",
     ],
     deps = [":libc_root"],
 )
