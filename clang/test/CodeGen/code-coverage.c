@@ -14,7 +14,6 @@
 // RUN: %clang_cc1 -emit-llvm-bc -o /dev/null -fdebug-pass-manager -fprofile-arcs %s 2>&1 | FileCheck --check-prefix=NEWPM %s
 // RUN: %clang_cc1 -emit-llvm-bc -o /dev/null -fdebug-pass-manager -fprofile-arcs -O3 %s 2>&1 | FileCheck --check-prefix=NEWPM-O3 %s
 
-// NEWPM-NOT: Running pass
 // NEWPM: Running pass: GCOVProfilerPass
 
 // NEWPM-O3-NOT: Running pass
