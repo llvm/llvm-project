@@ -102,11 +102,9 @@ define i32 @oversized_ADDV_512(ptr %arr)  {
 define i8 @addv_combine_i8(<8 x i8> %a1, <8 x i8> %a2) {
 ; CHECK-LABEL: addv_combine_i8:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    add v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    addv b0, v0.8b
-; CHECK-NEXT:    addv b1, v1.8b
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    add w0, w8, w9
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
   %rdx.1 = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> %a1)
@@ -118,11 +116,9 @@ entry:
 define i16 @addv_combine_i16(<4 x i16> %a1, <4 x i16> %a2) {
 ; CHECK-LABEL: addv_combine_i16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    add v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    addv h0, v0.4h
-; CHECK-NEXT:    addv h1, v1.4h
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    add w0, w8, w9
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
   %rdx.1 = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> %a1)

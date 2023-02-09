@@ -102,4 +102,23 @@ contains
 ! CHECK: %[[MASK_BOX_NONE:.*]] = fir.convert %[[EMBOXED_MASK]] : (!fir.box<!fir.array<20x20x!fir.logical<4>>>) -> !fir.box<none>
 ! CHECK: %{{.*}} = fir.call @_FortranAPack(%[[RES_BOX_NONE]], %[[I_BOX_NONE]], %[[MASK_BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
 
+  subroutine check_unpack(r)
+    class(p1), intent(in) :: r(:,:)
+  end subroutine
+
+  subroutine test_temp_from_unpack(v, m, f)
+    class(p1), intent(in) :: v(:), f(:,:)
+    logical, intent(in) :: m(:,:)
+    call check_unpack(unpack(v,m,f))
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpoly_tmpPtest_temp_from_unpack(
+! CHECK-SAME: %[[V:.*]]: !fir.class<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>> {fir.bindc_name = "v"}, %[[M:.*]]: !fir.box<!fir.array<?x?x!fir.logical<4>>> {fir.bindc_name = "m"}, %[[F:.*]]: !fir.class<!fir.array<?x?x!fir.type<_QMpoly_tmpTp1{a:i32}>>> {fir.bindc_name = "f"}) {
+! CHECK: %[[TMP_RES:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>>
+! CHECK: %[[TMP_BOX_NONE:.*]] = fir.convert %[[TMP_RES]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[V_BOX_NONE:.*]] = fir.convert %[[V]] : (!fir.class<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>) -> !fir.box<none>
+! CHECK: %[[M_BOX_NONE:.*]] = fir.convert %[[M]] : (!fir.box<!fir.array<?x?x!fir.logical<4>>>) -> !fir.box<none>
+! CHECK: %[[F_BOX_NONE:.*]] = fir.convert %[[F]] : (!fir.class<!fir.array<?x?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>) -> !fir.box<none>
+! CHECK: %{{.*}} = fir.call @_FortranAUnpack(%[[TMP_BOX_NONE]], %[[V_BOX_NONE]], %[[M_BOX_NONE]], %[[F_BOX_NONE]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+
 end module

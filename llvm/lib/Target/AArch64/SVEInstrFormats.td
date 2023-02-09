@@ -430,6 +430,13 @@ multiclass SVE_1_Op_PassthruUndef_Round_Pat<ValueType vtd, SDPatternOperator op,
             (inst $Op3, $Op1, $Op2)>;
 }
 
+def SVEDup0 : ComplexPattern<vAny, 0, "SelectDupZero", []>;
+
+class SVE_1_Op_PassthruZero_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
+                   ValueType vt2, Instruction inst>
+   : Pat<(vtd (op (vtd (SVEDup0)), vt1:$Op1, vt2:$Op2)),
+        (inst (IMPLICIT_DEF), $Op1, $Op2)>;
+
 class SVE_1_Op_Imm_OptLsl_Pat<ValueType vt, SDPatternOperator op, ZPRRegOp zprty,
                               ValueType it, ComplexPattern cpx, Instruction inst>
   : Pat<(vt (op (vt zprty:$Op1), (vt (splat_vector (it (cpx i32:$imm, i32:$shift)))))),
@@ -506,7 +513,6 @@ class SVE_4_Op_Imm_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
 : Pat<(vtd (op vt1:$Op1, vt2:$Op2, vt3:$Op3, (vt4 ImmTy:$Op4))),
       (inst $Op1, $Op2, $Op3, ImmTy:$Op4)>;
 
-def SVEDup0 : ComplexPattern<vAny, 0, "SelectDupZero", []>;
 def SVEDup0Undef : ComplexPattern<vAny, 0, "SelectDupZeroOrUndef", []>;
 
 let AddedComplexity = 1 in {
@@ -520,11 +526,6 @@ class SVE_3_Op_Pat_Shift_Imm_SelZero<ValueType vtd, SDPatternOperator op,
                                      Operand vt3, Instruction inst>
 : Pat<(vtd (op vt1:$Op1, (vselect vt1:$Op1, vt2:$Op2, (SVEDup0)), (i32 (vt3:$Op3)))),
       (inst $Op1, $Op2, vt3:$Op3)>;
-
-class SVE_2_Op_Pat_Zero<ValueType vtd, SDPatternOperator op, ValueType vt1,
-                   ValueType vt2, Instruction inst>
-   : Pat<(vtd (op (vtd (SVEDup0)), vt1:$Op1, vt2:$Op2)),
-        (inst (IMPLICIT_DEF), $Op1, $Op2)>;
 }
 
 //
@@ -2930,9 +2931,9 @@ multiclass sve2_fp_un_pred_zeroing_hsd<SDPatternOperator op> {
   def _ZERO_S : PredOneOpPassthruPseudo<NAME # _S, ZPR32, FalseLanesZero>;
   def _ZERO_D : PredOneOpPassthruPseudo<NAME # _D, ZPR64, FalseLanesZero>;
 
-  def : SVE_2_Op_Pat_Zero<nxv8i16, op, nxv8i1, nxv8f16, !cast<Pseudo>(NAME # _ZERO_H)>;
-  def : SVE_2_Op_Pat_Zero<nxv4i32, op, nxv4i1, nxv4f32, !cast<Pseudo>(NAME # _ZERO_S)>;
-  def : SVE_2_Op_Pat_Zero<nxv2i64, op, nxv2i1, nxv2f64, !cast<Pseudo>(NAME # _ZERO_D)>;
+  def : SVE_1_Op_PassthruZero_Pat<nxv8i16, op, nxv8i1, nxv8f16, !cast<Pseudo>(NAME # _ZERO_H)>;
+  def : SVE_1_Op_PassthruZero_Pat<nxv4i32, op, nxv4i1, nxv4f32, !cast<Pseudo>(NAME # _ZERO_S)>;
+  def : SVE_1_Op_PassthruZero_Pat<nxv2i64, op, nxv2i1, nxv2f64, !cast<Pseudo>(NAME # _ZERO_D)>;
 }
 
 multiclass sve2_fp_convert_down_odd_rounding<string asm, string op> {

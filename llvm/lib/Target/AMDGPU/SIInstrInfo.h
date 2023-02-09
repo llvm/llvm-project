@@ -801,6 +801,10 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::FPAtomic;
   }
 
+  static bool isNeverUniform(const MachineInstr &MI){
+    return MI.getDesc().TSFlags & SIInstrFlags::IsNeverUniform;
+  }
+
   static bool doesNotReadTiedSource(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::TiedSourceNotRead;
   }

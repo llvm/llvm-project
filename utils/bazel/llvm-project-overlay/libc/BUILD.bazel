@@ -63,6 +63,7 @@ cc_library(
 libc_support_library(
     name = "__support_compiler_features",
     hdrs = ["src/__support/macros/compiler_features.h"],
+    deps = [":libc_root"],
 )
 
 libc_support_library(

@@ -133,6 +133,9 @@ enum : uint64_t {
 
   // Whether tied sources will be read.
   TiedSourceNotRead = UINT64_C(1) << 60,
+
+  // Is never uniform.
+  IsNeverUniform = UINT64_C(1) << 61,
 };
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.

@@ -3,6 +3,7 @@ Test SBProcess APIs, including ReadMemory(), WriteMemory(), and others.
 """
 
 import lldb
+import sys
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.lldbutil import get_stopped_thread, state_type_to_str
@@ -72,19 +73,21 @@ class ProcessAPITestCase(TestBase):
             exe=False,
             startstr=b'x')
 
-        # Try to read an impossibly large amount of memory; swig
-        # will try to malloc it and fail, we should get an error 
-        # result.
-        error = lldb.SBError()
-        content = process.ReadMemory(
-                val.AddressOf().GetValueAsUnsigned(), 
-                0xffffffffffffffe8, error)
-        if error.Success():
-            self.assertFalse(error.Success(), "SBProcessReadMemory claims to have "
-                      "successfully read 0xffffffffffffffe8 bytes")
-        if self.TraceOn():
-            print("Tried to read 0xffffffffffffffe8 bytes, got error message: ",
-                  error.GetCString())
+        if self.platformIsDarwin():
+          # Try to read an impossibly large amount of memory; swig
+          # will try to malloc it and fail, we should get an error 
+          # result.
+          error = lldb.SBError()
+          bigsize = sys.maxsize - 8;
+          content = process.ReadMemory(
+                  val.AddressOf().GetValueAsUnsigned(), 
+                  bigsize, error)
+          if error.Success():
+              self.assertFalse(error.Success(), "SBProcessReadMemory claims to have "
+                        "successfully read 0x%x bytes" % bigsize)
+          if self.TraceOn():
+              print("Tried to read 0x%x bytes, got error message: %s" %
+                    (bigsize, error.GetCString()))
 
         # Read (char *)my_char_ptr.
         val = frame.FindValue("my_char_ptr", lldb.eValueTypeVariableGlobal)

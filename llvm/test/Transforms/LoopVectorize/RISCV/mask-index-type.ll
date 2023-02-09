@@ -50,9 +50,9 @@ define void @test(ptr noalias nocapture %a, ptr noalias nocapture %b, i32 %v) {
 ; VLENUNK-NEXT:    [[TMP19:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP15]]
 ; VLENUNK-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[TMP18]], i32 0
 ; VLENUNK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32.p0(ptr [[TMP20]], i32 4, <vscale x 2 x i1> [[TMP16]], <vscale x 2 x i32> poison)
-; VLENUNK-NEXT:    [[TMP21:%.*]] = call i64 @llvm.vscale.i64()
-; VLENUNK-NEXT:    [[TMP22:%.*]] = mul i64 [[TMP21]], 2
-; VLENUNK-NEXT:    [[TMP23:%.*]] = getelementptr i32, ptr [[TMP18]], i64 [[TMP22]]
+; VLENUNK-NEXT:    [[TMP21:%.*]] = call i32 @llvm.vscale.i32()
+; VLENUNK-NEXT:    [[TMP22:%.*]] = mul i32 [[TMP21]], 2
+; VLENUNK-NEXT:    [[TMP23:%.*]] = getelementptr i32, ptr [[TMP18]], i32 [[TMP22]]
 ; VLENUNK-NEXT:    [[WIDE_MASKED_LOAD2:%.*]] = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32.p0(ptr [[TMP23]], i32 4, <vscale x 2 x i1> [[TMP17]], <vscale x 2 x i32> poison)
 ; VLENUNK-NEXT:    [[TMP24:%.*]] = xor <vscale x 2 x i1> [[TMP16]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
 ; VLENUNK-NEXT:    [[TMP25:%.*]] = xor <vscale x 2 x i1> [[TMP17]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
@@ -64,9 +64,9 @@ define void @test(ptr noalias nocapture %a, ptr noalias nocapture %b, i32 %v) {
 ; VLENUNK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP15]]
 ; VLENUNK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i32, ptr [[TMP28]], i32 0
 ; VLENUNK-NEXT:    store <vscale x 2 x i32> [[TMP26]], ptr [[TMP30]], align 4
-; VLENUNK-NEXT:    [[TMP31:%.*]] = call i64 @llvm.vscale.i64()
-; VLENUNK-NEXT:    [[TMP32:%.*]] = mul i64 [[TMP31]], 2
-; VLENUNK-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i32, ptr [[TMP28]], i64 [[TMP32]]
+; VLENUNK-NEXT:    [[TMP31:%.*]] = call i32 @llvm.vscale.i32()
+; VLENUNK-NEXT:    [[TMP32:%.*]] = mul i32 [[TMP31]], 2
+; VLENUNK-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i32, ptr [[TMP28]], i32 [[TMP32]]
 ; VLENUNK-NEXT:    store <vscale x 2 x i32> [[TMP27]], ptr [[TMP33]], align 4
 ; VLENUNK-NEXT:    [[TMP34:%.*]] = call i64 @llvm.vscale.i64()
 ; VLENUNK-NEXT:    [[TMP35:%.*]] = mul i64 [[TMP34]], 4
@@ -95,7 +95,7 @@ define void @test(ptr noalias nocapture %a, ptr noalias nocapture %b, i32 %v) {
 ; VLENUNK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX2]], align 4
 ; VLENUNK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; VLENUNK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; VLENUNK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; VLENUNK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; VLENUNK:       for.end:
 ; VLENUNK-NEXT:    ret void
 ;

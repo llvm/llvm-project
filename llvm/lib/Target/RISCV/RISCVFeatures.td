@@ -463,6 +463,13 @@ def HasVendorXVentanaCondOps : Predicate<"Subtarget->hasVendorXVentanaCondOps()"
                                 AssemblerPredicate<(all_of FeatureVendorXVentanaCondOps),
                                 "'XVentanaCondOps' (Ventana Conditional Ops)">;
 
+def FeatureVendorXTHeadBa
+    : SubtargetFeature<"xtheadba", "HasVendorXTHeadBa", "true",
+                       "'xtheadba' (T-Head address calculation instructions)">;
+def HasVendorXTHeadBa : Predicate<"Subtarget->hasVendorXTHeadBa()">,
+                                  AssemblerPredicate<(all_of FeatureVendorXTHeadBa),
+                                  "'xtheadba' (T-Head address calculation instructions)">;
+
 def FeatureVendorXTHeadVdot
     : SubtargetFeature<"xtheadvdot", "HasVendorXTHeadVdot", "true",
                        "'xtheadvdot' (T-Head Vector Extensions for Dot)",

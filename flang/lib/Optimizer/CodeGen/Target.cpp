@@ -492,6 +492,50 @@ struct TargetAMDGPU : public GenericTarget<TargetAMDGPU> {
 };
 } // namespace
 
+//===----------------------------------------------------------------------===//
+// LoongArch64 linux target specifics.
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
+  using GenericTarget::GenericTarget;
+
+  static constexpr int defaultWidth = 64;
+
+  CodeGenSpecifics::Marshalling
+  complexArgumentType(mlir::Location loc, mlir::Type eleTy) const override {
+    CodeGenSpecifics::Marshalling marshal;
+    const auto *sem = &floatToSemantics(kindMap, eleTy);
+    if (sem == &llvm::APFloat::IEEEsingle() ||
+        sem == &llvm::APFloat::IEEEdouble()) {
+      // Two distinct element type arguments (re, im)
+      marshal.emplace_back(eleTy, AT{});
+      marshal.emplace_back(eleTy, AT{});
+    } else {
+      TODO(loc, "complex for this precision");
+    }
+    return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  complexReturnType(mlir::Location loc, mlir::Type eleTy) const override {
+    CodeGenSpecifics::Marshalling marshal;
+    const auto *sem = &floatToSemantics(kindMap, eleTy);
+    if (sem == &llvm::APFloat::IEEEsingle() ||
+        sem == &llvm::APFloat::IEEEdouble()) {
+      // Use a type that will be translated into LLVM as:
+      // { t, t }   struct of 2 eleTy, byVal
+      marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(),
+                                                mlir::TypeRange{eleTy, eleTy}),
+                           AT{/*alignment=*/0, /*byval=*/true});
+    } else {
+      TODO(loc, "complex for this precision");
+    }
+    return marshal;
+  }
+};
+} // namespace
+
 // Instantiate the overloaded target instance based on the triple value.
 // TODO: Add other targets to this file as needed.
 std::unique_ptr<fir::CodeGenSpecifics>
@@ -527,6 +571,9 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
   case llvm::Triple::ArchType::amdgcn:
     return std::make_unique<TargetAMDGPU>(ctx, std::move(trp),
                                           std::move(kindMap));
+  case llvm::Triple::ArchType::loongarch64:
+    return std::make_unique<TargetLoongArch64>(ctx, std::move(trp),
+                                               std::move(kindMap));
   }
   TODO(mlir::UnknownLoc::get(ctx), "target not implemented");
 }
