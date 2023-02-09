@@ -222,7 +222,7 @@ void OneShotAnalysisState::gatherUndefinedTensorUses(Operation *op) {
 
       // If there is no preceding definition, the tensor contents are
       // undefined.
-      if (findDefinitions(opResult).empty())
+      if (findDefinitionsCached(opResult).empty())
         for (OpOperand &use : opResult.getUses())
           undefinedTensorUses.insert(&use);
     }
@@ -473,7 +473,8 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
     // In the above example, if uRead is the OpOperand of reading_op, the
     // definition is %0. Note that operations that create an alias but do not
     // bufferize to a memory write (such as ExtractSliceOp) are skipped.
-    SetVector<Value> definitions = state.findDefinitions(uRead->get());
+    const SetVector<Value> &definitions =
+        state.findDefinitionsCached(uRead->get());
     if (definitions.empty()) {
       // Fast path: No conflict if there are no definitions.
       LLVM_DEBUG(llvm::dbgs()
@@ -768,6 +769,19 @@ wouldCreateWriteToNonWritableBuffer(OpOperand &operand,
 //===----------------------------------------------------------------------===//
 // Bufferization analyses.
 //===----------------------------------------------------------------------===//
+
+// Find the values that define the contents of the given value.
+const llvm::SetVector<Value> &
+OneShotAnalysisState::findDefinitionsCached(Value value) {
+  if (!cachedDefinitions.count(value)) {
+    cachedDefinitions[value] = findValueInReverseUseDefChain(
+        value, [&](Value v) { return this->bufferizesToMemoryWrite(v); },
+        /*followEquivalentOnly=*/false, /*alwaysIncludeLeaves=*/false);
+  }
+  return cachedDefinitions[value];
+}
+
+void OneShotAnalysisState::resetCache() { cachedDefinitions.clear(); }
 
 /// Determine if `operand` can be bufferized in-place.
 static LogicalResult
