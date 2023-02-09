@@ -55623,7 +55623,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         if (ConcatMask.size() == (NumOps * NumSrcElts)) {
           SDValue Src = concatSubVectors(Ops[0].getOperand(1),
                                          Ops[1].getOperand(1), DAG, DL);
-          MVT IntMaskSVT = MVT::getIntegerVT(VT.getScalarSizeInBits());
+          MVT IntMaskSVT = MVT::getIntegerVT(EltSizeInBits);
           MVT IntMaskVT = MVT::getVectorVT(IntMaskSVT, NumOps * NumSrcElts);
           SDValue Mask = getConstVector(ConcatMask, IntMaskVT, DAG, DL, true);
           return DAG.getNode(X86ISD::VPERMV, DL, VT, Mask, Src);
@@ -55654,7 +55654,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                                           Ops[1].getOperand(0), DAG, DL);
           SDValue Src1 = concatSubVectors(Ops[0].getOperand(2),
                                           Ops[1].getOperand(2), DAG, DL);
-          MVT IntMaskSVT = MVT::getIntegerVT(VT.getScalarSizeInBits());
+          MVT IntMaskSVT = MVT::getIntegerVT(EltSizeInBits);
           MVT IntMaskVT = MVT::getVectorVT(IntMaskSVT, NumOps * NumSrcElts);
           SDValue Mask = getConstVector(ConcatMask, IntMaskVT, DAG, DL, true);
           return DAG.getNode(X86ISD::VPERMV3, DL, VT, Src0, Mask, Src1);
@@ -55777,7 +55777,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     case ISD::VSELECT:
     case X86ISD::BLENDV:
       if (!IsSplat && VT.is256BitVector() && Ops.size() == 2 &&
-          (VT.getScalarSizeInBits() >= 32 || Subtarget.hasInt256()) &&
+          (EltSizeInBits >= 32 || Subtarget.hasInt256()) &&
           IsConcatFree(VT, Ops, 1) && IsConcatFree(VT, Ops, 2)) {
         EVT SelVT = Ops[0].getOperand(0).getValueType();
         SelVT = SelVT.getDoubleNumVectorElementsVT(*DAG.getContext());
