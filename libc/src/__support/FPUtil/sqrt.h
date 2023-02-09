@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_SQRT_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_SQRT_H
 
-#include "src/__support/macros/architectures.h"
+#include "src/__support/macros/properties/architectures.h"
 
 #if defined(LIBC_TARGET_ARCH_IS_X86_64)
 #include "x86_64/sqrt.h"

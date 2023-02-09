@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/macros/architectures.h"
+#include "src/__support/macros/properties/architectures.h"
 #include "src/fenv/fedisableexcept.h"
 #include "src/fenv/feenableexcept.h"
 #include "src/fenv/fegetexcept.h"

@@ -11,7 +11,7 @@
 #include "src/fenv/fetestexcept.h"
 
 #include "src/__support/FPUtil/FEnvImpl.h"
-#include "src/__support/macros/architectures.h"
+#include "src/__support/macros/properties/architectures.h"
 #include "test/UnitTest/FPExceptMatcher.h"
 #include "test/UnitTest/Test.h"
 
