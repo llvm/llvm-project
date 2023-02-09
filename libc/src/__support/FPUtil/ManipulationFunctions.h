@@ -17,6 +17,7 @@
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/attributes.h"
 
 #include <limits.h>
 #include <math.h>
@@ -116,10 +117,10 @@ LIBC_INLINE T logb(T x) {
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T ldexp(T x, int exp) {
-  if (unlikely(exp == 0))
+  if (LIBC_UNLIKELY(exp == 0))
     return x;
   FPBits<T> bits(x);
-  if (unlikely(bits.is_zero() || bits.is_inf_or_nan()))
+  if (LIBC_UNLIKELY(bits.is_zero() || bits.is_inf_or_nan()))
     return x;
 
   // NormalFloat uses int32_t to store the true exponent value. We should ensure
