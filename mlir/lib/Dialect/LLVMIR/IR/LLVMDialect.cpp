@@ -2227,39 +2227,17 @@ LogicalResult LLVM::ConstantOp::verify() {
 OpFoldResult LLVM::ConstantOp::fold(FoldAdaptor) { return getValue(); }
 
 //===----------------------------------------------------------------------===//
-// Utility functions for parsing atomic ops
+// AtomicRMWOp
 //===----------------------------------------------------------------------===//
 
-// Helper function to parse a keyword into the specified attribute named by
-// `attrName`. The keyword must match one of the string values defined by the
-// AtomicOrdering enum. The resulting I64 attribute is added to the `result`
-// state.
-static ParseResult parseAtomicOrdering(OpAsmParser &parser,
-                                       OperationState &result,
-                                       StringRef attrName) {
-  SMLoc loc;
-  StringRef ordering;
-  if (parser.getCurrentLocation(&loc) || parser.parseKeyword(&ordering))
-    return failure();
-
-  // Replace the keyword `ordering` with an integer attribute.
-  auto kind = symbolizeAtomicOrdering(ordering);
-  if (!kind) {
-    return parser.emitError(loc)
-           << "'" << ordering << "' is an incorrect value of the '" << attrName
-           << "' attribute";
-  }
-
-  auto value = static_cast<int64_t>(*kind);
-  auto attr = parser.getBuilder().getI64IntegerAttr(value);
-  result.addAttribute(attrName, attr);
-
-  return success();
+void AtomicRMWOp::build(OpBuilder &builder, OperationState &state,
+                        AtomicBinOp binOp, Value ptr, Value val,
+                        AtomicOrdering ordering, StringRef syncscope,
+                        unsigned alignment, bool isVolatile) {
+  build(builder, state, val.getType(), binOp, ptr, val, ordering,
+        !syncscope.empty() ? builder.getStringAttr(syncscope) : nullptr,
+        alignment ? builder.getI64IntegerAttr(alignment) : nullptr, isVolatile);
 }
-
-//===----------------------------------------------------------------------===//
-// Verifier for LLVM::AtomicRMWOp.
-//===----------------------------------------------------------------------===//
 
 LogicalResult AtomicRMWOp::verify() {
   auto ptrType = getPtr().getType().cast<LLVM::LLVMPointerType>();
@@ -2297,13 +2275,25 @@ LogicalResult AtomicRMWOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// Verifier for LLVM::AtomicCmpXchgOp.
+// AtomicCmpXchgOp
 //===----------------------------------------------------------------------===//
 
 /// Returns an LLVM struct type that contains a value type and a boolean type.
 static LLVMStructType getValAndBoolStructType(Type valType) {
   auto boolType = IntegerType::get(valType.getContext(), 1);
   return LLVMStructType::getLiteral(valType.getContext(), {valType, boolType});
+}
+
+void AtomicCmpXchgOp::build(OpBuilder &builder, OperationState &state,
+                            Value ptr, Value cmp, Value val,
+                            AtomicOrdering successOrdering,
+                            AtomicOrdering failureOrdering, StringRef syncscope,
+                            unsigned alignment, bool isWeak, bool isVolatile) {
+  build(builder, state, getValAndBoolStructType(val.getType()), ptr, cmp, val,
+        successOrdering, failureOrdering,
+        !syncscope.empty() ? builder.getStringAttr(syncscope) : nullptr,
+        alignment ? builder.getI64IntegerAttr(alignment) : nullptr, isWeak,
+        isVolatile);
 }
 
 LogicalResult AtomicCmpXchgOp::verify() {
@@ -2331,35 +2321,13 @@ LogicalResult AtomicCmpXchgOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// Printer, parser and verifier for LLVM::FenceOp.
+// FenceOp
 //===----------------------------------------------------------------------===//
 
-// <operation> ::= `llvm.fence` (`syncscope(`strAttr`)`)? keyword
-// attribute-dict?
-ParseResult FenceOp::parse(OpAsmParser &parser, OperationState &result) {
-  StringAttr sScope;
-  StringRef syncscopeKeyword = "syncscope";
-  if (!failed(parser.parseOptionalKeyword(syncscopeKeyword))) {
-    if (parser.parseLParen() ||
-        parser.parseAttribute(sScope, syncscopeKeyword, result.attributes) ||
-        parser.parseRParen())
-      return failure();
-  } else {
-    result.addAttribute(syncscopeKeyword,
-                        parser.getBuilder().getStringAttr(""));
-  }
-  if (parseAtomicOrdering(parser, result, "ordering") ||
-      parser.parseOptionalAttrDict(result.attributes))
-    return failure();
-  return success();
-}
-
-void FenceOp::print(OpAsmPrinter &p) {
-  StringRef syncscopeKeyword = "syncscope";
-  p << ' ';
-  if (!(*this)->getAttr(syncscopeKeyword).cast<StringAttr>().getValue().empty())
-    p << "syncscope(" << (*this)->getAttr(syncscopeKeyword) << ") ";
-  p << stringifyAtomicOrdering(getOrdering());
+void FenceOp::build(OpBuilder &builder, OperationState &state,
+                    AtomicOrdering ordering, StringRef syncscope) {
+  build(builder, state, ordering,
+        syncscope.empty() ? nullptr : builder.getStringAttr(syncscope));
 }
 
 LogicalResult FenceOp::verify() {
