@@ -34,9 +34,6 @@ s_cbranch_cdbgsys_or_user 0
 s_cbranch_cdbgsys_and_user 0
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
-v_fmac_f64_dpp v[10:11], v[2:3], v[4:5] row_newbcast:1 row_mask:0xf bank_mask:0xf
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
-
 v_fmac_legacy_f32 v0, v1, v2
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
