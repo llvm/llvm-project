@@ -1329,7 +1329,7 @@ private:
     targetDesc.setRank(rewriter, loc, resultRank);
     SmallVector<Value, 4> sizes;
     UnrankedMemRefDescriptor::computeSizes(rewriter, loc, *getTypeConverter(),
-                                           targetDesc, sizes);
+                                           targetDesc, addressSpace, sizes);
     Value underlyingDescPtr = rewriter.create<LLVM::AllocaOp>(
         loc, getVoidPtrType(), IntegerType::get(getContext(), 8),
         sizes.front());
