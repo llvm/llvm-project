@@ -746,6 +746,13 @@ unsigned Module::getOverrideStackAlignment() const {
   return 0;
 }
 
+unsigned Module::getMaxTLSAlignment() const {
+  Metadata *MD = getModuleFlag("MaxTLSAlign");
+  if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
+    return CI->getZExtValue();
+  return 0;
+}
+
 void Module::setOverrideStackAlignment(unsigned Align) {
   addModuleFlag(ModFlagBehavior::Error, "override-stack-alignment", Align);
 }
