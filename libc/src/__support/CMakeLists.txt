@@ -33,7 +33,7 @@ add_header_library(
   HDRS
     common.h
     endian.h
-    macros/architectures.h
+    macros/properties/architectures.h
     macros/attributes.h
     macros/cpu_features.h
 )

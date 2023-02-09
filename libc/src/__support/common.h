@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SUPPORT_COMMON_H
 #define LLVM_LIBC_SUPPORT_COMMON_H
 
-#include "src/__support/macros/architectures.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/properties/architectures.h"
 
 #ifndef LLVM_LIBC_FUNCTION_ATTR
 #define LLVM_LIBC_FUNCTION_ATTR

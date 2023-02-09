@@ -13,7 +13,7 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/stringstream.h"
-#include "src/__support/macros/architectures.h"
+#include "src/__support/macros/properties/architectures.h"
 
 #include <stddef.h> // For size_t
 #include <stdint.h>

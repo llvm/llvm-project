@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/common.h"
-#include "src/__support/macros/architectures.h"
+#include "src/__support/macros/properties/architectures.h"
 #include "src/setjmp/setjmp_impl.h"
 
 #include <setjmp.h>
