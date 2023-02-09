@@ -3018,12 +3018,6 @@ LogicalResult LLVMDialect::verifyOperationAttribute(Operation *op,
     }
   }
 
-  if (attr.getName() == LLVMDialect::getStructAttrsAttrName()) {
-    return op->emitOpError()
-           << "'" << LLVM::LLVMDialect::getStructAttrsAttrName()
-           << "' is permitted only in argument or result attributes";
-  }
-
   // If the data layout attribute is present, it must use the LLVM data layout
   // syntax. Try parsing it and report errors in case of failure. Users of this
   // attribute may assume it is well-formed and can pass it to the (asserting)
@@ -3038,46 +3032,6 @@ LogicalResult LLVMDialect::verifyOperationAttribute(Operation *op,
   return op->emitOpError() << "expected '"
                            << LLVM::LLVMDialect::getDataLayoutAttrName()
                            << "' to be a string attributes";
-}
-
-LogicalResult LLVMDialect::verifyStructAttr(Operation *op, Attribute attr,
-                                            Type annotatedType) {
-  auto structType = annotatedType.dyn_cast<LLVMStructType>();
-  if (!structType) {
-    const auto emitIncorrectAnnotatedType = [&op]() {
-      return op->emitError()
-             << "expected '" << LLVMDialect::getStructAttrsAttrName()
-             << "' to annotate '!llvm.struct' or '!llvm.ptr<struct<...>>'";
-    };
-    const auto ptrType = annotatedType.dyn_cast<LLVMPointerType>();
-    if (!ptrType)
-      return emitIncorrectAnnotatedType();
-    structType = ptrType.getElementType().dyn_cast<LLVMStructType>();
-    if (!structType)
-      return emitIncorrectAnnotatedType();
-  }
-
-  const auto arrAttrs = attr.dyn_cast<ArrayAttr>();
-  if (!arrAttrs)
-    return op->emitError() << "expected '"
-                           << LLVMDialect::getStructAttrsAttrName()
-                           << "' to be an array attribute";
-
-  if (structType.getBody().size() != arrAttrs.size())
-    return op->emitError()
-           << "size of '" << LLVMDialect::getStructAttrsAttrName()
-           << "' must match the size of the annotated '!llvm.struct'";
-  return success();
-}
-
-static LogicalResult verifyFuncOpInterfaceStructAttr(Operation *op,
-                                                     Attribute attr,
-                                                     Type annotatedType) {
-  if (isa<FunctionOpInterface>(op))
-    return LLVMDialect::verifyStructAttr(op, attr, annotatedType);
-  return op->emitError() << "expected '"
-                         << LLVMDialect::getStructAttrsAttrName()
-                         << "' to be used on function-like operations";
 }
 
 LogicalResult LLVMDialect::verifyParameterAttribute(Operation *op,
@@ -3130,10 +3084,6 @@ LogicalResult LLVMDialect::verifyParameterAttribute(Operation *op,
                 "different type";
     return success();
   };
-
-  // Note: The struct parameter attributes are not lowered to LLVM IR.
-  if (name == LLVMDialect::getStructAttrsAttrName())
-    return verifyFuncOpInterfaceStructAttr(op, paramAttr.getValue(), paramType);
 
   // Check a unit attribute that is attached to a pointer value.
   if (name == LLVMDialect::getNoAliasAttrName() ||
