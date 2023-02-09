@@ -1,9 +1,6 @@
 // RUN: %clang_lsan %s -o %t
 // RUN: %env_lsan_opts=allocator_may_return_null=1:max_allocation_size_mb=1:use_stacks=0 not %run %t 2>&1 | FileCheck %s
 
-// Fixme: remove once test passes with hwasan
-// UNSUPPORTED: hwasan
-
 /// Fails when only leak sanitizer is enabled
 // UNSUPPORTED: arm-linux, armhf-linux
 
@@ -11,10 +8,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// CHECK: {{Leak|Address}}Sanitizer failed to allocate 0x100001 bytes
+// CHECK: {{.*}}Sanitizer failed to allocate 0x100001 bytes
 
-// CHECK: {{Leak|Address}}Sanitizer: detected memory leaks
-// CHECK: {{Leak|Address}}Sanitizer: 9 byte(s) leaked in 1 allocation(s).
+// CHECK: {{.*}}Sanitizer: detected memory leaks
+// CHECK: {{.*}}Sanitizer: 9 byte(s) leaked in 1 allocation(s).
 
 int main() {
   char *p = malloc(9);
