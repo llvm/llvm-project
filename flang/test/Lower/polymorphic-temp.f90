@@ -141,4 +141,26 @@ contains
 ! CHECK: %[[SHIFT_I64:.*]] = fir.convert %[[LOAD_SHIFT]] : (i32) -> i64
 ! CHECK: %{{.*}} = fir.call @_FortranACshiftVector(%[[RES_BOX_NONE]], %[[ARRAY_NONE]], %[[SHIFT_I64]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i64, !fir.ref<i8>, i32) -> none
 
+  subroutine check_eoshift(r)
+    class(p1) :: r(:)
+  end subroutine
+
+  subroutine test_temp_from_intrinsic_eoshift(a, shift, b)
+    class(p1), intent(in) :: a(20)
+    class(p1), intent(in) :: b
+    integer :: shift
+
+    call check_pack(eoshift(a, shift, b))
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpoly_tmpPtest_temp_from_intrinsic_eoshift(
+! CHECK-SAME: %[[ARRAY:.*]]: !fir.class<!fir.array<20x!fir.type<_QMpoly_tmpTp1{a:i32}>>> {fir.bindc_name = "a"}, %[[SHIFT:.*]]: !fir.ref<i32> {fir.bindc_name = "shift"}, %[[BOUNDARY:.*]]: !fir.class<!fir.type<_QMpoly_tmpTp1{a:i32}>> {fir.bindc_name = "b"}) {
+! CHECK: %[[TMP_RES:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>>
+! CHECK: %[[LOAD_SHIFT:.*]] = fir.load %[[SHIFT]] : !fir.ref<i32>
+! CHECK: %[[RES_BOX_NONE:.*]] = fir.convert %[[TMP_RES]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[ARRAY_NONE:.*]] = fir.convert %[[ARRAY]] : (!fir.class<!fir.array<20x!fir.type<_QMpoly_tmpTp1{a:i32}>>>) -> !fir.box<none>
+! CHECK: %[[SHIFT_I64:.*]] = fir.convert %[[LOAD_SHIFT]] : (i32) -> i64
+! CHECK: %[[BOUNDARY_NONE:.*]] = fir.convert %[[BOUNDARY]] : (!fir.class<!fir.type<_QMpoly_tmpTp1{a:i32}>>) -> !fir.box<none>
+! CHECK: %{{.*}} = fir.call @_FortranAEoshiftVector(%[[RES_BOX_NONE]], %[[ARRAY_NONE]], %[[SHIFT_I64]], %[[BOUNDARY_NONE]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i64, !fir.box<none>, !fir.ref<i8>, i32) -> none
+
 end module
