@@ -186,38 +186,23 @@ struct CallOpInterface
     auto aliasingReturnVals =
         funcState.aliasingReturnVals.lookup(funcOp).lookup(
             opOperand.getOperandNumber());
+
+    // Check if the aliasing OpResult is equivalent to the OpOperand.
+    std::optional<int64_t> equivalent = {};
+    if (aliasingReturnVals.size() == 1) {
+      equivalent = getEquivalentFuncArgIdx(funcOp, funcState,
+                                           aliasingReturnVals.front());
+      assert((!equivalent.has_value() ||
+              *equivalent == opOperand.getOperandNumber()) &&
+             "inconsistent analysis state");
+    }
     AliasingOpResultList result;
     for (int64_t resultIdx : aliasingReturnVals)
-      result.push_back(callOp->getOpResult(resultIdx));
+      result.addAlias({callOp->getOpResult(resultIdx),
+                       equivalent.has_value() ? BufferRelation::Equivalent
+                                              : BufferRelation::Unknown,
+                       /*isDefinite=*/equivalent.has_value()});
     return result;
-  }
-
-  BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const AnalysisState &state) const {
-    func::CallOp callOp = cast<func::CallOp>(op);
-    FuncOp funcOp = getCalledFunction(callOp);
-    assert(funcOp && "expected CallOp to a FuncOp");
-    if (getFuncOpAnalysisState(state, funcOp) !=
-        FuncOpAnalysisState::Analyzed) {
-      // Function not analyzed yet. The conservative answer is "None".
-      return BufferRelation::Unknown;
-    }
-
-    const FuncAnalysisState &funcState = getFuncAnalysisState(state);
-    std::optional<int64_t> maybeEquiv =
-        getEquivalentFuncArgIdx(funcOp, funcState, opResult.getResultNumber());
-    if (maybeEquiv) {
-#ifndef NDEBUG
-      SmallVector<OpOperand *> aliasingOpOperands =
-          getAliasingOpOperands(op, opResult, state);
-      assert(aliasingOpOperands.size() == 1 &&
-             "expected exactly 1 aliasing OpOperand");
-      assert(aliasingOpOperands.front()->getOperandNumber() == *maybeEquiv &&
-             "inconsistent analysis state");
-#endif
-      return BufferRelation::Equivalent;
-    }
-    return BufferRelation::Unknown;
   }
 
   /// All function arguments are writable. It is the responsibility of the

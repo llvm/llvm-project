@@ -25,7 +25,7 @@ namespace bufferization {
 class AnalysisState;
 class BufferizableOpInterface;
 
-/// Specify fine-grain relationship between buffers to enable more analysis.
+/// Specifies a fine-grain relationship between buffers to enable more analysis.
 enum class BufferRelation {
   Unknown,
   // TODO: ResultContainsOperand,
@@ -33,13 +33,65 @@ enum class BufferRelation {
   Equivalent
 };
 
+/// A maybe aliasing OpOperand. If `isDefinite` is `true`, the OpOperand is
+/// guaranteed to alias at runtime.
+struct AliasingOpOperand {
+  AliasingOpOperand(OpOperand *opOperand, BufferRelation relation,
+                    bool isDefinite = true)
+      : opOperand(opOperand), relation(relation), isDefinite(isDefinite) {}
+
+  OpOperand *opOperand;
+  BufferRelation relation;
+  bool isDefinite;
+};
+
+/// A maybe aliasing OpResult. If `isDefinite` is `true`, the OpResult is
+/// guaranteed to alias at runtime.
+struct AliasingOpResult {
+  AliasingOpResult(OpResult opResult, BufferRelation relation,
+                   bool isDefinite = true)
+      : opResult(opResult), relation(relation), isDefinite(isDefinite) {}
+
+  OpResult opResult;
+  BufferRelation relation;
+  bool isDefinite;
+};
+
+template <typename T> class AliasList {
+public:
+  /// Create an empty list of aliases.
+  AliasList<T>() = default;
+
+  /// Create a list of aliases.
+  AliasList<T>(std::initializer_list<T> elems) {
+    for (T alias : elems)
+      addAlias(alias);
+  }
+
+  /// Create a list of aliases.
+  AliasList<T>(SmallVector<T> &&aliases) : aliases(std::move(aliases)) {}
+
+  ArrayRef<T> getAliases() const { return aliases; }
+
+  size_t getNumAliases() const { return aliases.size(); }
+
+  void addAlias(T alias) { aliases.push_back(alias); }
+
+  auto begin() const { return aliases.begin(); }
+  auto end() const { return aliases.end(); }
+
+private:
+  /// The list of aliases.
+  SmallVector<T> aliases;
+};
+
 /// A list of possible aliasing OpOperands. This list models the runtime
 /// aliasing relationship for an OpResult.
-using AliasingOpOperandList = SmallVector<OpOperand *>;
+using AliasingOpOperandList = AliasList<AliasingOpOperand>;
 
 /// A list of possible aliasing OpResults. This list models the runtime
 /// aliasing relationship for an OpOperand.
-using AliasingOpResultList = SmallVector<OpResult>;
+using AliasingOpResultList = AliasList<AliasingOpResult>;
 
 class OpFilter {
 public:

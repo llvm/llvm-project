@@ -147,7 +147,7 @@ struct MaskOpInterface
                                      llvm::find(op->getOpResults(), opResult));
     auto yieldOp =
         cast<vector::YieldOp>(maskOp.getMaskRegion().front().getTerminator());
-    return {&yieldOp->getOpOperand(resultNum)};
+    return {{&yieldOp->getOpOperand(resultNum), BufferRelation::Equivalent}};
   }
 
   LogicalResult resolveConflicts(Operation *op, RewriterBase &rewriter,
@@ -217,11 +217,6 @@ struct MaskOpInterface
     replaceOpWithBufferizedValues(rewriter, maskOp, newReturnValues);
     return success();
   }
-
-  BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const AnalysisState &state) const {
-    return BufferRelation::Equivalent;
-  }
 };
 
 /// Bufferization of vector.yield. Replaced with a new vector.yield that
@@ -241,7 +236,8 @@ struct YieldOpInterface
 
   AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
-    return {op->getParentOp()->getResult(opOperand.getOperandNumber())};
+    return {{op->getParentOp()->getResult(opOperand.getOperandNumber()),
+             BufferRelation::Equivalent}};
   }
 
   bool mustBufferizeInPlace(Operation *op, OpOperand &opOperand,
