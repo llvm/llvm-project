@@ -13,7 +13,7 @@
 #include "src/__support/CPP/cstddef.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h"          //LIBC_INLINE
-#include "src/__support/macros/properties/compiler.h" // LIBC_HAS_BUILTIN
+#include "src/__support/macros/config.h"              // LIBC_HAS_BUILTIN
 
 #include <stddef.h> // size_t
 #include <stdint.h> // intptr_t / uintptr_t

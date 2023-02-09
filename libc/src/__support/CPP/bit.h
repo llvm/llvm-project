@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SUPPORT_CPP_BIT_H
 #define LLVM_LIBC_SUPPORT_CPP_BIT_H
 
-#include "src/__support/macros/properties/compiler.h"
+#include "src/__support/macros/config.h" // LIBC_HAS_BUILTIN
 
 namespace __llvm_libc::cpp {
 

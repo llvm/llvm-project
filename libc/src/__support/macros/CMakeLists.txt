@@ -1,6 +1,12 @@
 add_subdirectory(properties)
 
 add_header_library(
+  config
+  HDRS
+    config.h
+)
+
+add_header_library(
   attributes
   HDRS
     attributes.h
