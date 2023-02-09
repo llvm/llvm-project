@@ -17,7 +17,7 @@ add_header_library(
 add_header_library(
   compiler_features
   HDRS
-    macros/compiler_features.h
+    macros/properties/compiler.h
 )
 
 add_header_library(
