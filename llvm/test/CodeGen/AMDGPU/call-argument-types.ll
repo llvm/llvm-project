@@ -671,7 +671,7 @@ define amdgpu_kernel void @test_call_external_void_func_struct_i8_i32() #0 {
 ; GCN-NEXT: s_swappc_b64
 ; GCN-NOT: [[SP]]
 define amdgpu_kernel void @test_call_external_void_func_byval_struct_i8_i32() #0 {
-  %val = alloca { i8, i32 }, align 4, addrspace(5)
+  %val = alloca { i8, i32 }, align 8, addrspace(5)
   %gep0 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %val, i32 0, i32 0
   %gep1 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %val, i32 0, i32 1
   store i8 3, ptr addrspace(5) %gep0
@@ -702,8 +702,8 @@ define amdgpu_kernel void @test_call_external_void_func_byval_struct_i8_i32() #0
 ; GCN: buffer_store_byte [[LOAD_OUT_VAL0]], off
 ; GCN: buffer_store_dword [[LOAD_OUT_VAL1]], off
 define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval_struct_i8_i32(i32) #0 {
-  %in.val = alloca { i8, i32 }, align 4, addrspace(5)
-  %out.val = alloca { i8, i32 }, align 4, addrspace(5)
+  %in.val = alloca { i8, i32 }, align 8, addrspace(5)
+  %out.val = alloca { i8, i32 }, align 8, addrspace(5)
   %in.gep0 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %in.val, i32 0, i32 0
   %in.gep1 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %in.val, i32 0, i32 1
   store i8 3, ptr addrspace(5) %in.gep0
