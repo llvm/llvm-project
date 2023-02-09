@@ -44,6 +44,7 @@ libc_test(
     deps = [
         "//libc:__support_common",
         "//libc:__support_fputil_fenv_impl",
+        "//libc:__support_macros_properties_architectures",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -58,6 +59,7 @@ libc_test(
     deps = [
         "//libc:__support_common",
         "//libc:__support_fputil_fenv_impl",
+        "//libc:__support_macros_properties_architectures",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -95,6 +97,7 @@ libc_test(
     ],
     deps = [
         "//libc:__support_common",
+        "//libc:__support_macros_properties_architectures",
     ],
 )
 
