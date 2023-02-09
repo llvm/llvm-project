@@ -2039,11 +2039,20 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
         targetDiag(D->getLocation(), diag::note_defined_here, FD) << D;
     }
 
+    // RISC-V vector builtin types (RISCVVTypes.def)
+    if (Ty->isRVVType(/* Bitwidth */ 64, /* IsFloat */ false) &&
+        !Context.getTargetInfo().hasFeature("zve64x"))
+      Diag(Loc, diag::err_riscv_type_requires_extension, FD) << Ty << "zve64x";
     if (Ty->isRVVType(/* Bitwidth */ 16, /* IsFloat */ true) &&
-        !Context.getTargetInfo().hasFeature("experimental-zvfh")) {
+        !Context.getTargetInfo().hasFeature("experimental-zvfh"))
       Diag(Loc, diag::err_riscv_type_requires_extension, FD)
           << Ty << "zvfh";
-    }
+    if (Ty->isRVVType(/* Bitwidth */ 32, /* IsFloat */ true) &&
+        !Context.getTargetInfo().hasFeature("zve32f"))
+      Diag(Loc, diag::err_riscv_type_requires_extension, FD) << Ty << "zve32f";
+    if (Ty->isRVVType(/* Bitwidth */ 64, /* IsFloat */ true) &&
+        !Context.getTargetInfo().hasFeature("zve64d"))
+      Diag(Loc, diag::err_riscv_type_requires_extension, FD) << Ty << "zve64d";
 
     // Don't allow SVE types in functions without a SVE target.
     if (Ty->isSVESizelessBuiltinType() && FD && FD->hasBody()) {
