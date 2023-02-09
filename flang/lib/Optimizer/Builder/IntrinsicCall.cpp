@@ -4930,7 +4930,8 @@ IntrinsicLibrary::genTransfer(mlir::Type resultType,
                         ? resultType
                         : builder.getVarLenSeqTy(resultType, 1);
   fir::MutableBoxValue resultMutableBox =
-      fir::factory::createTempMutableBox(builder, loc, type);
+      fir::factory::createTempMutableBox(builder, loc, type, {},
+      fir::isPolymorphicType(mold.getType()) ? mold : mlir::Value{});
 
   if (moldRank == 0 && absentSize) {
     // This result is a scalar in this case.
