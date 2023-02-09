@@ -37,6 +37,29 @@ func.func @recursive_decomposition(%arg0: tuple<tuple<tuple<i1>>>) -> tuple<tupl
 
 // -----
 
+// Test case: Type that needs to be recursively decomposed at different recursion depths.
+
+// CHECK-LABEL:   func @mixed_recursive_decomposition(
+// CHECK-SAME:                 %[[ARG0:.*]]: i1,
+// CHECK-SAME:                 %[[ARG1:.*]]: i2) -> (i1, i2) {
+// CHECK:           %[[V0:.*]] = "test.make_tuple"() : () -> tuple<>
+// CHECK:           %[[V1:.*]] = "test.make_tuple"(%[[ARG0]]) : (i1) -> tuple<i1>
+// CHECK:           %[[V2:.*]] = "test.make_tuple"(%[[ARG1]]) : (i2) -> tuple<i2>
+// CHECK:           %[[V3:.*]] = "test.make_tuple"(%[[V2]]) : (tuple<i2>) -> tuple<tuple<i2>>
+// CHECK:           %[[V4:.*]] = "test.make_tuple"(%[[V0]], %[[V1]], %[[V3]]) : (tuple<>, tuple<i1>, tuple<tuple<i2>>) -> tuple<tuple<>, tuple<i1>, tuple<tuple<i2>>>
+// CHECK:           %[[V5:.*]] = "test.get_tuple_element"(%[[V4]]) {index = 0 : i32} : (tuple<tuple<>, tuple<i1>, tuple<tuple<i2>>>) -> tuple<>
+// CHECK:           %[[V6:.*]] = "test.get_tuple_element"(%[[V4]]) {index = 1 : i32} : (tuple<tuple<>, tuple<i1>, tuple<tuple<i2>>>) -> tuple<i1>
+// CHECK:           %[[V7:.*]] = "test.get_tuple_element"(%[[V6]]) {index = 0 : i32} : (tuple<i1>) -> i1
+// CHECK:           %[[V8:.*]] = "test.get_tuple_element"(%[[V4]]) {index = 2 : i32} : (tuple<tuple<>, tuple<i1>, tuple<tuple<i2>>>) -> tuple<tuple<i2>>
+// CHECK:           %[[V9:.*]] = "test.get_tuple_element"(%[[V8]]) {index = 0 : i32} : (tuple<tuple<i2>>) -> tuple<i2>
+// CHECK:           %[[V10:.*]] = "test.get_tuple_element"(%[[V9]]) {index = 0 : i32} : (tuple<i2>) -> i2
+// CHECK:           return %[[V7]], %[[V10]] : i1, i2
+func.func @mixed_recursive_decomposition(%arg0: tuple<tuple<>, tuple<i1>, tuple<tuple<i2>>>) -> tuple<tuple<>, tuple<i1>, tuple<tuple<i2>>> {
+  return %arg0 : tuple<tuple<>, tuple<i1>, tuple<tuple<i2>>>
+}
+
+// -----
+
 // Test case: Check decomposition of calls.
 
 // CHECK-LABEL:   func private @callee(i1, i32) -> (i1, i32)
@@ -85,6 +108,26 @@ func.func @caller(%arg0: tuple<>) -> tuple<> {
 func.func @unconverted_op_result() -> tuple<i1, i32> {
   %0 = "test.source"() : () -> (tuple<i1, i32>)
   return %0 : tuple<i1, i32>
+}
+
+// -----
+
+// Test case: Ensure decompositions are inserted properly around results of
+// unconverted ops in the case of different nesting levels.
+
+// CHECK-LABEL:   func @nested_unconverted_op_result(
+// CHECK-SAME:                 %[[ARG0:.*]]: i1,
+// CHECK-SAME:                 %[[ARG1:.*]]: i32) -> (i1, i32) {
+// CHECK:           %[[V0:.*]] = "test.make_tuple"(%[[ARG1]]) : (i32) -> tuple<i32>
+// CHECK:           %[[V1:.*]] = "test.make_tuple"(%[[ARG0]], %[[V0]]) : (i1, tuple<i32>) -> tuple<i1, tuple<i32>>
+// CHECK:           %[[V2:.*]] = "test.op"(%[[V1]]) : (tuple<i1, tuple<i32>>) -> tuple<i1, tuple<i32>>
+// CHECK:           %[[V3:.*]] = "test.get_tuple_element"(%[[V2]]) {index = 0 : i32} : (tuple<i1, tuple<i32>>) -> i1
+// CHECK:           %[[V4:.*]] = "test.get_tuple_element"(%[[V2]]) {index = 1 : i32} : (tuple<i1, tuple<i32>>) -> tuple<i32>
+// CHECK:           %[[V5:.*]] = "test.get_tuple_element"(%[[V4]]) {index = 0 : i32} : (tuple<i32>) -> i32
+// CHECK:           return %[[V3]], %[[V5]] : i1, i32
+func.func @nested_unconverted_op_result(%arg: tuple<i1, tuple<i32>>) -> tuple<i1, tuple<i32>> {
+  %0 = "test.op"(%arg) : (tuple<i1, tuple<i32>>) -> (tuple<i1, tuple<i32>>)
+  return %0 : tuple<i1, tuple<i32>>
 }
 
 // -----
