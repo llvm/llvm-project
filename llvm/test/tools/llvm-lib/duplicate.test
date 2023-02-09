@@ -6,9 +6,11 @@ RUN: mkdir -p %t
 
 RUN: llvm-mc -triple=x86_64-pc-windows-msvc -filetype=obj -o %t/foo.o %S/Inputs/a.s
 RUN: llvm-mc -triple=x86_64-pc-windows-msvc -filetype=obj -o %t/bar.o %S/Inputs/b.s
-RUN: llvm-lib -out:%t/foo.lib %t/foo.o %t/foo.o %t/bar.o
+RUN: llvm-mc -triple=x86_64-pc-windows-msvc -filetype=obj -o %t/abc.o %S/Inputs/abc.s
+RUN: llvm-lib -out:%t/foo.lib %t/foo.o %t/foo.o %t/abc.o %t/bar.o  %t/foo.o %t/foo.o
 
 RUN: llvm-ar t %t/foo.lib | FileCheck %s
-CHECK: foo.o
-CHECK-NOT: foo.o
 CHECK: bar.o
+CHECK-NEXT: abc.o
+CHECK-NEXT: foo.o
+CHECK-NOT: foo.o
