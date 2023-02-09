@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Internals.h"
 #include "clang/ARCMigrate/ARCMT.h"
+#include "Internals.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/DiagnosticCategories.h"
 #include "clang/Frontend/ASTUnit.h"
@@ -20,8 +20,8 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Serialization/ASTReader.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/TargetParser/Triple.h"
 #include <utility>
 using namespace clang;
 using namespace arcmt;

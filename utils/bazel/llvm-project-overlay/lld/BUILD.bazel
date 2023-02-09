@@ -4,7 +4,6 @@
 
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("//llvm:tblgen.bzl", "gentbl")
-
 load(
     "//:vars.bzl",
     "LLVM_VERSION",
@@ -52,6 +51,7 @@ cc_library(
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:Target",
+        "//llvm:TargetParser",
         "//llvm:config",
     ],
 )
@@ -105,6 +105,7 @@ cc_library(
         "//llvm:Passes",
         "//llvm:Remarks",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//llvm:TransformUtils",
         "//llvm:config",
     ],
@@ -158,6 +159,7 @@ cc_library(
         "//llvm:Support",
         "//llvm:Symbolize",
         "//llvm:Target",
+        "//llvm:TargetParser",
         "//llvm:TransformUtils",
         "//llvm:WindowsDriver",
         "//llvm:WindowsManifest",
@@ -190,6 +192,7 @@ cc_library(
         ":mingw_options_inc_gen",
         "//llvm:Option",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -298,6 +301,7 @@ cc_binary(
         ":MinGW",
         ":Wasm",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 

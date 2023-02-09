@@ -21,16 +21,6 @@ transform.with_pdl_patterns {
   }
 }
 
-// CHECK: transform.sequence
-// CHECK: ^{{.+}}(%[[ARG:.+]]: !pdl.operation):
-transform.sequence failures(propagate) {
-^bb0(%arg0: !pdl.operation):
-  // CHECK: with_pdl_patterns %[[ARG]] : !pdl.operation
-  with_pdl_patterns %arg0 : !pdl.operation {
-  ^bb1(%arg1: !pdl.operation):
-  }
-}
-
 // Using the same value multiple times without consuming it is fine.
 // CHECK: transform.sequence
 // CHECK: %[[V:.+]] = sequence %{{.*}} : !pdl.operation -> !pdl.operation

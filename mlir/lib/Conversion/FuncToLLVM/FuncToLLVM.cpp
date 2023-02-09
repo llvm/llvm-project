@@ -78,54 +78,26 @@ static void filterFuncAttributes(func::FuncOp func, bool filterArgAndResAttrs,
   }
 }
 
-/// Helper function for wrapping all attributes into a single DictionaryAttr
-static auto wrapAsStructAttrs(OpBuilder &b, ArrayAttr attrs) {
-  return DictionaryAttr::get(
-      b.getContext(),
-      b.getNamedAttr(LLVM::LLVMDialect::getStructAttrsAttrName(), attrs));
-}
-
-/// Combines all result attributes into a single DictionaryAttr
-/// and prepends to argument attrs.
-/// This is intended to be used to format the attributes for a C wrapper
-/// function when the result(s) is converted to the first function argument
-/// (in the multiple return case, all returns get wrapped into a single
-/// argument). The total number of argument attributes should be equal to
-/// (number of function arguments) + 1.
-static void
-prependResAttrsToArgAttrs(OpBuilder &builder,
-                          SmallVectorImpl<NamedAttribute> &attributes,
-                          func::FuncOp func) {
-  size_t numArguments = func.getNumArguments();
-  auto allAttrs = SmallVector<Attribute>(
-      numArguments + 1, DictionaryAttr::get(builder.getContext()));
-  NamedAttribute *argAttrs = nullptr;
-  for (auto *it = attributes.begin(); it != attributes.end();) {
-    if (it->getName() == func.getArgAttrsAttrName()) {
-      auto arrayAttrs = it->getValue().cast<ArrayAttr>();
-      assert(arrayAttrs.size() == numArguments &&
-             "Number of arg attrs and args should match");
-      std::copy(arrayAttrs.begin(), arrayAttrs.end(), allAttrs.begin() + 1);
-      argAttrs = it;
-    } else if (it->getName() == func.getResAttrsAttrName()) {
-      auto arrayAttrs = it->getValue().cast<ArrayAttr>();
-      assert(!arrayAttrs.empty() && "expected array to be non-empty");
-      allAttrs[0] = (arrayAttrs.size() == 1)
-                        ? arrayAttrs[0]
-                        : wrapAsStructAttrs(builder, arrayAttrs);
-      it = attributes.erase(it);
-      continue;
-    }
-    it++;
-  }
-
-  auto newArgAttrs = builder.getNamedAttr(func.getArgAttrsAttrName(),
-                                          builder.getArrayAttr(allAttrs));
-  if (!argAttrs) {
-    attributes.emplace_back(newArgAttrs);
+/// Adds a an empty set of argument attributes for the newly added argument in
+/// front of the existing ones.
+static void prependEmptyArgAttr(OpBuilder &builder,
+                                SmallVectorImpl<NamedAttribute> &newFuncAttrs,
+                                func::FuncOp func) {
+  auto argAttrs = func.getArgAttrs();
+  // Nothing to do when there were no arg attrs beforehand.
+  if (!argAttrs)
     return;
-  }
-  *argAttrs = newArgAttrs;
+
+  size_t numArguments = func.getNumArguments();
+  SmallVector<Attribute> newArgAttrs;
+  newArgAttrs.reserve(numArguments + 1);
+  // Insert empty dictionary for the new argument.
+  newArgAttrs.push_back(builder.getDictionaryAttr({}));
+
+  llvm::append_range(newArgAttrs, *argAttrs);
+  auto newNamedAttr = builder.getNamedAttr(func.getArgAttrsAttrName(),
+                                           builder.getArrayAttr(newArgAttrs));
+  newFuncAttrs.push_back(newNamedAttr);
 }
 
 /// Creates an auxiliary function with pointer-to-memref-descriptor-struct
@@ -141,12 +113,16 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
                                    func::FuncOp funcOp,
                                    LLVM::LLVMFuncOp newFuncOp) {
   auto type = funcOp.getFunctionType();
-  SmallVector<NamedAttribute, 4> attributes;
-  filterFuncAttributes(funcOp, /*filterArgAndResAttrs=*/false, attributes);
   auto [wrapperFuncType, resultIsNowArg] =
       typeConverter.convertFunctionTypeCWrapper(type);
+
+  SmallVector<NamedAttribute, 4> attributes;
+  // Only modify the argument and result attributes when the result is now an
+  // argument.
   if (resultIsNowArg)
-    prependResAttrsToArgAttrs(rewriter, attributes, funcOp);
+    prependEmptyArgAttr(rewriter, attributes, funcOp);
+  filterFuncAttributes(funcOp, /*filterArgAndResAttrs=*/resultIsNowArg,
+                       attributes);
   auto wrapperFuncOp = rewriter.create<LLVM::LLVMFuncOp>(
       loc, llvm::formatv("_mlir_ciface_{0}", funcOp.getName()).str(),
       wrapperFuncType, LLVM::Linkage::External, /*dsoLocal*/ false,
@@ -207,10 +183,13 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
   assert(wrapperType && "unexpected type conversion failure");
 
   SmallVector<NamedAttribute, 4> attributes;
-  filterFuncAttributes(funcOp, /*filterArgAndResAttrs=*/false, attributes);
-
+  // Only modify the argument and result attributes when the result is now an
+  // argument.
   if (resultIsNowArg)
-    prependResAttrsToArgAttrs(builder, attributes, funcOp);
+    prependEmptyArgAttr(builder, attributes, funcOp);
+  filterFuncAttributes(funcOp, /*filterArgAndResAttrs=*/resultIsNowArg,
+                       attributes);
+
   // Create the auxiliary function.
   auto wrapperFunc = builder.create<LLVM::LLVMFuncOp>(
       loc, llvm::formatv("_mlir_ciface_{0}", funcOp.getName()).str(),
@@ -312,8 +291,7 @@ protected:
       auto newResAttrDicts =
           (funcOp.getNumResults() == 1)
               ? resAttrDicts
-              : rewriter.getArrayAttr(
-                    {wrapAsStructAttrs(rewriter, resAttrDicts)});
+              : rewriter.getArrayAttr(rewriter.getDictionaryAttr({}));
       attributes.push_back(
           rewriter.getNamedAttr(funcOp.getResAttrsAttrName(), newResAttrDicts));
     }

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/atomic.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 // Tests in this file do not test atomicity as it would require using
 // threads, at which point it becomes a chicken and egg problem.

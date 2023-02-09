@@ -429,6 +429,9 @@ getOrDeclareFunction(llvm::StringRef name,
 mlir::Type getDummyProcedureType(const Fortran::semantics::Symbol &dummyProc,
                                  Fortran::lower::AbstractConverter &);
 
+/// Return !fir.boxproc<() -> ()> type.
+mlir::Type getUntypedBoxProcType(mlir::MLIRContext *context);
+
 /// Return true if \p ty is "!fir.ref<i64>", which is the interface for
 /// type(C_PTR/C_FUNPTR) passed by value.
 bool isCPtrArgByValueType(mlir::Type ty);

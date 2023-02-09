@@ -12,6 +12,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/Designator.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
@@ -19,7 +20,6 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/Sema/Designator.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/SemaInternal.h"
@@ -2340,19 +2340,17 @@ static void ExpandAnonymousFieldDesignator(Sema &SemaRef,
                                            DesignatedInitExpr *DIE,
                                            unsigned DesigIdx,
                                            IndirectFieldDecl *IndirectField) {
-  typedef DesignatedInitExpr::Designator Designator;
-
   // Build the replacement designators.
   SmallVector<Designator, 4> Replacements;
   for (IndirectFieldDecl::chain_iterator PI = IndirectField->chain_begin(),
        PE = IndirectField->chain_end(); PI != PE; ++PI) {
     if (PI + 1 == PE)
-      Replacements.push_back(Designator((IdentifierInfo *)nullptr,
-                                    DIE->getDesignator(DesigIdx)->getDotLoc(),
-                                DIE->getDesignator(DesigIdx)->getFieldLoc()));
+      Replacements.push_back(Designator::CreateFieldDesignator(
+          nullptr, DIE->getDesignator(DesigIdx)->getDotLoc(),
+          DIE->getDesignator(DesigIdx)->getFieldLoc()));
     else
-      Replacements.push_back(Designator((IdentifierInfo *)nullptr,
-                                        SourceLocation(), SourceLocation()));
+      Replacements.push_back(Designator::CreateFieldDesignator(
+          nullptr, SourceLocation(), SourceLocation()));
     assert(isa<FieldDecl>(*PI));
     Replacements.back().setField(cast<FieldDecl>(*PI));
   }
@@ -2495,7 +2493,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
     return hadError && !prevHadError;
   }
 
-  DesignatedInitExpr::Designator *D = DIE->getDesignator(DesigIdx);
+  Designator *D = DIE->getDesignator(DesigIdx);
   bool IsFirstDesignator = (DesigIdx == 0);
   if (IsFirstDesignator ? FullyStructuredList : StructuredList) {
     // Determine the structural initializer list that corresponds to the
@@ -2577,7 +2575,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
 
     FieldDecl *KnownField = D->getField();
     if (!KnownField) {
-      IdentifierInfo *FieldName = D->getFieldName();
+      const IdentifierInfo *FieldName = D->getFieldName();
       DeclContext::lookup_result Lookup = RT->getDecl()->lookup(FieldName);
       for (NamedDecl *ND : Lookup) {
         if (auto *FD = dyn_cast<FieldDecl>(ND)) {
@@ -2753,8 +2751,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
         // We can't designate an object within the flexible array
         // member (because GCC doesn't allow it).
         if (!VerifyOnly) {
-          DesignatedInitExpr::Designator *NextD
-            = DIE->getDesignator(DesigIdx + 1);
+          Designator *NextD = DIE->getDesignator(DesigIdx + 1);
           SemaRef.Diag(NextD->getBeginLoc(),
                        diag::err_designator_into_flexible_array_member)
               << SourceRange(NextD->getBeginLoc(), DIE->getEndLoc());
@@ -3214,40 +3211,32 @@ CheckArrayDesignatorExpr(Sema &S, Expr *Index, llvm::APSInt &Value) {
 
 ExprResult Sema::ActOnDesignatedInitializer(Designation &Desig,
                                             SourceLocation EqualOrColonLoc,
-                                            bool GNUSyntax,
-                                            ExprResult Init) {
-  typedef DesignatedInitExpr::Designator ASTDesignator;
-
+                                            bool GNUSyntax, ExprResult Init) {
   bool Invalid = false;
-  SmallVector<ASTDesignator, 32> Designators;
+  SmallVector<Designator, 32> Designators;
   SmallVector<Expr *, 32> InitExpressions;
 
   // Build designators and check array designator expressions.
   for (unsigned Idx = 0; Idx < Desig.getNumDesignators(); ++Idx) {
     const Designator &D = Desig.getDesignator(Idx);
-    switch (D.getKind()) {
-    case Designator::FieldDesignator:
-      Designators.push_back(ASTDesignator(D.getField(), D.getDotLoc(),
-                                          D.getFieldLoc()));
-      break;
 
-    case Designator::ArrayDesignator: {
+    if (D.isFieldDesignator()) {
+      Designators.push_back(Designator::CreateFieldDesignator(
+          D.getFieldName(), D.getDotLoc(), D.getFieldLoc()));
+    } else if (D.isArrayDesignator()) {
       Expr *Index = static_cast<Expr *>(D.getArrayIndex());
       llvm::APSInt IndexValue;
+
       if (!Index->isTypeDependent() && !Index->isValueDependent())
         Index = CheckArrayDesignatorExpr(*this, Index, IndexValue).get();
       if (!Index)
         Invalid = true;
       else {
-        Designators.push_back(ASTDesignator(InitExpressions.size(),
-                                            D.getLBracketLoc(),
-                                            D.getRBracketLoc()));
+        Designators.push_back(Designator::CreateArrayDesignator(
+            InitExpressions.size(), D.getLBracketLoc(), D.getRBracketLoc()));
         InitExpressions.push_back(Index);
       }
-      break;
-    }
-
-    case Designator::ArrayRangeDesignator: {
+    } else if (D.isArrayRangeDesignator()) {
       Expr *StartIndex = static_cast<Expr *>(D.getArrayRangeStart());
       Expr *EndIndex = static_cast<Expr *>(D.getArrayRangeEnd());
       llvm::APSInt StartValue;
@@ -3256,9 +3245,11 @@ ExprResult Sema::ActOnDesignatedInitializer(Designation &Desig,
                             StartIndex->isValueDependent();
       bool EndDependent = EndIndex->isTypeDependent() ||
                           EndIndex->isValueDependent();
+
       if (!StartDependent)
         StartIndex =
             CheckArrayDesignatorExpr(*this, StartIndex, StartValue).get();
+
       if (!EndDependent)
         EndIndex = CheckArrayDesignatorExpr(*this, EndIndex, EndValue).get();
 
@@ -3279,24 +3270,18 @@ ExprResult Sema::ActOnDesignatedInitializer(Designation &Desig,
             << StartIndex->getSourceRange() << EndIndex->getSourceRange();
           Invalid = true;
         } else {
-          Designators.push_back(ASTDesignator(InitExpressions.size(),
-                                              D.getLBracketLoc(),
-                                              D.getEllipsisLoc(),
-                                              D.getRBracketLoc()));
+          Designators.push_back(Designator::CreateArrayRangeDesignator(
+              InitExpressions.size(), D.getLBracketLoc(), D.getEllipsisLoc(),
+              D.getRBracketLoc()));
           InitExpressions.push_back(StartIndex);
           InitExpressions.push_back(EndIndex);
         }
       }
-      break;
-    }
     }
   }
 
   if (Invalid || Init.isInvalid())
     return ExprError();
-
-  // Clear out the expressions within the designation.
-  Desig.ClearExprs(*this);
 
   return DesignatedInitExpr::Create(Context, Designators, InitExpressions,
                                     EqualOrColonLoc, GNUSyntax,

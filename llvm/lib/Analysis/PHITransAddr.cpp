@@ -177,10 +177,12 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
 
     // Find an available version of this cast.
 
-    // Constants are trivial to find.
-    if (Constant *C = dyn_cast<Constant>(PHIIn))
-      return addAsInput(
-          ConstantExpr::getCast(Cast->getOpcode(), C, Cast->getType()));
+    // Try to simplify cast first.
+    if (Value *V = simplifyCastInst(Cast->getOpcode(), PHIIn, Cast->getType(),
+                                    {DL, TLI, DT, AC})) {
+      RemoveInstInputs(PHIIn, InstInputs);
+      return addAsInput(V);
+    }
 
     // Otherwise we have to see if a casted version of the incoming pointer
     // is available.  If so, we can use it, otherwise we have to fail.

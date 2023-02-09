@@ -47,10 +47,12 @@
 ! CHECK-NEXT: -fno-color-diagnostics  Disable colors in diagnostics
 ! CHECK-NEXT: -fno-integrated-as     Disable the integrated assembler
 ! CHECK-NEXT: -fno-signed-zeros      Allow optimizations that ignore the sign of floating point zeros
+! CHECK-NEXT: -fno-stack-arrays      Allocate array temporaries on the heap (default)
 ! CHECK-NEXT: -fopenacc              Enable OpenACC
 ! CHECK-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
 ! CHECK-NEXT: -fpass-plugin=<dsopath> Load pass plugin from a dynamic shared object file (only with new pass manager).
 ! CHECK-NEXT: -freciprocal-math      Allow division operations to be reassociated
+! CHECK-NEXT: -fstack-arrays         Attempt to allocate array temporaries on the stack, no matter their size
 ! CHECK-NEXT: -fsyntax-only          Run the preprocessor, parser and semantic analysis stages
 ! CHECK-NEXT: -fxor-operator         Enable .XOR. as a synonym of .NEQV.
 ! CHECK-NEXT: -help     Display available options

@@ -14,8 +14,8 @@
 
 #include <stdio.h> // For EOF
 
-#include "utils/UnitTest/FPMatcher.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcSScanfTest, SimpleStringConv) {
   int ret_val;

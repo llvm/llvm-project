@@ -634,11 +634,35 @@ SDValue AVRTargetLowering::getAVRCmp(SDValue LHS, SDValue RHS,
   SDValue Cmp;
 
   if (LHS.getSimpleValueType() == MVT::i16 && isa<ConstantSDNode>(RHS)) {
-    // Generate a CPI/CPC pair if RHS is a 16-bit constant.
+    uint64_t Imm = cast<ConstantSDNode>(RHS)->getZExtValue();
+    // Generate a CPI/CPC pair if RHS is a 16-bit constant. Use the zero
+    // register for the constant RHS if its lower or higher byte is zero.
     SDValue LHSlo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, LHS,
                                 DAG.getIntPtrConstant(0, DL));
     SDValue LHShi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, LHS,
                                 DAG.getIntPtrConstant(1, DL));
+    SDValue RHSlo = (Imm & 0xff) == 0
+                        ? DAG.getRegister(Subtarget.getZeroRegister(), MVT::i8)
+                        : DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, RHS,
+                                      DAG.getIntPtrConstant(0, DL));
+    SDValue RHShi = (Imm & 0xff00) == 0
+                        ? DAG.getRegister(Subtarget.getZeroRegister(), MVT::i8)
+                        : DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, RHS,
+                                      DAG.getIntPtrConstant(1, DL));
+    Cmp = DAG.getNode(AVRISD::CMP, DL, MVT::Glue, LHSlo, RHSlo);
+    Cmp = DAG.getNode(AVRISD::CMPC, DL, MVT::Glue, LHShi, RHShi, Cmp);
+  } else if (RHS.getSimpleValueType() == MVT::i16 && isa<ConstantSDNode>(LHS)) {
+    // Generate a CPI/CPC pair if LHS is a 16-bit constant. Use the zero
+    // register for the constant LHS if its lower or higher byte is zero.
+    uint64_t Imm = cast<ConstantSDNode>(LHS)->getZExtValue();
+    SDValue LHSlo = (Imm & 0xff) == 0
+                        ? DAG.getRegister(Subtarget.getZeroRegister(), MVT::i8)
+                        : DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, LHS,
+                                      DAG.getIntPtrConstant(0, DL));
+    SDValue LHShi = (Imm & 0xff00) == 0
+                        ? DAG.getRegister(Subtarget.getZeroRegister(), MVT::i8)
+                        : DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, LHS,
+                                      DAG.getIntPtrConstant(1, DL));
     SDValue RHSlo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, RHS,
                                 DAG.getIntPtrConstant(0, DL));
     SDValue RHShi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, RHS,

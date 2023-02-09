@@ -23,10 +23,11 @@ LLVM_LIBC_FUNCTION(float, asinhf, (float x)) {
   uint32_t x_abs = x_u & FPBits_t::FloatProp::EXP_MANT_MASK;
 
   // |x| <= 2^-3
-  if (unlikely(x_abs <= 0x3e80'0000U)) {
+  if (LIBC_UNLIKELY(x_abs <= 0x3e80'0000U)) {
     // |x| <= 2^-26
-    if (unlikely(x_abs <= 0x3280'0000U)) {
-      return unlikely(x_abs == 0) ? x : (x - 0x1.5555555555555p-3 * x * x * x);
+    if (LIBC_UNLIKELY(x_abs <= 0x3280'0000U)) {
+      return LIBC_UNLIKELY(x_abs == 0) ? x
+                                       : (x - 0x1.5555555555555p-3 * x * x * x);
     }
 
     double x_d = x;
@@ -55,8 +56,8 @@ LLVM_LIBC_FUNCTION(float, asinhf, (float x)) {
                                 static_cast<float>(x_sign) * 0x1.0p-24f);
   };
 
-  if (unlikely(x_abs >= 0x4bdd'65a5U)) {
-    if (unlikely(x_abs >= 0x7f80'0000U)) {
+  if (LIBC_UNLIKELY(x_abs >= 0x4bdd'65a5U)) {
+    if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
       // x is +-inf or nan
       return x;
     }
@@ -84,11 +85,11 @@ LLVM_LIBC_FUNCTION(float, asinhf, (float x)) {
     }
   } else {
     // Exceptional cases when x < 2^24.
-    if (unlikely(x_abs == 0x45abaf26)) {
+    if (LIBC_UNLIKELY(x_abs == 0x45abaf26)) {
       // |x| = 0x1.575e4cp12f
       return round_result_slightly_down(0x1.29becap3f);
     }
-    if (unlikely(x_abs == 0x49d29048)) {
+    if (LIBC_UNLIKELY(x_abs == 0x49d29048)) {
       // |x| = 0x1.a5209p20f
       return round_result_slightly_down(0x1.e1b92p3f);
     }

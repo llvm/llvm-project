@@ -3297,36 +3297,51 @@ multiclass VPseudoVCMPM_VX_VI {
 
 multiclass VPseudoVRED_VS {
   foreach m = MxList in {
+    defvar mx = m.MX;
+    defvar WriteVIRedV_From_MX = !cast<SchedWrite>("WriteVIRedV_From_" # mx);
     defm _VS : VPseudoTernary<V_M1.vrclass, m.vrclass, V_M1.vrclass, m>,
-               Sched<[WriteVIRedV, ReadVIRedV, ReadVIRedV, ReadVIRedV, ReadVMask]>;
+               Sched<[WriteVIRedV_From_MX, ReadVIRedV, ReadVIRedV, ReadVIRedV,
+                      ReadVMask]>;
   }
 }
 
 multiclass VPseudoVWRED_VS {
   foreach m = MxList in {
+    defvar mx = m.MX;
+    defvar WriteVIWRedV_From_MX = !cast<SchedWrite>("WriteVIWRedV_From_" # mx);
     defm _VS : VPseudoTernary<V_M1.vrclass, m.vrclass, V_M1.vrclass, m>,
-               Sched<[WriteVIWRedV, ReadVIWRedV, ReadVIWRedV, ReadVIWRedV, ReadVMask]>;
+               Sched<[WriteVIWRedV_From_MX, ReadVIWRedV, ReadVIWRedV,
+                      ReadVIWRedV, ReadVMask]>;
   }
 }
 
 multiclass VPseudoVFRED_VS {
   foreach m = MxListF in {
+    defvar mx = m.MX;
+    defvar WriteVFRedV_From_MX = !cast<SchedWrite>("WriteVFRedV_From_" # mx);
     defm _VS : VPseudoTernary<V_M1.vrclass, m.vrclass, V_M1.vrclass, m>,
-               Sched<[WriteVFRedV, ReadVFRedV, ReadVFRedV, ReadVFRedV, ReadVMask]>;
+               Sched<[WriteVFRedV_From_MX, ReadVFRedV, ReadVFRedV, ReadVFRedV,
+                      ReadVMask]>;
   }
 }
 
 multiclass VPseudoVFREDO_VS {
   foreach m = MxListF in {
+    defvar mx = m.MX;
+    defvar WriteVFRedOV_From_MX = !cast<SchedWrite>("WriteVFRedOV_From_" # mx);
     defm _VS : VPseudoTernary<V_M1.vrclass, m.vrclass, V_M1.vrclass, m>,
-               Sched<[WriteVFRedOV, ReadVFRedOV, ReadVFRedOV, ReadVFRedOV, ReadVMask]>;
+               Sched<[WriteVFRedOV_From_MX, ReadVFRedOV, ReadVFRedOV,
+                      ReadVFRedOV, ReadVMask]>;
   }
 }
 
 multiclass VPseudoVFWRED_VS {
   foreach m = MxListF in {
+    defvar mx = m.MX;
+    defvar WriteVFWRedV_From_MX = !cast<SchedWrite>("WriteVFWRedV_From_" # mx);
     defm _VS : VPseudoTernary<V_M1.vrclass, m.vrclass, V_M1.vrclass, m>,
-               Sched<[WriteVFWRedV, ReadVFWRedV, ReadVFWRedV, ReadVFWRedV, ReadVMask]>;
+               Sched<[WriteVFWRedV_From_MX, ReadVFWRedV, ReadVFWRedV,
+                      ReadVFWRedV, ReadVMask]>;
   }
 }
 

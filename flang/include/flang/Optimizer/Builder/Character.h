@@ -224,9 +224,11 @@ mlir::Value createCharacterProcedureTuple(fir::FirOpBuilder &builder,
 
 /// Given a tuple containing a character function address and its result length,
 /// extract the tuple into a pair of value <function address, result length>.
+/// If openBoxProc is true, the function address is extracted from the
+/// fir.boxproc, otherwise, the returned function address is the fir.boxproc.
 std::pair<mlir::Value, mlir::Value>
 extractCharacterProcedureTuple(fir::FirOpBuilder &builder, mlir::Location loc,
-                               mlir::Value tuple);
+                               mlir::Value tuple, bool openBoxProc = true);
 
 } // namespace fir::factory
 

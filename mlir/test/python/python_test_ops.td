@@ -20,7 +20,6 @@ def Python_Test_Dialect : Dialect {
 
   let useDefaultTypePrinterParser = 1;
   let useDefaultAttributePrinterParser = 1;
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 class TestType<string name, string typeMnemonic>

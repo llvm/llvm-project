@@ -8,7 +8,7 @@
 
 #include "memory_utils/memory_check_utils.h"
 #include "src/string/memcmp.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 namespace __llvm_libc {
 

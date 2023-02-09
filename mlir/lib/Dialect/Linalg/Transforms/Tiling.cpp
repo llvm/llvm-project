@@ -381,7 +381,8 @@ static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
     if (destinationStyleOp) {
       for (OpOperand *outOperand : destinationStyleOp.getDpsInitOperands()) {
         auto *it = llvm::find(dest, outOperand->get());
-        assert(it != dest.end() && "dest operand not found in dest");
+        if (it == dest.end())
+          return op->emitOpError("must have \"tensor semantic\" for tiling");
         unsigned destNum = std::distance(dest.begin(), it);
         outOperand->set(destBbArgs[destNum]);
       }

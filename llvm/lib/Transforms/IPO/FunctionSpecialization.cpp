@@ -125,6 +125,10 @@ Constant *FunctionSpecializer::getPromotableAlloca(AllocaInst *Alloca,
     // Bail if there is any other unknown usage.
     return nullptr;
   }
+
+  if (!StoreValue)
+    return nullptr;
+
   return getCandidateConstant(StoreValue);
 }
 

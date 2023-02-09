@@ -36,7 +36,6 @@ def NVGPU_Dialect : Dialect {
   }];
 
   let useDefaultTypePrinterParser = 1;
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 
   let extraClassDeclaration = [{
     /// Return true if the given MemRefType has an integer address

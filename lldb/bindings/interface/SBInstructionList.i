@@ -83,7 +83,9 @@ public:
             '''Access instructions by integer index for array access or by lldb.SBAddress to find an instruction that matches a section offset address object.'''
             if type(key) is int:
                 # Find an instruction by index
-                if key < len(self):
+                count = len(self)
+                if -count <= key < count:
+                    key %= count
                     return self.GetInstructionAtIndex(key)
             elif type(key) is SBAddress:
                 # Find an instruction using a lldb.SBAddress object

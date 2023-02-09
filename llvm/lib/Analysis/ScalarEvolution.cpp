@@ -14933,9 +14933,6 @@ ScalarEvolution::computeSymbolicMaxBackedgeTakenCount(const Loop *L) {
 /// A rewriter to replace SCEV expressions in Map with the corresponding entry
 /// in the map. It skips AddRecExpr because we cannot guarantee that the
 /// replacement is loop invariant in the loop of the AddRec.
-///
-/// At the moment only rewriting SCEVUnknown and SCEVZeroExtendExpr is
-/// supported.
 class SCEVLoopGuardRewriter : public SCEVRewriteVisitor<SCEVLoopGuardRewriter> {
   const DenseMap<const SCEV *, const SCEV *> &Map;
 
@@ -14957,6 +14954,14 @@ public:
     auto I = Map.find(Expr);
     if (I == Map.end())
       return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitZeroExtendExpr(
+          Expr);
+    return I->second;
+  }
+
+  const SCEV *visitSignExtendExpr(const SCEVSignExtendExpr *Expr) {
+    auto I = Map.find(Expr);
+    if (I == Map.end())
+      return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitSignExtendExpr(
           Expr);
     return I->second;
   }

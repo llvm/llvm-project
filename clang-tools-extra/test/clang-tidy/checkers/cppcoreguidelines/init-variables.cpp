@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-init-variables %t -- -- -fno-delayed-template-parsing -fexceptions
+// RUN: %check_clang_tidy %s cppcoreguidelines-init-variables -fix-errors %t -- -- -fno-delayed-template-parsing -fexceptions
 // CHECK-FIXES: {{^}}#include <math.h>
 
 // Ensure that function declarations are not changed.
@@ -123,4 +123,14 @@ void uninitialized_enum() {
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: variable 'direction' is not initialized [cppcoreguidelines-init-variables]
   Fruit fruit;
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: variable 'fruit' is not initialized [cppcoreguidelines-init-variables]
+}
+
+void test_clang_diagnostic_error() {
+  int a;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'a' is not initialized [cppcoreguidelines-init-variables]
+  // CHECK-FIXES: {{^}}  int a = 0;{{$}}
+
+  UnknownType b;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: error: unknown type name 'UnknownType' [clang-diagnostic-error]
+  // CHECK-FIXES-NOT: {{^}}  UnknownType b = 0;{{$}}
 }

@@ -329,6 +329,11 @@ public:
   /// Get the method body.
   MethodBody &body() { return methodBody; }
 
+  /// Sets or removes the deprecation message of the method.
+  void setDeprecated(std::optional<StringRef> message) {
+    this->deprecationMessage = message;
+  }
+
   /// Returns true if this is a static method.
   bool isStatic() const { return properties & Static; }
 
@@ -369,6 +374,8 @@ protected:
   MethodSignature methodSignature;
   /// The body of the method, if it has one.
   MethodBody methodBody;
+  /// Deprecation message if the method is deprecated.
+  std::optional<std::string> deprecationMessage;
 };
 
 /// This enum describes C++ inheritance visibility.

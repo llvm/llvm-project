@@ -1346,6 +1346,12 @@ std::optional<unsigned> getVPMaskIdx(unsigned Opcode);
 /// The operand position of the explicit vector length parameter.
 std::optional<unsigned> getVPExplicitVectorLengthIdx(unsigned Opcode);
 
+/// Translate this VP Opcode to its corresponding non-VP Opcode.
+std::optional<unsigned> getBaseOpcodeForVP(unsigned Opcode, bool hasFPExcept);
+
+/// Translate this non-VP Opcode to its corresponding VP Opcode.
+unsigned getVPForBaseOpcode(unsigned Opcode);
+
 //===--------------------------------------------------------------------===//
 /// MemIndexedMode enum - This enum defines the load / store indexed
 /// addressing modes.

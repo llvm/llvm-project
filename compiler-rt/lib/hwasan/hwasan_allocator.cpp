@@ -94,8 +94,7 @@ inline void Metadata::SetUnallocated() {
 }
 
 inline bool Metadata::IsAllocated() const {
-  return atomic_load(&chunk_state, memory_order_relaxed) == CHUNK_ALLOCATED &&
-         GetRequestedSize();
+  return atomic_load(&chunk_state, memory_order_relaxed) == CHUNK_ALLOCATED;
 }
 
 inline u64 Metadata::GetRequestedSize() const {

@@ -38,6 +38,8 @@ What's New in Libc++ 17.0.0?
 Implemented Papers
 ------------------
 
+- P1328R1 - `constexpr type_info::operator==()`
+
 Improvements and New Features
 -----------------------------
 

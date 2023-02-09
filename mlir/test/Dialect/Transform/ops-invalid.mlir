@@ -126,6 +126,28 @@ transform.with_pdl_patterns {
 
 // -----
 
+// expected-error @below {{op expects at least one non-pattern op}}
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  pdl.pattern @some : benefit(1) {
+    %0 = pdl.operation "test.foo"
+    pdl.rewrite %0 with "transform.dialect"
+  }
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !pdl.operation):
+  // expected-error @below {{op expects at least one non-pattern op}}
+  with_pdl_patterns %arg0 : !pdl.operation {
+  ^bb1(%arg1: !pdl.operation):
+  }
+}
+
+
+// -----
+
 // expected-error @below {{expects at least one region}}
 "transform.test_transform_unrestricted_op_no_interface"() : () -> ()
 

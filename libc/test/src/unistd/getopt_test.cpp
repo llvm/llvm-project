@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/unistd/getopt.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include "src/__support/CPP/array.h"
 #include "src/stdio/fflush.h"

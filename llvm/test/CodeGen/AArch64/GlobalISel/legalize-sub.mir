@@ -81,6 +81,46 @@ body:             |
 
 ...
 ---
+name:            test_vector_sub_v16s16
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: test_vector_sub_v16s16
+    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(<8 x s16>) = G_SUB [[COPY]], [[COPY]]
+    ; CHECK-NEXT: [[SUB1:%[0-9]+]]:_(<8 x s16>) = G_SUB [[COPY1]], [[COPY1]]
+    ; CHECK-NEXT: $q0 = COPY [[SUB]](<8 x s16>)
+    ; CHECK-NEXT: $q1 = COPY [[SUB1]](<8 x s16>)
+    %1:_(<8 x s16>) = COPY $q0
+    %2:_(<8 x s16>) = COPY $q1
+    %0:_(<16 x s16>) = G_CONCAT_VECTORS %1(<8 x s16>), %2(<8 x s16>)
+    %3:_(<16 x s16>) = G_SUB %0, %0
+    %4:_(<8 x s16>), %5:_(<8 x s16>) = G_UNMERGE_VALUES %3(<16 x s16>)
+    $q0 = COPY %4(<8 x s16>)
+    $q1 = COPY %5(<8 x s16>)
+
+...
+---
+name:            test_vector_sub_v32s8
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: test_vector_sub_v32s8
+    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<16 x s8>) = COPY $q1
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(<16 x s8>) = G_SUB [[COPY]], [[COPY]]
+    ; CHECK-NEXT: [[SUB1:%[0-9]+]]:_(<16 x s8>) = G_SUB [[COPY1]], [[COPY1]]
+    ; CHECK-NEXT: $q0 = COPY [[SUB]](<16 x s8>)
+    ; CHECK-NEXT: $q1 = COPY [[SUB1]](<16 x s8>)
+    %0:_(<16 x s8>) = COPY $q0
+    %1:_(<16 x s8>) = COPY $q1
+    %2:_(<32 x s8>) = G_CONCAT_VECTORS %0, %1
+    %3:_(<32 x s8>) = G_SUB %2, %2
+    %7:_(<16 x s8>), %8:_(<16 x s8>) = G_UNMERGE_VALUES %3(<32 x s8>)
+    $q0 = COPY %7(<16 x s8>)
+    $q1 = COPY %8(<16 x s8>)
+
+...
+---
 name:            sub_v2s1
 tracksRegLiveness: true
 body:             |

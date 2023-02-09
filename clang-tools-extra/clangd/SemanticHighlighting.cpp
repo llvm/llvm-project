@@ -519,10 +519,11 @@ private:
     Loc = getHighlightableSpellingToken(Loc, SourceMgr);
     if (Loc.isInvalid())
       return std::nullopt;
-
+    // We might have offsets in the main file that don't correspond to any
+    // spelled tokens.
     const auto *Tok = TB.spelledTokenAt(Loc);
-    assert(Tok);
-
+    if (!Tok)
+      return std::nullopt;
     return halfOpenToRange(SourceMgr,
                            Tok->range(SourceMgr).toCharRange(SourceMgr));
   }

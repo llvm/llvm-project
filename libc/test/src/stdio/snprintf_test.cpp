@@ -8,7 +8,7 @@
 
 #include "src/stdio/snprintf.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 // The sprintf test cases cover testing the shared printf functionality, so
 // these tests will focus on snprintf exclusive features.

@@ -215,6 +215,7 @@ struct OneShotBufferizePass
       opt.printConflicts = printConflicts;
       opt.testAnalysisOnly = testAnalysisOnly;
       opt.bufferizeFunctionBoundaries = bufferizeFunctionBoundaries;
+      opt.noAnalysisFuncFilter = noAnalysisFuncFilter;
 
       // Configure type converter.
       LayoutMapOption unknownTypeConversionOption =
@@ -249,25 +250,12 @@ struct OneShotBufferizePass
     BufferizationStatistics statistics;
     ModuleOp moduleOp = getOperation();
     if (opt.bufferizeFunctionBoundaries) {
-      OpFilter::Entry::FilterFn analysisFilterFn = nullptr;
-      // FuncOps whose names are specified in noAnalysisFuncFilter will not be
-      // analyzed. Ops in these FuncOps will not be analyzed as well.
-      if (this->noAnalysisFuncFilter.hasValue())
-        analysisFilterFn = [=](Operation *op) {
-          auto func = dyn_cast<func::FuncOp>(op);
-          if (!func)
-            func = op->getParentOfType<func::FuncOp>();
-          if (func)
-            return llvm::is_contained(noAnalysisFuncFilter, func.getSymName());
-          return false;
-        };
-      if (failed(runOneShotModuleBufferize(moduleOp, opt, &statistics,
-                                           analysisFilterFn))) {
+      if (failed(runOneShotModuleBufferize(moduleOp, opt, &statistics))) {
         signalPassFailure();
         return;
       }
     } else {
-      assert(!this->noAnalysisFuncFilter.hasValue() &&
+      assert(opt.noAnalysisFuncFilter.empty() &&
              "invalid combination of bufferization flags");
       if (failed(runOneShotBufferize(moduleOp, opt, &statistics))) {
         signalPassFailure();

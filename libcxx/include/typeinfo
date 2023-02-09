@@ -21,7 +21,7 @@ class type_info
 public:
     virtual ~type_info();
 
-    bool operator==(const type_info& rhs) const noexcept;
+    bool operator==(const type_info& rhs) const noexcept; // constexpr since C++23
     bool operator!=(const type_info& rhs) const noexcept; // removed in C++20
 
     bool before(const type_info& rhs) const noexcept;
@@ -59,6 +59,7 @@ public:
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__availability>
 #include <__config>
+#include <__type_traits/is_constant_evaluated.h>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -104,8 +105,13 @@ public:
 
     size_t hash_code() const _NOEXCEPT;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
     bool operator==(const type_info& __arg) const _NOEXCEPT {
+      // When evaluated in a constant expression, both type infos simply can't come
+      // from different translation units, so it is sufficient to compare their addresses.
+      if (__libcpp_is_constant_evaluated()) {
+        return this == &__arg;
+      }
       return __compare(__arg) == 0;
     }
 
@@ -330,9 +336,14 @@ public:
       return __impl::__hash(__type_name);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
     bool operator==(const type_info& __arg) const _NOEXCEPT
     {
+      // When evaluated in a constant expression, both type infos simply can't come
+      // from different translation units, so it is sufficient to compare their addresses.
+      if (__libcpp_is_constant_evaluated()) {
+        return this == &__arg;
+      }
       return __impl::__eq(__type_name, __arg.__type_name);
     }
 

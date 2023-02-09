@@ -185,7 +185,7 @@ LIBC_INLINE char *string_token(char *__restrict src,
                                const char *__restrict delimiter_string,
                                char **__restrict saveptr) {
   // Return nullptr immediately if both src AND saveptr are nullptr
-  if (unlikely(src == nullptr && ((src = *saveptr) == nullptr)))
+  if (LIBC_UNLIKELY(src == nullptr && ((src = *saveptr) == nullptr)))
     return nullptr;
 
   cpp::bitset<256> delimiter_set;

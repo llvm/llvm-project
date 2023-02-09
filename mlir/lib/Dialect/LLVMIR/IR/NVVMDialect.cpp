@@ -537,7 +537,8 @@ LogicalResult ShflOp::verify() {
 }
 
 std::pair<mlir::Type, unsigned> NVVM::inferMMAType(NVVM::MMATypes type,
-                                                   NVVM::MMAFrag frag,
+                                                   NVVM::MMAFrag frag, int nRow,
+                                                   int nCol,
                                                    MLIRContext *context) {
   unsigned numberElements = 0;
   Type elementType;
@@ -555,9 +556,46 @@ std::pair<mlir::Type, unsigned> NVVM::inferMMAType(NVVM::MMATypes type,
   } else if (type == NVVM::MMATypes::tf32) {
     elementType = builder.getI32Type();
     numberElements = 4;
+  } else if (type == NVVM::MMATypes::s8 || type == NVVM::MMATypes::u8) {
+    elementType = builder.getI32Type();
+    int parallelSize = 0;
+    if (frag == NVVM::MMAFrag::a)
+      parallelSize = nRow;
+    if (frag == NVVM::MMAFrag::b)
+      parallelSize = nCol;
+
+    // m == 16 && n == 16 && k == 16
+    if (parallelSize == 16)
+      numberElements = 2;
+    // m == 8 && n == 32 && k == 16 or m == 32 && n == 8 && k == 16
+    else if (parallelSize == 8)
+      numberElements = 1;
+    else if (parallelSize == 32)
+      numberElements = 4;
+  } else if (type == NVVM::MMATypes::s32) {
+    elementType = builder.getI32Type();
+    numberElements = 8;
   }
   assert(numberElements != 0 && elementType != nullptr);
   return std::make_pair(elementType, numberElements);
+}
+
+static std::pair<mlir::Type, unsigned>
+inferMMATypeFromMNK(NVVM::MMATypes type, NVVM::MMAFrag frag, int m, int n,
+                    int k, MLIRContext *context) {
+  int nRow, nCol;
+  if (frag == NVVM::MMAFrag::a) {
+    nRow = m;
+    nCol = k;
+  } else if (frag == NVVM::MMAFrag::b) {
+    nRow = k;
+    nCol = n;
+  } else {
+    nRow = m;
+    nCol = n;
+  }
+  assert(nRow && nCol);
+  return inferMMAType(type, frag, nRow, nCol, context);
 }
 
 LogicalResult NVVM::WMMALoadOp::verify() {
@@ -570,8 +608,8 @@ LogicalResult NVVM::WMMALoadOp::verify() {
   if (NVVM::WMMALoadOp::getIntrinsicID(getM(), getN(), getK(), getLayout(),
                                        getEltype(), getFrag()) == 0)
     return emitOpError() << "invalid attribute combination";
-  std::pair<Type, unsigned> typeInfo =
-      inferMMAType(getEltype(), getFrag(), getContext());
+  std::pair<Type, unsigned> typeInfo = inferMMATypeFromMNK(
+      getEltype(), getFrag(), getM(), getN(), getK(), getContext());
   Type dstType = LLVM::LLVMStructType::getLiteral(
       getContext(), SmallVector<Type, 8>(typeInfo.second, typeInfo.first));
   if (getType() != dstType)
@@ -590,8 +628,8 @@ LogicalResult NVVM::WMMAStoreOp::verify() {
   if (NVVM::WMMAStoreOp::getIntrinsicID(getM(), getN(), getK(), getLayout(),
                                         getEltype()) == 0)
     return emitOpError() << "invalid attribute combination";
-  std::pair<Type, unsigned> typeInfo =
-      inferMMAType(getEltype(), NVVM::MMAFrag::c, getContext());
+  std::pair<Type, unsigned> typeInfo = inferMMATypeFromMNK(
+      getEltype(), NVVM::MMAFrag::c, getM(), getN(), getK(), getContext());
   if (getArgs().size() != typeInfo.second)
     return emitOpError() << "expected " << typeInfo.second << " data operands";
   if (llvm::any_of(getArgs(), [&typeInfo](Value operands) {
@@ -606,12 +644,12 @@ LogicalResult NVVM::WMMAMmaOp::verify() {
                                       getLayoutB(), getEltypeA(),
                                       getEltypeB()) == 0)
     return emitOpError() << "invalid attribute combination";
-  std::pair<Type, unsigned> typeInfoA =
-      inferMMAType(getEltypeA(), NVVM::MMAFrag::a, getContext());
-  std::pair<Type, unsigned> typeInfoB =
-      inferMMAType(getEltypeA(), NVVM::MMAFrag::b, getContext());
-  std::pair<Type, unsigned> typeInfoC =
-      inferMMAType(getEltypeB(), NVVM::MMAFrag::c, getContext());
+  std::pair<Type, unsigned> typeInfoA = inferMMATypeFromMNK(
+      getEltypeA(), NVVM::MMAFrag::a, getM(), getN(), getK(), getContext());
+  std::pair<Type, unsigned> typeInfoB = inferMMATypeFromMNK(
+      getEltypeA(), NVVM::MMAFrag::b, getM(), getN(), getK(), getContext());
+  std::pair<Type, unsigned> typeInfoC = inferMMATypeFromMNK(
+      getEltypeB(), NVVM::MMAFrag::c, getM(), getN(), getK(), getContext());
   SmallVector<Type, 32> arguments;
   arguments.append(typeInfoA.second, typeInfoA.first);
   arguments.append(typeInfoB.second, typeInfoB.first);

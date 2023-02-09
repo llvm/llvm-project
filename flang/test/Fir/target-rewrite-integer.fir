@@ -4,6 +4,7 @@
 // RUN: fir-opt --split-input-file --target-rewrite="target=powerpc64le-unknown-linux-gnu" %s | FileCheck %s --check-prefixes=PPC,ALL
 // RUN: fir-opt --split-input-file --target-rewrite="target=sparc64-unknown-linux-gnu" %s | FileCheck %s --check-prefixes=SPARCV9,ALL
 // RUN: fir-opt --split-input-file --target-rewrite="target=sparcv9-sun-solaris2.11" %s | FileCheck %s --check-prefixes=SPARCV9,ALL
+// RUN: fir-opt --split-input-file --target-rewrite="target=loongarch64-unknown-linux-gnu" %s | FileCheck %s --check-prefixes=LOONGARCH64,ALL
 
 // -----
 
@@ -18,6 +19,7 @@
 // AARCH64: func.func{{.*}}@_FortranAioOutputLogical({{.*}}i1 {llvm.zeroext}) -> (i1 {llvm.zeroext})
 // PPC: func.func{{.*}}@_FortranAioOutputLogical({{.*}}i1 {llvm.zeroext}) -> (i1 {llvm.zeroext})
 // SPARCV9: func.func{{.*}}@_FortranAioOutputLogical({{.*}}i1 {llvm.zeroext}) -> (i1 {llvm.zeroext})
+// LOONGARCH64: func.func{{.*}}@_FortranAioOutputLogical({{.*}}i1 {llvm.zeroext}) -> (i1 {llvm.zeroext})
 func.func @_QPtest_i1(%arg0: !fir.ref<!fir.logical<4>> {fir.bindc_name = "x"}) {
   %c3_i32 = arith.constant 3 : i32
   %c-1_i32 = arith.constant -1 : i32
@@ -49,6 +51,7 @@ func.func private @_FortranAioEndIoStatement(!fir.ref<i8>) -> i32 attributes {fi
 // AARCH64: func.func{{.*}}@_SomeFunc_si1(si1 {llvm.signext}) -> (si1 {llvm.signext})
 // PPC: func.func{{.*}}@_SomeFunc_si1(si1 {llvm.signext}) -> (si1 {llvm.signext})
 // SPARCV9: func.func{{.*}}@_SomeFunc_si1(si1 {llvm.signext}) -> (si1 {llvm.signext})
+// LOONGARCH64: func.func{{.*}}@_SomeFunc_si1(si1 {llvm.signext}) -> (si1 {llvm.signext})
 func.func @_QPtest_si1(%arg0: !fir.ref<!fir.logical<4>> {fir.bindc_name = "x"}) {
   %0 = fir.load %arg0 : !fir.ref<!fir.logical<4>>
   %1 = fir.convert %0 : (!fir.logical<4>) -> si1
@@ -68,6 +71,7 @@ func.func private @_SomeFunc_si1(si1) -> si1 attributes {fir.runtime}
 // AARCH64: func.func{{.*}}@_SomeFunc_ui1(ui1 {llvm.zeroext}) -> (ui1 {llvm.zeroext})
 // PPC: func.func{{.*}}@_SomeFunc_ui1(ui1 {llvm.zeroext}) -> (ui1 {llvm.zeroext})
 // SPARCV9: func.func{{.*}}@_SomeFunc_ui1(ui1 {llvm.zeroext}) -> (ui1 {llvm.zeroext})
+// LOONGARCH64: func.func{{.*}}@_SomeFunc_ui1(ui1 {llvm.zeroext}) -> (ui1 {llvm.zeroext})
 func.func @_QPtest_ui1(%arg0: !fir.ref<!fir.logical<4>> {fir.bindc_name = "x"}) {
   %0 = fir.load %arg0 : !fir.ref<!fir.logical<4>>
   %1 = fir.convert %0 : (!fir.logical<4>) -> ui1
