@@ -129,7 +129,7 @@ contains
     class(p1), intent(in) :: a(20)
     integer :: shift
 
-    call check_pack(cshift(a, shift))
+    call check(cshift(a, shift))
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMpoly_tmpPtest_temp_from_intrinsic_cshift(
@@ -150,7 +150,7 @@ contains
     class(p1), intent(in) :: b
     integer :: shift
 
-    call check_pack(eoshift(a, shift, b))
+    call check(eoshift(a, shift, b))
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMpoly_tmpPtest_temp_from_intrinsic_eoshift(
