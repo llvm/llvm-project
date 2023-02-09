@@ -710,15 +710,17 @@ mlir::Value fir::factory::CharacterExprHelper::getLength(mlir::Value memref) {
 std::pair<mlir::Value, mlir::Value>
 fir::factory::extractCharacterProcedureTuple(fir::FirOpBuilder &builder,
                                              mlir::Location loc,
-                                             mlir::Value tuple) {
+                                             mlir::Value tuple,
+                                             bool openBoxProc) {
   mlir::TupleType tupleType = tuple.getType().cast<mlir::TupleType>();
   mlir::Value addr = builder.create<fir::ExtractValueOp>(
       loc, tupleType.getType(0), tuple,
       builder.getArrayAttr(
           {builder.getIntegerAttr(builder.getIndexType(), 0)}));
   mlir::Value proc = [&]() -> mlir::Value {
-    if (auto addrTy = addr.getType().dyn_cast<fir::BoxProcType>())
-      return builder.create<fir::BoxAddrOp>(loc, addrTy.getEleTy(), addr);
+    if (openBoxProc)
+      if (auto addrTy = addr.getType().dyn_cast<fir::BoxProcType>())
+        return builder.create<fir::BoxAddrOp>(loc, addrTy.getEleTy(), addr);
     return addr;
   }();
   mlir::Value len = builder.create<fir::ExtractValueOp>(

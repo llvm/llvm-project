@@ -807,6 +807,12 @@ private:
             },
             [](auto x) -> Fortran::lower::SymbolBox { return x; });
       }
+      // Procedure dummies are not mapped with an hlfir.declare because
+      // they are not "variable" (cannot be assigned to), and it would
+      // make hlfir.declare more complex than it needs to to allow this.
+      // Do a regular lookup.
+      if (Fortran::semantics::IsProcedure(sym))
+        return symMap->lookupSymbol(sym);
       return {};
     }
     if (Fortran::lower::SymbolBox v = symMap->lookupSymbol(sym))
