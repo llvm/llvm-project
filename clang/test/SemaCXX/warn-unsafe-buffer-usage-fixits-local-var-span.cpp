@@ -1,3 +1,4 @@
+// REQUIRES: !system-windows
 // RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 typedef int * Int_ptr_t;
 typedef int Int_t;
@@ -97,10 +98,10 @@ void decl_without_init() {
   int tmp;
   int * p;
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:10}:"std::span<int> p"
-  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-2]]
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-2]]:{{^3}}
   Int_ptr_t q;
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:14}:"std::span<int> q"
-  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-2]]
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-2]]:{{^3}}
   tmp = p[5];
   tmp = q[5];
 }
