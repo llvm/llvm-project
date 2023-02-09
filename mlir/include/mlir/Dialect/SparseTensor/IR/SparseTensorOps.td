@@ -59,8 +59,8 @@ def SparseTensor_NewOp : SparseTensor_Op<"new", [Pure]>,
 }
 
 def SparseTensor_PackOp : SparseTensor_Op<"pack", [Pure]>,
-    Arguments<(ins AnyRankedTensor:$data,
-                   AnyRankedTensor:$indices)>,
+    Arguments<(ins 1DTensorOf<[AnyType]>:$data,
+                   2DTensorOf<[AnySignlessIntegerOrIndex]>:$indices)>,
     Results<(outs AnySparseTensor: $result)> {
   let summary = "Returns a sparse tensor from the given (data, indices) pair";
 
@@ -95,6 +95,46 @@ def SparseTensor_PackOp : SparseTensor_Op<"pack", [Pure]>,
 
   let assemblyFormat = "$data `,` $indices attr-dict `:` type($data) `,` type($indices)"
                                                    "`to` type($result)";
+
+  let hasVerifier = 1;
+}
+
+def SparseTensor_UnpackOp : SparseTensor_Op<"unpack", [Pure]>,
+    Arguments<(ins AnySparseTensor:$tensor)>,
+    Results<(outs 1DTensorOf<[AnyType]>:$data,
+                  2DTensorOf<[AnySignlessIntegerOrIndex]>:$indices,
+                  AnySignlessIntegerOrIndex:$nnz)> {
+  let summary = "Returns the (data, indices) pair unpacked from the input tensor";
+
+  let description = [{
+    Unpack is the inverse operation of `sparse_tensor::pack`. It returns the data/indices
+    extracted from a COO sparse tensor. Additionally, it also returns an integer value
+    indicating the number of entries in the source tensor.
+
+    The operation can be used to return an unpacked MLIR sparse tensor to frontend.
+    E.g., returning two numpy arrays for data and indices.
+
+    The unpack operation ends the life time of the sparse tensor, and using this
+    after the unpack is undefined behavior.
+
+    Example:
+    ```mlir
+    // input COO format |1.1, 0.0, 0.0, 0.0|
+    //    of 3x4 matrix |0.0, 0.0, 2.2, 3.3|
+    //                  |0.0, 0.0, 0.0, 0.0|
+    %data, %indices, %nnz = sparse_tensor.unpack %st
+                          : tensor<3x4xf64, #COO>
+                         to tensor<2xf64>, tensor<2x2xindex>, index
+
+    // %data    = arith.constant dense<[ 1.1,   2.2,   3.3 ]> : tensor<3xf64>
+    // %indices = arith.constant dense<[[0,0], [1,2], [1,3]]> : tensor<3x2xindex>
+    // %nnz = 2
+
+    ```
+  }];
+
+  let assemblyFormat = "$tensor attr-dict `:` type($tensor) "
+                                        "`to` type($data) `,` type($indices)`,` type($nnz)";
 
   let hasVerifier = 1;
 }
