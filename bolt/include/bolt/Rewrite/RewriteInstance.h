@@ -95,6 +95,9 @@ private:
   /// from meta data in the file.
   void discoverFileObjects();
 
+  /// Process fragments, locate parent functions.
+  void registerFragments();
+
   /// Read info from special sections. E.g. eh_frame and .gcc_except_table
   /// for exception and stack unwinding information.
   Error readSpecialSections();
