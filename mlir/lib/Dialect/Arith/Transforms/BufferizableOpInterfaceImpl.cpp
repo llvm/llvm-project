@@ -76,12 +76,7 @@ struct IndexCastOpInterface
 
   AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
-    return {op->getResult(0)};
-  }
-
-  BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const AnalysisState &state) const {
-    return BufferRelation::Equivalent;
+    return {{op->getResult(0), BufferRelation::Equivalent}};
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
@@ -128,14 +123,8 @@ struct SelectOpInterface
 
   AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
-    return {op->getOpResult(0) /*result*/};
-  }
-
-  AliasingOpOperandList
-  getAliasingOpOperands(Operation *op, OpResult opResult,
-                        const AnalysisState &state) const {
-    return {&op->getOpOperand(1) /*true_value*/,
-            &op->getOpOperand(2) /*false_value*/};
+    return {{op->getOpResult(0) /*result*/, BufferRelation::Equivalent,
+             /*isDefinite=*/false}};
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
@@ -198,11 +187,6 @@ struct SelectOpInterface
         RankedTensorType::get(memrefType.getShape(),
                               memrefType.getElementType()),
         memrefType.getMemorySpace());
-  }
-
-  BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const AnalysisState &state) const {
-    return BufferRelation::Unknown;
   }
 };
 

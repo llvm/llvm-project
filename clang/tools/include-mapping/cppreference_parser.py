@@ -30,7 +30,7 @@ class Symbol:
 
   def __lt__(self, other):
     if self.namespace != other.namespace:
-      return self.namespace < other.namespace
+      return str(self.namespace) < str(other.namespace)
     return self.name < other.name
 
 

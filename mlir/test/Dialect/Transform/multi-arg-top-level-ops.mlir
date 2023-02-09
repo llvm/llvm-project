@@ -37,6 +37,17 @@ func.func @foo() {
 
 // -----
 
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op, %arg1: !transform.any_op, %arg2: !transform.any_value):
+  // expected-error @above {{wrong kind of value provided for the top-level value handle}}
+}
+
+func.func @foo() {
+  return
+}
+
+// -----
+
 // expected-error @below {{operation expects 1 extra value bindings, but 2 were provided to the interpreter}}
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op, %arg1: !transform.any_op):

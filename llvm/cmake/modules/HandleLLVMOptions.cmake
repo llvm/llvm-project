@@ -494,9 +494,11 @@ if( MSVC )
 
   append("/Zc:inline" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 
-  # Enable standards-conforming preprocessor.
-  # https://learn.microsoft.com/en-us/cpp/build/reference/zc-preprocessor
-  append("/Zc:preprocessor" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  if (NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # Enable standards-conforming preprocessor.
+    # https://learn.microsoft.com/en-us/cpp/build/reference/zc-preprocessor
+    append("/Zc:preprocessor" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  endif ()
 
   # Some projects use the __cplusplus preprocessor macro to check support for
   # a particular version of the C++ standard. When this option is not specified
@@ -665,6 +667,10 @@ if (MSVC)
           # v15.8.8. Re-evaluate the usefulness of this diagnostic when the bug
           # is fixed.
       -wd4709 # Suppress comma operator within array index expression
+
+      # We'd like this warning to be enabled, but it triggers from code in
+      # WinBase.h that we don't have control over.
+      -wd5105 # Suppress macro expansion producing 'defined' has undefined behavior
 
       # Ideally, we'd like this warning to be enabled, but even MSVC 2019 doesn't
       # support the 'aligned' attribute in the way that clang sources requires (for
