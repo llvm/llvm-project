@@ -806,6 +806,15 @@ hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
     return {translateVariableToExtendedValue(loc, builder, entity),
             std::nullopt};
 
+  if (entity.isProcedure()) {
+    if (fir::isCharacterProcedureTuple(entity.getType())) {
+      auto [boxProc, len] = fir::factory::extractCharacterProcedureTuple(
+          builder, loc, entity, /*openBoxProc=*/false);
+      return {fir::CharBoxValue{boxProc, len}, std::nullopt};
+    }
+    return {static_cast<mlir::Value>(entity), std::nullopt};
+  }
+
   if (entity.getType().isa<hlfir::ExprType>()) {
     hlfir::AssociateOp associate = hlfir::genAssociateExpr(
         loc, builder, entity, entity.getType(), "adapt.valuebyref");
@@ -856,10 +865,14 @@ static fir::ExtendedValue placeTrivialInMemory(mlir::Location loc,
   return temp;
 }
 
-std::pair<fir::BoxValue, std::optional<hlfir::CleanupFunction>>
+std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 hlfir::convertToBox(mlir::Location loc, fir::FirOpBuilder &builder,
                     const hlfir::Entity &entity, mlir::Type targetType) {
   auto [exv, cleanup] = translateToExtendedValue(loc, builder, entity);
+  // Procedure entities should not go through createBoxValue that embox
+  // object entities. Return the fir.boxproc directly.
+  if (entity.isProcedure())
+    return {exv, cleanup};
   mlir::Value base = fir::getBase(exv);
   if (fir::isa_trivial(base.getType()))
     exv = placeTrivialInMemory(loc, builder, base, targetType);
