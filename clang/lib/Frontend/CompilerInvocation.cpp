@@ -2430,14 +2430,8 @@ void CompilerInvocation::GenerateCASArgs(
     CompilerInvocation::StringAllocator SA) {
   const CASOptions &CASOpts = Opts;
 
-#define CAS_OPTION_WITH_MARSHALLING(                                           \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  GENERATE_OPTION_WITH_MARSHALLING(                                            \
-      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
-      IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+#define CAS_OPTION_WITH_MARSHALLING(...)                                       \
+  GENERATE_OPTION_WITH_MARSHALLING(Args, SA, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef CAS_OPTION_WITH_MARSHALLING
 }
@@ -2447,14 +2441,8 @@ bool CompilerInvocation::ParseCASArgs(CASOptions &Opts, const ArgList &Args,
   CASOptions &CASOpts = Opts;
   bool Success = true;
 
-#define CAS_OPTION_WITH_MARSHALLING(                                           \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  PARSE_OPTION_WITH_MARSHALLING(                                               \
-      Args, Diags, ID, FLAGS, PARAM, SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,     \
-      IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, MERGER, TABLE_INDEX)
+#define CAS_OPTION_WITH_MARSHALLING(...)                                       \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef CAS_OPTION_WITH_MARSHALLING
 
