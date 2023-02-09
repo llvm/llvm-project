@@ -10,7 +10,7 @@
 #define LLVM_LIBC_TEST_SRC_MATH_SCALBN_H
 
 #include "LdExpTest.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #define LIST_SCALBN_TESTS(T, func)                                             \
   using LlvmLibcScalbnTest = LdExpTestTemplate<T>;                             \
