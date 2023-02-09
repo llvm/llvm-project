@@ -80,14 +80,14 @@ contains
 ! CHECK: %[[RES_BOX_NONE:.*]] = fir.convert %[[LOAD_RES]] : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>) -> !fir.box<none>
 ! CHECK: %{{.*}} = fir.call @_FortranAAllocatableApplyMold(%[[A_BOX_NONE]], %[[RES_BOX_NONE]], %[[RANK]]) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32) -> none
 
-  subroutine check_pack(r)
+  subroutine check(r)
     class(p1) :: r(:)
   end subroutine
 
   subroutine test_temp_from_intrinsic_pack(i, mask)
     class(p1), intent(in) :: i(20, 20)
     logical, intent(in) :: mask(20, 20)
-    call check_pack(pack(i, mask))
+    call check(pack(i, mask))
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMpoly_tmpPtest_temp_from_intrinsic_pack(
@@ -162,5 +162,19 @@ contains
 ! CHECK: %[[SHIFT_I64:.*]] = fir.convert %[[LOAD_SHIFT]] : (i32) -> i64
 ! CHECK: %[[BOUNDARY_NONE:.*]] = fir.convert %[[BOUNDARY]] : (!fir.class<!fir.type<_QMpoly_tmpTp1{a:i32}>>) -> !fir.box<none>
 ! CHECK: %{{.*}} = fir.call @_FortranAEoshiftVector(%[[RES_BOX_NONE]], %[[ARRAY_NONE]], %[[SHIFT_I64]], %[[BOUNDARY_NONE]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i64, !fir.box<none>, !fir.ref<i8>, i32) -> none
+
+  subroutine test_temp_from_intrinsic_transfer(source, mold)
+    class(p1), intent(in) :: source(:)
+    class(p1), intent(in) :: mold(:)
+    call check(transfer(source, mold))
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpoly_tmpPtest_temp_from_intrinsic_transfer(
+! CHECK-SAME: %[[SOURCE:.*]]: !fir.class<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>> {fir.bindc_name = "source"}, %[[MOLD:.*]]: !fir.class<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>> {fir.bindc_name = "mold"}) {
+! CHECK: %[[TMP_RES:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>>
+! CHECK: %[[RES_BOX_NONE:.*]] = fir.convert %[[TMP_RES]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[SOURCE_NONE:.*]] = fir.convert %[[SOURCE]] : (!fir.class<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>) -> !fir.box<none>
+! CHECK: %[[MOLD_NONE:.*]] = fir.convert %[[MOLD]] : (!fir.class<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>) -> !fir.box<none>
+! CHECK: %{{.*}} = fir.call @_FortranATransfer(%[[RES_BOX_NONE]], %[[SOURCE_NONE]], %[[MOLD_NONE]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
 
 end module
