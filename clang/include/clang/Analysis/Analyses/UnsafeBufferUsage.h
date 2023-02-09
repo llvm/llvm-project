@@ -38,6 +38,9 @@ public:
   virtual void handleFixableVariable(const VarDecl *Variable,
                                      FixItList &&List) = 0;
 
+  /// Returns a reference to the `Preprocessor`:
+  virtual bool isSafeBufferOptOut(const SourceLocation &Loc) const = 0;
+
   /// Returns the text indicating that the user needs to provide input there:
   virtual std::string
   getUserFillPlaceHolder(StringRef HintTextToUser = "placeholder") {
