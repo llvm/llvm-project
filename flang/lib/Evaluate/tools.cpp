@@ -78,8 +78,11 @@ std::optional<DataRef> ExtractSubstringBase(const Substring &substring) {
 // IsVariable()
 
 auto IsVariableHelper::operator()(const Symbol &symbol) const -> Result {
-  const Symbol &root{GetAssociationRoot(symbol)};
-  return !IsNamedConstant(root) && root.has<semantics::ObjectEntityDetails>();
+  // ASSOCIATE(x => expr) -- x counts as a variable, but undefinable
+  const Symbol &ultimate{symbol.GetUltimate()};
+  return !IsNamedConstant(ultimate) &&
+      (ultimate.has<semantics::ObjectEntityDetails>() ||
+          ultimate.has<semantics::AssocEntityDetails>());
 }
 auto IsVariableHelper::operator()(const Component &x) const -> Result {
   const Symbol &comp{x.GetLastSymbol()};
@@ -1263,15 +1266,10 @@ const Symbol *GetMainEntry(const Symbol *symbol) {
 }
 
 bool IsVariableName(const Symbol &original) {
-  const Symbol &symbol{ResolveAssociations(original)};
-  if (symbol.has<ObjectEntityDetails>()) {
-    return !IsNamedConstant(symbol);
-  } else if (const auto *assoc{symbol.detailsIf<AssocEntityDetails>()}) {
-    const auto &expr{assoc->expr()};
-    return expr && IsVariable(*expr) && !HasVectorSubscript(*expr);
-  } else {
-    return false;
-  }
+  const Symbol &ultimate{original.GetUltimate()};
+  return !IsNamedConstant(ultimate) &&
+      (ultimate.has<ObjectEntityDetails>() ||
+          ultimate.has<AssocEntityDetails>());
 }
 
 bool IsPureProcedure(const Symbol &original) {
