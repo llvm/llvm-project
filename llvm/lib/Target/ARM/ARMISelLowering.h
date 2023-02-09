@@ -572,8 +572,9 @@ class VectorType;
     const TargetRegisterClass *
     getRegClassFor(MVT VT, bool isDivergent = false) const override;
 
-    bool shouldAlignPointerArgs(CallInst *CI, unsigned &MinSize,
-                                Align &PrefAlign) const override;
+    bool shouldUpdatePointerArgAlignment(
+        const CallInst *CI, unsigned &MinSize, Align &PrefAlign,
+        const TargetTransformInfo &TTI) const override;
 
     /// createFastISel - This method returns a target specific FastISel object,
     /// or null if the target does not support "fast" ISel.

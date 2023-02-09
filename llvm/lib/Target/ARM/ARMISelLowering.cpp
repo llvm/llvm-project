@@ -1920,8 +1920,9 @@ ARMTargetLowering::getRegClassFor(MVT VT, bool isDivergent) const {
 // memcpy, and other memory intrinsics, typically tries to use LDM/STM if the
 // source/dest is aligned and the copy size is large enough. We therefore want
 // to align such objects passed to memory intrinsics.
-bool ARMTargetLowering::shouldAlignPointerArgs(CallInst *CI, unsigned &MinSize,
-                                               Align &PrefAlign) const {
+bool ARMTargetLowering::shouldUpdatePointerArgAlignment(
+    const CallInst *CI, unsigned &MinSize, Align &PrefAlign,
+    const TargetTransformInfo &TTI) const {
   if (!isa<MemIntrinsic>(CI))
     return false;
   MinSize = 8;
