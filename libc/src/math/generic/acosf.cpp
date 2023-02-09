@@ -43,15 +43,15 @@ LLVM_LIBC_FUNCTION(float, acosf, (float x)) {
   uint32_t x_sign = x_uint >> 31;
 
   // |x| <= 0.5
-  if (unlikely(x_abs <= 0x3f00'0000U)) {
+  if (LIBC_UNLIKELY(x_abs <= 0x3f00'0000U)) {
     // |x| < 0x1p-10
-    if (unlikely(x_abs < 0x3a80'0000U)) {
+    if (LIBC_UNLIKELY(x_abs < 0x3a80'0000U)) {
       // When |x| < 2^-10, we use the following approximation:
       //   acos(x) = pi/2 - asin(x)
       //           ~ pi/2 - x - x^3 / 6
 
       // Check for exceptional values
-      if (auto r = ACOSF_EXCEPTS.lookup(x_uint); unlikely(r.has_value()))
+      if (auto r = ACOSF_EXCEPTS.lookup(x_uint); LIBC_UNLIKELY(r.has_value()))
         return r.value();
 
       double xd = static_cast<double>(x);
@@ -73,7 +73,7 @@ LLVM_LIBC_FUNCTION(float, acosf, (float x)) {
   }
 
   // |x| > 1, return NaNs.
-  if (unlikely(x_abs > 0x3f80'0000U)) {
+  if (LIBC_UNLIKELY(x_abs > 0x3f80'0000U)) {
     if (x_abs <= 0x7f80'0000U) {
       errno = EDOM;
       fputil::set_except(FE_INVALID);

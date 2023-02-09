@@ -57,7 +57,7 @@ template <typename T> LIBC_INLINE T with_errno(T x, int err) {
 }
 
 template <typename T> LIBC_INLINE void force_eval(T x) {
-  volatile T y UNUSED = x;
+  volatile T y LIBC_UNUSED = x;
 }
 
 template <typename T> LIBC_INLINE T opt_barrier(T x) {

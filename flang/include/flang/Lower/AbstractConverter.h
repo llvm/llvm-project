@@ -56,6 +56,7 @@ class DerivedTypeSpec;
 } // namespace semantics
 
 namespace lower {
+class SymMap;
 namespace pft {
 struct Variable;
 }
@@ -81,7 +82,8 @@ public:
   virtual mlir::Value getSymbolAddress(SymbolRef sym) = 0;
 
   virtual fir::ExtendedValue
-  getSymbolExtendedValue(const Fortran::semantics::Symbol &sym) = 0;
+  getSymbolExtendedValue(const Fortran::semantics::Symbol &sym,
+                         Fortran::lower::SymMap *symMap = nullptr) = 0;
 
   /// Get the binding of an implied do variable by name.
   virtual mlir::Value impliedDoBinding(llvm::StringRef name) = 0;

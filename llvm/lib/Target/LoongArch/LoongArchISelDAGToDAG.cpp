@@ -138,6 +138,25 @@ bool LoongArchDAGToDAGISel::SelectBaseAddr(SDValue Addr, SDValue &Base) {
   return true;
 }
 
+// Fold constant addresses.
+bool LoongArchDAGToDAGISel::SelectAddrConstant(SDValue Addr, SDValue &Base,
+                                               SDValue &Offset) {
+  SDLoc DL(Addr);
+  MVT VT = Addr.getSimpleValueType();
+
+  if (!isa<ConstantSDNode>(Addr))
+    return false;
+
+  // If the constant is a simm12, we can fold the whole constant and use R0 as
+  // the base.
+  int64_t CVal = cast<ConstantSDNode>(Addr)->getSExtValue();
+  if (!isInt<12>(CVal))
+    return false;
+  Base = CurDAG->getRegister(LoongArch::R0, VT);
+  Offset = CurDAG->getTargetConstant(SignExtend64<12>(CVal), DL, VT);
+  return true;
+}
+
 bool LoongArchDAGToDAGISel::selectNonFIBaseAddr(SDValue Addr, SDValue &Base) {
   // If this is FrameIndex, don't select it.
   if (isa<FrameIndexSDNode>(Addr))

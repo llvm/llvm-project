@@ -146,7 +146,8 @@ public:
             # Access with "int" to get Nth item in the list
             #------------------------------------------------------------
             if type(key) is int:
-                if key < count:
+                if -count <= key < count:
+                    key %= count
                     return self.GetValueAtIndex(key)
             #------------------------------------------------------------
             # Access with "str" to get values by name

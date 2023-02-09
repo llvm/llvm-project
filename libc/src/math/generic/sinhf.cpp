@@ -19,12 +19,12 @@ LLVM_LIBC_FUNCTION(float, sinhf, (float x)) {
   uint32_t x_abs = xbits.uintval() & FPBits::FloatProp::EXP_MANT_MASK;
 
   // |x| <= 2^-26
-  if (unlikely(x_abs <= 0x3280'0000U)) {
-    return unlikely(x_abs == 0) ? x : (x + 0.25 * x * x * x);
+  if (LIBC_UNLIKELY(x_abs <= 0x3280'0000U)) {
+    return LIBC_UNLIKELY(x_abs == 0) ? x : (x + 0.25 * x * x * x);
   }
 
   // When |x| >= 90, or x is inf or nan
-  if (unlikely(x_abs >= 0x42b4'0000U)) {
+  if (LIBC_UNLIKELY(x_abs >= 0x42b4'0000U)) {
     if (xbits.is_nan())
       return x + 1.0f; // sNaN to qNaN + signal
 
@@ -33,11 +33,11 @@ LLVM_LIBC_FUNCTION(float, sinhf, (float x)) {
 
     int rounding = fputil::get_round();
     if (sign) {
-      if (unlikely(rounding == FE_UPWARD || rounding == FE_TOWARDZERO))
+      if (LIBC_UNLIKELY(rounding == FE_UPWARD || rounding == FE_TOWARDZERO))
         return FPBits(FPBits::MAX_NORMAL | FPBits::FloatProp::SIGN_MASK)
             .get_val();
     } else {
-      if (unlikely(rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO))
+      if (LIBC_UNLIKELY(rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO))
         return FPBits(FPBits::MAX_NORMAL).get_val();
     }
 
@@ -47,9 +47,9 @@ LLVM_LIBC_FUNCTION(float, sinhf, (float x)) {
   }
 
   // |x| <= 0.078125
-  if (unlikely(x_abs <= 0x3da0'0000U)) {
+  if (LIBC_UNLIKELY(x_abs <= 0x3da0'0000U)) {
     // |x| = 0.0005589424981735646724700927734375
-    if (unlikely(x_abs == 0x3a12'85ffU)) {
+    if (LIBC_UNLIKELY(x_abs == 0x3a12'85ffU)) {
       if (fputil::get_round() == FE_TONEAREST)
         return x;
     }

@@ -13,7 +13,7 @@
 #include "src/sys/wait/waitpid.h"
 #include "src/unistd/fork.h"
 
-#include "utils/IntegrationTest/test.h"
+#include "test/IntegrationTest/test.h"
 
 #include <errno.h>
 #include <signal.h>

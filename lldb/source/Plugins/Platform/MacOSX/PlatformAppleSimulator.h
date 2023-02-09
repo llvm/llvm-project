@@ -19,7 +19,7 @@
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include <mutex>
 #include <optional>

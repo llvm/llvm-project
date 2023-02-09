@@ -41,7 +41,7 @@ attributes #0 = { nofree norecurse nosync nounwind writeonly "frame-pointer"="no
 
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{i32 1, !"target-abi", !"lp64"}
-!2 = !{i32 1, !"SmallDataLimit", i32 8}
+!2 = !{i32 8, !"SmallDataLimit", i32 8}
 !3 = !{!"clang version 13.0.0"}
 !4 = !{!5, !5, i64 0}
 !5 = !{!"int", !6, i64 0}

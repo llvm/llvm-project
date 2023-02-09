@@ -1508,6 +1508,10 @@ LLVMDIBuilderCreateArtificialType(LLVMDIBuilderRef Builder,
   return wrap(unwrap(Builder)->createArtificialType(unwrapDI<DIType>(Type)));
 }
 
+uint16_t LLVMGetDINodeTag(LLVMMetadataRef MD) {
+  return unwrapDI<DINode>(MD)->getTag();
+}
+
 const char *LLVMDITypeGetName(LLVMMetadataRef DType, size_t *Length) {
   StringRef Str = unwrap<DIType>(DType)->getName();
   *Length = Str.size();

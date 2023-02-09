@@ -147,7 +147,8 @@ namespace lldb {
                 def __getitem__(self, key):
                     num_items = len(self)
                     if type(key) is int:
-                        if key < num_items:
+                        if -num_items <= key < num_items:
+                            key %= num_items
                             return self.get_at_index_function(self.sbcategory,key)
                     elif type(key) is str:
                         return self.get_by_name_function(self.sbcategory,SBTypeNameSpecifier(key))

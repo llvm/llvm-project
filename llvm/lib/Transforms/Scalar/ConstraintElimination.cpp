@@ -123,8 +123,6 @@ struct ConstraintTy {
 /// based on signed-ness, certain conditions can be transferred between the two
 /// systems.
 class ConstraintInfo {
-  DenseMap<Value *, unsigned> UnsignedValue2Index;
-  DenseMap<Value *, unsigned> SignedValue2Index;
 
   ConstraintSystem UnsignedCS;
   ConstraintSystem SignedCS;
@@ -135,10 +133,10 @@ public:
   ConstraintInfo(const DataLayout &DL) : DL(DL) {}
 
   DenseMap<Value *, unsigned> &getValue2Index(bool Signed) {
-    return Signed ? SignedValue2Index : UnsignedValue2Index;
+    return Signed ? SignedCS.getValue2Index() : UnsignedCS.getValue2Index();
   }
   const DenseMap<Value *, unsigned> &getValue2Index(bool Signed) const {
-    return Signed ? SignedValue2Index : UnsignedValue2Index;
+    return Signed ? SignedCS.getValue2Index() : UnsignedCS.getValue2Index();
   }
 
   ConstraintSystem &getCS(bool Signed) {

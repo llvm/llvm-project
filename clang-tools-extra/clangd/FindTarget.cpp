@@ -285,8 +285,7 @@ public:
         Outer.add(CCE->getConstructor(), Flags);
       }
       void VisitDesignatedInitExpr(const DesignatedInitExpr *DIE) {
-        for (const DesignatedInitExpr::Designator &D :
-             llvm::reverse(DIE->designators()))
+        for (const Designator &D : llvm::reverse(DIE->designators()))
           if (D.isFieldDesignator()) {
             Outer.add(D.getField(), Flags);
             // We don't know which designator was intended, we assume the outer.
@@ -801,7 +800,7 @@ llvm::SmallVector<ReferenceLoc> refInStmt(const Stmt *S,
     }
 
     void VisitDesignatedInitExpr(const DesignatedInitExpr *DIE) {
-      for (const DesignatedInitExpr::Designator &D : DIE->designators()) {
+      for (const Designator &D : DIE->designators()) {
         if (!D.isFieldDesignator())
           continue;
 

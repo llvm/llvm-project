@@ -825,7 +825,8 @@ def LLVM_VPFRemOp : LLVM_VPBinaryF<"frem">;
 def LLVM_VPFNegOp : LLVM_VPUnaryF<"fneg">;
 
 // Float Ternary
-def LLVM_VPFmaOp  : LLVM_VPTernaryF<"fma">;
+def LLVM_VPFMulAddOp  : LLVM_VPTernaryF<"fmuladd">;
+def LLVM_VPFmaOp      : LLVM_VPTernaryF<"fma">;
 
 // Integer Reduction
 def LLVM_VPReduceAddOp  : LLVM_VPReductionI<"add">;

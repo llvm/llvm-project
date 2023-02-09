@@ -96,7 +96,7 @@ OUTPUT OPTIONS
 
 .. option:: -vv, --echo-all-commands
 
- Echo all commands to stdout, as they are being executed.
+ On test failure, echo all commands to stdout as they are being executed.
  This can be valuable for debugging test failures, as the last echoed command
  will be the one which has failed.
  :program:`lit` normally inserts a no-op command (``:`` in the case of bash)

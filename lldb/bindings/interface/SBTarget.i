@@ -1001,7 +1001,8 @@ public:
             def __getitem__(self, key):
                 num_modules = self.sbtarget.GetNumModules()
                 if type(key) is int:
-                    if key < num_modules:
+                    if -num_modules <= key < num_modules:
+                        key %= num_modules
                         return self.sbtarget.GetModuleAtIndex(key)
                 elif type(key) is str:
                     if key.find('/') == -1:

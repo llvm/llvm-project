@@ -364,6 +364,7 @@ def ImmSubFrom32 : SDNodeXForm<imm, [{
 }]>;
 
 def BaseAddr : ComplexPattern<iPTR, 1, "SelectBaseAddr">;
+def AddrConstant : ComplexPattern<iPTR, 2, "SelectAddrConstant">;
 def NonFIBaseAddr : ComplexPattern<iPTR, 1, "selectNonFIBaseAddr">;
 
 def fma_nsz : PatFrag<(ops node:$fj, node:$fk, node:$fa),
@@ -1219,6 +1220,8 @@ def : Pat<(bitreverse (bswap GPR:$rj)), (BITREV_8B GPR:$rj)>;
 
 multiclass LdPat<PatFrag LoadOp, LAInst Inst, ValueType vt = GRLenVT> {
   def : Pat<(vt (LoadOp BaseAddr:$rj)), (Inst BaseAddr:$rj, 0)>;
+  def : Pat<(vt (LoadOp (AddrConstant GPR:$rj, simm12:$imm12))),
+            (Inst GPR:$rj, simm12:$imm12)>;
   def : Pat<(vt (LoadOp (AddLike BaseAddr:$rj, simm12:$imm12))),
             (Inst BaseAddr:$rj, simm12:$imm12)>;
 }
@@ -1261,6 +1264,8 @@ multiclass StPat<PatFrag StoreOp, LAInst Inst, RegisterClass StTy,
                  ValueType vt> {
   def : Pat<(StoreOp (vt StTy:$rd), BaseAddr:$rj),
             (Inst StTy:$rd, BaseAddr:$rj, 0)>;
+  def : Pat<(StoreOp (vt StTy:$rs2), (AddrConstant GPR:$rj, simm12:$imm12)),
+            (Inst StTy:$rs2, GPR:$rj, simm12:$imm12)>;
   def : Pat<(StoreOp (vt StTy:$rd), (AddLike BaseAddr:$rj, simm12:$imm12)),
             (Inst StTy:$rd, BaseAddr:$rj, simm12:$imm12)>;
 }

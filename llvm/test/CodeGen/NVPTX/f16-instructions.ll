@@ -1032,8 +1032,7 @@ define half @test_copysign(half %a, half %b) #0 {
 ; CHECK-DAG:  mov.b32         [[B:%r[0-9]+]], [[BF]];
 ; CHECK-DAG:  and.b16         [[AX:%rs[0-9]+]], [[A]], 32767;
 ; CHECK-DAG:  and.b32         [[BX0:%r[0-9]+]], [[B]], -2147483648;
-; CHECK-DAG:  shr.u32         [[BX1:%r[0-9]+]], [[BX0]], 16;
-; CHECK-DAG:  cvt.u16.u32     [[BX2:%rs[0-9]+]], [[BX1]];
+; CHECK-DAG:  mov.b32         {tmp, [[BX2:%rs[0-9]+]]}, [[BX0]];
 ; CHECK:      or.b16          [[RX:%rs[0-9]+]], [[AX]], [[BX2]];
 ; CHECK:      mov.b16         [[R:%h[0-9]+]], [[RX]];
 ; CHECK:      st.param.b16    [func_retval0+0], [[R]];

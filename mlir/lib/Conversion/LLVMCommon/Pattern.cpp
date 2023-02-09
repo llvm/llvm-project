@@ -48,7 +48,7 @@ Type ConvertToLLVMPattern::getVoidType() const {
 }
 
 Type ConvertToLLVMPattern::getVoidPtrType() const {
-  return LLVM::LLVMPointerType::get(
+  return getTypeConverter()->getPointerType(
       IntegerType::get(&getTypeConverter()->getContext(), 8));
 }
 
@@ -93,7 +93,10 @@ Value ConvertToLLVMPattern::getStridedElementPtr(
   }
 
   Type elementPtrType = memRefDescriptor.getElementPtrType();
-  return index ? rewriter.create<LLVM::GEPOp>(loc, elementPtrType, base, index)
+  return index ? rewriter.create<LLVM::GEPOp>(
+                     loc, elementPtrType,
+                     getTypeConverter()->convertType(type.getElementType()),
+                     base, index)
                : base;
 }
 
@@ -109,8 +112,8 @@ bool ConvertToLLVMPattern::isConvertibleAndHasIdentityMaps(
 Type ConvertToLLVMPattern::getElementPtrType(MemRefType type) const {
   auto elementType = type.getElementType();
   auto structElementType = typeConverter->convertType(elementType);
-  return LLVM::LLVMPointerType::get(structElementType,
-                                    type.getMemorySpaceAsInt());
+  return getTypeConverter()->getPointerType(structElementType,
+                                            type.getMemorySpaceAsInt());
 }
 
 void ConvertToLLVMPattern::getMemRefDescriptorSizes(
@@ -157,10 +160,11 @@ void ConvertToLLVMPattern::getMemRefDescriptorSizes(
   }
 
   // Buffer size in bytes.
-  Type elementPtrType = getElementPtrType(memRefType);
+  Type elementType = typeConverter->convertType(memRefType.getElementType());
+  Type elementPtrType = getTypeConverter()->getPointerType(elementType);
   Value nullPtr = rewriter.create<LLVM::NullOp>(loc, elementPtrType);
-  Value gepPtr =
-      rewriter.create<LLVM::GEPOp>(loc, elementPtrType, nullPtr, runningStride);
+  Value gepPtr = rewriter.create<LLVM::GEPOp>(loc, elementPtrType, elementType,
+                                              nullPtr, runningStride);
   sizeBytes = rewriter.create<LLVM::PtrToIntOp>(loc, getIndexType(), gepPtr);
 }
 
@@ -171,11 +175,11 @@ Value ConvertToLLVMPattern::getSizeInBytes(
   //   %0 = getelementptr %elementType* null, %indexType 1
   //   %1 = ptrtoint %elementType* %0 to %indexType
   // which is a common pattern of getting the size of a type in bytes.
-  auto convertedPtrType =
-      LLVM::LLVMPointerType::get(typeConverter->convertType(type));
+  Type llvmType = typeConverter->convertType(type);
+  auto convertedPtrType = getTypeConverter()->getPointerType(llvmType);
   auto nullPtr = rewriter.create<LLVM::NullOp>(loc, convertedPtrType);
-  auto gep = rewriter.create<LLVM::GEPOp>(loc, convertedPtrType, nullPtr,
-                                          ArrayRef<LLVM::GEPArg>{1});
+  auto gep = rewriter.create<LLVM::GEPOp>(loc, convertedPtrType, llvmType,
+                                          nullPtr, ArrayRef<LLVM::GEPArg>{1});
   return rewriter.create<LLVM::PtrToIntOp>(loc, getIndexType(), gep);
 }
 
@@ -241,7 +245,6 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
 
   // Get frequently used types.
   MLIRContext *context = builder.getContext();
-  Type voidPtrType = LLVM::LLVMPointerType::get(IntegerType::get(context, 8));
   auto i1Type = IntegerType::get(context, 1);
   Type indexType = getTypeConverter()->getIndexType();
 
@@ -249,9 +252,11 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
   auto module = builder.getInsertionPoint()->getParentOfType<ModuleOp>();
   LLVM::LLVMFuncOp freeFunc, mallocFunc;
   if (toDynamic)
-    mallocFunc = LLVM::lookupOrCreateMallocFn(module, indexType);
+    mallocFunc = LLVM::lookupOrCreateMallocFn(
+        module, indexType, getTypeConverter()->useOpaquePointers());
   if (!toDynamic)
-    freeFunc = LLVM::lookupOrCreateFreeFn(module);
+    freeFunc = LLVM::lookupOrCreateFreeFn(
+        module, getTypeConverter()->useOpaquePointers());
 
   // Initialize shared constants.
   Value zero =
@@ -270,7 +275,8 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
         toDynamic
             ? builder.create<LLVM::CallOp>(loc, mallocFunc, allocationSize)
                   .getResult()
-            : builder.create<LLVM::AllocaOp>(loc, voidPtrType, allocationSize,
+            : builder.create<LLVM::AllocaOp>(loc, getVoidPtrType(),
+                                             getVoidType(), allocationSize,
                                              /*alignment=*/0);
     Value source = desc.memRefDescPtr(builder, loc);
     builder.create<LLVM::MemcpyOp>(loc, memory, source, allocationSize, zero);

@@ -1247,69 +1247,6 @@ llvm.mlir.global internal @side_effecting_global() : !llvm.struct<(i8)> {
 
 // -----
 
-// expected-error@+1 {{'llvm.struct_attrs' is permitted only in argument or result attributes}}
-func.func @struct_attrs_in_op() attributes {llvm.struct_attrs = []} {
-  return
-}
-
-// -----
-
-// expected-error@+1 {{expected 'llvm.struct_attrs' to annotate '!llvm.struct' or '!llvm.ptr<struct<...>>'}}
-func.func @invalid_struct_attr_arg_type(%arg0 : i32 {llvm.struct_attrs = []}) {
-    return
-}
-
-// -----
-
-// expected-error@+1 {{expected 'llvm.struct_attrs' to annotate '!llvm.struct' or '!llvm.ptr<struct<...>>'}}
-func.func @invalid_struct_attr_pointer_arg_type(%arg0 : !llvm.ptr<i32> {llvm.struct_attrs = []}) {
-    return
-}
-
-// -----
-
-// expected-error@+1 {{expected 'llvm.struct_attrs' to be an array attribute}}
-func.func @invalid_arg_struct_attr_value(%arg0 : !llvm.struct<(i32)> {llvm.struct_attrs = {}}) {
-    return
-}
-
-// -----
-
-// expected-error@+1 {{size of 'llvm.struct_attrs' must match the size of the annotated '!llvm.struct'}}
-func.func @invalid_arg_struct_attr_size(%arg0 : !llvm.struct<(i32)> {llvm.struct_attrs = []}) {
-    return
-}
-
-// -----
-
-// expected-error@+1 {{expected 'llvm.struct_attrs' to annotate '!llvm.struct' or '!llvm.ptr<struct<...>>'}}
-func.func @invalid_struct_attr_res_type(%arg0 : i32) -> (i32 {llvm.struct_attrs = []}) {
-  return %arg0 : i32
-}
-
-// -----
-
-// expected-error@+1 {{expected 'llvm.struct_attrs' to annotate '!llvm.struct' or '!llvm.ptr<struct<...>>'}}
-func.func @invalid_struct_attr_pointer_res_type(%arg0 : !llvm.ptr<i32>) -> (!llvm.ptr<i32> {llvm.struct_attrs = []}) {
-    return %arg0 : !llvm.ptr<i32>
-}
-
-// -----
-
-// expected-error@+1 {{expected 'llvm.struct_attrs' to be an array attribute}}
-func.func @invalid_res_struct_attr_value(%arg0 : !llvm.struct<(i32)>) -> (!llvm.struct<(i32)> {llvm.struct_attrs = {}}) {
-    return %arg0 : !llvm.struct<(i32)>
-}
-
-// -----
-
-// expected-error@+1 {{size of 'llvm.struct_attrs' must match the size of the annotated '!llvm.struct'}}
-func.func @invalid_res_struct_attr_size(%arg0 : !llvm.struct<(i32)>) -> (!llvm.struct<(i32)> {llvm.struct_attrs = []}) {
-    return %arg0 : !llvm.struct<(i32)>
-}
-
-// -----
-
 func.func @insert_vector_invalid_source_vector_size(%arg0 : vector<16385xi8>, %arg1 : vector<[16]xi8>) {
   // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
   %0 = llvm.intr.vector.insert %arg0, %arg1[0] : vector<16385xi8> into vector<[16]xi8>

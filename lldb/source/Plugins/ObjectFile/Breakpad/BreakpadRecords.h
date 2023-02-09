@@ -12,8 +12,8 @@
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/FormatProviders.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
 
 namespace lldb_private {

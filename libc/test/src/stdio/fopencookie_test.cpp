@@ -15,8 +15,8 @@
 #include "src/stdio/fread.h"
 #include "src/stdio/fseek.h"
 #include "src/stdio/fwrite.h"
-#include "utils/UnitTest/MemoryMatcher.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/MemoryMatcher.h"
+#include "test/UnitTest/Test.h"
 
 #include <errno.h>
 #include <stdio.h>

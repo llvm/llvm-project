@@ -534,7 +534,10 @@ getNormalizedEncodingForSpecifier(SparseTensorEncodingAttr enc) {
       enc.getContext(), dlts,
       AffineMap(), // dimOrdering (irrelavant to storage speicifer)
       AffineMap(), // highLvlOrdering (irrelavant to storage specifer)
-      enc.getPointerBitWidth(), enc.getIndexBitWidth());
+      enc.getPointerBitWidth(), enc.getIndexBitWidth(),
+      // FIXME: we should keep the slice information, for now it is okay as only
+      // constant can be used for slice
+      ArrayRef<SparseTensorDimSliceAttr>{} /*enc.getDimSlices()*/);
 }
 
 StorageSpecifierType

@@ -14,6 +14,8 @@ defvar SchedMxList = ["UpperBound", "M1", "M2", "M4", "M8", "MF2", "MF4", "MF8"]
 // Used for widening and narrowing instructions as it doesn't contain M8.
 defvar SchedMxListW = ["UpperBound", "MF8", "MF4", "MF2", "M1", "M2", "M4"];
 defvar SchedMxListFW = ["UpperBound", "MF4", "MF2", "M1", "M2", "M4"];
+// Used for widening floating-point Reduction as it doesn't contain MF8.
+defvar SchedMxListFWRed = ["UpperBound", "MF4", "MF2", "M1", "M2", "M4", "M8"];
 
 // Creates SchedWrite for each (name, LMUL) pair for LMUL in SchedMxList
 multiclass LMULSchedWrites<string name> {
@@ -32,6 +34,13 @@ multiclass LMULSchedWritesW<string name> {
 // Creates SchedWrite for each (name, LMUL) pair for LMUL in SchedMxListFW
 multiclass LMULSchedWritesFW<string name> {
   foreach mx = SchedMxListFW in {
+    def name # "_" # mx : SchedWrite;
+  }
+}
+
+// Creates SchedWrite for each (name, LMUL) pair for LMUL in SchedMxListFWRed
+multiclass LMULSchedWritesFWRed<string name> {
+  foreach mx = SchedMxListFWRed in {
     def name # "_" # mx : SchedWrite;
   }
 }
@@ -77,6 +86,14 @@ multiclass LMULWriteResW<string name, list<ProcResourceKind> resources> {
 // in SchedMxListFW
 multiclass LMULWriteResFW<string name, list<ProcResourceKind> resources> {
   foreach mx = SchedMxListFW in {
+    def : WriteRes<!cast<SchedWrite>(name # "_" # mx), resources>;
+  }
+}
+
+// Creates WriteRes for each (name, LMUL, resources) tuple for LMUL
+// in SchedMxListFWRed
+multiclass LMULWriteResFWRed<string name, list<ProcResourceKind> resources> {
+  foreach mx = SchedMxListFWRed in {
     def : WriteRes<!cast<SchedWrite>(name # "_" # mx), resources>;
   }
 }
@@ -297,16 +314,20 @@ defm "" : LMULSchedWritesW<"WriteVFNCvtFToIV">;
 defm "" : LMULSchedWritesFW<"WriteVFNCvtFToFV">;
 
 // 14. Vector Reduction Operations
+// The latency of reduction is determined by the size of the read resource.
+// The LMUL range of read resource(VS2) for reduction operantion is between
+// MF8 and M8. Use the _From suffix to indicate the number of the
+// LMUL from VS2.
 // 14.1. Vector Single-Width Integer Reduction Instructions
-def WriteVIRedV       : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVIRedV_From">;
 // 14.2. Vector Widening Integer Reduction Instructions
-def WriteVIWRedV      : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVIWRedV_From">;
 // 14.3. Vector Single-Width Floating-Point Reduction Instructions
-def WriteVFRedV       : SchedWrite;
-def WriteVFRedOV      : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVFRedV_From">;
+defm "" : LMULSchedWrites<"WriteVFRedOV_From">;
 // 14.4. Vector Widening Floating-Point Reduction Instructions
-def WriteVFWRedV      : SchedWrite;
-def WriteVFWRedOV     : SchedWrite;
+defm "" : LMULSchedWritesFWRed<"WriteVFWRedV_From">;
+defm "" : LMULSchedWritesFWRed<"WriteVFWRedOV_From">;
 
 // 15. Vector Mask Instructions
 // 15.1. Vector Mask-Register Logical Instructions
@@ -727,12 +748,12 @@ defm "" : LMULWriteResW<"WriteVFNCvtFToIV", []>;
 defm "" : LMULWriteResFW<"WriteVFNCvtFToFV", []>;
 
 // 14. Vector Reduction Operations
-def : WriteRes<WriteVIRedV, []>;
-def : WriteRes<WriteVIWRedV, []>;
-def : WriteRes<WriteVFRedV, []>;
-def : WriteRes<WriteVFRedOV, []>;
-def : WriteRes<WriteVFWRedV, []>;
-def : WriteRes<WriteVFWRedOV, []>;
+defm "" : LMULWriteRes<"WriteVIRedV_From", []>;
+defm "" : LMULWriteRes<"WriteVIWRedV_From", []>;
+defm "" : LMULWriteRes<"WriteVFRedV_From", []>;
+defm "" : LMULWriteRes<"WriteVFRedOV_From", []>;
+defm "" : LMULWriteResFWRed<"WriteVFWRedV_From", []>;
+defm "" : LMULWriteResFWRed<"WriteVFWRedOV_From", []>;
 
 // 15. Vector Mask Instructions
 defm "" : LMULWriteRes<"WriteVMALUV", []>;
