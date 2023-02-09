@@ -10,7 +10,7 @@
 #define LIBC_TEST_SRC_STRING_MEMORY_UTILS_MEMORY_CHECK_UTILS_H
 
 #include "src/__support/CPP/span.h"
-#include "src/__support/macros/compiler_features.h"
+#include "src/__support/macros/properties/compiler.h"
 #include "src/__support/macros/sanitizer.h"
 #include "src/string/memory_utils/utils.h"
 #include <assert.h> // assert
