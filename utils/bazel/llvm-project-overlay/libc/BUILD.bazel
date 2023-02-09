@@ -80,8 +80,8 @@ libc_support_library(
     hdrs = [
         "src/__support/common.h",
         "src/__support/endian.h",
-        "src/__support/macros/properties/architectures.h",
         "src/__support/macros/attributes.h",
+        "src/__support/macros/properties/architectures.h",
         "src/__support/macros/properties/cpu_features.h",
     ],
     deps = [":libc_root"],
