@@ -211,6 +211,7 @@ int llvm_get_di_tag(void) {
   uint16_t tag0 = LLVMGetDINodeTag(md);
 
   assert(tag0 == 0);
+  (void)tag0;
 
   const char *filename = "metadata.c";
   LLVMDIBuilderRef builder = LLVMCreateDIBuilder(m);
@@ -222,6 +223,7 @@ int llvm_get_di_tag(void) {
   uint16_t tag1 = LLVMGetDINodeTag(decl);
 
   assert(tag1 == 0x13);
+  (void)tag1;
 
   LLVMDisposeModule(m);
 
