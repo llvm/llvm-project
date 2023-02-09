@@ -782,6 +782,11 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // element if this is an array in an elemental call.
   hlfir::Entity actual = preparedActual.getActual(loc, builder);
 
+  // Do nothing if this is a procedure argument. It is already a
+  // fir.boxproc/fir.tuple<fir.boxproc, len> as it should.
+  if (actual.isProcedure())
+    return PreparedDummyArgument{actual, std::nullopt};
+
   const bool passingPolymorphicToNonPolymorphic =
       actual.isPolymorphic() && !fir::isPolymorphicType(dummyType);
 
@@ -1013,7 +1018,10 @@ genUserCall(PreparedActualArguments &loweredActuals,
           loc, "unexpected PassBy::AddressAndLength for actual arguments");
       break;
     case PassBy::CharProcTuple: {
-      TODO(loc, "HLFIR PassBy::CharProcTuple");
+      hlfir::Entity actual = preparedActual->getActual(loc, builder);
+      assert(fir::isCharacterProcedureTuple(actual.getType()) &&
+             "character dummy procedure was not prepared as expected");
+      caller.placeInput(arg, actual);
     } break;
     case PassBy::MutableBox: {
       hlfir::Entity actual = preparedActual->getActual(loc, builder);

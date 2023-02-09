@@ -1439,7 +1439,13 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
                              llvm::ArrayRef<mlir::Value> shape = std::nullopt,
                              llvm::ArrayRef<mlir::Value> lbounds = std::nullopt,
                              bool force = false) {
-  if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
+  // In HLFIR, procedure dummy symbols are not added with an hlfir.declare
+  // because they are "values", and hlfir.declare is intended for variables. It
+  // would add too much complexity to hlfir.declare to support this case, and
+  // this would bring very little (the only point being debug info, that are not
+  // yet emitted) since alias analysis is meaningless for those.
+  if (converter.getLoweringOptions().getLowerToHighLevelFIR() &&
+      !Fortran::semantics::IsProcedure(sym)) {
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     const mlir::Location loc = genLocation(converter, sym);
     mlir::Value shapeOrShift;
@@ -1488,7 +1494,8 @@ void Fortran::lower::genDeclareSymbol(
     Fortran::lower::AbstractConverter &converter,
     Fortran::lower::SymMap &symMap, const Fortran::semantics::Symbol &sym,
     const fir::ExtendedValue &exv, bool force) {
-  if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
+  if (converter.getLoweringOptions().getLowerToHighLevelFIR() &&
+      !Fortran::semantics::IsProcedure(sym)) {
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     const mlir::Location loc = genLocation(converter, sym);
     fir::FortranVariableFlagsAttr attributes =
