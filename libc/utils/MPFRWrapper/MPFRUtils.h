@@ -10,7 +10,7 @@
 #define LLVM_LIBC_UTILS_TESTUTILS_MPFRUTILS_H
 
 #include "src/__support/CPP/type_traits.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 #include "utils/testutils/RoundingModeUtils.h"
 
 #include <stdint.h>

@@ -11,7 +11,7 @@
 
 #include "lldb/lldb-types.h"
 
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include <string>
 

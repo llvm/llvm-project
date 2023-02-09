@@ -29,6 +29,14 @@ void LangOptions::resetNonModularOptions() {
   Name = static_cast<unsigned>(Default);
 #include "clang/Basic/LangOptions.def"
 
+  // Reset "benign" options with implied values (Options.td ImpliedBy relations)
+  // rather than their defaults. This avoids unexpected combinations and
+  // invocations that cannot be round-tripped to arguments.
+  // FIXME: we should derive this automatically from ImpliedBy in tablegen.
+  AllowFPReassoc = UnsafeFPMath;
+  NoHonorNaNs = FiniteMathOnly;
+  NoHonorInfs = FiniteMathOnly;
+
   // These options do not affect AST generation.
   NoSanitizeFiles.clear();
   XRayAlwaysInstrumentFiles.clear();

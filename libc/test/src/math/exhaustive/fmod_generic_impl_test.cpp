@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/generic/FMod.h"
+#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/FPMatcher.h"
-#include "utils/UnitTest/Test.h"
 
 #include <array>
 #include <limits>

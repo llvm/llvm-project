@@ -250,7 +250,6 @@ static func::FuncOp getCalledFunction(CallOpInterface callOp) {
 /// analyzed.
 // TODO: This does not handle cyclic function call graphs etc.
 static void equivalenceAnalysis(func::FuncOp funcOp,
-                                BufferizationAliasInfo &aliasInfo,
                                 OneShotAnalysisState &state,
                                 FuncAnalysisState &funcState) {
   funcOp->walk([&](func::CallOp callOp) {
@@ -268,7 +267,7 @@ static void equivalenceAnalysis(func::FuncOp funcOp,
         continue;
       Value returnVal = callOp.getResult(returnIdx);
       Value argVal = callOp->getOperand(bbargIdx);
-      aliasInfo.unionEquivalenceClasses(returnVal, argVal);
+      state.unionEquivalenceClasses(returnVal, argVal);
     }
 
     return WalkResult::advance();
@@ -365,7 +364,6 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
   assert(state.getOptions().bufferizeFunctionBoundaries &&
          "expected that function boundary bufferization is activated");
   FuncAnalysisState &funcState = getOrCreateFuncAnalysisState(state);
-  BufferizationAliasInfo &aliasInfo = state.getAliasInfo();
 
   // A list of functions in the order in which they are analyzed + bufferized.
   SmallVector<func::FuncOp> orderedFuncOps;
@@ -385,7 +383,7 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
     funcState.startFunctionAnalysis(funcOp);
 
     // Gather equivalence info for CallOps.
-    equivalenceAnalysis(funcOp, aliasInfo, state, funcState);
+    equivalenceAnalysis(funcOp, state, funcState);
 
     // Analyze funcOp.
     if (failed(analyzeOp(funcOp, state, statistics)))
@@ -413,8 +411,7 @@ void mlir::bufferization::removeBufferizationAttributesInModule(
 
 LogicalResult mlir::bufferization::bufferizeModuleOp(
     ModuleOp moduleOp, const OneShotBufferizationOptions &options,
-    BufferizationStatistics *statistics,
-    OpFilter::Entry::FilterFn analysisFilterFn) {
+    BufferizationStatistics *statistics) {
   assert(options.bufferizeFunctionBoundaries &&
          "expected that function boundary bufferization is activated");
   IRRewriter rewriter(moduleOp.getContext());
@@ -432,8 +429,9 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
   for (func::FuncOp funcOp : orderedFuncOps) {
     // Note: It would be good to apply cleanups here but we cannot as aliasInfo
     // would be invalidated.
-    bool copyBeforeWrite = options.copyBeforeWrite ||
-                           (analysisFilterFn && analysisFilterFn(funcOp));
+    bool copyBeforeWrite =
+        options.copyBeforeWrite ||
+        llvm::is_contained(options.noAnalysisFuncFilter, funcOp.getSymName());
     if (failed(bufferizeOp(funcOp, options, copyBeforeWrite,
                            /*opFilter=*/nullptr, statistics)))
       return failure();
@@ -451,17 +449,27 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
 
 LogicalResult mlir::bufferization::runOneShotModuleBufferize(
     ModuleOp moduleOp, const OneShotBufferizationOptions &options,
-    BufferizationStatistics *statistics,
-    OpFilter::Entry::FilterFn analysisFilterFn) {
+    BufferizationStatistics *statistics) {
   assert(options.bufferizeFunctionBoundaries &&
          "expected that function boundary bufferization is activated");
   assert(!(options.copyBeforeWrite && options.testAnalysisOnly) &&
          "invalid combination of bufferization flags");
   if (!options.copyBeforeWrite) {
-    if (!analysisFilterFn) {
+    if (options.noAnalysisFuncFilter.empty()) {
       if (failed(insertTensorCopies(moduleOp, options, statistics)))
         return failure();
     } else {
+      // FuncOps whose names are specified in options.noAnalysisFuncFilter will
+      // not be analyzed. Ops in these FuncOps will not be analyzed as well.
+      OpFilter::Entry::FilterFn analysisFilterFn = [=](Operation *op) {
+        auto func = dyn_cast<func::FuncOp>(op);
+        if (!func)
+          func = op->getParentOfType<func::FuncOp>();
+        if (func)
+          return llvm::is_contained(options.noAnalysisFuncFilter,
+                                    func.getSymName());
+        return false;
+      };
       OneShotBufferizationOptions updatedOptions(options);
       updatedOptions.opFilter.denyOperation(analysisFilterFn);
       if (failed(insertTensorCopies(moduleOp, updatedOptions, statistics)))
@@ -470,9 +478,7 @@ LogicalResult mlir::bufferization::runOneShotModuleBufferize(
   }
   if (options.testAnalysisOnly)
     return success();
-
-  if (failed(
-          bufferizeModuleOp(moduleOp, options, statistics, analysisFilterFn)))
+  if (failed(bufferizeModuleOp(moduleOp, options, statistics)))
     return failure();
   return success();
 }

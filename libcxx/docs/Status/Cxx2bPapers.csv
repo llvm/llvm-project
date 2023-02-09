@@ -14,7 +14,7 @@
 "`P0401R6 <https://wg21.link/P0401R6>`__","LWG","Providing size feedback in the Allocator interface","June 2021","|Complete|","15.0"
 "`P0448R4 <https://wg21.link/P0448R4>`__","LWG","A strstream replacement using span<charT> as buffer","June 2021","",""
 "`P1132R8 <https://wg21.link/P1132R8>`__","LWG","out_ptr - a scalable output pointer abstraction","June 2021","",""
-"`P1328R1 <https://wg21.link/P1328R1>`__","LWG","Making std::type_info::operator== constexpr","June 2021","",""
+"`P1328R1 <https://wg21.link/P1328R1>`__","LWG","Making std::type_info::operator== constexpr","June 2021","|Complete|","17.0"
 "`P1425R4 <https://wg21.link/P1425R4>`__","LWG","Iterators pair constructors for stack and queue","June 2021","|Complete|","14.0","|ranges|"
 "`P1518R2 <https://wg21.link/P1518R2>`__","LWG","Stop overconstraining allocators in container deduction guides","June 2021","|Complete|","13.0"
 "`P1659R3 <https://wg21.link/P1659R3>`__","LWG","starts_with and ends_with","June 2021","","","|ranges|"

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/unistd/getpid.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcGetPidTest, SmokeTest) {
   // getpid always succeeds. So, we just call it as a smoke test.

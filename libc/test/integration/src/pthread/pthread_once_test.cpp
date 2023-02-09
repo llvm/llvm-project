@@ -15,7 +15,7 @@
 #include "src/pthread/pthread_mutex_unlock.h"
 #include "src/pthread/pthread_once.h"
 
-#include "utils/IntegrationTest/test.h"
+#include "test/IntegrationTest/test.h"
 
 #include <pthread.h>
 

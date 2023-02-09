@@ -8,7 +8,6 @@
 
 #include "DwarfGenerator.h"
 #include "../lib/CodeGen/AsmPrinter/DwarfStringPool.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/DIE.h"
@@ -34,6 +33,7 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 using namespace dwarf;

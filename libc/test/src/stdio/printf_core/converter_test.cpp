@@ -11,7 +11,7 @@
 #include "src/stdio/printf_core/string_writer.h"
 #include "src/stdio/printf_core/writer.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 class LlvmLibcPrintfConverterTest : public __llvm_libc::testing::Test {
 protected:

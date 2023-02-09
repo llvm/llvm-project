@@ -52,12 +52,13 @@ bool MachineSanitizerBinaryMetadata::runOnMachineFunction(MachineFunction &MF) {
   if (!MD)
     return false;
   const auto &Section = *cast<MDString>(MD->getOperand(0));
-  if (!Section.getString().equals(kSanitizerBinaryMetadataCoveredSection))
+  if (!Section.getString().startswith(kSanitizerBinaryMetadataCoveredSection))
     return false;
   auto &AuxMDs = *cast<MDTuple>(MD->getOperand(1));
   // Assume it currently only has features.
   assert(AuxMDs.getNumOperands() == 1);
-  auto *Features = cast<ConstantAsMetadata>(AuxMDs.getOperand(0))->getValue();
+  Constant *Features =
+      cast<ConstantAsMetadata>(AuxMDs.getOperand(0))->getValue();
   if (!Features->getUniqueInteger()[kSanitizerBinaryMetadataUARBit])
     return false;
   // Calculate size of stack args for the function.
@@ -69,12 +70,18 @@ bool MachineSanitizerBinaryMetadata::runOnMachineFunction(MachineFunction &MF) {
     Align = std::max(Align, MFI.getObjectAlign(i).value());
   }
   Size = (Size + Align - 1) & ~(Align - 1);
+  if (!Size)
+    return false;
+  // Non-zero size, update metadata.
   auto &F = MF.getFunction();
   IRBuilder<> IRB(F.getContext());
   MDBuilder MDB(F.getContext());
   // Keep the features and append size of stack args to the metadata.
-  F.setMetadata(LLVMContext::MD_pcsections,
-                MDB.createPCSections(
-                    {{Section.getString(), {Features, IRB.getInt32(Size)}}}));
+  APInt NewFeatures = Features->getUniqueInteger();
+  NewFeatures.setBit(kSanitizerBinaryMetadataUARHasSizeBit);
+  F.setMetadata(
+      LLVMContext::MD_pcsections,
+      MDB.createPCSections({{Section.getString(),
+                             {IRB.getInt(NewFeatures), IRB.getInt32(Size)}}}));
   return false;
 }

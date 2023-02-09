@@ -60,6 +60,13 @@ void RTNAME(PointerApplyMold)(
   pointer.set_base_addr(nullptr);
   pointer.raw().attribute = CFI_attribute_pointer;
   pointer.raw().rank = rank;
+  if (auto *pointerAddendum{pointer.Addendum()}) {
+    if (const auto *moldAddendum{mold.Addendum()}) {
+      if (const auto *derived{moldAddendum->derivedType()}) {
+        pointerAddendum->set_derivedType(derived);
+      }
+    }
+  }
 }
 
 void RTNAME(PointerAssociateScalar)(Descriptor &pointer, void *target) {
@@ -95,6 +102,7 @@ void RTNAME(PointerAssociateRemapping)(Descriptor &pointer,
   Terminator terminator{sourceFile, sourceLine};
   SubscriptValue byteStride{/*captured from first dimension*/};
   std::size_t boundElementBytes{bounds.ElementBytes()};
+  pointer.raw().rank = bounds.rank();
   for (int j{0}; j < bounds.rank(); ++j) {
     auto &dim{pointer.GetDimension(j)};
     dim.SetBounds(GetInt64(bounds.ZeroBasedIndexedElement<const char>(2 * j),
@@ -102,7 +110,7 @@ void RTNAME(PointerAssociateRemapping)(Descriptor &pointer,
         GetInt64(bounds.ZeroBasedIndexedElement<const char>(2 * j + 1),
             boundElementBytes, terminator));
     if (j == 0) {
-      byteStride = dim.ByteStride();
+      byteStride = dim.ByteStride() * dim.Extent();
     } else {
       dim.SetByteStride(byteStride);
       byteStride *= dim.Extent();

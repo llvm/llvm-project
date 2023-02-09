@@ -530,13 +530,19 @@ struct ElideSingleElementReduction : public OpRewritePattern<ReductionOp> {
     if (maskableOp.isMasked())
       return failure();
 
-    if (reductionOp.getVectorType().getDimSize(0) != 1)
+    auto vectorType = reductionOp.getVectorType();
+    if (vectorType.getRank() != 0 && vectorType.getDimSize(0) != 1)
       return failure();
 
     Location loc = reductionOp.getLoc();
-    Value result = rewriter.create<ExtractOp>(loc, reductionOp.getType(),
-                                              reductionOp.getVector(),
-                                              rewriter.getI64ArrayAttr(0));
+    Value result;
+    if (vectorType.getRank() == 0) {
+      result = rewriter.create<ExtractElementOp>(loc, reductionOp.getVector());
+    } else {
+      result = rewriter.create<ExtractOp>(loc, reductionOp.getType(),
+                                          reductionOp.getVector(),
+                                          rewriter.getI64ArrayAttr(0));
+    }
 
     if (Value acc = reductionOp.getAcc())
       result = vector::makeArithReduction(rewriter, loc, reductionOp.getKind(),

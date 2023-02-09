@@ -323,16 +323,23 @@ bool AArch64MIPeepholeOpt::visitADDSUB(
     unsigned PosOpc, unsigned NegOpc, MachineInstr &MI) {
   // Try below transformation.
   //
-  // MOVi32imm + ADDWrr ==> ADDWri + ADDWri
-  // MOVi64imm + ADDXrr ==> ADDXri + ADDXri
+  // ADDWrr X, MOVi32imm ==> ADDWri + ADDWri
+  // ADDXrr X, MOVi64imm ==> ADDXri + ADDXri
   //
-  // MOVi32imm + SUBWrr ==> SUBWri + SUBWri
-  // MOVi64imm + SUBXrr ==> SUBXri + SUBXri
+  // SUBWrr X, MOVi32imm ==> SUBWri + SUBWri
+  // SUBXrr X, MOVi64imm ==> SUBXri + SUBXri
   //
   // The mov pseudo instruction could be expanded to multiple mov instructions
   // later. Let's try to split the constant operand of mov instruction into two
   // legal add/sub immediates. It makes only two ADD/SUB instructions intead of
   // multiple `mov` + `and/sub` instructions.
+
+  // We can sometimes have ADDWrr WZR, MULi32imm that have not been constant
+  // folded. Make sure that we don't generate invalid instructions that use XZR
+  // in those cases.
+  if (MI.getOperand(1).getReg() == AArch64::XZR ||
+      MI.getOperand(1).getReg() == AArch64::WZR)
+    return false;
 
   return splitTwoPartImm<T>(
       MI,
@@ -365,6 +372,11 @@ bool AArch64MIPeepholeOpt::visitADDSSUBS(
     OpcodePair PosOpcs, OpcodePair NegOpcs, MachineInstr &MI) {
   // Try the same transformation as ADDSUB but with additional requirement
   // that the condition code usages are only for Equal and Not Equal
+
+  if (MI.getOperand(1).getReg() == AArch64::XZR ||
+      MI.getOperand(1).getReg() == AArch64::WZR)
+    return false;
+
   return splitTwoPartImm<T>(
       MI,
       [PosOpcs, NegOpcs, &MI, &TRI = TRI,

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/time/time_func.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include <errno.h>
 #include <limits.h>

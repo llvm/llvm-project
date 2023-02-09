@@ -8,7 +8,6 @@
 
 #include "OffloadWrapper.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
@@ -16,6 +15,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Support/Error.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;

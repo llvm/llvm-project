@@ -1158,7 +1158,7 @@ void SIPeepholeSDWA::legalizeScalarOperands(MachineInstr &MI,
     if (!Op.isImm() && !(Op.isReg() && !TRI->isVGPR(*MRI, Op.getReg())))
       continue;
 
-    unsigned I = MI.getOperandNo(&Op);
+    unsigned I = Op.getOperandNo();
     if (Desc.operands()[I].RegClass == -1 ||
         !TRI->isVSSuperClass(TRI->getRegClass(Desc.operands()[I].RegClass)))
       continue;

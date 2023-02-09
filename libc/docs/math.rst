@@ -110,7 +110,7 @@ remainder      :green:`XA`      :green:`XA`     :green:`XA`
 remquo         :green:`XA`      :green:`XA`     :green:`XA`
 rint           :green:`XA`      :green:`XA`     :green:`XA`
 round          :green:`XA`      :green:`XA`     :green:`XA`
-scalbn
+scalbn         :green:`XA`      :green:`XA`     :green:`XA`
 signbit
 trunc          :green:`XA`      :green:`XA`     :green:`XA`
 ============== ================ =============== ======================

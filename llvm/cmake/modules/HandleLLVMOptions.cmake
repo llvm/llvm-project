@@ -81,6 +81,8 @@ if( LLVM_ENABLE_ASSERTIONS )
       endforeach()
     endif()
   endif()
+  # Enable assertions in libstdc++.
+  add_compile_definitions(_GLIBCXX_ASSERTIONS)
 endif()
 
 if(LLVM_ENABLE_EXPENSIVE_CHECKS)
@@ -491,6 +493,10 @@ if( MSVC )
   endif (LLVM_ENABLE_WERROR)
 
   append("/Zc:inline" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+
+  # Enable standards-conforming preprocessor.
+  # https://learn.microsoft.com/en-us/cpp/build/reference/zc-preprocessor
+  append("/Zc:preprocessor" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 
   # Some projects use the __cplusplus preprocessor macro to check support for
   # a particular version of the C++ standard. When this option is not specified

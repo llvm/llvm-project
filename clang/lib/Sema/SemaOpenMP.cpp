@@ -17662,6 +17662,13 @@ OMPClause *Sema::ActOnOpenMPDestroyClause(Expr *InteropVar,
                                           SourceLocation LParenLoc,
                                           SourceLocation VarLoc,
                                           SourceLocation EndLoc) {
+  if (!InteropVar && LangOpts.OpenMP >= 52 &&
+      DSAStack->getCurrentDirective() == OMPD_depobj) {
+    Diag(StartLoc, diag::err_omp_expected_clause_argument)
+        << getOpenMPClauseName(OMPC_destroy)
+        << getOpenMPDirectiveName(OMPD_depobj);
+    return nullptr;
+  }
   if (InteropVar &&
       !isValidInteropVariable(*this, InteropVar, VarLoc, OMPC_destroy))
     return nullptr;

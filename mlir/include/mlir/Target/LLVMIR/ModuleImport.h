@@ -33,6 +33,7 @@ namespace LLVM {
 
 namespace detail {
 class DebugImporter;
+class LoopAnnotationImporter;
 } // namespace detail
 
 /// Module import implementation class that provides methods to import globals
@@ -164,11 +165,16 @@ public:
     return tbaaMapping.lookup(node);
   }
 
-  /// Returns the MLIR symbol reference mapped to the given LLVM access
-  /// group metadata `node`.
-  SymbolRefAttr lookupAccessGroupAttr(const llvm::MDNode *node) const {
-    return accessGroupMapping.lookup(node);
-  }
+  /// Returns the symbol references pointing to the access group operations that
+  /// map to the access group nodes starting from the access group metadata
+  /// `node`. Returns failure, if any of the symbol references cannot be found.
+  FailureOr<SmallVector<SymbolRefAttr>>
+  lookupAccessGroupAttrs(const llvm::MDNode *node) const;
+
+  /// Returns the loop annotation attribute that corresponds to the given LLVM
+  /// loop metadata `node`.
+  LoopAnnotationAttr translateLoopAnnotationAttr(const llvm::MDNode *node,
+                                                 Location loc) const;
 
 private:
   /// Clears the block and value mapping before processing a new region.
@@ -303,6 +309,8 @@ private:
   LLVM::TypeFromLLVMIRTranslator typeTranslator;
   /// Stateful debug information importer.
   std::unique_ptr<detail::DebugImporter> debugImporter;
+  /// Loop annotation importer.
+  std::unique_ptr<detail::LoopAnnotationImporter> loopAnnotationImporter;
 };
 
 } // namespace LLVM

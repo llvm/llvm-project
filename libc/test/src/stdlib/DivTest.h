@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 template <typename IntType, typename ReturnType>
 class DivTest : public __llvm_libc::testing::Test {

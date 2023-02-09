@@ -2049,8 +2049,146 @@ define i1 @fabs_ueq_neginfinity_or_fabs_uge_smallest_normal(half %x) #0 {
   ret i1 %class
 }
 
+; --------------------------------------------------------------------
+; Test denormal mode handling with x == 0
+; --------------------------------------------------------------------
+
+; Base pattern !isfinite(x) || x == 0.0, with input denormals flushed to 0
+define i1 @not_isfinite_or_zero_f16_daz(half %x) #1 {
+; CHECK-LABEL: @not_isfinite_or_zero_f16_daz(
+; CHECK-NEXT:    [[FABS:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    [[CMPINF:%.*]] = fcmp ueq half [[FABS]], 0xH7C00
+; CHECK-NEXT:    [[CMPZERO:%.*]] = fcmp oeq half [[X]], 0xH0000
+; CHECK-NEXT:    [[CLASS:%.*]] = or i1 [[CMPZERO]], [[CMPINF]]
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call half @llvm.fabs.f16(half %x)
+  %cmpinf = fcmp ueq half %fabs, 0xH7C00
+  %cmpzero = fcmp oeq half %x, 0xH0000
+  %class = or i1 %cmpzero, %cmpinf
+  ret i1 %class
+}
+
+define <2 x i1> @not_isfinite_or_zero_v2f16_daz(<2 x half> %x) #1 {
+; CHECK-LABEL: @not_isfinite_or_zero_v2f16_daz(
+; CHECK-NEXT:    [[FABS:%.*]] = call <2 x half> @llvm.fabs.v2f16(<2 x half> [[X:%.*]])
+; CHECK-NEXT:    [[CMPINF:%.*]] = fcmp ueq <2 x half> [[FABS]], <half 0xH7C00, half 0xH7C00>
+; CHECK-NEXT:    [[CMPZERO:%.*]] = fcmp oeq <2 x half> [[X]], zeroinitializer
+; CHECK-NEXT:    [[CLASS:%.*]] = or <2 x i1> [[CMPZERO]], [[CMPINF]]
+; CHECK-NEXT:    ret <2 x i1> [[CLASS]]
+;
+  %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %x)
+  %cmpinf = fcmp ueq <2 x half> %fabs, <half 0xH7C00, half 0xH7C00>
+  %cmpzero = fcmp oeq <2 x half> %x, zeroinitializer
+  %class = or <2 x i1> %cmpzero, %cmpinf
+  ret <2 x i1> %class
+}
+
+; Base pattern !isfinite(x) || x == 0.0, with unknown input denormal treatment
+define i1 @not_isfinite_or_zero_f16_dynamic(half %x) #2 {
+; CHECK-LABEL: @not_isfinite_or_zero_f16_dynamic(
+; CHECK-NEXT:    [[FABS:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    [[CMPINF:%.*]] = fcmp ueq half [[FABS]], 0xH7C00
+; CHECK-NEXT:    [[CMPZERO:%.*]] = fcmp oeq half [[X]], 0xH0000
+; CHECK-NEXT:    [[CLASS:%.*]] = or i1 [[CMPZERO]], [[CMPINF]]
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call half @llvm.fabs.f16(half %x)
+  %cmpinf = fcmp ueq half %fabs, 0xH7C00
+  %cmpzero = fcmp oeq half %x, 0xH0000
+  %class = or i1 %cmpzero, %cmpinf
+  ret i1 %class
+}
+
+define <2 x i1> @not_isfinite_or_zero_v2f16_dynamic(<2 x half> %x) #2 {
+; CHECK-LABEL: @not_isfinite_or_zero_v2f16_dynamic(
+; CHECK-NEXT:    [[FABS:%.*]] = call <2 x half> @llvm.fabs.v2f16(<2 x half> [[X:%.*]])
+; CHECK-NEXT:    [[CMPINF:%.*]] = fcmp ueq <2 x half> [[FABS]], <half 0xH7C00, half 0xH7C00>
+; CHECK-NEXT:    [[CMPZERO:%.*]] = fcmp oeq <2 x half> [[X]], zeroinitializer
+; CHECK-NEXT:    [[CLASS:%.*]] = or <2 x i1> [[CMPZERO]], [[CMPINF]]
+; CHECK-NEXT:    ret <2 x i1> [[CLASS]]
+;
+  %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %x)
+  %cmpinf = fcmp ueq <2 x half> %fabs, <half 0xH7C00, half 0xH7C00>
+  %cmpzero = fcmp oeq <2 x half> %x, zeroinitializer
+  %class = or <2 x i1> %cmpzero, %cmpinf
+  ret <2 x i1> %class
+}
+
+define i1 @not_zero_and_subnormal_daz(half %x) #1 {
+; CHECK-LABEL: @not_zero_and_subnormal_daz(
+; CHECK-NEXT:    [[OR:%.*]] = fcmp ord half [[X:%.*]], 0xH0000
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %fabs = call half @llvm.fabs.f16(half %x)
+  %cmp.zero = fcmp one half %fabs, 0.0
+  %cmp.smallest.normal = fcmp olt half %fabs, 0xH0400
+  %or = or i1 %cmp.smallest.normal, %cmp.zero
+  ret i1 %or
+}
+
+define i1 @not_zero_and_subnormal_dynamic(half %x) #2 {
+; CHECK-LABEL: @not_zero_and_subnormal_dynamic(
+; CHECK-NEXT:    [[FABS:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    [[CMP_ZERO:%.*]] = fcmp one half [[X]], 0xH0000
+; CHECK-NEXT:    [[CMP_SMALLEST_NORMAL:%.*]] = fcmp olt half [[FABS]], 0xH0400
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP_SMALLEST_NORMAL]], [[CMP_ZERO]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %fabs = call half @llvm.fabs.f16(half %x)
+  %cmp.zero = fcmp one half %fabs, 0.0
+  %cmp.smallest.normal = fcmp olt half %fabs, 0xH0400
+  %or = or i1 %cmp.smallest.normal, %cmp.zero
+  ret i1 %or
+}
+
+; TODO: This could fold to just fcmp olt half %fabs, 0xH0400
+define i1 @subnormal_or_zero_ieee(half %x) #0 {
+; CHECK-LABEL: @subnormal_or_zero_ieee(
+; CHECK-NEXT:    [[FABS:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    [[IS_SUBNORMAL:%.*]] = fcmp olt half [[FABS]], 0xH0400
+; CHECK-NEXT:    [[IS_ZERO:%.*]] = fcmp oeq half [[X]], 0xH0000
+; CHECK-NEXT:    [[AND:%.*]] = or i1 [[IS_SUBNORMAL]], [[IS_ZERO]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %fabs = call half @llvm.fabs.f16(half %x)
+  %is.subnormal = fcmp olt half %fabs, 0xH0400
+  %is.zero = fcmp oeq half %x, 0xH0000
+  %and = or i1 %is.subnormal, %is.zero
+  ret i1 %and
+}
+
+define i1 @subnormal_or_zero_daz(half %x) #1 {
+; CHECK-LABEL: @subnormal_or_zero_daz(
+; CHECK-NEXT:    [[AND:%.*]] = fcmp oeq half [[X:%.*]], 0xH0000
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %fabs = call half @llvm.fabs.f16(half %x)
+  %is.subnormal = fcmp olt half %fabs, 0xH0400
+  %is.zero = fcmp oeq half %x, 0xH0000
+  %and = or i1 %is.subnormal, %is.zero
+  ret i1 %and
+}
+
+define i1 @subnormal_or_zero_dynamic(half %x) #2 {
+; CHECK-LABEL: @subnormal_or_zero_dynamic(
+; CHECK-NEXT:    [[FABS:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    [[IS_SUBNORMAL:%.*]] = fcmp olt half [[FABS]], 0xH0400
+; CHECK-NEXT:    [[IS_ZERO:%.*]] = fcmp oeq half [[X]], 0xH0000
+; CHECK-NEXT:    [[AND:%.*]] = or i1 [[IS_SUBNORMAL]], [[IS_ZERO]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %fabs = call half @llvm.fabs.f16(half %x)
+  %is.subnormal = fcmp olt half %fabs, 0xH0400
+  %is.zero = fcmp oeq half %x, 0xH0000
+  %and = or i1 %is.subnormal, %is.zero
+  ret i1 %and
+}
+
 declare half @llvm.fabs.f16(half) #0
 declare half @llvm.canonicalize.f16(half) #0
 declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #0
 
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+attributes #1 = { "denormal-fp-math"="ieee,preserve-sign" }
+attributes #2 = { "denormal-fp-math"="ieee,dynamic" }

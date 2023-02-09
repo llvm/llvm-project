@@ -111,6 +111,8 @@ public:
   static unsigned getNumUnpackedValues(MemRefType type);
 
 private:
+  bool useOpaquePointers();
+
   // Cached index type.
   Type indexType;
 };
@@ -194,36 +196,39 @@ public:
 
   /// Builds IR extracting the allocated pointer from the descriptor.
   static Value allocatedPtr(OpBuilder &builder, Location loc,
-                            Value memRefDescPtr, Type elemPtrPtrType);
+                            Value memRefDescPtr,
+                            LLVM::LLVMPointerType elemPtrType);
   /// Builds IR inserting the allocated pointer into the descriptor.
   static void setAllocatedPtr(OpBuilder &builder, Location loc,
-                              Value memRefDescPtr, Type elemPtrPtrType,
+                              Value memRefDescPtr,
+                              LLVM::LLVMPointerType elemPtrType,
                               Value allocatedPtr);
 
   /// Builds IR extracting the aligned pointer from the descriptor.
   static Value alignedPtr(OpBuilder &builder, Location loc,
                           LLVMTypeConverter &typeConverter, Value memRefDescPtr,
-                          Type elemPtrPtrType);
+                          LLVM::LLVMPointerType elemPtrType);
   /// Builds IR inserting the aligned pointer into the descriptor.
   static void setAlignedPtr(OpBuilder &builder, Location loc,
                             LLVMTypeConverter &typeConverter,
-                            Value memRefDescPtr, Type elemPtrPtrType,
+                            Value memRefDescPtr,
+                            LLVM::LLVMPointerType elemPtrType,
                             Value alignedPtr);
 
   /// Builds IR extracting the offset from the descriptor.
   static Value offset(OpBuilder &builder, Location loc,
                       LLVMTypeConverter &typeConverter, Value memRefDescPtr,
-                      Type elemPtrPtrType);
+                      LLVM::LLVMPointerType elemPtrType);
   /// Builds IR inserting the offset into the descriptor.
   static void setOffset(OpBuilder &builder, Location loc,
                         LLVMTypeConverter &typeConverter, Value memRefDescPtr,
-                        Type elemPtrPtrType, Value offset);
+                        LLVM::LLVMPointerType elemPtrType, Value offset);
 
   /// Builds IR extracting the pointer to the first element of the size array.
   static Value sizeBasePtr(OpBuilder &builder, Location loc,
                            LLVMTypeConverter &typeConverter,
                            Value memRefDescPtr,
-                           LLVM::LLVMPointerType elemPtrPtrType);
+                           LLVM::LLVMPointerType elemPtrType);
   /// Builds IR extracting the size[index] from the descriptor.
   static Value size(OpBuilder &builder, Location loc,
                     LLVMTypeConverter &typeConverter, Value sizeBasePtr,

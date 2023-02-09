@@ -14,6 +14,8 @@
 #include <__algorithm/replace_copy.h>
 #include <__availability>
 #include <__config>
+#include <__functional/unary_function.h>
+#include <__fwd/hash.h>
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/iterator_traits.h>
 #include <cstddef>
@@ -1085,6 +1087,17 @@ size_t hash_value(const path& __p) noexcept;
 _LIBCPP_AVAILABILITY_FILESYSTEM_POP
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+template <>
+struct _LIBCPP_AVAILABILITY_FILESYSTEM hash<_VSTD_FS::path> : __unary_function<_VSTD_FS::path, size_t> {
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(_VSTD_FS::path const& __p) const noexcept {
+    return _VSTD_FS::hash_value(__p);
+  }
+};
+
+_LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_CXX03_LANG
 

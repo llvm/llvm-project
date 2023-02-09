@@ -1423,6 +1423,12 @@ static Align tryEnforceAlignment(Value *V, Align PrefAlign,
     if (!GO->canIncreaseAlignment())
       return CurrentAlign;
 
+    if (GO->isThreadLocal()) {
+      unsigned MaxTLSAlign = GO->getParent()->getMaxTLSAlignment() / CHAR_BIT;
+      if (MaxTLSAlign && PrefAlign > Align(MaxTLSAlign))
+        PrefAlign = Align(MaxTLSAlign);
+    }
+
     GO->setAlignment(PrefAlign);
     return PrefAlign;
   }

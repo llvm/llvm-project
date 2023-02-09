@@ -8,7 +8,7 @@
 
 #include "src/ctype/isalpha.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcIsAlpha, DefaultLocale) {
   // Loops through all characters, verifying that letters return a

@@ -12,7 +12,7 @@
 #include "lldb/Utility/XcodeSDK.h"
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include <tuple>
 

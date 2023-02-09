@@ -54,7 +54,7 @@ bool Localizer::isLocalUse(MachineOperand &MOUse, const MachineInstr &Def,
   MachineInstr &MIUse = *MOUse.getParent();
   InsertMBB = MIUse.getParent();
   if (MIUse.isPHI())
-    InsertMBB = MIUse.getOperand(MIUse.getOperandNo(&MOUse) + 1).getMBB();
+    InsertMBB = MIUse.getOperand(MOUse.getOperandNo() + 1).getMBB();
   return InsertMBB == Def.getParent();
 }
 
@@ -99,7 +99,7 @@ bool Localizer::localizeInterBlock(MachineFunction &MF,
       MachineBasicBlock *InsertMBB;
       LLVM_DEBUG(MachineInstr &MIUse = *MOUse.getParent();
                  dbgs() << "Checking use: " << MIUse
-                        << " #Opd: " << MIUse.getOperandNo(&MOUse) << '\n');
+                        << " #Opd: " << MOUse.getOperandNo() << '\n');
       if (isLocalUse(MOUse, MI, InsertMBB)) {
         // Even if we're in the same block, if the block is very large we could
         // still have many long live ranges. Try to do intra-block localization

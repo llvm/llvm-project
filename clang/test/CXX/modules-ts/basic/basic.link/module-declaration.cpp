@@ -42,7 +42,7 @@ EXPORT module MODULE_NAME;
 #elif TEST == 10
 // expected-error-re@-9 {{'maybe_unused' attribute cannot be applied to a module{{$}}}}
 #elif TEST == 1
-// expected-error@-11 {{definition of module 'z' is not available}}
+// expected-error@-11 {{module 'z' not found}}
 #else
 // expected-no-diagnostics
 #endif

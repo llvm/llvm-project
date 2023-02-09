@@ -479,18 +479,6 @@ MemoryContentsType BinaryContext::analyzeMemoryAt(uint64_t Address,
   return MemoryContentsType::UNKNOWN;
 }
 
-/// Check if <fragment restored name> == <parent restored name>.cold(.\d+)?
-bool isPotentialFragmentByName(BinaryFunction &Fragment,
-                               BinaryFunction &Parent) {
-  for (StringRef Name : Parent.getNames()) {
-    std::string NamePrefix = Regex::escape(NameResolver::restore(Name));
-    std::string NameRegex = Twine(NamePrefix, "\\.cold(\\.[0-9]+)?").str();
-    if (Fragment.hasRestoredNameRegex(NameRegex))
-      return true;
-  }
-  return false;
-}
-
 bool BinaryContext::analyzeJumpTable(
     const uint64_t Address, const JumpTable::JumpTableType Type,
     BinaryFunction &BF, const uint64_t NextJTAddress,
@@ -513,14 +501,9 @@ bool BinaryContext::analyzeJumpTable(
     // Nothing to do if we failed to identify the containing function.
     if (!TargetBF)
       return false;
-    // Case 1: check if BF is a fragment and TargetBF is its parent.
-    if (BF.isFragment()) {
-      // Parent function may or may not be already registered.
-      // Set parent link based on function name matching heuristic.
-      return registerFragment(BF, *TargetBF);
-    }
-    // Case 2: check if TargetBF is a fragment and BF is its parent.
-    return TargetBF->isFragment() && registerFragment(*TargetBF, BF);
+    // Check if BF is a fragment of TargetBF or vice versa.
+    return (BF.isFragment() && BF.isParentFragment(TargetBF)) ||
+           (TargetBF->isFragment() && TargetBF->isParentFragment(&BF));
   };
 
   ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
@@ -1116,8 +1099,6 @@ void BinaryContext::generateSymbolHashes() {
 
 bool BinaryContext::registerFragment(BinaryFunction &TargetFunction,
                                      BinaryFunction &Function) const {
-  if (!isPotentialFragmentByName(TargetFunction, Function))
-    return false;
   assert(TargetFunction.isFragment() && "TargetFunction must be a fragment");
   if (TargetFunction.isParentFragment(&Function))
     return true;
@@ -1242,7 +1223,7 @@ void BinaryContext::processInterproceduralReferences() {
 
     if (TargetFunction) {
       if (TargetFunction->isFragment() &&
-          !registerFragment(*TargetFunction, Function)) {
+          !TargetFunction->isParentFragment(&Function)) {
         errs() << "BOLT-WARNING: interprocedural reference between unrelated "
                   "fragments: "
                << Function.getPrintName() << " and "

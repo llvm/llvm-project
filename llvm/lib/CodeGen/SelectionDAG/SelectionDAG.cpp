@@ -21,7 +21,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
@@ -67,6 +66,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
 #include <algorithm>
 #include <cassert>
@@ -512,6 +512,31 @@ std::optional<unsigned> ISD::getVPExplicitVectorLengthIdx(unsigned Opcode) {
 #define BEGIN_REGISTER_VP_SDNODE(VPSD, LEGALPOS, TDNAME, MASKPOS, EVLPOS)      \
   case ISD::VPSD:                                                              \
     return EVLPOS;
+#include "llvm/IR/VPIntrinsics.def"
+  }
+}
+
+std::optional<unsigned> ISD::getBaseOpcodeForVP(unsigned VPOpcode,
+                                                bool hasFPExcept) {
+  // FIXME: Return strict opcodes in case of fp exceptions.
+  switch (VPOpcode) {
+  default:
+    return std::nullopt;
+#define BEGIN_REGISTER_VP_SDNODE(VPOPC, ...) case ISD::VPOPC:
+#define VP_PROPERTY_FUNCTIONAL_SDOPC(SDOPC) return ISD::SDOPC;
+#define END_REGISTER_VP_SDNODE(VPOPC) break;
+#include "llvm/IR/VPIntrinsics.def"
+  }
+  return std::nullopt;
+}
+
+unsigned ISD::getVPForBaseOpcode(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    llvm_unreachable("can not translate this Opcode to VP.");
+#define BEGIN_REGISTER_VP_SDNODE(VPOPC, ...) break;
+#define VP_PROPERTY_FUNCTIONAL_SDOPC(SDOPC) case ISD::SDOPC:
+#define END_REGISTER_VP_SDNODE(VPOPC) return ISD::VPOPC;
 #include "llvm/IR/VPIntrinsics.def"
   }
 }
@@ -4733,6 +4758,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::AssertSext:
   case ISD::AssertZext:
   case ISD::FREEZE:
+  case ISD::CONCAT_VECTORS:
   case ISD::INSERT_SUBVECTOR:
   case ISD::AND:
   case ISD::OR:
@@ -4753,6 +4779,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::ZERO_EXTEND_VECTOR_INREG:
   case ISD::BITCAST:
   case ISD::BUILD_VECTOR:
+  case ISD::BUILD_PAIR:
     return false;
 
   case ISD::ADD:
@@ -4918,9 +4945,21 @@ bool SelectionDAG::isKnownNeverZeroFloat(SDValue Op) const {
          "Floating point type expected");
 
   // If the value is a constant, we can obviously see if it is a zero or not.
-  // TODO: Add BuildVector support.
   if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Op))
     return !C->isZero();
+
+  // Return false if we find any zero in a vector.
+  if (Op->getOpcode() == ISD::BUILD_VECTOR ||
+      Op->getOpcode() == ISD::SPLAT_VECTOR) {
+    for (const SDValue &OpVal : Op->op_values()) {
+      if (OpVal.isUndef())
+        return false;
+      if (auto *C = dyn_cast<ConstantFPSDNode>(OpVal))
+        if (C->isZero())
+          return false;
+    }
+    return true;
+  }
   return false;
 }
 
