@@ -121,7 +121,8 @@ public:
         def __getitem__(self, key):
           num_elements = self.GetSize()
           if type(key) is int:
-              if key < num_elements:
+              if -num_elements <= key < num_elements:
+                  key %= num_elements
                   return self.GetTypeEnumMemberAtIndex(key)
           elif type(key) is str:
               for idx in range(num_elements):
