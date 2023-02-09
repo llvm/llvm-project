@@ -323,8 +323,8 @@ func.func @memref_reshape(%input : memref<2x3xf32>, %shape : memref<?xindex>) {
 // Compute size in bytes to allocate result ranked descriptor
 // CHECK: [[C1:%.*]] = llvm.mlir.constant(1 : index) : i64
 // CHECK: [[C2:%.*]] = llvm.mlir.constant(2 : index) : i64
-// CHECK: [[PTR_SIZE:%.*]] = llvm.mlir.constant(8 : index) : i64
 // CHECK: [[INDEX_SIZE:%.*]] = llvm.mlir.constant(8 : index) : i64
+// CHECK: [[PTR_SIZE:%.*]] = llvm.mlir.constant(8 : index) : i64
 // CHECK: [[DOUBLE_PTR_SIZE:%.*]] = llvm.mul [[C2]], [[PTR_SIZE]] : i64
 // CHECK: [[DESC_ALLOC_SIZE:%.*]] = llvm.add [[DOUBLE_PTR_SIZE]], %{{.*}}
 // CHECK: [[UNDERLYING_DESC:%.*]] = llvm.alloca [[DESC_ALLOC_SIZE]] x i8

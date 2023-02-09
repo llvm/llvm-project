@@ -158,6 +158,10 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
     return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
         .getResult(0);
   });
+
+  // Integer memory spaces map to themselves.
+  addTypeAttributeConversion(
+      [](BaseMemRefType memref, IntegerAttr addrspace) { return addrspace; });
 }
 
 /// Returns the MLIR context.
@@ -318,8 +322,17 @@ LLVMTypeConverter::getMemRefDescriptorFields(MemRefType type,
   if (!elementType)
     return {};
 
-  LLVM::LLVMPointerType ptrTy =
-      getPointerType(elementType, type.getMemorySpaceAsInt());
+  FailureOr<unsigned> addressSpace = getMemRefAddressSpace(type);
+  if (failed(addressSpace)) {
+    emitError(UnknownLoc::get(type.getContext()),
+              "conversion of memref memory space ")
+        << type.getMemorySpace()
+        << " to integer address space "
+           "failed. Consider adding memory space conversions.";
+    return {};
+  }
+  auto ptrTy = getPointerType(elementType, *addressSpace);
+
   auto indexTy = getIndexType();
 
   SmallVector<Type, 5> results = {ptrTy, ptrTy, indexTy};
@@ -337,7 +350,7 @@ LLVMTypeConverter::getMemRefDescriptorFields(MemRefType type,
 unsigned LLVMTypeConverter::getMemRefDescriptorSize(MemRefType type,
                                                     const DataLayout &layout) {
   // Compute the descriptor size given that of its components indicated above.
-  unsigned space = type.getMemorySpaceAsInt();
+  unsigned space = *getMemRefAddressSpace(type);
   return 2 * llvm::divideCeil(getPointerBitwidth(space), 8) +
          (1 + 2 * type.getRank()) * layout.getTypeSize(getIndexType());
 }
@@ -369,7 +382,7 @@ unsigned
 LLVMTypeConverter::getUnrankedMemRefDescriptorSize(UnrankedMemRefType type,
                                                    const DataLayout &layout) {
   // Compute the descriptor size given that of its components indicated above.
-  unsigned space = type.getMemorySpaceAsInt();
+  unsigned space = *getMemRefAddressSpace(type);
   return layout.getTypeSize(getIndexType()) +
          llvm::divideCeil(getPointerBitwidth(space), 8);
 }
@@ -379,6 +392,21 @@ Type LLVMTypeConverter::convertUnrankedMemRefType(UnrankedMemRefType type) {
     return {};
   return LLVM::LLVMStructType::getLiteral(&getContext(),
                                           getUnrankedMemRefDescriptorFields());
+}
+
+FailureOr<unsigned>
+LLVMTypeConverter::getMemRefAddressSpace(BaseMemRefType type) {
+  if (!type.getMemorySpace()) // Default memory space -> 0.
+    return 0;
+  Optional<Attribute> converted =
+      convertTypeAttribute(type, type.getMemorySpace());
+  if (!converted)
+    return failure();
+  if (!(*converted)) // Conversion to default is 0.
+    return 0;
+  if (auto explicitSpace = converted->dyn_cast_or_null<IntegerAttr>())
+    return explicitSpace.getInt();
+  return failure();
 }
 
 // Check if a memref type can be converted to a bare pointer.
@@ -412,7 +440,10 @@ Type LLVMTypeConverter::convertMemRefToBarePtr(BaseMemRefType type) {
   Type elementType = convertType(type.getElementType());
   if (!elementType)
     return {};
-  return getPointerType(elementType, type.getMemorySpaceAsInt());
+  FailureOr<unsigned> addressSpace = getMemRefAddressSpace(type);
+  if (failed(addressSpace))
+    return {};
+  return getPointerType(elementType, *addressSpace);
 }
 
 /// Convert an n-D vector type to an LLVM vector type:

@@ -473,8 +473,7 @@ LLVMPassManagerBuilderSetDisableSimplifyLibCalls(LLVMPassManagerBuilderRef PMB,
 void
 LLVMPassManagerBuilderUseInlinerWithThreshold(LLVMPassManagerBuilderRef PMB,
                                               unsigned Threshold) {
-  PassManagerBuilder *Builder = unwrap(PMB);
-  Builder->Inliner = createFunctionInliningPass(Threshold);
+  // TODO: remove this
 }
 
 void

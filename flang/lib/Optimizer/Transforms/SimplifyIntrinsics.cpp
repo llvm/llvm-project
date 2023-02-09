@@ -27,6 +27,7 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Runtime/entry-names.h"
@@ -39,6 +40,10 @@
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <mlir/IR/Location.h>
+#include <mlir/IR/MLIRContext.h>
+#include <mlir/IR/Value.h>
+#include <mlir/Support/LLVM.h>
 #include <optional>
 
 namespace fir {
@@ -57,7 +62,8 @@ class SimplifyIntrinsicsPass
   using FunctionBodyGeneratorTy =
       llvm::function_ref<void(fir::FirOpBuilder &, mlir::func::FuncOp &)>;
   using GenReductionBodyTy = llvm::function_ref<void(
-      fir::FirOpBuilder &builder, mlir::func::FuncOp &funcOp, unsigned rank)>;
+      fir::FirOpBuilder &builder, mlir::func::FuncOp &funcOp, unsigned rank,
+      mlir::Type elementType)>;
 
 public:
   /// Generate a new function implementing a simplified version
@@ -82,13 +88,17 @@ private:
   void simplifyIntOrFloatReduction(fir::CallOp call,
                                    const fir::KindMapping &kindMap,
                                    GenReductionBodyTy genBodyFunc);
-  void simplifyLogicalReduction(fir::CallOp call,
-                                const fir::KindMapping &kindMap,
-                                GenReductionBodyTy genBodyFunc);
+  void simplifyLogicalDim0Reduction(fir::CallOp call,
+                                    const fir::KindMapping &kindMap,
+                                    GenReductionBodyTy genBodyFunc);
+  void simplifyLogicalDim1Reduction(fir::CallOp call,
+                                    const fir::KindMapping &kindMap,
+                                    GenReductionBodyTy genBodyFunc);
   void simplifyReductionBody(fir::CallOp call, const fir::KindMapping &kindMap,
                              GenReductionBodyTy genBodyFunc,
                              fir::FirOpBuilder &builder,
-                             const mlir::StringRef &basename);
+                             const mlir::StringRef &basename,
+                             mlir::Type elementType);
 };
 
 } // namespace
@@ -136,22 +146,30 @@ using BodyOpGeneratorTy = llvm::function_ref<mlir::Value(
     mlir::Value)>;
 using InitValGeneratorTy = llvm::function_ref<mlir::Value(
     fir::FirOpBuilder &, mlir::Location, const mlir::Type &)>;
+using ContinueLoopGenTy = llvm::function_ref<llvm::SmallVector<mlir::Value>(
+    fir::FirOpBuilder &, mlir::Location, mlir::Value)>;
 
 /// Generate the reduction loop into \p funcOp.
 ///
-/// \p elementType is the type of the elements in the input array,
-///    which may be different to the return type.
 /// \p initVal is a function, called to get the initial value for
 ///    the reduction value
 /// \p genBody is called to fill in the actual reduciton operation
 ///    for example add for SUM, MAX for MAXVAL, etc.
 /// \p rank is the rank of the input argument.
-static void genReductionLoop(fir::FirOpBuilder &builder, mlir::Type elementType,
-                             mlir::func::FuncOp &funcOp,
-                             InitValGeneratorTy initVal,
-                             BodyOpGeneratorTy genBody, unsigned rank) {
-  auto loc = mlir::UnknownLoc::get(builder.getContext());
-  builder.setInsertionPointToEnd(funcOp.addEntryBlock());
+/// \p elementType is the type of the elements in the input array,
+///    which may be different to the return type.
+/// \p loopCond is called to generate the condition to continue or
+///    not for IterWhile loops
+/// \p unorderedOrInitalLoopCond contains either a boolean or bool
+///    mlir constant, and controls the inital value for while loops
+///    or if DoLoop is ordered/unordered.
+
+template <typename OP, typename T, int resultIndex>
+static void
+genReductionLoop(fir::FirOpBuilder &builder, mlir::func::FuncOp &funcOp,
+                 InitValGeneratorTy initVal, ContinueLoopGenTy loopCond,
+                 T unorderedOrInitialLoopCond, BodyOpGeneratorTy genBody,
+                 unsigned rank, mlir::Type elementType, mlir::Location loc) {
 
   mlir::IndexType idxTy = builder.getIndexType();
 
@@ -186,8 +204,7 @@ static void genReductionLoop(fir::FirOpBuilder &builder, mlir::Type elementType,
     mlir::Value loopCount = builder.create<mlir::arith::SubIOp>(loc, len, one);
     bounds.push_back(loopCount);
   }
-
-  // Create a loop nest consisting of DoLoopOp operations.
+  // Create a loop nest consisting of OP operations.
   // Collect the loops' induction variables into indices array,
   // which will be used in the innermost loop to load the input
   // array's element.
@@ -197,9 +214,9 @@ static void genReductionLoop(fir::FirOpBuilder &builder, mlir::Type elementType,
   for (unsigned i = rank; 0 < i; --i) {
     mlir::Value step = one;
     mlir::Value loopCount = bounds[i - 1];
-    auto loop = builder.create<fir::DoLoopOp>(loc, zeroIdx, loopCount, step,
-                                              /*unordered=*/false,
-                                              /*finalCountValue=*/false, init);
+    auto loop = builder.create<OP>(loc, zeroIdx, loopCount, step,
+                                   unorderedOrInitialLoopCond,
+                                   /*finalCountValue=*/false, init);
     init = loop.getRegionIterArgs()[0];
     indices.push_back(loop.getInductionVar());
     // Set insertion point to the loop body so that the next loop
@@ -210,31 +227,38 @@ static void genReductionLoop(fir::FirOpBuilder &builder, mlir::Type elementType,
   // Reverse the indices such that they are ordered as:
   //   <dim-0-idx, dim-1-idx, ...>
   std::reverse(indices.begin(), indices.end());
-
   // We are in the innermost loop: generate the reduction body.
   mlir::Type eleRefTy = builder.getRefType(elementType);
   mlir::Value addr =
       builder.create<fir::CoordinateOp>(loc, eleRefTy, array, indices);
   mlir::Value elem = builder.create<fir::LoadOp>(loc, addr);
-
   mlir::Value reductionVal = genBody(builder, loc, elementType, elem, init);
+  // Generate vector with condition to continue while loop at [0] and result
+  // from current loop at [1] for IterWhileOp loops, just result at [0] for
+  // DoLoopOp loops.
+  llvm::SmallVector<mlir::Value> results = loopCond(builder, loc, reductionVal);
 
   // Unwind the loop nest and insert ResultOp on each level
   // to return the updated value of the reduction to the enclosing
   // loops.
   for (unsigned i = 0; i < rank; ++i) {
-    auto result = builder.create<fir::ResultOp>(loc, reductionVal);
+    auto result = builder.create<fir::ResultOp>(loc, results);
     // Proceed to the outer loop.
-    auto loop = mlir::cast<fir::DoLoopOp>(result->getParentOp());
-    reductionVal = loop.getResult(0);
+    auto loop = mlir::cast<OP>(result->getParentOp());
+    results = loop.getResults();
     // Set insertion point after the loop operation that we have
     // just processed.
     builder.setInsertionPointAfter(loop.getOperation());
   }
-
   // End of loop nest. The insertion point is after the outermost loop.
   // Return the reduction value from the function.
-  builder.create<mlir::func::ReturnOp>(loc, reductionVal);
+  builder.create<mlir::func::ReturnOp>(loc, results[resultIndex]);
+}
+
+static llvm::SmallVector<mlir::Value> nopLoopCond(fir::FirOpBuilder &builder,
+                                                  mlir::Location,
+                                                  mlir::Value reductionVal) {
+  return {reductionVal};
 }
 
 /// Generate function body of the simplified version of RTNAME(Sum)
@@ -243,7 +267,8 @@ static void genReductionLoop(fir::FirOpBuilder &builder, mlir::Type elementType,
 /// \p funcOp is expected to be empty on entry to this function.
 /// \p rank specifies the rank of the input argument.
 static void genRuntimeSumBody(fir::FirOpBuilder &builder,
-                              mlir::func::FuncOp &funcOp, unsigned rank) {
+                              mlir::func::FuncOp &funcOp, unsigned rank,
+                              mlir::Type elementType) {
   // function RTNAME(Sum)<T>x<rank>_simplified(arr)
   //   T, dimension(:) :: arr
   //   T sum = 0
@@ -275,13 +300,17 @@ static void genRuntimeSumBody(fir::FirOpBuilder &builder,
     return {};
   };
 
-  mlir::Type elementType = funcOp.getResultTypes()[0];
+  mlir::Location loc = mlir::UnknownLoc::get(builder.getContext());
+  builder.setInsertionPointToEnd(funcOp.addEntryBlock());
 
-  genReductionLoop(builder, elementType, funcOp, zero, genBodyOp, rank);
+  genReductionLoop<fir::DoLoopOp, bool, 0>(builder, funcOp, zero, nopLoopCond,
+                                           false, genBodyOp, rank, elementType,
+                                           loc);
 }
 
 static void genRuntimeMaxvalBody(fir::FirOpBuilder &builder,
-                                 mlir::func::FuncOp &funcOp, unsigned rank) {
+                                 mlir::func::FuncOp &funcOp, unsigned rank,
+                                 mlir::Type elementType) {
   auto init = [](fir::FirOpBuilder builder, mlir::Location loc,
                  mlir::Type elementType) {
     if (auto ty = elementType.dyn_cast<mlir::FloatType>()) {
@@ -306,13 +335,17 @@ static void genRuntimeMaxvalBody(fir::FirOpBuilder &builder,
     return {};
   };
 
-  mlir::Type elementType = funcOp.getResultTypes()[0];
+  mlir::Location loc = mlir::UnknownLoc::get(builder.getContext());
+  builder.setInsertionPointToEnd(funcOp.addEntryBlock());
 
-  genReductionLoop(builder, elementType, funcOp, init, genBodyOp, rank);
+  genReductionLoop<fir::DoLoopOp, bool, 0>(builder, funcOp, init, nopLoopCond,
+                                           false, genBodyOp, rank, elementType,
+                                           loc);
 }
 
 static void genRuntimeCountBody(fir::FirOpBuilder &builder,
-                                mlir::func::FuncOp &funcOp, unsigned rank) {
+                                mlir::func::FuncOp &funcOp, unsigned rank,
+                                mlir::Type elementType) {
   auto zero = [](fir::FirOpBuilder builder, mlir::Location loc,
                  mlir::Type elementType) {
     unsigned bits = elementType.getIntOrFloatBitWidth();
@@ -334,9 +367,78 @@ static void genRuntimeCountBody(fir::FirOpBuilder &builder,
     return builder.create<mlir::arith::AddIOp>(loc, select, elem2);
   };
 
-  mlir::Type elementType = builder.getI32Type();
+  // Count always gets I32 for elementType as it converts logical input to
+  // logical<4> before passing to the function.
+  mlir::Location loc = mlir::UnknownLoc::get(builder.getContext());
+  builder.setInsertionPointToEnd(funcOp.addEntryBlock());
 
-  genReductionLoop(builder, elementType, funcOp, zero, genBodyOp, rank);
+  genReductionLoop<fir::DoLoopOp, bool, 0>(builder, funcOp, zero, nopLoopCond,
+                                           false, genBodyOp, rank, elementType,
+                                           loc);
+}
+
+static void genRuntimeAnyBody(fir::FirOpBuilder &builder,
+                              mlir::func::FuncOp &funcOp, unsigned rank,
+                              mlir::Type elementType) {
+  auto zero = [](fir::FirOpBuilder builder, mlir::Location loc,
+                 mlir::Type elementType) {
+    return builder.createIntegerConstant(loc, elementType, 0);
+  };
+
+  auto genBodyOp = [](fir::FirOpBuilder builder, mlir::Location loc,
+                      mlir::Type elementType, mlir::Value elem1,
+                      mlir::Value elem2) -> mlir::Value {
+    auto zero = builder.createIntegerConstant(loc, elementType, 0);
+    return builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::ne, elem1, zero);
+  };
+
+  auto continueCond = [](fir::FirOpBuilder builder, mlir::Location loc,
+                         mlir::Value reductionVal) {
+    auto one1 = builder.createIntegerConstant(loc, builder.getI1Type(), 1);
+    auto eor = builder.create<mlir::arith::XOrIOp>(loc, reductionVal, one1);
+    llvm::SmallVector<mlir::Value> results = {eor, reductionVal};
+    return results;
+  };
+
+  mlir::Location loc = mlir::UnknownLoc::get(builder.getContext());
+  builder.setInsertionPointToEnd(funcOp.addEntryBlock());
+  mlir::Value ok = builder.createBool(loc, true);
+
+  genReductionLoop<fir::IterWhileOp, mlir::Value, 1>(
+      builder, funcOp, zero, continueCond, ok, genBodyOp, rank, elementType,
+      loc);
+}
+
+static void genRuntimeAllBody(fir::FirOpBuilder &builder,
+                              mlir::func::FuncOp &funcOp, unsigned rank,
+                              mlir::Type elementType) {
+  auto one = [](fir::FirOpBuilder builder, mlir::Location loc,
+                mlir::Type elementType) {
+    return builder.createIntegerConstant(loc, elementType, 1);
+  };
+
+  auto genBodyOp = [](fir::FirOpBuilder builder, mlir::Location loc,
+                      mlir::Type elementType, mlir::Value elem1,
+                      mlir::Value elem2) -> mlir::Value {
+    auto zero = builder.createIntegerConstant(loc, elementType, 0);
+    return builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::ne, elem1, zero);
+  };
+
+  auto continueCond = [](fir::FirOpBuilder builder, mlir::Location loc,
+                         mlir::Value reductionVal) {
+    llvm::SmallVector<mlir::Value> results = {reductionVal, reductionVal};
+    return results;
+  };
+
+  mlir::Location loc = mlir::UnknownLoc::get(builder.getContext());
+  builder.setInsertionPointToEnd(funcOp.addEntryBlock());
+  mlir::Value ok = builder.createBool(loc, true);
+
+  genReductionLoop<fir::IterWhileOp, mlir::Value, 1>(
+      builder, funcOp, one, continueCond, ok, genBodyOp, rank, elementType,
+      loc);
 }
 
 /// Generate function type for the simplified version of RTNAME(DotProduct)
@@ -612,10 +714,11 @@ void SimplifyIntrinsicsPass::simplifyIntOrFloatReduction(
        (fmfString.empty() ? mlir::Twine{} : mlir::Twine{"_", fmfString}))
           .str();
 
-  simplifyReductionBody(call, kindMap, genBodyFunc, builder, funcName);
+  simplifyReductionBody(call, kindMap, genBodyFunc, builder, funcName,
+                        resultType);
 }
 
-void SimplifyIntrinsicsPass::simplifyLogicalReduction(
+void SimplifyIntrinsicsPass::simplifyLogicalDim0Reduction(
     fir::CallOp call, const fir::KindMapping &kindMap,
     GenReductionBodyTy genBodyFunc) {
 
@@ -623,26 +726,79 @@ void SimplifyIntrinsicsPass::simplifyLogicalReduction(
   const mlir::Value &dim = args[3];
   unsigned rank = getDimCount(args[0]);
 
-  // Rank is set to 0 for assumed shape arrays, don't simplify
-  // in these cases
+  // getDimCount returns a rank of 0 for assumed shape arrays, don't simplify in
+  // these cases.
   if (!(isZero(dim) && rank > 0))
     return;
 
+  mlir::Value inputBox = findBoxDef(args[0]);
+  LLVM_DEBUG(llvm::dbgs() << "Boxdef was: " << inputBox << '\n');
+
+  mlir::Type elementType = hlfir::getFortranElementType(inputBox.getType());
   mlir::SymbolRefAttr callee = call.getCalleeAttr();
 
   fir::FirOpBuilder builder{getSimplificationBuilder(call, kindMap)};
+
+  LLVM_DEBUG(llvm::dbgs() << "In DIM0 simplify" << '\n');
+  // Treating logicals as integers makes things a lot easier
+  fir::LogicalType logicalType = {elementType.dyn_cast<fir::LogicalType>()};
+  LLVM_DEBUG(llvm::dbgs() << "Done logical cast, got: " << logicalType << '\n');
+  fir::KindTy kind = logicalType.getFKind();
+  mlir::Type intElementType =
+      mlir::IntegerType::get(builder.getContext(), kind * 8);
+
+  // Mangle kind into function name as it is not done by default
   std::string funcName =
-      (mlir::Twine{callee.getLeafReference().getValue(), "x"} +
-       mlir::Twine{rank})
+      (mlir::Twine{callee.getLeafReference().getValue(), "Logical"} +
+       mlir::Twine{kind} + "x" + mlir::Twine{rank})
           .str();
 
-  simplifyReductionBody(call, kindMap, genBodyFunc, builder, funcName);
+  LLVM_DEBUG(llvm::dbgs() << "end of DIM0" << '\n');
+
+  simplifyReductionBody(call, kindMap, genBodyFunc, builder, funcName,
+                        intElementType);
+}
+
+void SimplifyIntrinsicsPass::simplifyLogicalDim1Reduction(
+    fir::CallOp call, const fir::KindMapping &kindMap,
+    GenReductionBodyTy genBodyFunc) {
+
+  mlir::Operation::operand_range args = call.getArgs();
+  mlir::SymbolRefAttr callee = call.getCalleeAttr();
+  mlir::StringRef funcNameBase = callee.getLeafReference().getValue();
+  unsigned rank = getDimCount(args[0]);
+
+  // getDimCount returns a rank of 0 for assumed shape arrays, don't simplify in
+  // these cases. We check for Dim at the end as some logical functions (Any,
+  // All) set dim to 1 instead of 0 when the argument is not present.
+  if (funcNameBase.ends_with("Dim") || !(rank > 0))
+    return;
+
+  mlir::Value inputBox = findBoxDef(args[0]);
+  mlir::Type elementType = hlfir::getFortranElementType(inputBox.getType());
+
+  fir::FirOpBuilder builder{getSimplificationBuilder(call, kindMap)};
+
+  // Treating logicals as integers makes things a lot easier
+  fir::LogicalType logicalType = {elementType.dyn_cast<fir::LogicalType>()};
+  fir::KindTy kind = logicalType.getFKind();
+  mlir::Type intElementType =
+      mlir::IntegerType::get(builder.getContext(), kind * 8);
+
+  // Mangle kind into function name as it is not done by default
+  std::string funcName =
+      (mlir::Twine{callee.getLeafReference().getValue(), "Logical"} +
+       mlir::Twine{kind} + "x" + mlir::Twine{rank})
+          .str();
+
+  simplifyReductionBody(call, kindMap, genBodyFunc, builder, funcName,
+                        intElementType);
 }
 
 void SimplifyIntrinsicsPass::simplifyReductionBody(
     fir::CallOp call, const fir::KindMapping &kindMap,
     GenReductionBodyTy genBodyFunc, fir::FirOpBuilder &builder,
-    const mlir::StringRef &funcName) {
+    const mlir::StringRef &funcName, mlir::Type elementType) {
 
   mlir::Operation::operand_range args = call.getArgs();
 
@@ -654,9 +810,10 @@ void SimplifyIntrinsicsPass::simplifyReductionBody(
   auto typeGenerator = [&resultType](fir::FirOpBuilder &builder) {
     return genNoneBoxType(builder, resultType);
   };
-  auto bodyGenerator = [&rank, &genBodyFunc](fir::FirOpBuilder &builder,
-                                             mlir::func::FuncOp &funcOp) {
-    genBodyFunc(builder, funcOp, rank);
+  auto bodyGenerator = [&rank, &genBodyFunc,
+                        &elementType](fir::FirOpBuilder &builder,
+                                      mlir::func::FuncOp &funcOp) {
+    genBodyFunc(builder, funcOp, rank, elementType);
   };
   // Mangle the function name with the rank value as "x<rank>".
   mlir::func::FuncOp newFunc =
@@ -761,7 +918,17 @@ void SimplifyIntrinsicsPass::runOnOperation() {
           return;
         }
         if (funcName.startswith(RTNAME_STRING(Count))) {
-          simplifyLogicalReduction(call, kindMap, genRuntimeCountBody);
+          LLVM_DEBUG(llvm::dbgs() << "Count" << '\n');
+          simplifyLogicalDim0Reduction(call, kindMap, genRuntimeCountBody);
+          return;
+        }
+        if (funcName.startswith(RTNAME_STRING(Any))) {
+          LLVM_DEBUG(llvm::dbgs() << "Any" << '\n');
+          simplifyLogicalDim1Reduction(call, kindMap, genRuntimeAnyBody);
+          return;
+        }
+        if (funcName.endswith(RTNAME_STRING(All))) {
+          simplifyLogicalDim1Reduction(call, kindMap, genRuntimeAllBody);
           return;
         }
       }

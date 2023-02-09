@@ -558,7 +558,7 @@ public:
                                    bool OutlineFromLinkOnceODRs) const override;
 
   outliner::InstrType
-  getOutliningType(MachineBasicBlock::iterator &MIT, unsigned Flags) const override;
+  getOutliningTypeImpl(MachineBasicBlock::iterator &MIT, unsigned Flags) const override;
 
   void buildOutlinedFrame(MachineBasicBlock &MBB, MachineFunction &MF,
                           const outliner::OutlinedFunction &OF) const override;

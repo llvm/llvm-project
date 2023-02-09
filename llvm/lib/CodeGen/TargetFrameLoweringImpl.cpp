@@ -17,7 +17,6 @@
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -129,16 +128,6 @@ void TargetFrameLowering::determineCalleeSaves(MachineFunction &MF,
     if (CallsUnwindInit || MRI.isPhysRegModified(Reg))
       SavedRegs.set(Reg);
   }
-}
-
-unsigned TargetFrameLowering::getStackAlignmentSkew(
-    const MachineFunction &MF) const {
-  // When HHVM function is called, the stack is skewed as the return address
-  // is removed from the stack before we enter the function.
-  if (LLVM_UNLIKELY(MF.getFunction().getCallingConv() == CallingConv::HHVM))
-    return MF.getTarget().getAllocaPointerSize();
-
-  return 0;
 }
 
 bool TargetFrameLowering::allocateScavengingFrameIndexesNearIncomingSP(

@@ -151,8 +151,9 @@ def CConvWin64 : LLVM_EnumAttrCase<"Win64", "win64cc", "Win64", 79>;
 def CConvX86_VectorCall : LLVM_EnumAttrCase<"X86_VectorCall",
                                             "x86_vectorcallcc",
                                             "X86_VectorCall", 80>;
-def CConvHHVM : LLVM_EnumAttrCase<"HHVM", "hhvmcc", "HHVM", 81>;
-def CConvHHVM_C : LLVM_EnumAttrCase<"HHVM_C", "hhvm_ccc", "HHVM_C", 82>;
+def CConvHHVM : LLVM_EnumAttrCase<"DUMMY_HHVM", "hhvmcc", "DUMMY_HHVM", 81>;
+def CConvHHVM_C
+    : LLVM_EnumAttrCase<"DUMMY_HHVM_C", "hhvm_ccc", "DUMMY_HHVM_C", 82>;
 def CConvX86_INTR : LLVM_EnumAttrCase<"X86_INTR", "x86_intrcc", "X86_INTR", 83>;
 def CConvAVR_INTR : LLVM_EnumAttrCase<"AVR_INTR", "avr_intrcc", "AVR_INTR", 84>;
 def CConvAVR_SIGNAL : LLVM_EnumAttrCase<"AVR_SIGNAL", "avr_signalcc",
