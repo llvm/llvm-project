@@ -1086,8 +1086,7 @@ auto MachineFunction::salvageCopySSAImpl(MachineInstr &MI)
     for (auto &MO : Inst->operands()) {
       if (!MO.isReg() || !MO.isDef() || MO.getReg() != State.first)
         continue;
-      return ApplySubregisters(
-          {Inst->getDebugInstrNum(), Inst->getOperandNo(&MO)});
+      return ApplySubregisters({Inst->getDebugInstrNum(), MO.getOperandNo()});
     }
 
     llvm_unreachable("Vreg def with no corresponding operand?");
@@ -1109,7 +1108,7 @@ auto MachineFunction::salvageCopySSAImpl(MachineInstr &MI)
         continue;
 
       return ApplySubregisters(
-          {ToExamine.getDebugInstrNum(), ToExamine.getOperandNo(&MO)});
+          {ToExamine.getDebugInstrNum(), MO.getOperandNo()});
     }
   }
 

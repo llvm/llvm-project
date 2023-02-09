@@ -1010,6 +1010,40 @@ public:
   }
 };
 
+class SparseExtractSliceCoverter
+    : public OpConversionPattern<tensor::ExtractSliceOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(tensor::ExtractSliceOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto srcEnc = getSparseTensorEncoding(op.getSourceType());
+    auto dstEnc = getSparseTensorEncoding(op.getResult().getType());
+    if (!srcEnc && !dstEnc)
+      return failure();
+
+    // TODO: We should check these in ExtractSliceOp::verify.
+    assert(srcEnc && dstEnc && dstEnc.isSlice());
+    assert(srcEnc.getDimLevelType() == dstEnc.getDimLevelType());
+    assert(srcEnc.getDimOrdering() == dstEnc.getDimOrdering());
+    assert(srcEnc.getHigherOrdering() == dstEnc.getHigherOrdering());
+    assert(srcEnc.getPointerBitWidth() == dstEnc.getPointerBitWidth());
+    assert(srcEnc.getIndexBitWidth() == dstEnc.getIndexBitWidth());
+
+    // TODO: support dynamic slices.
+    for (int i = 0, e = op.getSourceType().getRank(); i < e; i++) {
+      assert(op.getStaticStrides()[i] == dstEnc.getStaticDimSliceStride(i));
+      assert(op.getStaticOffsets()[i] == dstEnc.getStaticDimSliceOffset(i));
+      assert(op.getStaticSizes()[i] == dstEnc.getStaticDimSliceSize(i));
+    }
+
+    // TODO: create a new specifer for slices (need to encode slice metadata).
+    // It does not matter now because only constant offset/stride are allowed.
+    rewriter.replaceOp(op, adaptor.getSource());
+    return success();
+  }
+};
+
 /// Sparse codegen rule for number of entries operator.
 class SparseNumberOfEntriesConverter
     : public OpConversionPattern<NumberOfEntriesOp> {
@@ -1133,13 +1167,13 @@ void mlir::populateSparseTensorCodegenPatterns(
     bool enableBufferInitialization) {
   patterns.add<SparsePackOpConverter, SparseReturnConverter,
                SparseCallConverter, SparseDimOpConverter, SparseCastConverter,
-               SparseTensorDeallocConverter, SparseTensorLoadConverter,
-               SparseExpandConverter, SparseCompressConverter,
-               SparseInsertConverter, SparseToPointersConverter,
-               SparseToIndicesConverter, SparseToIndicesBufferConverter,
-               SparseToValuesConverter, SparseConvertConverter,
-               SparseNumberOfEntriesConverter>(typeConverter,
-                                               patterns.getContext());
+               SparseTensorDeallocConverter, SparseExtractSliceCoverter,
+               SparseTensorLoadConverter, SparseExpandConverter,
+               SparseCompressConverter, SparseInsertConverter,
+               SparseToPointersConverter, SparseToIndicesConverter,
+               SparseToIndicesBufferConverter, SparseToValuesConverter,
+               SparseConvertConverter, SparseNumberOfEntriesConverter>(
+      typeConverter, patterns.getContext());
   patterns.add<SparseTensorAllocConverter>(typeConverter, patterns.getContext(),
                                            enableBufferInitialization);
 }

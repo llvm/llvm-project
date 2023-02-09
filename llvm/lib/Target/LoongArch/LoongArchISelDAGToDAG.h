@@ -42,6 +42,7 @@ public:
                                     std::vector<SDValue> &OutOps) override;
 
   bool SelectBaseAddr(SDValue Addr, SDValue &Base);
+  bool SelectAddrConstant(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool selectNonFIBaseAddr(SDValue Addr, SDValue &Base);
 
   bool selectShiftMask(SDValue N, unsigned ShiftWidth, SDValue &ShAmt);

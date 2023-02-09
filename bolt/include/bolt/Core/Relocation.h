@@ -14,7 +14,7 @@
 #ifndef BOLT_CORE_RELOCATION_H
 #define BOLT_CORE_RELOCATION_H
 
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 class MCStreamer;

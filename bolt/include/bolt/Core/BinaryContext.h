@@ -21,7 +21,6 @@
 #include "bolt/RuntimeLibs/RuntimeLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -39,6 +38,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/RWMutex.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include <functional>
 #include <list>
 #include <map>
@@ -600,6 +600,9 @@ public:
 
   /// Indicates if the binary is stripped
   bool IsStripped{false};
+
+  /// Indicates if the binary contains split functions.
+  bool HasSplitFunctions{false};
 
   /// Is the binary always loaded at a fixed address. Shared objects and
   /// position-independent executables (PIEs) are examples of binaries that

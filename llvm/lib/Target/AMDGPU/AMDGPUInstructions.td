@@ -146,10 +146,6 @@ def s16imm : Operand<i16> {
   let ParserMatchClass = s16ImmTarget;
 }
 
-def u8imm : Operand<i8> {
-  let PrintMethod = "printU8ImmOperand";
-}
-
 } // End OperandType = "OPERAND_IMMEDIATE"
 
 //===--------------------------------------------------------------------===//

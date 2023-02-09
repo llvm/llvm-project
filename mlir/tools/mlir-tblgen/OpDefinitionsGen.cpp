@@ -1965,6 +1965,9 @@ void OpEmitter::genBuilder() {
     if (body)
       ERROR_IF_PRUNED(method, "build", op);
 
+    if (method)
+      method->setDeprecated(builder.getDeprecatedMessage());
+
     FmtContext fctx;
     fctx.withBuilder(odsBuilder);
     fctx.addSubst("_state", builderOpState);

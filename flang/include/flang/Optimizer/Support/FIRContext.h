@@ -18,7 +18,7 @@
 #define FORTRAN_OPTIMIZER_SUPPORT_FIRCONTEXT_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace mlir {
 class ModuleOp;

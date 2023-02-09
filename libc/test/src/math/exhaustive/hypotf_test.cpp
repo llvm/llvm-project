@@ -10,8 +10,8 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/Hypot.h"
 #include "src/math/hypotf.h"
+#include "test/UnitTest/FPMatcher.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/FPMatcher.h"
 
 using FPBits = __llvm_libc::fputil::FPBits<float>;
 

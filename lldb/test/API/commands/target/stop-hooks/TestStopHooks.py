@@ -39,7 +39,7 @@ class TestStopHooks(TestBase):
         interp = self.dbg.GetCommandInterpreter()
         result = lldb.SBCommandReturnObject()
         interp.HandleCommand("target stop-hook add -o 'expr g_var++'", result)
-        self.assertTrue(result.Succeeded, "Set the target stop hook")
+        self.assertTrue(result.Succeeded(), "Set the target stop hook")
         thread.StepOut()
         var = target.FindFirstGlobalVariable("g_var")
         self.assertTrue(var.IsValid())
@@ -49,7 +49,7 @@ class TestStopHooks(TestBase):
         interp = self.dbg.GetCommandInterpreter()
         result = lldb.SBCommandReturnObject()
         interp.HandleCommand("target stop-hook add -o 'expr g_var++'", result)
-        self.assertTrue(result.Succeeded, "Set the target stop hook")
+        self.assertTrue(result.Succeeded(), "Set the target stop hook")
 
         (target, process, thread, first_bkpt) = lldbutil.run_to_source_breakpoint(self,
                                    "Set a breakpoint here", self.main_source_file)

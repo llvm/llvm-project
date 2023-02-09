@@ -1256,7 +1256,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::UMIN,               MVT::v8i16, Legal);
     setOperationAction(ISD::UMIN,               MVT::v4i32, Legal);
 
-    for (auto VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32}) {
+    for (auto VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64}) {
       setOperationAction(ISD::ABDS,             VT, Custom);
       setOperationAction(ISD::ABDU,             VT, Custom);
     }
@@ -1396,14 +1396,16 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // In the customized shift lowering, the legal v8i32/v4i64 cases
     // in AVX2 will be recognized.
     for (auto VT : { MVT::v32i8, MVT::v16i16, MVT::v8i32, MVT::v4i64 }) {
-      setOperationAction(ISD::SRL, VT, Custom);
-      setOperationAction(ISD::SHL, VT, Custom);
-      setOperationAction(ISD::SRA, VT, Custom);
+      setOperationAction(ISD::SRL,             VT, Custom);
+      setOperationAction(ISD::SHL,             VT, Custom);
+      setOperationAction(ISD::SRA,             VT, Custom);
+      setOperationAction(ISD::ABDS,            VT, Custom);
+      setOperationAction(ISD::ABDU,            VT, Custom);
       if (VT == MVT::v4i64) continue;
-      setOperationAction(ISD::ROTL, VT, Custom);
-      setOperationAction(ISD::ROTR, VT, Custom);
-      setOperationAction(ISD::FSHL, VT, Custom);
-      setOperationAction(ISD::FSHR, VT, Custom);
+      setOperationAction(ISD::ROTL,            VT, Custom);
+      setOperationAction(ISD::ROTR,            VT, Custom);
+      setOperationAction(ISD::FSHL,            VT, Custom);
+      setOperationAction(ISD::FSHR,            VT, Custom);
     }
 
     // These types need custom splitting if their input is a 128-bit vector.
@@ -1499,8 +1501,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::UMAX, VT, HasInt256 ? Legal : Custom);
       setOperationAction(ISD::SMIN, VT, HasInt256 ? Legal : Custom);
       setOperationAction(ISD::UMIN, VT, HasInt256 ? Legal : Custom);
-      setOperationAction(ISD::ABDS, VT, Custom);
-      setOperationAction(ISD::ABDU, VT, Custom);
     }
 
     for (auto VT : {MVT::v16i16, MVT::v8i32, MVT::v4i64}) {
@@ -1816,6 +1816,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::ROTL,             VT, Custom);
       setOperationAction(ISD::ROTR,             VT, Custom);
       setOperationAction(ISD::SETCC,            VT, Custom);
+      setOperationAction(ISD::ABDS,             VT, Custom);
+      setOperationAction(ISD::ABDU,             VT, Custom);
 
       // The condition codes aren't legal in SSE/AVX and under AVX512 we use
       // setcc all the way to isel and prefer SETGT in some isel patterns.
@@ -1828,8 +1830,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SMIN,             VT, Legal);
       setOperationAction(ISD::UMIN,             VT, Legal);
       setOperationAction(ISD::ABS,              VT, Legal);
-      setOperationAction(ISD::ABDS,             VT, Custom);
-      setOperationAction(ISD::ABDU,             VT, Custom);
       setOperationAction(ISD::CTPOP,            VT, Custom);
       setOperationAction(ISD::STRICT_FSETCC,    VT, Custom);
       setOperationAction(ISD::STRICT_FSETCCS,   VT, Custom);
@@ -1837,8 +1837,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     for (auto VT : { MVT::v64i8, MVT::v32i16 }) {
       setOperationAction(ISD::ABS,     VT, HasBWI ? Legal : Custom);
-      setOperationAction(ISD::ABDS,    VT, Custom);
-      setOperationAction(ISD::ABDU,    VT, Custom);
       setOperationAction(ISD::CTPOP,   VT, Subtarget.hasBITALG() ? Legal : Custom);
       setOperationAction(ISD::CTLZ,    VT, Custom);
       setOperationAction(ISD::SMAX,    VT, HasBWI ? Legal : Custom);
@@ -1968,8 +1966,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SMIN, VT, Legal);
       setOperationAction(ISD::UMIN, VT, Legal);
       setOperationAction(ISD::ABS,  VT, Legal);
-      setOperationAction(ISD::ABDS, VT, Custom);
-      setOperationAction(ISD::ABDU, VT, Custom);
     }
 
     for (auto VT : { MVT::v4i32, MVT::v8i32, MVT::v2i64, MVT::v4i64 }) {
@@ -29659,15 +29655,30 @@ static SDValue LowerABD(SDValue Op, const X86Subtarget &Subtarget,
   if ((VT == MVT::v32i16 || VT == MVT::v64i8) && !Subtarget.useBWIRegs())
     return splitVectorIntBinary(Op, DAG);
 
-  // Default to expand: sub(smax(lhs,rhs),smin(lhs,rhs))
   // TODO: Add TargetLowering expandABD() support.
   SDLoc dl(Op);
   bool IsSigned = Op.getOpcode() == ISD::ABDS;
   SDValue LHS = DAG.getFreeze(Op.getOperand(0));
   SDValue RHS = DAG.getFreeze(Op.getOperand(1));
-  SDValue Max = DAG.getNode(IsSigned ? ISD::SMAX : ISD::UMAX, dl, VT, LHS, RHS);
-  SDValue Min = DAG.getNode(IsSigned ? ISD::SMIN : ISD::UMIN, dl, VT, LHS, RHS);
-  return DAG.getNode(ISD::SUB, dl, VT, Max, Min);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  // abds(lhs, rhs) -> sub(smax(lhs,rhs), smin(lhs,rhs))
+  // abdu(lhs, rhs) -> sub(umax(lhs,rhs), umin(lhs,rhs))
+  unsigned MaxOpc = IsSigned ? ISD::SMAX : ISD::UMAX;
+  unsigned MinOpc = IsSigned ? ISD::SMIN : ISD::UMIN;
+  if (TLI.isOperationLegal(MaxOpc, VT) && TLI.isOperationLegal(MinOpc, VT)) {
+    SDValue Max = DAG.getNode(MaxOpc, dl, VT, LHS, RHS);
+    SDValue Min = DAG.getNode(MinOpc, dl, VT, LHS, RHS);
+    return DAG.getNode(ISD::SUB, dl, VT, Max, Min);
+  }
+
+  // abds(lhs, rhs) -> select(sgt(lhs,rhs), sub(lhs,rhs), sub(rhs,lhs))
+  // abdu(lhs, rhs) -> select(ugt(lhs,rhs), sub(lhs,rhs), sub(rhs,lhs))
+  EVT CCVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  ISD::CondCode CC = IsSigned ? ISD::CondCode::SETGT : ISD::CondCode::SETUGT;
+  SDValue Cmp = DAG.getSetCC(dl, CCVT, LHS, RHS, CC);
+  return DAG.getSelect(dl, VT, Cmp, DAG.getNode(ISD::SUB, dl, VT, LHS, RHS),
+                       DAG.getNode(ISD::SUB, dl, VT, RHS, LHS));
 }
 
 static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
@@ -39733,77 +39744,92 @@ static SDValue combineX86ShuffleChainWithExtract(
 
   EVT RootVT = Root.getValueType();
   unsigned RootSizeInBits = RootVT.getSizeInBits();
+  unsigned RootEltSizeInBits = RootSizeInBits / NumMaskElts;
   assert((RootSizeInBits % NumMaskElts) == 0 && "Unexpected root shuffle mask");
 
-  // Bail if we have any smaller inputs.
-  if (llvm::any_of(Inputs, [RootSizeInBits](SDValue Input) {
-        return Input.getValueSizeInBits() < RootSizeInBits;
-      }))
-    return SDValue();
-
-  SmallVector<SDValue, 4> WideInputs(Inputs.begin(), Inputs.end());
-  SmallVector<unsigned, 4> Offsets(NumInputs, 0);
-
-  // Peek through subvectors.
-  // TODO: Support inter-mixed EXTRACT_SUBVECTORs + BITCASTs?
+  // Peek through extract_subvector to find widest legal vector.
+  // TODO: Handle ISD::TRUNCATE
   unsigned WideSizeInBits = RootSizeInBits;
-  for (unsigned i = 0; i != NumInputs; ++i) {
-    SDValue &Src = WideInputs[i];
-    unsigned &Offset = Offsets[i];
-    Src = peekThroughBitcasts(Src);
-    EVT BaseVT = Src.getValueType();
-    while (Src.getOpcode() == ISD::EXTRACT_SUBVECTOR) {
-      Offset += Src.getConstantOperandVal(1);
-      Src = Src.getOperand(0);
-    }
-    WideSizeInBits = std::max(WideSizeInBits,
-                              (unsigned)Src.getValueSizeInBits());
-    assert((Offset % BaseVT.getVectorNumElements()) == 0 &&
-           "Unexpected subvector extraction");
-    Offset /= BaseVT.getVectorNumElements();
-    Offset *= NumMaskElts;
+  for (unsigned I = 0; I != NumInputs; ++I) {
+    SDValue Input = peekThroughBitcasts(Inputs[I]);
+    while (Input.getOpcode() == ISD::EXTRACT_SUBVECTOR)
+      Input = peekThroughBitcasts(Input.getOperand(0));
+    if (DAG.getTargetLoweringInfo().isTypeLegal(Input.getValueType()) &&
+        WideSizeInBits < Input.getValueSizeInBits())
+      WideSizeInBits = Input.getValueSizeInBits();
   }
 
-  // Bail if we're always extracting from the lowest subvectors,
-  // combineX86ShuffleChain should match this for the current width.
-  if (llvm::all_of(Offsets, [](unsigned Offset) { return Offset == 0; }))
-    return SDValue();
-
+  // Bail if we fail to find a source larger than the existing root.
   unsigned Scale = WideSizeInBits / RootSizeInBits;
-  assert((WideSizeInBits % RootSizeInBits) == 0 &&
-         "Unexpected subvector extraction");
-
-  // If the src vector types aren't the same, see if we can extend
-  // them to match each other.
-  // TODO: Support different scalar types?
-  EVT WideSVT = WideInputs[0].getValueType().getScalarType();
-  if (llvm::any_of(WideInputs, [&WideSVT, &DAG](SDValue Op) {
-        return !DAG.getTargetLoweringInfo().isTypeLegal(Op.getValueType()) ||
-               Op.getValueType().getScalarType() != WideSVT;
-      }))
+  if (WideSizeInBits <= RootSizeInBits ||
+      (WideSizeInBits % RootSizeInBits) != 0)
     return SDValue();
 
   // Create new mask for larger type.
-  for (unsigned i = 1; i != NumInputs; ++i)
-    Offsets[i] += i * Scale * NumMaskElts;
-
   SmallVector<int, 64> WideMask(BaseMask);
   for (int &M : WideMask) {
     if (M < 0)
       continue;
-    M = (M % NumMaskElts) + Offsets[M / NumMaskElts];
+    M = (M % NumMaskElts) + ((M / NumMaskElts) * Scale * NumMaskElts);
   }
   WideMask.append((Scale - 1) * NumMaskElts, SM_SentinelUndef);
+
+  // Attempt to peek through inputs and adjust mask when we extract from an
+  // upper subvector.
+  int AdjustedMasks = 0;
+  SmallVector<SDValue, 4> WideInputs(Inputs.begin(), Inputs.end());
+  for (unsigned I = 0; I != NumInputs; ++I) {
+    SDValue &Input = WideInputs[I];
+    Input = peekThroughBitcasts(Input);
+    while (Input.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+           Input.getOperand(0).getValueSizeInBits() <= WideSizeInBits) {
+      uint64_t Idx = Input.getConstantOperandVal(1);
+      if (Idx != 0) {
+        ++AdjustedMasks;
+        unsigned InputEltSizeInBits = Input.getScalarValueSizeInBits();
+        Idx = (Idx * InputEltSizeInBits) / RootEltSizeInBits;
+
+        int lo = I * WideMask.size();
+        int hi = (I + 1) * WideMask.size();
+        for (int &M : WideMask)
+          if (lo <= M && M < hi)
+            M += Idx;
+      }
+      Input = peekThroughBitcasts(Input.getOperand(0));
+    }
+  }
 
   // Remove unused/repeated shuffle source ops.
   resolveTargetShuffleInputsAndMask(WideInputs, WideMask);
   assert(!WideInputs.empty() && "Shuffle with no inputs detected");
 
-  if (WideInputs.size() > 2)
+  // Bail if we're always extracting from the lowest subvectors,
+  // combineX86ShuffleChain should match this for the current width, or the
+  // shuffle still references too many inputs.
+  if (AdjustedMasks == 0 || WideInputs.size() > 2)
     return SDValue();
 
+  // Minor canonicalization of the accumulated shuffle mask to make it easier
+  // to match below. All this does is detect masks with sequential pairs of
+  // elements, and shrink them to the half-width mask. It does this in a loop
+  // so it will reduce the size of the mask to the minimal width mask which
+  // performs an equivalent shuffle.
+  while (WideMask.size() > 1) {
+    SmallVector<int, 64> WidenedMask;
+    if (!canWidenShuffleElements(WideMask, WidenedMask))
+      break;
+    WideMask = std::move(WidenedMask);
+  }
+
+  // Canonicalization of binary shuffle masks to improve pattern matching by
+  // commuting the inputs.
+  if (WideInputs.size() == 2 && canonicalizeShuffleMaskWithCommute(WideMask)) {
+    ShuffleVectorSDNode::commuteMask(WideMask);
+    std::swap(WideInputs[0], WideInputs[1]);
+  }
+
   // Increase depth for every upper subvector we've peeked through.
-  Depth += count_if(Offsets, [](unsigned Offset) { return Offset > 0; });
+  Depth += AdjustedMasks;
 
   // Attempt to combine wider chain.
   // TODO: Can we use a better Root?
@@ -39811,6 +39837,9 @@ static SDValue combineX86ShuffleChainWithExtract(
                              WideInputs.back().getValueSizeInBits()
                          ? WideInputs.front()
                          : WideInputs.back();
+  assert(WideRoot.getValueSizeInBits() == WideSizeInBits &&
+         "WideRootSize mismatch");
+
   if (SDValue WideShuffle =
           combineX86ShuffleChain(WideInputs, WideRoot, WideMask, Depth,
                                  HasVariableMask, AllowVariableCrossLaneMask,
@@ -39819,6 +39848,7 @@ static SDValue combineX86ShuffleChainWithExtract(
         extractSubVector(WideShuffle, 0, DAG, SDLoc(Root), RootSizeInBits);
     return DAG.getBitcast(RootVT, WideShuffle);
   }
+
   return SDValue();
 }
 
@@ -40371,6 +40401,24 @@ static SDValue combineX86ShufflesRecursively(
       OpMaskedIdx += OpInputIdx[InputIdx] * MaskWidth;
 
       Mask[i] = OpMaskedIdx;
+    }
+  }
+
+  // Peek through vector widenings and set out of bounds mask indices to undef.
+  // TODO: Can resolveTargetShuffleInputsAndMask do some of this?
+  for (unsigned I = 0, E = Ops.size(); I != E; ++I) {
+    SDValue &Op = Ops[I];
+    if (Op.getOpcode() == ISD::INSERT_SUBVECTOR && Op.getOperand(0).isUndef() &&
+        isNullConstant(Op.getOperand(2))) {
+      Op = Op.getOperand(1);
+      unsigned Scale = RootSizeInBits / Op.getValueSizeInBits();
+      int Lo = I * Mask.size();
+      int Hi = (I + 1) * Mask.size();
+      int NewHi = Lo + (Mask.size() / Scale);
+      for (int &M : Mask) {
+        if (Lo <= M && NewHi <= M && M < Hi)
+          M = SM_SentinelUndef;
+      }
     }
   }
 

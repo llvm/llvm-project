@@ -365,7 +365,7 @@ template <size_t Bits> struct UInt {
       return;
     }
 #endif // __SIZEOF_INT128__
-    if (unlikely(s == 0))
+    if (LIBC_UNLIKELY(s == 0))
       return;
 
     const size_t drop = s / 64;  // Number of words to drop
@@ -420,7 +420,7 @@ template <size_t Bits> struct UInt {
     }
 #endif // __SIZEOF_INT128__
 
-    if (unlikely(s == 0))
+    if (LIBC_UNLIKELY(s == 0))
       return;
     const size_t drop = s / 64;  // Number of words to drop
     const size_t shift = s % 64; // Bit shift in the remaining words.

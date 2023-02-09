@@ -175,8 +175,9 @@ static bool isSignExtendedW(Register SrcReg, const MachineRegisterInfo &MRI,
 
         const AttributeSet &Attrs = CalleeFn->getAttributes().getRetAttrs();
         unsigned BitWidth = IntTy->getBitWidth();
-        return (BitWidth <= 32 && Attrs.hasAttribute(Attribute::SExt)) ||
-               (BitWidth < 32 && Attrs.hasAttribute(Attribute::ZExt));
+        if ((BitWidth <= 32 && Attrs.hasAttribute(Attribute::SExt)) ||
+            (BitWidth < 32 && Attrs.hasAttribute(Attribute::ZExt)))
+          continue;
       }
 
       if (!AddRegDefToWorkList(CopySrcReg))

@@ -16,6 +16,7 @@
 
 #include "AttrKindDetail.h"
 #include "DebugImporter.h"
+#include "LoopAnnotationImporter.h"
 
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -97,15 +98,27 @@ static FloatType getDLFloatType(MLIRContext &ctx, int32_t bitwidth) {
   }
 }
 
-/// Converts the sync scope identifier of `fenceInst` to the string
-/// representation necessary to build the LLVM dialect fence operation.
-static StringRef getLLVMSyncScope(llvm::FenceInst *fenceInst) {
-  llvm::LLVMContext &llvmContext = fenceInst->getContext();
-  SmallVector<StringRef> syncScopeNames;
-  llvmContext.getSyncScopeNames(syncScopeNames);
-  for (StringRef name : syncScopeNames)
-    if (fenceInst->getSyncScopeID() == llvmContext.getOrInsertSyncScopeID(name))
-      return name;
+/// Converts the sync scope identifier of `inst` to the string representation
+/// necessary to build an atomic LLVM dialect operation. Returns the empty
+/// string if the operation has either no sync scope or the default system-level
+/// sync scope attached. The atomic operations only set their sync scope
+/// attribute if they have a non-default sync scope attached.
+static StringRef getLLVMSyncScope(llvm::Instruction *inst) {
+  std::optional<llvm::SyncScope::ID> syncScopeID =
+      llvm::getAtomicSyncScopeID(inst);
+  if (!syncScopeID)
+    return "";
+
+  // Search the sync scope name for the given identifier. The default
+  // system-level sync scope thereby maps to the empty string.
+  SmallVector<StringRef> syncScopeName;
+  llvm::LLVMContext &llvmContext = inst->getContext();
+  llvmContext.getSyncScopeNames(syncScopeName);
+  auto *it = llvm::find_if(syncScopeName, [&](StringRef name) {
+    return *syncScopeID == llvmContext.getOrInsertSyncScopeID(name);
+  });
+  if (it != syncScopeName.end())
+    return *it;
   llvm_unreachable("incorrect sync scope identifier");
 }
 
@@ -241,7 +254,8 @@ ModuleImport::ModuleImport(ModuleOp mlirModule,
       mlirModule(mlirModule), llvmModule(std::move(llvmModule)),
       iface(mlirModule->getContext()),
       typeTranslator(*mlirModule->getContext()),
-      debugImporter(std::make_unique<DebugImporter>(mlirModule)) {
+      debugImporter(std::make_unique<DebugImporter>(mlirModule)),
+      loopAnnotationImporter(std::make_unique<LoopAnnotationImporter>(*this)) {
   builder.setInsertionPointToStart(mlirModule.getBody());
 }
 
@@ -1569,6 +1583,29 @@ LogicalResult ModuleImport::processBasicBlock(llvm::BasicBlock *bb,
     }
   }
   return success();
+}
+
+FailureOr<SmallVector<SymbolRefAttr>>
+ModuleImport::lookupAccessGroupAttrs(const llvm::MDNode *node) const {
+  // An access group node is either a single access group or an access group
+  // list.
+  SmallVector<SymbolRefAttr> accessGroups;
+  if (!node->getNumOperands())
+    accessGroups.push_back(accessGroupMapping.lookup(node));
+  for (const llvm::MDOperand &operand : node->operands()) {
+    auto *node = cast<llvm::MDNode>(operand.get());
+    accessGroups.push_back(accessGroupMapping.lookup(node));
+  }
+  // Exit if one of the access group node lookups failed.
+  if (llvm::is_contained(accessGroups, nullptr))
+    return failure();
+  return accessGroups;
+}
+
+LoopAnnotationAttr
+ModuleImport::translateLoopAnnotationAttr(const llvm::MDNode *node,
+                                          Location loc) const {
+  return loopAnnotationImporter->translate(node, loc);
 }
 
 OwningOpRef<ModuleOp>

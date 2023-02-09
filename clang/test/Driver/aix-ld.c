@@ -1017,36 +1017,6 @@
 // CHECK-LD64-SHARED-EXPFULL:     "-lm"
 // CHECK-LD64-SHARED-EXPFULL:     "-lc"
 
-// Check powerpc-ibm-aix7.1.0.0. -fopenmp to use default OpenMP runtime libomp.
-// RUN: %clang %s -### 2>&1 \
-// RUN:        -resource-dir=%S/Inputs/resource_dir \
-// RUN:        --target=powerpc-ibm-aix7.1.0.0 \
-// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
-// RUN:        --unwindlib=libunwind \
-// RUN:        -fopenmp \
-// RUN:   | FileCheck --check-prefixes=CHECK-FOPENMP,CHECK-FOPENMP-OMP %s
-// CHECK-FOPENMP-NOT: warning:
-// CHECK-FOPENMP:     "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
-// CHECK-FOPENMP:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
-// CHECK-FOPENMP:     "-isysroot" "[[SYSROOT:[^"]+]]"
-// CHECK-FOPENMP:     "{{.*}}ld{{(.exe)?}}"
-// CHECK-FOPENMP-NOT: "-bnso"
-// CHECK-FOPENMP:     "-b32"
-// CHECK-FOPENMP:     "-bpT:0x10000000" "-bpD:0x20000000"
-// CHECK-FOPENMP:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0.o"
-// CHECK-FOPENMP:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crti.o"
-// CHECK-FOPENMP-NOT: "-lc++"
-// CHECK-FOPENMP-NOT: "-lc++abi"
-// CHECK-FOPENMP:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc.a"
-// CHECK-FOPENMP-NOT: "--as-needed"
-// CHECK-FOPENMP:     "-lunwind"
-// CHECK-FOPENMP-NOT: "--no-as-needed"
-// CHECK-FOPENMP-NOT: "-lm"
-// CHECK-FOPENMP-OMP:     "-lomp"
-// CHECK-FOPENMP-IOMP5:   "-liomp5"
-// CHECK-FOPENMP-GOMP:    "-lgomp"
-// CHECK-FOPENMP:     "-lc"
-
 // Check powerpc-ibm-aix7.1.0.0. -fopenmp=libomp to specify libomp explicitly.
 // RUN: %clang %s -### 2>&1 \
 // RUN:        -resource-dir=%S/Inputs/resource_dir \
@@ -1073,6 +1043,28 @@
 // RUN:        --unwindlib=libunwind \
 // RUN:        -fopenmp=libgomp \
 // RUN:   | FileCheck --check-prefixes=CHECK-FOPENMP,CHECK-FOPENMP-GOMP %s
+
+// CHECK-FOPENMP-NOT: warning:
+// CHECK-FOPENMP:     "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
+// CHECK-FOPENMP:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-FOPENMP:     "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-FOPENMP:     "{{.*}}ld{{(.exe)?}}"
+// CHECK-FOPENMP-NOT: "-bnso"
+// CHECK-FOPENMP:     "-b32"
+// CHECK-FOPENMP:     "-bpT:0x10000000" "-bpD:0x20000000"
+// CHECK-FOPENMP:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0.o"
+// CHECK-FOPENMP:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crti.o"
+// CHECK-FOPENMP-NOT: "-lc++"
+// CHECK-FOPENMP-NOT: "-lc++abi"
+// CHECK-FOPENMP:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc.a"
+// CHECK-FOPENMP-NOT: "--as-needed"
+// CHECK-FOPENMP:     "-lunwind"
+// CHECK-FOPENMP-NOT: "--no-as-needed"
+// CHECK-FOPENMP-NOT: "-lm"
+// CHECK-FOPENMP-OMP:     "-lomp"
+// CHECK-FOPENMP-IOMP5:   "-liomp5"
+// CHECK-FOPENMP-GOMP:    "-lgomp"
+// CHECK-FOPENMP:     "-lc"
 
 // Check powerpc-ibm-aix7.1.0.0, 32-bit. -fopenmp=libfoo results an error.
 // RUN: %clang %s 2>&1 -### \

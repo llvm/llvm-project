@@ -19,14 +19,14 @@ LLVM_LIBC_FUNCTION(float, atanf, (float x)) {
   bool sign = xbits.get_sign();
   xbits.set_sign(false);
 
-  if (unlikely(xbits.is_inf_or_nan())) {
+  if (LIBC_UNLIKELY(xbits.is_inf_or_nan())) {
     if (xbits.is_inf())
       return opt_barrier(sign ? -M_MATH_PI_2 : M_MATH_PI_2);
     else
       return x;
   }
   // |x| == 0.06905200332403183
-  if (unlikely(xbits.uintval() == 0x3d8d6b23U)) {
+  if (LIBC_UNLIKELY(xbits.uintval() == 0x3d8d6b23U)) {
     if (fputil::get_round() == FE_TONEAREST) {
       // 0.06894256919622421
       FPBits br(0x3d8d31c3U);
@@ -36,7 +36,7 @@ LLVM_LIBC_FUNCTION(float, atanf, (float x)) {
   }
 
   // |x| == 1.8670953512191772
-  if (unlikely(xbits.uintval() == 0x3feefcfbU)) {
+  if (LIBC_UNLIKELY(xbits.uintval() == 0x3feefcfbU)) {
     int rounding_mode = fputil::get_round();
     if (sign) {
       if (rounding_mode == FE_DOWNWARD) {

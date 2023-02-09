@@ -212,7 +212,7 @@ static bool isCandidateStore(const MachineInstr &MI, const MachineOperand &MO) {
     // In case we have str xA, [xA, #imm], this is two different uses
     // of xA and we cannot fold, otherwise the xA stored may be wrong,
     // even if #imm == 0.
-    return MI.getOperandNo(&MO) == 1 &&
+    return MO.getOperandNo() == 1 &&
            MI.getOperand(0).getReg() != MI.getOperand(1).getReg();
   }
 }

@@ -3988,17 +3988,11 @@
 #   error "__cpp_lib_constexpr_tuple should have the value 201811L in c++2b"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_constexpr_typeinfo
-#     error "__cpp_lib_constexpr_typeinfo should be defined in c++2b"
-#   endif
-#   if __cpp_lib_constexpr_typeinfo != 202106L
-#     error "__cpp_lib_constexpr_typeinfo should have the value 202106L in c++2b"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_constexpr_typeinfo
-#     error "__cpp_lib_constexpr_typeinfo should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_constexpr_typeinfo
+#   error "__cpp_lib_constexpr_typeinfo should be defined in c++2b"
+# endif
+# if __cpp_lib_constexpr_typeinfo != 202106L
+#   error "__cpp_lib_constexpr_typeinfo should have the value 202106L in c++2b"
 # endif
 
 # ifndef __cpp_lib_constexpr_utility

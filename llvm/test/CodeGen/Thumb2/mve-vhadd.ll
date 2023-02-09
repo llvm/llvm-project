@@ -869,3 +869,68 @@ vector.body:                                      ; preds = %vector.body, %entry
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
+
+
+define arm_aapcs_vfpcc i16 @vhadds_reduce_v16i8(<16 x i8> %s0, <16 x i8> %s1) {
+; CHECK-LABEL: vhadds_reduce_v16i8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vhadd.s8 q0, q0, q1
+; CHECK-NEXT:    vaddv.s8 r0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = sext <16 x i8> %s0 to <16 x i16>
+  %s1s = sext <16 x i8> %s1 to <16 x i16>
+  %add = add <16 x i16> %s0s, %s1s
+  %s = ashr <16 x i16> %add, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %result = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %s)
+  ret i16 %result
+}
+
+define arm_aapcs_vfpcc i16 @vhaddu_reduce_v16i8(<16 x i8> %s0, <16 x i8> %s1) {
+; CHECK-LABEL: vhaddu_reduce_v16i8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vhadd.u8 q0, q0, q1
+; CHECK-NEXT:    vaddv.u8 r0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = zext <16 x i8> %s0 to <16 x i16>
+  %s1s = zext <16 x i8> %s1 to <16 x i16>
+  %add = add <16 x i16> %s0s, %s1s
+  %s = lshr <16 x i16> %add, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %result = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %s)
+  ret i16 %result
+}
+
+define arm_aapcs_vfpcc i16 @vrhadds_reduce_v16i8(<16 x i8> %s0, <16 x i8> %s1) {
+; CHECK-LABEL: vrhadds_reduce_v16i8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vrhadd.s8 q0, q0, q1
+; CHECK-NEXT:    vaddv.s8 r0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = sext <16 x i8> %s0 to <16 x i16>
+  %s1s = sext <16 x i8> %s1 to <16 x i16>
+  %add = add <16 x i16> %s0s, %s1s
+  %add2 = add <16 x i16> %add, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %s = ashr <16 x i16> %add2, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %result = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %s)
+  ret i16 %result
+}
+
+define arm_aapcs_vfpcc i16 @vrhaddu_reduce_v16i8(<16 x i8> %s0, <16 x i8> %s1) {
+; CHECK-LABEL: vrhaddu_reduce_v16i8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vrhadd.u8 q0, q0, q1
+; CHECK-NEXT:    vaddv.u8 r0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = zext <16 x i8> %s0 to <16 x i16>
+  %s1s = zext <16 x i8> %s1 to <16 x i16>
+  %add = add <16 x i16> %s0s, %s1s
+  %add2 = add <16 x i16> %add, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %s = lshr <16 x i16> %add2, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %result = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %s)
+  ret i16 %result
+}
+
+declare i16 @llvm.vector.reduce.add.v16i16(<16 x i16>)

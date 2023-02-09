@@ -8,8 +8,8 @@
 
 #include "ABISysV_hexagon.h"
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"

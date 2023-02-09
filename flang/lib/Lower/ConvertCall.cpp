@@ -121,7 +121,7 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
   mlir::Value charFuncPointerLength;
   if (const Fortran::semantics::Symbol *sym =
           caller.getIfIndirectCallSymbol()) {
-    funcPointer = symMap.lookupSymbol(*sym).getAddr();
+    funcPointer = fir::getBase(converter.getSymbolExtendedValue(*sym, &symMap));
     if (!funcPointer)
       fir::emitFatalError(loc, "failed to find indirect call symbol address");
     if (fir::isCharacterProcedureTuple(funcPointer.getType(),
@@ -347,8 +347,8 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
       const Fortran::evaluate::Component *component =
           caller.getCallDescription().proc().GetComponent();
       assert(component && "expect component for type-bound procedure call.");
-      fir::ExtendedValue pass =
-          symMap.lookupSymbol(component->GetFirstSymbol()).toExtendedValue();
+      fir::ExtendedValue pass = converter.getSymbolExtendedValue(
+          component->GetFirstSymbol(), &symMap);
       mlir::Value passObject = fir::getBase(pass);
       if (fir::isa_ref_type(passObject.getType()))
         passObject = builder.create<fir::ConvertOp>(
@@ -782,6 +782,11 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // element if this is an array in an elemental call.
   hlfir::Entity actual = preparedActual.getActual(loc, builder);
 
+  // Do nothing if this is a procedure argument. It is already a
+  // fir.boxproc/fir.tuple<fir.boxproc, len> as it should.
+  if (actual.isProcedure())
+    return PreparedDummyArgument{actual, std::nullopt};
+
   const bool passingPolymorphicToNonPolymorphic =
       actual.isPolymorphic() && !fir::isPolymorphicType(dummyType);
 
@@ -1013,7 +1018,10 @@ genUserCall(PreparedActualArguments &loweredActuals,
           loc, "unexpected PassBy::AddressAndLength for actual arguments");
       break;
     case PassBy::CharProcTuple: {
-      TODO(loc, "HLFIR PassBy::CharProcTuple");
+      hlfir::Entity actual = preparedActual->getActual(loc, builder);
+      assert(fir::isCharacterProcedureTuple(actual.getType()) &&
+             "character dummy procedure was not prepared as expected");
+      caller.placeInput(arg, actual);
     } break;
     case PassBy::MutableBox: {
       hlfir::Entity actual = preparedActual->getActual(loc, builder);
@@ -1098,6 +1106,16 @@ genIntrinsicRefCore(PreparedActualArguments &loweredActuals,
           Fortran::lower::convertToValue(loc, converter, actual, stmtCtx));
       continue;
     }
+    // Helper to get the type of the Fortran expression in case it is a
+    // computed value that must be placed in memory (logicals are computed as
+    // i1, but must be placed in memory as fir.logical).
+    auto getActualFortranElementType = [&]() {
+      const Fortran::lower::SomeExpr *expr =
+          callContext.procRef.UnwrapArgExpr(arg.index());
+      assert(expr && "must be an expr");
+      mlir::Type type = converter.genType(*expr);
+      return hlfir::getFortranElementType(type);
+    };
     // Ad-hoc argument lowering handling.
     fir::ArgLoweringRule argRules =
         fir::lowerIntrinsicArgumentAs(*argLowering, arg.index());
@@ -1107,12 +1125,12 @@ genIntrinsicRefCore(PreparedActualArguments &loweredActuals,
           Fortran::lower::convertToValue(loc, converter, actual, stmtCtx));
       continue;
     case fir::LowerIntrinsicArgAs::Addr:
-      operands.emplace_back(
-          Fortran::lower::convertToAddress(loc, converter, actual, stmtCtx));
+      operands.emplace_back(Fortran::lower::convertToAddress(
+          loc, converter, actual, stmtCtx, getActualFortranElementType()));
       continue;
     case fir::LowerIntrinsicArgAs::Box:
-      operands.emplace_back(
-          Fortran::lower::convertToBox(loc, converter, actual, stmtCtx));
+      operands.emplace_back(Fortran::lower::convertToBox(
+          loc, converter, actual, stmtCtx, getActualFortranElementType()));
       continue;
     case fir::LowerIntrinsicArgAs::Inquired:
       // Place hlfir.expr in memory, and unbox fir.boxchar. Other entities

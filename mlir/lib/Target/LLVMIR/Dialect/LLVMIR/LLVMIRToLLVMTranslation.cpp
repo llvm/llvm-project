@@ -72,7 +72,7 @@ static LogicalResult convertIntrinsicImpl(OpBuilder &odsBuilder,
 static ArrayRef<unsigned> getSupportedMetadataImpl() {
   static const SmallVector<unsigned> convertibleMetadata = {
       llvm::LLVMContext::MD_prof, llvm::LLVMContext::MD_tbaa,
-      llvm::LLVMContext::MD_access_group};
+      llvm::LLVMContext::MD_access_group, llvm::LLVMContext::MD_loop};
   return convertibleMetadata;
 }
 
@@ -84,36 +84,48 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
                                       LLVM::ModuleImport &moduleImport) {
   // Return success for empty metadata nodes since there is nothing to import.
   if (!node->getNumOperands())
-    return success();
+    return op->emitWarning() << "expected non-empty profiling metadata node";
 
   auto *name = dyn_cast<llvm::MDString>(node->getOperand(0));
   if (!name)
-    return failure();
+    return op->emitWarning()
+           << "expected profiling metadata node to have a string identifier";
 
   // Handle function entry count metadata.
   if (name->getString().equals("function_entry_count")) {
+    auto emitNodeWarning = [&]() {
+      return op->emitWarning()
+             << "expected function_entry_count to hold a single i64 value";
+    };
+
     // TODO support function entry count metadata with GUID fields.
     if (node->getNumOperands() != 2)
-      return failure();
+      return emitNodeWarning();
 
     llvm::ConstantInt *entryCount =
-        llvm::mdconst::extract<llvm::ConstantInt>(node->getOperand(1));
+        llvm::mdconst::dyn_extract<llvm::ConstantInt>(node->getOperand(1));
+    if (!entryCount)
+      return emitNodeWarning();
     if (auto funcOp = dyn_cast<LLVMFuncOp>(op)) {
       funcOp.setFunctionEntryCount(entryCount->getZExtValue());
       return success();
     }
-    return failure();
+    return op->emitWarning()
+           << "expected function_entry_count to be attached to a function";
   }
 
   if (!name->getString().equals("branch_weights"))
-    return failure();
+    return op->emitWarning()
+           << "unknown profiling metadata node " << name->getString();
 
   // Handle branch weights metadata.
   SmallVector<int32_t> branchWeights;
   branchWeights.reserve(node->getNumOperands() - 1);
   for (unsigned i = 1, e = node->getNumOperands(); i != e; ++i) {
     llvm::ConstantInt *branchWeight =
-        llvm::mdconst::extract<llvm::ConstantInt>(node->getOperand(i));
+        llvm::mdconst::dyn_extract<llvm::ConstantInt>(node->getOperand(i));
+    if (!branchWeight)
+      return op->emitWarning() << "expected branch weights to be integers";
     branchWeights.push_back(branchWeight->getZExtValue());
   }
 
@@ -124,7 +136,10 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
             builder.getI32VectorAttr(branchWeights));
         return success();
       })
-      .Default([](auto) { return failure(); });
+      .Default([op](auto) {
+        return op->emitWarning()
+               << op->getName() << " does not support branch weights";
+      });
 }
 
 /// Searches the symbol reference pointing to the metadata operation that
@@ -141,28 +156,38 @@ static LogicalResult setTBAAAttr(const llvm::MDNode *node, Operation *op,
   return success();
 }
 
-/// Searches the symbol references pointing to the access group operations that
-/// map to the access group nodes starting from the access group metadata
+/// Looks up all the symbol references pointing to the access group operations
+/// that map to the access group nodes starting from the access group metadata
 /// `node`, and attaches all of them to the imported operation if the lookups
 /// succeed. Returns failure otherwise.
 static LogicalResult setAccessGroupAttr(const llvm::MDNode *node, Operation *op,
                                         LLVM::ModuleImport &moduleImport) {
-  // An access group node is either access group or an access group list.
-  SmallVector<Attribute> accessGroups;
-  if (!node->getNumOperands())
-    accessGroups.push_back(moduleImport.lookupAccessGroupAttr(node));
-  for (const llvm::MDOperand &operand : node->operands()) {
-    auto *node = cast<llvm::MDNode>(operand.get());
-    accessGroups.push_back(moduleImport.lookupAccessGroupAttr(node));
-  }
-  // Exit if one of the access group node lookups failed.
-  if (llvm::is_contained(accessGroups, nullptr))
+  FailureOr<SmallVector<SymbolRefAttr>> accessGroups =
+      moduleImport.lookupAccessGroupAttrs(node);
+  if (failed(accessGroups))
     return failure();
 
+  SmallVector<Attribute> accessGroupAttrs(accessGroups->begin(),
+                                          accessGroups->end());
   op->setAttr(LLVMDialect::getAccessGroupsAttrName(),
-              ArrayAttr::get(op->getContext(), accessGroups));
+              ArrayAttr::get(op->getContext(), accessGroupAttrs));
   return success();
 }
+
+/// Converts the given loop metadata node to an MLIR loop annotation attribute
+/// and attaches it to the imported operation if the translation succeeds.
+/// Returns failure otherwise.
+static LogicalResult setLoopAttr(const llvm::MDNode *node, Operation *op,
+                                 LLVM::ModuleImport &moduleImport) {
+  LoopAnnotationAttr attr =
+      moduleImport.translateLoopAnnotationAttr(node, op->getLoc());
+  if (!attr)
+    return failure();
+
+  op->setAttr(LLVMDialect::getLoopAttrName(), attr);
+  return success();
+}
+
 namespace {
 
 /// Implementation of the dialect interface that converts operations belonging
@@ -191,6 +216,8 @@ public:
       return setTBAAAttr(node, op, moduleImport);
     if (kind == llvm::LLVMContext::MD_access_group)
       return setAccessGroupAttr(node, op, moduleImport);
+    if (kind == llvm::LLVMContext::MD_loop)
+      return setLoopAttr(node, op, moduleImport);
 
     // A handler for a supported metadata kind is missing.
     llvm_unreachable("unknown metadata type");

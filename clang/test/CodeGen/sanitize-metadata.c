@@ -22,15 +22,15 @@ int atomics() {
   return y;
 }
 // ATOMICS-LABEL: __sanitizer_metadata_atomics.module_ctor
-// ATOMICS: call void @__sanitizer_metadata_atomics_add(i32 1, ptr @__start_sanmd_atomics, ptr @__stop_sanmd_atomics)
+// ATOMICS: call void @__sanitizer_metadata_atomics_add(i32 2, ptr @__start_sanmd_atomics, ptr @__stop_sanmd_atomics)
 // ATOMICS-LABEL: __sanitizer_metadata_atomics.module_dtor
-// ATOMICS: call void @__sanitizer_metadata_atomics_del(i32 1, ptr @__start_sanmd_atomics, ptr @__stop_sanmd_atomics)
+// ATOMICS: call void @__sanitizer_metadata_atomics_del(i32 2, ptr @__start_sanmd_atomics, ptr @__stop_sanmd_atomics)
 
 // CHECK-LABEL: __sanitizer_metadata_covered.module_ctor
-// CHECK: call void @__sanitizer_metadata_covered_add(i32 1, ptr @__start_sanmd_covered, ptr @__stop_sanmd_covered)
+// CHECK: call void @__sanitizer_metadata_covered_add(i32 2, ptr @__start_sanmd_covered, ptr @__stop_sanmd_covered)
 // CHECK-LABEL: __sanitizer_metadata_covered.module_dtor
-// CHECK: call void @__sanitizer_metadata_covered_del(i32 1, ptr @__start_sanmd_covered, ptr @__stop_sanmd_covered)
+// CHECK: call void @__sanitizer_metadata_covered_del(i32 2, ptr @__start_sanmd_covered, ptr @__stop_sanmd_covered)
 
-// ATOMICS: ![[ATOMICS_COVERED]] = !{!"sanmd_covered", ![[ATOMICS_COVERED_AUX:[0-9]+]]}
-// ATOMICS: ![[ATOMICS_COVERED_AUX]] = !{i32 1}
-// ATOMICS: ![[ATOMIC_OP]] = !{!"sanmd_atomics"}
+// ATOMICS: ![[ATOMICS_COVERED]] = !{!"sanmd_covered!C", ![[ATOMICS_COVERED_AUX:[0-9]+]]}
+// ATOMICS: ![[ATOMICS_COVERED_AUX]] = !{i64 1}
+// ATOMICS: ![[ATOMIC_OP]] = !{!"sanmd_atomics!C"}

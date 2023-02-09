@@ -2,185 +2,158 @@
 ; RUN: llc --mtriple=loongarch32 < %s | FileCheck %s --check-prefix=LA32
 ; RUN: llc --mtriple=loongarch64 < %s | FileCheck %s --check-prefix=LA64
 
-;; TODO: When the offset of the address is less than 12bit, merge the offset
-;;       of address calculation into the offset field of the instruction.
-
 define i8 @load_i8() nounwind {
 ; LA32-LABEL: load_i8:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ori $a0, $zero, 40
-; LA32-NEXT:    ld.b $a0, $a0, 0
+; LA32-NEXT:    ld.b $a0, $zero, 40
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_i8:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a0, $zero, 40
-; LA64-NEXT:    ld.b $a0, $a0, 0
+; LA64-NEXT:    ld.b $a0, $zero, 40
 ; LA64-NEXT:    ret
-  %a = load i8, i8* inttoptr (i64 40 to i8*), align 8
+  %a = load i8, ptr inttoptr (i64 40 to ptr), align 8
   ret i8 %a
 }
 
 define signext i8 @load_i8_sext() nounwind {
 ; LA32-LABEL: load_i8_sext:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ori $a0, $zero, 40
-; LA32-NEXT:    ld.b $a0, $a0, 0
+; LA32-NEXT:    ld.b $a0, $zero, 40
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_i8_sext:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a0, $zero, 40
-; LA64-NEXT:    ld.b $a0, $a0, 0
+; LA64-NEXT:    ld.b $a0, $zero, 40
 ; LA64-NEXT:    ret
-  %a = load i8, i8* inttoptr (i64 40 to i8*), align 8
+  %a = load i8, ptr inttoptr (i64 40 to ptr), align 8
   ret i8 %a
 }
 
 define i16 @load_i16() nounwind {
 ; LA32-LABEL: load_i16:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ori $a0, $zero, 40
-; LA32-NEXT:    ld.h $a0, $a0, 0
+; LA32-NEXT:    ld.h $a0, $zero, 40
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_i16:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a0, $zero, 40
-; LA64-NEXT:    ld.h $a0, $a0, 0
+; LA64-NEXT:    ld.h $a0, $zero, 40
 ; LA64-NEXT:    ret
-  %a = load i16, i16* inttoptr (i64 40 to i16*), align 8
+  %a = load i16, ptr inttoptr (i64 40 to ptr), align 8
   ret i16 %a
 }
 
 define signext i16 @load_i16_sext() nounwind {
 ; LA32-LABEL: load_i16_sext:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ori $a0, $zero, 40
-; LA32-NEXT:    ld.h $a0, $a0, 0
+; LA32-NEXT:    ld.h $a0, $zero, 40
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_i16_sext:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a0, $zero, 40
-; LA64-NEXT:    ld.h $a0, $a0, 0
+; LA64-NEXT:    ld.h $a0, $zero, 40
 ; LA64-NEXT:    ret
-  %a = load i16, i16* inttoptr (i64 40 to i16*), align 8
+  %a = load i16, ptr inttoptr (i64 40 to ptr), align 8
   ret i16 %a
 }
 
 define i32 @load_i32() nounwind {
 ; LA32-LABEL: load_i32:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ori $a0, $zero, 40
-; LA32-NEXT:    ld.w $a0, $a0, 0
+; LA32-NEXT:    ld.w $a0, $zero, 40
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_i32:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a0, $zero, 40
-; LA64-NEXT:    ld.w $a0, $a0, 0
+; LA64-NEXT:    ld.w $a0, $zero, 40
 ; LA64-NEXT:    ret
-  %a = load i32, i32* inttoptr (i64 40 to i32*), align 8
+  %a = load i32, ptr inttoptr (i64 40 to ptr), align 8
   ret i32 %a
 }
 
 define signext i32 @load_i32_sext() nounwind {
 ; LA32-LABEL: load_i32_sext:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ori $a0, $zero, 40
-; LA32-NEXT:    ld.w $a0, $a0, 0
+; LA32-NEXT:    ld.w $a0, $zero, 40
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_i32_sext:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a0, $zero, 40
-; LA64-NEXT:    ld.w $a0, $a0, 0
+; LA64-NEXT:    ld.w $a0, $zero, 40
 ; LA64-NEXT:    ret
-  %a = load i32, i32* inttoptr (i64 40 to i32*), align 8
+  %a = load i32, ptr inttoptr (i64 40 to ptr), align 8
   ret i32 %a
 }
 
 define i64 @load_i64() nounwind {
 ; LA32-LABEL: load_i64:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ori $a0, $zero, 40
-; LA32-NEXT:    ld.w $a0, $a0, 0
-; LA32-NEXT:    ori $a1, $zero, 44
-; LA32-NEXT:    ld.w $a1, $a1, 0
+; LA32-NEXT:    ld.w $a0, $zero, 40
+; LA32-NEXT:    ld.w $a1, $zero, 44
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_i64:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a0, $zero, 40
-; LA64-NEXT:    ld.d $a0, $a0, 0
+; LA64-NEXT:    ld.d $a0, $zero, 40
 ; LA64-NEXT:    ret
-  %a = load i64, i64* inttoptr (i64 40 to i64*), align 8
+  %a = load i64, ptr inttoptr (i64 40 to ptr), align 8
   ret i64 %a
 }
 
 define void @store_i8(i8 %v) nounwind {
 ; LA32-LABEL: store_i8:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ori $a1, $zero, 40
-; LA32-NEXT:    st.b $a0, $a1, 0
+; LA32-NEXT:    st.b $a0, $zero, 40
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: store_i8:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a1, $zero, 40
-; LA64-NEXT:    st.b $a0, $a1, 0
+; LA64-NEXT:    st.b $a0, $zero, 40
 ; LA64-NEXT:    ret
-  store i8 %v, i8* inttoptr (i64 40 to i8*), align 8
+  store i8 %v, ptr inttoptr (i64 40 to ptr), align 8
   ret void
 }
 
 define void @store_i16(i16 %v) nounwind {
 ; LA32-LABEL: store_i16:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ori $a1, $zero, 40
-; LA32-NEXT:    st.h $a0, $a1, 0
+; LA32-NEXT:    st.h $a0, $zero, 40
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: store_i16:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a1, $zero, 40
-; LA64-NEXT:    st.h $a0, $a1, 0
+; LA64-NEXT:    st.h $a0, $zero, 40
 ; LA64-NEXT:    ret
-  store i16 %v, i16* inttoptr (i64 40 to i16*), align 8
+  store i16 %v, ptr inttoptr (i64 40 to ptr), align 8
   ret void
 }
 
 define void @store_i32(i32 %v) nounwind {
 ; LA32-LABEL: store_i32:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ori $a1, $zero, 40
-; LA32-NEXT:    st.w $a0, $a1, 0
+; LA32-NEXT:    st.w $a0, $zero, 40
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: store_i32:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a1, $zero, 40
-; LA64-NEXT:    st.w $a0, $a1, 0
+; LA64-NEXT:    st.w $a0, $zero, 40
 ; LA64-NEXT:    ret
-  store i32 %v, i32* inttoptr (i64 40 to i32*), align 8
+  store i32 %v, ptr inttoptr (i64 40 to ptr), align 8
   ret void
 }
 
 define void @store_i64(i64 %v) nounwind {
 ; LA32-LABEL: store_i64:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ori $a2, $zero, 44
-; LA32-NEXT:    st.w $a1, $a2, 0
-; LA32-NEXT:    ori $a1, $zero, 40
-; LA32-NEXT:    st.w $a0, $a1, 0
+; LA32-NEXT:    st.w $a1, $zero, 44
+; LA32-NEXT:    st.w $a0, $zero, 40
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: store_i64:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a1, $zero, 40
-; LA64-NEXT:    st.d $a0, $a1, 0
+; LA64-NEXT:    st.d $a0, $zero, 40
 ; LA64-NEXT:    ret
-  store i64 %v, i64* inttoptr (i64 40 to i64*), align 8
+  store i64 %v, ptr inttoptr (i64 40 to ptr), align 8
   ret void
 }

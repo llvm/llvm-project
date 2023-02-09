@@ -9,7 +9,7 @@
 #include "src/threads/thrd_create.h"
 #include "src/threads/thrd_join.h"
 
-#include "utils/IntegrationTest/test.h"
+#include "test/IntegrationTest/test.h"
 
 #include <threads.h>
 

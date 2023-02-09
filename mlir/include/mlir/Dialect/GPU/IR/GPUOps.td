@@ -1150,6 +1150,10 @@ def GPU_SubgroupMmaLoadMatrixOp : GPU_Op<"subgroup_mma_load_matrix",
     matrix which eventually allows the lowering to determine the size of each
     row.  If the `transpose` attribute is present then the op does a transposed load.
 
+    For integer types, the resulting `!gpu.mma_matrix` type needs to specify the
+    signedness of the data if the matrix type is an `A` or `B` operand for
+    `gpu.subgroup_mma_compute`.
+
     This op is often meant to be used along with `gpu.subgroup_mma_store_matrix` and
     `gpu.subgroup_mma_compute`.
 
@@ -1201,7 +1205,7 @@ def GPU_SubgroupMmaStoreMatrixOp : GPU_Op<"subgroup_mma_store_matrix",
     ```
   }];
 
-  let arguments = (ins Arg<MMAMatrixOf<[F16, F32]>>:$src,
+  let arguments = (ins Arg<MMAMatrixOf<[SI8, UI8, I32, F16, F32]>>:$src,
                   Arg<GPU_MMAMemRef, "",[MemWrite]>:$dstMemref,
                   Variadic<Index>:$indices,
                   IndexAttr:$leadDimension,
@@ -1227,10 +1231,14 @@ def GPU_SubgroupMmaComputeOp
     as `C += A * B`. The op returns a `!gpu.mma_matrix` which contains the result of
     the operation held by all threads in a subgroup. `a_transpose` or
     `b_transpose` if present, signify that the respective operand was loaded in a
-    transposed manner. The transpose opernads are required to map to correct
+    transposed manner. The transpose operands are required to map to correct
     underlying intrisics but they currently do not seem to affect correctness
     even if they are absent given that the operands were loaded correctly using
     the `transpose` attribute in `gpu.subgroup_mma_load_matrix` op.
+
+    For integer types, the `A` and `B` matrices carry their signedness with their
+    types. The accumulator type is expected to be signless and imply a signed integer
+    with a greater width than the other two operands.
 
     This op is meant to be used along with `gpu.subgroup_mma_store_matrix` and
     `gpu.subgroup_mma_load_matrix` ops.
@@ -1244,9 +1252,9 @@ def GPU_SubgroupMmaComputeOp
     ```
   }];
 
-  let arguments = (ins Arg<MMAMatrixOf<[F16, F32]>>:$opA,
-                  Arg<MMAMatrixOf<[F16, F32]>>:$opB,
-                  Arg<MMAMatrixOf<[F16, F32]>>:$opC,
+  let arguments = (ins Arg<MMAMatrixOf<[SI8, UI8, F16, F32]>>:$opA,
+                  Arg<MMAMatrixOf<[SI8, UI8, F16, F32]>>:$opB,
+                  Arg<MMAMatrixOf<[I32, F16, F32]>>:$opC,
                   OptionalAttr<UnitAttr>:$a_transpose,
                   OptionalAttr<UnitAttr>:$b_transpose);
 
@@ -1288,7 +1296,7 @@ def GPU_SubgroupMmaConstantMatrixOp : GPU_Op<"subgroup_mma_constant_matrix",
     ```
   }];
 
-  let arguments = (ins AnyTypeOf<[F16, F32]>:$value);
+  let arguments = (ins AnyTypeOf<[SI8, UI8, I32, F16, F32]>:$value);
 
   let results = (outs GPU_MMAMatrix:$res);
 

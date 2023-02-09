@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strcasestr.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcStrCaseStrTest, NeedleNotInHaystack) {
   EXPECT_STREQ(__llvm_libc::strcasestr("abcd", "e"), nullptr);

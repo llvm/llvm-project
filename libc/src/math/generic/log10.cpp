@@ -948,8 +948,8 @@ LLVM_LIBC_FUNCTION(double, log10, (double x)) {
   FPBits_t xbits(x);
   int x_e = -1023;
 
-  if (unlikely(xbits.uintval() < FPBits_t::MIN_NORMAL ||
-               xbits.uintval() > FPBits_t::MAX_NORMAL)) {
+  if (LIBC_UNLIKELY(xbits.uintval() < FPBits_t::MIN_NORMAL ||
+                    xbits.uintval() > FPBits_t::MAX_NORMAL)) {
     if (xbits.is_zero()) {
       // return -Inf and raise FE_DIVBYZERO.
       return -1.0 / 0.0;

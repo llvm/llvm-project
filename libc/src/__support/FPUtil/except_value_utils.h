@@ -29,7 +29,7 @@ namespace fputil {
 //   };
 //
 // Check for exceptional inputs:
-//   if (auto r = Excepts.lookup(x_bits); unlikely(r.has_value()))
+//   if (auto r = Excepts.lookup(x_bits); LIBC_UNLIKELY(r.has_value()))
 //     return r.value();
 
 template <typename T, size_t N> struct ExceptValues {
@@ -49,7 +49,7 @@ template <typename T, size_t N> struct ExceptValues {
 
   constexpr cpp::optional<T> lookup(UIntType x_bits) const {
     for (size_t i = 0; i < N; ++i) {
-      if (unlikely(x_bits == values[i].input)) {
+      if (LIBC_UNLIKELY(x_bits == values[i].input)) {
         UIntType out_bits = values[i].rnd_towardzero_result;
         switch (fputil::get_round()) {
         case FE_UPWARD:
@@ -70,7 +70,7 @@ template <typename T, size_t N> struct ExceptValues {
 
   constexpr cpp::optional<T> lookup_odd(UIntType x_abs, bool sign) const {
     for (size_t i = 0; i < N; ++i) {
-      if (unlikely(x_abs == values[i].input)) {
+      if (LIBC_UNLIKELY(x_abs == values[i].input)) {
         UIntType out_bits = values[i].rnd_towardzero_result;
         switch (fputil::get_round()) {
         case FE_UPWARD:

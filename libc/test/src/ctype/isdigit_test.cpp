@@ -8,7 +8,7 @@
 
 #include "src/ctype/isdigit.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcIsDigit, DefaultLocale) {
   // Loops through all characters, verifying that numbers return a

@@ -28,8 +28,8 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 // Define these constants from FreeBSD mman.h for use when targeting remote
 // FreeBSD systems even when host has different values.
