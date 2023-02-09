@@ -668,6 +668,10 @@ if (MSVC)
           # is fixed.
       -wd4709 # Suppress comma operator within array index expression
 
+      # We'd like this warning to be enabled, but it triggers from code in
+      # WinBase.h that we don't have control over.
+      -wd5105 # Suppress macro expansion producing 'defined' has undefined behavior
+
       # Ideally, we'd like this warning to be enabled, but even MSVC 2019 doesn't
       # support the 'aligned' attribute in the way that clang sources requires (for
       # any code that uses the LLVM_ALIGNAS macro), so this is must be disabled to
