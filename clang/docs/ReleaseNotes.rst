@@ -64,6 +64,9 @@ Bug Fixes
   driver mode and emit an error which suggests using ``/TC`` or ``/TP``
   ``clang-cl`` options instead. This fixes
   `Issue 59307 <https://github.com/llvm/llvm-project/issues/59307>`_.
+- Fix crash when evaluating consteval constructor of derived class whose base
+  has more than one field. This fixes
+  `Issue 60166 <https://github.com/llvm/llvm-project/issues/60166>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
