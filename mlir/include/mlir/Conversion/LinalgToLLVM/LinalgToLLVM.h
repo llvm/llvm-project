@@ -13,20 +13,15 @@
 namespace mlir {
 class LLVMTypeConverter;
 class MLIRContext;
-class ModuleOp;
-template <typename T>
-class OperationPass;
+class Pass;
 class RewritePatternSet;
 
-#define GEN_PASS_DECL_CONVERTLINALGTOLLVM
+#define GEN_PASS_DECL_CONVERTLINALGTOLLVMPASS
 #include "mlir/Conversion/Passes.h.inc"
 
 /// Populate the given list with patterns that convert from Linalg to LLVM.
 void populateLinalgToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                             RewritePatternSet &patterns);
-
-/// Create a pass to convert Linalg operations to the LLVMIR dialect.
-std::unique_ptr<OperationPass<ModuleOp>> createConvertLinalgToLLVMPass();
 
 } // namespace mlir
 
