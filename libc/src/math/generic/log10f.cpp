@@ -8,12 +8,14 @@
 
 #include "src/math/log10f.h"
 #include "common_constants.h" // Lookup table for (1/f)
-#include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FMA.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
+#include "src/__support/FPUtil/except_value_utils.h"
+#include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/attributes.h" // LIBC_UNLIKELY
 
 // This is an algorithm for log10(x) in single precision which is
 // correctly rounded for all rounding modes, based on the implementation of
@@ -106,10 +108,10 @@ LLVM_LIBC_FUNCTION(float, log10f, (float x)) {
 
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
-  double m = 0.0;
+  uint32_t x_u = xbits.uintval();
 
   // Exact powers of 10 and other hard-to-round cases.
-  switch (xbits.uintval()) {
+  switch (x_u) {
   case 0x4120'0000U: // x = 10
     return 1.0f;
   case 0x42c8'0000U: // x = 100
@@ -131,37 +133,44 @@ LLVM_LIBC_FUNCTION(float, log10f, (float x)) {
   case 0x5015'02f9U: // x = 10,000,000,000
     return 10.0f;
   case 0x4f13'4f83U: // x = 2471461632.0
-    if (fputil::get_round() == FE_UPWARD)
-      return 0x1.2c9314p+3f;
-    break;
-  case 0x7956'ba5eU: { // x = 69683218960000541503257137270226944.0
-    int round_mode = fputil::get_round();
-    if (round_mode == FE_DOWNWARD || round_mode == FE_TOWARDZERO)
-      return 0x1.16bebap+5f;
-    break;
-  }
+    return fputil::round_result_slightly_down(0x1.2c9314p+3f);
+  case 0x7956'ba5eU: // x = 69683218960000541503257137270226944.0
+    return fputil::round_result_slightly_up(0x1.16bebap+5f);
+#ifndef LIBC_TARGET_HAS_FMA
+  case 0x08ae'a356U: // x = 0x1.5d46acp-110f
+    return fputil::round_result_slightly_up(-0x1.07d3b4p+5f);
+  case 0x1c7d'a337U: // x = 0x1.fb466ep-71f
+    return fputil::round_result_slightly_up(-0x1.5137dp+4f);
+  case 0x69c8'c583U: // x = 0x1.918b06p+84f
+    return fputil::round_result_slightly_down(0x1.97b652p+4f);
+#endif // LIBC_TARGET_HAS_FMA
   }
 
-  if (xbits.uintval() < FPBits::MIN_NORMAL ||
-      xbits.uintval() > FPBits::MAX_NORMAL) {
+  int m = -FPBits::EXPONENT_BIAS;
+
+  if (LIBC_UNLIKELY(x_u < FPBits::MIN_NORMAL || x_u > FPBits::MAX_NORMAL)) {
     if (xbits.is_zero()) {
+      // Return -inf and raise FE_DIVBYZERO
+      fputil::raise_except(FE_DIVBYZERO);
       return static_cast<float>(FPBits::neg_inf());
     }
     if (xbits.get_sign() && !xbits.is_nan()) {
-      return FPBits::build_nan(1 << (fputil::MantissaWidth<float>::VALUE - 1));
+      // Return NaN and raise FE_INVALID
+      fputil::raise_except(FE_INVALID);
+      return FPBits::build_quiet_nan(0);
     }
     if (xbits.is_inf_or_nan()) {
       return x;
     }
     // Normalize denormal inputs.
     xbits.set_val(xbits.get_val() * 0x1.0p23f);
-    m -= 23.0;
+    m -= 23;
   }
 
-  m += static_cast<double>(xbits.get_exponent());
+  m += xbits.get_unbiased_exponent();
+  int f_index = xbits.get_mantissa() >> 16;
   // Set bits to 1.m
   xbits.set_unbiased_exponent(0x7F);
-  int f_index = xbits.get_mantissa() >> 16;
 
   FPBits f = xbits;
   f.bits &= ~0x0000'FFFF;
@@ -169,7 +178,8 @@ LLVM_LIBC_FUNCTION(float, log10f, (float x)) {
   double d = static_cast<float>(xbits) - static_cast<float>(f);
   d *= ONE_OVER_F[f_index];
 
-  double extra_factor = fputil::multiply_add(m, LOG10_2, LOG10_F[f_index]);
+  double extra_factor =
+      fputil::multiply_add(static_cast<double>(m), LOG10_2, LOG10_F[f_index]);
 
   double r = fputil::polyeval(d, extra_factor, 0x1.bcb7b1526e4c5p-2,
                               -0x1.bcb7b1518a5e9p-3, 0x1.287a72a6f716p-3,

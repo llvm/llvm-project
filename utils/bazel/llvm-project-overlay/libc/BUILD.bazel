@@ -849,7 +849,6 @@ libc_math_function(
     name = "logf",
     additional_deps = [
         ":__support_fputil_fma",
-        ":__support_fputil_nearest_integer",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
         ":common_constants",
@@ -860,7 +859,6 @@ libc_math_function(
     name = "log2f",
     additional_deps = [
         ":__support_fputil_fma",
-        ":__support_fputil_nearest_integer",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
         ":common_constants",
@@ -871,7 +869,6 @@ libc_math_function(
     name = "log10f",
     additional_deps = [
         ":__support_fputil_fma",
-        ":__support_fputil_nearest_integer",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
         ":common_constants",
@@ -882,7 +879,6 @@ libc_math_function(
     name = "log1pf",
     additional_deps = [
         ":__support_fputil_fma",
-        ":__support_fputil_nearest_integer",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
         ":common_constants",
