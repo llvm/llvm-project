@@ -76,6 +76,8 @@ void HybridMutex::lockSlow() {}
 
 void HybridMutex::unlock() {}
 
+void HybridMutex::assertHeldImpl() {}
+
 u64 getMonotonicTime() {
   timespec TS;
   clock_gettime(CLOCK_MONOTONIC, &TS);
