@@ -255,6 +255,7 @@ cc_test(
     deps = [
         "//clang:ast",
         "//clang:basic",
+        "//clang:frontend",
         "//clang:lex",
         "//clang:parse",
         "//clang:sema",
@@ -262,8 +263,8 @@ cc_test(
         "//llvm:Support",
         "//llvm:TestingSupport",
         "//third-party/unittest:gmock",
-        "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
+        "//third-party/unittest:gtest",
     ],
 )
 
