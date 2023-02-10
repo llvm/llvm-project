@@ -186,6 +186,14 @@ asImplicitArg(Fortran::evaluate::characteristics::DummyArgument &&dummy) {
       dummy.u);
 }
 
+static bool isExternalDefinedInSameCompilationUnit(
+    const Fortran::evaluate::ProcedureDesignator &proc) {
+  if (const auto *symbol{proc.GetSymbol()})
+    return symbol->has<Fortran::semantics::SubprogramDetails>() &&
+           symbol->owner().IsGlobal();
+  return false;
+}
+
 Fortran::evaluate::characteristics::Procedure
 Fortran::lower::CallerInterface::characterize() const {
   Fortran::evaluate::FoldingContext &foldingContext =
@@ -195,27 +203,58 @@ Fortran::lower::CallerInterface::characterize() const {
           procRef.proc(), foldingContext);
   assert(characteristic && "Failed to get characteristic from procRef");
   // The characteristic may not contain the argument characteristic if the
-  // ProcedureDesignator has no interface.
-  if (!characteristic->HasExplicitInterface()) {
+  // ProcedureDesignator has no interface, or may mismatch in case of implicit
+  // interface.
+  if (!characteristic->HasExplicitInterface() ||
+      (converter.getLoweringOptions().getLowerToHighLevelFIR() &&
+       isExternalDefinedInSameCompilationUnit(procRef.proc()) &&
+       characteristic->CanBeCalledViaImplicitInterface())) {
+    // In HLFIR lowering, calls to subprogram with implicit interfaces are
+    // always prepared according to the actual arguments. This is to support
+    // cases where the implicit interfaces are "abused" in old and not so old
+    // Fortran code (e.g, passing REAL(8) to CHARACTER(8), passing object
+    // pointers to procedure dummies, passing regular procedure dummies to
+    // character procedure dummies, omitted arguments....).
+    // In all those case, if the subprogram definition is in the same
+    // compilation unit, the "characteristic" from Characterize will be the one
+    // from the definition, in case of "abuses" (for which semantics raise a
+    // warning), lowering will be placed in a difficult position if it is given
+    // the dummy characteristic from the definition and an actual that has
+    // seemingly nothing to do with it: it would need to battle to anticipate
+    // and handle these mismatches (e.g., be able to prepare a fir.boxchar<>
+    // from a fir.real<> and so one). This was the approach of the lowering to
+    // FIR, and usually lead to compiler bug every time a new "abuse" was met in
+    // the wild.
+    // Instead, in HLFIR, the dummy characteristic is always computed from the
+    // actual for subprogram with implicit interfaces, and in case of call site
+    // vs fun.func MLIR function type signature mismatch, a function cast is
+    // done before placing the call. This is a hammer that should cover all
+    // cases and behave like existing compiler that "do not see" the definition
+    // when placing the call.
+    characteristic->dummyArguments.clear();
     for (const std::optional<Fortran::evaluate::ActualArgument> &arg :
          procRef.arguments()) {
-      if (arg.value().isAlternateReturn()) {
-        characteristic->dummyArguments.emplace_back(
-            Fortran::evaluate::characteristics::AlternateReturn{});
-      } else {
-        // Argument cannot be optional with implicit interface
-        const Fortran::lower::SomeExpr *expr = arg.value().UnwrapExpr();
-        assert(
-            expr &&
-            "argument in call with implicit interface cannot be assumed type");
-        std::optional<Fortran::evaluate::characteristics::DummyArgument>
-            argCharacteristic =
-                Fortran::evaluate::characteristics::DummyArgument::FromActual(
-                    "actual", *expr, foldingContext);
-        assert(argCharacteristic &&
-               "failed to characterize argument in implicit call");
-        characteristic->dummyArguments.emplace_back(
-            asImplicitArg(std::move(*argCharacteristic)));
+      // "arg" may be null if this is a call with missing arguments compared
+      // to the subprogram definition. Do not compute any characteristic
+      // in this case.
+      if (arg.has_value()) {
+        if (arg.value().isAlternateReturn()) {
+          characteristic->dummyArguments.emplace_back(
+              Fortran::evaluate::characteristics::AlternateReturn{});
+        } else {
+          // Argument cannot be optional with implicit interface
+          const Fortran::lower::SomeExpr *expr = arg.value().UnwrapExpr();
+          assert(expr && "argument in call with implicit interface cannot be "
+                         "assumed type");
+          std::optional<Fortran::evaluate::characteristics::DummyArgument>
+              argCharacteristic =
+                  Fortran::evaluate::characteristics::DummyArgument::FromActual(
+                      "actual", *expr, foldingContext);
+          assert(argCharacteristic &&
+                 "failed to characterize argument in implicit call");
+          characteristic->dummyArguments.emplace_back(
+              asImplicitArg(std::move(*argCharacteristic)));
+        }
       }
     }
   }
