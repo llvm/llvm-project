@@ -2481,10 +2481,35 @@ bool isArgPassedInSGPR(const Argument *A) {
   case CallingConv::AMDGPU_PS:
   case CallingConv::AMDGPU_CS:
   case CallingConv::AMDGPU_Gfx:
-    // For non-compute shaders, SGPR inputs are marked with either inreg or byval.
-    // Everything else is in VGPRs.
-    return F->getAttributes().hasParamAttr(A->getArgNo(), Attribute::InReg) ||
-           F->getAttributes().hasParamAttr(A->getArgNo(), Attribute::ByVal);
+    // For non-compute shaders, SGPR inputs are marked with either inreg or
+    // byval. Everything else is in VGPRs.
+    return A->hasAttribute(Attribute::InReg) ||
+           A->hasAttribute(Attribute::ByVal);
+  default:
+    // TODO: Should calls support inreg for SGPR inputs?
+    return false;
+  }
+}
+
+bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo) {
+  // Arguments to compute shaders are never a source of divergence.
+  CallingConv::ID CC = CB->getCallingConv();
+  switch (CC) {
+  case CallingConv::AMDGPU_KERNEL:
+  case CallingConv::SPIR_KERNEL:
+    return true;
+  case CallingConv::AMDGPU_VS:
+  case CallingConv::AMDGPU_LS:
+  case CallingConv::AMDGPU_HS:
+  case CallingConv::AMDGPU_ES:
+  case CallingConv::AMDGPU_GS:
+  case CallingConv::AMDGPU_PS:
+  case CallingConv::AMDGPU_CS:
+  case CallingConv::AMDGPU_Gfx:
+    // For non-compute shaders, SGPR inputs are marked with either inreg or
+    // byval. Everything else is in VGPRs.
+    return CB->paramHasAttr(ArgNo, Attribute::InReg) ||
+           CB->paramHasAttr(ArgNo, Attribute::ByVal);
   default:
     // TODO: Should calls support inreg for SGPR inputs?
     return false;
