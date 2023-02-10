@@ -10,6 +10,10 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 
 declare double @exp2(double)
 declare float @exp2f(float)
+declare double @llvm.exp2.f64(double)
+declare float @llvm.exp2.f32(float)
+declare <2 x float> @llvm.exp2.v2f32(<2 x float>)
+
 
 ; Check exp2(sitofp(x)) -> ldexp(1.0, sext(x)).
 
@@ -219,9 +223,6 @@ define float @test_simplify8(i8 zeroext %x) {
   ret float %ret
 }
 
-declare double @llvm.exp2.f64(double)
-declare float @llvm.exp2.f32(float)
-
 define double @test_simplify9(i8 zeroext %x) {
 ; LDEXP32-LABEL: @test_simplify9(
 ; LDEXP32-NEXT:    [[TMP1:%.*]] = zext i8 [[X:%.*]] to i32
@@ -272,4 +273,32 @@ define float @test_simplify10(i8 zeroext %x) {
   %conv = uitofp i8 %x to float
   %ret = call float @llvm.exp2.f32(float %conv)
   ret float %ret
+}
+
+; TODO: FMF could be propagated when transforming.
+
+define float @sitofp_scalar_intrinsic_with_FMF(i8 %x) {
+; LDEXP32-LABEL: @sitofp_scalar_intrinsic_with_FMF(
+; LDEXP32-NEXT:    [[TMP1:%.*]] = sext i8 [[X:%.*]] to i32
+; LDEXP32-NEXT:    [[LDEXPF:%.*]] = call float @ldexpf(float 1.000000e+00, i32 [[TMP1]])
+; LDEXP32-NEXT:    ret float [[LDEXPF]]
+;
+; LDEXP16-LABEL: @sitofp_scalar_intrinsic_with_FMF(
+; LDEXP16-NEXT:    [[TMP1:%.*]] = sext i8 [[X:%.*]] to i16
+; LDEXP16-NEXT:    [[LDEXPF:%.*]] = call float @ldexpf(float 1.000000e+00, i16 [[TMP1]])
+; LDEXP16-NEXT:    ret float [[LDEXPF]]
+;
+; NOLDEXPF-LABEL: @sitofp_scalar_intrinsic_with_FMF(
+; NOLDEXPF-NEXT:    [[S:%.*]] = sitofp i8 [[X:%.*]] to float
+; NOLDEXPF-NEXT:    [[R:%.*]] = call nnan float @llvm.exp2.f32(float [[S]])
+; NOLDEXPF-NEXT:    ret float [[R]]
+;
+; NOLDEXP-LABEL: @sitofp_scalar_intrinsic_with_FMF(
+; NOLDEXP-NEXT:    [[S:%.*]] = sitofp i8 [[X:%.*]] to float
+; NOLDEXP-NEXT:    [[R:%.*]] = call nnan float @llvm.exp2.f32(float [[S]])
+; NOLDEXP-NEXT:    ret float [[R]]
+;
+  %s = sitofp i8 %x to float
+  %r = call nnan float @llvm.exp2.f32(float %s)
+  ret float %r
 }
