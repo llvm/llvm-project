@@ -608,22 +608,42 @@ static void trackASTFileInputs(CompilerInstance &CI,
   }
 }
 
+/// Ensure files that are not accessed during the scan (or accessed before the
+/// tracking scope) are tracked.
+static void trackFilesCommon(CompilerInstance &CI,
+                             llvm::cas::CachingOnDiskFileSystem &CacheFS) {
+  trackASTFileInputs(CI, CacheFS);
+
+  // Exclude the module cache from tracking. The implicit build pcms should
+  // not be needed after scanning.
+  if (!CI.getHeaderSearchOpts().ModuleCachePath.empty())
+    (void)CacheFS.excludeFromTracking(CI.getHeaderSearchOpts().ModuleCachePath);
+
+  // Normally this would be looked up while creating the VFS, but implicit
+  // modules share their VFS and it happens too early for the TU scan.
+  for (const auto &File : CI.getHeaderSearchOpts().VFSOverlayFiles)
+    (void)CacheFS.status(File);
+
+  StringRef Sysroot = CI.getHeaderSearchOpts().Sysroot;
+  if (!Sysroot.empty()) {
+    // Include 'SDKSettings.json', if it exists, to accomodate availability
+    // checks during the compilation.
+    llvm::SmallString<256> FilePath = Sysroot;
+    llvm::sys::path::append(FilePath, "SDKSettings.json");
+    (void)CacheFS.status(FilePath);
+  }
+}
+
 Error FullDependencyConsumer::finalize(CompilerInstance &ScanInstance,
                                        CompilerInvocation &NewInvocation) {
   if (CacheFS) {
-    // Exclude the module cache from tracking. The implicit build pcms should
-    // not be needed after scanning.
-    if (!ScanInstance.getHeaderSearchOpts().ModuleCachePath.empty())
-      (void)CacheFS->excludeFromTracking(
-          ScanInstance.getHeaderSearchOpts().ModuleCachePath);
-
     // Handle profile mappings.
     (void)CacheFS->status(
         NewInvocation.getCodeGenOpts().ProfileInstrumentUsePath);
     (void)CacheFS->status(NewInvocation.getCodeGenOpts().SampleProfileFile);
     (void)CacheFS->status(NewInvocation.getCodeGenOpts().ProfileRemappingFile);
 
-    trackASTFileInputs(ScanInstance, *CacheFS);
+    trackFilesCommon(ScanInstance, *CacheFS);
 
     auto E = CacheFS
                  ->createTreeFromNewAccesses(
@@ -651,19 +671,10 @@ Error FullDependencyConsumer::initializeModuleBuild(
     CompilerInstance &ModuleScanInstance) {
   if (CacheFS) {
     CacheFS->trackNewAccesses();
-    auto &HSOpts = ModuleScanInstance.getHeaderSearchOpts();
-    // Normally this would be looked up while creating the VFS, but implicit
-    // modules share their VFS.
-    for (const auto &File : HSOpts.VFSOverlayFiles)
-      (void)CacheFS->status(File);
     // If the working directory is not otherwise accessed by the module build,
     // we still need it due to -fcas-fs-working-directory being set.
     if (auto CWD = CacheFS->getCurrentWorkingDirectory())
       (void)CacheFS->status(*CWD);
-    // Exclude the module cache from tracking. The implicit build pcms should
-    // not be needed after scanning.
-    if (!HSOpts.ModuleCachePath.empty())
-      (void)CacheFS->excludeFromTracking(HSOpts.ModuleCachePath);
   }
   return Error::success();
 }
@@ -671,7 +682,7 @@ Error FullDependencyConsumer::initializeModuleBuild(
 Error FullDependencyConsumer::finalizeModuleBuild(
     CompilerInstance &ModuleScanInstance) {
   if (CacheFS) {
-    trackASTFileInputs(ModuleScanInstance, *CacheFS);
+    trackFilesCommon(ModuleScanInstance, *CacheFS);
 
     std::optional<cas::CASID> RootID;
     auto E = CacheFS
