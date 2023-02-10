@@ -2516,7 +2516,9 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   if (!Diags.isIgnored(diag::warn_unsafe_buffer_operation, D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_unsafe_buffer_variable, D->getBeginLoc())) {
     UnsafeBufferUsageReporter R(S);
-    checkUnsafeBufferUsage(D, R);
+    checkUnsafeBufferUsage(
+        D, R,
+        /*EmitFixits=*/S.getLangOpts().CPlusPlus20);
   }
 
   // If none of the previous checks caused a CFG build, trigger one here
