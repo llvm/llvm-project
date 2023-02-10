@@ -50,7 +50,7 @@
 #endif
 #else
 #include "hsa/hsa.h"
-#include "hsa_ext_amd.h"
+#include "hsa/hsa_ext_amd.h"
 #endif
 
 namespace llvm {
@@ -1438,7 +1438,7 @@ struct AMDHostDeviceTy : public AMDGenericDeviceTy {
     if (auto Err = ArgsMemoryManager.init(getArgsMemoryPool()))
       return Err;
 
-    if (auto Err = PinnedMemoryManager.init(getHostMemoryPool()))
+    if (auto Err = PinnedMemoryManager.init(getFineGrainedMemoryPool()))
       return Err;
 
     return Plugin::success();
@@ -1478,8 +1478,8 @@ struct AMDHostDeviceTy : public AMDGenericDeviceTy {
   /// Get one of the host agents. Return always the first agent.
   hsa_agent_t getAgent() const override { return Agents[0]; }
 
-  /// Get a memory pool for host pinned allocations.
-  AMDGPUMemoryPoolTy &getHostMemoryPool() {
+  /// Get a memory pool for fine-grained allocations.
+  AMDGPUMemoryPoolTy &getFineGrainedMemoryPool() {
     assert(!FineGrainedMemoryPools.empty() && "No fine-grained mempool");
     // Retrive any memory pool.
     return *FineGrainedMemoryPools[0];
@@ -1762,12 +1762,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       MemoryPool = CoarseGrainedMemoryPools[0];
       break;
     case TARGET_ALLOC_HOST:
-      MemoryPool = &HostDevice.getHostMemoryPool();
       break;
     case TARGET_ALLOC_SHARED:
-      // TODO: Not supported yet. We could look at fine-grained host memory
-      // pools that are accessible by this device. The allocation should be made
-      // explicitly accessible if it is not yet.
+      MemoryPool = &HostDevice.getFineGrainedMemoryPool();
       break;
     }
 
@@ -2626,12 +2623,9 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
     MemoryPool = CoarseGrainedMemoryPools[0];
     break;
   case TARGET_ALLOC_HOST:
-    MemoryPool = &HostDevice.getHostMemoryPool();
     break;
   case TARGET_ALLOC_SHARED:
-    // TODO: Not supported yet. We could look at fine-grained host memory
-    // pools that are accessible by this device. The allocation should be made
-    // explicitly accessible if it is not yet.
+    MemoryPool = &HostDevice.getFineGrainedMemoryPool();
     break;
   }
 
@@ -2647,10 +2641,10 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
     return nullptr;
   }
 
-  if (Kind == TARGET_ALLOC_HOST && Alloc) {
+  if (Alloc && (Kind == TARGET_ALLOC_HOST || Kind == TARGET_ALLOC_SHARED)) {
     auto &KernelAgents = Plugin::get<AMDGPUPluginTy>().getKernelAgents();
 
-    // Enable all kernel agents to access the host pinned buffer.
+    // Enable all kernel agents to access the buffer.
     if (auto Err = MemoryPool->enableAccess(Alloc, Size, KernelAgents)) {
       REPORT("%s\n", toString(std::move(Err)).data());
       return nullptr;
