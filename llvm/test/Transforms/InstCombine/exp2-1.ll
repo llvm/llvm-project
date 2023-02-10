@@ -302,3 +302,32 @@ define float @sitofp_scalar_intrinsic_with_FMF(i8 %x) {
   %r = call nnan float @llvm.exp2.f32(float %s)
   ret float %r
 }
+
+; PR60605
+; This would crash because there is no ldexp intrinsic.
+
+define <2 x float> @sitofp_vector_intrinsic_with_FMF(<2 x i8> %x) {
+; LDEXP32-LABEL: @sitofp_vector_intrinsic_with_FMF(
+; LDEXP32-NEXT:    [[S:%.*]] = sitofp <2 x i8> [[X:%.*]] to <2 x float>
+; LDEXP32-NEXT:    [[R:%.*]] = call nnan <2 x float> @llvm.exp2.v2f32(<2 x float> [[S]])
+; LDEXP32-NEXT:    ret <2 x float> [[R]]
+;
+; LDEXP16-LABEL: @sitofp_vector_intrinsic_with_FMF(
+; LDEXP16-NEXT:    [[S:%.*]] = sitofp <2 x i8> [[X:%.*]] to <2 x float>
+; LDEXP16-NEXT:    [[R:%.*]] = call nnan <2 x float> @llvm.exp2.v2f32(<2 x float> [[S]])
+; LDEXP16-NEXT:    ret <2 x float> [[R]]
+;
+; NOLDEXPF-LABEL: @sitofp_vector_intrinsic_with_FMF(
+; NOLDEXPF-NEXT:    [[S:%.*]] = sitofp <2 x i8> [[X:%.*]] to <2 x float>
+; NOLDEXPF-NEXT:    [[R:%.*]] = call nnan <2 x float> @llvm.exp2.v2f32(<2 x float> [[S]])
+; NOLDEXPF-NEXT:    ret <2 x float> [[R]]
+;
+; NOLDEXP-LABEL: @sitofp_vector_intrinsic_with_FMF(
+; NOLDEXP-NEXT:    [[S:%.*]] = sitofp <2 x i8> [[X:%.*]] to <2 x float>
+; NOLDEXP-NEXT:    [[R:%.*]] = call nnan <2 x float> @llvm.exp2.v2f32(<2 x float> [[S]])
+; NOLDEXP-NEXT:    ret <2 x float> [[R]]
+;
+  %s = sitofp <2 x i8> %x to <2 x float>
+  %r = call nnan <2 x float> @llvm.exp2.v2f32(<2 x float> %s)
+  ret <2 x float> %r
+}
