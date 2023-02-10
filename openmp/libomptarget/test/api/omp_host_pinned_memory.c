@@ -1,5 +1,4 @@
 // RUN: %libomptarget-compile-run-and-check-generic
-// UNSUPPORTED: amdgcn-amd-amdhsa
 
 #include <omp.h>
 #include <stdio.h>
