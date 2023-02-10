@@ -12,6 +12,7 @@
 #include "FEnvImpl.h"
 #include "FPBits.h"
 #include "src/__support/CPP/optional.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 namespace __llvm_libc {
 
