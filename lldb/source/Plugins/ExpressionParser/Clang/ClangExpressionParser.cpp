@@ -46,9 +46,9 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/TargetParser/Host.h"
 
 #include "ClangDiagnostic.h"
 #include "ClangExpressionParser.h"

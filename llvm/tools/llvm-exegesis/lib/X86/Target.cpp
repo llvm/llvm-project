@@ -22,7 +22,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 
 #include <memory>
 #include <string>
