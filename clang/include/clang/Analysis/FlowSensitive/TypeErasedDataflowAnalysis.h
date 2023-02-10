@@ -96,7 +96,7 @@ public:
 
   /// Applies the analysis transfer function for a given control flow graph
   /// element and type-erased lattice element.
-  virtual void transferTypeErased(const CFGElement *, TypeErasedLattice &,
+  virtual void transferTypeErased(const CFGElement &, TypeErasedLattice &,
                                   Environment &) = 0;
 
   /// Applies the analysis transfer function for a given edge from a CFG block
