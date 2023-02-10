@@ -19,7 +19,7 @@
 #include "llvm-c/Transforms/PassBuilder.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;

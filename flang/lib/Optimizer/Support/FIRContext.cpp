@@ -15,7 +15,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 
 void fir::setTargetTriple(mlir::ModuleOp mod, llvm::StringRef triple) {
   auto target = fir::determineTargetTriple(triple);
