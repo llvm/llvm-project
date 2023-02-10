@@ -290,16 +290,16 @@ define float @sitofp_scalar_intrinsic_with_FMF(i8 %x) {
 ;
 ; NOLDEXPF-LABEL: @sitofp_scalar_intrinsic_with_FMF(
 ; NOLDEXPF-NEXT:    [[S:%.*]] = sitofp i8 [[X:%.*]] to float
-; NOLDEXPF-NEXT:    [[R:%.*]] = call nnan float @llvm.exp2.f32(float [[S]])
+; NOLDEXPF-NEXT:    [[R:%.*]] = tail call nnan float @llvm.exp2.f32(float [[S]])
 ; NOLDEXPF-NEXT:    ret float [[R]]
 ;
 ; NOLDEXP-LABEL: @sitofp_scalar_intrinsic_with_FMF(
 ; NOLDEXP-NEXT:    [[S:%.*]] = sitofp i8 [[X:%.*]] to float
-; NOLDEXP-NEXT:    [[R:%.*]] = call nnan float @llvm.exp2.f32(float [[S]])
+; NOLDEXP-NEXT:    [[R:%.*]] = tail call nnan float @llvm.exp2.f32(float [[S]])
 ; NOLDEXP-NEXT:    ret float [[R]]
 ;
   %s = sitofp i8 %x to float
-  %r = call nnan float @llvm.exp2.f32(float %s)
+  %r = tail call nnan float @llvm.exp2.f32(float %s)
   ret float %r
 }
 
