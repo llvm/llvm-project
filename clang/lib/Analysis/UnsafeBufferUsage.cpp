@@ -1008,7 +1008,8 @@ getNaiveStrategy(const llvm::SmallVectorImpl<const VarDecl *> &UnsafeVars) {
 }
 
 void clang::checkUnsafeBufferUsage(const Decl *D,
-                                   UnsafeBufferUsageHandler &Handler) {
+                                   UnsafeBufferUsageHandler &Handler,
+                                   bool EmitFixits) {
   assert(D && D->getBody());
 
   WarningGadgetSets UnsafeOps;
@@ -1016,40 +1017,46 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   DeclUseTracker Tracker;
 
   {
+    // FIXME: We could skip even matching Fixables' matchers if EmitFixits ==
+    // false.
     auto [FixableGadgets, WarningGadgets, TrackerRes] = findGadgets(D, Handler);
     UnsafeOps = groupWarningGadgetsByVar(std::move(WarningGadgets));
     FixablesForUnsafeVars = groupFixablesByVar(std::move(FixableGadgets));
     Tracker = std::move(TrackerRes);
   }
 
-  // Filter out non-local vars and vars with unclaimed DeclRefExpr-s.
-  for (auto it = FixablesForUnsafeVars.byVar.cbegin();
-       it != FixablesForUnsafeVars.byVar.cend();) {
-    // FIXME: Support ParmVarDecl as well.
-    if (!it->first->isLocalVarDecl() || Tracker.hasUnclaimedUses(it->first)) {
-      it = FixablesForUnsafeVars.byVar.erase(it);
-    } else {
-      ++it;
+  std::map<const VarDecl *, FixItList> FixItsForVariable;
+
+  if (EmitFixits) {
+    // Filter out non-local vars and vars with unclaimed DeclRefExpr-s.
+    for (auto it = FixablesForUnsafeVars.byVar.cbegin();
+         it != FixablesForUnsafeVars.byVar.cend();) {
+      // FIXME: Support ParmVarDecl as well.
+      if (!it->first->isLocalVarDecl() || Tracker.hasUnclaimedUses(it->first)) {
+        it = FixablesForUnsafeVars.byVar.erase(it);
+      } else {
+        ++it;
+      }
     }
+
+    llvm::SmallVector<const VarDecl *, 16> UnsafeVars;
+    for (const auto &[VD, ignore] : FixablesForUnsafeVars.byVar)
+      UnsafeVars.push_back(VD);
+
+    Strategy NaiveStrategy = getNaiveStrategy(UnsafeVars);
+    FixItsForVariable = getFixIts(FixablesForUnsafeVars, NaiveStrategy, Tracker,
+                                  D->getASTContext(), Handler);
+
+    // FIXME Detect overlapping FixIts.
   }
-
-  llvm::SmallVector<const VarDecl *, 16> UnsafeVars;
-  for (const auto &[VD, ignore] : FixablesForUnsafeVars.byVar)
-    UnsafeVars.push_back(VD);
-
-  Strategy NaiveStrategy = getNaiveStrategy(UnsafeVars);
-  std::map<const VarDecl *, FixItList> FixItsForVariable =
-      getFixIts(FixablesForUnsafeVars, NaiveStrategy, Tracker,
-                D->getASTContext(), Handler);
-
-  // FIXME Detect overlapping FixIts.
 
   for (const auto &G : UnsafeOps.noVar) {
     Handler.handleUnsafeOperation(G->getBaseStmt(), /*IsRelatedToDecl=*/false);
   }
 
   for (const auto &[VD, WarningGadgets] : UnsafeOps.byVar) {
-    auto FixItsIt = FixItsForVariable.find(VD);
+    auto FixItsIt =
+        EmitFixits ? FixItsForVariable.find(VD) : FixItsForVariable.end();
     Handler.handleFixableVariable(VD, FixItsIt != FixItsForVariable.end()
                                           ? std::move(FixItsIt->second)
                                           : FixItList{});

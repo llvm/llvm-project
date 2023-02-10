@@ -105,12 +105,15 @@ public:
   std::optional<AMDGPU::IsaInfo::AMDGPUTargetID> &getTargetID() {
     return TargetID;
   }
-  void initializeTargetID(const MCSubtargetInfo &STI) {
+  void initializeTargetID(const MCSubtargetInfo &STI,
+                          unsigned CodeObjectVersion) {
     assert(TargetID == std::nullopt && "TargetID can only be initialized once");
     TargetID.emplace(STI);
+    getTargetID()->setCodeObjectVersion(CodeObjectVersion);
   }
-  void initializeTargetID(const MCSubtargetInfo &STI, StringRef FeatureString) {
-    initializeTargetID(STI);
+  void initializeTargetID(const MCSubtargetInfo &STI, StringRef FeatureString,
+                          unsigned CodeObjectVersion) {
+    initializeTargetID(STI, CodeObjectVersion);
 
     assert(getTargetID() != std::nullopt && "TargetID is None");
     getTargetID()->setTargetIDFromFeaturesString(FeatureString);

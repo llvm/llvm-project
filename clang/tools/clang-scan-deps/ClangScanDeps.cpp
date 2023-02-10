@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
@@ -24,6 +25,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/TargetParser/Host.h"
 #include <mutex>
 #include <optional>
 #include <thread>
@@ -132,12 +134,15 @@ static llvm::cl::opt<ScanningMode> ScanMode(
 
 static llvm::cl::opt<ScanningOutputFormat> Format(
     "format", llvm::cl::desc("The output format for the dependencies"),
-    llvm::cl::values(clEnumValN(ScanningOutputFormat::Make, "make",
-                                "Makefile compatible dep file"),
-                     clEnumValN(ScanningOutputFormat::Full, "experimental-full",
-                                "Full dependency graph suitable"
-                                " for explicitly building modules. This format "
-                                "is experimental and will change.")),
+    llvm::cl::values(
+        clEnumValN(ScanningOutputFormat::Make, "make",
+                   "Makefile compatible dep file"),
+        clEnumValN(ScanningOutputFormat::P1689, "p1689",
+                   "Generate standard c++ modules dependency P1689 format"),
+        clEnumValN(ScanningOutputFormat::Full, "experimental-full",
+                   "Full dependency graph suitable"
+                   " for explicitly building modules. This format "
+                   "is experimental and will change.")),
     llvm::cl::init(ScanningOutputFormat::Make),
     llvm::cl::cat(DependencyScannerCategory));
 
@@ -166,8 +171,13 @@ llvm::cl::opt<unsigned>
 
 llvm::cl::opt<std::string>
     CompilationDB("compilation-database",
-                  llvm::cl::desc("Compilation database"), llvm::cl::Required,
+                  llvm::cl::desc("Compilation database"), llvm::cl::Optional,
                   llvm::cl::cat(DependencyScannerCategory));
+
+llvm::cl::opt<std::string> P1689TargettedCommand(
+    llvm::cl::Positional, llvm::cl::ZeroOrMore,
+    llvm::cl::desc("The command line flags for the target of which "
+                   "the dependencies are to be computed."));
 
 llvm::cl::opt<std::string> ModuleName(
     "module-name", llvm::cl::Optional,
@@ -462,6 +472,88 @@ static bool handleModuleResult(
   return false;
 }
 
+class P1689Deps {
+public:
+  void printDependencies(raw_ostream &OS) {
+    addSourcePathsToRequires();
+    // Sort the modules by name to get a deterministic order.
+    llvm::sort(Rules, [](const P1689Rule &A, const P1689Rule &B) {
+      return A.PrimaryOutput < B.PrimaryOutput;
+    });
+
+    using namespace llvm::json;
+    Array OutputRules;
+    for (const P1689Rule &R : Rules) {
+      Object O{{"primary-output", R.PrimaryOutput}};
+
+      if (R.Provides) {
+        Array Provides;
+        Object Provided{{"logical-name", R.Provides->ModuleName},
+                        {"source-path", R.Provides->SourcePath},
+                        {"is-interface", R.Provides->IsStdCXXModuleInterface}};
+        Provides.push_back(std::move(Provided));
+        O.insert({"provides", std::move(Provides)});
+      }
+
+      Array Requires;
+      for (const P1689ModuleInfo &Info : R.Requires) {
+        Object RequiredInfo{{"logical-name", Info.ModuleName}};
+        if (!Info.SourcePath.empty())
+          RequiredInfo.insert({"source-path", Info.SourcePath});
+        Requires.push_back(std::move(RequiredInfo));
+      }
+
+      if (!Requires.empty())
+        O.insert({"requires", std::move(Requires)});
+
+      OutputRules.push_back(std::move(O));
+    }
+
+    Object Output{
+        {"version", 1}, {"revision", 0}, {"rules", std::move(OutputRules)}};
+
+    OS << llvm::formatv("{0:2}\n", Value(std::move(Output)));
+  }
+
+  void addRules(P1689Rule &Rule) { Rules.push_back(Rule); }
+
+private:
+  void addSourcePathsToRequires() {
+    llvm::DenseMap<StringRef, StringRef> ModuleSourceMapper;
+    for (const P1689Rule &R : Rules)
+      if (R.Provides && !R.Provides->SourcePath.empty())
+        ModuleSourceMapper[R.Provides->ModuleName] = R.Provides->SourcePath;
+
+    for (P1689Rule &R : Rules) {
+      for (P1689ModuleInfo &Info : R.Requires) {
+        auto Iter = ModuleSourceMapper.find(Info.ModuleName);
+        if (Iter != ModuleSourceMapper.end())
+          Info.SourcePath = Iter->second;
+      }
+    }
+  }
+
+  std::vector<P1689Rule> Rules;
+};
+
+static bool
+handleP1689DependencyToolResult(const std::string &Input,
+                                llvm::Expected<P1689Rule> &MaybeRule,
+                                P1689Deps &PD, SharedStream &Errs) {
+  if (!MaybeRule) {
+    llvm::handleAllErrors(
+        MaybeRule.takeError(), [&Input, &Errs](llvm::StringError &Err) {
+          Errs.applyLocked([&](raw_ostream &OS) {
+            OS << "Error while scanning dependencies for " << Input << ":\n";
+            OS << Err.getMessage();
+          });
+        });
+    return true;
+  }
+  PD.addRules(*MaybeRule);
+  return false;
+}
+
 /// Construct a path for the explicitly built PCM.
 static std::string constructPCMPath(ModuleID MID, StringRef OutputDir) {
   SmallString<256> ExplicitPCMPath(OutputDir);
@@ -498,19 +590,109 @@ static std::string getModuleCachePath(ArrayRef<std::string> Args) {
   return std::string(Path);
 }
 
-int main(int argc, const char **argv) {
+// getCompilationDataBase - If -compilation-database is set, load the
+// compilation database from the specified file. Otherwise if the we're
+// generating P1689 format, trying to generate the compilation database
+// form specified command line after the positional parameter "--".
+static std::unique_ptr<tooling::CompilationDatabase>
+getCompilationDataBase(int argc, const char **argv, std::string &ErrorMessage) {
   llvm::InitLLVM X(argc, argv);
   llvm::cl::HideUnrelatedOptions(DependencyScannerCategory);
   if (!llvm::cl::ParseCommandLineOptions(argc, argv))
-    return 1;
+    return nullptr;
 
+  if (!CompilationDB.empty())
+    return tooling::JSONCompilationDatabase::loadFromFile(
+        CompilationDB, ErrorMessage,
+        tooling::JSONCommandLineSyntax::AutoDetect);
+
+  if (Format != ScanningOutputFormat::P1689) {
+    llvm::errs() << "the --compilation-database option: must be specified at "
+                    "least once!";
+    return nullptr;
+  }
+
+  // Trying to get the input file, the output file and the command line options
+  // from the positional parameter "--".
+  const char **DoubleDash = std::find(argv, argv + argc, StringRef("--"));
+  if (DoubleDash == argv + argc) {
+    llvm::errs() << "The command line arguments is required after '--' in "
+                    "P1689 per file mode.";
+    return nullptr;
+  }
+  std::vector<const char *> CommandLine(DoubleDash + 1, argv + argc);
+
+  llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+      CompilerInstance::createDiagnostics(new DiagnosticOptions);
+  driver::Driver TheDriver(CommandLine[0], llvm::sys::getDefaultTargetTriple(),
+                           *Diags);
+  std::unique_ptr<driver::Compilation> C(
+      TheDriver.BuildCompilation(CommandLine));
+  if (!C)
+    return nullptr;
+
+  auto Cmd = C->getJobs().begin();
+  auto CI = std::make_unique<CompilerInvocation>();
+  CompilerInvocation::CreateFromArgs(*CI, Cmd->getArguments(), *Diags,
+                                     CommandLine[0]);
+  if (!CI)
+    return nullptr;
+
+  FrontendOptions &FEOpts = CI->getFrontendOpts();
+  if (FEOpts.Inputs.size() != 1) {
+    llvm::errs() << "Only one input file is allowed in P1689 per file mode.";
+    return nullptr;
+  }
+
+  // There might be multiple jobs for a compilation. Extract the specified
+  // output filename from the last job.
+  auto LastCmd = C->getJobs().end();
+  LastCmd--;
+  if (LastCmd->getOutputFilenames().size() != 1) {
+    llvm::errs() << "The command line should provide exactly one output file "
+                    "in P1689 per file mode.\n";
+  }
+  StringRef OutputFile = LastCmd->getOutputFilenames().front();
+
+  class InplaceCompilationDatabase : public tooling::CompilationDatabase {
+  public:
+    InplaceCompilationDatabase(StringRef InputFile, StringRef OutputFile,
+                               ArrayRef<const char *> CommandLine)
+        : Command(".", InputFile, {}, OutputFile) {
+      for (auto *C : CommandLine)
+        Command.CommandLine.push_back(C);
+    }
+
+    std::vector<tooling::CompileCommand>
+    getCompileCommands(StringRef FilePath) const override {
+      if (FilePath != Command.Filename)
+        return {};
+      return {Command};
+    }
+
+    std::vector<std::string> getAllFiles() const override {
+      return {Command.Filename};
+    }
+
+    std::vector<tooling::CompileCommand>
+    getAllCompileCommands() const override {
+      return {Command};
+    }
+
+  private:
+    tooling::CompileCommand Command;
+  };
+
+  return std::make_unique<InplaceCompilationDatabase>(
+      FEOpts.Inputs[0].getFile(), OutputFile, CommandLine);
+}
+
+int main(int argc, const char **argv) {
   std::string ErrorMessage;
-  std::unique_ptr<tooling::JSONCompilationDatabase> Compilations =
-      tooling::JSONCompilationDatabase::loadFromFile(
-          CompilationDB, ErrorMessage,
-          tooling::JSONCommandLineSyntax::AutoDetect);
+  std::unique_ptr<tooling::CompilationDatabase> Compilations =
+      getCompilationDataBase(argc, argv, ErrorMessage);
   if (!Compilations) {
-    llvm::errs() << "error: " << ErrorMessage << "\n";
+    llvm::errs() << ErrorMessage << "\n";
     return 1;
   }
 
@@ -597,6 +779,7 @@ int main(int argc, const char **argv) {
 
   std::atomic<bool> HadErrors(false);
   FullDeps FD;
+  P1689Deps PD;
   std::mutex Lock;
   size_t Index = 0;
 
@@ -605,7 +788,7 @@ int main(int argc, const char **argv) {
                  << " files using " << Pool.getThreadCount() << " workers\n";
   }
   for (unsigned I = 0; I < Pool.getThreadCount(); ++I) {
-    Pool.async([I, &Lock, &Index, &Inputs, &HadErrors, &FD, &WorkerTools,
+    Pool.async([I, &Lock, &Index, &Inputs, &HadErrors, &FD, &PD, &WorkerTools,
                 &DependencyOS, &Errs]() {
       llvm::StringSet<> AlreadySeenModules;
       while (true) {
@@ -641,6 +824,11 @@ int main(int argc, const char **argv) {
           if (handleMakeDependencyToolResult(Filename, MaybeFile, DependencyOS,
                                              Errs))
             HadErrors = true;
+        } else if (Format == ScanningOutputFormat::P1689) {
+          auto MaybeRule =
+              WorkerTools[I]->getP1689ModuleDependencyFile(*Input, CWD);
+          if (handleP1689DependencyToolResult(Filename, MaybeRule, PD, Errs))
+            HadErrors = true;
         } else if (MaybeModuleName) {
           auto MaybeModuleDepsGraph = WorkerTools[I]->getModuleDependencies(
               *MaybeModuleName, Input->CommandLine, CWD, AlreadySeenModules,
@@ -666,6 +854,8 @@ int main(int argc, const char **argv) {
 
   if (Format == ScanningOutputFormat::Full)
     FD.printFullOutput(llvm::outs());
+  else if (Format == ScanningOutputFormat::P1689)
+    PD.printDependencies(llvm::outs());
 
   return HadErrors;
 }

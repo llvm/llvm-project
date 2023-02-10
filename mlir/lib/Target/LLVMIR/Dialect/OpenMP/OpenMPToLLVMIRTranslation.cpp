@@ -759,10 +759,8 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
     llvm::IRBuilderBase::InsertPointGuard guard(builder);
     builder.restoreIP(allocaIP);
     for (unsigned i = 0; i < numReductions; ++i) {
-      auto reductionType =
-          loop.getReductionVars()[i].getType().cast<LLVM::LLVMPointerType>();
       llvm::Value *var = builder.CreateAlloca(
-          moduleTranslation.convertType(reductionType.getElementType()));
+          moduleTranslation.convertType(reductionDecls[i].getType()));
       privateReductionVariables.push_back(var);
       reductionVariableMap.try_emplace(loop.getReductionVars()[i], var);
     }
@@ -893,14 +891,11 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
     llvm::OpenMPIRBuilder::AtomicReductionGenTy atomicGen = nullptr;
     if (owningAtomicReductionGens[i])
       atomicGen = owningAtomicReductionGens[i];
-    auto reductionType =
-        loop.getReductionVars()[i].getType().cast<LLVM::LLVMPointerType>();
     llvm::Value *variable =
         moduleTranslation.lookupValue(loop.getReductionVars()[i]);
     reductionInfos.push_back(
-        {moduleTranslation.convertType(reductionType.getElementType()),
-         variable, privateReductionVariables[i], owningReductionGens[i],
-         atomicGen});
+        {moduleTranslation.convertType(reductionDecls[i].getType()), variable,
+         privateReductionVariables[i], owningReductionGens[i], atomicGen});
   }
 
   // The call to createReductions below expects the block to have a
@@ -1041,15 +1036,13 @@ convertOmpAtomicRead(Operation &opInst, llvm::IRBuilderBase &builder,
 
   llvm::AtomicOrdering AO = convertAtomicOrdering(readOp.getMemoryOrderVal());
   llvm::Value *x = moduleTranslation.lookupValue(readOp.getX());
-  Type xTy =
-      readOp.getX().getType().cast<omp::PointerLikeType>().getElementType();
   llvm::Value *v = moduleTranslation.lookupValue(readOp.getV());
-  Type vTy =
-      readOp.getV().getType().cast<omp::PointerLikeType>().getElementType();
-  llvm::OpenMPIRBuilder::AtomicOpValue V = {
-      v, moduleTranslation.convertType(vTy), false, false};
-  llvm::OpenMPIRBuilder::AtomicOpValue X = {
-      x, moduleTranslation.convertType(xTy), false, false};
+
+  llvm::Type *elementType =
+      moduleTranslation.convertType(readOp.getElementType());
+
+  llvm::OpenMPIRBuilder::AtomicOpValue V = {v, elementType, false, false};
+  llvm::OpenMPIRBuilder::AtomicOpValue X = {x, elementType, false, false};
   builder.restoreIP(ompBuilder->createAtomicRead(ompLoc, X, V, AO));
   return success();
 }
@@ -1120,10 +1113,8 @@ convertOmpAtomicUpdate(omp::AtomicUpdateOp &opInst,
                                        : innerUpdateOp.getOperand(0));
   llvm::Value *llvmExpr = moduleTranslation.lookupValue(mlirExpr);
   llvm::Value *llvmX = moduleTranslation.lookupValue(opInst.getX());
-  LLVM::LLVMPointerType mlirXType =
-      opInst.getX().getType().cast<LLVM::LLVMPointerType>();
-  llvm::Type *llvmXElementType =
-      moduleTranslation.convertType(mlirXType.getElementType());
+  llvm::Type *llvmXElementType = moduleTranslation.convertType(
+      opInst.getRegion().getArgument(0).getType());
   llvm::OpenMPIRBuilder::AtomicOpValue llvmAtomicX = {llvmX, llvmXElementType,
                                                       /*isSigned=*/false,
                                                       /*isVolatile=*/false};
@@ -1208,12 +1199,8 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
       moduleTranslation.lookupValue(atomicCaptureOp.getAtomicReadOp().getX());
   llvm::Value *llvmV =
       moduleTranslation.lookupValue(atomicCaptureOp.getAtomicReadOp().getV());
-  auto mlirXType = atomicCaptureOp.getAtomicReadOp()
-                       .getX()
-                       .getType()
-                       .cast<LLVM::LLVMPointerType>();
-  llvm::Type *llvmXElementType =
-      moduleTranslation.convertType(mlirXType.getElementType());
+  llvm::Type *llvmXElementType = moduleTranslation.convertType(
+      atomicCaptureOp.getAtomicReadOp().getElementType());
   llvm::OpenMPIRBuilder::AtomicOpValue llvmAtomicX = {llvmX, llvmXElementType,
                                                       /*isSigned=*/false,
                                                       /*isVolatile=*/false};

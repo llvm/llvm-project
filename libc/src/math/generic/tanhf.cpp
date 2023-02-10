@@ -8,7 +8,8 @@
 
 #include "src/math/tanhf.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/macros/properties/cpu_features.h"
+#include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
+#include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 #include "src/math/generic/explogxf.h"
 
 namespace __llvm_libc {

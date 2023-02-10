@@ -169,3 +169,38 @@ func.func @parallel_insert_slice(
 
   return %r1: tensor<?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @eleminate_multiple_ops(
+//  CHECK-SAME:   %[[FUNC_ARG:[0-9a-zA-Z]*]]: memref<?xf32>
+//  CHECK-SAME:   %[[sz:[0-9a-zA-Z]*]]: index
+func.func @eleminate_multiple_ops(%t: tensor<?xf32> {bufferization.buffer_layout = affine_map<(d0) -> (d0)>}, %sz: index, %c: i1)
+    -> (tensor<?xf32>)
+{
+  %cst1 = arith.constant 0.0: f32
+  %cst2 = arith.constant 1.0: f32
+
+  // CHECK: %[[r:.*]] = scf.if %{{.*}} -> (memref
+  %if = scf.if %c -> tensor<?xf32> {
+    // CHECK: %[[T_SUBVIEW_1:.*]] =  memref.subview %[[FUNC_ARG]][42] [%[[sz]]] [1]
+    %a1 = tensor.empty(%sz) : tensor<?xf32>
+    // CHECK: linalg.fill ins({{.*}} : f32) outs(%[[T_SUBVIEW_1]] : memref<?xf32
+    %f1 = linalg.fill ins(%cst1 : f32) outs(%a1 : tensor<?xf32>) -> tensor<?xf32>
+    // CHECK: scf.yield %[[T_SUBVIEW_1]]
+    scf.yield %f1 : tensor<?xf32>
+  } else {
+      // CHECK: %[[T_SUBVIEW_2:.*]] =  memref.subview %[[FUNC_ARG]][42] [%[[sz]]] [1]
+    %a2 = tensor.empty(%sz) : tensor<?xf32>
+    // CHECK: linalg.fill ins({{.*}} : f32) outs(%[[T_SUBVIEW_2]] : memref<?xf32
+    %f2 = linalg.fill ins(%cst2 : f32) outs(%a2 : tensor<?xf32>) -> tensor<?xf32>
+    // CHECK: scf.yield %[[T_SUBVIEW_2]]
+    scf.yield %f2 : tensor<?xf32>
+  }
+
+  // Self-copy could canonicalize away later.
+  // CHECK: %[[T_SUBVIEW_3:.*]] =  memref.subview %[[FUNC_ARG]][42] [%[[sz]]] [1]
+  // CHECK: memref.copy %[[r]], %[[T_SUBVIEW_3]]
+  %r1 = tensor.insert_slice %if into %t[42][%sz][1]: tensor<?xf32> into tensor<?xf32>
+  return %r1: tensor<?xf32>
+}

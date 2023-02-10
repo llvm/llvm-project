@@ -22,7 +22,7 @@ class TestUniquePtrDbgInfoContent(TestBase):
 
         self.runCmd("settings set target.import-std-module true")
 
-        if self.expectedCompilerVersion(['>', '16.0']):
+        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(['>', '16.0']):
             ptr_type = "std::unique_ptr<Foo>"
         else:
             ptr_type = "std::unique_ptr<Foo, std::default_delete<Foo> >"

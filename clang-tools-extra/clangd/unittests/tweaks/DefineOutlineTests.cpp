@@ -84,6 +84,32 @@ TEST_F(DefineOutlineTest, TriggersOnFunctionDecl) {
     template <typename> void fo^o() {};
     template <> void fo^o<int>() {};
   )cpp");
+
+  // Not available on methods of unnamed classes.
+  EXPECT_UNAVAILABLE(R"cpp(
+    struct Foo {
+      struct { void b^ar() {} } Bar;
+    };
+  )cpp");
+
+  // Not available on methods of named classes with unnamed parent in parents
+  // nesting.
+  EXPECT_UNAVAILABLE(R"cpp(
+    struct Foo {
+      struct {
+        struct Bar { void b^ar() {} };
+      } Baz;
+    };
+  )cpp");
+
+  // Not available on definitions within unnamed namespaces
+  EXPECT_UNAVAILABLE(R"cpp(
+    namespace {
+      struct Foo {
+        void f^oo() {}
+      };
+    } // namespace
+  )cpp");
 }
 
 TEST_F(DefineOutlineTest, FailsWithoutSource) {

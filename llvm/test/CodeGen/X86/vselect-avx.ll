@@ -285,6 +285,25 @@ define void @vselect_concat_splat() {
 ; AVX2-NEXT:    vmovups %xmm2, (%rax)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
+; AVX512-LABEL: vselect_concat_splat:
+; AVX512:       ## %bb.0: ## %entry
+; AVX512-NEXT:    vmovups (%rax), %ymm0
+; AVX512-NEXT:    vmovups (%rax), %xmm1
+; AVX512-NEXT:    vmovaps {{.*#+}} xmm2 = [0,3,6,9]
+; AVX512-NEXT:    vpermi2ps %ymm1, %ymm0, %ymm2
+; AVX512-NEXT:    vmovups 32, %xmm3
+; AVX512-NEXT:    vmovups 0, %ymm4
+; AVX512-NEXT:    vxorps %xmm5, %xmm5, %xmm5
+; AVX512-NEXT:    vcmpneqps %xmm5, %xmm2, %k0
+; AVX512-NEXT:    kshiftlw $4, %k0, %k1
+; AVX512-NEXT:    korw %k1, %k0, %k1
+; AVX512-NEXT:    vmovaps {{.*#+}} ymm2 = [0,3,6,9,1,4,7,10]
+; AVX512-NEXT:    vpermt2ps %ymm3, %ymm2, %ymm4
+; AVX512-NEXT:    vpermt2ps %ymm1, %ymm2, %ymm0
+; AVX512-NEXT:    vmovaps %ymm4, %ymm0 {%k1}
+; AVX512-NEXT:    vmovups %ymm0, (%rax)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
 entry:
   %wide.vec = load <12 x float>, ptr undef, align 1
   %strided.vec = shufflevector <12 x float> %wide.vec, <12 x float> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>

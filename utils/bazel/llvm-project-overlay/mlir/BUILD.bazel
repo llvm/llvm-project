@@ -2543,6 +2543,7 @@ cc_library(
         ":MemRefDialect",
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
+        ":Support",
         "//llvm:Support",
     ],
 )
@@ -6791,6 +6792,7 @@ cc_library(
         "//llvm:OrcJIT",
         "//llvm:Support",
         "//llvm:Target",  # fixdeps: keep
+        "//llvm:TargetParser",
         "//llvm:TransformUtils",
         "//llvm:X86CodeGen",  # fixdeps: keep
         "//llvm:X86Disassembler",  # fixdeps: keep
@@ -7031,6 +7033,7 @@ cc_binary(
         "//mlir/test:TestIR",
         "//mlir/test:TestLLVM",
         "//mlir/test:TestLinalg",
+        "//mlir/test:TestLoopLikeInterface",
         "//mlir/test:TestMath",
         "//mlir/test:TestMemRef",
         "//mlir/test:TestNVGPU",

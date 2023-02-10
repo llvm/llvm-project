@@ -31,7 +31,7 @@ class TestCase(TestBase):
             ValueCheck(value="2"),
         ]
 
-        if self.expectedCompilerVersion(['>', '16.0']):
+        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(['>', '16.0']):
             vector_type = "std::vector<int>"
             dbg_vec_type = "std::vector<DbgInfoClass>"
             module_vector_type = "std::vector<int>"

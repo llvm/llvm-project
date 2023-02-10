@@ -116,6 +116,9 @@ class Command {
   /// The executable to run.
   const char *Executable;
 
+  /// Optional argument to prepend.
+  const char *PrependArg;
+
   /// The list of program arguments (not including the implicit first
   /// argument, which will be the executable).
   llvm::opt::ArgStringList Arguments;
@@ -172,7 +175,8 @@ public:
   Command(const Action &Source, const Tool &Creator,
           ResponseFileSupport ResponseSupport, const char *Executable,
           const llvm::opt::ArgStringList &Arguments, ArrayRef<InputInfo> Inputs,
-          ArrayRef<InputInfo> Outputs = std::nullopt);
+          ArrayRef<InputInfo> Outputs = std::nullopt,
+          const char *PrependArg = nullptr);
   // FIXME: This really shouldn't be copyable, but is currently copied in some
   // error handling in Driver::generateCompilationDiagnostics.
   Command(const Command &) = default;
@@ -248,7 +252,8 @@ public:
              ResponseFileSupport ResponseSupport, const char *Executable,
              const llvm::opt::ArgStringList &Arguments,
              ArrayRef<InputInfo> Inputs,
-             ArrayRef<InputInfo> Outputs = std::nullopt);
+             ArrayRef<InputInfo> Outputs = std::nullopt,
+             const char *PrependArg = nullptr);
 
   void Print(llvm::raw_ostream &OS, const char *Terminator, bool Quote,
              CrashReportInfo *CrashInfo = nullptr) const override;

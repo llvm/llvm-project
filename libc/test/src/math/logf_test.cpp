@@ -23,18 +23,22 @@ DECLARE_SPECIAL_CONSTANTS(float)
 TEST(LlvmLibcLogfTest, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, __llvm_libc::logf(aNaN));
   EXPECT_FP_EQ(inf, __llvm_libc::logf(inf));
-  EXPECT_TRUE(FPBits((__llvm_libc::logf(neg_inf))).is_nan());
-  EXPECT_FP_EQ(neg_inf, __llvm_libc::logf(0.0f));
-  EXPECT_FP_EQ(neg_inf, __llvm_libc::logf(-0.0f));
-  EXPECT_TRUE(FPBits(__llvm_libc::logf(-1.0f)).is_nan());
+  EXPECT_FP_IS_NAN_WITH_EXCEPTION(__llvm_libc::logf(neg_inf), FE_INVALID);
+  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, __llvm_libc::logf(0.0f), FE_DIVBYZERO);
+  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, __llvm_libc::logf(-0.0f), FE_DIVBYZERO);
+  EXPECT_FP_IS_NAN_WITH_EXCEPTION(__llvm_libc::logf(-1.0f), FE_INVALID);
   EXPECT_FP_EQ(zero, __llvm_libc::logf(1.0f));
 }
 
 TEST(LlvmLibcLogfTest, TrickyInputs) {
-  constexpr int N = 28;
+  constexpr int N = 35;
   constexpr uint32_t INPUTS[N] = {
+      0x1b7679ffU, /*0x1.ecf3fep-73f*/
+      0x1e88452dU, /*0x1.108a5ap-66f*/
+      0x3f800001U, /*0x1.000002p+0f*/
       0x3509dcf6U, /*0x1.13b9ecp-21f*/
       0x3bf86ef0U, /*0x1.f0ddep-8f*/
+      0x3c413d3aU, /*0x1.827a74p-7f*/
       0x3ca1c99fU, /*0x1.43933ep-6f*/
       0x3d13e105U, /*0x1.27c20ap-5f*/
       0x3f7ff1f2U, /*0x1.ffe3e4p-1f*/
@@ -58,13 +62,17 @@ TEST(LlvmLibcLogfTest, TrickyInputs) {
       0x4e85f412U, /*0x1.0be824p+30f*/
       0x500ffb03U, /*0x1.1ff606p+33f*/
       0x5cd69e88U, /*0x1.ad3d1p+58f*/
+      0x5ee8984eU, /*0x1.d1309cp+62f*/
       0x65d890d3U, /*0x1.b121a6p+76f*/
+      0x665e7ca6U, /*0x1.bcf94cp+77f*/
       0x6f31a8ecU, /*0x1.6351d8p+95f*/
+      0x79e7ec37U, /*0x1.cfd86ep+116f*/
       0x7a17f30aU, /*0x1.2fe614p+117f*/
   };
   for (int i = 0; i < N; ++i) {
     float x = float(FPBits(INPUTS[i]));
-    EXPECT_MPFR_MATCH(mpfr::Operation::Log, x, __llvm_libc::logf(x), 0.5);
+    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log, x,
+                                   __llvm_libc::logf(x), 0.5);
   }
 }
 
@@ -75,14 +83,7 @@ TEST(LlvmLibcLogfTest, InFloatRange) {
     float x = float(FPBits(v));
     if (isnan(x) || isinf(x))
       continue;
-    errno = 0;
-    float result = __llvm_libc::logf(x);
-    // If the computation resulted in an error or did not produce valid result
-    // in the single-precision floating point range, then ignore comparing with
-    // MPFR result as MPFR can still produce valid results because of its
-    // wider precision.
-    if (isnan(result) || isinf(result) || errno != 0)
-      continue;
-    ASSERT_MPFR_MATCH(mpfr::Operation::Log, x, __llvm_libc::logf(x), 0.5);
+    ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log, x,
+                                   __llvm_libc::logf(x), 0.5);
   }
 }

@@ -11,7 +11,7 @@
 
 #include "src/__support/common.h"
 #include "src/__support/macros/properties/architectures.h"
-#include "src/__support/macros/properties/cpu_features.h"
+#include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
 namespace __llvm_libc {
 namespace fputil {

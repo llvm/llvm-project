@@ -37,7 +37,7 @@ llvm.func @omp_atomic_update_multiple_step_update(%x: !llvm.ptr<i32>, %expr: i32
 llvm.func @omp_atomic_update_multiple_step_update(%x: !llvm.ptr<i32>, %v: !llvm.ptr<i32>, %expr: i32) {
   // expected-error @+1 {{LLVM Translation failed for operation: omp.atomic.capture}}
   omp.atomic.capture memory_order(seq_cst) {
-    omp.atomic.read %v = %x : !llvm.ptr<i32>
+    omp.atomic.read %v = %x : !llvm.ptr<i32>, i32
     // expected-error @+1 {{the update operation inside the region must be a binary operation and that update operation must have the region argument as an operand}}
     omp.atomic.update %x : !llvm.ptr<i32> {
     ^bb0(%xval: i32):
@@ -55,7 +55,7 @@ llvm.func @omp_atomic_update_multiple_step_update(%x: !llvm.ptr<i32>, %v: !llvm.
 llvm.func @omp_atomic_update_multiple_step_update(%x: !llvm.ptr<i32>, %v: !llvm.ptr<i32>, %expr: i32) {
   // expected-error @+1 {{LLVM Translation failed for operation: omp.atomic.capture}}
   omp.atomic.capture memory_order(seq_cst) {
-    omp.atomic.read %v = %x : !llvm.ptr<i32>
+    omp.atomic.read %v = %x : !llvm.ptr<i32>, i32
     // expected-error @+1 {{exactly two operations are allowed inside an atomic update region while lowering to LLVM IR}}
     omp.atomic.update %x : !llvm.ptr<i32> {
     ^bb0(%xval: i32):

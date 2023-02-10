@@ -85,6 +85,22 @@ DiagnosticEventData::GetEventDataFromEvent(const Event *event_ptr) {
   return GetEventDataFromEventImpl<DiagnosticEventData>(event_ptr);
 }
 
+StructuredData::DictionarySP
+DiagnosticEventData::GetAsStructuredData(const Event *event_ptr) {
+  const DiagnosticEventData *diagnostic_data =
+      DiagnosticEventData::GetEventDataFromEvent(event_ptr);
+
+  if (!diagnostic_data)
+    return {};
+
+  auto dictionary_sp = std::make_shared<StructuredData::Dictionary>();
+  dictionary_sp->AddStringItem("message", diagnostic_data->GetMessage());
+  dictionary_sp->AddStringItem("type", diagnostic_data->GetPrefix());
+  dictionary_sp->AddBooleanItem("debugger_specific",
+                                diagnostic_data->IsDebuggerSpecific());
+  return dictionary_sp;
+}
+
 ConstString SymbolChangeEventData::GetFlavorString() {
   static ConstString g_flavor("SymbolChangeEventData");
   return g_flavor;

@@ -9,6 +9,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Event.h"
+#include "lldb/Utility/StructuredData.h"
 
 #include <string>
 
@@ -74,6 +75,9 @@ public:
 
   static const DiagnosticEventData *
   GetEventDataFromEvent(const Event *event_ptr);
+
+  static StructuredData::DictionarySP
+  GetAsStructuredData(const Event *event_ptr);
 
 protected:
   std::string m_message;
