@@ -141,10 +141,6 @@ contains
 ! CHECK: %[[SHIFT_I64:.*]] = fir.convert %[[LOAD_SHIFT]] : (i32) -> i64
 ! CHECK: %{{.*}} = fir.call @_FortranACshiftVector(%[[RES_BOX_NONE]], %[[ARRAY_NONE]], %[[SHIFT_I64]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i64, !fir.ref<i8>, i32) -> none
 
-  subroutine check_eoshift(r)
-    class(p1) :: r(:)
-  end subroutine
-
   subroutine test_temp_from_intrinsic_eoshift(a, shift, b)
     class(p1), intent(in) :: a(20)
     class(p1), intent(in) :: b
