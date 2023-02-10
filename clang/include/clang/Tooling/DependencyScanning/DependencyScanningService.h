@@ -38,7 +38,7 @@ enum class ScanningOutputFormat {
   /// intermodule dependency information.
   Make,
 
-  /// This outputs the full module dependency graph suitable for use for
+  /// This outputs the full clang module dependency graph suitable for use for
   /// explicitly building modules.
   Full,
 
@@ -51,6 +51,10 @@ enum class ScanningOutputFormat {
 
   /// This emits the CAS ID of the include tree.
   IncludeTree,
+
+  /// This outputs the dependency graph for standard c++ modules in P1689R5
+  /// format.
+  P1689,
 };
 
 /// The dependency scanning service contains shared configuration and state that

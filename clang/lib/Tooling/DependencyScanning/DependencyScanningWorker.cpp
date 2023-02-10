@@ -463,11 +463,13 @@ public:
       ScanInstance.addDependencyCollector(std::move(IncTreeCollector));
       break;
     }
+    case ScanningOutputFormat::P1689:
     case ScanningOutputFormat::Full:
     case ScanningOutputFormat::FullTree:
       MDC = std::make_shared<ModuleDepCollector>(
           std::move(Opts), ScanInstance, Consumer, OriginalInvocation,
-          OptimizeArgs, EagerLoadModules);
+          OptimizeArgs, EagerLoadModules,
+          Format == ScanningOutputFormat::P1689);
       ScanInstance.addDependencyCollector(MDC);
       if (CacheFS) {
         ScanInstance.setGenModuleActionWrapper(
