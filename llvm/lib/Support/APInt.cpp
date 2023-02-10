@@ -68,7 +68,7 @@ inline static unsigned getDigit(char cdigit, uint8_t radix) {
   if (r < radix)
     return r;
 
-  return -1U;
+  return UINT_MAX;
 }
 
 
@@ -2330,7 +2330,7 @@ void APInt::tcClearBit(WordType *parts, unsigned bit) {
 }
 
 /// Returns the bit number of the least significant set bit of a number.  If the
-/// input number has no bits set -1U is returned.
+/// input number has no bits set UINT_MAX is returned.
 unsigned APInt::tcLSB(const WordType *parts, unsigned n) {
   for (unsigned i = 0; i < n; i++) {
     if (parts[i] != 0) {
@@ -2339,11 +2339,11 @@ unsigned APInt::tcLSB(const WordType *parts, unsigned n) {
     }
   }
 
-  return -1U;
+  return UINT_MAX;
 }
 
 /// Returns the bit number of the most significant set bit of a number.
-/// If the input number has no bits set -1U is returned.
+/// If the input number has no bits set UINT_MAX is returned.
 unsigned APInt::tcMSB(const WordType *parts, unsigned n) {
   do {
     --n;
@@ -2356,7 +2356,7 @@ unsigned APInt::tcMSB(const WordType *parts, unsigned n) {
     }
   } while (n);
 
-  return -1U;
+  return UINT_MAX;
 }
 
 /// Copy the bit vector of width srcBITS from SRC, starting at bit srcLSB, to
