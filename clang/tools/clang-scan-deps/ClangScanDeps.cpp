@@ -833,8 +833,7 @@ int main(int argc, const char **argv) {
           std::string MakeformatOutput;
 
           auto MaybeRule = WorkerTools[I]->getP1689ModuleDependencyFile(
-              *Input, CWD, MakeformatOutput, MakeformatOutputPath,
-              MaybeModuleName);
+              *Input, CWD, MakeformatOutput, MakeformatOutputPath);
           HadErrors =
               handleP1689DependencyToolResult(Filename, MaybeRule, PD, Errs);
 

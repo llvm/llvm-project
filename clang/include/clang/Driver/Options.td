@@ -1756,6 +1756,10 @@ def fexperimental_sanitize_metadata_EQ : CommaJoined<["-"], "fexperimental-sanit
 def fno_experimental_sanitize_metadata_EQ : CommaJoined<["-"], "fno-experimental-sanitize-metadata=">,
   Group<f_Group>, Flags<[CoreOption]>,
   HelpText<"Disable emitting metadata for binary analysis sanitizers">;
+def fexperimental_sanitize_metadata_ignorelist_EQ : Joined<["-"], "fexperimental-sanitize-metadata-ignorelist=">,
+    Group<f_Group>, Flags<[CoreOption]>,
+    HelpText<"Disable sanitizer metadata for modules and functions that match the provided special case list">,
+    MarshallingInfoStringVector<CodeGenOpts<"SanitizeMetadataIgnorelistFiles">>;
 def fsanitize_memory_track_origins_EQ : Joined<["-"], "fsanitize-memory-track-origins=">,
                                         Group<f_clang_Group>,
                                         HelpText<"Enable origins tracking in MemorySanitizer">,

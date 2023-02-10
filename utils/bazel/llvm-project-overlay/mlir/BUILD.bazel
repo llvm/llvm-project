@@ -2543,6 +2543,7 @@ cc_library(
         ":MemRefDialect",
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
+        ":Support",
         "//llvm:Support",
     ],
 )
