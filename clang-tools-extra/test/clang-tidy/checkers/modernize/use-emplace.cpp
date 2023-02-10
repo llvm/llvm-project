@@ -1334,3 +1334,90 @@ void testBracedInitTemporaries() {
   v3.push_back({{0}});
   v3.push_back({{}});
 }
+
+void testWithPointerTypes() {
+  std::list<Something> l;
+  std::list<Something>* lp = &l;
+  std::stack<Something> s;
+  std::stack<Something>* sp;
+
+  lp->push_back(Something(1, 2));
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use emplace_back instead of push_back [modernize-use-emplace]
+  // CHECK-FIXES: lp->emplace_back(1, 2);
+  lp->push_front(Something(1, 2));
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use emplace_front instead of push_front [modernize-use-emplace]
+  // CHECK-FIXES: lp->emplace_front(1, 2);
+  sp->push(Something(1, 2));
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use emplace instead of push [modernize-use-emplace]
+  // CHECK-FIXES: sp->emplace(1, 2);
+
+  lp->push_back(Something{1, 2});
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use emplace_back instead of push_back [modernize-use-emplace]
+  // CHECK-FIXES: lp->emplace_back(1, 2);
+  lp->push_front(Something{1, 2});
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use emplace_front instead of push_front [modernize-use-emplace]
+  // CHECK-FIXES: lp->emplace_front(1, 2);
+  sp->push(Something{1, 2});
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use emplace instead of push [modernize-use-emplace]
+  // CHECK-FIXES: sp->emplace(1, 2);
+
+  lp->push_back(Something());
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use emplace_back instead of push_back [modernize-use-emplace]
+  // CHECK-FIXES: lp->emplace_back();
+  lp->push_front(Something());
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use emplace_front instead of push_front [modernize-use-emplace]
+  // CHECK-FIXES: lp->emplace_front();
+  sp->push(Something());
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use emplace instead of push [modernize-use-emplace]
+  // CHECK-FIXES: sp->emplace();
+
+  lp->push_back(Something{});
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use emplace_back instead of push_back [modernize-use-emplace]
+  // CHECK-FIXES: lp->emplace_back();
+  lp->push_front(Something{});
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use emplace_front instead of push_front [modernize-use-emplace]
+  // CHECK-FIXES: lp->emplace_front();
+  sp->push(Something{});
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use emplace instead of push [modernize-use-emplace]
+  // CHECK-FIXES: sp->emplace();
+
+  lp->emplace_back(Something(1, 2));
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: lp->emplace_back(1, 2);
+  lp->emplace_front(Something(1, 2));
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: unnecessary temporary object created while calling emplace_front
+  // CHECK-FIXES: lp->emplace_front(1, 2);
+  sp->emplace(Something(1, 2));
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: unnecessary temporary object created while calling emplace
+  // CHECK-FIXES: sp->emplace(1, 2);
+
+  lp->emplace_back(Something{1, 2});
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: lp->emplace_back(1, 2);
+  lp->emplace_front(Something{1, 2});
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: unnecessary temporary object created while calling emplace_front
+  // CHECK-FIXES: lp->emplace_front(1, 2);
+  sp->emplace(Something{1, 2});
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: unnecessary temporary object created while calling emplace
+  // CHECK-FIXES: sp->emplace(1, 2);
+
+  lp->emplace_back(Something());
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: lp->emplace_back();
+  lp->emplace_front(Something());
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: unnecessary temporary object created while calling emplace_front
+  // CHECK-FIXES: lp->emplace_front();
+  sp->emplace(Something());
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: unnecessary temporary object created while calling emplace
+  // CHECK-FIXES: sp->emplace();
+
+  lp->emplace_back(Something{});
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: lp->emplace_back();
+  lp->emplace_front(Something{});
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: unnecessary temporary object created while calling emplace_front
+  // CHECK-FIXES: lp->emplace_front();
+  sp->emplace(Something{});
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: unnecessary temporary object created while calling emplace
+  // CHECK-FIXES: sp->emplace();
+}
