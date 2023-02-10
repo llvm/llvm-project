@@ -234,6 +234,7 @@ cc_library(
         "//llvm:Object",
         "//llvm:Option",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//llvm:TextAPI",
         "//llvm:config",
     ],
@@ -274,6 +275,7 @@ cc_library(
         "//llvm:Object",
         "//llvm:Option",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//llvm:config",
     ],
 )
