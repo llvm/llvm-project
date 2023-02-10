@@ -961,6 +961,7 @@ cc_library(
         ":MC",
         ":Object",
         ":Support",
+        ":TargetParser",
     ],
 )
 
@@ -2638,6 +2639,7 @@ cc_library(
         ":Passes",
         ":Support",
         ":Target",
+        ":TargetParser",
         ":config",
     ],
 )
@@ -2683,6 +2685,7 @@ cc_library(
         ":Object",
         ":Option",
         ":Support",
+        ":TargetParser",
     ],
 )
 
@@ -3399,6 +3402,7 @@ cc_binary(
         ":MCParser",
         ":Object",
         ":Support",
+        ":TargetParser",
         ":config",
     ],
 )
@@ -3699,6 +3703,7 @@ cc_binary(
         ":MCA",
         ":MCParser",
         ":Support",
+        ":TargetParser",
         ":llvm-mca-headers",
     ],
 )
@@ -3934,6 +3939,7 @@ cc_binary(
         ":Option",
         ":Support",
         ":Target",
+        ":TargetParser",
         ":llvm-bitcode-strip-opts",
         ":llvm-installnametool-opts",
         ":llvm-objcopy-opts",
@@ -4237,6 +4243,7 @@ cc_binary(
         ":Passes",
         ":Support",
         ":Target",
+        ":TargetParser",
         ":TransformUtils",
     ],
 )

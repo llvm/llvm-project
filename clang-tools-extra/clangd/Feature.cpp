@@ -9,7 +9,7 @@
 #include "Feature.h"
 #include "clang/Basic/Version.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 
 namespace clang {
 namespace clangd {

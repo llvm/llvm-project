@@ -182,6 +182,7 @@ cc_library(
         "//llvm:Object",
         "//llvm:Support",
         "//llvm:Target",
+        "//llvm:TransformUtils",
     ],
 )
 

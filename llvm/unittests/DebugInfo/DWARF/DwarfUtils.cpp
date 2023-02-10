@@ -9,8 +9,8 @@
 #include "DwarfUtils.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;

@@ -6792,6 +6792,7 @@ cc_library(
         "//llvm:OrcJIT",
         "//llvm:Support",
         "//llvm:Target",  # fixdeps: keep
+        "//llvm:TargetParser",
         "//llvm:TransformUtils",
         "//llvm:X86CodeGen",  # fixdeps: keep
         "//llvm:X86Disassembler",  # fixdeps: keep

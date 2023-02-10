@@ -31,7 +31,7 @@
 
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Errc.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 
 using namespace clang;
 
