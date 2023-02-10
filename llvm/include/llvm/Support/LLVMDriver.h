@@ -9,9 +9,20 @@
 #ifndef LLVM_SUPPORT_LLVMDRIVER_H
 #define LLVM_SUPPORT_LLVMDRIVER_H
 
+#include "llvm/ADT/SmallVector.h"
+
 namespace llvm {
 
-struct ToolContext {};
+struct ToolContext {
+  const char *Path;
+  const char *PrependArg;
+  // PrependArg will be added unconditionally by the llvm-driver, but
+  // NeedsPrependArg will be false if Path is adequate to reinvoke the tool.
+  // This is useful if realpath is ever called on Path, in which case it will
+  // point to the llvm-driver executable, where PrependArg will be needed to
+  // invoke the correct tool.
+  bool NeedsPrependArg;
+};
 
 } // namespace llvm
 

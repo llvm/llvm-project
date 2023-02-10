@@ -27,7 +27,7 @@
 // CHECK-NEXT: "pid":
 // CHECK-NEXT: "tid":
 // CHECK-NEXT: "ts":
-// CHECK:      "name": "clang{{.*}}"
+// CHECK:      "name": "{{clang|llvm}}{{.*}}"
 // CHECK:      "name": "process_name"
 // CHECK:      "name": "thread_name"
 
