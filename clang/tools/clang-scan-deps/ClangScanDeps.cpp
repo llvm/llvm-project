@@ -132,12 +132,15 @@ static llvm::cl::opt<ScanningMode> ScanMode(
 
 static llvm::cl::opt<ScanningOutputFormat> Format(
     "format", llvm::cl::desc("The output format for the dependencies"),
-    llvm::cl::values(clEnumValN(ScanningOutputFormat::Make, "make",
-                                "Makefile compatible dep file"),
-                     clEnumValN(ScanningOutputFormat::Full, "experimental-full",
-                                "Full dependency graph suitable"
-                                " for explicitly building modules. This format "
-                                "is experimental and will change.")),
+    llvm::cl::values(
+        clEnumValN(ScanningOutputFormat::Make, "make",
+                   "Makefile compatible dep file"),
+        clEnumValN(ScanningOutputFormat::P1689, "p1689",
+                   "Generate standard c++ modules dependency P1689 format"),
+        clEnumValN(ScanningOutputFormat::Full, "experimental-full",
+                   "Full dependency graph suitable"
+                   " for explicitly building modules. This format "
+                   "is experimental and will change.")),
     llvm::cl::init(ScanningOutputFormat::Make),
     llvm::cl::cat(DependencyScannerCategory));
 
@@ -462,6 +465,88 @@ static bool handleModuleResult(
   return false;
 }
 
+class P1689Deps {
+public:
+  void printDependencies(raw_ostream &OS) {
+    addSourcePathsToRequires();
+    // Sort the modules by name to get a deterministic order.
+    llvm::sort(Rules, [](const P1689Rule &A, const P1689Rule &B) {
+      return A.PrimaryOutput < B.PrimaryOutput;
+    });
+
+    using namespace llvm::json;
+    Array OutputRules;
+    for (const P1689Rule &R : Rules) {
+      Object O{{"primary-output", R.PrimaryOutput}};
+
+      if (R.Provides) {
+        Array Provides;
+        Object Provided{{"logical-name", R.Provides->ModuleName},
+                        {"source-path", R.Provides->SourcePath},
+                        {"is-interface", R.Provides->IsStdCXXModuleInterface}};
+        Provides.push_back(std::move(Provided));
+        O.insert({"provides", std::move(Provides)});
+      }
+
+      Array Requires;
+      for (const P1689ModuleInfo &Info : R.Requires) {
+        Object RequiredInfo{{"logical-name", Info.ModuleName}};
+        if (!Info.SourcePath.empty())
+          RequiredInfo.insert({"source-path", Info.SourcePath});
+        Requires.push_back(std::move(RequiredInfo));
+      }
+
+      if (!Requires.empty())
+        O.insert({"requires", std::move(Requires)});
+
+      OutputRules.push_back(std::move(O));
+    }
+
+    Object Output{
+        {"version", 1}, {"revision", 0}, {"rules", std::move(OutputRules)}};
+
+    OS << llvm::formatv("{0:2}\n", Value(std::move(Output)));
+  }
+
+  void addRules(P1689Rule &Rule) { Rules.push_back(Rule); }
+
+private:
+  void addSourcePathsToRequires() {
+    llvm::DenseMap<StringRef, StringRef> ModuleSourceMapper;
+    for (const P1689Rule &R : Rules)
+      if (R.Provides && !R.Provides->SourcePath.empty())
+        ModuleSourceMapper[R.Provides->ModuleName] = R.Provides->SourcePath;
+
+    for (P1689Rule &R : Rules) {
+      for (P1689ModuleInfo &Info : R.Requires) {
+        auto Iter = ModuleSourceMapper.find(Info.ModuleName);
+        if (Iter != ModuleSourceMapper.end())
+          Info.SourcePath = Iter->second;
+      }
+    }
+  }
+
+  std::vector<P1689Rule> Rules;
+};
+
+static bool
+handleP1689DependencyToolResult(const std::string &Input,
+                                llvm::Expected<P1689Rule> &MaybeRule,
+                                P1689Deps &PD, SharedStream &Errs) {
+  if (!MaybeRule) {
+    llvm::handleAllErrors(
+        MaybeRule.takeError(), [&Input, &Errs](llvm::StringError &Err) {
+          Errs.applyLocked([&](raw_ostream &OS) {
+            OS << "Error while scanning dependencies for " << Input << ":\n";
+            OS << Err.getMessage();
+          });
+        });
+    return true;
+  }
+  PD.addRules(*MaybeRule);
+  return false;
+}
+
 /// Construct a path for the explicitly built PCM.
 static std::string constructPCMPath(ModuleID MID, StringRef OutputDir) {
   SmallString<256> ExplicitPCMPath(OutputDir);
@@ -597,6 +682,7 @@ int main(int argc, const char **argv) {
 
   std::atomic<bool> HadErrors(false);
   FullDeps FD;
+  P1689Deps PD;
   std::mutex Lock;
   size_t Index = 0;
 
@@ -605,7 +691,7 @@ int main(int argc, const char **argv) {
                  << " files using " << Pool.getThreadCount() << " workers\n";
   }
   for (unsigned I = 0; I < Pool.getThreadCount(); ++I) {
-    Pool.async([I, &Lock, &Index, &Inputs, &HadErrors, &FD, &WorkerTools,
+    Pool.async([I, &Lock, &Index, &Inputs, &HadErrors, &FD, &PD, &WorkerTools,
                 &DependencyOS, &Errs]() {
       llvm::StringSet<> AlreadySeenModules;
       while (true) {
@@ -641,6 +727,11 @@ int main(int argc, const char **argv) {
           if (handleMakeDependencyToolResult(Filename, MaybeFile, DependencyOS,
                                              Errs))
             HadErrors = true;
+        } else if (Format == ScanningOutputFormat::P1689) {
+          auto MaybeRule =
+              WorkerTools[I]->getP1689ModuleDependencyFile(*Input, CWD);
+          if (handleP1689DependencyToolResult(Filename, MaybeRule, PD, Errs))
+            HadErrors = true;
         } else if (MaybeModuleName) {
           auto MaybeModuleDepsGraph = WorkerTools[I]->getModuleDependencies(
               *MaybeModuleName, Input->CommandLine, CWD, AlreadySeenModules,
@@ -666,6 +757,8 @@ int main(int argc, const char **argv) {
 
   if (Format == ScanningOutputFormat::Full)
     FD.printFullOutput(llvm::outs());
+  else if (Format == ScanningOutputFormat::P1689)
+    PD.printDependencies(llvm::outs());
 
   return HadErrors;
 }
