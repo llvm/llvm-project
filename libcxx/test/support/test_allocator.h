@@ -31,6 +31,8 @@ struct test_allocator_statistics {
   int throw_after = INT_MAX;
   int count = 0;
   int alloc_count = 0;
+  int construct_count = 0; // the number of times that ::construct was called
+  int destroy_count = 0; // the number of times that ::destroy was called
   int copied = 0;
   int moved = 0;
   int converted = 0;
@@ -40,6 +42,8 @@ struct test_allocator_statistics {
     count = 0;
     time_to_throw = 0;
     alloc_count = 0;
+    construct_count = 0;
+    destroy_count = 0;
     throw_after = INT_MAX;
     clear_ctor_counters();
   }
@@ -144,7 +148,7 @@ public:
   TEST_CONSTEXPR pointer address(reference x) const { return &x; }
   TEST_CONSTEXPR const_pointer address(const_reference x) const { return &x; }
 
-  TEST_CONSTEXPR_CXX14 pointer allocate(size_type n, const void* = 0) {
+  TEST_CONSTEXPR_CXX14 pointer allocate(size_type n, const void* = nullptr) {
     assert(data_ != test_alloc_base::destructed_value);
     if (stats_ != nullptr) {
       if (stats_->time_to_throw >= stats_->throw_after)
@@ -166,6 +170,8 @@ public:
 
   template <class U>
   TEST_CONSTEXPR_CXX20 void construct(pointer p, U&& val) {
+    if (stats_ != nullptr)
+      ++stats_->construct_count;
 #if TEST_STD_VER > 17
     std::construct_at(std::to_address(p), std::forward<U>(val));
 #else
@@ -173,7 +179,11 @@ public:
 #endif
   }
 
-  TEST_CONSTEXPR_CXX14 void destroy(pointer p) { p->~T(); }
+  TEST_CONSTEXPR_CXX14 void destroy(pointer p) {
+    if (stats_ != nullptr)
+      ++stats_->destroy_count;
+    p->~T();
+  }
   TEST_CONSTEXPR friend bool operator==(const test_allocator& x, const test_allocator& y) { return x.data_ == y.data_; }
   TEST_CONSTEXPR friend bool operator!=(const test_allocator& x, const test_allocator& y) { return !(x == y); }
 
