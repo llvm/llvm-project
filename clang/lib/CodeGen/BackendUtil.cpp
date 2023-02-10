@@ -665,7 +665,8 @@ static void addSanitizers(const Triple &TargetTriple,
 
     if (CodeGenOpts.hasSanitizeBinaryMetadata()) {
       MPM.addPass(SanitizerBinaryMetadataPass(
-          getSanitizerBinaryMetadataOptions(CodeGenOpts)));
+          getSanitizerBinaryMetadataOptions(CodeGenOpts),
+          CodeGenOpts.SanitizeMetadataIgnorelistFiles));
     }
 
     auto MSanPass = [&](SanitizerMask Mask, bool CompileKernel) {

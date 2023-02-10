@@ -38,13 +38,16 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #include <array>
 #include <cstdint>
+#include <memory>
 
 using namespace llvm;
 
@@ -121,9 +124,11 @@ transformOptionsFromCl(SanitizerBinaryMetadataOptions &&Opts) {
 
 class SanitizerBinaryMetadata {
 public:
-  SanitizerBinaryMetadata(Module &M, SanitizerBinaryMetadataOptions Opts)
+  SanitizerBinaryMetadata(Module &M, SanitizerBinaryMetadataOptions Opts,
+                          std::unique_ptr<SpecialCaseList> Ignorelist)
       : Mod(M), Options(transformOptionsFromCl(std::move(Opts))),
-        TargetTriple(M.getTargetTriple()), IRB(M.getContext()) {
+        Ignorelist(std::move(Ignorelist)), TargetTriple(M.getTargetTriple()),
+        IRB(M.getContext()) {
     // FIXME: Make it work with other formats.
     assert(TargetTriple.isOSBinFormatELF() && "ELF only");
   }
@@ -168,6 +173,7 @@ private:
 
   Module &Mod;
   const SanitizerBinaryMetadataOptions Options;
+  std::unique_ptr<SpecialCaseList> Ignorelist;
   const Triple TargetTriple;
   IRBuilder<> IRB;
   BumpPtrAllocator Alloc;
@@ -242,6 +248,8 @@ void SanitizerBinaryMetadata::runOn(Function &F, MetadataInfoSet &MIS) {
   if (F.empty())
     return;
   if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
+    return;
+  if (Ignorelist && Ignorelist->inSection("metadata", "fun", F.getName()))
     return;
   // Don't touch available_externally functions, their actual body is elsewhere.
   if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage)
@@ -455,12 +463,20 @@ Twine SanitizerBinaryMetadata::getSectionEnd(StringRef SectionSuffix) {
 } // namespace
 
 SanitizerBinaryMetadataPass::SanitizerBinaryMetadataPass(
-    SanitizerBinaryMetadataOptions Opts)
-    : Options(std::move(Opts)) {}
+    SanitizerBinaryMetadataOptions Opts, ArrayRef<std::string> IgnorelistFiles)
+    : Options(std::move(Opts)), IgnorelistFiles(std::move(IgnorelistFiles)) {}
 
 PreservedAnalyses
 SanitizerBinaryMetadataPass::run(Module &M, AnalysisManager<Module> &AM) {
-  SanitizerBinaryMetadata Pass(M, Options);
+  std::unique_ptr<SpecialCaseList> Ignorelist;
+  if (!IgnorelistFiles.empty()) {
+    Ignorelist = SpecialCaseList::createOrDie(IgnorelistFiles,
+                                              *vfs::getRealFileSystem());
+    if (Ignorelist->inSection("metadata", "src", M.getSourceFileName()))
+      return PreservedAnalyses::all();
+  }
+
+  SanitizerBinaryMetadata Pass(M, Options, std::move(Ignorelist));
   if (Pass.run())
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
