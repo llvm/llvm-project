@@ -12,6 +12,7 @@
 #include "atomic_helpers.h"
 #include "common.h"
 #include "mutex.h"
+#include "thread_annotations.h"
 
 #include <limits.h> // for PTHREAD_DESTRUCTOR_ITERATIONS
 #include <pthread.h>
@@ -24,21 +25,20 @@
 namespace scudo {
 
 template <class Allocator> struct alignas(SCUDO_CACHE_LINE_SIZE) TSD {
+  // TODO: Add thread-safety annotation on `Cache` and `QuarantineCache`.
   typename Allocator::CacheT Cache;
   typename Allocator::QuarantineCacheT QuarantineCache;
   using ThisT = TSD<Allocator>;
   u8 DestructorIterations = 0;
 
-  void init(Allocator *Instance) {
+  void init(Allocator *Instance) NO_THREAD_SAFETY_ANALYSIS {
     DCHECK_EQ(DestructorIterations, 0U);
     DCHECK(isAligned(reinterpret_cast<uptr>(this), alignof(ThisT)));
     Instance->initCache(&Cache);
     DestructorIterations = PTHREAD_DESTRUCTOR_ITERATIONS;
   }
 
-  void commitBack(Allocator *Instance) { Instance->commitBack(this); }
-
-  inline bool tryLock() {
+  inline bool tryLock() NO_THREAD_SAFETY_ANALYSIS {
     if (Mutex.tryLock()) {
       atomic_store_relaxed(&Precedence, 0);
       return true;
@@ -49,12 +49,16 @@ template <class Allocator> struct alignas(SCUDO_CACHE_LINE_SIZE) TSD {
           static_cast<uptr>(getMonotonicTime() >> FIRST_32_SECOND_64(16, 0)));
     return false;
   }
-  inline void lock() {
+  inline void lock() NO_THREAD_SAFETY_ANALYSIS {
     atomic_store_relaxed(&Precedence, 0);
     Mutex.lock();
   }
-  inline void unlock() { Mutex.unlock(); }
+  inline void unlock() NO_THREAD_SAFETY_ANALYSIS { Mutex.unlock(); }
   inline uptr getPrecedence() { return atomic_load_relaxed(&Precedence); }
+
+  void commitBack(Allocator *Instance) ASSERT_CAPABILITY(Mutex) {
+    Instance->commitBack(this);
+  }
 
 private:
   HybridMutex Mutex;

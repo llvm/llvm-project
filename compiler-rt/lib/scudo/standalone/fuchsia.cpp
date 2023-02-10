@@ -195,6 +195,8 @@ void HybridMutex::unlock() __TA_NO_THREAD_SAFETY_ANALYSIS {
   sync_mutex_unlock(&M);
 }
 
+void HybridMutex::assertHeldImpl() __TA_NO_THREAD_SAFETY_ANALYSIS {}
+
 u64 getMonotonicTime() { return _zx_clock_get_monotonic(); }
 
 u32 getNumberOfCPUs() { return _zx_system_get_num_cpus(); }

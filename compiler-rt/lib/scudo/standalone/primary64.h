@@ -18,6 +18,7 @@
 #include "release.h"
 #include "stats.h"
 #include "string_utils.h"
+#include "thread_annotations.h"
 
 namespace scudo {
 
@@ -60,7 +61,7 @@ public:
 
   static bool canAllocate(uptr Size) { return Size <= SizeClassMap::MaxSize; }
 
-  void init(s32 ReleaseToOsInterval) {
+  void init(s32 ReleaseToOsInterval) NO_THREAD_SAFETY_ANALYSIS {
     DCHECK(isAligned(reinterpret_cast<uptr>(this), alignof(ThisT)));
     DCHECK_EQ(PrimaryBase, 0U);
     // Reserve the space required for the Primary.
@@ -86,7 +87,7 @@ public:
     setOption(Option::ReleaseInterval, static_cast<sptr>(ReleaseToOsInterval));
   }
 
-  void unmapTestOnly() {
+  void unmapTestOnly() NO_THREAD_SAFETY_ANALYSIS {
     for (uptr I = 0; I < NumClasses; I++) {
       RegionInfo *Region = getRegionInfo(I);
       *Region = {};
@@ -103,7 +104,7 @@ public:
     bool PrintStats = false;
     {
       ScopedLock L(Region->Mutex);
-      TransferBatch *B = popBatchImpl(C, ClassId);
+      TransferBatch *B = popBatchImpl(C, ClassId, Region);
       if (LIKELY(B)) {
         Region->Stats.PoppedBlocks += B->getCount();
         return B;
@@ -114,7 +115,7 @@ public:
                    !populateFreeList(C, ClassId, Region))) {
         PrintStats = !RegionIsExhausted && Region->Exhausted;
       } else {
-        B = popBatchImpl(C, ClassId);
+        B = popBatchImpl(C, ClassId, Region);
         // if `populateFreeList` succeeded, we are supposed to get free blocks.
         DCHECK_NE(B, nullptr);
         Region->Stats.PoppedBlocks += B->getCount();
@@ -152,7 +153,7 @@ public:
         // be less than two. Therefore, populate the free list before inserting
         // the blocks.
         if (Size >= 2U) {
-          pushBlocksImpl(C, SizeClassMap::BatchClassId, Array, Size);
+          pushBlocksImpl(C, SizeClassMap::BatchClassId, Region, Array, Size);
           Region->Stats.PushedBlocks += Size;
         } else {
           const bool RegionIsExhausted = Region->Exhausted;
@@ -199,14 +200,14 @@ public:
     }
 
     ScopedLock L(Region->Mutex);
-    pushBlocksImpl(C, ClassId, Array, Size, SameGroup);
+    pushBlocksImpl(C, ClassId, Region, Array, Size, SameGroup);
 
     Region->Stats.PushedBlocks += Size;
     if (ClassId != SizeClassMap::BatchClassId)
       releaseToOSMaybe(Region, ClassId);
   }
 
-  void disable() {
+  void disable() NO_THREAD_SAFETY_ANALYSIS {
     // The BatchClassId must be locked last since other classes can use it.
     for (sptr I = static_cast<sptr>(NumClasses) - 1; I >= 0; I--) {
       if (static_cast<uptr>(I) == SizeClassMap::BatchClassId)
@@ -216,7 +217,7 @@ public:
     getRegionInfo(SizeClassMap::BatchClassId)->Mutex.lock();
   }
 
-  void enable() {
+  void enable() NO_THREAD_SAFETY_ANALYSIS {
     getRegionInfo(SizeClassMap::BatchClassId)->Mutex.unlock();
     for (uptr I = 0; I < NumClasses; I++) {
       if (I == SizeClassMap::BatchClassId)
@@ -225,11 +226,12 @@ public:
     }
   }
 
-  template <typename F> void iterateOverBlocks(F Callback) {
+  template <typename F>
+  void iterateOverBlocks(F Callback) NO_THREAD_SAFETY_ANALYSIS {
     for (uptr I = 0; I < NumClasses; I++) {
       if (I == SizeClassMap::BatchClassId)
         continue;
-      const RegionInfo *Region = getRegionInfo(I);
+      RegionInfo *Region = getRegionInfo(I);
       const uptr BlockSize = getSizeByClassId(I);
       const uptr From = Region->RegionBeg;
       const uptr To = From + Region->AllocatedUser;
@@ -259,7 +261,7 @@ public:
     for (uptr I = 0; I < NumClasses; I++) {
       RegionInfo *Region = getRegionInfo(I);
       ScopedLock L(Region->Mutex);
-      getStats(Str, I, 0);
+      getStats(Str, I, Region, 0);
     }
   }
 
@@ -311,15 +313,23 @@ public:
         decompactPtrInternal(getCompactPtrBaseByClassId(ClassId), CompactPtr));
   }
 
-  static BlockInfo findNearestBlock(const char *RegionInfoData, uptr Ptr) {
+  static BlockInfo findNearestBlock(const char *RegionInfoData,
+                                    uptr Ptr) NO_THREAD_SAFETY_ANALYSIS {
     const RegionInfo *RegionInfoArray =
         reinterpret_cast<const RegionInfo *>(RegionInfoData);
+
     uptr ClassId;
     uptr MinDistance = -1UL;
     for (uptr I = 0; I != NumClasses; ++I) {
       if (I == SizeClassMap::BatchClassId)
         continue;
       uptr Begin = RegionInfoArray[I].RegionBeg;
+      // TODO(chiahungduan): In fact, We need to lock the RegionInfo::Mutex.
+      // However, the RegionInfoData is passed with const qualifier and lock the
+      // mutex requires modifying RegionInfoData, which means we need to remove
+      // the const qualifier. This may lead to another undefined behavior (The
+      // first one is accessing `AllocatedUser` without locking. It's better to
+      // pass `RegionInfoData` as `void *` then we can lock the mutex properly.
       uptr End = Begin + RegionInfoArray[I].AllocatedUser;
       if (Begin > End || End - Begin < SizeClassMap::getSizeByClassId(I))
         continue;
@@ -380,15 +390,18 @@ private:
 
   struct UnpaddedRegionInfo {
     HybridMutex Mutex;
-    SinglyLinkedList<BatchGroup> FreeList;
+    SinglyLinkedList<BatchGroup> FreeList GUARDED_BY(Mutex);
+    // This is initialized before thread creation.
     uptr RegionBeg = 0;
-    RegionStats Stats = {};
-    u32 RandState = 0;
-    uptr MappedUser = 0;    // Bytes mapped for user memory.
-    uptr AllocatedUser = 0; // Bytes allocated for user memory.
-    MapPlatformData Data = {};
-    ReleaseToOsInfo ReleaseInfo = {};
-    bool Exhausted = false;
+    RegionStats Stats GUARDED_BY(Mutex) = {};
+    u32 RandState GUARDED_BY(Mutex) = 0;
+    // Bytes mapped for user memory.
+    uptr MappedUser GUARDED_BY(Mutex) = 0;
+    // Bytes allocated for user memory.
+    uptr AllocatedUser GUARDED_BY(Mutex) = 0;
+    MapPlatformData Data GUARDED_BY(Mutex) = {};
+    ReleaseToOsInfo ReleaseInfo GUARDED_BY(Mutex) = {};
+    bool Exhausted GUARDED_BY(Mutex) = false;
   };
   struct RegionInfo : UnpaddedRegionInfo {
     char Padding[SCUDO_CACHE_LINE_SIZE -
@@ -451,10 +464,10 @@ private:
   // `SameGroup=true` instead.
   //
   // The region mutex needs to be held while calling this method.
-  void pushBlocksImpl(CacheT *C, uptr ClassId, CompactPtrT *Array, u32 Size,
-                      bool SameGroup = false) {
+  void pushBlocksImpl(CacheT *C, uptr ClassId, RegionInfo *Region,
+                      CompactPtrT *Array, u32 Size, bool SameGroup = false)
+      REQUIRES(Region->Mutex) {
     DCHECK_GT(Size, 0U);
-    RegionInfo *Region = getRegionInfo(ClassId);
 
     auto CreateGroup = [&](uptr GroupId) {
       BatchGroup *BG = nullptr;
@@ -580,8 +593,8 @@ private:
   // group id will be considered first.
   //
   // The region mutex needs to be held while calling this method.
-  TransferBatch *popBatchImpl(CacheT *C, uptr ClassId) {
-    RegionInfo *Region = getRegionInfo(ClassId);
+  TransferBatch *popBatchImpl(CacheT *C, uptr ClassId, RegionInfo *Region)
+      REQUIRES(Region->Mutex) {
     if (Region->FreeList.empty())
       return nullptr;
 
@@ -610,7 +623,8 @@ private:
     return B;
   }
 
-  NOINLINE bool populateFreeList(CacheT *C, uptr ClassId, RegionInfo *Region) {
+  NOINLINE bool populateFreeList(CacheT *C, uptr ClassId, RegionInfo *Region)
+      REQUIRES(Region->Mutex) {
     const uptr Size = getSizeByClassId(ClassId);
     const u16 MaxCount = TransferBatch::getMaxCached(Size);
 
@@ -665,7 +679,8 @@ private:
       // it only happens when it crosses the group size boundary. Instead of
       // sorting them, treat them as same group here to avoid sorting the
       // almost-sorted blocks.
-      pushBlocksImpl(C, ClassId, &ShuffleArray[I], N, /*SameGroup=*/true);
+      pushBlocksImpl(C, ClassId, Region, &ShuffleArray[I], N,
+                     /*SameGroup=*/true);
       I += N;
     }
 
@@ -676,8 +691,8 @@ private:
     return true;
   }
 
-  void getStats(ScopedString *Str, uptr ClassId, uptr Rss) {
-    RegionInfo *Region = getRegionInfo(ClassId);
+  void getStats(ScopedString *Str, uptr ClassId, RegionInfo *Region, uptr Rss)
+      REQUIRES(Region->Mutex) {
     if (Region->MappedUser == 0)
       return;
     const uptr InUse = Region->Stats.PoppedBlocks - Region->Stats.PushedBlocks;
@@ -694,7 +709,7 @@ private:
   }
 
   NOINLINE uptr releaseToOSMaybe(RegionInfo *Region, uptr ClassId,
-                                 bool Force = false) {
+                                 bool Force = false) REQUIRES(Region->Mutex) {
     const uptr BlockSize = getSizeByClassId(ClassId);
     const uptr PageSize = getPageSizeCached();
 

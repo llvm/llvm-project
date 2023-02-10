@@ -435,7 +435,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, Stats) {
   EXPECT_NE(Stats.find("Stats: Quarantine"), std::string::npos);
 }
 
-SCUDO_TYPED_TEST(ScudoCombinedTest, CacheDrain) {
+SCUDO_TYPED_TEST(ScudoCombinedTest, CacheDrain) NO_THREAD_SAFETY_ANALYSIS {
   auto *Allocator = this->Allocator.get();
 
   std::vector<void *> V;

@@ -12,6 +12,7 @@
 #include "common.h"
 #include "list.h"
 #include "mutex.h"
+#include "thread_annotations.h"
 
 namespace scudo {
 
@@ -76,7 +77,12 @@ public:
     Buffer = nullptr;
   }
 
-  void reset(uptr NumberOfRegion, uptr CountersPerRegion, uptr MaxValue) {
+  // Lock of `StaticBuffer` is acquired conditionally and there's no easy way to
+  // specify the thread-safety attribute properly in current code structure.
+  // Besides, it's the only place we may want to check thread safety. Therefore,
+  // it's fine to bypass the thread-safety analysis now.
+  void reset(uptr NumberOfRegion, uptr CountersPerRegion,
+             uptr MaxValue) NO_THREAD_SAFETY_ANALYSIS {
     DCHECK_GT(NumberOfRegion, 0);
     DCHECK_GT(CountersPerRegion, 0);
     DCHECK_GT(MaxValue, 0);
@@ -181,7 +187,7 @@ private:
   [[no_unique_address]] MapPlatformData MapData = {};
 
   static HybridMutex Mutex;
-  static uptr StaticBuffer[StaticBufferCount];
+  static uptr StaticBuffer[StaticBufferCount] GUARDED_BY(Mutex);
 };
 
 template <class ReleaseRecorderT> class FreePagesRangeTracker {
