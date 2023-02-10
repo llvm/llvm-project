@@ -77,7 +77,7 @@ struct FormatSection {
   }
 };
 
-enum PrimaryType : uint8_t { Integer = 0, Float = 1, Pointer = 2 };
+enum PrimaryType : uint8_t { Unknown = 0, Float = 1, Pointer = 2, Integer = 3 };
 
 // TypeDesc stores the information about a type that is relevant to printf in
 // a relatively compact manner.
@@ -91,7 +91,7 @@ struct TypeDesc {
 
 template <typename T> LIBC_INLINE constexpr TypeDesc type_desc_from_type() {
   if constexpr (cpp::is_same_v<T, void>) {
-    return TypeDesc{0, PrimaryType::Integer};
+    return TypeDesc{0, PrimaryType::Unknown};
   } else {
     constexpr bool isPointer = cpp::is_pointer_v<T>;
     constexpr bool isFloat = cpp::is_floating_point_v<T>;
