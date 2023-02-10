@@ -1662,7 +1662,7 @@ ConstantRange LazyValueInfo::getConstantRangeAtUse(const Use &U,
   // position where V can be constrained by a select or branch condition.
   const Use *CurrU = &U;
   // TODO: Increase limit?
-  const unsigned MaxUsesToInspect = 3;
+  const unsigned MaxUsesToInspect = 0;
   for (unsigned I = 0; I < MaxUsesToInspect; ++I) {
     std::optional<ValueLatticeElement> CondVal;
     auto *CurrI = cast<Instruction>(CurrU->getUser());
