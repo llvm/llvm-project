@@ -180,9 +180,9 @@ namespace ranges {
     }
     _LIBCPP_HIDE_FROM_ABI
     constexpr __iterator operator--(int) requires bidirectional_range<_View> {
-      auto tmp = *this;
+      auto __tmp = *this;
       --*this;
-      return tmp;
+      return __tmp;
     }
 
     _LIBCPP_HIDE_FROM_ABI

@@ -188,23 +188,23 @@ void
 piecewise_linear_distribution<_RealType>::param_type::__init()
 {
     __areas_.assign(__densities_.size() - 1, result_type());
-    result_type _Sp = 0;
+    result_type __sp = 0;
     for (size_t __i = 0; __i < __areas_.size(); ++__i)
     {
         __areas_[__i] = (__densities_[__i+1] + __densities_[__i]) *
                         (__b_[__i+1] - __b_[__i]) * .5;
-        _Sp += __areas_[__i];
+        __sp += __areas_[__i];
     }
     for (size_t __i = __areas_.size(); __i > 1;)
     {
         --__i;
-        __areas_[__i] = __areas_[__i-1] / _Sp;
+        __areas_[__i] = __areas_[__i-1] / __sp;
     }
     __areas_[0] = 0;
     for (size_t __i = 1; __i < __areas_.size(); ++__i)
         __areas_[__i] += __areas_[__i-1];
     for (size_t __i = 0; __i < __densities_.size(); ++__i)
-        __densities_[__i] /= _Sp;
+        __densities_[__i] /= __sp;
 }
 
 template<class _RealType>

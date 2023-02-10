@@ -1120,7 +1120,7 @@ template <class _Rp>
 _Rp
 future<_Rp>::get()
 {
-    unique_ptr<__shared_count, __release_shared_count> __(__state_);
+    unique_ptr<__shared_count, __release_shared_count> __guard(__state_);
     __assoc_state<_Rp>* __s = __state_;
     __state_ = nullptr;
     return __s->move();
@@ -1202,7 +1202,7 @@ template <class _Rp>
 _Rp&
 future<_Rp&>::get()
 {
-    unique_ptr<__shared_count, __release_shared_count> __(__state_);
+    unique_ptr<__shared_count, __release_shared_count> __guard(__state_);
     __assoc_state<_Rp&>* __s = __state_;
     __state_ = nullptr;
     return __s->copy();
