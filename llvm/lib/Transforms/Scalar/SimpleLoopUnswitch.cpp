@@ -42,6 +42,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
@@ -78,6 +79,8 @@ STATISTIC(NumTrivial, "Number of unswitches that are trivial");
 STATISTIC(
     NumCostMultiplierSkipped,
     "Number of unswitch candidates that had their cost multiplier skipped");
+STATISTIC(NumInvariantConditionsInjected,
+          "Number of invariant conditions injected and unswitched");
 
 static cl::opt<bool> EnableNonTrivialUnswitch(
     "enable-nontrivial-unswitch", cl::init(false), cl::Hidden,
@@ -118,15 +121,53 @@ static cl::opt<bool> FreezeLoopUnswitchCond(
     cl::desc("If enabled, the freeze instruction will be added to condition "
              "of loop unswitch to prevent miscompilation."));
 
+static cl::opt<bool> InjectInvariantConditions(
+    "simple-loop-unswitch-inject-invariant-conditions", cl::Hidden,
+    cl::desc("Whether we should inject new invariants and unswitch them to "
+             "eliminate some existing (non-invariant) conditions."),
+    cl::init(true));
+
+static cl::opt<unsigned> InjectInvariantConditionHotnesThreshold(
+    "simple-loop-unswitch-inject-invariant-condition-hotness-threshold",
+    cl::Hidden, cl::desc("Only try to inject loop invariant conditions and "
+                         "unswitch on them to eliminate branches that are "
+                         "not-taken 1/<this option> times or less."),
+    cl::init(16));
+
 namespace {
+struct CompareDesc {
+  BranchInst *Term;
+  Value *Invariant;
+  BasicBlock *InLoopSucc;
+
+  CompareDesc(BranchInst *Term, Value *Invariant, BasicBlock *InLoopSucc)
+      : Term(Term), Invariant(Invariant), InLoopSucc(InLoopSucc) {}
+};
+
+struct InjectedInvariant {
+  ICmpInst::Predicate Pred;
+  Value *LHS;
+  Value *RHS;
+  BasicBlock *InLoopSucc;
+
+  InjectedInvariant(ICmpInst::Predicate Pred, Value *LHS, Value *RHS,
+                    BasicBlock *InLoopSucc)
+      : Pred(Pred), LHS(LHS), RHS(RHS), InLoopSucc(InLoopSucc) {}
+};
+
 struct NonTrivialUnswitchCandidate {
   Instruction *TI = nullptr;
   TinyPtrVector<Value *> Invariants;
   std::optional<InstructionCost> Cost;
+  std::optional<InjectedInvariant> PendingInjection;
   NonTrivialUnswitchCandidate(
       Instruction *TI, ArrayRef<Value *> Invariants,
-      std::optional<InstructionCost> Cost = std::nullopt)
-      : TI(TI), Invariants(Invariants), Cost(Cost){};
+      std::optional<InstructionCost> Cost = std::nullopt,
+      std::optional<InjectedInvariant> PendingInjection = std::nullopt)
+      : TI(TI), Invariants(Invariants), Cost(Cost),
+        PendingInjection(PendingInjection) {};
+
+  bool hasPendingInjection() const { return PendingInjection.has_value(); }
 };
 } // end anonymous namespace.
 
@@ -2844,6 +2885,252 @@ static bool collectUnswitchCandidates(
   return !UnswitchCandidates.empty();
 }
 
+/// Returns true, if predicate described by ( \p Pred, \p LHS, \p RHS )
+/// succeeding into blocks ( \p IfTrue, \p IfFalse) can be optimized by
+/// injecting a loop-invariant condition.
+static bool shouldTryInjectInvariantCondition(
+    const ICmpInst::Predicate Pred, const Value *LHS, const Value *RHS,
+    const BasicBlock *IfTrue, const BasicBlock *IfFalse, const Loop &L) {
+  if (L.isLoopInvariant(LHS) || !L.isLoopInvariant(RHS))
+    return false;
+  // TODO: Support other predicates.
+  if (Pred != ICmpInst::ICMP_ULT)
+    return false;
+  // TODO: Support non-loop-exiting branches?
+  if (!L.contains(IfTrue) || L.contains(IfFalse))
+    return false;
+  // FIXME: For some reason this causes problems with MSSA updates, need to
+  // investigate why. So far, just don't unswitch latch.
+  if (L.getHeader() == IfTrue)
+    return false;
+  return true;
+}
+
+/// Returns true, if metadata on \p BI allows us to optimize branching into \p
+/// TakenSucc via injection of invariant conditions. The branch should be not
+/// enough and not previously unswitched, the information about this comes from
+/// the metadata.
+bool shouldTryInjectBasingOnMetadata(const BranchInst *BI,
+                                     const BasicBlock *TakenSucc) {
+  // Skip branches that have already been unswithed this way. After successful
+  // unswitching of injected condition, we will still have a copy of this loop
+  // which looks exactly the same as original one. To prevent the 2nd attempt
+  // of unswitching it in the same pass, mark this branch as "nothing to do
+  // here".
+  if (BI->hasMetadata("llvm.invariant.condition.injection.disabled"))
+    return false;
+  SmallVector<uint32_t> Weights;
+  if (!extractBranchWeights(*BI, Weights))
+    return false;
+  unsigned T = InjectInvariantConditionHotnesThreshold;
+  BranchProbability LikelyTaken(T - 1, T);
+
+  assert(Weights.size() == 2 && "Unexpected profile data!");
+  size_t Idx = BI->getSuccessor(0) == TakenSucc ? 0 : 1;
+  auto Num = Weights[Idx];
+  auto Denom = Weights[0] + Weights[1];
+  // Degenerate metadata.
+  if (Denom == 0)
+    return false;
+  BranchProbability ActualTaken(Num, Denom);
+  if (LikelyTaken > ActualTaken)
+    return false;
+  return true;
+}
+
+/// Materialize pending invariant condition of the given candidate into IR. The
+/// injected loop-invariant condition implies the original loop-variant branch
+/// condition, so the materialization turns
+///
+/// loop_block:
+///   ...
+///   br i1 %variant_cond, label InLoopSucc, label OutOfLoopSucc
+///
+/// into
+///
+/// preheader:
+///   %invariant_cond = LHS pred RHS
+/// ...
+/// loop_block:
+///   br i1 %invariant_cond, label InLoopSucc, label OriginalCheck
+/// OriginalCheck:
+///   br i1 %variant_cond, label InLoopSucc, label OutOfLoopSucc
+/// ...
+static NonTrivialUnswitchCandidate
+injectPendingInvariantConditions(NonTrivialUnswitchCandidate Candidate, Loop &L,
+                                 DominatorTree &DT, LoopInfo &LI,
+                                 AssumptionCache &AC, MemorySSAUpdater *MSSAU) {
+  assert(Candidate.hasPendingInjection() && "Nothing to inject!");
+  BasicBlock *Preheader = L.getLoopPreheader();
+  assert(Preheader && "Loop is not in simplified form?");
+
+  auto Pred = Candidate.PendingInjection->Pred;
+  auto *LHS = Candidate.PendingInjection->LHS;
+  auto *RHS = Candidate.PendingInjection->RHS;
+  auto *InLoopSucc = Candidate.PendingInjection->InLoopSucc;
+  auto *TI = cast<BranchInst>(Candidate.TI);
+  auto *BB = Candidate.TI->getParent();
+  assert(InLoopSucc == TI->getSuccessor(0));
+  auto *OutOfLoopSucc = TI->getSuccessor(1);
+  // FIXME: Remove this once limitation on successors is lifted.
+  assert(L.contains(InLoopSucc) && "Not supported yet!");
+  assert(!L.contains(OutOfLoopSucc) && "Not supported yet!");
+  auto &Ctx = BB->getContext();
+
+  assert(LHS->getType() == RHS->getType() && "Type mismatch!");
+  // Do not use builder here: CreateICmp may simplify this intro a constant and
+  // unswitching will break. Better optimize it away later.
+  auto *InjectedCond =
+      ICmpInst::Create(Instruction::ICmp, Pred, LHS, RHS, "injected.cond",
+                       Preheader->getTerminator());
+  auto *OldCond = TI->getCondition();
+
+  BasicBlock *CheckBlock = BasicBlock::Create(Ctx, BB->getName() + ".check",
+                                              BB->getParent(), InLoopSucc);
+  IRBuilder<> Builder(TI);
+  auto *InvariantBr =
+      Builder.CreateCondBr(InjectedCond, InLoopSucc, CheckBlock);
+
+  Builder.SetInsertPoint(CheckBlock);
+  auto *NewTerm = Builder.CreateCondBr(OldCond, InLoopSucc, OutOfLoopSucc);
+
+  TI->eraseFromParent();
+  // Prevent infinite unswitching.
+  NewTerm->setMetadata("llvm.invariant.condition.injection.disabled",
+                       MDNode::get(BB->getContext(), {}));
+
+  // Fixup phis.
+  for (auto &I : *InLoopSucc) {
+    auto *PN = dyn_cast<PHINode>(&I);
+    if (!PN)
+      break;
+    auto *Inc = PN->getIncomingValueForBlock(BB);
+    PN->addIncoming(Inc, CheckBlock);
+  }
+  OutOfLoopSucc->replacePhiUsesWith(BB, CheckBlock);
+
+  SmallVector<DominatorTree::UpdateType, 4> DTUpdates = {
+    { DominatorTree::Insert, BB, CheckBlock },
+    { DominatorTree::Insert, CheckBlock, InLoopSucc },
+    { DominatorTree::Insert, CheckBlock, OutOfLoopSucc },
+    { DominatorTree::Delete, BB, OutOfLoopSucc }
+  };
+
+  DT.applyUpdates(DTUpdates);
+  if (MSSAU)
+    MSSAU->applyUpdates(DTUpdates, DT);
+  L.addBasicBlockToLoop(CheckBlock, LI);
+
+#ifdef EXPENSIVE_CHECKS
+  DT.verify();
+  LI.verify(DT);
+  if (MSSAU && VerifyMemorySSA)
+    MSSAU->getMemorySSA()->verifyMemorySSA();
+#endif
+
+  // TODO: In fact, cost of unswitching a new invariant candidate is *slightly*
+  // higher because we have just inserted a new block. Need to think how to
+  // adjust the cost of injected candidates when it was first computed.
+  LLVM_DEBUG(dbgs() << "Injected a new loop-invariant branch " << *InvariantBr
+                    << " and considering it for unswitching.");
+  ++NumInvariantConditionsInjected;
+  return NonTrivialUnswitchCandidate(InvariantBr, { InjectedCond },
+                                     Candidate.Cost);
+}
+
+/// Given chain of loop branch conditions looking like:
+///   br (Variant < Invariant1)
+///   br (Variant < Invariant2)
+///   br (Variant < Invariant3)
+///   ...
+/// collect set of invariant conditions on which we want to unswitch, which
+/// look like:
+///   Invariant1 <= Invariant2
+///   Invariant2 <= Invariant3
+///   ...
+/// Though they might not immediately exist in the IR, we can still inject them.
+static bool insertCandidatesWithPendingInjections(
+    SmallVectorImpl<NonTrivialUnswitchCandidate> &UnswitchCandidates, Loop &L,
+    ICmpInst::Predicate Pred, ArrayRef<CompareDesc> Compares,
+    const DominatorTree &DT) {
+
+  assert(ICmpInst::isRelational(Pred));
+  assert(ICmpInst::isStrictPredicate(Pred));
+  if (Compares.size() < 2)
+    return false;
+  ICmpInst::Predicate NonStrictPred = ICmpInst::getNonStrictPredicate(Pred);
+  for (auto Prev = Compares.begin(), Next = Compares.begin() + 1;
+       Next != Compares.end(); ++Prev, ++Next) {
+    Value *LHS = Next->Invariant;
+    Value *RHS = Prev->Invariant;
+    BasicBlock *InLoopSucc = Prev->InLoopSucc;
+    InjectedInvariant ToInject(NonStrictPred, LHS, RHS, InLoopSucc);
+    NonTrivialUnswitchCandidate Candidate(Prev->Term, { LHS, RHS },
+                                          std::nullopt, std::move(ToInject));
+    UnswitchCandidates.push_back(std::move(Candidate));
+  }
+  return true;
+}
+
+/// Collect unswitch candidates by invariant conditions that are not immediately
+/// present in the loop. However, they can be injected into the code if we
+/// decide it's profitable.
+/// An example of such conditions is following:
+///
+///   for (...) {
+///     x = load ...
+///     if (! x <u C1) break;
+///     if (! x <u C2) break;
+///     <do something>
+///   }
+///
+/// We can unswitch by condition "C1 <=u C2". If that is true, then "x <u C1 <=
+/// C2" automatically implies "x <u C2", so we can get rid of one of
+/// loop-variant checks in unswitched loop version.
+static bool collectUnswitchCandidatesWithInjections(
+    SmallVectorImpl<NonTrivialUnswitchCandidate> &UnswitchCandidates,
+    IVConditionInfo &PartialIVInfo, Instruction *&PartialIVCondBranch, Loop &L,
+    const DominatorTree &DT, const LoopInfo &LI, AAResults &AA,
+    const MemorySSAUpdater *MSSAU) {
+  if (!InjectInvariantConditions)
+    return false;
+
+  if (!DT.isReachableFromEntry(L.getHeader()))
+    return false;
+  auto *Latch = L.getLoopLatch();
+  // Need to have a single latch and a preheader.
+  if (!Latch)
+    return false;
+  assert(L.getLoopPreheader() && "Must have a preheader!");
+
+  DenseMap<Value *, SmallVector<CompareDesc, 4> > CandidatesULT;
+  // Traverse the conditions that dominate latch (and therefore dominate each
+  // other).
+  for (auto *DTN = DT.getNode(Latch); L.contains(DTN->getBlock());
+       DTN = DTN->getIDom()) {
+    ICmpInst::Predicate Pred;
+    Value *LHS = nullptr, *RHS = nullptr;
+    BasicBlock *IfTrue = nullptr, *IfFalse = nullptr;
+    auto *BB = DTN->getBlock();
+    auto *Term = BB->getTerminator();
+    if (!match(Term, m_Br(m_ICmp(Pred, m_Value(LHS), m_Value(RHS)),
+                          m_BasicBlock(IfTrue), m_BasicBlock(IfFalse))))
+      continue;
+    if (!shouldTryInjectInvariantCondition(Pred, LHS, RHS, IfTrue, IfFalse, L))
+      continue;
+    if (!shouldTryInjectBasingOnMetadata(cast<BranchInst>(Term), IfTrue))
+      continue;
+    CompareDesc Desc(cast<BranchInst>(Term), RHS, IfTrue);
+    CandidatesULT[LHS].push_back(Desc);
+  }
+
+  bool Found = false;
+  for (auto &It : CandidatesULT)
+    Found |= insertCandidatesWithPendingInjections(
+        UnswitchCandidates, L, ICmpInst::ICMP_ULT, It.second, DT);
+  return Found;
+}
+
 static bool isSafeForNoNTrivialUnswitching(Loop &L, LoopInfo &LI) {
   if (!L.isSafeToClone())
     return false;
@@ -3003,10 +3290,11 @@ static NonTrivialUnswitchCandidate findBestNonTrivialUnswitchCandidate(
     Instruction &TI = *Candidate.TI;
     ArrayRef<Value *> Invariants = Candidate.Invariants;
     BranchInst *BI = dyn_cast<BranchInst>(&TI);
-    InstructionCost CandidateCost = ComputeUnswitchedCost(
-        TI, /*FullUnswitch*/ !BI ||
-                (Invariants.size() == 1 &&
-                 Invariants[0] == skipTrivialSelect(BI->getCondition())));
+    bool FullUnswitch =
+        !BI || Candidate.hasPendingInjection() ||
+        (Invariants.size() == 1 &&
+         Invariants[0] == skipTrivialSelect(BI->getCondition()));
+    InstructionCost CandidateCost = ComputeUnswitchedCost(TI, FullUnswitch);
     // Calculate cost multiplier which is a tool to limit potentially
     // exponential behavior of loop-unswitch.
     if (EnableUnswitchCostMultiplier) {
@@ -3044,9 +3332,13 @@ static bool unswitchBestCondition(
   SmallVector<NonTrivialUnswitchCandidate, 4> UnswitchCandidates;
   IVConditionInfo PartialIVInfo;
   Instruction *PartialIVCondBranch = nullptr;
+  collectUnswitchCandidates(UnswitchCandidates, PartialIVInfo,
+                            PartialIVCondBranch, L, LI, AA, MSSAU);
+  collectUnswitchCandidatesWithInjections(UnswitchCandidates, PartialIVInfo,
+                                          PartialIVCondBranch, L, DT, LI, AA,
+                                          MSSAU);
   // If we didn't find any candidates, we're done.
-  if (!collectUnswitchCandidates(UnswitchCandidates, PartialIVInfo,
-                                 PartialIVCondBranch, L, LI, AA, MSSAU))
+  if (UnswitchCandidates.empty())
     return false;
 
   LLVM_DEBUG(
@@ -3064,6 +3356,11 @@ static bool unswitchBestCondition(
                       << "\n");
     return false;
   }
+
+  if (Best.hasPendingInjection())
+    Best = injectPendingInvariantConditions(Best, L, DT, LI, AC, MSSAU);
+  assert(!Best.hasPendingInjection() &&
+         "All injections should have been done by now!");
 
   if (Best.TI != PartialIVCondBranch)
     PartialIVInfo.InstToDuplicate.clear();
