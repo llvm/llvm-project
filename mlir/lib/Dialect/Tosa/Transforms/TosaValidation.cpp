@@ -58,6 +58,9 @@ void TosaValidation::runOnOperation() {
           getElementTypeOrSelf(operand).isa<FloatType>()) {
         return signalPassFailure();
       }
+      if (getElementTypeOrSelf(operand).isF64()) {
+        return signalPassFailure();
+      }
     }
   });
 }
