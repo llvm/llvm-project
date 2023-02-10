@@ -100,6 +100,44 @@ Fortran::lower::argumentHostAssocs(Fortran::lower::AbstractConverter &converter,
   return {};
 }
 
+static bool mustCastFuncOpToCopeWithImplicitInterfaceMismatch(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    mlir::FunctionType callSiteType, mlir::FunctionType funcOpType) {
+  // Deal with argument number mismatch by making a function pointer so
+  // that function type cast can be inserted. Do not emit a warning here
+  // because this can happen in legal program if the function is not
+  // defined here and it was first passed as an argument without any more
+  // information.
+  if (callSiteType.getNumResults() != funcOpType.getNumResults() ||
+      callSiteType.getNumInputs() != funcOpType.getNumInputs())
+    return true;
+
+  // Implicit interface result type mismatch are not standard Fortran, but
+  // some compilers are not complaining about it.  The front end is not
+  // protecting lowering from this currently. Support this with a
+  // discouraging warning.
+  // Cast the actual function to the current caller implicit type because
+  // that is the behavior we would get if we could not see the definition.
+  if (callSiteType.getResults() != funcOpType.getResults()) {
+    LLVM_DEBUG(mlir::emitWarning(
+        loc, "a return type mismatch is not standard compliant and may "
+             "lead to undefined behavior."));
+    return true;
+  }
+
+  // In HLFIR, there is little attempt to cope with implicit interface
+  // mismatch on the arguments. The argument are always prepared according
+  // to the implicit interface. Cast the actual function if any of the
+  // argument mismatch cannot be dealt with a simple fir.convert.
+  if (converter.getLoweringOptions().getLowerToHighLevelFIR())
+    for (auto [actualType, dummyType] :
+         llvm::zip(callSiteType.getInputs(), funcOpType.getInputs()))
+      if (actualType != dummyType &&
+          !fir::ConvertOp::canBeConverted(actualType, dummyType))
+        return true;
+  return false;
+}
+
 fir::ExtendedValue Fortran::lower::genCallOpAndResult(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
@@ -244,29 +282,16 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
              converter.hostAssocTupleValue().getType());
       addHostAssociations = true;
     }
+    // When this is not a call to an internal procedure (where there is a
+    // mismatch due to the extra argument, but the interface is otherwise
+    // explicit and safe), handle interface mismatch due to F77 implicit
+    // interface "abuse" with a function address cast if needed.
     if (!addHostAssociations &&
-        (callSiteType.getNumResults() != funcOpType.getNumResults() ||
-         callSiteType.getNumInputs() != funcOpType.getNumInputs())) {
-      // Deal with argument number mismatch by making a function pointer so
-      // that function type cast can be inserted. Do not emit a warning here
-      // because this can happen in legal program if the function is not
-      // defined here and it was first passed as an argument without any more
-      // information.
+        mustCastFuncOpToCopeWithImplicitInterfaceMismatch(
+            loc, converter, callSiteType, funcOpType))
       funcPointer = builder.create<fir::AddrOfOp>(loc, funcOpType, symbolAttr);
-    } else if (callSiteType.getResults() != funcOpType.getResults()) {
-      // Implicit interface result type mismatch are not standard Fortran, but
-      // some compilers are not complaining about it.  The front end is not
-      // protecting lowering from this currently. Support this with a
-      // discouraging warning.
-      LLVM_DEBUG(mlir::emitWarning(
-          loc, "a return type mismatch is not standard compliant and may "
-               "lead to undefined behavior."));
-      // Cast the actual function to the current caller implicit type because
-      // that is the behavior we would get if we could not see the definition.
-      funcPointer = builder.create<fir::AddrOfOp>(loc, funcOpType, symbolAttr);
-    } else {
+    else
       funcSymbolAttr = symbolAttr;
-    }
   }
 
   mlir::FunctionType funcType =
@@ -761,6 +786,33 @@ struct ConditionallyPreparedDummy {
 };
 } // namespace
 
+/// Fix-up the fact that it is supported to pass a character procedure
+/// designator to a non character procedure dummy procedure and vice-versa, even
+/// in case of explicit interface. Uglier cases where an object is passed as
+/// procedure designator or vice versa are handled only for implicit interfaces
+/// (refused by semantics with explicit interface), and handled with a funcOp
+/// cast like other implicit interface mismatches.
+static hlfir::Entity fixProcedureDummyMismatch(mlir::Location loc,
+                                               fir::FirOpBuilder &builder,
+                                               hlfir::Entity actual,
+                                               mlir::Type dummyType) {
+  if (actual.getType().isa<fir::BoxProcType>() &&
+      fir::isCharacterProcedureTuple(dummyType)) {
+    mlir::Value length =
+        builder.create<fir::UndefOp>(loc, builder.getCharacterLengthType());
+    mlir::Value tuple = fir::factory::createCharacterProcedureTuple(
+        builder, loc, dummyType, actual, length);
+    return hlfir::Entity{tuple};
+  }
+  assert(fir::isCharacterProcedureTuple(actual.getType()) &&
+         dummyType.isa<fir::BoxProcType>() &&
+         "unsupported dummy procedure mismatch with the actual argument");
+  mlir::Value boxProc = fir::factory::extractCharacterProcedureTuple(
+                            builder, loc, actual, /*openBoxProc=*/false)
+                            .first;
+  return hlfir::Entity{boxProc};
+}
+
 /// When dummy is not ALLOCATABLE, POINTER and is not passed in register,
 /// prepare the actual argument according to the interface. Do as needed:
 /// - address element if this is an array argument in an elemental call.
@@ -784,8 +836,11 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
 
   // Do nothing if this is a procedure argument. It is already a
   // fir.boxproc/fir.tuple<fir.boxproc, len> as it should.
-  if (actual.isProcedure())
+  if (actual.isProcedure()) {
+    if (actual.getType() != dummyType)
+      actual = fixProcedureDummyMismatch(loc, builder, actual, dummyType);
     return PreparedDummyArgument{actual, std::nullopt};
+  }
 
   const bool passingPolymorphicToNonPolymorphic =
       actual.isPolymorphic() && !fir::isPolymorphicType(dummyType);
@@ -1019,8 +1074,8 @@ genUserCall(PreparedActualArguments &loweredActuals,
       break;
     case PassBy::CharProcTuple: {
       hlfir::Entity actual = preparedActual->getActual(loc, builder);
-      assert(fir::isCharacterProcedureTuple(actual.getType()) &&
-             "character dummy procedure was not prepared as expected");
+      if (!fir::isCharacterProcedureTuple(actual.getType()))
+        actual = fixProcedureDummyMismatch(loc, builder, actual, argTy);
       caller.placeInput(arg, actual);
     } break;
     case PassBy::MutableBox: {

@@ -2473,28 +2473,27 @@ struct TBAAGraphNode {
 
 // TBAA graph.
 class TBAAGraph {
-  // Mapping between symbol names defined by TBAA
-  // operations and corresponding TBAAGraphNode's.
-  DenseMap<StringAttr, TBAAGraphNode> nodeMap;
-  // Synthetic root node that has all graph nodes
-  // in its operands list.
-  TBAAGraphNode root;
-
 public:
   using iterator = SmallVectorImpl<TBAAGraphNode *>::iterator;
+
+  // Creates a new graph with nodes corresponding to `symbolNames` defined by a
+  // set of TBAA operations.
+  TBAAGraph(ArrayRef<StringAttr> symbolNames) {
+    for (auto symbol : symbolNames) {
+      TBAAGraphNode &node = nodeMap[symbol];
+      assert(node.symbol.empty() && "node is already in the graph");
+      node.symbol = symbol;
+    }
+
+    // Fill the graph operands once all nodes were added. Otherwise,
+    // reallocation can lead to pointer invalidation.
+    for (auto symbol : symbolNames)
+      root.operands.push_back(&nodeMap[symbol]);
+  }
 
   iterator begin() { return root.operands.begin(); }
   iterator end() { return root.operands.end(); }
   TBAAGraphNode *getEntryNode() { return &root; }
-
-  // Add new graph node corresponding to `symbol`
-  // defined by a TBAA operation.
-  void addNodeDefinition(StringAttr symbol) {
-    TBAAGraphNode &node = nodeMap[symbol];
-    assert(node.symbol.empty() && "node is already in the graph");
-    node.symbol = symbol;
-    root.operands.push_back(&node);
-  }
 
   // Get a pointer to TBAAGraphNode corresponding
   // to `symbol`. The node must be already in the graph.
@@ -2503,8 +2502,17 @@ public:
     assert(it != nodeMap.end() && "node must be in the graph");
     return &it->second;
   }
+
+private:
+  // Mapping between symbol names defined by TBAA
+  // operations and corresponding TBAAGraphNode's.
+  DenseMap<StringAttr, TBAAGraphNode> nodeMap;
+  // Synthetic root node that has all graph nodes
+  // in its operands list.
+  TBAAGraphNode root;
 };
 } // end anonymous namespace
+
 namespace llvm {
 // GraphTraits definitions for using TBAAGraph with
 // scc_iterator.
@@ -2536,20 +2544,26 @@ LogicalResult MetadataOp::verifyRegions() {
   Region &body = getBody();
   // Symbol names defined by TBAARootMetadataOp and TBAATypeDescriptorOp.
   llvm::SmallDenseSet<StringAttr> definedGraphSymbols;
-  // Complete TBAA graph consisting of TBAARootMetadataOp,
-  // TBAATypeDescriptorOp, and TBAATagOp symbols. It is used
-  // for detecting cycles in the TBAA graph, which is illegal.
-  TBAAGraph tbaaGraph;
 
-  for (Operation &op : body.getOps())
+  // Collection of symbol names to ensure a stable ordering of the pointers.
+  // Otherwise, error messages might not be deterministic.
+  SmallVector<StringAttr> symbolNames;
+
+  for (Operation &op : body.getOps()) {
     if (isa<LLVM::TBAARootMetadataOp>(op) ||
         isa<LLVM::TBAATypeDescriptorOp>(op)) {
       StringAttr symbolDef = cast<SymbolOpInterface>(op).getNameAttr();
       definedGraphSymbols.insert(symbolDef);
-      tbaaGraph.addNodeDefinition(symbolDef);
+      symbolNames.push_back(symbolDef);
     } else if (auto tagOp = dyn_cast<LLVM::TBAATagOp>(op)) {
-      tbaaGraph.addNodeDefinition(tagOp.getSymNameAttr());
+      symbolNames.push_back(tagOp.getSymNameAttr());
     }
+  }
+
+  // Complete TBAA graph consisting of TBAARootMetadataOp,
+  // TBAATypeDescriptorOp, and TBAATagOp symbols. It is used
+  // for detecting cycles in the TBAA graph, which is illegal.
+  TBAAGraph tbaaGraph(symbolNames);
 
   // Verify that TBAA metadata operations refer symbols
   // from definedGraphSymbols only. Note that TBAATagOp

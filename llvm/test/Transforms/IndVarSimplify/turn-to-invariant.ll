@@ -918,3 +918,144 @@ failed_2:
 constant_check_failed:
   ret i32 -3
 }
+
+; TODO: the backedge is predicated by iv.next <u len. It means that starting the
+; 2nd iteration, iv <u len is a known fact. We can replace %check with
+; %check.first.iter = icmp ult i32 0, %len.
+define i32 @test_predicated_backedge_no_side_exit(i32 %len) {
+; CHECK-LABEL: @test_predicated_backedge_no_side_exit(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[LEN:%.*]], i32 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[UMAX]], -1
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[LEN]], i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[LEN]], [[UMIN]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[TMP1]], label [[BACKEDGE]], label [[FAILED:%.*]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], [[LEN]]
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_NEXT_LCSSA1:%.*]] = phi i32 [ [[IV_NEXT]], [[BACKEDGE]] ]
+; CHECK-NEXT:    ret i32 [[IV_NEXT_LCSSA1]]
+; CHECK:       failed:
+; CHECK-NEXT:    ret i32 -1
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %backedge]
+  %iv.next = add i32 %iv, 1
+  %check = icmp ult i32 %iv, %len
+  br i1 %check, label %backedge, label %failed
+
+backedge:
+  %loop.cond = icmp ult i32 %iv.next, %len
+  br i1 %loop.cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv.next
+
+failed:
+  ret i32 -1
+}
+
+; TODO: the backedge is predicated by iv.next <u len. It means that starting the
+; 2nd iteration, iv <u len is a known fact. We can replace %check with
+; %check.first.iter = icmp ult i32 0, %len.
+define i32 @test_predicated_backedge_with_side_exit(i32 %len) {
+; CHECK-LABEL: @test_predicated_backedge_with_side_exit(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[LEN:%.*]], i32 1)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
+; CHECK-NEXT:    [[CHECK:%.*]] = icmp ult i32 [[IV]], [[LEN]]
+; CHECK-NEXT:    br i1 [[CHECK]], label [[INNER_BLOCK:%.*]], label [[FAILED:%.*]]
+; CHECK:       inner_block:
+; CHECK-NEXT:    [[COND_1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[COND_1]], label [[BACKEDGE]], label [[FAILED]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], [[LEN]]
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[UMAX]]
+; CHECK:       failed:
+; CHECK-NEXT:    ret i32 -1
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %backedge]
+  %iv.next = add i32 %iv, 1
+  %check = icmp ult i32 %iv, %len
+  br i1 %check, label %inner_block, label %failed
+
+inner_block:
+  %cond_1 = call i1 @cond()
+  br i1 %cond_1, label %backedge, label %failed
+
+backedge:
+  %loop.cond = icmp ult i32 %iv.next, %len
+  br i1 %loop.cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv.next
+
+failed:
+  ret i32 -1
+}
+
+; TODO: the backedge is predicated by iv.next <u len. It means that starting the
+; 2nd iteration, iv <u len is a known fact. We can replace %check with
+; %check.first.iter = icmp ult i32 %start, %len.
+define i32 @test_predicated_backedge_with_side_exit_unknown_start(i32 %start, i32 %len) {
+; CHECK-LABEL: @test_predicated_backedge_with_side_exit_unknown_start(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START:%.*]], 1
+; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[LEN:%.*]], i32 [[TMP0]])
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[CHECK:%.*]] = icmp ult i32 [[IV]], [[LEN]]
+; CHECK-NEXT:    br i1 [[CHECK]], label [[INNER_BLOCK:%.*]], label [[FAILED:%.*]]
+; CHECK:       inner_block:
+; CHECK-NEXT:    [[COND_1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[COND_1]], label [[BACKEDGE]], label [[FAILED]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], [[LEN]]
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[UMAX]]
+; CHECK:       failed:
+; CHECK-NEXT:    ret i32 -1
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %backedge]
+  %iv.next = add i32 %iv, 1
+  %check = icmp ult i32 %iv, %len
+  br i1 %check, label %inner_block, label %failed
+
+inner_block:
+  %cond_1 = call i1 @cond()
+  br i1 %cond_1, label %backedge, label %failed
+
+backedge:
+  %loop.cond = icmp ult i32 %iv.next, %len
+  br i1 %loop.cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv.next
+
+failed:
+  ret i32 -1
+}
