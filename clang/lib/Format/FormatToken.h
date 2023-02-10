@@ -743,8 +743,8 @@ public:
   }
 
   /// Returns the next token ignoring comments.
-  [[nodiscard]] const FormatToken *getNextNonComment() const {
-    const FormatToken *Tok = Next;
+  [[nodiscard]] FormatToken *getNextNonComment() const {
+    FormatToken *Tok = Next;
     while (Tok && Tok->is(tok::comment))
       Tok = Tok->Next;
     return Tok;
