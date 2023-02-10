@@ -280,12 +280,12 @@ define float @test_simplify10(i8 zeroext %x) {
 define float @sitofp_scalar_intrinsic_with_FMF(i8 %x) {
 ; LDEXP32-LABEL: @sitofp_scalar_intrinsic_with_FMF(
 ; LDEXP32-NEXT:    [[TMP1:%.*]] = sext i8 [[X:%.*]] to i32
-; LDEXP32-NEXT:    [[LDEXPF:%.*]] = call float @ldexpf(float 1.000000e+00, i32 [[TMP1]])
+; LDEXP32-NEXT:    [[LDEXPF:%.*]] = tail call float @ldexpf(float 1.000000e+00, i32 [[TMP1]])
 ; LDEXP32-NEXT:    ret float [[LDEXPF]]
 ;
 ; LDEXP16-LABEL: @sitofp_scalar_intrinsic_with_FMF(
 ; LDEXP16-NEXT:    [[TMP1:%.*]] = sext i8 [[X:%.*]] to i16
-; LDEXP16-NEXT:    [[LDEXPF:%.*]] = call float @ldexpf(float 1.000000e+00, i16 [[TMP1]])
+; LDEXP16-NEXT:    [[LDEXPF:%.*]] = tail call float @ldexpf(float 1.000000e+00, i16 [[TMP1]])
 ; LDEXP16-NEXT:    ret float [[LDEXPF]]
 ;
 ; NOLDEXPF-LABEL: @sitofp_scalar_intrinsic_with_FMF(
