@@ -2599,6 +2599,7 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoMemoryEffect]> {
     static bool isIntegerCompatible(mlir::Type ty);
     static bool isFloatCompatible(mlir::Type ty);
     static bool isPointerCompatible(mlir::Type ty);
+    static bool canBeConverted(mlir::Type inType, mlir::Type outType);
   }];
   let hasCanonicalizer = 1;
 }

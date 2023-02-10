@@ -940,24 +940,26 @@ bool fir::ConvertOp::isPointerCompatible(mlir::Type ty) {
                 fir::TypeDescType>();
 }
 
-mlir::LogicalResult fir::ConvertOp::verify() {
-  auto inType = getValue().getType();
-  auto outType = getType();
+bool fir::ConvertOp::canBeConverted(mlir::Type inType, mlir::Type outType) {
   if (inType == outType)
-    return mlir::success();
-  if ((isPointerCompatible(inType) && isPointerCompatible(outType)) ||
-      (isIntegerCompatible(inType) && isIntegerCompatible(outType)) ||
-      (isIntegerCompatible(inType) && isFloatCompatible(outType)) ||
-      (isFloatCompatible(inType) && isIntegerCompatible(outType)) ||
-      (isFloatCompatible(inType) && isFloatCompatible(outType)) ||
-      (isIntegerCompatible(inType) && isPointerCompatible(outType)) ||
-      (isPointerCompatible(inType) && isIntegerCompatible(outType)) ||
-      (inType.isa<fir::BoxType>() && outType.isa<fir::BoxType>()) ||
-      (inType.isa<fir::BoxProcType>() && outType.isa<fir::BoxProcType>()) ||
-      (fir::isa_complex(inType) && fir::isa_complex(outType)) ||
-      (fir::isBoxedRecordType(inType) && fir::isPolymorphicType(outType)) ||
-      (fir::isPolymorphicType(inType) && fir::isPolymorphicType(outType)) ||
-      (fir::isPolymorphicType(inType) && outType.isa<BoxType>()))
+    return true;
+  return (isPointerCompatible(inType) && isPointerCompatible(outType)) ||
+         (isIntegerCompatible(inType) && isIntegerCompatible(outType)) ||
+         (isIntegerCompatible(inType) && isFloatCompatible(outType)) ||
+         (isFloatCompatible(inType) && isIntegerCompatible(outType)) ||
+         (isFloatCompatible(inType) && isFloatCompatible(outType)) ||
+         (isIntegerCompatible(inType) && isPointerCompatible(outType)) ||
+         (isPointerCompatible(inType) && isIntegerCompatible(outType)) ||
+         (inType.isa<fir::BoxType>() && outType.isa<fir::BoxType>()) ||
+         (inType.isa<fir::BoxProcType>() && outType.isa<fir::BoxProcType>()) ||
+         (fir::isa_complex(inType) && fir::isa_complex(outType)) ||
+         (fir::isBoxedRecordType(inType) && fir::isPolymorphicType(outType)) ||
+         (fir::isPolymorphicType(inType) && fir::isPolymorphicType(outType)) ||
+         (fir::isPolymorphicType(inType) && outType.isa<BoxType>());
+}
+
+mlir::LogicalResult fir::ConvertOp::verify() {
+  if (canBeConverted(getValue().getType(), getType()))
     return mlir::success();
   return emitOpError("invalid type conversion");
 }
