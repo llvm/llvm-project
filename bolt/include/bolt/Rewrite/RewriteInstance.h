@@ -547,18 +547,6 @@ private:
   ErrorOr<BinarySection &> LSDASection{std::errc::bad_address};
   ErrorOr<BinarySection &> EHFrameSection{std::errc::bad_address};
 
-  /// .got.plt sections.
-  ///
-  /// Contains jump slots (addresses) indirectly referenced by
-  /// instructions in .plt section.
-  ErrorOr<BinarySection &> GOTPLTSection{std::errc::bad_address};
-
-  /// .rela.plt section.
-  ///
-  /// Contains relocations against .got.plt.
-  ErrorOr<BinarySection &> RelaPLTSection{std::errc::bad_address};
-  ErrorOr<BinarySection &> RelaDynSection{std::errc::bad_address};
-
   /// .note.gnu.build-id section.
   ErrorOr<BinarySection &> BuildIDSection{std::errc::bad_address};
 
