@@ -1,7 +1,7 @@
 // RUN: %clang -O -fexperimental-sanitize-metadata=all -target x86_64-gnu-linux -x c -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=ALLOW
 // RUN: echo "fun:foo" > %t.fun
 // RUN: %clang -O -fexperimental-sanitize-metadata=all -fexperimental-sanitize-metadata-ignorelist=%t.fun -target x86_64-gnu-linux -x c -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=FUN
-// RUN: echo "src:%s" > %t.src
+// RUN: echo "src:*sanitize-metadata-ignorelist.c" > %t.src
 // RUN: %clang -O -fexperimental-sanitize-metadata=all -fexperimental-sanitize-metadata-ignorelist=%t.src -target x86_64-gnu-linux -x c -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=SRC
 
 int y;
