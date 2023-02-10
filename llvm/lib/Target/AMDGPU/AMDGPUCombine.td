@@ -136,8 +136,10 @@ def AMDGPUPostLegalizerCombinerHelper: GICombinerHelper<
 }
 
 def AMDGPURegBankCombinerHelper : GICombinerHelper<
-  "AMDGPUGenRegBankCombinerHelper", [zext_trunc_fold, int_minmax_to_med3, rm_uniform_wf,
-   ptr_add_immed_chain, fp_minmax_to_clamp, fp_minmax_to_med3, fmed3_intrinsic_to_clamp]> {
+  "AMDGPUGenRegBankCombinerHelper",
+  [unmerge_merge, unmerge_cst, unmerge_undef,
+   zext_trunc_fold, int_minmax_to_med3, ptr_add_immed_chain, rm_uniform_wf,
+   fp_minmax_to_clamp, fp_minmax_to_med3, fmed3_intrinsic_to_clamp]> {
   let DisableRuleOption = "amdgpuregbankcombiner-disable-rule";
   let StateClass = "AMDGPURegBankCombinerHelperState";
   let AdditionalArguments = [];

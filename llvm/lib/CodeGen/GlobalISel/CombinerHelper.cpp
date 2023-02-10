@@ -1763,6 +1763,15 @@ void CombinerHelper::applyCombineUnmergeMergeToPlainValues(
   for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
     Register DstReg = MI.getOperand(Idx).getReg();
     Register SrcReg = Operands[Idx];
+
+    // This combine may run after RegBankSelect, so we need to be aware of
+    // register banks.
+    const auto &DstCB = MRI.getRegClassOrRegBank(DstReg);
+    if (!DstCB.isNull() && DstCB != MRI.getRegClassOrRegBank(SrcReg)) {
+      SrcReg = Builder.buildCopy(MRI.getType(SrcReg), SrcReg).getReg(0);
+      MRI.setRegClassOrRegBank(SrcReg, DstCB);
+    }
+
     if (CanReuseInputDirectly)
       replaceRegWith(MRI, DstReg, SrcReg);
     else

@@ -13,11 +13,10 @@ define i32 @test(i32 %c, ptr %a, ptr %b) {
 ; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:  .LBB0_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr w9, [x1]
+; CHECK-NEXT:    ldr w9, [x1], #4
 ; CHECK-NEXT:    cbnz w9, .LBB0_5
 ; CHECK-NEXT:  // %bb.3: // %for.cond
 ; CHECK-NEXT:    // in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    add x1, x1, #4
 ; CHECK-NEXT:    subs x8, x8, #1
 ; CHECK-NEXT:    b.ne .LBB0_2
 ; CHECK-NEXT:  .LBB0_4:
@@ -35,13 +34,13 @@ for.body.preheader:                               ; preds = %entry
   br label %for.body
 
 for.cond:                                         ; preds = %for.body
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %wide.trip.count
   br i1 %exitcond.not, label %return, label %for.body
 
 for.body:                                         ; preds = %for.body.preheader, %for.cond
-  %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.cond ]
-  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %iv = phi i64 [ 0, %for.body.preheader ], [ %iv.next, %for.cond ]
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
   %val = load i32, ptr %arrayidx, align 4
   %tobool3.not = icmp eq i32 %val, 0
   br i1 %tobool3.not, label %for.cond, label %return
@@ -50,3 +49,124 @@ return:                                           ; preds = %for.cond, %for.body
   %retval.1 = phi i32 [ 0, %entry ], [ 0, %for.cond ], [ 1, %for.body ]
   ret i32 %retval.1
 }
+
+; negative case: %arrayidx.b is not in header
+
+define i64 @IVIncHoist_not_all_user_in_header(i32 %c, ptr %a, ptr %b) {
+; CHECK-LABEL: IVIncHoist_not_all_user_in_header:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cmp w0, #1
+; CHECK-NEXT:    b.lt .LBB1_5
+; CHECK-NEXT:  // %bb.1: // %for.body.preheader
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w9, w0
+; CHECK-NEXT:    add x10, x1, #4
+; CHECK-NEXT:    add x11, x2, #8
+; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:  .LBB1_2: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr w12, [x10, x8, lsl #2]
+; CHECK-NEXT:    cbnz w12, .LBB1_7
+; CHECK-NEXT:  // %bb.3: // %if.then
+; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
+; CHECK-NEXT:    ldr w12, [x11, x8, lsl #2]
+; CHECK-NEXT:    cbnz w12, .LBB1_6
+; CHECK-NEXT:  // %bb.4: // %for.cond
+; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
+; CHECK-NEXT:    add x8, x8, #1
+; CHECK-NEXT:    cmp x9, x8
+; CHECK-NEXT:    b.ne .LBB1_2
+; CHECK-NEXT:  .LBB1_5:
+; CHECK-NEXT:    mov x0, xzr
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB1_6: // %if.then.return.loopexit_crit_edge
+; CHECK-NEXT:    add x0, x8, #3
+; CHECK-NEXT:  .LBB1_7: // %return
+; CHECK-NEXT:    ret
+entry:
+  %cmp13 = icmp sgt i32 %c, 0
+  br i1 %cmp13, label %for.body.preheader, label %return
+
+for.body.preheader:                               ; preds = %entry
+  %wide.trip.count = zext i32 %c to i64
+  br label %for.body
+
+for.cond:                                         ; preds = %for.body
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %wide.trip.count
+  br i1 %exitcond.not, label %return, label %for.body
+
+for.body:                                         ; preds = %for.body.preheader, %for.cond
+  %iv = phi i64 [ 0, %for.body.preheader ], [ %iv.next, %for.cond ]
+  %iv.a = phi i64 [ 1, %for.body.preheader ], [ %iv.next.a, %for.cond ]
+  %iv.b = phi i64 [ 2, %for.body.preheader ], [ %iv.next.b, %for.cond ]
+  %arrayidx.a = getelementptr inbounds i32, ptr %a, i64 %iv.a
+  %iv.next.a = add nuw nsw i64 %iv.a, 1
+  %val.a = load i32, ptr %arrayidx.a, align 4
+  %tobool3.not = icmp eq i32 %val.a, 0
+  br i1 %tobool3.not, label %if.then, label %return
+
+if.then:
+  %arrayidx.b = getelementptr inbounds i32, ptr %b, i64 %iv.b
+  %iv.next.b = add nuw nsw i64 %iv.b, 1
+  %val.b = load i32, ptr %arrayidx.b, align 4
+  %tobool4.not = icmp eq i32 %val.b, 0
+  br i1 %tobool4.not, label %for.cond, label %return
+
+return:                                           ; preds = %for.cond, %for.body, %entry
+  %retval.1 = phi i64 [ 0, %entry ], [ 0, %for.cond ], [ 1, %for.body ], [ %iv.next.b, %if.then ]
+  ret i64 %retval.1
+}
+
+%struct.A = type { i32 }
+
+; this used to crash because the load type is struct
+
+define i32 @negative_test_type_is_struct(i32 %c, ptr %a, ptr %b) {
+; CHECK-LABEL: negative_test_type_is_struct:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cmp w0, #1
+; CHECK-NEXT:    b.lt .LBB2_4
+; CHECK-NEXT:  // %bb.1: // %for.body.preheader
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:  .LBB2_2: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr w9, [x1]
+; CHECK-NEXT:    cbnz w9, .LBB2_5
+; CHECK-NEXT:  // %bb.3: // %for.cond
+; CHECK-NEXT:    // in Loop: Header=BB2_2 Depth=1
+; CHECK-NEXT:    add x1, x1, #4
+; CHECK-NEXT:    subs x8, x8, #1
+; CHECK-NEXT:    b.ne .LBB2_2
+; CHECK-NEXT:  .LBB2_4:
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB2_5:
+; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    ret
+entry:
+  %cmp13 = icmp sgt i32 %c, 0
+  br i1 %cmp13, label %for.body.preheader, label %return
+
+for.body.preheader:                               ; preds = %entry
+  %wide.trip.count = zext i32 %c to i64
+  br label %for.body
+
+for.cond:                                         ; preds = %for.body
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %wide.trip.count
+  br i1 %exitcond.not, label %return, label %for.body
+
+for.body:                                         ; preds = %for.body.preheader, %for.cond
+  %iv = phi i64 [ 0, %for.body.preheader ], [ %iv.next, %for.cond ]
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
+  %str.val = load %struct.A, ptr %arrayidx
+  %val = extractvalue %struct.A %str.val, 0
+  %tobool3.not = icmp eq i32 %val, 0
+  br i1 %tobool3.not, label %for.cond, label %return
+
+return:                                           ; preds = %for.cond, %for.body, %entry
+  %retval.1 = phi i32 [ 0, %entry ], [ 0, %for.cond ], [ 1, %for.body ]
+  ret i32 %retval.1
+}
+

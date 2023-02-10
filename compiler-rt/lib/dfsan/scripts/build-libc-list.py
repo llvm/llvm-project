@@ -69,7 +69,7 @@ p.add_option('--error-missing-lib', action='store_true',
 
 libs = options.lib_file
 if not libs:
-    print >> sys.stderr, 'No libraries provided.'
+    print('No libraries provided.', file=sys.stderr)
     exit(1)
 
 missing_lib = False
@@ -79,14 +79,14 @@ for l in libs:
     functions += defined_function_list(l)
   else:
     missing_lib = True
-    print >> sys.stderr, 'warning: library %s not found' % l
+    print('warning: library %s not found' % l, file=sys.stderr)
 
 if options.error_missing_lib and missing_lib:
-    print >> sys.stderr, 'Exiting with failure code due to missing library.'
+    print('Exiting with failure code due to missing library.', file=sys.stderr)
     exit(1)
 
 functions = list(set(functions))
 functions.sort()
 
 for f in functions:
-  print 'fun:%s=uninstrumented' % f
+  print('fun:%s=uninstrumented' % f)

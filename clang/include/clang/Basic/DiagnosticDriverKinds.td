@@ -215,6 +215,8 @@ def err_drv_malformed_sanitizer_coverage_allowlist : Error<
   "malformed sanitizer coverage allowlist: '%0'">;
 def err_drv_malformed_sanitizer_coverage_ignorelist : Error<
   "malformed sanitizer coverage ignorelist: '%0'">;
+def err_drv_malformed_sanitizer_metadata_ignorelist : Error<
+  "malformed sanitizer metadata ignorelist: '%0'">;
 def err_drv_unsupported_static_ubsan_darwin : Error<
   "static UndefinedBehaviorSanitizer runtime is not supported on darwin">;
 def err_drv_duplicate_config : Error<

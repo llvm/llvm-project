@@ -864,6 +864,16 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     }
   }
 
+  // Parse -fsanitize-metadata-ignorelist option if enabled.
+  if (BinaryMetadataFeatures) {
+    parseSpecialCaseListArg(
+        D, Args, BinaryMetadataIgnorelistFiles,
+        options::OPT_fexperimental_sanitize_metadata_ignorelist_EQ,
+        OptSpecifier(), // Cannot clear ignore list, only append.
+        clang::diag::err_drv_malformed_sanitizer_metadata_ignorelist,
+        DiagnoseErrors);
+  }
+
   SharedRuntime =
       Args.hasFlag(options::OPT_shared_libsan, options::OPT_static_libsan,
                    TC.getTriple().isAndroid() || TC.getTriple().isOSFuchsia() ||
@@ -1141,6 +1151,9 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
       CmdArgs.push_back(
           Args.MakeArgString("-fexperimental-sanitize-metadata=" + F.second));
   }
+  addSpecialCaseListOpt(Args, CmdArgs,
+                        "-fexperimental-sanitize-metadata-ignorelist=",
+                        BinaryMetadataIgnorelistFiles);
 
   if (TC.getTriple().isOSWindows() && needsUbsanRt()) {
     // Instruct the code generator to embed linker directives in the object file
