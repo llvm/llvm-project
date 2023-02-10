@@ -4192,6 +4192,11 @@ class SBDebugger(object):
         return _lldb.SBDebugger_GetProgressFromEvent(event)
 
     @staticmethod
+    def GetProgressDataFromEvent(event):
+        r"""GetProgressDataFromEvent(SBEvent event) -> SBStructuredData"""
+        return _lldb.SBDebugger_GetProgressDataFromEvent(event)
+
+    @staticmethod
     def GetDiagnosticFromEvent(event):
         r"""GetDiagnosticFromEvent(SBEvent event) -> SBStructuredData"""
         return _lldb.SBDebugger_GetDiagnosticFromEvent(event)

@@ -21677,6 +21677,36 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBDebugger_GetProgressDataFromEvent(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBEvent *arg1 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  lldb::SBStructuredData result;
+  
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_lldb__SBEvent,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBDebugger_GetProgressDataFromEvent" "', argument " "1"" of type '" "lldb::SBEvent const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "SBDebugger_GetProgressDataFromEvent" "', argument " "1"" of type '" "lldb::SBEvent const &""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBEvent * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = lldb::SBDebugger::GetProgressDataFromEvent((lldb::SBEvent const &)*arg1);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj((new lldb::SBStructuredData(result)), SWIGTYPE_p_lldb__SBStructuredData, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBDebugger_GetDiagnosticFromEvent(PyObject *self, PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBEvent *arg1 = 0 ;
@@ -84702,6 +84732,7 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBData_swigregister", SBData_swigregister, METH_O, NULL},
 	 { "SBData_swiginit", SBData_swiginit, METH_VARARGS, NULL},
 	 { "SBDebugger_GetProgressFromEvent", _wrap_SBDebugger_GetProgressFromEvent, METH_O, "SBDebugger_GetProgressFromEvent(SBEvent event) -> char const *"},
+	 { "SBDebugger_GetProgressDataFromEvent", _wrap_SBDebugger_GetProgressDataFromEvent, METH_O, "SBDebugger_GetProgressDataFromEvent(SBEvent event) -> SBStructuredData"},
 	 { "SBDebugger_GetDiagnosticFromEvent", _wrap_SBDebugger_GetDiagnosticFromEvent, METH_O, "SBDebugger_GetDiagnosticFromEvent(SBEvent event) -> SBStructuredData"},
 	 { "SBDebugger_GetBroadcaster", _wrap_SBDebugger_GetBroadcaster, METH_O, "SBDebugger_GetBroadcaster(SBDebugger self) -> SBBroadcaster"},
 	 { "SBDebugger_Initialize", _wrap_SBDebugger_Initialize, METH_NOARGS, "SBDebugger_Initialize()"},

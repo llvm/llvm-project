@@ -131,6 +131,8 @@ public:
                                         uint64_t &OUTPUT,
                                         bool &OUTPUT);
 
+    static lldb::SBStructuredData GetProgressDataFromEvent(const lldb::SBEvent &event);
+
     static lldb::SBStructuredData GetDiagnosticFromEvent(const lldb::SBEvent &event);
 
     SBBroadcaster GetBroadcaster();

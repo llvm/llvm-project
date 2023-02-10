@@ -28,3 +28,14 @@ class TestProgressReporting(TestBase):
         message = ret_args[0]
         self.assertGreater(len(message), 0)
 
+    def test_dwarf_symbol_loading_progress_report_structured_data(self):
+        """Test that we are able to fetch dwarf symbol loading progress events
+           using the structured data API"""
+        self.build()
+
+        lldbutil.run_to_source_breakpoint(self, 'break here', lldb.SBFileSpec('main.c'))
+
+        event = lldbutil.fetch_next_event(self, self.listener, self.broadcaster)
+        progress_data = lldb.SBDebugger.GetProgressDataFromEvent(event)
+        message = progress_data.GetValueForKey("message").GetStringValue(100)
+        self.assertGreater(len(message), 0)
