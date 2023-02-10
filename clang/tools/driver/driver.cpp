@@ -537,7 +537,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
     return 1;
 
   if (!UseNewCC1Process) {
-    TheDriver.CC1Main = [&ToolContext](SmallVectorImpl<const char *> &ArgV) {
+    TheDriver.CC1Main = [ToolContext](SmallVectorImpl<const char *> &ArgV) {
       return ExecuteCC1Tool(ArgV, ToolContext);
     };
     // Ensure the CC1Command actually catches cc1 crashes
