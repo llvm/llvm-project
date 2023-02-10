@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Tooling/CommonOptionsParser.h"
@@ -17,6 +18,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Program.h"
@@ -168,8 +170,13 @@ llvm::cl::opt<unsigned>
 
 llvm::cl::opt<std::string>
     CompilationDB("compilation-database",
-                  llvm::cl::desc("Compilation database"), llvm::cl::Required,
+                  llvm::cl::desc("Compilation database"), llvm::cl::Optional,
                   llvm::cl::cat(DependencyScannerCategory));
+
+llvm::cl::opt<std::string> P1689TargettedCommand(
+    llvm::cl::Positional, llvm::cl::ZeroOrMore,
+    llvm::cl::desc("The command line flags for the target of which "
+                   "the dependencies are to be computed."));
 
 llvm::cl::opt<std::string> ModuleName(
     "module-name", llvm::cl::Optional,
@@ -527,19 +534,109 @@ static std::string getModuleCachePath(ArrayRef<std::string> Args) {
   return std::string(Path);
 }
 
-int main(int argc, const char **argv) {
+// getCompilationDataBase - If -compilation-database is set, load the
+// compilation database from the specified file. Otherwise if the we're
+// generating P1689 format, trying to generate the compilation database
+// form specified command line after the positional parameter "--".
+static std::unique_ptr<tooling::CompilationDatabase>
+getCompilationDataBase(int argc, const char **argv, std::string &ErrorMessage) {
   llvm::InitLLVM X(argc, argv);
   llvm::cl::HideUnrelatedOptions(DependencyScannerCategory);
   if (!llvm::cl::ParseCommandLineOptions(argc, argv))
-    return 1;
+    return nullptr;
 
+  if (!CompilationDB.empty())
+    return tooling::JSONCompilationDatabase::loadFromFile(
+        CompilationDB, ErrorMessage,
+        tooling::JSONCommandLineSyntax::AutoDetect);
+
+  if (Format != ScanningOutputFormat::P1689) {
+    llvm::errs() << "the --compilation-database option: must be specified at "
+                    "least once!";
+    return nullptr;
+  }
+
+  // Trying to get the input file, the output file and the command line options
+  // from the positional parameter "--".
+  const char **DoubleDash = std::find(argv, argv + argc, StringRef("--"));
+  if (DoubleDash == argv + argc) {
+    llvm::errs() << "The command line arguments is required after '--' in "
+                    "P1689 per file mode.";
+    return nullptr;
+  }
+  std::vector<const char *> CommandLine(DoubleDash + 1, argv + argc);
+
+  llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+      CompilerInstance::createDiagnostics(new DiagnosticOptions);
+  driver::Driver TheDriver(CommandLine[0], llvm::sys::getDefaultTargetTriple(),
+                           *Diags);
+  std::unique_ptr<driver::Compilation> C(
+      TheDriver.BuildCompilation(CommandLine));
+  if (!C)
+    return nullptr;
+
+  auto Cmd = C->getJobs().begin();
+  auto CI = std::make_unique<CompilerInvocation>();
+  CompilerInvocation::CreateFromArgs(*CI, Cmd->getArguments(), *Diags,
+                                     CommandLine[0]);
+  if (!CI)
+    return nullptr;
+
+  FrontendOptions &FEOpts = CI->getFrontendOpts();
+  if (FEOpts.Inputs.size() != 1) {
+    llvm::errs() << "Only one input file is allowed in P1689 per file mode.";
+    return nullptr;
+  }
+
+  // There might be multiple jobs for a compilation. Extract the specified
+  // output filename from the last job.
+  auto LastCmd = C->getJobs().end();
+  LastCmd--;
+  if (LastCmd->getOutputFilenames().size() != 1) {
+    llvm::errs() << "The command line should provide exactly one output file "
+                    "in P1689 per file mode.\n";
+  }
+  StringRef OutputFile = LastCmd->getOutputFilenames().front();
+
+  class InplaceCompilationDatabase : public tooling::CompilationDatabase {
+  public:
+    InplaceCompilationDatabase(StringRef InputFile, StringRef OutputFile,
+                               ArrayRef<const char *> CommandLine)
+        : Command(".", InputFile, {}, OutputFile) {
+      for (auto *C : CommandLine)
+        Command.CommandLine.push_back(C);
+    }
+
+    std::vector<tooling::CompileCommand>
+    getCompileCommands(StringRef FilePath) const override {
+      if (FilePath != Command.Filename)
+        return {};
+      return {Command};
+    }
+
+    std::vector<std::string> getAllFiles() const override {
+      return {Command.Filename};
+    }
+
+    std::vector<tooling::CompileCommand>
+    getAllCompileCommands() const override {
+      return {Command};
+    }
+
+  private:
+    tooling::CompileCommand Command;
+  };
+
+  return std::make_unique<InplaceCompilationDatabase>(
+      FEOpts.Inputs[0].getFile(), OutputFile, CommandLine);
+}
+
+int main(int argc, const char **argv) {
   std::string ErrorMessage;
-  std::unique_ptr<tooling::JSONCompilationDatabase> Compilations =
-      tooling::JSONCompilationDatabase::loadFromFile(
-          CompilationDB, ErrorMessage,
-          tooling::JSONCommandLineSyntax::AutoDetect);
+  std::unique_ptr<tooling::CompilationDatabase> Compilations =
+      getCompilationDataBase(argc, argv, ErrorMessage);
   if (!Compilations) {
-    llvm::errs() << "error: " << ErrorMessage << "\n";
+    llvm::errs() << ErrorMessage << "\n";
     return 1;
   }
 
