@@ -62,16 +62,37 @@ TEST(StdlibTest, All) {
               ElementsAre(stdlib::Header::named("<istream>"),
                           stdlib::Header::named("<iostream>"),
                           stdlib::Header::named("<iosfwd>")));
+  EXPECT_THAT(stdlib::Symbol::named("std::", "size_t")->headers(),
+              ElementsAre(stdlib::Header::named("<cstddef>"),
+                          stdlib::Header::named("<cstdlib>"),
+                          stdlib::Header::named("<cstring>"),
+                          stdlib::Header::named("<cwchar>"),
+                          stdlib::Header::named("<cuchar>"),
+                          stdlib::Header::named("<ctime>"),
+                          stdlib::Header::named("<cstdio>")));
+  EXPECT_EQ(stdlib::Symbol::named("std::", "size_t")->header(),
+            stdlib::Header::named("<cstddef>"));
 
   EXPECT_THAT(stdlib::Header::all(), Contains(*VectorH));
   EXPECT_THAT(stdlib::Symbol::all(), Contains(*Vector));
-  EXPECT_FALSE(stdlib::Header::named("<stdint.h>"));
-  EXPECT_FALSE(stdlib::Header::named("<stdint.h>", stdlib::Lang::CXX));
-  EXPECT_TRUE(stdlib::Header::named("<stdint.h>", stdlib::Lang::C));
+  EXPECT_TRUE(stdlib::Header::named("<stdint.h>", stdlib::Lang::CXX));
+  EXPECT_FALSE(stdlib::Header::named("<ios646.h>", stdlib::Lang::CXX));
+}
 
-  EXPECT_FALSE(stdlib::Symbol::named("", "int16_t"));
-  EXPECT_FALSE(stdlib::Symbol::named("", "int16_t", stdlib::Lang::CXX));
-  EXPECT_TRUE(stdlib::Symbol::named("", "int16_t", stdlib::Lang::C));
+TEST(StdlibTest, CCompat) {
+  EXPECT_THAT(
+      stdlib::Symbol::named("", "int16_t", stdlib::Lang::CXX)->headers(),
+      ElementsAre(stdlib::Header::named("<cstdint>"),
+                  stdlib::Header::named("<stdint.h>")));
+  EXPECT_THAT(
+      stdlib::Symbol::named("std::", "int16_t", stdlib::Lang::CXX)->headers(),
+      ElementsAre(stdlib::Header::named("<cstdint>")));
+
+  EXPECT_TRUE(stdlib::Header::named("<stdint.h>", stdlib::Lang::C));
+  EXPECT_THAT(
+      stdlib::Symbol::named("", "int16_t", stdlib::Lang::C)->headers(),
+      ElementsAre(stdlib::Header::named("<stdint.h>", stdlib::Lang::C)));
+  EXPECT_FALSE(stdlib::Symbol::named("std::", "int16_t", stdlib::Lang::C));
 }
 
 TEST(StdlibTest, Recognizer) {
@@ -127,9 +148,9 @@ TEST(StdlibTest, Recognizer) {
   EXPECT_EQ(Recognizer(Nest), stdlib::Symbol::named("std::", "vector"));
   EXPECT_EQ(Recognizer(Clock),
             stdlib::Symbol::named("std::chrono::", "system_clock"));
-  EXPECT_EQ(Recognizer(CDivT), stdlib::Symbol::named("", "div_t"));
-  EXPECT_EQ(Recognizer(CDivT),
-            stdlib::Symbol::named("", "div_t", stdlib::Lang::C));
+  auto DivT = stdlib::Symbol::named("", "div_t", stdlib::Lang::CXX);
+  EXPECT_TRUE(DivT);
+  EXPECT_EQ(Recognizer(CDivT), DivT);
   EXPECT_EQ(Recognizer(Sec), std::nullopt);
 }
 

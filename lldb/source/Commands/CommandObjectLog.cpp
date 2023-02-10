@@ -177,6 +177,20 @@ protected:
       return false;
     }
 
+    if ((m_options.handler != eLogHandlerCircular &&
+         m_options.handler != eLogHandlerStream) &&
+        m_options.buffer_size.GetCurrentValue() != 0) {
+      result.AppendError("a buffer size can only be specified for the circular "
+                         "and stream buffer handler.\n");
+      return false;
+    }
+
+    if (m_options.handler != eLogHandlerStream && m_options.log_file) {
+      result.AppendError(
+          "a file name can only be specified for the stream handler.\n");
+      return false;
+    }
+
     // Store into a std::string since we're about to shift the channel off.
     const std::string channel = std::string(args[0].ref());
     args.Shift(); // Shift off the channel

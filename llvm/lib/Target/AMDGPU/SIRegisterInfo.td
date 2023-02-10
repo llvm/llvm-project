@@ -1109,11 +1109,11 @@ class RegOrB64 <string RegisterClass, string OperandTypePrefix>
 
 class RegOrV2F32 <string RegisterClass, string OperandTypePrefix>
   : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_V2FP32",
-                     !subst("_v2f32", "V2FP32", NAME), "_Imm64">;
+                     !subst("_v2f32", "V2FP32", NAME), "_Imm32">;
 
 class RegOrV2B32 <string RegisterClass, string OperandTypePrefix>
   : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_V2INT32",
-                     !subst("_v2b32", "V2INT32", NAME), "_Imm64">;
+                     !subst("_v2b32", "V2INT32", NAME), "_Imm32">;
 
 // For VOP1,2,C True16 instructions. _Lo128 use first 128 32-bit VGPRs only.
 class RegOrB16_Lo128 <string RegisterClass, string OperandTypePrefix>

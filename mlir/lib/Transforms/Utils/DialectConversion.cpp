@@ -3054,6 +3054,54 @@ auto TypeConverter::convertBlockSignature(Block *block)
 }
 
 //===----------------------------------------------------------------------===//
+// Type attribute conversion
+//===----------------------------------------------------------------------===//
+TypeConverter::AttributeConversionResult
+TypeConverter::AttributeConversionResult::result(Attribute attr) {
+  return AttributeConversionResult(attr, resultTag);
+}
+
+TypeConverter::AttributeConversionResult
+TypeConverter::AttributeConversionResult::na() {
+  return AttributeConversionResult(nullptr, naTag);
+}
+
+TypeConverter::AttributeConversionResult
+TypeConverter::AttributeConversionResult::abort() {
+  return AttributeConversionResult(nullptr, abortTag);
+}
+
+bool TypeConverter::AttributeConversionResult::hasResult() const {
+  return impl.getInt() == resultTag;
+}
+
+bool TypeConverter::AttributeConversionResult::isNa() const {
+  return impl.getInt() == naTag;
+}
+
+bool TypeConverter::AttributeConversionResult::isAbort() const {
+  return impl.getInt() == abortTag;
+}
+
+Attribute TypeConverter::AttributeConversionResult::getResult() const {
+  assert(hasResult() && "Cannot get result from N/A or abort");
+  return impl.getPointer();
+}
+
+Optional<Attribute> TypeConverter::convertTypeAttribute(Type type,
+                                                        Attribute attr) {
+  for (TypeAttributeConversionCallbackFn &fn :
+       llvm::reverse(typeAttributeConversions)) {
+    AttributeConversionResult res = fn(type, attr);
+    if (res.hasResult())
+      return res.getResult();
+    if (res.isAbort())
+      return std::nullopt;
+  }
+  return std::nullopt;
+}
+
+//===----------------------------------------------------------------------===//
 // FunctionOpInterfaceSignatureConversion
 //===----------------------------------------------------------------------===//
 

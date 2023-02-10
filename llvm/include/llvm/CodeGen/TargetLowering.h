@@ -1932,10 +1932,10 @@ public:
   /// the object whose address is being passed. If so then MinSize is set to the
   /// minimum size the object must be to be aligned and PrefAlign is set to the
   /// preferred alignment.
-  virtual bool shouldAlignPointerArgs(CallInst * /*CI*/, unsigned & /*MinSize*/,
-                                      Align & /*PrefAlign*/) const {
-    return false;
-  }
+  virtual bool
+  shouldUpdatePointerArgAlignment(const CallInst *CI, unsigned &MinSize,
+                                  Align &PrefAlign,
+                                  const TargetTransformInfo &TTI) const;
 
   //===--------------------------------------------------------------------===//
   /// \name Helpers for TargetTransformInfo implementations

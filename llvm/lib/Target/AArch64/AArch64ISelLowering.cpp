@@ -20364,6 +20364,7 @@ static SDValue performSETCCCombine(SDNode *N,
   // setcc (srl x, imm), 0, ne ==> setcc (and x, (-1 << imm)), 0, ne
   if (Cond == ISD::SETNE && isNullConstant(RHS) &&
       LHS->getOpcode() == ISD::SRL && isa<ConstantSDNode>(LHS->getOperand(1)) &&
+      LHS->getConstantOperandVal(1) < VT.getScalarSizeInBits() &&
       LHS->hasOneUse()) {
     EVT TstVT = LHS->getValueType(0);
     if (TstVT.isScalarInteger() && TstVT.getFixedSizeInBits() <= 64) {

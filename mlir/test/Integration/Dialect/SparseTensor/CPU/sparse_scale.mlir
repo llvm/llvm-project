@@ -11,7 +11,7 @@
 // REDEFINE: %{option} = enable-runtime-library=false
 // RUN: %{compile} | %{run}
 
-// If SVE is available, do the same run, but now with direct IR generation and VLA
+// Do the same run, but now with direct IR generation and, if available, VLA
 // vectorization.
 // REDEFINE: %{option} = "enable-runtime-library=false vl=4 enable-arm-sve=%ENABLE_VLA"
 // REDEFINE: %{run} = %lli \

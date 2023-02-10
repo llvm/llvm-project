@@ -33,18 +33,6 @@ class Parser {
   internal::ArgList args_start;
   size_t args_index = 1;
 
-  enum PrimaryType : uint8_t { Integer = 0, Float = 1, Pointer = 2 };
-
-  // TypeDesc stores the information about a type that is relevant to printf in
-  // a relatively compact manner.
-  struct TypeDesc {
-    uint8_t size;
-    PrimaryType primary_type;
-    LIBC_INLINE constexpr bool operator==(const TypeDesc &other) const {
-      return (size == other.size) && (primary_type == other.primary_type);
-    }
-  };
-
   // Defined in printf_config.h
   static constexpr size_t DESC_ARR_LEN = LLVM_LIBC_PRINTF_INDEX_ARR_LEN;
 
@@ -105,19 +93,6 @@ private:
   // local_pos.
   size_t parse_index(size_t *local_pos);
 
-  template <typename T> LIBC_INLINE static constexpr TypeDesc get_type_desc() {
-    if constexpr (cpp::is_same_v<T, void>) {
-      return TypeDesc{0, PrimaryType::Integer};
-    } else {
-      constexpr bool isPointer = cpp::is_same_v<T, void *>;
-      constexpr bool isFloat =
-          cpp::is_same_v<T, double> || cpp::is_same_v<T, long double>;
-      return TypeDesc{sizeof(T), isPointer ? PrimaryType::Pointer
-                                 : isFloat ? PrimaryType::Float
-                                           : PrimaryType::Integer};
-    }
-  }
-
   LIBC_INLINE void set_type_desc(size_t index, TypeDesc value) {
     if (index != 0 && index <= DESC_ARR_LEN)
       desc_arr[index - 1] = value;
@@ -130,7 +105,7 @@ private:
     if (!(index == 0 || index == args_index))
       args_to_index(index);
 
-    set_type_desc(index, get_type_desc<T>());
+    set_type_desc(index, type_desc_from_type<T>());
 
     ++args_index;
     return get_next_arg_value<T>();

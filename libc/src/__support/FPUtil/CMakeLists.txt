@@ -4,8 +4,9 @@ add_header_library(
     FEnvImpl.h
   DEPENDS
     libc.include.fenv
-    libc.src.__support.common
-    libc.src.__support.compiler_features
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.properties.architectures
+    libc.src.__support.macros.sanitizer
 )
 
 add_header_library(

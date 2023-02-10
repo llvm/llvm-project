@@ -4179,6 +4179,7 @@ def pedantic_errors : Flag<["-", "--"], "pedantic-errors">, Group<pedantic_Group
   MarshallingInfoFlag<DiagnosticOpts<"PedanticErrors">>;
 def pedantic : Flag<["-", "--"], "pedantic">, Group<pedantic_Group>, Flags<[CC1Option,FlangOption,FC1Option]>,
   HelpText<"Warn on language extensions">, MarshallingInfoFlag<DiagnosticOpts<"Pedantic">>;
+def p : Flag<["-"], "p">, HelpText<"Enable mcount instrumentation with prof">;
 def pg : Flag<["-"], "pg">, HelpText<"Enable mcount instrumentation">, Flags<[CC1Option]>,
   MarshallingInfoFlag<CodeGenOpts<"InstrumentForProfiling">>;
 def pipe : Flag<["-", "--"], "pipe">,
@@ -4225,7 +4226,6 @@ defm pthread : BoolOption<"", "pthread",
   LangOpts<"POSIXThreads">, DefaultFalse,
   PosFlag<SetTrue, [], "Support POSIX threads in generated code">,
   NegFlag<SetFalse>, BothFlags<[CC1Option]>>;
-def p : Flag<["-"], "p">;
 def pie : Flag<["-"], "pie">, Group<Link_Group>;
 def static_pie : Flag<["-"], "static-pie">, Group<Link_Group>;
 def read__only__relocs : Separate<["-"], "read_only_relocs">;

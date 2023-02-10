@@ -71,6 +71,10 @@ v_pk_fma_f32 v[8:9], v[0:1], s[0:1], v[4:5] clamp
 v_pk_fma_f32 v[0:1], v[4:5], v[8:9], v[16:17]
 
 // NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX90A: v_pk_fma_f32 v[0:1], v[2:3], v[4:5], 1.0 ; encoding: [0x00,0x40,0xb0,0xd3,0x02,0x09,0xca,0x1b]
+v_pk_fma_f32 v[0:1], v[2:3], v[4:5], 1.0
+
+// NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX90A: v_pk_mul_f32 v[254:255], v[8:9], v[16:17] ; encoding: [0xfe,0x40,0xb1,0xd3,0x08,0x21,0x02,0x18]
 v_pk_mul_f32 v[254:255], v[8:9], v[16:17]
 
@@ -181,6 +185,10 @@ v_pk_mul_f32 v[4:5], v[8:9], v[16:17] neg_hi:[1,1]
 // NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX90A: v_pk_mul_f32 v[4:5], v[8:9], v[16:17] clamp ; encoding: [0x04,0xc0,0xb1,0xd3,0x08,0x21,0x02,0x18]
 v_pk_mul_f32 v[4:5], v[8:9], v[16:17] clamp
+
+// NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX90A: v_pk_mul_f32 v[0:1], v[2:3], 1.0        ; encoding: [0x00,0x40,0xb1,0xd3,0x02,0xe5,0x01,0x18]
+v_pk_mul_f32 v[0:1], v[2:3], 1.0
 
 // NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX90A: v_pk_add_f32 v[254:255], v[8:9], v[16:17] ; encoding: [0xfe,0x40,0xb2,0xd3,0x08,0x21,0x02,0x18]
@@ -295,6 +303,10 @@ v_pk_add_f32 v[4:5], v[8:9], v[16:17] neg_hi:[1,1]
 v_pk_add_f32 v[4:5], v[8:9], v[16:17] clamp
 
 // NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX90A: v_pk_add_f32 v[0:1], v[2:3], 1.0 ; encoding: [0x00,0x40,0xb2,0xd3,0x02,0xe5,0x01,0x18]
+v_pk_add_f32 v[0:1], v[2:3], 1.0
+
+// NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX90A: v_pk_mov_b32 v[0:1], v[2:3], v[4:5] ; encoding: [0x00,0x40,0xb3,0xd3,0x02,0x09,0x02,0x18]
 v_pk_mov_b32 v[0:1], v[2:3], v[4:5]
 
@@ -321,6 +333,14 @@ v_pk_mov_b32 v[0:1], v[2:3], v[4:5] op_sel:[1,0]
 // NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX90A: v_pk_mov_b32 v[0:1], v[2:3], v[4:5] op_sel:[1,1] ; encoding: [0x00,0x58,0xb3,0xd3,0x02,0x09,0x02,0x18]
 v_pk_mov_b32 v[0:1], v[2:3], v[4:5] op_sel:[1,1]
+
+// NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX90A: v_pk_mov_b32 v[0:1], v[2:3], 4 ; encoding: [0x00,0x40,0xb3,0xd3,0x02,0x09,0x01,0x18]
+v_pk_mov_b32 v[0:1], v[2:3], 4
+
+// NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX90A: v_pk_mov_b32 v[0:1], v[2:3], 2.0 ; encoding: [0x00,0x40,0xb3,0xd3,0x02,0xe9,0x01,0x18]
+v_pk_mov_b32 v[0:1], v[2:3], 2.0
 
 // NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX90A: buffer_wbl2 ; encoding: [0x00,0x00,0xa0,0xe0,0x00,0x00,0x00,0x00]

@@ -51,6 +51,7 @@ TEST(CanonicalIncludesTest, CXXStandardLibrary) {
   EXPECT_EQ("<cstdio>", CI.mapSymbol("std::", "printf", Language));
   // std::move is ambiguous, currently always mapped to <utility>
   EXPECT_EQ("<utility>", CI.mapSymbol("std::", "move", Language));
+  EXPECT_EQ("<cstddef>", CI.mapSymbol("std::", "size_t", Language));
   // Unknown std symbols aren't mapped.
   EXPECT_EQ("", CI.mapSymbol("std::", "notathing", Language));
   // iosfwd declares some symbols it doesn't own.

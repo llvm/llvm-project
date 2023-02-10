@@ -521,7 +521,7 @@ define zeroext i1 @_Z26atomic_load_relaxed_stk_i1v() {
 ; CHECK-NEXT:    ld1b.zx %s0, 248(, %s11)
 ; CHECK-NEXT:    and %s0, 1, %s0
 ; CHECK-NEXT:    or %s11, 0, %s9
-  %1 = alloca %"struct.std::__1::atomic", align 1
+  %1 = alloca %"struct.std::__1::atomic", align 8
   call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %1)
   call void @_Z6fun_i1RNSt3__16atomicIbEE(ptr nonnull align 1 dereferenceable(1) %1)
   %2 = load atomic i8, ptr %1 monotonic, align 1
@@ -550,7 +550,7 @@ define signext i8 @_Z26atomic_load_relaxed_stk_i8v() {
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    ld1b.sx %s0, 248(, %s11)
 ; CHECK-NEXT:    or %s11, 0, %s9
-  %1 = alloca %"struct.std::__1::atomic.0", align 1
+  %1 = alloca %"struct.std::__1::atomic.0", align 8
   call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %1)
   call void @_Z6fun_i8RNSt3__16atomicIcEE(ptr nonnull align 1 dereferenceable(1) %1)
   %2 = load atomic i8, ptr %1 monotonic, align 1
@@ -571,7 +571,7 @@ define zeroext i8 @_Z26atomic_load_relaxed_stk_u8v() {
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    ld1b.zx %s0, 248(, %s11)
 ; CHECK-NEXT:    or %s11, 0, %s9
-  %1 = alloca %"struct.std::__1::atomic.5", align 1
+  %1 = alloca %"struct.std::__1::atomic.5", align 8
   call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %1)
   call void @_Z6fun_u8RNSt3__16atomicIhEE(ptr nonnull align 1 dereferenceable(1) %1)
   %2 = load atomic i8, ptr %1 monotonic, align 1
@@ -592,7 +592,7 @@ define signext i16 @_Z27atomic_load_relaxed_stk_i16v() {
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    ld2b.sx %s0, 248(, %s11)
 ; CHECK-NEXT:    or %s11, 0, %s9
-  %1 = alloca %"struct.std::__1::atomic.10", align 2
+  %1 = alloca %"struct.std::__1::atomic.10", align 8
   call void @llvm.lifetime.start.p0(i64 2, ptr nonnull %1)
   call void @_Z7fun_i16RNSt3__16atomicIsEE(ptr nonnull align 2 dereferenceable(2) %1)
   %2 = load atomic i16, ptr %1 monotonic, align 2
@@ -613,7 +613,7 @@ define zeroext i16 @_Z27atomic_load_relaxed_stk_u16v() {
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    ld2b.zx %s0, 248(, %s11)
 ; CHECK-NEXT:    or %s11, 0, %s9
-  %1 = alloca %"struct.std::__1::atomic.15", align 2
+  %1 = alloca %"struct.std::__1::atomic.15", align 8
   call void @llvm.lifetime.start.p0(i64 2, ptr nonnull %1)
   call void @_Z7fun_u16RNSt3__16atomicItEE(ptr nonnull align 2 dereferenceable(2) %1)
   %2 = load atomic i16, ptr %1 monotonic, align 2
@@ -634,7 +634,7 @@ define signext i32 @_Z27atomic_load_relaxed_stk_i32v() {
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    ldl.sx %s0, 248(, %s11)
 ; CHECK-NEXT:    or %s11, 0, %s9
-  %1 = alloca %"struct.std::__1::atomic.20", align 4
+  %1 = alloca %"struct.std::__1::atomic.20", align 8
   call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %1)
   call void @_Z7fun_i32RNSt3__16atomicIiEE(ptr nonnull align 4 dereferenceable(4) %1)
   %2 = load atomic i32, ptr %1 monotonic, align 4
@@ -655,7 +655,7 @@ define zeroext i32 @_Z27atomic_load_relaxed_stk_u32v() {
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    ldl.zx %s0, 248(, %s11)
 ; CHECK-NEXT:    or %s11, 0, %s9
-  %1 = alloca %"struct.std::__1::atomic.25", align 4
+  %1 = alloca %"struct.std::__1::atomic.25", align 8
   call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %1)
   call void @_Z7fun_u32RNSt3__16atomicIjEE(ptr nonnull align 4 dereferenceable(4) %1)
   %2 = load atomic i32, ptr %1 monotonic, align 4

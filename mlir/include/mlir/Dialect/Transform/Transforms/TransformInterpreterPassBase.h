@@ -40,7 +40,7 @@ interpreterBaseInitializeImpl(MLIRContext *context, StringRef transformFileName,
 LogicalResult interpreterBaseRunOnOperationImpl(
     Operation *target, StringRef passName,
     const std::shared_ptr<OwningOpRef<ModuleOp>> &sharedTransformModule,
-    ArrayRef<ArrayRef<MappedValue>> extraMappings,
+    const RaggedArray<MappedValue> &extraMappings,
     const TransformOptions &options,
     const Pass::Option<std::string> &transformFileName,
     const Pass::Option<std::string> &debugPayloadRootTag,

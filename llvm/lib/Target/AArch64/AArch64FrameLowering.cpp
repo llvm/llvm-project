@@ -3429,7 +3429,11 @@ void TagStoreEdit::emitUnrolled(MachineBasicBlock::iterator InsertI) {
   Register BaseReg = FrameReg;
   int64_t BaseRegOffsetBytes = FrameRegOffset.getFixed();
   if (BaseRegOffsetBytes < kMinOffset ||
-      BaseRegOffsetBytes + (Size - Size % 32) > kMaxOffset) {
+      BaseRegOffsetBytes + (Size - Size % 32) > kMaxOffset ||
+      // BaseReg can be FP, which is not necessarily aligned to 16-bytes. In
+      // that case, BaseRegOffsetBytes will not be aligned to 16 bytes, which
+      // is required for the offset of ST2G.
+      BaseRegOffsetBytes % 16 != 0) {
     Register ScratchReg = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
     emitFrameOffset(*MBB, InsertI, DL, ScratchReg, BaseReg,
                     StackOffset::getFixed(BaseRegOffsetBytes), TII);
@@ -3444,6 +3448,7 @@ void TagStoreEdit::emitUnrolled(MachineBasicBlock::iterator InsertI) {
         InstrSize == 16
             ? (ZeroData ? AArch64::STZGOffset : AArch64::STGOffset)
             : (ZeroData ? AArch64::STZ2GOffset : AArch64::ST2GOffset);
+    assert(BaseRegOffsetBytes % 16 == 0);
     MachineInstr *I = BuildMI(*MBB, InsertI, DL, TII->get(Opcode))
                           .addReg(AArch64::SP)
                           .addReg(BaseReg)
