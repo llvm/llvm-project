@@ -1,3 +1,8 @@
+// It is annoying to handle different slash direction
+// in the filesystem of Windows and Linux.
+// So we disable the test on Windows here.
+// REQUIRES: !system-windows
+//
 // RUN: rm -fr %t
 // RUN: mkdir -p %t
 // RUN: split-file %s %t
@@ -25,41 +30,49 @@
 // RUN: clang-scan-deps -format=p1689 \
 // RUN:   -- %clang++ -std=c++20 -c -fprebuilt-module-path=%t %t/User.cpp -o %t/User.o \
 // RUN:   | FileCheck %t/User.cpp -DPREFIX=%/t
+//
+// Check we can generate the make-style dependencies as expected.
+// RUN: clang-scan-deps -format=p1689 \
+// RUN:   -- %clang++ -std=c++20 -c -fprebuilt-module-path=%t %t/impl_part.cppm -o %t/impl_part.o \
+// RUN:      -MT %t/impl_part.o.ddi -MD -MF %t/impl_part.dep
+// RUN:   cat %t/impl_part.dep | FileCheck %t/impl_part.cppm -DPREFIX=%/t --check-prefix=CHECK-MAKE
+//
+// Check that we can generate multiple make-style dependency information with compilation database.
+// RUN: cat %t/P1689.dep | FileCheck %t/Checks.cpp -DPREFIX=%/t --check-prefix=CHECK-MAKE
 
 //--- P1689.json.in
 [
 {
   "directory": "DIR",
-  "command": "clang++ -std=c++20 DIR/M.cppm -c -o DIR/M.o",
+  "command": "clang++ -std=c++20 DIR/M.cppm -c -o DIR/M.o -MT DIR/M.o.ddi -MD -MF DIR/P1689.dep",
   "file": "DIR/M.cppm",
   "output": "DIR/M.o"
 },
 {
   "directory": "DIR",
-  "command": "clang++ -std=c++20 DIR/Impl.cpp -c -o DIR/Impl.o",
+  "command": "clang++ -std=c++20 DIR/Impl.cpp -c -o DIR/Impl.o -MT DIR/Impl.o.ddi -MD -MF DIR/P1689.dep",
   "file": "DIR/Impl.cpp",
   "output": "DIR/Impl.o"
 },
 {
   "directory": "DIR",
-  "command": "clang++ -std=c++20 DIR/impl_part.cppm -c -o DIR/impl_part.o",
+  "command": "clang++ -std=c++20 DIR/impl_part.cppm -c -o DIR/impl_part.o -MT DIR/impl_part.o.ddi -MD -MF DIR/P1689.dep",
   "file": "DIR/impl_part.cppm",
   "output": "DIR/impl_part.o"
 },
 {
   "directory": "DIR",
-  "command": "clang++ -std=c++20 DIR/interface_part.cppm -c -o DIR/interface_part.o",
+  "command": "clang++ -std=c++20 DIR/interface_part.cppm -c -o DIR/interface_part.o -MT DIR/interface_part.o.ddi -MD -MF DIR/P1689.dep",
   "file": "DIR/interface_part.cppm",
   "output": "DIR/interface_part.o"
 },
 {
   "directory": "DIR",
-  "command": "clang++ -std=c++20 DIR/User.cpp -c -o DIR/User.o",
+  "command": "clang++ -std=c++20 DIR/User.cpp -c -o DIR/User.o -MT DIR/User.o.ddi -MD -MF DIR/P1689.dep",
   "file": "DIR/User.cpp",
   "output": "DIR/User.o"
 }
 ]
-
 
 //--- M.cppm
 export module M;
@@ -274,5 +287,18 @@ int main() {
 // CHECK-NEXT:   ],
 // CHECK-NEXT:   "version": 1
 // CHECK-NEXT: }
+
+// CHECK-MAKE-DAG: [[PREFIX]]/impl_part.o.ddi: \
+// CHECK-MAKE-DAG-NEXT:   [[PREFIX]]/impl_part.cppm \
+// CHECK-MAKE-DAG-NEXT:   [[PREFIX]]/header.mock
+// CHECK-MAKE-DAG: [[PREFIX]]/interface_part.o.ddi: \
+// CHECK-MAKE-DAG-NEXT:   [[PREFIX]]/interface_part.cppm
+// CHECK-MAKE-DAG: [[PREFIX]]/M.o.ddi: \
+// CHECK-MAKE-DAG-NEXT:   [[PREFIX]]/M.cppm
+// CHECK-MAKE-DAG: [[PREFIX]]/User.o.ddi: \
+// CHECK-MAKE-DAG-NEXT:   [[PREFIX]]/User.cpp
+// CHECK-MAKE-DAG: [[PREFIX]]/Impl.o.ddi: \
+// CHECK-MAKE-DAG-NEXT:   [[PREFIX]]/Impl.cpp \
+// CHECK-MAKE-DAG-NEXT:   [[PREFIX]]/header.mock
 
 //--- header.mock
