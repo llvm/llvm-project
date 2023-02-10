@@ -25,6 +25,8 @@ class LowerToLLVMOptions;
 namespace LLVM {
 class LLVMDialect;
 class LLVMPointerType;
+class LLVMFunctionType;
+class LLVMStructType;
 } // namespace LLVM
 
 /// Conversion from types to the LLVM IR dialect.
@@ -106,7 +108,8 @@ public:
   /// pointers to memref descriptors for arguments. Also converts the return
   /// type to a pointer argument if it is a struct. Returns true if this
   /// was the case.
-  std::pair<Type, bool> convertFunctionTypeCWrapper(FunctionType type);
+  std::pair<LLVM::LLVMFunctionType, LLVM::LLVMStructType>
+  convertFunctionTypeCWrapper(FunctionType type);
 
   /// Returns the data layout to use during and after conversion.
   const llvm::DataLayout &getDataLayout() { return options.dataLayout; }
@@ -143,6 +146,11 @@ public:
   /// Returns the size of the unranked memref descriptor object in bytes.
   unsigned getUnrankedMemRefDescriptorSize(UnrankedMemRefType type,
                                            const DataLayout &layout);
+
+  /// Return the LLVM address space corresponding to the memory space of the
+  /// memref type `type` or failure if the memory space cannot be converted to
+  /// an integer.
+  FailureOr<unsigned> getMemRefAddressSpace(BaseMemRefType type);
 
   /// Check if a memref type can be converted to a bare pointer.
   static bool canConvertToBarePtr(BaseMemRefType type);

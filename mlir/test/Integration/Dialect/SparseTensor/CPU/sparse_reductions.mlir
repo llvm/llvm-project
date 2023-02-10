@@ -15,7 +15,7 @@
 // REDEFINE: %{option} = "enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
 // RUN: %{compile} | %{run}
 
-// If SVE is available, do the same run, but now with direct IR generation and VLA
+// Do the same run, but now with direct IR generation and, if available, VLA
 // vectorization.
 // REDEFINE: %{option} = "enable-runtime-library=false vl=4 enable-arm-sve=%ENABLE_VLA"
 // REDEFINE: %{run} = %lli \
@@ -25,7 +25,7 @@
 // REDEFINE:   --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext | \
 // REDEFINE: FileCheck %s
 
-// Reduction in this file are supported by the AArch64 SVE backend
+// Reduction in this file _are_ supported by the AArch64 SVE backend
 
 #SV = #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>
 #DV = #sparse_tensor.encoding<{ dimLevelType = [ "dense"      ] }>

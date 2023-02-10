@@ -639,6 +639,16 @@ struct DefaultAllocationInterface
   }
 };
 
+struct DefaultReallocationInterface
+    : public bufferization::AllocationOpInterface::ExternalModel<
+          DefaultAllocationInterface, memref::ReallocOp> {
+  static std::optional<Operation *> buildDealloc(OpBuilder &builder,
+                                                 Value realloc) {
+    return builder.create<memref::DeallocOp>(realloc.getLoc(), realloc)
+        .getOperation();
+  }
+};
+
 /// The actual buffer deallocation pass that inserts and moves dealloc nodes
 /// into the right positions. Furthermore, it inserts additional clones if
 /// necessary. It uses the algorithm described at the top of the file.
@@ -703,6 +713,7 @@ void bufferization::registerAllocationOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
     memref::AllocOp::attachInterface<DefaultAllocationInterface>(*ctx);
+    memref::ReallocOp::attachInterface<DefaultReallocationInterface>(*ctx);
   });
 }
 

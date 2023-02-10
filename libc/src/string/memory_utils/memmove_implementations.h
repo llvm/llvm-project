@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_IMPLEMENTATIONS_H
 
 #include "src/__support/common.h"
+#include "src/__support/macros/optimization.h"
 #include "src/string/memory_utils/op_aarch64.h"
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/op_generic.h"

@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_MACROS_SANITIZER_H
 #define LLVM_LIBC_SRC_SUPPORT_MACROS_SANITIZER_H
 
-#include "src/__support/macros/properties/compiler.h"
+#include "src/__support/macros/config.h" //LIBC_HAS_FEATURE
 
 //-----------------------------------------------------------------------------
 // Properties to check the presence or absence or sanitizers

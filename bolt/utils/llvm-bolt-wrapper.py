@@ -324,6 +324,10 @@ def main():
         print(tmp)
         exit("exitcode mismatch")
 
+    # don't compare output upon unsuccessful exit
+    if main_bolt.returncode != 0:
+        cfg.SKIP_BINARY_CMP = True
+
     # compare logs, skip_end=1 skips the line with time
     out = compare_logs(main_out, cmp_out, skip_end=1, str_input=False) if cfg.COMPARE_OUTPUT else None
     if out:
@@ -346,23 +350,23 @@ def main():
     # report binary timing as csv: output binary; base bolt real; cmp bolt real
     report_real_time(main_binary, main_out, cmp_out, cfg)
 
-    # check if files exist
-    main_exists = os.path.exists(main_binary)
-    cmp_exists = os.path.exists(cmp_binary)
-    if main_exists and cmp_exists:
-        # proceed to comparison
-        pass
-    elif not main_exists and not cmp_exists:
-        # both don't exist, assume it's intended, skip comparison
-        clean_exit(tmp, main_out, main_bolt.returncode, cfg)
-    elif main_exists:
-        assert not cmp_exists
-        exit(f"{cmp_binary} doesn't exist")
-    else:
-        assert not main_exists
-        exit(f"{main_binary} doesn't exist")
-
     if not cfg.SKIP_BINARY_CMP:
+        # check if files exist
+        main_exists = os.path.exists(main_binary)
+        cmp_exists = os.path.exists(cmp_binary)
+        if main_exists and cmp_exists:
+            # proceed to comparison
+            pass
+        elif not main_exists and not cmp_exists:
+            # both don't exist, assume it's intended, skip comparison
+            clean_exit(tmp, main_out, main_bolt.returncode, cfg)
+        elif main_exists:
+            assert not cmp_exists
+            exit(f"{cmp_binary} doesn't exist")
+        else:
+            assert not main_exists
+            exit(f"{main_binary} doesn't exist")
+
         cmp_proc = subprocess.run(['cmp', '-b', main_binary, cmp_binary],
                                   capture_output=True, text=True)
         if cmp_proc.returncode:

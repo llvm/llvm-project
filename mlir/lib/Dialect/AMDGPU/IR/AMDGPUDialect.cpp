@@ -13,6 +13,7 @@
 #include "mlir/Dialect/AMDGPU/AMDGPUDialect.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
@@ -48,7 +49,16 @@ void AMDGPUDialect::initialize() {
 template <typename T>
 static LogicalResult verifyRawBufferOp(T &op) {
   MemRefType bufferType = op.getMemref().getType().template cast<MemRefType>();
-  if (bufferType.getMemorySpaceAsInt() != 0)
+  Attribute memorySpace = bufferType.getMemorySpace();
+  bool isGlobal = false;
+  if (!memorySpace)
+    isGlobal = true;
+  else if (auto intMemorySpace = memorySpace.dyn_cast<IntegerAttr>())
+    isGlobal = intMemorySpace.getInt() == 0 || intMemorySpace.getInt() == 1;
+  else if (auto gpuMemorySpace = memorySpace.dyn_cast<gpu::AddressSpaceAttr>())
+    isGlobal = gpuMemorySpace.getValue() == gpu::AddressSpace::Global;
+
+  if (!isGlobal)
     return op.emitOpError(
         "Buffer ops must operate on a memref in global memory");
   if (!bufferType.hasRank())

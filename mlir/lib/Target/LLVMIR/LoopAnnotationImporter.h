@@ -21,13 +21,28 @@ namespace mlir {
 namespace LLVM {
 namespace detail {
 
-/// A helper class that converts a `llvm.loop` metadata node into a
-/// corresponding LoopAnnotationAttr.
+/// A helper class that converts llvm.loop metadata nodes into corresponding
+/// LoopAnnotationAttrs and llvm.access.group nodes into
+/// AccessGroupMetadataOps.
 class LoopAnnotationImporter {
 public:
-  explicit LoopAnnotationImporter(ModuleImport &moduleImport)
-      : moduleImport(moduleImport) {}
-  LoopAnnotationAttr translate(const llvm::MDNode *node, Location loc);
+  explicit LoopAnnotationImporter(OpBuilder &builder) : builder(builder) {}
+  LoopAnnotationAttr translateLoopAnnotation(const llvm::MDNode *node,
+                                             Location loc);
+
+  /// Converts all LLVM access groups starting from node to MLIR access group
+  /// operations mested in the region of metadataOp. It stores a mapping from
+  /// every nested access group nod to the symbol pointing to the translated
+  /// operation. Returns success if all conversions succeed and failure
+  /// otherwise.
+  LogicalResult translateAccessGroup(const llvm::MDNode *node, Location loc,
+                                     MetadataOp metadataOp);
+
+  /// Returns the symbol references pointing to the access group operations that
+  /// map to the access group nodes starting from the access group metadata
+  /// node. Returns failure, if any of the symbol references cannot be found.
+  FailureOr<SmallVector<SymbolRefAttr>>
+  lookupAccessGroupAttrs(const llvm::MDNode *node) const;
 
 private:
   /// Returns the LLVM metadata corresponding to a llvm loop metadata attribute.
@@ -42,8 +57,11 @@ private:
            "attempting to map loop options that was already mapped");
   }
 
-  ModuleImport &moduleImport;
+  OpBuilder &builder;
   DenseMap<const llvm::MDNode *, LoopAnnotationAttr> loopMetadataMapping;
+  /// Mapping between original LLVM access group metadata nodes and the symbol
+  /// references pointing to the imported MLIR access group operations.
+  DenseMap<const llvm::MDNode *, SymbolRefAttr> accessGroupMapping;
 };
 
 } // namespace detail

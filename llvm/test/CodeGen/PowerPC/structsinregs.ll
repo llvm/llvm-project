@@ -35,13 +35,13 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 define i32 @caller1() nounwind {
 entry:
-  %p1 = alloca %struct.s1, align 1
-  %p2 = alloca %struct.s2, align 2
-  %p3 = alloca %struct.s3, align 2
-  %p4 = alloca %struct.s4, align 4
-  %p5 = alloca %struct.s5, align 4
-  %p6 = alloca %struct.s6, align 4
-  %p7 = alloca %struct.s7, align 4
+  %p1 = alloca %struct.s1
+  %p2 = alloca %struct.s2
+  %p3 = alloca %struct.s3
+  %p4 = alloca %struct.s4
+  %p5 = alloca %struct.s5
+  %p6 = alloca %struct.s6
+  %p7 = alloca %struct.s7
   call void @llvm.memcpy.p0.p0.i64(ptr %p1, ptr @caller1.p1, i64 1, i1 false)
   call void @llvm.memcpy.p0.p0.i64(ptr align 2 %p2, ptr align 2 @caller1.p2, i64 2, i1 false)
   call void @llvm.memcpy.p0.p0.i64(ptr align 2 %p3, ptr align 2 @caller1.p3, i64 4, i1 false)
@@ -103,13 +103,13 @@ entry:
 
 define i32 @caller2() nounwind {
 entry:
-  %p1 = alloca %struct.t1, align 1
-  %p2 = alloca %struct.t2, align 1
-  %p3 = alloca %struct.t3, align 1
-  %p4 = alloca %struct.t4, align 1
-  %p5 = alloca %struct.t5, align 1
-  %p6 = alloca %struct.t6, align 1
-  %p7 = alloca %struct.t7, align 1
+  %p1 = alloca %struct.t1
+  %p2 = alloca %struct.t2
+  %p3 = alloca %struct.t3
+  %p4 = alloca %struct.t4
+  %p5 = alloca %struct.t5
+  %p6 = alloca %struct.t6
+  %p7 = alloca %struct.t7
   call void @llvm.memcpy.p0.p0.i64(ptr %p1, ptr @caller2.p1, i64 1, i1 false)
   call void @llvm.memcpy.p0.p0.i64(ptr %p2, ptr @caller2.p2, i64 2, i1 false)
   call void @llvm.memcpy.p0.p0.i64(ptr %p3, ptr @caller2.p3, i64 3, i1 false)

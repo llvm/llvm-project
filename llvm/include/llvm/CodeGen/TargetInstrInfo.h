@@ -1975,12 +1975,19 @@ public:
   virtual void mergeOutliningCandidateAttributes(
       Function &F, std::vector<outliner::Candidate> &Candidates) const;
 
-  /// Returns how or if \p MI should be outlined.
+protected:
+  /// Target-dependent implementation for getOutliningTypeImpl.
   virtual outliner::InstrType
-  getOutliningType(MachineBasicBlock::iterator &MIT, unsigned Flags) const {
+  getOutliningTypeImpl(MachineBasicBlock::iterator &MIT, unsigned Flags) const {
     llvm_unreachable(
-        "Target didn't implement TargetInstrInfo::getOutliningType!");
+        "Target didn't implement TargetInstrInfo::getOutliningTypeImpl!");
   }
+
+public:
+  /// Returns how or if \p MIT should be outlined. \p Flags is the
+  /// target-specific information returned by isMBBSafeToOutlineFrom.
+  outliner::InstrType
+  getOutliningType(MachineBasicBlock::iterator &MIT, unsigned Flags) const;
 
   /// Optional target hook that returns true if \p MBB is safe to outline from,
   /// and returns any target-specific information in \p Flags.
