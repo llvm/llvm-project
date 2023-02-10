@@ -18,7 +18,7 @@ class TestVectorOfVectors(TestBase):
                                           "// Set break point at this line.",
                                           lldb.SBFileSpec("main.cpp"))
 
-        if self.expectedCompilerVersion(['>', '16.0']):
+        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(['>', '16.0']):
             vector_type = "std::vector<int>"
             vector_of_vector_type = "std::vector<std::vector<int> >"
         else:

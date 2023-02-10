@@ -14,7 +14,7 @@ class TestCase(TestBase):
                                           "// Set break point at this line.",
                                           lldb.SBFileSpec("main.cpp"))
 
-        if self.expectedCompilerVersion(['>', '16.0']):
+        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(['>', '16.0']):
             vec_type = "std::vector<int>"
         else:
             vec_type = "std::vector<int, std::allocator<int> >"

@@ -259,7 +259,7 @@ private:
     // Initialize the set of values that require a dedicated memory free
     // operation since their operands cannot be safely deallocated in a post
     // dominator.
-    SmallPtrSet<Value, 8> valuesToFree;
+    SetVector<Value> valuesToFree;
     llvm::SmallDenseSet<std::tuple<Value, Block *>> visitedValues;
     SmallVector<std::tuple<Value, Block *>, 8> toProcess;
 

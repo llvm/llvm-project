@@ -52,7 +52,7 @@ class LibcxxStringDataFormatterTestCase(TestBase):
 
         ns = self.namespace
 
-        if self.expectedCompilerVersion(['>', '16.0']):
+        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(['>', '16.0']):
             expected_basic_string = '%s::basic_string<unsigned char>'%ns
         else:
             expected_basic_string = '%s::basic_string<unsigned char, %s::char_traits<unsigned char>, ' \
