@@ -1892,11 +1892,15 @@ def int_aarch64_sve_zip2q     : AdvSIMD_2VectorArg_Intrinsic;
 //
 
 def int_aarch64_sve_and  : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_and_u: AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_bic  : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_bic_u: AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_cnot : AdvSIMD_Merged1VectorArg_Intrinsic;
 def int_aarch64_sve_eor  : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_eor_u: AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_not  : AdvSIMD_Merged1VectorArg_Intrinsic;
 def int_aarch64_sve_orr  : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_orr_u: AdvSIMD_Pred2VectorArg_Intrinsic;
 
 //
 // Conversion
