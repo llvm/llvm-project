@@ -25,6 +25,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -734,7 +735,7 @@ void doCvtres(std::string Src, std::string Dest, std::string TargetTriple) {
 
 } // anonymous namespace
 
-int llvm_rc_main(int Argc, char **Argv) {
+int llvm_rc_main(int Argc, char **Argv, const llvm::ToolContext &) {
   InitLLVM X(Argc, Argv);
   ExitOnErr.setBanner("llvm-rc: ");
 
