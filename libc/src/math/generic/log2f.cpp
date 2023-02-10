@@ -8,12 +8,13 @@
 
 #include "src/math/log2f.h"
 #include "common_constants.h" // Lookup table for (1/f)
-#include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
-#include "src/__support/FPUtil/FMA.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
+#include "src/__support/FPUtil/except_value_utils.h"
+#include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/attributes.h" // LIBC_UNLIKELY
 
 // This is a correctly-rounded algorithm for log2(x) in single precision with
 // round-to-nearest, tie-to-even mode from the RLIBM project at:
@@ -101,52 +102,46 @@ static constexpr double LOG2_F[128] = {
 LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
-  int m = 0;
+  uint32_t x_u = xbits.uintval();
 
   // Hard to round value(s).
-  switch (FPBits(x).uintval()) {
-  case 0x3f81d0b5U: {
-    int rounding_mode = fputil::get_round();
-    if (rounding_mode == FE_DOWNWARD || rounding_mode == FE_TOWARDZERO) {
-      return 0x1.4cdc4cp-6f;
-    }
-    break;
-  }
-  case 0x3f7e3274U:
-    if (fputil::get_round() == FE_TONEAREST) {
-      return -0x1.4e1d16p-7f;
-    }
-    break;
-  case 0x3f7d57f5U:
-    if (fputil::get_round() == FE_TOWARDZERO) {
-      return -0x1.ed1c32p-7f;
-    }
-    break;
+  using fputil::round_result_slightly_up;
+
+  switch (x_u) {
+  case 0x3f7d57f5U: // x = 0x1.faafeap-1
+    return round_result_slightly_up(-0x1.ed1c34p-7f);
+  case 0x3f7e3274U: // x = 0x1.fc64e8p-1f
+    return round_result_slightly_up(-0x1.4e1d16p-7f);
+  case 0x3f81d0b5U: // x = 0x1.03a16ap0f
+    return round_result_slightly_up(0x1.4cdc4cp-6f);
   }
 
+  int m = -FPBits::EXPONENT_BIAS;
+
   // Exceptional inputs.
-  if (xbits.uintval() < FPBits::MIN_NORMAL ||
-      xbits.uintval() > FPBits::MAX_NORMAL) {
+  if (LIBC_UNLIKELY(x_u < FPBits::MIN_NORMAL || x_u > FPBits::MAX_NORMAL)) {
     if (xbits.is_zero()) {
+      fputil::raise_except(FE_DIVBYZERO);
       return static_cast<float>(FPBits::neg_inf());
     }
     if (xbits.get_sign() && !xbits.is_nan()) {
-      return FPBits::build_nan(1 << (fputil::MantissaWidth<float>::VALUE - 1));
+      fputil::raise_except(FE_INVALID);
+      return FPBits::build_quiet_nan(0);
     }
     if (xbits.is_inf_or_nan()) {
       return x;
     }
     // Normalize denormal inputs.
     xbits.set_val(xbits.get_val() * 0x1.0p23f);
-    m = -23;
+    m -= 23;
   }
 
-  m += xbits.get_exponent();
+  m += xbits.get_unbiased_exponent();
+  int f_index = xbits.get_mantissa() >> 16;
   // Set bits to 1.m
   xbits.set_unbiased_exponent(0x7F);
   // Get the 8 highest bits, use 7 bits (excluding the implicit hidden bit) for
   // lookup tables.
-  int f_index = xbits.get_mantissa() >> 16;
 
   FPBits f = xbits;
   // Clear the lowest 16 bits.
@@ -156,9 +151,17 @@ LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
   d *= ONE_OVER_F[f_index];
 
   double extra_factor = static_cast<double>(m) + LOG2_F[f_index];
-  double r = __llvm_libc::fputil::polyeval(
-      d, extra_factor, 0x1.71547652bd4fp+0, -0x1.7154769b978c7p-1,
-      0x1.ec71a99e349c8p-2, -0x1.720d90e6aac6cp-2, 0x1.5132da3583dap-2);
+
+  const double COEFFS[5] = {0x1.71547652bd4fp+0, -0x1.7154769b978c7p-1,
+                            0x1.ec71a99e349c8p-2, -0x1.720d90e6aac6cp-2,
+                            0x1.5132da3583dap-2};
+
+  double dsq = d * d;
+  double c0 = fputil::multiply_add(d, COEFFS[0], extra_factor);
+  double c1 = fputil::multiply_add(d, COEFFS[2], COEFFS[1]);
+  double c2 = fputil::multiply_add(d, COEFFS[4], COEFFS[3]);
+
+  double r = fputil::polyeval(dsq, c0, c1, c2);
 
   return static_cast<float>(r);
 }
