@@ -25,11 +25,9 @@ DiagnosedSilenceableFailure transform::MemRefMultiBufferOp::applyToOne(
     memref::AllocOp target, transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   auto newBuffer = memref::multiBuffer(target, getFactor());
-  if (failed(newBuffer)) {
-    Diagnostic diag(target->getLoc(), DiagnosticSeverity::Note);
-    diag << "op failed to multibuffer";
-    return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
-  }
+  if (failed(newBuffer))
+    return emitSilenceableFailure(target->getLoc())
+           << "op failed to multibuffer";
 
   results.push_back(*newBuffer);
   return DiagnosedSilenceableFailure::success();
