@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #===- lib/dfsan/scripts/build-libc-list.py ---------------------------------===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -44,7 +44,7 @@ def defined_function_list(object):
   functions = []
   readelf_proc = subprocess.Popen(['readelf', '-s', '-W', object],
                                   stdout=subprocess.PIPE)
-  readelf = readelf_proc.communicate()[0].split('\n')
+  readelf = readelf_proc.communicate()[0].decode().split('\n')
   if readelf_proc.returncode != 0:
     raise subprocess.CalledProcessError(readelf_proc.returncode, 'readelf')
   for line in readelf:
