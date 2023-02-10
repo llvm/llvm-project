@@ -175,6 +175,7 @@ protected:
   bool ScalarFlatScratchInsts = false;
   bool HasArchitectedFlatScratch = false;
   bool EnableFlatScratch = false;
+  bool HasArchitectedSGPRs = false;
   bool AddNoCarryInsts = false;
   bool HasUnpackedD16VMem = false;
   bool LDSMisalignedBug = false;
@@ -1131,6 +1132,9 @@ public:
   /// \returns true if the flat_scratch register is initialized by the HW.
   /// In this case it is readonly.
   bool flatScratchIsArchitected() const { return HasArchitectedFlatScratch; }
+
+  /// \returns true if the architected SGPRs are enabled.
+  bool hasArchitectedSGPRs() const { return HasArchitectedSGPRs; }
 
   /// \returns true if the machine has merged shaders in which s0-s7 are
   /// reserved by the hardware and user SGPRs start at s8
