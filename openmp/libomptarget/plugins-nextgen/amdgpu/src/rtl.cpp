@@ -1485,6 +1485,12 @@ struct AMDHostDeviceTy : public AMDGenericDeviceTy {
     return *FineGrainedMemoryPools[0];
   }
 
+  AMDGPUMemoryPoolTy &getCoarseGrainedMemoryPool() {
+    assert(!CoarseGrainedMemoryPools.empty() && "No coarse-grained mempool");
+    // Retrive any memory pool.
+    return *CoarseGrainedMemoryPools[0];
+  }
+
   /// Get a memory pool for kernel args allocations.
   AMDGPUMemoryPoolTy &getArgsMemoryPool() {
     assert(!ArgsMemoryPools.empty() && "No kernelargs mempool");
@@ -1762,6 +1768,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       MemoryPool = CoarseGrainedMemoryPools[0];
       break;
     case TARGET_ALLOC_HOST:
+      MemoryPool = &HostDevice.getFineGrainedMemoryPool();
       break;
     case TARGET_ALLOC_SHARED:
       MemoryPool = &HostDevice.getFineGrainedMemoryPool();
@@ -2623,6 +2630,7 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
     MemoryPool = CoarseGrainedMemoryPools[0];
     break;
   case TARGET_ALLOC_HOST:
+    MemoryPool = &HostDevice.getFineGrainedMemoryPool();
     break;
   case TARGET_ALLOC_SHARED:
     MemoryPool = &HostDevice.getFineGrainedMemoryPool();
