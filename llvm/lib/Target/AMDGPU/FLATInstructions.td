@@ -466,7 +466,7 @@ class FLAT_AtomicRet_Pseudo<string opName, dag outs, dag ins,
   let PseudoInstr = NAME # "_RTN";
 }
 
-multiclass FLAT_Atomic_Pseudo<
+multiclass FLAT_Atomic_Pseudo_NO_RTN<
   string opName,
   RegisterClass vdst_rc,
   ValueType vt,
@@ -484,7 +484,16 @@ multiclass FLAT_Atomic_Pseudo<
     let FPAtomic = isFP;
     let AddedComplexity = -1; // Prefer global atomics if available
   }
+}
 
+multiclass FLAT_Atomic_Pseudo_RTN<
+  string opName,
+  RegisterClass vdst_rc,
+  ValueType vt,
+  ValueType data_vt = vt,
+  RegisterClass data_rc = vdst_rc,
+  bit isFP = isFloatType<data_vt>.ret,
+  RegisterOperand data_op = getLdStRegisterOperand<data_rc>.ret> {
   def _RTN : FLAT_AtomicRet_Pseudo <opName,
     (outs getLdStRegisterOperand<vdst_rc>.ret:$vdst),
     (ins VReg_64:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_GLC1:$cpol),
@@ -494,6 +503,18 @@ multiclass FLAT_Atomic_Pseudo<
     let FPAtomic = isFP;
     let AddedComplexity = -1; // Prefer global atomics if available
   }
+}
+
+multiclass FLAT_Atomic_Pseudo<
+  string opName,
+  RegisterClass vdst_rc,
+  ValueType vt,
+  ValueType data_vt = vt,
+  RegisterClass data_rc = vdst_rc,
+  bit isFP = isFloatType<data_vt>.ret,
+  RegisterOperand data_op = getLdStRegisterOperand<data_rc>.ret> {
+  defm "" : FLAT_Atomic_Pseudo_NO_RTN<opName, vdst_rc, vt, data_vt, data_rc, isFP, data_op>;
+  defm "" : FLAT_Atomic_Pseudo_RTN<opName, vdst_rc, vt, data_vt, data_rc, isFP, data_op>;
 }
 
 multiclass FLAT_Global_Atomic_Pseudo_NO_RTN<
