@@ -19,8 +19,18 @@
 
 #define LIBC_INLINE inline
 #define LIBC_INLINE_ASM __asm__ __volatile__
-#define LIBC_LIKELY(x) __builtin_expect(!!(x), 1)
-#define LIBC_UNLIKELY(x) __builtin_expect(x, 0)
+
+// We use a template to implement likely/unlikely to make sure that we don't
+// accidentally pass an integer.
+namespace __llvm_libc::details {
+template <typename T>
+constexpr LIBC_INLINE bool expects_bool_condition(T value, T expected) {
+  return __builtin_expect(value, expected);
+}
+} // namespace __llvm_libc::details
+#define LIBC_LIKELY(x) __llvm_libc::details::expects_bool_condition(x, true)
+#define LIBC_UNLIKELY(x) __llvm_libc::details::expects_bool_condition(x, false)
+
 #define LIBC_UNUSED __attribute__((unused))
 
 #endif // LLVM_LIBC_SUPPORT_MACROS_ATTRIBUTES_H
